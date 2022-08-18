@@ -66,6 +66,7 @@ namespace primitive {
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSin)             \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSinh)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSqrt)            \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSigmoid)         \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSign)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSquare)          \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kTan)             

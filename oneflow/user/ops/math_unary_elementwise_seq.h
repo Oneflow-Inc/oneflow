@@ -101,8 +101,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("rint", Rint)                   \
   OF_PP_MAKE_TUPLE_SEQ("round", Round)                 \
   OF_PP_MAKE_TUPLE_SEQ("floor", Floor)                 \
-  OF_PP_MAKE_TUPLE_SEQ("ceil", Ceil) \
-  OF_PP_MAKE_TUPLE_SEQ("sigmoid_v2", Sigmoid)               
+  OF_PP_MAKE_TUPLE_SEQ("ceil", Ceil)                
 
 #define MATH_UNARY_ELEMENTWISE_REGISTER_FUNC_SEQ_ODS                  \
   OF_PP_MAKE_TUPLE_SEQ("negative", Negative) \
@@ -111,8 +110,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("rint", Rint)                   \
   OF_PP_MAKE_TUPLE_SEQ("round", Round)                 \
   OF_PP_MAKE_TUPLE_SEQ("floor", Floor)                 \
-  OF_PP_MAKE_TUPLE_SEQ("ceil", Ceil) \
-  OF_PP_MAKE_TUPLE_SEQ("sigmoid_v2", SigmoidV2)
+  OF_PP_MAKE_TUPLE_SEQ("ceil", Ceil) 
 
 
 
@@ -145,9 +143,9 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("tan", Tan)
 
 #define MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_DY_Y_ODS_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ("sigmoid_v2", SigmoidV2)
+  OF_PP_MAKE_TUPLE_SEQ("sigmoid", Sigmoid)
 
-#define MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_DY_Y_SEQ OF_PP_MAKE_TUPLE_SEQ("sigmoid_v2", Sigmoid)
+#define MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_DY_Y_SEQ OF_PP_MAKE_TUPLE_SEQ("sigmoid", Sigmoid)
 
 #define MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_FILL_SEQ  \
   OF_PP_MAKE_TUPLE_SEQ("not_equal_zero", NotEqualZero) \

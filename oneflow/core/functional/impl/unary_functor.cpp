@@ -59,6 +59,9 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("square", Square)                     \
   OF_PP_MAKE_TUPLE_SEQ("tan", Tan)
 
+#define FLOAT_UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_Y_SEQ                     \
+  OF_PP_MAKE_TUPLE_SEQ("sigmoid", Sigmoid)    
+
 #define UNARY_FUNC_SEQ                                       \
   OF_PP_MAKE_TUPLE_SEQ("ceil", Ceil)                         \
   OF_PP_MAKE_TUPLE_SEQ("floor", Floor)                       \
@@ -102,7 +105,6 @@ namespace impl {
 
 #define FLOAT_UNARY_FUNC_SEQ                     \
   OF_PP_MAKE_TUPLE_SEQ("negative", Negative)     \
-  OF_PP_MAKE_TUPLE_SEQ("sigmoid_v2", Sigmoid)    \
   OF_PP_MAKE_TUPLE_SEQ("sign", Sign)             \
   OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)             \
   OF_PP_MAKE_TUPLE_SEQ("not_equal_zero", NotEqualZero)
@@ -142,6 +144,18 @@ namespace impl {
     }                                                                            \
   };
 
+#define UNARY_ELEMENTWISE_GRAD_WITH_DY_Y_FUNCTOR(op_type_name, class_name, base) \
+  class class_name##WithDyYGradFunctor : public base {                           \
+   public:                                                                       \
+    class_name##WithDyYGradFunctor() {                                           \
+      op_ = CHECK_JUST(one::OpBuilder(std::string("") + op_type_name + "_grad")  \
+                           .Input("y")                                           \
+                           .Input("dy")                                          \
+                           .Output("dx")                                         \
+                           .Build());                                            \
+    }                                                                            \
+  };
+
 #define INPLACE_UNARY_FUNCOTRS(op_type_name, class_name) \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, InplaceUnaryFunctor)
 #define INPLACE_FLOAT_UNARY_FUNCOTRS(op_type_name, class_name) \
@@ -159,12 +173,17 @@ namespace impl {
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, UnaryFunctor) \
   UNARY_ELEMENTWISE_GRAD_WITH_DY_X_FUNCTOR(op_type_name, class_name, BinaryFunctor)
 
+#define FLOAT_UNARY_WITH_DY_Y_FUNCOTRS(op_type_name, class_name)          \
+  UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, FloatUnaryFunctor) \
+  UNARY_ELEMENTWISE_GRAD_WITH_DY_Y_FUNCTOR(op_type_name, class_name, BinaryFunctor)
+
 OF_PP_FOR_EACH_TUPLE(INPLACE_FLOAT_UNARY_FUNCOTRS, INPLACE_UNARY_FLOAT_FUNC_SEQ);
 OF_PP_FOR_EACH_TUPLE(UNARY_FUNCOTRS, UNARY_FUNC_SEQ);
 OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_FUNCOTRS, FLOAT_UNARY_FUNC_SEQ);
 OF_PP_FOR_EACH_TUPLE(LOGICAL_FLOAT_UNARY_FUNCTORS, LOGICAL_FLOAT_UNARY_FUNC_SEQ);
 
 OF_PP_FOR_EACH_TUPLE(UNARY_WITH_DY_X_FUNCOTRS, UNARY_PRIMITIVE_FUNC_SEQ);
+OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_WITH_DY_Y_FUNCOTRS, FLOAT_UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_Y_SEQ);
 
 }  // namespace impl
 
@@ -176,6 +195,10 @@ using namespace impl;
 #define ADD_UNARY_FUNCTOR_WITH_DY_X(class_name, functor_name) \
   m.add_functor<class_name##Functor>(functor_name);           \
   m.add_functor<class_name##WithDyXGradFunctor>(std::string("") + functor_name + "Grad");
+
+#define ADD_UNARY_FUNCTOR_WITH_DY_Y(class_name, functor_name) \
+  m.add_functor<class_name##Functor>(functor_name);           \
+  m.add_functor<class_name##WithDyYGradFunctor>(std::string("") + functor_name + "Grad");
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   ADD_UNARY_FUNCTOR_WITH_DY_X(Abs, "Abs");
@@ -212,7 +235,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   ADD_UNARY_FUNCTOR(Round, "Round");
 
   ADD_UNARY_FUNCTOR_WITH_DY_X(Rsqrt, "Rsqrt");
-  ADD_UNARY_FUNCTOR(Sigmoid, "Sigmoid");
+  ADD_UNARY_FUNCTOR_WITH_DY_Y(Sigmoid, "Sigmoid");
 
   ADD_UNARY_FUNCTOR(Sign, "Sign");
 

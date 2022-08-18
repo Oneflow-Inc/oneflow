@@ -138,13 +138,13 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_X_CLASS,
 
 #undef INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_X_CLASS
 
-// #define INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_Y_CLASS(op_type_name, op_cls)     \
-//   class op_cls##Cls final : public UnaryMathBwdWithDyYOp<functional::op_cls##Grad> {}; \
-//   REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, op_cls##Cls);
+#define INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_Y_CLASS(op_type_name, op_cls)     \
+  class op_cls##Cls final : public UnaryMathBwdWithDyYOp<functional::op_cls##Grad> {}; \
+  REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, op_cls##Cls);
 
-// OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_Y_CLASS,
-//                      MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_DY_Y_SEQ);
-// #undef INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_Y_CLASS
+OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_Y_CLASS,
+                     MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_DY_Y_SEQ);
+#undef INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_Y_CLASS
 
 // #define INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_FILL_CLASS(op_type_name, op_cls)     \
 //   class op_cls##Cls final : public UnaryMathBwdWithDyYOp<functional::op_cls##Grad> {}; \

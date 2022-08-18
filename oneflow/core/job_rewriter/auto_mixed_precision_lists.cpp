@@ -47,7 +47,7 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "tf_avg_pool_2d",
                               "tf_avg_pool_3d",
                               "bias_add",
-                              "sigmoid_v2",
+                              "sigmoid",
                               "tanh",
                               "sqrt",
                               "scalar_mul",
