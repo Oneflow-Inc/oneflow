@@ -51,29 +51,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("pad").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                       user_op::AddOpFn AddOp) -> Maybe<void> {
-  if (op.NeedGenGradTensor4OpInput("x", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    std::vector<int64_t> padding_before = op.attr<std::vector<int64_t>>("padding_before");
-    std::vector<int64_t> padding_after = op.attr<std::vector<int64_t>>("padding_after");
-    for (int i = 0; i < padding_before.size(); i++) {
-      padding_before[i] = -padding_before[i];
-      padding_after[i] = -padding_after[i];
-    }
-    user_op::UserOpConfWrapper grad_op =
-        builder.Op("pad")
-            .Input("x", op.GetGradTensorWithOpOutput("y", 0))
-            .Output("y")
-            .Attr("floating_constant_value", static_cast<double>(0.0))
-            .Attr("integral_constant_value", static_cast<int64_t>(0))
-            .Attr("padding_before", padding_before)
-            .Attr("padding_after", padding_after)
-            .Build();
-    op.BindGradTensorWithOpInput(grad_op.output("y", 0), "x", 0);
-    AddOp(grad_op);
-  }
-  return Maybe<void>::Ok();
-});
-
 }  // namespace oneflow

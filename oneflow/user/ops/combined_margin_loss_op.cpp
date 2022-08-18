@@ -103,25 +103,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("combined_margin_loss")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op = builder.Op("combined_margin_loss_grad")
-                                                 .Input("label", op.input("label", 0))
-                                                 .Input("theta", op.output("theta", 0))
-                                                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                                                 .Output("dx")
-                                                 .Attr("m1", op.attr<float>("m1"))
-                                                 .Attr("m2", op.attr<float>("m2"))
-                                                 .Attr("m3", op.attr<float>("m3"))
-                                                 .Attr("depth", op.attr<int64_t>("depth"))
-                                                 .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace oneflow
