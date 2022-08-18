@@ -15,9 +15,12 @@ limitations under the License.
 """
 import os
 
+import numpy as np
+
 import oneflow as flow
-from oneflow.framework.tensor import _copy_from_numpy_to_eager_local_tensor, Tensor
 from oneflow.ops.util.initializer_util import calc_gain as calculate_gain
+from oneflow.framework.tensor import Tensor
+import oneflow.framework.dtype as dtype_util
 import oneflow.ops.initializer_register as initializer_register
 
 
@@ -42,9 +45,8 @@ def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
             )
             tensor.copy_(src_tensor)
         else:
-            _copy_from_numpy_to_eager_local_tensor(
-                tensor, np_arr,
-            )
+            shared_mem_tensor = flow.from_numpy(np_arr)
+            tensor[...] = shared_mem_tensor
     return tensor
 
 
@@ -299,7 +301,8 @@ def constant_(tensor, val):
         >>> nn.init.constant_(w, 0.3)
     """
     with flow.no_grad():
-        return tensor.fill_(val)
+        tensor[...] = val
+        return tensor
 
 
 def ones_(tensor):
@@ -318,7 +321,7 @@ def ones_(tensor):
         >>> nn.init.ones_(w)
     """
     with flow.no_grad():
-        return tensor.fill_(1)
+        return constant_(tensor, 1)
 
 
 def zeros_(tensor):
@@ -337,7 +340,7 @@ def zeros_(tensor):
         >>> nn.init.zeros_(w)
     """
     with flow.no_grad():
-        return tensor.fill_(0)
+        return constant_(tensor, 0)
 
 
 def eye_(tensor):
@@ -360,7 +363,15 @@ def eye_(tensor):
     if tensor.ndimension() != 2:
         raise ValueError("Only tensors with 2 dimensions are supported")
     with flow.no_grad():
-        tensor = flow._C.eye_(tensor)
+        # TODO: use flow._C.eye_ after eye_op supporting non-contiguous kernel
+        assign_tensor = flow.from_numpy(
+            np.eye(
+                tensor.shape[0],
+                tensor.shape[1],
+                dtype=dtype_util.convert_oneflow_dtype_to_numpy_dtype(tensor.dtype),
+            )
+        )
+        tensor[...] = assign_tensor
         return tensor
 
 

@@ -261,7 +261,11 @@ DIRECT_PASS_FUNC(PyTensorObject_addcdiv_, functional::addcdiv_)
 DIRECT_PASS_FUNC(PyTensorObject_clip, functional::clip)
 DIRECT_PASS_FUNC(PyTensorObject_clip_, functional::clip_)
 DIRECT_PASS_FUNC(PyTensorObject_clamp, functional::clamp)
+DIRECT_PASS_FUNC(PyTensorObject_clamp_min, functional::clamp_min)
+DIRECT_PASS_FUNC(PyTensorObject_clamp_max, functional::clamp_max)
 DIRECT_PASS_FUNC(PyTensorObject_clamp_, functional::clamp_)
+DIRECT_PASS_FUNC(PyTensorObject_clamp_min_, functional::clamp_min_)
+DIRECT_PASS_FUNC(PyTensorObject_clamp_max_, functional::clamp_max_)
 DIRECT_PASS_FUNC(PyTensorObject_flatten, functional::flatten)
 DIRECT_PASS_FUNC(PyTensorObject_in_top_k, functional::in_top_k)
 DIRECT_PASS_FUNC(PyTensorObject_index_select, functional::index_select)
@@ -778,7 +782,7 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
     if (functional::PyScalarCheck(value)) {
       Scalar value_scalar = functional::PyUnpackScalar(value);
       value_tensor = ASSERT_PTR(
-          functional::GlobalConstant({1}, value_scalar, tensor->dtype(), placement, sbp));
+          functional::GlobalConstant(Shape({}), value_scalar, tensor->dtype(), placement, sbp));
     } else {
       value_tensor = PyTensor_Unpack(value);
       CHECK_OR_THROW(value_tensor->is_global())
@@ -791,7 +795,7 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
     if (functional::PyScalarCheck(value)) {
       Scalar value_scalar = functional::PyUnpackScalar(value);
       value_tensor = ASSERT_PTR(
-          functional::Constant({1}, value_scalar, tensor->dtype(), ASSERT(tensor->device())));
+          functional::Constant(Shape({}), value_scalar, tensor->dtype(), ASSERT(tensor->device())));
     } else {
       value_tensor = PyTensor_Unpack(value);
       CHECK_OR_THROW(value_tensor->is_local())
@@ -869,7 +873,11 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"clip", (PyCFunction)PyTensorObject_clip, METH_VARARGS | METH_KEYWORDS, NULL},
     {"clip_", (PyCFunction)PyTensorObject_clip_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"clamp", (PyCFunction)PyTensorObject_clamp, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"clamp_min", (PyCFunction)PyTensorObject_clamp_min, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"clamp_max", (PyCFunction)PyTensorObject_clamp_max, METH_VARARGS | METH_KEYWORDS, NULL},
     {"clamp_", (PyCFunction)PyTensorObject_clamp_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"clamp_min_", (PyCFunction)PyTensorObject_clamp_min_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"clamp_max_", (PyCFunction)PyTensorObject_clamp_max_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"flatten", (PyCFunction)PyTensorObject_flatten, METH_VARARGS | METH_KEYWORDS, NULL},
     {"in_top_k", (PyCFunction)PyTensorObject_in_top_k, METH_VARARGS | METH_KEYWORDS, NULL},
     {"index_select", (PyCFunction)PyTensorObject_index_select, METH_VARARGS | METH_KEYWORDS, NULL},

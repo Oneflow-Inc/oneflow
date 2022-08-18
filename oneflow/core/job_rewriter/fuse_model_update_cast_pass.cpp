@@ -20,10 +20,6 @@ namespace oneflow {
 
 namespace {
 
-bool IsUserOpWithTypeName(const OperatorConf& op_conf, const std::string& op_type_name) {
-  return op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == op_type_name;
-};
-
 class FuseModelUpdateCastOpsPass final : public JobPass {
  public:
   FuseModelUpdateCastOpsPass() = default;
