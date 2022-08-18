@@ -32,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/common/blocking_then_busy.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace py = pybind11;
 
@@ -61,28 +62,38 @@ inline static Maybe<PyObject*> EagerLocalTensorToNumpy(PyObject* py_tensor) {
   const auto& t = PyTensor_Unpack(py_tensor);
 
   std::shared_ptr<LocalTensor> tensor = JUST(t->AsLocalTensor());
-  CHECK_OR_RETURN(JUST(tensor->device()) == JUST(Device::New("cpu")));
-  CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only.";
-  // set base object attr
-  py::handle handle = py::handle(py_tensor);
-
   const size_t ndim = tensor->ndim();
   const auto shape = numpy::OFShapeToNumpyShape(tensor->shape()->dim_vec());
   // NumPy strides use bytes. OneFlow strides use element counts.
   const auto stride =
       numpy::OFStrideToNumpyStride(*JUST(tensor->stride()), tensor->dtype()->data_type());
+  if (JUST(tensor->device())->enum_type() == kCPU) {
+    // set base object attr
+    py::handle handle = py::handle(py_tensor);
 
-  T* data_ptr = nullptr;
-  const auto& Callback = [&](ep::Stream*,
-                             const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
-    data_ptr = eager_blob_object->mut_dptr<T>();
-  };
-  JUST(SyncAccessBlobByCallback(tensor, Callback));
-  return py::array(py::buffer_info(data_ptr, sizeof(T), py::format_descriptor<T>::format(), ndim,
-                                   shape, stride),
-                   handle)
-      .release()
-      .ptr();
+    T* data_ptr = nullptr;
+    const auto& Callback = [&](ep::Stream*,
+                               const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+      data_ptr = eager_blob_object->mut_dptr<T>();
+    };
+    JUST(SyncAccessBlobByCallback(tensor, Callback));
+    return py::array(py::buffer_info(data_ptr, sizeof(T), py::format_descriptor<T>::format(), ndim,
+                                     shape, stride),
+                     handle)
+        .release()
+        .ptr();
+  } else {
+    auto ndarray = py::array_t<T>(shape, stride);
+    py::buffer_info buf = ndarray.request();
+    const auto& Callback = [&](ep::Stream* stream,
+                               const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+      SyncAutoMemcpy(stream, buf.ptr, eager_blob_object->mut_dptr(),
+                     tensor->shape()->Count(0) * sizeof(T), memory::MakeHostMemCase(),
+                     eager_blob_object->mem_case());
+    };
+    JUST(SyncAccessBlobByCallback(tensor, Callback));
+    return ndarray.release().ptr();
+  }
 }
 
 template<typename T>

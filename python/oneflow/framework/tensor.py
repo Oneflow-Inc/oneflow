@@ -444,8 +444,6 @@ def _numpy(self):
             .to_local()
         )
     assert self.is_local
-    if self.device != flow.device("cpu"):
-        self = self.cpu()
     return self.to_numpy()
 
 

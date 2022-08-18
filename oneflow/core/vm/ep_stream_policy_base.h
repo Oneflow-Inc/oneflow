@@ -49,7 +49,9 @@ class EpStreamPolicyBase : public StreamPolicy {
 
   EpEventProvider* ep_event_provider() {
     if (unlikely(ep_event_provier_ == nullptr)) {
-      ep_event_provier_.reset(new SingleThreadEpEventProvider(GetOrCreateEpDevice()));
+      // It's correct to use thread unsafe event provider, because the entire virtual machine is
+      // locked when scheduling.
+      ep_event_provier_.reset(new ThreadUnsafeEpEventProvider(GetOrCreateEpDevice()));
     }
     return ep_event_provier_.get();
   }

@@ -91,9 +91,9 @@ Tensor Tensor::from_buffer(const void* buffer, const Shape& shape, const Device&
         local_tensor,
         [buffer, shape, dtype](of::ep::Stream* stream,
                                const std::shared_ptr<of::vm::EagerBlobObject>& eager_blob_object) {
-          of::AutoMemcpy(stream, eager_blob_object->mut_dptr(), buffer,
-                         shape.Count(0) * GetDTypeSize(dtype), eager_blob_object->mem_case(),
-                         of::memory::MakeHostMemCase());
+          of::SyncAutoMemcpy(stream, eager_blob_object->mut_dptr(), buffer,
+                             shape.Count(0) * GetDTypeSize(dtype), eager_blob_object->mem_case(),
+                             of::memory::MakeHostMemCase());
         },
         "mut");
   }).GetOrThrow();
@@ -108,8 +108,8 @@ void Tensor::copy_to(T* buffer) const {
   const auto& Callback = [buffer, shape](
                              of::ep::Stream* stream,
                              const std::shared_ptr<of::vm::EagerBlobObject>& eager_blob_object) {
-    of::AutoMemcpy(stream, buffer, eager_blob_object->mut_dptr(), shape.Count(0) * sizeof(T),
-                   of::memory::MakeHostMemCase(), eager_blob_object->mem_case());
+    of::SyncAutoMemcpy(stream, buffer, eager_blob_object->mut_dptr(), shape.Count(0) * sizeof(T),
+                       of::memory::MakeHostMemCase(), eager_blob_object->mem_case());
   };
   TRY(of::SyncAccessBlobByCallback(local_tensor, Callback)).GetOrThrow();
 }

@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/device.h"
 #include "oneflow/core/ep/include/event.h"
 #include "oneflow/core/common/single_thread_obj_pool.h"
+#include "oneflow/core/common/thread_unsafe_obj_pool.h"
 
 namespace oneflow {
 
@@ -67,6 +68,23 @@ class SingleThreadEpEventProvider final : public EpEventProvider {
   using SingleThreadPoolType =
       obj_pool::SingleThreadObjPool<EpEvent, obj_pool::kDisableReconstruct>;
   std::shared_ptr<SingleThreadPoolType> events_;
+  ep::Device* device_;
+};
+
+class ThreadUnsafeEpEventProvider final : public EpEventProvider {
+ public:
+  ThreadUnsafeEpEventProvider(const ThreadUnsafeEpEventProvider&) = delete;
+  ThreadUnsafeEpEventProvider(ThreadUnsafeEpEventProvider&&) = delete;
+  explicit ThreadUnsafeEpEventProvider(ep::Device* device)
+      : EpEventProvider(), events_(new ThreadUnsafePoolType()), device_(device) {}
+  ~ThreadUnsafeEpEventProvider() = default;
+
+  std::shared_ptr<EpEvent> GetReusedEpEvent() override { return events_->make_shared(device_); }
+
+ private:
+  using ThreadUnsafePoolType =
+      obj_pool::ThreadUnsafeObjPool<EpEvent, obj_pool::kDisableReconstruct>;
+  std::shared_ptr<ThreadUnsafePoolType> events_;
   ep::Device* device_;
 };
 
