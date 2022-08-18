@@ -596,7 +596,6 @@ class StackFunctor {
     int64_t ndims = inputs[0]->ndim();
     int64_t stack_dim = dim;
     stack_dim = JUST(maybe_wrap_dim(stack_dim, ndims + 1));
-    if (ninput == 1) { return ExpandDims(inputs[0], dim); }
     const std::shared_ptr<const Shape>& first_in_shape = inputs[0]->shape();
     for (const auto& input : inputs) {
       for (int i = 0; i < ndims; ++i) {
@@ -615,8 +614,13 @@ class StackFunctor {
       size_t size = (i + kMaxInputCount) < ninput ? kMaxInputCount : ninput - i;
       TensorTuple partial_inputs(size);
       for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
-      outputs.emplace_back(
-          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
+      if (partial_inputs.size() == 1) {
+        // Use ExpandDims functor for only one input
+        outputs.emplace_back(JUST(functional::ExpandDims(partial_inputs[0], dim)));
+      } else {
+        outputs.emplace_back(
+            JUST(OpInterpUtil::Dispatch<Tensor>(*ops_[size - 1], partial_inputs, attrs)));
+      }
     }
     if (outputs.size() == 1) { return outputs.at(0); }
     return Concat(outputs, stack_dim);
