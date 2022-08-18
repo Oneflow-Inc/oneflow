@@ -252,6 +252,7 @@ Pointwise Ops
     floor_ 
     fmod 
     gelu
+    gelu_fast
     log 
     log1p 
     log2 

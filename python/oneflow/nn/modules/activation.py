@@ -376,6 +376,9 @@ class GELUFast(Module):
     .. math:: 
         \text{GELUFast}(x) = 0.5 * x * (1 + \text{Tanh}(input * 0.7978845608 * (1 + 0.044715 * x * x)))
 
+    Args:
+        input (oneflow.Tensor): Input Tensor
+
     Shape:
         - Input: :math:`(N, *)` where `*` means, any number of additional
           dimensions

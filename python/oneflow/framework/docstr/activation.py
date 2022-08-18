@@ -115,10 +115,18 @@ add_docstr(
 
 add_docstr(
     oneflow.gelu_fast,
-    r"""
-    gelu_fast(x: Tensor) -> Tensor
+    r"""Applies GELU approximation. See: https://github.com/hendrycks/GELUs.
     
-    Applies GELU approximation. See: https://github.com/hendrycks/GELUs.
+    .. math:: 
+        \\text{GELUFast}(x) = 0.5 * x * (1 + \\text{Tanh}(input * 0.7978845608 * (1 + 0.044715 * x * x)))
+    
+    Args:
+        input (oneflow.Tensor): Input Tensor
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
 
     For example:
 
@@ -131,8 +139,7 @@ add_docstr(
         >>> out = flow.gelu_fast(x)
         >>> out
         tensor([-0.1595,  0.0000,  0.3837], dtype=oneflow.float32)
-
-    """,
+    """
 )
 
 add_docstr(
