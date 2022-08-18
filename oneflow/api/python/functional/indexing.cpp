@@ -67,8 +67,8 @@ DataType InferScalarType(PyObject* object) {
     return numpy::NumpyTypeToOFDataType(PyArray_DescrFromScalar(object)->type_num).GetOrThrow();
   } else if (PySequence_Check(object)) {
     int64_t length = PySequence_Length(object);
+    if (length == 0) { return DataType::kInt64; }
     DataType scalar_type = DataType::kInvalidDataType;
-    if (length == 0) { scalar_type = DataType::kInt64; }
     for (int64_t i = 0; i < length; ++i) {
       PyObjectPtr item(PySequence_GetItem(object, i));
       const auto& item_scalar_type = InferScalarType(item.get());

@@ -123,7 +123,11 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
   FOR_RANGE(int64_t, i, index_ndims, params_shape.NumAxes()) {
     out_shape_vec.emplace_back(params_shape.At(i));
   }
-  *ctx->MutOutputShape("out", 0) = Shape(out_shape_vec);
+  bool IsOutofbonds =
+      std::find(params_shape.begin(), params_shape.end(), 0) != params_shape.end()
+      && std::find(out_shape_vec.begin(), out_shape_vec.end(), 0) == out_shape_vec.end();
+  CHECK_OR_RETURN(!IsOutofbonds) << Error::IndexError()
+                                 << "The index is out of bounds for dimension with size 0";
   return Maybe<void>::Ok();
 }
 
