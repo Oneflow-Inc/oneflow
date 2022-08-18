@@ -22,8 +22,6 @@ namespace oneflow {
 namespace {
 
 typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn;
-typedef std::function<Maybe<void>(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
-    GenBackwardOpConfFn;
 
 TensorDescInferFn AvgPoolMakeForwardTensorDescInferFn(const int32_t dim) {
   return [dim](user_op::InferContext* ctx) -> Maybe<void> {
