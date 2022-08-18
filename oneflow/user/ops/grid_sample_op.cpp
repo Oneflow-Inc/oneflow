@@ -142,32 +142,4 @@ Maybe<void> GridSampleGradOp::CheckAttr(const user_op::UserOpDefWrapper& def,
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("grid_sample")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("input", 0) || op.NeedGenGradTensor4OpInput("grid", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("grid_sample_grad")
-                .Input("doutput", op.GetGradTensorWithOpOutput("output", 0))
-                .Input("input", op.input("input", 0))
-                .Input("grid", op.input("grid", 0))
-                .Output("dinput")
-                .Output("dgrid")
-                .Attr("interpolation_mode", op.attr<std::string>("interpolation_mode"))
-                .Attr("padding_mode", op.attr<std::string>("padding_mode"))
-                .Attr("align_corners", op.attr<bool>("align_corners"))
-                .Build();
-
-        if (op.NeedGenGradTensor4OpInput("input", 0)) {
-          op.BindGradTensorWithOpInput(grad_op.output("dinput", 0), "input", 0);
-        }
-        if (op.NeedGenGradTensor4OpInput("grid", 0)) {
-          op.BindGradTensorWithOpInput(grad_op.output("dgrid", 0), "grid", 0);
-        }
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace oneflow
