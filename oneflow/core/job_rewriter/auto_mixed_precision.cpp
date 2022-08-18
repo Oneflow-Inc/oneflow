@@ -89,18 +89,20 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
   HashMap<std::string, std::vector<OpEdge*>> edges_group_by_lbn;
   {
     for (OpEdge* edge : white_set_edges) {
-      CHECK_EQ(1, edge->lbis().size());
-      std::string lbn = GenLogicalBlobName(edge->lbis().front());
-      edges_group_by_lbn[lbn].emplace_back(edge);
+      for (const auto& lbi : edge->lbis()) {
+        std::string lbn = GenLogicalBlobName(lbi);
+        edges_group_by_lbn[lbn].emplace_back(edge);
+      }
     }
   }
 
   HashMap<std::string, OperatorConf> dst_op_name2dst_op_confs;
   for (auto& pair : edges_group_by_lbn) {
     const std::string& lbn = pair.first;
+    LogicalBlobId cur_lbi = GenLogicalBlobId(lbn);
     OpNode* src_node = pair.second.front()->src_node();
 
-    const BlobDesc& blob_desc = src_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(lbn));
+    const BlobDesc& blob_desc = src_node->LogicalBlobDesc4Lbi(cur_lbi);
     if (blob_desc.data_type() != DataType::kFloat) { continue; }
 
     std::string cast_suffix = f2h ? "-cast_f2h" : "-cast_h2f";
@@ -117,8 +119,6 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
     for (OpEdge* edge : pair.second) {
       CHECK(src_node == edge->src_node());
       OpNode* dst_node = edge->dst_node();
-      LogicalBlobId cur_lbi = edge->lbis().front();
-      CHECK_EQ(lbn, GenLogicalBlobName(cur_lbi));
       const auto& dst_ibns = edge->lbi2ibns().at(cur_lbi);
       for (const auto& dst_ibn : dst_ibns) {
         if (dst_node->op().op_conf().has_user_conf()) {
@@ -250,12 +250,15 @@ void AutoMixedPrecision::FillWhiteSet(const OpGraph& op_graph,
                                       std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
                                       const HashSet<OpNode*>& black_set,
                                       HashSet<OpNode*>* white_set) const {
-  HashSet<OpNode*> upstream_or_part_of_white;
-  auto IsWhiteAndAllowedToRunHalf = [&](OpNode* node) {
-    return IsAllowedToRunWithHalf(node) && IsNodeInList(white_list_, node);
+  auto IsWhiteOrSinkAndAllowedToRunHalf = [&](OpNode* node) {
+    return IsAllowedToRunWithHalf(node)
+           && (IsNodeInList(white_list_, node)
+               || (node->out_edges().empty()
+                   && (IsNodeInList(gray_list_, node) || IsNodeInList(clear_list_, node))));
   };
+  HashSet<OpNode*> upstream_or_part_of_white;
   DfsTopoGraphTraversal(
-      op_graph, true, IsWhiteAndAllowedToRunHalf,
+      op_graph, true, IsWhiteOrSinkAndAllowedToRunHalf,
       [&](OpNode* node) {
         return !IsKeyFound(black_set, node) && IsAllowedToRunWithHalf(node)
                && (IsNodeInList(gray_list_, node) || IsNodeInList(clear_list_, node));
@@ -267,6 +270,9 @@ void AutoMixedPrecision::FillWhiteSet(const OpGraph& op_graph,
                 << " to upstream_or_part_of_white";
       });
 
+  auto IsWhiteAndAllowedToRunHalf = [&](OpNode* node) {
+    return IsAllowedToRunWithHalf(node) && IsNodeInList(white_list_, node);
+  };
   DfsTopoGraphTraversal(
       op_graph, false, IsWhiteAndAllowedToRunHalf,
       [&](OpNode* node) { return IsKeyFound(upstream_or_part_of_white, node); },
@@ -331,10 +337,23 @@ REGISTER_NO_CAST_REGISTRY("normalization", "moving_variance", 0)
 REGISTER_NO_CAST_REGISTRY("normalization", "gamma", 0)
 REGISTER_NO_CAST_REGISTRY("normalization", "beta", 0)
 
+REGISTER_NO_CAST_REGISTRY("normalization_grad", "gamma", 0)
+
 REGISTER_NO_CAST_REGISTRY("normalization_add_relu", "moving_mean", 0)
 REGISTER_NO_CAST_REGISTRY("normalization_add_relu", "moving_variance", 0)
 REGISTER_NO_CAST_REGISTRY("normalization_add_relu", "gamma", 0)
 REGISTER_NO_CAST_REGISTRY("normalization_add_relu", "beta", 0)
+
+REGISTER_NO_CAST_REGISTRY("normalization_add_relu_grad", "gamma", 0)
+REGISTER_NO_CAST_REGISTRY("normalization_add_relu_grad", "beta", 0)
+REGISTER_NO_CAST_REGISTRY("normalization_add_relu_grad", "mean", 0)
+REGISTER_NO_CAST_REGISTRY("normalization_add_relu_grad", "inv_variance", 0)
+REGISTER_NO_CAST_REGISTRY("normalization_add_relu_grad", "reserve_space", 0)
+
+REGISTER_NO_CAST_REGISTRY("layer_norm_grad", "mean", 0)
+REGISTER_NO_CAST_REGISTRY("layer_norm_grad", "inv_variance", 0)
+REGISTER_NO_CAST_REGISTRY("layer_norm_param_grad", "mean", 0)
+REGISTER_NO_CAST_REGISTRY("layer_norm_param_grad", "inv_variance", 0)
 
 }  // namespace
 
