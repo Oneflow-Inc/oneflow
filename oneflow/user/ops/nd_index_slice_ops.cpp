@@ -124,11 +124,10 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
     out_shape_vec.emplace_back(params_shape.At(i));
   }
   *ctx->MutOutputShape("out", 0) = Shape(out_shape_vec);
-  bool IsOutofbonds =
-      std::find(params_shape.begin(), params_shape.end(), 0) != params_shape.end()
-      && std::find(out_shape_vec.begin(), out_shape_vec.end(), 0) == out_shape_vec.end();
-  CHECK_OR_RETURN(!IsOutofbonds) << Error::IndexError()
-                                 << "The index is out of bounds for dimension with size 0";
+  bool is_out_of_bounds = (std::count(params_shape.begin(), params_shape.end(), 0) > 0)
+                          && (std::count(out_shape_vec.begin(), out_shape_vec.end(), 0) == 0);
+  CHECK_OR_RETURN(!is_out_of_bounds)
+      << Error::IndexError() << "The index is out of bounds for dimension with size 0";
   return Maybe<void>::Ok();
 }
 
