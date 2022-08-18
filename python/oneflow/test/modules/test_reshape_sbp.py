@@ -15,6 +15,7 @@ limitations under the License.
 """
 
 import unittest
+import os
 import oneflow.unittest
 import oneflow as flow
 
