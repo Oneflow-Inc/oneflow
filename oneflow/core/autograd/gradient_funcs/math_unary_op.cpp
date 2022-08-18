@@ -56,7 +56,8 @@ class UnaryMathOp : public OpExprGradFunction<UnaryMathCaptureState> {
   class op_cls##Cls final : public UnaryMathOp<functional::op_cls##Grad> {}; \
   REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, op_cls##Cls);
 
-OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS, MATH_UNARY_ELEMENTWISE_REGISTER_FUNC_SEQ);
+// OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS,
+// MATH_UNARY_ELEMENTWISE_REGISTER_FUNC_SEQ);
 OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS,
                      OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh));
 
@@ -153,6 +154,28 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_Y_CLASS,
 OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_FILL_CLASS,
                      MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_FILL_SEQ);
 #undef INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_FILL_CLASS
+
+class NegativeOp : public OpExprGradFunction<UnaryMathCaptureState> {
+  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
+
+  Maybe<void> Capture(UnaryMathCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    ctx->x_requires_grad = inputs.at(0)->requires_grad();
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const UnaryMathCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
+    in_grads->at(0) = JUST(functional::Negative(out_grads[0]));
+    ;
+    return Maybe<void>::Ok();
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> grad_op_;
+};
+REGISTER_OP_EXPR_GRAD_FUNCTION("negative", NegativeOp);
 
 }  // namespace one
 }  // namespace oneflow

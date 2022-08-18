@@ -54,8 +54,8 @@ namespace oneflow {
             return Maybe<void>::Ok();                                                          \
           });
 
-OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD,
-                     MATH_UNARY_ELEMENTWISE_REGISTER_FUNC_SEQ_ODS)
+// OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD,
+//                      MATH_UNARY_ELEMENTWISE_REGISTER_FUNC_SEQ_ODS)
 
 #define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_X(math_unary_elementwise_type,     \
                                                               func_prefix)                     \
@@ -78,8 +78,8 @@ OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD,
             return Maybe<void>::Ok();                                                          \
           });
 
-OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_X, MATH_UNARY_ELEMENTWISE_PRIMITIVE_FUNC_BWD_WITH_DY_X_SEQ)
-
+OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_X,
+                     MATH_UNARY_ELEMENTWISE_PRIMITIVE_FUNC_BWD_WITH_DY_X_SEQ)
 
 #define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_Y(math_unary_elementwise_type,     \
                                                               func_prefix)                     \
@@ -103,11 +103,30 @@ OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_X, MATH
           });
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_Y,
-                     MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_DY_Y_ODS_SEQ)
+                     MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_DY_Y_SEQ)
 
-#define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_FILL(math_unary_elementwise_type, func_prefix)      \
+#define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_FILL(math_unary_elementwise_type, \
+                                                              func_prefix)                 \
   MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##Op)
 
-OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_FILL, MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_FILL_SEQ)
+OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_FILL,
+                     MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_FILL_SEQ)
+
+// Negative's grad function = negative(dy)
+MATH_ELEMENTWISE_DEFAULT_SET_FUNC(NegativeOp)
+REGISTER_USER_OP_GRAD("negative")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
+      if (op.NeedGenGradTensor4OpInput("x", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper grad_op = builder.Op("negative")
+                                                 .Input("x", op.GetGradTensorWithOpOutput("y", 0))
+                                                 .Output("y")
+                                                 .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("y", 0), "x", 0);
+        AddOp(grad_op);
+      }
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace oneflow

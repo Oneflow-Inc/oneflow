@@ -31,7 +31,7 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("sin", InplaceSin) \
   OF_PP_MAKE_TUPLE_SEQ("floor", InplaceFloor)
 
-#define UNARY_PRIMITIVE_FUNC_SEQ \
+#define UNARY_PRIMITIVE_FUNC_SEQ                             \
   OF_PP_MAKE_TUPLE_SEQ("abs", Abs)                           \
   OF_PP_MAKE_TUPLE_SEQ("acos", Acos)                         \
   OF_PP_MAKE_TUPLE_SEQ("acosh", Acosh)                       \
@@ -49,7 +49,7 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("Lgamma", Lgamma)                     \
   OF_PP_MAKE_TUPLE_SEQ("log2", Log2)                         \
   OF_PP_MAKE_TUPLE_SEQ("log1p", Log1p)                       \
-  OF_PP_MAKE_TUPLE_SEQ("log_sigmoid", LogSigmoid)             \
+  OF_PP_MAKE_TUPLE_SEQ("log_sigmoid", LogSigmoid)            \
   OF_PP_MAKE_TUPLE_SEQ("reciprocal", Reciprocal)             \
   OF_PP_MAKE_TUPLE_SEQ("reciprocal_no_nan", ReciprocalNoNan) \
   OF_PP_MAKE_TUPLE_SEQ("rsqrt", Rsqrt)                       \
@@ -59,8 +59,7 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("square", Square)                     \
   OF_PP_MAKE_TUPLE_SEQ("tan", Tan)
 
-#define FLOAT_UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_Y_SEQ                     \
-  OF_PP_MAKE_TUPLE_SEQ("sigmoid", Sigmoid)    
+#define FLOAT_UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_Y_SEQ OF_PP_MAKE_TUPLE_SEQ("sigmoid", Sigmoid)
 
 #define UNARY_FUNC_GRAD_WITH_FILL_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ("sign", Sign)                   \
@@ -69,7 +68,6 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("round", Round)                 \
   OF_PP_MAKE_TUPLE_SEQ("floor", Floor)                 \
   OF_PP_MAKE_TUPLE_SEQ("ceil", Ceil)
-
 
 // #define UNARY_FUNC_SEQ                                       \
 //   OF_PP_MAKE_TUPLE_SEQ("ceil", Ceil)                         \
@@ -82,7 +80,7 @@ namespace impl {
 //   OF_PP_MAKE_TUPLE_SEQ("cosh", Cosh)                         \
 //   OF_PP_MAKE_TUPLE_SEQ("lgamma", Lgamma)                     \
 //   OF_PP_MAKE_TUPLE_SEQ("log_sigmoid", LogSigmoid)            \
-//   OF_PP_MAKE_TUPLE_SEQ("reciprocal_no_nan", ReciprocalNoNan) 
+//   OF_PP_MAKE_TUPLE_SEQ("reciprocal_no_nan", ReciprocalNoNan)
 
 // #define FLOAT_UNARY_FUNC_SEQ                     \
 //   OF_PP_MAKE_TUPLE_SEQ("acosh", Acosh)           \
@@ -111,11 +109,9 @@ namespace impl {
 //   OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)             \
 //   OF_PP_MAKE_TUPLE_SEQ("not_equal_zero", NotEqualZero)
 
-
-#define FLOAT_UNARY_FUNC_SEQ                     \
-  OF_PP_MAKE_TUPLE_SEQ("negative", Negative)     \
-  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)             
-
+#define FLOAT_UNARY_FUNC_SEQ                 \
+  OF_PP_MAKE_TUPLE_SEQ("negative", Negative) \
+  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)
 
 #define LOGICAL_FLOAT_UNARY_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("logical_not", LogicalNot)
 
@@ -180,7 +176,7 @@ namespace impl {
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, UnaryFunctor) \
   UNARY_ELEMENTWISE_GRAD_WITH_DY_X_FUNCTOR(op_type_name, class_name, BinaryFunctor)
 
-#define FLOAT_UNARY_WITH_DY_Y_FUNCTORS(op_type_name, class_name)          \
+#define FLOAT_UNARY_WITH_DY_Y_FUNCTORS(op_type_name, class_name)         \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, FloatUnaryFunctor) \
   UNARY_ELEMENTWISE_GRAD_WITH_DY_Y_FUNCTOR(op_type_name, class_name, BinaryFunctor)
 
@@ -222,14 +218,14 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
 
   // ADD_UNARY_FUNCTOR(Ceil, "Ceil");
   m.add_functor<CeilFunctor>("Ceil");
-  
+
   ADD_UNARY_FUNCTOR_WITH_DY_X(Cos, "Cos");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Cosh, "Cosh");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Erf, "Erf");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Erfc, "Erfc");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Exp, "Exp");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Expm1, "Expm1");
-  
+
   // ADD_UNARY_FUNCTOR(Floor, "Floor");
   m.add_functor<FloorFunctor>("Floor");
 
@@ -249,8 +245,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<RintFunctor>("Rint");
   m.add_functor<RoundFunctor>("Round");
 
-
-
   ADD_UNARY_FUNCTOR_WITH_DY_X(Rsqrt, "Rsqrt");
   ADD_UNARY_FUNCTOR_WITH_DY_Y(Sigmoid, "Sigmoid");
 
@@ -266,7 +260,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   // ADD_UNARY_FUNCTOR(NotEqualZero, "NotEqualZero")
   m.add_functor<NotEqualZeroFunctor>("NotEqualZero");
 
-  
   m.add_functor<LogicalNotFunctor>("LogicalNot");
   m.add_functor<InplaceSinFunctor>("Sin_");
   m.add_functor<InplaceFloorFunctor>("Floor_");
