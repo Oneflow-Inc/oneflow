@@ -18,17 +18,7 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_FRAMEWORK_TYPEINFO_H_
 
 #include <Python.h>
-#include <object.h>
-#include "oneflow/api/python/exception/exception.h"
-#include "oneflow/api/python/framework/size.h"
-#include "oneflow/api/python/functional/common.h"
-#include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
-#include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/framework/dtype.h"
-#include "oneflow/core/functional/functional.h"
-#include "oneflow/core/common/shape.h"
-#include "oneflow/core/common/wrap_dim_utils.h"
 
 namespace oneflow {
 namespace one {

@@ -19,12 +19,6 @@ limitations under the License.
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/framework/typeinfo.h"
-#include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/symbol.h"
-#include "oneflow/core/common/throw.h"
-#include "oneflow/core/framework/dtype.h"
 
 namespace oneflow {
 namespace one {
@@ -236,7 +230,8 @@ static PyObject* PyIInfo_str(PyObject* self) {
 static PyObject* PyFInfo_str(PyObject* self) {
   HANDLE_ERRORS
   std::ostringstream oss;
-  oss << "finfo(resolution=" << PyFloat_AS_DOUBLE(PyFInfo_resolution((PyObject*)self, NULL)) << ", ";
+  oss << "finfo(resolution=" << PyFloat_AS_DOUBLE(PyFInfo_resolution((PyObject*)self, NULL))
+      << ", ";
   oss << "min=" << PyFloat_AS_DOUBLE(PyFInfo_min((PyObject*)self, NULL)) << ", ";
   oss << "max=" << PyFloat_AS_DOUBLE(PyFInfo_max((PyObject*)self, NULL)) << ", ";
   oss << "eps=" << PyFloat_AS_DOUBLE(PyFInfo_eps((PyObject*)self, NULL)) << ", ";
@@ -294,3 +289,12 @@ ONEFLOW_API_PYBIND11_MODULE("_C", m) {
 }  // namespace oneflow
 #undef ASSERT
 #undef ASSERT_PTR
+#undef GET_INT_MAX_VAL
+#undef GET_INT_MIN_VAL
+#undef GET_FLOAT_MAX_VAL
+#undef GET_FLOAT_MIN_VAL
+#undef GET_FLOAT_RESOLUTION
+#undef GET_FLOAT_EPS
+#undef GET_FLOAT_TINY
+#undef INT_TYPE
+#undef FLOAT_TYPE
