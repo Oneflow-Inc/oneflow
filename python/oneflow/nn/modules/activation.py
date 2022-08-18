@@ -396,7 +396,7 @@ class GELUFast(Module):
 
     def __init__(self):
         super().__init__()
-    
+
     def forward(self, input):
         return flow._C.gelu_fast(input)
 
