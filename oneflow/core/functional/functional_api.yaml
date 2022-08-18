@@ -1097,11 +1097,11 @@
   bind_python: True
 
 - name: "l1_loss"
-  signature: "Tensor(Tensor input, Tensor target, String reduction) => L1Loss"
+  signature: "Tensor(Tensor input, Tensor target, String reduction=\"mean\") => L1Loss"
   bind_python: True
 
 - name: "mse_loss"
-  signature: "Tensor(Tensor input, Tensor target, String reduction) => MseLoss"
+  signature: "Tensor(Tensor input, Tensor target, String reduction=\"mean\") => MseLoss"
   bind_python: True
 
 - name: "kl_div_loss"
@@ -1294,7 +1294,7 @@
   bind_python: False
 
 - name: "layer_norm_param_grad"
-  signature: "TensorTuple (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Int64 begin_params_axis, Double epsilon) => LayerNormParamGrad"
+  signature: "TensorTuple (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Int64 begin_params_axis) => LayerNormParamGrad"
   bind_python: False
 
 - name: "avg_pool2d_nhwc"
@@ -1722,13 +1722,27 @@
   bind_python: True
 
 - name: "clamp"
-  signature:
-    ["Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clamp"]
+  signature: "Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clamp"
   bind_python: true
 
 - name: "clamp_"
-  signature:
-    ["Tensor (Tensor input, Scalar min=None, Scalar max=None) => ClampInplace"]
+  signature: "Tensor (Tensor input, Scalar min=None, Scalar max=None) => ClampInplace"
+  bind_python: true
+
+- name: "clamp_min"
+  signature: "Tensor (Tensor input, Scalar min) => ClampMin"
+  bind_python: true
+
+- name: "clamp_min_"
+  signature: "Tensor (Tensor input, Scalar min) => ClampMinInplace"
+  bind_python: true
+
+- name: "clamp_max"
+  signature: "Tensor (Tensor input, Scalar max) => ClampMax"
+  bind_python: true
+
+- name: "clamp_max_"
+  signature: "Tensor (Tensor input, Scalar min) => ClampMaxInplace"
   bind_python: true
 
 - name: "clip"
@@ -1769,6 +1783,10 @@
       "Tensor (Tensor input, Scalar ord=None, Scalar dim, Bool keepdim=False, *, DataType dtype=None) => ScalarNorm",
       "Tensor (Tensor input, String ord, Scalar dim, Bool keepdim=False, *, DataType dtype=None) => ScalarNorm",
     ]
+  bind_python: True
+
+- name: "inv"
+  signature: "Tensor (Tensor x) => Inv"
   bind_python: True
 
 - name: "dropout"
@@ -2120,6 +2138,10 @@
 
 - name: "split_like"
   signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => SplitLike"
+  bind_python: True
+
+- name: "pairwise_distance"
+  signature: "Tensor (Tensor x1, Tensor x2, Float p=2.0, Double eps=1e-6, Bool keepdim=False) => PairwiseDistance"
   bind_python: True
 
 - name: "cosine_similarity"

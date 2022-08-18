@@ -20,6 +20,7 @@ limitations under the License.
 #include <string>
 
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/job/scope.h"
 
 namespace oneflow {
 
@@ -41,6 +42,8 @@ Maybe<void> SyncAccessTensorWithTimeOut(
     const std::string& modifier);
 
 Maybe<void> CopyLocalTensorDataTo(const std::shared_ptr<Tensor>& input, void* mem_ptr, size_t size);
+
+Maybe<Scope> GetTensorScope(const std::shared_ptr<Tensor>& tensor);
 
 }  // namespace one
 }  // namespace oneflow

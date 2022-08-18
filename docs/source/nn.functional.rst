@@ -115,6 +115,7 @@ Distance functions
     :nosignatures:
 
     cosine_similarity
+    pairwise_distance
 
 
 Loss functions
@@ -126,6 +127,8 @@ Loss functions
 
     sparse_softmax_cross_entropy
     cross_entropy
+    l1_loss
+    mse_loss
     smooth_l1_loss
     triplet_margin_loss
     binary_cross_entropy

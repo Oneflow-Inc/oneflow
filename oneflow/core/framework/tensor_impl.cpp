@@ -231,8 +231,8 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
 }
 
 Maybe<GlobalTensorImpl> EagerGlobalTensorImpl::detach() const {
-  auto detached_impl = JUST(EagerGlobalTensorImpl::New(tensor_meta_, false, true));
-  detached_impl->cur_rank_phy_tensor_ = cur_rank_phy_tensor_;
+  auto detached_impl = std::shared_ptr<EagerGlobalTensorImpl>(
+      new EagerGlobalTensorImpl(tensor_meta_, false, true, cur_rank_phy_tensor_));
   detached_impl->consumer_nd_sbp_constraint_ = consumer_nd_sbp_constraint_;
   detached_impl->transport_token_ = transport_token_;
   return std::shared_ptr<GlobalTensorImpl>(detached_impl);

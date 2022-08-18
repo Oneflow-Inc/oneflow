@@ -54,15 +54,6 @@ message CopyCommNetOpConf {
   required LogicalBlobId lbi = 2;
 }
 
-message CopyHdOpConf {
-  enum Type {
-    H2D = 0;
-    D2H = 1;
-  }
-  required Type type = 1;
-  required LogicalBlobId lbi = 2;
-}
-
 message BoxConcatConf {
   required int32 axis = 1;
 }
@@ -408,7 +399,6 @@ message OperatorConf {
   optional string loc = 11 [default = ""];
   oneof op_type {
     // system op
-    CopyHdOpConf copy_hd_conf = 105;
     CopyCommNetOpConf copy_comm_net_conf = 106;
     BoxingOpConf boxing_conf = 108;
     VariableOpConf variable_conf = 122;
@@ -462,7 +452,7 @@ message OperatorConf {
     BroadcastToCompatibleWithOpConf broadcast_to_compatible_with_conf = 525;
 
     // NOTE(chengcheng): Lazy 1.0 system ops.
-    //   Feed EagerTensor to interface op. 
+    //   Feed EagerTensor to interface op.
     //   Note that FeedxxOp just for build CustomOpExpr, and has NO operator impl.
     FeedInputOpConf feed_input_conf = 600;
     FeedVariableOpConf feed_variable_conf = 601;
