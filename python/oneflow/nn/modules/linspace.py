@@ -83,7 +83,8 @@ def linspace_op(
             )
         if flow.is_floating_point(steps):
             raise TypeError(
-                "linspace(): argument 'steps' must be int, not Tensor(with dtype:"
+                "linspace(): argument 'steps' (position 3) must be int, not Tensor (with dtype: "
+
                 + str(steps.dtype)
                 + ")"
             )
