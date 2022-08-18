@@ -82,12 +82,6 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                            Symbol<Stream> stream);
 
   template<typename T>
-  Maybe<void> SyncAccessBlobByCallback(
-      const T tensor, const std::shared_ptr<BlockingThenBusy>& btb,
-      const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& Callback,
-      const std::string& modifier);
-
-  template<typename T>
   Maybe<void> AccessBlobByCallback(
       const T tensor,
       const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& callback,
@@ -164,6 +158,11 @@ Maybe<void> PhysicalRun(const CallbackT& Build) {
   JUST(vm::Run(instructions_builder.mut_instruction_list()));
   return Maybe<void>::Ok();
 }
+
+template<typename T>
+Maybe<void> SyncAccessBlobByCallback(
+    const T tensor,
+    const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& Callback);
 
 }  // namespace oneflow
 

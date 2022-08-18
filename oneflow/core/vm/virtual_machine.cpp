@@ -22,6 +22,8 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/allocator.h"
+#include "oneflow/core/vm/ep_stream_policy_base.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/singleton_ptr.h"
@@ -289,6 +291,53 @@ class MultiThreadScheduleCtx : public vm::ScheduleCtx {
 
 }  // namespace
 
+Maybe<void> VirtualMachine::SyncAccessBlobByCallback(
+    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object, Symbol<Device> device,
+    const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& Callback) {
+  // Do not use producer_stream or last_used_stream.
+  // Bug case when using producer_stream or last_used_stream:
+  //
+  // ```python
+  // tensor = oneflow.ones((1024, 1024, 1024), device='cuda').cpu()
+  // ndarray = tensor.numpy() # share memory
+  //
+  // ```
+  // `ndarray` may not be ones because instruction AccessBlobByCallback is prescheduled before
+  // oneflow.ones actually finished.
+  Symbol<Stream> stream = JUST(GetDefaultStreamByDevice(device));
+  auto* vm_stream = JUST(GetVmStream(stream));
+  auto* stream_policy_base = vm_stream->mut_stream_policy();
+  auto* ep_stream_policy_base = dynamic_cast<vm::EpStreamPolicyBase*>(stream_policy_base);
+  CHECK_NOTNULL_OR_RETURN(ep_stream_policy_base) << "fatal error! the tensor is not on ep stream";
+  const auto NoPendingInstructions = [&] {
+    return engine_->pending_instruction_list().thread_unsafe_size() == 0
+           && engine_->local_pending_instruction_list().empty();
+  };
+  const auto AllAccessFinished = [&]() -> Maybe<bool> {
+    auto* dep = JUST(eager_blob_object->compute_local_dep_object());
+    return dep->mut_access_list()->size() == 0;
+  };
+  {
+    MultiThreadScheduleCtx schedule_ctx{};
+    std::unique_lock<std::mutex> lock(scheduler_mutex_);
+    while (!NoPendingInstructions()) { engine_->Schedule(schedule_ctx); }
+    while (!(JUST(AllAccessFinished()) && vm_stream->active_stream_hook().empty())) {
+      if (!Schedule(schedule_ctx)) { std::this_thread::yield(); }
+    }
+    eager_blob_object->InitOrCheckMemPtrForAllocationComputationPipelining();
+    Callback(ep_stream_policy_base->stream(), eager_blob_object);
+  }
+  return Maybe<void>::Ok();
+}
+
+bool VirtualMachine::Schedule(const vm::ScheduleCtx& schedule_ctx) {
+  size_t total_inserted = engine_->total_inserted_instruction_cnt();
+  size_t total_erased = engine_->total_erased_instruction_cnt();
+  engine_->Schedule(schedule_ctx);
+  return total_inserted != engine_->total_inserted_instruction_cnt()
+         || total_erased != engine_->total_erased_instruction_cnt();
+}
+
 void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
   SyncVmModeGuard guard(SyncVmMode::kEnable);
   Initializer();
@@ -313,12 +362,13 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
       // used
       //  here, because VirtualMachine::ScheduleLoop is more likely to get the mutex lock.
       do {
-        const size_t total_inserted = engine_->total_inserted_instruction_cnt();
-        const size_t total_erased = engine_->total_erased_instruction_cnt();
-        engine_->Schedule(schedule_ctx);
+        const bool instructions_erased_or_inserted = [&] {
+          std::unique_lock<std::mutex> lock(scheduler_mutex_);
+          return Schedule(schedule_ctx);
+        }();
         if (ThreadLocalEnvBool<ONEFLOW_VM_ENABLE_SCHEDULE_YIELD>()
-            && total_inserted == engine_->total_inserted_instruction_cnt()
-            && total_erased == engine_->total_erased_instruction_cnt()) {  // nothing handled.
+            && !instructions_erased_or_inserted) {
+          // nothing handled.
           std::this_thread::yield();
         }
       } while (!engine_->SchedulerThreadUnsafeEmpty());

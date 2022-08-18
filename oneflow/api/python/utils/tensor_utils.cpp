@@ -103,13 +103,8 @@ MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
   std::vector<Shape> shapes;
   std::vector<Symbol<DType>> dtypes;
 
-  auto btb = std::make_shared<BlockingThenBusy>(1);
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->SyncAccessBlobByCallback(
-        tensor, btb, [](ep::Stream* stream, const std::shared_ptr<vm::EagerBlobObject>&) {},
-        "const");
-  }));
-  JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+  JUST(SyncAccessBlobByCallback(
+      tensor, [](ep::Stream* stream, const std::shared_ptr<vm::EagerBlobObject>&) {}));
 
   const auto& eager_blob_object = JUST(tensor->eager_blob_object());
   const Shape& blob_shape = eager_blob_object->shape();

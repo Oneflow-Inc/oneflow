@@ -77,11 +77,7 @@ inline static Maybe<PyObject*> EagerLocalTensorToNumpy(PyObject* py_tensor) {
                              const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
     data_ptr = eager_blob_object->mut_dptr<T>();
   };
-  auto btb = std::make_shared<BlockingThenBusy>(1);
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->SyncAccessBlobByCallback(tensor, btb, Callback, "mut");
-  }));
-  JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+  JUST(SyncAccessBlobByCallback(tensor, Callback));
   return py::array(py::buffer_info(data_ptr, sizeof(T), py::format_descriptor<T>::format(), ndim,
                                    shape, stride),
                    handle)
@@ -105,11 +101,7 @@ inline Maybe<void> CopyBetweenLocalTensorAndNumpy(
                                const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
       Copy(stream, eager_blob_object, array_ptr);
     };
-    auto btb = std::make_shared<BlockingThenBusy>(1);
-    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(tensor, btb, Callback, modifier);
-    }));
-    JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+    JUST(SyncAccessBlobByCallback(tensor, Callback));
   } else {
     Py_INCREF(array);
     NumPyArrayPtr array_ptr(array, [array]() {
