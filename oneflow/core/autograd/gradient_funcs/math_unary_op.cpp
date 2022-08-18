@@ -62,7 +62,8 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS,
 
 #undef INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS
 
-class AbsOp : public OpExprGradFunction<UnaryMathCaptureState> {
+template<UnaryBwFunc BwFunc>
+class UnaryMathBwdWithDyXOp : public OpExprGradFunction<UnaryMathCaptureState> {
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
   Maybe<void> Capture(UnaryMathCaptureState* ctx, const TensorTuple& inputs,
@@ -76,7 +77,7 @@ class AbsOp : public OpExprGradFunction<UnaryMathCaptureState> {
                     TensorTuple* in_grads) const override {
     if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
     const auto& x = ctx->SavedTensors().at(0);
-    in_grads->at(0) = JUST(functional::AbsGrad(x, out_grads[0]));
+    in_grads->at(0) = JUST(BwFunc(x, out_grads.at(0)));
     return Maybe<void>::Ok();
   }
 
@@ -84,7 +85,74 @@ class AbsOp : public OpExprGradFunction<UnaryMathCaptureState> {
   std::shared_ptr<OpExpr> grad_op_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("abs", AbsOp);
+template<UnaryBwFunc BwFunc>
+class UnaryMathBwdWithDyYOp : public OpExprGradFunction<UnaryMathCaptureState> {
+  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
+
+  Maybe<void> Capture(UnaryMathCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    ctx->x_requires_grad = inputs.at(0)->requires_grad();
+    ctx->SaveTensorForBackward(outputs.at(0));
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const UnaryMathCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
+    const auto& y = ctx->SavedTensors().at(0);
+    in_grads->at(0) = JUST(BwFunc(y, out_grads.at(0)));
+    return Maybe<void>::Ok();
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> grad_op_;
+};
+
+class UnaryMathBwdWithFillOp : public OpExprGradFunction<UnaryMathCaptureState> {
+  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
+
+  Maybe<void> Capture(UnaryMathCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    ctx->x_requires_grad = inputs.at(0)->requires_grad();
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const UnaryMathCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
+    in_grads->at(0) = JUST(functional::Fill(out_grads[0], 0));
+    ;
+    return Maybe<void>::Ok();
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> grad_op_;
+};
+
+#define INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_X_CLASS(op_type_name, op_cls)     \
+  class op_cls##Cls final : public UnaryMathBwdWithDyXOp<functional::op_cls##Grad> {}; \
+  REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, op_cls##Cls);
+
+OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_X_CLASS,
+                     OF_PP_MAKE_TUPLE_SEQ("abs", Abs));
+
+#undef INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_X_CLASS
+
+// #define INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_Y_CLASS(op_type_name, op_cls)     \
+//   class op_cls##Cls final : public UnaryMathBwdWithDyYOp<functional::op_cls##Grad> {}; \
+//   REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, op_cls##Cls);
+
+// OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_Y_CLASS,
+//                      MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_DY_Y_SEQ);
+// #undef INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_Y_CLASS
+
+// #define INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_FILL_CLASS(op_type_name, op_cls)     \
+//   class op_cls##Cls final : public UnaryMathBwdWithDyYOp<functional::op_cls##Grad> {}; \
+//   REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, UnaryMathBwdWithFillOp);
+
+// OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_FILL_CLASS,
+//                      MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_FILL_SEQ);
+// #undef INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_FILL_CLASS
 
 }  // namespace one
 }  // namespace oneflow
