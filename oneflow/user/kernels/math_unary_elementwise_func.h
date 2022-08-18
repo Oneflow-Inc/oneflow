@@ -43,22 +43,22 @@ namespace oneflow {
 
 OF_PP_FOR_EACH_TUPLE(DECLARE_UNARY_FUNCTOR, MATH_UNARY_ELEMENTWISE_FUNC_SEQ)
 
-// template<typename T>
-// struct AbsFunctor {
-//   static OF_DEVICE_FUNC T Forward(const T x) {
-//     if (x == T(0))
-//       return T(0);
-//     else
-//       return x < T(0) ? -x : x;
-//   }
+template<typename T>
+struct AbsFunctor {
+  static OF_DEVICE_FUNC T Forward(const T x) {
+    if (x == T(0))
+      return T(0);
+    else
+      return x < T(0) ? -x : x;
+  }
 
-//   static OF_DEVICE_FUNC T Backward(const T x, const T dy) {
-//     if (x == T(0))
-//       return T(0);
-//     else
-//       return x < T(0) ? -dy : dy;
-//   }
-// };
+  static OF_DEVICE_FUNC T Backward(const T x, const T dy) {
+    if (x == T(0))
+      return T(0);
+    else
+      return x < T(0) ? -dy : dy;
+  }
+};
 
 template<typename T>
 struct SignFunctor {
@@ -659,16 +659,16 @@ struct TanFunctor<double> {
 #define HALF_VAL_TWO __float2half(2.0f)
 #define HALF_VAL_2RSQRT_PI __float2half(1.1283791671f)
 
-// template<>
-// struct AbsFunctor<half> {
-//   static OF_HALF_FUNC half Forward(const half x) {
-//     return __hlt(x, GetZeroVal<half>()) ? __hneg(x) : x;
-//   }
+template<>
+struct AbsFunctor<half> {
+  static OF_HALF_FUNC half Forward(const half x) {
+    return __hlt(x, GetZeroVal<half>()) ? __hneg(x) : x;
+  }
 
-//   static OF_HALF_FUNC half Backward(const half x, const half dy) {
-//     return __hlt(x, GetZeroVal<half>()) ? __hneg(dy) : dy;
-//   }
-// };
+  static OF_HALF_FUNC half Backward(const half x, const half dy) {
+    return __hlt(x, GetZeroVal<half>()) ? __hneg(dy) : dy;
+  }
+};
 
 template<>
 struct AcosFunctor<half> {

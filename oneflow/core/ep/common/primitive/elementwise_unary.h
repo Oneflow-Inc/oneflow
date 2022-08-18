@@ -42,7 +42,9 @@ namespace primitive {
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSoftPlus)    \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kTanh)        \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kThreshold)   \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAbs)
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAbs)         \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAcos)         
+
 
 #define UNARY_LOGICAL_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLogicalNot)
 

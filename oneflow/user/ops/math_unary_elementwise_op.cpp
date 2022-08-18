@@ -54,7 +54,7 @@ namespace oneflow {
           });
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD,
-                     MATH_UNARY_ELEMENTWISE_FUNC_SEQ_ODS)
+                     MATH_UNARY_ELEMENTWISE_REGISTER_FUNC_SEQ_ODS)
 
 #define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_X(math_unary_elementwise_type,     \
                                                               func_prefix)                     \
@@ -78,6 +78,6 @@ OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD,
           });
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_X,
-                     OF_PP_MAKE_TUPLE_SEQ("abs", Abs))
+                     MATH_UNARY_ELEMENTWISE_PRIMITIVE_FUNC_BWD_WITH_DY_X_SEQ)
 
 }  // namespace oneflow

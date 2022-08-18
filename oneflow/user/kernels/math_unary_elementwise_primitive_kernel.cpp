@@ -32,10 +32,14 @@ limitations under the License.
 namespace oneflow {
 
 #define MATH_UNARY_ELEMENTWISE_PRIMITIVE_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ("abs", ep::primitive::UnaryOp::kAbs)
+  OF_PP_MAKE_TUPLE_SEQ("abs", ep::primitive::UnaryOp::kAbs) \
+  OF_PP_MAKE_TUPLE_SEQ("acos", ep::primitive::UnaryOp::kAcos) 
+
 
 #define MATH_UNARY_ELEMENTWISE_GRAD_WITH_DY_X_PRIMITIVE_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ("abs_grad", ep::primitive::BinaryOp::kAbsBackwardWithDyX)
+  OF_PP_MAKE_TUPLE_SEQ("abs_grad", ep::primitive::BinaryOp::kAbsBackwardWithDyX) \
+  OF_PP_MAKE_TUPLE_SEQ("acos_grad", ep::primitive::BinaryOp::kAcosBackwardWithDyX) 
+
 
 #define REGISTER_MATH_UNARY_PRIMITIVE_KERNEL(name, UnaryOp)                               \
   REGISTER_USER_KERNEL(name)                                                              \

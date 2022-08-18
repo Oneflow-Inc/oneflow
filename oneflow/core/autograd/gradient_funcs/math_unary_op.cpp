@@ -56,7 +56,7 @@ class UnaryMathOp : public OpExprGradFunction<UnaryMathCaptureState> {
   class op_cls##Cls final : public UnaryMathOp<functional::op_cls##Grad> {}; \
   REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, op_cls##Cls);
 
-OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS, MATH_UNARY_ELEMENTWISE_FUNC_SEQ);
+OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS, MATH_UNARY_ELEMENTWISE_REGISTER_FUNC_SEQ);
 OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS,
                      OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh));
 
@@ -134,7 +134,7 @@ class UnaryMathBwdWithFillOp : public OpExprGradFunction<UnaryMathCaptureState> 
   REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, op_cls##Cls);
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_X_CLASS,
-                     OF_PP_MAKE_TUPLE_SEQ("abs", Abs));
+                     MATH_UNARY_ELEMENTWISE_PRIMITIVE_FUNC_BWD_WITH_DY_X_SEQ);
 
 #undef INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_X_CLASS
 

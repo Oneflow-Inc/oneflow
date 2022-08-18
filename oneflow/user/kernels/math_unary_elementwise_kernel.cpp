@@ -76,7 +76,7 @@ class MathUnaryElementwiseGradCpuKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,
-                                 MATH_UNARY_ELEMENTWISE_FUNC_SEQ, FLOATING_DATA_TYPE_SEQ)
+                                 MATH_UNARY_ELEMENTWISE_REGISTER_FUNC_SEQ, FLOATING_DATA_TYPE_SEQ)
 
 // For some special dtype kernel register.
 // OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,
