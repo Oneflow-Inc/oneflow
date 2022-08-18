@@ -86,10 +86,10 @@ class DivGradGrad : public OpExprGradFunction<DivGradGradCaptureState> {
       const auto& grad = ctx->SavedTensors().at(ctx->grad_index);
       in_grads->at(2) = JUST(
           functional::sequence_function(functional::Mul)
-              .then(std::bind(functional::Mul, std::placeholders::_1, z))
               .then(std::bind(functional::BroadcastReduceSumLike, std::placeholders::_1, y))
+              .then(std::bind(functional::Mul, std::placeholders::_1, out_grads.at(0)))
               .then(std::bind(functional::Div, std::placeholders::_1, JUST(functional::Square(y))))
-              .call(out_grads.at(0), grad));
+              .call(z, grad));
     }
 
     return Maybe<void>::Ok();
