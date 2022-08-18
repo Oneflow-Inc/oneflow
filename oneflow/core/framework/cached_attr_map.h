@@ -18,9 +18,9 @@ limitations under the License.
 
 #include "llvm/ADT/StringRef.h"
 
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/small_vector.h"
 #include "oneflow/core/common/symbol.h"
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
@@ -57,44 +57,17 @@ class CachedMutableAttrMap {
     return attrs_;
   }
 
-  void reset() {
+  inline void reset() {
     hash_value_ = 0;
     // mark all cached attributes as illegal values
     memset(valid_masks_.data(), 0, count_);
   }
 
   template<typename T>
-  void SetAttr(const char* attr_name, const T& attr_val) {
-    auto it = name_indices_.find(attr_name);
-    if (it == name_indices_.end()) {
-      if (count_ >= attrs_.size()) { InternalEnlarge(); }
-      attrs_[count_] = std::make_shared<user_op::TypedAttrVal<T>>(attr_val);
-      valid_masks_[count_] = true;
-      (*attr_names_)[count_] = attr_name;
-      it = name_indices_.emplace((*attr_names_)[count_], count_).first;
-      ++count_;
-    } else {
-      if (/*attrs_[i].v->value_type() != user_op::GetAttrType<T>::value ||*/
-          *static_cast<const T*>(attrs_[it->second]->Ptr()) != attr_val) {
-        attrs_[it->second] = std::make_shared<user_op::TypedAttrVal<T>>(attr_val);
-      }
-      valid_masks_[it->second] = true;
-    }
-    HashCombine(&hash_value_, (*attr_names_)[it->second].size());
-    HashCombine(&hash_value_, std::hash<T>()(attr_val));
-  }
+  inline void SetAttr(const char* attr_name, const T& attr_val);
 
  private:
-  void InternalEnlarge() {
-    size_t capacity = count_ * 2;
-    valid_masks_.resize(capacity);
-    attrs_.resize(capacity);
-    // expand `attr_names_`
-    auto attr_names = std::make_shared<small_vector<std::string, kInitializedSize>>();
-    attr_names->resize(capacity);
-    std::copy(attr_names_->begin(), attr_names_->end(), attr_names->begin());
-    attr_names_ = std::move(attr_names);
-  }
+  inline void InternalEnlarge();
 
   // the actually count of all attributes
   size_t count_;
@@ -113,6 +86,38 @@ class CachedMutableAttrMap {
   small_vector<bool, kInitializedSize> valid_masks_;
   small_vector<std::shared_ptr<user_op::AttrVal>, kInitializedSize> attrs_;
 };
+
+template<typename T>
+void CachedMutableAttrMap::SetAttr(const char* attr_name, const T& attr_val) {
+  auto it = name_indices_.find(attr_name);
+  if (it == name_indices_.end()) {
+    if (count_ >= attrs_.size()) { InternalEnlarge(); }
+    attrs_[count_] = std::make_shared<user_op::TypedAttrVal<T>>(attr_val);
+    valid_masks_[count_] = true;
+    (*attr_names_)[count_] = attr_name;
+    it = name_indices_.emplace((*attr_names_)[count_], count_).first;
+    ++count_;
+  } else {
+    if (/*attrs_[i].v->value_type() != user_op::GetAttrType<T>::value ||*/
+        *static_cast<const T*>(attrs_[it->second]->Ptr()) != attr_val) {
+      attrs_[it->second] = std::make_shared<user_op::TypedAttrVal<T>>(attr_val);
+    }
+    valid_masks_[it->second] = true;
+  }
+  HashCombine(&hash_value_, (*attr_names_)[it->second].size());
+  HashCombine(&hash_value_, std::hash<T>()(attr_val));
+}
+
+void CachedMutableAttrMap::InternalEnlarge() {
+  size_t capacity = count_ * 2;
+  valid_masks_.resize(capacity);
+  attrs_.resize(capacity);
+  // expand `attr_names_`
+  auto attr_names = std::make_shared<small_vector<std::string, kInitializedSize>>();
+  attr_names->resize(capacity);
+  std::copy(attr_names_->begin(), attr_names_->end(), attr_names->begin());
+  attr_names_ = std::move(attr_names);
+}
 
 }  // namespace oneflow
 
