@@ -93,6 +93,7 @@ from oneflow._C import logical_or
 from oneflow._C import logical_xor
 from oneflow._C import logical_not
 from oneflow._C import gelu_with_approximate as gelu
+from oneflow._C import gelu_fast
 from oneflow._C import mish
 from oneflow._C import repeat
 from oneflow._C import repeat_interleave

@@ -113,6 +113,27 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow.gelu_fast,
+    r"""
+    gelu_fast(x: Tensor) -> Tensor
+    
+    Applies GELU approximation. See: https://github.com/hendrycks/GELUs.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> x = flow.tensor([-0.5432, 0, 0.5432], dtype=flow.float32)
+
+        >>> out = flow.gelu_fast(x)
+        >>> out
+        tensor([-0.1595,  0.0000,  0.3837], dtype=oneflow.float32)
+
+    """,
+)
 
 add_docstr(
     oneflow._C.softmax,

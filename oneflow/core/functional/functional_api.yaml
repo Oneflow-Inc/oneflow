@@ -601,6 +601,10 @@
   signature: "Tensor (Tensor x) => Gelu"
   bind_python: True
 
+- name: "gelu_fast"
+  signature: "Tensor (Tensor x) => GeluFast"
+  bind_python: True
+
 - name: "gelu_grad"
   signature: "Tensor (Tensor dy, Tensor x) => GeluGrad"
   bind_python: False

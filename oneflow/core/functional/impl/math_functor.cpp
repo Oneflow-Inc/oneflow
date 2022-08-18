@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
@@ -2362,16 +2363,38 @@ class GeluWithApproximateFunctor {
                            const std::string& approximate) const {
     if (approximate == "tanh") {
       return JUST(
-          Mul(JUST(ScalarAdd(JUST(Tanh(JUST(ScalarMul(
+          Mul(JUST(ScalarAdd(JUST(Tanh(
+                      JUST(ScalarMul(
                                  JUST(Add(x,
                                           JUST(ScalarMul(JUST(ScalarPow(x, Scalar(3.0), false)),
                                                          Scalar(0.044715), false)),
                                           1.0, false)),
-                                 Scalar(sqrt(2.0 / M_PI)), false)))),
+                                 Scalar(sqrt(2.0 / M_PI)), false))
+                                 )),
                              Scalar(1.0), 1.0, false)),
               JUST(ScalarMul(x, 0.5, false))));
     }
     return Gelu(x);
+  }
+};
+
+class GeluFastFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const{
+    return JUST(
+      ScalarMul(
+        JUST(
+          Mul(x, JUST(ScalarAdd(
+              JUST(Tanh(
+                JUST(Mul(x, JUST(ScalarMul(
+                  JUST(ScalarAdd(
+                    JUST(ScalarMul(
+                      JUST(ScalarPow(x, Scalar(2), false)), Scalar(0.044715), false)),
+                      Scalar(1.0), 1, false)),
+                      Scalar(0.7978845608), false)))))),
+                      Scalar(1.0), 1, false)))), 
+                      Scalar(0.5), 
+                      false));
   }
 };
 
@@ -3135,6 +3158,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<CumProdGradFunctor>("CumprodGrad");
   m.add_functor<EinSumFunctor>("EinSum");
   m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
+  m.add_functor<GeluFastFunctor>("GeluFast");
 };
 
 }  // namespace functional

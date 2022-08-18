@@ -370,6 +370,37 @@ class GELU(Module):
             raise NotImplementedError
 
 
+class GELUFast(Module):
+    """Applies GELU approximation. See: https://github.com/hendrycks/GELUs.
+    
+    .. math:: 
+        \text{GELUFast}(x) = 0.5 * x * (1 + \text{Tanh}(input * 0.7978845608 * (1 + 0.044715 * x * x)))
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> x = flow.tensor([-0.5432, 0, 0.5432], dtype=flow.float32)
+
+        >>> out = flow.gelu_fast(x)
+        >>> out
+        tensor([-0.1595,  0.0000,  0.3837], dtype=oneflow.float32)
+    """
+
+    def __init__(self):
+        super().__init__()
+    
+    def forward(self, input):
+        return flow._C.gelu_fast(input)
+
+
 class Sigmoid(Module):
     """Applies the element-wise function:
 
