@@ -128,39 +128,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("distributed_partial_fc_sample")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      const auto disable_boxing_op_name = ctx->FwOp().op_name() + "_disable_boxing";
-      ctx->DefineOp(disable_boxing_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("distributed_partial_fc_sample_disable_boxing")
-            .InputBind("sampled_weight_diff", ctx->FwOp().output_grad("sampled_weight", 0))
-            .InputBind("sampled_label", ctx->FwOp().output("sampled_label", 0))
-            .Output("boxing_disabled_sampled_weight_diff")
-            .Output("boxing_disabled_sampled_label")
-            .Build();
-      });
-      const auto unsorted_segment_sum_like_op_name =
-          ctx->FwOp().op_name() + "_grad_unsorted_segment_sum_like";
-      ctx->DefineOp(unsorted_segment_sum_like_op_name, [&ctx, &disable_boxing_op_name](
-                                                           user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("unsorted_segment_sum_like")
-            .InputBind(
-                "data",
-                ctx->GetOp(disable_boxing_op_name).output("boxing_disabled_sampled_weight_diff", 0))
-            .InputBind(
-                "segment_ids",
-                ctx->GetOp(disable_boxing_op_name).output("boxing_disabled_sampled_label", 0))
-            .InputBind("like", ctx->FwOp().input("weight", 0))
-            .Output("out")
-            .Attr("axis", static_cast<int64_t>(0))
-            .Build();
-      });
-      ctx->FwOp().InputGradBind(
-          user_op::OpArg("weight", 0),
-          [&ctx, &unsorted_segment_sum_like_op_name]() -> const std::string& {
-            return ctx->GetOp(unsorted_segment_sum_like_op_name).output("out", 0);
-          });
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace oneflow

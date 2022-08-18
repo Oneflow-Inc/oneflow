@@ -64,24 +64,4 @@ void CheckIsPerm(const std::vector<int32_t>& perm) {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("transpose")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("input", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        const auto& tmp = op.attr<std::vector<int32_t>>("perm");
-        std::vector<int32_t> perm;
-        perm.resize(tmp.size());
-        FOR_RANGE(int32_t, i, 0, tmp.size()) { perm.at(tmp.at(i)) = i; }
-        user_op::UserOpConfWrapper transpose_grad_op =
-            builder.Op("transpose")
-                .Input("input", op.GetGradTensorWithOpOutput("output", 0))
-                .Output("output")
-                .Attr<std::vector<int32_t>>("perm", perm)
-                .Build();
-        op.BindGradTensorWithOpInput(transpose_grad_op.output("output", 0), "input", 0);
-        AddOp(transpose_grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 }  // namespace oneflow
