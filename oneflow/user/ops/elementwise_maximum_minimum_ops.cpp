@@ -69,37 +69,6 @@ Maybe<void> InferDataType_(InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name) {
-  return [=](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-    const bool x_need_grad = ctx->FwOp().NeedGenGradTensor4OpInput("x", 0);
-    const bool y_need_grad = ctx->FwOp().NeedGenGradTensor4OpInput("y", 0);
-    const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
-
-    auto BuildGradOp = [&](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
-      builder.OpTypeName(op_type_name + "_backward")
-          .InputBind("dz", ctx->FwOp().output_grad("z", 0))
-          .InputBind("x", ctx->FwOp().input("x", 0))
-          .InputBind("y", ctx->FwOp().input("y", 0));
-      if (x_need_grad) { builder.Output("dx"); }
-      if (y_need_grad) { builder.Output("dy"); }
-      return builder.Build();
-    };
-    ctx->DefineOp(grad_op_name, BuildGradOp);
-    if (x_need_grad) {
-      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), [&]() -> const std::string& {
-        return ctx->GetOp(grad_op_name).output("dx", 0);
-      });
-    }
-
-    if (y_need_grad) {
-      ctx->FwOp().InputGradBind(user_op::OpArg("y", 0), [&]() -> const std::string& {
-        return ctx->GetOp(grad_op_name).output("dy", 0);
-      });
-    }
-    return Maybe<void>::Ok();
-  };
-}
-
 }  // namespace
 
 #define DEF_ELEMENTWISE_XIMUM_FW_OP(op_class_name_prefix)                                        \
@@ -141,14 +110,9 @@ user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name
     return InferDataType_(ctx);                                                                 \
   }
 
-#define REGISTER_ELEMENTWISE_XIMUM_GRAD(op_type_name) \
-  REGISTER_USER_OP_GRAD(op_type_name)                 \
-      .SetBackwardOpConfGenFn(MakeGenBackwardOpFn(std::string(op_type_name)));
-
 #define REGISTER_ELEMENTWISE_XIMUM_OP(op_type_name, op_class_name_prefix) \
   DEF_ELEMENTWISE_XIMUM_FW_OP(op_class_name_prefix);                      \
-  DEF_ELEMENTWISE_XIMUM_BW_OP(op_class_name_prefix);                      \
-  REGISTER_ELEMENTWISE_XIMUM_GRAD(op_type_name);
+  DEF_ELEMENTWISE_XIMUM_BW_OP(op_class_name_prefix);
 
 REGISTER_ELEMENTWISE_XIMUM_OP("elementwise_maximum", ElementwiseMaximum);
 REGISTER_ELEMENTWISE_XIMUM_OP("elementwise_minimum", ElementwiseMinimum);

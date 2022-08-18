@@ -60,24 +60,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-namespace {
-
-REGISTER_USER_OP_GRAD("acc").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx)
-                                                        -> Maybe<void> {
-  const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
-  ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("repeat")
-        .InputBind("in", ctx->FwOp().output_grad("out", 0))
-        .Output("out")
-        .Attr<int32_t>("repeat_num", ctx->FwOp().attr<int32_t>("max_acc_num"))
-        .Build();
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), [&ctx, &grad_op_name]() -> const std::string& {
-    return ctx->GetOp(grad_op_name).output("out", 0);
-  });
-  return Maybe<void>::Ok();
-});
-
-}  // namespace
-
 }  // namespace oneflow
