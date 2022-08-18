@@ -193,24 +193,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("nll").SetGenBackwardOpConfFn(
-    [](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("input", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        builder.Op("nll_grad")
-            .Input("input", op.input("input", 0))
-            .Input("target", op.input("target", 0))
-            .Input("out_grad", op.GetGradTensorWithOpOutput("output", 0))
-            .Output("in_grad")
-            .Attr("ignore_index", op.attr<int64_t>("ignore_index"));
-        if (op.user_op_conf().has_input("weight", 0)) {
-          builder.Input("weight", op.input("weight", 0));
-        }
-        auto grad_op = builder.Build();
-        op.BindGradTensorWithOpInput(grad_op.output("in_grad", 0), "input", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace oneflow
