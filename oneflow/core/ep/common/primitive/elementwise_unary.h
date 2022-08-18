@@ -78,6 +78,8 @@ namespace primitive {
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kTan)             \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kNotEqualZero)
 
+#define UNARY_INT_MATH_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAbs)
+
 #define UNARY_LOGICAL_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLogicalNot)
 
 #define UNARY_UTILS_OP_SEQ              \

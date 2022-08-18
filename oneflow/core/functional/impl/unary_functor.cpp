@@ -65,7 +65,7 @@ namespace impl {
 
 #define FLOAT_UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_Y_SEQ OF_PP_MAKE_TUPLE_SEQ("sigmoid", Sigmoid)
 
-#define UNARY_FUNC_GRAD_WITH_FILL_SEQ                  \
+#define UNARY_FUNC_BWD_WITH_FILL_SEQ                   \
   OF_PP_MAKE_TUPLE_SEQ("sign", Sign)                   \
   OF_PP_MAKE_TUPLE_SEQ("not_equal_zero", NotEqualZero) \
   OF_PP_MAKE_TUPLE_SEQ("rint", Rint)                   \
@@ -83,40 +83,28 @@ namespace impl {
     }                                                                                \
   };
 
-// #define UNARY_ELEMENTWISE_GRAD_FUNCTOR(op_type_name, class_name, base)          \
-//   class class_name##GradFunctor : public base {                                 \
-//    public:                                                                      \
-//     class_name##GradFunctor() {                                                 \
-//       op_ = CHECK_JUST(one::OpBuilder(std::string("") + op_type_name + "_grad") \
-//                            .Input("x")                                          \
-//                            .Input("dy")                                         \
-//                            .Output("dx")                                        \
-//                            .Build());                                           \
-//     }                                                                           \
-//   };
-
-#define UNARY_ELEMENTWISE_GRAD_WITH_DY_X_FUNCTOR(op_type_name, class_name, base) \
-  class class_name##WithDyXGradFunctor : public base {                           \
-   public:                                                                       \
-    class_name##WithDyXGradFunctor() {                                           \
-      op_ = CHECK_JUST(one::OpBuilder(std::string("") + op_type_name + "_grad")  \
-                           .Input("x")                                           \
-                           .Input("dy")                                          \
-                           .Output("dx")                                         \
-                           .Build());                                            \
-    }                                                                            \
+#define UNARY_ELEMENTWISE_BWD_WITH_DY_X_FUNCTOR(op_type_name, class_name, base) \
+  class class_name##WithDyXGradFunctor : public base {                          \
+   public:                                                                      \
+    class_name##WithDyXGradFunctor() {                                          \
+      op_ = CHECK_JUST(one::OpBuilder(std::string("") + op_type_name + "_grad") \
+                           .Input("x")                                          \
+                           .Input("dy")                                         \
+                           .Output("dx")                                        \
+                           .Build());                                           \
+    }                                                                           \
   };
 
-#define UNARY_ELEMENTWISE_GRAD_WITH_DY_Y_FUNCTOR(op_type_name, class_name, base) \
-  class class_name##WithDyYGradFunctor : public base {                           \
-   public:                                                                       \
-    class_name##WithDyYGradFunctor() {                                           \
-      op_ = CHECK_JUST(one::OpBuilder(std::string("") + op_type_name + "_grad")  \
-                           .Input("y")                                           \
-                           .Input("dy")                                          \
-                           .Output("dx")                                         \
-                           .Build());                                            \
-    }                                                                            \
+#define UNARY_ELEMENTWISE_BWD_WITH_DY_Y_FUNCTOR(op_type_name, class_name, base) \
+  class class_name##WithDyYGradFunctor : public base {                          \
+   public:                                                                      \
+    class_name##WithDyYGradFunctor() {                                          \
+      op_ = CHECK_JUST(one::OpBuilder(std::string("") + op_type_name + "_grad") \
+                           .Input("y")                                          \
+                           .Input("dy")                                         \
+                           .Output("dx")                                        \
+                           .Build());                                           \
+    }                                                                           \
   };
 
 #define INPLACE_UNARY_FUNCTORS(op_type_name, class_name) \
@@ -127,24 +115,24 @@ namespace impl {
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, FloatUnaryFunctor)
 #define UNARY_FUNCTORS(op_type_name, class_name)                    \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, UnaryFunctor) \
-  UNARY_ELEMENTWISE_GRAD_WITH_DY_X_FUNCTOR(op_type_name, class_name, BinaryFunctor)
+  UNARY_ELEMENTWISE_BWD_WITH_DY_X_FUNCTOR(op_type_name, class_name, BinaryFunctor)
 #define FLOAT_UNARY_FUNCTORS(op_type_name, class_name)                   \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, FloatUnaryFunctor) \
-  UNARY_ELEMENTWISE_GRAD_WITH_DY_X_FUNCTOR(op_type_name, class_name, BinaryFunctor)
+  UNARY_ELEMENTWISE_BWD_WITH_DY_X_FUNCTOR(op_type_name, class_name, BinaryFunctor)
 
 #define UNARY_BWD_WITH_DY_X_FUNCTORS(op_type_name, class_name)      \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, UnaryFunctor) \
-  UNARY_ELEMENTWISE_GRAD_WITH_DY_X_FUNCTOR(op_type_name, class_name, BinaryFunctor)
+  UNARY_ELEMENTWISE_BWD_WITH_DY_X_FUNCTOR(op_type_name, class_name, BinaryFunctor)
 
 #define FLOAT_UNARY_BWD_WITH_DY_X_FUNCTORS(op_type_name, class_name)     \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, FloatUnaryFunctor) \
-  UNARY_ELEMENTWISE_GRAD_WITH_DY_X_FUNCTOR(op_type_name, class_name, BinaryFunctor)
+  UNARY_ELEMENTWISE_BWD_WITH_DY_X_FUNCTOR(op_type_name, class_name, BinaryFunctor)
 
 #define FLOAT_UNARY_WITH_DY_Y_FUNCTORS(op_type_name, class_name)         \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, FloatUnaryFunctor) \
-  UNARY_ELEMENTWISE_GRAD_WITH_DY_Y_FUNCTOR(op_type_name, class_name, BinaryFunctor)
+  UNARY_ELEMENTWISE_BWD_WITH_DY_Y_FUNCTOR(op_type_name, class_name, BinaryFunctor)
 
-#define UNARY_GRAD_WITH_FILL_FUNCTORS(op_type_name, class_name) \
+#define UNARY_BWD_WITH_FILL_FUNCTORS(op_type_name, class_name) \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, UnaryFunctor)
 
 OF_PP_FOR_EACH_TUPLE(INPLACE_FLOAT_UNARY_FUNCTORS, INPLACE_UNARY_FLOAT_FUNC_SEQ);
@@ -155,7 +143,7 @@ OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_BWD_WITH_DY_X_FUNCTORS,
                      FLOAT_UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_X_SEQ);
 
 OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_WITH_DY_Y_FUNCTORS, FLOAT_UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_Y_SEQ);
-OF_PP_FOR_EACH_TUPLE(UNARY_GRAD_WITH_FILL_FUNCTORS, UNARY_FUNC_GRAD_WITH_FILL_SEQ);
+OF_PP_FOR_EACH_TUPLE(UNARY_BWD_WITH_FILL_FUNCTORS, UNARY_FUNC_BWD_WITH_FILL_SEQ);
 
 }  // namespace impl
 

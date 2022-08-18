@@ -264,6 +264,13 @@ struct UnaryFunctor<device, UnaryOp::kAbs, Dst, Src> {
   OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(abs(src)); }
 };
 
+template<DeviceType device>
+struct UnaryFunctor<device, UnaryOp::kAbs, uint8_t, uint8_t> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC uint8_t operator()(uint8_t src) const { return src; }
+};
+
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kExp, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
