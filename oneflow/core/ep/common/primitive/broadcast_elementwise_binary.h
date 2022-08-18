@@ -84,8 +84,32 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kThresholdBackwardWithDyX)
 
 #define BINARY_MATH_BACKWARD_WITH_DY_X_OP_SEQ                 \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAbsBackwardWithDyX)         \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAcosBackwardWithDyX)         
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAbsBackwardWithDyX)             \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAcosBackwardWithDyX)            \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAcoshBackwardWithDyX)           \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAsinBackwardWithDyX)            \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAsinhBackwardWithDyX)           \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAtanBackwardWithDyX)            \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAtanhBackwardWithDyX)           \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kCosBackwardWithDyX)             \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kCoshBackwardWithDyX)            \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kErfBackwardWithDyX)             \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kErfcBackwardWithDyX)            \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kExpBackwardWithDyX)             \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kExpm1BackwardWithDyX)           \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLgammaBackwardWithDyX)          \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogBackwardWithDyX)             \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLog2BackwardWithDyX)            \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLog1pBackwardWithDyX)           \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogSigmoidBackwardWithDyX)      \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kReciprocalBackwardWithDyX)      \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kReciprocalNoNanBackwardWithDyX) \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kRsqrtBackwardWithDyX)           \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSinBackwardWithDyX)             \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSinhBackwardWithDyX)            \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSqrtBackwardWithDyX)            \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSquareBackwardWithDyX)          \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kTanBackwardWithDyX) 
 
 
 }  // namespace broadcast_elementwise_binary
