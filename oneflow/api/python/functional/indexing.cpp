@@ -67,8 +67,13 @@ DataType InferScalarType(PyObject* object) {
     return numpy::NumpyTypeToOFDataType(PyArray_DescrFromScalar(object)->type_num).GetOrThrow();
   } else if (PySequence_Check(object)) {
     int64_t length = PySequence_Length(object);
-    CHECK_GT_OR_THROW(length, 0) << "Index should not be empty.";
-    DataType scalar_type = DataType::kInvalidDataType;
+    // CHECK_GT_OR_THROW(length, 0) << "Index should not be empty.";
+    DataType scalar_type;
+    if (length == 0) {
+      scalar_type = DataType::kInt64;
+    } else {
+      scalar_type = DataType::kInvalidDataType;
+    }
     for (int64_t i = 0; i < length; ++i) {
       PyObjectPtr item(PySequence_GetItem(object, i));
       const auto& item_scalar_type = InferScalarType(item.get());
@@ -145,7 +150,7 @@ Shape InferArraySizes(PyObject* object) {
   PyObjectPtr handle;
   while (PySequence_Check(seq)) {
     int64_t length = PySequence_Length(seq);
-    CHECK_GT_OR_THROW(length, 0) << "Index should not be empty.";
+    //(length, 0) << "Index should not be empty.";
     sizes.emplace_back(length);
     CHECK_LE_OR_THROW(sizes.size(), /*MAX_DIMS=*/128)
         << "Too many dimensions " << Py_TYPE(seq)->tp_name;
