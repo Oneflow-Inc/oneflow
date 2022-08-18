@@ -309,6 +309,10 @@ Maybe<void> VirtualMachine::SyncAccessBlobByCallback(
   auto* stream_policy_base = vm_stream->mut_stream_policy();
   auto* ep_stream_policy_base = dynamic_cast<vm::EpStreamPolicyBase*>(stream_policy_base);
   CHECK_NOTNULL_OR_RETURN(ep_stream_policy_base) << "fatal error! the tensor is not on ep stream";
+  if (unlikely(pthread_fork::IsForkedSubProcess())) {
+    Callback(ep_stream_policy_base->stream(), eager_blob_object);
+    return Maybe<void>::Ok();
+  }
   const auto NoPendingInstructions = [&] {
     return engine_->pending_instruction_list().thread_unsafe_size() == 0
            && engine_->local_pending_instruction_list().empty();
