@@ -21,6 +21,7 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow.unittest
 from collections import OrderedDict
 
+
 def _test_finfo(test_case, dtype):
     finfo = torch.finfo(dtype)
     torch_finfo = finfo.pytorch
