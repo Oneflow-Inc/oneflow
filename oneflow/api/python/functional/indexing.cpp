@@ -67,7 +67,6 @@ DataType InferScalarType(PyObject* object) {
     return numpy::NumpyTypeToOFDataType(PyArray_DescrFromScalar(object)->type_num).GetOrThrow();
   } else if (PySequence_Check(object)) {
     int64_t length = PySequence_Length(object);
-    // CHECK_GT_OR_THROW(length, 0) << "Index should not be empty.";
     DataType scalar_type;
     if (length == 0) {
       scalar_type = DataType::kInt64;
