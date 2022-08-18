@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/functional/functional.h"
@@ -38,6 +39,11 @@ typedef struct {
 
 struct PyIInfo : public PyDTypeInfo {};
 struct PyFInfo : public PyDTypeInfo {};
+
+inline Symbol<DType> PyDTypeInfo_UnpackDType(PyObject* obj) { return ((PyDTypeInfo*)obj)->dtype; }
+inline DataType PyDTypeInfo_UnpackDataType(PyObject* obj) {
+  return ((PyDTypeInfo*)obj)->dtype->data_type();
+}
 
 }  // namespace one
 }  // namespace oneflow
