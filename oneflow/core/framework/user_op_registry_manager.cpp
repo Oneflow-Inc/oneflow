@@ -49,25 +49,6 @@ const OpRegistryResult* UserOpRegistryMgr::GetOpRegistryResult(const std::string
   return nullptr;
 }
 
-OpGradRegistry UserOpRegistryMgr::CheckAndGetOpGradRegistry(const std::string& op_type_name) {
-  CHECK(!op_type_name.empty());
-  auto it = op_grad_reg_result_.find(op_type_name);
-  CHECK(it == op_grad_reg_result_.end());
-  return OpGradRegistry().Name(op_type_name);
-}
-
-Maybe<void> UserOpRegistryMgr::Register(OpGradRegistryResult result) {
-  CHECK_OR_RETURN(op_grad_reg_result_.emplace(result.op_type_name, result).second);
-  return Maybe<void>::Ok();
-}
-
-const OpGradRegistryResult* UserOpRegistryMgr::GetOpGradRegistryResult(
-    const std::string& op_type_name) {
-  auto it = op_grad_reg_result_.find(op_type_name);
-  if (it != op_grad_reg_result_.end()) { return &(it->second); }
-  return nullptr;
-}
-
 OpKernelRegistry UserOpRegistryMgr::CheckAndGetOpKernelRegistry(const std::string& op_type_name) {
   CHECK(!op_type_name.empty());
   return OpKernelRegistry().Name(op_type_name);
