@@ -38,8 +38,7 @@ namespace oneflow {
                                                                                                 \
   MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##XGradOp);                                      \
                                                                                                 \
-  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##YGradOp);                                   
-                                                                                                
+  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##YGradOp);
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_ELEMENTWISE_OP_AND_GRAD,
                      MATH_BINARY_ELEMENTWISE_FUNC_SEQ_ODS)

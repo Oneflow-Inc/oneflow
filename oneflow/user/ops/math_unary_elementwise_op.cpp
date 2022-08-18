@@ -33,9 +33,9 @@ namespace oneflow {
     return user_op::TensorDescInferFnUtil::UnchangedDataType(ctx);                       \
   }
 
-#define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD(math_unary_elementwise_type, func_prefix)  \
-  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##Op)                                           \
-  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##GradOp)                                 
+#define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD(math_unary_elementwise_type, func_prefix) \
+  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##Op)                                          \
+  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##GradOp)
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD,
                      MATH_UNARY_ELEMENTWISE_FUNC_SEQ_ODS)
