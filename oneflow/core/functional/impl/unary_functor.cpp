@@ -31,8 +31,7 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("sin", InplaceSin) \
   OF_PP_MAKE_TUPLE_SEQ("floor", InplaceFloor)
 
-#define UNARY_PRIMITIVE_FUNC_SEQ                             \
-  OF_PP_MAKE_TUPLE_SEQ("abs", Abs)                         
+#define UNARY_PRIMITIVE_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("abs", Abs)
 
 #define UNARY_FUNC_SEQ                                       \
   OF_PP_MAKE_TUPLE_SEQ("acos", Acos)                         \
@@ -139,7 +138,7 @@ using namespace impl;
 
 #define ADD_UNARY_FUNCTOR_WITH_DY_X(class_name, functor_name) \
   m.add_functor<class_name##Functor>(functor_name);           \
-  m.add_functor<class_name##Functor>(std::string("") + functor_name + "Grad");
+  m.add_functor<class_name##WithDyXGradFunctor>(std::string("") + functor_name + "Grad");
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   // ADD_UNARY_FUNCTOR(Abs, "Abs");

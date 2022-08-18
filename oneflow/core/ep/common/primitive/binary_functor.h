@@ -574,7 +574,6 @@ struct BinaryFunctor<device, BinaryOp::kAbsBackwardWithDyX, Src, Dst> {
 //   }
 // };
 
-
 }  // namespace broadcast_elementwise_binary
 }  // namespace primitive
 }  // namespace ep
