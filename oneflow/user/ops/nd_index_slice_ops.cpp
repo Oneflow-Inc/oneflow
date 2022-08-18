@@ -128,7 +128,6 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
   CHECK_OR_RETURN(!is_out_of_bounds)
       << Error::IndexError() << "The index is out of bounds for dimension with size 0";
   *ctx->MutOutputShape("out", 0) = Shape(out_shape_vec);
-
   return Maybe<void>::Ok();
 }
 
