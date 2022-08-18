@@ -10,7 +10,7 @@ AUTO_RELEASE_TIME = 600
 def parse_args():
     parser = argparse.ArgumentParser(description='Control when the script runs through special variables.')
     parser.add_argument('--port', type=int, default='6379', help='the redlock server port.')
-    parser.add_argument('--with-cuda', type=bool, default=True, help='whether has cuda device.')
+    parser.add_argument('--with-cuda', type=int, default=1, help='whether has cuda device.')
     parser.add_argument('cli', type=str, nargs='...', help='the controlled script path.')
     return parser.parse_args()
 
