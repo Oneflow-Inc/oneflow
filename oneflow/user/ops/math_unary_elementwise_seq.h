@@ -95,24 +95,10 @@ namespace oneflow {
 
 
 #define MATH_UNARY_ELEMENTWISE_REGISTER_FUNC_SEQ             \
-  OF_PP_MAKE_TUPLE_SEQ("negative", Negative) \
-  OF_PP_MAKE_TUPLE_SEQ("not_equal_zero", NotEqualZero) \
-  OF_PP_MAKE_TUPLE_SEQ("sign", Sign)                   \
-  OF_PP_MAKE_TUPLE_SEQ("rint", Rint)                   \
-  OF_PP_MAKE_TUPLE_SEQ("round", Round)                 \
-  OF_PP_MAKE_TUPLE_SEQ("floor", Floor)                 \
-  OF_PP_MAKE_TUPLE_SEQ("ceil", Ceil)                
+  OF_PP_MAKE_TUPLE_SEQ("negative", Negative)                 
 
 #define MATH_UNARY_ELEMENTWISE_REGISTER_FUNC_SEQ_ODS                  \
-  OF_PP_MAKE_TUPLE_SEQ("negative", Negative) \
-  OF_PP_MAKE_TUPLE_SEQ("not_equal_zero", NotEqualZero) \
-  OF_PP_MAKE_TUPLE_SEQ("sign", Sign)                   \
-  OF_PP_MAKE_TUPLE_SEQ("rint", Rint)                   \
-  OF_PP_MAKE_TUPLE_SEQ("round", Round)                 \
-  OF_PP_MAKE_TUPLE_SEQ("floor", Floor)                 \
-  OF_PP_MAKE_TUPLE_SEQ("ceil", Ceil) 
-
-
+  OF_PP_MAKE_TUPLE_SEQ("negative", Negative) 
 
 #define MATH_UNARY_ELEMENTWISE_PRIMITIVE_FUNC_BWD_WITH_DY_X_SEQ        \
   OF_PP_MAKE_TUPLE_SEQ("abs", Abs)                           \

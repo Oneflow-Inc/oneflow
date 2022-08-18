@@ -85,7 +85,7 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
 
 
 // todo rename
-#define BINARY_MATH_BACKWARD_WITH_DY_X_OP_SEQ                 \
+#define BINARY_MATH_BACKWARD_WITH_DY_X_OP_SEQ                     \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAbsBackwardWithDyX)             \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAcosBackwardWithDyX)            \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAcoshBackwardWithDyX)           \

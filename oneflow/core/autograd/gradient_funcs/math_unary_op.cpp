@@ -108,7 +108,7 @@ class UnaryMathBwdWithDyYOp : public OpExprGradFunction<UnaryMathCaptureState> {
   std::shared_ptr<OpExpr> grad_op_;
 };
 
-class UnaryMathBwdWithFillOp : public OpExprGradFunction<UnaryMathCaptureState> {
+class UnaryMathBwdWithFillZeroOp : public OpExprGradFunction<UnaryMathCaptureState> {
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
   Maybe<void> Capture(UnaryMathCaptureState* ctx, const TensorTuple& inputs,
@@ -146,13 +146,13 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_Y_CLASS,
                      MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_DY_Y_SEQ);
 #undef INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_Y_CLASS
 
-// #define INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_FILL_CLASS(op_type_name, op_cls)     \
-//   class op_cls##Cls final : public UnaryMathBwdWithDyYOp<functional::op_cls##Grad> {}; \
-//   REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, UnaryMathBwdWithFillOp);
+#define INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_FILL_CLASS(op_type_name, op_cls)     \
+  class op_cls##Cls final : public UnaryMathBwdWithDyYOp<functional::op_cls##Grad> {}; \
+  REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, UnaryMathBwdWithFillZeroOp);
 
-// OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_FILL_CLASS,
-//                      MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_FILL_SEQ);
-// #undef INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_FILL_CLASS
+OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_FILL_CLASS,
+                     MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_FILL_SEQ);
+#undef INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_FILL_CLASS
 
 }  // namespace one
 }  // namespace oneflow

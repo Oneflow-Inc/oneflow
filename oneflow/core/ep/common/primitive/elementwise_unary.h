@@ -49,27 +49,34 @@ namespace primitive {
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAsinh)           \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAtan)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAtanh)           \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kCeil)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kCos)             \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kCosh)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kErf)             \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kErfc)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kExp)             \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kExpm1)           \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kFloor)           \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLgamma)          \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLog)             \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLog2)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLog1p)           \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLogSigmoid)      \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kNegative)        \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kReciprocal)      \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kReciprocalNoNan) \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRint)            \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRound)           \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRsqrt)           \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSigmoid)         \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSign)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSin)             \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSinh)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSqrt)            \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSigmoid)         \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSign)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSquare)          \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kTan)             
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kTan)             \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kNotEqualZero)            
 
 
 #define UNARY_LOGICAL_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLogicalNot)

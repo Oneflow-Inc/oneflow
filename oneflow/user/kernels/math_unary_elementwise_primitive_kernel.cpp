@@ -31,34 +31,42 @@ limitations under the License.
 
 namespace oneflow {
 
+// todo negative 
+
 #define MATH_UNARY_ELEMENTWISE_PRIMITIVE_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ("abs", ep::primitive::UnaryOp::kAbs) \
-  OF_PP_MAKE_TUPLE_SEQ("acos", ep::primitive::UnaryOp::kAcos) \
+  OF_PP_MAKE_TUPLE_SEQ("abs", ep::primitive::UnaryOp::kAbs)                           \
+  OF_PP_MAKE_TUPLE_SEQ("acos", ep::primitive::UnaryOp::kAcos)                         \
   OF_PP_MAKE_TUPLE_SEQ("acosh", ep::primitive::UnaryOp::kAcosh)                       \
   OF_PP_MAKE_TUPLE_SEQ("asin", ep::primitive::UnaryOp::kAsin)                         \
   OF_PP_MAKE_TUPLE_SEQ("asinh", ep::primitive::UnaryOp::kAsinh)                       \
   OF_PP_MAKE_TUPLE_SEQ("atan", ep::primitive::UnaryOp::kAtan)                         \
   OF_PP_MAKE_TUPLE_SEQ("atanh", ep::primitive::UnaryOp::kAtanh)                       \
+  OF_PP_MAKE_TUPLE_SEQ("ceil", ep::primitive::UnaryOp::kCeil)                         \
   OF_PP_MAKE_TUPLE_SEQ("cos", ep::primitive::UnaryOp::kCos)                           \
   OF_PP_MAKE_TUPLE_SEQ("cosh", ep::primitive::UnaryOp::kCosh)                         \
   OF_PP_MAKE_TUPLE_SEQ("erf", ep::primitive::UnaryOp::kErf)                           \
   OF_PP_MAKE_TUPLE_SEQ("erfc", ep::primitive::UnaryOp::kErfc)                         \
   OF_PP_MAKE_TUPLE_SEQ("exp", ep::primitive::UnaryOp::kExp)                           \
   OF_PP_MAKE_TUPLE_SEQ("expm1", ep::primitive::UnaryOp::kExpm1)                       \
-  OF_PP_MAKE_TUPLE_SEQ("log", ep::primitive::UnaryOp::kLog)                           \
+  OF_PP_MAKE_TUPLE_SEQ("floor", ep::primitive::UnaryOp::kFloor)                       \
   OF_PP_MAKE_TUPLE_SEQ("lgamma", ep::primitive::UnaryOp::kLgamma)                     \
+  OF_PP_MAKE_TUPLE_SEQ("log", ep::primitive::UnaryOp::kLog)                           \
   OF_PP_MAKE_TUPLE_SEQ("log2", ep::primitive::UnaryOp::kLog2)                         \
   OF_PP_MAKE_TUPLE_SEQ("log1p", ep::primitive::UnaryOp::kLog1p)                       \
-  OF_PP_MAKE_TUPLE_SEQ("log_sigmoid", ep::primitive::UnaryOp::kLogSigmoid)             \
+  OF_PP_MAKE_TUPLE_SEQ("log_sigmoid", ep::primitive::UnaryOp::kLogSigmoid)            \
   OF_PP_MAKE_TUPLE_SEQ("reciprocal", ep::primitive::UnaryOp::kReciprocal)             \
   OF_PP_MAKE_TUPLE_SEQ("reciprocal_no_nan", ep::primitive::UnaryOp::kReciprocalNoNan) \
+  OF_PP_MAKE_TUPLE_SEQ("rint", ep::primitive::UnaryOp::kRint)                         \
+  OF_PP_MAKE_TUPLE_SEQ("round", ep::primitive::UnaryOp::kRound)                       \
   OF_PP_MAKE_TUPLE_SEQ("rsqrt", ep::primitive::UnaryOp::kRsqrt)                       \
+  OF_PP_MAKE_TUPLE_SEQ("sigmoid_v2", ep::primitive::UnaryOp::kSigmoid)                \
+  OF_PP_MAKE_TUPLE_SEQ("sign", ep::primitive::UnaryOp::kSign)                         \
   OF_PP_MAKE_TUPLE_SEQ("sin", ep::primitive::UnaryOp::kSin)                           \
   OF_PP_MAKE_TUPLE_SEQ("sinh", ep::primitive::UnaryOp::kSinh)                         \
-  OF_PP_MAKE_TUPLE_SEQ("sigmoid", ep::primitive::UnaryOp::kSigmoid)                   \
   OF_PP_MAKE_TUPLE_SEQ("sqrt", ep::primitive::UnaryOp::kSqrt)                         \
   OF_PP_MAKE_TUPLE_SEQ("square", ep::primitive::UnaryOp::kSquare)                     \
-  OF_PP_MAKE_TUPLE_SEQ("tan", ep::primitive::UnaryOp::kTan)
+  OF_PP_MAKE_TUPLE_SEQ("tan", ep::primitive::UnaryOp::kTan)                           \
+  OF_PP_MAKE_TUPLE_SEQ("not_equal_zero", ep::primitive::UnaryOp::kNotEqualZero)
 
 
 #define MATH_UNARY_ELEMENTWISE_GRAD_WITH_DY_X_PRIMITIVE_SEQ \

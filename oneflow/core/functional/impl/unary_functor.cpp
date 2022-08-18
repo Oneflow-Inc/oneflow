@@ -62,11 +62,20 @@ namespace impl {
 #define FLOAT_UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_Y_SEQ                     \
   OF_PP_MAKE_TUPLE_SEQ("sigmoid", Sigmoid)    
 
-#define UNARY_FUNC_SEQ                                       \
-  OF_PP_MAKE_TUPLE_SEQ("ceil", Ceil)                         \
-  OF_PP_MAKE_TUPLE_SEQ("floor", Floor)                       \
-  OF_PP_MAKE_TUPLE_SEQ("rint", Rint)                         \
-  OF_PP_MAKE_TUPLE_SEQ("round", Round)
+#define UNARY_FUNC_GRAD_WITH_FILL_SEQ                  \
+  OF_PP_MAKE_TUPLE_SEQ("sign", Sign)                   \
+  OF_PP_MAKE_TUPLE_SEQ("not_equal_zero", NotEqualZero) \
+  OF_PP_MAKE_TUPLE_SEQ("rint", Rint)                   \
+  OF_PP_MAKE_TUPLE_SEQ("round", Round)                 \
+  OF_PP_MAKE_TUPLE_SEQ("floor", Floor)                 \
+  OF_PP_MAKE_TUPLE_SEQ("ceil", Ceil)
+
+
+// #define UNARY_FUNC_SEQ                                       \
+//   OF_PP_MAKE_TUPLE_SEQ("ceil", Ceil)                         \
+//   OF_PP_MAKE_TUPLE_SEQ("floor", Floor)                       \
+//   OF_PP_MAKE_TUPLE_SEQ("rint", Rint)                         \
+//   OF_PP_MAKE_TUPLE_SEQ("round", Round)
 
 // #define UNARY_FUNC_SEQ                                       \
 //   OF_PP_MAKE_TUPLE_SEQ("acos", Acos)                         \
@@ -105,9 +114,7 @@ namespace impl {
 
 #define FLOAT_UNARY_FUNC_SEQ                     \
   OF_PP_MAKE_TUPLE_SEQ("negative", Negative)     \
-  OF_PP_MAKE_TUPLE_SEQ("sign", Sign)             \
-  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)             \
-  OF_PP_MAKE_TUPLE_SEQ("not_equal_zero", NotEqualZero)
+  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)             
 
 
 #define LOGICAL_FLOAT_UNARY_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("logical_not", LogicalNot)
@@ -156,34 +163,38 @@ namespace impl {
     }                                                                            \
   };
 
-#define INPLACE_UNARY_FUNCOTRS(op_type_name, class_name) \
+#define INPLACE_UNARY_FUNCTORS(op_type_name, class_name) \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, InplaceUnaryFunctor)
-#define INPLACE_FLOAT_UNARY_FUNCOTRS(op_type_name, class_name) \
+#define INPLACE_FLOAT_UNARY_FUNCTORS(op_type_name, class_name) \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, InplaceFloatUnaryFunctor)
 #define LOGICAL_FLOAT_UNARY_FUNCTORS(op_type_name, class_name) \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, FloatUnaryFunctor)
-#define UNARY_FUNCOTRS(op_type_name, class_name)                    \
+#define UNARY_FUNCTORS(op_type_name, class_name)                    \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, UnaryFunctor) \
   UNARY_ELEMENTWISE_GRAD_FUNCTOR(op_type_name, class_name, BinaryFunctor)
-#define FLOAT_UNARY_FUNCOTRS(op_type_name, class_name)                   \
+#define FLOAT_UNARY_FUNCTORS(op_type_name, class_name)                   \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, FloatUnaryFunctor) \
   UNARY_ELEMENTWISE_GRAD_FUNCTOR(op_type_name, class_name, BinaryFunctor)
 
-#define UNARY_WITH_DY_X_FUNCOTRS(op_type_name, class_name)          \
+#define UNARY_WITH_DY_X_FUNCTORS(op_type_name, class_name)          \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, UnaryFunctor) \
   UNARY_ELEMENTWISE_GRAD_WITH_DY_X_FUNCTOR(op_type_name, class_name, BinaryFunctor)
 
-#define FLOAT_UNARY_WITH_DY_Y_FUNCOTRS(op_type_name, class_name)          \
+#define FLOAT_UNARY_WITH_DY_Y_FUNCTORS(op_type_name, class_name)          \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, FloatUnaryFunctor) \
   UNARY_ELEMENTWISE_GRAD_WITH_DY_Y_FUNCTOR(op_type_name, class_name, BinaryFunctor)
 
-OF_PP_FOR_EACH_TUPLE(INPLACE_FLOAT_UNARY_FUNCOTRS, INPLACE_UNARY_FLOAT_FUNC_SEQ);
-OF_PP_FOR_EACH_TUPLE(UNARY_FUNCOTRS, UNARY_FUNC_SEQ);
-OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_FUNCOTRS, FLOAT_UNARY_FUNC_SEQ);
+#define UNARY_GRAD_WITH_FILL_FUNCTORS(op_type_name, class_name) \
+  UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, UnaryFunctor)
+
+OF_PP_FOR_EACH_TUPLE(INPLACE_FLOAT_UNARY_FUNCTORS, INPLACE_UNARY_FLOAT_FUNC_SEQ);
+// OF_PP_FOR_EACH_TUPLE(UNARY_FUNCTORS, UNARY_FUNC_SEQ);
+OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_FUNCTORS, FLOAT_UNARY_FUNC_SEQ);
 OF_PP_FOR_EACH_TUPLE(LOGICAL_FLOAT_UNARY_FUNCTORS, LOGICAL_FLOAT_UNARY_FUNC_SEQ);
 
-OF_PP_FOR_EACH_TUPLE(UNARY_WITH_DY_X_FUNCOTRS, UNARY_PRIMITIVE_FUNC_SEQ);
-OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_WITH_DY_Y_FUNCOTRS, FLOAT_UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_Y_SEQ);
+OF_PP_FOR_EACH_TUPLE(UNARY_WITH_DY_X_FUNCTORS, UNARY_PRIMITIVE_FUNC_SEQ);
+OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_WITH_DY_Y_FUNCTORS, FLOAT_UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_Y_SEQ);
+OF_PP_FOR_EACH_TUPLE(UNARY_GRAD_WITH_FILL_FUNCTORS, UNARY_FUNC_GRAD_WITH_FILL_SEQ);
 
 }  // namespace impl
 
@@ -209,8 +220,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   ADD_UNARY_FUNCTOR_WITH_DY_X(Atan, "Atan");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Atanh, "Atanh");
 
-  ADD_UNARY_FUNCTOR(Ceil, "Ceil");
-
+  // ADD_UNARY_FUNCTOR(Ceil, "Ceil");
+  m.add_functor<CeilFunctor>("Ceil");
+  
   ADD_UNARY_FUNCTOR_WITH_DY_X(Cos, "Cos");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Cosh, "Cosh");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Erf, "Erf");
@@ -218,7 +230,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   ADD_UNARY_FUNCTOR_WITH_DY_X(Exp, "Exp");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Expm1, "Expm1");
   
-  ADD_UNARY_FUNCTOR(Floor, "Floor");
+  // ADD_UNARY_FUNCTOR(Floor, "Floor");
+  m.add_functor<FloorFunctor>("Floor");
 
   ADD_UNARY_FUNCTOR_WITH_DY_X(Lgamma, "Lgamma");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Log, "Log");
@@ -231,13 +244,18 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   ADD_UNARY_FUNCTOR_WITH_DY_X(Reciprocal, "Reciprocal");
   ADD_UNARY_FUNCTOR_WITH_DY_X(ReciprocalNoNan, "ReciprocalNoNan");
 
-  ADD_UNARY_FUNCTOR(Rint, "Rint");
-  ADD_UNARY_FUNCTOR(Round, "Round");
+  // ADD_UNARY_FUNCTOR(Rint, "Rint");
+  // ADD_UNARY_FUNCTOR(Round, "Round");
+  m.add_functor<RintFunctor>("Rint");
+  m.add_functor<RoundFunctor>("Round");
+
+
 
   ADD_UNARY_FUNCTOR_WITH_DY_X(Rsqrt, "Rsqrt");
   ADD_UNARY_FUNCTOR_WITH_DY_Y(Sigmoid, "Sigmoid");
 
-  ADD_UNARY_FUNCTOR(Sign, "Sign");
+  // ADD_UNARY_FUNCTOR(Sign, "Sign");
+  m.add_functor<SignFunctor>("Sign");
 
   ADD_UNARY_FUNCTOR_WITH_DY_X(Sin, "Sin");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Sinh, "Sinh");
@@ -245,7 +263,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   ADD_UNARY_FUNCTOR_WITH_DY_X(Square, "Square");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Tan, "Tan");
   ADD_UNARY_FUNCTOR(Tanh, "Tanh");
-  ADD_UNARY_FUNCTOR(NotEqualZero, "NotEqualZero")
+  // ADD_UNARY_FUNCTOR(NotEqualZero, "NotEqualZero")
+  m.add_functor<NotEqualZeroFunctor>("NotEqualZero");
 
   
   m.add_functor<LogicalNotFunctor>("LogicalNot");

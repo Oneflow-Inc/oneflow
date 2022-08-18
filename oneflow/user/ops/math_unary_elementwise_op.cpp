@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/math_unary_elementwise_seq.h"
 #include "oneflow/core/framework/op_generated.h"
@@ -104,5 +105,9 @@ OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_X, MATH
 OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_Y,
                      MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_DY_Y_ODS_SEQ)
 
+#define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_FILL(math_unary_elementwise_type, func_prefix)      \
+  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##Op)
+
+OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_FILL, MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_FILL_SEQ)
 
 }  // namespace oneflow
