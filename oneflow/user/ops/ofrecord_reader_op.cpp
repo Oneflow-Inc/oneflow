@@ -43,7 +43,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> OFRecordReaderOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
+  ctx->NewBuilder().Broadcast(ctx->inputs()).Split(ctx->outputs(), 0).Build();
   return Maybe<void>::Ok();
 }
 

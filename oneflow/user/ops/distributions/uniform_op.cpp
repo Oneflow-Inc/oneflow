@@ -46,7 +46,9 @@ namespace oneflow {
 /* static */ Maybe<void> UniformOp::GetSbp(user_op::SbpContext* ctx) {
   const Shape& logical_shape = ctx->Attr<Shape>("shape");
   int64_t num_axes = logical_shape.NumAxes();
-  for (int i = 0; i < num_axes; ++i) { ctx->NewBuilder().Split(ctx->outputs(), i).Build(); }
+  for (int i = 0; i < num_axes; ++i) {
+    ctx->NewBuilder().Broadcast(ctx->inputs()).Split(ctx->outputs(), i).Build();
+  }
   return Maybe<void>::Ok();
 }
 
