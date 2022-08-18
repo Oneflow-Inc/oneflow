@@ -23,25 +23,25 @@ namespace oneflow {
 
 namespace ccl {
 
-// Use CpuSendImpl to avoid name confilict
+// Use CpuSendImpl to avoid name conflict
 class CpuSendImpl final : public Send {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuSendImpl);
-  CpuSendImpl() : size_of_datatype_(0) {}
+  CpuSendImpl() : size_of_dtype_(0) {}
   ~CpuSendImpl() = default;
 
   void Init(DataType datatype) override {
     CHECK(IsPODDataType(datatype));
-    this->size_of_datatype_ = GetSizeOfDataType(datatype);
+    this->size_of_dtype_ = GetSizeOfDataType(datatype);
   }
 
   void Launch(ep::Stream* stream, const void* in, size_t elem_cnt, int64_t dst) const override {
-    size_t buffer_size = elem_cnt * size_of_datatype_;
+    size_t buffer_size = elem_cnt * size_of_dtype_;
     CHECK_JUST(CpuSend(in, buffer_size, dst));
   }
 
  private:
-  size_t size_of_datatype_;
+  size_t size_of_dtype_;
 };
 
 REGISTER_COLLECTIVE_COMMUNICATION(DeviceType::kCPU, Send, CpuSendImpl);

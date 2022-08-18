@@ -23,25 +23,25 @@ namespace oneflow {
 
 namespace ccl {
 
-// Use CpuRecvImpl to avoid name confilict
+// Use CpuRecvImpl to avoid name conflict
 class CpuRecvImpl final : public Recv {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuRecvImpl);
-  CpuRecvImpl() : size_of_datatype_(0) {}
+  CpuRecvImpl() : size_of_dtype_(0) {}
   ~CpuRecvImpl() = default;
 
   void Init(DataType datatype) override {
     CHECK(IsPODDataType(datatype));
-    this->size_of_datatype_ = GetSizeOfDataType(datatype);
+    this->size_of_dtype_ = GetSizeOfDataType(datatype);
   }
 
   void Launch(ep::Stream* stream, void* out, size_t elem_cnt, int64_t src) const override {
-    size_t buffer_size = elem_cnt * size_of_datatype_;
+    size_t buffer_size = elem_cnt * size_of_dtype_;
     CHECK_JUST(CpuRecv(out, buffer_size, src));
   }
 
  private:
-  size_t size_of_datatype_;
+  size_t size_of_dtype_;
 };
 
 REGISTER_COLLECTIVE_COMMUNICATION(DeviceType::kCPU, Recv, CpuRecvImpl);
