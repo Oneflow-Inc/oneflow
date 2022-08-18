@@ -129,8 +129,16 @@ void TensorScatterNdAddKernel<device_type, T, I>::Compute(
                                            updates->dptr<T>(), out->mut_dptr<T>());
 }
 
-#define REGISTER_GATHER_SCATTER_ND_KERNELS(op_type_name, op, device_type_v, dtype_pair,            \
-                                           itype_pair)                                             \
+#define REGISTER_GATHER_ND_KERNEL(op_type_name, op, device_type_v, dtype_pair, itype_pair)         \
+  REGISTER_USER_KERNEL(#op_type_name)                                                              \
+      .SetCreateFn<                                                                                \
+          op##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>>() \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                                 \
+                       && (user_op::HobDataType("params", 0) == OF_PP_PAIR_SECOND(dtype_pair))     \
+                       && (user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(itype_pair))    \
+                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
+
+#define REGISTER_SCATTER_ND_KERNEL(op_type_name, op, device_type_v, dtype_pair, itype_pair)        \
   REGISTER_USER_KERNEL(#op_type_name)                                                              \
       .SetCreateFn<                                                                                \
           op##Kernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair)>>() \
@@ -154,14 +162,13 @@ void TensorScatterNdAddKernel<device_type, T, I>::Compute(
           });
 
 #define REGISTER_GATHER_ND_KERNELS(device_type_v, dtype_pair, itype_pair) \
-  REGISTER_GATHER_SCATTER_ND_KERNELS(gather_nd, GatherNd, device_type_v, dtype_pair, itype_pair)
+  REGISTER_GATHER_ND_KERNEL(gather_nd, GatherNd, device_type_v, dtype_pair, itype_pair)
 
 #define REGISTER_SCATTER_ND_KERNELS(device_type_v, dtype_pair, itype_pair) \
-  REGISTER_GATHER_SCATTER_ND_KERNELS(scatter_nd, ScatterNd, device_type_v, dtype_pair, itype_pair)
+  REGISTER_SCATTER_ND_KERNEL(scatter_nd, ScatterNd, device_type_v, dtype_pair, itype_pair)
 
-#define REGISTER_SCATTER_ND_LIKE_KERNELS(device_type_v, dtype_pair, itype_pair)             \
-  REGISTER_GATHER_SCATTER_ND_KERNELS(scatter_nd_like, ScatterNd, device_type_v, dtype_pair, \
-                                     itype_pair)
+#define REGISTER_SCATTER_ND_LIKE_KERNELS(device_type_v, dtype_pair, itype_pair) \
+  REGISTER_SCATTER_ND_KERNEL(scatter_nd_like, ScatterNd, device_type_v, dtype_pair, itype_pair)
 
 #define REGISTER_TENSOR_GATHER_ND_UPDATE_KERNELS(device_type_v, dtype_pair, itype_pair)   \
   REGISTER_TENSOR_SCATTER_ND_OPT_KERNELS(tensor_scatter_nd_update, Update, device_type_v, \

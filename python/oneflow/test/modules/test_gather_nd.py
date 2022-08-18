@@ -35,6 +35,17 @@ def _test_gather_nd(test_case, device):
     test_case.assertTrue(np.array_equal(output.numpy(), np_out))
 
 
+def _test_gather_nd_fp16(test_case, device):
+    input = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    indices = np.array([[0], [2]])
+    np_out = np.array([[1, 2, 3], [7, 8, 9]])
+    output = flow.gather_nd(
+        flow.tensor(input, dtype=flow.float16, device=flow.device(device)),
+        flow.tensor(indices, dtype=flow.int, device=flow.device(device)),
+    )
+    test_case.assertTrue(np.array_equal(output.numpy(), np_out))
+
+
 def _test_gather_nd_t(test_case, device):
     input = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
     indices = np.array([[0, 2], [2, 1]])
@@ -91,6 +102,15 @@ class TestGather_nd(flow.unittest.TestCase):
             _test_gather_nd_backward_t,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+    
+    def test_gather_nd_fp16(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_gather_nd_fp16,
+        ]
+        arg_dict["device"] = ["cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
