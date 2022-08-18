@@ -51,7 +51,7 @@ using functional::PyObjectPtr;
         std::pow(10, -std::numeric_limits<DataTypeToType<DataType::datatype>>::digits10));
 #define GET_FLOAT_EPS(datatype) \
   case DataType::datatype:      \
-    return PyFloat_FromDouble(-std::numeric_limits<DataTypeToType<DataType::datatype>>::epsilon());
+    return PyFloat_FromDouble(std::numeric_limits<DataTypeToType<DataType::datatype>>::epsilon());
 #define GET_FLOAT_TINY(datatype) \
   case DataType::datatype:       \
     return PyFloat_FromDouble(std::numeric_limits<DataTypeToType<DataType::datatype>>::min());
@@ -216,8 +216,9 @@ static PyObject* PyFInfo_tiny(PyObject* self, void*) {
 
 static PyObject* PyDInfo_dtype(PyObject* self, void*) {
   HANDLE_ERRORS
-  Symbol<DType> dtype = ((PyDTypeInfo*)self)->dtype;
-  return functional::CastToPyObject(dtype);
+  std::string name = ((PyDTypeInfo*)self)->dtype->name();
+  name = name.erase(0, name.find('.') + 1);
+  return PyUnicode_FromString(name.data());
   END_HANDLE_ERRORS
 }
 
