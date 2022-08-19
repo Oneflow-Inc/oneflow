@@ -99,6 +99,72 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow._C.dropout1d,
+    r"""
+    dropout1d(x: Tensor, p: float = 0.5, training: bool = True) -> Tensor 
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.functional.dropout1d.html.
+
+    Randomly zero out entire channels (a channel is a 1D feature map,
+    e.g., the :math:`j`-th channel of the :math:`i`-th sample in the
+    batched input is a 1D tensor :math:`\text{input}[i, j]`) of the input tensor).
+    Each channel will be zeroed out independently on every forward call with
+    probability :attr:`p` using samples from a Bernoulli distribution.
+
+    See :class:`~oneflow.nn.Dropout1d` for details.
+
+    Args:
+        p: probability of a channel to be zeroed. Default: 0.5
+        training: apply dropout if is ``True``. Default: ``True``
+    """,
+)
+
+add_docstr(
+    oneflow._C.dropout2d,
+    r"""
+    dropout1d(x: Tensor, p: float = 0.5, training: bool = True) -> Tensor 
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.functional.dropout2d.html.
+
+    Randomly zero out entire channels (a channel is a 2D feature map,
+    e.g., the :math:`j`-th channel of the :math:`i`-th sample in the
+    batched input is a 2D tensor :math:`\text{input}[i, j]`) of the input tensor).
+    Each channel will be zeroed out independently on every forward call with
+    probability :attr:`p` using samples from a Bernoulli distribution.
+
+    See :class:`~oneflow.nn.Dropout2d` for details.
+
+    Args:
+        p: probability of a channel to be zeroed. Default: 0.5
+        training: apply dropout if is ``True``. Default: ``True``
+    """,
+)
+
+add_docstr(
+    oneflow._C.dropout3d,
+    r"""
+    dropout1d(x: Tensor, p: float = 0.5, training: bool = True) -> Tensor 
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.functional.dropout3d.html.
+
+    Randomly zero out entire channels (a channel is a 3D feature map,
+    e.g., the :math:`j`-th channel of the :math:`i`-th sample in the
+    batched input is a 3D tensor :math:`\text{input}[i, j]`) of the input tensor).
+    Each channel will be zeroed out independently on every forward call with
+    probability :attr:`p` using samples from a Bernoulli distribution.
+
+    See :class:`~oneflow.nn.Dropout3d` for details.
+
+    Args:
+        p: probability of a channel to be zeroed. Default: 0.5
+        training: apply dropout if is ``True``. Default: ``True``
+    """,
+)
+
+add_docstr(
     oneflow.nn.Dropout,
     """
     During training, randomly zeroes some of the elements of the input
