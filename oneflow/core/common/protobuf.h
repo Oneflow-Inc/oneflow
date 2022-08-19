@@ -227,31 +227,31 @@ struct hash<oneflow::DataType> {
 template<>
 struct hash<oneflow::LogicalBlobId> {
   size_t operator()(const oneflow::LogicalBlobId& lbi) const {
-    const auto& str_hash = std::hash<std::string>();
-    return str_hash(lbi.op_name()) ^ str_hash(lbi.blob_name());
+    using namespace oneflow;
+    return Hash(lbi.op_name(), lbi.blob_name());
   }
 };
 
 template<>
 struct hash<oneflow::OpBlobArg> {
   size_t operator()(const oneflow::OpBlobArg& oba) const {
-    const auto& str_hash = std::hash<std::string>();
-    return str_hash(oba.op_name()) ^ str_hash(oba.bn_in_op());
+    using namespace oneflow;
+    return Hash(oba.op_name(), oba.bn_in_op());
   }
 };
 
 template<>
 struct hash<oneflow::SbpParallel> {
   size_t operator()(const oneflow::SbpParallel& sbp_parallel) const {
-    const auto& str_hash = std::hash<std::string>();
+    using namespace oneflow;
     size_t ret = 0;
     if (sbp_parallel.has_broadcast_parallel()) {
-      ret ^= str_hash("B");
+      AddHash(&ret, std::string("B"));
     } else if (sbp_parallel.has_partial_sum_parallel()) {
-      ret ^= str_hash("P");
+      AddHash(&ret, std::string("P"));
     } else if (sbp_parallel.has_split_parallel()) {
-      ret ^= str_hash("S");
-      ret ^= std::hash<int64_t>()(sbp_parallel.split_parallel().axis());
+      AddHash(&ret, std::string("S"));
+      AddHash(&ret, sbp_parallel.split_parallel().axis());
     } else {
       UNIMPLEMENTED();
     }

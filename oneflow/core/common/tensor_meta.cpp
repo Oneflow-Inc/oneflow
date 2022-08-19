@@ -40,8 +40,7 @@ bool MutTensorMeta::operator==(const MutTensorMeta& other) const {
 
 size_t MutTensorMeta::CalcHashValue() const {
   // It's correct to ignore is_dynamic_ field.
-  return std::hash<Shape>()(*shape_ptr()) ^ std::hash<DataType>()(dtype())
-         ^ std::hash<Stride>()(stride());
+  return Hash(*shape_ptr(), dtype(), stride());
 }
 
 LocalTensorMeta::LocalTensorMeta()
@@ -70,8 +69,7 @@ bool LocalTensorMeta::operator==(const LocalTensorMeta& other) const {
 
 size_t LocalTensorMeta::CalcHashValue() const {
   // It's correct to ignore is_dynamic_ field.
-  return std::hash<Shape>()(*shape_ptr()) ^ std::hash<DataType>()(dtype())
-         ^ std::hash<Symbol<Device>>()(device()) ^ std::hash<Stride>()(stride()) ^ storage_offset();
+  return Hash(*shape_ptr(), dtype(), device(), stride(), storage_offset());
 }
 
 MutLocalTensorMeta::MutLocalTensorMeta()
@@ -100,8 +98,7 @@ bool MutLocalTensorMeta::operator==(const MutLocalTensorMeta& other) const {
 
 size_t MutLocalTensorMeta::CalcHashValue() const {
   // It's correct to ignore is_dynamic_ field.
-  return std::hash<Shape>()(*shape_ptr()) ^ std::hash<DataType>()(dtype())
-         ^ std::hash<Device>()(*device()) ^ std::hash<Stride>()(stride()) ^ storage_offset();
+  return Hash(*shape_ptr(), dtype(), *device(), stride(), storage_offset());
 }
 
 bool GlobalTensorMeta::operator==(const GlobalTensorMeta& other) const {
@@ -111,9 +108,7 @@ bool GlobalTensorMeta::operator==(const GlobalTensorMeta& other) const {
 }
 
 size_t GlobalTensorMeta::CalcHashValue() const {
-  return std::hash<Shape>()(*shape_ptr()) ^ std::hash<DataType>()(dtype())
-         ^ std::hash<Symbol<NdSbp>>()(nd_sbp())
-         ^ std::hash<Symbol<ParallelDesc>>()(parallel_desc());
+  return Hash(*shape_ptr(), dtype(), nd_sbp(), parallel_desc());
 }
 
 bool IsContiguous(const Shape& shape, const Stride& stride) {
