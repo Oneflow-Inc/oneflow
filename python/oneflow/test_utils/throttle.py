@@ -20,7 +20,6 @@ import pynvml
 import portalocker
 
 
-
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Control when the script runs through special variables."
