@@ -165,24 +165,6 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GenBackwardOpConf4SparseSoftmaxCrossEntropy(const std::string& op_type_name,
-                                                        const user_op::UserOpWrapper& op,
-                                                        user_op::AddOpFn AddOp) {
-  if (op.NeedGenGradTensor4OpInput("prediction", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper grad_op = builder.Op(op_type_name)
-                                             .Input("prob", op.output("prob", 0))
-                                             .Input("label", op.input("label", 0))
-                                             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-                                             .Output("prediction_diff")
-                                             .Attr("depth", op.attr<int64_t>("depth"))
-                                             .Build();
-    op.BindGradTensorWithOpInput(grad_op.output("prediction_diff", 0), "prediction", 0);
-    AddOp(grad_op);
-  }
-  return Maybe<void>::Ok();
-}
-
 }  // namespace
 
 #define IMPLEMENT_SPAESE_SOFTMAX_CROSS_ENTROPY_OP_FUNCS(op_name, sbp_sig)                       \
@@ -226,19 +208,5 @@ IMPLEMENT_SPAESE_SOFTMAX_CROSS_ENTROPY_GRAD_OP_FUNCS(SparseSoftmaxCrossEntropy, 
 IMPLEMENT_SPAESE_SOFTMAX_CROSS_ENTROPY_GRAD_OP_FUNCS(SparseSoftmaxCrossEntropyMs,
                                                      AddGradMsSignature);
 #undef IMPLEMENT_SPAESE_SOFTMAX_CROSS_ENTROPY_GRAD_OP_FUNCS
-
-REGISTER_USER_OP_GRAD("sparse_softmax_cross_entropy")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      return GenBackwardOpConf4SparseSoftmaxCrossEntropy("sparse_softmax_cross_entropy_grad", op,
-                                                         AddOp);
-    });
-
-REGISTER_USER_OP_GRAD("sparse_softmax_cross_entropy_ms")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      return GenBackwardOpConf4SparseSoftmaxCrossEntropy("sparse_softmax_cross_entropy_ms_grad", op,
-                                                         AddOp);
-    });
 
 }  // namespace oneflow
