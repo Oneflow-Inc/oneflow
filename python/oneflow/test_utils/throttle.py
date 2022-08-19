@@ -12,9 +12,6 @@ def parse_args():
         description="Control when the script runs through special variables."
     )
     parser.add_argument(
-        "--port", type=int, default="6379", help="the redlock server port."
-    )
-    parser.add_argument(
         "--with-cuda", type=int, default=1, help="whether has cuda device."
     )
     parser.add_argument(
