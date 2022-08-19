@@ -716,8 +716,7 @@ def _test_step(test_case, device):
 def _test_step_assignment(test_case, device):
     v = flow.zeros(4, 4, device=device)
     v[0, 1::2] = flow.tensor([3.0, 4.0], device=device)
-    # BUG(wyg): step assignment has a bug
-    #  test_case.assertEqual(v[0].tolist(), [0., 3., 0., 4.])
+    test_case.assertEqual(v[0].tolist(), [0., 3., 0., 4.])
     test_case.assertEqual(v[1:].sum(), 0)
 
 
