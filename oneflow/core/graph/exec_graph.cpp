@@ -61,7 +61,7 @@ void ExecNode::UnbindBnWithEmptyRegst() {
 }
 
 void ExecNode::ToProto(const ParallelContext* parallel_ctx, const bool need_op_attr, ExecNodeProto* ret) const {
-  op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), parallel_ctx, need_op_attr, ret->mutable_kernel_conf());
+  op_->GenKernelConf(GetRegstBlobDesc4BnInOpFunc(), parallel_ctx, need_op_attr, ret->mutable_kernel_conf());
   for (const auto& bn_regst : bn_in_op2regst_) {
     const std::string& bn_in_op = bn_regst.first;
     auto regst = bn_regst.second;
@@ -106,7 +106,7 @@ Maybe<void> CheckPhysicalBlobDesc(
 }  // namespace
 
 void ExecNode::InferBlobDescs(const OpNode* op_node, const ParallelContext* parallel_ctx) {
-  auto GetBlobDesc4BnInOp = GetBlobDesc4BnInOpFunc();
+  auto GetBlobDesc4BnInOp = GetRegstBlobDesc4BnInOpFunc();
   const NdSbpSignature* nd_sbp_signature = nullptr;
   if (op_node != nullptr) { nd_sbp_signature = &op_node->nd_sbp_signature(); }
 
@@ -116,6 +116,8 @@ void ExecNode::InferBlobDescs(const OpNode* op_node, const ParallelContext* para
         std::bind(&Operator::GetLogicalBlobDesc4Ibn, op().get(), std::placeholders::_1),
         nd_sbp_signature, parallel_ctx, GetBlobDesc4BnInOp));
   }
+  // infer physical output
+  // find ops has diff infer logical and physical
   CHECK_JUST_MSG(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, &GlobalJobDesc()),
                  std::stringstream() << " infer blob descs if failed, op name " << op_->op_loc());
   if (op_node != nullptr && parallel_ctx->parallel_num() > 1 && nd_sbp_signature != nullptr) {
@@ -130,7 +132,7 @@ void ExecNode::InferBlobDescs(const OpNode* op_node, const ParallelContext* para
                      << " infer inplace obn to ibn if failed, op name " << op_->op_loc());
 }
 
-std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc() const {
+std::function<BlobDesc*(const std::string&)> ExecNode::GetRegstBlobDesc4BnInOpFunc() const {
   return [this](const std::string& bn_in_op) -> BlobDesc* {
     auto it = bn_in_op2regst_.find(bn_in_op);
     if (it == bn_in_op2regst_.end()) { return nullptr; }

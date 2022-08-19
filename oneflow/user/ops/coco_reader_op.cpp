@@ -37,6 +37,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
+// Special infer physical
 /* static */ Maybe<void> COCOReaderOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("image", 0);
   CHECK_OR_RETURN(nd_sbp == ctx->NdSbp4ArgNameAndIndex("image_id", 0));

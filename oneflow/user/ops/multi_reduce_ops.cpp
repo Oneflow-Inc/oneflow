@@ -106,6 +106,7 @@ DEFINE_MULTI_REDUCE_OP_METHODS(MultiReduceMaxAbs)
 DEFINE_MULTI_REDUCE_OP_METHODS(MultiReduceMinAbs)
 #undef DEFINE_MULTI_REDUCE_OP_METHODS
 
+// Special infer physical
 #define DEFINE_LOCAL_MULTI_REDUCE_OP_METHODS(op)                            \
   Maybe<void> op##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
     return InferLocalMultiReduceOpLogicalShape(ctx);                        \

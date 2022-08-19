@@ -132,6 +132,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
+// Special infer physical
 /* static */ Maybe<void> EagerCclReduceScatterOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);

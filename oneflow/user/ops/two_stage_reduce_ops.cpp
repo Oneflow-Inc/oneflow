@@ -199,6 +199,7 @@ Maybe<void> GetReduceDeviceStageGradSbpFn(user_op::SbpContext* ctx) {
 
 }  // namespace
 
+// Special infer physical
 #define IMPLEMENT_REDUCE_DEVICE_STAGE_USER_OP_FUNCS(op_name)                                \
   /*static*/ Maybe<void> op_name##Op::GetSbp(user_op::SbpContext* ctx) {                    \
     return GetReduceDeviceStageSbpFn(ctx);                                                  \

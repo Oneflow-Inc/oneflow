@@ -28,6 +28,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
+// Special infer physical
 /* static */ Maybe<void> OfrecordImageClassificationReaderOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   user_op::TensorDesc* image_tensor = ctx->MutOutputTensorDesc("image", 0);

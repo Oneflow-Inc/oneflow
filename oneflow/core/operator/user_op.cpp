@@ -641,6 +641,7 @@ Maybe<void> UserOp::InferOutBlobDescs(
   CHECK_OR_RETURN(val_ != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
   if (!val_->physical_tensor_desc_infer_fn) {
+    // When there has no physical tensor desc infer function, use infer function in base class.
     return Operator::InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
   } else {
     // default method set output blob desc (such as Dtype, is_dynamic, is_tensor_list)

@@ -264,6 +264,7 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn() {
   })(ctx);
 }
 
+// Special infer physical
 /* static */ Maybe<void> NormalizationAddReluOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   return MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
@@ -349,6 +350,7 @@ void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int
   })(ctx);
 }
 
+// Special infer physical
 /* static */ Maybe<void> CudnnFusedNormalizationAddReluOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   return MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,

@@ -83,6 +83,7 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
   return Maybe<void>::Ok();
 }
 
+// Special infer physical
 /*static*/ Maybe<void> AffineGridOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& theta = ctx->InputTensorDesc("theta", 0);
   user_op::TensorDesc* grid = ctx->MutOutputTensorDesc("grid", 0);
