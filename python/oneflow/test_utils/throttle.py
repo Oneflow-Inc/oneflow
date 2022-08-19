@@ -32,20 +32,24 @@ def parse_args():
     return parser.parse_args()
 
 
-def hash_cli2gpu(cli: str):
+def hash_cli2gpu(cmd: list):
     pynvml.nvmlInit()
     slot = pynvml.nvmlDeviceGetCount()
-    hash = hashlib.sha1(cli.encode("utf-8")).hexdigest()
-    return int(hash, 16) % slot
+    hash = hashlib.sha1(" ".join(cmd).encode("utf-8")).hexdigest()
+    gpu_id = int(hash, 16) % slot
+    return [gpu_id]
 
 
 def main():
     args = parse_args()
     if args.with_cuda:
-        gpu_slot = str(hash_cli2gpu(" ".join(args.cmd)))
-        with portalocker.Lock(f".oneflow-throttle-gpu-{gpu_slot}.lock", timeout=400):
+        cuda_visible_devices = [str(i) for i in hash_cli2gpu(args.cmd)]
+        with portalocker.Lock(
+            ".oneflow-throttle-gpu-" + "-".join(cuda_visible_devices) + ".lock",
+            timeout=400,
+        ):
             env = os.environ
-            env = dict(env, CUDA_VISIBLE_DEVICES=gpu_slot)
+            env = dict(env, CUDA_VISIBLE_DEVICES=",".join(cuda_visible_devices))
             return subprocess.call(args.cmd, env=env)
     else:
         return subprocess.call(args.cmd, shell=True)
