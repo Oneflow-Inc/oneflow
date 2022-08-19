@@ -18,7 +18,9 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include <assert.h>
-
+#if CUDA_VERSION >= 11000
+#include <cuda_bf16.h>
+#endif  // CUDA_VERSION >= 11000
 namespace oneflow {
 
 namespace {
@@ -117,6 +119,11 @@ struct GatherKernelUtilImpl<DeviceType::kCUDA, T, K> final {
                                        OF_PP_PAIR_FIRST(index_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_CUDA_IMPL,
                                  GATHER_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, GATHER_INDEX_TYPE_SEQ);
+#if CUDA_VERSION >= 11000
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_CUDA_IMPL,
+                                 OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16),
+                                 GATHER_INDEX_TYPE_SEQ);
+#endif
 #undef INITIATE_GATHER_KERNEL_UTIL_CUDA_IMPL
 
 }  // namespace oneflow

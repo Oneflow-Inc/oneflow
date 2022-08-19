@@ -893,10 +893,9 @@ class LayerNormParamGradFunctor {
                                 const std::shared_ptr<one::Tensor>& x,
                                 const std::shared_ptr<one::Tensor>& mean,
                                 const std::shared_ptr<one::Tensor>& inv_variance,
-                                const int64_t& begin_params_axis, const double& epsilon) const {
+                                const int64_t& begin_params_axis) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("begin_params_axis", begin_params_axis));
-    JUST(attrs.SetAttr<double>("epsilon", epsilon));
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, x, mean, inv_variance}, attrs);
   }
 

@@ -113,6 +113,7 @@ class GpuL2NormalizeKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_CUDA_L2_NORMALIZE_KERNEL(float)
+REGISTER_CUDA_L2_NORMALIZE_KERNEL(double)
 
 template<typename T>
 class GpuL2NormalizeGradKernel final : public user_op::OpKernel {
@@ -145,5 +146,6 @@ class GpuL2NormalizeGradKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_CUDA_L2_NORMALIZE_GRAD_KERNEL(float)
+REGISTER_CUDA_L2_NORMALIZE_GRAD_KERNEL(double)
 
 }  // namespace oneflow

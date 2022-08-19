@@ -145,25 +145,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("fused_scale_mask_softmax_dropout")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("fused_scale_mask_softmax_dropout_grad")
-                .Input("softmax_y", op.output("softmax_y", 0))
-                .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                .Input("mask", op.input("mask", 0))
-                .Input("dropout_mask", op.input("dropout_mask", 0))
-                .Output("dx")
-                .Attr("scale_value", op.attr<float>("scale_value"))
-                .Attr("dropout_scale_value", op.attr<float>("dropout_scale_value"))
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace oneflow
