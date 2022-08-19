@@ -32,7 +32,7 @@ def main():
     cli = " ".join(args.cli)
     if args.with_cuda:
         gpu_slot = str(hash_cli2gpu(cli))
-        with portalocker.Lock(f".oneflow-throttle-gpu-{gpu_slot}", timeout=10) as fh:
+        with portalocker.Lock(f".oneflow-throttle-gpu-{gpu_slot}", timeout=400) as fh:
             cli = "CUDA_VISIBLE_DEVICES=" + gpu_slot + " " + cli
             return subprocess.call(cli, shell=True)
     else:
