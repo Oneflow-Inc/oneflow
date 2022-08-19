@@ -2491,7 +2491,7 @@ Maybe<Tensor> DropoutImpl(const std::shared_ptr<one::Tensor>& input, const float
 class Dropout1dFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
-                           const bool& train) const {
+                           const bool& training) const {
     CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, true)
         << "dropout probability has to be between 0 and 1, but got " << p;
     const int input_dim = input->ndim();
@@ -2503,7 +2503,7 @@ class Dropout1dFunctor {
     bool is_batched = (input_dim == 3);
     std::shared_ptr<one::Tensor> result;
     if (!is_batched) { result = JUST(Unsqueeze(input, 0)); }
-    result = JUST(DropoutImpl(result, p, train));
+    result = JUST(DropoutImpl(result, p, training));
     if (!is_batched) { result = JUST(Squeeze(result, std::vector<int32_t>{0})); }
     return result;
   }
@@ -2512,7 +2512,7 @@ class Dropout1dFunctor {
 class Dropout2dFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
-                           const bool& train) const {
+                           const bool& training) const {
     CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, true)
         << "dropout probability has to be between 0 and 1, but got " << p;
     const int input_dim = input->ndim();
@@ -2528,14 +2528,14 @@ class Dropout2dFunctor {
            "is the channel dim. This behavior will change in a future release to interpret the "
            "input as one without a batch dimension, i.e. shape (C, H, W). To maintain the 1D "
            "channel-wise dropout behavior, please switch to using dropout1d instead.";
-    return JUST(DropoutImpl(input, p, train));
+    return JUST(DropoutImpl(input, p, training));
   }
 };
 
 class Dropout3dFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
-                           const bool& train) const {
+                           const bool& training) const {
     CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, true)
         << "dropout probability has to be between 0 and 1, but got " << p;
     const int input_dim = input->ndim();
@@ -2548,7 +2548,7 @@ class Dropout3dFunctor {
     bool is_batched = (input_dim == 5);
     std::shared_ptr<one::Tensor> result;
     if (!is_batched) { result = JUST(Unsqueeze(input, 0)); }
-    result = JUST(DropoutImpl(result, p, train));
+    result = JUST(DropoutImpl(result, p, training));
     if (!is_batched) { result = JUST(Squeeze(result, std::vector<int32_t>{0})); }
     return result;
   }

@@ -1794,15 +1794,15 @@
   bind_python: False
 
 - name: "dropout1d"
-  signature: "Tensor (Tensor input, Float p=0.5, Bool train=True) => Dropout1d"
+  signature: "Tensor (Tensor input, Float p=0.5, Bool training=True) => Dropout1d"
   bind_python: True
 
 - name: "dropout2d"
-  signature: "Tensor (Tensor input, Float p=0.5, Bool train=True) => Dropout2d"
+  signature: "Tensor (Tensor input, Float p=0.5, Bool training=True) => Dropout2d"
   bind_python: True
 
 - name: "dropout3d"
-  signature: "Tensor (Tensor input, Float p=0.5, Bool train=True) => Dropout3d"
+  signature: "Tensor (Tensor input, Float p=0.5, Bool training=True) => Dropout3d"
   bind_python: True
 
 - name: "constant_pad"
