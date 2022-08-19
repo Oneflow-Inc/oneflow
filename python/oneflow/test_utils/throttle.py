@@ -21,7 +21,6 @@ import portalocker
 import os
 
 
-
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Control when the script runs through special variables."
