@@ -67,7 +67,6 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "bias_add",
                               "reduce_sum",
                               "reduce_sum_like",
-                              "sigmoid",
                               "sigmoid_grad",
                               "tanh",
                               "tanh_grad",
