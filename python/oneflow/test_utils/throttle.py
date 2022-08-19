@@ -43,14 +43,13 @@ def hash_cli2gpu(cli: str):
 
 def main():
     args = parse_args()
-    cli = " ".join(args.cli)
     env = os.environ
     if args.with_cuda:
-        gpu_slot = hash_cli2gpu(cli)
+        gpu_slot = hash_cli2gpu(" ".join(args.cli))
         with portalocker.Lock(f".oneflow-throttle-gpu-{gpu_slot}.lock", timeout=400):
             env = dict(env, CUDA_VISIBLE_DEVICES=str(gpu_slot))
-            return subprocess.call(cli, env=env)
-    return subprocess.call(cli, env)
+            return subprocess.call(args.cli, env=env)
+    return subprocess.call(args.cli, env)
 
 
 if __name__ == "__main__":
