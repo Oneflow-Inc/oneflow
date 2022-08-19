@@ -37,20 +37,16 @@ Maybe<std::vector<int32_t>> CheckAxis(const std::vector<int32_t>& axis, const in
   std::vector<int32_t> reduce_axis(reduce_ndim);
   if (naxis == 0) {
     std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-    return reduce_axis;
   } else {
-    // NOTE: for 0-dim tensor, just return empty reduce vector
-    if (ndim == 0) { return reduce_axis; }
-    std::vector<int32_t> axis_num(ndim);
+    std::vector<int32_t> axis_num(naxis);
     for (int32_t i = 0; i < naxis; i++) {
-      reduce_axis[i] = JUST(maybe_wrap_dim(axis[i], ndim));
-      axis_num[reduce_axis[i]]++;
-      CHECK_OR_RETURN(axis_num[reduce_axis[i]] < 2)
-          << Error::RuntimeError() << "dim " << reduce_axis[i]
-          << " appears multiple times in the list of dims";
+      const int32_t axis_i = JUST(maybe_wrap_dim(axis[i], ndim));
+      axis_num[axis_i]++;
+      CHECK_OR_RETURN(axis_num[axis_i] < 2) << Error::RuntimeError() << "dim " << axis_i
+                                            << " appears multiple times in the list of dims";
     }
-    return reduce_axis;
   }
+  return reduce_axis;
 }
 
 Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x) {
