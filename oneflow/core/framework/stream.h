@@ -65,8 +65,7 @@ template<>
 struct hash<oneflow::Stream> final {
   size_t operator()(const oneflow::Stream& stream) const {
     using namespace oneflow;
-    return std::hash<Symbol<Device>>()(stream.device())
-           ^ std::hash<StreamType>()(stream.stream_type());
+    return Hash(stream.device(), stream.stream_type());
   }
 };
 
