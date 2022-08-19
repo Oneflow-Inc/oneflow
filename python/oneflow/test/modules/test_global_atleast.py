@@ -53,19 +53,19 @@ class TestAtLeastModule(flow.unittest.TestCase):
     @globaltest
     def test_atleast1d_with_random_data(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=4):
+            for sbp in all_sbp(placement, max_dim=1):
                 _test_atleast1d_with_random_data(test_case, placement, sbp)
 
     @globaltest
     def test_atleast2d_with_random_data(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=4):
+            for sbp in all_sbp(placement, max_dim=1):
                 _test_atleast2d_with_random_data(test_case, placement, sbp)
 
     @globaltest
     def test_atleast3d_with_random_data(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=4):
+            for sbp in all_sbp(placement, max_dim=1):
                 _test_atleast3d_with_random_data(test_case, placement, sbp)
 
 
