@@ -98,25 +98,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("unfold_tensor")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
-      ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("unfold_tensor_grad")
-            .InputBind("dy", ctx->FwOp().output_grad("y", 0))
-            .InputBind("x", ctx->FwOp().input("x", 0))
-            .Attr<int32_t>("dimension", ctx->FwOp().attr<int32_t>("dimension"))
-            .Attr<int32_t>("size", ctx->FwOp().attr<int32_t>("size"))
-            .Attr<int32_t>("step", ctx->FwOp().attr<int32_t>("step"))
-            .Output("dx")
-            .Build();
-      });
-
-      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
-                                [&ctx, &grad_op_name]() -> const std::string& {
-                                  return ctx->GetOp(grad_op_name).output("dx", 0);
-                                });
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace oneflow

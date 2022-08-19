@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
@@ -63,6 +64,11 @@ inline Maybe<void> AddTensorAsGraphLoss(const std::shared_ptr<one::Tensor>& t) {
   CHECK_OR_RETURN("" != loss_lbn);
   return JUST(GetCurInferCtx())->AddLossLogicalBlobName(loss_lbn);
 }
+
+Maybe<void> MarkVariableGradients(const one::TensorTuple& variables,
+                                  const one::TensorTuple& gradients);
+
+Maybe<void> MarkOutputGradients(const one::TensorTuple& outputs, const one::TensorTuple& gradients);
 
 }  // namespace oneflow
 
