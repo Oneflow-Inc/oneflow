@@ -16,9 +16,10 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_REWRITER_JOB_PASS_H_
 #define ONEFLOW_CORE_JOB_REWRITER_JOB_PASS_H_
 
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_builder.h"
-#include "oneflow/core/common/util.h"
+#include "oneflow/core/job_rewriter/pass_util.h"
 
 namespace oneflow {
 

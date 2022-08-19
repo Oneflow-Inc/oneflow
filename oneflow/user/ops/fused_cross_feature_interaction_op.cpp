@@ -138,44 +138,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("fused_cross_feature_interaction")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-      if (op.attr<std::string>("interaction_mode") == "vector") {
-        builder.Op("fused_cross_feature_interaction_v1_grad")
-            .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-            .Input("weight", op.input("weight", 0))
-            .Input("x", op.input("x", 0))
-            .Input("x0", op.input("x0", 0))
-            .Input("matmul_result", op.output("matmul_result", 0));
-      } else if (op.attr<std::string>("interaction_mode") == "matrix") {
-        builder.Op("fused_cross_feature_interaction_v2_grad")
-            .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-            .Input("weight", op.input("weight", 0))
-            .Input("bias", op.input("bias", 0))
-            .Input("x", op.input("x", 0))
-            .Input("x0", op.input("x0", 0))
-            .Input("matmul_result", op.output("matmul_result", 0));
-      } else {
-        UNIMPLEMENTED();
-      }
-      builder.Output("dx").Output("dw").Output("dx0").Output("dbias");
-      auto grad_op = builder.Build();
-      AddOp(grad_op);
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-      }
-      if (op.NeedGenGradTensor4OpInput("weight", 0)) {
-        op.BindGradTensorWithOpInput(grad_op.output("dw", 0), "weight", 0);
-      }
-      if (op.NeedGenGradTensor4OpInput("x0", 0)) {
-        op.BindGradTensorWithOpInput(grad_op.output("dx0", 0), "x0", 0);
-      }
-      if (op.NeedGenGradTensor4OpInput("bias", 0)) {
-        op.BindGradTensorWithOpInput(grad_op.output("dbias", 0), "bias", 0);
-      }
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace oneflow
