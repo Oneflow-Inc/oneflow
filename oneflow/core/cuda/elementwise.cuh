@@ -113,20 +113,20 @@ class HasApply2 {
 template<int pack_size, typename FunctorT, typename R, typename... IN>
 __device__ typename std::enable_if<HasApply2<FunctorT>::value == true && pack_size % 2 == 0,
                                    Packed<R, pack_size>>::type
-ApplyPack(const FunctorT& functor, const IN... in[pack_size]) {
+ApplyPack(const FunctorT& functor, const Packed<IN, pack_size>... in) {
   Packed<R, pack_size> ret;
 #pragma unroll
-  for (int j = 0; j < pack_size; j += 2) { functor.Apply2(ret.elem + j, (in + j)...); }
+  for (int j = 0; j < pack_size; j += 2) { functor.Apply2(ret.elem + j, (in.elem + j)...); }
   return ret;
 }
 
 template<int pack_size, typename FunctorT, typename R, typename... IN>
 __device__ typename std::enable_if<HasApply2<FunctorT>::value == false || pack_size % 2 != 0,
                                    Packed<R, pack_size>>::type
-ApplyPack(const FunctorT& functor, const IN... in[pack_size]) {
+ApplyPack(const FunctorT& functor, const Packed<IN, pack_size>... in) {
   Packed<R, pack_size> ret;
 #pragma unroll
-  for (int j = 0; j < pack_size; ++j) { ret.elem[j] = functor((in[j])...); }
+  for (int j = 0; j < pack_size; ++j) { ret.elem[j] = functor((in[j].elem)...); }
   return ret;
 }
 
@@ -138,7 +138,7 @@ __global__ void __launch_bounds__(kBlockSize)
   auto functor = factory();
   const int global_tid = blockIdx.x * kBlockSize + threadIdx.x;
   for (int64_t i = global_tid; i < n_pack; i += blockDim.x * gridDim.x) {
-    pack_r[i] = ApplyPack<pack_size, decltype(functor), R, IN...>(functor, (pack_in[i].elem)...);
+    pack_r[i] = ApplyPack<pack_size, decltype(functor), R, IN...>(functor, (pack_in[i])...);
   }
   if (tail && global_tid < n_tail) { tail_r[global_tid] = functor((tail_in[global_tid])...); }
 }
