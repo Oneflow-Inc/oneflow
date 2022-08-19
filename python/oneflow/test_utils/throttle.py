@@ -18,6 +18,7 @@ import hashlib
 import subprocess
 import pynvml
 import portalocker
+import os
 
 
 
@@ -48,7 +49,9 @@ def main():
         gpu_slot = str(hash_cli2gpu(cli))
         with portalocker.Lock(f".oneflow-throttle-gpu-{gpu_slot}.lock", timeout=400):
             cli = "CUDA_VISIBLE_DEVICES=" + gpu_slot + " " + cli
-            return subprocess.call(cli, shell=True)
+            env = os.environ
+            env = dict(env, CUDA_VISIBLE_DEVICES=gpu_slot)
+            return subprocess.call(cli, shell=True, env=env)
     else:
         return subprocess.call(cli, shell=True)
 
