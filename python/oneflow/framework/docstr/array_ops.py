@@ -433,8 +433,8 @@ add_docstr(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> x1 = flow.randn(2, 5)
-        >>> x2 = flow.randn(3, 5)
+        >>> x1 = flow.randn(5, 2)
+        >>> x2 = flow.randn(5, 3)
         >>> flow.hstack([x1, x2]).shape
         oneflow.Size([5, 5])
         >>> x = flow.randn(5)
