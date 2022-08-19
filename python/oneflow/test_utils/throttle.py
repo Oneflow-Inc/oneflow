@@ -2,8 +2,7 @@ import argparse
 import hashlib
 import subprocess
 import pynvml
-from redis import Redis
-from pottery import Redlock
+import portalocker
 
 AUTO_RELEASE_TIME = 1000
 
@@ -14,9 +13,6 @@ def parse_args():
     parser.add_argument('cli', type=str, nargs='...', help='the controlled script path.')
     return parser.parse_args()
 
-def get_redis(port:int):
-    server_host = 'redis://localhost:'+ str(port)
-    return Redis.from_url(server_host)
 
 def hash_cli2gpu(cli:str):
     pynvml.nvmlInit()
@@ -25,15 +21,12 @@ def hash_cli2gpu(cli:str):
     return int(hash, 16) % slot
 
 
-
 def main():
     args = parse_args()
     cli = ' '.join(args.cli)
     if args.with_cuda:
-        redis = get_redis(args.port)
         gpu_slot = str(hash_cli2gpu(cli))
-        lock = Redlock(key=gpu_slot, masters={redis}, auto_release_time=AUTO_RELEASE_TIME)
-        with lock:
+        with portalocker.Lock('.oneflow-throttle-gpu'+gpu_slot, timeout=1) as fh:
             cli = 'CUDA_VISIBLE_DEVICES='+ gpu_slot + ' ' + cli
             return subprocess.call(cli, shell=True)
     else:
