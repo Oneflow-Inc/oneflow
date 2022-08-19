@@ -140,7 +140,14 @@ std::string VirtualMachineEngine::GetLivelyInstructionListDebugString(int64_t de
   std::stringstream ss;
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, mut_lively_instruction_list()) {
     if (--debug_cnt <= 0) { break; }
-    ss << instruction->DebugName() << "\n";
+    ss << instruction->DebugName() << " ptr: " << instruction
+       << " dispatched:" << (instruction->dispatched_instruction_hook().empty() ? "0" : "1")
+       << " launched:" << (instruction->Launched() ? "1" : "0")
+       << " done:" << (instruction->Done() ? "1" : "0");
+    INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_in_edges()) {
+      ss << " dep-ptr:" << &edge->src_instruction();
+    }
+    ss << "\n";
   }
   return ss.str();
 }

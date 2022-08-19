@@ -55,6 +55,8 @@ class StreamPolicy {
                                      InstructionStatusBuffer* status_buffer) const = 0;
   virtual void DeleteInstructionStatus(const Stream& stream,
                                        InstructionStatusBuffer* status_buffer) const = 0;
+  virtual bool QueryInstructionStatusLaunched(
+      const Stream& stream, const InstructionStatusBuffer& status_buffer) const = 0;
   virtual bool QueryInstructionStatusDone(const Stream& stream,
                                           const InstructionStatusBuffer& status_buffer) const = 0;
   virtual void Run(Instruction* instruction) const = 0;
