@@ -19,7 +19,6 @@ import subprocess
 import pynvml
 import portalocker
 
-AUTO_RELEASE_TIME = 1000
 
 
 def parse_args():
