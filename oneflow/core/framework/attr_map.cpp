@@ -105,22 +105,22 @@ bool AttrMap::HasAttr4Name(const std::string& attr_name) const {
 AttrMap::const_iterator::const_iterator(size_t pos, const AttrMap::AttrData* data)
     : pos_(pos), data_(data) {
   while (pos_ < data_->capacity) {
-    if (!data_->attrs[pos_].second) {
-      ++pos_;
-      continue;
-    }
+    if (data_->attrs[pos_].second) { break; }
+    ++pos_;
+  }
+  if (pos_ < data_->capacity) {
     kv_.first = (*data_->attr_names)[pos_];
     kv_.second = data_->attrs[pos_].first;
   }
 }
 
 AttrMap::const_iterator& AttrMap::const_iterator::operator++() {
-  while (pos_ < data_->capacity - 1) {
+  ++pos_;
+  while (pos_ < data_->capacity) {
+    if (data_->attrs[pos_].second) { break; }
     ++pos_;
-    if (!data_->attrs[pos_].second) {
-      ++pos_;
-      continue;
-    }
+  }
+  if (pos_ < data_->capacity) {
     kv_.first = (*data_->attr_names)[pos_];
     kv_.second = data_->attrs[pos_].first;
   }

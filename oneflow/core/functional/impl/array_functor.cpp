@@ -215,6 +215,7 @@ class EmptyFunctor {
   EmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device, const bool pin_memory) const {
+    OF_PROFILER_RANGE_PUSH("AttrMap");
     thread_local static CachedMutableAttrMap attrs;
     attrs.reset();
     Symbol<Device> device_symbol = device.value_or(JUST(Device::New("cpu", 0)));
@@ -223,6 +224,7 @@ class EmptyFunctor {
     attrs.SetAttr<bool>("pin_memory", pin_memory);
     attrs.SetAttr<std::string>("device_type", device_symbol->type());
     attrs.SetAttr<int64_t>("device_id", device_symbol->device_id());
+    OF_PROFILER_RANGE_POP();
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
   }
 
