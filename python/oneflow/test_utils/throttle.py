@@ -16,7 +16,6 @@ limitations under the License.
 import argparse
 import hashlib
 import subprocess
-import pynvml
 import portalocker
 import os
 
@@ -33,6 +32,8 @@ def parse_args():
 
 
 def hash_cli2gpu(cmd: list):
+    import pynvml
+
     pynvml.nvmlInit()
     slot = pynvml.nvmlDeviceGetCount()
     hash = hashlib.sha1(" ".join(cmd).encode("utf-8")).hexdigest()
