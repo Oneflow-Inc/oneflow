@@ -28,6 +28,7 @@ class EpD2HStreamPolicy final : public EpStreamPolicyBase {
 
   void InitInstructionStatus(const Stream& stream,
                              InstructionStatusBuffer* status_buffer) const override;
+  void Run(Instruction* instruction) const override;
 };
 
 }  // namespace vm

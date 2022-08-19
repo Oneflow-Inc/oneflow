@@ -46,13 +46,19 @@ EpD2HStreamPolicy::EpD2HStreamPolicy(Symbol<Device> device)
 void EpD2HStreamPolicy::InitInstructionStatus(const Stream& stream,
                                               InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(EpOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
-  EpStreamPolicyBase* ep_stream_policy_base =
-      dynamic_cast<EpStreamPolicyBase*>(const_cast<Stream&>(stream).mut_stream_policy());
-  CHECK_NOTNULL(ep_stream_policy_base);
-  auto* ep_event_provider = ep_stream_policy_base->ep_event_provider();
   auto* data_ptr = status_buffer->mut_buffer();
-  const auto& ep_event = CHECK_NOTNULL(ep_event_provider)->GetReusedEpEvent();
-  EpOptionalEventRecordStatusQuerier::PlacementNew(data_ptr, ep_event);
+  EpOptionalEventRecordStatusQuerier::PlacementNew(data_ptr, nullptr);
+}
+
+void EpD2HStreamPolicy::Run(Instruction* instruction) const {
+  OF_PROFILER_RANGE_GUARD("S:" + instruction->DebugName());
+  auto* stream = instruction->mut_stream();
+  EpStreamPolicyBase* ep_stream_policy_base =
+      dynamic_cast<EpStreamPolicyBase*>(stream->mut_stream_policy());
+  CHECK_NOTNULL(ep_stream_policy_base);
+  ep_stream_policy_base->GetOrCreateEpDevice()->SetAsActiveDevice();
+  instruction->Compute();
+  ep_stream_policy_base->stream()->Sync();
 }
 
 }  // namespace vm

@@ -15,11 +15,25 @@ limitations under the License.
 */
 #include "oneflow/core/vm/instruction_policy.h"
 #include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/vm/stream.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
 namespace vm {
+
+bool InstructionPolicy::Prescheduleable(const vm::Stream* src, const vm::Stream* dst) const {
+  if (src == dst) { return true; }
+  if (&src->thread_ctx() == &dst->thread_ctx()) {
+    if (src->device()->enum_type() == kCPU && dst->stream_type() == StreamType::kHost2Device) {
+      return true;
+    }
+    if (src->stream_type() == StreamType::kDevice2Host && dst->device()->enum_type() == kCPU) {
+      return true;
+    }
+  }
+  return false;
+}
 
 void InstructionPolicy::InitInstructionStatus(Instruction* instruction) {
   instruction->stream_policy().InitInstructionStatus(instruction->stream(),
