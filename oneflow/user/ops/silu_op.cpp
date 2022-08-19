@@ -69,24 +69,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-namespace {
-
-REGISTER_USER_OP_GRAD("silu").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
-  const auto silu_grad_op_name = ctx->FwOp().op_name() + "_grad";
-  ctx->DefineOp(silu_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("silu_grad")
-        .InputBind("x", ctx->FwOp().input("in", 0))
-        .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-        .Output("dx")
-        .Build();
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
-                            [&ctx, &silu_grad_op_name]() -> const std::string& {
-                              return ctx->GetOp(silu_grad_op_name).output("dx", 0);
-                            });
-  return Maybe<void>::Ok();
-});
-
-}  // namespace
-
 }  // namespace oneflow
