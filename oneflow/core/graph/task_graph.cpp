@@ -593,14 +593,18 @@ void TaskGraph::MergeChain() {
 }
 
 void TaskGraph::BuildCtrlRegstDescInSameChain() {
-  HashMap<int64_t, TaskNode*> chain_id2node;
+  auto GenPhysicalChainId = [](TaskNode* node) {
+    // NOTE(chengcheng): different rank cannot use same chain id for bad ctrl link.
+    return (node->chain_id() << 31) | (node->machine_id());
+  };
+  HashMap<int64_t, TaskNode*> physical_chain_id2node;
   for (auto* node : ordered_task_nodes_) {
     if (IsConnectToTickOp(node)) { continue; }
-    int64_t chain_id = node->chain_id();
-    if (chain_id == -1) { continue; }  // NOTE(chengcheng): skip chain id default -1.
-    auto iter = chain_id2node.find(chain_id);
-    if (iter == chain_id2node.end()) {
-      CHECK(chain_id2node.emplace(chain_id, node).second);
+    if (node->chain_id() == -1) { continue; }  // NOTE(chengcheng): skip chain id default -1.
+    int64_t physical_chain_id = GenPhysicalChainId(node);
+    auto iter = physical_chain_id2node.find(physical_chain_id);
+    if (iter == physical_chain_id2node.end()) {
+      CHECK(physical_chain_id2node.emplace(physical_chain_id, node).second);
     } else {
       TaskNode* src_node = iter->second;
       TaskNode* dst_node = node;
