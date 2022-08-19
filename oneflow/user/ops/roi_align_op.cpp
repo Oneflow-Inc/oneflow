@@ -110,32 +110,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-namespace {
-
-Maybe<void> GenerateBackwardOpConf4RoiAlign(const user_op::UserOpWrapper& op,
-                                            const user_op::AddOpFn& AddOp) {
-  if (op.NeedGenGradTensor4OpInput("x", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper grad_op =
-        builder.Op("roi_align_grad")
-            .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-            .Input("x_like", op.input("x", 0))
-            .Input("rois", op.input("rois", 0))
-            .Attr("pooled_h", op.attr<int32_t>("pooled_h"))
-            .Attr("pooled_w", op.attr<int32_t>("pooled_w"))
-            .Attr("spatial_scale", op.attr<float>("spatial_scale"))
-            .Attr("sampling_ratio", op.attr<int32_t>("sampling_ratio"))
-            .Attr("aligned", op.attr<bool>("aligned"))
-            .Output("dx")
-            .Build();
-    op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-    AddOp(grad_op);
-  }
-  return Maybe<void>::Ok();
-}
-
-}  // namespace
-
-REGISTER_USER_OP_GRAD("roi_align").SetGenBackwardOpConfFn(GenerateBackwardOpConf4RoiAlign);
-
 }  // namespace oneflow
