@@ -48,7 +48,7 @@ def main():
     if args.with_cuda:
         gpu_slot = hash_cli2gpu(cli)
         with portalocker.Lock(f".oneflow-throttle-gpu-{gpu_slot}.lock", timeout=400):
-            env = dict(env, CUDA_VISIBLE_DEVICES=gpu_slot)
+            env = dict(env, CUDA_VISIBLE_DEVICES=str(gpu_slot))
             return subprocess.call(cli, env=env)
     return subprocess.call(cli, env)
 
