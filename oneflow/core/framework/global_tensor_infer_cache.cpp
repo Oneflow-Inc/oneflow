@@ -38,7 +38,7 @@ bool OptionalEqual(const Optional<Symbol<NdSbp>>& lhs, const Optional<Symbol<NdS
 size_t InputGlobalTensorMeta::hash_value() const {
   size_t hash_value = std::hash<Symbol<GlobalTensorMeta>>()(tensor_meta());
   if (consumer_nd_sbp_constraint().has_value()) {
-    hash_value ^= std::hash<Symbol<NdSbp>>()(CHECK_JUST(consumer_nd_sbp_constraint()));
+    AddHash(&hash_value, CHECK_JUST(consumer_nd_sbp_constraint()));
   }
   return hash_value;
 }
@@ -65,8 +65,8 @@ size_t GlobalTensorMetaInferArgs::hash_value() const {
 
 size_t SrcOpGlobalTensorMetaInferArgs::hash_value() const {
   size_t hash_value = std::hash<AttrMap>()(attrs_);
-  hash_value ^= std::hash<Symbol<ParallelDesc>>()(parallel_desc_);
-  hash_value ^= std::hash<Symbol<NdSbp>>()(nd_sbp_);
+  AddHash(&hash_value, parallel_desc_);
+  AddHash(&hash_value, nd_sbp_);
   return hash_value;
 }
 
