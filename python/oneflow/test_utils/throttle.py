@@ -28,9 +28,7 @@ def parse_args():
     parser.add_argument(
         "--with-cuda", type=int, default=1, help="whether has cuda device."
     )
-    parser.add_argument(
-        "cli", type=str, nargs="...", help="the controlled script path."
-    )
+    parser.add_argument("cmd", type=str, nargs="...", help="command to run")
     return parser.parse_args()
 
 
@@ -43,15 +41,14 @@ def hash_cli2gpu(cli: str):
 
 def main():
     args = parse_args()
-    cli = " ".join(args.cli)
     if args.with_cuda:
-        gpu_slot = str(hash_cli2gpu(cli))
+        gpu_slot = str(hash_cli2gpu(" ".join(args.cmd)))
         with portalocker.Lock(f".oneflow-throttle-gpu-{gpu_slot}.lock", timeout=400):
             env = os.environ
             env = dict(env, CUDA_VISIBLE_DEVICES=gpu_slot)
-            return subprocess.call(cli, shell=True, env=env)
+            return subprocess.call(args.cmd, env=env)
     else:
-        return subprocess.call(cli, shell=True)
+        return subprocess.call(args.cmd, shell=True)
 
 
 if __name__ == "__main__":
