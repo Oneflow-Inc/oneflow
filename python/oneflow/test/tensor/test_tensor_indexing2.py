@@ -716,8 +716,7 @@ def _test_step(test_case, device):
 def _test_step_assignment(test_case, device):
     v = flow.zeros(4, 4, device=device)
     v[0, 1::2] = flow.tensor([3.0, 4.0], device=device)
-    # BUG(wyg): step assignment has a bug
-    #  test_case.assertEqual(v[0].tolist(), [0., 3., 0., 4.])
+    test_case.assertEqual(v[0].tolist(), [0.0, 3.0, 0.0, 4.0])
     test_case.assertEqual(v[1:].sum(), 0)
 
 
@@ -801,11 +800,13 @@ def _test_empty_ndim_index(test_case, device):
 
     x = flow.empty(10, 0, device=device)
     test_case.assertEqual(x[[1, 2]].shape, (2, 0))
-    # TODO: support empty ndim getitem
-    #  test_case.assertEqual(x[[], []].shape, (0,))
-    # TODO(wyg): catch exception for dimension with size 0
-    #  with test_case.assertRaisesRegex(IndexError, 'for dimension with size 0'):
-    #      x[:, [0, 1]]
+    test_case.assertEqual(x[[], []].shape, (0,))
+    test_case.assertEqual(x[[[]]].shape, (0, 0))
+    test_case.assertEqual(x[[[[]]]].shape, (1, 0, 0))
+    test_case.assertEqual(x[[1], []].shape, (0,))
+    test_case.assertEqual(x[[], [2]].shape, (0,))
+    with test_case.assertRaisesRegex(IndexError, "for dimension with size 0"):
+        x[:, [0, 1]]
 
 
 def _test_empty_ndim_index_bool(test_case, device):
