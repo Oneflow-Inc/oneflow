@@ -1785,6 +1785,9 @@
   signature: "Tensor (Tensor x) => Inv"
   bind_python: True
 
+- name: "linalg_cross"
+  signature: "Tensor (Tensor input, Tensor other, *, Int64 dim=-1) => LinalgCross"
+
 - name: "dropout"
   signature: "Tensor (Tensor input, Float p=0.5, Bool training=True, Bool inplace=False, Generator generator=None, *, Tensor addend=None) => Dropout"
   bind_python: True
