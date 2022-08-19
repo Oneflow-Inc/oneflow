@@ -51,7 +51,7 @@ def main():
             env = dict(os.environ, CUDA_VISIBLE_DEVICES=",".join(cuda_visible_devices))
             return subprocess.call(args.cmd, env=env)
     else:
-        return subprocess.call(args.cmd, shell=True)
+        return subprocess.call(args.cmd)
 
 
 if __name__ == "__main__":
