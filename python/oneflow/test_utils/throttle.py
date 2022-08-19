@@ -48,8 +48,7 @@ def main():
             ".oneflow-throttle-gpu-" + "-".join(cuda_visible_devices) + ".lock",
             timeout=400,
         ):
-            env = os.environ
-            env = dict(env, CUDA_VISIBLE_DEVICES=",".join(cuda_visible_devices))
+            env = dict(os.environ, CUDA_VISIBLE_DEVICES=",".join(cuda_visible_devices))
             return subprocess.call(args.cmd, env=env)
     else:
         return subprocess.call(args.cmd, shell=True)
