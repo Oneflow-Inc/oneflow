@@ -14,12 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <cstdint>
-#include <memory>
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/error.h"
-#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
@@ -34,7 +31,6 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
