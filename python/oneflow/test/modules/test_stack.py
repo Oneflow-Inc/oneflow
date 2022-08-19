@@ -127,6 +127,14 @@ class TestStackModule(flow.unittest.TestCase):
         y = random_tensor(ndim=0).to(device)
         z = random_tensor(ndim=0).to(device)
         out = torch.dstack((x, y, z))
+
+    @autotest(auto_backward=True, check_graph=True)
+    def test_stack_kMaxInputCount_inputs(test_case):
+        kMaxInputCount = 128 + 1
+        stack_list = [
+            random_tensor(ndim=2, dim0=3, dim1=4) for _ in range(kMaxInputCount)
+        ]
+        out = torch.stack(stack_list, 0)
         return out
 
 
