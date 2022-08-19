@@ -61,9 +61,9 @@ struct ScaleLoad {
 
     src_pack.storage = *(reinterpret_cast<const cuda::layer_norm::PackType<SRC, PackSize>*>(src) + packed_offset);
     SRC gamma_val = static_cast<SRC>(1.0); 
-    if (affine) {
-      gamma_val = gamma[gamma_offset]; 
-    } 
+    // if (affine) {
+    //   gamma_val = gamma[gamma_offset]; 
+    // } 
 #pragma unroll
     for (int i = 0; i < PackSize; ++i) {
       dst[i] = static_cast<DST>(src_pack.elem[i] * gamma_val);
@@ -348,6 +348,12 @@ void GroupNormBackwardGpu(ep::Stream* stream, const int64_t num_instances,
                                        decltype(store), ComputeType>(
       stream->As<ep::CudaStream>()->cuda_stream(), load_x, load_scaled_dy, store,
       mean->dptr<ComputeType>(), inv_variance->dptr<ComputeType>(), num_instances, norm_size, spatial_size)));
+
+  // OF_CUDA_CHECK((cuda::layer_norm::DispatchLayerNormGrad<decltype(load_x), decltype(load_scaled_dy),
+  //                                                        decltype(store), ComputeType>(
+  //     stream->As<ep::CudaStream>()->cuda_stream(), load_x, load_scaled_dy, store,
+  //     mean->dptr<ComputeType>(), inv_variance->dptr<ComputeType>(), num_instances, norm_size)));
+
 }
 
 template<typename T>
@@ -442,6 +448,9 @@ class GroupNormGradGpuKernel final : public user_op::OpKernel {
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const int64_t num_instances = mean->shape_view().elem_cnt();
     const int64_t norm_size = x->shape_view().elem_cnt() / num_instances;
+    printf("Num instances is: %ld \n", num_instances); 
+    printf("Norm size is: %ld \n", norm_size); 
+
     const int64_t batch_size = x->shape_view().At(0); 
     const int64_t channel_size = x->shape_view().At(1); 
     const int64_t spatial_size = x->shape_view().elem_cnt() / batch_size / channel_size; 
@@ -452,6 +461,7 @@ class GroupNormGradGpuKernel final : public user_op::OpKernel {
     LaunchGroupNormBackward<T>(ctx->stream(), num_instances, norm_size, channel_size, spatial_size, 
                                dy->dptr<T>(), x->dptr<T>(),
                                mean, inv_variance, gamma_ptr, dx->mut_dptr<T>());
+                               
   };
 };
 
