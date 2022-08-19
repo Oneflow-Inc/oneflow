@@ -362,7 +362,6 @@ void LaunchGroupNormBackward(ep::Stream* stream, const int64_t num_instances,
                                   spatial_size, dy_ptr, x_ptr, mean,
                                   inv_variance, gamma_ptr, dx_ptr);
   } else {
-    printf("Here not affine. \n"); 
     GroupNormBackwardGpu<T, false>(stream, num_instances, norm_size, channel_size, spatial_size, 
                                     dy_ptr, x_ptr, mean,
                                     inv_variance, gamma_ptr, dx_ptr);
@@ -390,24 +389,20 @@ private:
         const double epsilon = ctx->Attr<double>("epsilon");
         const int32_t num_groups = ctx->Attr<int32_t>("num_groups"); 
         CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
-        const int64_t num_instances = mean->shape().elem_cnt();  // N*num_groups
-        const int64_t norm_size = x->shape().elem_cnt() / num_instances;
-        const int64_t batch_size = x->shape().At(0); 
-        const int64_t channel_size = x->shape().At(1); 
-        const int64_t spatial_size = x->shape().elem_cnt() / batch_size / channel_size; 
-        printf("B x num_groups = %d \n", batch_size*num_groups); 
-        printf("num instance is: %d \n", num_instances); 
-        printf("Spatial size is: %d \n", spatial_size); 
-        printf("CHannel size is: %d \n", channel_size); 
+        const int64_t num_instances = mean->shape_view().elem_cnt();  // N*num_groups
+        const int64_t norm_size = x->shape_view().elem_cnt() / num_instances;
+        const int64_t batch_size = x->shape_view().At(0); 
+        const int64_t channel_size = x->shape_view().At(1); 
+        const int64_t spatial_size = x->shape_view().elem_cnt() / batch_size / channel_size; 
         const T* gamma_ptr = nullptr;
         const T* beta_ptr = nullptr;
         if (ctx->has_input("gamma", 0) && ctx->has_input("beta", 0)) {
           const user_op::Tensor* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
           gamma_ptr = gamma->dptr<T>();
-          CHECK_EQ(gamma->shape().elem_cnt(), channel_size);
+          CHECK_EQ(gamma->shape_view().elem_cnt(), channel_size);
           const user_op::Tensor* beta = ctx->Tensor4ArgNameAndIndex("beta", 0); 
           beta_ptr = ctx->Tensor4ArgNameAndIndex("beta", 0)->dptr<T>();
-          CHECK_EQ(beta->shape().elem_cnt(), channel_size);
+          CHECK_EQ(beta->shape_view().elem_cnt(), channel_size);
         }
         DispatchGroupNormForwardGpu<T>(ctx->stream(), 
                                        num_instances, norm_size, 
@@ -445,11 +440,11 @@ class GroupNormGradGpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
     const user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const int64_t num_instances = mean->shape().elem_cnt();
-    const int64_t norm_size = x->shape().elem_cnt() / num_instances;
-    const int64_t batch_size = x->shape().At(0); 
-    const int64_t channel_size = x->shape().At(1); 
-    const int64_t spatial_size = x->shape().elem_cnt() / batch_size / channel_size; 
+    const int64_t num_instances = mean->shape_view().elem_cnt();
+    const int64_t norm_size = x->shape_view().elem_cnt() / num_instances;
+    const int64_t batch_size = x->shape_view().At(0); 
+    const int64_t channel_size = x->shape_view().At(1); 
+    const int64_t spatial_size = x->shape_view().elem_cnt() / batch_size / channel_size; 
     const T* gamma_ptr = nullptr;
     if (ctx->has_input("gamma", 0)) {
       gamma_ptr = ctx->Tensor4ArgNameAndIndex("gamma", 0)->dptr<T>();

@@ -29,9 +29,9 @@ oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
 
 /* static */ Maybe<void> GroupNormOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-  user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
-  user_op::TensorDesc* mean = ctx->OutputTensorDesc("mean", 0);
-  user_op::TensorDesc* inv_variance = ctx->OutputTensorDesc("inv_variance", 0);
+  user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
+  user_op::TensorDesc* mean = ctx->MutOutputTensorDesc("mean", 0);
+  user_op::TensorDesc* inv_variance = ctx->MutOutputTensorDesc("inv_variance", 0);
   const bool affine = ctx->Attr<bool>("affine");
   const int32_t num_groups = ctx->Attr<int32_t>("num_groups"); 
   const int64_t batch_num = x.shape().At(0); 
@@ -68,7 +68,7 @@ oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
 /* static */ Maybe<void> GroupNormOp::InferDataType(user_op::InferContext* ctx) {
   const bool affine = ctx->Attr<bool>("affine");
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-  user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
   *y->mut_data_type() = x.data_type();
   if (affine) {
     const user_op::TensorDesc& gamma = ctx->InputTensorDesc("gamma", 0);
@@ -76,8 +76,8 @@ oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
     const user_op::TensorDesc& beta = ctx->InputTensorDesc("beta", 0);
     CHECK_EQ_OR_RETURN(beta.data_type(), x.data_type());
   }
-  user_op::TensorDesc* mean = ctx->OutputTensorDesc("mean", 0);
-  user_op::TensorDesc* inv_variance = ctx->OutputTensorDesc("inv_variance", 0);
+  user_op::TensorDesc* mean = ctx->MutOutputTensorDesc("mean", 0);
+  user_op::TensorDesc* inv_variance = ctx->MutOutputTensorDesc("inv_variance", 0);
   *mean->mut_data_type() = InferGnParamDataType(x.data_type());
   *inv_variance->mut_data_type() = mean->data_type();
   return Maybe<void>::Ok();
@@ -90,7 +90,7 @@ oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
   const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);
   const user_op::TensorDesc& inv_variance = ctx->InputTensorDesc("inv_variance", 0);
   const int32_t num_groups = ctx->Attr<int32_t>("num_groups"); 
-  user_op::TensorDesc* dx = ctx->OutputTensorDesc("dx", 0);
+  user_op::TensorDesc* dx = ctx->MutOutputTensorDesc("dx", 0);
   CHECK_EQ_OR_RETURN(dy.shape(), x.shape());
   const Shape& gn_param_shape = Shape({x.shape().At(0), num_groups}); 
   CHECK_EQ_OR_RETURN(mean.shape(), gn_param_shape);
@@ -128,7 +128,7 @@ oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
   const DataType& gn_param_data_type = InferGnParamDataType(x.data_type());
   CHECK_EQ_OR_RETURN(mean.data_type(), gn_param_data_type);
   CHECK_EQ_OR_RETURN(inv_variance.data_type(), gn_param_data_type);
-  user_op::TensorDesc* dx = ctx->OutputTensorDesc("dx", 0);
+  user_op::TensorDesc* dx = ctx->MutOutputTensorDesc("dx", 0);
   *dx->mut_data_type() = dy.data_type();
   return Maybe<void>::Ok();
 }
