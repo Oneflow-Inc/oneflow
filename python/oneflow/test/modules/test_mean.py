@@ -85,6 +85,13 @@ class TestMean(flow.unittest.TestCase):
         dim = random(1, 4).to(int)
         x = random_tensor(ndim=4, dtype=float).to(device)
         return torch.mean(x, dim)
+    
+    @autotest(n=5)
+    def test_mean_with_scalar_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, dtype=float).to(device).mean()
+        y = x.mean(-1)
+        return y
 
 
 if __name__ == "__main__":

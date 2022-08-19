@@ -32,12 +32,15 @@ bool IsInplaceValid(const std::shared_ptr<Tensor>& x) {
 Maybe<std::vector<int32_t>> CheckAxis(const std::vector<int32_t>& axis, const int32_t& ndim) {
   const int32_t naxis = axis.size();
 
+  int32_t reduce_ndim = naxis;
+  if (naxis == 0 || ndim == 0) reduce_ndim = ndim;
+  std::vector<int32_t> reduce_axis(reduce_ndim);
   if (naxis == 0) {
-    std::vector<int32_t> reduce_axis(ndim);
     std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
     return reduce_axis;
   } else {
-    std::vector<int32_t> reduce_axis(naxis);
+    // NOTE: for 0-dim tensor, just return empty reduce vector
+    if (ndim == 0) { return reduce_axis; }
     std::vector<int32_t> axis_num(ndim);
     for (int32_t i = 0; i < naxis; i++) {
       reduce_axis[i] = JUST(maybe_wrap_dim(axis[i], ndim));
