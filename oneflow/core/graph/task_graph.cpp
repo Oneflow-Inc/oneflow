@@ -192,7 +192,8 @@ MakePredicatorIsLbiAllConsumersReachable(
         IsOpNameDataOrCtrlReachable) {
   auto IsDataOrCtrlReachable = [IsOpNameDataOrCtrlReachable](const TaskNode* src_node,
                                                              const TaskNode* dst_node) -> bool {
-    if (src_node->chain_id() == dst_node->chain_id()
+    if (src_node->chain_id() != -1 && dst_node->chain_id() != -1
+        && src_node->chain_id() == dst_node->chain_id()
         && src_node->order_in_graph() <= dst_node->order_in_graph()) {
       return true;
     }
@@ -568,6 +569,7 @@ void TaskGraph::MergeChain() {
   if (EnableLogicalChain()) {
     for (TaskNode* this_node : ordered_task_nodes_) {
       CompTaskNode* comp_node = dynamic_cast<CompTaskNode*>(this_node);
+      if (!comp_node) { continue; }
       const int64_t logical_chain_id = comp_node->op()->op_conf().logical_chain_id();
       if (logical_chain_id != -1) { this_node->set_chain_id(logical_chain_id); }
     }
@@ -595,6 +597,7 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
   for (auto* node : ordered_task_nodes_) {
     if (IsConnectToTickOp(node)) { continue; }
     int64_t chain_id = node->chain_id();
+    if (chain_id == -1) { continue; }  // NOTE(chengcheng): skip chain id default -1.
     auto iter = chain_id2node.find(chain_id);
     if (iter == chain_id2node.end()) {
       CHECK(chain_id2node.emplace(chain_id, node).second);

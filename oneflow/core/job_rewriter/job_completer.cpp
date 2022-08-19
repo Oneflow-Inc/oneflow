@@ -129,6 +129,8 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
     JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
   }
 #endif  // WITH_CUDA
+  JUST(JobPass4Name("LogicalChainPass")(job, &job_pass_ctx));
+  JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
   JUST(CheckOpGraph(OpGraph(*job)));
   return Maybe<void>::Ok();
 }
