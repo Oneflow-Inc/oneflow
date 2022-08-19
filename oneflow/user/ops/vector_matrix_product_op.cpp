@@ -106,33 +106,6 @@ Maybe<void> InferDataType4Grad(user_op::InferContext* ctx) {
   return InferDataType4VectorMatrixProduct(ctx);
 }
 
-REGISTER_USER_OP_GRAD("vector_matrix_product")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("a", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op = builder.Op("vector_matrix_product_grad_a")
-                                                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                                                 .Input("b", op.input("b", 0))
-                                                 .Output("dx")
-                                                 .Build();
-        AddOp(grad_op);
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "a", 0);
-      }
-
-      if (op.NeedGenGradTensor4OpInput("b", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op = builder.Op("vector_matrix_product_grad_b")
-                                                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                                                 .Input("a", op.input("a", 0))
-                                                 .Output("dx")
-                                                 .Build();
-        AddOp(grad_op);
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "b", 0);
-      }
-      return Maybe<void>::Ok();
-    });
-
 /* static */ Maybe<void> VectorMatrixProductGradAOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferTensorDesc4VectorMatrixProductGradA(ctx);
