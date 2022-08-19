@@ -298,13 +298,13 @@ class HardShrinkFunctor {
 class HardShrinkGradFunctor {
  public:
   HardShrinkGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("hardshrink_grad").Input("dy").Input("y").Output("dx").Build());
+    op_ = CHECK_JUST(one::OpBuilder("hardshrink_grad").Input("y").Input("dy").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& y, const std::shared_ptr<Tensor>& dy,
                            const double& lambd) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("lambd", lambd));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, y}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {y, dy}, attrs);
   }
 
  private:
@@ -589,13 +589,13 @@ class ThresholdGradFunctor {
 class SoftShrinkGradFunctor {
  public:
   SoftShrinkGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("softshrink_grad").Input("dy").Input("y").Output("dx").Build());
+    op_ = CHECK_JUST(one::OpBuilder("softshrink_grad").Input("y").Input("dy").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& y, const std::shared_ptr<Tensor>& dy,
                            const double& alpha) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, y}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {y, dy}, attrs);
   }
 
  private:
