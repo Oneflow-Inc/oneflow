@@ -5,7 +5,7 @@ import pynvml
 from redis import Redis
 from pottery import Redlock
 
-AUTO_RELEASE_TIME = 600
+AUTO_RELEASE_TIME = 1000
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Control when the script runs through special variables.')
@@ -24,13 +24,6 @@ def hash_cli2gpu(cli:str):
     hash = hashlib.sha1(cli.encode('utf-8')).hexdigest()
     return int(hash, 16) % slot
 
-def run(cli) -> subprocess.Popen:
-    proc = subprocess.Popen(cli, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.STDOUT)
-    while proc.poll() is None:
-        line = proc.stdout.readline().decode("utf8")
-        print(line, end='')
-    proc.wait()
-    return proc.returncode
 
 
 def main():
@@ -42,9 +35,10 @@ def main():
         lock = Redlock(key=gpu_slot, masters={redis}, auto_release_time=AUTO_RELEASE_TIME)
         with lock:
             cli = 'CUDA_VISIBLE_DEVICES='+ gpu_slot + ' ' + cli
-            return run(cli)
+            return subprocess.call(cli, shell=True)
     else:
-        return run(cli)
+        return subprocess.call(cli, shell=True)
 
 if __name__ == "__main__":
-    exit(main())
+    returncode = main()
+    exit(returncode)
