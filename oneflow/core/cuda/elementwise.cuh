@@ -126,7 +126,7 @@ __device__ typename std::enable_if<HasApply2<FunctorT>::value == false || pack_s
 ApplyPack(const FunctorT& functor, const Packed<IN, pack_size>... in) {
   Packed<R, pack_size> ret;
 #pragma unroll
-  for (int j = 0; j < pack_size; ++j) { ret.elem[j] = functor((in[j].elem)...); }
+  for (int j = 0; j < pack_size; ++j) { ret.elem[j] = functor((in.elem[j])...); }
   return ret;
 }
 
