@@ -58,25 +58,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("as_strided")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      bool need_grad_weight = op.NeedGenGradTensor4OpInput("input", 0);
-      if (need_grad_weight) {
-        user_op::UserOpConfWrapperBuilder in_grad_builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper in_grad_op =
-            in_grad_builder.Op("as_strided_grad")
-                .Input("dy", op.GetGradTensorWithOpOutput("output", 0))
-                .Input("input", op.input("input", 0))
-                .Output("dx")
-                .Attr("size", op.attr<std::vector<int32_t>>("size"))
-                .Attr("stride", op.attr<std::vector<int32_t>>("stride"))
-                .Attr("storage_offset", op.attr<int32_t>("storage_offset"))
-                .Build();
-        op.BindGradTensorWithOpInput(in_grad_op.output("dx", 0), "input", 0);
-        AddOp(in_grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace oneflow
