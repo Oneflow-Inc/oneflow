@@ -174,6 +174,14 @@ class TestAutograd(flow.unittest.TestCase):
         x += y
         return x
 
+    @autotest(n=1, check_graph=False)
+    def test_retain_grad_for_leaf_tensor(test_case):
+        random_shape = [random(1, 10).to(int) for _ in range(4)]
+        x = random_tensor(4, *random_shape, requires_grad=True)
+        y = x * 2
+        x.retain_grad()
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()
