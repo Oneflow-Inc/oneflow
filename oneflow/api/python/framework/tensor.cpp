@@ -207,7 +207,7 @@ static PyObject* PyTensorObject_retain_grad(PyObject* self, PyObject* unused) {
     return PyErr_Format(PyExc_RuntimeError,
                         "can't retain_grad on Tensor that has requires_grad=False");
   }
-  ASSERT(t->set_retain_grad(true));
+  if (!t->is_leaf()) { ASSERT(t->set_retain_grad(true)); }
   Py_RETURN_NONE;
   END_HANDLE_ERRORS
 }
