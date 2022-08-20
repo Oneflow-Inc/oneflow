@@ -91,7 +91,7 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   qp_attr.qp_access_flags =
       IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ;
   PCHECK(ibv::wrapper.ibv_modify_qp(
-               qp_, &qp_attr, IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS),
+             qp_, &qp_attr, IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS),
          == 0);
 
   // IBV_QPS_RTR
@@ -121,9 +121,9 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   qp_attr.max_dest_rd_atomic = 1;
   qp_attr.min_rnr_timer = 12;
   PCHECK(ibv::wrapper.ibv_modify_qp(qp_, &qp_attr,
-                                      IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN
-                                          | IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC
-                                          | IBV_QP_MIN_RNR_TIMER),
+                                    IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN
+                                        | IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC
+                                        | IBV_QP_MIN_RNR_TIMER),
          == 0);
 
   // IBV_QPS_RTS
@@ -135,8 +135,8 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   qp_attr.rnr_retry = 7;
   qp_attr.timeout = 14;
   PCHECK(ibv::wrapper.ibv_modify_qp(qp_, &qp_attr,
-                                      IBV_QP_STATE | IBV_QP_SQ_PSN | IBV_QP_MAX_QP_RD_ATOMIC
-                                          | IBV_QP_RETRY_CNT | IBV_QP_RNR_RETRY | IBV_QP_TIMEOUT),
+                                    IBV_QP_STATE | IBV_QP_SQ_PSN | IBV_QP_MAX_QP_RD_ATOMIC
+                                        | IBV_QP_RETRY_CNT | IBV_QP_RNR_RETRY | IBV_QP_TIMEOUT),
 
          == 0);
 }
