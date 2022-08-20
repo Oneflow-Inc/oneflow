@@ -23,19 +23,19 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestLinalgInv(flow.unittest.TestCase):
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-2)
     def test_inv_3by3_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=2, dim0=3, dim1=3, low=-1).to(device)
         return torch.linalg.inv(x)
 
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-2)
     def test_inv_batch_3by3_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=3, dim0=random(), dim1=3, dim2=3, low=-1).to(device)
         return torch.linalg.inv(x)
 
-    @autotest(n=5, rtol=1e-3, atol=1e-3)
+    @autotest(n=5, rtol=1e-2)
     def test_inv_random_square_with_random_data(test_case):
         device = random_device()
         square_dim = random()
