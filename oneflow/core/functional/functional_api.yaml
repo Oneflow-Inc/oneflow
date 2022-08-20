@@ -94,7 +94,7 @@
   bind_python: true
 
 - name: "div_grad"
-  signature: "Tensor (Tensor y, Tensor z, Tensor dz) => DivGrad"
+  signature: "Tensor (Tensor dz, Tensor z, Tensor y) => DivGrad"
   bind_python: False
 
 - name: "equal"
