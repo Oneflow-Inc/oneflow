@@ -71,9 +71,9 @@ IBVerbsCommNet::~IBVerbsCommNet() {
   for (IBVerbsQP* qp : qp_vec_) {
     if (qp) { delete qp; }
   }
-  CHECK_EQ(ibv::wrapper.ibv_destroy_cq(cq_), 0);
-  CHECK_EQ(ibv::wrapper.ibv_dealloc_pd(pd_), 0);
-  CHECK_EQ(ibv::wrapper.ibv_close_device(context_), 0);
+  PCHECK(ibv::wrapper.ibv_destroy_cq(cq_) == 0);
+  PCHECK(ibv::wrapper.ibv_dealloc_pd(pd_) == 0);
+  PCHECK(ibv::wrapper.ibv_close_device(context_) == 0);
 }
 
 void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
@@ -127,20 +127,20 @@ IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT
     CHECK(device != nullptr) << "No IB device match " << user_device;
   }
   context_ = ibv::wrapper.ibv_open_device(device);
-  CHECK(context_);
+  PCHECK(context_);
   ibv::wrapper.ibv_free_device_list(device_list);
   pd_ = ibv::wrapper.ibv_alloc_pd(context_);
-  CHECK(pd_);
+  PCHECK(pd_);
   ibv_device_attr device_attr{};
-  CHECK_EQ(ibv::wrapper.ibv_query_device(context_, &device_attr), 0);
+  PCHECK(ibv::wrapper.ibv_query_device(context_, &device_attr) == 0);
   cq_ = ibv::wrapper.ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
-  CHECK(cq_);
+  PCHECK(cq_);
   ibv_port_attr port_attr{};
   const uint8_t port = user_port == 0 ? 1 : user_port;
-  CHECK_EQ(ibv::wrapper.ibv_query_port_wrap(context_, port, &port_attr), 0);
+  PCHECK(ibv::wrapper.ibv_query_port_wrap(context_, port, &port_attr) == 0);
   ibv_gid gid{};
   const int64_t gid_index = ParseIntegerFromEnv("ONEFLOW_COMM_NET_IB_GID_INDEX", 0);
-  CHECK_EQ(ibv::wrapper.ibv_query_gid(context_, port, gid_index, &gid), 0);
+  PCHECK(ibv::wrapper.ibv_query_gid(context_, port, gid_index, &gid) == 0);
   VLOG(1) << "Using IB device " << device->name << " port " << static_cast<int32_t>(port)
           << " gid index " << gid_index;
   int64_t this_machine_id = GlobalProcessCtx::Rank();
