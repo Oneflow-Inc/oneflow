@@ -420,6 +420,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   auto origin_input = JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true,
                                        /* is_local= */ input_tensor->is_local()));
   TensorNameScope::Global()->Record(origin_input, GenLogicalBlobName(op_conf.name(), obn));
+  TensorNameScope::Global()->Record(input_tensor, GenLogicalBlobName(op_conf.name(), obn));
 
   // NOTE: The input will then be unpacked in DispatchFeedInputOpExprFunctor
   // if GradAcc is enabled

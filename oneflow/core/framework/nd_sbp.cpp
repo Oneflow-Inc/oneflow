@@ -102,6 +102,20 @@ bool RawContainSplitSbp(Symbol<NdSbp> nd_sbp) {
   return false;
 }
 
+Maybe<std::vector<Symbol<SbpParallel>>> RawNdSbpReplacePartialByBroadcast(
+    const std::vector<Symbol<SbpParallel>>& sbp_list) {
+  auto result = std::make_shared<std::vector<Symbol<SbpParallel>>>(sbp_list.size());
+  for (int i = 0; i < sbp_list.size(); ++i) {
+    const auto& sbp = sbp_list[i];
+    if (sbp->has_partial_sum_parallel()) {
+      (*result)[i] = JUST(MakeBroadcastSbpParallel());
+    } else {
+      (*result)[i] = sbp;
+    }
+  }
+  return result;
+}
+
 }  // namespace private_details
 
 const std::vector<Symbol<SbpParallel>>& GetNoneSbpList() {
