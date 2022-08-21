@@ -95,6 +95,9 @@ Dropout functions
     :nosignatures:
 
     dropout
+    dropout1d
+    dropout2d
+    dropout3d
 
 Sparse functions
 ----------------------------------
