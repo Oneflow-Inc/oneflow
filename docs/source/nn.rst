@@ -321,7 +321,6 @@ Quantization Aware Training
     :toctree: generated
     :nosignatures:
 
-    
     nn.MinMaxObserver
     nn.MovingAverageMinMaxObserver
     nn.FakeQuantization
