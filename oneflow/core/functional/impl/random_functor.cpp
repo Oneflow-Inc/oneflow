@@ -448,7 +448,7 @@ using namespace impl;
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<BernoulliFunctor>("Bernoulli");
-  m.add_functor<BernoulliProbFunctor>("Bernoulli");
+  m.add_functor<BernoulliProbFunctor>("BernoulliProb");
   m.add_functor<RandPermFunctor>("RandPerm");
   m.add_functor<GlobalRandPermFunctor>("GlobalRandPerm");
   m.add_functor<RandFunctor>("Rand");
