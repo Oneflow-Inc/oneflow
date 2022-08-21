@@ -192,6 +192,8 @@ def compare_with_np(
     assert device_type in ["cuda", "cpu"]
     assert reduction in ["none", "mean", "sum"]
     assert zero_infinity in [False, True]
+    import random
+    random.sample([flow.int32, flow.int64], 1)[0]
     log_probs = np.random.random(
         size=(max_input_length, batch_size, num_classes)
     ).astype(np.float32)
@@ -249,13 +251,13 @@ def compare_with_np(
     )
     input_lengths = flow.tensor(
         input_lengths,
-        dtype=flow.int32,
+        dtype=random.sample([flow.int32, flow.int64], 1)[0],
         requires_grad=False,
         device=flow.device(device_type),
     )
     target_lengths = flow.tensor(
         target_lengths,
-        dtype=flow.int32,
+        dtype=random.sample([flow.int32, flow.int64], 1)[0],
         requires_grad=False,
         device=flow.device(device_type),
     )

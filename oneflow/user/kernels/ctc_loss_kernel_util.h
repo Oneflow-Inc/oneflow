@@ -24,7 +24,7 @@ namespace oneflow {
 template<DeviceType device_type, typename T, typename IDX>
 struct CtcLossKernelUtil final {
   static void CtcLossForward(ep::Stream* stream, const T* log_probs_ptr, const int* targets_ptr,
-                             const IDX* input_lengths_ptr, const IDX* target_lengths_ptr,
+                             const int64_t* input_lengths_ptr, const int64_t* target_lengths_ptr,
                              T* alpha_ptr, T* loss_ptr,
                              NdIndexOffsetHelper<int64_t, 3>& input_helper,
                              NdIndexOffsetHelper<int64_t, 3>& alpha_helper,
@@ -34,7 +34,7 @@ struct CtcLossKernelUtil final {
 
   static void CtcLossBackward(ep::Stream* stream, const T* grad_out_ptr, const T* loss_ptr,
                               const T* alpha_ptr, const T* log_probs_ptr, const int* targets_ptr,
-                              const IDX* input_lengths_ptr, const IDX* target_lengths_ptr,
+                              const int64_t* input_lengths_ptr, const int64_t* target_lengths_ptr,
                               T* beta_ptr, T* grad_ptr,
                               NdIndexOffsetHelper<int64_t, 3>& input_helper,
                               NdIndexOffsetHelper<int64_t, 3>& beta_helper,

@@ -1202,7 +1202,7 @@
   bind_python: True
 
 - name: "ctc_loss"
-  signature: "Tensor (Tensor log_probs, Tensor targets, Tensor input_lengths, Tensor target_lengths, Int64 max_target_length, Int32 blank, Bool zero_infinity, String reduction) => CtcLoss"
+  signature: "Tensor (Tensor log_probs, Tensor targets, Tensor input_lengths, Tensor target_lengths, Int32 blank, Bool zero_infinity, String reduction) => CtcLoss"
   bind_python: True
 
 - name: "affine_grid"

@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -1662,14 +1663,32 @@ class CtcLossFunctor {
                            const std::shared_ptr<one::Tensor>& targets,
                            const std::shared_ptr<one::Tensor>& input_lengths,
                            const std::shared_ptr<one::Tensor>& target_lengths,
-                           const int64_t& max_target_length, const int& blank,
+                           const int& blank,
                            const bool& zero_infinity, const std::string& reduction) const {
+    const auto& input_lengths_long =
+        JUST(Reshape(JUST(Cast(input_lengths, Symbol<DType>(DType::Int64()), false)), {-1}));
+    const auto& target_lengths_long =
+        JUST(Reshape(JUST(Cast(target_lengths, Symbol<DType>(DType::Int64()), false)), {-1}));
+    int64_t max_target_length = 0;
+    if (targets->ndim() == 1) {
+      const auto& tensor_max = JUST(functional::ReduceMax(target_lengths_long, {}, false));
+      const auto& callback = [&](ep::Stream* stream,
+                                 const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+        SyncAutoMemcpy(stream, &max_target_length, eager_blob_object->dptr(),
+                       sizeof(max_target_length), memory::MakeHostMemCase(),
+                       eager_blob_object->mem_case());
+      };
+      JUST(SyncAccessTensorWithTimeOut(tensor_max, callback, "const"));
+    } else {
+      max_target_length = targets->shape()->At(1);
+    }
+
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("max_target_length", max_target_length));
     JUST(attrs.SetAttr<int32_t>("blank", blank));
     JUST(attrs.SetAttr<bool>("zero_infinity", zero_infinity));
+    JUST(attrs.SetAttr<int64_t>("max_target_length", max_target_length));
     auto out = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *op_, {log_probs, targets, input_lengths, target_lengths}, attrs));
+        *op_, {log_probs, targets, input_lengths_long, target_lengths_long}, attrs));
     if (zero_infinity) {
       const auto create_constant = [&](const Scalar& scalar) -> Maybe<Tensor> {
         return functional::Constant(*out->shape(), scalar, out->dtype(), JUST(out->device()));

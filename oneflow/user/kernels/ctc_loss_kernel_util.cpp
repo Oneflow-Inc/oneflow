@@ -17,8 +17,8 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename IDX>
-int get_target_prime(const int* targets_ptr, const IDX* target_lengths_ptr,
+// template<typename IDX>
+int get_target_prime(const int* targets_ptr, const int64_t* target_lengths_ptr,
                      int64_t max_target_length, int64_t b, int64_t s, int blank,
                      const int32_t targets_ndim) {
   if (s % 2 == 0) {
@@ -38,7 +38,7 @@ int get_target_prime(const int* targets_ptr, const IDX* target_lengths_ptr,
 template<typename T, typename IDX>
 struct CtcLossKernelUtil<DeviceType::kCPU, T, IDX> final {
   static void CtcLossForward(ep::Stream* stream, const T* log_probs_ptr, const int* targets_ptr,
-                             const IDX* input_lengths_ptr, const IDX* target_lengths_ptr,
+                             const int64_t* input_lengths_ptr, const int64_t* target_lengths_ptr,
                              T* alpha_ptr, T* loss_ptr,
                              NdIndexOffsetHelper<int64_t, 3>& input_helper,
                              NdIndexOffsetHelper<int64_t, 3>& alpha_helper,
@@ -48,7 +48,7 @@ struct CtcLossKernelUtil<DeviceType::kCPU, T, IDX> final {
 
   static void CtcLossBackward(ep::Stream* stream, const T* grad_out_ptr, const T* loss_ptr,
                               const T* alpha_ptr, const T* log_probs_ptr, const int* targets_ptr,
-                              const IDX* input_lengths_ptr, const IDX* target_lengths_ptr,
+                              const int64_t* input_lengths_ptr, const int64_t* target_lengths_ptr,
                               T* beta_ptr, T* grad_ptr,
                               NdIndexOffsetHelper<int64_t, 3>& input_helper,
                               NdIndexOffsetHelper<int64_t, 3>& beta_helper,
@@ -61,7 +61,7 @@ struct CtcLossKernelUtil<DeviceType::kCPU, T, IDX> final {
 template<typename T, typename IDX>
 void CtcLossKernelUtil<DeviceType::kCPU, T, IDX>::CtcLossForward(
     ep::Stream* stream, const T* log_probs_ptr, const int* targets_ptr,
-    const IDX* input_lengths_ptr, const IDX* target_lengths_ptr, T* alpha_ptr, T* loss_ptr,
+    const int64_t* input_lengths_ptr, const int64_t* target_lengths_ptr, T* alpha_ptr, T* loss_ptr,
     NdIndexOffsetHelper<int64_t, 3>& input_helper, NdIndexOffsetHelper<int64_t, 3>& alpha_helper,
     const int64_t batch_size, const int64_t max_input_length, const int64_t max_target_length,
     const int blank, const int32_t targets_ndim) {
@@ -71,8 +71,8 @@ void CtcLossKernelUtil<DeviceType::kCPU, T, IDX>::CtcLossForward(
     CHECK_GE(max_target_length, target_lengths_ptr[b]);
   }
   FOR_RANGE(int32_t, b, 0, batch_size) {
-    IDX input_length = input_lengths_ptr[b];
-    IDX target_length = target_lengths_ptr[b];
+    int64_t input_length = input_lengths_ptr[b];
+    int64_t target_length = target_lengths_ptr[b];
 
     int64_t alpha_idx = alpha_helper.NdIndexToOffset(b, 0, 0);
     for (IDX s = 0; s < 2 * target_length + 1; s++) { alpha_ptr[alpha_idx + s] = neginf; }
@@ -132,8 +132,8 @@ void CtcLossKernelUtil<DeviceType::kCPU, T, IDX>::CtcLossForward(
 template<typename T, typename IDX>
 void CtcLossKernelUtil<DeviceType::kCPU, T, IDX>::CtcLossBackward(
     ep::Stream* stream, const T* grad_out_ptr, const T* loss_ptr, const T* alpha_ptr,
-    const T* log_probs_ptr, const int* targets_ptr, const IDX* input_lengths_ptr,
-    const IDX* target_lengths_ptr, T* beta_ptr, T* grad_ptr,
+    const T* log_probs_ptr, const int* targets_ptr, const int64_t* input_lengths_ptr,
+    const int64_t* target_lengths_ptr, T* beta_ptr, T* grad_ptr,
     NdIndexOffsetHelper<int64_t, 3>& input_helper, NdIndexOffsetHelper<int64_t, 3>& beta_helper,
     const int64_t batch_size, const int64_t max_input_length, const int64_t max_target_length,
     const int64_t num_labels, const int blank, const bool zero_infinity,
@@ -143,8 +143,8 @@ void CtcLossKernelUtil<DeviceType::kCPU, T, IDX>::CtcLossBackward(
   FOR_RANGE(int64_t, i, 0, elem_cnt) { grad_ptr[i] = neginf; }
 
   FOR_RANGE(int64_t, b, 0, batch_size) {
-    IDX input_length = input_lengths_ptr[b];
-    IDX target_length = target_lengths_ptr[b];
+    int64_t input_length = input_lengths_ptr[b];
+    int64_t target_length = target_lengths_ptr[b];
     T nll = loss_ptr[b];
     if (zero_infinity && nll == std::numeric_limits<T>::infinity()) {
       for (IDX t = 0; t < max_input_length; t++) {
@@ -175,8 +175,8 @@ void CtcLossKernelUtil<DeviceType::kCPU, T, IDX>::CtcLossBackward(
       }
     }
 
-    for (IDX t = input_length - 2; t >= 0; t--) {
-      for (IDX s = 2 * target_length; s >= 0; s--) {
+    for (int64_t t = input_length - 2; t >= 0; t--) {
+      for (int64_t s = 2 * target_length; s >= 0; s--) {
         int current_target_prime = get_target_prime(targets_ptr, target_lengths_ptr,
                                                     max_target_length, b, s, blank, targets_ndim);
         T lb1 = beta_ptr[beta_helper.NdIndexToOffset(b, t + 1, s)];

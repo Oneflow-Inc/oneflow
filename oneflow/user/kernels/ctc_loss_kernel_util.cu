@@ -20,9 +20,9 @@ namespace oneflow {
 
 namespace {
 
-template<typename IDX>
+// template<typename IDX>
 __device__ __inline__ static int get_target_prime(const int* targets_ptr,
-                                                  const IDX* target_lengths_ptr,
+                                                  const int64_t* target_lengths_ptr,
                                                   int64_t max_target_length, int64_t b, int64_t s,
                                                   int blank, const int32_t targets_ndim) {
   if (s % 2 == 0) {
@@ -41,7 +41,7 @@ __device__ __inline__ static int get_target_prime(const int* targets_ptr,
 
 template<typename T, typename IDX>
 __global__ void CtcLossGpu(const T* log_probs_ptr, const int* targets_ptr,
-                           const IDX* input_lengths_ptr, const IDX* target_lengths_ptr,
+                           const int64_t* input_lengths_ptr, const int64_t* target_lengths_ptr,
                            T* alpha_ptr, T* loss_ptr, NdIndexOffsetHelper<int64_t, 3> input_helper,
                            NdIndexOffsetHelper<int64_t, 3> alpha_helper, const int64_t batch_size,
                            const int64_t max_input_length, const int64_t max_target_length,
@@ -56,8 +56,8 @@ __global__ void CtcLossGpu(const T* log_probs_ptr, const int* targets_ptr,
     }
   }
   for (int64_t b = bid; b < batch_size; b += gridDim.x) {
-    IDX input_length = input_lengths_ptr[b];
-    IDX target_length = target_lengths_ptr[b];
+    int64_t input_length = input_lengths_ptr[b];
+    int64_t target_length = target_lengths_ptr[b];
 
     for (IDX s = tid; s < 2 * target_length + 1; s += blockDim.x) {
       alpha_ptr[alpha_helper.NdIndexToOffset(b, 0, s)] = neginf;
@@ -73,8 +73,8 @@ __global__ void CtcLossGpu(const T* log_probs_ptr, const int* targets_ptr,
       }
     }
     __syncthreads();
-    for (IDX t = 1; t < input_length; t++) {
-      for (IDX s = tid; s < 2 * target_length + 1; s += blockDim.x) {
+    for (int64_t t = 1; t < input_length; t++) {
+      for (int64_t s = tid; s < 2 * target_length + 1; s += blockDim.x) {
         int current_target_prime = get_target_prime(targets_ptr, target_lengths_ptr,
                                                     max_target_length, b, s, blank, targets_ndim);
         T la1 = alpha_ptr[alpha_helper.NdIndexToOffset(b, t - 1, s)];
@@ -124,7 +124,7 @@ __global__ void CtcLossGpu(const T* log_probs_ptr, const int* targets_ptr,
 template<typename T, typename IDX>
 __global__ void CtcLossGradGpu(
     const T* grad_out_ptr, const T* loss_ptr, const T* alpha_ptr, const T* log_probs_ptr,
-    const int* targets_ptr, const IDX* input_lengths_ptr, const IDX* target_lengths_ptr,
+    const int* targets_ptr, const int64_t* input_lengths_ptr, const int64_t* target_lengths_ptr,
     T* beta_ptr, T* grad_ptr, NdIndexOffsetHelper<int64_t, 3> input_helper,
     NdIndexOffsetHelper<int64_t, 3> beta_helper, const int64_t batch_size,
     const int64_t max_input_length, const int64_t max_target_length, const int64_t num_labels,
@@ -134,8 +134,8 @@ __global__ void CtcLossGradGpu(
   const int32_t tid = threadIdx.x;
 
   for (int64_t b = bid; b < batch_size; b += gridDim.x) {
-    IDX input_length = input_lengths_ptr[b];
-    IDX target_length = target_lengths_ptr[b];
+    int64_t input_length = input_lengths_ptr[b];
+    int64_t target_length = target_lengths_ptr[b];
     T nll = loss_ptr[b];
     if (zero_infinity && nll == INFINITY) {
       for (IDX t = tid; t < max_input_length; t += blockDim.x) {
@@ -163,8 +163,8 @@ __global__ void CtcLossGradGpu(
       }
       __syncthreads();
     }
-    for (IDX t = input_length - 2; t >= 0; t--) {
-      for (IDX s = tid; s < 2 * target_length + 1; s += blockDim.x) {
+    for (int64_t t = input_length - 2; t >= 0; t--) {
+      for (int64_t s = tid; s < 2 * target_length + 1; s += blockDim.x) {
         int current_target_prime = get_target_prime(targets_ptr, target_lengths_ptr,
                                                     max_target_length, b, s, blank, targets_ndim);
         T lb1 = beta_ptr[beta_helper.NdIndexToOffset(b, t + 1, s)];
@@ -240,7 +240,7 @@ __global__ void CtcLossGradGpu(
 template<typename T, typename IDX>
 struct CtcLossKernelUtil<DeviceType::kCUDA, T, IDX> {
   static void CtcLossForward(ep::Stream* stream, const T* log_probs_ptr, const int* targets_ptr,
-                             const IDX* input_lengths_ptr, const IDX* target_lengths_ptr,
+                             const int64_t* input_lengths_ptr, const int64_t* target_lengths_ptr,
                              T* alpha_ptr, T* loss_ptr,
                              NdIndexOffsetHelper<int64_t, 3>& input_helper,
                              NdIndexOffsetHelper<int64_t, 3>& alpha_helper,
@@ -256,7 +256,7 @@ struct CtcLossKernelUtil<DeviceType::kCUDA, T, IDX> {
 
   static void CtcLossBackward(ep::Stream* stream, const T* grad_out_ptr, const T* loss_ptr,
                               const T* alpha_ptr, const T* log_probs_ptr, const int* targets_ptr,
-                              const IDX* input_lengths_ptr, const IDX* target_lengths_ptr,
+                              const int64_t* input_lengths_ptr, const int64_t* target_lengths_ptr,
                               T* beta_ptr, T* grad_ptr,
                               NdIndexOffsetHelper<int64_t, 3>& input_helper,
                               NdIndexOffsetHelper<int64_t, 3>& beta_helper,

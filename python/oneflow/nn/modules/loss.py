@@ -684,7 +684,7 @@ class CTCLoss(_Loss):
             targets,
             input_lengths,
             target_lengths,
-            max_target_length,
+            # max_target_length,
             self.blank,
             self.zero_infinity,
             self.reduction,

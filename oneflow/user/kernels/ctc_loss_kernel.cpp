@@ -35,8 +35,8 @@ class CtcLossKernel final : public user_op::OpKernel {
 
     const T* log_probs_ptr = log_probs->dptr<T>();
     const int* targets_ptr = targets->dptr<int>();
-    const IDX* input_lengths_ptr = input_lengths->dptr<IDX>();
-    const IDX* target_lengths_ptr = target_lengths->dptr<IDX>();
+    const int64_t* input_lengths_ptr = input_lengths->dptr<int64_t>();
+    const int64_t* target_lengths_ptr = target_lengths->dptr<int64_t>();
     const int32_t blank = ctx->Attr<int32_t>("blank");
     const int64_t max_input_length = log_probs->shape_view().At(0);
     const int64_t batch_size = log_probs->shape_view().At(1);
@@ -91,8 +91,8 @@ class CtcLossGradKernel final : public user_op::OpKernel {
     const T* alpha_ptr = alpha->dptr<T>();
     const T* log_probs_ptr = log_probs->dptr<T>();
     const int* targets_ptr = targets->dptr<int>();
-    const IDX* input_lengths_ptr = input_lengths->dptr<IDX>();
-    const IDX* target_lengths_ptr = target_lengths->dptr<IDX>();
+    const int64_t* input_lengths_ptr = input_lengths->dptr<int64_t>();
+    const int64_t* target_lengths_ptr = target_lengths->dptr<int64_t>();
     const int32_t blank = ctx->Attr<int32_t>("blank");
     const bool zero_infinity = ctx->Attr<bool>("zero_infinity");
     const int64_t batch_size = log_probs->shape_view().At(1);
