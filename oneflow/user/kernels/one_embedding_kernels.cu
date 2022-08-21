@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/copy_nd.h"
 #include "oneflow/core/ep/include/primitive/cast.h"
 #include "oneflow/core/ep/include/device.h"
+#include "oneflow/user/kernels/one_embedding_id_shuffle.cuh"
 
 namespace oneflow {
 
@@ -328,24 +329,16 @@ __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen
 }
 
 template<typename T, typename U, typename IDX>
-void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* kernel_state,
-                          uint32_t num_unique, const int64_t embedding_size,
-                          const int64_t line_size, const bool is_prefetch, const void* unique_ids,
-                          const void* table_ids, void* num_missing_ptr, void* missing_indices,
-                          void* store_values) {
-  const auto& generator = kernel_state->generator();
-  CHECK_NOTNULL(generator);
-  std::shared_ptr<one::CUDAGeneratorImpl> cuda_generator =
-      CHECK_JUST(generator->template Get<one::CUDAGeneratorImpl>(stream->device()->device_index()));
-  uint64_t seed = cuda_generator->current_seed();
-  one::CUDAGeneratorState* cuda_gen_state = cuda_generator->cuda_gen_state();
-  embedding::KeyValueStore* store = kernel_state->KeyValueStore();
-  const EmbeddingInitializer* initializer_param = kernel_state->Initializers();
-  const int8_t* initializer_index = kernel_state->InitializerIndex();
+void LookupAndInitMissing(ep::Stream* stream, uint64_t seed,
+                          one::CUDAGeneratorState* cuda_gen_state, embedding::KeyValueStore* store,
+                          const EmbeddingInitializer* initializer_param,
+                          const int8_t* initializer_index, void* host_num_keys, uint32_t num_unique,
+                          const int64_t embedding_size, const int64_t line_size,
+                          const bool is_prefetch, const void* unique_ids, const void* table_ids,
+                          void* num_missing_ptr, void* missing_indices, void* store_values) {
   store->Get(stream, num_unique, unique_ids, store_values,
              reinterpret_cast<uint32_t*>(num_missing_ptr),
              reinterpret_cast<uint32_t*>(missing_indices));
-  void* host_num_keys = kernel_state->HostNumKeys();
   CHECK_GE(sizeof(IDX), sizeof(uint32_t));  // host_num_keys's buffer size is sizeof(IDX)
   OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, num_missing_ptr, sizeof(uint32_t), cudaMemcpyDefault,
                                 stream->As<ep::CudaStream>()->cuda_stream()));
@@ -364,6 +357,28 @@ void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* kernel_
             reinterpret_cast<uint32_t*>(missing_indices), reinterpret_cast<T*>(store_values));
   }
   if (is_prefetch) { store->Put(stream, num_unique, unique_ids, store_values); }
+}
+
+template<typename T, typename U, typename IDX>
+void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* kernel_state,
+                          uint32_t num_unique, const int64_t embedding_size,
+                          const int64_t line_size, const bool is_prefetch, const void* unique_ids,
+                          const void* table_ids, void* num_missing_ptr, void* missing_indices,
+                          void* store_values) {
+  const auto& generator = kernel_state->generator();
+  CHECK_NOTNULL(generator);
+  std::shared_ptr<one::CUDAGeneratorImpl> cuda_generator =
+      CHECK_JUST(generator->template Get<one::CUDAGeneratorImpl>(stream->device()->device_index()));
+  uint64_t seed = cuda_generator->current_seed();
+  one::CUDAGeneratorState* cuda_gen_state = cuda_generator->cuda_gen_state();
+  embedding::KeyValueStore* store = kernel_state->KeyValueStore();
+  const EmbeddingInitializer* initializer_param = kernel_state->Initializers();
+  const int8_t* initializer_index = kernel_state->InitializerIndex();
+  void* host_num_keys = kernel_state->HostNumKeys();
+  LookupAndInitMissing<T, U, IDX>(stream, seed, cuda_gen_state, store, initializer_param,
+                                  initializer_index, host_num_keys, num_unique, embedding_size,
+                                  line_size, is_prefetch, unique_ids, table_ids, num_missing_ptr,
+                                  missing_indices, store_values);
 }
 
 template<typename T, size_t pack_size>
@@ -957,5 +972,533 @@ class IdShuffleCopyOutKernel final : public user_op::OpKernel {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_ID_SHUFFLE_COPY_OUT_KERNEL, ID_DATA_TYPE_SEQ,
                                  TABLE_ID_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
+
+enum class EmbeddingForwardBufferType {
+  // id shuffle
+  kNumPartitionedUnique = 0,
+  kPartitionedUniqueIds,
+  kReceivedIds,
+  kTableIds,
+  kPartitionedUniqueTableIds,
+  kReceivedTableIds,
+  kWorkspace,
+  kNumUniqueMatrix,
+  kInverseUniquePartitionIndices,
+  kCurRankNumUnique,
+  kCurRankUniqueIds,
+  kCurRankUniqueTableIds,
+  kCurRankInverseIndices,
+  // embedding lookup
+  kNumMissing,
+  kMissingIndices,
+  kCurRankUniqueValues,
+  kCurRankUniqueEmbeddings,
+  // embedding shuffle
+  kReverseUniqueCurRankEmbeddings,
+  kReceivedEmbeddings,
+  kMaxType
+};
+
+template<typename K, typename U, typename IDX>
+class EmbeddingForwardTmpBufferManager final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(EmbeddingForwardTmpBufferManager);
+  EmbeddingForwardTmpBufferManager(void* ptr, const int64_t num_ids, const int64_t parallel_num,
+                                   bool need_table_ids, bool need_process_table_ids,
+                                   int64_t line_size, int64_t embedding_size, bool need_embeddings,
+                                   DataType value_dtype, DataType embedding_dtype)
+      : offset_(0),
+        offsets_(static_cast<size_t>(EmbeddingForwardBufferType::kMaxType), -1),
+        sizes_(static_cast<size_t>(EmbeddingForwardBufferType::kMaxType)),
+        ptr_(ptr) {
+    // id shuffle
+    const int64_t num_table_ids = need_process_table_ids ? num_ids : 0;
+    const size_t table_ids_bytes = need_table_ids ? num_ids * sizeof(U) : 0;
+    AllocBuffer(EmbeddingForwardBufferType::kNumPartitionedUnique, parallel_num * sizeof(IDX));
+    size_t partitioned_ids_bytes = parallel_num * num_ids * sizeof(K);
+    AllocBuffer(EmbeddingForwardBufferType::kPartitionedUniqueIds, partitioned_ids_bytes);
+    AllocBuffer(EmbeddingForwardBufferType::kReceivedIds, partitioned_ids_bytes);
+    AllocBuffer(EmbeddingForwardBufferType::kTableIds, table_ids_bytes);
+    size_t partitioned_table_ids_bytes = parallel_num * num_table_ids * sizeof(U);
+    AllocBuffer(EmbeddingForwardBufferType::kPartitionedUniqueTableIds,
+                partitioned_table_ids_bytes);
+    AllocBuffer(EmbeddingForwardBufferType::kReceivedTableIds, partitioned_table_ids_bytes);
+    const size_t hash_table_capacity = parallel_num * num_ids;
+    AllocBuffer(EmbeddingForwardBufferType::kWorkspace,
+                hash_table_capacity * sizeof(id_shuffle::TableEntry<K>));
+    size_t num_unique_matrix_bytes = parallel_num * parallel_num * sizeof(IDX);
+    AllocBuffer(EmbeddingForwardBufferType::kNumUniqueMatrix, num_unique_matrix_bytes);
+    size_t inverse_unique_partition_indices_bytes = num_ids * sizeof(IDX);
+    AllocBuffer(EmbeddingForwardBufferType::kInverseUniquePartitionIndices,
+                inverse_unique_partition_indices_bytes);
+    size_t cur_rank_num_ids = parallel_num * num_ids;
+    size_t cur_rank_num_table_ids = cur_rank_num_ids;
+    size_t cur_rank_num_unique_bytes = sizeof(uint32_t);
+    AllocBuffer(EmbeddingForwardBufferType::kCurRankNumUnique, cur_rank_num_unique_bytes);
+    size_t cur_rank_unique_ids_bytes = cur_rank_num_ids * sizeof(K);
+    AllocBuffer(EmbeddingForwardBufferType::kCurRankUniqueIds, cur_rank_unique_ids_bytes);
+    size_t cur_rank_unique_table_ids_bytes = cur_rank_num_table_ids * sizeof(U);
+    AllocBuffer(EmbeddingForwardBufferType::kCurRankUniqueTableIds,
+                cur_rank_unique_table_ids_bytes);
+    size_t cur_rank_inverse_indices_bytes = cur_rank_num_ids * sizeof(IDX);
+    AllocBuffer(EmbeddingForwardBufferType::kCurRankInverseIndices, cur_rank_inverse_indices_bytes);
+    // embedding lookup
+    size_t num_missing_bytes = sizeof(uint32_t);
+    AllocBuffer(EmbeddingForwardBufferType::kNumMissing, num_missing_bytes);
+    size_t missing_indices_bytes = cur_rank_num_ids * sizeof(uint32_t);
+    AllocBuffer(EmbeddingForwardBufferType::kMissingIndices, missing_indices_bytes);
+    size_t cur_rank_unique_values_bytes =
+        cur_rank_num_ids * line_size * GetSizeOfDataType(value_dtype);  // TODO: dynamic alloc?
+    AllocBuffer(EmbeddingForwardBufferType::kCurRankUniqueValues, cur_rank_unique_values_bytes);
+    if (need_embeddings) {
+      size_t cur_rank_unique_embeddings_bytes =
+          cur_rank_num_ids * embedding_size * GetSizeOfDataType(embedding_dtype);
+      AllocBuffer(EmbeddingForwardBufferType::kCurRankUniqueEmbeddings,
+                  cur_rank_unique_embeddings_bytes);
+    }
+    // embedding shuffle
+    size_t reverse_unique_cur_rank_embeddings_bytes =
+        cur_rank_num_ids * embedding_size * GetSizeOfDataType(embedding_dtype);
+    AllocBuffer(EmbeddingForwardBufferType::kReverseUniqueCurRankEmbeddings,
+                reverse_unique_cur_rank_embeddings_bytes);
+    size_t received_embeddings_bytes =
+        cur_rank_num_ids * embedding_size * GetSizeOfDataType(embedding_dtype);
+    AllocBuffer(EmbeddingForwardBufferType::kReceivedEmbeddings, received_embeddings_bytes);
+  }
+
+  template<typename T = void>
+  T* Ptr(EmbeddingForwardBufferType type) {
+    CHECK(ptr_ != nullptr);
+    int64_t offset = offsets_.at(static_cast<size_t>(type));
+    CHECK_NE(offset, -1);
+    return reinterpret_cast<T*>(reinterpret_cast<char*>(ptr_) + offset);
+  }
+
+  int64_t Size(EmbeddingForwardBufferType type) { return sizes_.at(static_cast<size_t>(type)); }
+
+  size_t TotalBufferSize() const { return offset_; }
+
+ private:
+  void AllocBuffer(EmbeddingForwardBufferType type, size_t size) {
+    const size_t type_id = static_cast<size_t>(type);
+    CHECK_EQ(offsets_.at(type_id), -1);
+    offsets_.at(type_id) = offset_;
+    sizes_.at(type_id) = size;
+    offset_ += GetCudaAlignedSize(size);
+  }
+  size_t offset_;
+  std::vector<int64_t> offsets_;
+  std::vector<int64_t> sizes_;
+  void* ptr_;
+};
+
+void MakeConstantInitializerAttr(const int64_t embedding_size, const int64_t line_size,
+                                 const std::vector<float>& values, std::string* initializer_attr) {
+  if (embedding_size == line_size) { return; }
+  const int32_t num_states = line_size / embedding_size - 1;
+  CHECK_GT(num_states, 0) << "num_states " << num_states;
+  CHECK(values.size() == 0 || num_states == values.size())
+      << "must set " << num_states << " optimizer states init value, but get " << values.size();
+  nlohmann::json initializers;
+  for (int32_t i = 0; i < num_states; ++i) {
+    nlohmann::json initializer;
+    initializer["type"] = "constant";
+    const float initial_value = values.size() > 0 ? values.at(i) : 0.0;
+    initializer["value"] = initial_value;
+    initializers.push_back(initializer);
+  }
+  *initializer_attr = initializers.dump();
+}
+
+class EmbeddingLookupPlaceholderKernelState final : public user_op::OpKernelState {
+ public:
+  explicit EmbeddingLookupPlaceholderKernelState(user_op::KernelInitContext* ctx)
+      : device_index_(-1),
+        stream_name_(EagerNcclCommMgr::kDefaultStreamName),
+        parallel_desc_(ctx->parallel_desc()),
+        generator_(CHECK_JUST(one::MakeGenerator(DeviceType::kCUDA))) {
+    OF_CUDA_CHECK(cudaGetDevice(&device_index_));
+    const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+    const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
+    OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(uint32_t)));
+    OF_CUDA_CHECK(
+        cudaMallocHost(&host_num_unique_matrix_, parallel_num * parallel_num * sizeof(uint32_t)));
+
+    embedding::KeyValueStoreOptions options(ctx->Attr<std::string>("key_value_store_options"));
+    const std::string& embedding_name = options.Name();
+    key_value_store_ = Singleton<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
+        embedding_name, parallel_id);
+    uint32_t max_query_length =
+        ctx->TensorDesc4ArgNameAndIndex("ids", 0)->shape().elem_cnt() * parallel_num;
+    key_value_store_->ReserveQueryLength(max_query_length);
+
+    const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+    line_size_ = options.LineSize();
+    std::string state_initializer = "";
+    // const std::string& state_initializer //TODO: how to process it.
+
+    std::vector<EmbeddingInitializer> initializer_param;
+    std::vector<int8_t> initializer_index;
+    ParseInitializers(line_size_, embedding_size, state_initializer,
+                      ctx->Attr<std::string>("embedding_tables"), &initializer_param,
+                      &initializer_index);
+
+    const size_t param_size_bytes = initializer_param.size() * sizeof(EmbeddingInitializer);
+    OF_CUDA_CHECK(cudaMallocHost(&host_initializer_param_, param_size_bytes));
+    std::memcpy(host_initializer_param_, initializer_param.data(), param_size_bytes);
+    OF_CUDA_CHECK(cudaMalloc(&device_initializer_param_, param_size_bytes));
+    OF_CUDA_CHECK(cudaMemcpyAsync(device_initializer_param_, host_initializer_param_,
+                                  param_size_bytes, cudaMemcpyDefault,
+                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+
+    const size_t index_size_bytes = initializer_index.size() * sizeof(int8_t);
+    OF_CUDA_CHECK(cudaMallocHost(&host_initializer_index_, index_size_bytes));
+    std::memcpy(host_initializer_index_, initializer_index.data(), index_size_bytes);
+    OF_CUDA_CHECK(cudaMalloc(&device_initializer_index_, index_size_bytes));
+    OF_CUDA_CHECK(cudaMemcpyAsync(device_initializer_index_, host_initializer_index_,
+                                  index_size_bytes, cudaMemcpyDefault,
+                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+  }
+  ~EmbeddingLookupPlaceholderKernelState() override {
+    CudaCurrentDeviceGuard guard(device_index_);
+    OF_CUDA_CHECK(cudaFreeHost(host_num_keys_));
+    OF_CUDA_CHECK(cudaFreeHost(host_initializer_param_));
+    OF_CUDA_CHECK(cudaFree(device_initializer_param_));
+    OF_CUDA_CHECK(cudaFreeHost(host_initializer_index_));
+    OF_CUDA_CHECK(cudaFree(device_initializer_index_));
+  }
+
+  ncclComm_t comm() { return GetOrCreate().comm; }
+
+  uint32_t* HostNumUniqueMatrix() { return host_num_unique_matrix_; }
+
+  void* HostNumKeys() { return host_num_keys_; }
+
+  embedding::KeyValueStore* KeyValueStore() { return key_value_store_; }
+
+  one::Generator* generator() { return generator_.get(); }
+
+  const int8_t* InitializerIndex() { return device_initializer_index_; }
+  const EmbeddingInitializer* Initializers() { return device_initializer_param_; }
+  int64_t LineSize() { return line_size_; }
+
+ private:
+  struct Comm {
+    Comm(ncclComm_t comm) : comm(comm) {}
+    ncclComm_t comm;
+  };
+
+  const Comm& GetOrCreate() {
+    if (!comm_) { Init(); }
+    return *comm_;
+  }
+
+  void Init() {
+    std::set<std::pair<int64_t, int64_t>> device_set;
+    for (int64_t parallel_id = 0; parallel_id < parallel_desc_.parallel_num(); ++parallel_id) {
+      int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
+      int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
+      device_set.emplace(std::make_pair(machine_id, device_id));
+    }
+    EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
+    ncclComm_t comm;
+    comm = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
+    comm_.reset(new Comm(comm));
+  }
+
+  int device_index_;
+  std::string stream_name_;
+  ParallelDesc parallel_desc_;
+  std::unique_ptr<Comm> comm_;
+  void* host_num_keys_;
+  uint32_t* host_num_unique_matrix_;
+  std::shared_ptr<one::Generator> generator_;
+  embedding::KeyValueStore* key_value_store_;
+
+  EmbeddingInitializer* host_initializer_param_;
+  EmbeddingInitializer* device_initializer_param_;
+  int8_t* host_initializer_index_;
+  int8_t* device_initializer_index_;
+  int64_t line_size_;
+};
+
+template<typename T, typename U, typename IDX>
+void LookupAndInitMissing(ep::Stream* stream, EmbeddingLookupPlaceholderKernelState* kernel_state,
+                          uint32_t num_unique, const int64_t embedding_size,
+                          const int64_t line_size, const bool is_prefetch, const void* unique_ids,
+                          const void* table_ids, void* num_missing_ptr, void* missing_indices,
+                          void* store_values) {
+  const auto& generator = kernel_state->generator();
+  CHECK_NOTNULL(generator);
+  std::shared_ptr<one::CUDAGeneratorImpl> cuda_generator =
+      CHECK_JUST(generator->template Get<one::CUDAGeneratorImpl>(stream->device()->device_index()));
+  uint64_t seed = cuda_generator->current_seed();
+  one::CUDAGeneratorState* cuda_gen_state = cuda_generator->cuda_gen_state();
+  embedding::KeyValueStore* store = kernel_state->KeyValueStore();
+  const EmbeddingInitializer* initializer_param = kernel_state->Initializers();
+  const int8_t* initializer_index = kernel_state->InitializerIndex();
+  void* host_num_keys = kernel_state->HostNumKeys();
+  LookupAndInitMissing<T, U, IDX>(stream, seed, cuda_gen_state, store, initializer_param,
+                                  initializer_index, host_num_keys, num_unique, embedding_size,
+                                  line_size, is_prefetch, unique_ids, table_ids, num_missing_ptr,
+                                  missing_indices, store_values);
+}
+
+template<typename T, typename V, typename K, typename U>
+class EmbeddingLookupPlaceholderKernel final : public user_op::OpKernel {
+ public:
+  EmbeddingLookupPlaceholderKernel(){};
+  ~EmbeddingLookupPlaceholderKernel() override = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<EmbeddingLookupPlaceholderKernelState>(ctx);
+  }
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
+    LOG(ERROR) << "EmbeddingLookupPlaceholderKernel";
+    using IDX = uint32_t;
+    auto* kernel_state = dynamic_cast<EmbeddingLookupPlaceholderKernelState*>(state);
+    CHECK(kernel_state != nullptr);
+    const user_op::Tensor* ids = ctx->Tensor4ArgNameAndIndex("ids", 0);
+    user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
+    const int32_t num_tables = ctx->Attr<int32_t>("num_tables");
+    const bool has_table_ids = ctx->has_input("table_ids", 0);
+    const bool need_gen_table_ids = (!has_table_ids && num_tables > 1);
+    const bool need_process_table_ids = (has_table_ids || num_tables > 1);
+    const int64_t num_ids = ids->shape_view().elem_cnt();
+    const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
+    const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+    cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+    DataType value_dtype = ctx->Attr<DataType>("dtype");
+    const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+    const int64_t line_size = kernel_state->LineSize();
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    bool need_embeddings =
+        (line_size != embedding_size) || (value_dtype != embeddings->data_type());
+    EmbeddingForwardTmpBufferManager<K, U, IDX> buffer_manager(
+        tmp_buffer->mut_dptr(), num_ids, parallel_num, need_gen_table_ids, need_process_table_ids,
+        line_size, embedding_size, need_embeddings, value_dtype, embeddings->data_type());
+    CHECK_GE(tmp_buffer->shape_view().elem_cnt(), buffer_manager.TotalBufferSize());
+
+    const U* table_ids_ptr;
+    if (has_table_ids) {
+      const user_op::Tensor* table_ids = ctx->Tensor4ArgNameAndIndex("table_ids", 0);
+      table_ids_ptr = reinterpret_cast<const U*>(table_ids->dptr());
+    } else if (need_gen_table_ids) {
+      id_shuffle::GenerateTableIds<<<BlocksNum4ThreadsNum(num_ids), kCudaThreadsNumPerBlock, 0,
+                                     cuda_stream>>>(
+          num_ids, num_tables,
+          buffer_manager.template Ptr<U>(EmbeddingForwardBufferType::kTableIds));
+      table_ids_ptr = buffer_manager.template Ptr<U>(EmbeddingForwardBufferType::kTableIds);
+    } else {
+      table_ids_ptr = nullptr;
+    }
+    IDX* num_partitioned_unique =
+        buffer_manager.template Ptr<IDX>(EmbeddingForwardBufferType::kNumPartitionedUnique);
+    K* partitioned_unique_ids =
+        buffer_manager.template Ptr<K>(EmbeddingForwardBufferType::kPartitionedUniqueIds);
+    U* partitioned_unique_table_ids =
+        buffer_manager.template Ptr<U>(EmbeddingForwardBufferType::kPartitionedUniqueTableIds);
+    IDX* num_unique_matrix_ptr =
+        buffer_manager.template Ptr<IDX>(EmbeddingForwardBufferType::kNumUniqueMatrix);
+    DataType num_unique_matrix_type = DataType::kUInt32;
+    IDX* inverse_unique_partition_indices_ptr = buffer_manager.template Ptr<IDX>(
+        EmbeddingForwardBufferType::kInverseUniquePartitionIndices);
+    size_t hash_table_capacity = parallel_num * num_ids;
+    void* workspace_ptr = buffer_manager.Ptr(EmbeddingForwardBufferType::kWorkspace);
+    size_t workspace_size = buffer_manager.Size(EmbeddingForwardBufferType::kWorkspace);
+    id_shuffle::UniqueAndPartition<K, U, IDX, embedding::ShardingHash>(
+        cuda_stream, num_ids, hash_table_capacity, parallel_num,
+        reinterpret_cast<const K*>(ids->dptr()), table_ids_ptr, num_partitioned_unique,
+        partitioned_unique_ids, partitioned_unique_table_ids, inverse_unique_partition_indices_ptr,
+        workspace_ptr, workspace_size, need_process_table_ids);
+    ncclComm_t comm = kernel_state->comm();
+    OF_NCCL_CHECK(ncclAllGather(num_partitioned_unique, num_unique_matrix_ptr, parallel_num,
+                                GetNcclDataType(num_unique_matrix_type), comm, cuda_stream));
+    IDX* host_num_unique_matrix = kernel_state->HostNumUniqueMatrix();
+    OF_CUDA_CHECK(cudaMemcpyAsync(host_num_unique_matrix, num_unique_matrix_ptr,
+                                  parallel_num * parallel_num * sizeof(IDX), cudaMemcpyDefault,
+                                  cuda_stream));
+    CHECK_JUST(ctx->stream()->Sync());
+    if (parallel_num > 1) {
+      // use num_partitioned_unique as indices_offset buffer, so should after ncclAllGather.
+      id_shuffle::ComputeOffset<<<1, 1, 0, cuda_stream>>>(parallel_num, num_partitioned_unique);
+      id_shuffle::ContiguousInverseUniquePartitionIndices<<<
+          BlocksNum4ThreadsNum(num_ids), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
+          num_ids, num_partitioned_unique, inverse_unique_partition_indices_ptr);
+    }
+
+    K* received_ids = buffer_manager.template Ptr<K>(EmbeddingForwardBufferType::kReceivedIds);
+    U* received_table_ids =
+        buffer_manager.template Ptr<U>(EmbeddingForwardBufferType::kReceivedTableIds);
+    IDX* cur_rank_num_unique_ptr =
+        buffer_manager.template Ptr<IDX>(EmbeddingForwardBufferType::kCurRankNumUnique);
+    K* cur_rank_unique_ids_ptr =
+        buffer_manager.template Ptr<K>(EmbeddingForwardBufferType::kCurRankUniqueIds);
+    U* cur_rank_unique_table_ids_ptr =
+        buffer_manager.template Ptr<U>(EmbeddingForwardBufferType::kCurRankUniqueTableIds);
+    IDX* cur_rank_inverse_indices_ptr =
+        buffer_manager.template Ptr<IDX>(EmbeddingForwardBufferType::kCurRankInverseIndices);
+    int64_t received_elem_cnt = 0;
+    DataType table_ids_dtype = DataType::kUInt32;
+    id_shuffle::ShuffleIdsAndTableIds(
+        cuda_stream, comm, parallel_id, parallel_num, num_ids, ids->data_type(), table_ids_dtype,
+        host_num_unique_matrix, partitioned_unique_ids, partitioned_unique_table_ids, received_ids,
+        received_table_ids, &received_elem_cnt, need_process_table_ids);
+    id_shuffle::UniqueAndPartition<K, U, IDX, embedding::LocalUniqueHash>(
+        cuda_stream, received_elem_cnt, hash_table_capacity, 1, received_ids, received_table_ids,
+        cur_rank_num_unique_ptr, cur_rank_unique_ids_ptr, cur_rank_unique_table_ids_ptr,
+        cur_rank_inverse_indices_ptr, workspace_ptr, workspace_size, need_process_table_ids);
+    if (!need_process_table_ids) {
+      OF_CUDA_CHECK(cudaMemsetAsync(cur_rank_unique_table_ids_ptr, 0, received_elem_cnt * sizeof(U),
+                                    cuda_stream));
+    }
+    void* host_num_keys = kernel_state->HostNumKeys();
+    OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, cur_rank_num_unique_ptr, sizeof(IDX),
+                                  cudaMemcpyDefault, cuda_stream));
+    CHECK_JUST(ctx->stream()->Sync());
+    uint32_t num_unique = *reinterpret_cast<uint32_t*>(host_num_keys);
+
+    // lookup and put
+    uint32_t* num_missing_ptr =
+        buffer_manager.template Ptr<uint32_t>(EmbeddingForwardBufferType::kNumMissing);
+    uint32_t* missing_indices_ptr =
+        buffer_manager.template Ptr<uint32_t>(EmbeddingForwardBufferType::kMissingIndices);
+    // if no cast and line_size==embedding_size values_ptr == embedding_ptr else add slice
+    void* values_ptr =
+        buffer_manager.template Ptr<V>(EmbeddingForwardBufferType::kCurRankUniqueValues);
+    T* cur_rank_embeddings_ptr =
+        need_embeddings
+            ? buffer_manager.template Ptr<T>(EmbeddingForwardBufferType::kCurRankUniqueEmbeddings)
+            : reinterpret_cast<T*>(values_ptr);
+    LookupAndInitMissing<V, U, IDX>(ctx->stream(), kernel_state, num_unique, embedding_size,
+                                    line_size, true, cur_rank_unique_ids_ptr,
+                                    cur_rank_unique_table_ids_ptr, num_missing_ptr,
+                                    missing_indices_ptr, values_ptr);
+    if (need_embeddings) {
+      CopyValuesToEmbeddings<V>(ctx->stream(), num_unique, embedding_size, line_size, value_dtype,
+                                embeddings->data_type(), reinterpret_cast<V*>(values_ptr),
+                                cur_rank_embeddings_ptr);
+    }
+
+    // embedding shuffle
+    int64_t cur_rank_num_ids = 0;
+    for (int64_t i = 0; i < parallel_num; ++i) {
+      cur_rank_num_ids += host_num_unique_matrix[i * parallel_num + parallel_id];
+    }
+    int64_t unique_partitioned_num_ids = 0;
+    for (int64_t i = 0; i < parallel_num; ++i) {
+      unique_partitioned_num_ids += host_num_unique_matrix[parallel_id * parallel_num + i];
+    }
+    T* reverse_unique_cur_rank_embeddings_ptr =
+        buffer_manager.template Ptr<T>(EmbeddingForwardBufferType::kReverseUniqueCurRankEmbeddings);
+    T* received_embeddings_ptr =
+        buffer_manager.template Ptr<T>(EmbeddingForwardBufferType::kReceivedEmbeddings);
+    GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
+        ctx->stream(), cur_rank_inverse_indices_ptr, cur_rank_num_ids, cur_rank_embeddings_ptr,
+        Shape({1, num_unique, embedding_size}), reverse_unique_cur_rank_embeddings_ptr, 0);
+
+    id_shuffle::ShuffleEmbeddings(cuda_stream, comm, parallel_id, parallel_num, num_ids,
+                                  embedding_size, embeddings->data_type(), host_num_unique_matrix,
+                                  reverse_unique_cur_rank_embeddings_ptr, received_embeddings_ptr);
+
+    // 3. reverse unique_partition, from (unique_partitioned_num_ids, embedding_size) to
+    // (num_ids, embedding_size)
+    GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
+        ctx->stream(), inverse_unique_partition_indices_ptr, num_ids, received_embeddings_ptr,
+        Shape({1, unique_partitioned_num_ids, embedding_size}), embeddings->mut_dptr<T>(), 0);
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define ID_DATA_TYPE_SEQ                            \
+  OF_PP_MAKE_TUPLE_SEQ(uint32_t, DataType::kUInt32) \
+  OF_PP_MAKE_TUPLE_SEQ(uint64_t, DataType::kUInt64) \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)   \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
+
+#define REGISTER_CUDA_EMBEDDING_LOOKUP_PLACEHOLDER_KERNEL(t_dtype_pair, k_dtype_pair,             \
+                                                          table_dtype_pair, v_dtype_pair)         \
+  REGISTER_USER_KERNEL("embedding_lookup_placeholder")                                            \
+      .SetCreateFn<EmbeddingLookupPlaceholderKernel<                                              \
+          OF_PP_PAIR_FIRST(t_dtype_pair), OF_PP_PAIR_FIRST(v_dtype_pair),                         \
+          OF_PP_PAIR_FIRST(k_dtype_pair), OF_PP_PAIR_FIRST(table_dtype_pair)>>()                  \
+      .SetIsMatchedHob(                                                                           \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                         \
+          && (user_op::HobDataType("ids", 0) == OF_PP_PAIR_SECOND(k_dtype_pair))                  \
+          && (DataType::kUInt32 == OF_PP_PAIR_SECOND(table_dtype_pair))                           \
+          && (user_op::HobAttr<DataType>("dtype") == OF_PP_PAIR_SECOND(v_dtype_pair))             \
+          && (user_op::HobDataType("embeddings", 0) == OF_PP_PAIR_SECOND(t_dtype_pair)))          \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
+        const user_op::TensorDesc& ids = ctx->InputTensorDesc("ids", 0);                          \
+        const user_op::TensorDesc& embeddings = ctx->OutputTensorDesc("embeddings", 0);           \
+        const bool has_table_ids = ctx->has_input("table_ids", 0);                                \
+        const int32_t num_tables = ctx->Attr<int32_t>("num_tables");                              \
+        const bool need_gen_table_ids = (!has_table_ids && num_tables > 1);                       \
+        const bool need_process_table_ids = (has_table_ids || num_tables > 1);                    \
+        DataType value_dtype = ctx->Attr<DataType>("dtype");                                      \
+        const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");                      \
+        const int64_t line_size = ctx->Attr<int64_t>("line_size");                                \
+        bool need_embeddings =                                                                    \
+            (line_size != embedding_size) || (value_dtype != embeddings.data_type());             \
+        EmbeddingForwardTmpBufferManager<OF_PP_PAIR_FIRST(k_dtype_pair),                          \
+                                         OF_PP_PAIR_FIRST(table_dtype_pair), uint32_t>            \
+            buffer_manager(nullptr, ids.shape().elem_cnt(), ctx->parallel_ctx().parallel_num(),   \
+                           need_gen_table_ids, need_process_table_ids, line_size, embedding_size, \
+                           need_embeddings, value_dtype, embeddings.data_type());                 \
+        return buffer_manager.TotalBufferSize();                                                  \
+      });
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_LOOKUP_PLACEHOLDER_KERNEL,
+                                 FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, ID_DATA_TYPE_SEQ,
+                                 TABLE_ID_DATA_TYPE_SEQ, EMBEDDING_DATA_TYPE_SEQ)
+// TODO: fix the specified data_type
+
+template<typename T, typename IDX>
+class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
+ public:
+  EmbeddingLookupPlaceholderGradKernel() : current_iter_(0){};
+  ~EmbeddingLookupPlaceholderGradKernel() override = default;
+
+  // std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+  //    user_op::KernelInitContext* ctx) const override {
+  //  return std::make_shared<EmbeddingKernelState<IDX>>(ctx);
+  //}
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    // auto* kernel_state = dynamic_cast<EmbeddingKernelState<IDX>*>(state);
+    // CHECK(kernel_state != nullptr);
+    // embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
+    // std::unique_ptr<embedding::TmpBufferAllocator> allocator =
+    //    embedding_state->NewTmpBufferAllocator(ctx);
+
+    // id shuffle-embedding lookup
+    // embedding gradient shuffle: embedding_grad->unique embedding grad
+    // embedding update: emb
+
+    LOG(ERROR) << "EmbeddingLookupPlaceholder grad Kernel";
+    current_iter_++;
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  mutable int64_t current_iter_;
+};
+
+#define REGISTER_CUDA_EMBEDDING_LOOKUP_PLACEHOLDER_GRAD_KERNEL(t_dtype_pair, idx_dtype_pair) \
+  REGISTER_USER_KERNEL("embedding_lookup_placeholder_grad")                                  \
+      .SetCreateFn<EmbeddingLookupPlaceholderGradKernel<OF_PP_PAIR_FIRST(t_dtype_pair),      \
+                                                        OF_PP_PAIR_FIRST(idx_dtype_pair)>>() \
+      .SetIsMatchedHob(                                                                      \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                    \
+          && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(t_dtype_pair))  \
+          && (user_op::HobDataType("ids", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair)));
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_LOOKUP_PLACEHOLDER_GRAD_KERNEL,
+                                 EMBEDDING_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

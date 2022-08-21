@@ -55,7 +55,7 @@ namespace oneflow {
     const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* shadow = GetInputArgModifierFn("shadow", 0);
   CHECK_OR_RETURN(shadow != nullptr) << "shadow is nullptr";
-  shadow->set_requires_grad(false);
+  // shadow->set_requires_grad(false);
   user_op::InputArgModifier* ids = GetInputArgModifierFn("ids", 0);
   CHECK_OR_RETURN(ids != nullptr);
   ids->set_requires_grad(false);
@@ -64,6 +64,7 @@ namespace oneflow {
     CHECK_OR_RETURN(table_ids != nullptr) << "table_ids is nullptr";
     table_ids->set_requires_grad(false);
   }
+  LOG(ERROR) << "EmbeddingLookupPlaceholderOp set_requires_grad false ";
   return Maybe<void>::Ok();
 }
 
@@ -486,6 +487,32 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
       ctx->InputDType("cur_rank_unique_table_ids", 0);
   *ctx->MutOutputDType("out_cur_rank_inverse_indices", 0) =
       ctx->InputDType("cur_rank_inverse_indices", 0);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> EmbeddingLookupPlaceholderGradOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  *ctx->MutOutputShape("shadow_grad", 0) = Shape({1});
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> EmbeddingLookupPlaceholderGradOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> EmbeddingLookupPlaceholderGradOp::GetSbp(user_op::SbpContext* ctx) {
+  auto builder = ctx->NewBuilder()
+                     .Broadcast(user_op::OpArg("shadow_grad", 0))  // to skip boxing
+                     .Split(user_op::OpArg("ids", 0), 0)
+                     .Split(user_op::OpArg("embedding_grad", 0), 0);
+  builder.Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> EmbeddingLookupPlaceholderGradOp::InferDataType(
+    user_op::InferContext* ctx) {
+  *ctx->MutOutputDType("shadow_grad", 0) = DataType::kFloat;
   return Maybe<void>::Ok();
 }
 

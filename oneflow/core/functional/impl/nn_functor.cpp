@@ -3386,11 +3386,12 @@ class OneEmbeddingLookupFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& shadow,
                            const std::shared_ptr<one::Tensor>& ids,
                            const Optional<one::Tensor>& table_ids, const Symbol<DType>& dtype,
-                           const int64_t embedding_size, const int32_t num_tables,
-                           const std::string& embedding_tables,
+                           const int64_t line_size, const int64_t embedding_size,
+                           const int32_t num_tables, const std::string& embedding_tables,
                            const std::string& key_value_store_options) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    JUST(attrs.SetAttr<int64_t>("line_size", line_size));
     JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
     JUST(attrs.SetAttr<int32_t>("num_tables", num_tables));
     JUST(attrs.SetAttr<std::string>("embedding_tables", embedding_tables));
@@ -3406,6 +3407,28 @@ class OneEmbeddingLookupFunctor {
  private:
   std::shared_ptr<OpExpr> op_has_table_ids_;
   std::shared_ptr<OpExpr> op_no_table_ids_;
+};
+
+class OneEmbeddingLookupGradFunctor {
+ public:
+  OneEmbeddingLookupGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("embedding_lookup_placeholder_grad")
+                         .Input("ids")
+                         .Input("embedding_grad")
+                         .Output("shadow_grad")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& ids,
+                           const std::shared_ptr<one::Tensor>& embedding_grad,
+                           const std::string& key_value_store_options) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("key_value_store_options", key_value_store_options));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {ids, embedding_grad}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class OneEmbeddingUniqueKeyValuePairFunctor {
@@ -3871,6 +3894,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingEmbeddingGradientShuffleFunctor>(
       "OneEmbeddingEmbeddingGradientShuffle");
   m.add_functor<impl::OneEmbeddingLookupFunctor>("OneEmbeddingLookup");
+  m.add_functor<impl::OneEmbeddingLookupGradFunctor>("OneEmbeddingLookupGrad");
   m.add_functor<impl::OneEmbeddingUniqueKeyValuePairFunctor>("OneEmbeddingUniqueKeyValuePair");
   m.add_functor<impl::NormalFunctor>("Normal");
   m.add_functor<impl::Normal2Functor>("Normal2");

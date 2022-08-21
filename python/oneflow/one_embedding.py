@@ -25,6 +25,7 @@ from oneflow._oneflow_internal import PersistentTableReader
 from oneflow._oneflow_internal import PersistentTableWriter
 import numpy as np
 import traceback
+from oneflow import nn
 
 
 def _check_initializer(initializer):
@@ -185,6 +186,7 @@ class Embedding(Module):
             store_options,
             default_initializer,
         )
+        self.storage_dim = key_value_store_options["storage_dim"]
         self.key_value_store_options = json.dumps(key_value_store_options)
         self.embedding_tables = json.dumps(embedding_tables)
         self.num_tables = len(embedding_tables["tables"])
@@ -272,6 +274,9 @@ class Embedding(Module):
         """
         self.handler.LoadSnapshot(snapshot_name)
 
+    def eager_update(self):
+        print("embedding eager_update")
+
     def forward(self, ids, table_ids=None):
         """Embedding lookup operation
 
@@ -288,6 +293,7 @@ class Embedding(Module):
             ids,
             table_ids,
             self.dtype,
+            self.storage_dim,
             self.embedding_dim,
             self.num_tables,
             self.embedding_tables,
@@ -950,3 +956,19 @@ def make_persistent_table_writer(
         4 * 1024,
         physical_block_size,
     )
+
+
+class Optimizer(Optimizer):
+    def __init__(
+        self, optimizer: Optimizer, embeddings: List[Embedding],
+    ):
+        self.optimizer = optimizer
+        self.embeddings = embeddings
+        print("self.embeddings", self.optimizer.param_groups[0])
+
+    def step(self, closure: Callable = None):
+        print("step")
+        for embedding in self.embeddings:
+            print("embedding", embedding)
+            embedding.eager_update()
+        self.optimizer.step()
