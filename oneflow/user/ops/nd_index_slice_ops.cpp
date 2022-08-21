@@ -123,7 +123,11 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
   FOR_RANGE(int64_t, i, index_ndims, params_shape.NumAxes()) {
     out_shape_vec.emplace_back(params_shape.At(i));
   }
-  *ctx->MutOutputShape("out", 0) = Shape(out_shape_vec);
+  const Shape& out_shape = Shape(out_shape_vec);
+  bool is_out_of_bounds = params_shape.Count(0) == 0 && out_shape.Count(0) != 0;
+  CHECK_OR_RETURN(!is_out_of_bounds)
+      << Error::IndexError() << "The index is out of bounds for dimension with size 0";
+  *ctx->MutOutputShape("out", 0) = out_shape;
   return Maybe<void>::Ok();
 }
 
