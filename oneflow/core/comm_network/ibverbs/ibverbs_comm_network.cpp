@@ -73,7 +73,9 @@ IBVerbsCommNet::~IBVerbsCommNet() {
   }
   PCHECK(ibv::wrapper.ibv_destroy_cq(cq_) == 0);
   PCHECK(ibv::wrapper.ibv_dealloc_pd(pd_) == 0);
-  PCHECK(ibv::wrapper.ibv_close_device(context_) == 0);
+  CHECK_EQ(ibv::wrapper.ibv_close_device(context_), 0)
+      << "Error, failed to close the IB device "
+      << ibv::wrapper.ibv_get_device_name(context_->device);
 }
 
 void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
@@ -127,10 +129,11 @@ IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT
     CHECK(device != nullptr) << "No IB device match " << user_device;
   }
   context_ = ibv::wrapper.ibv_open_device(device);
-  PCHECK(context_);
+  CHECK(context_ != NULL) << "Error, failed to open the IB device "
+                          << ibv::wrapper.ibv_get_device_name(device);
   ibv::wrapper.ibv_free_device_list(device_list);
   pd_ = ibv::wrapper.ibv_alloc_pd(context_);
-  PCHECK(pd_);
+  CHECK(pd_) << "Error, ibv_alloc_pd() allocates a Protection Domain (PD) failed";
   ibv_device_attr device_attr{};
   PCHECK(ibv::wrapper.ibv_query_device(context_, &device_attr) == 0);
   cq_ = ibv::wrapper.ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
