@@ -173,7 +173,8 @@ from oneflow._C import argmax
 from oneflow._C import argmin
 from oneflow._C import std
 from oneflow._C import var
-from oneflow._C import stack
+from oneflow._C import stack, hstack, vstack, dstack, column_stack, row_stack
+from oneflow._C import atleast_1d, atleast_2d, atleast_3d
 from oneflow._C import squeeze
 from oneflow._C import narrow
 from oneflow._C import unsqueeze
