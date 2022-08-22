@@ -808,7 +808,7 @@
   signature:
     [
       "Tensor (Tensor input, *, DataType dtype=kFloat, Generator generator=None) => Bernoulli",
-      "Tensor (Tensor input, Double p, *, DataType dtype=kFloat, Generator generator=None) => Bernoulli",
+      "Tensor (Tensor input, Double p, *, DataType dtype=kFloat, Generator generator=None) => BernoulliProb",
     ]
   bind_python: True
 
@@ -1792,6 +1792,18 @@
 - name: "dropout_grad"
   signature: "Tensor (Tensor dy, Tensor mask, Float scale) => DropoutGrad"
   bind_python: False
+
+- name: "dropout1d"
+  signature: "Tensor (Tensor input, Float p=0.5, Bool training=True) => Dropout1d"
+  bind_python: True
+
+- name: "dropout2d"
+  signature: "Tensor (Tensor input, Float p=0.5, Bool training=True) => Dropout2d"
+  bind_python: True
+
+- name: "dropout3d"
+  signature: "Tensor (Tensor input, Float p=0.5, Bool training=True) => Dropout3d"
+  bind_python: True
 
 - name: "constant_pad"
   signature: 'Tensor (Tensor x, Int64List pad, Scalar value=0) => ConstantPad'
