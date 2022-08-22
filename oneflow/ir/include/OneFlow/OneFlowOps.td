@@ -269,6 +269,11 @@ def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
   let constructor = "mlir::oneflow::createOutlineJitFunctionPass()";
 }
 
+def KernelLaunchFunctionPass : Pass<"kernel-launch-function", "ModuleOp"> {
+  let summary = "move user ops to func.call";
+  let constructor = "mlir::oneflow::createKernelLaunchFunctionPass()";
+}
+
 def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";

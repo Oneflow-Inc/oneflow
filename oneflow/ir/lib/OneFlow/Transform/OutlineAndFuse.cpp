@@ -1,5 +1,3 @@
-/*
-Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,11 +13,28 @@ limitations under the License.
 */
 #include <iostream>
 #include <string>
+#include "OneFlow/OneFlowOps.h"
 #include "OneFlow/Passes.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
+
+namespace mlir {
+namespace oneflow {
+struct UserOpLowering final : public OpConversionPattern<UserOp> {
+ public:
+  using OpConversionPattern<UserOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(UserOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    llvm::StringRef callee = "oneflow_launch_kernel";
+    rewriter.replaceOpWithNewOp<mlir::func::CallOp>(op, callee, op->getResults());
+    return success();
+  }
+};
+} //namespace oneflow
+} // namespace mlir
 
 namespace {
 
@@ -28,6 +43,15 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
     oneflow::populateFuserPasses(patterns);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
+class KernelLaunchFunctionPass : public KernelLaunchFunctionPassBase<KernelLaunchFunctionPass> {
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    patterns.add<oneflow::UserOpLowering>(patterns.getContext());
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
@@ -49,6 +73,10 @@ namespace oneflow {
 
 std::unique_ptr<Pass> createOutlineJitFunctionPass() {
   return std::make_unique<OutlineJitFunctionPass>();
+}
+
+std::unique_ptr<Pass> createKernelLaunchFunctionPass() {
+  return std::make_unique<KernelLaunchFunctionPass>();
 }
 
 std::unique_ptr<Pass> createFuseIntoExistingOpPass() {
