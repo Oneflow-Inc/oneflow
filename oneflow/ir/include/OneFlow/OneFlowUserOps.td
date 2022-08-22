@@ -10156,4 +10156,104 @@ def OneFlow_CopyD2HOp : OneFlow_BaseOp<"copy_d2h", [NoSideEffect, NoGrad, Declar
   let has_data_type_infer_fn = 1;
 }
 
+
+def OneFlow_DeformConv2dOp : OneFlow_BaseOp<"deform_conv2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$weight,
+    OneFlow_Tensor:$offset
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+
+
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "0">:$kW,
+    DefaultValuedAttr<SI32Attr, "0">:$kH,
+    DefaultValuedAttr<SI32Attr, "0">:$dW,
+    DefaultValuedAttr<SI32Attr, "0">:$dH,
+    DefaultValuedAttr<SI32Attr, "0">:$padW,
+    DefaultValuedAttr<SI32Attr, "0">:$padH,
+    DefaultValuedAttr<SI32Attr, "0">:$dilationW,
+    DefaultValuedAttr<SI32Attr, "0">:$dilationH,
+    DefaultValuedAttr<SI32Attr, "0">:$group,
+    DefaultValuedAttr<SI32Attr, "0">:$deformable_group    
+  );
+
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_check_fn=1;
+}
+
+def OneFlow_DeformConv2dInputGradOp : OneFlow_BaseOp<"deform_conv2d_input_grap", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$output_grad,
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$weight,
+    OneFlow_Tensor:$offset
+  );
+  let output = (outs
+    OneFlow_Tensor:$input_grad,
+    OneFlow_Tensor:$offset_grad
+  );
+
+
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "0">:$kW,
+    DefaultValuedAttr<SI32Attr, "0">:$kH,
+    DefaultValuedAttr<SI32Attr, "0">:$dW,
+    DefaultValuedAttr<SI32Attr, "0">:$dH,
+    DefaultValuedAttr<SI32Attr, "0">:$padW,
+    DefaultValuedAttr<SI32Attr, "0">:$padH,
+    DefaultValuedAttr<SI32Attr, "0">:$dilationW,
+    DefaultValuedAttr<SI32Attr, "0">:$dilationH,
+    DefaultValuedAttr<SI32Attr, "0">:$group,
+    DefaultValuedAttr<SI32Attr, "0">:$deformable_group
+
+    
+  );
+
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_Deformconv2dParamGradOp : OneFlow_BaseOp<"deform_conv2d_param_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$output_grad,
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$offset
+  );
+  let output = (outs
+    OneFlow_Tensor:$weight_grad
+  );
+
+
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "0">:$kW,
+    DefaultValuedAttr<SI32Attr, "0">:$kH,
+    DefaultValuedAttr<SI32Attr, "0">:$dW,
+    DefaultValuedAttr<SI32Attr, "0">:$dH,
+    DefaultValuedAttr<SI32Attr, "0">:$padW,
+    DefaultValuedAttr<SI32Attr, "0">:$padH,
+    DefaultValuedAttr<SI32Attr, "0">:$dilationW,
+    DefaultValuedAttr<SI32Attr, "0">:$dilationH,
+    DefaultValuedAttr<SI32Attr, "0">:$group,
+    DefaultValuedAttr<SI32Attr, "0">:$deformable_group
+
+    
+  );
+
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+
+
 #endif // GET_ONEFLOW_SYSTEM_OP_DEFINITIONS
