@@ -31,19 +31,20 @@ bool IsInplaceValid(const std::shared_ptr<Tensor>& x) {
 
 Maybe<std::vector<int32_t>> CheckAxis(const std::vector<int32_t>& axis, const int32_t& ndim) {
   const int32_t naxis = axis.size();
-
   int32_t reduce_ndim = naxis;
   if (naxis == 0 || ndim == 0) reduce_ndim = ndim;
   std::vector<int32_t> reduce_axis(reduce_ndim);
   if (naxis == 0) {
     std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
   } else {
-    std::vector<int32_t> axis_num(naxis);
+    int32_t check_ndim = (naxis > ndim) ? naxis : ndim;
+    std::vector<int32_t> axis_num(check_ndim, 0);
     for (int32_t i = 0; i < naxis; i++) {
       const int32_t axis_i = JUST(maybe_wrap_dim(axis[i], ndim));
       axis_num[axis_i]++;
-      CHECK_OR_RETURN(axis_num[axis_i] < 2) << Error::RuntimeError() << "dim " << axis_i
-                                            << " appears multiple times in the list of dims";
+      CHECK_OR_RETURN_ERROR(axis_num[axis_i] < 2) << Error::RuntimeError() << "dim " << axis_i
+                                                  << " appears multiple times in the list of dims";
+      if (i < reduce_ndim) reduce_axis[i] = axis_i;
     }
   }
   return reduce_axis;
