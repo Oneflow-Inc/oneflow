@@ -18,6 +18,7 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_FRAMEWORK_TYPEINFO_H_
 
 #include <Python.h>
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/dtype.h"
 
 namespace oneflow {
@@ -27,11 +28,28 @@ typedef struct {
   PyObject_HEAD Symbol<DType> dtype;
 } PyDTypeInfo;
 
-struct PyIInfo : public PyDTypeInfo {};
-struct PyFInfo : public PyDTypeInfo {};
+static PyTypeObject PyIInfoType = {
+    PyVarObject_HEAD_INIT(NULL, 0) "oneflow.iinfo",  // tp_name
+    sizeof(PyDTypeInfo),                             // tp_basicsize
+};
 
-inline Symbol<DType> PyDTypeInfo_UnpackDType(PyObject* obj) { return ((PyDTypeInfo*)obj)->dtype; }
+static PyTypeObject PyFInfoType = {
+    PyVarObject_HEAD_INIT(NULL, 0) "oneflow.finfo",  // tp_name
+    sizeof(PyDTypeInfo),                             // tp_basicsize
+};
+inline bool PyIInfo_Check(PyObject* obj) { return PyObject_TypeCheck(obj, &PyIInfoType); }
+
+inline bool PyFInfo_Check(PyObject* obj) { return PyObject_TypeCheck(obj, &PyFInfoType); }
+
+inline bool PyDTypeInfo_Check(PyObject* obj) { return PyIInfo_Check(obj) || PyFInfo_Check(obj); }
+
+inline Symbol<DType> PyDTypeInfo_UnpackDType(PyObject* obj) {
+  CHECK_OR_THROW(PyDTypeInfo_Check(obj));
+  return ((PyDTypeInfo*)obj)->dtype;
+}
+
 inline DataType PyDTypeInfo_UnpackDataType(PyObject* obj) {
+  CHECK_OR_THROW(PyDTypeInfo_Check(obj));
   return ((PyDTypeInfo*)obj)->dtype->data_type();
 }
 
