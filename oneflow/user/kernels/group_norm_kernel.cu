@@ -3,7 +3,7 @@
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/cuda/layer_norm.cuh"
-
+#include <cub/cub.cuh>
 
 namespace oneflow{
 
@@ -474,6 +474,57 @@ class GroupNormGradGpuKernel final : public user_op::OpKernel {
 REGISTER_GROUP_NORM_GRAD_CUDA_KERNEL(float)
 
 
+// template<typename T, typename ComputeType>
+// __global__ void GroupNormParamGradKernel(const T* dy, 
+//                                          const T* x, 
+//                                          const T* mean, 
+//                                          const T* inv_var, 
+//                                          T* dgamma, 
+//                                          T* dbeta, 
+//                                          const int32_t batch_size, 
+//                                          const int32_t group_size, 
+//                                          const int32_t channel_size, 
+//                                          const int32_t spatial_size){
+//   // Assume each thread compute each norm
+//   /*
+//   actually: n, g, c // g, h, w
+//   mean: n, g
+//   alpha: c
+//   */
+//   const int32_t global_thread_idx = blockDim.x * blockIdx.x + threadIdx.x; 
+//   const int32_t step = gridDim.x * blockDim.x; 
+//   for(int32_t channel=global_thread_idx; channel < channel_size; channel+=step){
+//     ComputeType dgamma_sum = 0.0; 
+//     ComputeType dbeta_sum = 0.0; 
+//     const int32_t D = channel_size / group_size; 
+//     for(int32_t batch=0; batch < batch_size; batch++){
+//       const int32_t batch_channel_id = batch * channel_size + channel; 
+//       ComputeType ds_sum = 0.0; 
+//       ComputeType db_sum = 0.0; 
+//       for(int32_t spatial=0; spatial < spatial_size; spatial++){
+//         ComputeType dy_val = static_cast<ComputeType>(dy[batch_channel_id * spatial_size + spatial]); 
+//         ComputeType x_val = static_cast<ComputeType>(x[batch_channel_id * spatial_size + spatial]); 
+//         ds_sum += dy_val * x_val; 
+//         db_sum += dy_val; 
+//       }
+//       const int32_t batch_group_id = batch * group_size + channel / D; 
+//       ComputeType mean_val = static_cast<ComputeType>(mean[batch_group_id]); 
+//       ComputeType inv_var_val = static_cast<ComputeType>(inv_var[batch_group_id]); 
+//       dgamma_sum += (ds_sum - db_sum * mean_val) * inv_var_val; 
+//       dbeta_sum += db_sum;
+//     }
+//     dgamma[channel] = dgamma_sum; 
+//     dbeta[channel] = dbeta_sum; 
+//   }
+// }
+
+constexpr int kBlockSize = 128; 
+
+template<typename T>
+struct SumOp {
+  __device__ __forceinline__ T operator()(const T& a, const T& b) const { return a + b; }
+};
+
 template<typename T, typename ComputeType>
 __global__ void GroupNormParamGradKernel(const T* dy, 
                                          const T* x, 
@@ -485,41 +536,36 @@ __global__ void GroupNormParamGradKernel(const T* dy,
                                          const int32_t group_size, 
                                          const int32_t channel_size, 
                                          const int32_t spatial_size){
-  // Assume each thread compute each norm
-  /*
-  actually: n, g, c // g, h, w
-  mean: n, g
-  alpha: c
-  */
-  const int32_t global_thread_idx = blockDim.x * blockIdx.x + threadIdx.x; 
-  const int32_t step = gridDim.x * blockDim.x; 
-  for(int32_t channel=global_thread_idx; channel < channel_size; channel+=step){
+  for(int32_t channel=blockIdx.x; channel < channel_size; channel+=gridDim.x){
     ComputeType dgamma_sum = 0.0; 
     ComputeType dbeta_sum = 0.0; 
-    // const int32_t group_idx = channel / group_size; 
     const int32_t D = channel_size / group_size; 
     for(int32_t batch=0; batch < batch_size; batch++){
       const int32_t batch_channel_id = batch * channel_size + channel; 
       ComputeType ds_sum = 0.0; 
       ComputeType db_sum = 0.0; 
-      for(int32_t spatial=0; spatial < spatial_size; spatial++){
+      for(int32_t spatial=threadIdx.x; spatial < spatial_size; spatial+=blockDim.x){
         ComputeType dy_val = static_cast<ComputeType>(dy[batch_channel_id * spatial_size + spatial]); 
         ComputeType x_val = static_cast<ComputeType>(x[batch_channel_id * spatial_size + spatial]); 
         ds_sum += dy_val * x_val; 
         db_sum += dy_val; 
       }
       const int32_t batch_group_id = batch * group_size + channel / D; 
-      // printf("Channel is: %d, batch_channel_id is: %d, batch_group_id is: %d \n", channel, batch_channel_id, batch_group_id); 
       ComputeType mean_val = static_cast<ComputeType>(mean[batch_group_id]); 
       ComputeType inv_var_val = static_cast<ComputeType>(inv_var[batch_group_id]); 
-      // printf("Channel is: %d, meanval is: %f, invvar is: %f \n", channel, mean_val, inv_var_val); 
-      // printf("Channel is: %d, x_sum is: %f, dy_sum is: %f \n", channel, x_sum, dy_sum); 
-      // dgamma_sum += (dy_sum * (x_sum - mean_val)) * inv_var_val; 
       dgamma_sum += (ds_sum - db_sum * mean_val) * inv_var_val; 
       dbeta_sum += db_sum;
     }
-    dgamma[channel] = dgamma_sum; 
-    dbeta[channel] = dbeta_sum; 
+    __syncthreads(); 
+    typedef cub::BlockReduce<ComputeType, kBlockSize> BlockReduce; 
+    __shared__ typename BlockReduce::TempStorage temp_storage1;
+    __shared__ typename BlockReduce::TempStorage temp_storage2;
+    ComputeType dgamma_sum_result = BlockReduce(temp_storage1).Reduce(dgamma_sum, SumOp<ComputeType>());
+    ComputeType dbeta_sum_result = BlockReduce(temp_storage2).Reduce(dbeta_sum, SumOp<ComputeType>());
+    if(threadIdx.x == 0){
+      dgamma[channel] = dgamma_sum_result; 
+      dbeta[channel] = dbeta_sum_result;
+    }
   }
 }
 
@@ -560,10 +606,8 @@ class GroupNormParamGradGpuKernel final : public user_op::OpKernel {
     printf("channel_size is: %ld \n", channel_size); 
     printf("spatial_size is: %ld \n", spatial_size); 
     printf("group_size is: %ld \n", group_size); 
-
-    const int32_t block_size = 128; 
-    const int32_t grid_size = (channel_size + block_size - 1) / block_size; 
-    GroupNormParamGradKernel<T, float><<<grid_size, block_size, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(dy->dptr<T>(), 
+    const int32_t grid_size = channel_size; 
+    GroupNormParamGradKernel<T, float><<<grid_size, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(dy->dptr<T>(), 
                                                                                                        x->dptr<T>(), 
                                                                                                        mean->dptr<T>(), 
                                                                                                        inv_variance->dptr<T>(), 
