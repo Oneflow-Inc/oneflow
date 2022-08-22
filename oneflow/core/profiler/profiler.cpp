@@ -13,6 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <chrono>
+#include <stack>
+#include <map>
+#include <unordered_map>
+#include <iomanip>
+#include <iostream>
+#include <vector>
+#include <algorithm>
 
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/profiler/profile_manager.h"
@@ -45,15 +53,136 @@ void NameThisHostThread(const std::string& name) {
 #endif  // OF_ENABLE_PROFILER
 }
 
+uint64_t nanos() {
+  int64_t ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                   std::chrono::high_resolution_clock::now().time_since_epoch())
+                   .count();
+  return ns;
+}
+
+class Profiler {
+ public:
+  Profiler() = default;
+  virtual ~Profiler() {
+    std::cout << "========================== PROFILE RESULT =========================="
+              << std::endl;
+    Print();
+  }
+
+  void Push(const std::string& frame) {
+    uint64_t start_ns = nanos();
+    stack_.push(Frame{frame, start_ns});
+  }
+
+  void Pop() {
+    uint64_t end_ns = nanos();
+    const auto& frame = stack_.top();
+    uint64_t time = end_ns - frame.start_ns;
+    auto& item = items_[frame.name];
+    item.instances += 1;
+    item.total_time += time;
+    item.elapsed.emplace_back(time);
+    if (time < item.minium) { item.minium = time; }
+    if (time > item.maxium) { item.maxium = time; }
+    stack_.pop();
+  }
+
+  void Print() {
+    std::map<uint64_t, std::string> sorted_items;
+    double sum = 0;
+    for (const auto& it : items_) {
+      sum += it.second.total_time;
+      sorted_items.emplace(it.second.total_time, it.first);
+    }
+    const char* sep = "  ";
+
+    std::cout.setf(std::ios::fixed);
+    std::cout.precision(1);
+
+    std::cout << std::setw(7) << "Time(%)";
+    std::cout << sep;
+    std::cout << std::setw(15) << "Total Time (ns)";
+    std::cout << sep;
+    std::cout << std::setw(10) << "Instances";
+    std::cout << sep;
+    std::cout << std::setw(10) << "Average";
+    std::cout << sep;
+    std::cout << std::setw(10) << "Minimum";
+    std::cout << sep;
+    std::cout << std::setw(10) << "Maximum";
+    std::cout << sep;
+    std::cout << std::left << std::setw(31) << "Range";
+    std::cout << std::endl;
+
+    std::cout << std::setw(7) << "-------";
+    std::cout << sep;
+    std::cout << std::setw(15) << "---------------";
+    std::cout << sep;
+    std::cout << std::setw(10) << "----------";
+    std::cout << sep;
+    std::cout << std::setw(10) << "----------";
+    std::cout << sep;
+    std::cout << std::setw(10) << "----------";
+    std::cout << sep;
+    std::cout << std::setw(10) << "----------";
+    std::cout << sep;
+    std::cout << std::left << std::setw(31) << "-------------------------------";
+    std::cout << std::endl;
+
+    for (auto it = sorted_items.rbegin(); it != sorted_items.rend(); ++it) {
+      const std::string& name = it->second;
+      auto& item = items_.at(name);
+      std::cout << std::right << std::setw(7) << (item.total_time / sum) * 100;
+      std::cout << sep;
+      std::cout << std::right << std::setw(15) << item.total_time;
+      std::cout << sep;
+      std::cout << std::right << std::setw(10) << item.instances;
+      std::cout << sep;
+
+      std::sort(item.elapsed.begin(), item.elapsed.end());
+      std::cout << std::right << std::setw(10)
+                // << item.total_time / static_cast<float>(item.instances);
+                << item.elapsed[item.instances / 2];
+      std::cout << sep;
+      std::cout << std::right << std::setw(10) << item.minium;
+      std::cout << sep;
+      std::cout << std::right << std::setw(10) << item.maxium;
+      std::cout << sep;
+      std::cout << std::left << std::setw(31) << name;
+      std::cout << std::endl;
+    }
+  }
+
+ private:
+  struct Frame {
+    std::string name;
+    uint64_t start_ns;
+  };
+  std::stack<Frame> stack_;
+
+  struct TimeItem {
+    uint64_t instances = 0;
+    uint64_t total_time = 0;
+    uint64_t minium = std::numeric_limits<uint64_t>::max();
+    uint64_t maxium = 0;
+    std::vector<uint64_t> elapsed;
+  };
+  std::unordered_map<std::string, TimeItem> items_;
+};
+
+static thread_local Profiler profiler;
+
 void RangePush(const std::string& name) {
 #ifdef OF_ENABLE_PROFILER
-  nvtxRangePushA(name.c_str());
+  // nvtxRangePushA(name.c_str());
+  profiler.Push(name);
 #endif  // OF_ENABLE_PROFILER
 }
 
 void RangePop() {
 #ifdef OF_ENABLE_PROFILER
-  nvtxRangePop();
+  // nvtxRangePop();
+  profiler.Pop();
 #endif  // OF_ENABLE_PROFILER
 }
 
