@@ -373,6 +373,7 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
     // NOTE(chengcheng): create logical chain after acc, and merge with first logical chain.
     const std::vector<const OpNode*>& ordered_acc_op_nodes = info.ordered_acc_op_nodes;
     if (!ordered_acc_op_nodes.empty()) {
+      info.after_acc_logical_chain = std::make_shared<LogicalChain>();
       CreateAfterAccLogicalChain(info.after_acc_logical_chain, ordered_acc_op_nodes,
                                  *info.seed_parallel_desc);
       if (info.after_acc_logical_chain->ordered_op_nodes.size() > 1) {
