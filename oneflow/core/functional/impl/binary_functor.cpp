@@ -33,13 +33,9 @@ namespace functional {
 
 namespace impl {
 
-Maybe<Tensor> MaybeCopyTensorToDevice(const std::shared_ptr<Tensor>& tensor,
-                                      Symbol<Device> device) {
-  if (JUST(tensor->device())->type() != device->type()) {
-    return JUST(functional::Copy(tensor, device->type(), device->device_id(),
-                                 /*pin_memory=*/false));
-  }
-  return tensor;
+std::string TensorDeviceString(const std::shared_ptr<Tensor>& tensor) {
+  if (tensor->is_global()) { return CHECK_JUST(tensor->parallel_desc())->device_tag(); }
+  return CHECK_JUST(tensor->device())->ToString();
 }
 
 class AddFunctor {
@@ -53,11 +49,12 @@ class AddFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& other, const Scalar& alpha,
                            bool inplace) const {
-    // NOTE:If tensor x is scalar and it's device not equal to tensor y,
-    // then need move it to the target device first.(This behavior aligns to torch)
     auto input_tensor = input;
     if (IsScalarTensor(input)) {
-      input_tensor = JUST(MaybeCopyTensorToDevice(input, JUST(other->device())));
+      // NOTE:If tensor x is scalar and it's device not equal to tensor y,
+      // then need move it to the target device first.(This behavior aligns to PyTorch)
+      std::string device_str = TensorDeviceString(other);
+      input_tensor = JUST(functional::To(input, device_str));
     }
     if (IsIntegralDataType(input_tensor->dtype()->data_type())
         && IsIntegralDataType(other->dtype()->data_type()) && alpha.IsFloatingPoint()) {
@@ -167,10 +164,13 @@ class MulFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
-    // NOTE:If tensor x is scalar and it's device not equal to tensor y,
-    // then need move it to the target device first.(This behavior aligns to torch)
     auto tensor_x = x;
-    if (IsScalarTensor(x)) { tensor_x = JUST(MaybeCopyTensorToDevice(x, JUST(y->device()))); }
+    if (IsScalarTensor(x)) {
+      // NOTE:If tensor x is scalar and it's device not equal to tensor y,
+      // then need move it to the target device first.(This behavior aligns to PyTorch)
+      std::string device_str = TensorDeviceString(y);
+      tensor_x = JUST(functional::To(x, device_str));
+    }
     TensorProcessor tensor_processor;
     JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({tensor_x, y}).Apply());
     TensorTuple input_vec = JUST(tensor_processor.GetInputs());
