@@ -164,7 +164,10 @@ def _test_linear_graph_save_load_global_broadcast(
             iter2_state_dict = linear_t_g.state_dict()
             return iter2_state_dict
 
-    with tempfile.TemporaryDirectory(prefix="graph_save_load_global") as state_dict_dir:
+    rank_id = flow.env.get_rank()
+    with tempfile.TemporaryDirectory(
+        prefix="graph_save_load_global_" + str(rank_id)
+    ) as state_dict_dir:
         iter2_state_dict = train_with_graph(0, state_dict_dir)
         train_with_graph(1, state_dict_dir, iter2_state_dict)
 
@@ -417,7 +420,10 @@ def _test_graph_save_load_global_split_2(
             iter2_state_dict = graph_model.state_dict()
             return iter2_state_dict
 
-    with tempfile.TemporaryDirectory(prefix="graph_save_load_global") as state_dict_dir:
+    rank_id = flow.env.get_rank()
+    with tempfile.TemporaryDirectory(
+        prefix="graph_save_load_global_" + str(rank_id)
+    ) as state_dict_dir:
         iter2_state_dict = train_with_graph(0, state_dict_dir)
         train_with_graph(1, state_dict_dir, iter2_state_dict)
 
@@ -749,7 +755,10 @@ def _test_graph_save_load_global_split_4(
             iter2_state_dict = graph_model.state_dict()
             return iter2_state_dict
 
-    with tempfile.TemporaryDirectory(prefix="graph_save_load_global") as state_dict_dir:
+    rank_id = flow.env.get_rank()
+    with tempfile.TemporaryDirectory(
+        prefix="graph_save_load_global_" + str(rank_id)
+    ) as state_dict_dir:
         iter2_state_dict = train_with_graph(0, state_dict_dir)
         train_with_graph(1, state_dict_dir, iter2_state_dict)
 
@@ -757,28 +766,28 @@ def _test_graph_save_load_global_split_4(
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class TestGraphSaveLoadGlobal2d(oneflow.unittest.TestCase):
-    def test_linear_graph_save_load_gpu_1b(test_case):
+    def test_linear_graph_save_load_gpu_1_broadcast(test_case):
         _test_linear_graph_save_load_global_broadcast(
             test_case,
             model_tensor_placement=flow.placement("cuda", ranks=[0, 1]),
             model_file_placement=flow.placement("cpu", ranks=[0]),
         )
 
-    def test_linear_graph_save_load_cpu_1b(test_case):
+    def test_linear_graph_save_load_cpu_1_broadcast(test_case):
         _test_linear_graph_save_load_global_broadcast(
             test_case,
             model_tensor_placement=flow.placement("cpu", ranks=[0, 1]),
             model_file_placement=flow.placement("cpu", ranks=[0]),
         )
 
-    def test_graph_save_load_gpu_2s(test_case):
+    def test_graph_save_load_gpu_2_split(test_case):
         _test_graph_save_load_global_split_2(
             test_case,
             model_tensor_placement=flow.placement("cuda", ranks=[0, 1]),
             model_file_placement=flow.placement("cpu", ranks=[0, 1]),
         )
 
-    def test_graph_save_load_cpu_2s(test_case):
+    def test_graph_save_load_cpu_2_split(test_case):
         _test_graph_save_load_global_split_2(
             test_case,
             model_tensor_placement=flow.placement("cpu", ranks=[0, 1]),
@@ -789,14 +798,14 @@ class TestGraphSaveLoadGlobal2d(oneflow.unittest.TestCase):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n4d()
 class TestGraphSaveLoadGlobal4d(oneflow.unittest.TestCase):
-    def test_graph_save_load_gpu_2s2n(test_case):
+    def test_graph_save_load_gpu_2_split_2_none(test_case):
         _test_graph_save_load_global_split_4(
             test_case,
             model_tensor_placement=flow.placement("cuda", ranks=[0, 1, 2, 3]),
             model_file_placement=flow.placement("cpu", ranks=[0, 1]),
         )
 
-    def test_graph_save_load_cpu_2s2n(test_case):
+    def test_graph_save_load_cpu_2_split_2_none(test_case):
         _test_graph_save_load_global_split_4(
             test_case,
             model_tensor_placement=flow.placement("cpu", ranks=[0, 1, 2, 3]),
