@@ -116,6 +116,13 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsFinite, bool, double> {
   OF_DEVICE_FUNC bool operator()(double src) const { return isfinite(src); }
 };
 
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAbs, half, half> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  __device__ half operator()(half src) const { return __habs(src); }
+};
+
 #define SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(op)                                         \
   template<>                                                                                 \
   struct UnaryFunctor<DeviceType::kCUDA, op, half, half> {                                   \
@@ -135,7 +142,6 @@ SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kSelu);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kSilu);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kSoftSign);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kSoftPlus);
-SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kAbs);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kAcos);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kAcosh);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kAsin);
