@@ -474,51 +474,48 @@ class GroupNormGradGpuKernel final : public user_op::OpKernel {
 REGISTER_GROUP_NORM_GRAD_CUDA_KERNEL(float)
 
 
-// template<typename T, typename ComputeType>
-// __global__ void GroupNormParamGradKernel(const T* dy, 
-//                                          const T* x, 
-//                                          const T* mean, 
-//                                          const T* inv_var, 
-//                                          T* dgamma, 
-//                                          T* dbeta, 
-//                                          const int32_t batch_size, 
-//                                          const int32_t group_size, 
-//                                          const int32_t channel_size, 
-//                                          const int32_t spatial_size){
-//   // Assume each thread compute each norm
-//   /*
-//   actually: n, g, c // g, h, w
-//   mean: n, g
-//   alpha: c
-//   */
-//   const int32_t global_thread_idx = blockDim.x * blockIdx.x + threadIdx.x; 
-//   const int32_t step = gridDim.x * blockDim.x; 
-//   for(int32_t channel=global_thread_idx; channel < channel_size; channel+=step){
-//     ComputeType dgamma_sum = 0.0; 
-//     ComputeType dbeta_sum = 0.0; 
-//     const int32_t D = channel_size / group_size; 
-//     for(int32_t batch=0; batch < batch_size; batch++){
-//       const int32_t batch_channel_id = batch * channel_size + channel; 
-//       ComputeType ds_sum = 0.0; 
-//       ComputeType db_sum = 0.0; 
-//       for(int32_t spatial=0; spatial < spatial_size; spatial++){
-//         ComputeType dy_val = static_cast<ComputeType>(dy[batch_channel_id * spatial_size + spatial]); 
-//         ComputeType x_val = static_cast<ComputeType>(x[batch_channel_id * spatial_size + spatial]); 
-//         ds_sum += dy_val * x_val; 
-//         db_sum += dy_val; 
-//       }
-//       const int32_t batch_group_id = batch * group_size + channel / D; 
-//       ComputeType mean_val = static_cast<ComputeType>(mean[batch_group_id]); 
-//       ComputeType inv_var_val = static_cast<ComputeType>(inv_var[batch_group_id]); 
-//       dgamma_sum += (ds_sum - db_sum * mean_val) * inv_var_val; 
-//       dbeta_sum += db_sum;
-//     }
-//     dgamma[channel] = dgamma_sum; 
-//     dbeta[channel] = dbeta_sum; 
-//   }
-// }
 
 constexpr int kBlockSize = 128; 
+constexpr int kNumWaves = 32; 
+
+template<typename T>
+struct DefaultComputeType{
+  using type = T; 
+}; 
+
+template<>
+struct DefaultComputeType<half>{
+  using type = float; 
+}
+
+#if CUDA_VERSION >= 11000
+template<>
+struct DefaultComputeType<nv_bfloat16> {
+  using type = float;
+};
+#endif  // CUDA_VERSION >= 11000
+
+inline cudaError_t GetNumBlocks(int64_t n, int* num_blocks) {
+  int dev;
+  {
+    cudaError_t err = cudaGetDevice(&dev);
+    if (err != cudaSuccess) { return err; }
+  }
+  int sm_count;
+  {
+    cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
+    if (err != cudaSuccess) { return err; }
+  }
+  int tpm;
+  {
+    cudaError_t err = cudaDeviceGetAttribute(&tpm, cudaDevAttrMaxThreadsPerMultiProcessor, dev);
+    if (err != cudaSuccess) { return err; }
+  }
+  *num_blocks = std::max<int>(1, std::min<int64_t>((n + kBlockSize - 1) / kBlockSize,
+                                                   sm_count * tpm / kBlockSize * kNumWaves));
+  return cudaSuccess;
+}
+
 
 template<typename T>
 struct SumOp {
@@ -539,7 +536,7 @@ __global__ void GroupNormParamGradKernel(const T* dy,
   for(int32_t channel=blockIdx.x; channel < channel_size; channel+=gridDim.x){
     ComputeType dgamma_sum = 0.0; 
     ComputeType dbeta_sum = 0.0; 
-    const int32_t D = channel_size / group_size; 
+    const int32_t group_num = channel_size / group_size; 
     for(int32_t batch=0; batch < batch_size; batch++){
       const int32_t batch_channel_id = batch * channel_size + channel; 
       ComputeType ds_sum = 0.0; 
@@ -550,7 +547,7 @@ __global__ void GroupNormParamGradKernel(const T* dy,
         ds_sum += dy_val * x_val; 
         db_sum += dy_val; 
       }
-      const int32_t batch_group_id = batch * group_size + channel / D; 
+      const int32_t batch_group_id = batch * group_size + channel / group_num; 
       ComputeType mean_val = static_cast<ComputeType>(mean[batch_group_id]); 
       ComputeType inv_var_val = static_cast<ComputeType>(inv_var[batch_group_id]); 
       dgamma_sum += (ds_sum - db_sum * mean_val) * inv_var_val; 
@@ -585,29 +582,16 @@ class GroupNormParamGradGpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
     user_op::Tensor* dgamma = ctx->Tensor4ArgNameAndIndex("dgamma", 0);
     user_op::Tensor* dbeta = ctx->Tensor4ArgNameAndIndex("dbeta", 0);
-
-    /*
-    actually: n, g, c // g, h, w
-    mean: n, g
-    alpha: c
-
-    */
-
     const int64_t num_instances = mean->shape_view().elem_cnt();
     const int64_t norm_size = x->shape_view().elem_cnt() / num_instances;
-    printf("Num instances is: %ld \n", num_instances); 
-    printf("Norm size is: %ld \n", norm_size); 
-
     const int64_t batch_size = x->shape_view().At(0); 
     const int64_t channel_size = x->shape_view().At(1); 
     const int64_t spatial_size = x->shape_view().elem_cnt() / batch_size / channel_size; 
     const int64_t group_size = num_instances / batch_size; 
-    printf("batch_size is: %ld \n", batch_size); 
-    printf("channel_size is: %ld \n", channel_size); 
-    printf("spatial_size is: %ld \n", spatial_size); 
-    printf("group_size is: %ld \n", group_size); 
-    const int32_t grid_size = channel_size; 
-    GroupNormParamGradKernel<T, float><<<grid_size, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(dy->dptr<T>(), 
+    int num_blocks; 
+    OF_CUDA_CHECK(GetNumBlocks(channel_size, &num_blocks)); 
+    using ComputeType = typename DefaultComputeType<T>::type; 
+    GroupNormParamGradKernel<T, ComputeType><<<num_blocks, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(dy->dptr<T>(), 
                                                                                                        x->dptr<T>(), 
                                                                                                        mean->dptr<T>(), 
                                                                                                        inv_variance->dptr<T>(), 
@@ -627,7 +611,6 @@ class GroupNormParamGradGpuKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
 REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(float)
-
 
 
 } // namespace oneflow 
