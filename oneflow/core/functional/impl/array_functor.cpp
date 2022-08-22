@@ -1443,12 +1443,13 @@ class InplaceToContiguousFunctor {
     const auto& blob_object = JUST(input->eager_blob_object());
     Symbol<LocalTensorMeta> old_tensor_meta = JUST(input->local_tensor_meta());
 
-    Symbol<LocalTensorMeta> new_tensor_meta = SymbolOf(LocalTensorMeta(
-        std::make_shared<Shape>(old_tensor_meta->shape()), stride, old_tensor_meta->dtype(),
-        old_tensor_meta->device(), old_tensor_meta->storage_offset()));
+    Symbol<LocalTensorMeta> new_tensor_meta =
+        SymbolOf(LocalTensorMeta(std::make_shared<Shape>(old_tensor_meta->shape()), stride,
+                                 old_tensor_meta->dtype(), old_tensor_meta->device()));
 
     std::shared_ptr<EagerLocalTensorImpl> final_tensor_impl =
         std::make_shared<EagerLocalTensorImpl>(JUST(input->tensor_storage()),
+                                               JUST(input->storage_offset()),
                                                input->requires_grad(), input->is_leaf());
     JUST(final_tensor_impl->set_retain_grad(input->retain_grad()));
     JUST(final_tensor_impl->InitEagerBlobObject(new_tensor_meta,
