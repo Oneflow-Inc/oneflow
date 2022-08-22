@@ -99,30 +99,6 @@ Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx,
   return logical_computation_cost;
 }
 
-GenBackwardOpConfFn AvgPoolMakeBackwardOpConfFn(const int32_t dim) {
-  return [dim](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {
-    if (op.NeedGenGradTensor4OpInput("x", 0)) {
-      user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-      user_op::UserOpConfWrapper grad_op =
-          builder.Op("avg_pool_" + std::to_string(dim) + "d_grad")
-              .Input("x", op.input("x", 0))
-              .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-              .Output("dx")
-              .Attr("data_format", op.attr<std::string>("data_format"))
-              .Attr("padding", op.attr<std::vector<int32_t>>("padding"))
-              .Attr("kernel_size", op.attr<std::vector<int32_t>>("kernel_size"))
-              .Attr("stride", op.attr<std::vector<int32_t>>("stride"))
-              .Attr("ceil_mode", op.attr<bool>("ceil_mode"))
-              .Attr("count_include_pad", op.attr<bool>("count_include_pad"))
-              .Attr("divisor_override", op.attr<int32_t>("divisor_override"))
-              .Build();
-      op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-      AddOp(grad_op);
-    }
-    return Maybe<void>::Ok();
-  };
-}
-
 Maybe<void> BackwardTensorDescInferFn(user_op::InferContext* ctx) {
   *ctx->MutOutputTensorDesc("dx", 0) = ctx->InputTensorDesc("x", 0);
   return Maybe<void>::Ok();

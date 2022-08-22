@@ -73,73 +73,6 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::UserOpWrapper& op,
-                              user_op::AddOpFn AddOp) {
-  const bool transpose_a = op.attr<bool>("transpose_a");
-  const bool transpose_b = op.attr<bool>("transpose_b");
-  const double alpha = op.attr<double>("alpha");
-  auto HandleGradOp = [&](user_op::UserOpConfWrapper&& grad_op,
-                          std::string&& input_arg_name) -> void {
-    op.BindGradTensorWithOpInput(grad_op.output("out", 0), input_arg_name, 0);
-    AddOp(grad_op);
-  };
-
-  if (op.NeedGenGradTensor4OpInput("a", 0)) {
-    if (transpose_a) {
-      user_op::UserOpConfWrapper grad_a_op =
-          user_op::UserOpConfWrapperBuilder(op.op_name() + "_grad_a")
-              .Op(op_type_name)
-              .Input("a", op.input("b", 0))
-              .Input("b", op.GetGradTensorWithOpOutput("out", 0))
-              .Output("out")
-              .Attr<bool>("transpose_a", transpose_b)
-              .Attr<bool>("transpose_b", true)
-              .Attr<double>("alpha", alpha)
-              .Build();
-      HandleGradOp(std::move(grad_a_op), "a");
-    } else {
-      user_op::UserOpConfWrapper grad_a_op =
-          user_op::UserOpConfWrapperBuilder(op.op_name() + "_grad_a")
-              .Op(op_type_name)
-              .Input("a", op.GetGradTensorWithOpOutput("out", 0))
-              .Input("b", op.input("b", 0))
-              .Output("out")
-              .Attr<bool>("transpose_a", false)
-              .Attr<bool>("transpose_b", !transpose_b)
-              .Attr<double>("alpha", alpha)
-              .Build();
-      HandleGradOp(std::move(grad_a_op), "a");
-    }
-  }
-  if (op.NeedGenGradTensor4OpInput("b", 0)) {
-    if (transpose_b) {
-      user_op::UserOpConfWrapper grad_b_op =
-          user_op::UserOpConfWrapperBuilder(op.op_name() + "_grad_b")
-              .Op(op_type_name)
-              .Input("a", op.GetGradTensorWithOpOutput("out", 0))
-              .Input("b", op.input("a", 0))
-              .Output("out")
-              .Attr<bool>("transpose_a", true)
-              .Attr<bool>("transpose_b", transpose_a)
-              .Attr<double>("alpha", alpha)
-              .Build();
-      HandleGradOp(std::move(grad_b_op), "b");
-    } else {
-      user_op::UserOpConfWrapper grad_b_op =
-          user_op::UserOpConfWrapperBuilder(op.op_name() + "_grad_b")
-              .Op(op_type_name)
-              .Input("a", op.input("a", 0))
-              .Input("b", op.GetGradTensorWithOpOutput("out", 0))
-              .Output("out")
-              .Attr<bool>("transpose_a", !transpose_a)
-              .Attr<bool>("transpose_b", false)
-              .Attr<double>("alpha", alpha)
-              .Build();
-      HandleGradOp(std::move(grad_b_op), "b");
-    }
-  }
-}
-
 // Theoretically computation cost of matrix multiplication is the products of the number of matrix
 // and first dimension of matrix a, second dimension of matrix a, second dimension of matrix
 // b. If there is any splitting sbp parallel, the computation cost will be divided by number of
@@ -148,7 +81,7 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
 Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
   bool transpose_b = ctx->Attr<bool>("transpose_b");
   Shape* shape_b = ctx->Shape4ArgNameAndIndex("b", 0);
-  int64_t n;
+  int64_t n = 0;
   if (!transpose_b) {
     n = shape_b->At(shape_b->NumAxes() - 1);
   } else {

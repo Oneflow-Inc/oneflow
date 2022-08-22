@@ -503,8 +503,4 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
   return cost;
 }
 
-REGISTER_USER_OP_GRAD("conv1d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4Conv);
-REGISTER_USER_OP_GRAD("conv2d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4Conv);
-REGISTER_USER_OP_GRAD("conv3d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4Conv);
-
 }  // namespace oneflow
