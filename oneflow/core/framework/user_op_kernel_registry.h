@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_USER_OP_KERNEL_REGISTRY_H_
 #define ONEFLOW_CORE_FRAMEWORK_USER_OP_KERNEL_REGISTRY_H_
 
+#include <string>
+#include <unordered_map>
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/op_kernel.h"
@@ -76,11 +78,15 @@ struct OpKernelRegistryResult {
 
 class OpKernelRegistry final {
  public:
+  static std::unordered_map<std::string, OpKernelCreateFn> registry_;
   OpKernelRegistry& Name(const std::string& op_type_name);
 
   template<typename T>
   OpKernelRegistry& SetCreateFn() {
-    return SetCreateFn([]() -> const OpKernel* { return NewOpKernel<T>(); });
+    auto fn = []() -> const OpKernel* { return NewOpKernel<T>(); };
+    auto name = result_.op_type_name;
+    OpKernelRegistry::registry_[name] = fn;
+    return SetCreateFn(fn);
   }
   template<typename T>
   OpKernelRegistry& SetIsMatchedHob(const T& hob) {

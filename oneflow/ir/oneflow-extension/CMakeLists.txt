@@ -2,6 +2,7 @@ oneflow_add_mlir_library(
   MLIROneFlowExtension
   extension.cpp
   mlir_jit_op.cpp
+  kernel_launch_op.cpp
   ir_pass.cpp
   lr_jit.cpp
   mlir_gen.cpp
