@@ -499,6 +499,10 @@ def _inv(self):
     return flow._C.inv(self)
 
 
+def _cross(self, other, dim=None):
+    return flow._C.cross(self, other, dim)
+
+
 def RegisterMethods():
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
@@ -564,6 +568,7 @@ def RegisterMethods():
     Tensor.cumprod = _cumprod
     Tensor.mv = _mv
     Tensor.inverse = _inv
+    Tensor.cross = _cross
 
 
 def register_tensor_op(op_name):
