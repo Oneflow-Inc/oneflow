@@ -441,17 +441,24 @@ Maybe<vm::Stream*> VirtualMachine::CreateStream(vm::ThreadCtx* thread_ctx, Symbo
   if (IsCommNetStream::Visit(stream_type)) {
     transport_local_dep_object = FindOrCreateTransportLocalDepObject();
   }
-  engine_->InsertProbe([stream_ptr, thread_ctx, device, stream_type, bc, schedule_local_dep_object,
-                        transport_local_dep_object](vm::VirtualMachineEngine* engine) {
+  if (ParseBooleanFromEnv("ONEFLOW_CREATE_STREAM_ON_MAIN_THREAD", true)) {
     auto stream = intrusive::make_shared<vm::Stream>(
         thread_ctx, device, stream_type, schedule_local_dep_object, transport_local_dep_object);
     thread_ctx->mut_stream_list()->PushBack(stream.Mutable());
     *stream_ptr = stream.Mutable();
-    bc->Decrease();
-    return true;
-  });
-  JUST(NotifyOrRunScheduler());
-  JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+  } else {
+    engine_->InsertProbe([stream_ptr, thread_ctx, device, stream_type, bc, schedule_local_dep_object,
+                          transport_local_dep_object](vm::VirtualMachineEngine* engine) {
+      auto stream = intrusive::make_shared<vm::Stream>(
+          thread_ctx, device, stream_type, schedule_local_dep_object, transport_local_dep_object);
+      thread_ctx->mut_stream_list()->PushBack(stream.Mutable());
+      *stream_ptr = stream.Mutable();
+      bc->Decrease();
+      return true;
+    });
+    JUST(NotifyOrRunScheduler());
+    JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+  }
   return *stream_ptr;
 }
 
