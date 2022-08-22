@@ -131,6 +131,15 @@ class TestAmax(flow.unittest.TestCase):
         y = torch.amax(x, dim=tuple(dim), keepdim=random().to(bool))
         return y
 
+    @profile(torch.amax)
+    def profile_amax(test_case):
+        input1 = torch.ones(4, 4)
+        input2 = torch.ones(100, 100)
+        torch.amax(input1, 1)
+        torch.amax(input1, 1, True)
+        torch.amax(input2, 1)
+        torch.amax(input2, 1, True)
+
 
 if __name__ == "__main__":
     unittest.main()

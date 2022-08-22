@@ -17,42 +17,34 @@ limitations under the License.
 #include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/framework/transport_util.h"
-#include "oneflow/user/kernels/collective_communication/cpu/cpu_communication_context.h"
-#include "oneflow/user/kernels/collective_communication/include/broadcast.h"
+#include "oneflow/user/kernels/collective_communication/include/send.h"
 
 namespace oneflow {
 
 namespace ccl {
 
-// Use CpuBroadcastImpl to avoid name conflict
-class CpuBroadcastImpl final : public Broadcast {
+// Use CpuSendImpl to avoid name conflict
+class CpuSendImpl final : public Send {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CpuBroadcastImpl);
-  CpuBroadcastImpl() : size_of_dtype_(0) {}
-  ~CpuBroadcastImpl() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CpuSendImpl);
+  CpuSendImpl() : size_of_dtype_(0) {}
+  ~CpuSendImpl() = default;
 
   void Init(DataType datatype) override {
     CHECK(IsPODDataType(datatype));
     this->size_of_dtype_ = GetSizeOfDataType(datatype);
   }
 
-  void Launch(ep::Stream* stream, const void* in, void* out, size_t elem_cnt, int64_t root,
-              const std::shared_ptr<CommunicationContext>& communication_ctx) const override {
-    const auto& cpu_communication_ctx =
-        std::dynamic_pointer_cast<CpuCommunicationContext>(communication_ctx);
-    CHECK(cpu_communication_ctx);
+  void Launch(ep::Stream* stream, const void* in, size_t elem_cnt, int64_t dst) const override {
     size_t buffer_size = elem_cnt * size_of_dtype_;
-    const auto& transport_token =
-        CHECK_JUST(TransportToken::NewTransportToken(kTransportTokenTypeData));
-    CHECK_JUST(CpuBroadcast(in, out, buffer_size, root, cpu_communication_ctx->parallel_desc(),
-                            transport_token));
+    CHECK_JUST(CpuSend(in, buffer_size, dst));
   }
 
  private:
   size_t size_of_dtype_;
 };
 
-REGISTER_COLLECTIVE_COMMUNICATION(DeviceType::kCPU, Broadcast, CpuBroadcastImpl);
+REGISTER_COLLECTIVE_COMMUNICATION(DeviceType::kCPU, Send, CpuSendImpl);
 
 }  // namespace ccl
 

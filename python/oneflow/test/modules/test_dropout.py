@@ -239,7 +239,7 @@ class TestModule(flow.unittest.TestCase):
     def test_dropout_numpy_case(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [do_test_dropout_numpy_p0, do_test_dropout_numpy_p1]
-        arg_dict["shape"] = [[4, 127, 256], [2, 1024, 1024]]
+        arg_dict["shape"] = [[4], [4, 3], [4, 127, 256], [2, 1024, 1024]]
         arg_dict["device"] = ["cuda"]
         if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
             arg_dict["device"] = ["cpu"]
@@ -298,21 +298,81 @@ class TestModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case)
 
-    @autotest()
+    @autotest(n=5)
     def autotest_dropout_p0(test_case):
         device = random_device()
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
         m = torch.nn.Dropout(p=0, inplace=random_bool())
         return m(x)
 
-    @autotest()
+    @autotest(n=5)
+    def autotest_dropout1d_p0(test_case):
+        device = random_device()
+        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        m = torch.nn.Dropout1d(p=0, inplace=random_bool())
+        return m(x)
+
+    @autotest(n=5)
+    def autotest_dropout2d_p0(test_case):
+        device = random_device()
+        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        m = torch.nn.Dropout2d(p=0, inplace=random_bool())
+        return m(x)
+
+    @autotest(n=5)
+    def autotest_dropout3d_p0(test_case):
+        device = random_device()
+        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        m = torch.nn.Dropout3d(p=0, inplace=random_bool())
+        return m(x)
+
+    @autotest(n=5)
     def autotest_dropout_p1(test_case):
         device = random_device()
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
         m = torch.nn.Dropout(p=1.0, inplace=random_bool())
         return m(x)
 
-    @autotest()
+    @autotest(n=5)
+    def autotest_dropout1d_p1(test_case):
+        device = random_device()
+        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        m = torch.nn.Dropout1d(p=1.0, inplace=random_bool())
+        return m(x)
+
+    @autotest(n=5)
+    def autotest_dropout2d_p1(test_case):
+        device = random_device()
+        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        m = torch.nn.Dropout2d(p=1.0, inplace=random_bool())
+        return m(x)
+
+    @autotest(n=5)
+    def autotest_dropout3d_p1(test_case):
+        device = random_device()
+        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        m = torch.nn.Dropout3d(p=1.0, inplace=random_bool())
+        return m(x)
+
+    @autotest(n=5)
+    def autotest_functional_dropout1d_p1(test_case):
+        device = random_device()
+        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        return torch.nn.functional.dropout1d(x, p=1.0)
+
+    @autotest(n=5)
+    def autotest_functional_dropout2d_p1(test_case):
+        device = random_device()
+        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        return torch.nn.functional.dropout2d(x, p=1.0)
+
+    @autotest(n=5)
+    def autotest_functional_dropout3d_p1(test_case):
+        device = random_device()
+        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        return torch.nn.functional.dropout3d(x, p=1.0)
+
+    @autotest(n=5)
     def autotest_dropout_eval(test_case):
         device = random_device()
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
@@ -320,7 +380,31 @@ class TestModule(flow.unittest.TestCase):
         m.eval()
         return m(x)
 
-    @autotest()
+    @autotest(n=5)
+    def autotest_dropout1d_eval(test_case):
+        device = random_device()
+        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        m = torch.nn.Dropout1d(p=1.0, inplace=random_bool())
+        m.eval()
+        return m(x)
+
+    @autotest(n=5)
+    def autotest_dropout2d_eval(test_case):
+        device = random_device()
+        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        m = torch.nn.Dropout2d(p=1.0, inplace=random_bool())
+        m.eval()
+        return m(x)
+
+    @autotest(n=5)
+    def autotest_dropout3d_eval(test_case):
+        device = random_device()
+        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        m = torch.nn.Dropout3d(p=1.0, inplace=random_bool())
+        m.eval()
+        return m(x)
+
+    @autotest(n=5)
     def autotest_0dim_dropout_eval(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
