@@ -22,8 +22,6 @@ namespace oneflow {
 namespace {
 
 typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn;
-typedef std::function<Maybe<void>(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
-    GenBackwardOpConfFn;
 
 TensorDescInferFn MaxPoolMakeForwardTensorDescInferFn(const int32_t dim) {
   return [dim](user_op::InferContext* ctx) -> Maybe<void> {
@@ -85,31 +83,6 @@ Maybe<void> MaxPoolBackwardGetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-GenBackwardOpConfFn MaxPoolMakeBackwardOpConfFn(const int32_t dim) {
-  return [dim](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {
-    if (op.NeedGenGradTensor4OpInput("x", 0)) {
-      user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-      user_op::UserOpConfWrapper grad_op =
-          builder.Op("max_pool_" + std::to_string(dim) + "d_grad")
-              .Input("x", op.input("x", 0))
-              .Input("indice", op.output("indice", 0))
-              .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-              .Output("dx")
-              .Attr("data_format", op.attr<std::string>("data_format"))
-              .Attr("padding", op.attr<std::vector<int32_t>>("padding"))
-              .Attr("kernel_size", op.attr<std::vector<int32_t>>("kernel_size"))
-              .Attr("stride", op.attr<std::vector<int32_t>>("stride"))
-              .Attr("dilation", op.attr<std::vector<int32_t>>("dilation"))
-              .Attr("return_indices", op.attr<bool>("return_indices"))
-              .Attr("ceil_mode", op.attr<bool>("ceil_mode"))
-              .Build();
-      op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-      AddOp(grad_op);
-    }
-    return Maybe<void>::Ok();
-  };
-}
-
 Maybe<void> BackwardTensorDescInferFn(user_op::InferContext* ctx) {
   *ctx->MutOutputTensorDesc("dx", 0) = ctx->InputTensorDesc("x", 0);
   return Maybe<void>::Ok();
@@ -163,23 +136,5 @@ IMPLEMENT_MAXPOOL_BACKWARD_FUNCS(MaxPool1D)
 IMPLEMENT_MAXPOOL_BACKWARD_FUNCS(MaxPool2D)
 IMPLEMENT_MAXPOOL_BACKWARD_FUNCS(MaxPool3D)
 #undef IMPLEMENT_MAXPOOL_BACKWARD_FUNCS
-
-REGISTER_USER_OP_GRAD("max_pool_1d").SetGenBackwardOpConfFn(MaxPoolMakeBackwardOpConfFn(1));
-REGISTER_USER_OP_GRAD("max_pool_2d").SetGenBackwardOpConfFn(MaxPoolMakeBackwardOpConfFn(2));
-REGISTER_USER_OP_GRAD("max_pool_3d").SetGenBackwardOpConfFn(MaxPoolMakeBackwardOpConfFn(3));
-
-#define IMPLEMENT_AVGPOOL_FUNCS(name, ndim)                                              \
-  /*static*/ Maybe<void> name##Op::GetSbp(user_op::SbpContext* ctx) {                    \
-    return AvgPoolForwardGetSbpFn(ctx);                                                  \
-  }                                                                                      \
-  /*static*/ Maybe<void> name##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
-    return AvgPoolMakeForwardTensorDescInferFn(ndim)(ctx);                               \
-  }                                                                                      \
-  /*static*/ Maybe<void> name##Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
-    return InferLogicalTensorDesc(ctx);                                                  \
-  }                                                                                      \
-  /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {           \
-    return FwInferDataType(ctx);                                                         \
-  }
 
 }  // namespace oneflow

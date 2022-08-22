@@ -86,15 +86,22 @@ Indexing, Slicing, Joining, Mutating Ops
     :nosignatures:
 
     argwhere
+    atleast_1d
+    atleast_2d
+    atleast_3d
     cat
+    column_stack
     concat
     chunk
+    dstack
     expand
     gather
     gather_nd
     batch_gather
     hsplit
+    hstack
     vsplit
+    vstack
     index_select
     masked_select
     movedim
@@ -103,6 +110,7 @@ Indexing, Slicing, Joining, Mutating Ops
     permute
     repeat
     reshape
+    row_stack
     select
     scatter
     scatter_add
@@ -340,7 +348,6 @@ Spectral Ops
     :toctree: generated
     :nosignatures:
 
-    
     hann_window
     
 Other Ops

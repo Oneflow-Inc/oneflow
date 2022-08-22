@@ -93,24 +93,6 @@ Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name,
-                                                 const user_op::UserOpWrapper& op,
-                                                 const user_op::AddOpFn& AddOp) {
-  if (op.NeedGenGradTensor4OpInput("prediction", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper grad_op = builder.Op(op_type_name)
-                                             .Input("prediction", op.input("prediction", 0))
-                                             .Input("label", op.input("label", 0))
-                                             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-                                             .Output("prediction_diff")
-                                             .Attr("depth", op.attr<int64_t>("depth"))
-                                             .Build();
-    op.BindGradTensorWithOpInput(grad_op.output("prediction_diff", 0), "prediction", 0);
-    AddOp(grad_op);
-  }
-  return Maybe<void>::Ok();
-}
-
 }  // namespace
 
 /*static*/ Maybe<void> SparseCrossEntropyOp::GetSbp(user_op::SbpContext* ctx) {
@@ -219,17 +201,5 @@ Maybe<void> GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name
 /*static*/ Maybe<void> SparseCrossEntropyMsGradOp::InferDataType(user_op::InferContext* ctx) {
   return InferDataTypeGrad(ctx);
 }
-
-REGISTER_USER_OP_GRAD("sparse_cross_entropy")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      return GenBackwardOpConf4SparseCrossEntropy("sparse_cross_entropy_grad", op, AddOp);
-    });
-
-REGISTER_USER_OP_GRAD("sparse_cross_entropy_ms")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      return GenBackwardOpConf4SparseCrossEntropy("sparse_cross_entropy_ms_grad", op, AddOp);
-    });
 
 }  // namespace oneflow

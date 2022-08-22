@@ -130,22 +130,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("embedding")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      const auto embedding_grad_op_name = ctx->FwOp().op_name() + "_grad";
-      ctx->DefineOp(embedding_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("embedding_grad")
-            .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-            .InputBind("weight", ctx->FwOp().input("weight", 0))
-            .InputBind("indices", ctx->FwOp().input("indices", 0))
-            .Output("dx")
-            .Build();
-      });
-      ctx->FwOp().InputGradBind(user_op::OpArg("weight", 0),
-                                [&ctx, &embedding_grad_op_name]() -> const std::string& {
-                                  return ctx->GetOp(embedding_grad_op_name).output("dx", 0);
-                                });
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace oneflow
