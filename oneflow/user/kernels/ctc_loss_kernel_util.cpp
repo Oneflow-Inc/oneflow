@@ -147,7 +147,7 @@ void CtcLossKernelUtil<DeviceType::kCPU, T, T_TGT, T_INLEN, T_TGTLEN>::CtcLossBa
     T_TGTLEN target_length = target_lengths_ptr[b];
     T nll = loss_ptr[b];
     if (zero_infinity && nll == std::numeric_limits<T>::infinity()) {
-      for (T_INLEN t = 0; t < max_input_length; t++) {
+      for (int64_t t = 0; t < max_input_length; t++) {
         for (int64_t c = 0; c < num_labels; c++) {
           grad_ptr[input_helper.NdIndexToOffset(t, b, c)] = 0;
         }
