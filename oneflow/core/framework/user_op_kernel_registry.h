@@ -18,13 +18,16 @@ limitations under the License.
 
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/common/high_order_bool.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -76,16 +79,25 @@ struct OpKernelRegistryResult {
   IsMatchedHob is_matched_hob;
 };
 
+class KernelLaunchRegistry final {
+ public:
+  KernelLaunchRegistry() = default;
+  OpKernelCreateFn& LookUp(const std::string& key) { return registry_[key]; }
+  void Register(const std::string& key, OpKernelCreateFn val) { registry_[key] = std::move(val); }
+
+ private:
+  friend class oneflow::Singleton<KernelLaunchRegistry>;
+  std::unordered_map<std::string, OpKernelCreateFn> registry_;
+};
+
 class OpKernelRegistry final {
  public:
-  static std::unordered_map<std::string, OpKernelCreateFn> registry_;
   OpKernelRegistry& Name(const std::string& op_type_name);
 
   template<typename T>
   OpKernelRegistry& SetCreateFn() {
     auto fn = []() -> const OpKernel* { return NewOpKernel<T>(); };
-    auto name = result_.op_type_name;
-    OpKernelRegistry::registry_[name] = fn;
+    oneflow::Singleton<KernelLaunchRegistry>::Get()->Register(result_.op_type_name, fn);
     return SetCreateFn(fn);
   }
   template<typename T>
