@@ -55,7 +55,7 @@ class TestArgwhere(flow.unittest.TestCase):
     
     @profile(torch.argwhere) 
     def profile_argwhere(test_case):
-        torch.argwhere(torch.tensor([[1, 0, 1], [0, 1, 1]]))
+        torch.argwhere(torch.ones(3,3,100,100))
 
 
 
