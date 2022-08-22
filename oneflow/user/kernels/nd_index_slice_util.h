@@ -97,6 +97,9 @@ OF_DEVICE_FUNC int64_t OffsetInSliceToOffsetInDense(int64_t slice_size, int64_t 
   int64_t product = 1;
   int64_t shifted_index = 0;
   for (int64_t i = index_ndims - 1; i >= 0; --i) {
+    CHECK(cur_nd_index_ptr[i] < dense_shape[i] && cur_nd_index_ptr[i] >= -dense_shape[i])
+        << "IndexError: index " << cur_nd_index_ptr[i] << " is out of bounds for dimension " << i
+        << " with size " << dense_shape[i];
     shifted_index = cur_nd_index_ptr[i] < 0 && cur_nd_index_ptr[i] >= -dense_shape[i]
                         ? cur_nd_index_ptr[i] + dense_shape[i]
                         : cur_nd_index_ptr[i];
