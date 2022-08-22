@@ -444,10 +444,15 @@ class TestConv1d(flow.unittest.TestCase):
         return y
 
     @profile(torch.nn.functional.conv1d)
-    def profile_functional_conv1d(test_case):
-        img = torch.ones(1, 3, 224)
-        kernel = torch.ones(3, 1, 3)
-        torch.nn.functional.conv1d(img, kernel, groups=3)
+    def profile_conv1d(test_case):
+        inputs  = torch.ones(40, 16, 30)
+        filters  = torch.ones(20, 16, 5)
+        filters2  = torch.ones(20, 4, 5)
+        torch.nn.functional.conv1d(inputs , filters)
+        torch.nn.functional.conv1d(inputs , filters2, groups=4)
+        torch.nn.functional.conv1d(inputs , filters2, bias=torch.ones(20), groups=4)
+        torch.nn.functional.conv1d(inputs , filters2, bias=torch.ones(20),groups=4,stride=4)
+        torch.nn.functional.conv1d(inputs , filters2, bias=torch.ones(20),groups=4,padding=1)
         
 
     @autotest(n=5)

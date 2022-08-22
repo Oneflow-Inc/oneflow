@@ -1591,10 +1591,15 @@ class TestConv2d(flow.unittest.TestCase):
         return y
 
     @profile(torch.nn.functional.conv2d)
-    def profile_functional_conv2d(test_case):
-        img = torch.ones(8, 4, 3, 3)
-        kernel = torch.ones(1, 4, 5, 5)
-        torch.nn.functional.conv2d(img, kernel, padding=1)
+    def profile_conv2d(test_case):
+        inputs = torch.ones(8, 16, 128, 128)
+        filters = torch.ones(64, 16, 3, 3)
+        filters2 = torch.ones(64, 4, 3, 3)
+        torch.nn.functional.conv2d(inputs, filters, padding=1)
+        torch.nn.functional.conv2d(inputs , filters2, groups=4)
+        torch.nn.functional.conv2d(inputs , filters2, bias=torch.ones(64), groups=4)
+        torch.nn.functional.conv2d(inputs , filters2, bias=torch.ones(64),groups=4,stride=4)
+        torch.nn.functional.conv2d(inputs , filters2, bias=torch.ones(64),groups=4,padding=1)
 
     def test_conv2d(test_case):
         arg_dict = OrderedDict()
