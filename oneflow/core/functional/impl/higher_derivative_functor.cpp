@@ -73,7 +73,8 @@ class SiluGradGradFunctor {
                    .then([&x](const std::shared_ptr<Tensor>& input) {
                      return functional::Add(x, input, /*alpha=*/Scalar(1.0), /*inplace=*/false);
                    })
-                   .then(std::bind(functional::SigmoidGrad, x, std::placeholders::_1))
+                   .then(std::bind(functional::SigmoidGrad, JUST(functional::Sigmoid(x)),
+                                   std::placeholders::_1))
                    .then(std::bind(functional::Mul, dydx, std::placeholders::_1))
                    .call(x);
     return res;
@@ -144,12 +145,13 @@ class SoftplusGradGradFunctor {
     auto beta_x = JUST(functional::ScalarMul(x, beta, /*inplace=*/false));
     auto condition = JUST(functional::ScalarLogicalLess(beta_x, Scalar(threshold)));
     auto zero_out = JUST(functional::ZerosLike(x));
-    auto res = functional::sequence_function(SigmoidGrad)
+    auto res = functional::sequence_function(functional::Sigmoid)
+                   .then(std::bind(functional::SigmoidGrad, std::placeholders::_1, dydx))
                    .then([&beta](const std::shared_ptr<Tensor>& input) {
                      return functional::ScalarMul(Scalar(beta), input);
                    })
                    .then(std::bind(functional::Where, condition, std::placeholders::_1, zero_out))
-                   .call(beta_x, dydx);
+                   .call(beta_x);
 
     return res;
   }
