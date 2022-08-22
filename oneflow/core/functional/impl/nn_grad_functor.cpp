@@ -932,6 +932,32 @@ class GroupNormAffineGradFunctor {
 };
 
 
+class GroupNormGradFunctor {
+ public:
+  GroupNormGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("group_norm_grad")
+                         .Input("dy")
+                         .Input("x")
+                         .Input("mean")
+                         .Input("inv_variance")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& mean,
+                           const std::shared_ptr<one::Tensor>& inv_variance,
+                           const int32_t& num_groups, const double& epsilon) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("num_groups", num_groups));
+    JUST(attrs.SetAttr<double>("epsilon", epsilon));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x, mean, inv_variance}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class GroupNormParamGradFunctor {
  public:
   GroupNormParamGradFunctor() {
@@ -1358,6 +1384,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::LayerNormAffineGradFunctor>("LayerNormAffineGrad");
   m.add_functor<impl::LayerNormParamGradFunctor>("LayerNormParamGrad");
   m.add_functor<impl::GroupNormAffineGradFunctor>("GroupNormAffineGrad"); 
+  m.add_functor<impl::GroupNormGradFunctor>("GroupNormGrad"); 
   m.add_functor<impl::GroupNormParamGradFunctor>("GroupNormParamGrad"); 
   m.add_functor<impl::BroadcastMatmulGradBFunctor>("BroadcastMatmulGradB");
   m.add_functor<impl::CtcLossGradFunctor>("CtcLossGrad");

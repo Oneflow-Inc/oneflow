@@ -111,22 +111,30 @@ class GroupNorm(Module):
         assert (
             input.shape[1] == self.num_channels
         ), "The channels of input tensor must equal num_channels"
-        origin_shape = input.shape
-        reshape_to_1d = flow.reshape(
-            input, shape=[origin_shape[0], self.num_groups, -1]
-        )
-        mean = flow.mean(reshape_to_1d, dim=2, keepdim=True)
-        variance = flow.var(reshape_to_1d, dim=2, unbiased=False, keepdim=True)
-        normalized = (reshape_to_1d - mean) / flow.sqrt(variance + self.eps)
-        normalized = flow.reshape(
-            normalized, shape=[origin_shape[0], self.num_channels, -1]
-        )
-        if self.weight is not None:
-            normalized = normalized * self.weight.reshape(1, self.num_channels, 1)
-        if self.bias is not None:
-            normalized = normalized + self.bias.reshape(1, self.num_channels, 1)
-        res = flow.reshape(normalized, shape=tuple(input.shape))
-        return res
+        if not input.is_cuda: 
+            origin_shape = input.shape
+            reshape_to_1d = flow.reshape(
+                input, shape=[origin_shape[0], self.num_groups, -1]
+            )
+            mean = flow.mean(reshape_to_1d, dim=2, keepdim=True)
+            variance = flow.var(reshape_to_1d, dim=2, unbiased=False, keepdim=True)
+            normalized = (reshape_to_1d - mean) / flow.sqrt(variance + self.eps)
+            
+            # normalized = layer_norm(
+            #     reshape_to_1d, normalized_shape=(reshape_to_1d.shape[-1:]), eps=self.eps
+            # )
+
+            normalized = flow.reshape(
+                normalized, shape=[origin_shape[0], self.num_channels, -1]
+            )
+            if self.weight is not None:
+                normalized = normalized * self.weight.reshape(1, self.num_channels, 1)
+            if self.bias is not None:
+                normalized = normalized + self.bias.reshape(1, self.num_channels, 1)
+            res = flow.reshape(normalized, shape=tuple(input.shape))
+            return res
+        else: 
+            return flow._C.group_norm(input, self.weight, self.bias, self.affine, self.num_groups, self.eps)
 
     def extra_repr(self) -> str:
         return "{num_groups}, {num_channels}, eps={eps}, affine={affine}".format(

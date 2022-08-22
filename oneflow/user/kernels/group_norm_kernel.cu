@@ -486,7 +486,7 @@ struct DefaultComputeType{
 template<>
 struct DefaultComputeType<half>{
   using type = float; 
-}
+}; 
 
 #if CUDA_VERSION >= 11000
 template<>

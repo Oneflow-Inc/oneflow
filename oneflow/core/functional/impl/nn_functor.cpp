@@ -781,10 +781,16 @@ class LayerNormAffineFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class GroupNormAffineFunctor {
+class GroupNormFunctor {
  public:
-  GroupNormAffineFunctor() {
+  GroupNormFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("group_norm")
+                         .Input("x")
+                         .Output("y")
+                         .Output("mean")
+                         .Output("inv_variance")
+                         .Build());
+    affine_op_ = CHECK_JUST(one::OpBuilder("group_norm")
                          .Input("x")
                          .Input("gamma")
                          .Input("beta")
@@ -793,9 +799,9 @@ class GroupNormAffineFunctor {
                          .Output("inv_variance")
                          .Build());
   }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& gamma,
-                           const std::shared_ptr<one::Tensor>& beta, 
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<one::Tensor>& gamma,
+                           const Optional<one::Tensor>& beta, 
                            const bool affine, 
                            const int32_t num_groups, 
                            const double& epsilon) const {
@@ -803,11 +809,16 @@ class GroupNormAffineFunctor {
     JUST(attrs.SetAttr<bool>("affine", affine));
     JUST(attrs.SetAttr<int32_t>("num_groups", num_groups));
     JUST(attrs.SetAttr<double>("epsilon", epsilon));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x, gamma, beta}, attrs);
+    if(affine){
+      return OpInterpUtil::Dispatch<Tensor>(*affine_op_, {x, JUST(gamma), JUST(beta)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    }
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> affine_op_;
 };
 
 
@@ -3834,7 +3845,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedMatmulBiasAddReluDropoutFunctor>("FusedMatmulBiasAddReluDropout");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
-  m.add_functor<impl::GroupNormAffineFunctor>("GroupNormAffine");
+  m.add_functor<impl::GroupNormFunctor>("GroupNorm");
   m.add_functor<impl::TFAvgPool2DFunctor>("TFAvgPool2D");
   m.add_functor<impl::MaxPool1DFunctor>("MaxPool1D");
   m.add_functor<impl::MaxPool2DFunctor>("MaxPool2D");
