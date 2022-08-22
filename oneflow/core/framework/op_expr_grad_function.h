@@ -165,8 +165,7 @@ class FunctionOpExprGradFunction final : public OpExprGradFunctionIf {
     FunctionAutoGradCaptureState* func_ctx = dynamic_cast<FunctionAutoGradCaptureState*>(ctx);
     func_ctx->input_requires_grad.resize(inputs.size());
     for (int i = 0; i < inputs.size(); ++i) {
-      func_ctx->input_requires_grad[i] = false;
-      if (inputs.at(i)->requires_grad()) { func_ctx->input_requires_grad[i] = true; }
+      func_ctx->input_requires_grad[i] = inputs.at(i)->requires_grad();
     }
     return Maybe<void>::Ok();
   }
