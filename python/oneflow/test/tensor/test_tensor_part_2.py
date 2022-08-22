@@ -81,6 +81,13 @@ class TestTensor(flow.unittest.TestCase):
         np_out = np.equal(arr1, arr2)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
+    def test_tensor_equal_bool_dtype(test_case):
+        np_bool = np.random.randint(0, 2, size=()).astype(np.bool).item()
+        input = flow.tensor(np_bool, dtype=flow.bool)
+        input2 = flow.tensor([np_bool], dtype=flow.bool)
+        test_case.assertTrue(input == np_bool)
+        test_case.assertTrue(input2 == np_bool)
+
     def test_tensor_detach(test_case):
         shape = (2, 3, 4, 5)
         x = flow.tensor(np.random.randn(*shape), dtype=flow.float32, requires_grad=True)

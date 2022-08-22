@@ -27,8 +27,8 @@ namespace {
 size_t HashAttrName2AttrValWrapper(const oneflow::AttrName2AttrValWrapper& attr_name2attr_val) {
   size_t hash_value = 0;
   for (const auto& pair : attr_name2attr_val) {
-    hash_value ^= std::hash<std::string>()(pair.first);
-    hash_value ^= pair.second->hash_value();
+    AddHash(&hash_value, pair.first);
+    HashCombine(&hash_value, pair.second->hash_value());
   }
   return hash_value;
 }

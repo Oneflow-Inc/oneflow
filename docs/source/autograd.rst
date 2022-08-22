@@ -66,7 +66,7 @@ Function
 .. autoclass:: Function
 .. currentmodule:: oneflow.autograd
 .. autosummary::
-    :toctree generated
+    :toctree: generated
     :nosignatures:
 
     Function.forward

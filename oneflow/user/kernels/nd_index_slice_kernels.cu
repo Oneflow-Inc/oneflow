@@ -159,8 +159,6 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_TENSOR_GATHER_ND_ADD_KERNELS, (DeviceType::kCUDA),
                                  CUDA_ATOMIC_ADD_SUPPORTED_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
-
 template<>
 struct DeviceAdd<DeviceType::kCUDA, float16> {
   __device__ __forceinline__ static void Invoke(const float16* x, float16* y) {
@@ -173,7 +171,5 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_ND_INDEX_SLICE_FUNCTORS, (DeviceTyp
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ND_INDEX_SLICE_KERNELS, (DeviceType::kCUDA),
                                  FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
-
-#endif
 
 }  // namespace oneflow
