@@ -46,7 +46,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("rint", ep::primitive::UnaryOp::kRint)                         \
   OF_PP_MAKE_TUPLE_SEQ("round", ep::primitive::UnaryOp::kRound)                       \
   OF_PP_MAKE_TUPLE_SEQ("rsqrt", ep::primitive::UnaryOp::kRsqrt)                       \
-  OF_PP_MAKE_TUPLE_SEQ("sigmoid_v2", ep::primitive::UnaryOp::kSigmoid)                \
+  OF_PP_MAKE_TUPLE_SEQ("sigmoid", ep::primitive::UnaryOp::kSigmoid)                   \
   OF_PP_MAKE_TUPLE_SEQ("sign", ep::primitive::UnaryOp::kSign)                         \
   OF_PP_MAKE_TUPLE_SEQ("sin", ep::primitive::UnaryOp::kSin)                           \
   OF_PP_MAKE_TUPLE_SEQ("sinh", ep::primitive::UnaryOp::kSinh)                         \

@@ -88,7 +88,6 @@ class UnaryMathBwdWithFillZeroOp : public OpExprGradFunction<UnaryMathCaptureSta
                     TensorTuple* in_grads) const override {
     if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
     in_grads->at(0) = JUST(functional::Fill(out_grads[0], 0));
-    ;
     return Maybe<void>::Ok();
   }
 
@@ -136,7 +135,6 @@ class NegativeOp : public OpExprGradFunction<UnaryMathCaptureState> {
                     TensorTuple* in_grads) const override {
     if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
     in_grads->at(0) = JUST(functional::Negative(out_grads[0]));
-    ;
     return Maybe<void>::Ok();
   }
 

@@ -618,7 +618,7 @@
   bind_python: True
 
 - name: "sigmoid_grad"
-  signature: "Tensor (Tensor x, Tensor dy) => SigmoidGrad"
+  signature: "Tensor (Tensor y, Tensor dy) => SigmoidGrad"
   bind_python: True
 
 - name: "hardsigmoid"
