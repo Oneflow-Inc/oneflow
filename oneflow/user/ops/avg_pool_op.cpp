@@ -22,8 +22,6 @@ namespace oneflow {
 namespace {
 
 typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn;
-typedef std::function<Maybe<void>(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
-    GenBackwardOpConfFn;
 
 TensorDescInferFn AvgPoolMakeForwardTensorDescInferFn(const int32_t dim) {
   return [dim](user_op::InferContext* ctx) -> Maybe<void> {
@@ -187,9 +185,5 @@ IMPLEMENT_AVGPOOL_BACKWARD_FUNCS(AvgPool1D)
 IMPLEMENT_AVGPOOL_BACKWARD_FUNCS(AvgPool2D)
 IMPLEMENT_AVGPOOL_BACKWARD_FUNCS(AvgPool3D)
 #undef IMPLEMENT_AVGPOOL_BACKWARD_FUNCS
-
-REGISTER_USER_OP_GRAD("avg_pool_1d").SetGenBackwardOpConfFn(AvgPoolMakeBackwardOpConfFn(1));
-REGISTER_USER_OP_GRAD("avg_pool_2d").SetGenBackwardOpConfFn(AvgPoolMakeBackwardOpConfFn(2));
-REGISTER_USER_OP_GRAD("avg_pool_3d").SetGenBackwardOpConfFn(AvgPoolMakeBackwardOpConfFn(3));
 
 }  // namespace oneflow

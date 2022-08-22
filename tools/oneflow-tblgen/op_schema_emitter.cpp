@@ -191,6 +191,8 @@ void OpSchemaEmitter<Target>::emitAttrs(const Record* def, json* op) const {
       AS = A->getValueAsDef("baseAttr")->getNameInitAsString();
     }
     auto NS = attrs->getArgName(i)->getAsUnquotedString();
+    // FlatSymbolRefAttr:$callee,
+    if ("callee" == NS && "FlatSymbolRefAttr" == AS) { continue; }
     json attr{{"name", NS}, {"type", emitType(AS)}};
 
     if (auto DV = A->getValueAsOptionalString("defaultValue")) { attr["default"] = DV.getValue(); }

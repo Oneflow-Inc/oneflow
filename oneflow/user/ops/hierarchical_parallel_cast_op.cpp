@@ -104,44 +104,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("hierarchical_parallel_cast")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      if (ctx->FwOp().NeedGenGradTensor4OpInput("in", 0)) {
-        const auto& grad_mode = ctx->FwOp().attr<std::string>("grad_mode");
-        if (grad_mode == "identity") {
-          ctx->FwOp().BindGradTensorWithOpInput(ctx->FwOp().GetGradTensorWithOpOutput("out", 0),
-                                                "in", 0);
-        } else if (grad_mode == "manual") {
-          const std::string grad_op_name = "System-AutoGrad-" + ctx->FwOp().op_name();
-          ctx->DefineOp(grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
-            return builder.OpTypeName("hierarchical_parallel_cast")
-                .InputBind("in", ctx->FwOp().output_grad("out", 0))
-                .Output("out")
-                .Attr<std::vector<std::string>>(
-                    "nd_sbp", ctx->FwOp().attr<std::vector<std::string>>("grad_nd_sbp"))
-                .Attr<std::vector<std::string>>("grad_nd_sbp", std::vector<std::string>())
-                .Build();
-          });
-          ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), [&]() -> const std::string& {
-            return ctx->GetOp(grad_op_name).output("out", 0);
-          });
-        } else if (grad_mode == "restore") {
-          const std::string grad_op_name = "System-AutoGrad-" + ctx->FwOp().op_name();
-          ctx->DefineOp(grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
-            return builder.OpTypeName("hierarchical_parallel_cast_like")
-                .InputBind("in", ctx->FwOp().output_grad("out", 0))
-                .InputBind("like", ctx->FwOp().input("in", 0))
-                .Output("out")
-                .Build();
-          });
-          ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), [&]() -> const std::string& {
-            return ctx->GetOp(grad_op_name).output("out", 0);
-          });
-        } else {
-          UNIMPLEMENTED();
-        }
-      }
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace oneflow

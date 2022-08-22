@@ -741,6 +741,10 @@ Maybe<void> UserOp::InferLogicalOutBlobDescs(
     } else {
       out_blob_desc->mut_stride() = Stride(out_blob_desc->shape());
     }
+    CHECK_EQ_OR_RETURN(out_blob_desc->stride().size(), out_blob_desc->shape().size())
+        << Error::RuntimeError() << "stride and shape size mismatch since stride is "
+        << out_blob_desc->stride().ToString() << " but shape is "
+        << out_blob_desc->shape().ToString();
     out_blob_desc->set_is_dynamic(tensor_desc.is_dynamic());
   }
   return Maybe<void>::Ok();
@@ -772,7 +776,15 @@ Maybe<void> UserOp::InferOutBlobDescs(
       BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
       out_blob_desc->set_data_type(infer_ctx.OutputDType(pair.first, pair.second));
       out_blob_desc->mut_shape() = infer_ctx.OutputShape(pair.first, pair.second);
-      out_blob_desc->mut_stride() = Stride(infer_ctx.OutputShape(pair.first, pair.second));
+      if (val_->non_contiguous_supported) {
+        out_blob_desc->mut_stride() = infer_ctx.OutputStride(pair.first, pair.second);
+      } else {
+        out_blob_desc->mut_stride() = Stride(out_blob_desc->shape());
+      }
+      CHECK_EQ_OR_RETURN(out_blob_desc->stride().size(), out_blob_desc->shape().size())
+          << Error::RuntimeError() << "stride and shape size mismatch since stride is "
+          << out_blob_desc->stride().ToString() << " but shape is "
+          << out_blob_desc->shape().ToString();
       out_blob_desc->set_is_dynamic(infer_ctx.OutputIsDynamic(pair.first, pair.second));
     }
     return Maybe<void>::Ok();
