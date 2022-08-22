@@ -40,6 +40,9 @@ class AutoGradCaptureState {
     return offset;
   }
 
+ public:
+  std::vector<bool> input_requires_grad;
+
  protected:
   TensorTuple saved_tensors_;
 };
@@ -142,7 +145,8 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
 class FunctionOpExprGradFunction final : public OpExprGradFunctionIf {
  public:
   using FType = AutogradFunctionBase::FType;
-  explicit FunctionOpExprGradFunction(const FType& backward_fn) : backward_fn_(backward_fn) {}
+  FunctionOpExprGradFunction(const std::string& func_name, const FType& backward_fn)
+      : backward_fn_(backward_fn), op_name_(func_name) {}
 
   std::shared_ptr<AutoGradCaptureState> MakeCustomState() const override {
     PRINT_BUG_PROMPT_AND_ABORT()
@@ -158,7 +162,12 @@ class FunctionOpExprGradFunction final : public OpExprGradFunctionIf {
   Maybe<void> CaptureIf(AutoGradCaptureState* ctx, const TensorTuple& inputs,
                         const TensorTuple& outputs,
                         const OpExprInterpContext& interp_ctx) const override {
-    // do nothing
+    FunctionAutoGradCaptureState* func_ctx = dynamic_cast<FunctionAutoGradCaptureState*>(ctx);
+    func_ctx->input_requires_grad.resize(inputs.size());
+    for (int i = 0; i < inputs.size(); ++i) {
+      func_ctx->input_requires_grad[i] = false;
+      if (inputs.at(i)->requires_grad()) { func_ctx->input_requires_grad[i] = true; }
+    }
     return Maybe<void>::Ok();
   }
 
@@ -169,12 +178,28 @@ class FunctionOpExprGradFunction final : public OpExprGradFunctionIf {
     CHECK_NOTNULL_OR_RETURN(func_ctx);
     const std::shared_ptr<TensorTuple>& out = backward_fn_(
         const_cast<FunctionAutoGradCaptureState*>(func_ctx)->GetSharedFromThis(), out_grads);
-    in_grads->assign(out->begin(), out->end());
+    in_grads->resize(func_ctx->input_requires_grad.size());
+    CHECK_EQ_OR_RETURN(out->size(), in_grads->size())
+        << "RuntimeError: function " << op_name_
+        << " returned an incorrect number of gradients (expected " << in_grads->size() << ", got "
+        << out->size() << ")";
+    for (int i = 0; i < in_grads->size(); ++i) {
+      if (func_ctx->input_requires_grad[i]) {
+        if (!out->at(i)) {
+          return Error::RuntimeError()
+                 << "autograd.Function named " << op_name_ << "'s inputs[" << i
+                 << "] requires grad but got None grad. Please use Tensor.detach() for this "
+                    "input.";
+        }
+        in_grads->at(i) = out->at(i);
+      }
+    }
     return Maybe<void>::Ok();
   }
 
  protected:
   FType backward_fn_;
+  std::string op_name_;
 };
 
 // Stateful wrapper of the `OpExprGradFunction`.

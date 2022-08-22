@@ -38,14 +38,18 @@ Maybe<one::TensorTuple> UnpackTensorTuple(const py::object& input) {
     tp.emplace_back(input.cast<std::shared_ptr<one::Tensor>>());
   } else if (py::isinstance<py::tuple>(input)) {
     auto tuple = input.cast<py::tuple>();
+    tp.resize(tuple.size());
     for (int i = 0; i < tuple.size(); ++i) {
       PyObject* obj = tuple[i].ptr();
-      if (!one::PyTensor_Check(obj)) {
+      if (obj == Py_None) {
+        // do nothing
+      } else if (one::PyTensor_Check(obj)) {
+        tp[i] = one::PyTensor_Unpack(obj);
+      } else {
         return Error::RuntimeError()
-               << "expected Tensor as element " << i << ", but got "
+               << "expected Tensor or None as element " << i << ", but got "
                << one::functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(obj)));
       }
-      tp.emplace_back(one::PyTensor_Unpack(obj));
     }
   } else {
     return Error::RuntimeError() << "Only support tensor or list of tensors";
