@@ -52,7 +52,8 @@ Maybe<one::TensorTuple> UnpackTensorTuple(const py::object& input) {
       }
     }
   } else {
-    return Error::RuntimeError() << "Only support tensor or list of tensors";
+    return Error::RuntimeError()
+           << "autograd.Function's output only support tensor or list of tensors";
   }
   return tp;
 }
