@@ -134,4 +134,54 @@ oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
 }
 
 
+// GroupNorm Param Grad
+/* static */ Maybe<void> GroupNormParamGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
+  const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+  const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);
+  const user_op::TensorDesc& inv_variance = ctx->InputTensorDesc("inv_variance", 0);
+  user_op::TensorDesc* dgamma = ctx->MutOutputTensorDesc("dgamma", 0);
+  user_op::TensorDesc* dbeta = ctx->MutOutputTensorDesc("dbeta", 0);
+  const int64_t channel_size = x.shape().At(1); 
+  *dgamma->mut_shape() = Shape{channel_size};
+  // *dgamma->mut_is_dynamic() = dgamma.is_dynamic();
+  *dbeta->mut_shape() = Shape{channel_size};
+  // *dbeta->mut_is_dynamic() = dbeta.is_dynamic();
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> GroupNormParamGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> GroupNormParamGradOp::GetSbp(user_op::SbpContext* ctx) {
+  std::vector<user_op::OpArg> broadcast_args;
+  // TODO: Support More SBP
+  ctx->NewBuilder()
+    .Split(ctx->inputs(), 0)
+    .Split(ctx->outputs(), 0)
+    .Broadcast(broadcast_args)
+    .Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> GroupNormParamGradOp::InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
+  // const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+  // CHECK_EQ_OR_RETURN(dy.data_type(), x.data_type());
+  // const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);
+  // const user_op::TensorDesc& inv_variance = ctx->InputTensorDesc("inv_variance", 0);
+  // const DataType& gn_param_data_type = InferGnParamDataType(x.data_type());
+  // CHECK_EQ_OR_RETURN(mean.data_type(), gn_param_data_type);
+  // CHECK_EQ_OR_RETURN(inv_variance.data_type(), gn_param_data_type);
+  // user_op::TensorDesc* dx = ctx->MutOutputTensorDesc("dx", 0);
+
+  user_op::TensorDesc* dgamma = ctx->MutOutputTensorDesc("dgamma", 0);
+  user_op::TensorDesc* dbeta = ctx->MutOutputTensorDesc("dbeta", 0);
+  *dgamma->mut_data_type() = dy.data_type();
+  *dbeta->mut_data_type() = dy.data_type();
+  return Maybe<void>::Ok();
+}
+
+
 }  // namespace oneflow

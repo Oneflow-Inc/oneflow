@@ -1302,6 +1302,10 @@
   signature: "Tensor (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Tensor gamma, Int32 num_groups, Double epsilon) => GroupNormAffineGrad"
   bind_python: True
 
+- name: "group_norm_param_grad"
+  signature: "TensorTuple (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance) => GroupNormParamGrad"
+  bind_python: True
+
 - name: "avg_pool2d_nhwc"
   signature:
     'Tensor (Tensor x, Int32List kernel_size, Int32List stride, String padding,

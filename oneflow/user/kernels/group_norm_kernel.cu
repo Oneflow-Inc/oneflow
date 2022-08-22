@@ -471,7 +471,119 @@ class GroupNormGradGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                     \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
-
 REGISTER_GROUP_NORM_GRAD_CUDA_KERNEL(float)
+
+
+template<typename T, typename ComputeType>
+__global__ void GroupNormParamGradKernel(const T* dy, 
+                                         const T* x, 
+                                         const T* mean, 
+                                         const T* inv_var, 
+                                         T* dgamma, 
+                                         T* dbeta, 
+                                         const int32_t batch_size, 
+                                         const int32_t group_size, 
+                                         const int32_t channel_size, 
+                                         const int32_t spatial_size){
+  // Assume each thread compute each norm
+  /*
+  actually: n, g, c // g, h, w
+  mean: n, g
+  alpha: c
+  */
+  const int32_t global_thread_idx = blockDim.x * blockIdx.x + threadIdx.x; 
+  const int32_t step = gridDim.x * blockDim.x; 
+  for(int32_t channel=global_thread_idx; channel < channel_size; channel+=step){
+    ComputeType dgamma_sum = 0.0; 
+    ComputeType dbeta_sum = 0.0; 
+    // const int32_t group_idx = channel / group_size; 
+    const int32_t D = channel_size / group_size; 
+    for(int32_t batch=0; batch < batch_size; batch++){
+      const int32_t batch_channel_id = batch * channel_size + channel; 
+      ComputeType ds_sum = 0.0; 
+      ComputeType db_sum = 0.0; 
+      for(int32_t spatial=0; spatial < spatial_size; spatial++){
+        ComputeType dy_val = static_cast<ComputeType>(dy[batch_channel_id * spatial_size + spatial]); 
+        ComputeType x_val = static_cast<ComputeType>(x[batch_channel_id * spatial_size + spatial]); 
+        ds_sum += dy_val * x_val; 
+        db_sum += dy_val; 
+      }
+      const int32_t batch_group_id = batch * group_size + channel / D; 
+      // printf("Channel is: %d, batch_channel_id is: %d, batch_group_id is: %d \n", channel, batch_channel_id, batch_group_id); 
+      ComputeType mean_val = static_cast<ComputeType>(mean[batch_group_id]); 
+      ComputeType inv_var_val = static_cast<ComputeType>(inv_var[batch_group_id]); 
+      // printf("Channel is: %d, meanval is: %f, invvar is: %f \n", channel, mean_val, inv_var_val); 
+      // printf("Channel is: %d, x_sum is: %f, dy_sum is: %f \n", channel, x_sum, dy_sum); 
+      // dgamma_sum += (dy_sum * (x_sum - mean_val)) * inv_var_val; 
+      dgamma_sum += (ds_sum - db_sum * mean_val) * inv_var_val; 
+      dbeta_sum += db_sum;
+    }
+    dgamma[channel] = dgamma_sum; 
+    dbeta[channel] = dbeta_sum; 
+  }
+}
+
+template<typename T>
+class GroupNormParamGradGpuKernel final : public user_op::OpKernel {
+ public:
+  GroupNormParamGradGpuKernel() = default;
+  ~GroupNormParamGradGpuKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
+    const user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
+    user_op::Tensor* dgamma = ctx->Tensor4ArgNameAndIndex("dgamma", 0);
+    user_op::Tensor* dbeta = ctx->Tensor4ArgNameAndIndex("dbeta", 0);
+
+    /*
+    actually: n, g, c // g, h, w
+    mean: n, g
+    alpha: c
+
+    */
+
+    const int64_t num_instances = mean->shape_view().elem_cnt();
+    const int64_t norm_size = x->shape_view().elem_cnt() / num_instances;
+    printf("Num instances is: %ld \n", num_instances); 
+    printf("Norm size is: %ld \n", norm_size); 
+
+    const int64_t batch_size = x->shape_view().At(0); 
+    const int64_t channel_size = x->shape_view().At(1); 
+    const int64_t spatial_size = x->shape_view().elem_cnt() / batch_size / channel_size; 
+    const int64_t group_size = num_instances / batch_size; 
+    printf("batch_size is: %ld \n", batch_size); 
+    printf("channel_size is: %ld \n", channel_size); 
+    printf("spatial_size is: %ld \n", spatial_size); 
+    printf("group_size is: %ld \n", group_size); 
+
+    const int32_t block_size = 128; 
+    const int32_t grid_size = (channel_size + block_size - 1) / block_size; 
+    GroupNormParamGradKernel<T, float><<<grid_size, block_size, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(dy->dptr<T>(), 
+                                                                                                       x->dptr<T>(), 
+                                                                                                       mean->dptr<T>(), 
+                                                                                                       inv_variance->dptr<T>(), 
+                                                                                                       dgamma->mut_dptr<T>(), 
+                                                                                                       dbeta->mut_dptr<T>(), 
+                                                                                                       batch_size, 
+                                                                                                       group_size, 
+                                                                                                       channel_size, 
+                                                                                                       spatial_size); 
+  };
+};
+
+#define REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(dtype)                                        \
+  REGISTER_USER_KERNEL("group_norm_param_grad")                                                  \
+      .SetCreateFn<GroupNormParamGradGpuKernel<dtype>>()                                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                     \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
+
+REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(float)
+
+
 
 } // namespace oneflow 

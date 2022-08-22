@@ -932,6 +932,30 @@ class GroupNormAffineGradFunctor {
 };
 
 
+class GroupNormParamGradFunctor {
+ public:
+  GroupNormParamGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("group_norm_param_grad")
+                         .Input("dy")
+                         .Input("x")
+                         .Input("mean")
+                         .Input("inv_variance")
+                         .Output("dgamma")
+                         .Output("dbeta")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& mean,
+                           const std::shared_ptr<one::Tensor>& inv_variance) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, x, mean, inv_variance});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+
 class BroadcastMatmulGradBFunctor {
  public:
   BroadcastMatmulGradBFunctor() {
@@ -1334,6 +1358,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::LayerNormAffineGradFunctor>("LayerNormAffineGrad");
   m.add_functor<impl::LayerNormParamGradFunctor>("LayerNormParamGrad");
   m.add_functor<impl::GroupNormAffineGradFunctor>("GroupNormAffineGrad"); 
+  m.add_functor<impl::GroupNormParamGradFunctor>("GroupNormParamGrad"); 
   m.add_functor<impl::BroadcastMatmulGradBFunctor>("BroadcastMatmulGradB");
   m.add_functor<impl::CtcLossGradFunctor>("CtcLossGrad");
   m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleGradFunctor>(
