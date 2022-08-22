@@ -102,45 +102,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("fused_bias_add_gelu")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("a", 0) || op.NeedGenGradTensor4OpInput("b", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_gelu_grad");
-        user_op::UserOpConfWrapper bias_add_gelu_grad_op =
-            builder.Op("fused_bias_add_gelu_grad")
-                .Input("a", op.input("a", 0))
-                .Input("b", op.input("b", 0))
-                .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-                .Attr("axis", op.attr<int32_t>("axis"))
-                .Output("dx")
-                .Build();
-        AddOp(bias_add_gelu_grad_op);
-
-        if (op.NeedGenGradTensor4OpInput("a", 0)) {
-          op.BindGradTensorWithOpInput(bias_add_gelu_grad_op.output("dx", 0), "a", 0);
-        }
-        if (op.NeedGenGradTensor4OpInput("b", 0)) {
-          const int64_t num_axes = op.TensorDesc4ArgNameAndIndex("a", 0).shape().NumAxes();
-          const int32_t bias_add_axis = op.attr<int32_t>("axis");
-          std::vector<int32_t> reduce_axes_vec;
-          FOR_RANGE(int64_t, i, 0, num_axes) {
-            if (i != bias_add_axis) { reduce_axes_vec.emplace_back(i); }
-          }
-          user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-          auto grad_op = builder.Op("reduce_sum")
-                             .Input("input_tensor", bias_add_gelu_grad_op.output("dx", 0))
-                             .Output("output_tensor")
-                             .Attr("axis", reduce_axes_vec)
-                             .Attr("keepdims", false)
-                             .Build();
-          AddOp(grad_op);
-          op.BindGradTensorWithOpInput(grad_op.output("output_tensor", 0), "b", 0);
-        }
-      }
-      return Maybe<void>::Ok();
-    });
-
 /*static*/ auto FusedBiasAddMaskScaleOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
   const auto& a_tensor_desc = ctx->InputTensorDesc("a", 0);
@@ -190,68 +151,5 @@ REGISTER_USER_OP_GRAD("fused_bias_add_gelu")
   ctx->NewBuilder().Split(user_op::OpArg("b", 0), 0).Split(split_args, axis).Build();
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("fused_bias_add_mask_scale")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("a", 0) || op.NeedGenGradTensor4OpInput("b", 0)) {
-        float scale = op.attr<float>("scale");
-        if (scale != 1.0) {
-          user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_dropout_grad");
-          user_op::UserOpConfWrapper dropout_grad_op =
-              builder.Op("dropout_grad")
-                  .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-                  .Input("mask", op.input("mask", 0))
-                  .Output("dx")
-                  .Attr("scale", scale)
-                  .Build();
-          AddOp(dropout_grad_op);
-
-          if (op.NeedGenGradTensor4OpInput("a", 0)) {
-            op.BindGradTensorWithOpInput(dropout_grad_op.output("dx", 0), "a", 0);
-          }
-          if (op.NeedGenGradTensor4OpInput("b", 0)) {
-            const int64_t num_axes = op.TensorDesc4ArgNameAndIndex("a", 0).shape().NumAxes();
-            const int32_t bias_add_axis = op.attr<int32_t>("axis");
-            std::vector<int32_t> reduce_axes_vec;
-            FOR_RANGE(int64_t, i, 0, num_axes) {
-              if (i != bias_add_axis) { reduce_axes_vec.emplace_back(i); }
-            }
-            user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-            auto grad_op = builder.Op("reduce_sum")
-                               .Input("input_tensor", dropout_grad_op.output("dx", 0))
-                               .Output("output_tensor")
-                               .Attr("axis", reduce_axes_vec)
-                               .Attr("keepdims", false)
-                               .Build();
-            AddOp(grad_op);
-            op.BindGradTensorWithOpInput(grad_op.output("output_tensor", 0), "b", 0);
-          }
-        } else {
-          // When dropout_prob = 0.0, scale = 1.0, here we directly use out grad.
-          if (op.NeedGenGradTensor4OpInput("a", 0)) {
-            op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", 0), "a", 0);
-          }
-          if (op.NeedGenGradTensor4OpInput("b", 0)) {
-            const int64_t num_axes = op.TensorDesc4ArgNameAndIndex("a", 0).shape().NumAxes();
-            const int32_t bias_add_axis = op.attr<int32_t>("axis");
-            std::vector<int32_t> reduce_axes_vec;
-            FOR_RANGE(int64_t, i, 0, num_axes) {
-              if (i != bias_add_axis) { reduce_axes_vec.emplace_back(i); }
-            }
-            user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-            auto grad_op = builder.Op("reduce_sum")
-                               .Input("input_tensor", op.GetGradTensorWithOpOutput("out", 0))
-                               .Output("output_tensor")
-                               .Attr("axis", reduce_axes_vec)
-                               .Attr("keepdims", false)
-                               .Build();
-            AddOp(grad_op);
-            op.BindGradTensorWithOpInput(grad_op.output("output_tensor", 0), "b", 0);
-          }
-        }
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow
