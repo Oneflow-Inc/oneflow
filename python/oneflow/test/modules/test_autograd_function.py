@@ -112,7 +112,7 @@ class TestAutogradFunction(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     def test_graph_test_multi_input(test_case):
-        class MyMatMul(autograd.Function):
+        class MyMul(autograd.Function):
             @staticmethod
             def forward(ctx, x, y):
                 z = x * y
@@ -140,7 +140,7 @@ class TestAutogradFunction(flow.unittest.TestCase):
         model = flow.nn.Linear(5, 4, bias=False)
         model.train()
 
-        class MyMatMulGraph(flow.nn.Graph):
+        class MyGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
                 self.model = model
@@ -151,7 +151,7 @@ class TestAutogradFunction(flow.unittest.TestCase):
                 x.retain_grad()
                 y.retain_grad()
                 self.model.weight.retain_grad()
-                z = MyMatMul().apply(x, y)
+                z = MyMul().apply(x, y)
                 z = MyAdd().apply(z, self.model.weight)
                 z.sum().backward()
                 return z, x.grad, y.grad, self.model.weight.grad
@@ -163,7 +163,7 @@ class TestAutogradFunction(flow.unittest.TestCase):
         b = flow.tensor(np_arr1).requires_grad_()
         model.weight.copy_(np_arr2)
 
-        c, a_grad, b_grad, w_grad = MyMatMulGraph()(a, b)
+        c, a_grad, b_grad, w_grad = MyGraph()(a, b)
         test_case.assertTrue(np.allclose(c.numpy(), 2 * np_arr0 * np_arr1 + np_arr2))
         test_case.assertTrue(np.allclose(a_grad.numpy(), 2 * np_arr1))
         test_case.assertTrue(np.allclose(b_grad.numpy(), 3 * np_arr0))
