@@ -89,23 +89,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("gather").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                          user_op::AddOpFn AddOp) -> Maybe<void> {
-  bool need_grad_in = op.NeedGenGradTensor4OpInput("in", 0);
-  if (need_grad_in) {
-    user_op::UserOpConfWrapperBuilder in_grad_builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper in_grad_op =
-        in_grad_builder.Op("unsorted_segment_sum_like")
-            .Input("data", op.GetGradTensorWithOpOutput("out", 0))
-            .Input("segment_ids", op.input("indices", 0))
-            .Input("like", op.input("in", 0))
-            .Output("out")
-            .Attr("axis", op.attr<int64_t>("axis"))
-            .Build();
-    op.BindGradTensorWithOpInput(in_grad_op.output("out", 0), "in", 0);
-    AddOp(in_grad_op);
-  }
-  return Maybe<void>::Ok();
-});
-
 }  // namespace oneflow

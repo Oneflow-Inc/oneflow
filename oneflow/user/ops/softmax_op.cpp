@@ -72,24 +72,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-namespace {
-
-REGISTER_USER_OP_GRAD("softmax").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                           user_op::AddOpFn AddOp) -> Maybe<void> {
-  if (op.NeedGenGradTensor4OpInput("in", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper softmax_grad_op =
-        builder.Op("softmax_grad")
-            .Input("y", op.output("out", 0))
-            .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-            .Output("dx")
-            .Build();
-    op.BindGradTensorWithOpInput(softmax_grad_op.output("dx", 0), "in", 0);
-    AddOp(softmax_grad_op);
-  }
-  return Maybe<void>::Ok();
-});
-
-}  // namespace
-
 }  // namespace oneflow
