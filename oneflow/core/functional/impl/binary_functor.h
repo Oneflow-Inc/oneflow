@@ -30,7 +30,7 @@ namespace functional {
 
 namespace impl {
 
-std::string TensorDeviceString(const std::shared_ptr<Tensor>& tensor);
+std::string TensorDeviceToString(const std::shared_ptr<Tensor>& tensor);
 
 class BinaryFunctor {
  public:
@@ -57,7 +57,7 @@ class BinaryFloatFunctor {
     if (IsScalarTensor(x)) {
       // NOTE:If tensor x is scalar and it's device not equal to tensor y,
       // then need move it to the target device first.(This behavior aligns to PyTorch)
-      std::string device_str = TensorDeviceString(y);
+      std::string device_str = TensorDeviceToString(y);
       tensor_x = JUST(functional::To(x, device_str));
     }
     TensorProcessor tensor_processor;
@@ -99,7 +99,7 @@ class InplaceableBinaryFunctor {
     if (IsScalarTensor(x)) {
       // NOTE:If tensor x is scalar and it's device not equal to tensor y,
       // then need move it to the target device first.(This behavior aligns to PyTorch)
-      std::string device_str = TensorDeviceString(y);
+      std::string device_str = TensorDeviceToString(y);
       tensor_x = JUST(functional::To(x, device_str));
     }
     TensorProcessor tensor_processor;

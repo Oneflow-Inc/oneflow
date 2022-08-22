@@ -33,7 +33,7 @@ namespace functional {
 
 namespace impl {
 
-std::string TensorDeviceString(const std::shared_ptr<Tensor>& tensor) {
+std::string TensorDeviceToString(const std::shared_ptr<Tensor>& tensor) {
   if (tensor->is_global()) { return CHECK_JUST(tensor->parallel_desc())->device_tag(); }
   return CHECK_JUST(tensor->device())->ToString();
 }
@@ -53,7 +53,7 @@ class AddFunctor {
     if (IsScalarTensor(input)) {
       // NOTE:If tensor x is scalar and it's device not equal to tensor y,
       // then need move it to the target device first.(This behavior aligns to PyTorch)
-      std::string device_str = TensorDeviceString(other);
+      std::string device_str = TensorDeviceToString(other);
       input_tensor = JUST(functional::To(input, device_str));
     }
     if (IsIntegralDataType(input_tensor->dtype()->data_type())
@@ -168,7 +168,7 @@ class MulFunctor {
     if (IsScalarTensor(x)) {
       // NOTE:If tensor x is scalar and it's device not equal to tensor y,
       // then need move it to the target device first.(This behavior aligns to PyTorch)
-      std::string device_str = TensorDeviceString(y);
+      std::string device_str = TensorDeviceToString(y);
       tensor_x = JUST(functional::To(x, device_str));
     }
     TensorProcessor tensor_processor;
