@@ -167,6 +167,7 @@ class TestAutogradFunction(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(c.numpy(), 2 * np_arr0 * np_arr1 + np_arr2))
         test_case.assertTrue(np.allclose(a_grad.numpy(), 2 * np_arr1))
         test_case.assertTrue(np.allclose(b_grad.numpy(), 3 * np_arr0))
+        test_case.assertTrue(np.allclose(w_grad.numpy(), 2 * np.ones_like(np_arr2)))
 
 
 if __name__ == "__main__":
