@@ -674,17 +674,11 @@ class CTCLoss(_Loss):
         input_lengths: Tensor,
         target_lengths: Tensor,
     ) -> Tensor:
-        max_target_length = 0
-        if targets.ndim == 1:
-            max_target_length = target_lengths.max().item()
-        elif targets.ndim == 2:
-            max_target_length = targets.shape[1]
         return flow._C.ctc_loss(
             log_probs,
             targets,
             input_lengths,
             target_lengths,
-            max_target_length,
             self.blank,
             self.zero_infinity,
             self.reduction,

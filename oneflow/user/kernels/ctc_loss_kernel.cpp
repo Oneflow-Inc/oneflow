@@ -131,7 +131,7 @@ class CtcLossGradKernel final : public user_op::OpKernel {
       .SetIsMatchedHob(                                                                           \
           (user_op::HobDeviceType() == device)                                                    \
           && (user_op::HobDataType("log_probs", 0) == OF_PP_PAIR_SECOND(dtype))                   \
-          && (user_op::HobDataType("targets", 0) == OF_PP_PAIR_SECOND(target_dtype))               \
+          && (user_op::HobDataType("targets", 0) == OF_PP_PAIR_SECOND(target_dtype))              \
           && (user_op::HobDataType("input_lengths", 0) == OF_PP_PAIR_SECOND(input_lengths_dtype)) \
           && (user_op::HobDataType("target_lengths", 0)                                           \
               == OF_PP_PAIR_SECOND(target_lengths_dtype)))                                        \

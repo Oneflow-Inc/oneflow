@@ -20,11 +20,7 @@ from collections import OrderedDict
 import torch
 import numpy as np
 from oneflow.test_utils.automated_test_util import *
-# from oneflow.test_utils.automated_test_util.generators import random_device
-# from oneflow.test_utils.automated_test_util.torch_flow_dual_object import random_tensor
-# from oneflow.test_utils.automated_test_util import autotest
 from oneflow.test_utils.test_util import GenArgList
-# from oneflow.test_utils.automated_test_util import oneof
 
 import oneflow as flow
 import oneflow.unittest
@@ -186,6 +182,7 @@ def compare_with_np(
     device_type,
     device_num,
     data_type,
+    target_dtype,
     input_lengths_dtype,
     target_lengths_dtype,
     max_input_length,
@@ -197,6 +194,7 @@ def compare_with_np(
     zero_infinity,
 ):
     assert data_type in ["float32", "double"]
+    assert target_dtype in [flow.int32, flow.int64]
     assert input_lengths_dtype in [flow.int32, flow.int64]
     assert target_lengths_dtype in [flow.int32, flow.int64]
     assert device_type in ["cuda", "cpu"]
@@ -255,7 +253,10 @@ def compare_with_np(
         device=flow.device(device_type),
     )
     targets = flow.tensor(
-        targets, dtype=flow.int32, requires_grad=False, device=flow.device(device_type)
+        targets,
+        dtype=target_dtype,
+        requires_grad=False,
+        device=flow.device(device_type),
     )
     input_lengths = flow.tensor(
         input_lengths,
@@ -282,6 +283,7 @@ def gen_arg_list():
     arg_dict["device_type"] = ["cuda", "cpu"]
     arg_dict["device_num"] = [1]
     arg_dict["data_type"] = ["float32"]
+    arg_dict["target_dtype"] = [flow.int32, flow.int64]
     arg_dict["input_lengths_dtype"] = [flow.int32, flow.int64]
     arg_dict["target_lengths_dtype"] = [flow.int32, flow.int64]
     arg_dict["max_input_length"] = [20]
@@ -294,42 +296,83 @@ def gen_arg_list():
     return GenArgList(arg_dict)
 
 
-def _test_ctc_loss(test_case, log_prob, target, input_lengths, target_lengths, zero_infinity):
-    input_length = 20
-    batch_size = 4
-    num_classes = 5
-    max_input_length=1
-    max_target_length=1
-    device = random_device()
-    log_probs = random_tensor(ndim=3, dim0=max_input_length, dim1=batch_size, dim2=num_classes).to(random_device)
-    targets = random_tensor(ndim=2, dim0=batch_size, dim1=max_target_length, low=1, high=num_classes)
-    input_lengths = random_tensor(low=max_input_length / 2, high=max_input_length, ndim=1, dim0=batch_size)
-    target_lengths = random_tensor(low=max_target_length / 2, high=max_target_length, ndim=1, dim0=batch_size)
-    out = torch.nn.functional.ctc_loss(log_probs, targets, input_lengths, target_lengths)
-    return out
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestCTCLoss1n1d(flow.unittest.TestCase):
-    # def test_ctc_loss(test_case):
-    #     for arg in gen_arg_list():
-    #         compare_with_np(*arg)
-    
-    @autotest(n=5)
-    def test_mean(test_case):
+    def test_ctc_loss(test_case):
+        for arg in gen_arg_list():
+            compare_with_np(*arg)
+
+    @autotest(n=5, check_graph=True)
+    def test_ctc_loss_torch(test_case):
         batch_size = 4
         num_classes = 5
         max_input_length = 20
         max_target_length = 10
         device = random_device()
-        log_probs = random_tensor(ndim=3, dim0=max_input_length, dim1=batch_size, dim2=num_classes).to(device)
-        # log_probs = random_tensor(ndim=1).to(device)
-        # log_probs.oneflow
-        targets = random_tensor(ndim=2, dim0=batch_size, dim1=max_target_length, low=1, high=num_classes).to(device)
-        input_lengths = random_tensor(low=max_input_length / 2, high=max_input_length, ndim=1, dim0=batch_size).to(device)
-        target_lengths = random_tensor(low=max_target_length / 2, high=max_target_length, ndim=1, dim0=batch_size).to(device)
-        # return torch.mean(log_probs)
-        return torch.nn.functional.ctc_loss(log_probs, targets, input_lengths, target_lengths)
+        log_probs = random_tensor(
+            ndim=3, dim0=max_input_length, dim1=batch_size, dim2=num_classes
+        ).to(device)
+        targets = random_tensor(
+            ndim=2,
+            dim0=batch_size,
+            dim1=max_target_length,
+            low=1,
+            high=num_classes,
+            dtype=int,
+        ).to(device)
+        input_lengths = random_tensor(
+            low=max_input_length / 2,
+            high=max_input_length,
+            ndim=1,
+            dim0=batch_size,
+            dtype=int,
+        ).to(device)
+        target_lengths = random_tensor(
+            low=max_target_length / 2,
+            high=max_target_length,
+            ndim=1,
+            dim0=batch_size,
+            dtype=int,
+        ).to(device)
+        return torch.nn.functional.ctc_loss(
+            log_probs, targets, input_lengths, target_lengths
+        )
+
+    # TODO: fix bug when check_graph = True
+    @autotest(n=5, check_graph=False)
+    def test_ctc_loss_torch_1dtarget(test_case):
+        batch_size = 4
+        num_classes = 5
+        max_input_length = 20
+        max_target_length = 10
+        device = random_device()
+        log_probs = random_tensor(
+            ndim=3, dim0=max_input_length, dim1=batch_size, dim2=num_classes
+        ).to(device)
+        targets = random_tensor(
+            ndim=1,
+            dim0=batch_size * max_target_length,
+            low=1,
+            high=num_classes,
+            dtype=int,
+        ).to(device)
+        input_lengths = random_tensor(
+            low=max_input_length / 2,
+            high=max_input_length,
+            ndim=1,
+            dim0=batch_size,
+            dtype=int,
+        ).to(device)
+        target_lengths = random_tensor(
+            low=max_target_length,
+            high=max_target_length + 1,
+            ndim=1,
+            dim0=batch_size,
+            dtype=int,
+        ).to(device)
+        return torch.nn.functional.ctc_loss(
+            log_probs, targets, input_lengths, target_lengths
+        )
 
 
 if __name__ == "__main__":
