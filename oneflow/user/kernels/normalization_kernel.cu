@@ -31,8 +31,10 @@ namespace oneflow {
 
 namespace {
 
-cudnnBatchNormMode_t getCudnnBatchNormMode() {
-  if (ParseBooleanFromEnv("ONEFLOW_ENABLE_NHWC", false)) {
+cudnnBatchNormMode_t getCudnnBatchNormMode(const int64_t dim) {
+  if (dim == 2) {
+    return CUDNN_BATCHNORM_PER_ACTIVATION;
+  } else if (ParseBooleanFromEnv("ONEFLOW_ENABLE_NHWC", false)) {
     return CUDNN_BATCHNORM_SPATIAL_PERSISTENT;
   } else {
     // NOTE(Liang Depeng): The new CUDNN_BATCHNORM_SPATIAL_PERSISTENT mode was
@@ -143,7 +145,7 @@ class CudnnTensorDescHelper final {
 size_t InferTrainWorkspaceSize(const ShapeView& x_shape, const DataType data_type,
                                const int32_t axis) {
 #if defined(BN_ENABLE_EX_API)
-  cudnnBatchNormMode_t mode = getCudnnBatchNormMode();
+  cudnnBatchNormMode_t mode = getCudnnBatchNormMode(x_shape.NumAxes());
   const CudnnTensorDescHelper desc_helper(x_shape, data_type, axis, mode);
   size_t size_in_bytes;
   cudnnHandle_t handle = GetOrCreateCudnnHandle();
@@ -165,7 +167,7 @@ size_t InferTrainTmpSize(user_op::InferContext* ctx) {
 size_t InferGradWorkspaceSize(const ShapeView& x_shape, const DataType data_type,
                               const int32_t axis) {
 #if defined(BN_ENABLE_EX_API)
-  cudnnBatchNormMode_t mode = getCudnnBatchNormMode();
+  cudnnBatchNormMode_t mode = getCudnnBatchNormMode(x_shape.NumAxes());
   const CudnnTensorDescHelper desc_helper(x_shape, data_type, axis, mode);
   size_t size_in_bytes;
   cudnnHandle_t handle = GetOrCreateCudnnHandle();
@@ -215,7 +217,7 @@ class NormalizationInferenceKernel final : public user_op::OpKernel,
     CHECK_GE(axis, 0);
     CHECK_LT(axis, x->shape_view().NumAxes());
 
-    cudnnBatchNormMode_t mode = getCudnnBatchNormMode();
+    cudnnBatchNormMode_t mode = getCudnnBatchNormMode(x->shape_view().NumAxes());
     const CudnnTensorDescHelper desc_helper(x->shape_view(), data_type, axis, mode);
     desc_helper.CheckParamTensor(gamma);
     desc_helper.CheckParamTensor(beta);
@@ -415,7 +417,7 @@ class NormalizationTrainKernel final : public user_op::OpKernel, public user_op:
     CHECK_EQ(y->data_type(), data_type);
     CHECK_GE(axis, 0);
     CHECK_LT(axis, x->shape_view().NumAxes());
-    cudnnBatchNormMode_t mode = getCudnnBatchNormMode();
+    cudnnBatchNormMode_t mode = getCudnnBatchNormMode(x->shape_view().NumAxes());
     const CudnnTensorDescHelper desc_helper(x->shape_view(), data_type, axis, mode);
 
     const auto* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
@@ -554,7 +556,7 @@ class NormalizationGradUserKernel final : public user_op::OpKernel,
     CHECK_EQ(dx->data_type(), data_type);
     CHECK_GE(axis, 0);
     CHECK_LT(axis, x->shape_view().NumAxes());
-    cudnnBatchNormMode_t mode = getCudnnBatchNormMode();
+    cudnnBatchNormMode_t mode = getCudnnBatchNormMode(x->shape_view().NumAxes());
     const CudnnTensorDescHelper desc_helper(x->shape_view(), data_type, axis, mode);
     desc_helper.CheckParamTensor(gamma);
     desc_helper.CheckParamTensor(gamma_diff);
