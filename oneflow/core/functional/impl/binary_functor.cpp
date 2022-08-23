@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/functional/impl/binary_functor.h"
 
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -255,6 +256,31 @@ class DivFunctor : public BinaryFloatFunctor {
   }
 };
 
+class DivFunctorMode {
+ public:
+  DivFunctorMode() {}
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const Optional<std::string>& rounding_mode) const {
+    std::shared_ptr<one::Tensor> ret;
+
+    std::string rmode = rounding_mode.value_or("");
+    if (rmode == "floor") {
+      return JUST(functional::FloorDiv(x, y));
+      
+    } else if(rmode == "trunc"){
+      CHECK_OR_RETURN(false) << "trunc mode not implemented yet";
+    }
+    CHECK_OR_RETURN(rmode == "") << "div expected rounding_mode to be one of None,"
+                                    " 'trunc', or 'floor' but found " << rmode;
+    return JUST(functional::Div(x, y));
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class InplaceDivFunctor {
  public:
   InplaceDivFunctor() {
@@ -436,6 +462,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::InplaceMulFunctor>("InplaceMul");
   m.add_functor<impl::InplaceDivFunctor>("InplaceDiv");
   m.add_functor<impl::DivFunctor>("Div");
+  m.add_functor<impl::DivFunctorMode>("DivMode");
   m.add_functor<impl::PowFunctor>("Pow");
   m.add_functor<impl::BroadcastPowFunctor>("BroadcastPow");
   m.add_functor<impl::BroadcastEqualFunctor>("BroadcastEqual");

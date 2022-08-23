@@ -80,8 +80,11 @@
   signature:
     [
       "Tensor (Tensor input, Tensor other) => Div",
+      "Tensor (Tensor input, Tensor other, *, String rounding_mode=None) => DivMode",
       "Tensor (Tensor input, Scalar other) => ScalarDiv",
       "Tensor (Scalar input, Tensor other) => ScalarDiv",
+      "Tensor (Tensor input, Scalar other, *, String rounding_mode=None) => ScalarDivMode",
+      "Tensor (Scalar input, Tensor other, *, String rounding_mode=None) => ScalarDivMode",
     ]
   bind_python: true
 
