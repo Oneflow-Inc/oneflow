@@ -25,10 +25,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> CastToTickOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> CastToTickOp::GetSbp(user_op::SbpContext* ctx) {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }

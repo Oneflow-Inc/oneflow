@@ -70,11 +70,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedDotFeatureInteractionOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> FusedDotFeatureInteractionOp::GetSbp(user_op::SbpContext* ctx) {
   auto builder = ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0);
   if (ctx->user_op_conf().has_input("num_valid_sparse_feature", 0)) {
@@ -119,11 +114,6 @@ namespace oneflow {
     *ctx->MutOutputShape("sparse_feature_grad", 0) = ctx->InputShape("sparse_feature", 0);
   }
   return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> FusedDotFeatureInteractionGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> FusedDotFeatureInteractionGradOp::GetSbp(user_op::SbpContext* ctx) {

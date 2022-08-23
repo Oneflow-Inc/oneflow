@@ -42,10 +42,6 @@ bool PowerOfTwo(T x) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> ImageBatchAlignOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> ImageBatchAlignOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
   return Maybe<void>::Ok();

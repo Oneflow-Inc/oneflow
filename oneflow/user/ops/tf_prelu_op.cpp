@@ -50,9 +50,6 @@ namespace oneflow {
   *y_desc->mut_is_dynamic() = x_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> TfPreluOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> TfPreluOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
@@ -105,9 +102,6 @@ namespace oneflow {
   *ctx->MutOutputShape("alpha_diff", 0) = alpha_desc.shape();
   *ctx->MutOutputIsDynamic("alpha_diff", 0) = alpha_desc.is_dynamic();
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> TfPreluGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> TfPreluGradOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);

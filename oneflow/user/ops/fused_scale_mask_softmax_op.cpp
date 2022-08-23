@@ -31,10 +31,6 @@ namespace oneflow {
   *ctx->MutOutputIsDynamic("y", 0) = x_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
-/*static*/ auto FusedScaleMaskSoftmaxOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
-    -> Maybe<void> {
-  return FusedScaleMaskSoftmaxOp::InferLogicalTensorDesc(ctx);
-}
 /*static*/ auto FusedScaleMaskSoftmaxOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
@@ -87,10 +83,6 @@ namespace oneflow {
   *dx_desc->mut_shape() = dy_desc.shape();
   *dx_desc->mut_is_dynamic() = dy_desc.is_dynamic();
   return Maybe<void>::Ok();
-}
-/*static*/ auto FusedScaleMaskSoftmaxGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
-    -> Maybe<void> {
-  return FusedScaleMaskSoftmaxGradOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ auto FusedScaleMaskSoftmaxGradOp::InferDataType(user_op::InferContext* ctx)
     -> Maybe<void> {

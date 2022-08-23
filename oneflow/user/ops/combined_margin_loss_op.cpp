@@ -31,10 +31,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> CombinedMarginLossOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> CombinedMarginLossOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("x", 0), 0)
@@ -75,11 +71,6 @@ namespace oneflow {
   *ctx->MutOutputShape("dx", 0) = ctx->InputShape("dy", 0);
   *ctx->MutIsDynamic4ArgNameAndIndex("dx", 0) = ctx->InputIsDynamic("dy", 0);
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> CombinedMarginLossGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> CombinedMarginLossGradOp::GetSbp(user_op::SbpContext* ctx) {

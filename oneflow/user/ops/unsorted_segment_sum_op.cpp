@@ -64,9 +64,6 @@ namespace oneflow {
   *out_shape = Shape(dim_vec);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> UnsortedSegmentSumOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> UnsortedSegmentSumOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_OR_RETURN(IsIndexDataType(ctx->InputDType("segment_ids", 0)));
   *ctx->MutOutputDType("out", 0) = ctx->InputDType("data", 0);
@@ -166,10 +163,6 @@ REGISTER_USER_OP_GRAD("unsorted_segment_sum")
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("like", 0);
   *ctx->MutIsDynamic4ArgNameAndIndex("out", 0) = ctx->InputIsDynamic("like", 0);
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> UnsortedSegmentSumLikeOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> UnsortedSegmentSumLikeOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& data = ctx->InputTensorDesc("data", 0);

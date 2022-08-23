@@ -105,10 +105,6 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   return InferTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> BroadcastLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> BroadcastLikeOp::GetSbp(user_op::SbpContext* ctx) {
   return GetSbpSignatures(ctx);
 }

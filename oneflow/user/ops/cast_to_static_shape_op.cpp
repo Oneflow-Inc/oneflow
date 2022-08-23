@@ -26,10 +26,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> CastToStaticShapeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> CastToStaticShapeOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0);
   FOR_RANGE(int64_t, i, 0, input_desc.shape().NumAxes()) {

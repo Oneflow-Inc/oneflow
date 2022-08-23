@@ -108,11 +108,6 @@ user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name
     return user_op::TensorDescInferFnUtil::Unchanged(ctx);                                       \
   }                                                                                              \
                                                                                                  \
-  /*static*/ Maybe<void> op_class_name_prefix##Op::InferPhysicalTensorDesc(                      \
-      user_op::InferContext* ctx) {                                                              \
-    return InferLogicalTensorDesc(ctx);                                                          \
-  }                                                                                              \
-                                                                                                 \
   /* static */ Maybe<void> op_class_name_prefix##Op::GetSbp(user_op::SbpContext* ctx) {          \
     return user_op::GetSbpFnUtil::SplitForEachAxis(ctx);                                         \
   }                                                                                              \
@@ -125,11 +120,6 @@ user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name
   /* static */ Maybe<void> op_class_name_prefix##BackwardOp::InferLogicalTensorDesc(            \
       user_op::InferContext* ctx) {                                                             \
     return InferTensorDesc_(ctx);                                                               \
-  }                                                                                             \
-                                                                                                \
-  /*static*/ Maybe<void> op_class_name_prefix##BackwardOp::InferPhysicalTensorDesc(             \
-      user_op::InferContext* ctx) {                                                             \
-    return InferLogicalTensorDesc(ctx);                                                         \
   }                                                                                             \
                                                                                                 \
   /* static */ Maybe<void> op_class_name_prefix##BackwardOp::GetSbp(user_op::SbpContext* ctx) { \

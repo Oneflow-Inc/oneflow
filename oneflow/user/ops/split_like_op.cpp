@@ -114,9 +114,6 @@ namespace oneflow {
   }
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SplitLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SplitLikeOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {

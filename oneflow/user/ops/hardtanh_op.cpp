@@ -28,10 +28,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> HardtanhOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> HardtanhOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
@@ -55,10 +51,6 @@ namespace oneflow {
   double max_val = ctx->Attr<double>("max_val");
   CHECK_LE_OR_RETURN(min_val, max_val);
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> HardtanhGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> HardtanhGradOp::GetSbp(user_op::SbpContext* ctx) {

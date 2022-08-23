@@ -72,10 +72,6 @@ Maybe<void> GetMaskedFillInputArgModify(const user_op::GetInputArgModifier& GetI
   return InferMaskedFillTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> MaskedFillOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> MaskedFillOp::GetSbp(user_op::SbpContext* ctx) {
   return GetMaskedFillSbpSignatures(ctx);
 }

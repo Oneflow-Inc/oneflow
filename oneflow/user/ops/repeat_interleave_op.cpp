@@ -40,9 +40,6 @@ namespace oneflow {
   *out_desc->mut_shape() = Shape({repeat_num});
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> Repeat_InterLeaveOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> Repeat_InterLeaveOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();

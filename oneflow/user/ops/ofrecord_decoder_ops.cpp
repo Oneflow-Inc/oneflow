@@ -31,10 +31,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> OfrecordRawDecoderOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> OfrecordRawDecoderOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().Split(user_op::OpArg("in", 0), 0).Split(user_op::OpArg("out", 0), 0).Build();
   return Maybe<void>::Ok();
@@ -63,10 +59,6 @@ namespace oneflow {
   *out->mut_is_dynamic() = in.is_dynamic();
   *out->mut_shape() = in.shape();
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> OfrecordBytesDecoderOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> OfrecordBytesDecoderOp::GetSbp(user_op::SbpContext* ctx) {
@@ -98,10 +90,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> OfrecordImageDecoderOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> OfrecordImageDecoderOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().Split(user_op::OpArg("in", 0), 0).Split(user_op::OpArg("out", 0), 0).Build();
   return Maybe<void>::Ok();
@@ -130,11 +118,6 @@ namespace oneflow {
   CHECK_OR_RETURN(in_tensor.shape().NumAxes() == 1 && in_tensor.shape().At(0) >= 1);
   *out_tensor->mut_shape() = in_tensor.shape();
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> OfrecordImageDecoderRandomCropOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> OfrecordImageDecoderRandomCropOp::GetSbp(user_op::SbpContext* ctx) {

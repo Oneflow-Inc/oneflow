@@ -41,10 +41,6 @@ int32_t TransformNegativeAxisToPositive(int32_t axis, const int32_t num_axes) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> ExpandDimsOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> ExpandDimsOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   const int32_t axis =

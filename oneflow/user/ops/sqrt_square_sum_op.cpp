@@ -30,9 +30,6 @@ namespace oneflow {
   *y->mut_shape() = Shape({});
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SqrtSquareSumOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SqrtSquareSumOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();

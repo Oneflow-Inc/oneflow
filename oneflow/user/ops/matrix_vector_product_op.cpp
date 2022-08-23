@@ -74,10 +74,6 @@ Maybe<void> InferDataType4Grad(user_op::InferContext* ctx) {
   return InferTensorDesc4MatrixVectorProduct(ctx);
 }
 
-/*static*/ Maybe<void> MatrixVectorProductOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> MatrixVectorProductOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("a", 0), 0)
@@ -138,11 +134,6 @@ REGISTER_USER_OP_GRAD("matrix_vector_product")
   return InferTensorDesc4MatrixVectorProductGradA(ctx);
 }
 
-/*static*/ Maybe<void> MatrixVectorProductGradAOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> MatrixVectorProductGradAOp::GetSbp(user_op::SbpContext* ctx) {
   /*
   A(m, k) matmul B(k) -> (m, k) matmul (k, 1) -> (m, 1) -> (m)
@@ -173,11 +164,6 @@ REGISTER_USER_OP_GRAD("matrix_vector_product")
 /* static */ Maybe<void> MatrixVectorProductGradBOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferTensorDesc4MatrixVectorProductGradB(ctx);
-}
-
-/*static*/ Maybe<void> MatrixVectorProductGradBOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> MatrixVectorProductGradBOp::GetSbp(user_op::SbpContext* ctx) {

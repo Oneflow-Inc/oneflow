@@ -40,10 +40,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> NarrowOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> NarrowOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   const int64_t& dim = ctx->Attr<int64_t>("dim");
@@ -85,10 +81,6 @@ namespace oneflow {
 
   *ctx->MutOutputShape("dx", 0) = like_shape;
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> NarrowGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> NarrowGradOp::GetSbp(user_op::SbpContext* ctx) {

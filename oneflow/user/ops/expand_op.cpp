@@ -39,10 +39,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> ExpandOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> ExpandOp::GetSbp(user_op::SbpContext* ctx) {
   const std::vector<int32_t>& logical_in_shape =
       ctx->Attr<std::vector<int32_t>>("logical_in_shape");
@@ -94,10 +90,6 @@ namespace oneflow {
   DimVector dim_vec(out_shape.begin(), out_shape.end());
   *output_shape = Shape(dim_vec);
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> ExpandGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> ExpandGradOp::GetSbp(user_op::SbpContext* ctx) {

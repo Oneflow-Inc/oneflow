@@ -62,11 +62,6 @@ Maybe<void> InferDataType4MatmulBiasAddBackward(user_op::InferContext* ctx) {
   return InferTensorDesc4MatmulBiasAddBackward(ctx);
 }
 
-/*static*/ Maybe<void> CublasMatmulBiasAddGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> CublasMatmulBiasAddGradOp::GetSbp(user_op::SbpContext* ctx) {
   /*
   dy need transpose.

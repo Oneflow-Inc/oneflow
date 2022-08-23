@@ -28,9 +28,6 @@ namespace oneflow {
   *y_desc->mut_shape() = x_desc.shape();
   return Maybe<void>::Ok();
 }
-/*static*/ auto FlipOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
-  return FlipOp::InferLogicalTensorDesc(ctx);
-}
 /*static*/ auto FlipOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   const std::vector<int32_t> dims = ctx->Attr<std::vector<int32_t>>("dims");

@@ -80,9 +80,6 @@ namespace oneflow {
   *y_tensor->mut_is_dynamic() = like_tensor.is_dynamic();
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> ReduceSumLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> ReduceSumLikeOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_tensor = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& like_tensor = ctx->InputTensorDesc("like", 0);

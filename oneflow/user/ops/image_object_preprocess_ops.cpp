@@ -40,10 +40,6 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> ImageFlipOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> ImageFlipOp::GetSbp(user_op::SbpContext* ctx) {
   return ImageObjectGetSbp(ctx);
 }
@@ -69,10 +65,6 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("bbox", 0);
   *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("bbox", 0);
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> ObjectBboxFlipOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> ObjectBboxFlipOp::GetSbp(user_op::SbpContext* ctx) {
@@ -101,10 +93,6 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("bbox", 0);
   *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("bbox", 0);
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> ObjectBboxScaleOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> ObjectBboxScaleOp::GetSbp(user_op::SbpContext* ctx) {
@@ -137,11 +125,6 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> ObjectSegmentationPolygonFlipOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> ObjectSegmentationPolygonFlipOp::GetSbp(user_op::SbpContext* ctx) {
   return ImageObjectGetSbp(ctx);
 }
@@ -172,11 +155,6 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> ObjectSegmentationPolygonScaleOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> ObjectSegmentationPolygonScaleOp::GetSbp(user_op::SbpContext* ctx) {
   return ImageObjectGetSbp(ctx);
 }
@@ -197,10 +175,6 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
   *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> ImageNormalizeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> ImageNormalizeOp::GetSbp(user_op::SbpContext* ctx) {
@@ -230,11 +204,6 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("poly", 0);
   *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("poly", 0);
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> ObjectSegmentationPolygonToMaskOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> ObjectSegmentationPolygonToMaskOp::GetSbp(user_op::SbpContext* ctx) {

@@ -38,10 +38,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> ImageResizeToFixedOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> ImageResizeToFixedOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
   return Maybe<void>::Ok();
@@ -95,11 +91,6 @@ namespace oneflow {
   user_op::TensorDesc* scale_desc = ctx->MutOutputTensorDesc("scale", 0);
   *scale_desc->mut_shape() = in_desc.shape();
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> ImageResizeKeepAspectRatioOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> ImageResizeKeepAspectRatioOp::GetSbp(user_op::SbpContext* ctx) {

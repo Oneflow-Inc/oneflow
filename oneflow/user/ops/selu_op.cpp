@@ -29,9 +29,6 @@ namespace oneflow {
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SeluOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SeluOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
@@ -56,9 +53,6 @@ namespace oneflow {
       << Error::RuntimeError() << "Tensors dy and x must be the same shape";
   *dx_shape = dy_shape;
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> SeluGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SeluGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), ctx->InputDType("x", 0))

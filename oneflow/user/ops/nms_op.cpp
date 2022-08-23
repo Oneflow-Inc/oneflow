@@ -36,10 +36,6 @@ Maybe<void> InferNmsDataType(user_op::InferContext* ctx) {
   return InferNmsTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> NmsOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> NmsOp::GetSbp(user_op::SbpContext* ctx) {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }

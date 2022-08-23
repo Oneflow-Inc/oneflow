@@ -58,9 +58,6 @@ namespace oneflow {
   *out_desc->mut_shape() = Shape(out_dim_vector);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SoftmaxCrossEntropyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SoftmaxCrossEntropyOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
@@ -121,10 +118,6 @@ namespace oneflow {
   *ctx->MutOutputShape("prediction_diff", 0) = ctx->InputShape("prob", 0);
   *ctx->MutOutputIsDynamic("prediction_diff", 0) = ctx->InputIsDynamic("prob", 0);
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> SoftmaxCrossEntropyGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SoftmaxCrossEntropyGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& prob_desc = ctx->InputTensorDesc("prob", 0);

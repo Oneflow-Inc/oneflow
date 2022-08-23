@@ -38,9 +38,6 @@ namespace oneflow {
   *indices_shape = reduce_shape.RemoveOnes({-1});
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> MedianWithIndicesOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> MedianWithIndicesOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("values", 0) = ctx->InputDType("input", 0);
   *ctx->MutOutputDType("indices", 0) = DataType::kInt64;

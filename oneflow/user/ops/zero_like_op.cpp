@@ -36,9 +36,6 @@ namespace oneflow {
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("like", 0);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> ZeroLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> ZeroLikeOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("out", 0) = ctx->InputDType("like", 0);
   return Maybe<void>::Ok();

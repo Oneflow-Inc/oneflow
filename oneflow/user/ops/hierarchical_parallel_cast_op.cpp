@@ -26,11 +26,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> HierarchicalParallelCastOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> HierarchicalParallelCastOp::GetSbp(user_op::SbpContext* ctx) {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }
@@ -60,11 +55,6 @@ namespace oneflow {
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
   *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> HierarchicalParallelCastLikeOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> HierarchicalParallelCastLikeOp::GetSbp(user_op::SbpContext* ctx) {

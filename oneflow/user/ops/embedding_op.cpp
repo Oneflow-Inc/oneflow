@@ -24,10 +24,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EmbeddingRenormOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /*static*/ Maybe<void> EmbeddingRenormOp::GetSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
@@ -49,10 +45,6 @@ namespace oneflow {
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_shape() = Shape(out_dim_vec);
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> EmbeddingOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /*static*/ Maybe<void> EmbeddingOp::GetSbp(user_op::SbpContext* ctx) {
@@ -91,10 +83,6 @@ namespace oneflow {
   *dx_desc->mut_shape() = weight_shape;
 
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> EmbeddingGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return EmbeddingGradOp::InferLogicalTensorDesc(ctx);
 }
 
 /*static*/ Maybe<void> EmbeddingGradOp::GetSbp(user_op::SbpContext* ctx) {

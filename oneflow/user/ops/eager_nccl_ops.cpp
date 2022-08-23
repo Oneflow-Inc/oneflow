@@ -29,10 +29,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EagerCclAllReduceOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> EagerCclAllReduceOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().PartialSum(user_op::OpArg("in", 0)).Broadcast(user_op::OpArg("out", 0)).Build();
   return Maybe<void>::Ok();
@@ -55,10 +51,6 @@ namespace oneflow {
       << "the size of input tensor tuple should equal the size of output tensor tuple.";
   for (int i = 0; i < size; ++i) { *ctx->MutOutputShape("out", i) = JUST(VectorAt(shape_list, i)); }
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> EagerNcclBroadcastOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> EagerNcclBroadcastOp::GetSbp(user_op::SbpContext* ctx) {
@@ -85,10 +77,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EagerNcclTouchOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return Maybe<void>::Ok();
-}
-
 /* static */ Maybe<void> EagerNcclTouchOp::GetSbp(user_op::SbpContext* ctx) {
   // local only
   return Maybe<void>::Ok();
@@ -106,10 +94,6 @@ namespace oneflow {
 /* static */ Maybe<void> EagerNcclReduceOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> EagerNcclReduceOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> EagerNcclReduceOp::GetSbp(user_op::SbpContext* ctx) {
@@ -191,10 +175,6 @@ namespace oneflow {
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
   *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> EagerCclAllGatherOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> EagerCclAllGatherOp::GetSbp(user_op::SbpContext* ctx) {

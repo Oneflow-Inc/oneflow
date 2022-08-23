@@ -23,10 +23,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> HardswishOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> HardswishOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
@@ -47,10 +43,6 @@ namespace oneflow {
   CHECK_OR_RETURN(dy_shape == x_shape);
   *dx_shape = dy_shape;
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> HardswishGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> HardswishGradOp::GetSbp(user_op::SbpContext* ctx) {

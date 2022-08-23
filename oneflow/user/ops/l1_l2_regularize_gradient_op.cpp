@@ -44,11 +44,6 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
   return InferTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> L1L2RegularizeGradientOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> L1L2RegularizeGradientOp::GetSbp(user_op::SbpContext* ctx) {
   return GetSbpSignatures(ctx);
 }

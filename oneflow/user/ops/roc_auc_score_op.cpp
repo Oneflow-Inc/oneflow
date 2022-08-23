@@ -29,10 +29,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> RocAucScoreOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> RocAucScoreOp::GetSbp(user_op::SbpContext* ctx) {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }

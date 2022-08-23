@@ -24,10 +24,6 @@ namespace oneflow {
   *ctx->MutOutputShape("y", 0) = Shape({ctx->InputShape("x", 0).At(0)});
   return Maybe<void>::Ok();
 }
-/*static*/ auto GenerateRandomBatchPermutationIndicesOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) -> Maybe<void> {
-  return GenerateRandomBatchPermutationIndicesOp::InferLogicalTensorDesc(ctx);
-}
 /*static*/ auto GenerateRandomBatchPermutationIndicesOp::GetSbp(user_op::SbpContext* ctx)
     -> Maybe<void> {
   ctx->NewBuilder().PartialSum(user_op::OpArg("x", 0)).Broadcast(user_op::OpArg("y", 0)).Build();

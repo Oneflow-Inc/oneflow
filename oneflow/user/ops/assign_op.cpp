@@ -83,10 +83,6 @@ Maybe<void> InferDataType_(user_op::InferContext* ctx) {
     return InferTensorDesc(ctx);                                                                  \
   }                                                                                               \
                                                                                                   \
-  /*static*/ Maybe<void> op_class_name::InferPhysicalTensorDesc(user_op::InferContext* ctx) {     \
-    return InferLogicalTensorDesc(ctx);                                                           \
-  }                                                                                               \
-                                                                                                  \
   /* static */ Maybe<void> op_class_name::GetSbp(user_op::SbpContext* ctx) {                      \
     return GetSbpSignatures(ctx);                                                                 \
   }                                                                                               \

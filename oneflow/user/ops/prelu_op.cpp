@@ -46,9 +46,6 @@ namespace oneflow {
   *y_shape = x_shape;
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> PreluOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> PreluOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
@@ -100,9 +97,6 @@ namespace oneflow {
   *dx_shape = x_shape;
   *alpha_diff_shape = alpha_shape;
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> PreluGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> PreluGradOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);

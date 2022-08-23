@@ -103,9 +103,6 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   *y_desc->mut_is_dynamic() = ref_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SliceUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SliceUpdateOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& ref_desc = ctx->InputTensorDesc("ref", 0);
   const user_op::TensorDesc& value_desc = ctx->InputTensorDesc("value", 0);

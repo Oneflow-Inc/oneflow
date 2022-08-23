@@ -205,9 +205,6 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
 /*static*/ Maybe<void> WhereOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferWhereTensorDesc(ctx);
 }
-/*static*/ Maybe<void> WhereOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> WhereOp::InferDataType(user_op::InferContext* ctx) {
   DataType cond_dtype = ctx->InputDType("condition", 0);
   CHECK_OR_RETURN(IsBoolDataType(cond_dtype) || IsIntegralDataType(cond_dtype));
@@ -226,9 +223,6 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
 }
 /*static*/ Maybe<void> WhereScalarXOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferWhereXScalarTensorDesc(ctx);
-}
-/*static*/ Maybe<void> WhereScalarXOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> WhereScalarXOp::InferDataType(user_op::InferContext* ctx) {
   DataType cond_dtype = ctx->InputDType("condition", 0);
@@ -258,9 +252,6 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
 /*static*/ Maybe<void> WhereScalarYOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferWhereYScalarTensorDesc(ctx);
 }
-/*static*/ Maybe<void> WhereScalarYOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> WhereScalarYOp::InferDataType(user_op::InferContext* ctx) {
   DataType cond_dtype = ctx->InputDType("condition", 0);
   CHECK_OR_RETURN(IsBoolDataType(cond_dtype) || IsIntegralDataType(cond_dtype));
@@ -288,9 +279,6 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
 }
 /*static*/ Maybe<void> WhereScalarXyOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferWhereXYScalarTensorDesc(ctx);
-}
-/*static*/ Maybe<void> WhereScalarXyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> WhereScalarXyOp::InferDataType(user_op::InferContext* ctx) {
   DataType cond_dtype = ctx->InputDType("condition", 0);

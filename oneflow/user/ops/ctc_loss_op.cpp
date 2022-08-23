@@ -40,10 +40,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> CtcLossOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> CtcLossOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("log_probs", 0), 1)  // `log_probs` batch axis is 1
@@ -82,10 +78,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> CtcLossGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> CtcLossGradOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("grad_out", 0), 0)
@@ -113,10 +105,6 @@ namespace oneflow {
   *ctx->MutOutputShape("decoded", 0) = Shape({batch_size, log_probs.shape().At(0)});
   *ctx->MutOutputShape("neg_sum_logits", 0) = Shape({batch_size, 1});
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> CtcGreedyDecoderOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> CtcGreedyDecoderOp::GetSbp(user_op::SbpContext* ctx) {

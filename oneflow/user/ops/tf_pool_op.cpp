@@ -119,9 +119,6 @@ GenBackwardOpConfFn MakeGenBackwardOpConfFn(const std::string& mode, const int32
   /*static*/ Maybe<void> name##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {         \
     return MakeFwTensorDescInferFn(dim)(ctx);                                                   \
   }                                                                                             \
-  /*static*/ Maybe<void> name##Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) {        \
-    return InferLogicalTensorDesc(ctx);                                                         \
-  }                                                                                             \
   /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {                  \
     return FwInferDataType(ctx);                                                                \
   }
@@ -140,9 +137,6 @@ IMPLEMENT_TF_POOL_FUNCS(TfMaxPool3D, 3)
   }                                                                                          \
   /*static*/ Maybe<void> name##GradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
     return BwTensorDescInferFn(ctx);                                                         \
-  }                                                                                          \
-  /*static*/ Maybe<void> name##GradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
-    return InferLogicalTensorDesc(ctx);                                                      \
   }                                                                                          \
   /*static*/ Maybe<void> name##GradOp::InferDataType(user_op::InferContext* ctx) {           \
     return BwInferDataType(ctx);                                                             \

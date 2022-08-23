@@ -24,10 +24,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> CountNotFiniteOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> CountNotFiniteOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& x = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   FOR_RANGE(int64_t, i, 0, x.shape().NumAxes()) {
@@ -46,10 +42,6 @@ namespace oneflow {
   user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
   *y_desc->mut_shape() = Shape({1});
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> MultiCountNotFiniteOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> MultiCountNotFiniteOp::GetSbp(user_op::SbpContext* ctx) {

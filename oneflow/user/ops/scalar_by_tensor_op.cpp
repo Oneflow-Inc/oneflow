@@ -77,9 +77,6 @@ GetSbpFn MakeGetSbpFn(GetSbpFn extra) {
 /*static*/ Maybe<void> ScalarAddByTensorOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return TensorDescInferFn(ctx);
 }
-/*static*/ Maybe<void> ScalarAddByTensorOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> ScalarAddByTensorOp::InferDataType(user_op::InferContext* ctx) {
   return DataTypeInferFn(ctx);
 }
@@ -96,9 +93,6 @@ GetSbpFn MakeGetSbpFn(GetSbpFn extra) {
 }
 /*static*/ Maybe<void> ScalarSubByTensorOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return TensorDescInferFn(ctx);
-}
-/*static*/ Maybe<void> ScalarSubByTensorOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ScalarSubByTensorOp::InferDataType(user_op::InferContext* ctx) {
   return DataTypeInferFn(ctx);
@@ -122,9 +116,6 @@ GetSbpFn MakeGetSbpFn(GetSbpFn extra) {
 /*static*/ Maybe<void> ScalarMulByTensorOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return TensorDescInferFn(ctx);
 }
-/*static*/ Maybe<void> ScalarMulByTensorOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> ScalarMulByTensorOp::InferDataType(user_op::InferContext* ctx) {
   return DataTypeInferFn(ctx);
 }
@@ -141,9 +132,6 @@ GetSbpFn MakeGetSbpFn(GetSbpFn extra) {
 }
 /*static*/ Maybe<void> ScalarDivByTensorOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return TensorDescInferFn(ctx);
-}
-/*static*/ Maybe<void> ScalarDivByTensorOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ScalarDivByTensorOp::InferDataType(user_op::InferContext* ctx) {
   return DataTypeInferFn(ctx);

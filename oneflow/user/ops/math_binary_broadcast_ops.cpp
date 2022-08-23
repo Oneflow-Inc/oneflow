@@ -198,9 +198,6 @@ Maybe<void> GetBinaryBroadcastSbpSignature(user_op::SbpContext* ctx) {
   /* static */ Maybe<void> op_name::InferLogicalTensorDesc(user_op::InferContext* ctx) { \
     return InferTensorDescBinaryBroadcastNormal(ctx);                                    \
   }                                                                                      \
-  /*static*/ Maybe<void> op_name::InferPhysicalTensorDesc(user_op::InferContext* ctx) {  \
-    return InferLogicalTensorDesc(ctx);                                                  \
-  }                                                                                      \
   /* static */ Maybe<void> op_name::GetSbp(user_op::SbpContext* ctx) {                   \
     return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);                      \
   }                                                                                      \
@@ -211,9 +208,6 @@ Maybe<void> GetBinaryBroadcastSbpSignature(user_op::SbpContext* ctx) {
 #define REGISTER_BINARY_BROADCAST_LOGICAL_USER_OP(op_name, suffix)                       \
   /* static */ Maybe<void> op_name::InferLogicalTensorDesc(user_op::InferContext* ctx) { \
     return InferTensorDescBinaryBroadcastLogical(ctx);                                   \
-  }                                                                                      \
-  /*static*/ Maybe<void> op_name::InferPhysicalTensorDesc(user_op::InferContext* ctx) {  \
-    return InferLogicalTensorDesc(ctx);                                                  \
   }                                                                                      \
   /* static */ Maybe<void> op_name::GetSbp(user_op::SbpContext* ctx) {                   \
     return GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>(ctx);                      \

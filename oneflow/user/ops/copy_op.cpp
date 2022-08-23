@@ -50,10 +50,6 @@ Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> CopyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> CopyOp::GetSbp(user_op::SbpContext* ctx) {
   const auto& inputs = ctx->inputs();
   CHECK_EQ_OR_RETURN(inputs.size(), 1);

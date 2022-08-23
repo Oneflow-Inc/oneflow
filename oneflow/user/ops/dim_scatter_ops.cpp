@@ -243,10 +243,6 @@ Maybe<void> ScatterBackward(user_op::BackwardOpConfContext* ctx) {
   return InferTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> DimScatterAddLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> DimScatterAddLikeOp::GetSbp(user_op::SbpContext* ctx) {
   return SetSbpLike(ctx);
 }
@@ -265,10 +261,6 @@ Maybe<void> ScatterBackward(user_op::BackwardOpConfContext* ctx) {
     return InferTensorDesc(ctx);                                                                  \
   }                                                                                               \
                                                                                                   \
-  /*static*/ Maybe<void> op_class_name::InferPhysicalTensorDesc(user_op::InferContext* ctx) {     \
-    return InferLogicalTensorDesc(ctx);                                                           \
-  }                                                                                               \
-                                                                                                  \
   /* static */ Maybe<void> op_class_name::GetSbp(user_op::SbpContext* ctx) {                      \
     return SetSbpScatter(ctx);                                                                    \
   }                                                                                               \
@@ -285,10 +277,6 @@ Maybe<void> ScatterBackward(user_op::BackwardOpConfContext* ctx) {
 #define DEF_SCATTER_SCALAR_OP(optypename)                                                         \
   /* static */ Maybe<void> optypename::InferLogicalTensorDesc(user_op::InferContext* ctx) {       \
     return InferScalarTensorDesc(ctx);                                                            \
-  }                                                                                               \
-                                                                                                  \
-  /*static*/ Maybe<void> optypename::InferPhysicalTensorDesc(user_op::InferContext* ctx) {        \
-    return InferLogicalTensorDesc(ctx);                                                           \
   }                                                                                               \
                                                                                                   \
   /* static */ Maybe<void> optypename::GetSbp(user_op::SbpContext* ctx) {                         \

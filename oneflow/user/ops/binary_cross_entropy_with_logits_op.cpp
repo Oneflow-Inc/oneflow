@@ -103,11 +103,6 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
   return InferTensorDescFn(ctx);
 }
 
-/*static*/ Maybe<void> BinaryCrossEntropyWithLogitsOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> BinaryCrossEntropyWithLogitsOp::GetSbp(user_op::SbpContext* ctx) {
   return GenLossForwardDefaultGetSbpFn(
       [](user_op::UserOpSbpSignatureBuilder& builder, user_op::SbpContext* ctx) {
@@ -132,11 +127,6 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
 /* static */ Maybe<void> BinaryCrossEntropyWithLogitsGradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferGradTensorDescFn(ctx);
-}
-
-/*static*/ Maybe<void> BinaryCrossEntropyWithLogitsGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> BinaryCrossEntropyWithLogitsGradOp::GetSbp(user_op::SbpContext* ctx) {

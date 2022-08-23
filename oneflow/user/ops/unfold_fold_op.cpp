@@ -138,9 +138,6 @@ Maybe<void> GetFoldSbpFn(user_op::SbpContext* ctx) {
 /*static*/ Maybe<void> UnfoldOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return UnfoldTensorDescInferFn(ctx);
 }
-/*static*/ Maybe<void> UnfoldOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> UnfoldOp::InferDataType(user_op::InferContext* ctx) {
   return SetUnfoldDTypeFn(ctx);
 }
@@ -148,9 +145,6 @@ Maybe<void> GetFoldSbpFn(user_op::SbpContext* ctx) {
 /*static*/ Maybe<void> FoldOp::GetSbp(user_op::SbpContext* ctx) { return GetFoldSbpFn(ctx); }
 /*static*/ Maybe<void> FoldOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return FoldTensorDescInferFn(ctx);
-}
-/*static*/ Maybe<void> FoldOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> FoldOp::InferDataType(user_op::InferContext* ctx) {
   return FoldDTypeFn(ctx);

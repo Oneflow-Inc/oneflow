@@ -25,10 +25,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> LeakyReluOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> LeakyReluOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
@@ -49,10 +45,6 @@ namespace oneflow {
   CHECK_OR_RETURN(dy_shape == x_shape);
   *dx_shape = dy_shape;
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> LeakyReluGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> LeakyReluGradOp::GetSbp(user_op::SbpContext* ctx) {

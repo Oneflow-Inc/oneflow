@@ -51,11 +51,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> CropMirrorNormalizeFromTensorbufferOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> CropMirrorNormalizeFromTensorbufferOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
   return Maybe<void>::Ok();
@@ -114,11 +109,6 @@ namespace oneflow {
   }
 
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> CropMirrorNormalizeFromUint8Op::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> CropMirrorNormalizeFromUint8Op::GetSbp(user_op::SbpContext* ctx) {
@@ -214,10 +204,6 @@ namespace oneflow {
   *out_tensor->mut_shape() = in_tensor.shape();
   *out_tensor->mut_is_dynamic() = in_tensor.is_dynamic();
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> ImageRandomCropOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> ImageRandomCropOp::GetSbp(user_op::SbpContext* ctx) {

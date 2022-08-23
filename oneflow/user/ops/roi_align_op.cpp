@@ -46,9 +46,6 @@ namespace oneflow {
   *ctx->MutOutputShape("y", 0) = Shape({rois_shape.At(0), x_shape.At(1), pooled_h, pooled_w});
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> RoiAlignOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> RoiAlignOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
@@ -98,9 +95,6 @@ namespace oneflow {
       << Error::RuntimeError() << "Tensors y and dy must have same shape";
   *ctx->MutOutputShape("dx", 0) = x_like_shape;
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> RoiAlignGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> RoiAlignGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), ctx->InputDType("x_like", 0))

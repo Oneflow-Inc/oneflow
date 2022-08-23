@@ -67,9 +67,6 @@ namespace oneflow {
   *y_desc->mut_shape() = Shape(y_dim_vec);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SamePaddingOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SamePaddingOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
@@ -111,9 +108,6 @@ namespace oneflow {
   *ctx->MutOutputShape("dx", 0) = ctx->InputShape("x_like", 0);
   *ctx->MutOutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x_like", 0);
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> SamePaddingGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SamePaddingGradOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x_like", 0);

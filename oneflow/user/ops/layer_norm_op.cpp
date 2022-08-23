@@ -76,10 +76,6 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> LayerNormOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> LayerNormOp::GetSbp(user_op::SbpContext* ctx) {
   const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
   int64_t begin_norm_axis = ShiftNegativeAxisIfNeed(x_shape, ctx->Attr<int64_t>("begin_norm_axis"));
@@ -136,10 +132,6 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
     CHECK_EQ_OR_RETURN(add_to_output.shape(), dx->shape());
   }
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> LayerNormGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> LayerNormGradOp::GetSbp(user_op::SbpContext* ctx) {
@@ -208,10 +200,6 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
     *gamma_diff->mut_shape() = param_shape;
   }
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> LayerNormParamGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> LayerNormParamGradOp::GetSbp(user_op::SbpContext* ctx) {

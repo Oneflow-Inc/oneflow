@@ -31,9 +31,6 @@ namespace oneflow {
   *ctx->MutOutputShape("output", 0) = ones_shape.RemoveOnes({0});
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> MedianOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> MedianOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("output", 0) = ctx->InputDType("input", 0);
   return Maybe<void>::Ok();

@@ -80,11 +80,6 @@ Maybe<void> InferBWDataType(user_op::InferContext* ctx) {
     return InferFWTensorDesc(ctx);                                                               \
   }                                                                                              \
                                                                                                  \
-  /*static*/ Maybe<void> op_class_name_prefix##Op::InferPhysicalTensorDesc(                      \
-      user_op::InferContext* ctx) {                                                              \
-    return InferLogicalTensorDesc(ctx);                                                          \
-  }                                                                                              \
-                                                                                                 \
   /* static */ Maybe<void> op_class_name_prefix##Op::GetSbp(user_op::SbpContext* ctx) {          \
     return FwGetSbpFn(ctx);                                                                      \
   }                                                                                              \
@@ -96,11 +91,6 @@ Maybe<void> InferBWDataType(user_op::InferContext* ctx) {
   /* static */ Maybe<void> op_class_name_prefix##GradOp::InferLogicalTensorDesc(                 \
       user_op::InferContext* ctx) {                                                              \
     return InferBWTensorDesc(ctx);                                                               \
-  }                                                                                              \
-                                                                                                 \
-  /*static*/ Maybe<void> op_class_name_prefix##GradOp::InferPhysicalTensorDesc(                  \
-      user_op::InferContext* ctx) {                                                              \
-    return InferLogicalTensorDesc(ctx);                                                          \
   }                                                                                              \
                                                                                                  \
   /* static */ Maybe<void> op_class_name_prefix##GradOp::GetSbp(user_op::SbpContext* ctx) {      \

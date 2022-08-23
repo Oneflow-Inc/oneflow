@@ -24,10 +24,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> BroadcastPowXGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> BroadcastPowXGradOp::GetSbp(user_op::SbpContext* ctx) {
   const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
   const Shape& y_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape();
@@ -79,10 +75,6 @@ namespace oneflow {
   *ctx->MutOutputShape("dy", 0) = ctx->InputShape("y", 0);
   *ctx->MutOutputIsDynamic("dy", 0) = ctx->InputIsDynamic("y", 0);
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> BroadcastPowYGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> BroadcastPowYGradOp::GetSbp(user_op::SbpContext* ctx) {

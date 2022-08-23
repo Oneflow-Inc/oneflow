@@ -83,9 +83,6 @@ Maybe<void> GridSampleOp::CheckAttr(const user_op::UserOpDefWrapper& def,
   }
   return Maybe<void>::Ok();
 }
-/*static*/ auto GridSampleOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
-  return GridSampleOp::InferLogicalTensorDesc(ctx);
-}
 /*static*/ auto GridSampleOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   ctx->NewBuilder()
       .Split(user_op::OpArg("input", 0), 0)
@@ -114,10 +111,6 @@ Maybe<void> GridSampleGradOp::CheckAttr(const user_op::UserOpDefWrapper& def,
   *(ctx->MutOutputTensorDesc("dinput", 0)->mut_shape()) = ctx->InputTensorDesc("input", 0).shape();
   *(ctx->MutOutputTensorDesc("dgrid", 0)->mut_shape()) = ctx->InputTensorDesc("grid", 0).shape();
   return Maybe<void>::Ok();
-}
-/*static*/ auto GridSampleGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
-    -> Maybe<void> {
-  return GridSampleGradOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ auto GridSampleGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   ctx->NewBuilder()

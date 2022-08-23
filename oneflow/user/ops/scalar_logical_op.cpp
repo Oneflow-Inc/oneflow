@@ -31,9 +31,6 @@ namespace oneflow {
     *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);                           \
     return Maybe<void>::Ok();                                                                    \
   }                                                                                              \
-  /*static*/ Maybe<void> name##Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) {         \
-    return InferLogicalTensorDesc(ctx);                                                          \
-  }                                                                                              \
   /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {                   \
     *ctx->MutOutputDType("out", 0) = DataType::kBool;                                            \
     return Maybe<void>::Ok();                                                                    \

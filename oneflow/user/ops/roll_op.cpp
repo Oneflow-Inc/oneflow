@@ -48,9 +48,6 @@ namespace oneflow {
   *ctx->MutOutputShape("out", 0) = in_shape;
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> RollOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> RollOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();

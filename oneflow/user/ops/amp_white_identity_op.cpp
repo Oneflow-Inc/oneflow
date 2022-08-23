@@ -26,10 +26,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> AmpWhiteIdentityOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> AmpWhiteIdentityOp::GetSbp(user_op::SbpContext* ctx) {
   const auto& in = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   for (int i = 0; i < in.shape().NumAxes(); ++i) {

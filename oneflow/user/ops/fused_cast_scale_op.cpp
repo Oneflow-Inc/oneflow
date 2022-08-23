@@ -29,10 +29,6 @@ Maybe<void> FusedCastScaleOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedCastScaleOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return FusedCastScaleOp::InferLogicalTensorDesc(ctx);
-}
-
 Maybe<void> FusedCastScaleOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
   user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);

@@ -34,11 +34,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EmbeddingLookupPlaceholderOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> EmbeddingLookupPlaceholderOp::GetSbp(user_op::SbpContext* ctx) {
   auto builder = ctx->NewBuilder()
                      .Broadcast(user_op::OpArg("shadow", 0))
@@ -77,11 +72,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EmbeddingUpdatePlaceholderOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> EmbeddingUpdatePlaceholderOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("ids", 0), 0)
@@ -118,10 +108,6 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
   CHECK_EQ_OR_RETURN(num_unique_ids_shape.elem_cnt(), 1);
   *ctx->MutOutputShape("context", 0) = num_unique_ids_shape;
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> EmbeddingPrefetchOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> EmbeddingPrefetchOp::GetSbp(user_op::SbpContext* ctx) {
@@ -173,10 +159,6 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EmbeddingLookupOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> EmbeddingLookupOp::GetSbp(user_op::SbpContext* ctx) {
   auto builder = ctx->NewBuilder()
                      .Broadcast(user_op::OpArg("num_unique_ids", 0))
@@ -212,10 +194,6 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
 
 /* static */ Maybe<void> EmbeddingPutOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> EmbeddingPutOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> EmbeddingPutOp::GetSbp(user_op::SbpContext* ctx) {
@@ -287,11 +265,6 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> FusedSgdEmbeddingUpdatePutOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> FusedSgdEmbeddingUpdatePutOp::GetSbp(user_op::SbpContext* ctx) {
   auto builder = ctx->NewBuilder()
                      .Broadcast(user_op::OpArg("learning_rate", 0))
@@ -322,10 +295,6 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> SgdEmbeddingUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> SgdEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
@@ -350,11 +319,6 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> MomentumEmbeddingUpdateOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> MomentumEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
@@ -376,10 +340,6 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
   *ctx->MutOutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> AdamEmbeddingUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> AdamEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
@@ -406,11 +366,6 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> AdagradEmbeddingUpdateOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> AdagradEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
@@ -432,10 +387,6 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
   *ctx->MutOutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> FtrlEmbeddingUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> FtrlEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
@@ -473,9 +424,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
       ctx->InputShape("cur_rank_inverse_indices", 0);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> IdShuffleCopyOutOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
+
 /*static*/ Maybe<void> IdShuffleCopyOutOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("out_num_unique_matrix", 0) = ctx->InputDType("num_unique_matrix", 0);
   *ctx->MutOutputDType("out_inverse_unique_partition_indices", 0) =

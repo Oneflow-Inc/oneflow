@@ -46,9 +46,6 @@ namespace oneflow {
 
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SmoothL1LossOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SmoothL1LossOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
@@ -104,9 +101,6 @@ namespace oneflow {
   *dx_desc->mut_shape() = input_desc.shape();
 
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> SmoothL1LossGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SmoothL1LossGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);

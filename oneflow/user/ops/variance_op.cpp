@@ -36,10 +36,6 @@ Maybe<void> VarOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> VarOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 Maybe<void> VarOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("output", 0) = ctx->InputDType("input", 0);
   return Maybe<void>::Ok();

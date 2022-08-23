@@ -29,9 +29,6 @@ namespace oneflow {
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SoftsignOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SoftsignOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
@@ -56,9 +53,6 @@ namespace oneflow {
                                        << " must match the size of x " << x_shape;
   *dx_shape = dy_shape;
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> SoftsignGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SoftsignGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), ctx->InputDType("x", 0))

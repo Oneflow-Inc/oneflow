@@ -30,9 +30,6 @@ namespace oneflow {
   *y->mut_shape() = Shape({1});
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SquareSumOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SquareSumOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
@@ -53,9 +50,6 @@ namespace oneflow {
   user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
   *y->mut_shape() = Shape({1});
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> MultiSquareSumOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> MultiSquareSumOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_0 = ctx->InputTensorDesc("x", 0);

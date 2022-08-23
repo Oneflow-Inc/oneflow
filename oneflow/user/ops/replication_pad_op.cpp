@@ -69,9 +69,6 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   *ctx->MutOutputShape("y", 0) = Shape(y_dim_vec);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> ReplicationPad1DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return ReplicationPad1DOp::InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> ReplicationPad1DOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
@@ -105,9 +102,6 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   *ctx->MutOutputShape("dx", 0) = Shape(dx_dim_vec);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> ReplicationPad1DGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return ReplicationPad2DGradOp::InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> ReplicationPad1DGradOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
   return Maybe<void>::Ok();
@@ -136,9 +130,6 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
 
   *ctx->MutOutputShape("y", 0) = Shape(y_dim_vec);
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> ReplicationPad2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return ReplicationPad2DOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ReplicationPad2DOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
@@ -175,9 +166,6 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
 
   *ctx->MutOutputShape("dx", 0) = Shape(dx_dim_vec);
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> ReplicationPad2DGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return ReplicationPad2DGradOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ReplicationPad2DGradOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);

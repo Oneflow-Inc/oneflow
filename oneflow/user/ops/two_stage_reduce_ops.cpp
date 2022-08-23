@@ -225,9 +225,6 @@ IMPLEMENT_REDUCE_DEVICE_STAGE_USER_OP_FUNCS(ReduceMaxDeviceStage)
   /*static*/ Maybe<void> op_name##GradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
     return InferReduceDeviceStageGradTensorDescFn(ctx);                                         \
   }                                                                                             \
-  /*static*/ Maybe<void> op_name##GradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
-    return InferLogicalTensorDesc(ctx);                                                         \
-  }                                                                                             \
   /*static*/ Maybe<void> op_name##GradOp::InferDataType(user_op::InferContext* ctx) {           \
     return InferReduceDeviceStageGradDtypeFn(ctx);                                              \
   }
@@ -277,9 +274,6 @@ REGISTER_REDUCE_DEVICE_STAGE_USER_OP_GRAD("reduce_max_device_stage", "reduce_max
   /*static*/ Maybe<void> op_name##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {       \
     return InferReduceGlobalStageTensorDescFn(ctx);                                              \
   }                                                                                              \
-  /*static*/ Maybe<void> op_name##Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) {      \
-    return InferLogicalTensorDesc(ctx);                                                          \
-  }                                                                                              \
   /*static*/ Maybe<void> op_name##Op::InferDataType(user_op::InferContext* ctx) {                \
     return InferReduceGlobalStageDtypeFn(ctx);                                                   \
   }                                                                                              \
@@ -306,9 +300,6 @@ IMPLEMENT_REDUCE_GLOBAL_STAGE_OP_FUNCS(ReduceMaxGlobalStage)
   }                                                                                             \
   /*static*/ Maybe<void> op_name##GradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
     return InferReduceGlobalStageGradTensorDescFn(ctx);                                         \
-  }                                                                                             \
-  /*static*/ Maybe<void> op_name##GradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
-    return InferLogicalTensorDesc(ctx);                                                         \
   }                                                                                             \
   /*static*/ Maybe<void> op_name##GradOp::InferDataType(user_op::InferContext* ctx) {           \
     return InferReduceGlobalStageGradDtypeFn(ctx);                                              \

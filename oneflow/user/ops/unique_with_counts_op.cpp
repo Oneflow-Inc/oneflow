@@ -41,9 +41,6 @@ namespace oneflow {
   *num_unique->mut_shape() = Shape({1});
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> UniqueWithCountsOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> UniqueWithCountsOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   auto out_idx = ctx->Attr<DataType>("out_idx");

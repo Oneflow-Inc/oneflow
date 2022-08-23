@@ -42,10 +42,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EagerNaiveSToSOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> EagerNaiveSToSOp::GetSbp(user_op::SbpContext* ctx) {
   return Error::TypeError() << "eager_naive_s_to_s op doesn't support global tensor!";
 }

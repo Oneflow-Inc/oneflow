@@ -97,9 +97,6 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   /*static*/ Maybe<void> name##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
     return InferTensorDescFn(ctx);                                                       \
   }                                                                                      \
-  /*static*/ Maybe<void> name##Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
-    return InferLogicalTensorDesc(ctx);                                                  \
-  }                                                                                      \
   /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {           \
     return infer_dtype_func(ctx);                                                        \
   }

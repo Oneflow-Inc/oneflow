@@ -190,9 +190,6 @@ Maybe<void> GenBackwardOpConf4SparseSoftmaxCrossEntropy(const std::string& op_ty
   /*static*/ Maybe<void> op_name##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {      \
     return InferTensorDescFn(ctx);                                                              \
   }                                                                                             \
-  /*static*/ Maybe<void> op_name##Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) {     \
-    return InferLogicalTensorDesc(ctx);                                                         \
-  }                                                                                             \
   /*static*/ Maybe<void> op_name##Op::InferDataType(user_op::InferContext* ctx) {               \
     return oneflow::InferDataType(ctx);                                                         \
   }                                                                                             \
@@ -214,9 +211,6 @@ IMPLEMENT_SPAESE_SOFTMAX_CROSS_ENTROPY_OP_FUNCS(SparseSoftmaxCrossEntropyMs, Add
   }                                                                                             \
   /*static*/ Maybe<void> op_name##GradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
     return InferGradTensorDescFn(ctx);                                                          \
-  }                                                                                             \
-  /*static*/ Maybe<void> op_name##GradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
-    return InferLogicalTensorDesc(ctx);                                                         \
   }                                                                                             \
   /*static*/ Maybe<void> op_name##GradOp::InferDataType(user_op::InferContext* ctx) {           \
     return InferDataTypeGrad(ctx);                                                              \

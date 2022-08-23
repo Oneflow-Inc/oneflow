@@ -85,10 +85,6 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> ConcatOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> ConcatOp::GetSbp(user_op::SbpContext* ctx) {
   const int64_t axis = ctx->Attr<int64_t>("axis");
   const user_op::TensorDesc& first_in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);

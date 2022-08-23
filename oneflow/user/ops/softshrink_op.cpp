@@ -23,10 +23,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> SoftShrinkOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> SoftShrinkOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
@@ -48,10 +44,6 @@ namespace oneflow {
                                        << " must match the size of y " << y_shape;
   *dx_shape = dy_shape;
   return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> SoftShrinkGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> SoftShrinkGradOp::GetSbp(user_op::SbpContext* ctx) {

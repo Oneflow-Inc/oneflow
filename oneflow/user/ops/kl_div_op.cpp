@@ -74,10 +74,6 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
   return KlInferTensorDescFn(ctx);
 }
 
-/*static*/ Maybe<void> KlDivLossOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> KlDivLossOp::GetSbp(user_op::SbpContext* ctx) {
   const auto& input_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0).shape();
   FOR_RANGE(int64_t, i, 0, input_shape.NumAxes()) {
@@ -100,10 +96,6 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
 
 /* static */ Maybe<void> KlDivLossGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferGradTensorDescFn(ctx);
-}
-
-/*static*/ Maybe<void> KlDivLossGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> KlDivLossGradOp::GetSbp(user_op::SbpContext* ctx) {

@@ -37,10 +37,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> MinMaxObserverOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> MinMaxObserverOp::GetSbp(user_op::SbpContext* ctx) {
   // NOTE(Liang Depeng): input needs to be broadcast in order to accurately calculate the
   // global scale and zero_point

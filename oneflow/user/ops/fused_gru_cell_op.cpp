@@ -26,10 +26,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> FusedGruCellOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> FusedGruCellOp::GetSbp(user_op::SbpContext* ctx) {
   // input_gates shape:  [batch_size, hidden_size * 3]
   // hidden_gates shape: [batch_size, hidden_size * 3]
@@ -80,10 +76,6 @@ namespace oneflow {
   }
 
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> FusedGruCellGradOp ::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> FusedGruCellGradOp ::GetSbp(user_op::SbpContext* ctx) {

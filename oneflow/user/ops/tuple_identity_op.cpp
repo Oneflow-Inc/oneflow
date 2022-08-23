@@ -31,9 +31,6 @@ namespace oneflow {
   }
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> TupleIdentityOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> TupleIdentityOp::InferDataType(user_op::InferContext* ctx) {
   const int64_t in_size = ctx->input_size("in");
   CHECK_EQ_OR_RETURN(ctx->output_size("out"), in_size);

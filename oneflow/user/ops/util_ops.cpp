@@ -23,10 +23,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> IsNanOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> IsNanOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
   const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
@@ -47,10 +43,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> IsInfOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> IsInfOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
   const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
@@ -69,10 +61,6 @@ namespace oneflow {
 /* static */ Maybe<void> IsFiniteOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> IsFiniteOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> IsFiniteOp::GetSbp(user_op::SbpContext* ctx) {

@@ -27,10 +27,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> FusedLstmCellOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> FusedLstmCellOp::GetSbp(user_op::SbpContext* ctx) {
   // input_gates shape:  [batch_size, hidden_size * 4]
   // hidden_gates shape: [batch_size, hidden_size * 4]
@@ -82,10 +78,6 @@ namespace oneflow {
   }
 
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> FusedLstmCellGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> FusedLstmCellGradOp::GetSbp(user_op::SbpContext* ctx) {

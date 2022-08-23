@@ -107,11 +107,6 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   return InferTensorDesc4FusedMatmul(ctx);
 }
 
-/*static*/ Maybe<void> FusedMatmulBiasAddReluDropoutOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> FusedMatmulBiasAddReluDropoutOp::GetSbp(user_op::SbpContext* ctx) {
   auto builder = ctx->NewBuilder().Split(user_op::OpArg("x", 0), 0);
   for (int i = 0; i < ctx->user_op_conf().input_size("weights"); ++i) {

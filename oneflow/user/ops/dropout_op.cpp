@@ -26,10 +26,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> DropoutOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> DropoutOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   FOR_RANGE(int64_t, axis, 0, in_tensor.shape().NumAxes()) {
@@ -57,10 +53,6 @@ namespace oneflow {
   *ctx->MutOutputIsDynamic("dx", 0) = ctx->InputIsDynamic("dy", 0);
   CHECK_EQ_OR_RETURN(ctx->InputShape("mask", 0), dy_shape);
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> DropoutGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> DropoutGradOp::GetSbp(user_op::SbpContext* ctx) {
@@ -91,10 +83,6 @@ namespace oneflow {
 /* static */ Maybe<void> RandomMaskLikeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("like", 0);
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> RandomMaskLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> RandomMaskLikeOp::GetSbp(user_op::SbpContext* ctx) {

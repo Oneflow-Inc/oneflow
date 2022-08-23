@@ -74,9 +74,6 @@ Maybe<void> CheckAndLabelAxesToSqueezeMinusOne(const AxisVector& axes, DimVector
   *out_shape = Shape(dim_vec);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SqueezeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SqueezeOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();

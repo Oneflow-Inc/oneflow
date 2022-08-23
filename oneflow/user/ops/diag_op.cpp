@@ -47,10 +47,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> DiagOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> DiagOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
   return Maybe<void>::Ok();
@@ -67,10 +63,6 @@ namespace oneflow {
   user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
   *dx_desc->mut_shape() = Shape(in_shape.dim_vec());
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> DiagGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> DiagGradOp::GetSbp(user_op::SbpContext* ctx) {

@@ -57,10 +57,6 @@ namespace oneflow {
   *out->mut_shape() = Shape(dim_vec);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> UnsortedBatchSegmentSumOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> UnsortedBatchSegmentSumOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& data = ctx->InputTensorDesc("data", 0);
   const user_op::TensorDesc& segment_ids = ctx->InputTensorDesc("segment_ids", 0);

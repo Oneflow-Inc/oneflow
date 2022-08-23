@@ -27,10 +27,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> FillOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> FillOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
@@ -51,10 +47,6 @@ namespace oneflow {
   Stride* out_stride = ctx->MutOutputStride("out", 0);
   *out_stride = ctx->InputStride("in", 0);
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> FillTensorOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> FillTensorOp::GetSbp(user_op::SbpContext* ctx) {

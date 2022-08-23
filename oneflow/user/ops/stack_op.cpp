@@ -99,10 +99,6 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> StackOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> StackOp::GetSbp(user_op::SbpContext* ctx) {
   const int64_t axis = ctx->Attr<int64_t>("axis");
   const user_op::TensorDesc& first_in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
@@ -223,9 +219,6 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
            "size. ";
   }
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> StackGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> StackGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);

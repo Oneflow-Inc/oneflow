@@ -24,9 +24,6 @@ namespace oneflow {
   // Do nothing.
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SendOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return SendOp::InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SendOp::InferDataType(user_op::InferContext* ctx) {
   // Do nothing.
   return Maybe<void>::Ok();
@@ -50,9 +47,6 @@ Maybe<Symbol<Device>> GetRecvOutputDeivce(user_op::DeviceAndStreamInferContext* 
 /*static*/ Maybe<void> RecvOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->MutOutputShape("out", 0) = ctx->Attr<Shape>("shape");
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> RecvOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return SendOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> RecvOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("out", 0) = ctx->Attr<DataType>("dtype");

@@ -43,10 +43,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> DimGatherOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> DimGatherOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& index_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0);
   int64_t index_num_axes = index_tensor.shape().NumAxes();

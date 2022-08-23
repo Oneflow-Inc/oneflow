@@ -146,10 +146,6 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
   return InferTensorDesc4Matmul(ctx);
 }
 
-/*static*/ Maybe<void> MatmulOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> MatmulOp::GetSbp(user_op::SbpContext* ctx) {
   // (m, k_a) * (k_b, n) where k_a == k_b
   int32_t m_axis = -1;
@@ -211,10 +207,6 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
 
 /* static */ Maybe<void> BatchMatmulOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferTensorDesc4Matmul(ctx);
-}
-
-/*static*/ Maybe<void> BatchMatmulOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> BatchMatmulOp::GetSbp(user_op::SbpContext* ctx) {
@@ -344,10 +336,6 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
   }
 
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> BroadcastMatmulOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> BroadcastMatmulOp::GetSbp(user_op::SbpContext* ctx) {
@@ -490,10 +478,6 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
   }
 
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> BroadcastMatmulGradBOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> BroadcastMatmulGradBOp::GetSbp(user_op::SbpContext* ctx) {

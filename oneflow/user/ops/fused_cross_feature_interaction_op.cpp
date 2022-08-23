@@ -32,11 +32,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedCrossFeatureInteractionOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> FusedCrossFeatureInteractionOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("x", 0), 0)
@@ -64,11 +59,6 @@ namespace oneflow {
   *ctx->MutOutputShape("dx", 0) = x0_shape;
   *ctx->MutOutputShape("dbias", 0) = Shape({x0_shape.At(1)});
   return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> FusedCrossFeatureInteractionV1GradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> FusedCrossFeatureInteractionV1GradOp::GetSbp(user_op::SbpContext* ctx) {
@@ -105,11 +95,6 @@ namespace oneflow {
   *ctx->MutOutputShape("dx", 0) = x0_shape;
   *ctx->MutOutputShape("dbias", 0) = Shape({x0_shape.At(1)});
   return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> FusedCrossFeatureInteractionV2GradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> FusedCrossFeatureInteractionV2GradOp::GetSbp(user_op::SbpContext* ctx) {

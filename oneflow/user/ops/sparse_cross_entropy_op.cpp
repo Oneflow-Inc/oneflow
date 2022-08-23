@@ -124,9 +124,6 @@ Maybe<void> GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name
 /*static*/ Maybe<void> SparseCrossEntropyOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferTensorDescFn(ctx);
 }
-/*static*/ Maybe<void> SparseCrossEntropyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SparseCrossEntropyOp::InferDataType(user_op::InferContext* ctx) {
   return oneflow::InferDataType(ctx);
 }
@@ -156,9 +153,6 @@ Maybe<void> GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name
 /*static*/ Maybe<void> SparseCrossEntropyMsOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferTensorDescFn(ctx);
 }
-/*static*/ Maybe<void> SparseCrossEntropyMsOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SparseCrossEntropyMsOp::InferDataType(user_op::InferContext* ctx) {
   return oneflow::InferDataType(ctx);
 }
@@ -182,10 +176,6 @@ Maybe<void> GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name
 /*static*/ Maybe<void> SparseCrossEntropyGradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferGradTensorDescFn(ctx);
-}
-/*static*/ Maybe<void> SparseCrossEntropyGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SparseCrossEntropyGradOp::InferDataType(user_op::InferContext* ctx) {
   return InferDataTypeGrad(ctx);
@@ -211,10 +201,6 @@ Maybe<void> GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name
 /*static*/ Maybe<void> SparseCrossEntropyMsGradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferGradTensorDescFn(ctx);
-}
-/*static*/ Maybe<void> SparseCrossEntropyMsGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SparseCrossEntropyMsGradOp::InferDataType(user_op::InferContext* ctx) {
   return InferDataTypeGrad(ctx);

@@ -53,11 +53,6 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx) {
   return InferTensorDesc4FusedMatmulBackward(ctx);
 }
 
-/*static*/ Maybe<void> CublasBiasAddReluMatmulGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> CublasBiasAddReluMatmulGradOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("weight", 0))

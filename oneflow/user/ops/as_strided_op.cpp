@@ -28,9 +28,6 @@ namespace oneflow {
   *output_desc->mut_shape() = Shape(out_vec);
   return Maybe<void>::Ok();
 }
-/*static*/ auto AsStridedOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
-  return AsStridedOp::InferLogicalTensorDesc(ctx);
-}
 /*static*/ auto AsStridedOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   return Maybe<void>::Ok();
 }
@@ -45,10 +42,6 @@ namespace oneflow {
   user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
   *dx_desc->mut_shape() = input_shape;
   return Maybe<void>::Ok();
-}
-/*static*/ auto AsStridedGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
-    -> Maybe<void> {
-  return AsStridedGradOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ auto AsStridedGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   return Maybe<void>::Ok();

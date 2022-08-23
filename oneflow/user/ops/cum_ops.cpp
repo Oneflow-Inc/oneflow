@@ -23,10 +23,6 @@ Maybe<void> CumsumOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CumsumOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 Maybe<void> CumsumOp::GetSbp(user_op::SbpContext* ctx) {
   const auto& in_tensor_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   auto dim = ctx->Attr<int64_t>("dim");
@@ -77,10 +73,6 @@ Maybe<void> CumProdOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CumProdOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 Maybe<void> CumProdOp::GetSbp(user_op::SbpContext* ctx) {
   const auto& in_tensor_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   auto dim = ctx->Attr<int64_t>("dim");
@@ -98,10 +90,6 @@ Maybe<void> CumProdOp::InferDataType(user_op::InferContext* ctx) {
 Maybe<void> CumProdGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->MutOutputShape("dx", 0) = ctx->InputShape("dy", 0);
   return Maybe<void>::Ok();
-}
-
-Maybe<void> CumProdGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 Maybe<void> CumProdGradOp::GetSbp(user_op::SbpContext* ctx) {
