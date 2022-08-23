@@ -2010,14 +2010,14 @@ class TestConv2d(flow.unittest.TestCase):
         torch.nn.functional.conv2d(input, weight_128c, padding=1, stride=2)
         torch.nn.functional.conv2d(input, weight_128c, bias=bias, padding=1)
         torch.nn.functional.conv2d(input, weight_128c, bias=bias, padding=1, stride=2)
-        torch.nn.functional.conv2d(input, weight_1x1_128c, padding=1)
-        torch.nn.functional.conv2d(input, weight_1x1_128c, padding=1, stride=2)
-        torch.nn.functional.conv2d(input, weight_1x1_128c, bias=bias, padding=1)
-        torch.nn.functional.conv2d(input, weight_1x1_128c, bias=bias, padding=1, stride=2)
-        torch.nn.functional.conv2d(input, weight_5x5_128c, padding=1)
-        torch.nn.functional.conv2d(input, weight_5x5_128c, padding=1, stride=2)
-        torch.nn.functional.conv2d(input, weight_5x5_128c, bias=bias, padding=1)
-        torch.nn.functional.conv2d(input, weight_5x5_128c, bias=bias, padding=1, stride=2)
+        torch.nn.functional.conv2d(input, weight_1x1_128c)
+        torch.nn.functional.conv2d(input, weight_1x1_128c, stride=2)
+        torch.nn.functional.conv2d(input, weight_1x1_128c, bias=bias)
+        torch.nn.functional.conv2d(input, weight_1x1_128c, bias=bias, stride=2)
+        torch.nn.functional.conv2d(input, weight_5x5_128c, padding=2)
+        torch.nn.functional.conv2d(input, weight_5x5_128c, padding=2, stride=2)
+        torch.nn.functional.conv2d(input, weight_5x5_128c, bias=bias, padding=2)
+        torch.nn.functional.conv2d(input, weight_5x5_128c, bias=bias, padding=2, stride=2)
 
 
 if __name__ == "__main__":
