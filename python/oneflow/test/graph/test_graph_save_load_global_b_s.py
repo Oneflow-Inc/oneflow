@@ -180,11 +180,15 @@ def _test_graph_save_load_global_split_2(
     P0 = flow.placement(model_tensor_placement.type, ranks=[0])
     P1 = flow.placement(model_tensor_placement.type, ranks=[1])
     BROADCAST = flow.sbp.broadcast
-    sbp_for_special_keys = {
-        "System-Train-TrainStep": BROADCAST,
-        "module_pipeline.m_stage1.linear.weight": flow.sbp.split(1),  # or BROADCAST
-        "module_pipeline.m_stage1.linear.bias": BROADCAST,
-    }
+
+    def get_sbp(state_dict, tensor):
+        if tensor is state_dict["System-Train-TrainStep"]:
+            return BROADCAST
+        if tensor is state_dict["module_pipeline"]["m_stage1.linear.weight"]:
+            return flow.sbp.split(1)
+        if tensor is state_dict["module_pipeline"]["m_stage1.linear.bias"]:
+            return BROADCAST
+        return flow.sbp.split(0)
 
     class Stage0Module(flow.nn.Module):
         def __init__(self):
@@ -292,11 +296,8 @@ def _test_graph_save_load_global_split_2(
                 local_state_dict = None
 
             # test sbp_for_special_keys
-            global_state_dict = flow.utils.dict_to_global(
-                local_state_dict,
-                placement=model_file_placement,
-                sbp=flow.sbp.split(0),
-                sbp_for_special_keys=sbp_for_special_keys,
+            global_state_dict = flow.utils.global_view.to_global(
+                local_state_dict, placement=model_file_placement, sbp=get_sbp,
             )
             graph_model.load_state_dict(global_state_dict)
 
@@ -407,11 +408,8 @@ def _test_graph_save_load_global_split_2(
         iter1_state_dict = graph_model.state_dict()
 
         if call_cnt == 0:
-            model_file_state_dict = flow.utils.dict_to_global(
-                iter1_state_dict,
-                placement=model_file_placement,
-                sbp=flow.sbp.split(0),
-                sbp_for_special_keys=sbp_for_special_keys,
+            model_file_state_dict = flow.utils.global_view.to_global(
+                iter1_state_dict, placement=model_file_placement, sbp=get_sbp,
             )
             if flow.env.get_rank() in model_file_placement.ranks:
                 flow.save(flow.utils.to_local(model_file_state_dict), state_dict_dir)
@@ -439,11 +437,14 @@ def _test_graph_save_load_global_split_4(
     P3 = flow.placement(model_tensor_placement.type, ranks=[3])
     BROADCAST = flow.sbp.broadcast
 
-    sbp_for_special_keys = {
-        "System-Train-TrainStep": BROADCAST,
-        "module_pipeline.m_stage3.linear.weight": flow.sbp.split(1),  # or BROADCAST
-        "module_pipeline.m_stage3.linear.bias": BROADCAST,
-    }
+    def get_sbp(state_dict, tensor):
+        if tensor is state_dict["System-Train-TrainStep"]:
+            return BROADCAST
+        if tensor is state_dict["module_pipeline"]["m_stage3.linear.weight"]:
+            return flow.sbp.split(1)
+        if tensor is state_dict["module_pipeline"]["m_stage3.linear.bias"]:
+            return BROADCAST
+        return flow.sbp.split(0)
 
     class Stage0Module(flow.nn.Module):
         def __init__(self):
@@ -583,11 +584,8 @@ def _test_graph_save_load_global_split_4(
                 local_state_dict = None
 
             # test sbp_for_special_keys
-            global_state_dict = flow.utils.dict_to_global(
-                local_state_dict,
-                placement=model_file_placement,
-                sbp=flow.sbp.split(0),
-                sbp_for_special_keys=sbp_for_special_keys,
+            global_state_dict = flow.utils.global_view.to_global(
+                local_state_dict, placement=model_file_placement, sbp=get_sbp,
             )
             graph_model.load_state_dict(global_state_dict)
 
@@ -742,11 +740,8 @@ def _test_graph_save_load_global_split_4(
         iter1_state_dict = graph_model.state_dict()
 
         if call_cnt == 0:
-            model_file_state_dict = flow.utils.dict_to_global(
-                iter1_state_dict,
-                placement=model_file_placement,
-                sbp=flow.sbp.split(0),
-                sbp_for_special_keys=sbp_for_special_keys,
+            model_file_state_dict = flow.utils.global_view.to_global(
+                iter1_state_dict, placement=model_file_placement, sbp=get_sbp,
             )
             if flow.env.get_rank() in model_file_placement.ranks:
                 flow.save(flow.utils.to_local(model_file_state_dict), state_dict_dir)

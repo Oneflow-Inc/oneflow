@@ -15,6 +15,7 @@ limitations under the License.
 """
 import warnings
 import pickle
+import types
 
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
@@ -121,14 +122,23 @@ def to_global(input, placement=None, sbp=None, **kwargs):
                     flow._oneflow_internal.cpu_broadcast(None, src_rank)
                 )
 
-    if isinstance(input, Tensor) or input is None:
-        return to_global_tensor(input, placement, sbp, **kwargs)
-    elif isinstance(input, (dict, tuple, list)):
+    is_tensor_transform_list = 0
+    if isinstance(input, Tensor):
+        input = [input]
+        is_tensor_transform_list = 1
+
+    if input is None:
+        input = [None]
+
+    if isinstance(input, (dict, tuple, list)):
         input_tree = ArgsTree(input)
 
         def leaf_fn(node):
             if isinstance(node, Tensor) or node is None:
-                return to_global_tensor(node, placement, sbp, **kwargs)
+                if isinstance(sbp, types.FunctionType):
+                    return to_global_tensor(node, placement, sbp(input, node), **kwargs)
+                else:
+                    return to_global_tensor(node, placement, sbp, **kwargs)
             else:
                 warnings.warn(
                     "Non-Tensor type: {} encountered, it will remain the same.".format(
@@ -138,7 +148,10 @@ def to_global(input, placement=None, sbp=None, **kwargs):
                 return node
 
         mapped_input = input_tree.map_leaf(leaf_fn)
+        if is_tensor_transform_list:
+            return mapped_input[0]
         return mapped_input
+
     else:
         warnings.warn(
             "Non-Tensor type: {} encountered, it will remain the same.".format(

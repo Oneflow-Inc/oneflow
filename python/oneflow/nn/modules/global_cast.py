@@ -58,6 +58,7 @@ def local_to_global_op(input, placement=None, sbp=None, *, check_meta=True, copy
 def global_to_global_op(
     input, placement=None, sbp=None, *, grad_sbp=None, check_meta=False, copy=False
 ):
+
     assert isinstance(input, Tensor)
     assert input.is_global, "input must be a global tensor"
 
