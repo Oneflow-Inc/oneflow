@@ -119,6 +119,13 @@ void CachedMutableAttrMap::InternalEnlarge() {
   attr_names_ = std::move(attr_names);
 }
 
+#define THREAD_LOCAL_MUT_ATTR_MAP                   \
+  []() {                                            \
+    thread_local static CachedMutableAttrMap attrs; \
+    attrs.reset();                                  \
+    return &attrs;                                  \
+  }
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_CACHED_ATTR_MAP_H_

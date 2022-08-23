@@ -156,11 +156,6 @@ Maybe<void> DimScatterUpdateScalar::Apply(const DimScatterCaptureState* ctx,
   const std::shared_ptr<oneflow::one::Tensor>& index = ctx->SavedTensors().at(0);
 
   in_grads->resize(2);
-
-  thread_local static CachedMutableAttrMap attrs;
-  attrs.reset();
-  attrs.SetAttr<int32_t>("dim", ctx->dim);
-  attrs.SetAttr<float>("src_scalar", 0.0f);
   in_grads->at(0) =
       JUST(functional::DimScatterUpdateScalar(out_grads.at(0), ctx->dim, index, 0.0f));
 

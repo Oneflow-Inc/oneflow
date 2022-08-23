@@ -99,8 +99,7 @@ class CastFromGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
   Maybe<void> Apply(const CastGlobalCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& dual_nd_sbp = JUST(GetDualNdSbp(ctx->nd_sbp));
-    thread_local static CachedMutableAttrMap attrs;
-    attrs.reset();
+    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
     attrs.SetAttr<Shape>("shape", *ctx->shape);
     attrs.SetAttr<DataType>("dtype", ctx->dtype->data_type());
     attrs.SetAttr<bool>("sync_data", true);

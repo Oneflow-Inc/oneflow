@@ -46,8 +46,7 @@ class EyeDevcieFunctor {
   Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device,
                            const bool& requires_grad) const {
-    thread_local static CachedMutableAttrMap attrs;
-    attrs.reset();
+    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
     attrs.SetAttr<int64_t>("rows", rows.As<int64_t>());
     attrs.SetAttr<int64_t>("cols", cols.value_or(rows).As<int64_t>());
     attrs.SetAttr<DataType>("dtype", dtype->data_type());
@@ -79,8 +78,7 @@ class GlobalEyeSbpListFunctor {
                            const Symbol<DType>& dtype, const bool& requires_grad,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
-    thread_local static CachedMutableAttrMap attrs;
-    attrs.reset();
+    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
     CHECK_EQ_OR_RETURN(sbp_tuple.size(), placement->hierarchy()->NumAxes())
         << "len(sbp) == len(placement.hierarchy) required, but "
         << "len(sbp)==" << sbp_tuple.size() << ", "
@@ -134,8 +132,7 @@ class EyeInplaceFunctor {
     JUST(CheckInplaceValid(x));
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = x;
-    thread_local static CachedMutableAttrMap attrs;
-    attrs.reset();
+    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
     attrs.SetAttr<int64_t>("rows", x->shape()->At(0));
     attrs.SetAttr<int64_t>("cols", x->shape()->At(1));
     attrs.SetAttr<DataType>("dtype", x->dtype()->data_type());

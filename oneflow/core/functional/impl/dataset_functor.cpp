@@ -53,8 +53,7 @@ class DecodeOneRecFunctor {
                            const Symbol<DType>& dtype, const Shape& shape, const bool is_dynamic,
                            const Optional<Shape>& reshape,
                            const Optional<Shape>& batch_padding) const {
-    thread_local static CachedMutableAttrMap attrs;
-    attrs.reset();
+    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
     bool has_reshape = false;
     bool has_batch_padding = false;
 

@@ -21,8 +21,7 @@ namespace oneflow {
 namespace test {
 
 TEST(AttrMap, basic) {
-  thread_local static CachedMutableAttrMap mut_attr_map;
-  mut_attr_map.reset();
+  auto& mut_attr_map = *THREAD_LOCAL_MUT_ATTR_MAP();
   mut_attr_map.SetAttr<int32_t>("zero", 0);
   mut_attr_map.SetAttr<int64_t>("one", 1);
   mut_attr_map.SetAttr<std::vector<int32_t>>("zeros", std::vector<int32_t>{0});
@@ -56,8 +55,7 @@ TEST(AttrMap, basic) {
 
 TEST(AttrMap, hash_value) {
   HashMap<AttrMap, int32_t> attr_map2int_value;
-  thread_local static CachedMutableAttrMap mut_attr_map;
-  mut_attr_map.reset();
+  auto& mut_attr_map = *THREAD_LOCAL_MUT_ATTR_MAP();
   mut_attr_map.SetAttr<int32_t>("zero", 0);
   mut_attr_map.SetAttr<int64_t>("one", 1);
   mut_attr_map.SetAttr<std::vector<int32_t>>("zeros", std::vector<int32_t>{0});
@@ -68,8 +66,7 @@ TEST(AttrMap, hash_value) {
 
 TEST(AttrMap, hash_map) {
   HashMap<AttrMap, int32_t> attr_map2int_value;
-  thread_local static CachedMutableAttrMap mut_attr_map;
-  mut_attr_map.reset();
+  auto& mut_attr_map = *THREAD_LOCAL_MUT_ATTR_MAP();
   attr_map2int_value[AttrMap(mut_attr_map)] = 0;
   ASSERT_EQ(attr_map2int_value.at(AttrMap(mut_attr_map)), 0);
   mut_attr_map.SetAttr<int32_t>("zero", 0);

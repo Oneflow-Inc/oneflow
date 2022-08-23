@@ -44,8 +44,7 @@ class MinMaxObserverFunctor {
                                 const int32_t& quantization_bit,
                                 const std::string& quantization_scheme,
                                 const bool& per_layer_quantization) const {
-    thread_local static CachedMutableAttrMap attrs;
-    attrs.reset();
+    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
     attrs.SetAttr<std::string>("quantization_formula", quantization_formula);
     attrs.SetAttr<int32_t>("quantization_bit", quantization_bit);
     attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme);
@@ -78,8 +77,7 @@ class MovingAverageMinMaxObserverFunctor {
                                 const int32_t& quantization_bit,
                                 const std::string& quantization_scheme,
                                 const float& momentum) const {
-    thread_local static CachedMutableAttrMap attrs;
-    attrs.reset();
+    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
     attrs.SetAttr<bool>("training", training);
     attrs.SetAttr<std::string>("quantization_formula", quantization_formula);
     attrs.SetAttr<int64_t>("stop_update_after_iters", stop_update_after_iters);
@@ -109,8 +107,7 @@ class FakeQuantizationFunctor {
                            const std::shared_ptr<one::Tensor>& zero_point,
                            const std::string& quantization_formula, const int32_t& quantization_bit,
                            const std::string& quantization_scheme) const {
-    thread_local static CachedMutableAttrMap attrs;
-    attrs.reset();
+    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
     attrs.SetAttr<std::string>("quantization_formula", quantization_formula);
     attrs.SetAttr<int32_t>("quantization_bit", quantization_bit);
     attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme);
@@ -136,8 +133,7 @@ class QuantizationFunctor {
                            const std::shared_ptr<one::Tensor>& zero_point,
                            const std::string quantization_formula, const int32_t& quantization_bit,
                            const std::string quantization_scheme) const {
-    thread_local static CachedMutableAttrMap attrs;
-    attrs.reset();
+    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
     attrs.SetAttr<std::string>("quantization_formula", quantization_formula);
     attrs.SetAttr<int32_t>("quantization_bit", quantization_bit);
     attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme);

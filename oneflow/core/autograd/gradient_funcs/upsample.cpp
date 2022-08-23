@@ -112,8 +112,6 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DCaptureStat
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
-    thread_local static CachedMutableAttrMap attrs;
-    attrs.reset();
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
     JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::UpsampleNearest2DGrad(
@@ -164,8 +162,6 @@ class UpsampleBilinear2D : public OpExprGradFunction<UpsampleBilinear2DCaptureSt
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
-    thread_local static CachedMutableAttrMap attrs;
-    attrs.reset();
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
     JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::UpsampleBilinear2DGrad(
@@ -214,8 +210,6 @@ class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DCaptureState>
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
-    thread_local static CachedMutableAttrMap attrs;
-    attrs.reset();
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
     JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::UpsampleLinear1DGrad(
@@ -262,8 +256,6 @@ class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DCaptureStat
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
-    thread_local static CachedMutableAttrMap attrs;
-    attrs.reset();
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
     JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(
@@ -314,8 +306,6 @@ class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DCaptureStat
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
-    thread_local static CachedMutableAttrMap attrs;
-    attrs.reset();
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
     JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::UpsampleBicubic2DGrad(
@@ -365,8 +355,6 @@ class UpsampleNearest3D : public OpExprGradFunction<UpsampleNearest3DCaptureStat
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
-    thread_local static CachedMutableAttrMap attrs;
-    attrs.reset();
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
     JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::UpsampleNearest3DGrad(
@@ -419,8 +407,6 @@ class UpsampleTrilinear3D : public OpExprGradFunction<UpsampleTrilinear3DCapture
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
-    thread_local static CachedMutableAttrMap attrs;
-    attrs.reset();
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
     JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::UpsampleTrilinear3DGrad(
