@@ -103,8 +103,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
           mut_tensor_meta = std::make_shared<MutLocalTensorMeta>(
               std::make_shared<Shape>(output_tensor_metas.at(i)->shape()),
               std::make_shared<Stride>(output_tensor_metas.at(i)->stride()),
-              output_tensor_metas.at(i)->dtype(), output_tensor_metas.at(i)->device(),
-              output_tensor_metas.at(i)->storage_offset());
+              output_tensor_metas.at(i)->dtype(), output_tensor_metas.at(i)->device());
         }
       }
       std::shared_ptr<EagerLocalTensorImpl> tensor_impl =
@@ -145,12 +144,13 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }));
     JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
     const auto& mut_tensor_meta = const_cast<EagerLocalTensorImpl*>(tensor_impl)->mut_tensor_meta();
-    Symbol<LocalTensorMeta> new_tensor_meta = SymbolOf(LocalTensorMeta(
-        std::make_shared<Shape>(mut_tensor_meta->shape()),
-        std::make_shared<Stride>(mut_tensor_meta->stride()), mut_tensor_meta->dtype(),
-        mut_tensor_meta->device(), mut_tensor_meta->storage_offset()));
+    Symbol<LocalTensorMeta> new_tensor_meta =
+        SymbolOf(LocalTensorMeta(std::make_shared<Shape>(mut_tensor_meta->shape()),
+                                 std::make_shared<Stride>(mut_tensor_meta->stride()),
+                                 mut_tensor_meta->dtype(), mut_tensor_meta->device()));
     std::shared_ptr<EagerLocalTensorImpl> final_tensor_impl =
-        std::make_shared<EagerLocalTensorImpl>(JUST(tensor_impl->tensor_storage()), false, false);
+        std::make_shared<EagerLocalTensorImpl>(JUST(tensor_impl->tensor_storage()),
+                                               JUST(tensor_impl->storage_offset()), false, false);
     JUST(final_tensor_impl->InitEagerBlobObject(
         new_tensor_meta,
         JUST(JUST(outputs->at(index)->eager_blob_object())->compute_local_dep_object())));

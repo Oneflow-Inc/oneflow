@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_ND_INDEX_SLICE_UTIL_H_
 #define ONEFLOW_USER_KERNELS_ND_INDEX_SLICE_UTIL_H_
 
+#include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 
@@ -91,11 +92,21 @@ OF_DEVICE_FUNC int64_t OffsetInSliceToOffsetInDense(int64_t slice_size, int64_t 
                                                     const int64_t* dense_shape, const I* indices,
                                                     int64_t n) {
   int64_t slice_idx = n / slice_size;
-  const I* cur_nd_index_ptr = indices + slice_idx * index_ndims;
+  const I* nd_index = indices + slice_idx * index_ndims;
   int64_t offset = 0;
   int64_t product = 1;
+  int64_t shifted_index = 0;
   for (int64_t i = index_ndims - 1; i >= 0; --i) {
-    offset += cur_nd_index_ptr[i] * product;
+#if defined(__CUDACC__)
+    assert(nd_index[i] < dense_shape[i] && nd_index[i] >= -dense_shape[i] && "index out of bounds");
+#else
+    CHECK(nd_index[i] < dense_shape[i] && nd_index[i] >= -dense_shape[i])
+        << "IndexError: index " << nd_index[i] << " is out of bounds for dimension " << i
+        << " with size " << dense_shape[i];
+#endif
+    shifted_index = nd_index[i] < 0 && nd_index[i] >= -dense_shape[i] ? nd_index[i] + dense_shape[i]
+                                                                      : nd_index[i];
+    offset += shifted_index * product;
     product *= dense_shape[i];
   }
   return offset * slice_size + n % slice_size;

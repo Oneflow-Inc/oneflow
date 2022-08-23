@@ -69,24 +69,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-namespace {
-
-REGISTER_USER_OP_GRAD("softsign").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
-  const auto softsign_grad_op_name = ctx->FwOp().op_name() + "_grad";
-  ctx->DefineOp(softsign_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("softsign_grad")
-        .InputBind("x", ctx->FwOp().input("in", 0))
-        .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-        .Output("dx")
-        .Build();
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
-                            [&ctx, &softsign_grad_op_name]() -> const std::string& {
-                              return ctx->GetOp(softsign_grad_op_name).output("dx", 0);
-                            });
-  return Maybe<void>::Ok();
-});
-
-}  // namespace
-
 }  // namespace oneflow
