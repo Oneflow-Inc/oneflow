@@ -46,59 +46,51 @@ size_t MutTensorMeta::CalcHashValue() const {
 LocalTensorMeta::LocalTensorMeta()
     : TensorMeta(std::make_shared<const Shape>(), std::make_shared<const Stride>(),
                  DataType::kInvalidDataType),
-      device_(Symbol<Device>()),
-      storage_offset_(0) {}
+      device_(Symbol<Device>()) {}
 
 LocalTensorMeta::LocalTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
                                  Symbol<Device> device)
-    : TensorMeta(shape, std::make_shared<const Stride>(*shape), dtype),
-      device_(device),
-      storage_offset_(0) {}
+    : TensorMeta(shape, std::make_shared<const Stride>(*shape), dtype), device_(device) {}
 
 LocalTensorMeta::LocalTensorMeta(const std::shared_ptr<const Shape>& shape,
                                  const std::shared_ptr<const Stride>& stride, DataType dtype,
-                                 Symbol<Device> device, int64_t storage_offset)
-    : TensorMeta(shape, stride, dtype), device_(device), storage_offset_(storage_offset) {}
+                                 Symbol<Device> device)
+    : TensorMeta(shape, stride, dtype), device_(device) {}
 
 bool LocalTensorMeta::operator==(const LocalTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
   return *this->shape_ptr() == *other.shape_ptr() && this->dtype() == other.dtype()
-         && this->device() == other.device() && this->stride() == other.stride()
-         && this->storage_offset() == other.storage_offset();
+         && this->device() == other.device() && this->stride() == other.stride();
 }
 
 size_t LocalTensorMeta::CalcHashValue() const {
   // It's correct to ignore is_dynamic_ field.
-  return Hash(*shape_ptr(), dtype(), device(), stride(), storage_offset());
+  return Hash(*shape_ptr(), dtype(), device(), stride());
 }
 
 MutLocalTensorMeta::MutLocalTensorMeta()
     : MutTensorMeta(std::make_shared<const Shape>(), std::make_shared<const Stride>(),
                     kInvalidDataType),
-      device_(Symbol<Device>()),
-      storage_offset_(0) {}
+      device_(Symbol<Device>()) {}
 
 MutLocalTensorMeta::MutLocalTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
                                        Symbol<Device> device)
-    : MutTensorMeta(shape, std::make_shared<const Stride>(*shape), dtype),
-      device_(device),
-      storage_offset_(0) {}
+    : MutTensorMeta(shape, std::make_shared<const Stride>(*shape), dtype), device_(device) {}
 
 MutLocalTensorMeta::MutLocalTensorMeta(const std::shared_ptr<const Shape>& shape,
                                        const std::shared_ptr<const Stride>& stride, DataType dtype,
-                                       Symbol<Device> device, int64_t storage_offset)
-    : MutTensorMeta(shape, stride, dtype), device_(device), storage_offset_(storage_offset) {}
+                                       Symbol<Device> device)
+    : MutTensorMeta(shape, stride, dtype), device_(device) {}
 
 bool MutLocalTensorMeta::operator==(const MutLocalTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
   return *this->shape_ptr() == *other.shape_ptr() && this->dtype() == other.dtype()
-         && *this->device() == *other.device() && this->stride() == other.stride()
-         && this->storage_offset() == other.storage_offset();
+         && *this->device() == *other.device() && this->stride() == other.stride();
 }
 
 size_t MutLocalTensorMeta::CalcHashValue() const {
   // It's correct to ignore is_dynamic_ field.
-  return Hash(*shape_ptr(), dtype(), *device(), stride(), storage_offset());
+  return Hash(*shape_ptr(), dtype(), *device(), stride());
 }
 
 bool GlobalTensorMeta::operator==(const GlobalTensorMeta& other) const {
