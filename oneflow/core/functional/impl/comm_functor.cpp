@@ -336,15 +336,13 @@ class SendFunctor {
     JUST(attrs.SetAttr<int64_t>("dst_process_id", dst));
     if (send_meta) {
       std::shared_ptr<FlatShape> flat_shape = JUST(FlatShape::New(*x->shape()));
-      JUST(ccl::Send<DeviceType::kCPU>(flat_shape.get(), sizeof(*flat_shape), DataType::kChar, dst,
-                                       nullptr));
+      JUST(ccl::CpuSend(flat_shape.get(), sizeof(*flat_shape), dst));
 
       DataType dtype = x->dtype()->data_type();
-      JUST(ccl::Send<DeviceType::kCPU>(&dtype, sizeof(dtype), DataType::kChar, dst, nullptr));
+      JUST(ccl::CpuSend(&dtype, sizeof(dtype), dst));
 
       DeviceType device_type = JUST(Device::GetPlacement(*JUST(x->device())))->device_type();
-      JUST(ccl::Send<DeviceType::kCPU>(&device_type, sizeof(device_type), DataType::kChar, dst,
-                                       nullptr));
+      JUST(ccl::CpuSend(&device_type, sizeof(device_type), dst));
     }
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_expr_, {x}, attrs));
     return Maybe<void>::Ok();
@@ -373,16 +371,13 @@ class RecvFunctor {
     } else if (!optional_shape.has_value() && !optional_dtype.has_value()
                && !optional_device.has_value()) {
       FlatShape flat_shape{};
-      JUST(ccl::Recv<DeviceType::kCPU>(&flat_shape, sizeof(flat_shape), DataType::kChar, src,
-                                       nullptr));
+      JUST(ccl::CpuRecv(&flat_shape, sizeof(flat_shape), src));
       shape = *JUST(flat_shape.ToShape());
 
-      JUST(ccl::Recv<DeviceType::kCPU>(&data_type, sizeof(data_type), DataType::kChar, src,
-                                       nullptr));
+      JUST(ccl::CpuRecv(&data_type, sizeof(data_type), src));
 
       DeviceType device_type = DeviceType::kInvalidDevice;
-      JUST(ccl::Recv<DeviceType::kCPU>(&device_type, sizeof(device_type), DataType::kChar, src,
-                                       nullptr));
+      JUST(ccl::CpuRecv(&device_type, sizeof(device_type), src));
       device = JUST(Device::New(*JUST(DeviceTag4DeviceType(device_type))));
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "All or none of shape, dtype and device should have value.";
