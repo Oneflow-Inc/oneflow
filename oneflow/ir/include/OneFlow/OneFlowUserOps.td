@@ -9610,9 +9610,6 @@ def OneFlow_EmbeddingLookupPlaceholderGradOp : OneFlow_BaseOp<"embedding_lookup_
     OneFlow_Tensor:$ids,
     OneFlow_Tensor:$embedding_grad
   );
-  let output = (outs
-    OneFlow_Tensor:$shadow_grad
-  );
   let attrs = (ins
     StrAttr:$embedding_name,
     DefaultValuedAttr<SI64Attr, "0">:$line_size,

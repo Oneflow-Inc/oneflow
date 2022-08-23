@@ -41,7 +41,7 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "fused_dot_feature_interaction",
                                "fused_dot_feature_interaction_grad",
                                "embedding_lookup_placeholder",
-                               "embedding_update_placeholder",
+                               "embedding_lookup_placeholder_grad",
                                "binary_cross_entropy_with_logits_reduce_mean",
                                "binary_cross_entropy_with_logits_reduce_mean_grad",
                                "fused_cross_feature_interaction",

@@ -520,6 +520,9 @@ bool IsSupportFusedUpdatePut(const bool is_full_cache, const bool enable_auto_mi
                              const bool is_sgd, const std::string& down_scale_by_lbn,
                              const std::string& skip_if_lbn, const float l1, const float l2,
                              const float weight_decay) {
+  if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSE_UPDATE_PUT", false)) {
+    return false;
+  }
   if (!is_full_cache) { return false; }
   if (!enable_auto_mixed_precision) { return false; }
   if (!is_sgd) { return false; }
@@ -1098,7 +1101,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
       const OpNode* consumer = edge->dst_node();
       if (consumer->op().op_conf().has_user_conf()) {
         const user_op::UserOpConfWrapper update_op_conf(consumer->op().op_conf());
-        if (update_op_conf.op_type_name() != "embedding_update_placeholder") { continue; }
+        if (update_op_conf.op_type_name() != "embedding_lookup_placeholder_grad") { continue; }
         if (update_op_conf.attr<std::string>("embedding_name")
             != embedding_op.attr<std::string>("embedding_name")) {
           continue;

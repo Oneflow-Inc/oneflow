@@ -476,7 +476,6 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
 
 /* static */ Maybe<void> EmbeddingLookupPlaceholderGradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("shadow_grad", 0) = Shape({1});
   return Maybe<void>::Ok();
 }
 
@@ -487,16 +486,14 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
 
 /* static */ Maybe<void> EmbeddingLookupPlaceholderGradOp::GetSbp(user_op::SbpContext* ctx) {
   auto builder = ctx->NewBuilder()
-                     .Broadcast(user_op::OpArg("shadow_grad", 0))  // to skip boxing
-                     .Split(user_op::OpArg("ids", 0), 0)
-                     .Split(user_op::OpArg("embedding_grad", 0), 0);
+                     .Split(user_op::OpArg("embedding_grad", 0), 0)  // to skip boxing
+                     .Split(user_op::OpArg("ids", 0), 0);
   builder.Build();
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> EmbeddingLookupPlaceholderGradOp::InferDataType(
     user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("shadow_grad", 0) = DataType::kFloat;
   return Maybe<void>::Ok();
 }
 

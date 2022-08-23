@@ -3513,11 +3513,10 @@ class OneEmbeddingLookupGradFunctor {
     op_ = CHECK_JUST(one::OpBuilder("embedding_lookup_placeholder_grad")
                          .Input("ids")
                          .Input("embedding_grad")
-                         .Output("shadow_grad")
                          .Build());
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& ids,
+  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ids,
                            const std::shared_ptr<one::Tensor>& embedding_grad,
                            const std::string& embedding_name, const int64_t line_size,
                            const int64_t embedding_size) const {
@@ -3525,7 +3524,8 @@ class OneEmbeddingLookupGradFunctor {
     JUST(attrs.SetAttr<std::string>("embedding_name", embedding_name));
     JUST(attrs.SetAttr<int64_t>("line_size", line_size));
     JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {ids, embedding_grad}, attrs);
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ids, embedding_grad}, attrs));
+    return Maybe<void>::Ok();
   }
 
  private:
