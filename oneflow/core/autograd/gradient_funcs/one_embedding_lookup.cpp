@@ -22,13 +22,9 @@ namespace one {
 
 struct OneEmbeddingLookupCaptureState : public AutoGradCaptureState {
   bool requires_grad{};
-<<<<<<< HEAD
   std::string embedding_name{};
   int64_t line_size{};
   int64_t embedding_size{};
-=======
-  std::string key_value_store_options{};
->>>>>>> 98679eb739c78a2e2238c6811de05d3d9ea9af1f
   int shadow_index{};
   int ids_index{};
   int input_num{};
