@@ -104,6 +104,8 @@ size_t GetAvailableGpuMemSize(int dev_id) {
 
 namespace {
 
+static std::vector<cudaDeviceProp> device_properties;
+
 std::function<cudaError_t(void**, size_t)> GetCudaMallocHostFn(int32_t dev) {
   auto default_fn = [](void** ptr, size_t size) { return cudaMallocHost(ptr, size); };
   auto manager = Singleton<hardware::NodeDeviceDescriptorManager>::Get();
@@ -199,14 +201,26 @@ Maybe<double> GetCUDAMemoryUsed() {
   return (total_memory - free_memory);
 }
 
+void InitDeviceProperties(int device_id) {
+    cudaDeviceProp prop {};
+    cudaGetDeviceProperties(&prop, device_id);
+    device_properties[device_id] = prop;
+}
+
+cudaDeviceProp* GetDeviceProperties(int device_id) {
+    return &device_properties[device_id];
+}
+
 void InitCudaContextOnce(int device_id) {
   static int device_count = GetCudaDeviceCount();
   static std::vector<std::once_flag> init_flags = std::vector<std::once_flag>(device_count);
+  device_properties.resize(device_count);
   if (LazyMode::is_enabled()) { return; }
   if (device_id == -1) { device_id = GetCudaDeviceIndex(); }
   std::call_once(init_flags[device_id], [&]() {
     OF_CUDA_CHECK(cudaSetDevice(device_id));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
+    InitDeviceProperties(device_id);
   });
 }
 

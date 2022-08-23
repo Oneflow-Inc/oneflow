@@ -28,6 +28,26 @@ namespace py = pybind11;
 
 namespace oneflow {
 
+void RegisterCudaDeviceProperties(py::module& m) {
+  py::class_<cudaDeviceProp>(m, "_CudaDeviceProperties")
+    .def(py::init<int>())
+    .def_readonly("name", &cudaDeviceProp::name)
+    .def_readonly("major", &cudaDeviceProp::major)
+    .def_readonly("minor", &cudaDeviceProp::minor)
+    .def_readonly("is_multi_gpu_board", &cudaDeviceProp::isMultiGpuBoard)
+    .def_readonly("is_integrated", &cudaDeviceProp::integrated)
+    .def_readonly("multi_processor_count", &cudaDeviceProp::multiProcessorCount)
+    .def_readonly("total_memory", &cudaDeviceProp::totalGlobalMem)
+    .def("__repr__", [](const cudaDeviceProp &prop) {
+      std::ostringstream stream;
+      stream << "_CudaDeviceProperties(name='" << prop.name << "', major=" << prop.major
+             << ", minor=" << prop.minor << ", total_memory=" << prop.totalGlobalMem / (1024 *
+             1024)
+             << "MB, multi_processor_count=" << prop.multiProcessorCount << ")";
+      return stream.str();
+    });
+}
+
 Maybe<void> SwitchToShuttingDownPhase(EnvGlobalObjectsScope* env, bool is_normal_exit) {
   if (is_normal_exit) {
     JUST(vm::ClusterSync());
@@ -48,6 +68,12 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::init<const std::string&>())
       .def("SwitchToShuttingDownPhase", &SwitchToShuttingDownPhase,
            py::call_guard<py::gil_scoped_release>());
+
+  RegisterCudaDeviceProperties(m);
+  m.def("_get_", &CurrentMachineId);
+  m.def("_get_device_properties", [](int device) -> cudaDeviceProp * {
+    return GetDeviceProperties(device);
+  }, py::return_value_policy::reference);
 
   m.def("CurrentMachineId", &CurrentMachineId);
 
