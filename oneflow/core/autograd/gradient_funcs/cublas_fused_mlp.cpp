@@ -86,7 +86,7 @@ Maybe<void> CublasFusedMLP::Capture(CublasFusedMLPCaptureState* ctx, const Tenso
   }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->skip_final_activation = JUST(composed_attrs.GetAttr<bool>("skip_final_activation"));
+  ctx->skip_final_activation = JUST(composed_attrs.Attr<bool>("skip_final_activation"));
 
   return Maybe<void>::Ok();
 }

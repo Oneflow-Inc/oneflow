@@ -55,11 +55,11 @@ Maybe<void> Upsample::Capture(UpsampleCaptureState* ctx, const TensorTuple& inpu
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->height_scale = JUST(composed_attrs.GetAttr<double>("height_scale"));
-  ctx->width_scale = JUST(composed_attrs.GetAttr<double>("width_scale"));
-  ctx->align_corners = JUST(composed_attrs.GetAttr<bool>("align_corners"));
-  ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
-  ctx->interpolation = JUST(composed_attrs.GetAttr<std::string>("interpolation"));
+  ctx->height_scale = JUST(composed_attrs.Attr<double>("height_scale"));
+  ctx->width_scale = JUST(composed_attrs.Attr<double>("width_scale"));
+  ctx->align_corners = JUST(composed_attrs.Attr<bool>("align_corners"));
+  ctx->data_format = JUST(composed_attrs.Attr<std::string>("data_format"));
+  ctx->interpolation = JUST(composed_attrs.Attr<std::string>("interpolation"));
   ctx->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
 }
@@ -98,12 +98,12 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DCaptureStat
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->height_scale = JUST(composed_attrs.GetAttr<double>("height_scale"));
-    ctx->width_scale = JUST(composed_attrs.GetAttr<double>("width_scale"));
-    if (composed_attrs.HasAttr4Name("output_size")) {
-      ctx->output_size = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("output_size"));
+    ctx->height_scale = JUST(composed_attrs.Attr<double>("height_scale"));
+    ctx->width_scale = JUST(composed_attrs.Attr<double>("width_scale"));
+    if (composed_attrs.Has("output_size")) {
+      ctx->output_size = JUST(composed_attrs.Attr<std::vector<int64_t>>("output_size"));
     }
-    ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
+    ctx->data_format = JUST(composed_attrs.Attr<std::string>("data_format"));
     ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -147,13 +147,13 @@ class UpsampleBilinear2D : public OpExprGradFunction<UpsampleBilinear2DCaptureSt
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->height_scale = JUST(composed_attrs.GetAttr<double>("height_scale"));
-    ctx->width_scale = JUST(composed_attrs.GetAttr<double>("width_scale"));
-    ctx->align_corners = JUST(composed_attrs.GetAttr<bool>("align_corners"));
-    if (composed_attrs.HasAttr4Name("output_size")) {
-      ctx->output_size = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("output_size"));
+    ctx->height_scale = JUST(composed_attrs.Attr<double>("height_scale"));
+    ctx->width_scale = JUST(composed_attrs.Attr<double>("width_scale"));
+    ctx->align_corners = JUST(composed_attrs.Attr<bool>("align_corners"));
+    if (composed_attrs.Has("output_size")) {
+      ctx->output_size = JUST(composed_attrs.Attr<std::vector<int64_t>>("output_size"));
     }
-    ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
+    ctx->data_format = JUST(composed_attrs.Attr<std::string>("data_format"));
     ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -196,12 +196,12 @@ class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DCaptureState>
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->scale_factor = JUST(composed_attrs.GetAttr<double>("scale_factor"));
-    ctx->align_corners = JUST(composed_attrs.GetAttr<bool>("align_corners"));
-    if (composed_attrs.HasAttr4Name("output_size")) {
-      ctx->output_size = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("output_size"));
+    ctx->scale_factor = JUST(composed_attrs.Attr<double>("scale_factor"));
+    ctx->align_corners = JUST(composed_attrs.Attr<bool>("align_corners"));
+    if (composed_attrs.Has("output_size")) {
+      ctx->output_size = JUST(composed_attrs.Attr<std::vector<int64_t>>("output_size"));
     }
-    ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
+    ctx->data_format = JUST(composed_attrs.Attr<std::string>("data_format"));
     ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -243,11 +243,11 @@ class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DCaptureStat
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->scale_factor = JUST(composed_attrs.GetAttr<double>("scale_factor"));
-    if (composed_attrs.HasAttr4Name("output_size")) {
-      ctx->output_size = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("output_size"));
+    ctx->scale_factor = JUST(composed_attrs.Attr<double>("scale_factor"));
+    if (composed_attrs.Has("output_size")) {
+      ctx->output_size = JUST(composed_attrs.Attr<std::vector<int64_t>>("output_size"));
     }
-    ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
+    ctx->data_format = JUST(composed_attrs.Attr<std::string>("data_format"));
     ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -291,13 +291,13 @@ class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DCaptureStat
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->height_scale = JUST(composed_attrs.GetAttr<double>("height_scale"));
-    ctx->width_scale = JUST(composed_attrs.GetAttr<double>("width_scale"));
-    ctx->align_corners = JUST(composed_attrs.GetAttr<bool>("align_corners"));
-    if (composed_attrs.HasAttr4Name("output_size")) {
-      ctx->output_size = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("output_size"));
+    ctx->height_scale = JUST(composed_attrs.Attr<double>("height_scale"));
+    ctx->width_scale = JUST(composed_attrs.Attr<double>("width_scale"));
+    ctx->align_corners = JUST(composed_attrs.Attr<bool>("align_corners"));
+    if (composed_attrs.Has("output_size")) {
+      ctx->output_size = JUST(composed_attrs.Attr<std::vector<int64_t>>("output_size"));
     }
-    ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
+    ctx->data_format = JUST(composed_attrs.Attr<std::string>("data_format"));
     ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -340,13 +340,13 @@ class UpsampleNearest3D : public OpExprGradFunction<UpsampleNearest3DCaptureStat
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->depth_scale = JUST(composed_attrs.GetAttr<double>("depth_scale"));
-    ctx->height_scale = JUST(composed_attrs.GetAttr<double>("height_scale"));
-    ctx->width_scale = JUST(composed_attrs.GetAttr<double>("width_scale"));
-    if (composed_attrs.HasAttr4Name("output_size")) {
-      ctx->output_size = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("output_size"));
+    ctx->depth_scale = JUST(composed_attrs.Attr<double>("depth_scale"));
+    ctx->height_scale = JUST(composed_attrs.Attr<double>("height_scale"));
+    ctx->width_scale = JUST(composed_attrs.Attr<double>("width_scale"));
+    if (composed_attrs.Has("output_size")) {
+      ctx->output_size = JUST(composed_attrs.Attr<std::vector<int64_t>>("output_size"));
     }
-    ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
+    ctx->data_format = JUST(composed_attrs.Attr<std::string>("data_format"));
     ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -391,14 +391,14 @@ class UpsampleTrilinear3D : public OpExprGradFunction<UpsampleTrilinear3DCapture
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->depth_scale = JUST(composed_attrs.GetAttr<double>("depth_scale"));
-    ctx->height_scale = JUST(composed_attrs.GetAttr<double>("height_scale"));
-    ctx->width_scale = JUST(composed_attrs.GetAttr<double>("width_scale"));
-    ctx->align_corners = JUST(composed_attrs.GetAttr<bool>("align_corners"));
-    if (composed_attrs.HasAttr4Name("output_size")) {
-      ctx->output_size = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("output_size"));
+    ctx->depth_scale = JUST(composed_attrs.Attr<double>("depth_scale"));
+    ctx->height_scale = JUST(composed_attrs.Attr<double>("height_scale"));
+    ctx->width_scale = JUST(composed_attrs.Attr<double>("width_scale"));
+    ctx->align_corners = JUST(composed_attrs.Attr<bool>("align_corners"));
+    if (composed_attrs.Has("output_size")) {
+      ctx->output_size = JUST(composed_attrs.Attr<std::vector<int64_t>>("output_size"));
     }
-    ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
+    ctx->data_format = JUST(composed_attrs.Attr<std::string>("data_format"));
     ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }

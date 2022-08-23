@@ -50,7 +50,7 @@ Maybe<void> Diag::Capture(DiagCaptureState* ctx, const TensorTuple& inputs,
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->diagonal = JUST(composed_attrs.GetAttr<int32_t>("diagonal"));
+  ctx->diagonal = JUST(composed_attrs.Attr<int32_t>("diagonal"));
   ctx->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
 }

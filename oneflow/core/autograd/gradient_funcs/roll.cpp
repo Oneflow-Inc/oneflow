@@ -51,8 +51,8 @@ Maybe<void> Roll::Capture(RollCaptureState* ctx, const TensorTuple& inputs,
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->shifts = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("shifts"));
-  ctx->dims = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("dims"));
+  ctx->shifts = JUST(composed_attrs.Attr<std::vector<int32_t>>("shifts"));
+  ctx->dims = JUST(composed_attrs.Attr<std::vector<int32_t>>("dims"));
   return Maybe<void>::Ok();
 }
 

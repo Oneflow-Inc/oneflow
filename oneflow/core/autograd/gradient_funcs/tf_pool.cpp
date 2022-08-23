@@ -73,13 +73,13 @@ Maybe<void> TFPoolNdGrad::Capture(TFPoolCaptureState* ctx, const TensorTuple& in
   ctx->output_index = ctx->SaveTensorForBackward(outputs.at(0));
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
-  ctx->padding = JUST(composed_attrs.GetAttr<std::string>("padding"));
-  ctx->padding_before = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding_before"));
-  ctx->padding_after = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding_after"));
-  ctx->pool_size = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("pool_size"));
-  ctx->strides = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("strides"));
-  ctx->ceil_mode = JUST(composed_attrs.GetAttr<bool>("ceil_mode"));
+  ctx->data_format = JUST(composed_attrs.Attr<std::string>("data_format"));
+  ctx->padding = JUST(composed_attrs.Attr<std::string>("padding"));
+  ctx->padding_before = JUST(composed_attrs.Attr<std::vector<int32_t>>("padding_before"));
+  ctx->padding_after = JUST(composed_attrs.Attr<std::vector<int32_t>>("padding_after"));
+  ctx->pool_size = JUST(composed_attrs.Attr<std::vector<int32_t>>("pool_size"));
+  ctx->strides = JUST(composed_attrs.Attr<std::vector<int32_t>>("strides"));
+  ctx->ceil_mode = JUST(composed_attrs.Attr<bool>("ceil_mode"));
   return Maybe<void>::Ok();
 }
 

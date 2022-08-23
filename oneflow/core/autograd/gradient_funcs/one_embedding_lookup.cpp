@@ -38,7 +38,7 @@ class OneEmbeddingLookup : public OpExprGradFunction<OneEmbeddingLookupCaptureSt
     ctx->requires_grad = inputs.at(0)->requires_grad();            // shadow
     ctx->shadow_index = ctx->SaveTensorForBackward(inputs.at(0));  // shadow
     ctx->ids_index = ctx->SaveTensorForBackward(inputs.at(1));     // id
-    ctx->key_value_store_options = JUST(attrs.GetAttr<std::string>("key_value_store_options"));
+    ctx->key_value_store_options = JUST(attrs.Attr<std::string>("key_value_store_options"));
     ctx->input_num = inputs.size();
     return Maybe<void>::Ok();
   }

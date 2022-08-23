@@ -55,9 +55,9 @@ Maybe<void> AsStrided::Capture(AsStridedCaptureState* ctx, const TensorTuple& in
   ctx->SaveTensorForBackward(inputs.at(0));
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->size = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("size"));
-  ctx->stride = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("stride"));
-  ctx->storage_offset = JUST(composed_attrs.GetAttr<int32_t>("storage_offset"));
+  ctx->size = JUST(composed_attrs.Attr<std::vector<int32_t>>("size"));
+  ctx->stride = JUST(composed_attrs.Attr<std::vector<int32_t>>("stride"));
+  ctx->storage_offset = JUST(composed_attrs.Attr<int32_t>("storage_offset"));
   return Maybe<void>::Ok();
 }
 

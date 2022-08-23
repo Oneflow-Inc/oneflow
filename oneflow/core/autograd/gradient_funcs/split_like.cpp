@@ -52,7 +52,7 @@ Maybe<void> SplitLike::Capture(SplitLikeCaptureState* ctx, const TensorTuple& in
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->axis = JUST(composed_attrs.GetAttr<int64_t>("axis"));
+  ctx->axis = JUST(composed_attrs.Attr<int64_t>("axis"));
   for (int i = 0; i < outputs.size(); ++i) { ctx->SaveTensorForBackward(outputs.at(i)); }
   return Maybe<void>::Ok();
 }

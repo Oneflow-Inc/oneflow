@@ -57,7 +57,7 @@ Maybe<void> FusedDotFeatureInteraction::Capture(FusedDotFeatureInteractionCaptur
                                                 const TensorTuple& inputs,
                                                 const TensorTuple& outputs,
                                                 const AttrMap& attrs) const {
-  ctx->has_output_concat = JUST(attrs.GetAttr<bool>("has_output_concat"));
+  ctx->has_output_concat = JUST(attrs.Attr<bool>("has_output_concat"));
   int32_t num_features = 0;
   if (ctx->has_output_concat) {
     num_features = inputs.size() - 1;
@@ -77,9 +77,9 @@ Maybe<void> FusedDotFeatureInteraction::Capture(FusedDotFeatureInteractionCaptur
     if (feature->requires_grad()) { ctx->need_grad_op = true; }
     ctx->SaveTensorForBackward(feature);
   }
-  ctx->pooling = JUST(attrs.GetAttr<std::string>("pooling"));
+  ctx->pooling = JUST(attrs.Attr<std::string>("pooling"));
   if (!ctx->need_grad_op) { return Maybe<void>::Ok(); }
-  ctx->self_interaction = JUST(attrs.GetAttr<bool>("self_interaction"));
+  ctx->self_interaction = JUST(attrs.Attr<bool>("self_interaction"));
   return Maybe<void>::Ok();
 }
 

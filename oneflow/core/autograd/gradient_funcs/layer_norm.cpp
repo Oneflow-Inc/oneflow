@@ -67,11 +67,11 @@ Maybe<void> LayerNorm::Init(const OpExpr& op) {
 Maybe<void> LayerNorm::Capture(LayerNormCaptureState* ctx, const TensorTuple& inputs,
                                const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->center = JUST(composed_attrs.GetAttr<bool>("center"));
-  ctx->scale = JUST(composed_attrs.GetAttr<bool>("scale"));
-  ctx->begin_norm_axis = JUST(composed_attrs.GetAttr<int64_t>("begin_norm_axis"));
-  ctx->begin_params_axis = JUST(composed_attrs.GetAttr<int64_t>("begin_params_axis"));
-  ctx->epsilon = JUST(composed_attrs.GetAttr<double>("epsilon"));
+  ctx->center = JUST(composed_attrs.Attr<bool>("center"));
+  ctx->scale = JUST(composed_attrs.Attr<bool>("scale"));
+  ctx->begin_norm_axis = JUST(composed_attrs.Attr<int64_t>("begin_norm_axis"));
+  ctx->begin_params_axis = JUST(composed_attrs.Attr<int64_t>("begin_params_axis"));
+  ctx->epsilon = JUST(composed_attrs.Attr<double>("epsilon"));
 
   CHECK_EQ_OR_RETURN(inputs.size(), ctx->center + ctx->scale + 1);  // NOLINT(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(outputs.size(), 3);                            // NOLINT(maybe-need-error-msg)

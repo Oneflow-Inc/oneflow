@@ -48,9 +48,9 @@ class Narrow : public OpExprGradFunction<NarrowCaptureState> {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->dim = JUST(composed_attrs.GetAttr<int64_t>("dim"));
-    ctx->start = JUST(composed_attrs.GetAttr<int64_t>("start"));
-    ctx->length = JUST(composed_attrs.GetAttr<int64_t>("length"));
+    ctx->dim = JUST(composed_attrs.Attr<int64_t>("dim"));
+    ctx->start = JUST(composed_attrs.Attr<int64_t>("start"));
+    ctx->length = JUST(composed_attrs.Attr<int64_t>("length"));
     if (LazyMode::is_enabled()) {
       ctx->SaveTensorForBackward(inputs.at(0));
     } else {

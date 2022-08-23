@@ -51,7 +51,7 @@ class FusedCrossFeatureInteraction
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 4) << "Input size should be equal to 4. ";
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->interaction_mode = JUST(composed_attrs.GetAttr<std::string>("interaction_mode"));
+    ctx->interaction_mode = JUST(composed_attrs.Attr<std::string>("interaction_mode"));
     ctx->x_requires_grad = JUST(oneflow::VectorAt(inputs, 0))->requires_grad();
     ctx->weight_requires_grad = JUST(oneflow::VectorAt(inputs, 1))->requires_grad();
     ctx->x_requires_grad = JUST(oneflow::VectorAt(inputs, 2))->requires_grad();

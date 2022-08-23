@@ -51,7 +51,7 @@ Maybe<void> BinaryCrossEntropyWithLogits::Capture(BinaryCrossEntropyWithLogitsCa
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->has_pos_weight = JUST(composed_attrs.GetAttr<bool>("has_pos_weight"));
+  ctx->has_pos_weight = JUST(composed_attrs.Attr<bool>("has_pos_weight"));
   ctx->SaveTensorForBackward(inputs.at(0));  // input
   ctx->SaveTensorForBackward(inputs.at(1));  // target
   if (inputs.size() == 3) {

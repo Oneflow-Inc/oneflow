@@ -72,9 +72,9 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
     ctx->beta_requires_grad = beta->requires_grad();
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
 
-    ctx->axis = JUST(composed_attrs.GetAttr<int32_t>("axis"));
-    ctx->epsilon = JUST(composed_attrs.GetAttr<float>("epsilon"));
-    ctx->is_training = JUST(composed_attrs.GetAttr<bool>("training"));
+    ctx->axis = JUST(composed_attrs.Attr<int32_t>("axis"));
+    ctx->epsilon = JUST(composed_attrs.Attr<float>("epsilon"));
+    ctx->is_training = JUST(composed_attrs.Attr<bool>("training"));
     ctx->SaveTensorForBackward(inputs.at(0));  // x
     ctx->SaveTensorForBackward(gamma);         // gamma
     if (ctx->is_training || !ctx->track_running_stats) {

@@ -19,45 +19,47 @@ limitations under the License.
 #include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/framework/cached_attr_map.h"
+#include "oneflow/core/framework/mutable_attr_map.h"
 
 namespace oneflow {
 
-constexpr int AttrMap::kInitializedSize;
+AttrMap::AttrMap() : internal_(std::make_shared<AttrMap::AttrInternal>()) {}
 
-AttrMap::AttrMap() : internal_(std::make_shared<AttrMap::>()) {}
-
-AttrMap::AttrMap(const CachedMutableAttrMap& other) : internal_(std::make_shared<AttrMap::>()) {
-  internal_->capacity = other.size();
-  internal_->hash_value = other.hash_value();
-  internal_->attr_names = other.attr_names();
-  internal_->attrs.resize(internal_->capacity);
-  for (int i = 0; i < internal_->capacity; ++i) {
+AttrMap::AttrMap(const MutableAttrMap& other)
+    : internal_(std::make_shared<AttrMap::AttrInternal>()) {
+  internal_->max_size = other.max_size();
+  internal_->ordered_attr_names = other.ordered_attr_names();
+  internal_->attrs.resize(internal_->max_size);
+  for (int i = 0; i < internal_->max_size; ++i) {
     internal_->attrs[i].second = other.valid_masks()[i];
     if (other.valid_masks()[i]) {
       ++(internal_->size);
       internal_->attrs[i].first = other.attrs()[i];
+
+      HashCombine(&internal_->hash_value, (*internal_->ordered_attr_names)[i].size());
+      HashCombine(&internal_->hash_value, other.attrs()[i]->hash_value());
     }
   }
 }
 
-AttrMap::AttrMap(const UserOpConf& user_op_conf) : internal_(std::make_shared<AttrMap::>()) {
-  internal_->attr_names.reset(new small_vector<std::string, kInitializedSize>());
-  for (const auto& kv : user_op_conf.attr()) {
+AttrMap::AttrMap(const UserOpConf& user_conf)
+    : internal_(std::make_shared<AttrMap::AttrInternal>()) {
+  internal_->ordered_attr_names.reset(new OrderedStringList);
+  for (const auto& kv : user_conf.attr()) {
     auto cpp_attr_value = user_op::AttrValueUtil::ToCppAttrValue(kv.second);
     if (cpp_attr_value.IsOk()) {
       ++(internal_->size);
-      internal_->attr_names->emplace_back(kv.first);
+      internal_->ordered_attr_names->emplace_back(kv.first);
       internal_->attrs.emplace_back(CHECK_JUST(cpp_attr_value), true);
 
       HashCombine(&internal_->hash_value, kv.first.size());
       HashCombine(&internal_->hash_value, internal_->attrs.back().first->hash_value());
     } else {
-      LOG(ERROR) << user_op_conf.DebugString()
+      LOG(ERROR) << user_conf.DebugString()
                  << " failed to convert to cpp attr value, key: " << kv.first;
     }
   }
-  internal_->capacity = internal_->size;
+  internal_->max_size = internal_->size;
 }
 
 AttrMap& AttrMap::operator=(const AttrMap& other) {
@@ -73,7 +75,9 @@ bool AttrMap::operator==(const AttrMap& other) const {
   for (int i = 0; i < std::min(internal_->size, other.internal_->size); ++i) {
     if (internal_->attrs[i].second != other.internal_->attrs[i].second) { return false; }
     if (internal_->attrs[i].second) {
-      if ((*internal_->attr_names)[i] != (*other.internal_->attr_names)[i]) { return false; }
+      if ((*internal_->ordered_attr_names)[i] != (*other.internal_->ordered_attr_names)[i]) {
+        return false;
+      }
       if (*(internal_->attrs[i].first) != *(other.internal_->attrs[i].first)) { return false; }
     }
   }
@@ -81,7 +85,7 @@ bool AttrMap::operator==(const AttrMap& other) const {
 }
 
 template<typename T>
-Maybe<const T&> AttrMap::GetAttr(const std::string& attr_name) const {
+Maybe<const T&> AttrMap::Attr(const std::string& attr_name) const {
   const auto& attr = Attr4Name(attr_name);
   CHECK_OR_RETURN(attr) << Error::InvalidValueError()
                         << "no attribute found. attribute name: " << attr_name;
@@ -92,20 +96,15 @@ Maybe<const T&> AttrMap::GetAttr(const std::string& attr_name) const {
 
 const std::shared_ptr<const user_op::AttrVal>& AttrMap::Attr4Name(
     const std::string& attr_name) const {
-  for (int i = 0; i < internal_->capacity; ++i) {
-    if (internal_->attrs[i].second && attr_name == (*internal_->attr_names)[i]) {
-      return internal_->attrs[i].first;
-    }
-  }
+  int idx = internal_->ordered_attr_names->order(attr_name);
+  if (idx >= 0) { return internal_->attrs[idx].first; }
   static const std::shared_ptr<const user_op::AttrVal> none;
   return none;
 }
 
-bool AttrMap::HasAttr4Name(const std::string& attr_name) const {
-  return Attr4Name(attr_name) != nullptr;
-}
+bool AttrMap::Has(const std::string& attr_name) const { return Attr4Name(attr_name) != nullptr; }
 
-AttrMap::const_iterator::const_iterator(size_t pos, const AttrMap::*internal)
+AttrMap::const_iterator::const_iterator(size_t pos, const AttrMap::AttrInternal* internal)
     : pos_(pos), internal_(internal) {
   UpdateKV();
 }
@@ -117,20 +116,20 @@ AttrMap::const_iterator& AttrMap::const_iterator::operator++() {
 }
 
 void AttrMap::const_iterator::UpdateKV() {
-  while (pos_ < internal_->capacity) {
+  while (pos_ < internal_->max_size) {
     if (internal_->attrs[pos_].second) { break; }
     ++pos_;
   }
-  if (pos_ < internal_->capacity) {
-    kv_.first = (*internal_->attr_names)[pos_];
+  if (pos_ < internal_->max_size) {
+    kv_.first = (*internal_->ordered_attr_names)[pos_];
     kv_.second = internal_->attrs[pos_].first;
   }
 }
 
-AttrMap MakeAttrMapFromUserOpConf(const UserOpConf& user_op_conf) { return AttrMap(user_op_conf); }
+AttrMap MakeAttrMapFromUserOpConf(const UserOpConf& user_conf) { return AttrMap(user_conf); }
 
 template<typename T>
-Maybe<const T&> ComposedAttrMap::GetAttr(const std::string& attr_name) const {
+Maybe<const T&> ComposedAttrMap::Attr(const std::string& attr_name) const {
   const auto& attr = Attr4Name(attr_name);
   CHECK_OR_RETURN(attr) << Error::InvalidValueError()
                         << "no attribute found. attribute name: " << attr_name;
@@ -144,13 +143,13 @@ const std::shared_ptr<const user_op::AttrVal>& ComposedAttrMap::Attr4Name(
   return base_.Attr4Name(attr_name);
 }
 
-bool ComposedAttrMap::HasAttr4Name(const std::string& attr_name) const {
+bool ComposedAttrMap::Has(const std::string& attr_name) const {
   return Attr4Name(attr_name) != nullptr;
 }
 
-#define DEFINE_ATTR_VALUE_MAP_GET_ATTR(field, T, attr_type)                         \
-  template Maybe<const T&> AttrMap::GetAttr<T>(const std::string& attr_name) const; \
-  template Maybe<const T&> ComposedAttrMap::GetAttr<T>(const std::string& attr_name) const;
+#define DEFINE_ATTR_VALUE_MAP_GET_ATTR(field, T, attr_type)                      \
+  template Maybe<const T&> AttrMap::Attr<T>(const std::string& attr_name) const; \
+  template Maybe<const T&> ComposedAttrMap::Attr<T>(const std::string& attr_name) const;
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_ATTR_VALUE_MAP_GET_ATTR, ATTR_SEQ);
 #undef DEFINE_ATTR_VALUE_MAP_GET_ATTR

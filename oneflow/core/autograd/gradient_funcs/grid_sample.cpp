@@ -53,9 +53,9 @@ class GridSample : public OpExprGradFunction<GridSampleInterpState> {
     ctx->grid_index = ctx->SaveTensorForBackward(inputs.at(1));   // grid
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->interpolation_mode = JUST(composed_attrs.GetAttr<std::string>("interpolation_mode"));
-    ctx->padding_mode = JUST(composed_attrs.GetAttr<std::string>("padding_mode"));
-    ctx->align_corners = JUST(composed_attrs.GetAttr<bool>("align_corners"));
+    ctx->interpolation_mode = JUST(composed_attrs.Attr<std::string>("interpolation_mode"));
+    ctx->padding_mode = JUST(composed_attrs.Attr<std::string>("padding_mode"));
+    ctx->align_corners = JUST(composed_attrs.Attr<bool>("align_corners"));
     return Maybe<void>::Ok();
   }
 

@@ -55,7 +55,7 @@ Maybe<void> FusedScaleMaskSoftmax::Capture(FusedScaleMaskSoftmaxInterState* ctx,
 
   if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->scale = JUST(composed_attrs.GetAttr<float>("scale_value"));
+  ctx->scale = JUST(composed_attrs.Attr<float>("scale_value"));
 
   ctx->SaveTensorForBackward(inputs.at(1));   // save mask
   ctx->SaveTensorForBackward(outputs.at(0));  // save y, ie. softmax result

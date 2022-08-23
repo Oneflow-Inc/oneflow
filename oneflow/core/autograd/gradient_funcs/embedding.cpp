@@ -57,8 +57,8 @@ Maybe<void> Embedding::Capture(EmbeddingCaptureState* ctx, const TensorTuple& in
   ctx->SaveTensorForBackward(JUST(oneflow::VectorAt(inputs, 1)));
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->padding_idx = JUST(composed_attrs.GetAttr<int64_t>("padding_idx"));
-  ctx->scale_grad_by_freq = JUST(composed_attrs.GetAttr<bool>("scale_grad_by_freq"));
+  ctx->padding_idx = JUST(composed_attrs.Attr<int64_t>("padding_idx"));
+  ctx->scale_grad_by_freq = JUST(composed_attrs.Attr<bool>("scale_grad_by_freq"));
   return Maybe<void>::Ok();
 }
 

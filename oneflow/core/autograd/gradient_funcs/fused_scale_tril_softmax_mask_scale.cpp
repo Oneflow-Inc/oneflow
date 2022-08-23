@@ -58,9 +58,9 @@ Maybe<void> FusedScaleTrilSoftmaxMaskScale::Capture(FusedScaleTrilSoftmaxMaskSca
 
   if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->diagonal = JUST(composed_attrs.GetAttr<int64_t>("diagonal"));
-  ctx->tril_scale_value = JUST(composed_attrs.GetAttr<float>("tril_scale_value"));
-  ctx->mask_scale_value = JUST(composed_attrs.GetAttr<float>("mask_scale_value"));
+  ctx->diagonal = JUST(composed_attrs.Attr<int64_t>("diagonal"));
+  ctx->tril_scale_value = JUST(composed_attrs.Attr<float>("tril_scale_value"));
+  ctx->mask_scale_value = JUST(composed_attrs.Attr<float>("mask_scale_value"));
   ctx->SaveTensorForBackward(inputs.at(1));   // Save Mask
   ctx->SaveTensorForBackward(outputs.at(1));  // Save softmax_y
   return Maybe<void>::Ok();

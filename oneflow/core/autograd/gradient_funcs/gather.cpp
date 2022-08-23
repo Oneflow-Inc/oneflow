@@ -54,7 +54,7 @@ Maybe<void> Gather::Capture(GatherCaptureState* ctx, const TensorTuple& inputs,
   ctx->SaveTensorForBackward(inputs.at(1));
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->axis = JUST(composed_attrs.GetAttr<int64_t>("axis"));
+  ctx->axis = JUST(composed_attrs.Attr<int64_t>("axis"));
   return Maybe<void>::Ok();
 }
 

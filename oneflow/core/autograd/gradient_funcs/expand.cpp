@@ -51,9 +51,9 @@ Maybe<void> Expand::Capture(ExpandCaptureState* ctx, const TensorTuple& inputs,
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->logical_out_shape = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("logical_in_shape"));
+  ctx->logical_out_shape = JUST(composed_attrs.Attr<std::vector<int32_t>>("logical_in_shape"));
   ctx->logical_expand_shape =
-      JUST(composed_attrs.GetAttr<std::vector<int32_t>>("logical_expand_shape"));
+      JUST(composed_attrs.Attr<std::vector<int32_t>>("logical_expand_shape"));
   return Maybe<void>::Ok();
 }
 

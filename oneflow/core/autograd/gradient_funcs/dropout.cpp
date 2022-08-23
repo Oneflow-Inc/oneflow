@@ -50,7 +50,7 @@ Maybe<void> Dropout::Capture(DropoutCaptureState* ctx, const TensorTuple& inputs
   ctx->requires_grad = inputs.at(0)->requires_grad();
 
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  ctx->rate = JUST(composed_attrs.GetAttr<float>("rate"));
+  ctx->rate = JUST(composed_attrs.Attr<float>("rate"));
 
   if (inputs.size() == 1) {
     ctx->has_addend = false;

@@ -72,13 +72,13 @@ Maybe<void> MaxPoolNdGrad::Capture(MaxPoolCaptureState* ctx, const TensorTuple& 
   ctx->indice_index = ctx->SaveTensorForBackward(outputs.at(1));
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
-  ctx->padding = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding"));
-  ctx->kernel_size = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("kernel_size"));
-  ctx->stride = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("stride"));
-  ctx->dilation = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("dilation"));
-  ctx->return_indices = JUST(composed_attrs.GetAttr<bool>("return_indices"));
-  ctx->ceil_mode = JUST(composed_attrs.GetAttr<bool>("ceil_mode"));
+  ctx->data_format = JUST(composed_attrs.Attr<std::string>("data_format"));
+  ctx->padding = JUST(composed_attrs.Attr<std::vector<int32_t>>("padding"));
+  ctx->kernel_size = JUST(composed_attrs.Attr<std::vector<int32_t>>("kernel_size"));
+  ctx->stride = JUST(composed_attrs.Attr<std::vector<int32_t>>("stride"));
+  ctx->dilation = JUST(composed_attrs.Attr<std::vector<int32_t>>("dilation"));
+  ctx->return_indices = JUST(composed_attrs.Attr<bool>("return_indices"));
+  ctx->ceil_mode = JUST(composed_attrs.Attr<bool>("ceil_mode"));
   return Maybe<void>::Ok();
 }
 

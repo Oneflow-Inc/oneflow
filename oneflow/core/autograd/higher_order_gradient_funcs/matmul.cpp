@@ -50,7 +50,7 @@ class BroadcastMatmulGradBGrad : public OpExprGradFunction<BroadcastMatmulGradBG
     if (ctx->b_requires_grad) { ctx->a_index = ctx->SaveTensorForBackward(inputs.at(0)); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->alpha = JUST(composed_attrs.GetAttr<double>("alpha"));
+    ctx->alpha = JUST(composed_attrs.Attr<double>("alpha"));
 
     return Maybe<void>::Ok();
   }

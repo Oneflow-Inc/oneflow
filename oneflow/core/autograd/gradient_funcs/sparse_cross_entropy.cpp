@@ -45,7 +45,7 @@ class SparseCrossEntropy : public OpExprGradFunction<SparseCrossEntropyCaptureSt
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->depth = JUST(composed_attrs.GetAttr<int64_t>("depth"));
+    ctx->depth = JUST(composed_attrs.Attr<int64_t>("depth"));
     ctx->prediction_index = ctx->SaveTensorForBackward(inputs.at(0));  // prediction
     ctx->label_index = ctx->SaveTensorForBackward(inputs.at(1));       // label
     return Maybe<void>::Ok();

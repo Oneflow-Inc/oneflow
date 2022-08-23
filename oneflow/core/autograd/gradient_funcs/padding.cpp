@@ -42,7 +42,7 @@ class PadNd : public OpExprGradFunction<PadNdCaptureState> {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->paddings = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("padding"));
+    ctx->paddings = JUST(composed_attrs.Attr<std::vector<int64_t>>("padding"));
     return Maybe<void>::Ok();
   }
 
@@ -101,7 +101,7 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->paddings = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("padding"));
+    ctx->paddings = JUST(composed_attrs.Attr<std::vector<int64_t>>("padding"));
     for (int i = 0; i < ctx->paddings.size(); i++) { ctx->paddings[i] = -ctx->paddings[i]; }
     return Maybe<void>::Ok();
   }

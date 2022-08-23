@@ -39,7 +39,7 @@ class ConvBiasGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy, const int32_t& num_spatial_dims,
                            const std::string& data_format) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"num_spatial_dims", "data_format"});
     attrs.SetAttr<int32_t>("num_spatial_dims", num_spatial_dims);
     attrs.SetAttr<std::string>("data_format", data_format);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, attrs);
@@ -62,7 +62,9 @@ class ConvFilterGradFunctor {
                            const std::vector<int32_t>& padding_before,
                            const std::vector<int32_t>& dilation_rate, const int32_t& groups,
                            const std::string& data_format) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"num_spatial_dims", "kernel_size", "strides",
+                                                  "padding_before", "dilation_rate", "groups",
+                                                  "data_format"});
     attrs.SetAttr<int32_t>("num_spatial_dims", num_spatial_dims);
     attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size);
     attrs.SetAttr<std::vector<int32_t>>("strides", strides);
@@ -95,7 +97,9 @@ class ConvDataGradFunctor {
                            const std::vector<int32_t>& padding_before,
                            const std::vector<int32_t>& dilation_rate, const int32_t& groups,
                            const std::string& data_format) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"num_spatial_dims", "kernel_size", "strides",
+                                                  "padding_before", "dilation_rate", "groups",
+                                                  "data_format"});
     attrs.SetAttr<int32_t>("num_spatial_dims", num_spatial_dims);
     attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size);
     attrs.SetAttr<std::vector<int32_t>>("strides", strides);
@@ -124,7 +128,7 @@ class EmbeddingGradFunctor {
                            const std::shared_ptr<one::Tensor>& weight,
                            const std::shared_ptr<one::Tensor>& indices, const int64_t& padding_idx,
                            const bool& scale_grad_by_freq) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"padding_idx", "scale_grad_by_freq"});
     attrs.SetAttr<int64_t>("padding_idx", padding_idx);
     attrs.SetAttr<bool>("scale_grad_by_freq", scale_grad_by_freq);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, weight, indices}, attrs);
@@ -153,7 +157,8 @@ class MaxPoolNdGradFunctor {
                            const std::vector<int32_t>& kernel_size,
                            const std::vector<int32_t>& stride, const std::vector<int32_t>& dilation,
                            const bool& return_indices, const bool& ceil_mode) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"data_format", "padding", "kernel_size", "stride",
+                                                  "dilation", "return_indices", "ceil_mode"});
     attrs.SetAttr<std::string>("data_format", data_format);
     attrs.SetAttr<std::vector<int32_t>>("padding", padding);
     attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size);
@@ -196,7 +201,9 @@ class TFPoolNdGradFunctor {
                            const std::vector<int32_t>& padding_after,
                            const std::vector<int32_t>& pool_size,
                            const std::vector<int32_t>& strides, const bool& ceil_mode) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP({"data_format", "padding", "padding_before", "padding_after",
+                                        "pool_size", "strides", "ceil_mode"});
     attrs.SetAttr<std::string>("data_format", data_format);
     attrs.SetAttr<std::string>("padding", padding);
     attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before);
@@ -260,7 +267,7 @@ class SparseCrossEntropyGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& prediction,
                            const std::shared_ptr<one::Tensor>& label,
                            const std::shared_ptr<one::Tensor>& dy, const int64_t& depth) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"depth"});
     attrs.SetAttr<int64_t>("depth", depth);
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {prediction, label, dy}, attrs);
@@ -283,7 +290,7 @@ class SparseCrossEntropyMsGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& prediction,
                            const std::shared_ptr<one::Tensor>& label,
                            const std::shared_ptr<one::Tensor>& dy, const int64_t& depth) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"depth"});
     attrs.SetAttr<int64_t>("depth", depth);
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {prediction, label, dy}, attrs);
@@ -307,7 +314,7 @@ class SparseSoftmaxCrossEntropyGrad {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& prob,
                            const std::shared_ptr<one::Tensor>& label, const int64_t& depth) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"depth"});
     attrs.SetAttr<int64_t>("depth", depth);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {prob, label, dy}, attrs);
   }
@@ -330,7 +337,7 @@ class SparseSoftmaxCrossEntropyMsGrad {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& prob,
                            const std::shared_ptr<one::Tensor>& label, const int64_t& depth) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"depth"});
     attrs.SetAttr<int64_t>("depth", depth);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {prob, label, dy}, attrs);
   }
@@ -352,7 +359,7 @@ class SmoothL1LossGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target, const float& beta) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"beta"});
     attrs.SetAttr<float>("beta", beta);
 
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, input, target}, attrs);
@@ -376,7 +383,7 @@ class KLDivLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
                            const bool log_target) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"log_target"});
     attrs.SetAttr<bool>("log_target", log_target);
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, target, dy}, attrs);
@@ -409,7 +416,7 @@ class NLLGradFunctor {
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight, const int64_t ignore_index) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"ignore_index"});
     attrs.SetAttr<int64_t>("ignore_index", ignore_index);
 
     if (weight) {
@@ -446,12 +453,10 @@ class BinaryCrossEntropyLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
     if (weight) {
-      return OpInterpUtil::Dispatch<one::Tensor>(*op_weight_, {input, target, JUST(weight), dy},
-                                                 attrs);
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_weight_, {input, target, JUST(weight), dy});
     } else {
-      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {input, target, dy}, attrs);
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {input, target, dy});
     }
   }
 
@@ -497,7 +502,7 @@ class BinaryCrossEntropyWithLogitsLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight,
                            const Optional<one::Tensor>& pos_weight) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"has_pos_weight"});
     attrs.SetAttr<bool>("has_pos_weight", pos_weight.has_value());
 
     if (weight) {
@@ -561,7 +566,7 @@ class CombinedMarginLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& label,
                            const std::shared_ptr<one::Tensor>& theta, const float& m1,
                            const float& m2, const float& m3, const int64_t& depth) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"m1", "m2", "m3", "depth"});
     attrs.SetAttr<float>("m1", m1);
     attrs.SetAttr<float>("m2", m2);
     attrs.SetAttr<float>("m3", m3);
@@ -580,7 +585,7 @@ class AffineGridGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dgrid, const Shape& size,
                            const bool& align_corners) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"size", "align_corners"});
     attrs.SetAttr<Shape>("size", size);
     attrs.SetAttr<bool>("align_corners", align_corners);
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dgrid}, attrs);
@@ -606,7 +611,8 @@ class GridSampleGradFunctor {
                                 const std::shared_ptr<one::Tensor>& grid,
                                 const std::string& interpolation_mode,
                                 const std::string& padding_mode, const bool& align_corners) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP({"interpolation_mode", "padding_mode", "align_corners"});
     attrs.SetAttr<std::string>("interpolation_mode", interpolation_mode);
     attrs.SetAttr<std::string>("padding_mode", padding_mode);
     attrs.SetAttr<bool>("align_corners", align_corners);
@@ -639,7 +645,7 @@ class CtcLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& loss,
                            const std::shared_ptr<one::Tensor>& alpha, const int32_t& blank,
                            const bool& zero_infinity, const int64_t& max_target_length) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"blank", "zero_infinity", "max_target_length"});
     attrs.SetAttr<int32_t>("blank", blank);
     attrs.SetAttr<bool>("zero_infinity", zero_infinity);
     attrs.SetAttr<int64_t>("max_target_length", max_target_length);
@@ -666,7 +672,7 @@ class PadGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy, const std::vector<int64_t>& pad,
                            const std::string& mode, const Scalar& value) const {
     const int64_t ndim = dy->shape()->NumAxes();
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"padding"});
     attrs.SetAttr<std::vector<int64_t>>("padding", pad);
     if (mode == "reflect") {
       if (ndim == 3) {
@@ -716,7 +722,9 @@ class AvgPoolNdGradFunctor {
                            const std::vector<int32_t>& kernel_size,
                            const std::vector<int32_t>& stride, const bool& ceil_mode,
                            const bool& count_include_pad, const int32_t& divisor_override) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP({"data_format", "padding", "kernel_size", "stride",
+                                        "ceil_mode", "count_include_pad", "divisor_override"});
     attrs.SetAttr<std::string>("data_format", data_format);
     attrs.SetAttr<std::vector<int32_t>>("padding", padding);
     attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size);
@@ -757,7 +765,7 @@ class NormalizationGradFunctor {
                                 const std::shared_ptr<one::Tensor>& inv_variance,
                                 const std::shared_ptr<one::Tensor>& gamma, const float& epsilon,
                                 const int32_t& axis) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"epsilon", "axis"});
     attrs.SetAttr<float>("epsilon", epsilon);
     attrs.SetAttr<int32_t>("axis", axis);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {grad, x, mean, inv_variance, gamma}, attrs);
@@ -804,7 +812,7 @@ class NormalizationAddReluGradFunctor {
       const std::shared_ptr<one::Tensor>& gamma, const std::shared_ptr<one::Tensor>& beta,
       const std::shared_ptr<one::Tensor>& reserve_space, const std::shared_ptr<one::Tensor>& y,
       const int32_t& axis, const float& epsilon, bool has_addend) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"axis", "epsilon"});
     attrs.SetAttr<int32_t>("axis", axis);
     attrs.SetAttr<float>("epsilon", epsilon);
     if (has_addend) {
@@ -837,7 +845,7 @@ class LayerNormGradFunctor {
                            const std::shared_ptr<one::Tensor>& mean,
                            const std::shared_ptr<one::Tensor>& inv_variance,
                            const int64_t& begin_norm_axis, const double& epsilon) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"begin_norm_axis", "epsilon"});
     attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis);
     attrs.SetAttr<double>("epsilon", epsilon);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x, mean, inv_variance}, attrs);
@@ -865,7 +873,7 @@ class LayerNormAffineGradFunctor {
                            const std::shared_ptr<one::Tensor>& inv_variance,
                            const std::shared_ptr<one::Tensor>& gamma,
                            const int64_t& begin_norm_axis, const double& epsilon) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"begin_norm_axis", "epsilon"});
     attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis);
     attrs.SetAttr<double>("epsilon", epsilon);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x, mean, inv_variance, gamma}, attrs);
@@ -892,7 +900,7 @@ class LayerNormParamGradFunctor {
                                 const std::shared_ptr<one::Tensor>& mean,
                                 const std::shared_ptr<one::Tensor>& inv_variance,
                                 const int64_t& begin_params_axis) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"begin_params_axis"});
     attrs.SetAttr<int64_t>("begin_params_axis", begin_params_axis);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, x, mean, inv_variance}, attrs);
   }
@@ -909,7 +917,7 @@ class BroadcastMatmulGradBFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b, double alpha) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"alpha"});
     attrs.SetAttr<double>("alpha", alpha);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b}, attrs);
   }
@@ -932,7 +940,8 @@ class FusedScaleTrilSoftmaxMaskScaleGradFunctor {
                            const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& mask, const int64_t diagonal,
                            const float tril_scale_value, const float mask_scale_value) const {
-    auto& fused_attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& fused_attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP({"diagonal", "tril_scale_value", "mask_scale_value"});
     fused_attrs.SetAttr<int64_t>("diagonal", diagonal);
     fused_attrs.SetAttr<float>("tril_scale_value", tril_scale_value);
     fused_attrs.SetAttr<float>("mask_scale_value", mask_scale_value);
@@ -956,7 +965,7 @@ class FusedScaleMaskSoftmaxGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& mask, const float& scale) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"scale_value"});
     attrs.SetAttr<float>("scale_value", scale);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy, mask}, attrs);
   }
@@ -981,7 +990,7 @@ class FusedScaleMaskSoftmaxDropoutGradFunctor {
                            const std::shared_ptr<one::Tensor>& mask,
                            const std::shared_ptr<one::Tensor>& dropout_mask, const float& scale,
                            const float& dropout_scale) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"scale_value", "dropout_scale_value"});
     attrs.SetAttr<float>("scale_value", scale);
     attrs.SetAttr<float>("dropout_scale_value", dropout_scale);
 
@@ -1007,7 +1016,7 @@ class CublasBiasAddReluMatmulGradFunctor {
                                 const std::shared_ptr<one::Tensor>& weight,
                                 const std::shared_ptr<one::Tensor>& aux,
                                 const double& alpha) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"alpha"});
     attrs.SetAttr<double>("alpha", alpha);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, weight, aux}, attrs);
   }
@@ -1043,7 +1052,7 @@ class FusedReluDropoutGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& mask, const float& scale) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"scale"});
     attrs.SetAttr<float>("scale", scale);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, mask}, attrs);
   }
@@ -1080,7 +1089,8 @@ class FusedDotFeatureInteractionGradFunctor {
                                 const bool& has_output_concat, const bool& self_interaction,
                                 const int32_t& output_concat_grad_dim,
                                 const std::string& pooling) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP({"self_interaction", "output_concat_grad_dim", "pooling"});
     attrs.SetAttr<bool>("self_interaction", self_interaction);
     attrs.SetAttr<int32_t>("output_concat_grad_dim", output_concat_grad_dim);
     attrs.SetAttr<std::string>("pooling", pooling);
@@ -1249,10 +1259,10 @@ class FusedMLPGradFunctor {
                                 const std::shared_ptr<one::Tensor>& x, const TensorTuple& weights,
                                 const TensorTuple& cublas_aux, const TensorTuple& hidden,
                                 const std::vector<float>& alpha_list) const {
-    auto& attrs = *THREAD_LOCAL_MUT_ATTR_MAP();
     const int64_t weight_size = weights.size();
     CHECK_EQ_OR_RETURN(alpha_list.size(), weight_size - 1)
         << "Alpha list size should be equal to weight_size - 1. ";
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"alpha_list"});
     attrs.SetAttr<std::vector<float>>("alpha_list", alpha_list);
     TensorTuple input(2 + 3 * weight_size);
     input[0] = dy;

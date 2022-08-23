@@ -42,9 +42,9 @@ class ClipByScalarMax : public OpExprGradFunction<ClipByScalarMaxCaptureState> {
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     if (IsFloatingDataType(inputs.at(0)->dtype()->data_type())) {
-      ctx->max = Scalar(JUST(composed_attrs.GetAttr<double>("floating_max")));
+      ctx->max = Scalar(JUST(composed_attrs.Attr<double>("floating_max")));
     } else if (IsIntegralDataType(inputs.at(0)->dtype()->data_type())) {
-      ctx->max = Scalar(JUST(composed_attrs.GetAttr<int64_t>("integral_max")));
+      ctx->max = Scalar(JUST(composed_attrs.Attr<int64_t>("integral_max")));
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Data type is not floating or integral type.";
     }

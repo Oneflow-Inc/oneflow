@@ -21,41 +21,41 @@ namespace oneflow {
 namespace test {
 
 TEST(AttrMap, basic) {
-  auto& mut_attr_map = *THREAD_LOCAL_MUT_ATTR_MAP();
+  auto& mut_attr_map = THREAD_CACHED_MUTABLE_ATTR_MAP({"zero", "one", "zeros", "ones"});
   mut_attr_map.SetAttr<int32_t>("zero", 0);
   mut_attr_map.SetAttr<int64_t>("one", 1);
   mut_attr_map.SetAttr<std::vector<int32_t>>("zeros", std::vector<int32_t>{0});
   mut_attr_map.SetAttr<std::vector<int64_t>>("ones", std::vector<int64_t>{1});
   AttrMap attr_map(mut_attr_map);
   {
-    const auto& val = CHECK_JUST(attr_map.GetAttr<int32_t>("zero"));
+    const auto& val = CHECK_JUST(attr_map.Attr<int32_t>("zero"));
     ASSERT_EQ(val, 0);
   }
   {
-    const auto& val = CHECK_JUST(attr_map.GetAttr<int64_t>("one"));
+    const auto& val = CHECK_JUST(attr_map.Attr<int64_t>("one"));
     ASSERT_EQ(val, 1);
   }
   {
-    const auto& val = CHECK_JUST(attr_map.GetAttr<std::vector<int32_t>>("zeros"));
+    const auto& val = CHECK_JUST(attr_map.Attr<std::vector<int32_t>>("zeros"));
     ASSERT_EQ(val.size(), 1);
   }
   {
-    const auto& val = CHECK_JUST(attr_map.GetAttr<std::vector<int32_t>>("zeros"));
+    const auto& val = CHECK_JUST(attr_map.Attr<std::vector<int32_t>>("zeros"));
     ASSERT_EQ(val.at(0), 0);
   }
   {
-    const auto& val = CHECK_JUST(attr_map.GetAttr<std::vector<int64_t>>("ones"));
+    const auto& val = CHECK_JUST(attr_map.Attr<std::vector<int64_t>>("ones"));
     ASSERT_EQ(val.size(), 1);
   }
   {
-    const auto& val = CHECK_JUST(attr_map.GetAttr<std::vector<int64_t>>("ones"));
+    const auto& val = CHECK_JUST(attr_map.Attr<std::vector<int64_t>>("ones"));
     ASSERT_EQ(val.at(0), 1);
   }
 }
 
 TEST(AttrMap, hash_value) {
   HashMap<AttrMap, int32_t> attr_map2int_value;
-  auto& mut_attr_map = *THREAD_LOCAL_MUT_ATTR_MAP();
+  auto& mut_attr_map = THREAD_CACHED_MUTABLE_ATTR_MAP({"zero", "one", "zeros", "ones"});
   mut_attr_map.SetAttr<int32_t>("zero", 0);
   mut_attr_map.SetAttr<int64_t>("one", 1);
   mut_attr_map.SetAttr<std::vector<int32_t>>("zeros", std::vector<int32_t>{0});
@@ -66,7 +66,7 @@ TEST(AttrMap, hash_value) {
 
 TEST(AttrMap, hash_map) {
   HashMap<AttrMap, int32_t> attr_map2int_value;
-  auto& mut_attr_map = *THREAD_LOCAL_MUT_ATTR_MAP();
+  auto& mut_attr_map = THREAD_CACHED_MUTABLE_ATTR_MAP({"zero", "one", "zeros", "ones"});
   attr_map2int_value[AttrMap(mut_attr_map)] = 0;
   ASSERT_EQ(attr_map2int_value.at(AttrMap(mut_attr_map)), 0);
   mut_attr_map.SetAttr<int32_t>("zero", 0);

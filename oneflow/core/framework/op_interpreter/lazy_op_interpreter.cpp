@@ -455,7 +455,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   JUST(GenVariableOpConfNdSbpStringByTensor(var_conf, input_tensor));
   if (!input_tensor->requires_grad()) { var_conf->set_trainable(false); }
   if (input_tensor->requires_grad()) {
-    double l2 = JUST(ctx.attrs.GetAttr<double>("l2"));
+    double l2 = JUST(ctx.attrs.Attr<double>("l2"));
     if (unlikely(l2 != 0.0)) { var_conf->mutable_regularizer()->mutable_l1_l2_conf()->set_l2(l2); }
   }
 
@@ -702,8 +702,8 @@ Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
     input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   }
   CHECK_OR_RETURN(!input_lbn.empty());  // NOLINT(maybe-need-error-msg)
-  std::string device_type = JUST(ctx.attrs.GetAttr<std::string>("device_type"));
-  int64_t device_id = JUST(ctx.attrs.GetAttr<int64_t>("device_id"));
+  std::string device_type = JUST(ctx.attrs.Attr<std::string>("device_type"));
+  int64_t device_id = JUST(ctx.attrs.Attr<int64_t>("device_id"));
 
   CHECK_EQ_OR_RETURN(outputs->size(), 1);        // NOLINT(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);  // NOLINT(maybe-need-error-msg)

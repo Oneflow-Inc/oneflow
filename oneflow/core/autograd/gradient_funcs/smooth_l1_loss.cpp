@@ -46,7 +46,7 @@ class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossCaptureState> {
     ctx->SaveTensorForBackward(inputs.at(1));  // label
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->beta = JUST(composed_attrs.GetAttr<float>("beta"));
+    ctx->beta = JUST(composed_attrs.Attr<float>("beta"));
     return Maybe<void>::Ok();
   }
 

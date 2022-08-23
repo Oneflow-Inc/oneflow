@@ -51,7 +51,7 @@ Maybe<void> SparseSoftmaxCrossEntropyMs::Capture(SparseSoftmaxCrossEntropyMsCapt
                                                  const TensorTuple& outputs,
                                                  const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->depth = JUST(composed_attrs.GetAttr<int64_t>("depth"));
+  ctx->depth = JUST(composed_attrs.Attr<int64_t>("depth"));
   CHECK_EQ_OR_RETURN(inputs.size(), 2);                    // NOLINT(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(outputs.size(), 2);                   // NOLINT(maybe-need-error-msg)
   ctx->SaveTensorForBackward(JUST(VectorAt(outputs, 0)));  // prob

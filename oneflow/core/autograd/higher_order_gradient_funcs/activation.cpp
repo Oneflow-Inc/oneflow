@@ -110,7 +110,7 @@ class HardShrinkGradGrad : public OpExprGradFunction<HardShrinkGradGradCaptureSt
     if (!ctx->y_requires_grad && !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->lambd = JUST(composed_attrs.GetAttr<double>("lambd"));
+    ctx->lambd = JUST(composed_attrs.Attr<double>("lambd"));
     if (ctx->grad_requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
     return Maybe<void>::Ok();
   }
@@ -156,7 +156,7 @@ class SoftShrinkGradGrad : public OpExprGradFunction<SoftShrinkGradGradCaptureSt
     if (!ctx->y_requires_grad && !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->alpha = JUST(composed_attrs.GetAttr<double>("alpha"));
+    ctx->alpha = JUST(composed_attrs.Attr<double>("alpha"));
     if (ctx->grad_requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
     return Maybe<void>::Ok();
   }
@@ -235,7 +235,7 @@ class LeakyReluGradGrad : public OpExprGradFunction<LeakyReluGradGradCaptureStat
     if (!ctx->x_requires_grad && !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->alpha = JUST(composed_attrs.GetAttr<float>("alpha"));
+    ctx->alpha = JUST(composed_attrs.Attr<float>("alpha"));
 
     if (ctx->grad_requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
     return Maybe<void>::Ok();
@@ -282,8 +282,8 @@ class SoftplusGradGrad : public OpExprGradFunction<SoftplusGradGradCaptureState>
     if (!ctx->x_requires_grad && !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->beta = JUST(composed_attrs.GetAttr<double>("beta"));
-    ctx->threshold = JUST(composed_attrs.GetAttr<double>("threshold"));
+    ctx->beta = JUST(composed_attrs.Attr<double>("beta"));
+    ctx->threshold = JUST(composed_attrs.Attr<double>("threshold"));
 
     ctx->SaveTensorForBackward(inputs.at(0));
     if (ctx->x_requires_grad) { ctx->SaveTensorForBackward(inputs.at(1)); }
@@ -337,8 +337,8 @@ class HardTanhGradGrad : public OpExprGradFunction<HardTanhGradGradCaptureState>
     if (!ctx->y_requires_grad && !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->min_val = JUST(composed_attrs.GetAttr<double>("min_val"));
-    ctx->max_val = JUST(composed_attrs.GetAttr<double>("max_val"));
+    ctx->min_val = JUST(composed_attrs.Attr<double>("min_val"));
+    ctx->max_val = JUST(composed_attrs.Attr<double>("max_val"));
     if (ctx->grad_requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
     return Maybe<void>::Ok();
   }
@@ -384,7 +384,7 @@ class EluGradGrad : public OpExprGradFunction<EluGradGradCaptureState> {
     ctx->grad_requires_grad = inputs.at(1)->requires_grad();
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->alpha = JUST(composed_attrs.GetAttr<double>("alpha"));
+    ctx->alpha = JUST(composed_attrs.Attr<double>("alpha"));
 
     if (!ctx->x_requires_grad && !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
     ctx->SaveTensorForBackward(inputs.at(0));
@@ -520,7 +520,7 @@ class ThresholdGradGrad : public OpExprGradFunction<ThresholdGradGradCaptureStat
     if (!ctx->x_requires_grad && !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->threshold = JUST(composed_attrs.GetAttr<double>("threshold_val"));
+    ctx->threshold = JUST(composed_attrs.Attr<double>("threshold_val"));
 
     if (ctx->grad_requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
     return Maybe<void>::Ok();

@@ -47,11 +47,11 @@ class RoiAlign : public OpExprGradFunction<RoiAlignCaptureState> {
     ctx->SaveTensorForBackward(inputs.at(1));
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->spatial_scale = JUST(composed_attrs.GetAttr<float>("spatial_scale"));
-    ctx->pooled_h = JUST(composed_attrs.GetAttr<int32_t>("pooled_h"));
-    ctx->pooled_w = JUST(composed_attrs.GetAttr<int32_t>("pooled_w"));
-    ctx->sampling_ratio = JUST(composed_attrs.GetAttr<int32_t>("sampling_ratio"));
-    ctx->aligned = JUST(composed_attrs.GetAttr<bool>("aligned"));
+    ctx->spatial_scale = JUST(composed_attrs.Attr<float>("spatial_scale"));
+    ctx->pooled_h = JUST(composed_attrs.Attr<int32_t>("pooled_h"));
+    ctx->pooled_w = JUST(composed_attrs.Attr<int32_t>("pooled_w"));
+    ctx->sampling_ratio = JUST(composed_attrs.Attr<int32_t>("sampling_ratio"));
+    ctx->aligned = JUST(composed_attrs.Attr<bool>("aligned"));
     return Maybe<void>::Ok();
   }
 

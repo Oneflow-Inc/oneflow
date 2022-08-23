@@ -40,7 +40,7 @@ class FusedSelfAttention : public OpExprGradFunction<FusedSelfAttentionInterpSta
     ctx->input_requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->alpha = JUST(composed_attrs.GetAttr<float>("alpha"));
+    ctx->alpha = JUST(composed_attrs.Attr<float>("alpha"));
     ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }

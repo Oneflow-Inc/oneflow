@@ -52,7 +52,7 @@ Maybe<void> Transpose::Capture(TransposeCaptureState* ctx, const TensorTuple& in
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->perm = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("perm"));
+  ctx->perm = JUST(composed_attrs.Attr<std::vector<int32_t>>("perm"));
   return Maybe<void>::Ok();
 }
 

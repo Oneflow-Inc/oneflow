@@ -89,8 +89,8 @@ Maybe<void> FusedMatmulBiasAddReluDropout::Capture(FusedMatmulBiasAddReluDropout
   }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->skip_final_activation = JUST(composed_attrs.GetAttr<bool>("skip_final_activation"));
-  ctx->dropout_rate_list = JUST(composed_attrs.GetAttr<std::vector<float>>("dropout_rate_list"));
+  ctx->skip_final_activation = JUST(composed_attrs.Attr<bool>("skip_final_activation"));
+  ctx->dropout_rate_list = JUST(composed_attrs.Attr<std::vector<float>>("dropout_rate_list"));
 
   return Maybe<void>::Ok();
 }

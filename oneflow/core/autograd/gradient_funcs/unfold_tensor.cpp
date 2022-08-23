@@ -53,9 +53,9 @@ Maybe<void> UnfoldTensor::Capture(UnfoldTensorCaptureState* ctx, const TensorTup
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->dimension = JUST(composed_attrs.GetAttr<int32_t>("dimension"));
-  ctx->size = JUST(composed_attrs.GetAttr<int32_t>("size"));
-  ctx->step = JUST(composed_attrs.GetAttr<int32_t>("step"));
+  ctx->dimension = JUST(composed_attrs.Attr<int32_t>("dimension"));
+  ctx->size = JUST(composed_attrs.Attr<int32_t>("size"));
+  ctx->step = JUST(composed_attrs.Attr<int32_t>("step"));
   ctx->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
 }

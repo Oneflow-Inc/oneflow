@@ -49,7 +49,7 @@ Maybe<void> ReduceSum::Init(const OpExpr& op) {
 Maybe<void> ReduceSum::Capture(ReduceSumCaptureState* ctx, const TensorTuple& inputs,
                                const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->axis = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("axis"));
+  ctx->axis = JUST(composed_attrs.Attr<std::vector<int32_t>>("axis"));
   ctx->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
 }
@@ -92,7 +92,7 @@ Maybe<void> ReduceProdOp::Init(const OpExpr& op) {
 Maybe<void> ReduceProdOp::Capture(ReduceProdOpInterpState* ctx, const TensorTuple& inputs,
                                   const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->axis = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("axis"));
+  ctx->axis = JUST(composed_attrs.Attr<std::vector<int32_t>>("axis"));
   ctx->requires_grad = inputs.at(0)->requires_grad();
   ctx->SaveTensorForBackward(inputs.at(0));
   ctx->SaveTensorForBackward(outputs.at(0));
@@ -145,8 +145,8 @@ Maybe<void> ReduceMaxOrMin::Init(const OpExpr& op) {
 Maybe<void> ReduceMaxOrMin::Capture(ReduceMaxOrMinCaptureState* ctx, const TensorTuple& inputs,
                                     const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->axis = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("axis"));
-  ctx->keepdims = JUST(composed_attrs.GetAttr<bool>("keepdims"));
+  ctx->axis = JUST(composed_attrs.Attr<std::vector<int32_t>>("axis"));
+  ctx->keepdims = JUST(composed_attrs.Attr<bool>("keepdims"));
   ctx->SaveTensorForBackward(inputs.at(0));
   ctx->SaveTensorForBackward(outputs.at(0));
   return Maybe<void>::Ok();

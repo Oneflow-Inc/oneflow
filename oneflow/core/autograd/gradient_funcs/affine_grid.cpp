@@ -43,8 +43,8 @@ class AffineGrid : public OpExprGradFunction<AffineGridInterpState> {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->size = JUST(composed_attrs.GetAttr<Shape>("size"));
-    ctx->align_corners = JUST(composed_attrs.GetAttr<bool>("align_corners"));
+    ctx->size = JUST(composed_attrs.Attr<Shape>("size"));
+    ctx->align_corners = JUST(composed_attrs.Attr<bool>("align_corners"));
     return Maybe<void>::Ok();
   }
 

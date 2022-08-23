@@ -65,7 +65,7 @@ Maybe<void> DimScatter<T>::Capture(DimScatterCaptureState* ctx, const TensorTupl
   ctx->SaveTensorForBackward(inputs.at(1));  // index saved
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->dim = JUST(composed_attrs.GetAttr<int32_t>("dim"));
+  ctx->dim = JUST(composed_attrs.Attr<int32_t>("dim"));
   return Maybe<void>::Ok();
 }
 
@@ -144,7 +144,7 @@ Maybe<void> DimScatterUpdateScalar::Capture(DimScatterCaptureState* ctx, const T
   ctx->SaveTensorForBackward(inputs.at(1));  // index saved
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->dim = JUST(composed_attrs.GetAttr<int32_t>("dim"));
+  ctx->dim = JUST(composed_attrs.Attr<int32_t>("dim"));
   return Maybe<void>::Ok();
 }
 

@@ -17,8 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_ATTR_MAP_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/symbol.h"
-#include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/small_vector.h"
 
 namespace oneflow {
@@ -27,29 +25,31 @@ namespace user_op {
 class AttrVal;
 }
 class AttrValue;
-class CachedMutableAttrMap;
+class MutableAttrMap;
 class UserOpConf;
+
+class OrderedStringList;
 
 class AttrMap final {
  public:
-  static constexpr int kInitializedSize = 4;
   AttrMap();
-  AttrMap(const CachedMutableAttrMap& other);
-  AttrMap(const UserOpConf& user_op_conf);
+  AttrMap(const MutableAttrMap& other);
+  AttrMap(const UserOpConf& user_conf);
 
   AttrMap(const AttrMap&) = default;
   AttrMap(AttrMap&&) = default;
   ~AttrMap() = default;
 
+  bool Has(const std::string& attr_name) const;
+
+  template<typename T>
+  Maybe<const T&> Attr(const std::string& attr_name) const;
+
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(const std::string& attr_name) const;
+
   AttrMap& operator=(const AttrMap& other);
 
   bool operator==(const AttrMap& other) const;
-
-  template<typename T>
-  Maybe<const T&> GetAttr(const std::string& attr_name) const;
-
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(const std::string& attr_name) const;
-  bool HasAttr4Name(const std::string& attr_name) const;
 
   size_t size() const { return internal_->size; }
   bool empty() const { return internal_->size > 0; }
@@ -57,10 +57,10 @@ class AttrMap final {
   size_t hash_value() const { return internal_->hash_value; }
 
   struct AttrInternal {
-    size_t capacity = 0;
+    size_t max_size = 0;
     size_t size = 0;
     size_t hash_value = 0;
-    std::shared_ptr<small_vector<std::string, kInitializedSize>> attr_names;
+    std::shared_ptr<OrderedStringList> ordered_attr_names;
     small_vector<std::pair<std::shared_ptr<const user_op::AttrVal>, bool>, 16> attrs;
   };
 
@@ -90,13 +90,13 @@ class AttrMap final {
   };
 
   const_iterator begin() const { return const_iterator(0, internal_.get()); }
-  const_iterator end() const { return const_iterator(internal_->capacity, internal_.get()); }
+  const_iterator end() const { return const_iterator(internal_->max_size, internal_.get()); }
 
  private:
   std::shared_ptr<AttrInternal> internal_;
 };
 
-AttrMap MakeAttrMapFromUserOpConf(const UserOpConf& user_op_conf);
+AttrMap MakeAttrMapFromUserOpConf(const UserOpConf& user_conf);
 
 class ComposedAttrMap final {
  public:
@@ -106,11 +106,11 @@ class ComposedAttrMap final {
   ComposedAttrMap(const AttrMap& prior, const AttrMap& base) : prior_(prior), base_(base) {}
 
   template<typename T>
-  Maybe<const T&> GetAttr(const std::string& attr_name) const;
+  Maybe<const T&> Attr(const std::string& attr_name) const;
 
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(const std::string& attr_name) const;
 
-  bool HasAttr4Name(const std::string& attr_name) const;
+  bool Has(const std::string& attr_name) const;
 
   void ResetPrior(const AttrMap& prior) { prior_ = prior; }
   void ResetBase(const AttrMap& base) { base_ = base; }

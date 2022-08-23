@@ -40,7 +40,7 @@ class FusedBiasAddGelu : public OpExprGradFunction<FusedBiasAddGeluInterpState> 
     ctx->input_requires_grad = inputs.at(0)->requires_grad();
     ctx->bias_requires_grad = inputs.at(1)->requires_grad();
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->axis = JUST(composed_attrs.GetAttr<int32_t>("axis"));
+    ctx->axis = JUST(composed_attrs.Attr<int32_t>("axis"));
     if (ctx->input_requires_grad || ctx->bias_requires_grad) {
       ctx->SaveTensorForBackward(inputs.at(0));
       ctx->SaveTensorForBackward(inputs.at(1));

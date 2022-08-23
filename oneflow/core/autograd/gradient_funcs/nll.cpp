@@ -52,7 +52,7 @@ Maybe<void> NLLGradFunction::Capture(NLLCaptureState* ctx, const TensorTuple& in
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->ignore_index = JUST(composed_attrs.GetAttr<int64_t>("ignore_index"));
+  ctx->ignore_index = JUST(composed_attrs.Attr<int64_t>("ignore_index"));
   ctx->SaveTensorForBackward(input);                      // input
   ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 1)));  // target
   if (inputs.size() == 3) {

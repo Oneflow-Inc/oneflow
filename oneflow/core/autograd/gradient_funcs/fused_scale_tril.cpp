@@ -53,10 +53,10 @@ Maybe<void> FusedScaleTril::Capture(FusedScaleTrilState* ctx, const TensorTuple&
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->diagonal = JUST(composed_attrs.GetAttr<int64_t>("diagonal"));
-  ctx->floating_scale_value = JUST(composed_attrs.GetAttr<double>("floating_scale_value"));
-  ctx->integer_scale_value = JUST(composed_attrs.GetAttr<int64_t>("integer_scale_value"));
-  ctx->is_floating_scale_value = JUST(composed_attrs.GetAttr<bool>("is_floating_scale_value"));
+  ctx->diagonal = JUST(composed_attrs.Attr<int64_t>("diagonal"));
+  ctx->floating_scale_value = JUST(composed_attrs.Attr<double>("floating_scale_value"));
+  ctx->integer_scale_value = JUST(composed_attrs.Attr<int64_t>("integer_scale_value"));
+  ctx->is_floating_scale_value = JUST(composed_attrs.Attr<bool>("is_floating_scale_value"));
   return Maybe<void>::Ok();
 }
 

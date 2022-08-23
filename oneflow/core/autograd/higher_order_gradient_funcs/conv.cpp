@@ -71,12 +71,12 @@ Maybe<void> ConvDataGradGrad::Capture(ConvDataGradGradCaptureState* ctx, const T
   if (ctx->w_requires_grad) { ctx->grad_index = ctx->SaveTensorForBackward(inputs.at(0)); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
-  ctx->padding_before = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding_before"));
-  ctx->kernel_size = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("kernel_size"));
-  ctx->strides = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("strides"));
-  ctx->dilation_rate = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("dilation_rate"));
-  ctx->groups = JUST(composed_attrs.GetAttr<int32_t>("groups"));
+  ctx->data_format = JUST(composed_attrs.Attr<std::string>("data_format"));
+  ctx->padding_before = JUST(composed_attrs.Attr<std::vector<int32_t>>("padding_before"));
+  ctx->kernel_size = JUST(composed_attrs.Attr<std::vector<int32_t>>("kernel_size"));
+  ctx->strides = JUST(composed_attrs.Attr<std::vector<int32_t>>("strides"));
+  ctx->dilation_rate = JUST(composed_attrs.Attr<std::vector<int32_t>>("dilation_rate"));
+  ctx->groups = JUST(composed_attrs.Attr<int32_t>("groups"));
   return Maybe<void>::Ok();
 }
 
@@ -170,12 +170,12 @@ Maybe<void> ConvFilterGradGrad::Capture(ConvFilterGradGradCaptureState* ctx,
   if (ctx->x_requires_grad) { ctx->grad_index = ctx->SaveTensorForBackward(inputs.at(0)); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
-  ctx->padding_before = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding_before"));
-  ctx->kernel_size = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("kernel_size"));
-  ctx->strides = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("strides"));
-  ctx->dilation_rate = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("dilation_rate"));
-  ctx->groups = JUST(composed_attrs.GetAttr<int32_t>("groups"));
+  ctx->data_format = JUST(composed_attrs.Attr<std::string>("data_format"));
+  ctx->padding_before = JUST(composed_attrs.Attr<std::vector<int32_t>>("padding_before"));
+  ctx->kernel_size = JUST(composed_attrs.Attr<std::vector<int32_t>>("kernel_size"));
+  ctx->strides = JUST(composed_attrs.Attr<std::vector<int32_t>>("strides"));
+  ctx->dilation_rate = JUST(composed_attrs.Attr<std::vector<int32_t>>("dilation_rate"));
+  ctx->groups = JUST(composed_attrs.Attr<int32_t>("groups"));
   return Maybe<void>::Ok();
 }
 

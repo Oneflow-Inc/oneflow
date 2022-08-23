@@ -55,8 +55,8 @@ Maybe<void> FusedBiasAddDropout::Capture(FusedBiasAddDropoutInterpState* ctx,
 
   if (!ctx->input_requires_grad && !ctx->bias_requires_grad) { return Maybe<void>::Ok(); }
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->scale = JUST(composed_attrs.GetAttr<float>("scale"));
-  ctx->axis = JUST(composed_attrs.GetAttr<int32_t>("axis"));
+  ctx->scale = JUST(composed_attrs.Attr<float>("scale"));
+  ctx->axis = JUST(composed_attrs.Attr<int32_t>("axis"));
 
   ctx->SaveTensorForBackward(inputs.at(2));
 

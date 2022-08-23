@@ -53,7 +53,7 @@ Maybe<void> Stack::Capture(StackCaptureState* ctx, const TensorTuple& inputs,
   for (int i = 0; i < inputs.size(); ++i) { ctx->requires_grad[i] = inputs.at(i)->requires_grad(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->axis = JUST(composed_attrs.GetAttr<int64_t>("axis"));
+  ctx->axis = JUST(composed_attrs.Attr<int64_t>("axis"));
   for (const auto& input : inputs) { ctx->SaveTensorForBackward(input); }
   ctx->input_num = inputs.size();
   return Maybe<void>::Ok();

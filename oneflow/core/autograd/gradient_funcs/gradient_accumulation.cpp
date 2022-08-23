@@ -46,7 +46,7 @@ Maybe<void> GradAccRepeat::Init(const OpExpr& op) {
 Maybe<void> GradAccRepeat::Capture(GradAccRepeatCaptureState* ctx, const TensorTuple& inputs,
                                    const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->repeat_num = JUST(composed_attrs.GetAttr<int32_t>("repeat_num"));
+  ctx->repeat_num = JUST(composed_attrs.Attr<int32_t>("repeat_num"));
   return Maybe<void>::Ok();
 }
 
@@ -86,7 +86,7 @@ Maybe<void> GradAccCollect::Init(const OpExpr& op) {
 Maybe<void> GradAccCollect::Capture(GradAccCollectCaptureState* ctx, const TensorTuple& inputs,
                                     const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->max_acc_num = JUST(composed_attrs.GetAttr<int32_t>("max_acc_num"));
+  ctx->max_acc_num = JUST(composed_attrs.Attr<int32_t>("max_acc_num"));
   return Maybe<void>::Ok();
 }
 
@@ -126,7 +126,7 @@ Maybe<void> GradAccPack::Init(const OpExpr& op) {
 Maybe<void> GradAccPack::Capture(GradAccPackCaptureState* ctx, const TensorTuple& inputs,
                                  const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->pack_num = JUST(composed_attrs.GetAttr<int32_t>("pack_num"));
+  ctx->pack_num = JUST(composed_attrs.Attr<int32_t>("pack_num"));
   return Maybe<void>::Ok();
 }
 
@@ -166,7 +166,7 @@ Maybe<void> GradAccUnpack::Init(const OpExpr& op) {
 Maybe<void> GradAccUnpack::Capture(GradAccUnpackCaptureState* ctx, const TensorTuple& inputs,
                                    const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->unpack_num = JUST(composed_attrs.GetAttr<int32_t>("unpack_num"));
+  ctx->unpack_num = JUST(composed_attrs.Attr<int32_t>("unpack_num"));
   return Maybe<void>::Ok();
 }
 

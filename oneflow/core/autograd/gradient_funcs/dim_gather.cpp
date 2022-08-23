@@ -54,7 +54,7 @@ Maybe<void> DimGather::Capture(DimGatherCaptureState* ctx, const TensorTuple& in
   ctx->SaveTensorForBackward(inputs.at(0));
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->dim = JUST(composed_attrs.GetAttr<int32_t>("dim"));
+  ctx->dim = JUST(composed_attrs.Attr<int32_t>("dim"));
   return Maybe<void>::Ok();
 }
 

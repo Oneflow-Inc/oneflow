@@ -53,11 +53,11 @@ Maybe<void> Fold::Capture(FoldInterpState* ctx, const TensorTuple& inputs,
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
-  ctx->kernel_size = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("kernel_size"));
-  ctx->dilation_rate = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("dilation_rate"));
-  ctx->padding = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding"));
-  ctx->strides = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("strides"));
+  ctx->data_format = JUST(composed_attrs.Attr<std::string>("data_format"));
+  ctx->kernel_size = JUST(composed_attrs.Attr<std::vector<int32_t>>("kernel_size"));
+  ctx->dilation_rate = JUST(composed_attrs.Attr<std::vector<int32_t>>("dilation_rate"));
+  ctx->padding = JUST(composed_attrs.Attr<std::vector<int32_t>>("padding"));
+  ctx->strides = JUST(composed_attrs.Attr<std::vector<int32_t>>("strides"));
   return Maybe<void>::Ok();
 }
 

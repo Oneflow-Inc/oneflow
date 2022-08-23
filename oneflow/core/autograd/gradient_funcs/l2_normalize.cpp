@@ -56,8 +56,8 @@ Maybe<void> L2Normalize::Capture(L2NormalizeCaptureState* ctx, const TensorTuple
   ctx->SaveTensorForBackward(outputs.at(1));  // square_x_sum
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->axis = JUST(composed_attrs.GetAttr<int32_t>("axis"));
-  ctx->epsilon = JUST(composed_attrs.GetAttr<float>("epsilon"));
+  ctx->axis = JUST(composed_attrs.Attr<int32_t>("axis"));
+  ctx->epsilon = JUST(composed_attrs.Attr<float>("epsilon"));
   return Maybe<void>::Ok();
 }
 

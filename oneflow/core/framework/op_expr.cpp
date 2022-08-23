@@ -657,17 +657,17 @@ Maybe<void> BuiltinOpExprImpl<ImageDecoderRandomCropResizeOpConf>::BuildOpConf(
   *(op_conf->mutable_image_decoder_random_crop_resize_conf()) = op_proto_;
   *(op_conf->mutable_loc()) = DispatchFrame::get_str();
   auto* proto = op_conf->mutable_image_decoder_random_crop_resize_conf();
-  proto->set_target_width(JUST(attrs.GetAttr<int64_t>("target_width")));
-  proto->set_target_height(JUST(attrs.GetAttr<int64_t>("target_height")));
-  proto->set_num_workers(JUST(attrs.GetAttr<int64_t>("num_workers")));
-  proto->set_max_num_pixels(JUST(attrs.GetAttr<int64_t>("max_num_pixels")));
-  proto->set_warmup_size(JUST(attrs.GetAttr<int64_t>("warmup_size")));
-  proto->set_seed(JUST(attrs.GetAttr<int64_t>("seed")));
-  proto->set_num_attempts(JUST(attrs.GetAttr<int64_t>("num_attempts")));
-  proto->set_random_area_min(JUST(attrs.GetAttr<float>("random_area_min")));
-  proto->set_random_area_max(JUST(attrs.GetAttr<float>("random_area_max")));
-  proto->set_random_aspect_ratio_min(JUST(attrs.GetAttr<float>("random_aspect_ratio_min")));
-  proto->set_random_aspect_ratio_max(JUST(attrs.GetAttr<float>("random_aspect_ratio_max")));
+  proto->set_target_width(JUST(attrs.Attr<int64_t>("target_width")));
+  proto->set_target_height(JUST(attrs.Attr<int64_t>("target_height")));
+  proto->set_num_workers(JUST(attrs.Attr<int64_t>("num_workers")));
+  proto->set_max_num_pixels(JUST(attrs.Attr<int64_t>("max_num_pixels")));
+  proto->set_warmup_size(JUST(attrs.Attr<int64_t>("warmup_size")));
+  proto->set_seed(JUST(attrs.Attr<int64_t>("seed")));
+  proto->set_num_attempts(JUST(attrs.Attr<int64_t>("num_attempts")));
+  proto->set_random_area_min(JUST(attrs.Attr<float>("random_area_min")));
+  proto->set_random_area_max(JUST(attrs.Attr<float>("random_area_max")));
+  proto->set_random_aspect_ratio_min(JUST(attrs.Attr<float>("random_aspect_ratio_min")));
+  proto->set_random_aspect_ratio_max(JUST(attrs.Attr<float>("random_aspect_ratio_max")));
   return Maybe<void>::Ok();
 }
 

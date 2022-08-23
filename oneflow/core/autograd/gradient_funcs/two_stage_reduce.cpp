@@ -50,7 +50,7 @@ class ReduceDevice : public OpExprGradFunction<ReduceDeviceCaptureState> {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->axis = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("axis"));
+    ctx->axis = JUST(composed_attrs.Attr<std::vector<int32_t>>("axis"));
     ctx->mask_index = ctx->SaveTensorForBackward(outputs.at(1));   // mask
     ctx->count_index = ctx->SaveTensorForBackward(outputs.at(2));  // count
     return Maybe<void>::Ok();
@@ -107,8 +107,8 @@ class ReduceGlobal : public OpExprGradFunction<ReduceGlobalCaptureState> {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->axis = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("axis"));
-    ctx->keepdims = JUST(composed_attrs.GetAttr<bool>("keepdims"));
+    ctx->axis = JUST(composed_attrs.Attr<std::vector<int32_t>>("axis"));
+    ctx->keepdims = JUST(composed_attrs.Attr<bool>("keepdims"));
     ctx->mask_index = ctx->SaveTensorForBackward(outputs.at(1));         // mask
     ctx->device_count_index = ctx->SaveTensorForBackward(inputs.at(1));  // device_count
     return Maybe<void>::Ok();

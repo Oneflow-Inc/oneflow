@@ -65,7 +65,7 @@ class EagerCclBroadcast : public OpExprGradFunction<EagerCclBroadcastCaptureStat
   Maybe<void> Capture(EagerCclBroadcastCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs,
                       const OpExprInterpContext& interp_ctx) const override {
-    ctx->root = JUST(interp_ctx.attrs.GetAttr<int64_t>("root"));
+    ctx->root = JUST(interp_ctx.attrs.Attr<int64_t>("root"));
     ctx->parallel_desc = JUST(interp_ctx.parallel_desc);
     return Maybe<void>::Ok();
   }

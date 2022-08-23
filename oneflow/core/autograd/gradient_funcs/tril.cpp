@@ -49,7 +49,7 @@ Maybe<void> Tril::Capture(TrilCaptureState* ctx, const TensorTuple& inputs,
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->diagonal = JUST(composed_attrs.GetAttr<int64_t>("diagonal"));
+  ctx->diagonal = JUST(composed_attrs.Attr<int64_t>("diagonal"));
   return Maybe<void>::Ok();
 }
 

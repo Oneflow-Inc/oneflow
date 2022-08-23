@@ -95,9 +95,9 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
     ctx->beta_requires_grad = beta->requires_grad();
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
 
-    ctx->axis = JUST(composed_attrs.GetAttr<int32_t>("axis"));
-    ctx->epsilon = JUST(composed_attrs.GetAttr<float>("epsilon"));
-    ctx->is_training = JUST(composed_attrs.GetAttr<bool>("training"));
+    ctx->axis = JUST(composed_attrs.Attr<int32_t>("axis"));
+    ctx->epsilon = JUST(composed_attrs.Attr<float>("epsilon"));
+    ctx->is_training = JUST(composed_attrs.Attr<bool>("training"));
 
     ctx->SaveTensorForBackward(inputs.at(0));  // x 0
     ctx->SaveTensorForBackward(gamma);         // gamma 1

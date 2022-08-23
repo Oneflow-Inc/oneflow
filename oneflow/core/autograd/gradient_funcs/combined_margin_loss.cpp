@@ -50,10 +50,10 @@ class CombinedMarginLoss : public OpExprGradFunction<CombinedMarginLossCaptureSt
     ctx->theta_index = ctx->SaveTensorForBackward(outputs.at(1));  // theta
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->m1 = JUST(composed_attrs.GetAttr<float>("m1"));
-    ctx->m2 = JUST(composed_attrs.GetAttr<float>("m2"));
-    ctx->m3 = JUST(composed_attrs.GetAttr<float>("m3"));
-    ctx->depth = JUST(composed_attrs.GetAttr<int64_t>("depth"));
+    ctx->m1 = JUST(composed_attrs.Attr<float>("m1"));
+    ctx->m2 = JUST(composed_attrs.Attr<float>("m2"));
+    ctx->m3 = JUST(composed_attrs.Attr<float>("m3"));
+    ctx->depth = JUST(composed_attrs.Attr<int64_t>("depth"));
     return Maybe<void>::Ok();
   }
 

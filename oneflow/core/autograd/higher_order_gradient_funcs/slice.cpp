@@ -43,9 +43,9 @@ class SliceGradGrad : public OpExprGradFunction<SliceGradGradCaptureState> {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);   // NOLINT(maybe-need-error-msg)
     CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->start = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("start"));
-    ctx->stop = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("stop"));
-    ctx->step = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("step"));
+    ctx->start = JUST(composed_attrs.Attr<std::vector<int64_t>>("start"));
+    ctx->stop = JUST(composed_attrs.Attr<std::vector<int64_t>>("stop"));
+    ctx->step = JUST(composed_attrs.Attr<std::vector<int64_t>>("step"));
     return Maybe<void>::Ok();
   }
 

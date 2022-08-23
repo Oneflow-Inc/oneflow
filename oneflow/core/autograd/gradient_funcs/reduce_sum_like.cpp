@@ -57,7 +57,7 @@ Maybe<void> ReduceSumLike::Capture(ReduceSumLikeCaptureState* ctx, const TensorT
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->axis = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("axis"));
+  ctx->axis = JUST(composed_attrs.Attr<std::vector<int32_t>>("axis"));
   ctx->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
 }

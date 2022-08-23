@@ -56,11 +56,11 @@ Maybe<void> Unfold::Capture(UnfoldInterpState* ctx, const TensorTuple& inputs,
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   std::vector<int32_t> out_shape(2);
   const std::shared_ptr<Tensor>& x = inputs.at(0);
-  ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
-  ctx->kernel_size = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("kernel_size"));
-  ctx->dilation_rate = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("dilation_rate"));
-  ctx->padding = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding"));
-  ctx->strides = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("strides"));
+  ctx->data_format = JUST(composed_attrs.Attr<std::string>("data_format"));
+  ctx->kernel_size = JUST(composed_attrs.Attr<std::vector<int32_t>>("kernel_size"));
+  ctx->dilation_rate = JUST(composed_attrs.Attr<std::vector<int32_t>>("dilation_rate"));
+  ctx->padding = JUST(composed_attrs.Attr<std::vector<int32_t>>("padding"));
+  ctx->strides = JUST(composed_attrs.Attr<std::vector<int32_t>>("strides"));
   // Only support 4-d Tensor Input.
   for (int i = 0; i < 2; i++) { out_shape.at(i) = (x->shape()->At(i + 2)); }
   ctx->output_size = out_shape;

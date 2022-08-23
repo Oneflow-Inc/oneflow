@@ -44,9 +44,9 @@ class Slice : public OpExprGradFunction<SliceCaptureState> {
     CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->start = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("start"));
-    ctx->stop = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("stop"));
-    ctx->step = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("step"));
+    ctx->start = JUST(composed_attrs.Attr<std::vector<int64_t>>("start"));
+    ctx->stop = JUST(composed_attrs.Attr<std::vector<int64_t>>("stop"));
+    ctx->step = JUST(composed_attrs.Attr<std::vector<int64_t>>("step"));
     ctx->like_shape = *(inputs[0]->shape());
     return Maybe<void>::Ok();
   }
@@ -92,9 +92,9 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateCaptureState> {
     if (!ctx->requires_grad_ref && !ctx->requires_grad_value) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->start = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("start"));
-    ctx->stop = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("stop"));
-    ctx->step = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("step"));
+    ctx->start = JUST(composed_attrs.Attr<std::vector<int64_t>>("start"));
+    ctx->stop = JUST(composed_attrs.Attr<std::vector<int64_t>>("stop"));
+    ctx->step = JUST(composed_attrs.Attr<std::vector<int64_t>>("step"));
 
     if (ctx->requires_grad_ref) {
       ctx->value_shape = *(inputs[1]->shape());

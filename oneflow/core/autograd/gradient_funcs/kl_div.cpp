@@ -48,7 +48,7 @@ Maybe<void> KLDivLoss::Capture(KLDivLossCaptureState* ctx, const TensorTuple& in
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->log_target = JUST(composed_attrs.GetAttr<bool>("log_target"));
+  ctx->log_target = JUST(composed_attrs.Attr<bool>("log_target"));
   ctx->SaveTensorForBackward(inputs.at(0));  // input
   ctx->SaveTensorForBackward(inputs.at(1));  // target
   return Maybe<void>::Ok();

@@ -41,11 +41,11 @@ class ScalarDiv : public OpExprGradFunction<ScalarDivCaptureState> {
     ctx->requires_grad = JUST(VectorAt(inputs, 0))->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    bool has_float_operand = JUST(composed_attrs.GetAttr<bool>("has_float_operand"));
+    bool has_float_operand = JUST(composed_attrs.Attr<bool>("has_float_operand"));
     if (has_float_operand) {
-      ctx->operand = Scalar(JUST(composed_attrs.GetAttr<double>("float_operand")));
+      ctx->operand = Scalar(JUST(composed_attrs.Attr<double>("float_operand")));
     } else {
-      ctx->operand = Scalar(JUST(composed_attrs.GetAttr<int64_t>("int_operand")));
+      ctx->operand = Scalar(JUST(composed_attrs.Attr<int64_t>("int_operand")));
     }
     return Maybe<void>::Ok();
   }
