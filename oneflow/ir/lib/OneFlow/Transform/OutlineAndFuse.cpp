@@ -1,4 +1,4 @@
-
+/*
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -29,7 +29,7 @@ struct UserOpLowering final : public OpConversionPattern<UserOp> {
   LogicalResult matchAndRewrite(UserOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
     llvm::StringRef callee = "oneflow_launch_kernel";
-    rewriter.replaceOpWithNewOp<mlir::func::CallOp>(op, callee, op->getResults());
+    // rewriter.replaceOpWithNewOp<mlir::func::CallOp>(op, callee, op->getResults());
     return success();
   }
 };
@@ -42,7 +42,7 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    oneflow::populateFuserPasses(patterns);
+    mlir::oneflow::populateFuserPasses(patterns);
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
@@ -51,7 +51,8 @@ class KernelLaunchFunctionPass : public KernelLaunchFunctionPassBase<KernelLaunc
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    patterns.add<oneflow::UserOpLowering>(patterns.getContext());
+    TypeConverter typeConverter;
+    patterns.add<mlir::oneflow::UserOpLowering>(patterns.getContext());
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
@@ -60,7 +61,7 @@ class FuseIntoExistingOpPass : public FuseIntoExistingOpPassBase<FuseIntoExistin
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    oneflow::populateFuserForExistingOp(patterns);
+    mlir::oneflow::populateFuserForExistingOp(patterns);
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
