@@ -29,6 +29,10 @@ bool IsInplaceValid(const std::shared_ptr<Tensor>& x) {
   return !autograd::GradMode::is_enabled() || !(x->is_leaf() && x->requires_grad());
 }
 
+bool IsScalarTensor(const std::shared_ptr<Tensor>& x) {
+  return x->shape()->NumAxes() == 0 && x->shape()->elem_cnt() == 1;
+}
+
 Maybe<std::vector<int32_t>> CheckAxis(const std::vector<int32_t>& axis, const int32_t& ndim) {
   const int32_t naxis = axis.size();
   int32_t reduce_ndim = naxis;
