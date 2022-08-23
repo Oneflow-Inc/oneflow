@@ -49,6 +49,9 @@ enum class UnaryOp {
   kIsInf,
   kIsNan,
   kIsFinite,
+
+  // math op
+  kTrunc
 };
 
 }

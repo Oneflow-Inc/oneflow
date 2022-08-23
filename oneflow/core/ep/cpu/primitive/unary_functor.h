@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/ep/common/primitive/unary_functor.h"
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
-#include <cmath>
 
 namespace oneflow {
 namespace ep {
@@ -71,6 +70,14 @@ struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kIsFinite, bool, Src> {
   UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC bool operator()(Src src) const { return std::isfinite(src); }
+};
+
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kTrunc, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return static_cast<Dst>(std::trunc(static_cast<Src>(src)));
+  }
 };
 
 }  // namespace primitive

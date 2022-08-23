@@ -257,6 +257,14 @@ struct UnaryFunctor<device, UnaryOp::kIsFinite, bool, Src> {
   OF_DEVICE_FUNC bool operator()(Src src) const { return true; }
 };
 
+template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kTrunc, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return static_cast<Dst>(std::trunc(static_cast<Src>(src)));
+  }
+};
+
 }  // namespace primitive
 }  // namespace ep
 }  // namespace oneflow
