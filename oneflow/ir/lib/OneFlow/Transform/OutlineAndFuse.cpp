@@ -33,8 +33,27 @@ struct UserOpLowering final : public OpConversionPattern<UserOp> {
     return success();
   }
 };
-} //namespace oneflow
-} // namespace mlir
+
+struct InputOpLowering final : public OpConversionPattern<InputOp> {
+ public:
+  using OpConversionPattern<InputOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(InputOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    return success();
+  }
+};
+
+struct OutputOpLowering final : public OpConversionPattern<OutputOp> {
+ public:
+  using OpConversionPattern<OutputOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(OutputOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    return success();
+  }
+};
+
+}  // namespace oneflow
+}  // namespace mlir
 
 namespace {
 
@@ -52,7 +71,8 @@ class KernelLaunchFunctionPass : public KernelLaunchFunctionPassBase<KernelLaunc
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
     TypeConverter typeConverter;
-    patterns.add<mlir::oneflow::UserOpLowering>(patterns.getContext());
+    patterns.add<mlir::oneflow::UserOpLowering, mlir::oneflow::InputOpLowering,
+                 mlir::oneflow::OutputOpLowering>(patterns.getContext());
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
