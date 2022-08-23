@@ -35,17 +35,13 @@ def to_global(input, placement=None, sbp=None, **kwargs):
 
     Args:
         input (oneflow.Tensor/None/list/tuple/dict): the input that needs to be converted.
-        placement (oneflow.placement, optional):  the desired placement of the input. Default: None
-        sbp (oneflow.sbp.sbp or list/tuple of oneflow.sbp.sbp, optional): the desired sbp of the input. Default: None
+        placement (oneflow.placement, optional): the desired placement of the input. Default: None
+        sbp (oneflow.sbp.sbp or list/tuple of oneflow.sbp.sbp, optional): the desired sbp of the input or self-defined functions in order to specify SBP. Default: None
     
     Returns:
         The converted input.
 
     For a tensor input: please refer to the examples in :func:`oneflow.Tensor.to_global`.
-
-    Note:
-        For the input of dict type, such as the state dict of the model, the unified sbp cannot be used when calling the to_global method, and the sbp needs to be specialized. 
-
 
     For an input of other type (take a state dict as an example):
 
@@ -76,6 +72,28 @@ def to_global(input, placement=None, sbp=None, **kwargs):
         True
         True
         True
+
+    Note:
+        For the input of dict type, such as the state dict of the model, the unified sbp cannot be used when calling the to_global method, and the sbp needs to be specialized. 
+        Usually used for making graph models's state dict global.
+
+    If you want to do the `split(0)` operation, but there are tensors that cannot be split by dim 0, then these tensors can specify sbp. 
+    It is worth noting that, for a tensor of shape `(1, n)`, you can specify SBP is `oneflow.sbp.split(1)`.
+    For example:
+
+    .. code-block:: python
+
+        flow.utils.to_global(state_dict, placement=placement, sbp=get_sbp)
+        # Defines a function to return the specified SBP.
+        def get_sbp(state_dict, tensor):
+            if tensor is state_dict["System-Train-TrainStep"]:
+                return BROADCAST
+            if tensor is state_dict["module_pipeline"]["m_stage3.linear.weight"]:
+                return flow.sbp.split(1)
+            if tensor is state_dict["module_pipeline"]["m_stage3.linear.bias"]:
+                return BROADCAST
+            return flow.sbp.split(0)
+
     """
     is_input_not_tensor_or_none = False
     if (input is not None) and (not isinstance(input, (Tensor, dict, tuple, list))):
