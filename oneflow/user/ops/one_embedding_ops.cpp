@@ -94,20 +94,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_update");
-      user_op::UserOpConfWrapper grad_op =
-          builder.Op("embedding_update_placeholder")
-              .Input("ids", op.input("ids", 0))
-              .Input("embedding_grad", op.GetGradTensorWithOpOutput("embeddings", 0))
-              .Attr<std::string>("embedding_name", op.attr<std::string>("embedding_name"))
-              .Build();
-      AddOp(grad_op);
-      return Maybe<void>::Ok();
-    });
-
 /* static */ Maybe<void> EmbeddingPrefetchOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& num_unique_ids_shape = ctx->InputShape("num_unique_ids", 0);
   const Shape& unique_ids_shape = ctx->InputShape("unique_ids", 0);

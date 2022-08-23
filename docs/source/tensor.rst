@@ -157,13 +157,11 @@ Tensor class reference
     Tensor.new_ones 
     Tensor.new_zeros
     Tensor.new_tensor
-    
     Tensor.is_cuda
     Tensor.is_global
     Tensor.device
     Tensor.grad
     Tensor.ndim
-
     Tensor.abs
     Tensor.acos
     Tensor.acosh
@@ -245,7 +243,6 @@ Tensor class reference
     Tensor.gather
     Tensor.ge
     Tensor.get_device
-    
     Tensor.grad_fn
     Tensor.gt
     Tensor.half

@@ -57,13 +57,15 @@ from oneflow._C import threshold
 from oneflow._C import silu
 from oneflow._C import mish
 from oneflow.nn.modules.normalization import layer_norm
-from oneflow._C import dropout
+from oneflow._C import dropout, dropout1d, dropout2d, dropout3d
 from oneflow._C import smooth_l1_loss
 from .functional_pad import pad
 from oneflow._C import triplet_margin_loss
 from oneflow._C import ctc_greedy_decoder
 from oneflow._C import one_hot
 from oneflow._C import normalize
+from oneflow._C import mse_loss
+from oneflow._C import l1_loss
 from oneflow._C import cross_entropy
 from oneflow._C import binary_cross_entropy_loss as binary_cross_entropy
 from oneflow._C import (
