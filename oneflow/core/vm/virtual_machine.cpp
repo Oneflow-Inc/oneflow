@@ -432,8 +432,6 @@ Maybe<vm::ThreadCtx*> VirtualMachine::CreateThreadCtx(Symbol<Device> device,
 Maybe<vm::Stream*> VirtualMachine::CreateStream(vm::ThreadCtx* thread_ctx, Symbol<Device> device,
                                                 StreamType stream_type) {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
-  // stream_ptr may be used after timout.
-  auto stream_ptr = std::make_shared<vm::Stream*>(nullptr);
   intrusive::shared_ptr<vm::Dependence> schedule_local_dep_object =
       FindOrCreateScheduleLocalDepObject(device, stream_type);
   Optional<intrusive::shared_ptr<vm::Dependence>> transport_local_dep_object;
@@ -442,7 +440,6 @@ Maybe<vm::Stream*> VirtualMachine::CreateStream(vm::ThreadCtx* thread_ctx, Symbo
   }
   auto stream = intrusive::make_shared<vm::Stream>(
       thread_ctx, device, stream_type, schedule_local_dep_object, transport_local_dep_object);
-  *stream_ptr = stream.Mutable();
 
   auto bc = std::make_shared<BlockingCounter>(1);
   engine_->InsertProbe([&stream, thread_ctx, bc](vm::VirtualMachineEngine* engine) {
@@ -452,7 +449,7 @@ Maybe<vm::Stream*> VirtualMachine::CreateStream(vm::ThreadCtx* thread_ctx, Symbo
   });
   JUST(NotifyOrRunScheduler());
   JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
-  return *stream_ptr;
+  return stream.Mutable();
 }
 
 }  // namespace oneflow
