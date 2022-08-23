@@ -280,7 +280,7 @@ class LocalTensorSharedNumpyDataFunctor {
     DataType data_type = JUST(numpy::GetOFDataTypeFromNpArray(array));
     Symbol<Device> device = JUST(Device::New("cpu"));
 
-    auto tensor_meta = SymbolOf(LocalTensorMeta(shape, stride, data_type, device, 0));
+    auto tensor_meta = SymbolOf(LocalTensorMeta(shape, stride, data_type, device));
 
     // Build TensorBuffer
     const auto& Free = [array](char* dptr) {

@@ -135,7 +135,7 @@ def _test_global_tensor_str_2d(test_case, device):
 
     x = flow.ones((10, 10), placement=placement, sbp=[flow.sbp.partial_sum])
     tensor_str = str(x)
-    test_case.assertTrue("2." in tensor_str)
+    test_case.assertTrue("1." in tensor_str)
 
     x = flow.ones((100, 100), placement=placement, sbp=[flow.sbp.split(0)])
     tensor_str = str(x)

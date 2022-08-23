@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/env_var/eager.h"
 
 namespace oneflow {
 namespace one {
@@ -38,7 +39,7 @@ bool OptionalEqual(const Optional<Symbol<NdSbp>>& lhs, const Optional<Symbol<NdS
 size_t InputGlobalTensorMeta::hash_value() const {
   size_t hash_value = std::hash<Symbol<GlobalTensorMeta>>()(tensor_meta());
   if (consumer_nd_sbp_constraint().has_value()) {
-    hash_value ^= std::hash<Symbol<NdSbp>>()(CHECK_JUST(consumer_nd_sbp_constraint()));
+    AddHash(&hash_value, CHECK_JUST(consumer_nd_sbp_constraint()));
   }
   return hash_value;
 }
@@ -65,8 +66,8 @@ size_t GlobalTensorMetaInferArgs::hash_value() const {
 
 size_t SrcOpGlobalTensorMetaInferArgs::hash_value() const {
   size_t hash_value = std::hash<AttrMap>()(attrs_);
-  hash_value ^= std::hash<Symbol<ParallelDesc>>()(parallel_desc_);
-  hash_value ^= std::hash<Symbol<NdSbp>>()(nd_sbp_);
+  AddHash(&hash_value, parallel_desc_);
+  AddHash(&hash_value, nd_sbp_);
   return hash_value;
 }
 
@@ -349,6 +350,9 @@ Maybe<const GlobalTensorInferResult> GlobalTensorInferCache::GetOrInfer(
     const GlobalTensorMetaInferArgs& infer_args) {
   auto iter = cache_.find(infer_args);
   if (iter == cache_.end()) {
+    if (unlikely(cache_.size() >= ThreadLocalEnvInteger<ONEFLOW_EAGER_TENSOR_INFER_CACHE_SIZE>())) {
+      cache_.clear();
+    }
     const auto& user_op_expr = user_op_expr_.lock();
     CHECK_OR_RETURN(static_cast<bool>(user_op_expr));
     const auto& output_tensor_metas = JUST(Infer(*user_op_expr, infer_args));
@@ -361,6 +365,10 @@ Maybe<const GlobalTensorInferResult> GlobalTensorInferCache::GetOrInfer(
     const SrcOpGlobalTensorMetaInferArgs& infer_args) {
   auto iter = src_op_cache_.find(infer_args);
   if (iter == src_op_cache_.end()) {
+    if (unlikely(src_op_cache_.size()
+                 >= ThreadLocalEnvInteger<ONEFLOW_EAGER_TENSOR_INFER_CACHE_SIZE>())) {
+      src_op_cache_.clear();
+    }
     const auto& user_op_expr = user_op_expr_.lock();
     CHECK_OR_RETURN(static_cast<bool>(user_op_expr));
     const auto& output_tensor_metas = JUST(Infer(*user_op_expr, infer_args));

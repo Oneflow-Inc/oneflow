@@ -120,23 +120,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("smooth_l1_loss")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("input", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("smooth_l1_loss_grad")
-                .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-                .Input("input", op.input("input", 0))
-                .Input("target", op.input("target", 0))
-                .Output("dx")
-                .Attr("beta", op.attr<float>("beta"))
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "input", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace oneflow
