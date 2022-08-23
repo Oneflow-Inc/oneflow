@@ -33,18 +33,18 @@ oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
   user_op::TensorDesc* mean = ctx->MutOutputTensorDesc("mean", 0);
   user_op::TensorDesc* inv_variance = ctx->MutOutputTensorDesc("inv_variance", 0);
   const bool affine = ctx->Attr<bool>("affine");
-  const int32_t num_groups = ctx->Attr<int32_t>("num_groups"); 
-  const int64_t batch_num = x.shape().At(0); 
-  const int64_t channel_num = x.shape().At(1); // Assueme channel first
+  const int32_t num_groups = ctx->Attr<int32_t>("num_groups");
+  const int64_t batch_num = x.shape().At(0);
+  const int64_t channel_num = x.shape().At(1);  // Assueme channel first
   *y->mut_shape() = x.shape();
   *y->mut_is_dynamic() = x.is_dynamic();
-  if(affine){
+  if (affine) {
     const user_op::TensorDesc& gamma = ctx->InputTensorDesc("gamma", 0);
-    CHECK_EQ_OR_RETURN(gamma.shape().At(0), channel_num); 
+    CHECK_EQ_OR_RETURN(gamma.shape().At(0), channel_num);
     const user_op::TensorDesc& beta = ctx->InputTensorDesc("beta", 0);
-    CHECK_EQ_OR_RETURN(beta.shape().At(0), channel_num); 
+    CHECK_EQ_OR_RETURN(beta.shape().At(0), channel_num);
   }
-  CHECK_EQ_OR_RETURN(channel_num % num_groups, 0) << "Channels should be divisble by num_groups. "; 
+  CHECK_EQ_OR_RETURN(channel_num % num_groups, 0) << "Channels should be divisble by num_groups. ";
   *mean->mut_shape() = Shape({batch_num, num_groups});
   *inv_variance = *mean;
   return Maybe<void>::Ok();
@@ -55,13 +55,13 @@ oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
 }
 
 /* static */ Maybe<void> GroupNormOp::GetSbp(user_op::SbpContext* ctx) {
-  // TODO: Support More SBP 
+  // TODO: Support More SBP
   ctx->NewBuilder()
-    .Split(ctx->inputs(), 0)
-    .Split(ctx->outputs(), 0)
-    .Broadcast(user_op::OpArg("gamma", 0))
-    .Broadcast(user_op::OpArg("beta", 0))
-    .Build();
+      .Split(ctx->inputs(), 0)
+      .Split(ctx->outputs(), 0)
+      .Broadcast(user_op::OpArg("gamma", 0))
+      .Broadcast(user_op::OpArg("beta", 0))
+      .Build();
   return Maybe<void>::Ok();
 }
 
@@ -89,10 +89,10 @@ oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);
   const user_op::TensorDesc& inv_variance = ctx->InputTensorDesc("inv_variance", 0);
-  const int32_t num_groups = ctx->Attr<int32_t>("num_groups"); 
+  const int32_t num_groups = ctx->Attr<int32_t>("num_groups");
   user_op::TensorDesc* dx = ctx->MutOutputTensorDesc("dx", 0);
   CHECK_EQ_OR_RETURN(dy.shape(), x.shape());
-  const Shape& gn_param_shape = Shape({x.shape().At(0), num_groups}); 
+  const Shape& gn_param_shape = Shape({x.shape().At(0), num_groups});
   CHECK_EQ_OR_RETURN(mean.shape(), gn_param_shape);
   CHECK_EQ_OR_RETURN(inv_variance.shape(), gn_param_shape);
   *dx->mut_shape() = dy.shape();
@@ -109,13 +109,13 @@ oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
   if (ctx->user_op_conf().has_input("gamma", 0)) {
     broadcast_args.emplace_back(user_op::OpArg("gamma", 0));
   }
-  
+
   // TODO: Support More SBP
   ctx->NewBuilder()
-    .Split(ctx->inputs(), 0)
-    .Split(ctx->outputs(), 0)
-    .Broadcast(broadcast_args)
-    .Build();
+      .Split(ctx->inputs(), 0)
+      .Split(ctx->outputs(), 0)
+      .Broadcast(broadcast_args)
+      .Build();
   return Maybe<void>::Ok();
 }
 
@@ -133,7 +133,6 @@ oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
   return Maybe<void>::Ok();
 }
 
-
 // GroupNorm Param Grad
 /* static */ Maybe<void> GroupNormParamGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
@@ -142,7 +141,7 @@ oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
   const user_op::TensorDesc& inv_variance = ctx->InputTensorDesc("inv_variance", 0);
   user_op::TensorDesc* dgamma = ctx->MutOutputTensorDesc("dgamma", 0);
   user_op::TensorDesc* dbeta = ctx->MutOutputTensorDesc("dbeta", 0);
-  const int64_t channel_size = x.shape().At(1); 
+  const int64_t channel_size = x.shape().At(1);
   *dgamma->mut_shape() = Shape{channel_size};
   // *dgamma->mut_is_dynamic() = dgamma.is_dynamic();
   *dbeta->mut_shape() = Shape{channel_size};
@@ -158,10 +157,10 @@ oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
   std::vector<user_op::OpArg> broadcast_args;
   // TODO: Support More SBP
   ctx->NewBuilder()
-    .Split(ctx->inputs(), 0)
-    .Split(ctx->outputs(), 0)
-    .Broadcast(broadcast_args)
-    .Build();
+      .Split(ctx->inputs(), 0)
+      .Split(ctx->outputs(), 0)
+      .Broadcast(broadcast_args)
+      .Build();
   return Maybe<void>::Ok();
 }
 
@@ -182,6 +181,5 @@ oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
   *dbeta->mut_data_type() = dy.data_type();
   return Maybe<void>::Ok();
 }
-
 
 }  // namespace oneflow

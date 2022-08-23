@@ -295,14 +295,6 @@ void LaunchLayerNormBackward(ep::Stream* stream, const int64_t num_instances,
 }  // namespace
 
 template<typename T>
-__global__ void printKernel(T* out, int32_t elem_cnt){
-  for(int i = 0; i < elem_cnt; i++){
-    float val = out[i]; 
-    printf("Val is: %f \n", val); 
-  }
-}
-
-template<typename T>
 class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   LayerNormGpuKernel() = default;
@@ -330,8 +322,6 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
     if (ctx->has_input("beta", 0)) { beta_ptr = ctx->Tensor4ArgNameAndIndex("beta", 0)->dptr<T>(); }
     DispatchLayerNormForwardGpu<T>(ctx->stream(), num_instances, norm_size, epsilon, x->dptr<T>(),
                                    gamma_ptr, beta_ptr, y->mut_dptr<T>(), mean, inv_variance);
-    printf("Here is layernorm kernel \n"); 
-    printKernel<T><<<1, 1, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(inv_variance->mut_dptr<T>(), num_instances); 
   };
 };
 
@@ -365,8 +355,6 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const int64_t num_instances = mean->shape_view().elem_cnt();
     const int64_t norm_size = x->shape_view().elem_cnt() / num_instances;
-    printf("Num instances is: %ld \n", num_instances); 
-    printf("Norm size is: %ld \n", norm_size); 
     const T* gamma_ptr = nullptr;
     if (ctx->has_input("gamma", 0)) {
       gamma_ptr = ctx->Tensor4ArgNameAndIndex("gamma", 0)->dptr<T>();

@@ -791,25 +791,23 @@ class GroupNormFunctor {
                          .Output("inv_variance")
                          .Build());
     affine_op_ = CHECK_JUST(one::OpBuilder("group_norm")
-                         .Input("x")
-                         .Input("gamma")
-                         .Input("beta")
-                         .Output("y")
-                         .Output("mean")
-                         .Output("inv_variance")
-                         .Build());
+                                .Input("x")
+                                .Input("gamma")
+                                .Input("beta")
+                                .Output("y")
+                                .Output("mean")
+                                .Output("inv_variance")
+                                .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const Optional<one::Tensor>& gamma,
-                           const Optional<one::Tensor>& beta, 
-                           const bool affine, 
-                           const int32_t num_groups, 
+                           const Optional<one::Tensor>& gamma, const Optional<one::Tensor>& beta,
+                           const bool affine, const int32_t num_groups,
                            const double& epsilon) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("affine", affine));
     JUST(attrs.SetAttr<int32_t>("num_groups", num_groups));
     JUST(attrs.SetAttr<double>("epsilon", epsilon));
-    if(affine){
+    if (affine) {
       return OpInterpUtil::Dispatch<Tensor>(*affine_op_, {x, JUST(gamma), JUST(beta)}, attrs);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -820,7 +818,6 @@ class GroupNormFunctor {
   std::shared_ptr<OpExpr> op_;
   std::shared_ptr<OpExpr> affine_op_;
 };
-
 
 class PixelShuffleFunctor {
  public:

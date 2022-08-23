@@ -24,7 +24,7 @@ struct GroupNormCaptureState : public AutoGradCaptureState {
   double epsilon = 1e-5;
   bool x_requires_grad = true;
   bool affine = true;
-  int32_t num_groups = 1; 
+  int32_t num_groups = 1;
   size_t x_index = 0;
   size_t mean_index = 1;
   size_t inv_variance_index = 2;
@@ -57,15 +57,15 @@ Maybe<void> GroupNorm::Init(const OpExpr& op) {
 Maybe<void> GroupNorm::Capture(GroupNormCaptureState* ctx, const TensorTuple& inputs,
                                const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->affine = JUST(composed_attrs.GetAttr<bool>("affine")); 
+  ctx->affine = JUST(composed_attrs.GetAttr<bool>("affine"));
   ctx->epsilon = JUST(composed_attrs.GetAttr<double>("epsilon"));
-  ctx->num_groups = JUST(composed_attrs.GetAttr<int32_t>("num_groups")); 
-  if(ctx->affine){
+  ctx->num_groups = JUST(composed_attrs.GetAttr<int32_t>("num_groups"));
+  if (ctx->affine) {
     CHECK_EQ_OR_RETURN(inputs.size(), 3);  // NOLINT(maybe-need-error-msg)
   } else {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);  // NOLINT(maybe-need-error-msg)
   }
-  CHECK_EQ_OR_RETURN(outputs.size(), 3);                            // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(outputs.size(), 3);  // NOLINT(maybe-need-error-msg)
 
   ctx->x_requires_grad = inputs.at(0)->requires_grad();
   if (ctx->x_requires_grad || ctx->affine) {
@@ -82,7 +82,7 @@ Maybe<void> GroupNorm::Capture(GroupNormCaptureState* ctx, const TensorTuple& in
 Maybe<void> GroupNorm::Apply(const GroupNormCaptureState* ctx, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
   const auto& saved_tensors = ctx->SavedTensors();
-  if(ctx->affine){
+  if (ctx->affine) {
     in_grads->resize(3);
   } else {
     in_grads->resize(1);
@@ -93,19 +93,18 @@ Maybe<void> GroupNorm::Apply(const GroupNormCaptureState* ctx, const TensorTuple
   std::shared_ptr<Tensor> inv_variance = saved_tensors.at(ctx->inv_variance_index);
 
   if (ctx->affine) {
-    const auto& results =
-        JUST(functional::GroupNormParamGrad(dy, x, mean, inv_variance));
+    const auto& results = JUST(functional::GroupNormParamGrad(dy, x, mean, inv_variance));
     in_grads->at(1) = results->at(0);  // For gamma.
     in_grads->at(2) = results->at(1);  // For beta.
   }
   if (ctx->x_requires_grad) {
     if (ctx->affine) {
       std::shared_ptr<Tensor> gamma = saved_tensors.at(ctx->gamma_index);
-      in_grads->at(0) = JUST(functional::GroupNormAffineGrad(dy, x, mean, inv_variance, gamma,
-                                                             ctx->num_groups, ctx->epsilon));
+      in_grads->at(0) = JUST(functional::GroupNormGrad(dy, x, mean, inv_variance, gamma,
+                                                       ctx->num_groups, ctx->epsilon));
     } else {
-      in_grads->at(0) =
-          JUST(functional::GroupNormGrad(dy, x, mean, inv_variance, ctx->num_groups, ctx->epsilon));
+      in_grads->at(0) = JUST(functional::GroupNormGrad(dy, x, mean, inv_variance, NullOpt,
+                                                       ctx->num_groups, ctx->epsilon));
     }
   }
   return Maybe<void>::Ok();

@@ -5842,7 +5842,6 @@ def OneFlow_GroupNormOp : OneFlow_BaseOp<"group_norm", [NoSideEffect, AttrSizedO
   let has_data_type_infer_fn = 1;
 }
 
-
 def OneFlow_GroupNormGradOp : OneFlow_BaseOp<"group_norm_grad", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,

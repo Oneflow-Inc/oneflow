@@ -1298,12 +1298,8 @@
     "Tensor (Tensor x, Tensor gamma=None, Tensor beta=None, Bool affine, Int32 num_groups, Double epsilon) => GroupNorm"
   bind_python: True
 
-- name: "group_norm_affine_grad"
-  signature: "Tensor (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Tensor gamma, Int32 num_groups, Double epsilon) => GroupNormAffineGrad"
-  bind_python: True
-
 - name: "group_norm_grad"
-  signature: "Tensor (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Int32 num_groups, Double epsilon) => GroupNormGrad"
+  signature: "Tensor (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Tensor gamma=None, Int32 num_groups, Double epsilon) => GroupNormGrad"
   bind_python: True
 
 - name: "group_norm_param_grad"
