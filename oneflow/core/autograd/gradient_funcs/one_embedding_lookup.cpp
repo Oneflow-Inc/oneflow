@@ -22,7 +22,7 @@ namespace one {
 
 struct OneEmbeddingLookupCaptureState : public AutoGradCaptureState {
   bool requires_grad;
-  std::string embedding_store_options;
+  std::string key_value_store_options;
   int shadow_index;
   int ids_index;
   int input_num;
@@ -38,7 +38,7 @@ class OneEmbeddingLookup : public OpExprGradFunction<OneEmbeddingLookupCaptureSt
     ctx->requires_grad = inputs.at(0)->requires_grad();            // shadow
     ctx->shadow_index = ctx->SaveTensorForBackward(inputs.at(0));  // shadow
     ctx->ids_index = ctx->SaveTensorForBackward(inputs.at(1));     // id
-    ctx->embedding_store_options = JUST(attrs.GetAttr<std::string>("embedding_store_options"));
+    ctx->key_value_store_options = JUST(attrs.GetAttr<std::string>("key_value_store_options"));
     ctx->input_num = inputs.size();
     return Maybe<void>::Ok();
   }
@@ -51,7 +51,7 @@ class OneEmbeddingLookup : public OpExprGradFunction<OneEmbeddingLookupCaptureSt
     if (ctx->requires_grad) {
       JUST(functional::OneEmbeddingLookupGrad(saved_tensors.at(ctx->ids_index),
                                               JUST(VectorAt(out_grads, 0)),
-                                              ctx->embedding_store_options));
+                                              ctx->key_value_store_options));
       (*in_grads)[0] = JUST(functional::ZerosLike(saved_tensors.at(ctx->shadow_index)));
     }
     return Maybe<void>::Ok();
