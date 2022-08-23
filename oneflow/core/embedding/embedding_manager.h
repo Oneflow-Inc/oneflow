@@ -153,6 +153,17 @@ class EmbeddingState {
   virtual const void* EmbeddingFusedUpdatePutUniqueEmbeddings(int64_t iter) = 0;
   virtual void OnEmbeddingFusedUpdatePutEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
 
+  virtual void OnEmbeddingEagerBackwardStart(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
+  virtual void* EmbeddingEagerBackwardUniqueIds(int64_t iter) = 0;
+  virtual void* EmbeddingEagerBackwardUniqueEmbeddingGrad(int64_t iter) = 0;
+  virtual void OnEmbeddingEagerBackwardEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
+
+  virtual void OnEmbeddingEagerUpdateStart(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
+  virtual const void* EmbeddingEagerUpdateUniqueIds(int64_t iter) = 0;
+  virtual const void* EmbeddingEagerUpdateUniqueEmbeddingGrad(int64_t iter) = 0;
+  virtual const void* EmbeddingEagerUpdateUniqueValues(int64_t iter) = 0;
+  virtual void OnEmbeddingEagerUpdateEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
+
   virtual void SetIdFinalNumUnique(uint32_t final_num_unique, int64_t iter) = 0;
   virtual void SetIdNumUniqueMatrix(const std::vector<uint32_t>& num_unique_matrix,
                                     int64_t iter) = 0;

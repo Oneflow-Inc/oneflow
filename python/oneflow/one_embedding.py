@@ -187,6 +187,11 @@ class Embedding(Module):
             default_initializer,
         )
         self.storage_dim = key_value_store_options["storage_dim"]
+        self.embedding_name = key_value_store_options["name"]
+        self.is_full_cache = (
+            len(key_value_store_options["kv_store"]["caches"]) > 0
+            and key_value_store_options["kv_store"]["caches"][0]["policy"] == "full"
+        )
         self.key_value_store_options = json.dumps(key_value_store_options)
         self.embedding_tables = json.dumps(embedding_tables)
         self.num_tables = len(embedding_tables["tables"])
@@ -196,6 +201,7 @@ class Embedding(Module):
         self.handler = OneEmbeddingHandler(
             self.key_value_store_options, self.local_rank, self.rank_id, self.world_size
         )
+
         self.shadow = flow.nn.Parameter(flow.Tensor(1))
 
     def _save_to_state_dict(self, destination, prefix, keep_vars):
@@ -276,6 +282,7 @@ class Embedding(Module):
 
     def eager_update(self):
         print("embedding eager_update")
+        flow._C.eager_update()
 
     def forward(self, ids, table_ids=None):
         """Embedding lookup operation
@@ -293,11 +300,12 @@ class Embedding(Module):
             ids,
             table_ids,
             self.dtype,
+            self.embedding_name,
             self.storage_dim,
             self.embedding_dim,
+            self.is_full_cache,
             self.num_tables,
             self.embedding_tables,
-            self.key_value_store_options,
         )
 
 

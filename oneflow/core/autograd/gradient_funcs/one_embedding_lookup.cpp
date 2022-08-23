@@ -22,7 +22,9 @@ namespace one {
 
 struct OneEmbeddingLookupCaptureState : public AutoGradCaptureState {
   bool requires_grad;
-  std::string key_value_store_options;
+  std::string embedding_name;
+  int64_t line_size;
+  int64_t embedding_size;
   int ids_index;
 };
 
@@ -37,7 +39,9 @@ class OneEmbeddingLookup : public OpExprGradFunction<OneEmbeddingLookupCaptureSt
     LOG(ERROR) << "ctx->requires_grad " << ctx->requires_grad;
     ctx->ids_index = ctx->SaveTensorForBackward(inputs.at(1));  // id
     LOG(ERROR) << "ctx->ids_index " << ctx->ids_index;
-    ctx->key_value_store_options = "";  // TODO
+    ctx->embedding_name = JUST(attrs.GetAttr<std::string>("embedding_name"));
+    ctx->line_size = JUST(attrs.GetAttr<int64_t>("line_size"));
+    ctx->embedding_size = JUST(attrs.GetAttr<int64_t>("embedding_size"));
     return Maybe<void>::Ok();
   }
 
@@ -48,7 +52,8 @@ class OneEmbeddingLookup : public OpExprGradFunction<OneEmbeddingLookupCaptureSt
     // in_grads->resize(1);
     if (ctx->requires_grad) {
       (*in_grads)[0] = JUST(functional::OneEmbeddingLookupGrad(
-          saved_tensors.at(0), JUST(VectorAt(out_grads, 0)), ctx->key_value_store_options));
+          saved_tensors.at(0), JUST(VectorAt(out_grads, 0)), ctx->embedding_name, ctx->line_size,
+          ctx->embedding_size));
     }
     LOG(ERROR) << "Apply ";
     return Maybe<void>::Ok();

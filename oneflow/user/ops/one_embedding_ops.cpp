@@ -55,7 +55,7 @@ namespace oneflow {
     const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* shadow = GetInputArgModifierFn("shadow", 0);
   CHECK_OR_RETURN(shadow != nullptr) << "shadow is nullptr";
-  // shadow->set_requires_grad(false);
+  shadow->set_requires_grad(false);
   user_op::InputArgModifier* ids = GetInputArgModifierFn("ids", 0);
   CHECK_OR_RETURN(ids != nullptr);
   ids->set_requires_grad(false);
@@ -64,7 +64,6 @@ namespace oneflow {
     CHECK_OR_RETURN(table_ids != nullptr) << "table_ids is nullptr";
     table_ids->set_requires_grad(false);
   }
-  LOG(ERROR) << "EmbeddingLookupPlaceholderOp set_requires_grad false ";
   return Maybe<void>::Ok();
 }
 
@@ -103,8 +102,7 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
           builder.Op("embedding_update_placeholder")
               .Input("ids", op.input("ids", 0))
               .Input("embedding_grad", op.GetGradTensorWithOpOutput("embeddings", 0))
-              .Attr<std::string>("key_value_store_options",
-                                 op.attr<std::string>("key_value_store_options"))
+              .Attr<std::string>("embedding_name", op.attr<std::string>("embedding_name"))
               .Build();
       AddOp(grad_op);
       return Maybe<void>::Ok();
