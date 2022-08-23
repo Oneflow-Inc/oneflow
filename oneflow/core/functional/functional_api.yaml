@@ -2383,6 +2383,10 @@
   signature: "Tensor (Tensor shadow, Tensor ids, Tensor table_ids=None, DataType dtype, Int64 embedding_size, Int32 num_tables, String embedding_tables, String embedding_store_options) => OneEmbeddingLookup"
   bind_python: True
 
+- name: "one_embedding_lookup_grad"
+  signature: "Void (Tensor ids, Tensor embedding_grad, String embedding_store_options) => OneEmbeddingLookupGrad"
+  bind_python: True
+
 - name: "one_embedding_unique_key_value_pair"
   signature: "TensorTuple (Tensor keys, Tensor values=None, Int32 num_tables) => OneEmbeddingUniqueKeyValuePair"
   bind_python: True
