@@ -9605,7 +9605,7 @@ def OneFlow_EmbeddingLookupPlaceholderOp : OneFlow_BaseOp<"embedding_lookup_plac
   let has_input_arg_modify_fn = 1;
 }
 
-def OneFlow_EmbeddingLookupPlaceholderGradOp : OneFlow_BaseOp<"embedding_lookup_placeholder_grad", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_EmbeddingUpdatePlaceholderOp : OneFlow_BaseOp<"embedding_update_placeholder", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$ids,
     OneFlow_Tensor:$embedding_grad
@@ -9614,20 +9614,6 @@ def OneFlow_EmbeddingLookupPlaceholderGradOp : OneFlow_BaseOp<"embedding_lookup_
     StrAttr:$embedding_name,
     DefaultValuedAttr<SI64Attr, "0">:$line_size,
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size
-  );
-  let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
-  let has_get_sbp_fn = 1;
-  let has_data_type_infer_fn = 1;
-}
-
-def OneFlow_EmbeddingUpdatePlaceholderOp : OneFlow_BaseOp<"embedding_update_placeholder", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    OneFlow_Tensor:$ids,
-    OneFlow_Tensor:$embedding_grad
-  );
-  let attrs = (ins
-    StrAttr:$embedding_name
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

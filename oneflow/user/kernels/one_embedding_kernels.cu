@@ -1657,7 +1657,7 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_CUDA_EMBEDDING_LOOKUP_PLACEHOLDER_GRAD_KERNEL(t_dtype_pair, k_dtype_pair)      \
-  REGISTER_USER_KERNEL("embedding_lookup_placeholder_grad")                                     \
+  REGISTER_USER_KERNEL("embedding_update_placeholder")                                          \
       .SetCreateFn<EmbeddingLookupPlaceholderGradKernel<OF_PP_PAIR_FIRST(t_dtype_pair),         \
                                                         OF_PP_PAIR_FIRST(k_dtype_pair)>>()      \
       .SetIsMatchedHob(                                                                         \

@@ -474,27 +474,4 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EmbeddingLookupPlaceholderGradOp::InferLogicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> EmbeddingLookupPlaceholderGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
-/* static */ Maybe<void> EmbeddingLookupPlaceholderGradOp::GetSbp(user_op::SbpContext* ctx) {
-  auto builder = ctx->NewBuilder()
-                     .Split(user_op::OpArg("embedding_grad", 0), 0)  // to skip boxing
-                     .Split(user_op::OpArg("ids", 0), 0);
-  builder.Build();
-  return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> EmbeddingLookupPlaceholderGradOp::InferDataType(
-    user_op::InferContext* ctx) {
-  return Maybe<void>::Ok();
-}
-
 }  // namespace oneflow

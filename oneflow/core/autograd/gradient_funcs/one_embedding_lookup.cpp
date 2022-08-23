@@ -27,6 +27,7 @@ struct OneEmbeddingLookupCaptureState : public AutoGradCaptureState {
   int64_t embedding_size;
   int shadow_index;
   int ids_index;
+  int input_num;
 };
 
 class OneEmbeddingLookup : public OpExprGradFunction<OneEmbeddingLookupCaptureState> {
@@ -35,30 +36,29 @@ class OneEmbeddingLookup : public OpExprGradFunction<OneEmbeddingLookupCaptureSt
 
   Maybe<void> Capture(OneEmbeddingLookupCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    // CHECK_EQ_OR_RETURN(inputs.size(), 1);  // NOLINT(maybe-need-error-msg)
-    ctx->requires_grad = inputs.at(0)->requires_grad();  // shadow
-    LOG(ERROR) << "ctx->requires_grad " << ctx->requires_grad;
+    CHECK_GE_OR_RETURN(inputs.size(), 2);                          // NOLINT(maybe-need-error-msg)
+    ctx->requires_grad = inputs.at(0)->requires_grad();            // shadow
     ctx->shadow_index = ctx->SaveTensorForBackward(inputs.at(0));  // shadow
-    ctx->ids_index = ctx->SaveTensorForBackward(inputs.at(1));  // id
-    LOG(ERROR) << "ctx->ids_index " << ctx->ids_index;
+    ctx->ids_index = ctx->SaveTensorForBackward(inputs.at(1));     // id
     ctx->embedding_name = JUST(attrs.GetAttr<std::string>("embedding_name"));
     ctx->line_size = JUST(attrs.GetAttr<int64_t>("line_size"));
     ctx->embedding_size = JUST(attrs.GetAttr<int64_t>("embedding_size"));
+    ctx->input_num = inputs.size();
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const OneEmbeddingLookupCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
+    in_grads->resize(ctx->input_num);
     const auto& saved_tensors = ctx->SavedTensors();
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     // in_grads->resize(1);
     if (ctx->requires_grad) {
-      JUST(functional::OneEmbeddingLookupGrad(
-          saved_tensors.at(ctx->ids_index), JUST(VectorAt(out_grads, 0)), ctx->embedding_name, ctx->line_size,
-          ctx->embedding_size));
+      JUST(functional::OneEmbeddingLookupGrad(saved_tensors.at(ctx->ids_index),
+                                              JUST(VectorAt(out_grads, 0)), ctx->embedding_name,
+                                              ctx->line_size, ctx->embedding_size));
       (*in_grads)[0] = JUST(functional::ZerosLike(saved_tensors.at(ctx->shadow_index)));
     }
-    LOG(ERROR) << "Apply ";
     return Maybe<void>::Ok();
   }
 };

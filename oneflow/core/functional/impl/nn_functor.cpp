@@ -3510,16 +3510,16 @@ class OneEmbeddingLookupFunctor {
 class OneEmbeddingLookupGradFunctor {
  public:
   OneEmbeddingLookupGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("embedding_lookup_placeholder_grad")
+    op_ = CHECK_JUST(one::OpBuilder("embedding_update_placeholder")
                          .Input("ids")
                          .Input("embedding_grad")
                          .Build());
   }
 
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ids,
-                           const std::shared_ptr<one::Tensor>& embedding_grad,
-                           const std::string& embedding_name, const int64_t line_size,
-                           const int64_t embedding_size) const {
+                         const std::shared_ptr<one::Tensor>& embedding_grad,
+                         const std::string& embedding_name, const int64_t line_size,
+                         const int64_t embedding_size) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("embedding_name", embedding_name));
     JUST(attrs.SetAttr<int64_t>("line_size", line_size));
