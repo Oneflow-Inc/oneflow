@@ -25,55 +25,56 @@ namespace oneflow {
 
 constexpr int AttrMap::kInitializedSize;
 
-AttrMap::AttrMap() : data_(std::make_shared<AttrMap::AttrData>()) {}
+AttrMap::AttrMap() : internal_(std::make_shared<AttrMap::>()) {}
 
-AttrMap::AttrMap(const CachedMutableAttrMap& other) : data_(std::make_shared<AttrMap::AttrData>()) {
-  data_->capacity = other.size();
-  data_->hash_value = other.hash_value();
-  data_->attr_names = other.attr_names();
-  data_->attrs.resize(data_->capacity);
-  for (int i = 0; i < data_->capacity; ++i) {
-    data_->attrs[i].second = other.valid_masks()[i];
+AttrMap::AttrMap(const CachedMutableAttrMap& other) : internal_(std::make_shared<AttrMap::>()) {
+  internal_->capacity = other.size();
+  internal_->hash_value = other.hash_value();
+  internal_->attr_names = other.attr_names();
+  internal_->attrs.resize(internal_->capacity);
+  for (int i = 0; i < internal_->capacity; ++i) {
+    internal_->attrs[i].second = other.valid_masks()[i];
     if (other.valid_masks()[i]) {
-      ++(data_->size);
-      data_->attrs[i].first = other.attrs()[i];
+      ++(internal_->size);
+      internal_->attrs[i].first = other.attrs()[i];
     }
   }
 }
 
-AttrMap::AttrMap(const UserOpConf& user_op_conf) : data_(std::make_shared<AttrMap::AttrData>()) {
-  data_->attr_names.reset(new small_vector<std::string, kInitializedSize>());
+AttrMap::AttrMap(const UserOpConf& user_op_conf) : internal_(std::make_shared<AttrMap::>()) {
+  internal_->attr_names.reset(new small_vector<std::string, kInitializedSize>());
   for (const auto& kv : user_op_conf.attr()) {
     auto cpp_attr_value = user_op::AttrValueUtil::ToCppAttrValue(kv.second);
     if (cpp_attr_value.IsOk()) {
-      ++(data_->size);
-      data_->attr_names->emplace_back(kv.first);
-      data_->attrs.emplace_back(CHECK_JUST(cpp_attr_value), true);
+      ++(internal_->size);
+      internal_->attr_names->emplace_back(kv.first);
+      internal_->attrs.emplace_back(CHECK_JUST(cpp_attr_value), true);
 
-      HashCombine(&data_->hash_value, kv.first.size());
-      HashCombine(&data_->hash_value, data_->attrs.back().first->hash_value());
+      HashCombine(&internal_->hash_value, kv.first.size());
+      HashCombine(&internal_->hash_value, internal_->attrs.back().first->hash_value());
     } else {
       LOG(ERROR) << user_op_conf.DebugString()
                  << " failed to convert to cpp attr value, key: " << kv.first;
     }
   }
-  data_->capacity = data_->size;
+  internal_->capacity = internal_->size;
 }
 
 AttrMap& AttrMap::operator=(const AttrMap& other) {
-  data_ = other.data_;
+  internal_ = other.internal_;
   return *this;
 }
 
 bool AttrMap::operator==(const AttrMap& other) const {
-  if (data_->size != other.data_->size || data_->hash_value != other.data_->hash_value) {
+  if (internal_->size != other.internal_->size
+      || internal_->hash_value != other.internal_->hash_value) {
     return false;
   }
-  for (int i = 0; i < std::min(data_->size, other.data_->size); ++i) {
-    if (data_->attrs[i].second != other.data_->attrs[i].second) { return false; }
-    if (data_->attrs[i].second) {
-      if ((*data_->attr_names)[i] != (*other.data_->attr_names)[i]) { return false; }
-      if (*(data_->attrs[i].first) != *(other.data_->attrs[i].first)) { return false; }
+  for (int i = 0; i < std::min(internal_->size, other.internal_->size); ++i) {
+    if (internal_->attrs[i].second != other.internal_->attrs[i].second) { return false; }
+    if (internal_->attrs[i].second) {
+      if ((*internal_->attr_names)[i] != (*other.internal_->attr_names)[i]) { return false; }
+      if (*(internal_->attrs[i].first) != *(other.internal_->attrs[i].first)) { return false; }
     }
   }
   return true;
@@ -91,9 +92,9 @@ Maybe<const T&> AttrMap::GetAttr(const std::string& attr_name) const {
 
 const std::shared_ptr<const user_op::AttrVal>& AttrMap::Attr4Name(
     const std::string& attr_name) const {
-  for (int i = 0; i < data_->capacity; ++i) {
-    if (data_->attrs[i].second && attr_name == (*data_->attr_names)[i]) {
-      return data_->attrs[i].first;
+  for (int i = 0; i < internal_->capacity; ++i) {
+    if (internal_->attrs[i].second && attr_name == (*internal_->attr_names)[i]) {
+      return internal_->attrs[i].first;
     }
   }
   static const std::shared_ptr<const user_op::AttrVal> none;
@@ -104,8 +105,8 @@ bool AttrMap::HasAttr4Name(const std::string& attr_name) const {
   return Attr4Name(attr_name) != nullptr;
 }
 
-AttrMap::const_iterator::const_iterator(size_t pos, const AttrMap::AttrData* data)
-    : pos_(pos), data_(data) {
+AttrMap::const_iterator::const_iterator(size_t pos, const AttrMap::*internal)
+    : pos_(pos), internal_(internal) {
   UpdateKV();
 }
 
@@ -116,13 +117,13 @@ AttrMap::const_iterator& AttrMap::const_iterator::operator++() {
 }
 
 void AttrMap::const_iterator::UpdateKV() {
-  while (pos_ < data_->capacity) {
-    if (data_->attrs[pos_].second) { break; }
+  while (pos_ < internal_->capacity) {
+    if (internal_->attrs[pos_].second) { break; }
     ++pos_;
   }
-  if (pos_ < data_->capacity) {
-    kv_.first = (*data_->attr_names)[pos_];
-    kv_.second = data_->attrs[pos_].first;
+  if (pos_ < internal_->capacity) {
+    kv_.first = (*internal_->attr_names)[pos_];
+    kv_.second = internal_->attrs[pos_].first;
   }
 }
 

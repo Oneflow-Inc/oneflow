@@ -51,12 +51,12 @@ class AttrMap final {
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(const std::string& attr_name) const;
   bool HasAttr4Name(const std::string& attr_name) const;
 
-  size_t size() const { return data_->size; }
-  bool empty() const { return data_->size > 0; }
+  size_t size() const { return internal_->size; }
+  bool empty() const { return internal_->size > 0; }
 
-  size_t hash_value() const { return data_->hash_value; }
+  size_t hash_value() const { return internal_->hash_value; }
 
-  struct AttrData {
+  struct AttrInternal {
     size_t capacity = 0;
     size_t size = 0;
     size_t hash_value = 0;
@@ -69,29 +69,31 @@ class AttrMap final {
     using const_reference = const std::pair<std::string, std::shared_ptr<const user_op::AttrVal>>&;
     using const_pointer = const std::pair<std::string, std::shared_ptr<const user_op::AttrVal>>*;
 
-    const_iterator(size_t pos, const AttrData* data);
+    const_iterator(size_t pos, const AttrInternal* internal);
     ~const_iterator() = default;
 
     const_reference operator*() const { return kv_; }
     const_pointer operator->() const { return &kv_; }
 
     const_iterator& operator++();
-    bool operator==(const const_iterator& x) const { return pos_ == x.pos_ && data_ == x.data_; }
+    bool operator==(const const_iterator& x) const {
+      return pos_ == x.pos_ && internal_ == x.internal_;
+    }
     bool operator!=(const const_iterator& x) const { return !(*this == x); }
 
    private:
     void UpdateKV();
 
     size_t pos_;
-    const AttrData* data_;
+    const AttrInternal* internal_;
     std::pair<std::string, std::shared_ptr<const user_op::AttrVal>> kv_;
   };
 
-  const_iterator begin() const { return const_iterator(0, data_.get()); }
-  const_iterator end() const { return const_iterator(data_->capacity, data_.get()); }
+  const_iterator begin() const { return const_iterator(0, internal_.get()); }
+  const_iterator end() const { return const_iterator(internal_->capacity, internal_.get()); }
 
  private:
-  std::shared_ptr<AttrData> data_;
+  std::shared_ptr<AttrInternal> internal_;
 };
 
 AttrMap MakeAttrMapFromUserOpConf(const UserOpConf& user_op_conf);
