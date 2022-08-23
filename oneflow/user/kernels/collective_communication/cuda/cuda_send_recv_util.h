@@ -13,20 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_ENV_VAR_EAGER_H_
-#define ONEFLOW_CORE_COMMON_ENV_VAR_EAGER_H_
+#ifndef ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_CUDA_CUDA_SEND_RECV_UTIL_H_
+#define ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_CUDA_CUDA_SEND_RECV_UTIL_H_
 
-#include "oneflow/core/common/env_var/env_var.h"
+#ifdef WITH_CUDA
+#include "oneflow/core/device/nccl_util.h"
 
 namespace oneflow {
 
-// NOTE: use env variable 'ONEFLOW_EAGER_ENABLE_LOCAL_INFER_CACHE' indicate whether the
-// use infer cache in naive local op interpret.
-DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_EAGER_ENABLE_LOCAL_INFER_CACHE, true);
+namespace ccl {
 
-// NOTE: use env variable 'ONEFLOW_EAGER_TENSOR_INFER_CACHE_SIZE' indicate the size of
-// infer cache in op interpret.
-DEFINE_THREAD_LOCAL_ENV_INTEGER(ONEFLOW_EAGER_TENSOR_INFER_CACHE_SIZE, 128 * 1024);
+extern std::pair<ncclComm_t, int64_t> (*GetNcclCommAndPeerNcclRank)(int64_t peer_process_i);
+
+}  // namespace ccl
 
 }  // namespace oneflow
-#endif  // ONEFLOW_CORE_COMMON_ENV_VAR_EAGER_H_
+
+#endif  // WITH_CUDA
+
+#endif  // ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_CUDA_CUDA_SEND_RECV_UTIL_H_

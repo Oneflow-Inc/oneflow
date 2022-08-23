@@ -254,6 +254,11 @@ class TestAddModule(flow.unittest.TestCase):
         z3 = torch.add(s, x3, alpha=alpha)
         return z1, z2, z3
 
+    @profile(torch.add)
+    def profile_add(test_case):
+        torch.add(torch.ones(100), 20)
+        torch.add(torch.ones(100), torch.ones(100, 1), alpha=10)
+
     @autotest(n=3)
     def test_non_contiguous_inplace_add(test_case):
         device = random_device()
@@ -261,6 +266,15 @@ class TestAddModule(flow.unittest.TestCase):
         y = x + 1
         y = y[:, 1:3]
         y += random_tensor(2, 2, 2).to(device)
+        return y
+
+    @autotest(n=5)
+    def test_scalar_add_with_random_devices(test_case):
+        x1_device = random_device()
+        x2_device = random_device()
+        x1 = random_tensor(2, 2, 3).to(x1_device).mean()
+        x2 = random_tensor(2, 2, 3).to(x2_device)
+        y = x1 + x2
         return y
 
 
