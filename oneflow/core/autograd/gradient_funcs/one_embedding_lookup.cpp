@@ -21,11 +21,11 @@ namespace oneflow {
 namespace one {
 
 struct OneEmbeddingLookupCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  std::string key_value_store_options;
-  int shadow_index;
-  int ids_index;
-  int input_num;
+  bool requires_grad{};
+  std::string key_value_store_options{};
+  int shadow_index{};
+  int ids_index{};
+  int input_num{};
 };
 
 class OneEmbeddingLookup : public OpExprGradFunction<OneEmbeddingLookupCaptureState> {
