@@ -59,7 +59,7 @@ class TestGroupNormModule(flow.unittest.TestCase):
     @globaltest
     def test_global_group_norm_with_random_data(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=1):
+            for sbp in all_sbp(placement, max_dim=4):
                 _test_global_group_norm(test_case, placement, sbp)
 
 
