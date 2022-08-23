@@ -1443,12 +1443,13 @@ class InplaceToContiguousFunctor {
     const auto& blob_object = JUST(input->eager_blob_object());
     Symbol<LocalTensorMeta> old_tensor_meta = JUST(input->local_tensor_meta());
 
-    Symbol<LocalTensorMeta> new_tensor_meta = SymbolOf(LocalTensorMeta(
-        std::make_shared<Shape>(old_tensor_meta->shape()), stride, old_tensor_meta->dtype(),
-        old_tensor_meta->device(), old_tensor_meta->storage_offset()));
+    Symbol<LocalTensorMeta> new_tensor_meta =
+        SymbolOf(LocalTensorMeta(std::make_shared<Shape>(old_tensor_meta->shape()), stride,
+                                 old_tensor_meta->dtype(), old_tensor_meta->device()));
 
     std::shared_ptr<EagerLocalTensorImpl> final_tensor_impl =
         std::make_shared<EagerLocalTensorImpl>(JUST(input->tensor_storage()),
+                                               JUST(input->storage_offset()),
                                                input->requires_grad(), input->is_leaf());
     JUST(final_tensor_impl->set_retain_grad(input->retain_grad()));
     JUST(final_tensor_impl->InitEagerBlobObject(new_tensor_meta,
@@ -2963,6 +2964,36 @@ class To4Functor {
   }
 };
 
+class ToDeviceFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
+                           const Optional<std::string>& device_) const {
+    Symbol<DType> dtype = input->dtype();
+    const bool copy = false;
+    if (input->is_global()) {
+      std::string device_type = device_.value_or(JUST(input->parallel_desc())->device_tag());
+      CHECK_OR_RETURN(ep::DeviceManagerRegistry::GetDeviceTypeByDeviceTypeName(device_type)
+                      != DeviceType::kInvalidDevice)
+          << Error::RuntimeError()
+          << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
+          << "for global tensor, but got " << device_.value_or("");
+      return JUST(GlobalTensorTo(input, device_type, dtype, copy));
+    } else {
+      std::string device_name = "";
+      int device_id = 0;
+      if (device_.has_value()) {
+        JUST(ParsingDeviceTag(device_.value_or(""), &device_name, &device_id));
+        if (device_id == -1) { device_id = GlobalProcessCtx::LocalRank(); }
+      } else {
+        Symbol<Device> device = JUST(input->device());
+        device_name = device->type();
+        device_id = device->device_id();
+      }
+      return JUST(LocalTensorTo(input, device_name, device_id, dtype, copy));
+    }
+  }
+};
+
 class TopKFunctor {
  public:
   TopKFunctor() { op_ = CHECK_JUST(one::OpBuilder("top_k").Input("in").Output("out").Build()); }
@@ -3491,7 +3522,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MaskedFillFunctor>("MaskedFill");
   m.add_functor<impl::MeshgridFunctor>("Meshgrid");
   m.add_functor<impl::IndexSelectFunctor>("IndexSelect");
-  m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor>("To");
+  m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor,
+                impl::ToDeviceFunctor>("To");
   m.add_functor<impl::TopKFunctor>("TopK");
   m.add_functor<impl::InTopKFunctor>("InTopK");
   m.add_functor<impl::TensorToTensorBufferFunctor>("TensorToTensorBuffer");
