@@ -23,6 +23,8 @@ limitations under the License.
 
 namespace oneflow {
 
+constexpr int AttrMap::kInitializedSize;
+
 AttrMap::AttrMap() : data_(std::make_shared<AttrMap::AttrData>()) {}
 
 AttrMap::AttrMap(const CachedMutableAttrMap& other) : data_(std::make_shared<AttrMap::AttrData>()) {
@@ -104,18 +106,16 @@ bool AttrMap::HasAttr4Name(const std::string& attr_name) const {
 
 AttrMap::const_iterator::const_iterator(size_t pos, const AttrMap::AttrData* data)
     : pos_(pos), data_(data) {
-  while (pos_ < data_->capacity) {
-    if (data_->attrs[pos_].second) { break; }
-    ++pos_;
-  }
-  if (pos_ < data_->capacity) {
-    kv_.first = (*data_->attr_names)[pos_];
-    kv_.second = data_->attrs[pos_].first;
-  }
+  UpdateKV();
 }
 
 AttrMap::const_iterator& AttrMap::const_iterator::operator++() {
   ++pos_;
+  UpdateKV();
+  return *this;
+}
+
+void AttrMap::const_iterator::UpdateKV() {
   while (pos_ < data_->capacity) {
     if (data_->attrs[pos_].second) { break; }
     ++pos_;
@@ -124,7 +124,6 @@ AttrMap::const_iterator& AttrMap::const_iterator::operator++() {
     kv_.first = (*data_->attr_names)[pos_];
     kv_.second = data_->attrs[pos_].first;
   }
-  return *this;
 }
 
 AttrMap MakeAttrMapFromUserOpConf(const UserOpConf& user_op_conf) { return AttrMap(user_op_conf); }

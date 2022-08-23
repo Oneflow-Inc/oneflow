@@ -80,6 +80,8 @@ class AttrMap final {
     bool operator!=(const const_iterator& x) const { return !(*this == x); }
 
    private:
+    void UpdateKV();
+
     size_t pos_;
     const AttrData* data_;
     std::pair<std::string, std::shared_ptr<const user_op::AttrVal>> kv_;
