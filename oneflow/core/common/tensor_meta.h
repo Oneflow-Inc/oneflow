@@ -129,11 +129,10 @@ class LocalTensorMeta : public TensorMeta {
   LocalTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype, Symbol<Device> device);
   LocalTensorMeta(const std::shared_ptr<const Shape>& shape,
                   const std::shared_ptr<const Stride>& stride, DataType dtype,
-                  Symbol<Device> device, int64_t storage_offset);
+                  Symbol<Device> device);
   virtual ~LocalTensorMeta() = default;
 
   const Symbol<Device>& device() const { return device_; }
-  int64_t storage_offset() const { return storage_offset_; }
 
   bool operator==(const LocalTensorMeta& other) const;
   size_t CalcHashValue() const;
@@ -142,7 +141,6 @@ class LocalTensorMeta : public TensorMeta {
 
  private:
   Symbol<Device> device_;
-  int64_t storage_offset_;
 };
 
 class MutLocalTensorMeta : public MutTensorMeta {
@@ -154,14 +152,12 @@ class MutLocalTensorMeta : public MutTensorMeta {
                      Symbol<Device> device);
   MutLocalTensorMeta(const std::shared_ptr<const Shape>& shape,
                      const std::shared_ptr<const Stride>& stride, DataType dtype,
-                     Symbol<Device> device, int64_t storage_offset);
+                     Symbol<Device> device);
   virtual ~MutLocalTensorMeta() = default;
 
   const Symbol<Device>& device() const { return device_; }
-  int64_t storage_offset() const { return storage_offset_; }
 
   Symbol<Device>* mut_device() { return &device_; }
-  void set_storage_offset(int64_t offset) { storage_offset_ = offset; }
 
   bool operator==(const MutLocalTensorMeta& other) const;
   size_t CalcHashValue() const;
@@ -170,7 +166,6 @@ class MutLocalTensorMeta : public MutTensorMeta {
 
  private:
   Symbol<Device> device_;
-  int64_t storage_offset_;
 };
 
 class GlobalTensorMeta : public TensorMeta {
