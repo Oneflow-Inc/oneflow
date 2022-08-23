@@ -1300,11 +1300,11 @@
 
 - name: "group_norm_grad"
   signature: "Tensor (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Tensor gamma=None, Int32 num_groups, Double epsilon) => GroupNormGrad"
-  bind_python: True
+  bind_python: False
 
 - name: "group_norm_param_grad"
   signature: "TensorTuple (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance) => GroupNormParamGrad"
-  bind_python: True
+  bind_python: False
 
 - name: "avg_pool2d_nhwc"
   signature:

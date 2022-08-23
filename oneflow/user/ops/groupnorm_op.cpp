@@ -34,18 +34,18 @@ oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
   user_op::TensorDesc* inv_variance = ctx->MutOutputTensorDesc("inv_variance", 0);
   const bool affine = ctx->Attr<bool>("affine");
   const int32_t num_groups = ctx->Attr<int32_t>("num_groups");
-  const int64_t batch_num = x.shape().At(0);
-  const int64_t channel_num = x.shape().At(1);  // Assueme channel first
+  const int64_t batch_size = x.shape().At(0);
+  const int64_t channel_size = x.shape().At(1);  // Assume NCHW format.
   *y->mut_shape() = x.shape();
   *y->mut_is_dynamic() = x.is_dynamic();
   if (affine) {
     const user_op::TensorDesc& gamma = ctx->InputTensorDesc("gamma", 0);
-    CHECK_EQ_OR_RETURN(gamma.shape().At(0), channel_num);
+    CHECK_EQ_OR_RETURN(gamma.shape().At(0), channel_size);
     const user_op::TensorDesc& beta = ctx->InputTensorDesc("beta", 0);
-    CHECK_EQ_OR_RETURN(beta.shape().At(0), channel_num);
+    CHECK_EQ_OR_RETURN(beta.shape().At(0), channel_size);
   }
-  CHECK_EQ_OR_RETURN(channel_num % num_groups, 0) << "Channels should be divisble by num_groups. ";
-  *mean->mut_shape() = Shape({batch_num, num_groups});
+  CHECK_EQ_OR_RETURN(channel_size % num_groups, 0) << "Channels should be divisble by num_groups. ";
+  *mean->mut_shape() = Shape({batch_size, num_groups});
   *inv_variance = *mean;
   return Maybe<void>::Ok();
 }
@@ -55,7 +55,6 @@ oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
 }
 
 /* static */ Maybe<void> GroupNormOp::GetSbp(user_op::SbpContext* ctx) {
-  // TODO: Support More SBP
   ctx->NewBuilder()
       .Split(ctx->inputs(), 0)
       .Split(ctx->outputs(), 0)
@@ -110,9 +109,11 @@ oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
     broadcast_args.emplace_back(user_op::OpArg("gamma", 0));
   }
 
-  // TODO: Support More SBP
   ctx->NewBuilder()
-      .Split(ctx->inputs(), 0)
+      .Split(user_op::OpArg("dy", 0), 0)
+      .Split(user_op::OpArg("x", 0), 0)
+      .Split(user_op::OpArg("mean", 0), 0)
+      .Split(user_op::OpArg("inv_variance", 0), 0)
       .Split(ctx->outputs(), 0)
       .Broadcast(broadcast_args)
       .Build();
@@ -135,17 +136,12 @@ oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
 
 // GroupNorm Param Grad
 /* static */ Maybe<void> GroupNormParamGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-  const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);
-  const user_op::TensorDesc& inv_variance = ctx->InputTensorDesc("inv_variance", 0);
   user_op::TensorDesc* dgamma = ctx->MutOutputTensorDesc("dgamma", 0);
   user_op::TensorDesc* dbeta = ctx->MutOutputTensorDesc("dbeta", 0);
   const int64_t channel_size = x.shape().At(1);
   *dgamma->mut_shape() = Shape{channel_size};
-  // *dgamma->mut_is_dynamic() = dgamma.is_dynamic();
   *dbeta->mut_shape() = Shape{channel_size};
-  // *dbeta->mut_is_dynamic() = dbeta.is_dynamic();
   return Maybe<void>::Ok();
 }
 
@@ -154,27 +150,18 @@ oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
 }
 
 /* static */ Maybe<void> GroupNormParamGradOp::GetSbp(user_op::SbpContext* ctx) {
-  std::vector<user_op::OpArg> broadcast_args;
-  // TODO: Support More SBP
   ctx->NewBuilder()
-      .Split(ctx->inputs(), 0)
-      .Split(ctx->outputs(), 0)
-      .Broadcast(broadcast_args)
+      .Split(user_op::OpArg("dy", 0), 0)
+      .Split(user_op::OpArg("x", 0), 0)
+      .Split(user_op::OpArg("mean", 0), 0)
+      .Split(user_op::OpArg("inv_variance", 0), 0)
+      .PartialSum(ctx->outputs())
       .Build();
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> GroupNormParamGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
-  // const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-  // CHECK_EQ_OR_RETURN(dy.data_type(), x.data_type());
-  // const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);
-  // const user_op::TensorDesc& inv_variance = ctx->InputTensorDesc("inv_variance", 0);
-  // const DataType& gn_param_data_type = InferGnParamDataType(x.data_type());
-  // CHECK_EQ_OR_RETURN(mean.data_type(), gn_param_data_type);
-  // CHECK_EQ_OR_RETURN(inv_variance.data_type(), gn_param_data_type);
-  // user_op::TensorDesc* dx = ctx->MutOutputTensorDesc("dx", 0);
-
   user_op::TensorDesc* dgamma = ctx->MutOutputTensorDesc("dgamma", 0);
   user_op::TensorDesc* dbeta = ctx->MutOutputTensorDesc("dbeta", 0);
   *dgamma->mut_data_type() = dy.data_type();

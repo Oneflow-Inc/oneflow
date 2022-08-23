@@ -24,8 +24,6 @@ namespace oneflow {
 
 namespace {
 
-// TODO add AFFINE STORE
-
 template<typename SRC, typename DST, bool affine>
 struct AffineStore {
   AffineStore(DST* y, int64_t row_size, int64_t channel_size, int64_t spatial_size,
@@ -89,9 +87,7 @@ struct ScaleLoad {
     src_pack.storage =
         *(reinterpret_cast<const cuda::layer_norm::PackType<SRC, PackSize>*>(src) + packed_offset);
     SRC gamma_val = static_cast<SRC>(1.0);
-    // if (affine) {
-    //   gamma_val = gamma[gamma_offset];
-    // }
+    if (affine) { gamma_val = gamma[gamma_offset]; }
 #pragma unroll
     for (int i = 0; i < PackSize; ++i) { dst[i] = static_cast<DST>(src_pack.elem[i] * gamma_val); }
   }
@@ -197,7 +193,6 @@ DispatchGroupNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t row
     return DispatchGroupNormWarpImpl<LOAD, STORE, ComputeType>(
         stream, load, store, rows, cols, spatial_size, epsilon, mean, inv_variance);
   } else {
-    // TODO
     bool dispatch_smem_impl_success;
     {
       cudaError_t err = TryDispatchGroupNormBlockSMemImpl<LOAD, STORE, ComputeType>(
@@ -211,6 +206,15 @@ DispatchGroupNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t row
     }
     return cudaSuccess;
   }
+}
+
+template<typename LOAD, typename STORE, typename ComputeType>
+inline typename std::enable_if<std::is_same<ComputeType, double>::value, cudaError_t>::type
+DispatchGroupNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
+                  const int64_t cols, const int64_t spatial_size, const double epsilon,
+                  ComputeType* mean, ComputeType* inv_variance) {
+  return DispatchGroupNormBlockUncachedImpl<LOAD, STORE, ComputeType>(
+      stream, load, store, rows, cols, spatial_size, epsilon, mean, inv_variance);
 }
 
 template<typename T, bool affine>
@@ -354,6 +358,15 @@ DispatchGroupNormGrad(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_sc
   }
 }
 
+template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
+inline typename std::enable_if<std::is_same<ComputeType, double>::value, cudaError_t>::type
+DispatchGroupNormGrad(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
+                      STORE store, const ComputeType* mean, const ComputeType* inv_variance,
+                      const int64_t rows, const int64_t cols, const int64_t spatial_size) {
+  return DispatchGroupNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType>(
+      stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols, spatial_size);
+}
+
 template<typename T, bool affine>
 void GroupNormBackwardGpu(ep::Stream* stream, const int64_t num_instances, const int64_t norm_size,
                           const int64_t channel_size, const int64_t spatial_size, const T* dy_ptr,
@@ -369,12 +382,6 @@ void GroupNormBackwardGpu(ep::Stream* stream, const int64_t num_instances, const
       stream->As<ep::CudaStream>()->cuda_stream(), load_x, load_scaled_dy, store,
       mean->dptr<ComputeType>(), inv_variance->dptr<ComputeType>(), num_instances, norm_size,
       spatial_size)));
-
-  // OF_CUDA_CHECK((cuda::layer_norm::DispatchLayerNormGrad<decltype(load_x),
-  // decltype(load_scaled_dy),
-  //                                                        decltype(store), ComputeType>(
-  //     stream->As<ep::CudaStream>()->cuda_stream(), load_x, load_scaled_dy, store,
-  //     mean->dptr<ComputeType>(), inv_variance->dptr<ComputeType>(), num_instances, norm_size)));
 }
 
 template<typename T>
@@ -438,9 +445,12 @@ class GroupNormGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
-// REGISTER_GROUP_NORM_CUDA_KERNEL(half)
+REGISTER_GROUP_NORM_CUDA_KERNEL(half)
 REGISTER_GROUP_NORM_CUDA_KERNEL(float)
-// REGISTER_GROUP_NORM_CUDA_KERNEL(double)
+REGISTER_GROUP_NORM_CUDA_KERNEL(double)
+#if CUDA_VRSION >= 11000
+REGISTER_GROUP_NORM_CUDA_KERNEL(nv_bfloat16)
+#endif
 
 template<typename T>
 class GroupNormGradGpuKernel final : public user_op::OpKernel {
@@ -478,27 +488,15 @@ class GroupNormGradGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
+REGISTER_GROUP_NORM_GRAD_CUDA_KERNEL(half)
 REGISTER_GROUP_NORM_GRAD_CUDA_KERNEL(float)
+REGISTER_GROUP_NORM_GRAD_CUDA_KERNEL(double)
+#if CUDA_VRSION >= 11000
+REGISTER_GROUP_NORM_GRAD_CUDA_KERNEL(nv_bfloat16)
+#endif
 
 constexpr int kBlockSize = 128;
 constexpr int kNumWaves = 32;
-
-template<typename T>
-struct DefaultComputeType {
-  using type = T;
-};
-
-template<>
-struct DefaultComputeType<half> {
-  using type = float;
-};
-
-#if CUDA_VERSION >= 11000
-template<>
-struct DefaultComputeType<nv_bfloat16> {
-  using type = float;
-};
-#endif  // CUDA_VERSION >= 11000
 
 inline cudaError_t GetNumBlocks(int64_t n, int* num_blocks) {
   int dev;
@@ -591,7 +589,7 @@ class GroupNormParamGradGpuKernel final : public user_op::OpKernel {
     const int64_t group_size = num_instances / batch_size;
     int num_blocks;
     OF_CUDA_CHECK(GetNumBlocks(channel_size, &num_blocks));
-    using ComputeType = typename DefaultComputeType<T>::type;
+    using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
     GroupNormParamGradKernel<T, ComputeType>
         <<<num_blocks, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             dy->dptr<T>(), x->dptr<T>(), mean->dptr<T>(), inv_variance->dptr<T>(),
@@ -606,6 +604,11 @@ class GroupNormParamGradGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
+REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(half)
 REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(float)
+REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(double)
+#if CUDA_VRSION >= 11000
+REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(nv_bfloat16)
+#endif
 
 }  // namespace oneflow
