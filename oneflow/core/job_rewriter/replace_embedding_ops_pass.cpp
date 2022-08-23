@@ -520,7 +520,7 @@ bool IsSupportFusedUpdatePut(const bool is_full_cache, const bool enable_auto_mi
                              const bool is_sgd, const std::string& down_scale_by_lbn,
                              const std::string& skip_if_lbn, const float l1, const float l2,
                              const float weight_decay) {
-  if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSE_UPDATE_PUT", false)) { return false; }
+  if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSE_UPDATE_PUT", true)) { return false; }
   if (!is_full_cache) { return false; }
   if (!enable_auto_mixed_precision) { return false; }
   if (!is_sgd) { return false; }

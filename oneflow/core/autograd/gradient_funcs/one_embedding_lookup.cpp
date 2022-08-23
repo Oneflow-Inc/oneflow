@@ -21,13 +21,13 @@ namespace oneflow {
 namespace one {
 
 struct OneEmbeddingLookupCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  std::string embedding_name;
-  int64_t line_size;
-  int64_t embedding_size;
-  int shadow_index;
-  int ids_index;
-  int input_num;
+  bool requires_grad{};
+  std::string embedding_name{};
+  int64_t line_size{};
+  int64_t embedding_size{};
+  int shadow_index{};
+  int ids_index{};
+  int input_num{};
 };
 
 class OneEmbeddingLookup : public OpExprGradFunction<OneEmbeddingLookupCaptureState> {
@@ -52,7 +52,6 @@ class OneEmbeddingLookup : public OpExprGradFunction<OneEmbeddingLookupCaptureSt
     in_grads->resize(ctx->input_num);
     const auto& saved_tensors = ctx->SavedTensors();
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
-    // in_grads->resize(1);
     if (ctx->requires_grad) {
       JUST(functional::OneEmbeddingLookupGrad(saved_tensors.at(ctx->ids_index),
                                               JUST(VectorAt(out_grads, 0)), ctx->embedding_name,

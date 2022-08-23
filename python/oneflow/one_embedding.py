@@ -282,7 +282,6 @@ class Embedding(Module):
 
     def eager_update(self):
         print("embedding eager_update")
-        flow._C.eager_update()
 
     def forward(self, ids, table_ids=None):
         """Embedding lookup operation
