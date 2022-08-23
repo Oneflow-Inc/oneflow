@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/sbp_context.h"
 #include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/framework/infer_output_blob_time_shape_fn_context.h"
 #include "oneflow/core/framework/infer_nd_sbp_fn_context.h"
@@ -640,15 +641,19 @@ Maybe<void> UserOp::InferOutBlobDescs(
     const ParallelContext* parallel_ctx) const {
   CHECK_OR_RETURN(val_ != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
-  if (!val_->physical_tensor_desc_infer_fn) {
-    // When there has no physical tensor desc infer function, use infer function in base class.
-    return Operator::InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
-  } else {
+  user_op::TensorDescInferFn tensor_desc_infer_fn;
+  if (val_->physical_tensor_desc_infer_fn) {
+    tensor_desc_infer_fn = val_->physical_tensor_desc_infer_fn;
+  } else if (val_->logical_tensor_desc_infer_fn) {
+    tensor_desc_infer_fn = val_->logical_tensor_desc_infer_fn;
+  }
+  if (tensor_desc_infer_fn) {
     // default method set output blob desc (such as Dtype, is_dynamic, is_tensor_list)
     // set out blob desc attr as first input blob desc (if has)
     BlobDesc* first_in_blob_desc = FindValidBlobDescOfBnsInOp(GetBlobDesc4BnInOp, input_bns());
     if (first_in_blob_desc) {
       for (const std::string& obn : output_bns()) {
+        // set base attr with the valid input
         GetBlobDesc4BnInOp(obn)->CopyFrom(*first_in_blob_desc);
       }
     }
@@ -657,7 +662,7 @@ Maybe<void> UserOp::InferOutBlobDescs(
     CHECK_OR_RETURN(val_->data_type_infer_fn)
         << "No InferDataType function for " << val_->op_type_name;
     JUST(val_->data_type_infer_fn(&infer_ctx));
-    JUST(val_->physical_tensor_desc_infer_fn(&infer_ctx));
+    JUST(tensor_desc_infer_fn(&infer_ctx));
     for (const auto& pair : infer_ctx.outputs()) {
       BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
       out_blob_desc->set_data_type(infer_ctx.OutputDType(pair.first, pair.second));
@@ -666,6 +671,9 @@ Maybe<void> UserOp::InferOutBlobDescs(
       out_blob_desc->set_is_dynamic(infer_ctx.OutputIsDynamic(pair.first, pair.second));
     }
     return Maybe<void>::Ok();
+  } else {
+    // When there has no physical/logical tensor desc infer function, use infer with logical blob and sbp.
+    return Operator::InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
   }
 }
 
