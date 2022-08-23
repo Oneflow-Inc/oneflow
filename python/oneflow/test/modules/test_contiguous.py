@@ -84,7 +84,7 @@ class TestContiguous(flow.unittest.TestCase):
 
     @profile(torch.Tensor.contiguous)
     def profile_contiguous(test_case):
-        x = torch.ones(32,3,128,128)
+        x = torch.ones(32, 3, 128, 128)
         x.contiguous()
 
 

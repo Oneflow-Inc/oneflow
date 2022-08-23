@@ -52,9 +52,9 @@ class TestConstantModule(flow.unittest.TestCase):
 
     @profile(torch.zeros)
     def profile_zeros(test_case):
-        torch.zeros(2,3)
-        torch.zeros(32, 3,128,128)
-        torch.zeros(1000,1000)
+        torch.zeros(2, 3)
+        torch.zeros(32, 3, 128, 128)
+        torch.zeros(1000, 1000)
 
     @autotest(n=10, auto_backward=False, check_graph=True)
     def test_flow_ones_list_with_random_data(test_case):
@@ -69,9 +69,9 @@ class TestConstantModule(flow.unittest.TestCase):
 
     @profile(torch.ones)
     def profile_ones(test_case):
-        torch.ones(2,3)
-        torch.ones(32,3,128,128)
-        torch.ones(1000,1000)
+        torch.ones(2, 3)
+        torch.ones(32, 3, 128, 128)
+        torch.ones(1000, 1000)
 
     @autotest(auto_backward=False, check_graph=True)
     def test_flow_zeros_like_list_with_random_data(test_case):
@@ -82,9 +82,9 @@ class TestConstantModule(flow.unittest.TestCase):
 
     @profile(torch.zeros_like)
     def profile_zeros_like(test_case):
-        input1 = torch.ones(32,3,128,128)
-        input2 = torch.ones(1000,1000)
-        input3 = torch.ones(2,3)
+        input1 = torch.ones(32, 3, 128, 128)
+        input2 = torch.ones(1000, 1000)
+        input3 = torch.ones(2, 3)
         torch.zeros_like(input1)
         torch.zeros_like(input2)
         torch.zeros_like(input3)
@@ -109,12 +109,12 @@ class TestConstantModule(flow.unittest.TestCase):
         x = random_tensor().to(device)
         y = torch.ones_like(x)
         return y
-    
+
     @profile(torch.ones_like)
     def profile_ones_like(test_case):
-        input1 = torch.ones(32,3,128,128)
-        input2 = torch.ones(1000,1000)
-        input3 = torch.ones(2,3)
+        input1 = torch.ones(32, 3, 128, 128)
+        input2 = torch.ones(1000, 1000)
+        input3 = torch.ones(2, 3)
         torch.ones_like(input1)
         torch.ones_like(input2)
         torch.ones_like(input3)
@@ -147,9 +147,9 @@ class TestConstantModule(flow.unittest.TestCase):
     @profile(torch.Tensor.new_ones)
     def profile_new_ones(test_case):
         x = torch.Tensor(np.ones((1, 2, 3)))
-        x.new_ones((2,3))
-        x.new_ones((32,3,128,128))
-        x.new_ones((1000,1000,1000,1000))
+        x.new_ones((2, 3))
+        x.new_ones((32, 3, 128, 128))
+        x.new_ones((1000, 1000, 1000, 1000))
 
     @autotest(auto_backward=True, check_graph=True)
     def test_flow_new_ones_list_with_0dim_data(test_case):
@@ -172,13 +172,13 @@ class TestConstantModule(flow.unittest.TestCase):
             requires_grad=constant(True),
         )
         return y
-    
+
     @profile(torch.Tensor.new_zeros)
     def profile_new_zeros(test_case):
         x = torch.Tensor(np.ones((1, 2, 3)))
-        x.new_zeros((2,3))
-        x.new_zeros((32,3,128,128))
-        x.new_zeros((1000,1000,1000,1000))
+        x.new_zeros((2, 3))
+        x.new_zeros((32, 3, 128, 128))
+        x.new_zeros((1000, 1000, 1000, 1000))
 
     @autotest(n=10, auto_backward=True)
     def test_full_with_random_data_int(test_case):
@@ -186,7 +186,7 @@ class TestConstantModule(flow.unittest.TestCase):
         shape = random_tensor(low=1, high=6, requires_grad=False).pytorch.shape
         y = torch.full(shape, 2.0, requires_grad=True)
         return y
-    
+
     @profile(torch.full)
     def profile_full(test_case):
         torch.full((2, 3), 3.141592)

@@ -191,9 +191,9 @@ class TestModule(flow.unittest.TestCase):
 
     @profile(torch.cat)
     def profile_cat(test_case):
-        input = torch.ones(100,100)
-        torch.cat((input,input),dim=0)
-        torch.cat((input,input),dim=1)
+        input = torch.ones(100, 100)
+        torch.cat((input, input), dim=0)
+        torch.cat((input, input), dim=1)
 
 
 if __name__ == "__main__":

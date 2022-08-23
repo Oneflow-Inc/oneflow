@@ -59,6 +59,5 @@ class TestCeilModule(flow.unittest.TestCase):
         torch.ceil(torch.ones(100000))
 
 
-
 if __name__ == "__main__":
     unittest.main()

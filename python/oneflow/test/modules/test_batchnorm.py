@@ -63,7 +63,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
         ).to(device)
         y = m(x)
         return y
-    
+
     @autotest(
         auto_backward=True, rtol=1e-3, atol=1e-3, check_grad_use_random_data=False
     )
@@ -80,7 +80,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    '''
+    """
     @profile(torch.nn.BatchNorm1d) 
     def profile_BatchNorm1d(test_case):
         m1 = torch.nn.BatchNorm1d(100)
@@ -108,7 +108,8 @@ class TestBatchNormModule(flow.unittest.TestCase):
         input2 = torch.ones(2, 10, 5, 8, 4)
         out1=m1(input1)
         out2=m2(input2)
-    '''
+    """
+
 
 if __name__ == "__main__":
     unittest.main()

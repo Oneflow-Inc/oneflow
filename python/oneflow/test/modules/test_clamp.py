@@ -133,8 +133,8 @@ class TestClampModule(flow.unittest.TestCase):
 
     @profile(torch.clamp)
     def profile_clamp(test_case):
-        torch.clamp(torch.ones(4),-1,2)
-        torch.clamp(torch.ones(100000),-1,2)
+        torch.clamp(torch.ones(4), -1, 2)
+        torch.clamp(torch.ones(100000), -1, 2)
 
     @autotest(n=5)
     def test_clip_flow_with_random_data(test_case):
@@ -158,11 +158,11 @@ class TestClampModule(flow.unittest.TestCase):
             input, min=random().to(float), max=random().to(float) | nothing()
         )
         return y
-    
+
     @profile(torch.clip)
     def profile_clip(test_case):
-        torch.clip(torch.ones(4),-1,2)
-        torch.clip(torch.ones(100000),-1,2)
+        torch.clip(torch.ones(4), -1, 2)
+        torch.clip(torch.ones(100000), -1, 2)
 
     @autotest(n=5, auto_backward=False, check_graph=True)
     def test_clamp_with_0_size_data(test_case):

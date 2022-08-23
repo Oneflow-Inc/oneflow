@@ -1590,7 +1590,6 @@ class TestConv2d(flow.unittest.TestCase):
         y = torch.nn.functional.conv2d(img, kernel, groups=3)
         return y
 
-
     def test_conv2d(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cuda", "cpu"]
@@ -2017,7 +2016,9 @@ class TestConv2d(flow.unittest.TestCase):
         torch.nn.functional.conv2d(input, weight_5x5_128c, padding=2)
         torch.nn.functional.conv2d(input, weight_5x5_128c, padding=2, stride=2)
         torch.nn.functional.conv2d(input, weight_5x5_128c, bias=bias, padding=2)
-        torch.nn.functional.conv2d(input, weight_5x5_128c, bias=bias, padding=2, stride=2)
+        torch.nn.functional.conv2d(
+            input, weight_5x5_128c, bias=bias, padding=2, stride=2
+        )
 
 
 if __name__ == "__main__":

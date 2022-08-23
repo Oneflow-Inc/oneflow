@@ -52,11 +52,10 @@ class TestArgwhere(flow.unittest.TestCase):
         x = random_tensor(ndim=random(2, 5).to(int)).to(device)
         y = torch.argwhere(x)
         return y
-    
-    @profile(torch.argwhere) 
-    def profile_argwhere(test_case):
-        torch.argwhere(torch.ones(3,3,100,100))
 
+    @profile(torch.argwhere)
+    def profile_argwhere(test_case):
+        torch.argwhere(torch.ones(3, 3, 100, 100))
 
 
 if __name__ == "__main__":
