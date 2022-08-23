@@ -442,7 +442,7 @@ Maybe<vm::Stream*> VirtualMachine::CreateStream(vm::ThreadCtx* thread_ctx, Symbo
       thread_ctx, device, stream_type, schedule_local_dep_object, transport_local_dep_object);
 
   auto bc = std::make_shared<BlockingCounter>(1);
-  engine_->InsertProbe([&stream, thread_ctx, bc](vm::VirtualMachineEngine* engine) {
+  engine_->InsertProbe([stream, thread_ctx, bc](vm::VirtualMachineEngine* engine) {
     thread_ctx->mut_stream_list()->PushBack(stream.Mutable());
     bc->Decrease();
     return true;
