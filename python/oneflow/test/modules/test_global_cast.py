@@ -1380,6 +1380,50 @@ class TestToGlobalAndLocal(flow.unittest.TestCase):
             ret = flow.utils.to_local(i)
             test_case.__all_local(ret)
 
+    def _test_any_input_get_sbp_func(test_case):
+        def __get_sbp(input, tensor):
+            return TestToGlobalAndLocal.sbp
+
+        tensor = flow.zeros((3, 4))
+        tensor_list = [flow.tensor([1, 2, 3]), flow.randn((2, 3, 4))]
+        tensor_tuple = (flow.zeros((2, 2)), flow.ones((2, 3)), flow.randn((3, 5)))
+        tensor_dict = {"tensor": tensor, "tensor_lt": tensor_list}
+        random_combination = [
+            None,
+            1,
+            "test_str",
+            tensor,
+            tensor_list,
+            tensor_tuple,
+            tensor_dict,
+        ]
+
+        inputs = [
+            None,
+            100,
+            "test_str",
+            tensor,
+            tensor_list,
+            tensor_tuple,
+            tensor_dict,
+            random_combination,
+        ]
+        global_inputs = []
+        for i in inputs:
+            ret = flow.utils.to_global(
+                i, placement=TestToGlobalAndLocal.placement, sbp=__get_sbp,
+            )
+            test_case.__all_global(
+                ret,
+                placement=TestToGlobalAndLocal.placement,
+                sbp=TestToGlobalAndLocal.sbp,
+            )
+            global_inputs.append(ret)
+
+        for i in global_inputs:
+            ret = flow.utils.to_local(i)
+            test_case.__all_local(ret)
+
     def _test_tensor_to_global(test_case):
         local_tensor = flow.ones((3, 4))
 
@@ -1483,6 +1527,7 @@ class TestToGlobalAndLocal(flow.unittest.TestCase):
                 )
             )
             test_case._test_any_input()
+            test_case._test_any_input_get_sbp_func()
             test_case._test_tensor_to_global()
             test_case._test_tensor_to_local()
             test_case._test_eagar_state_dict()
