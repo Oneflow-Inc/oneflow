@@ -45,7 +45,7 @@ def to_global(input, placement=None, sbp=None, **kwargs):
 
     Note:
         For the input of dict type, such as the state dict of the model, the unified sbp cannot be used when calling the to_global method, and the sbp needs to be specialized. 
-        It is recommended to use :func:`oneflow.utils.global_view.dict_to_global`.
+
 
     For an input of other type (take a state dict as an example):
 

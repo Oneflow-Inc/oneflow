@@ -10,5 +10,4 @@ Some global view Ops
 
     to_global
     to_local
-    dict_to_global
 
