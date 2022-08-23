@@ -530,11 +530,10 @@ def _test_combined_indexing(test_case, device, dtype):
         #  # weird shape
         #  [slice(None), [[0, 1],
         #                 [2, 3]]],
-        # BUG(wyg): It has bug when using negative indexing(setitem and getitem)
         # negatives
-        #  [[-1], [0]],
-        #  [[0, 2], [-1]],
-        #  [slice(None), [-1]],
+        [[-1], [0]],
+        [[0, 2], [-1]],
+        [slice(None), [-1]],
     ]
 
     # test getitem
@@ -865,14 +864,18 @@ def _test_setitem_scalars(test_case, device):
     test_case.assertEqual(x.numpy().all(), np_x.all())
 
     # scalar indexed with scalars
-    r = flow.randn((), device=device)
+    r = flow.tensor(1.0).to(device)
     with test_case.assertRaises(IndexError):
         r[:] = 8.8
     with test_case.assertRaises(IndexError):
         r[zero] = 8.8
-    # TODO: support scalar tensor setitem
-    # r[...] = 9.9
-    # test_case.assertEqual(9.9, r)
+    r[...] = 9.9
+    # Numpy was temporarily adopted before resolving the bug
+    np_r = np.random.rand(1)
+    np_r[...] = 9.9
+    test_case.assertEqual(r.numpy().all(), np_r.all())
+    # TODO: fix the bug about the direct comparison of tensors and numbers in the cuda scene
+    # test_case.assertTrue(r == 9.9)
 
     # scalar indexed with oneflow.Size([1])
     np_x = np.random.rand(2, 3)
@@ -903,6 +906,12 @@ def _test_ellipsis_tensor(test_case, device):
     idx = flow.tensor([0, 2], device=device)
     test_case.assertEqual(x[..., idx].tolist(), [[0, 2], [3, 5], [6, 8]])
     test_case.assertEqual(x[idx, ...].tolist(), [[0, 1, 2], [6, 7, 8]])
+
+    # Test scalar ellipsis getitem
+    y = flow.tensor(1.0).to(device)
+    x_scalar = flow.tensor(9.9)
+    y = x_scalar[...]
+    test_case.assertEqual(y, 9.9)
 
 
 @flow.unittest.skip_unless_1n1d()
