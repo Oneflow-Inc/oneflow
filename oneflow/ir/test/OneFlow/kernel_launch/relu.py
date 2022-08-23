@@ -14,6 +14,6 @@ class GraphToRun(flow.nn.Graph):
     def build(self, x):
         return flow.relu(x)
 
-x = [1]
+x = flow.Tensor([1])
 graph_to_run = GraphToRun()
 lazy_relu = graph_to_run(x)
