@@ -495,7 +495,7 @@ REGISTER_GROUP_NORM_GRAD_CUDA_KERNEL(double)
 REGISTER_GROUP_NORM_GRAD_CUDA_KERNEL(nv_bfloat16)
 #endif
 
-constexpr int kBlockSize = 128;
+constexpr int kBlockSize = 512;
 constexpr int kNumWaves = 32;
 
 inline cudaError_t GetNumBlocks(int64_t n, int* num_blocks) {
@@ -514,8 +514,7 @@ inline cudaError_t GetNumBlocks(int64_t n, int* num_blocks) {
     cudaError_t err = cudaDeviceGetAttribute(&tpm, cudaDevAttrMaxThreadsPerMultiProcessor, dev);
     if (err != cudaSuccess) { return err; }
   }
-  *num_blocks = std::max<int>(1, std::min<int64_t>((n + kBlockSize - 1) / kBlockSize,
-                                                   sm_count * tpm / kBlockSize * kNumWaves));
+  *num_blocks = std::max<int>(1, std::min<int64_t>(n, sm_count * tpm / kBlockSize * kNumWaves));
   return cudaSuccess;
 }
 
@@ -524,11 +523,56 @@ struct SumOp {
   __device__ __forceinline__ T operator()(const T& a, const T& b) const { return a + b; }
 };
 
-template<typename T, typename ComputeType>
+template<typename T, int PackSize>
+struct GetPackType {
+  using type = typename std::aligned_storage<sizeof(T) * PackSize, sizeof(T) * PackSize>::type;
+};
+
+template<typename T, int PackSize>
+using PackType = typename GetPackType<T, PackSize>::type;
+
+template<typename T, int PackSize>
+union Pack {
+  static_assert(sizeof(PackType<T, PackSize>) == sizeof(T) * PackSize, "");
+  __device__ Pack() {
+    // do nothing
+  }
+
+  __device__ Pack<T, PackSize> operator*(Pack<T, PackSize> pack) {
+    Pack<T, PackSize> newPack;
+#pragma unroll
+    for (int i = 0; i < PackSize; i++) { newPack.elem[i] = elem[i] * pack.elem[i]; }
+    return newPack;
+  }
+
+  T elem[PackSize];
+  PackType<T, PackSize> storage;
+};
+
+template<typename ComputeType, typename T, int PackSize>
+__device__ ComputeType PackReduce(Pack<T, PackSize> pack) {
+  ComputeType result = 0.0;
+#pragma unroll
+  for (int i = 0; i < PackSize; i++) { result += static_cast<ComputeType>(pack.elem[i]); }
+  return result;
+}
+
+constexpr int kMaxPackBytes = 128 / 8;
+constexpr int kMaxPackSize = 8;
+
+constexpr int Min(int a, int b) { return a < b ? a : b; }
+
+template<typename T>
+constexpr int GetPackSize() {
+  return Min(kMaxPackBytes / sizeof(T), kMaxPackSize);
+}
+
+template<typename T, typename ComputeType, int PackSize>
 __global__ void GroupNormParamGradKernel(const T* dy, const T* x, const T* mean, const T* inv_var,
                                          T* dgamma, T* dbeta, const int32_t batch_size,
                                          const int32_t group_size, const int32_t channel_size,
                                          const int32_t spatial_size) {
+  using LoadType = PackType<T, PackSize>;
   for (int32_t channel = blockIdx.x; channel < channel_size; channel += gridDim.x) {
     ComputeType dgamma_sum = 0.0;
     ComputeType dbeta_sum = 0.0;
@@ -537,12 +581,17 @@ __global__ void GroupNormParamGradKernel(const T* dy, const T* x, const T* mean,
       const int32_t batch_channel_id = batch * channel_size + channel;
       ComputeType ds_sum = 0.0;
       ComputeType db_sum = 0.0;
-      for (int32_t spatial = threadIdx.x; spatial < spatial_size; spatial += blockDim.x) {
-        ComputeType dy_val =
-            static_cast<ComputeType>(dy[batch_channel_id * spatial_size + spatial]);
-        ComputeType x_val = static_cast<ComputeType>(x[batch_channel_id * spatial_size + spatial]);
-        ds_sum += dy_val * x_val;
-        db_sum += dy_val;
+      for (int32_t spatial = threadIdx.x * PackSize; spatial < spatial_size;
+           spatial += blockDim.x * PackSize) {
+        Pack<T, PackSize> dy_pack{};
+        Pack<T, PackSize> x_pack{};
+        const int32_t load_idx = batch_channel_id * spatial_size + spatial;
+        const LoadType* dy_load = reinterpret_cast<const LoadType*>(dy + load_idx);
+        dy_pack.storage = *dy_load;
+        const LoadType* x_load = reinterpret_cast<const LoadType*>(x + load_idx);
+        x_pack.storage = *x_load;
+        ds_sum += PackReduce<ComputeType, T, PackSize>(dy_pack * x_pack);
+        db_sum += PackReduce<ComputeType, T, PackSize>(dy_pack);
       }
       const int32_t batch_group_id = batch * group_size + channel / group_num;
       ComputeType mean_val = static_cast<ComputeType>(mean[batch_group_id]);
@@ -562,6 +611,45 @@ __global__ void GroupNormParamGradKernel(const T* dy, const T* x, const T* mean,
       dgamma[channel] = dgamma_sum_result;
       dbeta[channel] = dbeta_sum_result;
     }
+  }
+}
+
+template<typename T>
+int32_t GetLaunchPackSize(const int32_t spatial_size) {
+  for (int pack_size = GetPackSize<T>(); pack_size > 0; pack_size /= 2) {
+    if (spatial_size % pack_size == 0) { return pack_size; }
+  }
+  return 1;
+}
+
+template<typename T, typename ComputeType>
+void DispatchGroupNormParamGradKernel(ep::Stream* stream, const T* dy, const T* x, const T* mean,
+                                      const T* inv_var, T* dgamma, T* dbeta,
+                                      const int32_t batch_size, const int32_t group_size,
+                                      const int32_t channel_size, const int32_t spatial_size) {
+  const int launch_pack_size = GetLaunchPackSize<T>(spatial_size);
+  int num_blocks;
+  OF_CUDA_CHECK(GetNumBlocks(channel_size, &num_blocks));
+  if (launch_pack_size == 8) {
+    GroupNormParamGradKernel<T, ComputeType, 8>
+        <<<num_blocks, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            dy, x, mean, inv_var, dgamma, dbeta, batch_size, group_size, channel_size,
+            spatial_size);
+  } else if (launch_pack_size == 4) {
+    GroupNormParamGradKernel<T, ComputeType, 4>
+        <<<num_blocks, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            dy, x, mean, inv_var, dgamma, dbeta, batch_size, group_size, channel_size,
+            spatial_size);
+  } else if (launch_pack_size == 2) {
+    GroupNormParamGradKernel<T, ComputeType, 2>
+        <<<num_blocks, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            dy, x, mean, inv_var, dgamma, dbeta, batch_size, group_size, channel_size,
+            spatial_size);
+  } else {
+    GroupNormParamGradKernel<T, ComputeType, 1>
+        <<<num_blocks, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            dy, x, mean, inv_var, dgamma, dbeta, batch_size, group_size, channel_size,
+            spatial_size);
   }
 }
 
@@ -587,14 +675,11 @@ class GroupNormParamGradGpuKernel final : public user_op::OpKernel {
     const int64_t channel_size = x->shape_view().At(1);
     const int64_t spatial_size = x->shape_view().elem_cnt() / batch_size / channel_size;
     const int64_t group_size = num_instances / batch_size;
-    int num_blocks;
-    OF_CUDA_CHECK(GetNumBlocks(channel_size, &num_blocks));
     using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
-    GroupNormParamGradKernel<T, ComputeType>
-        <<<num_blocks, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-            dy->dptr<T>(), x->dptr<T>(), mean->dptr<T>(), inv_variance->dptr<T>(),
-            dgamma->mut_dptr<T>(), dbeta->mut_dptr<T>(), batch_size, group_size, channel_size,
-            spatial_size);
+    DispatchGroupNormParamGradKernel<T, ComputeType>(
+        ctx->stream(), dy->dptr<T>(), x->dptr<T>(), mean->dptr<T>(), inv_variance->dptr<T>(),
+        dgamma->mut_dptr<T>(), dbeta->mut_dptr<T>(), batch_size, group_size, channel_size,
+        spatial_size);
   };
 };
 
@@ -604,11 +689,11 @@ class GroupNormParamGradGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
-REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(half)
+// REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(half)
 REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(float)
-REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(double)
-#if CUDA_VRSION >= 11000
-REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(nv_bfloat16)
-#endif
+// REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(double)
+// #if CUDA_VRSION >= 11000
+// REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(nv_bfloat16)
+// #endif
 
 }  // namespace oneflow
