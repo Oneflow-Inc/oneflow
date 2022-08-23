@@ -193,11 +193,11 @@
   bind_python: True
 
 - name: "pow_x_grad"
-  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => PowXGrad"
+  signature: "Tensor (Tensor x, Tensor y, Tensor dz) => PowXGrad"
   bind_python: False
 
 - name: "pow_y_grad"
-  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => PowYGrad"
+  signature: "Tensor (Tensor x, Tensor y, Tensor dz) => PowYGrad"
   bind_python: False
 
 - name: "searchsorted"

@@ -24,7 +24,7 @@ limitations under the License.
 
 namespace oneflow {
 
-#define ARITHMETIC_UNARY_FUNC_NAME_SEQ (Identity)(Negative)(Exp)
+#define ARITHMETIC_UNARY_FUNC_NAME_SEQ (Identity)(Negative)(Exp)(ReciprocalNoNan)
 
 #define PREPEND_PREFIX_UNARY_FUNC(name) OF_PP_CAT(UnaryFunc, name)
 #define ARITHMETIC_UNARY_FUNC_SEQ \
@@ -91,6 +91,44 @@ struct UnaryFuncExp<float16> final {
 #endif  // defined(__CUDA_ARCH__)
   }
 };
+
+template<typename T>
+struct UnaryFuncReciprocalNoNan final {
+  static OF_DEVICE_FUNC const T Invoke(const T x) {
+    if (fabs(x) <= 0.0) { return 0.0; }
+    return 1.0 / x;
+  }
+};
+SPECIALIZE_CONST_TYPE_UNARY_FUNC(UnaryFuncReciprocalNoNan);
+
+template<>
+struct UnaryFuncReciprocalNoNan<float> final {
+  static OF_DEVICE_FUNC const float Invoke(const float x) {
+    if (fabsf(x) <= 0.0f) { return 0.0f; }
+    return 1.0f / x;
+  }
+};
+
+template<>
+struct UnaryFuncReciprocalNoNan<double> final {
+  static OF_DEVICE_FUNC const double Invoke(const double x) {
+    if (fabs(x) <= 0.0) { return 0.0; }
+    return 1.0 / x;
+  }
+};
+
+template<>
+struct UnaryFuncReciprocalNoNan<float16> final {
+  static OF_DEVICE_FUNC const float16 Invoke(const float16 x) {
+#if defined(__CUDA_ARCH__)
+    half res = static_cast<half>(exp(static_cast<float>(*reinterpret_cast<const half*>(&x))));
+    return *reinterpret_cast<float16*>(&res);
+#else
+    return float16(std::exp(static_cast<float>(x)));
+#endif  // defined(__CUDA_ARCH__)
+  }
+};
+
 #define NO_HALF_UTIL_FOUND         \
   printf("cuda arch must >= 530"); \
   assert(false);                   \
@@ -113,6 +151,15 @@ struct UnaryFuncExp<half> final {
     return __float2half(std::exp(__half2float(x)));
   }
 };
+
+template<>
+struct UnaryFuncReciprocalNoNan<half> final {
+  static __device__ __forceinline__ const half Invoke(const half x) {
+    if (fabsf(__half2float(x)) <= 0.0f) { return __float2half(0.0f); }
+    return __float2half(1.0f / __half2float(x));
+  }
+};
+
 #endif
 
 template<typename T>

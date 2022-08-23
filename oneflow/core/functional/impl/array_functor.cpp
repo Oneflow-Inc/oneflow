@@ -2460,7 +2460,7 @@ class BroadcastPowYGradFunctor {
                            const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& z) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz, x, y, z});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz, x, JUST(y->detach()), z});
   }
 
  private:
