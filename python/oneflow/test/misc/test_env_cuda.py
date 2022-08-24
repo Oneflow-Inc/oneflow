@@ -17,7 +17,7 @@ import os
 import unittest
 import oneflow as flow
 import oneflow.unittest
-
+import torch
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
@@ -46,6 +46,12 @@ class TestEnv(flow.unittest.TestCase):
 
         with test_case.assertRaisesRegex(ValueError, "Expected a cuda device, but"):
             flow.cuda.synchronize("cpu")
+
+    def test_cuda_get_device_name(test_case):
+        return torch.cuda.get_device_name(0)
+
+    def test_cuda_get_device_capability(test_case):
+        return torch.cuda.get_device_capability(0)
 
 
 if __name__ == "__main__":

@@ -18,7 +18,7 @@ import oneflow as flow
 from oneflow.cuda.type_tensor import *
 from oneflow.cuda._utils import _get_device_index
 
-from typing import Union, Any
+from typing import Tuple, Union, Any
 
 
 def is_available() -> bool:
@@ -36,6 +36,27 @@ def device_count() -> int:
 def current_device() -> int:
     r"""Returns local rank as device index."""
     return flow._oneflow_internal.GetCudaDeviceIndex()
+
+
+def get_device_properties(device):
+    # import ipdb; ipdb.set_trace()
+    if isinstance(device, str):
+        _device = flow.device(device)
+        if _device.type != "cuda":
+            raise ValueError("Expect a cuda device, but got: {}".format(_device.type))
+        device = _device.index
+    if device < 0 or device >= device_count():
+        raise ValueError("Invalid device id")
+    return flow._oneflow_internal._get_device_properties(device)
+
+
+def get_device_capability(device) -> Tuple[int, int]:
+    device_prop = get_device_properties(device)
+    return device_prop.major, device_prop.minor
+
+
+def get_device_name(device) -> str:
+    return get_device_properties(device).name
 
 
 def manual_seed_all(seed) -> None:
