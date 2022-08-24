@@ -446,7 +446,7 @@ Maybe<Tensor> LocalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDes
   bool sync_and_check_meta = NeedSyncAndCheckShapeAndDtype(check_meta_hint);
   JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp,
                                   sync_and_check_meta));
-  auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"shape", "dtype", "sync_data"});
+  auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "sync_data");
   attrs.SetAttr<Shape>("shape", *shape);
   attrs.SetAttr<DataType>("dtype", dtype);
   attrs.SetAttr<bool>("sync_data", true);
@@ -494,7 +494,7 @@ class LocalToGlobalFunctor {
                                     /*pin_memory=*/false));
     }
     Symbol<NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"shape", "dtype", "sync_data"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "sync_data");
     attrs.SetAttr<Shape>("shape", shape);
     attrs.SetAttr<DataType>("dtype", dtype->data_type());
     attrs.SetAttr<bool>("sync_data", sync_data);

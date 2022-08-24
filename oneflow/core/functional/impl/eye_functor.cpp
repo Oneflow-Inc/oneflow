@@ -46,7 +46,7 @@ class EyeDevcieFunctor {
   Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device,
                            const bool& requires_grad) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"rows", "cols", "dtype"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rows", "cols", "dtype");
     attrs.SetAttr<int64_t>("rows", rows.As<int64_t>());
     attrs.SetAttr<int64_t>("cols", cols.value_or(rows).As<int64_t>());
     attrs.SetAttr<DataType>("dtype", dtype->data_type());
@@ -88,7 +88,7 @@ class GlobalEyeSbpListFunctor {
           << "sbp of eye should be broadcast only";
     }
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"rows", "cols", "dtype", "nd_sbp"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rows", "cols", "dtype", "nd_sbp");
     attrs.SetAttr<int64_t>("rows", rows.As<int64_t>());
     attrs.SetAttr<int64_t>("cols", cols.value_or(rows).As<int64_t>());
     attrs.SetAttr<DataType>("dtype", dtype->data_type());
@@ -132,7 +132,7 @@ class EyeInplaceFunctor {
     JUST(CheckInplaceValid(x));
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = x;
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"rows", "cols", "dtype"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rows", "cols", "dtype");
     attrs.SetAttr<int64_t>("rows", x->shape()->At(0));
     attrs.SetAttr<int64_t>("cols", x->shape()->At(1));
     attrs.SetAttr<DataType>("dtype", x->dtype()->data_type());

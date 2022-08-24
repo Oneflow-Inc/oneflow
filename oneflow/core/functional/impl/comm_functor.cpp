@@ -332,7 +332,7 @@ class SendFunctor {
  public:
   SendFunctor() { op_expr_ = CHECK_JUST(one::OpBuilder("send").Input("in").Build()); }
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& x, int64_t dst, bool send_meta) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"dst_process_id"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dst_process_id");
     attrs.SetAttr<int64_t>("dst_process_id", dst);
     if (send_meta) {
       std::shared_ptr<FlatShape> flat_shape = JUST(FlatShape::New(*x->shape()));
@@ -359,8 +359,8 @@ class RecvFunctor {
                            const Optional<Symbol<DType>>& optional_dtype,
                            const Optional<Symbol<Device>>& optional_device,
                            const Optional<one::Tensor>& out) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        {"src_process_id", "shape", "dtype", "device_type", "device_id"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("src_process_id", "shape", "dtype", "device_type",
+                                                 "device_id");
     attrs.SetAttr<int64_t>("src_process_id", src);
     Shape shape;
     DataType data_type = DataType::kInvalidDataType;

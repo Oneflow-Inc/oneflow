@@ -53,9 +53,9 @@ class DecodeOneRecFunctor {
                            const Symbol<DType>& dtype, const Shape& shape, const bool is_dynamic,
                            const Optional<Shape>& reshape,
                            const Optional<Shape>& batch_padding) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"reshape", "batch_padding", "key", "data_type",
-                                                  "static_shape", "is_dynamic", "has_reshape",
-                                                  "has_batch_padding"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("reshape", "batch_padding", "key", "data_type",
+                                                 "static_shape", "is_dynamic", "has_reshape",
+                                                 "has_batch_padding");
     bool has_reshape = false;
     bool has_batch_padding = false;
 

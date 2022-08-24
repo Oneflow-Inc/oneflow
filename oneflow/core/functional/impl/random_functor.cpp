@@ -50,7 +50,7 @@ class BernoulliFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Symbol<DType>& dtype,
                            const Optional<one::Generator>& generator) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    auto& bernoulli_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"dtype", "seed", "p"});
+    auto& bernoulli_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "seed", "p");
     bernoulli_attrs.SetAttr<DataType>("dtype", dtype->data_type());
     bernoulli_attrs.SetAttr<int64_t>("seed", gen->current_seed());
 
@@ -74,7 +74,7 @@ class BernoulliProbFunctor {
                            const Symbol<DType>& dtype,
                            const Optional<one::Generator>& generator) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    auto& bernoulli_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"dtype", "seed", "p"});
+    auto& bernoulli_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "seed", "p");
     bernoulli_attrs.SetAttr<DataType>("dtype", dtype->data_type());
     bernoulli_attrs.SetAttr<int64_t>("seed", gen->current_seed());
 
@@ -105,7 +105,7 @@ class RandFunctor {
     }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"from", "to", "shape", "dtype", "seed"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("from", "to", "shape", "dtype", "seed");
     attrs.SetAttr<double>("from", 0);
     attrs.SetAttr<double>("to", 1);
     attrs.SetAttr<Shape>("shape", shape);
@@ -143,8 +143,7 @@ class GlobalRandFunctor {
     }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP({"from", "to", "shape", "dtype", "seed", "nd_sbp"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("from", "to", "shape", "dtype", "seed", "nd_sbp");
     attrs.SetAttr<double>("from", 0);
     attrs.SetAttr<double>("to", 1);
     attrs.SetAttr<Shape>("shape", shape);
@@ -181,7 +180,7 @@ class RandNFunctor {
     }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"mean", "std", "shape", "dtype", "seed"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("mean", "std", "shape", "dtype", "seed");
     attrs.SetAttr<double>("mean", 0);
     attrs.SetAttr<double>("std", 1);
     attrs.SetAttr<Shape>("shape", shape);
@@ -217,8 +216,7 @@ class GlobalRandNFunctor {
     }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP({"mean", "std", "shape", "dtype", "seed", "nd_sbp"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("mean", "std", "shape", "dtype", "seed", "nd_sbp");
     attrs.SetAttr<double>("mean", 0);
     attrs.SetAttr<double>("std", 1);
     attrs.SetAttr<Shape>("shape", shape);
@@ -254,7 +252,7 @@ class RandIntFunctor {
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"shape", "from", "to", "dtype", "seed"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "from", "to", "dtype", "seed");
     attrs.SetAttr<Shape>("shape", shape);
     attrs.SetAttr<int64_t>("from", low);
     attrs.SetAttr<int64_t>("to", high);
@@ -325,8 +323,7 @@ class GlobalRandIntFunctor {
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP({"shape", "from", "to", "dtype", "seed", "nd_sbp"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "from", "to", "dtype", "seed", "nd_sbp");
     attrs.SetAttr<Shape>("shape", shape);
     attrs.SetAttr<int64_t>("from", low);
     attrs.SetAttr<int64_t>("to", high);
@@ -396,7 +393,7 @@ class RandPermFunctor {
                            const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device,
                            const bool& requires_grad) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"n", "seed"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("n", "seed");
     attrs.SetAttr<int32_t>("n", n);
     attrs.SetAttr<int64_t>("seed", gen->current_seed());
 
@@ -425,7 +422,7 @@ class GlobalRandPermFunctor {
                            const bool& requires_grad) const {
     JUST(CheckDeviceIdsIsValid(placement));
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"n", "seed", "nd_sbp"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("n", "seed", "nd_sbp");
     attrs.SetAttr<int32_t>("n", n);
     attrs.SetAttr<int64_t>("seed", gen->current_seed());
 

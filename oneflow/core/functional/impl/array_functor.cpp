@@ -132,8 +132,8 @@ class GlobalConstantFunctor {
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        {"shape", "dtype", "floating_value", "is_floating_value", "integer_value", "nd_sbp"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "floating_value",
+                                                 "is_floating_value", "integer_value", "nd_sbp");
     attrs.SetAttr<Shape>("shape", shape);
     attrs.SetAttr<DataType>("dtype", dtype->data_type());
     if (IsIntegralDataType(dtype->data_type())) {
@@ -186,8 +186,8 @@ class ConstantFunctor {
   ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        {"shape", "dtype", "floating_value", "is_floating_value", "integer_value"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "floating_value",
+                                                 "is_floating_value", "integer_value");
     attrs.SetAttr<Shape>("shape", shape);
     attrs.SetAttr<DataType>("dtype", dtype->data_type());
     if (IsIntegralDataType(dtype->data_type())) {
@@ -238,7 +238,7 @@ class GlobalEmptyFunctor {
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"shape", "dtype", "nd_sbp"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "nd_sbp");
     attrs.SetAttr<Shape>("shape", shape);
     attrs.SetAttr<DataType>("dtype", dtype->data_type());
     if (LazyMode::is_enabled()) {
@@ -288,7 +288,7 @@ class FlattenFunctor {
     if (end_dim < 0) { new_end_dim += x_dim; }
     if (new_start_dim == new_end_dim) { return x; }
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"start_dim", "end_dim"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("start_dim", "end_dim");
     attrs.SetAttr<int32_t>("start_dim", start_dim);
     attrs.SetAttr<int32_t>("end_dim", end_dim);
 
@@ -324,8 +324,8 @@ class WhereScalarXFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition, const Scalar& scalar,
                            const std::shared_ptr<one::Tensor>& y) const {
     auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP({"bool_operand", "has_bool_operand", "float_operand",
-                                        "has_float_operand", "int_operand", "has_int_operand"});
+        THREAD_CACHED_MUTABLE_ATTR_MAP("bool_operand", "has_bool_operand", "float_operand",
+                                       "has_float_operand", "int_operand", "has_int_operand");
     if (scalar.IsBool()) {
       attrs.SetAttr<bool>("bool_operand", scalar.As<bool>());
       attrs.SetAttr<bool>("has_bool_operand", true);
@@ -360,8 +360,8 @@ class WhereScalarYFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition,
                            const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
     auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP({"bool_operand", "has_bool_operand", "float_operand",
-                                        "has_bool_operand", "int_operand", "has_int_operand"});
+        THREAD_CACHED_MUTABLE_ATTR_MAP("bool_operand", "has_bool_operand", "float_operand",
+                                       "has_bool_operand", "int_operand", "has_int_operand");
     if (scalar.IsBool()) {
       attrs.SetAttr<bool>("bool_operand", scalar.As<bool>());
       attrs.SetAttr<bool>("has_bool_operand", true);
@@ -395,9 +395,9 @@ class WhereScalarXYFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition, const Scalar& x_scalar,
                            const Scalar& y_scalar) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        {"x_bool_operand", "y_bool_operand", "has_x_bool_operand", "has_y_bool_operand",
-         "x_float_operand", "y_float_operand", "has_x_float_operand", "has_y_float_operand",
-         "x_int_operand", "y_int_operand", "has_x_int_operand", "has_y_int_operand"});
+        "x_bool_operand", "y_bool_operand", "has_x_bool_operand", "has_y_bool_operand",
+        "x_float_operand", "y_float_operand", "has_x_float_operand", "has_y_float_operand",
+        "x_int_operand", "y_int_operand", "has_x_int_operand", "has_y_int_operand");
     if (x_scalar.IsBool() && y_scalar.IsBool()) {
       attrs.SetAttr<bool>("x_bool_operand", x_scalar.As<bool>());
       attrs.SetAttr<bool>("y_bool_operand", y_scalar.As<bool>());
@@ -443,7 +443,7 @@ class ArgWhereFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
                                 const Symbol<DType>& dtype) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"dtype"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype");
     attrs.SetAttr<DataType>("dtype", dtype->data_type());
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
   }
@@ -505,7 +505,7 @@ class BroadcastLikeFunctor {
     const Shape& x_shape = *x->shape();
     const Shape& like_shape = *like->shape();
     if (x_shape == like_shape) { return x; }
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"broadcast_axes"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("broadcast_axes");
     if (broadcast_axes.empty()) {
       int64_t like_ndim = like_shape.NumAxes();
       int64_t x_ndim = x_shape.NumAxes();
@@ -572,7 +572,7 @@ class ConcatFunctor {
       }
     }
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"axis", "max_dim_size"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis", "max_dim_size");
     attrs.SetAttr<int64_t>("axis", axis);
     attrs.SetAttr<int64_t>("max_dim_size", max_dim_size);
     TensorTuple outputs;
@@ -618,7 +618,7 @@ class StackFunctor {
       }
     }
     int64_t max_dim_size = ninput;
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"axis", "max_dim_size"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis", "max_dim_size");
     attrs.SetAttr<int64_t>("axis", stack_dim);
     attrs.SetAttr<int64_t>("max_dim_size", max_dim_size);
     TensorTuple outputs;
@@ -661,7 +661,7 @@ class StackGradFunctor {
     CHECK_LE_OR_RETURN(like.size(), kMaxInputCount)
         << Error::RuntimeError() << "like.size() must not greater than " << kMaxInputCount
         << ", but got " << like.size();
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"axis"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis");
     attrs.SetAttr<int64_t>("axis", axis);
     TensorTuple inputs(like.size() + 1);
     inputs[0] = x;
@@ -828,7 +828,7 @@ class ExpandFunctor {
     // if input tensor is eager local, then try return tensor's view
     if (view::IsViewApplicable(x)) { return view::Expand(x, in_shape, expand_shape); }
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"logical_in_shape", "logical_expand_shape"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("logical_in_shape", "logical_expand_shape");
     attrs.SetAttr<std::vector<int32_t>>("logical_in_shape", in_shape);
     attrs.SetAttr<std::vector<int32_t>>("logical_expand_shape", expand_shape);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -846,7 +846,7 @@ class ExpandGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::vector<int32_t>& logical_in_shape,
                            const std::vector<int32_t>& logical_expand_shape) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"logical_out_shape", "logical_expand_shape"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("logical_out_shape", "logical_expand_shape");
     attrs.SetAttr<std::vector<int32_t>>("logical_out_shape", logical_in_shape);
     attrs.SetAttr<std::vector<int32_t>>("logical_expand_shape", logical_expand_shape);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, attrs);
@@ -868,7 +868,7 @@ class ExpandDimsFunctor {
 
     if (view::IsViewApplicable(input)) { return view::Unsqueeze(input, expand_dim); }
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"axis"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis");
     attrs.SetAttr<int32_t>("axis", expand_dim);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
@@ -940,7 +940,7 @@ class SqueezeFunctor {
 
     if (view::IsViewApplicable(x)) { return view::Squeeze(x, squeeze_dims); }
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"axes"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axes");
     attrs.SetAttr<std::vector<int32_t>>("axes", squeeze_dims);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
@@ -955,7 +955,7 @@ class RollFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int32_t>& shifts,
                            const Optional<std::vector<int32_t>>& dims) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"shifts", "dims"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shifts", "dims");
     attrs.SetAttr<std::vector<int32_t>>("shifts", shifts);
 
     std::vector<int32_t> actual_dims;
@@ -983,7 +983,7 @@ class GatherFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& indices, const int64_t& axis) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"axis"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis");
     attrs.SetAttr<int64_t>("axis", axis);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, indices}, attrs);
   }
@@ -1032,7 +1032,7 @@ class DimGatherFunctor {
       }
     }
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"dim"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim");
     attrs.SetAttr<int32_t>("dim", new_dim);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
@@ -1054,7 +1054,7 @@ class DimScatterFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
                            const std::shared_ptr<one::Tensor>& src) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"dim"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim");
     const int32_t ndim = input->shape()->NumAxes();
     attrs.SetAttr<int32_t>("dim", dim < 0 ? dim + ndim : dim);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
@@ -1077,7 +1077,7 @@ class DimScatterAddFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
                            const std::shared_ptr<one::Tensor>& src) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"dim"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim");
     attrs.SetAttr<int32_t>("dim", dim);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
   }
@@ -1099,7 +1099,7 @@ class DimScatterAddLikeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& like, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
                            const std::shared_ptr<one::Tensor>& src) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"dim"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim");
     attrs.SetAttr<int32_t>("dim", dim);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {like, index, src}, attrs);
   }
@@ -1121,7 +1121,7 @@ class DimScatterMulFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
                            const std::shared_ptr<one::Tensor>& src) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"dim"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim");
     attrs.SetAttr<int32_t>("dim", dim);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
   }
@@ -1141,7 +1141,7 @@ class DimScatterUpdateScalarFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"dim", "src_scalar"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim", "src_scalar");
     const int32_t ndim = input->shape()->NumAxes();
     attrs.SetAttr<int32_t>("dim", dim < 0 ? dim + ndim : dim);
     attrs.SetAttr<float>("src_scalar", src.As<float>());
@@ -1163,7 +1163,7 @@ class DimScatterAddScalarFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"dim", "src_scalar"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim", "src_scalar");
     attrs.SetAttr<int32_t>("dim", dim);
     attrs.SetAttr<float>("src_scalar", src.As<float>());
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
@@ -1184,7 +1184,7 @@ class DimScatterMulScalarFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"dim", "src_scalar"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim", "src_scalar");
     attrs.SetAttr<int32_t>("dim", dim);
     attrs.SetAttr<float>("src_scalar", src.As<float>());
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
@@ -1201,7 +1201,7 @@ class ArgSortFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
                            const std::string& direction) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"direction"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("direction");
     attrs.SetAttr<std::string>("direction", direction);
     CHECK_OR_RETURN(direction == "ASCENDING" || direction == "DESCENDING")
         << Error::RuntimeError()
@@ -1243,7 +1243,7 @@ class SearchSortedFunctor {
           << "for searchsorted op, the size of input sorted_sequence' last dimension should "
           << "be less than " << INT32_MAX;
     }
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"out_int32", "right"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("out_int32", "right");
     attrs.SetAttr<bool>("out_int32", out_int32);
     attrs.SetAttr<bool>("right", right);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {sorted_sequence, values}, attrs);
@@ -1272,7 +1272,7 @@ class SearchSortedScalarFunctor {
           << "for searchsorted op, the size of input sorted_sequence' last dimension should "
           << "be less than " << INT32_MAX;
     }
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"out_int32", "right", "values"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("out_int32", "right", "values");
     attrs.SetAttr<bool>("out_int32", out_int32);
     attrs.SetAttr<bool>("right", right);
     bool is_values_float = values.IsFloatingPoint();
@@ -1313,7 +1313,7 @@ class ScatterNdFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& indices,
                            const std::shared_ptr<one::Tensor>& updates, const Shape& shape) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"shape"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape");
     attrs.SetAttr<Shape>("shape", shape);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {indices, updates}, attrs);
   }
@@ -1389,7 +1389,7 @@ class ReshapeFunctor {
         return view::Reshape(x, infered_shape, *JUST(infered_stride));
       }
     }
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"shape"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape");
     attrs.SetAttr<Shape>("shape", infered_shape);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
@@ -1412,7 +1412,7 @@ class ViewFunctor {
              "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
       return view::Reshape(x, infered_shape, *JUST(infered_stride));
     }
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"shape"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape");
     attrs.SetAttr<Shape>("shape", infered_shape);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
@@ -1497,7 +1497,7 @@ class NarrowFunctor {
     if (view::IsViewApplicable(input)) {
       return JUST(view::Narrow(input, narrow_dim, narrow_start, length));
     }
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"dim", "start", "length"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim", "start", "length");
     attrs.SetAttr<int64_t>("dim", narrow_dim);
     attrs.SetAttr<int64_t>("start", start);
     attrs.SetAttr<int64_t>("length", length);
@@ -1516,7 +1516,7 @@ class NarrowGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& like, const int64_t& dim,
                            const int64_t& start, const int64_t& length) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"dim", "start", "length"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim", "start", "length");
     attrs.SetAttr<int64_t>("dim", dim);
     attrs.SetAttr<int64_t>("start", start);
     attrs.SetAttr<int64_t>("length", length);
@@ -1537,7 +1537,7 @@ class SliceFunctor {
       return view::Slice(x, start, stop, step);
     }
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"start", "stop", "step"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("start", "stop", "step");
     attrs.SetAttr<std::vector<int64_t>>("start", start);
     attrs.SetAttr<std::vector<int64_t>>("stop", stop);
     attrs.SetAttr<std::vector<int64_t>>("step", step);
@@ -1558,7 +1558,7 @@ class SliceUpdateFunctor {
                            const std::shared_ptr<one::Tensor>& value,
                            const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step, bool inplace) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"start", "stop", "step"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("start", "stop", "step");
     attrs.SetAttr<std::vector<int64_t>>("start", start);
     attrs.SetAttr<std::vector<int64_t>>("stop", stop);
     attrs.SetAttr<std::vector<int64_t>>("step", step);
@@ -1586,7 +1586,7 @@ class SliceGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy, const Shape& like_shape,
                            const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"like_shape", "start", "stop", "step"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("like_shape", "start", "stop", "step");
     attrs.SetAttr<Shape>("like_shape", like_shape);
     attrs.SetAttr<std::vector<int64_t>>("start", start);
     attrs.SetAttr<std::vector<int64_t>>("stop", stop);
@@ -1607,8 +1607,8 @@ class UpsampleGradFunctor {
                            const std::shared_ptr<one::Tensor>& x, const double& height_scale,
                            const double& width_scale, const bool& align_corners,
                            const std::string& data_format, const std::string& interpolation) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        {"height_scale", "width_scale", "align_corners", "interpolation", "data_format"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("height_scale", "width_scale", "align_corners",
+                                                 "interpolation", "data_format");
     attrs.SetAttr<double>("height_scale", height_scale);
     attrs.SetAttr<double>("width_scale", width_scale);
     attrs.SetAttr<bool>("align_corners", align_corners);
@@ -1627,7 +1627,7 @@ class CopyFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& device_type,
                            const int64_t& device_id, const bool pin_memory) const {
     auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP({"device_type", "device_id", "pin_memory", "asynced_copy"});
+        THREAD_CACHED_MUTABLE_ATTR_MAP("device_type", "device_id", "pin_memory", "asynced_copy");
     attrs.SetAttr<std::string>("device_type", device_type);
     attrs.SetAttr<int64_t>("device_id", device_id);
     attrs.SetAttr<bool>("pin_memory", pin_memory);
@@ -1657,7 +1657,7 @@ class FlipFunctor {
   FlipFunctor() { op_ = CHECK_JUST(one::OpBuilder("flip").Input("x").Output("y").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int32_t>& dims) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"dims"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims");
     attrs.SetAttr<std::vector<int32_t>>("dims", dims);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
@@ -1676,7 +1676,7 @@ class UnfoldTensorFunctor {
     // if input tensor is eager local, than try return tensor's view
     if (view::IsViewApplicable(x)) { return view::UnfoldTensor(x, dimension, size, step); }
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"dimension", "size", "step"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dimension", "size", "step");
     attrs.SetAttr<int32_t>("dimension", dimension);
     attrs.SetAttr<int32_t>("size", size);
     attrs.SetAttr<int32_t>("step", step);
@@ -1696,7 +1696,7 @@ class UnfoldTensorGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const int32_t& dimension,
                            const int32_t& size, const int32_t& step) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"dimension", "size", "step"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dimension", "size", "step");
     attrs.SetAttr<int32_t>("dimension", dimension);
     attrs.SetAttr<int32_t>("size", size);
     attrs.SetAttr<int32_t>("step", step);
@@ -1716,8 +1716,8 @@ class UpsampleLinear1DFunctor {
                            const bool& align_corners,
                            const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        {"scale_factor", "align_corners", "data_format", "output_size"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale_factor", "align_corners", "data_format",
+                                                 "output_size");
     attrs.SetAttr<double>("scale_factor", scale_factor);
     attrs.SetAttr<bool>("align_corners", align_corners);
     attrs.SetAttr<std::string>("data_format", data_format);
@@ -1742,8 +1742,8 @@ class UpsampleLinear1DGradFunctor {
                            const bool& align_corners,
                            const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        {"scale_factor", "align_corners", "data_format", "output_size"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale_factor", "align_corners", "data_format",
+                                                 "output_size");
     attrs.SetAttr<double>("scale_factor", scale_factor);
     attrs.SetAttr<bool>("align_corners", align_corners);
     attrs.SetAttr<std::string>("data_format", data_format);
@@ -1765,7 +1765,7 @@ class UpsampleNearest1DFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& scale_factor,
                            const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"scale_factor", "data_format", "output_size"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale_factor", "data_format", "output_size");
     attrs.SetAttr<double>("scale_factor", scale_factor);
     attrs.SetAttr<std::string>("data_format", data_format);
     if (output_size.has_value()) {
@@ -1788,7 +1788,7 @@ class UpsampleNearest1DGradFunctor {
                            const std::shared_ptr<one::Tensor>& x, const double& scale_factor,
                            const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"scale_factor", "data_format", "output_size"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale_factor", "data_format", "output_size");
     attrs.SetAttr<double>("scale_factor", scale_factor);
     attrs.SetAttr<std::string>("data_format", data_format);
     if (output_size.has_value()) {
@@ -1810,8 +1810,8 @@ class UpsampleNearest2DFunctor {
                            const double& width_scale,
                            const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        {"height_scale", "width_scale", "data_format", "output_size"});
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("height_scale", "width_scale", "data_format", "output_size");
     attrs.SetAttr<double>("height_scale", height_scale);
     attrs.SetAttr<double>("width_scale", width_scale);
     attrs.SetAttr<std::string>("data_format", data_format);
@@ -1836,8 +1836,8 @@ class UpsampleNearest2DGradFunctor {
                            const double& width_scale,
                            const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        {"height_scale", "width_scale", "data_format", "output_size"});
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("height_scale", "width_scale", "data_format", "output_size");
     attrs.SetAttr<double>("height_scale", height_scale);
     attrs.SetAttr<double>("width_scale", width_scale);
     attrs.SetAttr<std::string>("data_format", data_format);
@@ -1860,8 +1860,8 @@ class UpsampleBilinear2DFunctor {
                            const double& width_scale, const bool& align_corners,
                            const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        {"height_scale", "width_scale", "align_corners", "data_format", "output_size"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("height_scale", "width_scale", "align_corners",
+                                                 "data_format", "output_size");
     attrs.SetAttr<double>("height_scale", height_scale);
     attrs.SetAttr<double>("width_scale", width_scale);
     attrs.SetAttr<bool>("align_corners", align_corners);
@@ -1887,8 +1887,8 @@ class UpsampleBilinear2DGradFunctor {
                            const double& width_scale, const bool& align_corners,
                            const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        {"height_scale", "width_scale", "align_corners", "data_format", "output_size"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("height_scale", "width_scale", "align_corners",
+                                                 "data_format", "output_size");
     attrs.SetAttr<double>("height_scale", height_scale);
     attrs.SetAttr<double>("width_scale", width_scale);
     attrs.SetAttr<bool>("align_corners", align_corners);
@@ -1912,8 +1912,8 @@ class UpsampleBicubic2DFunctor {
                            const double& width_scale, const bool& align_corners,
                            const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        {"height_scale", "width_scale", "align_corners", "data_format", "output_size"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("height_scale", "width_scale", "align_corners",
+                                                 "data_format", "output_size");
     attrs.SetAttr<double>("height_scale", height_scale);
     attrs.SetAttr<double>("width_scale", width_scale);
     attrs.SetAttr<bool>("align_corners", align_corners);
@@ -1939,8 +1939,8 @@ class UpsampleBicubic2DGradFunctor {
                            const double& width_scale, const bool& align_corners,
                            const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        {"height_scale", "width_scale", "align_corners", "data_format", "output_size"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("height_scale", "width_scale", "align_corners",
+                                                 "data_format", "output_size");
     attrs.SetAttr<double>("height_scale", height_scale);
     attrs.SetAttr<double>("width_scale", width_scale);
     attrs.SetAttr<bool>("align_corners", align_corners);
@@ -1964,8 +1964,8 @@ class UpsampleNearest3DFunctor {
                            const double& height_scale, const double& width_scale,
                            const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        {"depth_scale", "height_scale", "width_scale", "data_format", "output_size"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("depth_scale", "height_scale", "width_scale",
+                                                 "data_format", "output_size");
     attrs.SetAttr<double>("depth_scale", depth_scale);
     attrs.SetAttr<double>("height_scale", height_scale);
     attrs.SetAttr<double>("width_scale", width_scale);
@@ -1991,8 +1991,8 @@ class UpsampleNearest3DGradFunctor {
                            const double& height_scale, const double& width_scale,
                            const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        {"depth_scale", "height_scale", "width_scale", "data_format", "output_size"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("depth_scale", "height_scale", "width_scale",
+                                                 "data_format", "output_size");
     attrs.SetAttr<double>("depth_scale", depth_scale);
     attrs.SetAttr<double>("height_scale", height_scale);
     attrs.SetAttr<double>("width_scale", width_scale);
@@ -2017,8 +2017,8 @@ class UpsampleTrilinear3DFunctor {
                            const bool& align_corners,
                            const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"depth_scale", "height_scale", "width_scale",
-                                                  "align_corners", "data_format", "output_size"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("depth_scale", "height_scale", "width_scale",
+                                                 "align_corners", "data_format", "output_size");
     attrs.SetAttr<double>("depth_scale", depth_scale);
     attrs.SetAttr<double>("height_scale", height_scale);
     attrs.SetAttr<double>("width_scale", width_scale);
@@ -2046,8 +2046,8 @@ class UpsampleTrilinear3DGradFunctor {
                            const bool& align_corners,
                            const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"depth_scale", "height_scale", "width_scale",
-                                                  "align_corners", "data_format", "output_size"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("depth_scale", "height_scale", "width_scale",
+                                                 "align_corners", "data_format", "output_size");
     attrs.SetAttr<double>("depth_scale", depth_scale);
     attrs.SetAttr<double>("height_scale", height_scale);
     attrs.SetAttr<double>("width_scale", width_scale);
@@ -2076,7 +2076,7 @@ class UnsortedSegmentSumLikeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& segment_ids,
                            const std::shared_ptr<one::Tensor>& like, const int64_t& axis) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"axis"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis");
     attrs.SetAttr<int64_t>("axis", axis);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, segment_ids, like}, attrs);
   }
@@ -2089,8 +2089,8 @@ class TrilFunctor {
  public:
   TrilFunctor() { op_ = CHECK_JUST(one::OpBuilder("tril").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        {"diagonal", "is_floating_fill_value", "integer_fill_value"});
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("diagonal", "is_floating_fill_value", "integer_fill_value");
     attrs.SetAttr<int64_t>("diagonal", diagonal);
     attrs.SetAttr<bool>("is_floating_fill_value", false);
     attrs.SetAttr<int64_t>("integer_fill_value", 0);
@@ -2105,7 +2105,7 @@ class TriuFunctor {
  public:
   TriuFunctor() { op_ = CHECK_JUST(one::OpBuilder("triu").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"diagonal"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("diagonal");
     attrs.SetAttr<int64_t>("diagonal", diagonal);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
@@ -2118,7 +2118,7 @@ class DiagFunctor {
  public:
   DiagFunctor() { op_ = CHECK_JUST(one::OpBuilder("diag").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& diagonal) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"diagonal"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("diagonal");
     attrs.SetAttr<int32_t>("diagonal", diagonal);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
@@ -2134,7 +2134,7 @@ class DiagGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const int32_t& diagonal) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"diagonal"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("diagonal");
     attrs.SetAttr<int32_t>("diagonal", diagonal);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
@@ -2159,7 +2159,7 @@ class DiagonalFunctor {
         << Error::RuntimeError() << "diagonal dimensions cannot be identical " << dim1 << ", "
         << dim2;
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"offset"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("offset");
     attrs.SetAttr<int32_t>("offset", offset);
 
     if (view::IsViewApplicable(x)) {
@@ -2185,7 +2185,7 @@ class DiagonalGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const int32_t& offset) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"offset"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("offset");
     attrs.SetAttr<int32_t>("offset", offset);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
@@ -2528,7 +2528,7 @@ class ReduceSumLikeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& like,
                            const std::vector<int32_t>& axis) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"axis"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis");
     attrs.SetAttr<std::vector<int32_t>>("axis", axis);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, JUST(like->detach())}, attrs);
   }
@@ -2646,7 +2646,7 @@ class SplitLikeFunctor {
     CHECK_LE_OR_RETURN(like.size(), kMaxInputCount)
         << Error::RuntimeError() << "like.size() must not greater than " << kMaxInputCount
         << ", but got " << like.size();
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"axis"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis");
     attrs.SetAttr<int64_t>("axis", axis);
     TensorTuple inputs(like.size() + 1);
     inputs[0] = x;
@@ -2714,7 +2714,7 @@ class UnsortedBatchSegmentSumFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& data,
                            const std::shared_ptr<one::Tensor>& segment_ids,
                            const int64_t& num_segments) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"num_segments"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_segments");
     attrs.SetAttr<int64_t>("num_segments", num_segments);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {data, segment_ids}, attrs);
   }
@@ -2731,8 +2731,8 @@ class MaskedFillFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& mask, const Scalar& value) const {
     auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP({"float_operand", "has_float_operand", "int_operand",
-                                        "has_int_operand", "bool_operand", "has_bool_operand"});
+        THREAD_CACHED_MUTABLE_ATTR_MAP("float_operand", "has_float_operand", "int_operand",
+                                       "has_int_operand", "bool_operand", "has_bool_operand");
     if (IsFloatingDataType(x->dtype()->data_type())) {
       attrs.SetAttr<double>("float_operand", value.As<double>());
       attrs.SetAttr<bool>("has_float_operand", true);
@@ -3025,7 +3025,7 @@ class TopKFunctor {
  public:
   TopKFunctor() { op_ = CHECK_JUST(one::OpBuilder("top_k").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, int32_t k, bool sorted) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"k", "sorted"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("k", "sorted");
     attrs.SetAttr<int32_t>("k", k);
     attrs.SetAttr<bool>("sorted", sorted);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
@@ -3049,7 +3049,7 @@ class InTopKFunctor {
         << Error::RuntimeError() << "The dimension of targets must be 1";
     CHECK_EQ_OR_RETURN(predictions->ndim(), 2)
         << Error::RuntimeError() << "The dimension of predictions must be 2";
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"k"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("k");
     attrs.SetAttr<int32_t>("k", k);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {targets, predictions}, attrs);
   }
@@ -3065,7 +3065,7 @@ class TensorBufferToTensorFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const Shape& instance_shape,
                            const Symbol<DType>& dtype) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"instance_shape", "dtype"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("instance_shape", "dtype");
     attrs.SetAttr<Shape>("instance_shape", instance_shape);
     attrs.SetAttr<DataType>("dtype", dtype->data_type());
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
@@ -3081,7 +3081,7 @@ class TensorToTensorBufferFunctor {
     op_ = CHECK_JUST(one::OpBuilder("tensor_to_tensor_buffer").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, int32_t instance_dims) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"instance_dims"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("instance_dims");
     attrs.SetAttr<int32_t>("instance_dims", instance_dims);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
@@ -3098,8 +3098,8 @@ class GenTensorBufferFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const std::vector<Shape>& shape_list,
                            const std::vector<float>& value_list, const Symbol<DType>& dtype,
                            bool dynamic_out) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        {"shape", "shape_list", "value_list", "data_type", "dynamic_out"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "shape_list", "value_list", "data_type",
+                                                 "dynamic_out");
     attrs.SetAttr<Shape>("shape", shape);
     attrs.SetAttr<std::vector<Shape>>("shape_list", shape_list);
     attrs.SetAttr<std::vector<float>>("value_list", value_list);
@@ -3179,7 +3179,7 @@ class RepeatInterLeaveIndexFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& cumsum,
                            const int32_t& repeat_num) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"repeat_num"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("repeat_num");
     attrs.SetAttr<std::int64_t>("repeat_num", repeat_num);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, cumsum}, attrs);
   }
@@ -3350,7 +3350,7 @@ class PinMemoryFunctor {
     // TODO: remove this requires_grad
     JUST(empty->set_requires_grad(requires_grad));
     const int32_t ndim = input->ndim();
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"start", "stop", "step"});
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("start", "stop", "step");
     if (ndim == 0) {
       // TODO(wyg): use TensorSetItem after supporting non-requires_grad tensor inplace
       // for 0-dim tensor
@@ -3387,7 +3387,7 @@ class FillFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, const Scalar& value) const {
     JUST(CheckInplaceValid(in));
     auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP({"floating_value", "is_floating_value", "integral_value"});
+        THREAD_CACHED_MUTABLE_ATTR_MAP("floating_value", "is_floating_value", "integral_value");
     if (IsFloatingDataType(in->dtype()->data_type())) {
       attrs.SetAttr<double>("floating_value", value.As<double>());
       attrs.SetAttr<bool>("is_floating_value", true);

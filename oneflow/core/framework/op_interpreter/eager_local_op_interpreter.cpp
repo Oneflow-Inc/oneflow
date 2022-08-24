@@ -202,7 +202,7 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
   if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
   std::shared_ptr<UserOpExpr> op_expr =
       JUST(CachedEagerCclBroadcastOpExpr(parallel_desc, src_rank, 1, {*tensor->shape()}));
-  auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"root"});
+  auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("root");
   attrs.SetAttr<int64_t>("root", src_rank);
   if (src_rank == GlobalProcessCtx::Rank() || inplace) {
     TensorTuple outputs{tensor};
@@ -224,7 +224,7 @@ Maybe<TensorTuple> Broadcast(const TensorTuple& inputs, int64_t src_rank,
   for (const auto& tensor : inputs) { shape_list.emplace_back(*tensor->shape()); }
   std::shared_ptr<UserOpExpr> op_expr =
       JUST(CachedEagerCclBroadcastOpExpr(parallel_desc, src_rank, inputs.size(), shape_list));
-  auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP({"root"});
+  auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("root");
   attrs.SetAttr<int64_t>("root", src_rank);
   if (src_rank == GlobalProcessCtx::Rank() || inplace) {
     auto outputs = std::make_shared<TensorTuple>(inputs);
