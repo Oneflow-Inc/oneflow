@@ -57,7 +57,7 @@ class TestArgwhere(flow.unittest.TestCase):
 
     has_pytorch_1_11 = version.parse(torch_original.__version__) >= version.parse("1.11.0")
 
-    @unittest.skipIf(not has_pytorch_1_11, "...")
+    @unittest.skipIf(not has_pytorch_1_11,  "torch.argwhere only exists in PyTorch >= 1.11.0")
     @profile(torch.argwhere if has_pytorch_1_11 else None)
     def profile_argwhere(test_case):
         torch.argwhere(torch.ones(3, 3, 100, 100))
