@@ -518,7 +518,7 @@ class SyncBatchNormFunction(flow.autograd.Function):
 
         # synchronizing of grad_weight / grad_bias is not needed as distributed
         # training would handle all reduce.
-        return grad_input, grad_weight, grad_bias
+        return grad_input, grad_weight, grad_bias, None, None
 
 
 class SyncBatchNorm(_BatchNorm):
