@@ -153,28 +153,4 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
   return InferGradDataType(ctx);
 }
 
-REGISTER_USER_OP_GRAD("binary_cross_entropy_with_logits")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("input", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        builder.Op("binary_cross_entropy_with_logits_grad")
-            .Input("input", op.input("input", 0))
-            .Input("target", op.input("target", 0))
-            .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-            .Output("dx");
-        if (op.user_op_conf().has_input("weight", 0)) {
-          builder.Input("weight", op.input("weight", 0));
-        }
-        if (op.attr<bool>("has_pos_weight")) {
-          builder.Input("pos_weight", op.input("pos_weight", 0))
-              .Attr("has_pos_weight", op.attr<bool>("has_pos_weight"));
-        }
-        user_op::UserOpConfWrapper grad_op = builder.Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "input", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace oneflow

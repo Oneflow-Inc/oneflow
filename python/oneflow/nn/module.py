@@ -104,7 +104,13 @@ class Module(object):
 
     def __getstate__(self):
         if not self._is_ddp_module:
-            if len(self._backward_hooks) > 0 or len(self._forward_hooks) > 0 or len(self._forward_pre_hooks) > 0 or len(self._state_dict_hooks) > 0 or len(self._load_state_dict_pre_hooks) > 0:
+            if (
+                len(self._backward_hooks) > 0
+                or len(self._forward_hooks) > 0
+                or len(self._forward_pre_hooks) > 0
+                or len(self._state_dict_hooks) > 0
+                or len(self._load_state_dict_pre_hooks) > 0
+            ):
                 warnings.warn("The module hooks will not be remained after serializing")
 
         state = self.__dict__.copy()
@@ -125,7 +131,6 @@ class Module(object):
         if self._is_ddp_module:
             # flow.nn.parallel.DistributedDataParallel updates the module inplace
             flow.nn.parallel.DistributedDataParallel(self)
-
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError()
@@ -737,6 +742,24 @@ class Module(object):
                         )
                     )
                     continue
+                if (
+                    isinstance(input_param, flow.Tensor)
+                    and input_param.is_global != param.is_global
+                ):
+                    if param.is_global:
+                        help_msg = "Maybe you need to convert the checkpoint param to global, or set global_src_rank=0 when using flow.load to load model's state_dict"
+                    else:
+                        help_msg = "Maybe you need to convert your model to global."
+                    error_msgs.append(
+                        'local / global mismatch for "{}":  param from checkpoint is {} tensor, but the param in current model is {} tensor. {}'.format(
+                            key,
+                            "global" if input_param.is_global else "local",
+                            "global" if param.is_global else "local",
+                            help_msg,
+                        )
+                    )
+                    continue
+
                 try:
                     with flow.no_grad():
                         param.copy_(input_param)

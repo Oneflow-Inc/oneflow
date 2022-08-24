@@ -15,6 +15,7 @@ limitations under the License.
 """
 import logging
 import os
+import sys
 import time
 import inspect
 from collections import OrderedDict
@@ -446,7 +447,7 @@ class Graph(object):
         Use ``ranks`` to choose which rank to print the debug information.
 
         Use ``max_py_stack_depth`` to specify the max Python stack depth for the debug information.
-        
+
         Use ``only_user_py_stack`` to only print the operators' locations which are from users' code or models.
 
         Use ``op_repr_with_py_stack`` to print operators' locations when printing nn.Graph's repr.
@@ -465,7 +466,7 @@ class Graph(object):
                 You can choose any valid rank. Ranks equals ``-1`` means debug on all ranks.
             max_py_stack_depth(int): the maximum depth for the Python stack debug information. Default: ``2``.
             only_user_py_stack(bool): only to print the operators' locations from users' code. Default: ``True``.
-            op_repr_with_py_stack(bool):  print operators' locations when printing nn.Graph's repr. Default: ``False``. 
+            op_repr_with_py_stack(bool):  print operators' locations when printing nn.Graph's repr. Default: ``False``.
         """
         assert isinstance(v_level, int)
         assert v_level >= -1, "The min verbose debug info level is -1."
@@ -712,6 +713,19 @@ class Graph(object):
                 )
                 state2lazy_builder[state_tensor] = state_block.lazy_origin_builder()
 
+    def _mark_variable_gradients(self):
+        variable = []
+        gradients = []
+        for state_block in self._state():
+            if (
+                state_block.type == BlockType.PARAMETER
+                and state_block.origin.grad is not None
+                and state_block.origin.grad.is_lazy
+            ):
+                variable.append(state_block.origin)
+                gradients.append(state_block.origin.grad)
+        oneflow._oneflow_internal.nn.graph.MarkVariableGradients(variable, gradients)
+
     @staticmethod
     def to_graph(func):
         """Make a function to do static graph run with nn.Graph.
@@ -841,7 +855,8 @@ class Graph(object):
                 + "s."
                 + "\n",
             )
-        except:
+        except Exception as e:
+            print(e, file=sys.stderr)
             self.__print(
                 2, 0, "[ERROR]" + self._shallow_repr() + " building plan got error."
             )
@@ -904,6 +919,9 @@ class Graph(object):
 
             # Save forward graph job proto
             self._forward_job_proto = c_api_util.GetCurrentJob()
+
+            if self.training:
+                self._mark_variable_gradients()
 
             self.__print(
                 0,

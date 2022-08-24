@@ -127,7 +127,7 @@ from oneflow._C import atan
 from oneflow._C import atan as arctan
 from oneflow._C import atan2
 from oneflow._C import ceil
-from oneflow._C import clamp, clamp_
+from oneflow._C import clamp, clamp_, clamp_min, clamp_min_, clamp_max, clamp_max_
 from oneflow._C import clip, clip_
 from oneflow._C import cos
 from oneflow._C import cosh
@@ -173,7 +173,8 @@ from oneflow._C import argmax
 from oneflow._C import argmin
 from oneflow._C import std
 from oneflow._C import var
-from oneflow._C import stack
+from oneflow._C import stack, hstack, vstack, dstack, column_stack, row_stack
+from oneflow._C import atleast_1d, atleast_2d, atleast_3d
 from oneflow._C import squeeze
 from oneflow._C import narrow
 from oneflow._C import unsqueeze
@@ -212,6 +213,7 @@ from oneflow._C import index_select
 from oneflow._C import isnan
 from oneflow._C import isinf
 from oneflow._C import isfinite
+from oneflow._C import inv as inverse
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
@@ -337,6 +339,7 @@ from oneflow.nn.modules.constant import new_ones_op as new_ones
 from oneflow.nn.modules.constant import new_zeros_op as new_zeros
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.empty import new_empty_op as new_empty
+from oneflow.nn.modules.empty import empty_like_op as empty_like
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand

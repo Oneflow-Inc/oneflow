@@ -1134,16 +1134,16 @@ add_docstr(
     When exponent is a scalar value, the operation applied is:
 
     .. math::
-        \\text{out}_i = x_i ^ \\text{exponent}
-\u200b
+        \text{out}_i = x_i ^ \text{exponent}
+
     When exponent is a tensor, the operation applied is:
 
     .. math::
-        \\text{out}_i = x_i ^ {\\text{exponent}_i}
+        \text{out}_i = x_i ^ {\text{exponent}_i}
 
     Args:
-        - input (Tensor): the input tensor.
-        - exponent (int, float, Tensor): the exponent.
+        input (Tensor): the input tensor.
+        exponent (int, float, Tensor): the exponent.
 
     Returns:
         Tensor: The result of variance on the specified axis of input Tensor

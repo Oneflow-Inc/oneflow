@@ -73,21 +73,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("hardsigmoid")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      const auto hardsigmoid_grad_op_name = ctx->FwOp().op_name() + "_grad";
-      ctx->DefineOp(hardsigmoid_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("hardsigmoid_grad")
-            .InputBind("x", ctx->FwOp().input("in", 0))
-            .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-            .Output("dx")
-            .Build();
-      });
-      ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
-                                [&ctx, &hardsigmoid_grad_op_name]() -> const std::string& {
-                                  return ctx->GetOp(hardsigmoid_grad_op_name).output("dx", 0);
-                                });
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace oneflow

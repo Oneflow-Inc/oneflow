@@ -86,6 +86,14 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
   m.def("RunLazyNNGraph", &RunLazyNNGraph);
   m.def("SoftSyncNNGraphBuffers", &SoftSyncNNGraphBuffers);
   m.def("AddTensorAsGraphLoss", &AddTensorAsGraphLoss);
+  m.def("MarkVariableGradients", [](const std::vector<std::shared_ptr<one::Tensor>>& variables,
+                                    const std::vector<std::shared_ptr<one::Tensor>>& gradients) {
+    one::TensorTuple variable_tuple(variables.size());
+    one::TensorTuple gradient_tuple(gradients.size());
+    for (int i = 0; i < variables.size(); ++i) { variable_tuple[i] = variables[i]; }
+    for (int i = 0; i < gradients.size(); ++i) { gradient_tuple[i] = gradients[i]; }
+    return MarkVariableGradients(variable_tuple, gradient_tuple);
+  });
   m.def("ConvertJobToTosaIR", [](const std::string& serialized_job) -> Maybe<std::string> {
     Job job;
     CHECK_OR_RETURN(job.ParseFromString(serialized_job)) << "serialized job conversion failed.";
