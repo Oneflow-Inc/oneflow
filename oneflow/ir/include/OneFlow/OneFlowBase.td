@@ -247,7 +247,6 @@ class OneFlow_AvgPoolBaseOp<string mnemonic, list<Trait> traits = []> :
     DefaultValuedAttr<SI32Attr, "0">:$divisor_override
   );
   let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
@@ -298,7 +297,6 @@ class OneFlow_AvgPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
     DefaultValuedAttr<SI32Attr, "0">:$divisor_override
   );
   let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
@@ -314,7 +312,6 @@ class OneFlow_AdaptivePoolBaseOp<string mnemonic, list<Trait> traits = []> :
     SI64ArrayAttr:$output_size
   );
   let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
@@ -331,7 +328,6 @@ class OneFlow_AdaptivePoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
     SI64ArrayAttr:$output_size
   );
   let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
