@@ -29,7 +29,7 @@ def _check_equal(test_case, lhs, rhs, rtol=1e-4, atol=1e-4, name=""):
         atol=atol,
         equal_nan=True,
     )
-    test_case.assertTrue(is_equal, f'{name} is not equal')
+    test_case.assertTrue(is_equal, f"{name} is not equal")
 
 
 def _test_scalar_pow_grad_grad_impl(test_case, placement, reverse=False):
