@@ -1,0 +1,137 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
+import os
+
+import unittest
+from collections import OrderedDict
+from oneflow.test_utils.test_util import GenArgDict
+import numpy as np
+import oneflow as flow
+import oneflow.nn as nn
+import tempfile
+
+
+def _test_one_embedding(test_case, embedding_size):
+    class OneEmbedding(nn.Module):
+        def __init__(
+            self, embedding_vec_size, persistent_path, table_size_array,
+        ):
+            assert table_size_array is not None
+            vocab_size = sum(table_size_array)
+
+            scales = np.sqrt(1 / np.array(table_size_array))
+            tables = [
+                flow.one_embedding.make_table(
+                    flow.one_embedding.make_uniform_initializer(low=-scale, high=scale)
+                )
+                for scale in scales
+            ]
+            store_options = flow.one_embedding.make_device_mem_store_options(
+                persistent_path=persistent_path, capacity=vocab_size
+            )
+
+            super(OneEmbedding, self).__init__()
+            self.one_embedding = flow.one_embedding.MultiTableEmbedding(
+                f"oneembedding_{embedding_vec_size}",
+                embedding_dim=embedding_vec_size,
+                dtype=flow.float,
+                key_type=flow.int64,
+                tables=tables,
+                store_options=store_options,
+            )
+
+        def forward(self, ids):
+            return self.one_embedding.forward(ids)
+
+    class TestModule(nn.Module):
+        def __init__(
+            self, embedding_vec_size=128, persistent_path=None, table_size_array=[],
+        ):
+            super(TestModule, self).__init__()
+            self.embedding = OneEmbedding(embedding_vec_size, persistent_path, table_size_array,)
+            self.mlp = nn.Linear(embedding_vec_size, 1)
+
+        def forward(self, inputs) -> flow.Tensor:
+            embedding = self.embedding(inputs)
+            logits = self.mlp(embedding).mean(dim=1)
+            return logits
+
+    class TrainGraph(flow.nn.Graph):
+        def __init__(
+            self, module, loss, optimizer, amp=False,
+        ):
+            super(TrainGraph, self).__init__()
+            self.module = module
+            self.loss = loss
+            self.add_optimizer(optimizer)
+            if amp:
+                self.config.enable_amp(True)
+
+        def build(self, labels, features):
+            logits = self.module(features.to("cuda"))
+            loss = self.loss(logits, labels.to("cuda"))
+            reduce_loss = flow.mean(loss)
+            reduce_loss.backward()
+            return reduce_loss.to("cpu")
+
+    def np_to_global(np):
+        t = flow.from_numpy(np)
+        return t.to_global(placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.split(0))
+
+    batch_size = 32
+    table_size_array = [32, 65536, 100, 7]
+
+    with tempfile.TemporaryDirectory() as persistent_path:
+        rank = flow.env.get_rank()
+        module = TestModule(
+            embedding_vec_size=embedding_size,
+            persistent_path=persistent_path,
+            table_size_array=table_size_array,
+        )
+        module.to_global(flow.env.all_device_placement("cuda"), flow.sbp.broadcast)
+
+        opt = flow.optim.SGD(module.parameters(), lr=0.1)
+        loss = flow.nn.BCEWithLogitsLoss(reduction="none").to("cuda")
+
+        train_graph = TrainGraph(module, loss, opt)
+
+        module.train()
+        for step in range(1, 101):
+            labels = np.random.randint(2, size=(batch_size, 1)).astype(np.float32)
+            features = np.random.randint(
+                sum(table_size_array), size=(batch_size, len(table_size_array))
+            )
+            labels = np_to_global(labels)
+            features = np_to_global(features)
+
+            loss = train_graph(labels, features)
+            if step % 10 == 0:
+                loss = loss.numpy()
+                if rank == 0:
+                    print(f"Rank[{rank}], Step {step}, Loss {loss:0.4f}")
+
+
+class OneEmbeddingTestCase(flow.unittest.TestCase):
+    def test_one_embedding(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["embedding_size"] = [128, 17]
+        for kwargs in GenArgDict(arg_dict):
+            _test_one_embedding(test_case, **kwargs)
+
+
+if __name__ == "__main__":
+    unittest.main()
