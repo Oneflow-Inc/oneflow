@@ -70,11 +70,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            py::call_guard<py::gil_scoped_release>());
 
   RegisterCudaDeviceProperties(m);
-  m.def("_get_", &CurrentMachineId);
-  m.def(
-      "_get_device_properties",
-      [](int device) -> cudaDeviceProp* { return GetDeviceProperties(device); },
-      py::return_value_policy::reference);
+  // m.def("_get_", &CurrentMachineId);
 
   m.def("CurrentMachineId", &CurrentMachineId);
 
@@ -91,6 +87,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("SetCudaDeviceIndex", &SetCudaDeviceIndex);
   m.def("CudaSynchronize", &CudaSynchronize);
   m.def("GetCUDAMemoryUsed", &GetCUDAMemoryUsed);
+  m.def(
+      "_get_device_properties",
+      [](int device) -> cudaDeviceProp* { return GetDeviceProperties(device); },
+      py::return_value_policy::reference);
 #endif  // WITH_CUDA
   m.def("SetFLAGS_alsologtostderr", &SetFLAGS_alsologtostderr);
   m.def("GetFLAGS_alsologtostderr", &GetFLAGS_alsologtostderr);
