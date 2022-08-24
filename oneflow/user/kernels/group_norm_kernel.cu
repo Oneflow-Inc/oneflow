@@ -557,15 +557,24 @@ using PackType = typename GetPackType<T, PackSize>::type;
 template<typename ComputeType, typename T, int PackSize>
 union Pack {
   static_assert(sizeof(PackType<T, PackSize>) == sizeof(T) * PackSize, "");
-  __device__ Pack() {
-    for (int i = 0; i < PackSize; i++) { elem[i] = 0.0; }
+  __device__ Pack(T val) {
+    for (int i = 0; i < PackSize; i++) { elem[i] = val; }
   }
 
   __device__ Pack<ComputeType, T, PackSize> operator*(Pack<ComputeType, T, PackSize> pack) {
-    Pack<ComputeType, T, PackSize> newPack{};
+    Pack<ComputeType, T, PackSize> newPack(0);
 #pragma unroll
     for (int i = 0; i < PackSize; i++) { newPack.elem[i] = elem[i] * pack.elem[i]; }
     return newPack;
+  }
+
+  __device__ Pack<ComputeType, T, PackSize> operator-(Pack<ComputeType, T, PackSize> pack) {
+    Pack<ComputeType, T, PackSize> newPack(0);
+    #pragma unroll 
+    for(int i = 0; i < PackSize; i++){
+      newPack.elem[i] = elem[i] - pack.elem[i];
+    }
+    return newPack; 
   }
 
   __device__ void operator+=(Pack<ComputeType, T, PackSize> pack) {
@@ -607,22 +616,30 @@ __global__ void GroupNormParamGradKernel(const T* dy, const T* x, const T* mean,
     const int32_t batch_id = batch_channel_id / channel_size;
     const int32_t channel_id = batch_channel_id % channel_size;
     const int32_t group_num = channel_size / group_size;
+    const int32_t batch_group_id = batch_id * group_size + channel_id / group_num;
+    
+    T mean_val = mean[batch_group_id];
+    T inv_var_val = inv_var[batch_group_id];
+    
+    Pack<ComputeType, T, PackSize> ds_sum_pack(0);
+    Pack<ComputeType, T, PackSize> db_sum_pack(0);
 
-    Pack<ComputeType, T, PackSize> ds_sum_pack{};
-    Pack<ComputeType, T, PackSize> db_sum_pack{};
+    Pack<ComputeType, T, PackSize> mean_pack(mean_val);
+    Pack<ComputeType, T, PackSize> inv_var_pack(inv_var_val);
 
     for (int32_t spatial = threadIdx.x * PackSize; spatial < spatial_size;
          spatial += blockDim.x * PackSize) {
-      Pack<ComputeType, T, PackSize> dy_pack{};
-      Pack<ComputeType, T, PackSize> x_pack{};
+      Pack<ComputeType, T, PackSize> dy_pack(0);
+      Pack<ComputeType, T, PackSize> x_pack(0);
       const int32_t load_idx = batch_channel_id * spatial_size + spatial;
       const LoadType* dy_load = reinterpret_cast<const LoadType*>(dy + load_idx);
       dy_pack.storage = *dy_load;
       const LoadType* x_load = reinterpret_cast<const LoadType*>(x + load_idx);
       x_pack.storage = *x_load;
-      ds_sum_pack += dy_pack * x_pack;
+      ds_sum_pack += dy_pack * (x_pack - mean_pack) * inv_var_pack;
       db_sum_pack += dy_pack;
     }
+    
     ComputeType ds_sum = PackReduce<ComputeType, T, PackSize>(ds_sum_pack);
     ComputeType db_sum = PackReduce<ComputeType, T, PackSize>(db_sum_pack);
 
@@ -654,8 +671,9 @@ __global__ void BatchReduceGammaBetaGradKernel(const T* mean, const T* inv_var, 
       const int32_t batch_channel_id = batch_id * channel_size + channel_idx;
       ComputeType mean_val = static_cast<ComputeType>(mean[batch_group_id]);
       ComputeType inv_var_val = static_cast<ComputeType>(inv_var[batch_group_id]);
-      dgamma_sum += (ds_sum[batch_channel_id] - db_sum[batch_channel_id] * mean_val) * inv_var_val;
-      dbeta_sum += db_sum[batch_channel_id];
+      // dgamma_sum += (ds_sum[batch_channel_id] - db_sum[batch_channel_id] * mean_val) * inv_var_val;
+      dgamma_sum += static_cast<ComputeType>(ds_sum[batch_channel_id]); 
+      dbeta_sum += static_cast<ComputeType>(db_sum[batch_channel_id]);
     }
     dgamma[channel_idx] = dgamma_sum;
     dbeta[channel_idx] = dbeta_sum;
@@ -754,11 +772,11 @@ class GroupNormParamGradGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)            \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
-REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(half)
+// REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(half)
 REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(float)
-REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(double)
-#if CUDA_VRSION >= 11000
-REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(nv_bfloat16)
-#endif
+// REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(double)
+// #if CUDA_VRSION >= 11000
+// REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(nv_bfloat16)
+// #endif
 
 }  // namespace oneflow
