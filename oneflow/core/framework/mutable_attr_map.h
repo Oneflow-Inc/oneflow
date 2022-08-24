@@ -57,13 +57,25 @@ class MutableAttrMap {
   inline void SetAttr(const char* attr_name, const T& attr_val) {
     auto idx = ordered_attr_names_->order(attr_name);
     CHECK_OR_THROW(idx != -1) << "has no attribute named " << attr_name;
+    SetAttrNoThrow(idx, attr_val);
+  }
+
+  template<typename T>
+  inline void SetAttr(int idx, const T& attr_val) {
+    CHECK_LT_OR_THROW(idx, max_size_)
+        << "index " << idx << " is out of bound, and the max size is " << max_size_;
+    SetAttrNoThrow(idx, attr_val);
+  }
+
+ private:
+  template<typename T>
+  inline void SetAttrNoThrow(int idx, const T& attr_val) {
     if (!attrs_[idx] || *static_cast<const T*>(attrs_[idx]->Ptr()) != attr_val) {
       attrs_[idx] = std::make_shared<user_op::TypedAttrVal<T>>(attr_val);
     }
     valid_masks_[idx] = true;
   }
 
- private:
   // The actually count of all attributes
   size_t max_size_;
   // The ordered attribute names is determined and should be shared
