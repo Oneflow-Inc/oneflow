@@ -1,0 +1,1 @@
+void enable_eval_frame_shim_for_current_thread();

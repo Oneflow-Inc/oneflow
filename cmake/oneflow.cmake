@@ -91,7 +91,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
 
   if(BUILD_PYTHON)
 
-    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/python/.*\\.(h|cpp)$")
+    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/python/.*\\.(h|cpp|c)$")
       list(APPEND of_pybind_obj_cc ${oneflow_single_file})
       set(group_this ON)
     endif()
