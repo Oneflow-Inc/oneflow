@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
@@ -34,15 +35,34 @@ namespace oneflow {
   const Shape& z_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("z", 0).shape();
   CHECK_LE_OR_RETURN(x_shape.NumAxes(), z_shape.NumAxes());
   CHECK_LE_OR_RETURN(y_shape.NumAxes(), z_shape.NumAxes());
-  FOR_RANGE(int64_t, i, 0, z_shape.NumAxes()) {
-    const int64_t _axis = z_shape.NumAxes() - 1 - i;
-    if (z_shape.At(_axis) == x_shape.At(_axis) && z_shape.At(_axis) == y_shape.At(_axis)) {
+  int64_t min_num_axes = std::min(x_shape.NumAxes(), y_shape.NumAxes());
+  FOR_RANGE(int64_t, i, 0, min_num_axes) {
+    const int64_t axis_x = x_shape.NumAxes() - 1 - i;
+    const int64_t axis_y = y_shape.NumAxes() - 1 - i;
+    const int64_t axis_z = z_shape.NumAxes() - 1 - i;
+    if (z_shape.At(axis_z) == x_shape.At(axis_x) && z_shape.At(axis_z) == y_shape.At(axis_y)) {
       ctx->NewBuilder()
-          .Split(user_op::OpArg("x", 0), _axis)
-          .Split(user_op::OpArg("y", 0), _axis)
-          .Split(user_op::OpArg("z", 0), _axis)
-          .Split(user_op::OpArg("dz", 0), _axis)
-          .Split(user_op::OpArg("dx", 0), _axis)
+          .Split(user_op::OpArg("x", 0), axis_x)
+          .Split(user_op::OpArg("y", 0), axis_y)
+          .Split(user_op::OpArg("z", 0), axis_z)
+          .Split(user_op::OpArg("dz", 0), axis_z)
+          .Split(user_op::OpArg("dx", 0), axis_x)
+          .Build();
+    } else if (z_shape.At(axis_z) == y_shape.At(axis_y)) {
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("x", 0))
+          .Split(user_op::OpArg("y", 0), axis_y)
+          .Split(user_op::OpArg("z", 0), axis_z)
+          .Split(user_op::OpArg("dz", 0), axis_z)
+          .PartialSum(user_op::OpArg("dx", 0))
+          .Build();
+    } else if (z_shape.At(axis_z) == x_shape.At(axis_x)) {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("x", 0), axis_x)
+          .Broadcast(user_op::OpArg("y", 0))
+          .Split(user_op::OpArg("z", 0), axis_z)
+          .Split(user_op::OpArg("dz", 0), axis_z)
+          .Split(user_op::OpArg("dx", 0), axis_x)
           .Build();
     }
   }
@@ -87,27 +107,50 @@ namespace oneflow {
 
 /* static */ Maybe<void> BroadcastPowYGradOp::GetSbp(user_op::SbpContext* ctx) {
   const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
+  const Shape& y_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape();
   const Shape& z_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("z", 0).shape();
   CHECK_LE_OR_RETURN(x_shape.NumAxes(), z_shape.NumAxes());
-  FOR_RANGE(int64_t, i, 0, z_shape.NumAxes()) {
-    const int64_t _axis = z_shape.NumAxes() - 1 - i;
-    if (z_shape.At(_axis) == x_shape.At(_axis)) {
+  int64_t min_num_axes = std::min(x_shape.NumAxes(), y_shape.NumAxes());
+  FOR_RANGE(int64_t, i, 0, min_num_axes) {
+    const int64_t axis_x = x_shape.NumAxes() - 1 - i;
+    const int64_t axis_y = y_shape.NumAxes() - 1 - i;
+    const int64_t axis_z = z_shape.NumAxes() - 1 - i;
+    if (z_shape.At(axis_z) == x_shape.At(axis_x) && z_shape.At(axis_z) == y_shape.At(axis_y)) {
       ctx->NewBuilder()
-          .Split(user_op::OpArg("x", 0), _axis)
-          .Split(user_op::OpArg("z", 0), _axis)
-          .Split(user_op::OpArg("dz", 0), _axis)
-          .Split(user_op::OpArg("dy", 0), _axis)
+          .Split(user_op::OpArg("x", 0), axis_x)
+          .Split(user_op::OpArg("z", 0), axis_z)
+          .Split(user_op::OpArg("y", 0), axis_y)
+          .Split(user_op::OpArg("dz", 0), axis_z)
+          .Split(user_op::OpArg("dy", 0), axis_y)
+          .Build();
+    } else if (z_shape.At(axis_z) == y_shape.At(axis_y)) {
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("x", 0))
+          .Split(user_op::OpArg("y", 0), axis_y)
+          .Split(user_op::OpArg("z", 0), axis_z)
+          .Split(user_op::OpArg("dz", 0), axis_z)
+          .Split(user_op::OpArg("dy", 0), axis_y)
+          .Build();
+    } else if (z_shape.At(axis_z) == x_shape.At(axis_x)) {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("x", 0), axis_x)
+          .Broadcast(user_op::OpArg("y", 0))
+          .Split(user_op::OpArg("z", 0), axis_z)
+          .Split(user_op::OpArg("dz", 0), axis_z)
+          .PartialSum(user_op::OpArg("dy", 0))
           .Build();
     }
   }
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("x", 0))
+      .Broadcast(user_op::OpArg("y", 0))
       .PartialSum(user_op::OpArg("z", 0))
       .Broadcast(user_op::OpArg("dz", 0))
       .Broadcast(user_op::OpArg("dy", 0))
       .Build();
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("x", 0))
+      .Broadcast(user_op::OpArg("y", 0))
       .Broadcast(user_op::OpArg("z", 0))
       .PartialSum(user_op::OpArg("dz", 0))
       .Broadcast(user_op::OpArg("dy", 0))
