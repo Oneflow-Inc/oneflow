@@ -13,23 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import unittest
 
+import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-def _check_equal(test_case, lhs, rhs, rtol=1e-5, atol=1e-5):
+def _check_equal(test_case, lhs, rhs, rtol=1e-3, atol=1e-3):
     is_equal = np.allclose(
-        lhs.detach().cpu().numpy(), rhs.detach().cpu().numpy(), rtol=rtol, atol=atol,
+        lhs.detach().cpu().numpy(),
+        rhs.detach().cpu().numpy(),
+        rtol=rtol,
+        atol=atol,
+        equal_nan=True,
     )
-    try:
-        assert is_equal
-    except:
-        print(lhs)
-        print(rhs)
     test_case.assertTrue(is_equal)
 
 
@@ -39,8 +38,8 @@ def _test_pow_grad_grad_impl(test_case):
     if random_bool().value():
         x_shape, y_shape = y_shape, x_shape
 
-    x = random_tensor(len(x_shape), *x_shape)
-    y = random_tensor(len(y_shape), *y_shape)
+    x = random_tensor(len(x_shape), *x_shape, low=-5, high=5)
+    y = random_tensor(len(y_shape), *y_shape, low=-5, high=5)
 
     z = torch.pow(x, y)
     _check_equal(test_case, z.pytorch, z.oneflow)
@@ -63,8 +62,7 @@ def _test_pow_grad_grad_impl(test_case):
 
 class TestPowHigherDerivative(flow.unittest.TestCase):
     def test_pow_grad_grad(test_case):
-        for i in range(10000):
-            print(i)
+        for i in range(10):
             _test_pow_grad_grad_impl(test_case)
 
 
