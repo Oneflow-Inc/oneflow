@@ -105,7 +105,7 @@ class TestMaxPooling(flow.unittest.TestCase):
             return y[0]
         else:
             return y
-    
+
     @autotest(n=5, auto_backward=False)
     def test_maxpool2d_with_half_data(test_case):
         return_indices = random().to(bool).value()
@@ -120,7 +120,11 @@ class TestMaxPooling(flow.unittest.TestCase):
         m.train(random())
         device = gpu_device()
         m.to(device)
-        x = random_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(device).to(torch.float16)
+        x = (
+            random_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22))
+            .to(device)
+            .to(torch.float16)
+        )
         y = m(x)
         if return_indices:
             return y[0]
