@@ -42,7 +42,7 @@ def get_device_properties(device: Union[flow.device, str, int]):
     r"""Gets the properties of a device.
 
     Args:
-        device(oneflow.device or int): device for which to return the properties of the device.
+        device(oneflow.device or str or int): device for which to return the properties of the device.
 
     Returns:
         the properties of the device.
