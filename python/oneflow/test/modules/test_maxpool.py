@@ -105,6 +105,27 @@ class TestMaxPooling(flow.unittest.TestCase):
             return y[0]
         else:
             return y
+    
+    @autotest(n=5, auto_backward=False)
+    def test_maxpool2d_with_half_data(test_case):
+        return_indices = random().to(bool).value()
+        m = torch.nn.MaxPool2d(
+            kernel_size=random(4, 6).to(_size_2_t),
+            stride=random(1, 3).to(_size_2_t) | nothing(),
+            padding=random(1, 3).to(_size_2_t) | nothing(),
+            dilation=random(2, 4).to(_size_2_t) | nothing(),
+            ceil_mode=random(),
+            return_indices=return_indices,
+        )
+        m.train(random())
+        device = gpu_device()
+        m.to(device)
+        x = random_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(device).to(torch.float16)
+        y = m(x)
+        if return_indices:
+            return y[0]
+        else:
+            return y
 
     @autotest(n=5, auto_backward=True, check_graph=True)
     def test_maxpool3d_with_random_data(test_case):
