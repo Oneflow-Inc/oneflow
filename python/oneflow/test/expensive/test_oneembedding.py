@@ -117,12 +117,8 @@ def _test_one_embedding(test_case, embedding_size):
             )
             labels = np_to_global(labels)
             features = np_to_global(features)
-
             loss = train_graph(labels, features)
-            if step % 10 == 0:
-                loss = loss.numpy()
-                if rank == 0:
-                    print(f"Rank[{rank}], Step {step}, Loss {loss:0.4f}")
+            test_case.assertFalse(np.isnan(loss.numpy()))
 
 
 class OneEmbeddingTestCase(flow.unittest.TestCase):
