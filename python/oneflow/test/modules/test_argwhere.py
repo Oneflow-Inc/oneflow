@@ -24,7 +24,7 @@ import oneflow as flow
 import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
-
+import torch as torch_original
 
 def _test_argwhere(test_case, shape, device):
     np_input = np.random.randn(*shape)
@@ -53,6 +53,10 @@ class TestArgwhere(flow.unittest.TestCase):
         y = torch.argwhere(x)
         return y
 
+    @unittest.skipIf(
+        version.parse(torch_original.__version__) < version.parse("1.11.0"),
+        "torch.argwhere only exists in PyTorch >= 1.11.0",
+    )
     @profile(torch.argwhere)
     def profile_argwhere(test_case):
         torch.argwhere(torch.ones(3, 3, 100, 100))
