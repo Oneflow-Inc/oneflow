@@ -40,13 +40,14 @@ class BroadcastPowXGradKernel final : public user_op::OpKernel {
     const int64_t num_axes = dz_tensor->shape_view().NumAxes();
     XpuVarNdarray<const T> dz(dz_tensor->shape_view(), dz_tensor->dptr<T>(), num_axes);
     XpuVarNdarray<const T> y(y_tensor->shape_view(), y_tensor->dptr<T>(), num_axes);
+    XpuVarNdarray<const T> z(z_tensor->shape_view(), z_tensor->dptr<T>(), num_axes);
     XpuVarNdarray<const T> const_tmp(dz.shape(), tmp_buffer->dptr<T>());
     XpuVarNdarray<T> tmp(dz.shape(), tmp_buffer->mut_dptr<T>());
 
-    NdarrayUtil<device, T>::BroadcastDiv(
+    NdarrayUtil<device, T>::BroadcastReciprocalNoNan(
         ctx->stream(), tmp,
-        XpuVarNdarray<const T>(z_tensor->shape_view(), z_tensor->dptr<T>(), num_axes),
         XpuVarNdarray<const T>(x_tensor->shape_view(), x_tensor->dptr<T>(), num_axes));
+    NdarrayUtil<device, T>::BroadcastMul(ctx->stream(), tmp, z, const_tmp);
     NdarrayUtil<device, T>::BroadcastMul(ctx->stream(), tmp, y, const_tmp);
     NdarrayUtil<device, T>::BroadcastMul(ctx->stream(), tmp, dz, const_tmp);
     NdarrayUtil<device, T>::ReduceSum(

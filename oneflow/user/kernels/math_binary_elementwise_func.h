@@ -50,11 +50,7 @@ struct PowFunctor {
   }
 
   static OF_DEVICE_FUNC const T BackwardYGrad(const T x, const T y, const T dz) {
-    if (x > T(0)) {
-      return dz * MATH_FUNC(log)(x) * (MATH_FUNC(pow)(x, y));
-    } else {
-      return T(0);
-    }
+    return dz * MATH_FUNC(log)(x) * (MATH_FUNC(pow)(x, y));
   }
 };
 
