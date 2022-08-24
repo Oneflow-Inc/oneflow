@@ -29,6 +29,15 @@ import oneflow.nn as nn
 import oneflow.unittest
 
 
+class CustomModuleForSaveLoad(flow.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.param = flow.nn.Parameter(flow.randn(1, 3, 3, 3))
+
+    def forward(self, x):
+        return self.param + x
+
+
 def np_relu(np_arr):
     return np.where(np_arr > 0, np_arr, 0)
 
@@ -307,17 +316,9 @@ class TestModule(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     def test_save_load_module_directly(test_case):
-        class CustomModule(flow.nn.Module):
-            def __init__(self):
-                super().__init__()
-                self.param = flow.nn.Parameter(flow.randn(1, 3, 3, 3))
-
-            def forward(self, x):
-                return self.param + x
-
         x = flow.randn(1, 3, 3, 3)
 
-        m = CustomModule()
+        m = CustomModuleForSaveLoad()
 
         with tempfile.TemporaryDirectory() as f:
             flow.save(m, f)
