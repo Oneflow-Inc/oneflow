@@ -55,7 +55,7 @@ class TestArgwhere(flow.unittest.TestCase):
         return y
 
 
-    has_pytorch_1_11 = version.parse(torch_original.__version__) < version.parse("1.11.0")
+    has_pytorch_1_11 = version.parse(torch_original.__version__) >= version.parse("1.11.0")
 
     @unittest.skipIf(not has_pytorch_1_11, "...")
     @profile(torch.argwhere if has_pytorch_1_11 else None)
