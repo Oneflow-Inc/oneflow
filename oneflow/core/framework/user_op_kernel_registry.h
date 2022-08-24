@@ -97,6 +97,9 @@ class OpKernelRegistry final {
   template<typename T>
   OpKernelRegistry& SetCreateFn() {
     auto fn = []() -> const OpKernel* { return NewOpKernel<T>(); };
+    if (oneflow::Singleton<KernelLaunchRegistry>::Get() == nullptr) {
+      oneflow::Singleton<KernelLaunchRegistry>::New();
+    }
     oneflow::Singleton<KernelLaunchRegistry>::Get()->Register(result_.op_type_name, fn);
     return SetCreateFn(fn);
   }
