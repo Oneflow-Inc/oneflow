@@ -89,8 +89,7 @@ __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C
     // half no = o > u + k[ii] ? o : u + k[ii];
     if (o > u + k[ii]) {
       no = o;
-    }
-    else{
+    } else {
       no = u + k[ii];
     }
     AA = static_cast<half>(exp(static_cast<float>(o - no)));
@@ -101,8 +100,7 @@ __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C
     // no = w + o > k[ii] ? w + o : k[ii];
     if (w + o > k[ii]) {
       no = w + o;
-    }
-    else{
+    } else {
       no = k[ii];
     }
     AA = static_cast<half>(exp(static_cast<float>(w + o - no)));
@@ -116,8 +114,10 @@ __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C
 #if CUDA_VERSION >= 11000
 template<>
 __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C,
-                               const nv_bfloat16* __restrict__ const _w, const nv_bfloat16* __restrict__ const _u,
-                               const nv_bfloat16* __restrict__ const _k, const nv_bfloat16* __restrict__ const _v,
+                               const nv_bfloat16* __restrict__ const _w,
+                               const nv_bfloat16* __restrict__ const _u,
+                               const nv_bfloat16* __restrict__ const _k,
+                               const nv_bfloat16* __restrict__ const _v,
                                nv_bfloat16* __restrict__ const _y) {
   const int idx = blockIdx.x * blockDim.x + threadIdx.x;
   const int _b = idx / C;
@@ -125,12 +125,14 @@ __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C
   const int _offset = _b * T * C + _c;
 
   nv_bfloat16 u = _u[_c];
-  const nv_bfloat16 w = static_cast<nv_bfloat16>(-1.0) * static_cast<nv_bfloat16>(exp(static_cast<float>(_w[_c])));
+  const nv_bfloat16 w =
+      static_cast<nv_bfloat16>(-1.0) * static_cast<nv_bfloat16>(exp(static_cast<float>(_w[_c])));
   const nv_bfloat16* __restrict__ const k = _k + _offset;
   const nv_bfloat16* __restrict__ const v = _v + _offset;
   nv_bfloat16* __restrict__ const y = _y + _offset;
 
-  nv_bfloat16 p = static_cast<nv_bfloat16>(0.0), q = static_cast<nv_bfloat16>(0.0), o = static_cast<nv_bfloat16>(MIN_VALUE);
+  nv_bfloat16 p = static_cast<nv_bfloat16>(0.0), q = static_cast<nv_bfloat16>(0.0),
+              o = static_cast<nv_bfloat16>(MIN_VALUE);
   nv_bfloat16 no, AA, BB;
   // p and q are running sums divided by exp(o) (to avoid overflows)
   for (int i = 0; i < T; i++) {
@@ -140,8 +142,7 @@ __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C
     // nv_bfloat16 no = o > u + k[ii] ? o : u + k[ii];
     if (o > u + k[ii]) {
       no = o;
-    }
-    else{
+    } else {
       no = u + k[ii];
     }
     AA = static_cast<nv_bfloat16>(exp(static_cast<float>(o - no)));
@@ -152,8 +153,7 @@ __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C
     // no = w + o > k[ii] ? w + o : k[ii];
     if (w + o > k[ii]) {
       no = w + o;
-    }
-    else{
+    } else {
       no = k[ii];
     }
     AA = static_cast<nv_bfloat16>(exp(static_cast<float>(w + o - no)));
@@ -164,8 +164,6 @@ __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C
   }
 }
 #endif
-
-
 
 template<typename F>
 __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t C,
@@ -246,21 +244,20 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
 
 #if CUDA_VERSION >= 11000
 template<>
-__global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t C,
-                                const nv_bfloat16* __restrict__ const _w,
-                                const nv_bfloat16* __restrict__ const _u,
-                                const nv_bfloat16* __restrict__ const _k,
-                                const nv_bfloat16* __restrict__ const _v,
-                                const nv_bfloat16* __restrict__ const _gy, nv_bfloat16* __restrict__ const _gw,
-                                nv_bfloat16* __restrict__ const _gu, nv_bfloat16* __restrict__ const _gk,
-                                nv_bfloat16* __restrict__ const _gv) {
+__global__ void kernel_backward(
+    const int64_t B, const int64_t T, const int64_t C, const nv_bfloat16* __restrict__ const _w,
+    const nv_bfloat16* __restrict__ const _u, const nv_bfloat16* __restrict__ const _k,
+    const nv_bfloat16* __restrict__ const _v, const nv_bfloat16* __restrict__ const _gy,
+    nv_bfloat16* __restrict__ const _gw, nv_bfloat16* __restrict__ const _gu,
+    nv_bfloat16* __restrict__ const _gk, nv_bfloat16* __restrict__ const _gv) {
   const int idx = blockIdx.x * blockDim.x + threadIdx.x;
   const int _b = idx / C;
   const int _c = idx % C;
   const int _offset = _b * T * C + _c;
 
   nv_bfloat16 u = _u[_c];
-  const nv_bfloat16 w = static_cast<nv_bfloat16>(-1.0) * static_cast<nv_bfloat16>(exp(static_cast<float>(_w[_c])));
+  const nv_bfloat16 w =
+      static_cast<nv_bfloat16>(-1.0) * static_cast<nv_bfloat16>(exp(static_cast<float>(_w[_c])));
   const nv_bfloat16* __restrict__ const k = _k + _offset;
   const nv_bfloat16* __restrict__ const v = _v + _offset;
   const nv_bfloat16* __restrict__ const gy = _gy + _offset;
@@ -281,8 +278,7 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
     // nv_bfloat16 no = o > k[ii] + u ? o : k[ii] + u;
     if (o > k[ii] + u) {
       no = o;
-    }
-    else{
+    } else {
       no = k[ii] + u;
     }
     nv_bfloat16 A = static_cast<nv_bfloat16>(exp(static_cast<float>(o - no)));
@@ -303,8 +299,7 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
     // no = w + o > k[ii] ? w + o : k[ii];
     if (w + o > k[ii]) {
       no = w + o;
-    }
-    else{
+    } else {
       no = k[ii];
     }
     A = static_cast<nv_bfloat16>(exp(static_cast<float>(w + o - no)));
@@ -329,8 +324,7 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
     // nv_bfloat16 no = w + o > zexp[i] - k[ii] - u ? w + o : zexp[i] - k[ii] - u;
     if (w + o > zexp[i] - k[ii] - u) {
       no = w + o;
-    }
-    else{
+    } else {
       no = zexp[i] - k[ii] - u;
     }
     A = static_cast<nv_bfloat16>(exp(static_cast<float>(w + o - no)));

@@ -27,9 +27,9 @@ namespace oneflow {
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("w", 0))
       .Broadcast(user_op::OpArg("u", 0))
-      .Split(user_op::OpArg("k", 0), 1)
-      .Split(user_op::OpArg("v", 0), 1)
-      .Split(user_op::OpArg("y", 0), 1)
+      .Split(user_op::OpArg("k", 0), 0)
+      .Split(user_op::OpArg("v", 0), 0)
+      .Split(user_op::OpArg("y", 0), 0)
       .Build();
   return Maybe<void>::Ok();
 }
@@ -48,17 +48,17 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> WkvGradOp::GetSbp(user_op::SbpContext* ctx) {
-  return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+  // return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("w", 0))
       .Broadcast(user_op::OpArg("u", 0))
-      .Split(user_op::OpArg("k", 0), 1)
-      .Split(user_op::OpArg("v", 0), 1)
-      .Split(user_op::OpArg("gy", 0), 1)
+      .Split(user_op::OpArg("k", 0), 0)
+      .Split(user_op::OpArg("v", 0), 0)
+      .Split(user_op::OpArg("gy", 0), 0)
       .Broadcast(user_op::OpArg("gw", 0))
       .Broadcast(user_op::OpArg("gu", 0))
-      .Split(user_op::OpArg("gk", 0), 1)
-      .Split(user_op::OpArg("gv", 0), 1)
+      .Split(user_op::OpArg("gk", 0), 0)
+      .Split(user_op::OpArg("gv", 0), 0)
       .Build();
   return Maybe<void>::Ok();
 }
@@ -83,75 +83,5 @@ namespace oneflow {
   *ctx->MutOutputDType("gv", 0) = gy_dtype;
   return Maybe<void>::Ok();
 }
-
-namespace {
-
-Maybe<void> WkvGraphGradOp(user_op::BackwardOpConfContext* ctx) {
-  const std::string exp_op = ctx->FwOp().op_name() + "_w_exp";
-  ctx->DefineOp(exp_op, [&](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("exp").InputBind("x", ctx->FwOp().input("w", 0)).Output("y").Build();
-  });
-  const std::string neg_op = ctx->FwOp().op_name() + "_w_exp_negative";
-  ctx->DefineOp(neg_op, [&](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("negative")
-        .InputBind("x", ctx->GetOp(exp_op).output("y", 0))
-        .Output("y")
-        .Build();
-  });
-
-  const std::string wkv_grad_op = ctx->FwOp().op_name() + "_grad";
-  ctx->DefineOp(wkv_grad_op, [&](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("wkv_grad")
-        .InputBind("w", ctx->GetOp(neg_op).output("y", 0))
-        .InputBind("u", ctx->FwOp().input("u", 0))
-        .InputBind("k", ctx->FwOp().input("k", 0))
-        .InputBind("v", ctx->FwOp().input("v", 0))
-        .InputBind("gy", ctx->FwOp().GetGradTensorWithOpOutput("y", 0))
-        .Attr("B", ctx->FwOp().attr<int64_t>("B"))
-        .Attr("T", ctx->FwOp().attr<int64_t>("T"))
-        .Attr("C", ctx->FwOp().attr<int64_t>("C"))
-        .Output("gw")
-        .Output("gu")
-        .Output("gk")
-        .Output("gv")
-        .Build();
-  });
-  const std::string reduce_sum_w_op = ctx->FwOp().op_name() + "_grad_reduce_sum_w";
-  std::vector<int32_t> reduce_axes_vec{0};
-  ctx->DefineOp(reduce_sum_w_op, [&](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("reduce_sum")
-        .InputBind("input_tensor", ctx->GetOp(wkv_grad_op).output("gw", 0))
-        .Attr("axis", reduce_axes_vec)
-        .Attr("keepdims", false)
-        .Output("output_tensor")
-        .Build();
-  });
-  const std::string reduce_sum_u_op = ctx->FwOp().op_name() + "_grad_reduce_sum_u";
-  ctx->DefineOp(reduce_sum_u_op, [&](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("reduce_sum")
-        .InputBind("input_tensor", ctx->GetOp(wkv_grad_op).output("gu", 0))
-        .Attr("axis", reduce_axes_vec)
-        .Attr("keepdims", false)
-        .Output("output_tensor")
-        .Build();
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("w", 0), [&]() -> const std::string& {
-    return ctx->GetOp(reduce_sum_w_op).output("output_tensor", 0);
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("u", 0), [&]() -> const std::string& {
-    return ctx->GetOp(reduce_sum_u_op).output("output_tensor", 0);
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("k", 0), [&]() -> const std::string& {
-    return ctx->GetOp(wkv_grad_op).output("gk", 0);
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("v", 0), [&]() -> const std::string& {
-    return ctx->GetOp(wkv_grad_op).output("gv", 0);
-  });
-  return Maybe<void>::Ok();
-}
-
-}  // namespace
-
-REGISTER_USER_OP_GRAD("wkv").SetBackwardOpConfGenFn(WkvGraphGradOp);
 
 }  // namespace oneflow
