@@ -199,8 +199,8 @@ Maybe<double> GetCUDAMemoryUsed() {
   return (total_memory - free_memory);
 }
 
-std::once_flag prop_init_flag;
-std::vector<cudaDeviceProp> device_props;
+static std::once_flag prop_init_flag;
+static std::vector<cudaDeviceProp> device_props;
 
 void InitDevicePropVectorSize() {
   int device_count = GetCudaDeviceCount();
