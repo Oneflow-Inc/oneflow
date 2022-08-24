@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_UTIL_H_
 
 #include "oneflow/core/framework/attr_map.h"
-#include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter.h"

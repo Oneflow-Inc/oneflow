@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"

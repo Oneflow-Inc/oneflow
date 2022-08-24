@@ -16,6 +16,7 @@ limitations under the License.
 #include "gtest/gtest.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/attr_value.h"
+#include "oneflow/core/framework/mutable_attr_map.h"
 
 namespace oneflow {
 namespace test {

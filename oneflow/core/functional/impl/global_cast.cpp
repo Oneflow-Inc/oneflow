@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/framework/id_util.h"
+#include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/op_builder.h"

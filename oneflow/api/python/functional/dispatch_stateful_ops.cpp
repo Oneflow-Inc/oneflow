@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_interpreter/lazy_op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
