@@ -69,8 +69,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("SwitchToShuttingDownPhase", &SwitchToShuttingDownPhase,
            py::call_guard<py::gil_scoped_release>());
 
-  RegisterCudaDeviceProperties(m);
-  // m.def("_get_", &CurrentMachineId);
 
   m.def("CurrentMachineId", &CurrentMachineId);
 
@@ -83,6 +81,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CudaGetDeviceCount", &CudaGetDeviceCount);
   m.def("EmptyCache", &EmptyCache);
 #ifdef WITH_CUDA
+  RegisterCudaDeviceProperties(m);
   m.def("GetCudaDeviceIndex", &GetCudaDeviceIndex);
   m.def("SetCudaDeviceIndex", &SetCudaDeviceIndex);
   m.def("CudaSynchronize", &CudaSynchronize);
