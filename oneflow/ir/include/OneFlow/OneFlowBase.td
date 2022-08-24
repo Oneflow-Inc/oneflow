@@ -153,7 +153,6 @@ class OneFlow_ConvolutionBaseOp<string mnemonic, list<Trait> traits = []> :
     );
     let has_check_fn = 1;
     let has_logical_tensor_desc_infer_fn = 1;
-    let has_physical_tensor_desc_infer_fn = 1;
     let has_get_sbp_fn = 1;
     let has_data_type_infer_fn = 1;
 }
@@ -173,7 +172,6 @@ class OneFlow_TFPoolBaseOp<string mnemonic, list<Trait> traits = []> :
     BoolAttr:$ceil_mode
   );
   let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
@@ -197,7 +195,6 @@ class OneFlow_TFPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
     BoolAttr:$ceil_mode
   );
   let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
@@ -223,7 +220,6 @@ class OneFlow_MaxPoolBaseOp<string mnemonic, list<Trait> traits = []> :
     DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
   );
   let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
@@ -272,7 +268,6 @@ class OneFlow_MaxPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
     DefaultValuedAttr<BoolAttr, "false">:$ceil_mode
   );
   let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
