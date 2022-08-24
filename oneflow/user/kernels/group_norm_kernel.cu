@@ -495,8 +495,30 @@ REGISTER_GROUP_NORM_GRAD_CUDA_KERNEL(double)
 REGISTER_GROUP_NORM_GRAD_CUDA_KERNEL(nv_bfloat16)
 #endif
 
-constexpr int kBlockSize = 512;
+constexpr int kReduceBlockSize = 512;
+constexpr int kBlockSize = 128;
 constexpr int kNumWaves = 32;
+
+inline cudaError_t GetReduceNumBlocks(int64_t n, int* num_blocks) {
+  int dev;
+  {
+    cudaError_t err = cudaGetDevice(&dev);
+    if (err != cudaSuccess) { return err; }
+  }
+  int sm_count;
+  {
+    cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
+    if (err != cudaSuccess) { return err; }
+  }
+  int tpm;
+  {
+    cudaError_t err = cudaDeviceGetAttribute(&tpm, cudaDevAttrMaxThreadsPerMultiProcessor, dev);
+    if (err != cudaSuccess) { return err; }
+  }
+  *num_blocks =
+      std::max<int>(1, std::min<int64_t>(n, sm_count * tpm / kReduceBlockSize * kNumWaves));
+  return cudaSuccess;
+}
 
 inline cudaError_t GetNumBlocks(int64_t n, int* num_blocks) {
   int dev;
@@ -514,7 +536,8 @@ inline cudaError_t GetNumBlocks(int64_t n, int* num_blocks) {
     cudaError_t err = cudaDeviceGetAttribute(&tpm, cudaDevAttrMaxThreadsPerMultiProcessor, dev);
     if (err != cudaSuccess) { return err; }
   }
-  *num_blocks = std::max<int>(1, std::min<int64_t>(n, sm_count * tpm / kBlockSize * kNumWaves));
+  *num_blocks = std::max<int>(1, std::min<int64_t>((n + kBlockSize - 1) / kBlockSize,
+                                                   sm_count * tpm / kBlockSize * kNumWaves));
   return cudaSuccess;
 }
 
@@ -572,54 +595,6 @@ constexpr int GetPackSize() {
   return Min(kMaxPackBytes / sizeof(T), kMaxPackSize);
 }
 
-// template<typename T, typename ComputeType, int PackSize>
-// __global__ void GroupNormParamGradKernel(const T* dy, const T* x, const T* mean, const T*
-// inv_var,
-//                                          T* dgamma, T* dbeta, const int32_t batch_size,
-//                                          const int32_t group_size, const int32_t channel_size,
-//                                          const int32_t spatial_size) {
-//   using LoadType = PackType<T, PackSize>;
-//   for (int32_t channel = blockIdx.x; channel < channel_size; channel += gridDim.x) {
-//     ComputeType dgamma_sum = 0.0;
-//     ComputeType dbeta_sum = 0.0;
-//     const int32_t group_num = channel_size / group_size;
-//     for (int32_t batch = 0; batch < batch_size; batch++) {
-//       const int32_t batch_channel_id = batch * channel_size + channel;
-//       ComputeType ds_sum = 0.0;
-//       ComputeType db_sum = 0.0;
-//       for (int32_t spatial = threadIdx.x * PackSize; spatial < spatial_size;
-//            spatial += blockDim.x * PackSize) {
-//         Pack<ComputeType, T, PackSize> dy_pack{};
-//         Pack<ComputeType, T, PackSize> x_pack{};
-//         const int32_t load_idx = batch_channel_id * spatial_size + spatial;
-//         const LoadType* dy_load = reinterpret_cast<const LoadType*>(dy + load_idx);
-//         dy_pack.storage = *dy_load;
-//         const LoadType* x_load = reinterpret_cast<const LoadType*>(x + load_idx);
-//         x_pack.storage = *x_load;
-//         ds_sum += PackReduce<ComputeType, T, PackSize>(dy_pack * x_pack);
-//         db_sum += PackReduce<ComputeType, T, PackSize>(dy_pack);
-//       }
-//       const int32_t batch_group_id = batch * group_size + channel / group_num;
-//       ComputeType mean_val = static_cast<ComputeType>(mean[batch_group_id]);
-//       ComputeType inv_var_val = static_cast<ComputeType>(inv_var[batch_group_id]);
-//       dgamma_sum += (ds_sum - db_sum * mean_val) * inv_var_val;
-//       dbeta_sum += db_sum;
-//     }
-//     __syncthreads();
-//     typedef cub::BlockReduce<ComputeType, kBlockSize> BlockReduce;
-//     __shared__ typename BlockReduce::TempStorage temp_storage1;
-//     __shared__ typename BlockReduce::TempStorage temp_storage2;
-//     ComputeType dgamma_sum_result =
-//         BlockReduce(temp_storage1).Reduce(dgamma_sum, SumOp<ComputeType>());
-//     ComputeType dbeta_sum_result =
-//         BlockReduce(temp_storage2).Reduce(dbeta_sum, SumOp<ComputeType>());
-//     if (threadIdx.x == 0) {
-//       dgamma[channel] = dgamma_sum_result;
-//       dbeta[channel] = dbeta_sum_result;
-//     }
-//   }
-// }
-
 template<typename T, typename ComputeType, int PackSize>
 __global__ void GroupNormParamGradKernel(const T* dy, const T* x, const T* mean, const T* inv_var,
                                          T* dgamma_partial_sum, T* dbeta_partial_sum,
@@ -652,7 +627,7 @@ __global__ void GroupNormParamGradKernel(const T* dy, const T* x, const T* mean,
     ComputeType db_sum = PackReduce<ComputeType, T, PackSize>(db_sum_pack);
 
     __syncthreads();
-    typedef cub::BlockReduce<ComputeType, kBlockSize> BlockReduce;
+    typedef cub::BlockReduce<ComputeType, kReduceBlockSize> BlockReduce;
     __shared__ typename BlockReduce::TempStorage temp_storage1;
     __shared__ typename BlockReduce::TempStorage temp_storage2;
     ComputeType ds_sum_result = BlockReduce(temp_storage1).Reduce(ds_sum, SumOp<ComputeType>());
@@ -665,9 +640,11 @@ __global__ void GroupNormParamGradKernel(const T* dy, const T* x, const T* mean,
 }
 
 template<typename T, typename ComputeType>
-__global__ void FinalReduceKernel(const T* mean, const T* inv_var, T* ds_sum, T* db_sum, T* dgamma,
-                                  T* dbeta, const int32_t batch_size, const int32_t group_size,
-                                  const int32_t channel_size, const int32_t spatial_size) {
+__global__ void BatchReduceGammaBetaGradKernel(const T* mean, const T* inv_var, T* ds_sum,
+                                               T* db_sum, T* dgamma, T* dbeta,
+                                               const int32_t batch_size, const int32_t group_size,
+                                               const int32_t channel_size,
+                                               const int32_t spatial_size) {
   const int32_t group_num = channel_size / group_size;
   CUDA_1D_KERNEL_LOOP(channel_idx, channel_size) {
     ComputeType dgamma_sum = 0.0;
@@ -700,25 +677,25 @@ void DispatchGroupNormParamGradKernel(ep::Stream* stream, const T* dy, const T* 
                                       const int32_t channel_size, const int32_t spatial_size) {
   const int launch_pack_size = GetLaunchPackSize<T>(spatial_size);
   int num_blocks;
-  OF_CUDA_CHECK(GetNumBlocks(batch_size * channel_size, &num_blocks));
+  OF_CUDA_CHECK(GetReduceNumBlocks(batch_size * channel_size, &num_blocks));
   if (launch_pack_size == 8) {
     GroupNormParamGradKernel<T, ComputeType, 8>
-        <<<num_blocks, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        <<<num_blocks, kReduceBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             dy, x, mean, inv_var, dgamma, dbeta, batch_size, group_size, channel_size,
             spatial_size);
   } else if (launch_pack_size == 4) {
     GroupNormParamGradKernel<T, ComputeType, 4>
-        <<<num_blocks, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        <<<num_blocks, kReduceBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             dy, x, mean, inv_var, dgamma, dbeta, batch_size, group_size, channel_size,
             spatial_size);
   } else if (launch_pack_size == 2) {
     GroupNormParamGradKernel<T, ComputeType, 2>
-        <<<num_blocks, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        <<<num_blocks, kReduceBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             dy, x, mean, inv_var, dgamma, dbeta, batch_size, group_size, channel_size,
             spatial_size);
   } else {
     GroupNormParamGradKernel<T, ComputeType, 1>
-        <<<num_blocks, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        <<<num_blocks, kReduceBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             dy, x, mean, inv_var, dgamma, dbeta, batch_size, group_size, channel_size,
             spatial_size);
   }
@@ -754,8 +731,10 @@ class GroupNormParamGradGpuKernel final : public user_op::OpKernel {
     DispatchGroupNormParamGradKernel<T, ComputeType>(
         ctx->stream(), dy->dptr<T>(), x->dptr<T>(), mean->dptr<T>(), inv_variance->dptr<T>(),
         reduce_ds_buf_ptr, reduce_db_buf_ptr, batch_size, group_size, channel_size, spatial_size);
-    FinalReduceKernel<T, ComputeType>
-        <<<1, 1024, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+    int num_blocks;
+    OF_CUDA_CHECK(GetNumBlocks(batch_size * channel_size, &num_blocks));
+    BatchReduceGammaBetaGradKernel<T, ComputeType>
+        <<<num_blocks, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             mean->dptr<T>(), inv_variance->dptr<T>(), reduce_ds_buf_ptr, reduce_db_buf_ptr,
             dgamma->mut_dptr<T>(), dbeta->mut_dptr<T>(), batch_size, group_size, channel_size,
             spatial_size);
@@ -775,11 +754,11 @@ class GroupNormParamGradGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)            \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
-// REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(half)
+REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(half)
 REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(float)
-// REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(double)
-// #if CUDA_VRSION >= 11000
-// REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(nv_bfloat16)
-// #endif
+REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(double)
+#if CUDA_VRSION >= 11000
+REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(nv_bfloat16)
+#endif
 
 }  // namespace oneflow
