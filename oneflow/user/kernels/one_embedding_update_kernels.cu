@@ -209,6 +209,7 @@ class EmbeddingUpdateKernelState final : public user_op::OpKernelState {
  public:
   explicit EmbeddingUpdateKernelState(user_op::KernelInitContext* ctx) {
     const std::string& embedding_name = ctx->Attr<std::string>("embedding_name");
+    LOG(ERROR) << "embedding_name " << embedding_name;
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
     embedding_state_ = Singleton<embedding::EmbeddingManager>::Get()->GetEmbeddingState(
         embedding_name, parallel_id);

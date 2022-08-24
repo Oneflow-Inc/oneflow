@@ -821,7 +821,7 @@ class EmbeddingPutKernel final : public user_op::OpKernel {
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
     uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
-    store->Put(ctx->stream(), num_unique, unique_ids->dptr(),
+    store->Put(ctx->stream(), num_unique, embedding_state->EmbeddingPutUniqueIds(current_iter_),
                embedding_state->EmbeddingPutUniqueEmbeddings(current_iter_));
     embedding_state->OnEmbeddingPutEnd(ctx, current_iter_);
     current_iter_++;
@@ -1497,6 +1497,8 @@ class EmbeddingLookupPlaceholderGradKernelState final : public user_op::OpKernel
         parallel_desc_.parallel_num() * parallel_desc_.parallel_num() * sizeof(uint32_t)));
     const std::string& embedding_name = ctx->Attr<std::string>("embedding_name");
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+    key_value_store_ = Singleton<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
+        embedding_name, parallel_id);
     embedding_state_ = Singleton<embedding::EmbeddingManager>::Get()->GetEmbeddingState(
         embedding_name, parallel_id);
   }
@@ -1510,6 +1512,8 @@ class EmbeddingLookupPlaceholderGradKernelState final : public user_op::OpKernel
   uint32_t* HostNumUniqueMatrix() { return host_num_unique_matrix_; }
 
   void* HostNumKeys() { return host_num_keys_; }
+
+  embedding::KeyValueStore* KeyValueStore() { return key_value_store_; }
 
   embedding::EmbeddingState* EmbeddingState() { return embedding_state_; }
 
@@ -1543,6 +1547,7 @@ class EmbeddingLookupPlaceholderGradKernelState final : public user_op::OpKernel
   ParallelDesc parallel_desc_;
   std::unique_ptr<Comm> comm_;
   uint32_t* host_num_unique_matrix_;
+  embedding::KeyValueStore* key_value_store_;
   void* host_num_keys_;
   embedding::EmbeddingState* embedding_state_;
 };
@@ -1567,6 +1572,7 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
     embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
     embedding_state->OnEmbeddingEagerBackwardStart(ctx, current_iter_);
     using IDX = uint32_t;
+    using U = uint8_t;
     const user_op::Tensor* ids = ctx->Tensor4ArgNameAndIndex("ids", 0);
     // Note: the missing value has been put in lookup, in backward and update, not need to init, so
     // not need table id.
@@ -1648,6 +1654,26 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
     OF_CUDA_CHECK(cudaMemcpyAsync(embedding_state->EmbeddingEagerBackwardUniqueIds(current_iter_),
                                   cur_rank_unique_ids_ptr, num_unique * sizeof(K),
                                   cudaMemcpyDefault, cuda_stream));
+    // copy num_unique_id to embedding_state, todo: rm it in tmp_buffer
+    IDX* cur_rank_num_unique_ptr =
+        buffer_manager.template Ptr<IDX>(EmbeddingForwardBufferType::kCurRankNumUnique);
+    OF_CUDA_CHECK(cudaMemcpyAsync(
+        embedding_state->EmbeddingEagerBackwardNumUniqueIds(current_iter_), cur_rank_num_unique_ptr,
+        num_unique * sizeof(IDX), cudaMemcpyDefault, cuda_stream));
+
+    // lookup
+    uint32_t* num_missing_ptr =
+        buffer_manager.template Ptr<uint32_t>(EmbeddingForwardBufferType::kNumMissing);
+    uint32_t* missing_indices_ptr =
+        buffer_manager.template Ptr<uint32_t>(EmbeddingForwardBufferType::kMissingIndices);
+    void* values_ptr = embedding_state->EmbeddingEagerBackwardUniqueValues(current_iter_);
+    embedding::KeyValueStore* store = kernel_state->KeyValueStore();
+    store->Get(ctx->stream(), num_unique, cur_rank_unique_ids_ptr, values_ptr, num_missing_ptr,
+               missing_indices_ptr);
+    OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, num_missing_ptr, sizeof(uint32_t),
+                                  cudaMemcpyDefault, cuda_stream));
+    CHECK_JUST(ctx->stream()->Sync());
+    CHECK_EQ(*reinterpret_cast<uint32_t*>(host_num_keys), 0);  // check no missing.
     embedding_state->OnEmbeddingEagerBackwardEnd(ctx, current_iter_);
     LOG(ERROR) << "EmbeddingLookupPlaceholder grad Kernel";
     current_iter_++;

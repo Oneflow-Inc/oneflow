@@ -283,8 +283,39 @@ class Embedding(Module):
         """
         self.handler.LoadSnapshot(snapshot_name)
 
-    def eager_update(self):
+    def eager_update(self, param_group):
         print("embedding eager_update")
+        lr = param_group["lr"]
+        l2 = param_group["weight_decay"]
+        num_valid = flow.tensor(np.ones((1,)).astype(np.int32)).to("cuda")
+        unique_ids = flow.tensor(np.ones((1,)).astype(np.int64)).to("cuda")
+        unique_embeddings = flow.tensor(np.ones((1,)).astype(np.float32)).to("cuda")
+        embedding_grad = flow.tensor(np.ones((1,)).astype(np.float32)).to("cuda")
+        lr_tensor = flow.tensor(np.ones((1,)).astype(np.float32)).to("cuda")
+        down_scale_by_tensor = flow.tensor(np.ones((1,)).astype(np.float32)).to("cuda")
+        skip_if = flow.tensor(np.zeros((1,)).astype(np.int64)).to("cuda")
+        scale = 1.0
+        weight_decay = 0.0
+        momentum = 0.0
+        line_size = self.storage_dim
+        embedding_size = self.embedding_dim
+        flow._C.one_embedding_sgd_update(
+            num_valid,
+            unique_embeddings,
+            embedding_grad,
+            lr_tensor,
+            down_scale_by_tensor,
+            skip_if,
+            scale,
+            weight_decay,
+            momentum,
+            line_size,
+            embedding_size,
+            self.embedding_name,
+        )
+        flow._C.one_embedding_embedding_put(
+            num_valid, unique_ids, unique_embeddings, self.embedding_name, line_size
+        )
 
     def forward(self, ids, table_ids=None):
         """Embedding lookup operation
@@ -999,7 +1030,9 @@ class Optimizer(Optimizer):
 
     def step(self, closure: Callable = None):
         print("step")
+        param_group = self.optimizer.param_groups[0]
         for embedding in self.embeddings:
             print("embedding", embedding)
-            embedding.eager_update()
+            embedding.eager_update(param_group)
+            # embedding.put()
         self.optimizer.step()

@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/embedding/embedding_manager.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 
@@ -207,7 +208,7 @@ namespace oneflow {
   auto builder = ctx->NewBuilder()
                      .Broadcast(user_op::OpArg("num_unique_ids", 0))
                      .Split(user_op::OpArg("unique_ids", 0), 0);
-  if (embedding::UseDynamicMemoryAllocation()) {
+  if (embedding::UseDynamicMemoryAllocation() || !LazyMode::is_enabled()) {
     builder.Broadcast(user_op::OpArg("unique_embeddings", 0)).Build();
   } else {
     builder.Split(user_op::OpArg("unique_embeddings", 0), 0).Build();
@@ -226,9 +227,9 @@ Maybe<void> CheckDataShape(user_op::InferContext* ctx) {
   }
   CHECK_EQ_OR_RETURN(ctx->InputShape("num_unique_ids", 0), Shape({1}));
   const Shape& embedding_grad_shape = ctx->InputShape("embedding_grad", 0);
-  CHECK_EQ_OR_RETURN(embedding_grad_shape.NumAxes(), 2);
+  // CHECK_EQ_OR_RETURN(embedding_grad_shape.NumAxes(), 2);
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  if (embedding::UseDynamicMemoryAllocation()) {
+  if (embedding::UseDynamicMemoryAllocation() || !LazyMode::is_enabled()) {
     CHECK_EQ_OR_RETURN(unique_embeddings_shape.elem_cnt(), 1)
         << "if use dynamic memory allocation, unique_embeddings elem_cnt should be 1.";
   } else {
