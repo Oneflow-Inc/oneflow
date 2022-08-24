@@ -60,6 +60,7 @@ def _test_pow_grad_grad_impl(test_case):
     _check_equal(test_case, ddx_ddy_ddz.pytorch[2], ddx_ddy_ddz.oneflow[2])
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestPowHigherDerivative(flow.unittest.TestCase):
     def test_pow_grad_grad(test_case):
         for i in range(10):

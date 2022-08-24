@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import unittest
 
+import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.unittest
@@ -33,11 +33,9 @@ def _check_equal(test_case, lhs, rhs, rtol=1e-3, atol=1e-3):
 
 
 def _test_global_pow_grad_grad_impl(test_case, placement):
-    x_shape, y_shape = [
-        ([8, 8], [8, 8]),
-        ([8, 8, 8, 8], [8, 8]),
-        ([8, 8], [8, 8, 8, 8]),
-    ][random(0, 1).to(int).value()]
+    x_shape, y_shape = [([8, 8], [8, 8]), ([8, 8, 8], [8, 8]), ([8, 8], [8, 8, 8]),][
+        random(0, 3).to(int).value()
+    ]
 
     x = random_tensor(len(x_shape), *x_shape).to_global(
         placement=placement, sbp=random_sbp(placement, max_dim=2)
