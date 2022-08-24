@@ -21,7 +21,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-def _check_equal(test_case, lhs, rhs, rtol=1e-5, atol=1e-5, name=""):
+def _check_equal(test_case, lhs, rhs, rtol=1e-4, atol=1e-4, name=""):
     is_equal = np.allclose(
         lhs.detach().cpu().numpy(),
         rhs.detach().cpu().numpy(),
@@ -29,7 +29,7 @@ def _check_equal(test_case, lhs, rhs, rtol=1e-5, atol=1e-5, name=""):
         atol=atol,
         equal_nan=True,
     )
-    test_case.assertTrue(is_equal)
+    test_case.assertTrue(is_equal, name)
 
 
 def _test_scalar_pow_grad_grad_impl(test_case, placement, reverse=False):
