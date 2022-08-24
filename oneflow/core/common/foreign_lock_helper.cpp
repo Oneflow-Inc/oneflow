@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/foreign_lock_helper.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 
 namespace oneflow {
 class NoForeignLockHelper final : public ForeignLockHelper {
@@ -28,7 +28,7 @@ class NoForeignLockHelper final : public ForeignLockHelper {
 };
 
 static int __register_no_foreign_lock_helper __attribute__((unused)) = []() {
-  Global<ForeignLockHelper>::SetAllocated(new NoForeignLockHelper());
+  Singleton<ForeignLockHelper>::SetAllocated(new NoForeignLockHelper());
   return 0;
 }();
 

@@ -19,16 +19,21 @@ limitations under the License.
 #include <queue>
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_meta.h"
+#include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/common/container_util.h"
+#include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_arg.h"
+#include "oneflow/core/framework/tensor_methods.h"
+#include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
-#include "oneflow/core/autograd/autograd_mode.h"
-#include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/global_param_grad_sync_mode.h"
-#include "oneflow/core/common/container_util.h"
+#include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/common/env_var/autograd.h"
 
 namespace oneflow {
 namespace one {
@@ -79,7 +84,6 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
   auto current_grad = JUST(autograd_meta->current_grad()->GetAccTensor({}));
   if (!current_grad) { return Maybe<void>::Ok(); }
   if (autograd_meta->acc_grad()) {
-    DevVmDepObjectConsumeModeGuard guard(DevVmDepObjectConsumeMode::NONE);
     // Should not inplace accumulate grad. For example,
     // >>> z = x + y
     // >>> p = x / z
@@ -101,19 +105,44 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> RawTorchConsistentTensor(const std::shared_ptr<one::Tensor>& tensor) {
+Maybe<void> RawTouchGlobalTensor(const std::shared_ptr<one::Tensor>& tensor) {
   // Do nothing.
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* TorchConsistentTensor =
-    DECORATE(&RawTorchConsistentTensor, CheckConsistentTensorMeta);
+static constexpr auto* TouchGlobalTensor = DECORATE(&RawTouchGlobalTensor, CheckGlobalTensorMeta);
 
-Maybe<void> CheckConsistentTensorsMeta(const TensorTuple& tensor_tuple) {
+Maybe<void> CheckGlobalTensorsMeta(const TensorTuple& tensor_tuple) {
   for (const auto& tensor : tensor_tuple) {
-    if (tensor->is_consistent()) { JUST(TorchConsistentTensor(tensor)); }
+    if (tensor->is_global() && tensor->is_eager()) { JUST(TouchGlobalTensor(tensor)); }
   }
   return Maybe<void>::Ok();
+}
+
+Maybe<void> TouchInTmpComputeStream(const TensorTuple& inputs) {
+  for (auto input : inputs) {
+    if (input->is_global()) { input = JUST(input->cur_rank_phy_tensor()); }
+    if (input) {
+      Symbol<Device> device = JUST(input->device());
+      auto stream = JUST(Stream::New(device, StreamType::kTmpCompute));
+      JUST(Touch(input, stream));
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+constexpr static int kSmallTensorThreshold = 1024;
+
+Maybe<TensorTuple> TryCopyForSmallTensor(const TensorTuple& inputs) {
+  auto outputs = std::make_shared<TensorTuple>();
+  outputs->reserve(inputs.size());
+  for (auto input : inputs) {
+    if (input->shape()->elem_cnt() <= kSmallTensorThreshold) {
+      input = JUST(functional::Identity(input));
+    }
+    outputs->push_back(input);
+  }
+  return outputs;
 }
 
 }  // namespace
@@ -122,19 +151,28 @@ Maybe<void> AutogradEngine::RunBackwardAndSaveGrads4LeafTensorIf(const TensorTup
                                                                  const TensorTuple& out_grads,
                                                                  bool retain_graph,
                                                                  bool create_graph) {
-  JUST(CheckConsistentTensorsMeta(outputs));
-  JUST(CheckConsistentTensorsMeta(out_grads));
-  DisableCheckConsistentTensorMetaScope disable_meta_check;
-  return RunBackwardAndSaveGrads4LeafTensor(outputs, out_grads, retain_graph, create_graph);
+  JUST(CheckGlobalTensorsMeta(outputs));
+  JUST(CheckGlobalTensorsMeta(out_grads));
+  DisableCheckGlobalTensorMetaScope disable_meta_check;
+  if (!LazyMode::is_enabled() && ThreadLocalEnvBool<ONEFLOW_AD_PUT_LOSS_ON_TMP_COMPUTE_STREAM>()) {
+    // Put outputs into kTmpCompute stream for reducing blocking time of outputs[i].numpy() in main
+    // thread.
+    auto copied_outputs = JUST(TryCopyForSmallTensor(outputs));
+    JUST(TouchInTmpComputeStream(outputs));
+    return RunBackwardAndSaveGrads4LeafTensor(*copied_outputs, out_grads, retain_graph,
+                                              create_graph);
+  } else {
+    return RunBackwardAndSaveGrads4LeafTensor(outputs, out_grads, retain_graph, create_graph);
+  }
 }
 
 Maybe<TensorTuple> AutogradEngine::RunBackwardAndReturnInputsTensorGradIf(
     const TensorTuple& outputs, const TensorTuple& inputs, const TensorTuple& out_grads,
     bool retain_graph, bool create_graph) {
-  JUST(CheckConsistentTensorsMeta(outputs));
-  JUST(CheckConsistentTensorsMeta(inputs));
-  JUST(CheckConsistentTensorsMeta(out_grads));
-  DisableCheckConsistentTensorMetaScope disable_meta_check;
+  JUST(CheckGlobalTensorsMeta(outputs));
+  JUST(CheckGlobalTensorsMeta(inputs));
+  JUST(CheckGlobalTensorsMeta(out_grads));
+  DisableCheckGlobalTensorMetaScope disable_meta_check;
   return RunBackwardAndReturnInputsTensorGrad(outputs, inputs, out_grads, retain_graph,
                                               create_graph);
 }
@@ -155,13 +193,13 @@ Maybe<void> FunctionNode::AccGrad4LeafTensor(bool create_graph) {
 
       // control acc_grad to do boxing conditionally
       const auto& acc_grad = out->acc_grad();
-      if (GlobalGradSyncMode::is_enabled() && acc_grad->is_consistent()) {
+      if (!LazyMode::is_enabled() && GlobalGradSyncMode::is_enabled() && acc_grad->is_global()) {
         auto& tensor_info = output_tensor_infos_[i];
         const auto& placement = JUST(tensor_info.placement());
         const auto& nd_sbp = JUST(tensor_info.sbp());
         JUST(out->set_acc_grad(
-            JUST(functional::ToConsistent(acc_grad, placement, *JUST(GetSbpList(nd_sbp)),
-                                          GetNoneSbpList(), /* check_meta */ false))));
+            JUST(functional::ToGlobal(acc_grad, placement, *JUST(GetSbpList(nd_sbp)),
+                                      GetNoneSbpList(), /* check_meta */ false, /*copy=*/false))));
       }
     }
   }
@@ -184,22 +222,31 @@ Maybe<bool> FunctionNode::Apply(bool create_graph) {
   TensorTuple output_grads(output_meta_data_.size());
   for (int i = 0; i < output_meta_data_.size(); ++i) {
     if (output_meta_data_.at(i)->current_grad()->Empty()) {
-      output_grads.at(i) = JUST(output_tensor_infos_.at(i).zeros());
+      // Only initialize out_grads for those requires_grad outputs
+      if (output_meta_data_[i]->requires_grad()) {
+        output_grads[i] = JUST(output_tensor_infos_[i].zeros());
+      }
     } else {
       const auto& hooks = JUST(oneflow::VectorAt(output_meta_data_, i))->hooks();
-      *JUST(oneflow::VectorAt(&output_grads, i)) =
+      JUST(oneflow::VectorAt(output_grads, i)) =
           JUST(JUST(oneflow::VectorAt(output_meta_data_, i))->current_grad()->GetAccTensor(hooks));
     }
   }
   JUST(backward_fn_->body(output_grads, &input_grads, create_graph));
   for (int i = 0; i < input_meta_data_.size(); ++i) {
     if (JUST(VectorAt(input_grads, i))) {
-      CHECK_NOTNULL_OR_RETURN(input_meta_data_.at(i))
+      CHECK_NOTNULL_OR_RETURN(input_meta_data_[i])
           << name_
           << " calculate grad for tensor which requires_grad is False. Please submit an issue in "
              "`https://github.com/Oneflow-Inc/oneflow/issues` and we will fix it as soon as "
              "possible";
-      JUST(input_meta_data_.at(i)->current_grad()->PushPartialTensor(input_grads.at(i)));
+      JUST(input_meta_data_[i]->current_grad()->PushPartialTensor(JUST(VectorAt(input_grads, i))));
+    } else {
+      CHECK_OR_RETURN(!input_meta_data_[i])
+          << name() << "'s input[" << i
+          << "] need calculate grad but got nullptr. Please submit an issue in "
+             "`https://github.com/Oneflow-Inc/oneflow/issues` and we will fix it as soon as "
+             "possible;";
     }
   }
   return true;
@@ -276,7 +323,7 @@ Maybe<void> GraphTask::ComputeDependencies() {
 // according to input tensors
 Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs) {
   struct NodeFrame {
-    NodeFrame(FunctionNode* node) : node_(node), next_function_idx_(0) {}
+    explicit NodeFrame(FunctionNode* node) : node_(node), next_function_idx_(0) {}
     FunctionNode* node_;
     size_t next_function_idx_;
 
@@ -339,6 +386,7 @@ Maybe<void> GraphTask::Apply(bool save_grad_for_leaf) {
       node->ReleaseOutTensorArgs();
       continue;
     }
+    BackwardPassScopeGuard backward_guard(node->scope());
     if (/*bool not_ready_to_apply=*/!(JUST(node->Apply(create_graph_)))) { continue; }
     if (save_grad_for_leaf) { JUST(node->AccGrad4LeafTensor(create_graph_)); }
     JUST(node->AccGrad4RetainGradTensor());
@@ -398,6 +446,7 @@ Maybe<TensorTuple> GraphAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
 Maybe<FunctionNode> GraphAutogradEngine::AddNode(
     const std::string& name, const std::shared_ptr<BackwardFunction>& backward_fn,
     const TensorTuple& inputs, TensorTuple* outputs) {
+  OF_PROFILER_RANGE_PUSH("AddAccumulateFunctionNode");
   // Firstly push function_node of tensor in stack which is leaf and requires_grad
   for (const std::shared_ptr<Tensor>& in_tensor : inputs) {
     if (in_tensor->is_leaf() && in_tensor->requires_grad()) {
@@ -405,11 +454,15 @@ Maybe<FunctionNode> GraphAutogradEngine::AddNode(
     }
   }
 
+  OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_PUSH("set_grad_fn_node");
   std::shared_ptr<FunctionNode> func_node =
       GraphFunctionNode::New(name, backward_fn, inputs, *outputs);
   for (const std::shared_ptr<Tensor>& out_tensor : *outputs) {
     out_tensor->set_grad_fn_node(func_node);
   }
+  if (LazyMode::is_enabled()) { func_node->set_scope(JUST(GetCurrentScope())); }
+  OF_PROFILER_RANGE_POP();
   return func_node;
 }
 
@@ -425,6 +478,9 @@ Maybe<void> AddAccumulateFunctionNode(const std::shared_ptr<Tensor>& tensor) {
   backward_fn->status = []() { return false; };
   tensor->set_grad_fn_node(GraphFunctionNode::New(
       "accumulate_grad", backward_fn, /*inputs=*/TensorTuple{}, /*outputs*/ TensorTuple{tensor}));
+  if (LazyMode::is_enabled()) {
+    tensor->mut_grad_fn_node()->set_scope(JUST(GetTensorScope(tensor)));
+  }
   return Maybe<void>::Ok();
 }
 

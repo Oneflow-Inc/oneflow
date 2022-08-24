@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
@@ -75,42 +74,6 @@ void InitEagerCclOpKernelCache(user_op::KernelCacheContext* ctx,
 }
 }  // namespace
 
-class EagerCclBroadcastKernel final : public user_op::OpKernel {
- public:
-  EagerCclBroadcastKernel() = default;
-  ~EagerCclBroadcastKernel() override = default;
-
-  void InitOpKernelCacheWithFlags(
-      user_op::KernelCacheContext* ctx, int8_t flag,
-      std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
-    InitEagerCclOpKernelCache(ctx, cache_ptr);
-  }
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
-               const user_op::OpKernelCache* cache) const override {
-    auto* kernel_cache = dynamic_cast<const EagerCclOpKernelCache*>(cache);
-    CHECK(kernel_cache != nullptr);
-    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t root = ctx->Attr<int64_t>("root");
-    const void* in_ptr = nullptr;
-    if (GlobalProcessCtx::Rank() == root) {
-      CHECK_EQ(in->shape(), out->shape());
-      CHECK_EQ(in->data_type(), out->data_type());
-      in_ptr = in->dptr();
-    }
-    CHECK_JUST(ccl::Broadcast<DeviceType::kCPU>(in_ptr, out->mut_dptr(), out->shape().elem_cnt(),
-                                                out->data_type(), root,
-                                                kernel_cache->parallel_desc(), ctx->stream()));
-  };
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-REGISTER_USER_KERNEL("eager_nccl_broadcast")
-    .SetCreateFn<EagerCclBroadcastKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU);
-
 class EagerCclTouchKernel final : public user_op::OpKernel {
  public:
   EagerCclTouchKernel() = default;
@@ -126,139 +89,6 @@ class EagerCclTouchKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_nccl_touch")
     .SetCreateFn<EagerCclTouchKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU);
-
-class EagerCclReduceKernel final : public user_op::OpKernel {
- public:
-  EagerCclReduceKernel() = default;
-  ~EagerCclReduceKernel() override = default;
-
-  void InitOpKernelCacheWithFlags(
-      user_op::KernelCacheContext* ctx, int8_t flag,
-      std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
-    InitEagerCclOpKernelCache(ctx, cache_ptr);
-  }
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
-               const user_op::OpKernelCache* cache) const override {
-    auto* kernel_cache = dynamic_cast<const EagerCclOpKernelCache*>(cache);
-    CHECK(kernel_cache != nullptr);
-    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t root = ctx->Attr<int64_t>("root");
-    void* out_ptr = nullptr;
-    if (GlobalProcessCtx::Rank() == root) {
-      CHECK_EQ(in->shape(), out->shape());
-      CHECK_EQ(in->data_type(), out->data_type());
-      out_ptr = out->mut_dptr();
-    }
-    CHECK_JUST(ccl::Reduce<DeviceType::kCPU>(in->dptr(), out_ptr, in->shape().elem_cnt(),
-                                             in->data_type(), ccl::kSum, root,
-                                             kernel_cache->parallel_desc(), ctx->stream()));
-  };
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-REGISTER_USER_KERNEL("eager_nccl_reduce")
-    .SetCreateFn<EagerCclReduceKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU);
-
-class EagerCclAllReduceKernel final : public user_op::OpKernel {
- public:
-  EagerCclAllReduceKernel() = default;
-  ~EagerCclAllReduceKernel() override = default;
-
-  void InitOpKernelCacheWithFlags(
-      user_op::KernelCacheContext* ctx, int8_t flag,
-      std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
-    InitEagerCclOpKernelCache(ctx, cache_ptr);
-  }
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
-               const user_op::OpKernelCache* cache) const override {
-    auto* kernel_cache = dynamic_cast<const EagerCclOpKernelCache*>(cache);
-    CHECK(kernel_cache != nullptr);
-    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(in->shape(), out->shape());
-    CHECK_EQ(in->data_type(), out->data_type());
-
-    CHECK_JUST(ccl::AllReduce<DeviceType::kCPU>(
-        in->dptr(), out->mut_dptr(), out->shape().elem_cnt(), out->data_type(), ccl::kSum,
-        kernel_cache->parallel_desc(), ctx->stream()));
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-REGISTER_USER_KERNEL("eager_nccl_all_reduce")
-    .SetCreateFn<EagerCclAllReduceKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU);
-
-class EagerCclReduceScatterKernel final : public user_op::OpKernel {
- public:
-  EagerCclReduceScatterKernel() = default;
-  ~EagerCclReduceScatterKernel() override = default;
-
-  void InitOpKernelCacheWithFlags(
-      user_op::KernelCacheContext* ctx, int8_t flag,
-      std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
-    InitEagerCclOpKernelCache(ctx, cache_ptr);
-  }
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
-               const user_op::OpKernelCache* cache) const override {
-    auto* kernel_cache = dynamic_cast<const EagerCclOpKernelCache*>(cache);
-    CHECK(kernel_cache != nullptr);
-    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(in->data_type(), out->data_type());
-    const auto& op_type = ctx->Attr<std::string>("op_type");
-    CHECK_EQ(op_type, "sum");
-    CHECK_JUST(ccl::ReduceScatter<DeviceType::kCPU>(
-        in->dptr(), out->mut_dptr(), out->shape().elem_cnt(), out->data_type(), ccl::kSum,
-        kernel_cache->parallel_desc(), ctx->stream()));
-  };
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-REGISTER_USER_KERNEL("eager_nccl_reduce_scatter")
-    .SetCreateFn<EagerCclReduceScatterKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU);
-
-class EagerCclAllGatherKernel final : public user_op::OpKernel {
- public:
-  EagerCclAllGatherKernel() = default;
-  ~EagerCclAllGatherKernel() override = default;
-
-  void InitOpKernelCacheWithFlags(
-      user_op::KernelCacheContext* ctx, int8_t flag,
-      std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
-    InitEagerCclOpKernelCache(ctx, cache_ptr);
-  }
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
-               const user_op::OpKernelCache* cache) const override {
-    auto* kernel_cache = dynamic_cast<const EagerCclOpKernelCache*>(cache);
-    CHECK(kernel_cache != nullptr);
-    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(in->data_type(), out->data_type());
-    CHECK_JUST(ccl::AllGather<DeviceType::kCPU>(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
-                                                out->data_type(), kernel_cache->parallel_desc(),
-                                                ctx->stream()));
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-REGISTER_USER_KERNEL("eager_nccl_all_gather")
-    .SetCreateFn<EagerCclAllGatherKernel>()
     .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU);
 
 template<typename T>
@@ -284,23 +114,23 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t dtype_size = GetSizeOfDataType(in->data_type());
-    int64_t data_size = in->shape().elem_cnt() * dtype_size;
+    int64_t data_size = in->shape_view().elem_cnt() * dtype_size;
     // NOTE: in (transpose)-> pack_to_ptr (all2all)-> unpack_from_ptr (transpose)-> out
     const char* pack_to_ptr = in->dptr<char>();
     char* unpack_from_ptr = out->mut_dptr<char>();
-    int64_t tmp_size = tmp_buffer->shape().elem_cnt();
+    int64_t tmp_size = tmp_buffer->shape_view().elem_cnt();
     CHECK_EQ(tmp_size, data_size * 2);
 
     CHECK_EQ(in->data_type(), out->data_type());
     const int64_t num_ranks = kernel_cache->parallel_desc()->parallel_num();
-    CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt())
-        << in->shape().ToString() << " vs " << out->shape().ToString();
-    const int64_t elem_cnt = in->shape().elem_cnt();
+    CHECK_EQ(in->shape_view().elem_cnt(), out->shape_view().elem_cnt())
+        << in->shape_view().ToString() << " vs " << out->shape_view().ToString();
+    const int64_t elem_cnt = in->shape_view().elem_cnt();
     const int64_t in_split_axis = ctx->Attr<int64_t>("in_split_axis");
     const int64_t out_split_axis = ctx->Attr<int64_t>("out_split_axis");
 
     DimVector logical_shape_dim_vec;
-    in->shape().ToDimVector(&logical_shape_dim_vec);
+    in->shape_view().ToDimVector(&logical_shape_dim_vec);
     logical_shape_dim_vec[in_split_axis] = logical_shape_dim_vec.at(in_split_axis) * num_ranks;
 
     if (out_split_axis != 0) {
@@ -347,10 +177,9 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
           int64_t parallel_id =
               CHECK_JUST(parallel_desc->ParallelId4MachineDeviceId(dst, device_id));
 
-          CHECK_JUST(Send<DeviceType::kCPU>(
-              reinterpret_cast<const void*>(reinterpret_cast<const char*>(pack_to_ptr)
-                                            + parallel_id * chunk_size),
-              elem_per_chunk, in->data_type(), dst, ctx->stream()));
+          CHECK_JUST(Send(reinterpret_cast<const void*>(reinterpret_cast<const char*>(pack_to_ptr)
+                                                        + parallel_id * chunk_size),
+                          elem_per_chunk, in->data_type(), dst, DeviceType::kCPU, ctx->stream()));
         }
         if (GlobalProcessCtx::Rank() == dst) {
           Symbol<ParallelDesc> parallel_desc = kernel_cache->parallel_desc();
@@ -358,10 +187,9 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
           int64_t parallel_id =
               CHECK_JUST(parallel_desc->ParallelId4MachineDeviceId(src, device_id));
 
-          CHECK_JUST(Recv<DeviceType::kCPU>(
-              reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr)
-                                      + parallel_id * chunk_size),
-              elem_per_chunk, out->data_type(), src, ctx->stream()));
+          CHECK_JUST(Recv(reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr)
+                                                  + parallel_id * chunk_size),
+                          elem_per_chunk, out->data_type(), src, DeviceType::kCPU, ctx->stream()));
         }
       }
     }

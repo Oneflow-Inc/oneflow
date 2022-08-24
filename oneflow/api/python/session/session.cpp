@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include <pybind11/pytypes.h>
 #include <string>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/job/session.h"

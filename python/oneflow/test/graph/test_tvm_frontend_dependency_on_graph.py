@@ -109,7 +109,7 @@ class TestConvertDependency(flow.unittest.TestCase):
             size_where = 3
 
         p_size = re.compile(r"size=\(.*?\)", re.S)
-        p_type = re.compile(r"dtype=.*?\)", re.S)
+        p_type = re.compile(r"(dtype=.*?)[,|\)]", re.S)
         types = ["INPUT", "PARAMETER", "BUFFER", "OUTPUT"]
         num_nodes = {}
 
@@ -201,7 +201,7 @@ class TestConvertDependency(flow.unittest.TestCase):
 
         test_case.assertEqual("_TvmFrontedGraph_1_input.0.0_2" in node_input_list, True)
         test_case.assertEqual("m.features.0.weight" in node_input_list, True)
-        test_case.assertEqual("m.features.5-maxpool_2d-7" in node_input_list, True)
+        test_case.assertEqual("m.features.5-max_pool_2d-7" in node_input_list, True)
         test_case.assertEqual("m.features.0-conv2d-0" in node_output_list, True)
         test_case.assertEqual("m.features.6-conv2d-8" in node_output_list, True)
 

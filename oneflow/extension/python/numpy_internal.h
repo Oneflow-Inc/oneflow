@@ -22,7 +22,7 @@ limitations under the License.
 // ************************
 
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/fixed_vector.h"
+#include "oneflow/core/common/small_vector.h"
 #include "oneflow/core/common/shape_vec.h"
 
 // PyArrayObject cannot be forward declared, or a compile error will occur
@@ -33,6 +33,8 @@ limitations under the License.
 #include <numpy/arrayobject.h>
 
 namespace oneflow {
+
+class Stride;
 
 namespace numpy {
 
@@ -60,7 +62,7 @@ Maybe<DataType> GetOFDataTypeFromNpArray(PyArrayObject* array);
 
 std::vector<size_t> OFShapeToNumpyShape(const DimVector& fixed_vec);
 
-std::vector<size_t> OFStrideToNumpyStride(const StrideVector& fixed_vec, const DataType data_type);
+std::vector<size_t> OFStrideToNumpyStride(const Stride& stride, const DataType data_type);
 
 bool PyArrayCheckLongScalar(PyObject* obj);
 

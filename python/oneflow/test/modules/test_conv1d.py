@@ -443,7 +443,7 @@ class TestConv1d(flow.unittest.TestCase):
         y = torch.nn.functional.conv1d(img, kernel, groups=3)
         return y
 
-    @autotest()
+    @autotest(n=5)
     def test_conv1d_with_random_data(test_case):
         channels = random(1, 6)
         m = torch.nn.Conv1d(
@@ -464,7 +464,7 @@ class TestConv1d(flow.unittest.TestCase):
         return y
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    @autotest(n=30, check_allclose=False)
+    @autotest(n=5, check_allclose=False)
     def test_conv1d_group_with_random_data(test_case):
         channels = 720  # lcm(1, 2, 3, 4, 5, 6)
         m = torch.nn.Conv1d(

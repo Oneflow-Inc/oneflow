@@ -21,7 +21,7 @@ namespace one {
 
 struct CumCaptureState : public AutoGradCaptureState {
   bool requires_grad = false;
-  int64_t dim = 0;
+  int32_t dim = 0;
 };
 
 template<typename StateT>
@@ -29,7 +29,7 @@ class CumGrad : public OpExprGradFunction<StateT> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
@@ -42,7 +42,7 @@ class CumsumGrad : public CumGrad<CumCaptureState> {
  public:
   Maybe<void> Capture(CumCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -52,10 +52,14 @@ class CumsumGrad : public CumGrad<CumCaptureState> {
   }
   Maybe<void> Apply(const CumCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(1);
     if (ctx->requires_grad) {
-      in_grads->at(0) = JUST(functional::CumsumGrad(out_grads.at(0), ctx->dim));
+      std::vector<int32_t> flip_dim(1, ctx->dim);
+      (*in_grads)[0] = JUST(
+          functional::Flip(JUST(functional::Cumsum(JUST(functional::Flip(out_grads[0], flip_dim)),
+                                                   ctx->dim, out_grads[0]->dtype())),
+                           flip_dim));
     }
     return Maybe<void>::Ok();
   }
@@ -67,7 +71,7 @@ class CumProdGrad : public CumGrad<CumCaptureState> {
  public:
   Maybe<void> Capture(CumCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -80,7 +84,7 @@ class CumProdGrad : public CumGrad<CumCaptureState> {
 
   Maybe<void> Apply(const CumCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(1);
     if (ctx->requires_grad) {
       in_grads->at(0) = JUST(functional::CumprodGrad(out_grads.at(0), ctx->SavedTensors().at(0),

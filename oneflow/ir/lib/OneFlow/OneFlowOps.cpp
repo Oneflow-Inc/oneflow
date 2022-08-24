@@ -17,6 +17,7 @@ limitations under the License.
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/Passes.h"
+#include "OneFlow/SBP/SBPAttributes.h"
 #include "llvm/ADT/StringRef.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -29,7 +30,6 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
-#include "oneflow/api/common/ofblob.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/job/lazy_mode.h"
@@ -155,6 +155,7 @@ struct ConcreteUserOps : public OpRewritePattern<UserOp> {
       NamedAttrList attributes(op->getAttrDictionary());
       attributes.erase(op.input_sizesAttrName());
       attributes.erase(op.output_sizesAttrName());
+      attributes.erase(op.output_lbnsAttrName());
       attributes.erase(OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr());
       attributes.erase(OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr());
       llvm::SmallVector<int32_t> input_sizes, output_sizes;
@@ -520,19 +521,54 @@ llvm::DenseSet<Value> MaxPool2DOp::ResultsToTranspose() { return {this->y(), thi
 
 llvm::SmallVector<Value, 4> MaxPool2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                     PatternRewriter& rewriter) {
-  auto maxpool_2d_op = *this;
+  auto max_pool_2d_op = *this;
   SmallVector<Value, 4> operands;
   operands.push_back(value[0]);
-  NamedAttrList attributes = maxpool_2d_op->getAttrs();
-  attributes.set(maxpool_2d_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
-  auto res = rewriter
-                 .create<oneflow::MaxPool2DOp>(
-                     maxpool_2d_op.getLoc(), maxpool_2d_op->getResultTypes(), operands, attributes)
-                 ->getResults();
+  NamedAttrList attributes = max_pool_2d_op->getAttrs();
+  attributes.set(max_pool_2d_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
+  auto res =
+      rewriter
+          .create<oneflow::MaxPool2DOp>(max_pool_2d_op.getLoc(), max_pool_2d_op->getResultTypes(),
+                                        operands, attributes)
+          ->getResults();
   llvm::SmallVector<Value, 4> results;
   results.push_back(res[0]);
   results.push_back(res[1]);
   return results;
+}
+
+bool ReluOp::IsNCHW() { return false; }
+
+llvm::DenseSet<Value> ReluOp::OperandsToTranspose() { return {this->x()}; }
+
+llvm::DenseSet<Value> ReluOp::ResultsToTranspose() { return {this->y()}; }
+
+llvm::SmallVector<Value, 4> ReluOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                               PatternRewriter& rewriter) {
+  auto relu_op = *this;
+  SmallVector<Value, 4> operands{value[0]};
+  auto res = rewriter
+                 .create<oneflow::ReluOp>(relu_op.getLoc(), relu_op->getResultTypes(), operands,
+                                          relu_op->getAttrs())
+                 ->getResults();
+  return {res[0]};
+}
+
+bool Add2Op::IsNCHW() { return false; }
+
+llvm::DenseSet<Value> Add2Op::OperandsToTranspose() { return {this->in0(), this->in1()}; }
+
+llvm::DenseSet<Value> Add2Op::ResultsToTranspose() { return {this->out()}; }
+
+llvm::SmallVector<Value, 4> Add2Op::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                               PatternRewriter& rewriter) {
+  auto add2_op = *this;
+  SmallVector<Value, 4> operands{value[0], value[1]};
+  auto res = rewriter
+                 .create<oneflow::Add2Op>(add2_op.getLoc(), add2_op->getResultTypes(), operands,
+                                          add2_op->getAttrs())
+                 ->getResults();
+  return {res[0]};
 }
 
 }  // namespace oneflow

@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "OneFlow/SBP/SBPImporter.h"
 
 #include "OneFlow/OneFlowOps.h"
 
@@ -105,6 +106,7 @@ class Importer {
   }
 
   ArrayAttr GetAttrFromShape(const ::oneflow::ShapeProto& shape);
+  ArrayAttr GetAttrFromStride(const ::oneflow::Int64ListProto& stride);
   llvm::Optional<Type> GetTypeFromOneFlowDataType(::oneflow::DataType dt);
   OpBuilder& GetBuilder() { return builder_; }
   MLIRContext* GetMLIRContext() { return context_; }
@@ -112,6 +114,7 @@ class Importer {
   Location& GetRootLocation() { return unknown_loc_; }
   virtual Type GetTensorTypeOfLbn(const std::string& lbn) = 0;
   LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf);
+  void SetOpStateLoc(const ::oneflow::OperatorConf&, OperationState&);
 
  private:
   OpBuilder builder_;
@@ -149,7 +152,9 @@ void RoundTripOneFlowJob(
 
 void registerFromOneFlowJobTranslation();
 
+std::string ConvertJobToTosaIR(RoundTripOneFlowJobWrapperInterface& job_wrapper);
 void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path);
+std::string ConvertJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper);
 void LoadJobFromIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path);
 
 }  // namespace oneflow

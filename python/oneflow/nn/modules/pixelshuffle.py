@@ -23,7 +23,7 @@ from oneflow.nn.module import Module
 class PixelShufflev2(Module):
     """
     Part of the documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.PixelShuffle.html#torch.nn.PixelShuffle
+    https://pytorch.org/docs/1.10/generated/torch.nn.PixelShuffle.html.
 
     Rearranges elements in a tensor of shape :math:`(*, C \\times r_h \\times r_w, H, W)`
     to a tensor of shape :math:`(*, C, H \\times r_h, W \\times r_w)`, where r_h and r_w are upscale factors.

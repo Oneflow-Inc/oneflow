@@ -20,7 +20,7 @@ import os
 world_size = os.getenv("WORLD_SIZE")
 
 
-class TestCallWhenShuttingDown:
+class _TestCallWhenShuttingDown:
     def __init__(self):
         self.oneflow = oneflow
         tensor = oneflow.ones((2, 2))
@@ -35,10 +35,10 @@ class TestCallWhenShuttingDown:
             print("__del__ at shutting down phase in Python is not stable.")
 
 
-test_call_when_shutting_down = TestCallWhenShuttingDown()
+test_call_when_shutting_down = _TestCallWhenShuttingDown()
 
 
-class TestSyncWhenShuttingDown:
+class _TestSyncWhenShuttingDown:
     def __init__(self):
         self.eager = oneflow._oneflow_internal.eager
 
@@ -50,4 +50,4 @@ class TestSyncWhenShuttingDown:
             print("__del__ at shutting down phase in Python is not stable.")
 
 
-test_sync_when_shutting_down = TestSyncWhenShuttingDown()
+test_sync_when_shutting_down = _TestSyncWhenShuttingDown()

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
@@ -311,12 +312,15 @@ LogicalResult JobImporter::ProcessVariableOp(const ::oneflow::OperatorConf& op_c
           GetBuilder().getNamedAttr("integer_initializer", const_initialize_attr));
     }
   }
-  // attr nd_sbp
-  const std::vector<StringRef> nd_sbp_str_vec{op_conf.variable_conf().nd_sbp().begin(),
-                                              op_conf.variable_conf().nd_sbp().end()};
-  auto nd_sbp_attr = GetBuilder().getStrArrayAttr(makeArrayRef(nd_sbp_str_vec));
+  // attr parallel
+  auto conf = this->job_wrapper_.ParallelConf4OpName(op_conf.name());
+
+  auto nd_size = conf.hierarchy().dim().size();
+  auto nd_sbp = op_conf.variable_conf().nd_sbp();
+  auto parallel = mlir::oneflow::SBPTranslation::ConvertNdSbpToPsig(
+      GetBuilder(), std::vector<std::string>(nd_sbp.begin(), nd_sbp.end()), nd_size);
   attr_vec.emplace_back(
-      GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getNdSbpAttrName(), nd_sbp_attr));
+      GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getSbpAttrName(), parallel));
   // add attrs
   state.addAttributes(attr_vec);
   // operands
@@ -329,6 +333,7 @@ LogicalResult JobImporter::ProcessVariableOp(const ::oneflow::OperatorConf& op_c
   out_types.push_back(GetTensorTypeOfLbn(output_lbn));
   if (failed(AppendCtrlOutType(out_types))) { return failure(); }
   state.addTypes(out_types);
+  SetOpStateLoc(op_conf, state);
   // create op
   auto op = GetBuilder().create(state);
   if (!op) {
@@ -575,13 +580,6 @@ LogicalResult JobImporter::ProcessJob() {
     }
   });
   if (is_succeeded == false) { return failure(); }
-  SmallVector<mlir::Value, 4> loss_tensors;
-  for (auto& loss_lbn : job_wrapper_.job()->job_conf().train_conf().loss_lbn()) {
-    loss_tensors.push_back(lbn2result_.at(loss_lbn));
-  }
-  if (job_wrapper_.job()->job_conf().train_conf().loss_lbn_size() > 0) {
-    GetBuilder().create<mlir::oneflow::LossMarkerOp>(GetRootLocation(), loss_tensors);
-  }
   mlir::oneflow::ReturnOp return_op;
   if (!entryBlock->empty()) { return_op = dyn_cast<mlir::oneflow::ReturnOp>(entryBlock->back()); }
   if (!return_op) { GetBuilder().create<mlir::oneflow::ReturnOp>(GetRootLocation(), results); }
@@ -788,6 +786,9 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   if (job_wrapper.IsLastIRPass() && std::getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS") != nullptr) {
     pm.addPass(oneflow::createOutlineJitFunctionPass());
   }
+  // we must do auto nhwc and eliminate redundant transpose op first, avoid insert redundant
+  // transpose op due to fuse pattern like normlazation_add_relu.
+  pm.addPass(oneflow::createAutoNhwcPass());
   pm.addPass(oneflow::createFuseIntoExistingOpPass());
   if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION", false)) {
     pm.addPass(oneflow::createPreConvertInferenceOpPass());
@@ -847,6 +848,65 @@ void RoundTripOneFlowJob(
   }
 }
 
+std::string ConvertJobToTosaIR(RoundTripOneFlowJobWrapperInterface& job_wrapper) {
+  const ::oneflow::Job* job = job_wrapper.job();
+  mlir::MLIRContext context;
+  context.getOrLoadDialect<oneflow::OneFlowDialect>();
+  context.loadDialect<mlir::func::FuncDialect>();
+
+  OwningOpRef<ModuleOp> module(
+      ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
+  JobImporter imp(job_wrapper, &context, module.get());
+  if (succeeded(imp.ProcessJob())) {
+    mlir::PassManager pm(&context);
+    pm.addPass(createCanonicalizerPass());
+    pm.addPass(createConvertToSignlessForTosaPass());
+    pm.addPass(createLowerOneFlowToTosaPass());
+    pm.addNestedPass<func::FuncOp>(tosa::createTosaMakeBroadcastablePass());
+    if (mlir::failed(pm.run(*module))) {
+      module->emitError("Failed to run oneflow-to-tosa pass");
+      exit(EXIT_FAILURE);
+    }
+
+    std::string mlir;
+    llvm::raw_string_ostream os_mlir(mlir);
+    module->print(os_mlir);
+    return mlir;
+  } else {
+    const auto& job_name = job->job_conf().job_name();
+    llvm::errs() << "fail to convert job to IR, job_name: " << job_name << "\n";
+    exit(EXIT_FAILURE);
+  }
+}
+
+std::string ConvertJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper) {
+  const ::oneflow::Job* job = job_wrapper.job();
+  mlir::MLIRContext context;
+  context.getOrLoadDialect<oneflow::OneFlowDialect>();
+  context.loadDialect<mlir::func::FuncDialect>();
+
+  OwningOpRef<ModuleOp> module(
+      ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
+  JobImporter imp(job_wrapper, &context, module.get());
+  if (succeeded(imp.ProcessJob())) {
+    mlir::PassManager pm(&context);
+    pm.addPass(createCanonicalizerPass());
+    if (mlir::failed(pm.run(*module))) {
+      module->emitError("Failed to run canonicalizer pass");
+      exit(EXIT_FAILURE);
+    }
+
+    std::string mlir;
+    llvm::raw_string_ostream os_mlir(mlir);
+    module->print(os_mlir);
+    return mlir;
+  } else {
+    const auto& job_name = job->job_conf().job_name();
+    llvm::errs() << "Failed to convert Job to IR, job_name: " << job_name << "\n";
+    exit(EXIT_FAILURE);
+  }
+}
+
 void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path) {
   const ::oneflow::Job* job = job_wrapper.job();
   mlir::MLIRContext context;
@@ -887,6 +947,10 @@ void LoadJobFromIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
   context.loadDialect<mlir::func::FuncDialect>();
   OwningOpRef<ModuleOp> module = parseSourceFile<ModuleOp>(path, &context);
+  if (!module) {
+    llvm::errs() << "fail to parse file: " << path << "\n";
+    exit(EXIT_FAILURE);
+  }
   JobImporter imp(job_wrapper, &context, module.get());
   if (failed(imp.TryToUpdateJob())) {
     llvm::errs() << "fail to load job from IR";

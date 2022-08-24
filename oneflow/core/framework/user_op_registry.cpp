@@ -228,11 +228,12 @@ Maybe<OpRegistry&> OpRegistry::Finish() {
                           == in_physical.shape());
         }
         for (const auto& pair : ctx->outputs()) {
-          TensorDesc* desc = ctx->OutputTensorDesc(pair.first, pair.second);
+          TensorDesc* desc = ctx->MutOutputTensorDesc(pair.first, pair.second);
           *desc = *ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
           const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex(pair.first, pair.second);
           *desc->mut_shape() = *JUST(
               GetPhysicalShape(desc->shape(), nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
+          *desc->mut_stride() = Stride(desc->shape());
         }
       }
       return Maybe<void>::Ok();
@@ -260,7 +261,7 @@ Maybe<OpRegistry&> OpRegistry::Finish() {
       for (const auto& pair : ctx->outputs()) {
         *ctx->OutputTensorDevice4ArgNameAndIndex(pair.first, pair.second) = default_device;
       }
-      return Stream::New(default_device, StreamRole::kCompute);
+      return Stream::New(default_device, StreamType::kCompute);
     };
   }
   return *this;

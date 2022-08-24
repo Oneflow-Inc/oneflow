@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -70,7 +71,7 @@ class PReluFunctor {
                            const std::shared_ptr<Tensor>& alpha) const {
     int num_params = alpha->dim(0);
     CHECK_OR_RETURN(((num_params == 1) || (num_params == x->shape()->At(1))))
-        << "num_parameters in prelu must be 1 or " << x->shape()->At(1);
+        << Error::RuntimeError() << "num_parameters in prelu must be 1 or " << x->shape()->At(1);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, alpha});
   }
 
@@ -222,14 +223,14 @@ class GluFunctor {
  public:
   GluFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
-    auto ndim = input->ndim();
-    CHECK_GT_OR_RETURN(ndim, 0) << "glu does not support 0-dimensional tensors";
-    CHECK_OR_RETURN(dim >= -ndim && dim < ndim)
-        << ", Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
-        << "], but got " << dim << ")";
+    const auto ndim = input->ndim();
+    CHECK_GT_OR_RETURN(ndim, 0) << Error::RuntimeError()
+                                << "glu does not support scalars because halving size must be even";
+    dim = JUST(maybe_wrap_dim(dim, ndim));
     if (dim < 0) { dim += ndim; }
     int64_t nc = input->dim(dim);
-    CHECK_EQ_OR_RETURN(nc % 2, 0) << "Halving dimension must be even, but dimension " << dim
+    CHECK_EQ_OR_RETURN(nc % 2, 0) << Error::RuntimeError()
+                                  << "Halving dimension must be even, but dimension " << dim
                                   << " is size " << nc;
     nc = nc / 2;
     std::vector<int64_t> split_sizes(2, nc);
@@ -278,16 +279,13 @@ class HardShrinkFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& lambd,
                            bool inplace) const {
     MutableAttrMap attrs;
-    CHECK_GT_OR_RETURN(lambd, 0) << "lambd must be greater than 0";
     JUST(attrs.SetAttr<double>("lambd", lambd));
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      // outputs->at(0) = x;
-      *JUST(oneflow::VectorAt(outputs.get(), 0)) = x;
+      JUST(oneflow::VectorAt(*outputs, 0)) = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
-      // return outputs->at(0);
-      return *JUST(oneflow::VectorAt(outputs.get(), 0));
+      return JUST(oneflow::VectorAt(*outputs, 0));
     } else {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
     }
@@ -300,13 +298,13 @@ class HardShrinkFunctor {
 class HardShrinkGradFunctor {
  public:
   HardShrinkGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("hardshrink_grad").Input("dy").Input("y").Output("dx").Build());
+    op_ = CHECK_JUST(one::OpBuilder("hardshrink_grad").Input("y").Input("dy").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& y, const std::shared_ptr<Tensor>& dy,
                            const double& lambd) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("lambd", lambd));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, y}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {y, dy}, attrs);
   }
 
  private:
@@ -332,9 +330,7 @@ class SoftmaxFunctorBase {
     int64_t dim_ = dim ? JUST(dim) : get_dim();
     if (dim_ < 0) { dim_ += num_axes; }
 
-    CHECK_GE_OR_RETURN(dim_, 0);
-    CHECK_LT_OR_RETURN(dim_, num_axes);
-
+    dim_ = JUST(maybe_wrap_dim(dim_, num_axes));
     if (dim_ != num_axes - 1) {
       std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
       for (size_t i = 1; i < input_perm.size(); ++i) { input_perm[i] = i; }
@@ -414,9 +410,9 @@ class LeakyReluFunctor {
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      *JUST(oneflow::VectorAt(outputs.get(), 0)) = x;
+      JUST(oneflow::VectorAt(*outputs, 0)) = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
-      return *JUST(oneflow::VectorAt(outputs.get(), 0));
+      return JUST(oneflow::VectorAt(*outputs, 0));
     } else {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
     }
@@ -536,14 +532,16 @@ class SoftShrinkFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& alpha,
                            bool inplace) const {
     MutableAttrMap attrs;
-    CHECK_GT_OR_RETURN(alpha, 0) << "alpha must be greater than 0";
+    CHECK_GE_OR_RETURN(alpha, 0) << Error::RuntimeError()
+                                 << "alpha must be greater or equal to 0, but found to be " << alpha
+                                 << ".";
     JUST(attrs.SetAttr<double>("alpha", alpha));
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      *JUST(oneflow::VectorAt(outputs.get(), 0)) = x;
+      JUST(oneflow::VectorAt(*outputs, 0)) = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
-      return *JUST(oneflow::VectorAt(outputs.get(), 0));
+      return JUST(oneflow::VectorAt(*outputs, 0));
     } else {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
     }
@@ -591,13 +589,13 @@ class ThresholdGradFunctor {
 class SoftShrinkGradFunctor {
  public:
   SoftShrinkGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("softshrink_grad").Input("dy").Input("y").Output("dx").Build());
+    op_ = CHECK_JUST(one::OpBuilder("softshrink_grad").Input("y").Input("dy").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& y, const std::shared_ptr<Tensor>& dy,
                            const double& alpha) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, y}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {y, dy}, attrs);
   }
 
  private:

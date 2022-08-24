@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/tensor_buffer.h"
@@ -26,25 +27,16 @@ namespace oneflow {
 namespace {
 
 std::shared_ptr<ep::Device> GetAllocationDevice(const MemoryCase& mem_case) {
-  DeviceType device_type = DeviceType::kInvalidDevice;
-  size_t device_index = 0;
-  if (mem_case.has_host_mem()) {
-    device_type = DeviceType::kCPU;
-  } else if (mem_case.has_device_cuda_mem()) {
-    device_type = DeviceType::kCUDA;
-    device_index = mem_case.device_cuda_mem().device_id();
-  } else {
-    UNIMPLEMENTED();
-  }
-  auto device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
+  auto device = Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(mem_case.device_type(),
+                                                                       mem_case.device_id());
   CHECK(device);
   return device;
 }
 
 ep::AllocationOptions GetAllocationOptions(const MemoryCase& mem_case) {
   ep::AllocationOptions options{};
-  if (mem_case.has_host_mem() && mem_case.host_mem().has_cuda_pinned_mem()) {
-    options.SetPinnedDevice(DeviceType::kCUDA, mem_case.host_mem().cuda_pinned_mem().device_id());
+  if (mem_case.has_pinned_device_type() && mem_case.has_pinned_device_id()) {
+    options.SetPinnedDevice(mem_case.pinned_device_type(), mem_case.pinned_device_id());
   }
   return options;
 }
@@ -80,20 +72,7 @@ MemoryAllocator::~MemoryAllocator() {
 }
 
 char* MemoryAllocator::Allocate(const MemoryCase& mem_case, std::size_t size) {
-  const int memset_val = 0;
   char* dptr = static_cast<char*>(MemoryAllocatorImpl::Allocate(mem_case, size));
-  if (mem_case.has_host_mem()) {
-    memset(dptr, memset_val, size);
-  } else if (mem_case.has_device_cuda_mem()) {
-#ifdef WITH_CUDA
-    CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
-    OF_CUDA_CHECK(cudaMemset(dptr, memset_val, size));
-#else
-    UNIMPLEMENTED();
-#endif
-  } else {
-    UNIMPLEMENTED();
-  }
   deleters_.push_front(std::bind(&MemoryAllocator::Deallocate, this, dptr, mem_case));
   return dptr;
 }
@@ -114,6 +93,22 @@ void InitNonPODTypeBlobIfNeed(MemoryAllocator* allocator, Blob* blob_ptr) {
     int64_t elem_cnt = blob_desc.shape().elem_cnt();
     FOR_RANGE(int64_t, idx, 0, elem_cnt) {
       allocator->PlacementNew(&blob_ptr->mut_dptr<TensorBuffer>()[idx]);
+    }
+  }
+}
+
+void InitNonPODTypeEagerBlobObjectIfNeed(MemoryAllocator* allocator,
+                                         vm::EagerBlobObject* eager_blob_object_ptr) {
+  if (eager_blob_object_ptr->data_type() == kOFRecord) {
+    int64_t elem_cnt = eager_blob_object_ptr->shape().elem_cnt();
+    FOR_RANGE(int64_t, idx, 0, elem_cnt) {
+      allocator->PlacementNew(&eager_blob_object_ptr->mut_dptr<OFRecord>()[idx]);
+    }
+  }
+  if (eager_blob_object_ptr->data_type() == kTensorBuffer) {
+    int64_t elem_cnt = eager_blob_object_ptr->shape().elem_cnt();
+    FOR_RANGE(int64_t, idx, 0, elem_cnt) {
+      allocator->PlacementNew(&eager_blob_object_ptr->mut_dptr<TensorBuffer>()[idx]);
     }
   }
 }

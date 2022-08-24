@@ -173,9 +173,8 @@ struct VarFunctor<DeviceType::kCUDA, T> final {
     int block_dim = 0;
     SetGridDimAndBlockDim(var_param.elem_cnt, &grid_dim, &block_dim);
     if (var_param.parallel_num == 1) {
-      const size_t shm_size = grid_dim * sizeof(T) * 3;
       ComputeVarScalarOut<T>
-          <<<grid_dim, block_dim, shm_size, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          <<<grid_dim, block_dim, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
               in_ptr, out_ptr, tmp_buffer_ptr, var_param);
     } else {
       // if var_param.parallel_num is 0, do nothing, return 0-size tensor

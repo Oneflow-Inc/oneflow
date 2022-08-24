@@ -109,6 +109,13 @@ class TestAutograd(flow.unittest.TestCase):
         x = random_tensor(ndim=ndim, requires_grad=True).to(device)
         return x
 
+    @autotest(n=1, auto_backward=False, check_graph=False)
+    def test_out_grad_with_different_dtype(test_case):
+        x = random_tensor(ndim=2, requires_grad=True)
+        y = x.sum()
+        y.backward(torch.tensor(False))
+        return x.grad
+
     @autotest(n=10, auto_backward=False, check_graph=False)
     def test_grad_grad(test_case):
         device = random_device()
@@ -141,6 +148,39 @@ class TestAutograd(flow.unittest.TestCase):
         for _ in range(10):
             z.sum().backward()
         return (x.grad, y.grad)
+
+    def test_autograd_set_acc_grad_and_backward(test_case):
+        for _ in range(5):
+            ndim = 2
+            dims = [random(1, 5).to(int).value() for _ in range(ndim)]
+            x = torch.randn(*dims).requires_grad_()
+            np_arr = np.random.rand(*dims)
+            init_grad = torch.tensor(np_arr).to(x.dtype)
+            x.pytorch.grad = init_grad.pytorch
+            x.oneflow.grad = init_grad.oneflow
+
+            x.sum().backward()
+            test_case.assertTrue(
+                np.allclose(
+                    x.grad.oneflow.numpy(), x.grad.pytorch.cpu().detach().numpy()
+                )
+            )
+
+    @autotest(n=1, check_graph=False)
+    def test_requires_grad_tensor_inplace_and_backward(test_case):
+        random_shape = [random(1, 10).to(int) for _ in range(4)]
+        x = random_tensor(4, *random_shape, requires_grad=False)
+        y = random_tensor(4, *random_shape, requires_grad=True)
+        x += y
+        return x
+
+    @autotest(n=1, check_graph=False)
+    def test_retain_grad_for_leaf_tensor(test_case):
+        random_shape = [random(1, 10).to(int) for _ in range(4)]
+        x = random_tensor(4, *random_shape, requires_grad=True)
+        y = x * 2
+        x.retain_grad()
+        return y
 
 
 if __name__ == "__main__":

@@ -15,8 +15,10 @@ limitations under the License.
 */
 #include "oneflow/core/functional/tensor_processor.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 namespace one {
@@ -47,7 +49,7 @@ bool CheckHasDifferentInputDType(const TensorTuple& tensor_tuple) {
 Maybe<void> CastToSameType(TensorTuple& tensor_tuple, const Symbol<DType>& common_dtype) {
   for (auto& tensor_ptr : tensor_tuple) {
     if (tensor_ptr->dtype() != common_dtype) {
-      tensor_ptr = JUST(functional::Cast(tensor_ptr, common_dtype));
+      tensor_ptr = JUST(functional::Cast(tensor_ptr, common_dtype, /*pin_memory=*/false));
     }
   }
   return Maybe<void>::Ok();
@@ -92,11 +94,55 @@ Maybe<void> TensorProcessor::Apply() {
       if (base_dtype->data_type()
           && DType::priority_order[base_dtype->data_type()]
                  > DType::priority_order[tensor_tuple_.at(i)->dtype()->data_type()]) {
-        tensor_tuple_.at(i) = JUST(one::functional::Cast(tensor_tuple_.at(i), base_dtype));
+        tensor_tuple_[i] =
+            JUST(one::functional::Cast(tensor_tuple_[i], base_dtype, /*pin_memory=*/false));
       }
     }
   }
   return Maybe<void>::Ok();
+}
+
+static bool IsAllContiguous(const TensorTuple& tensors) {
+  for (const auto& t : tensors) {
+    if (t && !t->is_contiguous()) { return false; }
+  }
+  return true;
+}
+
+Maybe<void> TensorLayoutProcessor::Apply() {
+  if (LazyMode::is_enabled()) { return Maybe<void>::Ok(); }
+  if (!non_contiguous_enabled_ && !IsAllContiguous(inputs_)) {
+    contiguous_inputs_.resize(inputs_.size());
+    for (int i = 0; i < inputs_.size(); ++i) { contiguous_inputs_[i] = inputs_[i]->contiguous(); }
+    converted_ = true;
+  }
+  // inplace operation is not allowed if input is non-contiguous and non-contiguous is
+  // not supported for this operation
+  if (!non_contiguous_enabled_ && outputs_ && !IsAllContiguous(*outputs_)) {
+    post_process_outputs_.reserve(outputs_->size());
+    post_process_output_indices_.reserve(outputs_->size());
+    for (int i = 0; i < outputs_->size(); ++i) {
+      if ((*outputs_)[i] && !(*outputs_)[i]->is_contiguous()) {
+        post_process_outputs_.emplace_back((*outputs_)[i]);
+        post_process_output_indices_.emplace_back(i);
+        (*outputs_)[i] = nullptr;
+      }
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+TensorLayoutProcessor::~TensorLayoutProcessor() {
+  for (int i = 0; i < post_process_output_indices_.size(); ++i) {
+    int output_index = post_process_output_indices_[i];
+    CHECK_OR_THROW((*outputs_)[output_index])
+        << "the output which index is " << i << " should not be nullptr";
+    functional::TensorIndex ellipsis_index;
+    ellipsis_index.emplace_back(functional::detail::EllipsisIndex());
+    CHECK_JUST(functional::TensorSetItem(post_process_outputs_[i], ellipsis_index,
+                                         (*outputs_)[output_index]));
+    (*outputs_)[output_index] = post_process_outputs_[i];
+  }
 }
 
 }  // namespace functional

@@ -18,13 +18,16 @@ limitations under the License.
 #include <memory>
 #include <vector>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/api/python/job_build/job_build_and_infer.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace autograd {
@@ -49,7 +52,8 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
       << " gradients";
   for (int i = 0; i < outputs.size(); ++i) {
     CHECK_OR_RETURN(outputs.at(i)->requires_grad())
-        << "All output tensors `.requires_grad` should be true";
+        << "\nRuntimeError: element " << i
+        << " of tensors does not require grad and does not have a grad_fn";
     if (!outputs.at(i)->grad_fn_node()) {
       CHECK_OR_RETURN(outputs.at(i)->is_leaf())
           << "output[" << i << "] doesn't have grad_fn and it is not leaf tensor!\n"
@@ -65,9 +69,17 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
       CHECK_OR_RETURN(*(outputs.at(i)->shape()) == *(out_grads.at(i)->shape()))
           << "out_grad's shape must be same as output's (" << outputs.at(i)->shape()->ToString()
           << " vs " << out_grads.at(i)->shape()->ToString() << ")";
-      gradients->at(i) = out_grads.at(i);
+      // if (outputs.at(i)->dtype() != out_grads.at(i)->dtype()) {
+      if (JUST(oneflow::VectorAt(outputs, i))->dtype()
+          != JUST(oneflow::VectorAt(out_grads, i))->dtype()) {
+        JUST(oneflow::VectorAt(*gradients, i)) =
+            JUST(one::functional::Cast(out_grads[i], outputs[i]->dtype(), /*pin_memory=*/false));
+      } else {
+        JUST(oneflow::VectorAt(*gradients, i)) = out_grads[i];
+      }
     }
   }
+  if (LazyMode::is_enabled()) { JUST(MarkOutputGradients(outputs, *gradients)); }
   return gradients;
 }
 
@@ -75,6 +87,7 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
 
 Maybe<one::TensorTuple> Backward(const one::TensorTuple& outputs, const one::TensorTuple& out_grads,
                                  bool retain_graph, bool create_graph) {
+  BackwardPassScopeGuard backward_guard;
   if (create_graph) { retain_graph = true; }
   std::shared_ptr<one::TensorTuple> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
   JUST(one::GetThreadLocalAutogradEngine()->RunBackwardAndSaveGrads4LeafTensorIf(
@@ -85,6 +98,7 @@ Maybe<one::TensorTuple> Backward(const one::TensorTuple& outputs, const one::Ten
 Maybe<one::TensorTuple> Grad(const one::TensorTuple& outputs, const one::TensorTuple& inputs,
                              const one::TensorTuple& out_grads, bool retain_graph,
                              bool create_graph) {
+  BackwardPassScopeGuard backward_guard;
   if (create_graph) { retain_graph = true; }
   if (inputs.empty()) { return Backward(outputs, out_grads, retain_graph, create_graph); }
   CHECK_OR_RETURN(std::all_of(

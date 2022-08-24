@@ -85,9 +85,9 @@ class RocAucScoreKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     P* out_ptr = out->mut_dptr<P>();
-    CHECK_EQ(label->shape().elem_cnt(), pred->shape().elem_cnt());
-    CHECK_EQ(out->shape().elem_cnt(), 1);
-    out_ptr[0] = RocAucScore(label->shape().elem_cnt(), label->dptr<L>(), pred->dptr<P>(),
+    CHECK_EQ(label->shape_view().elem_cnt(), pred->shape_view().elem_cnt());
+    CHECK_EQ(out->shape_view().elem_cnt(), 1);
+    out_ptr[0] = RocAucScore(label->shape_view().elem_cnt(), label->dptr<L>(), pred->dptr<P>(),
                              tmp_buffer->mut_dptr<float>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

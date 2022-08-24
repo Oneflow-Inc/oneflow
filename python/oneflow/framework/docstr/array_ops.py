@@ -269,6 +269,116 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.atleast_1d,
+    r"""
+    oneflow.atleast_1d(*tensors) -> Tensor or List[Tensor]
+
+    Returns a 1-dimensional view of each input tensor with zero dimensions. Input tensors with one or more dimensions are returned as-is.
+
+    The interface is consistent with PyTorch.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.atleast_1d.html.
+
+    Args:
+        tensors (List[oneflow.Tensor] or oneflow.Tensor): Tensor or list of tensors to be reshaped
+
+    Returns:
+        A `Tensor`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.randn(1)
+        >>> flow.atleast_1d(x).shape
+        oneflow.Size([1])
+        >>> x = flow.tensor(0)
+        >>> x.shape
+        oneflow.Size([])
+        >>> flow.atleast_1d(x).shape
+        oneflow.Size([1])
+
+    """,
+)
+
+add_docstr(
+    oneflow.atleast_2d,
+    r"""
+    oneflow.atleast_2d(*tensors) -> Tensor or List[Tensor]
+
+    Returns a 2-dimensional view of each input tensor with zero dimensions. Input tensors with two or more dimensions are returned as-is.
+
+    The interface is consistent with PyTorch.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.atleast_2d.html.
+
+
+    Args:
+        tensors (List[oneflow.Tensor] or oneflow.Tensor): Tensor or list of tensors to be reshaped
+
+    Returns:
+        A `Tensor`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor(0)
+        >>> x.shape
+        oneflow.Size([])
+        >>> flow.atleast_2d(x).shape
+        oneflow.Size([1, 1])
+        >>> x = flow.randn(3)
+        >>> flow.atleast_2d(x).shape
+        oneflow.Size([1, 3])
+        >>> x = flow.randn(3, 3)
+        >>> flow.atleast_2d(x).shape
+        oneflow.Size([3, 3])
+
+    """,
+)
+
+add_docstr(
+    oneflow.atleast_3d,
+    r"""
+    oneflow.atleast_3d(*tensors) -> Tensor or List[Tensor]
+
+    Returns a 3-dimensional view of each input tensor with zero dimensions. Input tensors with three or more dimensions are returned as-is.
+
+    The interface is consistent with PyTorch.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.atleast_3d.html.
+
+    Args:
+        tensors (List[oneflow.Tensor] or oneflow.Tensor): Tensor or list of tensors to be reshaped
+
+    Returns:
+        A `Tensor`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor(0)
+        >>> flow.atleast_3d(x).shape
+        oneflow.Size([1, 1, 1])
+        >>> x = flow.randn(3)
+        >>> flow.atleast_3d(x).shape
+        oneflow.Size([1, 3, 1])
+        >>> x = flow.randn(3, 4)
+        >>> flow.atleast_3d(x).shape
+        oneflow.Size([3, 4, 1])
+        >>> x = flow.randn(3, 4, 5)
+        >>> flow.atleast_3d(x).shape
+        oneflow.Size([3, 4, 5])
+
+    """,
+)
+
+add_docstr(
     oneflow.stack,
     r"""Concatenates a sequence of tensors along a new dimension.
     The returned tensor shares the same underlying data with input tensors.
@@ -296,6 +406,176 @@ add_docstr(
         >>> y = flow.stack([x1, x2], dim = -1)
         >>> y.shape
         oneflow.Size([1, 3, 5, 2])
+    """,
+)
+
+add_docstr(
+    oneflow.hstack,
+    r"""
+    oneflow.hstack(tensors) -> Tensor
+
+    Stack tensors in :attr:`tensors` horizontally (column wise).
+
+    This is equivalent to concatenation tensors in :attr:`tensors` along the first axis for 1-D tensors, and along the second axis for all other tensors.
+
+    When there are tensors with dimension less than 1, these tensors will be reshaped by ``oneflow.atleast_1d()`` to 1-dims tensors before stacking.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.hstack.html.
+
+    Args:
+        tensors: (List[oneflow.Tensor]): sequence of tensors to stack
+
+    Returns:
+        A `Tensor`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x1 = flow.randn(5, 2)
+        >>> x2 = flow.randn(5, 3)
+        >>> flow.hstack([x1, x2]).shape
+        oneflow.Size([5, 5])
+        >>> x = flow.randn(5)
+        >>> flow.hstack([x, x]).shape
+        oneflow.Size([10])
+    """,
+)
+
+add_docstr(
+    oneflow.vstack,
+    r"""
+    oneflow.vstack(tensors) -> Tensor
+
+    Stack tensors in :attr:`tensors` vertically (row wise).
+
+    This is equivalent to concatenation tensors in :attr:`tensors` along the first axis.
+
+    When there are tensors with dimension less than 2, these tensors will be reshaped by ``oneflow.atleast_2d()`` to 2-D tensors before stacking.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.vstack.html.
+
+    Args:
+        tensors: (List[oneflow.Tensor]): sequence of tensors to stack
+
+    Returns:
+        A `Tensor`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x1 = flow.randn(2, 5)
+        >>> x2 = flow.randn(3, 5)
+        >>> flow.vstack([x1, x2]).shape
+        oneflow.Size([5, 5])
+        >>> x = flow.randn(5)
+        >>> flow.vstack([x, x]).shape
+        oneflow.Size([2, 5])
+    """,
+)
+
+add_docstr(
+    oneflow.dstack,
+    r"""
+    oneflow.dstack(tensors) -> Tensor
+
+    Stack tensors in :attr:`tensors` depthwish (along third axis).
+
+    This is equivalent to concatenation tensors in :attr:`tensors` along the third axis after 1-D and 2-D tensors have been reshaped by ``oneflow.atleast_3d()``.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.dstack.html.
+
+    Args:
+        tensors: (List[oneflow.Tensor]): sequence of tensors to stack
+
+    Returns:
+        A `Tensor`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x1 = flow.randn(2, 3, 4)
+        >>> x2 = flow.randn(2, 3, 2)
+        >>> flow.dstack([x1, x2]).shape
+        oneflow.Size([2, 3, 6])
+        >>> x = flow.randn(6, 4)
+        >>> flow.dstack([x, x]).shape
+        oneflow.Size([6, 4, 2])
+    """,
+)
+
+add_docstr(
+    oneflow.column_stack,
+    r"""
+    oneflow.column_stack(tensors) -> Tensor
+
+    Creates a new tensor by horizontally stacking the tensors in :attr:`tensors`.
+
+    Equivalent to :code:`oneflow.hstack(tensors)`, tensors with dimensions less than 2 will be reshaped to :code:`(t.numel(), 1)` before being stacked horizontally.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.column_stack.html.
+
+    Args:
+        tensors: (List[oneflow.Tensor]): sequence of tensors to stack
+
+    Returns:
+        A `Tensor`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x1 = flow.randn(5)
+        >>> x2 = flow.randn(5)
+        >>> flow.column_stack([x1, x2]).shape
+        oneflow.Size([5, 2])
+        >>> x1 = flow.randn(2, 5)
+        >>> x2 = flow.randn(2, 2)
+        >>> flow.column_stack([x1, x2]).shape
+        oneflow.Size([2, 7])
+
+    """,
+)
+
+add_docstr(
+    oneflow.row_stack,
+    r"""
+    oneflow.row_stack(tensors) -> Tensor
+
+    Alias of ``oneflow.vstack()``.
+
+    Stack tensors in :attr:`tensors` vertically (row wise).
+
+    This is equivalent to concatenation tensors in :attr:`tensors` along the first axis.
+
+    When there are tensors with dimension less than 2, these tensors will be reshaped by ``oneflow.atleast_2d()`` to 2-D tensors before stacking.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.row_stack.html.
+
+    Args:
+        tensors: (List[oneflow.Tensor]): sequence of tensors to stack
+
+    Returns:
+        A `Tensor`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x1 = flow.randn(2, 5)
+        >>> x2 = flow.randn(3, 5)
+        >>> flow.vstack([x1, x2]).shape
+        oneflow.Size([5, 5])
+        >>> x = flow.randn(5)
+        >>> flow.vstack([x, x]).shape
+        oneflow.Size([2, 5])
     """,
 )
 
@@ -394,7 +674,7 @@ add_docstr(
         >>> import numpy as np
         >>> input = np.random.randn(3, 4, 3, 5)
         >>> index = np.random.choice(np.arange(3), size=180, replace=True).reshape((3, 4, 3, 5))
-        >>> output = flow.gather(flow.Tensor(input), 1, flow.tensor(index, dtype=flow.int))
+        >>> output = flow.gather(flow.Tensor(input), 1, flow.tensor(index, dtype=flow.int64))
         >>> output.shape
         oneflow.Size([3, 4, 3, 5])
 

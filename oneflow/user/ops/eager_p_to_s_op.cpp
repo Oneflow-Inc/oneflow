@@ -38,7 +38,7 @@ namespace oneflow {
     int64_t parallel_id = opt_parallel_id->value_or(0);
     dim_vec[out_split_axis] = bs.At(parallel_id).size();
   }
-  *ctx->OutputShape("out", 0) = Shape(dim_vec);
+  *ctx->MutOutputShape("out", 0) = Shape(dim_vec);
   return Maybe<void>::Ok();
 }
 
@@ -47,15 +47,15 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EagerPToSOp::GetSbp(user_op::SbpContext* ctx) {
-  return Error::TypeError() << "eager_b_to_s op doesn't support consistent tensor!";
+  return Error::TypeError() << "eager_b_to_s op doesn't support global tensor!";
 }
 
 /* static */ Maybe<void> EagerPToSOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  return Error::TypeError() << "eager_b_to_s op doesn't support consistent tensor!";
+  return Error::TypeError() << "eager_b_to_s op doesn't support global tensor!";
 }
 
 /* static */ Maybe<void> EagerPToSOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 

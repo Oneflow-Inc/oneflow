@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> RocAucScoreOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   const Shape& pred_shape = ctx->InputTensorDesc("pred", 0).shape();
   const Shape& label_shape = ctx->InputTensorDesc("label", 0).shape();
   CHECK_EQ_OR_RETURN(pred_shape.elem_cnt(), label_shape.elem_cnt())
@@ -38,7 +38,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> RocAucScoreOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kFloat;
+  *ctx->MutOutputDType("out", 0) = DataType::kFloat;
   const user_op::TensorDesc& label = ctx->InputTensorDesc("label", 0);
   CHECK_OR_RETURN(IsFloatingDataType(label.data_type()) || IsIntegralDataType(label.data_type()))
       << "Input `label` data type " << DataType_Name(label.data_type()) << " is not supported.";

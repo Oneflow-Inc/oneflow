@@ -26,7 +26,7 @@ def grid_sample(
 ):
     """The interface is consistent with PyTorch.    
     The documentation is referenced from: 
-    https://pytorch.org/docs/stable/generated/torch.nn.functional.grid_sample.html?highlight=grid_sample#torch.nn.functional.grid_sample
+    https://pytorch.org/docs/1.10/generated/torch.nn.functional.grid_sample.html.
 
     Given an :attr:`input` and a flow-field :attr:`grid`, computes the
     ``output`` using :attr:`input` values and pixel locations from :attr:`grid`.

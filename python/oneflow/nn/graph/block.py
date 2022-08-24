@@ -16,10 +16,11 @@ limitations under the License.
 from collections import OrderedDict
 from functools import partial
 from typing import Iterator, Optional, Set, Union, List
+import weakref
 
 import oneflow._C
 import oneflow._oneflow_internal
-import oneflow.framework.graph_build_util as graph_build_util
+from oneflow.framework import graph_build_util
 from oneflow.env import get_rank
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.nn.module import Module
@@ -29,9 +30,9 @@ from oneflow.nn.parameter import Parameter
 from oneflow.nn.graph.block_config import BlockConfig
 from oneflow.nn.graph.util import (
     add_indent,
+    ArgsTree,
+    operators_repr,
     seq_to_func_return,
-    IONodeType,
-    IONode,
 )
 
 
@@ -63,7 +64,10 @@ class BlockType:
 
 class Block(object):
     def __init__(
-        self, prefix: str = "", name: str = "",
+        self,
+        prefix: str = "",
+        name: str = "",
+        belonged_graph: weakref.ProxyTypes = None,
     ):
         self._name = name
         self._name_prefix = prefix
@@ -71,6 +75,8 @@ class Block(object):
         self._origin = None
         self._scope = None
         self._prev_scope = None
+        assert belonged_graph is None or isinstance(belonged_graph, weakref.ProxyTypes)
+        self._belonged_graph = belonged_graph
         self.config = BlockConfig()
 
     @property
@@ -103,14 +109,20 @@ class Block(object):
 
 class ModuleBlock(Block):
     def __init__(
-        self, prefix: str = "", name: str = "", origin: Module = None,
+        self,
+        prefix: str = "",
+        name: str = "",
+        origin: Module = None,
+        belonged_graph: weakref.ProxyTypes = None,
     ):
         assert not isinstance(origin, Block)
-        super().__init__(prefix, name)
+        super().__init__(prefix, name, belonged_graph)
         self._debug = False
         self._debug_min_s_level = 2
         self._debug_max_v_level = 0
         self._debug_max_py_stack_depth = 2
+        self._debug_only_user_py_stack = True
+        self._debug_op_repr_with_py_stack = False
         self._type = BlockType.MODULE
         self._is_executing_forward = False
         self._modules = OrderedDict()
@@ -131,7 +143,10 @@ class ModuleBlock(Block):
         assert isinstance(origin, Module)
         for (n, m) in list(origin.named_children()):
             self.__setattr__(
-                n, get_block_cls(m)(self._name_prefix + self._name + ".", n, m)
+                n,
+                get_block_cls(m)(
+                    self._name_prefix + self._name + ".", n, m, self._belonged_graph
+                ),
             )
         for (n, p) in list(origin.named_parameters("", False)):
             self.__setattr__(
@@ -148,9 +163,13 @@ class ModuleBlock(Block):
         *,
         ranks: Optional[Union[int, List[int]]] = None,
         max_py_stack_depth: int = 2,
+        only_user_py_stack=True,
+        op_repr_with_py_stack=False,
     ) -> None:
         assert isinstance(v_level, int)
         assert isinstance(max_py_stack_depth, int)
+        assert isinstance(only_user_py_stack, bool)
+        assert isinstance(op_repr_with_py_stack, bool)
 
         if ranks is None:
             rank_list = [0]
@@ -167,14 +186,21 @@ class ModuleBlock(Block):
             if self._debug:
                 self._debug_min_s_level = 0
                 self._debug_max_v_level = max(0, v_level)
-                self._debug_max_py_stack_depth = max_py_stack_depth
+
+            self._debug_max_py_stack_depth = max_py_stack_depth
+            self._debug_only_user_py_stack = only_user_py_stack
+            self._debug_op_repr_with_py_stack = op_repr_with_py_stack
 
             if self._type == BlockType.MODULE:
 
                 def _set_child(d):
                     for (_, n) in d.items():
                         n.debug(
-                            v_level, ranks=ranks, max_py_stack_depth=max_py_stack_depth
+                            v_level,
+                            ranks=ranks,
+                            max_py_stack_depth=max_py_stack_depth,
+                            only_user_py_stack=only_user_py_stack,
+                            op_repr_with_py_stack=op_repr_with_py_stack,
                         )
 
                 _set_child(self._modules)
@@ -183,17 +209,20 @@ class ModuleBlock(Block):
         assert self._type == BlockType.MODULE
         self.__print(0, 1, self._shallow_repr())
 
-        in_node = IONode(
-            None, 0, (args, kwargs), "_" + self.name_prefix + self.name + "_input"
+        args_tree = ArgsTree(
+            (args, kwargs), True, "_" + self.name_prefix + self.name + "_input", None
         )
-        for (name, node) in list(in_node.named_nodes()):
-            if node._is_leaf:
-                arg = node._value
+
+        for (name, arg) in args_tree.iter_named_nodes():
+            if arg.is_leaf():
+                arg_value = arg.value()
                 meta_repr_str = (
-                    arg._meta_repr() if isinstance(arg, Tensor) else str(type(arg))
+                    arg_value._meta_repr()
+                    if isinstance(arg_value, Tensor)
+                    else str(type(arg_value))
                 )
                 in_str = "(INPUT:" + name + ":" + meta_repr_str + ")"
-                if not isinstance(arg, Tensor):
+                if not isinstance(arg_value, Tensor):
                     in_str = "[WARNING]" + in_str
                 self._args_repr.append(in_str)
                 self.__print(0, 1, in_str)
@@ -214,6 +243,7 @@ class ModuleBlock(Block):
             self._debug_max_v_level,
             self._debug,
             self._debug_max_py_stack_depth,
+            self._debug_only_user_py_stack,
         ):
             result = self.__block_forward(*args, **kwargs)
 
@@ -223,17 +253,20 @@ class ModuleBlock(Block):
         else:
             outputs = result
 
-        out_node = IONode(
-            None, 0, (outputs, {}), "_" + self.name_prefix + self.name + "_output"
+        args_tree = ArgsTree(
+            (outputs, {}), True, "_" + self.name_prefix + self.name + "_output", None
         )
-        for (name, node) in list(out_node.named_nodes()):
-            if node._is_leaf:
-                arg = node._value
+
+        for (name, arg) in args_tree.iter_named_nodes():
+            if arg.is_leaf():
+                arg_value = arg.value()
                 meta_repr_str = (
-                    arg._meta_repr() if isinstance(arg, Tensor) else str(type(arg))
+                    arg_value._meta_repr()
+                    if isinstance(arg_value, Tensor)
+                    else str(type(arg_value))
                 )
                 out_str = "(OUTPUT:" + name + ":" + meta_repr_str + ")"
-                if not isinstance(arg, Tensor):
+                if not isinstance(arg_value, Tensor):
                     out_str = "[WARNING]" + out_str
                 self._outs_repr.append(out_str)
                 self.__print(0, 1, out_str)
@@ -245,10 +278,6 @@ class ModuleBlock(Block):
         args, kwargs = self.__pre_forward_map(*args, **kwargs)
         with self.scope_context():
             result = self._origin.__class__.forward(self, *args, **kwargs)
-            # Always pack outputs to remain type of outputs
-            outputs = (result,)
-        result = self.__post_forward_map(*outputs)
-        result = seq_to_func_return(result, True)
         self._is_executing_forward = False
         return result
 
@@ -257,13 +286,23 @@ class ModuleBlock(Block):
         # Identity op outside activation checkpointing scope will be the endpoint of an activation checkpointing segment.
         # Identity op as the first op of a pipeline stage will make backward op depends on the identity op within the stage,
         # otherwise the backward op may depends the op in former stage which will make graph creates unnessary buffers.
+        if self.config._stage_placement is not None:
+
+            def insert_to_global(t):
+                assert isinstance(t, Tensor)
+                return self.__get_or_create_global(t, self.config._stage_placement)
+
+            args, kwargs = self.__map_io(
+                "input", insert_to_global, "insert_to_global", *args, **kwargs
+            )
+
         if self.config.activation_checkpointing or (
             self.config.stage_id is not None and self.config.stage_id >= 0
         ):
 
             def insert_identity(t):
                 assert isinstance(t, Tensor)
-                return oneflow._C.identity(t)
+                return self.__get_or_create_identity(t)
 
             args, kwargs = self.__map_io(
                 "input", insert_identity, "insert_identity", *args, **kwargs
@@ -271,25 +310,47 @@ class ModuleBlock(Block):
 
         return args, kwargs
 
-    def __post_forward_map(self, *args):
-        # Insert identity op when doing activation checkpointing or pipeline execution.
-        if self.config.activation_checkpointing or (
-            self.config.stage_id is not None and self.config.stage_id >= 0
-        ):
+    def __get_or_create_global(self, input_tensor: Tensor = None, placement=None):
+        assert input_tensor is not None
+        assert placement is not None
+        key = str(id(input_tensor)) + str(placement)
 
-            def insert_identity(t):
-                assert isinstance(t, Tensor)
-                return oneflow._C.identity(t)
-
-            args, _ = self.__map_io(
-                "output", insert_identity, "insert_identity", *args,
+        # input_tensor + placement -> unique_global_tensor
+        if key not in self._belonged_graph._unique_global_op_dict:
+            # store input tensor to avoid tensor id recycle
+            self._belonged_graph._unique_global_op_dict[key] = (
+                input_tensor.to_global(placement=placement),
+                input_tensor,
             )
-        return args
+
+        return self._belonged_graph._unique_global_op_dict[key][0]
+
+    def __get_or_create_identity(self, input_tensor: Tensor = None):
+        assert input_tensor is not None
+        key = input_tensor
+
+        # input_tensor(with placement) -> unique_identity_tensor
+        # When placement is different, the input tensor(output tensor of __get_or_create_global) is different, so the
+        # key can use only input tensor.
+        if key not in self._belonged_graph._unique_identity_op_dict:
+            # Reuse current module name for indentity op
+            ident_name_scope = graph_build_util.make_new_name_scope(
+                self.prev_scope, self.name_prefix + self.name
+            )
+            with graph_build_util.BlockScopeContext(self.prev_scope, ident_name_scope):
+                # store input tensor to avoid tensor id recycle
+                self._belonged_graph._unique_identity_op_dict[
+                    key
+                ] = oneflow._C.identity(input_tensor)
+
+        return self._belonged_graph._unique_identity_op_dict[key]
 
     def add_module(self, name: str, module: Optional[Module]) -> None:
         self.__setattr__(
             name,
-            get_block_cls(module)(self._name_prefix + self._name + ".", name, module),
+            get_block_cls(module)(
+                self._name_prefix + self._name + ".", name, module, self._belonged_graph
+            ),
         )
 
     def register_parameter(self, name: str, param: Optional[Parameter]) -> None:
@@ -320,13 +381,16 @@ class ModuleBlock(Block):
             assert isinstance(item, Tensor)
             return func(item)
 
-        io_node = IONode(
-            None, 0, (args, kwargs), "_" + self.name_prefix + self.name + "_" + io_type
+        args_tree = ArgsTree(
+            (args, kwargs),
+            True,
+            "_" + self.name_prefix + self.name + "_" + io_type,
+            None,
         )
 
         def leaf_node_fn(leaf_node):
-            arg = leaf_node._value
-            name = leaf_node._prefix + "_" + leaf_node._name
+            arg = leaf_node.value()
+            name = leaf_node.prefix() + "_" + leaf_node.name()
             is_tensor, repr_str = self.__io_tensor_check_and_gen(arg, io_type, name)
             if is_tensor:
                 self.__print(
@@ -343,7 +407,7 @@ class ModuleBlock(Block):
                 )
                 return arg
 
-        out = io_node.map_leaf(leaf_node_fn)
+        out = args_tree.map_leaf(leaf_node_fn)
         mapped_args = out[0]
         mapped_kwargs = out[1]
         return mapped_args, mapped_kwargs
@@ -499,6 +563,9 @@ class ModuleBlock(Block):
         _append_child(self._buffers)
         _append_child(self._modules)
 
+        for op_str in self._ops_repr():
+            child_lines.append(add_indent(op_str, 2))
+
         if len(self._outs_repr) > 0:
             for out_str in self._outs_repr:
                 output_str = add_indent(out_str, 2)
@@ -525,6 +592,29 @@ class ModuleBlock(Block):
             + ")"
         )
         return shallow_repr
+
+    def _ops_repr(self):
+        r"""Generate operators' string representation of this module
+        """
+        assert self._belonged_graph, (
+            "ModuleBlock: "
+            + self._name_prefix
+            + self.name
+            + "'s belonged graph is not set."
+        )
+
+        if self._belonged_graph.is_compiled:
+            if self._belonged_graph._compiled_graph_proto is not None:
+                module_conf = self._belonged_graph._compiled_graph_proto.module_name2module_conf[
+                    self.name_prefix + self.name
+                ]
+                return operators_repr(
+                    module_conf.ops,
+                    self._belonged_graph._compiled_graph_proto,
+                    self._debug_op_repr_with_py_stack,
+                )
+
+        return []
 
     def __print(self, s_level=2, v_level=0, msg: str = ""):
         r"""Do print according to info level.
@@ -556,10 +646,14 @@ class LazyBuilder(object):
 
 class TensorBlock(Block):
     def __init__(
-        self, prefix: str = "", name: str = "", origin: Union[Parameter, Tensor] = None,
+        self,
+        prefix: str = "",
+        name: str = "",
+        origin: Union[Parameter, Tensor] = None,
+        belonged_graph: weakref.ProxyTypes = None,
     ):
         assert not isinstance(origin, Block)
-        super().__init__(prefix, name)
+        super().__init__(prefix, name, belonged_graph)
         if isinstance(origin, Parameter):
             self._type = BlockType.PARAMETER
         elif isinstance(origin, Tensor):
@@ -625,21 +719,31 @@ class TensorBlock(Block):
 
 class SequentialBlock(get_seq(ModuleBlock)):
     def __init__(
-        self, prefix: str = "", name: str = "", origin: Sequential = None,
+        self,
+        prefix: str = "",
+        name: str = "",
+        origin: Sequential = None,
+        belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
         self._name_prefix = prefix
         self._name = name
+        self._belonged_graph = belonged_graph
         self.set_origin(origin)
 
 
 class ModuleListBlock(get_list(ModuleBlock)):
     def __init__(
-        self, prefix: str = "", name: str = "", origin: ModuleList = None,
+        self,
+        prefix: str = "",
+        name: str = "",
+        origin: ModuleList = None,
+        belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
         self._name_prefix = prefix
         self._name = name
+        self._belonged_graph = belonged_graph
         self.set_origin(origin)
         # MoudleList is a container without forward() method,
         # so it will not be executed or has an execution config.
@@ -648,21 +752,31 @@ class ModuleListBlock(get_list(ModuleBlock)):
 
 class ModuleDictBlock(get_dict(ModuleBlock)):
     def __init__(
-        self, prefix: str = "", name: str = "", origin: ModuleDict = None,
+        self,
+        prefix: str = "",
+        name: str = "",
+        origin: ModuleDict = None,
+        belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
         self._name_prefix = prefix
         self._name = name
+        self._belonged_graph = belonged_graph
         self.set_origin(origin)
 
 
 class ParameterListBlock(get_para_list(ModuleBlock)):
     def __init__(
-        self, prefix: str = "", name: str = "", origin: ParameterList = None,
+        self,
+        prefix: str = "",
+        name: str = "",
+        origin: ParameterList = None,
+        belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
         self._name_prefix = prefix
         self._name = name
+        self._belonged_graph = belonged_graph
         self.set_origin(origin)
         self._is_executing_forward = True
 
@@ -679,11 +793,16 @@ class ParameterListBlock(get_para_list(ModuleBlock)):
 
 class ParameterDictBlock(get_para_dict(ModuleBlock)):
     def __init__(
-        self, prefix: str = "", name: str = "", origin: ParameterDict = None,
+        self,
+        prefix: str = "",
+        name: str = "",
+        origin: ParameterDict = None,
+        belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
         self._name_prefix = prefix
         self._name = name
+        self._belonged_graph = belonged_graph
         self.set_origin(origin)
         self._is_executing_forward = True
 

@@ -20,7 +20,6 @@ namespace oneflow {
 
 SliceParams FoldContiguousFullSliceDimensions(const SliceParams& params) {
   SliceParams fold_slice_params;
-  std::memset(&fold_slice_params, 0, sizeof(SliceParams));
   bool full_slice_on_prev_axis = false;
   FOR_RANGE(int, i, 0, params.ndim) {
     bool full_slice_on_cur_axis = params.IsFullSlice(i);
@@ -48,6 +47,12 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
     SwitchDoForward(SwitchCase(fold_slice_params.ndim), stream, fold_slice_params, entire, sliced);
   }
 
+  static void Forward(ep::Stream* stream, const SliceParams& entire_params,
+                      const SliceParams& sliced_params, const T* entire, T* sliced) {
+    SwitchDoForward(SwitchCase(entire_params.ndim), stream, entire_params, sliced_params, entire,
+                    sliced);
+  }
+
   static void Backward(ep::Stream* stream, const SliceParams& params, const T* sliced, T* entire) {
     SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
     SwitchDoBackward(SwitchCase(fold_slice_params.ndim), stream, fold_slice_params, sliced, entire);
@@ -63,6 +68,44 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
     FOR_RANGE(int, i, 0, elem_cnt) {
       int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
       sliced[i] = entire[offset];
+    }
+  }
+
+  template<int NDIM>
+  static void DoForward(ep::Stream* stream, const SliceParams& entire_params,
+                        const SliceParams& sliced_params, const T* entire, T* sliced) {
+    CHECK_EQ(entire_params.ndim, NDIM);
+    CHECK_EQ(sliced_params.ndim, NDIM);
+    int64_t elem_cnt = entire_params.elem_cnt();
+    SliceIndexHelper<NDIM> entire_splitted_large_idx_cvtr =
+        NdIndexStrideOffsetHelper<int64_t, NDIM>(entire_params.stride);
+    SliceIndexHelper<NDIM> sliced_splitted_large_idx_cvtr(entire_params.size);
+    SliceIndexHelper<NDIM> entire_full_small_idx_cvtr =
+        NdIndexStrideOffsetHelper<int64_t, NDIM>(sliced_params.stride);
+    SliceIndexHelper<NDIM> sliced_full_small_idx_cvtr(sliced_params.size);
+
+    int cnt = 1;
+    int entire_target_stride = 1;
+    int sliced_target_stride = 1;
+    // Calculate the length of continuous part
+    for (int i = NDIM - 1; i >= 0; i--) {
+      if (entire_params.stride[i] != entire_target_stride
+          || sliced_params.stride[i] != sliced_target_stride) {
+        break;
+      }
+      entire_target_stride *= entire_params.size[i];
+      sliced_target_stride *= sliced_params.size[i];
+      if (sliced_params.step[i] == 1 && entire_params.step[i] == 1) {
+        cnt *= sliced_params.size[i];
+      }
+      if (!entire_params.IsFullSlice(i) || !sliced_params.IsFullSlice(i)) { break; }
+    }
+    for (int i = 0; i < elem_cnt; i += cnt) {
+      const int64_t entire_offset = SliceOffsetToEntireOffset<NDIM>(
+          i, entire_params, entire_splitted_large_idx_cvtr, sliced_splitted_large_idx_cvtr);
+      const int64_t sliced_offset = SliceOffsetToEntireOffset<NDIM>(
+          i, sliced_params, entire_full_small_idx_cvtr, sliced_full_small_idx_cvtr);
+      std::copy(entire + entire_offset, entire + entire_offset + cnt, sliced + sliced_offset);
     }
   }
 

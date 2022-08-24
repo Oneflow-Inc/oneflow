@@ -50,7 +50,7 @@ class FunctionSchema {
   bool Parse(PyObject* args, PyObject* kwargs, PythonArg* parsed_args, bool raise_exception) const;
 
  private:
-  void ReportKwargsError(PyObject* kwargs) const;
+  void ReportKwargsError(PyObject* kwargs, size_t nargs) const;
 
   std::string signature_;
   const FunctionDef* def_;

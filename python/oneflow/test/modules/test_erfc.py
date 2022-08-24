@@ -29,14 +29,14 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestErfcModule(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_flow_erfc_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
         y = torch.erfc(x)
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_flow_erfc_with_0dim_data(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)

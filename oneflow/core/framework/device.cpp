@@ -31,13 +31,13 @@ namespace oneflow {
 namespace {
 
 inline size_t HashDevice(const std::string& type, int64_t device_id) {
-  return std::hash<std::string>()(type) ^ std::hash<int64_t>()(device_id);
+  return Hash(type, device_id);
 }
 
 void CheckDeviceType(const std::string& type) {
   if (!TRY(DeviceType4DeviceTag(type)).IsOk()) {
-    std::string error_msg =
-        "Expected one of cpu, cuda device type at start of device string " + type;
+    std::string error_msg = "Expected one of " + PrintAvailableDevices()
+                            + " device type at start of device string: " + type;
     throw std::runtime_error(error_msg);
   }
 }
@@ -56,7 +56,7 @@ Maybe<void> Device::Init() {
   {
     DeviceType dev_type = enum_type_;
     if (dev_type == kMockDevice) { dev_type = DeviceType::kCPU; }
-    mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, device_id_);
+    mem_case_ = memory::MakeMemCaseShared(enum_type_, device_id_);
   }
   return Maybe<void>::Ok();
 }

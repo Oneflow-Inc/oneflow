@@ -43,7 +43,7 @@ class BernoulliKerenl final : public user_op::OpKernel {
     K* out_dptr = out_blob->mut_dptr<K>();
     CHECK_EQ(GetDataType<T>(), in_blob->data_type());
     CHECK_EQ(GetDataType<K>(), out_blob->data_type());
-    CHECK_EQ(in_blob->shape().elem_cnt(), out_blob->shape().elem_cnt());
+    CHECK_EQ(in_blob->shape_view().elem_cnt(), out_blob->shape_view().elem_cnt());
 
     auto* kernel_state = dynamic_cast<DistributionKernelState*>(state);
     CHECK_NOTNULL(kernel_state);
@@ -51,11 +51,20 @@ class BernoulliKerenl final : public user_op::OpKernel {
     CHECK_NOTNULL(generator);
     const auto& cpu_generator = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
 
-    for (int32_t i = 0; i < out_blob->shape().elem_cnt(); ++i) {
-      double prob = static_cast<double>(*(in_dptr + i));
-      CHECK(prob >= 0.0 && prob <= 1.0);
-      std::bernoulli_distribution dis(prob);
-      *(out_dptr + i) = dis(cpu_generator->engine()) ? GetOneVal<K>() : GetZeroVal<K>();
+    double p = ctx->Attr<double>("p");
+    // prob != -1 means use prob instead of tensor to generate random number
+    if (p != static_cast<double>(-1.0)) {
+      for (int32_t i = 0; i < out_blob->shape_view().elem_cnt(); ++i) {
+        std::bernoulli_distribution dis(p);
+        *(out_dptr + i) = dis(cpu_generator->engine()) ? GetOneVal<K>() : GetZeroVal<K>();
+      }
+    } else {
+      for (int32_t i = 0; i < out_blob->shape_view().elem_cnt(); ++i) {
+        double prob = static_cast<double>(*(in_dptr + i));
+        CHECK(prob >= 0.0 && prob <= 1.0);
+        std::bernoulli_distribution dis(prob);
+        *(out_dptr + i) = dis(cpu_generator->engine()) ? GetOneVal<K>() : GetZeroVal<K>();
+      }
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

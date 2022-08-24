@@ -47,7 +47,7 @@ class DimScatter : public OpExprGradFunction<DimScatterCaptureState> {
 template<SCATTER_TYPE T>
 Maybe<void> DimScatter<T>::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -55,8 +55,8 @@ Maybe<void> DimScatter<T>::Init(const OpExpr& op) {
 template<SCATTER_TYPE T>
 Maybe<void> DimScatter<T>::Capture(DimScatterCaptureState* ctx, const TensorTuple& inputs,
                                    const TensorTuple& outputs, const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), 3);
-  CHECK_EQ_OR_RETURN(outputs.size(), 1);
+  CHECK_EQ_OR_RETURN(inputs.size(), 3);   // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
 
   ctx->input_requires_grad = inputs.at(0)->requires_grad();
   ctx->src_requires_grad = inputs.at(2)->requires_grad();
@@ -87,7 +87,7 @@ Maybe<void> DimScatter<SCATTER_TYPE::SCATTER_UPDATE>::Apply(const DimScatterCapt
                                                             const TensorTuple& out_grads,
                                                             TensorTuple* in_grads) const {
   if ((!ctx->input_requires_grad) && (!ctx->src_requires_grad)) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   JUST(ApplyCommon(ctx, out_grads, in_grads));
 
   if (ctx->input_requires_grad) {
@@ -103,7 +103,7 @@ Maybe<void> DimScatter<SCATTER_TYPE::SCATTER_ADD>::Apply(const DimScatterCapture
                                                          const TensorTuple& out_grads,
                                                          TensorTuple* in_grads) const {
   if ((!ctx->input_requires_grad) && (!ctx->src_requires_grad)) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
 
   JUST(ApplyCommon(ctx, out_grads, in_grads));
 
@@ -126,7 +126,7 @@ class DimScatterUpdateScalar : public OpExprGradFunction<DimScatterCaptureState>
 
 Maybe<void> DimScatterUpdateScalar::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
 
   return Maybe<void>::Ok();
@@ -135,8 +135,8 @@ Maybe<void> DimScatterUpdateScalar::Init(const OpExpr& op) {
 Maybe<void> DimScatterUpdateScalar::Capture(DimScatterCaptureState* ctx, const TensorTuple& inputs,
                                             const TensorTuple& outputs,
                                             const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), 2);
-  CHECK_EQ_OR_RETURN(outputs.size(), 1);
+  CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
 
   ctx->input_requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
@@ -152,7 +152,7 @@ Maybe<void> DimScatterUpdateScalar::Apply(const DimScatterCaptureState* ctx,
                                           const TensorTuple& out_grads,
                                           TensorTuple* in_grads) const {
   if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   const std::shared_ptr<oneflow::one::Tensor>& index = ctx->SavedTensors().at(0);
 
   in_grads->resize(2);

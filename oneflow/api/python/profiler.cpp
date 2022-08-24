@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
-
 #include "oneflow/core/profiler/profiler.h"
 
 namespace py = pybind11;
@@ -30,6 +29,14 @@ ONEFLOW_API_PYBIND11_MODULE("profiler", m) {
   m.def("ProfilerStart", []() { profiler::ProfilerStart(); });
 
   m.def("ProfilerStop", []() { profiler::ProfilerStop(); });
+
+  m.def("EnableProfiler", &profiler::EnableProfiler);
+
+  m.def("DisableProfilerAndReturnResult", &profiler::DisableProfilerAndReturnResult);
+
+  m.def("StartRecord", &profiler::StartRecord);
+
+  m.def("EndRecord", &profiler::EndRecord);
 }
 
 }  // namespace oneflow

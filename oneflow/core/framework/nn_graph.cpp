@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/graph/op_graph.h"
@@ -34,7 +35,9 @@ limitations under the License.
 #include "oneflow/core/job/critical_section_instance.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/plan_util.h"
+#include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
@@ -44,7 +47,7 @@ namespace oneflow {
 namespace {
 
 Maybe<bool> GetTensorValidInCurRank(const std::shared_ptr<one::Tensor>& tensor) {
-  if (tensor->is_consistent()) {
+  if (tensor->is_global()) {
     const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(JUST(tensor->parallel_desc())));
     if (parallel_id->has_value()) {
       return true;
@@ -58,7 +61,7 @@ Maybe<bool> GetTensorValidInCurRank(const std::shared_ptr<one::Tensor>& tensor) 
 
 Maybe<std::string> GetTensorMetaString(const std::shared_ptr<one::Tensor>& tensor) {
   std::string ret = "shape=" + tensor->shape()->ToString() + ", dtype=" + tensor->dtype()->name();
-  if (tensor->is_consistent()) {
+  if (tensor->is_global()) {
     ret += ", placement=" + *JUST(PlacementToString(JUST(tensor->parallel_desc())));
     ret += ", nd_sbp=" + NdSbpToString(JUST(tensor->nd_sbp()));
   } else {
@@ -253,7 +256,7 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
   }()
                                                       .GetOrThrow();
 
-  auto mgr = Global<VariableTensorMgr>::Get();
+  auto mgr = Singleton<VariableTensorMgr>::Get();
   for (auto& name : mgr->DumpNames()) {
     if (variable_names.find(name) == variable_names.end()) { mgr->Delete(name); }
   }
@@ -262,30 +265,32 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
 
 Maybe<void> NNGraph::CompileAndInitRuntime() {
   CHECK_OR_RETURN(!runtime_inited_);
-  JobBuildAndInferCtx* job_ctx = JUST(GetJobBuildAndInferCtx(name_));
-  // TODO(chengcheng): CHECK job valid for each rank.
-  job_ = job_ctx->job();
-
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
   JUST(RegisterNewVariableOpInJobPass());
   JUST(DeleteOutdatedVariableInVariableTensorMgr());
 
   // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
   one::TensorNameScope::Global()->Clear();
+  // Clear all backward pass scope
+  ClearAllBackwardPassScope();
 
-  // NOTE(chengcheng): Global<JobDesc> need be clear before GlobalJobDescScope construct.
-  if (Global<JobDesc>::Get() != nullptr) { Global<JobDesc>::Delete(); }
+  // NOTE(chengcheng): Singleton<JobDesc> need be clear before GlobalJobDescScope construct.
+  if (Singleton<JobDesc>::Get() != nullptr) { Singleton<JobDesc>::Delete(); }
 
-  auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_ctx->job_id());
+  auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id_);
+
+  // NOTE(chengcheng): do job compeleter for each rank.
+  JUST(JobCompleter().Complete(&job_));
+
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     double start = GetCurTime();
     // TODO(chengcheng): new memory reused by chunk
-    Compiler().Compile(&job_, &plan_, /* need_job_complete */ true);
+    Compiler().Compile(&job_, &plan_);
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
 
     VLOG(1) << "Graph name: " << name_ << " compile time: " << (GetCurTime() - start) / 1000000000.0
             << " seconds.";
-    if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
       PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
     }
@@ -295,19 +300,24 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
     PlanUtil::PlanMemoryLog(&plan_, name_);
+    if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+      PlanUtil::GenLightPlan(&plan_, name_);
+    }
   }
   if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name = "plan:" + job_name();
     if (GlobalProcessCtx::IsThisProcessMaster()) {
       // TODO(chengcheng): split plan for each rank.
-      Global<CtrlClient>::Get()->PushKV(plan_name, plan_);
+      Singleton<CtrlClient>::Get()->PushKV(plan_name, plan_);
     } else {
-      Global<CtrlClient>::Get()->PullKV(plan_name, &plan_);
+      Singleton<CtrlClient>::Get()->PullKV(plan_name, &plan_);
     }
     OF_SESSION_BARRIER();
     // NOTE(zwx): After barrier plan is synchronized between all ranks,
     //     then it can be cleared for saving mem.
-    if (GlobalProcessCtx::IsThisProcessMaster()) { Global<CtrlClient>::Get()->ClearKV(plan_name); }
+    if (GlobalProcessCtx::IsThisProcessMaster()) {
+      Singleton<CtrlClient>::Get()->ClearKV(plan_name);
+    }
   }
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
@@ -315,27 +325,43 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   NewRuntimeBuffers();
 
   JUST(GetVariableRealBlobAfterSyncPlan());
-  runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_));
+
+  // NOTE(strint): Do memory shrink to free cached memory in eager VM before graph runtime init.
+  JUST(vm::CurrentRankSync());
+  auto* vm = JUST(SingletonMaybe<VirtualMachine>());
+  JUST(vm->ShrinkAllMem());
+
+  runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));
   runtime_inited_ = true;
   return Maybe<void>::Ok();
 }
 
 Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
-  CHECK_OR_RETURN(variable_op_name2eager_blob_.empty());
+  CHECK_OR_RETURN(variable_op_name2eager_blob_object_.empty()) << kOfBugIssueUploadPrompt;
   JUST(vm::CurrentRankSync());
-  JobBuildAndInferCtx* job_ctx = JUST(GetJobBuildAndInferCtx(name_));
-  auto job_id = job_ctx->job_id();
   // Create or Rebuild variable, then get the real blob.
   for (const std::string& var_name : variable_op_names_) {
     auto iter = variable_op_name2tensor_.find(var_name);
     CHECK_OR_RETURN(iter != variable_op_name2tensor_.end()) << var_name << " not found.";
     std::shared_ptr<one::Tensor> tensor = iter->second;
-    Blob* var_blob = nullptr;
-    if (/*is_null=*/!tensor) {
+    vm::EagerBlobObject* var_blob = nullptr;
+    if (plan_.job_id2op_attribute_ref_table().at(job_id_).op_name2op_attribute().find(var_name)
+        == plan_.job_id2op_attribute_ref_table().at(job_id_).op_name2op_attribute().end()) {
+      // Deal with variable tensor not used in nn.Graph build.
+      CHECK(tensor != NULL)
+          << "the tensor of " << var_name
+          << " is not existed in job, so it's not created in nn.Graph and cannot be NULL.";
+      if (tensor->is_global()) {
+        const std::shared_ptr<one::LocalTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
+        var_blob = JUST(local_var->eager_blob_object()).get();
+      } else {
+        var_blob = JUST(tensor->eager_blob_object()).get();
+      }
+    } else if (/*is_null=*/!tensor) {
       // Deal with tensors which are not in the nn.Module.
       // We can call these tensors as additional variables.
       const auto& op_attribute =
-          plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().at(var_name);
+          plan_.job_id2op_attribute_ref_table().at(job_id_).op_name2op_attribute().at(var_name);
       // NOTE(chengcheng): handle constant variable created by job pass
       Symbol<ParallelDesc> placement(op_attribute.parallel_conf_signature().op_parallel_conf());
       NdSbp nd_sbp(NdSbpSignature(op_attribute.nd_sbp_signature()).bn_in_op2nd_sbp().at("out"));
@@ -359,8 +385,8 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
         }
         // NOTE(chengcheng): New EagerTensor need set LazyMode false.
         auto lazy_mode_disabled_guard = LazyMode::Guard(/*is_enabled*/ false);
-        tensor = JUST(one::functional::ConsistentConstant(
-            blob_desc.shape(), value, Symbol<DType>(dtype), placement, *sbp_tuple));
+        tensor = JUST(one::functional::GlobalConstant(blob_desc.shape(), value,
+                                                      Symbol<DType>(dtype), placement, *sbp_tuple));
         JUST(vm::CurrentRankSync());
         VLOG(2) << "Lazy nn.Graph name " << name_ << " op: " << op_attribute.op_conf().name()
                 << " created in JobPass, nn.Graph has created a eager tensor for this variable.\n";
@@ -368,27 +394,27 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
         // Load a additional variable tensor
         auto lazy_mode_disabled_guard = LazyMode::Guard(/*is_enabled*/ false);
         std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-        // To consistent from a local or consistent tensor.
-        bool check_meta = load_tensor_iter->second->is_consistent() ? false : true;
-        tensor = JUST(one::functional::ToConsistent(load_tensor_iter->second, placement, *sbp_tuple,
-                                                    grad_sbp_tuple, check_meta));
+        // To consistent from a local or global tensor.
+        bool check_meta = load_tensor_iter->second->is_global() ? false : true;
+        tensor = JUST(one::functional::ToGlobal(load_tensor_iter->second, placement, *sbp_tuple,
+                                                grad_sbp_tuple, check_meta, /*copy=*/false));
         JUST(vm::CurrentRankSync());
         VLOG(2) << "Lazy nn.Graph name " << name_ << " op: " << op_attribute.op_conf().name()
                 << " created in JobPass, nn.Graph has loaded the tensor from state dict for this "
                    "variable.\n";
       }
       // Register
-      *JUST(MapAt(&variable_op_name2tensor_, var_name)) = tensor;
+      JUST(MapAt(variable_op_name2tensor_, var_name)) = tensor;
       // NOTE(chengcheng): Just for tensor lifetime hold by session context in graph lifetime
       // valid.
       session_ctx_->StoreFreeEagerTensorWithNameByGraphName(name_, tensor, var_name);
 
-      const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
-      var_blob = JUST(local_var->eager_blob_object())->mut_blob();
-    } else if (tensor->is_consistent()) {
+      const std::shared_ptr<one::LocalTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
+      var_blob = JUST(local_var->eager_blob_object()).get();
+    } else if (tensor->is_global()) {
       // Deal with tensors which need to change sbp.
       NdSbpSignature var_nd_sbp_signature = NdSbpSignature(plan_.job_id2op_attribute_ref_table()
-                                                               .at(job_id)
+                                                               .at(job_id_)
                                                                .op_name2op_attribute()
                                                                .at(var_name)
                                                                .nd_sbp_signature());
@@ -404,22 +430,32 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
         }
         {
           auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
-          const auto& new_tensor = JUST(
-              one::functional::ToConsistent(tensor, JUST(tensor->parallel_desc()),
-                                            optimized_sbp_parallels, {}, /* check_meta */ false));
+          const auto& new_tensor = JUST(one::functional::ToGlobal(
+              tensor, JUST(tensor->parallel_desc()), optimized_sbp_parallels, {},
+              /* check_meta */ false, /*copy=*/false));
           JUST(vm::CurrentRankSync());
           // Use tensor.set_data inferface and make new TensorImpl instead of the old one.
           JUST(tensor->set_data(new_tensor));
         }
       }
-      const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
-      var_blob = JUST(local_var->eager_blob_object())->mut_blob();
+      const std::shared_ptr<one::LocalTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
+      var_blob = JUST(local_var->eager_blob_object()).get();
     } else {
-      var_blob = JUST(tensor->eager_blob_object())->mut_blob();
+      var_blob = JUST(tensor->eager_blob_object()).get();
     }
-    CHECK_OR_RETURN(var_blob != nullptr);
-    CHECK_OR_RETURN(variable_op_name2eager_blob_.emplace(var_name, var_blob).second);
+    CHECK_OR_RETURN(var_blob != nullptr) << kOfBugIssueUploadPrompt;
+    CHECK_OR_RETURN(variable_op_name2eager_blob_object_.emplace(var_name, var_blob).second)
+        << kOfBugIssueUploadPrompt;
   }
+  // Initialize or check mem_ptr_for_allocation_computation_pipelining by TouchTensors instruction.
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    auto eager_blob_objects = std::make_shared<vm::EagerBlobObjectList>();
+    for (const auto& pair : variable_op_name2eager_blob_object_) {
+      eager_blob_objects->push_back(pair.second->shared_from_this());
+    }
+    return builder->TouchTensors(eager_blob_objects);
+  }));
+  JUST(vm::CurrentRankSync());
   // Clear after load additional variable is finished.
   additional_variable_op_tobe_loaded_name2tensor_.clear();
   return Maybe<void>::Ok();
@@ -431,12 +467,12 @@ void NNGraph::NewRuntimeBuffers() {
   //   2. In Pipeline Parallelism, this value need greater than pipeline stage num for pipelining.
   size_t concurrency_width = job_.job_conf().concurrency_width();
   {
-    auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
+    auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
     buffer_mgr->NewBuffer(GetSourceTickBufferName(name_), concurrency_width);
     buffer_mgr->NewBuffer(GetCallbackNotifierBufferName(name_), concurrency_width);
   }
   {
-    auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
+    auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
     buffer_mgr->NewBuffer(GetInputCriticalSectionWaitBufferName(name_), concurrency_width);
     buffer_mgr->NewBuffer(GetInputCriticalSectionCallbackBufferName(name_), concurrency_width);
     buffer_mgr->NewBuffer(GetOutputCriticalSectionWaitBufferName(name_), concurrency_width);
@@ -453,7 +489,7 @@ void NNGraph::NewRuntimeBuffers() {
 void NNGraph::CloseRuntimeBuffers() {
   if (runtime_inited_) {
     {
-      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
+      auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
       for (const std::string& output_op_name : outputs_op_names_) {
         buffer_mgr->Get(GetOutputBufferName(name_, output_op_name))->Close();
       }
@@ -466,7 +502,7 @@ void NNGraph::CloseRuntimeBuffers() {
       buffer_mgr->Get(GetInputCriticalSectionWaitBufferName(name_))->Close();
     }
     {
-      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
+      auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
       buffer_mgr->Get(GetCallbackNotifierBufferName(name_))->Close();
       buffer_mgr->Get(GetSourceTickBufferName(name_))->Close();
     }
@@ -475,12 +511,12 @@ void NNGraph::CloseRuntimeBuffers() {
 
 namespace {
 
-Maybe<void> MakeEagerBlobObjectList(std::vector<std::shared_ptr<vm::EagerBlobObject>>* blob_list,
+Maybe<void> MakeEagerBlobObjectList(vm::EagerBlobObjectList* blob_list,
                                     const one::TensorTuple& tensor_list) {
   blob_list->reserve(tensor_list.size());
   for (const auto& tensor : tensor_list) {
     CHECK_OR_RETURN(tensor->is_eager());
-    if (tensor->is_consistent()) {
+    if (tensor->is_global()) {
       blob_list->emplace_back(JUST(JUST(tensor->cur_rank_phy_tensor())->eager_blob_object()));
     } else {
       blob_list->emplace_back(JUST(tensor->eager_blob_object()));
@@ -516,21 +552,18 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
     CHECK_OR_RETURN(nn_graph->outputs_tensor_meta_str().at(i)
                     == *JUST(GetTensorMetaString(outputs.at(i))));
   }
-  std::vector<std::shared_ptr<vm::EagerBlobObject>> input_blobs;
-  std::vector<std::shared_ptr<vm::EagerBlobObject>> output_blobs;
-  std::vector<std::shared_ptr<vm::EagerBlobObject>> var_blobs;
+  vm::EagerBlobObjectList input_blobs;
+  vm::EagerBlobObjectList output_blobs;
+  vm::EagerBlobObjectList var_blobs;
   JUST(MakeEagerBlobObjectList(&input_blobs, inputs));
   JUST(MakeEagerBlobObjectList(&output_blobs, outputs));
   JUST(MakeEagerBlobObjectList(&var_blobs, parameters));
   const auto& input_blob_list_ptr =
-      std::make_shared<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>(
-          std::move(input_blobs));
+      std::make_shared<const vm::EagerBlobObjectList>(std::move(input_blobs));
   const auto& output_blob_list_ptr =
-      std::make_shared<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>(
-          std::move(output_blobs));
+      std::make_shared<const vm::EagerBlobObjectList>(std::move(output_blobs));
   const auto& var_blob_list_ptr =
-      std::make_shared<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>(
-          std::move(var_blobs));
+      std::make_shared<const vm::EagerBlobObjectList>(std::move(var_blobs));
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->LaunchLazyJob(input_blob_list_ptr, output_blob_list_ptr, var_blob_list_ptr,
                                   nn_graph);
@@ -540,8 +573,7 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
 
 Maybe<void> SoftSyncNNGraphBuffers(const one::TensorTuple& buffers,
                                    const std::shared_ptr<NNGraph>& nn_graph) {
-  const auto& eager_blob_objects =
-      std::make_shared<std::vector<std::shared_ptr<vm::EagerBlobObject>>>();
+  const auto& eager_blob_objects = std::make_shared<vm::EagerBlobObjectList>();
   JUST(MakeEagerBlobObjectList(eager_blob_objects.get(), buffers));
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->SoftSyncNNGraphBuffers(eager_blob_objects, nn_graph);

@@ -77,6 +77,11 @@ class ParamGroup(object):
     def items(self):
         return self.__dict__.items()
 
+    def __repr__(self):
+        res = self.options
+        res["params"] = self.parameters
+        return str(res)
+
     @property
     def options(self):
         return self._options
@@ -107,6 +112,16 @@ def _decorate_step(step):
     return decorated_step
 
 
+class _RequiredParameter(object):
+    """Singleton class representing a required parameter for an Optimizer."""
+
+    def __repr__(self):
+        return "<required parameter>"
+
+
+required = _RequiredParameter()
+
+
 class Optimizer(object):
     def __init__(self, parameters, options):
         self.param_groups = list()
@@ -119,13 +134,92 @@ class Optimizer(object):
         self.step = _decorate_step(self.step)
 
     def add_param_group(self, param_group) -> None:
-        raise NotImplementedError()
+        r"""
+        
+        Add a param group to the :class:`Optimizer` s `param_groups`.
+        This can be useful when fine tuning a pre-trained network as frozen layers can be made
+        trainable and added to the :class:`Optimizer` as training progresses.
+        
+        Args:
+            param_group (dict): Specifies what Tensors should be optimized along with group
+                specific optimization options.
+        
+        Example:
+
+        >>> import oneflow
+        >>> import oneflow.optim as optim
+        >>> w1 = oneflow.ones(3, 3)
+        >>> w1.requires_grad = True
+        >>> w2 = oneflow.ones(3, 3)
+        >>> w2.requires_grad = True
+        >>> o = optim.SGD([w1])
+        >>> o.param_groups[0]
+        {'lr': 0.001, 'momentum': 0.0, 'dampening': 0.0, 'weight_decay': 0.0, 'nesterov': False, 'maximize': False, 'params': [tensor([[1., 1., 1.],
+                [1., 1., 1.],
+                [1., 1., 1.]], dtype=oneflow.float32, requires_grad=True)]}
+        >>> o.add_param_group({'params': w2})
+        >>> o.param_groups[1]
+        {'lr': 0.001, 'momentum': 0.0, 'dampening': 0.0, 'weight_decay': 0.0, 'nesterov': False, 'maximize': False, 'params': [tensor([[1., 1., 1.],
+                [1., 1., 1.],
+                [1., 1., 1.]], dtype=oneflow.float32, requires_grad=True)]}
+
+        """
+        assert isinstance(param_group, dict), "param group must be a dict"
+
+        params = param_group["params"]
+        if isinstance(params, flow.Tensor):
+            param_group["params"] = [params]
+        elif isinstance(params, set):
+            raise TypeError(
+                "optimizer parameters need to be organized in ordered collections, but "
+                "the ordering of tensors in sets will change between runs. Please use a list instead."
+            )
+        else:
+            param_group["params"] = list(params)
+
+        for param in param_group["params"]:
+            if not isinstance(param, flow.Tensor):
+                raise TypeError(
+                    "optimizer can only optimize Tensors, "
+                    "but one of the params is " + type(param)
+                )
+            if not param.is_leaf:
+                raise ValueError("can't optimize a non-leaf Tensor")
+
+        for name, default in self._default_options.items():
+            if default is required and name not in param_group:
+                raise ValueError(
+                    "parameter group didn't specify a value of required optimization parameter "
+                    + name
+                )
+            else:
+                param_group.setdefault(name, default)
+        params = param_group["params"]
+        if len(params) != len(set(params)):
+            warnings.warn(
+                "optimizer contains a parameter group with duplicate parameters; "
+                "in future, this will cause an error; ",
+                stacklevel=3,
+            )
+
+        param_set = set()
+        for group in self.param_groups:
+            param_set.update(set(group.parameters))
+
+        if not param_set.isdisjoint(set(param_group["params"])):
+            raise ValueError("some parameters appear in more than one parameter group")
+
+        self.param_groups.append(ParamGroup(param_group, self._default_options))
+
+        for param in param_group["params"]:
+            assert param.is_leaf, "parameters must be leaf tensor"
+            self._state[param] = dict()
 
     def load_state_dict(self, state_dict) -> None:
         r"""
         Load the state of the optimizer which is created by `state_dict` function.
 
-        It almost copied from: https://pytorch.org/docs/stable/_modules/torch/optim/optimizer.html#Optimizer.load_state_dict
+        It almost copied from: https://pytorch.org/docs/1.10/_modules/torch/optim/optimizer.html#Optimizer.load_state_dict.
         """
 
         # Validate the state_dict
@@ -159,7 +253,13 @@ class Optimizer(object):
                 if value.is_local:
                     value = value.to(param.device)
                 else:
-                    value = value.to_global(placement=param.placement, sbp=param.sbp)
+                    cpu_value_placement = flow.placement("cpu", value.placement.ranks)
+                    cpu_param_placement = flow.placement("cpu", param.placement.ranks)
+                    value = (
+                        value.to_global(placement=cpu_value_placement)
+                        .to_global(placement=cpu_param_placement, sbp=param.sbp)
+                        .to_global(placement=param.placement)
+                    )
                 return value
             elif isinstance(value, dict):
                 return {k: cast(param, v) for k, v in value.items()}
@@ -191,7 +291,7 @@ class Optimizer(object):
 
     def state_dict(self):
         r"""
-        Returns the state of the optimizer as a :class:`dict`.
+        Returns the state of the optimizer as a :py:class:`dict`.
 
         It contains two entries:
 
@@ -199,7 +299,7 @@ class Optimizer(object):
           differs between optimizer classes.
         * param_group - a dict containing all parameter groups.
 
-        It almost copied from: https://pytorch.org/docs/stable/_modules/torch/optim/optimizer.html#Optimizer.state_dict
+        It almost copied from: https://pytorch.org/docs/1.10/_modules/torch/optim/optimizer.html#Optimizer.state_dict.
         """
 
         # Save order indices instead of Tensors
@@ -242,7 +342,7 @@ class Optimizer(object):
         """
         raise NotImplementedError()
 
-    def clip_grad(self):
+    def clip_grad(self, error_if_nonfinite: bool = False):
         r"""Clips gradient norm of an iterable of parameters. 
         The norm is computed over all gradients together, as if they were concatenated into a single vector.
 
@@ -252,6 +352,11 @@ class Optimizer(object):
 
         You can also refer the code in :func:`oneflow.nn.utils.clip_grad_norm_`
 
+        Args:
+            error_if_nonfinite (bool): if True, an error is thrown if the total
+                norm of the gradients from :attr:``parameters`` is ``nan``,
+                ``inf``, or ``-inf``. Default: False (will switch to True in the future)
+
         """
         for param_group in self.param_groups:
             if param_group._enable_clip_grad:
@@ -259,7 +364,7 @@ class Optimizer(object):
                     param_group.parameters,
                     param_group["clip_grad_max_norm"],
                     param_group["clip_grad_norm_type"],
-                    True,
+                    error_if_nonfinite,
                 )
             else:
                 warnings.warn(
@@ -267,7 +372,7 @@ class Optimizer(object):
                 )
 
     def zero_grad(self, set_to_none: bool = False):
-        """Sets the gradients of all optimized torch.Tensor s to zero.
+        """Sets the gradients of all optimized :class:`oneflow.Tensor` s to zero.
 
         Args:
             set_to_none (bool): instead of setting to zero, set the grads to None.
@@ -329,11 +434,9 @@ class Optimizer(object):
         assert "clip_grad_norm_type" in param_group
         max_norm = float(param_group["clip_grad_max_norm"])
         norm_type = float(param_group["clip_grad_norm_type"])
-        clip_grad_norm = (
-            optimizer_conf.mutable_clip_conf().mutable_clip_by_global_norm()
-        )
-        clip_grad_norm.set_max_norm(max_norm)
-        clip_grad_norm.set_norm_type(norm_type)
+        clip_grad_norm = optimizer_conf.clip_conf.clip_by_global_norm
+        clip_grad_norm.max_norm = max_norm
+        clip_grad_norm.norm_type = norm_type
 
     @property
     def support_sparse(self):
@@ -377,6 +480,6 @@ class Optimizer(object):
                 if not param.requires_grad:
                     continue
 
-                sparse_opt_conf = job_conf.mutable_indexed_slices_optimizer_conf()
-                sparse_variable_op_names = sparse_opt_conf.mutable_include_op_names()
-                sparse_variable_op_names.add_op_name(vars_conf[param].name)
+                sparse_opt_conf = job_conf.indexed_slices_optimizer_conf
+                sparse_variable_op_names = sparse_opt_conf.include_op_names
+                sparse_variable_op_names.op_name.append(vars_conf[param].name)

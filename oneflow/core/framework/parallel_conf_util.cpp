@@ -15,30 +15,26 @@ limitations under the License.
 */
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
-#include "oneflow/core/common/shape.cfg.h"
 #include "oneflow/core/common/shape.pb.h"
 
 namespace oneflow {
 
-Maybe<std::tuple<std::string, std::vector<std::string>, std::shared_ptr<cfg::ShapeProto>>>
-GetDeviceTagAndMachineDeviceIdsAndHierarchy(
-    const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
+Maybe<std::tuple<std::string, std::vector<std::string>, std::shared_ptr<ShapeProto>>>
+GetDeviceTagAndMachineDeviceIdsAndHierarchy(const ParallelConf& parallel_conf) {
   std::vector<std::string> machine_device_ids;
-  machine_device_ids.reserve(parallel_conf->device_name().size());
-  for (const std::string& device_name : parallel_conf->device_name()) {
+  machine_device_ids.reserve(parallel_conf.device_name().size());
+  for (const std::string& device_name : parallel_conf.device_name()) {
     machine_device_ids.emplace_back(device_name);
   }
-  std::shared_ptr<cfg::ShapeProto> hierarchy;
-  if (parallel_conf->has_hierarchy()) {
-    hierarchy.reset(new cfg::ShapeProto(parallel_conf->hierarchy()));
-  }
-  return std::make_tuple(parallel_conf->device_tag(), machine_device_ids, hierarchy);
+  std::shared_ptr<ShapeProto> hierarchy;
+  if (parallel_conf.has_hierarchy()) { hierarchy.reset(new ShapeProto(parallel_conf.hierarchy())); }
+  return std::make_tuple(parallel_conf.device_tag(), machine_device_ids, hierarchy);
 }
 
-Maybe<cfg::ParallelConf> MakeParallelConf(const std::string& device_tag,
-                                          const std::vector<std::string>& machine_device_ids,
-                                          const std::shared_ptr<Shape>& hierarchy) {
-  std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
+Maybe<ParallelConf> MakeParallelConf(const std::string& device_tag,
+                                     const std::vector<std::string>& machine_device_ids,
+                                     const std::shared_ptr<Shape>& hierarchy) {
+  std::shared_ptr<ParallelConf> parallel_conf = std::make_shared<ParallelConf>();
   parallel_conf->set_device_tag(device_tag);
   for (const std::string& machine_device_id : machine_device_ids) {
     size_t pos = machine_device_id.find(':');
@@ -61,7 +57,7 @@ Maybe<cfg::ParallelConf> MakeParallelConf(const std::string& device_tag,
     if (hierarchy) {
       ShapeProto proto;
       hierarchy->ToProto(&proto);
-      parallel_conf->mutable_hierarchy()->CopyFrom(cfg::ShapeProto(proto));
+      parallel_conf->mutable_hierarchy()->CopyFrom(proto);
     }
   }
   return parallel_conf;

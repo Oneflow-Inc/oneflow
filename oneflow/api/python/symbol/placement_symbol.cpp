@@ -17,6 +17,7 @@ limitations under the License.
 #include <pybind11/stl.h>
 #include <pybind11/operators.h>
 
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/of_api_registry.h"
@@ -28,10 +29,7 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
-
-#ifdef WITH_CUDA
-#include <cuda_runtime_api.h>
-#endif  // WITH_CUDA
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace py = pybind11;
 
@@ -39,20 +37,15 @@ namespace oneflow {
 
 namespace {
 
-int64_t GetGpuDeviceNum() {
-#ifndef WITH_CUDA
-  return 0;
-#else
-  int device_count = 0;
-  cudaGetDeviceCount(&device_count);
-  return device_count;
-#endif
+int64_t GetDeviceCount(const std::string& device_name) {
+  return Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(device_name);
 }
 
 struct PlacementSymbolExportUtil {
   static Maybe<void> CheckDeviceTag(const std::string& type) {
     if (!TRY(DeviceType4DeviceTag(type)).IsOk()) {
-      return Error::RuntimeError() << "placement type " << type << " not supported.";
+      return Error::RuntimeError() << "Expected one of " << PrintAvailableDevices()
+                                   << " device type at start of device string: " << type;
     }
     return Maybe<void>::Ok();
   }
@@ -62,6 +55,19 @@ struct PlacementSymbolExportUtil {
       const std::shared_ptr<Shape>& hierarchy_shape) {
     JUST(CheckDeviceTag(type));
     auto parallel_conf = JUST(MakeParallelConf(type, formated_machine_device_ids, hierarchy_shape));
+    std::shared_ptr<ParallelDesc> parallel_desc;
+    JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
+      parallel_desc = JUST(builder->GetParallelDescSymbol(*parallel_conf));
+      return Maybe<void>::Ok();
+    }));
+
+    return parallel_desc;
+  }
+
+  static Maybe<ParallelDesc> CreateParallelDesc(const std::string& proto_str) {
+    ParallelConf parallel_conf;
+    CHECK_OR_RETURN(TxtString2PbMessage(proto_str, &parallel_conf))
+        << " Get ParallelConf Pb from string failed.";
     std::shared_ptr<ParallelDesc> parallel_desc;
     JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
       parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
@@ -107,17 +113,12 @@ struct PlacementSymbolExportUtil {
   static Maybe<std::vector<std::string>> ParseAndFormatRanks(PyArrayObject* ranks) {
     size_t size = PyArray_SIZE(ranks);
     CHECK_EQ_OR_RETURN(PyArray_TYPE(ranks), NPY_INT64)
-        << "placement ranks shoule be array of int64.";
+        << Error::RuntimeError() << "placement ranks shoule be an array of long int";
     int64_t* rank_data = static_cast<int64_t*>(PyArray_DATA(ranks));
 
     std::vector<std::pair<int64_t, int64_t>> machine_device_id_vec;
     for (int i = 0; i < size; ++i) {
       int64_t rank = rank_data[i];
-      // TODO(hjchen2): Prevent users from creating illegal placement
-      // if (rank >= GlobalProcessCtx::WorldSize()) {
-      //   return Error::RuntimeError() << "rank " << rank << " is invalid since the world size is "
-      //                                << GlobalProcessCtx::WorldSize();
-      // }
       int64_t machine_id = GlobalProcessCtx::NodeId(rank);
       int64_t device_id = GlobalProcessCtx::LocalRank(rank);
       machine_device_id_vec.emplace_back(machine_id, device_id);
@@ -143,26 +144,31 @@ struct PlacementSymbolExportUtil {
                                                               const py::object& ranks) {
     auto* obj = reinterpret_cast<PyArrayObject*>(PyArray_FromAny(
         ranks.ptr(), nullptr, 0, 0, NPY_ARRAY_DEFAULT | NPY_ARRAY_ENSURECOPY, nullptr));
-    if (!obj) { return Error::RuntimeError() << "placement ranks must be int64 array."; }
+    if (!obj) { return Error::RuntimeError() << "placement ranks shoule be an array of long int"; }
 
     const auto& shape = JUST(GetRanksShape(obj));
     const auto& formated_machine_device_ids = JUST(ParseAndFormatRanks(obj));
     return SymbolOf(*JUST(CreateParallelDesc(type, *formated_machine_device_ids, shape)));
   }
 
+  static Maybe<Symbol<ParallelDesc>> CreateParallelDescSymbol(const std::string& proto_str) {
+    return SymbolOf(*JUST(CreateParallelDesc(proto_str)));
+  }
+
   static Maybe<Symbol<ParallelDesc>> AllDevicePlacement(const std::string& type) {
     static thread_local HashMap<std::string, Symbol<ParallelDesc>> device_tag2placement;
-    CHECK_NOTNULL((Global<ResourceDesc, ForEnv>::Get()));
+    CHECK_NOTNULL((Singleton<ResourceDesc, ForEnv>::Get()));
     JUST(CheckDeviceTag(type));
     auto it = device_tag2placement.find(type);
     if (it == device_tag2placement.end()) {
       int64_t node_size = GlobalProcessCtx::NodeSize();
       int64_t device_num = GlobalProcessCtx::NumOfProcessPerNode();
-      if (type == "cuda") {
-        const int64_t gpu_device_num = GetGpuDeviceNum();
-        CHECK_NE_OR_RETURN(gpu_device_num, 0)
-            << "Can\'t construct placement with \"cuda\" type because there is no CUDA device!";
-        device_num = std::min(device_num, gpu_device_num);
+      if (type != "cpu") {
+        const int64_t device_count = GetDeviceCount(type);
+        CHECK_NE_OR_RETURN(device_count, 0)
+            << Error::RuntimeError() << "Can\'t construct placement with \"" << type
+            << "\" type because there is no device!";
+        device_num = std::min(device_num, device_count);
       }
       std::vector<std::string> machine_device_ids;
       for (int64_t node_id = 0; node_id < node_size; ++node_id) {
@@ -225,6 +231,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
              return PlacementSymbolExportUtil::CreateParallelDescSymbol(type, ranks).GetOrThrow();
            }),
            py::arg("type"), py::arg("ranks"))
+      .def(py::init([](const std::string& proto_str) {
+             return PlacementSymbolExportUtil::CreateParallelDescSymbol(proto_str).GetOrThrow();
+           }),
+           py::arg("proto_str"))
       .def_property_readonly(
           "device_type",
           [](Symbol<ParallelDesc> p) {

@@ -145,6 +145,14 @@ class TestAsTensor(flow.unittest.TestCase):
                         # Ignore cast or kernel mismatch error in test example
                         pass
 
+    def test_numpy_dtype_bug(test_case):
+        test_case.assertEqual(flow.as_tensor([1.0]).dtype, flow.float32)
+        x = np.random.randn(10)
+        y1 = flow.as_tensor(x, dtype=flow.int64)
+        y2 = flow.as_tensor(x, dtype=flow.float64)
+        test_case.assertEqual(y1.dtype, flow.int64)
+        test_case.assertEqual(y2.dtype, flow.float64)
+
 
 if __name__ == "__main__":
     unittest.main()

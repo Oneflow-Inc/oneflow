@@ -31,13 +31,15 @@ def _check_initializer(initializer):
     assert isinstance(initializer, dict)
     assert initializer.__contains__("type")
     initializer_type = initializer["type"]
-    assert initializer_type in ["uniform", "normal"]
+    assert initializer_type in ["uniform", "normal", "constant"]
     if initializer_type == "uniform":
         assert initializer.__contains__("low")
         assert initializer.__contains__("high")
     elif initializer_type == "normal":
         assert initializer.__contains__("mean")
         assert initializer.__contains__("std")
+    elif initializer_type == "constant":
+        assert initializer.__contains__("value")
     else:
         raise NotImplementedError("unsupported initializer_type")
 
@@ -87,6 +89,7 @@ def _init(
     ).itemsize
     assert value_type_size > 0
     key_value_store_options["value_type_size"] = value_type_size
+    key_value_store_options["value_type"] = str(dtype)
     scale_factor = store_options["size_factor"]
     key_value_store_options["storage_dim"] = scale_factor * embedding_dim
     # kv store
@@ -209,7 +212,10 @@ class Embedding(Module):
             "%Y-%m-%d-%H-%M-%S-%f"
         )
         self.handler.SaveSnapshot(snapshot_timestamp_str)
-        destination[prefix + "OneEmbedding"] = snapshot_timestamp_str
+        destination[prefix + "OneEmbeddingSnapshot"] = snapshot_timestamp_str
+        destination[
+            prefix + "OneEmbeddingKeyValueOptions"
+        ] = self.key_value_store_options
 
     def _load_from_state_dict(
         self,
@@ -221,7 +227,7 @@ class Embedding(Module):
         unexpected_keys,
         error_msgs,
     ):
-        key = prefix + "OneEmbedding"
+        key = prefix + "OneEmbeddingSnapshot"
         if key in state_dict:
             saved_snapshot_name = state_dict[key]
             try:
@@ -269,7 +275,7 @@ class Embedding(Module):
         self.handler.LoadSnapshot(snapshot_name)
 
     def forward(self, ids, table_ids=None):
-        """forward of MultiTableEmbedding
+        """Embedding lookup operation
 
         Args:
             ids (flow.tensor): the feature ids
@@ -490,11 +496,32 @@ def make_normal_initializer(mean, std):
     return {"type": "normal", "mean": mean, "std": std}
 
 
+def make_constant_initializer(value):
+    """make constant initializer param of make_table_options
+
+    Args:
+        constant (float): A python scalar. value to generate.
+
+    Returns:
+        dict: initializer param of make_table_options
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> initializer = flow.one_embedding.make_constant_initializer(value=0)
+        >>> # pass the initializer to flow.one_embedding.make_table_options
+        >>> # ...
+    """
+    return {"type": "constant", "value": value}
+
+
 def make_table_options(param):
     """make table param of Embedding tables
 
     Args:
-        param (dict or list): param can be initializer or list of column_option. initializer can be made by make_uniform_initializer or make_normal_initializer, column options can be made by make_column_options
+        param (dict or list): param can be initializer or list of column_option. initializer can be made by make_uniform_initializer or make_normal_initializer or make_constant_initializer, column options can be made by make_column_options
 
     Returns:
         dict: table param of Embedding tables
@@ -744,42 +771,41 @@ class Ftrl(Optimizer):
     The formula is: 
 
         .. math:: 
-
-            & accumlator_{i+1} = accumlator_{i} + grad * grad
-            
-            & sigma = (accumulator_{i+1}^{lr\_power} - accumulator_{i}^{lr\_power}) / learning\_rate
-            
-            & z_{i+1} = z_{i} + grad - sigma * param_{i}
-
-            \text{}
-                param_{i+1} = \begin{cases}
-            0 & \text{ if } |z_{i+1}| < \lambda_1 \\
-            -(\frac{\beta+accumlator_{i+1}^{lr\_power}}{learning\_rate} + \lambda_2)*(z_{i+1} - sign(z_{i+1})*\lambda_1) & \text{ otherwise } \\
-            \end{cases}
+                \begin{align}
+                accumlator_{i+1} = accumlator_{i} + grad * grad \\
+                sigma = (accumulator_{i+1}^{lr\_power} - accumulator_{i}^{lr\_power}) / learning\_rate \\
+                z_{i+1} = z_{i} + grad - sigma * param_{i} \\
+                \text{}
+                    param_{i+1} = \begin{cases}
+                    0 & \text{ if } |z_{i+1}| < \lambda_1 \\
+                    -(\frac{\beta+accumlator_{i+1}^{lr\_power}}{learning\_rate} + \lambda_2)*(z_{i+1} - sign(z_{i+1})*\lambda_1) & \text{ otherwise } \\
+                \end{cases}
+                \end{align}
     
     Example 1: 
 
     .. code-block:: python 
 
         # Assume net is a custom model. 
-        adam = flow.one_embedding.FTRL(net.parameters(), lr=1e-3)
+        ftrl = flow.one_embedding.FTRL(net.parameters(), lr=1e-3)
 
         for epoch in range(epochs):
             # Read data, Compute the loss and so on. 
             # ...
             loss.backward()
-            adam.step()
-            adam.zero_grad()
+            ftrl.step()
+            ftrl.zero_grad()
 
     Args:
-        params (Union[Iterator[Parameter], List[Dict]]): _description_
-        lr (float, optional): _description_. Defaults to 0.001.
-        weight_decay (float, optional): _description_. Defaults to 0.0.
-        lr_power (float, optional): _description_. Defaults to -0.5.
-        initial_accumulator_value (float, optional): _description_. Defaults to 0.1.
-        lambda1 (float, optional): _description_. Defaults to 0.0.
-        lambda2 (float, optional): _description_. Defaults to 0.0.
-        beta (float, optional): _description_. Defaults to 0.0.
+        params (iterable): iterable of parameters to optimize or dicts defining
+            parameter groups
+        lr (float, optional): learning rate. Defaults to 1e-3.
+        weight_decay (float, optional): weight decay (L2 penalty). Defaults to 0.0.
+        lr_power (float, optional): learning rate decrease factor. Defaults to -0.5.
+        initial_accumulator_value (float, optional): The initial value of accumlator. Defaults to 0.1.
+        lambda1 (float, optional): L1 regularization strength. Defaults to 0.0.
+        lambda2 (float, optional): L2 regularization strength. Defaults to 0.0.
+        beta (float, optional): The value of beta. Defaults to 0.0.
     """
 
     def __init__(
@@ -804,7 +830,6 @@ class Ftrl(Optimizer):
         options["lambda2"] = lambda2
         options["beta"] = beta
         super().__init__(params, options)
-        # print("initial accumulator value is: ", options["initial_accumulator_value"])
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
@@ -863,7 +888,7 @@ class Ftrl(Optimizer):
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
-            optimizer_conf = train_conf.mutable_optimizer_conf().Add()
+            optimizer_conf = train_conf.optimizer_conf.add()
 
             lr = (
                 param_group["initial_lr"]
@@ -878,21 +903,21 @@ class Ftrl(Optimizer):
             lambda2 = param_group["lambda2"]
             beta = param_group["beta"]
 
-            optimizer_conf.set_base_learning_rate(lr)
-            optimizer_conf.mutable_ftrl_conf().set_initial_accumulator_value(
+            optimizer_conf.base_learning_rate = lr
+            optimizer_conf.ftrl_conf.initial_accumulator_value = (
                 initial_accumulator_value
             )
-            optimizer_conf.mutable_ftrl_conf().set_lr_power(lr_power)
-            optimizer_conf.mutable_ftrl_conf().set_lambda1(lambda1)
-            optimizer_conf.mutable_ftrl_conf().set_lambda2(lambda2)
-            optimizer_conf.mutable_ftrl_conf().set_beta(beta)
+            optimizer_conf.ftrl_conf.lr_power = lr_power
+            optimizer_conf.ftrl_conf.lambda1 = lambda1
+            optimizer_conf.ftrl_conf.lambda2 = lambda2
+            optimizer_conf.ftrl_conf.beta = beta
 
             self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
 
             for param in param_group.parameters:
                 vars_conf[param].l2 = l2
                 if param.requires_grad:
-                    optimizer_conf.add_variable_op_names(vars_conf[param].name)
+                    optimizer_conf.variable_op_names.append(vars_conf[param].name)
 
             new_opt_confs.append(optimizer_conf)
         return new_opt_confs
@@ -906,6 +931,7 @@ def make_persistent_table_reader(
     paths, snapshot_name, key_type, value_type, storage_dim, physical_block_size=512,
 ):
     r"""Creates a reader for reading persistent table.
+
     Args:
         paths (list): paths of tables to read
         snapshot_name (str): name of the snapshot to read
@@ -929,6 +955,7 @@ def make_persistent_table_writer(
     paths, snapshot_name, key_type, value_type, storage_dim, physical_block_size=512,
 ):
     r"""Creates a writer for writing persistent table.
+
     Args:
         paths (list): paths of tables to write
         snapshot_name (str): name of the snapshot to write

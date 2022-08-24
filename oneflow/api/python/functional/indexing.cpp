@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/functional/functional.h"
@@ -68,7 +67,7 @@ DataType InferScalarType(PyObject* object) {
     return numpy::NumpyTypeToOFDataType(PyArray_DescrFromScalar(object)->type_num).GetOrThrow();
   } else if (PySequence_Check(object)) {
     int64_t length = PySequence_Length(object);
-    CHECK_GT_OR_THROW(length, 0) << "Index should not be empty.";
+    if (length == 0) { return DataType::kInt64; }
     DataType scalar_type = DataType::kInvalidDataType;
     for (int64_t i = 0; i < length; ++i) {
       PyObjectPtr item(PySequence_GetItem(object, i));
@@ -126,16 +125,18 @@ void RecursiveParseAndAssign(PyObject* object, char* data, const int& ndims, con
   }
 }
 
-void ParseArrayToBlob(PyObject* object, Blob* blob) {
-  const DataType dtype = blob->data_type();
-  const int ndims = blob->shape().NumAxes();
+void ParseArrayToTensor(PyObject* object,
+                        const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+  const DataType dtype = eager_blob_object->data_type();
+  const int ndims = eager_blob_object->shape().NumAxes();
   DimVector strides(ndims);
   int64_t size = 1;
   for (int i = ndims - 1; i >= 0; --i) {
     strides[i] = size;
-    size *= blob->shape().At(i);
+    size *= eager_blob_object->shape().At(i);
   }
-  RecursiveParseAndAssign(object, blob->mut_dptr<char>(), ndims, 0, blob->shape(), strides, dtype);
+  RecursiveParseAndAssign(object, eager_blob_object->mut_dptr<char>(), ndims, 0,
+                          eager_blob_object->shape(), strides, dtype);
 }
 
 Shape InferArraySizes(PyObject* object) {
@@ -144,7 +145,6 @@ Shape InferArraySizes(PyObject* object) {
   PyObjectPtr handle;
   while (PySequence_Check(seq)) {
     int64_t length = PySequence_Length(seq);
-    CHECK_GT_OR_THROW(length, 0) << "Index should not be empty.";
     sizes.emplace_back(length);
     CHECK_LE_OR_THROW(sizes.size(), /*MAX_DIMS=*/128)
         << "Too many dimensions " << Py_TYPE(seq)->tp_name;
@@ -165,21 +165,24 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
                                   "(`None`) and integer or boolean arrays are valid indices";
   }
   // In advanced indexing condition, index can be array object, need to handle it specially.
-  if (PyArray_Check(object)) { return TensorWithData(object, NullOpt, device, false); }
+  if (PyArray_Check(object)) {
+    return TensorWithData(object, NullOpt, device, false, /*pin_memory=*/false);
+  }
 
   const auto& sizes = InferArraySizes(object);
-  const auto& tensor = JUST(functional::Empty(sizes, CHECK_JUST(DType::Get(dtype)), device));
+  const auto& tensor =
+      JUST(functional::Empty(sizes, CHECK_JUST(DType::Get(dtype)), device, /*pin_memory=*/false));
   // Prevent the python object release until the callback is complete.
   Py_INCREF(object);
   auto handle = std::shared_ptr<PyObject>(PyObjectPtr(object));
 
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->AccessBlobByCallback(
-        JUST(tensor->AsMirroredTensor()),
-        [handle](uint64_t ofblob_ptr) {
-          auto* of_blob = reinterpret_cast<OfBlob*>(ofblob_ptr);
-          CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
-            ParseArrayToBlob(handle.get(), of_blob->mut_blob());
+        JUST(tensor->AsLocalTensor()),
+        [handle](ep::Stream* stream,
+                 const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+          CHECK_JUST(Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+            ParseArrayToTensor(handle.get(), eager_blob_object);
             return Maybe<void>::Ok();
           }));
         },
@@ -208,7 +211,7 @@ IndexItem UnpackIndexItem(PyObject* object) {
   } else if (PySequence_Check(object)) {
     return IndexItem(ConvertToIndexingTensor(object).GetPtrOrThrow());
   }
-  THROW(TypeError) << "Invalid index " << Py_TYPE(object)->tp_name;
+  THROW(IndexError) << "Invalid index " << Py_TYPE(object)->tp_name;
   return IndexItem();
 }
 

@@ -29,6 +29,8 @@ limitations under the License.
 #include "oneflow/core/register/op_blob_arg.pb.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
+#include "oneflow/core/job/job_conf.pb.h"
+#include "oneflow/core/job/scope.pb.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 
 namespace oneflow {
@@ -190,6 +192,14 @@ class BlobDescProto;
 bool operator==(const BlobDescProto& lhs, const BlobDescProto& rhs);
 inline bool operator!=(const BlobDescProto& lhs, const BlobDescProto& rhs) { return !(lhs == rhs); }
 
+inline bool operator==(const JobConfigProto& lhs, const JobConfigProto& rhs) {
+  return PbMd().Equals(lhs, rhs);
+}
+
+inline bool operator==(const ScopeProto& lhs, const ScopeProto& rhs) {
+  return PbMd().Equals(lhs, rhs);
+}
+
 // Persistent
 
 PersistentOutStream& operator<<(PersistentOutStream&, const PbMessage&);
@@ -217,31 +227,31 @@ struct hash<oneflow::DataType> {
 template<>
 struct hash<oneflow::LogicalBlobId> {
   size_t operator()(const oneflow::LogicalBlobId& lbi) const {
-    const auto& str_hash = std::hash<std::string>();
-    return str_hash(lbi.op_name()) ^ str_hash(lbi.blob_name());
+    using namespace oneflow;
+    return Hash(lbi.op_name(), lbi.blob_name());
   }
 };
 
 template<>
 struct hash<oneflow::OpBlobArg> {
   size_t operator()(const oneflow::OpBlobArg& oba) const {
-    const auto& str_hash = std::hash<std::string>();
-    return str_hash(oba.op_name()) ^ str_hash(oba.bn_in_op());
+    using namespace oneflow;
+    return Hash(oba.op_name(), oba.bn_in_op());
   }
 };
 
 template<>
 struct hash<oneflow::SbpParallel> {
   size_t operator()(const oneflow::SbpParallel& sbp_parallel) const {
-    const auto& str_hash = std::hash<std::string>();
+    using namespace oneflow;
     size_t ret = 0;
     if (sbp_parallel.has_broadcast_parallel()) {
-      ret ^= str_hash("B");
+      AddHash(&ret, std::string("B"));
     } else if (sbp_parallel.has_partial_sum_parallel()) {
-      ret ^= str_hash("P");
+      AddHash(&ret, std::string("P"));
     } else if (sbp_parallel.has_split_parallel()) {
-      ret ^= str_hash("S");
-      ret ^= std::hash<int64_t>()(sbp_parallel.split_parallel().axis());
+      AddHash(&ret, std::string("S"));
+      AddHash(&ret, sbp_parallel.split_parallel().axis());
     } else {
       UNIMPLEMENTED();
     }
@@ -258,6 +268,20 @@ struct hash<oneflow::NdSbp> {
       oneflow::HashCombine(&hash, sbp_hash(nd_sbp.sbp_parallel(i)));
     }
     return hash;
+  }
+};
+
+template<>
+struct hash<oneflow::JobConfigProto> {
+  size_t operator()(const oneflow::JobConfigProto& job_conf) const {
+    return oneflow::SerializedHashPb<oneflow::JobConfigProto>()(job_conf);
+  }
+};
+
+template<>
+struct hash<oneflow::ScopeProto> {
+  size_t operator()(const oneflow::ScopeProto& scope) const {
+    return oneflow::SerializedHashPb<oneflow::ScopeProto>()(scope);
   }
 };
 

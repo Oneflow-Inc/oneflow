@@ -52,10 +52,15 @@ decltype(ReplaceOutDeviceType) ReplaceOutDeviceType =
 namespace {
 
 Maybe<Symbol<PlacedNdSbp>> RawFlattenHierarchy(Symbol<PlacedNdSbp> placed_nd_sbp) {
-  CHECK_GE_OR_RETURN(placed_nd_sbp->nd_sbp()->sbp_parallel_size(), 0);
+  CHECK_GE_OR_RETURN(placed_nd_sbp->nd_sbp()->sbp_parallel_size(), 0)
+      << Error::RuntimeError() << "Invalid nd_sbp with ndim equal 0!";
   const auto& first_sbp_parallel = placed_nd_sbp->nd_sbp()->sbp_parallel(0);
   for (const auto& sbp_parallel : placed_nd_sbp->nd_sbp()->sbp_parallel()) {
-    CHECK_OR_RETURN(sbp_parallel == first_sbp_parallel);
+    CHECK_OR_RETURN(sbp_parallel == first_sbp_parallel)
+        << Error::RuntimeError()
+        << "Expected all sbps to be on the same in sbp list during flatten sbps list, but find at "
+           "least two sbps, "
+        << SbpToString(first_sbp_parallel) << " and " << SbpToString(sbp_parallel) << "!";
   }
   std::vector<Symbol<SbpParallel>> vec{SymbolOf(first_sbp_parallel)};
   const auto& flattened_nd_sbp = JUST(GetNdSbp(vec));
@@ -77,8 +82,10 @@ Maybe<BoxingDividor> RawFlattenInHierarchy() {
 
 Maybe<Symbol<PlacedNdSbp>> RawUnflattenHierarchy(Symbol<PlacedNdSbp> in_placed_nd_sbp,
                                                  Symbol<PlacedNdSbp> out_placed_nd_sbp) {
-  CHECK_GE_OR_RETURN(in_placed_nd_sbp->nd_sbp()->sbp_parallel_size(), 0);
-  CHECK_GE_OR_RETURN(out_placed_nd_sbp->nd_sbp()->sbp_parallel_size(), 0);
+  CHECK_GE_OR_RETURN(in_placed_nd_sbp->nd_sbp()->sbp_parallel_size(), 0)
+      << Error::RuntimeError() << "Invalid nd_sbp with ndim equal 0!";
+  CHECK_GE_OR_RETURN(out_placed_nd_sbp->nd_sbp()->sbp_parallel_size(), 0)
+      << Error::RuntimeError() << "Invalid nd_sbp with ndim equal 0!";
   const auto& in_sbp_parallel = in_placed_nd_sbp->nd_sbp()->sbp_parallel(0);
   NdSbp unflattened_nd_sbp;
   for (int64_t i = 0; i < out_placed_nd_sbp->nd_sbp()->sbp_parallel_size(); ++i) {
@@ -230,14 +237,14 @@ decltype(OutPlacementAndSplit) OutPlacementAndSplit =
 namespace {
 
 Maybe<Symbol<ParallelDesc>> GetFisrtDeviceOfPlacement(Symbol<ParallelDesc> placement) {
-  std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
+  ParallelConf parallel_conf;
   int64_t machine_id = JUST(placement->MachineId4ParallelId(0));
   int64_t device_id = JUST(placement->DeviceId4ParallelId(0));
-  parallel_conf->set_device_tag(placement->device_tag());
-  parallel_conf->add_device_name(std::string("@") + std::to_string(machine_id) + ":"
-                                 + std::to_string(device_id));
+  parallel_conf.set_device_tag(placement->device_tag());
+  parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":"
+                                + std::to_string(device_id));
   for (int64_t i = 0; i < placement->hierarchy()->NumAxes(); ++i) {
-    parallel_conf->mutable_hierarchy()->add_dim(1);
+    parallel_conf.mutable_hierarchy()->add_dim(1);
   }
   std::shared_ptr<ParallelDesc> parallel_desc;
   JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {

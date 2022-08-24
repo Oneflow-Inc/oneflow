@@ -66,6 +66,7 @@ class StepLR(LRScheduler):
         return base_lr * factor
 
     def _generate_conf_for_graph(self, lr_conf):
-        step_conf = lr_conf.mutable_step_conf()
-        step_conf.set_step_size(self.step_size)
-        step_conf.set_gamma(self.gamma)
+        lr_conf.step_conf.SetInParent()
+        step_conf = lr_conf.step_conf
+        step_conf.step_size = self.step_size
+        step_conf.gamma = self.gamma

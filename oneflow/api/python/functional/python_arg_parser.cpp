@@ -21,26 +21,28 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-void FunctionSchema::ReportKwargsError(PyObject* kwargs) const {
+void FunctionSchema::ReportKwargsError(PyObject* kwargs, size_t nargs) const {
   PyObject *key = nullptr, *value = nullptr;
   Py_ssize_t pos = 0;
 
   while (PyDict_Next(kwargs, &pos, &key, &value)) {
     if (!PyStringCheck(key)) { THROW(TypeError) << def_->name << "(): keywords must be strings"; }
-    bool unexpected_param = true;
+    int64_t index = -1;
     const std::string string_key = PyStringAsString(key);
-    for (const auto& arg : def_->argument_def) {
+    for (int i = 0; i < def_->argument_def.size(); ++i) {
+      const auto& arg = def_->argument_def.at(i);
       if (arg.name == string_key) {
-        unexpected_param = false;
+        index = i;
         break;
       }
     }
-    if (unexpected_param) {
-      THROW(TypeError) << def_->name  // NOLINT
-                       << "(): got an unexpected keyword argument '" << string_key << "'";
-    } else {
-      THROW(TypeError) << def_->name  // NOLINT
-                       << "(): got multiple values for argument '" << string_key << "'";
+    if (index < 0) {
+      THROW(TypeError) << def_->name << "(): got an unexpected keyword argument '" << string_key
+                       << "'";
+    }
+    if (index < nargs) {
+      THROW(TypeError) << def_->name << "(): got multiple values for argument '" << string_key
+                       << "'";
     }
   }
   THROW(TypeError) << def_->name << "(): kwargs unknown error";
@@ -111,7 +113,7 @@ bool FunctionSchema::Parse(PyObject* args, PyObject* kwargs, PythonArg* parsed_a
     }
   }
   if (remaining_kwargs > 0) {
-    if (raise_exception) { ReportKwargsError(kwargs); }
+    if (raise_exception) { ReportKwargsError(kwargs, nargs); }
     return false;
   }
   return true;

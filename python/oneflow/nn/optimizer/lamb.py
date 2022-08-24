@@ -211,7 +211,7 @@ class LAMB(Optimizer):
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
-            optimizer_conf = train_conf.mutable_optimizer_conf().Add()
+            optimizer_conf = train_conf.optimizer_conf.add()
 
             lr = (
                 param_group["initial_lr"]
@@ -225,30 +225,26 @@ class LAMB(Optimizer):
             do_bias_correction = param_group["do_bias_correction"]
             epsilon = param_group["eps"]
 
-            optimizer_conf.set_base_learning_rate(lr)
+            optimizer_conf.base_learning_rate = lr
 
-            optimizer_conf.mutable_lamb_conf().set_beta1(beta1)
-            optimizer_conf.mutable_lamb_conf().set_beta2(beta2)
-            optimizer_conf.mutable_lamb_conf().set_epsilon(epsilon)
-            optimizer_conf.mutable_lamb_conf().set_do_bias_correction(
-                do_bias_correction
-            )
+            optimizer_conf.lamb_conf.beta1 = beta1
+            optimizer_conf.lamb_conf.beta2 = beta2
+            optimizer_conf.lamb_conf.epsilon = epsilon
+            optimizer_conf.lamb_conf.do_bias_correction = do_bias_correction
 
             self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
 
             if adam_w_mode:
-                optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
-                    weight_decay
-                )
+                optimizer_conf.weight_decay_conf.weight_decay_rate = weight_decay
             else:
-                optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(0.0)
+                optimizer_conf.weight_decay_conf.weight_decay_rate = 0.0
 
             for param in param_group.parameters:
                 if not adam_w_mode:
                     # Set l2 penalty as weight decay if **NOT** using adam_w_mode
                     vars_conf[param].l2 = weight_decay
                 if param.requires_grad:
-                    optimizer_conf.add_variable_op_names(vars_conf[param].name)
+                    optimizer_conf.variable_op_names.append(vars_conf[param].name)
 
             new_opt_confs.append(optimizer_conf)
         return new_opt_confs

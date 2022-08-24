@@ -59,20 +59,29 @@ class DTypeMeta final {
 };
 
 Maybe<const DTypeMeta&> DTypeMeta4DataType(DataType data_type) {
-  static HashMap<DataType, DTypeMeta> data_type2dtype_meta{
+  static const HashMap<DataType, DTypeMeta> data_type2dtype_meta{
       {DataType::kInvalidDataType, DTypeMeta("oneflow.invalid_data_type", false, false, false)},
       {DataType::kChar, DTypeMeta("oneflow.char", false, false, false)},
       {DataType::kFloat16, DTypeMeta("oneflow.float16", true, true, false)},
       {DataType::kFloat, DTypeMeta("oneflow.float32", true, true, false)},
       {DataType::kDouble, DTypeMeta("oneflow.float64", true, true, false)},
       {DataType::kInt8, DTypeMeta("oneflow.int8", true, false, false)},
+      {DataType::kInt16, DTypeMeta("oneflow.int16", true, false, false)},
       {DataType::kInt32, DTypeMeta("oneflow.int32", true, false, false)},
       {DataType::kInt64, DTypeMeta("oneflow.int64", true, false, false)},
+      {DataType::kInt128, DTypeMeta("oneflow.int128", true, false, false)},
       {DataType::kUInt8, DTypeMeta("oneflow.uint8", false, false, false)},
+      {DataType::kUInt16, DTypeMeta("oneflow.uint16", false, false, false)},
+      {DataType::kUInt32, DTypeMeta("oneflow.uint32", false, false, false)},
+      {DataType::kUInt64, DTypeMeta("oneflow.uint64", false, false, false)},
+      {DataType::kUInt128, DTypeMeta("oneflow.uint128", false, false, false)},
       {DataType::kOFRecord, DTypeMeta("oneflow.of_record", false, false, false)},
       {DataType::kTensorBuffer, DTypeMeta("oneflow.tensor_buffer", false, false, false)},
       {DataType::kBFloat16, DTypeMeta("oneflow.bfloat16", true, true, false)},
       {DataType::kBool, DTypeMeta("oneflow.bool", false, false, false)},
+      {DataType::kComplex32, DTypeMeta("oneflow.complex32", false, false, true)},
+      {DataType::kComplex64, DTypeMeta("oneflow.complex64", false, false, true)},
+      {DataType::kComplex128, DTypeMeta("oneflow.complex128", false, false, true)},
   };
   return MapAt(data_type2dtype_meta, data_type);
 };
