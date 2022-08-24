@@ -120,7 +120,9 @@ template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAbs, half, half> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  __device__ half operator()(half src) const { return __habs(src); }
+  __device__ half operator()(half src) const {
+    return __hlt(src, static_cast<half>(0)) ? __hneg(src) : src;
+  }
 };
 
 #define SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(op)                                         \
