@@ -561,6 +561,13 @@ union Pack {
     for (int i = 0; i < PackSize; i++) { elem[i] = val; }
   }
 
+  __device__ Pack<ComputeType, T, PackSize> operator*(T val) {
+    Pack<ComputeType, T, PackSize> newPack(0);
+#pragma unroll
+    for (int i = 0; i < PackSize; i++) { newPack.elem[i] = elem[i] * val; }
+    return newPack;
+  }
+
   __device__ Pack<ComputeType, T, PackSize> operator*(Pack<ComputeType, T, PackSize> pack) {
     Pack<ComputeType, T, PackSize> newPack(0);
 #pragma unroll
@@ -568,13 +575,18 @@ union Pack {
     return newPack;
   }
 
+  __device__ Pack<ComputeType, T, PackSize> operator-(T val) {
+    Pack<ComputeType, T, PackSize> newPack(0);
+#pragma unroll
+    for (int i = 0; i < PackSize; i++) { newPack.elem[i] = elem[i] - val; }
+    return newPack;
+  }
+
   __device__ Pack<ComputeType, T, PackSize> operator-(Pack<ComputeType, T, PackSize> pack) {
     Pack<ComputeType, T, PackSize> newPack(0);
-    #pragma unroll 
-    for(int i = 0; i < PackSize; i++){
-      newPack.elem[i] = elem[i] - pack.elem[i];
-    }
-    return newPack; 
+#pragma unroll
+    for (int i = 0; i < PackSize; i++) { newPack.elem[i] = elem[i] - pack.elem[i]; }
+    return newPack;
   }
 
   __device__ void operator+=(Pack<ComputeType, T, PackSize> pack) {
@@ -617,15 +629,12 @@ __global__ void GroupNormParamGradKernel(const T* dy, const T* x, const T* mean,
     const int32_t channel_id = batch_channel_id % channel_size;
     const int32_t group_num = channel_size / group_size;
     const int32_t batch_group_id = batch_id * group_size + channel_id / group_num;
-    
+
     T mean_val = mean[batch_group_id];
     T inv_var_val = inv_var[batch_group_id];
-    
+
     Pack<ComputeType, T, PackSize> ds_sum_pack(0);
     Pack<ComputeType, T, PackSize> db_sum_pack(0);
-
-    Pack<ComputeType, T, PackSize> mean_pack(mean_val);
-    Pack<ComputeType, T, PackSize> inv_var_pack(inv_var_val);
 
     for (int32_t spatial = threadIdx.x * PackSize; spatial < spatial_size;
          spatial += blockDim.x * PackSize) {
@@ -636,10 +645,10 @@ __global__ void GroupNormParamGradKernel(const T* dy, const T* x, const T* mean,
       dy_pack.storage = *dy_load;
       const LoadType* x_load = reinterpret_cast<const LoadType*>(x + load_idx);
       x_pack.storage = *x_load;
-      ds_sum_pack += dy_pack * (x_pack - mean_pack) * inv_var_pack;
+      ds_sum_pack += dy_pack * (x_pack - mean_val) * inv_var_val;
       db_sum_pack += dy_pack;
     }
-    
+
     ComputeType ds_sum = PackReduce<ComputeType, T, PackSize>(ds_sum_pack);
     ComputeType db_sum = PackReduce<ComputeType, T, PackSize>(db_sum_pack);
 
@@ -657,8 +666,7 @@ __global__ void GroupNormParamGradKernel(const T* dy, const T* x, const T* mean,
 }
 
 template<typename T, typename ComputeType>
-__global__ void BatchReduceGammaBetaGradKernel(const T* mean, const T* inv_var, T* ds_sum,
-                                               T* db_sum, T* dgamma, T* dbeta,
+__global__ void BatchReduceGammaBetaGradKernel(T* ds_sum, T* db_sum, T* dgamma, T* dbeta,
                                                const int32_t batch_size, const int32_t group_size,
                                                const int32_t channel_size,
                                                const int32_t spatial_size) {
@@ -669,10 +677,7 @@ __global__ void BatchReduceGammaBetaGradKernel(const T* mean, const T* inv_var, 
     for (int batch_id = 0; batch_id < batch_size; batch_id++) {
       const int32_t batch_group_id = batch_id * group_size + channel_idx / group_num;
       const int32_t batch_channel_id = batch_id * channel_size + channel_idx;
-      ComputeType mean_val = static_cast<ComputeType>(mean[batch_group_id]);
-      ComputeType inv_var_val = static_cast<ComputeType>(inv_var[batch_group_id]);
-      // dgamma_sum += (ds_sum[batch_channel_id] - db_sum[batch_channel_id] * mean_val) * inv_var_val;
-      dgamma_sum += static_cast<ComputeType>(ds_sum[batch_channel_id]); 
+      dgamma_sum += static_cast<ComputeType>(ds_sum[batch_channel_id]);
       dbeta_sum += static_cast<ComputeType>(db_sum[batch_channel_id]);
     }
     dgamma[channel_idx] = dgamma_sum;
@@ -753,9 +758,8 @@ class GroupNormParamGradGpuKernel final : public user_op::OpKernel {
     OF_CUDA_CHECK(GetNumBlocks(batch_size * channel_size, &num_blocks));
     BatchReduceGammaBetaGradKernel<T, ComputeType>
         <<<num_blocks, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-            mean->dptr<T>(), inv_variance->dptr<T>(), reduce_ds_buf_ptr, reduce_db_buf_ptr,
-            dgamma->mut_dptr<T>(), dbeta->mut_dptr<T>(), batch_size, group_size, channel_size,
-            spatial_size);
+            reduce_ds_buf_ptr, reduce_db_buf_ptr, dgamma->mut_dptr<T>(), dbeta->mut_dptr<T>(),
+            batch_size, group_size, channel_size, spatial_size);
   };
 };
 
@@ -772,11 +776,11 @@ class GroupNormParamGradGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)            \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
-// REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(half)
+REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(half)
 REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(float)
-// REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(double)
-// #if CUDA_VRSION >= 11000
-// REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(nv_bfloat16)
-// #endif
+REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(double)
+#if CUDA_VRSION >= 11000
+REGISTER_GROUP_NORM_PARAM_GRAD_CUDA_KERNEL(nv_bfloat16)
+#endif
 
 }  // namespace oneflow
