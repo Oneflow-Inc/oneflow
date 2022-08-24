@@ -119,6 +119,18 @@ class TestCumOp(flow.unittest.TestCase):
         graph = TestCumsum()
         loss = graph(ids_tensor)
 
+    @profile(torch.cumsum)
+    def profile_cumsum(test_case):
+        input = torch.ones(100,1280)
+        torch.cumsum(input,dim=0)
+        torch.cumsum(input,dim=1)
+
+    @profile(torch.cumprod)
+    def profile_cumprod(test_case):
+        input = torch.ones(100,1280)
+        torch.cumprod(input,dim=0)
+        torch.cumprod(input,dim=1)
+
 
 if __name__ == "__main__":
     unittest.main()

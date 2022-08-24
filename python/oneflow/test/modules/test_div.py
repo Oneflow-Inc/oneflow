@@ -152,6 +152,12 @@ class TestDiv(flow.unittest.TestCase):
         y = x1 / x2
         return y
 
+    @profile(torch.div)
+    def profile_div(test_case):
+        input1 = torch.ones(16,10,128,128)
+        input2 = torch.ones(16,10,128,128) 
+        torch.div(input1,input2)
+
 
 if __name__ == "__main__":
     unittest.main()
