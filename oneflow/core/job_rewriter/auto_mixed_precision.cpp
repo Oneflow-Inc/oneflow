@@ -57,7 +57,10 @@ std::function<bool(OpNode*)> MakePredicatorIsAllowedToRunWithHalf(const OpGraph&
   auto allowed_set = std::make_shared<HashSet<OpNode*>>();
   op_graph.ForEachNode([&](OpNode* node) {
     if (node->parallel_desc().device_type() != DeviceType::kCUDA) { return; }
-    if (node->op().output_bns().size() > 0) { INSERT_CHECK(allowed_set->insert(node)); }
+    if (node->op().output_bns().size() > 0
+        || IsUserOpWithTypeName(node->op().op_conf(), "embedding_update_placeholder")) {
+      INSERT_CHECK(allowed_set->insert(node));
+    }
   });
   return [allowed_set](OpNode* node) -> bool { return IsKeyFound(*allowed_set, node); };
 }
@@ -119,8 +122,6 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
     for (OpEdge* edge : pair.second) {
       CHECK(src_node == edge->src_node());
       OpNode* dst_node = edge->dst_node();
-      LogicalBlobId cur_lbi = edge->lbis().front();
-      CHECK_EQ(lbn, GenLogicalBlobName(cur_lbi));
       const auto& dst_ibns = edge->lbi2ibns().at(cur_lbi);
       for (const auto& dst_ibn : dst_ibns) {
         if (dst_node->op().op_conf().has_user_conf()) {
@@ -351,6 +352,11 @@ REGISTER_NO_CAST_REGISTRY("normalization_add_relu_grad", "beta", 0)
 REGISTER_NO_CAST_REGISTRY("normalization_add_relu_grad", "mean", 0)
 REGISTER_NO_CAST_REGISTRY("normalization_add_relu_grad", "inv_variance", 0)
 REGISTER_NO_CAST_REGISTRY("normalization_add_relu_grad", "reserve_space", 0)
+
+REGISTER_NO_CAST_REGISTRY("layer_norm_grad", "mean", 0)
+REGISTER_NO_CAST_REGISTRY("layer_norm_grad", "inv_variance", 0)
+REGISTER_NO_CAST_REGISTRY("layer_norm_param_grad", "mean", 0)
+REGISTER_NO_CAST_REGISTRY("layer_norm_param_grad", "inv_variance", 0)
 
 }  // namespace
 
