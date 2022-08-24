@@ -207,6 +207,15 @@ class TestPow(flow.unittest.TestCase):
         y = random_tensor(ndim=2, dim1=2).to(device)
         return torch.pow(x, y)
 
+    @autotest(n=5)
+    def test_scalar_pow_with_random_devices(test_case):
+        x1_device = random_device()
+        x2_device = random_device()
+        x1 = random_tensor(2, 2, 3).to(x1_device).mean()
+        x2 = random_tensor(2, 2, 3).to(x2_device)
+        y = torch.pow(x1, x2)
+        return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestAsin(flow.unittest.TestCase):
