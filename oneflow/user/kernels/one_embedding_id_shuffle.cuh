@@ -412,12 +412,79 @@ void UniqueCurRankEmbeddingGrad(ep::Stream* stream, DataType data_type, int64_t 
   }
 }
 
-int64_t GetPaddedEmbeddingSize(DataType data_type, int64_t embedding_size) {
+inline int64_t GetPaddedEmbeddingSize(DataType data_type, int64_t embedding_size) {
   if (data_type == DataType::kFloat16 && embedding_size % 2 != 0) {
     return embedding_size + 1;
   } else {
     return embedding_size;
   }
+}
+
+template<typename K, typename U, typename IDX>
+struct IdShuffleDataPtrs {
+  const K* ids_ptr;
+  const U* table_ids_ptr;
+  IDX* num_partitioned_unique;
+  K* partitioned_unique_ids;
+  U* partitioned_unique_table_ids;
+  IDX* num_unique_matrix_ptr;
+  IDX* inverse_unique_partition_indices_ptr;
+  void* workspace_ptr;
+  size_t workspace_size;
+  K* received_ids;
+  U* received_table_ids;
+  IDX* cur_rank_num_unique_ptr;
+  K* cur_rank_unique_ids_ptr;
+  U* cur_rank_unique_table_ids_ptr;
+  IDX* cur_rank_inverse_indices_ptr;
+};
+
+template<typename K, typename U, typename IDX>
+void IdShuffle(ep::Stream* stream, ncclComm_t comm, const IdShuffleDataPtrs<K, U, IDX>& data_ptrs,
+               int64_t num_ids, int64_t parallel_id, int64_t parallel_num,
+               DataType num_unique_matrix_dtype, DataType ids_dtype, DataType table_ids_dtype,
+               bool need_process_table_ids, IDX* host_num_unique_matrix, IDX* host_num_keys) {
+  cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
+  size_t hash_table_capacity = parallel_num * num_ids;
+  UniqueAndPartition<K, U, IDX, embedding::ShardingHash>(
+      cuda_stream, num_ids, hash_table_capacity, parallel_num, data_ptrs.ids_ptr,
+      data_ptrs.table_ids_ptr, data_ptrs.num_partitioned_unique, data_ptrs.partitioned_unique_ids,
+      data_ptrs.partitioned_unique_table_ids, data_ptrs.inverse_unique_partition_indices_ptr,
+      data_ptrs.workspace_ptr, data_ptrs.workspace_size, need_process_table_ids);
+
+  OF_NCCL_CHECK(ncclAllGather(data_ptrs.num_partitioned_unique, data_ptrs.num_unique_matrix_ptr,
+                              parallel_num, GetNcclDataType(num_unique_matrix_dtype), comm,
+                              cuda_stream));
+
+  OF_CUDA_CHECK(cudaMemcpyAsync(host_num_unique_matrix, data_ptrs.num_unique_matrix_ptr,
+                                parallel_num * parallel_num * sizeof(IDX), cudaMemcpyDefault,
+                                cuda_stream));
+  CHECK_JUST(stream->Sync());
+  if (parallel_num > 1) {
+    // use num_partitioned_unique as indices_offset buffer, so should after ncclAllGather.
+    ComputeOffset<<<1, 1, 0, cuda_stream>>>(parallel_num, data_ptrs.num_partitioned_unique);
+    ContiguousInverseUniquePartitionIndices<<<BlocksNum4ThreadsNum(num_ids),
+                                              kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
+        num_ids, data_ptrs.num_partitioned_unique, data_ptrs.inverse_unique_partition_indices_ptr);
+  }
+  int64_t received_elem_cnt = 0;
+  ShuffleIdsAndTableIds(cuda_stream, comm, parallel_id, parallel_num, num_ids, ids_dtype,
+                        table_ids_dtype, host_num_unique_matrix, data_ptrs.partitioned_unique_ids,
+                        data_ptrs.partitioned_unique_table_ids, data_ptrs.received_ids,
+                        data_ptrs.received_table_ids, &received_elem_cnt, need_process_table_ids);
+  UniqueAndPartition<K, U, IDX, embedding::LocalUniqueHash>(
+      cuda_stream, received_elem_cnt, hash_table_capacity, 1, data_ptrs.received_ids,
+      data_ptrs.received_table_ids, data_ptrs.cur_rank_num_unique_ptr,
+      data_ptrs.cur_rank_unique_ids_ptr, data_ptrs.cur_rank_unique_table_ids_ptr,
+      data_ptrs.cur_rank_inverse_indices_ptr, data_ptrs.workspace_ptr, data_ptrs.workspace_size,
+      need_process_table_ids);
+  if (!need_process_table_ids) {
+    OF_CUDA_CHECK(cudaMemsetAsync(data_ptrs.cur_rank_unique_table_ids_ptr, 0,
+                                  received_elem_cnt * sizeof(U), cuda_stream));
+  }
+  OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, data_ptrs.cur_rank_num_unique_ptr, sizeof(IDX),
+                                cudaMemcpyDefault, cuda_stream));
+  CHECK_JUST(stream->Sync());
 }
 
 }  // namespace id_shuffle

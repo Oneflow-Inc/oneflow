@@ -17,6 +17,8 @@ import oneflow as flow
 import oneflow.nn as nn
 import numpy as np
 
+# run with ONEFLOW_ONE_EMBEDDING_EAGER=1 python3 test_one_embedding.py
+
 
 class OneEmbedding(nn.Module):
     def __init__(

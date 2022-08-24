@@ -836,7 +836,7 @@ void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value
   store->ReserveQueryLength(kDefaultMaxQueryLength);
   CHECK(key_value_store_map_.emplace(map_key, std::move(store)).second)
       << "Can't create an embedding with same name of an existing embedding, the name: " << name;
-  //TODO: in graph LazyMode::is_enabled() return false.
+  // TODO: in graph LazyMode::is_enabled() return false.
   if (!LazyMode::is_enabled() && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_EAGER", false)) {
     LOG(ERROR) << "make EagerEmbeddingState" << name;
     CHECK(embedding_state_map_.emplace(map_key, std::make_unique<EagerEmbeddingState>()).second)
