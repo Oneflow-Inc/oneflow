@@ -142,17 +142,38 @@ class GlobalConstantFunctor {
       JUST(attrs.SetAttr<bool>("is_floating_value", true));
       JUST(attrs.SetAttr<double>("floating_value", value.As<double>()));
     }
-    if (LazyMode::is_enabled()) {
-      std::vector<std::string> nd_sbp(sbp_tuple.size());
-      {
-        for (int i = 0; i < sbp_tuple.size(); ++i) {
-          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+
+    auto dispatch_constant =
+        [&](const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
+      if (LazyMode::is_enabled()) {
+        std::vector<std::string> nd_sbp(sbp_tuple.size());
+        {
+          for (int i = 0; i < sbp_tuple.size(); ++i) {
+            nd_sbp[i] = SbpParallelToString(*sbp_tuple[i]);
+          }
         }
+        JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
       }
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
+      const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {},
+                                            OpExprInterpContext(attrs, placement, nd_sbp));
+    };
+    bool has_partial_parallel = [&]() {
+      for (const auto& sbp : sbp_tuple) {
+        if (sbp->has_partial_sum_parallel()) { return true; }
+      }
+      return false;
+    }();
+    // Since the source op does not support Partial, it is necessary to replace Partial
+    // with Broadcast, and then convert it to Partial
+    if (has_partial_parallel) {
+      const auto& fixed_sbp_tuple = JUST(NdSbpReplacePartialByBroadcast(sbp_tuple));
+      const auto& tensor = JUST(dispatch_constant(*fixed_sbp_tuple));
+      return functional::ToGlobal(tensor, placement, sbp_tuple, {}, /* check_meta */ false,
+                                  /*copy*/ false);
+    } else {
+      return dispatch_constant(sbp_tuple);
     }
-    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
   }
 
  private:
@@ -575,7 +596,6 @@ class StackFunctor {
     int64_t ndims = inputs[0]->ndim();
     int64_t stack_dim = dim;
     stack_dim = JUST(maybe_wrap_dim(stack_dim, ndims + 1));
-    if (ninput == 1) { return ExpandDims(inputs[0], dim); }
     const std::shared_ptr<const Shape>& first_in_shape = inputs[0]->shape();
     for (const auto& input : inputs) {
       for (int i = 0; i < ndims; ++i) {
@@ -594,8 +614,13 @@ class StackFunctor {
       size_t size = (i + kMaxInputCount) < ninput ? kMaxInputCount : ninput - i;
       TensorTuple partial_inputs(size);
       for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
-      outputs.emplace_back(
-          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
+      if (partial_inputs.size() == 1) {
+        // Use ExpandDims functor for only one input
+        outputs.emplace_back(JUST(functional::ExpandDims(partial_inputs[0], dim)));
+      } else {
+        outputs.emplace_back(
+            JUST(OpInterpUtil::Dispatch<Tensor>(*ops_[size - 1], partial_inputs, attrs)));
+      }
     }
     if (outputs.size() == 1) { return outputs.at(0); }
     return Concat(outputs, stack_dim);
@@ -634,6 +659,122 @@ class StackGradFunctor {
 
  private:
   std::vector<std::shared_ptr<OpExpr>> ops_;
+};
+
+class AtLeast1DFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x) const {
+    if (x->ndim() == 0) {
+      return JUST(Reshape(x, {1}));
+    } else
+      return x;
+  }
+};
+
+class AtLeast1DListFunctor {
+ public:
+  Maybe<TensorTuple> operator()(const TensorTuple& inputs) const {
+    TensorTuple result = TensorTuple(inputs.size());
+    for (int32_t i = 0; i < inputs.size(); i++) {
+      result.at(i) = JUST(AtLeast1D(JUST(VectorAt(inputs, i))));
+    }
+    return result;
+  }
+};
+
+class AtLeast2DFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x) const {
+    if (x->ndim() == 0) {
+      return JUST(Reshape(x, {1, 1}));
+    } else if (x->ndim() == 1) {
+      return JUST(Unsqueeze(x, 0));
+    } else
+      return x;
+  }
+};
+
+class AtLeast2DListFunctor {
+ public:
+  Maybe<TensorTuple> operator()(const TensorTuple& inputs) const {
+    TensorTuple result = TensorTuple(inputs.size());
+    for (int32_t i = 0; i < inputs.size(); i++) {
+      result.at(i) = JUST(AtLeast2D(JUST(VectorAt(inputs, i))));
+    }
+    return result;
+  }
+};
+
+class AtLeast3DFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x) const {
+    if (x->ndim() == 0) {
+      return JUST(Reshape(x, {1, 1, 1}));
+    } else if (x->ndim() == 1) {
+      return JUST(Reshape(x, {1, x->shape()->At(0), 1}));
+    } else if (x->ndim() == 2) {
+      return JUST(Unsqueeze(x, -1));
+    } else
+      return x;
+  }
+};
+
+class AtLeast3DListFunctor {
+ public:
+  Maybe<TensorTuple> operator()(const TensorTuple& inputs) const {
+    TensorTuple result = TensorTuple(inputs.size());
+    for (int32_t i = 0; i < inputs.size(); i++) {
+      result.at(i) = JUST(AtLeast3D(JUST(VectorAt(inputs, i))));
+    }
+    return result;
+  }
+};
+
+class ColumnStackFunctor {
+ public:
+  Maybe<Tensor> operator()(const TensorTuple& inputs) const {
+    std::shared_ptr<TensorTuple> new_inputs = std::make_shared<TensorTuple>(inputs.size());
+    for (int32_t i = 0; i < inputs.size(); i++) {
+      const auto& t = JUST(VectorAt(inputs, i));
+      if (t->ndim() <= 1)
+        new_inputs->at(i) = JUST(Reshape(t, {t->nelement(), 1}));
+      else
+        new_inputs->at(i) = t;
+    }
+    return HStack(*new_inputs);
+  }
+};
+
+class HStackFunctor {
+ public:
+  Maybe<Tensor> operator()(const TensorTuple& inputs) const {
+    std::shared_ptr<TensorTuple> new_inputs = JUST(AtLeast1D(inputs));
+    if (new_inputs->at(0)->ndim() == 1)
+      return Concat(*new_inputs, 0);
+    else
+      return Concat(*new_inputs, 1);
+  }
+};
+
+class VStackFunctor {
+ public:
+  Maybe<Tensor> operator()(const TensorTuple& inputs) const {
+    std::shared_ptr<TensorTuple> new_inputs = JUST(AtLeast2D(inputs));
+    return Concat(*new_inputs, 0);
+  }
+};
+
+class RowStackFunctor {
+ public:
+  Maybe<Tensor> operator()(const TensorTuple& inputs) const { return VStack(inputs); }
+};
+
+class DStackFunctor {
+ public:
+  Maybe<Tensor> operator()(const TensorTuple& inputs) const {
+    std::shared_ptr<TensorTuple> new_inputs = JUST(AtLeast3D(inputs));
+    return Concat(*new_inputs, 2);
+  }
 };
 
 class ExpandFunctor {
@@ -711,8 +852,7 @@ class ExpandDimsFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim) const {
     int32_t expand_dim = dim;
     const int32_t ndim = input->shape()->NumAxes();
-    JUST(maybe_wrap_dim(dim, ndim + 1));
-    if (dim < 0) { expand_dim = dim + ndim + 1; }
+    expand_dim = JUST(maybe_wrap_dim(dim, ndim + 1));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", expand_dim));
 
@@ -856,7 +996,7 @@ class DimGatherFunctor {
     CHECK_EQ_OR_RETURN(sparse_grad, false)
         << Error::RuntimeError() << "Only support bool = False for now!";
 
-    JUST(maybe_wrap_dim(dim, index->ndim()));
+    int64_t new_dim = JUST(maybe_wrap_dim(dim, index->ndim()));
     if (input->ndim() > 0 && index->ndim() > 0) {
       CHECK_EQ_OR_RETURN(input->ndim(), index->ndim())
           << Error::RuntimeError()
@@ -872,17 +1012,17 @@ class DimGatherFunctor {
     }
     if (input->ndim() > 0 && index->ndim() > 0) {
       FOR_RANGE(int32_t, i, 0, input->ndim()) {
-        if (i != dim) {
+        if (i != new_dim) {
           CHECK_LE_OR_RETURN(index->shape()->At(i), input->shape()->At(i))
               << Error::RuntimeError() << "Size does not match at dimension " << i
               << " expected index " << *(index->shape()) << " to be smaller than self "
-              << *(input->shape()) << " apart from dimension " << dim;
+              << *(input->shape()) << " apart from dimension " << new_dim;
         }
       }
     }
 
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    JUST(attrs.SetAttr<int32_t>("dim", new_dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
@@ -1303,12 +1443,13 @@ class InplaceToContiguousFunctor {
     const auto& blob_object = JUST(input->eager_blob_object());
     Symbol<LocalTensorMeta> old_tensor_meta = JUST(input->local_tensor_meta());
 
-    Symbol<LocalTensorMeta> new_tensor_meta = SymbolOf(LocalTensorMeta(
-        std::make_shared<Shape>(old_tensor_meta->shape()), stride, old_tensor_meta->dtype(),
-        old_tensor_meta->device(), old_tensor_meta->storage_offset()));
+    Symbol<LocalTensorMeta> new_tensor_meta =
+        SymbolOf(LocalTensorMeta(std::make_shared<Shape>(old_tensor_meta->shape()), stride,
+                                 old_tensor_meta->dtype(), old_tensor_meta->device()));
 
     std::shared_ptr<EagerLocalTensorImpl> final_tensor_impl =
         std::make_shared<EagerLocalTensorImpl>(JUST(input->tensor_storage()),
+                                               JUST(input->storage_offset()),
                                                input->requires_grad(), input->is_leaf());
     JUST(final_tensor_impl->set_retain_grad(input->retain_grad()));
     JUST(final_tensor_impl->InitEagerBlobObject(new_tensor_meta,
@@ -2169,10 +2310,6 @@ class TensorSetItemFunctor {
         //
         // value_shape = (3,), target_shape = (2, 3), slice_shape = (2, 3, 1)
         // We must change value shape to slice_shape if it uses SliceUpdate op.
-        // BUG(wyg): value shape cannot initialize to a scalar tensor,
-        // so it is not possible to expand to target_shape.
-        // e.g. x[0, 0] = 1.0
-        // But x[0, 0] = flow.ones(1) do not align with numpy behavior.
         if (target_shape != *(value_tensor->shape()) && target_shape.NumAxes() > 0) {
           value_tensor = JUST(Expand(value_tensor, target_shape));
         }
@@ -2368,7 +2505,7 @@ class ReduceSumLikeFunctor {
                            const std::vector<int32_t>& axis) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, JUST(like->detach())}, attrs);
   }
 
  private:
@@ -2827,6 +2964,36 @@ class To4Functor {
   }
 };
 
+class ToDeviceFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
+                           const Optional<std::string>& device_) const {
+    Symbol<DType> dtype = input->dtype();
+    const bool copy = false;
+    if (input->is_global()) {
+      std::string device_type = device_.value_or(JUST(input->parallel_desc())->device_tag());
+      CHECK_OR_RETURN(ep::DeviceManagerRegistry::GetDeviceTypeByDeviceTypeName(device_type)
+                      != DeviceType::kInvalidDevice)
+          << Error::RuntimeError()
+          << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
+          << "for global tensor, but got " << device_.value_or("");
+      return JUST(GlobalTensorTo(input, device_type, dtype, copy));
+    } else {
+      std::string device_name = "";
+      int device_id = 0;
+      if (device_.has_value()) {
+        JUST(ParsingDeviceTag(device_.value_or(""), &device_name, &device_id));
+        if (device_id == -1) { device_id = GlobalProcessCtx::LocalRank(); }
+      } else {
+        Symbol<Device> device = JUST(input->device());
+        device_name = device->type();
+        device_id = device->device_id();
+      }
+      return JUST(LocalTensorTo(input, device_name, device_id, dtype, copy));
+    }
+  }
+};
+
 class TopKFunctor {
  public:
   TopKFunctor() { op_ = CHECK_JUST(one::OpBuilder("top_k").Input("in").Output("out").Build()); }
@@ -3263,6 +3430,17 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConcatFunctor>("Concat");
   m.add_functor<impl::StackFunctor>("Stack");
   m.add_functor<impl::StackGradFunctor>("StackGrad");
+  m.add_functor<impl::AtLeast1DFunctor>("AtLeast1D");
+  m.add_functor<impl::AtLeast1DListFunctor>("AtLeast1D");
+  m.add_functor<impl::AtLeast2DFunctor>("AtLeast2D");
+  m.add_functor<impl::AtLeast2DListFunctor>("AtLeast2D");
+  m.add_functor<impl::AtLeast3DFunctor>("AtLeast3D");
+  m.add_functor<impl::AtLeast3DListFunctor>("AtLeast3D");
+  m.add_functor<impl::HStackFunctor>("HStack");
+  m.add_functor<impl::ColumnStackFunctor>("ColumnStack");
+  m.add_functor<impl::VStackFunctor>("VStack");
+  m.add_functor<impl::RowStackFunctor>("RowStack");
+  m.add_functor<impl::DStackFunctor>("DStack");
   m.add_functor<impl::ExpandFunctor>("Expand");
   m.add_functor<impl::ExpandGradFunctor>("ExpandGrad");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
@@ -3344,7 +3522,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MaskedFillFunctor>("MaskedFill");
   m.add_functor<impl::MeshgridFunctor>("Meshgrid");
   m.add_functor<impl::IndexSelectFunctor>("IndexSelect");
-  m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor>("To");
+  m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor,
+                impl::ToDeviceFunctor>("To");
   m.add_functor<impl::TopKFunctor>("TopK");
   m.add_functor<impl::InTopKFunctor>("InTopK");
   m.add_functor<impl::TensorToTensorBufferFunctor>("TensorToTensorBuffer");

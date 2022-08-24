@@ -49,6 +49,16 @@ class TestCosineSimilarity(flow.unittest.TestCase):
         output = torch.nn.functional.cosine_similarity(a, b, dim=1, eps=1e-6)
         return output
 
+    @autotest(n=3)
+    def test_cosine_similartiy_module_with_nonequal_dim_data(test_case):
+        device = random_device()
+        a = random_tensor(ndim=2, dim0=10, dim1=128).to(device)
+        b = random_tensor(ndim=3, dim0=10, dim1=10, dim2=128).to(device)
+        cos = torch.nn.CosineSimilarity(dim=-1, eps=1e-6).to(device)
+        cos.train(random())
+        output = cos(a, b)
+        return output
+
 
 if __name__ == "__main__":
     unittest.main()

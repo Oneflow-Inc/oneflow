@@ -120,31 +120,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("same_padding")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        const std::string& padding = op.attr<std::string>("padding");
-        const std::string& data_format = op.attr<std::string>("data_format");
-        const auto& kernel_size = op.attr<std::vector<int32_t>>("kernel_size");
-        const auto& strides = op.attr<std::vector<int32_t>>("strides");
-        const auto& dilation_rate = op.attr<std::vector<int32_t>>("dilation_rate");
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("same_padding_grad")
-                .Input("x_like", op.input("x", 0))
-                .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                .Output("dx")
-                .Attr<std::string>("padding", padding)
-                .Attr<std::string>("data_format", data_format)
-                .Attr<std::vector<int32_t>>("kernel_size", kernel_size)
-                .Attr<std::vector<int32_t>>("strides", strides)
-                .Attr<std::vector<int32_t>>("dilation_rate", dilation_rate)
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace oneflow

@@ -135,29 +135,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("ctc_loss")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      const auto ctc_loss_grad_op_name = ctx->FwOp().op_name() + "_grad";
-      ctx->DefineOp(ctc_loss_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("ctc_loss_grad")
-            .InputBind("grad_out", ctx->FwOp().output_grad("loss", 0))
-            .InputBind("log_probs", ctx->FwOp().input("log_probs", 0))
-            .InputBind("targets", ctx->FwOp().input("targets", 0))
-            .InputBind("input_lengths", ctx->FwOp().input("input_lengths", 0))
-            .InputBind("target_lengths", ctx->FwOp().input("target_lengths", 0))
-            .InputBind("loss", ctx->FwOp().output("loss", 0))
-            .InputBind("alpha", ctx->FwOp().output("alpha", 0))
-            .Attr("max_target_length", ctx->FwOp().attr<int64_t>("max_target_length"))
-            .Attr("blank", ctx->FwOp().attr<int32_t>("blank"))
-            .Attr("zero_infinity", ctx->FwOp().attr<bool>("zero_infinity"))
-            .Output("grad")
-            .Build();
-      });
-      ctx->FwOp().InputGradBind(user_op::OpArg("log_probs", 0),
-                                [&ctx, &ctc_loss_grad_op_name]() -> const std::string& {
-                                  return ctx->GetOp(ctc_loss_grad_op_name).output("grad", 0);
-                                });
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace oneflow

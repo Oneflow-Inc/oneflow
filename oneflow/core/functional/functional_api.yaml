@@ -94,7 +94,7 @@
   bind_python: true
 
 - name: "div_grad"
-  signature: "Tensor (Tensor y, Tensor z, Tensor dz) => DivGrad"
+  signature: "Tensor (Tensor dz, Tensor z, Tensor y) => DivGrad"
   bind_python: False
 
 - name: "equal"
@@ -807,7 +807,8 @@
 - name: "bernoulli"
   signature:
     [
-      "Tensor (Tensor x, *, DataType dtype=kFloat, Generator generator=None) => Bernoulli",
+      "Tensor (Tensor input, *, DataType dtype=kFloat, Generator generator=None) => Bernoulli",
+      "Tensor (Tensor input, Double p, *, DataType dtype=kFloat, Generator generator=None) => BernoulliProb",
     ]
   bind_python: True
 
@@ -1092,11 +1093,11 @@
   bind_python: True
 
 - name: "l1_loss"
-  signature: "Tensor(Tensor input, Tensor target, String reduction) => L1Loss"
+  signature: "Tensor(Tensor input, Tensor target, String reduction=\"mean\") => L1Loss"
   bind_python: True
 
 - name: "mse_loss"
-  signature: "Tensor(Tensor input, Tensor target, String reduction) => MseLoss"
+  signature: "Tensor(Tensor input, Tensor target, String reduction=\"mean\") => MseLoss"
   bind_python: True
 
 - name: "kl_div_loss"
@@ -1289,7 +1290,7 @@
   bind_python: False
 
 - name: "layer_norm_param_grad"
-  signature: "TensorTuple (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Int64 begin_params_axis, Double epsilon) => LayerNormParamGrad"
+  signature: "TensorTuple (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Int64 begin_params_axis) => LayerNormParamGrad"
   bind_python: False
 
 - name: "avg_pool2d_nhwc"
@@ -1416,7 +1417,8 @@
     "Tensor (Tensor x, String device=None, DataType dtype=None, Bool copy=False) => To",
     "Tensor (Tensor x, Device device=None, DataType dtype=None, Bool copy=False) => To",
     "Tensor (Tensor x, DataType dtype=None, Bool copy=False) => To",
-    "Tensor (Tensor x, Tensor other, Bool copy=False) => To"
+    "Tensor (Tensor x, Tensor other, Bool copy=False) => To",
+    "Tensor (Tensor x, String device=None) => To",
   ]
   bind_python: True
 
@@ -1717,13 +1719,27 @@
   bind_python: True
 
 - name: "clamp"
-  signature:
-    ["Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clamp"]
+  signature: "Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clamp"
   bind_python: true
 
 - name: "clamp_"
-  signature:
-    ["Tensor (Tensor input, Scalar min=None, Scalar max=None) => ClampInplace"]
+  signature: "Tensor (Tensor input, Scalar min=None, Scalar max=None) => ClampInplace"
+  bind_python: true
+
+- name: "clamp_min"
+  signature: "Tensor (Tensor input, Scalar min) => ClampMin"
+  bind_python: true
+
+- name: "clamp_min_"
+  signature: "Tensor (Tensor input, Scalar min) => ClampMinInplace"
+  bind_python: true
+
+- name: "clamp_max"
+  signature: "Tensor (Tensor input, Scalar max) => ClampMax"
+  bind_python: true
+
+- name: "clamp_max_"
+  signature: "Tensor (Tensor input, Scalar min) => ClampMaxInplace"
   bind_python: true
 
 - name: "clip"
@@ -1766,6 +1782,10 @@
     ]
   bind_python: True
 
+- name: "inv"
+  signature: "Tensor (Tensor x) => Inv"
+  bind_python: True
+
 - name: "dropout"
   signature: "Tensor (Tensor input, Float p=0.5, Bool training=True, Bool inplace=False, Generator generator=None, *, Tensor addend=None) => Dropout"
   bind_python: True
@@ -1773,6 +1793,18 @@
 - name: "dropout_grad"
   signature: "Tensor (Tensor dy, Tensor mask, Float scale) => DropoutGrad"
   bind_python: False
+
+- name: "dropout1d"
+  signature: "Tensor (Tensor input, Float p=0.5, Bool training=True) => Dropout1d"
+  bind_python: True
+
+- name: "dropout2d"
+  signature: "Tensor (Tensor input, Float p=0.5, Bool training=True) => Dropout2d"
+  bind_python: True
+
+- name: "dropout3d"
+  signature: "Tensor (Tensor input, Float p=0.5, Bool training=True) => Dropout3d"
+  bind_python: True
 
 - name: "constant_pad"
   signature: 'Tensor (Tensor x, Int64List pad, Scalar value=0) => ConstantPad'
@@ -1799,7 +1831,7 @@
   bind_python: True
 
 - name: "silu_grad"
-  signature: "Tensor (Tensor x, Tensor dy) => SiluGrad"
+  signature: "Tensor (Tensor dy, Tensor x) => SiluGrad"
   bind_python: False
 
 - name: "mish"
@@ -1807,7 +1839,7 @@
   bind_python: True
 
 - name: "mish_grad"
-  signature: "Tensor (Tensor x, Tensor dy) => MishGrad"
+  signature: "Tensor (Tensor dy, Tensor x) => MishGrad"
   bind_python: False
 
 - name: "selu"
@@ -1815,7 +1847,7 @@
   bind_python: True
 
 - name: "selu_grad"
-  signature: "Tensor (Tensor x, Tensor dy) => SeluGrad"
+  signature: "Tensor (Tensor dy, Tensor x) => SeluGrad"
   bind_python: False
 
 - name: "softsign"
@@ -1823,7 +1855,7 @@
   bind_python: True
 
 - name: "softsign_grad"
-  signature: "Tensor (Tensor x, Tensor dy) => SoftSignGrad"
+  signature: "Tensor (Tensor dy, Tensor x) => SoftSignGrad"
   bind_python: False
 
 - name: "diag"
@@ -1921,6 +1953,47 @@
 - name: "stack_grad"
   signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => StackGrad"
   bind_python: False
+
+- name: "atleast_1d"
+  signature: [
+    "Tensor (Tensor input) => AtLeast1D",
+    "TensorTuple (TensorTuple tensors) => AtLeast1D",
+  ]
+  bind_python: True
+
+- name: "atleast_2d"
+  signature: [
+    "Tensor (Tensor input) => AtLeast2D",
+    "TensorTuple (TensorTuple tensors) => AtLeast2D",
+  ]
+  bind_python: True
+
+- name: "atleast_3d"
+  signature: [
+    "Tensor (Tensor input) => AtLeast3D",
+    "TensorTuple (TensorTuple tensors) => AtLeast3D",
+  ]
+  bind_python: True
+
+- name: "hstack"
+  signature: "Tensor (TensorTuple tensors) => HStack"
+  bind_python: True
+
+- name: "vstack"
+  signature: "Tensor (TensorTuple tensors) => VStack"
+  bind_python: True
+
+- name: "dstack"
+  signature: "Tensor (TensorTuple tensors) => DStack"
+  bind_python: True
+
+- name: "column_stack"
+  signature: "Tensor (TensorTuple tensors) => ColumnStack"
+  bind_python: True
+
+- name: "row_stack"
+  signature: "Tensor (TensorTuple tensors) => RowStack"
+  bind_python: True
 
 - name: "local_to_global"
   signature: "Tensor (Tensor x, Placement placement, SbpList sbp, Shape shape, DataType dtype, Bool sync_data, Bool copy=False) => LocalToGlobal"
@@ -2117,6 +2190,10 @@
   signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => SplitLike"
   bind_python: True
 
+- name: "pairwise_distance"
+  signature: "Tensor (Tensor x1, Tensor x2, Float p=2.0, Double eps=1e-6, Bool keepdim=False) => PairwiseDistance"
+  bind_python: True
+
 - name: "cosine_similarity"
   signature: "Tensor (Tensor x, Tensor y, Int32 dim=1, Double eps=1e-8) => CosineSimilarity"
   bind_python: True
@@ -2306,6 +2383,10 @@
   signature: "Tensor (Tensor shadow, Tensor ids, Tensor table_ids=None, DataType dtype, Int64 embedding_size, Int32 num_tables, String embedding_tables, String embedding_store_options) => OneEmbeddingLookup"
   bind_python: True
 
+- name: "one_embedding_lookup_grad"
+  signature: "Void (Tensor ids, Tensor embedding_grad, String embedding_store_options) => OneEmbeddingLookupGrad"
+  bind_python: True
+
 - name: "one_embedding_unique_key_value_pair"
   signature: "TensorTuple (Tensor keys, Tensor values=None, Int32 num_tables) => OneEmbeddingUniqueKeyValuePair"
   bind_python: True
@@ -2436,3 +2517,59 @@
 - name: "multi_tensor_adam_update"
   signature: "Void (TensorTuple model, TensorTuple model_diff, TensorTuple m, TensorTuple v, Tensor learning_rate, Float beta1, Float beta2, Float bias_correction1_val, Float bias_correction2_val, Bool do_bias_correction, Double scale, Float weight_decay) => MultiTensorAdamUpdate"
   bind_python: True
+
+- name: "grad_acc_repeat"
+  signature: "Tensor (Tensor input, Int32 repeat_num) => GradAccRepeat"
+  bind_python: False
+
+- name: "grad_acc_collect"
+  signature: "Tensor (Tensor input, Int32 collect_num) => GradAccCollect"
+  bind_python: False
+
+- name: "grad_acc_pack"
+  signature: "Tensor (Tensor input, Int32 pack_num) => GradAccPack"
+  bind_python: False
+
+- name: "grad_acc_unpack"
+  signature: "Tensor (Tensor input, Int32 unpack_num) => GradAccUnpack"
+  bind_python: False
+
+- name: "silu_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx) => SiluGradGrad"  
+  bind_python: False
+
+- name: "mish_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx) => MishGradGrad"  
+  bind_python: False
+
+- name: "selu_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx) => SeluGradGrad"  
+  bind_python: False
+
+- name: "softsign_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx) => SoftSignGradGrad"  
+  bind_python: False
+
+- name: "gelu_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx) => GeluGradGrad"  
+  bind_python: False
+
+- name: "hardsigmoid_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx) => HardSigmoidGradGrad"  
+  bind_python: False
+
+- name: "hardswish_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx) => HardSwishGradGrad"  
+  bind_python: False
+
+- name: "softplus_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx, Double beta=1.0, Double threshold=20.0) => SoftplusGradGrad"  
+  bind_python: False
+
+- name: "elu_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx, Double alpha) => EluGradGrad"  
+  bind_python: False
+
+- name: "celu_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx, Double alpha) => CeluGradGrad"  
+  bind_python: False

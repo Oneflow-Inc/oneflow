@@ -1224,7 +1224,21 @@ class ClampFunctor : public ClampBaseFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& min,
                            const Optional<Scalar>& max) const {
-    return ClampBaseFunctor::operator()(x, min, max, false);
+    return ClampBaseFunctor::operator()(x, min, max, /* inplace=*/false);
+  }
+};
+
+class ClampMinFunctor : public ClampBaseFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& min) const {
+    return ClampBaseFunctor::operator()(x, min, NullOpt, /* inplace=*/false);
+  }
+};
+
+class ClampMaxFunctor : public ClampBaseFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& max) const {
+    return ClampBaseFunctor::operator()(x, NullOpt, max, /* inplace=*/false);
   }
 };
 
@@ -1232,7 +1246,21 @@ class ClampInplaceFunctor : public ClampBaseFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& min,
                            const Optional<Scalar>& max) const {
-    return ClampBaseFunctor::operator()(x, min, max, true);
+    return ClampBaseFunctor::operator()(x, min, max, /* inplace=*/true);
+  }
+};
+
+class ClampMinInplaceFunctor : public ClampBaseFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& min) const {
+    return ClampBaseFunctor::operator()(x, min, NullOpt, /* inplace=*/true);
+  }
+};
+
+class ClampMaxInplaceFunctor : public ClampBaseFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& max) const {
+    return ClampBaseFunctor::operator()(x, NullOpt, max, /* inplace=*/true);
   }
 };
 
@@ -1652,6 +1680,25 @@ class ScalarNorm2Functor {
   }
 };
 
+class InvFunctor {
+ public:
+  InvFunctor() { op_ = CHECK_JUST(one::OpBuilder("inv").Input("x").Output("y").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x) const {
+    if (x->ndim() < 2) {
+      return Error::RuntimeError() << "linalg.inv: The input tensor must be at least 2 dimensions.";
+    }
+    if (x->dim(x->ndim() - 1) != x->dim(x->ndim() - 2)) {
+      return Error::RuntimeError() << "linalg.inv: A must be batches of square matrices, "
+                                   << "but they are " << x->dim(x->ndim() - 2) << " by "
+                                   << x->dim(x->ndim() - 1) << " matrices";
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, {});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ClampGradFunctor {
  public:
   ClampGradFunctor() {
@@ -1836,7 +1883,7 @@ class ScalarLogicalBaseFunctor {
       } else {
         lowest_dtype = x->dtype();
       }
-    } else if (scalar.IsIntegral()) {
+    } else if (scalar.IsIntegral() || scalar.IsBool()) {
       JUST(attrs.SetAttr<int64_t>("int_operand", scalar.As<int64_t>()));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
@@ -2082,7 +2129,7 @@ class VarianceFunctor {
       for (int i = 0; i < ndim; i++) { axis.emplace_back(i); }
     } else {
       std::vector<int32_t>& dims = *JUST(dim);
-      JUST(maybe_wrap_dim(dims.size(), ndim));
+      JUST(maybe_wrap_dim(dims.size(), ndim));  // only check validation
       std::sort(dims.begin(), dims.end());
       axis.assign(dims.begin(), dims.end());
     }
@@ -3087,7 +3134,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<GlobalHannWindowFunctor>("GlobalHannWindow");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
+  m.add_functor<ClampMinFunctor>("ClampMin");
+  m.add_functor<ClampMaxFunctor>("ClampMax");
   m.add_functor<ClampInplaceFunctor>("ClampInplace");
+  m.add_functor<ClampMinInplaceFunctor>("ClampMinInplace");
+  m.add_functor<ClampMaxInplaceFunctor>("ClampMaxInplace");
   m.add_functor<ClipFunctor>("Clip");
   m.add_functor<ClipInplaceFunctor>("ClipInplace");
   m.add_functor<SqrtSquareSumFunctor>("SqrtSquareSum");
@@ -3134,6 +3185,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<CumProdFunctor>("Cumprod");
   m.add_functor<CumProdGradFunctor>("CumprodGrad");
   m.add_functor<EinSumFunctor>("EinSum");
+  m.add_functor<InvFunctor>("Inv");
   m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
 };
 

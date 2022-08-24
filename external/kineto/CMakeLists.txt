@@ -34,7 +34,9 @@ list(
   $ENV{CUPTI_ROOT}/lib
   /usr/lib
   ${CUDA_SOURCE_DIR}/targets/x86_64-linux/lib64
-  ${CUDA_SOURCE_DIR}/extras/CUPTI/lib64)
+  ${CUDA_SOURCE_DIR}/targets/x86_64-linux/lib
+  ${CUDA_SOURCE_DIR}/extras/CUPTI/lib64
+  ${CUDA_SOURCE_DIR}/extras/CUPTI/lib)
 
 find_library(
   CUDA_cupti_LIBRARY
