@@ -311,45 +311,4 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
   return GetWhereInputArgModify(f, conf);
 }
 
-REGISTER_USER_OP_GRAD("where").SetBackwardOpConfGenFn(
-    [](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      const auto zero_op_name = ctx->FwOp().op_name() + "_zero_grad";
-      ctx->DefineOp(zero_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("zero_like")
-            .InputBind("like", ctx->FwOp().input("x", 0))
-            .Output("out")
-            .Build();
-      });
-
-      const auto x_grad_op_name = ctx->FwOp().op_name() + "_x_grad";
-      ctx->DefineOp(x_grad_op_name, [&ctx, &zero_op_name](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("where")
-            .InputBind("condition", ctx->FwOp().input("condition", 0))
-            .InputBind("x", ctx->FwOp().output_grad("out", 0))
-            .InputBind("y", ctx->GetOp(zero_op_name).output("out", 0))
-            .Output("out")
-            .Build();
-      });
-
-      const auto y_grad_op_name = ctx->FwOp().op_name() + "_y_grad";
-      ctx->DefineOp(y_grad_op_name, [&ctx, &zero_op_name](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("where")
-            .InputBind("condition", ctx->FwOp().input("condition", 0))
-            .InputBind("x", ctx->GetOp(zero_op_name).output("out", 0))
-            .InputBind("y", ctx->FwOp().output_grad("out", 0))
-            .Output("out")
-            .Build();
-      });
-
-      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
-                                [&ctx, &x_grad_op_name]() -> const std::string& {
-                                  return ctx->GetOp(x_grad_op_name).output("out", 0);
-                                });
-      ctx->FwOp().InputGradBind(user_op::OpArg("y", 0),
-                                [&ctx, &y_grad_op_name]() -> const std::string& {
-                                  return ctx->GetOp(y_grad_op_name).output("out", 0);
-                                });
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace oneflow

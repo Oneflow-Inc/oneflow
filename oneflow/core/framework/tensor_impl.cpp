@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include <type_traits>
 #include "oneflow/core/common/blocking_then_busy.h"
-#include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/stream_type.h"
 #include "oneflow/core/common/tensor_meta.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -31,7 +31,6 @@ limitations under the License.
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/control/global_process_ctx.h"
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/framework/stream_allocator_is_pinned.h"
 
 namespace oneflow {
@@ -68,11 +67,11 @@ Maybe<LocalTensorImpl> LazyLocalTensorImpl::detach() const {
   return std::shared_ptr<LocalTensorImpl>(detached_impl);
 }
 
-EagerLocalTensorImpl::EagerLocalTensorImpl() : LocalTensorImpl(false, false) {}
-
 EagerLocalTensorImpl::EagerLocalTensorImpl(const std::shared_ptr<TensorStorage>& tensor_storage,
-                                           bool requires_grad, bool is_leaf)
-    : LocalTensorImpl(requires_grad, is_leaf), tensor_storage_(tensor_storage) {}
+                                           int64_t storage_offset, bool requires_grad, bool is_leaf)
+    : LocalTensorImpl(requires_grad, is_leaf),
+      tensor_storage_(tensor_storage),
+      storage_offset_(storage_offset) {}
 
 EagerLocalTensorImpl::~EagerLocalTensorImpl() {}
 
@@ -126,7 +125,7 @@ Maybe<void> EagerLocalTensorImpl::InitEagerBlobObject(
 
 Maybe<bool> EagerLocalTensorImpl::is_pinned() const {
   if (!eager_blob_object_) { return false; }
-  return IsStreamAllocatorPinned::Visit(JUST(eager_blob_object_->producer_stream())->stream_role());
+  return IsStreamAllocatorPinned::Visit(JUST(eager_blob_object_->producer_stream())->stream_type());
 }
 
 Maybe<void> EagerLocalTensorImpl::set_eager_blob_object(
@@ -232,8 +231,8 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
 }
 
 Maybe<GlobalTensorImpl> EagerGlobalTensorImpl::detach() const {
-  auto detached_impl = JUST(EagerGlobalTensorImpl::New(tensor_meta_, false, true));
-  detached_impl->cur_rank_phy_tensor_ = cur_rank_phy_tensor_;
+  auto detached_impl = std::shared_ptr<EagerGlobalTensorImpl>(
+      new EagerGlobalTensorImpl(tensor_meta_, false, true, cur_rank_phy_tensor_));
   detached_impl->consumer_nd_sbp_constraint_ = consumer_nd_sbp_constraint_;
   detached_impl->transport_token_ = transport_token_;
   return std::shared_ptr<GlobalTensorImpl>(detached_impl);

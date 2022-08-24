@@ -29,9 +29,9 @@ Maybe<Symbol<Stream>> MakeCastStream(const Symbol<Device>& in_device,
         << "cast op only support pin_memory in cpu device but got " << in_device->type();
     // TODO:(zhaoluyang) Parsing pin-memory-device from python
     auto pin_device = JUST(Device::New("cuda"));
-    return Stream::New(pin_device, StreamRole::kPinnedCompute);
+    return Stream::New(pin_device, StreamType::kPinnedCompute);
   }
-  return Stream::New(out_device, StreamRole::kCompute);
+  return Stream::New(out_device, StreamType::kCompute);
 }
 
 }  // namespace
@@ -74,22 +74,5 @@ Maybe<Symbol<Stream>> MakeCastStream(const Symbol<Device>& in_device,
   const bool pin_memory = ctx->Attr<bool>("pin_memory");
   return MakeCastStream(in_device, out_device, pin_memory);
 }
-
-REGISTER_USER_OP_GRAD("cast").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                        user_op::AddOpFn AddOp) -> Maybe<void> {
-  if (op.NeedGenGradTensor4OpInput("in", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    DataType dtype = op.TensorDesc4ArgNameAndIndex("in", 0).data_type();
-    user_op::UserOpConfWrapper cast_grad_op =
-        builder.Op("cast")
-            .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-            .Output("out")
-            .Attr<DataType>("dtype", dtype)
-            .Build();
-    op.BindGradTensorWithOpInput(cast_grad_op.output("out", 0), "in", 0);
-    AddOp(cast_grad_op);
-  }
-  return Maybe<void>::Ok();
-});
 
 }  // namespace oneflow

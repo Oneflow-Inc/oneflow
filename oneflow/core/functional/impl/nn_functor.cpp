@@ -35,9 +35,9 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
 #include "oneflow/user/kernels/dropout_kernel.h"
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/user/kernels/distributions/common.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -1129,6 +1129,19 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("has_pos_weight", pos_weight.has_value()));
 
+    if (pos_weight) {
+      const auto pos_weight_shape = JUST(pos_weight)->shape();
+      // pos weight shape = (), (1,), (1,1)... or (input/target.shape[-1],)
+      const bool is_pos_weight_shape_valid =
+          (pos_weight_shape->elem_cnt() == 1)
+          || (pos_weight_shape->NumAxes() == 1
+              && pos_weight_shape->At(0) == target->shape()->back());
+
+      CHECK_OR_RETURN(is_pos_weight_shape_valid)
+          << Error::RuntimeError()
+          << "pos_weight must be a vector with length equal to the number of classes.";
+    }
+
     std::shared_ptr<Tensor> out;
     if (weight) {
       if (pos_weight) {
@@ -1505,10 +1518,10 @@ class SparseSoftmaxCrossEntropyFunctor {
       s0s1_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(1));
       max_global_stage_input0 = JUST(functional::ToGlobal(
           (*max_device_stage)[0], JUST((*max_device_stage)[0]->parallel_desc()), new_sbp_parallels,
-          s0s1_sbp_parallels, /* check_meta */ false));
+          s0s1_sbp_parallels, /* check_meta */ false, /*copy=*/false));
       max_global_stage_input1 = JUST(functional::ToGlobal(
           (*max_device_stage)[2], JUST((*max_device_stage)[0]->parallel_desc()), new_sbp_parallels,
-          s0s1_sbp_parallels, /* check_meta */ false));
+          s0s1_sbp_parallels, /* check_meta */ false, /*copy=*/false));
     }
     // op_reduce_max_global_stage_
     attrs.clear();
@@ -1518,9 +1531,9 @@ class SparseSoftmaxCrossEntropyFunctor {
         *op_reduce_max_global_stage_, {max_global_stage_input0, max_global_stage_input1}, attrs));
     auto& broadcast_sub_input = max_global_stage->at(0);
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
-      broadcast_sub_input = JUST(
-          functional::ToGlobal(broadcast_sub_input, JUST((*max_device_stage)[0]->parallel_desc()),
-                               new_sbp_parallels, new_sbp_parallels, /* check_meta */ false));
+      broadcast_sub_input = JUST(functional::ToGlobal(
+          broadcast_sub_input, JUST((*max_device_stage)[0]->parallel_desc()), new_sbp_parallels,
+          new_sbp_parallels, /* check_meta */ false, /*copy=*/false));
     }
     // op_broadcast_sub_
     attrs.clear();
@@ -1539,7 +1552,7 @@ class SparseSoftmaxCrossEntropyFunctor {
       std::vector<Symbol<SbpParallel>> empty_grad_sbp_parallels;
       broadcast_div_input1 = JUST(functional::ToGlobal(
           (*output_reduce_sum)[0], JUST((*output_reduce_sum)[0]->parallel_desc()),
-          new_sbp_parallels, new_sbp_parallels, /* check_meta */ false));
+          new_sbp_parallels, new_sbp_parallels, /* check_meta */ false, /*copy=*/false));
     }
     // op_broadcast_div_
     attrs.clear();
@@ -2143,211 +2156,253 @@ class NormalizationAddReluFunctor {
   std::shared_ptr<OpExpr> fused_addend_norm_training_no_stats_op_;
 };
 
-class PadFunctor {
+class ConstantPadFunctor {
  public:
-  PadFunctor() {
-    pad_ = CHECK_JUST(one::OpBuilder("pad").Input("x").Output("y").Build());
+  ConstantPadFunctor() {
+    constant_pad_ = CHECK_JUST(one::OpBuilder("pad").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::vector<int64_t>& pad, const Scalar& value) const {
+    const int64_t ndim = input->shape()->NumAxes();
+    const int64_t pad_size = pad.size();
+    CHECK_LE_OR_RETURN(pad_size, 2 * ndim)
+        << Error::RuntimeError() << "Pad size should less than or equal to input axes * 2.";
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
+    CHECK_EQ_OR_RETURN(pad_size % 2, 0)
+        << Error::RuntimeError() << "Length of pad must be even but instead it equals " << pad_size;
+    if (IsFloatingDataType(input->dtype()->data_type())
+        || input->dtype()->data_type() == DataType::kFloat16) {
+      JUST(attrs.SetAttr<double>("floating_constant_value", value.As<double>()));
+      JUST(attrs.SetAttr<int64_t>("integral_constant_value", 0));
+    } else if (IsIntegralDataType(input->dtype()->data_type())) {
+      JUST(attrs.SetAttr<double>("floating_constant_value", 0));
+      JUST(attrs.SetAttr<int64_t>("integral_constant_value", value.As<int64_t>()));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
+    }
+
+    std::vector<int64_t> pad_before(ndim, 0);
+    std::vector<int64_t> pad_after(ndim, 0);
+    const int64_t pad_pair = pad_size / 2;
+    for (int64_t i = 0; i < pad_pair; ++i) {
+      pad_before[ndim - i - 1] = pad[2 * i];
+      pad_after[ndim - i - 1] = pad[2 * i + 1];
+    }
+    JUST(attrs.SetAttr<std::vector<int64_t>>("padding_before", pad_before));
+    JUST(attrs.SetAttr<std::vector<int64_t>>("padding_after", pad_after));
+    return OpInterpUtil::Dispatch<Tensor>(*constant_pad_, {input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> constant_pad_;
+};
+
+class ReflectionPadFunctor {
+ public:
+  ReflectionPadFunctor() {
     reflect_pad1d_ = CHECK_JUST(one::OpBuilder("reflection_pad1d").Input("x").Output("y").Build());
     reflect_pad2d_ = CHECK_JUST(one::OpBuilder("reflection_pad2d").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::vector<int64_t>& pad) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
+    const int64_t pad_size = pad.size();
+    const size_t ndim = input->ndim();
+    CHECK_LE_OR_RETURN(pad_size, 2 * ndim)
+        << Error::RuntimeError() << "Pad size should less than or equal to input axes * 2.";
+
+    if (pad_size == 2) {
+      // 2D/3D reflect padding
+      CHECK_OR_RETURN((ndim == 2 && input->shape()->At(1) != 0)
+                      || (ndim == 3 && input->shape()->At(1) != 0 && input->shape()->At(2) != 0))
+          << "2D or 3D (batch mode) tensor expected for input, but got: " << ndim;
+      const int64_t pad_left = pad[0];
+      const int64_t pad_right = pad[1];
+      const int64_t dim_w = (ndim == 3) ? 2 : 1;
+      const int64_t input_width = input->shape()->At(dim_w);
+      const int64_t output_w = input_width + pad_left + pad_right;
+      CHECK_OR_RETURN(pad_left < input_width && pad_right < input_width)
+          << "Padding size should be less than the corresponding input dimension, but got: "
+             "padding ("
+          << pad_left << ", " << pad_right << ") at dimension " << dim_w << " of input "
+          << input->shape()->ToString();
+      CHECK_OR_RETURN(output_w >= 1)
+          << "input (W: " << input_width << ")is too small. Calculated output W: " << output_w;
+
+      if (ndim == 2) {
+        // for 2D input
+        auto unsqueezed_input = JUST(functional::Unsqueeze(input, 0));
+        auto unsqueezed_output =
+            JUST(OpInterpUtil::Dispatch<Tensor>(*reflect_pad1d_, {unsqueezed_input}, attrs));
+        return JUST(functional::Squeeze(unsqueezed_output, std::vector<int32_t>{0}));
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*reflect_pad1d_, {input}, attrs);
+    } else if (pad_size == 4) {
+      // 3D/4D reflect padding
+      bool valid_dims = input->shape()->At(1) != 0 && input->shape()->At(2) != 0;
+      CHECK_OR_RETURN((ndim == 3 && valid_dims)
+                      || (ndim == 4 && valid_dims && input->shape()->At(3) != 0))
+          << "3D or 4D (batch mode) tensor expected for input, but got: " << ndim;
+
+      int dim_h = 1;
+      int dim_w = 2;
+      if (ndim == 4) {
+        dim_w++;
+        dim_h++;
+      }
+
+      const int64_t pad_left = pad[0];
+      const int64_t pad_right = pad[1];
+      const int64_t pad_top = pad[2];
+      const int64_t pad_bottom = pad[3];
+
+      const int64_t input_h = input->shape()->At(dim_h);
+      const int64_t input_w = input->shape()->At(dim_w);
+      const int64_t output_h = input_h + pad_top + pad_bottom;
+      const int64_t output_w = input_w + pad_left + pad_right;
+      CHECK_OR_RETURN(pad_left < input_w && pad_right < input_w)
+          << Error::RuntimeError()
+          << "Padding size should be less than the corresponding input "
+             "dimension, but got: padding ("
+          << pad_left << ", " << pad_right << ") at dimension " << dim_w << " of input " << ndim;
+
+      CHECK_OR_RETURN(pad_top < input_h && pad_bottom < input_h)
+          << Error::RuntimeError()
+          << "Padding size should be less than the corresponding input "
+             "dimension, but got: padding ("
+          << pad_top << ", " << pad_bottom << ") at dimension " << dim_h << " of input " << ndim;
+
+      CHECK_OR_RETURN(output_w >= 1 || output_h >= 1)
+          << Error::RuntimeError() << "input (H: " << input_h << ", W: " << input_w
+          << ")is too small. Calculated output H: " << output_h << " W: " << output_w;
+
+      if (ndim == 3) {
+        // for 3D input
+        auto unsqueezed_input = JUST(functional::Unsqueeze(input, 0));
+        auto unsqueezed_output =
+            JUST(OpInterpUtil::Dispatch<Tensor>(*reflect_pad2d_, {unsqueezed_input}, attrs));
+        return JUST(functional::Squeeze(unsqueezed_output, std::vector<int32_t>{0}));
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*reflect_pad2d_, {input}, attrs);
+    } else if (pad_size == 6) {
+      UNIMPLEMENTED_THEN_RETURN() << "5D reflect padding are not supported for now";
+    } else {
+      UNIMPLEMENTED_THEN_RETURN()
+          << "Only 2D, 3D, 4D, 5D padding with non-constant padding are supported for now";
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> reflect_pad1d_;
+  std::shared_ptr<OpExpr> reflect_pad2d_;
+};
+
+class ReplicationPadFunctor {
+ public:
+  ReplicationPadFunctor() {
     replicate_pad1d_ =
         CHECK_JUST(one::OpBuilder("replication_pad1d").Input("x").Output("y").Build());
     replicate_pad2d_ =
         CHECK_JUST(one::OpBuilder("replication_pad2d").Input("x").Output("y").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::vector<int64_t>& pad, const std::string& mode,
-                           const Scalar& value) const {
-    const int64_t ndim = input->shape()->NumAxes();
-    const int64_t pad_size = pad.size();
-    CHECK_LE_OR_RETURN(pad_size, 2 * ndim)
-        << Error::RuntimeError() << "Pad size should less than or equal to input axes * 2.";
+                           const std::vector<int64_t>& pad) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
+    const int64_t pad_size = pad.size();
+    const size_t ndim = input->ndim();
+    CHECK_LE_OR_RETURN(pad_size, 2 * ndim)
+        << Error::RuntimeError() << "Pad size should less than or equal to input axes * 2.";
+    if (pad_size == 2) {
+      // 2D/3D replicate padding
+      CHECK_OR_RETURN((ndim == 2 && input->shape()->At(0) != 0 && input->shape()->At(1) != 0)
+                      || (ndim == 3 && input->shape()->At(1) != 0 && input->shape()->At(2) != 0))
+          << "Expected 2D or 3D (batch mode) tensor with possibly 0 batch size and other "
+             "non-zero dimensions for input, but got: "
+          << ndim;
+      const int64_t pad_left = pad[0];
+      const int64_t pad_right = pad[1];
+      const int64_t dim_w = (ndim == 3) ? 2 : 1;
+      const int64_t input_width = input->shape()->At(dim_w);
+      const int64_t output_w = input_width + pad_left + pad_right;
+      CHECK_OR_RETURN(output_w >= 1)
+          << "input (W: " << input_width << ")is too small. Calculated output W: " << output_w;
+
+      if (ndim == 2) {
+        // for 2D input
+        auto unsqueezed_input = JUST(functional::Unsqueeze(input, 0));
+        auto unsqueezed_output =
+            JUST(OpInterpUtil::Dispatch<Tensor>(*replicate_pad1d_, {unsqueezed_input}, attrs));
+        return JUST(functional::Squeeze(unsqueezed_output, std::vector<int32_t>{0}));
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*replicate_pad1d_, {input}, attrs);
+    } else if (pad_size == 4) {
+      // 3D/4D replicate padding
+      bool valid_dims = input->shape()->At(1) != 0 && input->shape()->At(2) != 0;
+      CHECK_OR_RETURN((ndim == 3 && valid_dims)
+                      || (ndim == 4 && valid_dims && input->shape()->At(3) != 0))
+          << "3D or 4D (batch mode) tensor expected for input, but got: " << ndim;
+
+      int dim_h = 1;
+      int dim_w = 2;
+      if (ndim == 4) {
+        dim_w++;
+        dim_h++;
+      }
+
+      const int64_t pad_left = pad[0];
+      const int64_t pad_right = pad[1];
+      const int64_t pad_top = pad[2];
+      const int64_t pad_bottom = pad[3];
+
+      const int64_t input_h = input->shape()->At(dim_h);
+      const int64_t input_w = input->shape()->At(dim_w);
+      const int64_t output_h = input_h + pad_top + pad_bottom;
+      const int64_t output_w = input_w + pad_left + pad_right;
+      CHECK_OR_RETURN(output_w >= 1 || output_h >= 1)
+          << Error::RuntimeError() << "input (H: " << input_h << ", W: " << input_w
+          << ")is too small. Calculated output H: " << output_h << " W: " << output_w;
+
+      if (ndim == 3) {
+        // for 3D input
+        auto unsqueezed_input = JUST(functional::Unsqueeze(input, 0));
+        auto unsqueezed_output =
+            JUST(OpInterpUtil::Dispatch<Tensor>(*replicate_pad2d_, {unsqueezed_input}, attrs));
+        return JUST(functional::Squeeze(unsqueezed_output, std::vector<int32_t>{0}));
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*replicate_pad2d_, {input}, attrs);
+    } else if (pad_size == 6) {
+      UNIMPLEMENTED_THEN_RETURN() << "5D replicate padding are not supported for now";
+    } else {
+      UNIMPLEMENTED_THEN_RETURN()
+          << "Only 2D, 3D, 4D, 5D padding with non-constant padding are supported for now";
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> replicate_pad1d_;
+  std::shared_ptr<OpExpr> replicate_pad2d_;
+};
+
+class PadFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::vector<int64_t>& pad, const std::string& mode,
+                           const Scalar& value) const {
     if (mode == "constant") {
-      CHECK_EQ_OR_RETURN(pad_size % 2, 0)
-          << Error::RuntimeError() << "Length of pad must be even but instead it equals "
-          << pad_size;
-      if (IsFloatingDataType(input->dtype()->data_type())
-          || input->dtype()->data_type() == DataType::kFloat16) {
-        JUST(attrs.SetAttr<double>("floating_constant_value", value.As<double>()));
-        JUST(attrs.SetAttr<int64_t>("integral_constant_value", 0));
-      } else if (IsIntegralDataType(input->dtype()->data_type())) {
-        JUST(attrs.SetAttr<double>("floating_constant_value", 0));
-        JUST(attrs.SetAttr<int64_t>("integral_constant_value", value.As<int64_t>()));
-      } else {
-        UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
-      }
-
-      std::vector<int64_t> pad_before(ndim, 0);
-      std::vector<int64_t> pad_after(ndim, 0);
-      const int64_t pad_pair = pad_size / 2;
-      for (int64_t i = 0; i < pad_pair; ++i) {
-        pad_before[ndim - i - 1] = pad[2 * i];
-        pad_after[ndim - i - 1] = pad[2 * i + 1];
-      }
-      JUST(attrs.SetAttr<std::vector<int64_t>>("padding_before", pad_before));
-      JUST(attrs.SetAttr<std::vector<int64_t>>("padding_after", pad_after));
-      return OpInterpUtil::Dispatch<Tensor>(*pad_, {input}, attrs);
-
+      return functional::ConstantPad(input, pad, value);
     } else if (mode == "reflect") {
-      if (pad_size == 2) {
-        // 2D/3D reflect padding
-        CHECK_OR_RETURN((ndim == 2 && input->shape()->At(1) != 0)
-                        || (ndim == 3 && input->shape()->At(1) != 0 && input->shape()->At(2) != 0))
-            << "2D or 3D (batch mode) tensor expected for input, but got: " << ndim;
-        const int64_t pad_left = pad[0];
-        const int64_t pad_right = pad[1];
-        const int64_t dim_w = (ndim == 3) ? 2 : 1;
-        const int64_t input_width = input->shape()->At(dim_w);
-        const int64_t output_w = input_width + pad_left + pad_right;
-        CHECK_OR_RETURN(pad_left < input_width && pad_right < input_width)
-            << "Padding size should be less than the corresponding input dimension, but got: "
-               "padding ("
-            << pad_left << ", " << pad_right << ") at dimension " << dim_w << " of input "
-            << input->shape()->ToString();
-        CHECK_OR_RETURN(output_w >= 1)
-            << "input (W: " << input_width << ")is too small. Calculated output W: " << output_w;
-
-        if (ndim == 2) {
-          // for 2D input
-          auto unsqueezed_input = JUST(functional::Unsqueeze(input, 0));
-          auto unsqueezed_output =
-              JUST(OpInterpUtil::Dispatch<Tensor>(*reflect_pad1d_, {unsqueezed_input}, attrs));
-          return JUST(functional::Squeeze(unsqueezed_output, std::vector<int32_t>{0}));
-        }
-        return OpInterpUtil::Dispatch<Tensor>(*reflect_pad1d_, {input}, attrs);
-      } else if (pad_size == 4) {
-        // 3D/4D reflect padding
-        bool valid_dims = input->shape()->At(1) != 0 && input->shape()->At(2) != 0;
-        CHECK_OR_RETURN((ndim == 3 && valid_dims)
-                        || (ndim == 4 && valid_dims && input->shape()->At(3) != 0))
-            << "3D or 4D (batch mode) tensor expected for input, but got: " << ndim;
-
-        int dim_h = 1;
-        int dim_w = 2;
-        if (ndim == 4) {
-          dim_w++;
-          dim_h++;
-        }
-
-        const int64_t pad_left = pad[0];
-        const int64_t pad_right = pad[1];
-        const int64_t pad_top = pad[2];
-        const int64_t pad_bottom = pad[3];
-
-        const int64_t input_h = input->shape()->At(dim_h);
-        const int64_t input_w = input->shape()->At(dim_w);
-        const int64_t output_h = input_h + pad_top + pad_bottom;
-        const int64_t output_w = input_w + pad_left + pad_right;
-        CHECK_OR_RETURN(pad_left < input_w && pad_right < input_w)
-            << Error::RuntimeError()
-            << "Padding size should be less than the corresponding input "
-               "dimension, but got: padding ("
-            << pad_left << ", " << pad_right << ") at dimension " << dim_w << " of input " << ndim;
-
-        CHECK_OR_RETURN(pad_top < input_h && pad_bottom < input_h)
-            << Error::RuntimeError()
-            << "Padding size should be less than the corresponding input "
-               "dimension, but got: padding ("
-            << pad_top << ", " << pad_bottom << ") at dimension " << dim_h << " of input " << ndim;
-
-        CHECK_OR_RETURN(output_w >= 1 || output_h >= 1)
-            << Error::RuntimeError() << "input (H: " << input_h << ", W: " << input_w
-            << ")is too small. Calculated output H: " << output_h << " W: " << output_w;
-
-        if (ndim == 3) {
-          // for 3D input
-          auto unsqueezed_input = JUST(functional::Unsqueeze(input, 0));
-          auto unsqueezed_output =
-              JUST(OpInterpUtil::Dispatch<Tensor>(*reflect_pad2d_, {unsqueezed_input}, attrs));
-          return JUST(functional::Squeeze(unsqueezed_output, std::vector<int32_t>{0}));
-        }
-        return OpInterpUtil::Dispatch<Tensor>(*reflect_pad2d_, {input}, attrs);
-      } else if (pad_size == 6) {
-        UNIMPLEMENTED_THEN_RETURN() << "5D reflect padding are not supported for now";
-      } else {
-        UNIMPLEMENTED_THEN_RETURN()
-            << "Only 2D, 3D, 4D, 5D padding with non-constant padding are supported for now";
-      }
-
+      return functional::ReflectionPad(input, pad);
     } else if (mode == "replicate") {
-      if (pad_size == 2) {
-        // 2D/3D replicate padding
-        CHECK_OR_RETURN((ndim == 2 && input->shape()->At(0) != 0 && input->shape()->At(1) != 0)
-                        || (ndim == 3 && input->shape()->At(1) != 0 && input->shape()->At(2) != 0))
-            << "Expected 2D or 3D (batch mode) tensor with possibly 0 batch size and other "
-               "non-zero dimensions for input, but got: "
-            << ndim;
-        const int64_t pad_left = pad[0];
-        const int64_t pad_right = pad[1];
-        const int64_t dim_w = (ndim == 3) ? 2 : 1;
-        const int64_t input_width = input->shape()->At(dim_w);
-        const int64_t output_w = input_width + pad_left + pad_right;
-        CHECK_OR_RETURN(output_w >= 1)
-            << "input (W: " << input_width << ")is too small. Calculated output W: " << output_w;
-
-        if (ndim == 2) {
-          // for 2D input
-          auto unsqueezed_input = JUST(functional::Unsqueeze(input, 0));
-          auto unsqueezed_output =
-              JUST(OpInterpUtil::Dispatch<Tensor>(*replicate_pad1d_, {unsqueezed_input}, attrs));
-          return JUST(functional::Squeeze(unsqueezed_output, std::vector<int32_t>{0}));
-        }
-        return OpInterpUtil::Dispatch<Tensor>(*replicate_pad1d_, {input}, attrs);
-      } else if (pad_size == 4) {
-        // 3D/4D replicate padding
-        bool valid_dims = input->shape()->At(1) != 0 && input->shape()->At(2) != 0;
-        CHECK_OR_RETURN((ndim == 3 && valid_dims)
-                        || (ndim == 4 && valid_dims && input->shape()->At(3) != 0))
-            << "3D or 4D (batch mode) tensor expected for input, but got: " << ndim;
-
-        int dim_h = 1;
-        int dim_w = 2;
-        if (ndim == 4) {
-          dim_w++;
-          dim_h++;
-        }
-
-        const int64_t pad_left = pad[0];
-        const int64_t pad_right = pad[1];
-        const int64_t pad_top = pad[2];
-        const int64_t pad_bottom = pad[3];
-
-        const int64_t input_h = input->shape()->At(dim_h);
-        const int64_t input_w = input->shape()->At(dim_w);
-        const int64_t output_h = input_h + pad_top + pad_bottom;
-        const int64_t output_w = input_w + pad_left + pad_right;
-        CHECK_OR_RETURN(output_w >= 1 || output_h >= 1)
-            << Error::RuntimeError() << "input (H: " << input_h << ", W: " << input_w
-            << ")is too small. Calculated output H: " << output_h << " W: " << output_w;
-
-        if (ndim == 3) {
-          // for 3D input
-          auto unsqueezed_input = JUST(functional::Unsqueeze(input, 0));
-          auto unsqueezed_output =
-              JUST(OpInterpUtil::Dispatch<Tensor>(*replicate_pad2d_, {unsqueezed_input}, attrs));
-          return JUST(functional::Squeeze(unsqueezed_output, std::vector<int32_t>{0}));
-        }
-        return OpInterpUtil::Dispatch<Tensor>(*replicate_pad2d_, {input}, attrs);
-      } else if (pad_size == 6) {
-        UNIMPLEMENTED_THEN_RETURN() << "5D replicate padding are not supported for now";
-      } else {
-        UNIMPLEMENTED_THEN_RETURN()
-            << "Only 2D, 3D, 4D, 5D padding with non-constant padding are supported for now";
-      }
-
+      return functional::ReplicationPad(input, pad);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode
                                   << ", but only constant, reflect and replicate are valid.";
     }
   }
-
- private:
-  std::shared_ptr<OpExpr> pad_;
-  std::shared_ptr<OpExpr> reflect_pad1d_;
-  std::shared_ptr<OpExpr> reflect_pad2d_;
-  std::shared_ptr<OpExpr> replicate_pad1d_;
-  std::shared_ptr<OpExpr> replicate_pad2d_;
 };
 
 class DropoutFunctor {
@@ -2400,6 +2455,103 @@ class DropoutFunctor {
   std::shared_ptr<OpExpr> dropout_op_;
   std::shared_ptr<OpExpr> dropout_addend_op_;
   std::shared_ptr<OpExpr> add_op_;
+};
+
+namespace {
+Maybe<Tensor> MakeFeatureNoise(const std::shared_ptr<one::Tensor>& x) {
+  const int64_t ndim = x->ndim();
+  CHECK_GE_OR_RETURN(ndim, 2) << Error::RuntimeError()
+                              << "Feature dropout requires at least 2 dimensions in the input";
+  std::vector<int64_t> sizes;
+  sizes.reserve(ndim);
+  sizes.push_back(x->shape()->At(0));
+  sizes.push_back(x->shape()->At(1));
+  for (int i = 2; i < ndim; i++) { sizes.push_back(1); }
+  return JUST(Empty(Shape(sizes), x->dtype(), JUST(x->device()), false));
+}
+
+Maybe<Tensor> DropoutImpl(const std::shared_ptr<one::Tensor>& input, const float& p,
+                          const bool& train) {
+  CHECK_EQ_OR_RETURN(p >= 0 && p <= 1, true)
+      << "dropout probability has to be between 0 and 1, but got " << p;
+  if (p == 0 || !train || input->shape()->elem_cnt() == 0) { return input; }
+  if (p == 1) {
+    std::shared_ptr<Tensor> other =
+        JUST(Constant(*input->shape(), Scalar(0.0), input->dtype(), JUST(input->device())));
+    return InplaceMul(input, other);
+  }
+  std::shared_ptr<Tensor> noise = JUST(MakeFeatureNoise(input));
+  noise = JUST(BernoulliProb(noise, 1.0 - p, noise->dtype(), JUST(one::DefaultAutoGenerator())));
+  noise = JUST(InplaceScalarDiv(noise, Scalar(1.0 - p)));
+  noise = JUST(InplaceMul(input, noise));
+  return noise;
+}
+}  // namespace
+
+class Dropout1dFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
+                           const bool& training) const {
+    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, true)
+        << "dropout probability has to be between 0 and 1, but got " << p;
+    const int input_dim = input->ndim();
+    CHECK_EQ_OR_RETURN(input_dim != 2 && input_dim != 3, true)
+        << "dropout1d: Expected 2D or 3D input, but received a {inp_dim}D input. "
+           "Note that dropout1d exists to provide channel-wise dropout on inputs with 1 "
+           "spatial dimension, a channel dimension, and an optional batch dimension "
+           "(i.e. 2D or 3D inputs).";
+    bool is_batched = (input_dim == 3);
+    std::shared_ptr<one::Tensor> result;
+    if (!is_batched) { result = JUST(Unsqueeze(input, 0)); }
+    result = JUST(DropoutImpl(result, p, training));
+    if (!is_batched) { result = JUST(Squeeze(result, std::vector<int32_t>{0})); }
+    return result;
+  }
+};
+
+class Dropout2dFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
+                           const bool& training) const {
+    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, true)
+        << "dropout probability has to be between 0 and 1, but got " << p;
+    const int input_dim = input->ndim();
+    CHECK_EQ_OR_RETURN(input_dim != 3 && input_dim != 4, true)
+        << "dropout2d: Received a {inp_dim}-D input to dropout2d, which is deprecated "
+           "and will result in an error in a future release. To retain the behavior "
+           "and silence this warning, please use dropout instead. Note that dropout2d "
+           "exists to provide channel-wise dropout on inputs with 2 spatial dimensions, "
+           "a channel dimension, and an optional batch dimension (i.e. 3D or 4D inputs).";
+    CHECK_EQ_OR_RETURN(input_dim == 3, true)
+        << "dropout2d: Received a 3D input to dropout2d and assuming that channel-wise "
+           "1D dropout behavior is desired - input is interpreted as shape (N, C, L), where C "
+           "is the channel dim. This behavior will change in a future release to interpret the "
+           "input as one without a batch dimension, i.e. shape (C, H, W). To maintain the 1D "
+           "channel-wise dropout behavior, please switch to using dropout1d instead.";
+    return JUST(DropoutImpl(input, p, training));
+  }
+};
+
+class Dropout3dFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
+                           const bool& training) const {
+    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, true)
+        << "dropout probability has to be between 0 and 1, but got " << p;
+    const int input_dim = input->ndim();
+    CHECK_EQ_OR_RETURN(input_dim != 4 && input_dim != 5, true)
+        << "dropout3d: Received a {inp_dim}-D input to dropout3d, which is deprecated "
+           "and will result in an error in a future release. To retain the behavior "
+           "and silence this warning, please use dropout instead. Note that dropout3d "
+           "exists to provide channel-wise dropout on inputs with 3 spatial dimensions, "
+           "a channel dimension, and an optional batch dimension (i.e. 4D or 5D inputs).";
+    bool is_batched = (input_dim == 5);
+    std::shared_ptr<one::Tensor> result;
+    if (!is_batched) { result = JUST(Unsqueeze(input, 0)); }
+    result = JUST(DropoutImpl(result, p, training));
+    if (!is_batched) { result = JUST(Squeeze(result, std::vector<int32_t>{0})); }
+    return result;
+  }
 };
 
 class DropoutGradFunctor {
@@ -2543,9 +2695,10 @@ class OneHotFunctor {
       auto tensor_max = JUST(functional::ReduceMax(input, axis, false));
 
       int64_t max = 0;
-      const auto& callback = [&](uint64_t of_blob_ptr) {
-        auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-        of_blob->AutoMemCopyTo<int64_t>(&max, 1);  // copy 1 scalar(int64_t) tensor's value to max
+      const auto& callback = [&](ep::Stream* stream,
+                                 const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+        SyncAutoMemcpy(stream, &max, eager_blob_object->dptr(), sizeof(max),
+                       memory::MakeHostMemCase(), eager_blob_object->mem_case());
       };
       JUST(SyncAccessTensorWithTimeOut(tensor_max, callback, "const"));
       JUST(attrs.SetAttr<int64_t>("depth", max + 1));
@@ -2576,6 +2729,18 @@ class OneHotFunctor {
   std::shared_ptr<OpExpr> one_hot_op_;
 };
 
+class PairwiseDistanceFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& y,
+                           const float& p, const double& eps, bool keepdim) const {
+    const int64_t xdim = x->ndim();
+    const int64_t ydim = y->ndim();
+    const int64_t output_dim = xdim > ydim ? xdim : ydim;
+    const auto& sub = JUST(ScalarAdd(JUST(Sub(x, y, 1, false)), eps, 1, false));
+    return ScalarNorm(sub, p, output_dim - 1, keepdim, NullOpt);
+  }
+};
+
 class CosineSimilarityFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -2591,8 +2756,8 @@ class CosineSimilarityFunctor {
         int64_t offset = max_shape.NumAxes() - 1 - i;
         int64_t dim_x = x_shape.NumAxes() - 1 - offset;
         int64_t dim_y = y_shape.NumAxes() - 1 - offset;
-        int64_t size_x = (dim_x >= 0) ? x_shape.At(i) : 1;
-        int64_t size_y = (dim_y >= 0) ? y_shape.At(i) : 1;
+        int64_t size_x = (dim_x >= 0) ? x_shape.At(dim_x) : 1;
+        int64_t size_y = (dim_y >= 0) ? y_shape.At(dim_y) : 1;
         if (!(size_x == size_y || size_x == 1 || size_y == 1)) {
           return Error::RuntimeError()
                  << "The size of tensor a (" << size_x << ") must match the size of tensor b ("
@@ -3340,6 +3505,28 @@ class OneEmbeddingLookupFunctor {
   std::shared_ptr<OpExpr> op_no_table_ids_;
 };
 
+class OneEmbeddingLookupGradFunctor {
+ public:
+  OneEmbeddingLookupGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("embedding_update_placeholder")
+                         .Input("ids")
+                         .Input("embedding_grad")
+                         .Build());
+  }
+
+  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ids,
+                         const std::shared_ptr<one::Tensor>& embedding_grad,
+                         const std::string& key_value_store_options) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("key_value_store_options", key_value_store_options));
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ids, embedding_grad}, attrs));
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class OneEmbeddingUniqueKeyValuePairFunctor {
  public:
   OneEmbeddingUniqueKeyValuePairFunctor() {
@@ -3764,9 +3951,15 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GridSampleFunctor>("GridSample");
   m.add_functor<impl::NormalizationFunctor>("Normalization");
   m.add_functor<impl::NormalizationAddReluFunctor>("NormalizationAddRelu");
+  m.add_functor<impl::ConstantPadFunctor>("ConstantPad");
+  m.add_functor<impl::ReflectionPadFunctor>("ReflectionPad");
+  m.add_functor<impl::ReplicationPadFunctor>("ReplicationPad");
   m.add_functor<impl::PadFunctor>("Pad");
   m.add_functor<impl::DropoutFunctor>("Dropout");
   m.add_functor<impl::DropoutGradFunctor>("DropoutGrad");
+  m.add_functor<impl::Dropout1dFunctor>("Dropout1d");
+  m.add_functor<impl::Dropout2dFunctor>("Dropout2d");
+  m.add_functor<impl::Dropout3dFunctor>("Dropout3d");
   m.add_functor<impl::PixelShuffleFunctor>("PixelShuffle");
   m.add_functor<impl::AvgPool1DFunctor>("AvgPool1D");
   m.add_functor<impl::AvgPool2DFunctor>("AvgPool2D");
@@ -3776,6 +3969,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneHotFunctor>("OneHot");
   m.add_functor<impl::FusedSelfAttentionFunctor>("FusedSelfAttention");
   m.add_functor<impl::FusedSelfAttentionGradFunctor>("FusedSelfAttentionGrad");
+  m.add_functor<impl::PairwiseDistanceFunctor>("PairwiseDistance");
   m.add_functor<impl::CosineSimilarityFunctor>("CosineSimilarity");
   m.add_functor<impl::NormalizeFunctor>("Normalize");
   m.add_functor<impl::L2NormalizeFunctor>("L2Normalize");
@@ -3799,6 +3993,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingEmbeddingGradientShuffleFunctor>(
       "OneEmbeddingEmbeddingGradientShuffle");
   m.add_functor<impl::OneEmbeddingLookupFunctor>("OneEmbeddingLookup");
+  m.add_functor<impl::OneEmbeddingLookupGradFunctor>("OneEmbeddingLookupGrad");
   m.add_functor<impl::OneEmbeddingUniqueKeyValuePairFunctor>("OneEmbeddingUniqueKeyValuePair");
   m.add_functor<impl::NormalFunctor>("Normal");
   m.add_functor<impl::Normal2Functor>("Normal2");

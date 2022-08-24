@@ -14,12 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/instruction.h"
-#include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
-#include "oneflow/core/framework/stream_get_stream_role_name.h"
+#include "oneflow/core/framework/stream_get_stream_type_name.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/profiler/profiler.h"
@@ -29,13 +27,13 @@ namespace vm {
 
 std::string Instruction::DebugName() const {
   std::string instr_name = instruction_policy().DebugName(*this);
-  return instr_name + ":" + GetStreamRoleName::Visit(stream().stream_role());
+  return instr_name + ":" + GetStreamTypeName::Visit(stream().stream_type());
 }
 
 void Instruction::__Init__(Stream* stream,
-                           std::unique_ptr<InstructionPolicy>&& instruction_policy) {
+                           std::shared_ptr<InstructionPolicy>&& instruction_policy) {
   stream_ = stream;
-  instruction_policy_ = std::move(instruction_policy);
+  instruction_policy_ = instruction_policy;
 }
 
 void Instruction::InitStatus() { instruction_policy_->InitInstructionStatusIf(this); }
@@ -43,11 +41,17 @@ void Instruction::InitStatus() { instruction_policy_->InitInstructionStatusIf(th
 Maybe<void> Instruction::Prepare() { return instruction_policy_->PrepareIf(this); }
 void Instruction::Compute() { return instruction_policy_->ComputeIf(this); }
 
-void Instruction::DeleteStatusAndClearEdges() {
-  OF_PROFILER_RANGE_GUARD("Instruction::DeleteStatusAndClearEdges");
+void Instruction::DeleteStatusAndCheckEdges() {
+  OF_PROFILER_RANGE_GUARD("Instruction::DeleteStatusAndCheckEdges");
   instruction_policy_->DeleteInstructionStatusIf(this);
-  mut_in_edges()->Clear();
-  mut_out_edges()->Clear();
+  INTRUSIVE_FOR_EACH_PTR(edge, mut_in_edges()) {
+    Instruction* in_instruction = edge->mut_src_instruction();
+    LOG(FATAL) << "unerased edge: " << in_instruction->DebugName() << " -> " << this->DebugName();
+  }
+  INTRUSIVE_FOR_EACH_PTR(edge, mut_out_edges()) {
+    Instruction* out_instruction = edge->mut_dst_instruction();
+    LOG(FATAL) << "unerased edge: " << this->DebugName() << " -> " << out_instruction->DebugName();
+  }
 }
 
 bool Instruction::Done() const {
