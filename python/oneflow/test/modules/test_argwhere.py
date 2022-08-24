@@ -26,6 +26,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 import torch as torch_original
 
+
 def _test_argwhere(test_case, shape, device):
     np_input = np.random.randn(*shape)
     input = flow.tensor(np_input, dtype=flow.float32, device=flow.device(device))
