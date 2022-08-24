@@ -155,11 +155,13 @@ class BroadcastPowYGradGrad : public OpExprGradFunction<BroadcastPowYGradGradCap
     // grad_for_x  = out_grads * z * dz / x
     // grad_for_z  = out_grads * ln(x) * dz
 
-    if (ctx->dz_requires_grad) {
-      const auto& y = ctx->SavedTensors().at(ctx->y_index);
-      const auto& broadcast_y = JUST(functional::BroadcastLike(y, z, {}));
-      const auto& broadcast_g = JUST(functional::BroadcastLike(out_grads.at(0), z, {}));
-      in_grads->at(0) = JUST(functional::BroadcastPowYGrad(broadcast_g, x, broadcast_y, z));
+    if (ctx->dz_requires_grad || ctx->z_requires_grad) {
+      const auto& tmp =
+          JUST(functional::sequence_function(functional::Log)
+                   .then(std::bind(functional::Mul, std::placeholders::_1, out_grads.at(0)))
+                   .call(x));
+      if (ctx->dz_requires_grad) { in_grads->at(0) = JUST(functional::Mul(tmp, z)); }
+      if (ctx->z_requires_grad) { in_grads->at(3) = JUST(functional::Mul(tmp, dz)); }
     }
     if (ctx->x_requires_grad) {
       in_grads->at(1) =
@@ -168,13 +170,6 @@ class BroadcastPowYGradGrad : public OpExprGradFunction<BroadcastPowYGradGradCap
                    .then(std::bind(functional::BroadcastReduceSumLike, std::placeholders::_1, x))
                    .then(std::bind(functional::Div, std::placeholders::_1, x))
                    .call(z, dz));
-    }
-    if (ctx->z_requires_grad) {
-      in_grads->at(3) =
-          JUST(functional::sequence_function(functional::Log)
-                   .then(std::bind(functional::Mul, std::placeholders::_1, out_grads.at(0)))
-                   .then(std::bind(functional::Mul, std::placeholders::_1, dz))
-                   .call(x));
     }
     return Maybe<void>::Ok();
   }
