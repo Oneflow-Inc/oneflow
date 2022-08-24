@@ -265,3 +265,12 @@ add_docstr(
         >>> loss.backward()
     """,
 )
+
+add_docstr(
+    oneflow._C.ctc_loss,
+    r"""
+    ctc_loss(log_probs, target, input_lenghts, target_lengths, blank=0, zero_infinity=False, reduction="mean")
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.ctc_loss.html
+    """
+)
