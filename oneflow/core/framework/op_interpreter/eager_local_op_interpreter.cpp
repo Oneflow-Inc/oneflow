@@ -299,8 +299,8 @@ Maybe<void> RawLocalToGlobal(const CastToGlobalOpExpr& op_expr, const TensorTupl
     CHECK_OR_RETURN(ctx.nd_sbp.has_value());
     const auto& nd_sbp = JUST(ctx.nd_sbp);
     const auto& parallel_desc = JUST(ctx.parallel_desc);
-    const auto& logical_shape = JUST(ctx.attrs.Attr<Shape>("shape"));
-    DataType dtype = JUST(ctx.attrs.Attr<DataType>("dtype"));
+    const auto& logical_shape = JUST(ctx.attrs.GetAttr<Shape>("shape"));
+    DataType dtype = JUST(ctx.attrs.GetAttr<DataType>("dtype"));
     GlobalTensorMeta tensor_meta(std::make_shared<const Shape>(logical_shape), dtype, nd_sbp,
                                  parallel_desc);
     Optional<int64_t> parallel_id{};
@@ -328,7 +328,7 @@ static constexpr auto* LocalToGlobal = DECORATE(&RawLocalToGlobal, NonRecursiveI
 Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastToGlobalOpExpr& op_expr,
                                              const TensorTuple& inputs, TensorTuple* outputs,
                                              const OpExprInterpContext& ctx) const {
-  bool sync_data = JUST(ctx.attrs.Attr<bool>("sync_data"));
+  bool sync_data = JUST(ctx.attrs.GetAttr<bool>("sync_data"));
   JUST(LocalToGlobal(op_expr, inputs, outputs, ctx));
   const auto& global_tensor = JUST((*outputs)[0]->AsGlobalTensor());
   JUST(WithConsistencyChecked(global_tensor, [&]() -> Maybe<void> {
@@ -411,7 +411,7 @@ Maybe<void> EagerLocalInterpreter::ApplyImpl(const DistributeAddOpExpr& op_expr,
 Maybe<void> EagerLocalInterpreter::ApplyImpl(const SelectTopNOpExpr& op_expr,
                                              const TensorTuple& inputs, TensorTuple* outputs,
                                              const OpExprInterpContext& ctx) const {
-  int top_n = JUST(ctx.attrs.Attr<int32_t>("top_n"));
+  int top_n = JUST(ctx.attrs.GetAttr<int32_t>("top_n"));
   outputs->resize(top_n);
   for (int i = 0; i < top_n; ++i) { (*outputs)[i] = JUST(JUST(VectorAt(inputs, i))->detach()); }
   return Maybe<void>::Ok();

@@ -85,7 +85,7 @@ bool AttrMap::operator==(const AttrMap& other) const {
 }
 
 template<typename T>
-Maybe<const T&> AttrMap::Attr(const std::string& attr_name) const {
+Maybe<const T&> AttrMap::GetAttr(const std::string& attr_name) const {
   const auto& attr = Attr4Name(attr_name);
   CHECK_OR_RETURN(attr) << Error::InvalidValueError()
                         << "no attribute found. attribute name: " << attr_name;
@@ -129,7 +129,7 @@ void AttrMap::const_iterator::UpdateKV() {
 AttrMap MakeAttrMapFromUserOpConf(const UserOpConf& user_conf) { return AttrMap(user_conf); }
 
 template<typename T>
-Maybe<const T&> ComposedAttrMap::Attr(const std::string& attr_name) const {
+Maybe<const T&> ComposedAttrMap::GetAttr(const std::string& attr_name) const {
   const auto& attr = Attr4Name(attr_name);
   CHECK_OR_RETURN(attr) << Error::InvalidValueError()
                         << "no attribute found. attribute name: " << attr_name;
@@ -147,9 +147,9 @@ bool ComposedAttrMap::Has(const std::string& attr_name) const {
   return Attr4Name(attr_name) != nullptr;
 }
 
-#define DEFINE_ATTR_VALUE_MAP_GET_ATTR(field, T, attr_type)                      \
-  template Maybe<const T&> AttrMap::Attr<T>(const std::string& attr_name) const; \
-  template Maybe<const T&> ComposedAttrMap::Attr<T>(const std::string& attr_name) const;
+#define DEFINE_ATTR_VALUE_MAP_GET_ATTR(field, T, attr_type)                         \
+  template Maybe<const T&> AttrMap::GetAttr<T>(const std::string& attr_name) const; \
+  template Maybe<const T&> ComposedAttrMap::GetAttr<T>(const std::string& attr_name) const;
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_ATTR_VALUE_MAP_GET_ATTR, ATTR_SEQ);
 #undef DEFINE_ATTR_VALUE_MAP_GET_ATTR

@@ -43,7 +43,7 @@ class AttrMap final {
   bool Has(const std::string& attr_name) const;
 
   template<typename T>
-  Maybe<const T&> Attr(const std::string& attr_name) const;
+  Maybe<const T&> GetAttr(const std::string& attr_name) const;
 
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(const std::string& attr_name) const;
 
@@ -106,7 +106,7 @@ class ComposedAttrMap final {
   ComposedAttrMap(const AttrMap& prior, const AttrMap& base) : prior_(prior), base_(base) {}
 
   template<typename T>
-  Maybe<const T&> Attr(const std::string& attr_name) const;
+  Maybe<const T&> GetAttr(const std::string& attr_name) const;
 
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(const std::string& attr_name) const;
 

@@ -28,27 +28,27 @@ TEST(AttrMap, basic) {
   mut_attr_map.SetAttr<std::vector<int64_t>>("ones", std::vector<int64_t>{1});
   AttrMap attr_map(mut_attr_map);
   {
-    const auto& val = CHECK_JUST(attr_map.Attr<int32_t>("zero"));
+    const auto& val = CHECK_JUST(attr_map.GetAttr<int32_t>("zero"));
     ASSERT_EQ(val, 0);
   }
   {
-    const auto& val = CHECK_JUST(attr_map.Attr<int64_t>("one"));
+    const auto& val = CHECK_JUST(attr_map.GetAttr<int64_t>("one"));
     ASSERT_EQ(val, 1);
   }
   {
-    const auto& val = CHECK_JUST(attr_map.Attr<std::vector<int32_t>>("zeros"));
+    const auto& val = CHECK_JUST(attr_map.GetAttr<std::vector<int32_t>>("zeros"));
     ASSERT_EQ(val.size(), 1);
   }
   {
-    const auto& val = CHECK_JUST(attr_map.Attr<std::vector<int32_t>>("zeros"));
+    const auto& val = CHECK_JUST(attr_map.GetAttr<std::vector<int32_t>>("zeros"));
     ASSERT_EQ(val.at(0), 0);
   }
   {
-    const auto& val = CHECK_JUST(attr_map.Attr<std::vector<int64_t>>("ones"));
+    const auto& val = CHECK_JUST(attr_map.GetAttr<std::vector<int64_t>>("ones"));
     ASSERT_EQ(val.size(), 1);
   }
   {
-    const auto& val = CHECK_JUST(attr_map.Attr<std::vector<int64_t>>("ones"));
+    const auto& val = CHECK_JUST(attr_map.GetAttr<std::vector<int64_t>>("ones"));
     ASSERT_EQ(val.at(0), 1);
   }
 }
