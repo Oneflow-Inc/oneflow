@@ -22,7 +22,7 @@ from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-
+from packaging import version
 from oneflow.test_utils.automated_test_util import *
 import torch as torch_original
 
