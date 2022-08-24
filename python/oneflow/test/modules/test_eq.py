@@ -86,6 +86,12 @@ class TestEq(flow.unittest.TestCase):
         x = random_tensor(ndim=0, requires_grad=False).to(device)
         return torch.eq(x, x)
 
+    @profile(torch.eq)
+    def profile_eq(test_case):
+        input1 = torch.ones(1000,1280)
+        input2 = torch.ones(1000,1280)
+        torch.eq(input1, input2)
+
 
 if __name__ == "__main__":
     unittest.main()
