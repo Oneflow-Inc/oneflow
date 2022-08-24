@@ -104,7 +104,13 @@ class Module(object):
 
     def __getstate__(self):
         if not self._is_ddp_module:
-            if len(self._backward_hooks) > 0 or len(self._forward_hooks) > 0 or len(self._forward_pre_hooks) > 0 or len(self._state_dict_hooks) > 0 or len(self._load_state_dict_pre_hooks) > 0:
+            if (
+                len(self._backward_hooks) > 0
+                or len(self._forward_hooks) > 0
+                or len(self._forward_pre_hooks) > 0
+                or len(self._state_dict_hooks) > 0
+                or len(self._load_state_dict_pre_hooks) > 0
+            ):
                 warnings.warn("The module hooks will not be remained after serializing")
 
         state = self.__dict__.copy()
@@ -125,7 +131,6 @@ class Module(object):
         if self._is_ddp_module:
             # flow.nn.parallel.DistributedDataParallel updates the module inplace
             flow.nn.parallel.DistributedDataParallel(self)
-
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError()
