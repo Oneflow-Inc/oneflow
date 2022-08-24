@@ -70,7 +70,8 @@ class MutableAttrMap {
  private:
   template<typename T>
   inline void SetAttrNoThrow(int idx, const T& attr_val) {
-    if (!attrs_[idx] || *static_cast<const T*>(attrs_[idx]->Ptr()) != attr_val) {
+    if (!attrs_[idx] || attrs_[idx]->value_type() != user_op::GetAttrType<T>::value
+        || *static_cast<const T*>(attrs_[idx]->Ptr()) != attr_val) {
       attrs_[idx] = std::make_shared<user_op::TypedAttrVal<T>>(attr_val);
     }
     valid_masks_[idx] = true;
