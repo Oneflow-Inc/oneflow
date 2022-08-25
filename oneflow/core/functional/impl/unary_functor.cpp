@@ -64,16 +64,15 @@ namespace impl {
 
 #define FLOAT_UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_Y_SEQ OF_PP_MAKE_TUPLE_SEQ("sigmoid", Sigmoid)
 
-#define UNARY_FUNC_BWD_WITH_FILL_SEQ                   \
-  OF_PP_MAKE_TUPLE_SEQ("rint", Rint)                   \
-  OF_PP_MAKE_TUPLE_SEQ("round", Round)                 \
-  OF_PP_MAKE_TUPLE_SEQ("floor", Floor)                 \
+#define UNARY_FUNC_BWD_WITH_FILL_SEQ   \
+  OF_PP_MAKE_TUPLE_SEQ("rint", Rint)   \
+  OF_PP_MAKE_TUPLE_SEQ("round", Round) \
+  OF_PP_MAKE_TUPLE_SEQ("floor", Floor) \
   OF_PP_MAKE_TUPLE_SEQ("ceil", Ceil)
 
 #define FLOAT_UNARY_FUNC_BWD_WITH_FILL_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ("sign", Sign) \
+  OF_PP_MAKE_TUPLE_SEQ("sign", Sign)       \
   OF_PP_MAKE_TUPLE_SEQ("not_equal_zero", NotEqualZero)
-
 
 #define LOGICAL_FLOAT_UNARY_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("logical_not", LogicalNot)
 
