@@ -227,6 +227,9 @@ Dropout Layers
     :template: classtemplate.rst
 
     nn.Dropout
+    nn.Dropout1d
+    nn.Dropout2d
+    nn.Dropout3d
 
 Sparse Layers
 ----------------------------------
@@ -318,7 +321,6 @@ Quantization Aware Training
     :toctree: generated
     :nosignatures:
 
-    
     nn.MinMaxObserver
     nn.MovingAverageMinMaxObserver
     nn.FakeQuantization

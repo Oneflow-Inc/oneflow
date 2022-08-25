@@ -30,11 +30,9 @@ class TransportToken;
 // collective communication library
 namespace ccl {
 
-template<DeviceType device_type>
-Maybe<void> Send(const void* in, size_t elem_cnt, DataType dtype, int64_t dst, ep::Stream* stream);
+Maybe<void> CpuSend(const void* in, size_t buffer_size, int64_t dst);
 
-template<DeviceType device_type>
-Maybe<void> Recv(void* out, size_t elem_cnt, DataType dtype, int64_t src, ep::Stream* stream);
+Maybe<void> CpuRecv(void* out, size_t buffer_size, int64_t src);
 
 Maybe<void> CpuBroadcast(const void* in, void* out, size_t buffer_size, int64_t root,
                          Symbol<ParallelDesc> parallel_desc, const TransportToken& transport_token);
