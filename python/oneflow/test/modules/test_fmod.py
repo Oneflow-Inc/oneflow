@@ -70,6 +70,11 @@ class TestFmodModule(flow.unittest.TestCase):
         y = torch.fmod(x, 2)
         return y
 
+    @profile(torch.fmod)
+    def profile_fmod(test_case):
+        torch.fmod(torch.ones(100,100,100), 1)
+        torch.fmod(torch.ones(100,100,100), -0.5)
+
 
 if __name__ == "__main__":
     unittest.main()

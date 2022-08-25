@@ -150,6 +150,13 @@ class TestGreater(flow.unittest.TestCase):
         y2 = x1 > x2
         return (y1, y2)
 
+    @profile(torch.gt)
+    def profile_gt(test_case):
+        input = torch.ones(1000,1000)
+        other = torch.ones(1000,1000)
+        torch.gt(input, other)
+        torch.gt(input, 0)
+
 
 if __name__ == "__main__":
     unittest.main()

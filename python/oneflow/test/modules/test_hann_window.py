@@ -47,6 +47,11 @@ class TestHannWindow(flow.unittest.TestCase):
         output = flow.hann_window(window_length, periodic, device=device, dtype=dtype)
         test_case.assertEqual(output.dtype, dtype)
 
+    @profile(torch.hann_window)
+    def profile_hann_window(test_case):
+        torch.hann_window(128000,periodic=True)
+        torch.hann_window(128001,periodic=False)
+
 
 if __name__ == "__main__":
     unittest.main()

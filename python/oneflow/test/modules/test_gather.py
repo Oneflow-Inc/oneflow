@@ -180,6 +180,11 @@ class TestGather(flow.unittest.TestCase):
         ).to(device)
         return torch.gather(input, dim, index)
 
+    @profile(torch.gather)
+    def profile_gather(test_case):
+        t = torch.ones(1000,1000)
+        torch.gather(t, 1, torch.ones(1000,1000,dtype=torch.int64))
+
 
 if __name__ == "__main__":
     unittest.main()
