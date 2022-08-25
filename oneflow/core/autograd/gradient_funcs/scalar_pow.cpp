@@ -63,7 +63,6 @@ class ScalarPow : public OpExprGradFunction<ScalarPowCaptureState> {
   }
 
  private:
-  std::shared_ptr<OpExpr> grad_op_;
   AttrMap base_attrs_;
 };
 
@@ -107,7 +106,6 @@ class ScalarReversePow : public OpExprGradFunction<ScalarPowCaptureState> {
   }
 
  private:
-  std::shared_ptr<OpExpr> grad_op_;
   AttrMap base_attrs_;
 };
 
