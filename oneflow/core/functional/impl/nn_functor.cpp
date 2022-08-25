@@ -2457,6 +2457,103 @@ class DropoutFunctor {
   std::shared_ptr<OpExpr> add_op_;
 };
 
+namespace {
+Maybe<Tensor> MakeFeatureNoise(const std::shared_ptr<one::Tensor>& x) {
+  const int64_t ndim = x->ndim();
+  CHECK_GE_OR_RETURN(ndim, 2) << Error::RuntimeError()
+                              << "Feature dropout requires at least 2 dimensions in the input";
+  std::vector<int64_t> sizes;
+  sizes.reserve(ndim);
+  sizes.push_back(x->shape()->At(0));
+  sizes.push_back(x->shape()->At(1));
+  for (int i = 2; i < ndim; i++) { sizes.push_back(1); }
+  return JUST(Empty(Shape(sizes), x->dtype(), JUST(x->device()), false));
+}
+
+Maybe<Tensor> DropoutImpl(const std::shared_ptr<one::Tensor>& input, const float& p,
+                          const bool& train) {
+  CHECK_EQ_OR_RETURN(p >= 0 && p <= 1, true)
+      << "dropout probability has to be between 0 and 1, but got " << p;
+  if (p == 0 || !train || input->shape()->elem_cnt() == 0) { return input; }
+  if (p == 1) {
+    std::shared_ptr<Tensor> other =
+        JUST(Constant(*input->shape(), Scalar(0.0), input->dtype(), JUST(input->device())));
+    return InplaceMul(input, other);
+  }
+  std::shared_ptr<Tensor> noise = JUST(MakeFeatureNoise(input));
+  noise = JUST(BernoulliProb(noise, 1.0 - p, noise->dtype(), JUST(one::DefaultAutoGenerator())));
+  noise = JUST(InplaceScalarDiv(noise, Scalar(1.0 - p)));
+  noise = JUST(InplaceMul(input, noise));
+  return noise;
+}
+}  // namespace
+
+class Dropout1dFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
+                           const bool& training) const {
+    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, true)
+        << "dropout probability has to be between 0 and 1, but got " << p;
+    const int input_dim = input->ndim();
+    CHECK_EQ_OR_RETURN(input_dim != 2 && input_dim != 3, true)
+        << "dropout1d: Expected 2D or 3D input, but received a {inp_dim}D input. "
+           "Note that dropout1d exists to provide channel-wise dropout on inputs with 1 "
+           "spatial dimension, a channel dimension, and an optional batch dimension "
+           "(i.e. 2D or 3D inputs).";
+    bool is_batched = (input_dim == 3);
+    std::shared_ptr<one::Tensor> result;
+    if (!is_batched) { result = JUST(Unsqueeze(input, 0)); }
+    result = JUST(DropoutImpl(result, p, training));
+    if (!is_batched) { result = JUST(Squeeze(result, std::vector<int32_t>{0})); }
+    return result;
+  }
+};
+
+class Dropout2dFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
+                           const bool& training) const {
+    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, true)
+        << "dropout probability has to be between 0 and 1, but got " << p;
+    const int input_dim = input->ndim();
+    CHECK_EQ_OR_RETURN(input_dim != 3 && input_dim != 4, true)
+        << "dropout2d: Received a {inp_dim}-D input to dropout2d, which is deprecated "
+           "and will result in an error in a future release. To retain the behavior "
+           "and silence this warning, please use dropout instead. Note that dropout2d "
+           "exists to provide channel-wise dropout on inputs with 2 spatial dimensions, "
+           "a channel dimension, and an optional batch dimension (i.e. 3D or 4D inputs).";
+    CHECK_EQ_OR_RETURN(input_dim == 3, true)
+        << "dropout2d: Received a 3D input to dropout2d and assuming that channel-wise "
+           "1D dropout behavior is desired - input is interpreted as shape (N, C, L), where C "
+           "is the channel dim. This behavior will change in a future release to interpret the "
+           "input as one without a batch dimension, i.e. shape (C, H, W). To maintain the 1D "
+           "channel-wise dropout behavior, please switch to using dropout1d instead.";
+    return JUST(DropoutImpl(input, p, training));
+  }
+};
+
+class Dropout3dFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
+                           const bool& training) const {
+    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, true)
+        << "dropout probability has to be between 0 and 1, but got " << p;
+    const int input_dim = input->ndim();
+    CHECK_EQ_OR_RETURN(input_dim != 4 && input_dim != 5, true)
+        << "dropout3d: Received a {inp_dim}-D input to dropout3d, which is deprecated "
+           "and will result in an error in a future release. To retain the behavior "
+           "and silence this warning, please use dropout instead. Note that dropout3d "
+           "exists to provide channel-wise dropout on inputs with 3 spatial dimensions, "
+           "a channel dimension, and an optional batch dimension (i.e. 4D or 5D inputs).";
+    bool is_batched = (input_dim == 5);
+    std::shared_ptr<one::Tensor> result;
+    if (!is_batched) { result = JUST(Unsqueeze(input, 0)); }
+    result = JUST(DropoutImpl(result, p, training));
+    if (!is_batched) { result = JUST(Squeeze(result, std::vector<int32_t>{0})); }
+    return result;
+  }
+};
+
 class DropoutGradFunctor {
  public:
   DropoutGradFunctor() {
@@ -3408,6 +3505,28 @@ class OneEmbeddingLookupFunctor {
   std::shared_ptr<OpExpr> op_no_table_ids_;
 };
 
+class OneEmbeddingLookupGradFunctor {
+ public:
+  OneEmbeddingLookupGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("embedding_update_placeholder")
+                         .Input("ids")
+                         .Input("embedding_grad")
+                         .Build());
+  }
+
+  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ids,
+                         const std::shared_ptr<one::Tensor>& embedding_grad,
+                         const std::string& key_value_store_options) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("key_value_store_options", key_value_store_options));
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ids, embedding_grad}, attrs));
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class OneEmbeddingUniqueKeyValuePairFunctor {
  public:
   OneEmbeddingUniqueKeyValuePairFunctor() {
@@ -3781,6 +3900,169 @@ class MatrixVectorProductFunctor {
   std::shared_ptr<OpExpr> matrix_vector_product_op_;
 };
 
+class BatchNormStatsFunctor {
+ public:
+  BatchNormStatsFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("batch_norm_stats").Input("input").Output("mean").Output("invstd").Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input, const int& axis,
+                                const float& eps) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    JUST(attrs.SetAttr<float>("eps", eps));
+    return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class BatchNormGatherStatsWithCountsFunctor {
+ public:
+  BatchNormGatherStatsWithCountsFunctor() {
+    op_with_running_mean_and_var_ = CHECK_JUST(one::OpBuilder("batch_norm_gather_stats_with_counts")
+                                                   .Input("input")
+                                                   .Input("mean")
+                                                   .Input("invstd")
+                                                   .Input("counts")
+                                                   .Input("running_mean")
+                                                   .Input("running_var")
+                                                   .Output("global_mean")
+                                                   .Output("global_invstd")
+                                                   .Build());
+    op_without_running_mean_and_var_ =
+        CHECK_JUST(one::OpBuilder("batch_norm_gather_stats_with_counts")
+                       .Input("input")
+                       .Input("mean")
+                       .Input("invstd")
+                       .Input("counts")
+                       .Output("global_mean")
+                       .Output("global_invstd")
+                       .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input,
+                                const std::shared_ptr<one::Tensor>& mean,
+                                const std::shared_ptr<one::Tensor>& invstd,
+                                const Optional<one::Tensor>& running_mean,
+                                const Optional<one::Tensor>& running_var, const float& momentum,
+                                const float& eps,
+                                const std::shared_ptr<one::Tensor>& counts) const {
+    CHECK_OR_RETURN((running_mean && running_var) || (!running_mean && !running_var))
+        << Error::RuntimeError()
+        << "Both running_mean and running_var should be None or Tensor at the same time.";
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("eps", eps));
+    JUST(attrs.SetAttr<float>("momentum", momentum));
+
+    if (running_mean) {
+      return OpInterpUtil::Dispatch<one::TensorTuple>(
+          *op_with_running_mean_and_var_,
+          {input, mean, invstd, counts, JUST(running_mean), JUST(running_var)}, attrs);
+    }
+    return OpInterpUtil::Dispatch<one::TensorTuple>(*op_without_running_mean_and_var_,
+                                                    {input, mean, invstd, counts}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_with_running_mean_and_var_;
+  std::shared_ptr<OpExpr> op_without_running_mean_and_var_;
+};
+
+class BatchNormElemtFunctor {
+ public:
+  BatchNormElemtFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("batch_norm_elemt")
+                         .Input("input")
+                         .Input("weight")
+                         .Input("bias")
+                         .Input("mean")
+                         .Input("invstd")
+                         .Output("output")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& bias,
+                           const std::shared_ptr<one::Tensor>& mean,
+                           const std::shared_ptr<one::Tensor>& invstd, const int& axis,
+                           const float& eps) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    JUST(attrs.SetAttr<float>("eps", eps));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {input, weight, bias, mean, invstd}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class BatchNormBackwardReduceFunctor {
+ public:
+  BatchNormBackwardReduceFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("batch_norm_backward_reduce")
+                         .Input("grad_out")
+                         .Input("input")
+                         .Input("mean")
+                         .Input("invstd")
+                         .Output("sum_dy")
+                         .Output("sum_dy_xmu")
+                         .Output("grad_weight")
+                         .Output("grad_bias")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& grad_out,
+                                const std::shared_ptr<one::Tensor>& input,
+                                const std::shared_ptr<one::Tensor>& mean,
+                                const std::shared_ptr<one::Tensor>& invstd, const int& axis) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {grad_out, input, mean, invstd}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class BatchNormBackwardElemtFunctor {
+ public:
+  BatchNormBackwardElemtFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("batch_norm_backward_elemt")
+                         .Input("grad_out")
+                         .Input("input")
+                         .Input("mean")
+                         .Input("invstd")
+                         .Input("weight")
+                         .Input("sum_dy")
+                         .Input("sum_dy_xmu")
+                         .Input("count")
+                         .Output("grad_in")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& grad_out,
+                           const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& mean,
+                           const std::shared_ptr<one::Tensor>& invstd,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& sum_dy,
+                           const std::shared_ptr<one::Tensor>& sum_dy_xmu,
+                           const std::shared_ptr<one::Tensor>& count, const int& axis) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    return OpInterpUtil::Dispatch<one::Tensor>(
+        *op_, {grad_out, input, mean, invstd, weight, sum_dy, sum_dy_xmu, count}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -3838,6 +4120,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PadFunctor>("Pad");
   m.add_functor<impl::DropoutFunctor>("Dropout");
   m.add_functor<impl::DropoutGradFunctor>("DropoutGrad");
+  m.add_functor<impl::Dropout1dFunctor>("Dropout1d");
+  m.add_functor<impl::Dropout2dFunctor>("Dropout2d");
+  m.add_functor<impl::Dropout3dFunctor>("Dropout3d");
   m.add_functor<impl::PixelShuffleFunctor>("PixelShuffle");
   m.add_functor<impl::AvgPool1DFunctor>("AvgPool1D");
   m.add_functor<impl::AvgPool2DFunctor>("AvgPool2D");
@@ -3871,6 +4156,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingEmbeddingGradientShuffleFunctor>(
       "OneEmbeddingEmbeddingGradientShuffle");
   m.add_functor<impl::OneEmbeddingLookupFunctor>("OneEmbeddingLookup");
+  m.add_functor<impl::OneEmbeddingLookupGradFunctor>("OneEmbeddingLookupGrad");
   m.add_functor<impl::OneEmbeddingUniqueKeyValuePairFunctor>("OneEmbeddingUniqueKeyValuePair");
   m.add_functor<impl::NormalFunctor>("Normal");
   m.add_functor<impl::Normal2Functor>("Normal2");
@@ -3883,6 +4169,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RocAucScoreFunctor>("RocAucScore");
   m.add_functor<impl::MultiTensorSgdUpdateFunctor>("MultiTensorSgdUpdate");
   m.add_functor<impl::MultiTensorAdamUpdateFunctor>("MultiTensorAdamUpdate");
+  m.add_functor<impl::BatchNormStatsFunctor>("BatchNormStats");
+  m.add_functor<impl::BatchNormGatherStatsWithCountsFunctor>("BatchNormGatherStatsWithCounts");
+  m.add_functor<impl::BatchNormElemtFunctor>("BatchNormElemt");
+  m.add_functor<impl::BatchNormBackwardReduceFunctor>("BatchNormBackwardReduce");
+  m.add_functor<impl::BatchNormBackwardElemtFunctor>("BatchNormBackwardElemt");
 }
 
 }  // namespace functional

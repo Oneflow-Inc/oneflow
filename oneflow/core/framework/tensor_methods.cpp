@@ -65,15 +65,15 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   auto device = JUST(input->device());
   auto tensor_meta = SymbolOf(LocalTensorMeta(std::make_shared<Shape>(target_shape),
                                               std::make_shared<Stride>(target_stride),
-                                              input->dtype()->data_type(), device, storage_offset));
+                                              input->dtype()->data_type(), device));
 
   CHECK_OR_RETURN(JUST(input->has_eager_blob_object()));
   // new output tensor
   const auto& blob_object = JUST(input->eager_blob_object());
   bool requires_grad = (autograd::GradMode::is_enabled() && input->requires_grad());
-  auto tensor_impl =
-      std::make_shared<EagerLocalTensorImpl>(JUST(input->tensor_storage()), requires_grad,
-                                             /*is_leaf=*/!requires_grad);
+  auto tensor_impl = std::make_shared<EagerLocalTensorImpl>(JUST(input->tensor_storage()),
+                                                            storage_offset, requires_grad,
+                                                            /*is_leaf=*/!requires_grad);
   JUST(
       tensor_impl->InitEagerBlobObject(tensor_meta, JUST(blob_object->compute_local_dep_object())));
 

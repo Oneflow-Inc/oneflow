@@ -58,6 +58,7 @@ check_unwanted_test_scripts(
         "tensor",
         "exceptions",
         "expensive",
+        "ddp",
         "misc",
         "profiler",
     ],

@@ -29,6 +29,7 @@ static constexpr size_t kMaxOutputCount = 128;
 
 bool IsStaticZerosTensor(const std::shared_ptr<Tensor>& x);
 bool IsInplaceValid(const std::shared_ptr<Tensor>& x);
+bool IsScalarTensor(const std::shared_ptr<Tensor>& x);
 
 Maybe<std::vector<int32_t>> CheckAxis(const std::vector<int32_t>& axis, const int32_t& ndim);
 Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x);
