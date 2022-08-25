@@ -65,12 +65,15 @@ namespace impl {
 #define FLOAT_UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_Y_SEQ OF_PP_MAKE_TUPLE_SEQ("sigmoid", Sigmoid)
 
 #define UNARY_FUNC_BWD_WITH_FILL_SEQ                   \
-  OF_PP_MAKE_TUPLE_SEQ("sign", Sign)                   \
-  OF_PP_MAKE_TUPLE_SEQ("not_equal_zero", NotEqualZero) \
   OF_PP_MAKE_TUPLE_SEQ("rint", Rint)                   \
   OF_PP_MAKE_TUPLE_SEQ("round", Round)                 \
   OF_PP_MAKE_TUPLE_SEQ("floor", Floor)                 \
   OF_PP_MAKE_TUPLE_SEQ("ceil", Ceil)
+
+#define FLOAT_UNARY_FUNC_BWD_WITH_FILL_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ("sign", Sign) \
+  OF_PP_MAKE_TUPLE_SEQ("not_equal_zero", NotEqualZero)
+
 
 #define LOGICAL_FLOAT_UNARY_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("logical_not", LogicalNot)
 
@@ -131,6 +134,9 @@ namespace impl {
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, FloatUnaryFunctor) \
   UNARY_ELEMENTWISE_BWD_WITH_DY_Y_FUNCTOR(op_type_name, class_name, BinaryFunctor)
 
+#define FLOAT_UNARY_BWD_WITH_FILL_FUNCTORS(op_type_name, class_name) \
+  UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, FloatUnaryFunctor)
+
 #define UNARY_BWD_WITH_FILL_FUNCTORS(op_type_name, class_name) \
   UNARY_ELEMENTWISE_FUNCTOR(op_type_name, class_name, UnaryFunctor)
 
@@ -143,6 +149,7 @@ OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_BWD_WITH_DY_X_FUNCTORS,
 
 OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_WITH_DY_Y_FUNCTORS, FLOAT_UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_Y_SEQ);
 OF_PP_FOR_EACH_TUPLE(UNARY_BWD_WITH_FILL_FUNCTORS, UNARY_FUNC_BWD_WITH_FILL_SEQ);
+OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_BWD_WITH_FILL_FUNCTORS, FLOAT_UNARY_FUNC_BWD_WITH_FILL_SEQ);
 
 UNARY_ELEMENTWISE_FUNCTOR("negative", Negative, FloatUnaryFunctor)
 
