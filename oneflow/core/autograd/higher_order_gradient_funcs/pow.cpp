@@ -117,8 +117,7 @@ struct BroadcastPowYGradGradCaptureState : public AutoGradCaptureState {
 
   size_t dz_index = 0;
   size_t x_index = 1;
-  size_t y_index = 2;
-  size_t z_index = 3;
+  size_t z_index = 2;
 };
 
 class BroadcastPowYGradGrad : public OpExprGradFunction<BroadcastPowYGradGradCaptureState> {
@@ -138,7 +137,6 @@ class BroadcastPowYGradGrad : public OpExprGradFunction<BroadcastPowYGradGradCap
 
     ctx->dz_index = ctx->SaveTensorForBackward(inputs.at(0));
     ctx->x_index = ctx->SaveTensorForBackward(inputs.at(1));
-    if (ctx->dz_requires_grad) { ctx->y_index = ctx->SaveTensorForBackward(inputs.at(2)); }
     ctx->z_index = ctx->SaveTensorForBackward(inputs.at(3));
     return Maybe<void>::Ok();
   }
