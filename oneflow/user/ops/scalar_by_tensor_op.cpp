@@ -25,7 +25,7 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc& scalar = ctx->InputTensorDesc("scalar", 0);
   CHECK_EQ_OR_RETURN(scalar.shape().elem_cnt(), 1)
       << Error::RuntimeError() << "The input scalar tensor is not a scalar";
-  user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
   *y->mut_shape() = x.shape();
   *y->mut_is_dynamic() = x.is_dynamic();
   return Maybe<void>::Ok();
@@ -36,7 +36,7 @@ Maybe<void> DataTypeInferFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc& scalar = ctx->InputTensorDesc("scalar", 0);
   CHECK_EQ_OR_RETURN(x.data_type(), scalar.data_type())
       << Error::TypeError() << "Tensors x and scalar have different type";
-  user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
   *y->mut_data_type() = x.data_type();
   return Maybe<void>::Ok();
 }
@@ -148,129 +148,5 @@ GetSbpFn MakeGetSbpFn(GetSbpFn extra) {
 /*static*/ Maybe<void> ScalarDivByTensorOp::InferDataType(user_op::InferContext* ctx) {
   return DataTypeInferFn(ctx);
 }
-
-REGISTER_USER_OP_GRAD("scalar_add_by_tensor")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("y", 0), "x", 0);
-      }
-      if (op.NeedGenGradTensor4OpInput("scalar", 0)) {
-        std::vector<int32_t> axes_vec(op.TensorDesc4ArgNameAndIndex("y", 0).shape().NumAxes());
-        std::iota(axes_vec.begin(), axes_vec.end(), 0);
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "scalar_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("reduce_sum")
-                .Input("input_tensor", op.GetGradTensorWithOpOutput("y", 0))
-                .Output("output_tensor")
-                .Attr("axis", axes_vec)
-                .Attr("keepdims", false)
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("output_tensor", 0), "scalar", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
-
-REGISTER_USER_OP_GRAD("scalar_sub_by_tensor")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("y", 0), "x", 0);
-      }
-      if (op.NeedGenGradTensor4OpInput("scalar", 0)) {
-        std::vector<int32_t> axes_vec(op.TensorDesc4ArgNameAndIndex("y", 0).shape().NumAxes());
-        std::iota(axes_vec.begin(), axes_vec.end(), 0);
-        user_op::UserOpConfWrapperBuilder builder0(op.op_name() + "scalar_grad_reduce_sum");
-        user_op::UserOpConfWrapper scalar_grad_reduce_sum_op =
-            builder0.Op("reduce_sum")
-                .Input("input_tensor", op.GetGradTensorWithOpOutput("y", 0))
-                .Output("output_tensor")
-                .Attr("axis", axes_vec)
-                .Attr("keepdims", false)
-                .Build();
-        user_op::UserOpConfWrapperBuilder builder1(op.op_name() + "scalar_grad_scalar_mul");
-        user_op::UserOpConfWrapper scalar_grad_scalar_mul_op =
-            builder1.Op("scalar_mul")
-                .Input("in", scalar_grad_reduce_sum_op.output("output_tensor", 0))
-                .Output("out")
-                .Attr("has_float_operand", true)
-                .Attr("has_int_operand", false)
-                .Attr("float_operand", static_cast<double>(-1))
-                .Attr("int_operand", static_cast<int64_t>(-1))
-                .Build();
-        op.BindGradTensorWithOpInput(scalar_grad_scalar_mul_op.output("out", 0), "scalar", 0);
-        AddOp(scalar_grad_reduce_sum_op);
-        AddOp(scalar_grad_scalar_mul_op);
-      }
-      return Maybe<void>::Ok();
-    });
-
-REGISTER_USER_OP_GRAD("scalar_mul_by_tensor")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op = builder.Op("scalar_mul_by_tensor")
-                                                 .Input("x", op.GetGradTensorWithOpOutput("y", 0))
-                                                 .Input("scalar", op.input("scalar", 0))
-                                                 .Output("y")
-                                                 .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("y", 0), "x", 0);
-        AddOp(grad_op);
-      }
-      if (op.NeedGenGradTensor4OpInput("scalar", 0)) {
-        int64_t num_axes = op.TensorDesc4ArgNameAndIndex("y", 0).shape().NumAxes();
-        user_op::UserOpConfWrapperBuilder builder0(op.op_name() + "scalar_grad_multiply");
-        user_op::UserOpConfWrapper scalar_grad_multiply_op =
-            builder0.Op("broadcast_mul")
-                .Input("x", op.GetGradTensorWithOpOutput("y", 0))
-                .Input("y", op.input("x", 0))
-                .Output("z")
-                .Build();
-        std::vector<int32_t> axes_vec(num_axes);
-        std::iota(axes_vec.begin(), axes_vec.end(), 0);
-        user_op::UserOpConfWrapperBuilder builder1(op.op_name() + "scalar_grad_reduce_sum");
-        user_op::UserOpConfWrapper scalar_grad_reduce_sum_op =
-            builder1.Op("reduce_sum")
-                .Input("input_tensor", scalar_grad_multiply_op.output("z", 0))
-                .Output("output_tensor")
-                .Attr("axis", axes_vec)
-                .Attr("keepdims", false)
-                .Build();
-        op.BindGradTensorWithOpInput(scalar_grad_reduce_sum_op.output("output_tensor", 0), "scalar",
-                                     0);
-        AddOp(scalar_grad_multiply_op);
-        AddOp(scalar_grad_reduce_sum_op);
-      }
-      return Maybe<void>::Ok();
-    });
-
-REGISTER_USER_OP_GRAD("scalar_div_by_tensor")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op = builder.Op("scalar_div_by_tensor")
-                                                 .Input("x", op.GetGradTensorWithOpOutput("y", 0))
-                                                 .Input("scalar", op.input("scalar", 0))
-                                                 .Output("y")
-                                                 .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("y", 0), "x", 0);
-        AddOp(grad_op);
-      }
-      if (op.NeedGenGradTensor4OpInput("scalar", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "scalar_grad");
-        user_op::UserOpConfWrapper grad_op = builder.Op("broadcast_div_grad")
-                                                 .Input("dz", op.GetGradTensorWithOpOutput("y", 0))
-                                                 .Input("z", op.output("y", 0))
-                                                 .Input("y", op.input("scalar", 0))
-                                                 .Output("dy")
-                                                 .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dy", 0), "scalar", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

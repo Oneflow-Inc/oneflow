@@ -39,6 +39,8 @@ Maybe<void> RawCheckAsymmetricBroadcast(Symbol<PlacedNdSbp> in, Symbol<PlacedNdS
   CHECK_OR_RETURN(NdSbpIsAllBroadcast(*out->nd_sbp()));
   CHECK_OR_RETURN(out->placement()->Bigger(*in->placement())
                   || in->placement()->Bigger(*out->placement()));
+  CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kCPU
+                  || in->placement()->device_type() == DeviceType::kCUDA);
   // NOLINTEND(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
@@ -76,16 +78,19 @@ Maybe<int64_t> CalBroadcastRoot(Symbol<ParallelDesc> src_parallel_desc,
 
 static constexpr auto* CachedGetBroadcastRoot = DECORATE(&CalBroadcastRoot, ThreadLocalCached);
 
-Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root) {
-  return one::OpBuilder("eager_nccl_broadcast", *JUST(UniqueStr("eager_nccl_broadcast")))
+Maybe<one::UserOpExpr> EagerCclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root,
+                                         const Shape& shape) {
+  return one::OpBuilder("eager_ccl_broadcast", *JUST(UniqueStr("eager_ccl_broadcast")))
       .Input("in")
       .Output("out")
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Attr<std::vector<Shape>>("shape_list", {shape})
       .Attr<int64_t>("root", root)
       .Build();
 }
 
-static constexpr auto* CachedEagerNcclBroadcast = DECORATE(&EagerNcclBroadcast, ThreadLocalCached);
+static constexpr auto* CachedEagerCclBroadcast =
+    DECORATE(&EagerCclBroadcast, ThreadLocalCachedCopiable);
 }  // namespace
 
 Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tensor,
@@ -105,26 +110,19 @@ Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tenso
   if (out->placement()->Bigger(*in->placement())) {
     const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_placement));
     if (out_parallel_id->has_value()) {
-      const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_placement));
-      if (!in_parallel_id->has_value()) {
-        const std::string& device_type = in_placement->device_tag();
-        local_tensor =
-            JUST(one::functional::Empty(*tensor->shape(), tensor->dtype(),
-                                        JUST(Device::New(device_type)), /*pin_memory=*/false));
-      }
       const auto& broadcast_group = JUST(GetBroadcastGroup(in_placement, out_placement));
 
       Symbol<ParallelDesc> broadcast_placement_cur_rank =
           JUST(MapAt(*broadcast_group, GlobalProcessCtx::Rank()));
       int64_t root = JUST(CachedGetBroadcastRoot(in_placement, broadcast_placement_cur_rank));
       std::shared_ptr<one::UserOpExpr> op_expr =
-          JUST(CachedEagerNcclBroadcast(broadcast_placement_cur_rank, root));
+          JUST(CachedEagerCclBroadcast(broadcast_placement_cur_rank, root, *tensor->shape()));
       local_tensor = JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {local_tensor}));
     }
   }
   return one::functional::LocalToGlobal(local_tensor, out_placement,
                                         *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
-                                        tensor->dtype());
+                                        tensor->dtype(), /* sync_data */ false, /*copy=*/false);
 }
 
 COMMAND(RegisterBoxingFunction("asymmetric-broadcast", CheckAsymmetricBroadcast,

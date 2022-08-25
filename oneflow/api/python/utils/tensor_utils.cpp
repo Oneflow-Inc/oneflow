@@ -15,13 +15,13 @@ limitations under the License.
 */
 #include "oneflow/api/python/utils/tensor_utils.h"
 
-#include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/framework/consistency_check.h"
@@ -44,9 +44,9 @@ Maybe<void> EagerLocalTensorZeros(const std::shared_ptr<Tensor>& t) {
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     JUST(builder->AccessBlobByCallback(
         local_tensor,
-        [](uint64_t of_blob_ptr) {
-          auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-          of_blob->AsyncAutoMemset(0);
+        [](ep::Stream* stream, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+          AutoMemset(stream, eager_blob_object->mut_dptr(), 0,
+                     eager_blob_object->ByteSizeOfBlobBody(), eager_blob_object->mem_case());
         },
         "mut"));
     return Maybe<void>::Ok();
@@ -54,10 +54,20 @@ Maybe<void> EagerLocalTensorZeros(const std::shared_ptr<Tensor>& t) {
   return Maybe<void>::Ok();
 }
 
+namespace {
+void CopyFromNumpyArray(ep::Stream* stream,
+                        const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+                        const NumPyArrayPtr& array_ptr) {
+  SyncAutoMemcpy(stream, eager_blob_object->mut_dptr(), array_ptr.data(),
+                 eager_blob_object->ByteSizeOfBlobBody(), eager_blob_object->mem_case(),
+                 memory::MakeHostMemCase());
+}
+}  // namespace
+
 template<typename T>
 Maybe<void> CopyLocalTensorFromUntypedArray(const std::shared_ptr<Tensor>& tensor,
                                             PyObject* array) {
-  return CopyBetweenLocalTensorAndNumpy<T>(tensor, array, BlobNumpyCopyUtil<T>::From, "mut",
+  return CopyBetweenLocalTensorAndNumpy<T>(tensor, array, CopyFromNumpyArray, "mut",
                                            /*block_host_until_done=*/false);
 }
 
@@ -96,7 +106,8 @@ MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
   auto btb = std::make_shared<BlockingThenBusy>(1);
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->SyncAccessBlobByCallback(
-        tensor, btb, [](uint64_t) {}, "const");
+        tensor, btb, [](ep::Stream* stream, const std::shared_ptr<vm::EagerBlobObject>&) {},
+        "const");
   }));
   JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
 
@@ -247,12 +258,14 @@ Maybe<Tensor> MakeGlobalTensorFromData(PyObject* data, const Optional<Symbol<DTy
   size_t sbp_dims = sbp_tuple.size();
   Symbol<NdSbp> broadcast_nd_sbp = JUST(CachedGetAllBroadcastNdSbp(sbp_dims));
 
-  std::shared_ptr<Tensor> broadcast_tensor = JUST(functional::LocalToGlobal(
-      local_tensor, placement, *JUST(GetSbpList(broadcast_nd_sbp)), shape, local_tensor->dtype()));
+  std::shared_ptr<Tensor> broadcast_tensor = JUST(
+      functional::LocalToGlobal(local_tensor, placement, *JUST(GetSbpList(broadcast_nd_sbp)), shape,
+                                local_tensor->dtype(), /* sync_data */ true, /*copy=*/false));
 
   std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-  auto global_tensor = JUST(functional::ToGlobal(broadcast_tensor, placement, sbp_tuple,
-                                                 grad_sbp_tuple, /* check_meta */ false));
+  auto global_tensor =
+      JUST(functional::ToGlobal(broadcast_tensor, placement, sbp_tuple, grad_sbp_tuple,
+                                /* check_meta */ false, /*copy=*/false));
   JUST(global_tensor->set_requires_grad(requires_grad));
   return global_tensor;
 }
@@ -268,7 +281,7 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
     std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
     // TODO:(zhaoluyang) global case support pin_memory
     return functional::ToGlobal(other, JUST(other->parallel_desc()), sbp_tuple, grad_sbp_tuple,
-                                /* check_meta */ false);
+                                /* check_meta */ false, /*copy=*/false);
   }
 }
 
@@ -284,7 +297,7 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
     tensor = JUST(functional::Copy(other, device_->type(), device_->device_id(),
                                    pin_memory && !dtype.has_value()));
   } else {
-    tensor = JUST(functional::GlobalToLocal(other));
+    tensor = JUST(functional::GlobalToLocal(other, /*copy=*/false));
     if (!device) { device_ = JUST(Device::New("cpu")); }
     tensor = JUST(functional::Copy(tensor, device_->type(), device_->device_id(),
                                    pin_memory && !dtype.has_value()));
@@ -304,8 +317,8 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const bool requires_grad) {
   std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
   bool check_meta = other->is_global() ? false : true;
-  std::shared_ptr<Tensor> tensor =
-      JUST(functional::ToGlobal(other, placement, sbp_tuple, grad_sbp_tuple, check_meta));
+  std::shared_ptr<Tensor> tensor = JUST(functional::ToGlobal(
+      other, placement, sbp_tuple, grad_sbp_tuple, check_meta, /*copy=*/false));
   if (dtype) {
     const Symbol<DType>& dtype_ = JUST(dtype);
     if (tensor->dtype() != dtype_) {

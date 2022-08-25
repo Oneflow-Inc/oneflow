@@ -42,7 +42,6 @@ Maybe<void> SwitchToShuttingDownPhase(EnvGlobalObjectsScope* env, bool is_normal
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CurrentResource", &CurrentResource);
   m.def("EnvResource", &EnvResource);
-  m.def("EnableEagerEnvironment", &EnableEagerEnvironment);
 
   py::class_<oneflow::EnvGlobalObjectsScope, std::shared_ptr<oneflow::EnvGlobalObjectsScope>>(
       m, "EnvContext")
@@ -78,6 +77,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetGraphDebugMode", &GetGraphDebugMode);
   m.def("SetGraphDebugOnlyUserPyStack", &SetGraphDebugOnlyUserPyStack);
   m.def("GetGraphDebugOnlyUserPyStack", &GetGraphDebugOnlyUserPyStack);
+  m.def("InitPythonPathsToBeKeptAndFilteredForDebugging",
+        &InitPythonPathsToBeKeptAndFilteredForDebugging);
 }
 
 }  // namespace oneflow

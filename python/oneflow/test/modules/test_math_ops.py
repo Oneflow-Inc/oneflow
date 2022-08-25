@@ -207,6 +207,15 @@ class TestPow(flow.unittest.TestCase):
         y = random_tensor(ndim=2, dim1=2).to(device)
         return torch.pow(x, y)
 
+    @autotest(n=5)
+    def test_scalar_pow_with_random_devices(test_case):
+        x1_device = random_device()
+        x2_device = random_device()
+        x1 = random_tensor(2, 2, 3).to(x1_device).mean()
+        x2 = random_tensor(2, 2, 3).to(x2_device)
+        y = torch.pow(x1, x2)
+        return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestAsin(flow.unittest.TestCase):
@@ -387,19 +396,21 @@ class TestAtan2(flow.unittest.TestCase):
 class TestMinimum(flow.unittest.TestCase):
     @autotest(n=5)
     def test_flow_elementwise_minimum_with_random_data(test_case):
+        device = random_device()
         k1 = random(2, 6)
         k2 = random(2, 6)
-        x = random_tensor(ndim=2, dim0=k1, dim1=k2)
-        y = random_tensor(ndim=2, dim0=k1, dim1=k2)
+        x = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        y = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         return torch.minimum(x, y)
 
     @autotest(n=5)
     def test_flow_broadcast_minimum_with_random_data(test_case):
+        device = random_device()
         k1 = random(2, 6)
         k2 = random(2, 6)
         k3 = random(2, 6)
-        x = random_tensor(ndim=3, dim0=k1, dim1=1, dim2=1)
-        y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3)
+        x = random_tensor(ndim=3, dim0=k1, dim1=1, dim2=1).to(device)
+        y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3).to(device)
         return torch.minimum(x, y)
 
 
@@ -407,19 +418,21 @@ class TestMinimum(flow.unittest.TestCase):
 class TestMaximum(flow.unittest.TestCase):
     @autotest(n=5)
     def test_flow_elementwise_mximum_with_random_data(test_case):
+        device = random_device()
         k1 = random(2, 6)
         k2 = random(2, 6)
-        x = random_tensor(ndim=2, dim0=k1, dim1=k2)
-        y = random_tensor(ndim=2, dim0=k1, dim1=k2)
+        x = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        y = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         return torch.maximum(x, y)
 
     @autotest(n=5)
     def test_flow_broadcast_maximum_with_random_data(test_case):
+        device = random_device()
         k1 = random(2, 6)
         k2 = random(2, 6)
         k3 = random(2, 6)
-        x = random_tensor(ndim=3, dim0=k1, dim1=1, dim2=1)
-        y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3)
+        x = random_tensor(ndim=3, dim0=k1, dim1=1, dim2=1).to(device)
+        y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3).to(device)
         return torch.maximum(x, y)
 
 
@@ -439,6 +452,62 @@ class TestFloorDiv(flow.unittest.TestCase):
         x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
         y = random().to(int)
         return torch.floor_divide(x, y)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestFmod(flow.unittest.TestCase):
+    @autotest(auto_backward=False)
+    def test_elementwise_fmod_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        y = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+
+        return torch.fmod(x, y)
+
+    @autotest(n=5, auto_backward=False)
+    def test_flow_broadcast_fmod_with_random_data(test_case):
+        device = random_device()
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        k3 = random(2, 6)
+        x = random_tensor(ndim=3, dim0=k1, dim1=1, dim2=1).to(device)
+        y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3).to(device)
+        return torch.fmod(x, y)
+
+    @autotest(auto_backward=False)
+    def test_tensor_fmod_scalar_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        y = random().to(int)
+        return torch.fmod(x, y)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestPow(flow.unittest.TestCase):
+    @autotest(auto_backward=False)
+    def test_elementwise_pow_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        y = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+
+        return torch.pow(x, y)
+
+    @autotest(n=5)
+    def test_flow_broadcast_pow_with_random_data(test_case):
+        device = random_device()
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        k3 = random(2, 6)
+        x = random_tensor(ndim=3, dim0=k1, dim1=1, dim2=1).to(device)
+        y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3).to(device)
+        return torch.pow(x, y)
+
+    @autotest(auto_backward=False)
+    def test_tensor_pow_scalar_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        y = random().to(int)
+        return torch.pow(x, y)
 
 
 if __name__ == "__main__":

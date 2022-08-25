@@ -48,7 +48,7 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
   JUST(CheckPredictionLabelDesc(&prediction_desc, &label_desc));
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_is_dynamic() = prediction_desc.is_dynamic();
   *out_desc->mut_shape() = label_desc.shape();
   return Maybe<void>::Ok();
@@ -62,8 +62,8 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(dy_desc.shape(), label_desc.shape())
       << Error::RuntimeError() << "The size of dy " << dy_desc.shape()
       << " must match the size of label " << label_desc.shape();
-  *ctx->OutputShape("prediction_diff", 0) = prediction_desc.shape();
-  *ctx->OutputIsDynamic("prediction_diff", 0) = prediction_desc.is_dynamic();
+  *ctx->MutOutputShape("prediction_diff", 0) = prediction_desc.shape();
+  *ctx->MutOutputIsDynamic("prediction_diff", 0) = prediction_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
 
@@ -73,7 +73,7 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
   CHECK_OR_RETURN(IsIndexDataType(label_desc.data_type()))
       << Error::TypeError() << "The dtype of label must be integer, but found "
       << DataType_Name(label_desc.data_type());
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_data_type() = prediction_desc.data_type();
   return Maybe<void>::Ok();
 }
@@ -89,25 +89,7 @@ Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
       << Error::TypeError() << "dy and prediction are expected to have the same dtype, but found "
       << DataType_Name(dy_desc.data_type()) << " and "
       << DataType_Name(prediction_desc.data_type());
-  *ctx->OutputDType("prediction_diff", 0) = prediction_desc.data_type();
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name,
-                                                 const user_op::UserOpWrapper& op,
-                                                 const user_op::AddOpFn& AddOp) {
-  if (op.NeedGenGradTensor4OpInput("prediction", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper grad_op = builder.Op(op_type_name)
-                                             .Input("prediction", op.input("prediction", 0))
-                                             .Input("label", op.input("label", 0))
-                                             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-                                             .Output("prediction_diff")
-                                             .Attr("depth", op.attr<int64_t>("depth"))
-                                             .Build();
-    op.BindGradTensorWithOpInput(grad_op.output("prediction_diff", 0), "prediction", 0);
-    AddOp(grad_op);
-  }
+  *ctx->MutOutputDType("prediction_diff", 0) = prediction_desc.data_type();
   return Maybe<void>::Ok();
 }
 
@@ -219,17 +201,5 @@ Maybe<void> GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name
 /*static*/ Maybe<void> SparseCrossEntropyMsGradOp::InferDataType(user_op::InferContext* ctx) {
   return InferDataTypeGrad(ctx);
 }
-
-REGISTER_USER_OP_GRAD("sparse_cross_entropy")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      return GenBackwardOpConf4SparseCrossEntropy("sparse_cross_entropy_grad", op, AddOp);
-    });
-
-REGISTER_USER_OP_GRAD("sparse_cross_entropy_ms")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      return GenBackwardOpConf4SparseCrossEntropy("sparse_cross_entropy_ms_grad", op, AddOp);
-    });
 
 }  // namespace oneflow

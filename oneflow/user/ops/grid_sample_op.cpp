@@ -47,7 +47,7 @@ Maybe<void> GridSampleOp::CheckAttr(const user_op::UserOpDefWrapper& def,
 /*static*/ auto GridSampleOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
   const user_op::TensorDesc& input = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& grid = ctx->InputTensorDesc("grid", 0);
-  user_op::TensorDesc& output = *(ctx->OutputTensorDesc("output", 0));
+  user_op::TensorDesc& output = *(ctx->MutOutputTensorDesc("output", 0));
   // Only support 4D or 5D input with NCHW layout
   // For 4D grid: input  = { N, C, H_in, W_in },
   //              grid   = { N, H_out, W_out, 2 }
@@ -100,7 +100,7 @@ Maybe<void> GridSampleOp::CheckAttr(const user_op::UserOpDefWrapper& def,
   return Maybe<void>::Ok();
 }
 /*static*/ auto GridSampleOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
-  *ctx->OutputDType("output", 0) = ctx->InputDType("input", 0);
+  *ctx->MutOutputDType("output", 0) = ctx->InputDType("input", 0);
   return Maybe<void>::Ok();
 }
 
@@ -111,8 +111,8 @@ Maybe<void> GridSampleGradOp::CheckAttr(const user_op::UserOpDefWrapper& def,
 
 /*static*/ auto GridSampleGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
-  *(ctx->OutputTensorDesc("dinput", 0)->mut_shape()) = ctx->InputTensorDesc("input", 0).shape();
-  *(ctx->OutputTensorDesc("dgrid", 0)->mut_shape()) = ctx->InputTensorDesc("grid", 0).shape();
+  *(ctx->MutOutputTensorDesc("dinput", 0)->mut_shape()) = ctx->InputTensorDesc("input", 0).shape();
+  *(ctx->MutOutputTensorDesc("dgrid", 0)->mut_shape()) = ctx->InputTensorDesc("grid", 0).shape();
   return Maybe<void>::Ok();
 }
 /*static*/ auto GridSampleGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
@@ -137,37 +137,9 @@ Maybe<void> GridSampleGradOp::CheckAttr(const user_op::UserOpDefWrapper& def,
   return Maybe<void>::Ok();
 }
 /*static*/ auto GridSampleGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
-  *ctx->OutputDType("dinput", 0) = ctx->InputDType("input", 0);
-  *ctx->OutputDType("dgrid", 0) = ctx->InputDType("grid", 0);
+  *ctx->MutOutputDType("dinput", 0) = ctx->InputDType("input", 0);
+  *ctx->MutOutputDType("dgrid", 0) = ctx->InputDType("grid", 0);
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("grid_sample")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("input", 0) || op.NeedGenGradTensor4OpInput("grid", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("grid_sample_grad")
-                .Input("doutput", op.GetGradTensorWithOpOutput("output", 0))
-                .Input("input", op.input("input", 0))
-                .Input("grid", op.input("grid", 0))
-                .Output("dinput")
-                .Output("dgrid")
-                .Attr("interpolation_mode", op.attr<std::string>("interpolation_mode"))
-                .Attr("padding_mode", op.attr<std::string>("padding_mode"))
-                .Attr("align_corners", op.attr<bool>("align_corners"))
-                .Build();
-
-        if (op.NeedGenGradTensor4OpInput("input", 0)) {
-          op.BindGradTensorWithOpInput(grad_op.output("dinput", 0), "input", 0);
-        }
-        if (op.NeedGenGradTensor4OpInput("grid", 0)) {
-          op.BindGradTensorWithOpInput(grad_op.output("dgrid", 0), "grid", 0);
-        }
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

@@ -27,10 +27,10 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(x_desc.shape().At(x_shape.NumAxes() - 1),
                      mask_desc.shape().At(mask_shape.NumAxes() - 1))
       << " last dim of x and mask is not equal.";
-  *ctx->OutputShape("y", 0) = x_desc.shape();
-  *ctx->OutputIsDynamic("y", 0) = x_desc.is_dynamic();
-  *ctx->OutputShape("softmax_y", 0) = x_desc.shape();
-  *ctx->OutputIsDynamic("softmax_y", 0) = x_desc.is_dynamic();
+  *ctx->MutOutputShape("y", 0) = x_desc.shape();
+  *ctx->MutOutputIsDynamic("y", 0) = x_desc.is_dynamic();
+  *ctx->MutOutputShape("softmax_y", 0) = x_desc.shape();
+  *ctx->MutOutputIsDynamic("softmax_y", 0) = x_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedScaleMaskSoftmaxDropoutOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
@@ -42,8 +42,8 @@ namespace oneflow {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
   CHECK_EQ_OR_RETURN(mask_desc.data_type(), DataType::kBool) << " mask dtype only support bool.";
-  *ctx->OutputDType("y", 0) = x_desc.data_type();
-  *ctx->OutputDType("softmax_y", 0) = x_desc.data_type();
+  *ctx->MutOutputDType("y", 0) = x_desc.data_type();
+  *ctx->MutOutputDType("softmax_y", 0) = x_desc.data_type();
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedScaleMaskSoftmaxDropoutOp::ModifyInputArg(
@@ -95,7 +95,7 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(dy_desc.shape().At(dy_desc.shape().NumAxes() - 1),
                      mask_desc.shape().At(mask_desc.shape().NumAxes() - 1))
       << " last dim of y and mask is not equal.";
-  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
+  user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
   *dx_desc->mut_shape() = dy_desc.shape();
   *dx_desc->mut_is_dynamic() = dy_desc.is_dynamic();
   return Maybe<void>::Ok();
@@ -112,7 +112,7 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(dy_desc.data_type(), softmax_y_desc.data_type())
       << " dy and softmax_y dtype must equal";
   CHECK_EQ_OR_RETURN(mask_desc.data_type(), DataType::kBool) << " mask dtype only support bool.";
-  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
+  user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
   *dx_desc->mut_data_type() = dy_desc.data_type();
   return Maybe<void>::Ok();
 }
@@ -144,26 +144,5 @@ namespace oneflow {
   }
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("fused_scale_mask_softmax_dropout")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("fused_scale_mask_softmax_dropout_grad")
-                .Input("softmax_y", op.output("softmax_y", 0))
-                .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                .Input("mask", op.input("mask", 0))
-                .Input("dropout_mask", op.input("dropout_mask", 0))
-                .Output("dx")
-                .Attr("scale_value", op.attr<float>("scale_value"))
-                .Attr("dropout_scale_value", op.attr<float>("dropout_scale_value"))
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

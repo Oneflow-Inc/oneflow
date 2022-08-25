@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_SYNC_SYMBOL_CONSISTENT_TENSOR_META_H_
-#define ONEFLOW_CORE_FRAMEWORK_SYNC_SYMBOL_CONSISTENT_TENSOR_META_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_SYNC_SYMBOL_GLOBAL_TENSOR_META_H_
+#define ONEFLOW_CORE_FRAMEWORK_SYNC_SYMBOL_GLOBAL_TENSOR_META_H_
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
@@ -31,4 +31,4 @@ Maybe<void> SyncSymbolGlobalTensorMeta(uint64_t symbol_id, Symbol<one::GlobalTen
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_SYNC_SYMBOL_CONSISTENT_TENSOR_META_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_SYNC_SYMBOL_GLOBAL_TENSOR_META_H_

@@ -19,12 +19,13 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.bernoulli,
     """
-    bernoulli(x, *, generator=None, out=None)
+    bernoulli(input, p, *, generator=None, out=None)
     
     This operator returns a Tensor with binaray random numbers (0 / 1) from a Bernoulli distribution.
 
     Args:
-        x (Tensor): the input tensor of probability values for the Bernoulli distribution
+        input (Tensor): the input tensor of probability values for the Bernoulli distribution
+        p (float, optional): the probability for the Bernoulli distribution. If specified, Bernoulli distribution will use p for sampling, not input
         generator (Generator, optional): a pseudorandom number generator for sampling
         out (Tensor, optional): the output tensor.
 
@@ -52,6 +53,16 @@ add_docstr(
         tensor([[1., 1., 1.],
                 [1., 1., 1.],
                 [1., 1., 1.]], dtype=oneflow.float32)
+        >>> y = flow.bernoulli(x, 1)
+        >>> y
+        tensor([[1., 1., 1.],
+                [1., 1., 1.],
+                [1., 1., 1.]], dtype=oneflow.float32)
+        >>> y = flow.bernoulli(x, p=0)
+        >>> y
+        tensor([[0., 0., 0.],
+                [0., 0., 0.],
+                [0., 0., 0.]], dtype=oneflow.float32)
 
     """,
 )
@@ -181,12 +192,12 @@ add_docstr(
     """
     randint(low=0, high, size, *, dtype=None, generator=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
 
-    The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.randint.html.
-
     Returns a tensor filled with random integers generated uniformly between low (inclusive) and high (exclusive).
 
     The shape of the tensor is defined by the variable argument ``size``.
+
+    The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.randint.html.
 
     Args:
         low (int, optional):  Lowest integer to be drawn from the distribution. Default: 0.
@@ -232,10 +243,10 @@ add_docstr(
     """
     randint_like(input, low=0, high, size, *, dtype=None, generator=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
 
+    Returns a tensor filled with random integers generated uniformly between low (inclusive) and high (exclusive).
+
     The interface is consistent with PyTorch.    
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.randint_like.html.
-
-    Returns a tensor filled with random integers generated uniformly between low (inclusive) and high (exclusive).
 
     Args:
         input (oneflow.Tensor): the size of ``input`` will determine size of the output tensor.

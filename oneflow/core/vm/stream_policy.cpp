@@ -20,9 +20,9 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-bool StreamPolicy::OnSchedulerThread(StreamRole stream_role) const {
-  if (StreamOnIndependentThread::Visit(stream_role)) { return false; }
-  return ThreadLocalEnvBool<ONEFLOW_VM_WORKLOAD_ON_SCHEDULER_THREAD>();
+bool StreamPolicy::OnSchedulerThread(StreamType stream_type) const {
+  if (StreamOnIndependentThread::Visit(stream_type)) { return false; }
+  return !ThreadLocalEnvBool<ONEFLOW_VM_COMPUTE_ON_WORKER_THREAD>();
 }
 
 }  // namespace vm

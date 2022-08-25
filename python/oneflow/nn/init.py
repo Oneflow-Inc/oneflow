@@ -15,9 +15,12 @@ limitations under the License.
 """
 import os
 
+import numpy as np
+
 import oneflow as flow
-from oneflow.framework.tensor import _copy_from_numpy_to_eager_local_tensor, Tensor
 from oneflow.ops.util.initializer_util import calc_gain as calculate_gain
+from oneflow.framework.tensor import Tensor
+import oneflow.framework.dtype as dtype_util
 import oneflow.ops.initializer_register as initializer_register
 
 
@@ -42,13 +45,29 @@ def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
             )
             tensor.copy_(src_tensor)
         else:
-            _copy_from_numpy_to_eager_local_tensor(
-                tensor, np_arr,
-            )
+            shared_mem_tensor = flow.from_numpy(np_arr)
+            tensor[...] = shared_mem_tensor
     return tensor
 
 
 def uniform_(tensor, a=0.0, b=1.0):
+    r"""
+    
+    Fills the input Tensor with values drawn from the uniform
+    distribution :math:`\mathcal{U}(a, b)`.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
+
+    Args:
+        tensor: an n-dimensional `oneflow.Tensor`
+        a: the lower bound of the uniform distribution
+        b: the upper bound of the uniform distribution
+
+    Examples:
+        >>> w = flow.empty(3, 5)
+        >>> nn.init.uniform_(w)
+    """
     if isinstance(a, Tensor):
         assert a.ndim == 0 and a.nelement() == 1, "a must be a number or scalar tensor!"
         a = a.numpy().item()
@@ -62,15 +81,29 @@ def uniform_(tensor, a=0.0, b=1.0):
 
 
 def normal_(tensor, mean=0.0, std=1.0):
+    r"""
+    
+    Fills the input Tensor with values drawn from the normal
+    distribution :math:`\mathcal{N}(\text{mean}, \text{std}^2)`.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
+
+    Args:
+        tensor: an n-dimensional `oneflow.Tensor`
+        mean: the mean of the normal distribution
+        std: the standard deviation of the normal distribution
+
+    Examples:
+        >>> w = flow.empty(3, 5)
+        >>> nn.init.normal_(w)
+    """
     initializer_conf = initializer_register.random_normal_initializer(mean, std)
     return _init_by_initializer_conf(tensor, initializer_conf)
 
 
 def xavier_uniform_(tensor, gain=1.0, *, data_format="NCHW"):
     r"""
-    The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
-
     Fills the input `Tensor` with values according to the method
     described in `Understanding the difficulty of training deep feedforward
     neural networks` - Glorot, X. & Bengio, Y. (2010), using a uniform
@@ -80,10 +113,13 @@ def xavier_uniform_(tensor, gain=1.0, *, data_format="NCHW"):
     .. math::
         a = \text{gain} \times \sqrt{\frac{6}{\text{fan_in} + \text{fan_out}}}
 
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
+
     Also known as Glorot initialization.
 
     Args:
-        tensor: an n-dimensional `flow.Tensor`
+        tensor: an n-dimensional `oneflow.Tensor`
         gain: an optional scaling factor
 
     Examples:
@@ -98,9 +134,6 @@ def xavier_uniform_(tensor, gain=1.0, *, data_format="NCHW"):
 
 def xavier_normal_(tensor, gain=1.0, *, data_format="NCHW"):
     r"""
-    The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
-
     Fills the input `Tensor` with values according to the method
     described in `Understanding the difficulty of training deep feedforward
     neural networks` - Glorot, X. & Bengio, Y. (2010), using a normal
@@ -110,10 +143,13 @@ def xavier_normal_(tensor, gain=1.0, *, data_format="NCHW"):
     .. math::
         \text{std} = \text{gain} \times \sqrt{\frac{2}{\text{fan_in} + \text{fan_out}}}
 
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
+
     Also known as Glorot initialization.
 
     Args:
-        tensor: an n-dimensional `flow.Tensor`
+        tensor: an n-dimensional `oneflow.Tensor`
         gain: an optional scaling factor
 
     Examples:
@@ -128,14 +164,14 @@ def xavier_normal_(tensor, gain=1.0, *, data_format="NCHW"):
 
 def orthogonal_(tensor, gain=1.0):
     r"""
-    The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/nn.init.html.
-
     Fills the input `Tensor` with a (semi) orthogonal matrix, as
     described in `Exact solutions to the nonlinear dynamics of learning in deep
     linear neural networks` - Saxe, A. et al. (2013). The input tensor must have
     at least 2 dimensions, and for tensors with more than 2 dimensions the
     trailing dimensions are flattened.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
 
     Args:
         tensor: an n-dimensional `torch.Tensor`, where :math:`n \geq 2`
@@ -153,9 +189,6 @@ def kaiming_uniform_(
     tensor, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
 ):
     r"""
-    The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
-
     Fills the input `Tensor` with values according to the method
     described in `Delving deep into rectifiers: Surpassing human-level
     performance on ImageNet classification` - He, K. et al. (2015), using a
@@ -164,11 +197,14 @@ def kaiming_uniform_(
 
     .. math::
         \text{bound} = \text{gain} \times \sqrt{\frac{3}{\text{fan_mode}}}
+    
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
 
     Also known as He initialization.
 
     Args:
-        tensor: an n-dimensional `flow.Tensor`
+        tensor: an n-dimensional `oneflow.Tensor`
         a: the negative slope of the rectifier used after this layer (only
             used with ``'leaky_relu'``)
         mode: either ``'fan_in'`` (default) or ``'fan_out'``. Choosing ``'fan_in'``
@@ -198,10 +234,7 @@ def kaiming_uniform_(
 def kaiming_normal_(
     tensor, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
 ):
-    r"""
-    The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
-    
+    r"""    
     Fills the input `Tensor` with values according to the method
     described in `Delving deep into rectifiers: Surpassing human-level
     performance on ImageNet classification` - He, K. et al. (2015), using a
@@ -211,10 +244,13 @@ def kaiming_normal_(
     .. math::
         \text{std} = \frac{\text{gain}}{\sqrt{\text{fan_mode}}}
 
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
+
     Also known as He initialization.
 
     Args:
-        tensor: an n-dimensional `flow.Tensor`
+        tensor: an n-dimensional `oneflow.Tensor`
         a: the negative slope of the rectifier used after this layer (only
             used with ``'leaky_relu'``)
         mode: either ``'fan_in'`` (default) or ``'fan_out'``. Choosing ``'fan_in'``
@@ -249,18 +285,94 @@ def trunc_normal_(tensor, mean=0.0, std=1.0, a=-2.0, b=2.0):
 
 
 def constant_(tensor, val):
+    r"""
+    
+    Fills the input Tensor with the value :math:`\text{val}`.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
+
+    Args:
+        tensor: an n-dimensional `oneflow.Tensor`
+        val: the value to fill the tensor with
+
+    Examples:
+        >>> w = flow.empty(3, 5)
+        >>> nn.init.constant_(w, 0.3)
+    """
     with flow.no_grad():
-        return tensor.fill_(val)
+        tensor[...] = val
+        return tensor
 
 
 def ones_(tensor):
+    r"""
+    
+    Fills the input Tensor with the scalar value `1`.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
+
+    Args:
+        tensor: an n-dimensional `oneflow.Tensor`
+
+    Examples:
+        >>> w = flow.empty(3, 5)
+        >>> nn.init.ones_(w)
+    """
     with flow.no_grad():
-        return tensor.fill_(1)
+        return constant_(tensor, 1)
 
 
 def zeros_(tensor):
+    r"""
+    
+    Fills the input Tensor with the scalar value `0`.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
+
+    Args:
+        tensor: an n-dimensional `oneflow.Tensor`
+
+    Examples:
+        >>> w = flow.empty(3, 5)
+        >>> nn.init.zeros_(w)
+    """
     with flow.no_grad():
-        return tensor.fill_(0)
+        return constant_(tensor, 0)
+
+
+def eye_(tensor):
+    r"""
+    
+    Fills the 2-dimensional input `Tensor` with the identity
+    matrix. Preserves the identity of the inputs in `Linear` layers, where as
+    many inputs are preserved as possible.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
+
+    Args:
+        tensor: a 2-dimensional `oneflow.Tensor`
+
+    Examples:
+        >>> w = flow.empty(3, 5)
+        >>> nn.init.eye_(w)
+    """
+    if tensor.ndimension() != 2:
+        raise ValueError("Only tensors with 2 dimensions are supported")
+    with flow.no_grad():
+        # TODO: use flow._C.eye_ after eye_op supporting non-contiguous kernel
+        assign_tensor = flow.from_numpy(
+            np.eye(
+                tensor.shape[0],
+                tensor.shape[1],
+                dtype=dtype_util.convert_oneflow_dtype_to_numpy_dtype(tensor.dtype),
+            )
+        )
+        tensor[...] = assign_tensor
+        return tensor
 
 
 def _calculate_fan_in_and_fan_out(tensor):

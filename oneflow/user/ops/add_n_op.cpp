@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 /* static */ Maybe<void> AddNOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const auto& in_0 = ctx->InputTensorDesc("in", 0);
-  auto* out = ctx->OutputTensorDesc("out", 0);
+  auto* out = ctx->MutOutputTensorDesc("out", 0);
   CHECK_NOTNULL_OR_RETURN(out);  // NOLINT(maybe-need-error-msg)
   for (const auto& pair : ctx->inputs()) {
     const auto& cur_in = ctx->InputTensorDesc(pair.first, pair.second);
@@ -50,7 +50,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> AddNOp::InferDataType(user_op::InferContext* ctx) {
   const auto& in_0 = ctx->InputTensorDesc("in", 0);
-  auto* out = ctx->OutputTensorDesc("out", 0);
+  auto* out = ctx->MutOutputTensorDesc("out", 0);
   CHECK_NOTNULL_OR_RETURN(out);  // NOLINT(maybe-need-error-msg)
   for (const auto& pair : ctx->inputs()) {
     const auto& cur_in = ctx->InputTensorDesc(pair.first, pair.second);
@@ -70,16 +70,5 @@ namespace oneflow {
       << "The number of input tensors should be greater than or equal to 2";
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("add_n").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                         user_op::AddOpFn AddOp) -> Maybe<void> {
-  int32_t in_size = op.input_size("in");
-  for (int i = 0; i < in_size; ++i) {
-    if (op.NeedGenGradTensor4OpInput("in", i)) {
-      op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", 0), "in", i);
-    }
-  }
-  return Maybe<void>::Ok();
-});
 
 }  // namespace oneflow

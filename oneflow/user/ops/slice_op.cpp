@@ -98,7 +98,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
         << "The size of slice tuple must be equal to the size of value tensor at dimension " << i
         << ", but got " << (stop - start + step - 1) / step << " and " << value_shape.At(i);
   }
-  auto* y_desc = ctx->OutputTensorDesc("y", 0);
+  auto* y_desc = ctx->MutOutputTensorDesc("y", 0);
   *y_desc->mut_shape() = ref_desc.shape();
   *y_desc->mut_is_dynamic() = ref_desc.is_dynamic();
   return Maybe<void>::Ok();
@@ -111,8 +111,9 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   const user_op::TensorDesc& value_desc = ctx->InputTensorDesc("value", 0);
   CHECK_OR_RETURN(ref_desc.data_type() == value_desc.data_type())
       << Error::TypeError() << "Tensors ref and value must have same type";
-  auto* y_desc = ctx->OutputTensorDesc("y", 0);
+  auto* y_desc = ctx->MutOutputTensorDesc("y", 0);
   *y_desc->mut_data_type() = ref_desc.data_type();
+  *y_desc->mut_stride() = ref_desc.stride();
   return Maybe<void>::Ok();
 }
 
@@ -170,7 +171,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
     const int64_t diff = stop - start - 1;
     dim_vec[i] = diff / step + 1;
   }
-  *ctx->OutputShape("y", 0) = Shape(dim_vec);
+  *ctx->MutOutputShape("y", 0) = Shape(dim_vec);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -198,11 +199,11 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
   const TensorSliceView& slice_view =
       GetTensorSliceView4ParallelId(parallel_hierarchy, y_nd_sbp, logical_shape, parallel_id);
-  *ctx->OutputShape("y", 0) = Shape(slice_view.shape());
+  *ctx->MutOutputShape("y", 0) = Shape(slice_view.shape());
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -253,13 +254,13 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
       << Error::RuntimeError()
       << "The size of step list must be equal to the dimension of ref tensor, "
       << "but got " << step_vec.size() << " and " << ndim;
-  *ctx->OutputShape("dx", 0) = like_shape;
+  *ctx->MutOutputShape("dx", 0) = like_shape;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   Shape logical_shape = ctx->Attr<Shape>("like_shape");
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
+  user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
   *dx_desc->mut_is_dynamic() = dy_desc.is_dynamic();
 
   const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("dx", 0);
@@ -273,7 +274,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceGradOp::ModifyInputArg(const GetInputArgModifier& GetInputArgModifierFn,
@@ -282,71 +283,5 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   dy_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();
 }
-
-namespace {
-
-Maybe<void> GenSliceUpdateGradOp(user_op::BackwardOpConfContext* ctx) {
-  // value grad
-  const std::string update_grad_op_name = ctx->FwOp().op_name() + "_value_grad";
-  ctx->DefineOp(update_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("slice")
-        .InputBind("x", ctx->FwOp().output_grad("y", 0))
-        .Attr("start", ctx->FwOp().attr<std::vector<int64_t>>("start"))
-        .Attr("stop", ctx->FwOp().attr<std::vector<int64_t>>("stop"))
-        .Attr("step", ctx->FwOp().attr<std::vector<int64_t>>("step"))
-        .Output("y")
-        .Build();
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("value", 0), [&]() -> const std::string& {
-    return ctx->GetOp(update_grad_op_name).output("y", 0);
-  });
-
-  // ref grad
-  const std::string zero_grad_op_name = ctx->FwOp().op_name() + "_zero_grad";
-  ctx->DefineOp(zero_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("zero_like")
-        .InputBind("like", ctx->FwOp().input("value", 0))
-        .Output("out")
-        .Build();
-  });
-  const std::string x_grad_op_name = ctx->FwOp().op_name() + "_x_grad";
-  ctx->DefineOp(x_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("slice_update")
-        .InputBind("ref", ctx->FwOp().output_grad("y", 0))
-        .InputBind("value", ctx->GetOp(zero_grad_op_name).output("out", 0))
-        .Attr("start", ctx->FwOp().attr<std::vector<int64_t>>("start"))
-        .Attr("stop", ctx->FwOp().attr<std::vector<int64_t>>("stop"))
-        .Attr("step", ctx->FwOp().attr<std::vector<int64_t>>("step"))
-        .Output("y")
-        .Build();
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("ref", 0), [&]() -> const std::string& {
-    return ctx->GetOp(x_grad_op_name).output("y", 0);
-  });
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> GenSliceGradOp(user_op::BackwardOpConfContext* ctx) {
-  const std::string ref_grad_op_name = ctx->FwOp().op_name() + "_x_grad";
-  ctx->DefineOp(ref_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("slice_grad")
-        .InputBind("dy", ctx->FwOp().output_grad("y", 0))
-        .Attr("like_shape", ctx->FwOp().arg_tensor_desc("x", 0).shape())
-        .Attr("start", ctx->FwOp().attr<std::vector<int64_t>>("start"))
-        .Attr("stop", ctx->FwOp().attr<std::vector<int64_t>>("stop"))
-        .Attr("step", ctx->FwOp().attr<std::vector<int64_t>>("step"))
-        .Output("dx")
-        .Build();
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), [&]() -> const std::string& {
-    return ctx->GetOp(ref_grad_op_name).output("dx", 0);
-  });
-  return Maybe<void>::Ok();
-}
-
-}  // namespace
-
-REGISTER_USER_OP_GRAD("slice_update").SetBackwardOpConfGenFn(GenSliceUpdateGradOp);
-REGISTER_USER_OP_GRAD("slice").SetBackwardOpConfGenFn(GenSliceGradOp);
 
 }  // namespace oneflow

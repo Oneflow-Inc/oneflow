@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/common/error.h"
+#include "oneflow/core/autograd/autograd_engine.h"
 
 namespace oneflow {
 
@@ -64,6 +65,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual const TensorMeta& tensor_meta() const = 0;
   virtual Maybe<Tensor> data() = 0;
   virtual std::shared_ptr<Tensor> pin_memory() const = 0;
+  virtual Maybe<Symbol<LocalTensorMeta>> local_tensor_meta() const { OF_UNIMPLEMENTED(); }
   virtual Maybe<Symbol<GlobalTensorMeta>> global_tensor_meta() const { OF_UNIMPLEMENTED(); }
 
   // Getters valid only for EagerLocalTensor
@@ -163,6 +165,9 @@ class StaticZerosTensor final : public Tensor {
   Maybe<Tensor> data() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   std::shared_ptr<Tensor> pin_memory() const override {
     return std::const_pointer_cast<Tensor>(shared_from_this());
+  }
+  Maybe<Symbol<LocalTensorMeta>> local_tensor_meta() const override {
+    RETURN_ERROR_WITH_BUG_PROMPT();
   }
   Maybe<Symbol<GlobalTensorMeta>> global_tensor_meta() const override {
     RETURN_ERROR_WITH_BUG_PROMPT();
@@ -315,6 +320,9 @@ class ProxyTensor : public TensorIf<DerivedT> {
   virtual bool is_lazy() const override { return tensor_->is_lazy(); }
   virtual bool is_eager() const override { return tensor_->is_eager(); }
   virtual const TensorMeta& tensor_meta() const override { return tensor_->tensor_meta(); }
+  virtual Maybe<Symbol<LocalTensorMeta>> local_tensor_meta() const override {
+    return tensor_->local_tensor_meta();
+  }
   virtual Maybe<Symbol<GlobalTensorMeta>> global_tensor_meta() const override {
     return tensor_->global_tensor_meta();
   }
@@ -496,8 +504,14 @@ class LocalTensor final : public TensorIf<LocalTensor> {
   bool is_contiguous() const override { return impl_->is_contiguous(); }
   Maybe<bool> is_pinned() const override { return impl_->is_pinned(); };
 
+  Maybe<Symbol<LocalTensorMeta>> local_tensor_meta() const override { return impl_->tensor_meta(); }
+
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
+    if (!grad_fn_node_ && requires_grad()) {
+      CHECK_OR_RETURN(is_leaf()) << "only leaf tensor may have no grad_fn";
+      AddAccumulateFunctionNode(shared_from_this());
+    }
     return impl_->set_acc_grad(grad);
   }
   Maybe<void> set_requires_grad(bool requires_grad) override {
@@ -530,8 +544,15 @@ class LocalTensor final : public TensorIf<LocalTensor> {
   Maybe<EagerLocalTensorImpl*> mut_eager_local_tensor_impl() override {
     return impl_->mut_eager_local_tensor_impl();
   }
-  user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
+  user_op::TensorDesc* mut_tensor_meta() override {
+    return std::const_pointer_cast<MutLocalTensorMeta>(impl_->mut_tensor_meta()).get();
+  }
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override;
+
+  Maybe<void> set_impl(std::shared_ptr<LocalTensorImpl> impl) {
+    impl_ = impl;
+    return Maybe<void>::Ok();
+  }
 
   Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) override {
     return impl_->RegisterStorageDeleteHook(hook);
@@ -608,6 +629,10 @@ class GlobalTensor final : public TensorIf<GlobalTensor> {
 
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
+    if (!grad_fn_node_ && requires_grad()) {
+      CHECK_OR_RETURN(is_leaf()) << "only leaf tensor may have no grad_fn";
+      AddAccumulateFunctionNode(shared_from_this());
+    }
     return impl_->set_acc_grad(grad);
   }
   Maybe<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }

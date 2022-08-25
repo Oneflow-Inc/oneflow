@@ -32,7 +32,7 @@ namespace oneflow {
   std::vector<int32_t> stride;
   CHECK_JUST(getOutShapeAndStrideForFp(in_shape, logical_expand_shape, out_shape, stride));
 
-  Shape* output_shape = ctx->OutputShape("out", 0);
+  Shape* output_shape = ctx->MutOutputShape("out", 0);
   DimVector dim_vec(out_shape.begin(), out_shape.end());
   *output_shape = Shape(dim_vec);
 
@@ -71,7 +71,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> ExpandOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -90,7 +90,7 @@ namespace oneflow {
   CHECK_JUST(getOutShapeAndStrideForBp(logical_out_shape, logical_expand_shape, in_shape, out_shape,
                                        stride));
 
-  Shape* output_shape = ctx->OutputShape("out", 0);
+  Shape* output_shape = ctx->MutOutputShape("out", 0);
   DimVector dim_vec(out_shape.begin(), out_shape.end());
   *output_shape = Shape(dim_vec);
   return Maybe<void>::Ok();
@@ -125,27 +125,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> ExpandGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("expand").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                          user_op::AddOpFn AddOp) -> Maybe<void> {
-  if (op.NeedGenGradTensor4OpInput("in", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper grad_op =
-        builder.Op("expand_grad")
-            .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-            .Output("out")
-            .Attr<std::vector<int32_t>>("logical_out_shape",
-                                        op.attr<std::vector<int32_t>>("logical_in_shape"))
-            .Attr<std::vector<int32_t>>("logical_expand_shape",
-                                        op.attr<std::vector<int32_t>>("logical_expand_shape"))
-            .Build();
-    op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
-    AddOp(grad_op);
-  }
-  return Maybe<void>::Ok();
-});
 
 }  // namespace oneflow

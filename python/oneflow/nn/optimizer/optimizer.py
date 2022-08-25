@@ -211,6 +211,10 @@ class Optimizer(object):
 
         self.param_groups.append(ParamGroup(param_group, self._default_options))
 
+        for param in param_group["params"]:
+            assert param.is_leaf, "parameters must be leaf tensor"
+            self._state[param] = dict()
+
     def load_state_dict(self, state_dict) -> None:
         r"""
         Load the state of the optimizer which is created by `state_dict` function.
@@ -287,7 +291,7 @@ class Optimizer(object):
 
     def state_dict(self):
         r"""
-        Returns the state of the optimizer as a :class:`dict`.
+        Returns the state of the optimizer as a :py:class:`dict`.
 
         It contains two entries:
 
@@ -338,7 +342,7 @@ class Optimizer(object):
         """
         raise NotImplementedError()
 
-    def clip_grad(self):
+    def clip_grad(self, error_if_nonfinite: bool = False):
         r"""Clips gradient norm of an iterable of parameters. 
         The norm is computed over all gradients together, as if they were concatenated into a single vector.
 
@@ -348,6 +352,11 @@ class Optimizer(object):
 
         You can also refer the code in :func:`oneflow.nn.utils.clip_grad_norm_`
 
+        Args:
+            error_if_nonfinite (bool): if True, an error is thrown if the total
+                norm of the gradients from :attr:``parameters`` is ``nan``,
+                ``inf``, or ``-inf``. Default: False (will switch to True in the future)
+
         """
         for param_group in self.param_groups:
             if param_group._enable_clip_grad:
@@ -355,7 +364,7 @@ class Optimizer(object):
                     param_group.parameters,
                     param_group["clip_grad_max_norm"],
                     param_group["clip_grad_norm_type"],
-                    True,
+                    error_if_nonfinite,
                 )
             else:
                 warnings.warn(
@@ -363,7 +372,7 @@ class Optimizer(object):
                 )
 
     def zero_grad(self, set_to_none: bool = False):
-        """Sets the gradients of all optimized torch.Tensor s to zero.
+        """Sets the gradients of all optimized :class:`oneflow.Tensor` s to zero.
 
         Args:
             set_to_none (bool): instead of setting to zero, set the grads to None.

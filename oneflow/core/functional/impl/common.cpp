@@ -29,25 +29,24 @@ bool IsInplaceValid(const std::shared_ptr<Tensor>& x) {
   return !autograd::GradMode::is_enabled() || !(x->is_leaf() && x->requires_grad());
 }
 
+bool IsScalarTensor(const std::shared_ptr<Tensor>& x) {
+  return x->shape()->NumAxes() == 0 && x->shape()->elem_cnt() == 1;
+}
+
 Maybe<std::vector<int32_t>> CheckAxis(const std::vector<int32_t>& axis, const int32_t& ndim) {
   const int32_t naxis = axis.size();
-
+  int32_t reduce_ndim = naxis;
+  if (naxis == 0 || ndim == 0) { reduce_ndim = ndim; };
+  std::vector<int32_t> reduce_axis(reduce_ndim);
   if (naxis == 0) {
-    std::vector<int32_t> reduce_axis(ndim);
     std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-    return reduce_axis;
   } else {
-    std::vector<int32_t> reduce_axis(naxis);
-    std::vector<int32_t> axis_num(ndim);
+    JUST(dim_list_to_bitset(axis, ndim));  // checking axis[dim]'s validation
     for (int32_t i = 0; i < naxis; i++) {
-      reduce_axis[i] = JUST(maybe_wrap_dim(axis[i], ndim));
-      axis_num[reduce_axis[i]]++;
-      CHECK_OR_RETURN(axis_num[reduce_axis[i]] < 2)
-          << Error::RuntimeError() << "dim " << reduce_axis[i]
-          << " appears multiple times in the list of dims";
+      if (i < reduce_ndim) { reduce_axis[i] = JUST(maybe_wrap_dim(axis[i], ndim)); };
     }
-    return reduce_axis;
   }
+  return reduce_axis;
 }
 
 Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x) {
@@ -138,31 +137,33 @@ Optional<Stride> ComputeStride(const Shape& shape, const Stride& stride,
   return target_stride;
 }
 
-Maybe<Shape> InferShape(const std::shared_ptr<one::Tensor>& x, const Shape& shape) {
+Maybe<Shape> InferShapeUnspecifiedDim(const int64_t& elem_count, const Shape& shape) {
   int need_infer_axis = -1;
-  size_t count = 1;
+  int64_t target_elem_count = 1;
   for (int i = 0; i < shape.NumAxes(); ++i) {
     if (shape.At(i) < -1) {
       return Error::RuntimeError() << "Invalid shape dimension " << shape.At(i);
     } else if (shape.At(i) == -1) {
-      CHECK_EQ_OR_RETURN(need_infer_axis, -1)
+      CHECK_OR_RETURN_ERROR(need_infer_axis == -1)
           << Error::RuntimeError() << "only one dimension can be inferred";
       need_infer_axis = i;
     } else {
-      count *= shape.At(i);
+      target_elem_count *= shape.At(i);
     }
   }
-  size_t x_count = x->shape()->Count(0);
   Shape infered_shape = shape;
   if (need_infer_axis == -1) {
-    CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
-        << Error::RuntimeError() << "shape '" << shape.ToString()
-        << "' is invalid for input of size " << x->nelement();
+    if (elem_count > 0) {
+      // For 0-size tensor, we don't need to check the element size.
+      CHECK_OR_RETURN_ERROR(target_elem_count == elem_count)
+          << Error::RuntimeError() << "shape '" << shape.ToString()
+          << "' is invalid for input of size " << elem_count;
+    }
   } else {
-    infered_shape.Set(need_infer_axis, x_count / count);
-    CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
+    infered_shape.Set(need_infer_axis, elem_count / target_elem_count);
+    CHECK_OR_RETURN_ERROR(target_elem_count * infered_shape.At(need_infer_axis) == elem_count)
         << Error::RuntimeError() << "shape '" << shape.ToString()
-        << "' is invalid for input of size " << x->nelement();
+        << "' is invalid for input of size " << elem_count;
   }
   return infered_shape;
 }

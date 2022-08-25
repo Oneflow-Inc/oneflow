@@ -59,6 +59,7 @@ class CpuArgMaxKernel final : public user_op::OpKernel {
       (user_op::HobDeviceType() == DeviceType::kCPU)                                    \
       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
+REGISTER_CPU_ARGMAX_KERNEL(bool)
 REGISTER_CPU_ARGMAX_KERNEL(float)
 REGISTER_CPU_ARGMAX_KERNEL(double)
 REGISTER_CPU_ARGMAX_KERNEL(uint8_t)

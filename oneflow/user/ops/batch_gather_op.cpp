@@ -28,7 +28,7 @@ namespace oneflow {
       << Error::RuntimeError()
       << "The dimension of the indices tensor should be greater than zero, "
       << "but got " << indices.shape().NumAxes();
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   CHECK_LE_OR_RETURN(indices.shape().dim_vec().size(), in.shape().dim_vec().size())
       << Error::RuntimeError()
       << "The dimension of the input tensor should be greater than or equal to the dimension of "
@@ -97,31 +97,9 @@ namespace oneflow {
   CHECK_OR_RETURN(IsIndexDataType(indices.data_type()))
       << Error::TypeError() << "The dtype of the indices tensor must be int32 or int64";
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   *out->mut_data_type() = in.data_type();
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("batch_gather")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      bool need_grad_in = op.NeedGenGradTensor4OpInput("in", 0);
-      if (need_grad_in) {
-        const Shape in_shape = op.TensorDesc4ArgNameAndIndex("in", 0).shape();
-        const Shape indices_shape = op.TensorDesc4ArgNameAndIndex("indices", 0).shape();
-
-        user_op::UserOpConfWrapperBuilder in_grad_builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper in_grad_op =
-            in_grad_builder.Op("unsorted_batch_segment_sum")
-                .Input("data", op.GetGradTensorWithOpOutput("out", 0))
-                .Input("segment_ids", op.input("indices", 0))
-                .Output("out")
-                .Attr("num_segments", in_shape.At(indices_shape.NumAxes() - 1))
-                .Build();
-        op.BindGradTensorWithOpInput(in_grad_op.output("out", 0), "in", 0);
-        AddOp(in_grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

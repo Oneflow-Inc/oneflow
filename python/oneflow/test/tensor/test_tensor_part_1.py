@@ -44,6 +44,12 @@ class TestTensor(flow.unittest.TestCase):
             np.allclose(tensor.numpy(), np.ones(shape, dtype=np.float32))
         )
 
+        shape = flow.Size((2, 3))
+        tensor = flow.Tensor(shape)
+        flow.nn.init.eye_(tensor)
+        test_case.assertTrue(tensor.dtype == flow.float32)
+        test_case.assertTrue(np.allclose(tensor.numpy(), np.eye(2, 3)))
+
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_deepcopy(test_case):
         shape = (2, 3)
@@ -192,9 +198,57 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(flow.nn.init.calculate_gain("conv2d"), 1)
         test_case.assertEqual(flow.nn.init.calculate_gain("tanh"), 5.0 / 3)
 
+    def _test_non_contiguous_tensor_init_methods(test_case, tensor_creator, get_numpy):
+        shape = (8, 8)
+        x = flow.zeros(shape)
+        sliced_x = x[::2, 1::2]
+        not_sliced_x = x[1::2, ::2]
+        random_fill_val = 923.53
+        np_zeros = np.zeros((4, 4))
+        # ones
+        flow.nn.init.ones_(sliced_x)
+        test_case.assertTrue(np.allclose(get_numpy(sliced_x), np.ones((4, 4))))
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # constant
+        flow.nn.init.constant_(sliced_x, random_fill_val)
+        test_case.assertTrue(
+            np.allclose(get_numpy(sliced_x), np.ones((4, 4)) * random_fill_val)
+        )
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # eye
+        flow.nn.init.eye_(sliced_x)
+        test_case.assertTrue(np.allclose(get_numpy(sliced_x), np.eye(4)))
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # kaiming_normal_
+        flow.nn.init.kaiming_normal_(
+            sliced_x, a=0.1, mode="fan_out", nonlinearity="relu"
+        )
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # kaiming_uniform_
+        flow.nn.init.kaiming_uniform_(sliced_x)
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # xavier_normal_ with relu gain
+        flow.nn.init.xavier_normal_(sliced_x, flow.nn.init.calculate_gain("relu"))
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # xavier_uniform_ with relu gain
+        flow.nn.init.xavier_uniform_(sliced_x, flow.nn.init.calculate_gain("relu"))
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # trunc_normal_
+        flow.nn.init.trunc_normal_(sliced_x, mean=0.0, std=1.0, a=-2.0, b=2.0)
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # normal_
+        flow.nn.init.normal_(sliced_x, mean=0.0, std=1.0)
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # orthogonal_
+        flow.nn.init.orthogonal_(sliced_x)
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+
     @flow.unittest.skip_unless_1n1d()
     def test_local_tensor_init_methods(test_case):
         test_case._test_tensor_init_methods(
+            lambda *args, **kwargs: flow.Tensor(*args, **kwargs), lambda x: x.numpy()
+        )
+        test_case._test_non_contiguous_tensor_init_methods(
             lambda *args, **kwargs: flow.Tensor(*args, **kwargs), lambda x: x.numpy()
         )
 
@@ -557,16 +611,25 @@ class TestTensor(flow.unittest.TestCase):
         compare_setitem_with_numpy(x, se[1, :, 2], v)
 
     @flow.unittest.skip_unless_1n1d()
-    @autotest(n=5)
+    @autotest(n=5, auto_backward=False)
     def test_setitem_with_random_data(test_case):
         device = random_device()
-        x = random_tensor(low=0, high=0, ndim=1, dim0=16).to(device)
+        x = random_tensor(low=0, high=0, ndim=1, dim0=16, requires_grad=False).to(
+            device
+        )
         y = random_tensor(low=-2, high=2, ndim=1, dim0=16).to(device)
         idx = random_tensor(
             low=0, high=15, ndim=1, dim0=20, dtype=int, requires_grad=False
         ).to(device)
-        z = y[idx]
-        x[idx] = z
+
+        getitem_of = y.oneflow[idx.oneflow]
+        getitem_torch = y.pytorch[idx.pytorch]
+        test_case.assertTrue(
+            np.allclose(getitem_of.numpy(), getitem_torch.detach().cpu().numpy())
+        )
+
+        x.oneflow[idx.oneflow] = getitem_of
+        x.pytorch[idx.pytorch] = getitem_torch
         return x
 
     @flow.unittest.skip_unless_1n1d()
@@ -759,6 +822,24 @@ class TestTensor(flow.unittest.TestCase):
         x = random_tensor(ndim=ndim).to(device)
         y = x.argmax(dim=random(0, ndim).to(int), keepdim=random().to(bool))
         return y
+
+    @autotest(auto_backward=False, check_graph=False)
+    def test_max_bool_input_with_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(
+            device, dtype=torch.bool
+        )
+        return x.max(dim)
+
+    @autotest(auto_backward=False, check_graph=False)
+    def test_min_bool_input_with_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(
+            device, dtype=torch.bool
+        )
+        return x.min(dim)
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(n=5)
