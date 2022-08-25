@@ -31,9 +31,6 @@ class StreamConverter final {
  public:
   explicit StreamConverter(const std::shared_ptr<StreamSet>& stream_set, bool exclude_ccl)
       : stream_set_(stream_set), exclude_ccl_(exclude_ccl) {}
-  StreamConverter(const StreamConverter& stream_converter) = default;
-  StreamConverter(StreamConverter&& stream_converter) = default;
-  ~StreamConverter() = default;
 
   Maybe<Symbol<Stream>> TryConvertStream(Symbol<Stream> stream) {
     auto key = std::make_pair(stream->device(), stream->stream_type());

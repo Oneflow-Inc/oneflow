@@ -83,10 +83,6 @@ std::unique_ptr<int64_t>* MutThreadLocalUniqueGlobalId() {
 
 size_t GetThreadGlobalIdCount() { return GlobalIdStorage::Singleton()->Size(); }
 
-size_t CpuWorkerThreadsMaxSize() {
-  return TransportToken::MaxNumberOfThreadGlobalUId() - kThreadGlobalIdWorkerStart;
-}
-
 Maybe<void> CheckThreadGlobalIdAvailable(int64_t thread_global_id) {
   CHECK_GE_OR_RETURN(thread_global_id, 0) << "thread_global_id should be non negative";
   CHECK_LT_OR_RETURN(thread_global_id, TransportToken::MaxNumberOfThreadGlobalUId())

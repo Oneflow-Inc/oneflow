@@ -27,8 +27,6 @@ const static int kThreadGlobalIdWorkerStart = kThreadGlobalIdScheduler + 1;
 
 size_t GetThreadGlobalIdCount();
 
-size_t CpuWorkerThreadsMaxSize();
-
 Maybe<void> InitThisThreadUniqueGlobalId(int64_t thread_global_id, const std::string& debug_string);
 Maybe<void> InitThisThreadGlobalId(int64_t thread_global_id, const std::string& debug_string);
 Maybe<void> CheckThreadGlobalIdAvailable(int64_t thread_global_id);
