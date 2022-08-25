@@ -1276,8 +1276,9 @@ struct UnsortedSegmentSumPad<half, K> {
 template<typename T, typename K>
 void UnsortedSegmentSum(ep::Stream* stream, const K* segment_ids, const T* data,
                         int64_t num_segment_ids, int64_t num_segments, int64_t inner_dim_size,
-                        int64_t padded_inner_dim_size, T* out) {
+                        int64_t padded_inner_dim_size, T* out, const uint32_t padding_idx) {
   if (inner_dim_size == padded_inner_dim_size) {
+    // todo
     UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, T, K, T>::UnsortedSegmentSum(
         stream, segment_ids, data, num_segment_ids, num_segments, 1, inner_dim_size, 0, out);
   } else {
@@ -1293,13 +1294,13 @@ void UniquePartitionEmbeddingGrad(ep::Stream* stream, int64_t unique_partitioned
                                   int64_t padded_embedding_size, const IDX* host_num_unique_matrix,
                                   const T* embedding_grad,
                                   const IDX* inverse_unique_partition_indices,
-                                  T* unique_partition_embedding_grad) {
+                                  T* unique_partition_embedding_grad, const uint32_t padding_idx) {
   const int64_t valid_value_size = unique_partitioned_num_ids * padded_embedding_size * sizeof(T);
   OF_CUDA_CHECK(cudaMemsetAsync(unique_partition_embedding_grad, 0, valid_value_size,
                                 stream->As<ep::CudaStream>()->cuda_stream()));
   UnsortedSegmentSum<T, IDX>(stream, inverse_unique_partition_indices, embedding_grad, num_ids,
                              unique_partitioned_num_ids, embedding_size, padded_embedding_size,
-                             unique_partition_embedding_grad);
+                             unique_partition_embedding_grad, padding_idx);
 }
 
 template<typename T, typename IDX>
@@ -1385,6 +1386,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
         ctx->Tensor4ArgNameAndIndex("cur_rank_unique_embedding_grad", 0);
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const bool only_zero_valid_grad = ctx->Attr<bool>("only_zero_valid_grad");
+    const uint32_t padding_idx = ctx->Attr<uint32_t>("padding_idx"); 
     IDX* host_num_unique_matrix = kernel_state->HostNumUniqueMatrix();
     DataType data_type = embedding_grad->data_type();
     const int64_t num_ids = inverse_unique_partition_indices->shape_view().elem_cnt();
@@ -1434,7 +1436,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
             ctx->stream(), unique_partitioned_num_ids, num_ids, embedding_size,
             padded_embedding_size, host_num_unique_matrix, embedding_grad->dptr<T>(),
             reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
-            reinterpret_cast<T*>(unique_partition_embedding_grad));
+            reinterpret_cast<T*>(unique_partition_embedding_grad), padding_idx);
         unique_embedding_grad_ptr = reinterpret_cast<T*>(unique_partition_embedding_grad);
       }
       // 2. send recv grad, from (unique_partitioned_num_ids, padded_embedding_size) to
@@ -1475,7 +1477,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
           ctx->stream(), unique_partitioned_num_ids, num_ids, embedding_size, padded_embedding_size,
           host_num_unique_matrix, embedding_grad->dptr<T>(),
           reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
-          reinterpret_cast<T*>(unique_partition_embedding_grad));
+          reinterpret_cast<T*>(unique_partition_embedding_grad), padding_idx);
 
       // 2. Quantize unique_partition_embedding_grad, get
       // quantize_cur_rank_embedding_grad(unique_partitioned_num_ids, padded_embedding_size) int8_t

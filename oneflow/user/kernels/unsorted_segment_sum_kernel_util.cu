@@ -99,7 +99,7 @@ __global__ void UnsortedSegmentRowSumGpu(const IDX data_elem_cnt,
                                          const NdIndexOffsetHelper<IDX, 2> out_helper,
                                          const U* data, const K* segment_ids,
                                          const IDX num_segments, const IDX segment_id_offset,
-                                         T* out) {
+                                         T* out, const uint32_t padding_idx) {
   CUDA_1D_KERNEL_LOOP_T(IDX, i, data_elem_cnt) {
     const U val = data[i];
     if (!IsZero(val)) {
@@ -108,7 +108,7 @@ __global__ void UnsortedSegmentRowSumGpu(const IDX data_elem_cnt,
       const K origin_idx = segment_ids[segment_id_idx];
       assert(origin_idx >= 0);
       const IDX idx = origin_idx - segment_id_offset;
-      if (idx >= 0 && idx < num_segments) {
+      if (idx >= 0 && idx < num_segments && idx != padding_idx) {
         const int64_t out_offset = out_helper.NdIndexToOffset(idx, inner_idx);
         if (out_offset >= 0) { cuda::atomic::Add(out + out_offset, static_cast<T>(val)); }
       }
