@@ -105,7 +105,8 @@ class TestMaxPooling(flow.unittest.TestCase):
             return y[0]
         else:
             return y
-
+    
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @autotest(n=5, auto_backward=False)
     def test_maxpool2d_with_half_data(test_case):
         return_indices = random().to(bool).value()
