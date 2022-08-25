@@ -160,7 +160,7 @@ __global__ void EncodeLookupKernel(uint32_t value_length, const Elem* cache_valu
                                    uint32_t values_elem_cnt, const Key* keys, const Index* context,
                                    Elem* values, uint32_t* n_missing, Key* missing_keys,
                                    uint32_t* missing_indices, const size_t capacity,
-                                   Key* table_keys, Index* table_indices) {
+                                   Key* table_keys, Index* table_indices, const uint32_t padding_idx) {
   constexpr uint32_t warp_size = 32;
   constexpr uint32_t n_warp_per_block = block_size / warp_size;
   const uint32_t warp_id = threadIdx.x / warp_size;
@@ -181,14 +181,18 @@ __global__ void EncodeLookupKernel(uint32_t value_length, const Elem* cache_valu
     const uint32_t key_offset = batch_start + lane_id;
     if (key_offset < n_keys) {
       const Key key = keys[batch_start + lane_id];
-      const uint64_t hash = FullCacheHash()(key);
-      Index row;
-      GetOne<Key, Index>(capacity, table_keys, table_indices, key, hash, &row);
-      batch_row_ids[warp_id][lane_id] = row;
-      if (row == 0) {
-        const uint32_t batch_missing_idx = atomicAdd(batch_n_missing + warp_id, 1);
-        batch_missing_keys[warp_id][batch_missing_idx] = key;
-        batch_missing_indices[warp_id][batch_missing_idx] = key_offset;
+      if(key == padding_idx){
+        batch_row_ids[warp_id][lane_id] = -1; // Assume -1 is a special value. 
+      } else {
+        const uint64_t hash = FullCacheHash()(key);
+        Index row;
+        GetOne<Key, Index>(capacity, table_keys, table_indices, key, hash, &row);
+        batch_row_ids[warp_id][lane_id] = row;
+        if (row == 0) {
+          const uint32_t batch_missing_idx = atomicAdd(batch_n_missing + warp_id, 1);
+          batch_missing_keys[warp_id][batch_missing_idx] = key;
+          batch_missing_indices[warp_id][batch_missing_idx] = key_offset;
+        }
       }
     }
     __syncwarp();
@@ -204,12 +208,18 @@ __global__ void EncodeLookupKernel(uint32_t value_length, const Elem* cache_valu
       missing_indices[batch_n_missing[warp_id] + lane_id] = batch_missing_indices[warp_id][lane_id];
     }
     for (int i = 0; i < batch_n_key; ++i) {
-      const Key key = batch_keys[warp_id][i];
       const Index row = batch_row_ids[warp_id][i];
       if (row == 0) { continue; }
-      for (int col = lane_id; col < value_length; col += warp_size) {
-        values[(batch_start + i) * value_length + col] =
-            cache_values[(row - 1) * value_length + col];
+      if(row == -1){
+        // Here is padding idx, return all zero vec. 
+        for (int col = lane_id; col < value_length; col += warp_size) {
+          values[(batch_start + i) * value_length + col] = static_cast<Elem>(0.0);
+        }
+      } else {
+        for (int col = lane_id; col < value_length; col += warp_size) {
+          values[(batch_start + i) * value_length + col] =
+              cache_values[(row - 1) * value_length + col];
+        }
       }
     }
     __syncwarp();
@@ -400,7 +410,8 @@ class CacheImpl : public Cache {
       : encoder_(options.capacity, options.load_factor),
         device_index_(-1),
         options_(options),
-        max_query_length_(0) {
+        max_query_length_(0), 
+        padding_idx_(options.padding_idx) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     const uint64_t values_size = options.capacity * options.value_size;
     if (options.value_memory_kind == CacheOptions::MemoryKind::kDevice) {
@@ -453,7 +464,7 @@ class CacheImpl : public Cache {
             void* missing_keys, uint32_t* missing_indices) override;
 
   void Get(ep::Stream* stream, uint32_t n_keys, const void* keys, void* values, uint32_t* n_missing,
-           void* missing_keys, uint32_t* missing_indices) override;
+           void* missing_keys, uint32_t* missing_indices, const uint32_t padding_idx) override;
 
   void Get(ep::Stream* stream, uint32_t n_keys, const void* keys, void* values,
            uint8_t* mask) override;
@@ -476,6 +487,7 @@ class CacheImpl : public Cache {
   Index* encoding_buffer_{};
   CacheOptions options_;
   uint32_t max_query_length_;
+  uint32_t padding_idx_;
 };
 
 template<typename Key, typename Elem, typename Index, size_t pack_size>
@@ -498,7 +510,7 @@ template<typename Key, typename Elem, typename Index, size_t pack_size>
 void CacheImpl<Key, Elem, Index, pack_size>::Get(ep::Stream* stream, uint32_t n_keys,
                                                  const void* keys, void* values,
                                                  uint32_t* n_missing, void* missing_keys,
-                                                 uint32_t* missing_indices) {
+                                                 uint32_t* missing_indices, const uint32_t padding_idx) {
   OF_CUDA_CHECK(
       cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), stream->As<ep::CudaStream>()->cuda_stream()));
   if (n_keys == 0) { return; }
@@ -511,7 +523,7 @@ void CacheImpl<Key, Elem, Index, pack_size>::Get(ep::Stream* stream, uint32_t n_
           num_elem_per_value_, values_, values_elem_cnt, static_cast<const Key*>(keys),
           encoding_buffer_, static_cast<Elem*>(values), n_missing, static_cast<Key*>(missing_keys),
           missing_indices, encoder_.TableCapacity(), encoder_.table_keys(),
-          encoder_.table_indices());
+          encoder_.table_indices(), padding_idx);
 }
 
 template<typename Key, typename Elem, typename Index, size_t pack_size>
