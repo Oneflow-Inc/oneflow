@@ -23,7 +23,8 @@ limitations under the License.
 
 namespace oneflow {
 
-StackedError::StackedError() : stack_frame_(), error_proto_(new ErrorProto()) {}
+ErrorFrame::ErrorFrame()
+    : prev_(), code_location_(), error_proto_(new ErrorProto()), frame_msg_() {}
 
 namespace {
 
@@ -32,209 +33,209 @@ void LogError(const Error& error) {
   LOG(ERROR) << error->msg();
 }
 
-std::shared_ptr<StackedError>* MutThreadLocalError() {
-  thread_local std::shared_ptr<StackedError> error;
+std::shared_ptr<ErrorFrame>* MutThreadLocalError() {
+  thread_local std::shared_ptr<ErrorFrame> error;
   return &error;
 }
 
 }  // namespace
 
-Error&& Error::AddStackFrame(Symbol<ErrorStackFrame> error_stack_frame) {
-  stacked_error_->add_stack_frame(error_stack_frame);
+Error&& Error::AddStackFrame(Symbol<CodeLocation> code_location) {
+  error_frame_.reset(new ErrorFrame(error_frame_, code_location));
   return std::move(*this);
 }
 
 void Error::Merge(const Error& other) {
-  auto* error_proto = stacked_error_->mut_error_proto();
-  error_proto->MergeFrom(*other.stacked_error_->error_proto());
+  auto* error_proto = error_frame_->mut_error_proto();
+  error_proto->MergeFrom(*other.error_frame_->error_proto());
 }
 
-Error::operator std::string() const { return stacked_error_->DebugString(); }
+Error::operator std::string() const { return error_frame_->DebugString(); }
 
-Error Error::Ok() { return std::make_shared<StackedError>(); }
+Error Error::Ok() { return std::make_shared<ErrorFrame>(); }
 
 Error Error::ProtoParseFailedError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_proto_parse_failed_error();
   return error;
 }
 
 Error Error::JobSetEmptyError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_job_set_empty_error();
   return error;
 }
 
 Error Error::DeviceTagNotFoundError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_device_tag_not_found_error();
   return error;
 }
 
 Error Error::InvalidValueError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_invalid_value_error();
   return error;
 }
 
 Error Error::IndexError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_index_error();
   return error;
 }
 
 Error Error::TypeError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_type_error();
   return error;
 }
 
 Error Error::TimeoutError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_timeout_error();
   return error;
 }
 
 Error Error::JobNameExistError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_job_name_exist_error();
   return error;
 }
 
 Error Error::JobNameEmptyError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_job_name_empty_error();
   return error;
 }
 
 Error Error::JobNameNotEqualError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_job_name_not_equal_error();
   return error;
 }
 
 Error Error::NoJobBuildAndInferCtxError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_no_job_build_and_infer_ctx_error();
   return error;
 }
 
 Error Error::JobConfFrozenError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_job_conf_frozen_error();
   return error;
 }
 
 Error Error::JobConfNotSetError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_job_conf_not_set_error();
   return error;
 }
 
 Error Error::JobConfRepeatedSetError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_job_conf_repeated_set_error();
   return error;
 }
 
 Error Error::JobTypeNotSetError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_job_type_not_set_error();
   return error;
 }
 
 Error Error::LogicalBlobNameNotExistError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_logical_blob_name_not_exist_error();
   return error;
 }
 
 Error Error::LogicalBlobNameExistError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_logical_blob_name_exist_error();
   return error;
 }
 
 Error Error::LogicalBlobNameInvalidError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_logical_blob_name_invalid_error();
   return error;
 }
 
 Error Error::OpNameExistError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_op_name_exist_error();
   return error;
 }
 
 Error Error::OpConfDeviceTagNoSetError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_op_conf_device_tag_no_set_error();
   return error;
 }
 
 Error Error::PlacementError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_placement_error();
   return error;
 }
 
 Error Error::BlobSplitAxisInferError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_blob_split_axis_infer_error();
   return error;
 }
 
 Error Error::UnknownJobBuildAndInferError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_unknown_job_build_and_infer_error();
   return error;
 }
 
 Error Error::CheckFailedError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_check_failed_error();
   return error;
 }
 
 Error Error::ValueNotFoundError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_value_not_found_error();
   return error;
 }
 
 Error Error::TodoError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_todo_error();
   return error;
 }
 
 Error Error::UnimplementedError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_unimplemented_error();
   return error;
 }
 
 Error Error::RuntimeError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_runtime_error();
   return error;
 }
 
 Error Error::OutOfMemoryError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_out_of_memory_error();
   return error;
 }
 
 Error Error::BoxingNotSupportedError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_boxing_not_supported_error();
   return error;
 }
 
 Error Error::OpKernelNotFoundError(const std::vector<std::string>& error_msgs) {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   auto* op_kernel_not_found_error = error->mut_error_proto()->mutable_op_kernel_not_found_error();
   for (const auto& msg : error_msgs) {
     op_kernel_not_found_error->add_op_kernels_not_found_debug_str(msg);
@@ -243,7 +244,7 @@ Error Error::OpKernelNotFoundError(const std::vector<std::string>& error_msgs) {
 }
 
 Error Error::MultipleOpKernelsMatchedError(const std::vector<std::string>& error_msgs) {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   auto* multiple_op_kernels_matched_error =
       error->mut_error_proto()->mutable_multiple_op_kernels_matched_error();
   for (const auto& msg : error_msgs) {
@@ -254,7 +255,7 @@ Error Error::MultipleOpKernelsMatchedError(const std::vector<std::string>& error
 
 Error Error::MemoryZoneOutOfMemoryError(int64_t machine_id, int64_t mem_zone_id, uint64_t calc,
                                         uint64_t available, const std::string& device_tag) {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   auto* memory_zone_out_of_memory_error =
       error->mut_error_proto()->mutable_memory_zone_out_of_memory_error();
   memory_zone_out_of_memory_error->add_machine_id(std::to_string(machine_id));
@@ -266,37 +267,37 @@ Error Error::MemoryZoneOutOfMemoryError(int64_t machine_id, int64_t mem_zone_id,
 }
 
 Error Error::LossBlobNotFoundError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_loss_blob_not_found_error();
   return error;
 }
 
 Error Error::RwMutexedObjectNotFoundError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_rw_mutexed_object_not_found_error();
   return error;
 }
 
 Error Error::GradientFunctionNotFoundError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_gradient_function_not_found_error();
   return error;
 }
 
 Error Error::SymbolIdUninitializedError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_symbol_id_uninitialized_error();
   return error;
 }
 
 Error Error::CompileOptionWrongError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   error->mut_error_proto()->mutable_compile_option_wrong_error();
   return error;
 }
 
 Error Error::InputDeviceNotMatchError() {
-  auto error = std::make_shared<StackedError>();
+  auto error = std::make_shared<ErrorFrame>();
   auto* input_device_not_match_error =
       error->mut_error_proto()->mutable_input_device_not_match_error();
   input_device_not_match_error->add_info(
@@ -305,31 +306,31 @@ Error Error::InputDeviceNotMatchError() {
   return error;
 }
 
-std::string GetStackedErrorString(const std::shared_ptr<StackedError>& error) {
+std::string GetErrorFrameString(const std::shared_ptr<ErrorFrame>& error) {
   const auto& maybe_error = TRY(FormatErrorStr(error));
-  const auto& error_str = maybe_error.GetDataAndStackedError(error->DebugString());
+  const auto& error_str = maybe_error.GetDataAndErrorFrame(error->DebugString());
   CHECK_NE(error->error_proto()->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET);
   return error_str.first;
 }
 
-std::string GetErrorString(const std::shared_ptr<StackedError>& error) {
+std::string GetErrorString(const std::shared_ptr<ErrorFrame>& error) {
   if (IsInDebugMode()) {
-    return GetStackedErrorString(error);
+    return GetErrorFrameString(error);
   } else {
     return error->error_proto()->msg();
   }
 }
 
-void ThrowError(const std::shared_ptr<StackedError>& error) {
+void ThrowError(const std::shared_ptr<ErrorFrame>& error) {
   *MutThreadLocalError() = error;
   if ((*error)->has_runtime_error()) { throw RuntimeException(GetErrorString(error)); }
   if ((*error)->has_type_error()) { throw TypeException(GetErrorString(error)); }
   if ((*error)->has_index_error()) { throw IndexException(GetErrorString(error)); }
   if ((*error)->has_unimplemented_error()) { throw NotImplementedException(GetErrorString(error)); }
-  throw Exception(GetStackedErrorString(error));
+  throw Exception(GetErrorFrameString(error));
 }
 
-const std::shared_ptr<StackedError>& ThreadLocalError() { return *MutThreadLocalError(); }
+const std::shared_ptr<ErrorFrame>& ThreadLocalError() { return *MutThreadLocalError(); }
 
 const char* kOfBugIssueUploadPrompt =
     "This is a oneflow bug, please submit issues in "

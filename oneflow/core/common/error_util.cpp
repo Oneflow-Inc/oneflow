@@ -35,7 +35,7 @@ bool IsLetterNumberOrUnderline(char c) {
   return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_');
 }
 
-Maybe<std::string> ShortenMsg(std::string str) {
+std::string ShortenMsg(std::string str) {
   // 150 characters is the threshold
   const int num_character_threshold = 150;
   const int num_displayed_character = 50;
@@ -65,42 +65,42 @@ Maybe<std::string> ShortenMsg(std::string str) {
   // a long word of more than 150
   if (right_index - left_index < 50) { return str; }
   std::stringstream ss;
-  CHECK_OR_RETURN(left_index >= 0);
-  CHECK_OR_RETURN(left_index < str.size());
+  CHECK(left_index >= 0);
+  CHECK(left_index < str.size());
   ss << str.substr(0, left_index);
   ss << " ... ";
-  CHECK_OR_RETURN(right_index >= 0);
-  CHECK_OR_RETURN(right_index < str.size());
+  CHECK(right_index >= 0);
+  CHECK(right_index < str.size());
   ss << str.substr(right_index);
   return ss.str();
 }
 
-// file info in stack frame
-std::string FormatFileOfStackFrame(const std::string& file) {
+// file info
+std::string FormatFileOfCodeLocation(const std::string& file) {
   std::stringstream ss;
   ss << "\n  File \"" << file << "\", ";
   return ss.str();
 }
 
-// line info in stack frame
-std::string FormatLineOfStackFrame(const int64_t& line) {
+// line info
+std::string FormatLineOfCodeLocation(const int64_t& line) {
   std::stringstream ss;
   ss << "line " << line << ",";
   return ss.str();
 }
 
-// function info in stack frame
-std::string FormatFunctionOfStackFrame(const std::string& function) {
+// function info
+std::string FormatFunctionOfCodeLocation(const std::string& function) {
   std::stringstream ss;
   ss << " in " << function;
   return ss.str();
 }
 
-// msg in stack frame
-Maybe<std::string> FormatMsgOfStackFrame(std::string error_msg, bool is_last_stack_frame) {
+// code_text
+std::string FormatMsgOfCodeLocation(std::string error_msg, bool is_last_stack_frame) {
   const bool debug_mode = GetGraphDebugMode();
   // only shorten the message if it is not the last stack frame AND not in debug mode
-  if (!is_last_stack_frame && !debug_mode) { error_msg = *JUST(ShortenMsg(error_msg)); }
+  if (!is_last_stack_frame && !debug_mode) { error_msg = ShortenMsg(error_msg); }
   // error_msg of last stack frame come from "<<"
   if (is_last_stack_frame) { error_msg = StripSpace(error_msg); }
   std::stringstream ss;
@@ -109,7 +109,7 @@ Maybe<std::string> FormatMsgOfStackFrame(std::string error_msg, bool is_last_sta
 }
 
 // the msg in error type instance.
-Maybe<std::string> FormatMsgOfErrorType(const std::shared_ptr<StackedError>& error) {
+Maybe<std::string> FormatMsgOfErrorType(const std::shared_ptr<ErrorFrame>& error) {
   const auto& error_proto = error->error_proto();
   CHECK_NE_OR_RETURN(error_proto->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET)
       << Error::RuntimeError() << "Parse error failed, unknown error type";
@@ -127,18 +127,17 @@ Maybe<std::string> FormatMsgOfErrorType(const std::shared_ptr<StackedError>& err
 
 }  // namespace
 
-Maybe<std::string> FormatErrorStr(const std::shared_ptr<StackedError>& error) {
+Maybe<std::string> FormatErrorStr(const std::shared_ptr<ErrorFrame>& error) {
   std::stringstream ss;
   ss << error->error_proto()->msg();
-  ss << error->error_proto()->frame_msg();
   // Get msg from stack frame of error proto
-  for (auto iter = error->stack_frame().rbegin(); iter < error->stack_frame().rend(); iter++) {
-    auto stack_frame = *iter;
-    ss << FormatFileOfStackFrame(stack_frame->file()) << FormatLineOfStackFrame(stack_frame->line())
-       << FormatFunctionOfStackFrame(stack_frame->function())
-       << *JUST(FormatMsgOfStackFrame(stack_frame->code_text(),
-                                      iter == error->stack_frame().rend() - 1));
-  }
+  error->ForEachFrame([&](const auto* error_frame) {
+    auto location = error_frame->code_location();
+    ss << FormatFileOfCodeLocation(location->file()) << FormatLineOfCodeLocation(location->line())
+       << FormatFunctionOfCodeLocation(location->function())
+       << FormatMsgOfCodeLocation(location->code_text(), error_frame->prev() == nullptr);
+    if (!error_frame->frame_msg().empty()) { ss << ": " << error_frame->frame_msg(); }
+  });
   // Get msg from error type of error proto
   std::string msg_of_error_type = *JUST(FormatMsgOfErrorType(error));
   if (msg_of_error_type.size() != 0) { ss << "\n" << msg_of_error_type; }

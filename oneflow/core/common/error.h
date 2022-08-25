@@ -26,16 +26,16 @@ limitations under the License.
 
 namespace oneflow {
 
-class ErrorStackFrame final {
+class CodeLocation final {
  public:
-  ErrorStackFrame(const ErrorStackFrame&) = default;
-  ErrorStackFrame(const std::string& file, int64_t line, const std::string& function)
+  CodeLocation(const CodeLocation&) = default;
+  CodeLocation(const std::string& file, int64_t line, const std::string& function)
       : file_(file), line_(line), function_(function), code_text_() {}
-  ErrorStackFrame(const std::string& file, int64_t line, const std::string& function,
-                  const std::string& code_text)
+  CodeLocation(const std::string& file, int64_t line, const std::string& function,
+               const std::string& code_text)
       : file_(file), line_(line), function_(function), code_text_(code_text) {}
 
-  bool operator==(const ErrorStackFrame& other) const {
+  bool operator==(const CodeLocation& other) const {
     return this->file_ == other.file_ && this->line_ == other.line_
            && this->function_ == other.function_ && this->code_text_ == other.code_text_;
   }
@@ -61,8 +61,8 @@ class ErrorStackFrame final {
 namespace std {
 
 template<>
-struct hash<::oneflow::ErrorStackFrame> final {
-  size_t operator()(const ::oneflow::ErrorStackFrame& frame) const {
+struct hash<::oneflow::CodeLocation> final {
+  size_t operator()(const ::oneflow::CodeLocation& frame) const {
     using namespace oneflow;
     return Hash(frame.file(), frame.line(), frame.function(), frame.code_text());
   }
@@ -72,50 +72,70 @@ struct hash<::oneflow::ErrorStackFrame> final {
 
 namespace oneflow {
 
-class StackedError final {
+class ErrorFrame final {
  public:
-  StackedError();
-  StackedError(const StackedError&) = default;
+  ErrorFrame(const std::shared_ptr<const ErrorFrame>& prev, Symbol<CodeLocation> code_location)
+      : prev_(prev), code_location_(code_location), error_proto_(prev->error_proto()) {}
+  ErrorFrame(const ErrorFrame&) = default;
 
-  constexpr static int kStackReservedSize = 16;
-  using FrameVector = small_vector<Symbol<ErrorStackFrame>, kStackReservedSize>;
+  ErrorFrame();
 
   const ErrorProto* operator->() const { return error_proto().get(); }
   ErrorProto* operator->() { return mut_error_proto(); }
 
   // Getters
-  const FrameVector& stack_frame() const { return stack_frame_; }
+  const std::shared_ptr<const ErrorFrame>& prev() const { return prev_; }
   const std::shared_ptr<const ErrorProto>& error_proto() const { return error_proto_; }
   std::string DebugString() const {
     std::string str;
-    for (const auto& frame : stack_frame()) { str += frame->DebugString() + "\n"; }
+    ReverseForEachFrame(
+        [&](const auto* frame) { str += frame->code_location_->DebugString() + "\n"; });
     str += error_proto()->DebugString();
     return str;
   }
+  Symbol<CodeLocation> code_location() const { return code_location_; }
+  const std::string& frame_msg() const { return frame_msg_; }
 
   // Setters
-  void add_stack_frame(Symbol<ErrorStackFrame> error_frame) { stack_frame_.push_back(error_frame); }
   ErrorProto* mut_error_proto() { return const_cast<ErrorProto*>(error_proto_.get()); }
+  void set_frame_msg(const std::string& frame_msg) { frame_msg_ = frame_msg; }
+
+  template<typename DoEachFrameT>
+  void ForEachFrame(const DoEachFrameT& DoEachFrame) const {
+    for (const auto* error_frame = this; error_frame != nullptr;
+         error_frame = error_frame->prev().get()) {
+      if (error_frame->code_location_) { DoEachFrame(error_frame); }
+    }
+  }
+
+  template<typename DoEachFrameT>
+  void ReverseForEachFrame(const DoEachFrameT& DoEachFrame) const {
+    std::vector<const ErrorFrame*> frames;
+    ForEachFrame([&](const auto* frame) { frames.push_back(frame); });
+    for (auto iter = frames.rbegin(); iter != frames.rend(); ++iter) { DoEachFrame(*iter); }
+  }
 
  private:
-  FrameVector stack_frame_;
+  std::shared_ptr<const ErrorFrame> prev_;
+  Symbol<CodeLocation> code_location_;
   std::shared_ptr<const ErrorProto> error_proto_;
+  std::string frame_msg_;
 };
 
 class Error final {
  public:
-  Error(const std::shared_ptr<StackedError>& stacked_error) : stacked_error_(stacked_error) {}
+  Error(const std::shared_ptr<ErrorFrame>& error_frame) : error_frame_(error_frame) {}
   Error(const Error&) = default;
   ~Error() = default;
 
-  std::shared_ptr<StackedError> stacked_error() const { return stacked_error_; }
-  const ErrorProto* operator->() const { return stacked_error_->error_proto().get(); }
-  ErrorProto* operator->() { return stacked_error_->mut_error_proto(); }
+  std::shared_ptr<ErrorFrame> error_frame() const { return error_frame_; }
+  const ErrorProto* operator->() const { return error_frame_->error_proto().get(); }
+  ErrorProto* operator->() { return error_frame_->mut_error_proto(); }
   operator std::string() const;
-  void Assign(const Error& other) { stacked_error_ = other.stacked_error_; }
+  void Assign(const Error& other) { error_frame_ = other.error_frame_; }
   void Merge(const Error& other);
 
-  Error&& AddStackFrame(Symbol<ErrorStackFrame> error_stack_frame);
+  Error&& AddStackFrame(Symbol<CodeLocation> code_location);
 
   static Error Ok();
   static Error ProtoParseFailedError();
@@ -167,11 +187,11 @@ class Error final {
   static Error InputDeviceNotMatchError();
 
  private:
-  std::shared_ptr<StackedError> stacked_error_;
+  std::shared_ptr<ErrorFrame> error_frame_;
 };
 
-void ThrowError(const std::shared_ptr<StackedError>& error);
-const std::shared_ptr<StackedError>& ThreadLocalError();
+void ThrowError(const std::shared_ptr<ErrorFrame>& error);
+const std::shared_ptr<ErrorFrame>& ThreadLocalError();
 
 template<typename T>
 Error& operator<<(Error& error, const T& x) {

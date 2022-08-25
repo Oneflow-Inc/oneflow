@@ -132,7 +132,6 @@ message ValueNotFoundError {}
 
 message ErrorProto {
   optional string msg = 1 [default = ""];
-  optional string frame_msg = 2 [default = ""];
   oneof error_type {
     ConfigAssertFailedError config_assert_failed_error = 12;
     ConfigResourceUnavailableError config_resource_unavailable_error = 13;

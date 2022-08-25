@@ -22,7 +22,7 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<std::string> FormatErrorStr(const std::shared_ptr<StackedError>& error);
+Maybe<std::string> FormatErrorStr(const std::shared_ptr<ErrorFrame>& error);
 
 }  // namespace oneflow
 
