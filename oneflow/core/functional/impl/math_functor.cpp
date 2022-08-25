@@ -980,7 +980,8 @@ class ArangeFunctor {
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP("integer_start", "integer_limit", "integer_delta", "dtype");
+        THREAD_CACHED_MUTABLE_ATTR_MAP("integer_start", "integer_limit", "integer_delta",
+                                       "float_start", "float_limit", "float_delta", "dtype");
     if (dtype.has_value()) {
       const DataType range_dtype = JUST(dtype)->data_type();
       if (IsIntegralDataType(range_dtype)) {
@@ -1033,6 +1034,7 @@ class GlobalArangeFunctor {
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("integer_start", "integer_limit", "integer_delta",
+                                                 "float_start", "float_limit", "float_delta",
                                                  "dtype", "nd_sbp");
     if (dtype.has_value()) {
       const DataType range_dtype = JUST(dtype)->data_type();

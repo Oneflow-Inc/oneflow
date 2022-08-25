@@ -56,6 +56,51 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   // Repeat variable when do grad acc
                   return GradAccTryInsertRepeatAfterVar(origin_var);
                 });
+  m.add_functor(
+      "DispatchOfrecordReader",
+      [](const std::shared_ptr<OpExpr>& op, const std::string& data_dir, int32_t data_part_num,
+         const std::string& part_name_prefix, int32_t part_name_suffix_length, int32_t batch_size,
+         int32_t shuffle_buffer_size, bool random_shuffle, bool shuffle_after_epoch, int64_t seed,
+         const Optional<Symbol<Device>>& device) -> Maybe<Tensor> {
+        auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
+            "data_dir", "data_part_num", "part_name_prefix", "part_name_suffix_length",
+            "batch_size", "shuffle_buffer_size", "random_shuffle", "shuffle_after_epoch", "seed");
+        attrs.SetAttr("data_dir", data_dir);
+        attrs.SetAttr("data_part_num", data_part_num);
+        attrs.SetAttr("part_name_prefix", part_name_prefix);
+        attrs.SetAttr("part_name_suffix_length", part_name_suffix_length);
+        attrs.SetAttr("batch_size", batch_size);
+        attrs.SetAttr("shuffle_buffer_size", shuffle_buffer_size);
+        attrs.SetAttr("random_shuffle", random_shuffle);
+        attrs.SetAttr("shuffle_after_epoch", shuffle_after_epoch);
+        attrs.SetAttr("seed", seed);
+        return OpInterpUtil::Dispatch<Tensor>(*op, {}, OpExprInterpContext(attrs, JUST(device)));
+      });
+  m.add_functor(
+      "DispatchOfrecordReader",
+      [](const std::shared_ptr<OpExpr>& op, const std::string& data_dir, int32_t data_part_num,
+         const std::string& part_name_prefix, int32_t part_name_suffix_length, int32_t batch_size,
+         int32_t shuffle_buffer_size, bool random_shuffle, bool shuffle_after_epoch, int64_t seed,
+         const Symbol<ParallelDesc>& placement,
+         const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
+        auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
+            "data_dir", "data_part_num", "part_name_prefix", "part_name_suffix_length",
+            "batch_size", "shuffle_buffer_size", "random_shuffle", "shuffle_after_epoch", "seed",
+            "nd_sbp");
+        attrs.SetAttr("data_dir", data_dir);
+        attrs.SetAttr("data_part_num", data_part_num);
+        attrs.SetAttr("part_name_prefix", part_name_prefix);
+        attrs.SetAttr("part_name_suffix_length", part_name_suffix_length);
+        attrs.SetAttr("batch_size", batch_size);
+        attrs.SetAttr("shuffle_buffer_size", shuffle_buffer_size);
+        attrs.SetAttr("random_shuffle", random_shuffle);
+        attrs.SetAttr("shuffle_after_epoch", shuffle_after_epoch);
+        attrs.SetAttr("seed", seed);
+        attrs.SetAttr("nd_sbp", *JUST(GetNdSbpStrList(sbp_tuple)));
+        auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
+        return OpInterpUtil::Dispatch<Tensor>(*op, {},
+                                              OpExprInterpContext(attrs, placement, nd_sbp));
+      });
   m.add_functor("DispatchOfrecordRawDecoder",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const std::string& name, const Shape& shape, const Symbol<DType>& data_type,
