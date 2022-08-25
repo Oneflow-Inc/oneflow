@@ -1004,17 +1004,17 @@ class EmbeddingForwardTmpBufferManager final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EmbeddingForwardTmpBufferManager);
   EmbeddingForwardTmpBufferManager(void* ptr, const int64_t num_ids, const int64_t parallel_num,
-                                   bool need_table_ids, bool need_process_table_ids,
-                                   int64_t line_size, int64_t embedding_size,
-                                   bool need_unique_values, bool need_embeddings,
-                                   DataType value_dtype, DataType embedding_dtype)
+                                   bool need_process_table_ids, int64_t line_size,
+                                   int64_t embedding_size, bool need_unique_values,
+                                   bool need_embeddings, DataType value_dtype,
+                                   DataType embedding_dtype)
       : offset_(0),
         offsets_(static_cast<size_t>(EmbeddingForwardBufferType::kMaxType), -1),
         sizes_(static_cast<size_t>(EmbeddingForwardBufferType::kMaxType)),
         ptr_(ptr) {
     // id shuffle
     const int64_t num_table_ids = need_process_table_ids ? num_ids : 0;
-    const size_t table_ids_bytes = need_table_ids ? num_ids * sizeof(U) : 0;
+    const size_t table_ids_bytes = need_process_table_ids ? num_ids * sizeof(U) : 0;
     AllocBuffer(EmbeddingForwardBufferType::kNumPartitionedUnique, parallel_num * sizeof(IDX));
     size_t partitioned_ids_bytes = parallel_num * num_ids * sizeof(K);
     AllocBuffer(EmbeddingForwardBufferType::kPartitionedUniqueIds, partitioned_ids_bytes);
@@ -1115,6 +1115,7 @@ void MakeConstantInitializerAttr(const int64_t embedding_size, const int64_t lin
   *initializer_attr = initializers.dump();
 }
 
+template<typename IDX>
 class EmbeddingLookupPlaceholderKernelState final : public user_op::OpKernelState {
  public:
   explicit EmbeddingLookupPlaceholderKernelState(user_op::KernelInitContext* ctx)
@@ -1125,9 +1126,9 @@ class EmbeddingLookupPlaceholderKernelState final : public user_op::OpKernelStat
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
     const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-    OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(uint32_t)));
+    OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
     OF_CUDA_CHECK(
-        cudaMallocHost(&host_num_unique_matrix_, parallel_num * parallel_num * sizeof(uint32_t)));
+        cudaMallocHost(&host_num_unique_matrix_, parallel_num * parallel_num * sizeof(IDX)));
     // TODO: IsFull cache
     const std::string& embedding_name = ctx->Attr<std::string>("embedding_name");
     key_value_store_ = Singleton<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
@@ -1138,8 +1139,7 @@ class EmbeddingLookupPlaceholderKernelState final : public user_op::OpKernelStat
 
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
-    std::string state_initializer = "";
-    // const std::string& state_initializer //TODO: how to process it.
+    std::string state_initializer = "";  // TODO: how to process it.
 
     std::vector<EmbeddingInitializer> initializer_param;
     std::vector<int8_t> initializer_index;
@@ -1174,9 +1174,9 @@ class EmbeddingLookupPlaceholderKernelState final : public user_op::OpKernelStat
 
   ncclComm_t comm() { return GetOrCreate().comm; }
 
-  uint32_t* HostNumUniqueMatrix() { return host_num_unique_matrix_; }
+  IDX* HostNumUniqueMatrix() { return host_num_unique_matrix_; }
 
-  void* HostNumKeys() { return host_num_keys_; }
+  IDX* HostNumKeys() { return host_num_keys_; }
 
   embedding::KeyValueStore* KeyValueStore() { return key_value_store_; }
 
@@ -1213,8 +1213,8 @@ class EmbeddingLookupPlaceholderKernelState final : public user_op::OpKernelStat
   std::string stream_name_;
   ParallelDesc parallel_desc_;
   std::unique_ptr<Comm> comm_;
-  void* host_num_keys_;
-  uint32_t* host_num_unique_matrix_;
+  IDX* host_num_keys_;
+  IDX* host_num_unique_matrix_;
   std::shared_ptr<one::Generator> generator_;
   embedding::KeyValueStore* key_value_store_;
 
@@ -1225,7 +1225,8 @@ class EmbeddingLookupPlaceholderKernelState final : public user_op::OpKernelStat
 };
 
 template<typename T, typename U, typename IDX>
-void LookupAndInitMissing(ep::Stream* stream, EmbeddingLookupPlaceholderKernelState* kernel_state,
+void LookupAndInitMissing(ep::Stream* stream,
+                          EmbeddingLookupPlaceholderKernelState<IDX>* kernel_state,
                           uint32_t num_unique, const int64_t embedding_size,
                           const int64_t line_size, const bool is_prefetch, const void* unique_ids,
                           const void* table_ids, void* num_missing_ptr, void* missing_indices,
@@ -1246,7 +1247,7 @@ void LookupAndInitMissing(ep::Stream* stream, EmbeddingLookupPlaceholderKernelSt
                                   missing_indices, store_values);
 }
 
-template<typename T, typename V, typename K, typename U>
+template<typename K, typename T, typename V, typename U, typename IDX>
 class EmbeddingLookupPlaceholderKernel final : public user_op::OpKernel {
  public:
   EmbeddingLookupPlaceholderKernel(){};
@@ -1254,15 +1255,19 @@ class EmbeddingLookupPlaceholderKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EmbeddingLookupPlaceholderKernelState>(ctx);
+    return std::make_shared<EmbeddingLookupPlaceholderKernelState<IDX>>(ctx);
   }
 
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    using IDX = uint32_t;
-    auto* kernel_state = dynamic_cast<EmbeddingLookupPlaceholderKernelState*>(state);
+    // IDX type is uint32_t, table_ids type is uint8_t.
+    DataType num_unique_matrix_dtype = DataType::kUInt32;
+    DataType table_ids_dtype = DataType::kUInt8;
+    CHECK_EQ(sizeof(IDX), GetSizeOfDataType(num_unique_matrix_dtype));
+    CHECK_EQ(sizeof(U), GetSizeOfDataType(table_ids_dtype));
+    auto* kernel_state = dynamic_cast<EmbeddingLookupPlaceholderKernelState<IDX>*>(state);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* ids = ctx->Tensor4ArgNameAndIndex("ids", 0);
     user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
@@ -1282,26 +1287,35 @@ class EmbeddingLookupPlaceholderKernel final : public user_op::OpKernel {
     bool need_embeddings =
         (line_size != embedding_size) || (value_dtype != embeddings->data_type());
     EmbeddingForwardTmpBufferManager<K, U, IDX> buffer_manager(
-        tmp_buffer->mut_dptr(), num_ids, parallel_num, need_gen_table_ids, need_process_table_ids,
-        line_size, embedding_size, need_unique_values, need_embeddings, value_dtype,
-        embeddings->data_type());
+        tmp_buffer->mut_dptr(), num_ids, parallel_num, need_process_table_ids, line_size,
+        embedding_size, need_unique_values, need_embeddings, value_dtype, embeddings->data_type());
     CHECK_GE(tmp_buffer->shape_view().elem_cnt(), buffer_manager.TotalBufferSize());
     ncclComm_t comm = kernel_state->comm();
     IDX* host_num_unique_matrix = kernel_state->HostNumUniqueMatrix();
-    IDX* host_num_keys = reinterpret_cast<IDX*>(kernel_state->HostNumKeys());
+    IDX* host_num_keys = kernel_state->HostNumKeys();
     id_shuffle::IdShuffleDataPtrs<K, U, IDX> data_ptrs;
     data_ptrs.ids_ptr = reinterpret_cast<const K*>(ids->dptr());
-    if (has_table_ids) {
-      const user_op::Tensor* table_ids = ctx->Tensor4ArgNameAndIndex("table_ids", 0);
-      data_ptrs.table_ids_ptr = reinterpret_cast<const U*>(table_ids->dptr());
-    } else if (need_gen_table_ids) {
-      const int32_t num_tables = ctx->Attr<int32_t>("num_tables");
-      id_shuffle::GenerateTableIds<<<BlocksNum4ThreadsNum(num_ids), kCudaThreadsNumPerBlock, 0,
-                                     cuda_stream>>>(
-          num_ids, num_tables,
-          buffer_manager.template Ptr<U>(EmbeddingForwardBufferType::kTableIds));
-      data_ptrs.table_ids_ptr =
-          buffer_manager.template Ptr<U>(EmbeddingForwardBufferType::kTableIds);
+    if (need_process_table_ids) {
+      U* tmp_table_ids_ptr = buffer_manager.template Ptr<U>(EmbeddingForwardBufferType::kTableIds);
+      data_ptrs.table_ids_ptr = tmp_table_ids_ptr;
+      if (has_table_ids) {
+        // use table_id default data_type uint8, if has input table_ids with different data_type,
+        // cast it to uint8.
+        const user_op::Tensor* table_ids = ctx->Tensor4ArgNameAndIndex("table_ids", 0);
+        if (table_ids->data_type() != table_ids_dtype) {
+          std::unique_ptr<ep::primitive::Cast> cast_primitive =
+              ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
+                  DeviceType::kCUDA, table_ids->data_type(), table_ids_dtype);
+          cast_primitive->Launch(ctx->stream(), table_ids->dptr(), tmp_table_ids_ptr,
+                                 table_ids->shape_view().elem_cnt());
+        } else {
+          data_ptrs.table_ids_ptr = reinterpret_cast<const U*>(table_ids->dptr());
+        }
+      } else {
+        const int32_t num_tables = ctx->Attr<int32_t>("num_tables");
+        id_shuffle::GenerateTableIds<<<BlocksNum4ThreadsNum(num_ids), kCudaThreadsNumPerBlock, 0,
+                                       cuda_stream>>>(num_ids, num_tables, tmp_table_ids_ptr);
+      }
     } else {
       data_ptrs.table_ids_ptr = nullptr;
     }
@@ -1330,11 +1344,9 @@ class EmbeddingLookupPlaceholderKernel final : public user_op::OpKernel {
     data_ptrs.cur_rank_inverse_indices_ptr =
         buffer_manager.template Ptr<IDX>(EmbeddingForwardBufferType::kCurRankInverseIndices);
 
-    DataType num_unique_matrix_dtype = DataType::kUInt32;
-    DataType table_ids_dtype = DataType::kUInt32;
-    IdShuffle(ctx->stream(), comm, data_ptrs, num_ids, parallel_id, parallel_num,
-              num_unique_matrix_dtype, ids->data_type(), table_ids_dtype, need_process_table_ids,
-              host_num_unique_matrix, host_num_keys);
+    id_shuffle::IdShuffle(ctx->stream(), comm, data_ptrs, num_ids, parallel_id, parallel_num,
+                          num_unique_matrix_dtype, ids->data_type(), table_ids_dtype,
+                          need_process_table_ids, host_num_unique_matrix, host_num_keys);
     uint32_t num_unique = *host_num_keys;
 
     // lookup and put
@@ -1393,41 +1405,38 @@ class EmbeddingLookupPlaceholderKernel final : public user_op::OpKernel {
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)   \
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
-#define REGISTER_CUDA_EMBEDDING_LOOKUP_PLACEHOLDER_KERNEL(t_dtype_pair, k_dtype_pair,             \
-                                                          table_dtype_pair, v_dtype_pair)         \
-  REGISTER_USER_KERNEL("embedding_lookup_placeholder")                                            \
-      .SetCreateFn<EmbeddingLookupPlaceholderKernel<                                              \
-          OF_PP_PAIR_FIRST(t_dtype_pair), OF_PP_PAIR_FIRST(v_dtype_pair),                         \
-          OF_PP_PAIR_FIRST(k_dtype_pair), OF_PP_PAIR_FIRST(table_dtype_pair)>>()                  \
-      .SetIsMatchedHob(                                                                           \
-          (user_op::HobDeviceType() == DeviceType::kCUDA)                                         \
-          && (user_op::HobDataType("ids", 0) == OF_PP_PAIR_SECOND(k_dtype_pair))                  \
-          && (DataType::kUInt32 == OF_PP_PAIR_SECOND(table_dtype_pair))                           \
-          && (user_op::HobAttr<DataType>("dtype") == OF_PP_PAIR_SECOND(v_dtype_pair))             \
-          && (user_op::HobDataType("embeddings", 0) == OF_PP_PAIR_SECOND(t_dtype_pair)))          \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
-        const user_op::TensorDesc& ids = ctx->InputTensorDesc("ids", 0);                          \
-        const user_op::TensorDesc& embeddings = ctx->OutputTensorDesc("embeddings", 0);           \
-        const bool has_table_ids = ctx->has_input("table_ids", 0);                                \
-        const int32_t num_tables = ctx->Attr<int32_t>("num_tables");                              \
-        const bool need_gen_table_ids = (!has_table_ids && num_tables > 1);                       \
-        const bool need_process_table_ids = (has_table_ids || num_tables > 1);                    \
-        DataType value_dtype = ctx->Attr<DataType>("dtype");                                      \
-        const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");                      \
-        const int64_t line_size = ctx->Attr<int64_t>("line_size");                                \
-        bool need_embeddings =                                                                    \
-            (line_size != embedding_size) || (value_dtype != embeddings.data_type());             \
-        EmbeddingForwardTmpBufferManager<OF_PP_PAIR_FIRST(k_dtype_pair),                          \
-                                         OF_PP_PAIR_FIRST(table_dtype_pair), uint32_t>            \
-            buffer_manager(nullptr, ids.shape().elem_cnt(), ctx->parallel_ctx().parallel_num(),   \
-                           need_gen_table_ids, need_process_table_ids, line_size, embedding_size, \
-                           true, need_embeddings, value_dtype, embeddings.data_type());           \
-        return buffer_manager.TotalBufferSize();                                                  \
+#define REGISTER_CUDA_EMBEDDING_LOOKUP_PLACEHOLDER_KERNEL(k_dtype_pair, t_dtype_pair,           \
+                                                          v_dtype_pair)                         \
+  REGISTER_USER_KERNEL("embedding_lookup_placeholder")                                          \
+      .SetCreateFn<EmbeddingLookupPlaceholderKernel<                                            \
+          OF_PP_PAIR_FIRST(k_dtype_pair), OF_PP_PAIR_FIRST(t_dtype_pair),                       \
+          OF_PP_PAIR_FIRST(v_dtype_pair), uint8_t, uint32_t>>()                                 \
+      .SetIsMatchedHob(                                                                         \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                       \
+          && (user_op::HobDataType("ids", 0) == OF_PP_PAIR_SECOND(k_dtype_pair))                \
+          && (user_op::HobDataType("embeddings", 0) == OF_PP_PAIR_SECOND(t_dtype_pair))         \
+          && (user_op::HobAttr<DataType>("dtype") == OF_PP_PAIR_SECOND(v_dtype_pair)))          \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
+        const user_op::TensorDesc& ids = ctx->InputTensorDesc("ids", 0);                        \
+        const user_op::TensorDesc& embeddings = ctx->OutputTensorDesc("embeddings", 0);         \
+        const bool has_table_ids = ctx->has_input("table_ids", 0);                              \
+        const int32_t num_tables = ctx->Attr<int32_t>("num_tables");                            \
+        const bool need_process_table_ids = (has_table_ids || num_tables > 1);                  \
+        DataType value_dtype = ctx->Attr<DataType>("dtype");                                    \
+        const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");                    \
+        const int64_t line_size = ctx->Attr<int64_t>("line_size");                              \
+        bool need_embeddings =                                                                  \
+            (line_size != embedding_size) || (value_dtype != embeddings.data_type());           \
+        EmbeddingForwardTmpBufferManager<OF_PP_PAIR_FIRST(k_dtype_pair), uint8_t, uint32_t>     \
+            buffer_manager(nullptr, ids.shape().elem_cnt(), ctx->parallel_ctx().parallel_num(), \
+                           need_process_table_ids, line_size, embedding_size, true,             \
+                           need_embeddings, value_dtype, embeddings.data_type());               \
+        return buffer_manager.TotalBufferSize();                                                \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_LOOKUP_PLACEHOLDER_KERNEL,
-                                 FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, ID_DATA_TYPE_SEQ,
-                                 TABLE_ID_DATA_TYPE_SEQ, EMBEDDING_DATA_TYPE_SEQ)
+                                 ID_DATA_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
+                                 EMBEDDING_DATA_TYPE_SEQ)
 // TODO: fix the specified data_type
 
 class EmbeddingLookupPlaceholderGradKernelState final : public user_op::OpKernelState {
@@ -1524,7 +1533,6 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
     // Note: the missing value has been put in lookup, in backward and update, not need to init, so
     // not need table id.
     const bool has_table_ids = false;
-    const bool need_gen_table_ids = false;
     const bool need_process_table_ids = false;
     const int64_t num_ids = ids->shape_view().elem_cnt();
     const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
@@ -1539,8 +1547,8 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     // not need lookup values.
     EmbeddingForwardTmpBufferManager<K, uint8_t, IDX> buffer_manager(
-        tmp_buffer->mut_dptr(), num_ids, parallel_num, need_gen_table_ids, need_process_table_ids,
-        line_size, embedding_size, false, false, DataType::kInvalidDataType, data_type);
+        tmp_buffer->mut_dptr(), num_ids, parallel_num, need_process_table_ids, line_size,
+        embedding_size, false, false, DataType::kInvalidDataType, data_type);
     CHECK_GE(tmp_buffer->shape_view().elem_cnt(), buffer_manager.TotalBufferSize());
     ncclComm_t comm = kernel_state->comm();
     IDX* host_num_unique_matrix = kernel_state->HostNumUniqueMatrix();
@@ -1663,7 +1671,7 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
         const int64_t line_size = ctx->Attr<int64_t>("line_size");                              \
         EmbeddingForwardTmpBufferManager<OF_PP_PAIR_FIRST(k_dtype_pair), uint8_t, uint32_t>     \
             buffer_manager(nullptr, ids.shape().elem_cnt(), ctx->parallel_ctx().parallel_num(), \
-                           false, false, line_size, embedding_size, false, false,               \
+                           false, line_size, embedding_size, false, false,                      \
                            DataType::kInvalidDataType, embedding_grad.data_type());             \
         return buffer_manager.TotalBufferSize();                                                \
       });
