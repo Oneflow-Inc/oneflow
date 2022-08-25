@@ -24,24 +24,45 @@ namespace oneflow {
 namespace one {
 
 #define ASSERT(x) (x).GetOrThrow()
-#define ASSERT_PTR(x) (x).GetPtrOrThrow()
 using functional::PyObjectPtr;
 
+#define INT_TYPE INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
+// TODO(WangYi): support bf16
+#define FLOAT_TYPE FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
+
+PyObject* PyGetMaxVal(DataType datatype) {
 #define GET_INT_MAX_VAL(cpp_type, of_datatype) \
   case of_datatype:                            \
     return PyLong_FromLong(GetMaxVal<DataTypeToType<of_datatype>>());
+#define GET_FLOAT_MAX_VAL(cpp_type, of_datatype) \
+  case of_datatype: return PyFloat_FromDouble(GetMaxVal<DataTypeToType<of_datatype>>());
 
+  switch (datatype) {
+    OF_PP_FOR_EACH_TUPLE(GET_INT_MAX_VAL, INT_TYPE);
+    OF_PP_FOR_EACH_TUPLE(GET_FLOAT_MAX_VAL, FLOAT_TYPE);
+    default: return NULL;
+
+#undef GET_INT_MAX_VAL
+#undef GET_FLOAT_MAX_VAL
+  }
+}
+
+PyObject* PyGetMinVal(DataType datatype) {
 #define GET_INT_MIN_VAL(cpp_type, of_datatype) \
   case of_datatype:                            \
     return PyLong_FromLong(GetMinVal<DataTypeToType<of_datatype>>());
-
-#define GET_FLOAT_MAX_VAL(cpp_type, of_datatype) \
-  case of_datatype:                              \
-    return PyFloat_FromDouble(GetMaxVal<DataTypeToType<of_datatype>>());
-
 #define GET_FLOAT_MIN_VAL(cpp_type, of_datatype) \
-  case of_datatype:                              \
-    return PyFloat_FromDouble(GetMinVal<DataTypeToType<of_datatype>>());
+  case of_datatype: return PyFloat_FromDouble(GetMinVal<DataTypeToType<of_datatype>>());
+
+  switch (datatype) {
+    OF_PP_FOR_EACH_TUPLE(GET_INT_MIN_VAL, INT_TYPE);
+    OF_PP_FOR_EACH_TUPLE(GET_FLOAT_MIN_VAL, FLOAT_TYPE);
+    default: return NULL;
+
+#undef GET_INT_MIN_VAL
+#undef GET_FLOAT_MIN_VAL
+  }
+}
 
 #define GET_FLOAT_RESOLUTION(cpp_type, of_datatype) \
   case of_datatype:                                 \
@@ -56,9 +77,15 @@ using functional::PyObjectPtr;
   case of_datatype:                           \
     return PyFloat_FromDouble(std::numeric_limits<DataTypeToType<of_datatype>>::min());
 
-#define INT_TYPE INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
-// TODO(WangYi): support bf16
-#define FLOAT_TYPE FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
+PyTypeObject PyIInfoType = {
+    PyVarObject_HEAD_INIT(NULL, 0) "oneflow.iinfo",  // tp_name
+    sizeof(PyDTypeInfo),                             // tp_basicsize
+};
+
+PyTypeObject PyFInfoType = {
+    PyVarObject_HEAD_INIT(NULL, 0) "oneflow.finfo",  // tp_name
+    sizeof(PyDTypeInfo),                             // tp_basicsize
+};
 
 static PyObject* PyIInfo_new(PyTypeObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
@@ -102,6 +129,9 @@ static PyObject* PyFInfo_new(PyTypeObject* self, PyObject* args, PyObject* kwarg
       << Error::TypeError()
       << "oneflow.finfo() requires a float input type. Use oneflow.iinfo to handle '"
       << self->dtype->name() << "' ";
+  // TODO (wangyi): support bfloat16
+  CHECK_OR_THROW(self->dtype->data_type() != kBFloat16)
+      << Error::TypeError() << "bfloat16 is not supported yet by oneflow.finfo";
   return (PyObject*)self;
   END_HANDLE_ERRORS
 }
@@ -113,55 +143,27 @@ static PyObject* PyDInfo_bits(PyObject* self, void*) {
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyIInfo_min(PyObject* self, void*) {
+static PyObject* PyDInfo_min(PyObject* self, void*) {
   HANDLE_ERRORS
   DataType datatype = PyDTypeInfo_UnpackDataType(self);
-  switch (datatype) {
-    OF_PP_FOR_EACH_TUPLE(GET_INT_MIN_VAL, INT_TYPE);
-    default:
-      THROW(RuntimeError) << PyDTypeInfo_UnpackDType(self)->name()
-                          << " not supported by oneflow.iinfo";
-      return NULL;
+  PyObject* result = PyGetMinVal(datatype);
+  if (!result) {
+    THROW(RuntimeError) << PyDTypeInfo_UnpackDType(self)->name() << " not supported by "
+                        << self->ob_type->tp_name;
   }
+  return result;
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyFInfo_min(PyObject* self, void*) {
+static PyObject* PyDInfo_max(PyObject* self, void*) {
   HANDLE_ERRORS
   DataType datatype = PyDTypeInfo_UnpackDataType(self);
-  switch (datatype) {
-    OF_PP_FOR_EACH_TUPLE(GET_FLOAT_MIN_VAL, FLOAT_TYPE);
-    default:
-      THROW(RuntimeError) << PyDTypeInfo_UnpackDType(self)->name()
-                          << " not supported by oneflow.finfo";
-      return NULL;
+  PyObject* result = PyGetMaxVal(datatype);
+  if (!result) {
+    THROW(RuntimeError) << PyDTypeInfo_UnpackDType(self)->name() << " not supported by "
+                        << self->ob_type->tp_name;
   }
-  END_HANDLE_ERRORS
-}
-
-static PyObject* PyIInfo_max(PyObject* self, void*) {
-  HANDLE_ERRORS
-  DataType datatype = PyDTypeInfo_UnpackDataType(self);
-  switch (datatype) {
-    OF_PP_FOR_EACH_TUPLE(GET_INT_MAX_VAL, INT_TYPE);
-    default:
-      THROW(RuntimeError) << PyDTypeInfo_UnpackDType(self)->name()
-                          << " not supported by oneflow.iinfo";
-      return NULL;
-  }
-  END_HANDLE_ERRORS
-}
-
-static PyObject* PyFInfo_max(PyObject* self, void*) {
-  HANDLE_ERRORS
-  DataType datatype = PyDTypeInfo_UnpackDataType(self);
-  switch (datatype) {
-    OF_PP_FOR_EACH_TUPLE(GET_FLOAT_MAX_VAL, FLOAT_TYPE);
-    default:
-      THROW(RuntimeError) << PyDTypeInfo_UnpackDType(self)->name()
-                          << " not supported by oneflow.finfo";
-      return NULL;
-  }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -215,8 +217,8 @@ static PyObject* PyDInfo_dtype(PyObject* self, void*) {
 static PyObject* PyIInfo_str(PyObject* self) {
   HANDLE_ERRORS
   std::ostringstream oss;
-  oss << "iinfo(min=" << PyLong_AS_LONG(PyIInfo_min((PyObject*)self, NULL)) << ", ";
-  oss << "max=" << PyLong_AS_LONG(PyIInfo_max((PyObject*)self, NULL)) << ", ";
+  oss << "iinfo(min=" << PyLong_AS_LONG(PyDInfo_min((PyObject*)self, NULL)) << ", ";
+  oss << "max=" << PyLong_AS_LONG(PyDInfo_max((PyObject*)self, NULL)) << ", ";
   oss << "dtype=" << PyDTypeInfo_UnpackDType(self)->name() << ", ";
   oss << "bits=" << PyLong_AS_LONG(PyDInfo_bits((PyObject*)self, NULL)) << ")";
   return PyUnicode_FromString(oss.str().data());
@@ -228,8 +230,8 @@ static PyObject* PyFInfo_str(PyObject* self) {
   std::ostringstream oss;
   oss << "finfo(resolution=" << PyFloat_AS_DOUBLE(PyFInfo_resolution((PyObject*)self, NULL))
       << ", ";
-  oss << "min=" << PyFloat_AS_DOUBLE(PyFInfo_min((PyObject*)self, NULL)) << ", ";
-  oss << "max=" << PyFloat_AS_DOUBLE(PyFInfo_max((PyObject*)self, NULL)) << ", ";
+  oss << "min=" << PyFloat_AS_DOUBLE(PyDInfo_min((PyObject*)self, NULL)) << ", ";
+  oss << "max=" << PyFloat_AS_DOUBLE(PyDInfo_max((PyObject*)self, NULL)) << ", ";
   oss << "eps=" << PyFloat_AS_DOUBLE(PyFInfo_eps((PyObject*)self, NULL)) << ", ";
   oss << "smallest_normal=" << PyFloat_AS_DOUBLE(PyFInfo_tiny((PyObject*)self, NULL)) << ", ";
   oss << "tiny=" << PyFloat_AS_DOUBLE(PyFInfo_tiny((PyObject*)self, NULL)) << ", ";
@@ -241,16 +243,16 @@ static PyObject* PyFInfo_str(PyObject* self) {
 
 static struct PyGetSetDef PyIInfo_properties[] = {
     {"bits", (getter)PyDInfo_bits, nullptr, nullptr, nullptr},
-    {"max", (getter)PyIInfo_max, nullptr, nullptr, nullptr},
-    {"min", (getter)PyIInfo_min, nullptr, nullptr, nullptr},
+    {"max", (getter)PyDInfo_max, nullptr, nullptr, nullptr},
+    {"min", (getter)PyDInfo_min, nullptr, nullptr, nullptr},
     {"dtype", (getter)PyDInfo_dtype, nullptr, nullptr, nullptr},
     {nullptr},
 };
 
 static struct PyGetSetDef PyFInfo_properties[] = {
     {"bits", (getter)PyDInfo_bits, nullptr, nullptr, nullptr},
-    {"max", (getter)PyFInfo_max, nullptr, nullptr, nullptr},
-    {"min", (getter)PyFInfo_min, nullptr, nullptr, nullptr},
+    {"max", (getter)PyDInfo_max, nullptr, nullptr, nullptr},
+    {"min", (getter)PyDInfo_min, nullptr, nullptr, nullptr},
     {"resolution", (getter)PyFInfo_resolution, nullptr, nullptr, nullptr},
     {"eps", (getter)PyFInfo_eps, nullptr, nullptr, nullptr},
     {"smallest_normal", (getter)PyFInfo_tiny, nullptr, nullptr, nullptr},
@@ -284,11 +286,6 @@ ONEFLOW_API_PYBIND11_MODULE("_C", m) {
 }  // namespace one
 }  // namespace oneflow
 #undef ASSERT
-#undef ASSERT_PTR
-#undef GET_INT_MAX_VAL
-#undef GET_INT_MIN_VAL
-#undef GET_FLOAT_MAX_VAL
-#undef GET_FLOAT_MIN_VAL
 #undef GET_FLOAT_RESOLUTION
 #undef GET_FLOAT_EPS
 #undef GET_FLOAT_TINY

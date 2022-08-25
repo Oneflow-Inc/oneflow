@@ -28,28 +28,20 @@ typedef struct {
   PyObject_HEAD Symbol<DType> dtype;
 } PyDTypeInfo;
 
-static PyTypeObject PyIInfoType = {
-    PyVarObject_HEAD_INIT(NULL, 0) "oneflow.iinfo",  // tp_name
-    sizeof(PyDTypeInfo),                             // tp_basicsize
-};
+extern PyTypeObject PyIInfoType;
+extern PyTypeObject PyFInfoType;
 
-static PyTypeObject PyFInfoType = {
-    PyVarObject_HEAD_INIT(NULL, 0) "oneflow.finfo",  // tp_name
-    sizeof(PyDTypeInfo),                             // tp_basicsize
-};
 inline bool PyIInfo_Check(PyObject* obj) { return PyObject_TypeCheck(obj, &PyIInfoType); }
-
 inline bool PyFInfo_Check(PyObject* obj) { return PyObject_TypeCheck(obj, &PyFInfoType); }
-
 inline bool PyDTypeInfo_Check(PyObject* obj) { return PyIInfo_Check(obj) || PyFInfo_Check(obj); }
 
 inline Symbol<DType> PyDTypeInfo_UnpackDType(PyObject* obj) {
-  CHECK_OR_THROW(PyDTypeInfo_Check(obj));
+  assert(!PyDTypeInfo_Check(obj));
   return ((PyDTypeInfo*)obj)->dtype;
 }
 
 inline DataType PyDTypeInfo_UnpackDataType(PyObject* obj) {
-  CHECK_OR_THROW(PyDTypeInfo_Check(obj));
+  assert(PyDTypeInfo_Check(obj));
   return ((PyDTypeInfo*)obj)->dtype->data_type();
 }
 
