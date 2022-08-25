@@ -2475,3 +2475,7 @@
 - name: "grad_acc_unpack"
   signature: "Tensor (Tensor input, Int32 unpack_num) => GradAccUnpack"
   bind_python: False
+
+- name: "trunc"
+  signature: "Tensor (Tensor input) => Trunc"
+  bind_python: True
