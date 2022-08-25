@@ -2383,6 +2383,10 @@
   signature: "Tensor (Tensor shadow, Tensor ids, Tensor table_ids=None, DataType dtype, Int64 embedding_size, Int32 num_tables, String embedding_tables, String embedding_store_options) => OneEmbeddingLookup"
   bind_python: True
 
+- name: "one_embedding_lookup_grad"
+  signature: "Void (Tensor ids, Tensor embedding_grad, String embedding_store_options) => OneEmbeddingLookupGrad"
+  bind_python: True
+
 - name: "one_embedding_unique_key_value_pair"
   signature: "TensorTuple (Tensor keys, Tensor values=None, Int32 num_tables) => OneEmbeddingUniqueKeyValuePair"
   bind_python: True
@@ -2569,3 +2573,24 @@
 - name: "celu_grad_grad"
   signature: "Tensor (Tensor x, Tensor dydx, Double alpha) => CeluGradGrad"  
   bind_python: False
+
+- name: "batch_norm_stats"
+  signature: "TensorTuple (Tensor input, Int32 axis, Float eps) => BatchNormStats"
+  bind_python: True
+
+- name: "batch_norm_gather_stats_with_counts"
+  signature: "TensorTuple (Tensor input, Tensor mean, Tensor invstd, Tensor running_mean=None, Tensor running_var=None, Float momentum, Float eps, Tensor counts) => BatchNormGatherStatsWithCounts"
+  bind_python: True
+
+- name: "batch_norm_elemt"
+  signature: "Tensor (Tensor input, Tensor weight, Tensor bias, Tensor mean, Tensor invstd, Int32 axis, Float eps) => BatchNormElemt"
+  bind_python: True
+
+- name: "batch_norm_backward_reduce"
+  signature: "TensorTuple (Tensor grad_out, Tensor input, Tensor mean, Tensor invstd, Int32 axis) => BatchNormBackwardReduce"
+  bind_python: True
+
+- name: "batch_norm_backward_elemt"
+  signature: "Tensor (Tensor grad_out, Tensor input, Tensor mean, Tensor invstd, Tensor weight, Tensor sum_dy, Tensor sum_dy_xmu, Tensor count, Int32 axis) => BatchNormBackwardElemt"
+  bind_python: True
+  
