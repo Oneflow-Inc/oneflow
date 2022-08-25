@@ -470,10 +470,9 @@ struct UnaryFunctor<device, UnaryOp::kSign, Dst, Src> {
     const Src zero = static_cast<Src>(0.0);
     if (src > zero) {
       return static_cast<Dst>(1.0);
-    } else if(src < zero) {
+    } else if (src < zero) {
       return static_cast<Dst>(-1.0);
-    }
-      else {
+    } else {
       return static_cast<Dst>(0.0);
     }
   }
