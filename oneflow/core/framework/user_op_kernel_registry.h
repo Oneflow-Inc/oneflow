@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_USER_OP_KERNEL_REGISTRY_H_
 #define ONEFLOW_CORE_FRAMEWORK_USER_OP_KERNEL_REGISTRY_H_
 
+#include <sys/types.h>
+#include <cstddef>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -82,12 +84,25 @@ struct OpKernelRegistryResult {
 class KernelLaunchRegistry final {
  public:
   KernelLaunchRegistry() = default;
-  OpKernelCreateFn& LookUp(const std::string& key) { return registry_[key]; }
-  void Register(const std::string& key, OpKernelCreateFn val) { registry_[key] = std::move(val); }
+  OpKernelCreateFn& LookUp(const std::string& key) { return registry_[key].second; }
+  size_t LookUpIndex(const std::string& key) { return registry_[key].first; }
+  void Register(const std::string& key, OpKernelCreateFn val) {
+    if (registry_.find(key) == registry_.end()) {
+      registry_[key] = {index_registry_.size(), std::move(val)};
+      index_registry_.push_back(key);
+    }
+  }
+  static std::string getName(std::string op_name, std::string device_name) {
+    // TODO
+    LOG(ERROR) << "test: " << op_name << " " << device_name;
+    return op_name + device_name;
+  }
+  std::string getName(size_t index) { return index_registry_[index]; }
 
  private:
   friend class oneflow::Singleton<KernelLaunchRegistry>;
-  std::unordered_map<std::string, OpKernelCreateFn> registry_;
+  std::vector<std::string> index_registry_;
+  std::unordered_map<std::string, std::pair<size_t, OpKernelCreateFn>> registry_;
 };
 
 class OpKernelRegistry final {
@@ -100,7 +115,10 @@ class OpKernelRegistry final {
     if (oneflow::Singleton<KernelLaunchRegistry>::Get() == nullptr) {
       oneflow::Singleton<KernelLaunchRegistry>::New();
     }
-    oneflow::Singleton<KernelLaunchRegistry>::Get()->Register(result_.op_type_name, fn);
+    auto device_name = typeid(T).name();
+    auto op_name = result_.op_type_name;
+    oneflow::Singleton<KernelLaunchRegistry>::Get()->Register(
+        KernelLaunchRegistry::getName(op_name, device_name), fn);
     return SetCreateFn(fn);
   }
   template<typename T>
