@@ -346,6 +346,18 @@ REGISTER_USER_KERNEL("silu_grad")
     })
     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kSiluBackwardWithDyX, "dx",
                                            "dy"));
+REGISTER_USER_KERNEL("trunc")
+    .SetCreateFn([]() {
+      return user_op::NewOpKernel<UnaryPrimitiveKernel>(
+          "out", "in", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+            const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+            return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
+                ctx->device_type(), ep::primitive::UnaryOp::kTrunc, src->data_type(),
+                dst->data_type());
+          });
+    })
+    .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kSilu, "out", "in"));
 
 REGISTER_USER_KERNEL("selu")
     .SetCreateFn([]() {
