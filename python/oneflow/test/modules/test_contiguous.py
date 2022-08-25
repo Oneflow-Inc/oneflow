@@ -82,6 +82,11 @@ class TestContiguous(flow.unittest.TestCase):
         z = y.contiguous()
         return z
 
+    @profile(torch.Tensor.contiguous)
+    def profile_contiguous(test_case):
+        x = torch.ones(32, 3, 128, 128)
+        x.contiguous()
+
 
 def _test_inplace_contiguous(test_case, device):
     arr = np.random.randn(4, 5, 6, 7).astype(np.float32)
