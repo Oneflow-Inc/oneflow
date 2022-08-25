@@ -30,6 +30,8 @@ namespace oneflow {
 
 class MutableAttrMap {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(MutableAttrMap);
+
   explicit MutableAttrMap(const std::vector<std::string>& attr_names)
       : max_size_(attr_names.size()),
         ordered_attr_names_(std::make_shared<OrderedStringList>()),
