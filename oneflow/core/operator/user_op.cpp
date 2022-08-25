@@ -644,8 +644,10 @@ Maybe<void> UserOp::InferOutBlobDescs(
   user_op::TensorDescInferFn tensor_desc_infer_fn;
   if (val_->physical_tensor_desc_infer_fn) {
     tensor_desc_infer_fn = val_->physical_tensor_desc_infer_fn;
+    LOG(ERROR) << "user op " << op_conf().user_conf().op_type_name() << " use physical tensor desc infer.";
   } else if (val_->logical_tensor_desc_infer_fn) {
     tensor_desc_infer_fn = val_->logical_tensor_desc_infer_fn;
+    LOG(ERROR) << "user op " << op_conf().user_conf().op_type_name() << " use logical tensor desc infer.";
   }
   if (tensor_desc_infer_fn) {
     // default method set output blob desc (such as Dtype, is_dynamic, is_tensor_list)

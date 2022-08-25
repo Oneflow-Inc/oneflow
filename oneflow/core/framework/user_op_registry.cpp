@@ -211,34 +211,6 @@ OpRegistry& OpRegistry::SetDeviceAndStreamInferFn(
 Maybe<OpRegistry&> OpRegistry::Finish() {
   CHECK_OR_RETURN(result_.logical_tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;
-  if (!result_.physical_tensor_desc_infer_fn) {
-    const auto& logical_fn = result_.logical_tensor_desc_infer_fn;
-    result_.physical_tensor_desc_infer_fn =
-        [logical_fn](user_op::InferContext* ctx) -> Maybe<void> {
-      if (ctx->parallel_num() == 1) {
-        logical_fn(ctx);
-      } else {
-        for (const auto& pair : ctx->inputs()) {
-          const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex(pair.first, pair.second);
-          const TensorDesc* in_logical =
-              ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
-          const TensorDesc& in_physical = ctx->InputTensorDesc(pair.first, pair.second);
-          CHECK_OR_RETURN(*JUST(GetPhysicalShape(in_logical->shape(), nd_sbp, ctx->parallel_desc(),
-                                                 ctx->parallel_ctx()))
-                          == in_physical.shape());
-        }
-        for (const auto& pair : ctx->outputs()) {
-          TensorDesc* desc = ctx->MutOutputTensorDesc(pair.first, pair.second);
-          *desc = *ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
-          const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex(pair.first, pair.second);
-          *desc->mut_shape() = *JUST(
-              GetPhysicalShape(desc->shape(), nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
-          *desc->mut_stride() = Stride(desc->shape());
-        }
-      }
-      return Maybe<void>::Ok();
-    };
-  }
   if (result_.check_fn == nullptr) { result_.check_fn = CheckAttrFnUtil::NoCheck; }
   CHECK_OR_RETURN(result_.get_sbp_fn != nullptr) << "No Sbp function for " << result_.op_type_name;
   if (result_.cpu_only_supported && result_.device_and_stream_infer_fn == nullptr) {

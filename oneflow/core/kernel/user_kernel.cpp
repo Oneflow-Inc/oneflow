@@ -432,6 +432,8 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
     CHECK_NOTNULL(op_reg_val);
     if (op_reg_val->physical_tensor_desc_infer_fn) {
       tensor_desc_infer_fn_ = op_reg_val->physical_tensor_desc_infer_fn;
+    } else if (op_reg_val->logical_tensor_desc_infer_fn) {
+      tensor_desc_infer_fn_ = op_reg_val->logical_tensor_desc_infer_fn;
     } else {
       UNIMPLEMENTED();
     }

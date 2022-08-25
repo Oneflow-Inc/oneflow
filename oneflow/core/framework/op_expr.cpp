@@ -542,6 +542,7 @@ Maybe<void> UserOpExpr::InferPhysicalTensorDesc(
     const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const {
   UserOpExprPhysicalInferContext infer_ctx(this, attrs, device_tag, TensorMeta4InputIndex,
                                            TensorMeta4OutputIndex);
+  // NOTE(strint): Need to use physical infer function?
   JUST(tensor_desc_infer_fn_(&infer_ctx));
   JUST(dtype_infer_fn_(&infer_ctx));
   return Maybe<void>::Ok();
