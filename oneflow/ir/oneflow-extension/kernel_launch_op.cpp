@@ -32,12 +32,16 @@ limitations under the License.
 #include "oneflow/ir/include/OneFlow/Extension.h"
 
 extern "C" {
-void launch_kernel(void* ctx, u_int64_t index) {
-  auto instance = oneflow::Singleton<oneflow::user_op::KernelLaunchRegistry>::Get();
-  auto name = instance->getName(index);
-  auto kernel = instance->LookUp(name)();
+void launch_kernel(void* ctx, std::string name) {
+  auto res = ::oneflow::user_op::UserOpRegistryMgr::Get().GetAllOpRegistryResults();
+  auto it = res.find(name);
+  if (it == res.end()) return;
+  // TODO: LookUp
+  // auto instance = oneflow::Singleton<oneflow::user_op::KernelLaunchRegistry>::Get();
+  // auto name = instance->getName(index);
+  // auto kernel = instance->LookUp(name)();
   auto converted_ctx = (oneflow::user_op::KernelComputeContext*)ctx;
-  kernel->Compute(converted_ctx);
+  // kernel->Compute(converted_ctx);
 }
 }  // extern "C"
 

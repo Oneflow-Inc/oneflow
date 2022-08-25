@@ -81,30 +81,6 @@ struct OpKernelRegistryResult {
   IsMatchedHob is_matched_hob;
 };
 
-class KernelLaunchRegistry final {
- public:
-  KernelLaunchRegistry() = default;
-  OpKernelCreateFn& LookUp(const std::string& key) { return registry_[key].second; }
-  size_t LookUpIndex(const std::string& key) { return registry_[key].first; }
-  void Register(const std::string& key, OpKernelCreateFn val) {
-    if (registry_.find(key) == registry_.end()) {
-      registry_[key] = {index_registry_.size(), std::move(val)};
-      index_registry_.push_back(key);
-    }
-  }
-  static std::string getName(std::string op_name, std::string device_name) {
-    // TODO
-    LOG(ERROR) << "test: " << op_name << " " << device_name;
-    return op_name + device_name;
-  }
-  std::string getName(size_t index) { return index_registry_[index]; }
-
- private:
-  friend class oneflow::Singleton<KernelLaunchRegistry>;
-  std::vector<std::string> index_registry_;
-  std::unordered_map<std::string, std::pair<size_t, OpKernelCreateFn>> registry_;
-};
-
 class OpKernelRegistry final {
  public:
   OpKernelRegistry& Name(const std::string& op_type_name);
@@ -112,13 +88,6 @@ class OpKernelRegistry final {
   template<typename T>
   OpKernelRegistry& SetCreateFn() {
     auto fn = []() -> const OpKernel* { return NewOpKernel<T>(); };
-    if (oneflow::Singleton<KernelLaunchRegistry>::Get() == nullptr) {
-      oneflow::Singleton<KernelLaunchRegistry>::New();
-    }
-    auto device_name = typeid(T).name();
-    auto op_name = result_.op_type_name;
-    oneflow::Singleton<KernelLaunchRegistry>::Get()->Register(
-        KernelLaunchRegistry::getName(op_name, device_name), fn);
     return SetCreateFn(fn);
   }
   template<typename T>
