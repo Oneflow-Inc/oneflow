@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/common/error.pb.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/small_vector.h"
+#include "oneflow/core/common/hash.h"
 
 namespace oneflow {
 
@@ -63,9 +64,8 @@ namespace std {
 template<>
 struct hash<::oneflow::ErrorStackFrame> final {
   size_t operator()(const ::oneflow::ErrorStackFrame& frame) const {
-    const auto& string_hash = std::hash<std::string>();
-    return string_hash(frame.file()) ^ std::hash<int64_t>()(frame.line())
-           ^ string_hash(frame.function()) ^ string_hash(frame.code_text());
+    using namespace oneflow;
+    return Hash(frame.file(), frame.line(), frame.function(), frame.code_text());
   }
 };
 

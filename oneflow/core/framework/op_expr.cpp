@@ -824,7 +824,9 @@ Maybe<OpExprGradClosure> SelectTopNOpExpr::GetOrCreateOpGradClosure() const {
 void FunctionOpExpr::reset_state() const { state_.reset(new FunctionAutoGradCaptureState); }
 
 Maybe<OpExprGradClosure> FunctionOpExpr::GetOrCreateOpGradClosure() const {
-  if (!op_grad_func_) { op_grad_func_.reset(new FunctionOpExprGradFunction(backward_fn_)); }
+  if (!op_grad_func_) {
+    op_grad_func_.reset(new FunctionOpExprGradFunction(func_name_, backward_fn_));
+  }
   return std::make_shared<OpExprGradClosure>(op_grad_func_, state_);
 }
 

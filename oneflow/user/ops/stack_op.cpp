@@ -18,35 +18,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) {
-  bool need_grad = false;
-  const int32_t in_size = op.input_size("in");
-  FOR_RANGE(int32_t, i, 0, in_size) {
-    if (op.NeedGenGradTensor4OpInput("in", i)) { need_grad = true; }
-  }
-  if (need_grad) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    builder = builder.Op("stack_grad");
-    FOR_RANGE(int32_t, i, 0, in_size) { builder = builder.Input("like", op.input("in", i)); }
-    user_op::UserOpConfWrapper grad_op = builder.Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                                             .Output("out", in_size)
-                                             .Attr("axis", op.attr<int64_t>("axis"))
-                                             .Build();
-
-    FOR_RANGE(int32_t, i, 0, in_size) {
-      if (op.NeedGenGradTensor4OpInput("in", i)) {
-        op.BindGradTensorWithOpInput(grad_op.output("out", i), "in", i);
-      }
-    }
-    AddOp(grad_op);
-  }
-  return Maybe<void>::Ok();
-}
-
-}  // namespace
-
 /* static */ Maybe<void> StackOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& first_in_desc = ctx->InputTensorDesc("in", 0);
   const int64_t axis = ctx->Attr<int64_t>("axis");
@@ -254,7 +225,5 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
       << "The count of out tensor should be greater than or equal to 1. ";
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("stack").SetGenBackwardOpConfFn(GenGradOp);
 
 }  // namespace oneflow

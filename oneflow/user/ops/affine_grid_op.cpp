@@ -184,22 +184,4 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("affine_grid")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("theta", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("affine_grid_grad")
-                .Input("dgrid", op.GetGradTensorWithOpOutput("grid", 0))
-                .Output("dtheta")
-                .Attr("size", op.attr<Shape>("size"))
-                .Attr("align_corners", op.attr<bool>("align_corners"))
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dtheta", 0), "theta", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace oneflow

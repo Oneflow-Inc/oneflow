@@ -79,23 +79,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("hardtanh")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      const auto hardtanh_grad_op_name = ctx->FwOp().op_name() + "_grad";
-      ctx->DefineOp(hardtanh_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("hardtanh_grad")
-            .InputBind("y", ctx->FwOp().output("out", 0))
-            .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-            .Attr("min_val", ctx->FwOp().attr<double>("min_val"))
-            .Attr("max_val", ctx->FwOp().attr<double>("max_val"))
-            .Output("dx")
-            .Build();
-      });
-      ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
-                                [&ctx, &hardtanh_grad_op_name]() -> const std::string& {
-                                  return ctx->GetOp(hardtanh_grad_op_name).output("dx", 0);
-                                });
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace oneflow
