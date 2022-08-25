@@ -80,6 +80,36 @@ class TestBatchNormModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    """
+    @profile(torch.nn.BatchNorm1d) 
+    def profile_BatchNorm1d(test_case):
+        m1 = torch.nn.BatchNorm1d(100)
+        m2 = torch.nn.BatchNorm1d(100, affine=False)
+        input1 = torch.ones(20, 100)
+        input2 = torch.ones(20, 100)
+        out1=m1(input1)
+        out2=m2(input2)
+
+    @profile(torch.nn.BatchNorm2d) 
+    def profile_BatchNorm2d(test_case):
+        m1 = torch.nn.BatchNorm2d(10)
+        m2 = torch.nn.BatchNorm2d(10, affine=False)
+        print(type(m1),type(m2))
+        input1 = torch.ones(2, 10, 8, 3)
+        input2 = torch.ones(2, 10, 8, 3)
+        out1=m1(input1)
+        out2=m2(input2)
+
+    @profile(torch.nn.BatchNorm3d) 
+    def profile_BatchNorm3d(test_case):
+        m1 = torch.nn.BatchNorm3d(10)
+        m2 = torch.nn.BatchNorm3d(10, affine=False)
+        input1 = torch.ones(2, 10, 5, 8, 4)
+        input2 = torch.ones(2, 10, 5, 8, 4)
+        out1=m1(input1)
+        out2=m2(input2)
+    """
+
 
 if __name__ == "__main__":
     unittest.main()
