@@ -44,51 +44,56 @@ __global__ void HashTableUniqueAndPartitionPairs(const uint32_t table_capacity,
                                                  const K* keys, const V* values,
                                                  K* partitioned_unique_keys,
                                                  V* partitioned_unique_values, IDX* reverse_index,
-                                                 bool need_process_values) {
+                                                 bool need_process_values, const uint32_t padding_idx) {
   CUDA_1D_KERNEL_LOOP_T(uint32_t, i, num_keys) {
     IDX r_index_plus_one = 0;
     const K key = keys[i];
-    size_t key_hash = HASH()(key);
-    uint32_t partition_id = key_hash % num_partition;
-    IDX* unique_count = unique_counts + partition_id;
-    K* unique_keys = partitioned_unique_keys + partition_id * num_keys;
-    uint32_t pos = key_hash % table_capacity;
-    const K key_hi = (key | 0x1);
-    const K key_lo = (key & 0x1);
-    uint32_t counter = 0;
-    while (r_index_plus_one == 0) {
-      bool prob_next = false;
-      K* key_ptr = &table[pos].key;
-      volatile uint32_t* table_value_ptr = &table[pos].value;
-      const K old_key = cuda::atomic::CAS(key_ptr, 0, key_hi);
-      if (old_key == 0) {
-        IDX unique_pos = cuda::atomic::Add(unique_count, 1);
-        r_index_plus_one = unique_pos + 1;
-        unique_keys[unique_pos] = key;
-        if (need_process_values) {
-          partitioned_unique_values[partition_id * num_keys + unique_pos] = values[i];
-        }
-        *table_value_ptr = ((r_index_plus_one << 1U) | key_lo);
-      } else if (old_key == key_hi) {
-        const uint32_t value = *table_value_ptr;
-        if (value == 0) {
-          // do nothing
-        } else if ((value & 0x1) == key_lo) {
-          r_index_plus_one = (value >> 1U);
+    if (key == padding_idx){
+      reverse_index[i] = -1; // Assume index=-1 is ilegal. 
+    } else {
+      size_t key_hash = HASH()(key);
+      uint32_t partition_id = key_hash % num_partition;
+      IDX* unique_count = unique_counts + partition_id;
+      K* unique_keys = partitioned_unique_keys + partition_id * num_keys;
+      uint32_t pos = key_hash % table_capacity;
+      const K key_hi = (key | 0x1);
+      const K key_lo = (key & 0x1);
+      uint32_t counter = 0;
+      while (r_index_plus_one == 0) {
+        bool prob_next = false;
+        K* key_ptr = &table[pos].key;
+        volatile uint32_t* table_value_ptr = &table[pos].value;
+        const K old_key = cuda::atomic::CAS(key_ptr, 0, key_hi);
+        if (old_key == 0) {
+          IDX unique_pos = cuda::atomic::Add(unique_count, 1);
+          r_index_plus_one = unique_pos + 1;
+          unique_keys[unique_pos] = key;
+          if (need_process_values) {
+            partitioned_unique_values[partition_id * num_keys + unique_pos] = values[i];
+          }
+          *table_value_ptr = ((r_index_plus_one << 1U) | key_lo);
+        } else if (old_key == key_hi) {
+          const uint32_t value = *table_value_ptr;
+          if (value == 0) {
+            // do nothing
+          } else if ((value & 0x1) == key_lo) {
+            r_index_plus_one = (value >> 1U);
+          } else {
+            prob_next = true;
+          }
         } else {
           prob_next = true;
         }
-      } else {
-        prob_next = true;
+        if (prob_next) {
+          pos += 1;
+          counter += 1;
+          if (pos >= table_capacity) { pos -= table_capacity; }
+          if (counter >= table_capacity) { __trap(); }
+        }
       }
-      if (prob_next) {
-        pos += 1;
-        counter += 1;
-        if (pos >= table_capacity) { pos -= table_capacity; }
-        if (counter >= table_capacity) { __trap(); }
-      }
+      reverse_index[i] = partition_id * num_keys + r_index_plus_one - 1;
     }
-    reverse_index[i] = partition_id * num_keys + r_index_plus_one - 1;
+    
   }
 }
 
@@ -102,7 +107,7 @@ void UniqueAndPartition(cudaStream_t cuda_stream, int64_t num_ids, size_t capaci
                         int64_t num_partition, const K* ids, const V* table_ids,
                         IDX* num_partitioned_unique_ids_ptr, K* partitioned_unique_ids,
                         V* partitioned_unique_table_ids, IDX* inverse_unique_partition_indices,
-                        void* workspace_ptr, size_t workspace_bytes, bool need_process_table_ids) {
+                        void* workspace_ptr, size_t workspace_bytes, bool need_process_table_ids, const uint32_t padding_idx) {
   size_t table_capacity_bytes = capacity * sizeof(TableEntry<K>);
   CHECK_GE(workspace_bytes, table_capacity_bytes);
   OF_CUDA_CHECK(cudaMemsetAsync(workspace_ptr, 0, table_capacity_bytes, cuda_stream));
@@ -112,7 +117,7 @@ void UniqueAndPartition(cudaStream_t cuda_stream, int64_t num_ids, size_t capaci
       <<<BlocksNum4ThreadsNum(num_ids), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
           capacity, num_ids, num_partition, num_partitioned_unique_ids_ptr,
           reinterpret_cast<TableEntry<K>*>(workspace_ptr), ids, table_ids, partitioned_unique_ids,
-          partitioned_unique_table_ids, inverse_unique_partition_indices, need_process_table_ids);
+          partitioned_unique_table_ids, inverse_unique_partition_indices, need_process_table_ids, padding_idx);
 }
 
 template<typename T>
@@ -381,6 +386,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
         ctx->Tensor4ArgNameAndIndex("cur_rank_inverse_indices", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int32_t num_tables = ctx->Attr<int32_t>("num_tables");
+    const uint32_t padding_idx = ctx->Attr<uint32_t>("padding_idx"); 
     const bool has_table_ids = ctx->has_input("table_ids", 0);
     const bool need_gen_table_ids = (!has_table_ids && num_tables > 1);
     const bool need_process_table_ids = (has_table_ids || num_tables > 1);
@@ -418,7 +424,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
         reinterpret_cast<const K*>(ids->dptr()), table_ids_ptr, num_partitioned_unique,
         partitioned_unique_ids, partitioned_unique_table_ids,
         reinterpret_cast<IDX*>(inverse_unique_partition_indices->mut_dptr()), workspace_ptr,
-        workspace_size, need_process_table_ids);
+        workspace_size, need_process_table_ids, padding_idx);
     ncclComm_t comm = kernel_state->comm();
     OF_NCCL_CHECK(ncclAllGather(num_partitioned_unique, num_unique_matrix_ptr, parallel_num,
                                 GetNcclDataType(num_unique_matrix->data_type()), comm,
@@ -450,7 +456,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
         reinterpret_cast<K*>(cur_rank_unique_ids->mut_dptr()),
         reinterpret_cast<U*>(cur_rank_unique_table_ids->mut_dptr()),
         reinterpret_cast<IDX*>(cur_rank_inverse_indices->mut_dptr()), workspace_ptr, workspace_size,
-        need_process_table_ids);
+        need_process_table_ids, padding_idx);
     if (!need_process_table_ids) {
       OF_CUDA_CHECK(cudaMemsetAsync(cur_rank_unique_table_ids->mut_dptr(), 0,
                                     received_elem_cnt * sizeof(U), cuda_stream));
@@ -1617,6 +1623,7 @@ class UniqueKeyValuePairKernel final : public user_op::OpKernel {
     user_op::Tensor* inverse_indices = ctx->Tensor4ArgNameAndIndex("inverse_indices", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int32_t num_tables = ctx->Attr<int32_t>("num_tables");
+    const uint32_t padding_idx = ctx->Attr<uint32_t>("padding_idx"); 
     const bool has_values = ctx->has_input("values", 0);
     const bool need_values_buffer = (!has_values && num_tables > 1);
     size_t values_buffer_bytes =
@@ -1647,7 +1654,7 @@ class UniqueKeyValuePairKernel final : public user_op::OpKernel {
         reinterpret_cast<K*>(unique_keys->mut_dptr()),
         reinterpret_cast<V*>(unique_values->mut_dptr()),
         reinterpret_cast<IDX*>(inverse_indices->mut_dptr()), workspace_ptr, workspace_bytes,
-        need_process_table_ids);
+        need_process_table_ids, padding_idx);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
