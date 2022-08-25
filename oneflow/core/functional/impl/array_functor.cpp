@@ -361,7 +361,7 @@ class WhereScalarYFunctor {
                            const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("bool_operand", "has_bool_operand", "float_operand",
-                                       "has_bool_operand", "int_operand", "has_int_operand");
+                                       "has_float_operand", "int_operand", "has_int_operand");
     if (scalar.IsBool()) {
       attrs.SetAttr<bool>("bool_operand", scalar.As<bool>());
       attrs.SetAttr<bool>("has_bool_operand", true);
