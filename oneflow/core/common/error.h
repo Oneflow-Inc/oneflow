@@ -19,6 +19,7 @@ limitations under the License.
 #include <sstream>
 #include <vector>
 #include <functional>
+#include <glog/logging.h>
 #include "oneflow/core/common/error.pb.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/small_vector.h"
@@ -104,7 +105,8 @@ class StackedError final {
 
 class Error final {
  public:
-  Error(const std::shared_ptr<StackedError>& stacked_error) : stacked_error_(stacked_error) {}
+  Error(const std::shared_ptr<StackedError>& stacked_error)
+      : stacked_error_(stacked_error), msg_collecting_mode_(kMergeMessage) {}
   Error(const Error&) = default;
   ~Error() = default;
 
@@ -166,18 +168,40 @@ class Error final {
 
   static Error InputDeviceNotMatchError();
 
+  enum MsgCollectingMode {
+    kInvalidMsgCollectingMode = 0,
+    kMergeMessage,
+    kOverrideThenMergeMessage,
+  };
+
+  MsgCollectingMode msg_collecting_mode() const { return msg_collecting_mode_; }
+  void set_msg_collecting_mode(MsgCollectingMode val) { msg_collecting_mode_ = val; }
+
  private:
   std::shared_ptr<StackedError> stacked_error_;
+  MsgCollectingMode msg_collecting_mode_;
 };
 
 void ThrowError(const std::shared_ptr<StackedError>& error);
 const std::shared_ptr<StackedError>& ThreadLocalError();
 
+inline Error& operator<<(Error& error, Error::MsgCollectingMode mode) {
+  error.set_msg_collecting_mode(mode);
+  return error;
+}
+
 template<typename T>
 Error& operator<<(Error& error, const T& x) {
   std::ostringstream ss;
   ss << x;
-  error->set_msg(error->msg() + ss.str());
+  if (error.msg_collecting_mode() == Error::kMergeMessage) {
+    error->set_msg(error->msg() + ss.str());
+  } else if (error.msg_collecting_mode() == Error::kOverrideThenMergeMessage) {
+    error->set_msg(ss.str());
+    error.set_msg_collecting_mode(Error::kMergeMessage);
+  } else {
+    LOG(FATAL) << "UNIMPLEMENTED";
+  }
   return error;
 }
 
