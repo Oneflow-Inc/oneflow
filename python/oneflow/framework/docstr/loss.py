@@ -272,5 +272,89 @@ add_docstr(
     ctc_loss(log_probs, target, input_lenghts, target_lengths, blank=0, zero_infinity=False, reduction="mean")
 
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.ctc_loss.html
+
+    See :class:`~oneflow.nn.CTCLoss` for details.
+
+    Args:
+        log_probs (Tensor): :math:`(T, N, C)` where `C = number of characters in alphabet including blank`,
+            `T = input length`, and `N = batch size`.
+            The logarithmized probabilities of the outputs
+            (e.g. obtained with :func:`oneflow.nn.functional.log_softmax`).
+        targets (Tensor): :math:`(N, S)` or `(sum(target_lengths))`.
+            Targets cannot be blank. In the second form, the targets are assumed to be concatenated.
+        input_lengths (Tensor): :math:`(N)`.
+            Lengths of the inputs (must each be :math:`\leq T`)
+        target_lengths (Tensor): :math:`(N)`.
+            Lengths of the targets
+        blank (int, optional): blank label. Default :math:`0`.
+        reduction (string, optional): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
+            ``'mean'``: the output losses will be divided by the target lengths and
+            then the mean over the batch is taken. Default: ``'mean'``
+        zero_infinity (bool, optional):
+            Whether to zero infinite losses and the associated gradients.
+            Default: ``False``
+            Infinite losses mainly occur when the inputs are too short
+            to be aligned to the targets.
+
+    Shape:
+        - Log_probs: Tensor of size :math:`(T, N, C)`,
+          where :math:`T = \text{input length}`,
+          :math:`N = \text{batch size}`, and
+          :math:`C = \text{number of classes (including blank)}`.
+        - Targets: Tensor of size :math:`(N, S)` or
+          :math:`(\operatorname{sum}(\text{target_lengths}))`,
+          where :math:`N = \text{batch size}` and
+          :math:`S = \text{max target length, if shape is } (N, S)`.
+          It represent the target sequences. Each element in the target
+          sequence is a class index. And the target index cannot be blank (default=0).
+          In the :math:`(N, S)` form, targets are padded to the
+          length of the longest sequence, and stacked.
+          In the :math:`(\operatorname{sum}(\text{target_lengths}))` form,
+          the targets are assumed to be un-padded and
+          concatenated within 1 dimension.
+        - Input_lengths: Tuple or tensor of size :math:`(N)`,
+          where :math:`N = \text{batch size}`. It represent the lengths of the
+          inputs (must each be :math:`\leq T`). And the lengths are specified
+          for each sequence to achieve masking under the assumption that sequences
+          are padded to equal lengths.
+        - Target_lengths: Tuple or tensor of size :math:`(N)`,
+          where :math:`N = \text{batch size}`. It represent lengths of the targets.
+          Lengths are specified for each sequence to achieve masking under the
+          assumption that sequences are padded to equal lengths. If target shape is
+          :math:`(N,S)`, target_lengths are effectively the stop index
+          :math:`s_n` for each target sequence, such that ``target_n = targets[n,0:s_n]`` for
+          each target in a batch. Lengths must each be :math:`\leq S`
+          If the targets are given as a 1d tensor that is the concatenation of individual
+          targets, the target_lengths must add up to the total length of the tensor.
+
+    Reference:
+        A. Graves et al.: Connectionist Temporal Classification:
+        Labelling Unsegmented Sequence Data with Recurrent Neural Networks:
+        https://www.cs.toronto.edu/~graves/icml_2006.pdf
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> log_probs = flow.tensor(
+        ...    [
+        ...        [[-1.1031, -0.7998, -1.5200], [-0.9808, -1.1363, -1.1908]],
+        ...        [[-1.2258, -1.0665, -1.0153], [-1.1135, -1.2331, -0.9671]],
+        ...        [[-1.3348, -0.6611, -1.5118], [-0.9823, -1.2355, -1.0941]],
+        ...        [[-1.3850, -1.3273, -0.7247], [-0.8235, -1.4783, -1.0994]],
+        ...        [[-0.9049, -0.8867, -1.6962], [-1.4938, -1.3630, -0.6547]],
+        ...    ], dtype=flow.float32)
+        >>> targets = flow.tensor([[1, 2, 2], [1, 2, 2]], dtype=flow.int32)
+        >>> input_lengths = flow.tensor([5, 5], dtype=flow.int32)
+        >>> target_lengths = flow.tensor([3, 3], dtype=flow.int32)
+        >>> out = flow.nn.functional.ctc_loss(log_probs, targets, input_lengths, target_lengths)
+        >>> out
+        tensor(1.1376, dtype=oneflow.float32)
+        >>> out = flow.nn.functional.ctc_loss(log_probs, targets, input_lengths, target_lengths, reduction="sum")
+        >>> out
+        tensor(6.8257, dtype=oneflow.float32)
+
     """
 )
