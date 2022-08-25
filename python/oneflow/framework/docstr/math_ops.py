@@ -1813,3 +1813,8 @@ add_docstr(
         tensor([1, 2, 6], dtype=oneflow.int64)
     """,
 )
+
+
+add_docstr(oneflow.trunc,
+    r"""
+    """)

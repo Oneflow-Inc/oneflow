@@ -163,6 +163,7 @@ from oneflow._C import softplus
 from oneflow._C import threshold
 from oneflow._C import tril
 from oneflow._C import triu
+from oneflow._C import trunc
 from oneflow._C import pad
 from oneflow._C import transpose
 from oneflow._C import relu
