@@ -96,6 +96,12 @@ class TestFunctionalConstantPad2d(flow.unittest.TestCase):
         y = torch.nn.functional.pad(x, pad=padding, mode="constant", value=value)
         return y
 
+    @profile(torch.nn.functional.pad)
+    def profile_pad(test_case):
+        tensor = torch.ones(32, 3, 128, 128)
+        pad = (1, 1)
+        torch.nn.functional.pad(tensor, pad)
+
 
 if __name__ == "__main__":
     unittest.main()
