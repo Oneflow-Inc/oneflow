@@ -37,7 +37,6 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("cosh", Cosh)              \
   OF_PP_MAKE_TUPLE_SEQ("lgamma", Lgamma)          \
   OF_PP_MAKE_TUPLE_SEQ("log_sigmoid", LogSigmoid) \
-  OF_PP_MAKE_TUPLE_SEQ("negative", Negative)      \
   OF_PP_MAKE_TUPLE_SEQ("reciprocal_no_nan", ReciprocalNoNan)
 
 #define FLOAT_UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_X_SEQ \
@@ -144,6 +143,8 @@ OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_BWD_WITH_DY_X_FUNCTORS,
 
 OF_PP_FOR_EACH_TUPLE(FLOAT_UNARY_WITH_DY_Y_FUNCTORS, FLOAT_UNARY_PRIMITIVE_FUNC_BWD_WITH_DY_Y_SEQ);
 OF_PP_FOR_EACH_TUPLE(UNARY_BWD_WITH_FILL_FUNCTORS, UNARY_FUNC_BWD_WITH_FILL_SEQ);
+
+UNARY_ELEMENTWISE_FUNCTOR("negative", Negative, FloatUnaryFunctor)
 
 }  // namespace impl
 
