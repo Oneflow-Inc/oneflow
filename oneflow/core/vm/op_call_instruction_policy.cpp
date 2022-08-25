@@ -136,7 +136,6 @@ OpCallInstructionPolicy::OpCallInstructionPolicy(
   for (const auto& blob_object : outputs) {
     is_all_outputs_pod_ = is_all_outputs_pod_ && IsPODDataType(blob_object->data_type());
   }
-  CHECK_JUST(Init());
 }
 
 Maybe<void> OpCallInstructionPolicy::Init() {
