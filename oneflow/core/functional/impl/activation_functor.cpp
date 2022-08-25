@@ -131,7 +131,7 @@ class HardTanhGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& dy, const double& min_val,
                            const double& max_val) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("hardtanh_grad");
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("min_val", "max_val");
     attrs.SetAttr<double>("min_val", min_val);
     attrs.SetAttr<double>("max_val", max_val);
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {y, dy}, attrs);
@@ -161,7 +161,7 @@ class EluGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& dy, const double& alpha) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("elu_grad");
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("alpha");
     attrs.SetAttr<double>("alpha", alpha);
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
   }
@@ -175,7 +175,7 @@ class CeluFunctor {
   CeluFunctor() { op_ = CHECK_JUST(one::OpBuilder("celu").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& alpha,
                            bool inplace) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("celu");
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("alpha");
     attrs.SetAttr<double>("alpha", alpha);
     if (inplace) {
       JUST(CheckInplaceValid(x));
