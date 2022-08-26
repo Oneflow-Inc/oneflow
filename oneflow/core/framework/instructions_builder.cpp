@@ -366,10 +366,10 @@ Maybe<void> InstructionsBuilder::Call(
   }
   auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
   auto instruction = intrusive::make_shared<vm::Instruction>(
-      vm_stream, std::make_shared<vm::OpCallInstructionPolicy>(
+      vm_stream, JUST(vm::OpCallInstructionPolicy::New(
                      vm_stream, opkernel, std::move(input_eager_blob_objects),
                      std::move(output_eager_blob_objects), global_tensor_infer_result, ctx,
-                     *one::CurrentDevVmDepObjectConsumeMode()));
+                     *one::CurrentDevVmDepObjectConsumeMode())));
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
