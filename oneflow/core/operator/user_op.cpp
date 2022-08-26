@@ -639,7 +639,7 @@ Maybe<void> UserOp::InferLogicalOutBlobDescs(
 Maybe<void> UserOp::InferOutBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  LOG(ERROR) << op_name() << " is from logical graph " << JUST(IsFromLogicalGraph());
+  // LOG(ERROR) << op_name() << " is from logical graph " << JUST(IsFromLogicalGraph());
   // Infer with logical blob desc, sbp.
   const auto& nd_sbp_signature = JUST(this->nd_sbp_signature());
   const auto& parallel_desc = JUST(this->GetOpParallelDesc());
