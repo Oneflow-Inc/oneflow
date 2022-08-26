@@ -57,9 +57,12 @@ class AttrMap final {
   size_t hash_value() const { return internal_->hash_value; }
 
   struct AttrInternal {
-    size_t max_size = 0;
-    size_t size = 0;
-    size_t hash_value = 0;
+    AttrInternal();
+    AttrInternal(size_t max_size, size_t size, size_t hash_value,
+                 const std::shared_ptr<OrderedStringList>& ordered_attr_names);
+    size_t max_size;
+    size_t size;
+    size_t hash_value;
     std::shared_ptr<OrderedStringList> ordered_attr_names;
     small_vector<std::pair<std::shared_ptr<const user_op::AttrVal>, bool>, 16> attrs;
   };

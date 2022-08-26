@@ -23,12 +23,24 @@ limitations under the License.
 
 namespace oneflow {
 
+AttrMap::AttrInternal::AttrInternal()
+    : max_size(0),
+      size(0),
+      hash_value(0),
+      ordered_attr_names(std::make_shared<OrderedStringList>()) {}
+
+AttrMap::AttrInternal::AttrInternal(size_t _max_size, size_t _size, size_t _hash_value,
+                                    const std::shared_ptr<OrderedStringList>& _ordered_attr_names)
+    : max_size(_max_size),
+      size(_size),
+      hash_value(_hash_value),
+      ordered_attr_names(_ordered_attr_names) {}
+
 AttrMap::AttrMap() : internal_(std::make_shared<AttrMap::AttrInternal>()) {}
 
 AttrMap::AttrMap(const MutableAttrMap& other)
-    : internal_(std::make_shared<AttrMap::AttrInternal>()) {
-  internal_->max_size = other.max_size();
-  internal_->ordered_attr_names = other.ordered_attr_names();
+    : internal_(std::make_shared<AttrMap::AttrInternal>(
+        other.max_size(), /*size*/ 0, /*hash_value*/ 0, other.ordered_attr_names())) {
   internal_->attrs.resize(internal_->max_size);
   for (int i = 0; i < internal_->max_size; ++i) {
     internal_->attrs[i].second = other.valid_masks()[i];
@@ -44,7 +56,6 @@ AttrMap::AttrMap(const MutableAttrMap& other)
 
 AttrMap::AttrMap(const UserOpConf& user_conf)
     : internal_(std::make_shared<AttrMap::AttrInternal>()) {
-  internal_->ordered_attr_names.reset(new OrderedStringList);
   for (const auto& kv : user_conf.attr()) {
     auto cpp_attr_value = user_op::AttrValueUtil::ToCppAttrValue(kv.second);
     if (cpp_attr_value.IsOk()) {
