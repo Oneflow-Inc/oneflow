@@ -53,6 +53,7 @@ user_op::NaiveTensorDesc GenTensorDescFromBlobDesc(const BlobDesc* blob_desc) {
 
 }  // namespace
 
+// kernel registry context used in infer functions of user op
 class UserOpKernelRegContext final : public user_op::KernelRegContext {
  public:
   using ArgVec = std::vector<std::pair<std::string, int32_t>>;
