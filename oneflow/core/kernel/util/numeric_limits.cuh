@@ -116,6 +116,24 @@ struct numeric_limits<float> {
   OF_NUMERICS_FUNC float upper_bound() { return static_cast<float>(inf); }
 };
 
+#if defined(__CUDACC__)
+static __device__ unsigned short int HALF_LOWEST = 0xfbff;
+static __device__ unsigned short int HALF_MAX = 0x7bff;
+static __device__ unsigned short int HALF_LOWER_BOUND = 0xfc00;
+static __device__ unsigned short int HALF_UPPER_BOUND = 0x7c00;
+template<>
+struct numeric_limits<half> {
+  static inline __device__ half lowest() { return *reinterpret_cast<const __half*>(&HALF_LOWEST); }
+  static inline __device__ half max() { return *reinterpret_cast<const __half*>(&HALF_MAX); }
+  static inline __device__ half lower_bound() {
+    return *reinterpret_cast<const __half*>(&HALF_LOWER_BOUND);
+  }
+  static inline __device__ half upper_bound() {
+    return *reinterpret_cast<const __half*>(&HALF_UPPER_BOUND);
+  }
+};
+#endif
+
 template<>
 struct numeric_limits<double> {
   OF_NUMERICS_FUNC double lowest() { return -DBL_MAX; }
