@@ -35,6 +35,7 @@ class NopKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(op_type_name).SetCreateFn<NopKernel>().SetIsMatchedHob(user_op::HobTrue());
 
 REGISTER_NOP_KERNEL("cast_to_tick")
+REGISTER_NOP_KERNEL("acc_ctrl_tick")
 
 }  // namespace
 

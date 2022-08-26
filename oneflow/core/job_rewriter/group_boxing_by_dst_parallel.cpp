@@ -101,7 +101,8 @@ Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_bu
       const ParallelDesc& dst_parallel_desc = parallel7group.first.first;
       const NdSbp& dst_nd_sbp = parallel7group.first.second;
       OperatorConf identity_op_conf{};
-      identity_op_conf.set_name("System-Boxing-Identity-" + NewUniqueId());
+      identity_op_conf.set_name("Sys-Boxing-GroupIdentity-" + lbi.op_name() + "_" + lbi.blob_name()
+                                + "-" + NewUniqueId());
       IdentityOpConf* identity_conf = identity_op_conf.mutable_identity_conf();
       identity_conf->set_in(GenLogicalBlobName(lbi));
       identity_conf->set_out("out");
