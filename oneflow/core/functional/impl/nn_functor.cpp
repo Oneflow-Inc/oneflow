@@ -1291,7 +1291,8 @@ class CrossEntropyFunctor {
                            const Optional<one::Tensor>& weight, const int64_t& ignore_index,
                            const std::string& reduction, const double& label_smoothing) const {
     if (label_smoothing > 0.0)
-      return CrossEntropyLabelSmoothing(input, target, weight, ignore_index, reduction, label_smoothing);
+      return CrossEntropyLabelSmoothing(input, target, weight, ignore_index, reduction,
+                                        label_smoothing);
     CHECK_OR_RETURN(reduction == "none" || reduction == "sum" || reduction == "mean")
         << Error::RuntimeError() << "Reduction should be none, sum or mean.";
     const auto& input_shape = input->shape();
@@ -1444,7 +1445,6 @@ class CrossEntropyLabelSmoothingFunctor {
   std::shared_ptr<OpExpr> op_nll_;
   std::shared_ptr<OpExpr> op_nll_weight_;
 };
-
 
 class SparseCrossEntropyFunctor {
  public:
