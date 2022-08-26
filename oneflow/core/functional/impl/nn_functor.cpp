@@ -1402,7 +1402,19 @@ class CrossEntropyFunctor {
                                  })
                                  .call(input, input_perm));
 
-    const auto target_ = JUST(functional::Flatten(target, 0, target->shape()->NumAxes() - 1));
+    const auto target_flatten =
+        JUST(functional::Flatten(target, 0, target->shape()->NumAxes() - 1));
+    const std::shared_ptr<Tensor> target_smoothing = JUST([&]() -> Maybe<Tensor> {
+      if (label_smoothing > 0.0) {
+        CHECK_LE_OR_RETURN(label_smoothing, 1.0)
+            << "label_smoothing must be between 0.0 and 1.0. Got: " << label_smoothing;
+        return JUST(ScalarAdd(JUST(ScalarMul(target_flatten, Scalar(1.0 - label_smoothing), false)),
+                              label_smoothing / static_cast<double>(input->shape()->At(1)), 1,
+                              false));
+      } else {
+        return target_flatten;
+      }
+    }());
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
@@ -1410,9 +1422,10 @@ class CrossEntropyFunctor {
     std::shared_ptr<TensorTuple> nll_result;
     if (weight) {
       nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-          *op_nll_weight_, {input_, target_, JUST(weight)}, attrs));
+          *op_nll_weight_, {input_, target_smoothing, JUST(weight)}, attrs));
     } else {
-      nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_, {input_, target_}, attrs));
+      nll_result =
+          JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_, {input_, target_smoothing}, attrs));
     }
 
     auto output = JUST(VectorAt(*nll_result, 0));
