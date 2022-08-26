@@ -3943,9 +3943,9 @@ class BatchNormStatsFunctor {
 
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input, const int& axis,
                                 const float& eps) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("axis", axis));
-    JUST(attrs.SetAttr<float>("eps", eps));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis", "eps");
+    attrs.SetAttr<int32_t>("axis", axis);
+    attrs.SetAttr<float>("eps", eps);
     return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {input}, attrs);
   }
 
@@ -3988,9 +3988,9 @@ class BatchNormGatherStatsWithCountsFunctor {
         << Error::RuntimeError()
         << "Both running_mean and running_var should be None or Tensor at the same time.";
 
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<float>("eps", eps));
-    JUST(attrs.SetAttr<float>("momentum", momentum));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("eps", "momentum");
+    attrs.SetAttr<float>("eps", eps);
+    attrs.SetAttr<float>("momentum", momentum);
 
     if (running_mean) {
       return OpInterpUtil::Dispatch<one::TensorTuple>(
@@ -4025,9 +4025,9 @@ class BatchNormElemtFunctor {
                            const std::shared_ptr<one::Tensor>& mean,
                            const std::shared_ptr<one::Tensor>& invstd, const int& axis,
                            const float& eps) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("axis", axis));
-    JUST(attrs.SetAttr<float>("eps", eps));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis", "eps");
+    attrs.SetAttr<int32_t>("axis", axis);
+    attrs.SetAttr<float>("eps", eps);
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {input, weight, bias, mean, invstd}, attrs);
   }
 
@@ -4054,8 +4054,8 @@ class BatchNormBackwardReduceFunctor {
                                 const std::shared_ptr<one::Tensor>& input,
                                 const std::shared_ptr<one::Tensor>& mean,
                                 const std::shared_ptr<one::Tensor>& invstd, const int& axis) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis");
+    attrs.SetAttr<int32_t>("axis", axis);
     return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {grad_out, input, mean, invstd}, attrs);
   }
 
@@ -4087,8 +4087,8 @@ class BatchNormBackwardElemtFunctor {
                            const std::shared_ptr<one::Tensor>& sum_dy,
                            const std::shared_ptr<one::Tensor>& sum_dy_xmu,
                            const std::shared_ptr<one::Tensor>& count, const int& axis) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis");
+    attrs.SetAttr<int32_t>("axis", axis);
     return OpInterpUtil::Dispatch<one::Tensor>(
         *op_, {grad_out, input, mean, invstd, weight, sum_dy, sum_dy_xmu, count}, attrs);
   }
