@@ -1831,8 +1831,8 @@ add_docstr(
     Example::
 
         >>> import oneflow as flow
-        >>> a = flow.tensor([[ 3.4742,  0.5466, -0.8008, -0.9079]])
+        >>> a = flow.tensor([ 3.4742,  0.5466, -0.8008, -0.9079])
         >>> flow.trunc(a)
-        tensor([[3., 0., -0., -0.]], dtype=oneflow.float32)
+        tensor([3., 0., -0., -0.], dtype=oneflow.float32)
     """,
 )

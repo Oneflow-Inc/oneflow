@@ -357,7 +357,7 @@ REGISTER_USER_KERNEL("trunc")
                 dst->data_type());
           });
     })
-    .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kSilu, "out", "in"));
+    .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kTrunc, "out", "in"));
 
 REGISTER_USER_KERNEL("selu")
     .SetCreateFn([]() {
