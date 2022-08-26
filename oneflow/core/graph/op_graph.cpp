@@ -59,6 +59,7 @@ OpNode::OpNode(const std::shared_ptr<const ParallelDesc>& parallel_desc,
       op_(CHECK_JUST(ConstructOp(op_conf, parallel_desc->device_type()))),
       ibns_(op_->input_bns().begin(), op_->input_bns().end()) {
   CHECK_JUST(op_->FillOpParallelDesc(parallel_desc));
+  CHECK_JUST(op_->SetIsFromLogicalGraph(true));
 }
 
 std::string OpNode::VisualStr() const {

@@ -107,25 +107,24 @@ Maybe<void> CheckPhysicalBlobDesc(
 
 void ExecNode::InferBlobDescs(const OpNode* op_node, const ParallelContext* parallel_ctx) {
   auto GetBlobDesc4BnInOp = GetRegstBlobDesc4BnInOpFunc();
-  const NdSbpSignature* nd_sbp_signature = nullptr;
-  if (op_node != nullptr) { nd_sbp_signature = &op_node->nd_sbp_signature(); }
+  // const NdSbpSignature* nd_sbp_signature = nullptr;
+  // if (op_node != nullptr) { nd_sbp_signature = &op_node->nd_sbp_signature(); }
 
-  if (op_node != nullptr && parallel_ctx->parallel_num() > 1 && nd_sbp_signature != nullptr) {
-    CHECK_JUST(CheckPhysicalBlobDesc(
-        *op(), op()->input_bns(),
-        std::bind(&Operator::GetLogicalBlobDesc4Ibn, op().get(), std::placeholders::_1),
-        nd_sbp_signature, parallel_ctx, GetBlobDesc4BnInOp));
-  }
-  // infer physical output
-  // find ops has diff infer logical and physical
+  // if (op_node != nullptr && parallel_ctx->parallel_num() > 1 && nd_sbp_signature != nullptr) {
+  //   CHECK_JUST(CheckPhysicalBlobDesc(
+  //       *op(), op()->input_bns(),
+  //       std::bind(&Operator::GetLogicalBlobDesc4Ibn, op().get(), std::placeholders::_1),
+  //       nd_sbp_signature, parallel_ctx, GetBlobDesc4BnInOp));
+  // }
+  // NOTE(strint): bad news, lots of InferTmpSizeFn use input register TensorDesc.
   CHECK_JUST_MSG(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, &GlobalJobDesc()),
                  std::stringstream() << " infer blob descs if failed, op name " << op_->op_loc());
-  if (op_node != nullptr && parallel_ctx->parallel_num() > 1 && nd_sbp_signature != nullptr) {
-    CHECK_JUST(CheckPhysicalBlobDesc(
-        *op(), op()->output_bns(),
-        std::bind(&Operator::GetLogicalBlobDesc4Obn, op().get(), std::placeholders::_1),
-        nd_sbp_signature, parallel_ctx, GetBlobDesc4BnInOp));
-  }
+  // if (op_node != nullptr && parallel_ctx->parallel_num() > 1 && nd_sbp_signature != nullptr) {
+  //   CHECK_JUST(CheckPhysicalBlobDesc(
+  //       *op(), op()->output_bns(),
+  //       std::bind(&Operator::GetLogicalBlobDesc4Obn, op().get(), std::placeholders::_1),
+  //       nd_sbp_signature, parallel_ctx, GetBlobDesc4BnInOp));
+  // }
   CHECK_JUST_MSG(op_->InferInplaceObn2IbnIf(&mut_inplace_obn2ibn_, &con_inplace_obn2ibn_,
                                             GetBlobDesc4BnInOp, parallel_ctx),
                  std::stringstream()

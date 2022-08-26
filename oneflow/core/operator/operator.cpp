@@ -528,19 +528,19 @@ Maybe<void> Operator::FillNdSbpSignature(const NdSbpSignature& signature) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Operator::InferSbpSignatureIf(
-    const SbpSignature& sbp_sig_conf,
-    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-    const std::function<Maybe<const SbpInferHint*>(const std::string&)>& SbpInferHint4Ibn,
-    const ParallelDesc& parallel_desc) {
-  SbpSignature signature;
-
-  JUST(InferSbpSignature(&signature, sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
-                         parallel_desc));
-
-  JUST(FillSbpSignature(signature));
-  return Maybe<void>::Ok();
-}
+// Maybe<void> Operator::InferSbpSignatureIf(
+//     const SbpSignature& sbp_sig_conf,
+//     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+//     const std::function<Maybe<const SbpInferHint*>(const std::string&)>& SbpInferHint4Ibn,
+//     const ParallelDesc& parallel_desc) {
+//   SbpSignature signature;
+// 
+//   JUST(InferSbpSignature(&signature, sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
+//                          parallel_desc));
+// 
+//   JUST(FillSbpSignature(signature));
+//   return Maybe<void>::Ok();
+// }
 
 Maybe<void> Operator::InferSbpSignature(
     SbpSignature* infered_sbp_signature, const SbpSignature& sbp_sig_conf,
@@ -1423,26 +1423,26 @@ bool operator==(const OperatorConf& lhs, const OperatorConf& rhs) {
 
 namespace {
 
-Maybe<void> InferOpOutSbpParallel(
-    Operator* op, const OpNodeSignature& upstream_signature,
-    const std::function<const BlobDesc&(const std::string&)>& ConstBlobDesc4Ibn,
-    const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc) {
-  const auto& SbpParallel4Ibn = [&](const std::string& ibn) -> const SbpParallel* {
-    const auto& map = upstream_signature.sbp_signature().bn_in_op2sbp_parallel();
-    return &map.at(ibn);
-  };
-  HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
-  for (const std::string& ibn : op->input_bns()) {
-    const ParallelDesc* pd = &parallel_desc;
-    const BlobDesc* logical_blob_desc = &ConstBlobDesc4Ibn(ibn);
-    const SbpParallel* sbp_parallel = SbpParallel4Ibn(ibn);
-    ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(pd, logical_blob_desc, sbp_parallel));
-  }
-  SbpSignature sbp_signature;
-  JUST(op->InferSbpSignature(&sbp_signature, sbp_sig_conf, ibn2sbp_infer_hint));
-  JUST(op->FillSbpSignature(sbp_signature));
-  return Maybe<void>::Ok();
-}
+// Maybe<void> InferOpOutSbpParallel(
+//     Operator* op, const OpNodeSignature& upstream_signature,
+//     const std::function<const BlobDesc&(const std::string&)>& ConstBlobDesc4Ibn,
+//     const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc) {
+//   const auto& SbpParallel4Ibn = [&](const std::string& ibn) -> const SbpParallel* {
+//     const auto& map = upstream_signature.sbp_signature().bn_in_op2sbp_parallel();
+//     return &map.at(ibn);
+//   };
+//   HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
+//   for (const std::string& ibn : op->input_bns()) {
+//     const ParallelDesc* pd = &parallel_desc;
+//     const BlobDesc* logical_blob_desc = &ConstBlobDesc4Ibn(ibn);
+//     const SbpParallel* sbp_parallel = SbpParallel4Ibn(ibn);
+//     ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(pd, logical_blob_desc, sbp_parallel));
+//   }
+//   SbpSignature sbp_signature;
+//   JUST(op->InferSbpSignature(&sbp_signature, sbp_sig_conf, ibn2sbp_infer_hint));
+//   JUST(op->FillSbpSignature(sbp_signature));
+//   return Maybe<void>::Ok();
+// }
 
 Maybe<void> InferLocalSignature(Operator* op, const OpNodeSignature& upstream_signature,
                                 bool is_local, const ParallelDesc& parallel_desc) {
@@ -1486,32 +1486,32 @@ Maybe<void> CheckOpInputSignature(const Operator& op, const OpNodeSignature& ups
 
 }  // namespace
 
-Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
-                                    const OpNodeSignature& upstream_signature, const Scope& scope) {
-  const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
-  bool is_local = scope.opt_local_parallel_conf().has_local_parallel();
-  const auto& op = JUST(ConstructOp(op_conf));
-  JUST(CheckOpInputSignature(*op, upstream_signature));
-  JUST(op->FillOpParallelDesc(parallel_desc));
-  HashMap<std::string, std::unique_ptr<BlobDesc>> bn_in_op2blob_desc;
-  for (const auto& ibn : op->input_bns()) {
-    const auto& map = upstream_signature.logical_blob_desc_signature().bn_in_op2blob_desc();
-    bn_in_op2blob_desc[ibn].reset(new BlobDesc(map.at(ibn)));
-  }
-  const auto& ConstBlobDesc4Ibn = [&](const std::string& ibn) -> const BlobDesc& {
-    return *bn_in_op2blob_desc.at(ibn);
-  };
-  JUST(op->FillLogicalInBlobDesc(ConstBlobDesc4Ibn));
-  // infer is_local
-  JUST(InferLocalSignature(op.get(), upstream_signature, is_local, parallel_desc));
-  SbpSignature sbp_sig_conf;
-  // iner sbp
-  JUST(InferOpOutSbpParallel(op.get(), upstream_signature, ConstBlobDesc4Ibn, sbp_sig_conf,
-                             parallel_desc));
-  // infer logical blob_desc
-  JUST(op->InferLogicalOutBlobDescsIf());
-  return op;
-}
+// Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
+//                                     const OpNodeSignature& upstream_signature, const Scope& scope) {
+//   const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
+//   bool is_local = scope.opt_local_parallel_conf().has_local_parallel();
+//   const auto& op = JUST(ConstructOp(op_conf));
+//   JUST(CheckOpInputSignature(*op, upstream_signature));
+//   JUST(op->FillOpParallelDesc(parallel_desc));
+//   HashMap<std::string, std::unique_ptr<BlobDesc>> bn_in_op2blob_desc;
+//   for (const auto& ibn : op->input_bns()) {
+//     const auto& map = upstream_signature.logical_blob_desc_signature().bn_in_op2blob_desc();
+//     bn_in_op2blob_desc[ibn].reset(new BlobDesc(map.at(ibn)));
+//   }
+//   const auto& ConstBlobDesc4Ibn = [&](const std::string& ibn) -> const BlobDesc& {
+//     return *bn_in_op2blob_desc.at(ibn);
+//   };
+//   JUST(op->FillLogicalInBlobDesc(ConstBlobDesc4Ibn));
+//   // infer is_local
+//   JUST(InferLocalSignature(op.get(), upstream_signature, is_local, parallel_desc));
+//   SbpSignature sbp_sig_conf;
+//   // iner sbp
+//   JUST(InferOpOutSbpParallel(op.get(), upstream_signature, ConstBlobDesc4Ibn, sbp_sig_conf,
+//                              parallel_desc));
+//   // infer logical blob_desc
+//   JUST(op->InferLogicalOutBlobDescsIf());
+//   return op;
+// }
 
 namespace {
 
