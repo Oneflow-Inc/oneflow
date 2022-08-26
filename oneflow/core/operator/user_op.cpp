@@ -639,42 +639,18 @@ Maybe<void> UserOp::InferLogicalOutBlobDescs(
 Maybe<void> UserOp::InferOutBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  CHECK_OR_RETURN(val_ != nullptr)
-      << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
-  user_op::TensorDescInferFn tensor_desc_infer_fn;
-  if (val_->physical_tensor_desc_infer_fn) {
-    tensor_desc_infer_fn = val_->physical_tensor_desc_infer_fn;
-  } else if (val_->logical_tensor_desc_infer_fn) {
-    tensor_desc_infer_fn = val_->logical_tensor_desc_infer_fn;
+  // Infer with logical blob desc, sbp.
+  const auto& nd_sbp_signature = JUST(this->nd_sbp_signature());
+  const auto& parallel_desc = JUST(this->GetOpParallelDesc());
+  for (const auto& bn : output_bns()) {
+    BlobDesc* desc = GetBlobDesc4BnInOp(bn);
+    *desc = *JUST(GetLogicalBlobDesc4Obn(bn));
+    const auto& nd_sbp = nd_sbp_signature->bn_in_op2nd_sbp().at(bn);
+    desc->mut_shape() =
+        *JUST(GetPhysicalShape(desc->shape(), nd_sbp, *parallel_desc, *parallel_ctx));
+    desc->mut_stride() = Stride(desc->shape());
   }
-  if (tensor_desc_infer_fn) {
-    // default method set output blob desc (such as Dtype, is_dynamic, is_tensor_list)
-    // set out blob desc attr as first input blob desc (if has)
-    BlobDesc* first_in_blob_desc = FindValidBlobDescOfBnsInOp(GetBlobDesc4BnInOp, input_bns());
-    if (first_in_blob_desc) {
-      for (const std::string& obn : output_bns()) {
-        // set base attr with the valid input
-        GetBlobDesc4BnInOp(obn)->CopyFrom(*first_in_blob_desc);
-      }
-    }
-    UserOpInferContext infer_ctx(this, parallel_ctx, nullptr, GetBlobDesc4BnInOp);
-
-    CHECK_OR_RETURN(val_->data_type_infer_fn)
-        << "No InferDataType function for " << val_->op_type_name;
-    JUST(val_->data_type_infer_fn(&infer_ctx));
-    JUST(tensor_desc_infer_fn(&infer_ctx));
-    for (const auto& pair : infer_ctx.outputs()) {
-      BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
-      out_blob_desc->set_data_type(infer_ctx.OutputDType(pair.first, pair.second));
-      out_blob_desc->mut_shape() = infer_ctx.OutputShape(pair.first, pair.second);
-      out_blob_desc->mut_stride() = Stride(infer_ctx.OutputShape(pair.first, pair.second));
-      out_blob_desc->set_is_dynamic(infer_ctx.OutputIsDynamic(pair.first, pair.second));
-    }
-    return Maybe<void>::Ok();
-  } else {
-    // When there has no physical/logical tensor desc infer function, use infer with logical blob and sbp.
-    return Operator::InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
-  }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> UserOp::InferInplaceObn2Ibn(
