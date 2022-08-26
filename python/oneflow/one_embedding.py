@@ -881,6 +881,8 @@ class Ftrl(Optimizer):
             beta = param_group["beta"]
 
             optimizer_conf.base_learning_rate = lr
+            self._generate_lr_scale_for_optim_conf(param_group, optimizer_conf)
+
             optimizer_conf.ftrl_conf.initial_accumulator_value = (
                 initial_accumulator_value
             )
