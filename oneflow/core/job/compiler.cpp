@@ -105,6 +105,7 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
   // NOTE(chengcheng): infer mem blob id & set inplace & add ctrl
   IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan, IsReachable);
+  PlanUtil::MergeMemBlockIdByLogicalChainId(plan, *job);
   PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
   Singleton<OpGraph>::Delete();
 }

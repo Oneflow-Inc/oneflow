@@ -188,6 +188,10 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
 
 }  // namespace
 
+void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
+  // TODO();
+}
+
 void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     Plan* plan, const HashSet<std::string>& variable_op_names) {
   HashMap<int64_t, std::unique_ptr<MemBlockProto>> mem_block_id2mem_block;

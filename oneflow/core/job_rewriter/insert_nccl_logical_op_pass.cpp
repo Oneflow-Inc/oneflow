@@ -968,10 +968,12 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
           .OpTypeName("cast_to_tick")
           .Input("in", bw_sink_op_out_lbn)
           .Output("out")
+          .ScopeSymbolId(bw_sink_op->op().op_conf().scope_symbol_id())
           .Build();
 
   OperatorConf bw_sink_acc_tick_conf;
   bw_sink_acc_tick_conf.set_name(std::string("System-BwSinkTick-AccTick_") + NewUniqueId());
+  bw_sink_acc_tick_conf.set_scope_symbol_id(bw_sink_op->op().op_conf().scope_symbol_id());
   auto* acc_conf = bw_sink_acc_tick_conf.mutable_acc_tick_conf();
   acc_conf->set_one(cast_to_tick_op.output("out", 0));
   acc_conf->set_acc("acc");
@@ -980,6 +982,7 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
   OperatorConf bw_sink_final_tick_conf;
   bw_sink_final_tick_conf.set_name(std::string("System-BwSinkFinalTick-DeviceTick_")
                                    + NewUniqueId());
+  bw_sink_final_tick_conf.set_scope_symbol_id(bw_sink_op->op().op_conf().scope_symbol_id());
   auto* tick_conf = bw_sink_final_tick_conf.mutable_device_tick_conf();
   tick_conf->add_tick(GenLogicalBlobName(bw_sink_acc_tick_conf.name(), "acc"));
   tick_conf->set_out("out");
