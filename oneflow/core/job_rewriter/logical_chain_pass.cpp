@@ -397,14 +397,13 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
 
         // NOTE(chengcheng):
         //   1.add acc ctrl tick between first chain src to acc chain sink for memory lock.
-        //   2.add acc tick between first chain sink to acc chain src for strict exec order.
         const int64_t acc_num = job_builder->job().job_conf().num_gradient_accumulation_steps();
         CHECK_GT(acc_num, 1);
         const OpNode* first_chain_src_op = info.ordered_logical_chains.front()->begin_op;
-        const auto& fcs_obns = first_chain_src_op->op().output_bns();
-        CHECK(!fcs_obns.empty());
+        const auto& fc_src_obns = first_chain_src_op->op().output_bns();
+        CHECK(!fc_src_obns.empty());
         const std::string& first_chain_src_out_lbn =
-            GenLogicalBlobName(first_chain_src_op->op().BnInOp2Lbi(fcs_obns.Get(0)));
+            GenLogicalBlobName(first_chain_src_op->op().BnInOp2Lbi(fc_src_obns.Get(0)));
 
         VLOG(3) << " first_chain_src_out_lbn : " << first_chain_src_out_lbn;
         user_op::UserOpConfWrapper acc_ctrl_tick_op =
@@ -418,12 +417,56 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
 
         OperatorConf& consumer =
             JUST(MapAt(mut_op_name2conf, info.after_acc_logical_chain->end_op->op().op_name()));
-        if (consumer.has_user_conf()) {
-          (*consumer.mutable_user_conf()->mutable_input())[user_op::kUserSourceOpTickInputArgName]
-              .add_s(acc_ctrl_tick_op.output("out", 0));
-          JUST(job_builder->AddOp(first_chain_src_op->parallel_desc().parallel_conf(),
-                                  acc_ctrl_tick_op.op_conf()));
-        }
+        CHECK(consumer.has_user_conf());
+        (*consumer.mutable_user_conf()->mutable_input())[user_op::kUserSourceOpTickInputArgName]
+            .add_s(acc_ctrl_tick_op.output("out", 0));
+        JUST(job_builder->AddOp(first_chain_src_op->parallel_desc().parallel_conf(),
+                                acc_ctrl_tick_op.op_conf()));
+
+        // NOTE(chengcheng):
+        //   2.add acc tick between first chain sink to acc chain src for strict exec order.
+        const OpNode* first_chain_sink_op = info.ordered_logical_chains.front()->end_op;
+        const auto& fc_sink_obns = first_chain_sink_op->op().output_bns();
+        CHECK(!fc_sink_obns.empty());
+        const std::string first_chain_sink_lbn =
+            GenLogicalBlobName(first_chain_sink_op->op().BnInOp2Lbi(fc_sink_obns.Get(0)));
+        VLOG(3) << " first_chain_sink_lbn : " << first_chain_sink_lbn;
+
+        user_op::UserOpConfWrapper cast_to_tick_op =
+            user_op::UserOpConfWrapperBuilder("Sys-LogicalChainSink-CastToTick-" + NewUniqueId())
+                .OpTypeName("cast_to_tick")
+                .Input("in", first_chain_sink_lbn)
+                .Output("out")
+                .ScopeSymbolId(first_chain_sink_op->op().op_conf().scope_symbol_id())
+                .Build();
+
+        OperatorConf sink_acc_tick_conf;
+        sink_acc_tick_conf.set_name(std::string("Sys-LogicalChainSink-AccTick_") + NewUniqueId());
+        sink_acc_tick_conf.set_scope_symbol_id(
+            first_chain_sink_op->op().op_conf().scope_symbol_id());
+        auto* acc_conf = sink_acc_tick_conf.mutable_acc_tick_conf();
+        acc_conf->set_one(cast_to_tick_op.output("out", 0));
+        acc_conf->set_acc("acc");
+        acc_conf->set_max_acc_num(acc_num);
+
+        OperatorConf sink_final_tick_conf;
+        sink_final_tick_conf.set_name(std::string("Sys-LogicalChainSink-FinalTick-DeviceTick_")
+                                      + NewUniqueId());
+        sink_final_tick_conf.set_scope_symbol_id(
+            first_chain_sink_op->op().op_conf().scope_symbol_id());
+        auto* tick_conf = sink_final_tick_conf.mutable_device_tick_conf();
+        tick_conf->add_tick(GenLogicalBlobName(sink_acc_tick_conf.name(), "acc"));
+        tick_conf->set_out("out");
+
+        JUST(MapAt(mut_op_name2conf, info.after_acc_logical_chain->begin_op->op().op_name()))
+            .add_ctrl_in_op_name(sink_final_tick_conf.name());
+
+        CHECK_JUST(job_builder->AddOp(first_chain_sink_op->parallel_desc().parallel_conf(),
+                                      cast_to_tick_op.op_conf()));
+        CHECK_JUST(job_builder->AddOp(first_chain_sink_op->parallel_desc().parallel_conf(),
+                                      sink_acc_tick_conf));
+        CHECK_JUST(job_builder->AddOp(first_chain_sink_op->parallel_desc().parallel_conf(),
+                                      sink_final_tick_conf));
       }
     }
 
