@@ -1247,6 +1247,38 @@ void LookupAndInitMissing(ep::Stream* stream,
                                   missing_indices, store_values);
 }
 
+template<typename K, typename U, typename IDX>
+void SetIdShuffleDataPtrsParam(const void* ids_ptr,
+                               const EmbeddingForwardTmpBufferManager<K, U, IDX>& buffer_manager,
+                               id_shuffle::IdShuffleDataPtrs<K, U, IDX>* data_ptrs) {
+  data_ptrs->ids_ptr = reinterpret_cast<const K*>(ids_ptr);
+  data_ptrs->table_ids_ptr = buffer_manager.template Ptr<U>(EmbeddingForwardBufferType::kTableIds);
+  data_ptrs->num_partitioned_unique =
+      buffer_manager.template Ptr<IDX>(EmbeddingForwardBufferType::kNumPartitionedUnique);
+  data_ptrs->partitioned_unique_ids =
+      buffer_manager.template Ptr<K>(EmbeddingForwardBufferType::kPartitionedUniqueIds);
+  data_ptrs->partitioned_unique_table_ids =
+      buffer_manager.template Ptr<U>(EmbeddingForwardBufferType::kPartitionedUniqueTableIds);
+  data_ptrs->workspace_ptr = buffer_manager.Ptr(EmbeddingForwardBufferType::kWorkspace);
+  data_ptrs->workspace_size = buffer_manager.Size(EmbeddingForwardBufferType::kWorkspace);
+  data_ptrs->received_ids =
+      buffer_manager.template Ptr<K>(EmbeddingForwardBufferType::kReceivedIds);
+  data_ptrs->received_table_ids =
+      buffer_manager.template Ptr<U>(EmbeddingForwardBufferType::kReceivedTableIds);
+  data_ptrs->inverse_unique_partition_indices_ptr =
+      buffer_manager.template Ptr<IDX>(EmbeddingForwardBufferType::kInverseUniquePartitionIndices);
+  data_ptrs->num_unique_matrix_ptr =
+      buffer_manager.template Ptr<IDX>(EmbeddingForwardBufferType::kNumUniqueMatrix);
+  data_ptrs->cur_rank_num_unique_ptr =
+      buffer_manager.template Ptr<IDX>(EmbeddingForwardBufferType::kCurRankNumUnique);
+  data_ptrs->cur_rank_unique_ids_ptr =
+      buffer_manager.template Ptr<K>(EmbeddingForwardBufferType::kCurRankUniqueIds);
+  data_ptrs->cur_rank_unique_table_ids_ptr =
+      buffer_manager.template Ptr<U>(EmbeddingForwardBufferType::kCurRankUniqueTableIds);
+  data_ptrs->cur_rank_inverse_indices_ptr =
+      buffer_manager.template Ptr<IDX>(EmbeddingForwardBufferType::kCurRankInverseIndices);
+}
+
 template<typename K, typename T, typename V, typename U, typename IDX>
 class EmbeddingLookupPlaceholderKernel final : public user_op::OpKernel {
  public:
@@ -1296,7 +1328,8 @@ class EmbeddingLookupPlaceholderKernel final : public user_op::OpKernel {
     IDX* host_num_unique_matrix = kernel_state->HostNumUniqueMatrix();
     IDX* host_num_keys = kernel_state->HostNumKeys();
     id_shuffle::IdShuffleDataPtrs<K, U, IDX> data_ptrs;
-    data_ptrs.ids_ptr = reinterpret_cast<const K*>(ids->dptr());
+    SetIdShuffleDataPtrsParam(ids->dptr(), buffer_manager, &data_ptrs);
+    // overwrite data_ptrs.table_ids_ptr
     if (need_process_table_ids) {
       U* tmp_table_ids_ptr = buffer_manager.template Ptr<U>(EmbeddingForwardBufferType::kTableIds);
       data_ptrs.table_ids_ptr = tmp_table_ids_ptr;
@@ -1321,30 +1354,6 @@ class EmbeddingLookupPlaceholderKernel final : public user_op::OpKernel {
     } else {
       data_ptrs.table_ids_ptr = nullptr;
     }
-    data_ptrs.num_partitioned_unique =
-        buffer_manager.template Ptr<IDX>(EmbeddingForwardBufferType::kNumPartitionedUnique);
-    data_ptrs.partitioned_unique_ids =
-        buffer_manager.template Ptr<K>(EmbeddingForwardBufferType::kPartitionedUniqueIds);
-    data_ptrs.partitioned_unique_table_ids =
-        buffer_manager.template Ptr<U>(EmbeddingForwardBufferType::kPartitionedUniqueTableIds);
-    data_ptrs.workspace_ptr = buffer_manager.Ptr(EmbeddingForwardBufferType::kWorkspace);
-    data_ptrs.workspace_size = buffer_manager.Size(EmbeddingForwardBufferType::kWorkspace);
-    data_ptrs.received_ids =
-        buffer_manager.template Ptr<K>(EmbeddingForwardBufferType::kReceivedIds);
-    data_ptrs.received_table_ids =
-        buffer_manager.template Ptr<U>(EmbeddingForwardBufferType::kReceivedTableIds);
-    data_ptrs.inverse_unique_partition_indices_ptr = buffer_manager.template Ptr<IDX>(
-        EmbeddingForwardBufferType::kInverseUniquePartitionIndices);
-    data_ptrs.num_unique_matrix_ptr =
-        buffer_manager.template Ptr<IDX>(EmbeddingForwardBufferType::kNumUniqueMatrix);
-    data_ptrs.cur_rank_num_unique_ptr =
-        buffer_manager.template Ptr<IDX>(EmbeddingForwardBufferType::kCurRankNumUnique);
-    data_ptrs.cur_rank_unique_ids_ptr =
-        buffer_manager.template Ptr<K>(EmbeddingForwardBufferType::kCurRankUniqueIds);
-    data_ptrs.cur_rank_unique_table_ids_ptr =
-        buffer_manager.template Ptr<U>(EmbeddingForwardBufferType::kCurRankUniqueTableIds);
-    data_ptrs.cur_rank_inverse_indices_ptr =
-        buffer_manager.template Ptr<IDX>(EmbeddingForwardBufferType::kCurRankInverseIndices);
 
     id_shuffle::IdShuffle(ctx->stream(), comm, data_ptrs, num_ids, parallel_id, parallel_num,
                           num_unique_matrix_dtype, ids->data_type(), table_ids_dtype,
@@ -1527,8 +1536,8 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
     using IDX = uint32_t;
     using U = uint8_t;
     const user_op::Tensor* ids = ctx->Tensor4ArgNameAndIndex("ids", 0);
-    // Note: the missing value has been put in lookup, in backward and update, not need to init, so
-    // not need table id.
+    // Note(guoran): the missing value has been put in lookup, in backward and update, not need to
+    // init, so not need table id.
     const bool has_table_ids = false;
     const bool need_process_table_ids = false;
     const int64_t num_ids = ids->shape_view().elem_cnt();
@@ -1545,38 +1554,20 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
     // not need lookup values.
     EmbeddingForwardTmpBufferManager<K, uint8_t, IDX> buffer_manager(
         tmp_buffer->mut_dptr(), num_ids, parallel_num, need_process_table_ids, line_size,
-        embedding_size, false, false, DataType::kInvalidDataType, data_type);
+        padded_embedding_size, false, false, DataType::kInvalidDataType, data_type);
     CHECK_GE(tmp_buffer->shape_view().elem_cnt(), buffer_manager.TotalBufferSize());
     ncclComm_t comm = kernel_state->comm();
     IDX* host_num_unique_matrix = kernel_state->HostNumUniqueMatrix();
     IDX* host_num_keys = kernel_state->HostNumKeys();
     id_shuffle::IdShuffleDataPtrs<K, U, IDX> data_ptrs;
-    data_ptrs.ids_ptr = reinterpret_cast<const K*>(ids->dptr());
+    SetIdShuffleDataPtrsParam(ids->dptr(), buffer_manager, &data_ptrs);
+    // overwrite cur_rank_unique_table_ids_ptr, data_ptrs.cur_rank_num_unique_ptr,
+    // data_ptrs.cur_rank_unique_ids_ptr
     data_ptrs.table_ids_ptr = nullptr;
-    data_ptrs.num_partitioned_unique =
-        buffer_manager.template Ptr<IDX>(EmbeddingForwardBufferType::kNumPartitionedUnique);
-    data_ptrs.partitioned_unique_ids =
-        buffer_manager.template Ptr<K>(EmbeddingForwardBufferType::kPartitionedUniqueIds);
-    data_ptrs.partitioned_unique_table_ids =
-        buffer_manager.template Ptr<U>(EmbeddingForwardBufferType::kPartitionedUniqueTableIds);
-    data_ptrs.workspace_ptr = buffer_manager.Ptr(EmbeddingForwardBufferType::kWorkspace);
-    data_ptrs.workspace_size = buffer_manager.Size(EmbeddingForwardBufferType::kWorkspace);
-    data_ptrs.received_ids =
-        buffer_manager.template Ptr<K>(EmbeddingForwardBufferType::kReceivedIds);
-    data_ptrs.received_table_ids =
-        buffer_manager.template Ptr<U>(EmbeddingForwardBufferType::kReceivedTableIds);
-    data_ptrs.num_unique_matrix_ptr =
-        buffer_manager.template Ptr<IDX>(EmbeddingForwardBufferType::kNumUniqueMatrix);
-    data_ptrs.inverse_unique_partition_indices_ptr = buffer_manager.template Ptr<IDX>(
-        EmbeddingForwardBufferType::kInverseUniquePartitionIndices);
     data_ptrs.cur_rank_num_unique_ptr =
         reinterpret_cast<IDX*>(embedding_state->EmbeddingEagerBackwardNumUniqueIds(current_iter_));
     data_ptrs.cur_rank_unique_ids_ptr =
         reinterpret_cast<K*>(embedding_state->EmbeddingEagerBackwardUniqueIds(current_iter_));
-    data_ptrs.cur_rank_unique_table_ids_ptr =
-        buffer_manager.template Ptr<U>(EmbeddingForwardBufferType::kCurRankUniqueTableIds);
-    data_ptrs.cur_rank_inverse_indices_ptr =
-        buffer_manager.template Ptr<IDX>(EmbeddingForwardBufferType::kCurRankInverseIndices);
 
     DataType num_unique_matrix_dtype = DataType::kUInt32;
     DataType table_ids_dtype = DataType::kUInt8;
@@ -1603,9 +1594,6 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
     for (int64_t i = 0; i < parallel_num; ++i) {
       unique_partitioned_num_ids += host_num_unique_matrix[parallel_id * parallel_num + i];
     }
-    IDX* inverse_unique_partition_indices_ptr = buffer_manager.template Ptr<IDX>(
-        EmbeddingForwardBufferType::kInverseUniquePartitionIndices);
-    // TODO: consider padded_embedding_size
     T* unique_partition_embedding_grad =
         buffer_manager.template Ptr<T>(EmbeddingForwardBufferType::kReverseUniqueCurRankEmbeddings);
     id_shuffle::UniquePartitionEmbeddingGrad(
@@ -1621,13 +1609,11 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
     // use unique_partition_embedding_grad as buffer
     T* buffer_ptr = unique_partition_embedding_grad;
 
-    IDX* cur_rank_inverse_indices_ptr =
-        buffer_manager.template Ptr<IDX>(EmbeddingForwardBufferType::kCurRankInverseIndices);
     bool only_zero_valid_grad = false;
     id_shuffle::UniqueCurRankEmbeddingGrad<T, IDX>(
         ctx->stream(), data_type, cur_rank_num_ids, num_unique, embedding_size,
         padded_embedding_size, only_zero_valid_grad, parallel_num * num_ids * embedding_size,
-        received_embedding_grad, cur_rank_inverse_indices_ptr,
+        received_embedding_grad, data_ptrs.cur_rank_inverse_indices_ptr,
         reinterpret_cast<T*>(
             embedding_state->EmbeddingEagerBackwardUniqueEmbeddingGrad(current_iter_)),
         buffer_ptr);
