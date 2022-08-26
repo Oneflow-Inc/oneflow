@@ -28,6 +28,7 @@ class AttrValue;
 class MutableAttrMap;
 class UserOpConf;
 
+template<int N>
 class OrderedStringList;
 
 class AttrMap final {
@@ -59,12 +60,12 @@ class AttrMap final {
   struct AttrInternal {
     AttrInternal();
     AttrInternal(size_t max_size, size_t size, size_t hash_value,
-                 const std::shared_ptr<OrderedStringList>& ordered_attr_names);
+                 const std::shared_ptr<OrderedStringList<8>>& ordered_attr_names);
     size_t max_size;
     size_t size;
     size_t hash_value;
-    std::shared_ptr<OrderedStringList> ordered_attr_names;
-    small_vector<std::pair<std::shared_ptr<const user_op::AttrVal>, bool>, 16> attrs;
+    std::shared_ptr<OrderedStringList<8>> ordered_attr_names;
+    small_vector<std::pair<std::shared_ptr<const user_op::AttrVal>, bool>, 8> attrs;
   };
 
   class const_iterator {
