@@ -3915,6 +3915,169 @@ class MatrixVectorProductFunctor {
   std::shared_ptr<OpExpr> matrix_vector_product_op_;
 };
 
+class BatchNormStatsFunctor {
+ public:
+  BatchNormStatsFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("batch_norm_stats").Input("input").Output("mean").Output("invstd").Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input, const int& axis,
+                                const float& eps) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    JUST(attrs.SetAttr<float>("eps", eps));
+    return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class BatchNormGatherStatsWithCountsFunctor {
+ public:
+  BatchNormGatherStatsWithCountsFunctor() {
+    op_with_running_mean_and_var_ = CHECK_JUST(one::OpBuilder("batch_norm_gather_stats_with_counts")
+                                                   .Input("input")
+                                                   .Input("mean")
+                                                   .Input("invstd")
+                                                   .Input("counts")
+                                                   .Input("running_mean")
+                                                   .Input("running_var")
+                                                   .Output("global_mean")
+                                                   .Output("global_invstd")
+                                                   .Build());
+    op_without_running_mean_and_var_ =
+        CHECK_JUST(one::OpBuilder("batch_norm_gather_stats_with_counts")
+                       .Input("input")
+                       .Input("mean")
+                       .Input("invstd")
+                       .Input("counts")
+                       .Output("global_mean")
+                       .Output("global_invstd")
+                       .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input,
+                                const std::shared_ptr<one::Tensor>& mean,
+                                const std::shared_ptr<one::Tensor>& invstd,
+                                const Optional<one::Tensor>& running_mean,
+                                const Optional<one::Tensor>& running_var, const float& momentum,
+                                const float& eps,
+                                const std::shared_ptr<one::Tensor>& counts) const {
+    CHECK_OR_RETURN((running_mean && running_var) || (!running_mean && !running_var))
+        << Error::RuntimeError()
+        << "Both running_mean and running_var should be None or Tensor at the same time.";
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("eps", eps));
+    JUST(attrs.SetAttr<float>("momentum", momentum));
+
+    if (running_mean) {
+      return OpInterpUtil::Dispatch<one::TensorTuple>(
+          *op_with_running_mean_and_var_,
+          {input, mean, invstd, counts, JUST(running_mean), JUST(running_var)}, attrs);
+    }
+    return OpInterpUtil::Dispatch<one::TensorTuple>(*op_without_running_mean_and_var_,
+                                                    {input, mean, invstd, counts}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_with_running_mean_and_var_;
+  std::shared_ptr<OpExpr> op_without_running_mean_and_var_;
+};
+
+class BatchNormElemtFunctor {
+ public:
+  BatchNormElemtFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("batch_norm_elemt")
+                         .Input("input")
+                         .Input("weight")
+                         .Input("bias")
+                         .Input("mean")
+                         .Input("invstd")
+                         .Output("output")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& bias,
+                           const std::shared_ptr<one::Tensor>& mean,
+                           const std::shared_ptr<one::Tensor>& invstd, const int& axis,
+                           const float& eps) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    JUST(attrs.SetAttr<float>("eps", eps));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {input, weight, bias, mean, invstd}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class BatchNormBackwardReduceFunctor {
+ public:
+  BatchNormBackwardReduceFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("batch_norm_backward_reduce")
+                         .Input("grad_out")
+                         .Input("input")
+                         .Input("mean")
+                         .Input("invstd")
+                         .Output("sum_dy")
+                         .Output("sum_dy_xmu")
+                         .Output("grad_weight")
+                         .Output("grad_bias")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& grad_out,
+                                const std::shared_ptr<one::Tensor>& input,
+                                const std::shared_ptr<one::Tensor>& mean,
+                                const std::shared_ptr<one::Tensor>& invstd, const int& axis) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {grad_out, input, mean, invstd}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class BatchNormBackwardElemtFunctor {
+ public:
+  BatchNormBackwardElemtFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("batch_norm_backward_elemt")
+                         .Input("grad_out")
+                         .Input("input")
+                         .Input("mean")
+                         .Input("invstd")
+                         .Input("weight")
+                         .Input("sum_dy")
+                         .Input("sum_dy_xmu")
+                         .Input("count")
+                         .Output("grad_in")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& grad_out,
+                           const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& mean,
+                           const std::shared_ptr<one::Tensor>& invstd,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& sum_dy,
+                           const std::shared_ptr<one::Tensor>& sum_dy_xmu,
+                           const std::shared_ptr<one::Tensor>& count, const int& axis) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    return OpInterpUtil::Dispatch<one::Tensor>(
+        *op_, {grad_out, input, mean, invstd, weight, sum_dy, sum_dy_xmu, count}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -4021,6 +4184,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RocAucScoreFunctor>("RocAucScore");
   m.add_functor<impl::MultiTensorSgdUpdateFunctor>("MultiTensorSgdUpdate");
   m.add_functor<impl::MultiTensorAdamUpdateFunctor>("MultiTensorAdamUpdate");
+  m.add_functor<impl::BatchNormStatsFunctor>("BatchNormStats");
+  m.add_functor<impl::BatchNormGatherStatsWithCountsFunctor>("BatchNormGatherStatsWithCounts");
+  m.add_functor<impl::BatchNormElemtFunctor>("BatchNormElemt");
+  m.add_functor<impl::BatchNormBackwardReduceFunctor>("BatchNormBackwardReduce");
+  m.add_functor<impl::BatchNormBackwardElemtFunctor>("BatchNormBackwardElemt");
 }
 
 }  // namespace functional
