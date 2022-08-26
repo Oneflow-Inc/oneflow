@@ -32,17 +32,18 @@ def log_softmax(logits, axis=0):
     dist = exp / exp_sum
     return np.log(dist)
 
-def  _compare_torch_and_oneflow(
-        test_case,
-        torch_ctc_loss, 
-        flow_ctc_loss, 
-        placement, 
-        module_sbp, 
-        in_sbp, 
-        max_input_length,
-        batch_size,
-        num_classes,
-        max_target_length,
+
+def _compare_torch_and_oneflow(
+    test_case,
+    torch_ctc_loss,
+    flow_ctc_loss,
+    placement,
+    module_sbp,
+    in_sbp,
+    max_input_length,
+    batch_size,
+    num_classes,
+    max_target_length,
 ):
     log_probs = np.random.random(
         size=(max_input_length, batch_size, num_classes)
@@ -87,8 +88,12 @@ def  _compare_torch_and_oneflow(
         .to_global(placement=placement, sbp=in_sbp)
     )
 
-    out_torch = torch_ctc_loss(log_probs_torch, targets_torch, input_lengths_torch, target_lengths_torch)
-    out_flow = flow_ctc_loss(log_probs_flow, targets_flow, input_lengths_flow, target_lengths_flow)
+    out_torch = torch_ctc_loss(
+        log_probs_torch, targets_torch, input_lengths_torch, target_lengths_torch
+    )
+    out_flow = flow_ctc_loss(
+        log_probs_flow, targets_flow, input_lengths_flow, target_lengths_flow
+    )
 
     # check forward
     local_output = out_flow.to_global(
@@ -122,6 +127,7 @@ def  _compare_torch_and_oneflow(
             )
         )
 
+
 def _test_ctc_loss_impl(
     test_case,
     placement,
@@ -136,22 +142,18 @@ def _test_ctc_loss_impl(
     zero_infinity,
 ):
     torch_ctc_loss = torch.nn.CTCLoss(
-        blank=blank,
-        reduction=reduction,
-        zero_infinity=zero_infinity
+        blank=blank, reduction=reduction, zero_infinity=zero_infinity
     )
     flow_ctc_loss = flow.nn.CTCLoss(
-        blank=blank,
-        reduction=reduction,
-        zero_infinity=zero_infinity
+        blank=blank, reduction=reduction, zero_infinity=zero_infinity
     )
     _compare_torch_and_oneflow(
         test_case,
-        torch_ctc_loss, 
-        flow_ctc_loss, 
-        placement, 
-        module_sbp, 
-        in_sbp, 
+        torch_ctc_loss,
+        flow_ctc_loss,
+        placement,
+        module_sbp,
+        in_sbp,
         max_input_length,
         batch_size,
         num_classes,
@@ -176,7 +178,10 @@ class TestCTCLossGlobal(oneflow.unittest.TestCase):
         for args in GenArgDict(arg_dict):
             for placement in all_placement():
                 for in_sbp in all_sbp(placement):
-                    _test_ctc_loss_impl(test_case, placement, module_sbp, in_sbp, **args)
+                    _test_ctc_loss_impl(
+                        test_case, placement, module_sbp, in_sbp, **args
+                    )
+
 
 if __name__ == "__main__":
     unittest.main()
