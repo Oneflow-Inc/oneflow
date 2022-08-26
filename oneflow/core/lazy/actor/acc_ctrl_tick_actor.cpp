@@ -77,25 +77,22 @@ class AccCtrlTickActor : public Actor {
 
 void AccCtrlTickActor::VirtualActorInit(const TaskProto& proto) {
   acc_cnt_ = 0;
-  // const OperatorConf op_conf =
-  //    proto.exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf();
-  // max_acc_num_ = user_op::UserOpConfWrapper(op_conf).attr<int32_t>("max_acc_num");
+  const OperatorConf op_conf =
+      proto.exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf();
+  max_acc_num_ = user_op::UserOpConfWrapper(op_conf).attr<int32_t>("max_acc_num");
 
   // NOTE(chengcheng): check time shape equal max_acc_num
   const Shape& in_time_shape = Singleton<RegstMgr>::Get()
                                    ->RegstDesc4RegstDescId(Name2SoleRegstDescId("in"))
                                    .data_regst_time_shape();
-  max_acc_num_ = in_time_shape.elem_cnt();
-  CHECK_GT(max_acc_num_, 1);
-
-  /*
+  // max_acc_num_ = in_time_shape.elem_cnt();
+  // CHECK_GT(max_acc_num_, 1);
   const Shape& out_time_shape = Singleton<RegstMgr>::Get()
                                     ->RegstDesc4RegstDescId(Name2SoleRegstDescId("out"))
                                     .data_regst_time_shape();
   CHECK_EQ(in_time_shape.elem_cnt() % out_time_shape.elem_cnt(), 0);
   CHECK_EQ(in_time_shape.elem_cnt() / out_time_shape.elem_cnt(), max_acc_num_);
   CHECK_GT(max_acc_num_, 1);
-  */
 
   // input
   const auto& consumed_ids = proto.consumed_regst_desc_id();
@@ -109,17 +106,26 @@ void AccCtrlTickActor::VirtualActorInit(const TaskProto& proto) {
 
   // output
   CHECK_EQ(proto.produced_regst_desc().size(), 1);
+  /*
   for (const auto& pair : proto.produced_regst_desc()) {
     const RegstDescProto& out_regst_desc = pair.second;
     if (out_regst_desc.regst_desc_type().has_ctrl_regst_desc()) {
-      CHECK_EQ(out_regst_desc.register_num(), 1);
-      CHECK_EQ(produced_tick_regst_desc_id_, -1);
-      produced_tick_regst_desc_id_ = out_regst_desc.regst_desc_id();
-      produced_tick_rs_.InsertRegstDescId(produced_tick_regst_desc_id_);
-      produced_tick_rs_.InitedDone();
-    }
+    CHECK_EQ(out_regst_desc.register_num(), 1);
+    CHECK_EQ(produced_tick_regst_desc_id_, -1);
+    produced_tick_regst_desc_id_ = out_regst_desc.regst_desc_id();
+    produced_tick_rs_.InsertRegstDescId(produced_tick_regst_desc_id_);
+    produced_tick_rs_.InitedDone();
+      }
   }
   CHECK_NE(produced_tick_regst_desc_id_, -1);
+  */
+  const auto& produced_ids = proto.produced_regst_desc();
+  CHECK_EQ(produced_ids.size(), 1);
+  CHECK(produced_ids.find("out") != produced_ids.end());
+  const RegstDescProto& out_regst_desc = produced_ids.at("out");
+  produced_tick_regst_desc_id_ = out_regst_desc.regst_desc_id();
+  produced_tick_rs_.InsertRegstDescId(produced_tick_regst_desc_id_);
+  produced_tick_rs_.InitedDone();
 
   ForEachProducedRegst([&](Regst* regst) {
     // if (regst->regst_desc_id() == produced_tick_regst_desc_id_) {

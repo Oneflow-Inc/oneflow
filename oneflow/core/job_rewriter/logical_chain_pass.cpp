@@ -76,7 +76,8 @@ bool IsBreakpointOpNode(const OpNode* node) {
     // TODO(chengcheng): acc node can be merged in chain.
     if (user_type_name == "repeat" || user_type_name == "acc" || user_type_name == "pack"
         || user_type_name == "unpack" || user_type_name == "identity_buffer"
-        || user_type_name == "copy_h2d" || user_type_name == "copy_d2h") {
+        || user_type_name == "copy_h2d" || user_type_name == "copy_d2h"
+        || user_type_name == "acc_ctrl_tick") {
       return true;
     }
   }
@@ -359,6 +360,7 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
   };
 
   for (auto& pair : placement2logical_chains) {
+    const auto& placement = pair.first;
     auto& info = pair.second;
     CHECK_GE(info.ordered_logical_chains.size(), 1);
     for (int i = 0; i < info.ordered_logical_chains.size() - 1; i++) {
@@ -414,12 +416,39 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
                 .Attr<int32_t>("max_acc_num", acc_num)
                 .Build();
 
-        JUST(MapAt(mut_op_name2conf, info.after_acc_logical_chain->end_op->op().op_name()))
-            .add_ctrl_in_op_name(acc_ctrl_tick_op.op_name());
-
-        JUST(job_builder->AddOp(first_chain_src_op->parallel_desc().parallel_conf(),
-                                acc_ctrl_tick_op.op_conf()));
+        OperatorConf& consumer =
+            JUST(MapAt(mut_op_name2conf, info.after_acc_logical_chain->end_op->op().op_name()));
+        if (consumer.has_user_conf()) {
+          (*consumer.mutable_user_conf()->mutable_input())[user_op::kUserSourceOpTickInputArgName]
+              .add_s(acc_ctrl_tick_op.output("out", 0));
+          JUST(job_builder->AddOp(first_chain_src_op->parallel_desc().parallel_conf(),
+                                  acc_ctrl_tick_op.op_conf()));
+        }
       }
+    }
+
+    for (const auto& logical_chain : info.ordered_logical_chains) {
+      VLOG(3) << " In placement: " << placement
+              << " logical_chain_id: " << logical_chain->logical_chain_id
+              << " has op num = " << logical_chain->ordered_op_nodes.size();
+
+      for (int i = 0; i < logical_chain->ordered_op_nodes.size(); ++i) {
+        const OpNode* ordered_op = JUST(VectorAt(logical_chain->ordered_op_nodes, i));
+        VLOG(3) << " ChainId: " << logical_chain_id << " order: " << i
+                << " op_name: " << ordered_op->op().op_name()
+                << " global_order: " << JUST(MapAt(op_node2global_order, ordered_op));
+      }
+    }
+
+    VLOG(3) << " In placement: " << placement
+            << " AccLogicalChain: " << info.after_acc_logical_chain->logical_chain_id
+            << " has op num = " << info.after_acc_logical_chain->ordered_op_nodes.size();
+
+    for (int i = 0; i < info.after_acc_logical_chain->ordered_op_nodes.size(); ++i) {
+      const OpNode* ordered_op = JUST(VectorAt(info.after_acc_logical_chain->ordered_op_nodes, i));
+      VLOG(3) << " AfterAccChainId: " << info.after_acc_logical_chain->logical_chain_id
+              << " order: " << i << " op_name: " << ordered_op->op().op_name()
+              << " global_order: " << JUST(MapAt(op_node2global_order, ordered_op));
     }
   }
 

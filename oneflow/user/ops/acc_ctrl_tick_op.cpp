@@ -36,7 +36,8 @@ namespace oneflow {
 /* static */ Maybe<void> AccCtrlTickOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
   const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
   const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
-  CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(), parallel_hierarchy.NumAxes());
+  CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(),  // NOLINT(maybe-need-error-msg)
+                     parallel_hierarchy.NumAxes());    // NOLINT(maybe-need-error-msg)
 
   NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
   NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
@@ -61,8 +62,8 @@ namespace oneflow {
     user_op::InferOutputBlobTimeShapeFnContext* ctx) {
   const int32_t max_acc_num = ctx->user_op_conf().attr<int32_t>("max_acc_num");
   const Shape& in_time_shape = ctx->TimeShape4InputArgNameAndIndex("in", 0);
-  DimVector time_shape_dim_vec = in_time_shape.dim_vec();
-  CHECK_OR_RETURN(!time_shape_dim_vec.empty());
+  DimVector time_shape_dim_vec = in_time_shape.dim_vec();  // NOLINT(maybe-need-error-msg)
+  CHECK_OR_RETURN(!time_shape_dim_vec.empty());            // NOLINT(maybe-need-error-msg)
   if (time_shape_dim_vec.back() == max_acc_num) {
     time_shape_dim_vec.pop_back();
   } else if (time_shape_dim_vec.back() % max_acc_num == 0) {
