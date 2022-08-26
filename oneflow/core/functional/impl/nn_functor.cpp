@@ -1266,6 +1266,99 @@ class NLLLossFunctor {
   std::shared_ptr<OpExpr> op_weight_;
 };
 
+class CrossEntropyLabelSmoothingFunctor {
+ public:
+  CrossEntropyLabelSmoothingFunctor() {
+    op_log_softmax_ = CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
+
+    op_nll_ = CHECK_JUST(one::OpBuilder("nll")
+                             .Input("input")
+                             .Input("target")
+                             .Output("output")
+                             .Output("out_weight")
+                             .Build());
+
+    op_nll_weight_ = CHECK_JUST(one::OpBuilder("nll")
+                                    .Input("input")
+                                    .Input("target")
+                                    .Input("weight")
+                                    .Output("output")
+                                    .Output("out_weight")
+                                    .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const Optional<one::Tensor>& weight, const int64_t& ignore_index,
+                           const std::string& reduction, const double& label_smoothing) const {
+    CHECK_OR_RETURN(reduction == "none" || reduction == "sum" || reduction == "mean")
+        << Error::RuntimeError() << "Reduction should be none, sum or mean.";
+    const auto& input_shape = input->shape();
+    const auto& target_shape = target->shape();
+
+    std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
+    input_perm[input_perm.size() - 1] = 1;
+    for (size_t i = 1; i < input_perm.size() - 1; ++i) { input_perm[i] = i + 1; }
+    CHECK_OR_RETURN(label_smoothing >= 0.0 && label_smoothing <= 1.0);
+
+    const auto input_ = JUST(sequence_function(functional::Transpose)
+                                 .then(std::bind(functional::Reshape, std::placeholders::_1,
+                                                 Shape({-1, input_shape->At(1)})))
+                                 .then([this](const std::shared_ptr<one::Tensor>& x) {
+                                   return OpInterpUtil::Dispatch<Tensor>(*op_log_softmax_, {x});
+                                 })
+                                 .call(input, input_perm));
+
+    const auto target_ = JUST(functional::Flatten(target, 0, target->shape()->NumAxes() - 1));
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
+    std::shared_ptr<TensorTuple> nll_result;
+    if (weight) {
+      nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+          *op_nll_weight_, {input_, target_, JUST(weight)}, attrs));
+    } else {
+      nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_, {input_, target_}, attrs));
+    }
+
+    const auto ignore_mask = JUST(Reshape(JUST(ScalarLogicalEqual(target, ignore_index)), {-1}));
+    std::shared_ptr<Tensor> smooth_loss = input_;
+    if (weight) {
+      const std::shared_ptr<Tensor> weight_2d = JUST(Reshape(JUST(weight), {1, -1}));
+      smooth_loss = JUST(Mul(smooth_loss, weight_2d));
+    }
+    smooth_loss = JUST(Negative(JUST(ReduceSum(smooth_loss, {1}, false))));
+    smooth_loss = JUST(MaskedFill(smooth_loss, ignore_mask, 0.0));
+
+    auto output = JUST(VectorAt(*nll_result, 0));
+    output = JUST(functional::Reshape(output, *target_shape));
+    int64_t n_classes = input->shape()->At(input->ndim() - 1);
+    if (reduction == "none") {
+      return JUST(Add(JUST(ScalarMul(output, 1 - label_smoothing, false)),
+                      JUST(ScalarMul(smooth_loss, label_smoothing / n_classes, false)), 1, false));
+    }
+
+    auto sum = JUST(functional::ReduceSum(output, {}, false));
+    if (reduction == "sum") {
+      smooth_loss = JUST(ReduceSum(smooth_loss, {}, false));
+      return JUST(Add(JUST(ScalarMul(sum, 1 - label_smoothing, false)),
+                      JUST(ScalarMul(smooth_loss, label_smoothing / n_classes, false)), 1, false));
+    }
+
+    auto total_weight = JUST(functional::ReduceSum(JUST(VectorAt(*nll_result, 1)), {}, false));
+    smooth_loss = JUST(ReduceSum(smooth_loss, {}, false));
+    // sum * (1 - label_smoothing) + smooth_loss * label_smoothing / num_classes
+    auto total_loss =
+        JUST(Add(JUST(ScalarMul(sum, 1 - label_smoothing, false)),
+                 JUST(ScalarMul(smooth_loss, label_smoothing / n_classes, false)), 1, false));
+    return Div(total_loss, total_weight);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_log_softmax_;
+  std::shared_ptr<OpExpr> op_nll_;
+  std::shared_ptr<OpExpr> op_nll_weight_;
+};
+
 class CrossEntropyFunctor {
  public:
   CrossEntropyFunctor() {
@@ -1289,7 +1382,9 @@ class CrossEntropyFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight, const int64_t& ignore_index,
-                           const std::string& reduction) const {
+                           const std::string& reduction, const double& label_smoothing) const {
+    if (label_smoothing > 0.0)
+      return CrossEntropyLabelSmoothing(input, target, weight, ignore_index, reduction, label_smoothing);
     CHECK_OR_RETURN(reduction == "none" || reduction == "sum" || reduction == "mean")
         << Error::RuntimeError() << "Reduction should be none, sum or mean.";
     const auto& input_shape = input->shape();
@@ -3820,6 +3915,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SparseCrossEntropyFunctor>("SparseCrossEntropy");
   m.add_functor<impl::SparseCrossEntropyMsFunctor>("SparseCrossEntropyMs");
   m.add_functor<impl::CrossEntropyFunctor>("CrossEntropy");
+  m.add_functor<impl::CrossEntropyLabelSmoothingFunctor>("CrossEntropyLabelSmoothing");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
   m.add_functor<impl::SoftmaxCrossEntropyFunctor>("SoftmaxCrossEntropy");
   m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");
