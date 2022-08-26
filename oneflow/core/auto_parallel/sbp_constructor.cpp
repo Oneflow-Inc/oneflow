@@ -234,7 +234,9 @@ Maybe<void> SbpConstructor::InitComputationCost(const OpGraph& op_graph) {
       if (comp_cost > GetValidMaxCopyCost()) {
         sbp_node->cost_.at(sbp_id) = comp_cost;
       } else {
-        sbp_node->cost_.at(sbp_id) = cost_ratio_ * comp_cost;
+        sbp_node->cost_.at(sbp_id) =
+            cost_ratio_ * comp_cost
+            * JUST(op_node->op().GetInputOutputFastestTimeShape())->elem_cnt();
       }
     }
     return Maybe<void>::Ok();
