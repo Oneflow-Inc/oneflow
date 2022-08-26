@@ -9654,7 +9654,7 @@ def OneFlow_IdShuffleOp : OneFlow_BaseOp<"id_shuffle", [NoSideEffect, DeclareOpI
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "1">:$num_tables,
-    DefaultValuedAttr<UI32Attr, "0">:$padding_idx,
+    DefaultValuedAttr<SI64Attr, "-1">:$padding_idx,
     StrAttr:$embedding_name
   );
   let same_output_regst_num = 2;

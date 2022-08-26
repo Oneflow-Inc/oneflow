@@ -330,9 +330,9 @@ __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen
 template<typename T, typename U, typename IDX>
 void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* kernel_state,
                           uint32_t num_unique, const int64_t embedding_size,
-                          const int64_t line_size, const bool is_prefetch, const void* unique_ids,
-                          const void* table_ids, void* num_missing_ptr, void* missing_indices,
-                          void* store_values) {
+                          const int64_t line_size, const bool is_prefetch,
+                          const int64_t padding_idx, const void* unique_ids, const void* table_ids,
+                          void* num_missing_ptr, void* missing_indices, void* store_values) {
   const auto& generator = kernel_state->generator();
   CHECK_NOTNULL(generator);
   std::shared_ptr<one::CUDAGeneratorImpl> cuda_generator =
@@ -344,7 +344,8 @@ void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* kernel_
   const int8_t* initializer_index = kernel_state->InitializerIndex();
   store->Get(stream, num_unique, unique_ids, store_values,
              reinterpret_cast<uint32_t*>(num_missing_ptr),
-             reinterpret_cast<uint32_t*>(missing_indices));
+             reinterpret_cast<uint32_t*>(missing_indices), padding_idx);
+
   void* host_num_keys = kernel_state->HostNumKeys();
   CHECK_GE(sizeof(IDX), sizeof(uint32_t));  // host_num_keys's buffer size is sizeof(IDX)
   OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, num_missing_ptr, sizeof(uint32_t), cudaMemcpyDefault,
@@ -654,16 +655,16 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     const user_op::Tensor* table_ids = ctx->Tensor4ArgNameAndIndex("table_ids", 0);
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
-
+    const int64_t padding_idx = ctx->Attr<int64_t>("padding_idx");
     void* num_missing_ptr;
     allocator->Allocate(&num_missing_ptr, sizeof(uint32_t));
     void* missing_indices_ptr;
     allocator->Allocate(&missing_indices_ptr, num_unique * sizeof(uint32_t));
     void* values_ptr;
     allocator->Allocate(&values_ptr, num_unique * line_size * sizeof(T));
-    LookupAndInitMissing<T, U, IDX>(ctx->stream(), kernel_state, num_unique, embedding_size,
-                                    line_size, true, unique_ids->dptr(), table_ids->dptr(),
-                                    num_missing_ptr, missing_indices_ptr, values_ptr);
+    LookupAndInitMissing<T, U, IDX>(
+        ctx->stream(), kernel_state, num_unique, embedding_size, line_size, true, padding_idx,
+        unique_ids->dptr(), table_ids->dptr(), num_missing_ptr, missing_indices_ptr, values_ptr);
     allocator->Free(num_missing_ptr);
     allocator->Free(missing_indices_ptr);
     allocator->Free(values_ptr);
@@ -728,6 +729,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     user_op::Tensor* unique_values = ctx->Tensor4ArgNameAndIndex("unique_values", 0);
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
+    const int64_t padding_idx = ctx->Attr<int64_t>("padding_idx");
     const bool has_output_embeddings = ctx->has_output("embeddings", 0);
     uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
     void* values_ptr = embedding_state->LookupUniqueValues(current_iter_);
@@ -747,9 +749,9 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
       allocator->Allocate(&num_missing_ptr, sizeof(uint32_t));
       void* missing_indices_ptr;
       allocator->Allocate(&missing_indices_ptr, num_unique * sizeof(uint32_t));
-      LookupAndInitMissing<T, U, IDX>(ctx->stream(), kernel_state, num_unique, embedding_size,
-                                      line_size, false, unique_ids->dptr(), table_ids->dptr(),
-                                      num_missing_ptr, missing_indices_ptr, values_ptr);
+      LookupAndInitMissing<T, U, IDX>(
+          ctx->stream(), kernel_state, num_unique, embedding_size, line_size, false, padding_idx,
+          unique_ids->dptr(), table_ids->dptr(), num_missing_ptr, missing_indices_ptr, values_ptr);
       allocator->Free(num_missing_ptr);
       allocator->Free(missing_indices_ptr);
       if (has_output_embeddings) {

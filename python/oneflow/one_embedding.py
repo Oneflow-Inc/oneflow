@@ -323,8 +323,8 @@ def make_device_mem_store_options(
                 {
                     "policy": "full",
                     "capacity": int(capacity),
-                    "value_memory_kind": "device", 
-                    "padding_idx": int(padding_idx), 
+                    "value_memory_kind": "device",
+                    "padding_idx": int(padding_idx),
                 }
             ],
             "persistent_table": {

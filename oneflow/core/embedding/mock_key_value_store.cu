@@ -129,7 +129,7 @@ class KeyValueStoreImpl : public KeyValueStore {
   }
 
   void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
-           uint32_t* n_missing, uint32_t* missing_indices) override;
+           uint32_t* n_missing, uint32_t* missing_indices, const int64_t padding_idx) override;
   void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values) override;
   bool SnapshotExists(const std::string& name) override;
   void LoadSnapshot(const std::string& name) override;
@@ -153,7 +153,8 @@ class KeyValueStoreImpl : public KeyValueStore {
 
 template<typename Key>
 void KeyValueStoreImpl<Key>::Get(ep::Stream* stream, uint32_t num_keys, const void* keys,
-                                 void* values, uint32_t* n_missing, uint32_t* missing_indices) {
+                                 void* values, uint32_t* n_missing, uint32_t* missing_indices,
+                                 const int64_t padding_idx) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto cuda_stream = stream->As<ep::CudaStream>();
   CHECK_LE(num_keys, max_query_length_);

@@ -542,7 +542,8 @@ class LruCache : public Cache {
   }
 
   void Get(ep::Stream* stream, uint32_t n_keys, const void* keys, void* values, uint32_t* n_missing,
-           void* missing_keys, uint32_t* missing_indices) override {
+           void* missing_keys, uint32_t* missing_indices, const int64_t padding_idx) override {
+    // todo padding_idx
     CHECK_LE(n_keys, max_query_length_);
     auto cuda_stream = stream->As<ep::CudaStream>();
     OF_CUDA_CHECK(cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));

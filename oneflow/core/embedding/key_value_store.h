@@ -36,7 +36,7 @@ class KeyValueStore {
   virtual void ReserveQueryLength(uint32_t query_length) = 0;
 
   virtual void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
-                   uint32_t* n_missing, uint32_t* missing_indices) = 0;
+                   uint32_t* n_missing, uint32_t* missing_indices, const int64_t padding_idx) = 0;
   virtual void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
                    uint8_t* mask) {
     UNIMPLEMENTED();
