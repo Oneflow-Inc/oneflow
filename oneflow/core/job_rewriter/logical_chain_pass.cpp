@@ -254,6 +254,7 @@ void CreateAfterAccLogicalChain(const std::shared_ptr<LogicalChain>& after_acc_l
     CHECK(after_acc_chain_ops.insert(cur_node).second);
 
     for (const OpEdge* in_edge : cur_node->in_edges()) {
+      // NOTE(chengcheng): maybe bad case for too early source op before repeat.
       SearchToNextNode(cur_node, in_edge->src_node(), in_edge);
     }
     for (const OpEdge* out_edge : cur_node->out_edges()) {
@@ -359,6 +360,7 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
 
   for (auto& pair : placement2logical_chains) {
     auto& info = pair.second;
+    CHECK_GE(info.ordered_logical_chains.size(), 1);
     for (int i = 0; i < info.ordered_logical_chains.size() - 1; i++) {
       CHECK_LT(JUST(VectorAt(info.ordered_logical_chains, i))->begin_op_global_order,
                JUST(VectorAt(info.ordered_logical_chains, i + 1))->begin_op_global_order);
@@ -390,6 +392,33 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
 
         InsertLogicalChainId(chain_order_ops, info.after_acc_logical_chain->logical_chain_id);
         InsertCtrlEdgeInChain(chain_order_ops);
+
+        // NOTE(chengcheng):
+        //   1.add acc ctrl tick between first chain src to acc chain sink for memory lock.
+        //   2.add acc tick between first chain sink to acc chain src for strict exec order.
+        const int64_t acc_num = job_builder->job().job_conf().num_gradient_accumulation_steps();
+        CHECK_GT(acc_num, 1);
+        const OpNode* first_chain_src_op = info.ordered_logical_chains.front()->begin_op;
+        const auto& fcs_obns = first_chain_src_op->op().output_bns();
+        CHECK(!fcs_obns.empty());
+        const std::string& first_chain_src_out_lbn =
+            GenLogicalBlobName(first_chain_src_op->op().BnInOp2Lbi(fcs_obns.Get(0)));
+
+        VLOG(3) << " first_chain_src_out_lbn : " << first_chain_src_out_lbn;
+        user_op::UserOpConfWrapper acc_ctrl_tick_op =
+            user_op::UserOpConfWrapperBuilder("Sys-AccCtrlTick4MergeFirstAccChain-" + NewUniqueId())
+                .OpTypeName("acc_ctrl_tick")
+                .Input("in", first_chain_src_out_lbn)
+                .Output("out")
+                .ScopeSymbolId(first_chain_src_op->op().op_conf().scope_symbol_id())
+                .Attr<int32_t>("max_acc_num", acc_num)
+                .Build();
+
+        JUST(MapAt(mut_op_name2conf, info.after_acc_logical_chain->end_op->op().op_name()))
+            .add_ctrl_in_op_name(acc_ctrl_tick_op.op_name());
+
+        JUST(job_builder->AddOp(first_chain_src_op->parallel_desc().parallel_conf(),
+                                acc_ctrl_tick_op.op_conf()));
       }
     }
   }
