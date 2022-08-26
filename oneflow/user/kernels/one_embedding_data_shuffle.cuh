@@ -24,7 +24,7 @@ limitations under the License.
 #include "oneflow/core/embedding/hash_functions.cuh"
 
 namespace oneflow {
-namespace id_shuffle {
+namespace data_shuffle {
 
 template<typename K>
 struct TableEntry {
@@ -511,5 +511,5 @@ void IdShuffle(ep::Stream* stream, ncclComm_t comm, const IdShuffleDataPtrs<K, U
   CHECK_JUST(stream->Sync());
 }
 
-}  // namespace id_shuffle
+}  // namespace data_shuffle
 }  // namespace oneflow

@@ -24,7 +24,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/copy_nd.h"
 #include "oneflow/core/ep/include/primitive/cast.h"
 #include "oneflow/core/ep/include/device.h"
-#include "oneflow/user/kernels/one_embedding_id_shuffle.cuh"
+#include "oneflow/user/kernels/one_embedding_data_shuffle.cuh"
 
 namespace oneflow {
 
@@ -1025,7 +1025,7 @@ class FusedEmbeddingTmpBufferManager final {
     AllocBuffer(FusedEmbeddingBufferType::kReceivedTableIds, partitioned_table_ids_bytes);
     const size_t hash_table_capacity = parallel_num * num_ids;
     AllocBuffer(FusedEmbeddingBufferType::kWorkspace,
-                hash_table_capacity * sizeof(id_shuffle::TableEntry<K>));
+                hash_table_capacity * sizeof(data_shuffle::TableEntry<K>));
     size_t num_unique_matrix_bytes = parallel_num * parallel_num * sizeof(IDX);
     AllocBuffer(FusedEmbeddingBufferType::kNumUniqueMatrix, num_unique_matrix_bytes);
     size_t inverse_unique_partition_indices_bytes = num_ids * sizeof(IDX);
@@ -1248,7 +1248,7 @@ void LookupAndInitMissing(ep::Stream* stream,
 template<typename K, typename U, typename IDX>
 void SetIdShuffleDataPtrsParam(const void* ids_ptr,
                                const FusedEmbeddingTmpBufferManager<K, U, IDX>& buffer_manager,
-                               id_shuffle::IdShuffleDataPtrs<K, U, IDX>* data_ptrs) {
+                               data_shuffle::IdShuffleDataPtrs<K, U, IDX>* data_ptrs) {
   data_ptrs->ids_ptr = reinterpret_cast<const K*>(ids_ptr);
   data_ptrs->table_ids_ptr = buffer_manager.template Ptr<U>(FusedEmbeddingBufferType::kTableIds);
   data_ptrs->num_partitioned_unique =
@@ -1324,7 +1324,7 @@ class EmbeddingLookupPlaceholderKernel final : public user_op::OpKernel {
     ncclComm_t comm = kernel_state->comm();
     IDX* host_num_unique_matrix = kernel_state->HostNumUniqueMatrix();
     IDX* host_num_keys = kernel_state->HostNumKeys();
-    id_shuffle::IdShuffleDataPtrs<K, U, IDX> data_ptrs;
+    data_shuffle::IdShuffleDataPtrs<K, U, IDX> data_ptrs;
     SetIdShuffleDataPtrsParam(ids->dptr(), buffer_manager, &data_ptrs);
     // overwrite data_ptrs.table_ids_ptr
     if (need_process_table_ids) {
@@ -1345,16 +1345,16 @@ class EmbeddingLookupPlaceholderKernel final : public user_op::OpKernel {
         }
       } else {
         const int32_t num_tables = ctx->Attr<int32_t>("num_tables");
-        id_shuffle::GenerateTableIds<<<BlocksNum4ThreadsNum(num_ids), kCudaThreadsNumPerBlock, 0,
-                                       cuda_stream>>>(num_ids, num_tables, tmp_table_ids_ptr);
+        data_shuffle::GenerateTableIds<<<BlocksNum4ThreadsNum(num_ids), kCudaThreadsNumPerBlock, 0,
+                                         cuda_stream>>>(num_ids, num_tables, tmp_table_ids_ptr);
       }
     } else {
       data_ptrs.table_ids_ptr = nullptr;
     }
 
-    id_shuffle::IdShuffle(ctx->stream(), comm, data_ptrs, num_ids, parallel_id, parallel_num,
-                          num_unique_matrix_dtype, ids->data_type(), table_ids_dtype,
-                          need_process_table_ids, host_num_unique_matrix, host_num_keys);
+    data_shuffle::IdShuffle(ctx->stream(), comm, data_ptrs, num_ids, parallel_id, parallel_num,
+                            num_unique_matrix_dtype, ids->data_type(), table_ids_dtype,
+                            need_process_table_ids, host_num_unique_matrix, host_num_keys);
     uint32_t num_unique = *host_num_keys;
 
     // lookup and put, if is_full_cache, not put to store.
@@ -1398,9 +1398,10 @@ class EmbeddingLookupPlaceholderKernel final : public user_op::OpKernel {
         cur_rank_embeddings_ptr, Shape({1, num_unique, embedding_size}),
         reverse_unique_cur_rank_embeddings_ptr, 0);
 
-    id_shuffle::ShuffleEmbeddings(cuda_stream, comm, parallel_id, parallel_num, num_ids,
-                                  embedding_size, embeddings->data_type(), host_num_unique_matrix,
-                                  reverse_unique_cur_rank_embeddings_ptr, received_embeddings_ptr);
+    data_shuffle::ShuffleEmbeddings(cuda_stream, comm, parallel_id, parallel_num, num_ids,
+                                    embedding_size, embeddings->data_type(), host_num_unique_matrix,
+                                    reverse_unique_cur_rank_embeddings_ptr,
+                                    received_embeddings_ptr);
     GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
         ctx->stream(), data_ptrs.inverse_unique_partition_indices_ptr, num_ids,
         received_embeddings_ptr, Shape({1, unique_partitioned_num_ids, embedding_size}),
@@ -1549,7 +1550,7 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* embedding_grad = ctx->Tensor4ArgNameAndIndex("embedding_grad", 0);
     DataType data_type = embedding_grad->data_type();
     const int64_t padded_embedding_size =
-        id_shuffle::GetPaddedEmbeddingSize(data_type, embedding_size);
+        data_shuffle::GetPaddedEmbeddingSize(data_type, embedding_size);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     // not need lookup values in buffer, save it in embedding_state for update ops.
     FusedEmbeddingTmpBufferManager<K, U, IDX> buffer_manager(
@@ -1559,7 +1560,7 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
     ncclComm_t comm = kernel_state->comm();
     IDX* host_num_unique_matrix = kernel_state->HostNumUniqueMatrix();
     IDX* host_num_keys = kernel_state->HostNumKeys();
-    id_shuffle::IdShuffleDataPtrs<K, U, IDX> data_ptrs;
+    data_shuffle::IdShuffleDataPtrs<K, U, IDX> data_ptrs;
     SetIdShuffleDataPtrsParam(ids->dptr(), buffer_manager, &data_ptrs);
     // overwrite data_ptrs.table_ids_ptr, data_ptrs.cur_rank_num_unique_ptr,
     // data_ptrs.cur_rank_unique_ids_ptr
@@ -1569,9 +1570,9 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
     data_ptrs.cur_rank_unique_ids_ptr =
         reinterpret_cast<K*>(embedding_state->EmbeddingEagerBackwardUniqueIds(current_iter_));
 
-    id_shuffle::IdShuffle(ctx->stream(), comm, data_ptrs, num_ids, parallel_id, parallel_num,
-                          num_unique_matrix_dtype, ids->data_type(), table_ids_dtype,
-                          need_process_table_ids, host_num_unique_matrix, host_num_keys);
+    data_shuffle::IdShuffle(ctx->stream(), comm, data_ptrs, num_ids, parallel_id, parallel_num,
+                            num_unique_matrix_dtype, ids->data_type(), table_ids_dtype,
+                            need_process_table_ids, host_num_unique_matrix, host_num_keys);
     uint32_t num_unique = *host_num_keys;
 
     std::vector<uint32_t> num_unique_matrix_vec(parallel_num * parallel_num);
@@ -1592,21 +1593,21 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
     }
     T* unique_partition_embedding_grad =
         buffer_manager.template Ptr<T>(FusedEmbeddingBufferType::kReverseUniqueCurRankEmbeddings);
-    id_shuffle::UniquePartitionEmbeddingGrad(
+    data_shuffle::UniquePartitionEmbeddingGrad(
         ctx->stream(), unique_partitioned_num_ids, num_ids, embedding_size, padded_embedding_size,
         host_num_unique_matrix, embedding_grad->dptr<T>(),
         data_ptrs.inverse_unique_partition_indices_ptr, unique_partition_embedding_grad);
     T* received_embedding_grad =
         buffer_manager.template Ptr<T>(FusedEmbeddingBufferType::kReceivedEmbeddings);
 
-    id_shuffle::ShuffleEmbeddingsGrad(cuda_stream, comm, parallel_id, parallel_num, num_ids,
-                                      padded_embedding_size, data_type, host_num_unique_matrix,
-                                      unique_partition_embedding_grad, received_embedding_grad);
+    data_shuffle::ShuffleEmbeddingsGrad(cuda_stream, comm, parallel_id, parallel_num, num_ids,
+                                        padded_embedding_size, data_type, host_num_unique_matrix,
+                                        unique_partition_embedding_grad, received_embedding_grad);
     // use unique_partition_embedding_grad as buffer
     T* buffer_ptr = unique_partition_embedding_grad;
 
     bool only_zero_valid_grad = true;
-    id_shuffle::UniqueCurRankEmbeddingGrad<T, IDX>(
+    data_shuffle::UniqueCurRankEmbeddingGrad<T, IDX>(
         ctx->stream(), data_type, cur_rank_num_ids, num_unique, embedding_size,
         padded_embedding_size, only_zero_valid_grad, parallel_num * num_ids * embedding_size,
         received_embedding_grad, data_ptrs.cur_rank_inverse_indices_ptr,
