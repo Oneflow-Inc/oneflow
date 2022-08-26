@@ -89,24 +89,36 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_ATTR_TYPE, ATTR_SEQ);
 
 class AttrVal {
  public:
-  AttrVal() = default;
+  AttrVal(AttrType value_type, size_t hash_value)
+      : value_type_(value_type), hash_value_(hash_value) {}
   virtual ~AttrVal() = default;
 
-  virtual size_t hash_value() const = 0;
+  size_t hash_value() const { return hash_value_; }
+  AttrType value_type() const { return value_type_; }
+
+  virtual const void* Ptr() const = 0;
   virtual bool operator==(const AttrVal& other) const = 0;
   bool operator!=(const AttrVal& other) const { return !(*this == other); }
 
  private:
   OF_DISALLOW_COPY_AND_MOVE(AttrVal);
+
+  AttrType value_type_;
+  size_t hash_value_;
 };
 
 template<typename T>
 class TypedAttrValIf : public AttrVal {
  public:
+  TypedAttrValIf(size_t hash_value) : AttrVal(GetAttrType<T>::value, hash_value) {}
+
   virtual const T& val() const = 0;
-  size_t hash_value() const override { return std::hash<T>()(val()); }
+  virtual const T* val_ptr() const = 0;
+
+  const void* Ptr() const override { return static_cast<const void*>(val_ptr()); }
 
   bool operator==(const AttrVal& other) const override {
+    if (value_type() != other.value_type() || hash_value() != hash_value()) { return false; }
     auto* that = dynamic_cast<const TypedAttrValIf<T>*>(&other);
     if (that == nullptr) { return false; }
     return this->val() == that->val();
@@ -116,10 +128,11 @@ class TypedAttrValIf : public AttrVal {
 template<typename T>
 class TypedAttrVal final : public TypedAttrValIf<T> {
  public:
-  TypedAttrVal(T v) : val_(v) {}
+  TypedAttrVal(T v) : TypedAttrValIf<T>(std::hash<T>()(v)), val_(v) {}
   ~TypedAttrVal() = default;
 
   const T& val() const override { return val_; }
+  const T* val_ptr() const override { return &val_; }
 
  private:
   OF_DISALLOW_COPY_AND_MOVE(TypedAttrVal);
@@ -130,10 +143,11 @@ class TypedAttrVal final : public TypedAttrValIf<T> {
 template<typename T>
 class TypedAttrValRef final : public TypedAttrValIf<T> {
  public:
-  TypedAttrValRef(const T* v) : val_(v) {}
+  TypedAttrValRef(const T* v) : TypedAttrValIf<T>(std::hash<T>()(*v)), val_(v) {}
   ~TypedAttrValRef() = default;
 
   const T& val() const override { return *val_; }
+  const T* val_ptr() const override { return val_; }
 
  private:
   OF_DISALLOW_COPY_AND_MOVE(TypedAttrValRef);
