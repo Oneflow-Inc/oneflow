@@ -35,6 +35,10 @@ __global__ void GatherForwardGpu(const IDX elem_cnt, NdIndexOffsetHelper<IDX, 3>
     index[1] = indices[index[1]] - offset;
     T v{};
     if (index[1] >= 0 && index[1] < gather_dim_size) { v = in[in_helper.NdIndexToOffset(index)]; }
+    if (index[1] == -1){
+      // For padding idx
+      v = 0.0f; 
+    }
     out[i] = v;
   }
 }
