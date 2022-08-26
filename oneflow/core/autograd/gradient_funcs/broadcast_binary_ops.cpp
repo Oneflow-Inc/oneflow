@@ -235,10 +235,10 @@ class BroadcastPow : public BroadcastBinaryGrad {
     const auto& z = ctx->SavedTensors().at(ctx->z_index);
     in_grads->resize(2);
     if (ctx->x_requires_grad) {
-      in_grads->at(0) = JUST(functional::BroadcastPowXGrad(out_grads.at(0), x, y, z));
+      in_grads->at(0) = JUST(functional::BroadcastPowXGrad(x, y, out_grads.at(0)));
     }
     if (ctx->y_requires_grad) {
-      in_grads->at(1) = JUST(functional::BroadcastPowYGrad(out_grads.at(0), x, y, z));
+      in_grads->at(1) = JUST(functional::BroadcastPowYGrad(x, y, out_grads.at(0)));
     }
     return Maybe<void>::Ok();
   }
