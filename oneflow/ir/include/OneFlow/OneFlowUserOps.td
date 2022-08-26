@@ -9630,7 +9630,7 @@ def OneFlow_UniqueKeyValuePairOp : OneFlow_BaseOp<"unique_key_value_pair", [NoSi
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "1">:$num_tables, 
-    DefaultValuedAttr<UI32Attr, "0">:$padding_idx
+    DefaultValuedAttr<SI64Attr, "-1">:$padding_idx
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;

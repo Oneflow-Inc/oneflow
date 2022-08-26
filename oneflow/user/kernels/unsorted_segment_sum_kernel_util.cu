@@ -99,7 +99,7 @@ __global__ void UnsortedSegmentRowSumGpu(const IDX data_elem_cnt,
                                          const NdIndexOffsetHelper<IDX, 2> out_helper,
                                          const U* data, const K* segment_ids,
                                          const IDX num_segments, const IDX segment_id_offset,
-                                         T* out, const uint32_t padding_idx) {
+                                         T* out, const int64_t padding_idx) {
   CUDA_1D_KERNEL_LOOP_T(IDX, i, data_elem_cnt) {
     const U val = data[i];
     if (!IsZero(val)) {

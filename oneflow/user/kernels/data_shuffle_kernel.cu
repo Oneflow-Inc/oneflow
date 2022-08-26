@@ -44,7 +44,7 @@ __global__ void HashTableUniqueAndPartitionPairs(const uint32_t table_capacity,
                                                  const K* keys, const V* values,
                                                  K* partitioned_unique_keys,
                                                  V* partitioned_unique_values, IDX* reverse_index,
-                                                 bool need_process_values, const uint32_t padding_idx) {
+                                                 bool need_process_values, const int64_t padding_idx) {
   CUDA_1D_KERNEL_LOOP_T(uint32_t, i, num_keys) {
     IDX r_index_plus_one = 0;
     const K key = keys[i];
@@ -107,7 +107,7 @@ void UniqueAndPartition(cudaStream_t cuda_stream, int64_t num_ids, size_t capaci
                         int64_t num_partition, const K* ids, const V* table_ids,
                         IDX* num_partitioned_unique_ids_ptr, K* partitioned_unique_ids,
                         V* partitioned_unique_table_ids, IDX* inverse_unique_partition_indices,
-                        void* workspace_ptr, size_t workspace_bytes, bool need_process_table_ids, const uint32_t padding_idx) {
+                        void* workspace_ptr, size_t workspace_bytes, bool need_process_table_ids, const int64_t padding_idx) {
   size_t table_capacity_bytes = capacity * sizeof(TableEntry<K>);
   CHECK_GE(workspace_bytes, table_capacity_bytes);
   OF_CUDA_CHECK(cudaMemsetAsync(workspace_ptr, 0, table_capacity_bytes, cuda_stream));
@@ -386,7 +386,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
         ctx->Tensor4ArgNameAndIndex("cur_rank_inverse_indices", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int32_t num_tables = ctx->Attr<int32_t>("num_tables");
-    const uint32_t padding_idx = ctx->Attr<uint32_t>("padding_idx"); 
+    const int64_t padding_idx = ctx->Attr<int64_t>("padding_idx"); 
     const bool has_table_ids = ctx->has_input("table_ids", 0);
     const bool need_gen_table_ids = (!has_table_ids && num_tables > 1);
     const bool need_process_table_ids = (has_table_ids || num_tables > 1);
@@ -1221,7 +1221,7 @@ template<typename K, typename IDX>
 __global__ void UnsortedSegmentHalfGpu(const IDX in_h2_elem_cnt, const IDX h2_inner_dim_size,
                                        const IDX inner_dim_size, const half* data,
                                        const K* segment_ids, const IDX num_segments,
-                                       half2* out_h2, const uint32_t padding_idx) {
+                                       half2* out_h2, const int64_t padding_idx) {
   CUDA_1D_KERNEL_LOOP_T(IDX, i, in_h2_elem_cnt) {
     const IDX segment_id_idx = i / h2_inner_dim_size;
     const IDX h2_inner_idx = i - segment_id_idx * h2_inner_dim_size;
@@ -1253,7 +1253,7 @@ template<typename K>
 struct UnsortedSegmentSumPad<half, K> {
   void operator()(ep::Stream* stream, const K* segment_ids, const half* data,
                   int64_t num_segment_ids, int64_t num_segments, int64_t inner_dim_size,
-                  int64_t padded_inner_dim_size, half* out) const {
+                  int64_t padded_inner_dim_size, half* out, const int64_t padding_idx) const {
     const int64_t data_elem_cnt = num_segment_ids * inner_dim_size;
     const int64_t out_elem_cnt = num_segments * padded_inner_dim_size;
     CHECK_EQ(padded_inner_dim_size % 2, 0);
@@ -1265,13 +1265,13 @@ struct UnsortedSegmentSumPad<half, K> {
           <<<BlocksNum4ThreadsNum(in_h2_elem_cnt), kCudaThreadsNumPerBlock, 0,
              stream->As<ep::CudaStream>()->cuda_stream()>>>(
               in_h2_elem_cnt, h2_inner_dim_size, inner_dim_size, data, segment_ids, num_segments,
-              reinterpret_cast<half2*>(out));
+              reinterpret_cast<half2*>(out), padding_idx);
     } else {
       UnsortedSegmentHalfGpu<K, int64_t>
           <<<BlocksNum4ThreadsNum(in_h2_elem_cnt), kCudaThreadsNumPerBlock, 0,
              stream->As<ep::CudaStream>()->cuda_stream()>>>(
               in_h2_elem_cnt, h2_inner_dim_size, inner_dim_size, data, segment_ids, num_segments,
-              reinterpret_cast<half2*>(out));
+              reinterpret_cast<half2*>(out), padding_idx);
     }
   }
 };
@@ -1279,14 +1279,17 @@ struct UnsortedSegmentSumPad<half, K> {
 template<typename T, typename K>
 void UnsortedSegmentSum(ep::Stream* stream, const K* segment_ids, const T* data,
                         int64_t num_segment_ids, int64_t num_segments, int64_t inner_dim_size,
-                        int64_t padded_inner_dim_size, T* out, const uint32_t padding_idx) {
+                        int64_t padded_inner_dim_size, T* out, const int64_t padding_idx) {
   if (inner_dim_size == padded_inner_dim_size) {
     UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, T, K, T>::UnsortedSegmentSum(
         stream, segment_ids, data, num_segment_ids, num_segments, 1, inner_dim_size, 0, out);
+  
+    // TODO: Add skip_row_idx here
+  
   } else {
     CHECK_EQ(inner_dim_size + 1, padded_inner_dim_size);
     UnsortedSegmentSumPad<T, K>()(stream, segment_ids, data, num_segment_ids, num_segments,
-                                  inner_dim_size, padded_inner_dim_size, out);
+                                  inner_dim_size, padded_inner_dim_size, out, padding_idx);
   }
 }
 
@@ -1296,7 +1299,7 @@ void UniquePartitionEmbeddingGrad(ep::Stream* stream, int64_t unique_partitioned
                                   int64_t padded_embedding_size, const IDX* host_num_unique_matrix,
                                   const T* embedding_grad,
                                   const IDX* inverse_unique_partition_indices,
-                                  T* unique_partition_embedding_grad, const uint32_t padding_idx) {
+                                  T* unique_partition_embedding_grad, const int64_t padding_idx) {
   const int64_t valid_value_size = unique_partitioned_num_ids * padded_embedding_size * sizeof(T);
   OF_CUDA_CHECK(cudaMemsetAsync(unique_partition_embedding_grad, 0, valid_value_size,
                                 stream->As<ep::CudaStream>()->cuda_stream()));
@@ -1388,7 +1391,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
         ctx->Tensor4ArgNameAndIndex("cur_rank_unique_embedding_grad", 0);
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const bool only_zero_valid_grad = ctx->Attr<bool>("only_zero_valid_grad");
-    const uint32_t padding_idx = ctx->Attr<uint32_t>("padding_idx"); 
+    const int64_t padding_idx = ctx->Attr<int64_t>("padding_idx"); 
     IDX* host_num_unique_matrix = kernel_state->HostNumUniqueMatrix();
     DataType data_type = embedding_grad->data_type();
     const int64_t num_ids = inverse_unique_partition_indices->shape_view().elem_cnt();
@@ -1627,7 +1630,7 @@ class UniqueKeyValuePairKernel final : public user_op::OpKernel {
     user_op::Tensor* inverse_indices = ctx->Tensor4ArgNameAndIndex("inverse_indices", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int32_t num_tables = ctx->Attr<int32_t>("num_tables");
-    const uint32_t padding_idx = ctx->Attr<uint32_t>("padding_idx"); 
+    const int64_t padding_idx = ctx->Attr<int64_t>("padding_idx"); 
     const bool has_values = ctx->has_input("values", 0);
     const bool need_values_buffer = (!has_values && num_tables > 1);
     size_t values_buffer_bytes =

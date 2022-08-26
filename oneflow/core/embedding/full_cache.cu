@@ -160,7 +160,7 @@ __global__ void EncodeLookupKernel(uint32_t value_length, const Elem* cache_valu
                                    uint32_t values_elem_cnt, const Key* keys, const Index* context,
                                    Elem* values, uint32_t* n_missing, Key* missing_keys,
                                    uint32_t* missing_indices, const size_t capacity,
-                                   Key* table_keys, Index* table_indices, const uint32_t padding_idx) {
+                                   Key* table_keys, Index* table_indices, const int64_t padding_idx) {
   constexpr uint32_t warp_size = 32;
   constexpr uint32_t n_warp_per_block = block_size / warp_size;
   const uint32_t warp_id = threadIdx.x / warp_size;
