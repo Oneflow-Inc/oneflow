@@ -19,8 +19,6 @@ from copy import deepcopy
 from itertools import chain
 from typing import Any, Callable, Dict, Union
 
-from numpy import isin
-
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.graph.block import TensorBlock
 from oneflow.nn.parameter import Parameter
