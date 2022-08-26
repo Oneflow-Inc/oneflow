@@ -334,7 +334,7 @@ void LookupAndInitMissing(ep::Stream* stream, uint64_t seed,
                           const EmbeddingInitializer* initializer_param,
                           const int8_t* initializer_index, void* host_num_keys, uint32_t num_unique,
                           const int64_t embedding_size, const int64_t line_size,
-                          const bool is_prefetch, const void* unique_ids, const void* table_ids,
+                          const bool put_to_store, const void* unique_ids, const void* table_ids,
                           void* num_missing_ptr, void* missing_indices, void* store_values) {
   store->Get(stream, num_unique, unique_ids, store_values,
              reinterpret_cast<uint32_t*>(num_missing_ptr),
@@ -356,13 +356,13 @@ void LookupAndInitMissing(ep::Stream* stream, uint64_t seed,
             reinterpret_cast<uint32_t*>(num_missing_ptr),
             reinterpret_cast<uint32_t*>(missing_indices), reinterpret_cast<T*>(store_values));
   }
-  if (is_prefetch) { store->Put(stream, num_unique, unique_ids, store_values); }
+  if (put_to_store) { store->Put(stream, num_unique, unique_ids, store_values); }
 }
 
 template<typename T, typename U, typename IDX>
 void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* kernel_state,
                           uint32_t num_unique, const int64_t embedding_size,
-                          const int64_t line_size, const bool is_prefetch, const void* unique_ids,
+                          const int64_t line_size, const bool put_to_store, const void* unique_ids,
                           const void* table_ids, void* num_missing_ptr, void* missing_indices,
                           void* store_values) {
   const auto& generator = kernel_state->generator();
@@ -377,7 +377,7 @@ void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* kernel_
   void* host_num_keys = kernel_state->HostNumKeys();
   LookupAndInitMissing<T, U, IDX>(stream, seed, cuda_gen_state, store, initializer_param,
                                   initializer_index, host_num_keys, num_unique, embedding_size,
-                                  line_size, is_prefetch, unique_ids, table_ids, num_missing_ptr,
+                                  line_size, put_to_store, unique_ids, table_ids, num_missing_ptr,
                                   missing_indices, store_values);
 }
 
@@ -1048,7 +1048,7 @@ class FusedEmbeddingTmpBufferManager final {
     AllocBuffer(FusedEmbeddingBufferType::kMissingIndices, missing_indices_bytes);
     if (need_unique_values) {
       size_t cur_rank_unique_values_bytes =
-          cur_rank_num_ids * line_size * GetSizeOfDataType(value_dtype);  
+          cur_rank_num_ids * line_size * GetSizeOfDataType(value_dtype);
       AllocBuffer(FusedEmbeddingBufferType::kCurRankUniqueValues, cur_rank_unique_values_bytes);
     }
     if (need_embeddings) {
@@ -1125,7 +1125,6 @@ class EmbeddingLookupPlaceholderKernelState final : public user_op::OpKernelStat
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
     OF_CUDA_CHECK(
         cudaMallocHost(&host_num_unique_matrix_, parallel_num * parallel_num * sizeof(IDX)));
-    // TODO: IsFull cache
     const std::string& embedding_name = ctx->Attr<std::string>("embedding_name");
     key_value_store_ = Singleton<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
         embedding_name, parallel_id);
@@ -1135,8 +1134,9 @@ class EmbeddingLookupPlaceholderKernelState final : public user_op::OpKernelStat
 
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
-    //Note(guoran): In this op, can't get user optimizer conf, so set embedding states initializer constant 0, may make error in optimizer with initial_accumulator_value like adagrad and ftrl.
-    std::string state_initializer;  
+    // Note(guoran): This op not have optimizer info, so set embedding states initializer constant
+    // 0, which may make error in optimizer with initial_accumulator_value like adagrad and ftrl.
+    std::string state_initializer;
     MakeConstantInitializerAttr(embedding_size, line_size, {}, &state_initializer);
 
     std::vector<EmbeddingInitializer> initializer_param;
@@ -1226,7 +1226,7 @@ template<typename T, typename U, typename IDX>
 void LookupAndInitMissing(ep::Stream* stream,
                           EmbeddingLookupPlaceholderKernelState<IDX>* kernel_state,
                           uint32_t num_unique, const int64_t embedding_size,
-                          const int64_t line_size, const bool is_prefetch, const void* unique_ids,
+                          const int64_t line_size, const bool put_to_store, const void* unique_ids,
                           const void* table_ids, void* num_missing_ptr, void* missing_indices,
                           void* store_values) {
   const auto& generator = kernel_state->generator();
@@ -1241,7 +1241,7 @@ void LookupAndInitMissing(ep::Stream* stream,
   void* host_num_keys = kernel_state->HostNumKeys();
   LookupAndInitMissing<T, U, IDX>(stream, seed, cuda_gen_state, store, initializer_param,
                                   initializer_index, host_num_keys, num_unique, embedding_size,
-                                  line_size, is_prefetch, unique_ids, table_ids, num_missing_ptr,
+                                  line_size, put_to_store, unique_ids, table_ids, num_missing_ptr,
                                   missing_indices, store_values);
 }
 
@@ -1279,7 +1279,7 @@ void SetIdShuffleDataPtrsParam(const void* ids_ptr,
 template<typename K, typename T, typename V, typename U, typename IDX>
 class EmbeddingLookupPlaceholderKernel final : public user_op::OpKernel {
  public:
-  EmbeddingLookupPlaceholderKernel(){};
+  EmbeddingLookupPlaceholderKernel() = default;
   ~EmbeddingLookupPlaceholderKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -1357,7 +1357,7 @@ class EmbeddingLookupPlaceholderKernel final : public user_op::OpKernel {
                           need_process_table_ids, host_num_unique_matrix, host_num_keys);
     uint32_t num_unique = *host_num_keys;
 
-    // lookup and put
+    // lookup and put, if is_full_cache, not put to store.
     uint32_t* num_missing_ptr =
         buffer_manager.template Ptr<uint32_t>(FusedEmbeddingBufferType::kNumMissing);
     uint32_t* missing_indices_ptr =
@@ -1368,8 +1368,10 @@ class EmbeddingLookupPlaceholderKernel final : public user_op::OpKernel {
         need_embeddings
             ? buffer_manager.template Ptr<T>(FusedEmbeddingBufferType::kCurRankUniqueEmbeddings)
             : reinterpret_cast<T*>(values_ptr);
+    const bool is_full_cache = ctx->Attr<bool>("is_full_cache");
+    const bool put_to_store = (!is_full_cache);
     LookupAndInitMissing<V, U, IDX>(ctx->stream(), kernel_state, num_unique, embedding_size,
-                                    line_size, true, data_ptrs.cur_rank_unique_ids_ptr,
+                                    line_size, put_to_store, data_ptrs.cur_rank_unique_ids_ptr,
                                     data_ptrs.cur_rank_unique_table_ids_ptr, num_missing_ptr,
                                     missing_indices_ptr, values_ptr);
     if (need_embeddings) {
@@ -1442,6 +1444,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_LOOKUP_PLACEHOLDER_KERN
                                  ID_DATA_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
                                  EMBEDDING_DATA_TYPE_SEQ)
 
+template<typename IDX>
 class EmbeddingLookupPlaceholderGradKernelState final : public user_op::OpKernelState {
  public:
   explicit EmbeddingLookupPlaceholderGradKernelState(user_op::KernelInitContext* ctx)
@@ -1450,10 +1453,10 @@ class EmbeddingLookupPlaceholderGradKernelState final : public user_op::OpKernel
         parallel_desc_(ctx->parallel_desc()) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
-    OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(uint32_t)));
+    OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
     OF_CUDA_CHECK(cudaMallocHost(
         &host_num_unique_matrix_,
-        parallel_desc_.parallel_num() * parallel_desc_.parallel_num() * sizeof(uint32_t)));
+        parallel_desc_.parallel_num() * parallel_desc_.parallel_num() * sizeof(IDX)));
     const std::string& embedding_name = ctx->Attr<std::string>("embedding_name");
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
     key_value_store_ = Singleton<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
@@ -1468,9 +1471,9 @@ class EmbeddingLookupPlaceholderGradKernelState final : public user_op::OpKernel
 
   ncclComm_t comm() { return GetOrCreate().comm; }
 
-  uint32_t* HostNumUniqueMatrix() { return host_num_unique_matrix_; }
+  IDX* HostNumUniqueMatrix() { return host_num_unique_matrix_; }
 
-  uint32_t* HostNumKeys() { return host_num_keys_; }
+  IDX* HostNumKeys() { return host_num_keys_; }
 
   embedding::KeyValueStore* KeyValueStore() { return key_value_store_; }
 
@@ -1505,13 +1508,13 @@ class EmbeddingLookupPlaceholderGradKernelState final : public user_op::OpKernel
   std::string stream_name_;
   ParallelDesc parallel_desc_;
   std::unique_ptr<Comm> comm_;
-  uint32_t* host_num_unique_matrix_;
+  IDX* host_num_unique_matrix_;
   embedding::KeyValueStore* key_value_store_;
-  uint32_t* host_num_keys_;
+  IDX* host_num_keys_;
   embedding::EmbeddingState* embedding_state_;
 };
 
-template<typename T, typename K>
+template<typename K, typename T, typename U, typename IDX>
 class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
  public:
   EmbeddingLookupPlaceholderGradKernel() : current_iter_(0){};
@@ -1519,19 +1522,19 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EmbeddingLookupPlaceholderGradKernelState>(ctx);
+    return std::make_shared<EmbeddingLookupPlaceholderGradKernelState<IDX>>(ctx);
   }
 
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* kernel_state = dynamic_cast<EmbeddingLookupPlaceholderGradKernelState*>(state);
+    auto* kernel_state = dynamic_cast<EmbeddingLookupPlaceholderGradKernelState<IDX>*>(state);
     CHECK(kernel_state != nullptr);
     embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
     embedding_state->OnEmbeddingEagerBackwardStart(ctx, current_iter_);
-    using IDX = uint32_t;
-    using U = uint8_t;
+    DataType num_unique_matrix_dtype = DataType::kUInt32;
+    DataType table_ids_dtype = DataType::kUInt8;
     const user_op::Tensor* ids = ctx->Tensor4ArgNameAndIndex("ids", 0);
     // Note(guoran): the missing value has been put in lookup, in backward and update, not need to
     // init, so not need table id.
@@ -1548,8 +1551,8 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
     const int64_t padded_embedding_size =
         id_shuffle::GetPaddedEmbeddingSize(data_type, embedding_size);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    // not need lookup values.
-    FusedEmbeddingTmpBufferManager<K, uint8_t, IDX> buffer_manager(
+    // not need lookup values in buffer, save it in embedding_state for update ops.
+    FusedEmbeddingTmpBufferManager<K, U, IDX> buffer_manager(
         tmp_buffer->mut_dptr(), num_ids, parallel_num, need_process_table_ids, line_size,
         padded_embedding_size, false, false, DataType::kInvalidDataType, data_type);
     CHECK_GE(tmp_buffer->shape_view().elem_cnt(), buffer_manager.TotalBufferSize());
@@ -1558,7 +1561,7 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
     IDX* host_num_keys = kernel_state->HostNumKeys();
     id_shuffle::IdShuffleDataPtrs<K, U, IDX> data_ptrs;
     SetIdShuffleDataPtrsParam(ids->dptr(), buffer_manager, &data_ptrs);
-    // overwrite cur_rank_unique_table_ids_ptr, data_ptrs.cur_rank_num_unique_ptr,
+    // overwrite data_ptrs.table_ids_ptr, data_ptrs.cur_rank_num_unique_ptr,
     // data_ptrs.cur_rank_unique_ids_ptr
     data_ptrs.table_ids_ptr = nullptr;
     data_ptrs.cur_rank_num_unique_ptr =
@@ -1566,8 +1569,6 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
     data_ptrs.cur_rank_unique_ids_ptr =
         reinterpret_cast<K*>(embedding_state->EmbeddingEagerBackwardUniqueIds(current_iter_));
 
-    DataType num_unique_matrix_dtype = DataType::kUInt32;
-    DataType table_ids_dtype = DataType::kUInt8;
     id_shuffle::IdShuffle(ctx->stream(), comm, data_ptrs, num_ids, parallel_id, parallel_num,
                           num_unique_matrix_dtype, ids->data_type(), table_ids_dtype,
                           need_process_table_ids, host_num_unique_matrix, host_num_keys);
@@ -1579,9 +1580,7 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
     CHECK_EQ(sizeof(IDX), sizeof(uint32_t)) << "assume sizeof(IDX) equals to sizeof(uint32_t)";
     embedding_state->SetIdNumUniqueMatrix(num_unique_matrix_vec, current_iter_);
     embedding_state->SetIdFinalNumUnique(num_unique, current_iter_);
-    // id shuffle-embedding lookup
-    // embedding gradient shuffle: embedding_grad->unique embedding grad
-    // embedding update: emb
+
     // embedding gradient shuffle
     int64_t cur_rank_num_ids = 0;
     for (int64_t i = 0; i < parallel_num; ++i) {
@@ -1606,7 +1605,7 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
     // use unique_partition_embedding_grad as buffer
     T* buffer_ptr = unique_partition_embedding_grad;
 
-    bool only_zero_valid_grad = false;
+    bool only_zero_valid_grad = true;
     id_shuffle::UniqueCurRankEmbeddingGrad<T, IDX>(
         ctx->stream(), data_type, cur_rank_num_ids, num_unique, embedding_size,
         padded_embedding_size, only_zero_valid_grad, parallel_num * num_ids * embedding_size,
@@ -1615,7 +1614,7 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
             embedding_state->EmbeddingEagerBackwardUniqueEmbeddingGrad(current_iter_)),
         buffer_ptr);
 
-    // lookup
+    // embedding lookup
     uint32_t* num_missing_ptr =
         buffer_manager.template Ptr<uint32_t>(FusedEmbeddingBufferType::kNumMissing);
     uint32_t* missing_indices_ptr =
@@ -1636,10 +1635,10 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
   mutable int64_t current_iter_;
 };
 
-#define REGISTER_CUDA_EMBEDDING_LOOKUP_PLACEHOLDER_GRAD_KERNEL(t_dtype_pair, k_dtype_pair)      \
+#define REGISTER_CUDA_EMBEDDING_LOOKUP_PLACEHOLDER_GRAD_KERNEL(k_dtype_pair, t_dtype_pair)      \
   REGISTER_USER_KERNEL("embedding_update_placeholder")                                          \
-      .SetCreateFn<EmbeddingLookupPlaceholderGradKernel<OF_PP_PAIR_FIRST(t_dtype_pair),         \
-                                                        OF_PP_PAIR_FIRST(k_dtype_pair)>>()      \
+      .SetCreateFn<EmbeddingLookupPlaceholderGradKernel<                                        \
+          OF_PP_PAIR_FIRST(k_dtype_pair), OF_PP_PAIR_FIRST(t_dtype_pair), uint8_t, uint32_t>>() \
       .SetIsMatchedHob(                                                                         \
           (user_op::HobDeviceType() == DeviceType::kCUDA)                                       \
           && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(t_dtype_pair))     \
@@ -1657,6 +1656,6 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_LOOKUP_PLACEHOLDER_GRAD_KERNEL,
-                                 EMBEDDING_DATA_TYPE_SEQ, ID_DATA_TYPE_SEQ)
+                                 ID_DATA_TYPE_SEQ, EMBEDDING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
