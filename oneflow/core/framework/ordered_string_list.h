@@ -23,19 +23,20 @@ limitations under the License.
 
 namespace oneflow {
 
+template<int N>
 class OrderedStringList {
  public:
   OrderedStringList() = default;
 
   size_t size() const { return strings_.size(); }
 
-  void emplace_back(const llvm::StringRef& s) {
+  void emplace_back(llvm::StringRef s) {
     strings_.emplace_back(std::make_shared<std::string>(s.str()));
     order_.emplace(*strings_.back(), order_.size());
   }
 
-  int order(const llvm::StringRef& str) {
-    const auto& it = order_.find(str);
+  int order(llvm::StringRef s) const {
+    const auto& it = order_.find(s);
     if (it == order_.end()) { return -1; }
     return it->second;
   }
@@ -44,14 +45,14 @@ class OrderedStringList {
 
  private:
   struct Hash {
-    size_t operator()(const llvm::StringRef& val) const {
+    size_t operator()(llvm::StringRef val) const {
       return HashCombine(val.size(), val.size() > 0 ? static_cast<size_t>(val.data()[0] - '0') : 0);
     }
   };
   HashMap<llvm::StringRef, int, Hash> order_;
   // Use shared_ptr to prevent the appended element from being freed when the
   // vector increases
-  small_vector<std::shared_ptr<std::string>, 4> strings_;
+  small_vector<std::shared_ptr<std::string>, N> strings_;
 };
 
 }  // namespace oneflow

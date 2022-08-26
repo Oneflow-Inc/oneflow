@@ -27,10 +27,11 @@ AttrMap::AttrInternal::AttrInternal()
     : max_size(0),
       size(0),
       hash_value(0),
-      ordered_attr_names(std::make_shared<OrderedStringList>()) {}
+      ordered_attr_names(std::make_shared<OrderedStringList<8>>()) {}
 
-AttrMap::AttrInternal::AttrInternal(size_t _max_size, size_t _size, size_t _hash_value,
-                                    const std::shared_ptr<OrderedStringList>& _ordered_attr_names)
+AttrMap::AttrInternal::AttrInternal(
+    size_t _max_size, size_t _size, size_t _hash_value,
+    const std::shared_ptr<OrderedStringList<8>>& _ordered_attr_names)
     : max_size(_max_size),
       size(_size),
       hash_value(_hash_value),
