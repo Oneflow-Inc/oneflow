@@ -4,7 +4,7 @@
 
 ### Stage 1
 
-- 1:1 conversion form user op to kernel launch op
+- 1:1 conversion from user op to kernel launch op
 
 ### Stage 2
 
