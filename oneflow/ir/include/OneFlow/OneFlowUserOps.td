@@ -9705,6 +9705,7 @@ def OneFlow_EmbeddingShuffleOp : OneFlow_BaseOp<"embedding_shuffle", [NoSideEffe
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
     DefaultValuedAttr<BoolAttr, "false">:$skip_last_gather,
     DefaultValuedAttr<BoolAttr, "false">:$is_train,
+    DefaultValuedAttr<SI64Attr, "-1">:$padding_idx,
     StrAttr:$embedding_name
   );
   let same_output_regst_num = 1;
@@ -9749,6 +9750,7 @@ def OneFlow_EmbeddingPrefetchOp : OneFlow_BaseOp<"embedding_prefetch", [NoSideEf
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$line_size,
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
+    DefaultValuedAttr<SI64Attr, "-1">:$padding_idx,
     StrAttr:$embedding_name,
     StrAttr:$embedding_tables,
     StrAttr:$state_initializer
@@ -9776,6 +9778,7 @@ def OneFlow_EmbeddingLookupOp : OneFlow_BaseOp<"embedding_lookup", [NoSideEffect
     OneFlow_DataType:$embeddings_dtype,
     DefaultValuedAttr<SI64Attr, "0">:$line_size,
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
+    DefaultValuedAttr<SI64Attr, "-1">:$padding_idx,
     StrAttr:$embedding_name,
     StrAttr:$embedding_tables,
     StrAttr:$state_initializer
