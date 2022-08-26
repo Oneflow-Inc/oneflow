@@ -1266,6 +1266,92 @@ class NLLLossFunctor {
   std::shared_ptr<OpExpr> op_weight_;
 };
 
+class CrossEntropyFunctor {
+ public:
+  CrossEntropyFunctor() {
+    op_log_softmax_ = CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
+
+    op_nll_ = CHECK_JUST(one::OpBuilder("nll")
+                             .Input("input")
+                             .Input("target")
+                             .Output("output")
+                             .Output("out_weight")
+                             .Build());
+
+    op_nll_weight_ = CHECK_JUST(one::OpBuilder("nll")
+                                    .Input("input")
+                                    .Input("target")
+                                    .Input("weight")
+                                    .Output("output")
+                                    .Output("out_weight")
+                                    .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const Optional<one::Tensor>& weight, const int64_t& ignore_index,
+                           const std::string& reduction, const double& label_smoothing) const {
+    if (label_smoothing > 0.0)
+      return CrossEntropyLabelSmoothing(input, target, weight, ignore_index, reduction, label_smoothing);
+    CHECK_OR_RETURN(reduction == "none" || reduction == "sum" || reduction == "mean")
+        << Error::RuntimeError() << "Reduction should be none, sum or mean.";
+    const auto& input_shape = input->shape();
+    const auto& target_shape = target->shape();
+
+    std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
+    input_perm[input_perm.size() - 1] = 1;
+    for (size_t i = 1; i < input_perm.size() - 1; ++i) { input_perm[i] = i + 1; }
+
+    const auto input_ = JUST(sequence_function(functional::Transpose)
+                                 .then(std::bind(functional::Reshape, std::placeholders::_1,
+                                                 Shape({-1, input_shape->At(1)})))
+                                 .then([this](const std::shared_ptr<one::Tensor>& x) {
+                                   return OpInterpUtil::Dispatch<Tensor>(*op_log_softmax_, {x});
+                                 })
+                                 .call(input, input_perm));
+
+    const auto target_flatten =
+        JUST(functional::Flatten(target, 0, target->shape()->NumAxes() - 1));
+    const std::shared_ptr<Tensor> target_smoothing = JUST([&]() -> Maybe<Tensor> {
+      if (label_smoothing > 0.0) {
+        CHECK_LE_OR_RETURN(label_smoothing, 1.0)
+            << "label_smoothing must be between 0.0 and 1.0. Got: " << label_smoothing;
+        return JUST(ScalarAdd(JUST(ScalarMul(target_flatten, Scalar(1.0 - label_smoothing), false)),
+                              label_smoothing / static_cast<double>(input->shape()->At(1)), 1,
+                              false));
+      } else {
+        return target_flatten;
+      }
+    }());
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
+
+    std::shared_ptr<TensorTuple> nll_result;
+    if (weight) {
+      nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+          *op_nll_weight_, {input_, target_smoothing, JUST(weight)}, attrs));
+    } else {
+      nll_result =
+          JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_, {input_, target_smoothing}, attrs));
+    }
+
+    auto output = JUST(VectorAt(*nll_result, 0));
+    output = JUST(functional::Reshape(output, *target_shape));
+    if (reduction == "none") { return output; }
+
+    auto sum = JUST(functional::ReduceSum(output, {}, false));
+    if (reduction == "sum") { return sum; }
+
+    auto total_weight = JUST(functional::ReduceSum(JUST(VectorAt(*nll_result, 1)), {}, false));
+    return functional::Div(sum, total_weight);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_log_softmax_;
+  std::shared_ptr<OpExpr> op_nll_;
+  std::shared_ptr<OpExpr> op_nll_weight_;
+};
+
 class CrossEntropyLabelSmoothingFunctor {
  public:
   CrossEntropyLabelSmoothingFunctor() {
@@ -1359,91 +1445,6 @@ class CrossEntropyLabelSmoothingFunctor {
   std::shared_ptr<OpExpr> op_nll_weight_;
 };
 
-class CrossEntropyFunctor {
- public:
-  CrossEntropyFunctor() {
-    op_log_softmax_ = CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
-
-    op_nll_ = CHECK_JUST(one::OpBuilder("nll")
-                             .Input("input")
-                             .Input("target")
-                             .Output("output")
-                             .Output("out_weight")
-                             .Build());
-
-    op_nll_weight_ = CHECK_JUST(one::OpBuilder("nll")
-                                    .Input("input")
-                                    .Input("target")
-                                    .Input("weight")
-                                    .Output("output")
-                                    .Output("out_weight")
-                                    .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::shared_ptr<one::Tensor>& target,
-                           const Optional<one::Tensor>& weight, const int64_t& ignore_index,
-                           const std::string& reduction, const double& label_smoothing) const {
-    if (label_smoothing > 0.0)
-      return CrossEntropyLabelSmoothing(input, target, weight, ignore_index, reduction, label_smoothing);
-    CHECK_OR_RETURN(reduction == "none" || reduction == "sum" || reduction == "mean")
-        << Error::RuntimeError() << "Reduction should be none, sum or mean.";
-    const auto& input_shape = input->shape();
-    const auto& target_shape = target->shape();
-
-    std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
-    input_perm[input_perm.size() - 1] = 1;
-    for (size_t i = 1; i < input_perm.size() - 1; ++i) { input_perm[i] = i + 1; }
-
-    const auto input_ = JUST(sequence_function(functional::Transpose)
-                                 .then(std::bind(functional::Reshape, std::placeholders::_1,
-                                                 Shape({-1, input_shape->At(1)})))
-                                 .then([this](const std::shared_ptr<one::Tensor>& x) {
-                                   return OpInterpUtil::Dispatch<Tensor>(*op_log_softmax_, {x});
-                                 })
-                                 .call(input, input_perm));
-
-    const auto target_flatten =
-        JUST(functional::Flatten(target, 0, target->shape()->NumAxes() - 1));
-    const std::shared_ptr<Tensor> target_smoothing = JUST([&]() -> Maybe<Tensor> {
-      if (label_smoothing > 0.0) {
-        CHECK_LE_OR_RETURN(label_smoothing, 1.0)
-            << "label_smoothing must be between 0.0 and 1.0. Got: " << label_smoothing;
-        return JUST(ScalarAdd(JUST(ScalarMul(target_flatten, Scalar(1.0 - label_smoothing), false)),
-                              label_smoothing / static_cast<double>(input->shape()->At(1)), 1,
-                              false));
-      } else {
-        return target_flatten;
-      }
-    }());
-
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
-
-    std::shared_ptr<TensorTuple> nll_result;
-    if (weight) {
-      nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-          *op_nll_weight_, {input_, target_smoothing, JUST(weight)}, attrs));
-    } else {
-      nll_result =
-          JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_, {input_, target_smoothing}, attrs));
-    }
-
-    auto output = JUST(VectorAt(*nll_result, 0));
-    output = JUST(functional::Reshape(output, *target_shape));
-    if (reduction == "none") { return output; }
-
-    auto sum = JUST(functional::ReduceSum(output, {}, false));
-    if (reduction == "sum") { return sum; }
-
-    auto total_weight = JUST(functional::ReduceSum(JUST(VectorAt(*nll_result, 1)), {}, false));
-    return functional::Div(sum, total_weight);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_log_softmax_;
-  std::shared_ptr<OpExpr> op_nll_;
-  std::shared_ptr<OpExpr> op_nll_weight_;
-};
 
 class SparseCrossEntropyFunctor {
  public:
