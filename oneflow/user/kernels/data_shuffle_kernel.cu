@@ -1221,7 +1221,7 @@ template<typename K, typename IDX>
 __global__ void UnsortedSegmentHalfGpu(const IDX in_h2_elem_cnt, const IDX h2_inner_dim_size,
                                        const IDX inner_dim_size, const half* data,
                                        const K* segment_ids, const IDX num_segments,
-                                       half2* out_h2) {
+                                       half2* out_h2, const uint32_t padding_idx) {
   CUDA_1D_KERNEL_LOOP_T(IDX, i, in_h2_elem_cnt) {
     const IDX segment_id_idx = i / h2_inner_dim_size;
     const IDX h2_inner_idx = i - segment_id_idx * h2_inner_dim_size;
@@ -1232,6 +1232,9 @@ __global__ void UnsortedSegmentHalfGpu(const IDX in_h2_elem_cnt, const IDX h2_in
     val.x = data_row[inner_idx_0];
     val.y = (inner_idx_1 >= inner_dim_size) ? static_cast<half>(0) : data_row[inner_idx_1];
     const IDX idx = segment_ids[segment_id_idx];
+    if(idx == padding_idx){
+      continue; 
+    }
     const IDX out_h2_offset = idx * h2_inner_dim_size + h2_inner_idx;
     cuda::atomic::Add(out_h2 + out_h2_offset, val);
   }
@@ -1278,7 +1281,6 @@ void UnsortedSegmentSum(ep::Stream* stream, const K* segment_ids, const T* data,
                         int64_t num_segment_ids, int64_t num_segments, int64_t inner_dim_size,
                         int64_t padded_inner_dim_size, T* out, const uint32_t padding_idx) {
   if (inner_dim_size == padded_inner_dim_size) {
-    // todo
     UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, T, K, T>::UnsortedSegmentSum(
         stream, segment_ids, data, num_segment_ids, num_segments, 1, inner_dim_size, 0, out);
   } else {
