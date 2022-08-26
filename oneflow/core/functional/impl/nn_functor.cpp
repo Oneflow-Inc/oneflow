@@ -3483,15 +3483,17 @@ class OneEmbeddingLookupFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& shadow,
                            const std::shared_ptr<one::Tensor>& ids,
                            const Optional<one::Tensor>& table_ids, const Symbol<DType>& dtype,
-                           const int64_t embedding_size, const int32_t num_tables,
-                           const std::string& embedding_tables,
-                           const std::string& key_value_store_options) const {
+                           const std::string& embedding_name, const int64_t line_size,
+                           const int64_t embedding_size, const bool is_full_cache,
+                           const int32_t num_tables, const std::string& embedding_tables) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    JUST(attrs.SetAttr<std::string>("embedding_name", embedding_name));
+    JUST(attrs.SetAttr<int64_t>("line_size", line_size));
     JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
+    JUST(attrs.SetAttr<bool>("is_full_cache", is_full_cache));
     JUST(attrs.SetAttr<int32_t>("num_tables", num_tables));
     JUST(attrs.SetAttr<std::string>("embedding_tables", embedding_tables));
-    JUST(attrs.SetAttr<std::string>("key_value_store_options", key_value_store_options));
     if (table_ids) {
       return OpInterpUtil::Dispatch<Tensor>(*op_has_table_ids_, {shadow, ids, JUST(table_ids)},
                                             attrs);
@@ -3516,9 +3518,12 @@ class OneEmbeddingLookupGradFunctor {
 
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ids,
                          const std::shared_ptr<one::Tensor>& embedding_grad,
-                         const std::string& key_value_store_options) const {
+                         const std::string& embedding_name, const int64_t line_size,
+                         const int64_t embedding_size) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("key_value_store_options", key_value_store_options));
+    JUST(attrs.SetAttr<std::string>("embedding_name", embedding_name));
+    JUST(attrs.SetAttr<int64_t>("line_size", line_size));
+    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ids, embedding_grad}, attrs));
     return Maybe<void>::Ok();
   }

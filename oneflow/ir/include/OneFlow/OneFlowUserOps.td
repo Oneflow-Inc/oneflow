@@ -9591,10 +9591,12 @@ def OneFlow_EmbeddingLookupPlaceholderOp : OneFlow_BaseOp<"embedding_lookup_plac
   );
   let attrs = (ins
     OneFlow_DataType:$dtype,
+    StrAttr:$embedding_name,
+    DefaultValuedAttr<SI64Attr, "0">:$line_size,
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
+    DefaultValuedAttr<BoolAttr, "false">:$is_full_cache,
     DefaultValuedAttr<SI32Attr, "1">:$num_tables,
-    StrAttr:$embedding_tables,
-    StrAttr:$key_value_store_options
+    StrAttr:$embedding_tables
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -9609,7 +9611,9 @@ def OneFlow_EmbeddingUpdatePlaceholderOp : OneFlow_BaseOp<"embedding_update_plac
     OneFlow_Tensor:$embedding_grad
   );
   let attrs = (ins
-    StrAttr:$key_value_store_options
+    StrAttr:$embedding_name,
+    DefaultValuedAttr<SI64Attr, "0">:$line_size,
+    DefaultValuedAttr<SI64Attr, "0">:$embedding_size
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
