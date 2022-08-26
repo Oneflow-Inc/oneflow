@@ -67,14 +67,7 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
 };
 
 class KernelLaunchFunctionPass : public KernelLaunchFunctionPassBase<KernelLaunchFunctionPass> {
-  void runOnOperation() override {
-    Operation* op = getOperation();
-    RewritePatternSet patterns(op->getContext());
-    TypeConverter typeConverter;
-    patterns.add<mlir::oneflow::UserOpLowering, mlir::oneflow::InputOpLowering,
-                 mlir::oneflow::OutputOpLowering>(patterns.getContext());
-    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
-  }
+  void runOnOperation() override {}
 };
 
 class FuseIntoExistingOpPass : public FuseIntoExistingOpPassBase<FuseIntoExistingOpPass> {

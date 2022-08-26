@@ -1,3 +1,4 @@
+# RUN: python3 %s
 import numpy as np
 import os
 
@@ -13,6 +14,7 @@ class GraphToRun(flow.nn.Graph):
 
     def build(self, x):
         return flow.relu(x)
+
 
 x = flow.Tensor([1])
 graph_to_run = GraphToRun()
