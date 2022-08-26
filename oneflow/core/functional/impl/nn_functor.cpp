@@ -1677,11 +1677,11 @@ class CtcLossFunctor {
         };
 
         out = JUST(sequence_function(functional::Constant)
-                        .then(std::bind(functional::BroadcastEqual, out, std::placeholders::_1))
-                        .then(std::bind(functional::Where, std::placeholders::_1,
-                                        JUST(create_constant(Scalar(0))), out))
-                        .call(*out->shape(), Scalar(std::numeric_limits<double>::infinity()),
-                              out->dtype(), JUST(out->device())));
+                       .then(std::bind(functional::BroadcastEqual, out, std::placeholders::_1))
+                       .then(std::bind(functional::Where, std::placeholders::_1,
+                                       JUST(create_constant(Scalar(0))), out))
+                       .call(*out->shape(), Scalar(std::numeric_limits<double>::infinity()),
+                             out->dtype(), JUST(out->device())));
       } else {
         const auto& placement = JUST(out->parallel_desc());
         const auto& nd_sbp = *JUST(GetSbpList(JUST(out->nd_sbp())));
@@ -1690,11 +1690,11 @@ class CtcLossFunctor {
         };
 
         out = JUST(sequence_function(functional::GlobalConstant)
-                        .then(std::bind(functional::BroadcastEqual, out, std::placeholders::_1))
-                        .then(std::bind(functional::Where, std::placeholders::_1,
-                                        JUST(create_constant(Scalar(0))), out))
-                        .call(*out->shape(), Scalar(std::numeric_limits<double>::infinity()),
-                              out->dtype(), placement, nd_sbp));
+                       .then(std::bind(functional::BroadcastEqual, out, std::placeholders::_1))
+                       .then(std::bind(functional::Where, std::placeholders::_1,
+                                       JUST(create_constant(Scalar(0))), out))
+                       .call(*out->shape(), Scalar(std::numeric_limits<double>::infinity()),
+                             out->dtype(), placement, nd_sbp));
       }
     }
     CHECK_OR_RETURN([&]() -> bool {
