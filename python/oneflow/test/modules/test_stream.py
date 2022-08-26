@@ -35,8 +35,8 @@ class TestStream(flow.unittest.TestCase):
 class TestGlobalStream(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cpu_stream(test_case):
-        worker_thread = flow.worker_thread(2)
-        streams = [flow.Stream(worker_thread) for i in range(10)]
+        worker_thread_id = 2
+        streams = [flow.Stream(worker_thread_id) for i in range(10)]
         for s in streams:
             with flow.stream(s):
                 placement = flow.placement("cpu", [0, 1])
@@ -45,7 +45,7 @@ class TestGlobalStream(flow.unittest.TestCase):
                 test_case.assertEqual(tensor[1], 1)
 
     def test_cuda_stream(test_case):
-        streams = [flow.Stream(flow.worker_thread(i % 4)) for i in range(200)]
+        streams = [flow.Stream(i % 4) for i in range(200)]
         tensors = []
         dim = 0
         for s in streams:
