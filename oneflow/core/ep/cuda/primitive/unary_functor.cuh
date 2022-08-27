@@ -125,6 +125,21 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAbs, half, half> {
   }
 };
 
+#if CUDA_VERSION >= 11000
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAbs, nv_bfloat16, nv_bfloat16> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  __device__ nv_bfloat16 operator()(nv_bfloat16 src) const {
+#if CUDA_ARCH >= 800
+    return __habs(src);
+#else
+    return __float2bfloat16(abs(__bfloat162float(src)));
+#endif  // CUDA_ARCH >= 800
+  }
+};
+#endif  // CUDA_VERSION >= 11000
+
 #define SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(op)                                         \
   template<>                                                                                 \
   struct UnaryFunctor<DeviceType::kCUDA, op, half, half> {                                   \
