@@ -36,9 +36,6 @@ class TestTrunc(flow.unittest.TestCase):
 
         return y
 
-    @profile(torch.trunc)
-    def profile_trunc(test_case):
-        torch.trunc(torch.ones(4, 8, 8))
-    
+
 if __name__ == "__main__":
     unittest.main()
