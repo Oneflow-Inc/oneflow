@@ -30,7 +30,7 @@ class DistributeSplitCompTaskNode final : public CompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kDistributeSplit; }
 
  private:
-  void BuildExecGphAndRegst() override;
+  void BuildExecGph() override;
   void BuildExecGphStructAndBindInRegst();
   void BuildOutRegst();
 };
@@ -44,10 +44,9 @@ void DistributeSplitCompTaskNode::ConsumeAllRegsts() {
   ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
 }
 
-void DistributeSplitCompTaskNode::BuildExecGphAndRegst() {
+void DistributeSplitCompTaskNode::BuildExecGph() {
   BuildExecGphStructAndBindInRegst();
   BuildOutRegst();
-  mut_exec_gph().TopoForEachNode([this](ExecNode* node) { node->InferBlobDescs(op_node(), parallel_ctx()); });
 }
 
 void DistributeSplitCompTaskNode::BuildExecGphStructAndBindInRegst() {

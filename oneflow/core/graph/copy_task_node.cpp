@@ -25,7 +25,7 @@ void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void CopyTaskNode::ConsumeAllRegsts() { ConsumeRegst("copy_in", SoleInDataEdge()->GetSoleRegst()); }
 
-void CopyTaskNode::BuildExecGphAndRegst() {
+void CopyTaskNode::BuildExecGph() {
   auto out_regst = GetProducedRegst("copy_out");
   auto in_regst = GetSoleConsumedRegst("copy_in");
   out_regst->CopyBlobDescFrom(in_regst.get());

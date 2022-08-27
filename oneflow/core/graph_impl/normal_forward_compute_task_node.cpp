@@ -85,11 +85,10 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
   });
 }
 
-void NormalForwardCompTaskNode::BuildExecGphAndRegst() {
+void NormalForwardCompTaskNode::BuildExecGph() {
   BuildExecGphStructAndBindInRegst();
   BuildOutRegst();
   BuildTmp7BufRegsts();
-  mut_exec_gph().TopoForEachNode([this](ExecNode* node) { node->InferBlobDescs(op_node(), parallel_ctx()); });
 }
 
 void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {

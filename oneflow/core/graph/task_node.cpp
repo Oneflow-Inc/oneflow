@@ -156,7 +156,14 @@ void TaskNode::ForEachProducedDataRegst(
   }
 }
 
-void TaskNode::Build() { BuildExecGphAndRegst(); }
+void TaskNode::Build() {
+  BuildExecGph();
+  InferRegst();
+}
+
+void TaskNode::InferRegst() {
+  mut_exec_gph().TopoForEachNode([this](ExecNode* node) { node->InferBlobDescs(op_node(), parallel_ctx()); });
+}
 
 void TaskNode::EraseUninitializedShapeProducedBlob() {
   for (auto& pair : produced_regsts_) { pair.second->EraseUninitializedShapeBlob(); }

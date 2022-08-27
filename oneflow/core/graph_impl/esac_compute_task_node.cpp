@@ -30,7 +30,7 @@ class EsacCompTaskNode final : public CompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kEsac; }
 
  private:
-  void BuildExecGphAndRegst() override;
+  void BuildExecGph() override;
   void InferProducedDataRegstTimeShape() override;
 };
 
@@ -59,7 +59,7 @@ void EsacCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", out_regst); });
 }
 
-void EsacCompTaskNode::BuildExecGphAndRegst() {
+void EsacCompTaskNode::BuildExecGph() {
   ExecNode* node = mut_exec_gph().NewNode();
   std::shared_ptr<const Operator> sole_op = this->op();
   node->mut_op() = sole_op;
@@ -70,7 +70,6 @@ void EsacCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   out_regst->AddLbi(sole_op->BnInOp2Lbi("out"));
   node->BindBnWithRegst("out", out_regst);
-  node->InferBlobDescs(op_node(), parallel_ctx());
 }
 
 void EsacCompTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }

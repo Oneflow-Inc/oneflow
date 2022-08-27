@@ -31,7 +31,7 @@ class DecodeH2DCompTaskNode final : public CompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kDecodeH2D; }
 
  private:
-  void BuildExecGphAndRegst() override;
+  void BuildExecGph() override;
 };
 
 void DecodeH2DCompTaskNode::ConsumeAllRegsts() {
@@ -45,7 +45,7 @@ void DecodeH2DCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("tmp", false);
 }
 
-void DecodeH2DCompTaskNode::BuildExecGphAndRegst() {
+void DecodeH2DCompTaskNode::BuildExecGph() {
   ExecNode* node = mut_exec_gph().NewNode();
   std::shared_ptr<const Operator> sole_op = op();
   node->mut_op() = sole_op;
@@ -54,7 +54,6 @@ void DecodeH2DCompTaskNode::BuildExecGphAndRegst() {
   out_regst->AddLbi(sole_op->BnInOp2Lbi(sole_op->SoleObn()));
   node->BindBnWithRegst(sole_op->SoleObn(), out_regst);
   node->AddBnToRegstAndBindIt(&Operator::tmp_bns, GetProducedRegst("tmp"));
-  node->InferBlobDescs(op_node(), parallel_ctx());
 }
 
 REGISTER_NAMED_TASK_STREAM_INDEX_GETTER(DeviceType::kCUDA, TaskType::kDecodeH2D, "DECODE_H2D")

@@ -30,7 +30,7 @@ class CaseCompTaskNode final : public CompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kCase; }
 
  private:
-  void BuildExecGphAndRegst() override;
+  void BuildExecGph() override;
   void InferProducedDataRegstTimeShape() override;
 };
 
@@ -58,7 +58,7 @@ void CaseCompTaskNode::ProduceAllRegstsAndBindEdges() {
   });
 }
 
-void CaseCompTaskNode::BuildExecGphAndRegst() {
+void CaseCompTaskNode::BuildExecGph() {
   ExecNode* node = mut_exec_gph().NewNode();
   std::shared_ptr<const Operator> sole_op = op();
   node->mut_op() = sole_op;
@@ -69,7 +69,6 @@ void CaseCompTaskNode::BuildExecGphAndRegst() {
     out_regst->AddLbi(sole_op->BnInOp2Lbi(name));
     node->BindBnWithRegst(name, out_regst);
   }
-  node->InferBlobDescs(op_node(), parallel_ctx());
 }
 
 void CaseCompTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }

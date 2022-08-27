@@ -132,7 +132,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   ExecGraph& mut_exec_gph() { return exec_gph_; }
   void EraseConsumedRegstsByName(const std::string& name);
 
-  virtual void BuildExecGphAndRegst() = 0;
+  virtual void BuildExecGph() = 0;
+
+  virtual void InferRegst();
 
   virtual void InferProducedDataRegstTimeShape() = 0;
   void NaiveInferProducedDataRegstTimeShape();
