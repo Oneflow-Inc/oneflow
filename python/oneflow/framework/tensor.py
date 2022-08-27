@@ -498,6 +498,7 @@ def _cumprod(self, dim, dtype=None):
 def _inv(self):
     return flow._C.inv(self)
 
+
 def _trunc(self):
     """trunc() -> Tensor
 
