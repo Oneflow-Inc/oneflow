@@ -59,6 +59,7 @@ Maybe<void> CopyHdOp::InferOutBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+  LOG(ERROR) << "op " << op_name() << " copy hd infer out blob called.";
   return Maybe<void>::Ok();
 }
 

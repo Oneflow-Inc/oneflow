@@ -157,6 +157,7 @@ void TaskNode::ForEachProducedDataRegst(
 }
 
 void TaskNode::Build() {
+  LOG(ERROR) << " type " << GetTaskType() << " task build.";
   BuildExecGph();
   InferRegst();
 }
