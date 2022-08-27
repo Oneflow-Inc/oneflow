@@ -94,34 +94,8 @@ class CosGradGrad : public OpExprGradFunction<UnaryGradGradState> {
   }
 };
 
-class NegativeGradGrad : public OpExprGradFunction<UnaryGradGradState> {
-  // neg_grad = -1 * grad
-  // So: out_grad_grad = -1 * gradgrad
-  //     x_grad_grad = 0 * gradgrad = 0
- public:
-  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
-
-  Maybe<void> Capture(UnaryGradGradState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
-    ctx->x_requires_grad = inputs.at(0)->requires_grad();
-    ctx->grad_requires_grad = inputs.at(1)->requires_grad();
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> Apply(const UnaryGradGradState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override {
-    in_grads->resize(2);
-    if (ctx->x_requires_grad) { in_grads->at(0) = JUST(functional::ZerosLike(out_grads.at(0))); }
-    if (ctx->grad_requires_grad) { in_grads->at(1) = JUST(functional::Negative(out_grads.at(0))); }
-    return Maybe<void>::Ok();
-  }
-};
-
 REGISTER_OP_EXPR_GRAD_FUNCTION("sin_grad", SinGradGrad);
 REGISTER_OP_EXPR_GRAD_FUNCTION("cos_grad", CosGradGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("negative_grad", NegativeGradGrad);
 
 }  // namespace one
 }  // namespace oneflow
