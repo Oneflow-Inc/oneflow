@@ -3528,15 +3528,17 @@ class OneEmbeddingLookupFunctor {
                            const int64_t embedding_size, const bool is_full_cache,
                            const int32_t num_tables, const std::string& embedding_tables,
                            const int64_t seed) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    JUST(attrs.SetAttr<std::string>("embedding_name", embedding_name));
-    JUST(attrs.SetAttr<int64_t>("line_size", line_size));
-    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
-    JUST(attrs.SetAttr<bool>("is_full_cache", is_full_cache));
-    JUST(attrs.SetAttr<int32_t>("num_tables", num_tables));
-    JUST(attrs.SetAttr<std::string>("embedding_tables", embedding_tables));
-    JUST(attrs.SetAttr<int64_t>("seed", seed));
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "embedding_name", "line_size", "embedding_size",
+                                       "is_full_cache", "num_tables", "embedding_tables", "seed");
+    attrs.SetAttr<DataType>("dtype", dtype->data_type());
+    attrs.SetAttr<std::string>("embedding_name", embedding_name);
+    attrs.SetAttr<int64_t>("line_size", line_size);
+    attrs.SetAttr<int64_t>("embedding_size", embedding_size);
+    attrs.SetAttr<bool>("is_full_cache", is_full_cache);
+    attrs.SetAttr<int32_t>("num_tables", num_tables);
+    attrs.SetAttr<std::string>("embedding_tables", embedding_tables);
+    attrs.SetAttr<int64_t>("seed", seed);
     if (table_ids) {
       return OpInterpUtil::Dispatch<Tensor>(*op_has_table_ids_, {shadow, ids, JUST(table_ids)},
                                             attrs);
@@ -3563,10 +3565,10 @@ class OneEmbeddingLookupGradFunctor {
                          const std::shared_ptr<one::Tensor>& embedding_grad,
                          const std::string& embedding_name, const int64_t line_size,
                          const int64_t embedding_size) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("embedding_name", embedding_name));
-    JUST(attrs.SetAttr<int64_t>("line_size", line_size));
-    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("embedding_name", "line_size", "embedding_size");
+    attrs.SetAttr<std::string>("embedding_name", embedding_name);
+    attrs.SetAttr<int64_t>("line_size", line_size);
+    attrs.SetAttr<int64_t>("embedding_size", embedding_size);
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ids, embedding_grad}, attrs));
     return Maybe<void>::Ok();
   }
