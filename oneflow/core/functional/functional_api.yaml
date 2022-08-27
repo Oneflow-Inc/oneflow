@@ -618,7 +618,7 @@
   bind_python: True
 
 - name: "sigmoid_grad"
-  signature: "Tensor (Tensor x, Tensor dy) => SigmoidGrad"
+  signature: "Tensor (Tensor y, Tensor dy) => SigmoidGrad"
   bind_python: True
 
 - name: "hardsigmoid"
@@ -1266,10 +1266,6 @@
 - name: "negative"
   signature: "Tensor (Tensor x) => Negative"
   bind_python: True
-
-- name: "negative_grad"
-  signature: "Tensor (Tensor x, Tensor dy) => NegativeGrad"
-  bind_python: False
 
 - name: "layer_norm_affine"
   signature:

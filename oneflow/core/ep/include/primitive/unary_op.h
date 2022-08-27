@@ -41,7 +41,42 @@ enum class UnaryOp {
   kSoftPlus,
   kTanh,
   kThreshold,
-
+  // math op
+  kAbs,
+  kAcos,
+  kAcosh,
+  kAsin,
+  kAsinh,
+  kAtan,
+  kAtanh,
+  kCeil,
+  kCos,
+  kCosh,
+  kErf,
+  kErfc,
+  kExp,
+  kExpm1,
+  kFloor,
+  kLgamma,
+  kLog,
+  kLog2,
+  kLog1p,
+  kLogSigmoid,
+  kNegative,
+  kReciprocal,
+  kReciprocalNoNan,
+  kRint,
+  kRound,
+  kRsqrt,
+  kSigmoid,
+  kSign,
+  kSin,
+  kSinh,
+  kSqrt,
+  kSquare,
+  kTan,
+  kTrunc,
+  kNotEqualZero,
   // logical op
   kLogicalNot,
 
@@ -49,9 +84,6 @@ enum class UnaryOp {
   kIsInf,
   kIsNan,
   kIsFinite,
-
-  // math op
-  kTrunc
 };
 
 }
