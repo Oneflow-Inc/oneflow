@@ -30,6 +30,7 @@ class CallbackNotifyCompTaskNode final : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGph() override;
+  void InferRegst()override {}
 };
 
 void CallbackNotifyCompTaskNode::ProduceAllRegstsAndBindEdges() {}
