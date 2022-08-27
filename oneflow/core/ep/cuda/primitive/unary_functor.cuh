@@ -269,6 +269,12 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTrunc, nv_bfloat16, nv_bfloat16
   __device__ nv_bfloat16 operator()(nv_bfloat16 src) const { return htrunc(src); }
 };
 
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAbs, nv_bfloat16, nv_bfloat16> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  __device__ nv_bfloat16 operator()(nv_bfloat16 src) const { return __habs(src); }
+};
 #endif
 
 }  // namespace primitive
