@@ -75,9 +75,7 @@ struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kIsFinite, bool, Src> {
 template<typename Dst, typename Src>
 struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kTrunc, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-  OF_DEVICE_FUNC Dst operator()(Src src) const {
-    return static_cast<Dst>(std::trunc(static_cast<Src>(src)));
-  }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(std::trunc(src)); }
 };
 
 template<typename Dst, typename Src>
