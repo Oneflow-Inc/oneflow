@@ -207,7 +207,7 @@ class Embedding(Module):
         self.shadow = flow.nn.Parameter(flow.Tensor(1))
 
     def _save_to_state_dict(self, destination, prefix, keep_vars):
-        super()._save_to_state_dict(self, destination, prefix, keep_vars)
+        super()._save_to_state_dict(destination, prefix, keep_vars)
         snapshot_timestamp_tensor = flow.tensor(
             datetime.datetime.now().timestamp(), dtype=flow.float64, device="cuda"
         )

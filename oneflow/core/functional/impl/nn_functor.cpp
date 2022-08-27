@@ -3485,7 +3485,8 @@ class OneEmbeddingLookupFunctor {
                            const Optional<one::Tensor>& table_ids, const Symbol<DType>& dtype,
                            const std::string& embedding_name, const int64_t line_size,
                            const int64_t embedding_size, const bool is_full_cache,
-                           const int32_t num_tables, const std::string& embedding_tables) const {
+                           const int32_t num_tables, const std::string& embedding_tables,
+                           const int64_t seed) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     JUST(attrs.SetAttr<std::string>("embedding_name", embedding_name));
@@ -3494,6 +3495,7 @@ class OneEmbeddingLookupFunctor {
     JUST(attrs.SetAttr<bool>("is_full_cache", is_full_cache));
     JUST(attrs.SetAttr<int32_t>("num_tables", num_tables));
     JUST(attrs.SetAttr<std::string>("embedding_tables", embedding_tables));
+    JUST(attrs.SetAttr<int64_t>("seed", seed));
     if (table_ids) {
       return OpInterpUtil::Dispatch<Tensor>(*op_has_table_ids_, {shadow, ids, JUST(table_ids)},
                                             attrs);
