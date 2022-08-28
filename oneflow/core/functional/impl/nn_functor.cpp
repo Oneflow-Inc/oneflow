@@ -3591,9 +3591,9 @@ class OneEmbeddingEmbeddingPutFunctor {
                          const std::shared_ptr<one::Tensor>& unique_ids,
                          const std::shared_ptr<one::Tensor>& unique_embeddings,
                          const std::string& embedding_name, const int64_t line_size) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("embedding_name", embedding_name));
-    JUST(attrs.SetAttr<int64_t>("line_size", line_size));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("embedding_name", "line_size");
+    attrs.SetAttr<std::string>("embedding_name", embedding_name);
+    attrs.SetAttr<int64_t>("line_size", line_size);
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {num_unique_ids, unique_ids, unique_embeddings},
                                              attrs));
     return Maybe<void>::Ok();
@@ -3678,7 +3678,7 @@ class OneEmbeddingSgdUpdateFunctor {
     attrs.SetAttr<float>("weight_decay", weight_decay);
     attrs.SetAttr<int64_t>("line_size", line_size);
     attrs.SetAttr<int64_t>("embedding_size", embedding_size);
-    attrs.SetAttr<std::string>("embedding_name", embedding_name)
+    attrs.SetAttr<std::string>("embedding_name", embedding_name);
     if (momentum == 0) {
       return OpInterpUtil::Dispatch<Tensor>(*sgd_op_,
                                             {num_unique_ids, unique_embeddings, embedding_grad,
@@ -3734,7 +3734,8 @@ class OneEmbeddingAdamUpdateFunctor {
                            const Optional<one::Tensor>& bias_correction2, const double scale,
                            const float weight_decay, const float beta1, const float beta2,
                            const float epsilon, const bool do_bias_correction,
-                           const int64_t line_size, const int64_t embedding_size, const std::string& embedding_name) const {
+                           const int64_t line_size, const int64_t embedding_size,
+                           const std::string& embedding_name) const {
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "beta1", "beta2", "epsilon",
                                        "do_bias_correction", "line_size", "embedding_size");
@@ -3746,7 +3747,7 @@ class OneEmbeddingAdamUpdateFunctor {
     attrs.SetAttr<bool>("do_bias_correction", do_bias_correction);
     attrs.SetAttr<int64_t>("line_size", line_size);
     attrs.SetAttr<int64_t>("embedding_size", embedding_size);
-    attrs.SetAttr<std::string>("embedding_name", embedding_name)
+    attrs.SetAttr<std::string>("embedding_name", embedding_name);
     if (do_bias_correction) {
       CHECK(bias_correction1);
       CHECK(bias_correction2);
@@ -3792,7 +3793,8 @@ class OneEmbeddingAdagradUpdateFunctor {
                            const std::shared_ptr<one::Tensor>& skip_if,
                            const std::shared_ptr<one::Tensor>& train_step, const double scale,
                            const float weight_decay, const float lr_decay, const float epsilon,
-                           const int64_t line_size, const int64_t embedding_size, const std::string& embedding_name) const {
+                           const int64_t line_size, const int64_t embedding_size,
+                           const std::string& embedding_name) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "lr_decay", "epsilon",
                                                  "line_size", "embedding_size");
     attrs.SetAttr<double>("scale", scale);
@@ -3801,7 +3803,7 @@ class OneEmbeddingAdagradUpdateFunctor {
     attrs.SetAttr<float>("epsilon", epsilon);
     attrs.SetAttr<int64_t>("line_size", line_size);
     attrs.SetAttr<int64_t>("embedding_size", embedding_size);
-    attrs.SetAttr<std::string>("embedding_name", embedding_name)
+    attrs.SetAttr<std::string>("embedding_name", embedding_name);
     return OpInterpUtil::Dispatch<Tensor>(
         *op_,
         {num_unique_ids, unique_embeddings, embedding_grad, learning_rate, down_scale_by_tensor,
@@ -3847,7 +3849,7 @@ class OneEmbeddingFtrlUpdateFunctor {
     attrs.SetAttr<float>("beta", beta);
     attrs.SetAttr<int64_t>("line_size", line_size);
     attrs.SetAttr<int64_t>("embedding_size", embedding_size);
-    attrs.SetAttr<std::string>("embedding_name", embedding_name)
+    attrs.SetAttr<std::string>("embedding_name", embedding_name);
     return OpInterpUtil::Dispatch<Tensor>(*op_,
                                           {num_unique_ids, unique_embeddings, embedding_grad,
                                            learning_rate, down_scale_by_tensor, skip_if},
