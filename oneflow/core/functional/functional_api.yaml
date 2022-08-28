@@ -246,8 +246,21 @@
   bind_python: False
 
 - name: "trunc_divide"
-  signature: "Tensor (Tensor input, Tensor other) => TruncDiv"
-  bind_python: True
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => TruncDiv",
+      "Tensor (Tensor input, Scalar other, *, Bool inplace=False) => ScalarTruncDiv",
+      "Tensor (Tensor input, Scalar other) => ScalarTruncDiv",
+    ]
+  bind_python: False
+
+- name: "truncdiv_x_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => TruncDivXGrad"
+  bind_python: False
+
+- name: "truncdiv_y_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => TruncDivYGrad"
+  bind_python: False
 
 - name: "xdivy_x_grad"
   signature: "Tensor (Tensor dz, Tensor x, Tensor y) => XdivyXGrad"

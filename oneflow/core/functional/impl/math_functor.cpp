@@ -306,6 +306,11 @@ class ScalarFloorDivFunctor : public ScalarMathBaseFunctor {
   ScalarFloorDivFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_floordiv") {}
 };
 
+class ScalarTruncDivFunctor : public ScalarMathBaseFunctor {
+ public:
+  ScalarTruncDivFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_truncdiv") {}
+};
+
 class ScalarFModFunctor : public ScalarMathBaseFunctor {
  public:
   ScalarFModFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_fmod") {}
@@ -3155,6 +3160,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<MaximumFunctor>("Max");
   m.add_functor<ScalarFModFunctor>("ScalarFMod");
   m.add_functor<ScalarFloorDivFunctor>("ScalarFloorDiv");
+  m.add_functor<ScalarTruncDivFunctor>("ScalarTruncDiv");
   m.add_functor<ScalarLogicalEqualFunctor, ScalarLogicalEqual2Functor>("ScalarLogicalEqual");
   m.add_functor<ScalarLogicalNotEqualFunctor, ScalarLogicalNotEqual2Functor>(
       "ScalarLogicalNotEqual");

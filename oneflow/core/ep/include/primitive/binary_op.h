@@ -34,6 +34,7 @@ enum class BinaryOp {
   kPow,
   kFmod,
   kFloorDiv,
+  kTruncDiv,
   kFloorMod,
   // Comparision
   kEqual,

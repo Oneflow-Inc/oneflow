@@ -57,6 +57,20 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kFloorDiv, double, double> {
 };
 
 template<>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kTruncDiv, float, float> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC float operator()(float src0, float src1) const { return trunc(src0 / src1); }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kTruncDiv, double, double> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC double operator()(double src0, double src1) const { return trunc(src0 / src1); }
+};
+
+template<>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kFloorMod, float, float> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
@@ -129,6 +143,7 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kTanhBackwardWithDyX, Src, Dst
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kPow);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kFmod);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kFloorDiv);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kTruncDiv);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kFloorMod);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kEluBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kCeluBackwardWithDyX);
@@ -163,6 +178,7 @@ SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kThresholdBackwardWithDy
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kPow);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kFmod);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kFloorDiv);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kTruncDiv);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kFloorMod);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kEluBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kCeluBackwardWithDyX);
@@ -192,10 +208,12 @@ SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kTanhBackwardWithDyX);
 SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kPow, bool);
 SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kFmod, bool);
 SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kFloorDiv, bool);
+SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kTruncDiv, bool);
 SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kFloorMod, bool);
 SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kPow, char);
 SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kFmod, char);
 SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kFloorDiv, char);
+SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kTruncDiv, char);
 SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kFloorMod, char);
 
 }  // namespace broadcast_elementwise_binary
