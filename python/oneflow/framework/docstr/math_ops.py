@@ -1813,3 +1813,26 @@ add_docstr(
         tensor([1, 2, 6], dtype=oneflow.int64)
     """,
 )
+
+
+add_docstr(
+    oneflow.trunc,
+    r"""trunc(input) -> Tensor
+
+    The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.trunc.html
+
+    Returns a new tensor with the truncated integer values of
+    the elements of :attr:`input`.
+
+    Args:
+        input(Tensor): the input tensor.
+
+    Example::
+
+        >>> import oneflow as flow
+        >>> a = flow.tensor([ 3.4742,  0.5466, -0.8008, -0.9079])
+        >>> flow.trunc(a)
+        tensor([3., 0., -0., -0.], dtype=oneflow.float32)
+    """,
+)
