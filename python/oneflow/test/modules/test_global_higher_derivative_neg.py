@@ -34,11 +34,6 @@ def _global_neg_grad_grad_impl(test_case, placement, sbp):
     x_grad = flow.autograd.grad(y, x, init_grad, create_graph=True)[0]
     test_case.assertTrue(np.allclose(-init_grad, x_grad.detach().numpy()))
 
-    x_grad_grad = flow.autograd.grad(x_grad, x, init_grad, create_graph=True)[0]
-    test_case.assertTrue(
-        np.allclose(np.full(x.shape, 0.0), x_grad_grad.detach().numpy(),)
-    )
-
     dgrad = flow.autograd.grad(x_grad, init_grad, init_grad_grad, create_graph=True)[0]
     test_case.assertTrue(np.allclose(-init_grad_grad, dgrad.detach().numpy(),))
 

@@ -138,6 +138,7 @@ from oneflow._C import expm1
 from oneflow._C import fmod
 from oneflow._C import flatten
 from oneflow._C import in_top_k
+from oneflow._C import lgamma
 from oneflow._C import log
 from oneflow._C import log2
 from oneflow._C import minimum

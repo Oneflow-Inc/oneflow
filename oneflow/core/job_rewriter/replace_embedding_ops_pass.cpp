@@ -105,7 +105,8 @@ Maybe<void> DynamicLossScaleAddGradient(
 
 void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_t embedding_size,
                           const int64_t line_size, const std::string& embedding_name,
-                          bool has_embedding_prefetch, const ParallelConf& parallel_conf,
+                          const int64_t seed, bool has_embedding_prefetch,
+                          const ParallelConf& parallel_conf,
                           const user_op::UserOpConfWrapper& embedding_op,
                           const std::string& num_unique_ids_lbn, const std::string& unique_ids_lbn,
                           const std::string& unique_table_ids_lbn, std::string* embedding_lbn,
@@ -127,6 +128,7 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
             .Attr<std::string>("embedding_tables",
                                embedding_op.attr<std::string>("embedding_tables"))
             .Attr<std::string>("embedding_name", embedding_name)
+            .Attr<int64_t>("seed", seed)
             .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
             .Build();
     *embedding_prefetch_op_conf = embedding_prefetch_op.op_conf();
@@ -147,6 +149,7 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
       .Attr<int64_t>("line_size", line_size)
       .Attr<std::string>("embedding_tables", embedding_op.attr<std::string>("embedding_tables"))
       .Attr<std::string>("embedding_name", embedding_name)
+      .Attr<int64_t>("seed", seed)
       .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id());
   if (has_embedding_prefetch) { embedding_lookup_op_builder.Input("context", context_lbn); }
   bool has_embeddings_output =
@@ -1036,6 +1039,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     const int64_t line_size = embedding_op.attr<int64_t>("line_size");
     const int64_t embedding_size = embedding_op.attr<int64_t>("embedding_size");
     const bool is_full_cache = embedding_op.attr<bool>("is_full_cache");
+    const int64_t seed = embedding_op.attr<int64_t>("seed");
     const int64_t parallel_num = op_node->parallel_desc().parallel_num();
     const bool use_system_gather =
         (parallel_num == 1 && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_USE_SYSTEM_GATHER", false)
@@ -1061,7 +1065,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     OperatorConf embedding_lookup_op_conf;
     // embedding lookup op
     std::string embedding_lbn, unique_values_lbn;
-    BuildEmbeddingLookup(ctx, job_builder, embedding_size, line_size, embedding_name,
+    BuildEmbeddingLookup(ctx, job_builder, embedding_size, line_size, embedding_name, seed,
                          has_embedding_prefetch, embedding_parallel_conf, embedding_op,
                          num_unique_ids_lbn, unique_ids_lbn, unique_table_ids_lbn, &embedding_lbn,
                          &unique_values_lbn, &embedding_prefetch_op_conf,
