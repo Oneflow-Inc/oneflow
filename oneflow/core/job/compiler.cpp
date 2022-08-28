@@ -74,7 +74,9 @@ void PlanCompiler::Compile(Job* job, Plan* plan, std::shared_ptr<TaskGraph>& tas
   // 1, create and add exe node parallel
   // 2, parallel infer user op
   // 3, topo infer others 
-  task_gph->TopoForEachNode(&TaskNode::Build);
+  // task_gph->TopoForEachNode(&TaskNode::Build);
+  task_gph->TopoForEachNode(&TaskNode::BuildExecGph);
+  task_gph->TopoForEachNode(&TaskNode::InferRegst);
   tc->Count("Graph name: " + job_name + " TaskNode::Build", 1);
   task_gph->RemoveEmptyRegsts();
   tc->Count("Graph name: " + job_name + " RemoveEmptyRegsts", 1);
