@@ -302,7 +302,7 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTrunc, nv_bfloat16, nv_bfloat16
   }
 };
 
-#endif // CUDA_VERSION >= 11000
+#endif  // CUDA_VERSION >= 11000
 
 }  // namespace primitive
 }  // namespace ep
