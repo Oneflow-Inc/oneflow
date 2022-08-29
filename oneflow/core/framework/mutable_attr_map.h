@@ -82,7 +82,7 @@ class MutableAttrMap {
                                                    && !internal::IsOptional<T>::value,
                                                int>::type = 0>
   inline void SetAttrNoThrow(int idx, const T& attr_val) {
-    if (!attrs_[idx] || attrs_[idx]->value_type() != user_op::GetAttrType<T>::value
+    if (!attrs_[idx] /* || attrs_[idx]->value_type() != user_op::GetAttrType<T>::value*/
         || *static_cast<const T*>(attrs_[idx]->Ptr()) != attr_val) {
       attrs_[idx] = std::make_shared<user_op::TypedAttrVal<T>>(attr_val);
     }
