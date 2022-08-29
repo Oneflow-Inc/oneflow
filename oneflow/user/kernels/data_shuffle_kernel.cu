@@ -109,8 +109,9 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
         parallel_desc_.parallel_num() * parallel_desc_.parallel_num() * sizeof(IDX)));
     const std::string& embedding_name = ctx->Attr<std::string>("embedding_name");
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-    embedding_state_ = Singleton<embedding::EmbeddingManager>::Get()->GetEmbeddingState(
-        embedding_name, parallel_id);
+    embedding_state_ = dynamic_cast<embedding::LazyEmbeddingState*>(
+        Singleton<embedding::EmbeddingManager>::Get()->GetEmbeddingState(embedding_name,
+                                                                         parallel_id));
   }
   ~DataShuffleKernelState() {
     CudaCurrentDeviceGuard guard(device_index_);
@@ -122,7 +123,7 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
   IDX* HostNumUniqueMatrix() { return host_num_unique_matrix_; }
   IDX* HostNumKeys() { return host_num_keys_; }
 
-  embedding::EmbeddingState* EmbeddingState() { return embedding_state_; }
+  embedding::LazyEmbeddingState* EmbeddingState() { return embedding_state_; }
 
  private:
   struct Comm {
@@ -155,7 +156,7 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
   std::unique_ptr<Comm> comm_;
   IDX* host_num_unique_matrix_;
   IDX* host_num_keys_;
-  embedding::EmbeddingState* embedding_state_;
+  embedding::LazyEmbeddingState* embedding_state_;
 };
 
 }  // namespace
@@ -242,7 +243,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
                             cur_rank_unique_table_ids->data_type(), need_process_table_ids,
                             host_num_unique_matrix, host_num_keys);
 
-    embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
+    embedding::LazyEmbeddingState* embedding_state = kernel_state->EmbeddingState();
     std::vector<uint32_t> num_unique_matrix_vec(parallel_num * parallel_num);
     std::memcpy(num_unique_matrix_vec.data(), host_num_unique_matrix,
                 parallel_num * parallel_num * sizeof(IDX));
@@ -683,7 +684,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     auto* kernel_state = dynamic_cast<DataShuffleKernelState<IDX>*>(state);
     CHECK(kernel_state != nullptr);
-    embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
+    embedding::LazyEmbeddingState* embedding_state = kernel_state->EmbeddingState();
     std::unique_ptr<embedding::TmpBufferAllocator> allocator =
         embedding_state->NewTmpBufferAllocator(ctx);
     embedding_state->OnEmbeddingShuffleStart(ctx, current_iter_);
@@ -931,7 +932,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     auto* kernel_state = dynamic_cast<DataShuffleKernelState<IDX>*>(state);
     CHECK(kernel_state != nullptr);
-    embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
+    embedding::LazyEmbeddingState* embedding_state = kernel_state->EmbeddingState();
     std::unique_ptr<embedding::TmpBufferAllocator> allocator =
         embedding_state->NewTmpBufferAllocator(ctx);
     const user_op::Tensor* embedding_grad = ctx->Tensor4ArgNameAndIndex("embedding_grad", 0);

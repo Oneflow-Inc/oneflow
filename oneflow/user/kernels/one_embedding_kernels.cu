@@ -195,8 +195,9 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
     uint32_t max_query_length =
         ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
     key_value_store_->ReserveQueryLength(max_query_length);
-    embedding_state_ = Singleton<embedding::EmbeddingManager>::Get()->GetEmbeddingState(
-        embedding_name, parallel_id);
+    embedding_state_ = dynamic_cast<embedding::LazyEmbeddingState*>(
+        Singleton<embedding::EmbeddingManager>::Get()->GetEmbeddingState(embedding_name,
+                                                                         parallel_id));
 
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
@@ -237,7 +238,7 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
 
   embedding::KeyValueStore* KeyValueStore() { return key_value_store_; }
 
-  embedding::EmbeddingState* EmbeddingState() { return embedding_state_; }
+  embedding::LazyEmbeddingState* EmbeddingState() { return embedding_state_; }
 
   const int8_t* InitializerIndex() { return device_initializer_index_; }
   const EmbeddingInitializer* Initializers() { return device_initializer_param_; }
@@ -246,7 +247,7 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
   int device_index_;
   void* host_num_keys_;
   embedding::KeyValueStore* key_value_store_;
-  embedding::EmbeddingState* embedding_state_;
+  embedding::LazyEmbeddingState* embedding_state_;
   EmbeddingInitializer* host_initializer_param_;
   EmbeddingInitializer* device_initializer_param_;
   int8_t* host_initializer_index_;
@@ -632,7 +633,7 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     auto* kernel_state = dynamic_cast<EmbeddingKernelState<IDX>*>(state);
     CHECK(kernel_state != nullptr);
-    embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
+    embedding::LazyEmbeddingState* embedding_state = kernel_state->EmbeddingState();
     std::unique_ptr<embedding::TmpBufferAllocator> allocator =
         embedding_state->NewTmpBufferAllocator(ctx);
     uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
@@ -714,7 +715,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     auto* kernel_state = dynamic_cast<EmbeddingKernelState<IDX>*>(state);
     CHECK(kernel_state != nullptr);
-    embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
+    embedding::LazyEmbeddingState* embedding_state = kernel_state->EmbeddingState();
     std::unique_ptr<embedding::TmpBufferAllocator> allocator =
         embedding_state->NewTmpBufferAllocator(ctx);
     embedding_state->OnEmbeddingLookupStart(ctx, current_iter_);
@@ -840,7 +841,8 @@ class FusedSgdEmbeddingUpdatePutKernel final : public user_op::OpKernel {
     auto* kernel_state = dynamic_cast<EmbeddingPutKernelState*>(state);
     CHECK(kernel_state != nullptr);
     embedding::KeyValueStore* store = kernel_state->KeyValueStore();
-    embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
+    embedding::LazyEmbeddingState* embedding_state =
+        dynamic_cast<embedding::LazyEmbeddingState*>(kernel_state->EmbeddingState());
     embedding_state->OnEmbeddingFusedUpdatePutStart(ctx, current_iter_);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     const user_op::Tensor* embedding_grad = ctx->Tensor4ArgNameAndIndex("embedding_grad", 0);
@@ -1138,8 +1140,9 @@ class EmbeddingLookupPlaceholderKernelState final : public user_op::OpKernelStat
                                   index_size_bytes, cudaMemcpyDefault,
                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
 
-    embedding_state_ = Singleton<embedding::EmbeddingManager>::Get()->GetEmbeddingState(
-        embedding_name, parallel_id);
+    embedding_state_ = dynamic_cast<embedding::EagerEmbeddingState*>(
+        Singleton<embedding::EmbeddingManager>::Get()->GetEmbeddingState(embedding_name,
+                                                                         parallel_id));
   }
   ~EmbeddingLookupPlaceholderKernelState() override {
     CudaCurrentDeviceGuard guard(device_index_);
@@ -1161,7 +1164,7 @@ class EmbeddingLookupPlaceholderKernelState final : public user_op::OpKernelStat
   const int8_t* InitializerIndex() { return device_initializer_index_; }
   const EmbeddingInitializer* Initializers() { return device_initializer_param_; }
 
-  embedding::EmbeddingState* EmbeddingState() { return embedding_state_; }
+  embedding::EagerEmbeddingState* EmbeddingState() { return embedding_state_; }
 
  private:
   struct Comm {
@@ -1199,7 +1202,7 @@ class EmbeddingLookupPlaceholderKernelState final : public user_op::OpKernelStat
   EmbeddingInitializer* device_initializer_param_;
   int8_t* host_initializer_index_;
   int8_t* device_initializer_index_;
-  embedding::EmbeddingState* embedding_state_;
+  embedding::EagerEmbeddingState* embedding_state_;
 };
 
 template<typename T, typename K, typename U, typename IDX>
@@ -1436,7 +1439,7 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     auto* kernel_state = dynamic_cast<EmbeddingLookupPlaceholderKernelState<IDX>*>(state);
     CHECK(kernel_state != nullptr);
-    embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
+    embedding::EagerEmbeddingState* embedding_state = kernel_state->EmbeddingState();
     embedding_state->OnEmbeddingEagerBackwardStart(ctx, current_iter_);
     DataType num_unique_matrix_dtype = DataType::kUInt32;
     DataType table_ids_dtype = DataType::kUInt8;

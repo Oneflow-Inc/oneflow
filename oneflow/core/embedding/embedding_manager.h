@@ -128,6 +128,30 @@ class EmbeddingState {
   EmbeddingState() = default;
   virtual ~EmbeddingState() = default;
 
+  virtual void OnEmbeddingUpdateStart(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
+  virtual const void* EmbeddingUpdateNumUniqueIds(int64_t iter) = 0;
+  virtual const void* EmbeddingUpdateEmbeddingGrad(int64_t iter) = 0;
+  virtual const void* EmbeddingUpdateUniqueEmbeddings(int64_t iter) = 0;
+  virtual void* EmbeddingUpdateUpdatedUniqueEmbeddings(int64_t iter) = 0;
+  virtual void OnEmbeddingUpdateEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
+
+  virtual void OnEmbeddingPutStart(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
+  virtual const void* EmbeddingPutUniqueIds(int64_t iter) = 0;
+  virtual const void* EmbeddingPutUniqueEmbeddings(int64_t iter) = 0;
+  virtual void OnEmbeddingPutEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
+
+  virtual void SetIdFinalNumUnique(uint32_t final_num_unique, int64_t iter) = 0;
+  virtual void SetIdNumUniqueMatrix(const std::vector<uint32_t>& num_unique_matrix,
+                                    int64_t iter) = 0;
+  virtual uint32_t GetIdNumUnique(int64_t iter) = 0;
+  virtual const std::vector<uint32_t>& GetIdNumUniqueMatrix(int64_t iter) = 0;
+};
+
+class LazyEmbeddingState : public EmbeddingState {
+ public:
+  LazyEmbeddingState() = default;
+  virtual ~LazyEmbeddingState() = default;
+
   virtual std::unique_ptr<TmpBufferAllocator> NewTmpBufferAllocator(
       user_op::KernelComputeContext* ctx) = 0;
 
@@ -155,6 +179,30 @@ class EmbeddingState {
   virtual void OnEmbeddingFusedUpdatePutStart(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
   virtual const void* EmbeddingFusedUpdatePutUniqueEmbeddings(int64_t iter) = 0;
   virtual void OnEmbeddingFusedUpdatePutEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
+
+  virtual void SetIdFinalNumUnique(uint32_t final_num_unique, int64_t iter) = 0;
+  virtual void SetIdNumUniqueMatrix(const std::vector<uint32_t>& num_unique_matrix,
+                                    int64_t iter) = 0;
+  virtual uint32_t GetIdNumUnique(int64_t iter) = 0;
+  virtual const std::vector<uint32_t>& GetIdNumUniqueMatrix(int64_t iter) = 0;
+};
+
+class EagerEmbeddingState : public EmbeddingState {
+ public:
+  EagerEmbeddingState() = default;
+  virtual ~EagerEmbeddingState() = default;
+
+  virtual void OnEmbeddingUpdateStart(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
+  virtual const void* EmbeddingUpdateNumUniqueIds(int64_t iter) = 0;
+  virtual const void* EmbeddingUpdateEmbeddingGrad(int64_t iter) = 0;
+  virtual const void* EmbeddingUpdateUniqueEmbeddings(int64_t iter) = 0;
+  virtual void* EmbeddingUpdateUpdatedUniqueEmbeddings(int64_t iter) = 0;
+  virtual void OnEmbeddingUpdateEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
+
+  virtual void OnEmbeddingPutStart(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
+  virtual const void* EmbeddingPutUniqueIds(int64_t iter) = 0;
+  virtual const void* EmbeddingPutUniqueEmbeddings(int64_t iter) = 0;
+  virtual void OnEmbeddingPutEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
 
   virtual void OnEmbeddingEagerBackwardStart(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
   virtual void* EmbeddingEagerBackwardNumUniqueIds(int64_t iter) { return nullptr; }

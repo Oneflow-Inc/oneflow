@@ -55,7 +55,7 @@ class DynamicTmpBufferAllocator final : public TmpBufferAllocator {
   cudaMemPool_t mem_pool_{};
 };
 
-class DynamicAllocationEmbeddingState final : public EmbeddingState {
+class DynamicAllocationEmbeddingState final : public LazyEmbeddingState {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DynamicAllocationEmbeddingState);
   DynamicAllocationEmbeddingState()
@@ -227,22 +227,6 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
     // do nothing
   }
 
-  void OnEmbeddingEagerBackwardStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    UNIMPLEMENTED();
-  }
-
-  void* EmbeddingEagerBackwardUniqueIds(int64_t iter) override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-
-  void* EmbeddingEagerBackwardUniqueEmbeddingGrad(int64_t iter) override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-
-  void OnEmbeddingEagerBackwardEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {}
-
   void SetIdFinalNumUnique(uint32_t final_num_unique, int64_t iter) override {
     std::unique_lock<std::mutex> lock(mutex_);
     int64_t index = iter % kRingBufferSize;
@@ -293,10 +277,10 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
   std::mutex mutex_;
 };
 
-class EagerEmbeddingState final : public EmbeddingState {
+class DynamicAllocationEagerEmbeddingState final : public EagerEmbeddingState {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(EagerEmbeddingState);
-  EagerEmbeddingState()
+  OF_DISALLOW_COPY_AND_MOVE(DynamicAllocationEagerEmbeddingState);
+  DynamicAllocationEagerEmbeddingState()
       : num_unique_ids_(nullptr),
         unique_ids_(nullptr),
         unique_embedding_grad_(nullptr),
@@ -314,35 +298,9 @@ class EagerEmbeddingState final : public EmbeddingState {
     uint64_t threshold = UINT64_MAX;
     cudaMemPoolSetAttribute(mem_pool_, cudaMemPoolAttrReleaseThreshold, &threshold);
   }
-  ~EagerEmbeddingState() {
+  ~DynamicAllocationEagerEmbeddingState() {
     CudaCurrentDeviceGuard guard(device_index_);
     OF_CUDA_CHECK(cudaMemPoolDestroy(mem_pool_));
-  }
-
-  std::unique_ptr<TmpBufferAllocator> NewTmpBufferAllocator(
-      user_op::KernelComputeContext* ctx) override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-
-  void OnEmbeddingLookupStart(user_op::KernelComputeContext* ctx, int64_t iter) override {}
-
-  void* LookupUniqueValues(int64_t iter) override { return nullptr; }
-
-  void* LookupEmbeddings(int64_t iter) override { return nullptr; }
-
-  void OnEmbeddingLookupEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    // do nothing
-  }
-
-  void OnEmbeddingShuffleStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    // do nothing
-  }
-
-  const void* EmbeddingShuffleCurRankEmbeddings(int64_t iter) override { return nullptr; }
-
-  void OnEmbeddingShuffleEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    // do nothing
   }
 
   void OnEmbeddingUpdateStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
@@ -407,20 +365,7 @@ class EagerEmbeddingState final : public EmbeddingState {
         cudaFreeAsync(updated_values_, ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   }
 
-  void OnEmbeddingFusedUpdatePutStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    // do nothing
-  }
-
-  const void* EmbeddingFusedUpdatePutUniqueEmbeddings(int64_t iter) override {
-    CHECK_EQ(iter_, iter);
-    return nullptr;
-  }
-
-  void OnEmbeddingFusedUpdatePutEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    // do nothing
-  }
-
-  void OnEmbeddingEagerBackwardStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
+  void OnEmbeddingEagerBackwardStart(user_op::KernelComputeContext* ctx, int64_t iter) {
     const user_op::Tensor* ids = ctx->Tensor4ArgNameAndIndex("ids", 0);
     const user_op::Tensor* embedding_grad = ctx->Tensor4ArgNameAndIndex("embedding_grad", 0);
     const int64_t num_ids = ids->shape_view().elem_cnt();
@@ -451,27 +396,27 @@ class EagerEmbeddingState final : public EmbeddingState {
                                           ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   }
 
-  void* EmbeddingEagerBackwardNumUniqueIds(int64_t iter) override {
+  void* EmbeddingEagerBackwardNumUniqueIds(int64_t iter) {
     // CHECK_EQ(iter_, iter);
     return num_unique_ids_;
   }
 
-  void* EmbeddingEagerBackwardUniqueIds(int64_t iter) override {
+  void* EmbeddingEagerBackwardUniqueIds(int64_t iter) {
     // CHECK_EQ(iter_, iter);
     return unique_ids_;
   }
 
-  void* EmbeddingEagerBackwardUniqueEmbeddingGrad(int64_t iter) override {
+  void* EmbeddingEagerBackwardUniqueEmbeddingGrad(int64_t iter) {
     // CHECK_EQ(iter_, iter);
     return unique_embedding_grad_;
   }
 
-  void* EmbeddingEagerBackwardUniqueValues(int64_t iter) override {
+  void* EmbeddingEagerBackwardUniqueValues(int64_t iter) {
     // CHECK_EQ(iter_, iter);
     return unique_values_;
   }
 
-  void OnEmbeddingEagerBackwardEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {}
+  void OnEmbeddingEagerBackwardEnd(user_op::KernelComputeContext* ctx, int64_t iter) {}
 
   void SetIdFinalNumUnique(uint32_t final_num_unique, int64_t iter) override {
     std::unique_lock<std::mutex> lock(mutex_);
@@ -546,7 +491,7 @@ class StaticTmpBufferAllocator final : public TmpBufferAllocator {
   size_t size_;
 };
 
-class StaticAllocationEmbeddingState final : public EmbeddingState {
+class StaticAllocationEmbeddingState final : public LazyEmbeddingState {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StaticAllocationEmbeddingState);
   StaticAllocationEmbeddingState()
@@ -672,18 +617,6 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
     embedding_fused_update_put_unique_embeddings_ = nullptr;
   }
 
-  void OnEmbeddingEagerBackwardStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    UNIMPLEMENTED();
-  }
-
-  void* EmbeddingEagerBackwardUniqueIds(int64_t iter) override { return nullptr; }
-
-  void* EmbeddingEagerBackwardUniqueEmbeddingGrad(int64_t iter) override { return nullptr; }
-
-  void* EmbeddingEagerBackwardUniqueValues(int64_t iter) override { return nullptr; }
-
-  void OnEmbeddingEagerBackwardEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {}
-
   void SetIdFinalNumUnique(uint32_t final_num_unique, int64_t iter) override {
     std::unique_lock<std::mutex> lock(mutex_);
     int64_t index = iter % kRingBufferSize;
@@ -741,7 +674,9 @@ EmbeddingState* EmbeddingManager::GetEmbeddingState(const std::string& embedding
     LOG(WARNING) << "create embedding state: " << embedding_name << "-" << rank_id;
     if (!LazyMode::is_enabled() && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_EAGER", false)) {
       LOG(ERROR) << "make EagerEmbeddingState" << embedding_name << "-" << rank_id;
-      it = embedding_state_map_.emplace(map_key, std::make_unique<EagerEmbeddingState>()).first;
+      it = embedding_state_map_
+               .emplace(map_key, std::make_unique<DynamicAllocationEagerEmbeddingState>())
+               .first;
     } else {
       LOG(ERROR) << "make lazy EmbeddingState";
       if (UseDynamicMemoryAllocation()) {
@@ -805,7 +740,9 @@ void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value
   // TODO: in graph LazyMode::is_enabled() return false.
   if (!LazyMode::is_enabled() && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_EAGER", false)) {
     LOG(ERROR) << "make EagerEmbeddingState" << name << "-" << rank_id;
-    CHECK(embedding_state_map_.emplace(map_key, std::make_unique<EagerEmbeddingState>()).second)
+    CHECK(embedding_state_map_
+              .emplace(map_key, std::make_unique<DynamicAllocationEagerEmbeddingState>())
+              .second)
         << "Can't create an embedding state with same name of an existing embedding, the name: "
         << name;
   } else {
