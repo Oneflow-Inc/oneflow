@@ -284,16 +284,45 @@ class Embedding(Module):
         self.handler.LoadSnapshot(snapshot_name)
 
     def eager_update(self, param_group):
-        print("embedding eager_update")
         lr = param_group["lr"]
         l2 = param_group["weight_decay"]
-        num_valid = flow.tensor(np.ones((1,)).astype(np.int32)).to("cuda")
-        unique_ids = flow.tensor(np.ones((1,)).astype(np.int64)).to("cuda")
-        unique_embeddings = flow.tensor(np.ones((1,)).astype(np.float32)).to("cuda")
-        embedding_grad = flow.tensor(np.ones((1,)).astype(np.float32)).to("cuda")
-        lr_tensor = flow.tensor(np.array((lr,)).astype(np.float32)).to("cuda")
-        down_scale_by_tensor = flow.tensor(np.ones((1,)).astype(np.float32)).to("cuda")
-        skip_if = flow.tensor(np.zeros((1,)).astype(np.int64)).to("cuda")
+        placement = flow.env.all_device_placement("cuda")
+        sbp = flow.sbp.broadcast()
+        num_valid = (
+            flow.tensor(np.ones((1,)).astype(np.int32))
+            .to("cuda")
+            .to_global(placement=placement, sbp=sbp)
+        )
+        unique_ids = (
+            flow.tensor(np.ones((1,)).astype(np.int64))
+            .to("cuda")
+            .to_global(placement=placement, sbp=sbp)
+        )
+        unique_embeddings = (
+            flow.tensor(np.ones((1,)).astype(np.float32))
+            .to("cuda")
+            .to_global(placement=placement, sbp=sbp)
+        )
+        embedding_grad = (
+            flow.tensor(np.ones((1,)).astype(np.float32))
+            .to("cuda")
+            .to_global(placement=placement, sbp=sbp)
+        )
+        lr_tensor = (
+            flow.tensor(np.array((lr,)).astype(np.float32))
+            .to("cuda")
+            .to_global(placement=placement, sbp=sbp)
+        )
+        down_scale_by_tensor = (
+            flow.tensor(np.ones((1,)).astype(np.float32))
+            .to("cuda")
+            .to_global(placement=placement, sbp=sbp)
+        )
+        skip_if = (
+            flow.tensor(np.zeros((1,)).astype(np.int64))
+            .to("cuda")
+            .to_global(placement=placement, sbp=sbp)
+        )
         scale = 1.0
         weight_decay = 0.0
         momentum = 0.0
@@ -1026,13 +1055,12 @@ class Optimizer(Optimizer):
     ):
         self.optimizer = optimizer
         self.embeddings = embeddings
-        print("self.embeddings", self.optimizer.param_groups[0])
 
     def step(self, closure: Callable = None):
-        print("step")
         param_group = self.optimizer.param_groups[0]
         for embedding in self.embeddings:
-            print("embedding", embedding)
             embedding.eager_update(param_group)
-            # embedding.put()
         self.optimizer.step()
+
+    def zero_grad(self, set_to_none: bool = False):
+        self.optimizer.zero_grad(set_to_none)

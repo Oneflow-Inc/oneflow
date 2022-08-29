@@ -228,33 +228,17 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
   }
 
   void OnEmbeddingEagerBackwardStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    const user_op::Tensor* ids = ctx->Tensor4ArgNameAndIndex("ids", 0);
-    const user_op::Tensor* embedding_grad = ctx->Tensor4ArgNameAndIndex("embedding_grad", 0);
-    const int64_t num_ids = ids->shape_view().elem_cnt();
-    const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-    const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
-    const int64_t num_unique_ids = parallel_num * num_ids;
-
-    size_t unique_ids_size =
-        GetCudaAlignedSize(num_unique_ids * GetSizeOfDataType(ids->data_type()));
-    OF_CUDA_CHECK(cudaMallocFromPoolAsync(&eager_unique_ids_, unique_ids_size, mem_pool_,
-                                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-
-    size_t eager_unique_embedding_grad_size = GetCudaAlignedSize(
-        num_unique_ids * embedding_size * GetSizeOfDataType(embedding_grad->data_type()));
-    OF_CUDA_CHECK(cudaMallocFromPoolAsync(&eager_unique_embedding_grad_,
-                                          eager_unique_embedding_grad_size, mem_pool_,
-                                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+    UNIMPLEMENTED();
   }
 
   void* EmbeddingEagerBackwardUniqueIds(int64_t iter) override {
-    // CHECK_EQ(iter_, iter);
-    return eager_unique_ids_;
+    UNIMPLEMENTED();
+    return nullptr;
   }
 
   void* EmbeddingEagerBackwardUniqueEmbeddingGrad(int64_t iter) override {
-    // CHECK_EQ(iter_, iter);
-    return eager_unique_embedding_grad_;
+    UNIMPLEMENTED();
+    return nullptr;
   }
 
   void OnEmbeddingEagerBackwardEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {}
@@ -299,9 +283,6 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
   size_t lookup_embeddings_size_;
   bool has_lookup_embeddings_;
   void* updated_values_;
-  void* eager_unique_ids_;
-  void* eager_unique_embedding_grad_;
-  void* eager_unique_values_;
   const void* embeding_update_num_unique_ids_;
   const void* embeding_update_embedding_grad_;
   const void* embedding_put_unique_ids_;
@@ -340,8 +321,8 @@ class EagerEmbeddingState final : public EmbeddingState {
 
   std::unique_ptr<TmpBufferAllocator> NewTmpBufferAllocator(
       user_op::KernelComputeContext* ctx) override {
-    return std::make_unique<DynamicTmpBufferAllocator>(
-        ctx->stream()->As<ep::CudaStream>()->cuda_stream(), mem_pool_);
+    UNIMPLEMENTED();
+    return nullptr;
   }
 
   void OnEmbeddingLookupStart(user_op::KernelComputeContext* ctx, int64_t iter) override {}
@@ -397,6 +378,10 @@ class EagerEmbeddingState final : public EmbeddingState {
 
   void OnEmbeddingUpdateEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
     // do nothing
+    OF_CUDA_CHECK(
+        cudaFreeAsync(unique_embedding_grad_, ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+    OF_CUDA_CHECK(
+        cudaFreeAsync(unique_values_, ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   }
 
   void OnEmbeddingPutStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
@@ -415,6 +400,8 @@ class EagerEmbeddingState final : public EmbeddingState {
   }
 
   void OnEmbeddingPutEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    OF_CUDA_CHECK(
+        cudaFreeAsync(num_unique_ids_, ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     OF_CUDA_CHECK(cudaFreeAsync(unique_ids_, ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     OF_CUDA_CHECK(
         cudaFreeAsync(updated_values_, ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
@@ -441,7 +428,7 @@ class EagerEmbeddingState final : public EmbeddingState {
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
     const int64_t num_unique_ids = parallel_num * num_ids;  // use unique?
-    DataType data_type = DataType::kFloat;                  // todo: from attr
+    DataType data_type = ctx->Attr<DataType>("dtype");
     grad_data_type_ = embedding_grad->data_type();
 
     size_t num_unique_ids_size = GetCudaAlignedSize(sizeof(uint32_t));
@@ -458,7 +445,6 @@ class EagerEmbeddingState final : public EmbeddingState {
     OF_CUDA_CHECK(cudaMallocFromPoolAsync(&unique_embedding_grad_, eager_unique_embedding_grad_size,
                                           mem_pool_,
                                           ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-
     size_t unique_value_size =
         GetCudaAlignedSize(num_unique_ids * line_size * GetSizeOfDataType(data_type));
     OF_CUDA_CHECK(cudaMallocFromPoolAsync(&unique_values_, unique_value_size, mem_pool_,
@@ -687,31 +673,14 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
   }
 
   void OnEmbeddingEagerBackwardStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    const user_op::Tensor* ids = ctx->Tensor4ArgNameAndIndex("ids", 0);
-    const user_op::Tensor* embedding_grad = ctx->Tensor4ArgNameAndIndex("embedding_grad", 0);
-    const int64_t num_ids = ids->shape_view().elem_cnt();
-    const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-    const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
-    const int64_t num_unique_ids = parallel_num * num_ids;
-
-    size_t unique_ids_size =
-        GetCudaAlignedSize(num_unique_ids * GetSizeOfDataType(ids->data_type()));
-    OF_CUDA_CHECK(cudaMallocAsync(&eager_unique_ids_, unique_ids_size,
-                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-
-    size_t eager_unique_embedding_grad_size = GetCudaAlignedSize(
-        num_unique_ids * embedding_size * GetSizeOfDataType(embedding_grad->data_type()));
-    OF_CUDA_CHECK(cudaMallocAsync(&eager_unique_embedding_grad_, eager_unique_embedding_grad_size,
-                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+    UNIMPLEMENTED();
   }
 
-  void* EmbeddingEagerBackwardUniqueIds(int64_t iter) override { return eager_unique_ids_; }
+  void* EmbeddingEagerBackwardUniqueIds(int64_t iter) override { return nullptr; }
 
-  void* EmbeddingEagerBackwardUniqueEmbeddingGrad(int64_t iter) override {
-    return eager_unique_embedding_grad_;
-  }
+  void* EmbeddingEagerBackwardUniqueEmbeddingGrad(int64_t iter) override { return nullptr; }
 
-  void* EmbeddingEagerBackwardUniqueValues(int64_t iter) override { return eager_unique_values_; }
+  void* EmbeddingEagerBackwardUniqueValues(int64_t iter) override { return nullptr; }
 
   void OnEmbeddingEagerBackwardEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {}
 
@@ -758,9 +727,6 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
   const void* embedding_put_unique_ids_;
   const void* embedding_put_unique_embeddings_;
   const void* embedding_fused_update_put_unique_embeddings_;
-  void* eager_unique_ids_;
-  void* eager_unique_embedding_grad_;
-  void* eager_unique_values_;
   std::vector<IdStatistics> id_statistics_vec_;
   std::mutex mutex_;
 };
@@ -774,7 +740,7 @@ EmbeddingState* EmbeddingManager::GetEmbeddingState(const std::string& embedding
   if (it == embedding_state_map_.end()) {
     LOG(WARNING) << "create embedding state: " << embedding_name << "-" << rank_id;
     if (!LazyMode::is_enabled() && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_EAGER", false)) {
-      LOG(ERROR) << "make EagerEmbeddingState";
+      LOG(ERROR) << "make EagerEmbeddingState" << embedding_name << "-" << rank_id;
       it = embedding_state_map_.emplace(map_key, std::make_unique<EagerEmbeddingState>()).first;
     } else {
       LOG(ERROR) << "make lazy EmbeddingState";
@@ -838,7 +804,7 @@ void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value
       << "Can't create an embedding with same name of an existing embedding, the name: " << name;
   // TODO: in graph LazyMode::is_enabled() return false.
   if (!LazyMode::is_enabled() && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_EAGER", false)) {
-    LOG(ERROR) << "make EagerEmbeddingState" << name;
+    LOG(ERROR) << "make EagerEmbeddingState" << name << "-" << rank_id;
     CHECK(embedding_state_map_.emplace(map_key, std::make_unique<EagerEmbeddingState>()).second)
         << "Can't create an embedding state with same name of an existing embedding, the name: "
         << name;
