@@ -492,7 +492,6 @@ class IdShuffleKernel final : public user_op::OpKernel {
     const int64_t padding_idx = ctx->Attr<int64_t>("padding_idx");
     bool has_padding_idx = false;
     if (padding_idx >= 0) { has_padding_idx = true; }
-    printf("Padding idx is: %ld \n", padding_idx);
     const bool has_table_ids = ctx->has_input("table_ids", 0);
     const bool need_gen_table_ids = (!has_table_ids && num_tables > 1);
     const bool need_process_table_ids = (has_table_ids || num_tables > 1);
@@ -1338,7 +1337,7 @@ __global__ void UnsortedSegmentHalfGpu(const IDX in_h2_elem_cnt, const IDX h2_in
     val.x = data_row[inner_idx_0];
     val.y = (inner_idx_1 >= inner_dim_size) ? static_cast<half>(0) : data_row[inner_idx_1];
     const IDX idx = segment_ids[segment_id_idx];
-    if (idx == padding_idx) { continue; }
+    if (idx == PADDING_REV_INDEX) { continue; }
     const IDX out_h2_offset = idx * h2_inner_dim_size + h2_inner_idx;
     cuda::atomic::Add(out_h2 + out_h2_offset, val);
   }
