@@ -101,7 +101,7 @@ Maybe<void> TensorProcessor::Apply() {
   } else if (promote_integer_inputs_to_float_) {
     const bool has_integer_input_dtype = CheckHasIntegerInputDType(tensor_tuple_);
     if (has_integer_input_dtype) {
-      Symbol<DType> float_dtype = DType::Float32;
+      Symbol<DType> float_dtype = DType::Float();
       JUST(CastToSameType(tensor_tuple_, float_dtype));
     }
   } else {
