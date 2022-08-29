@@ -24,7 +24,7 @@ namespace py = pybind11;
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   using namespace oneflow;
-  py::class_<StreamSet, std::shared_ptr<StreamSet>>(m, "Stream")
+  py::class_<StreamSet, std::shared_ptr<StreamSet>>(m, "StreamSet")
       .def(py::init([](const Optional<int64_t>& opt_worker_thread_id) {
              int64_t worker_thread_id = Stream::kTmpStreamThreadUid;
              if (opt_worker_thread_id.has_value()) {

@@ -67,8 +67,6 @@ def is_deprecated(func_or_class):
     )
 
 
-from oneflow.framework.stream import Stream, stream
-
 from oneflow._C import abs
 from oneflow._C import exp
 from oneflow._C import acos
@@ -400,6 +398,7 @@ import oneflow.utils.data
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing
+import oneflow.experimental
 import oneflow.one_embedding
 import oneflow.profiler
 

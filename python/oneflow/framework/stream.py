@@ -16,11 +16,11 @@ limitations under the License.
 import oneflow._oneflow_internal
 import contextlib
 
-Stream = oneflow._oneflow_internal.Stream
+StreamSet = oneflow._oneflow_internal.StreamSet
 
 
 @contextlib.contextmanager
-def stream(stream_obj: Stream, exclude_ccl=False):
-    guard = oneflow._oneflow_internal.StreamGuard(stream_obj, exclude_ccl)
+def stream_set(stream_set_object: StreamSet, exclude_ccl=False):
+    guard = oneflow._oneflow_internal.StreamGuard(stream_set_object, exclude_ccl)
     yield
     del guard
