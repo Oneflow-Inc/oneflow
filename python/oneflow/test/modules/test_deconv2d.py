@@ -947,8 +947,8 @@ class TestDeconv2d(flow.unittest.TestCase):
         torch.nn.functional.conv_transpose2d(inputs, weights_64c, stride=2, padding=1, bias=torch.ones(64))
         torch.nn.functional.conv_transpose2d(inputs, weights_8x8_64c, stride=4, padding=2)
         torch.nn.functional.conv_transpose2d(inputs, weights_8x8_64c, stride=4, padding=2, bias=torch.ones(64))
-        torch.nn.functional.conv_transpose2d(inputs, weights_3x3_64c, stride=3, padding=2, output_padding=2)
-        torch.nn.functional.conv_transpose2d(inputs, weights_3x3_64c, stride=3, padding=2, bias=torch.ones(64), output_padding=2)
+        torch.nn.functional.conv_transpose2d(inputs, weights_3x3_64c, stride=3, padding=2, output_padding=1)
+        torch.nn.functional.conv_transpose2d(inputs, weights_3x3_64c, stride=3, padding=2, bias=torch.ones(64), output_padding=1)
 
         
 if __name__ == "__main__":
