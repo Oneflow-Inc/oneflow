@@ -47,15 +47,15 @@ class TestGlobalThread(flow.unittest.TestCase):
         thread_ids = [i % 4 for i in range(200)]
         tensors = []
         dim = 0
-        for thread in thread_ids:
+        for i, thread in enumerate(thread_ids):
             dim += 1
             with flow.async.thread(thread):
                 placement = flow.placement("cuda", [0, 1])
                 ones = flow.ones(2 * dim, placement=placement, sbp=flow.sbp.split(0))
-                tensors.append(ones.to_global(sbp=flow.sbp.broadcast))
-        for tensor in tensors:
-            test_case.assertEqual(tensor[0], 1)
-            test_case.assertEqual(tensor[int(tensor.shape[0] / 2)], 1)
+                tensors.append(ones.to_global(sbp=flow.sbp.broadcast) + i)
+        for i, tensor in enumerate(tensors):
+            test_case.assertEqual(tensor[0], 1 + i)
+            test_case.assertEqual(tensor[int(tensor.shape[0] / 2)], 1 + i)
 
     def test_decorator(test_case):
         thread_ids = [i % 4 for i in range(200)]
