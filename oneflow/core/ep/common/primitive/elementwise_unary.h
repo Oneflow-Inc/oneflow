@@ -76,6 +76,7 @@ namespace primitive {
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSign)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSquare)          \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kTan)             \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kTrunc)           \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kNotEqualZero)
 
 #define UNARY_INT_MATH_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAbs)
