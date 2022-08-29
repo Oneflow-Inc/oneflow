@@ -3199,19 +3199,19 @@ class FusedDotFeatureInteractionFunctor {
       CHECK_EQ_OR_RETURN(output_padding, 0)
           << Error::RuntimeError() << "output_padding should be equal to 0. ";
       CHECK_OR_RETURN(!output_concat) << Error::RuntimeError() << "output_concat should not exist";
-      attrs.SetAllAttrs(self_interaction, output_padding, pooling, pooling, false);
+      attrs.SetAllAttrs(self_interaction, output_padding, pooling, false);
       const std::shared_ptr<one::Tensor>& bi_interaction = JUST(OpInterpUtil::Dispatch<Tensor>(
           *JUST(oneflow::VectorAt(ops_no_output_concat_, n_features - 1)), inputs, attrs));
       std::vector<int32_t> reduce_axes_vec = {1};
       return functional::ReduceSum(bi_interaction, reduce_axes_vec, true);
     }
     if (output_concat) {
-      attrs.SetAllAttrs(self_interaction, output_padding, pooling, pooling, true);
+      attrs.SetAllAttrs(self_interaction, output_padding, pooling, true);
       inputs.push_back(JUST(output_concat));
       return OpInterpUtil::Dispatch<Tensor>(
           *JUST(oneflow::VectorAt(ops_has_output_concat_, n_features - 1)), inputs, attrs);
     } else {
-      attrs.SetAllAttrs(self_interaction, output_padding, pooling, pooling, false);
+      attrs.SetAllAttrs(self_interaction, output_padding, pooling, false);
       return OpInterpUtil::Dispatch<Tensor>(
           *JUST(oneflow::VectorAt(ops_no_output_concat_, n_features - 1)), inputs, attrs);
     }
