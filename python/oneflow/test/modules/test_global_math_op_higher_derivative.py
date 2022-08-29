@@ -23,7 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 
 def _global_math_op_grad_grad_impl(test_case, op_name, placement, sbp):
     x = (
-        random_tensor(2, dim0=8, dim1=8)
+        random_tensor(2, dim0=8, dim1=8, low=-2, high=2)
         .to_global(placement=placement, sbp=sbp)
         .requires_grad_(True)
     )
@@ -33,23 +33,34 @@ def _global_math_op_grad_grad_impl(test_case, op_name, placement, sbp):
     x_grad = torch.autograd.grad(y, x, init_grad, create_graph=True)[0]
     test_case.assertTrue(
         np.allclose(
-            x_grad.pytorch.detach().cpu().numpy(), x_grad.oneflow.detach().numpy()
+            x_grad.pytorch.detach().cpu().numpy(),
+            x_grad.oneflow.detach().numpy(),
+            atol=1e-4,
+            rtol=1e-4,
+            equal_nan=True,
         )
     )
 
-    x_grad_grad = torch.autograd.grad(x_grad, x, init_grad, create_graph=True)[0]
+    x_grad_grad = torch.autograd.grad(x_grad, x, init_grad, retain_graph=True)[0]
     test_case.assertTrue(
         np.allclose(
             x_grad_grad.pytorch.detach().cpu().numpy(),
             x_grad_grad.oneflow.detach().numpy(),
+            atol=1e-4,
+            rtol=1e-4,
+            equal_nan=True,
         )
     )
 
     init_grad_grad = random_tensor(2, 8, 8).to_global(placement, sbp).requires_grad_()
-    dgrad = torch.autograd.grad(x_grad, init_grad, init_grad_grad, create_graph=True)[0]
+    dgrad = torch.autograd.grad(x_grad, init_grad, init_grad_grad, retain_graph=True)[0]
     test_case.assertTrue(
         np.allclose(
-            dgrad.pytorch.detach().cpu().numpy(), dgrad.oneflow.detach().numpy(),
+            dgrad.pytorch.detach().cpu().numpy(),
+            dgrad.oneflow.detach().numpy(),
+            atol=1e-4,
+            rtol=1e-4,
+            equal_nan=True,
         )
     )
 
@@ -66,6 +77,66 @@ class TestGlobalMathOpHigherDerivative(flow.unittest.TestCase):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 _global_math_op_grad_grad_impl(test_case, "cos", placement, sbp)
+
+    @globaltest
+    def test_global_tan_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "tan", placement, sbp)
+
+    @globaltest
+    def test_global_sinh_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "sinh", placement, sbp)
+
+    @globaltest
+    def test_global_cosh_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "cosh", placement, sbp)
+
+    @globaltest
+    def test_global_tanh_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "tanh", placement, sbp)
+
+    @globaltest
+    def test_global_asin_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "asin", placement, sbp)
+
+    @globaltest
+    def test_global_acos_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "acos", placement, sbp)
+
+    @globaltest
+    def test_global_atan_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "atan", placement, sbp)
+
+    @globaltest
+    def test_global_asinh_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "asinh", placement, sbp)
+
+    @globaltest
+    def test_global_acosh_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "acosh", placement, sbp)
+
+    @globaltest
+    def test_global_atanh_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "atanh", placement, sbp)
 
 
 if __name__ == "__main__":
