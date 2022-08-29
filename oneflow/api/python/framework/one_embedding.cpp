@@ -222,6 +222,7 @@ class PersistentTableReaderImpl : public PersistentTableReader {
       options.value_size = storage_dim * sizeof(Value);
       options.target_chunk_size_mb = target_chunk_size_mb;
       options.physical_block_size = physical_block_size;
+      options.ready_only = true;
       tables_[i] = NewPersistentTable(options);
       iterators_[i] =
           std::unique_ptr<PersistentTable::Iterator>(tables_[i]->ReadSnapshot(snapshot_name));
