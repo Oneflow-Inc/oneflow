@@ -44,9 +44,6 @@ class PowXGradGrad : public OpExprGradFunction<PowXGradGradCaptureState> {
     ctx->x_requires_grad = inputs.at(0)->requires_grad();
     ctx->y_requires_grad = inputs.at(1)->requires_grad();
     ctx->dz_requires_grad = inputs.at(2)->requires_grad();
-    if (!(ctx->dz_requires_grad || ctx->x_requires_grad || ctx->y_requires_grad)) {
-      return Maybe<void>::Ok();
-    }
 
     ctx->x_index = ctx->SaveTensorForBackward(inputs.at(0));
     ctx->y_index = ctx->SaveTensorForBackward(inputs.at(1));
@@ -121,9 +118,6 @@ class PowYGradGrad : public OpExprGradFunction<PowYGradGradCaptureState> {
     ctx->y_requires_grad = inputs.at(1)->requires_grad();
     ctx->dz_requires_grad = inputs.at(2)->requires_grad();
 
-    if (!(ctx->dz_requires_grad || ctx->x_requires_grad || ctx->y_requires_grad)) {
-      return Maybe<void>::Ok();
-    }
     ctx->x_index = ctx->SaveTensorForBackward(inputs.at(0));
     if (ctx->x_requires_grad || ctx->y_requires_grad) {
       ctx->y_index = ctx->SaveTensorForBackward(inputs.at(1));
