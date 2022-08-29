@@ -290,6 +290,7 @@ Pointwise Ops
     sub 
     tan 
     tanh
+    trunc
     floor_divide
 
 Reduction Ops
