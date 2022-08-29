@@ -346,6 +346,7 @@ Tensor class reference
     Tensor.transpose
     Tensor.tril
     Tensor.triu
+    Tensor.trunc
     Tensor.type_as
     Tensor.type
     Tensor.t

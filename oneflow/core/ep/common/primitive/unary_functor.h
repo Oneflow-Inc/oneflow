@@ -258,6 +258,12 @@ struct UnaryFunctor<device, UnaryOp::kIsFinite, bool, Src> {
 };
 
 template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kTrunc, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1);
+  OF_DEVICE_FUNC Dst operator()(Src src) const;
+};
+
+template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kAbs, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 

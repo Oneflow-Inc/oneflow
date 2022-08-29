@@ -75,6 +75,7 @@ enum class UnaryOp {
   kSqrt,
   kSquare,
   kTan,
+  kTrunc,
   kNotEqualZero,
   // logical op
   kLogicalNot,
