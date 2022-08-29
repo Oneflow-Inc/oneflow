@@ -117,6 +117,24 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsFinite, bool, double> {
 };
 
 template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTrunc, half, half> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  __device__ half operator()(half src) const { return htrunc(src); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTrunc, float, float> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC float operator()(float src) const { return truncf(src); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTrunc, double, double> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC double operator()(double src) const { return trunc(src); }
+};
+
+template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAbs, half, half> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
@@ -272,7 +290,19 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsFinite, bool, nv_bfloat16> {
   OF_DEVICE_FUNC bool operator()(nv_bfloat16 src) const { return isfinite(__bfloat162float(src)); }
 };
 
-#endif
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTrunc, nv_bfloat16, nv_bfloat16> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  __device__ nv_bfloat16 operator()(nv_bfloat16 src) const {
+#if CUDA_ARCH >= 800
+    return htrunc(src);
+#else
+    return __float2bfloat16(truncf(__bfloat162float(src)));
+#endif  // CUDA_ARCH >= 800
+  }
+};
+
+#endif  // CUDA_VERSION >= 11000
 
 }  // namespace primitive
 }  // namespace ep
