@@ -9517,7 +9517,11 @@ def OneFlow_EmbeddingUpdatePlaceholderOp : OneFlow_BaseOp<"embedding_update_plac
   let attrs = (ins
     StrAttr:$embedding_name,
     DefaultValuedAttr<SI64Attr, "0">:$line_size,
-    DefaultValuedAttr<SI64Attr, "0">:$embedding_size
+    DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
+    DefaultValuedAttr<BoolAttr, "false">:$is_full_cache,
+    DefaultValuedAttr<SI32Attr, "1">:$num_tables,
+    StrAttr:$embedding_tables,
+    DefaultValuedAttr<SI64Attr, "0">:$seed
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

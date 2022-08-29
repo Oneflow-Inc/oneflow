@@ -291,7 +291,7 @@ class Embedding(Module):
         unique_ids = flow.tensor(np.ones((1,)).astype(np.int64)).to("cuda")
         unique_embeddings = flow.tensor(np.ones((1,)).astype(np.float32)).to("cuda")
         embedding_grad = flow.tensor(np.ones((1,)).astype(np.float32)).to("cuda")
-        lr_tensor = flow.tensor(np.ones((1,)).astype(np.float32)).to("cuda")
+        lr_tensor = flow.tensor(np.array((lr,)).astype(np.float32)).to("cuda")
         down_scale_by_tensor = flow.tensor(np.ones((1,)).astype(np.float32)).to("cuda")
         skip_if = flow.tensor(np.zeros((1,)).astype(np.int64)).to("cuda")
         scale = 1.0

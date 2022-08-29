@@ -84,10 +84,13 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EmbeddingUpdatePlaceholderOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("ids", 0), 0)
-      .Split(user_op::OpArg("embedding_grad", 0), 0)
-      .Build();
+  auto builder = ctx->NewBuilder()
+                     .Split(user_op::OpArg("ids", 0), 0)
+                     .Split(user_op::OpArg("embedding_grad", 0), 0);
+  if (ctx->user_op_conf().has_input("table_ids", 0)) {
+    builder.Split(user_op::OpArg("table_ids", 0), 0);
+  }
+  builder.Build();
   return Maybe<void>::Ok();
 }
 
@@ -229,7 +232,7 @@ Maybe<void> CheckDataShape(user_op::InferContext* ctx) {
   const Shape& embedding_grad_shape = ctx->InputShape("embedding_grad", 0);
   // CHECK_EQ_OR_RETURN(embedding_grad_shape.NumAxes(), 2);
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  if (embedding::UseDynamicMemoryAllocation()) {
+  if (embedding::UseDynamicMemoryAllocation() || !LazyMode::is_enabled()) {
     CHECK_EQ_OR_RETURN(unique_embeddings_shape.elem_cnt(), 1)
         << "if use dynamic memory allocation, unique_embeddings elem_cnt should be 1.";
   } else {

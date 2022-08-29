@@ -3555,26 +3555,47 @@ class OneEmbeddingLookupFunctor {
 class OneEmbeddingLookupGradFunctor {
  public:
   OneEmbeddingLookupGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("embedding_update_placeholder")
-                         .Input("ids")
-                         .Input("embedding_grad")
-                         .Build());
+    op_has_table_ids_ = CHECK_JUST(one::OpBuilder("embedding_update_placeholder")
+                                       .Input("ids")
+                                       .Input("table_ids")
+                                       .Input("embedding_grad")
+                                       .Build());
+    op_no_table_ids_ = CHECK_JUST(one::OpBuilder("embedding_update_placeholder")
+                                      .Input("ids")
+                                      .Input("embedding_grad")
+                                      .Build());
   }
 
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ids,
+                         const Optional<one::Tensor>& table_ids,
                          const std::shared_ptr<one::Tensor>& embedding_grad,
-                         const std::string& embedding_name, const int64_t line_size,
-                         const int64_t embedding_size) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("embedding_name", "line_size", "embedding_size");
+                         const Symbol<DType>& dtype, const std::string& embedding_name,
+                         const int64_t line_size, const int64_t embedding_size,
+                         const bool is_full_cache, const int32_t num_tables,
+                         const std::string& embedding_tables, const int64_t seed) const {
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "embedding_name", "line_size", "embedding_size",
+                                       "is_full_cache", "num_tables", "embedding_tables", "seed");
+    attrs.SetAttr<DataType>("dtype", dtype->data_type());
     attrs.SetAttr<std::string>("embedding_name", embedding_name);
     attrs.SetAttr<int64_t>("line_size", line_size);
     attrs.SetAttr<int64_t>("embedding_size", embedding_size);
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ids, embedding_grad}, attrs));
+    attrs.SetAttr<bool>("is_full_cache", is_full_cache);
+    attrs.SetAttr<int32_t>("num_tables", num_tables);
+    attrs.SetAttr<std::string>("embedding_tables", embedding_tables);
+    attrs.SetAttr<int64_t>("seed", seed);
+    if (table_ids) {
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_has_table_ids_,
+                                               {ids, JUST(table_ids), embedding_grad}, attrs));
+    } else {
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_no_table_ids_, {ids, embedding_grad}, attrs));
+    }
     return Maybe<void>::Ok();
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_has_table_ids_;
+  std::shared_ptr<OpExpr> op_no_table_ids_;
 };
 
 class OneEmbeddingEmbeddingPutFunctor {
@@ -3673,7 +3694,7 @@ class OneEmbeddingSgdUpdateFunctor {
                            const float weight_decay, const float momentum, const int64_t line_size,
                            const int64_t embedding_size, const std::string& embedding_name) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "line_size",
-                                                 "embedding_size", "beta");
+                                                 "embedding_size", "embedding_name", "beta");
     attrs.SetAttr<double>("scale", scale);
     attrs.SetAttr<float>("weight_decay", weight_decay);
     attrs.SetAttr<int64_t>("line_size", line_size);
@@ -3736,9 +3757,9 @@ class OneEmbeddingAdamUpdateFunctor {
                            const float epsilon, const bool do_bias_correction,
                            const int64_t line_size, const int64_t embedding_size,
                            const std::string& embedding_name) const {
-    auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "beta1", "beta2", "epsilon",
-                                       "do_bias_correction", "line_size", "embedding_size");
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "beta1", "beta2",
+                                                 "epsilon", "do_bias_correction", "line_size",
+                                                 "embedding_size", "embedding_name");
     attrs.SetAttr<double>("scale", scale);
     attrs.SetAttr<float>("weight_decay", weight_decay);
     attrs.SetAttr<float>("beta1", beta1);
@@ -3796,7 +3817,7 @@ class OneEmbeddingAdagradUpdateFunctor {
                            const int64_t line_size, const int64_t embedding_size,
                            const std::string& embedding_name) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "lr_decay", "epsilon",
-                                                 "line_size", "embedding_size");
+                                                 "line_size", "embedding_size", "embedding_name");
     attrs.SetAttr<double>("scale", scale);
     attrs.SetAttr<float>("weight_decay", weight_decay);
     attrs.SetAttr<float>("lr_decay", lr_decay);
@@ -3839,8 +3860,9 @@ class OneEmbeddingFtrlUpdateFunctor {
                            const float weight_decay, const float lr_power, const float lambda1,
                            const float lambda2, const float beta, const int64_t line_size,
                            const int64_t embedding_size, const std::string& embedding_name) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "lr_power", "lambda1",
-                                                 "lambda2", "beta", "line_size", "embedding_size");
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "lr_power", "lambda1", "lambda2",
+                                       "beta", "line_size", "embedding_size", "embedding_name");
     attrs.SetAttr<double>("scale", scale);
     attrs.SetAttr<float>("weight_decay", weight_decay);
     attrs.SetAttr<float>("lr_power", lr_power);
