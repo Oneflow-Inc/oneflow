@@ -23,37 +23,6 @@ using namespace mlir;
 
 namespace mlir {
 namespace oneflow {
-struct UserOpLowering final : public OpConversionPattern<UserOp> {
- public:
-  using OpConversionPattern<UserOp>::OpConversionPattern;
-  LogicalResult matchAndRewrite(UserOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter& rewriter) const override {
-    llvm::StringRef callee = "oneflow_launch_kernel";
-    // rewriter.replaceOpWithNewOp<mlir::func::CallOp>(op, callee, op->getResults());
-    return success();
-  }
-};
-
-struct InputOpLowering final : public OpConversionPattern<InputOp> {
- public:
-  using OpConversionPattern<InputOp>::OpConversionPattern;
-  LogicalResult matchAndRewrite(InputOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter& rewriter) const override {
-    return success();
-  }
-};
-
-struct OutputOpLowering final : public OpConversionPattern<OutputOp> {
- public:
-  using OpConversionPattern<OutputOp>::OpConversionPattern;
-  LogicalResult matchAndRewrite(OutputOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter& rewriter) const override {
-    return success();
-  }
-};
-
-}  // namespace oneflow
-}  // namespace mlir
 
 namespace {
 
@@ -61,29 +30,30 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    mlir::oneflow::populateFuserPasses(patterns);
+    populateFuserPasses(patterns);
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
 
 class KernelLaunchFunctionPass : public KernelLaunchFunctionPassBase<KernelLaunchFunctionPass> {
-  void runOnOperation() override {}
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    populateKernelWrapperPasses(patterns);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
 };
 
 class FuseIntoExistingOpPass : public FuseIntoExistingOpPassBase<FuseIntoExistingOpPass> {
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    mlir::oneflow::populateFuserForExistingOp(patterns);
+    populateFuserForExistingOp(patterns);
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
 
 }  // namespace
-
-namespace mlir {
-
-namespace oneflow {
 
 std::unique_ptr<Pass> createOutlineJitFunctionPass() {
   return std::make_unique<OutlineJitFunctionPass>();
@@ -98,5 +68,4 @@ std::unique_ptr<Pass> createFuseIntoExistingOpPass() {
 }
 
 }  // namespace oneflow
-
 }  // namespace mlir

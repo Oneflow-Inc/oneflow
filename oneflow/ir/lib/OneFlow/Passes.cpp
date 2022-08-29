@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/framework/sbp_context.h"
@@ -86,6 +87,25 @@ namespace mlir {
 namespace oneflow {
 
 LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
+  // TODO: now we only need one JIT engine
+  auto parent_func_op = op->getParentOfType<oneflow::Job>();
+  if (!parent_func_op) { return failure(); }
+  auto parent_module_op = parent_func_op->getParentOfType<ModuleOp>();
+  if (!parent_module_op) { return failure(); }
+  SymbolTable symbol_table(parent_module_op);
+  std::string mlir;
+  llvm::raw_string_ostream os_mlir(mlir);
+  if (auto found = symbol_table.lookup(op.op_name())) {
+    found->print(os_mlir);
+  } else {
+    parent_module_op->dump();
+    return op.emitError("symbol of jit function not found: " + op.op_name());
+  }
+  op->setAttr("mlir_assembly", rewriter.getStringAttr(mlir));
+  return success();
+}
+
+LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, KernelLaunchOp op) {
   // TODO: now we only need one JIT engine
   auto parent_func_op = op->getParentOfType<oneflow::Job>();
   if (!parent_func_op) { return failure(); }
@@ -818,6 +838,36 @@ void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLI
   results.insert<BroadcastMulToScalarMulPattern>(context);
 }
 
+struct KernelLaunchPattern : public RewritePattern {
+  explicit KernelLaunchPattern(::mlir::MLIRContext* context)
+      : RewritePattern(MatchAnyOpTypeTag(), 0, context){};
+
+  LogicalResult matchAndRewrite(Operation* op, ::mlir::PatternRewriter& rewriter) const override {
+    auto attr_flag = "in_kernel_launch";
+    auto op_name = op->getName().getStringRef();
+    std::vector<StringRef> white_list{ModuleOp::getOperationName(),
+                                      func::FuncOp::getOperationName(),
+                                      func::ReturnOp::getOperationName(),
+                                      KernelLaunchOp::getOperationName(),
+                                      Job::getOperationName(),
+                                      ReturnOp::getOperationName(),
+                                      OutputOp::getOperationName(),
+                                      InputOp::getOperationName()};
+    if (std::count(white_list.begin(), white_list.end(), op_name)) { return success(); }
+    if (op->hasAttr(attr_flag)) { return success(); }
+    op->setAttr(attr_flag, StringAttr::get(op->getContext(), "true"));
+    auto loc = op->getLoc();
+    auto in = op->getOperands();
+    auto res = op->getResults();
+    NamedAttrList attrs = GetJitOpAttributes(rewriter, op_name, in.size(), res.size(), op);
+
+    auto function = GetOrInsertFuncOp(rewriter, loc, op_name, in, res, {op});
+    auto kernel_launch = rewriter.replaceOpWithNewOp<KernelLaunchOp>(op, function, attrs, in);
+    if (failed(DumpAssembly(rewriter, kernel_launch))) { exit(1); }
+    return success();
+  }
+};
+
 void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addPass(createConvertToSignlessForTosaPass());  // convert-to-signless-for-tosa
   pm.addNestedPass<func::FuncOp>(LLVM::createRequestCWrappersPass());  // llvm-request-c-wrappers
@@ -885,6 +935,9 @@ void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<MulCastPattern>(patterns.getContext());
 }
 
+void populateKernelWrapperPasses(::mlir::RewritePatternSet& patterns) {
+  patterns.add<KernelLaunchPattern>(patterns.getContext());
+}
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedBiasAddGeluPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern>(patterns.getContext());
