@@ -407,7 +407,7 @@ PersistentTableImpl<Key, Engine>::PersistentTableImpl(const PersistentTableOptio
       logical_block_size_(GetLogicalBlockSize(options.physical_block_size, value_size_)),
       blocks_buffer_(options.physical_block_size),
       writable_key_file_chunk_id_(-1),
-      read_only_(options.ready_only) {
+      read_only_(options.read_only) {
   const uint64_t capacity_hint = ParseIntegerFromEnv(
       "ONEFLOW_ONE_EMBEDDING_PERSISTENT_TABLE_CAPACITY_HINT", options.capacity_hint);
   if (capacity_hint > 0) { row_id_mapping_.reserve(capacity_hint); }
@@ -415,7 +415,7 @@ PersistentTableImpl<Key, Engine>::PersistentTableImpl(const PersistentTableOptio
   const std::string lock_filename = PosixFile::JoinPath(options.path, kLockFileName);
   const bool init = !PosixFile::FileExists(lock_filename);
   if (read_only_) {
-    CHECK(init) << "The table must be initialized in read only mode";
+    CHECK(!init) << "The table must be initialized in read only mode";
   } else {
     lock_ = PosixFileLockGuard(PosixFile(lock_filename, O_CREAT | O_RDWR, 0644));
   }
