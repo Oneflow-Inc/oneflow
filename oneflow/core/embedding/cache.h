@@ -41,7 +41,7 @@ struct CacheOptions {
   uint32_t value_size{};
   DataType value_type{};
   float load_factor = 0.75;
-  int64_t padding_idx = 0;
+  int64_t padding_idx = -1;
 };
 
 class Cache {

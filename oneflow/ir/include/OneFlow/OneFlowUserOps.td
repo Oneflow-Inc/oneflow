@@ -9523,6 +9523,7 @@ def OneFlow_EmbeddingLookupPlaceholderOp : OneFlow_BaseOp<"embedding_lookup_plac
     OneFlow_DataType:$dtype,
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
     DefaultValuedAttr<SI32Attr, "1">:$num_tables,
+    DefaultValuedAttr<SI64Attr, "-1">:$padding_idx,
     StrAttr:$embedding_tables,
     StrAttr:$key_value_store_options
   );

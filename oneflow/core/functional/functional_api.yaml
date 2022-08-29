@@ -2376,7 +2376,7 @@
   bind_python: True
 
 - name: "one_embedding_lookup"
-  signature: "Tensor (Tensor shadow, Tensor ids, Tensor table_ids=None, DataType dtype, Int64 embedding_size, Int32 num_tables, String embedding_tables, String embedding_store_options) => OneEmbeddingLookup"
+  signature: "Tensor (Tensor shadow, Tensor ids, Tensor table_ids=None, DataType dtype, Int64 embedding_size, Int32 num_tables, String embedding_tables, String embedding_store_options, Int64 padding_idx) => OneEmbeddingLookup"
   bind_python: True
 
 - name: "one_embedding_lookup_grad"

@@ -173,6 +173,7 @@ class Embedding(Module):
         tables,
         store_options,
         default_initializer=None,
+        padding_idx=-1, 
     ):
         super().__init__()
         self.dtype = dtype
@@ -197,6 +198,7 @@ class Embedding(Module):
             self.key_value_store_options, self.local_rank, self.rank_id, self.world_size
         )
         self.shadow = flow.nn.Parameter(flow.Tensor(1))
+        self.padding_idx = padding_idx
 
     def _save_to_state_dict(self, destination, prefix, keep_vars):
         super()._save_to_state_dict(destination, prefix, keep_vars)
@@ -295,6 +297,7 @@ class Embedding(Module):
             self.num_tables,
             self.embedding_tables,
             self.key_value_store_options,
+            padding_idx=self.padding_idx
         )
 
 
@@ -647,6 +650,7 @@ class MultiTableEmbedding(Embedding):
         tables,
         store_options,
         default_initializer=None,
+        padding_idx=-1, 
     ):
         assert isinstance(embedding_dim, int)
         super().__init__(
@@ -657,6 +661,7 @@ class MultiTableEmbedding(Embedding):
             tables,
             store_options,
             default_initializer,
+            padding_idx, 
         )
 
 
@@ -749,6 +754,7 @@ class MultiTableMultiColumnEmbedding(Embedding):
         tables,
         store_options,
         default_initializer=None,
+        padding_idx=-1, 
     ):
         if isinstance(embedding_dim, (list, tuple)):
             for dim in embedding_dim:
@@ -764,6 +770,7 @@ class MultiTableMultiColumnEmbedding(Embedding):
             tables,
             store_options,
             default_initializer,
+            padding_idx, 
         )
 
 
