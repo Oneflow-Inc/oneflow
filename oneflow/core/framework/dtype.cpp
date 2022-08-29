@@ -64,7 +64,8 @@ class DTypeMeta final {
 
 Maybe<const DTypeMeta&> DTypeMeta4DataType(DataType data_type) {
   static const HashMap<DataType, DTypeMeta> data_type2dtype_meta{
-      {DataType::kInvalidDataType, DTypeMeta("oneflow.invalid_data_type", false, false, false)},
+      {DataType::kInvalidDataType,
+       DTypeMeta("oneflow.invalid_data_type", false, false, false, false)},
       {DataType::kChar, DTypeMeta("oneflow.char", false, false, false, false)},
       {DataType::kFloat16, DTypeMeta("oneflow.float16", true, false, true, false)},
       {DataType::kFloat, DTypeMeta("oneflow.float32", true, false, true, false)},
