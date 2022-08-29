@@ -149,7 +149,7 @@ class GlobalConstantFunctor {
             nd_sbp[i] = SbpParallelToString(*sbp_tuple[i]);
           }
         }
-        attrs.SetAttr<6>(nd_sbp);
+        attrs.SetAttr<5>(nd_sbp);
       }
       const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
       return OpInterpUtil::Dispatch<Tensor>(*op_, {},
