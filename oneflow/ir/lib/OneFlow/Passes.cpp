@@ -86,30 +86,12 @@ namespace mlir {
 
 namespace oneflow {
 
-LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
+template<typename T>
+LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, T op) {
   // TODO: now we only need one JIT engine
-  auto parent_func_op = op->getParentOfType<oneflow::Job>();
+  auto parent_func_op = op->template getParentOfType<oneflow::Job>();
   if (!parent_func_op) { return failure(); }
-  auto parent_module_op = parent_func_op->getParentOfType<ModuleOp>();
-  if (!parent_module_op) { return failure(); }
-  SymbolTable symbol_table(parent_module_op);
-  std::string mlir;
-  llvm::raw_string_ostream os_mlir(mlir);
-  if (auto found = symbol_table.lookup(op.op_name())) {
-    found->print(os_mlir);
-  } else {
-    parent_module_op->dump();
-    return op.emitError("symbol of jit function not found: " + op.op_name());
-  }
-  op->setAttr("mlir_assembly", rewriter.getStringAttr(mlir));
-  return success();
-}
-
-LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, KernelLaunchOp op) {
-  // TODO: now we only need one JIT engine
-  auto parent_func_op = op->getParentOfType<oneflow::Job>();
-  if (!parent_func_op) { return failure(); }
-  auto parent_module_op = parent_func_op->getParentOfType<ModuleOp>();
+  auto parent_module_op = parent_func_op->template getParentOfType<ModuleOp>();
   if (!parent_module_op) { return failure(); }
   SymbolTable symbol_table(parent_module_op);
   std::string mlir;
@@ -856,6 +838,9 @@ struct KernelLaunchPattern : public RewritePattern {
     if (std::count(white_list.begin(), white_list.end(), op_name)) { return success(); }
     if (op->hasAttr(attr_flag)) { return success(); }
     op->setAttr(attr_flag, StringAttr::get(op->getContext(), "true"));
+    auto op_name_attr = op->getAttr("op_name");
+    if (!op_name_attr.isa<StringAttr>()) { exit(1); }
+    op_name = op_name_attr.cast<StringAttr>();
     auto loc = op->getLoc();
     auto in = op->getOperands();
     auto res = op->getResults();
