@@ -58,14 +58,15 @@ class TestCosineSimilarity(flow.unittest.TestCase):
         cos.train(random())
         output = cos(a, b)
         return output
-    '''
+    
+    @unittest.skip(reason="https://github.com/Oneflow-Inc/oneflow/issues/8881#issuecomment-1229682453")
     @profile(torch.nn.functional.cosine_similarity)
     def profile_cosine_similarity(test_case):
         input1 = torch.ones(100,128)
         input2 = torch.ones(100,128)
         torch.nn.functional.cosine_similarity(input1, input2)
         torch.nn.functional.cosine_similarity(input1, input2, dim=0) 
-    '''
+    
 
 
 if __name__ == "__main__":

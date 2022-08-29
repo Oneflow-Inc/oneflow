@@ -939,20 +939,14 @@ class TestDeconv2d(flow.unittest.TestCase):
 
     @profile(torch.nn.functional.conv_transpose2d)
     def profile_conv_transpose2d(test_case):
-        inputs = torch.randn(16, 3, 64, 64)
-        weights_64c = torch.randn(3, 64, 3, 3)
-        weights_5x5_64c = torch.randn(3, 64, 5, 5)
-        torch.nn.functional.conv_transpose2d(inputs, weights_64c)
-        torch.nn.functional.conv_transpose2d(inputs, weights_64c, stride=2)
+        inputs = torch.ones(16, 3, 128, 128)
+        weights_64c = torch.ones(3, 64, 4, 4)
+        weights_8x8_64c = torch.ones(3, 64, 8, 8)
         torch.nn.functional.conv_transpose2d(inputs, weights_64c, stride=2, padding=1)
-        torch.nn.functional.conv_transpose2d(inputs, weights_64c, stride=2, padding=1, output_padding=1)
-        torch.nn.functional.conv_transpose2d(inputs, weights_64c, stride=2, padding=1, output_padding=1, bias=torch.ones(64))
-        torch.nn.functional.conv_transpose2d(inputs, weights_5x5_64c)
-        torch.nn.functional.conv_transpose2d(inputs, weights_5x5_64c, stride=2)
-        torch.nn.functional.conv_transpose2d(inputs, weights_5x5_64c, stride=2, padding=1)
-        torch.nn.functional.conv_transpose2d(inputs, weights_5x5_64c, stride=2, padding=1, output_padding=1)
-        torch.nn.functional.conv_transpose2d(inputs, weights_5x5_64c, stride=2, padding=1, output_padding=1, bias=torch.ones(64))
+        torch.nn.functional.conv_transpose2d(inputs, weights_64c, stride=2, padding=1, bias=torch.ones(64))
+        torch.nn.functional.conv_transpose2d(inputs, weights_8x8_64c, stride=4, padding=2)
+        torch.nn.functional.conv_transpose2d(inputs, weights_8x8_64c, stride=4, padding=2, bias=torch.ones(64))
 
-
+        
 if __name__ == "__main__":
     unittest.main()
