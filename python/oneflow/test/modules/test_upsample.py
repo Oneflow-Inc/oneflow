@@ -383,7 +383,7 @@ class TestUpsample2d(flow.unittest.TestCase):
         m = torch.nn.Upsample(scale_factor=random().to(float), mode="nearest")
         y = m(x)
         return y
-    
+
     @unittest.skip(
         "The nearest interpolate operation in pytorch has bug, https://github.com/pytorch/pytorch/issues/65200"
     )
