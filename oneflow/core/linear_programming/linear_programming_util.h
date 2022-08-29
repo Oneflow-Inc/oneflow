@@ -23,11 +23,35 @@ limitations under the License.
 
 namespace oneflow {
 namespace linear_programming {
-// A sparse matrix whose rows and columns might be eliminated.
-class SparsePrimalMatrix {
+
+static const double floating_point_error = 1e-14;
+double SparseInnerProduct(const std::vector<double>& a, const std::vector<int32_t>& basis,
+                          const HashMap<int32_t, double>& b);
+
+// A sparse matrix with row and column major
+class SparseMatrix {
  public:
   std::vector<HashMap<int32_t, double>> rows_;
   std::vector<HashMap<int32_t, double>> columns_;
+
+  SparseMatrix() = default;
+  SparseMatrix(int32_t row_size, int32_t column_size);
+  ~SparseMatrix() = default;
+
+  void Insert(int32_t i, int32_t j, double val);
+
+  void Eye(int32_t n);
+
+  // p = c{basis} * this_sparse_matrix
+  // Specifically, basis would be basic_column2compact_primal_column_.
+  void VectorMatrixMultiplication(const std::vector<double>& c, const std::vector<int32_t>& basis,
+                                  std::vector<double>& p);
+};
+
+// A sparse matrix whose rows and columns might be eliminated.
+class SparsePrimalMatrix {
+ public:
+  SparseMatrix original_matrix_;
   std::vector<int32_t> rows_all2compact_;
   std::vector<int32_t> columns_all2compact_;
   std::vector<int32_t> rows_compact2all_;
@@ -40,8 +64,6 @@ class SparsePrimalMatrix {
   SparsePrimalMatrix() = default;
   ~SparsePrimalMatrix() = default;
 
-  void Insert(int32_t i, int32_t j, double val);
-
   void ExpandArtificialVariables();
   void EliminateArtificialVariables();
 
@@ -49,6 +71,48 @@ class SparsePrimalMatrix {
   void HideColumn(int32_t j);
   void InitPrimalMatrix();
 };
+
+// Use the two-phase revised simplex method to solve linear programming problem
+// Consider the standard form problem:
+//      minimize cx
+//      subject to Ax = b
+//                  x >= 0.
+class LinearProgrammingSolver {
+ public:
+  // primal matrix A
+  SparsePrimalMatrix primal_matrix_;
+  // inverse base matrix B
+  SparseMatrix inverse_base_matrix_;
+  // row vector c
+  std::vector<double> primal_cost_;
+  std::vector<double> c_;
+  // column vector b, all b_i >= 0.
+  std::vector<double> primal_constrain_b_;
+  std::vector<double> x_;
+  // row vector, p_ = basis_cost * inverse_base_matrix_
+  std::vector<double> p_;
+  // A map from the basic columns to the compact primal column
+  std::vector<int32_t> basic_column2compact_primal_column_;
+  // A map from the compact primal column to the basic columns
+  std::vector<int32_t> compact_primal_column2basic_column_;
+  // The floating point error cause by addition and subtraction
+  double zero_minus_ = 0.0;
+  double zero_plus_ = 0.0;
+
+  // Phase 1, solve for a initial feasible solution and corresponding basis.
+  void Solve4InitFeasibleSolution();
+
+ private:
+  // The revised simplex method
+  void RevisedSimplexMethod();
+
+  // Compute absolute error for 0
+  void ComputeAbsoluteError0();
+
+  // Numerically less than zero, x < 0
+  bool NumericalLT0(double x);
+};
+
 }  // namespace linear_programming
 }  // namespace oneflow
 
