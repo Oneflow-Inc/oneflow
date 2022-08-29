@@ -15,13 +15,53 @@ limitations under the License.
 """
 import oneflow._oneflow_internal
 
+
 class thread:
-    def __init__(self, thread_global_id=1, exclude_ccl=False):
+    r"""Context-manager to pick worker thread.
+    By default, all opkernels are excuted/launched in worker thread 0. Within this context, opkernels can be excuted/launched in the worker thread indicated by `thread_global_id`. 
+    This context manager is thread local; it will not affect ops in other threads.
+    Also functions as a decorator. (Make sure to instantiate with parenthesis.)
+
+    Args:
+        thread_global_id: a integer in range [0, 3) for communication across ranks.
+
+    For example:
+
+    .. code-block:: python
+        >>> import oneflow as flow
+        >>> with flow.async.thread(2):
+        ...     print(flow.ones(2, 2))
+        ...
+        tensor([[1., 1.],
+                [1., 1.]], dtype=oneflow.float32)
+        >>> @flow.async.thread(3)
+        ... def ones_in_other_thread():
+        ...     return flow.ones(2, 2)
+        ...
+        >>> print(ones_in_other_thread())
+        tensor([[1., 1.],
+                [1., 1.]], dtype=oneflow.float32)
+
+    """
+
+    def __init__(self, thread_global_id: int = 1, exclude_ccl=False):
         self.stream_set_ = oneflow._oneflow_internal.StreamSet(thread_global_id)
         self.exclude_ccl_ = exclude_ccl
 
     def __enter__(self):
-        self.guard_ = oneflow._oneflow_internal.StreamGuard(self.stream_set_, self.exclude_ccl_)
+        self.guard_ = oneflow._oneflow_internal.StreamGuard(
+            self.stream_set_, self.exclude_ccl_
+        )
 
     def __exit__(self, type, value, traceback):
         del self.guard_
+
+    def __call__(self, func):
+        def Func(*args, **kwargs):
+            guard = oneflow._oneflow_internal.StreamGuard(
+                self.stream_set_, self.exclude_ccl_
+            )
+            return func(*args, **kwargs)
+            del guard
+
+        return Func

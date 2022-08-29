@@ -57,6 +57,23 @@ class TestGlobalThread(flow.unittest.TestCase):
             test_case.assertEqual(tensor[0], 1)
             test_case.assertEqual(tensor[int(tensor.shape[0] / 2)], 1)
 
+    def test_decorator(test_case):
+        thread_ids = [i % 4 for i in range(200)]
+        tensors = []
+        dim = 0
+
+        def Func():
+            placement = flow.placement("cuda", [0, 1])
+            ones = flow.ones(2 * dim, placement=placement, sbp=flow.sbp.split(0))
+            tensors.append(ones.to_global(sbp=flow.sbp.broadcast))
+
+        for thread in thread_ids:
+            dim += 1
+            flow.async.thread(thread)(Func)()
+        for tensor in tensors:
+            test_case.assertEqual(tensor[0], 1)
+            test_case.assertEqual(tensor[int(tensor.shape[0] / 2)], 1)
+
 
 if __name__ == "__main__":
     unittest.main()
