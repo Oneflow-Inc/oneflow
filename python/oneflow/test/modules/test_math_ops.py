@@ -510,5 +510,42 @@ class TestPow(flow.unittest.TestCase):
         return torch.pow(x, y)
 
 
+@flow.unittest.skip_unless_1n1d()
+class TestAbsModule(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_abs_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return torch.abs(x)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestCoshModule(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_cosh_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return torch.cosh(x)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestLgammaModule(flow.unittest.TestCase):
+    # TODO: Add lgamma backward.
+    @autotest(n=5, auto_backward=False)
+    def test_lgamma_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return torch.lgamma(x)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestLog2Module(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_log2_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return torch.log2(x)
+
+
 if __name__ == "__main__":
     unittest.main()
