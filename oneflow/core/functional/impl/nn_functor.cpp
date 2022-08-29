@@ -3555,26 +3555,47 @@ class OneEmbeddingLookupFunctor {
 class OneEmbeddingLookupGradFunctor {
  public:
   OneEmbeddingLookupGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("embedding_update_placeholder")
-                         .Input("ids")
-                         .Input("embedding_grad")
-                         .Build());
+    op_has_table_ids_ = CHECK_JUST(one::OpBuilder("embedding_update_placeholder")
+                                       .Input("ids")
+                                       .Input("table_ids")
+                                       .Input("embedding_grad")
+                                       .Build());
+    op_no_table_ids_ = CHECK_JUST(one::OpBuilder("embedding_update_placeholder")
+                                      .Input("ids")
+                                      .Input("embedding_grad")
+                                      .Build());
   }
 
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ids,
+                         const Optional<one::Tensor>& table_ids,
                          const std::shared_ptr<one::Tensor>& embedding_grad,
-                         const std::string& embedding_name, const int64_t line_size,
-                         const int64_t embedding_size) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("embedding_name", "line_size", "embedding_size");
+                         const Symbol<DType>& dtype, const std::string& embedding_name,
+                         const int64_t line_size, const int64_t embedding_size,
+                         const bool is_full_cache, const int32_t num_tables,
+                         const std::string& embedding_tables, const int64_t seed) const {
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "embedding_name", "line_size", "embedding_size",
+                                       "is_full_cache", "num_tables", "embedding_tables", "seed");
+    attrs.SetAttr<DataType>("dtype", dtype->data_type());
     attrs.SetAttr<std::string>("embedding_name", embedding_name);
     attrs.SetAttr<int64_t>("line_size", line_size);
     attrs.SetAttr<int64_t>("embedding_size", embedding_size);
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ids, embedding_grad}, attrs));
+    attrs.SetAttr<bool>("is_full_cache", is_full_cache);
+    attrs.SetAttr<int32_t>("num_tables", num_tables);
+    attrs.SetAttr<std::string>("embedding_tables", embedding_tables);
+    attrs.SetAttr<int64_t>("seed", seed);
+    if (table_ids) {
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_has_table_ids_,
+                                               {ids, JUST(table_ids), embedding_grad}, attrs));
+    } else {
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_no_table_ids_, {ids, embedding_grad}, attrs));
+    }
     return Maybe<void>::Ok();
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_has_table_ids_;
+  std::shared_ptr<OpExpr> op_no_table_ids_;
 };
 
 class OneEmbeddingUniqueKeyValuePairFunctor {

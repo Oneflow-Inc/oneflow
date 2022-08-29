@@ -2380,7 +2380,7 @@
   bind_python: True
 
 - name: "one_embedding_lookup_grad"
-  signature: "Void (Tensor ids, Tensor embedding_grad, String embedding_name, Int64 line_size, Int64 embedding_size) => OneEmbeddingLookupGrad"
+  signature: "Void (Tensor ids, Tensor table_ids=None, Tensor embedding_grad, DataType dtype, String embedding_name, Int64 line_size, Int64 embedding_size, Bool is_full_cache, Int32 num_tables, String embedding_tables, Int64 seed=0) => OneEmbeddingLookupGrad"
   bind_python: True
 
 - name: "one_embedding_unique_key_value_pair"
