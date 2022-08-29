@@ -105,9 +105,9 @@ Maybe<void> DynamicLossScaleAddGradient(
 }
 
 void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_t embedding_size,
-                          const int64_t line_size, const int64_t padding_idx, 
-                          const std::string& embedding_name,
-                          bool has_embedding_prefetch, const ParallelConf& parallel_conf,
+                          const int64_t line_size, const int64_t padding_idx,
+                          const std::string& embedding_name, bool has_embedding_prefetch,
+                          const ParallelConf& parallel_conf,
                           const user_op::UserOpConfWrapper& embedding_op,
                           const std::string& num_unique_ids_lbn, const std::string& unique_ids_lbn,
                           const std::string& unique_table_ids_lbn, std::string* embedding_lbn,
@@ -174,8 +174,7 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
 }
 
 void BuildEmbeddingShuffle(JobBuilder* job_builder, const std::string& embedding_name,
-                           int64_t embedding_size, 
-                           const int64_t padding_idx, 
+                           int64_t embedding_size, const int64_t padding_idx,
                            const ParallelConf& parallel_conf,
                            const user_op::UserOpConfWrapper& embedding_op,
                            const std::string& inverse_indices_lbn,
@@ -214,7 +213,8 @@ void BuildEmbeddingGradientShuffle(
     const user_op::UserOpConfWrapper& embedding_op, const std::string& inverse_indices_lbn,
     const std::string& inner_inverse_unique_partition_indices_lbn,
     const std::string& num_unique_matrix_lbn, const std::string& update_embedding_grad,
-    const bool has_clip_grad, std::string* cur_rank_unique_embedding_grad_lbn, const int64_t padding_idx) {
+    const bool has_clip_grad, std::string* cur_rank_unique_embedding_grad_lbn,
+    const int64_t padding_idx) {
   std::string update_embedding_grad_lbn = update_embedding_grad;
   if (ctx->job_desc().enable_auto_mixed_precision()
       && !ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_GRADIENT_SHUFFLE_USE_FP16", true)) {
@@ -1073,11 +1073,10 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     OperatorConf embedding_lookup_op_conf;
     // embedding lookup op
     std::string embedding_lbn, unique_values_lbn;
-    BuildEmbeddingLookup(ctx, job_builder, embedding_size, options.LineSize(), padding_idx, 
-                         options.Name(),
-                         has_embedding_prefetch, embedding_parallel_conf, embedding_op,
-                         num_unique_ids_lbn, unique_ids_lbn, unique_table_ids_lbn, &embedding_lbn,
-                         &unique_values_lbn, &embedding_prefetch_op_conf,
+    BuildEmbeddingLookup(ctx, job_builder, embedding_size, options.LineSize(), padding_idx,
+                         options.Name(), has_embedding_prefetch, embedding_parallel_conf,
+                         embedding_op, num_unique_ids_lbn, unique_ids_lbn, unique_table_ids_lbn,
+                         &embedding_lbn, &unique_values_lbn, &embedding_prefetch_op_conf,
                          &embedding_lookup_op_conf);
 
     if (use_system_gather) {
@@ -1092,10 +1091,8 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
       new_embeddings_lbn = gather_op.output("out", 0);
     } else {
       // embedding shuffle op
-      BuildEmbeddingShuffle(job_builder, options.Name(), embedding_size, 
-                            padding_idx, 
-                            embedding_parallel_conf,
-                            embedding_op, inverse_indices_lbn,
+      BuildEmbeddingShuffle(job_builder, options.Name(), embedding_size, padding_idx,
+                            embedding_parallel_conf, embedding_op, inverse_indices_lbn,
                             inner_inverse_unique_partition_indices_lbn, num_unique_matrix_lbn,
                             embedding_lbn, &add_ops, &new_embeddings_lbn);
     }

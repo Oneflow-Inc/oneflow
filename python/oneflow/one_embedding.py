@@ -173,7 +173,7 @@ class Embedding(Module):
         tables,
         store_options,
         default_initializer=None,
-        padding_idx=-1, 
+        padding_idx=-1,
     ):
         super().__init__()
         self.dtype = dtype
@@ -297,7 +297,7 @@ class Embedding(Module):
             self.num_tables,
             self.embedding_tables,
             self.key_value_store_options,
-            padding_idx=self.padding_idx
+            padding_idx=self.padding_idx,
         )
 
 
@@ -650,7 +650,7 @@ class MultiTableEmbedding(Embedding):
         tables,
         store_options,
         default_initializer=None,
-        padding_idx=-1, 
+        padding_idx=-1,
     ):
         assert isinstance(embedding_dim, int)
         super().__init__(
@@ -661,7 +661,7 @@ class MultiTableEmbedding(Embedding):
             tables,
             store_options,
             default_initializer,
-            padding_idx, 
+            padding_idx,
         )
 
 
@@ -754,7 +754,7 @@ class MultiTableMultiColumnEmbedding(Embedding):
         tables,
         store_options,
         default_initializer=None,
-        padding_idx=-1, 
+        padding_idx=-1,
     ):
         if isinstance(embedding_dim, (list, tuple)):
             for dim in embedding_dim:
@@ -770,7 +770,7 @@ class MultiTableMultiColumnEmbedding(Embedding):
             tables,
             store_options,
             default_initializer,
-            padding_idx, 
+            padding_idx,
         )
 
 

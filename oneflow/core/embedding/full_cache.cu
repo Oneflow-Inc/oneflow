@@ -216,7 +216,6 @@ __global__ void EncodeLookupKernel(uint32_t value_length, const Elem* cache_valu
       if (row == PADDING_REV_INDEX) {
         // Here is padding idx, return all zero vec.
         for (int col = lane_id; col < value_length; col += warp_size) {
-          // todo
           Elem zero{0};
           values[(batch_start + i) * value_length + col] = zero;
         }
@@ -367,7 +366,7 @@ class OrdinalEncoder {
 
   template<bool insert>
   void Encode(ep::Stream* stream, uint32_t num_keys, const Key* keys, Index* context) {
-    printf("Here is Insert Ordinal Encode Kernel \n"); 
+    printf("Here is Insert Ordinal Encode Kernel \n");
     if (insert) {
       RUN_CUDA_KERNEL((OrdinalEncodeKernel<Key, Index>), stream, num_keys, table_capacity_,
                       table_keys_, table_indices_, table_size_, num_keys, keys, context);
@@ -525,7 +524,7 @@ void CacheImpl<Key, Elem, Index, pack_size>::Get(ep::Stream* stream, uint32_t n_
   constexpr uint32_t block_size = 128;
   uint32_t grid_size = (n_keys + block_size - 1) / block_size;
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
-  printf("Here is Get Kernel, and padding_idx is: %ld \n", padding_idx); 
+  printf("Here is Get Kernel, and padding_idx is: %ld \n", padding_idx);
   EncodeLookupKernel<Key, Elem, Index, block_size>
       <<<grid_size, block_size, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
           num_elem_per_value_, values_, values_elem_cnt, static_cast<const Key*>(keys),
