@@ -11,16 +11,16 @@ R"OP_SCHEMA_INC(
 namespace oneflow {
 
 #define REGISTER_OP_SCHEMA(op_type, schema) \
-  REGISTER_CLASS_CREATOR(std::string, op_type, OpBase, ([]() { return new schema; }))
+  REGISTER_CLASS_CREATOR(std::string, op_type, OpDefinitionBase, ([]() { return new schema; }))
 
 {% for opname, op in ops %}
-const HashSet<std::string>& {{opname}}::AttrNames() const {
+/*static*/ const HashSet<std::string>& {{opname}}::AttrNames() {
   static const HashSet<std::string> attr_names = { {%- for attr in op.attrs -%}"{{attr.name}}", {%- endfor -%} };
   return attr_names;
 }
 
 namespace schema {
-Maybe<AttrVal> {{opname}}::GetAttr(const std::string& attr_name) const {
+Maybe<AttrVal> {{opname}}::Attr(const std::string& attr_name) const {
   {% for attr in op.attrs %}if(attr_name == "{{attr.name}}") {
     return CastAttrValue(&{{attr.name}}_);
   }

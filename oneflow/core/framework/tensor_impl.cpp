@@ -67,11 +67,11 @@ Maybe<LocalTensorImpl> LazyLocalTensorImpl::detach() const {
   return std::shared_ptr<LocalTensorImpl>(detached_impl);
 }
 
-EagerLocalTensorImpl::EagerLocalTensorImpl() : LocalTensorImpl(false, false) {}
-
 EagerLocalTensorImpl::EagerLocalTensorImpl(const std::shared_ptr<TensorStorage>& tensor_storage,
-                                           bool requires_grad, bool is_leaf)
-    : LocalTensorImpl(requires_grad, is_leaf), tensor_storage_(tensor_storage) {}
+                                           int64_t storage_offset, bool requires_grad, bool is_leaf)
+    : LocalTensorImpl(requires_grad, is_leaf),
+      tensor_storage_(tensor_storage),
+      storage_offset_(storage_offset) {}
 
 EagerLocalTensorImpl::~EagerLocalTensorImpl() {}
 
