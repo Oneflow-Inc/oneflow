@@ -120,8 +120,7 @@ INSTANCE_OBJECT_AS_SHARED_PTR(std::vector<Symbol<DType>>)
 
 template<>
 Shape PythonArg::ObjectAs<Shape>() const {
-  const auto& shape = PyUnpackLongSequence<int64_t>(object_);
-  return Shape(DimVector(shape.begin(), shape.end()));
+  return PyUnpackShape(object_);
 }
 INSTANCE_OBJECT_AS_SHARED_PTR(Shape)
 

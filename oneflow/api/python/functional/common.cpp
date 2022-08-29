@@ -125,15 +125,28 @@ std::vector<Symbol<DType>> PyUnpackDTypeSequence(PyObject* obj) {
   return PyUnpackSequence<Symbol<DType>>(obj, [](PyObject* item) { return PyUnpackDType(item); });
 }
 
+// Shape
+bool PyShapeCheck(PyObject* obj) { return PyLongSequenceCheck(obj); }
+
+Shape PyUnpackShape(PyObject* obj) {
+  bool is_tuple = PyTuple_Check(obj);
+  CHECK_OR_THROW(is_tuple || PyList_Check(obj))
+      << "The object is not list or tuple, but is " << Py_TYPE(obj)->tp_name;
+  size_t size = is_tuple ? PyTuple_GET_SIZE(obj) : PyList_GET_SIZE(obj);
+  DimVector values(size);
+  for (int i = 0; i < size; ++i) {
+    PyObject* item = is_tuple ? PyTuple_GET_ITEM(obj, i) : PyList_GET_ITEM(obj, i);
+    values[i] = PyLong_AsLongLong(item);
+  }
+  return Shape(values);
+}
+
 // Shape list
 bool PyShapeSequenceCheck(PyObject* obj) {
   return PySequenceCheck(obj, [](PyObject* item) { return PyLongSequenceCheck(item); });
 }
 std::vector<Shape> PyUnpackShapeSequence(PyObject* obj) {
-  return PyUnpackSequence<Shape>(obj, [](PyObject* item) -> Shape {
-    const auto& shape = PyUnpackLongSequence<int64_t>(item);
-    return Shape(DimVector(shape.begin(), shape.end()));
-  });
+  return PyUnpackSequence<Shape>(obj, [](PyObject* item) -> Shape { return PyUnpackShape(item); });
 }
 
 // Generator

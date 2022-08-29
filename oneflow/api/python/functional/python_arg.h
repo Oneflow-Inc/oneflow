@@ -61,21 +61,12 @@ struct optional_traits<Optional<T>> {
 class PythonArg {
  public:
   PythonArg() = default;
-  PythonArg(const py::object& object, int size = 0) : PythonArg(object.ptr(), size) {}
+
   PythonArg(PyObject* object, int size = 0)
       : object_(object), default_val_(), size_(size), tag_(HAS_OBJECT) {}
 
-  PythonArg(const std::shared_ptr<const detail::DefaultVal>& value, int size = 0)
+  PythonArg(const detail::DefaultVal* value, int size = 0)
       : object_(nullptr), default_val_(value), size_(size), tag_(HAS_DEFAULT) {}
-
-  template<typename T, typename std::enable_if<!py::detail::is_pyobject<T>::value, int>::type = 0>
-  PythonArg(const T& value, int size = 0)
-      : object_(nullptr),
-        default_val_(std::make_shared<detail::TypedDefaultVal<T>>(value)),
-        size_(size),
-        tag_(HAS_DEFAULT) {}
-
-  virtual ~PythonArg() = default;
 
   template<typename T, typename std::enable_if<!internal::IsOptional<T>::value, int>::type = 0>
   T As() const {
@@ -109,7 +100,7 @@ class PythonArg {
   T ObjectAs() const;
 
   PyObject* object_;
-  std::shared_ptr<const detail::DefaultVal> default_val_;
+  const detail::DefaultVal* default_val_;
   size_t size_;
   enum { HAS_OBJECT, HAS_DEFAULT, HAS_NONE } tag_;
 };
