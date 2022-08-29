@@ -5,6 +5,7 @@ from datetime import date
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--cuda", type=str, required=False)
+parser.add_argument("--rocm", type=str, required=False)
 parser.add_argument("--cmake_project_binary_dir", type=str, required=False)
 parser.add_argument("--src", type=str, required=False)
 parser.add_argument("--out", type=str, required=False)
@@ -37,6 +38,8 @@ if args.cuda:
     assert len(splits) == 2
     compute_platform = "".join(splits)
     compute_platform = "cu" + compute_platform
+elif args.rocm:
+    compute_platform = "rocm"
 else:
     compute_platform = "cpu"
 assert compute_platform
