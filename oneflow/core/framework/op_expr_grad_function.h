@@ -63,6 +63,9 @@ class FunctionAutoGradCaptureState final
 
   std::shared_ptr<FunctionAutoGradCaptureState> GetSharedFromThis() { return shared_from_this(); }
 
+ public:
+  std::vector<bool> input_requires_grad;
+
  private:
   HashSet<Tensor*> non_differentiable_tensors_;
 };

@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -200,8 +201,8 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
   if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
   std::shared_ptr<UserOpExpr> op_expr =
       JUST(CachedEagerCclBroadcastOpExpr(parallel_desc, src_rank, 1, {*tensor->shape()}));
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<int64_t>("root", src_rank));
+  auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("root");
+  attrs.SetAttr<int64_t>("root", src_rank);
   if (src_rank == GlobalProcessCtx::Rank() || inplace) {
     TensorTuple outputs{tensor};
     JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs,
@@ -222,8 +223,8 @@ Maybe<TensorTuple> Broadcast(const TensorTuple& inputs, int64_t src_rank,
   for (const auto& tensor : inputs) { shape_list.emplace_back(*tensor->shape()); }
   std::shared_ptr<UserOpExpr> op_expr =
       JUST(CachedEagerCclBroadcastOpExpr(parallel_desc, src_rank, inputs.size(), shape_list));
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<int64_t>("root", src_rank));
+  auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("root");
+  attrs.SetAttr<int64_t>("root", src_rank);
   if (src_rank == GlobalProcessCtx::Rank() || inplace) {
     auto outputs = std::make_shared<TensorTuple>(inputs);
     JUST(OpInterpUtil::Dispatch(*op_expr, inputs, outputs.get(),
