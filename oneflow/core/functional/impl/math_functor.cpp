@@ -724,7 +724,7 @@ class ReduceMeanFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
     // ReduceMean only calculate floating values.
-    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type()))
+    CHECK_OR_RETURN(x->dtype()->is_floating_point())
         << "RuntimeError: Can only calculate the mean of floating types.";
     const auto& sum = JUST(functional::ReduceSum(x, axis, keepdims));
     size_t reduce_count = 1;

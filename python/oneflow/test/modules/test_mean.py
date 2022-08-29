@@ -93,6 +93,14 @@ class TestMean(flow.unittest.TestCase):
         y = x.mean(-1)
         return y
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    @autotest(n=5, atol=1e-3)
+    def test_mean_with_half_data(test_case):
+        device = gpu_device()
+        dim = random(1, 4).to(int)
+        x = random_tensor(ndim=4, dtype=float).to(device=device, dtype=torch.float16)
+        return torch.mean(x, dim)
+
 
 if __name__ == "__main__":
     unittest.main()
