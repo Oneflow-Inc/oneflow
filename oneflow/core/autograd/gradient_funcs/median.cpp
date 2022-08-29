@@ -95,7 +95,7 @@ class MedianWithIndices : public OpExprGradFunction<MedianWithIndicesCaptureStat
       JUST(VectorAt(*in_grads, 0)) = JUST(
           functional::DimScatter(JUST(functional::Constant(*(input->shape()), Scalar(0),
                                                            *dout->dtype(), JUST(dout->device()))),
-                                 -1, indices, dout));
+                                 -1, indices, dout, /*inplace*/ false));
     }
     return Maybe<void>::Ok();
   }

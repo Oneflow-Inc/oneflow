@@ -499,6 +499,10 @@ def _inv(self):
     return flow._C.inv(self)
 
 
+def _scatter_(self, dim, index, src):
+    return flow._C.scatter(self, dim, index, src, inplace=True)
+
+
 def RegisterMethods():
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
@@ -564,6 +568,7 @@ def RegisterMethods():
     Tensor.cumprod = _cumprod
     Tensor.mv = _mv
     Tensor.inverse = _inv
+    Tensor.scatter_ = _scatter_
 
 
 def register_tensor_op(op_name):

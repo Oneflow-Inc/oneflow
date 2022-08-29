@@ -58,7 +58,9 @@ struct DimScatterFunctor<DeviceType::kCUDA, float16, IDX_T, Opt> final {
 };
 
 INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kCUDA, BinOpAddFunctor);
+INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kCUDA, BinOpMulFunctor);
 INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kCUDA, BinOpUpdateFunctor);
+
 
 }  // namespace user_op
 }  // namespace oneflow
