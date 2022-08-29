@@ -37,9 +37,11 @@ DEFINE_STATIC_SWITCH_FUNC(std::size_t, GetDataTypeBytes, MAKE_DATA_TYPE_BYTES_SW
 
 class DTypeMeta final {
  public:
-  DTypeMeta(const std::string& name, bool is_signed, bool is_floating_point, bool is_complex)
+  DTypeMeta(const std::string& name, bool is_signed, bool is_integer, bool is_floating_point,
+            bool is_complex)
       : name_(name),
         is_signed_(is_signed),
+        is_integer_(is_integer),
         is_floating_point_(is_floating_point),
         is_complex_(is_complex) {}
   DTypeMeta(const DTypeMeta&) = default;
@@ -48,12 +50,14 @@ class DTypeMeta final {
 
   const std::string& name() const { return name_; }
   bool is_signed() const { return is_signed_; }
+  bool is_integer() const { return is_integer_; }
   bool is_floating_point() const { return is_floating_point_; }
   bool is_complex() const { return is_complex_; }
 
  private:
   const std::string name_;
   const bool is_signed_;
+  const bool is_integer_;
   const bool is_floating_point_;
   const bool is_complex_;
 };
@@ -61,20 +65,20 @@ class DTypeMeta final {
 Maybe<const DTypeMeta&> DTypeMeta4DataType(DataType data_type) {
   static const HashMap<DataType, DTypeMeta> data_type2dtype_meta{
       {DataType::kInvalidDataType, DTypeMeta("oneflow.invalid_data_type", false, false, false)},
-      {DataType::kChar, DTypeMeta("oneflow.char", false, false, false)},
-      {DataType::kFloat16, DTypeMeta("oneflow.float16", true, true, false)},
-      {DataType::kFloat, DTypeMeta("oneflow.float32", true, true, false)},
-      {DataType::kDouble, DTypeMeta("oneflow.float64", true, true, false)},
-      {DataType::kInt8, DTypeMeta("oneflow.int8", true, false, false)},
-      {DataType::kInt16, DTypeMeta("oneflow.int16", true, false, false)},
-      {DataType::kInt32, DTypeMeta("oneflow.int32", true, false, false)},
-      {DataType::kInt64, DTypeMeta("oneflow.int64", true, false, false)},
-      {DataType::kInt128, DTypeMeta("oneflow.int128", true, false, false)},
-      {DataType::kUInt8, DTypeMeta("oneflow.uint8", false, false, false)},
-      {DataType::kUInt16, DTypeMeta("oneflow.uint16", false, false, false)},
-      {DataType::kUInt32, DTypeMeta("oneflow.uint32", false, false, false)},
-      {DataType::kUInt64, DTypeMeta("oneflow.uint64", false, false, false)},
-      {DataType::kUInt128, DTypeMeta("oneflow.uint128", false, false, false)},
+      {DataType::kChar, DTypeMeta("oneflow.char", false, false, false, false)},
+      {DataType::kFloat16, DTypeMeta("oneflow.float16", true, false, true, false)},
+      {DataType::kFloat, DTypeMeta("oneflow.float32", true, false, true, false)},
+      {DataType::kDouble, DTypeMeta("oneflow.float64", true, false, true, false)},
+      {DataType::kInt8, DTypeMeta("oneflow.int8", true, true, false, false)},
+      {DataType::kInt16, DTypeMeta("oneflow.int16", true, true, false, false)},
+      {DataType::kInt32, DTypeMeta("oneflow.int32", true, true, false, false)},
+      {DataType::kInt64, DTypeMeta("oneflow.int64", true, true, false, false)},
+      {DataType::kInt128, DTypeMeta("oneflow.int128", true, true, false, false)},
+      {DataType::kUInt8, DTypeMeta("oneflow.uint8", false, true, false, false)},
+      {DataType::kUInt16, DTypeMeta("oneflow.uint16", false, true, false, false)},
+      {DataType::kUInt32, DTypeMeta("oneflow.uint32", false, true, false, false)},
+      {DataType::kUInt64, DTypeMeta("oneflow.uint64", false, true, false, false)},
+      {DataType::kUInt128, DTypeMeta("oneflow.uint128", false, true, false, false)},
       {DataType::kOFRecord, DTypeMeta("oneflow.of_record", false, false, false)},
       {DataType::kTensorBuffer, DTypeMeta("oneflow.tensor_buffer", false, false, false)},
       {DataType::kBFloat16, DTypeMeta("oneflow.bfloat16", true, true, false)},
@@ -139,6 +143,8 @@ const int DType::priority_order[DataType_ARRAYSIZE] = {0,  /*kInvalid*/
                                                        15, /*kComplex32*/
                                                        16, /*kComplex64*/
                                                        17 /*kComplex128*/};
+
+bool DType::is_integer() const { return CHECK_JUST(DTypeMeta4DataType(data_type_)).is_integer(); }
 
 bool DType::is_floating_point() const {
   return CHECK_JUST(DTypeMeta4DataType(data_type_)).is_floating_point();

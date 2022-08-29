@@ -46,6 +46,13 @@ bool CheckHasDifferentInputDType(const TensorTuple& tensor_tuple) {
   return false;
 }
 
+bool CheckHasIntegerInputDType(const TensorTuple& tensor_tuple) {
+  for (auto& tensor_ptr : tensor_tuple) {
+    if (tensor_ptr->dtype()->is_integer()) { return true; }
+  }
+  return false;
+}
+
 Maybe<void> CastToSameType(TensorTuple& tensor_tuple, const Symbol<DType>& common_dtype) {
   for (auto& tensor_ptr : tensor_tuple) {
     if (tensor_ptr->dtype() != common_dtype) {
@@ -79,12 +86,23 @@ TensorProcessor& TensorProcessor::PromoteInputsToCommonDtype(bool is_promote) {
   return *this;
 }
 
+TensorProcessor& TensorProcessor::PromoteIntegerInputsToFloatDtype(bool is_promote) {
+  promote_integer_inputs_to_float_ = is_promote;
+  return *this;
+}
+
 Maybe<void> TensorProcessor::Apply() {
   if (promote_inputs_to_common_dtype_) {
     bool has_different_input_dtype = CheckHasDifferentInputDType(tensor_tuple_);
     if (has_different_input_dtype) {
       common_dtype_ = ComputeCommonDType(tensor_tuple_);
       JUST(CastToSameType(tensor_tuple_, common_dtype_));
+    }
+  } else if (promote_integer_inputs_to_float_) {
+    const bool has_integer_input_dtype = CheckHasIntegerInputDType(tensor_tuple_);
+    if (has_integer_input_dtype) {
+      Symbol<DType> float_dtype = DType::Float32;
+      JUST(CastToSameType(tensor_tuple_, float_dtype));
     }
   } else {
     for (int i = 0; i < tensor_tuple_.size(); ++i) {
