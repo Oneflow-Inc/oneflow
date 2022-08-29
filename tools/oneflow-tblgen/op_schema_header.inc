@@ -2,7 +2,6 @@ R"OP_SCHEMA_INC(
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/symbol.h"
-#include "oneflow/core/framework/op_base.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/framework/op_definition.h"
