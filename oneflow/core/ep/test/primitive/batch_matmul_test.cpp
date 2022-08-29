@@ -119,8 +119,8 @@ void TestBatchMatmul(DeviceManagerRegistry* registry, const std::set<DeviceType>
 TEST_F(PrimitiveTest, TestBatchMatmul) {
   TestBatchMatmul<DataType::kDouble, double>(&device_manager_registry_, available_device_types_);
   TestBatchMatmul<DataType::kFloat, float>(&device_manager_registry_, available_device_types_);
-  // TestBatchMatmul<DataType::kFloat16, Eigen::half>(&device_manager_registry_,
-  //                                                  available_device_types_);
+  TestBatchMatmul<DataType::kFloat16, Eigen::half>(&device_manager_registry_,
+                                                   available_device_types_);
 }
 
 }  // namespace test

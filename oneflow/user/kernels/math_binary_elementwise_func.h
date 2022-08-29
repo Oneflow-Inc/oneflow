@@ -28,8 +28,15 @@ limitations under the License.
 
 #elif defined(__HIPCC__)
 
+#include <hip/hsa_detail/math_functions.h>
 #include <hip/hip_fp16.h>
-#define MATH_FUNC(name) 
+
+#if defined(__HIP_DEVICE_COMPILE__)
+#define MATH_FUNC(name) name
+#else
+#define MATH_FUNC(name) std::name
+#endif
+
 
 #else
 

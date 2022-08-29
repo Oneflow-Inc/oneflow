@@ -364,10 +364,16 @@ def _gen_tensor_str_template(tensor, is_meta):
         tensor_str = "..."
         suffixes.append("size=" + str(tuple(tensor.shape)))
     else:
-        if tensor.device.type != "cpu" and tensor.device.type != "cuda":
-            tensor_str = _tensor_str(tensor.detach().to("cpu"), indent)
+        if tensor.is_global: 
+            if tensor.placement.type != "cpu" and tensor.placement.type != "cuda":
+                tensor_str = _tensor_str(tensor.detach().to("cpu"), indent)
+            else:
+                tensor_str = _tensor_str(tensor, indent)
         else:
-            tensor_str = _tensor_str(tensor, indent)
+            if tensor.device.type != "cpu" and tensor.device.type != "cuda":
+                tensor_str = _tensor_str(tensor.detach().to("cpu"), indent)
+            else:
+                tensor_str = _tensor_str(tensor, indent)
 
     suffixes.append("dtype=" + str(tensor.dtype))
     if tensor.grad_fn is not None:

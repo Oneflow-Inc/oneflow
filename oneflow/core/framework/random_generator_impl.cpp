@@ -274,10 +274,11 @@ CUDAGeneratorImpl::CUDAGeneratorImpl(uint64_t seed, int device_index)
 
 CUDAGeneratorImpl::~CUDAGeneratorImpl() {
   // Skip if cuda runtime has been deinitialized.
-  if (hipErrorDeinitialized == hipSetDevice(this->device_index())) { return; }
-  CudaCurrentDeviceGuard dev_guard(this->device_index());
-  OF_CUDA_CHECK(hipFree(curand_states_));
-  OF_CUDA_CHECK(hipFree(cuda_gen_state_));
+  // if (hipErrorDeinitialized == hipSetDevice(this->device_index())) { return; }
+  // CudaCurrentDeviceGuard dev_guard(this->device_index());
+  // OF_CUDA_CHECK(hipFree(curand_states_));
+  // OF_CUDA_CHECK(hipFree(cuda_gen_state_));
+  return;
 }
 
 void CUDAGeneratorImpl::set_current_seed(uint64_t seed) {

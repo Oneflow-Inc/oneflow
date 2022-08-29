@@ -312,6 +312,7 @@ template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int
          int thread_group_width, int rows_per_access, bool padding, Algorithm algorithm>
 inline hipError_t LaunchSoftmaxWarpImpl(hipStream_t stream, LOAD load, STORE store,
                                          const int64_t rows, const int64_t cols) {
+  // std::cout << "LaunchSoftmaxWarpImpl" << std::endl;                                       
   constexpr int block_size = 128;
   constexpr int waves = 32;
   static_assert(block_size % thread_group_width == 0, "");
@@ -533,8 +534,60 @@ __global__ void SoftmaxBlockSMemImpl(LOAD load, STORE store, const int64_t rows,
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size,
          Algorithm algorithm>
+__global__ void SoftmaxBlockSMemImpl_1024(LOAD load, STORE store, const int64_t rows,
+                                     const int64_t cols) __attribute__((amdgpu_flat_work_group_size(1,1024))) {
+  extern __shared__ __align__(sizeof(double)) unsigned char shared_buf[];
+  auto* buf = reinterpret_cast<ComputeType*>(shared_buf);
+  const int tid = threadIdx.x;
+  assert(cols % pack_size == 0);
+  const int num_packs = cols / pack_size;
+  for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
+    ComputeType thread_max = -Inf<ComputeType>();
+    for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
+      ComputeType pack[pack_size];
+      load.template load<pack_size>(pack, row, pack_id * pack_size);
+#pragma unroll
+      for (int i = 0; i < pack_size; ++i) {
+        buf[i * num_packs + pack_id] = pack[i];
+        thread_max = max(thread_max, pack[i]);
+      }
+    }
+    const ComputeType row_max = BlockAllReduce<MaxOp, ComputeType, block_size>(thread_max);
+    ComputeType thread_sum = 0;
+    for (int col = tid; col < cols; col += block_size) {
+      if (algorithm == Algorithm::kSoftmax) {
+        const ComputeType exp_x = Exp(buf[col] - row_max);
+        buf[col] = exp_x;
+        thread_sum += exp_x;
+      } else {
+        const ComputeType x = buf[col] - row_max;
+        buf[col] = x;
+        thread_sum += Exp(x);
+      }
+    }
+    const ComputeType row_sum = BlockAllReduce<SumOp, ComputeType, block_size>(thread_sum);
+    for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
+      ComputeType pack[pack_size];
+#pragma unroll
+      for (int i = 0; i < pack_size; ++i) {
+        if (algorithm == Algorithm::kSoftmax) {
+          pack[i] = Div(buf[i * num_packs + pack_id], row_sum);
+        } else if (algorithm == Algorithm::kLogSoftmax) {
+          pack[i] = buf[i * num_packs + pack_id] - Log(row_sum);
+        } else {
+          asm volatile("s_trap 0;");
+        }
+      }
+      store.template store<pack_size>(pack, row, pack_id * pack_size);
+    }
+  }
+}
+
+template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size,
+         Algorithm algorithm>
 inline hipError_t LaunchSoftmaxBlockSMemImpl(hipStream_t stream, LOAD load, STORE store, int smem,
                                               const int64_t rows, const int64_t cols) {
+                                               
   constexpr int waves = 32;
   int grid_dim_x;
   {
@@ -546,10 +599,27 @@ inline hipError_t LaunchSoftmaxBlockSMemImpl(hipStream_t stream, LOAD load, STOR
   return hipPeekAtLastError();
 }
 
+template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size,
+         Algorithm algorithm>
+inline hipError_t LaunchSoftmaxBlockSMemImpl_1024(hipStream_t stream, LOAD load, STORE store, int smem,
+                                              const int64_t rows, const int64_t cols) {
+                                               
+  constexpr int waves = 32;
+  int grid_dim_x;
+  {
+    hipError_t err = GetNumBlocks(block_size, rows, waves, &grid_dim_x);
+    if (err != hipSuccess) { return err; }
+  }
+  SoftmaxBlockSMemImpl_1024<LOAD, STORE, ComputeType, pack_size, block_size, algorithm>
+      <<<grid_dim_x, block_size, smem, stream>>>(load, store, rows, cols);
+  return hipPeekAtLastError();
+}
+
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size, Algorithm algorithm>
 inline hipError_t TryDispatchSoftmaxBlockSMemImplBlockSize(hipStream_t stream, LOAD load,
                                                             STORE store, const int64_t rows,
                                                             const int64_t cols, bool* success) {
+  
   constexpr int block_size_conf_1 = 128;
   constexpr int block_size_conf_2 = 256;
   constexpr int block_size_conf_3 = 512;
@@ -571,13 +641,13 @@ inline hipError_t TryDispatchSoftmaxBlockSMemImplBlockSize(hipStream_t stream, L
   {
     hipError_t err = hipOccupancyMaxActiveBlocksPerMultiprocessor(
         &max_active_blocks_conf_4,
-        SoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_4, algorithm>,
+        SoftmaxBlockSMemImpl_1024<LOAD, STORE, ComputeType, pack_size, block_size_conf_4, algorithm>,
         block_size_conf_4, smem);
     if (err != hipSuccess) { return err; }
   }
   if (max_active_blocks_conf_4 == max_active_blocks_conf_1) {
     *success = true;
-    return LaunchSoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_4,
+    return LaunchSoftmaxBlockSMemImpl_1024<LOAD, STORE, ComputeType, pack_size, block_size_conf_4,
                                       algorithm>(stream, load, store, smem, rows, cols);
   }
   int max_active_blocks_conf_3;
@@ -636,7 +706,7 @@ inline hipError_t TryDispatchSoftmaxBlockSMemImpl(hipStream_t stream, LOAD load,
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size,
          Algorithm algorithm>
 __global__ void SoftmaxBlockUncachedImpl(LOAD load, STORE store, const int64_t rows,
-                                         const int64_t cols) {
+                                         const int64_t cols) __attribute__((amdgpu_flat_work_group_size(1,1024))) {
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = cols / pack_size;
@@ -678,6 +748,7 @@ __global__ void SoftmaxBlockUncachedImpl(LOAD load, STORE store, const int64_t r
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size, Algorithm algorithm>
 inline hipError_t LaunchSoftmaxBlockUncachedImpl(hipStream_t stream, LOAD load, STORE store,
                                                   const int64_t rows, const int64_t cols) {
+  // std::cout << "LaunchSoftmaxBlockUncachedImpl" << std::endl;                                                
   constexpr int block_size = 1024;
   constexpr int waves = 32;
   int grid_dim_x;
@@ -1080,6 +1151,54 @@ __global__ void SoftmaxGradBlockSMemImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE s
 
 template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
          int block_size, Algorithm algorithm>
+__global__ void SoftmaxGradBlockSMemImpl_1024(LOAD_Y load_y, LOAD_DY load_dy, STORE store,
+                                         const int64_t rows, const int64_t cols) __attribute__((amdgpu_flat_work_group_size(1,1024))) {
+  extern __shared__ __align__(sizeof(double)) unsigned char grad_shared_buf[];
+  auto* y_buf = reinterpret_cast<ComputeType*>(grad_shared_buf);
+  auto* dy_buf = y_buf + cols;
+  const int tid = threadIdx.x;
+  assert(cols % pack_size == 0);
+  const int num_packs = cols / pack_size;
+  for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
+    ComputeType thread_sum = 0;
+    for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
+      ComputeType y_pack[pack_size];
+      ComputeType dy_pack[pack_size];
+      load_y.template load<pack_size>(y_pack, row, pack_id * pack_size);
+      load_dy.template load<pack_size>(dy_pack, row, pack_id * pack_size);
+#pragma unroll
+      for (int i = 0; i < pack_size; ++i) {
+        y_buf[i * num_packs + pack_id] = y_pack[i];
+        dy_buf[i * num_packs + pack_id] = dy_pack[i];
+        if (algorithm == Algorithm::kSoftmax) {
+          thread_sum += y_pack[i] * dy_pack[i];
+        } else if (algorithm == Algorithm::kLogSoftmax) {
+          thread_sum += dy_pack[i];
+        } else {
+          asm volatile("s_trap 0;");
+        }
+      }
+    }
+    const ComputeType row_sum = BlockAllReduce<SumOp, ComputeType, block_size>(thread_sum);
+    for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
+      ComputeType pack[pack_size];
+#pragma unroll
+      for (int i = 0; i < pack_size; ++i) {
+        if (algorithm == Algorithm::kSoftmax) {
+          pack[i] = (dy_buf[i * num_packs + pack_id] - row_sum) * y_buf[i * num_packs + pack_id];
+        } else if (algorithm == Algorithm::kLogSoftmax) {
+          pack[i] = dy_buf[i * num_packs + pack_id] - Exp(y_buf[i * num_packs + pack_id]) * row_sum;
+        } else {
+          asm volatile("s_trap 0;");
+        }
+      }
+      store.template store<pack_size>(pack, row, pack_id * pack_size);
+    }
+  }
+}
+
+template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
+         int block_size, Algorithm algorithm>
 inline hipError_t LaunchSoftmaxGradBlockSMemImpl(hipStream_t stream, LOAD_Y load_y,
                                                   LOAD_DY load_dy, STORE store, int smem,
                                                   const int64_t rows, const int64_t cols) {
@@ -1090,6 +1209,22 @@ inline hipError_t LaunchSoftmaxGradBlockSMemImpl(hipStream_t stream, LOAD_Y load
     if (err != hipSuccess) { return err; }
   }
   SoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, block_size, algorithm>
+      <<<grid_dim_x, block_size, smem, stream>>>(load_y, load_dy, store, rows, cols);
+  return hipPeekAtLastError();
+}
+
+template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
+         int block_size, Algorithm algorithm>
+inline hipError_t LaunchSoftmaxGradBlockSMemImpl_1024(hipStream_t stream, LOAD_Y load_y,
+                                                  LOAD_DY load_dy, STORE store, int smem,
+                                                  const int64_t rows, const int64_t cols) {
+  constexpr int waves = 32;
+  int grid_dim_x;
+  {
+    hipError_t err = GetNumBlocks(block_size, rows, waves, &grid_dim_x);
+    if (err != hipSuccess) { return err; }
+  }
+  SoftmaxGradBlockSMemImpl_1024<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, block_size, algorithm>
       <<<grid_dim_x, block_size, smem, stream>>>(load_y, load_dy, store, rows, cols);
   return hipPeekAtLastError();
 }
@@ -1122,14 +1257,14 @@ inline hipError_t TryDispatchSoftmaxGradBlockSMemImplBlockSize(hipStream_t strea
   {
     hipError_t err = hipOccupancyMaxActiveBlocksPerMultiprocessor(
         &max_active_blocks_conf_4,
-        SoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, block_size_conf_4,
+        SoftmaxGradBlockSMemImpl_1024<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size, block_size_conf_4,
                                  algorithm>,
         block_size_conf_4, smem);
     if (err != hipSuccess) { return err; }
   }
   if (max_active_blocks_conf_4 == max_active_blocks_conf_1) {
     *success = true;
-    return LaunchSoftmaxGradBlockSMemImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size,
+    return LaunchSoftmaxGradBlockSMemImpl_1024<LOAD_Y, LOAD_DY, STORE, ComputeType, pack_size,
                                           block_size_conf_4, algorithm>(stream, load_y, load_dy,
                                                                         store, smem, rows, cols);
   }
@@ -1200,7 +1335,7 @@ inline hipError_t TryDispatchSoftmaxGradBlockSMemImpl(hipStream_t stream, LOAD_Y
 template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
          int block_size, Algorithm algorithm>
 __global__ void SoftmaxGradBlockUncachedImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE store,
-                                             const int64_t rows, const int64_t cols) {
+                                             const int64_t rows, const int64_t cols) __attribute__((amdgpu_flat_work_group_size(1,1024))) {
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = cols / pack_size;

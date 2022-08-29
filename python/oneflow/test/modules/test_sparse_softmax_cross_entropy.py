@@ -258,4 +258,63 @@ class TestSparseSoftmaxCrossEntropyMsWithLogits(flow.unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    # unittest.main()
+    np_label = np.random.randint(0, 10, size=(2,)).astype(np.int32)
+    np_prediction = np.random.random((2, 10)).astype(np.float32)
+
+    of_prediction = flow.tensor(
+        np_prediction, device=flow.device("cuda"), dtype=flow.float32, requires_grad=True)
+    of_label = flow.tensor(np_label, device=flow.device("cuda"), dtype=flow.int32)
+    of_output = flow.nn.functional.sparse_softmax_cross_entropy(
+        labels=of_label, logits=of_prediction).to("cuda")
+    of_output.sum()
+
+    torch_prediction = torch.tensor(np_prediction, dtype=torch.float32, requires_grad=True)
+    torch_label = torch.tensor(np_label, dtype=torch.int64)
+    torch_output = torch.nn.functional.cross_entropy(
+        torch_prediction, torch_label, reduction="none")
+    torch_output.sum()
+
+    if np.allclose(
+        of_output.numpy(), torch_output.detach().numpy(), rtol=1e-03, atol=1e-04
+    ):
+        print("test_softmax_cross_entropy Passed")
+    else:
+        print("test_softmax_cross_entropy Failed")
+
+    np_label = np.random.randint(0, 10, size=(2,)).astype(np.int32)
+    np_prediction = np.random.random((2, 10)).astype(np.float32)
+
+    of_prediction = flow.tensor(
+        np_prediction, device=flow.device("cpu"), dtype=flow.float32, requires_grad=True)
+    of_label = flow.tensor(np_label, device=flow.device("cpu"), dtype=flow.int32)
+    of_output = flow.nn.functional.sparse_softmax_cross_entropy(
+        labels=of_label, logits=of_prediction)
+    of_output.sum().backward()
+    print("of cpu res:")
+    print(of_prediction.grad.numpy())
+
+    of_prediction = flow.tensor(
+        np_prediction, device=flow.device("cuda"), dtype=flow.float32, requires_grad=True)
+    of_label = flow.tensor(np_label, device=flow.device("cuda"), dtype=flow.int32)
+    of_output = flow.nn.functional.sparse_softmax_cross_entropy(
+        labels=of_label, logits=of_prediction).to("cuda")
+    of_output.sum().backward()
+    print("of gpu res:")
+    print(of_prediction.grad.numpy())
+
+    torch_prediction = torch.tensor(np_prediction, dtype=torch.float32, requires_grad=True)
+    torch_label = torch.tensor(np_label, dtype=torch.int64)
+    torch_output = torch.nn.functional.cross_entropy(
+        torch_prediction, torch_label, reduction="none")
+    torch_output.sum().backward()
+    print("*********torch res*********")
+    print(torch_prediction.grad)
+
+    if np.allclose(
+        of_prediction.grad.numpy(), torch_prediction.grad, rtol=1e-03, atol=1e-04
+    ):
+        print("test_softmax_cross_entropy_grad Passed")
+    else:
+        print("test_softmax_cross_entropy_grad Failed")
+

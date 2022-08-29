@@ -129,16 +129,34 @@ void ExecutorImpl::Init(std::shared_ptr<RequestStore> request_store) {
     backends_.at(Backend::kBackendNCCL) = std::move(nccl_backend);
   }
 #endif
+#ifdef WITH_ROCM
+  int cuda_dev_count = 0;
+  hipError_t err = hipGetDeviceCount(&cuda_dev_count);
+  if (err != hipErrorNoDevice && err != hipErrorInsufficientDriver) { OF_CUDA_CHECK(err); }
+  if (cuda_dev_count > 0) {
+    std::unique_ptr<ExecutorBackend> nccl_backend = std::make_unique<NcclExecutorBackend>();
+    nccl_backend->Init(request_store_);
+    backends_.at(Backend::kBackendNCCL) = std::move(nccl_backend);
+  }
+#endif
 }
 
 void ExecutorImpl::InitJob(int64_t job_id) {
 #ifdef WITH_CUDA
   if (backends_.at(Backend::kBackendNCCL)) { backends_.at(Backend::kBackendNCCL)->InitJob(job_id); }
 #endif
+#ifdef WITH_ROCM
+  if (backends_.at(Backend::kBackendNCCL)) { backends_.at(Backend::kBackendNCCL)->InitJob(job_id); }
+#endif
 }
 
 void ExecutorImpl::DeinitJob(int64_t job_id) {
 #ifdef WITH_CUDA
+  if (backends_.at(Backend::kBackendNCCL)) {
+    backends_.at(Backend::kBackendNCCL)->DeinitJob(job_id);
+  }
+#endif
+#ifdef WITH_ROCM
   if (backends_.at(Backend::kBackendNCCL)) {
     backends_.at(Backend::kBackendNCCL)->DeinitJob(job_id);
   }

@@ -1270,7 +1270,10 @@ class VectorNormFunctor {
         res = JUST(ReduceMin(JUST(Abs(x)), dim, keepdim));
       } else if (ord_val == 2.0 && keepdim == false && full_dim_flag
                  && x->requires_grad() == false) {
-        res = JUST(SqrtSquareSum(x));
+        // res = JUST(SqrtSquareSum(x));
+        res =
+            JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord, false)), dim, keepdim)),
+                           Scalar(1.0) / ord, false));
       } else {
         res =
             JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord, false)), dim, keepdim)),

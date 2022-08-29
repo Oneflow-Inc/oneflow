@@ -77,11 +77,15 @@ class TestFusedBiasAddDropout(flow.unittest.TestCase):
     def test_fuse_bias_add_dropout(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_fused_bias_add_dropout]
-        arg_dict["shape"] = [(16, 64, 72), (32, 16, 48)]
-        arg_dict["axis"] = [0, 1, 2, -1, -2, -3]
+        # arg_dict["shape"] = [(16, 64, 72), (32, 16, 48)]
+        # arg_dict["axis"] = [0, 1, 2, -1, -2, -3]
+        # arg_dict["drop_prob"] = [0.0, 1.0]
+        arg_dict["shape"] = [(2,3,4)]
+        arg_dict["axis"] = [1]
         arg_dict["drop_prob"] = [0.0, 1.0]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
 
 
 if __name__ == "__main__":

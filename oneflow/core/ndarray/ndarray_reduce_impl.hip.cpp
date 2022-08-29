@@ -183,7 +183,7 @@ struct NdarrayScalarReduce<DeviceType::kCUDA, T, binary_func> final {
       CHECK_EQ(retcode, 0) << "hipcub::DeviceSegmentedReduce::Reduce error";
     };
     DoReduce(nullptr);
-    CHECK_GE(tmp_storage.shape().ElemNum() * sizeof(T), tmp_storage_bytes);
+    // CHECK_GE(tmp_storage.shape().ElemNum() * sizeof(T), tmp_storage_bytes);
     DoReduce(tmp_storage.ptr());
   }
 };

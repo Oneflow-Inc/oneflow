@@ -30,7 +30,7 @@ namespace cuda {
 
 namespace layer_norm {
 
-constexpr int kWarpSize = 32;
+constexpr int kWarpSize = 64;
 
 template<typename T>
 struct SumOp {
@@ -636,6 +636,51 @@ __global__ void LayerNormBlockSMemImpl(LOAD load, STORE store, const int64_t row
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size>
+__global__ void LayerNormBlockSMemImpl_1024(LOAD load, STORE store, const int64_t rows,
+                                       const int64_t cols, const double epsilon, ComputeType* mean,
+                                       ComputeType* inv_variance) __attribute__((amdgpu_flat_work_group_size(1,1024))) {
+  extern __shared__ __align__(sizeof(double)) unsigned char shared_buf[];
+  auto* buf = reinterpret_cast<ComputeType*>(shared_buf);
+  const int tid = threadIdx.x;
+  assert(cols % pack_size == 0);
+  const int num_packs = static_cast<int>(cols) / pack_size;
+  for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
+    ComputeType thread_mean = 0;
+    ComputeType thread_m2 = 0;
+    ComputeType thread_count = 0;
+    for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
+      ComputeType pack[pack_size];
+      load.template load<pack_size>(pack, row, pack_id * pack_size);
+#pragma unroll
+      for (int i = 0; i < pack_size; ++i) {
+        buf[i * num_packs + pack_id] = pack[i];
+        WelfordCombine(pack[i], &thread_mean, &thread_m2, &thread_count);
+      }
+    }
+    ComputeType row_mean = 0;
+    ComputeType row_m2 = 0;
+    ComputeType row_count = 0;
+    WelfordBlockAllReduce<ComputeType>(thread_mean, thread_m2, thread_count, &row_mean, &row_m2,
+                                       &row_count);
+    ComputeType row_variance = max(Div(row_m2, row_count), static_cast<ComputeType>(0.0));
+    ComputeType row_inv_var = Rsqrt(row_variance + static_cast<ComputeType>(epsilon));
+    if (threadIdx.x == 0) {
+      mean[row] = row_mean;
+      inv_variance[row] = row_inv_var;
+    }
+    for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
+      ComputeType pack[pack_size];
+#pragma unroll
+      for (int i = 0; i < pack_size; ++i) {
+        pack[i] = (buf[i * num_packs + pack_id] - row_mean) * row_inv_var;
+      }
+      store.template store<pack_size>(pack, row, pack_id * pack_size);
+    }
+  }
+}
+
+
+template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size>
 inline hipError_t LaunchLayerNormBlockSMemImpl(hipStream_t stream, LOAD load, STORE store,
                                                 int smem, const int64_t rows, const int64_t cols,
                                                 const double epsilon, ComputeType* mean,
@@ -649,6 +694,25 @@ inline hipError_t LaunchLayerNormBlockSMemImpl(hipStream_t stream, LOAD load, ST
     if (err != hipSuccess) { return err; }
   }
   LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size>
+      <<<grid_dim_x, block_size, smem, stream>>>(load, store, rows, cols, epsilon, mean,
+                                                 inv_variance);
+  return hipPeekAtLastError();
+}
+
+template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size>
+inline hipError_t LaunchLayerNormBlockSMemImpl_1024(hipStream_t stream, LOAD load, STORE store,
+                                                int smem, const int64_t rows, const int64_t cols,
+                                                const double epsilon, ComputeType* mean,
+                                                ComputeType* inv_variance) {
+  constexpr int waves = 32;
+  int grid_dim_x;
+  {
+    hipError_t err =
+        GetNumBlocks(LayerNormBlockSMemImpl_1024<LOAD, STORE, ComputeType, pack_size, block_size>,
+                     block_size, smem, rows, waves, &grid_dim_x);
+    if (err != hipSuccess) { return err; }
+  }
+  LayerNormBlockSMemImpl_1024<LOAD, STORE, ComputeType, pack_size, block_size>
       <<<grid_dim_x, block_size, smem, stream>>>(load, store, rows, cols, epsilon, mean,
                                                  inv_variance);
   return hipPeekAtLastError();
@@ -680,14 +744,14 @@ inline hipError_t TryDispatchLayerNormBlockSMemImplBlockSize(
   {
     hipError_t err = hipOccupancyMaxActiveBlocksPerMultiprocessor(
         &max_active_blocks_conf_4,
-        LayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_4>,
+        LayerNormBlockSMemImpl_1024<LOAD, STORE, ComputeType, pack_size, block_size_conf_4>,
         block_size_conf_4, smem);
     if (err != hipSuccess) { return err; }
   }
 
   if (max_active_blocks_conf_4 == max_active_blocks_conf_1) {
     *success = true;
-    return LaunchLayerNormBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_4>(
+    return LaunchLayerNormBlockSMemImpl_1024<LOAD, STORE, ComputeType, pack_size, block_size_conf_4>(
         stream, load, store, smem, rows, cols, epsilon, mean, inv_variance);
   }
   int max_active_blocks_conf_3;
@@ -753,7 +817,7 @@ inline hipError_t TryDispatchLayerNormBlockSMemImpl(hipStream_t stream, LOAD loa
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size>
 __global__ void LayerNormBlockUncachedImpl(LOAD load, STORE store, const int64_t rows,
                                            const int64_t cols, const double epsilon,
-                                           ComputeType* mean, ComputeType* inv_variance) {
+                                           ComputeType* mean, ComputeType* inv_variance) __attribute__((amdgpu_flat_work_group_size(1,1024))) {
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = static_cast<int>(cols) / pack_size;
@@ -1207,6 +1271,56 @@ __global__ void LayerNormGradBlockSMemImpl(LOAD_X load_x, LOAD_SCALED_DY load_sc
 
 template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType,
          int pack_size, int block_size>
+__global__ void LayerNormGradBlockSMemImpl_1024(LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
+                                           STORE store, const ComputeType* mean,
+                                           const ComputeType* inv_variance, const int64_t rows,
+                                           const int64_t cols) __attribute__((amdgpu_flat_work_group_size(1,1024))) {
+  extern __shared__ __align__(sizeof(double)) unsigned char grad_shared_buf[];
+  auto* normalized_buf = reinterpret_cast<ComputeType*>(grad_shared_buf);
+  auto* dy_buf = normalized_buf + cols;
+  const int tid = threadIdx.x;
+  assert(cols % pack_size == 0);
+  const int num_packs = static_cast<int>(cols) / pack_size;
+  const ComputeType one_over_cols = static_cast<ComputeType>(1.0) / static_cast<ComputeType>(cols);
+  for (int64_t row = blockIdx.x; row < rows; row += gridDim.x) {
+    ComputeType sum_stats1 = 0;
+    ComputeType sum_stats2 = 0;
+    const ComputeType mean_val = mean[row];
+    const ComputeType inv_variance_val = inv_variance[row];
+    const ComputeType inv_variance_over_cols = inv_variance_val * one_over_cols;
+    for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
+      ComputeType x_pack[pack_size];
+      ComputeType dy_pack[pack_size];
+      load_x.template load<pack_size>(x_pack, row, pack_id * pack_size);
+      load_scaled_dy.template load<pack_size>(dy_pack, row, pack_id * pack_size);
+#pragma unroll
+      for (int i = 0; i < pack_size; ++i) {
+        const int buf_offset = i * num_packs + pack_id;
+        ComputeType normalized = (x_pack[i] - mean_val) * inv_variance_val;
+        normalized_buf[buf_offset] = normalized;
+        dy_buf[buf_offset] = dy_pack[i];
+        sum_stats1 += dy_pack[i];
+        sum_stats2 += dy_pack[i] * normalized;
+      }
+    }
+    const ComputeType row_sum_stats1 = BlockAllReduce<SumOp, ComputeType, block_size>(sum_stats1);
+    const ComputeType row_sum_stats2 = BlockAllReduce<SumOp, ComputeType, block_size>(sum_stats2);
+    for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
+      ComputeType pack[pack_size];
+#pragma unroll
+      for (int i = 0; i < pack_size; ++i) {
+        const int buf_offset = i * num_packs + pack_id;
+        pack[i] = (cols * dy_buf[buf_offset] - row_sum_stats1
+                   - normalized_buf[buf_offset] * row_sum_stats2)
+                  * inv_variance_over_cols;
+      }
+      store.template store<pack_size>(pack, row, pack_id * pack_size);
+    }
+  }
+}
+
+template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType,
+         int pack_size, int block_size>
 inline hipError_t LaunchLayerNormGradBlockSMemImpl(hipStream_t stream, LOAD_X load_x,
                                                     LOAD_SCALED_DY load_scaled_dy, STORE store,
                                                     const ComputeType* mean,
@@ -1221,6 +1335,27 @@ inline hipError_t LaunchLayerNormGradBlockSMemImpl(hipStream_t stream, LOAD_X lo
     if (err != hipSuccess) { return err; }
   }
   LayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size, block_size>
+      <<<grid_dim_x, block_size, smem, stream>>>(load_x, load_scaled_dy, store, mean, inv_variance,
+                                                 rows, cols);
+  return hipPeekAtLastError();
+}
+
+template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType,
+         int pack_size, int block_size>
+inline hipError_t LaunchLayerNormGradBlockSMemImpl_1024(hipStream_t stream, LOAD_X load_x,
+                                                    LOAD_SCALED_DY load_scaled_dy, STORE store,
+                                                    const ComputeType* mean,
+                                                    const ComputeType* inv_variance, int smem,
+                                                    const int64_t rows, const int64_t cols) {
+  constexpr int waves = 32;
+  int grid_dim_x;
+  {
+    hipError_t err = GetNumBlocks(LayerNormGradBlockSMemImpl_1024<LOAD_X, LOAD_SCALED_DY, STORE,
+                                                              ComputeType, pack_size, block_size>,
+                                   block_size, smem, rows, waves, &grid_dim_x);
+    if (err != hipSuccess) { return err; }
+  }
+  LayerNormGradBlockSMemImpl_1024<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size, block_size>
       <<<grid_dim_x, block_size, smem, stream>>>(load_x, load_scaled_dy, store, mean, inv_variance,
                                                  rows, cols);
   return hipPeekAtLastError();
@@ -1254,14 +1389,14 @@ inline hipError_t TryDispatchLayerNormGradBlockSMemImplBlockSize(
   {
     hipError_t err = hipOccupancyMaxActiveBlocksPerMultiprocessor(
         &max_active_blocks_conf_4,
-        LayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
+        LayerNormGradBlockSMemImpl_1024<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
                                    block_size_conf_4>,
         block_size_conf_4, smem);
     if (err != hipSuccess) { return err; }
   }
   if (max_active_blocks_conf_4 == max_active_blocks_conf_1) {
     *success = true;
-    return LaunchLayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
+    return LaunchLayerNormGradBlockSMemImpl_1024<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
                                             block_size_conf_4>(
         stream, load_x, load_scaled_dy, store, mean, inv_variance, smem, rows, cols);
   }
@@ -1335,7 +1470,7 @@ template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename Comp
 __global__ void LayerNormGradBlockUncachedImpl(LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
                                                STORE store, const ComputeType* mean,
                                                const ComputeType* inv_variance, const int64_t rows,
-                                               const int64_t cols) {
+                                               const int64_t cols) __attribute__((amdgpu_flat_work_group_size(1,1024))) {
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = static_cast<int>(cols) / pack_size;

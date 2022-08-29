@@ -132,21 +132,21 @@ class TestMaxPooling(flow.unittest.TestCase):
         else:
             return y
 
-    def test_maxpool2d_channel_last(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_maxpool2d_channel_last]
-        arg_dict["device"] = ["cuda"]
-        # CPU pool is very slow, so don't run it with CUDA
-        if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
-            arg_dict["device"] = ["cpu"]
-        arg_dict["shape"] = [(3, 14, 27, 3), (5, 9, 14, 10), (2, 224, 224, 3)]
-        arg_dict["kernel_size"] = [3, (2, 3), (3, 4)]
-        arg_dict["stride"] = [1, (1, 2), 2]
-        arg_dict["padding"] = [0, (0, 1)]
-        arg_dict["dilation"] = [1, (1, 2), 2]
-        arg_dict["ceil_mode"] = [True, False]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    # def test_maxpool2d_channel_last(test_case):
+    #     arg_dict = OrderedDict()
+    #     arg_dict["test_fun"] = [_test_maxpool2d_channel_last]
+    #     arg_dict["device"] = ["cuda"]
+    #     # CPU pool is very slow, so don't run it with CUDA
+    #     if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+    #         arg_dict["device"] = ["cpu"]
+    #     arg_dict["shape"] = [(3, 14, 27, 3), (5, 9, 14, 10), (2, 224, 224, 3)]
+    #     arg_dict["kernel_size"] = [3, (2, 3), (3, 4)]
+    #     arg_dict["stride"] = [1, (1, 2), 2]
+    #     arg_dict["padding"] = [0, (0, 1)]
+    #     arg_dict["dilation"] = [1, (1, 2), 2]
+    #     arg_dict["ceil_mode"] = [True, False]
+    #     for arg in GenArgList(arg_dict):
+    #         arg[0](test_case, *arg[1:])
 
 
 @flow.unittest.skip_unless_1n1d()

@@ -60,6 +60,11 @@ struct OpCallInstructionUtil final {
   static inline void Compute(const vm::Instruction& instruction) {
     auto* operand = GetCallPhyInstrOperand(instruction);
     DeviceCtx* device_ctx = instruction.stream().device_ctx().get();
+    if (!operand->is_all_outputs_pod()) {
+      for (const auto& blob_object : *operand->outputs()) {
+        blob_object->TryInitNonPODTypeEagerBlobObjectIfNeed();
+      }
+    }
     user_op::OpKernelState* state = nullptr;
     user_op::OpKernelCache* cache = nullptr;
     if (operand->user_opkernel()->has_state_or_cache()) {

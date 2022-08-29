@@ -87,6 +87,10 @@ Maybe<Generator> MakeCPUGenerator();
 Maybe<Generator> DefaultCUDAGenerator(int device_index = -1);
 Maybe<Generator> MakeCUDAGenerator();
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+Maybe<Generator> DefaultCUDAGenerator(int device_index = -1);
+Maybe<Generator> MakeCUDAGenerator();
+#endif  // WITH_ROCM
 Maybe<void> ManualSeedAllCudaGenerator(uint64_t seed);
 
 }  // namespace one

@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/job/collective_boxing/executor_backend.h"
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 
 namespace oneflow {
 
@@ -54,6 +54,6 @@ class NcclExecutorBackend : public ExecutorBackend {
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA
+#endif  // WITH_CUDA || WITH_ROCM
 
 #endif  // ONEFLOW_CORE_JOB_COLLECTIVE_BOXING_NCCL_EXECUTOR_BACKEND_H_

@@ -44,16 +44,22 @@ struct NdarrayReduce<
     CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
     if (NdarrayNoReduce<device_type, T, binary_func>::Matched(y, x)) {
       NdarrayNoReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
+      // std::cout << "NdarrayNoReduce" << std::endl;
     } else if (NdarrayScalarReduce<device_type, T, binary_func>::Matched(y, x)) {
       NdarrayScalarReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
+      // std::cout << "NdarrayScalarReduce" << std::endl;
     } else if (NdarrayMatrixRowReduce<device_type, T, binary_func>::Matched(y, x)) {
       NdarrayMatrixRowReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
+      // std::cout << "NdarrayMatrixRowReduce" << std::endl;
     } else if (NdarrayMatrixColReduce<device_type, T, binary_func>::Matched(y, x)) {
       NdarrayMatrixColReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
+      // std::cout << "NdarrayMatrixColReduce" << std::endl;
     } else if (NdarrayXYZCubeXZReduce<device_type, T, binary_func>::Matched(y, x)) {
       NdarrayXYZCubeXZReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
+      // std::cout << "NdarrayXYZCubeXZReduce" << std::endl;
     } else {
       NdarrayDefaultReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
+      // std::cout << "NdarrayDefaultReduce" << std::endl;
     }
   }
 

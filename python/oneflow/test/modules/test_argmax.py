@@ -109,3 +109,11 @@ class TestArgmax(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+    # input = flow.tensor(
+    #     np.random.randn(5, 10), dtype=flow.float32, device=flow.device("cuda")
+    # )
+    # axis = 0
+    # of_out = input.argmax(dim=axis)
+    # np_out = np.argmax(input.numpy(), axis=axis)
+    # print(of_out)
+    # print(np_out)

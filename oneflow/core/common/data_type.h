@@ -269,7 +269,7 @@ inline bool operator==(const OptInt64& lhs, const OptInt64& rhs) {
 
 template<typename T>
 void CheckDataType(DataType data_type) {
-  LOG_IF(FATAL, (std::is_same<T, void>::value == false && std::is_same<T, char>::value == false
+  LOG_IF(FATAL, (std::is_same<T, void>::value == false && std::is_same<T, char>::value == false && std::is_same<T, long>::value == false
                  && data_type != DataType::kChar && data_type != GetDataType<T>::value))
       << data_type << " " << GetDataType<T>::value;
 }

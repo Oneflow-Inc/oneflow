@@ -21,6 +21,9 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include "oneflow/core/device/cuda_util.h"
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+#include "oneflow/core/device/cuda_util.h"
+#endif  // WITH_ROCM
 
 namespace oneflow {
 namespace one {
@@ -40,6 +43,11 @@ Maybe<void> ManualSeed(uint64_t seed, const std::string& device, int device_inde
     JUST(DefaultCUDAGenerator(device_index))->set_current_seed(seed);
   }
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+  else if (device == "cuda") {
+    JUST(DefaultCUDAGenerator(device_index))->set_current_seed(seed);
+  }
+#endif  // WITH_ROCM
   else if (device == "auto") {
     JUST(DefaultAutoGenerator())->set_current_seed(seed);
   } else {
@@ -105,6 +113,23 @@ Maybe<Generator> DefaultCUDAGenerator(int device_index) {
   return default_cuda_generator.at(device_index);
 }
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+Maybe<Generator> DefaultCUDAGenerator(int device_index) {
+  static int device_count = GetCudaDeviceCount();
+  static std::vector<std::once_flag> init_flags(device_count);
+  static std::vector<std::shared_ptr<Generator>> default_cuda_generator(device_count);
+
+  if (device_index == -1) { device_index = GetCudaDeviceIndex(); }
+  CHECK_OR_RETURN(device_index >= 0 && device_index < device_count)
+      << "Invalid device index " << device_index;
+  std::call_once(init_flags[device_index], [&]() {
+    default_cuda_generator[device_index] = std::make_shared<Generator>(
+        CHECK_JUST(CHECK_JUST(DefaultAutoGenerator())->Get<CUDAGeneratorImpl>(device_index)));
+  });
+  return default_cuda_generator.at(device_index);
+}
+#endif  // WITH_ROCM
+
 
 Maybe<Generator> MakeAutoGenerator() {
   return std::make_shared<Generator>(std::make_shared<AutoGeneratorImpl>(default_rng_seed_val));
@@ -122,7 +147,16 @@ Maybe<Generator> MakeCUDAGenerator(int device_index) {
   return std::make_shared<Generator>(
       std::make_shared<CUDAGeneratorImpl>(default_rng_seed_val, device_index));
 }
-#endif  // WITH_CUDA
+#endif  // 
+#ifdef WITH_ROCM
+Maybe<Generator> MakeCUDAGenerator(int device_index) {
+  if (device_index == -1) { device_index = GetCudaDeviceIndex(); }
+  CHECK_OR_RETURN(device_index >= 0 && device_index < GetCudaDeviceCount())
+      << "Invalid device index " << device_index;
+  return std::make_shared<Generator>(
+      std::make_shared<CUDAGeneratorImpl>(default_rng_seed_val, device_index));
+}
+#endif  // WITH_ROCM
 
 Maybe<void> ManualSeedAllCudaGenerator(uint64_t seed) {
 #ifdef WITH_CUDA
@@ -132,6 +166,13 @@ Maybe<void> ManualSeedAllCudaGenerator(uint64_t seed) {
     cuda_gen->set_current_seed(seed);
   }
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+  static int device_count = GetCudaDeviceCount();
+  FOR_RANGE(int, device_id, 0, device_count) {
+    const auto& cuda_gen = JUST(DefaultCUDAGenerator(device_id));
+    cuda_gen->set_current_seed(seed);
+  }
+#endif  // WITH_ROCM
   return Maybe<void>::Ok();
 }
 
@@ -144,6 +185,11 @@ Maybe<Generator> MakeGenerator(const std::string& device, int device_index) {
     return MakeCUDAGenerator(device_index);
   }
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+  else if (device == "cuda") {
+    return MakeCUDAGenerator(device_index);
+  }
+#endif  // WITH_ROCM
   else if (device == "auto") {
     return MakeAutoGenerator();
   } else {
@@ -161,7 +207,12 @@ Maybe<Generator> DefaultGenerator(const std::string& device, int device_index) {
   else if (device == "cuda") {
     return DefaultCUDAGenerator(device_index);
   }
-#endif  // WITH_CUDA
+#endif  // 
+#ifdef WITH_ROCM
+  else if (device == "cuda") {
+    return DefaultCUDAGenerator(device_index);
+  }
+#endif  // WITH_ROCM
   else if (device == "auto") {
     return DefaultAutoGenerator();
   } else {

@@ -774,10 +774,7 @@ CudnnConvDesc::CudnnConvDesc(const DataType compute_type, const DataType data_ty
   bool use_tensor_op_math;
   if (GetCudnnDataType(data_type) == HIPDNN_DATA_HALF) {
     use_tensor_op_math = true;
-// #if HIPDNN_VERSION >= 8100
-//   } else if (GetCudnnDataType(data_type) == CUDNN_DATA_BFLOAT16) {
-//     use_tensor_op_math = true;
-// #endif
+
   } else {
     use_tensor_op_math = false;
   }
@@ -799,30 +796,61 @@ CudnnConvDesc::CudnnConvDesc(const DataType compute_type, const DataType data_ty
         val_, padding_before.at(0), padding_before.at(1), strides.at(0), strides.at(1),
         dilation_rate.at(0), dilation_rate.at(1), HIPDNN_CROSS_CORRELATION,
         GetCudnnDataType(compute_type)));
+    CD_padding[0] = padding_before.at(0);
+    CD_padding[1] = padding_before.at(1);
+    CD_padding[2] = 0;
+    CD_stride[0] = strides.at(0);
+    CD_stride[1] = strides.at(1);
+    CD_stride[2] = 1;
+    CD_dilation[0] = dilation_rate.at(0);
+    CD_dilation[1] = dilation_rate.at(1);
+    CD_dilation[2] = 1;
+    CD_mode = HIPDNN_CROSS_CORRELATION;
+    CD_data_type = GetCudnnDataType(compute_type);
   } else if (opkernel_dim == 1) {
     OF_CUDNN_CHECK(hipdnnSetConvolution2dDescriptor(val_, padding_before.at(0), 0, strides.at(0), 1,
                                                    dilation_rate.at(0), 1, HIPDNN_CROSS_CORRELATION,
                                                    GetCudnnDataType(compute_type)));
+    CD_padding[0] = padding_before.at(0);
+    CD_padding[1] = 0;
+    CD_padding[2] = 0;
+    CD_stride[0] = strides.at(0);
+    CD_stride[1] = 1;
+    CD_stride[2] = 1;
+    CD_dilation[0] = dilation_rate.at(0);
+    CD_dilation[1] = 1;
+    CD_dilation[2] = 1;
+    CD_mode = HIPDNN_CROSS_CORRELATION;
+    CD_data_type = GetCudnnDataType(compute_type);
   } else {
     OF_CUDNN_CHECK(hipdnnSetConvolutionNdDescriptor(
         val_, opkernel_dim, padding_before.data(), strides.data(), dilation_rate.data(),
         HIPDNN_CROSS_CORRELATION, GetCudnnDataType(compute_type)));
+    CD_padding[0] = padding_before.at(0);
+    CD_padding[1] = padding_before.at(1);
+    CD_padding[2] = padding_before.at(2);
+    CD_stride[0] = strides.at(0);
+    CD_stride[1] = strides.at(1);
+    CD_stride[2] = strides.at(2);
+    CD_dilation[0] = dilation_rate.at(0);
+    CD_dilation[1] = dilation_rate.at(1);
+    CD_dilation[2] = dilation_rate.at(2);
+    CD_mode = HIPDNN_CROSS_CORRELATION;
+    CD_data_type = GetCudnnDataType(compute_type);
   }
   const int32_t groups = ctx.Attr<int32_t>("groups");
-  if (groups != 1) { OF_CUDNN_CHECK(hipdnnSetConvolutionGroupCount(val_, groups)); }
+  if (groups != 1) { OF_CUDNN_CHECK(hipdnnSetConvolutionGroupCount(val_, groups)); CD_groups = groups;}
   bool use_tensor_op_math;
   if (GetCudnnDataType(data_type) == HIPDNN_DATA_HALF) {
     use_tensor_op_math = true;
-// #if HIPDNN_VERSION >= 8100
-//   } else if (GetCudnnDataType(data_type) == CUDNN_DATA_BFLOAT16) {
-//     use_tensor_op_math = true;
-// #endif
+
   } else {
     use_tensor_op_math = false;
   }
   if (use_tensor_op_math) {
     OF_CUDNN_CHECK(hipdnnSetConvolutionMathType(val_, HIPDNN_TENSOR_OP_MATH));
   }
+  
 }
 
 CudnnConvArgs::CudnnConvArgs(const user_op::InferContext& ctx, DataType x_data_type,
@@ -848,13 +876,25 @@ CudnnConvArgs::CudnnConvArgs(const user_op::InferContext& ctx, DataType x_data_t
                                             &params.w_data_type, &params.w_format, &params.w_ndim,
                                             params.w_dims));
   hipdnnConvolutionMode_t mode;
-  int conv_dim_size = 0;
+  int conv_dim_size = x_shape.NumAxes() - 2;
+
+  for (int i=0; i<3; i++) {
+    params.padding[i] = cdesc.CD_padding[i];
+    params.stride[i] = cdesc.CD_stride[i];
+    params.dilation[i] = cdesc.CD_dilation[i];
+  }
+  
+  mode = cdesc.CD_mode;
+  params.data_type = cdesc.CD_data_type;
+  
   // OF_CUDNN_CHECK(cudnnGetConvolutionNdDescriptor(cdesc.Get(), CudnnConvParams::kConvMaxDims,
   //                                                &conv_dim_size, params.padding, params.stride,
   //                                                params.dilation, &mode, &params.data_type));
   CHECK_EQ(params.x_data_type, params.w_data_type);
   CHECK_EQ(params.x_ndim, params.w_ndim);
   // CHECK_EQ(conv_dim_size + 2, params.x_ndim);
+
+  params.groups = cdesc.CD_groups;
   // OF_CUDNN_CHECK(cudnnGetConvolutionGroupCount(cdesc.Get(), &params.groups));
   params.max_ws_size = max_workspace_size;
 }
@@ -882,13 +922,25 @@ CudnnConvArgs::CudnnConvArgs(const user_op::KernelComputeContext& ctx, DataType 
                                             &params.w_data_type, &params.w_format, &params.w_ndim,
                                             params.w_dims));
   hipdnnConvolutionMode_t mode;
-  int conv_dim_size = 0;
+  int conv_dim_size = x_shape.NumAxes() - 2;
+
+  for (int i=0; i<3; i++) {
+    params.padding[i] = cdesc.CD_padding[i];
+    params.stride[i] = cdesc.CD_stride[i];
+    params.dilation[i] = cdesc.CD_dilation[i];
+  }
+
+  mode = cdesc.CD_mode;
+  params.data_type = cdesc.CD_data_type;
+  
   // OF_CUDNN_CHECK(cudnnGetConvolutionNdDescriptor(cdesc.Get(), CudnnConvParams::kConvMaxDims,
   //                                                &conv_dim_size, params.padding, params.stride,
   //                                                params.dilation, &mode, &params.data_type));
   CHECK_EQ(params.x_data_type, params.w_data_type);
   CHECK_EQ(params.x_ndim, params.w_ndim);
   // CHECK_EQ(conv_dim_size + 2, params.x_ndim);
+
+  params.groups = cdesc.CD_groups;
   // OF_CUDNN_CHECK(cudnnGetConvolutionGroupCount(cdesc.Get(), &params.groups));
   params.max_ws_size = max_workspace_size;
 }
@@ -1092,18 +1144,18 @@ perf_t FindCudnnConvAlgorithm(CudnnConvArgs* args) {
 
 template<typename perf_t>
 perf_t FindCudnnConvAlgorithmWithResource(CudnnConvArgs* args, CudnnConvResource* res) {
-  auto Infer = [args, res](const CudnnConvParams& params) {
+  // auto Infer = [args, res](const CudnnConvParams& params) {
     std::vector<perf_t> perf_vec;
     if (args->heuristic) {
-      std::cout << "miopen not surpport HeuristicSearch, use ExhaustiveSearch instead" << std::endl;
+      // std::cout << "miopen not surpport HeuristicSearch, use ExhaustiveSearch instead" << std::endl;
       CudnnConvAlgorithmSearch<perf_t>::ExhaustiveSearch(*args, res, &perf_vec);
     } else {
       CudnnConvAlgorithmSearch<perf_t>::ExhaustiveSearch(*args, res, &perf_vec);
     }
     return perf_vec[0];
     // return GetBestAlgorithm<perf_t>(*args, res, perf_vec);
-  };
-  return Singleton<CudnnConvAlgoCache>::Get()->Remember<perf_t>(args->params, Infer);
+  // };
+  // return Singleton<CudnnConvAlgoCache>::Get()->Remember<perf_t>(args->params, Infer);
 }
 
 template<typename perf_t, typename algo_t>

@@ -25,6 +25,9 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include <nccl.h>
 #endif
+#ifdef WITH_ROCM
+#include <rccl.h>
+#endif
 
 namespace oneflow {
 
@@ -549,7 +552,7 @@ CollectiveBoxingSubTskGphBuilder::CollectiveBoxingSubTskGphBuilder() {
   builders.emplace_back(new CollectiveBoxingScatterThenNcclAllGatherSubTskGphBuilder());
   builders.emplace_back(new NcclCollectiveBoxingBroadcastSubTskGphBuilder());
   if (collective_boxing_conf.nccl_enable_all_to_all()) {
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+#if (defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700) || defined(WITH_ROCM)
     builders.emplace_back(new NcclCollectiveBoxingAll2AllSubTskGphBuilder());
 #else
     LOG(WARNING) << "nccl_enable_all_to_all is unavailable unless NCCL_VERSION > 2.7.0";

@@ -459,7 +459,7 @@ hipdnnStatus_t hipTomiopenConvolutionFwdAlgo(hipdnnConvolutionFwdAlgo_t in,
         case HIPDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM:
             HIPDNN_OPEN_LOG_M("HIPDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM"
                               << std::flush);
-            *out = miopenConvolutionFwdAlgoGEMM;
+            *out = miopenConvolutionFwdAlgoImplicitGEMM;
             break;
 
         default:
@@ -484,6 +484,9 @@ hipdnnStatus_t miopenTohipConvolutionFwdAlgo(miopenConvFwdAlgorithm_t in,
             break;
         case miopenConvolutionFwdAlgoWinograd:
             *out = HIPDNN_CONVOLUTION_FWD_ALGO_WINOGRAD;
+            break;
+        case miopenConvolutionFwdAlgoImplicitGEMM:
+            *out = HIPDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM;
             break;
         default:
             HIPDNN_OPEN_LOG_M("miopenTohipConvolutionFwdAlgo "
@@ -531,6 +534,12 @@ hipdnnStatus_t hipTomiopenConvolutionBwdFilterAlgo(
             *out = miopenConvolutionBwdWeightsAlgoDirect;
             break;
 
+        case HIPDNN_CONVOLUTION_BWD_FILTER_ALGO_IMPLICIT_GEMM:
+            HIPDNN_OPEN_LOG_M("HIPDNN_CONVOLUTION_BWD_FILTER_ALGO_IMPLICIT_GEMM"
+                              << std::flush);
+            *out = miopenConvolutionBwdWeightsAlgoImplicitGEMM;
+            break;
+
         case HIPDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD:
             HIPDNN_OPEN_LOG_M("HIPDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD"
                               << std::flush);
@@ -564,6 +573,9 @@ hipdnnStatus_t miopenTohipConvolutionBwdFilterAlgo(
             break;
         case miopenConvolutionBwdWeightsAlgoWinograd:
             *out = HIPDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD;
+            break;
+        case miopenConvolutionBwdWeightsAlgoImplicitGEMM:
+            *out = HIPDNN_CONVOLUTION_BWD_FILTER_ALGO_IMPLICIT_GEMM;
             break;
         default:
             HIPDNN_OPEN_LOG_E("miopenTohipConvolutionBwdFilterAlgo: "
@@ -635,6 +647,12 @@ hipdnnStatus_t hipTomiopenConvolutionBwdDataAlgo(
                               << std::flush);
             *out = miopenTransposeBwdDataAlgoGEMM;
             break;
+        
+        case HIPDNN_CONVOLUTION_BWD_DATA_ALGO_IMPLICIT_GEMM:
+            HIPDNN_OPEN_LOG_M("HIPDNN_CONVOLUTION_BWD_DATA_ALGO_IMPLICIT_GEMM"
+                              << std::flush);
+            *out = miopenConvolutionBwdDataAlgoImplicitGEMM;
+            break;
 
         default:
             HIPDNN_OPEN_LOG_E("hipdnnConvolutionBwdDataAlgo_t: "
@@ -661,6 +679,9 @@ hipdnnStatus_t miopenTohipConvolutionBwdDataAlgo(
             break;
         case miopenTransposeBwdDataAlgoGEMM:
             *out = HIPDNN_CONVOLUTION_BWD_DATA_ALGO_TRANSPOSE_GEMM;
+            break;
+        case miopenConvolutionBwdDataAlgoImplicitGEMM:
+            *out = HIPDNN_CONVOLUTION_BWD_DATA_ALGO_IMPLICIT_GEMM;
             break;
         default:
             HIPDNN_OPEN_LOG_E("miopenTohipConvolutionBwdDataAlgo: "
@@ -1323,9 +1344,9 @@ hipdnnStatus_t hipdnnSetConvolutionMathType(
     HIPDNN_OPEN_LOG_I2( "Setting MathType by user is not supported in MIOpen."
                       << "Internally set based on datatype of input.");
 
-    HIPDNN_OPEN_LOG_E("hipdnnSetConvolutionMathType"
-                      << mathType << " NOT SUPPORTED in MIOpen"
-                      << std::flush);
+    // HIPDNN_OPEN_LOG_E("hipdnnSetConvolutionMathType"
+    //                   << mathType << " NOT SUPPORTED in MIOpen"
+    //                   << std::flush);
 
     ((structConvDesc_t*)(convDesc))->convMathType = mathType;
 

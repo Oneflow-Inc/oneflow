@@ -79,6 +79,13 @@ size_t InferTempStorageForArgMax(int32_t num_row, int32_t num_col) {
           /* d_in */ nullptr, /* d_out */ nullptr, /* num_segments */ num_row,
           /* d_begin_offsets */ segment_offset_iter, /* d_end_offsets */ segment_offset_iter + 1,
           /* stream */ 0);
+
+  // auto err =
+  //   hipcub::DeviceReduce::ArgMax<T*, hipcub::KeyValuePair<int32_t, T>*>(
+  //                   nullptr, temp_storage_bytes,
+  //                   nullptr, nullptr, num_row,
+  //                   0);
+
   OF_CUDA_CHECK(err);
 
   return temp_storage_bytes;
@@ -97,6 +104,9 @@ void ArgMax(const T* in_ptr, int32_t num_row, int32_t num_col, void* temp_storag
   MultiplyFunctor multiply_functor(num_col);
   SegmentOffsetIter segment_offset_iter(counting_iter, multiply_functor);
 
+  // void * d_temp_storage = nullptr;
+  // hipMalloc((void **)&d_temp_storage, rt_inferred_temp_storage_bytes);
+
   auto err = hipcub::DeviceSegmentedReduce::ArgMax(
       /* d_temp_storage */ temp_storage_ptr,
       /* temp_storage_bytes */ rt_inferred_temp_storage_bytes,
@@ -106,14 +116,21 @@ void ArgMax(const T* in_ptr, int32_t num_row, int32_t num_col, void* temp_storag
       /* d_begin_offsets */ segment_offset_iter,
       /* d_end_offsets */ segment_offset_iter + 1,
       /* stream */ stream);
+
+  // auto err =
+  //   hipcub::DeviceReduce::ArgMax(
+  //                   d_temp_storage, rt_inferred_temp_storage_bytes,
+  //                   in_ptr, out_ptr, num_row,
+  //                   stream);
+
   OF_CUDA_CHECK(err);
 }
 
 template<typename T>
-__global__ void WriteKeysToOutput(const int32_t instance_num,
+__global__ void WriteKeysToOutput(const int32_t instance_num, const int32_t instance_size, 
                                   const hipcub::KeyValuePair<int32_t, T>* key_value_out_ptr,
                                   int64_t* out_ptr) {
-  CUDA_1D_KERNEL_LOOP(i, instance_num) { out_ptr[i] = key_value_out_ptr[i].key; }
+  CUDA_1D_KERNEL_LOOP(i, instance_num) { out_ptr[i] = key_value_out_ptr[i].key % instance_size; }
 }
 
 }  // namespace
@@ -142,7 +159,7 @@ class GpuArgMaxKernel final : public user_op::OpKernel {
            ctx->stream()->As<ep::CudaStream>()->cuda_stream());
     WriteKeysToOutput<T><<<BlocksNum4ThreadsNum(instance_num), kCudaThreadsNumPerBlock, 0,
                            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-        instance_num, buffer_manager.KeyValueOutPtr(), out->mut_dptr<int64_t>());
+        instance_num, instance_size, buffer_manager.KeyValueOutPtr(), out->mut_dptr<int64_t>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

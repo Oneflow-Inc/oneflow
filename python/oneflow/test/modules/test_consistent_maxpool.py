@@ -226,20 +226,20 @@ class TestMaxPool(flow.unittest.TestCase):
                 _test_maxpool2d(test_case, placement, sbp)
                 _test_maxpool3d(test_case, placement, sbp)
 
-    @globaltest
-    def test_maxpool2d_channel_last(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_maxpool2d_channel_last]
-        arg_dict["shape"] = [(1, 16, 16, 3), (2, 224, 224, 3)]
-        arg_dict["kernel_size"] = [3, (2, 3)]
-        arg_dict["stride"] = [1, (1, 2)]
-        arg_dict["padding"] = [0, (0, 1)]
-        arg_dict["dilation"] = [1, 2]
-        arg_dict["ceil_mode"] = [True, False]
-        for arg in GenArgList(arg_dict):
-            for placement in all_placement():
-                for sbp in all_sbp(placement, valid_split_axis=[1, 2]):
-                    arg[0](test_case, placement, sbp, *arg[1:])
+    # @globaltest
+    # def test_maxpool2d_channel_last(test_case):
+    #     arg_dict = OrderedDict()
+    #     arg_dict["test_fun"] = [_test_maxpool2d_channel_last]
+    #     arg_dict["shape"] = [(1, 16, 16, 3), (2, 224, 224, 3)]
+    #     arg_dict["kernel_size"] = [3, (2, 3)]
+    #     arg_dict["stride"] = [1, (1, 2)]
+    #     arg_dict["padding"] = [0, (0, 1)]
+    #     arg_dict["dilation"] = [1, 2]
+    #     arg_dict["ceil_mode"] = [True, False]
+    #     for arg in GenArgList(arg_dict):
+    #         for placement in all_placement():
+    #             for sbp in all_sbp(placement, valid_split_axis=[1, 2]):
+    #                 arg[0](test_case, placement, sbp, *arg[1:])
 
 
 if __name__ == "__main__":

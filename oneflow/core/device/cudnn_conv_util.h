@@ -264,6 +264,13 @@ class CudnnConvDesc final {
 
   const hipdnnConvolutionDescriptor_t& Get() const { return val_; }
 
+  int CD_padding[3];
+  int CD_stride[3];
+  int CD_dilation[3];
+  hipdnnConvolutionMode_t CD_mode;
+  int CD_groups;
+  hipdnnDataType_t CD_data_type;
+
  private:
   hipdnnConvolutionDescriptor_t val_;
 };

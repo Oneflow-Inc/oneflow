@@ -39,7 +39,7 @@ endif()
 
 if (BUILD_ROCM)
   # Search for rocm in common locations
-  list(APPEND CMAKE_PREFIX_PATH /opt/rocm/hip /opt/rocm /opt/rocm/llvm)
+  list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH}/hip ${ROCM_PATH} ${ROCM_PATH}/llvm)
 endif()
 
 

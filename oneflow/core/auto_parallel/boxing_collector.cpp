@@ -499,7 +499,7 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
   // If compute_cost==false + 2D sbp + same placment + nccl logical + not (p->b),
   // Use nccl logical send recv instead of middle node.
   // Note that in op sbp inference, cost of middle nodes is still used for the moment.
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
   if (compute_cost == false && producer_parallel_desc.hierarchy()->NumAxes() == 2
       && producer_parallel_desc == consumer_parallel_desc
       && !(NdSbpHasPartialParallel(sbp_consumer)) &&

@@ -307,7 +307,8 @@ elseif(UNIX)
     ${EXTERNAL_TARGETS}
     -Wl,--no-whole-archive
     -ldl
-    -lrt)
+    -lrt
+    -Wl,--version-script ${PROJECT_SOURCE_DIR}/version_script.lds)
   if(BUILD_CUDA)
     target_link_libraries(oneflow CUDA::cudart_static)
   endif()
@@ -362,6 +363,10 @@ if(BUILD_PYTHON)
   set(gen_pip_args "")
   if(BUILD_CUDA)
     list(APPEND gen_pip_args --cuda=${CUDA_VERSION})
+  endif()
+
+  if(BUILD_ROCM)
+    list(APPEND gen_pip_args --rocm="DCU Toolkits")
   endif()
 
   add_custom_target(

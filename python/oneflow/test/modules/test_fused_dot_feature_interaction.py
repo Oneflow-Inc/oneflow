@@ -21,7 +21,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 import os
-
+from fused_dot_feature_interaction import fused_dot_feature_interaction
 
 def _test_fused_dot_feature_interaction(
     test_case,
@@ -84,15 +84,23 @@ def _test_fused_dot_feature_interaction(
         output_concat_tensor = fused_feature_0_tensor
     else:
         output_concat_tensor = None
-    fused_R = flow._C.fused_dot_feature_interaction(
-        [
-            fused_feature_0_tensor.reshape(batch_size, 1, embedding_size),
-            fused_feature_1_tensor,
-        ],
+    # fused_R = flow._C.fused_dot_feature_interaction(
+    #     [
+    #         fused_feature_0_tensor.reshape(batch_size, 1, embedding_size),
+    #         fused_feature_1_tensor,
+    #     ],
+    #     output_concat=output_concat_tensor,
+    #     self_interaction=self_interaction,
+    #     output_padding=output_padding,
+    #     pooling="none",
+    # )
+    fused_R = fused_dot_feature_interaction(
+        fused_feature_0_tensor,
+        fused_feature_1_tensor,
         output_concat=output_concat_tensor,
         self_interaction=self_interaction,
         output_padding=output_padding,
-        pooling="none",
+        dtype=dtype
     )
     fused_loss = fused_R.sum()
     fused_loss.backward()

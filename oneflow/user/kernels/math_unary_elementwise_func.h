@@ -28,10 +28,16 @@ limitations under the License.
 #define MATH_FUNC_D(name, x) name(x)
 
 #elif defined(__HIPCC__)
-
+#include <cmath>
 #include <hip/hip_fp16.h>
+
+#if defined(__HIP_DEVICE_COMPILE__)
 #define MATH_FUNC_F(name, x) name##f(x)
 #define MATH_FUNC_D(name, x) name(x)
+#else
+#define MATH_FUNC_F(name, x) std::name(x)
+#define MATH_FUNC_D(name, x) std::name(x)
+#endif
 
 #else
 

@@ -22,6 +22,9 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include <nccl.h>
 #endif
+#ifdef WITH_ROCM
+#include <rccl.h>
+#endif
 
 namespace oneflow {
 
@@ -73,7 +76,7 @@ CollectiveBoxingConf ResourceDesc::collective_boxing_conf() const {
 }
 
 bool ResourceDesc::nccl_use_compute_stream() const {
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+#if (defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700) || defined(WITH_ROCM)
   return resource_.nccl_use_compute_stream();
 #else
   return false;

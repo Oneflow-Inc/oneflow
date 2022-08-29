@@ -37,11 +37,15 @@ OpCallPhyInstrOperand::OpCallPhyInstrOperand(
       need_temp_storage_(false),
       dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode),
       input_dependences_(),
-      output_dependences_() {
+      output_dependences_(),
+      is_all_outputs_pod_(false) {
   ForEachConstMirroredObject(SetInserter(&input_dependences_));
   ForEachMutMirroredObject(SetInserter(&output_dependences_));
   ForEachMut2MirroredObject(SetInserter(&output_dependences_));
   InitStreamSequentialDependence();
+  for (const auto& blob_object : *outputs) {
+    is_all_outputs_pod_ = is_all_outputs_pod_ && IsPODDataType(blob_object->data_type());
+  }
 }
 
 Maybe<void> OpCallPhyInstrOperand::Init() {

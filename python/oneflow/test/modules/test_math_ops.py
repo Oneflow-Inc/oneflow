@@ -442,4 +442,11 @@ class TestFloorDiv(flow.unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    # unittest.main()
+    x = np.array([[1, 3, 8, 7, 2], [1, 9, 4, 3, 2]], dtype=np.float32)
+    input = flow.tensor(
+        x, dtype=flow.float32, device=flow.device("cuda")
+    )
+    (values, indices) = flow.topk(flow.Tensor(x), k=1, dim=0)
+    print(values)
+    print(indices)
