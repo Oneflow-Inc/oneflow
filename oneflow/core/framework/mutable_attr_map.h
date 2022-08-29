@@ -34,8 +34,8 @@ class MutableAttrMap {
 
   explicit MutableAttrMap(const std::vector<std::string>& attr_names)
       : max_size_(attr_names.size()),
-        ordered_attr_names_(std::make_shared<OrderedStringList<8>>()),
-        valid_masks_(max_size_, 0) {
+        valid_masks_(max_size_, 0),
+        ordered_attr_names_(std::make_shared<OrderedStringList<8>>()) {
     for (const auto& attr_name : attr_names) { ordered_attr_names_->emplace_back(attr_name); }
     attrs_.resize(max_size_);
   }
@@ -82,11 +82,11 @@ class MutableAttrMap {
                                                    && !internal::IsOptional<T>::value,
                                                int>::type = 0>
   inline void SetAttrNoThrow(int idx, const T& attr_val) {
-    if (!attrs_[idx] /* || attrs_[idx]->value_type() != user_op::GetAttrType<T>::value*/
+    valid_masks_[idx] = true;
+    if (!attrs_[idx] /*|| attrs_[idx]->type() != user_op::GetAttrType<T>::value*/
         || *static_cast<const T*>(attrs_[idx]->Ptr()) != attr_val) {
       attrs_[idx] = std::make_shared<user_op::TypedAttrVal<T>>(attr_val);
     }
-    valid_masks_[idx] = true;
   }
 
   template<typename T, typename std::enable_if<internal::IsOptional<T>::value, int>::type = 0>
@@ -107,11 +107,11 @@ class MutableAttrMap {
 
   // The actually count of all attributes
   size_t max_size_;
+  small_vector<bool, 8> valid_masks_;
+  small_vector<std::shared_ptr<user_op::AttrVal>, 8> attrs_;
   // The ordered attribute names is determined and should be shared
   // between other AttrMap
   std::shared_ptr<OrderedStringList<8>> ordered_attr_names_;
-  small_vector<bool, 8> valid_masks_;
-  small_vector<std::shared_ptr<user_op::AttrVal>, 8> attrs_;
 };
 
 #define THREAD_CACHED_MUTABLE_ATTR_MAP(...)                                          \
