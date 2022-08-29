@@ -1438,14 +1438,13 @@ class InplaceToContiguousFunctor {
     auto contiguous_tensor = JUST(functional::ToContiguous(input));
     CHECK_OR_RETURN(input->is_local() && contiguous_tensor->is_local())
         << "Both ref and value must be local tensor.";
-    std::shared_ptr<Stride> stride(new Stride(*input->shape()));
+    const Stride stride(*input->shape());
     // update stride
     const auto& blob_object = JUST(input->eager_blob_object());
     Symbol<LocalTensorMeta> old_tensor_meta = JUST(input->local_tensor_meta());
 
-    Symbol<LocalTensorMeta> new_tensor_meta =
-        SymbolOf(LocalTensorMeta(std::make_shared<Shape>(old_tensor_meta->shape()), stride,
-                                 old_tensor_meta->dtype(), old_tensor_meta->device()));
+    Symbol<LocalTensorMeta> new_tensor_meta = SymbolOf(LocalTensorMeta(
+        old_tensor_meta->shape(), stride, old_tensor_meta->dtype(), old_tensor_meta->device()));
 
     std::shared_ptr<EagerLocalTensorImpl> final_tensor_impl =
         std::make_shared<EagerLocalTensorImpl>(JUST(input->tensor_storage()),
