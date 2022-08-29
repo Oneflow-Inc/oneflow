@@ -14,13 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow._oneflow_internal
-import contextlib
 
-StreamSet = oneflow._oneflow_internal.StreamSet
+class thread:
+    def __init__(self, thread_global_id=1, exclude_ccl=False):
+        self.stream_set_ = oneflow._oneflow_internal.StreamSet(thread_global_id)
+        self.exclude_ccl_ = exclude_ccl
 
+    def __enter__(self):
+        self.guard_ = oneflow._oneflow_internal.StreamGuard(self.stream_set_, self.exclude_ccl_)
 
-@contextlib.contextmanager
-def stream_set(stream_set_object: StreamSet, exclude_ccl=False):
-    guard = oneflow._oneflow_internal.StreamGuard(stream_set_object, exclude_ccl)
-    yield
-    del guard
+    def __exit__(self, type, value, traceback):
+        del self.guard_

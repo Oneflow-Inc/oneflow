@@ -25,32 +25,31 @@ import oneflow.unittest
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestStream(flow.unittest.TestCase):
+class TestLocalThread(flow.unittest.TestCase):
     def test_stream(test_case):
-        with flow.experimental.stream_set(flow.experimental.StreamSet()):
+        with flow.async.thread():
             test_case.assertEqual(flow.ones(1)[0], 1)
 
 
 @flow.unittest.skip_unless_1n2d()
-class TestGlobalStream(flow.unittest.TestCase):
+class TestGlobalThread(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cpu_stream(test_case):
-        worker_thread_id = 2
-        streams = [flow.experimental.StreamSet(worker_thread_id) for i in range(10)]
-        for s in streams:
-            with flow.experimental.stream_set(s):
+        thread_ids = [i % 4 for i in range(10)]
+        for thread_id in thread_ids:
+            with flow.async.thread(thread_id):
                 placement = flow.placement("cpu", [0, 1])
                 tensor = flow.ones(2, placement=placement, sbp=flow.sbp.split(0))
                 test_case.assertEqual(tensor[0], 1)
                 test_case.assertEqual(tensor[1], 1)
 
     def test_cuda_stream(test_case):
-        streams = [flow.experimental.StreamSet(i % 4) for i in range(200)]
+        thread_ids = [i % 4 for i in range(200)]
         tensors = []
         dim = 0
-        for s in streams:
+        for thread in thread_ids:
             dim += 1
-            with flow.experimental.stream_set(s):
+            with flow.async.thread(thread):
                 placement = flow.placement("cuda", [0, 1])
                 ones = flow.ones(2 * dim, placement=placement, sbp=flow.sbp.split(0))
                 tensors.append(ones.to_global(sbp=flow.sbp.broadcast))
