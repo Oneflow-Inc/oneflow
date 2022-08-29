@@ -36,7 +36,7 @@ class AutoParallelPass final : public JobPass {
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!job->job_conf().enable_auto_parallel()) { return Maybe<void>::Ok(); }
-    LOG(INFO) << "=== Enable AutoParallel ===";
+    VLOG(3) << "=== Enable AutoParallel ===";
     if (job->job_conf().enable_auto_parallel_prune_parallel_cast_ops()) {
       JUST(RemoveParallelCastOps(job));
     }
@@ -51,16 +51,16 @@ class AutoParallelPass final : public JobPass {
 Maybe<void> AutoParallelPass::Apply(const OpGraph& op_graph, Job* job) const {
   // auto-parallel
   // TODO: recode this
-  std::cout << "Start Auto Parallel" << std::endl;
+  VLOG(2) << "Start Auto Parallel" << std::endl;
   auto time_begin = std::chrono::high_resolution_clock::now();
 
   auto_parallel::SbpConstructor sbp_constructor(op_graph, job);
   JUST(sbp_constructor.FindBestSbpSignature());
   JUST(sbp_constructor.DumpNdSbpSignatureForJob(op_graph, job));
   auto time_end = std::chrono::high_resolution_clock::now();
-  std::cout << "Auto parallel took "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(time_end - time_begin).count()
-            << " ms\n";
+  VLOG(2) << "Auto parallel took "
+          << std::chrono::duration_cast<std::chrono::milliseconds>(time_end - time_begin).count()
+          << " ms\n";
   if (GlobalProcessCtx::Rank() == 0) {
     sbp_constructor.PrintSBPGraphDebugInfo();
     JUST(sbp_constructor.CheckSbpAgreement(*job));
@@ -71,7 +71,7 @@ Maybe<void> AutoParallelPass::Apply(const OpGraph& op_graph, Job* job) const {
 REGISTER_JOB_PASS("AutoParallelPass", AutoParallelPass);
 
 Maybe<void> AutoParallelPass::RemoveParallelCastOps(Job* job) const {
-  LOG(INFO) << "Remove parallel cast ops for auto_parallel:";
+  VLOG(3) << "Remove parallel cast ops for auto_parallel:";
   const OpGraph op_graph(*job);
   JobBuilder job_builder(job);
   HashMap<std::string, OperatorConf> op_name2op_conf;
@@ -138,7 +138,7 @@ Maybe<void> AutoParallelPass::RemoveParallelCastOps(Job* job) const {
     }
     del_op_names.emplace_back(op_conf.name());
     del_op_name_set.insert(op_conf.name());
-    LOG(INFO) << "\tremove " << op_conf.name();
+    VLOG(3) << "\tremove " << op_conf.name();
   };
   op_graph.ForEachNode(Try2Delete);
   for (const auto& pair : op_name2op_conf) { job_builder.MutOpsOnlyOnce({pair.second}); }

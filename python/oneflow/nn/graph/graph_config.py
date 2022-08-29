@@ -294,7 +294,7 @@ class GraphConfig(object):
         self.proto.enable_straighten_algorithm_in_task_graph = mode
 
     def enable_auto_parallel(self, mode: bool = True):
-        """If true, then graph will use auto parallel algorithm.
+        """If true, then graph will use the auto parallel algorithm to select a parallelism strategy.
 
         Args:
             mode (bool, optional): [description]. Default is True.
@@ -331,6 +331,8 @@ class GraphConfig(object):
         
         transfer cost: An auto-parallel parameter. Describe the fixed extra time it will take when
         communication between devices occurs. It will be added to the copy cost and can not be reduced.
+        Default value: 0
+        Using a positive number such as 1.65e8 would reduce the frequency of data transfer. 
         """
         self.proto.auto_parallel_transfer_cost = cost
 
