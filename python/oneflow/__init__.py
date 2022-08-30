@@ -29,6 +29,7 @@ oneflow._oneflow_internal.CheckAndClearRegistryFlag()
 Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
+
 locals()["dtype"] = oneflow._oneflow_internal.dtype
 locals()["bool"] = oneflow._oneflow_internal.bool
 locals()["float16"] = oneflow._oneflow_internal.float16
@@ -400,6 +401,7 @@ import oneflow.utils.data
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing
+import oneflow.asyncs
 import oneflow.one_embedding
 import oneflow.profiler
 

@@ -46,6 +46,7 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/framework/tensor_util.h"
+#include "oneflow/core/framework/stream_guard.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/tensor_util.h"
@@ -1626,26 +1627,38 @@ class CopyFunctor {
   CopyFunctor() { op_ = CHECK_JUST(one::OpBuilder("copy").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& device_type,
                            const int64_t& device_id, const bool pin_memory) const {
-    auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP("device_type", "device_id", "pin_memory", "asynced_copy");
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("device_type", "device_id", "pin_memory");
     attrs.SetAttr<std::string>("device_type", device_type);
     attrs.SetAttr<int64_t>("device_id", device_id);
     attrs.SetAttr<bool>("pin_memory", pin_memory);
-    attrs.SetAttr<bool>("asynced_copy", JUST(GetAsyncedCopy(*x)));
 
 #ifdef WITH_CUDA
     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
 #endif
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    int64_t thread_uid = Stream::kDefaultStreamThreadUid;
+    int64_t stream_set_id = Stream::kDefaultStreamSetId;
+    JUST(GetThreadUidAndStreamSetId(*x, &thread_uid, &stream_set_id));
+    if (thread_uid == Stream::kDefaultStreamThreadUid
+        && stream_set_id == Stream::kDefaultStreamSetId) {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    } else {
+      auto stream_set = std::make_shared<StreamSet>(thread_uid);
+      StreamGuard guard(StreamConverter(stream_set, /*exclude_ccl=*/false));
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    }
   }
 
-  Maybe<bool> GetAsyncedCopy(const one::Tensor& x) const {
-    if (!x.is_eager()) { return false; }
-    if (!x.is_local()) { return false; }
+  Maybe<void> GetThreadUidAndStreamSetId(const one::Tensor& x, int64_t* thread_uid,
+                                         int64_t* stream_set_id) const {
+    if (!x.is_eager()) { return Maybe<void>::Ok(); }
+    if (!x.is_local()) { return Maybe<void>::Ok(); }
     const auto& eager_blob_object = JUST(x.eager_blob_object());
-    const auto& opt_stream = eager_blob_object->last_used_stream();
-    if (!opt_stream.has_value()) { return false; }
-    return JUST(opt_stream)->stream_type() == StreamType::kTmpCompute;
+    const auto& opt_last_used_stream = eager_blob_object->last_used_stream();
+    if (!opt_last_used_stream.has_value()) { return Maybe<void>::Ok(); }
+    auto last_used_stream = JUST(opt_last_used_stream);
+    *thread_uid = last_used_stream->thread_uid();
+    *stream_set_id = last_used_stream->stream_set_id();
+    return Maybe<void>::Ok();
   }
 
  private:
