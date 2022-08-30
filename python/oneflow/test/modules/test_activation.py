@@ -277,6 +277,13 @@ class TestGelu(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestSigmoidModule(flow.unittest.TestCase):
+    @autotest(n=5, atol=1e-3)
+    def test_sigmoid_flow_with_half_data(test_case):
+        device = gpu_device()
+        x = random_tensor().to(device=device, dtype=torch.float16)
+        y = torch.sigmoid(x)
+        return y
+
     @autotest(n=5)
     def test_sigmoid_module_with_random_data(test_case):
         m = torch.nn.Sigmoid()
