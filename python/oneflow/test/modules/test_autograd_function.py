@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import re
+
 import unittest
 
 import numpy as np
@@ -109,6 +111,55 @@ class TestAutogradFunction(flow.unittest.TestCase):
         c.sum().backward()
         test_case.assertTrue(np.allclose(a.grad.numpy(), np_arr1))
         test_case.assertTrue(np.allclose(b.grad.numpy(), np_arr0))
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_partial_inputs_requires_grad(test_case):
+        class MyModule(autograd.Function):
+            @staticmethod
+            def forward(ctx, x, y, z):
+                return x + y + z
+
+            @staticmethod
+            def backward(ctx, out_grad):
+                return None, out_grad, None
+
+        x = flow.randn(4, 5)
+        y = flow.randn(4, 5).requires_grad_()
+        z = flow.randn(4, 5)
+        # forward
+        res = MyModule.apply(x, y, z)
+        test_case.assertTrue(
+            np.allclose(res.numpy(), x.numpy() + y.numpy() + z.numpy())
+        )
+        # backward
+        res.sum().backward()
+        test_case.assertIsNone(x.grad)
+        test_case.assertTrue(np.allclose(y.grad.numpy(), np.ones((4, 5))))
+        test_case.assertIsNone(z.grad)
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_backward_error_message(test_case):
+        class MyModule(autograd.Function):
+            @staticmethod
+            def forward(ctx, x, y, z):
+                return x + y + z
+
+            @staticmethod
+            def backward(ctx, out_grad):
+                return None, out_grad
+
+        x = flow.randn(4, 5)
+        y = flow.randn(4, 5).requires_grad_()
+        z = flow.randn(4, 5)
+        res = MyModule.apply(x, y, z)
+        with test_case.assertRaises(Exception) as exp:
+            res.sum().backward()
+        test_case.assertIsNotNone(
+            re.search(
+                r"RuntimeError: function MyModule returned an incorrect number of gradients \(expected \d, got \d\)",
+                str(exp.exception),
+            )
+        )
 
     @flow.unittest.skip_unless_1n1d()
     def test_graph_test_multi_input(test_case):

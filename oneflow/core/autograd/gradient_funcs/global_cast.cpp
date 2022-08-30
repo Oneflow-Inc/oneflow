@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -99,10 +100,10 @@ class CastFromGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
   Maybe<void> Apply(const CastGlobalCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& dual_nd_sbp = JUST(GetDualNdSbp(ctx->nd_sbp));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("shape", *ctx->shape));
-    JUST(attrs.SetAttr<DataType>("dtype", ctx->dtype->data_type()));
-    JUST(attrs.SetAttr<bool>("sync_data", true));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "sync_data");
+    attrs.SetAttr<Shape>("shape", *ctx->shape);
+    attrs.SetAttr<DataType>("dtype", ctx->dtype->data_type());
+    attrs.SetAttr<bool>("sync_data", true);
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(
         *grad_op_, {out_grads.at(0)}, OpExprInterpContext(attrs, ctx->parallel_desc, dual_nd_sbp)));
     return Maybe<void>::Ok();
