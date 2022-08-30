@@ -1320,8 +1320,7 @@ class CrossEntropyFunctor {
       nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
           *op_nll_weight_, {input_, target_, JUST(weight)}, attrs));
     } else {
-      nll_result =
-          JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_, {input_, target_}, attrs));
+      nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_, {input_, target_}, attrs));
     }
 
     auto output = JUST(VectorAt(*nll_result, 0));
@@ -1373,7 +1372,8 @@ class CrossEntropyLabelSmoothingFunctor {
     std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
     input_perm[input_perm.size() - 1] = 1;
     for (size_t i = 1; i < input_perm.size() - 1; ++i) { input_perm[i] = i + 1; }
-    CHECK_OR_RETURN(label_smoothing >= 0.0 && label_smoothing <= 1.0);
+    CHECK_OR_RETURN(label_smoothing > 0.0 && label_smoothing <= 1.0)
+        << "label_smoothing must be between 0.0 and 1.0. Got: " << label_smoothing;
 
     const auto input_ = JUST(sequence_function(functional::Transpose)
                                  .then(std::bind(functional::Reshape, std::placeholders::_1,
@@ -1382,11 +1382,11 @@ class CrossEntropyLabelSmoothingFunctor {
                                    return OpInterpUtil::Dispatch<Tensor>(*op_log_softmax_, {x});
                                  })
                                  .call(input, input_perm));
-
     const auto target_ = JUST(functional::Flatten(target, 0, target->shape()->NumAxes() - 1));
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
+
     std::shared_ptr<TensorTuple> nll_result;
     if (weight) {
       nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
@@ -1395,37 +1395,40 @@ class CrossEntropyLabelSmoothingFunctor {
       nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_, {input_, target_}, attrs));
     }
 
-    const auto ignore_mask = JUST(Reshape(JUST(ScalarLogicalEqual(target, ignore_index)), {-1}));
+    const auto ignore_mask = JUST(Reshape(JUST(ScalarLogicalEqual(target_, ignore_index)), {-1}));
+
+    // smooth_loss = (-(input_ * weight.reshape(1, -1)).sum(1) * ~ignore_mask).reshape_as(target)
     std::shared_ptr<Tensor> smooth_loss = input_;
     if (weight) {
-      const std::shared_ptr<Tensor> weight_2d = JUST(Reshape(JUST(weight), {1, -1}));
+      const auto& weight_2d = JUST(Reshape(JUST(weight), {1, -1}));
       smooth_loss = JUST(Mul(smooth_loss, weight_2d));
     }
     smooth_loss = JUST(Negative(JUST(ReduceSum(smooth_loss, {1}, false))));
     smooth_loss = JUST(MaskedFill(smooth_loss, ignore_mask, 0.0));
+    smooth_loss = JUST(Reshape(smooth_loss, *target_shape));
 
-    auto output = JUST(VectorAt(*nll_result, 0));
-    output = JUST(functional::Reshape(output, *target_shape));
-    int64_t n_classes = input->shape()->At(input->ndim() - 1);
+
+    int64_t n_classes = input->shape()->At(1);
+    auto nll_loss = JUST(VectorAt(*nll_result, 0));
+    nll_loss = JUST(functional::Reshape(nll_loss, *target_shape));
+
+    // loss = nll_loss * (1 - label_smoothing) + smooth_loss * label_smoothing / num_classes
     if (reduction == "none") {
-      return JUST(Add(JUST(ScalarMul(output, 1 - label_smoothing, false)),
+      return JUST(Add(JUST(ScalarMul(nll_loss, 1 - label_smoothing, false)),
                       JUST(ScalarMul(smooth_loss, label_smoothing / n_classes, false)), 1, false));
     }
 
-    auto sum = JUST(functional::ReduceSum(output, {}, false));
+    const auto& nll_loss_sum = JUST(ReduceSum(nll_loss, {}, false));
+    const auto& smooth_loss_sum = JUST(ReduceSum(smooth_loss, {}, false));
+    const auto& cross_entropy_loss_sum =
+        JUST(Add(JUST(ScalarMul(nll_loss_sum, 1 - label_smoothing, false)),
+                 JUST(ScalarMul(smooth_loss_sum, label_smoothing / n_classes, false)), 1, false));
     if (reduction == "sum") {
-      smooth_loss = JUST(ReduceSum(smooth_loss, {}, false));
-      return JUST(Add(JUST(ScalarMul(sum, 1 - label_smoothing, false)),
-                      JUST(ScalarMul(smooth_loss, label_smoothing / n_classes, false)), 1, false));
+      return cross_entropy_loss_sum;
     }
 
-    auto total_weight = JUST(functional::ReduceSum(JUST(VectorAt(*nll_result, 1)), {}, false));
-    smooth_loss = JUST(ReduceSum(smooth_loss, {}, false));
-    // sum * (1 - label_smoothing) + smooth_loss * label_smoothing / num_classes
-    auto total_loss =
-        JUST(Add(JUST(ScalarMul(sum, 1 - label_smoothing, false)),
-                 JUST(ScalarMul(smooth_loss, label_smoothing / n_classes, false)), 1, false));
-    return Div(total_loss, total_weight);
+    const auto& total_weight = JUST(ReduceSum(JUST(VectorAt(*nll_result, 1)), {}, false));
+    return Div(cross_entropy_loss_sum, total_weight);
   }
 
  private:

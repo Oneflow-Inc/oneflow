@@ -158,13 +158,20 @@ class CrossEntropyLoss(_WeightedLoss):
         weight: Optional[Tensor] = None,
         ignore_index: int = -100,
         reduction: str = "mean",
+        label_smoothing: float = 0.0,
     ) -> None:
         super(CrossEntropyLoss, self).__init__(weight, reduction)
         self.ignore_index = ignore_index
+        self.label_smoothing = label_smoothing
 
     def forward(self, input, target):
         return flow._C.cross_entropy(
-            input, target, self.weight, self.ignore_index, self.reduction
+            input,
+            target,
+            self.weight,
+            self.ignore_index,
+            self.reduction,
+            self.label_smoothing,
         )
 
 
