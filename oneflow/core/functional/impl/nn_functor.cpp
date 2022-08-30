@@ -1375,14 +1375,14 @@ class CrossEntropyLabelSmoothingFunctor {
     CHECK_OR_RETURN(label_smoothing > 0.0 && label_smoothing <= 1.0)
         << "label_smoothing must be between 0.0 and 1.0. Got: " << label_smoothing;
 
-    const auto input_ = JUST(sequence_function(functional::Transpose)
+    const auto& input_ = JUST(sequence_function(functional::Transpose)
                                  .then(std::bind(functional::Reshape, std::placeholders::_1,
                                                  Shape({-1, input_shape->At(1)})))
                                  .then([this](const std::shared_ptr<one::Tensor>& x) {
                                    return OpInterpUtil::Dispatch<Tensor>(*op_log_softmax_, {x});
                                  })
                                  .call(input, input_perm));
-    const auto target_ = JUST(functional::Flatten(target, 0, target->shape()->NumAxes() - 1));
+    const auto& target_ = JUST(functional::Flatten(target, 0, target->shape()->NumAxes() - 1));
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
@@ -1395,7 +1395,7 @@ class CrossEntropyLabelSmoothingFunctor {
       nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_, {input_, target_}, attrs));
     }
 
-    const auto ignore_mask = JUST(Reshape(JUST(ScalarLogicalEqual(target_, ignore_index)), {-1}));
+    const auto& ignore_mask = JUST(Reshape(JUST(ScalarLogicalEqual(target_, ignore_index)), {-1}));
 
     // smooth_loss = (-(input_ * weight.reshape(1, -1)).sum(1) * ~ignore_mask).reshape_as(target)
     std::shared_ptr<Tensor> smooth_loss = input_;
