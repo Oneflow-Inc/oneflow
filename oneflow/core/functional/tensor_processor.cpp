@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/functional/tensor_processor.h"
+#include <glog/logging.h>
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/dtype.h"
@@ -42,13 +43,6 @@ bool CheckHasDifferentInputDType(const TensorTuple& tensor_tuple) {
     } else {
       return true;
     }
-  }
-  return false;
-}
-
-bool CheckHasIntegerInputDType(const TensorTuple& tensor_tuple) {
-  for (auto& tensor_ptr : tensor_tuple) {
-    if (tensor_ptr->dtype()->is_integer()) { return true; }
   }
   return false;
 }
@@ -88,6 +82,9 @@ TensorProcessor& TensorProcessor::PromoteInputsToCommonDtype(bool is_promote) {
 
 TensorProcessor& TensorProcessor::PromoteIntegerInputsToFloatDtype(bool is_promote) {
   promote_integer_inputs_to_float_ = is_promote;
+  CHECK_OR_THROW(!promote_integer_inputs_to_float_ || promote_inputs_to_common_dtype_)
+      << "when set promote_integer_inputs_to_float to 'True', then promote_inputs_to_common_dtype "
+         "should be set to 'True' first!";
   return *this;
 }
 
@@ -96,13 +93,10 @@ Maybe<void> TensorProcessor::Apply() {
     bool has_different_input_dtype = CheckHasDifferentInputDType(tensor_tuple_);
     if (has_different_input_dtype) {
       common_dtype_ = ComputeCommonDType(tensor_tuple_);
+      if (promote_integer_inputs_to_float_ && common_dtype_->is_integer()) {
+        common_dtype_ = DType::Float();
+      }
       JUST(CastToSameType(tensor_tuple_, common_dtype_));
-    }
-  } else if (promote_integer_inputs_to_float_) {
-    const bool has_integer_input_dtype = CheckHasIntegerInputDType(tensor_tuple_);
-    if (has_integer_input_dtype) {
-      Symbol<DType> float_dtype = DType::Float();
-      JUST(CastToSameType(tensor_tuple_, float_dtype));
     }
   } else {
     for (int i = 0; i < tensor_tuple_.size(); ++i) {
