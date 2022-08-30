@@ -935,9 +935,9 @@ class GroupNormGradFunctor {
                            const std::shared_ptr<one::Tensor>& inv_variance,
                            const Optional<one::Tensor>& gamma, const int32_t& num_groups,
                            const double& epsilon) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("num_groups", num_groups));
-    JUST(attrs.SetAttr<double>("epsilon", epsilon));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_groups", "epsilon");
+    attrs.SetAttr<int32_t>("num_groups", num_groups);
+    attrs.SetAttr<double>("epsilon", epsilon);
     if (gamma) {
       return OpInterpUtil::Dispatch<Tensor>(*affine_grad_op_,
                                             {dy, x, mean, inv_variance, JUST(gamma)}, attrs);

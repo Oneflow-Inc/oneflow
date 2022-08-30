@@ -810,10 +810,10 @@ class GroupNormFunctor {
                            const Optional<one::Tensor>& gamma, const Optional<one::Tensor>& beta,
                            const bool affine, const int32_t num_groups,
                            const double& epsilon) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<bool>("affine", affine));
-    JUST(attrs.SetAttr<int32_t>("num_groups", num_groups));
-    JUST(attrs.SetAttr<double>("epsilon", epsilon));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("affine", "num_groups", "epsilon");
+    attrs.SetAttr<bool>("affine", affine);
+    attrs.SetAttr<int32_t>("num_groups", num_groups);
+    attrs.SetAttr<double>("epsilon", epsilon);
     if (affine) {
       return OpInterpUtil::Dispatch<Tensor>(*affine_op_, {x, JUST(gamma), JUST(beta)}, attrs);
     } else {
