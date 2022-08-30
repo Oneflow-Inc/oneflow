@@ -54,8 +54,6 @@ class TensorMeta : public user_op::TensorDesc {
   virtual void set_is_dynamic(bool is_dynamic) override { PRINT_BUG_PROMPT_AND_ABORT(); }
 
  protected:
-  TensorMeta& operator=(const TensorMeta& other) = default;
-
   DataType data_type_;
   bool is_dynamic_;
 };
@@ -90,8 +88,10 @@ class MutTensorMeta : public TensorMeta {
   size_t CalcHashValue() const;
 
   MutTensorMeta& operator=(const MutTensorMeta& other) {
-    TensorMeta::operator=(other);
+    this->data_type_ = other.data_type_;
+    this->is_dynamic_ = other.is_dynamic_;
     this->shape_ = std::make_shared<const Shape>(*other.shape_);
+    this->stride_ = std::make_shared<const Stride>(*other.stride_);
     return *this;
   }
 
