@@ -67,6 +67,7 @@ limitations under the License.
 #include "llvm/ADT/SmallVector.h"
 
 #include <algorithm>
+#include <memory>
 #include <vector>
 
 #ifdef WITH_MLIR_CUDA_CODEGEN
@@ -106,6 +107,73 @@ LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, T op) {
   return success();
 }
 
+std::unique_ptr<func::FuncOp> DeclareKernelLaunchCInterface(::mlir::PatternRewriter& rewriter,
+                                                                  mlir::Location loc,
+                                                                  ModuleOp* module) {
+  const auto c_api_callee = "kernel_launch";
+  rewriter.setInsertionPointToStart(module->getBody());
+  auto func_type = rewriter.getFunctionType({}, {});
+  auto res =
+      std::make_unique<func::FuncOp>(rewriter.create<func::FuncOp>(loc, c_api_callee, func_type));
+  return res;
+}
+
+func::FuncOp GetOrInsertKernelFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc,
+                                     StringRef func_name, ValueRange operands, ValueRange results,
+                                     Operation* op) {
+  static std::unique_ptr<func::FuncOp> c_api_func;
+  if (!c_api_func) {
+    c_api_func = std::move(DeclareKernelLaunchCInterface(rewriter, loc, nullptr));
+  }
+  BlockAndValueMapping mapping;
+  SmallVector<Type, 4> argument_types;
+  argument_types.reserve(operands.size());
+  SmallVector<Type, 4> result_types;
+  argument_types.reserve(results.size());
+  for (auto argument : operands) { argument_types.push_back(argument.getType()); }
+  for (auto result : results) { result_types.push_back(result.getType()); }
+  auto func_type = rewriter.getFunctionType(argument_types, result_types);
+  auto first_op = op;
+  auto parent_func_op = first_op->getParentOfType<oneflow::Job>();
+  if (!parent_func_op) {
+    emitError(loc) << "null parent oneflow::Job " << *first_op;
+    return nullptr;
+  }
+  auto parent_module_op = parent_func_op->getParentOfType<ModuleOp>();
+  if (!parent_module_op) {
+    emitError(loc) << "null ModuleOp " << *first_op;
+    return nullptr;
+  }
+  SymbolTable symbol_table(parent_module_op);
+  OpBuilder::InsertionGuard guard(rewriter);
+  Block::iterator insertPt(parent_func_op->getNextNode());
+  rewriter.setInsertionPointToStart(parent_module_op.getBody());
+  if (parent_func_op->hasAttr("llvm.emit_c_interface")) {
+    emitError(loc) << "parent should not has attr of llvm.emit_c_interface " << *parent_func_op;
+    return nullptr;
+  }
+  auto function = rewriter.create<func::FuncOp>(loc, func_name, func_type);
+  function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
+  function.getBody().emplaceBlock();
+  for (auto& arg : argument_types) { function.getBody().addArguments(arg, loc); }
+  for (auto argument_pair : llvm::zip(operands, function.getBody().getArguments())) {
+    mapping.map(std::get<0>(argument_pair), std::get<1>(argument_pair));
+  }
+  rewriter.setInsertionPointToStart(&function.getBody().front());
+  ImplicitLocOpBuilder nb(loc, rewriter);
+  auto name = op->getName();
+  auto call = rewriter.create<func::CallOp>(op->getLoc(), c_api, TypeRange{});
+  call->dump();
+  nb.clone(*op, mapping);
+  SmallVector<::mlir::Value, 4> mapped_results;
+  for (auto result : results) { mapped_results.push_back(mapping.lookup(result)); }
+  rewriter.create<func::ReturnOp>(loc, mapped_results);
+  if (symbol_table.lookup(func_name)) {
+    emitError(loc) << func_name << " should not be at symbol table of ModuleOp";
+    return nullptr;
+  }
+  return function;
+}
 // TODO: cfg/multi block support
 func::FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc,
                                StringRef func_name, ValueRange operands, ValueRange results,
@@ -827,14 +895,12 @@ struct KernelLaunchPattern : public RewritePattern {
   LogicalResult matchAndRewrite(Operation* op, ::mlir::PatternRewriter& rewriter) const override {
     auto attr_flag = "in_kernel_launch";
     auto op_name = op->getName().getStringRef();
-    std::vector<StringRef> white_list{ModuleOp::getOperationName(),
-                                      func::FuncOp::getOperationName(),
-                                      func::ReturnOp::getOperationName(),
-                                      KernelLaunchOp::getOperationName(),
-                                      Job::getOperationName(),
-                                      ReturnOp::getOperationName(),
-                                      OutputOp::getOperationName(),
-                                      InputOp::getOperationName()};
+    std::vector<StringRef> white_list{
+        ModuleOp::getOperationName(),       func::FuncOp::getOperationName(),
+        func::CallOp::getOperationName(),   func::ReturnOp::getOperationName(),
+        KernelLaunchOp::getOperationName(), Job::getOperationName(),
+        ReturnOp::getOperationName(),       OutputOp::getOperationName(),
+        InputOp::getOperationName()};
     if (std::count(white_list.begin(), white_list.end(), op_name)) { return success(); }
     if (op->hasAttr(attr_flag)) { return success(); }
     op->setAttr(attr_flag, StringAttr::get(op->getContext(), "true"));
@@ -846,7 +912,7 @@ struct KernelLaunchPattern : public RewritePattern {
     auto res = op->getResults();
     NamedAttrList attrs = GetJitOpAttributes(rewriter, op_name, in.size(), res.size(), op);
 
-    auto function = GetOrInsertFuncOp(rewriter, loc, op_name, in, res, {op});
+    auto function = GetOrInsertKernelFuncOp(rewriter, loc, op_name, in, res, {op});
     auto kernel_launch = rewriter.replaceOpWithNewOp<KernelLaunchOp>(op, function, attrs, in);
     if (failed(DumpAssembly(rewriter, kernel_launch))) { exit(1); }
     return success();
