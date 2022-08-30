@@ -115,8 +115,7 @@ struct GetRecordEventInstructionPolicy : public StreamTypeVisitor<GetRecordEvent
     return VisitDevice2Host(device_type, std::forward<Args>(args)...);
   }
   template<typename... Args>
-  static Maybe<vm::InstructionPolicy> VisitCcl(DeviceType device_type,
-                                                                 Args&&... args) {
+  static Maybe<vm::InstructionPolicy> VisitCcl(DeviceType device_type, Args&&... args) {
     return std::shared_ptr<vm::InstructionPolicy>(
         new vm::EpRecordEventInstructionPolicy(std::forward<Args>(args)...));
   }

@@ -48,8 +48,7 @@ struct StreamTypeVisitor {
       case StreamType::kDevice2Host: return DerivedT::VisitDevice2Host(std::forward<Args>(args)...);
       case StreamType::kAsyncedDevice2Host:
         return DerivedT::VisitAsyncedDevice2Host(std::forward<Args>(args)...);
-      case StreamType::kCcl:
-        return DerivedT::VisitCcl(std::forward<Args>(args)...);
+      case StreamType::kCcl: return DerivedT::VisitCcl(std::forward<Args>(args)...);
       case StreamType::kBarrier: return DerivedT::VisitBarrier(std::forward<Args>(args)...);
       case StreamType::kCriticalSection:
         return DerivedT::VisitCriticalSection(std::forward<Args>(args)...);
