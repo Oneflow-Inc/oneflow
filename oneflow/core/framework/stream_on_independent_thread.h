@@ -25,13 +25,11 @@ struct StreamOnIndependentThread : public StreamTypeVisitor<StreamOnIndependentT
   static bool VisitCompute() { return false; }
   static bool VisitHost2Device() { return false; }
   static bool VisitDevice2Host() { return false; }
-  static bool VisitAsyncedDevice2Host() { return true; }
   static bool VisitCcl() { return false; }
   static bool VisitBarrier() { return false; }
   static bool VisitCriticalSection() { return true; }
   static bool VisitLazyJobLauncher() { return true; }
   static bool VisitPinnedCompute() { return VisitCompute(); }
-  static bool VisitTmpCompute() { return VisitCompute(); }
 };
 
 }  // namespace oneflow
