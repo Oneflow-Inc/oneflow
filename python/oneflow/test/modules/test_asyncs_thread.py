@@ -27,7 +27,7 @@ import oneflow.unittest
 @flow.unittest.skip_unless_1n1d()
 class TestLocalThread(flow.unittest.TestCase):
     def test_stream(test_case):
-        with flow.async.thread():
+        with flow.asyncs.thread():
             test_case.assertEqual(flow.ones(1)[0], 1)
 
 
@@ -37,7 +37,7 @@ class TestGlobalThread(flow.unittest.TestCase):
     def test_cpu_stream(test_case):
         thread_ids = [i % 4 for i in range(10)]
         for thread_id in thread_ids:
-            with flow.async.thread(thread_id):
+            with flow.asyncs.thread(thread_id):
                 placement = flow.placement("cpu", [0, 1])
                 tensor = flow.ones(2, placement=placement, sbp=flow.sbp.split(0))
                 test_case.assertEqual(tensor[0], 1)
@@ -49,7 +49,7 @@ class TestGlobalThread(flow.unittest.TestCase):
         dim = 0
         for i, thread in enumerate(thread_ids):
             dim += 1
-            with flow.async.thread(thread):
+            with flow.asyncs.thread(thread):
                 placement = flow.placement("cuda", [0, 1])
                 ones = flow.ones(2 * dim, placement=placement, sbp=flow.sbp.split(0))
                 tensors.append(ones.to_global(sbp=flow.sbp.broadcast) + i)
@@ -69,7 +69,7 @@ class TestGlobalThread(flow.unittest.TestCase):
 
         for thread in thread_ids:
             dim += 1
-            flow.async.thread(thread)(Func)()
+            flow.asyncs.thread(thread)(Func)()
         for tensor in tensors:
             test_case.assertEqual(tensor[0], 1)
             test_case.assertEqual(tensor[int(tensor.shape[0] / 2)], 1)
