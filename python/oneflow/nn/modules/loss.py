@@ -179,6 +179,8 @@ class CrossEntropyLoss(_WeightedLoss):
         super(CrossEntropyLoss, self).__init__(weight, reduction)
         self.ignore_index = ignore_index
         self.label_smoothing = label_smoothing
+        if (self.label_smoothing < 0.0 or self.label_smoothing > 1.0):
+            raise ValueError("label_smoothing must be between 0.0 and 1.0. Got: ", label_smoothing)
 
     def forward(self, input, target):
         return flow._C.cross_entropy(
