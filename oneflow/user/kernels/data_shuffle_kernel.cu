@@ -50,7 +50,7 @@ __global__ void HashTableUniqueAndPartitionPairs(
     IDX r_index_plus_one = 0;
     const K key = keys[i];
     if (has_padding_idx && key == padding_idx) {
-      reverse_index[i] = PADDING_REV_INDEX;  // Assume index=0xffffffff is ilegal.
+      reverse_index[i] = PADDING_REV_INDEX;
     } else {
       size_t key_hash = HASH()(key);
       uint32_t partition_id = key_hash % num_partition;
