@@ -189,7 +189,103 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
 }  // namespace
 
 void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
-  // TODO();
+  if (job.logical_chain_groups_size() == 0) { return; }
+  HashMap<int64_t, HashSet<RegstDescProto*>> mem_block_id2regsts;
+  HashMap<int64_t, HashMap<int64_t, int64_t>> logical_chain_id2machine_id2mem_block_id;
+
+  // HashMap<int64_t, int64_t> mem_block_id2machine_id;
+
+  for (int64_t i = 0; i < plan->task_size(); ++i) {
+    TaskProto* task = plan->mutable_task(i);
+    const StreamId stream_id = PlanUtil::GetStreamId(*task);
+    int64_t machine_id = task->machine_id();
+    DeviceType device_type = stream_id.device_id().device_type();
+    // TODO(zwx): eliminate this special 'is cpu' determine
+    if (device_type == DeviceType::kCPU) { continue; }
+    if (task->task_set_info().chain_id() == -1) { continue; }
+    int64_t logical_chain_id = task->task_set_info().chain_id();
+
+    for (auto& pair : *(task->mutable_produced_regst_desc())) {
+      RegstDescProto* regst_desc = &pair.second;
+      if (regst_desc->mem_block_id() != -1 && regst_desc->enable_reuse_mem()
+          && regst_desc->mem_case().device_type() == device_type
+          && regst_desc->regst_desc_type().has_data_regst_desc()) {
+        int64_t mem_block_id = regst_desc->mem_block_id();
+        mem_block_id2regsts[mem_block_id].insert(regst_desc);
+        auto* rank2blocks = &(logical_chain_id2machine_id2mem_block_id[logical_chain_id]);
+        if (rank2blocks->find(machine_id) == rank2blocks->end()) {
+          rank2blocks->emplace(machine_id, mem_block_id);
+        } else {
+          CHECK_EQ(rank2blocks->at(machine_id), mem_block_id);
+        }
+
+        /*
+        if (mem_block_id2machine_id.find(mem_block_id) == mem_block_id2machine_id.end()) {
+          mem_block_id2machine_id.emplace(mem_block_id, machine_id);
+        } else {
+          CHECK_EQ(mem_block_id2machine_id.at(mem_block_id), machine_id);
+        }
+        */
+      }
+    }
+  }
+
+  HashMap<int64_t, int64_t> mem_block_id2merged_mem_block_id;
+  for (const auto& logical_chain_group : job.logical_chain_groups()) {
+    CHECK_GE(logical_chain_group.logical_chain_id_list_size(), 2);
+    int64_t merged_logical_chain_id = logical_chain_group.logical_chain_id_list(0);
+    CHECK(logical_chain_id2machine_id2mem_block_id.find(merged_logical_chain_id)
+          != logical_chain_id2machine_id2mem_block_id.end());
+    const auto& merged_rank2block =
+        logical_chain_id2machine_id2mem_block_id.at(merged_logical_chain_id);
+    for (int64_t i = 1; i < logical_chain_group.logical_chain_id_list_size(); ++i) {
+      int64_t this_logical_chain_id = logical_chain_group.logical_chain_id_list(i);
+      // NOTE(chengcheng): merge mem block id by each rank
+      CHECK(logical_chain_id2machine_id2mem_block_id.find(this_logical_chain_id)
+            != logical_chain_id2machine_id2mem_block_id.end());
+      const auto& this_rank2block =
+          logical_chain_id2machine_id2mem_block_id.at(this_logical_chain_id);
+      for (const auto& pair : this_rank2block) {
+        int64_t this_machine_id = pair.first;
+        int64_t this_mem_block_id = pair.second;
+        CHECK(merged_rank2block.find(this_machine_id) != merged_rank2block.end());
+        int64_t merged_mem_block_id = merged_rank2block.at(this_machine_id);
+        CHECK(mem_block_id2merged_mem_block_id.emplace(this_mem_block_id, merged_mem_block_id)
+                  .second);
+        VLOG(2) << " merge mem_block_id: " << this_mem_block_id << " to " << merged_mem_block_id;
+      }
+    }
+  }
+
+  for (int64_t i = 0; i < plan->task_size(); ++i) {
+    TaskProto* task = plan->mutable_task(i);
+    const StreamId stream_id = PlanUtil::GetStreamId(*task);
+    DeviceType device_type = stream_id.device_id().device_type();
+    // TODO(zwx): eliminate this special 'is cpu' determine
+    if (device_type == DeviceType::kCPU) { continue; }
+    if (task->task_set_info().chain_id() == -1) { continue; }
+
+    for (auto& pair : *(task->mutable_produced_regst_desc())) {
+      RegstDescProto* regst_desc = &pair.second;
+      if (regst_desc->mem_block_id() != -1 && regst_desc->enable_reuse_mem()
+          && regst_desc->mem_case().device_type() == device_type
+          && regst_desc->regst_desc_type().has_data_regst_desc()) {
+        int64_t mem_block_id = regst_desc->mem_block_id();
+        if (mem_block_id2merged_mem_block_id.find(mem_block_id)
+            != mem_block_id2merged_mem_block_id.end()) {
+          // merge mem_block_id
+          int64_t merged_mem_block_id = mem_block_id2merged_mem_block_id.at(mem_block_id);
+          regst_desc->set_mem_block_id(merged_mem_block_id);
+          const auto& data_regst = regst_desc->regst_desc_type().data_regst_desc();
+          CHECK_GE(data_regst.lbi2blob_desc_size(), 1);
+          const auto& lbi2blob_desc_pair = data_regst.lbi2blob_desc(0);
+          std::string tensor_name = GenLogicalBlobName(lbi2blob_desc_pair.lbi());
+          VLOG(3) << " regst: " << tensor_name << " merge mem block id " << mem_block_id << " to "
+                  << merged_mem_block_id;
+        }
+      }
+    }
+  }
 }
 
 void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
