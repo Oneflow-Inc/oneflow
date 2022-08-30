@@ -41,6 +41,9 @@ def current_device() -> int:
 def get_device_properties(device: Union[flow.device, str, int]=None):
     r"""Gets the properties of a device.
 
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.cuda.get_device_properties.html.
+
     Args:
         device(oneflow.device or str or int): device for which to return the properties of the device.
 
@@ -53,6 +56,9 @@ def get_device_properties(device: Union[flow.device, str, int]=None):
 
 def get_device_capability(device: Optional[Union[flow.device, str, int]] = None) -> Tuple[int, int]:
     r"""Gets the cuda capability of a device.
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.cuda.get_device_capability.html.
 
     Args:
         device (oneflow.device or int or str, optional): device for which to return the
@@ -69,6 +75,9 @@ def get_device_capability(device: Optional[Union[flow.device, str, int]] = None)
 
 def get_device_name(device: Optional[Union[flow.device, str, int]] = None) -> str:
     r"""Gets the name of a device.
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.cuda.get_device_name.html.
 
     Args:
         device (oneflow.device or int or str, optional): device for which to return the
