@@ -16,17 +16,19 @@ limitations under the License.
 
 #include "oneflow/core/linear_programming/linear_programming_util.h"
 #include <cmath>
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 namespace linear_programming {
 
+namespace {
 // a{basis}' * b
-double SparseInnerProduct(const std::vector<double>& a, const std::vector<int32_t>& basis,
-                          const HashMap<int32_t, double>& b) {
+double InnerProduct(const std::vector<double>& a, const std::vector<int32_t>& basis,
+                    const std::vector<double>& b) {
   double product = 0.0;
-  for (const auto& index2val : b) { product += a[basis[index2val.first]] * index2val.second; }
+  for (int32_t k = 0; k < basis.size(); k++) { product += a[basis[k]] * b[k]; }
   return product;
 }
 
@@ -41,40 +43,93 @@ double SparseInnerProduct(const std::vector<double>& a, const HashMap<int32_t, d
   return product;
 }
 
-SparseMatrix::SparseMatrix(int32_t row_size, int32_t column_size) {
-  rows_.reserve(row_size);
-  columns_.reserve(column_size);
+// a' * b{all2compact}
+double SparseInnerProduct(const HashMap<int32_t, double>& a, const HashMap<int32_t, double>& b,
+                          const std::vector<int32_t>& all2compact) {
+  double product = 0.0;
+  for (const auto& index2val : b) {
+    int32_t k = all2compact[index2val.first];
+    if (k >= 0) {
+      const auto& it = a.find(k);
+      if (it != a.end()) { product += it->second * index2val.second; }
+    }
+  }
+  return product;
 }
 
-void SparseMatrix::Insert(int32_t i, int32_t j, double val) {
+// Elementary row operation: division
+// a = a/u
+void ElementaryRowOperationDivision(HashMap<int32_t, double>& a, double u) {
+  for (auto& index2val : a) { index2val.second /= u; }
+}
+
+// Elementary row operation: subtraction
+// b = b - a*u
+void ElementaryRowOperationSbutraction(HashMap<int32_t, double>& b,
+                                       const HashMap<int32_t, double>& a, double u,
+                                       double safeguard) {
+  if (abs(u) < safeguard) { return; }
+  for (const auto& a_index2val : a) {
+    auto it = b.find(a_index2val.first);
+    if (it != b.end()) {
+      it->second -= a_index2val.second * u;
+      if (abs(it->second) < safeguard) { b.erase(it); }
+    } else {
+      b[a_index2val.first] = -a_index2val.second * u;
+    }
+  }
+}
+
+}  // namespace
+
+SparseMatrix::SparseMatrix(int32_t row_size, int32_t column_size) { rows_.reserve(row_size); }
+
+void SparsePrimalMatrix::Insert(int32_t i, int32_t j, double val) {
   if (i >= rows_.size()) { rows_.resize(i + 1); }
   rows_[i][j] = val;
   if (j >= columns_.size()) { columns_.resize(j + 1); }
   columns_[j][i] = val;
 }
 
+void SparseMatrix::SetValue(int32_t i, int32_t j, double val) {
+  if (i >= rows_.size()) { rows_.resize(i + 1); }
+  if (j >= column_size_) { column_size_ = j + 1; }
+  rows_[i][j] = val;
+}
+
 void SparseMatrix::Eye(int32_t n) {
   rows_.clear();
-  columns_.clear();
-  for (int32_t i = n - 1; i >= 0; i--) { Insert(i, i, 1.0); }
+  column_size_ = n;
+  for (int32_t i = n - 1; i >= 0; i--) { SetValue(i, i, 1.0); }
 }
 
 // p = c{basis} * this_sparse_matrix
 // Specifically, basis would be basic_column2compact_primal_column_.
 void SparseMatrix::VectorMatrixMultiplication(const std::vector<double>& c,
                                               const std::vector<int32_t>& basis,
-                                              std::vector<double>& p) {
-  p.resize(columns_.size());
-  for (int32_t j = 0; j < p.size(); j++) { p[j] = SparseInnerProduct(c, basis, columns_[j]); }
+                                              std::vector<double>& p) const {
+  p.clear();
+  p.resize(column_size_, 0);
+  for (int32_t i = 0; i < rows_.size(); i++) {
+    for (const auto& column2val : rows_[i]) {
+      p[column2val.first] += c[basis[column2val.first]] * column2val.second;
+    }
+  }
+}
+
+// u = this_sparse_matrix * a{all2compact}
+void SparseMatrix::MatrixVectorMultiplication(const HashMap<int32_t, double>& a,
+                                              const std::vector<int32_t>& all2compact,
+                                              std::vector<double>& u) const {
+  u.resize(rows_.size());
+  for (int32_t i = 0; i < u.size(); i++) { u[i] = SparseInnerProduct(rows_[i], a, all2compact); }
 }
 
 void SparsePrimalMatrix::ExpandArtificialVariables() {
   if (original_column_size_ < 0) {
-    original_column_size_ = original_matrix_.columns_.size();
-    for (int32_t i = 0; i < original_matrix_.rows_.size(); i++) {
-      original_matrix_.Insert(i, i + original_column_size_, 1.0);
-    }
-    columns_all2compact_.resize(original_matrix_.columns_.size());
+    original_column_size_ = columns_.size();
+    for (int32_t i = 0; i < rows_.size(); i++) { Insert(i, i + original_column_size_, 1.0); }
+    columns_all2compact_.resize(columns_.size());
   }
   for (int32_t j = original_column_size_; j < columns_all2compact_.size(); j++) {
     columns_all2compact_[j] = 1;
@@ -109,6 +164,8 @@ void SparsePrimalMatrix::InitPrimalMatrix() {
 // The revised simplex method
 void LinearProgrammingSolver::RevisedSimplexMethod() {
   while (1) {
+    // Whether we found the negative c_bar_j
+    bool not_found_negative_c_bar = true;
     inverse_base_matrix_.VectorMatrixMultiplication(c_, basic_column2compact_primal_column_, p_);
     for (int32_t compact_primal_column = 0;
          compact_primal_column < compact_primal_column2basic_column_.size();
@@ -119,13 +176,62 @@ void LinearProgrammingSolver::RevisedSimplexMethod() {
         // c_bar_j = c_j - p' * A_j
         double cost_difference =
             c_[compact_primal_column]
-            - SparseInnerProduct(p_, primal_matrix_.original_matrix_.columns_[all_primal_column],
-                                 primal_matrix_.columns_all2compact_);
+            - SparseInnerProduct(p_, primal_matrix_.columns_[all_primal_column],
+                                 primal_matrix_.rows_all2compact_);
         if (NumericalLT0(cost_difference)) {
+          not_found_negative_c_bar = false;
           // Compute u = B * A_j
+          inverse_base_matrix_.MatrixVectorMultiplication(
+              primal_matrix_.columns_[all_primal_column], primal_matrix_.rows_all2compact_, u_);
+
+          // Record the existing variable x_basis{i}, and corresponding theta = x_basis{i}/u_i
+          double min_theta = -1.0;
+          int32_t min_i = -1;
+          for (int32_t i = 0; i < u_.size(); i++) {
+            if (NumericalGT0(u_[i])) {
+              double theta = x_[i] / u_[i];
+              if (min_i == -1 || min_theta > theta) { min_theta = theta; }
+            }
+          }
+          // If all the u_i >= 0, the algorithm terminates with the optimal cost -Inf.
+          if (min_i == -1) {
+            std::cout << "All the u_i >= 0, the algorithm terminates with the optimal cost -Inf."
+                      << std::endl;
+            is_solved = SolveLpTag::kInfCost;
+            return;
+          }
+          // Rounding u
+          for (int32_t i = 0; i < u_.size(); i++) {
+            if (abs(u_[i]) < zero_plus_) { u_[i] = 0.0; }
+          }
+          // Update x_i
+          for (int32_t i = 0; i < u_.size(); i++) {
+            if (i != min_i) { x_[i] -= min_theta * u_[i]; }
+          }
+          // Update inverse_base_matrix_
+          // B[min_i, :] /= u_[min_i], u_[min_i] -> 1
+          ElementaryRowOperationDivision(inverse_base_matrix_.rows_[min_i], u_[min_i]);
+          // B[i, :] -= B[min_i, :] * u_[i]/u_[min_i], u_[i] -> 0, for all i != min_i
+          // The order of ElementaryRowOperation() can not be reverse
+          for (int32_t i = 0; i < u_.size(); i++) {
+            if (i != min_i) {
+              ElementaryRowOperationSbutraction(inverse_base_matrix_.rows_[i],
+                                                inverse_base_matrix_.rows_[min_i], u_[i],
+                                                zero_plus_);
+            }
+          }
+          // Replace basis[min_i] with compact_primal_column
+          compact_primal_column2basic_column_[basic_column2compact_primal_column_[min_i]] = -1;
+          compact_primal_column2basic_column_[compact_primal_column] = min_i;
+          basic_column2compact_primal_column_[min_i] = compact_primal_column;
+
+          // Move to the next step
+          break;
         }
       }
     }
+    // If all the c_bar_j is positive or zero, then we found a feasible solution x_
+    if (not_found_negative_c_bar) { return; }
   }
 }
 
@@ -163,13 +269,18 @@ void LinearProgrammingSolver::Solve4InitFeasibleSolution() {
   // Deal with potential floating point error
   ComputeAbsoluteError0();
   // Apply the revised simplex method to the auxiliary problem
+  RevisedSimplexMethod();
+  // Temp, pretend that the problem is solved.
+  std::cout << "Solve Tag: " << is_solved << std::endl;
+  if (is_solved == SolveLpTag::kInit) is_solved = SolveLpTag::kFiniteCost;
+  std::cout << "Optimal cost: " << OptimalCost();
 }
 
 // Compute absolute error for 0
 void LinearProgrammingSolver::ComputeAbsoluteError0() {
   double max_abs_val = 0.0;
   for (int32_t r : primal_matrix_.rows_compact2all_) {
-    for (const auto& column2val : primal_matrix_.original_matrix_.rows_[r]) {
+    for (const auto& column2val : primal_matrix_.rows_[r]) {
       max_abs_val = std::max(max_abs_val, abs(column2val.second));
     }
   }
@@ -179,6 +290,16 @@ void LinearProgrammingSolver::ComputeAbsoluteError0() {
 
 // Numerically less than zero, x < 0
 bool LinearProgrammingSolver::NumericalLT0(double x) { return x < zero_minus_; }
+// Numerically greater than zero, x > 0
+bool LinearProgrammingSolver::NumericalGT0(double x) { return x > zero_plus_; }
+
+// the optimal cost of the primal linear programming problem
+double LinearProgrammingSolver::OptimalCost() {
+  if (is_solved == SolveLpTag::kFiniteCost) {
+    return InnerProduct(c_, basic_column2compact_primal_column_, x_);
+  }
+  return -GetMaxVal<float>();
+}
 
 }  // namespace linear_programming
 }  // namespace oneflow
