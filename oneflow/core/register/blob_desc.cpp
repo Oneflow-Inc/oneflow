@@ -48,12 +48,11 @@ BlobDesc::BlobDesc(const BlobDescProto& proto) {
   is_dynamic_ = proto.is_dynamic();
 }
 
-BlobDesc::BlobDesc(const BlobDesc& other) {
-  shape_ = other.shape_;
-  stride_ = other.stride_;
-  data_type_ = other.data_type();
-  is_dynamic_ = other.is_dynamic();
-}
+BlobDesc::BlobDesc(const BlobDesc& other)
+    : shape_(other.shape_),
+      stride_(other.stride_),
+      data_type_(other.data_type()),
+      is_dynamic_(other.is_dynamic()) {}
 
 void BlobDesc::ToProto(BlobDescProto* proto) const {
   shape().ToProto(proto->mutable_shape());

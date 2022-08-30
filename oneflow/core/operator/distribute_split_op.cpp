@@ -98,10 +98,9 @@ Maybe<void> DistributeSplitOp::InferOutBlobDescs(
   BalancedSplitter bs(in_blob_desc.shape().At(split_axis), out_blob_descs.size());
   FOR_RANGE(int, i, 0, out_blob_descs.size()) {
     *out_blob_descs.at(i) = in_blob_desc;
-
-    Shape output = out_blob_descs.at(i)->shape();
+    Shape output = out_blob_descs.at(i)->shape();  // NOLINT
     output.Set(split_axis, bs.At(i).size());
-    out_blob_descs.at(i)->set_shape(output);
+    out_blob_descs.at(i)->set_shape(output);  // NOLINT
   }
   return Maybe<void>::Ok();
 }
