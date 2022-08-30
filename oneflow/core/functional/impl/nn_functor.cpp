@@ -1376,12 +1376,12 @@ class CrossEntropyLabelSmoothingFunctor {
         << "label_smoothing must be between 0.0 and 1.0. Got: " << label_smoothing;
 
     const auto& input_ = JUST(sequence_function(functional::Transpose)
-                                 .then(std::bind(functional::Reshape, std::placeholders::_1,
-                                                 Shape({-1, input_shape->At(1)})))
-                                 .then([this](const std::shared_ptr<one::Tensor>& x) {
-                                   return OpInterpUtil::Dispatch<Tensor>(*op_log_softmax_, {x});
-                                 })
-                                 .call(input, input_perm));
+                                  .then(std::bind(functional::Reshape, std::placeholders::_1,
+                                                  Shape({-1, input_shape->At(1)})))
+                                  .then([this](const std::shared_ptr<one::Tensor>& x) {
+                                    return OpInterpUtil::Dispatch<Tensor>(*op_log_softmax_, {x});
+                                  })
+                                  .call(input, input_perm));
     const auto& target_ = JUST(functional::Flatten(target, 0, target->shape()->NumAxes() - 1));
 
     MutableAttrMap attrs;
