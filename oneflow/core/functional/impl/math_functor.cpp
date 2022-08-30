@@ -3016,6 +3016,16 @@ class EinSumFunctor {
   }
 };
 
+class TruncFunctor {
+ public:
+  TruncFunctor() { op_ = CHECK_JUST(one::OpBuilder("trunc").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
 class AddCDivFunctor {
  public:
   AddCDivFunctor() {}
@@ -3150,6 +3160,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<EinSumFunctor>("EinSum");
   m.add_functor<InvFunctor>("Inv");
   m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
+  m.add_functor<impl::TruncFunctor>("Trunc");
 };
 
 }  // namespace functional

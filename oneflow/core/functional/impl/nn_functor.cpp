@@ -1627,16 +1627,31 @@ class CtcLossFunctor {
     auto out = JUST(OpInterpUtil::Dispatch<Tensor>(
         *op_, {log_probs, targets, input_lengths, target_lengths}, attrs));
     if (zero_infinity) {
-      const auto create_constant = [&](const Scalar& scalar) -> Maybe<Tensor> {
-        return functional::Constant(*out->shape(), scalar, out->dtype(), JUST(out->device()));
-      };
+      if (out->is_local()) {
+        const auto create_constant = [&](const Scalar& scalar) -> Maybe<Tensor> {
+          return functional::Constant(*out->shape(), scalar, out->dtype(), JUST(out->device()));
+        };
 
-      out = JUST(sequence_function(functional::Constant)
-                     .then(std::bind(functional::BroadcastEqual, out, std::placeholders::_1))
-                     .then(std::bind(functional::Where, std::placeholders::_1,
-                                     JUST(create_constant(Scalar(0))), out))
-                     .call(*out->shape(), Scalar(std::numeric_limits<double>::infinity()),
-                           out->dtype(), JUST(out->device())));
+        out = JUST(sequence_function(functional::Constant)
+                       .then(std::bind(functional::BroadcastEqual, out, std::placeholders::_1))
+                       .then(std::bind(functional::Where, std::placeholders::_1,
+                                       JUST(create_constant(Scalar(0))), out))
+                       .call(*out->shape(), Scalar(std::numeric_limits<double>::infinity()),
+                             out->dtype(), JUST(out->device())));
+      } else {
+        const auto& placement = JUST(out->parallel_desc());
+        const auto& nd_sbp = *JUST(GetSbpList(JUST(out->nd_sbp())));
+        const auto create_constant = [&](const Scalar& scalar) -> Maybe<Tensor> {
+          return functional::GlobalConstant(*out->shape(), scalar, out->dtype(), placement, nd_sbp);
+        };
+
+        out = JUST(sequence_function(functional::GlobalConstant)
+                       .then(std::bind(functional::BroadcastEqual, out, std::placeholders::_1))
+                       .then(std::bind(functional::Where, std::placeholders::_1,
+                                       JUST(create_constant(Scalar(0))), out))
+                       .call(*out->shape(), Scalar(std::numeric_limits<double>::infinity()),
+                             out->dtype(), placement, nd_sbp));
+      }
     }
     CHECK_OR_RETURN([&]() -> bool {
       if ((reduction != "none") && (reduction != "sum") && (reduction != "mean")) return false;
