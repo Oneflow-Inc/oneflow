@@ -33,7 +33,6 @@ class TestLocalThread(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n2d()
 class TestGlobalThread(flow.unittest.TestCase):
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cpu_stream(test_case):
         thread_ids = [i % 4 for i in range(10)]
         for thread_id in thread_ids:
@@ -43,6 +42,7 @@ class TestGlobalThread(flow.unittest.TestCase):
                 test_case.assertEqual(tensor[0], 1)
                 test_case.assertEqual(tensor[1], 1)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cuda_stream(test_case):
         thread_ids = [i % 4 for i in range(200)]
         tensors = []
@@ -57,6 +57,7 @@ class TestGlobalThread(flow.unittest.TestCase):
             test_case.assertEqual(tensor[0], 1 + i)
             test_case.assertEqual(tensor[int(tensor.shape[0] / 2)], 1 + i)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_decorator(test_case):
         thread_ids = [i % 4 for i in range(200)]
         tensors = []
