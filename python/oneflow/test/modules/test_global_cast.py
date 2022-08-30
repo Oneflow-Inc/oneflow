@@ -23,7 +23,7 @@ import oneflow as flow
 from oneflow import nn
 import oneflow.unittest
 from oneflow.test_utils.test_util import GenArgList
-from oneflow.framework.tensor import Tensor
+from oneflow import Tensor
 from oneflow.nn.graph.util import ArgsTree
 
 

@@ -36,7 +36,7 @@ def to_global(input, placement=None, sbp=None, **kwargs):
     Args:
         input (oneflow.Tensor/None/list/tuple/dict): the input that needs to be converted.
         placement (oneflow.placement, optional): the desired placement of the input. Default: None
-        sbp (oneflow.sbp.sbp or list/tuple of oneflow.sbp.sbp, optional): the desired sbp of the input or self-defined functions in order to specify SBP. Default: None
+        sbp (oneflow.sbp.sbp, list/tuple of oneflow.sbp.sbp or Callable[[Tensor], oneflow.sbp.sbp], optional): the desired sbp of the input or self-defined functions in order to specify SBP. Default: None
     
     Returns:
         The converted input.
