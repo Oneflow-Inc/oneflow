@@ -64,7 +64,9 @@ def _test_one_embedding(test_case, embedding_size, test_opt):
             self, embedding_vec_size=128, persistent_path=None, table_size_array=[],
         ):
             super(TestModule, self).__init__()
-            self.embedding = OneEmbedding(embedding_vec_size, persistent_path, table_size_array,)
+            self.embedding = OneEmbedding(
+                embedding_vec_size, persistent_path, table_size_array,
+            )
             self.mlp = nn.Linear(embedding_vec_size, 1)
 
         def forward(self, inputs) -> flow.Tensor:
@@ -92,7 +94,9 @@ def _test_one_embedding(test_case, embedding_size, test_opt):
 
     def np_to_global(np):
         t = flow.from_numpy(np)
-        return t.to_global(placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.split(0))
+        return t.to_global(
+            placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.split(0)
+        )
 
     batch_size = 32
     table_size_array = [32, 65536, 100, 7]
