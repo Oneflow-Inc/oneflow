@@ -37,6 +37,10 @@ class small_vector : public llvm::SmallVector<T, N> {
     CHECK_LT(idx, Base::size());
     return (*this)[idx];
   }
+  typename Base::reference operator[](typename Base::size_type idx) { return this->data()[idx]; }
+  typename Base::const_reference operator[](typename Base::size_type idx) const {
+    return this->data()[idx];
+  }
   typename Base::const_iterator cbegin() const {
     return (typename Base::const_iterator)this->BeginX;
   }
