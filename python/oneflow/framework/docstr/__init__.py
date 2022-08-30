@@ -49,6 +49,7 @@ from .swapaxes import *
 from .amax import *
 from .unbind import *
 from .repeat import *
+from .repeat_interleave import *
 from .tile import *
 from .tensor_t import *
 from .topk import *
@@ -73,4 +74,9 @@ from .tensordot import *
 from .searchsorted import *
 from .amin import *
 from .deconv import *
+from .inv import *
 from .logical_ops import *
+from .distance import *
+from .addcdiv import *
+from .hann_window import *
+from .convolution import *

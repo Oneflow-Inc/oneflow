@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <sys/types.h>
+#include <unistd.h>
+
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
@@ -29,8 +32,9 @@ class LearningRateScheduleKernel final : public Kernel {
 
  private:
   void VirtualKernelInit(KernelContext* ctx) override {
-    if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-      log_stream_ = TeePersistentLogStream::Create("train_step2lr.csv");
+    if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+      pid_t pid = getpid();
+      log_stream_ = TeePersistentLogStream::Create(std::to_string(pid) + "-train_step2lr.csv");
       (*log_stream_) << "train_step, lr\n";
     }
     if (IsOpenGraphVerboseStepLr()) { print_step_lr_ = true; }
@@ -296,7 +300,7 @@ void LearningRateScheduleKernel::ForwardDataContent(KernelContext* ctx) const {
               << std::endl;
   }
   *ctx->BnInOp2Blob("out")->mut_dptr<float>() = learning_rate;
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     (*log_stream_) << std::to_string(train_step) << ", " << std::to_string(learning_rate) << "\n";
     log_stream_->Flush();
   }

@@ -85,9 +85,9 @@ std::vector<int8_t> GetMirrorVec(user_op::KernelComputeContext* ctx) {
   std::vector<int8_t> mirror;
   user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
   user_op::Tensor* mirror_blob = ctx->Tensor4ArgNameAndIndex("mirror", 0);
-  int64_t record_num = in_blob->shape().At(0);
+  int64_t record_num = in_blob->shape_view().At(0);
   if (mirror_blob) {
-    CHECK_EQ(record_num, mirror_blob->shape().elem_cnt());
+    CHECK_EQ(record_num, mirror_blob->shape_view().elem_cnt());
     mirror.insert(mirror.end(), mirror_blob->dptr<int8_t>(),
                   mirror_blob->dptr<int8_t>() + record_num);
   } else {
@@ -140,7 +140,7 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
     user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     std::vector<int8_t> mirror = GetMirrorVec(ctx);
-    int64_t record_num = in_blob->shape().At(0);
+    int64_t record_num = in_blob->shape_view().At(0);
     const std::string& color_space = ctx->Attr<std::string>("color_space");
     int64_t C = ImageUtil::IsColor(color_space) ? 3 : 1;
     float crop_pos_y = ctx->Attr<float>("crop_pos_y");
@@ -149,13 +149,13 @@ class CropMirrorNormalizeFromStaticShapeToFloatKernel final : public user_op::Op
     float* out_dptr = out_blob->mut_dptr<float>();
 
     const uint8_t* in_dptr = in_blob->dptr<uint8_t>();
-    const ShapeView& in_shape = in_blob->shape();
+    const ShapeView& in_shape = in_blob->shape_view();
     int64_t N = in_shape.At(0);
     int64_t in_H = in_shape.At(1);
     int64_t in_W = in_shape.At(2);
     CHECK_EQ(C, in_shape.At(3));
     int64_t in_image_elem_cnt = in_H * in_W * C;
-    const ShapeView& out_shape = out_blob->shape();
+    const ShapeView& out_shape = out_blob->shape_view();
     CHECK_EQ(out_shape.NumAxes(), 4);
     CHECK_EQ(out_shape.At(0), N);
     if (output_layout == "NCHW") {
@@ -222,7 +222,7 @@ class CropMirrorNormalizeFromTensorBufferToFloatKernel final : public user_op::O
     user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     std::vector<int8_t> mirror = GetMirrorVec(ctx);
-    int64_t record_num = in_blob->shape().At(0);
+    int64_t record_num = in_blob->shape_view().At(0);
     const std::string& color_space = ctx->Attr<std::string>("color_space");
     int64_t C = ImageUtil::IsColor(color_space) ? 3 : 1;
     float crop_pos_y = ctx->Attr<float>("crop_pos_y");
@@ -231,10 +231,10 @@ class CropMirrorNormalizeFromTensorBufferToFloatKernel final : public user_op::O
     float* out_dptr = out_blob->mut_dptr<float>();
 
     const TensorBuffer* in_buffers = in_blob->dptr<TensorBuffer>();
-    const ShapeView& in_shape = in_blob->shape();
+    const ShapeView& in_shape = in_blob->shape_view();
     int64_t N = in_shape.At(0);
     CHECK_EQ(in_shape.NumAxes(), 1);
-    const ShapeView& out_shape = out_blob->shape();
+    const ShapeView& out_shape = out_blob->shape_view();
     CHECK_EQ(out_shape.NumAxes(), 4);
     CHECK_EQ(out_shape.At(0), N);
     if (output_layout == "NCHW") {
@@ -329,7 +329,7 @@ class CoinFlipKernel final : public user_op::OpKernel {
     auto* rand_bool_gen = dynamic_cast<RandBoolGen*>(state);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     int8_t* dptr = out_blob->mut_dptr<int8_t>();
-    for (int32_t i = 0; i < out_blob->shape().elem_cnt(); ++i) {
+    for (int32_t i = 0; i < out_blob->shape_view().elem_cnt(); ++i) {
       *(dptr + i) = rand_bool_gen->GetNextBool() ? 1 : 0;
     }
   }
@@ -364,7 +364,7 @@ void ImageRandomCropImpl(const TensorBuffer* in_buffer, TensorBuffer* out_buffer
   H = image.rows;
 
   CHECK(image.isContinuous());
-  const int c = in_buffer->shape().At(2);
+  const int c = in_buffer->shape_view().At(2);
   CHECK_EQ(c, image.channels());
   Shape image_shape({H, W, c});
   out_buffer->Resize(image_shape, in_buffer->data_type());
@@ -389,10 +389,10 @@ class ImageRandomCropKernel final : public user_op::OpKernel {
     auto* crop_window_generators = dynamic_cast<RandomCropKernelState*>(state);
     CHECK_NOTNULL(crop_window_generators);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t record_num = out_blob->shape().elem_cnt();
+    int64_t record_num = out_blob->shape_view().elem_cnt();
     CHECK(record_num > 0);
     user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
-    CHECK_EQ(out_blob->shape(), in_blob->shape());
+    CHECK_EQ(out_blob->shape_view(), in_blob->shape_view());
     const TensorBuffer* in_buffers = in_blob->dptr<TensorBuffer>();
     TensorBuffer* out_buffers = out_blob->mut_dptr<TensorBuffer>();
     MultiThreadLoop(record_num, [&](size_t i) {

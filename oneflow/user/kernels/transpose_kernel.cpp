@@ -50,12 +50,12 @@ class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport 
     const Tensor* tensor_in = ctx->Tensor4ArgNameAndIndex("input", 0);
     Tensor* tensor_out = ctx->Tensor4ArgNameAndIndex("output", 0);
     const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
-    const ShapeView& in_shape = tensor_in->shape();
+    const ShapeView& in_shape = tensor_in->shape_view();
     DataType dtype = tensor_out->data_type();
-    size_t num_dims = tensor_in->shape().NumAxes();
+    size_t num_dims = tensor_in->shape_view().NumAxes();
     const int64_t* src_dims = in_shape.ptr();
 
-    int64_t elem_cnt = tensor_out->shape().elem_cnt();
+    int64_t elem_cnt = tensor_out->shape_view().elem_cnt();
 
     if (elem_cnt != 0) {
       if (IsIdentity(perm)) {

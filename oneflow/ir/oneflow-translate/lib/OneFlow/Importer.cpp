@@ -21,6 +21,8 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry_manager.h"
 
 #include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/SBP/SBPDialect.h"
+#include "OneFlow/SBP/SBPAttributes.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowTypes.h"
 #include "OneFlow/OneFlowSupport.h"
@@ -58,6 +60,8 @@ limitations under the License.
 
 #include <google/protobuf/text_format.h>
 
+#include "oneflow/core/framework/sbp_context.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 namespace mlir {
 
 namespace oneflow {
@@ -334,9 +338,9 @@ llvm::Optional<Type> Importer::GetTypeFromOneFlowDataType(::oneflow::DataType dt
     if (dt == ::oneflow::DataType::kFloat) { return GetBuilder().getF32Type(); }
     if (dt == ::oneflow::DataType::kDouble) { return GetBuilder().getF64Type(); }
     if (dt == ::oneflow::DataType::kInt8) { return GetBuilder().getIntegerType(8, true); }
-    if (dt == ::oneflow::DataType::kInt32) { return GetBuilder().getI32Type(); }
-    if (dt == ::oneflow::DataType::kInt64) { return GetBuilder().getI64Type(); }
-    if (dt == ::oneflow::DataType::kUInt8) { return GetBuilder().getIntegerType(8, false); }
+    if (dt == ::oneflow::DataType::kInt32) { return GetBuilder().getIntegerType(32, true); }
+    if (dt == ::oneflow::DataType::kInt64) { return GetBuilder().getIntegerType(64, true); }
+    if (dt == ::oneflow::DataType::kUInt8) { return GetBuilder().getIntegerType(8, true); }
     if (dt == ::oneflow::DataType::kOFRecord) { return OFRecordElementType::get(GetMLIRContext()); }
     if (dt == ::oneflow::DataType::kFloat16) { return GetBuilder().getF16Type(); }
     if (dt == ::oneflow::DataType::kTensorBuffer) {
@@ -344,8 +348,8 @@ llvm::Optional<Type> Importer::GetTypeFromOneFlowDataType(::oneflow::DataType dt
     }
     if (dt == ::oneflow::DataType::kBool) { return GetBuilder().getI8Type(); }
     if (dt == ::oneflow::DataType::kUInt16) { return GetBuilder().getIntegerType(16, false); }
-    if (dt == ::oneflow::DataType::kUInt32) { return GetBuilder().getI32Type(); }
-    if (dt == ::oneflow::DataType::kUInt64) { return GetBuilder().getI64Type(); }
+    if (dt == ::oneflow::DataType::kUInt32) { return GetBuilder().getIntegerType(32, false); }
+    if (dt == ::oneflow::DataType::kUInt64) { return GetBuilder().getIntegerType(64, false); }
     if (dt == ::oneflow::DataType::kUInt128) { return GetBuilder().getIntegerType(128, false); }
     llvm::errs() << "unsupported data type: " << dt << "\n";
     return llvm::None;
@@ -390,7 +394,8 @@ Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp) {
     } else if (sbp.has_partial_sum_parallel()) {
       sbp_strs.emplace_back("P");
     } else {
-      llvm::errs() << "unsupported sbp";
+      llvm::errs() << "unsupported sbp: " << nd_sbp.DebugString();
+      exit(EXIT_FAILURE);
     }
   }
   return builder.getStrArrayAttr(
@@ -475,6 +480,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   state.addAttributes(named_attributes);
   state.addOperands(operands);
   state.addTypes(out_types);
+  SetOpStateLoc(op, state);
   created_op = GetBuilder().create(state);
 
   if (created_op == nullptr) {
@@ -492,10 +498,7 @@ LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf)
   if (auto ctrl_ins = GetCtrlIntputOperands(op)) {
     for (auto ctrl_in : ctrl_ins.getValue()) {
       op_conf.add_ctrl_in_op_name(
-          ctrl_in.getDefiningOp()
-              ->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
-              .getValue()
-              .str());
+          OpTrait::IsOpConfCompatible<void>::getOpName(ctrl_in.getDefiningOp()).str());
     }
   }
   return success();
@@ -675,9 +678,8 @@ llvm::Optional<std::string> GetOutputLbn(OpResult result) {
       auto size = std::get<1>(name_size_tuple);
       if ((size_sum + size) > result_number) {
         const uint32_t bn_i = result_number - size_sum;
-        return def_op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
-                   .str()
-               + "/" + name + "_" + std::to_string(bn_i);
+        return OpTrait::IsOpConfCompatible<void>::getOpName(def_op).str() + "/" + name + "_"
+               + std::to_string(bn_i);
       }
       size_sum += size;
     }
@@ -776,7 +778,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::Operat
   for (auto id_attr : op->getAttrDictionary()) {
     auto id = id_attr.getName();
     // mlir only attrs
-    // TODO: find a way to skip attrs like callee in a declarative way
+    // TODO: prefix special attributes with "oneflow.". For example: `oneflow.op_type_name = "add"`
     if (id.strref().equals("callee")
         || id.strref().equals(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr())
         || id.strref().equals(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr())
@@ -901,6 +903,12 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::Operat
   return success();
 }
 
+void Importer::SetOpStateLoc(const ::oneflow::OperatorConf& op_conf, OperationState& state) {
+  if (op_conf.has_loc()) {
+    state.location = (FileLineColLoc::get(GetMLIRContext(), op_conf.loc(), 0, 0));
+  }
+}
+
 LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_conf) {
   op_conf->set_name(op.op_name().str());
   op_conf->set_device_tag(op.device_tag().str());
@@ -939,14 +947,23 @@ LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_c
 
   if (op->hasAttr("trainable")) { var_op_conf->set_trainable(op.trainable()); }
 
-  for (const auto& sbp : op.nd_sbp()) {
-    var_op_conf->add_nd_sbp(sbp.cast<StringAttr>().getValue().str());
+  for (auto output : op.parallel()->getOutputs()) {
+    if (auto nd_outputs = output.dyn_cast<ArrayAttr>()) {
+      for (auto nd_output : nd_outputs) {
+        std::string sbp{};
+        if (failed(SBPTranslation::PrintSbpAttrToString(nd_output, sbp))) return failure();
+        var_op_conf->add_nd_sbp(sbp);
+      }
+    } else {
+      std::string sbp{};
+      if (failed(SBPTranslation::PrintSbpAttrToString(output, sbp))) return failure();
+      var_op_conf->add_nd_sbp(sbp);
+    }
   }
-
   // all operands are ctrl_inputs
   for (const auto& operand : op->getOperands()) {
     op_conf->add_ctrl_in_op_name(
-        operand.getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
+        OpTrait::IsOpConfCompatible<void>::getOpName(operand.getDefiningOp()).str());
   }
   if (auto floatInit = op.float_initializer()) {
     var_op_conf->mutable_initializer()->mutable_constant_conf()->set_value(
@@ -1002,7 +1019,7 @@ LogicalResult ConvertInputOpConf(InputOp op, ::oneflow::OperatorConf* op_conf) {
   // operand 0 is block argument, others are ctrl_inputs
   for (size_t i = 1; i < op->getNumOperands(); ++i) {
     op_conf->add_ctrl_in_op_name(
-        op->getOperand(i).getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
+        OpTrait::IsOpConfCompatible<void>::getOpName(op->getOperand(i).getDefiningOp()).str());
   }
 
   return success();
@@ -1054,7 +1071,7 @@ LogicalResult ConvertOutputOpConf(OutputOp op, ::oneflow::OperatorConf* op_conf)
   output_op_conf->set_in(output_lbn);
   for (size_t i = 1; i < op->getNumOperands(); ++i) {
     op_conf->add_ctrl_in_op_name(
-        op->getOperand(i).getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
+        OpTrait::IsOpConfCompatible<void>::getOpName(op->getOperand(i).getDefiningOp()).str());
   }
   return success();
 }

@@ -37,7 +37,7 @@ Maybe<void> Softmax::Init(const OpExpr& op) { return Maybe<void>::Ok(); }
 
 Maybe<void> Softmax::Capture(SoftmaxCaptureState* ctx, const TensorTuple& inputs,
                              const TensorTuple& outputs, const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), 1);
+  CHECK_EQ_OR_RETURN(inputs.size(), 1);  // NOLINT(maybe-need-error-msg)
   ctx->requires_grad = inputs.at(0)->requires_grad();
 
   if (!ctx->requires_grad) return Maybe<void>::Ok();
@@ -49,7 +49,7 @@ Maybe<void> Softmax::Capture(SoftmaxCaptureState* ctx, const TensorTuple& inputs
 Maybe<void> Softmax::Apply(const SoftmaxCaptureState* ctx, const TensorTuple& out_grads,
                            TensorTuple* in_grads) const {
   if (!ctx->requires_grad) return Maybe<void>::Ok();
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   const auto& dy = out_grads.at(0);
   const auto& y = ctx->SavedTensors().at(0);
   in_grads->resize(1);

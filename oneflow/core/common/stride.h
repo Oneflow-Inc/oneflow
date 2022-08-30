@@ -18,6 +18,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_STRIDE_H_
 
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/common/sequential.pb.h"
 #include "oneflow/core/common/util.h"
 
@@ -25,34 +26,18 @@ namespace oneflow {
 
 class Int64ListProto;
 
-class Stride final {
+class Stride final : public DimVector {
  public:
   Stride() = default;
+  using DimVector::DimVector;
   explicit Stride(const Shape& shape);
   explicit Stride(const std::shared_ptr<Shape>& shape);
-  explicit Stride(DimVector&& stride_vec);
-  explicit Stride(const DimVector& stride_vec);
   explicit Stride(const Int64ListProto& stride_proto);
-  Stride(const std::initializer_list<int64_t>& stride_vec);
-  Stride& operator=(const Stride& stride);
-  Stride& assign(const DimVector& stride_vec);
   Stride& CheckNumAxesIdenticalAndAssign(const Stride& stride);
   ~Stride() = default;
 
-  bool operator==(const Stride& rhs) const;
-  bool operator!=(const Stride& rhs) const { return !(*this == rhs); }
-
   std::string ToString() const;
   void ToProto(Int64ListProto*) const;
-
-  // Getters and Setters
-  const DimVector& StrideVec() const { return stride_vec_; }
-  int64_t NumAxes() const { return stride_vec_.size(); }
-  int64_t At(int64_t index) const { return stride_vec_.at(index); }
-  void Set(int64_t index, int64_t val) { stride_vec_.at(index) = val; }
-
- private:
-  DimVector stride_vec_;
 };
 
 }  // namespace oneflow
@@ -62,8 +47,8 @@ namespace std {
 template<>
 struct hash<oneflow::Stride> {
   size_t operator()(const oneflow::Stride& stride) const {
-    size_t ret = stride.NumAxes();
-    FOR_RANGE(int, i, 0, stride.NumAxes()) { oneflow::AddHash(&ret, stride.At(i)); }
+    size_t ret = stride.size();
+    FOR_RANGE(int, i, 0, stride.size()) { oneflow::AddHash(&ret, stride.at(i)); }
     return ret;
   }
 };

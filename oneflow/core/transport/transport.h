@@ -27,13 +27,14 @@ namespace oneflow {
 // Transport supports sending and receiving data between two machines, which is identified by
 // a unique token.
 //
-// Suppose machine A wants to send a piece of data to machine B. Global<Transport> both need
+// Suppose machine A wants to send a piece of data to machine B. Singleton<Transport> both need
 // created on machine A and machine B respectively.
 //
 // Machin A need call:
-//   Global<Transport>::Get()->Send(token, B, data_ptr_A, data_size_A, callback_after_send);
+//   Singleton<Transport>::Get()->Send(token, B, data_ptr_A, data_size_A, callback_after_send);
 // Machin B need call:
-//   Global<Transport>::Get()->Receive(token, A, data_ptr_B, data_size_B, callback_after_receive);
+//   Singleton<Transport>::Get()->Receive(token, A, data_ptr_B, data_size_B,
+//   callback_after_receive);
 //
 // data_size_A <= data_size_B
 //
@@ -66,8 +67,8 @@ class Transport {
                             std::function<void()> callback);
 
   // TODO(chengcheng)
-  // Global<Transport> has a dependency on Global<CommNet> which should be initialized first.
-  friend class Global<Transport>;
+  // Singleton<Transport> has a dependency on Singleton<CommNet> which should be initialized first.
+  friend class Singleton<Transport>;
   Transport();
 
   // TransportStatus stores all the information that Transport needs in a Send / Receive process.

@@ -188,7 +188,7 @@ class FusedDotFeatureInteractionTestCase(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["dtype"] = [flow.float16, flow.float32]
         arg_dict["feature_dims"] = [[39], [13, 26], [1, 10, 3]]
-        arg_dict["embedding_size"] = [127, 128, 16, 11, 12, 110]
+        arg_dict["embedding_size"] = [16, 11, 12]
         for kwargs in GenArgDict(arg_dict):
             _test_fused_dot_feature_interaction_pooling_sum(test_case, **kwargs)
 

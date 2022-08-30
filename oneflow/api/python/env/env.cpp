@@ -17,7 +17,8 @@ limitations under the License.
 #include "oneflow/api/python/env/env.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
+#include "oneflow/core/job/graph_scope_vars.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/shut_down_util.h"
@@ -30,7 +31,7 @@ namespace oneflow {
 Maybe<void> SwitchToShuttingDownPhase(EnvGlobalObjectsScope* env, bool is_normal_exit) {
   if (is_normal_exit) {
     JUST(vm::ClusterSync());
-    auto* vm = JUST(GlobalMaybe<VirtualMachine>());
+    auto* vm = JUST(SingletonMaybe<VirtualMachine>());
     JUST(vm->CloseVMThreads());
   }
   JUST(env->init_is_normal_exit(is_normal_exit));
@@ -41,7 +42,6 @@ Maybe<void> SwitchToShuttingDownPhase(EnvGlobalObjectsScope* env, bool is_normal
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CurrentResource", &CurrentResource);
   m.def("EnvResource", &EnvResource);
-  m.def("EnableEagerEnvironment", &EnableEagerEnvironment);
 
   py::class_<oneflow::EnvGlobalObjectsScope, std::shared_ptr<oneflow::EnvGlobalObjectsScope>>(
       m, "EnvContext")
@@ -55,11 +55,15 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetWorldSize", &GetWorldSize);
   m.def("GetNodeSize", &GetNodeSize);
   m.def("GetLocalRank", &GetLocalRank);
+  m.def("InitRDMA", &InitRDMA);
+  m.def("RDMAIsInitialized", &RDMAIsInitialized);
   m.def("CudaGetDeviceCount", &CudaGetDeviceCount);
+  m.def("EmptyCache", &EmptyCache);
 #ifdef WITH_CUDA
   m.def("GetCudaDeviceIndex", &GetCudaDeviceIndex);
   m.def("SetCudaDeviceIndex", &SetCudaDeviceIndex);
   m.def("CudaSynchronize", &CudaSynchronize);
+  m.def("GetCUDAMemoryUsed", &GetCUDAMemoryUsed);
 #endif  // WITH_CUDA
   m.def("SetFLAGS_alsologtostderr", &SetFLAGS_alsologtostderr);
   m.def("GetFLAGS_alsologtostderr", &GetFLAGS_alsologtostderr);
@@ -71,6 +75,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetGraphDebugMaxPyStackDepth", &GetGraphDebugMaxPyStackDepth);
   m.def("SetGraphDebugMode", &SetGraphDebugMode);
   m.def("GetGraphDebugMode", &GetGraphDebugMode);
+  m.def("SetGraphDebugOnlyUserPyStack", &SetGraphDebugOnlyUserPyStack);
+  m.def("GetGraphDebugOnlyUserPyStack", &GetGraphDebugOnlyUserPyStack);
+  m.def("InitPythonPathsToBeKeptAndFilteredForDebugging",
+        &InitPythonPathsToBeKeptAndFilteredForDebugging);
 }
 
 }  // namespace oneflow

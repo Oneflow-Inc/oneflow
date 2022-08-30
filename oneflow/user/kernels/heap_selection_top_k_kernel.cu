@@ -193,11 +193,11 @@ class GpuHeapSelectionTopKKernel final : public user_op::OpKernel {
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    if (in->shape().elem_cnt() == 0) { return; }
+    if (in->shape_view().elem_cnt() == 0) { return; }
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    const int64_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
-    const int64_t instance_num = in->shape().elem_cnt() / instance_size;
+    const int64_t instance_size = in->shape_view().At(in->shape_view().NumAxes() - 1);
+    const int64_t instance_num = in->shape_view().elem_cnt() / instance_size;
     const int64_t k = std::min(static_cast<int64_t>(ctx->Attr<int32_t>("k")), instance_size);
 
     // Use as many heaps as possible (# of heaps == # of threads used in thread block).

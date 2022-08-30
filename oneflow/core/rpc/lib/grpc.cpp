@@ -33,36 +33,36 @@ Maybe<int> GetCtrlPort(const EnvDesc& env_desc) {
 
 Maybe<void> GrpcRpcManager::Bootstrap() {
   std::shared_ptr<CtrlBootstrap> ctrl_bootstrap;
-  auto& env_desc = *Global<EnvDesc>::Get();
+  auto& env_desc = *Singleton<EnvDesc>::Get();
   if (env_desc.has_ctrl_bootstrap_conf()) {
     ctrl_bootstrap.reset(new RankInfoCtrlBootstrap(env_desc.bootstrap_conf()));
   } else {
     ctrl_bootstrap.reset(new HostListCtrlBootstrap(env_desc));
   }
-  JUST(
-      ctrl_bootstrap->InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
+  JUST(ctrl_bootstrap->InitProcessCtx(Singleton<CtrlServer>::Get()->port(),
+                                      Singleton<ProcessCtx>::Get()));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> GrpcRpcManager::CreateServer() {
-  Global<CtrlServer>::New(JUST(GetCtrlPort(*Global<EnvDesc>::Get())));
+  Singleton<CtrlServer>::New(JUST(GetCtrlPort(*Singleton<EnvDesc>::Get())));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> GrpcRpcManager::CreateClient() {
-  auto* client = new GrpcCtrlClient(*Global<ProcessCtx>::Get());
-  Global<CtrlClient>::SetAllocated(client);
+  auto* client = new GrpcCtrlClient(*Singleton<ProcessCtx>::Get());
+  Singleton<CtrlClient>::SetAllocated(client);
   return Maybe<void>::Ok();
 }
 
 GrpcRpcManager::~GrpcRpcManager() {
-  auto* grpc_client = dynamic_cast<GrpcCtrlClient*>(Global<CtrlClient>::Get());
+  auto* grpc_client = dynamic_cast<GrpcCtrlClient*>(Singleton<CtrlClient>::Get());
   CHECK_NOTNULL(grpc_client);
   grpc_client->StopHeartbeat();
   OF_ENV_BARRIER();
-  Global<CtrlClient>::Delete();
-  CHECK_NOTNULL(Global<CtrlServer>::Get());
-  Global<CtrlServer>::Delete();
+  Singleton<CtrlClient>::Delete();
+  CHECK_NOTNULL(Singleton<CtrlServer>::Get());
+  Singleton<CtrlServer>::Delete();
 }
 
 }  // namespace oneflow

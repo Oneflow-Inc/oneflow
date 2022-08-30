@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/framework/tensor_desc.h"
+#include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
@@ -67,8 +67,7 @@ class UserOpConfWrapper final {
 
   template<typename T>
   const T& attr_or_default(const std::string& attr_name, const T& default_val) const {
-    const auto& it = attrs_.find(attr_name);
-    if (it != attrs_.end()) {
+    if (attrs_.Has(attr_name)) {
       return CHECK_JUST(attrs_.GetAttr<T>(attr_name));
     } else {
       return default_val;
@@ -85,7 +84,6 @@ class UserOpConfWrapper final {
   AttrMap attrs_;
 };
 
-using UserOpInputGradGetFn = std::function<const std::string&()>;
 class UserOpWrapper final {
  public:
   UserOpWrapper(const OperatorConf& op, const std::function<const BlobDesc&(const std::string&)>&,
@@ -106,8 +104,6 @@ class UserOpWrapper final {
   const std::string& output(const std::string& arg_name, int32_t index) const {
     return conf_.output(arg_name, index);
   }
-  std::string output_grad(const std::string& output_arg_name, int32_t index) const;
-  std::string GetGradTensorWithOpOutput(const std::string& output_arg_name, int32_t index) const;
 
   template<typename T>
   T attr(const std::string& attr_name) const {
@@ -121,13 +117,6 @@ class UserOpWrapper final {
 
   const TensorDesc& arg_tensor_desc(const std::string& arg_name, int32_t index) const;
   const TensorDesc& TensorDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) const;
-
- public:
-  void InputGradBind(const user_op::OpArg& input, const UserOpInputGradGetFn& grad_fn);
-  void BindGradTensorWithOpInput(const std::string& logical_grad_blob_name,
-                                 const std::string& input_arg_name, int32_t index) const;
-  bool NeedGenGradTensor4OpInput(const std::string& input_arg_name, int32_t index) const;
-  bool HasGradTensor4OpOutput(const std::string& output_arg_name, int32_t index) const;
 
  private:
   UserOpConfWrapper conf_;
@@ -172,25 +161,6 @@ class UserOpConfWrapperBuilder final {
   std::vector<std::string> output_order_;
   OptInt64 scope_symbol_id_;
   std::string device_tag_;
-};
-
-using BackwardOpBuilder = UserOpConfWrapperBuilder;
-using BackwardOpBuilderFn = std::function<UserOpConfWrapper(BackwardOpBuilder&)>;
-class BackwardOpConfContext final {
- public:
-  BackwardOpConfContext(const UserOpWrapper& fw_op_wp, std::vector<OperatorConf>* bw_op_confs)
-      : fw_op_wp_(fw_op_wp), bw_op_confs_(bw_op_confs) {}
-
- public:
-  UserOpWrapper& FwOp() { return fw_op_wp_; }
-  void DefineOp(const std::string& op_name, const BackwardOpBuilderFn& fn);
-  UserOpConfWrapper& GetOp(const std::string& op_name);
-
- private:
-  UserOpWrapper fw_op_wp_;
-  HashMap<std::string, BackwardOpBuilderFn> op_builder_fns_;
-  HashMap<std::string, UserOpConfWrapper> op_builder_results_;
-  std::vector<OperatorConf>* bw_op_confs_;
 };
 
 }  // namespace user_op

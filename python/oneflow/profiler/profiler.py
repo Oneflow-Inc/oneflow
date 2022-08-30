@@ -72,9 +72,11 @@ class profile:
         if self.profile_events is None:
             raise RuntimeError("Profiler didn't finish running")
 
-    def key_averages(self):
+    def key_averages(self, group_by_input_shape=False):
         self.__check_finish()
-        return self.profile_events.key_averages()
+        return self.profile_events.key_averages(
+            group_by_input_shape=group_by_input_shape
+        )
 
     def events(self):
         self.__check_finish()

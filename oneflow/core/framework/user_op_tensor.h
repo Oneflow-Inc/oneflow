@@ -38,8 +38,8 @@ class Tensor {
   ~Tensor() = default;
 #pragma GCC diagnostic pop
 
-  virtual ShapeView shape() const = 0;
-  virtual MutShapeView mut_shape() = 0;
+  virtual ShapeView shape_view() const = 0;
+  virtual MutShapeView mut_shape_view() = 0;
   virtual const Stride& stride() const = 0;
   virtual DataType data_type() const = 0;
   virtual const MemoryCase& mem_case() const = 0;

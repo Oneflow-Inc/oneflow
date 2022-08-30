@@ -82,8 +82,13 @@ class TestContiguous(flow.unittest.TestCase):
         z = y.contiguous()
         return z
 
+    @profile(torch.Tensor.contiguous)
+    def profile_contiguous(test_case):
+        x = torch.ones(32, 3, 128, 128)
+        x.contiguous()
 
-def _tets_inplace_contiguous(test_case, device):
+
+def _test_inplace_contiguous(test_case, device):
     arr = np.random.randn(4, 5, 6, 7).astype(np.float32)
     input = flow.tensor(arr, device=device)
     x = input.permute(0, 3, 2, 1)  # x is non-contiguous tensor
@@ -105,7 +110,7 @@ class TestInplaceContiguous(flow.unittest.TestCase):
     def test_inplace_contiguous(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _tets_inplace_contiguous,
+            _test_inplace_contiguous,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

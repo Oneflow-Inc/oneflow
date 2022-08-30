@@ -18,6 +18,9 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/ep/include/primitive/cast.h"
+#ifdef WITH_CUDA
+#include <cuda.h>
+#endif
 
 namespace oneflow {
 
@@ -91,17 +94,18 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel, public user_op:
     const user_op::Tensor* segment_ids = ctx->Tensor4ArgNameAndIndex("segment_ids", 0);
     int64_t axis = ctx->Attr<int64_t>("axis");
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t outer_dim_size = out->shape().Count(0, axis);
-    int64_t num_segments = out->shape().At(axis);
-    int64_t inner_dim_size = out->shape().Count(axis + 1);
-    int64_t num_segment_ids = segment_ids->shape().elem_cnt();
-    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0, out->shape().elem_cnt() * sizeof(T));
+    int64_t outer_dim_size = out->shape_view().Count(0, axis);
+    int64_t num_segments = out->shape_view().At(axis);
+    int64_t inner_dim_size = out->shape_view().Count(axis + 1);
+    int64_t num_segment_ids = segment_ids->shape_view().elem_cnt();
+    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0,
+                        out->shape_view().elem_cnt() * sizeof(T));
 
     int64_t offset = 0;
     if (cache != nullptr) {
       auto* sum_cache = dynamic_cast<const UnsortedSegmentSumOpKernelCache*>(cache);
       CHECK_NOTNULL(sum_cache);
-      CHECK_EQ(out->shape().At(axis), sum_cache->upper() - sum_cache->lower());
+      CHECK_EQ(out->shape_view().At(axis), sum_cache->upper() - sum_cache->lower());
       offset = sum_cache->lower();
     }
 
@@ -138,7 +142,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_LIKE_KERNEL_CASE,
                                  UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 #ifdef WITH_CUDA
-template<typename K>
+template<typename T, typename K>
 class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
  public:
   UnsortedSegmentSumHalfKernel() = default;
@@ -157,43 +161,44 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
     int64_t axis = ctx->Attr<int64_t>("axis");
     user_op::Tensor* tmp_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t outer_dim_size = out->shape().Count(0, axis);
-    int64_t num_segments = out->shape().At(axis);
-    int64_t inner_dim_size = out->shape().Count(axis + 1);
-    int64_t num_segment_ids = segment_ids->shape().elem_cnt();
+    int64_t outer_dim_size = out->shape_view().Count(0, axis);
+    int64_t num_segments = out->shape_view().At(axis);
+    int64_t inner_dim_size = out->shape_view().Count(axis + 1);
+    int64_t num_segment_ids = segment_ids->shape_view().elem_cnt();
     Memset<DeviceType::kCUDA>(ctx->stream(), tmp_buf->mut_dptr(), 0,
-                              out->shape().elem_cnt() * sizeof(float));
+                              out->shape_view().elem_cnt() * sizeof(float));
     int64_t offset = 0;
     if (cache != nullptr) {
       auto* sum_cache = dynamic_cast<const UnsortedSegmentSumOpKernelCache*>(cache);
       CHECK_NOTNULL(sum_cache);
-      CHECK_EQ(out->shape().At(axis), sum_cache->upper() - sum_cache->lower());
+      CHECK_EQ(out->shape_view().At(axis), sum_cache->upper() - sum_cache->lower());
       offset = sum_cache->lower();
     }
 
-    UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, float, K, float16>::UnsortedSegmentSum(
-        ctx->stream(), segment_ids->dptr<K>(), data->dptr<float16>(), num_segment_ids, num_segments,
+    UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, float, K, T>::UnsortedSegmentSum(
+        ctx->stream(), segment_ids->dptr<K>(), data->dptr<T>(), num_segment_ids, num_segments,
         outer_dim_size, inner_dim_size, offset, tmp_buf->mut_dptr<float>());
 
     auto f2h = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
-        ctx->device_type(), DataType::kFloat, DataType::kFloat16);
+        ctx->device_type(), DataType::kFloat, out->data_type());
     CHECK(f2h);
-    f2h->Launch(ctx->stream(), tmp_buf->dptr<float>(), out->mut_dptr<float16>(),
-                out->shape().elem_cnt());
+    f2h->Launch(ctx->stream(), tmp_buf->dptr<float>(), out->mut_dptr<T>(),
+                out->shape_view().elem_cnt());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
 #define REGISTER_UNSORTED_SEGMENT_SUM_HALF_HALF_KERNEL(out_type, segment_ids_type, kernel_type) \
   REGISTER_USER_KERNEL(kernel_type)                                                             \
-      .SetCreateFn<UnsortedSegmentSumHalfKernel<OF_PP_PAIR_FIRST(segment_ids_type)>>()          \
+      .SetCreateFn<UnsortedSegmentSumHalfKernel<OF_PP_PAIR_FIRST(out_type),                     \
+                                                OF_PP_PAIR_FIRST(segment_ids_type)>>()          \
       .SetIsMatchedHob(                                                                         \
           (user_op::HobDeviceType() == DeviceType::kCUDA)                                       \
           && (user_op::HobDataType("segment_ids", 0) == OF_PP_PAIR_SECOND(segment_ids_type))    \
           && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_type)))                   \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
-        const Shape* out_shape = ctx->OutputShape("out", 0);                                    \
-        return GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(float));                       \
+        const Shape& out_shape = ctx->OutputShape("out", 0);                                    \
+        return GetCudaAlignedSize(out_shape.elem_cnt() * sizeof(float));                        \
       });
 
 #define REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE(out_type, segment_ids_type) \
@@ -204,6 +209,12 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE,
                                  FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
+#if CUDA_VERSION >= 11000
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE,
+                                 OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16),
+                                 INDEX_DATA_TYPE_SEQ)
+#endif
 
 #undef REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE
 

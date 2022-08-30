@@ -209,7 +209,7 @@ class TestWhere(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_flow_where_tensor_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -219,7 +219,7 @@ class TestWhere(flow.unittest.TestCase):
         y = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         return torch.where(cond > 0, x, y)
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_flow_where_tensor_with_0dim_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -229,7 +229,7 @@ class TestWhere(flow.unittest.TestCase):
         y = random_tensor(ndim=0).to(device)
         return torch.where(cond > 0, x, y)
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_flow_where_tensor_broadcast_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -239,7 +239,7 @@ class TestWhere(flow.unittest.TestCase):
         y = random_tensor(ndim=2, dim0=k1, dim1=1).to(device)
         return torch.where(cond > 0, x, y)
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_flow_where_scalar_x_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -251,7 +251,7 @@ class TestWhere(flow.unittest.TestCase):
         )
         return torch.where(cond > 0, x, y)
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_flow_where_scalar_x_broadcast_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -263,7 +263,7 @@ class TestWhere(flow.unittest.TestCase):
         )
         return torch.where(cond > 0, x, y)
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_flow_where_scalar_x_int_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -273,7 +273,7 @@ class TestWhere(flow.unittest.TestCase):
         y = random_tensor(ndim=2, dim0=k1, dim1=k2, dtype=int).to(device)
         return torch.where(cond > 0, x, y)
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_flow_where_scalar_y_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -285,7 +285,7 @@ class TestWhere(flow.unittest.TestCase):
         y = random().to(float)
         return torch.where(cond > 0, x, y)
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_flow_where_scalar_y_broadcast_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -297,7 +297,7 @@ class TestWhere(flow.unittest.TestCase):
         y = random().to(float)
         return torch.where(cond > 0, x, y)
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_flow_where_scalar_y_int_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -307,7 +307,7 @@ class TestWhere(flow.unittest.TestCase):
         y = random().to(int)
         return torch.where(cond > 0, x, y)
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_flow_where_scalar_xy_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -317,7 +317,7 @@ class TestWhere(flow.unittest.TestCase):
         y = random().to(float)
         return torch.where(cond > 0, x, y)
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_flow_where_scalar_xy_int_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -327,7 +327,7 @@ class TestWhere(flow.unittest.TestCase):
         y = random().to(int)
         return torch.where(cond > 0, x, y)
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_flow_where_tensor_bool_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -337,7 +337,7 @@ class TestWhere(flow.unittest.TestCase):
         y = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device=device, dtype=torch.bool)
         return torch.where(cond > 0, x, y)
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_flow_where_tensor_broadcast_bool_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -347,7 +347,7 @@ class TestWhere(flow.unittest.TestCase):
         y = random_tensor(ndim=2, dim0=k1, dim1=1).to(device=device, dtype=torch.bool)
         return torch.where(cond > 0, x, y)
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_flow_where_scalar_x_bool_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -359,7 +359,7 @@ class TestWhere(flow.unittest.TestCase):
         )
         return torch.where(cond > 0, x, y)
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_flow_where_scalar_x_broadcast_bool_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -371,7 +371,7 @@ class TestWhere(flow.unittest.TestCase):
         )
         return torch.where(cond > 0, x, y)
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_flow_where_scalar_y_bool_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -383,7 +383,7 @@ class TestWhere(flow.unittest.TestCase):
         y = random().to(bool)
         return torch.where(cond > 0, x, y)
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_flow_where_scalar_y_broadcast_bool_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -395,7 +395,7 @@ class TestWhere(flow.unittest.TestCase):
         y = random().to(bool)
         return torch.where(cond > 0, x, y)
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_flow_where_scalar_xy_bool_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)

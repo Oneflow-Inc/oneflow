@@ -184,20 +184,14 @@ relative_protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROJECT_SOURCE_DIR} ${of_
 
 oneflow_add_library(of_protoobj SHARED ${PROTO_SRCS} ${PROTO_HDRS})
 add_dependencies(of_protoobj make_pyproto_dir protobuf)
-
-if(BUILD_SHARED_LIBS)
-  target_link_libraries(of_protoobj protobuf_imported)
-else()
-  # For some unknown reasons, when building static libraries, we have to link of_protoobj with oneflow_third_party_libs
-  target_link_libraries(of_protoobj ${oneflow_third_party_libs})
-endif()
+target_link_libraries(of_protoobj protobuf_imported)
 
 include(functional)
 generate_functional_api_and_pybind11_cpp(FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GENERATED_HRCS
                                          FUNCTIONAL_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
 oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS}
                     ${FUNCTIONAL_GENERATED_HRCS})
-target_link_libraries(of_functional_obj glog::glog)
+target_link_libraries(of_functional_obj LLVMSupportWithHeader glog::glog)
 add_dependencies(of_functional_obj prepare_oneflow_third_party)
 
 if(BUILD_PYTHON)
@@ -214,7 +208,7 @@ if(BUILD_PYTHON)
     of_functional_tensor_obj STATIC ${FUNCTIONAL_TENSOR_GENERATED_SRCS}
     ${FUNCTIONAL_TENSOR_GENERATED_HRCS} ${FUNCTIONAL_OPS_GENERATED_SRCS}
     ${FUNCTIONAL_OPS_GENERATED_HRCS})
-  target_link_libraries(of_functional_tensor_obj glog::glog)
+  target_link_libraries(of_functional_tensor_obj LLVMSupportWithHeader glog::glog)
   add_dependencies(of_functional_tensor_obj prepare_oneflow_third_party)
   target_include_directories(of_functional_tensor_obj PRIVATE ${Python_INCLUDE_DIRS}
                                                               ${Python_NumPy_INCLUDE_DIRS})
@@ -256,30 +250,49 @@ if("${LLVM_MONO_REPO_URL}" STREQUAL
       "https://github.com/llvm/llvm-project/archive/7eaa84eac3ba935d13f4267d3d533a6c3e1283ed.zip"
    OR "${LLVM_MONO_REPO_URL}" STREQUAL
       "https://github.com/llvm/llvm-project/archive/35e60f5de180aea55ed478298f4b40f04dcc57d1.zip"
+   OR "${LLVM_MONO_REPO_URL}" STREQUAL
+      "https://github.com/llvm/llvm-project/archive/6a9bbd9f20dcd700e28738788bb63a160c6c088c.zip"
+   OR "${LLVM_MONO_REPO_URL}" STREQUAL
+      "https://github.com/llvm/llvm-project/archive/32805e60c9de1f82887cd2af30d247dcabd2e1d3.zip"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "f2f17229cf21049663b8ef4f2b6b8062"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "6b7c6506d5922de9632c8ff012b2f945"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "e0ea669a9f0872d35bffda5ec6c5ac6f"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "075fbfdf06cb3f02373ea44971af7b03")
+   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "241a333828bba1efa35aff4c4fc2ce87"
+   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "075fbfdf06cb3f02373ea44971af7b03"
+   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "e412dc61159b5e929b0c94e44b11feb2")
   unset(LLVM_MONO_REPO_URL CACHE)
   unset(LLVM_MONO_REPO_MD5 CACHE)
 endif()
 set(LLVM_MONO_REPO_URL
-    "https://github.com/llvm/llvm-project/archive/6a9bbd9f20dcd700e28738788bb63a160c6c088c.zip"
+    "https://github.com/llvm/llvm-project/archive/6d6268dcbf0f48e43f6f9fe46b3a28c29ba63c7d.zip"
     CACHE STRING "")
 use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
-set(LLVM_MONO_REPO_MD5 "241a333828bba1efa35aff4c4fc2ce87" CACHE STRING "")
+set(LLVM_MONO_REPO_MD5 "334997b4879aba15d9323a732356cf2a" CACHE STRING "")
 set(ONEFLOW_BUILD_ROOT_DIR "${PROJECT_BINARY_DIR}")
 add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
 if(WITH_MLIR)
   set(ONEFLOW_MLIR_LIBS -Wl,--no-as-needed MLIROneFlowExtension -Wl,--as-needed)
 endif()
 
+if("${LLVM_PROVIDER}" STREQUAL "install")
+  get_property(LLVM_INSTALL_DIR GLOBAL PROPERTY LLVM_INSTALL_DIR)
+  check_variable_defined(LLVM_INSTALL_DIR)
+  find_library(LLVMSupportLib LLVMSupport PATHS ${LLVM_INSTALL_DIR}/lib REQUIRED)
+  add_library(LLVMSupportWithHeader UNKNOWN IMPORTED)
+  set_property(TARGET LLVMSupportWithHeader PROPERTY IMPORTED_LOCATION ${LLVMSupportLib})
+else()
+  add_library(LLVMSupportWithHeader INTERFACE IMPORTED)
+  target_link_libraries(LLVMSupportWithHeader INTERFACE LLVMSupport)
+endif()
+check_variable_defined(LLVM_INCLUDE_DIRS)
+set_property(TARGET LLVMSupportWithHeader PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+                                                   ${LLVM_INCLUDE_DIRS})
+
+list(APPEND oneflow_third_party_libs LLVMSupportWithHeader)
+
 include(op_schema)
 
-get_property(EXTERNAL_INCLUDE_DIRS GLOBAL PROPERTY EXTERNAL_INCLUDE_DIRS)
 get_property(EXTERNAL_TARGETS GLOBAL PROPERTY EXTERNAL_TARGETS)
-
-target_include_directories(oneflow PRIVATE ${EXTERNAL_INCLUDE_DIRS})
 
 if(APPLE)
   set(of_libs -Wl,-force_load oneflow of_op_schema)
@@ -293,6 +306,7 @@ elseif(UNIX)
     ${oneflow_third_party_libs}
     ${EXTERNAL_TARGETS}
     -Wl,--no-whole-archive
+    -Wl,--as-needed
     -ldl
     -lrt)
   if(BUILD_CUDA)
@@ -317,7 +331,9 @@ endif()
 if(BUILD_PYTHON)
 
   # py ext lib
-  oneflow_add_library(of_pyext_obj SHARED ${of_pyext_obj_cc})
+  # This library should be static to make sure all python symbols are included in the final ext shared lib,
+  # so that it is safe to do wheel audits of multiple pythons version in parallel.
+  oneflow_add_library(of_pyext_obj STATIC ${of_pyext_obj_cc})
   target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS}
                                                   ${Python_NumPy_INCLUDE_DIRS})
   target_link_libraries(of_pyext_obj oneflow pybind11::headers)
@@ -399,6 +415,9 @@ if(BUILD_TESTING)
     oneflow_add_test(oneflow_testexe SRCS ${of_all_test_cc} TEST_NAME oneflow_test)
     target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} glog::glog
                           ${oneflow_test_libs})
+    if(WITH_MLIR)
+      target_link_libraries(oneflow_testexe MLIROneFlowExtension)
+    endif()
   endif()
 
   if(BUILD_CPP_API)

@@ -44,7 +44,7 @@ class CriticalSectionDesc final {
   }
 
  private:
-  friend class Global<CriticalSectionDesc>;
+  friend class Singleton<CriticalSectionDesc>;
   CriticalSectionDesc() : inited_(false) {}
   void UpdateJobId2CriticalSectionIds();
   void UpdateJobId2TotalJobCriticalSectionId();

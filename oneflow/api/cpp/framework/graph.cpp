@@ -13,8 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-#include "oneflow/api/common/ofblob.h"
+#include "nlohmann/json.hpp"
 #include "oneflow/api/common/variable_tensor_mgr.h"
 #include "oneflow/api/cpp/env_impl.h"
 #include "oneflow/api/cpp/framework/device.h"
@@ -23,15 +22,18 @@ limitations under the License.
 #include "oneflow/api/cpp/framework/ivalue.h"
 #include "oneflow/api/cpp/framework/shape.h"
 #include "oneflow/api/cpp/framework/tensor.h"
+#include "oneflow/api/cpp/embedding/embedding.h"
 #include "oneflow/api/common/job_build_and_infer_ctx.h"
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
 #include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/embedding/posix_file.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
@@ -52,6 +54,8 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/session.h"
+#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/operator/interface_blob_conf.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
@@ -108,6 +112,30 @@ Shape OfShapeToOfApiShape(const of::Shape& of_shape) {
   return Shape(dims);
 }
 
+#ifdef __linux__
+
+void LoadOneEmbedding(const std::string& model_path, const Device& device) {
+  const std::string one_embedding_info_name("one_embedding_options.json");
+  const std::string one_embedding_info_save_path(
+      oneflow::JoinPath(model_path, one_embedding_info_name));
+  if (oneflow::embedding::PosixFile::FileExists(one_embedding_info_save_path)) {
+    std::ifstream one_embedding_info_file(one_embedding_info_save_path);
+    auto one_embedding_json = nlohmann::json::parse(one_embedding_info_file);
+    for (auto& it : one_embedding_json["embedding"]) {
+      const std::string snapshot_path = it["snapshot"];
+      auto kv_options_json = it["kv_options"];
+      std::string embedding_name = embedding::CreateKeyValueStore(kv_options_json.dump(),
+                                                                  /*local_rank_id=*/0,
+                                                                  /*rank_id=*/0,
+                                                                  /*world_size=*/1);
+      embedding::LoadSnapshot(snapshot_path, embedding_name, /*local_rank_id=*/0,
+                              /*rank_id=*/0);
+    }
+  }
+}
+
+#endif  // __linux__
+
 }  // namespace
 
 class Graph::GraphImpl final {
@@ -127,6 +155,9 @@ class Graph::GraphImpl final {
   std::vector<Tensor> Forward(const std::vector<Tensor>& inputs);
   void set_batch_size(int batch_size) { batch_size_ = batch_size; }
 
+  of::Maybe<void> RegisterJobPass(
+      const std::function<std::string(const std::string& job)>& pass_fn);
+
  private:
   of::Maybe<void> CollectInputOutputInfos();
   of::Maybe<void> Compile(const std::vector<Tensor>& inputs);
@@ -135,6 +166,7 @@ class Graph::GraphImpl final {
   of::Maybe<void> BuildGraph();
   of::Maybe<void> LoadCheckpoint();
   of::Maybe<void> RegisterTensors(const std::vector<Tensor>& inputs);
+  of::Maybe<of::Job> ApplyJobPasses(const of::Job& job);
 
   std::shared_ptr<of::NNGraph> graph_ = nullptr;
   std::string model_path_;
@@ -149,6 +181,7 @@ class Graph::GraphImpl final {
   of::HashMap<std::string, std::shared_ptr<of::one::Tensor>> variable_op_name_to_tensor_;
   std::shared_ptr<of::one::TensorTuple> output_tensor_tuple_;
   std::shared_ptr<of::one::TensorTuple> parameter_tensor_tuple_;
+  std::vector<std::function<std::string(const std::string&)>> registered_job_passes_;
 };
 
 Graph::Graph(const std::string& model_path, const Device& device)
@@ -167,6 +200,10 @@ Graph& Graph::operator=(Graph&& graph) noexcept {
 InputOutputInfos Graph::GetInputInfos() { return graph_->GetInputInfos(); }
 
 InputOutputInfos Graph::GetOutputInfos() { return graph_->GetOutputInfos(); }
+
+void Graph::RegisterJobPass(const std::function<std::string(const std::string& job)>& pass_fn) {
+  CHECK_JUST(graph_->RegisterJobPass(pass_fn));
+}
 
 IValue Graph::Forward(const IValue& inputs) {
   std::vector<Tensor> input_tensors;
@@ -193,6 +230,9 @@ IValue Graph::Forward(const IValue& inputs) {
 void Graph::set_batch_size(int batch_size) { graph_->set_batch_size(batch_size); }
 
 Graph Graph::Load(const std::string& model_path, const Device& device) {
+#ifdef __linux__
+  LoadOneEmbedding(model_path, device);
+#endif  // __linux__
   Graph graph(model_path, device);
   return graph;
 }
@@ -232,6 +272,28 @@ of::Maybe<void> Graph::GraphImpl::CollectInputOutputInfos() {
     return of::Maybe<void>::Ok();
   });
   return of::Maybe<void>::Ok();
+}
+
+of::Maybe<void> Graph::GraphImpl::RegisterJobPass(
+    const std::function<std::string(const std::string& job)>& pass_fn) {
+  if (is_compiled_) {
+    return of::Error::RuntimeError() << "job pass should be registered before compile and forward";
+  }
+  registered_job_passes_.emplace_back(pass_fn);
+  return of::Maybe<void>::Ok();
+}
+
+of::Maybe<of::Job> Graph::GraphImpl::ApplyJobPasses(const of::Job& job) {
+  auto current_job = std::make_shared<of::Job>(job);
+  for (const auto& pass_fn : registered_job_passes_) {
+    std::string new_serialized_job = pass_fn(current_job->SerializeAsString());
+    of::Job new_job;
+    if (!new_job.ParseFromString(new_serialized_job)) {
+      return of::Error::RuntimeError() << "invalid serialized job after pass applied";
+    }
+    current_job->Swap(&new_job);
+  }
+  return current_job;
 }
 
 std::vector<Tensor> Graph::GraphImpl::Forward(const std::vector<Tensor>& inputs) {
@@ -275,7 +337,7 @@ of::Maybe<void> Graph::GraphImpl::AddOp(of::OperatorConf op_conf) {
         0, batch_size_);
   }
   auto* ctx = JUST(of::GetCurInferCtx());
-  JUST(ctx->AddAndInferConsistentOp(op_conf));
+  JUST(ctx->AddAndInferGlobalOp(op_conf));
   return of::Maybe<void>::Ok();
 }
 
@@ -299,11 +361,14 @@ of::Maybe<void> Graph::GraphImpl::BuildGraph() {
   }
   JUST(LoadCheckpoint());
   JUST(of::CurJobBuildAndInferCtx_Complete());
-  const std::shared_ptr<of::Job> complete_job = JUST(of::GetCurrentJob());
+  std::shared_ptr<of::Job> complete_job = JUST(of::GetCurrentJob());
   int64_t job_id = JUST(of::JobBuildAndInferCtx_GetCurrentJobId());
-  CHECK(of::Global<OneFlowEnv>::Get() != nullptr);
+  CHECK(of::Singleton<OneFlowEnv>::Get() != nullptr);
+
+  // apply custom job passes
+  complete_job = JUST(ApplyJobPasses(*complete_job));
   graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name(), *complete_job, job_id,
-                                         of::Global<OneFlowEnv>::Get()->GetSessionCtx());
+                                         of::Singleton<OneFlowEnv>::Get()->GetSessionCtx());
   {
     const of::OpGraph complete_graph(*complete_job);
     complete_graph.TopoForEachNode([&](const of::OpNode* node) -> of::Maybe<void> {
@@ -340,11 +405,12 @@ of::Maybe<void> Graph::GraphImpl::LoadCheckpoint() {
       ss << variable_file.rdbuf();
       return ss.str();
     }();
-    const auto& callback = [&](uint64_t of_blob_ptr) {
-      CHECK_JUST(of::BlobBufferCopyUtil<void>::From(
-          of_blob_ptr, buffer.data(),
-          variable_tensor->shape()->elem_cnt()
-              * of::GetSizeOfDataType(variable_tensor->dtype()->data_type())));
+    const auto& callback = [&](of::ep::Stream* stream,
+                               const std::shared_ptr<of::vm::EagerBlobObject>& eager_blob_object) {
+      of::AutoMemcpy(stream, eager_blob_object->mut_dptr(), buffer.data(),
+                     variable_tensor->shape()->elem_cnt()
+                         * of::GetSizeOfDataType(variable_tensor->dtype()->data_type()),
+                     eager_blob_object->mem_case(), of::memory::MakeHostMemCase());
     };
     JUST(of::one::SyncAccessTensorWithTimeOut(variable_tensor, callback, "mut"));
   }

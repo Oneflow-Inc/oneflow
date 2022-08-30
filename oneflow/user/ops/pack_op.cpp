@@ -34,7 +34,7 @@ namespace oneflow {
   const Shape& in_shape = in_desc.shape();
   const int32_t pack_num = ctx->Attr<int32_t>("pack_num");
   CHECK_GT_OR_RETURN(pack_num, 0);
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_is_dynamic() = in_desc.is_dynamic();
   if (in_shape.NumAxes() > 0) {
     *out_desc->mut_shape() = in_shape;
@@ -51,7 +51,7 @@ namespace oneflow {
   return PackOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> PackOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> PackOp::InferOutputBlobTimeShape(
@@ -65,25 +65,5 @@ namespace oneflow {
   *ctx->mut_output_blob_time_shape() = Shape(time_shape_dim_vec);
   return Maybe<void>::Ok();
 }
-
-namespace {
-
-REGISTER_USER_OP_GRAD("pack").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx)
-                                                         -> Maybe<void> {
-  const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
-  ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("unpack")
-        .InputBind("in", ctx->FwOp().output_grad("out", 0))
-        .Output("out")
-        .Attr<int32_t>("unpack_num", ctx->FwOp().attr<int32_t>("pack_num"))
-        .Build();
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), [&ctx, &grad_op_name]() -> const std::string& {
-    return ctx->GetOp(grad_op_name).output("out", 0);
-  });
-  return Maybe<void>::Ok();
-});
-
-}  // namespace
 
 }  // namespace oneflow

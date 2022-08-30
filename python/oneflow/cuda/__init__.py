@@ -39,10 +39,11 @@ def current_device() -> int:
 
 
 def manual_seed_all(seed) -> None:
-    r"""The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.cuda.manual_seed_all.html.
+    r"""Sets the seed for generating random numbers on all GPUs.
     
-    Sets the seed for generating random numbers on all GPUs.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.cuda.manual_seed_all.html.
+
     It's safe to call this function if CUDA is not available; in that
     case, it is silently ignored.
 
@@ -54,10 +55,11 @@ def manual_seed_all(seed) -> None:
 
 
 def manual_seed(seed: int) -> None:
-    r"""The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.cuda.manual_seed.html.
+    r"""Sets the seed for generating random numbers for the current GPU.
     
-    Sets the seed for generating random numbers for the current GPU.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.cuda.manual_seed.html.
+
     It's safe to call this function if CUDA is not available; in that
     case, it is silently ignored.
 
@@ -74,10 +76,11 @@ def manual_seed(seed: int) -> None:
 
 
 def set_device(device: Union[flow.device, str, int]) -> None:
-    r"""The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.cuda.set_device.html.
+    r"""Sets the current device.
     
-    Sets the current device.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.cuda.set_device.html.
+
     Usage of this function is discouraged in favor of :attr:`device`. In most
     cases it's better to use ``CUDA_VISIBLE_DEVICES`` environmental variable.
 
@@ -85,11 +88,16 @@ def set_device(device: Union[flow.device, str, int]) -> None:
         device (flow.device or int): selected device. This function is a no-op
             if this argument is negative.
     """
-    if flow.env.get_world_size() > 0:
-        raise ValueError("set_device() function is disabled in multi-device setting")
     device_idx = _get_device_index(device)
-    if device_idx >= 0:
-        flow._oneflow_internal.SetCudaDeviceIndex(device_idx)
+    if device_idx < 0:
+        return
+    if flow.env.get_world_size() > 0:
+        if device_idx == flow.env.get_local_rank():
+            return
+        raise ValueError(
+            "Setting cuda device to a device whose index does not equal to the local rank is not supported."
+        )
+    flow._oneflow_internal.SetCudaDeviceIndex(device_idx)
 
 
 def synchronize(device: Union[flow.device, str, int, None] = None) -> None:
@@ -113,3 +121,19 @@ def synchronize(device: Union[flow.device, str, int, None] = None) -> None:
     if device_idx >= 0:
         flow._oneflow_internal.eager.Sync()
         flow._oneflow_internal.CudaSynchronize(device_idx)
+
+
+def empty_cache() -> None:
+    r"""
+    
+    Releases all unoccupied cached memory currently held by the caching 
+    allocators of all OneFlow streams so those can be re-allocated in OneFlow streams 
+    or other GPU application and visible in `nvidia-smi`.
+    
+    Note:
+            :func:`~flow.cuda.empty_cache` may enable one stream to release memory 
+            and then freed memory can be used by another stream. It may also help reduce 
+            fragmentation of GPU memory in certain cases.
+
+    """
+    return flow._oneflow_internal.EmptyCache()

@@ -32,6 +32,10 @@ class FusedMLP(Module):
 
         out_features: The final Linear layer hidden size
 
+        hidden_dropout_rate: A tuple of each hidden layer's dropout rate
+
+        out_dropout_rate: The final Linear layer's dropout rate
+
     Shape:
         - Input: :math:`(N, *, H_{in})` where :math:`*` means any number of
           additional dimensions and :math:`H_{in} = {in\\_features}`
@@ -63,6 +67,8 @@ class FusedMLP(Module):
         in_features: int,
         hidden_features: Tuple[int],
         out_features: int,
+        hidden_dropout_rate: Tuple[float] = None,
+        out_dropout_rate: float = 0.0,
         skip_final_activation=False,
     ) -> None:
         super().__init__()
@@ -72,9 +78,19 @@ class FusedMLP(Module):
         # TODO(zzk): Add more activation support.
         self.skip_final_activation = skip_final_activation
         self.hidden_layer_num = len(hidden_features)
-
+        self.dropout_rate_list = (
+            hidden_dropout_rate
+            if hidden_dropout_rate
+            else [0.0] * (self.hidden_layer_num)
+        )
+        self.dropout_rate_list += [out_dropout_rate]
         self.add_parameters()
         self.reset_parameters()
+        self.use_dropout = False
+        for i in range(self.hidden_layer_num + 1):
+            if self.dropout_rate_list[i] != 0.0:
+                self.use_dropout = True
+                break
 
     def add_parameters(self) -> None:
         """Register parameter in FusedMLP module. 
@@ -166,10 +182,18 @@ class FusedMLP(Module):
             flow.nn.init.uniform_(self.bias(layer_idx), -bound, bound)
 
     def forward(self, x):
-        res = flow._C.fused_mlp(
-            x, self.weights(), self.biases(), self.skip_final_activation
-        )
-        return res
+        if not self.training or not self.use_dropout:
+            return flow._C.fused_mlp(
+                x, self.weights(), self.biases(), self.skip_final_activation
+            )
+        else:
+            return flow._C.fused_matmul_bias_add_relu_dropout(
+                x,
+                self.weights(),
+                self.biases(),
+                self.skip_final_activation,
+                self.dropout_rate_list,
+            )
 
     def extra_repr(self) -> str:
         return "in_features={}, hidden_features={}, out_features={}, skip_final_activation={}".format(
