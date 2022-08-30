@@ -3505,13 +3505,13 @@ class OneEmbeddingSgdUpdateFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "line_size",
                                                  "embedding_size", "beta");
     if (momentum == 0) {
-      attrs.SetAllAttrs(scale, weight_decay, line_size, embedding_size, momentum);
+      attrs.SetAllAttrs(scale, weight_decay, line_size, embedding_size, NullOpt);
       return OpInterpUtil::Dispatch<Tensor>(*sgd_op_,
                                             {num_unique_ids, unique_embeddings, embedding_grad,
                                              learning_rate, down_scale_by_tensor, skip_if},
                                             attrs);
     } else {
-      attrs.SetAllAttrs(scale, weight_decay, line_size, embedding_size, NullOpt);
+      attrs.SetAllAttrs(scale, weight_decay, line_size, embedding_size, momentum);
       return OpInterpUtil::Dispatch<Tensor>(*momentum_op_,
                                             {num_unique_ids, unique_embeddings, embedding_grad,
                                              learning_rate, down_scale_by_tensor, skip_if},
