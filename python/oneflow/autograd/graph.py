@@ -19,7 +19,7 @@ import oneflow as flow
 from typing import Callable, Any
 
 
-class saved_tensors_hooks():
+class saved_tensors_hooks:
     """Context-manager that sets a pair of pack / unpack hooks for saved tensors.
 
     Use this context-manager to define how intermediary results of an operation
@@ -79,12 +79,19 @@ class saved_tensors_hooks():
         Only one pair of hooks is allowed at a time. When recursively nesting this
         context-manager, only the inner-most pair of hooks will be applied.
     """
-    def __init__(self, pack_hook: Callable[["flow.Tensor"], Any], unpack_hook: Callable[[Any], "flow.Tensor"]):
+
+    def __init__(
+        self,
+        pack_hook: Callable[["flow.Tensor"], Any],
+        unpack_hook: Callable[[Any], "flow.Tensor"],
+    ):
         self.pack_hook = pack_hook
         self.unpack_hook = unpack_hook
 
     def __enter__(self):
-        flow._oneflow_internal.autograd.graph.append_new_hooks(self.pack_hook, self.unpack_hook)
+        flow._oneflow_internal.autograd.graph.append_new_hooks(
+            self.pack_hook, self.unpack_hook
+        )
 
     def __exit__(self, *args: Any):
         flow._oneflow_internal.autograd.graph.pop_hooks()

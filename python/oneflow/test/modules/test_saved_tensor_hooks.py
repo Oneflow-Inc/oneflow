@@ -26,12 +26,14 @@ import oneflow.unittest
 @flow.unittest.skip_unless_1n1d()
 class TestSavedTensorHooks(flow.unittest.TestCase):
     def test_normal_saved_tensor_hooks(test_case):
-        x = flow.ones(1,2,3).to('cuda').requires_grad_()
-        y = flow.zeros(1,2,3).to('cuda').requires_grad_()
+        x = flow.ones(1, 2, 3).to("cuda").requires_grad_()
+        y = flow.zeros(1, 2, 3).to("cuda").requires_grad_()
         tensor_list = []
+
         def pack(x):
             tensor_list.append(x)
             return len(tensor_list) - 1
+
         def unpack(x):
             return tensor_list[x]
 
@@ -45,12 +47,14 @@ class TestSavedTensorHooks(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(y.grad, x))
 
     def test_saved_tensor_hooks_in_autograd_function(test_case):
-        x = flow.ones(1,2,3).to('cuda').requires_grad_()
-        y = flow.zeros(1,2,3).to('cuda').requires_grad_()
+        x = flow.ones(1, 2, 3).to("cuda").requires_grad_()
+        y = flow.zeros(1, 2, 3).to("cuda").requires_grad_()
         tensor_list = []
+
         def pack(x):
             tensor_list.append(x)
             return len(tensor_list) - 1
+
         def unpack(x):
             return tensor_list[x]
 
