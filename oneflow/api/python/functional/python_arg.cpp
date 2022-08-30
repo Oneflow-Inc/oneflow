@@ -223,7 +223,7 @@ bool PythonArg::TypeCheck(ValueType type) const {
     case kGENERATOR:
     case kGENERATOR_REF: return PyGeneratorCheck(object_);
     case kTENSOR_INDEX: return PyTensorIndexCheck(object_);
-    case kDEVICE: return PyDeviceCheck(object_) || PyStringCheck(object_);
+    case kDEVICE: return PyStringCheck(object_) || PyDeviceCheck(object_);
     case kPARALLEL_DESC: return PyParallelDescCheck(object_);
     case kSBP_PARALLEL: return PySbpParallelCheck(object_);
     case kSBP_PARALLEL_LIST:
@@ -238,8 +238,6 @@ bool PythonArg::TypeCheck(ValueType type) const {
   }
   return false;
 }
-
-bool PythonArgCheck(const PythonArg& arg, ValueType type) { return arg.TypeCheck(type); }
 
 }  // namespace functional
 }  // namespace one

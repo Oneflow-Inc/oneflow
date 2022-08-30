@@ -105,8 +105,6 @@ class PythonArg {
   enum { HAS_OBJECT, HAS_DEFAULT, HAS_NONE } tag_;
 };
 
-bool PythonArgCheck(const PythonArg& arg, ValueType type);
-
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow

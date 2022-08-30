@@ -77,10 +77,10 @@ bool FunctionSchema::Parse(PyObject* args, PyObject* kwargs, PythonArg* parsed_a
         }
         return false;
       }
-      obj = PyTuple_GetItem(args, arg_pos);
+      obj = PyTuple_GET_ITEM(args, arg_pos);
     } else if (kwargs) {
       obj = PyDict_GetItemString(kwargs, param.name.c_str());
-      if (obj) { remaining_kwargs--; }
+      if (obj) { --remaining_kwargs; }
     }
 
     if (obj) {
@@ -89,10 +89,10 @@ bool FunctionSchema::Parse(PyObject* args, PyObject* kwargs, PythonArg* parsed_a
         obj = args;
         arg_pos = nargs;
       } else {
-        arg_pos++;
+        ++arg_pos;
       }
       PythonArg arg(obj, param.size);
-      if ((obj == Py_None && param.optional) || PythonArgCheck(arg, param.type)) {
+      if ((obj == Py_None && param.optional) || arg.TypeCheck(param.type)) {
         parsed_args[i] = arg;
       } else {
         if (raise_exception) {

@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 #include "oneflow/api/python/functional/common.h"
 #include <object.h>
 #include <string>
@@ -33,6 +32,40 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 namespace functional {
+
+namespace detail {
+
+template<typename T, typename std::enable_if<!std::is_base_of<py::object, T>::value, int>::type = 0>
+bool isinstance_fast(PyObject* obj) {
+  static auto type = py::detail::get_type_handle(typeid(T), false);
+  if (!type) { return false; }
+  const auto result = PyObject_IsInstance(obj, type.ptr());
+  if (result == -1) { throw py::error_already_set(); }
+  return result != 0;
+}
+
+template<typename T, typename std::enable_if<!std::is_base_of<py::object, T>::value
+                                                 && !py::detail::is_shared_ptr<T>::value,
+                                             int>::type = 0>
+const T& cast_fast(PyObject* obj) {
+  auto vh = reinterpret_cast<py::detail::instance*>(obj)->get_value_and_holder();
+  auto*& vptr = vh.value_ptr();
+  if (!vptr) { THROW(RuntimeError) << "Lazy allocation is not allowed"; }
+  return *reinterpret_cast<T*>(&vptr);
+}
+
+template<typename T, typename std::enable_if<!std::is_base_of<py::object, T>::value
+                                                 && py::detail::is_shared_ptr<T>::value,
+                                             int>::type = 0>
+const T& cast_fast(PyObject* obj) {
+  auto vh = reinterpret_cast<py::detail::instance*>(obj)->get_value_and_holder();
+  if (!vh.holder_constructed()) {
+    throw py::cast_error("Unable to cast from non-held to held instance (T& to Holder<T>) ");
+  }
+  return vh.template holder<T>();
+}
+
+}  // namespace detail
 
 bool PySequenceCheck(PyObject* obj, const std::function<bool(PyObject*)>& item_check) {
   bool is_tuple = PyTuple_Check(obj);
@@ -82,14 +115,10 @@ std::vector<std::shared_ptr<Tensor>> PyUnpackTensorSequence(PyObject* obj) {
 }
 
 // TensorTuple
-bool PyTensorTupleCheck(PyObject* obj) {
-  auto handle = py::reinterpret_borrow<py::object>(obj);
-  return py::isinstance<TensorTuple>(handle);
-}
+bool PyTensorTupleCheck(PyObject* obj) { return detail::isinstance_fast<TensorTuple>(obj); }
 
 std::shared_ptr<TensorTuple> PyUnpackTensorTuple(PyObject* obj) {
-  auto handle = py::reinterpret_borrow<py::object>(obj);
-  return py::cast<std::shared_ptr<TensorTuple>>(handle);
+  return detail::cast_fast<std::shared_ptr<TensorTuple>>(obj);
 }
 
 // Scalar
@@ -108,14 +137,8 @@ Scalar PyUnpackScalar(PyObject* obj) {
 }
 
 // DType
-bool PyDTypeCheck(PyObject* obj) {
-  auto handle = py::reinterpret_borrow<py::object>(obj);
-  return py::isinstance<Symbol<DType>>(handle);
-}
-Symbol<DType> PyUnpackDType(PyObject* obj) {
-  auto handle = py::reinterpret_borrow<py::object>(obj);
-  return *py::cast<Symbol<DType>*>(handle);
-}
+bool PyDTypeCheck(PyObject* obj) { return detail::isinstance_fast<Symbol<DType>>(obj); }
+Symbol<DType> PyUnpackDType(PyObject* obj) { return *detail::cast_fast<Symbol<DType>*>(obj); }
 
 // DType list
 bool PyDTypeSequenceCheck(PyObject* obj) {
@@ -150,43 +173,29 @@ std::vector<Shape> PyUnpackShapeSequence(PyObject* obj) {
 }
 
 // Generator
-bool PyGeneratorCheck(PyObject* obj) {
-  auto handle = py::reinterpret_borrow<py::object>(obj);
-  return py::isinstance<Generator>(handle);
-}
+bool PyGeneratorCheck(PyObject* obj) { return detail::isinstance_fast<Generator>(obj); }
 std::shared_ptr<Generator> PyUnpackGenerator(PyObject* obj) {
-  auto handle = py::reinterpret_borrow<py::object>(obj);
-  return py::cast<std::shared_ptr<one::Generator>>(handle);
+  return detail::cast_fast<std::shared_ptr<one::Generator>>(obj);
 }
 
 // Device
-bool PyDeviceCheck(PyObject* obj) {
-  auto handle = py::reinterpret_borrow<py::object>(obj);
-  return py::isinstance<Symbol<Device>>(handle);
-}
+bool PyDeviceCheck(PyObject* obj) { return detail::isinstance_fast<Symbol<Device>>(obj); }
 Symbol<Device> PyUnpackDevice(PyObject* obj) {
-  auto handle = py::reinterpret_borrow<py::object>(obj);
-  return *py::cast<std::shared_ptr<Symbol<Device>>>(handle);
+  return *detail::cast_fast<std::shared_ptr<Symbol<Device>>>(obj);
 }
 
 // Placement
 bool PyParallelDescCheck(PyObject* obj) {
-  auto handle = py::reinterpret_borrow<py::object>(obj);
-  return py::isinstance<Symbol<ParallelDesc>>(handle);
+  return detail::isinstance_fast<Symbol<ParallelDesc>>(obj);
 }
 Symbol<ParallelDesc> PyUnpackParallelDesc(PyObject* obj) {
-  auto handle = py::reinterpret_borrow<py::object>(obj);
-  return *py::cast<std::shared_ptr<Symbol<ParallelDesc>>>(handle);
+  return *detail::cast_fast<std::shared_ptr<Symbol<ParallelDesc>>>(obj);
 }
 
 // SBP
-bool PySbpParallelCheck(PyObject* obj) {
-  auto handle = py::reinterpret_borrow<py::object>(obj);
-  return py::isinstance<Symbol<SbpParallel>>(handle);
-}
+bool PySbpParallelCheck(PyObject* obj) { return detail::isinstance_fast<Symbol<SbpParallel>>(obj); }
 Symbol<SbpParallel> PyUnpackSbpParallel(PyObject* obj) {
-  auto handle = py::reinterpret_borrow<py::object>(obj);
-  return *py::cast<std::shared_ptr<Symbol<SbpParallel>>>(handle);
+  return *detail::cast_fast<std::shared_ptr<Symbol<SbpParallel>>>(obj);
 }
 
 // SBP list
@@ -293,14 +302,10 @@ TensorIndex PyUnpackTensorIndex(PyObject* obj) {
 }
 
 // OpExpr
-bool PyOpExprCheck(PyObject* obj) {
-  auto handle = py::reinterpret_borrow<py::object>(obj);
-  return py::isinstance<OpExpr>(handle);
-}
+bool PyOpExprCheck(PyObject* obj) { return detail::isinstance_fast<OpExpr>(obj); }
 
 std::shared_ptr<OpExpr> PyUnpackOpExpr(PyObject* obj) {
-  auto handle = py::reinterpret_borrow<py::object>(obj);
-  return py::cast<std::shared_ptr<OpExpr>>(handle);
+  return detail::cast_fast<std::shared_ptr<OpExpr>>(obj);
 }
 
 // int64_t
