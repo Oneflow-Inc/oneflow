@@ -148,17 +148,32 @@ void SparsePrimalMatrix::InitPrimalMatrix() {
   auto InitPrimalDimension = [](int32_t* primal_size, std::vector<int32_t>& all2compact,
                                 std::vector<int32_t>& compact2all) {
     *primal_size = 0;
+    compact2all.resize(all2compact.size());
     for (int32_t i = 0; i < all2compact.size(); i++) {
       if (all2compact[i] >= 0) {
         all2compact[i] = *primal_size;
-        (*primal_size)++;
         compact2all[*primal_size] = i;
+        (*primal_size)++;
       }
     }
     compact2all.resize(*primal_size);
   };
   InitPrimalDimension(&primal_row_size_, rows_all2compact_, rows_compact2all_);
   InitPrimalDimension(&primal_column_size_, columns_all2compact_, columns_compact2all_);
+}
+
+void SparsePrimalMatrix::ActivateAllRowColumns() {
+  auto ActivateDimension = [](int32_t size, std::vector<int32_t>& all2compact,
+                              std::vector<int32_t>& compact2all) {
+    all2compact.resize(size);
+    compact2all.resize(size);
+    for (int32_t i = 0; i < size; i++) {
+      all2compact[i] = i;
+      compact2all[i] = i;
+    }
+  };
+  ActivateDimension(rows_.size(), rows_all2compact_, rows_compact2all_);
+  ActivateDimension(columns_.size(), columns_all2compact_, columns_compact2all_);
 }
 
 // The revised simplex method
@@ -190,7 +205,10 @@ void LinearProgrammingSolver::RevisedSimplexMethod() {
           for (int32_t i = 0; i < u_.size(); i++) {
             if (NumericalGT0(u_[i])) {
               double theta = x_[i] / u_[i];
-              if (min_i == -1 || min_theta > theta) { min_theta = theta; }
+              if (min_i == -1 || min_theta > theta + zero_plus_) {
+                min_theta = theta;
+                min_i = i;
+              }
             }
           }
           // If all the u_i >= 0, the algorithm terminates with the optimal cost -Inf.
@@ -206,7 +224,11 @@ void LinearProgrammingSolver::RevisedSimplexMethod() {
           }
           // Update x_i
           for (int32_t i = 0; i < u_.size(); i++) {
-            if (i != min_i) { x_[i] -= min_theta * u_[i]; }
+            if (i != min_i) {
+              x_[i] -= min_theta * u_[i];
+            } else {
+              x_[i] /= u_[i];
+            }
           }
           // Update inverse_base_matrix_
           // B[min_i, :] /= u_[min_i], u_[min_i] -> 1

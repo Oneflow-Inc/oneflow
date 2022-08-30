@@ -79,6 +79,7 @@ class SparsePrimalMatrix {
 
   void ExpandArtificialVariables();
   void EliminateArtificialVariables();
+  void ActivateAllRowColumns();
 
   void HideRow(int32_t i);
   void HideColumn(int32_t j);
