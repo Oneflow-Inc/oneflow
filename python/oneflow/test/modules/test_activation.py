@@ -278,7 +278,7 @@ class TestGelu(flow.unittest.TestCase):
 @flow.unittest.skip_unless_1n1d()
 class TestSigmoidModule(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    @autotest(n=5, atol=1e-3)
+    @autotest(n=5, atol=1e-3, check_dtype=True)
     def test_sigmoid_flow_with_half_data(test_case):
         device = gpu_device()
         x = random_tensor().to(device=device, dtype=torch.float16)
