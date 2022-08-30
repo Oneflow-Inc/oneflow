@@ -38,7 +38,7 @@ def current_device() -> int:
     return flow._oneflow_internal.GetCudaDeviceIndex()
 
 
-def get_device_properties(device: Union[flow.device, str, int]):
+def get_device_properties(device: Union[flow.device, str, int]=None):
     r"""Gets the properties of a device.
 
     Args:
@@ -47,15 +47,7 @@ def get_device_properties(device: Union[flow.device, str, int]):
     Returns:
         the properties of the device.
     """
-    if device == None:
-        device = current_device()
-    if isinstance(device, str):
-        _device = flow.device(device)
-        if _device.type != "cuda":
-            raise ValueError("Expect a cuda device, but got: {}".format(_device.type))
-        device = _device.index
-    if device < 0 or device >= device_count():
-        raise ValueError("Invalid device id")
+    device = _get_device_index(device, optional=True)
     return flow._oneflow_internal._get_device_properties(device)
 
 

@@ -16,6 +16,7 @@ limitations under the License.
 import os
 import unittest
 import oneflow as flow
+from oneflow.test_utils.automated_test_util.generators import nothing, oneof
 import oneflow.unittest
 import torch
 
@@ -48,10 +49,10 @@ class TestEnv(flow.unittest.TestCase):
             flow.cuda.synchronize("cpu")
 
     def test_cuda_get_device_name(test_case):
-        return torch.cuda.get_device_name(0)
+        return torch.cuda.get_device_name(oneof(0, nothing()))
 
     def test_cuda_get_device_capability(test_case):
-        return torch.cuda.get_device_capability(0)
+        return torch.cuda.get_device_capability(oneof(0, nothing()))
 
 
 if __name__ == "__main__":
