@@ -22,14 +22,30 @@ namespace oneflow {
 namespace one {
 
 MutTensorMeta::MutTensorMeta()
-    : TensorMeta(SymbolOf(Stride()), kInvalidDataType), shape_(std::make_shared<const Shape>()) {}
+    : TensorMeta(kInvalidDataType),
+      shape_(std::make_shared<const Shape>()),
+      stride_(std::make_shared<const Stride>()) {}
 
 MutTensorMeta::MutTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype)
-    : TensorMeta(SymbolOf(Stride(*shape)), dtype), shape_(std::make_shared<const Shape>(*shape)) {}
+    : TensorMeta(dtype),
+      shape_(std::make_shared<const Shape>(*shape)),
+      stride_(std::make_shared<const Stride>(*shape)) {}
 
-MutTensorMeta::MutTensorMeta(const std::shared_ptr<const Shape>& shape, Symbol<Stride> stride,
-                             DataType dtype)
-    : TensorMeta(stride, dtype), shape_(std::make_shared<const Shape>(*shape)) {}
+MutTensorMeta::MutTensorMeta(const std::shared_ptr<const Shape>& shape,
+                             const std::shared_ptr<const Stride>& stride, DataType dtype)
+    : TensorMeta(dtype),
+      shape_(std::make_shared<const Shape>(*shape)),
+      stride_(std::make_shared<const Stride>(*stride)) {}
+
+MutTensorMeta::MutTensorMeta(const Shape& shape, DataType dtype)
+    : TensorMeta(dtype),
+      shape_(std::make_shared<const Shape>(shape)),
+      stride_(std::make_shared<const Stride>(shape)) {}
+
+MutTensorMeta::MutTensorMeta(const Shape& shape, const Stride& stride, DataType dtype)
+    : TensorMeta(dtype),
+      shape_(std::make_shared<const Shape>(shape)),
+      stride_(std::make_shared<const Stride>(stride)) {}
 
 bool MutTensorMeta::operator==(const MutTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
@@ -43,13 +59,13 @@ size_t MutTensorMeta::CalcHashValue() const {
 }
 
 ConstTensorMeta::ConstTensorMeta()
-    : TensorMeta(SymbolOf(Stride()), kInvalidDataType), shape_(SymbolOf(Shape())) {}
+    : TensorMeta(kInvalidDataType), shape_(SymbolOf(Shape())), stride_(SymbolOf(Stride())) {}
 
 ConstTensorMeta::ConstTensorMeta(Symbol<Shape> shape, DataType dtype)
-    : TensorMeta(SymbolOf(Stride(*shape)), dtype), shape_(shape) {}
+    : TensorMeta(dtype), shape_(shape), stride_(SymbolOf(Stride(*shape))) {}
 
 ConstTensorMeta::ConstTensorMeta(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype)
-    : TensorMeta(stride, dtype), shape_(shape) {}
+    : TensorMeta(dtype), shape_(shape), stride_(stride) {}
 
 bool ConstTensorMeta::operator==(const ConstTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
@@ -85,15 +101,24 @@ size_t LocalTensorMeta::CalcHashValue() const {
 }
 
 MutLocalTensorMeta::MutLocalTensorMeta()
-    : MutTensorMeta(std::make_shared<const Shape>(), SymbolOf(Stride()), kInvalidDataType),
+    : MutTensorMeta(std::make_shared<const Shape>(), std::make_shared<const Stride>(),
+                    kInvalidDataType),
       device_(Symbol<Device>()) {}
 
 MutLocalTensorMeta::MutLocalTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
                                        Symbol<Device> device)
-    : MutTensorMeta(shape, SymbolOf(Stride(*shape)), dtype), device_(device) {}
+    : MutTensorMeta(shape, std::make_shared<const Stride>(*shape), dtype), device_(device) {}
 
 MutLocalTensorMeta::MutLocalTensorMeta(const std::shared_ptr<const Shape>& shape,
-                                       Symbol<Stride> stride, DataType dtype, Symbol<Device> device)
+                                       const std::shared_ptr<const Stride>& stride, DataType dtype,
+                                       Symbol<Device> device)
+    : MutTensorMeta(shape, stride, dtype), device_(device) {}
+
+MutLocalTensorMeta::MutLocalTensorMeta(const Shape& shape, DataType dtype, Symbol<Device> device)
+    : MutTensorMeta(shape, Stride(shape), dtype), device_(device) {}
+
+MutLocalTensorMeta::MutLocalTensorMeta(const Shape& shape, const Stride& stride, DataType dtype,
+                                       Symbol<Device> device)
     : MutTensorMeta(shape, stride, dtype), device_(device) {}
 
 bool MutLocalTensorMeta::operator==(const MutLocalTensorMeta& other) const {
