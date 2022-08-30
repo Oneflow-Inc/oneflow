@@ -412,6 +412,11 @@ class TestModule(flow.unittest.TestCase):
         m.eval()
         return m(x)
 
+    @profile(torch.nn.functional.dropout)
+    def profile_dropout(test_case):
+        input = torch.ones(100, 128)
+        torch.nn.functional.dropout(input, p=0.3)
+
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
