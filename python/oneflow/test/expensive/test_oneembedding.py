@@ -25,7 +25,7 @@ import oneflow.nn as nn
 import tempfile
 
 
-def _test_one_embedding(test_case, embedding_size):
+def _test_one_embedding(test_case, embedding_size, test_opt):
     class OneEmbedding(nn.Module):
         def __init__(
             self, embedding_vec_size, persistent_path, table_size_array,
@@ -41,12 +41,14 @@ def _test_one_embedding(test_case, embedding_size):
                 for scale in scales
             ]
             store_options = flow.one_embedding.make_device_mem_store_options(
-                persistent_path=persistent_path, capacity=vocab_size
+                persistent_path=persistent_path,
+                capacity=vocab_size,
+                size_factor=3 if test_opt == "Adam" else 1,
             )
 
             super(OneEmbedding, self).__init__()
             self.one_embedding = flow.one_embedding.MultiTableEmbedding(
-                f"oneembedding_{embedding_vec_size}",
+                f"oneembedding_{embedding_vec_size}_{test_opt}",
                 embedding_dim=embedding_vec_size,
                 dtype=flow.float,
                 key_type=flow.int64,
@@ -62,9 +64,7 @@ def _test_one_embedding(test_case, embedding_size):
             self, embedding_vec_size=128, persistent_path=None, table_size_array=[],
         ):
             super(TestModule, self).__init__()
-            self.embedding = OneEmbedding(
-                embedding_vec_size, persistent_path, table_size_array,
-            )
+            self.embedding = OneEmbedding(embedding_vec_size, persistent_path, table_size_array,)
             self.mlp = nn.Linear(embedding_vec_size, 1)
 
         def forward(self, inputs) -> flow.Tensor:
@@ -92,9 +92,7 @@ def _test_one_embedding(test_case, embedding_size):
 
     def np_to_global(np):
         t = flow.from_numpy(np)
-        return t.to_global(
-            placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.split(0)
-        )
+        return t.to_global(placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.split(0))
 
     batch_size = 32
     table_size_array = [32, 65536, 100, 7]
@@ -108,7 +106,12 @@ def _test_one_embedding(test_case, embedding_size):
         )
         module.to_global(flow.env.all_device_placement("cuda"), flow.sbp.broadcast)
 
-        opt = flow.optim.SGD(module.parameters(), lr=0.1)
+        if test_opt == "Adam":
+            opt = flow.optim.Adam(module.parameters(), lr=0.1)
+        elif test_opt == "SGD":
+            opt = flow.optim.SGD(module.parameters(), lr=0.1)
+        else:
+            assert False
         loss = flow.nn.BCEWithLogitsLoss(reduction="none").to("cuda")
 
         train_graph = TrainGraph(module, loss, opt)
@@ -129,6 +132,7 @@ class OneEmbeddingTestCase(flow.unittest.TestCase):
     def test_one_embedding(test_case):
         arg_dict = OrderedDict()
         arg_dict["embedding_size"] = [128, 17]
+        arg_dict["test_opt"] = ["SGD", "Adam"]
         for kwargs in GenArgDict(arg_dict):
             _test_one_embedding(test_case, **kwargs)
 
