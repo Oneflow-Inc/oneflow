@@ -258,4 +258,83 @@ REGISTER_ADAPTIVE_POOL_KERNEL_WITH_DEVICE(DeviceType::kCPU)
   REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL(device, int)
 
 REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL_WITH_DEVICE(DeviceType::kCPU)
+
+template<typename T, int32_t dim>
+void AdapativeMaxPoolForward(user_op::KernelComputeContext* ctx) {
+  user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
+  user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
+  const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
+  const Shape& y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
+
+  // TODO (Yao Chi): Support 'channels_last'
+  std::string data_format = "channels_first";
+  const Shape& in = GetShape5D(x_shape, data_format, dim);
+  const Shape& out = GetShape5D(y_shape, data_format, dim);
+
+  const T* in_ptr = in_tensor->dptr<T>();
+  T* out_ptr = out_tensor->mut_dptr<T>();
+
+  const int64_t input_width = in.Count(4);
+  const int64_t output_width = out.Count(4);
+  const int64_t input_image_size = in.Count(3);
+  const int64_t output_image_size = out.Count(3);
+  const int64_t input_size = in.Count(2);
+  const int64_t output_size = out.Count(2);
+
+  FOR_RANGE(int64_t, n, 0, in.At(0)) {
+    FOR_RANGE(int64_t, c, 0, in.At(1)) {
+      FOR_RANGE(int64_t, od, 0, out.At(2)) {
+        int64_t id0 = start_index(od, out.At(2), in.At(2));
+        int64_t id1 = end_index(od, out.At(2), in.At(2));
+        FOR_RANGE(int64_t, oh, 0, out.At(3)) {
+          int64_t ih0 = start_index(oh, out.At(3), in.At(3));
+          int64_t ih1 = end_index(oh, out.At(3), in.At(3));
+          FOR_RANGE(int64_t, ow, 0, out.At(4)) {
+            int64_t iw0 = start_index(ow, out.At(4), in.At(4));
+            int64_t iw1 = end_index(ow, out.At(4), in.At(4));
+
+            // Find out local max
+            T local_max = in_ptr[0];
+            FOR_RANGE(int64_t, id, id0, id1) {
+              FOR_RANGE(int64_t, ih, ih0, ih1) {
+                FOR_RANGE(int64_t, iw, iw0, iw1) {
+                  if (in_ptr[id * input_image_size + ih * input_width + iw] > local_max) {
+                    local_max = in_ptr[id * input_image_size + ih * input_width + iw];
+                  }
+                }
+              }
+            }
+            out_ptr[od * output_image_size + oh * output_width + ow] = local_max;
+          }
+        }
+      }
+      in_ptr += input_size;
+      out_ptr += output_size;
+    }
+  }
+}
+
+template<typename T>
+class AdaptiveMaxPool2DCpuKernel final : public user_op::OpKernel {
+ public:
+  AdaptiveMaxPool2DCpuKernel() = default;
+  ~AdaptiveMaxPool2DCpuKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    AdapativeMaxPoolForward<T, 2>(ctx);
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+#define REGISTER_ADAPTIVE_MAX_POOL_CPU(dtype)                         \
+  REGISTER_USER_KERNEL("adaptive_max_pool2d")                         \
+      .SetCreateFn<AdaptiveMaxPool2DCpuKernel<dtype>>()               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+
+REGISTER_ADAPTIVE_MAX_POOL_CPU(double);
+REGISTER_ADAPTIVE_MAX_POOL_CPU(float);
+REGISTER_ADAPTIVE_MAX_POOL_CPU(int);
+
 }  // namespace oneflow

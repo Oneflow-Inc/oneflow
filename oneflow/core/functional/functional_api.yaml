@@ -2593,3 +2593,7 @@
 - name: "batch_norm_backward_elemt"
   signature: "Tensor (Tensor grad_out, Tensor input, Tensor mean, Tensor invstd, Tensor weight, Tensor sum_dy, Tensor sum_dy_xmu, Tensor count, Int32 axis) => BatchNormBackwardElemt"
   bind_python: True
+
+- name: "adaptive_max_pool2d"
+  signature: "Tensor (Tensor input, Int64List[2] output_size, Bool return_indices=False) => AdaptiveMaxPool2D"
+  bind_python: True
