@@ -128,7 +128,7 @@ class Module(object):
         self._forward_pre_hooks = OrderedDict()
         self._state_dict_hooks = OrderedDict()
         self._load_state_dict_pre_hooks = OrderedDict()
-        if self._is_ddp_module:
+        if hasattr(self, "_is_ddp_module") and self._is_ddp_module:
             # flow.nn.parallel.DistributedDataParallel updates the module inplace
             flow.nn.parallel.DistributedDataParallel(self)
 
