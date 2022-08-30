@@ -467,13 +467,13 @@ class CacheImpl : public Cache {
   void Test(ep::Stream* stream, uint32_t n_keys, const void* keys, uint32_t* n_missing,
             void* missing_keys, uint32_t* missing_indices) override;
 
-  void Get(ep::Stream* stream, uint32_t n_keys, const void* keys, void* values, uint32_t* n_missing,
-           void* missing_keys, uint32_t* missing_indices, const int64_t padding_idx) override;
+  void Get(ep::Stream* stream, uint32_t n_keys, const int64_t padding_idx, const void* keys, void* values, uint32_t* n_missing,
+           void* missing_keys, uint32_t* missing_indices) override;
 
   void Get(ep::Stream* stream, uint32_t n_keys, const void* keys, void* values,
            uint8_t* mask) override;
 
-  void Put(ep::Stream* stream, uint32_t n_keys, const void* keys, const void* values,
+  void Put(ep::Stream* stream, uint32_t n_keys, const int64_t padding_idx, const void* keys, const void* values,
            uint32_t* n_evicted, void* evicted_keys, void* evicted_values) override;
   void FusedHalfUpdatePut(ep::Stream* stream, uint32_t n_keys, const void* keys, const void* values,
                           const void* update, const float* lr, float scale, uint32_t* n_evicted,
@@ -512,10 +512,10 @@ void CacheImpl<Key, Elem, Index, pack_size>::Test(ep::Stream* stream, uint32_t n
 
 template<typename Key, typename Elem, typename Index, size_t pack_size>
 void CacheImpl<Key, Elem, Index, pack_size>::Get(ep::Stream* stream, uint32_t n_keys,
+                                                 const int64_t padding_idx,
                                                  const void* keys, void* values,
                                                  uint32_t* n_missing, void* missing_keys,
-                                                 uint32_t* missing_indices,
-                                                 const int64_t padding_idx) {
+                                                 uint32_t* missing_indices) {
   OF_CUDA_CHECK(
       cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), stream->As<ep::CudaStream>()->cuda_stream()));
   if (n_keys == 0) { return; }
@@ -548,6 +548,7 @@ void CacheImpl<Key, Elem, Index, pack_size>::Get(ep::Stream* stream, uint32_t n_
 
 template<typename Key, typename Elem, typename Index, size_t pack_size>
 void CacheImpl<Key, Elem, Index, pack_size>::Put(ep::Stream* stream, uint32_t n_keys,
+                                                 const int64_t padding_idx, 
                                                  const void* keys, const void* values,
                                                  uint32_t* n_evicted, void* evicted_keys,
                                                  void* evicted_values) {

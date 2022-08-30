@@ -87,20 +87,19 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
   OF_CUDA_CHECK(cudaMemcpy(keys, keys_host, keys_size, cudaMemcpyDefault));
   OF_CUDA_CHECK(cudaMemcpy(values, values_host, values_size, cudaMemcpyDefault));
 
-  store->Put(stream, 0, keys, values);
+  const int64_t padding_idx = -1; 
+  store->Put(stream, 0, padding_idx, keys, values);
   OF_CUDA_CHECK(cudaDeviceSynchronize());
   OF_CUDA_CHECK(cudaGetLastError());
 
-  const int64_t padding_idx = -1;
-
   for (size_t offset = 0; offset < test_embeddings; offset += batch_size) {
     const size_t num_keys = std::min(batch_size, test_embeddings - offset);
-    store->Get(stream, num_keys, keys + offset, values1 + offset * embedding_vec_size, n_missing,
-               missing_indices, padding_idx);
+    store->Get(stream, num_keys, padding_idx, keys + offset, values1 + offset * embedding_vec_size, n_missing,
+               missing_indices);
     OF_CUDA_CHECK(cudaMemcpy(host_n_missing, n_missing, sizeof(uint32_t), cudaMemcpyDefault));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     ASSERT_EQ(*host_n_missing, num_keys);
-    store->Put(stream, num_keys, keys + offset, values + offset * embedding_vec_size);
+    store->Put(stream, num_keys, padding_idx, keys + offset, values + offset * embedding_vec_size);
   }
 
   OF_CUDA_CHECK(cudaDeviceSynchronize());
@@ -111,8 +110,8 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
   OF_CUDA_CHECK(cudaMemset(values, 0, values_size));
   for (size_t offset = 0; offset < test_embeddings; offset += batch_size) {
     const size_t num_keys = std::min(batch_size, test_embeddings - offset);
-    store->Get(stream, num_keys, keys + offset, values + offset * embedding_vec_size, n_missing,
-               missing_indices, padding_idx);
+    store->Get(stream, num_keys, padding_idx, keys + offset, values + offset * embedding_vec_size, n_missing,
+               missing_indices);
     OF_CUDA_CHECK(cudaMemcpy(host_n_missing, n_missing, sizeof(uint32_t), cudaMemcpyDefault));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     ASSERT_EQ(*host_n_missing, 0);
@@ -130,8 +129,8 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
 
   for (size_t offset = 0; offset < test_embeddings; offset += batch_size) {
     const size_t num_keys = std::min(batch_size, test_embeddings - offset);
-    store->Get(stream, num_keys, keys + offset, values1 + offset * embedding_vec_size, n_missing,
-               missing_indices, padding_idx);
+    store->Get(stream, num_keys, padding_idx, keys + offset, values1 + offset * embedding_vec_size, n_missing,
+               missing_indices);
     OF_CUDA_CHECK(cudaMemcpy(host_n_missing, n_missing, sizeof(uint32_t), cudaMemcpyDefault));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     ASSERT_EQ(*host_n_missing, num_keys);
@@ -143,8 +142,8 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
   OF_CUDA_CHECK(cudaMemset(values, 0, values_size));
   for (size_t offset = 0; offset < test_embeddings; offset += batch_size) {
     const size_t num_keys = std::min(batch_size, test_embeddings - offset);
-    store->Get(stream, num_keys, keys + offset, values + offset * embedding_vec_size, n_missing,
-               missing_indices, padding_idx);
+    store->Get(stream, num_keys, padding_idx, keys + offset, values + offset * embedding_vec_size, n_missing,
+               missing_indices);
     OF_CUDA_CHECK(cudaMemcpy(host_n_missing, n_missing, sizeof(uint32_t), cudaMemcpyDefault));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     ASSERT_EQ(*host_n_missing, 0);
