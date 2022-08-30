@@ -29,8 +29,7 @@ struct NeedSoftSync : public StreamTypeVisitor<NeedSoftSync> {
   static bool VisitAsyncedDevice2Host(DeviceType device_type) {
     return VisitDevice2Host(device_type);
   }
-  static bool VisitSyncedLaunchedCommNet(DeviceType device_type) { return false; }
-  static bool VisitAsyncedLaunchedCommNet(DeviceType) { return false; }
+  static bool VisitCcl(DeviceType device_type) { return false; }
   static bool VisitBarrier(DeviceType) { return false; }
   static bool VisitCriticalSection(DeviceType) { return false; }
   static bool VisitLazyJobLauncher(DeviceType) { return false; }

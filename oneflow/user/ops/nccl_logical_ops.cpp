@@ -57,7 +57,7 @@ namespace oneflow {
 
 /* static */ Maybe<Symbol<Stream>> _ncclLogicalAllReduceOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 /* static */ Maybe<void> _ncclLogicalReduceScatterOp::InferLogicalTensorDesc(
@@ -98,7 +98,7 @@ namespace oneflow {
 
 /* static */ Maybe<Symbol<Stream>> _ncclLogicalReduceScatterOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 /* static */ Maybe<void> _ncclLogicalAllGatherOp::InferLogicalTensorDesc(
@@ -138,7 +138,7 @@ namespace oneflow {
 
 /* static */ Maybe<Symbol<Stream>> _ncclLogicalAllGatherOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 /* static */ Maybe<void> _ncclLogicalAllGatherNoncontinuousOp::InferLogicalTensorDesc(
@@ -180,7 +180,7 @@ namespace oneflow {
 
 /* static */ Maybe<Symbol<Stream>> _ncclLogicalAllGatherNoncontinuousOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 /* static */ Maybe<void> _ncclLogicalReduceScatterNoncontinuousOp::InferLogicalTensorDesc(
@@ -226,7 +226,7 @@ namespace oneflow {
 
 /* static */ Maybe<Symbol<Stream>> _ncclLogicalReduceScatterNoncontinuousOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 /* static */ Maybe<void> _ncclLogicalS2sOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
@@ -264,7 +264,7 @@ namespace oneflow {
 
 /* static */ Maybe<Symbol<Stream>> _ncclLogicalS2sOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 /* static */ Maybe<void> _ncclLogicalSendRecvOp::InferLogicalTensorDesc(
@@ -297,7 +297,7 @@ namespace oneflow {
 
 /* static */ Maybe<Symbol<Stream>> _ncclLogicalSendRecvOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 }  // namespace oneflow

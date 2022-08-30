@@ -26,8 +26,7 @@ struct IsStreamAllocatorPinned : public StreamTypeVisitor<IsStreamAllocatorPinne
   static bool VisitHost2Device() { return false; }
   static bool VisitDevice2Host() { return false; }
   static bool VisitAsyncedDevice2Host() { return VisitDevice2Host(); }
-  static bool VisitSyncedLaunchedCommNet() { return false; }
-  static bool VisitAsyncedLaunchedCommNet() { return false; }
+  static bool VisitCcl() { return false; }
   static bool VisitBarrier() { return false; }
   static bool VisitCriticalSection() { return false; }
   static bool VisitLazyJobLauncher() { return false; }
