@@ -255,49 +255,36 @@ Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
   return output;
 }
 
-Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& in_shape,
-                     const std::vector<int32_t>& expand_shape) {
-  const auto& shape = input->shape();
-  const auto& strides = JUST(input->stride());
-  const int64_t ndim = in_shape.size();
+Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const Shape& expand_shape) {
+  const Shape& input_shape = *input->shape();
+  const Stride& input_strides = *JUST(input->stride());
+  size_t lpad = expand_shape.size() - input_shape.size();
+  CHECK_GE_OR_RETURN(lpad, 0);  // NOLINT(maybe-need-error-msg)
+  Stride target_stride(expand_shape.size());
+  std::vector<int32_t> reduce_dims;
+  reduce_dims.reserve(expand_shape.size());
 
-  const int64_t target_ndim = expand_shape.size();
-  DimVector target_dim_vec(target_ndim);
-  Stride target_stride_vec(target_ndim);
-
-  for (int i = 0; i < target_ndim; i++) {
-    if (i < ndim) {
-      if (expand_shape[target_ndim - 1 - i] == -1) {
-        target_dim_vec[target_ndim - 1 - i] = in_shape[ndim - 1 - i];
-        target_stride_vec[target_ndim - 1 - i] = strides->at(ndim - 1 - i);
-      } else if (in_shape[ndim - 1 - i]
-                 == 1) {  // TODO (bowen): what if dim is 1, should stride be set to 0?
-        target_dim_vec[target_ndim - 1 - i] = expand_shape[target_ndim - 1 - i];
-        target_stride_vec[target_ndim - 1 - i] = 0;
+  for (size_t i = 0; i < expand_shape.size(); ++i) {
+    const auto& t_dim = expand_shape[i];
+    if (i >= lpad) {
+      const auto& dim = input_shape[i - lpad];
+      const auto& stride = input_strides[i - lpad];
+      if (dim == t_dim) {
+        target_stride[i] = stride;
       } else {
-        if (expand_shape[target_ndim - 1 - i] != in_shape[ndim - 1 - i]) {
-          return Error::RuntimeError()
-                 << "The expanded size of the tensor (" << expand_shape[target_ndim - 1 - i] << ")"
-                 << "must match the existing size (" << in_shape[ndim - 1 - i]
-                 << ") at non-singleton dimension " << ndim - i << ".  Target sizes: "
-                 << ".  Tensor sizes: " << shape->ToString();
-        }
-        target_dim_vec[target_ndim - 1 - i] = in_shape[ndim - 1 - i];
-        target_stride_vec[target_ndim - 1 - i] = strides->at(ndim - 1 - i);
+        CHECK_EQ_OR_RETURN(dim, 1);  // NOLINT(maybe-need-error-msg)
+        target_stride[i] = 0;
+        reduce_dims.push_back(i);
       }
     } else {
-      if (expand_shape[target_ndim - 1 - i] == -1) {
-        return Error::RuntimeError() << "The expanded size of the tensor (-1) "
-                                     << "isn't allowed in a leading, non-existing dimension 0";
-      }
-      target_dim_vec[target_ndim - 1 - i] = expand_shape[target_ndim - 1 - i];
-      target_stride_vec[target_ndim - 1 - i] = 0;
+      target_stride[i] = 0;
+      reduce_dims.push_back(i);
     }
   }
 
   int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
   std::shared_ptr<Tensor> output =
-      JUST(BasicView(input, Shape(target_dim_vec), target_stride_vec, storage_offset));
+      JUST(BasicView(input, expand_shape, target_stride, storage_offset));
 
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
     auto backward_fn = std::make_shared<BackwardFunction>();
@@ -307,7 +294,12 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int
       CHECK_EQ_OR_RETURN(out_grads.size(), 1)
           << "out grad size should be 1, but got " << out_grads.size();
       in_grads->resize(1);
-      (*in_grads)[0] = JUST(functional::ExpandGrad(out_grads[0], in_shape, expand_shape));
+      auto reduced = JUST(functional::ReduceSum(out_grads[0], reduce_dims, true));
+      if (lpad > 0) {
+        in_grads->at(0) = JUST(functional::Flatten(reduced, 0, lpad));
+      } else {
+        in_grads->at(0) = reduced;
+      }
       return Maybe<void>::Ok();
     };
     backward_fn->status = []() { return true; };
