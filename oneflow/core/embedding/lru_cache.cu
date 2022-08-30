@@ -233,13 +233,6 @@ struct SetContext {
     }
   }
 
-  __device__ void FillZero(const LruCacheContext<Key, Elem>& cache_ctx, const ThreadContext& thread_ctx, Elem* line) {
-    for (int i = thread_ctx.lane_id; i < cache_ctx.line_size; i += kWarpSize) {
-      Elem zero{0.0}; 
-      line[i] = zero;
-    }
-  }
-
   __device__ int InsertWithoutEvicting(const LruCacheContext<Key, Elem>& cache_ctx,
                                        const ThreadContext& thread_ctx, Key key) {
     int insert_way = -1;
@@ -309,8 +302,7 @@ struct SetContext {
 };
 
 template<typename Key, typename Elem, bool test_only>
-__global__ void GetKernel(LruCacheContext<Key, Elem> cache_ctx, uint32_t num_keys, 
-                          const int64_t padding_idx, const Key* keys,
+__global__ void GetKernel(LruCacheContext<Key, Elem> cache_ctx, uint32_t num_keys, const Key* keys,
                           Elem* values, uint32_t* n_missing_keys, Key* missing_keys,
                           uint32_t* missing_indices) {
   ThreadContext thread_ctx{};
@@ -335,22 +327,16 @@ __global__ void GetKernel(LruCacheContext<Key, Elem> cache_ctx, uint32_t num_key
       const Key key = block_keys[thread_ctx.warp_id_in_block][i];
       const size_t set_id = block_set_ids[thread_ctx.warp_id_in_block][i];
       SetContext<Key, Elem> set_ctx(cache_ctx, set_id);
-      if(key == padding_idx){
-        if(!test_only){
-          set_ctx.FillZero(cache_ctx, thread_ctx, values + key_idx * cache_ctx.line_size);
+      const int way = set_ctx.Lookup(thread_ctx, key);
+      if (way < 0) {
+        if (thread_ctx.lane_id == n_warp_missing) {
+          warp_missing_key = key;
+          warp_missing_index = key_idx;
         }
-      } else {
-        const int way = set_ctx.Lookup(thread_ctx, key);
-        if (way < 0) {
-          if (thread_ctx.lane_id == n_warp_missing) {
-            warp_missing_key = key;
-            warp_missing_index = key_idx;
-          }
-          __syncwarp();
-          n_warp_missing += 1;
-        } else if (!test_only) {
-          set_ctx.Read(cache_ctx, thread_ctx, way, values + key_idx * cache_ctx.line_size);
-        }
+        __syncwarp();
+        n_warp_missing += 1;
+      } else if (!test_only) {
+        set_ctx.Read(cache_ctx, thread_ctx, way, values + key_idx * cache_ctx.line_size);
       }
     }
     if (n_warp_missing > 0) {
@@ -370,7 +356,6 @@ __global__ void GetKernel(LruCacheContext<Key, Elem> cache_ctx, uint32_t num_key
 
 template<typename Key, typename Elem>
 __global__ void PutWithoutEvictingKernel(LruCacheContext<Key, Elem> cache_ctx, uint32_t num_keys,
-                                         const int64_t padding_idx, 
                                          const Key* keys, const Elem* values, uint32_t* n_missing,
                                          Key* missing_keys, uint32_t* missing_indices) {
   ThreadContext thread_ctx{};
@@ -393,24 +378,22 @@ __global__ void PutWithoutEvictingKernel(LruCacheContext<Key, Elem> cache_ctx, u
     for (uint32_t i = 0; i < n_batch_keys; ++i) {
       const uint32_t key_idx = batch_offset + i;
       const Key key = block_keys[thread_ctx.warp_id_in_block][i];
-      if(key != padding_idx){
-        const size_t set_id = block_set_ids[thread_ctx.warp_id_in_block][i];
-        SetContext<Key, Elem> set_ctx(cache_ctx, set_id);
-        set_ctx.Lock(thread_ctx);
-        Key evicted_key = 0;
-        const int insert_way = set_ctx.InsertWithoutEvicting(cache_ctx, thread_ctx, key);
-        if (insert_way >= 0) {
-          set_ctx.Write(cache_ctx, thread_ctx, insert_way, values + cache_ctx.line_size * key_idx);
-        } else {
-          if (thread_ctx.lane_id == n_warp_missing) {
-            warp_missing_key = key;
-            warp_missing_index = key_idx;
-          }
-          __syncwarp();
-          n_warp_missing += 1;
+      const size_t set_id = block_set_ids[thread_ctx.warp_id_in_block][i];
+      SetContext<Key, Elem> set_ctx(cache_ctx, set_id);
+      set_ctx.Lock(thread_ctx);
+      Key evicted_key = 0;
+      const int insert_way = set_ctx.InsertWithoutEvicting(cache_ctx, thread_ctx, key);
+      if (insert_way >= 0) {
+        set_ctx.Write(cache_ctx, thread_ctx, insert_way, values + cache_ctx.line_size * key_idx);
+      } else {
+        if (thread_ctx.lane_id == n_warp_missing) {
+          warp_missing_key = key;
+          warp_missing_index = key_idx;
         }
-        set_ctx.Unlock(thread_ctx);
+        __syncwarp();
+        n_warp_missing += 1;
       }
+      set_ctx.Unlock(thread_ctx);
     }
     if (n_warp_missing > 0) {
       uint32_t base_missing_idx = 0;
@@ -554,31 +537,30 @@ class LruCache : public Cache {
     OF_CUDA_CHECK(cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
     if (n_keys == 0) { return; }
     cuda_stream->LaunchKernel(GetKernel<Key, Elem, true>, GetLaunchConfig(n_keys), ctx_, n_keys,
-                              -1, 
                               static_cast<const Key*>(keys), nullptr, n_missing,
                               static_cast<Key*>(missing_keys), missing_indices);
   }
 
-  void Get(ep::Stream* stream, uint32_t n_keys, const int64_t padding_idx, const void* keys, void* values, uint32_t* n_missing,
-           void* missing_keys, uint32_t* missing_indices) override {
+  void Get(ep::Stream* stream, uint32_t n_keys, const int64_t padding_idx, const void* keys,
+           void* values, uint32_t* n_missing, void* missing_keys,
+           uint32_t* missing_indices) override {
     CHECK_LE(n_keys, max_query_length_);
     auto cuda_stream = stream->As<ep::CudaStream>();
     OF_CUDA_CHECK(cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
     if (n_keys == 0) { return; }
     cuda_stream->LaunchKernel(GetKernel<Key, Elem, false>, GetLaunchConfig(n_keys), ctx_, n_keys,
-                              padding_idx, 
                               static_cast<const Key*>(keys), static_cast<Elem*>(values), n_missing,
                               static_cast<Key*>(missing_keys), missing_indices);
   }
 
-  void Put(ep::Stream* stream, uint32_t n_keys, const int64_t padding_idx, const void* keys, const void* values,
+  void Put(ep::Stream* stream, uint32_t n_keys, const void* keys, const void* values,
            uint32_t* n_evicted, void* evicted_keys, void* evicted_values) override {
     CHECK_LE(n_keys, max_query_length_);
     auto cuda_stream = stream->As<ep::CudaStream>();
     OF_CUDA_CHECK(cudaMemsetAsync(n_evicted, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
     if (n_keys == 0) { return; }
     cuda_stream->LaunchKernel(PutWithoutEvictingKernel<Key, Elem>, GetLaunchConfig(n_keys), ctx_,
-                              n_keys, padding_idx, static_cast<const Key*>(keys),
+                              n_keys, static_cast<const Key*>(keys),
                               static_cast<const Elem*>(values), n_evicted, query_keys_buffer_,
                               query_indices_buffer_);
     cuda_stream->LaunchKernel(EvictKernel<Key, Elem>, GetLaunchConfig(n_keys), ctx_,

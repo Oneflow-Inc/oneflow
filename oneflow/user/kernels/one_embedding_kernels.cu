@@ -364,7 +364,7 @@ void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* kernel_
             reinterpret_cast<uint32_t*>(num_missing_ptr),
             reinterpret_cast<uint32_t*>(missing_indices), reinterpret_cast<T*>(store_values));
   }
-  if (is_prefetch) { store->Put(stream, num_unique, padding_idx, unique_ids, store_values); }
+  if (is_prefetch) { store->Put(stream, num_unique, unique_ids, store_values); }
 }
 
 template<typename T, size_t pack_size>
@@ -808,8 +808,7 @@ class EmbeddingPutKernel final : public user_op::OpKernel {
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
     uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
-    const int64_t padding_idx = -1; 
-    store->Put(ctx->stream(), num_unique, padding_idx, unique_ids->dptr(),
+    store->Put(ctx->stream(), num_unique, unique_ids->dptr(),
                embedding_state->EmbeddingPutUniqueEmbeddings(current_iter_));
     embedding_state->OnEmbeddingPutEnd(ctx, current_iter_);
     current_iter_++;

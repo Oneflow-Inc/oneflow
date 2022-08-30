@@ -124,8 +124,8 @@ void TestCache(Cache* cache, uint32_t line_size) {
       cache->Get(stream, n_keys, d_keys, d_values, mask);
     }
     const int64_t padding_idx = -1;
-    cache->Get(stream, n_keys, padding_idx, d_keys, 
-               d_values, d_n_missing, d_missing_keys, d_missing_indices);
+    cache->Get(stream, n_keys, padding_idx, d_keys, d_values, d_n_missing, d_missing_keys,
+               d_missing_indices);
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     OF_CUDA_CHECK(cudaMemcpy(n_missing, d_n_missing, sizeof(uint32_t), cudaMemcpyDefault));
     OF_CUDA_CHECK(cudaMemcpy(missing_keys, d_missing_keys, keys_size, cudaMemcpyDefault));
@@ -159,7 +159,7 @@ void TestCache(Cache* cache, uint32_t line_size) {
     }
     OF_CUDA_CHECK(cudaMemcpy(d_values, values, values_size, cudaMemcpyDefault));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
-    cache->Put(stream, n_keys, padding_idx, d_keys, d_values, d_n_evicted, d_evicted_keys, d_evicted_values);
+    cache->Put(stream, n_keys, d_keys, d_values, d_n_evicted, d_evicted_keys, d_evicted_values);
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     OF_CUDA_CHECK(cudaMemcpy(n_evicted, d_n_evicted, sizeof(uint32_t), cudaMemcpyDefault));
     OF_CUDA_CHECK(cudaMemcpy(evicted_keys, d_evicted_keys, keys_size, cudaMemcpyDefault));

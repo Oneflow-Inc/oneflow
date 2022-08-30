@@ -128,9 +128,9 @@ class KeyValueStoreImpl : public KeyValueStore {
     max_query_length_ = query_length;
   }
 
-  void Get(ep::Stream* stream, uint32_t num_keys, const int64_t padding_idx, const void* keys, void* values,
-           uint32_t* n_missing, uint32_t* missing_indices) override;
-  void Put(ep::Stream* stream, uint32_t num_keys, const int64_t padding_idx, const void* keys, const void* values) override;
+  void Get(ep::Stream* stream, uint32_t num_keys, const int64_t padding_idx, const void* keys,
+           void* values, uint32_t* n_missing, uint32_t* missing_indices) override;
+  void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values) override;
   bool SnapshotExists(const std::string& name) override;
   void LoadSnapshot(const std::string& name) override;
   void LoadSnapshot(const std::string& name,
@@ -152,9 +152,9 @@ class KeyValueStoreImpl : public KeyValueStore {
 };
 
 template<typename Key>
-void KeyValueStoreImpl<Key>::Get(ep::Stream* stream, uint32_t num_keys,
-                                 const int64_t padding_idx, const void* keys,
-                                 void* values, uint32_t* n_missing, uint32_t* missing_indices) {
+void KeyValueStoreImpl<Key>::Get(ep::Stream* stream, uint32_t num_keys, const int64_t padding_idx,
+                                 const void* keys, void* values, uint32_t* n_missing,
+                                 uint32_t* missing_indices) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto cuda_stream = stream->As<ep::CudaStream>();
   CHECK_LE(num_keys, max_query_length_);
@@ -186,8 +186,7 @@ void KeyValueStoreImpl<Key>::Get(ep::Stream* stream, uint32_t num_keys,
 }
 
 template<typename Key>
-void KeyValueStoreImpl<Key>::Put(ep::Stream* stream, uint32_t num_keys, const int64_t padding_idx, 
-                                 const void* keys,
+void KeyValueStoreImpl<Key>::Put(ep::Stream* stream, uint32_t num_keys, const void* keys,
                                  const void* values) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto cuda_stream = stream->As<ep::CudaStream>();
