@@ -38,21 +38,21 @@ class UnaryMathGradGrad : public OpExprGradFunction<UnaryMathGradGradState> {
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
     CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
-    ctx->x_requires_grad = inputs.at(0)->requires_grad();
-    ctx->grad_requires_grad = inputs.at(1)->requires_grad();
-    ctx->SaveTensorForBackward(inputs.at(0));
-    if (ctx->x_requires_grad) { ctx->SaveTensorForBackward(inputs.at(1)); }
+    ctx->x_requires_grad = inputs[0]->requires_grad();
+    ctx->grad_requires_grad = inputs[1]->requires_grad();
+    ctx->SaveTensorForBackward(inputs[0]);
+    if (ctx->x_requires_grad) { ctx->SaveTensorForBackward(inputs[1]); }
     return Maybe<void>::Ok();
   }
   Maybe<void> Apply(const UnaryMathGradGradState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->resize(2);
-    const auto& x = ctx->SavedTensors().at(0);
+    const auto& x = ctx->SavedTensors()[0];
     if (ctx->x_requires_grad) {
-      const auto& grad = ctx->SavedTensors().at(1);
-      in_grads->at(0) = JUST(functional::Mul(out_grads.at(0), JUST(BwBwFunc(x, grad))));
+      const auto& grad = ctx->SavedTensors()[1];
+      (*in_grads)[0] = JUST(functional::Mul(out_grads[0], JUST(BwBwFunc(x, grad))));
     }
-    if (ctx->grad_requires_grad) { in_grads->at(1) = JUST(BwFunc(x, out_grads.at(0))); }
+    if (ctx->grad_requires_grad) { (*in_grads)[1] = JUST(BwFunc(x, out_grads[0])); }
     return Maybe<void>::Ok();
   }
 };
@@ -64,17 +64,17 @@ class UnaryMathGradGradWithZeroDDX : public OpExprGradFunction<UnaryMathGradGrad
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
     CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
-    ctx->x_requires_grad = inputs.at(0)->requires_grad();
-    ctx->grad_requires_grad = inputs.at(1)->requires_grad();
-    ctx->SaveTensorForBackward(inputs.at(0));
+    ctx->x_requires_grad = inputs[0]->requires_grad();
+    ctx->grad_requires_grad = inputs[1]->requires_grad();
+    ctx->SaveTensorForBackward(inputs[0]);
     return Maybe<void>::Ok();
   }
   Maybe<void> Apply(const UnaryMathGradGradState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->resize(2);
-    const auto& x = ctx->SavedTensors().at(0);
-    if (ctx->x_requires_grad) { in_grads->at(0) = JUST(functional::ZerosLike(x)); }
-    if (ctx->grad_requires_grad) { in_grads->at(1) = JUST(BwFunc(x, out_grads.at(0))); }
+    const auto& x = ctx->SavedTensors()[0];
+    if (ctx->x_requires_grad) { (*in_grads)[0] = JUST(functional::ZerosLike(x)); }
+    if (ctx->grad_requires_grad) { (*in_grads)[1] = JUST(BwFunc(x, out_grads[0])); }
     return Maybe<void>::Ok();
   }
 };
