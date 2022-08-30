@@ -58,12 +58,7 @@ class TensorMeta : public user_op::TensorDesc {
   virtual void set_is_dynamic(bool is_dynamic) override { PRINT_BUG_PROMPT_AND_ABORT(); }
 
  protected:
-  TensorMeta& operator=(const TensorMeta& other) {
-    this->stride_ = other.stride_;
-    this->data_type_ = other.data_type_;
-    this->is_dynamic_ = other.is_dynamic_;
-    return *this;
-  }
+  TensorMeta& operator=(const TensorMeta& other) = default;
 
   Symbol<Stride> stride_;
   DataType data_type_;
@@ -74,7 +69,8 @@ class MutTensorMeta : public TensorMeta {
  public:
   // uninitialized MutTensorMeta.
   MutTensorMeta();
-  MutTensorMeta(const MutTensorMeta&) = default;
+  MutTensorMeta(const MutTensorMeta& other)
+      : TensorMeta(other), shape_(std::make_shared<const Shape>(*other.shape_)) {}
   MutTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype);
   MutTensorMeta(const std::shared_ptr<const Shape>& shape, Symbol<Stride> stride, DataType dtype);
   MutTensorMeta(const Shape& shape, DataType dtype)
@@ -95,7 +91,11 @@ class MutTensorMeta : public TensorMeta {
   bool operator==(const MutTensorMeta& other) const;
   size_t CalcHashValue() const;
 
-  MutTensorMeta& operator=(const MutTensorMeta& other) = default;
+  MutTensorMeta& operator=(const MutTensorMeta& other) {
+    TensorMeta::operator=(other);
+    this->shape_ = std::make_shared<const Shape>(*other.shape_);
+    return *this;
+  }
 
  protected:
   std::shared_ptr<const Shape> shape_;

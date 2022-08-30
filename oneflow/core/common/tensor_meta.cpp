@@ -25,11 +25,11 @@ MutTensorMeta::MutTensorMeta()
     : TensorMeta(SymbolOf(Stride()), kInvalidDataType), shape_(std::make_shared<const Shape>()) {}
 
 MutTensorMeta::MutTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype)
-    : TensorMeta(SymbolOf(Stride(*shape)), dtype), shape_(shape) {}
+    : TensorMeta(SymbolOf(Stride(*shape)), dtype), shape_(std::make_shared<const Shape>(*shape)) {}
 
 MutTensorMeta::MutTensorMeta(const std::shared_ptr<const Shape>& shape, Symbol<Stride> stride,
                              DataType dtype)
-    : TensorMeta(stride, dtype), shape_(shape) {}
+    : TensorMeta(stride, dtype), shape_(std::make_shared<const Shape>(*shape)) {}
 
 bool MutTensorMeta::operator==(const MutTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
