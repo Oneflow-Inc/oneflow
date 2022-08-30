@@ -138,6 +138,7 @@ from oneflow._C import expm1
 from oneflow._C import fmod
 from oneflow._C import flatten
 from oneflow._C import in_top_k
+from oneflow._C import lgamma
 from oneflow._C import log
 from oneflow._C import log2
 from oneflow._C import minimum
@@ -163,6 +164,7 @@ from oneflow._C import softplus
 from oneflow._C import threshold
 from oneflow._C import tril
 from oneflow._C import triu
+from oneflow._C import trunc
 from oneflow._C import pad
 from oneflow._C import transpose
 from oneflow._C import relu
@@ -173,7 +175,8 @@ from oneflow._C import argmax
 from oneflow._C import argmin
 from oneflow._C import std
 from oneflow._C import var
-from oneflow._C import stack
+from oneflow._C import stack, hstack, vstack, dstack, column_stack, row_stack
+from oneflow._C import atleast_1d, atleast_2d, atleast_3d
 from oneflow._C import squeeze
 from oneflow._C import narrow
 from oneflow._C import unsqueeze
