@@ -1545,8 +1545,7 @@ class CopyFunctor {
   CopyFunctor() { op_ = CHECK_JUST(one::OpBuilder("copy").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& device_type,
                            const int64_t& device_id, const bool pin_memory) const {
-    auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP("device_type", "device_id", "pin_memory");
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("device_type", "device_id", "pin_memory");
     attrs.SetAllAttrs(device_type, device_id, pin_memory);
 
 #ifdef WITH_CUDA
