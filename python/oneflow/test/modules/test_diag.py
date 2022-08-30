@@ -65,7 +65,8 @@ class Test_Diag_module(flow.unittest.TestCase):
     @profile(torch.diag)
     def profile_diag(test_case):
         torch.diag(torch.ones(1000))
-        torch.diag(torch.ones(128,128))
+        torch.diag(torch.ones(128, 128))
+
 
 if __name__ == "__main__":
     unittest.main()

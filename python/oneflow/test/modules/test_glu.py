@@ -45,7 +45,7 @@ class TestGluModule(flow.unittest.TestCase):
 
     @profile(torch.nn.functional.glu)
     def profile_glu(test_case):
-        input = torch.ones(1000,1000)
+        input = torch.ones(1000, 1000)
         torch.nn.functional.glu(input)
 
 

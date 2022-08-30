@@ -57,7 +57,7 @@ class TestFlip(flow.unittest.TestCase):
 
     @profile(torch.flip)
     def profile_flip(test_case):
-        torch.flip(torch.ones(100,100,100),[0,1])
+        torch.flip(torch.ones(100, 100, 100), [0, 1])
 
 
 if __name__ == "__main__":

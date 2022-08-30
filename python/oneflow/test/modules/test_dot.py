@@ -34,8 +34,8 @@ class TestDot(flow.unittest.TestCase):
     @profile(torch.dot)
     def profile_dot(test_case):
         input1 = torch.ones(10000)
-        input2 = torch.ones(10000) 
-        torch.dot(input1,input2)
+        input2 = torch.ones(10000)
+        torch.dot(input1, input2)
 
 
 if __name__ == "__main__":

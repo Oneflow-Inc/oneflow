@@ -114,7 +114,7 @@ class TestFlattenModule(flow.unittest.TestCase):
 
     @profile(torch.flatten)
     def profile_flatten(test_case):
-        torch.flatten(torch.ones(1000,1000))
+        torch.flatten(torch.ones(1000, 1000))
 
 
 if __name__ == "__main__":

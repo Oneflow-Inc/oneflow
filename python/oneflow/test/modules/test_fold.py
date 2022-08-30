@@ -131,12 +131,8 @@ class TestFold(flow.unittest.TestCase):
     @profile(torch.nn.functional.fold)
     def profile_fold(test_case):
         x = torch.ones(128, 128, 4)
-        torch.nn.functional.fold(
-            x,
-            output_size=(4, 4),
-            kernel_size=(2, 2),
-            stride=2
-        )
+        torch.nn.functional.fold(x, output_size=(4, 4), kernel_size=(2, 2), stride=2)
+
 
 if __name__ == "__main__":
     unittest.main()

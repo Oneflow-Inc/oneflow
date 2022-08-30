@@ -414,7 +414,7 @@ class TestModule(flow.unittest.TestCase):
 
     @profile(torch.nn.functional.dropout)
     def profile_dropout(test_case):
-        input = torch.ones(100,128)
+        input = torch.ones(100, 128)
         torch.nn.functional.dropout(input, p=0.3)
 
 

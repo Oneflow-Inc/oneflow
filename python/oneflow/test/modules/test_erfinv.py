@@ -66,5 +66,6 @@ class TestErfinvModule(flow.unittest.TestCase):
     def profile_erfinv(test_case):
         torch.erfinv(torch.ones(100000))
 
+
 if __name__ == "__main__":
     unittest.main()

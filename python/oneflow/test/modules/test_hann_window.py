@@ -49,8 +49,8 @@ class TestHannWindow(flow.unittest.TestCase):
 
     @profile(torch.hann_window)
     def profile_hann_window(test_case):
-        torch.hann_window(128000,periodic=True)
-        torch.hann_window(128001,periodic=False)
+        torch.hann_window(128000, periodic=True)
+        torch.hann_window(128001, periodic=False)
 
 
 if __name__ == "__main__":

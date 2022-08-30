@@ -98,7 +98,7 @@ class TestEye(flow.unittest.TestCase):
     @profile(torch.eye)
     def profile_eye(test_case):
         torch.eye(1000)
-        torch.eye(100,1280)
+        torch.eye(100, 1280)
 
 
 @flow.unittest.skip_unless_1n2d()

@@ -88,8 +88,8 @@ class TestEq(flow.unittest.TestCase):
 
     @profile(torch.eq)
     def profile_eq(test_case):
-        input1 = torch.ones(1000,1280)
-        input2 = torch.ones(1000,1280)
+        input1 = torch.ones(1000, 1280)
+        input2 = torch.ones(1000, 1280)
         torch.eq(input1, input2)
 
 

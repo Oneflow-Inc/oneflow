@@ -154,9 +154,9 @@ class TestDiv(flow.unittest.TestCase):
 
     @profile(torch.div)
     def profile_div(test_case):
-        input1 = torch.ones(16,10,128,128)
-        input2 = torch.ones(16,10,128,128) 
-        torch.div(input1,input2)
+        input1 = torch.ones(16, 10, 128, 128)
+        input2 = torch.ones(16, 10, 128, 128)
+        torch.div(input1, input2)
 
 
 if __name__ == "__main__":
