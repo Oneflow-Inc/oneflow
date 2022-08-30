@@ -1407,7 +1407,6 @@ class CrossEntropyLabelSmoothingFunctor {
     smooth_loss = JUST(MaskedFill(smooth_loss, ignore_mask, 0.0));
     smooth_loss = JUST(Reshape(smooth_loss, *target_shape));
 
-
     int64_t n_classes = input->shape()->At(1);
     auto nll_loss = JUST(VectorAt(*nll_result, 0));
     nll_loss = JUST(functional::Reshape(nll_loss, *target_shape));
@@ -1423,9 +1422,7 @@ class CrossEntropyLabelSmoothingFunctor {
     const auto& cross_entropy_loss_sum =
         JUST(Add(JUST(ScalarMul(nll_loss_sum, 1 - label_smoothing, false)),
                  JUST(ScalarMul(smooth_loss_sum, label_smoothing / n_classes, false)), 1, false));
-    if (reduction == "sum") {
-      return cross_entropy_loss_sum;
-    }
+    if (reduction == "sum") { return cross_entropy_loss_sum; }
 
     const auto& total_weight = JUST(ReduceSum(JUST(VectorAt(*nll_result, 1)), {}, false));
     return Div(cross_entropy_loss_sum, total_weight);
