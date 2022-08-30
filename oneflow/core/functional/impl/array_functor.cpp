@@ -206,8 +206,8 @@ class EmptyFunctor {
   EmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device, const bool pin_memory) const {
-    OF_PROFILER_RANGE_PUSH("AttrMap");
     Symbol<Device> device_symbol = device.value_or(JUST(Device::New("cpu", 0)));
+    OF_PROFILER_RANGE_PUSH("AttrMap");
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "pin_memory", "device_type", "device_id");
     attrs.SetAllAttrs(shape, dtype->data_type(), pin_memory, device_symbol->type(),
@@ -979,7 +979,7 @@ class DimGatherFunctor {
     }
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim");
-    attrs.SetAllAttrs(new_dim);
+    attrs.SetAllAttrs(static_cast<int32_t>(new_dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
