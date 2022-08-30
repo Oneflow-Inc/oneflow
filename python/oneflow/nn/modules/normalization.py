@@ -111,6 +111,7 @@ class GroupNorm(Module):
         assert (
             input.shape[1] == self.num_channels
         ), "The channels of input tensor must equal num_channels"
+
         if not input.is_cuda:
             origin_shape = input.shape
             reshape_to_1d = flow.reshape(

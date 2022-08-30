@@ -68,6 +68,13 @@ class TestBernoulli(flow.unittest.TestCase):
         input = random_tensor(ndim=1).to("cpu")
         return torch.bernoulli(input)
 
+    """
+    @profile(torch.bernoulli) 
+    def profile_bernoulli(test_case):
+        torch.bernoulli(torch.ones(3, 3))
+        torch.bernoulli(torch.zeros(3, 3))
+    """
+
 
 if __name__ == "__main__":
     unittest.main()

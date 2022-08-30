@@ -125,6 +125,38 @@ class TestModule(flow.unittest.TestCase):
         y = torch.reshape(x, shape=(-1,))
         return y
 
+    @autotest(n=2, auto_backward=False, check_graph=False)
+    def test_reshape_like(test_case):
+        device = random_device()
+        shape = [random(1, 5).to(int).value() for _ in range(4)]
+        like_shape = np.random.choice(
+            np.array(shape), len(shape), replace=False
+        ).tolist()
+        x = (
+            random_tensor(4, *shape, requires_grad=False)
+            .to(device=device)
+            .requires_grad_()
+        )
+        y = (
+            random_tensor(4, *like_shape)
+            .to(device=device)
+            .requires_grad_(random_bool())
+        )
+        # forward
+        of_z = flow._C.reshape_like(x.oneflow, y.oneflow)
+        torch_z = torch.pytorch.reshape(x.pytorch, like_shape)
+        test_case.assertTrue(
+            np.array_equal(of_z.numpy(), torch_z.detach().cpu().numpy())
+        )
+        # backward
+        of_z.sum().backward()
+        torch_z.sum().backward()
+        test_case.assertTrue(
+            np.array_equal(
+                x.grad.oneflow.numpy(), x.grad.pytorch.detach().cpu().numpy()
+            )
+        )
+
     @profile(torch.reshape)
     def profile_reshape(test_case):
         torch.reshape(torch.ones(50, 20), (20, 50))
