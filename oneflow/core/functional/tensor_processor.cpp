@@ -94,6 +94,8 @@ Maybe<void> TensorProcessor::Apply() {
     if (has_different_input_dtype) {
       common_dtype_ = ComputeCommonDType(tensor_tuple_);
       if (promote_integer_inputs_to_float_ && common_dtype_->is_integer()) {
+        // Promotes common dtype to the default float scalar type, if needed
+        // align to pytorch's computeTypes() in torch/csrc/jit/codegen/cuda/type_promotion.cpp
         common_dtype_ = DType::Float();
       }
       JUST(CastToSameType(tensor_tuple_, common_dtype_));
