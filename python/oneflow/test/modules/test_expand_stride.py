@@ -46,7 +46,9 @@ def _cmp_expand_stride(
 
     if verbose:
         print("")
-        print(f"{'-' * 10} {input_shape} -> {expand_shape} (disable_view={disable_view}) {'-' * 10}")
+        print(
+            f"{'-' * 10} {input_shape} -> {expand_shape} (disable_view={disable_view}) {'-' * 10}"
+        )
         print(f"x.stride={x.stride()}")
         print(input)
         print("*" * 10)
@@ -114,20 +116,19 @@ def _cmp_expand_non_contiguous_stride(
 class ExpandStrideTestCase(flow.unittest.TestCase):
     def test_stride(test_case):
         arg_dict = OrderedDict()
-        # arg_dict["verbose"] = [False]
-        arg_dict["verbose"] = [True]
+        arg_dict["verbose"] = [False]
         arg_dict["device"] = ["cpu", "cuda"]
-        # arg_dict["disable_view"] = [True, False]
+        arg_dict["disable_view"] = [True, False]
         arg_dict["disable_view"] = [True]
         arg_dict["shapes"] = [
-            # ((2, 2), (2, 2, 2)),
-            # ((2, 1, 3), (2, 1, -1, -1, -1)),
-            # ((2, 1, 3), (1, 2, -1, -1, -1)),
-            # ((2, 1, 3), (2, 1, -1, 2, 3)),
-            # ((2, 1, 3), (1, 2, 2, 2, -1)),
-            # ((), (3, 2)),
-            ((), (2, 1)),
-            # ((), (1, 2)),
+            ((2, 2), (2, 2, 2)),
+            ((2, 1, 3), (2, 1, -1, -1, -1)),
+            ((2, 1, 3), (1, 2, -1, -1, -1)),
+            ((2, 1, 3), (2, 1, -1, 2, 3)),
+            ((2, 1, 3), (1, 2, 2, 2, -1)),
+            ((), (3, 2)),
+            # ((), (2, 1)),
+            ((), (1, 2)),
         ]
         for kwargs in GenArgDict(arg_dict):
             assert "shapes" in kwargs
