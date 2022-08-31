@@ -47,10 +47,8 @@ class MinMaxObserverFunctor {
                                 const bool& per_layer_quantization) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("quantization_formula", "quantization_bit",
                                                  "quantization_scheme", "per_layer_quantization");
-    attrs.SetAttr<std::string>("quantization_formula", quantization_formula);
-    attrs.SetAttr<int32_t>("quantization_bit", quantization_bit);
-    attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme);
-    attrs.SetAttr<bool>("per_layer_quantization", per_layer_quantization);
+    attrs.SetAllAttrs(quantization_formula, quantization_bit, quantization_scheme,
+                      per_layer_quantization);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in}, attrs);
   }
 
@@ -82,12 +80,8 @@ class MovingAverageMinMaxObserverFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("training", "quantization_formula",
                                                  "stop_update_after_iters", "quantization_bit",
                                                  "quantization_scheme", "momentum");
-    attrs.SetAttr<bool>("training", training);
-    attrs.SetAttr<std::string>("quantization_formula", quantization_formula);
-    attrs.SetAttr<int64_t>("stop_update_after_iters", stop_update_after_iters);
-    attrs.SetAttr<int32_t>("quantization_bit", quantization_bit);
-    attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme);
-    attrs.SetAttr<float>("momentum", momentum);
+    attrs.SetAllAttrs(training, quantization_formula, stop_update_after_iters, quantization_bit,
+                      quantization_scheme, momentum);
     return OpInterpUtil::Dispatch<TensorTuple>(
         *op_, {in, current_train_step, moving_max, moving_min}, attrs);
   }
@@ -113,9 +107,7 @@ class FakeQuantizationFunctor {
                            const std::string& quantization_scheme) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("quantization_formula", "quantization_bit",
                                                  "quantization_scheme");
-    attrs.SetAttr<std::string>("quantization_formula", quantization_formula);
-    attrs.SetAttr<int32_t>("quantization_bit", quantization_bit);
-    attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme);
+    attrs.SetAllAttrs(quantization_formula, quantization_bit, quantization_scheme);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in, scale, zero_point}, attrs);
   }
 
@@ -140,9 +132,7 @@ class QuantizationFunctor {
                            const std::string quantization_scheme) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("quantization_formula", "quantization_bit",
                                                  "quantization_scheme");
-    attrs.SetAttr<std::string>("quantization_formula", quantization_formula);
-    attrs.SetAttr<int32_t>("quantization_bit", quantization_bit);
-    attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme);
+    attrs.SetAllAttrs(quantization_formula, quantization_bit, quantization_scheme);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in, scale, zero_point}, attrs);
   }
 
