@@ -256,15 +256,6 @@ struct Log2Functor<float> {
 };
 
 template<>
-struct Log10Functor<float> {
-  static OF_DEVICE_FUNC float Forward(const float x) { return MATH_FUNC_F(log10, x); }
-
-  static OF_DEVICE_FUNC float Backward(const float x, const float dy) {
-    return dy * (1.0f / (x * MATH_FUNC_F(log, 10.0f)));
-  }
-};
-
-template<>
 struct Log1pFunctor<float> {
   static OF_DEVICE_FUNC float Forward(const float x) { return MATH_FUNC_F(log1p, x); }
 
@@ -541,15 +532,6 @@ struct Log2Functor<double> {
 };
 
 template<>
-struct Log10Functor<double> {
-  static OF_DEVICE_FUNC double Forward(const double x) { return MATH_FUNC_D(log10, x); }
-
-  static OF_DEVICE_FUNC double Backward(const double x, const double dy) {
-    return dy * (1.0 / (x * MATH_FUNC_D(log, 10.0)));
-  }
-};
-
-template<>
 struct Log1pFunctor<double> {
   static OF_DEVICE_FUNC double Forward(const double x) { return MATH_FUNC_D(log1p, x); }
 
@@ -675,7 +657,6 @@ struct TanFunctor<double> {
 #define MATH_FUNC_H(name, x) __float2half(name##f(__half2float(x)))
 #define HALF_VAL_HALF __float2half(0.5f)
 #define HALF_VAL_TWO __float2half(2.0f)
-#define HALF_VAL_TEN __float2half(10.0f)
 #define HALF_VAL_2RSQRT_PI __float2half(1.1283791671f)
 
 template<>
@@ -838,15 +819,6 @@ struct Log2Functor<half> {
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
     return __hmul(dy, hrcp(__hmul(x, hlog(HALF_VAL_TWO))));
-  }
-};
-
-template<>
-struct Log10Functor<half> {
-  static OF_HALF_FUNC half Forward(const half x) { return hlog10(x); }
-
-  static OF_HALF_FUNC half Backward(const half x, const half dy) {
-    return __hmul(dy, hrcp(__hmul(x, hlog(HALF_VAL_TEN))));
   }
 };
 
