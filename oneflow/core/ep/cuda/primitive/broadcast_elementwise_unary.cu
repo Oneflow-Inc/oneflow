@@ -95,7 +95,7 @@ __global__ void BroadcastElementwiseUnaryGpu(
     params.dst_offset_to_index_helper.OffsetToNdIndex(offset, dst_index, num_dims);
 #pragma unroll
     for (int i = 0; i < max_dims; ++i) {
-      if (i < num_dims) { rc_index[i] = params.src_index_mask[i] * dst_index[i]; }
+      if (i < num_dims) { src_index[i] = params.src_index_mask[i] * dst_index[i]; }
     }
     const IndexType src_offset =
         params.src_index_to_offset_helper.NdIndexToOffset(src_index, num_dims);
