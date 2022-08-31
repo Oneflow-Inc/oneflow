@@ -45,7 +45,9 @@ class thread:
     """
 
     def __init__(self, thread_global_id: int = 1, exclude_ccl=False):
-        self.stream_set_ = oneflow._oneflow_internal.StreamSet(thread_global_id)
+        self.stream_set_ = oneflow._oneflow_internal.StreamSet(
+            thread_global_id, stream_set_id=0
+        )
         self.exclude_ccl_ = exclude_ccl
 
     def __enter__(self):

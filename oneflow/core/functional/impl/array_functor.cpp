@@ -1558,7 +1558,7 @@ class CopyFunctor {
         && stream_set_id == Stream::kDefaultStreamSetId) {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
     } else {
-      auto stream_set = std::make_shared<StreamSet>(thread_uid);
+      auto stream_set = std::make_shared<StreamSet>(thread_uid, NullOpt);
       StreamGuard guard(StreamConverter(stream_set, /*exclude_ccl=*/false));
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
     }

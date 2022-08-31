@@ -62,9 +62,9 @@ StreamSetIdMap* MutStreamSetIdMap() {
 
 }  // namespace
 
-StreamSet::StreamSet(int64_t worker_thread_id)
+StreamSet::StreamSet(int64_t worker_thread_id, const Optional<int64_t>& stream_set_id)
     : worker_thread_id_(worker_thread_id),
-      stream_set_id_(MutStreamSetIdMap()->Get(worker_thread_id)) {}
+      stream_set_id_(stream_set_id.value_or(MutStreamSetIdMap()->Get(worker_thread_id))) {}
 
 StreamSet::~StreamSet() {
   MutStreamSetIdMap()->Put(worker_thread_id_, stream_set_id_).GetOrThrow();
