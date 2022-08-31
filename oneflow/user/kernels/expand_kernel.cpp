@@ -77,16 +77,6 @@ class ExpandKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-// REGISTER_USER_KERNEL("expand")
-//     .SetCreateFn<ExpandKernel>()
-//     .SetIsMatchedHob(PrimitiveExists() == true)
-//     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
-//                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) ->
-//                              Maybe<void> {
-//       OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));
-//       return Maybe<void>::Ok();
-//     });
-
 REGISTER_USER_KERNEL("expand").SetCreateFn<ExpandKernel>().SetIsMatchedHob(PrimitiveExists()
                                                                            == true);
 
