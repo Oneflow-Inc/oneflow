@@ -25,16 +25,12 @@ struct StreamSupportStreamWait : public StreamTypeVisitor<StreamSupportStreamWai
   static bool VisitCompute(DeviceType device_type) { return Supported(device_type); }
   static bool VisitHost2Device(DeviceType device_type) { return false; }
   static bool VisitDevice2Host(DeviceType device_type) { return false; }
-  static bool VisitAsyncedDevice2Host(DeviceType device_type) {
-    return VisitDevice2Host(device_type);
-  }
   static bool VisitSyncedLaunchedCommNet(DeviceType device_type) { return Supported(device_type); }
   static bool VisitAsyncedLaunchedCommNet(DeviceType device_type) { return Supported(device_type); }
   static bool VisitBarrier(DeviceType device_type) { return false; }
   static bool VisitCriticalSection(DeviceType device_type) { return false; }
   static bool VisitLazyJobLauncher(DeviceType device_type) { return false; }
   static bool VisitPinnedCompute(DeviceType device_type) { return VisitCompute(device_type); }
-  static bool VisitTmpCompute(DeviceType device_type) { return VisitCompute(device_type); }
 
  private:
   static bool Supported(DeviceType device_type) { return device_type == kCUDA; }

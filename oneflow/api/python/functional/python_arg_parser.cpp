@@ -30,7 +30,7 @@ void FunctionSchema::ReportKwargsError(PyObject* kwargs, size_t nargs) const {
     int64_t index = -1;
     const std::string string_key = PyStringAsString(key);
     for (int i = 0; i < def_->argument_def.size(); ++i) {
-      const auto& arg = def_->argument_def.at(i);
+      const auto& arg = def_->argument_def[i];
       if (arg.name == string_key) {
         index = i;
         break;
@@ -56,7 +56,7 @@ bool FunctionSchema::Parse(PyObject* args, PyObject* kwargs, PythonArg* parsed_a
   size_t remaining_kwargs = kwargs ? PyDict_Size(kwargs) : 0;
 
   if (max_pos_nargs_ == 1) {
-    const auto& type = def_->argument_def.at(0).type;
+    const auto& type = def_->argument_def[0].type;
     treat_args_as_list = IsIntegralListType(type) || type == kSHAPE || type == kTENSOR_TUPLE;
   }
   if (nargs > max_pos_nargs_ && !treat_args_as_list) {
@@ -68,7 +68,7 @@ bool FunctionSchema::Parse(PyObject* args, PyObject* kwargs, PythonArg* parsed_a
   }
   int arg_pos = 0;
   for (int i = 0; i < def_->argument_def.size(); ++i) {
-    const auto& param = def_->argument_def.at(i);
+    const auto& param = def_->argument_def[i];
     PyObject* obj = NULL;
     if (args && arg_pos < nargs) {
       if (param.keyword_only) {
@@ -77,10 +77,10 @@ bool FunctionSchema::Parse(PyObject* args, PyObject* kwargs, PythonArg* parsed_a
         }
         return false;
       }
-      obj = PyTuple_GetItem(args, arg_pos);
+      obj = PyTuple_GET_ITEM(args, arg_pos);
     } else if (kwargs) {
       obj = PyDict_GetItemString(kwargs, param.name.c_str());
-      if (obj) { remaining_kwargs--; }
+      if (obj) { --remaining_kwargs; }
     }
 
     if (obj) {
@@ -89,10 +89,10 @@ bool FunctionSchema::Parse(PyObject* args, PyObject* kwargs, PythonArg* parsed_a
         obj = args;
         arg_pos = nargs;
       } else {
-        arg_pos++;
+        ++arg_pos;
       }
       PythonArg arg(obj, param.size);
-      if ((obj == Py_None && param.optional) || PythonArgCheck(arg, param.type)) {
+      if ((obj == Py_None && param.optional) || arg.TypeCheck(param.type)) {
         parsed_args[i] = arg;
       } else {
         if (raise_exception) {
@@ -109,7 +109,7 @@ bool FunctionSchema::Parse(PyObject* args, PyObject* kwargs, PythonArg* parsed_a
         }
         return false;
       }
-      parsed_args[i] = param.default_value;
+      parsed_args[i] = param.default_value.get();
     }
   }
   if (remaining_kwargs > 0) {

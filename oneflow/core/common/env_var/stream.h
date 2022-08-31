@@ -13,32 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_ATTR_VAL_ACCESSOR_H_
-#define ONEFLOW_CORE_FRAMEWORK_ATTR_VAL_ACCESSOR_H_
+#ifndef ONEFLOW_CORE_COMMON_ENV_VAR_STREAM_H_
+#define ONEFLOW_CORE_COMMON_ENV_VAR_STREAM_H_
 
-#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/env_var/env_var.h"
 
 namespace oneflow {
 
-class AttrValue;
-
-namespace user_op {
-
-template<typename T>
-struct AttrValueAccessor final {
-  static T Attr(const AttrValue&);
-  static void Attr(const T&, AttrValue*);
-};
-
-class AttrVal;
-
-struct AttrValueUtil final {
-  static Maybe<AttrVal> ToCppAttrValue(const AttrValue& proto_attr_value);
-  static Maybe<void> ToProtoAttrValue(const AttrVal& cpp_attr_value, AttrValue* attr_value);
-};
-
-}  // namespace user_op
+DEFINE_THREAD_LOCAL_ENV_INTEGER(ONEFLOW_DEVICE_STREAM_MAX_SIZE, 16);
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_FRAMEWORK_ATTR_VAL_ACCESSOR_H_
+#endif  // ONEFLOW_CORE_COMMON_ENV_VAR_STREAM_H_
