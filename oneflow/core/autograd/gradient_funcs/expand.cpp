@@ -70,11 +70,12 @@ Maybe<void> Expand::Apply(const ExpandCaptureState* ctx, const TensorTuple& out_
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   in_grads->resize(1);
-  auto reduced = JUST(functional::ReduceSum(out_grads[0], ctx->reduce_dims, true));
+  in_grads->at(0) = out_grads[0];
+  if (ctx->reduce_dims.size() > 0) {
+    in_grads->at(0) = JUST(functional::ReduceSum(in_grads->at(0), ctx->reduce_dims, true));
+  }
   if (ctx->squeeze > 0) {
-    in_grads->at(0) = JUST(functional::Flatten(reduced, 0, ctx->squeeze));
-  } else {
-    in_grads->at(0) = reduced;
+    in_grads->at(0) = JUST(functional::Flatten(in_grads->at(0), 0, ctx->squeeze));
   }
   return Maybe<void>::Ok();
 }

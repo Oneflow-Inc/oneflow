@@ -294,12 +294,11 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const Shape& expand_s
       CHECK_EQ_OR_RETURN(out_grads.size(), 1)
           << "out grad size should be 1, but got " << out_grads.size();
       in_grads->resize(1);
-      auto reduced = JUST(functional::ReduceSum(out_grads[0], reduce_dims, true));
-      if (lpad > 0) {
-        in_grads->at(0) = JUST(functional::Flatten(reduced, 0, lpad));
-      } else {
-        in_grads->at(0) = reduced;
+      in_grads->at(0) = out_grads[0];
+      if (reduce_dims.size() > 0) {
+        in_grads->at(0) = JUST(functional::ReduceSum(in_grads->at(0), reduce_dims, true));
       }
+      if (lpad > 0) { in_grads->at(0) = JUST(functional::Flatten(in_grads->at(0), 0, lpad)); }
       return Maybe<void>::Ok();
     };
     backward_fn->status = []() { return true; };

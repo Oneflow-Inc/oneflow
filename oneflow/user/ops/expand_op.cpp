@@ -27,20 +27,20 @@ Maybe<void> InferExpandOutputShapeAndStride(const Shape& input_shape, const Stri
   CHECK_EQ_OR_RETURN(input_shape.size(), input_stride.size());  // NOLINT(maybe-need-error-msg)
   size_t lpad = expand_shape.size() - input_shape.size();
   CHECK_GE_OR_RETURN(lpad, 0);  // NOLINT(maybe-need-error-msg)
-  output_stride->resize(expand_shape.size());
+  // output_stride->resize(expand_shape.size());
   for (size_t i = 0; i < expand_shape.size(); ++i) {
     const auto& t_dim = expand_shape[i];
     if (i >= lpad) {
       const auto& dim = input_shape[i - lpad];
       const auto& stride = input_stride[i - lpad];
       if (dim == t_dim) {
-        output_stride->at(i) = stride;
+        // output_stride->at(i) = stride;
       } else {
         CHECK_EQ_OR_RETURN(dim, 1);  // NOLINT(maybe-need-error-msg)
-        output_stride->at(i) = 0;
+        // output_stride->at(i) = 0;
       }
     } else {
-      output_stride->at(i) = 0;
+      // output_stride->at(i) = 0;
     }
   }
   *output_shape = expand_shape;
