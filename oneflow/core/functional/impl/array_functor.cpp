@@ -777,7 +777,7 @@ class ExpandFunctor {
     for (int i = 0; i < shape.NumAxes(); ++i) { expand_shape[i] = shape.dim_vec().at(i); }
 
     // if input tensor is eager local, then try return tensor's view
-    if (view::IsViewApplicable(x)) { return view::Expand(x, in_shape, expand_shape); }
+    if (view::IsViewApplicable(x)) { return view::Expand(x, expand_shape); }
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("logical_in_shape", "logical_expand_shape");
     attrs.SetAllAttrs(in_shape, expand_shape);

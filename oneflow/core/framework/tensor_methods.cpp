@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/functional/functional.h"
@@ -255,44 +256,41 @@ Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
   return output;
 }
 
-Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& in_shape,
+Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input,
                      const std::vector<int32_t>& expand_shape) {
   const auto& shape = input->shape();
+  const int64_t ndim = shape->size();
+  const std::vector<int32_t> shape_vec(shape->begin(), shape->end());
   const auto& strides = JUST(input->stride());
-  const int64_t ndim = in_shape.size();
 
   const int64_t target_ndim = expand_shape.size();
   DimVector target_dim_vec(target_ndim);
   Stride target_stride_vec(target_ndim);
 
-  for (int i = 0; i < target_ndim; i++) {
-    if (i < ndim) {
-      if (expand_shape[target_ndim - 1 - i] == -1) {
-        target_dim_vec[target_ndim - 1 - i] = in_shape[ndim - 1 - i];
-        target_stride_vec[target_ndim - 1 - i] = strides->at(ndim - 1 - i);
-      } else if (in_shape[ndim - 1 - i]
-                 == 1) {  // TODO (bowen): what if dim is 1, should stride be set to 0?
-        target_dim_vec[target_ndim - 1 - i] = expand_shape[target_ndim - 1 - i];
-        target_stride_vec[target_ndim - 1 - i] = 0;
-      } else {
-        if (expand_shape[target_ndim - 1 - i] != in_shape[ndim - 1 - i]) {
-          return Error::RuntimeError()
-                 << "The expanded size of the tensor (" << expand_shape[target_ndim - 1 - i] << ")"
-                 << "must match the existing size (" << in_shape[ndim - 1 - i]
-                 << ") at non-singleton dimension " << ndim - i << ".  Target sizes: "
-                 << ".  Tensor sizes: " << shape->ToString();
-        }
-        target_dim_vec[target_ndim - 1 - i] = in_shape[ndim - 1 - i];
-        target_stride_vec[target_ndim - 1 - i] = strides->at(ndim - 1 - i);
-      }
-    } else {
-      if (expand_shape[target_ndim - 1 - i] == -1) {
-        return Error::RuntimeError() << "The expanded size of the tensor (-1) "
-                                     << "isn't allowed in a leading, non-existing dimension 0";
-      }
-      target_dim_vec[target_ndim - 1 - i] = expand_shape[target_ndim - 1 - i];
-      target_stride_vec[target_ndim - 1 - i] = 0;
+  for (int64_t i = target_ndim - 1; i >= 0; --i) {
+    int64_t offset = target_ndim - 1 - i;
+    int64_t dim = ndim - 1 - offset;
+    int64_t size = (dim >= 0) ? shape_vec[dim] : 1;
+    int64_t stride =
+        (dim >= 0) ? strides->at(dim) : target_dim_vec[i + 1] * target_stride_vec[i + 1];
+    int64_t target_size = expand_shape[i];
+    if (target_size == -1) {
+      CHECK_OR_THROW(dim >= 0) << "The expanded size of the tensor (" << target_size
+                               << ") isn't allowed in a leading, non-existing dimension " << i;
+      target_size = size;
     }
+    if (size != target_size) {
+      CHECK_OR_THROW(size == 1)
+          << "The expanded size of the tensor (" << target_size
+          << ") must match the existing size (" << size << ") at non-singleton dimension " << i
+          << ".  Target sizes: "
+          << Shape(DimVector(expand_shape.begin(), expand_shape.end())).ToString()
+          << ".  Tensor sizes: " << shape->ToString();
+      size = target_size;
+      stride = 0;
+    }
+    target_dim_vec[i] = size;
+    target_stride_vec[i] = stride;
   }
 
   int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
@@ -307,7 +305,7 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int
       CHECK_EQ_OR_RETURN(out_grads.size(), 1)
           << "out grad size should be 1, but got " << out_grads.size();
       in_grads->resize(1);
-      (*in_grads)[0] = JUST(functional::ExpandGrad(out_grads[0], in_shape, expand_shape));
+      (*in_grads)[0] = JUST(functional::ExpandGrad(out_grads[0], shape_vec, expand_shape));
       return Maybe<void>::Ok();
     };
     backward_fn->status = []() { return true; };
