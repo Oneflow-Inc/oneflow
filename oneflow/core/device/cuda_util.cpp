@@ -222,7 +222,6 @@ cudaDeviceProp* GetDeviceProperties(int device_id) {
 void InitCudaContextOnce(int device_id) {
   static int device_count = GetCudaDeviceCount();
   static std::vector<std::once_flag> init_flags = std::vector<std::once_flag>(device_count);
-
   if (LazyMode::is_enabled()) { return; }
   if (device_id == -1) { device_id = GetCudaDeviceIndex(); }
   std::call_once(init_flags[device_id], [&]() {
