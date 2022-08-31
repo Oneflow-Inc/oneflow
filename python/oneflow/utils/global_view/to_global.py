@@ -140,10 +140,10 @@ def to_global(input, placement=None, sbp=None, **kwargs):
                     flow._oneflow_internal.cpu_broadcast(None, src_rank)
                 )
 
-    is_tensor_transform_list = 0
+    is_tensor_transform_list = False
     if isinstance(input, Tensor):
         input = [input]
-        is_tensor_transform_list = 1
+        is_tensor_transform_list = True
 
     if input is None:
         input = [None]
