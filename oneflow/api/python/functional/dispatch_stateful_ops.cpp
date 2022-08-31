@@ -50,7 +50,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const Scalar& l2) -> Maybe<Tensor> {
                   auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("l2");
-                  attrs.SetAttr<double>("l2", l2.As<double>());
+                  attrs.SetAllAttrs(l2.As<double>());
                   const auto& origin_var =
                       JUST(OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs));
                   // Repeat variable when do grad acc
@@ -65,15 +65,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
             "data_dir", "data_part_num", "part_name_prefix", "part_name_suffix_length",
             "batch_size", "shuffle_buffer_size", "random_shuffle", "shuffle_after_epoch", "seed");
-        attrs.SetAttr("data_dir", data_dir);
-        attrs.SetAttr("data_part_num", data_part_num);
-        attrs.SetAttr("part_name_prefix", part_name_prefix);
-        attrs.SetAttr("part_name_suffix_length", part_name_suffix_length);
-        attrs.SetAttr("batch_size", batch_size);
-        attrs.SetAttr("shuffle_buffer_size", shuffle_buffer_size);
-        attrs.SetAttr("random_shuffle", random_shuffle);
-        attrs.SetAttr("shuffle_after_epoch", shuffle_after_epoch);
-        attrs.SetAttr("seed", seed);
+        attrs.SetAllAttrs(data_dir, data_part_num, part_name_prefix, part_name_suffix_length,
+                          batch_size, shuffle_buffer_size, random_shuffle, shuffle_after_epoch,
+                          seed);
         return OpInterpUtil::Dispatch<Tensor>(*op, {}, OpExprInterpContext(attrs, JUST(device)));
       });
   m.add_functor(
@@ -87,16 +81,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
             "data_dir", "data_part_num", "part_name_prefix", "part_name_suffix_length",
             "batch_size", "shuffle_buffer_size", "random_shuffle", "shuffle_after_epoch", "seed",
             "nd_sbp");
-        attrs.SetAttr("data_dir", data_dir);
-        attrs.SetAttr("data_part_num", data_part_num);
-        attrs.SetAttr("part_name_prefix", part_name_prefix);
-        attrs.SetAttr("part_name_suffix_length", part_name_suffix_length);
-        attrs.SetAttr("batch_size", batch_size);
-        attrs.SetAttr("shuffle_buffer_size", shuffle_buffer_size);
-        attrs.SetAttr("random_shuffle", random_shuffle);
-        attrs.SetAttr("shuffle_after_epoch", shuffle_after_epoch);
-        attrs.SetAttr("seed", seed);
-        attrs.SetAttr("nd_sbp", *JUST(GetNdSbpStrList(sbp_tuple)));
+        attrs.SetAllAttrs(data_dir, data_part_num, part_name_prefix, part_name_suffix_length,
+                          batch_size, shuffle_buffer_size, random_shuffle, shuffle_after_epoch,
+                          seed, *JUST(GetNdSbpStrList(sbp_tuple)));
         auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
         return OpInterpUtil::Dispatch<Tensor>(*op, {},
                                               OpExprInterpContext(attrs, placement, nd_sbp));
@@ -107,11 +94,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                    bool dim1_varying_length, bool truncate) -> Maybe<Tensor> {
                   auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("name", "shape", "data_type",
                                                                "dim1_varying_length", "truncate");
-                  attrs.SetAttr("name", name);
-                  attrs.SetAttr("shape", shape);
-                  attrs.SetAttr("data_type", data_type->data_type());
-                  attrs.SetAttr("dim1_varying_length", dim1_varying_length);
-                  attrs.SetAttr("truncate", truncate);
+                  attrs.SetAllAttrs(name, shape, data_type->data_type(), dim1_varying_length,
+                                    truncate);
                   return OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs);
                 });
   m.add_functor(
@@ -120,10 +104,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
          bool has_seed, const Optional<Symbol<Device>>& device) -> Maybe<Tensor> {
         auto& attrs =
             THREAD_CACHED_MUTABLE_ATTR_MAP("probability", "batch_size", "seed", "has_seed");
-        attrs.SetAttr("probability", probability.As<float>());
-        attrs.SetAttr("batch_size", batch_size);
-        attrs.SetAttr("seed", seed);
-        attrs.SetAttr("has_seed", has_seed);
+        attrs.SetAllAttrs(probability.As<float>(), batch_size, seed, has_seed);
         return OpInterpUtil::Dispatch<Tensor>(*op, {}, OpExprInterpContext(attrs, JUST(device)));
       });
   m.add_functor("DispatchCoinFlip",
@@ -132,11 +113,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                    const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
                   auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("probability", "batch_size", "seed",
                                                                "has_seed", "nd_sbp");
-                  attrs.SetAttr("probability", probability.As<float>());
-                  attrs.SetAttr("batch_size", batch_size);
-                  attrs.SetAttr("seed", seed);
-                  attrs.SetAttr("has_seed", has_seed);
-                  attrs.SetAttr("nd_sbp", *JUST(GetNdSbpStrList(sbp_tuple)));
+                  attrs.SetAllAttrs(probability.As<float>(), batch_size, seed, has_seed,
+                                    *JUST(GetNdSbpStrList(sbp_tuple)));
                   auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
                   return OpInterpUtil::Dispatch<Tensor>(
                       *op, {}, OpExprInterpContext(attrs, placement, nd_sbp));
@@ -146,7 +124,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& weight,
          const std::shared_ptr<Tensor>& label, const int64_t& num_sample) -> Maybe<TensorTuple> {
         auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_sample");
-        attrs.SetAttr<int64_t>("num_sample", num_sample);
+        attrs.SetAllAttrs(num_sample);
         return OpInterpUtil::Dispatch<TensorTuple>(*op, {weight, label}, attrs);
       });
   m.add_functor(
@@ -158,15 +136,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         auto& attrs =
             THREAD_CACHED_MUTABLE_ATTR_MAP("color_space", "output_layout", "mean", "std", "crop_h",
                                            "crop_w", "crop_pos_x", "crop_pos_y", "output_dtype");
-        attrs.SetAttr("color_space", color_space);
-        attrs.SetAttr("output_layout", output_layout);
-        attrs.SetAttr("mean", mean);
-        attrs.SetAttr("std", std);
-        attrs.SetAttr("crop_h", crop_h);
-        attrs.SetAttr("crop_w", crop_w);
-        attrs.SetAttr("crop_pos_x", crop_pos_x);
-        attrs.SetAttr("crop_pos_y", crop_pos_y);
-        attrs.SetAttr("output_dtype", output_dtype->data_type());
+        attrs.SetAllAttrs(color_space, output_layout, mean, std, crop_h, crop_w, crop_pos_x,
+                          crop_pos_y, output_dtype->data_type());
         return OpInterpUtil::Dispatch<Tensor>(*op, input, attrs);
       });
   m.add_functor(
@@ -178,15 +149,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         auto& attrs =
             THREAD_CACHED_MUTABLE_ATTR_MAP("color_space", "output_layout", "mean", "std", "crop_h",
                                            "crop_w", "crop_pos_x", "crop_pos_y", "output_dtype");
-        attrs.SetAttr("color_space", color_space);
-        attrs.SetAttr("output_layout", output_layout);
-        attrs.SetAttr("mean", mean);
-        attrs.SetAttr("std", std);
-        attrs.SetAttr("crop_h", crop_h);
-        attrs.SetAttr("crop_w", crop_w);
-        attrs.SetAttr("crop_pos_x", crop_pos_x);
-        attrs.SetAttr("crop_pos_y", crop_pos_y);
-        attrs.SetAttr("output_dtype", output_dtype->data_type());
+        attrs.SetAllAttrs(color_space, output_layout, mean, std, crop_h, crop_w, crop_pos_x,
+                          crop_pos_y, output_dtype->data_type());
         return OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs);
       });
   m.add_functor(
@@ -198,21 +162,15 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         auto& attrs =
             THREAD_CACHED_MUTABLE_ATTR_MAP("name", "color_space", "num_attempts", "seed",
                                            "has_seed", "random_area", "random_aspect_ratio");
-        attrs.SetAttr("name", name);
-        attrs.SetAttr("color_space", color_space);
-        attrs.SetAttr("num_attempts", num_attempts);
-        attrs.SetAttr("seed", seed);
-        attrs.SetAttr("has_seed", has_seed);
-        attrs.SetAttr("random_area", random_area);
-        attrs.SetAttr("random_aspect_ratio", random_aspect_ratio);
+        attrs.SetAllAttrs(name, color_space, num_attempts, seed, has_seed, random_area,
+                          random_aspect_ratio);
         return OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs);
       });
   m.add_functor("DispatchOfrecordImageDecoder",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const std::string& name, const std::string& color_space) -> Maybe<Tensor> {
                   auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("name", "color_space");
-                  attrs.SetAttr("name", name);
-                  attrs.SetAttr("color_space", color_space);
+                  attrs.SetAllAttrs(name, color_space);
                   return OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs);
                 });
   m.add_functor("DispatchImageDecoderRandomCropResize",
@@ -225,17 +183,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                       "target_width", "target_height", "seed", "num_workers", "max_num_pixels",
                       "random_area_min", "random_area_max", "random_aspect_ratio_min",
                       "random_aspect_ratio_max", "warmup_size", "num_attempts");
-                  attrs.SetAttr("target_width", target_width);
-                  attrs.SetAttr("target_height", target_height);
-                  attrs.SetAttr("seed", seed);
-                  attrs.SetAttr("num_workers", num_workers);
-                  attrs.SetAttr("max_num_pixels", max_num_pixels);
-                  attrs.SetAttr("random_area_min", random_area_min);
-                  attrs.SetAttr("random_area_max", random_area_max);
-                  attrs.SetAttr("random_aspect_ratio_min", random_aspect_ratio_min);
-                  attrs.SetAttr("random_aspect_ratio_max", random_aspect_ratio_max);
-                  attrs.SetAttr("warmup_size", warmup_size);
-                  attrs.SetAttr("num_attempts", num_attempts);
+                  attrs.SetAllAttrs(target_width, target_height, seed, num_workers, max_num_pixels,
+                                    random_area_min, random_area_max, random_aspect_ratio_min,
+                                    random_aspect_ratio_max, warmup_size, num_attempts);
                   return OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs);
                 });
   m.add_functor(
@@ -243,14 +193,12 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
          const std::vector<Shape>& out_shapes, const std::vector<Symbol<DType>>& out_dtypes,
          bool dynamic_out) -> Maybe<TensorTuple> {
-        auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("out_shapes", "dynamic_out", "out_dtypes");
-        attrs.SetAttr("out_shapes", out_shapes);
-        attrs.SetAttr("dynamic_out", dynamic_out);
         auto out_data_types = std::vector<DataType>();
         for (auto it = out_dtypes.begin(); it != out_dtypes.end(); it++) {
           out_data_types.emplace_back((*it)->data_type());
         }
-        attrs.SetAttr("out_dtypes", out_data_types);
+        auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("out_shapes", "dynamic_out", "out_dtypes");
+        attrs.SetAllAttrs(out_shapes, dynamic_out, out_data_types);
         return OpInterpUtil::Dispatch<TensorTuple>(*op, {input}, attrs);
       });
   m.add_functor("DispatchImageResizeKeepAspectRatio",
@@ -259,11 +207,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                    const std::string& interpolation_type) -> Maybe<TensorTuple> {
                   auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
                       "target_size", "min_size", "max_size", "resize_longer", "interpolation_type");
-                  attrs.SetAttr("target_size", target_size);
-                  attrs.SetAttr("min_size", min_size);
-                  attrs.SetAttr("max_size", max_size);
-                  attrs.SetAttr("resize_longer", resize_longer);
-                  attrs.SetAttr("interpolation_type", interpolation_type);
+                  attrs.SetAllAttrs(target_size, min_size, max_size, resize_longer,
+                                    interpolation_type);
                   return OpInterpUtil::Dispatch<TensorTuple>(*op, {input}, attrs);
                 });
   m.add_functor("DispatchImageResizeToFixed",
@@ -274,11 +219,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   auto& attrs =
                       THREAD_CACHED_MUTABLE_ATTR_MAP("target_width", "target_height", "channels",
                                                      "data_type", "interpolation_type");
-                  attrs.SetAttr("target_width", target_width);
-                  attrs.SetAttr("target_height", target_height);
-                  attrs.SetAttr("channels", channels);
-                  attrs.SetAttr("data_type", data_type->data_type());
-                  attrs.SetAttr("interpolation_type", interpolation_type);
+                  attrs.SetAllAttrs(target_width, target_height, channels, data_type->data_type(),
+                                    interpolation_type);
                   return OpInterpUtil::Dispatch<TensorTuple>(*op, {input}, attrs);
                 });
   m.add_functor(
@@ -286,16 +228,14 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
          const std::string& color_space, const Symbol<DType>& data_type) -> Maybe<Tensor> {
         auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("color_space", "data_type");
-        attrs.SetAttr("color_space", color_space);
-        attrs.SetAttr("data_type", data_type->data_type());
+        attrs.SetAllAttrs(color_space, data_type->data_type());
         return OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs);
       });
   m.add_functor("DispatchImageNormalize",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const std::vector<float>& mean, const std::vector<float>& std) -> Maybe<Tensor> {
                   auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("std", "mean");
-                  attrs.SetAttr("std", std);
-                  attrs.SetAttr("mean", mean);
+                  attrs.SetAllAttrs(std, mean);
                   return OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs);
                 });
   m.add_functor("DispatchCOCOReader",
@@ -308,16 +248,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                       "session_id", "annotation_file", "image_dir", "batch_size",
                       "shuffle_after_epoch", "random_seed", "group_by_ratio",
                       "remove_images_without_annotations", "stride_partition");
-                  attrs.SetAttr("session_id", session_id);
-                  attrs.SetAttr("annotation_file", annotation_file);
-                  attrs.SetAttr("image_dir", image_dir);
-                  attrs.SetAttr("batch_size", batch_size);
-                  attrs.SetAttr("shuffle_after_epoch", shuffle_after_epoch);
-                  attrs.SetAttr("random_seed", random_seed);
-                  attrs.SetAttr("group_by_ratio", group_by_ratio);
-                  attrs.SetAttr("remove_images_without_annotations",
-                                remove_images_without_annotations);
-                  attrs.SetAttr("stride_partition", stride_partition);
+                  attrs.SetAllAttrs(session_id, annotation_file, image_dir, batch_size,
+                                    shuffle_after_epoch, random_seed, group_by_ratio,
+                                    remove_images_without_annotations, stride_partition);
                   return OpInterpUtil::Dispatch<TensorTuple>(
                       *op, {}, OpExprInterpContext(attrs, JUST(device)));
                 });
@@ -331,17 +264,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                       "session_id", "annotation_file", "image_dir", "batch_size",
                       "shuffle_after_epoch", "random_seed", "group_by_ratio",
                       "remove_images_without_annotations", "stride_partition", "nd_sbp");
-                  attrs.SetAttr("session_id", session_id);
-                  attrs.SetAttr("annotation_file", annotation_file);
-                  attrs.SetAttr("image_dir", image_dir);
-                  attrs.SetAttr("batch_size", batch_size);
-                  attrs.SetAttr("shuffle_after_epoch", shuffle_after_epoch);
-                  attrs.SetAttr("random_seed", random_seed);
-                  attrs.SetAttr("group_by_ratio", group_by_ratio);
-                  attrs.SetAttr("remove_images_without_annotations",
-                                remove_images_without_annotations);
-                  attrs.SetAttr("stride_partition", stride_partition);
-                  attrs.SetAttr("nd_sbp", *JUST(GetNdSbpStrList(sbp_tuple)));
+                  attrs.SetAllAttrs(session_id, annotation_file, image_dir, batch_size,
+                                    shuffle_after_epoch, random_seed, group_by_ratio,
+                                    remove_images_without_annotations, stride_partition,
+                                    *JUST(GetNdSbpStrList(sbp_tuple)));
                   auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
                   return OpInterpUtil::Dispatch<TensorTuple>(
                       *op, {}, OpExprInterpContext(attrs, placement, nd_sbp));
@@ -352,17 +278,14 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
          const Shape& shape, const Symbol<DType>& data_type, bool dynamic_out) -> Maybe<Tensor> {
         auto& attrs =
             THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "data_type", "alignment", "dynamic_out");
-        attrs.SetAttr("shape", shape);
-        attrs.SetAttr("data_type", data_type->data_type());
-        attrs.SetAttr("alignment", alignment);
-        attrs.SetAttr("dynamic_out", dynamic_out);
+        attrs.SetAllAttrs(shape, data_type->data_type(), alignment, dynamic_out);
         return OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs);
       });
   m.add_functor("DispatchOfrecordBytesDecoder",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const std::string& name) -> Maybe<Tensor> {
                   auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("name");
-                  attrs.SetAttr("name", name);
+                  attrs.SetAllAttrs(name);
                   return OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs);
                 });
   m.add_functor(
@@ -374,14 +297,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
             "files", "batch_size", "random_shuffle", "shuffle_mode", "shuffle_buffer_size",
             "shuffle_after_epoch", "seed", "verify_example");
-        attrs.SetAttr<std::vector<std::string>>("files", files);
-        attrs.SetAttr<int64_t>("batch_size", batch_size);
-        attrs.SetAttr<bool>("random_shuffle", random_shuffle);
-        attrs.SetAttr<std::string>("shuffle_mode", shuffle_mode);
-        attrs.SetAttr<int32_t>("shuffle_buffer_size", shuffle_buffer_size);
-        attrs.SetAttr<bool>("shuffle_after_epoch", shuffle_after_epoch);
-        attrs.SetAttr<int64_t>("seed", random_seed);
-        attrs.SetAttr<bool>("verify_example", verify_example);
+        attrs.SetAllAttrs(files, batch_size, random_shuffle, shuffle_mode, shuffle_buffer_size,
+                          shuffle_after_epoch, random_seed, verify_example);
         return OpInterpUtil::Dispatch<Tensor>(*op, {}, OpExprInterpContext(attrs, JUST(device)));
       });
   m.add_functor(
@@ -394,15 +311,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
             "files", "batch_size", "random_shuffle", "shuffle_mode", "shuffle_buffer_size",
             "shuffle_after_epoch", "seed", "verify_example", "nd_sbp");
-        attrs.SetAttr<std::vector<std::string>>("files", files);
-        attrs.SetAttr<int64_t>("batch_size", batch_size);
-        attrs.SetAttr<bool>("random_shuffle", random_shuffle);
-        attrs.SetAttr<std::string>("shuffle_mode", shuffle_mode);
-        attrs.SetAttr<int32_t>("shuffle_buffer_size", shuffle_buffer_size);
-        attrs.SetAttr<bool>("shuffle_after_epoch", shuffle_after_epoch);
-        attrs.SetAttr<int64_t>("seed", random_seed);
-        attrs.SetAttr<bool>("verify_example", verify_example);
-        attrs.SetAttr("nd_sbp", *JUST(GetNdSbpStrList(sbp_tuple)));
+        attrs.SetAllAttrs(files, batch_size, random_shuffle, shuffle_mode, shuffle_buffer_size,
+                          shuffle_after_epoch, random_seed, verify_example,
+                          *JUST(GetNdSbpStrList(sbp_tuple)));
         auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
         return OpInterpUtil::Dispatch<Tensor>(*op, {},
                                               OpExprInterpContext(attrs, placement, nd_sbp));
@@ -416,16 +327,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
             "data_file_prefix", "seq_length", "label_length", "num_samples", "batch_size", "dtype",
             "split_sizes", "split_index", "shuffle", "random_seed");
-        attrs.SetAttr("data_file_prefix", data_file_prefix);
-        attrs.SetAttr("seq_length", seq_length);
-        attrs.SetAttr("label_length", label_length);
-        attrs.SetAttr("num_samples", num_samples);
-        attrs.SetAttr("batch_size", batch_size);
-        attrs.SetAttr("dtype", dtype->data_type());
-        attrs.SetAttr("split_sizes", split_sizes);
-        attrs.SetAttr("split_index", split_index);
-        attrs.SetAttr("shuffle", shuffle);
-        attrs.SetAttr("random_seed", random_seed);
+        attrs.SetAllAttrs(data_file_prefix, seq_length, label_length, num_samples, batch_size,
+                          dtype->data_type(), split_sizes, split_index, shuffle, random_seed);
         return OpInterpUtil::Dispatch<Tensor>(*op, {}, OpExprInterpContext(attrs, JUST(device)));
       });
   m.add_functor(
@@ -438,16 +341,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
             "data_file_prefix", "seq_length", "label_length", "num_samples", "batch_size", "dtype",
             "split_sizes", "split_index", "shuffle", "random_seed");
-        attrs.SetAttr("data_file_prefix", data_file_prefix);
-        attrs.SetAttr("seq_length", seq_length);
-        attrs.SetAttr("label_length", label_length);
-        attrs.SetAttr("num_samples", num_samples);
-        attrs.SetAttr("batch_size", batch_size);
-        attrs.SetAttr("dtype", dtype->data_type());
-        attrs.SetAttr("split_sizes", split_sizes);
-        attrs.SetAttr("split_index", split_index);
-        attrs.SetAttr("shuffle", shuffle);
-        attrs.SetAttr("random_seed", random_seed);
+        attrs.SetAllAttrs(data_file_prefix, seq_length, label_length, num_samples, batch_size,
+                          dtype->data_type(), split_sizes, split_index, shuffle, random_seed);
         auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
         return OpInterpUtil::Dispatch<Tensor>(*op, {},
                                               OpExprInterpContext(attrs, placement, nd_sbp));
@@ -459,41 +354,25 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("learning_rate_val", "scale", "l1",
                                                                "l2", "centered", "epsilon",
                                                                "decay_rate", "weight_decay");
-                  attrs.SetAttr("learning_rate_val", learning_rate);
-                  attrs.SetAttr("scale", scale);
-                  attrs.SetAttr("l1", l1);
-                  attrs.SetAttr("l2", l2);
-                  attrs.SetAttr("centered", centered);
-                  attrs.SetAttr("epsilon", epsilon);
-                  attrs.SetAttr("decay_rate", decay_rate);
-                  attrs.SetAttr("weight_decay", weight_decay);
+                  attrs.SetAllAttrs(learning_rate, scale, l1, l2, centered, epsilon, decay_rate,
+                                    weight_decay);
                   JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
                   return Maybe<void>::Ok();
                 });
-  m.add_functor("DispatchAdamUpdate",
-                [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs,
-                   float learning_rate, float bias_correction1, float bias_correction2,
-                   double scale, float l1, float l2, float beta1, float beta2, float epsilon,
-                   float weight_decay, bool amsgrad, bool do_bias_correction) -> Maybe<void> {
-                  auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-                      "learning_rate_val", "bias_correction1_val", "bias_correction2_val", "scale",
-                      "l1", "l2", "beta1", "beta2", "epsilon", "weight_decay", "amsgrad",
-                      "do_bias_correction");
-                  attrs.SetAttr("learning_rate_val", learning_rate);
-                  attrs.SetAttr("bias_correction1_val", bias_correction1);
-                  attrs.SetAttr("bias_correction2_val", bias_correction2);
-                  attrs.SetAttr("scale", scale);
-                  attrs.SetAttr("l1", l1);
-                  attrs.SetAttr("l2", l2);
-                  attrs.SetAttr("beta1", beta1);
-                  attrs.SetAttr("beta2", beta2);
-                  attrs.SetAttr("epsilon", epsilon);
-                  attrs.SetAttr("weight_decay", weight_decay);
-                  attrs.SetAttr("amsgrad", amsgrad);
-                  attrs.SetAttr("do_bias_correction", do_bias_correction);
-                  JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
-                  return Maybe<void>::Ok();
-                });
+  m.add_functor(
+      "DispatchAdamUpdate",
+      [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs, float learning_rate,
+         float bias_correction1, float bias_correction2, double scale, float l1, float l2,
+         float beta1, float beta2, float epsilon, float weight_decay, bool amsgrad,
+         bool do_bias_correction) -> Maybe<void> {
+        auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
+            "learning_rate_val", "bias_correction1_val", "bias_correction2_val", "scale", "l1",
+            "l2", "beta1", "beta2", "epsilon", "weight_decay", "amsgrad", "do_bias_correction");
+        attrs.SetAllAttrs(learning_rate, bias_correction1, bias_correction2, scale, l1, l2, beta1,
+                          beta2, epsilon, weight_decay, amsgrad, do_bias_correction);
+        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
+        return Maybe<void>::Ok();
+      });
   m.add_functor("DispatchAdagradUpdate",
                 [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs,
                    float learning_rate, double scale, float l1, float l2, float lr_decay,
@@ -501,14 +380,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("learning_rate_val", "scale", "l1",
                                                                "l2", "lr_decay", "weight_decay",
                                                                "epsilon", "train_step_val");
-                  attrs.SetAttr("learning_rate_val", learning_rate);
-                  attrs.SetAttr("scale", scale);
-                  attrs.SetAttr("l1", l1);
-                  attrs.SetAttr("l2", l2);
-                  attrs.SetAttr("lr_decay", lr_decay);
-                  attrs.SetAttr("weight_decay", weight_decay);
-                  attrs.SetAttr("epsilon", epsilon);
-                  attrs.SetAttr("train_step_val", train_step);
+                  attrs.SetAllAttrs(learning_rate, scale, l1, l2, lr_decay, weight_decay, epsilon,
+                                    train_step);
                   JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
                   return Maybe<void>::Ok();
                 });
@@ -520,15 +393,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         auto& attrs =
             THREAD_CACHED_MUTABLE_ATTR_MAP("learning_rate_val", "scale", "l1", "l2", "beta",
                                            "dampening", "nesterov", "maximize", "weight_decay");
-        attrs.SetAttr("learning_rate_val", learning_rate);
-        attrs.SetAttr("scale", scale);
-        attrs.SetAttr("l1", l1);
-        attrs.SetAttr("l2", l2);
-        attrs.SetAttr("beta", beta);
-        attrs.SetAttr("dampening", dampening);
-        attrs.SetAttr("nesterov", nesterov);
-        attrs.SetAttr("maximize", maximize);
-        attrs.SetAttr("weight_decay", weight_decay);
+        attrs.SetAllAttrs(learning_rate, scale, l1, l2, beta, dampening, nesterov, maximize,
+                          weight_decay);
         JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
         return Maybe<void>::Ok();
       });
@@ -538,11 +404,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
          double scale, float l1, float l2, float weight_decay) -> Maybe<void> {
         auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("learning_rate_val", "scale", "l1", "l2",
                                                      "weight_decay");
-        attrs.SetAttr("learning_rate_val", learning_rate);
-        attrs.SetAttr("scale", scale);
-        attrs.SetAttr("l1", l1);
-        attrs.SetAttr("l2", l2);
-        attrs.SetAttr("weight_decay", weight_decay);
+        attrs.SetAllAttrs(learning_rate, scale, l1, l2, weight_decay);
         JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
         return Maybe<void>::Ok();
       });
@@ -555,17 +417,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                       "learning_rate_val", "bias_correction1_val", "bias_correction2_val", "scale",
                       "l1", "l2", "beta1", "beta2", "epsilon", "weight_decay",
                       "do_bias_correction");
-                  attrs.SetAttr("learning_rate_val", learning_rate);
-                  attrs.SetAttr("bias_correction1_val", bias_correction1);
-                  attrs.SetAttr("bias_correction2_val", bias_correction2);
-                  attrs.SetAttr("scale", scale);
-                  attrs.SetAttr("l1", l1);
-                  attrs.SetAttr("l2", l2);
-                  attrs.SetAttr("beta1", beta1);
-                  attrs.SetAttr("beta2", beta2);
-                  attrs.SetAttr("epsilon", epsilon);
-                  attrs.SetAttr("weight_decay", weight_decay);
-                  attrs.SetAttr("do_bias_correction", do_bias_correction);
+                  attrs.SetAllAttrs(learning_rate, bias_correction1, bias_correction2, scale, l1,
+                                    l2, beta1, beta2, epsilon, weight_decay, do_bias_correction);
                   JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
                   return Maybe<void>::Ok();
                 });
@@ -576,41 +429,27 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("learning_rate_val", "scale", "l1",
                                                                "l2", "lr_power", "lambda1",
                                                                "lambda2", "beta", "weight_decay");
-                  attrs.SetAttr("learning_rate_val", learning_rate);
-                  attrs.SetAttr("scale", scale);
-                  attrs.SetAttr("l1", l1);
-                  attrs.SetAttr("l2", l2);
-                  attrs.SetAttr("lr_power", lr_power);
-                  attrs.SetAttr("lambda1", lambda1);
-                  attrs.SetAttr("lambda2", lambda2);
-                  attrs.SetAttr("beta", beta);
-                  attrs.SetAttr("weight_decay", weight_decay);
+                  attrs.SetAllAttrs(learning_rate, scale, l1, l2, lr_power, lambda1, lambda2, beta,
+                                    weight_decay);
                   JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
                   return Maybe<void>::Ok();
                 });
-  m.add_functor("DispatchAdadeltaUpdate",
-                [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs,
-                   float learning_rate, double scale, float l1, float l2, float rho, float epsilon,
-                   bool maximize, float weight_decay) -> Maybe<void> {
-                  auto& attrs =
-                      THREAD_CACHED_MUTABLE_ATTR_MAP("learning_rate_val", "scale", "l1", "l2",
+  m.add_functor(
+      "DispatchAdadeltaUpdate",
+      [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs, float learning_rate,
+         double scale, float l1, float l2, float rho, float epsilon, bool maximize,
+         float weight_decay) -> Maybe<void> {
+        auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("learning_rate_val", "scale", "l1", "l2",
                                                      "rho", "epsilon", "maximize", "weight_decay");
-                  attrs.SetAttr("learning_rate_val", learning_rate);
-                  attrs.SetAttr("scale", scale);
-                  attrs.SetAttr("l1", l1);
-                  attrs.SetAttr("l2", l2);
-                  attrs.SetAttr("rho", rho);
-                  attrs.SetAttr("epsilon", epsilon);
-                  attrs.SetAttr("maximize", maximize);
-                  attrs.SetAttr("weight_decay", weight_decay);
-                  JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
-                  return Maybe<void>::Ok();
-                });
+        attrs.SetAllAttrs(learning_rate, scale, l1, l2, rho, epsilon, maximize, weight_decay);
+        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
+        return Maybe<void>::Ok();
+      });
   m.add_functor("DispatchEagerCclAllReduce",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const std::string& parallel_conf) -> Maybe<Tensor> {
                   auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("parallel_conf");
-                  attrs.SetAttr("parallel_conf", parallel_conf);
+                  attrs.SetAllAttrs(parallel_conf);
                   return OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs);
                 });
   m.add_functor(
@@ -622,14 +461,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
         auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("files", "shape", "data_type", "batch_size",
                                                      "random_shuffle", "shuffle_block_size", "seed",
                                                      "nd_sbp");
-        attrs.SetAttr<std::vector<std::string>>("files", files);
-        attrs.SetAttr<Shape>("shape", shape);
-        attrs.SetAttr<DataType>("data_type", data_type->data_type());
-        attrs.SetAttr<int64_t>("batch_size", batch_size);
-        attrs.SetAttr<bool>("random_shuffle", random_shuffle);
-        attrs.SetAttr<int64_t>("shuffle_block_size", shuffle_block_size);
-        attrs.SetAttr<int64_t>("seed", random_seed);
-        attrs.SetAttr("nd_sbp", std::vector<std::string>());
+        attrs.SetAllAttrs(files, shape, data_type->data_type(), batch_size, random_shuffle,
+                          shuffle_block_size, random_seed, std::vector<std::string>());
         return OpInterpUtil::Dispatch<Tensor>(*op, {}, OpExprInterpContext(attrs, JUST(device)));
       });
   m.add_functor("DispatchRawReader",
@@ -641,14 +474,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
                       "files", "shape", "data_type", "batch_size", "random_shuffle",
                       "shuffle_block_size", "seed", "nd_sbp");
-                  attrs.SetAttr<std::vector<std::string>>("files", files);
-                  attrs.SetAttr<Shape>("shape", shape);
-                  attrs.SetAttr<DataType>("data_type", data_type->data_type());
-                  attrs.SetAttr<int64_t>("batch_size", batch_size);
-                  attrs.SetAttr<bool>("random_shuffle", random_shuffle);
-                  attrs.SetAttr<int64_t>("shuffle_block_size", shuffle_block_size);
-                  attrs.SetAttr<int64_t>("seed", random_seed);
-                  attrs.SetAttr("nd_sbp", *JUST(GetNdSbpStrList(sbp_tuple)));
+                  attrs.SetAllAttrs(files, shape, data_type->data_type(), batch_size,
+                                    random_shuffle, shuffle_block_size, random_seed,
+                                    *JUST(GetNdSbpStrList(sbp_tuple)));
                   auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
                   return OpInterpUtil::Dispatch<Tensor>(
                       *op, {}, OpExprInterpContext(attrs, placement, nd_sbp));

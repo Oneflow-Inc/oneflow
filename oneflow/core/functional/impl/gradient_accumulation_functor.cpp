@@ -35,7 +35,7 @@ class GradAccRepeatFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& in, int32_t repeat_num) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("repeat_num");
-    attrs.SetAttr<int32_t>("repeat_num", repeat_num);
+    attrs.SetAllAttrs(repeat_num);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
   }
 
@@ -50,7 +50,7 @@ class GradAccCollectFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& in, int32_t collect_num) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_acc_num");
-    attrs.SetAttr<int32_t>("max_acc_num", collect_num);
+    attrs.SetAllAttrs(collect_num);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
   }
 
@@ -65,7 +65,7 @@ class GradAccPackFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& in, int32_t pack_num) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("pack_num");
-    attrs.SetAttr<int32_t>("pack_num", pack_num);
+    attrs.SetAllAttrs(pack_num);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
   }
 
@@ -80,7 +80,7 @@ class GradAccUnpackFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& in, int32_t unpack_num) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("unpack_num");
-    attrs.SetAttr<int32_t>("unpack_num", unpack_num);
+    attrs.SetAllAttrs(unpack_num);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
   }
 
