@@ -420,6 +420,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   auto origin_input = JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true,
                                        /* is_local= */ input_tensor->is_local()));
   TensorNameScope::Global()->Record(origin_input, GenLogicalBlobName(op_conf.name(), obn));
+  TensorNameScope::Global()->Record(input_tensor, GenLogicalBlobName(op_conf.name(), obn));
 
   // NOTE: The input will then be unpacked in DispatchFeedInputOpExprFunctor
   // if GradAcc is enabled
@@ -861,10 +862,11 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
 }
 
 Maybe<void> LazyInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const TensorTuple& inputs,
-                                       TensorTuple* outputs, const OpExprInterpContext& ctx) const {
-  // TODO(hjchen2)
-  OF_UNIMPLEMENTED() << "The type " << op_expr.op_type_name()
-                     << " has not been supported in LazyInterpreter::Apply.";
+                                       TensorTuple* outputs, const OpExprInterpContext&) const {
+  // Must reset ctx in each forward
+  op_expr.reset_state();
+  std::shared_ptr<FunctionAutoGradCaptureState> ctx = op_expr.state();
+  *outputs = *(op_expr.forward()(ctx, inputs));
   return Maybe<void>::Ok();
 }
 
