@@ -22,6 +22,7 @@ limitations under the License.
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "llvm/Support/TargetSelect.h"
 #include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/OneFlowOps.h"
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/switch_func.h"
@@ -68,6 +69,35 @@ Maybe<void> KernelLaunchOp::InferDataType(user_op::InferContext* ctx) { return M
 
 namespace {
 
+// this context should support querying information about the kernel from representation in MLIR
+class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
+  using ArgVec = std::vector<std::pair<std::string, int32_t>>;
+
+ public:
+  explicit KernelLaunchOpKernelRegContext();
+  ~KernelLaunchOpKernelRegContext() = default;
+  DeviceType device_type() const override { return device_type_; }
+  const ParallelContext& parallel_ctx() const override { return *parallel_ctx_; }
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                        int32_t index) const override {
+    return nullptr;
+  }
+  const ArgVec& inputs() const override { return {}; }
+  const ArgVec& outputs() const override { return {}; }
+
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4Name(attr_name);
+  }
+
+ private:
+  DeviceType device_type_;
+  const ParallelContext* parallel_ctx_;
+  const user_op::UserOpConfWrapper user_op_conf_;
+};
+
 template<typename T>
 class KernelLaunchCpuKernel final : public user_op::OpKernel {
  public:
@@ -79,8 +109,14 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
     llvm::SmallVector<llvm::StringRef, 4> ext_libs(
         {SharedLibPaths()->begin(), SharedLibPaths()->end()});
     // TODO
+    KernelLaunchOpKernelRegContext reg_ctx;
+    const auto* res =
+        CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult("relu", reg_ctx));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+  ::mlir::oneflow::KernelLaunchOp op_;
+  ::mlir::ModuleOp owned_module_;
 };
 
 #define REGISTER_KERNEL_LAUNCH_CPU_KERNEL(dtype)                                                \
