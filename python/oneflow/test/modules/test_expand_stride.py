@@ -147,6 +147,7 @@ class ExpandStrideTestCase(flow.unittest.TestCase):
             ((2, 1, 3), (0, 2, 1), (2, 1, -1, -1, -1)),
             ((2, 1, 3), (0, 2, 1), (2, 1, -1, -1, 4)),
             ((2, 1, 3), (0, 2, 1), (3, 2, -1, -1, 4)),
+            ((2, 3, 4), (0, 2, 1), (2, 2, -1, -1, -1)),
         ]
         for kwargs in GenArgDict(arg_dict):
             assert "shapes" in kwargs
