@@ -2662,6 +2662,10 @@
   signature: "Tensor (Tensor x, Tensor dydx) =>  Log2GradGrad" 
   bind_python: False
 
+- name: "log10_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  Log10GradGrad" 
+  bind_python: False
+
 - name: "log1p_grad_grad"  
   signature: "Tensor (Tensor x, Tensor dydx) =>  Log1pGradGrad" 
   bind_python: False

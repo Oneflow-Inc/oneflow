@@ -272,6 +272,16 @@ class Log2GradGradFunctor {
   }
 };
 
+class Log10GradGradFunctor {
+ public:
+  // dx = 1/(x*ln10), ddx = 1/ln10 * -1/(x*x)
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    return functional::ScalarMul(Scalar(1.0 / std::log(10.0f)),
+                                 JUST(functional::ReciprocalGrad(x, dydx)));
+  }
+};
+
 class Log1pGradGradFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
@@ -488,6 +498,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::Expm1GradGradFunctor>("Expm1GradGrad");
   m.add_functor<impl::LogGradGradFunctor>("LogGradGrad");
   m.add_functor<impl::Log2GradGradFunctor>("Log2GradGrad");
+  m.add_functor<impl::Log10GradGradFunctor>("Log10GradGrad");
   m.add_functor<impl::Log1pGradGradFunctor>("Log1pGradGrad");
   m.add_functor<impl::LogSigmoidGradGradFunctor>("LogSigmoidGradGrad");
   m.add_functor<impl::ReciprocalGradGradFunctor>("ReciprocalGradGrad");
