@@ -29,12 +29,12 @@ class thread:
 
     .. code-block:: python
         >>> import oneflow as flow
-        >>> with flow.async.thread(2):
+        >>> with flow.asyncs.thread(2):
         ...     print(flow.ones(2, 2))
         ...
         tensor([[1., 1.],
                 [1., 1.]], dtype=oneflow.float32)
-        >>> @flow.async.thread(3)
+        >>> @flow.asyncs.thread(3)
         ... def ones_in_other_thread():
         ...     return flow.ones(2, 2)
         ...
