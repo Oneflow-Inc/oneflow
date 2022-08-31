@@ -546,6 +546,7 @@ class TestLog2Module(flow.unittest.TestCase):
         x = random_tensor().to(device)
         return torch.log2(x)
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestLog10Module(flow.unittest.TestCase):
     @autotest(n=5)

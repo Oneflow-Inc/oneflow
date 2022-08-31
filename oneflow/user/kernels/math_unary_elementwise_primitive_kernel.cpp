@@ -38,7 +38,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("lgamma", ep::primitive::UnaryOp::kLgamma)                     \
   OF_PP_MAKE_TUPLE_SEQ("log", ep::primitive::UnaryOp::kLog)                           \
   OF_PP_MAKE_TUPLE_SEQ("log2", ep::primitive::UnaryOp::kLog2)                         \
-  OF_PP_MAKE_TUPLE_SEQ("log10", ep::primitive::UnaryOp::kLog10)                         \
+  OF_PP_MAKE_TUPLE_SEQ("log10", ep::primitive::UnaryOp::kLog10)                       \
   OF_PP_MAKE_TUPLE_SEQ("log1p", ep::primitive::UnaryOp::kLog1p)                       \
   OF_PP_MAKE_TUPLE_SEQ("log_sigmoid", ep::primitive::UnaryOp::kLogSigmoid)            \
   OF_PP_MAKE_TUPLE_SEQ("negative", ep::primitive::UnaryOp::kNegative)                 \
@@ -73,7 +73,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("log_grad", ep::primitive::BinaryOp::kLogBackwardWithDyX)                \
   OF_PP_MAKE_TUPLE_SEQ("lgamma_grad", ep::primitive::BinaryOp::kLgammaBackwardWithDyX)          \
   OF_PP_MAKE_TUPLE_SEQ("log2_grad", ep::primitive::BinaryOp::kLog2BackwardWithDyX)              \
-  OF_PP_MAKE_TUPLE_SEQ("log10_grad", ep::primitive::BinaryOp::kLog10BackwardWithDyX)              \
+  OF_PP_MAKE_TUPLE_SEQ("log10_grad", ep::primitive::BinaryOp::kLog10BackwardWithDyX)            \
   OF_PP_MAKE_TUPLE_SEQ("log1p_grad", ep::primitive::BinaryOp::kLog1pBackwardWithDyX)            \
   OF_PP_MAKE_TUPLE_SEQ("log_sigmoid_grad", ep::primitive::BinaryOp::kLogSigmoidBackwardWithDyX) \
   OF_PP_MAKE_TUPLE_SEQ("reciprocal_grad", ep::primitive::BinaryOp::kReciprocalBackwardWithDyX)  \
