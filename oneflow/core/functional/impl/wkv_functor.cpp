@@ -78,8 +78,9 @@ class WkvGradFunctor {
     JUST(attrs.SetAttr<int64_t>("C", C));
     OpExprInterpContext ctx(attrs);
 
-    std::shared_ptr<TensorTuple> outputs =
-        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {w, u, k, v, gy}, ctx));
+    std::shared_ptr<TensorTuple> outputs = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+        *op_, {JUST(functional::ScalarMul(Scalar(-1.0), JUST(functional::Exp(w)))), u, k, v, gy},
+        ctx));
     std::vector<int32_t> reduce_axes_vec;
     reduce_axes_vec.emplace_back(0);
     outputs->at(0) = JUST(ReduceSum(outputs->at(0), reduce_axes_vec, /*keepdim=*/false));
