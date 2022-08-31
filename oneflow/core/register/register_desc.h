@@ -33,6 +33,8 @@ class RegstDesc final {
   RegstDesc();
   ~RegstDesc() = default;
 
+  std::string lbi;
+
   // regst_desc_id
   int64_t regst_desc_id() const { return regst_desc_id_; }
 
