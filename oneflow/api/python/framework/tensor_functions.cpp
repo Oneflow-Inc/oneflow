@@ -575,6 +575,7 @@ REDUCE_FUNC(PyTensorObject_mean, functional::reduce_mean, functional::ReduceMean
     END_HANDLE_ERRORS                                                      \
   }
 
+DATATYPE_FUNC(PyTensorObject_bool, DType::Bool());
 DATATYPE_FUNC(PyTensorObject_int, DType::Int32());
 DATATYPE_FUNC(PyTensorObject_long, DType::Int64());
 DATATYPE_FUNC(PyTensorObject_half, DType::Float16());
@@ -830,6 +831,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"addcdiv", (PyCFunction)PyTensorObject_addcdiv, METH_VARARGS | METH_KEYWORDS, NULL},
     {"addcdiv_", (PyCFunction)PyTensorObject_addcdiv_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"matmul", (PyCFunction)PyTensorObject_matmul, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bool", PyTensorObject_bool, METH_NOARGS, NULL},
     {"int", PyTensorObject_int, METH_NOARGS, NULL},
     {"long", PyTensorObject_long, METH_NOARGS, NULL},
     {"half", PyTensorObject_half, METH_NOARGS, NULL},
