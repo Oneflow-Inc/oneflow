@@ -26,7 +26,6 @@ void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
 void CopyTaskNode::ConsumeAllRegsts() { ConsumeRegst("copy_in", SoleInDataEdge()->GetSoleRegst()); }
 
 void CopyTaskNode::BuildExecGph() {
-  LOG(ERROR) << "copy task node build, task id " << task_id();
   auto out_regst = GetProducedRegst("copy_out");
   auto in_regst = GetSoleConsumedRegst("copy_in");
   out_regst->AddLbiFrom(in_regst.get());

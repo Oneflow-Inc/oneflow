@@ -164,18 +164,9 @@ void TaskNode::Build() {
 void TaskNode::InferRegst() {
   if (mut_exec_gph().node_num() == 1) {
     auto node = mut_exec_gph().SoleNode();
-    if (op_node()) {
-      LOG(ERROR) << " solo " << op_node()->op().op_name() << " infer Regst";
-      if (op_node()->op().op_name() == "System-Boxing-Identity-63") {
-        LOG(ERROR) << " solo op conf " << op_node()->op().op_conf().DebugString() << " infer Regst";
-      }
-    }
     node->InferBlobDescs(op_node(), parallel_ctx());
   } else if (mut_exec_gph().node_num() > 1) {
     mut_exec_gph().TopoForEachNode([this](ExecNode* node) { 
-      if (op_node()) {
-        LOG(ERROR) << op_node()->op().op_name() << " infer Regst";
-      }
       node->InferBlobDescs(op_node(), parallel_ctx());
     });
   }

@@ -23,10 +23,7 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
-  auto in = BlobDesc4BnInOp("in");
-  LOG(ERROR) << " in blob desc shape " << in->shape().ToString();
   *BlobDesc4BnInOp("out") = *BlobDesc4BnInOp("in");
-  LOG(ERROR) << " out blob desc shape " << BlobDesc4BnInOp("out")->shape().ToString();
   return Maybe<void>::Ok();
 }
 

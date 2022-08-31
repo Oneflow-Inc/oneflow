@@ -222,8 +222,6 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
         if (in.shape().elem_cnt() == 0) return 0;                                       \
         const auto& weight = ctx->InputTensorDesc("weight", 0);                         \
         const auto& out = ctx->OutputTensorDesc("out", 0);                              \
-        LOG(ERROR) << "in shape " << in.shape().ToString() << " weight shape " << weight.shape().ToString() << " out shape " << out.shape().ToString(); \
-        LOG(ERROR) << "in shape " << in.shape().elem_cnt();                             \
         const auto& cudnn_conf =                                                        \
             Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();        \
         return InferTmpSizeWithCudnn<cudnnConvolutionFwdAlgoPerf_t>(                    \

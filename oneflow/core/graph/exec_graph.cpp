@@ -21,8 +21,6 @@ limitations under the License.
 namespace oneflow {
 
 void ExecNode::BindBnWithRegst(const std::string& bn, std::shared_ptr<RegstDesc> regst) {
-  auto ret = regst->MutBlobDesc(op()->BnInOp2Lbi(bn));
-  LOG(ERROR) << " op name " << op_->op_name() << " bn " <<  bn << " bind with regst ptr " << regst << " blob desc ptr " << ret;
   CHECK(bn_in_op2regst_.emplace(bn, regst).second);
 }
 
@@ -52,7 +50,6 @@ bool ExecNode::TryBindBnWithOneOfTheRegsts(const std::string& bn,
 
 void ExecNode::BindBnWithOneOfTheRegsts(const std::string& bn,
                                         const std::list<std::shared_ptr<RegstDesc>>& regsts) {
-  LOG(ERROR) << op_->op_name() << " bn " << bn << " try to bind regst";
   CHECK(TryBindBnWithOneOfTheRegsts(bn, regsts));
 }
 
@@ -141,7 +138,6 @@ std::function<BlobDesc*(const std::string&)> ExecNode::GetRegstBlobDesc4BnInOpFu
     std::shared_ptr<RegstDesc> regst = it->second;
     CHECK(regst);
     auto ret = regst->MutBlobDesc(op()->BnInOp2Lbi(bn_in_op));
-    LOG(ERROR) << " op name " << this->op_->op_name() << " bn in op " << bn_in_op << " regst ptr " << regst << " blob desc ptr " << ret;
     return ret;
   };
 }

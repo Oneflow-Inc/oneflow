@@ -85,12 +85,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void ForEachConsumedDataRegst(
       const std::function<void(const std::string&, const RegstDesc*)>& Handler) const;
   void Build();
-  void BuildExecGphIf() { 
-    BuildExecGph();
-    mut_exec_gph().TopoForEachNode([](ExecNode* node) { 
-      LOG(ERROR) << "build exe graph with node " << node->op()->op_name();
-    });
-  }
+  void BuildExecGphIf() { BuildExecGph(); }
   void InferRegstIf() { InferRegst(); }
 
 

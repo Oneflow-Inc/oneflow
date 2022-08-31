@@ -44,7 +44,6 @@ CudnnTensorDesc::CudnnTensorDesc(DataType data_type, int dims, const int* dim, c
 }
 CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const ShapeView& shape,
                                  const std::string& data_format) {
-  LOG(ERROR) << " data type " << data_type << " shape " << shape.ToString() << " format " << data_format;
   OF_CUDNN_CHECK(cudnnCreateTensorDescriptor(&val_));
   cudnnTensorFormat_t cudnn_data_format;
   if (data_format == "channels_first") {

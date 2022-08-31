@@ -94,9 +94,6 @@ void NormalForwardCompTaskNode::BuildExecGph() {
 void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
   ExecNode* cur_node = mut_exec_gph().NewNode();
   cur_node->mut_op() = op();
-  if (op()->op_name() == "Logical-Boxing-Identity-62") {
-    LOG(ERROR) << "got";
-  }
   const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
   for (const std::string& ibn : cur_node->op()->input_bns()) {
     cur_node->BindBnWithOneOfTheRegsts(ibn, in_regsts);

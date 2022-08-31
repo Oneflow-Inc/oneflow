@@ -639,21 +639,15 @@ Maybe<void> UserOp::InferLogicalOutBlobDescs(
 Maybe<void> UserOp::InferOutBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  // LOG(ERROR) << op_name() << " is from logical graph " << JUST(IsFromLogicalGraph());
   // Infer with logical blob desc, sbp.
   const auto& nd_sbp_signature = JUST(this->nd_sbp_signature());
   const auto& parallel_desc = JUST(this->GetOpParallelDesc());
-  for (const auto& bn : input_bns()) {
-    BlobDesc* desc = GetBlobDesc4BnInOp(bn);
-    LOG(ERROR) << "op " << op_name() << " input name " << bn << " blob desc shape " << desc->shape().ToString();
-  }
   for (const auto& bn : output_bns()) {
     BlobDesc* desc = GetBlobDesc4BnInOp(bn);
     *desc = *JUST(GetLogicalBlobDesc4Obn(bn));
     const auto& nd_sbp = nd_sbp_signature->bn_in_op2nd_sbp().at(bn);
     desc->mut_shape() =
         *JUST(GetPhysicalShape(desc->shape(), nd_sbp, *parallel_desc, *parallel_ctx));
-    LOG(ERROR) << "op " << op_name() << " output name " << bn << " blob desc shape " << desc->shape().ToString();
     desc->mut_stride() = Stride(desc->shape());
   }
   return Maybe<void>::Ok();

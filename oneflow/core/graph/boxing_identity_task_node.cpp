@@ -31,13 +31,10 @@ void BoxingIdentityTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void BoxingIdentityTaskNode::ConsumeAllRegsts() {
   this->ForEachInDataEdge(
-      [&](TaskEdge* in_edge) { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); 
-      LOG(ERROR) << " boxing task " << task_id() << " consume " << SoleInDataEdge()->GetSoleRegst()->producer()->task_id();
-      });
+      [&](TaskEdge* in_edge) { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); });
 }
 
 void BoxingIdentityTaskNode::BuildExecGph() {
-  LOG(ERROR) << "boxing task node build, task id " << task_id();
   ExecNode* node = mut_exec_gph().NewNode();
   OperatorConf op_conf;
   op_conf.set_name("System-Boxing-Identity-" + NewUniqueId());
@@ -46,11 +43,9 @@ void BoxingIdentityTaskNode::BuildExecGph() {
   std::shared_ptr<Operator> sole_op = CHECK_JUST(ConstructOp(op_conf));
   node->mut_op() = sole_op;
   node->BindBnWithRegst(sole_op->SoleIbn(), GetSoleConsumedRegst("in"));
-  LOG(ERROR) << "+++";
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   out_regst->AddLbi(sole_op->BnInOp2Lbi(sole_op->SoleObn()));
   node->BindBnWithRegst(sole_op->SoleObn(), out_regst);
-  LOG(ERROR) << "---";
 }
 
 void BoxingIdentityTaskNode::InferProducedDataRegstTimeShape() {
