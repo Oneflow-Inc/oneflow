@@ -491,7 +491,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AsinhGradGradFunctor>("AsinhGradGrad");
   m.add_functor<impl::AcoshGradGradFunctor>("AcoshGradGrad");
   m.add_functor<impl::AtanhGradGradFunctor>("AtanhGradGrad");
-
   m.add_functor<impl::ErfGradGradFunctor>("ErfGradGrad");
   m.add_functor<impl::ErfcGradGradFunctor>("ErfcGradGrad");
   m.add_functor<impl::ExpGradGradFunctor>("ExpGradGrad");
@@ -507,7 +506,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SqrtGradGradFunctor>("SqrtGradGrad");
   m.add_functor<impl::SquareGradGradFunctor>("SquareGradGrad");
   m.add_functor<impl::SigmoidGradGradFunctor>("SigmoidGradGrad");
-
   m.add_functor<impl::SiluGradGradFunctor>("SiluGradGrad");
   m.add_functor<impl::SeluGradGradFunctor>("SeluGradGrad");
   m.add_functor<impl::SoftSignGradGradFunctor>("SoftSignGradGrad");
