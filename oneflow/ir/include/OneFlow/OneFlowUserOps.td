@@ -9752,7 +9752,7 @@ def OneFlow_SgdEmbeddingUpdateOp : OneFlow_BaseOp<"sgd_embedding_update", [AttrS
     OneFlow_Tensor:$num_unique_ids,
     OneFlow_Tensor:$unique_embeddings,
     OneFlow_Tensor:$embedding_grad,
-    OneFlow_Tensor:$learning_rate,
+    Optional<OneFlow_Tensor>:$learning_rate,
     Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<OneFlow_Tensor>:$down_scale_by_tensor,
     Optional<OneFlow_Tensor>:$skip_if
@@ -9761,6 +9761,7 @@ def OneFlow_SgdEmbeddingUpdateOp : OneFlow_BaseOp<"sgd_embedding_update", [AttrS
     OneFlow_Tensor:$updated_unique_embeddings
   );
   let attrs = (ins
+    DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
     DefaultValuedAttr<F64Attr, "1.">:$scale,
     DefaultValuedAttr<F32Attr, "0.">:$l1,
     DefaultValuedAttr<F32Attr, "0.">:$l2,
@@ -9780,7 +9781,7 @@ def OneFlow_MomentumEmbeddingUpdateOp : OneFlow_BaseOp<"momentum_embedding_updat
     OneFlow_Tensor:$num_unique_ids,
     OneFlow_Tensor:$unique_embeddings,
     OneFlow_Tensor:$embedding_grad,
-    OneFlow_Tensor:$learning_rate,
+    Optional<OneFlow_Tensor>:$learning_rate,
     Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<OneFlow_Tensor>:$down_scale_by_tensor,
     Optional<OneFlow_Tensor>:$skip_if
@@ -9789,6 +9790,7 @@ def OneFlow_MomentumEmbeddingUpdateOp : OneFlow_BaseOp<"momentum_embedding_updat
     OneFlow_Tensor:$updated_unique_embeddings
   );
   let attrs = (ins
+    DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
     DefaultValuedAttr<F64Attr, "1.">:$scale,
     DefaultValuedAttr<F32Attr, "0.">:$l1,
     DefaultValuedAttr<F32Attr, "0.">:$l2,
@@ -9810,7 +9812,7 @@ def OneFlow_AdamEmbeddingUpdateOp : OneFlow_BaseOp<"adam_embedding_update", [Att
     OneFlow_Tensor:$num_unique_ids,
     OneFlow_Tensor:$unique_embeddings,
     OneFlow_Tensor:$embedding_grad,
-    OneFlow_Tensor:$learning_rate,
+    Optional<OneFlow_Tensor>:$learning_rate,
     Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<OneFlow_Tensor>:$down_scale_by_tensor,
     Optional<OneFlow_Tensor>:$skip_if,
@@ -9821,6 +9823,7 @@ def OneFlow_AdamEmbeddingUpdateOp : OneFlow_BaseOp<"adam_embedding_update", [Att
     OneFlow_Tensor:$updated_unique_embeddings
   );
   let attrs = (ins
+    DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
     DefaultValuedAttr<F64Attr, "1.">:$scale,
     DefaultValuedAttr<F32Attr, "0.">:$l1,
     DefaultValuedAttr<F32Attr, "0.">:$l2,
@@ -9845,8 +9848,8 @@ def OneFlow_AdagradEmbeddingUpdateOp : OneFlow_BaseOp<"adagrad_embedding_update"
     OneFlow_Tensor:$num_unique_ids,
     OneFlow_Tensor:$unique_embeddings,
     OneFlow_Tensor:$embedding_grad,
-    OneFlow_Tensor:$learning_rate,
     OneFlow_Tensor:$train_step,
+    Optional<OneFlow_Tensor>:$learning_rate,
     Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<OneFlow_Tensor>:$down_scale_by_tensor,
     Optional<OneFlow_Tensor>:$skip_if
@@ -9855,6 +9858,7 @@ def OneFlow_AdagradEmbeddingUpdateOp : OneFlow_BaseOp<"adagrad_embedding_update"
     OneFlow_Tensor:$updated_unique_embeddings
   );
   let attrs = (ins
+    DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
     DefaultValuedAttr<F64Attr, "1.">:$scale,
     DefaultValuedAttr<F32Attr, "0.">:$l1,
     DefaultValuedAttr<F32Attr, "0.">:$l2,
@@ -9894,7 +9898,8 @@ def OneFlow_FtrlEmbeddingUpdateOp : OneFlow_BaseOp<"ftrl_embedding_update", [Att
     OneFlow_Tensor:$num_unique_ids,
     OneFlow_Tensor:$unique_embeddings,
     OneFlow_Tensor:$embedding_grad,
-    OneFlow_Tensor:$learning_rate,
+    Optional<OneFlow_Tensor>:$learning_rate,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<OneFlow_Tensor>:$down_scale_by_tensor,
     Optional<OneFlow_Tensor>:$skip_if
   );
@@ -9902,6 +9907,7 @@ def OneFlow_FtrlEmbeddingUpdateOp : OneFlow_BaseOp<"ftrl_embedding_update", [Att
     OneFlow_Tensor:$updated_unique_embeddings
   );
   let attrs = (ins
+    DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
     DefaultValuedAttr<F64Attr, "1.">:$scale,
     DefaultValuedAttr<F32Attr, "0.">:$l1,
     DefaultValuedAttr<F32Attr, "0.">:$l2,

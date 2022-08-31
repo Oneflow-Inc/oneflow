@@ -671,14 +671,18 @@ EmbeddingState* EmbeddingManager::GetEmbeddingState(const std::string& embedding
   auto it = embedding_state_map_.find(map_key);
   if (it == embedding_state_map_.end()) {
     if (!LazyMode::is_enabled()) {
-      LOG(WARNING) << "create Eager EmbeddingState" << embedding_name << "-" << rank_id;
+#if CUDA_VERSION >= 11020
+      LOG(WARNING) << "create Eager EmbeddingState " << embedding_name << "-" << rank_id;
       it = embedding_state_map_
                .emplace(map_key, std::make_unique<DynamicAllocationEagerEmbeddingState>())
                .first;
+#else
+      UNIMPLEMENTED();
+#endif
     } else {
       if (UseDynamicMemoryAllocation()) {
 #if CUDA_VERSION >= 11020
-        LOG(WARNING) << "create DynamicAllocation Lazy EmbeddingState" << embedding_name << "-"
+        LOG(WARNING) << "create DynamicAllocation Lazy EmbeddingState " << embedding_name << "-"
                      << rank_id;
         it = embedding_state_map_
                  .emplace(map_key, std::make_unique<DynamicAllocationEmbeddingState>())
@@ -687,7 +691,7 @@ EmbeddingState* EmbeddingManager::GetEmbeddingState(const std::string& embedding
         UNIMPLEMENTED();
 #endif
       } else {
-        LOG(WARNING) << "create StaticAllocation Lazy EmbeddingState" << embedding_name << "-"
+        LOG(WARNING) << "create StaticAllocation Lazy EmbeddingState " << embedding_name << "-"
                      << rank_id;
         it = embedding_state_map_
                  .emplace(map_key, std::make_unique<StaticAllocationEmbeddingState>())

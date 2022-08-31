@@ -308,21 +308,6 @@ class Embedding(Module):
             .to("cuda")
             .to_global(placement=placement, sbp=sbp)
         )
-        lr_tensor = (
-            flow.tensor(np.array((lr,)).astype(np.float32))
-            .to("cuda")
-            .to_global(placement=placement, sbp=sbp)
-        )
-        down_scale_by_tensor = (
-            flow.tensor(np.ones((1,)).astype(np.float32))
-            .to("cuda")
-            .to_global(placement=placement, sbp=sbp)
-        )
-        skip_if = (
-            flow.tensor(np.zeros((1,)).astype(np.int64))
-            .to("cuda")
-            .to_global(placement=placement, sbp=sbp)
-        )
         scale = 1.0
         weight_decay = 0.0
         momentum = 0.0
@@ -332,15 +317,13 @@ class Embedding(Module):
             num_valid,
             unique_embeddings,
             embedding_grad,
-            lr_tensor,
-            down_scale_by_tensor,
-            skip_if,
-            scale,
-            weight_decay,
-            momentum,
-            line_size,
-            embedding_size,
-            self.embedding_name,
+            learning_rate_val=lr,
+            scale=scale,
+            weight_decay=weight_decay,
+            momentum=momentum,
+            line_size=line_size,
+            embedding_size=embedding_size,
+            embedding_name=self.embedding_name,
         )
         flow._C.one_embedding_embedding_put(
             num_valid, unique_ids, unique_embeddings, self.embedding_name, line_size

@@ -1562,7 +1562,6 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
         buffer_ptr);
 
     embedding_state->OnEmbeddingEagerBackwardEnd(ctx, current_iter_);
-    // LOG(ERROR) << "EmbeddingLookupPlaceholder grad Kernel";
     current_iter_++;
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

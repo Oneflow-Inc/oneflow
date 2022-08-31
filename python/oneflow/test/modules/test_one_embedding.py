@@ -79,6 +79,7 @@ optimizer = flow.one_embedding.Optimizer(
 # optimizer.zero_grad()
 loss.backward()
 optimizer.step()
+optimizer.zero_grad()
 
 
 class Optimizer:
