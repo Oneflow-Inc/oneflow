@@ -121,24 +121,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("dropout").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                           user_op::AddOpFn AddOp) -> Maybe<void> {
-  if (op.NeedGenGradTensor4OpInput("in", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    const float rate = op.attr<float>("rate");
-    float scale = 0.0f;  // When dropout rate = 1.0, we set scale as zero.
-    if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
-    user_op::UserOpConfWrapper dropout_grad_op =
-        builder.Op("dropout_grad")
-            .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-            .Input("mask", op.output("mask", 0))
-            .Output("dx")
-            .Attr("scale", scale)
-            .Build();
-    op.BindGradTensorWithOpInput(dropout_grad_op.output("dx", 0), "in", 0);
-    AddOp(dropout_grad_op);
-  }
-  return Maybe<void>::Ok();
-});
-
 }  // namespace oneflow

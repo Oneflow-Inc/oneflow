@@ -44,6 +44,11 @@ class GlobalIdStorage final {
     return Maybe<void>::Ok();
   }
 
+  bool IsInserted(int64_t id) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    return id2debug_string_.count(id) > 0;
+  }
+
   Maybe<void> TryEmplace(int64_t id, const std::string& debug_string) {
     std::unique_lock<std::mutex> lock(mutex_);
     for (const auto& pair : id2debug_string_) {
@@ -77,6 +82,15 @@ std::unique_ptr<int64_t>* MutThreadLocalUniqueGlobalId() {
 }  // namespace
 
 size_t GetThreadGlobalIdCount() { return GlobalIdStorage::Singleton()->Size(); }
+
+Maybe<void> CheckThreadGlobalIdAvailable(int64_t thread_global_id) {
+  CHECK_GE_OR_RETURN(thread_global_id, 0) << "thread_global_id should be non negative";
+  CHECK_LT_OR_RETURN(thread_global_id, TransportToken::MaxNumberOfThreadGlobalUId())
+      << "thread_global_id should be less than " << TransportToken::MaxNumberOfThreadGlobalUId();
+  CHECK_OR_RETURN(!GlobalIdStorage::Singleton()->IsInserted(thread_global_id))
+      << "thread_global_id " << thread_global_id << " has been used.";
+  return Maybe<void>::Ok();
+}
 
 Maybe<void> InitThisThreadUniqueGlobalId(int64_t id, const std::string& debug_string) {
   JUST(GlobalIdStorage::Singleton()->Emplace(id, debug_string));

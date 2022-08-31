@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
-#include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/operator/operator.h"
@@ -783,53 +782,5 @@ bool UserKernel::IsStateless() const { return !kernel_->AlwaysComputeWhenAllOutp
 NEW_REGISTER_KERNEL(OperatorConf::kUserConf, UserKernel).SetIsMatchedPred([](const KernelConf&) {
   return true;
 });
-
-EagerKernel::EagerKernel(const KernelConf& kernel_conf) {
-  InitBase(kernel_conf);
-  InitOpKernel(kernel_conf);
-}
-
-void EagerKernel::InitOpKernel(const KernelConf& kernel_conf) {
-  const std::string& op_type_name = kernel_conf.op_attribute().op_conf().user_conf().op_type_name();
-  auto kernel_reg_val = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-      op_type_name, UserKernelRegContext(kernel_conf)));
-  CHECK_NOTNULL(kernel_reg_val);
-  kernel_.reset(kernel_reg_val->create_fn());
-}
-
-void EagerKernel::Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf().all_blobs_are_static()) { return; }
-  UserKernelInferContext infer_ctx(nullptr, kernel_conf());
-  infer_ctx.UpdateArg2Tensor(BnInOp2Blob);
-  auto* op_infer_ctx = dynamic_cast<UserKernelOpInferContext*>(infer_ctx.MutOpInferContext());
-  if (op_infer_ctx) { op_infer_ctx->UpdateArg2TensorDesc(BnInOp2Blob); }
-  kernel_->InferShape(&infer_ctx);
-}
-
-std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
-    const std::shared_ptr<user_op::OpKernelState>& old_opkernel_state, ep::Stream* stream,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  std::shared_ptr<user_op::OpKernelState> new_opkernel_state;
-  CHECK_NOTNULL(stream);
-  UserKernelInitAndCacheContext init_and_cache_ctx(stream, kernel_conf());
-  if (old_opkernel_state) {
-    new_opkernel_state = old_opkernel_state;
-  } else {
-    new_opkernel_state = kernel_->CreateOpKernelState(&init_and_cache_ctx);
-  }
-  kernel_->InitOpKernelCacheWithFlags(&init_and_cache_ctx, user_op::OpKernelCache::kAllMayChanged,
-                                      &cache_);
-
-  if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob)
-      && !kernel_->AlwaysComputeWhenAllOutputsEmpty()) {
-    return new_opkernel_state;
-  }
-
-  // TODO(lixinqi): refactor to a lightweight KernelComputeContext
-  UserKernelComputeContext compute_ctx(stream, kernel_conf());
-  compute_ctx.UpdateTensorWithCorrBlob(BnInOp2Blob);
-  kernel_->Compute(&compute_ctx, new_opkernel_state.get(), cache_.get());
-  return new_opkernel_state;
-}
 
 }  // namespace oneflow

@@ -140,22 +140,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("softmax_cross_entropy")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("prediction", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("softmax_cross_entropy_grad")
-                .Input("prob", op.output("prob", 0))
-                .Input("label", op.input("label", 0))
-                .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-                .Output("prediction_diff")
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("prediction_diff", 0), "prediction", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace oneflow
