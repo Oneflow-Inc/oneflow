@@ -48,9 +48,7 @@ class EyeDevcieFunctor {
                            const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device,
                            const bool& requires_grad) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rows", "cols", "dtype");
-    attrs.SetAttr<int64_t>("rows", rows.As<int64_t>());
-    attrs.SetAttr<int64_t>("cols", cols.value_or(rows).As<int64_t>());
-    attrs.SetAttr<DataType>("dtype", dtype->data_type());
+    attrs.SetAllAttrs(rows.As<int64_t>(), cols.value_or(rows).As<int64_t>(), dtype->data_type());
     OpExprInterpContext ctx(attrs);
     ctx.device = device;
     auto res = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
@@ -88,11 +86,7 @@ class GlobalEyeSbpListFunctor {
       CHECK_OR_RETURN(sbp_tuple.at(i)->has_broadcast_parallel())
           << "sbp of eye should be broadcast only";
     }
-
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rows", "cols", "dtype", "nd_sbp");
-    attrs.SetAttr<int64_t>("rows", rows.As<int64_t>());
-    attrs.SetAttr<int64_t>("cols", cols.value_or(rows).As<int64_t>());
-    attrs.SetAttr<DataType>("dtype", dtype->data_type());
     if (LazyMode::is_enabled()) {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
       {
@@ -100,8 +94,13 @@ class GlobalEyeSbpListFunctor {
           nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
         }
       }
-      attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp);
+      attrs.SetAllAttrs(rows.As<int64_t>(), cols.value_or(rows).As<int64_t>(), dtype->data_type(),
+                        nd_sbp);
+    } else {
+      attrs.SetAllAttrs(rows.As<int64_t>(), cols.value_or(rows).As<int64_t>(), dtype->data_type(),
+                        NullOpt);
     }
+
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
     auto res = JUST(
         OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp)));
@@ -134,9 +133,7 @@ class EyeInplaceFunctor {
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = x;
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rows", "cols", "dtype");
-    attrs.SetAttr<int64_t>("rows", x->shape()->At(0));
-    attrs.SetAttr<int64_t>("cols", x->shape()->At(1));
-    attrs.SetAttr<DataType>("dtype", x->dtype()->data_type());
+    attrs.SetAllAttrs(x->shape()->At(0), x->shape()->At(1), x->dtype()->data_type());
     OpExprInterpContext ctx(attrs);
     ctx.device = JUST(x->device());
     JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(), ctx));
