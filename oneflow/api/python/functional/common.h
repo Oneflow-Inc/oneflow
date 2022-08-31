@@ -124,6 +124,10 @@ Symbol<DType> PyUnpackDType(PyObject* obj);
 bool PyDTypeSequenceCheck(PyObject* obj);
 std::vector<Symbol<DType>> PyUnpackDTypeSequence(PyObject* obj);
 
+// Shape
+bool PyShapeCheck(PyObject* obj);
+Shape PyUnpackShape(PyObject* obj);
+
 // Shape list
 bool PyShapeSequenceCheck(PyObject* obj);
 std::vector<Shape> PyUnpackShapeSequence(PyObject* obj);

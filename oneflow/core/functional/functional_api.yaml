@@ -618,7 +618,7 @@
   bind_python: True
 
 - name: "sigmoid_grad"
-  signature: "Tensor (Tensor x, Tensor dy) => SigmoidGrad"
+  signature: "Tensor (Tensor y, Tensor dy) => SigmoidGrad"
   bind_python: True
 
 - name: "hardsigmoid"
@@ -1267,10 +1267,6 @@
   signature: "Tensor (Tensor x) => Negative"
   bind_python: True
 
-- name: "negative_grad"
-  signature: "Tensor (Tensor x, Tensor dy) => NegativeGrad"
-  bind_python: False
-
 - name: "layer_norm_affine"
   signature:
     "Tensor (Tensor x, Tensor gamma, Tensor beta, Int64 begin_norm_axis,
@@ -1417,7 +1413,8 @@
     "Tensor (Tensor x, String device=None, DataType dtype=None, Bool copy=False) => To",
     "Tensor (Tensor x, Device device=None, DataType dtype=None, Bool copy=False) => To",
     "Tensor (Tensor x, DataType dtype=None, Bool copy=False) => To",
-    "Tensor (Tensor x, Tensor other, Bool copy=False) => To"
+    "Tensor (Tensor x, Tensor other, Bool copy=False) => To",
+    "Tensor (Tensor x, String device=None) => To",
   ]
   bind_python: True
 
@@ -2382,6 +2379,10 @@
   signature: "Tensor (Tensor shadow, Tensor ids, Tensor table_ids=None, DataType dtype, Int64 embedding_size, Int32 num_tables, String embedding_tables, String embedding_store_options) => OneEmbeddingLookup"
   bind_python: True
 
+- name: "one_embedding_lookup_grad"
+  signature: "Void (Tensor ids, Tensor embedding_grad, String embedding_store_options) => OneEmbeddingLookupGrad"
+  bind_python: True
+
 - name: "one_embedding_unique_key_value_pair"
   signature: "TensorTuple (Tensor keys, Tensor values=None, Int32 num_tables) => OneEmbeddingUniqueKeyValuePair"
   bind_python: True
@@ -2529,6 +2530,10 @@
   signature: "Tensor (Tensor input, Int32 unpack_num) => GradAccUnpack"
   bind_python: False
 
+- name: "trunc"
+  signature: "Tensor (Tensor input) => Trunc"
+  bind_python: True
+
 - name: "silu_grad_grad"
   signature: "Tensor (Tensor x, Tensor dydx) => SiluGradGrad"  
   bind_python: False
@@ -2568,3 +2573,23 @@
 - name: "celu_grad_grad"
   signature: "Tensor (Tensor x, Tensor dydx, Double alpha) => CeluGradGrad"  
   bind_python: False
+
+- name: "batch_norm_stats"
+  signature: "TensorTuple (Tensor input, Int32 axis, Float eps) => BatchNormStats"
+  bind_python: True
+
+- name: "batch_norm_gather_stats_with_counts"
+  signature: "TensorTuple (Tensor input, Tensor mean, Tensor invstd, Tensor running_mean=None, Tensor running_var=None, Float momentum, Float eps, Tensor counts) => BatchNormGatherStatsWithCounts"
+  bind_python: True
+
+- name: "batch_norm_elemt"
+  signature: "Tensor (Tensor input, Tensor weight, Tensor bias, Tensor mean, Tensor invstd, Int32 axis, Float eps) => BatchNormElemt"
+  bind_python: True
+
+- name: "batch_norm_backward_reduce"
+  signature: "TensorTuple (Tensor grad_out, Tensor input, Tensor mean, Tensor invstd, Int32 axis) => BatchNormBackwardReduce"
+  bind_python: True
+
+- name: "batch_norm_backward_elemt"
+  signature: "Tensor (Tensor grad_out, Tensor input, Tensor mean, Tensor invstd, Tensor weight, Tensor sum_dy, Tensor sum_dy_xmu, Tensor count, Int32 axis) => BatchNormBackwardElemt"
+  bind_python: True
