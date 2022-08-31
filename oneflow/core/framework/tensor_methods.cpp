@@ -260,31 +260,29 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const Shape& expand_s
   const Stride& input_strides = *JUST(input->stride());
   size_t lpad = expand_shape.size() - input_shape.size();
   CHECK_GE_OR_RETURN(lpad, 0);  // NOLINT(maybe-need-error-msg)
-  Stride target_stride(expand_shape.size());
+
+  Stride expand_stride(expand_shape.size());
   std::vector<int32_t> reduce_dims;
   reduce_dims.reserve(expand_shape.size());
 
-  for (size_t i = 0; i < expand_shape.size(); ++i) {
-    const auto& t_dim = expand_shape[i];
-    if (i >= lpad) {
-      const auto& dim = input_shape[i - lpad];
-      const auto& stride = input_strides[i - lpad];
-      if (dim == t_dim) {
-        target_stride[i] = stride;
+  for (int i = expand_shape.size() - 1; i >= 0; --i) {
+    int64_t dim = i < lpad ? 1 : input_shape[i - lpad];
+    if (dim == expand_shape[i]) {
+      if (i < lpad && i < expand_shape.size() - 1) {
+        expand_stride[i] = expand_stride[i + 1] * expand_shape[i + 1];
       } else {
-        CHECK_EQ_OR_RETURN(dim, 1);  // NOLINT(maybe-need-error-msg)
-        target_stride[i] = 0;
-        reduce_dims.push_back(i);
+        expand_stride[i] = input_strides[i - lpad];
       }
     } else {
-      target_stride[i] = 0;
+      CHECK_EQ_OR_RETURN(dim, 1);  // NOLINT(maybe-need-error-msg)
+      expand_stride[i] = 0;
       reduce_dims.push_back(i);
     }
   }
 
   int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
   std::shared_ptr<Tensor> output =
-      JUST(BasicView(input, expand_shape, target_stride, storage_offset));
+      JUST(BasicView(input, expand_shape, expand_stride, storage_offset));
 
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
     auto backward_fn = std::make_shared<BackwardFunction>();

@@ -27,23 +27,25 @@ Maybe<void> InferExpandOutputShapeAndStride(const Shape& input_shape, const Stri
   CHECK_EQ_OR_RETURN(input_shape.size(), input_stride.size());  // NOLINT(maybe-need-error-msg)
   size_t lpad = expand_shape.size() - input_shape.size();
   CHECK_GE_OR_RETURN(lpad, 0);  // NOLINT(maybe-need-error-msg)
-  // output_stride->resize(expand_shape.size());
-  for (size_t i = 0; i < expand_shape.size(); ++i) {
-    const auto& t_dim = expand_shape[i];
-    if (i >= lpad) {
-      const auto& dim = input_shape[i - lpad];
-      const auto& stride = input_stride[i - lpad];
-      if (dim == t_dim) {
-        // output_stride->at(i) = stride;
+
+  Stride expand_stride(expand_shape.size(), 1);
+  for (int i = expand_shape.size() - 1; i >= 0; --i) {
+    int64_t dim = i < lpad ? 1 : input_shape[i - lpad];
+    if (dim == expand_shape[i]) {
+      if (i < lpad && i < expand_shape.size() - 1) {
+        expand_stride[i] = expand_stride[i + 1] * expand_shape[i + 1];
       } else {
-        CHECK_EQ_OR_RETURN(dim, 1);  // NOLINT(maybe-need-error-msg)
-        // output_stride->at(i) = 0;
+        expand_stride[i] = input_stride[i - lpad];
       }
     } else {
-      // output_stride->at(i) = 0;
+      CHECK_EQ_OR_RETURN(dim, 1);  // NOLINT(maybe-need-error-msg)
+      expand_stride[i] = 0;
     }
   }
+
   *output_shape = expand_shape;
+  *output_stride = expand_stride;
+
   return Maybe<void>::Ok();
 }
 
