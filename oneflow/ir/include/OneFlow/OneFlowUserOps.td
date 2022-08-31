@@ -8422,8 +8422,7 @@ def OneFlow_CopyOp : OneFlow_BaseOp<"copy", [NoSideEffect, DeclareOpInterfaceMet
   let attrs = (ins
     StrAttr:$device_type,
     DefaultValuedAttr<SI64Attr, "0">:$device_id,
-    DefaultValuedAttr<BoolAttr, "false">:$pin_memory,
-    DefaultValuedAttr<BoolAttr, "false">:$asynced_copy
+    DefaultValuedAttr<BoolAttr, "false">:$pin_memory
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
