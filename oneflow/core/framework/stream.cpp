@@ -23,16 +23,22 @@ limitations under the License.
 
 namespace oneflow {
 
-Stream::Stream(Symbol<Device> device, StreamType stream_type)
-    : device_(device), stream_type_(stream_type), unique_stream_id_(-1) {}
+Stream::Stream(Symbol<Device> device, StreamType stream_type, size_t thread_uid,
+               size_t stream_set_id)
+    : device_(device),
+      stream_type_(stream_type),
+      thread_uid_(thread_uid),
+      stream_set_id_(stream_set_id),
+      unique_stream_id_(-1) {}
 
 Maybe<void> Stream::Init(size_t unique_stream_id) {
   unique_stream_id_ = unique_stream_id;
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<Symbol<Stream>> Stream::RawNew(Symbol<Device> device, StreamType stream_type) {
-  std::shared_ptr<Stream> stream(new Stream(device, stream_type));
+/*static*/ Maybe<Symbol<Stream>> Stream::RawNew(Symbol<Device> device, StreamType stream_type,
+                                                size_t thread_uid, size_t stream_set_id) {
+  std::shared_ptr<Stream> stream(new Stream(device, stream_type, thread_uid, stream_set_id));
   return JUST(SingletonMaybe<StreamMgr>())
       ->AddStreamSymbol(*stream, [&](size_t unique_stream_id) -> Maybe<Symbol<Stream>> {
         JUST(stream->Init(unique_stream_id));
@@ -40,9 +46,10 @@ Maybe<void> Stream::Init(size_t unique_stream_id) {
       });
 }
 
-/*static*/ Maybe<Symbol<Stream>> Stream::New(Symbol<Device> device, StreamType stream_type) {
-  constexpr auto* Make = DECORATE(&Stream::RawNew, ThreadLocal);
-  return Make(device, stream_type);
+/*static*/ Maybe<Symbol<Stream>> Stream::New(Symbol<Device> device, StreamType stream_type,
+                                             size_t thread_uid, size_t stream_set_id) {
+  constexpr auto* Make = DECORATE(&Stream::RawNew, ThreadLocalCopiable);
+  return Make(device, stream_type, thread_uid, stream_set_id);
 }
 
 namespace {
@@ -56,6 +63,10 @@ Maybe<Symbol<Stream>> RawGetDefaultStreamByPlacement(Symbol<ParallelDesc> parall
 }
 
 }  // namespace
+
+size_t Stream::kDefaultStreamThreadUid = 0;
+size_t Stream::kTmpStreamThreadUid = 1;
+size_t Stream::kDefaultStreamSetId = 0;
 
 decltype(GetDefaultStreamByDevice) GetDefaultStreamByDevice =
     DECORATE(&RawGetDefaultStreamByDevice, ThreadLocal);

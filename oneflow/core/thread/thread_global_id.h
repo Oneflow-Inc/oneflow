@@ -22,13 +22,14 @@ limitations under the License.
 namespace oneflow {
 
 const static int kThreadGlobalIdMain = 0;
-const static int kThreadGlobalIdHook = 1;
-const static int kThreadGlobalIdScheduler = 2;
+const static int kThreadGlobalIdScheduler = 1;
+const static int kThreadGlobalIdWorkerStart = kThreadGlobalIdScheduler + 1;
 
 size_t GetThreadGlobalIdCount();
 
 Maybe<void> InitThisThreadUniqueGlobalId(int64_t thread_global_id, const std::string& debug_string);
 Maybe<void> InitThisThreadGlobalId(int64_t thread_global_id, const std::string& debug_string);
+Maybe<void> CheckThreadGlobalIdAvailable(int64_t thread_global_id);
 Maybe<int64_t> GetThisThreadGlobalId();
 Maybe<void> ResetThisThreadUniqueGlobalId();
 
