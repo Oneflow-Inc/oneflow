@@ -125,7 +125,13 @@ class ConstTensorMeta : public TensorMeta {
   bool operator==(const ConstTensorMeta& other) const;
   size_t CalcHashValue() const;
 
-  ConstTensorMeta& operator=(const ConstTensorMeta& other) = default;
+  ConstTensorMeta& operator=(const ConstTensorMeta& other) {
+    this->data_type_ = other.data_type_;
+    this->is_dynamic_ = other.is_dynamic_;
+    this->shape_ = other.shape_;
+    this->stride_ = other.stride_;
+    return *this;
+  }
 
  protected:
   Symbol<Shape> shape_;
