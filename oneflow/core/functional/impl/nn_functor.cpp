@@ -973,6 +973,23 @@ class AdaptiveAvgPool3DFunctor : public AdaptivePoolNDFunctor {
   }
 };
 
+class AdaptiveMaxPool1DFunctor {
+ public:
+  AdaptiveMaxPool1DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("adaptive_max_pool1d").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::vector<int64_t>& output_size,
+                           const bool& return_indices) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("output_size");
+    attrs.SetAttr<std::vector<int64_t>>("output_size", output_size);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class AdaptiveMaxPool2DFunctor {
  public:
   AdaptiveMaxPool2DFunctor() {
@@ -990,6 +1007,22 @@ class AdaptiveMaxPool2DFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class AdaptiveMaxPool3DFunctor {
+ public:
+  AdaptiveMaxPool3DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("adaptive_max_pool3d").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::vector<int64_t>& output_size,
+                           const bool& return_indices) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("output_size");
+    attrs.SetAttr<std::vector<int64_t>>("output_size", output_size);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
 class LossFunctorBase {
  public:
   Maybe<Tensor> apply_reduction(const Maybe<Tensor>& x, const std::string& reduction) const {
@@ -4159,7 +4192,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
+  m.add_functor<impl::AdaptiveMaxPool1DFunctor>("AdaptiveMaxPool1D");
   m.add_functor<impl::AdaptiveMaxPool2DFunctor>("AdaptiveMaxPool2D");
+  m.add_functor<impl::AdaptiveMaxPool3DFunctor>("AdaptiveMaxPool3D");
   m.add_functor<impl::L1LossFunctor>("L1Loss");
   m.add_functor<impl::MseLossFunctor>("MseLoss");
   m.add_functor<impl::KLDivLossFunctor>("KLDivLoss");

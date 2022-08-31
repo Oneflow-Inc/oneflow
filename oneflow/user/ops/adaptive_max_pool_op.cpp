@@ -93,7 +93,9 @@ Maybe<void> InferBWDataType(user_op::InferContext* ctx) {
     return InferFWDataType(ctx);                                                                 \
   }
 
-DEF_ADAPTIVE_MAX_POOL_OP(AdaptiveMaxPool2D)
+DEF_ADAPTIVE_MAX_POOL_OP(AdaptiveMaxPool1D);
+DEF_ADAPTIVE_MAX_POOL_OP(AdaptiveMaxPool2D);
+DEF_ADAPTIVE_MAX_POOL_OP(AdaptiveMaxPool3D);
 
 #undef DEF_ADAPTIVE_MAX_POOL_OP
 

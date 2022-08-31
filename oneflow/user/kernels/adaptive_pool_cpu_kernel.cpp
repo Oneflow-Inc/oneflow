@@ -314,27 +314,32 @@ void AdapativeMaxPoolForward(user_op::KernelComputeContext* ctx) {
   }
 }
 
-template<typename T>
-class AdaptiveMaxPool2DCpuKernel final : public user_op::OpKernel {
+template<typename T, int32_t dim>
+class AdaptiveMaxPoolNDCpuKernel final : public user_op::OpKernel {
  public:
-  AdaptiveMaxPool2DCpuKernel() = default;
-  ~AdaptiveMaxPool2DCpuKernel() = default;
+  AdaptiveMaxPoolNDCpuKernel() = default;
+  ~AdaptiveMaxPoolNDCpuKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    AdapativeMaxPoolForward<T, 2>(ctx);
+    AdapativeMaxPoolForward<T, dim>(ctx);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-#define REGISTER_ADAPTIVE_MAX_POOL_CPU(dtype)                         \
-  REGISTER_USER_KERNEL("adaptive_max_pool2d")                         \
-      .SetCreateFn<AdaptiveMaxPool2DCpuKernel<dtype>>()               \
+#define REGISTER_ADAPTIVE_MAX_POOLND_CPU(optypename, dtype, dim)      \
+  REGISTER_USER_KERNEL(optypename)                                    \
+      .SetCreateFn<AdaptiveMaxPoolNDCpuKernel<dtype, dim>>()          \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
-REGISTER_ADAPTIVE_MAX_POOL_CPU(double);
-REGISTER_ADAPTIVE_MAX_POOL_CPU(float);
-REGISTER_ADAPTIVE_MAX_POOL_CPU(int);
+#define REGISTER_ADAPTIVE_MAX_POOL_CPU(optypename, dim)      \
+  REGISTER_ADAPTIVE_MAX_POOLND_CPU(optypename, double, dim); \
+  REGISTER_ADAPTIVE_MAX_POOLND_CPU(optypename, float, dim);  \
+  REGISTER_ADAPTIVE_MAX_POOLND_CPU(optypename, int, dim);
+
+REGISTER_ADAPTIVE_MAX_POOL_CPU("adaptive_max_pool1d", 1);
+REGISTER_ADAPTIVE_MAX_POOL_CPU("adaptive_max_pool2d", 2);
+REGISTER_ADAPTIVE_MAX_POOL_CPU("adaptive_max_pool3d", 3);
 
 }  // namespace oneflow
