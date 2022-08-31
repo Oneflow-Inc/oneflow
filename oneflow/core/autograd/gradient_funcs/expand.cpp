@@ -54,12 +54,8 @@ Maybe<void> Expand::Capture(ExpandCaptureState* ctx, const TensorTuple& inputs,
   ctx->reduce_dims.reserve(expand_shape.size());
   for (size_t i = 0; i < expand_shape.size(); ++i) {
     const auto& t_dim = expand_shape[i];
-    if (i >= ctx->lpad) {
-      const auto& dim = in_shape[i - ctx->lpad];
-      if (t_dim != dim) { ctx->reduce_dims.push_back(i); }
-    } else {
-      ctx->reduce_dims.push_back(i);
-    }
+    const auto& dim = i < ctx->lpad ? 1 : in_shape[i - ctx->lpad];
+    if (dim != t_dim) { ctx->reduce_dims.push_back(i); }
   }
 
   return Maybe<void>::Ok();
@@ -74,9 +70,7 @@ Maybe<void> Expand::Apply(const ExpandCaptureState* ctx, const TensorTuple& out_
   if (ctx->reduce_dims.size() > 0) {
     in_grads->at(0) = JUST(functional::ReduceSum(in_grads->at(0), ctx->reduce_dims, true));
   }
-  if (ctx->lpad > 0) {
-    in_grads->at(0) = JUST(functional::Flatten(in_grads->at(0), 0, ctx->lpad));
-  }
+  if (ctx->lpad > 0) { in_grads->at(0) = JUST(functional::Flatten(in_grads->at(0), 0, ctx->lpad)); }
   return Maybe<void>::Ok();
 }
 
