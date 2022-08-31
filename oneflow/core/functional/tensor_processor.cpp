@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <glog/logging.h>
+#include <cstdio>
 #include "oneflow/core/functional/tensor_processor.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/throw.h"
@@ -99,6 +100,13 @@ Maybe<void> TensorProcessor::Apply() {
         common_dtype_ = DType::Float();
       }
       JUST(CastToSameType(tensor_tuple_, common_dtype_));
+    } else {
+      if (tensor_tuple_.size() == 1 && !tensor_tuple_.at(0)->dtype()->is_floating_point()) {
+        Symbol<DType> cast_dtype = inputs_lowest_dtype_vec_.at(0)->InvalidDataType()
+                                       ? DType::Float()
+                                       : inputs_lowest_dtype_vec_.at(0);
+        JUST(CastToSameType(tensor_tuple_, cast_dtype));
+      }
     }
   } else {
     for (int i = 0; i < tensor_tuple_.size(); ++i) {

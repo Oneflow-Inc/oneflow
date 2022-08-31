@@ -69,7 +69,7 @@ class FloatUnaryFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     // The functor lowest Dtype is Float32. (For sigmoid, tanh and etc. )
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.AddInputs({x})
+    JUST(tensor_processor.AddInputs({x}, DType::Float())
              .PromoteInputsToCommonDtype(true)
              .PromoteIntegerInputsToFloatDtype(true)
              .Apply());
