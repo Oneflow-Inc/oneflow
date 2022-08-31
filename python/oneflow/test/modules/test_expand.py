@@ -188,7 +188,7 @@ def _test_expand_check_stride(test_case, device):
     input, gout, out_np, gin_np = _np_get_expand(input_shape, expand_dim)
     of_input = flow.tensor(input, dtype=flow.float32, device=flow.device(device))
     of_out = of_input.expand(expand_dim)
-    test_case.assertTrue(of_out.stride() == (0, 4, 2, 2, 1, 1) )
+    test_case.assertTrue(of_out.stride() == (0, 4, 2, 2, 1, 1))
     test_case.assertTrue(np.array_equal(of_out.numpy(), out_np.astype(np.float32)))
 
 
