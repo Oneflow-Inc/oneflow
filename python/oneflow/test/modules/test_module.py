@@ -29,6 +29,15 @@ import oneflow.nn as nn
 import oneflow.unittest
 
 
+class CustomModuleForSaveLoad(flow.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.param = flow.nn.Parameter(flow.randn(1, 3, 3, 3))
+
+    def forward(self, x):
+        return self.param + x
+
+
 def np_relu(np_arr):
     return np.where(np_arr > 0, np_arr, 0)
 
@@ -304,6 +313,30 @@ class TestModule(flow.unittest.TestCase):
     @flow.unittest.skip_unless_2n2d()
     def test_save_and_load_global_from_nested_dict_2n2d(test_case):
         test_case._test_save_and_load_global_from_nested_dict()
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_save_load_module_directly(test_case):
+        x = flow.randn(1, 3, 3, 3)
+
+        m = CustomModuleForSaveLoad()
+
+        with tempfile.TemporaryDirectory() as f:
+            flow.save(m, f)
+            new_m = flow.load(f)
+            res = m(x)
+            new_res = new_m(x)
+            test_case.assertTrue(np.array_equal(res.numpy(), new_res.numpy()))
+
+        m = flow.nn.parallel.DistributedDataParallel(m)
+        test_case.assertTrue(m._is_ddp_module)
+
+        with tempfile.TemporaryDirectory() as f:
+            flow.save(m, f)
+            new_m = flow.load(f)
+            test_case.assertTrue(new_m._is_ddp_module)
+            res = m(x)
+            new_res = new_m(x)
+            test_case.assertTrue(np.array_equal(res.numpy(), new_res.numpy()))
 
     @flow.unittest.skip_unless_1n1d()
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
