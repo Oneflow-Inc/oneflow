@@ -52,6 +52,7 @@ bool ExecNode::TryBindBnWithOneOfTheRegsts(const std::string& bn,
 
 void ExecNode::BindBnWithOneOfTheRegsts(const std::string& bn,
                                         const std::list<std::shared_ptr<RegstDesc>>& regsts) {
+  LOG(ERROR) << op_->op_name() << " bn " << bn << " try to bind regst";
   CHECK(TryBindBnWithOneOfTheRegsts(bn, regsts));
 }
 

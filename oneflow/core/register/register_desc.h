@@ -33,8 +33,6 @@ class RegstDesc final {
   RegstDesc();
   ~RegstDesc() = default;
 
-  std::string lbi;
-
   // regst_desc_id
   int64_t regst_desc_id() const { return regst_desc_id_; }
 
@@ -54,6 +52,7 @@ class RegstDesc final {
   // lbi2blob_desc_
   void CopyBlobDescFrom(const RegstDesc*);
   void CopyBlobDescWithoutAddLbi(const RegstDesc*);
+  void AddLbiFrom(const RegstDesc*);
   BlobDesc* AddLbi(const LogicalBlobId&);
   const BlobDesc* GetBlobDesc(const LogicalBlobId& lbi) const;
   bool HasLbi(const LogicalBlobId& lbi) const;
