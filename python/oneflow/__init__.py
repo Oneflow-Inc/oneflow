@@ -89,6 +89,7 @@ from oneflow._C import greater_equal
 from oneflow._C import greater_equal as ge
 from oneflow._C import log
 from oneflow._C import log2
+from oneflow._C import log10
 from oneflow._C import logical_and
 from oneflow._C import logical_or
 from oneflow._C import logical_xor
@@ -140,8 +141,6 @@ from oneflow._C import fmod
 from oneflow._C import flatten
 from oneflow._C import in_top_k
 from oneflow._C import lgamma
-from oneflow._C import log
-from oneflow._C import log2
 from oneflow._C import minimum
 from oneflow._C import maximum
 from oneflow._C import max

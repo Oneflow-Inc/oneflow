@@ -60,6 +60,7 @@ namespace primitive {
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLgamma)          \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLog)             \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLog2)            \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLog10)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLog1p)           \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLogSigmoid)      \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kNegative)        \

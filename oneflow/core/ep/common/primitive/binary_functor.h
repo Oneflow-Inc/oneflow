@@ -493,6 +493,14 @@ struct BinaryFunctor<device, BinaryOp::kLog2BackwardWithDyX, Src, Dst> {
 };
 
 template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kLog10BackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    return dy * (static_cast<Src>(1.0) / (x * log(static_cast<Src>(10.0))));
+  }
+};
+
+template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kLog1pBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {

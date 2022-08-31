@@ -193,6 +193,7 @@ UNARY_METHOD(PyTensorObject_selu, functional::Selu);
 UNARY_METHOD(PyTensorObject_softsign, functional::SoftSign);
 UNARY_METHOD(PyTensorObject_log1p, functional::Log1p);
 UNARY_METHOD(PyTensorObject_log2, functional::Log2);
+UNARY_METHOD(PyTensorObject_log10, functional::Log10);
 UNARY_METHOD(PyTensorObject_reciprocal, functional::Reciprocal);
 UNARY_METHOD(PyTensorObject_ceil, functional::Ceil);
 UNARY_METHOD(PyTensorObject_erf, functional::Erf);
@@ -929,6 +930,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"softsign", PyTensorObject_softsign, METH_NOARGS, NULL},
     {"log1p", PyTensorObject_log1p, METH_NOARGS, NULL},
     {"log2", PyTensorObject_log2, METH_NOARGS, NULL},
+    {"log10", PyTensorObject_log10, METH_NOARGS, NULL},
     {"reciprocal", PyTensorObject_reciprocal, METH_NOARGS, NULL},
     {"asin", PyTensorObject_asin, METH_NOARGS, NULL},
     {"arcsin", PyTensorObject_asin, METH_NOARGS, NULL},

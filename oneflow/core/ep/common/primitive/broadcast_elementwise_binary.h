@@ -100,6 +100,7 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLgammaBackwardWithDyX)          \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogBackwardWithDyX)             \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLog2BackwardWithDyX)            \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLog10BackwardWithDyX)            \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLog1pBackwardWithDyX)           \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogSigmoidBackwardWithDyX)      \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kReciprocalBackwardWithDyX)      \
