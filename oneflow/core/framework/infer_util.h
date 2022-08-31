@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/common/tensor_desc.h"
-#include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -29,6 +28,13 @@ namespace oneflow {
 class Shape;
 class JobDesc;
 class Device;
+
+namespace user_op {
+class AttrVal;
+}  // namespace user_op
+
+template<typename T>
+extern const T& AttrValueCast(const user_op::AttrVal& val);
 
 namespace user_op {
 

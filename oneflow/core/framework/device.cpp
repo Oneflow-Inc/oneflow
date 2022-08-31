@@ -79,21 +79,30 @@ Maybe<void> Device::Init() {
   return iter->second;
 }
 
+/* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(
+    const std::string& type_or_type_with_device_id) {
+  static thread_local HashMap<std::string, Symbol<Device>> map;
+  auto iter = map.find(type_or_type_with_device_id);
+  if (iter == map.end()) {
+    std::string type;
+    int device_id = -1;
+    JUST(ParsingDeviceTag(type_or_type_with_device_id, &type, &device_id));
+    CheckDeviceType(type);
+    if (device_id == -1) { device_id = GlobalProcessCtx::LocalRank(); }
+    Device device(type, device_id);
+    JUST(device.Init());
+    iter = map.emplace(type_or_type_with_device_id, SymbolOf(device)).first;
+  }
+  return iter->second;
+}
+
 /* static */ Maybe<Symbol<Device>> Device::New(const std::string& type) {
   return New(type, GlobalProcessCtx::LocalRank());
 }
 
 /* static */ Maybe<Symbol<Device>> Device::ParseAndNew(
     const std::string& type_or_type_with_device_id) {
-  std::string type;
-  int device_id = -1;
-  JUST(ParsingDeviceTag(type_or_type_with_device_id, &type, &device_id));
-  CheckDeviceType(type);
-  if (device_id == -1) {
-    return Device::New(type);
-  } else {
-    return Device::New(type, device_id);
-  }
+  return ThreadLocalGetOrNew(type_or_type_with_device_id);
 }
 
 std::string Device::ToRepr() const {
