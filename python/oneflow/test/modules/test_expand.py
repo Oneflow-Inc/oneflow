@@ -182,6 +182,16 @@ def _test_expand_backward(test_case, device):
     test_case.assertTrue(np.array_equal(of_input.grad.numpy(), np_grad))
 
 
+def _test_expand_check_stride(test_case, device):
+    input_shape = (2, 1, 2, 1)
+    expand_dim = flow.Size([2, 1, 2, 1, 2, 1])
+    input, gout, out_np, gin_np = _np_get_expand(input_shape, expand_dim)
+    of_input = flow.tensor(input, dtype=flow.float32, device=flow.device(device))
+    of_out = of_input.expand(expand_dim)
+    test_case.assertTrue(of_out.stride() == (0, 4, 2, 2, 1, 1) )
+    test_case.assertTrue(np.array_equal(of_out.numpy(), out_np.astype(np.float32)))
+
+
 def random_expand(x, ndim, expand_size):
     dim_size = [1,] * ndim
     random_index = random(0, ndim).to(int).value()
@@ -213,6 +223,7 @@ class TestExpand(flow.unittest.TestCase):
             _test_expand_flow_size,
             _test_expand_backward,
             _test_expand_backward_same_dim,
+            _test_expand_check_stride,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
