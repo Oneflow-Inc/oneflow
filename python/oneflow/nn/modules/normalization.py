@@ -112,7 +112,11 @@ class GroupNorm(Module):
             input.shape[1] == self.num_channels
         ), "The channels of input tensor must equal num_channels"
 
-        if not input.is_cuda:
+        if input.is_cuda:
+            return flow._C.group_norm(
+                input, self.weight, self.bias, self.affine, self.num_groups, self.eps
+            )
+        else:
             origin_shape = input.shape
             reshape_to_1d = flow.reshape(
                 input, shape=[origin_shape[0], self.num_groups, -1]
@@ -129,10 +133,6 @@ class GroupNorm(Module):
                 normalized = normalized + self.bias.reshape(1, self.num_channels, 1)
             res = flow.reshape(normalized, shape=tuple(input.shape))
             return res
-        else:
-            return flow._C.group_norm(
-                input, self.weight, self.bias, self.affine, self.num_groups, self.eps
-            )
 
     def extra_repr(self) -> str:
         return "{num_groups}, {num_channels}, eps={eps}, affine={affine}".format(

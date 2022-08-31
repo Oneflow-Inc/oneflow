@@ -770,6 +770,7 @@ class GroupNormFunctor {
                          .Output("y")
                          .Output("mean")
                          .Output("inv_variance")
+                         .Attr("affine", false)
                          .Build());
     affine_op_ = CHECK_JUST(one::OpBuilder("group_norm")
                                 .Input("x")
@@ -778,16 +779,15 @@ class GroupNormFunctor {
                                 .Output("y")
                                 .Output("mean")
                                 .Output("inv_variance")
+                                .Attr("affine", true)
                                 .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<one::Tensor>& gamma, const Optional<one::Tensor>& beta,
                            const bool affine, const int32_t num_groups,
                            const double& epsilon) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("affine", "num_groups", "epsilon");
-    attrs.SetAttr<bool>("affine", affine);
-    attrs.SetAttr<int32_t>("num_groups", num_groups);
-    attrs.SetAttr<double>("epsilon", epsilon);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_groups", "epsilon");
+    attrs.SetAllAttrs(num_groups, epsilon);
     if (affine) {
       return OpInterpUtil::Dispatch<Tensor>(*affine_op_, {x, JUST(gamma), JUST(beta)}, attrs);
     } else {
