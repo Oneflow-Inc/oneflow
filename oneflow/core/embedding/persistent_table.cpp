@@ -644,7 +644,7 @@ void PersistentTableImpl<Key, Engine>::LoadSnapshotImpl(const std::string& name)
     const uint64_t chunk_id = GetChunkId(index_filename, kIndexFileNamePrefix);
     PosixFile index_file(PosixFile::JoinPath(snapshot_base, index_filename), O_RDONLY, 0644);
     const size_t index_file_size = index_file.Size();
-    CHECK_EQ(index_file_size % sizeof(uint64_t), 0) << "index_file_size should be modified by 8. ";
+    CHECK_EQ(index_file_size % sizeof(uint64_t), 0) << "index_file_size should be divided by 8. ";
     if (index_file_size == 0) { return; }
     const size_t n_entries = index_file_size / sizeof(uint64_t);
     PosixMappedFile mapped_index(std::move(index_file), index_file_size, PROT_READ);
@@ -724,7 +724,7 @@ void PersistentTableImpl<Key, Engine>::LoadSnapshot(
     const uint64_t chunk_id = GetChunkId(index_filename, kIndexFileNamePrefix);
     PosixFile index_file(PosixFile::JoinPath(snapshot_base, index_filename), O_RDONLY, 0644);
     const size_t index_file_size = index_file.Size();
-    CHECK_EQ(index_file_size % sizeof(uint64_t), 0) << "index_file_size should be modified by 8. ";
+    CHECK_EQ(index_file_size % sizeof(uint64_t), 0) << "index_file_size should be divided by 8. ";
     if (index_file_size == 0) { return; }
     const size_t n_entries = index_file_size / sizeof(uint64_t);
     PosixMappedFile mapped_index(std::move(index_file), index_file_size, PROT_READ, mmap_flags);
@@ -811,7 +811,7 @@ class SnapshotIteratorImpl : public PersistentTable::Iterator {
                              O_RDONLY, 0644);
         const size_t index_file_size = index_file.Size();
         CHECK_EQ(index_file_size % sizeof(uint64_t), 0)
-            << "index_file_size should be modified by 8. ";
+            << "index_file_size should be divided by 8. ";
         if (index_file_size == 0) {
           current_chunk_ += 1;
           continue;
