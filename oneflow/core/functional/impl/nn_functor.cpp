@@ -1345,8 +1345,8 @@ class CrossEntropyLabelSmoothingFunctor {
                                   .call(input, input_perm));
     const auto& target_ = JUST(functional::Flatten(target, 0, target->shape()->NumAxes() - 1));
 
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("ignore_index");
+    attrs.SetAllAttrs(ignore_index);
 
     std::shared_ptr<TensorTuple> nll_result;
     if (weight) {
