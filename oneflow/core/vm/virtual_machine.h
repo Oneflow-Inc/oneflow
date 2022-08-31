@@ -88,7 +88,7 @@ class VirtualMachine final {
 
   // for creating vm::Stream and vm::ThreadCtx
   std::recursive_mutex creating_stream_and_thread_ctx_mutex_;
-  HashMap<std::pair<DeviceType, size_t>, vm::ThreadCtx*> devcie_type_thread_uid2shared_thread_ctx_;
+  HashMap<size_t, vm::ThreadCtx*> thread_uid2shared_thread_ctx_;
   HashMap<std::pair<DeviceType, StreamType>, vm::ThreadCtx*>
       devcie_type_stream_type_2independent_thread_ctx_;
   HashMap<std::pair<Symbol<Device>, StreamType>, intrusive::shared_ptr<vm::Dependence>>

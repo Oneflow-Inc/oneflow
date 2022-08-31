@@ -389,8 +389,7 @@ Maybe<vm::ThreadCtx*> VirtualMachine::FindOrCreateThreadCtx(Symbol<Device> devic
     auto key = std::make_pair(device->enum_type(), stream_type);
     thread_ctx_ptr = &devcie_type_stream_type_2independent_thread_ctx_[key];
   } else {
-    auto key = std::make_pair(device->enum_type(), thread_uid);
-    thread_ctx_ptr = &devcie_type_thread_uid2shared_thread_ctx_[key];
+    thread_ctx_ptr = &thread_uid2shared_thread_ctx_[thread_uid];
   }
   if (*thread_ctx_ptr == nullptr) {
     *thread_ctx_ptr = JUST(CreateThreadCtx(device, stream_type, thread_uid));
@@ -427,7 +426,7 @@ Maybe<vm::ThreadCtx*> VirtualMachine::CreateThreadCtx(Symbol<Device> device, Str
       if (StreamOnIndependentThread::Visit(stream_type)) {
         return device_tag + GetStreamTypeName::Visit(stream_type);
       } else {
-        return device_tag + std::to_string(thread_uid);
+        return std::to_string(thread_uid);
       }
     }();
     const auto& WorkerInitializer = [need_thread_global_id, thread_global_id,
