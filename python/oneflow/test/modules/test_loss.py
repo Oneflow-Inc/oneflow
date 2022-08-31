@@ -96,7 +96,9 @@ def _test_cross_entropy_loss(dim=int):
         ignore_index=ignore_index,
         weight=oneof(weight, nothing()),
         # TODO(wangyi): PyTorch under 1.12 has bug here, which returns wrong result when ignore_index >= 0 and label_smoothing > 0
-        label_smoothing=random(low=0, high=1) if version.parse(torch_original.__version__) >= version.parse("1.12.0") else 0
+        label_smoothing=random(low=0, high=1)
+        if version.parse(torch_original.__version__) >= version.parse("1.12.0")
+        else 0,
     )
     m.train(random())
     m.to(device)
