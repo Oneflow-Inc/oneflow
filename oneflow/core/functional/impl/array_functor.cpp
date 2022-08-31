@@ -775,22 +775,20 @@ class ExpandFunctor {
         }
         if (t_dim == -1) { expand_shape_vec[i] = dim; }
       } else {
-        CHECK_GE_OR_RETURN(shape.At(i), 0)
-            << Error::RuntimeError() << "The expanded size of the tensor (" << shape.At(i)
-            << ") isn't allowed in a leading, non-existing dimension " << i
-            << " .Target size: " << shape.ToString();
+        if (t_dim == -1) {
+          return Error::RuntimeError() << "The expanded size of the tensor (-1) isn't allowed in a "
+                                          "leading, non-existing dimension "
+                                       << i;
+        }
       }
     }
-
-    std::vector<int32_t> expand_shape(shape.NumAxes());
-    for (int i = 0; i < shape.NumAxes(); ++i) { expand_shape[i] = shape.dim_vec().at(i); }
 
     // if input tensor is eager local, then try return tensor's view
     Shape expand_shape(expand_shape_vec);
     if (view::IsViewApplicable(x)) { return view::Expand(x, expand_shape); }
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("expand_shape");
-    attrs.SetAttr<Shape>("expand_shape", expand_shape);
+    attrs.SetAllAttrs(expand_shape);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -1682,7 +1680,7 @@ class UpsampleNearest1DFunctor {
                            const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale_factor", "data_format", "output_size");
-    if (output_size) {
+,    if (output_size) {
       attrs.SetAllAttrs(scale_factor, data_format, *JUST(output_size));
     } else {
       attrs.SetAllAttrs(scale_factor, data_format, NullOpt);
