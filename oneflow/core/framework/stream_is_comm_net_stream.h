@@ -25,14 +25,12 @@ struct IsCommNetStream final : public StreamTypeVisitor<IsCommNetStream> {
   static bool VisitCompute() { return false; }
   static bool VisitHost2Device() { return false; }
   static bool VisitDevice2Host() { return false; }
-  static bool VisitAsyncedDevice2Host() { return VisitDevice2Host(); }
   static bool VisitSyncedLaunchedCommNet() { return true; }
   static bool VisitAsyncedLaunchedCommNet() { return true; }
   static bool VisitBarrier() { return false; }
   static bool VisitCriticalSection() { return false; }
   static bool VisitLazyJobLauncher() { return false; }
   static bool VisitPinnedCompute() { return VisitCompute(); }
-  static bool VisitTmpCompute() { return VisitCompute(); }
 };
 
 }  // namespace oneflow

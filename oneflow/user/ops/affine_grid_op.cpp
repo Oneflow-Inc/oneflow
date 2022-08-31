@@ -66,7 +66,7 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
     is_2d_grid = true;
   } else if (theta.shape().At(1) == 3) {
     CHECK_EQ_OR_RETURN(theta.shape().At(2), 4) << "Theta shape  MUST be (N, 2, 3) or (N, 3, 4)";
-    CHECK_EQ_OR_RETURN(size.NumAxes(), 5) "Dimension of size MUST be 4, when 3d affine grid";
+    CHECK_EQ_OR_RETURN(size.NumAxes(), 5) << "Dimension of size MUST be 4, when 3d affine grid";
     CHECK_EQ_OR_RETURN(theta.shape().At(0), size.At(0))
         << "Theta and size MUST have same batch dimension";
     is_2d_grid = false;
@@ -102,7 +102,7 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
     is_2d_grid = true;
   } else if (theta_shape.At(1) == 3) {
     CHECK_EQ_OR_RETURN(theta_shape.At(2), 4) << "Theta shape  MUST be (N, 2, 3) or (N, 3, 4)";
-    CHECK_EQ_OR_RETURN(size.NumAxes(), 5) "Dimension of size MUST be 4, when 3d affine grid";
+    CHECK_EQ_OR_RETURN(size.NumAxes(), 5) << "Dimension of size MUST be 4, when 3d affine grid";
     is_2d_grid = false;
   } else {
     CHECK_OR_RETURN(false) << "Theta MUST be 2D or 3D grid";
@@ -183,23 +183,5 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
   *ctx->MutOutputDType("dtheta", 0) = ctx->InputDType("dgrid", 0);
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("affine_grid")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("theta", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("affine_grid_grad")
-                .Input("dgrid", op.GetGradTensorWithOpOutput("grid", 0))
-                .Output("dtheta")
-                .Attr("size", op.attr<Shape>("size"))
-                .Attr("align_corners", op.attr<bool>("align_corners"))
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dtheta", 0), "theta", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow
