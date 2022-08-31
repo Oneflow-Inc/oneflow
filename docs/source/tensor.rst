@@ -260,6 +260,7 @@ Tensor class reference
     Tensor.log
     Tensor.log1p
     Tensor.log2
+    Tensor.log10
     Tensor.logical_and
     Tensor.logical_or
     Tensor.logical_not
