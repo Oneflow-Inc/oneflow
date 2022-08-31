@@ -69,7 +69,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("SwitchToShuttingDownPhase", &SwitchToShuttingDownPhase,
            py::call_guard<py::gil_scoped_release>());
 
-
   m.def("CurrentMachineId", &CurrentMachineId);
 
   m.def("GetRank", &GetRank);
