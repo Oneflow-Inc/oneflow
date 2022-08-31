@@ -36,7 +36,7 @@ inline bool PyFInfo_Check(PyObject* obj) { return PyObject_TypeCheck(obj, &PyFIn
 inline bool PyDTypeInfo_Check(PyObject* obj) { return PyIInfo_Check(obj) || PyFInfo_Check(obj); }
 
 inline Symbol<DType> PyDTypeInfo_UnpackDType(PyObject* obj) {
-  assert(!PyDTypeInfo_Check(obj));
+  assert(PyDTypeInfo_Check(obj));
   return ((PyDTypeInfo*)obj)->dtype;
 }
 
