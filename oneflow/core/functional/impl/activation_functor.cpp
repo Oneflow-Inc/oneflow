@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -385,6 +386,22 @@ class LogSoftmaxFunctor : public SoftmaxFunctorBase {
   }
 };
 
+class LogSoftmaxGradFunctor {
+ public:
+  LogSoftmaxGradFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("log_softmax_grad").Input("prob").Input("dy").Output("dx").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class HardSwishFunctor : public UnaryFunctor {
  public:
   HardSwishFunctor() {
@@ -626,6 +643,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SoftmaxFunctor>("Softmax");
   m.add_functor<impl::SoftmaxGradFunctor>("SoftmaxGrad");
   m.add_functor<impl::LogSoftmaxFunctor>("LogSoftmax");
+  m.add_functor<impl::LogSoftmaxGradFunctor>("LogSoftmaxGrad");
   m.add_functor<impl::HardSwishFunctor>("HardSwish");
   m.add_functor<impl::HardSwishGradFunctor>("HardSwishGrad");
   m.add_functor<impl::LeakyReluFunctor>("LeakyRelu");
