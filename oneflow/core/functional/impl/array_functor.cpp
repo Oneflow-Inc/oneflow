@@ -1680,7 +1680,7 @@ class UpsampleNearest1DFunctor {
                            const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale_factor", "data_format", "output_size");
-,    if (output_size) {
+    if (output_size) {
       attrs.SetAllAttrs(scale_factor, data_format, *JUST(output_size));
     } else {
       attrs.SetAllAttrs(scale_factor, data_format, NullOpt);

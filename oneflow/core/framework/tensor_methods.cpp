@@ -257,25 +257,24 @@ Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
 
 Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const Shape& expand_shape) {
   const Shape& input_shape = *input->shape();
-  const Stride& input_strides = *JUST(input->stride());
+  const Stride& input_stride = *JUST(input->stride());
   size_t lpad = expand_shape.size() - input_shape.size();
   CHECK_GE_OR_RETURN(lpad, 0);  // NOLINT(maybe-need-error-msg)
 
-  Stride expand_stride(expand_shape.size());
+  Stride expand_stride(expand_shape.size(), 0);
   std::vector<int32_t> reduce_dims;
   reduce_dims.reserve(expand_shape.size());
 
   for (int i = expand_shape.size() - 1; i >= 0; --i) {
     int64_t dim = i < lpad ? 1 : input_shape[i - lpad];
     if (dim == expand_shape[i]) {
-      if (i < lpad && i < expand_shape.size() - 1) {
+      if (i >= lpad) {
+        expand_stride[i] = input_stride[i - lpad];
+      } else if (i < expand_shape.size() - 1) {
         expand_stride[i] = expand_stride[i + 1] * expand_shape[i + 1];
-      } else {
-        expand_stride[i] = input_strides[i - lpad];
       }
     } else {
       CHECK_EQ_OR_RETURN(dim, 1);  // NOLINT(maybe-need-error-msg)
-      expand_stride[i] = 0;
       reduce_dims.push_back(i);
     }
   }
