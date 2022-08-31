@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <memory>
 #include "oneflow/core/common/just.h"
+#include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/functional/function_library.h"
@@ -38,10 +39,8 @@ class WkvFunctor {
                            const std::shared_ptr<one::Tensor>& u,
                            const std::shared_ptr<one::Tensor>& k,
                            const std::shared_ptr<one::Tensor>& v) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("B", B));
-    JUST(attrs.SetAttr<int64_t>("T", T));
-    JUST(attrs.SetAttr<int64_t>("C", C));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("B", "T", "C");
+    attrs.SetAllAttrs(B, T, C);
     OpExprInterpContext ctx(attrs);
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {w, u, k, v}, ctx);
@@ -72,10 +71,8 @@ class WkvGradFunctor {
                                 const std::shared_ptr<one::Tensor>& k,
                                 const std::shared_ptr<one::Tensor>& v,
                                 const std::shared_ptr<one::Tensor>& gy) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("B", B));
-    JUST(attrs.SetAttr<int64_t>("T", T));
-    JUST(attrs.SetAttr<int64_t>("C", C));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("B", "T", "C");
+    attrs.SetAllAttrs(B, T, C);
     OpExprInterpContext ctx(attrs);
 
     std::shared_ptr<TensorTuple> outputs = JUST(OpInterpUtil::Dispatch<TensorTuple>(
