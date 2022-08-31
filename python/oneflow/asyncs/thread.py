@@ -34,14 +34,6 @@ class thread:
         ...
         tensor([[1., 1.],
                 [1., 1.]], dtype=oneflow.float32)
-        >>> @flow.asyncs.thread(3)
-        ... def ones_in_other_thread():
-        ...     return flow.ones(2, 2)
-        ...
-        >>> print(ones_in_other_thread())
-        tensor([[1., 1.],
-                [1., 1.]], dtype=oneflow.float32)
-
     """
 
     def __init__(self, thread_global_id: int = 1, exclude_ccl=False):
@@ -57,13 +49,3 @@ class thread:
 
     def __exit__(self, type, value, traceback):
         del self.guard_
-
-    def __call__(self, func):
-        def Func(*args, **kwargs):
-            guard = oneflow._oneflow_internal.StreamGuard(
-                self.stream_set_, self.exclude_ccl_
-            )
-            return func(*args, **kwargs)
-            del guard
-
-        return Func
