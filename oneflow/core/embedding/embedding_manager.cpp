@@ -669,18 +669,17 @@ EmbeddingState* EmbeddingManager::GetEmbeddingState(const std::string& embedding
   std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, rank_id);
   std::unique_lock<std::mutex> lock(mutex_);
   auto it = embedding_state_map_.find(map_key);
-  // for id shuffle test, not need to create table
   if (it == embedding_state_map_.end()) {
-    LOG(WARNING) << "create embedding state: " << embedding_name << "-" << rank_id;
-    if (!LazyMode::is_enabled() && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_EAGER", false)) {
-      LOG(ERROR) << "make EagerEmbeddingState" << embedding_name << "-" << rank_id;
+    if (!LazyMode::is_enabled()) {
+      LOG(WARNING) << "create Eager EmbeddingState" << embedding_name << "-" << rank_id;
       it = embedding_state_map_
                .emplace(map_key, std::make_unique<DynamicAllocationEagerEmbeddingState>())
                .first;
     } else {
-      LOG(ERROR) << "make lazy EmbeddingState";
       if (UseDynamicMemoryAllocation()) {
 #if CUDA_VERSION >= 11020
+        LOG(WARNING) << "create DynamicAllocation Lazy EmbeddingState" << embedding_name << "-"
+                     << rank_id;
         it = embedding_state_map_
                  .emplace(map_key, std::make_unique<DynamicAllocationEmbeddingState>())
                  .first;
@@ -688,6 +687,8 @@ EmbeddingState* EmbeddingManager::GetEmbeddingState(const std::string& embedding
         UNIMPLEMENTED();
 #endif
       } else {
+        LOG(WARNING) << "create StaticAllocation Lazy EmbeddingState" << embedding_name << "-"
+                     << rank_id;
         it = embedding_state_map_
                  .emplace(map_key, std::make_unique<StaticAllocationEmbeddingState>())
                  .first;
@@ -737,34 +738,6 @@ void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value
   store->ReserveQueryLength(kDefaultMaxQueryLength);
   CHECK(key_value_store_map_.emplace(map_key, std::move(store)).second)
       << "Can't create an embedding with same name of an existing embedding, the name: " << name;
-  // TODO: in graph LazyMode::is_enabled() return false.
-  if (!LazyMode::is_enabled() && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_EAGER", false)) {
-    LOG(ERROR) << "make EagerEmbeddingState" << name << "-" << rank_id;
-    CHECK(embedding_state_map_
-              .emplace(map_key, std::make_unique<DynamicAllocationEagerEmbeddingState>())
-              .second)
-        << "Can't create an embedding state with same name of an existing embedding, the name: "
-        << name;
-  } else {
-    LOG(ERROR) << "make lazy EmbeddingState";
-    if (UseDynamicMemoryAllocation()) {
-#if CUDA_VERSION >= 11020
-      CHECK(
-          embedding_state_map_.emplace(map_key, std::make_unique<DynamicAllocationEmbeddingState>())
-              .second)
-          << "Can't create an embedding state with same name of an existing embedding, the name: "
-          << name;
-#else
-      UNIMPLEMENTED();
-#endif
-    } else {
-      CHECK(
-          embedding_state_map_.emplace(map_key, std::make_unique<StaticAllocationEmbeddingState>())
-              .second)
-          << "Can't create an embedding state with same name of an existing embedding, the name: "
-          << name;
-    }
-  }
 }
 
 void EmbeddingManager::SaveSnapshot(const std::string& embedding_name, int64_t local_rank_id,

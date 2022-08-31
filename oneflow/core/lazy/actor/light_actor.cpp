@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/kernel/user_kernel.h"
 #include "oneflow/core/lazy/stream_context/include/stream_context.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 #ifdef WITH_CUDA
 
@@ -223,6 +224,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   }
 
   void Init(const JobDesc* job_desc, ActorContext* actor_ctx) override {
+    auto guard = LazyMode::Guard(true);
     const TaskProto& task_proto = actor_ctx->task_proto();
     CHECK_EQ(task_proto.exec_sequence().exec_node_size(), 1);
     if (exec_kernel) {

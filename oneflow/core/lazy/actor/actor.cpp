@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/lazy/stream_context/include/stream_context.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 
@@ -127,6 +128,7 @@ void CheckInplaceRegstDescId(const TaskProto& task_proto) {
 Actor::~Actor() = default;
 
 void Actor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
+  auto guard = LazyMode::Guard(true);
   actor_ctx_ = actor_ctx;
   const TaskProto& task_proto = actor_ctx->task_proto();
   actor_id_ = task_proto.task_id();
