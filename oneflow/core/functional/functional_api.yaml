@@ -2595,13 +2595,13 @@
   bind_python: True
 
 - name: "adaptive_max_pool1d"
-  signature: "Tensor (Tensor input, Int64List[2] output_size, Bool return_indices=False) => AdaptiveMaxPool1D"
+  signature: "TensorTuple (Tensor input, Int64List[2] output_size) => AdaptiveMaxPool1D"
   bind_python: True
 
 - name: "adaptive_max_pool2d"
-  signature: "Tensor (Tensor input, Int64List[2] output_size, Bool return_indices=False) => AdaptiveMaxPool2D"
+  signature: "TensorTuple (Tensor input, Int64List[2] output_size) => AdaptiveMaxPool2D"
   bind_python: True
 
 - name: "adaptive_max_pool3d"
-  signature: "Tensor (Tensor input, Int64List[3] output_size, Bool return_indices=False) => AdaptiveMaxPool3D"
+  signature: "TensorTuple (Tensor input, Int64List[3] output_size) => AdaptiveMaxPool3D"
   bind_python: True

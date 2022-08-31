@@ -263,6 +263,7 @@ template<typename T, int32_t dim>
 void AdapativeMaxPoolForward(user_op::KernelComputeContext* ctx) {
   user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
   user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
+  user_op::Tensor* index_tensor = ctx->Tensor4ArgNameAndIndex("index", 0);
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
   const Shape& y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
 
@@ -273,6 +274,7 @@ void AdapativeMaxPoolForward(user_op::KernelComputeContext* ctx) {
 
   const T* in_ptr = in_tensor->dptr<T>();
   T* out_ptr = out_tensor->mut_dptr<T>();
+  int64_t* index_ptr = index_tensor->mut_dptr<int64_t>();
 
   const int64_t input_width = in.Count(4);
   const int64_t output_width = out.Count(4);
@@ -294,21 +296,28 @@ void AdapativeMaxPoolForward(user_op::KernelComputeContext* ctx) {
             int64_t iw1 = end_index(ow, out.At(4), in.At(4));
 
             // Find out local max
-            T local_max = in_ptr[0];
+            auto start_offset = id0 * input_image_size + ih0 * input_width + iw0;
+            T local_max = in_ptr[start_offset];
+            int64_t local_max_index = start_offset;
             FOR_RANGE(int64_t, id, id0, id1) {
               FOR_RANGE(int64_t, ih, ih0, ih1) {
                 FOR_RANGE(int64_t, iw, iw0, iw1) {
-                  if (in_ptr[id * input_image_size + ih * input_width + iw] > local_max) {
-                    local_max = in_ptr[id * input_image_size + ih * input_width + iw];
+                  auto cur_index = id * input_image_size + ih * input_width + iw;
+                  if (in_ptr[cur_index] > local_max) {
+                    local_max_index = cur_index;
+                    local_max = in_ptr[cur_index];
                   }
                 }
               }
             }
-            out_ptr[od * output_image_size + oh * output_width + ow] = local_max;
+            auto i = od * output_image_size + oh * output_width + ow;
+            out_ptr[i] = local_max;
+            index_ptr[i] = local_max_index;
           }
         }
       }
       in_ptr += input_size;
+      index_ptr += output_size;
       out_ptr += output_size;
     }
   }

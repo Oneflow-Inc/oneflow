@@ -973,55 +973,43 @@ class AdaptiveAvgPool3DFunctor : public AdaptivePoolNDFunctor {
   }
 };
 
-class AdaptiveMaxPool1DFunctor {
+class AdaptiveMaxPoolBaseFunctor {
+ public:
+  AdaptiveMaxPoolBaseFunctor() = default;
+  virtual ~AdaptiveMaxPoolBaseFunctor() = default;
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
+                                const std::vector<int64_t>& output_size) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("output_size");
+    attrs.SetAttr<std::vector<int64_t>>("output_size", output_size);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class AdaptiveMaxPool1DFunctor : public AdaptiveMaxPoolBaseFunctor {
  public:
   AdaptiveMaxPool1DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("adaptive_max_pool1d").Input("x").Output("y").Build());
+    op_ = CHECK_JUST(
+        one::OpBuilder("adaptive_max_pool1d").Input("x").Output("y").Output("index").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::vector<int64_t>& output_size,
-                           const bool& return_indices) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("output_size");
-    attrs.SetAttr<std::vector<int64_t>>("output_size", output_size);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
-class AdaptiveMaxPool2DFunctor {
+class AdaptiveMaxPool2DFunctor : public AdaptiveMaxPoolBaseFunctor {
  public:
   AdaptiveMaxPool2DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("adaptive_max_pool2d").Input("x").Output("y").Build());
+    op_ = CHECK_JUST(
+        one::OpBuilder("adaptive_max_pool2d").Input("x").Output("y").Output("index").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::vector<int64_t>& output_size,
-                           const bool& return_indices) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("output_size");
-    attrs.SetAttr<std::vector<int64_t>>("output_size", output_size);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
-class AdaptiveMaxPool3DFunctor {
+class AdaptiveMaxPool3DFunctor : public AdaptiveMaxPoolBaseFunctor {
  public:
   AdaptiveMaxPool3DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("adaptive_max_pool3d").Input("x").Output("y").Build());
+    op_ = CHECK_JUST(
+        one::OpBuilder("adaptive_max_pool3d").Input("x").Output("y").Output("index").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::vector<int64_t>& output_size,
-                           const bool& return_indices) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("output_size");
-    attrs.SetAttr<std::vector<int64_t>>("output_size", output_size);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 class LossFunctorBase {
  public:

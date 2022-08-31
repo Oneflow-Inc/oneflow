@@ -353,7 +353,10 @@ class OneFlow_AdaptiveMaxPoolBaseOp<string mnemonic, list<Trait> traits = []> :
   let input = (ins
     AnyType:$x
   );
-  let output = (outs AnyType:$y);
+  let output = (outs
+    AnyType:$y,
+    AnyType:$index
+  );
   let attrs = (ins
     SI64ArrayAttr:$output_size
   );
