@@ -39,7 +39,7 @@ __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C
   const int _offset = _b * T * C + _c;
 
   F u = _u[_c];
-  F w = _w[_c];
+  const F w = -1 * exp(_w[_c]);
   const F* __restrict__ const k = _k + _offset;
   const F* __restrict__ const v = _v + _offset;
   F* __restrict__ const y = _y + _offset;
@@ -74,7 +74,7 @@ __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C
   const int _offset = _b * T * C + _c;
 
   half u = _u[_c];
-  half w = _w[_c];
+  const half w = static_cast<half>(-1.0) * static_cast<half>(exp(static_cast<float>(_w[_c])));
   const half* __restrict__ const k = _k + _offset;
   const half* __restrict__ const v = _v + _offset;
   half* __restrict__ const y = _y + _offset;
@@ -125,7 +125,8 @@ __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C
   const int _offset = _b * T * C + _c;
 
   nv_bfloat16 u = _u[_c];
-  nv_bfloat16 w = _w[_c];
+  const nv_bfloat16 w =
+      static_cast<nv_bfloat16>(-1.0) * static_cast<nv_bfloat16>(exp(static_cast<float>(_w[_c])));
   const nv_bfloat16* __restrict__ const k = _k + _offset;
   const nv_bfloat16* __restrict__ const v = _v + _offset;
   nv_bfloat16* __restrict__ const y = _y + _offset;

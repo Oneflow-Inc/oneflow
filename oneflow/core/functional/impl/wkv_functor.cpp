@@ -43,8 +43,7 @@ class WkvFunctor {
     attrs.SetAllAttrs(B, T, C);
     OpExprInterpContext ctx(attrs);
 
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {JUST(functional::ScalarMul(Scalar(-1.0), JUST(functional::Exp(w)))), u, k, v}, ctx);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {w, u, k, v}, ctx);
   }
 
  private:

@@ -55,7 +55,8 @@ Maybe<void> WkvGrad::Capture(WkvGradCaptureState* ctx, const TensorTuple& inputs
   ctx->B = JUST(attrs.GetAttr<int64_t>("B"));
   ctx->T = JUST(attrs.GetAttr<int64_t>("T"));
   ctx->C = JUST(attrs.GetAttr<int64_t>("C"));
-  ctx->SaveTensorForBackward(inputs.at(0));
+  ctx->SaveTensorForBackward(
+      JUST(functional::ScalarMul(Scalar(-1.0), JUST(functional::Exp(inputs.at(0))))));
   ctx->SaveTensorForBackward(inputs.at(1));
   ctx->SaveTensorForBackward(inputs.at(2));
   ctx->SaveTensorForBackward(inputs.at(3));
