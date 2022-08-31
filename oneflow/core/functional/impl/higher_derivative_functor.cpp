@@ -184,6 +184,56 @@ class CeluGradGradFunctor {
   }
 };
 
+class MishGradGradFunctor {
+ public:
+  // y = x ∗ tanh(softplus(x))
+  // ddx = grad_tsp * sig * (2 + x * (1 + (-1 - 2 * tsp) * sig)), sig equal grad_sp here
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    const auto sig = JUST(functional::Sigmoid(x));
+    const auto sp = JUST(functional::Log1p(JUST(functional::Exp(x))));
+    const auto grad_tsp = JUST(functional::TanhGrad(sp, dydx));
+
+    auto r = functional::sequence_function(functional::Tanh)
+                 .then([](const std::shared_ptr<Tensor>& input) {
+                   return functional::ScalarAdd(-1, input, /*alpha=*/-2);
+                 })
+                 .then(std::bind(functional::Mul, std::placeholders::_1, sig))
+                 .then([](const std::shared_ptr<Tensor>& input) {
+                   return functional::ScalarAdd(1, input, /*alpha=*/1);
+                 })
+                 .then(std::bind(functional::Mul, std::placeholders::_1, x))
+                 .then([](const std::shared_ptr<Tensor>& input) {
+                   return functional::ScalarAdd(2, input, /*alpha=*/1);
+                 })
+                 .then(std::bind(functional::Mul, std::placeholders::_1, sig))
+                 .then(std::bind(functional::Mul, std::placeholders::_1, grad_tsp))
+                 .call(sp);
+    return r;
+  }
+};
+
+class GeluGradGradFunctor {
+ public:
+  // y = gussian(x) = 0.5 * x * (1.0 + erf(sqrt(0.5) * x));
+  // dx = 0.5 * (1.0 + erf(sqrt(0.5)*x) + x * coef * exp(-0.5*x*x)) * dy), coef = sqrt(-2.0/pi)
+  // ddx = coef * grad1 * grad2 * flow.exp(t) * (1+t), t = -0.5*x*x
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    const auto& tmp = JUST(functional::ScalarMul(-0.5, JUST(functional::Square(x))));
+    const auto& tmp_add_one = JUST(functional::ScalarAdd(1, tmp, 1));
+    const Scalar coef = std::sqrt(2.0 / std::acos(-1.0));
+
+    auto r = functional::sequence_function(functional::Exp)
+                 .then(std::bind(functional::Mul, std::placeholders::_1, tmp_add_one))
+                 .then(std::bind(functional::Mul, std::placeholders::_1, dydx))
+                 .then([&coef](const std::shared_ptr<Tensor>& input) {
+                   return functional::ScalarMul(coef, input);
+                 })
+                 .call(tmp);
+    return r;
+  }
+};
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -197,6 +247,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SoftplusGradGradFunctor>("SoftplusGradGrad");
   m.add_functor<impl::EluGradGradFunctor>("EluGradGrad");
   m.add_functor<impl::CeluGradGradFunctor>("CeluGradGrad");
+  m.add_functor<impl::MishGradGradFunctor>("MishGradGrad");
+  m.add_functor<impl::GeluGradGradFunctor>("GeluGradGrad");
 }
 
 }  // namespace functional
