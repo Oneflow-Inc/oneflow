@@ -23,8 +23,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogicalAllReduceOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -51,7 +51,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> _ncclLogicalAllReduceOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -62,8 +62,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogicalReduceScatterOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -92,7 +92,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> _ncclLogicalReduceScatterOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -103,8 +103,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogicalAllGatherOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -132,7 +132,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> _ncclLogicalAllGatherOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -143,8 +143,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogicalAllGatherNoncontinuousOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -174,7 +174,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogicalAllGatherNoncontinuousOp::InferDataType(
     user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -185,8 +185,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogicalReduceScatterNoncontinuousOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -220,7 +220,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogicalReduceScatterNoncontinuousOp::InferDataType(
     user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -230,8 +230,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> _ncclLogicalS2sOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -258,7 +258,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> _ncclLogicalS2sOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -269,8 +269,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogicalSendRecvOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -291,7 +291,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> _ncclLogicalSendRecvOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
