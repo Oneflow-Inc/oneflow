@@ -148,17 +148,22 @@ LLVM::GEPOp DeclareorGetGlobalString(::mlir::PatternRewriter& rewriter, mlir::Lo
 
 func::FuncOp DeclareKernelLaunchWrapInterface(::mlir::PatternRewriter& rewriter, mlir::Location loc,
                                               ModuleOp* module, StringRef func_name,
-                                              FunctionType func_type, func::FuncOp c_api_func) {
+                                              FunctionType func_type, func::FuncOp c_api_func,
+                                              Operation* op) {
   func::FuncOp func;
   if (!(func = module->lookupSymbol<func::FuncOp>(func_name))) {
-    // OpBuilder::InsertionGuard guard(rewriter);
+    OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(module->getBody());
     func = rewriter.create<func::FuncOp>(loc, func_name, func_type);
     auto ptr = DeclareorGetGlobalString(rewriter, loc, module, func_name);
     func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
     func.getBody().emplaceBlock();
+    for (auto& arg : func_type.getInputs()) { func.getBody().addArguments(arg, loc); }
     rewriter.setInsertionPointToStart(&func.getBody().front());
-    rewriter.create<func::CallOp>(loc, c_api_func, ValueRange{ptr});
+    // rewriter.create<func::CallOp>(loc, c_api_func, ValueRange{ptr});
+    auto var_op = rewriter.create<oneflow::VariableOp>(loc, TypeRange(func_type.getResults()),
+                                                       ValueRange(), op->getAttrs());
+    rewriter.create<func::ReturnOp>(loc, var_op->getResults());
   }
   func->dump();
   return func;
@@ -167,6 +172,7 @@ func::FuncOp DeclareKernelLaunchWrapInterface(::mlir::PatternRewriter& rewriter,
 func::FuncOp GetOrInsertKernelFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc,
                                      StringRef func_name, ValueRange operands, ValueRange results,
                                      Operation* op) {
+  op->dump();
   StringRef c_api_callee = "kernel_launch";
   auto parent_func_op = op->getParentOfType<oneflow::Job>();
   if (!parent_func_op) {
@@ -183,7 +189,7 @@ func::FuncOp GetOrInsertKernelFuncOp(::mlir::PatternRewriter& rewriter, mlir::Lo
 
   auto func_type = rewriter.getFunctionType(operands.getTypes(), results.getTypes());
   auto func = DeclareKernelLaunchWrapInterface(rewriter, loc, &parent_module_op, func_name,
-                                               func_type, c_api_func);
+                                               func_type, c_api_func, op);
 
   return func;
 }
@@ -913,12 +919,14 @@ struct KernelLaunchPattern : public RewritePattern {
         func::CallOp::getOperationName(),   func::ReturnOp::getOperationName(),
         KernelLaunchOp::getOperationName(), Job::getOperationName(),
         ReturnOp::getOperationName(),       OutputOp::getOperationName(),
-        InputOp::getOperationName()};
-    if (std::count(white_list.begin(), white_list.end(), op_name)) { return success(); }
-    if (op->hasAttr(attr_flag)) { return success(); }
-    op->setAttr(attr_flag, StringAttr::get(op->getContext(), "true"));
+        InputOp::getOperationName(),        VariableOp::getOperationName(),
+    };
     auto op_name_attr = op->getAttr("op_name");
-    if (!op_name_attr.isa<StringAttr>()) { exit(1); }
+    if (std::count(white_list.begin(), white_list.end(), op_name) || !op_name_attr
+        || op->hasAttr(attr_flag)) {
+      return success();
+    }
+    op->setAttr(attr_flag, StringAttr::get(op->getContext(), "true"));
     op_name = op_name_attr.cast<StringAttr>();
     auto loc = op->getLoc();
     auto in = op->getOperands();
