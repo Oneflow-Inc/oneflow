@@ -110,14 +110,16 @@ LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, T op) {
 }
 
 func::FuncOp DeclareKernelLaunchCInterface(::mlir::PatternRewriter& rewriter, mlir::Location loc,
-                                           ModuleOp* module) {
-  const auto c_api_callee = "kernel_launch";
-  OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPointToStart(module->getBody());
-  auto func = mlir::func::FuncOp(rewriter.create<func::FuncOp>(
-      loc, c_api_callee, rewriter.getFunctionType({rewriter.getF32Type()}, {})));
+                                           ModuleOp* module, StringRef c_api_callee) {
+  func::FuncOp func;
+  if (!(func = module->lookupSymbol<func::FuncOp>(c_api_callee))) {
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPointToStart(module->getBody());
+    auto func = mlir::func::FuncOp(rewriter.create<func::FuncOp>(
+        loc, c_api_callee, rewriter.getFunctionType({rewriter.getF32Type()}, {})));
 
-  func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
+    func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
+  }
   return func;
 }
 
@@ -141,30 +143,31 @@ LLVM::GEPOp DeclareorGetGlobalString(::mlir::PatternRewriter& rewriter, mlir::Lo
   auto res = rewriter.create<LLVM::GEPOp>(
       loc, LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8)), globalPtr,
       ArrayRef<Value>({cst0, cst0}));
-  global->dump();
-  globalPtr.dump();
-  cst0.dump();
-  res.dump();
   return res;
 }
 
 func::FuncOp DeclareKernelLaunchWrapInterface(::mlir::PatternRewriter& rewriter, mlir::Location loc,
                                               ModuleOp* module, StringRef func_name,
                                               FunctionType func_type, func::FuncOp c_api_func) {
-  OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPointToStart(module->getBody());
-  auto func = rewriter.create<func::FuncOp>(loc, func_name, func_type);
-  auto ptr = DeclareorGetGlobalString(rewriter, loc, module, func_name);
-  func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
-  func.getBody().emplaceBlock();
-  rewriter.setInsertionPointToStart(&func.getBody().front());
-  rewriter.create<func::CallOp>(loc, func, ValueRange{ptr});
+  func::FuncOp func;
+  if (!(func = module->lookupSymbol<func::FuncOp>(func_name))) {
+    // OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPointToStart(module->getBody());
+    func = rewriter.create<func::FuncOp>(loc, func_name, func_type);
+    auto ptr = DeclareorGetGlobalString(rewriter, loc, module, func_name);
+    func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
+    func.getBody().emplaceBlock();
+    rewriter.setInsertionPointToStart(&func.getBody().front());
+    rewriter.create<func::CallOp>(loc, c_api_func, ValueRange{ptr});
+  }
+  func->dump();
   return func;
 }
 
 func::FuncOp GetOrInsertKernelFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc,
                                      StringRef func_name, ValueRange operands, ValueRange results,
                                      Operation* op) {
+  StringRef c_api_callee = "kernel_launch";
   auto parent_func_op = op->getParentOfType<oneflow::Job>();
   if (!parent_func_op) {
     emitError(loc) << "null parent oneflow::Job " << *op;
@@ -175,8 +178,8 @@ func::FuncOp GetOrInsertKernelFuncOp(::mlir::PatternRewriter& rewriter, mlir::Lo
     emitError(loc) << "null ModuleOp " << *op;
     return nullptr;
   }
-  static func::FuncOp c_api_func;
-  if (!c_api_func) { c_api_func = DeclareKernelLaunchCInterface(rewriter, loc, &parent_module_op); }
+  func::FuncOp c_api_func =
+      DeclareKernelLaunchCInterface(rewriter, loc, &parent_module_op, c_api_callee);
 
   auto func_type = rewriter.getFunctionType(operands.getTypes(), results.getTypes());
   auto func = DeclareKernelLaunchWrapInterface(rewriter, loc, &parent_module_op, func_name,
