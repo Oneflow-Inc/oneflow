@@ -23,6 +23,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.nn as nn
 import tempfile
+import hashlib
 
 
 class OneEmbedding(nn.Module):
@@ -107,8 +108,8 @@ class TrainGraph(flow.nn.Graph):
 def _test_one_embedding(
     test_case, batch_size, table_size_array, embedding_size, test_opt
 ):
-    test_hash = hex(hash(str([batch_size, table_size_array, embedding_size, test_opt])))
-
+    test_str = str([batch_size, table_size_array, embedding_size, test_opt])
+    test_hash = hashlib.sha256(test_str.encode('utf-8')).hexdigest()
     def np_to_global(np):
         t = flow.from_numpy(np)
         return t.to_global(
@@ -152,7 +153,7 @@ class OneEmbeddingTestCase(flow.unittest.TestCase):
         arg_dict["batch_size"] = [32, 4096]
         arg_dict["table_size_array"] = [
             [32, 65536, 100, 7],
-            np.random.randint(100000, size=(10)).tolist(),
+            [32768, 10000, 17, 3, 686],
         ]
         arg_dict["embedding_size"] = [128, 17]
         arg_dict["test_opt"] = ["SGD", "Adam"]
