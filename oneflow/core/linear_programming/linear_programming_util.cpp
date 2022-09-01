@@ -316,15 +316,12 @@ void LinearProgrammingSolver::Solve4InitFeasibleSolution() {
   inverse_base_matrix_.Eye(compact_row_size);
   // Initialize the mapping between the compact primal column and the basic column
   basic_column2compact_primal_column_.resize(compact_row_size);
-  compact_primal_column2basic_column_.resize(compact_column_size);
   for (int32_t j = 0; j < compact_row_size; j++) {
     int32_t artificial_column = j + compact_primal_column_size;
     basic_column2compact_primal_column_[j] = artificial_column;
-    compact_primal_column2basic_column_[artificial_column] = j;
   }
-  for (int32_t j = 0; j < compact_primal_column_size; j++) {
-    compact_primal_column2basic_column_[j] = -1;
-  }
+  InitCompact2Basis(compact_column_size);
+
   // Deal with potential floating point error
   ComputeAbsoluteError0();
   // Apply the revised simplex method to the auxiliary problem
@@ -374,18 +371,17 @@ void LinearProgrammingSolver::Solve4InitFeasibleSolution() {
         // Move the other rows forward
         inverse_base_matrix_.rows_[compact_row_id] = inverse_base_matrix_.rows_[l];
         x_[compact_row_id] = x_[l];
+        basic_column2compact_primal_column_[compact_row_id] =
+            basic_column2compact_primal_column_[l];
         compact_row_id++;
       }
     }
     inverse_base_matrix_.rows_.resize(compact_row_id);
     x_.resize(compact_row_id);
-    // Remove marked columns
-    for (auto& row : inverse_base_matrix_.rows_) {
-      for (int32_t column_id : removed_columns) {
-        const auto& it = row.find(column_id);
-        if (it != row.end()) { row.erase(it); }
-      }
-    }
+    basic_column2compact_primal_column_.resize(compact_row_id);
+    // Note: The artificial columns of the inverse base matrix are already removed due to the
+    // sparsity. Remove marked columns
+
     // Adjust the position of the primal cost
     int32_t compact_column_id = 0;
     for (int32_t j = 0; j < primal_cost_.size(); j++) {
@@ -396,6 +392,7 @@ void LinearProgrammingSolver::Solve4InitFeasibleSolution() {
       }
     }
     primal_cost_.resize(compact_column_id);
+    InitCompact2Basis(compact_column_id);
     // Adjust the primal matrix
     primal_matrix_.InitPrimalMatrix();
   }
@@ -424,6 +421,15 @@ double LinearProgrammingSolver::OptimalCost() {
     return InnerProduct(c_, basic_column2compact_primal_column_, x_);
   }
   return -GetMaxVal<float>();
+}
+
+// Init the map from compact variables to the basic variables
+void LinearProgrammingSolver::InitCompact2Basis(int32_t column_size) {
+  compact_primal_column2basic_column_.clear();
+  compact_primal_column2basic_column_.resize(column_size, -1);
+  for (int32_t j = 0; j < basic_column2compact_primal_column_.size(); j++) {
+    compact_primal_column2basic_column_[basic_column2compact_primal_column_[j]] = j;
+  }
 }
 
 }  // namespace linear_programming

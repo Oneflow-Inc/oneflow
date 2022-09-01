@@ -132,6 +132,8 @@ class LinearProgrammingSolver {
   // Drive basis{l} out and get j in.
   // u_ = B * A_j should be precomputed.
   void ReplaceBasisVariable(int32_t l, int32_t j);
+  // Init the map from compact variables to the basic variables
+  void InitCompact2Basis(int32_t column_size);
 
   // Compute absolute error for 0
   void ComputeAbsoluteError0();
