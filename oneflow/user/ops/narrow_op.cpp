@@ -36,7 +36,7 @@ namespace oneflow {
   dim_vec.insert(dim_vec.end(), length);
   dim_vec.insert(dim_vec.end(), in.shape().dim_vec().cbegin() + dim + 1,
                  in.shape().dim_vec().end());
-  *out->mut_shape() = Shape(dim_vec);
+  out->set_shape(Shape(dim_vec));
   return Maybe<void>::Ok();
 }
 
@@ -73,7 +73,7 @@ namespace oneflow {
 /* static */ Maybe<void> NarrowOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
-  *out->mut_data_type() = in.data_type();
+  out->set_data_type(in.data_type());
   return Maybe<void>::Ok();
 }
 
@@ -83,7 +83,7 @@ namespace oneflow {
   const int64_t ndim = dy_shape.NumAxes();
   CHECK_EQ_OR_RETURN(like_shape.NumAxes(), ndim);
 
-  *ctx->MutOutputShape("dx", 0) = like_shape;
+  ctx->SetOutputShape("dx", 0, like_shape);
   return Maybe<void>::Ok();
 }
 
@@ -131,7 +131,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> NarrowGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
   return Maybe<void>::Ok();
 }
 
