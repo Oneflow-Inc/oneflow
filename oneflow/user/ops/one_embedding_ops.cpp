@@ -83,13 +83,10 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EmbeddingUpdatePlaceholderOp::GetSbp(user_op::SbpContext* ctx) {
-  auto builder = ctx->NewBuilder()
-                     .Split(user_op::OpArg("ids", 0), 0)
-                     .Split(user_op::OpArg("embedding_grad", 0), 0);
-  if (ctx->user_op_conf().has_input("table_ids", 0)) {
-    builder.Split(user_op::OpArg("table_ids", 0), 0);
-  }
-  builder.Build();
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("ids", 0), 0)
+      .Split(user_op::OpArg("embedding_grad", 0), 0)
+      .Build();
   return Maybe<void>::Ok();
 }
 
