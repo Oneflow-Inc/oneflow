@@ -22,7 +22,6 @@ namespace one {
 
 struct OneEmbeddingLookupCaptureState : public AutoGradCaptureState {
   bool requires_grad{};
-  DataType dtype;
   std::string embedding_name{};
   int64_t line_size{};
   int64_t embedding_size{};
@@ -41,7 +40,6 @@ class OneEmbeddingLookup : public OpExprGradFunction<OneEmbeddingLookupCaptureSt
     ctx->requires_grad = inputs.at(0)->requires_grad();            // shadow
     ctx->shadow_index = ctx->SaveTensorForBackward(inputs.at(0));  // shadow
     ctx->ids_index = ctx->SaveTensorForBackward(inputs.at(1));     // id
-    ctx->dtype = JUST(attrs.GetAttr<DataType>("dtype"));
     ctx->embedding_name = JUST(attrs.GetAttr<std::string>("embedding_name"));
     ctx->line_size = JUST(attrs.GetAttr<int64_t>("line_size"));
     ctx->embedding_size = JUST(attrs.GetAttr<int64_t>("embedding_size"));
