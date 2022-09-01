@@ -126,6 +126,12 @@ class LinearProgrammingSolver {
  private:
   // The revised simplex method
   void RevisedSimplexMethod();
+  // Compute u = B * A_j
+  void ComputeU4ColumnJ(int32_t j);
+  // Replace the l-th basis variable with x_j.
+  // Drive basis{l} out and get j in.
+  // u_ = B * A_j should be precomputed.
+  void ReplaceBasisVariable(int32_t l, int32_t j);
 
   // Compute absolute error for 0
   void ComputeAbsoluteError0();
