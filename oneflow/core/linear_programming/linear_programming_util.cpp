@@ -112,7 +112,7 @@ void SparseMatrix::VectorMatrixMultiplication(const std::vector<double>& c,
   p.resize(column_size_, 0);
   for (int32_t i = 0; i < rows_.size(); i++) {
     for (const auto& column2val : rows_[i]) {
-      p[column2val.first] += c[basis[column2val.first]] * column2val.second;
+      p[column2val.first] += c[basis[i]] * column2val.second;
     }
   }
 }
@@ -212,15 +212,28 @@ void LinearProgrammingSolver::RevisedSimplexMethod() {
           // Record the existing variable x_basis{i}, and corresponding theta = x_basis{i}/u_i
           double min_theta = -1.0;
           int32_t min_i = -1;
-          for (int32_t i = 0; i < u_.size(); i++) {
-            if (NumericalGT0(u_[i])) {
-              double theta = x_[i] / u_[i];
-              if (min_i == -1 || min_theta > theta + zero_plus_) {
-                min_theta = theta;
-                min_i = i;
+          // NOTE: Brand's Rule, the order of index really matter.
+          for (int32_t i : compact_primal_column2basic_column_) {
+            if (i >= 0) {
+              if (NumericalGT0(u_[i])) {
+                double theta = x_[i] / u_[i];
+                if (min_i == -1 || min_theta > theta + zero_plus_) {
+                  min_theta = theta;
+                  min_i = i;
+                }
               }
             }
           }
+          // Or this one?
+          // for (int32_t i = 0; i < u_.size(); i++) {
+          //   if (NumericalGT0(u_[i])) {
+          //     double theta = x_[i] / u_[i];
+          //     if (min_i == -1 || min_theta > theta + zero_plus_) {
+          //       min_theta = theta;
+          //       min_i = i;
+          //     }
+          //   }
+          // }
           // If all the u_i >= 0, the algorithm terminates with the optimal cost -Inf.
           if (min_i == -1) {
             std::cout << "All the u_i <= 0, the algorithm terminates with the optimal cost -Inf."
@@ -228,7 +241,7 @@ void LinearProgrammingSolver::RevisedSimplexMethod() {
             is_solved = SolveLpTag::kInfCost;
             return;
           }
-          // Replace the basis variables
+          // Replace the min_i-th basis variables with compact_primal_column
           ReplaceBasisVariable(min_i, compact_primal_column);
 
           // Move to the next step
