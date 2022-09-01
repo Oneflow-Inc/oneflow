@@ -35,12 +35,12 @@ void CopyTaskNode::BuildExecGph() {
   node->BindBnWithRegst(node->op()->SoleObn(), out_regst);
 }
 
-// void CopyTaskNode::InferRegst() {
-//   auto out_regst = GetProducedRegst("copy_out");
-//   auto in_regst = GetSoleConsumedRegst("copy_in");
-//   // NOTE(strint): This is strange, need to be removed.
-//   out_regst->CopyBlobDescWithoutAddLbi(in_regst.get());
-// };
+void CopyTaskNode::InferRegst() {
+  auto out_regst = GetProducedRegst("copy_out");
+  auto in_regst = GetSoleConsumedRegst("copy_in");
+  // NOTE(strint): This is strange, need to be removed.
+  out_regst->CopyBlobDescWithoutAddLbi(in_regst.get());
+};
 
 void CopyTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
 
