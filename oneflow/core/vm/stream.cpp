@@ -26,7 +26,8 @@ namespace vm {
 
 void Stream::__Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamType stream_type,
                       const intrusive::shared_ptr<Dependence>& schedule_local_dep_object,
-                      const std::vector<intrusive::shared_ptr<Dependence>>& transport_dependences) {
+                      const std::vector<intrusive::shared_ptr<Dependence>>& transport_dependences,
+                      const Optional<int64_t>& comm_id) {
   set_thread_ctx(thread_ctx);
   device_ = device;
   stream_type_ = stream_type;
@@ -34,6 +35,10 @@ void Stream::__Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamType s
   schedule_local_dep_object_ = schedule_local_dep_object;
   transport_dependences_ = transport_dependences;
   on_scheduler_thread_ = stream_policy_->OnSchedulerThread(stream_type);
+  comm_id_ = comm_id;
+  if (comm_id_.has_value()) {
+    CHECK(!transport_dependences_.empty()) << "transport_dependences not initialized";
+  }
 }
 
 int64_t Stream::device_id() const { return device_->device_id(); }

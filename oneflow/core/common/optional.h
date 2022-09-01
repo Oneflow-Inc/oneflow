@@ -17,12 +17,14 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_OPTIONAL_H_
 #define ONEFLOW_CORE_COMMON_OPTIONAL_H_
 
+#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include "oneflow/core/common/error.pb.h"
 #include "oneflow/core/common/type_traits.h"
 #include "oneflow/core/common/just.h"
+#include "oneflow/core/common/hash.h"
 
 namespace oneflow {
 
@@ -454,5 +456,21 @@ class Optional final : private internal::OptionalBase<T> {
 };
 
 }  // namespace oneflow
+
+namespace std {
+
+template<typename T>
+struct hash<oneflow::Optional<T>> final {
+  static_assert(std::is_scalar<T>::value, "");
+  size_t operator()(const oneflow::Optional<T>& opt_value) const {
+    if (opt_value.has_value()) {
+      return oneflow::Hash(1, CHECK_JUST(opt_value));
+    } else {
+      return oneflow::Hash(0);
+    }
+  }
+};
+
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_COMMON_OPTIONAL_H_

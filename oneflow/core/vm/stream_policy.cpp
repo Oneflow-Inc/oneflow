@@ -14,8 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/stream_policy.h"
+#include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/framework/stream_on_independent_thread.h"
 #include "oneflow/core/common/env_var/vm.h"
+#include "oneflow/core/thread/thread_global_id.h"
 
 namespace oneflow {
 namespace vm {
@@ -23,6 +26,16 @@ namespace vm {
 bool StreamPolicy::OnSchedulerThread(StreamType stream_type) const {
   if (StreamOnIndependentThread::Visit(stream_type)) { return false; }
   return !ThreadLocalEnvBool<ONEFLOW_VM_COMPUTE_ON_WORKER_THREAD>();
+}
+
+void StreamPolicy::RunIf(Instruction* instruction) const {
+  const auto& comm_id = instruction->stream().comm_id();
+  if (comm_id.has_value()) {
+    ThreadGlobalIdGuard guard(CHECK_JUST(comm_id));
+    Run(instruction);
+  } else {
+    Run(instruction);
+  }
 }
 
 }  // namespace vm

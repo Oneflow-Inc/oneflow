@@ -63,10 +63,7 @@ Maybe<void> ForEachThreadCtx(vm::VirtualMachineEngine* engine,
 }
 
 void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
-  *Initializer = [&]() {
-    CHECK_JUST(InitThisThreadUniqueGlobalId(kThreadGlobalIdScheduler, "scheduler"));
-    OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Scheduler");
-  };
+  *Initializer = [&]() { OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Scheduler"); };
 }
 
 void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCtx*)>& Initializer) {
@@ -89,7 +86,7 @@ VirtualMachine::VirtualMachine() : disable_vm_threads_(false), scheduler_stopped
   std::function<void()> SchedulerInitializer;
   GetSchedulerThreadInitializer(&SchedulerInitializer);
   schedule_thread_ = std::thread(&VirtualMachine::ScheduleLoop, this, SchedulerInitializer);
-  transport_dependence_.Reset();
+  for (auto& pair : comm_id2transport_dependence_) { pair.second.Reset(); }
 }
 
 namespace {
@@ -346,17 +343,20 @@ intrusive::shared_ptr<vm::Dependence> VirtualMachine::FindOrCreateScheduleLocalD
   return *ptr;
 }
 
-intrusive::shared_ptr<vm::Dependence> VirtualMachine::FindOrCreateTransportLocalDepObject() {
+intrusive::shared_ptr<vm::Dependence> VirtualMachine::FindOrCreateTransportLocalDepObject(
+    int64_t comm_id) {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
-  if (!transport_dependence_) { transport_dependence_ = intrusive::make_shared<vm::Dependence>(); }
-  return transport_dependence_;
+  auto* transport_dependence = &comm_id2transport_dependence_[comm_id];
+  if (!*transport_dependence) { *transport_dependence = intrusive::make_shared<vm::Dependence>(); }
+  return *transport_dependence;
 }
 
 Maybe<vm::Stream*> VirtualMachine::CreateStream(Symbol<Device> device, StreamType stream_type,
-                                                size_t thread_uid) {
+                                                size_t thread_uid,
+                                                const Optional<int64_t>& comm_id) {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
   vm::ThreadCtx* thread_ctx = JUST(FindOrCreateThreadCtx(device, stream_type, thread_uid));
-  return JUST(CreateStream(thread_ctx, device, stream_type));
+  return JUST(CreateStream(thread_ctx, device, stream_type, comm_id));
 }
 
 Maybe<vm::Stream*> VirtualMachine::GetVmStream(Symbol<Stream> stream) {
@@ -371,7 +371,7 @@ Maybe<vm::Stream*> VirtualMachine::GetVmStream(Symbol<Stream> stream) {
         unique_stream_id2vm_stream_.SetOrAdd(
             cur_stream->unique_stream_id(),
             JUST(CreateStream(cur_stream->device(), cur_stream->stream_type(),
-                              cur_stream->thread_uid())));
+                              cur_stream->thread_uid(), cur_stream->comm_id())));
       }
     }
   }
@@ -414,11 +414,6 @@ Maybe<vm::ThreadCtx*> VirtualMachine::CreateThreadCtx(Symbol<Device> device, Str
   }
   auto* thread_ctx = *thread_ctx_ptr;
   {
-    const bool need_thread_global_id = [&] {
-      return !StreamOnIndependentThread::Visit(stream_type) && device->enum_type() == kCPU;
-    }();
-    size_t thread_global_id = thread_uid + kThreadGlobalIdWorkerStart;
-    if (need_thread_global_id) { JUST(CheckThreadGlobalIdAvailable(thread_global_id)); }
     const std::string thread_tag = [&] {
       std::string device_tag = *CHECK_JUST(DeviceTag4DeviceType(device->enum_type()));
       if (StreamOnIndependentThread::Visit(stream_type)) {
@@ -427,11 +422,7 @@ Maybe<vm::ThreadCtx*> VirtualMachine::CreateThreadCtx(Symbol<Device> device, Str
         return std::to_string(thread_uid);
       }
     }();
-    const auto& WorkerInitializer = [need_thread_global_id, thread_global_id,
-                                     thread_tag](vm::ThreadCtx* thread_ctx) {
-      if (need_thread_global_id) {
-        CHECK_JUST(InitThisThreadGlobalId(thread_global_id, thread_tag));
-      }
+    const auto& WorkerInitializer = [thread_tag](vm::ThreadCtx* thread_ctx) {
       OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Worker_" + thread_tag);
     };
     auto thread = std::make_unique<std::thread>(&WorkerLoop, thread_ctx, WorkerInitializer);
@@ -444,16 +435,20 @@ Maybe<vm::ThreadCtx*> VirtualMachine::CreateThreadCtx(Symbol<Device> device, Str
 }
 
 Maybe<vm::Stream*> VirtualMachine::CreateStream(vm::ThreadCtx* thread_ctx, Symbol<Device> device,
-                                                StreamType stream_type) {
+                                                StreamType stream_type,
+                                                const Optional<int64_t>& comm_id) {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
   intrusive::shared_ptr<vm::Dependence> schedule_local_dep_object =
       FindOrCreateScheduleLocalDepObject(device, stream_type);
   std::vector<intrusive::shared_ptr<vm::Dependence>> transport_dependences{};
   if (IsCommNetStream::Visit(stream_type)) {
-    transport_dependences.push_back(FindOrCreateTransportLocalDepObject());
+    // Sequentalizes all communication collective op within the same worker thread.
+    transport_dependences.push_back(thread_ctx->transport_dependence());
+    // Sequentalizes all communication collective op with the same comm_id.
+    transport_dependences.push_back(FindOrCreateTransportLocalDepObject(JUST(comm_id)));
   }
   auto stream = intrusive::make_shared<vm::Stream>(
-      thread_ctx, device, stream_type, schedule_local_dep_object, transport_dependences);
+      thread_ctx, device, stream_type, schedule_local_dep_object, transport_dependences, comm_id);
 
   auto bc = std::make_shared<BlockingCounter>(1);
   engine_->InsertProbe([&stream, thread_ctx, bc](vm::VirtualMachineEngine* engine) {

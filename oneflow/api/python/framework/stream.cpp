@@ -26,13 +26,12 @@ namespace py = pybind11;
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   using namespace oneflow;
   py::class_<StreamSet, std::shared_ptr<StreamSet>>(m, "StreamSet")
-      .def(py::init([](const AsyncThread& async_thread) {
-             return std::make_shared<StreamSet>(async_thread.thread_uid());
-           }),
-           py::arg("worker_thread_id") = py::none());
+      .def(py::init([](const AsyncThread& async_thread, int64_t comm_id) {
+        return StreamSet::New(async_thread.thread_uid(), comm_id).GetPtrOrThrow();
+      }));
 
   py::class_<StreamGuard, std::shared_ptr<StreamGuard>>(m, "StreamGuard")
-      .def(py::init([](const std::shared_ptr<StreamSet>& stream_set, bool exclude_ccl) {
-        return std::make_shared<StreamGuard>(StreamConverter(stream_set, exclude_ccl));
+      .def(py::init([](const std::shared_ptr<StreamSet>& stream_set) {
+        return std::make_shared<StreamGuard>(StreamConverter(stream_set));
       }));
 }

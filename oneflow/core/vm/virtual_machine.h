@@ -37,7 +37,7 @@ class VirtualMachine final {
 
   static std::function<Maybe<bool>()> GetPredicatorNoMoreInstructionsFinished();
 
-  intrusive::shared_ptr<vm::Dependence> FindOrCreateTransportLocalDepObject();
+  intrusive::shared_ptr<vm::Dependence> FindOrCreateTransportLocalDepObject(int64_t comm_id);
 
   std::string GetBlockingDebugString();
 
@@ -67,10 +67,11 @@ class VirtualMachine final {
                                               size_t thread_uid);
   Maybe<vm::ThreadCtx*> CreateThreadCtx(Symbol<Device> device, StreamType stream_type,
                                         size_t thread_uid);
-  Maybe<vm::Stream*> CreateStream(Symbol<Device> device, StreamType stream_type, size_t thread_uid);
+  Maybe<vm::Stream*> CreateStream(Symbol<Device> device, StreamType stream_type, size_t thread_uid,
+                                  const Optional<int64_t>& comm_id);
 
   Maybe<vm::Stream*> CreateStream(vm::ThreadCtx* thread_ctx, Symbol<Device> device,
-                                  StreamType stream_type);
+                                  StreamType stream_type, const Optional<int64_t>& comm_id);
 
   Maybe<void> RunInCurrentThread(vm::InstructionList* instr_list);
 
@@ -93,7 +94,7 @@ class VirtualMachine final {
       devcie_type_stream_type_2independent_thread_ctx_;
   HashMap<std::pair<Symbol<Device>, StreamType>, intrusive::shared_ptr<vm::Dependence>>
       device_stream_type2local_dep_object_;
-  intrusive::shared_ptr<vm::Dependence> transport_dependence_;
+  HashMap<int64_t, intrusive::shared_ptr<vm::Dependence>> comm_id2transport_dependence_;
   SteadyVector<vm::Stream*> unique_stream_id2vm_stream_;
 
   std::thread schedule_thread_;

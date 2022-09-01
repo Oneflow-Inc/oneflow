@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/of_unused.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/nn_graph_if.h"
+#include "oneflow/core/framework/stream.h"
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/vm/instruction_policy.h"
 #include "oneflow/core/vm/instruction_policy_util.h"
@@ -74,7 +75,7 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
       DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
     }
     DoEach(CHECK_JUST(SingletonMaybe<VirtualMachine>())
-               ->FindOrCreateTransportLocalDepObject()
+               ->FindOrCreateTransportLocalDepObject(oneflow::Stream::kDefaultStreamCommId)
                .Mutable());
   }
 

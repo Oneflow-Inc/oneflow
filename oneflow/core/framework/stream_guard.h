@@ -29,8 +29,8 @@ namespace oneflow {
 
 class StreamConverter final {
  public:
-  explicit StreamConverter(const std::shared_ptr<StreamSet>& stream_set, bool exclude_ccl)
-      : stream_set_(stream_set), exclude_ccl_(exclude_ccl) {}
+  explicit StreamConverter(const std::shared_ptr<StreamSet>& stream_set)
+      : stream_set_(stream_set) {}
 
   Maybe<Symbol<Stream>> TryConvertStream(Symbol<Stream> stream) {
     auto key = std::make_pair(stream->device(), stream->stream_type());
@@ -39,12 +39,9 @@ class StreamConverter final {
     if (iter != map->end()) { return iter->second; }
     Symbol<Stream> ret;
     if (IsCommNetStream::Visit(stream->stream_type())) {
-      if (exclude_ccl_) {
-        ret = stream;
-      } else {
-        size_t thread_uid = stream_set_->worker_thread_id();
-        ret = JUST(Stream::New(stream->device(), stream->stream_type(), thread_uid));
-      }
+      size_t thread_uid = stream_set_->worker_thread_id();
+      int64_t comm_id = stream_set_->comm_id();
+      ret = JUST(Stream::New(stream->device(), stream->stream_type(), thread_uid, comm_id));
     } else {
       size_t thread_uid = stream_set_->worker_thread_id();
       ret = JUST(Stream::New(stream->device(), stream->stream_type(), thread_uid));
@@ -55,7 +52,6 @@ class StreamConverter final {
 
  private:
   const std::shared_ptr<StreamSet> stream_set_;
-  bool exclude_ccl_;
 };
 
 class StreamGuard final : public ThreadLocalGuard<StreamConverter> {
