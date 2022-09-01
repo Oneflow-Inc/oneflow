@@ -124,7 +124,7 @@ Maybe<void> TouchInTmpComputeStream(const TensorTuple& inputs) {
     if (input->is_global()) { input = JUST(input->cur_rank_phy_tensor()); }
     if (input) {
       Symbol<Device> device = JUST(input->device());
-      auto stream = JUST(Stream::New(device, StreamType::kTmpCompute));
+      auto stream = JUST(Stream::New(device, StreamType::kCompute, Stream::kTmpStreamThreadUid));
       JUST(Touch(input, stream));
     }
   }
