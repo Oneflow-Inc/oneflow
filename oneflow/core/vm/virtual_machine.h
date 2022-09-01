@@ -55,8 +55,7 @@ class VirtualMachine final {
 
   void ScheduleLoop(const std::function<void()>& Initializer);
 
-  intrusive::shared_ptr<vm::Dependence> FindOrCreateScheduleLocalDepObject(Symbol<Device> device,
-                                                                           StreamType stream_type);
+  intrusive::shared_ptr<vm::Dependence> FindOrCreateScheduleDependence(Symbol<Stream> stream);
   bool NoMoreErasedInstructions(size_t* last_total_erased_instruction_cnt) const;
 
   const vm::VirtualMachineEngine& engine() const { return *engine_; }
@@ -67,11 +66,9 @@ class VirtualMachine final {
                                               size_t thread_uid);
   Maybe<vm::ThreadCtx*> CreateThreadCtx(Symbol<Device> device, StreamType stream_type,
                                         size_t thread_uid);
-  Maybe<vm::Stream*> CreateStream(Symbol<Device> device, StreamType stream_type, size_t thread_uid,
-                                  const Optional<int64_t>& comm_id);
+  Maybe<vm::Stream*> CreateStream(Symbol<Stream> stream);
 
-  Maybe<vm::Stream*> CreateStream(vm::ThreadCtx* thread_ctx, Symbol<Device> device,
-                                  StreamType stream_type, const Optional<int64_t>& comm_id);
+  Maybe<vm::Stream*> CreateStream(vm::ThreadCtx* thread_ctx, Symbol<Stream> stream);
 
   Maybe<void> RunInCurrentThread(vm::InstructionList* instr_list);
 
@@ -87,13 +84,12 @@ class VirtualMachine final {
   std::mutex worker_threads_mutex_;
   std::list<std::unique_ptr<std::thread>> worker_threads_;
 
-  // for creating vm::Stream and vm::ThreadCtx
-  std::recursive_mutex creating_stream_and_thread_ctx_mutex_;
+  // for vm::Stream and vm::ThreadCtx
+  std::recursive_mutex stream_and_thread_ctx_mutex_;
   HashMap<size_t, vm::ThreadCtx*> thread_uid2shared_thread_ctx_;
   HashMap<std::pair<DeviceType, StreamType>, vm::ThreadCtx*>
       devcie_type_stream_type_2independent_thread_ctx_;
-  HashMap<std::pair<Symbol<Device>, StreamType>, intrusive::shared_ptr<vm::Dependence>>
-      device_stream_type2local_dep_object_;
+  HashMap<Symbol<Stream>, intrusive::shared_ptr<vm::Dependence>> stream2dependence_;
   HashMap<int64_t, intrusive::shared_ptr<vm::Dependence>> comm_id2transport_dependence_;
   SteadyVector<vm::Stream*> unique_stream_id2vm_stream_;
 

@@ -22,14 +22,17 @@ namespace oneflow {
 
 class AsyncThread final {
  public:
-  AsyncThread() : thread_uid_(Stream::kTmpStreamThreadUid) {}
   AsyncThread(const AsyncThread&) = delete;
   AsyncThread(AsyncThread&&) = delete;
-  ~AsyncThread() = default;
+  ~AsyncThread();
+
+  static Maybe<AsyncThread> New();
 
   int64_t thread_uid() const { return thread_uid_; }
 
  private:
+  AsyncThread(int64_t thread_uid) : thread_uid_(thread_uid) {}
+
   int64_t thread_uid_;
 };
 
