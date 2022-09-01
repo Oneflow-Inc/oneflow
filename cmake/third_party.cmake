@@ -236,6 +236,33 @@ if(THIRD_PARTY)
         EXCLUDE_FROM_ALL)
     endforeach()
   endif(BUILD_PYTHON)
+  install(
+    DIRECTORY ${THIRD_PARTY_DIR}/llvm/include/
+    DESTINATION ${ONEFLOW_INCLUDE_DIR}
+    COMPONENT oneflow_py_include
+    EXCLUDE_FROM_ALL FILES_MATCHING
+    PATTERN llvm/ADT/ArrayRef.h
+    PATTERN llvm/ADT/Hashing.h
+    PATTERN llvm/ADT/iterator.h
+    PATTERN llvm/ADT/None.h
+    PATTERN llvm/ADT/SmallVector.h
+    PATTERN llvm/ADT/STLExtras.h
+    PATTERN llvm/ADT/STLFunctionalExtras.h
+    PATTERN llvm/ADT/DenseMapInfo.h
+    PATTERN llvm/ADT/identity.h
+    PATTERN llvm/ADT/iterator_range.h
+    PATTERN llvm/ADT/Optional.h
+    PATTERN llvm/ADT/STLArrayExtras.h
+    PATTERN llvm/ADT/STLForwardCompat.h
+    PATTERN llvm/ADT/StringRef.h
+    PATTERN llvm/Config/abi-breaking.h
+    PATTERN llvm/Config/llvm-config.h
+    PATTERN llvm/Support/Compiler.h
+    PATTERN llvm/Support/DataTypes.h
+    PATTERN llvm/Support/ErrorHandling.h
+    PATTERN llvm/Support/SwapByteOrder.h
+    PATTERN llvm/Support/type_traits.h
+    PATTERN llvm-c/DataTypes.h)
 else()
   add_custom_target(prepare_oneflow_third_party ALL)
 endif()
