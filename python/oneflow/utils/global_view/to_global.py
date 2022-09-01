@@ -155,6 +155,7 @@ def to_global(input, placement=None, sbp=None, **kwargs):
         def leaf_fn(node):
             if isinstance(node, Tensor) or node is None:
                 if isinstance(sbp, types.FunctionType):
+                    # For the use of the get_sbp function, broadcast the SBP of src_rank to other ranks, avoiding the situation of none is none.
                     src_rank_sbp = src_sbp_broadcast(
                         sbp(input, node), placement.ranks.flat[0]
                     )

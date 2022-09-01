@@ -1445,7 +1445,9 @@ class TestToGlobalAndLocal(flow.unittest.TestCase):
 
         # passing no placement and sbp
         with test_case.assertRaises(ValueError):
-            global_tensor = flow.utils.global_view.to_global(local_tensor, placement=None, sbp=None)
+            global_tensor = flow.utils.global_view.to_global(
+                local_tensor, placement=None, sbp=None
+            )
 
         # wrong sbp type
         with test_case.assertRaises(TypeError):
