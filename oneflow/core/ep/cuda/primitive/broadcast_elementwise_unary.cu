@@ -272,13 +272,13 @@ template<UnaryOp op, typename Src, typename Dst>
 void LaunchFill(CudaStream* stream, Dst* dst, const Src* src, size_t count, Scalar attr0,
                 Scalar attr1) {
   auto uintptr = reinterpret_cast<std::uintptr_t>(dst);
-  if (uintptr % 16 == 0) {
+  if (uintptr % 16 == 0 && count >= (16 / sizeof(Dst))) {
     LaunchPackFill<op, Src, Dst, 16 / sizeof(Dst)>(stream, dst, src, count, attr0, attr1);
-  } else if (uintptr % 8 == 0) {
+  } else if (uintptr % 8 == 0 && count >= (8 / sizeof(Dst))) {
     LaunchPackFill<op, Src, Dst, 8 / sizeof(Dst)>(stream, dst, src, count, attr0, attr1);
-  } else if (uintptr % 4 == 0) {
+  } else if (uintptr % 4 == 0 && count >= (4 / sizeof(Dst))) {
     LaunchPackFill<op, Src, Dst, 4 / sizeof(Dst)>(stream, dst, src, count, attr0, attr1);
-  } else if (uintptr % 2 == 0) {
+  } else if (uintptr % 2 == 0 && count >= (2 / sizeof(Dst))) {
     LaunchPackFill<op, Src, Dst, 2 / sizeof(Dst)>(stream, dst, src, count, attr0, attr1);
   } else {
     LaunchPackFill<op, Src, Dst, 1 / sizeof(Dst)>(stream, dst, src, count, attr0, attr1);
