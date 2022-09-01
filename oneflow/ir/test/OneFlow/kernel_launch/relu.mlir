@@ -1,5 +1,7 @@
 // RUN: oneflow-opt %s \
-// RUN: -kernel-launch-function
+// RUN: -kernel-launch-function | FileCheck %s
+
+// CHECK: oneflow.kernel_launch
 
 module {
   oneflow.job @GraphToRun_0(%arg0: tensor<1xf32>) -> tensor<1xf32> {
