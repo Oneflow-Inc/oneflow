@@ -31,7 +31,9 @@ class TestSyncBatchNorm(flow.unittest.TestCase):
         os.environ["ONEFLOW_ENABLE_NHWC"] = "0"
         channel = 8
         torch.distributed.init_process_group(
-            backend="gloo", group_name="test_sync_batchnorm3d", timeout=datetime.timedelta(seconds=3600)
+            backend="gloo",
+            group_name="test_sync_batchnorm3d",
+            timeout=datetime.timedelta(seconds=3600),
         )
 
         torch_input = torch.rand(
@@ -76,7 +78,9 @@ class TestSyncBatchNorm(flow.unittest.TestCase):
         os.environ["ONEFLOW_ENABLE_NHWC"] = "0"
         channel = 8
         torch.distributed.init_process_group(
-            backend="gloo", group_name="test_sync_batchnorm2d", timeout=datetime.timedelta(seconds=3600)
+            backend="gloo",
+            group_name="test_sync_batchnorm2d",
+            timeout=datetime.timedelta(seconds=3600),
         )
 
         torch_input = torch.rand(
@@ -120,7 +124,9 @@ class TestSyncBatchNorm(flow.unittest.TestCase):
         os.environ["ONEFLOW_ENABLE_NHWC"] = "0"
         channel = 8
         torch.distributed.init_process_group(
-            backend="gloo", group_name="test_sync_batchnorm1d", timeout=datetime.timedelta(seconds=3600)
+            backend="gloo",
+            group_name="test_sync_batchnorm1d",
+            timeout=datetime.timedelta(seconds=3600),
         )
 
         torch_input = torch.rand(

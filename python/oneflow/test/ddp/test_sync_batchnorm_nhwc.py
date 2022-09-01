@@ -39,7 +39,9 @@ class TestSyncBatchNormChannelLast(flow.unittest.TestCase):
         of_res = of_bn(of_input)
 
         torch.distributed.init_process_group(
-            backend="gloo", group_name="test_sync_batchnorm2d_nhwc", timeout=datetime.timedelta(seconds=3600)
+            backend="gloo",
+            group_name="test_sync_batchnorm2d_nhwc",
+            timeout=datetime.timedelta(seconds=3600),
         )
         torch_input = torch.tensor(
             of_input.numpy(),
