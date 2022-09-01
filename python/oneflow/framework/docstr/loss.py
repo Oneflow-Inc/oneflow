@@ -81,7 +81,7 @@ add_docstr(
 add_docstr(
     oneflow._C.cross_entropy,
     r"""
-    cross_entropy(input, target, weight=None, ignore_index=-100, reduction="mean")
+    cross_entropy(input, target, weight=None, ignore_index=-100, reduction="mean", label_smoothing=0.0)
 
     See :class:`~oneflow.nn.CrossEntropyLoss` for details.
 
@@ -110,6 +110,11 @@ add_docstr(
             elements in the output, ``'sum'``: the output will be summed. Note: :attr:`size_average`
             and :attr:`reduce` are in the process of being deprecated, and in the meantime,
             specifying either of those two args will override :attr:`reduction`. Default: ``'mean'``
+        label_smoothing (float, optinoal): A float in [0.0, 1.0]. Specifies the amount
+            of smoothing when computing the loss, where 0.0 means no smoothing.
+            The targets become a mixture of the original ground truth and a uniform
+            distribution as described in `Rethinking the Inception Architecture for Computer Vision <https://arxiv.org/abs/1512.00567>`_.
+            Default: :math:`0.0`.
 
     For example:
 
