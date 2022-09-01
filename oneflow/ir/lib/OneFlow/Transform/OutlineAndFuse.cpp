@@ -36,6 +36,9 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
 };
 
 class KernelLaunchFunctionPass : public KernelLaunchFunctionPassBase<KernelLaunchFunctionPass> {
+  void getDependentDialects(DialectRegistry& registry) const override {
+    registry.insert<LLVM::LLVMDialect>();
+  }
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());

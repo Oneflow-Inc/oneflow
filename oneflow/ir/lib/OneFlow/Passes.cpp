@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/SymbolTable.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/framework/sbp_context.h"
@@ -107,72 +109,80 @@ LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, T op) {
   return success();
 }
 
-std::unique_ptr<func::FuncOp> DeclareKernelLaunchCInterface(::mlir::PatternRewriter& rewriter,
-                                                                  mlir::Location loc,
-                                                                  ModuleOp* module) {
+func::FuncOp DeclareKernelLaunchCInterface(::mlir::PatternRewriter& rewriter, mlir::Location loc,
+                                           ModuleOp* module) {
   const auto c_api_callee = "kernel_launch";
+  OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPointToStart(module->getBody());
-  auto func_type = rewriter.getFunctionType({}, {});
-  auto res =
-      std::make_unique<func::FuncOp>(rewriter.create<func::FuncOp>(loc, c_api_callee, func_type));
+  auto func = mlir::func::FuncOp(rewriter.create<func::FuncOp>(
+      loc, c_api_callee, rewriter.getFunctionType({rewriter.getF32Type()}, {})));
+
+  func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
+  return func;
+}
+
+LLVM::GEPOp DeclareorGetGlobalString(::mlir::PatternRewriter& rewriter, mlir::Location loc,
+                                     ModuleOp* module, StringRef func_name) {
+  LLVM::GlobalOp global;
+  StringRef variable = rewriter.getStringAttr(func_name + "_var");
+  if (!(global = module->lookupSymbol<LLVM::GlobalOp>(variable))) {
+    OpBuilder::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(module->getBody());
+    auto type =
+        LLVM::LLVMArrayType::get(IntegerType::get(rewriter.getContext(), 8), func_name.size());
+    global =
+        rewriter.create<LLVM::GlobalOp>(loc, type, /*isConstant=*/true, LLVM::Linkage::Internal,
+                                        variable, rewriter.getStringAttr(func_name),
+                                        /*alignment=*/0);
+  }
+  Value globalPtr = rewriter.create<LLVM::AddressOfOp>(loc, global);
+  Value cst0 =
+      rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), rewriter.getIndexAttr(0));
+  auto res = rewriter.create<LLVM::GEPOp>(
+      loc, LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8)), globalPtr,
+      ArrayRef<Value>({cst0, cst0}));
+  global->dump();
+  globalPtr.dump();
+  cst0.dump();
+  res.dump();
   return res;
+}
+
+func::FuncOp DeclareKernelLaunchWrapInterface(::mlir::PatternRewriter& rewriter, mlir::Location loc,
+                                              ModuleOp* module, StringRef func_name,
+                                              FunctionType func_type, func::FuncOp c_api_func) {
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPointToStart(module->getBody());
+  auto func = rewriter.create<func::FuncOp>(loc, func_name, func_type);
+  auto ptr = DeclareorGetGlobalString(rewriter, loc, module, func_name);
+  func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
+  func.getBody().emplaceBlock();
+  rewriter.setInsertionPointToStart(&func.getBody().front());
+  rewriter.create<func::CallOp>(loc, func, ValueRange{ptr});
+  return func;
 }
 
 func::FuncOp GetOrInsertKernelFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc,
                                      StringRef func_name, ValueRange operands, ValueRange results,
                                      Operation* op) {
-  static std::unique_ptr<func::FuncOp> c_api_func;
-  if (!c_api_func) {
-    c_api_func = std::move(DeclareKernelLaunchCInterface(rewriter, loc, nullptr));
-  }
-  BlockAndValueMapping mapping;
-  SmallVector<Type, 4> argument_types;
-  argument_types.reserve(operands.size());
-  SmallVector<Type, 4> result_types;
-  argument_types.reserve(results.size());
-  for (auto argument : operands) { argument_types.push_back(argument.getType()); }
-  for (auto result : results) { result_types.push_back(result.getType()); }
-  auto func_type = rewriter.getFunctionType(argument_types, result_types);
-  auto first_op = op;
-  auto parent_func_op = first_op->getParentOfType<oneflow::Job>();
+  auto parent_func_op = op->getParentOfType<oneflow::Job>();
   if (!parent_func_op) {
-    emitError(loc) << "null parent oneflow::Job " << *first_op;
+    emitError(loc) << "null parent oneflow::Job " << *op;
     return nullptr;
   }
   auto parent_module_op = parent_func_op->getParentOfType<ModuleOp>();
   if (!parent_module_op) {
-    emitError(loc) << "null ModuleOp " << *first_op;
+    emitError(loc) << "null ModuleOp " << *op;
     return nullptr;
   }
-  SymbolTable symbol_table(parent_module_op);
-  OpBuilder::InsertionGuard guard(rewriter);
-  Block::iterator insertPt(parent_func_op->getNextNode());
-  rewriter.setInsertionPointToStart(parent_module_op.getBody());
-  if (parent_func_op->hasAttr("llvm.emit_c_interface")) {
-    emitError(loc) << "parent should not has attr of llvm.emit_c_interface " << *parent_func_op;
-    return nullptr;
-  }
-  auto function = rewriter.create<func::FuncOp>(loc, func_name, func_type);
-  function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
-  function.getBody().emplaceBlock();
-  for (auto& arg : argument_types) { function.getBody().addArguments(arg, loc); }
-  for (auto argument_pair : llvm::zip(operands, function.getBody().getArguments())) {
-    mapping.map(std::get<0>(argument_pair), std::get<1>(argument_pair));
-  }
-  rewriter.setInsertionPointToStart(&function.getBody().front());
-  ImplicitLocOpBuilder nb(loc, rewriter);
-  auto name = op->getName();
-  auto call = rewriter.create<func::CallOp>(op->getLoc(), c_api, TypeRange{});
-  call->dump();
-  nb.clone(*op, mapping);
-  SmallVector<::mlir::Value, 4> mapped_results;
-  for (auto result : results) { mapped_results.push_back(mapping.lookup(result)); }
-  rewriter.create<func::ReturnOp>(loc, mapped_results);
-  if (symbol_table.lookup(func_name)) {
-    emitError(loc) << func_name << " should not be at symbol table of ModuleOp";
-    return nullptr;
-  }
-  return function;
+  static func::FuncOp c_api_func;
+  if (!c_api_func) { c_api_func = DeclareKernelLaunchCInterface(rewriter, loc, &parent_module_op); }
+
+  auto func_type = rewriter.getFunctionType(operands.getTypes(), results.getTypes());
+  auto func = DeclareKernelLaunchWrapInterface(rewriter, loc, &parent_module_op, func_name,
+                                               func_type, c_api_func);
+
+  return func;
 }
 // TODO: cfg/multi block support
 func::FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc,
@@ -909,11 +919,11 @@ struct KernelLaunchPattern : public RewritePattern {
     op_name = op_name_attr.cast<StringAttr>();
     auto loc = op->getLoc();
     auto in = op->getOperands();
-    auto res = op->getResults();
-    NamedAttrList attrs = GetJitOpAttributes(rewriter, op_name, in.size(), res.size(), op);
+    auto out = op->getResults();
+    NamedAttrList attrs = GetJitOpAttributes(rewriter, op_name, in.size(), out.size(), op);
 
-    auto function = GetOrInsertKernelFuncOp(rewriter, loc, op_name, in, res, {op});
-    auto kernel_launch = rewriter.replaceOpWithNewOp<KernelLaunchOp>(op, function, attrs, in);
+    auto function = GetOrInsertKernelFuncOp(rewriter, loc, op_name, in, out, op);
+    auto kernel_launch = rewriter.replaceOpWithNewOp<KernelLaunchOp>(op, function, attrs);
     if (failed(DumpAssembly(rewriter, kernel_launch))) { exit(1); }
     return success();
   }
