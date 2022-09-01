@@ -55,7 +55,7 @@ Maybe<void> InferExpandOutputStride(const Shape& input_shape, const Stride& inpu
 
   Stride output_stride;
   JUST(InferExpandOutputStride(input_shape, input_stride, expand_shape, &output_stride));
-  ctx->SetOutputStride("out", 0, output_stride);
+  // ctx->SetOutputStride("out", 0, output_stride);
   return Maybe<void>::Ok();
 }
 
@@ -74,7 +74,7 @@ Maybe<void> InferExpandOutputStride(const Shape& input_shape, const Stride& inpu
 
   Stride output_stride;
   JUST(InferExpandOutputStride(input_shape, input_stride, local_expand_shape, &output_stride));
-  ctx->SetOutputStride("out", 0, output_stride);
+  // ctx->SetOutputStride("out", 0, output_stride);
   return Maybe<void>::Ok();
 }
 
