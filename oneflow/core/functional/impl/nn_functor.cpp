@@ -3495,7 +3495,8 @@ class OneEmbeddingLookupFunctor {
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "embedding_name", "line_size", "embedding_size",
                                        "is_full_cache", "num_tables", "embedding_tables", "seed");
-    attrs.SetAllAttrs(dtype->data_type(), embedding_name, line_size, embedding_size, is_full_cache, num_tables, embedding_tables, seed);
+    attrs.SetAllAttrs(dtype->data_type(), embedding_name, line_size, embedding_size, is_full_cache,
+                      num_tables, embedding_tables, seed);
     if (table_ids) {
       return OpInterpUtil::Dispatch<Tensor>(*op_has_table_ids_, {shadow, ids, JUST(table_ids)},
                                             attrs);
