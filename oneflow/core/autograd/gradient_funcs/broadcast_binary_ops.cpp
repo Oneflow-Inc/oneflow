@@ -245,8 +245,8 @@ class BroadcastPow : public BroadcastBinaryGrad {
  protected:
   Maybe<void> SaveTensorForBackward(BroadcastBinaryCaptureState* ctx, const TensorTuple& inputs,
                                     const TensorTuple& outputs) const override {
-    ctx->x_index = ctx->SaveTensorForBackward(inputs.at(0));
-    ctx->y_index = ctx->SaveTensorForBackward(inputs.at(1));
+    ctx->x_index = ctx->SaveTensorForBackward(inputs[0]);
+    ctx->y_index = ctx->SaveTensorForBackward(inputs[1]);
     return Maybe<void>::Ok();
   }
 };
