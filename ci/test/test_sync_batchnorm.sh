@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 set -ex
-ONEFLOW_TEST_DIR=/home/liangdepeng/liangdepeng/oneflow/python/oneflow/test/ddp
+
 cd $ONEFLOW_TEST_DIR
 
 export ONEFLOW_TEST_DEVICE_NUM=2
