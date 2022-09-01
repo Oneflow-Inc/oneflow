@@ -1250,7 +1250,10 @@ class CrossEntropyFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight, const int64_t& ignore_index,
-                           const std::string& reduction) const {
+                           const std::string& reduction, const double& label_smoothing) const {
+    if (label_smoothing > 0.0)
+      return CrossEntropyLabelSmoothing(input, target, weight, ignore_index, reduction,
+                                        label_smoothing);
     CHECK_OR_RETURN(reduction == "none" || reduction == "sum" || reduction == "mean")
         << Error::RuntimeError() << "Reduction should be none, sum or mean.";
     const auto& input_shape = input->shape();
@@ -1290,6 +1293,100 @@ class CrossEntropyFunctor {
 
     auto total_weight = JUST(functional::ReduceSum(JUST(VectorAt(*nll_result, 1)), {}, false));
     return functional::Div(sum, total_weight);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_log_softmax_;
+  std::shared_ptr<OpExpr> op_nll_;
+  std::shared_ptr<OpExpr> op_nll_weight_;
+};
+
+class CrossEntropyLabelSmoothingFunctor {
+ public:
+  CrossEntropyLabelSmoothingFunctor() {
+    op_log_softmax_ = CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
+
+    op_nll_ = CHECK_JUST(one::OpBuilder("nll")
+                             .Input("input")
+                             .Input("target")
+                             .Output("output")
+                             .Output("out_weight")
+                             .Build());
+
+    op_nll_weight_ = CHECK_JUST(one::OpBuilder("nll")
+                                    .Input("input")
+                                    .Input("target")
+                                    .Input("weight")
+                                    .Output("output")
+                                    .Output("out_weight")
+                                    .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const Optional<one::Tensor>& weight, const int64_t& ignore_index,
+                           const std::string& reduction, const double& label_smoothing) const {
+    CHECK_OR_RETURN(reduction == "none" || reduction == "sum" || reduction == "mean")
+        << Error::RuntimeError() << "Reduction should be none, sum or mean.";
+    const auto& input_shape = input->shape();
+    const auto& target_shape = target->shape();
+
+    std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
+    input_perm[input_perm.size() - 1] = 1;
+    for (size_t i = 1; i < input_perm.size() - 1; ++i) { input_perm[i] = i + 1; }
+    CHECK_OR_RETURN(label_smoothing > 0.0 && label_smoothing <= 1.0)
+        << "label_smoothing must be between 0.0 and 1.0. Got: " << label_smoothing;
+
+    const auto& input_ = JUST(sequence_function(functional::Transpose)
+                                  .then(std::bind(functional::Reshape, std::placeholders::_1,
+                                                  Shape({-1, input_shape->At(1)})))
+                                  .then([this](const std::shared_ptr<one::Tensor>& x) {
+                                    return OpInterpUtil::Dispatch<Tensor>(*op_log_softmax_, {x});
+                                  })
+                                  .call(input, input_perm));
+    const auto& target_ = JUST(functional::Flatten(target, 0, target->shape()->NumAxes() - 1));
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("ignore_index");
+    attrs.SetAllAttrs(ignore_index);
+
+    std::shared_ptr<TensorTuple> nll_result;
+    if (weight) {
+      nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+          *op_nll_weight_, {input_, target_, JUST(weight)}, attrs));
+    } else {
+      nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_, {input_, target_}, attrs));
+    }
+
+    const auto& ignore_mask = JUST(Reshape(JUST(ScalarLogicalEqual(target_, ignore_index)), {-1}));
+
+    // smooth_loss = (-(input_ * weight.reshape(1, -1)).sum(1) * ~ignore_mask).reshape_as(target)
+    std::shared_ptr<Tensor> smooth_loss = input_;
+    if (weight) {
+      const auto& weight_2d = JUST(Reshape(JUST(weight), {1, -1}));
+      smooth_loss = JUST(Mul(smooth_loss, weight_2d));
+    }
+    smooth_loss = JUST(Negative(JUST(ReduceSum(smooth_loss, {1}, false))));
+    smooth_loss = JUST(MaskedFill(smooth_loss, ignore_mask, 0.0));
+    smooth_loss = JUST(Reshape(smooth_loss, *target_shape));
+
+    int64_t n_classes = input->shape()->At(1);
+    auto nll_loss = JUST(VectorAt(*nll_result, 0));
+    nll_loss = JUST(functional::Reshape(nll_loss, *target_shape));
+
+    // loss = nll_loss * (1 - label_smoothing) + smooth_loss * label_smoothing / num_classes
+    if (reduction == "none") {
+      return JUST(Add(JUST(ScalarMul(nll_loss, 1 - label_smoothing, false)),
+                      JUST(ScalarMul(smooth_loss, label_smoothing / n_classes, false)), 1, false));
+    }
+
+    const auto& nll_loss_sum = JUST(ReduceSum(nll_loss, {}, false));
+    const auto& smooth_loss_sum = JUST(ReduceSum(smooth_loss, {}, false));
+    const auto& cross_entropy_loss_sum =
+        JUST(Add(JUST(ScalarMul(nll_loss_sum, 1 - label_smoothing, false)),
+                 JUST(ScalarMul(smooth_loss_sum, label_smoothing / n_classes, false)), 1, false));
+    if (reduction == "sum") { return cross_entropy_loss_sum; }
+
+    const auto& total_weight = JUST(ReduceSum(JUST(VectorAt(*nll_result, 1)), {}, false));
+    return Div(cross_entropy_loss_sum, total_weight);
   }
 
  private:
@@ -3985,6 +4082,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SparseCrossEntropyFunctor>("SparseCrossEntropy");
   m.add_functor<impl::SparseCrossEntropyMsFunctor>("SparseCrossEntropyMs");
   m.add_functor<impl::CrossEntropyFunctor>("CrossEntropy");
+  m.add_functor<impl::CrossEntropyLabelSmoothingFunctor>("CrossEntropyLabelSmoothing");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
   m.add_functor<impl::SoftmaxCrossEntropyFunctor>("SoftmaxCrossEntropy");
   m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");
