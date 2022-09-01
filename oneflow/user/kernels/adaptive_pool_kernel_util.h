@@ -16,9 +16,31 @@ limitations under the License.
 #ifndef _ONEFLOW_USER_KERNELS_ADAPTIVE_POOL_UTIL_H_
 #define _ONEFLOW_USER_KERNELS_ADAPTIVE_POOL_UTIL_H_
 
-#include "oneflow/core/framework/op_kernel.h"
-#include "oneflow/core/common/device_type.h"
+#include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/operator/operator_util.h"
+#include "oneflow/user/utils/pool_util.h"
 
-namespace oneflow {}  // namespace oneflow
+namespace oneflow {
+
+namespace {
+
+inline int64_t start_index(int64_t a, int64_t b, int64_t c) {
+  return (int64_t)std::floor((float)(a * c) / b);
+}
+
+inline int64_t end_index(int64_t a, int64_t b, int64_t c) {
+  return (int64_t)std::ceil((float)((a + 1) * c) / b);
+}
+
+inline Shape GetShape5D(const Shape& shape, const std::string& data_format, int32_t dim) {
+  FixedDimVector shape_3d = {GetInDim(shape, data_format, 0, dim),
+                             GetInDim(shape, data_format, 1, dim),
+                             GetInDim(shape, data_format, 2, dim)};
+  return Shape({shape.At(0), shape.At(1), shape_3d.at(0), shape_3d.at(1), shape_3d.at(2)});
+}
+
+}  // namespace
+}  // namespace oneflow
 
 #endif  // _ONEFLOW_USER_KERNELS_ADAPTIVE_POOL_UTIL_H_
