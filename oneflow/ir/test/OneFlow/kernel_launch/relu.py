@@ -16,6 +16,7 @@ class GraphToRun(flow.nn.Graph):
         return flow.relu(x)
 
 
-x = flow.Tensor([1])
+x = flow.Tensor([1, -1])
 graph_to_run = GraphToRun()
 lazy_relu = graph_to_run(x)
+assert flow.all(flow.equal(lazy_relu, flow.Tensor([1, 0])))
