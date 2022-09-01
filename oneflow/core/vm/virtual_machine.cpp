@@ -348,9 +348,7 @@ intrusive::shared_ptr<vm::Dependence> VirtualMachine::FindOrCreateScheduleLocalD
 
 intrusive::shared_ptr<vm::Dependence> VirtualMachine::FindOrCreateTransportLocalDepObject() {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
-  if (!transport_dependence_) {
-    transport_dependence_ = intrusive::make_shared<vm::Dependence>();
-  }
+  if (!transport_dependence_) { transport_dependence_ = intrusive::make_shared<vm::Dependence>(); }
   return transport_dependence_;
 }
 
@@ -450,12 +448,12 @@ Maybe<vm::Stream*> VirtualMachine::CreateStream(vm::ThreadCtx* thread_ctx, Symbo
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
   intrusive::shared_ptr<vm::Dependence> schedule_local_dep_object =
       FindOrCreateScheduleLocalDepObject(device, stream_type);
-  Optional<intrusive::shared_ptr<vm::Dependence>> transport_dependence;
+  std::vector<intrusive::shared_ptr<vm::Dependence>> transport_dependences{};
   if (IsCommNetStream::Visit(stream_type)) {
-    transport_dependence = FindOrCreateTransportLocalDepObject();
+    transport_dependences.push_back(FindOrCreateTransportLocalDepObject());
   }
   auto stream = intrusive::make_shared<vm::Stream>(
-      thread_ctx, device, stream_type, schedule_local_dep_object, transport_dependence);
+      thread_ctx, device, stream_type, schedule_local_dep_object, transport_dependences);
 
   auto bc = std::make_shared<BlockingCounter>(1);
   engine_->InsertProbe([&stream, thread_ctx, bc](vm::VirtualMachineEngine* engine) {
