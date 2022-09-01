@@ -229,7 +229,7 @@ Maybe<void> CheckDataShape(user_op::InferContext* ctx) {
   }
   CHECK_EQ_OR_RETURN(ctx->InputShape("num_unique_ids", 0), Shape({1}));
   const Shape& embedding_grad_shape = ctx->InputShape("embedding_grad", 0);
-  // CHECK_EQ_OR_RETURN(embedding_grad_shape.NumAxes(), 2);
+  CHECK_EQ_OR_RETURN(embedding_grad_shape.NumAxes(), 2);
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
   if (embedding::UseDynamicMemoryAllocation()) {
     CHECK_EQ_OR_RETURN(unique_embeddings_shape.elem_cnt(), 1)
@@ -312,9 +312,9 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-///*static*/ Maybe<void> SgdEmbeddingUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-//  return InferLogicalTensorDesc(ctx);
-//}
+/*static*/ Maybe<void> SgdEmbeddingUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
 
 /* static */ Maybe<void> SgdEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   JUST(GetEmbeddingUpdateSbp(ctx));
