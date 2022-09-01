@@ -421,8 +421,8 @@ class NLLGradFunctor {
     attrs.SetAttr<int64_t>("ignore_index", ignore_index);
 
     if (weight) {
-      return OpInterpUtil::Dispatch<one::Tensor>(*op_weight_,
-                                                 {out_grad, input, target, JUST(weight)}, attrs);
+      return OpInterpUtil::Dispatch<one::Tensor>(
+          *op_weight_, {out_grad, input, target, JUST(JUST(weight)->detach())}, attrs);
     } else {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_, {out_grad, input, target}, attrs);
     }
