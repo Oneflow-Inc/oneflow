@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <glog/logging.h>
+#include <cstdio>
 #include "oneflow/core/functional/tensor_processor.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/throw.h"
@@ -79,12 +81,32 @@ TensorProcessor& TensorProcessor::PromoteInputsToCommonDtype(bool is_promote) {
   return *this;
 }
 
+TensorProcessor& TensorProcessor::PromoteIntegerInputsToFloatDtype(bool is_promote) {
+  promote_integer_inputs_to_float_ = is_promote;
+  CHECK_OR_THROW(!promote_integer_inputs_to_float_ || promote_inputs_to_common_dtype_)
+      << "when set promote_integer_inputs_to_float to 'True', then promote_inputs_to_common_dtype "
+         "should be set to 'True' first!";
+  return *this;
+}
+
 Maybe<void> TensorProcessor::Apply() {
   if (promote_inputs_to_common_dtype_) {
     bool has_different_input_dtype = CheckHasDifferentInputDType(tensor_tuple_);
     if (has_different_input_dtype) {
       common_dtype_ = ComputeCommonDType(tensor_tuple_);
+      if (promote_integer_inputs_to_float_ && common_dtype_->is_integer()) {
+        // Promotes common dtype to the default float scalar type, if needed.
+        // same to pytorch's computeTypes() in torch/csrc/jit/codegen/cuda/type_promotion.cpp
+        common_dtype_ = DType::Float();
+      }
       JUST(CastToSameType(tensor_tuple_, common_dtype_));
+    } else {
+      if (tensor_tuple_.size() == 1 && !tensor_tuple_[0]->dtype()->is_floating_point()) {
+        Symbol<DType> cast_dtype = inputs_lowest_dtype_vec_[0]->InvalidDataType()
+                                       ? DType::Float()
+                                       : inputs_lowest_dtype_vec_[0];
+        JUST(CastToSameType(tensor_tuple_, cast_dtype));
+      }
     }
   } else {
     for (int i = 0; i < tensor_tuple_.size(); ++i) {
