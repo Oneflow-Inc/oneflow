@@ -239,6 +239,7 @@ __oneflow_global_unique_env = env_util.GetEnv()
 session_ctx.NewDefaultSession(__oneflow_global_unique_env)
 
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
+oneflow._oneflow_internal.autograd.graph.register_saved_tensors_hook_manager()
 oneflow._oneflow_internal.InitDefaultGlobalTransportTokenScope()
 
 

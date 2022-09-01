@@ -37,6 +37,7 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator_impl.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -121,9 +122,12 @@ class ArgMinFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int32_t>& dim,
                            const Optional<bool>& keepdim,
                            const Optional<Symbol<DType>>& dtype) const {
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({input}, DType::Float()).Apply());
+    const auto x = JUST(tensor_processor.GetInputs()).at(0);
     return sequence_function(Negative)
         .then(std::bind(ArgMax, std::placeholders::_1, dim, keepdim, dtype))
-        .call(input);
+        .call(x);
   }
 };
 class GlobalConstantFunctor {
@@ -208,12 +212,10 @@ class EmptyFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device, const bool pin_memory) const {
     Symbol<Device> device_symbol = device.value_or(JUST(Device::New("cpu", 0)));
-    OF_PROFILER_RANGE_PUSH("AttrMap");
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "pin_memory", "device_type", "device_id");
     attrs.SetAllAttrs(shape, dtype->data_type(), pin_memory, device_symbol->type(),
                       device_symbol->device_id());
-    OF_PROFILER_RANGE_POP();
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
   }
 
