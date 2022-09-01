@@ -2342,46 +2342,32 @@ class DivGradFunctor {
 
 class BroadcastPowXGradFunctor {
  public:
-  BroadcastPowXGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("broadcast_pow_x_grad")
-                         .Input("dz")
-                         .Input("x")
-                         .Input("y")
-                         .Input("z")
-                         .Output("dx")
-                         .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dz,
-                           const std::shared_ptr<one::Tensor>& x,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y,
-                           const std::shared_ptr<one::Tensor>& z) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz, x, y, z});
+                           const std::shared_ptr<one::Tensor>& dz) const {
+    auto y_sub_one = JUST(functional::ScalarSub(y, 1, /*alpha=*/1, /*inplace=*/false));
+    auto result = functional::sequence_function(functional::BroadcastPow)
+                      .then(std::bind(functional::Mul, std::placeholders::_1, y))
+                      .then(std::bind(functional::Mul, std::placeholders::_1, dz))
+                      .then(std::bind(functional::BroadcastReduceSumLike, std::placeholders::_1, x))
+                      .call(x, y_sub_one);
+    return result;
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
 class BroadcastPowYGradFunctor {
  public:
-  BroadcastPowYGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("broadcast_pow_y_grad")
-                         .Input("dz")
-                         .Input("x")
-                         .Input("y")
-                         .Input("z")
-                         .Output("dy")
-                         .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dz,
-                           const std::shared_ptr<one::Tensor>& x,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y,
-                           const std::shared_ptr<one::Tensor>& z) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz, x, y, z});
+                           const std::shared_ptr<one::Tensor>& dz) const {
+    auto result =
+        functional::sequence_function(functional::BroadcastPow)
+            .then(std::bind(functional::Mul, std::placeholders::_1, JUST(functional::Log(x))))
+            .then(std::bind(functional::Mul, std::placeholders::_1, dz))
+            .then(std::bind(functional::BroadcastReduceSumLike, std::placeholders::_1, y))
+            .call(x, y);
+    return result;
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
 class IdentityFunctor {
