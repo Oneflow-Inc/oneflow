@@ -255,13 +255,14 @@ typename std::enable_if<(pack != 0), void>::type LaunchPackFill(CudaStream* stre
   const size_t tail_offset = pack_count * pack;
   const size_t tail_count = count - tail_offset;
   auto functor = UnaryFunctor<DeviceType::kCUDA, op, Src, Dst>(attr0, attr1);
+  const size_t launch_count = pack_count == 0 ? 1 : pack_count;
   if (tail_count > 0) {
     LaunchFillKernel<op, Src, Dst, pack, true>
-        <<<BlocksNum4ThreadsNum(pack_count), kCudaThreadsNumPerBlock, 0, stream->cuda_stream()>>>(
+        <<<BlocksNum4ThreadsNum(launch_count), kCudaThreadsNumPerBlock, 0, stream->cuda_stream()>>>(
             functor, dst, src, pack_count, count, tail_count, dst + tail_offset);
   } else {
     LaunchFillKernel<op, Src, Dst, pack, false>
-        <<<BlocksNum4ThreadsNum(pack_count), kCudaThreadsNumPerBlock, 0, stream->cuda_stream()>>>(
+        <<<BlocksNum4ThreadsNum(launch_count), kCudaThreadsNumPerBlock, 0, stream->cuda_stream()>>>(
             functor, dst, src, pack_count, count, tail_count, dst + tail_offset);
   }
 }
