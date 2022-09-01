@@ -24,6 +24,7 @@ from oneflow.utils.global_view.global_utils import (
     to_global_tensor,
     check_input_global,
     check_placement_on_all_ranks,
+    src_sbp_broadcast,
 )
 
 
@@ -154,9 +155,20 @@ def to_global(input, placement=None, sbp=None, **kwargs):
         def leaf_fn(node):
             if isinstance(node, Tensor) or node is None:
                 if isinstance(sbp, types.FunctionType):
-                    return to_global_tensor(node, placement, sbp(input, node), **kwargs)
+                    src_rank_sbp = src_sbp_broadcast(
+                        sbp(input, node), placement.ranks.flat[0]
+                    )
+
+                    if flow.env.get_rank() != placement.ranks.flat[0]:
+                        return to_global_tensor(node, placement, src_rank_sbp, **kwargs)
+                    else:
+                        return to_global_tensor(
+                            node, placement, sbp(input, node), **kwargs
+                        )
+
                 else:
                     return to_global_tensor(node, placement, sbp, **kwargs)
+
             else:
                 warnings.warn(
                     "Non-Tensor type: {} encountered, it will remain the same.".format(
