@@ -293,6 +293,7 @@ class Log1pGradGradFunctor {
 
 class LogSigmoidGradGradFunctor {
  public:
+  // dx = exp(-x)/(1+exp(-x)), ddx = -exp(-x)/(1+exp(-x))^2 = -sigmoid_grad(x)
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
                            const std::shared_ptr<Tensor>& dydx) const {
     return functional::Negative(JUST(functional::SigmoidGrad(JUST(functional::Sigmoid(x)), dydx)));
@@ -345,6 +346,7 @@ class SquareGradGradFunctor {
 
 class SigmoidGradGradFunctor {
  public:
+  // dy = y * (1 - y), ddy = 1 - 2*y
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& y,
                            const std::shared_ptr<Tensor>& dydx) const {
     return functional::Mul(JUST(functional::ScalarSub(1, y, /*alpha=*/2)), dydx);
