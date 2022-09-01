@@ -89,7 +89,7 @@ VirtualMachine::VirtualMachine() : disable_vm_threads_(false), scheduler_stopped
   std::function<void()> SchedulerInitializer;
   GetSchedulerThreadInitializer(&SchedulerInitializer);
   schedule_thread_ = std::thread(&VirtualMachine::ScheduleLoop, this, SchedulerInitializer);
-  transport_local_dep_object_.Reset();
+  transport_dependence_.Reset();
 }
 
 namespace {
@@ -348,10 +348,10 @@ intrusive::shared_ptr<vm::Dependence> VirtualMachine::FindOrCreateScheduleLocalD
 
 intrusive::shared_ptr<vm::Dependence> VirtualMachine::FindOrCreateTransportLocalDepObject() {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
-  if (!transport_local_dep_object_) {
-    transport_local_dep_object_ = intrusive::make_shared<vm::Dependence>();
+  if (!transport_dependence_) {
+    transport_dependence_ = intrusive::make_shared<vm::Dependence>();
   }
-  return transport_local_dep_object_;
+  return transport_dependence_;
 }
 
 Maybe<vm::Stream*> VirtualMachine::CreateStream(Symbol<Device> device, StreamType stream_type,
@@ -450,12 +450,12 @@ Maybe<vm::Stream*> VirtualMachine::CreateStream(vm::ThreadCtx* thread_ctx, Symbo
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
   intrusive::shared_ptr<vm::Dependence> schedule_local_dep_object =
       FindOrCreateScheduleLocalDepObject(device, stream_type);
-  Optional<intrusive::shared_ptr<vm::Dependence>> transport_local_dep_object;
+  Optional<intrusive::shared_ptr<vm::Dependence>> transport_dependence;
   if (IsCommNetStream::Visit(stream_type)) {
-    transport_local_dep_object = FindOrCreateTransportLocalDepObject();
+    transport_dependence = FindOrCreateTransportLocalDepObject();
   }
   auto stream = intrusive::make_shared<vm::Stream>(
-      thread_ctx, device, stream_type, schedule_local_dep_object, transport_local_dep_object);
+      thread_ctx, device, stream_type, schedule_local_dep_object, transport_dependence);
 
   auto bc = std::make_shared<BlockingCounter>(1);
   engine_->InsertProbe([&stream, thread_ctx, bc](vm::VirtualMachineEngine* engine) {

@@ -27,13 +27,13 @@ namespace vm {
 void Stream::__Init__(
     ThreadCtx* thread_ctx, Symbol<Device> device, StreamType stream_type,
     const intrusive::shared_ptr<Dependence>& schedule_local_dep_object,
-    const Optional<intrusive::shared_ptr<Dependence>>& transport_local_dep_object) {
+    const Optional<intrusive::shared_ptr<Dependence>>& transport_dependence) {
   set_thread_ctx(thread_ctx);
   device_ = device;
   stream_type_ = stream_type;
   stream_policy_ = CHECK_JUST(CreateStreamPolicy::Visit(stream_type, device));
   schedule_local_dep_object_ = schedule_local_dep_object;
-  transport_local_dep_object_ = transport_local_dep_object;
+  transport_dependence_ = transport_dependence;
   on_scheduler_thread_ = stream_policy_->OnSchedulerThread(stream_type);
 }
 

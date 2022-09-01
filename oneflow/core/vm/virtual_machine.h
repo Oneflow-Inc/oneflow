@@ -93,7 +93,7 @@ class VirtualMachine final {
       devcie_type_stream_type_2independent_thread_ctx_;
   HashMap<std::pair<Symbol<Device>, StreamType>, intrusive::shared_ptr<vm::Dependence>>
       device_stream_type2local_dep_object_;
-  intrusive::shared_ptr<vm::Dependence> transport_local_dep_object_;
+  intrusive::shared_ptr<vm::Dependence> transport_dependence_;
   SteadyVector<vm::Stream*> unique_stream_id2vm_stream_;
 
   std::thread schedule_thread_;
