@@ -74,18 +74,44 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
   using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
  public:
-  explicit KernelLaunchOpKernelRegContext();
+  explicit KernelLaunchOpKernelRegContext(::mlir::ModuleOp module_op) {
+    owned_module_ = module_op;
+    module_op.getBody()->walk([&](::mlir::func::FuncOp func_op) {
+      func_op_ = func_op;
+      return ::mlir::WalkResult::interrupt();
+    });
+    if (!func_op_) { LOG(FATAL) << "FuncOp not found in module"; }
+  }
+
   ~KernelLaunchOpKernelRegContext() = default;
-  DeviceType device_type() const override { return device_type_; }
-  const ParallelContext& parallel_ctx() const override { return *parallel_ctx_; }
+  DeviceType device_type() const override {
+    // TODO: create from device attr in op in mlir
+    return device_type_;
+  }
+  const ParallelContext& parallel_ctx() const override {
+    // TODO: create from device attr in op in mlir
+    ParallelContext* parallel_ctx = nullptr;
+    return *parallel_ctx;
+  }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
+    // TODO: query and build tensor desc from op in mlir
     return nullptr;
   }
-  const ArgVec& inputs() const override { return {}; }
-  const ArgVec& outputs() const override { return {}; }
+  const ArgVec& inputs() const override {
+    // TODO: query inputs from op in mlir
+    return {};
+  }
+  const ArgVec& outputs() const override {
+    // TODO: query outputs from op in mlir
+    return {};
+  }
 
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+  const user_op::UserOpConfWrapper& user_op_conf() const override {
+    // TODO: from op in mlir
+    OperatorConf user_op_conf;
+    return user_op::UserOpConfWrapper(std::make_shared<OperatorConf>(user_op_conf));
+  }
 
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
@@ -93,9 +119,9 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
   }
 
  private:
+  ::mlir::func::FuncOp func_op_;
+  ::mlir::ModuleOp owned_module_;
   DeviceType device_type_;
-  const ParallelContext* parallel_ctx_;
-  const user_op::UserOpConfWrapper user_op_conf_;
 };
 
 template<typename T>
@@ -108,15 +134,20 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     llvm::SmallVector<llvm::StringRef, 4> ext_libs(
         {SharedLibPaths()->begin(), SharedLibPaths()->end()});
-    // TODO
-    KernelLaunchOpKernelRegContext reg_ctx;
+    mlir::DialectRegistry registry;
+    registry
+        .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
+                mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect>();
+    mlir::registerLLVMDialectTranslation(registry);
+    mlir::MLIRContext mlir_ctx(registry);
+    mlir::OwningOpRef<mlir::ModuleOp> module_op =
+        mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
+    KernelLaunchOpKernelRegContext reg_ctx(module_op.get());
     const auto* res =
         CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult("relu", reg_ctx));
+    // TODO: run the kernel::compute func
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-
-  ::mlir::oneflow::KernelLaunchOp op_;
-  ::mlir::ModuleOp owned_module_;
 };
 
 #define REGISTER_KERNEL_LAUNCH_CPU_KERNEL(dtype)                                                \
