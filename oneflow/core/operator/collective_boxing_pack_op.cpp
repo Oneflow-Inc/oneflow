@@ -61,7 +61,7 @@ Maybe<void> CollectiveBoxingPackOp::InferOutBlobDescs(
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
-  out_blob_desc->mut_shape() = Shape({in_blob_desc->shape().elem_cnt()});
+  out_blob_desc->set_shape(Shape({in_blob_desc->shape().elem_cnt()}));
   return Maybe<void>::Ok();
 }
 
