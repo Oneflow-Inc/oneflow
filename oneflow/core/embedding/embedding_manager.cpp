@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/embedding/persistent_table_key_value_store.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/embedding/cached_key_value_store.h"
-#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 
@@ -55,7 +54,7 @@ class DynamicTmpBufferAllocator final : public TmpBufferAllocator {
   cudaMemPool_t mem_pool_{};
 };
 
-class DynamicAllocationEmbeddingState final : public LazyEmbeddingState {
+class DynamicAllocationEmbeddingState final : public EmbeddingState {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DynamicAllocationEmbeddingState);
   DynamicAllocationEmbeddingState()
@@ -159,26 +158,14 @@ class DynamicAllocationEmbeddingState final : public LazyEmbeddingState {
   }
 
   void OnEmbeddingUpdateStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
-    const user_op::Tensor* embedding_grad = ctx->Tensor4ArgNameAndIndex("embedding_grad", 0);
     const user_op::Tensor* updated_unique_embeddings =
         ctx->Tensor4ArgNameAndIndex("updated_unique_embeddings", 0);
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
-    embeding_update_num_unique_ids_ = num_unique_ids->dptr();
-    embeding_update_embedding_grad_ = embedding_grad->dptr();
     uint32_t num_unique = this->GetIdNumUnique(iter);
     size_t update_values_size = GetCudaAlignedSize(
         num_unique * line_size * GetSizeOfDataType(updated_unique_embeddings->data_type()));
     OF_CUDA_CHECK(cudaMallocFromPoolAsync(&updated_values_, update_values_size, mem_pool_,
                                           ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-  }
-
-  const void* EmbeddingUpdateNumUniqueIds(int64_t iter) override {
-    return embeding_update_num_unique_ids_;
-  }
-
-  const void* EmbeddingUpdateEmbeddingGrad(int64_t iter) override {
-    return embeding_update_embedding_grad_;
   }
 
   const void* EmbeddingUpdateUniqueEmbeddings(int64_t iter) override {
@@ -197,11 +184,8 @@ class DynamicAllocationEmbeddingState final : public LazyEmbeddingState {
   }
 
   void OnEmbeddingPutStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
-    embedding_put_unique_ids_ = unique_ids->dptr();
+    // do nothing
   }
-
-  const void* EmbeddingPutUniqueIds(int64_t iter) override { return embedding_put_unique_ids_; }
 
   const void* EmbeddingPutUniqueEmbeddings(int64_t iter) override {
     CHECK_EQ(iter_, iter);
@@ -267,196 +251,6 @@ class DynamicAllocationEmbeddingState final : public LazyEmbeddingState {
   size_t lookup_embeddings_size_;
   bool has_lookup_embeddings_;
   void* updated_values_;
-  const void* embeding_update_num_unique_ids_;
-  const void* embeding_update_embedding_grad_;
-  const void* embedding_put_unique_ids_;
-  int64_t iter_;
-  std::vector<IdStatistics> id_statistics_vec_;
-  int device_index_{};
-  cudaMemPool_t mem_pool_{};
-  std::mutex mutex_;
-};
-
-class DynamicAllocationEagerEmbeddingState final : public EagerEmbeddingState {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(DynamicAllocationEagerEmbeddingState);
-  DynamicAllocationEagerEmbeddingState()
-      : num_unique_ids_(nullptr),
-        unique_ids_(nullptr),
-        unique_embedding_grad_(nullptr),
-        unique_values_(nullptr),
-        updated_values_(nullptr),
-        iter_(-1) {
-    OF_CUDA_CHECK(cudaGetDevice(&device_index_));
-    id_statistics_vec_.resize(kRingBufferSize);
-    cudaMemPoolProps poolProps = {};
-    poolProps.allocType = cudaMemAllocationTypePinned;
-    poolProps.handleTypes = cudaMemHandleTypePosixFileDescriptor;
-    poolProps.location.type = cudaMemLocationTypeDevice;
-    poolProps.location.id = device_index_;
-    cudaMemPoolCreate(&mem_pool_, &poolProps);
-    uint64_t threshold = UINT64_MAX;
-    cudaMemPoolSetAttribute(mem_pool_, cudaMemPoolAttrReleaseThreshold, &threshold);
-  }
-  ~DynamicAllocationEagerEmbeddingState() {
-    CudaCurrentDeviceGuard guard(device_index_);
-    OF_CUDA_CHECK(cudaMemPoolDestroy(mem_pool_));
-  }
-
-  void OnEmbeddingUpdateStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    iter_ = iter;
-    const DataType data_type = DataType::kFloat;  // TODO: from attr
-    const int64_t line_size = ctx->Attr<int64_t>("line_size");
-    uint32_t num_unique = this->GetIdNumUnique(iter);
-    size_t update_values_size =
-        GetCudaAlignedSize(num_unique * line_size * GetSizeOfDataType(data_type));
-    OF_CUDA_CHECK(cudaMallocFromPoolAsync(&updated_values_, update_values_size, mem_pool_,
-                                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-  }
-
-  const void* EmbeddingUpdateNumUniqueIds(int64_t iter) override {
-    CHECK_EQ(iter_, iter);
-    return num_unique_ids_;
-  }
-
-  const void* EmbeddingUpdateEmbeddingGrad(int64_t iter) override {
-    CHECK_EQ(iter_, iter);
-    return unique_embedding_grad_;
-  }
-
-  const void* EmbeddingUpdateUniqueEmbeddings(int64_t iter) override {
-    CHECK_EQ(iter_, iter);
-    return unique_values_;
-  }
-
-  void* EmbeddingUpdateUpdatedUniqueEmbeddings(int64_t iter) override {
-    CHECK_EQ(iter_, iter);
-    return updated_values_;
-  }
-
-  void OnEmbeddingUpdateEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    // do nothing
-    OF_CUDA_CHECK(
-        cudaFreeAsync(unique_embedding_grad_, ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-    OF_CUDA_CHECK(
-        cudaFreeAsync(unique_values_, ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-  }
-
-  void OnEmbeddingPutStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    // do nothing
-    iter_ = iter;
-  }
-
-  const void* EmbeddingPutUniqueIds(int64_t iter) override {
-    CHECK_EQ(iter_, iter);
-    return unique_ids_;
-  }
-
-  const void* EmbeddingPutUniqueEmbeddings(int64_t iter) override {
-    CHECK_EQ(iter_, iter);
-    return updated_values_;
-  }
-
-  void OnEmbeddingPutEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    OF_CUDA_CHECK(
-        cudaFreeAsync(num_unique_ids_, ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-    OF_CUDA_CHECK(cudaFreeAsync(unique_ids_, ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-    OF_CUDA_CHECK(
-        cudaFreeAsync(updated_values_, ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-  }
-
-  void OnEmbeddingEagerBackwardStart(user_op::KernelComputeContext* ctx, int64_t iter) {
-    const user_op::Tensor* ids = ctx->Tensor4ArgNameAndIndex("ids", 0);
-    const user_op::Tensor* embedding_grad = ctx->Tensor4ArgNameAndIndex("embedding_grad", 0);
-    const int64_t num_ids = ids->shape_view().elem_cnt();
-    const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-    const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
-    const int64_t line_size = ctx->Attr<int64_t>("line_size");
-    const int64_t num_unique_ids = parallel_num * num_ids;  // use unique?
-    DataType data_type = ctx->Attr<DataType>("dtype");
-    grad_data_type_ = embedding_grad->data_type();
-
-    size_t num_unique_ids_size = GetCudaAlignedSize(sizeof(uint32_t));
-    OF_CUDA_CHECK(cudaMallocFromPoolAsync(&num_unique_ids_, num_unique_ids_size, mem_pool_,
-                                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-
-    size_t unique_ids_size =
-        GetCudaAlignedSize(num_unique_ids * GetSizeOfDataType(ids->data_type()));
-    OF_CUDA_CHECK(cudaMallocFromPoolAsync(&unique_ids_, unique_ids_size, mem_pool_,
-                                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-
-    size_t eager_unique_embedding_grad_size = GetCudaAlignedSize(
-        num_unique_ids * embedding_size * GetSizeOfDataType(embedding_grad->data_type()));
-    OF_CUDA_CHECK(cudaMallocFromPoolAsync(&unique_embedding_grad_, eager_unique_embedding_grad_size,
-                                          mem_pool_,
-                                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-    size_t unique_value_size =
-        GetCudaAlignedSize(num_unique_ids * line_size * GetSizeOfDataType(data_type));
-    OF_CUDA_CHECK(cudaMallocFromPoolAsync(&unique_values_, unique_value_size, mem_pool_,
-                                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-  }
-
-  void* EmbeddingEagerBackwardNumUniqueIds(int64_t iter) {
-    // CHECK_EQ(iter_, iter);
-    return num_unique_ids_;
-  }
-
-  void* EmbeddingEagerBackwardUniqueIds(int64_t iter) {
-    // CHECK_EQ(iter_, iter);
-    return unique_ids_;
-  }
-
-  void* EmbeddingEagerBackwardUniqueEmbeddingGrad(int64_t iter) {
-    // CHECK_EQ(iter_, iter);
-    return unique_embedding_grad_;
-  }
-
-  void* EmbeddingEagerBackwardUniqueValues(int64_t iter) {
-    // CHECK_EQ(iter_, iter);
-    return unique_values_;
-  }
-
-  void OnEmbeddingEagerBackwardEnd(user_op::KernelComputeContext* ctx, int64_t iter) {}
-
-  void SetIdFinalNumUnique(uint32_t final_num_unique, int64_t iter) override {
-    std::unique_lock<std::mutex> lock(mutex_);
-    int64_t index = iter % kRingBufferSize;
-    id_statistics_vec_.at(index).final_num_unique = final_num_unique;
-    id_statistics_vec_.at(index).iter = iter;
-  }
-
-  void SetIdNumUniqueMatrix(const std::vector<uint32_t>& num_unique_matrix, int64_t iter) override {
-    std::unique_lock<std::mutex> lock(mutex_);
-    int64_t index = iter % kRingBufferSize;
-    id_statistics_vec_.at(index).num_unique_matrix = num_unique_matrix;
-    id_statistics_vec_.at(index).iter = iter;
-  }
-
-  uint32_t GetIdNumUnique(int64_t iter) override {
-    std::unique_lock<std::mutex> lock(mutex_);
-    int64_t index = iter % kRingBufferSize;
-    const IdStatistics& statistics = id_statistics_vec_.at(index);
-    CHECK_EQ(statistics.iter, iter)
-        << "saved iter: " << statistics.iter << " current iter: " << iter;
-    return statistics.final_num_unique;
-  }
-
-  const std::vector<uint32_t>& GetIdNumUniqueMatrix(int64_t iter) override {
-    std::unique_lock<std::mutex> lock(mutex_);
-    int64_t index = iter % kRingBufferSize;
-    const IdStatistics& statistics = id_statistics_vec_.at(index);
-    CHECK_EQ(statistics.iter, iter)
-        << "saved iter: " << statistics.iter << " current iter: " << iter;
-    return statistics.num_unique_matrix;
-  }
-
- private:
-  void* num_unique_ids_;
-  void* unique_ids_;
-  void* unique_embedding_grad_;
-  void* unique_values_;
-  void* updated_values_;
-  DataType grad_data_type_;
   int64_t iter_;
   std::vector<IdStatistics> id_statistics_vec_;
   int device_index_{};
@@ -491,7 +285,7 @@ class StaticTmpBufferAllocator final : public TmpBufferAllocator {
   size_t size_;
 };
 
-class StaticAllocationEmbeddingState final : public LazyEmbeddingState {
+class StaticAllocationEmbeddingState final : public EmbeddingState {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StaticAllocationEmbeddingState);
   StaticAllocationEmbeddingState()
@@ -552,23 +346,11 @@ class StaticAllocationEmbeddingState final : public LazyEmbeddingState {
   }
 
   void OnEmbeddingUpdateStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
-    const user_op::Tensor* embedding_grad = ctx->Tensor4ArgNameAndIndex("embedding_grad", 0);
     const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
     user_op::Tensor* updated_unique_embeddings =
         ctx->Tensor4ArgNameAndIndex("updated_unique_embeddings", 0);
-    embeding_update_num_unique_ids_ = num_unique_ids->dptr();
-    embeding_update_embedding_grad_ = embedding_grad->dptr();
     embeding_update_unique_embeddings_ = unique_embeddings->dptr();
     embeding_update_updated_unique_embeddings_ = updated_unique_embeddings->mut_dptr();
-  }
-
-  const void* EmbeddingUpdateNumUniqueIds(int64_t iter) override {
-    return embeding_update_num_unique_ids_;
-  }
-
-  const void* EmbeddingUpdateEmbeddingGrad(int64_t iter) override {
-    return embeding_update_embedding_grad_;
   }
 
   const void* EmbeddingUpdateUniqueEmbeddings(int64_t iter) override {
@@ -580,27 +362,20 @@ class StaticAllocationEmbeddingState final : public LazyEmbeddingState {
   }
 
   void OnEmbeddingUpdateEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    embeding_update_num_unique_ids_ = nullptr;
-    embeding_update_embedding_grad_ = nullptr;
     embeding_update_unique_embeddings_ = nullptr;
     embeding_update_updated_unique_embeddings_ = nullptr;
   }
 
   void OnEmbeddingPutStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
-    embedding_put_unique_ids_ = unique_ids->dptr();
     embedding_put_unique_embeddings_ = unique_embeddings->dptr();
   }
-
-  const void* EmbeddingPutUniqueIds(int64_t iter) override { return embedding_put_unique_ids_; }
 
   const void* EmbeddingPutUniqueEmbeddings(int64_t iter) override {
     return embedding_put_unique_embeddings_;
   }
 
   void OnEmbeddingPutEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    embedding_put_unique_ids_ = nullptr;
     embedding_put_unique_embeddings_ = nullptr;
   }
 
@@ -653,11 +428,8 @@ class StaticAllocationEmbeddingState final : public LazyEmbeddingState {
   void* lookup_embeddings_;
   bool has_lookup_embeddings_;
   const void* embedding_shuffle_cur_rank_embeddings_;
-  const void* embeding_update_num_unique_ids_;
-  const void* embeding_update_embedding_grad_;
   const void* embeding_update_unique_embeddings_;
   void* embeding_update_updated_unique_embeddings_;
-  const void* embedding_put_unique_ids_;
   const void* embedding_put_unique_embeddings_;
   const void* embedding_fused_update_put_unique_embeddings_;
   std::vector<IdStatistics> id_statistics_vec_;
@@ -669,34 +441,20 @@ EmbeddingState* EmbeddingManager::GetEmbeddingState(const std::string& embedding
   std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, rank_id);
   std::unique_lock<std::mutex> lock(mutex_);
   auto it = embedding_state_map_.find(map_key);
+  // for id shuffle test, not need to create table
   if (it == embedding_state_map_.end()) {
-    if (false && !LazyMode::is_enabled()) {
+    LOG(WARNING) << "create embedding state: " << embedding_name << "-" << rank_id;
+    if (UseDynamicMemoryAllocation()) {
 #if CUDA_VERSION >= 11020
-      LOG(WARNING) << "create Eager EmbeddingState " << embedding_name << "-" << rank_id;
-      it = embedding_state_map_
-               .emplace(map_key, std::make_unique<DynamicAllocationEagerEmbeddingState>())
-               .first;
+      it =
+          embedding_state_map_.emplace(map_key, std::make_unique<DynamicAllocationEmbeddingState>())
+              .first;
 #else
       UNIMPLEMENTED();
 #endif
     } else {
-      if (UseDynamicMemoryAllocation()) {
-#if CUDA_VERSION >= 11020
-        LOG(WARNING) << "create DynamicAllocation Lazy EmbeddingState " << embedding_name << "-"
-                     << rank_id;
-        it = embedding_state_map_
-                 .emplace(map_key, std::make_unique<DynamicAllocationEmbeddingState>())
-                 .first;
-#else
-        UNIMPLEMENTED();
-#endif
-      } else {
-        LOG(WARNING) << "create StaticAllocation Lazy EmbeddingState " << embedding_name << "-"
-                     << rank_id;
-        it = embedding_state_map_
-                 .emplace(map_key, std::make_unique<StaticAllocationEmbeddingState>())
-                 .first;
-      }
+      it = embedding_state_map_.emplace(map_key, std::make_unique<StaticAllocationEmbeddingState>())
+               .first;
     }
   }
   return it->second.get();
@@ -742,6 +500,22 @@ void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value
   store->ReserveQueryLength(kDefaultMaxQueryLength);
   CHECK(key_value_store_map_.emplace(map_key, std::move(store)).second)
       << "Can't create an embedding with same name of an existing embedding, the name: " << name;
+
+  if (UseDynamicMemoryAllocation()) {
+#if CUDA_VERSION >= 11020
+    CHECK(embedding_state_map_.emplace(map_key, std::make_unique<DynamicAllocationEmbeddingState>())
+              .second)
+        << "Can't create an embedding state with same name of an existing embedding, the name: "
+        << name;
+#else
+    UNIMPLEMENTED();
+#endif
+  } else {
+    CHECK(embedding_state_map_.emplace(map_key, std::make_unique<StaticAllocationEmbeddingState>())
+              .second)
+        << "Can't create an embedding state with same name of an existing embedding, the name: "
+        << name;
+  }
 }
 
 void EmbeddingManager::SaveSnapshot(const std::string& embedding_name, int64_t local_rank_id,
