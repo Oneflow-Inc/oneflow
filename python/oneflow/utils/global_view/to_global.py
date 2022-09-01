@@ -84,16 +84,16 @@ def to_global(input, placement=None, sbp=None, **kwargs):
 
     .. code-block:: python
 
-        flow.utils.to_global(state_dict, placement=placement, sbp=get_sbp)
+        flow.utils.global_view.to_global(state_dict, placement=placement, sbp=get_sbp)
         # Defines a function to return the specified SBP.
         def get_sbp(state_dict, tensor):
             if tensor is state_dict["System-Train-TrainStep"]:
-                return BROADCAST
+                return oneflow.sbp.broadcast
             if tensor is state_dict["module_pipeline"]["m_stage3.linear.weight"]:
-                return flow.sbp.split(1)
+                return oneflow.sbp.split(1)
             if tensor is state_dict["module_pipeline"]["m_stage3.linear.bias"]:
-                return BROADCAST
-            return flow.sbp.split(0)
+                return oneflow.sbp.broadcast
+            return oneflow.sbp.split(0)
 
     """
     is_input_not_tensor_or_none = False
