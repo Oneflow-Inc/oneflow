@@ -3760,20 +3760,12 @@ class OneEmbeddingSgdUpdateFunctor {
 class OneEmbeddingAdamUpdateFunctor {
  public:
   OneEmbeddingAdamUpdateFunctor() {
-    no_bias_correction_no_optional_input_op_ = CHECK_JUST(one::OpBuilder("adam_embedding_update")
-                                                              .Input("num_unique_ids")
-                                                              .Input("unique_embeddings")
-                                                              .Input("embedding_grad")
-                                                              .Output("updated_unique_embeddings")
-                                                              .Build());
-    do_bias_correction_no_optional_input_op_ = CHECK_JUST(one::OpBuilder("adam_embedding_update")
-                                                              .Input("num_unique_ids")
-                                                              .Input("unique_embeddings")
-                                                              .Input("embedding_grad")
-                                                              .Input("bias_correction1")
-                                                              .Input("bias_correction2")
-                                                              .Output("updated_unique_embeddings")
-                                                              .Build());
+    no_optional_input_op_ = CHECK_JUST(one::OpBuilder("adam_embedding_update")
+                                           .Input("num_unique_ids")
+                                           .Input("unique_embeddings")
+                                           .Input("embedding_grad")
+                                           .Output("updated_unique_embeddings")
+                                           .Build());
     // This functor is just for unittest
     no_bias_correction_op_ = CHECK_JUST(one::OpBuilder("adam_embedding_update")
                                             .Input("num_unique_ids")
@@ -3805,27 +3797,31 @@ class OneEmbeddingAdamUpdateFunctor {
       const Optional<one::Tensor>& skip_if, const Optional<one::Tensor>& bias_correction1,
       const Optional<one::Tensor>& bias_correction2, const float learning_rate_val,
       const double scale, const float weight_decay, const float beta1, const float beta2,
-      const float epsilon, const bool do_bias_correction, const int64_t line_size,
-      const int64_t embedding_size, const std::string& embedding_name) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("learning_rate_val", "scale", "weight_decay",
-                                                 "beta1", "beta2", "epsilon", "do_bias_correction",
-                                                 "line_size", "embedding_size", "embedding_name");
+      const float& bias_correction1_val, const float& bias_correction2_val, const float epsilon,
+      const bool do_bias_correction, const int64_t line_size, const int64_t embedding_size,
+      const std::string& embedding_name) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
+        "learning_rate_val", "scale", "weight_decay", "beta1", "beta2", "epsilon",
+        "bias_correction1_val", "bias_correction2_val", "do_bias_correction", "line_size",
+        "embedding_size", "embedding_name");
     attrs.SetAttr<float>("learning_rate_val", learning_rate_val);
     attrs.SetAttr<double>("scale", scale);
     attrs.SetAttr<float>("weight_decay", weight_decay);
     attrs.SetAttr<float>("beta1", beta1);
     attrs.SetAttr<float>("beta2", beta2);
     attrs.SetAttr<float>("epsilon", epsilon);
+    attrs.SetAttr<float>("bias_correction1_val", bias_correction1_val);
+    attrs.SetAttr<float>("bias_correction2_val", bias_correction2_val);
     attrs.SetAttr<bool>("do_bias_correction", do_bias_correction);
     attrs.SetAttr<int64_t>("line_size", line_size);
     attrs.SetAttr<int64_t>("embedding_size", embedding_size);
     attrs.SetAttr<std::string>("embedding_name", embedding_name);
-    if (do_bias_correction) {
-      CHECK(bias_correction1);
-      CHECK(bias_correction2);
-      if (learning_rate) {
-        CHECK(down_scale_by_tensor);
-        CHECK(skip_if);
+    if (learning_rate) {
+      CHECK(down_scale_by_tensor);
+      CHECK(skip_if);
+      if (do_bias_correction) {
+        CHECK(bias_correction1);
+        CHECK(bias_correction2);
         return OpInterpUtil::Dispatch<Tensor>(
             *do_bias_correction_op_,
             {num_unique_ids, unique_embeddings, embedding_grad, JUST(learning_rate),
@@ -3833,37 +3829,26 @@ class OneEmbeddingAdamUpdateFunctor {
              JUST(bias_correction2)},
             attrs);
       } else {
-        CHECK(!down_scale_by_tensor);
-        CHECK(!skip_if);
-        return OpInterpUtil::Dispatch<Tensor>(*do_bias_correction_no_optional_input_op_,
-                                              {num_unique_ids, unique_embeddings, embedding_grad,
-                                               JUST(bias_correction1), JUST(bias_correction2)},
-                                              attrs);
-      }
-    } else {
-      if (learning_rate) {
-        CHECK(down_scale_by_tensor);
-        CHECK(skip_if);
         return OpInterpUtil::Dispatch<Tensor>(
             *no_bias_correction_op_,
             {num_unique_ids, unique_embeddings, embedding_grad, JUST(learning_rate),
              JUST(down_scale_by_tensor), JUST(skip_if)},
             attrs);
-      } else {
-        CHECK(!down_scale_by_tensor);
-        CHECK(!skip_if);
-        return OpInterpUtil::Dispatch<Tensor>(*no_bias_correction_no_optional_input_op_,
-                                              {num_unique_ids, unique_embeddings, embedding_grad},
-                                              attrs);
       }
+    } else {
+      CHECK(!down_scale_by_tensor);
+      CHECK(!skip_if);
+      CHECK(!bias_correction1);
+      CHECK(!bias_correction2);
+      return OpInterpUtil::Dispatch<Tensor>(
+          *no_optional_input_op_, {num_unique_ids, unique_embeddings, embedding_grad}, attrs);
     }
   }
 
  private:
   std::shared_ptr<OpExpr> no_bias_correction_op_;
-  std::shared_ptr<OpExpr> no_bias_correction_no_optional_input_op_;
   std::shared_ptr<OpExpr> do_bias_correction_op_;
-  std::shared_ptr<OpExpr> do_bias_correction_no_optional_input_op_;
+  std::shared_ptr<OpExpr> no_optional_input_op_;
 };
 
 class OneEmbeddingAdagradUpdateFunctor {

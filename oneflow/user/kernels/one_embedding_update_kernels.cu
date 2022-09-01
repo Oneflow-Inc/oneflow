@@ -95,12 +95,15 @@ __device__ void GetAdamOffset(const int32_t line_size, const int32_t embedding_s
 }
 
 template<typename T, typename G, typename IDX>
-__global__ void AdamUpdateKernel(
-    const int32_t line_size, const int32_t embedding_size, T scale, float l1, float l2,
-    float weight_decay, float beta1, float beta2, float epsilon, float learning_rate_val,
-    const float* bias_correction1_ptr, const float* bias_correction2_ptr, const IDX* num_unique_ids,
-    const float* learning_rate, const T* scale_by_ptr, const T* down_scale_by_ptr,
-    const int64_t* skip_if, const G* model_diff, const T* unique_values, T* updated_unique_values) {
+__global__ void AdamUpdateKernel(const int32_t line_size, const int32_t embedding_size, T scale,
+                                 float l1, float l2, float weight_decay, float beta1, float beta2,
+                                 float epsilon, float learning_rate_val, float bias_correction1_val,
+                                 float bias_correction2_val, const float* bias_correction1_ptr,
+                                 const float* bias_correction2_ptr, const IDX* num_unique_ids,
+                                 const float* learning_rate, const T* scale_by_ptr,
+                                 const T* down_scale_by_ptr, const int64_t* skip_if,
+                                 const G* model_diff, const T* unique_values,
+                                 T* updated_unique_values) {
   if (skip_if != nullptr && *skip_if != 0) {
     const int64_t n = *num_unique_ids * line_size;
     CUDA_1D_KERNEL_LOOP(i, n) {
@@ -110,8 +113,6 @@ __global__ void AdamUpdateKernel(
   } else {
     if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
     if (down_scale_by_ptr != nullptr) { scale /= *down_scale_by_ptr; }
-    float bias_correction1_val = 1.0;
-    float bias_correction2_val = 1.0;
     if (bias_correction1_ptr != nullptr) { bias_correction1_val = *bias_correction1_ptr; }
     if (bias_correction2_ptr != nullptr) { bias_correction2_val = *bias_correction2_ptr; }
     if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
@@ -487,10 +488,12 @@ class AdamEmbeddingUpdateKernel final : public user_op::OpKernel {
       CHECK_EQ(skip_if->shape_view().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
+    const float bias_correction1_val = ctx->Attr<float>("bias_correction1_val");
     const float* bias_correction1_ptr = nullptr;
     if (ctx->has_input("bias_correction1", 0)) {
       bias_correction1_ptr = ctx->Tensor4ArgNameAndIndex("bias_correction1", 0)->dptr<float>();
     }
+    const float bias_correction2_val = ctx->Attr<float>("bias_correction2_val");
     const float* bias_correction2_ptr = nullptr;
     if (ctx->has_input("bias_correction2", 0)) {
       bias_correction2_ptr = ctx->Tensor4ArgNameAndIndex("bias_correction2", 0)->dptr<float>();
@@ -510,9 +513,10 @@ class AdamEmbeddingUpdateKernel final : public user_op::OpKernel {
         <<<BlocksNum4ThreadsNum(embedding_grad_elem_cnt), kCudaThreadsNumPerBlock, 0,
            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             line_size, embedding_size, static_cast<T>(scale), l1, l2, weight_decay, beta1, beta2,
-            epsilon, learning_rate_val, bias_correction1_ptr, bias_correction2_ptr,
-            num_unique_ids_ptr, learning_rate_ptr, scale_by_ptr, down_scale_by_ptr, skip_if_ptr,
-            embedding_grad_ptr, unique_embeddings_ptr, updated_unique_embeddings_ptr);
+            epsilon, learning_rate_val, bias_correction1_val, bias_correction2_val,
+            bias_correction1_ptr, bias_correction2_ptr, num_unique_ids_ptr, learning_rate_ptr,
+            scale_by_ptr, down_scale_by_ptr, skip_if_ptr, embedding_grad_ptr, unique_embeddings_ptr,
+            updated_unique_embeddings_ptr);
     embedding_state->OnEmbeddingUpdateEnd(ctx, current_iter_);
     current_iter_++;
   }

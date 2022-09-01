@@ -2396,7 +2396,7 @@
   bind_python: True
 
 - name: "one_embedding_adam_update"
-  signature: "Tensor (Tensor num_unique_ids, Tensor unique_embeddings, Tensor embedding_grad, Tensor learning_rate=None, Tensor down_scale_by_tensor=None, Tensor skip_if=None, Tensor bias_correction1=None, Tensor bias_correction2=None, Float learning_rate_val=0.0, Double scale=1.0, Float weight_decay=0.0, Float beta1=0.9, Float beta2=0.999, Float epsilon=0, Bool do_bias_correction=True, Int64 line_size, Int64 embedding_size, String embedding_name) => OneEmbeddingAdamUpdate"
+  signature: "Tensor (Tensor num_unique_ids, Tensor unique_embeddings, Tensor embedding_grad, Tensor learning_rate=None, Tensor down_scale_by_tensor=None, Tensor skip_if=None, Tensor bias_correction1=None, Tensor bias_correction2=None, Float learning_rate_val=0.0, Double scale=1.0, Float weight_decay=0.0, Float beta1=0.9, Float beta2=0.999, Float bias_correction1_val=1.0, Float bias_correction2_val=1.0, Float epsilon=0, Bool do_bias_correction=True, Int64 line_size, Int64 embedding_size, String embedding_name) => OneEmbeddingAdamUpdate"
   bind_python: True
 
 - name: "one_embedding_adagrad_update"

@@ -283,52 +283,6 @@ class Embedding(Module):
         """
         self.handler.LoadSnapshot(snapshot_name)
 
-    def eager_update(self, param_group):
-        lr = param_group["lr"]
-        l2 = param_group["weight_decay"]
-        placement = flow.env.all_device_placement("cuda")
-        sbp = flow.sbp.broadcast()
-        num_valid = (
-            flow.tensor(np.ones((1,)).astype(np.int32))
-            .to("cuda")
-            .to_global(placement=placement, sbp=sbp)
-        )
-        unique_ids = (
-            flow.tensor(np.ones((1,)).astype(np.int64))
-            .to("cuda")
-            .to_global(placement=placement, sbp=sbp)
-        )
-        unique_embeddings = (
-            flow.tensor(np.ones((1,)).astype(np.float32))
-            .to("cuda")
-            .to_global(placement=placement, sbp=sbp)
-        )
-        embedding_grad = (
-            flow.tensor(np.ones((1,)).astype(np.float32))
-            .to("cuda")
-            .to_global(placement=placement, sbp=sbp)
-        )
-        scale = 1.0
-        weight_decay = 0.0
-        momentum = 0.0
-        line_size = self.storage_dim
-        embedding_size = self.embedding_dim
-        flow._C.one_embedding_sgd_update(
-            num_valid,
-            unique_embeddings,
-            embedding_grad,
-            learning_rate_val=lr,
-            scale=scale,
-            weight_decay=weight_decay,
-            momentum=momentum,
-            line_size=line_size,
-            embedding_size=embedding_size,
-            embedding_name=self.embedding_name,
-        )
-        flow._C.one_embedding_embedding_put(
-            num_valid, unique_ids, unique_embeddings, self.embedding_name, line_size
-        )
-
     def forward(self, ids, table_ids=None):
         """Embedding lookup operation
 
@@ -351,6 +305,106 @@ class Embedding(Module):
             self.is_full_cache,
             self.num_tables,
             self.embedding_tables,
+        )
+
+    def sgd_update(self, param_group):
+        lr = param_group["lr"]
+        l2 = param_group["weight_decay"]
+        momentum = param_group["momentum"]
+        placement = flow.env.all_device_placement("cuda")
+        sbp = flow.sbp.broadcast()
+        num_valid = (
+            flow.tensor(np.ones((1,)).astype(np.int32))
+            .to("cuda")
+            .to_global(placement=placement, sbp=sbp)
+        )
+        unique_ids = (
+            flow.tensor(np.ones((1,)), dtype=self.key_type)
+            .to("cuda")
+            .to_global(placement=placement, sbp=sbp)
+        )
+        unique_embeddings = (
+            flow.tensor(np.ones((1,)), dtype=self.dtype)
+            .to("cuda")
+            .to_global(placement=placement, sbp=sbp)
+        )
+        embedding_grad = (
+            flow.tensor(np.ones((1,)), dtype=self.dtype)
+            .to("cuda")
+            .to_global(placement=placement, sbp=sbp)
+        )
+        line_size = self.storage_dim
+        embedding_size = self.embedding_dim
+        flow._C.one_embedding_sgd_update(
+            num_valid,
+            unique_embeddings,
+            embedding_grad,
+            learning_rate_val=lr,
+            scale=1.0,
+            weight_decay=l2,
+            momentum=momentum,
+            line_size=line_size,
+            embedding_size=embedding_size,
+            embedding_name=self.embedding_name,
+        )
+        flow._C.one_embedding_embedding_put(
+            num_valid, unique_ids, unique_embeddings, self.embedding_name, line_size
+        )
+
+    def adam_update(self, param_group):
+        placement = flow.env.all_device_placement("cuda")
+        sbp = flow.sbp.broadcast()
+        num_valid = (
+            flow.tensor(np.ones((1,)).astype(np.int32))
+            .to("cuda")
+            .to_global(placement=placement, sbp=sbp)
+        )
+        unique_ids = (
+            flow.tensor(np.ones((1,)), dtype=self.key_type)
+            .to("cuda")
+            .to_global(placement=placement, sbp=sbp)
+        )
+        unique_embeddings = (
+            flow.tensor(np.ones((1,)), dtype=self.dtype)
+            .to("cuda")
+            .to_global(placement=placement, sbp=sbp)
+        )
+        embedding_grad = (
+            flow.tensor(np.ones((1,)), dtype=self.dtype)
+            .to("cuda")
+            .to_global(placement=placement, sbp=sbp)
+        )
+        line_size = self.storage_dim
+        embedding_size = self.embedding_dim
+        learning_rate = param_group["lr"]
+        # not adjust, because it has been set in optimizer's step
+        bias_correction1 = param_group["bias_correction1"]
+        bias_correction2 = param_group["bias_correction2"]
+        l2 = param_group["weight_decay"]
+        beta1 = param_group["betas"][0]
+        beta2 = param_group["betas"][1]
+        epsilon = param_group["eps"]
+        do_bias_correction = param_group["do_bias_correction"]
+        amsgrad = param_group["amsgrad"]  # one_embedding not support amsgrad
+        flow._C.one_embedding_adam_update(
+            num_valid,
+            unique_embeddings,
+            embedding_grad,
+            learning_rate_val=learning_rate,
+            scale=1.0,
+            weight_decay=l2,
+            beta1=beta1,
+            beta2=beta2,
+            bias_correction1_val=bias_correction1,
+            bias_correction2_val=bias_correction2,
+            epsilon=epsilon,
+            do_bias_correction=do_bias_correction,
+            line_size=line_size,
+            embedding_size=embedding_size,
+            embedding_name=self.embedding_name,
+        )
+        flow._C.one_embedding_embedding_put(
+            num_valid, unique_ids, unique_embeddings, self.embedding_name, line_size
         )
 
 
@@ -1040,9 +1094,18 @@ class Optimizer(Optimizer):
         self.embeddings = embeddings
 
     def step(self, closure: Callable = None):
-        param_group = self.optimizer.param_groups[0]
+        param_group = self.optimizer.param_groups[0]  # find the param group
         for embedding in self.embeddings:
-            embedding.eager_update(param_group)
+            if type(self.optimizer) is flow.nn.optimizer.sgd.SGD:
+                embedding.sgd_update(param_group)
+            elif type(self.optimizer) is flow.nn.optimizer.adam.Adam:
+                embedding.adam_update(param_group)
+            elif type(self.optimizer) is flow.nn.optimizer.adagrad.Adagrad:
+                raise NotImplementedError("")
+            elif type(self.optimizer) is flow.one_embedding.Ftrl:
+                raise NotImplementedError("")
+            else:
+                raise NotImplementedError("only support sgd, adam, adagrad and ftrl")
         self.optimizer.step()
 
     def zero_grad(self, set_to_none: bool = False):
