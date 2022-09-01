@@ -47,8 +47,7 @@ class StreamConverter final {
       }
     } else {
       size_t thread_uid = stream_set_->worker_thread_id();
-      size_t stream_set_id = stream_set_->stream_set_id();
-      ret = JUST(Stream::New(stream->device(), stream->stream_type(), thread_uid, stream_set_id));
+      ret = JUST(Stream::New(stream->device(), stream->stream_type(), thread_uid));
     }
     CHECK_OR_RETURN(map->emplace(key, ret).second) << "illegal memory access";
     return ret;

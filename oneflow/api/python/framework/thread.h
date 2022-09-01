@@ -13,18 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <vector>
-#include <mutex>
-#include <set>
-#include <map>
-#include "oneflow/core/framework/stream_set.h"
-#include "oneflow/core/common/env_var/stream.h"
-#include "oneflow/core/common/container_util.h"
+#ifndef ONEFLOW_API_PYTHON_FRAMEWORK_THREAD_H_
+#define ONEFLOW_API_PYTHON_FRAMEWORK_THREAD_H_
+
+#include "oneflow/core/framework/stream.h"
 
 namespace oneflow {
 
-StreamSet::StreamSet(int64_t worker_thread_id) : worker_thread_id_(worker_thread_id) {}
+class AsyncThread final {
+ public:
+  AsyncThread() : thread_uid_(Stream::kTmpStreamThreadUid) {}
+  AsyncThread(const AsyncThread&) = delete;
+  AsyncThread(AsyncThread&&) = delete;
+  ~AsyncThread() = default;
 
-StreamSet::~StreamSet() {}
+  int64_t thread_uid() const { return thread_uid_; }
+
+ private:
+  int64_t thread_uid_;
+};
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_API_PYTHON_FRAMEWORK_THREAD_H_

@@ -15,6 +15,8 @@ limitations under the License.
 """
 import oneflow._oneflow_internal
 
+Thread = oneflow._oneflow_internal.AsyncThread
+
 
 class thread:
     r"""Context-manager to pick worker thread.
@@ -29,7 +31,7 @@ class thread:
 
     .. code-block:: python
         >>> import oneflow as flow
-        >>> with flow.asyncs.thread(2):
+        >>> with flow.asyncs.thread(flow.asyncs.Thread()):
         ...     print(flow.ones(2, 2))
         ...
         tensor([[1., 1.],
@@ -37,9 +39,7 @@ class thread:
     """
 
     def __init__(self, thread_global_id: int = 1, exclude_ccl=False):
-        self.stream_set_ = oneflow._oneflow_internal.StreamSet(
-            thread_global_id, stream_set_id=0
-        )
+        self.stream_set_ = oneflow._oneflow_internal.StreamSet(thread_global_id)
         self.exclude_ccl_ = exclude_ccl
 
     def __enter__(self):

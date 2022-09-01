@@ -13,18 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <vector>
-#include <mutex>
-#include <set>
-#include <map>
-#include "oneflow/core/framework/stream_set.h"
-#include "oneflow/core/common/env_var/stream.h"
-#include "oneflow/core/common/container_util.h"
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/api/python/framework/thread.h"
 
-namespace oneflow {
+namespace py = pybind11;
 
-StreamSet::StreamSet(int64_t worker_thread_id) : worker_thread_id_(worker_thread_id) {}
-
-StreamSet::~StreamSet() {}
-
-}  // namespace oneflow
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  using namespace oneflow;
+  py::class_<AsyncThread, std::shared_ptr<AsyncThread>>(m, "AsyncThread").def(py::init([]() {
+    return std::make_shared<AsyncThread>();
+  }));
+}

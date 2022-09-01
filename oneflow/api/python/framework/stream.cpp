@@ -16,6 +16,7 @@ limitations under the License.
 
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/api/python/framework/thread.h"
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/stream_set.h"
 #include "oneflow/core/framework/stream_guard.h"
@@ -25,12 +26,10 @@ namespace py = pybind11;
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   using namespace oneflow;
   py::class_<StreamSet, std::shared_ptr<StreamSet>>(m, "StreamSet")
-      .def(py::init([](const Optional<int64_t>& worker_thread_id,
-                       const Optional<int64_t>& stream_set_id) {
-             return std::make_shared<StreamSet>(
-                 worker_thread_id.value_or(Stream::kTmpStreamThreadUid), stream_set_id);
+      .def(py::init([](const AsyncThread& async_thread) {
+             return std::make_shared<StreamSet>(async_thread.thread_uid());
            }),
-           py::arg("worker_thread_id") = py::none(), py::arg("stream_set_id") = py::none());
+           py::arg("worker_thread_id") = py::none());
 
   py::class_<StreamGuard, std::shared_ptr<StreamGuard>>(m, "StreamGuard")
       .def(py::init([](const std::shared_ptr<StreamSet>& stream_set, bool exclude_ccl) {
