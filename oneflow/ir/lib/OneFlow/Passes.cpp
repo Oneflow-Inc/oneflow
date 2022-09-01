@@ -118,15 +118,16 @@ func::FuncOp DeclareKernelLaunchCInterface(::mlir::PatternRewriter& rewriter, ml
     func = mlir::func::FuncOp(rewriter.create<func::FuncOp>(
         loc, c_api_callee,
         rewriter.getFunctionType(
-            {LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8))}, {})));
+            {LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8))}, {}),
+        rewriter.getStringAttr("private")));
 
     func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
   }
   return func;
 }
 
-LLVM::GEPOp DeclareorGetGlobalString(::mlir::PatternRewriter& rewriter, mlir::Location loc,
-                                     ModuleOp* module, StringRef func_name) {
+LLVM::GlobalOp DeclareorGetGlobalString(::mlir::PatternRewriter& rewriter, mlir::Location loc,
+                                        ModuleOp* module, StringRef func_name) {
   LLVM::GlobalOp global;
   StringRef variable = rewriter.getStringAttr(func_name + "_var");
   if (!(global = module->lookupSymbol<LLVM::GlobalOp>(variable))) {
@@ -139,13 +140,7 @@ LLVM::GEPOp DeclareorGetGlobalString(::mlir::PatternRewriter& rewriter, mlir::Lo
                                         variable, rewriter.getStringAttr(func_name),
                                         /*alignment=*/0);
   }
-  Value globalPtr = rewriter.create<LLVM::AddressOfOp>(loc, global);
-  Value cst0 =
-      rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), rewriter.getIndexAttr(0));
-  auto res = rewriter.create<LLVM::GEPOp>(
-      loc, LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8)), globalPtr,
-      ArrayRef<Value>({cst0, cst0}));
-  return res;
+  return global;
 }
 
 func::FuncOp DeclareKernelLaunchWrapInterface(::mlir::PatternRewriter& rewriter, mlir::Location loc,
@@ -154,24 +149,32 @@ func::FuncOp DeclareKernelLaunchWrapInterface(::mlir::PatternRewriter& rewriter,
                                               Operation* op) {
   func::FuncOp func;
   if (!(func = module->lookupSymbol<func::FuncOp>(func_name))) {
+    auto global = DeclareorGetGlobalString(rewriter, loc, module, func_name);
+
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(module->getBody());
     func = rewriter.create<func::FuncOp>(loc, func_name, func_type);
-    auto ptr = DeclareorGetGlobalString(rewriter, loc, module, func_name);
     func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
     func.getBody().emplaceBlock();
     for (auto& arg : func_type.getInputs()) { func.getBody().addArguments(arg, loc); }
     rewriter.setInsertionPointToStart(&func.getBody().front());
-    auto call = rewriter.create<func::CallOp>(loc, c_api_func, ValueRange(ptr->getResults()));
+    Value globalPtr = rewriter.create<LLVM::AddressOfOp>(loc, global);
+    Value cst0 =
+        rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), rewriter.getIndexAttr(0));
+    auto gep_op = rewriter.create<LLVM::GEPOp>(
+        loc, LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8)), globalPtr,
+        ArrayRef<Value>({cst0, cst0}));
+    auto call = rewriter.create<func::CallOp>(loc, c_api_func, ValueRange(gep_op->getResults()));
 
     auto var_op = rewriter.create<oneflow::VariableOp>(loc, TypeRange(func_type.getResults()),
                                                        ValueRange(), op->getAttrs());
-    // TODO: output_lbns? shape?
+    // TODO: output_lbns? shape? data_type?
     auto output_lbns = StringAttr::get(rewriter.getContext(), "");
-    var_op->setAttr("output_lbns", ArrayAttr::get(rewriter.getContext(), {output_lbns}));
-
     auto shape = rewriter.getI64ArrayAttr({});
+    auto data_type = rewriter.getI32IntegerAttr(0);
+    var_op->setAttr("output_lbns", ArrayAttr::get(rewriter.getContext(), {output_lbns}));
     var_op->setAttr("shape", shape);
+    var_op->setAttr("data_type", data_type);
     rewriter.create<func::ReturnOp>(loc, var_op->getResults());
   }
   return func;
