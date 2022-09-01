@@ -618,7 +618,7 @@
   bind_python: True
 
 - name: "sigmoid_grad"
-  signature: "Tensor (Tensor x, Tensor dy) => SigmoidGrad"
+  signature: "Tensor (Tensor y, Tensor dy) => SigmoidGrad"
   bind_python: True
 
 - name: "hardsigmoid"
@@ -1149,8 +1149,12 @@
   bind_python: True
 
 - name: "cross_entropy"
-  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index=-100, String reduction=\"mean\") => CrossEntropy"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index=-100, String reduction=\"mean\", Double label_smoothing=0.0) => CrossEntropy"
   bind_python: True
+
+- name: "cross_entropy_label_smoothing"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index=-100, String reduction=\"mean\", Double label_smoothing=0.0) => CrossEntropyLabelSmoothing"
+  bind_python: False
 
 - name: "distributed_sparse_cross_entropy_grad"
   signature: "Tensor (Tensor prediction, Tensor label, Tensor dy, Int64 depth) => SparseCrossEntropyMsGrad"
@@ -1266,10 +1270,6 @@
 - name: "negative"
   signature: "Tensor (Tensor x) => Negative"
   bind_python: True
-
-- name: "negative_grad"
-  signature: "Tensor (Tensor x, Tensor dy) => NegativeGrad"
-  bind_python: False
 
 - name: "layer_norm_affine"
   signature:
@@ -2534,6 +2534,10 @@
   signature: "Tensor (Tensor input, Int32 unpack_num) => GradAccUnpack"
   bind_python: False
 
+- name: "trunc"
+  signature: "Tensor (Tensor input) => Trunc"
+  bind_python: True
+
 - name: "silu_grad_grad"
   signature: "Tensor (Tensor x, Tensor dydx) => SiluGradGrad"  
   bind_python: False
@@ -2573,3 +2577,23 @@
 - name: "celu_grad_grad"
   signature: "Tensor (Tensor x, Tensor dydx, Double alpha) => CeluGradGrad"  
   bind_python: False
+
+- name: "batch_norm_stats"
+  signature: "TensorTuple (Tensor input, Int32 axis, Float eps) => BatchNormStats"
+  bind_python: True
+
+- name: "batch_norm_gather_stats_with_counts"
+  signature: "TensorTuple (Tensor input, Tensor mean, Tensor invstd, Tensor running_mean=None, Tensor running_var=None, Float momentum, Float eps, Tensor counts) => BatchNormGatherStatsWithCounts"
+  bind_python: True
+
+- name: "batch_norm_elemt"
+  signature: "Tensor (Tensor input, Tensor weight, Tensor bias, Tensor mean, Tensor invstd, Int32 axis, Float eps) => BatchNormElemt"
+  bind_python: True
+
+- name: "batch_norm_backward_reduce"
+  signature: "TensorTuple (Tensor grad_out, Tensor input, Tensor mean, Tensor invstd, Int32 axis) => BatchNormBackwardReduce"
+  bind_python: True
+
+- name: "batch_norm_backward_elemt"
+  signature: "Tensor (Tensor grad_out, Tensor input, Tensor mean, Tensor invstd, Tensor weight, Tensor sum_dy, Tensor sum_dy_xmu, Tensor count, Int32 axis) => BatchNormBackwardElemt"
+  bind_python: True

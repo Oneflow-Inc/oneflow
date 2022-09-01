@@ -13,9 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_OP_BASE_H_
-#define ONEFLOW_CORE_FRAMEWORK_OP_BASE_H_
-
+#ifndef ONEFLOW_CORE_FRAMEWORK_OP_DEFINITION_H_
+#define ONEFLOW_CORE_FRAMEWORK_OP_DEFINITION_H_
 #include <string>
 
 #include "oneflow/core/common/hash_container.h"
@@ -28,28 +27,26 @@ class AttrVal;
 }  // namespace user_op
 using AttrVal = user_op::AttrVal;
 
-class OpBase {
+class OpDefinitionBase {
  public:
-  virtual ~OpBase() = default;
-
-  virtual Maybe<AttrVal> GetAttr(const std::string& attr_name) const = 0;
-
-  virtual const HashSet<std::string>& AttrNames() const {
-    static const HashSet<std::string> attr_names;
-    return attr_names;
-  }
+  virtual ~OpDefinitionBase() = default;
+  virtual Maybe<AttrVal> Attr(const std::string& attr_name) const = 0;
+  virtual const HashSet<std::string>& AttributeNames() const = 0;
 
  protected:
-  OpBase() = default;
+  OpDefinitionBase() = default;
 };
 
-class FakeOp : public OpBase {
+template<typename Derived>
+class OpDefinition : public OpDefinitionBase {
  public:
-  Maybe<AttrVal> GetAttr(const std::string& attr_name) const override {
-    return Error::RuntimeError() << "`FakeOp` has no attribute.";
-  }
+  virtual ~OpDefinition() = default;
+  const HashSet<std::string>& AttributeNames() const override { return Derived::AttrNames(); }
+
+ protected:
+  OpDefinition() : OpDefinitionBase() {}
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_OP_BASE_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_OP_DEFINITION_H_

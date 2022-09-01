@@ -161,6 +161,65 @@ class TestAutogradFunction(flow.unittest.TestCase):
             )
         )
 
+    @flow.unittest.skip_unless_1n1d()
+    def test_graph_test_multi_input(test_case):
+        class MyMul(autograd.Function):
+            @staticmethod
+            def forward(ctx, x, y):
+                z = x * y
+                ctx.save_for_backward(x, y)
+                return z
+
+            @staticmethod
+            def backward(ctx, z_grad):
+                x, y = ctx.saved_tensors
+                x_grad = 2 * y * z_grad
+                y_grad = 3 * x * z_grad
+                return x_grad, y_grad
+
+        class MyAdd(autograd.Function):
+            @staticmethod
+            def forward(ctx, x, y):
+                return 2 * x + y
+
+            @staticmethod
+            def backward(ctx, z_grad):
+                x_grad = z_grad
+                y_grad = 2 * z_grad
+                return x_grad, y_grad
+
+        model = flow.nn.Linear(5, 4, bias=False)
+        model.train()
+
+        class MyGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.model = model
+                optimizer = flow.optim.SGD(self.model.parameters())
+                self.add_optimizer(optimizer)
+
+            def build(self, x, y):
+                x.retain_grad()
+                y.retain_grad()
+                self.model.weight.retain_grad()
+                z = MyMul().apply(x, y)
+                z = MyAdd().apply(z, self.model.weight)
+                z.sum().backward()
+                return z, x.grad, y.grad, self.model.weight.grad
+
+        np_arr0 = np.random.randn(4, 5).astype(np.float32)
+        np_arr1 = np.random.randn(4, 5).astype(np.float32)
+        np_arr2 = np.random.randn(4, 5).astype(np.float32)
+        a = flow.tensor(np_arr0).requires_grad_()
+        b = flow.tensor(np_arr1).requires_grad_()
+        model.weight.copy_(np_arr2)
+
+        c, a_grad, b_grad, w_grad = MyGraph()(a, b)
+        test_case.assertTrue(np.allclose(c.numpy(), 2 * np_arr0 * np_arr1 + np_arr2))
+        test_case.assertTrue(np.allclose(a_grad.numpy(), 2 * np_arr1))
+        test_case.assertTrue(np.allclose(b_grad.numpy(), 3 * np_arr0))
+        test_case.assertTrue(np.allclose(w_grad.numpy(), 2 * np.ones_like(np_arr2)))
+
 
 if __name__ == "__main__":
     unittest.main()
