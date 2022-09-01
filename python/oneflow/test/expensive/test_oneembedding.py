@@ -109,7 +109,8 @@ def _test_one_embedding(
     test_case, batch_size, table_size_array, embedding_size, test_opt
 ):
     test_str = str([batch_size, table_size_array, embedding_size, test_opt])
-    test_hash = hashlib.sha256(test_str.encode('utf-8')).hexdigest()
+    test_hash = hashlib.sha256(test_str.encode("utf-8")).hexdigest()
+
     def np_to_global(np):
         t = flow.from_numpy(np)
         return t.to_global(
