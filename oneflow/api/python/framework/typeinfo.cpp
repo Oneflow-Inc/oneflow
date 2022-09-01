@@ -233,7 +233,6 @@ static PyObject* PyFInfo_str(PyObject* self) {
   oss << "min=" << PyFloat_AS_DOUBLE(PyDInfo_min((PyObject*)self, NULL)) << ", ";
   oss << "max=" << PyFloat_AS_DOUBLE(PyDInfo_max((PyObject*)self, NULL)) << ", ";
   oss << "eps=" << PyFloat_AS_DOUBLE(PyFInfo_eps((PyObject*)self, NULL)) << ", ";
-  oss << "smallest_normal=" << PyFloat_AS_DOUBLE(PyFInfo_tiny((PyObject*)self, NULL)) << ", ";
   oss << "tiny=" << PyFloat_AS_DOUBLE(PyFInfo_tiny((PyObject*)self, NULL)) << ", ";
   oss << "dtype=" << PyDTypeInfo_UnpackDType(self)->name() << ", ";
   oss << "bits=" << PyLong_AS_LONG(PyDInfo_bits((PyObject*)self, NULL)) << ")";
@@ -255,7 +254,6 @@ static struct PyGetSetDef PyFInfo_properties[] = {
     {"min", (getter)PyDInfo_min, nullptr, nullptr, nullptr},
     {"resolution", (getter)PyFInfo_resolution, nullptr, nullptr, nullptr},
     {"eps", (getter)PyFInfo_eps, nullptr, nullptr, nullptr},
-    {"smallest_normal", (getter)PyFInfo_tiny, nullptr, nullptr, nullptr},
     {"tiny", (getter)PyFInfo_tiny, nullptr, nullptr, nullptr},
     {"dtype", (getter)PyDInfo_dtype, nullptr, nullptr, nullptr},
     {nullptr},

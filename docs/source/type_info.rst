@@ -5,7 +5,7 @@
 Type Info
 =========
 
-.. The documentation is referenced from: https://pytorch.org/docs/1.12/type_info.html.
+.. The documentation is referenced from: https://pytorch.org/docs/1.10/type_info.html.
 
 The numerical properties of a :class:`oneflow.dtype` can be accessed through either the :class:`oneflow.finfo` or the :class:`oneflow.iinfo`.
 
@@ -34,8 +34,7 @@ bits               int     The number of bits occupied by the type.
 eps                float   The smallest representable number such that ``1.0 + eps != 1.0``.             
 min                float   The largest representable number.                                         
 max                float   The smallest representable number (typically ``-max``).                       
-tiny               float   The smallest positive normal number. Equivalent to ``smallest_normal``.       
-smallest_normal    float   The smallest positive normal number. See notes.                           
+tiny               float   The smallest positive normal number. See notes.
 resolution         float   The approximate decimal resolution of this type, i.e., ``10**-precision``.    
 ================== ======= ========================================================================== 
 
@@ -45,7 +44,7 @@ For example:
 
     >>> import oneflow as flow
     >>> flow.finfo(flow.float)
-    finfo(resolution=1e-06, min=-3.40282e+38, max=3.40282e+38, eps=1.19209e-07, smallest_normal=1.17549e-38, tiny=1.17549e-38, dtype=oneflow.float32, bits=32)
+    finfo(resolution=1e-06, min=-3.40282e+38, max=3.40282e+38, eps=1.19209e-07, tiny=1.17549e-38, dtype=oneflow.float32, bits=32)
     >>> flow.finfo(flow.float16).bits
     16
     >>> flow.finfo(flow.float16).max
