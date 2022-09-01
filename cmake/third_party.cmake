@@ -237,7 +237,7 @@ if(THIRD_PARTY)
     endforeach()
   endif(BUILD_PYTHON)
   install(
-    DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/third_party_install/llvm/include/
+    DIRECTORY ${THIRD_PARTY_DIR}/llvm/include/
     DESTINATION ${ONEFLOW_INCLUDE_DIR}
     COMPONENT oneflow_py_include
     EXCLUDE_FROM_ALL FILES_MATCHING
