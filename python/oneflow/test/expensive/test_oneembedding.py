@@ -25,89 +25,87 @@ import oneflow.nn as nn
 import tempfile
 
 
-def _test_one_embedding(test_case, embedding_size, test_opt):
-    class OneEmbedding(nn.Module):
-        def __init__(
-            self, embedding_vec_size, persistent_path, table_size_array,
-        ):
-            assert table_size_array is not None
-            vocab_size = sum(table_size_array)
+class OneEmbedding(nn.Module):
+    def __init__(
+        self, test_id, embedding_vec_size, persistent_path, table_size_array, size_factor,
+    ):
+        assert table_size_array is not None
+        vocab_size = sum(table_size_array)
 
-            scales = np.sqrt(1 / np.array(table_size_array))
-            tables = [
-                flow.one_embedding.make_table(
-                    flow.one_embedding.make_uniform_initializer(low=-scale, high=scale)
-                )
-                for scale in scales
-            ]
-            store_options = flow.one_embedding.make_device_mem_store_options(
-                persistent_path=persistent_path,
-                capacity=vocab_size,
-                size_factor=3 if test_opt == "Adam" else 1,
+        scales = np.sqrt(1 / np.array(table_size_array))
+        tables = [
+            flow.one_embedding.make_table(
+                flow.one_embedding.make_uniform_initializer(low=-scale, high=scale)
             )
+            for scale in scales
+        ]
+        store_options = flow.one_embedding.make_device_mem_store_options(
+            persistent_path=persistent_path,
+            capacity=vocab_size,
+            size_factor=size_factor,
+        )
 
-            super(OneEmbedding, self).__init__()
-            self.one_embedding = flow.one_embedding.MultiTableEmbedding(
-                f"oneembedding_{embedding_vec_size}_{test_opt}",
-                embedding_dim=embedding_vec_size,
-                dtype=flow.float,
-                key_type=flow.int64,
-                tables=tables,
-                store_options=store_options,
-            )
+        super(OneEmbedding, self).__init__()
+        self.one_embedding = flow.one_embedding.MultiTableEmbedding(
+            f"oneembedding_{test_id}",
+            embedding_dim=embedding_vec_size,
+            dtype=flow.float,
+            key_type=flow.int64,
+            tables=tables,
+            store_options=store_options,
+        )
 
-        def forward(self, ids):
-            return self.one_embedding.forward(ids)
+    def forward(self, ids):
+        return self.one_embedding.forward(ids)
 
-    class TestModule(nn.Module):
-        def __init__(
-            self, embedding_vec_size=128, persistent_path=None, table_size_array=[],
-        ):
-            super(TestModule, self).__init__()
-            self.embedding = OneEmbedding(
-                embedding_vec_size, persistent_path, table_size_array,
-            )
-            self.mlp = nn.Linear(embedding_vec_size, 1)
 
-        def forward(self, inputs) -> flow.Tensor:
-            embedding = self.embedding(inputs)
-            logits = self.mlp(embedding).mean(dim=1)
-            return logits
+class TestModule(nn.Module):
+    def __init__(
+        self, test_id, embedding_vec_size, persistent_path, table_size_array, size_factor,
+    ):
+        super(TestModule, self).__init__()
+        self.embedding = OneEmbedding(
+            test_id, embedding_vec_size, persistent_path, table_size_array, size_factor
+        )
+        self.mlp = nn.Linear(embedding_vec_size, 1)
 
-    class TrainGraph(flow.nn.Graph):
-        def __init__(
-            self, module, loss, optimizer, amp=False,
-        ):
-            super(TrainGraph, self).__init__()
-            self.module = module
-            self.loss = loss
-            self.add_optimizer(optimizer)
-            if amp:
-                self.config.enable_amp(True)
+    def forward(self, inputs) -> flow.Tensor:
+        embedding = self.embedding(inputs)
+        logits = self.mlp(embedding).mean(dim=1)
+        return logits
 
-        def build(self, labels, features):
-            logits = self.module(features.to("cuda"))
-            loss = self.loss(logits, labels.to("cuda"))
-            reduce_loss = flow.mean(loss)
-            reduce_loss.backward()
-            return reduce_loss.to("cpu")
 
+class TrainGraph(flow.nn.Graph):
+    def __init__(
+        self, module, loss, optimizer, amp=False,
+    ):
+        super(TrainGraph, self).__init__()
+        self.module = module
+        self.loss = loss
+        self.add_optimizer(optimizer)
+        if amp:
+            self.config.enable_amp(True)
+
+    def build(self, labels, features):
+        logits = self.module(features.to("cuda"))
+        loss = self.loss(logits, labels.to("cuda"))
+        reduce_loss = flow.mean(loss)
+        reduce_loss.backward()
+        return reduce_loss.to("cpu")
+
+
+def _test_one_embedding(test_case, batch_size, table_size_array, embedding_size, test_opt):
+    test_hash = hex(hash(str([batch_size, table_size_array, embedding_size, test_opt])))
+    
     def np_to_global(np):
         t = flow.from_numpy(np)
         return t.to_global(
             placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.split(0)
         )
 
-    batch_size = 32
-    table_size_array = [32, 65536, 100, 7]
-
     with tempfile.TemporaryDirectory() as persistent_path:
-        rank = flow.env.get_rank()
-        module = TestModule(
-            embedding_vec_size=embedding_size,
-            persistent_path=persistent_path,
-            table_size_array=table_size_array,
-        )
+        size_factor = 3 if test_opt == "Adam" else 1
+        module = TestModule(test_hash, embedding_size, persistent_path, table_size_array, size_factor)
         module.to_global(flow.env.all_device_placement("cuda"), flow.sbp.broadcast)
 
         if test_opt == "Adam":
@@ -116,6 +114,7 @@ def _test_one_embedding(test_case, embedding_size, test_opt):
             opt = flow.optim.SGD(module.parameters(), lr=0.1)
         else:
             assert False
+
         loss = flow.nn.BCEWithLogitsLoss(reduction="none").to("cuda")
 
         train_graph = TrainGraph(module, loss, opt)
@@ -135,6 +134,8 @@ def _test_one_embedding(test_case, embedding_size, test_opt):
 class OneEmbeddingTestCase(flow.unittest.TestCase):
     def test_one_embedding(test_case):
         arg_dict = OrderedDict()
+        arg_dict["batch_size"] = [32, 4096]
+        arg_dict["table_size_array"] = [[32, 65536, 100, 7], np.random.randint(100000, size=(10)).tolist()]
         arg_dict["embedding_size"] = [128, 17]
         arg_dict["test_opt"] = ["SGD", "Adam"]
         for kwargs in GenArgDict(arg_dict):
