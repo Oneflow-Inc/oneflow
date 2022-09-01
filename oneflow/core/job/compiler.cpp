@@ -76,8 +76,9 @@ void PlanCompiler::Compile(Job* job, Plan* plan, std::shared_ptr<TaskGraph>& tas
   // 3, topo infer others 
   // task_gph->TopoForEachNode(&TaskNode::Build);
   task_gph->TopoForEachNode(&TaskNode::BuildExecGphIf);
+  tc->Count("Graph name: " + job_name + " TaskNode::BuildExecGraph", 1);
   task_gph->TopoForEachNode(&TaskNode::InferRegstIf);
-  tc->Count("Graph name: " + job_name + " TaskNode::Build", 1);
+  tc->Count("Graph name: " + job_name + " TaskNode::InferRegst", 1);
   task_gph->RemoveEmptyRegsts();
   tc->Count("Graph name: " + job_name + " RemoveEmptyRegsts", 1);
   task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
