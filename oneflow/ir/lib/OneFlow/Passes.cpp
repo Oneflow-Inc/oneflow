@@ -115,8 +115,10 @@ func::FuncOp DeclareKernelLaunchCInterface(::mlir::PatternRewriter& rewriter, ml
   if (!(func = module->lookupSymbol<func::FuncOp>(c_api_callee))) {
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(module->getBody());
-    auto func = mlir::func::FuncOp(rewriter.create<func::FuncOp>(
-        loc, c_api_callee, rewriter.getFunctionType({rewriter.getF32Type()}, {})));
+    func = mlir::func::FuncOp(rewriter.create<func::FuncOp>(
+        loc, c_api_callee,
+        rewriter.getFunctionType(
+            {LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8))}, {})));
 
     func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
   }
@@ -160,19 +162,24 @@ func::FuncOp DeclareKernelLaunchWrapInterface(::mlir::PatternRewriter& rewriter,
     func.getBody().emplaceBlock();
     for (auto& arg : func_type.getInputs()) { func.getBody().addArguments(arg, loc); }
     rewriter.setInsertionPointToStart(&func.getBody().front());
-    // rewriter.create<func::CallOp>(loc, c_api_func, ValueRange{ptr});
+    auto call = rewriter.create<func::CallOp>(loc, c_api_func, ValueRange(ptr->getResults()));
+
     auto var_op = rewriter.create<oneflow::VariableOp>(loc, TypeRange(func_type.getResults()),
                                                        ValueRange(), op->getAttrs());
+    // TODO: output_lbns? shape?
+    auto output_lbns = StringAttr::get(rewriter.getContext(), "");
+    var_op->setAttr("output_lbns", ArrayAttr::get(rewriter.getContext(), {output_lbns}));
+
+    auto shape = rewriter.getI64ArrayAttr({});
+    var_op->setAttr("shape", shape);
     rewriter.create<func::ReturnOp>(loc, var_op->getResults());
   }
-  func->dump();
   return func;
 }
 
 func::FuncOp GetOrInsertKernelFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc,
                                      StringRef func_name, ValueRange operands, ValueRange results,
                                      Operation* op) {
-  op->dump();
   StringRef c_api_callee = "kernel_launch";
   auto parent_func_op = op->getParentOfType<oneflow::Job>();
   if (!parent_func_op) {
