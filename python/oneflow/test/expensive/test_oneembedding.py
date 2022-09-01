@@ -27,7 +27,12 @@ import tempfile
 
 class OneEmbedding(nn.Module):
     def __init__(
-        self, test_id, embedding_vec_size, persistent_path, table_size_array, size_factor,
+        self,
+        test_id,
+        embedding_vec_size,
+        persistent_path,
+        table_size_array,
+        size_factor,
     ):
         assert table_size_array is not None
         vocab_size = sum(table_size_array)
@@ -61,7 +66,12 @@ class OneEmbedding(nn.Module):
 
 class TestModule(nn.Module):
     def __init__(
-        self, test_id, embedding_vec_size, persistent_path, table_size_array, size_factor,
+        self,
+        test_id,
+        embedding_vec_size,
+        persistent_path,
+        table_size_array,
+        size_factor,
     ):
         super(TestModule, self).__init__()
         self.embedding = OneEmbedding(
@@ -94,9 +104,11 @@ class TrainGraph(flow.nn.Graph):
         return reduce_loss.to("cpu")
 
 
-def _test_one_embedding(test_case, batch_size, table_size_array, embedding_size, test_opt):
+def _test_one_embedding(
+    test_case, batch_size, table_size_array, embedding_size, test_opt
+):
     test_hash = hex(hash(str([batch_size, table_size_array, embedding_size, test_opt])))
-    
+
     def np_to_global(np):
         t = flow.from_numpy(np)
         return t.to_global(
@@ -105,7 +117,9 @@ def _test_one_embedding(test_case, batch_size, table_size_array, embedding_size,
 
     with tempfile.TemporaryDirectory() as persistent_path:
         size_factor = 3 if test_opt == "Adam" else 1
-        module = TestModule(test_hash, embedding_size, persistent_path, table_size_array, size_factor)
+        module = TestModule(
+            test_hash, embedding_size, persistent_path, table_size_array, size_factor
+        )
         module.to_global(flow.env.all_device_placement("cuda"), flow.sbp.broadcast)
 
         if test_opt == "Adam":
@@ -135,7 +149,10 @@ class OneEmbeddingTestCase(flow.unittest.TestCase):
     def test_one_embedding(test_case):
         arg_dict = OrderedDict()
         arg_dict["batch_size"] = [32, 4096]
-        arg_dict["table_size_array"] = [[32, 65536, 100, 7], np.random.randint(100000, size=(10)).tolist()]
+        arg_dict["table_size_array"] = [
+            [32, 65536, 100, 7],
+            np.random.randint(100000, size=(10)).tolist(),
+        ]
         arg_dict["embedding_size"] = [128, 17]
         arg_dict["test_opt"] = ["SGD", "Adam"]
         for kwargs in GenArgDict(arg_dict):
