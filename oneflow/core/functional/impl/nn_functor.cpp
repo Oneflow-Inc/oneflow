@@ -3505,6 +3505,42 @@ class OneEmbeddingEmbeddingGradientShuffleFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class OneEmbeddingLookupEmbeddingFunctor {
+ public:
+  OneEmbeddingLookupEmbeddingFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("embedding_lookup")
+                         .Input("num_unique_ids")
+                         .Input("unique_ids")
+                         .Input("table_ids")
+                         .Output("unique_values")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& num_unique_ids,
+                           const std::shared_ptr<one::Tensor>& unique_ids,
+                           const std::shared_ptr<one::Tensor>& table_ids,
+                           const Symbol<DType>& dtype, const Symbol<DType>& embedding_dtype,
+                           const int64_t line_size, const int64_t embedding_size,
+                           const std::string& embedding_name, const std::string& embedding_tables,
+                           const std::string& state_initializer, const int64_t seed) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "embedding_dtype", "line_size",
+                                                 "embedding_size", "embedding_name",
+                                                 "embedding_tables", "state_initializer", "seed");
+    attrs.SetAttr<DataType>("dtype", dtype->data_type());
+    attrs.SetAttr<DataType>("embedding_dtype", embedding_dtype->data_type());
+    attrs.SetAttr<int64_t>("line_size", line_size);
+    attrs.SetAttr<int64_t>("embedding_size", embedding_size);
+    attrs.SetAttr<std::string>("embedding_name", embedding_name);
+    attrs.SetAttr<std::string>("embedding_tables", embedding_tables);
+    attrs.SetAttr<std::string>("state_initializer", state_initializer);
+    attrs.SetAttr<int64_t>("seed", seed);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {num_unique_ids, unique_ids, table_ids}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class OneEmbeddingLookupFunctor {
  public:
   OneEmbeddingLookupFunctor() {
@@ -4361,6 +4397,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingEmbeddingShuffleFunctor>("OneEmbeddingEmbeddingShuffle");
   m.add_functor<impl::OneEmbeddingEmbeddingGradientShuffleFunctor>(
       "OneEmbeddingEmbeddingGradientShuffle");
+  m.add_functor<impl::OneEmbeddingLookupEmbeddingFunctor>("OneEmbeddingLookupEmbedding");
   m.add_functor<impl::OneEmbeddingLookupFunctor>("OneEmbeddingLookup");
   m.add_functor<impl::OneEmbeddingLookupGradFunctor>("OneEmbeddingLookupGrad");
   m.add_functor<impl::OneEmbeddingEmbeddingPutFunctor>("OneEmbeddingEmbeddingPut");

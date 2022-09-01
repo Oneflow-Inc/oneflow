@@ -1437,6 +1437,7 @@ class EmbeddingLookupPlaceholderGradKernel final : public user_op::OpKernel {
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
+    return;
     auto* kernel_state = dynamic_cast<EmbeddingLookupPlaceholderKernelState<IDX>*>(state);
     CHECK(kernel_state != nullptr);
     embedding::EagerEmbeddingState* embedding_state = kernel_state->EmbeddingState();

@@ -670,7 +670,7 @@ EmbeddingState* EmbeddingManager::GetEmbeddingState(const std::string& embedding
   std::unique_lock<std::mutex> lock(mutex_);
   auto it = embedding_state_map_.find(map_key);
   if (it == embedding_state_map_.end()) {
-    if (!LazyMode::is_enabled()) {
+    if (false && !LazyMode::is_enabled()) {
 #if CUDA_VERSION >= 11020
       LOG(WARNING) << "create Eager EmbeddingState " << embedding_name << "-" << rank_id;
       it = embedding_state_map_

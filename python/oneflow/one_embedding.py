@@ -26,6 +26,7 @@ from oneflow._oneflow_internal import PersistentTableWriter
 import numpy as np
 import traceback
 from oneflow import nn
+import oneflow.framework.graph_build_util as graph_build_util
 
 
 def _check_initializer(initializer):
@@ -294,7 +295,8 @@ class Embedding(Module):
             flow.tensor: the result of embedding lookup
         """
         assert self.key_type == ids.dtype, "ids data_type must equals key_type"
-        return flow._C.one_embedding_lookup(
+
+        embedding = flow._C.one_embedding_lookup(
             self.shadow,
             ids,
             table_ids,
@@ -306,39 +308,54 @@ class Embedding(Module):
             self.num_tables,
             self.embedding_tables,
         )
+        if embedding.requires_grad and not graph_build_util.lazy_mode.is_enabled():
+            self.embedding = embedding
+            self.embedding.retain_grad()
+            self.ids = ids
+            self.table_ids = table_ids
+        return embedding
 
     def sgd_update(self, param_group):
+        embedding_grad = self.embedding.grad
         lr = param_group["lr"]
         l2 = param_group["weight_decay"]
-        momentum = param_group["momentum"]
-        placement = flow.env.all_device_placement("cuda")
-        sbp = flow.sbp.broadcast()
-        num_valid = (
-            flow.tensor(np.ones((1,)).astype(np.int32))
-            .to("cuda")
-            .to_global(placement=placement, sbp=sbp)
-        )
-        unique_ids = (
-            flow.tensor(np.ones((1,)), dtype=self.key_type)
-            .to("cuda")
-            .to_global(placement=placement, sbp=sbp)
-        )
-        unique_embeddings = (
-            flow.tensor(np.ones((1,)), dtype=self.dtype)
-            .to("cuda")
-            .to_global(placement=placement, sbp=sbp)
-        )
-        embedding_grad = (
-            flow.tensor(np.ones((1,)), dtype=self.dtype)
-            .to("cuda")
-            .to_global(placement=placement, sbp=sbp)
-        )
         line_size = self.storage_dim
         embedding_size = self.embedding_dim
-        flow._C.one_embedding_sgd_update(
-            num_valid,
-            unique_embeddings,
+        momentum = param_group["momentum"]
+        (
+            num_unique_matrix,
+            inverse_unique_partition_indices,
+            cur_rank_num_unique,
+            cur_rank_unique_ids,
+            cur_rank_unique_table_ids,
+            cur_rank_inverse_indices,
+        ) = flow._C.one_embedding_id_shuffle(
+            self.ids, self.table_ids, self.num_tables, self.embedding_name
+        )
+        unique_values = flow._C.one_embedding_lookup_embedding(
+            cur_rank_num_unique,
+            cur_rank_unique_ids,
+            cur_rank_unique_table_ids,
+            self.dtype,
+            self.dtype,
+            line_size,
+            embedding_size,
+            self.embedding_name,
+            self.embedding_tables,
+            "",
+            0,
+        )
+        cur_rank_unique_embedding_grad = flow._C.one_embedding_embedding_gradient_shuffle(
             embedding_grad,
+            num_unique_matrix,
+            cur_rank_inverse_indices,
+            inverse_unique_partition_indices,
+            self.embedding_name,
+        )
+        updated_values = flow._C.one_embedding_sgd_update(
+            cur_rank_num_unique,
+            unique_values,
+            cur_rank_unique_embedding_grad,
             learning_rate_val=lr,
             scale=1.0,
             weight_decay=l2,
@@ -348,7 +365,11 @@ class Embedding(Module):
             embedding_name=self.embedding_name,
         )
         flow._C.one_embedding_embedding_put(
-            num_valid, unique_ids, unique_embeddings, self.embedding_name, line_size
+            cur_rank_num_unique,
+            cur_rank_unique_ids,
+            updated_values,
+            self.embedding_name,
+            line_size,
         )
 
     def adam_update(self, param_group):
