@@ -145,6 +145,7 @@ def _test_one_embedding(
             test_case.assertFalse(np.isnan(loss.numpy()))
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class OneEmbeddingTestCase(flow.unittest.TestCase):
     def test_one_embedding(test_case):
         arg_dict = OrderedDict()
