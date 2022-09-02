@@ -817,12 +817,12 @@ jobs:
             sleep 7200
       - name: Exe test
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
-        timeout-minutes: 10
+        timeout-minutes: 20
         run: |
           docker exec ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} ./liboneflow-ci-linux/bin/oneflow_testexe
       - name: Exe test (C++ API)
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
-        timeout-minutes: 10
+        timeout-minutes: 20
         run: |
           docker exec -e ONEFLOW_SERVING_DEBUG=1 ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} ./liboneflow-ci-linux/bin/oneflow_cpp_api_testexe --gtest_filter=-Api.embedding*
       - name: Test container
@@ -928,7 +928,7 @@ jobs:
               body: "<details>\n <summary>Speed stats:</summary>\n\n ``` \n${{ steps.speed.outputs.stats }}\n ``` \n\n</details>".replace(/\\n/g, '\n')
             })
       - name: Sync BatchNorm test
-        timeout-minutes: 30
+        timeout-minutes: 120
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/ddp ${{ env.TEST_CONTAINER_NAME }} bash ci/test/test_sync_batchnorm.sh

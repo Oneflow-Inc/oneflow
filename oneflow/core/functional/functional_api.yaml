@@ -193,11 +193,11 @@
   bind_python: True
 
 - name: "pow_x_grad"
-  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => PowXGrad"
+  signature: "Tensor (Tensor x, Tensor y, Tensor dz) => PowXGrad"
   bind_python: False
 
 - name: "pow_y_grad"
-  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => PowYGrad"
+  signature: "Tensor (Tensor x, Tensor y, Tensor dz) => PowYGrad"
   bind_python: False
 
 - name: "searchsorted"
@@ -221,11 +221,11 @@
   bind_python: False
 
 - name: "broadcast_pow_x_grad"
-  signature: "Tensor (Tensor dz, Tensor x, Tensor y, Tensor z) => BroadcastPowXGrad"
+  signature: "Tensor (Tensor x, Tensor y, Tensor dz) => BroadcastPowXGrad"
   bind_python: False
 
 - name: "broadcast_pow_y_grad"
-  signature: "Tensor (Tensor dz, Tensor x, Tensor y, Tensor z) => BroadcastPowYGrad"
+  signature: "Tensor (Tensor x, Tensor y, Tensor dz) => BroadcastPowYGrad"
   bind_python: False
 
 - name: "floor_divide"
@@ -1153,8 +1153,12 @@
   bind_python: True
 
 - name: "cross_entropy"
-  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index=-100, String reduction=\"mean\") => CrossEntropy"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index=-100, String reduction=\"mean\", Double label_smoothing=0.0) => CrossEntropy"
   bind_python: True
+
+- name: "cross_entropy_label_smoothing"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index=-100, String reduction=\"mean\", Double label_smoothing=0.0) => CrossEntropyLabelSmoothing"
+  bind_python: False
 
 - name: "distributed_sparse_cross_entropy_grad"
   signature: "Tensor (Tensor prediction, Tensor label, Tensor dy, Int64 depth) => SparseCrossEntropyMsGrad"

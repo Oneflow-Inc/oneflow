@@ -275,8 +275,8 @@ class LocalTensorSharedNumpyDataFunctor {
     Py_INCREF(obj);
 
     // Build TensorMeta
-    const auto shape = std::make_shared<Shape>(DimVector(sizes.begin(), sizes.end()));
-    const auto stride = std::make_shared<Stride>(strides.begin(), strides.end());
+    const auto shape = Shape(DimVector(sizes.begin(), sizes.end()));
+    const auto stride = Stride(strides.begin(), strides.end());
     DataType data_type = JUST(numpy::GetOFDataTypeFromNpArray(array));
     Symbol<Device> device = JUST(Device::New("cpu"));
 
