@@ -51,7 +51,7 @@ class FunctionAutoGradCaptureState final
     : public AutoGradCaptureState,
       public std::enable_shared_from_this<FunctionAutoGradCaptureState> {
  public:
-  FunctionAutoGradCaptureState() = default;
+  FunctionAutoGradCaptureState() : pyobj_ptr_(nullptr, [](void*) {}) {}
   using AutoGradCaptureState::SavedTensors;
   using AutoGradCaptureState::SaveTensorForBackward;
 
@@ -63,11 +63,19 @@ class FunctionAutoGradCaptureState final
 
   std::shared_ptr<FunctionAutoGradCaptureState> GetSharedFromThis() { return shared_from_this(); }
 
+  // NOTE(wyg): Hold PyOjbect ptr to ensure getting the same objecet when casting to python.
+  // And decrease the reference count when C++ object is destructed to avoid memory leaking.
+  void* pyobject() const { return pyobj_ptr_.get(); }
+  void set_pyobject_ptr(std::unique_ptr<void, void (*)(void*)>&& pyobj_ptr) {
+    pyobj_ptr_ = std::move(pyobj_ptr);
+  }
+
  public:
   std::vector<bool> input_requires_grad;
 
  private:
   HashSet<Tensor*> non_differentiable_tensors_;
+  std::unique_ptr<void, void (*)(void*)> pyobj_ptr_;
 };
 
 // Stateless container base of the backward op exprs.

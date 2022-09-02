@@ -44,7 +44,7 @@ inline Maybe<std::string> NdSbpToString(Symbol<NdSbp> nd_sbp) {
   std::string str = "(";
   for (int i = 0; i < nd_sbp->sbp_parallel_size(); ++i) {
     if (i > 0) { str += ", "; }
-    str += *JUST(SbpToString(SymbolOf(nd_sbp->sbp_parallel(i))));
+    str += *JUST(oneflow::api::SbpToString(SymbolOf(nd_sbp->sbp_parallel(i))));
   }
   if (nd_sbp->sbp_parallel_size() == 1) { str += ","; }
   str += ")";
