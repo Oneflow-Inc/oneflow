@@ -53,44 +53,6 @@ def _cmp_expand_stride(
     test_case.assertTrue(np.array_equal(y.numpy(), torch_y.detach().cpu().numpy()))
 
 
-def _cmp_lazy_expand_stride(
-    test_case, input_shape, expand_shape, device="cuda", verbose=False,
-):
-    input = np.random.randn(*input_shape)
-    torch_x = torch.tensor(input, dtype=torch.float32, device=device)
-    torch_y = torch_x.expand(*expand_shape).contiguous()
-    # oneflow lazy must do this contiguous
-
-    class MyGraph(flow.nn.Graph):
-        def __init__(self, expand_shape):
-            super().__init__()
-            self.expand_shape = expand_shape
-
-        def build(self, x):
-            return x.expand(*self.expand_shape)
-
-    expand_graph = MyGraph(expand_shape)
-    x = flow.tensor(input, dtype=flow.float32, device=device)
-    y = expand_graph(x)
-
-    if verbose:
-        print("")
-        print(f" lazy (expand op/kernel) (device={device}) ".center(50, "="))
-        print(f" {input_shape} -> {expand_shape} ".center(50, "*"))
-        print(f"x: shape={x.shape}, stride={x.stride()}")
-        print(f"y: shape={y.shape}, stride={y.stride()}")
-        print(f"torch_y: shape={torch_y.shape}, stride={torch_y.stride()}")
-        print(" input ".center(50, "-"))
-        print(input)
-        print(" y ".center(50, "-"))
-        print(y)
-        print(" torch_y ".center(50, "-"))
-        print(torch_y)
-
-    test_case.assertTrue(np.array_equal(y.stride(), torch_y.stride()))
-    test_case.assertTrue(np.array_equal(y.numpy(), torch_y.detach().cpu().numpy()))
-
-
 def _cmp_expand_non_contiguous_stride(
     test_case, input_shape, perm, expand_shape, device="cuda", verbose=False,
 ):
@@ -121,6 +83,56 @@ def _cmp_expand_non_contiguous_stride(
 
     test_case.assertTrue(np.array_equal(z.stride(), torch_z.stride()))
     test_case.assertTrue(np.array_equal(z.numpy(), torch_z.detach().cpu().numpy()))
+
+
+def _cmp_lazy_expand_stride(
+    test_case, input_shape, expand_shape, device="cuda", verbose=False,
+):
+    input = np.random.randn(*input_shape)
+    torch_x = torch.tensor(input, dtype=torch.float32, device=device)
+    torch_y = torch_x.expand(*expand_shape).contiguous()
+    # oneflow lazy must do this contiguous
+
+    class MyGraph(flow.nn.Graph):
+        def __init__(self, expand_shape):
+            super().__init__()
+            self.expand_shape = expand_shape
+
+        def build(self, x):
+            return x.expand(*self.expand_shape)
+
+    expand_graph = MyGraph(expand_shape)
+    x = flow.tensor(input, dtype=flow.float32, device=device)
+    y = expand_graph(x)
+
+    squeeze_y_stride = []
+    for d, s in zip(y.shape, y.stride()):
+        if d != 1:
+            squeeze_y_stride.append(s)
+
+    squeeze_torch_y_stride = []
+    for d, s in zip(torch_y.shape, torch_y.stride()):
+        if d != 1:
+            squeeze_torch_y_stride.append(s)
+
+    if verbose:
+        print("")
+        print(f" lazy (expand op/kernel) (device={device}) ".center(50, "="))
+        print(f" {input_shape} -> {expand_shape} ".center(50, "*"))
+        print(f"x: shape={x.shape}, stride={x.stride()}")
+        print(f"y: shape={y.shape}, stride={y.stride()}")
+        print(f"torch_y: shape={torch_y.shape}, stride={torch_y.stride()}")
+        print(f"squeeze_y_stride={squeeze_y_stride}")
+        print(f"squeeze_torch_y_stride={squeeze_torch_y_stride}")
+        print(" input ".center(50, "-"))
+        print(input)
+        print(" y ".center(50, "-"))
+        print(y)
+        print(" torch_y ".center(50, "-"))
+        print(torch_y)
+
+    test_case.assertTrue(np.array_equal(squeeze_y_stride, squeeze_torch_y_stride))
+    test_case.assertTrue(np.array_equal(y.numpy(), torch_y.detach().cpu().numpy()))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -188,16 +200,6 @@ class ExpandStrideTestCase(flow.unittest.TestCase):
             input_shape, expand_shape = kwargs.pop("shapes")
             _cmp_expand_stride(self, input_shape, expand_shape, **kwargs)
 
-    def test_lazy(self):
-        arg_dict = OrderedDict()
-        arg_dict["verbose"] = [True]
-        arg_dict["device"] = ["cuda"]
-        arg_dict["shapes"] = self.test_shape_tuple_list
-        for kwargs in GenArgDict(arg_dict):
-            assert "shapes" in kwargs
-            input_shape, expand_shape = kwargs.pop("shapes")
-            _cmp_lazy_expand_stride(self, input_shape, expand_shape, **kwargs)
-
     def test_non_contiguous_stride(self):
         arg_dict = OrderedDict()
         arg_dict["verbose"] = [False]
@@ -219,6 +221,16 @@ class ExpandStrideTestCase(flow.unittest.TestCase):
             _cmp_expand_non_contiguous_stride(
                 self, input_shape, perm, expand_shape, **kwargs
             )
+
+    def test_lazy(self):
+        arg_dict = OrderedDict()
+        arg_dict["verbose"] = [True]
+        arg_dict["device"] = ["cuda"]
+        arg_dict["shapes"] = self.test_shape_tuple_list
+        for kwargs in GenArgDict(arg_dict):
+            assert "shapes" in kwargs
+            input_shape, expand_shape = kwargs.pop("shapes")
+            _cmp_lazy_expand_stride(self, input_shape, expand_shape, **kwargs)
 
 
 if __name__ == "__main__":
