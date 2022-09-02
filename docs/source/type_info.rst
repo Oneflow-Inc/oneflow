@@ -43,6 +43,8 @@ For example:
 .. code-block::
 
     >>> import oneflow as flow
+    >>> flow.finfo()
+    finfo(resolution=1e-06, min=-3.40282e+38, max=3.40282e+38, eps=1.19209e-07, tiny=1.17549e-38, dtype=oneflow.float32, bits=32)
     >>> flow.finfo(flow.float)
     finfo(resolution=1e-06, min=-3.40282e+38, max=3.40282e+38, eps=1.19209e-07, tiny=1.17549e-38, dtype=oneflow.float32, bits=32)
     >>> flow.finfo(flow.float16).bits
