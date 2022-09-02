@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/job/intra_job_mem_sharing_util.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/operator/op_attribute.pb.h"
+#include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
@@ -78,8 +79,33 @@ void PlanCompiler::Compile(Job* job, Plan* plan, std::shared_ptr<TaskGraph>& tas
   // NOTE(strint): register bind lbi and exec node bind register needs to run topologically.
   task_gph->TopoForEachNode(&TaskNode::BuildExecGphIf);
   tc->Count("Graph name: " + job_name + " TaskNode::BuildExecGraph", 1);
-  task_gph->TopoForEachNode(&TaskNode::InferRegstIf);
-  tc->Count("Graph name: " + job_name + " TaskNode::InferRegst", 1);
+  //task_gph->TopoForEachNode(&TaskNode::InferRegstIf);
+  std::vector<TaskNode*> user_task_node;
+  std::vector<TaskNode*> other_task_node;
+  task_gph->TopoForEachNode([&](TaskNode* task_node) {
+    if (task_node->op_node()) {
+      //LOG(ERROR) << " got task node " << task_node->VisualStr() << " with logical op " << task_node->op_node()->op().op_name();
+      if (dynamic_cast<const UserOp*>(&task_node->op_node()->op())) {
+        // LOG(ERROR) << " +++ got task node " << task_node->VisualStr() << " got user op " << task_node->op_node()->op().op_name();
+        user_task_node.push_back(task_node);
+      } else {
+        other_task_node.push_back(task_node);
+      }
+    } else {
+      // LOG(ERROR) << " === got task node thast is not" << task_node->VisualStr();
+      other_task_node.push_back(task_node);
+    }
+  });
+  tc->Count("Graph name: " + job_name + " TaskNode::CreateInferList", 1);
+  for (auto task_node : user_task_node) {
+    //LOG(ERROR) << " +++ got task node " << task_node->VisualStr() << " got user op " << task_node->op_node()->op().op_name();
+    task_node->InferRegstIf();
+  }
+  tc->Count("Graph name: " + job_name + " TaskNode::InferUserRegst", 1);
+  for (auto task_node : other_task_node) {
+    task_node->InferRegstIf();
+  }
+  tc->Count("Graph name: " + job_name + " TaskNode::InferOtherRegst", 1);
   task_gph->RemoveEmptyRegsts();
   tc->Count("Graph name: " + job_name + " RemoveEmptyRegsts", 1);
   task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
