@@ -24,12 +24,16 @@ from oneflow.test_utils.test_util import GenArgList
 import oneflow as flow
 import oneflow.unittest
 
+
 def _test_exponential(test_case, shape):
     from scipy.stats import kstest
+
     lambd = random(low=0).to(float)
     tensor = torch.randn(shape, dtype=torch.float32)
     tensor.exponential_(lambd=lambd)
-    pvalue = kstest(tensor.oneflow.flatten().numpy(), tensor.pytorch.flatten().numpy()).pvalue
+    pvalue = kstest(
+        tensor.oneflow.flatten().numpy(), tensor.pytorch.flatten().numpy()
+    ).pvalue
     test_case.assertTrue(pvalue > 0.05)
 
 
@@ -54,11 +58,10 @@ class TestExponential(flow.unittest.TestCase):
         arg_dict["shape"] = [(20, 30), (20, 30, 40), (20, 30, 40, 50)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-    
+
     def test_exponential_with_generator(test_case):
         for shape in [(2, 3), (2, 3, 4), (2, 3, 4, 5)]:
             _test_exponential_with_generator(test_case, shape)
-
 
 
 if __name__ == "__main__":
