@@ -21,7 +21,7 @@ namespace oneflow {
 /* static */ Maybe<void> CastToStaticShapeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   user_op::TensorDesc* output_desc = ctx->MutOutputTensorDesc("output", 0);
-  *output_desc->mut_shape() = input_desc.shape();
+  output_desc->set_shape(input_desc.shape());
   output_desc->set_is_dynamic(false);
   return Maybe<void>::Ok();
 }
@@ -46,7 +46,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CastToStaticShapeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("output", 0) = ctx->InputDType("input", 0);
+  ctx->SetOutputDType("output", 0, ctx->InputDType("input", 0));
   return Maybe<void>::Ok();
 }
 
