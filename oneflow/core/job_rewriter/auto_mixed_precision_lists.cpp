@@ -47,7 +47,7 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "fused_cross_feature_interaction",
                                "fused_cross_feature_interaction_v1_grad",
                                "fused_cross_feature_interaction_v2_grad",
-                               "wkv"
+                               "wkv",
                                "wkv_grad"};
   return white_list;
 }
