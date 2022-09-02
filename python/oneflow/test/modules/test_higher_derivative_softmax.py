@@ -38,7 +38,7 @@ def _test_softmax_grad_grad_impl(test_case, op_name):
 
     for dim in range(ndim):
         x = data.detach().clone().requires_grad_()
-        m = eval(f'torch.nn.{op_name}')(dim)
+        m = eval(f"torch.nn.{op_name}")(dim)
         y = m(x)
         _assert_true(test_case, y.pytorch, y.oneflow)
 
@@ -48,21 +48,21 @@ def _test_softmax_grad_grad_impl(test_case, op_name):
 
         dx = torch.autograd.grad(y, x, init_grad_y, True, True)[0]
         _assert_true(test_case, dx.pytorch, dx.oneflow)
-        
+
         ddx_ddy = torch.autograd.grad(dx, [x, init_grad_y], init_grad_x)
         ddx, ddy = ddx_ddy[0], ddx_ddy[1]
         _assert_true(test_case, ddx.pytorch, ddx.oneflow)
         _assert_true(test_case, ddy.pytorch, ddy.oneflow)
 
 
-
 @flow.unittest.skip_unless_1n1d()
 class TestSoftmaxHigherDerivative(flow.unittest.TestCase):
     def test_softmax_grad_grad(test_case):
-        _test_softmax_grad_grad_impl(test_case, op_name='Softmax')
+        _test_softmax_grad_grad_impl(test_case, op_name="Softmax")
 
     def test_logsoftmax_grad_grad(test_case):
-        _test_softmax_grad_grad_impl(test_case, op_name='LogSoftmax')
+        _test_softmax_grad_grad_impl(test_case, op_name="LogSoftmax")
+
 
 if __name__ == "__main__":
     unittest.main()

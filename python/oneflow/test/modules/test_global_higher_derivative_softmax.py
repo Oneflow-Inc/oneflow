@@ -37,23 +37,31 @@ def _test_global_softmax_grad_grad_impl(test_case, op_name, placement, sbp):
     data = random_tensor(ndim=ndim, dim0=8, dim1=8)
 
     for dim in range(ndim):
-        x = data.detach().clone().requires_grad_().to_global(placement=placement, sbp=sbp)
-        m = eval(f'torch.nn.{op_name}')(dim)
+        x = (
+            data.detach()
+            .clone()
+            .requires_grad_()
+            .to_global(placement=placement, sbp=sbp)
+        )
+        m = eval(f"torch.nn.{op_name}")(dim)
         y = m(x)
         _assert_true(test_case, y.pytorch, y.oneflow)
 
         x_shape = x.oneflow.shape
-        init_grad_x = random_tensor(len(x_shape), *x_shape).to_global(placement=placement, sbp=sbp)
-        init_grad_y = random_tensor(len(x_shape), *x_shape).to_global(placement=placement, sbp=sbp)
+        init_grad_x = random_tensor(len(x_shape), *x_shape).to_global(
+            placement=placement, sbp=sbp
+        )
+        init_grad_y = random_tensor(len(x_shape), *x_shape).to_global(
+            placement=placement, sbp=sbp
+        )
 
         dx = torch.autograd.grad(y, x, init_grad_y, True, True)[0]
         _assert_true(test_case, dx.pytorch, dx.oneflow)
-        
+
         ddx_ddy = torch.autograd.grad(dx, [x, init_grad_y], init_grad_x)
         ddx, ddy = ddx_ddy[0], ddx_ddy[1]
         _assert_true(test_case, ddx.pytorch, ddx.oneflow)
         _assert_true(test_case, ddy.pytorch, ddy.oneflow)
-
 
 
 class TestGlobalSoftmaxHigherDerivative(flow.unittest.TestCase):
@@ -61,13 +69,18 @@ class TestGlobalSoftmaxHigherDerivative(flow.unittest.TestCase):
     def test_global_softmax_grad_grad(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
-                _test_global_softmax_grad_grad_impl(test_case, op_name='Softmax', placement=placement, sbp=sbp)
+                _test_global_softmax_grad_grad_impl(
+                    test_case, op_name="Softmax", placement=placement, sbp=sbp
+                )
 
     @globaltest
     def test_global_logsoftmax_grad_grad(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
-                _test_global_softmax_grad_grad_impl(test_case, op_name='LogSoftmax', placement=placement, sbp=sbp)
+                _test_global_softmax_grad_grad_impl(
+                    test_case, op_name="LogSoftmax", placement=placement, sbp=sbp
+                )
+
 
 if __name__ == "__main__":
     unittest.main()
