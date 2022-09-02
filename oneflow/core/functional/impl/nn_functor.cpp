@@ -3628,6 +3628,10 @@ class OneEmbeddingUniqueKeyValuePairFunctor {
 class OneEmbeddingSgdUpdateFunctor {
  public:
   OneEmbeddingSgdUpdateFunctor() {
+    // This functor is only used in one_embedding eager mode with lr passed by attr and no optional
+    // input, we also define functor with all optional input just for unittest. when the optional
+    // input learning_rate tensor has passed in, we think all optional input are not None and check
+    // them.
     sgd_no_optional_input_op_ = CHECK_JUST(one::OpBuilder("sgd_embedding_update")
                                                .Input("num_unique_ids")
                                                .Input("unique_embeddings")
@@ -3722,6 +3726,10 @@ class OneEmbeddingSgdUpdateFunctor {
 class OneEmbeddingAdamUpdateFunctor {
  public:
   OneEmbeddingAdamUpdateFunctor() {
+    // This functor is only used in one_embedding eager mode with lr passed by attr and no optional
+    // input, we also define functor with all optional input just for unittest. when the optional
+    // input learning_rate tensor has passed in, we think all optional input are not None and check
+    // them.
     no_optional_input_op_ = CHECK_JUST(one::OpBuilder("adam_embedding_update")
                                            .Input("num_unique_ids")
                                            .Input("unique_embeddings")
@@ -3807,6 +3815,10 @@ class OneEmbeddingAdamUpdateFunctor {
 class OneEmbeddingAdagradUpdateFunctor {
  public:
   OneEmbeddingAdagradUpdateFunctor() {
+    // This functor is only used in one_embedding eager mode with lr passed by attr and no optional
+    // input, we also define functor with all optional input just for unittest. when the optional
+    // input learning_rate tensor has passed in, we think all optional input are not None and check
+    // them.
     op_no_optional_input_ = CHECK_JUST(one::OpBuilder("adagrad_embedding_update")
                                            .Input("num_unique_ids")
                                            .Input("unique_embeddings")
@@ -3868,6 +3880,10 @@ class OneEmbeddingAdagradUpdateFunctor {
 class OneEmbeddingFtrlUpdateFunctor {
  public:
   OneEmbeddingFtrlUpdateFunctor() {
+    // This functor is only used in one_embedding eager mode with lr passed by attr and no optional
+    // input, we also define functor with all optional input just for unittest. when the optional
+    // input learning_rate tensor has passed in, we think all optional input are not None and check
+    // them.
     op_no_optional_input_ = CHECK_JUST(one::OpBuilder("ftrl_embedding_update")
                                            .Input("num_unique_ids")
                                            .Input("unique_embeddings")

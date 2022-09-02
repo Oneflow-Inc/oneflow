@@ -54,6 +54,11 @@ def compare_with_numpy_sgd(
 
     init_value = np.random.uniform(size=(num_rows, line_size)).astype(np.float32)
 
+    """
+    In OneFlow's optimizer, learning_rate is passed by attr in eager mode, and passed by tensor in lazy mode.
+    in this test, if use_optional_tensor is True, we also pass lr_tensor/down_scale_by_tensor/skip_if tensor for unittest.
+    if use_optional_tensor is False, we only pass lr by attr, and not have down_scale_by_tensor/skip_if, so mul down_scale_by to scale and skip skip_if's test.
+    """
     down_scale_by = 10
     if use_optional_tensor:
         scale_val = scale
