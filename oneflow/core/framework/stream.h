@@ -34,7 +34,7 @@ class Stream final {
 
   bool operator==(const Stream& that) const {
     return this->device() == that.device() && this->stream_type() == that.stream_type()
-           && this->thread_uid() == that.thread_uid() && this->comm_id() == that.comm_id();
+           && this->thread_uid() == that.thread_uid();
   }
   bool operator!=(const Stream& that) const { return !(*this == that); }
 
@@ -42,37 +42,27 @@ class Stream final {
     return New(device, stream_type, kDefaultStreamThreadUid);
   }
   static Maybe<Symbol<Stream>> New(Symbol<Device> device, StreamType stream_type,
-                                   size_t thread_uid) {
-    return New(
-        device, stream_type, thread_uid,
-        IsCommNetStream::Visit(stream_type) ? Optional<int64_t>(kDefaultStreamCommId) : NullOpt);
-  }
-  static Maybe<Symbol<Stream>> New(Symbol<Device> device, StreamType stream_type, size_t thread_uid,
-                                   const Optional<int64_t>& comm_id);
+                                   size_t thread_uid);
 
   Symbol<Device> device() const { return device_; }
   StreamType stream_type() const { return stream_type_; }
   size_t thread_uid() const { return thread_uid_; }
-  const Optional<int64_t>& comm_id() const { return comm_id_; }
   size_t unique_stream_id() const { return unique_stream_id_; }
 
   static size_t kDefaultStreamThreadUid;
-  static size_t kDefaultStreamCommId;
   static size_t kTmpStreamThreadUid;
 
  private:
-  Stream(Symbol<Device> device, StreamType stream_type, size_t thread_uid,
-         const Optional<int64_t>& comm_id);
+  Stream(Symbol<Device> device, StreamType stream_type, size_t thread_uid);
 
   static Maybe<Symbol<Stream>> RawNew(Symbol<Device> device, StreamType stream_type,
-                                      size_t thread_uid, const Optional<int64_t>& comm_id);
+                                      size_t thread_uid);
 
   Maybe<void> Init(size_t unique_stream_id);
 
   Symbol<Device> device_;
   StreamType stream_type_;
   size_t thread_uid_;
-  Optional<int64_t> comm_id_;
   size_t unique_stream_id_;
 };
 

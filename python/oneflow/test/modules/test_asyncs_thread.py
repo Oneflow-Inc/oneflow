@@ -35,9 +35,9 @@ class TestLocalThread(flow.unittest.TestCase):
 class TestGlobalThread(flow.unittest.TestCase):
     def test_cpu_stream(test_case):
         threads = [flow.asyncs.Thread() for i in range(7)]
-        thread_and_comm_ids = [(threads[i % 7], i % 4) for i in range(10)]
-        for thread, comm_id in thread_and_comm_ids:
-            with flow.asyncs.thread(thread, comm_id):
+        iter_and_threads = [(i, threads[i % 7]) for i in range(30)]
+        for i, thread in iter_and_threads:
+            with flow.asyncs.thread(thread):
                 placement = flow.placement("cpu", [0, 1])
                 tensor = flow.ones(2, placement=placement, sbp=flow.sbp.split(0))
                 test_case.assertEqual(tensor[0], 1)
@@ -46,12 +46,12 @@ class TestGlobalThread(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cuda_stream(test_case):
         threads = [flow.asyncs.Thread() for i in range(7)]
-        iter_and_thread_and_comm_ids = [(i, threads[i % 7], i % 4) for i in range(200)]
+        iter_and_threads = [(i, threads[i % 7]) for i in range(200)]
         tensors = []
         dim = 0
-        for i, thread, comm_id in iter_and_thread_and_comm_ids:
+        for i, thread in iter_and_threads:
             dim += 1
-            with flow.asyncs.thread(thread, comm_id):
+            with flow.asyncs.thread(thread):
                 placement = flow.placement("cuda", [0, 1])
                 ones = flow.ones(2 * dim, placement=placement, sbp=flow.sbp.split(0))
                 tensors.append(ones.to_global(sbp=flow.sbp.broadcast) + i)

@@ -37,15 +37,8 @@ class StreamConverter final {
     auto* map = stream_set_->mut_device_stream_type2stream();
     const auto& iter = map->find(key);
     if (iter != map->end()) { return iter->second; }
-    Symbol<Stream> ret;
-    if (IsCommNetStream::Visit(stream->stream_type())) {
-      size_t thread_uid = stream_set_->worker_thread_id();
-      int64_t comm_id = stream_set_->comm_id();
-      ret = JUST(Stream::New(stream->device(), stream->stream_type(), thread_uid, comm_id));
-    } else {
-      size_t thread_uid = stream_set_->worker_thread_id();
-      ret = JUST(Stream::New(stream->device(), stream->stream_type(), thread_uid));
-    }
+    size_t thread_uid = stream_set_->worker_thread_id();
+    Symbol<Stream> ret = JUST(Stream::New(stream->device(), stream->stream_type(), thread_uid));
     CHECK_OR_RETURN(map->emplace(key, ret).second) << "illegal memory access";
     return ret;
   }

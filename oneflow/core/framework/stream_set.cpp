@@ -24,19 +24,12 @@ limitations under the License.
 
 namespace oneflow {
 
-StreamSet::StreamSet(int64_t worker_thread_id, int64_t comm_id)
-    : worker_thread_id_(worker_thread_id), comm_id_(comm_id) {}
+StreamSet::StreamSet(int64_t worker_thread_id) : worker_thread_id_(worker_thread_id) {}
 
 StreamSet::~StreamSet() {}
 
-/*static*/ Maybe<StreamSet> StreamSet::New(int64_t worker_thread_id, int64_t comm_id) {
-  std::shared_ptr<StreamSet> stream_set(new StreamSet(worker_thread_id, comm_id));
-  constexpr int kCommIdLimit = 4;
-  CHECK_GE_OR_RETURN(comm_id, 0) << "comm_id should be in range [0, " << kCommIdLimit << ")";
-  CHECK_LT_OR_RETURN(comm_id, kCommIdLimit)
-      << "comm_id should be in range [0, " << kCommIdLimit << ")";
-  JUST(CheckWorkerThreadThreadGlobalId(comm_id));
-  return stream_set;
+/*static*/ Maybe<StreamSet> StreamSet::New(int64_t worker_thread_id) {
+  return std::shared_ptr<StreamSet>(new StreamSet(worker_thread_id));
 }
 
 }  // namespace oneflow

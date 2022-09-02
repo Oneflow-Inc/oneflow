@@ -86,7 +86,7 @@ VirtualMachine::VirtualMachine() : disable_vm_threads_(false), scheduler_stopped
   std::function<void()> SchedulerInitializer;
   GetSchedulerThreadInitializer(&SchedulerInitializer);
   schedule_thread_ = std::thread(&VirtualMachine::ScheduleLoop, this, SchedulerInitializer);
-  for (auto& pair : comm_id2transport_dependence_) { pair.second.Reset(); }
+  transport_dependence_.Reset();
 }
 
 namespace {
@@ -342,12 +342,10 @@ intrusive::shared_ptr<vm::Dependence> VirtualMachine::FindOrCreateScheduleDepend
   return *ptr;
 }
 
-intrusive::shared_ptr<vm::Dependence> VirtualMachine::FindOrCreateTransportLocalDepObject(
-    int64_t comm_id) {
+intrusive::shared_ptr<vm::Dependence> VirtualMachine::FindOrCreateTransportLocalDepObject() {
   std::unique_lock<std::recursive_mutex> lock(stream_and_thread_ctx_mutex_);
-  auto* transport_dependence = &comm_id2transport_dependence_[comm_id];
-  if (!*transport_dependence) { *transport_dependence = intrusive::make_shared<vm::Dependence>(); }
-  return *transport_dependence;
+  if (!transport_dependence_) { transport_dependence_ = intrusive::make_shared<vm::Dependence>(); }
+  return transport_dependence_;
 }
 
 Maybe<vm::Stream*> VirtualMachine::CreateStream(Symbol<Stream> stream) {
@@ -436,14 +434,11 @@ Maybe<vm::Stream*> VirtualMachine::CreateStream(vm::ThreadCtx* thread_ctx, Symbo
       FindOrCreateScheduleDependence(stream);
   std::vector<intrusive::shared_ptr<vm::Dependence>> transport_dependences{};
   if (IsCommNetStream::Visit(stream->stream_type())) {
-    // Sequentalizes all communication collective op within the same worker thread.
-    transport_dependences.push_back(thread_ctx->transport_dependence());
-    // Sequentalizes all communication collective op with the same comm_id.
-    transport_dependences.push_back(FindOrCreateTransportLocalDepObject(JUST(stream->comm_id())));
+    transport_dependences.push_back(FindOrCreateTransportLocalDepObject());
   }
-  auto vm_stream = intrusive::make_shared<vm::Stream>(thread_ctx, stream->device(),
-                                                      stream->stream_type(), schedule_dependence,
-                                                      transport_dependences, stream->comm_id());
+  auto vm_stream =
+      intrusive::make_shared<vm::Stream>(thread_ctx, stream->device(), stream->stream_type(),
+                                         schedule_dependence, transport_dependences);
 
   auto bc = std::make_shared<BlockingCounter>(1);
   engine_->InsertProbe([&vm_stream, thread_ctx, bc](vm::VirtualMachineEngine* engine) {

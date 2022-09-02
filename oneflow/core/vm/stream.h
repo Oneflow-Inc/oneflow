@@ -58,8 +58,7 @@ class Stream final : public intrusive::Base {
   // methods
   void __Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamType stream_type,
                 const intrusive::shared_ptr<Dependence>& schedule_local_dep_object,
-                const std::vector<intrusive::shared_ptr<Dependence>>& transport_dependences,
-                const Optional<int64_t>& comm_id);
+                const std::vector<intrusive::shared_ptr<Dependence>>& transport_dependences);
   int64_t device_id() const;
   Symbol<Device> device() const { return device_; }
   StreamType stream_type() const { return stream_type_; }
@@ -72,8 +71,6 @@ class Stream final : public intrusive::Base {
   const std::vector<intrusive::shared_ptr<Dependence>>& transport_dependences() const {
     return transport_dependences_;
   }
-
-  const Optional<int64_t>& comm_id() const { return comm_id_; }
 
  private:
   void MoveToFreeList(intrusive::shared_ptr<Instruction>&& instruction);
@@ -104,7 +101,6 @@ class Stream final : public intrusive::Base {
 
   intrusive::shared_ptr<Dependence> schedule_local_dep_object_;
   std::vector<intrusive::shared_ptr<Dependence>> transport_dependences_;
-  Optional<int64_t> comm_id_;
 
  public:
   // list hooks

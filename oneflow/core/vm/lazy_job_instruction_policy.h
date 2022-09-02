@@ -75,7 +75,7 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
       DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
     }
     DoEach(CHECK_JUST(SingletonMaybe<VirtualMachine>())
-               ->FindOrCreateTransportLocalDepObject(oneflow::Stream::kDefaultStreamCommId)
+               ->FindOrCreateTransportLocalDepObject()
                .Mutable());
   }
 

@@ -37,7 +37,7 @@ class VirtualMachine final {
 
   static std::function<Maybe<bool>()> GetPredicatorNoMoreInstructionsFinished();
 
-  intrusive::shared_ptr<vm::Dependence> FindOrCreateTransportLocalDepObject(int64_t comm_id);
+  intrusive::shared_ptr<vm::Dependence> FindOrCreateTransportLocalDepObject();
 
   std::string GetBlockingDebugString();
 
@@ -90,7 +90,7 @@ class VirtualMachine final {
   HashMap<std::pair<DeviceType, StreamType>, vm::ThreadCtx*>
       devcie_type_stream_type_2independent_thread_ctx_;
   HashMap<Symbol<Stream>, intrusive::shared_ptr<vm::Dependence>> stream2dependence_;
-  HashMap<int64_t, intrusive::shared_ptr<vm::Dependence>> comm_id2transport_dependence_;
+  intrusive::shared_ptr<vm::Dependence> transport_dependence_;
   SteadyVector<vm::Stream*> unique_stream_id2vm_stream_;
 
   std::thread schedule_thread_;

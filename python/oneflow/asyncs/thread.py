@@ -26,9 +26,6 @@ class thread:
 
     Args:
         worker_thread: a worker thread create with oneflow.asyncs.Thread. 
-        comm_id: a communicator id in range [0, 4) for sequentializing communication collective ops.
-            Communication collective ops are sequentialized by comm_id across worker thread.
-            By default, comm_id=0 means all communication collective ops are sequentialized.
 
     For example:
 
@@ -41,8 +38,8 @@ class thread:
                 [1., 1.]], dtype=oneflow.float32)
     """
 
-    def __init__(self, worker_thread: int = 1, comm_id=0):
-        self.stream_set_ = oneflow._oneflow_internal.StreamSet(worker_thread, comm_id)
+    def __init__(self, worker_thread: Thread):
+        self.stream_set_ = oneflow._oneflow_internal.StreamSet(worker_thread)
 
     def __enter__(self):
         self.guard_ = oneflow._oneflow_internal.StreamGuard(self.stream_set_)
