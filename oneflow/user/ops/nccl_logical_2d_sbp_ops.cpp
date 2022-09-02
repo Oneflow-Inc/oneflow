@@ -60,7 +60,7 @@ namespace oneflow {
 
 /* static */ Maybe<Symbol<Stream>> _ncclLogical_2DSameDim0AllReduceOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 /* static */ Maybe<void> _ncclLogical_2DSameDim1AllReduceOp::InferLogicalTensorDesc(
@@ -102,7 +102,7 @@ namespace oneflow {
 
 /* static */ Maybe<Symbol<Stream>> _ncclLogical_2DSameDim1AllReduceOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 /* static */ Maybe<void> _ncclLogical_2DSameDim0AllGatherOp::InferLogicalTensorDesc(
@@ -145,7 +145,7 @@ namespace oneflow {
 
 /* static */ Maybe<Symbol<Stream>> _ncclLogical_2DSameDim0AllGatherOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 /* static */ Maybe<void> _ncclLogical_2DSameDim0AllGatherNoncontinuousOp::InferLogicalTensorDesc(
@@ -190,7 +190,7 @@ namespace oneflow {
 /* static */ Maybe<Symbol<Stream>>
 _ncclLogical_2DSameDim0AllGatherNoncontinuousOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 /* static */ Maybe<void> _ncclLogical_2DSameDim0All2allOp::InferLogicalTensorDesc(
@@ -232,7 +232,7 @@ _ncclLogical_2DSameDim0AllGatherNoncontinuousOp::InferDeviceAndStream(
 
 /* static */ Maybe<Symbol<Stream>> _ncclLogical_2DSameDim0All2allOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 }  // namespace oneflow
