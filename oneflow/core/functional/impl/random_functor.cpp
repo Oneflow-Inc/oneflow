@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <memory>
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
@@ -86,6 +87,67 @@ class BernoulliProbFunctor {
  private:
   std::shared_ptr<OpExpr> bernoulli_op_;
 };
+
+class ExponentialFunctor {
+ public:
+  ExponentialFunctor() {
+    exponential_op = CHECK_JUST(one::OpBuilder("exponential").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& lambd,
+                           const Symbol<DType>& dtype, const Optional<one::Generator>& generator,
+                           bool inplace) const {
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    auto& exponential_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "seed", "lambda");
+    CHECK_GE_OR_THROW(lambd, 0) << "exponential expects lambd be >= 0, but got lambd=" << lambd;
+    exponential_attrs.SetAllAttrs(dtype->data_type(), static_cast<int64_t>(gen->current_seed()),
+                                  lambd);
+    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    // if (inplace) {
+    //   JUST(CheckInplaceValid(x));
+    //   std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    //   outputs->at(0) = x;
+    //   JUST(OpInterpUtil::Dispatch(*exponential_op, {x}, outputs.get(),
+    //                               OpExprInterpContext(exponential_attrs, distribution_state)));
+    //   return outputs->at(0);
+    // }
+    return OpInterpUtil::Dispatch<Tensor>(
+        *exponential_op, {x}, OpExprInterpContext(exponential_attrs, distribution_state));
+  }
+
+ private:
+  std::shared_ptr<OpExpr> exponential_op;
+};
+
+class ExponentialInplaceFunctor {
+ public:
+  ExponentialInplaceFunctor() {
+    exponential_op = CHECK_JUST(one::OpBuilder("exponential").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& lambd,
+                           const Symbol<DType>& dtype, const Optional<one::Generator>& generator) const {
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    auto& exponential_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "seed", "lambda");
+    CHECK_GE_OR_THROW(lambd, 0) << "exponential expects lambd be >= 0, but got lambd=" << lambd;
+    exponential_attrs.SetAllAttrs(dtype->data_type(), static_cast<int64_t>(gen->current_seed()),
+                                  lambd);
+    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    JUST(CheckInplaceValid(x));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    JUST(OpInterpUtil::Dispatch(*exponential_op, {x}, outputs.get(),
+                                OpExprInterpContext(exponential_attrs, distribution_state)));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> exponential_op;
+};
+// class ExponentialInplaceFunctor {
+//   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& lambd,
+//                            const Symbol<DType>& dtype, const Optional<one::Generator>& generator) const {
+//     return ExponentialFunctor()(x, lambd, dtype, generator, /*inplace=*/true);
+//   }
+// };
 
 class RandFunctor {
  public:
@@ -434,6 +496,8 @@ using namespace impl;
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<BernoulliFunctor>("Bernoulli");
   m.add_functor<BernoulliProbFunctor>("BernoulliProb");
+  m.add_functor<ExponentialFunctor>("Exponential");
+  m.add_functor<ExponentialInplaceFunctor>("ExponentialInplace");
   m.add_functor<RandPermFunctor>("RandPerm");
   m.add_functor<GlobalRandPermFunctor>("GlobalRandPerm");
   m.add_functor<RandFunctor>("Rand");
