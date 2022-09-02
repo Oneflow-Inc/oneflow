@@ -224,7 +224,7 @@ class ExpandStrideTestCase(flow.unittest.TestCase):
 
     def test_lazy(self):
         arg_dict = OrderedDict()
-        arg_dict["verbose"] = [True]
+        arg_dict["verbose"] = [False]
         arg_dict["device"] = ["cuda"]
         arg_dict["shapes"] = self.test_shape_tuple_list
         for kwargs in GenArgDict(arg_dict):

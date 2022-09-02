@@ -40,7 +40,9 @@ Maybe<void> InferExpandOutputStride(const Shape& input_shape, const Stride& inpu
       CHECK_EQ_OR_RETURN(dim, 1);  // NOLINT(maybe-need-error-msg)
     }
   }
-
+  // NOTE: expand op only can output contiguous stride,
+  // because lazy don't support to_contiguous op for now
+  *output_stride = Stride(expand_shape);
   return Maybe<void>::Ok();
 }
 
@@ -55,7 +57,7 @@ Maybe<void> InferExpandOutputStride(const Shape& input_shape, const Stride& inpu
 
   Stride output_stride;
   JUST(InferExpandOutputStride(input_shape, input_stride, expand_shape, &output_stride));
-  // ctx->SetOutputStride("out", 0, output_stride);
+  ctx->SetOutputStride("out", 0, output_stride);
   return Maybe<void>::Ok();
 }
 
@@ -74,7 +76,7 @@ Maybe<void> InferExpandOutputStride(const Shape& input_shape, const Stride& inpu
 
   Stride output_stride;
   JUST(InferExpandOutputStride(input_shape, input_stride, local_expand_shape, &output_stride));
-  // ctx->SetOutputStride("out", 0, output_stride);
+  ctx->SetOutputStride("out", 0, output_stride);
   return Maybe<void>::Ok();
 }
 
