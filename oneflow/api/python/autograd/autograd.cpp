@@ -16,9 +16,11 @@ limitations under the License.
 
 #include <pybind11/pybind11.h>
 #include <memory>
+#include <utility>
 #include <vector>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/tensor.h"
@@ -28,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/framework/saved_tensor_hooks.h"
 
 namespace oneflow {
 namespace autograd {
@@ -110,9 +113,80 @@ Maybe<one::TensorTuple> Grad(const one::TensorTuple& outputs, const one::TensorT
       outputs, inputs, *gradients, retain_graph, create_graph);
 }
 
+namespace py = pybind11;
+
+class PySavedTensorHook final : public one::SavedTensorHook {
+ public:
+  PySavedTensorHook(const py::function& pack_hook, const py::function& unpack_hook)
+      : pack_hook_(pack_hook), unpack_hook_(unpack_hook) {}
+
+  void pack(const std::shared_ptr<one::Tensor>& tensor) {
+    py::gil_scoped_acquire acquire;
+    py::object packed = pack_hook_(tensor);
+    data_ = packed.release().ptr();
+  }
+  std::shared_ptr<one::Tensor> unpack() {
+    py::gil_scoped_acquire acquire;
+    py::object obj = py::cast<py::object>(data_);
+    py::object x = unpack_hook_(obj);
+    std::shared_ptr<one::Tensor> tensor;
+    try {
+      tensor = py::cast<std::shared_ptr<one::Tensor>>(x);
+    } catch (const py::cast_error& e) {
+      THROW(RuntimeError) << "unpack_hook should return a Tensor, but got `"
+                          << py::str(x.get_type()).cast<std::string>() << "` instead";
+    }
+    return tensor;
+  }
+
+ private:
+  PyObject* data_ = nullptr;
+  py::function pack_hook_;
+  py::function unpack_hook_;
+};
+
+class PySavedTensorHookCreator final : public one::SavedTensorHookCreator {
+ public:
+  std::unique_ptr<one::SavedTensorHook> new_saved_tensor_hook() const override {
+    if (hooks_.empty()) { return nullptr; }
+    return std::make_unique<PySavedTensorHook>(hooks_.back().first, hooks_.back().second);
+  }
+  void append_new_hooks(const py::function& pack_hook, const py::function& unpack_hook) {
+    hooks_.emplace_back(pack_hook, unpack_hook);
+  }
+  void pop_hooks() {
+    CHECK_OR_THROW(!hooks_.empty()) << "pop_hooks should not be called when there are no hooks";
+    hooks_.pop_back();
+  }
+
+ private:
+  small_vector<std::pair<py::function, py::function>, 1> hooks_;
+};
+
 ONEFLOW_API_PYBIND11_MODULE("autograd", m) {
   m.def("backward", &Backward);
   m.def("grad", &Grad);
+  m.def_submodule("graph")
+      .def("register_saved_tensors_hook_manager",
+           []() {
+             Singleton<one::SavedTensorHookCreator>::SetAllocated(new PySavedTensorHookCreator());
+           })
+      .def("append_new_hooks",
+           [](const py::function& pack_hook, const py::function& unpack_hook) {
+             PySavedTensorHookCreator* creator = dynamic_cast<PySavedTensorHookCreator*>(
+                 Singleton<one::SavedTensorHookCreator>::Get());
+             CHECK_NOTNULL_OR_THROW(creator)
+                 << "`register_saved_tensors_hook_manager` should be called "
+                    "before calling `append_new_hooks`";
+             creator->append_new_hooks(pack_hook, unpack_hook);
+           })
+      .def("pop_hooks", []() {
+        PySavedTensorHookCreator* creator =
+            dynamic_cast<PySavedTensorHookCreator*>(Singleton<one::SavedTensorHookCreator>::Get());
+        CHECK_NOTNULL_OR_THROW(creator) << "`register_saved_tensors_hook_manager` should be called "
+                                           "before calling `pop_hooks`";
+        creator->pop_hooks();
+      });
 }
 
 }  // namespace autograd
