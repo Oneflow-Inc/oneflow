@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/stream_is_comm_net_stream.h"
 
 namespace oneflow {
 

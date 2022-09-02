@@ -26,7 +26,7 @@ namespace {
 
 class UsingThreadUidSet final {
  public:
-  explicit UsingThreadUidSet() {
+  UsingThreadUidSet() {
     using_thread_uids_.insert(Stream::kDefaultStreamThreadUid);
     using_thread_uids_.insert(Stream::kTmpStreamThreadUid);
     thread_limits_ =

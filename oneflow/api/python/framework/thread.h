@@ -17,13 +17,13 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_FRAMEWORK_THREAD_H_
 
 #include "oneflow/core/framework/stream.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
 class AsyncThread final {
  public:
-  AsyncThread(const AsyncThread&) = delete;
-  AsyncThread(AsyncThread&&) = delete;
+  OF_DISALLOW_COPY_AND_MOVE(AsyncThread);
   ~AsyncThread();
 
   static Maybe<AsyncThread> New();
