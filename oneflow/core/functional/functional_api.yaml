@@ -813,12 +813,12 @@
   bind_python: True
 
 - name: "exponential"
-  signature: "Tensor (Tensor input, Double lambd=1, *, DataType dtype=kFloat, Generator generator=None) => Exponential"
+  signature: "Tensor (Tensor input, Double lambd=1, *, DataType dtype=kFloat, Generator generator=None, Bool inplace=False) => Exponential"
   bind_python: True
 
 - name: "exponential_"
   signature: "Tensor (Tensor input, Double lambd=1, *, DataType dtype=kFloat, Generator generator=None) => ExponentialInplace"
-  bind_python: False
+  bind_python: True
 
 - name: "concat"
   signature: "Tensor (TensorTuple inputs, Int64 dim=0) => Concat"
