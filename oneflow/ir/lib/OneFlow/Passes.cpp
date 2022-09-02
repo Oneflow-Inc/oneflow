@@ -17,6 +17,7 @@ limitations under the License.
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/SymbolTable.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
 #include "oneflow/core/operator/variable_op.h"
@@ -180,7 +181,51 @@ func::FuncOp DeclareKernelLaunchWrapInterface(::mlir::PatternRewriter& rewriter,
   return func;
 }
 
-func::FuncOp GetOrInsertKernelFuncOp(::mlir::PatternRewriter& rewriter, Operation* op) {
+ModuleOp GetModuleOpFromJobBodyOp(Operation* op) {
+  auto loc = op->getLoc();
+  auto parent_func_op = op->getParentOfType<oneflow::Job>();
+  if (!parent_func_op) { return nullptr; }
+  auto parent_module_op = parent_func_op->getParentOfType<ModuleOp>();
+  if (!parent_module_op) { return nullptr; }
+  return parent_module_op;
+}
+
+func::FuncOp GetOrInsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operation* op) {
+  func::FuncOp func;
+  auto loc = op->getLoc();
+  auto module = GetModuleOpFromJobBodyOp(op);
+  if (!module) {
+    emitError(loc) << "null ModuleOp " << *op;
+    return nullptr;
+  }
+
+  BlockAndValueMapping mapping;
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPointToStart(module.getBody());
+
+  auto func_name = op->getAttr("op_name").cast<StringAttr>().strref();
+  auto func_type =
+      rewriter.getFunctionType(TypeRange(op->getOperandTypes()), TypeRange(op->getResultTypes()));
+  func = rewriter.create<func::FuncOp>(loc, func_name, func_type);
+  func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
+  func.getBody().emplaceBlock();
+  for (auto& arg : func_type.getInputs()) { func.getBody().addArguments(arg, loc); }
+  for (auto argument_pair :
+       llvm::zip(ValueRange(op->getOperands()), func.getBody().getArguments())) {
+    mapping.map(std::get<0>(argument_pair), std::get<1>(argument_pair));
+  }
+  rewriter.setInsertionPointToStart(&func.getBody().front());
+  ImplicitLocOpBuilder nb(loc, rewriter);
+  nb.clone(*op, mapping);
+  SmallVector<::mlir::Value, 4> mapped_results;
+  for (auto result : ValueRange(op->getResults())) {
+    mapped_results.push_back(mapping.lookup(result));
+  }
+  rewriter.create<func::ReturnOp>(loc, mapped_results);
+  return func;
+}
+
+func::FuncOp GetOrInsertKernelLLVMFuncOp(::mlir::PatternRewriter& rewriter, Operation* op) {
   auto loc = op->getLoc();
   StringRef c_api_callee = "kernel_launch";
   auto parent_func_op = op->getParentOfType<oneflow::Job>();
@@ -198,8 +243,8 @@ func::FuncOp GetOrInsertKernelFuncOp(::mlir::PatternRewriter& rewriter, Operatio
 
   auto func_type = rewriter.getFunctionType(op->getOperandTypes(), op->getResultTypes());
   auto func = DeclareKernelLaunchWrapInterface(rewriter, loc, &parent_module_op,
-                                               op->getAttr("op_name").cast<StringAttr>(),
-                                               func_type, c_api_func, op);
+                                               op->getAttr("op_name").cast<StringAttr>(), func_type,
+                                               c_api_func, op);
 
   return func;
 }
@@ -928,7 +973,7 @@ struct KernelLaunchWithLLVMPattern : public mlir::OpRewritePattern<KernelLaunchO
     } else {
       op->setAttr(attr_flag, rewriter.getStringAttr("true"));
     }
-    auto function = GetOrInsertKernelFuncOp(rewriter, op);
+    auto function = GetOrInsertKernelLLVMFuncOp(rewriter, op);
     op->setAttr("callee", SymbolRefAttr::get(function));
 
     if (failed(DumpAssembly(rewriter, op))) { exit(1); }
@@ -948,18 +993,16 @@ struct KernelLaunchPattern : public RewritePattern {
         InputOp::getOperationName(),
         VariableOp::getOperationName(),
     };
-    if (std::count(white_list.begin(), white_list.end(), op_name) || !op->getAttr("op_name")) {
+    if (std::count(white_list.begin(), white_list.end(), op_name) || !op->getAttr("op_name")
+        || !GetModuleOpFromJobBodyOp(op)) {
       return success();
     }
 
     ValueRange in = op->getOperands();
-    TypeRange out = op->getResultTypes();
     NamedAttrList attrs = op->getAttrs();
-    auto new_op = rewriter.replaceOpWithNewOp<KernelLaunchOp>(op, attrs, out, in);
-    // in this pass, this field is used as storage of op name.
-    new_op->setAttr("mlir_assembly", rewriter.getStringAttr(op->getName().stripDialect()));
-    // in this pass, we escape from declaring the correspond func, so the callee is pointed to Job.
-    new_op->setAttr("callee", SymbolRefAttr::get(new_op->template getParentOfType<oneflow::Job>()));
+    auto func = GetOrInsertKernelOFFuncOp(rewriter, op);
+    auto new_op = rewriter.replaceOpWithNewOp<KernelLaunchOp>(op, func, attrs, in);
+    if (failed(DumpAssembly(rewriter, new_op))) { exit(1); }
     return success();
   }
 };
