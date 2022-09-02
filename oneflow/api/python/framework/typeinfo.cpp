@@ -241,21 +241,21 @@ static PyObject* PyFInfo_str(PyObject* self) {
 }
 
 static struct PyGetSetDef PyIInfo_properties[] = {
-    {"bits", (getter)PyDInfo_bits, nullptr, nullptr, nullptr},
-    {"max", (getter)PyDInfo_max, nullptr, nullptr, nullptr},
-    {"min", (getter)PyDInfo_min, nullptr, nullptr, nullptr},
-    {"dtype", (getter)PyDInfo_dtype, nullptr, nullptr, nullptr},
+    {static_cast<const char*>("bits"), (getter)PyDInfo_bits, nullptr, nullptr, nullptr},
+    {static_cast<const char*>("max"), (getter)PyDInfo_max, nullptr, nullptr, nullptr},
+    {static_cast<const char*>("min"), (getter)PyDInfo_min, nullptr, nullptr, nullptr},
+    {static_cast<const char*>("dtype"), (getter)PyDInfo_dtype, nullptr, nullptr, nullptr},
     {nullptr},
 };
 
 static struct PyGetSetDef PyFInfo_properties[] = {
-    {"bits", (getter)PyDInfo_bits, nullptr, nullptr, nullptr},
-    {"max", (getter)PyDInfo_max, nullptr, nullptr, nullptr},
-    {"min", (getter)PyDInfo_min, nullptr, nullptr, nullptr},
-    {"resolution", (getter)PyFInfo_resolution, nullptr, nullptr, nullptr},
-    {"eps", (getter)PyFInfo_eps, nullptr, nullptr, nullptr},
-    {"tiny", (getter)PyFInfo_tiny, nullptr, nullptr, nullptr},
-    {"dtype", (getter)PyDInfo_dtype, nullptr, nullptr, nullptr},
+    {static_cast<const char*>("bits"), (getter)PyDInfo_bits, nullptr, nullptr, nullptr},
+    {static_cast<const char*>("max"), (getter)PyDInfo_max, nullptr, nullptr, nullptr},
+    {static_cast<const char*>("min"), (getter)PyDInfo_min, nullptr, nullptr, nullptr},
+    {static_cast<const char*>("resolution"), (getter)PyFInfo_resolution, nullptr, nullptr, nullptr},
+    {static_cast<const char*>("eps"), (getter)PyFInfo_eps, nullptr, nullptr, nullptr},
+    {static_cast<const char*>("tiny"), (getter)PyFInfo_tiny, nullptr, nullptr, nullptr},
+    {static_cast<const char*>("dtype"), (getter)PyDInfo_dtype, nullptr, nullptr, nullptr},
     {nullptr},
 };
 
