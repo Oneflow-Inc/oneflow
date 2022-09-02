@@ -16,8 +16,6 @@ The numerical properties of a :class:`oneflow.dtype` can be accessed through eit
     :class: this-will-duplicate-information-and-it-is-still-useful-here
     :backlinks: top
 
-.. _dtype-doc:
-
 oneflow.finfo
 -------------
 
