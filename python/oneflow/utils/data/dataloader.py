@@ -512,7 +512,7 @@ class _BaseDataLoaderIter(object):
     def __iter__(self) -> "_BaseDataLoaderIter":
         return self
 
-    def _reset(self, loader, first_iter=False):
+    def _reset(self, loader, first_iter=True):
         self._sampler_iter = iter(self._index_sampler)
         self._num_yielded = 0
         self._IterableDataset_len_called = loader._IterableDataset_len_called
@@ -975,7 +975,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         self._worker_pids_set = True
         self._reset(loader, first_iter=True)
 
-    def _reset(self, loader, first_iter=False):
+    def _reset(self, loader, first_iter=True):
         super()._reset(loader, first_iter)
         self._send_idx = 0  # idx of the next task to be sent to workers
         self._rcvd_idx = 0  # idx of the next task to be returned in __next__
