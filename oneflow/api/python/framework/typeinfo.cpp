@@ -24,6 +24,12 @@ namespace oneflow {
 namespace one {
 
 #define ASSERT(x) (x).GetOrThrow()
+#if PY_VERSION_HEX < 0x03070000
+#define PYGETSET_NAME(name) const_cast<char*>(name)
+#else
+#define PYGETSET_NAME(name) (name)
+#endif
+
 using functional::PyObjectPtr;
 
 #define INT_TYPE INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
@@ -241,21 +247,21 @@ static PyObject* PyFInfo_str(PyObject* self) {
 }
 
 static struct PyGetSetDef PyIInfo_properties[] = {
-    {static_cast<const char*>("bits"), (getter)PyDInfo_bits, nullptr, nullptr, nullptr},
-    {static_cast<const char*>("max"), (getter)PyDInfo_max, nullptr, nullptr, nullptr},
-    {static_cast<const char*>("min"), (getter)PyDInfo_min, nullptr, nullptr, nullptr},
-    {static_cast<const char*>("dtype"), (getter)PyDInfo_dtype, nullptr, nullptr, nullptr},
+    {PYGETSET_NAME("bits"), (getter)PyDInfo_bits, nullptr, nullptr, nullptr},
+    {PYGETSET_NAME("max"), (getter)PyDInfo_max, nullptr, nullptr, nullptr},
+    {PYGETSET_NAME("min"), (getter)PyDInfo_min, nullptr, nullptr, nullptr},
+    {PYGETSET_NAME("dtype"), (getter)PyDInfo_dtype, nullptr, nullptr, nullptr},
     {nullptr},
 };
 
 static struct PyGetSetDef PyFInfo_properties[] = {
-    {static_cast<const char*>("bits"), (getter)PyDInfo_bits, nullptr, nullptr, nullptr},
-    {static_cast<const char*>("max"), (getter)PyDInfo_max, nullptr, nullptr, nullptr},
-    {static_cast<const char*>("min"), (getter)PyDInfo_min, nullptr, nullptr, nullptr},
-    {static_cast<const char*>("resolution"), (getter)PyFInfo_resolution, nullptr, nullptr, nullptr},
-    {static_cast<const char*>("eps"), (getter)PyFInfo_eps, nullptr, nullptr, nullptr},
-    {static_cast<const char*>("tiny"), (getter)PyFInfo_tiny, nullptr, nullptr, nullptr},
-    {static_cast<const char*>("dtype"), (getter)PyDInfo_dtype, nullptr, nullptr, nullptr},
+    {PYGETSET_NAME("bits"), (getter)PyDInfo_bits, nullptr, nullptr, nullptr},
+    {PYGETSET_NAME("max"), (getter)PyDInfo_max, nullptr, nullptr, nullptr},
+    {PYGETSET_NAME("min"), (getter)PyDInfo_min, nullptr, nullptr, nullptr},
+    {PYGETSET_NAME("resolution"), (getter)PyFInfo_resolution, nullptr, nullptr, nullptr},
+    {PYGETSET_NAME("eps"), (getter)PyFInfo_eps, nullptr, nullptr, nullptr},
+    {PYGETSET_NAME("tiny"), (getter)PyFInfo_tiny, nullptr, nullptr, nullptr},
+    {PYGETSET_NAME("dtype"), (getter)PyDInfo_dtype, nullptr, nullptr, nullptr},
     {nullptr},
 };
 
@@ -289,3 +295,4 @@ ONEFLOW_API_PYBIND11_MODULE("_C", m) {
 #undef GET_FLOAT_TINY
 #undef INT_TYPE
 #undef FLOAT_TYPE
+#undef PYGETSET_NAME
