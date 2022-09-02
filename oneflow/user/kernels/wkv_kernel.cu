@@ -229,10 +229,10 @@ class WkvGPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_WKV_CUDA_KERNEL(t_dtype, f_dtype)                                           \
-  REGISTER_USER_KERNEL("wkv").SetCreateFn<WkvGPUKernel<t_dtype, f_dtype>>().SetIsMatchedHob( \
+#define REGISTER_WKV_CUDA_KERNEL(e_dtype, f_dtype)                                           \
+  REGISTER_USER_KERNEL("wkv").SetCreateFn<WkvGPUKernel<e_dtype, f_dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceType() == DeviceType::kCUDA)                                        \
-      && (user_op::HobDataType("w", 0) == GetDataType<t_dtype>::value));
+      && (user_op::HobDataType("w", 0) == GetDataType<e_dtype>::value));
 
 #if CUDA_VERSION >= 11000
 REGISTER_WKV_CUDA_KERNEL(nv_bfloat16, float)
@@ -281,11 +281,11 @@ class WkvGradGPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_WKVGRAD_CUDA_KERNEL(t_dtype, f_dtype)                                  \
+#define REGISTER_WKVGRAD_CUDA_KERNEL(e_dtype, f_dtype)                                  \
   REGISTER_USER_KERNEL("wkv_grad")                                                      \
-      .SetCreateFn<WkvGradGPUKernel<t_dtype, f_dtype>>()                                \
+      .SetCreateFn<WkvGradGPUKernel<e_dtype, f_dtype>>()                                \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
-                       && (user_op::HobDataType("w", 0) == GetDataType<t_dtype>::value) \
+                       && (user_op::HobDataType("w", 0) == GetDataType<e_dtype>::value) \
                        && FillPrimitiveExists());
 
 #if CUDA_VERSION >= 11000
