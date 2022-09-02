@@ -101,6 +101,20 @@ void PlanCompiler::Compile(Job* job, Plan* plan, std::shared_ptr<TaskGraph>& tas
     //LOG(ERROR) << " +++ got task node " << task_node->VisualStr() << " got user op " << task_node->op_node()->op().op_name();
     task_node->InferRegstIf();
   }
+  {
+    const int64_t node_num = user_task_node.size();
+    const int64_t cpu_num = std::thread::hardware_concurrency();
+    const int64_t thread_pool_size = std::min(node_num, cpu_num);
+    BlockingCounter counter(node_num);
+    ThreadPool thread_pool(thread_pool_size);
+    for (auto task_node : user_task_node) {
+      thread_pool.AddWork([task_node, &counter]() {
+        task_node->InferRegstIf();
+        counter.Decrease();
+      });
+    }
+    counter.WaitForeverUntilCntEqualZero();
+  }
   tc->Count("Graph name: " + job_name + " TaskNode::InferUserRegst", 1);
   for (auto task_node : other_task_node) {
     task_node->InferRegstIf();

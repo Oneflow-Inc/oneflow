@@ -592,8 +592,7 @@ Maybe<void> UserOp::InferInternalBlobDescs(
   // tmp buffer size must be inferred after out shape/dtype
   // Create input blob desc from logical blob desc for parallel run
   // Infer with logical blob desc, sbp.
-  HashMap<std::string, std::shared_ptr<BlobDesc>> input_bn2blob_desc;
-  {
+  if (input_bn2blob_desc_.size() == 0) {
     const auto& nd_sbp_signature = JUST(this->nd_sbp_signature());
     const auto& parallel_desc = JUST(this->GetOpParallelDesc());
     for (const auto& bn : input_bns()) {
@@ -602,13 +601,13 @@ Maybe<void> UserOp::InferInternalBlobDescs(
       const auto& nd_sbp = nd_sbp_signature->bn_in_op2nd_sbp().at(bn);
       temp_blob_desc->mut_shape() =
           *JUST(GetPhysicalShape(logical_blob_desc->shape(), nd_sbp, *parallel_desc, *parallel_ctx));
-      CHECK_OR_RETURN(input_bn2blob_desc.emplace(bn, temp_blob_desc).second) << " duplicate insert of input blob name " << bn;
+      CHECK_OR_RETURN(input_bn2blob_desc_.emplace(bn, temp_blob_desc).second) << " duplicate insert of input blob name " << bn;
     }
   }
   // A wrapper getter for getting blob desc of input bn from logical blob desc.
   auto temp_blob_desc_getter = [&](const std::string& bn_in_op) -> BlobDesc* {
-    auto find_iter = input_bn2blob_desc.find(bn_in_op);
-    if (find_iter != input_bn2blob_desc.end()) {
+    auto find_iter = input_bn2blob_desc_.find(bn_in_op);
+    if (find_iter != input_bn2blob_desc_.end()) {
       return find_iter->second.get();
     } else {
       return GetBlobDesc4BnInOp(bn_in_op);
@@ -688,25 +687,12 @@ Maybe<void> UserOp::InferInplaceObn2Ibn(
     HashMap<std::string, std::string>* con_inplace_obn2ibn,
     const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-
   // TODO(strint): do only once.
-  HashMap<std::string, std::shared_ptr<BlobDesc>> input_bn2blob_desc;
-  {
-    const auto& nd_sbp_signature = JUST(this->nd_sbp_signature());
-    const auto& parallel_desc = JUST(this->GetOpParallelDesc());
-    for (const auto& bn : input_bns()) {
-      auto logical_blob_desc = JUST(GetLogicalBlobDesc4Ibn(bn));
-      auto temp_blob_desc = std::make_shared<BlobDesc>(*logical_blob_desc);
-      const auto& nd_sbp = nd_sbp_signature->bn_in_op2nd_sbp().at(bn);
-      temp_blob_desc->mut_shape() =
-          *JUST(GetPhysicalShape(logical_blob_desc->shape(), nd_sbp, *parallel_desc, *parallel_ctx));
-      CHECK_OR_RETURN(input_bn2blob_desc.emplace(bn, temp_blob_desc).second) << " duplicate insert of input blob name " << bn;
-    }
-  }
+  CHECK_OR_RETURN(input_bn2blob_desc_.size() > 0);
   // A wrapper getter for getting blob desc of input bn from logical blob desc.
   auto temp_blob_desc_getter = [&](const std::string& bn_in_op) -> BlobDesc* {
-    auto find_iter = input_bn2blob_desc.find(bn_in_op);
-    if (find_iter != input_bn2blob_desc.end()) {
+    auto find_iter = input_bn2blob_desc_.find(bn_in_op);
+    if (find_iter != input_bn2blob_desc_.end()) {
       return find_iter->second.get();
     } else {
       return GetBlobDesc4BnInOp(bn_in_op);

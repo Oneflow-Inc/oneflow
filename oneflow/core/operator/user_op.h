@@ -76,6 +76,7 @@ class UserOp final : public Operator {
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
   ArgVec inputs_;
   ArgVec outputs_;
+  mutable HashMap<std::string, std::shared_ptr<BlobDesc>> input_bn2blob_desc_;
 };
 
 }  // namespace oneflow
