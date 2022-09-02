@@ -41,6 +41,7 @@ bool ExecNode::TryBindBnWithOneOfTheRegsts(const std::string& bn,
   bool has_binded = false;
   for (std::shared_ptr<RegstDesc> regst : regsts) {
     // TODO(strint): this is strange, try to remove this.
+    //   This is because regsts are all the input of a TaskNode, here finds the register with lbi.
     if (regst->GetBlobDesc(lbi) == nullptr) { continue; }
     BindBnWithRegst(bn, regst);
     has_binded = true;

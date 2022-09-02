@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <memory>
+#include <string>
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/sbp_context.h"
 #include "oneflow/core/common/tensor_desc.h"
@@ -21,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/framework/infer_output_blob_time_shape_fn_context.h"
 #include "oneflow/core/framework/infer_nd_sbp_fn_context.h"
+#include "oneflow/core/register/blob_desc.h"
 
 namespace oneflow {
 
@@ -586,11 +590,35 @@ Maybe<void> UserOp::InferInternalBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const JobDesc* job_desc) const {
   // tmp buffer size must be inferred after out shape/dtype
-  UserOpInferContext infer_ctx(this, parallel_ctx, job_desc, GetBlobDesc4BnInOp);
+  // Create input blob desc from logical blob desc for parallel run
+  // Infer with logical blob desc, sbp.
+  HashMap<std::string, std::shared_ptr<BlobDesc>> input_bn2blob_desc;
+  {
+    const auto& nd_sbp_signature = JUST(this->nd_sbp_signature());
+    const auto& parallel_desc = JUST(this->GetOpParallelDesc());
+    for (const auto& bn : input_bns()) {
+      auto logical_blob_desc = JUST(GetLogicalBlobDesc4Ibn(bn));
+      auto temp_blob_desc = std::make_shared<BlobDesc>(*logical_blob_desc);
+      const auto& nd_sbp = nd_sbp_signature->bn_in_op2nd_sbp().at(bn);
+      temp_blob_desc->mut_shape() =
+          *JUST(GetPhysicalShape(logical_blob_desc->shape(), nd_sbp, *parallel_desc, *parallel_ctx));
+      CHECK_OR_RETURN(input_bn2blob_desc.emplace(bn, temp_blob_desc).second) << " duplicate insert of input blob name " << bn;
+    }
+  }
+  // A wrapper getter for getting blob desc of input bn from logical blob desc.
+  auto temp_blob_desc_getter = [&](const std::string& bn_in_op) -> BlobDesc* {
+    auto find_iter = input_bn2blob_desc.find(bn_in_op);
+    if (find_iter != input_bn2blob_desc.end()) {
+      return find_iter->second.get();
+    } else {
+      return GetBlobDesc4BnInOp(bn_in_op);
+    }
+  };
+  UserOpInferContext infer_ctx(this, parallel_ctx, job_desc, temp_blob_desc_getter);
   const user_op::OpKernelRegistryResult* kernel_reg_val =
       JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
           op_conf().user_conf().op_type_name(),
-          UserOpKernelRegContext(this, GetBlobDesc4BnInOp, parallel_ctx)));
+          UserOpKernelRegContext(this, temp_blob_desc_getter, parallel_ctx)));
   CHECK_OR_RETURN(kernel_reg_val != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in kernel registry !";
 
