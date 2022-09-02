@@ -32,7 +32,7 @@ Maybe<Symbol<Device>> DefaultGetOutputDeivce(user_op::DeviceAndStreamInferContex
 template<Maybe<Symbol<Device>> (*GetOutputDeivce)(user_op::DeviceAndStreamInferContext*) =
              DefaultGetOutputDeivce>
 Maybe<Symbol<Stream>> DeviceAndStreamInferFn(user_op::DeviceAndStreamInferContext* ctx) {
-  Symbol<Device> output_device = JUST(DefaultGetOutputDeivce(ctx));
+  Symbol<Device> output_device = JUST(GetOutputDeivce(ctx));
   for (const auto& pair : ctx->outputs()) {
     *ctx->OutputTensorDevice4ArgNameAndIndex(pair.first, pair.second) = output_device;
   }
