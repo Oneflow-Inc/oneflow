@@ -119,6 +119,8 @@ class LinearProgrammingSolver {
   double zero_plus_ = 0.0;
   // How the linear programming problem is solved
   SolveLpTag is_solved = SolveLpTag::kInit;
+  // Store the redundant row for recovery
+  std::vector<int32_t> removed_rows;
 
   // Phase 1, solve for a initial feasible solution and corresponding basis.
   void Solve4InitFeasibleSolution();
@@ -127,6 +129,8 @@ class LinearProgrammingSolver {
 
   // the optimal cost of the primal linear programming problem
   double OptimalCost();
+  // Recover the original problem by adding the removed rows back;
+  void Recovery();
 
  private:
   // The revised simplex method

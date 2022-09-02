@@ -372,12 +372,14 @@ void LinearProgrammingSolver::Solve4InitFeasibleSolution() {
   // Apply the revised simplex method to the auxiliary problem
   RevisedSimplexMethod();
   // If the optimal cost in the auxiliary problem is positive, the original problem is infeasible
-  // and the algorithm terminates. Drive artificial variables out of the basis
+  // and the algorithm terminates.
   if (NumericalGT0(OptimalCost())) {
     is_solved = SolveLpTag::kNoSolution;
     return;
   }
+  // Drive artificial variables out of the basis
   int32_t first_remove_row = -1;
+  removed_rows.clear();
   for (int32_t l = 0; l < compact_row_size; l++) {
     // Find those artificial variables
     if (basic_column2compact_primal_column_[l] >= compact_primal_column_size) {
@@ -402,6 +404,7 @@ void LinearProgrammingSolver::Solve4InitFeasibleSolution() {
       if (not_found_linear_independent_column) {
         // Remove this row and corresponding columns
         primal_matrix_.HideRow(rows_compact2all[l]);
+        removed_rows.push_back(rows_compact2all[l]);
         // Mark the l-th row which would be removed later
         if (first_remove_row < 0) { first_remove_row = l; }
       }
@@ -447,6 +450,7 @@ void LinearProgrammingSolver::Solve4FeasibleSolution() {
   // Find an initial feasible solution and corresponding basis
   // If you have the initial feasible solution already, you can comment out these lines.
   Solve4InitFeasibleSolution();
+  if (is_solved == SolveLpTag::kNoSolution) { return; }
   // Init the primal matrix
   primal_matrix_.InitPrimalMatrix();
   // Initialize the mapping between the compact primal column and the basic column
@@ -459,6 +463,7 @@ void LinearProgrammingSolver::Solve4FeasibleSolution() {
   }
   // Apply the revised simplex method to the auxiliary problem
   RevisedSimplexMethod();
+  if (is_solved == SolveLpTag::kInit) { is_solved = SolveLpTag::kFiniteCost; }
 }
 
 // Compute absolute error for 0
@@ -492,6 +497,13 @@ void LinearProgrammingSolver::InitCompact2Basis(int32_t column_size) {
   for (int32_t j = 0; j < basic_column2compact_primal_column_.size(); j++) {
     compact_primal_column2basic_column_[basic_column2compact_primal_column_[j]] = j;
   }
+}
+
+// Recover the original problem by adding the removed rows back;
+void LinearProgrammingSolver::Recovery() {
+  for (int32_t i : removed_rows) { primal_matrix_.rows_all2compact_[i] = 1; }
+  removed_rows.clear();
+  is_solved = SolveLpTag::kInit;
 }
 
 }  // namespace linear_programming
