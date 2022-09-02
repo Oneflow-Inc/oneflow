@@ -2637,3 +2637,63 @@
 - name: "atanh_grad_grad"  
   signature: "Tensor (Tensor x, Tensor dydx) =>  AtanhGradGrad" 
   bind_python: False
+
+- name: "erf_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  ErfGradGrad" 
+  bind_python: False
+
+- name: "erfc_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  ErfcGradGrad" 
+  bind_python: False
+
+- name: "exp_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  ExpGradGrad" 
+  bind_python: False
+
+- name: "expm1_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  Expm1GradGrad" 
+  bind_python: False
+
+- name: "log_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  LogGradGrad" 
+  bind_python: False
+
+- name: "logsigmoid_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  LogSigmoidGradGrad" 
+  bind_python: False
+
+- name: "log2_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  Log2GradGrad" 
+  bind_python: False
+
+- name: "log10_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  Log10GradGrad" 
+  bind_python: False
+
+- name: "log1p_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  Log1pGradGrad" 
+  bind_python: False
+
+- name: "reciprocal_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  ReciprocalGradGrad" 
+  bind_python: False
+
+- name: "reciprocal_no_nan_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  ReciprocalNoNanGradGrad" 
+  bind_python: False
+
+- name: "rsqrt_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  RsqrtGradGrad" 
+  bind_python: False
+
+- name: "sqrt_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  SqrtGradGrad" 
+  bind_python: False
+
+- name: "square_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  SquareGradGrad" 
+  bind_python: False
+
+- name: "sigmoid_grad_grad"  
+  signature: "Tensor (Tensor y, Tensor dydx) =>  SigmoidGradGrad" 
+  bind_python: False

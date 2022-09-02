@@ -23,7 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 
 def _test_math_op_grad_grad_impl(test_case, op_name):
     x = random_tensor(ndim=2, low=-2, high=2).requires_grad_(True)
-    y = eval(f"x.{op_name}()")
+    y = eval(f"torch.{op_name}")(x)
     np_arr = np.random.rand(*x.oneflow.shape)
     init_grad = torch.tensor(np_arr).requires_grad_()
 
@@ -101,6 +101,47 @@ class TestMathOpHigherDerivative(flow.unittest.TestCase):
     def test_atanh_grad_grad(test_case):
         _test_math_op_grad_grad_impl(test_case, "atanh")
 
+    def test_erf_grad_grad(test_case):
+        _test_math_op_grad_grad_impl(test_case, "erf")
+
+    def test_erfc_grad_grad(test_case):
+        _test_math_op_grad_grad_impl(test_case, "erfc")
+
+    def test_exp_grad_grad(test_case):
+        _test_math_op_grad_grad_impl(test_case, "exp")
+
+    def test_expm1_grad_grad(test_case):
+        _test_math_op_grad_grad_impl(test_case, "expm1")
+
+    def test_log_grad_grad(test_case):
+        _test_math_op_grad_grad_impl(test_case, "log")
+
+    def test_logsigmoid_grad_grad(test_case):
+        _test_math_op_grad_grad_impl(test_case, "nn.functional.logsigmoid")
+
+    def test_log2_grad_grad(test_case):
+        _test_math_op_grad_grad_impl(test_case, "log2")
+
+    def test_log1p_grad_grad(test_case):
+        _test_math_op_grad_grad_impl(test_case, "log1p")
+
+    def test_reciprocal_grad_grad(test_case):
+        _test_math_op_grad_grad_impl(test_case, "reciprocal")
+
+    def test_rsqrt_grad_grad(test_case):
+        _test_math_op_grad_grad_impl(test_case, "rsqrt")
+
+    def test_sqrt_grad_grad(test_case):
+        _test_math_op_grad_grad_impl(test_case, "sqrt")
+
+    def test_square_grad_grad(test_case):
+        _test_math_op_grad_grad_impl(test_case, "square")
+
+    def test_sigmoid_grad_grad(test_case):
+        _test_math_op_grad_grad_impl(test_case, "sigmoid")
+
+    def test_abs_grad_grad(test_case):
+        _test_math_op_grad_grad_impl(test_case, "abs")
 
 if __name__ == "__main__":
     unittest.main()

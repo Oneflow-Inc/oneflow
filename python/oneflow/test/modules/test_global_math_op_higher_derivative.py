@@ -27,7 +27,7 @@ def _global_math_op_grad_grad_impl(test_case, op_name, placement, sbp):
         .to_global(placement=placement, sbp=sbp)
         .requires_grad_(True)
     )
-    y = eval(f"x.{op_name}()")
+    y = eval(f"torch.{op_name}")(x)
     init_grad = random_tensor(2, 8, 8).to_global(placement, sbp).requires_grad_()
 
     x_grad = torch.autograd.grad(y, x, init_grad, create_graph=True)[0]
@@ -137,6 +137,92 @@ class TestGlobalMathOpHigherDerivative(flow.unittest.TestCase):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 _global_math_op_grad_grad_impl(test_case, "atanh", placement, sbp)
+
+    @globaltest
+    def test_global_erf_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "erf", placement, sbp)
+
+    @globaltest
+    def test_global_erfc_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "erfc", placement, sbp)
+
+    @globaltest
+    def test_global_exp_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "exp", placement, sbp)
+
+    @globaltest
+    def test_global_expm1_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "expm1", placement, sbp)
+
+    @globaltest
+    def test_global_log_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "log", placement, sbp)
+
+    @globaltest
+    def test_global_logsigmoid_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(
+                    test_case, "nn.functional.logsigmoid", placement, sbp
+                )
+
+    @globaltest
+    def test_global_log2_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "log2", placement, sbp)
+
+    @globaltest
+    def test_global_log1p_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "log1p", placement, sbp)
+
+    @globaltest
+    def test_global_reciprocal_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "reciprocal", placement, sbp)
+
+    @globaltest
+    def test_global_rsqrt_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "rsqrt", placement, sbp)
+
+    @globaltest
+    def test_global_sqrt_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "sqrt", placement, sbp)
+
+    @globaltest
+    def test_global_square_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "square", placement, sbp)
+
+    @globaltest
+    def test_global_sigmoid_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "sigmoid", placement, sbp)
+
+    @globaltest
+    def test_global_abs_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_math_op_grad_grad_impl(test_case, "abs", placement, sbp)
 
 
 if __name__ == "__main__":
