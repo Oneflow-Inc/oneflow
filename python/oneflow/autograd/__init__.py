@@ -23,6 +23,7 @@ from oneflow.autograd.autograd_mode import (
     is_grad_enabled,
     no_grad,
 )
+from . import graph
 
 __all__ = [
     "backward",
