@@ -118,7 +118,8 @@ def to_global(input, placement=None, sbp=None, **kwargs):
 
                 def leaf_fn_to_none(node):
                     if isinstance(node, Tensor):
-                        return None
+                        # Ensure that each rank has a tensor instance, which can avoid the situation of none is none in the user-defined get_sbp function.
+                        return flow.empty(0, 1)
                     else:
                         warnings.warn(
                             "Non-Tensor type: {} encountered, it will remain the same.".format(
@@ -155,17 +156,8 @@ def to_global(input, placement=None, sbp=None, **kwargs):
         def leaf_fn(node):
             if isinstance(node, Tensor) or node is None:
                 if isinstance(sbp, types.FunctionType):
-                    # For the use of the get_sbp function, broadcast the SBP of src_rank to other ranks, avoiding the situation of none is none.
-                    src_rank_sbp = src_sbp_broadcast(
-                        sbp(input, node), placement.ranks.flat[0]
-                    )
 
-                    if flow.env.get_rank() != placement.ranks.flat[0]:
-                        return to_global_tensor(node, placement, src_rank_sbp, **kwargs)
-                    else:
-                        return to_global_tensor(
-                            node, placement, sbp(input, node), **kwargs
-                        )
+                    return to_global_tensor(node, placement, sbp(input, node), **kwargs)
 
                 else:
                     return to_global_tensor(node, placement, sbp, **kwargs)
