@@ -105,8 +105,8 @@ const Optional<int64_t>& GetThisThreadGlobalId() { return *MutThreadLocalUniqueG
 
 Maybe<void> ResetThisThreadUniqueGlobalId() { return GlobalIdStorage::Singleton()->Reset(); }
 
-ThreadGlobalIdGuard::ThreadGlobalIdGuard(int64_t thread_global_id) {
-  old_thread_global_id_ = GetThisThreadGlobalId();
+ThreadGlobalIdGuard::ThreadGlobalIdGuard(int64_t thread_global_id)
+    : old_thread_global_id_(GetThisThreadGlobalId()) {
   if (old_thread_global_id_.has_value()) {
     int64_t old_thread_global_id = CHECK_JUST(old_thread_global_id_);
     CHECK_EQ(old_thread_global_id, thread_global_id)
