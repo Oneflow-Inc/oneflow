@@ -112,9 +112,9 @@ static PyObject* PyIInfo_new(PyTypeObject* self, PyObject* args, PyObject* kwarg
 
 static PyObject* PyFInfo_new(PyTypeObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  PyObject* dtype_obj = NULL;
+  PyObject* dtype_obj = functional::CastToPyObject(DType::Float());
   static const char* keywords[2] = {"type", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:finfo", const_cast<char**>(keywords),
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:finfo", const_cast<char**>(keywords),
                                    &dtype_obj)) {
     return NULL;
   }

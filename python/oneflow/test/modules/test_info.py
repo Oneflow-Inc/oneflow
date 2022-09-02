@@ -23,7 +23,11 @@ from collections import OrderedDict
 
 
 def _test_finfo(test_case, dtype):
-    finfo = torch.finfo(dtype)
+    # test finfo without input params
+    if dtype is None:
+        finfo = torch.finfo()
+    else:
+        finfo = torch.finfo(dtype)
     torch_finfo = finfo.pytorch
     flow_finfo = finfo.oneflow
     test_case.assertEqual(torch_finfo.max, flow_finfo.max)
@@ -53,7 +57,8 @@ class TestIInfo(flow.unittest.TestCase):
 
     @autotest(n=3, check_graph=False)
     def test_finfo_min(test_case):
-        for dtype in [torch.float16, torch.float32, torch.float64]:
+        # TODO(WangYi): support bf16
+        for dtype in [None, torch.float16, torch.float32, torch.float64]:
             _test_finfo(test_case, dtype)
 
 

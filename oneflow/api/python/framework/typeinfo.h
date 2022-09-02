@@ -25,7 +25,8 @@ namespace oneflow {
 namespace one {
 
 typedef struct {
-  PyObject_HEAD Symbol<DType> dtype;
+  PyObject_HEAD;
+  Symbol<DType> dtype;
 } PyDTypeInfo;
 
 extern PyTypeObject PyIInfoType;
@@ -47,4 +48,4 @@ inline DataType PyDTypeInfo_UnpackDataType(PyObject* obj) {
 
 }  // namespace one
 }  // namespace oneflow
-#endif
+#endif  // ONEFLOW_API_PYTHON_FRAMEWORK_TYPEINFO_H_
