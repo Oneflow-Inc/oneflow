@@ -19,7 +19,7 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.bernoulli,
     """
-    bernoulli(input, p, *, generator=None, out=None)
+    bernoulli(input, p, *, generator=None)
     
     This operator returns a Tensor with binaray random numbers (0 / 1) from a Bernoulli distribution.
 
@@ -27,7 +27,6 @@ add_docstr(
         input (Tensor): the input tensor of probability values for the Bernoulli distribution
         p (float, optional): the probability for the Bernoulli distribution. If specified, Bernoulli distribution will use p for sampling, not input
         generator (Generator, optional): a pseudorandom number generator for sampling
-        out (Tensor, optional): the output tensor.
 
     Shape:
         - Input: :math:`(*)`. Input can be of any shape
@@ -63,6 +62,48 @@ add_docstr(
         tensor([[0., 0., 0.],
                 [0., 0., 0.],
                 [0., 0., 0.]], dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow.exponential,
+    """
+    exponential(input, lambd=1, *, generator=None, inplace=False)
+
+    This operator returns a Tensor from an exponential distribution with :math:`\lambda` is ``lambd``:
+
+    .. math::
+      f(x) = \lambda \exp(-\lambda x)
+
+    The result has the same shape as ``input``.
+
+    Args:
+        input (Tensor): the input tensor
+        lambd (float, optional): the lambda for the exponential distribution. Default: 1.0
+        generator (Generator, optional): a pseudorandom number generator for sampling
+        inplace (bool, optional): If set to ``True``, will do this operation in-place. Default: ``False``
+
+    Shape:
+        - Input: :math:`(*)`. Input can be of any shape
+        - Output: :math:`(*)`. Output is of the same shape as input
+
+    For example:
+
+    .. code-block:: python
+
+      >>> import oneflow as flow
+      >>> x = flow.randn(3, 3)
+      >>> output = flow.exponential(x)
+      >>> output  # doctest: +SKIP
+      tensor([[0.4441, 0.3334, 0.2331],
+              [1.3410, 0.7762, 3.1475],
+              [1.8586, 0.0209, 2.1313]], dtype=oneflow.float32)
+      >>> output = flow.exponential(x, lambd=1.5, inplace=True)
+      >>> output  # doctest: +SKIP
+      tensor([[0.0317, 1.2766, 1.3579],
+              [0.1478, 0.0297, 0.7296],
+              [0.5029, 0.0475, 0.7616]], dtype=oneflow.float32)
 
     """,
 )

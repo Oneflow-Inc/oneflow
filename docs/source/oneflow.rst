@@ -145,6 +145,7 @@ Random sampling
     get_rng_state
     set_rng_state
     bernoulli
+    exponential
     normal
     rand
     randint
