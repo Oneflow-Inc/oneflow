@@ -63,9 +63,8 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
                         const Stride& target_stride, int64_t storage_offset) {
   // TODO(): Check shape compatible.
   auto device = JUST(input->device());
-  auto tensor_meta = SymbolOf(LocalTensorMeta(std::make_shared<Shape>(target_shape),
-                                              std::make_shared<Stride>(target_stride),
-                                              input->dtype()->data_type(), device));
+  auto tensor_meta =
+      SymbolOf(LocalTensorMeta(target_shape, target_stride, input->dtype()->data_type(), device));
 
   CHECK_OR_RETURN(JUST(input->has_eager_blob_object()));
   // new output tensor
