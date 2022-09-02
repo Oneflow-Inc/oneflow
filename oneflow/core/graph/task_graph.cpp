@@ -103,10 +103,10 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
     }
   }
   // NOTE(chengcheng): ONLY nccl_use_compute_stream = false will exclude optimizer pass ops
-  if (!Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
-      && IsOptimizerPassOp(op)) {
-    return true;
-  }
+  // if (!Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
+  //     && IsOptimizerPassOp(op)) {
+  //   return true;
+  // }
   return false;
 }
 
