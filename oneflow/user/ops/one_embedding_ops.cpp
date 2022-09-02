@@ -306,7 +306,10 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   const int64_t line_size = ctx->Attr<int64_t>("line_size");
   CHECK_NE_OR_RETURN(embedding_size, 0) << "should set attr embedding_size";
   CHECK_NE_OR_RETURN(line_size, 0) << "should set attr line_size";
-  CHECK_EQ_OR_RETURN(line_size, embedding_size) << "get " << line_size << " " << embedding_size;
+  CHECK_EQ_OR_RETURN(line_size, embedding_size)
+      << "when use SGD optimizer, line_size should equals to embedding_size, but get line_size: "
+      << line_size << " embedding_size: " << embedding_size
+      << ", please set size_factor of store_options to 1.";
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
   ctx->SetOutputShape("updated_unique_embeddings", 0, unique_embeddings_shape);
   return Maybe<void>::Ok();
@@ -334,7 +337,11 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   const int64_t line_size = ctx->Attr<int64_t>("line_size");
   CHECK_NE_OR_RETURN(embedding_size, 0) << "should set attr embedding_size";
   CHECK_NE_OR_RETURN(line_size, 0) << "should set attr line_size";
-  CHECK_EQ_OR_RETURN(line_size, embedding_size * 2) << "get " << line_size << " " << embedding_size;
+  CHECK_EQ_OR_RETURN(line_size, embedding_size * 2)
+      << "when using Momentum optimizer, line_size should equals to embedding_size * 2, but get "
+         "line_size: "
+      << line_size << " embedding_size: " << embedding_size
+      << ", please set size_factor of store_options to 2.";
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
   ctx->SetOutputShape("updated_unique_embeddings", 0, unique_embeddings_shape);
   return Maybe<void>::Ok();
@@ -362,7 +369,11 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   const int64_t line_size = ctx->Attr<int64_t>("line_size");
   CHECK_NE_OR_RETURN(embedding_size, 0) << "should set attr embedding_size";
   CHECK_NE_OR_RETURN(line_size, 0) << "should set attr line_size";
-  CHECK_EQ_OR_RETURN(line_size, embedding_size * 3) << "get " << line_size << " " << embedding_size;
+  CHECK_EQ_OR_RETURN(line_size, embedding_size * 3)
+      << "when using Adam optimizer, line_size should equals to embedding_size * 3, but get "
+         "line_size: "
+      << line_size << " embedding_size: " << embedding_size
+      << ", please set size_factor of store_options to 3.";
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
   ctx->SetOutputShape("updated_unique_embeddings", 0, unique_embeddings_shape);
   return Maybe<void>::Ok();
@@ -390,7 +401,11 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   const int64_t line_size = ctx->Attr<int64_t>("line_size");
   CHECK_NE_OR_RETURN(embedding_size, 0) << "should set attr embedding_size";
   CHECK_NE_OR_RETURN(line_size, 0) << "should set attr line_size";
-  CHECK_EQ_OR_RETURN(line_size, embedding_size * 2) << "get " << line_size << " " << embedding_size;
+  CHECK_EQ_OR_RETURN(line_size, embedding_size * 2)
+      << "when using Adagrad optimizer, line_size should equals to embedding_size * 2, but get "
+         "line_size: "
+      << line_size << " embedding_size: " << embedding_size
+      << ", please set size_factor of store_options to 2.";
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
   ctx->SetOutputShape("updated_unique_embeddings", 0, unique_embeddings_shape);
   return Maybe<void>::Ok();
@@ -418,7 +433,11 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   const int64_t line_size = ctx->Attr<int64_t>("line_size");
   CHECK_NE_OR_RETURN(embedding_size, 0) << "should set attr embedding_size";
   CHECK_NE_OR_RETURN(line_size, 0) << "should set attr line_size";
-  CHECK_EQ_OR_RETURN(line_size, embedding_size * 3) << "get " << line_size << " " << embedding_size;
+  CHECK_EQ_OR_RETURN(line_size, embedding_size * 3)
+      << "when using Ftrl optimizer, line_size should equals to embedding_size * 3, but get "
+         "line_size: "
+      << line_size << " embedding_size: " << embedding_size
+      << ", please set size_factor of store_options to 3.";
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
   ctx->SetOutputShape("updated_unique_embeddings", 0, unique_embeddings_shape);
   return Maybe<void>::Ok();

@@ -137,7 +137,7 @@ __global__ void AdamUpdateKernel(const int32_t line_size, const int32_t embeddin
 template<typename T, typename G, typename IDX>
 __global__ void AdagradUpdateKernel(const int64_t line_size, const int64_t embedding_size, T scale,
                                     float l1, float l2, float weight_decay, float lr_decay,
-                                    float epsilon, float learning_rate_val,
+                                    float epsilon, float learning_rate_val, int64_t train_step,
                                     const IDX* num_unique_ids, const float* learning_rate,
                                     const int64_t* train_step_ptr, const T* scale_by_ptr,
                                     const T* down_scale_by_ptr, const int64_t* skip_if,
@@ -147,7 +147,7 @@ __global__ void AdagradUpdateKernel(const int64_t line_size, const int64_t embed
     const int64_t n = *num_unique_ids * line_size;
     CUDA_1D_KERNEL_LOOP(i, n) { updated_unique_values[i] = unique_values[i]; }
   } else {
-    int64_t train_step = *train_step_ptr + 1;
+    if (train_step_ptr != nullptr) { train_step = *train_step_ptr + 1; }
     if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
     if (down_scale_by_ptr != nullptr) { scale /= *down_scale_by_ptr; }
     if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
@@ -576,7 +576,12 @@ class AdagradEmbeddingUpdateKernel final : public user_op::OpKernel {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
       learning_rate_ptr = learning_rate->dptr<float>();
     }
-    const int64_t* train_step_ptr = ctx->Tensor4ArgNameAndIndex("train_step", 0)->dptr<int64_t>();
+    const int64_t train_step_val = ctx->Attr<int64_t>("train_step_val");
+    const int64_t* train_step_ptr = nullptr;
+    if (ctx->has_input("train_step", 0)) {
+      const user_op::Tensor* train_step = ctx->Tensor4ArgNameAndIndex("train_step", 0);
+      train_step_ptr = train_step->dptr<int64_t>();
+    }
     const int64_t* skip_if_ptr = nullptr;
     if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
@@ -594,9 +599,10 @@ class AdagradEmbeddingUpdateKernel final : public user_op::OpKernel {
         <<<BlocksNum4ThreadsNum(embedding_grad_elem_cnt), kCudaThreadsNumPerBlock, 0,
            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             line_size, embedding_size, static_cast<T>(scale), l1, l2, weight_decay, lr_decay,
-            epsilon, learning_rate_val, reinterpret_cast<const IDX*>(num_unique_ids->dptr()),
-            learning_rate_ptr, train_step_ptr, scale_by_ptr, down_scale_by_ptr, skip_if_ptr,
-            embedding_grad->dptr<G>(), unique_embeddings_ptr, updated_unique_embeddings_ptr);
+            epsilon, learning_rate_val, train_step_val,
+            reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, train_step_ptr,
+            scale_by_ptr, down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(),
+            unique_embeddings_ptr, updated_unique_embeddings_ptr);
     embedding_state->OnEmbeddingUpdateEnd(ctx, current_iter_);
     current_iter_++;
   }

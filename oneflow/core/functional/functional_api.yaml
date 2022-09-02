@@ -2408,7 +2408,7 @@
   bind_python: True
 
 - name: "one_embedding_adagrad_update"
-  signature: "Tensor (Tensor num_unique_ids, Tensor unique_embeddings, Tensor embedding_grad, Tensor learning_rate=None, Tensor down_scale_by_tensor=None, Tensor skip_if=None, Tensor train_step, Float learning_rate_val=0.0, Double scale=1.0, Float weight_decay=0.0, Float lr_decay=0.0, Float epsilon=0, Int64 line_size, Int64 embedding_size, String embedding_name) => OneEmbeddingAdagradUpdate"
+  signature: "Tensor (Tensor num_unique_ids, Tensor unique_embeddings, Tensor embedding_grad, Tensor learning_rate=None, Tensor down_scale_by_tensor=None, Tensor skip_if=None, Tensor train_step=None, Int64 train_step_val=0, Float learning_rate_val=0.0, Double scale=1.0, Float weight_decay=0.0, Float lr_decay=0.0, Float epsilon=0, Int64 line_size, Int64 embedding_size, String embedding_name) => OneEmbeddingAdagradUpdate"
   bind_python: True
 
 - name: "one_embedding_ftrl_update"

@@ -3766,9 +3766,9 @@ class OneEmbeddingAdamUpdateFunctor {
         "learning_rate_val", "scale", "weight_decay", "beta1", "beta2", "epsilon",
         "bias_correction1_val", "bias_correction2_val", "do_bias_correction", "line_size",
         "embedding_size", "embedding_name");
-    attrs.SetAllAttrs(learning_rate_val, scale, weight_decay, beta1, beta2, bias_correction1_val,
-                      bias_correction2_val, epsilon, do_bias_correction, line_size, embedding_size,
-                      embedding_name);
+    attrs.SetAllAttrs(learning_rate_val, scale, weight_decay, beta1, beta2, epsilon,
+                      bias_correction1_val, bias_correction2_val, do_bias_correction, line_size,
+                      embedding_size, embedding_name);
     if (learning_rate) {
       CHECK(down_scale_by_tensor);
       CHECK(skip_if);
@@ -3811,7 +3811,6 @@ class OneEmbeddingAdagradUpdateFunctor {
                                            .Input("num_unique_ids")
                                            .Input("unique_embeddings")
                                            .Input("embedding_grad")
-                                           .Input("train_step")
                                            .Output("updated_unique_embeddings")
                                            .Build());
     // This functor is just for unittest
@@ -3833,30 +3832,31 @@ class OneEmbeddingAdagradUpdateFunctor {
                            const Optional<one::Tensor>& learning_rate,
                            const Optional<one::Tensor>& down_scale_by_tensor,
                            const Optional<one::Tensor>& skip_if,
-                           const std::shared_ptr<one::Tensor>& train_step,
+                           const Optional<one::Tensor>& train_step, const int64_t train_step_val,
                            const float learning_rate_val, const double scale,
                            const float weight_decay, const float lr_decay, const float epsilon,
                            const int64_t line_size, const int64_t embedding_size,
                            const std::string& embedding_name) const {
-    auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP("learning_rate_val", "scale", "weight_decay", "lr_decay",
-                                       "epsilon", "line_size", "embedding_size", "embedding_name");
-    attrs.SetAllAttrs(learning_rate_val, scale, weight_decay, lr_decay, epsilon, line_size,
-                      embedding_size, embedding_name);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("train_step_val", "learning_rate_val", "scale",
+                                                 "weight_decay", "lr_decay", "epsilon", "line_size",
+                                                 "embedding_size", "embedding_name");
+    attrs.SetAllAttrs(train_step_val, learning_rate_val, scale, weight_decay, lr_decay, epsilon,
+                      line_size, embedding_size, embedding_name);
     if (learning_rate) {
       CHECK(down_scale_by_tensor);
       CHECK(skip_if);
+      CHECK(train_step);
       return OpInterpUtil::Dispatch<Tensor>(
           *op_,
           {num_unique_ids, unique_embeddings, embedding_grad, JUST(learning_rate),
-           JUST(down_scale_by_tensor), JUST(skip_if), train_step},
+           JUST(down_scale_by_tensor), JUST(skip_if), JUST(train_step)},
           attrs);
     } else {
       CHECK(!down_scale_by_tensor);
       CHECK(!skip_if);
+      CHECK(!train_step);
       return OpInterpUtil::Dispatch<Tensor>(
-          *op_no_optional_input_, {num_unique_ids, unique_embeddings, embedding_grad, train_step},
-          attrs);
+          *op_no_optional_input_, {num_unique_ids, unique_embeddings, embedding_grad}, attrs);
     }
   }
 
@@ -3868,6 +3868,12 @@ class OneEmbeddingAdagradUpdateFunctor {
 class OneEmbeddingFtrlUpdateFunctor {
  public:
   OneEmbeddingFtrlUpdateFunctor() {
+    op_no_optional_input_ = CHECK_JUST(one::OpBuilder("ftrl_embedding_update")
+                                           .Input("num_unique_ids")
+                                           .Input("unique_embeddings")
+                                           .Input("embedding_grad")
+                                           .Output("updated_unique_embeddings")
+                                           .Build());
     // This functor is just for unittest
     op_ = CHECK_JUST(one::OpBuilder("ftrl_embedding_update")
                          .Input("num_unique_ids")
