@@ -68,17 +68,6 @@ std::string GetOpConfCalculationPassName(const OperatorConf& op_conf) {
   return scope.scope_proto().calculation_pass_name();
 }
 
-bool IsOptimizerPassOp(const Operator* op) {
-  // NOTE(chengcheng): use scope::calculation_pass_name instead of area_id to not merge optimizer
-  // ops with fw/bw ops
-  if (!op->op_conf().has_scope_symbol_id()) {
-    // NOTE(chengcheng): Some system op insert to OpGraph may not set scope_symbol_id, it MUST NOT
-    // optimizer subgraph ops.
-    return false;
-  }
-  return GetOpConfCalculationPassName(op->op_conf()) == kOptimizerPass;
-}
-
 bool IsSubsetTickOpConf(const OperatorConf& op_conf) {
   return op_conf.has_src_subset_tick_conf() || op_conf.has_dst_subset_tick_conf();
 }
