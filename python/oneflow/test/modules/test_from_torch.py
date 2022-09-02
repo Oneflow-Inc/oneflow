@@ -39,7 +39,7 @@ class TestFromTroch(flow.unittest.TestCase):
         # NOTE: oneflow and numpy shared the same memory,
         #   so oneflow and torch cpu tensor shared the same memory,
         #   which means oneflow can use torch's cpu tensor without cost.
-        flow_t = flow.utils.from_torch(torch_t)
+        flow_t = flow.utils.tensor.from_torch(torch_t)
 
         test_case.assertTrue(
             np.allclose(torch_t.numpy(), flow_t.numpy(), rtol=0.001, atol=0.001)
@@ -51,7 +51,7 @@ class TestFromTroch(flow.unittest.TestCase):
     def test_from_torch_cpu_with_0_size_data(test_case):
         torch_t = torch.rand(5, 0, 3)
 
-        flow_t = flow.utils.from_torch(torch_t)
+        flow_t = flow.utils.tensor.from_torch(torch_t)
 
         test_case.assertTrue(
             np.allclose(torch_t.numpy(), flow_t.numpy(), rtol=0.001, atol=0.001)
@@ -66,7 +66,7 @@ class TestFromTroch(flow.unittest.TestCase):
             torch_t.data_ptr(), numpy_from_torch.__array_interface__["data"][0]
         )
 
-        flow_t = flow.utils.from_torch(torch_t)
+        flow_t = flow.utils.tensor.from_torch(torch_t)
 
         test_case.assertTrue(
             np.allclose(torch_t.numpy(), flow_t.numpy(), rtol=0.001, atol=0.001)

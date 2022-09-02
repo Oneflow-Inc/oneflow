@@ -13,6 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.framework.config_util import api_load_library as load_library
-from oneflow.utils import tensor
-from oneflow.utils import global_view
+from oneflow.utils.global_view.to_global import to_global
+from oneflow.utils.global_view.to_local import to_local
+
+__all__ = [
+    "to_global",
+    "to_local",
+]

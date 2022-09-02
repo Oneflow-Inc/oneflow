@@ -25,8 +25,7 @@ struct StreamSupportStreamWait : public StreamTypeVisitor<StreamSupportStreamWai
   static bool VisitCompute(DeviceType device_type) { return Supported(device_type); }
   static bool VisitHost2Device(DeviceType device_type) { return false; }
   static bool VisitDevice2Host(DeviceType device_type) { return false; }
-  static bool VisitSyncedLaunchedCommNet(DeviceType device_type) { return Supported(device_type); }
-  static bool VisitAsyncedLaunchedCommNet(DeviceType device_type) { return Supported(device_type); }
+  static bool VisitCcl(DeviceType device_type) { return Supported(device_type); }
   static bool VisitBarrier(DeviceType device_type) { return false; }
   static bool VisitCriticalSection(DeviceType device_type) { return false; }
   static bool VisitLazyJobLauncher(DeviceType device_type) { return false; }
