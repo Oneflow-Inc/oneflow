@@ -72,8 +72,8 @@ class SparsePrimalMatrix {
   std::vector<int32_t> columns_compact2all_;
 
   int32_t original_column_size_ = -1;
-  int32_t primal_row_size_ = -1;
-  int32_t primal_column_size_ = -1;
+  int32_t compact_row_size_ = -1;
+  int32_t compact_column_size_ = -1;
 
   SparsePrimalMatrix() = default;
   ~SparsePrimalMatrix() = default;
@@ -86,6 +86,8 @@ class SparsePrimalMatrix {
 
   void HideRow(int32_t i);
   void HideColumn(int32_t j);
+  // Fully activate one row
+  void ActivateRow(int32_t i);
   void InitPrimalMatrix();
 };
 

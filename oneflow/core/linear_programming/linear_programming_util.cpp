@@ -172,8 +172,8 @@ void SparsePrimalMatrix::ExpandArtificialVariables() {
     for (int32_t i = 0; i < rows_.size(); i++) { Insert(i, i + original_column_size_, 1.0); }
     columns_all2compact_.resize(columns_.size());
   }
-  for (int32_t j = original_column_size_; j < columns_all2compact_.size(); j++) {
-    columns_all2compact_[j] = 1;
+  for (int32_t i = 0; i < rows_.size(); i++) {
+    if (rows_all2compact_[i] >= 0) { columns_all2compact_[i + original_column_size_] = 1; }
   }
 }
 
@@ -196,25 +196,33 @@ void SparsePrimalMatrix::HideRow(int32_t i) {
 
 void SparsePrimalMatrix::HideColumn(int32_t j) { columns_all2compact_[j] = -1; }
 
+// Fully activate one row
+void SparsePrimalMatrix::ActivateRow(int32_t i) {
+  rows_all2compact_[i] = 1;
+  for (const auto& column2val : rows_[i]) {
+    if (column2val.first < original_column_size_) { columns_all2compact_[column2val.first] = 1; }
+  }
+}
+
 // Generate the mapping between all columns and compact columns
 // all2compact (bool) should be initialized.
 // all2compact (bool) -> all2compact (int) and compact2all (int)
 void SparsePrimalMatrix::InitPrimalMatrix() {
-  auto InitPrimalDimension = [](int32_t* primal_size, std::vector<int32_t>& all2compact,
+  auto InitPrimalDimension = [](int32_t* compact_size, std::vector<int32_t>& all2compact,
                                 std::vector<int32_t>& compact2all) {
-    *primal_size = 0;
+    *compact_size = 0;
     compact2all.resize(all2compact.size());
     for (int32_t i = 0; i < all2compact.size(); i++) {
       if (all2compact[i] >= 0) {
-        all2compact[i] = *primal_size;
-        compact2all[*primal_size] = i;
-        (*primal_size)++;
+        all2compact[i] = *compact_size;
+        compact2all[*compact_size] = i;
+        (*compact_size)++;
       }
     }
-    compact2all.resize(*primal_size);
+    compact2all.resize(*compact_size);
   };
-  InitPrimalDimension(&primal_row_size_, rows_all2compact_, rows_compact2all_);
-  InitPrimalDimension(&primal_column_size_, columns_all2compact_, columns_compact2all_);
+  InitPrimalDimension(&compact_row_size_, rows_all2compact_, rows_compact2all_);
+  InitPrimalDimension(&compact_column_size_, columns_all2compact_, columns_compact2all_);
 }
 
 void SparsePrimalMatrix::ActivateAllRowColumns() {
