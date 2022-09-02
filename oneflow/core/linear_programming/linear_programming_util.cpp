@@ -262,7 +262,7 @@ void LinearProgrammingSolver::ComputeU4ColumnJ(int32_t j) {
 
 // Replace the l-th basis variable with x_j.
 // Drive basis{l} out and get j in.
-// u_ = B * A_j should be precomputed.
+// u_ = B * A_j must be precomputed.
 void LinearProgrammingSolver::ReplaceBasisVariable(int32_t l, int32_t j) {
   // Rounding u
   for (int32_t i = 0; i < u_.size(); i++) {
@@ -326,7 +326,12 @@ void LinearProgrammingSolver::Solve4InitFeasibleSolution() {
   ComputeAbsoluteError0();
   // Apply the revised simplex method to the auxiliary problem
   RevisedSimplexMethod();
-  // Drive artificial variables out of the basis
+  // If the optimal cost in the auxiliary problem is positive, the original problem is infeasible
+  // and the algorithm terminates. Drive artificial variables out of the basis
+  if (NumericalGT0(OptimalCost())) {
+    is_solved = SolveLpTag::kNoSolution;
+    return;
+  }
   int32_t first_remove_row = -1;
   for (int32_t l = 0; l < compact_row_size; l++) {
     // Find those artificial variables
@@ -379,23 +384,19 @@ void LinearProgrammingSolver::Solve4InitFeasibleSolution() {
     inverse_base_matrix_.rows_.resize(compact_row_id);
     x_.resize(compact_row_id);
     basic_column2compact_primal_column_.resize(compact_row_id);
-    // Note: The artificial columns of the inverse base matrix are already removed due to the
+    // NOTE: The artificial columns of the inverse base matrix are already removed due to the
     // sparsity. Remove marked columns
 
-    // Adjust the position of the primal cost
-    int32_t compact_column_id = 0;
-    for (int32_t j = 0; j < primal_cost_.size(); j++) {
-      if (primal_matrix_.columns_all2compact_[primal_matrix_.columns_compact2all_[j]] >= 0) {
-        // Move the column forward
-        if (compact_column_id < j) { primal_cost_[compact_column_id] = primal_cost_[j]; }
-        compact_column_id++;
-      }
-    }
-    primal_cost_.resize(compact_column_id);
-    InitCompact2Basis(compact_column_id);
-    // Adjust the primal matrix
-    primal_matrix_.InitPrimalMatrix();
+    // NOTE: As long as one row is the linear combination of the other rows, elimination of that row
+    // will not eliminate any columns.
   }
+
+  // Remove all the artificial variables
+  primal_matrix_.EliminateArtificialVariables();
+  primal_cost_.resize(compact_primal_column_size);
+  InitCompact2Basis(compact_primal_column_size);
+  // Adjust the primal matrix
+  primal_matrix_.InitPrimalMatrix();
 }
 
 // Compute absolute error for 0
@@ -417,10 +418,9 @@ bool LinearProgrammingSolver::NumericalGT0(double x) { return x > zero_plus_; }
 
 // the optimal cost of the primal linear programming problem
 double LinearProgrammingSolver::OptimalCost() {
-  if (is_solved == SolveLpTag::kFiniteCost) {
-    return InnerProduct(c_, basic_column2compact_primal_column_, x_);
-  }
-  return -GetMaxVal<float>();
+  if (is_solved == SolveLpTag::kInfCost) { return -GetMaxVal<float>(); }
+  if (is_solved == SolveLpTag::kNoSolution) { return GetMaxVal<float>(); }
+  return InnerProduct(c_, basic_column2compact_primal_column_, x_);
 }
 
 // Init the map from compact variables to the basic variables
