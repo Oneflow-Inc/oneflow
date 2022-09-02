@@ -180,9 +180,8 @@ func::FuncOp DeclareKernelLaunchWrapInterface(::mlir::PatternRewriter& rewriter,
   return func;
 }
 
-func::FuncOp GetOrInsertKernelFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc,
-                                     StringRef func_name, ValueRange operands, ValueRange results,
-                                     Operation* op) {
+func::FuncOp GetOrInsertKernelFuncOp(::mlir::PatternRewriter& rewriter, Operation* op) {
+  auto loc = op->getLoc();
   StringRef c_api_callee = "kernel_launch";
   auto parent_func_op = op->getParentOfType<oneflow::Job>();
   if (!parent_func_op) {
@@ -197,8 +196,9 @@ func::FuncOp GetOrInsertKernelFuncOp(::mlir::PatternRewriter& rewriter, mlir::Lo
   func::FuncOp c_api_func =
       DeclareKernelLaunchCInterface(rewriter, loc, &parent_module_op, c_api_callee);
 
-  auto func_type = rewriter.getFunctionType(operands.getTypes(), results.getTypes());
-  auto func = DeclareKernelLaunchWrapInterface(rewriter, loc, &parent_module_op, func_name,
+  auto func_type = rewriter.getFunctionType(op->getOperandTypes(), op->getResultTypes());
+  auto func = DeclareKernelLaunchWrapInterface(rewriter, loc, &parent_module_op,
+                                               op->getAttr("op_name").cast<StringAttr>(),
                                                func_type, c_api_func, op);
 
   return func;
@@ -917,35 +917,49 @@ void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLI
   results.insert<BroadcastMulToScalarMulPattern>(context);
 }
 
+struct KernelLaunchWithLLVMPattern : public mlir::OpRewritePattern<KernelLaunchOp> {
+  explicit KernelLaunchWithLLVMPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<KernelLaunchOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(KernelLaunchOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    auto attr_flag = "has_llvm";
+    if (op->getAttr(attr_flag)) {
+      return success();
+    } else {
+      op->setAttr(attr_flag, rewriter.getStringAttr("true"));
+    }
+    auto function = GetOrInsertKernelFuncOp(rewriter, op);
+    op->setAttr("callee", SymbolRefAttr::get(function));
+
+    if (failed(DumpAssembly(rewriter, op))) { exit(1); }
+    return success();
+  }
+};
+
 struct KernelLaunchPattern : public RewritePattern {
   explicit KernelLaunchPattern(::mlir::MLIRContext* context)
       : RewritePattern(MatchAnyOpTypeTag(), 0, context){};
 
   LogicalResult matchAndRewrite(Operation* op, ::mlir::PatternRewriter& rewriter) const override {
-    auto attr_flag = "in_kernel_launch";
     auto op_name = op->getName().getStringRef();
     std::vector<StringRef> white_list{
-        ModuleOp::getOperationName(),       func::FuncOp::getOperationName(),
-        func::CallOp::getOperationName(),   func::ReturnOp::getOperationName(),
-        KernelLaunchOp::getOperationName(), Job::getOperationName(),
-        ReturnOp::getOperationName(),       OutputOp::getOperationName(),
-        InputOp::getOperationName(),        VariableOp::getOperationName(),
+        KernelLaunchOp::getOperationName(),
+        OutputOp::getOperationName(),
+        InputOp::getOperationName(),
+        VariableOp::getOperationName(),
     };
-    auto op_name_attr = op->getAttr("op_name");
-    if (std::count(white_list.begin(), white_list.end(), op_name) || !op_name_attr
-        || op->hasAttr(attr_flag)) {
+    if (std::count(white_list.begin(), white_list.end(), op_name) || !op->getAttr("op_name")) {
       return success();
     }
-    op->setAttr(attr_flag, StringAttr::get(op->getContext(), "true"));
-    op_name = op_name_attr.cast<StringAttr>();
-    auto loc = op->getLoc();
-    auto in = op->getOperands();
-    auto out = op->getResults();
-    NamedAttrList attrs = GetJitOpAttributes(rewriter, op_name, in.size(), out.size(), op);
 
-    auto function = GetOrInsertKernelFuncOp(rewriter, loc, op_name, in, out, op);
-    auto kernel_launch = rewriter.replaceOpWithNewOp<KernelLaunchOp>(op, function, attrs);
-    if (failed(DumpAssembly(rewriter, kernel_launch))) { exit(1); }
+    ValueRange in = op->getOperands();
+    TypeRange out = op->getResultTypes();
+    NamedAttrList attrs = op->getAttrs();
+    auto new_op = rewriter.replaceOpWithNewOp<KernelLaunchOp>(op, attrs, out, in);
+    // in this pass, this field is used as storage of op name.
+    new_op->setAttr("mlir_assembly", rewriter.getStringAttr(op->getName().stripDialect()));
+    // in this pass, we escape from declaring the correspond func, so the callee is pointed to Job.
+    new_op->setAttr("callee", SymbolRefAttr::get(new_op->template getParentOfType<oneflow::Job>()));
     return success();
   }
 };
@@ -1015,6 +1029,9 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 
 void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<MulCastPattern>(patterns.getContext());
+}
+void populateKernelWithLLVMPasses(::mlir::RewritePatternSet& patterns) {
+  patterns.add<KernelLaunchWithLLVMPattern>(patterns.getContext());
 }
 
 void populateKernelWrapperPasses(::mlir::RewritePatternSet& patterns) {

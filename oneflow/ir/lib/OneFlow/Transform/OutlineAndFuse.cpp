@@ -35,10 +35,21 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
   }
 };
 
-class KernelLaunchFunctionPass : public KernelLaunchFunctionPassBase<KernelLaunchFunctionPass> {
+class KernelLaunchWithLLVMPass : public KernelLaunchWithLLVMPassBase<KernelLaunchWithLLVMPass> {
   void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<LLVM::LLVMDialect>();
   }
+
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    populateKernelWithLLVMPasses(patterns);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
+
+class KernelLaunchFunctionPass : public KernelLaunchFunctionPassBase<KernelLaunchFunctionPass> {
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
@@ -64,6 +75,11 @@ std::unique_ptr<Pass> createOutlineJitFunctionPass() {
 
 std::unique_ptr<Pass> createKernelLaunchFunctionPass() {
   return std::make_unique<KernelLaunchFunctionPass>();
+}
+
+
+std::unique_ptr<mlir::Pass> createKernelLaunchWithLLVMPass(){
+  return std::make_unique<KernelLaunchWithLLVMPass>();
 }
 
 std::unique_ptr<Pass> createFuseIntoExistingOpPass() {
