@@ -1,11 +1,10 @@
-# RUN: python3 %s
-# FileCheck %s
+# RUN: python3 %s | FileCheck %s
 # CHECK: oneflow.kernel_launch
 import numpy as np
 import os
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_PREFER_NHWC"] = "1"
+os.environ["ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"] = "1"
 
 import oneflow as flow
 

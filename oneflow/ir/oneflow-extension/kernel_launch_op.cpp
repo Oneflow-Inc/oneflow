@@ -39,7 +39,7 @@ void launch_kernel(void* ctx, std::string name) {
   auto res = ::oneflow::user_op::UserOpRegistryMgr::Get().GetAllOpRegistryResults();
   auto it = res.find(name);
   if (it == res.end()) return;
-  // TODO: LookUp
+  TODO() << "LookUp";
   // auto instance = oneflow::Singleton<oneflow::user_op::KernelLaunchRegistry>::Get();
   // auto name = instance->getName(index);
   // auto kernel = instance->LookUp(name)();
@@ -85,30 +85,30 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
 
   ~KernelLaunchOpKernelRegContext() = default;
   DeviceType device_type() const override {
-    // TODO: create from device attr in op in mlir
+    TODO() << "create from device attr in op in mlir";
     return device_type_;
   }
   const ParallelContext& parallel_ctx() const override {
-    // TODO: create from device attr in op in mlir
+    TODO() << "create from device attr in op in mlir";
     ParallelContext* parallel_ctx = nullptr;
     return *parallel_ctx;
   }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
-    // TODO: query and build tensor desc from op in mlir
+    TODO() << "query and build tensor desc from op in mlir";
     return nullptr;
   }
   const ArgVec& inputs() const override {
-    // TODO: query inputs from op in mlir
+    TODO() << "query inputs from op in mlir";
     return {};
   }
   const ArgVec& outputs() const override {
-    // TODO: query outputs from op in mlir
+    TODO() << "query outputs from op in mlir";
     return {};
   }
 
   const user_op::UserOpConfWrapper& user_op_conf() const override {
-    // TODO: from op in mlir
+    TODO() << "from op in mlir";
     OperatorConf user_op_conf;
     return user_op::UserOpConfWrapper(std::make_shared<OperatorConf>(user_op_conf));
   }
@@ -145,7 +145,7 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
     KernelLaunchOpKernelRegContext reg_ctx(module_op.get());
     const auto* res =
         CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult("relu", reg_ctx));
-    // TODO: run the kernel::compute func
+    TODO() << "run the kernel::compute func";
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

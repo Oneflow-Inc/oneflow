@@ -795,6 +795,9 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     pm.addPass(oneflow::createConvertInferenceOpPass());
     pm.addPass(oneflow::createPostConvertInferenceOpPass());
   }
+  if (std::getenv("ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH") != nullptr) {
+    pm.addPass(createKernelLaunchFunctionPass());
+  }
   pm.addPass(createCanonicalizerPass());
   llvm::raw_string_ostream os_graphviz(graphviz);
   pm.addPass(createPrintOpGraphPass(os_graphviz));
