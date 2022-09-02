@@ -20,7 +20,6 @@ import oneflow.nn as nn
 import torch
 from torch.utils.cpp_extension import load
 
-CUDA_KERNEL_VERSION = 2
 wkv_cuda = load(
     name="wkv",
     sources=[

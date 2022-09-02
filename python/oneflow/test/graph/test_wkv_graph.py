@@ -49,9 +49,9 @@ def test_wkv_graph(B, T, C, w, u, k, v):
 
 
 def CHECK_CUDA():
-    B = 100
-    T = 100
-    C = 300
+    B = 64
+    T = 256
+    C = 128
 
     w = flow.zeros(C, requires_grad=True, device="cuda").uniform_(-1, 1)
     u = flow.zeros(C, requires_grad=True, device="cuda").uniform_(-1, 1)
