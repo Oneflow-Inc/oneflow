@@ -125,6 +125,47 @@ void SparseMatrix::MatrixVectorMultiplication(const HashMap<int32_t, double>& a,
   for (int32_t i = 0; i < u.size(); i++) { u[i] = SparseInnerProduct(rows_[i], a, all2compact); }
 }
 
+// Remove some columns for this row major matrix
+void SparseMatrix::RemoveColumns4RowMajorMatrix(const std::vector<int32_t>& removed_columns) {
+  if (removed_columns.empty()) { return; }
+
+  // Init the mapping from original columns to the new compact columns
+  std::vector<int32_t> columns_original2compact(column_size_, -1);
+  int32_t first_removed_column = column_size_;
+  for (auto j : removed_columns) {
+    if (j < first_removed_column) { first_removed_column = j; }
+    columns_original2compact[j] = -2;
+  }
+  int32_t compact_column_id = first_removed_column;
+  for (int32_t j = first_removed_column + 1; j < column_size_; j++) {
+    if (columns_original2compact[j] > -2) {
+      columns_original2compact[j] = compact_column_id;
+      compact_column_id++;
+    }
+  }
+
+  // Move the column from old_id to new_id
+  auto MoveColumnForward = [&](HashMap<int32_t, double>& row, int32_t old_id) {
+    int32_t new_id = columns_original2compact[old_id];
+    if (new_id >= first_removed_column) {
+      // Move from the old house to the new one.
+      row[new_id] = row[old_id];
+    }
+    row.erase(old_id);
+  };
+  // Sort the column ids
+  std::set<int32_t> column_ids;
+  for (auto& row : rows_) {
+    // Collect the column ids to be moved
+    column_ids.clear();
+    for (const auto& pair : row) {
+      if (pair.first > first_removed_column) { column_ids.insert(pair.first); }
+    }
+    // Move the columns
+    for (int32_t column_id : column_ids) { MoveColumnForward(row, column_id); }
+  }
+}
+
 void SparsePrimalMatrix::ExpandArtificialVariables() {
   if (original_column_size_ < 0) {
     original_column_size_ = columns_.size();
@@ -155,6 +196,9 @@ void SparsePrimalMatrix::HideRow(int32_t i) {
 
 void SparsePrimalMatrix::HideColumn(int32_t j) { columns_all2compact_[j] = -1; }
 
+// Generate the mapping between all columns and compact columns
+// all2compact (bool) should be initialized.
+// all2compact (bool) -> all2compact (int) and compact2all (int)
 void SparsePrimalMatrix::InitPrimalMatrix() {
   auto InitPrimalDimension = [](int32_t* primal_size, std::vector<int32_t>& all2compact,
                                 std::vector<int32_t>& compact2all) {
@@ -304,10 +348,11 @@ void LinearProgrammingSolver::Solve4InitFeasibleSolution() {
   int32_t compact_column_size = primal_matrix_.columns_compact2all_.size();
   int32_t compact_row_size = rows_compact2all.size();
   int32_t compact_primal_column_size = compact_column_size - compact_row_size;
+  // Init c
   c_.resize(compact_column_size);
   for (int32_t j = 0; j < compact_primal_column_size; j++) { c_[j] = 0; }
   for (int32_t j = compact_primal_column_size; j < compact_column_size; j++) { c_[j] = 1; }
-  // Set up the right hand size of the constrains
+  // Set up the right hand size of the constrains (Init x)
   x_.resize(compact_row_size);
   for (int32_t i = 0; i < compact_row_size; i++) {
     x_[i] = primal_constrain_b_[rows_compact2all[i]];
@@ -384,8 +429,9 @@ void LinearProgrammingSolver::Solve4InitFeasibleSolution() {
     inverse_base_matrix_.rows_.resize(compact_row_id);
     x_.resize(compact_row_id);
     basic_column2compact_primal_column_.resize(compact_row_id);
-    // NOTE: The artificial columns of the inverse base matrix are already removed due to the
-    // sparsity. Remove marked columns
+    // NOTE: value(unremoved rows, removed columns) are all zeros.
+    // Remove marked columns
+    inverse_base_matrix_.RemoveColumns4RowMajorMatrix(removed_columns);
 
     // NOTE: As long as one row is the linear combination of the other rows, elimination of that row
     // will not eliminate any columns.
@@ -394,9 +440,25 @@ void LinearProgrammingSolver::Solve4InitFeasibleSolution() {
   // Remove all the artificial variables
   primal_matrix_.EliminateArtificialVariables();
   primal_cost_.resize(compact_primal_column_size);
-  InitCompact2Basis(compact_primal_column_size);
-  // Adjust the primal matrix
+}
+
+// Phase 2, solve for a feasible solution and the optimal cost
+void LinearProgrammingSolver::Solve4FeasibleSolution() {
+  // Find an initial feasible solution and corresponding basis
+  // If you have the initial feasible solution already, you can comment out these lines.
+  Solve4InitFeasibleSolution();
+  // Init the primal matrix
   primal_matrix_.InitPrimalMatrix();
+  // Initialize the mapping between the compact primal column and the basic column
+  int32_t compact_column_size = primal_matrix_.columns_compact2all_.size();
+  InitCompact2Basis(compact_column_size);
+  // Init c
+  c_.resize(compact_column_size);
+  for (int32_t j = 0; j < compact_column_size; j++) {
+    c_[j] = primal_cost_[primal_matrix_.columns_compact2all_[j]];
+  }
+  // Apply the revised simplex method to the auxiliary problem
+  RevisedSimplexMethod();
 }
 
 // Compute absolute error for 0

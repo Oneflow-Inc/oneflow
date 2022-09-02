@@ -56,6 +56,9 @@ class SparseMatrix {
   void MatrixVectorMultiplication(const HashMap<int32_t, double>& a,
                                   const std::vector<int32_t>& all2compact,
                                   std::vector<double>& u) const;
+
+  // Remove some columns for this row major matrix
+  void RemoveColumns4RowMajorMatrix(const std::vector<int32_t>& removed_columns);
 };
 
 // A sparse matrix whose rows and columns might be eliminated.
@@ -119,6 +122,8 @@ class LinearProgrammingSolver {
 
   // Phase 1, solve for a initial feasible solution and corresponding basis.
   void Solve4InitFeasibleSolution();
+  // Phase 2, solve for a feasible solution and the optimal cost
+  void Solve4FeasibleSolution();
 
   // the optimal cost of the primal linear programming problem
   double OptimalCost();
