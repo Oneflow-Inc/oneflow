@@ -1897,8 +1897,7 @@ def OneFlow_EagerCclAllReduceOp : OneFlow_BaseOp<"eager_ccl_all_reduce", [NoSide
     OneFlow_Tensor:$out
   );
   let attrs = (ins
-    StrAttr:$parallel_conf,
-    DefaultValuedAttr<BoolAttr, "false">:$async_launch
+    StrAttr:$parallel_conf
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

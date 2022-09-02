@@ -314,7 +314,8 @@ from oneflow.framework.generator import (
 
 # NOTE(chengcheng) oneflow.Model is unavailable now.
 # from oneflow.framework.model import Model
-import oneflow.utils.torch
+import oneflow.utils.tensor
+import oneflow.utils.global_view
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
 from oneflow.framework.type_tensor import *

@@ -447,9 +447,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       });
   m.add_functor("DispatchEagerCclAllReduce",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
-                   const std::string& parallel_conf, bool async_launch) -> Maybe<Tensor> {
-                  auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("parallel_conf", "async_launch");
-                  attrs.SetAllAttrs(parallel_conf, async_launch);
+                   const std::string& parallel_conf) -> Maybe<Tensor> {
+                  auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("parallel_conf");
+                  attrs.SetAllAttrs(parallel_conf);
                   return OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs);
                 });
   m.add_functor(

@@ -33,7 +33,7 @@ namespace oneflow {
 }
 /*static*/ Maybe<Symbol<Stream>> SendOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 namespace {
@@ -60,7 +60,7 @@ Maybe<Symbol<Device>> GetRecvOutputDeivce(user_op::DeviceAndStreamInferContext* 
 }
 /*static*/ Maybe<Symbol<Stream>> RecvOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched, &GetRecvOutputDeivce>(ctx);
+  return DeviceAndStreamInferFn<&GetRecvOutputDeivce>(ctx);
 }
 
 }  // namespace oneflow
