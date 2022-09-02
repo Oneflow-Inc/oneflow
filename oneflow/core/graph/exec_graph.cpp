@@ -111,6 +111,8 @@ void ExecNode::InferBlobDescs(const OpNode* op_node, const ParallelContext* para
   // NOTE(strint): bad news, lots of InferTmpSizeFn use input register TensorDesc.
   CHECK_JUST_MSG(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, &GlobalJobDesc()),
                  std::stringstream() << " infer blob descs if failed, op name " << op_->op_loc());
+  // NOTE(strint): Inplace infer doesn't need the real blob desc value, pass GetBlobDesc4BnInOp is just becase some
+  // infer context's constructor need it. 
   CHECK_JUST_MSG(op_->InferInplaceObn2IbnIf(&mut_inplace_obn2ibn_, &con_inplace_obn2ibn_,
                                             GetBlobDesc4BnInOp, parallel_ctx),
                  std::stringstream()

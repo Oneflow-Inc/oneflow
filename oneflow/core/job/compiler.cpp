@@ -75,6 +75,7 @@ void PlanCompiler::Compile(Job* job, Plan* plan, std::shared_ptr<TaskGraph>& tas
   // 2, parallel infer user op
   // 3, topo infer others 
   // task_gph->TopoForEachNode(&TaskNode::Build);
+  // NOTE(strint): register bind lbi and exec node bind register needs to run topologically.
   task_gph->TopoForEachNode(&TaskNode::BuildExecGphIf);
   tc->Count("Graph name: " + job_name + " TaskNode::BuildExecGraph", 1);
   task_gph->TopoForEachNode(&TaskNode::InferRegstIf);
