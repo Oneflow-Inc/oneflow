@@ -10235,12 +10235,13 @@ def OneFlow_KernelLaunchOp : OneFlow_BaseOp<"kernel_launch", [ CallOpInterface, 
     StrAttr:$mlir_assembly
   );
   let builders = [
-    OpBuilder<(ins "NamedAttrList":$attributes,
-      CArg<"TypeRange", "{}">:$out,
+    OpBuilder<(ins "func::FuncOp":$callee,
+      "NamedAttrList":$attributes,
       CArg<"ValueRange", "{}">:$in), [{
-      $_state.addTypes(out);
       $_state.addOperands(in);
       $_state.addAttributes(attributes);
+      $_state.addAttribute("callee", SymbolRefAttr::get(callee));
+      $_state.addTypes(callee.getFunctionType().getResults());
     }]>
   ];
   let extraClassDeclaration = [{
