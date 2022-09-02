@@ -24,16 +24,12 @@ CUDA_KERNEL_VERSION = 2
 wkv_cuda = load(
     name="wkv",
     sources=[
-        "/home/zhangxiaoyu/RWKV-CUDA/wkv/cuda/wkv_op.cpp",
-        f"/home/zhangxiaoyu/RWKV-CUDA/wkv/cuda/wkv_cuda_v{CUDA_KERNEL_VERSION}.cu",
+        "/home/hanbinbin/RWKV-LM/RWKV-v4/cuda/wkv_op.cpp",
+        f"/home/hanbinbin/RWKV-LM/RWKV-v4/cuda/wkv_cuda.cu",
     ],
     verbose=True,
     extra_cuda_cflags=["--use_fast_math", "--extra-device-vectorization"],
 )
-
-file = open("./input.pkl", "rb")
-input_dict = pickle.load(file)
-
 
 class WKV(torch.autograd.Function):
     @staticmethod
@@ -71,20 +67,34 @@ def RUN_CUDA(B, T, C, w, u, k, v):
 
 
 def CHECK_CUDA():
-    B = input_dict["B"]
-    T = input_dict["T"]
-    C = input_dict["C"]
+    B = 128
+    T = 128
+    C = 1024
+
     print(B, T, C)
 
     with torch.no_grad():
-        # w = torch.zeros(C, requires_grad=True, device='cuda').uniform_(-1, 1)
-        # u = torch.zeros(C, requires_grad=True, device='cuda').uniform_(-1, 1)
-        # k = torch.zeros(B, T, C, requires_grad=True, device='cuda').uniform_(-1, 1)
-        # v = torch.zeros(B, T, C, requires_grad=True, device='cuda').uniform_(-1, 1)
-        w = torch.from_numpy(input_dict["time_decay"]).to("cuda").requires_grad_()
-        u = torch.from_numpy(input_dict["time_first"]).to("cuda").requires_grad_()
-        k = torch.from_numpy(input_dict["k"]).to("cuda").requires_grad_()
-        v = torch.from_numpy(input_dict["v"]).to("cuda").requires_grad_()
+
+        w = (
+            torch.zeros(C, requires_grad=True, device="cuda")
+            .uniform_(-1, 1)
+            .requires_grad_()
+        )
+        u = (
+            torch.zeros(C, requires_grad=True, device="cuda")
+            .uniform_(-1, 1)
+            .requires_grad_()
+        )
+        k = (
+            torch.zeros(B, T, C, requires_grad=True, device="cuda")
+            .uniform_(-1, 1)
+            .requires_grad_()
+        )
+        v = (
+            torch.zeros(B, T, C, requires_grad=True, device="cuda")
+            .uniform_(-1, 1)
+            .requires_grad_()
+        )
 
     with torch.autograd.profiler.profile(use_cuda=True) as prof:
         y1 = RUN_CUDA(B, T, C, w, u, k, v)
@@ -124,11 +134,10 @@ def CHECK_CUDA():
     print(np.allclose(gu_flow, gu_torch, atol=1e-4))
     print(np.allclose(gk_flow, gk_torch, atol=1e-4))
     print(np.allclose(gv_flow, gv_torch, atol=1e-4))
-    print(gw_flow.flatten()[:5], -np.exp(gw_torch.flatten()[:5]))
+    print(gw_flow.flatten()[:5], gw_torch.flatten()[:5])
     print(gu_flow.flatten()[:5], gu_torch.flatten()[:5])
     print(gk_flow.flatten()[:5], gk_torch.flatten()[:5])
     print(gv_flow.flatten()[:5], gv_torch.flatten()[:5])
-    # print(gu_flow, gu_torch)
 
 
 if __name__ == "__main__":
