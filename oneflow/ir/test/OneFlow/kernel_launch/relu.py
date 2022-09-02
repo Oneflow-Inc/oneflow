@@ -1,4 +1,6 @@
 # RUN: python3 %s
+# FileCheck %s
+# CHECK: oneflow.kernel_launch
 import numpy as np
 import os
 
