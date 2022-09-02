@@ -26,12 +26,10 @@ namespace {
 
 class UsingThreadUidSet final {
  public:
-  UsingThreadUidSet() : thread_limits_(0) {
-    using_thread_uids_.insert(Stream::kDefaultStreamThreadUid);
-    using_thread_uids_.insert(Stream::kTmpStreamThreadUid);
-    thread_limits_ =
-        using_thread_uids_.size() + ThreadLocalEnvInteger<ONEFLOW_VM_WORKER_THREAD_LIMIT>();
-  }
+  UsingThreadUidSet()
+      : using_thread_uids_({Stream::kDefaultStreamThreadUid, Stream::kTmpStreamThreadUid}),
+        thread_limits_(using_thread_uids_.size()
+                       + ThreadLocalEnvInteger<ONEFLOW_VM_WORKER_THREAD_LIMIT>()) {}
   ~UsingThreadUidSet() = default;
 
   Maybe<int64_t> Get() {

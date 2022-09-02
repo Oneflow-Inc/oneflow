@@ -60,8 +60,8 @@ Maybe<Symbol<Stream>> RawGetDefaultStreamByPlacement(Symbol<ParallelDesc> parall
 
 }  // namespace
 
-size_t Stream::kDefaultStreamThreadUid = 0;
-size_t Stream::kTmpStreamThreadUid = 1;
+int64_t Stream::kDefaultStreamThreadUid = 0;
+int64_t Stream::kTmpStreamThreadUid = 1;
 
 decltype(GetDefaultStreamByDevice) GetDefaultStreamByDevice =
     DECORATE(&RawGetDefaultStreamByDevice, ThreadLocal);

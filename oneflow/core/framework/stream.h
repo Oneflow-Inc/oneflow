@@ -48,8 +48,8 @@ class Stream final {
   size_t thread_uid() const { return thread_uid_; }
   size_t unique_stream_id() const { return unique_stream_id_; }
 
-  static size_t kDefaultStreamThreadUid;
-  static size_t kTmpStreamThreadUid;
+  static int64_t kDefaultStreamThreadUid;
+  static int64_t kTmpStreamThreadUid;
 
  private:
   Stream(Symbol<Device> device, StreamType stream_type, size_t thread_uid);
