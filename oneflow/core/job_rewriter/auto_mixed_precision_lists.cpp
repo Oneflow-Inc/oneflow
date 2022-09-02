@@ -46,7 +46,9 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "binary_cross_entropy_with_logits_reduce_mean_grad",
                                "fused_cross_feature_interaction",
                                "fused_cross_feature_interaction_v1_grad",
-                               "fused_cross_feature_interaction_v2_grad"};
+                               "fused_cross_feature_interaction_v2_grad",
+                               "wkv"
+                               "wkv_grad"};
   return white_list;
 }
 

@@ -131,6 +131,11 @@ foreach(oneflow_single_file ${oneflow_all_src})
   endif()
 endforeach()
 
+set(OF_WKV_KERNEL_FILE ${PROJECT_SOURCE_DIR}/oneflow/user/kernels/wkv_kernel.cu)
+
+set_source_files_properties(${OF_WKV_KERNEL_FILE} PROPERTIES COMPILE_OPTIONS "--use_fast_math;-Xptxas;-O3;--maxrregcount;60;")
+
+
 # clang format
 add_custom_target(
   of_format

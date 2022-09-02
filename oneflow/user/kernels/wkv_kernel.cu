@@ -117,39 +117,27 @@ __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C
   const int _c = idx % C;
   const int _offset = _b * T * C + _c;
 
-  half u = _u[_c];
-  const half w = static_cast<half>(-1.0) * static_cast<half>(Exp(static_cast<float>(_w[_c])));
+  float u = static_cast<float>(_u[_c]);
+  const float w = -1.0 * (Exp(static_cast<float>(_w[_c])));
   const half* __restrict__ const k = _k + _offset;
   const half* __restrict__ const v = _v + _offset;
   half* __restrict__ const y = _y + _offset;
 
-  half p = static_cast<half>(0.0), q = static_cast<half>(0.0), o = static_cast<half>(MIN_VALUE);
-  half no, AA, BB;
+  float p = 0.0, q = 0.0, o = MIN_VALUE;
+  float no, AA, BB;
   // p and q are running sums divided by exp(o) (to avoid overflows)
   for (int i = 0; i < T; i++) {
     const int ii = i * C;
 
-    // half no = max(o, u + k[ii]);
-    // half no = o > u + k[ii] ? o : u + k[ii];
-    if (o > u + k[ii]) {
-      no = o;
-    } else {
-      no = u + k[ii];
-    }
-    AA = static_cast<half>(Exp(static_cast<float>(o - no)));
-    BB = static_cast<half>(Exp(static_cast<float>(u + k[ii] - no)));
-    y[ii] = Div((AA * p + BB * v[ii]), (AA * q + BB));
+    no = max(o, u + static_cast<float>(k[ii]));
+    AA = Exp(o - no);
+    BB = Exp(u + static_cast<float>(k[ii]) - no);
+    y[ii] = static_cast<half>(Div((AA * p + BB * static_cast<float>(v[ii])), (AA * q + BB)));
 
-    // no = max(w + o, k[ii]);
-    // no = w + o > k[ii] ? w + o : k[ii];
-    if (w + o > k[ii]) {
-      no = w + o;
-    } else {
-      no = k[ii];
-    }
-    AA = static_cast<half>(Exp(static_cast<float>(w + o - no)));
-    BB = static_cast<half>(Exp(static_cast<float>(k[ii] - no)));
-    p = AA * p + BB * v[ii];
+    no = max(w + o, static_cast<float>(k[ii]));
+    AA = Exp(w + o - no);
+    BB = Exp(static_cast<float>(k[ii]) - no);
+    p = AA * p + BB * static_cast<float>(v[ii]);
     q = AA * q + BB;
     o = no;
   }
@@ -168,41 +156,27 @@ __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C
   const int _c = idx % C;
   const int _offset = _b * T * C + _c;
 
-  nv_bfloat16 u = _u[_c];
-  const nv_bfloat16 w =
-      static_cast<nv_bfloat16>(-1.0) * static_cast<nv_bfloat16>(Exp(static_cast<float>(_w[_c])));
+  float u = static_cast<float>(_u[_c]);
+  const float w = -1.0 * (Exp(static_cast<float>(_w[_c])));
   const nv_bfloat16* __restrict__ const k = _k + _offset;
   const nv_bfloat16* __restrict__ const v = _v + _offset;
   nv_bfloat16* __restrict__ const y = _y + _offset;
 
-  nv_bfloat16 p = static_cast<nv_bfloat16>(0.0), q = static_cast<nv_bfloat16>(0.0),
-              o = static_cast<nv_bfloat16>(MIN_VALUE);
-  nv_bfloat16 no, AA, BB;
+  float p = 0.0, q = 0.0, o = MIN_VALUE;
+  float no, AA, BB;
   // p and q are running sums divided by exp(o) (to avoid overflows)
   for (int i = 0; i < T; i++) {
     const int ii = i * C;
 
-    // half no = max(o, u + k[ii]);
-    // nv_bfloat16 no = o > u + k[ii] ? o : u + k[ii];
-    if (o > u + k[ii]) {
-      no = o;
-    } else {
-      no = u + k[ii];
-    }
-    AA = static_cast<nv_bfloat16>(Exp(static_cast<float>(o - no)));
-    BB = static_cast<nv_bfloat16>(Exp(static_cast<float>(u + k[ii] - no)));
-    y[ii] = Div((AA * p + BB * v[ii]), (AA * q + BB));
+    no = max(o, u + static_cast<float>(k[ii]));
+    AA = Exp(o - no);
+    BB = Exp(u + static_cast<float>(k[ii]) - no);
+    y[ii] = static_cast<nv_bfloat16>(Div((AA * p + BB * static_cast<float>(v[ii])), (AA * q + BB)));
 
-    // no = max(w + o, k[ii]);
-    // no = w + o > k[ii] ? w + o : k[ii];
-    if (w + o > k[ii]) {
-      no = w + o;
-    } else {
-      no = k[ii];
-    }
-    AA = static_cast<nv_bfloat16>(Exp(static_cast<float>(w + o - no)));
-    BB = static_cast<nv_bfloat16>(Exp(static_cast<float>(k[ii] - no)));
-    p = AA * p + BB * v[ii];
+    no = max(w + o, static_cast<float>(k[ii]));
+    AA = Exp(w + o - no);
+    BB = Exp(static_cast<float>(k[ii]) - no);
+    p = AA * p + BB * static_cast<float>(v[ii]);
     q = AA * q + BB;
     o = no;
   }
@@ -286,6 +260,88 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
   _gu[_offsetBC] += gu;
 }
 
+template<>
+__global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t C,
+                                const half* __restrict__ const _w,
+                                const half* __restrict__ const _u,
+                                const half* __restrict__ const _k,
+                                const half* __restrict__ const _v,
+                                const half* __restrict__ const _gy, half* __restrict__ const _gw,
+                                half* __restrict__ const _gu, half* __restrict__ const _gk,
+                                half* __restrict__ const _gv) {
+  const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  const int _b = idx / C;
+  const int _c = idx % C;
+  const int _offset = _b * T * C + _c;
+
+  float u = static_cast<float>(_u[_c]);
+  const float w = -1 * Exp(static_cast<float>(_w[_c]));
+  const half* __restrict__ const k = _k + _offset;
+  const half* __restrict__ const v = _v + _offset;
+  const half* __restrict__ const gy = _gy + _offset;
+
+  half* __restrict__ const gk = _gk + _offset;
+  half* __restrict__ const gv = _gv + _offset;
+
+  float y[1024], z[1024], zexp[1024];
+
+  float gw = 0.0, gu = 0.0;
+  float p = 0.0, q = 0.0;
+  float dpdw = 0.0, dqdw = 0.0;
+  float o = static_cast<float>(MIN_VALUE);
+  for (int i = 0; i < T; i++) {
+    const int ii = i * C;
+    float no = max(o, static_cast<float>(k[ii]) + u);
+
+    float A = Exp(o - no);
+    float B = Exp(static_cast<float>(k[ii]) + u - no);
+
+    float num = A * p + B * static_cast<float>(v[ii]);
+    float iden = Div(static_cast<float>(1.0), A * q + B);
+
+    y[i] = num * iden;
+    z[i] = iden;
+    zexp[i] = static_cast<float>(k[ii]) + u - no;
+
+    gw = gw + static_cast<float>(gy[ii]) * (dpdw - dqdw * y[i]) * iden * A;
+    gu = gu + static_cast<float>(gy[ii]) * (static_cast<float>(v[ii]) - y[i]) * B * iden;
+
+    no = max(w + o, static_cast<float>(k[ii]));
+    A = Exp(w + o - no);
+    B = Exp(static_cast<float>(k[ii]) - no);
+    dpdw = A * (p + dpdw);
+    dqdw = A * (q + dqdw);
+    p = A * p + B * static_cast<float>(v[ii]);
+    q = A * q + B;
+    o = no;
+  }
+
+  float gp = 0.0, gq = 0.0;
+  o = static_cast<float>(MIN_VALUE);
+  for (int i = T - 1; i >= 0; i--) {
+    const int ii = i * C;
+    float A = static_cast<float>(gy[ii]) * z[i] * Exp(zexp[i]);
+    float B = Exp(static_cast<float>(k[ii]) + o);
+    gk[ii] = static_cast<half>(A * (static_cast<float>(v[ii]) - y[i])
+                               + B * (gp * static_cast<float>(v[ii]) + gq));
+    gv[ii] = static_cast<half>(A + B * gp);
+
+    float no = max(w + o, zexp[i] - static_cast<float>(k[ii]) - u);
+
+    A = Exp(w + o - no);
+    B = static_cast<float>(gy[ii]) * z[i] * Exp(zexp[i] - static_cast<float>(k[ii]) - u - no);
+    gp = A * gp + B;
+    gq = A * gq - B * y[i];
+    o = no;
+  }
+
+  // Multiply by w because the w -> -exp(w) preprocessing is halfway in the backwards pass, even
+  // though it's not in the forward pass
+  const int _offsetBC = _b * C + _c;
+  _gw[_offsetBC] = _gw[_offsetBC] + static_cast<half>(gw * w);
+  _gu[_offsetBC] = _gu[_offsetBC] + static_cast<half>(gu);
+}
+
 #if CUDA_VERSION >= 11000
 template<>
 __global__ void kernel_backward(
@@ -299,8 +355,8 @@ __global__ void kernel_backward(
   const int _c = idx % C;
   const int _offset = _b * T * C + _c;
 
-  nv_bfloat16 u = _u[_c];
-  const nv_bfloat16 w = -1 * Exp(static_cast<float>(_w[_c]));
+  float u = static_cast<float>(_u[_c]);
+  const float w = -1 * Exp(static_cast<float>(_w[_c]));
   const nv_bfloat16* __restrict__ const k = _k + _offset;
   const nv_bfloat16* __restrict__ const v = _v + _offset;
   const nv_bfloat16* __restrict__ const gy = _gy + _offset;
@@ -308,71 +364,53 @@ __global__ void kernel_backward(
   nv_bfloat16* __restrict__ const gk = _gk + _offset;
   nv_bfloat16* __restrict__ const gv = _gv + _offset;
 
-  nv_bfloat16 y[1024], z[1024], zexp[1024];
+  float y[1024], z[1024], zexp[1024];
 
-  nv_bfloat16 gw = static_cast<nv_bfloat16>(0.0), gu = static_cast<nv_bfloat16>(0.0);
-  nv_bfloat16 p = static_cast<nv_bfloat16>(0.0), q = static_cast<nv_bfloat16>(0.0);
-  nv_bfloat16 dpdw = static_cast<nv_bfloat16>(0.0), dqdw = static_cast<nv_bfloat16>(0.0);
-  nv_bfloat16 o = static_cast<nv_bfloat16>(MIN_VALUE);
-  nv_bfloat16 no;
+  float gw = 0.0, gu = 0.0;
+  float p = 0.0, q = 0.0;
+  float dpdw = 0.0, dqdw = 0.0;
+  float o = static_cast<float>(MIN_VALUE);
   for (int i = 0; i < T; i++) {
     const int ii = i * C;
-    // half no = max(o, k[ii] + u);
-    // nv_bfloat16 no = o > k[ii] + u ? o : k[ii] + u;
-    if (o > k[ii] + u) {
-      no = o;
-    } else {
-      no = k[ii] + u;
-    }
-    nv_bfloat16 A = static_cast<nv_bfloat16>(Exp(static_cast<float>(o - no)));
-    nv_bfloat16 B = static_cast<nv_bfloat16>(Exp(static_cast<float>(k[ii] + u - no)));
+    float no = max(o, static_cast<float>(k[ii]) + u);
 
-    nv_bfloat16 num = A * p + B * v[ii];
-    // half iden = 1 / (A * q + B);
-    nv_bfloat16 iden = Div(static_cast<nv_bfloat16>(1.0), static_cast<nv_bfloat16>(A * q + B));
+    float A = Exp(o - no);
+    float B = Exp(static_cast<float>(k[ii]) + u - no);
+
+    float num = A * p + B * static_cast<float>(v[ii]);
+    float iden = Div(static_cast<float>(1.0), A * q + B);
 
     y[i] = num * iden;
     z[i] = iden;
-    zexp[i] = k[ii] + u - no;
+    zexp[i] = static_cast<float>(k[ii]) + u - no;
 
-    gw = gw + gy[ii] * (dpdw - dqdw * y[i]) * iden * A;
-    gu = gu + gy[ii] * (v[ii] - y[i]) * B * iden;
+    gw = gw + static_cast<float>(gy[ii]) * (dpdw - dqdw * y[i]) * iden * A;
+    gu = gu + static_cast<float>(gy[ii]) * (static_cast<float>(v[ii]) - y[i]) * B * iden;
 
-    // no = max(w + o, k[ii]);
-    // no = w + o > k[ii] ? w + o : k[ii];
-    if (w + o > k[ii]) {
-      no = w + o;
-    } else {
-      no = k[ii];
-    }
-    A = static_cast<nv_bfloat16>(Exp(static_cast<float>(w + o - no)));
-    B = static_cast<nv_bfloat16>(Exp(static_cast<float>(k[ii] - no)));
+    no = max(w + o, static_cast<float>(k[ii]));
+    A = Exp(w + o - no);
+    B = Exp(static_cast<float>(k[ii]) - no);
     dpdw = A * (p + dpdw);
     dqdw = A * (q + dqdw);
-    p = A * p + B * v[ii];
+    p = A * p + B * static_cast<float>(v[ii]);
     q = A * q + B;
     o = no;
   }
 
-  nv_bfloat16 gp = static_cast<nv_bfloat16>(0.0), gq = static_cast<nv_bfloat16>(0.0);
-  o = static_cast<nv_bfloat16>(MIN_VALUE);
+  float gp = 0.0, gq = 0.0;
+  o = static_cast<float>(MIN_VALUE);
   for (int i = T - 1; i >= 0; i--) {
     const int ii = i * C;
-    nv_bfloat16 A = gy[ii] * z[i] * static_cast<nv_bfloat16>(Exp(static_cast<float>(zexp[i])));
-    nv_bfloat16 B = static_cast<nv_bfloat16>(Exp(static_cast<float>(k[ii] + o)));
-    gk[ii] = A * (v[ii] - y[i]) + B * (gp * v[ii] + gq);
-    gv[ii] = A + B * gp;
+    float A = static_cast<float>(gy[ii]) * z[i] * Exp(zexp[i]);
+    float B = Exp(static_cast<float>(k[ii]) + o);
+    gk[ii] = static_cast<nv_bfloat16>(A * (static_cast<float>(v[ii]) - y[i])
+                                      + B * (gp * static_cast<float>(v[ii]) + gq));
+    gv[ii] = static_cast<nv_bfloat16>(A + B * gp);
 
-    // half no = max(w + o, zexp[i] - k[ii] - u);
-    // nv_bfloat16 no = w + o > zexp[i] - k[ii] - u ? w + o : zexp[i] - k[ii] - u;
-    if (w + o > zexp[i] - k[ii] - u) {
-      no = w + o;
-    } else {
-      no = zexp[i] - k[ii] - u;
-    }
-    A = static_cast<nv_bfloat16>(Exp(static_cast<float>(w + o - no)));
-    // B = gy[ii] * z[i] * exp(zexp[i] - k[ii] - u - no);
-    B = gy[ii] * z[i] * static_cast<nv_bfloat16>(Exp(static_cast<float>(zexp[i] - k[ii] - u - no)));
+    float no = max(w + o, zexp[i] - static_cast<float>(k[ii]) - u);
+
+    A = Exp(w + o - no);
+    B = static_cast<float>(gy[ii]) * z[i] * Exp(zexp[i] - static_cast<float>(k[ii]) - u - no);
     gp = A * gp + B;
     gq = A * gq - B * y[i];
     o = no;
@@ -381,8 +419,8 @@ __global__ void kernel_backward(
   // Multiply by w because the w -> -exp(w) preprocessing is halfway in the backwards pass, even
   // though it's not in the forward pass
   const int _offsetBC = _b * C + _c;
-  _gw[_offsetBC] = _gw[_offsetBC] + gw * w;
-  _gu[_offsetBC] = _gu[_offsetBC] + gu;
+  _gw[_offsetBC] = _gw[_offsetBC] + static_cast<nv_bfloat16>(gw * w);
+  _gu[_offsetBC] = _gu[_offsetBC] + static_cast<nv_bfloat16>(gu);
 }
 #endif
 
@@ -418,7 +456,7 @@ class WkvGPUKernel final : public user_op::OpKernel {
     const int64_t T = ctx->Attr<int64_t>("T");
     const int64_t C = ctx->Attr<int64_t>("C");
 
-    dim3 threadsPerBlock(min((int)C, 1024));
+    dim3 threadsPerBlock(min((int)C, 32));
     assert(B * C % threadsPerBlock.x == 0);
     dim3 numBlocks(B * C / threadsPerBlock.x);
     kernel_forward<<<numBlocks, threadsPerBlock>>>(B, T, C, w->dptr<F>(), u->dptr<F>(),
@@ -469,7 +507,7 @@ class WkvGradGPUKernel final : public user_op::OpKernel {
     const int64_t T = ctx->Attr<int64_t>("T");
     const int64_t C = ctx->Attr<int64_t>("C");
 
-    dim3 threadsPerBlock(min((int)C, 1024));
+    dim3 threadsPerBlock(min((int)C, 32));
     assert(B * C % threadsPerBlock.x == 0);
     dim3 numBlocks(B * C / threadsPerBlock.x);
     kernel_backward<<<numBlocks, threadsPerBlock>>>(
@@ -489,6 +527,7 @@ class WkvGradGPUKernel final : public user_op::OpKernel {
 #if CUDA_VERSION >= 11000
 REGISTER_WKVGRAD_CUDA_KERNEL(nv_bfloat16)
 #endif  // CUDA_VERSION >= 11000
+REGISTER_WKVGRAD_CUDA_KERNEL(half)
 REGISTER_WKVGRAD_CUDA_KERNEL(float)
 REGISTER_WKVGRAD_CUDA_KERNEL(double)
 
