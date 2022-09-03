@@ -130,6 +130,58 @@ size_t GetSizeOfDataType(DataType data_type) {
   }
 }
 
+int64_t GetIntMaxVal(DataType datatype) {
+#define SWITCH_INT_TYPE(cpp_type, of_datatype) \
+  case of_datatype: return static_cast<int64_t>(GetMaxVal<DataTypeToType<of_datatype>>());
+
+  switch (datatype) {
+    OF_PP_FOR_EACH_TUPLE(SWITCH_INT_TYPE, INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
+    default:
+      LOG(FATAL) << "invalid data_type: " << DataType_Name(datatype)
+                 << " for GetIntMaxVal(DataType)";
+  }
+#undef SWITCH_INT_TYPE
+}
+
+int64_t GetIntMinVal(DataType datatype) {
+#define SWITCH_INT_TYPE(cpp_type, of_datatype) \
+  case of_datatype: return static_cast<int64_t>(GetMinVal<DataTypeToType<of_datatype>>());
+
+  switch (datatype) {
+    OF_PP_FOR_EACH_TUPLE(SWITCH_INT_TYPE, INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
+    default:
+      LOG(FATAL) << "invalid data_type: " << DataType_Name(datatype)
+                 << " for GetIntMinVal(DataType)";
+  }
+#undef SWITCH_INT_TYPE
+}
+
+double GetFloatMaxVal(DataType datatype) {
+#define SWITCH_FLOAT_TYPE(cpp_type, of_datatype) \
+  case of_datatype: return static_cast<double>(GetMaxVal<DataTypeToType<of_datatype>>());
+
+  switch (datatype) {
+    OF_PP_FOR_EACH_TUPLE(SWITCH_FLOAT_TYPE, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
+    default:
+      LOG(FATAL) << "invalid data_type: " << DataType_Name(datatype)
+                 << " for GetFloatMaxVal(DataType)";
+  }
+#undef SWITCH_FLOAT_TYPE
+}
+
+double GetFloatMinVal(DataType datatype) {
+#define SWITCH_FLOAT_TYPE(cpp_type, of_datatype) \
+  case of_datatype: return static_cast<double>(GetMinVal<DataTypeToType<of_datatype>>());
+
+  switch (datatype) {
+    OF_PP_FOR_EACH_TUPLE(SWITCH_FLOAT_TYPE, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
+    default:
+      LOG(FATAL) << "invalid data_type: " << DataType_Name(datatype)
+                 << " for GetFloatMinVal(DataType)";
+  }
+#undef SWITCH_INT_TYPE
+}
+
 namespace {
 
 void CheckDataType() {
