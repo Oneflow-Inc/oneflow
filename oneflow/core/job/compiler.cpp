@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/blocking_counter.h"
@@ -79,9 +80,19 @@ void PlanCompiler::Compile(Job* job, Plan* plan, std::shared_ptr<TaskGraph>& tas
   // NOTE(strint): register bind lbi and exec node bind register needs to run topologically.
   task_gph->TopoForEachNode(&TaskNode::BuildExecGphIf);
   tc->Count("Graph name: " + job_name + " TaskNode::BuildExecGraph", 1);
-  //task_gph->TopoForEachNode(&TaskNode::InferRegstIf);
+  // task_gph->TopoForEachNode(&TaskNode::InferRegstIf);
+  // tc->Count("Graph name: " + job_name + " TaskNode::InferRegst", 1);
+
+  // task_gph->TopoForEachNode([](TaskNode* task_node) {
+  //   auto ltc = std::make_unique<TimeCounter<std::chrono::microseconds>>(true);
+  //   task_node->InferRegstIf();
+  //   ltc->Count("TaskNode" + task_node->VisualStr() + "::InferRegst", 1);
+  // });
+  // tc->Count("Graph name: " + job_name + " TaskNode::InferRegst", 1);
+
   std::vector<TaskNode*> user_task_node;
   std::vector<TaskNode*> other_task_node;
+  const int64_t infer_thread_pool_size = 48;
   task_gph->TopoForEachNode([&](TaskNode* task_node) {
     if (task_node->op_node()) {
       //LOG(ERROR) << " got task node " << task_node->VisualStr() << " with logical op " << task_node->op_node()->op().op_name();
@@ -97,16 +108,17 @@ void PlanCompiler::Compile(Job* job, Plan* plan, std::shared_ptr<TaskGraph>& tas
     }
   });
   tc->Count("Graph name: " + job_name + " TaskNode::CreateInferList", 1);
-  for (auto task_node : user_task_node) {
-    //LOG(ERROR) << " +++ got task node " << task_node->VisualStr() << " got user op " << task_node->op_node()->op().op_name();
-    task_node->InferRegstIf();
-  }
+  // for (auto task_node : user_task_node) {
+  //   //LOG(ERROR) << " +++ got task node " << task_node->VisualStr() << " got user op " << task_node->op_node()->op().op_name();
+  //   task_node->InferRegstIf();
+  // }
   {
     const int64_t node_num = user_task_node.size();
     const int64_t cpu_num = std::thread::hardware_concurrency();
-    const int64_t thread_pool_size = std::min(node_num, cpu_num);
+    // const int64_t thread_pool_size = std::min(node_num, cpu_num);
+    LOG(ERROR) << " elapsed | thread pool size " << infer_thread_pool_size << " node num " << node_num << " cpu num " << cpu_num << " world size " << GlobalProcessCtx::WorldSize();
     BlockingCounter counter(node_num);
-    ThreadPool thread_pool(thread_pool_size);
+    ThreadPool thread_pool(infer_thread_pool_size);
     for (auto task_node : user_task_node) {
       thread_pool.AddWork([task_node, &counter]() {
         task_node->InferRegstIf();
