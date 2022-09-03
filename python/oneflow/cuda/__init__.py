@@ -38,7 +38,7 @@ def current_device() -> int:
     return flow._oneflow_internal.GetCudaDeviceIndex()
 
 
-def get_device_properties(device: Union[flow.device, str, int]=None):
+def get_device_properties(device: Union[flow.device, str, int] = None):
     r"""Gets the properties of a device.
 
     The documentation is referenced from:
@@ -54,7 +54,9 @@ def get_device_properties(device: Union[flow.device, str, int]=None):
     return flow._oneflow_internal._get_device_properties(device)
 
 
-def get_device_capability(device: Optional[Union[flow.device, str, int]] = None) -> Tuple[int, int]:
+def get_device_capability(
+    device: Optional[Union[flow.device, str, int]] = None
+) -> Tuple[int, int]:
     r"""Gets the cuda capability of a device.
 
     The documentation is referenced from:

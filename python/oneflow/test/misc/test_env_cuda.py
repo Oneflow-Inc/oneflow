@@ -20,6 +20,7 @@ from oneflow.test_utils.automated_test_util.generators import nothing, oneof
 import oneflow.unittest
 import torch
 
+
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class TestEnv(flow.unittest.TestCase):
