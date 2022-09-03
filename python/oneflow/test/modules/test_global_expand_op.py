@@ -33,7 +33,9 @@ def _test_global_expand(
     verbose=False,
 ):
     # random input
-    input = np.random.randn(*input_shape).astype(np.float32)
+    input = np.random.randn(*input_shape)
+    if isinstance(input, np.ndarray):
+        input = input.astype(np.float32)
 
     # torch computation
     torch_x = torch.tensor(input, requires_grad=True)
@@ -88,6 +90,39 @@ class ExpandGlobalTestCase(oneflow.unittest.TestCase):
             ((2, 1, 3), (1, 2, -1, -1, -1)),
             ((2, 1, 3), (2, 1, -1, 2, 3)),
             ((2, 1, 3), (1, 2, 2, 2, -1)),
+        ]
+        for kwargs in GenArgDict(arg_dict):
+            assert "shapes" in kwargs
+            input_shape, expand_shape = kwargs.pop("shapes")
+            _test_global_expand(test_case, input_shape, expand_shape, **kwargs)
+
+    def test_split_expand(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["verbose"] = [False]
+        arg_dict["device"] = ["cuda"]
+        arg_dict["sbp"] = [flow.sbp.split(0)]
+        arg_dict["shapes"] = [
+            ((2,), (1, 2)),
+            ((2,), (2, 2)),
+        ]
+        for kwargs in GenArgDict(arg_dict):
+            assert "shapes" in kwargs
+            input_shape, expand_shape = kwargs.pop("shapes")
+            _test_global_expand(test_case, input_shape, expand_shape, **kwargs)
+
+    def test_broadcast_scalar_expand(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["verbose"] = [False]
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["sbp"] = [flow.sbp.broadcast()]
+        arg_dict["shapes"] = [
+            ((), (1,)),
+            ((), (2,)),
+            ((), (1, 1)),
+            ((), (1, 2)),
+            ((), (2, 1)),
+            ((), (2, 2)),
+            ((), (2, 1, 2)),
         ]
         for kwargs in GenArgDict(arg_dict):
             assert "shapes" in kwargs

@@ -22,8 +22,9 @@ namespace one {
 
 struct ExpandCaptureState : public AutoGradCaptureState {
   bool requires_grad;
-  std::vector<int32_t> reduce_dims;
   int32_t lpad;
+  bool keep_dims;
+  std::vector<int32_t> reduce_dims;
 };
 
 class Expand : public OpExprGradFunction<ExpandCaptureState> {
@@ -51,13 +52,17 @@ Maybe<void> Expand::Capture(ExpandCaptureState* ctx, const TensorTuple& inputs,
   const Shape& in_shape = *inputs[0]->shape();
   const Shape& expand_shape = *outputs[0]->shape();
   ctx->lpad = expand_shape.size() - in_shape.size();
+  ctx->keep_dims = (in_shape.size() > 0);
   ctx->reduce_dims.reserve(expand_shape.size());
-  for (size_t i = 0; i < expand_shape.size(); ++i) {
-    const auto& t_dim = expand_shape[i];
-    const auto& dim = i < ctx->lpad ? 1 : in_shape[i - ctx->lpad];
-    if (dim != t_dim) { ctx->reduce_dims.push_back(i); }
+  if (ctx->keep_dims) {
+    for (size_t i = 0; i < expand_shape.size(); ++i) {
+      const auto& t_dim = expand_shape[i];
+      const auto& dim = i < ctx->lpad ? 1 : in_shape[i - ctx->lpad];
+      if (dim != t_dim) { ctx->reduce_dims.push_back(i); }
+    }
+  } else {
+    for (int32_t axis = 0; axis < expand_shape.size(); ++axis) { ctx->reduce_dims.push_back(axis); }
   }
-
   return Maybe<void>::Ok();
 }
 
@@ -68,9 +73,12 @@ Maybe<void> Expand::Apply(const ExpandCaptureState* ctx, const TensorTuple& out_
   in_grads->resize(1);
   in_grads->at(0) = out_grads[0];
   if (ctx->reduce_dims.size() > 0) {
-    in_grads->at(0) = JUST(functional::ReduceSum(in_grads->at(0), ctx->reduce_dims, true));
+    in_grads->at(0) =
+        JUST(functional::ReduceSum(in_grads->at(0), ctx->reduce_dims, ctx->keep_dims));
   }
-  if (ctx->lpad > 0) { in_grads->at(0) = JUST(functional::Flatten(in_grads->at(0), 0, ctx->lpad)); }
+  if (ctx->lpad > 0 && ctx->keep_dims) {
+    in_grads->at(0) = JUST(functional::Flatten(in_grads->at(0), 0, ctx->lpad));
+  }
   return Maybe<void>::Ok();
 }
 

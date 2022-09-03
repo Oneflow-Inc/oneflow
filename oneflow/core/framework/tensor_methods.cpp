@@ -278,6 +278,12 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const Shape& expand_s
     }
   }
 
+  if (input_shape.size() == 0) {
+    // handle scalar expand backward reduce dims
+    reduce_dims.clear();
+    for (int32_t axis = 0; axis < expand_shape.size(); ++axis) { reduce_dims.push_back(axis); }
+  }
+
   int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
   std::shared_ptr<Tensor> output =
       JUST(BasicView(input, expand_shape, expand_stride, storage_offset));
@@ -291,10 +297,13 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const Shape& expand_s
           << "out grad size should be 1, but got " << out_grads.size();
       in_grads->resize(1);
       in_grads->at(0) = out_grads[0];
+      bool keep_dims = (input_shape.size() > 0);
       if (reduce_dims.size() > 0) {
-        in_grads->at(0) = JUST(functional::ReduceSum(in_grads->at(0), reduce_dims, true));
+        in_grads->at(0) = JUST(functional::ReduceSum(in_grads->at(0), reduce_dims, keep_dims));
       }
-      if (lpad > 0) { in_grads->at(0) = JUST(functional::Flatten(in_grads->at(0), 0, lpad)); }
+      if (lpad > 0 && keep_dims) {
+        in_grads->at(0) = JUST(functional::Flatten(in_grads->at(0), 0, lpad));
+      }
       return Maybe<void>::Ok();
     };
     backward_fn->status = []() { return true; };
