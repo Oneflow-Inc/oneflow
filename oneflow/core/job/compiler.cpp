@@ -92,7 +92,8 @@ void PlanCompiler::Compile(Job* job, Plan* plan, std::shared_ptr<TaskGraph>& tas
 
   std::vector<TaskNode*> user_task_node;
   std::vector<TaskNode*> other_task_node;
-  const int64_t infer_thread_pool_size = 2;
+  // TODO(strint): choose best thread num
+  const int64_t infer_thread_pool_size = 24;
   task_gph->TopoForEachNode([&](TaskNode* task_node) {
     if (task_node->op_node()) {
       //LOG(ERROR) << " got task node " << task_node->VisualStr() << " with logical op " << task_node->op_node()->op().op_name();
