@@ -67,7 +67,9 @@ TensorPool::~TensorPool() {
       fs >> full_json;
     }
     full_json.merge_patch(cpp_summary);
-    full_json.merge_patch(Global<vm::DtrCudaAllocator>::Get()->DumpSearchFreeMemCost());
+    if (auto* allocator = Global<vm::DtrCudaAllocator>::Get()) {
+      full_json.merge_patch(allocator->DumpSearchFreeMemCost());
+    }
     {
       std::ofstream fs(std::string(prefix) + ".json");
       fs << full_json;

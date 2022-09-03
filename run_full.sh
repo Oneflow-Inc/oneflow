@@ -4,8 +4,8 @@ set -ux
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-MODEL_NAME=unet
-PREFIX=$MODEL_NAME-n3
+MODEL_NAME=swin_transformer
+PREFIX=$MODEL_NAME-n2
 
 if [[ $MODEL_NAME == resnet50 ]]
 then
@@ -31,85 +31,85 @@ fi
 
 ITERS=1
 
-METHOD=ours
-for threshold in "${array[@]}"
-do
-  ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --nlr --group-num 2
-done
-
-# METHOD=ours-g4
+# METHOD=ours
 # for threshold in "${array[@]}"
 # do
-#   ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --nlr --group-num 4
+#   ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --nlr --group-num 2
 # done
 #
-# METHOD=ours-g6
+# # METHOD=ours-g4
+# # for threshold in "${array[@]}"
+# # do
+# #   ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --nlr --group-num 4
+# # done
+# #
+# # METHOD=ours-g6
+# # for threshold in "${array[@]}"
+# # do
+# #   ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --nlr --group-num 6
+# # done
+#
+# METHOD=me-style-mul-beta
 # for threshold in "${array[@]}"
 # do
-#   ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --nlr --group-num 6
-# done
-
-METHOD=me-style-mul-beta
-for threshold in "${array[@]}"
-do
-  ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --nlr --me-style --me-method eq_mul_beta --group-num 2
-done
-
-METHOD=me-style-div-beta
-for threshold in "${array[@]}"
-do
-  ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --nlr --me-style --me-method eq_div_beta --group-num 2
-done
-
-METHOD=ours-id-guided
-for threshold in "${array[@]}"
-do
-  ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --group-num 2
-done
-
-# METHOD=ours-g4-id-guided
-# for threshold in "${array[@]}"
-# do
-#   ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --group-num 4
+#   ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --nlr --me-style --me-method eq_mul_beta --group-num 2
 # done
 #
-# METHOD=ours-g6-id-guided
+# METHOD=me-style-div-beta
 # for threshold in "${array[@]}"
 # do
-#   ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --group-num 6
+#   ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --nlr --me-style --me-method eq_div_beta --group-num 2
 # done
-
-METHOD=no-gp
-for threshold in "${array[@]}"
-do
-  ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --no-lr --group-num 1
-done
-
-# ------
-
-METHOD=me-style
-for threshold in "${array[@]}"
-do
-  ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --nlr --group-num 2 --me-style
-done
-
-METHOD=no-fbip
-for threshold in "${array[@]}"
-do
-  ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --old-immutable --nlr --group-num 2
-done
-
-METHOD=raw-gp
-for threshold in "${array[@]}"
-do
-  ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --group-num 2
-done
-
-METHOD=ours-with-size
-for threshold in "${array[@]}"
-do
-  ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --nlr --group-num 2 --with-size
-done
+#
+# METHOD=ours-id-guided
+# for threshold in "${array[@]}"
+# do
+#   ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --group-num 2
+# done
+#
+# # METHOD=ours-g4-id-guided
+# # for threshold in "${array[@]}"
+# # do
+# #   ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --group-num 4
+# # done
+# #
+# # METHOD=ours-g6-id-guided
+# # for threshold in "${array[@]}"
+# # do
+# #   ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --group-num 6
+# # done
+#
+# METHOD=no-gp
+# for threshold in "${array[@]}"
+# do
+#   ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --no-lr --group-num 1
+# done
+#
+# # ------
+#
+# METHOD=me-style
+# for threshold in "${array[@]}"
+# do
+#   ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --nlr --group-num 2 --me-style
+# done
+#
+# METHOD=no-fbip
+# for threshold in "${array[@]}"
+# do
+#   ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --old-immutable --nlr --group-num 2
+# done
+#
+# METHOD=raw-gp
+# for threshold in "${array[@]}"
+# do
+#   ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --group-num 2
+# done
+#
+# METHOD=ours-with-size
+# for threshold in "${array[@]}"
+# do
+#   ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --nlr --group-num 2 --with-size
+# done
 
 # --------------
 
@@ -131,8 +131,14 @@ done
 #   ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --with-size --group-num 2
 # done
 
-METHOD=raw-dtr
+METHOD=dte-our-impl
 for threshold in "${array[@]}"
 do
-  ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --no-allo --group-num 1
+  ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --me-style --group-num 1
 done
+
+# METHOD=raw-dtr
+# for threshold in "${array[@]}"
+# do
+#   ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --no-allo --group-num 1
+# done

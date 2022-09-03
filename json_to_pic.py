@@ -16,13 +16,24 @@ cwd = Path.cwd()
 
 
 def draw_from_file(ax, fn_pattern, threshold_fn, time_fn, label):
-    fns = list(filter(re.compile(fn_pattern).match, (str(x.name) for x in cwd.iterdir())))
+    fns = list(
+        filter(re.compile(fn_pattern).match, (str(x.name) for x in cwd.iterdir()))
+    )
     data = []
     for fn in fns:
         threshold = threshold_fn(fn)
         time = time_fn(fn)
         data.append((threshold, time))
     data = sorted(data, key=lambda x: x[0])
+
+    # def f(x):
+    #     if len(x) == 0:
+    #         return x
+    #     minimal = x[0][0]
+    #     x = filter(lambda x: x[0] >= 4000 or x[0] == minimal, x)
+    #     return map(lambda x: (x[0] / 9000, x[1]), x)
+    #
+    # data = f(data)
     ax.plot(*list(zip(*data)), label=label)
 
 
@@ -42,18 +53,19 @@ def get_mem_frag_rate_from_json_file(fn):
     with open(fn) as f:
         j = json.load(f)
         mem_frag_rate = j["mem frag rate"]
-        if mem_frag_rate is not None:
-            mem_frag_rate = float(mem_frag_rate)
+        if mem_frag_rate is None:
+            mem_frag_rate = 0
+        mem_frag_rate = float(mem_frag_rate)
         return mem_frag_rate
 
 
 def get_dataset_time_from_json_file(fn):
     with open(fn) as f:
         j = json.load(f)
-        mem_frag_rate = j["dataset time"]
-        if mem_frag_rate is not None:
-            mem_frag_rate = float(mem_frag_rate)
-        return mem_frag_rate
+        x = j["dataset time"]
+        if x is not None:
+            x = float(x)
+        return x
 
 
 def get_threshold_from_json_file(fn):
@@ -66,32 +78,56 @@ fig, ax = plt.subplots()
 
 model_name = sys.argv[1]
 
-def draw_from_files_and_draw(get_y, pic_name):
+
+def draw_from_files_and_draw(*, xlabel, ylabel, get_y, pic_name, legend_and_fn_pattern):
     _, ax = plt.subplots()
+    max_threshold = 0
+    for fn_pattern in legend_and_fn_pattern.values():
+        fns = list(
+            filter(re.compile(fn_pattern).match, (str(x.name) for x in cwd.iterdir()))
+        )
+        max_threshold = max(max(map(get_threshold_from_json_file, fns)), max_threshold)
 
-    draw_from_file(ax, rf"{model_name}-ours-\d+.json", get_threshold_from_json_file, get_y, 'g2')
-    # draw_from_file(ax, rf"{model_name}-ours-g4-\d+.json", get_threshold_from_json_file, get_y, 'g4')
-    # draw_from_file(ax, rf"{model_name}-ours-g6-\d+.json", get_threshold_from_json_file, get_y, 'g6')
-    draw_from_file(ax, rf"{model_name}-ours-id-guided-\d+.json", get_threshold_from_json_file, get_y, 'g2i')
-    # draw_from_file(ax, rf"{model_name}-ours-g4-id-guided-\d+.json", get_threshold_from_json_file, get_y, 'g4i')
-    # draw_from_file(ax, rf"{model_name}-ours-g6-id-guided-\d+.json", get_threshold_from_json_file, get_y, 'g6i')
-    # draw_from_file(ax, rf"{model_name}-ours-with-size-\d+.json", get_threshold_from_json_file, get_y, 'ours w/ size')
-    # draw_from_file(ax, rf"{model_name}-raw-gp-\d+.json", get_threshold_from_json_file, get_y, 'raw grouping')
-    # draw_from_file(ax, rf"{model_name}-raw-gp-size-\d+.json", get_threshold_from_json_file, get_y, 'raw grouping w/ size')
-    draw_from_file(ax, rf"{model_name}-no-gp-\d+.json", get_threshold_from_json_file, get_y, 'no grouping')
-    # draw_from_file(ax, rf"{model_name}-no-gp-size-\d+.json", get_threshold_from_json_file, get_y, 'no grouping w/ size')
-    draw_from_file(ax, rf"{model_name}-no-fbip-\d+.json", get_threshold_from_json_file, get_y, 'no fbip')
-    # draw_from_file(ax, rf"{model_name}-no-fbip-size-\d+.json", get_threshold_from_json_file, get_y, 'no fbip w/ size')
-    draw_from_file(ax, rf"{model_name}-me-style-\d+.json", get_threshold_from_json_file, get_y, 'me style')
-    # draw_from_file(ax, rf"{model_name}-raw-dtr-\d+.json", get_threshold_from_json_file, get_y, 'raw dtr')
+    def get_memory_ratio_from_json_file(*args, **kwargs):
+        return get_threshold_from_json_file(*args, **kwargs) / max_threshold
 
-    draw_from_file(ax, rf"{model_name}-me-style-div-beta-\d+.json", get_threshold_from_json_file, get_y, 'me div beta')
-    draw_from_file(ax, rf"{model_name}-me-style-mul-beta-\d+.json", get_threshold_from_json_file, get_y, 'me mul beta')
+    for label, fn_pattern in legend_and_fn_pattern.items():
+        draw_from_file(ax, fn_pattern, get_memory_ratio_from_json_file, get_y, label)
 
     ax.legend()
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel(xlabel)
     plt.savefig(pic_name)
+
 
 # draw_from_files_and_draw(get_theo_time_from_json_file, f'{model_name}-theo-time.png')
 # draw_from_files_and_draw(get_real_time_from_json_file, f'{model_name}-real-time.png')
-draw_from_files_and_draw(get_mem_frag_rate_from_json_file, f'{model_name}-mem-frag.png')
-draw_from_files_and_draw(get_dataset_time_from_json_file, f'{model_name}-dataset-time.png')
+# draw_from_files_and_draw(get_mem_frag_rate_from_json_file, f'{model_name}-mem-frag.png')
+draw_from_files_and_draw(
+    xlabel="Memory Ratio",
+    ylabel="Overhead (x)",
+    get_y=get_dataset_time_from_json_file,
+    pic_name=f"{model_name}-ablation-study.png",
+    legend_and_fn_pattern={
+        "ours": rf"{model_name}-ours-\d+.json",
+        "no op-guided allocation": rf"{model_name}-no-gp-\d+.json",
+        "no memory reuse": rf"{model_name}-no-fbip-\d+.json",
+        "no layout-aware eviction": rf"{model_name}-me-style-\d+.json",
+        # "DTE (Our Impl)": rf"{model_name}-dte-our-impl-\d+.json",
+    },
+)
+
+draw_from_files_and_draw(
+    xlabel="Memory Ratio",
+    ylabel="Memory Fragmentation Rate",
+    get_y=get_mem_frag_rate_from_json_file,
+    pic_name=f"{model_name}-mem-frag.png",
+    legend_and_fn_pattern={
+        "ours": rf"{model_name}-ours-\d+.json",
+        "no op-guided allocation": rf"{model_name}-no-gp-\d+.json",
+        "no memory reuse": rf"{model_name}-no-fbip-\d+.json",
+        "no layout-aware eviction": rf"{model_name}-me-style-\d+.json",
+        "DTE (Our Impl)": rf"{model_name}-dte-our-impl-\d+.json",
+        "DTR (Our Impl)": rf"{model_name}-raw-dtr-\d+.json",
+    },
+)

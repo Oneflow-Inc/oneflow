@@ -213,7 +213,7 @@ def unet_info():
 
 
 def update_dataset(prof):
-    DATASET_FILENAME = "/home/dev/op_time_dataset.json"
+    DATASET_FILENAME = f"/home/dev/{args.model_name}_op_time.json"
     if os.path.exists(DATASET_FILENAME):
         with open(DATASET_FILENAME, "r") as f:
             time_dict = json.load(f)
@@ -226,11 +226,11 @@ def update_dataset(prof):
         if isinstance(e, flow.profiler.events.KernelEvent):
             new_time_dict[
                 f"{e.name} {e.description['shape']} {e.description['attr']}"
-            ] = e.cuda_time
+            ] = (e.cuda_time_total, e.count)
 
     time_dict.update(new_time_dict)
 
-    with open("/home/dev/op_time_dataset.json", "w") as f:
+    with open(DATASET_FILENAME, "w") as f:
         json.dump(time_dict, f)
 
 
