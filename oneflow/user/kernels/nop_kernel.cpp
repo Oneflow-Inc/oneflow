@@ -36,6 +36,7 @@ class NopKernel final : public user_op::OpKernel {
 
 REGISTER_NOP_KERNEL("cast_to_tick")
 REGISTER_NOP_KERNEL("acc_ctrl_tick")
+REGISTER_NOP_KERNEL("repeat")
 
 }  // namespace
 

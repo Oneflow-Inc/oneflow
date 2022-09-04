@@ -38,6 +38,7 @@ class RepeatKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+/*
 #define REGISTER_REPEAT_KERNEL(device)                                                \
   REGISTER_USER_KERNEL("repeat").SetCreateFn<RepeatKernel<device>>().SetIsMatchedHob( \
       (user_op::HobDeviceType() == device));
@@ -45,6 +46,7 @@ class RepeatKernel final : public user_op::OpKernel {
 OF_PP_FOR_EACH_TUPLE(REGISTER_REPEAT_KERNEL, DEVICE_TYPE_SEQ)
 
 #undef REGISTER_REPEAT_KERNEL
+*/
 
 }  // namespace
 

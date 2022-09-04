@@ -55,12 +55,31 @@ std::function<const TaskProto*(int64_t)> PlanUtil::MakeGetterTaskProto4TaskId(co
 void PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan) {
   for (int i = 0; i < plan->task_size(); i++) {
     TaskProto* task = plan->mutable_task(i);
+
     for (auto& pair : *task->mutable_produced_regst_desc()) {
       RegstDescProto* regst_desc = &pair.second;
       if (regst_desc->mem_block_id() == -1) {
         CHECK_EQ(regst_desc->mem_block_offset(), -1);
         regst_desc->set_mem_block_id(Singleton<IDMgr>::Get()->NewMemBlockId());
         regst_desc->set_mem_block_offset(0);
+      }
+      // NOTE(chengcheng): set variable_op_name before set separated header because var regst alway
+      //  separated.
+      if (task->exec_sequence().exec_node_size() == 1) {
+        const auto& op_conf =
+            GetOpAttribute(plan, task->job_id(), task->exec_sequence().exec_node(0).kernel_conf())
+                .op_conf();
+        if (op_conf.has_variable_conf()) { regst_desc->set_variable_op_name(op_conf.name()); }
+      }
+
+      RtRegstDesc rt_regst_desc(*regst_desc);
+      int64_t regst_separated_size = rt_regst_desc.TotalSeparatedHeaderByteSize4AllRegst();
+      if (regst_separated_size > 0) {
+        int64_t separated_mem_block_id = Singleton<IDMgr>::Get()->NewMemBlockId();
+        regst_desc->set_separated_header_mem_block_id(separated_mem_block_id);
+        LOG(INFO) << "set sep id, regst: " << regst_desc->regst_desc_id()
+                  << " , sep : " << separated_mem_block_id
+                  << " , debug: " << regst_desc->DebugString();
       }
     }
   }
@@ -318,7 +337,6 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     int64_t mem_block_offset = regst_desc->mem_block_offset();
     CHECK_NE(mem_block_id, -1);
     CHECK_NE(mem_block_offset, -1);
-    CHECK_EQ(regst_desc->separated_header_mem_block_id(), -1);
 
     std::string var_name;
     bool is_variable_regst = IsVariableRegst(task, &var_name);
@@ -353,32 +371,59 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
                 .second);
     } else {
       MemBlockProto* mem_block = mem_block_id2mem_block.at(mem_block_id).get();
-      CHECK(!mem_block->has_variable_op_name());  // variable regst mem block is unique.
       CHECK_EQ(mem_block->job_id(0), job_id);
       CHECK_EQ(mem_block->machine_id(), machine_id);
       CHECK(mem_block->mem_case() == regst_desc->mem_case());
       CHECK_EQ(mem_block->enable_reuse_mem(), regst_desc->enable_reuse_mem());
-      mem_block->set_mem_size(std::max(mem_block->mem_size(), regst_main_size + mem_block_offset));
+      if (mem_block->enable_reuse_mem()) {
+        mem_block->set_mem_size(
+            std::max(mem_block->mem_size(), regst_main_size + mem_block_offset));
+      } else {
+        CHECK_EQ(mem_block->mem_size(), regst_main_size);
+        CHECK_EQ(mem_block_offset, 0);
+      }
+      if (is_variable_regst) {
+        mem_block->set_variable_op_name(var_name);
+        mem_block->set_is_separated_header(false);
+      }
     }
 
     if (regst_separated_size > 0) {
-      int64_t separated_mem_block_id = Singleton<IDMgr>::Get()->NewMemBlockId();
-      regst_desc->set_separated_header_mem_block_id(separated_mem_block_id);
-      MemBlockProto mem_block;
-      mem_block.set_mem_block_id(separated_mem_block_id);
-      mem_block.add_job_id(job_id);
-      mem_block.set_machine_id(machine_id);
-      *(mem_block.mutable_mem_case()) = memory::GetPinnedHostMemoryCase(regst_desc->mem_case());
-      mem_block.set_enable_reuse_mem(false);
-      mem_block.set_mem_size(regst_separated_size);
-      mem_block.set_thrd_id_hint(thrd_id);
-      if (is_variable_regst) {
-        mem_block.set_variable_op_name(var_name);
-        mem_block.set_is_separated_header(true);
+      if (regst_desc->has_separated_header_mem_block_id()) {
+        LOG(INFO) << "ccdebuglog: wrong, sep id, regst: " << regst_desc->regst_desc_id()
+                  << " , debug: " << regst_desc->DebugString();
       }
-      CHECK(mem_block_id2mem_block
-                .emplace(mem_block.mem_block_id(), std::make_unique<MemBlockProto>(mem_block))
-                .second);
+      CHECK(regst_desc->has_separated_header_mem_block_id()) << regst_desc->DebugString();
+      int64_t separated_mem_block_id = regst_desc->separated_header_mem_block_id();
+      CHECK_NE(separated_mem_block_id, -1);
+      if (mem_block_id2mem_block.find(separated_mem_block_id) == mem_block_id2mem_block.end()) {
+        MemBlockProto mem_block;
+        mem_block.set_mem_block_id(separated_mem_block_id);
+        mem_block.add_job_id(job_id);
+        mem_block.set_machine_id(machine_id);
+        *(mem_block.mutable_mem_case()) = memory::GetPinnedHostMemoryCase(regst_desc->mem_case());
+        mem_block.set_enable_reuse_mem(false);
+        mem_block.set_mem_size(regst_separated_size);
+        mem_block.set_thrd_id_hint(thrd_id);
+        if (is_variable_regst) {
+          mem_block.set_variable_op_name(var_name);
+          mem_block.set_is_separated_header(true);
+        }
+        CHECK(mem_block_id2mem_block
+                  .emplace(mem_block.mem_block_id(), std::make_unique<MemBlockProto>(mem_block))
+                  .second);
+      } else {
+        MemBlockProto* mem_block = mem_block_id2mem_block.at(separated_mem_block_id).get();
+        CHECK_EQ(mem_block->job_id(0), job_id);
+        CHECK_EQ(mem_block->machine_id(), machine_id);
+        CHECK(mem_block->mem_case() == memory::GetPinnedHostMemoryCase(regst_desc->mem_case()));
+        CHECK_EQ(mem_block->enable_reuse_mem(), false);
+        CHECK_EQ(mem_block->mem_size(), regst_separated_size);
+        if (is_variable_regst) {
+          mem_block->set_variable_op_name(var_name);
+          mem_block->set_is_separated_header(true);
+        }
+      }
     }
   };
 
@@ -756,8 +801,22 @@ void PlanUtil::SetForceInplaceMemBlock(Plan* plan) {
         CHECK_EQ(in_regst_desc->mem_block_offset(), 0);
         CHECK_EQ(regst_desc->mem_block_offset(), 0);
         CHECK_EQ(in_regst_desc->register_num(), regst_desc->register_num());
+        CHECK(in_regst_desc->mem_case() == regst_desc->mem_case());
+        RtRegstDesc in_regst_rt(*in_regst_desc);
+        RtRegstDesc regst_rt(*regst_desc);
+        CHECK_EQ(in_regst_rt.TotalByteSize4AllRegst(), regst_rt.TotalByteSize4AllRegst());
+        CHECK_EQ(in_regst_rt.TotalMainByteSize4AllRegst(), regst_rt.TotalMainByteSize4AllRegst());
+        CHECK_EQ(in_regst_rt.TotalSeparatedHeaderByteSize4AllRegst(),
+                 regst_rt.TotalSeparatedHeaderByteSize4AllRegst());
         regst_desc->set_mem_block_id(in_regst_desc->mem_block_id());
         regst_desc->set_inplace_consumed_regst_desc_id(force_id);
+        if (in_regst_desc->has_separated_header_mem_block_id()) {
+          CHECK(regst_desc->has_separated_header_mem_block_id());
+          regst_desc->set_separated_header_mem_block_id(
+              in_regst_desc->separated_header_mem_block_id());
+        }
+        LOG(INFO) << " cclog: set force inplace from " << regst_desc->DebugString() << " to "
+                  << in_regst_desc->DebugString();
       }
     }
   }

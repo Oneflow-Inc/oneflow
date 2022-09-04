@@ -297,7 +297,6 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     PlanUtil::GenRegisterHint(&plan_);
     // TODO(chengcheng): test collective boxing for multi-job.
     PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);
-    // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
     PlanUtil::PlanMemoryLog(&plan_, name_);
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
