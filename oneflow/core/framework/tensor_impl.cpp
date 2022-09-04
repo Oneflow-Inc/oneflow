@@ -67,11 +67,11 @@ Maybe<LocalTensorImpl> LazyLocalTensorImpl::detach() const {
   return std::shared_ptr<LocalTensorImpl>(detached_impl);
 }
 
-EagerLocalTensorImpl::EagerLocalTensorImpl() : LocalTensorImpl(false, false) {}
-
 EagerLocalTensorImpl::EagerLocalTensorImpl(const std::shared_ptr<TensorStorage>& tensor_storage,
-                                           bool requires_grad, bool is_leaf)
-    : LocalTensorImpl(requires_grad, is_leaf), tensor_storage_(tensor_storage) {}
+                                           int64_t storage_offset, bool requires_grad, bool is_leaf)
+    : LocalTensorImpl(requires_grad, is_leaf),
+      tensor_storage_(tensor_storage),
+      storage_offset_(storage_offset) {}
 
 EagerLocalTensorImpl::~EagerLocalTensorImpl() {}
 
@@ -211,7 +211,7 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
   // empty op.
   if (parallel_id.has_value() && shape->elem_cnt() != 0) {
     const auto& cur_rank_phy_tensor_meta =
-        SymbolOf(LocalTensorMeta(cur_rank_phy_shape, dtype, device));
+        SymbolOf(LocalTensorMeta(*cur_rank_phy_shape, dtype, device));
     auto cur_rank_phy_tensor_impl = std::make_shared<EagerLocalTensorImpl>(requires_grad, is_leaf);
     const auto& dep_object = NewLocalDepObject();
     JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(cur_rank_phy_tensor_meta, dep_object));

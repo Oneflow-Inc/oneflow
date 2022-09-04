@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
@@ -178,10 +177,9 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
           int64_t parallel_id =
               CHECK_JUST(parallel_desc->ParallelId4MachineDeviceId(dst, device_id));
 
-          CHECK_JUST(Send<DeviceType::kCPU>(
-              reinterpret_cast<const void*>(reinterpret_cast<const char*>(pack_to_ptr)
-                                            + parallel_id * chunk_size),
-              elem_per_chunk, in->data_type(), dst, ctx->stream()));
+          CHECK_JUST(Send(reinterpret_cast<const void*>(reinterpret_cast<const char*>(pack_to_ptr)
+                                                        + parallel_id * chunk_size),
+                          elem_per_chunk, in->data_type(), dst, DeviceType::kCPU, ctx->stream()));
         }
         if (GlobalProcessCtx::Rank() == dst) {
           Symbol<ParallelDesc> parallel_desc = kernel_cache->parallel_desc();
@@ -189,10 +187,9 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
           int64_t parallel_id =
               CHECK_JUST(parallel_desc->ParallelId4MachineDeviceId(src, device_id));
 
-          CHECK_JUST(Recv<DeviceType::kCPU>(
-              reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr)
-                                      + parallel_id * chunk_size),
-              elem_per_chunk, out->data_type(), src, ctx->stream()));
+          CHECK_JUST(Recv(reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr)
+                                                  + parallel_id * chunk_size),
+                          elem_per_chunk, out->data_type(), src, DeviceType::kCPU, ctx->stream()));
         }
       }
     }

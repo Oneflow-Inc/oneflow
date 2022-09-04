@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <atomic>
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/framework/stream_guard.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
 #include "oneflow/core/device/event_record.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
@@ -358,6 +359,7 @@ Maybe<void> InstructionsBuilder::Call(
     vm::EagerBlobObjectList&& output_eager_blob_objects,
     const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
     const one::OpExprInterpContext& ctx, Symbol<Stream> stream) {
+  stream = JUST(StreamGuard::TryConvertStream(stream));
   JUST(SoftSyncStream(output_eager_blob_objects, stream));
   JUST(SoftSyncStream(input_eager_blob_objects, stream));
   for (const auto& output : output_eager_blob_objects) {
@@ -366,10 +368,10 @@ Maybe<void> InstructionsBuilder::Call(
   }
   auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
   auto instruction = intrusive::make_shared<vm::Instruction>(
-      vm_stream, std::make_shared<vm::OpCallInstructionPolicy>(
+      vm_stream, JUST(vm::OpCallInstructionPolicy::New(
                      vm_stream, opkernel, std::move(input_eager_blob_objects),
                      std::move(output_eager_blob_objects), global_tensor_infer_result, ctx,
-                     *one::CurrentDevVmDepObjectConsumeMode()));
+                     *one::CurrentDevVmDepObjectConsumeMode())));
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
@@ -504,6 +506,7 @@ bool SupportingStreamWait(Symbol<Stream> from_stream, Symbol<Stream> to_stream) 
   DeviceType from_device_type = from_stream->device()->enum_type();
   DeviceType to_device_type = from_stream->device()->enum_type();
   return from_stream->device() == to_stream->device() && from_device_type == DeviceType::kCUDA
+         && from_stream->thread_uid() == to_stream->thread_uid()
          && StreamSupportStreamWait::Visit(from_stream->stream_type(), from_device_type)
          && StreamSupportStreamWait::Visit(to_stream->stream_type(), to_device_type)
          && !StreamOnIndependentThread::Visit(from_stream->stream_type())
@@ -641,6 +644,7 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(
   // `ndarray` may not be ones because instruction AccessBlobByCallback is prescheduled before
   // oneflow.ones actually finished.
   Symbol<Stream> stream = JUST(GetDefaultStreamByDevice(device));
+  stream = JUST(StreamGuard::TryConvertStream(stream));
   JUST(SoftSyncStream({eager_blob_object}, stream));
   auto instruction = intrusive::make_shared<vm::Instruction>(
       // Never replace `stream` with producer_stream or last_used_stream.

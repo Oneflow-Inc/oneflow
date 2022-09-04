@@ -23,7 +23,6 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
-#include "oneflow/core/ccl/ccl.h"
 
 namespace oneflow {
 namespace one {

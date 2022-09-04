@@ -2,7 +2,7 @@ R"OP_SCHEMA_INC(
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/symbol.h"
-#include "oneflow/core/framework/op_base.h"
+#include "oneflow/core/framework/op_definition.h"
 
 #include <string>
 #include <vector>
@@ -32,7 +32,7 @@ using GetOutputArgModifier =
     std::function<OutputBlobModifier*(const std::string& out_arg_name, int32_t out_arg_index)>;
 
 {% for opname, op in ops %}
-class {{opname}} : public OpBase {
+class {{opname}} : public OpDefinition<{{opname}}> {
  public:
   virtual ~{{opname}}() = default;
   {% if op.has_nd_sbp_infer_fn -%}
@@ -75,7 +75,7 @@ class {{opname}} : public OpBase {
   virtual void set_{{attr.name}}(const {{attr.type}}& {{attr.name}}) = 0;
 
   {% endfor -%}
-  const HashSet<std::string>& AttrNames() const;
+  static const HashSet<std::string>& AttrNames();
 };
 
 namespace schema {
@@ -88,7 +88,7 @@ class {{opname}} : public oneflow::{{opname}} {
 
   {% endfor -%}
 
-  Maybe<AttrVal> GetAttr(const std::string& attr_name) const override;
+  Maybe<AttrVal> Attr(const std::string& attr_name) const override;
 
  private:
   {% for attr in op.attrs -%}
