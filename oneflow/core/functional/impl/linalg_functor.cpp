@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -45,7 +46,7 @@ class CrossFunctor {
     CHECK_EQ_OR_RETURN(*input->shape(), *other->shape())
         << Error::RuntimeError() << "input and other should have same shape.";
 
-    MutableAttrMap attrs;
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim");
 
     const auto do_dispatch_base_on_device = [&](const int64_t dim) -> Maybe<Tensor> {
       DeviceType device{};
@@ -59,7 +60,7 @@ class CrossFunctor {
       const int64_t final_dim = input->ndim() - 1;
 
       if (device == DeviceType::kCUDA && dim != final_dim) {
-        JUST(attrs.SetAttr<int64_t>("dim", final_dim));
+        attrs.SetAllAttrs(final_dim);
 
         std::vector<int> perm(input->ndim(), 0);
         for (size_t i = 0; i < perm.size(); ++i) { perm[i] = static_cast<int>(i); }
@@ -72,7 +73,7 @@ class CrossFunctor {
             perm);
       }
 
-      JUST(attrs.SetAttr<int64_t>("dim", dim));
+      attrs.SetAllAttrs(dim);
       return OpInterpUtil::Dispatch<Tensor>(*op_, {input, other}, attrs);
     };
 
