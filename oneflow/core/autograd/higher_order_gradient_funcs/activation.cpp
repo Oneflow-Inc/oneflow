@@ -46,7 +46,7 @@ class NoParamActivationGradGrad : public OpExprGradFunction<BaseActivationGradGr
     ctx->x_requires_grad = inputs.at(1)->requires_grad();
     ctx->grad_requires_grad = inputs.at(0)->requires_grad();
 
-    if (!ctx->x_requires_grad || !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
+    if (!ctx->x_requires_grad && !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
 
     ctx->SaveTensorForBackward(inputs.at(1));
     if (ctx->x_requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
@@ -107,7 +107,7 @@ class HardShrinkGradGrad : public OpExprGradFunction<HardShrinkGradGradCaptureSt
 
     ctx->y_requires_grad = inputs.at(0)->requires_grad();
     ctx->grad_requires_grad = inputs.at(1)->requires_grad();
-    if (!ctx->y_requires_grad || !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
+    if (!ctx->y_requires_grad && !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->lambd = JUST(composed_attrs.GetAttr<double>("lambd"));
@@ -153,7 +153,7 @@ class SoftShrinkGradGrad : public OpExprGradFunction<SoftShrinkGradGradCaptureSt
 
     ctx->y_requires_grad = inputs.at(0)->requires_grad();
     ctx->grad_requires_grad = inputs.at(1)->requires_grad();
-    if (!ctx->y_requires_grad || !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
+    if (!ctx->y_requires_grad && !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->alpha = JUST(composed_attrs.GetAttr<double>("alpha"));
@@ -232,7 +232,7 @@ class LeakyReluGradGrad : public OpExprGradFunction<LeakyReluGradGradCaptureStat
 
     ctx->x_requires_grad = inputs.at(0)->requires_grad();
     ctx->grad_requires_grad = inputs.at(1)->requires_grad();
-    if (!ctx->x_requires_grad || !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
+    if (!ctx->x_requires_grad && !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->alpha = JUST(composed_attrs.GetAttr<float>("alpha"));
@@ -279,7 +279,7 @@ class SoftplusGradGrad : public OpExprGradFunction<SoftplusGradGradCaptureState>
 
     ctx->x_requires_grad = inputs.at(0)->requires_grad();
     ctx->grad_requires_grad = inputs.at(1)->requires_grad();
-    if (!ctx->x_requires_grad || !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
+    if (!ctx->x_requires_grad && !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->beta = JUST(composed_attrs.GetAttr<double>("beta"));
@@ -334,7 +334,7 @@ class HardTanhGradGrad : public OpExprGradFunction<HardTanhGradGradCaptureState>
 
     ctx->y_requires_grad = inputs.at(0)->requires_grad();
     ctx->grad_requires_grad = inputs.at(1)->requires_grad();
-    if (!ctx->y_requires_grad || !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
+    if (!ctx->y_requires_grad && !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->min_val = JUST(composed_attrs.GetAttr<double>("min_val"));
@@ -386,7 +386,7 @@ class EluGradGrad : public OpExprGradFunction<EluGradGradCaptureState> {
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->alpha = JUST(composed_attrs.GetAttr<double>("alpha"));
 
-    if (!ctx->x_requires_grad || !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
+    if (!ctx->x_requires_grad && !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
     ctx->SaveTensorForBackward(inputs.at(0));
     if (ctx->x_requires_grad) { ctx->SaveTensorForBackward(inputs.at(1)); }
     return Maybe<void>::Ok();
@@ -517,7 +517,7 @@ class ThresholdGradGrad : public OpExprGradFunction<ThresholdGradGradCaptureStat
 
     ctx->x_requires_grad = inputs.at(0)->requires_grad();
     ctx->grad_requires_grad = inputs.at(1)->requires_grad();
-    if (!ctx->x_requires_grad || !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
+    if (!ctx->x_requires_grad && !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->threshold = JUST(composed_attrs.GetAttr<double>("threshold_val"));

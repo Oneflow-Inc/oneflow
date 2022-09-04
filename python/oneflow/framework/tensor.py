@@ -498,6 +498,12 @@ def _cumprod(self, dim, dtype=None):
 def _inv(self):
     return flow._C.inv(self)
 
+def _trunc(self):
+    """trunc() -> Tensor
+
+    See :func:`oneflow.trunc`
+    """
+    return flow._C.trunc(self)
 
 def _cross(self, other, dim=None):
     return flow._C.cross(self, other, dim)
@@ -568,6 +574,7 @@ def RegisterMethods():
     Tensor.cumprod = _cumprod
     Tensor.mv = _mv
     Tensor.inverse = _inv
+    Tensor.trunc = _trunc
     Tensor.cross = _cross
 
 

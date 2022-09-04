@@ -56,7 +56,7 @@ namespace oneflow {
 
   DimVector dim_vec(in.shape().dim_vec());
   dim_vec.at(indices.shape().NumAxes() - 1) = indices.shape().dim_vec().back();
-  *out->mut_shape() = Shape(dim_vec);
+  out->set_shape(Shape(dim_vec));
   return Maybe<void>::Ok();
 }
 
@@ -98,7 +98,7 @@ namespace oneflow {
       << Error::TypeError() << "The dtype of the indices tensor must be int32 or int64";
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
-  *out->mut_data_type() = in.data_type();
+  out->set_data_type(in.data_type());
   return Maybe<void>::Ok();
 }
 

@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -101,10 +102,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       {
         if (kernel->output_is_mut2_type(i)) {
           mut_tensor_meta = std::make_shared<MutLocalTensorMeta>(
-              std::make_shared<Shape>(output_tensor_metas.at(i)->shape()),
-              std::make_shared<Stride>(output_tensor_metas.at(i)->stride()),
-              output_tensor_metas.at(i)->dtype(), output_tensor_metas.at(i)->device(),
-              output_tensor_metas.at(i)->storage_offset());
+              output_tensor_metas.at(i)->shape(), output_tensor_metas.at(i)->stride(),
+              output_tensor_metas.at(i)->dtype(), output_tensor_metas.at(i)->device());
         }
       }
       std::shared_ptr<EagerLocalTensorImpl> tensor_impl =
@@ -145,12 +144,12 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }));
     JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
     const auto& mut_tensor_meta = const_cast<EagerLocalTensorImpl*>(tensor_impl)->mut_tensor_meta();
-    Symbol<LocalTensorMeta> new_tensor_meta = SymbolOf(LocalTensorMeta(
-        std::make_shared<Shape>(mut_tensor_meta->shape()),
-        std::make_shared<Stride>(mut_tensor_meta->stride()), mut_tensor_meta->dtype(),
-        mut_tensor_meta->device(), mut_tensor_meta->storage_offset()));
+    Symbol<LocalTensorMeta> new_tensor_meta =
+        SymbolOf(LocalTensorMeta(mut_tensor_meta->shape(), mut_tensor_meta->stride(),
+                                 mut_tensor_meta->dtype(), mut_tensor_meta->device()));
     std::shared_ptr<EagerLocalTensorImpl> final_tensor_impl =
-        std::make_shared<EagerLocalTensorImpl>(JUST(tensor_impl->tensor_storage()), false, false);
+        std::make_shared<EagerLocalTensorImpl>(JUST(tensor_impl->tensor_storage()),
+                                               JUST(tensor_impl->storage_offset()), false, false);
     JUST(final_tensor_impl->InitEagerBlobObject(
         new_tensor_meta,
         JUST(JUST(outputs->at(index)->eager_blob_object())->compute_local_dep_object())));
@@ -202,8 +201,8 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
   if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
   std::shared_ptr<UserOpExpr> op_expr =
       JUST(CachedEagerCclBroadcastOpExpr(parallel_desc, src_rank, 1, {*tensor->shape()}));
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<int64_t>("root", src_rank));
+  auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("root");
+  attrs.SetAllAttrs(src_rank);
   if (src_rank == GlobalProcessCtx::Rank() || inplace) {
     TensorTuple outputs{tensor};
     JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs,
@@ -224,8 +223,8 @@ Maybe<TensorTuple> Broadcast(const TensorTuple& inputs, int64_t src_rank,
   for (const auto& tensor : inputs) { shape_list.emplace_back(*tensor->shape()); }
   std::shared_ptr<UserOpExpr> op_expr =
       JUST(CachedEagerCclBroadcastOpExpr(parallel_desc, src_rank, inputs.size(), shape_list));
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<int64_t>("root", src_rank));
+  auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("root");
+  attrs.SetAllAttrs(src_rank);
   if (src_rank == GlobalProcessCtx::Rank() || inplace) {
     auto outputs = std::make_shared<TensorTuple>(inputs);
     JUST(OpInterpUtil::Dispatch(*op_expr, inputs, outputs.get(),
@@ -301,8 +300,7 @@ Maybe<void> RawLocalToGlobal(const CastToGlobalOpExpr& op_expr, const TensorTupl
     const auto& parallel_desc = JUST(ctx.parallel_desc);
     const auto& logical_shape = JUST(ctx.attrs.GetAttr<Shape>("shape"));
     DataType dtype = JUST(ctx.attrs.GetAttr<DataType>("dtype"));
-    GlobalTensorMeta tensor_meta(std::make_shared<const Shape>(logical_shape), dtype, nd_sbp,
-                                 parallel_desc);
+    GlobalTensorMeta tensor_meta(logical_shape, dtype, nd_sbp, parallel_desc);
     Optional<int64_t> parallel_id{};
     const auto& device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
     const auto& global_tensor_impl = JUST(EagerGlobalTensorImpl::New(

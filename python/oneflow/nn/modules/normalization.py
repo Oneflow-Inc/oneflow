@@ -115,9 +115,9 @@ class GroupNorm(Module):
         reshape_to_1d = flow.reshape(
             input, shape=[origin_shape[0], self.num_groups, -1]
         )
-        mean = flow.mean(reshape_to_1d, dim=2, keepdim=True)
-        variance = flow.var(reshape_to_1d, dim=2, unbiased=False, keepdim=True)
-        normalized = (reshape_to_1d - mean) / flow.sqrt(variance + self.eps)
+        normalized = layer_norm(
+            reshape_to_1d, normalized_shape=(reshape_to_1d.shape[-1:]), eps=self.eps
+        )
         normalized = flow.reshape(
             normalized, shape=[origin_shape[0], self.num_channels, -1]
         )
