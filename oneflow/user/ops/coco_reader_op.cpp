@@ -21,19 +21,19 @@ namespace oneflow {
 /* static */ Maybe<void> COCOReaderOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   int64_t batch_size = ctx->Attr<int64_t>("batch_size");
   user_op::TensorDesc* image_desc = ctx->MutOutputTensorDesc("image", 0);
-  *image_desc->mut_shape() = Shape({batch_size});
+  image_desc->set_shape(Shape({batch_size}));
   user_op::TensorDesc* image_id_desc = ctx->MutOutputTensorDesc("image_id", 0);
-  *image_id_desc->mut_shape() = Shape({batch_size});
+  image_id_desc->set_shape(Shape({batch_size}));
   user_op::TensorDesc* image_size_desc = ctx->MutOutputTensorDesc("image_size", 0);
-  *image_size_desc->mut_shape() = Shape({batch_size, 2});
+  image_size_desc->set_shape(Shape({batch_size, 2}));
   user_op::TensorDesc* bbox_desc = ctx->MutOutputTensorDesc("gt_bbox", 0);
-  *bbox_desc->mut_shape() = Shape({batch_size});
+  bbox_desc->set_shape(Shape({batch_size}));
   user_op::TensorDesc* label_desc = ctx->MutOutputTensorDesc("gt_label", 0);
-  *label_desc->mut_shape() = Shape({batch_size});
+  label_desc->set_shape(Shape({batch_size}));
   user_op::TensorDesc* segm_desc = ctx->MutOutputTensorDesc("gt_segm", 0);
-  *segm_desc->mut_shape() = Shape({batch_size});
+  segm_desc->set_shape(Shape({batch_size}));
   user_op::TensorDesc* segm_index_desc = ctx->MutOutputTensorDesc("gt_segm_index", 0);
-  *segm_index_desc->mut_shape() = Shape({batch_size});
+  segm_index_desc->set_shape(Shape({batch_size}));
   return Maybe<void>::Ok();
 }
 
@@ -60,19 +60,19 @@ namespace oneflow {
   }
 
   user_op::TensorDesc* image_desc = ctx->MutOutputTensorDesc("image", 0);
-  *image_desc->mut_shape() = Shape({device_batch_size});
+  image_desc->set_shape(Shape({device_batch_size}));
   user_op::TensorDesc* image_id_desc = ctx->MutOutputTensorDesc("image_id", 0);
-  *image_id_desc->mut_shape() = Shape({device_batch_size});
+  image_id_desc->set_shape(Shape({device_batch_size}));
   user_op::TensorDesc* image_size_desc = ctx->MutOutputTensorDesc("image_size", 0);
-  *image_size_desc->mut_shape() = Shape({device_batch_size, 2});
+  image_size_desc->set_shape(Shape({device_batch_size, 2}));
   user_op::TensorDesc* bbox_desc = ctx->MutOutputTensorDesc("gt_bbox", 0);
-  *bbox_desc->mut_shape() = Shape({device_batch_size});
+  bbox_desc->set_shape(Shape({device_batch_size}));
   user_op::TensorDesc* label_desc = ctx->MutOutputTensorDesc("gt_label", 0);
-  *label_desc->mut_shape() = Shape({device_batch_size});
+  label_desc->set_shape(Shape({device_batch_size}));
   user_op::TensorDesc* segm_desc = ctx->MutOutputTensorDesc("gt_segm", 0);
-  *segm_desc->mut_shape() = Shape({device_batch_size});
+  segm_desc->set_shape(Shape({device_batch_size}));
   user_op::TensorDesc* segm_index_desc = ctx->MutOutputTensorDesc("gt_segm_index", 0);
-  *segm_index_desc->mut_shape() = Shape({device_batch_size});
+  segm_index_desc->set_shape(Shape({device_batch_size}));
   return Maybe<void>::Ok();
 }
 
@@ -121,19 +121,19 @@ namespace oneflow {
 
 /* static */ Maybe<void> COCOReaderOp::InferDataType(user_op::InferContext* ctx) {
   user_op::TensorDesc* image_desc = ctx->MutOutputTensorDesc("image", 0);
-  *image_desc->mut_data_type() = DataType::kTensorBuffer;
+  image_desc->set_data_type(DataType::kTensorBuffer);
   user_op::TensorDesc* image_id_desc = ctx->MutOutputTensorDesc("image_id", 0);
-  *image_id_desc->mut_data_type() = DataType::kInt64;
+  image_id_desc->set_data_type(DataType::kInt64);
   user_op::TensorDesc* image_size_desc = ctx->MutOutputTensorDesc("image_size", 0);
-  *image_size_desc->mut_data_type() = DataType::kInt32;
+  image_size_desc->set_data_type(DataType::kInt32);
   user_op::TensorDesc* bbox_desc = ctx->MutOutputTensorDesc("gt_bbox", 0);
-  *bbox_desc->mut_data_type() = DataType::kTensorBuffer;
+  bbox_desc->set_data_type(DataType::kTensorBuffer);
   user_op::TensorDesc* label_desc = ctx->MutOutputTensorDesc("gt_label", 0);
-  *label_desc->mut_data_type() = DataType::kTensorBuffer;
+  label_desc->set_data_type(DataType::kTensorBuffer);
   user_op::TensorDesc* segm_desc = ctx->MutOutputTensorDesc("gt_segm", 0);
-  *segm_desc->mut_data_type() = DataType::kTensorBuffer;
+  segm_desc->set_data_type(DataType::kTensorBuffer);
   user_op::TensorDesc* segm_index_desc = ctx->MutOutputTensorDesc("gt_segm_index", 0);
-  *segm_index_desc->mut_data_type() = DataType::kTensorBuffer;
+  segm_index_desc->set_data_type(DataType::kTensorBuffer);
   return Maybe<void>::Ok();
 }
 

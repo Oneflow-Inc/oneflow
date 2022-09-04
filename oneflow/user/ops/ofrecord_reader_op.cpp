@@ -20,7 +20,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> OFRecordReaderOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
-  *out_tensor->mut_shape() = Shape({ctx->Attr<int32_t>("batch_size")});
+  out_tensor->set_shape(Shape({ctx->Attr<int32_t>("batch_size")}));
   return Maybe<void>::Ok();
 }
 
@@ -38,7 +38,7 @@ namespace oneflow {
     CHECK_EQ_OR_RETURN(batch_size % split_num, 0);
     batch_size /= split_num;
   }
-  *out_tensor->mut_shape() = Shape({batch_size});
+  out_tensor->set_shape(Shape({batch_size}));
   return Maybe<void>::Ok();
 }
 
@@ -64,7 +64,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> OFRecordReaderOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = DataType::kOFRecord;
+  ctx->SetOutputDType("out", 0, DataType::kOFRecord);
   return Maybe<void>::Ok();
 }
 

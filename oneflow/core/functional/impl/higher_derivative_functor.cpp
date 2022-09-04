@@ -59,6 +59,300 @@ class CosGradGradFunctor {
   }
 };
 
+class TanGradGradFunctor {
+ public:
+  // dx = 1/cos^2(x), ddx = 2*sinx/cos^3(x) = tan_grad(x)*tan(x)*2
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    auto r = sequence_function(functional::Mul)
+                 .then([](const std::shared_ptr<Tensor>& input) {
+                   return functional::ScalarMul(Scalar(2), input);
+                 })
+                 .call(JUST(functional::Tan(x)), JUST(functional::TanGrad(x, dydx)));
+    return r;
+  }
+};
+
+class SinhGradGradFunctor {
+ public:
+  // dx = cosh(x), ddx = sinh(x) = cosh_grad(x)
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    return functional::CoshGrad(x, dydx);
+  }
+};
+
+class CoshGradGradFunctor {
+ public:
+  // dx = sinh(x), ddx = cosh(x) = sinh_grad(x)
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    return functional::SinhGrad(x, dydx);
+  }
+};
+
+class TanhGradGradFunctor {
+ public:
+  // dx = sech^2(x), ddx = -2*sech^2(x)*tanh(x) = tan_grad(x)*tanh(x)*(-2)
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    auto r = sequence_function(functional::Mul)
+                 .then([](const std::shared_ptr<Tensor>& input) {
+                   return functional::ScalarMul(Scalar(-2), input);
+                 })
+                 .call(JUST(functional::Tanh(x)), JUST(functional::TanhGrad(x, dydx)));
+    return r;
+  }
+};
+
+class AsinGradGradFunctor {
+ public:
+  // dx = 1/sqrt(1-x*x)=rsqrt(1-x*x), ddx = rsqrt_grad(1-x*x)*(-2x)
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    auto r = sequence_function(functional::Square)
+                 .then([](const std::shared_ptr<Tensor>& input) {
+                   return functional::ScalarSub(Scalar(1), input, /*alpha=*/1.0);
+                 })
+                 .then(std::bind(functional::RsqrtGrad, std::placeholders::_1, dydx))
+                 .then(std::bind(functional::Mul, std::placeholders::_1, x))
+                 .then([](const std::shared_ptr<Tensor>& input) {
+                   return functional::ScalarMul(Scalar(-2), input);
+                 })
+                 .call(x);
+    return r;
+  }
+};
+class AcosGradGradFunctor {
+ public:
+  // dx = -1/sqrt(1-x*x)=-rsqrt(1-x*x), ddx = rsqrt_grad(1-x*x)*(2x)
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    auto r = sequence_function(functional::Square)
+                 .then([](const std::shared_ptr<Tensor>& input) {
+                   return functional::ScalarSub(Scalar(1), input, /*alpha=*/1.0);
+                 })
+                 .then(std::bind(functional::RsqrtGrad, std::placeholders::_1, dydx))
+                 .then(std::bind(functional::Mul, std::placeholders::_1, x))
+                 .then([](const std::shared_ptr<Tensor>& input) {
+                   return functional::ScalarMul(Scalar(2), input);
+                 })
+                 .call(x);
+    return r;
+  }
+};
+
+class AtanGradGradFunctor {
+ public:
+  // dx = 1/(1+x*x), ddx = reci_grad(1+x*x)*(2x)
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    auto r = sequence_function(functional::Square)
+                 .then([](const std::shared_ptr<Tensor>& input) {
+                   return functional::ScalarAdd(Scalar(1), input, /*alpha=*/1.0);
+                 })
+                 .then(std::bind(functional::ReciprocalGrad, std::placeholders::_1, dydx))
+                 .then(std::bind(functional::Mul, std::placeholders::_1, x))
+                 .then([](const std::shared_ptr<Tensor>& input) {
+                   return functional::ScalarMul(Scalar(2), input);
+                 })
+                 .call(x);
+    return r;
+  }
+};
+
+class AsinhGradGradFunctor {
+ public:
+  // dx = 1/sqrt(1+x*x)=rsqrt(1+x*x), ddx = rsqrt_grad(1+x*x)*(2x)
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    auto r = sequence_function(functional::Square)
+                 .then([](const std::shared_ptr<Tensor>& input) {
+                   return functional::ScalarAdd(Scalar(1), input, /*alpha=*/1.0);
+                 })
+                 .then(std::bind(functional::RsqrtGrad, std::placeholders::_1, dydx))
+                 .then(std::bind(functional::Mul, std::placeholders::_1, x))
+                 .then([](const std::shared_ptr<Tensor>& input) {
+                   return functional::ScalarMul(Scalar(2), input);
+                 })
+                 .call(x);
+    return r;
+  }
+};
+
+class AcoshGradGradFunctor {
+ public:
+  // dx = 1/sqrt(x*x-1)=rsqrt(x*x-1), ddx = rsqrt_grad(x*x-1)*(2x)
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    auto r = sequence_function(functional::Square)
+                 .then([](const std::shared_ptr<Tensor>& input) {
+                   return functional::ScalarSub(input, Scalar(1), /*alpha=*/1.0,
+                                                /*inplace=*/false);
+                 })
+                 .then(std::bind(functional::RsqrtGrad, std::placeholders::_1, dydx))
+                 .then(std::bind(functional::Mul, std::placeholders::_1, x))
+                 .then([](const std::shared_ptr<Tensor>& input) {
+                   return functional::ScalarMul(Scalar(2), input);
+                 })
+                 .call(x);
+
+    return r;
+  }
+};
+
+class AtanhGradGradFunctor {
+ public:
+  // dx = 1/(1-x*x), ddx = reci_grad(1-x*x)*(-2x)
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    auto r = sequence_function(functional::Square)
+                 .then([](const std::shared_ptr<Tensor>& input) {
+                   return functional::ScalarSub(Scalar(1), input, /*alpha=*/1.0);
+                 })
+                 .then(std::bind(functional::ReciprocalGrad, std::placeholders::_1, dydx))
+                 .then(std::bind(functional::Mul, std::placeholders::_1, x))
+                 .then([](const std::shared_ptr<Tensor>& input) {
+                   return functional::ScalarMul(Scalar(-2), input);
+                 })
+                 .call(x);
+    return r;
+  }
+};
+
+class ErfGradGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    return functional::ScalarMul(Scalar(-2),
+                                 JUST(functional::Mul(x, JUST(functional::ErfGrad(x, dydx)))));
+  }
+};
+
+class ErfcGradGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    return functional::ScalarMul(Scalar(-2),
+                                 JUST(functional::Mul(x, JUST(functional::ErfcGrad(x, dydx)))));
+  }
+};
+
+class ExpGradGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    return functional::ExpGrad(x, dydx);
+  }
+};
+
+class Expm1GradGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    return functional::ExpGrad(x, dydx);
+  }
+};
+
+class LogGradGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    return functional::ReciprocalGrad(x, dydx);
+  }
+};
+
+class Log2GradGradFunctor {
+ public:
+  // dx = 1/(x*ln2), ddx = 1/ln2 * -1/(x*x)
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    return functional::ScalarMul(Scalar(1.0 / std::log(2.0f)),
+                                 JUST(functional::ReciprocalGrad(x, dydx)));
+  }
+};
+
+class Log10GradGradFunctor {
+ public:
+  // dx = 1/(x*ln10), ddx = 1/ln10 * -1/(x*x)
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    return functional::ScalarMul(Scalar(1.0 / std::log(10.0f)),
+                                 JUST(functional::ReciprocalGrad(x, dydx)));
+  }
+};
+
+class Log1pGradGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    return functional::ReciprocalGrad(
+        JUST(functional::ScalarAdd(Scalar(1), x, /*alpha=*/Scalar(1))), dydx);
+  }
+};
+
+class LogSigmoidGradGradFunctor {
+ public:
+  // dx = exp(-x)/(1+exp(-x)), ddx = -exp(-x)/(1+exp(-x))^2 = -sigmoid_grad(x)
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    return functional::Negative(JUST(functional::SigmoidGrad(JUST(functional::Sigmoid(x)), dydx)));
+  }
+};
+
+class ReciprocalGradGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    return functional::Negative(JUST(functional::ScalarPowGrad(x, dydx, Scalar(-2))));
+  }
+};
+
+class ReciprocalNoNanGradGradFunctor {
+ public:
+  // dx = -pow(x,-2), ddx = -pow_grad(x,-2)
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    return functional::Negative(JUST(functional::ScalarPowGrad(x, dydx, Scalar(-2))));
+  }
+};
+
+class RsqrtGradGradFunctor {
+ public:
+  // dx = -0.5*pow(x,-1.5), ddx = -0.5*pow_grad(x,-1.5)
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    return functional::ScalarMul(Scalar(-0.5),
+                                 JUST(functional::ScalarPowGrad(x, dydx, Scalar(-1.5))));
+  }
+};
+
+class SqrtGradGradFunctor {
+ public:
+  // dx = 0.5*pow(x,-0.5), ddx = -0.25*pow(x,-1.5) = 0.5*rsqrt_grad(x)
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    return functional::ScalarMul(Scalar(0.5), JUST(functional::RsqrtGrad(x, dydx)));
+  }
+};
+
+class SquareGradGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    return functional::ScalarMul(2, dydx);
+  }
+};
+
+class SigmoidGradGradFunctor {
+ public:
+  // dy = y * (1 - y), ddy = 1 - 2*y
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& y,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    return functional::Mul(JUST(functional::ScalarSub(1, y, /*alpha=*/2)), dydx);
+  }
+};
+
 class SiluGradGradFunctor {
  public:
   // y     = x ∗ sigmoid(x)
@@ -73,7 +367,11 @@ class SiluGradGradFunctor {
                    .then([&x](const std::shared_ptr<Tensor>& input) {
                      return functional::Add(x, input, /*alpha=*/Scalar(1.0), /*inplace=*/false);
                    })
-                   .then(std::bind(functional::SigmoidGrad, x, std::placeholders::_1))
+                   // Since we use y to compute SigmoidGrad, here we need to use sigmoid with x to
+                   // compute x first.
+                   // TODO(zzk):  Implement SigmoidGradXDy func.
+                   .then(std::bind(functional::SigmoidGrad, JUST(functional::Sigmoid(x)),
+                                   std::placeholders::_1))
                    .then(std::bind(functional::Mul, dydx, std::placeholders::_1))
                    .call(x);
     return res;
@@ -144,12 +442,13 @@ class SoftplusGradGradFunctor {
     auto beta_x = JUST(functional::ScalarMul(x, beta, /*inplace=*/false));
     auto condition = JUST(functional::ScalarLogicalLess(beta_x, Scalar(threshold)));
     auto zero_out = JUST(functional::ZerosLike(x));
-    auto res = functional::sequence_function(SigmoidGrad)
+    auto res = functional::sequence_function(functional::Sigmoid)
+                   .then(std::bind(functional::SigmoidGrad, std::placeholders::_1, dydx))
                    .then([&beta](const std::shared_ptr<Tensor>& input) {
                      return functional::ScalarMul(Scalar(beta), input);
                    })
                    .then(std::bind(functional::Where, condition, std::placeholders::_1, zero_out))
-                   .call(beta_x, dydx);
+                   .call(beta_x);
 
     return res;
   }
@@ -184,6 +483,31 @@ class CeluGradGradFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SinGradGradFunctor>("SinGradGrad");
   m.add_functor<impl::CosGradGradFunctor>("CosGradGrad");
+  m.add_functor<impl::TanGradGradFunctor>("TanGradGrad");
+  m.add_functor<impl::SinhGradGradFunctor>("SinhGradGrad");
+  m.add_functor<impl::CoshGradGradFunctor>("CoshGradGrad");
+  m.add_functor<impl::TanhGradGradFunctor>("TanhGradGrad");
+  m.add_functor<impl::AsinGradGradFunctor>("AsinGradGrad");
+  m.add_functor<impl::AcosGradGradFunctor>("AcosGradGrad");
+  m.add_functor<impl::AtanGradGradFunctor>("AtanGradGrad");
+  m.add_functor<impl::AsinhGradGradFunctor>("AsinhGradGrad");
+  m.add_functor<impl::AcoshGradGradFunctor>("AcoshGradGrad");
+  m.add_functor<impl::AtanhGradGradFunctor>("AtanhGradGrad");
+  m.add_functor<impl::ErfGradGradFunctor>("ErfGradGrad");
+  m.add_functor<impl::ErfcGradGradFunctor>("ErfcGradGrad");
+  m.add_functor<impl::ExpGradGradFunctor>("ExpGradGrad");
+  m.add_functor<impl::Expm1GradGradFunctor>("Expm1GradGrad");
+  m.add_functor<impl::LogGradGradFunctor>("LogGradGrad");
+  m.add_functor<impl::Log2GradGradFunctor>("Log2GradGrad");
+  m.add_functor<impl::Log10GradGradFunctor>("Log10GradGrad");
+  m.add_functor<impl::Log1pGradGradFunctor>("Log1pGradGrad");
+  m.add_functor<impl::LogSigmoidGradGradFunctor>("LogSigmoidGradGrad");
+  m.add_functor<impl::ReciprocalGradGradFunctor>("ReciprocalGradGrad");
+  m.add_functor<impl::ReciprocalNoNanGradGradFunctor>("ReciprocalNoNanGradGrad");
+  m.add_functor<impl::RsqrtGradGradFunctor>("RsqrtGradGrad");
+  m.add_functor<impl::SqrtGradGradFunctor>("SqrtGradGrad");
+  m.add_functor<impl::SquareGradGradFunctor>("SquareGradGrad");
+  m.add_functor<impl::SigmoidGradGradFunctor>("SigmoidGradGrad");
   m.add_functor<impl::SiluGradGradFunctor>("SiluGradGrad");
   m.add_functor<impl::SeluGradGradFunctor>("SeluGradGrad");
   m.add_functor<impl::SoftSignGradGradFunctor>("SoftSignGradGrad");
