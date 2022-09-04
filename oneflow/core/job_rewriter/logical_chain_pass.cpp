@@ -374,6 +374,19 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
       InsertCtrlEdgeInChain(logical_chain->ordered_op_nodes);
     }
 
+    for (const auto& logical_chain : info.ordered_logical_chains) {
+      VLOG(3) << " In placement: " << placement
+              << " logical_chain_id: " << logical_chain->logical_chain_id
+              << " has op num = " << logical_chain->ordered_op_nodes.size();
+
+      for (int i = 0; i < logical_chain->ordered_op_nodes.size(); ++i) {
+        const OpNode* ordered_op = JUST(VectorAt(logical_chain->ordered_op_nodes, i));
+        VLOG(3) << " ChainId: " << logical_chain_id << " order: " << i
+                << " op_name: " << ordered_op->op().op_name()
+                << " global_order: " << JUST(MapAt(op_node2global_order, ordered_op));
+      }
+    }
+
     // NOTE(chengcheng): create logical chain after acc, and merge with first logical chain.
     const std::vector<const OpNode*>& ordered_acc_op_nodes = info.ordered_acc_op_nodes;
     if (!ordered_acc_op_nodes.empty()) {
@@ -476,30 +489,18 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
         group->add_logical_chain_id_list(first_chain->logical_chain_id);
         group->add_logical_chain_id_list(info.after_acc_logical_chain->logical_chain_id);
       }
-    }
 
-    for (const auto& logical_chain : info.ordered_logical_chains) {
       VLOG(3) << " In placement: " << placement
-              << " logical_chain_id: " << logical_chain->logical_chain_id
-              << " has op num = " << logical_chain->ordered_op_nodes.size();
+              << " AccLogicalChain: " << info.after_acc_logical_chain->logical_chain_id
+              << " has op num = " << info.after_acc_logical_chain->ordered_op_nodes.size();
 
-      for (int i = 0; i < logical_chain->ordered_op_nodes.size(); ++i) {
-        const OpNode* ordered_op = JUST(VectorAt(logical_chain->ordered_op_nodes, i));
-        VLOG(3) << " ChainId: " << logical_chain_id << " order: " << i
-                << " op_name: " << ordered_op->op().op_name()
+      for (int i = 0; i < info.after_acc_logical_chain->ordered_op_nodes.size(); ++i) {
+        const OpNode* ordered_op =
+            JUST(VectorAt(info.after_acc_logical_chain->ordered_op_nodes, i));
+        VLOG(3) << " AfterAccChainId: " << info.after_acc_logical_chain->logical_chain_id
+                << " order: " << i << " op_name: " << ordered_op->op().op_name()
                 << " global_order: " << JUST(MapAt(op_node2global_order, ordered_op));
       }
-    }
-
-    VLOG(3) << " In placement: " << placement
-            << " AccLogicalChain: " << info.after_acc_logical_chain->logical_chain_id
-            << " has op num = " << info.after_acc_logical_chain->ordered_op_nodes.size();
-
-    for (int i = 0; i < info.after_acc_logical_chain->ordered_op_nodes.size(); ++i) {
-      const OpNode* ordered_op = JUST(VectorAt(info.after_acc_logical_chain->ordered_op_nodes, i));
-      VLOG(3) << " AfterAccChainId: " << info.after_acc_logical_chain->logical_chain_id
-              << " order: " << i << " op_name: " << ordered_op->op().op_name()
-              << " global_order: " << JUST(MapAt(op_node2global_order, ordered_op));
     }
   }
 
