@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
-#include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/operator/operator.h"
@@ -55,8 +54,12 @@ void FillTensorDescWithBlob(const Blob* blob, user_op::NaiveTensorDesc* tensor_d
   proto.set_data_type(blob->blob_desc().data_type());
   proto.set_is_dynamic(blob->blob_desc().is_dynamic());
   *tensor_desc = proto;
-  tensor_desc->mut_shape()->CheckNumAxesIdenticalAndAssign(blob->shape());
-  tensor_desc->mut_stride()->CheckNumAxesIdenticalAndAssign(blob->stride());
+  Shape tensor_desc_shape = tensor_desc->shape();
+  tensor_desc_shape.CheckNumAxesIdenticalAndAssign(blob->shape());
+  tensor_desc->set_shape(tensor_desc_shape);
+  Stride tensor_desc_stride = tensor_desc->stride();
+  tensor_desc_stride.CheckNumAxesIdenticalAndAssign(blob->stride());
+  tensor_desc->set_stride(tensor_desc_stride);
 }
 
 }  // namespace
@@ -147,7 +150,11 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
       auto& tensor_desc = pair.second.second;
       Blob* blob = BnInOp2Blob(bn);
       CHECK(blob != nullptr) << "Blob " << bn << " is not found in cache context.";
-      if (blob->blob_desc().is_dynamic()) { blob->shape().ToShape(tensor_desc.mut_shape()); }
+      if (blob->blob_desc().is_dynamic()) {
+        Shape shape;
+        blob->shape().ToShape(&shape);
+        tensor_desc.set_shape(shape);
+      }
     }
   }
 
@@ -275,14 +282,15 @@ class UserKernelOpInferContext : public user_op::InferContext {
   const Shape& OutputShape(const std::string& arg_name, int32_t index) const override {
     return Shape4ArgNameAndIndex(arg_name, index);
   }
-  Shape* MutOutputShape(const std::string& arg_name, int32_t index) override {
-    return MutShape4ArgNameAndIndex(arg_name, index);
+  void SetOutputShape(const std::string& arg_name, int32_t index, const Shape& shape) override {
+    SetShape4ArgNameAndIndex(arg_name, index, shape);
   }
   const Shape& Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->shape();
   }
-  Shape* MutShape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
+  void SetShape4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                const Shape& shape) override {
+    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->set_shape(shape);
   }
   const Stride& InputStride(const std::string& arg_name, int32_t index) const override {
     return Stride4ArgNameAndIndex(arg_name, index);
@@ -290,14 +298,15 @@ class UserKernelOpInferContext : public user_op::InferContext {
   const Stride& OutputStride(const std::string& arg_name, int32_t index) const override {
     return Stride4ArgNameAndIndex(arg_name, index);
   }
-  Stride* MutOutputStride(const std::string& arg_name, int32_t index) override {
-    return MutStride4ArgNameAndIndex(arg_name, index);
+  void SetOutputStride(const std::string& arg_name, int32_t index, const Stride& stride) override {
+    return SetStride4ArgNameAndIndex(arg_name, index, stride);
   }
   const Stride& Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->stride();
   }
-  Stride* MutStride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->mut_stride();
+  void SetStride4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                 const Stride& stride) override {
+    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->set_stride(stride);
   }
   DataType InputDType(const std::string& arg_name, int32_t index) const override {
     return Dtype4ArgNameAndIndex(arg_name, index);
@@ -305,14 +314,15 @@ class UserKernelOpInferContext : public user_op::InferContext {
   DataType OutputDType(const std::string& arg_name, int32_t index) const override {
     return Dtype4ArgNameAndIndex(arg_name, index);
   }
-  DataType* MutOutputDType(const std::string& arg_name, int32_t index) override {
-    return MutDtype4ArgNameAndIndex(arg_name, index);
+  void SetOutputDType(const std::string& arg_name, int32_t index, DataType data_type) override {
+    return SetDtype4ArgNameAndIndex(arg_name, index, data_type);
   }
   DataType Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->data_type();
   }
-  DataType* MutDtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
+  void SetDtype4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                DataType data_type) override {
+    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->set_data_type(data_type);
   }
   bool InputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return IsDynamic4ArgNameAndIndex(arg_name, index);
@@ -320,14 +330,15 @@ class UserKernelOpInferContext : public user_op::InferContext {
   bool OutputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return IsDynamic4ArgNameAndIndex(arg_name, index);
   }
-  bool* MutOutputIsDynamic(const std::string& arg_name, int32_t index) override {
-    return MutIsDynamic4ArgNameAndIndex(arg_name, index);
+  void SetOutputIsDynamic(const std::string& arg_name, int32_t index, bool is_dynamic) override {
+    return SetIsDynamic4ArgNameAndIndex(arg_name, index, is_dynamic);
   }
   bool IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->is_dynamic();
   }
-  bool* MutIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
+  void SetIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                    bool is_dynamic) override {
+    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->set_is_dynamic(is_dynamic);
   }
 
   const ArgVec& inputs() const override { return inputs_; }
@@ -357,8 +368,12 @@ class UserKernelOpInferContext : public user_op::InferContext {
       Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_pair.first, arg_pair.second));
       CHECK_NOTNULL(blob);
       if (*arg_tensor_desc_ptr) {
-        (*arg_tensor_desc_ptr)->mut_shape()->CheckNumAxesIdenticalAndAssign(blob->shape());
-        (*arg_tensor_desc_ptr)->mut_stride()->CheckNumAxesIdenticalAndAssign(blob->stride());
+        Shape tensor_desc_shape = (*arg_tensor_desc_ptr)->shape();
+        tensor_desc_shape.CheckNumAxesIdenticalAndAssign(blob->shape());
+        (*arg_tensor_desc_ptr)->set_shape(tensor_desc_shape);
+        Stride tensor_desc_stride = (*arg_tensor_desc_ptr)->stride();
+        tensor_desc_stride.CheckNumAxesIdenticalAndAssign(blob->stride());
+        (*arg_tensor_desc_ptr)->set_stride(tensor_desc_stride);
       } else {
         arg_tensor_desc_ptr->reset(new user_op::NaiveTensorDesc());
         FillTensorDescWithBlob(blob, arg_tensor_desc_ptr->get());
@@ -783,53 +798,5 @@ bool UserKernel::IsStateless() const { return !kernel_->AlwaysComputeWhenAllOutp
 NEW_REGISTER_KERNEL(OperatorConf::kUserConf, UserKernel).SetIsMatchedPred([](const KernelConf&) {
   return true;
 });
-
-EagerKernel::EagerKernel(const KernelConf& kernel_conf) {
-  InitBase(kernel_conf);
-  InitOpKernel(kernel_conf);
-}
-
-void EagerKernel::InitOpKernel(const KernelConf& kernel_conf) {
-  const std::string& op_type_name = kernel_conf.op_attribute().op_conf().user_conf().op_type_name();
-  auto kernel_reg_val = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-      op_type_name, UserKernelRegContext(kernel_conf)));
-  CHECK_NOTNULL(kernel_reg_val);
-  kernel_.reset(kernel_reg_val->create_fn());
-}
-
-void EagerKernel::Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf().all_blobs_are_static()) { return; }
-  UserKernelInferContext infer_ctx(nullptr, kernel_conf());
-  infer_ctx.UpdateArg2Tensor(BnInOp2Blob);
-  auto* op_infer_ctx = dynamic_cast<UserKernelOpInferContext*>(infer_ctx.MutOpInferContext());
-  if (op_infer_ctx) { op_infer_ctx->UpdateArg2TensorDesc(BnInOp2Blob); }
-  kernel_->InferShape(&infer_ctx);
-}
-
-std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
-    const std::shared_ptr<user_op::OpKernelState>& old_opkernel_state, ep::Stream* stream,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  std::shared_ptr<user_op::OpKernelState> new_opkernel_state;
-  CHECK_NOTNULL(stream);
-  UserKernelInitAndCacheContext init_and_cache_ctx(stream, kernel_conf());
-  if (old_opkernel_state) {
-    new_opkernel_state = old_opkernel_state;
-  } else {
-    new_opkernel_state = kernel_->CreateOpKernelState(&init_and_cache_ctx);
-  }
-  kernel_->InitOpKernelCacheWithFlags(&init_and_cache_ctx, user_op::OpKernelCache::kAllMayChanged,
-                                      &cache_);
-
-  if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob)
-      && !kernel_->AlwaysComputeWhenAllOutputsEmpty()) {
-    return new_opkernel_state;
-  }
-
-  // TODO(lixinqi): refactor to a lightweight KernelComputeContext
-  UserKernelComputeContext compute_ctx(stream, kernel_conf());
-  compute_ctx.UpdateTensorWithCorrBlob(BnInOp2Blob);
-  kernel_->Compute(&compute_ctx, new_opkernel_state.get(), cache_.get());
-  return new_opkernel_state;
-}
 
 }  // namespace oneflow

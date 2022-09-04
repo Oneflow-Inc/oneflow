@@ -754,7 +754,7 @@ add_docstr(
         >>> input = flow.tensor(arr, dtype=flow.float32)
         >>> output = flow.cosh(input).numpy()
         >>> output
-        array([1.0133467, 1.7859949, 1.2535787, 1.2804903], dtype=float32)
+        array([1.0133467, 1.7859949, 1.2535788, 1.2804903], dtype=float32)
 
     """,
 )
@@ -830,12 +830,12 @@ add_docstr(
         >>> x = flow.tensor(np.array([0, -1., 10.]), dtype=flow.float32)
         >>> out = flow.erfc(x)
         >>> out
-        tensor([1.0000e+00, 1.8427e+00, 2.8026e-45], dtype=oneflow.float32)
+        tensor([1.0000e+00, 1.8427e+00, 1.4013e-45], dtype=oneflow.float32)
 
         >>> x = flow.tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
         >>> out = flow.erfc(x)
         >>> out
-        tensor([[1.0000e+00, 1.8427e+00, 2.8026e-45],
+        tensor([[1.0000e+00, 1.8427e+00, 1.4013e-45],
                 [1.5375e-12, 4.1838e-23, 2.5790e-01]], dtype=oneflow.float32)
 
     """,
@@ -876,11 +876,11 @@ add_docstr(
         >>> print(y.shape)
         oneflow.Size([2, 2, 3])
         >>> print(y.numpy())
-        [[[6.3890562e+00 5.3598152e+01 4.0242880e+02]
+        [[[6.3890562e+00 5.3598148e+01 4.0242880e+02]
           [1.0956332e+03 2.9799580e+03 8.1020840e+03]]
         <BLANKLINE>
          [[2.2025465e+04 5.9873141e+04 1.6275380e+05]
-          [4.4241238e+05 1.2026032e+06 3.2690165e+06]]]
+          [4.4241241e+05 1.2026032e+06 3.2690162e+06]]]
 
 
     """,
@@ -1134,16 +1134,16 @@ add_docstr(
     When exponent is a scalar value, the operation applied is:
 
     .. math::
-        \\text{out}_i = x_i ^ \\text{exponent}
-\u200b
+        \text{out}_i = x_i ^ \text{exponent}
+
     When exponent is a tensor, the operation applied is:
 
     .. math::
-        \\text{out}_i = x_i ^ {\\text{exponent}_i}
+        \text{out}_i = x_i ^ {\text{exponent}_i}
 
     Args:
-        - input (Tensor): the input tensor.
-        - exponent (int, float, Tensor): the exponent.
+        input (Tensor): the input tensor.
+        exponent (int, float, Tensor): the exponent.
 
     Returns:
         Tensor: The result of variance on the specified axis of input Tensor
@@ -1811,5 +1811,28 @@ add_docstr(
         >>> input=flow.tensor([1, 2, 3])
         >>> flow.cumprod(input, dim=0)
         tensor([1, 2, 6], dtype=oneflow.int64)
+    """,
+)
+
+
+add_docstr(
+    oneflow.trunc,
+    r"""trunc(input) -> Tensor
+
+    The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.trunc.html
+
+    Returns a new tensor with the truncated integer values of
+    the elements of :attr:`input`.
+
+    Args:
+        input(Tensor): the input tensor.
+
+    Example::
+
+        >>> import oneflow as flow
+        >>> a = flow.tensor([ 3.4742,  0.5466, -0.8008, -0.9079])
+        >>> flow.trunc(a)
+        tensor([3., 0., -0., -0.], dtype=oneflow.float32)
     """,
 )

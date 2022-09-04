@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 /*static*/ Maybe<void> InvOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("y", 0) = ctx->InputShape("x", 0);
+  ctx->SetOutputShape("y", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -36,52 +36,8 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> InvOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
-
-Maybe<void> GenerateBackwardOpConf4Inv(const user_op::UserOpWrapper& op,
-                                       const user_op::AddOpFn& AddOp) {
-  if (op.NeedGenGradTensor4OpInput("x", 0)) {
-    const auto& x = op.arg_tensor_desc("x", 0);
-    const int64_t ndim = x.shape().NumAxes();
-    std::string matmul_op_name("matmul");
-    if (ndim > 2) { matmul_op_name = "batch_matmul"; }
-
-    user_op::UserOpConfWrapperBuilder matmul_grad_builder(op.op_name() + "_grad_matmul_grad");
-    user_op::UserOpConfWrapper matmul_grad_op =
-        matmul_grad_builder.Op(matmul_op_name)
-            .Input("a", op.GetGradTensorWithOpOutput("y", 0))
-            .Input("b", op.output("y", 0))
-            .Attr("transpose_a", false)
-            .Attr("transpose_b", true)
-            .Attr("alpha", 1.0)
-            .Output("out")
-            .Build();
-    AddOp(matmul_grad_op);
-
-    user_op::UserOpConfWrapperBuilder matmul_out_builder(op.op_name() + "_grad_matmul_out");
-    user_op::UserOpConfWrapper matmul_out_op = matmul_out_builder.Op(matmul_op_name)
-                                                   .Input("a", op.output("y", 0))
-                                                   .Input("b", matmul_grad_op.output("out", 0))
-                                                   .Attr("transpose_a", true)
-                                                   .Attr("transpose_b", false)
-                                                   .Attr("alpha", 1.0)
-                                                   .Output("out")
-                                                   .Build();
-    AddOp(matmul_out_op);
-
-    user_op::UserOpConfWrapperBuilder negative_builder(op.op_name() + "_grad_negative");
-    user_op::UserOpConfWrapper negative_op = negative_builder.Op("negative")
-                                                 .Input("x", matmul_out_op.output("out", 0))
-                                                 .Output("y")
-                                                 .Build();
-    AddOp(negative_op);
-    op.BindGradTensorWithOpInput(negative_op.output("y", 0), "x", 0);
-  }
-  return Maybe<void>::Ok();
-}
-
-REGISTER_USER_OP_GRAD("inv").SetGenBackwardOpConfFn(GenerateBackwardOpConf4Inv);
 
 }  // namespace oneflow

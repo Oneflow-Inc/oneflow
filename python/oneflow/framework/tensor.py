@@ -498,6 +498,12 @@ def _cumprod(self, dim, dtype=None):
 def _inv(self):
     return flow._C.inv(self)
 
+def _trunc(self):
+    """trunc() -> Tensor
+
+    See :func:`oneflow.trunc`
+    """
+    return flow._C.trunc(self)
 
 def _scatter_(self, dim, index, src):
     return flow._C.scatter(self, dim, index, src, inplace=True)
@@ -568,6 +574,7 @@ def RegisterMethods():
     Tensor.cumprod = _cumprod
     Tensor.mv = _mv
     Tensor.inverse = _inv
+    Tensor.trunc = _trunc
     Tensor.scatter_ = _scatter_
 
 

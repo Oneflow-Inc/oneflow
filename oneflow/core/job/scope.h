@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/placement_scope.h"
 #include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/symbol.h"

@@ -30,8 +30,8 @@ namespace oneflow {
           << "but got " << in_0.shape().elem_cnt() << " and " << cur_in.shape().elem_cnt();
     }
   }
-  *out->mut_shape() = in_0.shape();
-  *out->mut_is_dynamic() = in_0.is_dynamic();
+  out->set_shape(in_0.shape());
+  out->set_is_dynamic(in_0.is_dynamic());
   return Maybe<void>::Ok();
 }
 
@@ -59,7 +59,7 @@ namespace oneflow {
         << " expected all tenser to have same type, but found " << DataType_Name(in_0.data_type())
         << " and " << DataType_Name(cur_in.data_type());
   }
-  *out->mut_data_type() = in_0.data_type();
+  out->set_data_type(in_0.data_type());
   return Maybe<void>::Ok();
 }
 
@@ -70,16 +70,5 @@ namespace oneflow {
       << "The number of input tensors should be greater than or equal to 2";
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("add_n").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                         user_op::AddOpFn AddOp) -> Maybe<void> {
-  int32_t in_size = op.input_size("in");
-  for (int i = 0; i < in_size; ++i) {
-    if (op.NeedGenGradTensor4OpInput("in", i)) {
-      op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", 0), "in", i);
-    }
-  }
-  return Maybe<void>::Ok();
-});
 
 }  // namespace oneflow
