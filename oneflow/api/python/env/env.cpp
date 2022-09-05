@@ -24,6 +24,10 @@ limitations under the License.
 #include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/device/cuda_util.h"
 
+#ifdef WITH_CUDA
+#include <cuda.h>
+#endif // WITH_CUDA
+
 namespace py = pybind11;
 
 namespace oneflow {
