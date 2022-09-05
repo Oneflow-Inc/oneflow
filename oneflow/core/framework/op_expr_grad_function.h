@@ -64,7 +64,7 @@ class FunctionAutoGradCaptureState final
 
   std::shared_ptr<FunctionAutoGradCaptureState> GetSharedFromThis() { return shared_from_this(); }
 
-  // NOTE(wyg): Hold PyOjbect ptr to ensure getting the same objecet when casting to python.
+  // NOTE(wyg): Hold PyOjbect ptr to ensure getting the same object when casting to python.
   // And decrease the reference count when C++ object is destructed to avoid memory leaking.
   void* pyobject() const { return pyobj_ptr_.get(); }
   void set_pyobject_ptr(std::unique_ptr<void, void (*)(void*)>&& pyobj_ptr) {
