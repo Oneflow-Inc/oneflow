@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/compiler.h"
-#include <cstdint>
-#include <memory>
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/intra_job_mem_sharing_util.h"
@@ -74,29 +72,15 @@ void PlanCompiler::Compile(Job* job, Plan* plan, std::shared_ptr<TaskGraph>& tas
   tc->Count("Graph name: " + job_name + " ConsumeAllRegsts", 1);
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
   tc->Count("Graph name: " + job_name + " PinConsumedRegst", 1);
-  // 1, create and add exe node parallel
-  // 2, parallel infer user op
-  // 3, topo infer others 
-  // task_gph->TopoForEachNode(&TaskNode::Build);
   // NOTE(strint): register bind lbi and exec node bind register needs to run topologically.
   task_gph->TopoForEachNode(&TaskNode::BuildExecGphIf);
   tc->Count("Graph name: " + job_name + " TaskNode::BuildExecGraph", 1);
-  // task_gph->TopoForEachNode(&TaskNode::InferRegstIf);
-  // tc->Count("Graph name: " + job_name + " TaskNode::InferRegst", 1);
-
-  // task_gph->TopoForEachNode([](TaskNode* task_node) {
-  //   auto ltc = std::make_unique<TimeCounter<std::chrono::microseconds>>(true);
-  //   task_node->InferRegstIf();
-  //   ltc->Count("TaskNode" + task_node->VisualStr() + "::InferRegst", 1);
-  // });
-  // tc->Count("Graph name: " + job_name + " TaskNode::InferRegst", 1);
 
   HashMap<uint64_t, std::vector<TaskNode*>> group_id2user_task_node;
   uint64_t user_task_node_cnt = 0; 
   std::vector<TaskNode*> other_task_node;
   // TODO(strint): choose best thread num
   const uint64_t cpu_core_num = std::thread::hardware_concurrency();
-  LOG(ERROR) << " task num " << task_gph->node_num();
   const uint64_t infer_thread_pool_size = std::min(static_cast<uint64_t>(GlobalProcessCtx::WorldSize() * std::max(static_cast<uint64_t>(1ULL), static_cast<uint64_t>(task_gph->node_num() / 6000))), cpu_core_num);
   task_gph->TopoForEachNode([&](TaskNode* task_node) {
     if (task_node->op_node()) {
@@ -114,7 +98,7 @@ void PlanCompiler::Compile(Job* job, Plan* plan, std::shared_ptr<TaskGraph>& tas
   {
     const int64_t node_num = group_id2user_task_node.size();
     const int64_t cpu_num = std::thread::hardware_concurrency();
-    LOG(ERROR) << " elapsed | thread pool size " << infer_thread_pool_size << " node num " << user_task_node_cnt << " cpu num " << cpu_num << " world size " << GlobalProcessCtx::WorldSize();
+    VLOG(2) << " TaskNode::InferUserRegst thread pool size " << infer_thread_pool_size << " node num " << user_task_node_cnt << " cpu num " << cpu_num << " world size " << GlobalProcessCtx::WorldSize();
     BlockingCounter counter(node_num);
     ThreadPool thread_pool(infer_thread_pool_size);
     for (auto& task_group : group_id2user_task_node) {

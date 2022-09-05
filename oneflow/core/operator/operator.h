@@ -146,11 +146,6 @@ class Operator {
                                 const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint) const;
   Maybe<void> FillSbpSignature(const SbpSignature& sbp_signature);
   Maybe<void> FillNdSbpSignature(const NdSbpSignature& signature);
-  // Maybe<void> InferSbpSignatureIf(
-  //     const SbpSignature& sbp_sig_conf,
-  //     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-  //     const std::function<Maybe<const SbpInferHint*>(const std::string&)>& SbpInferHint4Ibn,
-  //     const ParallelDesc& parallel_desc);
   Maybe<void> InferNdSbpSignatureIf(
       const NdSbpSignature& nd_sbp_constraints, const ParallelDesc& parallel_desc,
       std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn);
@@ -427,9 +422,6 @@ std::string ReplaceInputLbnInOpCustomizedConf(OperatorConf* op_conf,
                                               const std::string& new_val);
 
 bool operator==(const OperatorConf& lhs, const OperatorConf& rhs);
-
-// Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
-//                                     const OpNodeSignature& upstream_signature, const Scope& scope);
 
 Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
                               const ParallelDesc& parallel_desc,

@@ -24,7 +24,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-// Special infer physical
 /* static */ Maybe<void> OFRecordReaderOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   int32_t batch_size = ctx->Attr<int32_t>("batch_size");

@@ -30,7 +30,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-// Special infer physical
 /* static */ Maybe<void> CategoricalOrdinalEncodeOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->parallel_ctx().parallel_num(), 1);

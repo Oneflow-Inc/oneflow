@@ -105,6 +105,7 @@ void NormalForwardCompTaskNode::BuildOutRegst() {
   for (const std::string& obn : exec_node->op()->output_bns()) {
     std::string out_regst_name = GetOutRegstNameByObn(obn);
     std::shared_ptr<RegstDesc> out_regst = GetProducedRegst(out_regst_name);
+    // out regster bind a lbi and create a blob desc
     out_regst->AddLbi(exec_node->op()->BnInOp2Lbi(obn));
     exec_node->BindBnWithRegst(obn, out_regst);
   }

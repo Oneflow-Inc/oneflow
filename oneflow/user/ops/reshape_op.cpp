@@ -77,7 +77,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-// Special infer physical
 /*static*/ Maybe<void> ReshapeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   Shape logical_shape = ctx->Attr<Shape>("shape");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);

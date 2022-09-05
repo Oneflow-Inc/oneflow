@@ -43,7 +43,6 @@ Maybe<Symbol<Stream>> MakeEmptyStream(const Symbol<Device>& out_device, const bo
   return Maybe<void>::Ok();
 }
 
-// Special infer physical
 /* static */ Maybe<void> EmptyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
   const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);

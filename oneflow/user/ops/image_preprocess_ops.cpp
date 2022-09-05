@@ -139,7 +139,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-// Special infer physical
 /* static */ Maybe<void> CoinFlipOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
   const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);

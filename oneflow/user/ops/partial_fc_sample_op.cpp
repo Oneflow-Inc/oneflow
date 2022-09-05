@@ -47,7 +47,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-// Special infer physical
 /*static*/ Maybe<void> DistributedPartialFcSampleOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   const int64_t num_sample = ctx->Attr<int64_t>("num_sample");

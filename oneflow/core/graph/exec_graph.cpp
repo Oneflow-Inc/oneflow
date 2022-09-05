@@ -109,7 +109,6 @@ Maybe<void> CheckPhysicalBlobDesc(
 
 void ExecNode::InferBlobDescs(const OpNode* op_node, const ParallelContext* parallel_ctx) {
   auto GetBlobDesc4BnInOp = GetRegstBlobDesc4BnInOpFunc();
-  // NOTE(strint): bad news, lots of InferTmpSizeFn use input register TensorDesc.
   CHECK_JUST_MSG(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, &GlobalJobDesc()),
                  std::stringstream() << " infer blob descs if failed, op name " << op_->op_loc());
   // NOTE(strint): Inplace infer doesn't need the real blob desc value, pass GetBlobDesc4BnInOp is just becase some
@@ -126,8 +125,7 @@ std::function<BlobDesc*(const std::string&)> ExecNode::GetRegstBlobDesc4BnInOpFu
     if (it == bn_in_op2regst_.end()) { return nullptr; }
     std::shared_ptr<RegstDesc> regst = it->second;
     CHECK(regst);
-    auto ret = regst->MutBlobDesc(op()->BnInOp2Lbi(bn_in_op));
-    return ret;
+    return regst->MutBlobDesc(op()->BnInOp2Lbi(bn_in_op));
   };
 }
 

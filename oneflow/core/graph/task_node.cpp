@@ -162,8 +162,6 @@ void TaskNode::Build() {
 }
 
 void TaskNode::InferRegst() {
-  // UserOp node do parallel run.
-  // Other node do topology run.
   if (mut_exec_gph().node_num() == 1) {
     auto node = mut_exec_gph().SoleNode();
     node->InferBlobDescs(op_node(), parallel_ctx());
