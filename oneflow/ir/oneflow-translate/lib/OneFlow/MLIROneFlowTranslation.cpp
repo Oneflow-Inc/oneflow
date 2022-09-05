@@ -799,7 +799,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     pm.addPass(oneflow::createConvertInferenceOpPass());
     pm.addPass(oneflow::createPostConvertInferenceOpPass());
   }
-  if (std::getenv("ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH") != nullptr) {
+  if (job_wrapper.IsLastIRPass() && std::getenv("ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH") != nullptr) {
     pm.addPass(createKernelLaunchFunctionPass());
   }
   pm.addPass(createCanonicalizerPass());
