@@ -964,9 +964,10 @@ void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLI
 
 struct KernelLaunchWithLLVMPattern : public mlir::OpRewritePattern<KernelLaunchOp> {
   explicit KernelLaunchWithLLVMPattern(mlir::MLIRContext* context)
-      : OpRewritePattern<KernelLaunchOp>(context, /*benefit=*/0) {}
+      : OpRewritePattern<KernelLaunchOp>(context, /*benefit=*/1) {}
   mlir::LogicalResult matchAndRewrite(KernelLaunchOp op,
                                       mlir::PatternRewriter& rewriter) const override {
+  LOG(ERROR) << 1;
     auto attr_flag = "has_llvm";
     if (op->getAttr(attr_flag)) {
       return success();
