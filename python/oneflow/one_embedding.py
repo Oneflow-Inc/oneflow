@@ -361,8 +361,7 @@ class Embedding(Module):
             cur_rank_unique_embedding_grad,
         )
 
-    def sgd_update(self, param_group):
-        param_group = optimizer.param_groups[0]  # TODO find the param group
+    def sgd_update(self, param_group, step):
         lr = param_group["lr"]
         l2 = param_group["weight_decay"]
         momentum = param_group["momentum"]
@@ -392,8 +391,7 @@ class Embedding(Module):
             self.storage_dim,
         )
 
-    def adam_update(self, optimizer):
-        param_group = optimizer.param_groups[0]  # TODO find the param group
+    def adam_update(self, param_group, step):
         line_size = self.storage_dim
         embedding_size = self.embedding_dim
         lr = param_group["lr"]
@@ -438,9 +436,7 @@ class Embedding(Module):
             line_size,
         )
 
-    def adagrad_update(self, optimizer):
-        param_group = optimizer.param_groups[0]  # TODO find the param group
-        step = optimizer._state["step"]
+    def adagrad_update(self, param_group, step):
         lr = param_group["lr"]
         l2 = param_group["weight_decay"]
         epsilon = param_group["eps"]
@@ -476,8 +472,7 @@ class Embedding(Module):
             self.storage_dim,
         )
 
-    def ftrl_update(self, optimizer):
-        param_group = optimizer.param_groups[0]  # TODO find the param group
+    def ftrl_update(self, param_group, step):
         lr = param_group["lr"]
         l2 = param_group["weight_decay"]
         lr_power = param_group["lr_power"]
@@ -1206,17 +1201,29 @@ class Optimizer(Optimizer):
         self.param_groups = optimizer.param_groups
         self._default_options = optimizer._default_options
         self._state = optimizer._state
+        self.embedding_param_group_dict = {}
+        for embedding in self.embeddings:
+            for group in self.param_groups:
+                param_set = set()
+                for param in group.parameters:
+                    param_set.add(param)
+                if embedding.shadow in param_set:
+                    self.embedding_param_group_dict[embedding.embedding_name] = group
+            if not embedding.embedding_name in self.embedding_param_group_dict:
+                raise ValueError("embedding must in optimizers param_group")
 
     def step(self, closure: Callable = None):
+        step = self.optimizer._state["step"]
         for embedding in self.embeddings:
+            param_group = self.embedding_param_group_dict[embedding.embedding_name]
             if type(self.optimizer) is flow.nn.optimizer.sgd.SGD:
-                embedding.sgd_update(self.optimizer)
+                embedding.sgd_update(param_group, step)
             elif type(self.optimizer) is flow.nn.optimizer.adam.Adam:
-                embedding.adam_update(self.optimizer)
+                embedding.adam_update(param_group, step)
             elif type(self.optimizer) is flow.nn.optimizer.adagrad.Adagrad:
-                embedding.adagrad_update(self.optimizer)
+                embedding.adagrad_update(param_group, step)
             elif type(self.optimizer) is flow.one_embedding.Ftrl:
-                embedding.ftrl_update(self.optimizer)
+                embedding.ftrl_update(param_group, step)
             else:
                 raise NotImplementedError("only support sgd, adam, adagrad and ftrl")
         self.optimizer.step()
