@@ -55,7 +55,7 @@ def from_torch(torch_tensor):
         import torch
 
         torch_t = torch.tensor([[1, 2, 3], [4, 5, 6]])
-        flow_t = flow.utils.from_torch(torch_t)
+        flow_t = flow.utils.tensor.from_torch(torch_t)
     
     This feature ``from_torch`` is at Alpha Stage.
     """
@@ -97,7 +97,7 @@ def to_torch(flow_tensor):
         import torch
 
         flow_t = flow.tensor([[1, 2, 3], [4, 5, 6]])
-        torch_t = flow.utils.to_torch(flow_t)
+        torch_t = flow.utils.tensor.to_torch(flow_t)
 
     This feature ``to_torch`` is at Alpha Stage.
     """

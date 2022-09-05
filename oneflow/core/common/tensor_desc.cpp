@@ -21,10 +21,10 @@ namespace oneflow {
 namespace user_op {
 
 TensorDesc& TensorDesc::operator=(const TensorDesc& rhs) {
-  *this->mut_shape() = rhs.shape();
-  *this->mut_stride() = rhs.stride();
-  *this->mut_data_type() = rhs.data_type();
-  *this->mut_is_dynamic() = rhs.is_dynamic();
+  this->set_shape(rhs.shape());
+  this->set_stride(rhs.stride());
+  this->set_data_type(rhs.data_type());
+  this->set_is_dynamic(rhs.is_dynamic());
   return *this;
 }
 

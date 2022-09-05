@@ -23,79 +23,111 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct UnaryGradGradState : public AutoGradCaptureState {
-  bool x_requires_grad = false;
+struct UnaryMathGradGradState : public AutoGradCaptureState {
+  bool input_requires_grad = false;
   bool grad_requires_grad = false;
 };
 
-class SinGradGrad : public OpExprGradFunction<UnaryGradGradState> {
-  // sin_grad = cos(x) * grad
-  // So: out_grad_grad = cos(x) * gradgrad
-  //     x_grad_grad = -sin(x) * grad * gradgrad
-  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
+typedef Maybe<one::Tensor> (*UnaryBwFunc)(const std::shared_ptr<one::Tensor>&,
+                                          const std::shared_ptr<one::Tensor>&);
 
-  Maybe<void> Capture(UnaryGradGradState* ctx, const TensorTuple& inputs,
+template<UnaryBwFunc BwFunc, UnaryBwFunc BwBwFunc>
+class UnaryMathGradGrad : public OpExprGradFunction<UnaryMathGradGradState> {
+  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
+  Maybe<void> Capture(UnaryMathGradGradState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2) << "SinGradGrad op have 2 inputs";
-    CHECK_EQ_OR_RETURN(outputs.size(), 1) << "SinGradGrad op have 1 output";
-    ctx->x_requires_grad = inputs[0]->requires_grad();
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
+    ctx->input_requires_grad = inputs[0]->requires_grad();
     ctx->grad_requires_grad = inputs[1]->requires_grad();
     ctx->SaveTensorForBackward(inputs[0]);
-    if (ctx->x_requires_grad) { ctx->SaveTensorForBackward(inputs[1]); }
+    if (ctx->input_requires_grad) { ctx->SaveTensorForBackward(inputs[1]); }
     return Maybe<void>::Ok();
   }
-
-  Maybe<void> Apply(const UnaryGradGradState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const UnaryMathGradGradState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->resize(2);
-    const auto& x = ctx->SavedTensors()[0];
-    if (ctx->x_requires_grad) {
+    const auto& input = ctx->SavedTensors()[0];
+    if (ctx->input_requires_grad) {
       const auto& grad = ctx->SavedTensors()[1];
-      (*in_grads)[0] =
-          JUST(functional::sequence_function(functional::SinGradGrad)
-                   .then(std::bind(functional::Mul, out_grads[0], std::placeholders::_1))
-                   .call(x, grad));
+      (*in_grads)[0] = JUST(functional::Mul(out_grads[0], JUST(BwBwFunc(input, grad))));
     }
-    if (ctx->grad_requires_grad) { (*in_grads)[1] = JUST(functional::SinGrad(x, out_grads[0])); }
+    if (ctx->grad_requires_grad) { (*in_grads)[1] = JUST(BwFunc(input, out_grads[0])); }
     return Maybe<void>::Ok();
   }
 };
 
-class CosGradGrad : public OpExprGradFunction<UnaryGradGradState> {
-  // sin_grad = -sin(x) * grad
-  // So: out_grad_grad = -sin(x) * gradgrad
-  //     x_grad_grad = -cos(x) * grad * gradgrad
+template<UnaryBwFunc BwFunc>
+class UnaryMathGradGradWithZeroDDX : public OpExprGradFunction<UnaryMathGradGradState> {
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
-
-  Maybe<void> Capture(UnaryGradGradState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(UnaryMathGradGradState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2) << "CosGradGrad op have 2 inputs";
-    CHECK_EQ_OR_RETURN(outputs.size(), 1) << "CosGradGrad op have 1 output";
-    ctx->x_requires_grad = inputs[0]->requires_grad();
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
+    ctx->input_requires_grad = inputs[0]->requires_grad();
     ctx->grad_requires_grad = inputs[1]->requires_grad();
     ctx->SaveTensorForBackward(inputs[0]);
-    if (ctx->x_requires_grad) { ctx->SaveTensorForBackward(inputs[1]); }
     return Maybe<void>::Ok();
   }
-
-  Maybe<void> Apply(const UnaryGradGradState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const UnaryMathGradGradState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->resize(2);
-    const auto& x = ctx->SavedTensors()[0];
-    if (ctx->x_requires_grad) {
-      const auto& grad = ctx->SavedTensors()[1];
-      (*in_grads)[0] =
-          JUST(functional::sequence_function(functional::CosGradGrad)
-                   .then(std::bind(functional::Mul, out_grads[0], std::placeholders::_1))
-                   .call(x, grad));
-    }
-    if (ctx->grad_requires_grad) { (*in_grads)[1] = JUST(functional::CosGrad(x, out_grads[0])); }
+    const auto& input = ctx->SavedTensors()[0];
+    if (ctx->input_requires_grad) { (*in_grads)[0] = JUST(functional::ZerosLike(input)); }
+    if (ctx->grad_requires_grad) { (*in_grads)[1] = JUST(BwFunc(input, out_grads[0])); }
     return Maybe<void>::Ok();
   }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("sin_grad", SinGradGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("cos_grad", CosGradGrad);
+// TODO: Lgamma, first order backward unimplemented
+#define MATH_UNARY_ELEMENTWISE_GRAD_GRAD_DY_X_FUNC_SEQ            \
+  OF_PP_MAKE_TUPLE_SEQ("sin_grad", Sin)                           \
+  OF_PP_MAKE_TUPLE_SEQ("cos_grad", Cos)                           \
+  OF_PP_MAKE_TUPLE_SEQ("tan_grad", Tan)                           \
+  OF_PP_MAKE_TUPLE_SEQ("sinh_grad", Sinh)                         \
+  OF_PP_MAKE_TUPLE_SEQ("cosh_grad", Cosh)                         \
+  OF_PP_MAKE_TUPLE_SEQ("tanh_grad", Tanh)                         \
+  OF_PP_MAKE_TUPLE_SEQ("asin_grad", Asin)                         \
+  OF_PP_MAKE_TUPLE_SEQ("acos_grad", Acos)                         \
+  OF_PP_MAKE_TUPLE_SEQ("atan_grad", Atan)                         \
+  OF_PP_MAKE_TUPLE_SEQ("asinh_grad", Asinh)                       \
+  OF_PP_MAKE_TUPLE_SEQ("acosh_grad", Acosh)                       \
+  OF_PP_MAKE_TUPLE_SEQ("atanh_grad", Atanh)                       \
+  OF_PP_MAKE_TUPLE_SEQ("erf_grad", Erf)                           \
+  OF_PP_MAKE_TUPLE_SEQ("erfc_grad", Erfc)                         \
+  OF_PP_MAKE_TUPLE_SEQ("exp_grad", Exp)                           \
+  OF_PP_MAKE_TUPLE_SEQ("expm1_grad", Expm1)                       \
+  OF_PP_MAKE_TUPLE_SEQ("log_grad", Log)                           \
+  OF_PP_MAKE_TUPLE_SEQ("log_sigmoid_grad", LogSigmoid)            \
+  OF_PP_MAKE_TUPLE_SEQ("log2_grad", Log2)                         \
+  OF_PP_MAKE_TUPLE_SEQ("log1p_grad", Log1p)                       \
+  OF_PP_MAKE_TUPLE_SEQ("reciprocal_grad", Reciprocal)             \
+  OF_PP_MAKE_TUPLE_SEQ("reciprocal_no_nan_grad", ReciprocalNoNan) \
+  OF_PP_MAKE_TUPLE_SEQ("rsqrt_grad", Rsqrt)                       \
+  OF_PP_MAKE_TUPLE_SEQ("sqrt_grad", Sqrt)                         \
+  OF_PP_MAKE_TUPLE_SEQ("square_grad", Square)
+
+#define MATH_UNARY_ELEMENTWISE_GRAD_GRAD_DY_Y_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("sigmoid_grad", Sigmoid)
+
+#define MATH_UNARY_ELEMENTWISE_GRAD_GRAD_ZERO_DDX_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("abs_grad", Abs)
+
+#define INSTANTIAT_AND_REGISTER_UNARY_MATHOP_GRAD_GRAD_CLASS(op_type_name, op_cls)           \
+  class op_cls##GradGradCls final                                                            \
+      : public UnaryMathGradGrad<functional::op_cls##Grad, functional::op_cls##GradGrad> {}; \
+  REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, op_cls##GradGradCls);
+
+OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_GRAD_GRAD_CLASS,
+                     MATH_UNARY_ELEMENTWISE_GRAD_GRAD_DY_X_FUNC_SEQ);
+
+OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_GRAD_GRAD_CLASS,
+                     MATH_UNARY_ELEMENTWISE_GRAD_GRAD_DY_Y_FUNC_SEQ);
+
+#define INSTANTIAT_AND_REGISTER_UNARY_MATHOP_GRAD_GRAD_ZERO_DDX_CLASS(op_type_name, op_cls) \
+  class op_cls##GradGradCls final                                                           \
+      : public UnaryMathGradGradWithZeroDDX<functional::op_cls##Grad> {};                   \
+  REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, op_cls##GradGradCls);
+OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_GRAD_GRAD_ZERO_DDX_CLASS,
+                     MATH_UNARY_ELEMENTWISE_GRAD_GRAD_ZERO_DDX_FUNC_SEQ);
 
 }  // namespace one
 }  // namespace oneflow

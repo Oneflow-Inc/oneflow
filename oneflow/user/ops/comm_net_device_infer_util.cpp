@@ -17,22 +17,14 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<bool> SyncLaunched(user_op::DeviceAndStreamInferContext* ctx) { return false; }
-
-Maybe<bool> IsAsyncLaunched(user_op::DeviceAndStreamInferContext* ctx) {
-  return ctx->Attr<bool>("async_launch");
-}
-
 namespace {
 
-Maybe<Symbol<Stream>> RawGetNcclDevice(bool is_async_launced) {
-  StreamType stream_type =
-      (is_async_launced ? StreamType::kAsyncedLaunchedCommNet : StreamType::kSyncedLaunchedCommNet);
-  return Stream::New(JUST(Device::New("cuda")), stream_type);
+Maybe<Symbol<Stream>> RawGetNcclDevice() {
+  return Stream::New(JUST(Device::New("cuda")), StreamType::kCcl);
 }
 
 Maybe<Symbol<Stream>> RawGetCpuTransportDevice() {
-  return Stream::New(JUST(Device::New("cpu")), StreamType::kSyncedLaunchedCommNet);
+  return Stream::New(JUST(Device::New("cpu")), StreamType::kCcl);
 }
 
 }  // namespace
