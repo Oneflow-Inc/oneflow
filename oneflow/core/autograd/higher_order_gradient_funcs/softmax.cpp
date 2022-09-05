@@ -59,19 +59,21 @@ Maybe<void> SoftmaxGradGrad::Apply(const SoftmaxGradGradCaptureState* ctx,
   if (ctx->y_requires_grad) {
     const auto& dy = ctx->SavedTensors()[1];
     const std::vector<int32_t> reduce_axis{static_cast<int32_t>(y->ndim() - 1)};
-    const auto& a =
-        JUST(functional::sequence_function(functional::Mul)
-                 .then(std::bind(functional::ReduceSum, std::placeholders::_1, reduce_axis, true))
-                 .then(std::bind(functional::Mul, std::placeholders::_1, dy))
-                 .call(y, out_grads[0]));
-    const auto& b =
-        JUST(functional::sequence_function(functional::Mul)
-                 .then(std::bind(functional::ReduceSum, std::placeholders::_1, reduce_axis, true))
-                 .then(std::bind(functional::Mul, std::placeholders::_1, out_grads[0]))
-                 .call(y, dy));
+    const auto& a = JUST(functional::sequence_function(functional::Mul)
+                             .then(std::bind(functional::ReduceSum, std::placeholders::_1,
+                                             reduce_axis, /*keepdim=*/true))
+                             .then(std::bind(functional::Mul, std::placeholders::_1, dy))
+                             .call(y, out_grads[0]));
+    const auto& b = JUST(functional::sequence_function(functional::Mul)
+                             .then(std::bind(functional::ReduceSum, std::placeholders::_1,
+                                             reduce_axis, /*keepdim=*/true))
+                             .then(std::bind(functional::Mul, std::placeholders::_1, out_grads[0]))
+                             .call(y, dy));
     in_grads->at(0) = JUST(functional::sequence_function(functional::Mul)
-                               .then(std::bind(functional::Sub, std::placeholders::_1, a, 1, false))
-                               .then(std::bind(functional::Sub, std::placeholders::_1, b, 1, false))
+                               .then(std::bind(functional::Sub, std::placeholders::_1, a,
+                                               /*alpha=*/1, /*inplace=*/false))
+                               .then(std::bind(functional::Sub, std::placeholders::_1, b,
+                                               /*alpha=*/1, /*inplace=*/false))
                                .call(out_grads[0], dy));
   }
   if (ctx->dy_requires_grad) { in_grads->at(1) = JUST(functional::SoftmaxGrad(out_grads[0], y)); }

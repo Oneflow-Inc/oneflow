@@ -71,8 +71,10 @@ Maybe<void> LogSoftmaxGradGrad::Apply(const LogSoftmaxGradGradCaptureState* ctx,
     in_grads->at(1) =
         JUST(functional::sequence_function(functional::Exp)
                  .then(std::bind(functional::Mul, std::placeholders::_1, out_grads[0]))
-                 .then(std::bind(functional::ReduceSum, std::placeholders::_1, reduce_axis, true))
-                 .then(std::bind(functional::Sub, out_grads[0], std::placeholders::_1, 1, false))
+                 .then(std::bind(functional::ReduceSum, std::placeholders::_1, reduce_axis,
+                                 /*keepdim=*/true))
+                 .then(std::bind(functional::Sub, out_grads[0], std::placeholders::_1, /*alpha=*/1,
+                                 /*inplace=*/false))
                  .call(y));
   }
 
