@@ -54,7 +54,7 @@ namespace oneflow {
 
   DimVector dim_vec(data.shape().dim_vec());
   dim_vec.at(segment_ids.shape().NumAxes() - 1) = num_segments;
-  *out->mut_shape() = Shape(dim_vec);
+  out->set_shape(Shape(dim_vec));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnsortedBatchSegmentSumOp::InferPhysicalTensorDesc(
@@ -66,7 +66,7 @@ namespace oneflow {
   const user_op::TensorDesc& segment_ids = ctx->InputTensorDesc("segment_ids", 0);
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   CHECK_OR_RETURN(IsIndexDataType(segment_ids.data_type()));
-  *out->mut_data_type() = data.data_type();
+  out->set_data_type(data.data_type());
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnsortedBatchSegmentSumOp::ModifyInputArg(
