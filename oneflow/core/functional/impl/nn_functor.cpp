@@ -3495,7 +3495,6 @@ class OneEmbeddingLookupFunctor {
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "embedding_size", "num_tables", "embedding_tables",
                                        "key_value_store_options", "padding_idx");
-                           const std::string& key_value_store_options); 
     attrs.SetAllAttrs(dtype->data_type(), embedding_size, num_tables, embedding_tables,
                       key_value_store_options, padding_idx);
     if (table_ids) {
