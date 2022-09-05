@@ -582,6 +582,7 @@ DATATYPE_FUNC(PyTensorObject_long, DType::Int64());
 DATATYPE_FUNC(PyTensorObject_half, DType::Float16());
 DATATYPE_FUNC(PyTensorObject_float, DType::Float());
 DATATYPE_FUNC(PyTensorObject_double, DType::Double());
+DATATYPE_FUNC(PyTensorObject_bfloat16, DType::BFloat16());
 
 static PyObject* PyTensorObject_view(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
@@ -837,6 +838,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"half", PyTensorObject_half, METH_NOARGS, NULL},
     {"float", PyTensorObject_float, METH_NOARGS, NULL},
     {"double", PyTensorObject_double, METH_NOARGS, NULL},
+    {"bfloat16", PyTensorObject_bfloat16, METH_NOARGS, NULL},
     {"local_to_global", (PyCFunction)PyTensorObject_local_to_global, METH_VARARGS | METH_KEYWORDS,
      NULL},
     {"global_to_global", (PyCFunction)PyTensorObject_global_to_global, METH_VARARGS | METH_KEYWORDS,

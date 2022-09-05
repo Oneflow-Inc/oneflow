@@ -746,61 +746,48 @@ class ExpandFunctor {
  public:
   ExpandFunctor() { op_ = CHECK_JUST(one::OpBuilder("expand").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    CHECK_GE_OR_RETURN(shape.NumAxes(), x->shape()->NumAxes())
-        << Error::RuntimeError() << "expand(tensor{" << x->shape()->ToString()
-        << "}, size=" << x->shape()->NumAxes() << "): the number of sizes provided ("
-        << shape.NumAxes() << ") "
-        << "must be greater or equal to the number of dimensions in the tensor ("
-        << x->shape()->NumAxes() << ")";
-    std::vector<int32_t> in_shape(x->shape()->NumAxes());
-    for (int i = 0; i < in_shape.size(); ++i) { in_shape[i] = x->shape()->At(i); }
+    const Shape& in_shape = *x->shape();
+    size_t lpad = shape.size() - in_shape.size();
+    if (lpad < 0) {
+      return Error::RuntimeError()
+             << "expand(tensor{" << in_shape.ToString() << "}, size=" << in_shape.size()
+             << "): the number of sizes provided (" << shape.size() << ") "
+             << "must be greater or equal to the number of dimensions in the tensor ("
+             << in_shape.size() << ")";
+    }
 
-    // check the parameters
-    int shift = shape.NumAxes() - in_shape.size();
-    for (int i = shape.NumAxes() - 1; i >= 0; --i) {
-      int index = i - shift;
-      if (index >= 0) {
-        if (shape.At(i) != -1 && shape.At(i) != in_shape[index]) {
-          CHECK_OR_RETURN(shape.At(i) >= 0 && in_shape[index] == 1)
-              << Error::RuntimeError() << "The expanded size of the tensor (" << shape.At(i)
-              << ") must match the existing size (" << in_shape[index]
-              << ") at non-singleton dimension " << i << ".  Target sizes: " << shape.ToString()
-              << ".  Tensor sizes: " << x->shape()->ToString();
+    DimVector expand_shape_vec = shape.dim_vec();
+    for (size_t i = 0; i < shape.size(); ++i) {
+      const auto& t_dim = shape[i];
+      if (t_dim < -1) {
+        return Error::RuntimeError() << "Trying to create tensor with negative dimension " << t_dim;
+      }
+      if (i >= lpad) {
+        const auto& dim = in_shape[i - lpad];
+        if (dim != 1 && t_dim != -1 && t_dim != dim) {
+          return Error::RuntimeError()
+                 << "The expanded size of the tensor (" << t_dim
+                 << ") must match the existing size (" << dim << ") at non-singleton dimension "
+                 << i << ". Target sizes: " << shape.ToString()
+                 << ". Tensor sizes: " << in_shape.ToString();
         }
+        if (t_dim == -1) { expand_shape_vec[i] = dim; }
       } else {
-        CHECK_GE_OR_RETURN(shape.At(i), 0)
-            << Error::RuntimeError() << "The expanded size of the tensor (" << shape.At(i)
-            << ") isn't allowed in a leading, non-existing dimension " << i
-            << " .Target size: " << shape.ToString();
+        if (t_dim == -1) {
+          return Error::RuntimeError() << "The expanded size of the tensor (-1) isn't allowed in a "
+                                          "leading, non-existing dimension "
+                                       << i;
+        }
       }
     }
 
-    std::vector<int32_t> expand_shape(shape.NumAxes());
-    for (int i = 0; i < shape.NumAxes(); ++i) { expand_shape[i] = shape.dim_vec().at(i); }
-
     // if input tensor is eager local, then try return tensor's view
-    if (view::IsViewApplicable(x)) { return view::Expand(x, in_shape, expand_shape); }
+    Shape expand_shape(expand_shape_vec);
+    if (view::IsViewApplicable(x)) { return view::Expand(x, expand_shape); }
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("logical_in_shape", "logical_expand_shape");
-    attrs.SetAllAttrs(in_shape, expand_shape);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("expand_shape");
+    attrs.SetAllAttrs(expand_shape);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class ExpandGradFunctor {
- public:
-  ExpandGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("expand_grad").Input("in").Output("out").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
-                           const std::vector<int32_t>& logical_in_shape,
-                           const std::vector<int32_t>& logical_expand_shape) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("logical_out_shape", "logical_expand_shape");
-    attrs.SetAllAttrs(logical_in_shape, logical_expand_shape);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, attrs);
   }
 
  private:
@@ -3339,7 +3326,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RowStackFunctor>("RowStack");
   m.add_functor<impl::DStackFunctor>("DStack");
   m.add_functor<impl::ExpandFunctor>("Expand");
-  m.add_functor<impl::ExpandGradFunctor>("ExpandGrad");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::ExpandDimsFunctor>("Unsqueeze");
   m.add_functor<impl::UnsqueezeMultipleFunctor>("UnsqueezeMultiple");
