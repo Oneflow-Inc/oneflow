@@ -1203,6 +1203,9 @@ class Optimizer(Optimizer):
     ):
         self.optimizer = optimizer
         self.embeddings = embeddings
+        self.param_groups = optimizer.param_groups
+        self._default_options = optimizer._default_options
+        self._state = optimizer._state
 
     def step(self, closure: Callable = None):
         for embedding in self.embeddings:
@@ -1218,5 +1221,5 @@ class Optimizer(Optimizer):
                 raise NotImplementedError("only support sgd, adam, adagrad and ftrl")
         self.optimizer.step()
 
-    def zero_grad(self, set_to_none: bool = False):
-        self.optimizer.zero_grad(set_to_none)
+    def _generate_conf_for_graph(self, train_conf, vars_conf):
+        return self.optimizer._generate_conf_for_graph(train_conf, vars_conf)
