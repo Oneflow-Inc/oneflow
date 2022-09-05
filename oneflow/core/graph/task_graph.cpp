@@ -57,28 +57,6 @@ bool IsConnectToTickOp(const TaskNode* node) {
   return false;
 }
 
-std::string GetOpConfCalculationPassName(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_scope_symbol_id());
-  int64_t scope_symbol_id = op_conf.scope_symbol_id();
-  CHECK(Singleton<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id))
-      << " Error! op : \n " << op_conf.DebugString()
-      << " has error scope_symbol_id = " << scope_symbol_id
-      << " which cannot find in Singleton<symbol::Storage<Scope>>::Get()\n";
-  const Scope& scope = Singleton<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
-  return scope.scope_proto().calculation_pass_name();
-}
-
-bool IsOptimizerPassOp(const Operator* op) {
-  // NOTE(chengcheng): use scope::calculation_pass_name instead of area_id to not merge optimizer
-  // ops with fw/bw ops
-  if (!op->op_conf().has_scope_symbol_id()) {
-    // NOTE(chengcheng): Some system op insert to OpGraph may not set scope_symbol_id, it MUST NOT
-    // optimizer subgraph ops.
-    return false;
-  }
-  return GetOpConfCalculationPassName(op->op_conf()) == kOptimizerPass;
-}
-
 bool IsSubsetTickOpConf(const OperatorConf& op_conf) {
   return op_conf.has_src_subset_tick_conf() || op_conf.has_dst_subset_tick_conf();
 }
@@ -101,11 +79,6 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
         || user_type_name == "unpack" || user_type_name == "identity_buffer") {
       return true;
     }
-  }
-  // NOTE(chengcheng): ONLY nccl_use_compute_stream = false will exclude optimizer pass ops
-  if (!Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
-      && IsOptimizerPassOp(op)) {
-    return true;
   }
   return false;
 }

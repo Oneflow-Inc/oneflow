@@ -52,7 +52,7 @@ std::function<Maybe<void>(const std::string&)> MakeSetParamTensorDescFn(user_op:
     if (ctx->has_output(bn, 0)) {
       auto* tensor_desc = ctx->MutOutputTensorDesc(bn, 0);
       CHECK_OR_RETURN(tensor_desc != nullptr);
-      *tensor_desc->mut_shape() = shape;
+      tensor_desc->set_shape(shape);
     }
     return Maybe<void>::Ok();
   };
@@ -64,7 +64,7 @@ std::function<Maybe<void>(const std::string&)> MakeSetParamDataTypeFn(user_op::I
     if (ctx->has_output(bn, 0)) {
       auto* tensor_desc = ctx->MutOutputTensorDesc(bn, 0);
       CHECK_OR_RETURN(tensor_desc != nullptr);
-      *tensor_desc->mut_data_type() = data_type;
+      tensor_desc->set_data_type(data_type);
     }
     return Maybe<void>::Ok();
   };
@@ -260,8 +260,7 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn() {
       CHECK_EQ_OR_RETURN(reserve_space_bits % split_num, 0);
       reserve_space_bits = reserve_space_bits / split_num;
     }
-    *reserve_space->mut_shape() =
-        Shape({static_cast<int64_t>(RoundUp(reserve_space_bits, 32) / 32)});
+    reserve_space->set_shape(Shape({static_cast<int64_t>(RoundUp(reserve_space_bits, 32) / 32)}));
     return Maybe<void>::Ok();
   })(ctx);
 }
@@ -271,8 +270,8 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn() {
   return MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
                                     user_op::TensorDesc* reserve_space) -> Maybe<void> {
     const auto& x_desc = ctx->InputTensorDesc("x", 0);
-    *reserve_space->mut_shape() =
-        Shape({static_cast<int64_t>(RoundUp(x_desc.shape().elem_cnt(), 32) / 32)});
+    reserve_space->set_shape(
+        Shape({static_cast<int64_t>(RoundUp(x_desc.shape().elem_cnt(), 32) / 32)}));
     return Maybe<void>::Ok();
   })(ctx);
 }
@@ -289,7 +288,7 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn() {
 /* static */ Maybe<void> NormalizationAddReluOp::InferDataType(user_op::InferContext* ctx) {
   return MakeFwDataTypeInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
                                   user_op::TensorDesc* reserve_space) -> Maybe<void> {
-    *reserve_space->mut_data_type() = DataType::kInt32;
+    reserve_space->set_data_type(DataType::kInt32);
     return Maybe<void>::Ok();
   })(ctx);
 }
@@ -346,7 +345,7 @@ void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int
     size_t reserve_space_size;
     InferCudnnReserveSpaceSize(x->data_type(), ops, n, c, h, w, &reserve_space_size);
     reserve_space_size = std::max(reserve_space_size, GetOneVal<size_t>());
-    *reserve_space->mut_shape() = Shape({static_cast<int64_t>(reserve_space_size)});
+    reserve_space->set_shape(Shape({static_cast<int64_t>(reserve_space_size)}));
     return Maybe<void>::Ok();
   })(ctx);
 }
@@ -371,7 +370,7 @@ void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int
     size_t reserve_space_size;
     InferCudnnReserveSpaceSize(x->data_type(), ops, n, c, h, w, &reserve_space_size);
     reserve_space_size = std::max(reserve_space_size, GetOneVal<size_t>());
-    *reserve_space->mut_shape() = Shape({static_cast<int64_t>(reserve_space_size)});
+    reserve_space->set_shape(Shape({static_cast<int64_t>(reserve_space_size)}));
     return Maybe<void>::Ok();
   })(ctx);
 }
@@ -389,7 +388,7 @@ void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int
     user_op::InferContext* ctx) {
   return MakeFwDataTypeInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
                                   user_op::TensorDesc* reserve_space) -> Maybe<void> {
-    *reserve_space->mut_data_type() = DataType::kChar;
+    reserve_space->set_data_type(DataType::kChar);
     return Maybe<void>::Ok();
   })(ctx);
 }

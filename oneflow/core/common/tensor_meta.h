@@ -35,61 +35,25 @@ bool IsContiguous(const ShapeView& shape_view, const Stride& stride);
 
 class TensorMeta : public user_op::TensorDesc {
  public:
-  TensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype)
-      : shape_(shape),
-        stride_(std::shared_ptr<Stride>(new Stride(*shape))),
-        data_type_(dtype),
-        is_dynamic_(false) {}
-  TensorMeta(const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const Stride>& stride,
-             DataType dtype)
-      : shape_(shape), stride_(stride), data_type_(dtype), is_dynamic_(false) {}
-  TensorMeta(const TensorMeta& other)
-      : shape_(std::make_shared<Shape>(*other.shape_)),
-        stride_(std::make_shared<Stride>(*other.stride_)),
-        data_type_(other.data_type_),
-        is_dynamic_(other.is_dynamic_) {}
+  TensorMeta(DataType dtype) : data_type_(dtype), is_dynamic_(false) {}
+  TensorMeta(const TensorMeta& other) = default;
   TensorMeta(TensorMeta&&) = default;
   virtual ~TensorMeta() = default;
 
-  const std::shared_ptr<const Shape>& shape_ptr() const { return shape_; }
-  const std::shared_ptr<const Stride>& stride_ptr() const { return stride_; }
+  virtual const std::shared_ptr<const Shape>& shape_ptr() const = 0;
+  virtual const std::shared_ptr<const Stride>& stride_ptr() const = 0;
+  virtual bool is_contiguous() const = 0;
 
-  const Shape& shape() const override { return *shape_; }
-  const Stride& stride() const override { return *stride_; }
   DataType dtype() const { return data_type_; }
   DataType data_type() const override { return data_type_; }
   bool is_dynamic() const override { return is_dynamic_; }
-  bool is_contiguous() const { return IsContiguous(shape(), *stride_); }
 
-  virtual Shape* mut_shape() override {
-    PRINT_BUG_PROMPT_AND_ABORT();
-    return nullptr;
-  }
-  virtual Stride* mut_stride() override {
-    PRINT_BUG_PROMPT_AND_ABORT();
-    return nullptr;
-  }
-  virtual DataType* mut_data_type() override {
-    PRINT_BUG_PROMPT_AND_ABORT();
-    return nullptr;
-  }
-  virtual bool* mut_is_dynamic() override {
-    PRINT_BUG_PROMPT_AND_ABORT();
-    return nullptr;
-  }
-  virtual void set_is_dynamic(bool val) override { PRINT_BUG_PROMPT_AND_ABORT(); }
+  virtual void set_shape(const Shape& shape) override { PRINT_BUG_PROMPT_AND_ABORT(); }
+  virtual void set_stride(const Stride& stride) override { PRINT_BUG_PROMPT_AND_ABORT(); }
+  virtual void set_data_type(DataType data_type) override { PRINT_BUG_PROMPT_AND_ABORT(); }
+  virtual void set_is_dynamic(bool is_dynamic) override { PRINT_BUG_PROMPT_AND_ABORT(); }
 
  protected:
-  TensorMeta& operator=(const TensorMeta& other) {
-    this->shape_ = std::make_shared<const Shape>(*other.shape_);
-    this->stride_ = std::make_shared<const Stride>(*other.stride_);
-    this->data_type_ = other.data_type_;
-    this->is_dynamic_ = other.is_dynamic_;
-    return *this;
-  }
-
-  std::shared_ptr<const Shape> shape_;
-  std::shared_ptr<const Stride> stride_;
   DataType data_type_;
   bool is_dynamic_;
 };
@@ -98,38 +62,94 @@ class MutTensorMeta : public TensorMeta {
  public:
   // uninitialized MutTensorMeta.
   MutTensorMeta();
-  MutTensorMeta(const MutTensorMeta&) = default;
+  MutTensorMeta(const MutTensorMeta& other)
+      : TensorMeta(other),
+        shape_(std::make_shared<const Shape>(*other.shape_)),
+        stride_(std::make_shared<const Stride>(*other.stride_)) {}
   MutTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype);
   MutTensorMeta(const std::shared_ptr<const Shape>& shape,
                 const std::shared_ptr<const Stride>& stride, DataType dtype);
+  MutTensorMeta(const Shape& shape, DataType dtype);
+  MutTensorMeta(const Shape& shape, const Stride& stride, DataType dtype);
   virtual ~MutTensorMeta() = default;
 
-  Shape* mut_shape() override { return const_cast<Shape*>(shape_.get()); }
-  Stride* mut_stride() override { return const_cast<Stride*>(stride_.get()); }
-  DataType* mut_data_type() override { return &data_type_; }
-  bool* mut_is_dynamic() override { return &is_dynamic_; }
-  void set_is_dynamic(bool val) override { is_dynamic_ = val; }
+  const std::shared_ptr<const Shape>& shape_ptr() const override { return shape_; }
+  const std::shared_ptr<const Stride>& stride_ptr() const override { return stride_; }
+  const Shape& shape() const override { return *shape_; }
+  const Stride& stride() const override { return *stride_; }
+  bool is_contiguous() const override { return IsContiguous(*shape_, *stride_); }
 
-  void set_shape(const std::shared_ptr<const Shape>& val) { shape_ = val; }
-  void set_stride(const std::shared_ptr<const Stride>& val) { stride_ = val; }
-  DataType* mut_dtype() { return &data_type_; }
-  void set_dtype(DataType data_type) { data_type_ = data_type; }
+  void set_shape(const Shape& shape) override { *const_cast<Shape*>(shape_.get()) = shape; }
+  void set_stride(const Stride& stride) override { *const_cast<Stride*>(stride_.get()) = stride; }
+  void set_data_type(DataType data_type) override { data_type_ = data_type; }
+  void set_is_dynamic(bool is_dynamic) override { is_dynamic_ = is_dynamic; }
 
   bool operator==(const MutTensorMeta& other) const;
   size_t CalcHashValue() const;
 
-  MutTensorMeta& operator=(const MutTensorMeta& other) = default;
+  MutTensorMeta& operator=(const MutTensorMeta& other) {
+    this->data_type_ = other.data_type_;
+    this->is_dynamic_ = other.is_dynamic_;
+    this->shape_ = std::make_shared<const Shape>(*other.shape_);
+    this->stride_ = std::make_shared<const Stride>(*other.stride_);
+    return *this;
+  }
+
+ protected:
+  std::shared_ptr<const Shape> shape_;
+  std::shared_ptr<const Stride> stride_;
 };
 
-class LocalTensorMeta : public TensorMeta {
+class ConstTensorMeta : public TensorMeta {
+ public:
+  // uninitialized ConstTensorMeta.
+  ConstTensorMeta();
+  ConstTensorMeta(const ConstTensorMeta&) = default;
+  ConstTensorMeta(Symbol<Shape> shape, DataType dtype);
+  ConstTensorMeta(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype);
+  ConstTensorMeta(const Shape& shape, DataType dtype) : ConstTensorMeta(SymbolOf(shape), dtype) {}
+  ConstTensorMeta(const Shape& shape, const Stride& stride, DataType dtype)
+      : ConstTensorMeta(SymbolOf(shape), SymbolOf(stride), dtype) {}
+  virtual ~ConstTensorMeta() = default;
+
+  const std::shared_ptr<const Shape>& shape_ptr() const override {
+    return shape_.shared_from_symbol();
+  }
+  const std::shared_ptr<const Stride>& stride_ptr() const override {
+    return stride_.shared_from_symbol();
+  }
+  const Shape& shape() const override { return *shape_; }
+  const Stride& stride() const override { return *stride_; }
+  bool is_contiguous() const override { return IsContiguous(*shape_, *stride_); }
+
+  bool operator==(const ConstTensorMeta& other) const;
+  size_t CalcHashValue() const;
+
+  ConstTensorMeta& operator=(const ConstTensorMeta& other) {
+    this->data_type_ = other.data_type_;
+    this->is_dynamic_ = other.is_dynamic_;
+    this->shape_ = other.shape_;
+    this->stride_ = other.stride_;
+    return *this;
+  }
+
+ protected:
+  Symbol<Shape> shape_;
+  Symbol<Stride> stride_;
+};
+
+class LocalTensorMeta : public ConstTensorMeta {
  public:
   // uninitialized LocalTensorMeta.
   LocalTensorMeta();
   LocalTensorMeta(const LocalTensorMeta&) = default;
-  LocalTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype, Symbol<Device> device);
-  LocalTensorMeta(const std::shared_ptr<const Shape>& shape,
-                  const std::shared_ptr<const Stride>& stride, DataType dtype,
+  LocalTensorMeta(Symbol<Shape> shape, DataType dtype, Symbol<Device> device);
+  LocalTensorMeta(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype,
                   Symbol<Device> device);
+  LocalTensorMeta(const Shape& shape, DataType dtype, Symbol<Device> device)
+      : LocalTensorMeta(SymbolOf(shape), dtype, device) {}
+  LocalTensorMeta(const Shape& shape, const Stride& stride, DataType dtype, Symbol<Device> device)
+      : LocalTensorMeta(SymbolOf(shape), SymbolOf(stride), dtype, device) {}
   virtual ~LocalTensorMeta() = default;
 
   const Symbol<Device>& device() const { return device_; }
@@ -153,6 +173,9 @@ class MutLocalTensorMeta : public MutTensorMeta {
   MutLocalTensorMeta(const std::shared_ptr<const Shape>& shape,
                      const std::shared_ptr<const Stride>& stride, DataType dtype,
                      Symbol<Device> device);
+  MutLocalTensorMeta(const Shape& shape, DataType dtype, Symbol<Device> device);
+  MutLocalTensorMeta(const Shape& shape, const Stride& stride, DataType dtype,
+                     Symbol<Device> device);
   virtual ~MutLocalTensorMeta() = default;
 
   const Symbol<Device>& device() const { return device_; }
@@ -168,11 +191,14 @@ class MutLocalTensorMeta : public MutTensorMeta {
   Symbol<Device> device_;
 };
 
-class GlobalTensorMeta : public TensorMeta {
+class GlobalTensorMeta : public ConstTensorMeta {
  public:
-  GlobalTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype, Symbol<NdSbp> nd_sbp,
+  GlobalTensorMeta(Symbol<Shape> shape, DataType dtype, Symbol<NdSbp> nd_sbp,
                    Symbol<ParallelDesc> parallel_desc)
-      : TensorMeta(shape, dtype), nd_sbp_(nd_sbp), parallel_desc_(parallel_desc) {}
+      : ConstTensorMeta(shape, dtype), nd_sbp_(nd_sbp), parallel_desc_(parallel_desc) {}
+  GlobalTensorMeta(const Shape& shape, DataType dtype, Symbol<NdSbp> nd_sbp,
+                   Symbol<ParallelDesc> parallel_desc)
+      : GlobalTensorMeta(SymbolOf(shape), dtype, nd_sbp, parallel_desc) {}
   GlobalTensorMeta(const GlobalTensorMeta&) = default;
   GlobalTensorMeta(GlobalTensorMeta&&) = default;
   virtual ~GlobalTensorMeta() = default;
