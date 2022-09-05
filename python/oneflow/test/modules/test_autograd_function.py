@@ -152,9 +152,7 @@ class TestAutogradFunction(flow.unittest.TestCase):
         x = flow.randn(4, 5).requires_grad_()
         # forward
         res = MyModule.apply(x)
-        test_case.assertTrue(
-            np.allclose(res.numpy(), x.numpy() * 2.0)
-        )
+        test_case.assertTrue(np.allclose(res.numpy(), x.numpy() * 2.0))
         # backward
         res.sum().backward()
         test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones((4, 5)) * 2.0))
