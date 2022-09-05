@@ -26,7 +26,7 @@ limitations under the License.
 
 #ifdef WITH_CUDA
 #include <cuda.h>
-#endif // WITH_CUDA
+#endif  // WITH_CUDA
 
 namespace py = pybind11;
 
