@@ -115,16 +115,8 @@ template<UnaryOp op, typename Src, typename Dst, size_t max_dims, size_t pack_si
          typename IndexType>
 void LaunchKernel(CudaStream* stream, size_t num_dims, const int64_t* src_dims,
                   const int64_t* src_strides, const Src* src, const int64_t* dst_dims,
-                  const int64_t* dst_strides, Dst* dst, Scalar attr0, Scalar attr1, size_t count) {
-  bool continuous_output = true;
-  for (int i = num_dims - 1; i >= 0; i--) {
-    if ((i == num_dims - 1 && dst_strides[i] != 1)
-        || (i != num_dims - 1 && dst_strides[i] != dst_strides[i + 1] * dst_dims[i + 1])) {
-      continuous_output = false;
-      break;
-    }
-  }
-
+                  const int64_t* dst_strides, Dst* dst, bool continuous_output, Scalar attr0,
+                  Scalar attr1, size_t count) {
   BroadcastElementwiseUnaryParams<Src, Dst, max_dims, IndexType> params;
   for (size_t i = 0; i < num_dims; ++i) { params.src_index_mask[i] = (src_dims[i] == 1) ? 0 : 1; }
   params.src_index_to_offset_helper =
@@ -149,28 +141,29 @@ void LaunchKernel(CudaStream* stream, size_t num_dims, const int64_t* src_dims,
 template<UnaryOp op, typename Src, typename Dst, size_t max_dims, size_t pack_size>
 void DispatchIndexType(CudaStream* stream, size_t num_dims, const int64_t* src_dims,
                        const int64_t* src_strides, const Src* src, const int64_t* dst_dims,
-                       const int64_t* dst_strides, Dst* dst, Scalar attr0, Scalar attr1) {
+                       const int64_t* dst_strides, Dst* dst, bool continuous_output, Scalar attr0,
+                       Scalar attr1) {
   size_t count = GetElementCount(num_dims, dst_dims);
   if (count < GetMaxVal<int32_t>() / 2) {
-    LaunchKernel<op, Src, Dst, max_dims, pack_size, int32_t>(stream, num_dims, src_dims,
-                                                             src_strides, src, dst_dims,
-                                                             dst_strides, dst, attr0, attr1, count);
+    LaunchKernel<op, Src, Dst, max_dims, pack_size, int32_t>(
+        stream, num_dims, src_dims, src_strides, src, dst_dims, dst_strides, dst, continuous_output,
+        attr0, attr1, count);
   } else {
-    LaunchKernel<op, Src, Dst, max_dims, pack_size, int64_t>(stream, num_dims, src_dims,
-                                                             src_strides, src, dst_dims,
-                                                             dst_strides, dst, attr0, attr1, count);
+    LaunchKernel<op, Src, Dst, max_dims, pack_size, int64_t>(
+        stream, num_dims, src_dims, src_strides, src, dst_dims, dst_strides, dst, continuous_output,
+        attr0, attr1, count);
   }
 }
 
 template<UnaryOp op, typename Src, typename Dst, size_t max_dims>
 void DispatchPackSize(CudaStream* stream, size_t pack_size, size_t num_dims,
                       const int64_t* src_dims, const int64_t* src_strides, const Src* src,
-                      const int64_t* dst_dims, const int64_t* dst_strides, Dst* dst, Scalar attr0,
-                      Scalar attr1) {
+                      const int64_t* dst_dims, const int64_t* dst_strides, Dst* dst,
+                      bool continuous_output, Scalar attr0, Scalar attr1) {
   void (*func)(CudaStream* /*stream*/, size_t /*num_dims*/, const int64_t* /*src_dims*/,
                const int64_t* /*src_strides*/, const Src* /*src*/, const int64_t* /*dst_dims*/,
-               const int64_t* /*dst_strides*/, Dst* /*dst*/, Scalar /*attr0*/, Scalar /*attr1*/) =
-      nullptr;
+               const int64_t* /*dst_strides*/, Dst* /*dst*/, bool /*continuous_output*/,
+               Scalar /*attr0*/, Scalar /*attr1*/) = nullptr;
   if (pack_size == 1) {
     func = DispatchIndexType<op, Src, Dst, max_dims, 1>;
   } else if (pack_size == 4) {
@@ -178,17 +171,19 @@ void DispatchPackSize(CudaStream* stream, size_t pack_size, size_t num_dims,
   } else {
     UNIMPLEMENTED();
   }
-  func(stream, num_dims, src_dims, src_strides, src, dst_dims, dst_strides, dst, attr0, attr1);
+  func(stream, num_dims, src_dims, src_strides, src, dst_dims, dst_strides, dst, continuous_output,
+       attr0, attr1);
 }
 
 template<UnaryOp op, typename Src, typename Dst>
 void DispatchNumDims(CudaStream* stream, size_t pack_size, size_t num_dims, const int64_t* src_dims,
                      const int64_t* src_strides, const Src* src, const int64_t* dst_dims,
-                     const int64_t* dst_strides, Dst* dst, Scalar attr0, Scalar attr1) {
+                     const int64_t* dst_strides, Dst* dst, bool continuous_output, Scalar attr0,
+                     Scalar attr1) {
   void (*func)(CudaStream* /*stream*/, size_t /*pack_size*/, size_t /*num_dims*/,
                const int64_t* /*src_dims*/, const int64_t* /*src_strides*/, const Src* /*src*/,
                const int64_t* /*dst_dims*/, const int64_t* /*dst_strides*/, Dst* /*dst*/,
-               Scalar /*attr0*/, Scalar /*attr1*/) = nullptr;
+               bool /*continuous_output*/, Scalar /*attr0*/, Scalar /*attr1*/) = nullptr;
   if (num_dims == 1) {
     func = DispatchPackSize<op, Src, Dst, 1>;
   } else if (num_dims == 2) {
@@ -202,8 +197,8 @@ void DispatchNumDims(CudaStream* stream, size_t pack_size, size_t num_dims, cons
   } else {
     UNIMPLEMENTED();
   }
-  func(stream, pack_size, num_dims, src_dims, src_strides, src, dst_dims, dst_strides, dst, attr0,
-       attr1);
+  func(stream, pack_size, num_dims, src_dims, src_strides, src, dst_dims, dst_strides, dst,
+       continuous_output, attr0, attr1);
 }
 
 template<UnaryOp op, typename Src, typename Dst>
@@ -215,9 +210,21 @@ void LaunchWithSimplified(CudaStream* stream, size_t simplified_num_dims,
   bool src_enable_pack = (simplified_src_strides[simplified_num_dims - 1] == 1);
   bool dst_enable_pack = (simplified_dst_strides[simplified_num_dims - 1] == 1);
   size_t pack_size = 1;
-  if (src_enable_pack && dst_enable_pack) {
-    pack_size = GetPackSize<kMaxPackSize, Src, Dst>(simplified_num_dims, simplified_src_dims, src,
-                                                    simplified_dst_dims, dst);
+  // TODO(zzk): this pack has bug, will be fixed in future
+  // if (src_enable_pack && dst_enable_pack) {
+  //   pack_size = GetPackSize<kMaxPackSize, Src, Dst>(simplified_num_dims, simplified_src_dims,
+  //   src,
+  //                                                   simplified_dst_dims, dst);
+  // }
+  bool continuous_output = true;
+  for (int i = simplified_num_dims - 1; i >= 0; i--) {
+    if ((i == simplified_num_dims - 1 && simplified_dst_strides[i] != 1)
+        || (i != simplified_num_dims - 1
+            && simplified_dst_strides[i]
+                   != simplified_dst_strides[i + 1] * simplified_dst_dims[i + 1])) {
+      continuous_output = false;
+      break;
+    }
   }
   simplified_src_dims[simplified_num_dims - 1] /= pack_size;
   simplified_dst_dims[simplified_num_dims - 1] /= pack_size;
@@ -227,7 +234,7 @@ void LaunchWithSimplified(CudaStream* stream, size_t simplified_num_dims,
   }
   DispatchNumDims<op, Src, Dst>(stream, pack_size, simplified_num_dims, simplified_src_dims,
                                 simplified_src_strides, src, simplified_dst_dims,
-                                simplified_dst_strides, dst, attr0, attr1);
+                                simplified_dst_strides, dst, continuous_output, attr0, attr1);
 }
 
 template<UnaryOp op, typename Src, typename Dst, size_t pack, bool tail>
