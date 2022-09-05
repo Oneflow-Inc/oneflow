@@ -26,7 +26,7 @@ namespace oneflow {
   const Shape& size_shape = ctx->InputShape("size", 0);
   CHECK_EQ_OR_RETURN(size_shape.NumAxes(), 1);
   CHECK_EQ_OR_RETURN(size_shape.elem_cnt(), 1);
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -39,7 +39,7 @@ namespace oneflow {
   const Shape& size_shape = ctx->InputShape("size", 0);
   CHECK_EQ_OR_RETURN(size_shape.NumAxes(), 1);
   CHECK_EQ_OR_RETURN(size_shape.elem_cnt(), 1);
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -72,7 +72,7 @@ namespace oneflow {
   CHECK_OR_RETURN(IsIndexDataType(data_type));
   CHECK_EQ_OR_RETURN(ctx->InputDType("table", 0), data_type);
   CHECK_EQ_OR_RETURN(ctx->InputDType("size", 0), data_type);
-  *ctx->MutOutputDType("out", 0) = data_type;
+  ctx->SetOutputDType("out", 0, data_type);
   return Maybe<void>::Ok();
 }
 

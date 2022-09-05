@@ -25,6 +25,7 @@ class small_vector : public llvm::SmallVector<T, N> {
   using Base = llvm::SmallVector<T, N>;
 
  public:
+  constexpr static size_t kInitialSize = N;
   // https://stackoverflow.com/questions/27954940/a-using-statement-compiles-with-g-fails-compilation-with-clang
   using Base::Base;
 
