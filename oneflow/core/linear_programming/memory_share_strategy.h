@@ -34,7 +34,6 @@ class MemoryShareStrategy {
   double large_m_;
 
   void ConstructMip4MemoryOnly(
-      const HashMap<RegstDescProto*, int64_t>& regst_desc2size,
       const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
 
   void ExportMemoryOffsets(size_t* mem_block_size,

@@ -16,23 +16,24 @@ limitations under the License.
 
 #include "oneflow/core/linear_programming/memory_share_strategy.h"
 #include <glog/logging.h>
+#include "oneflow/core/register/runtime_register_desc.h"
 
 namespace oneflow {
 namespace linear_programming {
 void MemoryShareStrategy::ConstructMip4MemoryOnly(
-    const HashMap<RegstDescProto*, int64_t>& regst_desc2size,
     const HashMap<RegstDescProto*, std::vector<RegstDescProto*> >& regst2mutual_exclusion_regsts) {
   // Initialization
-  int32_t total_register_num = regst_desc2size.size();
+  int32_t total_register_num = regst2mutual_exclusion_regsts.size();
   register_offset_.resize(total_register_num);
   register_size_.resize(total_register_num);
   int32_t register_id = 0;
   int64_t large_m = 1;
-  for (const auto& pair : regst_desc2size) {
+  for (const auto& pair : regst2mutual_exclusion_regsts) {
     register_id++;
-    register_size_[register_id] = pair.second;
+    int64_t register_size = RtRegstDesc(*pair.first).TotalMainByteSize4AllRegst();
+    register_size_[register_id] = register_size;
     register2index[pair.first] = register_id;
-    large_m += pair.second;
+    large_m += register_size;
   }
   large_m_ = double(large_m);
 
@@ -42,10 +43,11 @@ void MemoryShareStrategy::ConstructMip4MemoryOnly(
   // Compute total number of rows
   // Which requires that regst2mutual_exclusion_regsts is symmetric.
   // If register_i exclude register_j, then register_j exclude register_i.
-  int32_t total_row = 2 * total_register_num;
+  int32_t total_row = 0;
   for (const auto& register_i2exclusive_registers : regst2mutual_exclusion_regsts) {
     total_row += register_i2exclusive_registers.second.size();
   }
+  total_row = total_row / 2 * 3 + total_register_num;
   primal_b.resize(total_row);
 
   // Assemble x_i + l_i <= z,
@@ -96,12 +98,23 @@ void MemoryShareStrategy::ConstructMip4MemoryOnly(
         primal_matrix.Insert(row, 2 * total_register_num + 4 * index + 4, -1.0);      // -s2_ij
         primal_b[row] = register_size_[j];                                            // l_j
         row++;
+
+        // t1_ij + t2_ij = 1
+        primal_matrix.Insert(row, 2 * total_register_num + 4 * index + 1, 1.0);  // t1_ij
+        primal_matrix.Insert(row, 2 * total_register_num + 4 * index + 2, 1.0);  // t2_ij
+        primal_b[row] = 1.0;                                                     // 1
+        row++;
       }
     }
   }
 
   CHECK_EQ(row, primal_b.size())
       << "Inconsistent rows, bug occurs while assembling mix-integer programming";
+
+  // Minimize z
+  // c = [1, 0, 0, 0, ..., 0]
+  mips_.lps_.primal_cost_.resize(2 * total_register_num + 4 * index + 1);
+  mips_.lps_.primal_cost_[0] = 1.0;
 }
 
 void MemoryShareStrategy::ExportMemoryOffsets(
