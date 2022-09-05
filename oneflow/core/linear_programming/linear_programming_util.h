@@ -40,9 +40,7 @@ class SparseMatrix {
   std::vector<HashMap<int32_t, double>> rows_;
   int32_t column_size_ = 0;
 
-  SparseMatrix() = default;
-  SparseMatrix(int32_t row_size, int32_t column_size);
-  ~SparseMatrix() = default;
+  // SparseMatrix(int32_t row_size, int32_t column_size);
 
   void SetValue(int32_t i, int32_t j, double val);
 
@@ -74,9 +72,6 @@ class SparsePrimalMatrix {
   int32_t original_column_size_ = -1;
   int32_t compact_row_size_ = -1;
   int32_t compact_column_size_ = -1;
-
-  SparsePrimalMatrix() = default;
-  ~SparsePrimalMatrix() = default;
 
   void Insert(int32_t i, int32_t j, double val);
 

@@ -82,7 +82,7 @@ void ElementaryRowOperationSbutraction(HashMap<int32_t, double>& b,
 
 }  // namespace
 
-SparseMatrix::SparseMatrix(int32_t row_size, int32_t column_size) { rows_.reserve(row_size); }
+// SparseMatrix::SparseMatrix(int32_t row_size, int32_t column_size) { rows_.reserve(row_size); }
 
 void SparsePrimalMatrix::Insert(int32_t i, int32_t j, double val) {
   if (i >= rows_.size()) { rows_.resize(i + 1); }
