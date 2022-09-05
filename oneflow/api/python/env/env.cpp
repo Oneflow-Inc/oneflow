@@ -35,7 +35,7 @@ namespace oneflow {
 #ifdef WITH_CUDA
 
 void RegisterCudaDeviceProperties(py::module& m) {
-  py::class_<cudaDeviceProp>(m, "_CudaDeviceProperties")
+  py::class_<cudaDeviceProp>(m, "_OneFlowCudaDeviceProperties")
       .def(py::init<>())
       .def_readonly("name", &cudaDeviceProp::name)
       .def_readonly("major", &cudaDeviceProp::major)
