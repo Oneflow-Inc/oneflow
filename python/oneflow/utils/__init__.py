@@ -15,3 +15,4 @@ limitations under the License.
 """
 from oneflow.framework.config_util import api_load_library as load_library
 from oneflow.utils.torch.from_or_to_torch_tensor import from_torch, to_torch
+from . import checkpoint
