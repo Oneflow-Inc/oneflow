@@ -165,7 +165,7 @@ func::FuncOp DeclareKernelLaunchCInterface(::mlir::PatternRewriter& rewriter, ml
         loc, c_api_callee,
         rewriter.getFunctionType(
             {LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8))}, {}),
-        rewriter.getStringAttr("private")));
+        rewriter.getStringAttr("public")));
 
     func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
   }
@@ -227,7 +227,6 @@ func::FuncOp DeclareKernelLaunchWrapInterface(::mlir::PatternRewriter& rewriter,
 }
 
 ModuleOp GetModuleOpFromJobBodyOp(Operation* op) {
-  auto loc = op->getLoc();
   auto parent_func_op = op->getParentOfType<oneflow::Job>();
   if (!parent_func_op) { return nullptr; }
   auto parent_module_op = parent_func_op->getParentOfType<ModuleOp>();
@@ -249,12 +248,10 @@ func::FuncOp GetOrInsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operat
   rewriter.setInsertionPointToStart(module.getBody());
 
   auto func_name = op->getAttr("op_name").cast<StringAttr>().strref();
-  SmallString<16> tempBuffer;
-  func_name = sanitizeIdentifier(func_name, tempBuffer);
-  LOG(ERROR) << func_name.data();
   auto func_type =
       rewriter.getFunctionType(TypeRange(op->getOperandTypes()), TypeRange(op->getResultTypes()));
   func = rewriter.create<func::FuncOp>(loc, func_name, func_type);
+  func.setSymVisibilityAttr(rewriter.getStringAttr("public"));
   func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
   func.getBody().emplaceBlock();
   for (auto& arg : func_type.getInputs()) { func.getBody().addArguments(arg, loc); }
@@ -1000,6 +997,9 @@ struct KernelLaunchPattern : public RewritePattern {
         || !GetModuleOpFromJobBodyOp(op)) {
       return success();
     }
+    SmallString<16> tempBuffer;
+    op_name = sanitizeIdentifier(op->getAttr("op_name").cast<StringAttr>(), tempBuffer);
+    op->setAttr("op_name", rewriter.getStringAttr(op_name));
 
     ValueRange in = op->getOperands();
     NamedAttrList attrs = op->getAttrs();
