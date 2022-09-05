@@ -29,34 +29,22 @@ namespace oneflow {
 
 class StreamConverter final {
  public:
-  explicit StreamConverter(const std::shared_ptr<StreamSet>& stream_set, bool exclude_ccl)
-      : stream_set_(stream_set), exclude_ccl_(exclude_ccl) {}
+  explicit StreamConverter(const std::shared_ptr<StreamSet>& stream_set)
+      : stream_set_(stream_set) {}
 
   Maybe<Symbol<Stream>> TryConvertStream(Symbol<Stream> stream) {
     auto key = std::make_pair(stream->device(), stream->stream_type());
     auto* map = stream_set_->mut_device_stream_type2stream();
     const auto& iter = map->find(key);
     if (iter != map->end()) { return iter->second; }
-    Symbol<Stream> ret;
-    if (IsCommNetStream::Visit(stream->stream_type())) {
-      if (exclude_ccl_) {
-        ret = stream;
-      } else {
-        size_t thread_uid = stream_set_->worker_thread_id();
-        ret = JUST(Stream::New(stream->device(), stream->stream_type(), thread_uid));
-      }
-    } else {
-      size_t thread_uid = stream_set_->worker_thread_id();
-      size_t stream_set_id = stream_set_->stream_set_id();
-      ret = JUST(Stream::New(stream->device(), stream->stream_type(), thread_uid, stream_set_id));
-    }
+    size_t thread_uid = stream_set_->worker_thread_id();
+    Symbol<Stream> ret = JUST(Stream::New(stream->device(), stream->stream_type(), thread_uid));
     CHECK_OR_RETURN(map->emplace(key, ret).second) << "illegal memory access";
     return ret;
   }
 
  private:
   const std::shared_ptr<StreamSet> stream_set_;
-  bool exclude_ccl_;
 };
 
 class StreamGuard final : public ThreadLocalGuard<StreamConverter> {

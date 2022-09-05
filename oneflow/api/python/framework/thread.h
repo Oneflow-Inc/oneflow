@@ -13,18 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_ENV_VAR_VM_H_
-#define ONEFLOW_CORE_COMMON_ENV_VAR_VM_H_
+#ifndef ONEFLOW_API_PYTHON_FRAMEWORK_THREAD_H_
+#define ONEFLOW_API_PYTHON_FRAMEWORK_THREAD_H_
 
-#include "oneflow/core/common/env_var/env_var.h"
+#include "oneflow/core/framework/stream.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_VM_COMPUTE_ON_WORKER_THREAD, true);
-DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_VM_ENABLE_STREAM_WAIT, true);
-DEFINE_THREAD_LOCAL_ENV_INTEGER(ONEFLOW_VM_PENDING_HANDLE_WINDOW_SIZE, 10)
-DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_VM_ENABLE_SCHEDULE_YIELD, true)
-DEFINE_THREAD_LOCAL_ENV_INTEGER(ONEFLOW_VM_WORKER_THREAD_LIMIT, 16);
+class AsyncThread final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(AsyncThread);
+  ~AsyncThread();
+
+  static Maybe<AsyncThread> New();
+
+  int64_t thread_uid() const { return thread_uid_; }
+
+ private:
+  AsyncThread(int64_t thread_uid) : thread_uid_(thread_uid) {}
+
+  int64_t thread_uid_;
+};
 
 }  // namespace oneflow
-#endif  // ONEFLOW_CORE_COMMON_ENV_VAR_VM_H_
+
+#endif  // ONEFLOW_API_PYTHON_FRAMEWORK_THREAD_H_
