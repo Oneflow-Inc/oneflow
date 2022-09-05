@@ -134,6 +134,7 @@ Maybe<void> TouchInTmpComputeStream(const TensorTuple& inputs) {
 constexpr static int kSmallTensorThreshold = 1024;
 
 Maybe<TensorTuple> TryCopyForSmallTensor(const TensorTuple& inputs) {
+  autograd::AutoGradMode autograd_mode(true);
   auto outputs = std::make_shared<TensorTuple>();
   outputs->reserve(inputs.size());
   for (auto input : inputs) {
