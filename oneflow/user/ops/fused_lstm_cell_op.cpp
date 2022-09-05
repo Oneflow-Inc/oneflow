@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/expand_kernel_utils.h"
 #include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
