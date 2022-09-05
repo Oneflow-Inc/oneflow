@@ -111,50 +111,50 @@ __global__ void BroadcastElementwisePackedUnaryGpu(
   }
 }
 
-constexpr int unroll_size = 4; 
+constexpr int unroll_size = 4;
 
-template<UnaryOp op, typename Src, typename Dst, size_t max_dims, 
-         typename IndexType>
+template<UnaryOp op, typename Src, typename Dst, size_t max_dims, typename IndexType>
 __global__ void BroadcastElementwiseUnrollUnaryGpu(
     BroadcastElementwiseUnaryParams<Src, Dst, max_dims, IndexType> params) {
-  const IndexType remain = params.count - params.count / unroll_size * unroll_size; 
+  const IndexType remain = params.count - params.count / unroll_size * unroll_size;
   IndexType src_index[max_dims];
   IndexType dst_index[max_dims];
   size_t num_dims = params.num_dims;
   auto functor = UnaryFunctor<DeviceType::kCUDA, op, Src, Dst>(params.attr0, params.attr1);
-  
-  Src load[unroll_size]; 
-  Dst store[unroll_size]; 
-  
-  for(IndexType idx = blockIdx.x * blockDim.x + threadIdx.x; idx < params.count + (unroll_size-1) * blockDim.x * gridDim.x ; idx += unroll_size * blockDim.x * gridDim.x){
-    #pragma unroll 
-    for(int unroll_idx = 0; unroll_idx < unroll_size; unroll_idx++){
-      IndexType global_idx = idx + unroll_idx * blockDim.x * gridDim.x; 
-      if(global_idx < params.count){
+
+  Src load[unroll_size];
+  Dst store[unroll_size];
+
+  for (IndexType idx = blockIdx.x * blockDim.x + threadIdx.x;
+       idx < params.count + (unroll_size - 1) * blockDim.x * gridDim.x;
+       idx += unroll_size * blockDim.x * gridDim.x) {
+#pragma unroll
+    for (int unroll_idx = 0; unroll_idx < unroll_size; unroll_idx++) {
+      IndexType global_idx = idx + unroll_idx * blockDim.x * gridDim.x;
+      if (global_idx < params.count) {
         params.dst_offset_to_index_helper.OffsetToNdIndex(global_idx, dst_index, num_dims);
-        #pragma unroll
+#pragma unroll
         for (int i = 0; i < max_dims; ++i) {
           if (i < num_dims) { src_index[i] = params.src_index_mask[i] * dst_index[i]; }
         }
         const IndexType src_offset =
             params.src_index_to_offset_helper.NdIndexToOffset(src_index, num_dims);
-        printf("Global Idx is: %d, params.count is: %d, src offset is: %d \n", global_idx, params.count, src_offset); 
+        printf("Global Idx is: %d, params.count is: %d, src offset is: %d \n", global_idx,
+               params.count, src_offset);
         load[unroll_idx] = params.src[src_offset];
       }
     }
 
-    #pragma unroll 
-    for(int unroll_idx = 0; unroll_idx < unroll_size; unroll_idx++){
-      IndexType global_idx = idx + unroll_idx * blockDim.x * gridDim.x; 
-      if(global_idx < params.count){
-        store[unroll_idx] = functor(load[unroll_idx]); 
-      }
+#pragma unroll
+    for (int unroll_idx = 0; unroll_idx < unroll_size; unroll_idx++) {
+      IndexType global_idx = idx + unroll_idx * blockDim.x * gridDim.x;
+      if (global_idx < params.count) { store[unroll_idx] = functor(load[unroll_idx]); }
     }
-    
-    #pragma unroll 
-    for(int unroll_idx = 0; unroll_idx < unroll_size; unroll_idx++){
-      IndexType global_idx = idx + unroll_idx * blockDim.x * gridDim.x; 
-      if(global_idx < params.count){
+
+#pragma unroll
+    for (int unroll_idx = 0; unroll_idx < unroll_size; unroll_idx++) {
+      IndexType global_idx = idx + unroll_idx * blockDim.x * gridDim.x;
+      if (global_idx < params.count) {
         IndexType dst_offset = global_idx;
         if (!params.dst_is_contiguous) {
           dst_offset = params.dst_index_to_offset_helper.NdIndexToOffset(dst_index, num_dims);
@@ -164,8 +164,6 @@ __global__ void BroadcastElementwiseUnrollUnaryGpu(
     }
   }
 }
-
-
 
 template<UnaryOp op, typename Src, typename Dst, size_t max_dims, size_t pack_size,
          typename IndexType>
@@ -190,7 +188,8 @@ void LaunchKernel(CudaStream* stream, size_t num_dims, const int64_t* src_dims,
   params.dst_is_contiguous = continuous_output;
 
   // BroadcastElementwisePackedUnaryGpu<op, Src, Dst, max_dims, pack_size, IndexType>
-  //     <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, stream->cuda_stream()>>>(
+  //     <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0,
+  //     stream->cuda_stream()>>>(
   //         params);
 
   BroadcastElementwiseUnrollUnaryGpu<op, Src, Dst, max_dims, IndexType>
@@ -286,8 +285,8 @@ void LaunchWithSimplified(CudaStream* stream, size_t simplified_num_dims,
   }
   simplified_src_dims[simplified_num_dims - 1] /= pack_size;
   simplified_dst_dims[simplified_num_dims - 1] /= pack_size;
-  for(int i = 0; i < simplified_num_dims - 1; i++){
-    simplified_src_strides[i] /= pack_size; 
+  for (int i = 0; i < simplified_num_dims - 1; i++) {
+    simplified_src_strides[i] /= pack_size;
     simplified_dst_strides[i] /= pack_size;
   }
   DispatchNumDims<op, Src, Dst>(stream, pack_size, simplified_num_dims, simplified_src_dims,
