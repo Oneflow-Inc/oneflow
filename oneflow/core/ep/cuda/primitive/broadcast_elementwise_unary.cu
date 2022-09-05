@@ -126,7 +126,7 @@ __global__ void BroadcastElementwiseUnrollUnaryGpu(
   Src load[unroll_size]; 
   Dst store[unroll_size]; 
   
-  for(IndexType idx = blockIdx.x * blockDim.x + threadIdx.x; idx < params.count + (unroll_size-1) * blockDim.x * gridDim.x ; idx += unroll_size * blockDim.x * gridDim.x){
+  for(IndexType idx = blockIdx.x * blockDim.x + threadIdx.x; idx < params.count; idx += unroll_size * blockDim.x * gridDim.x){
     #pragma unroll 
     for(int unroll_idx = 0; unroll_idx < unroll_size; unroll_idx++){
       IndexType global_idx = idx + unroll_idx * blockDim.x * gridDim.x; 
