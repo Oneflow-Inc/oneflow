@@ -138,6 +138,28 @@ class TestAutogradFunction(flow.unittest.TestCase):
         test_case.assertIsNone(z.grad)
 
     @flow.unittest.skip_unless_1n1d()
+    def test_dynamic_attr_for_ctx(test_case):
+        class MyModule(autograd.Function):
+            @staticmethod
+            def forward(ctx, x):
+                ctx.scale = 2.0
+                return x * ctx.scale
+
+            @staticmethod
+            def backward(ctx, out_grad):
+                return out_grad * ctx.scale
+
+        x = flow.randn(4, 5).requires_grad_()
+        # forward
+        res = MyModule.apply(x)
+        test_case.assertTrue(
+            np.allclose(res.numpy(), x.numpy() * 2.0)
+        )
+        # backward
+        res.sum().backward()
+        test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones((4, 5)) * 2.0))
+
+    @flow.unittest.skip_unless_1n1d()
     def test_backward_error_message(test_case):
         class MyModule(autograd.Function):
             @staticmethod
