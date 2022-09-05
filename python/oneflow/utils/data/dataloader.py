@@ -144,6 +144,8 @@ class DataLoader(Generic[T_co]):
             If you are using oneflow with RDMA support in distributed training, the
             ``persistent_workers`` must be ``True`` otherwise will encounter segmentation
             fault. (default: ``False``)
+        first_iter_when_persistent_workers (bool, optional): Only need care it when attr:`persistent_workers` was set to `True`, 
+            this attr(`first_iter_when_persistent_workers`) controls whether to start from first iter when iterator call `_reset()` function.
 
 
     .. warning:: If the ``spawn`` start method is used, :attr:`worker_init_fn`
@@ -192,7 +194,8 @@ class DataLoader(Generic[T_co]):
         generator=flow.Generator("cpu"),
         *,
         prefetch_factor: int = 2,
-        persistent_workers: bool = False
+        persistent_workers: bool = False,
+        first_iter_when_persistent_workers: bool = False,
     ):
 
         if num_workers < 0:
@@ -327,6 +330,7 @@ class DataLoader(Generic[T_co]):
 
         self.collate_fn = collate_fn
         self.persistent_workers = persistent_workers
+        self.first_iter_when_persistent_workers = first_iter_when_persistent_workers
 
         self.__initialized = True
         self._IterableDataset_len_called = (
@@ -370,7 +374,7 @@ class DataLoader(Generic[T_co]):
             if self._iterator is None:
                 self._iterator = self._get_iterator()
             else:
-                self._iterator._reset(self)
+                self._iterator._reset(self, first_iter=self.first_iter_when_persistent_workers)
             return self._iterator
         else:
             return self._get_iterator()
@@ -508,6 +512,7 @@ class _BaseDataLoaderIter(object):
             0, np.iinfo(np.int64).max, (), generator=loader.generator
         ).item()
         self._persistent_workers = loader.persistent_workers
+        self._first_iter_when_persistent_workers = loader.first_iter_when_persistent_workers
         self._num_yielded = 0
         self._profile_name = "enumerate(DataLoader)#{}.__next__".format(
             self.__class__.__name__
