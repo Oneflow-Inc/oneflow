@@ -28,7 +28,7 @@ namespace oneflow {
   CHECK_OR_RETURN(x.shape().NumAxes() == 1)
       << Error::RuntimeError() << "1D tensors expected, but got " << x.shape().NumAxes()
       << "D tensors";
-  *ctx->MutOutputShape("out", 0) = Shape({});
+  ctx->SetOutputShape("out", 0, Shape({}));
   return Maybe<void>::Ok();
 }
 
@@ -52,7 +52,7 @@ namespace oneflow {
   CHECK_OR_RETURN(x.data_type() == y.data_type())
       << Error::RuntimeError() << "expected both vectors to have same dtype, but found "
       << DataType_Name(x.data_type()) << " and " << DataType_Name(y.data_type());
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 

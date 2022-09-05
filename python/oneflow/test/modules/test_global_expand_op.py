@@ -14,222 +14,123 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-import os
 import numpy as np
-from collections import OrderedDict
 
 import oneflow as flow
 import oneflow.unittest
-from oneflow.test_utils.test_util import GenArgList
-
 import torch
 
-
-def _test_expand_new_dims_broadcast(test_case, device):
-    input_shape = (1, 4, 1, 1)
-    expand_dim = [2, 1, 2, 4, 2, 1]
-
-    input_nd = np.random.random(size=input_shape).astype(np.float32)
-    torch_in = torch.tensor(input_nd, requires_grad=True)
-    torch_out = torch_in.expand(*expand_dim)
-    torch_out.sum().backward()
-
-    of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
-    global_of_input = of_input.to_global(
-        placement=flow.placement(device, ranks=[0, 1]), sbp=flow.sbp.broadcast,
-    )
-    of_out = global_of_input.expand(*expand_dim)
-    of_out.sum().backward()
-
-    if flow.env.get_rank() == 0:
-        test_case.assertTrue(
-            np.array_equal(of_out.to_local().numpy(), torch_out.detach().cpu().numpy())
-        )
-        test_case.assertTrue(
-            np.array_equal(of_input.grad.numpy(), torch_in.grad.cpu().numpy())
-        )
+from collections import OrderedDict
+from oneflow.test_utils.test_util import GenArgDict
 
 
-def _test_expand_same_dim_broadcast(test_case, device):
-    input_shape = (4, 1, 2, 1)
-    expand_dim = [4, 1, 2, 1]
+def _test_global_expand(
+    test_case,
+    input_shape,
+    expand_shape,
+    device="cuda",
+    sbp=flow.sbp.broadcast,
+    verbose=False,
+):
+    # random input
+    input = np.random.randn(*input_shape)
+    if isinstance(input, np.ndarray):
+        input = input.astype(np.float32)
 
-    input_nd = np.random.random(size=input_shape).astype(np.float32)
-    torch_in = torch.tensor(input_nd, requires_grad=True)
-    torch_out = torch_in.expand(*expand_dim)
-    torch_out.sum().backward()
+    # torch computation
+    torch_x = torch.tensor(input, requires_grad=True)
+    torch_y = torch_x.expand(*expand_shape)
+    torch_y.sum().backward()
 
-    of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
-    global_of_input = of_input.to_global(
-        placement=flow.placement(device, ranks=[0, 1]), sbp=flow.sbp.broadcast,
-    )
+    # oneflow computation
+    placement = flow.placement(device, np.array(range(flow.env.get_world_size())))
+    x = flow.tensor(input, requires_grad=True)
+    global_x = x.to_global(placement=placement, sbp=flow.sbp.broadcast)
+    if global_x.sbp != sbp:
+        global_x = global_x.to_global(sbp=sbp, grad_sbp=flow.sbp.broadcast)
+    y = global_x.expand(*expand_shape)
+    y.sum().backward()
 
-    of_out = global_of_input.expand(*expand_dim)
-    loss = of_out.sum()
-    loss.backward()
+    y_b = y.to_global(sbp=flow.sbp.broadcast)
 
     if flow.env.get_rank() == 0:
-        test_case.assertTrue(
-            np.array_equal(of_out.to_local().numpy(), torch_out.detach().cpu().numpy())
-        )
-        test_case.assertTrue(
-            np.array_equal(of_input.grad.numpy(), torch_in.grad.cpu().numpy())
-        )
+        out_a = y_b.to_local().numpy()
+        out_b = torch_y.detach().cpu().numpy()
+        grad_a = x.grad.numpy()
+        grad_b = torch_x.grad.cpu().numpy()
 
+        if verbose:
+            print("")
+            print(f"{'=' * 10} {input_shape} -> {expand_shape} {'=' * 10}")
+            print(f"{'=' * 10} {device}, {sbp} {'=' * 10}")
+            print(f"{'-' * 20} compare out {'-' * 20}")
+            print(out_a)
+            print("*" * 20)
+            print(out_b)
+            print("")
+            print(f"{'-' * 20} compare grad {'-' * 20}")
+            print(grad_a)
+            print("*" * 20)
+            print(grad_b)
 
-def _test_expand_same_dim_negative_broadcast(test_case, device):
-    input_shape = (2, 1, 4, 1)
-    expand_dim = [2, -1, 4, 4]
-
-    input_nd = np.random.random(size=input_shape).astype(np.float32)
-    torch_in = torch.tensor(input_nd, requires_grad=True)
-    torch_out = torch_in.expand(*expand_dim)
-    torch_out.sum().backward()
-
-    of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
-    global_of_input = of_input.to_global(
-        placement=flow.placement(device, ranks=[0, 1]), sbp=flow.sbp.broadcast,
-    )
-
-    of_out = global_of_input.expand(*expand_dim)
-    loss = of_out.sum()
-    loss.backward()
-
-    if flow.env.get_rank() == 0:
-        test_case.assertTrue(
-            np.array_equal(of_out.to_local().numpy(), torch_out.detach().cpu().numpy())
-        )
-        test_case.assertTrue(
-            np.array_equal(of_input.grad.numpy(), torch_in.grad.cpu().numpy())
-        )
-
-
-def _test_expand_new_dims_split(test_case, device):
-    input_shape = (4, 1, 2, 1)
-    expand_dim = [2, 1, 4, 1, 2, 1]
-
-    input_nd = np.random.random(size=input_shape).astype(np.float32)
-    torch_in = torch.tensor(input_nd, requires_grad=True)
-    torch_out = torch_in.expand(*expand_dim)
-    torch_out.sum().backward()
-
-    of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
-    global_of_input = of_input.to_global(
-        placement=flow.placement(device, ranks=[0, 1]), sbp=flow.sbp.broadcast,
-    )
-    global_of_input = global_of_input.to_global(sbp=flow.sbp.split(0))
-
-    of_out = global_of_input.expand(*expand_dim)
-    loss = of_out.sum()
-    loss.backward()
-
-    if flow.env.get_rank() == 0:
-        test_case.assertTrue(
-            np.array_equal(
-                of_out.to_local().numpy(),
-                torch_out.detach().cpu().numpy()[:, :, 0:2, :, :, :],
-            )
-        )
-        test_case.assertTrue(
-            np.array_equal(
-                of_input.grad.numpy(), torch_in.grad.cpu().numpy()[0:2, :, :, :],
-            )
-        )
-
-
-def _test_expand_same_dim_split(test_case, device):
-    input_shape = (4, 1, 2, 1)
-    expand_dim = [4, 1, 2, 4]
-
-    input_nd = np.random.random(size=input_shape).astype(np.float32)
-    torch_in = torch.tensor(input_nd, requires_grad=True)
-    torch_out = torch_in.expand(*expand_dim)
-    torch_out.sum().backward()
-
-    of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
-    global_of_input = of_input.to_global(
-        placement=flow.placement(device, ranks=[0, 1]), sbp=flow.sbp.broadcast,
-    )
-    global_of_input = global_of_input.to_global(sbp=flow.sbp.split(0))
-
-    of_out = of_input.expand(*expand_dim)
-    loss = of_out.sum()
-    loss.backward()
-
-    if flow.env.get_rank() == 0:
-        test_case.assertTrue(
-            np.array_equal(
-                of_out.to_local().numpy(),
-                torch_out.detach().cpu().numpy()[0:2, :, :, :],
-            )
-        )
-        test_case.assertTrue(
-            np.array_equal(
-                of_input.grad.numpy(), torch_in.grad.cpu().numpy()[0:2, :, :, :],
-            )
-        )
-
-
-def _test_expand_same_dim_negative_split(test_case, device):
-    input_shape = (2, 1, 4, 1)
-    expand_dim = [2, -1, 4, 4]
-
-    input_nd = np.random.random(size=input_shape).astype(np.float32)
-    torch_in = torch.tensor(input_nd, requires_grad=True)
-    torch_out = torch_in.expand(*expand_dim)
-    torch_out.sum().backward()
-
-    of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
-    global_of_input = of_input.to_global(
-        placement=flow.placement(device, ranks=[0, 1]), sbp=flow.sbp.broadcast,
-    )
-    global_of_input = global_of_input.to_global(sbp=flow.sbp.split(2))
-
-    of_out = global_of_input.expand(*expand_dim)
-    loss = of_out.sum()
-    loss.backward()
-
-    if flow.env.get_rank() == 0:
-        test_case.assertTrue(
-            np.array_equal(
-                of_out.to_local().numpy(),
-                torch_out.detach().cpu().numpy()[:, :, 0:2, :],
-            )
-        )
-        test_case.assertTrue(
-            np.array_equal(
-                of_input.grad.numpy(), torch_in.grad.cpu().numpy()[:, :, 0:2, :],
-            )
-        )
+        test_case.assertTrue(np.array_equal(out_a, out_b))
+        test_case.assertTrue(np.array_equal(grad_a, grad_b))
 
 
 @flow.unittest.skip_unless_1n2d()
 class ExpandGlobalTestCase(oneflow.unittest.TestCase):
-    def test_expand_broadcast(test_case):
+    def test_global_expand(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_expand_new_dims_broadcast,
-            _test_expand_same_dim_broadcast,
-            _test_expand_same_dim_negative_broadcast,
-        ]
+        arg_dict["verbose"] = [False]
         arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+        arg_dict["sbp"] = [flow.sbp.split(0), flow.sbp.broadcast()]
+        arg_dict["shapes"] = [
+            ((2, 2), (2, 2, 2)),
+            ((2, 1, 3), (2, 1, -1, -1, -1)),
+            ((2, 1, 3), (1, 2, -1, -1, -1)),
+            ((2, 1, 3), (2, 1, -1, 2, 3)),
+            ((2, 1, 3), (1, 2, 2, 2, -1)),
+        ]
+        for kwargs in GenArgDict(arg_dict):
+            assert "shapes" in kwargs
+            input_shape, expand_shape = kwargs.pop("shapes")
+            _test_global_expand(test_case, input_shape, expand_shape, **kwargs)
 
-    # NOTE(Liang Depeng): Run with the following command can pass the test locally, but will fail when run in ci.
-    # ONEFLOW_TEST_DEVICE_NUM=2 python3 -m oneflow.distributed.launch --nproc_per_node 2 test_global_expand_op.py
-    @unittest.skipIf(True, "skip for now")
-    def test_expand_split(test_case):
+    def test_split_expand(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_expand_new_dims_split,
-            _test_expand_same_dim_split,
-            _test_expand_same_dim_negative_split,
+        arg_dict["verbose"] = [False]
+        arg_dict["device"] = ["cuda"]
+        arg_dict["sbp"] = [flow.sbp.split(0)]
+        arg_dict["shapes"] = [
+            ((2,), (1, 2)),
+            ((2,), (2, 2)),
         ]
+        for kwargs in GenArgDict(arg_dict):
+            assert "shapes" in kwargs
+            input_shape, expand_shape = kwargs.pop("shapes")
+            _test_global_expand(test_case, input_shape, expand_shape, **kwargs)
+
+    def test_broadcast_scalar_expand(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["verbose"] = [False]
         arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+        arg_dict["sbp"] = [flow.sbp.broadcast()]
+        arg_dict["shapes"] = [
+            ((), (1,)),
+            ((), (2,)),
+            ((), (1, 1)),
+            ((), (1, 2)),
+            ((), (2, 1)),
+            ((), (2, 2)),
+            ((), (2, 1, 2)),
+        ]
+        for kwargs in GenArgDict(arg_dict):
+            assert "shapes" in kwargs
+            input_shape, expand_shape = kwargs.pop("shapes")
+            _test_global_expand(test_case, input_shape, expand_shape, **kwargs)
 
 
 if __name__ == "__main__":
     unittest.main()
+
+# ONEFLOW_TEST_DEVICE_NUM=2 python3 -m oneflow.distributed.launch --nproc_per_node 2 test_global_expand_op.py

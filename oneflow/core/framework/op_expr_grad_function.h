@@ -19,8 +19,10 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_captured_tensor.h"
 #include "oneflow/core/common/auto_registration_factory.h"
+#include "oneflow/core/common/op_args_vector.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/framework/saved_tensor_hooks.h"
 
 namespace oneflow {
 namespace one {
@@ -32,19 +34,18 @@ class AutoGradCaptureState {
   AutoGradCaptureState() = default;
   virtual ~AutoGradCaptureState() = default;
 
+  void unpack();
+
   const TensorTuple& SavedTensors() const { return saved_tensors_; }
 
-  size_t SaveTensorForBackward(const std::shared_ptr<Tensor>& tensor) {
-    size_t offset = saved_tensors_.size();
-    saved_tensors_.emplace_back(tensor);
-    return offset;
-  }
+  size_t SaveTensorForBackward(const std::shared_ptr<Tensor>& tensor);
 
  public:
   std::vector<bool> input_requires_grad;
 
  protected:
   TensorTuple saved_tensors_;
+  small_vector<std::unique_ptr<SavedTensorHook>, TensorTuple::kInitialSize> hooks_;
 };
 
 class FunctionAutoGradCaptureState final
@@ -62,6 +63,9 @@ class FunctionAutoGradCaptureState final
   HashSet<Tensor*> NonDifferentiableTensors() const { return non_differentiable_tensors_; }
 
   std::shared_ptr<FunctionAutoGradCaptureState> GetSharedFromThis() { return shared_from_this(); }
+
+ public:
+  std::vector<bool> input_requires_grad;
 
  private:
   HashSet<Tensor*> non_differentiable_tensors_;
@@ -219,6 +223,7 @@ class OpExprGradClosure {
   }
 
   Maybe<void> Apply(const TensorTuple& out_grads, TensorTuple* in_grads) const {
+    state_->unpack();
     return impl_->ApplyIf(state_.get(), out_grads, in_grads);
   }
 

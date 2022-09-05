@@ -61,8 +61,8 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
             << "). Output size is too small";
       }
     }
-    *out->mut_is_dynamic() = in.is_dynamic();
-    *out->mut_shape() = Shape(out_shape);
+    out->set_is_dynamic(in.is_dynamic());
+    out->set_shape(Shape(out_shape));
   }
 
   {
@@ -85,7 +85,7 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferDataType_(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
