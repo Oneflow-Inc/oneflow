@@ -165,9 +165,10 @@ func::FuncOp DeclareKernelLaunchCInterface(::mlir::PatternRewriter& rewriter, ml
         loc, c_api_callee,
         rewriter.getFunctionType(
             {LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8))}, {}),
-        rewriter.getStringAttr("public")));
+        rewriter.getStringAttr("private")));
 
     func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
+    func->setAttr("whitelist", rewriter.getStringAttr("true"));
   }
   return func;
 }
@@ -270,26 +271,36 @@ func::FuncOp GetOrInsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operat
   return func;
 }
 
-func::FuncOp GetOrInsertKernelLLVMFuncOp(::mlir::PatternRewriter& rewriter, Operation* op) {
+func::FuncOp GetOrInsertKernelLLVMFuncOp(::mlir::PatternRewriter& rewriter, func::FuncOp op) {
   auto loc = op->getLoc();
-  StringRef c_api_callee = "kernel_launch";
-  auto parent_func_op = op->getParentOfType<oneflow::Job>();
-  if (!parent_func_op) {
-    emitError(loc) << "null parent oneflow::Job " << *op;
-    return nullptr;
-  }
-  auto parent_module_op = parent_func_op->getParentOfType<ModuleOp>();
+  auto parent_module_op = op->getParentOfType<ModuleOp>();
   if (!parent_module_op) {
     emitError(loc) << "null ModuleOp " << *op;
     return nullptr;
   }
+  StringRef c_api_callee = "kernel_launch";
   func::FuncOp c_api_func =
       DeclareKernelLaunchCInterface(rewriter, loc, &parent_module_op, c_api_callee);
 
-  auto func_type = rewriter.getFunctionType(op->getOperandTypes(), op->getResultTypes());
-  auto func = DeclareKernelLaunchWrapInterface(rewriter, loc, &parent_module_op,
-                                               op->getAttr("op_name").cast<StringAttr>(), func_type,
-                                               c_api_func, op);
+  auto global = DeclareorGetGlobalString(rewriter, loc, &parent_module_op, op.getSymName());
+
+  auto func_name = op.getSymName();
+  auto func_type = rewriter.getFunctionType(TypeRange({}), TypeRange({}));
+  OpBuilder::InsertionGuard guard_module(rewriter);
+  rewriter.setInsertionPointToStart(parent_module_op.getBody());
+  auto func = rewriter.create<func::FuncOp>(loc, func_name, func_type);
+  func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
+  func.getBody().emplaceBlock();
+  OpBuilder::InsertionGuard guard_func(rewriter);
+  rewriter.setInsertionPointToStart(&func.getBody().front());
+  Value globalPtr = rewriter.create<LLVM::AddressOfOp>(loc, global);
+  Value cst0 =
+      rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), rewriter.getIndexAttr(0));
+  auto gep_op = rewriter.create<LLVM::GEPOp>(
+      loc, LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8)), globalPtr,
+      ArrayRef<Value>({cst0, cst0}));
+  auto call = rewriter.create<func::CallOp>(loc, c_api_func, ValueRange(gep_op->getResults()));
+  rewriter.create<func::ReturnOp>(loc);
 
   return func;
 }
@@ -962,22 +973,15 @@ void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLI
   results.insert<BroadcastMulToScalarMulPattern>(context);
 }
 
-struct KernelLaunchWithLLVMPattern : public mlir::OpRewritePattern<KernelLaunchOp> {
+struct KernelLaunchWithLLVMPattern : public mlir::OpRewritePattern<func::FuncOp> {
   explicit KernelLaunchWithLLVMPattern(mlir::MLIRContext* context)
-      : OpRewritePattern<KernelLaunchOp>(context, /*benefit=*/1) {}
-  mlir::LogicalResult matchAndRewrite(KernelLaunchOp op,
+      : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-  LOG(ERROR) << 1;
-    auto attr_flag = "has_llvm";
-    if (op->getAttr(attr_flag)) {
-      return success();
-    } else {
-      op->setAttr(attr_flag, rewriter.getStringAttr("true"));
-    }
-    auto function = GetOrInsertKernelLLVMFuncOp(rewriter, op);
-    op->setAttr("callee", SymbolRefAttr::get(function));
-
-    if (failed(DumpAssembly(rewriter, op))) { exit(1); }
+    if (op->hasAttr("whitelist")) { return success(); }
+    auto new_op = GetOrInsertKernelLLVMFuncOp(rewriter, op);
+    new_op->setAttr("whitelist", rewriter.getStringAttr("true"));
+    op->remove();
     return success();
   }
 };

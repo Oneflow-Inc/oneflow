@@ -274,7 +274,7 @@ def KernelLaunchFunctionPass : Pass<"kernel-launch-function", "ModuleOp"> {
   let constructor = "mlir::oneflow::createKernelLaunchFunctionPass()";
 }
 
-def KernelLaunchWithLLVMPass : Pass<"kernel-launch-with-llvm", "func::FuncOp"> {
+def KernelLaunchWithLLVMPass : Pass<"kernel-launch-with-llvm", "ModuleOp"> {
   let summary = "generate llvm op for kernel launch ops to call c interface";
   let constructor = "mlir::oneflow::createKernelLaunchWithLLVMPass()";
 }

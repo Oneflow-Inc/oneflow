@@ -48,7 +48,6 @@ class KernelLaunchWithLLVMPass : public KernelLaunchWithLLVMPassBase<KernelLaunc
   }
 };
 
-
 class KernelLaunchFunctionPass : public KernelLaunchFunctionPassBase<KernelLaunchFunctionPass> {
   void runOnOperation() override {
     Operation* op = getOperation();
@@ -77,8 +76,7 @@ std::unique_ptr<Pass> createKernelLaunchFunctionPass() {
   return std::make_unique<KernelLaunchFunctionPass>();
 }
 
-
-std::unique_ptr<mlir::Pass> createKernelLaunchWithLLVMPass(){
+std::unique_ptr<mlir::Pass> createKernelLaunchWithLLVMPass() {
   return std::make_unique<KernelLaunchWithLLVMPass>();
 }
 
