@@ -9587,7 +9587,6 @@ def OneFlow_EmbeddingShuffleOp : OneFlow_BaseOp<"embedding_shuffle", [NoSideEffe
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
     DefaultValuedAttr<BoolAttr, "false">:$skip_last_gather,
     DefaultValuedAttr<BoolAttr, "false">:$is_train,
-    DefaultValuedAttr<SI64Attr, "-1">:$padding_idx,
     StrAttr:$embedding_name
   );
   let same_output_regst_num = 1;

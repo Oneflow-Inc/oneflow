@@ -652,8 +652,9 @@ class MultiTableEmbedding(Embedding):
         key_type,
         tables,
         store_options,
+        padding_idx,
         default_initializer=None,
-        padding_idx=-1,
+        has_padding_idx=False,
     ):
         assert isinstance(embedding_dim, int)
         super().__init__(
@@ -663,8 +664,9 @@ class MultiTableEmbedding(Embedding):
             key_type,
             tables,
             store_options,
-            default_initializer,
             padding_idx,
+            default_initializer,
+            has_padding_idx,
         )
 
 
@@ -756,8 +758,9 @@ class MultiTableMultiColumnEmbedding(Embedding):
         key_type,
         tables,
         store_options,
+        padding_idx,
         default_initializer=None,
-        padding_idx=-1,
+        has_padding_idx=False,
     ):
         if isinstance(embedding_dim, (list, tuple)):
             for dim in embedding_dim:
@@ -772,8 +775,9 @@ class MultiTableMultiColumnEmbedding(Embedding):
             key_type,
             tables,
             store_options,
-            default_initializer,
             padding_idx,
+            default_initializer,
+            has_padding_idx,
         )
 
 
