@@ -32,6 +32,8 @@ namespace py = pybind11;
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
+
 void RegisterCudaDeviceProperties(py::module& m) {
   py::class_<cudaDeviceProp>(m, "_CudaDeviceProperties")
       .def(py::init<>())
@@ -51,6 +53,8 @@ void RegisterCudaDeviceProperties(py::module& m) {
         return stream.str();
       });
 }
+
+#endif  // WITH_CUDA
 
 Maybe<void> SwitchToShuttingDownPhase(EnvGlobalObjectsScope* env, bool is_normal_exit) {
   if (is_normal_exit) {
