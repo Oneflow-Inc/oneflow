@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/compiler.h"
+#include <cstdint>
 #include <memory>
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/global_for.h"
@@ -91,15 +92,20 @@ void PlanCompiler::Compile(Job* job, Plan* plan, std::shared_ptr<TaskGraph>& tas
   // tc->Count("Graph name: " + job_name + " TaskNode::InferRegst", 1);
 
   std::vector<TaskNode*> user_task_node;
+  HashMap<uint64_t, std::vector<TaskNode*>> group_id2user_task_node;
+  uint64_t user_task_node_cnt = 0; 
   std::vector<TaskNode*> other_task_node;
   // TODO(strint): choose best thread num
-  const int64_t infer_thread_pool_size = 24;
+  const int64_t cpu_core_num = std::thread::hardware_concurrency();
+  const int64_t infer_thread_pool_size = std::min(static_cast<int64_t>(GlobalProcessCtx::WorldSize() * 3), cpu_core_num);
   task_gph->TopoForEachNode([&](TaskNode* task_node) {
     if (task_node->op_node()) {
       //LOG(ERROR) << " got task node " << task_node->VisualStr() << " with logical op " << task_node->op_node()->op().op_name();
       if (dynamic_cast<const UserOp*>(&task_node->op_node()->op())) {
         // LOG(ERROR) << " +++ got task node " << task_node->VisualStr() << " got user op " << task_node->op_node()->op().op_name();
+        group_id2user_task_node[user_task_node_cnt % infer_thread_pool_size].push_back(task_node);
         user_task_node.push_back(task_node);
+        ++user_task_node_cnt;
       } else {
         other_task_node.push_back(task_node);
       }
@@ -113,16 +119,33 @@ void PlanCompiler::Compile(Job* job, Plan* plan, std::shared_ptr<TaskGraph>& tas
   //   //LOG(ERROR) << " +++ got task node " << task_node->VisualStr() << " got user op " << task_node->op_node()->op().op_name();
   //   task_node->InferRegstIf();
   // }
+  // {
+  //   const int64_t node_num = user_task_node.size();
+  //   const int64_t cpu_num = std::thread::hardware_concurrency();
+  //   // const int64_t thread_pool_size = std::min(node_num, cpu_num);
+  //   LOG(ERROR) << " elapsed | thread pool size " << infer_thread_pool_size << " node num " << node_num << " cpu num " << cpu_num << " world size " << GlobalProcessCtx::WorldSize();
+  //   BlockingCounter counter(node_num);
+  //   ThreadPool thread_pool(infer_thread_pool_size);
+  //   for (auto task_node : user_task_node) {
+  //     thread_pool.AddWork([task_node, &counter]() {
+  //       task_node->InferRegstIf();
+  //       counter.Decrease();
+  //     });
+  //   }
+  //   counter.WaitForeverUntilCntEqualZero();
+  // }
   {
-    const int64_t node_num = user_task_node.size();
+    const int64_t node_num = group_id2user_task_node.size();
     const int64_t cpu_num = std::thread::hardware_concurrency();
     // const int64_t thread_pool_size = std::min(node_num, cpu_num);
-    LOG(ERROR) << " elapsed | thread pool size " << infer_thread_pool_size << " node num " << node_num << " cpu num " << cpu_num << " world size " << GlobalProcessCtx::WorldSize();
+    LOG(ERROR) << " elapsed | thread pool size " << infer_thread_pool_size << " node num " << user_task_node.size() << " cpu num " << cpu_num << " world size " << GlobalProcessCtx::WorldSize();
     BlockingCounter counter(node_num);
     ThreadPool thread_pool(infer_thread_pool_size);
-    for (auto task_node : user_task_node) {
-      thread_pool.AddWork([task_node, &counter]() {
-        task_node->InferRegstIf();
+    for (auto& task_group : group_id2user_task_node) {
+      thread_pool.AddWork([&task_group, &counter]() {
+        for (auto& task_node : task_group.second) {
+          task_node->InferRegstIf();
+        }
         counter.Decrease();
       });
     }
