@@ -210,12 +210,11 @@ void LaunchWithSimplified(CudaStream* stream, size_t simplified_num_dims,
   bool src_enable_pack = (simplified_src_strides[simplified_num_dims - 1] == 1);
   bool dst_enable_pack = (simplified_dst_strides[simplified_num_dims - 1] == 1);
   size_t pack_size = 1;
-  // TODO(zzk): this pack has bug, will be fixed in future
-  // if (src_enable_pack && dst_enable_pack) {
-  //   pack_size = GetPackSize<kMaxPackSize, Src, Dst>(simplified_num_dims, simplified_src_dims,
-  //   src,
-  //                                                   simplified_dst_dims, dst);
-  // }
+  if (src_enable_pack && dst_enable_pack) {
+    pack_size = GetPackSize<kMaxPackSize, Src, Dst>(simplified_num_dims, simplified_src_dims,
+    src,
+                                                    simplified_dst_dims, dst);
+  }
   bool continuous_output = true;
   for (int i = simplified_num_dims - 1; i >= 0; i--) {
     if ((i == simplified_num_dims - 1 && simplified_dst_strides[i] != 1)
