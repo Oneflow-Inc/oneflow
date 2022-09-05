@@ -41,7 +41,6 @@ struct CacheOptions {
   uint32_t value_size{};
   DataType value_type{};
   float load_factor = 0.75;
-  int64_t padding_idx = -1;
 };
 
 class Cache {
@@ -60,9 +59,8 @@ class Cache {
   virtual CacheOptions::Policy Policy() const = 0;
   virtual void Test(ep::Stream* stream, uint32_t n_keys, const void* keys, uint32_t* n_missing,
                     void* missing_keys, uint32_t* missing_indices) = 0;
-  virtual void Get(ep::Stream* stream, uint32_t n_keys, const int64_t padding_idx, const void* keys,
-                   void* values, uint32_t* n_missing, void* missing_keys,
-                   uint32_t* missing_indices) = 0;
+  virtual void Get(ep::Stream* stream, uint32_t n_keys, const void* keys, void* values,
+                   uint32_t* n_missing, void* missing_keys, uint32_t* missing_indices) = 0;
   virtual void Get(ep::Stream* stream, uint32_t n_keys, const void* keys, void* values,
                    uint8_t* mask) {
     UNIMPLEMENTED();

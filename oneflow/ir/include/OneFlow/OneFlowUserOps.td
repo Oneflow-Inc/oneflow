@@ -9472,6 +9472,7 @@ def OneFlow_EmbeddingLookupPlaceholderOp : OneFlow_BaseOp<"embedding_lookup_plac
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
     DefaultValuedAttr<SI32Attr, "1">:$num_tables,
     DefaultValuedAttr<SI64Attr, "-1">:$padding_idx,
+    DefaultValuedAttr<BoolAttr, "false">:$has_padding_idx,
     StrAttr:$embedding_tables,
     StrAttr:$key_value_store_options
   );
@@ -9509,7 +9510,8 @@ def OneFlow_UniqueKeyValuePairOp : OneFlow_BaseOp<"unique_key_value_pair", [NoSi
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "1">:$num_tables, 
-    DefaultValuedAttr<SI64Attr, "-1">:$padding_idx
+    DefaultValuedAttr<SI64Attr, "-1">:$padding_idx, 
+    DefaultValuedAttr<BoolAttr, "false">:$has_padding_idx
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9534,6 +9536,7 @@ def OneFlow_IdShuffleOp : OneFlow_BaseOp<"id_shuffle", [NoSideEffect, DeclareOpI
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "1">:$num_tables,
     DefaultValuedAttr<SI64Attr, "-1">:$padding_idx,
+    DefaultValuedAttr<BoolAttr, "false">:$has_padding_idx,
     StrAttr:$embedding_name
   );
   let same_output_regst_num = 2;
@@ -9609,6 +9612,7 @@ def OneFlow_EmbeddingGradientShuffleOp : OneFlow_BaseOp<"embedding_gradient_shuf
     DefaultValuedAttr<BoolAttr, "false">:$only_zero_valid_grad,
     DefaultValuedAttr<BoolAttr, "false">:$skip_first_scatter,
     DefaultValuedAttr<SI64Attr, "-1">:$padding_idx,
+    DefaultValuedAttr<BoolAttr, "false">:$has_padding_idx,
     StrAttr:$embedding_name
   );
   let same_output_regst_num = 1;
@@ -9630,7 +9634,6 @@ def OneFlow_EmbeddingPrefetchOp : OneFlow_BaseOp<"embedding_prefetch", [NoSideEf
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$line_size,
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
-    DefaultValuedAttr<SI64Attr, "-1">:$padding_idx,
     StrAttr:$embedding_name,
     StrAttr:$embedding_tables,
     StrAttr:$state_initializer
@@ -9658,7 +9661,6 @@ def OneFlow_EmbeddingLookupOp : OneFlow_BaseOp<"embedding_lookup", [NoSideEffect
     OneFlow_DataType:$embeddings_dtype,
     DefaultValuedAttr<SI64Attr, "0">:$line_size,
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
-    DefaultValuedAttr<SI64Attr, "-1">:$padding_idx,
     StrAttr:$embedding_name,
     StrAttr:$embedding_tables,
     StrAttr:$state_initializer

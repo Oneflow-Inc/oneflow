@@ -88,8 +88,8 @@ class CacheKeyValueStoreImpl : public KeyValueStore {
     max_query_length_ = query_length;
   }
 
-  void Get(ep::Stream* stream, uint32_t num_keys, const int64_t padding_idx, const void* keys,
-           void* values, uint32_t* n_missing, uint32_t* missing_indices) override;
+  void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
+           uint32_t* n_missing, uint32_t* missing_indices) override;
   void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
            uint8_t* mask) override;
   void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values) override;
@@ -125,19 +125,16 @@ class CacheKeyValueStoreImpl : public KeyValueStore {
 };
 
 template<typename Key, typename Elem>
-void CacheKeyValueStoreImpl<Key, Elem>::Get(ep::Stream* stream, uint32_t num_keys,
-                                            const int64_t padding_idx, const void* keys,
+void CacheKeyValueStoreImpl<Key, Elem>::Get(ep::Stream* stream, uint32_t num_keys, const void* keys,
                                             void* values, uint32_t* n_missing,
                                             uint32_t* missing_indices) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   auto cuda_stream = stream->As<ep::CudaStream>();
   if (cache_->Policy() == CacheOptions::Policy::kFull) {
-    cache_->Get(stream, num_keys, padding_idx, keys, values, n_missing, keys_buffer_,
-                missing_indices);
+    cache_->Get(stream, num_keys, keys, values, n_missing, keys_buffer_, missing_indices);
     return;
   } else {
-    cache_->Get(stream, num_keys, padding_idx, keys, values, num_buffer_, keys_buffer_,
-                indices_buffer0_);
+    cache_->Get(stream, num_keys, keys, values, num_buffer_, keys_buffer_, indices_buffer0_);
   }
   OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, num_buffer_, sizeof(uint32_t), cudaMemcpyDefault,
                                 cuda_stream->cuda_stream()));
@@ -148,8 +145,7 @@ void CacheKeyValueStoreImpl<Key, Elem>::Get(ep::Stream* stream, uint32_t num_key
                                   stream->As<ep::CudaStream>()->cuda_stream()));
     return;
   }
-  store_->Get(stream, num_cache_missing, padding_idx, keys_buffer_, values_buffer_, n_missing,
-              indices_buffer1_);
+  store_->Get(stream, num_cache_missing, keys_buffer_, values_buffer_, n_missing, indices_buffer1_);
   OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, n_missing, sizeof(uint32_t), cudaMemcpyDefault,
                                 cuda_stream->cuda_stream()));
   CHECK_JUST(cuda_stream->Sync());

@@ -123,9 +123,7 @@ void TestCache(Cache* cache, uint32_t line_size) {
     if (cache->Policy() == CacheOptions::Policy::kFull) {
       cache->Get(stream, n_keys, d_keys, d_values, mask);
     }
-    const int64_t padding_idx = -1;
-    cache->Get(stream, n_keys, padding_idx, d_keys, d_values, d_n_missing, d_missing_keys,
-               d_missing_indices);
+    cache->Get(stream, n_keys, d_keys, d_values, d_n_missing, d_missing_keys, d_missing_indices);
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     OF_CUDA_CHECK(cudaMemcpy(n_missing, d_n_missing, sizeof(uint32_t), cudaMemcpyDefault));
     OF_CUDA_CHECK(cudaMemcpy(missing_keys, d_missing_keys, keys_size, cudaMemcpyDefault));

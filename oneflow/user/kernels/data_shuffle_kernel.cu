@@ -490,8 +490,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int32_t num_tables = ctx->Attr<int32_t>("num_tables");
     const int64_t padding_idx = ctx->Attr<int64_t>("padding_idx");
-    bool has_padding_idx = false;
-    if (padding_idx >= 0) { has_padding_idx = true; }
+    const bool has_padding_idx = ctx->Attr<bool>("has_padding_idx");
     const bool has_table_ids = ctx->has_input("table_ids", 0);
     const bool need_gen_table_ids = (!has_table_ids && num_tables > 1);
     const bool need_process_table_ids = (has_table_ids || num_tables > 1);
@@ -1733,8 +1732,7 @@ class UniqueKeyValuePairKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int32_t num_tables = ctx->Attr<int32_t>("num_tables");
     const int64_t padding_idx = ctx->Attr<int64_t>("padding_idx");
-    bool has_padding_idx = false;
-    if (padding_idx >= 0) { has_padding_idx = true; }
+    const bool has_padding_idx = ctx->Attr<bool>("has_padding_idx");
     const bool has_values = ctx->has_input("values", 0);
     const bool need_values_buffer = (!has_values && num_tables > 1);
     size_t values_buffer_bytes =

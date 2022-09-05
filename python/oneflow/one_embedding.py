@@ -172,8 +172,9 @@ class Embedding(Module):
         key_type,
         tables,
         store_options,
+        padding_idx,
         default_initializer=None,
-        padding_idx=-1,
+        has_padding_idx=False,
     ):
         super().__init__()
         self.dtype = dtype
@@ -199,6 +200,7 @@ class Embedding(Module):
         )
         self.shadow = flow.nn.Parameter(flow.Tensor(1))
         self.padding_idx = padding_idx
+        self.has_padding_idx = has_padding_idx
 
     def _save_to_state_dict(self, destination, prefix, keep_vars):
         super()._save_to_state_dict(destination, prefix, keep_vars)
@@ -298,6 +300,7 @@ class Embedding(Module):
             self.embedding_tables,
             self.key_value_store_options,
             padding_idx=self.padding_idx,
+            has_padding_idx=self.has_padding_idx,
         )
 
 
