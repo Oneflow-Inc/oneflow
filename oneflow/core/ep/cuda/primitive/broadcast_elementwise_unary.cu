@@ -221,6 +221,10 @@ void LaunchWithSimplified(CudaStream* stream, size_t simplified_num_dims,
   }
   simplified_src_dims[simplified_num_dims - 1] /= pack_size;
   simplified_dst_dims[simplified_num_dims - 1] /= pack_size;
+  for(int i = 0; i < simplified_num_dims - 1; i++){
+    simplified_src_strides[i] /= pack_size; 
+    simplified_dst_strides[i] /= pack_size;
+  }
   DispatchNumDims<op, Src, Dst>(stream, pack_size, simplified_num_dims, simplified_src_dims,
                                 simplified_src_strides, src, simplified_dst_dims,
                                 simplified_dst_strides, dst, attr0, attr1);
