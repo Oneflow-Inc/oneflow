@@ -374,7 +374,9 @@ class DataLoader(Generic[T_co]):
             if self._iterator is None:
                 self._iterator = self._get_iterator()
             else:
-                self._iterator._reset(self, first_iter=self.first_iter_when_persistent_workers)
+                self._iterator._reset(
+                    self, first_iter=self.first_iter_when_persistent_workers
+                )
             return self._iterator
         else:
             return self._get_iterator()
@@ -512,7 +514,9 @@ class _BaseDataLoaderIter(object):
             0, np.iinfo(np.int64).max, (), generator=loader.generator
         ).item()
         self._persistent_workers = loader.persistent_workers
-        self._first_iter_when_persistent_workers = loader.first_iter_when_persistent_workers
+        self._first_iter_when_persistent_workers = (
+            loader.first_iter_when_persistent_workers
+        )
         self._num_yielded = 0
         self._profile_name = "enumerate(DataLoader)#{}.__next__".format(
             self.__class__.__name__
