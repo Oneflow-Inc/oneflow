@@ -47,7 +47,9 @@ def _checkpoint_without_reentrant(function, *args):
                 return None
 
             def inner_unpack(packed):
-                raise RuntimeError("You are calling backwards on a tensor that is never exposed. Please open an issue.")
+                raise RuntimeError(
+                    "You are calling backwards on a tensor that is never exposed. Please open an issue."
+                )
 
             with flow.enable_grad():
                 with flow.autograd.graph.saved_tensors_hooks(inner_pack, inner_unpack):
@@ -106,7 +108,4 @@ def checkpoint(function, *args):
     Returns:
         Output of running :attr:`function` on :attr:`*args`
     """
-    return _checkpoint_without_reentrant(
-        function,
-        *args
-    )
+    return _checkpoint_without_reentrant(function, *args)

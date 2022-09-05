@@ -59,7 +59,6 @@ class TestCheckpointing(flow.unittest.TestCase):
                 x = self.conv2(x)
                 return x
 
-
         x1 = flow.randn(1, 3, 8, 16).requires_grad_()
         x2 = x1.detach().clone().requires_grad_()
 
