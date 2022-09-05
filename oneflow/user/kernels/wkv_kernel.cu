@@ -121,7 +121,7 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
   const int _offset = _b * T * C + _c;
 
   F u = static_cast<F>(_u[_c]);
-  const F w = -1 * Exp(static_cast<F>(_w[_c]));
+  const F w = -1.0 * (Exp(static_cast<F>(_w[_c])));
   const E* __restrict__ const k = _k + _offset;
   const E* __restrict__ const v = _v + _offset;
   const E* __restrict__ const gy = _gy + _offset;
@@ -184,8 +184,8 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
   // Multiply by w because the w -> -exp(w) preprocessing is halfway in the backwards pass, even
   // though it's not in the forward pass
   const int _offsetBC = _b * C + _c;
-  _gw[_offsetBC] = _gw[_offsetBC] + static_cast<E>(gw * w);
-  _gu[_offsetBC] = _gu[_offsetBC] + static_cast<E>(gu);
+  _gw[_offsetBC] = static_cast<E>(static_cast<F>(_gw[_offsetBC]) + gw * w);
+  _gu[_offsetBC] = static_cast<E>(static_cast<F>(_gu[_offsetBC]) + gu);
 }
 
 template<typename Context>
