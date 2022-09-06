@@ -68,7 +68,6 @@ struct AffineStore {
     }
     *(reinterpret_cast<cuda::layer_norm::PackType<DST, N>*>(y) + offset) = y_pack.storage;
   }
-  bool CanPackAs(size_t pack_size) { return (row_size % pack_size) == 0; }
   DST* y;
   int64_t row_size;
   const DST* gamma;
@@ -98,7 +97,6 @@ struct ScaleLoad {
       dst[i] = static_cast<DST>(src_pack.elem[i] * gamma_pack.elem[i]);
     }
   }
-  bool CanPackAs(size_t pack_size) { return (row_size % pack_size) == 0; }
   const SRC* src;
   const SRC* gamma;
   int64_t row_size;

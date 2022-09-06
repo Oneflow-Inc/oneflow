@@ -132,6 +132,34 @@ struct DefaultComputeType<nv_bfloat16> {
 };
 #endif  // CUDA_VERSION >= 11000
 
+template<typename T>
+class HasCanPackAs {
+  typedef char one;
+  struct two {
+    char x[2];
+  };
+
+  template<typename C>
+  static one test(decltype(&C::CanPackAs));
+  template<typename C>
+  static two test(...);
+
+ public:
+  enum { value = sizeof(test<T>(0)) == sizeof(char) };
+};
+
+template<typename T>
+typename std::enable_if<HasCanPackAs<T>::value == true, bool>::type CanPackAs(T t,
+                                                                              size_t pack_size) {
+  return t.CanPackAs(pack_size);
+}
+
+template<typename T>
+typename std::enable_if<HasCanPackAs<T>::value == false, bool>::type CanPackAs(T t,
+                                                                               size_t pack_size) {
+  return true;
+}
+
 template<typename T, int N>
 struct GetPackType {
   using type = typename std::aligned_storage<N * sizeof(T), N * sizeof(T)>::type;
@@ -161,7 +189,6 @@ struct DirectLoad {
 #pragma unroll
     for (int i = 0; i < N; ++i) { dst[i] = static_cast<DST>(pack.elem[i]); }
   }
-  bool CanPackAs(size_t pack_size) { return true; }
   const SRC* src;
   int64_t row_size;
 };
@@ -177,7 +204,6 @@ struct DirectStore {
     for (int i = 0; i < N; ++i) { pack.elem[i] = static_cast<DST>(src[i]); }
     *(reinterpret_cast<PackType<DST, N>*>(dst) + offset) = pack.storage;
   }
-  bool CanPackAs(size_t pack_size) { return true; }
   DST* dst;
   int64_t row_size;
 };
@@ -528,10 +554,10 @@ struct DispatchLayerNormWarpImplPackSize {
   cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
                          const int64_t cols, const double epsilon, ComputeType* mean,
                          ComputeType* inv_variance) {
-    if (load.CanPackAs(4) && store.CanPackAs(4)) {
+    if (cols % 4 == 0 && CanPackAs<STORE>(store, 4)) {
       return DispatchLayerNormWarpImplCols<LOAD, STORE, ComputeType, 4>(
           stream, load, store, rows, cols, epsilon, mean, inv_variance);
-    } else if (load.CanPackAs(2) && store.CanPackAs(2)) {
+    } else if (cols % 2 == 0 && CanPackAs<STORE>(store, 2)) {
       return DispatchLayerNormWarpImplCols<LOAD, STORE, ComputeType, 2>(
           stream, load, store, rows, cols, epsilon, mean, inv_variance);
     } else {
@@ -687,10 +713,10 @@ struct TryDispatchLayerNormBlockSMemImplPackSize {
   cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
                          const int64_t cols, const double epsilon, ComputeType* mean,
                          ComputeType* inv_variance, bool* success) {
-    if (load.CanPackAs(4) && store.CanPackAs(4)) {
+    if (cols % 4 == 0 && CanPackAs<STORE>(store, 4)) {
       return TryDispatchLayerNormBlockSMemImplBlockSize<LOAD, STORE, ComputeType, 4>(
           stream, load, store, rows, cols, epsilon, mean, inv_variance, success);
-    } else if (load.CanPackAs(2) && store.CanPackAs(2)) {
+    } else if (cols % 4 == 0 && CanPackAs<STORE>(store, 4)) {
       return TryDispatchLayerNormBlockSMemImplBlockSize<LOAD, STORE, ComputeType, 2>(
           stream, load, store, rows, cols, epsilon, mean, inv_variance, success);
     } else {
@@ -774,10 +800,10 @@ struct DispatchLayerNormBlockUncachedImplPackSize {
   cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
                          const int64_t cols, const double epsilon, ComputeType* mean,
                          ComputeType* inv_variance) {
-    if (load.CanPackAs(4) && store.CanPackAs(4)) {
+    if (cols % 4 == 0 && CanPackAs<STORE>(store, 4)) {
       return LaunchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, 4>(
           stream, load, store, rows, cols, epsilon, mean, inv_variance);
-    } else if (load.CanPackAs(2) && store.CanPackAs(2)) {
+    } else if (cols % 4 == 0 && CanPackAs<STORE>(store, 4)) {
       return LaunchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, 2>(
           stream, load, store, rows, cols, epsilon, mean, inv_variance);
     } else {
@@ -1061,7 +1087,7 @@ struct DispatchLayerNormGradWarpImplPackSize {
   cudaError_t operator()(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
                          STORE store, const ComputeType* mean, const ComputeType* inv_variance,
                          const int64_t rows, const int64_t cols) {
-    if (load.CanPackAs(2) && store.CanPackAs(2)) {
+    if (cols % 2 == 0 && CanPackAs<LOAD_SCALED_DY>(load_scaled_dy, 2)) {
       return DispatchLayerNormGradWarpImplCols<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, 2>(
           stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
     } else {
@@ -1232,7 +1258,7 @@ struct TryDispatchLayerNormGradBlockSMemImplPackSize {
   cudaError_t operator()(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
                          STORE store, const ComputeType* mean, const ComputeType* inv_variance,
                          const int64_t rows, const int64_t cols, bool* success) {
-    if (load.CanPackAs(2) && store.CanPackAs(2)) {
+    if (cols % 2 == 0 && CanPackAs<LOAD_SCALED_DY>(load_scaled_dy, 2)) {
       return TryDispatchLayerNormGradBlockSMemImplBlockSize<LOAD_X, LOAD_SCALED_DY, STORE,
                                                             ComputeType, 2>(
           stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols, success);
@@ -1330,7 +1356,7 @@ struct DispatchLayerNormGradBlockUncachedImplPackSize {
   cudaError_t operator()(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
                          STORE store, const ComputeType* mean, const ComputeType* inv_variance,
                          const int64_t rows, const int64_t cols) {
-    if (load.CanPackAs(2) && store.CanPackAs(2) && cols > kWarpSize) {
+    if (cols % 2 == 0 && CanPackAs<LOAD_SCALED_DY>(load_scaled_dy, 2) && cols > kWarpSize) {
       return LaunchLayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, 2>(
           stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
     } else {

@@ -22,7 +22,9 @@ namespace oneflow {
 namespace {
 
 oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
-  return x_data_type == DataType::kFloat16 ? DataType::kFloat : x_data_type;
+  return (x_data_type == DataType::kFloat16 || x_data_type == DataType::kBFloat16)
+             ? DataType::kFloat
+             : x_data_type;
 }
 
 }  // namespace
