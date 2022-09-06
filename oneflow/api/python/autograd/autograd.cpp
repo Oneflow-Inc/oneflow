@@ -72,7 +72,6 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
       CHECK_OR_RETURN(*(outputs.at(i)->shape()) == *(out_grads.at(i)->shape()))
           << "out_grad's shape must be same as output's (" << outputs.at(i)->shape()->ToString()
           << " vs " << out_grads.at(i)->shape()->ToString() << ")";
-      // if (outputs.at(i)->dtype() != out_grads.at(i)->dtype()) {
       if (JUST(oneflow::VectorAt(outputs, i))->dtype()
           != JUST(oneflow::VectorAt(out_grads, i))->dtype()) {
         JUST(oneflow::VectorAt(*gradients, i)) =
