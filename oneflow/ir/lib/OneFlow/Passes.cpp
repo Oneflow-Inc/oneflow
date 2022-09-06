@@ -1001,6 +1001,12 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
       mlir::bufferization::createFinalizingBufferizePass());  // finalizing-bufferize
 }
 
+LogicalResult LowerKernelLaunchModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
+  mlir::PassManager pm(context);
+  pm.addPass(createKernelLaunchWithLLVMPass());  // kernel-launch-with-llvm
+  return pm.run(module);
+}
+
 LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   mlir::PassManager pm(context);
   AddLowerToLinalgMemRefPasses(pm);

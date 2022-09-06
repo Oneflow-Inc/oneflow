@@ -185,14 +185,32 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
     mlir::DialectRegistry registry;
     registry
         .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
-                mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect>();
+                mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect, mlir::LLVM::LLVMDialect>();
     mlir::registerLLVMDialectTranslation(registry);
     mlir::MLIRContext mlir_ctx(registry);
     mlir::OwningOpRef<mlir::ModuleOp> module_op =
         mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
+
+    if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(&mlir_ctx, *module_op))) {
+      LOG(ERROR) << "Fail lowering kernel launch Module to llvm ir";
+      exit(1);
+    }
+    module_op->dump();
     KernelLaunchOpKernelRegContext reg_ctx(module_op.get());
     const auto* res =
         CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult("relu", reg_ctx));
+
+    mlir::ExecutionEngineOptions jitOptions;
+    jitOptions.transformer = {};
+    jitOptions.jitCodeGenOptLevel = llvm::None;
+    jitOptions.sharedLibPaths = ext_libs;
+
+    auto jit_or_error = mlir::ExecutionEngine::create(*module_op, jitOptions);
+    CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
+                          << llvm::toString(jit_or_error.takeError());
+    auto jit = std::move(jit_or_error.get());
+    auto error = jit->invoke("relu2D0", &reg_ctx);
+    CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
     TODO() << "run the kernel::compute func";
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
