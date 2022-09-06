@@ -41,8 +41,12 @@ struct AffineStore {
     const int64_t offset = row * row_size + col;
     const int64_t packed_offset = offset / PackSize;
     const int64_t gamma_beta_offset = (offset / spatial_size) % channel_size;
-    DST gamma_val = gamma[gamma_beta_offset];
-    DST beta_val = beta[gamma_beta_offset];
+    DST gamma_val = 1.0;
+    DST beta_val = 0.0;
+    if(affine){
+      gamma_val = gamma[gamma_beta_offset]; 
+      beta_val = beta[gamma_beta_offset]; 
+    }
 
 #pragma unroll
     for (int i = 0; i < PackSize; ++i) {
