@@ -162,3 +162,36 @@ def max_pool3d(
         return _max_pool_out
     else:
         return _max_pool_out[0]
+
+def adaptive_max_pool1d(input, output_size,
+    return_indices: bool = False):
+    r"""
+    """
+
+    _out = oneflow._C.adaptive_max_pool1d(input, output_size)
+    if return_indices:
+        return _out
+    else:
+        return _out[0]
+
+def adaptive_max_pool2d(input, output_size,
+    return_indices: bool = False):
+    r"""
+    """
+
+    _out = oneflow._C.adaptive_max_pool2d(input, output_size)
+    if return_indices:
+        return _out
+    else:
+        return _out[0]
+
+def adaptive_max_pool3d(input, output_size,
+    return_indices: bool = False):
+    r"""
+    """
+
+    _out = oneflow._C.adaptive_max_pool3d(input, output_size)
+    if return_indices:
+        return _out
+    else:
+        return _out[0]

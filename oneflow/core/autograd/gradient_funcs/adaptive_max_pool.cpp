@@ -87,9 +87,9 @@ class AdaptiveMaxPool3dGrad final : public AdaptiveMaxPoolNdGrad {
   Maybe<void> Init(const OpExpr& op) override { return AdaptiveMaxPoolNdGrad::Init(op, 3); }
 };
 
-// REGISTER_OP_EXPR_GRAD_FUNCTION("adaptive_max_pool1d", AdaptiveMaxPool1dGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("adaptive_max_pool1d", AdaptiveMaxPool1dGrad);
 REGISTER_OP_EXPR_GRAD_FUNCTION("adaptive_max_pool2d", AdaptiveMaxPool2dGrad);
-// REGISTER_OP_EXPR_GRAD_FUNCTION("adaptive_max_pool3d", AdaptiveMaxPool3dGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("adaptive_max_pool3d", AdaptiveMaxPool3dGrad);
 
 }  // namespace one
 }  // namespace oneflow

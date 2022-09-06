@@ -115,10 +115,10 @@ void AdaptiveMaxPoolBackward(user_op::KernelComputeContext* ctx) {
             dx_ptr[indices_ptr[i]] += dy_ptr[i];
           }
         }
-        dx_ptr += input_size;
-        dy_ptr += output_size;
-        indices_ptr += output_size;
       }
+      dx_ptr += input_size;
+      dy_ptr += output_size;
+      indices_ptr += output_size;
     }
   }
 }

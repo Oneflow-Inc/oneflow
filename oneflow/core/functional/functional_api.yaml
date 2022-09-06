@@ -2606,7 +2606,7 @@
   signature: "TensorTuple (Tensor input, Int64List[3] output_size) => AdaptiveMaxPool3D"
   bind_python: True
 
-- name: "adaptive_max_pool2d_grad"
+- name: "adaptive_max_pool_grad"
   signature:
     "Tensor (Tensor x, Tensor index, Tensor dy, Int32 ndims) => AdaptiveMaxPoolNdGrad"
-  bind_python: True
+  bind_python: False

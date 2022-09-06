@@ -183,7 +183,7 @@ class MaxPoolNdGradFunctor {
 class AdaptiveMaxPoolNdGradFunctor {
  public:
   AdaptiveMaxPoolNdGradFunctor() {
-    for (int ndims = 2; ndims <= 2; ++ndims) {
+    for (int ndims = 1; ndims <= 3; ++ndims) {
       const auto& op_type_name = GetOpTypeName(ndims);
       op_expr_map_[op_type_name] = CHECK_JUST(
           one::OpBuilder(op_type_name).Input("x").Input("dy").Input("index").Output("dx").Build());

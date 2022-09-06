@@ -81,42 +81,44 @@ Maybe<void> InferBWDataType(user_op::InferContext* ctx) {
 
 }  // namespace
 
-#define DEF_ADAPTIVE_MAX_POOL_OP(op_class_name_prefix)                                           \
-  /* static */ Maybe<void> op_class_name_prefix##Op::InferLogicalTensorDesc(                     \
-      user_op::InferContext* ctx) {                                                              \
-    return InferFWTensorDesc(ctx);                                                               \
-  }                                                                                              \
-                                                                                                 \
-  /*static*/ Maybe<void> op_class_name_prefix##Op::InferPhysicalTensorDesc(                      \
-      user_op::InferContext* ctx) {                                                              \
-    return InferLogicalTensorDesc(ctx);                                                          \
-  }                                                                                              \
-                                                                                                 \
-  /* static */ Maybe<void> op_class_name_prefix##Op::GetSbp(user_op::SbpContext* ctx) {          \
-    return FwGetSbpFn(ctx);                                                                      \
-  }                                                                                              \
-                                                                                                 \
-  /* static */ Maybe<void> op_class_name_prefix##Op::InferDataType(user_op::InferContext* ctx) { \
-    return InferFWDataType(ctx);                                                                 \
+#define DEF_ADAPTIVE_MAX_POOL_OP(op_class_name_prefix)                                            \
+  /* static */ Maybe<void> op_class_name_prefix##Op::InferLogicalTensorDesc(                      \
+      user_op::InferContext* ctx) {                                                               \
+    return InferFWTensorDesc(ctx);                                                                \
+  }                                                                                               \
+                                                                                                  \
+  /*static*/ Maybe<void> op_class_name_prefix##Op::InferPhysicalTensorDesc(                       \
+      user_op::InferContext* ctx) {                                                               \
+    return InferLogicalTensorDesc(ctx);                                                           \
+  }                                                                                               \
+                                                                                                  \
+  /* static */ Maybe<void> op_class_name_prefix##Op::GetSbp(user_op::SbpContext* ctx) {           \
+    return FwGetSbpFn(ctx);                                                                       \
+  }                                                                                               \
+                                                                                                  \
+  /* static */ Maybe<void> op_class_name_prefix##Op::InferDataType(user_op::InferContext* ctx) {  \
+    return InferFWDataType(ctx);                                                                  \
+  }                                                                                               \
+                                                                                                  \
+  /* static */ Maybe<void> op_class_name_prefix##GradOp::InferLogicalTensorDesc(                  \
+      user_op::InferContext* ctx) {                                                               \
+    return InferBWTensorDesc(ctx);                                                                \
+  }                                                                                               \
+                                                                                                  \
+  /*static*/                                                                                      \
+  Maybe<void> op_class_name_prefix##GradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
+    return InferLogicalTensorDesc(ctx);                                                           \
+  }                                                                                               \
+                                                                                                  \
+  /* static */                                                                                    \
+  Maybe<void> op_class_name_prefix##GradOp::GetSbp(user_op::SbpContext* ctx) {                    \
+    return BwGetSbpFn(ctx);                                                                       \
+  }                                                                                               \
+                                                                                                  \
+  /* static */                                                                                    \
+  Maybe<void> op_class_name_prefix##GradOp::InferDataType(user_op::InferContext* ctx) {           \
+    return InferBWDataType(ctx);                                                                  \
   }
-
-/* static */ Maybe<void> AdaptiveMaxPool2DGradOp::InferLogicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferBWTensorDesc(ctx);
-}
-
-/*static*/
-Maybe<void> AdaptiveMaxPool2DGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
-/* static */
-Maybe<void> AdaptiveMaxPool2DGradOp::GetSbp(user_op::SbpContext* ctx) { return BwGetSbpFn(ctx); }
-
-/* static */
-Maybe<void> AdaptiveMaxPool2DGradOp::InferDataType(user_op::InferContext* ctx) {
-  return InferBWDataType(ctx);
-}
 
 DEF_ADAPTIVE_MAX_POOL_OP(AdaptiveMaxPool1D);
 DEF_ADAPTIVE_MAX_POOL_OP(AdaptiveMaxPool2D);
