@@ -177,14 +177,13 @@ Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTupl
   auto* mut_output_tensor_metas = result->mut_output_tensor_metas();
   for (int32_t i = 0; i < user_op_expr.output_size(); ++i) {
     if (!JUST(user_op_expr.SupportNonContiguous())) {
-      std::shared_ptr<Stride> stride(new Stride(output_mut_metas.at(i).shape()));
+      Stride stride(output_mut_metas.at(i).shape());
       output_mut_metas.at(i).set_stride(stride);
     }
     CHECK_OR_RETURN(static_cast<bool>(output_mut_metas.at(i).device())) << "device not infered";
     mut_output_tensor_metas->at(i) = SymbolOf(
-        LocalTensorMeta(output_mut_metas.at(i).shape_ptr(), output_mut_metas.at(i).stride_ptr(),
-                        output_mut_metas.at(i).data_type(), output_mut_metas.at(i).device(),
-                        output_mut_metas.at(i).storage_offset()));
+        LocalTensorMeta(output_mut_metas.at(i).shape(), output_mut_metas.at(i).stride(),
+                        output_mut_metas.at(i).data_type(), output_mut_metas.at(i).device()));
   }
   return std::shared_ptr<const LocalTensorInferResult>(std::move(result));
 }
@@ -194,6 +193,10 @@ Maybe<const LocalTensorInferResult> LocalTensorInferCache::GetOrInfer(
   if (ThreadLocalEnvBool<ONEFLOW_EAGER_ENABLE_LOCAL_INFER_CACHE>()) {
     auto iter = cache_.find(infer_args);
     if (iter == cache_.end()) {
+      if (unlikely(cache_.size()
+                   >= ThreadLocalEnvInteger<ONEFLOW_EAGER_TENSOR_INFER_CACHE_SIZE>())) {
+        cache_.clear();
+      }
       const auto& user_op_expr = user_op_expr_.lock();
       CHECK_OR_RETURN(static_cast<bool>(user_op_expr));  // NOLINT
       const auto& output_tensor_metas = JUST(Infer(*user_op_expr, infer_args));

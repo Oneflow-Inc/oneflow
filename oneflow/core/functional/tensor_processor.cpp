@@ -13,8 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <glog/logging.h>
+#include <cstdio>
 #include "oneflow/core/functional/tensor_processor.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/job/lazy_mode.h"
@@ -78,12 +81,32 @@ TensorProcessor& TensorProcessor::PromoteInputsToCommonDtype(bool is_promote) {
   return *this;
 }
 
+TensorProcessor& TensorProcessor::PromoteIntegerInputsToFloatDtype(bool is_promote) {
+  promote_integer_inputs_to_float_ = is_promote;
+  CHECK_OR_THROW(!promote_integer_inputs_to_float_ || promote_inputs_to_common_dtype_)
+      << "when set promote_integer_inputs_to_float to 'True', then promote_inputs_to_common_dtype "
+         "should be set to 'True' first!";
+  return *this;
+}
+
 Maybe<void> TensorProcessor::Apply() {
   if (promote_inputs_to_common_dtype_) {
     bool has_different_input_dtype = CheckHasDifferentInputDType(tensor_tuple_);
     if (has_different_input_dtype) {
       common_dtype_ = ComputeCommonDType(tensor_tuple_);
+      if (promote_integer_inputs_to_float_ && common_dtype_->is_integer()) {
+        // Promotes common dtype to the default float scalar type, if needed.
+        // same to pytorch's computeTypes() in torch/csrc/jit/codegen/cuda/type_promotion.cpp
+        common_dtype_ = DType::Float();
+      }
       JUST(CastToSameType(tensor_tuple_, common_dtype_));
+    } else {
+      if (tensor_tuple_.size() == 1 && !tensor_tuple_[0]->dtype()->is_floating_point()) {
+        Symbol<DType> cast_dtype = inputs_lowest_dtype_vec_[0]->InvalidDataType()
+                                       ? DType::Float()
+                                       : inputs_lowest_dtype_vec_[0];
+        JUST(CastToSameType(tensor_tuple_, cast_dtype));
+      }
     }
   } else {
     for (int i = 0; i < tensor_tuple_.size(); ++i) {
@@ -103,7 +126,7 @@ Maybe<void> TensorProcessor::Apply() {
 
 static bool IsAllContiguous(const TensorTuple& tensors) {
   for (const auto& t : tensors) {
-    if (!t->is_contiguous()) { return false; }
+    if (t && !t->is_contiguous()) { return false; }
   }
   return true;
 }
@@ -111,22 +134,37 @@ static bool IsAllContiguous(const TensorTuple& tensors) {
 Maybe<void> TensorLayoutProcessor::Apply() {
   if (LazyMode::is_enabled()) { return Maybe<void>::Ok(); }
   if (!non_contiguous_enabled_ && !IsAllContiguous(inputs_)) {
-    // inplace is not allowed if input is non-contiguous
-    if (outputs_) {
-      size_t len = std::min(inputs_.size(), outputs_->size());
-      for (int i = 0; i < len; ++i) {
-        // only requires the inplaced input be contiguous
-        CHECK_OR_RETURN((*outputs_)[i] != inputs_[i] || inputs_[i]->is_contiguous())
-            << Error::RuntimeError()
-            << "inplace operation is not allowed if input is non-contiguous and non-contiguous is "
-               "not supported for this operation";
-      }
-    }
     contiguous_inputs_.resize(inputs_.size());
     for (int i = 0; i < inputs_.size(); ++i) { contiguous_inputs_[i] = inputs_[i]->contiguous(); }
     converted_ = true;
   }
+  // inplace operation is not allowed if input is non-contiguous and non-contiguous is
+  // not supported for this operation
+  if (!non_contiguous_enabled_ && outputs_ && !IsAllContiguous(*outputs_)) {
+    post_process_outputs_.reserve(outputs_->size());
+    post_process_output_indices_.reserve(outputs_->size());
+    for (int i = 0; i < outputs_->size(); ++i) {
+      if ((*outputs_)[i] && !(*outputs_)[i]->is_contiguous()) {
+        post_process_outputs_.emplace_back((*outputs_)[i]);
+        post_process_output_indices_.emplace_back(i);
+        (*outputs_)[i] = nullptr;
+      }
+    }
+  }
   return Maybe<void>::Ok();
+}
+
+TensorLayoutProcessor::~TensorLayoutProcessor() {
+  for (int i = 0; i < post_process_output_indices_.size(); ++i) {
+    int output_index = post_process_output_indices_[i];
+    CHECK_OR_THROW((*outputs_)[output_index])
+        << "the output which index is " << i << " should not be nullptr";
+    functional::TensorIndex ellipsis_index;
+    ellipsis_index.emplace_back(functional::detail::EllipsisIndex());
+    CHECK_JUST(functional::TensorSetItem(post_process_outputs_[i], ellipsis_index,
+                                         (*outputs_)[output_index]));
+    (*outputs_)[output_index] = post_process_outputs_[i];
+  }
 }
 
 }  // namespace functional

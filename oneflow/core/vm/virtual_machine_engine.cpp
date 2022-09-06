@@ -177,13 +177,14 @@ void VirtualMachineEngine::ReleaseFinishedInstructions(const ScheduleCtx& schedu
   INTRUSIVE_FOR_EACH_PTR(stream, mut_active_stream_list()) {
     while (true) {
       auto* instruction_ptr = stream->mut_running_instruction_list()->Begin();
-      if (instruction_ptr == nullptr || !instruction_ptr->Done()) { break; }
+      if (instruction_ptr == nullptr) { break; }
+      if (!(instruction_ptr->in_edges().empty() && instruction_ptr->Done())) { break; }
       ReleaseInstruction(instruction_ptr);
       // Prevent destructing instruction_ptr.
       intrusive::shared_ptr<Instruction> instruction =
           stream->mut_running_instruction_list()->Erase(instruction_ptr);
       LivelyInstructionListErase(instruction_ptr);
-      instruction_ptr->DeleteStatusAndClearEdges();
+      instruction_ptr->DeleteStatusAndCheckEdges();
     }
     if (stream->running_instruction_list().empty()) { mut_active_stream_list()->Erase(stream); }
   }
@@ -389,7 +390,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
   if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
   // Compute
   if (OnSchedulerThread(*stream)) {
-    stream->stream_policy().Run(instruction);
+    stream->stream_policy().RunIf(instruction);
   } else {
     stream->mut_thread_ctx()->mut_worker_pending_instruction_list()->PushBack(instruction);
     schedule_ctx.OnWorkerLoadPending(stream->mut_thread_ctx());
@@ -484,7 +485,7 @@ void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_
   CHECK(instruction_policy.IsBarrier());
   CHECK(OnSchedulerThread(sequnential_instruction->stream()));
   const StreamPolicy& stream_policy = sequnential_instruction->stream().stream_policy();
-  stream_policy.Run(sequnential_instruction);
+  stream_policy.RunIf(sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
   LivelyInstructionListErase(sequnential_instruction);
 }

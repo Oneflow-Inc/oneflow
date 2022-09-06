@@ -43,7 +43,12 @@ from oneflow.nn.modules.activation import (
 )
 
 from oneflow.nn.modules.all_reduce import AllReduce
-from oneflow.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d, BatchNorm3d
+from oneflow.nn.modules.batchnorm import (
+    BatchNorm1d,
+    BatchNorm2d,
+    BatchNorm3d,
+    SyncBatchNorm,
+)
 from oneflow.nn.modules.batchnorm_fused import (
     FusedBatchNorm1d,
     FusedBatchNorm2d,
@@ -66,7 +71,7 @@ from oneflow.nn.modules.conv import (
     ConvTranspose2d,
     ConvTranspose3d,
 )
-from oneflow.nn.modules.distance import CosineSimilarity
+from oneflow.nn.modules.distance import CosineSimilarity, PairwiseDistance
 from oneflow.nn.modules.min_max_observer import MinMaxObserver
 from oneflow.nn.modules.moving_average_min_max_observer import (
     MovingAverageMinMaxObserver,
@@ -94,7 +99,7 @@ from oneflow.nn.modules.dataset import (
     RawReader,
 )
 
-from oneflow.nn.modules.dropout import Dropout
+from oneflow.nn.modules.dropout import Dropout, Dropout1d, Dropout2d, Dropout3d
 from oneflow.nn.modules.flatten import Flatten
 from oneflow.nn.modules.instancenorm import (
     InstanceNorm1d,

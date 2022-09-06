@@ -220,12 +220,16 @@ class LazyLocalTensorImpl final : public LocalTensorImpl {
 class EagerLocalTensorImpl final : public LocalTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerLocalTensorImpl);
-  EagerLocalTensorImpl();
+  EagerLocalTensorImpl()
+      : EagerLocalTensorImpl(std::shared_ptr<TensorStorage>(), 0, false, false) {}
   EagerLocalTensorImpl(const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad,
-                       bool is_leaf);
+                       bool is_leaf)
+      : EagerLocalTensorImpl(tensor_storage, 0, requires_grad, is_leaf) {}
+  EagerLocalTensorImpl(const std::shared_ptr<TensorStorage>& tensor_storage, int64_t storage_offset,
+                       bool requires_grad, bool is_leaf);
 
   EagerLocalTensorImpl(bool requires_grad, bool is_leaf)
-      : EagerLocalTensorImpl(std::shared_ptr<TensorStorage>(), requires_grad, is_leaf) {}
+      : EagerLocalTensorImpl(std::shared_ptr<TensorStorage>(), 0, requires_grad, is_leaf) {}
   ~EagerLocalTensorImpl() override;
 
   const std::shared_ptr<const MutLocalTensorMeta>& mut_tensor_meta() override;
@@ -249,9 +253,10 @@ class EagerLocalTensorImpl final : public LocalTensorImpl {
     return tensor_storage_;
   }
   Maybe<bool> has_eager_blob_object() const override { return eager_blob_object_.get(); }
-  Maybe<int64_t> storage_offset() const override { return tensor_meta()->storage_offset(); }
+  Maybe<int64_t> storage_offset() const override { return storage_offset_; }
   // Setters
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
+  void set_storage_offset(int64_t offset) { storage_offset_ = offset; }
 
   Maybe<void> InitEagerBlobObject(
       const Symbol<one::LocalTensorMeta>& local_tensor_meta,
@@ -273,6 +278,7 @@ class EagerLocalTensorImpl final : public LocalTensorImpl {
   Maybe<void> set_eager_blob_object(std::shared_ptr<vm::EagerBlobObject> eager_blob_object);
 
   std::shared_ptr<TensorStorage> tensor_storage_;
+  int64_t storage_offset_;
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
 };
 
