@@ -23,6 +23,7 @@ limitations under the License.
 #include "llvm/Support/TargetSelect.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
+#include "OneFlow/UserOpReflection.h"
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/switch_func.h"
@@ -71,6 +72,7 @@ namespace {
 
 // this context should support querying information about the kernel from representation in MLIR
 class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
+  using ArgID = std::pair<std::string, int32_t>;
   using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
  public:
@@ -81,13 +83,57 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
       return ::mlir::WalkResult::interrupt();
     });
     if (!func_op_) { LOG(FATAL) << "FuncOp not found in module"; }
+
+    // init blob descriptors
+    auto& body = func_op_->getRegion(0);
+    auto& block = body.front();
+    CHECK(!block.empty());
+    auto& op = block.front();
+    op.dump();
+    for (const auto& operand_id : ::llvm::enumerate(
+             ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedOperandSegments>(&op))) {
+      user_op::NaiveTensorDesc tensor_desc{};
+      auto operand = op.getOperand(operand_id.index());
+      if (auto rankedTensorType = operand.getType().dyn_cast<mlir::RankedTensorType>()) {
+        *tensor_desc.mut_shape() =
+            Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()};
+        *tensor_desc.mut_data_type() =
+            mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType());
+        // TODO: set stride
+        // TODO: set is_dynamic
+      } else {
+        LOG(FATAL) << "Unranked tensor type not supported";
+      }
+      CHECK(arg2tensor_desc_.emplace(operand_id.value(), tensor_desc).second) << "duplicate key";
+    }
+    for (const auto& result_id : ::llvm::enumerate(
+             ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedResultSegments>(&op))) {
+      user_op::NaiveTensorDesc tensor_desc{};
+      auto result = op.getResult(result_id.index());
+      if (auto rankedTensorType = result.getType().dyn_cast<mlir::RankedTensorType>()) {
+        *tensor_desc.mut_shape() =
+            Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()};
+        *tensor_desc.mut_data_type() =
+            mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType());
+        // TODO: set stride
+        // TODO: set is_dynamic
+      } else {
+        LOG(FATAL) << "Unranked tensor type not supported";
+      }
+      CHECK(arg2tensor_desc_.emplace(result_id.value(), tensor_desc).second) << "duplicate key";
+    }
+    auto dev_tag = mlir::OpTrait::IsOpConfCompatible<void>::getDeviceTag(&op);
+    if (dev_tag == "cpu") {
+      device_type_ = DeviceType::kCPU;
+    } else if (dev_tag == "cuda") {
+      device_type_ = DeviceType::kCUDA;
+    } else {
+      LOG(FATAL) << "Unsupported device tag: " << dev_tag.str();
+    }
   }
 
   ~KernelLaunchOpKernelRegContext() = default;
-  DeviceType device_type() const override {
-    TODO() << "create from device attr in op in mlir";
-    return device_type_;
-  }
+  DeviceType device_type() const override { return device_type_; }
   const ParallelContext& parallel_ctx() const override {
     TODO() << "create from device attr in op in mlir";
     ParallelContext* parallel_ctx = nullptr;
@@ -95,8 +141,9 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
   }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
-    TODO() << "query and build tensor desc from op in mlir";
-    return nullptr;
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; }
+    return &(it->second);
   }
   const ArgVec& inputs() const override {
     TODO() << "query inputs from op in mlir";
@@ -122,6 +169,7 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
   ::mlir::func::FuncOp func_op_;
   ::mlir::ModuleOp owned_module_;
   DeviceType device_type_;
+  std::unordered_map<ArgID, user_op::NaiveTensorDesc> arg2tensor_desc_{};
 };
 
 template<typename T>
