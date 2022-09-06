@@ -44,7 +44,7 @@ void FindUniqueSbpSets(
   std::vector<int32_t> sbp_ids;
   // count the number of sbp
   for (const auto& sbp_set_group : consumer_bn2sbp_set) {
-    sbp_set_group.second.QuickOutPut(sbp_ids);
+    sbp_set_group.second.QuickOutput(sbp_ids);
     for (int32_t sbp_id : sbp_ids) { accumulator[sbp_id]++; }
   }
   // find unique sbp and clear the accumulator
@@ -164,7 +164,7 @@ void SbpCollector::InitializeCopyCostFromNode2Proxy(const SbpNode* sbp_proxy,
     // look through sbp parallel set in consumer
     for (int32_t sbp_id_consumer = 0; sbp_id_consumer < consumer_sbp_size; sbp_id_consumer++) {
       const BinarySet& sbp_parallel_set = sbp_proxy->parallel_candidates_[sbp_id_consumer];
-      sbp_parallel_set.QuickOutPut(sbp_parallel_ids);
+      sbp_parallel_set.QuickOutput(sbp_parallel_ids);
 
       // look through all sbp parallels in a sbp parallel set
       for (int32_t sbp_parallel_id : sbp_parallel_ids) {

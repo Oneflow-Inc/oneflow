@@ -19,13 +19,14 @@ limitations under the License.
 #include <cstdlib>
 #include <unordered_map>
 #include <vector>
-
-// log_2_ index only support 32-bit int. Don't know why.
-// Don't have any other bugs for unsigned int.
-#define kBinarySetEntryType unsigned int
+#include "oneflow/core/common/hash.h"
 
 namespace oneflow {
 namespace auto_parallel {
+
+// log_2_ index only support 32-bit int. Don't know why.
+// Don't have any other bugs for unsigned int.
+using kBinarySetEntryType = unsigned int;
 
 class BinarySet {
  public:
@@ -37,7 +38,7 @@ class BinarySet {
   // Clear all the elements in the set
   void Clear();
   // Check if i-th element in this subset
-  int32_t CheckExistence(int32_t i) const;
+  bool CheckExistence(int32_t i) const;
   // Add i-th element into this subset
   void AddEntry(int32_t i);
   // Take i-th element out from this subset
@@ -51,9 +52,9 @@ class BinarySet {
   // Count number of elements in this subset
   int32_t Total() const;
   // Output all the elements in the subset
-  void OutPut(std::vector<int32_t>& out) const;
+  void Output(std::vector<int32_t>& out) const;
   // Output all the elements in the subset
-  void QuickOutPut(std::vector<int32_t>& out) const;
+  void QuickOutput(std::vector<int32_t>& out) const;
   // Add elements of input into this subset
   void AddEntries(std::vector<int32_t>& in);
   // If two binary sets are equal to each other
@@ -70,11 +71,7 @@ class BinarySet {
   int32_t size_of_set_ = -1;
 
   // total bits of the entry type in vector binary_set_values_.
-  static const int32_t bit_entry_type_ = 8 * sizeof(kBinarySetEntryType);
-  // A static function for initialization of log_2_ mapping
-  static std::unordered_map<kBinarySetEntryType, int32_t> InitLog2();
-  // Take log2 of a integer value: 2^n -> n.
-  static const std::unordered_map<kBinarySetEntryType, int32_t> log_2_;
+  static constexpr int32_t bit_entry_type_ = 8 * sizeof(kBinarySetEntryType);
 };
 
 struct BinarySetHasher {
@@ -84,7 +81,7 @@ struct BinarySetHasher {
 
     size_t h = 0;
     for (int i = 0; i < bs.binary_set_values_.size(); i++) {
-      h ^= (hash<kBinarySetEntryType>()(bs.binary_set_values_[i]) << i);
+      h = HashCombine(h, hash<kBinarySetEntryType>()(bs.binary_set_values_[i]));
     }
     return h;
   };

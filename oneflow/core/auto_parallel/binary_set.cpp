@@ -18,17 +18,21 @@ limitations under the License.
 namespace oneflow {
 namespace auto_parallel {
 
+namespace {
 // A static function for initialization of log_2 mapping
-std::unordered_map<kBinarySetEntryType, int32_t> BinarySet::InitLog2() {
+std::unordered_map<kBinarySetEntryType, int32_t> InitLog2() {
   std::unordered_map<kBinarySetEntryType, int32_t> log_2;
-  for (int32_t i = 0; i < BinarySet::bit_entry_type_; i++) {
+  for (int32_t i = 0; i < 8 * sizeof(kBinarySetEntryType); i++) {
     log_2[(kBinarySetEntryType)(1 << i)] = i;
   }
   return log_2;
 }
 
 // Initialization of log_2 mapping
-const std::unordered_map<kBinarySetEntryType, int32_t> BinarySet::log_2_ = BinarySet::InitLog2();
+// Take log2 of a integer value: 2^n -> n.
+const std::unordered_map<kBinarySetEntryType, int32_t> log_2 = InitLog2();
+
+}  // namespace
 
 // Constructor
 BinarySet::BinarySet(int32_t size_of_set) : size_of_set_(size_of_set) {
@@ -47,10 +51,10 @@ void BinarySet::Initialize(int32_t size_of_set) {
 void BinarySet::Clear() { binary_set_values_.assign(binary_set_values_.size(), 0); }
 
 // Check if i-th element in this subset
-int32_t BinarySet::CheckExistence(int32_t i) const {
+bool BinarySet::CheckExistence(int32_t i) const {
   int32_t k = i / bit_entry_type_;
   int32_t j = i % bit_entry_type_;
-  return (binary_set_values_[k] >> j) & 1;
+  return bool((binary_set_values_[k] >> j) & 1);
 }
 
 // Add i-th element into this subset
@@ -104,7 +108,7 @@ int32_t BinarySet::Total() const {
 }
 
 // Output all the elements in the subset
-void BinarySet::OutPut(std::vector<int32_t>& out) const {
+void BinarySet::Output(std::vector<int32_t>& out) const {
   out.clear();
   for (int32_t i = 0; i < size_of_set_; i++) {
     if (CheckExistence(i)) { out.emplace_back(i); }
@@ -112,7 +116,7 @@ void BinarySet::OutPut(std::vector<int32_t>& out) const {
 }
 
 // Output all the elements in the subset
-void BinarySet::QuickOutPut(std::vector<int32_t>& out) const {
+void BinarySet::QuickOutput(std::vector<int32_t>& out) const {
   out.clear();
   for (int32_t i = 0; i < binary_set_values_.size(); i++) {
     kBinarySetEntryType x = binary_set_values_[i];
@@ -120,7 +124,7 @@ void BinarySet::QuickOutPut(std::vector<int32_t>& out) const {
     while (x) {
       y = x;
       x &= x - 1;
-      out.emplace_back(i * BinarySet::bit_entry_type_ + log_2_.find(y - x)->second);
+      out.emplace_back(i * BinarySet::bit_entry_type_ + log_2.find(y - x)->second);
     }
   }
 }
