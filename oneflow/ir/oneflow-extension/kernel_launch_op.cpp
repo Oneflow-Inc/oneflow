@@ -71,6 +71,7 @@ namespace {
 
 // this context should support querying information about the kernel from representation in MLIR
 class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
+  using ArgID = std::pair<std::string, int32_t>;
   using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
  public:
@@ -95,6 +96,12 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
   }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
+    LOG(ERROR) << "arg_name: " << arg_name << " index: " << index;
+    auto& body = func_op_->getRegion(0);
+    auto& block = body.front();
+    CHECK(!block.empty());
+    auto& op = block.front();
+    op.dump();
     TODO() << "query and build tensor desc from op in mlir";
     return nullptr;
   }
@@ -122,6 +129,7 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
   ::mlir::func::FuncOp func_op_;
   ::mlir::ModuleOp owned_module_;
   DeviceType device_type_;
+  std::unordered_map<ArgID, user_op::NaiveTensorDesc> cached_tensor_descs_{};
 };
 
 template<typename T>
