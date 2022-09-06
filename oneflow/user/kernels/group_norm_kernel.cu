@@ -57,7 +57,7 @@ struct AffineStore {
     *(reinterpret_cast<cuda::layer_norm::PackType<DST, PackSize>*>(y) + packed_offset) =
         y_pack.storage;
   }
-
+  bool CanPackAs(size_t pack_size) { return (spatial_size % pack_size) == 0; }
   DST* y;
   int64_t row_size;
   int64_t channel_size;
@@ -91,131 +91,13 @@ struct ScaleLoad {
 #pragma unroll
     for (int i = 0; i < PackSize; ++i) { dst[i] = static_cast<DST>(src_pack.elem[i] * gamma_val); }
   }
+  bool CanPackAs(size_t pack_size) { return (spatial_size % pack_size) == 0; }
   const SRC* src;
   const SRC* gamma;
   int64_t row_size;
   int64_t channel_size;
   int64_t spatial_size;
 };
-
-template<typename LOAD, typename STORE, typename ComputeType>
-struct DispatchGroupNormWarpImplPackSize {
-  cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
-                         const int64_t cols, const int64_t spatial_size, const double epsilon,
-                         ComputeType* mean, ComputeType* inv_variance) {
-    if (spatial_size % 4 == 0) {
-      return cuda::layer_norm::DispatchLayerNormWarpImplCols<LOAD, STORE, ComputeType, 4>(
-          stream, load, store, rows, cols, epsilon, mean, inv_variance);
-    } else if (spatial_size % 2 == 0) {
-      return cuda::layer_norm::DispatchLayerNormWarpImplCols<LOAD, STORE, ComputeType, 2>(
-          stream, load, store, rows, cols, epsilon, mean, inv_variance);
-    } else {
-      return cuda::layer_norm::DispatchLayerNormWarpImplCols<LOAD, STORE, ComputeType, 1>(
-          stream, load, store, rows, cols, epsilon, mean, inv_variance);
-    }
-  }
-};
-
-template<typename LOAD, typename STORE, typename ComputeType>
-inline cudaError_t DispatchGroupNormWarpImpl(cudaStream_t stream, LOAD load, STORE store,
-                                             const int64_t rows, const int64_t cols,
-                                             const int64_t spatial_size, const double epsilon,
-                                             ComputeType* mean, ComputeType* inv_variance) {
-  return DispatchGroupNormWarpImplPackSize<LOAD, STORE, ComputeType>()(
-      stream, load, store, rows, cols, spatial_size, epsilon, mean, inv_variance);
-}
-
-template<typename LOAD, typename STORE, typename ComputeType>
-struct TryDispatchGroupNormBlockSMemImplPackSize {
-  cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
-                         const int64_t cols, const int64_t spatial_size, const double epsilon,
-                         ComputeType* mean, ComputeType* inv_variance, bool* success) {
-    if (spatial_size % 4 == 0) {
-      return cuda::layer_norm::TryDispatchLayerNormBlockSMemImplBlockSize<LOAD, STORE, ComputeType,
-                                                                          4>(
-          stream, load, store, rows, cols, epsilon, mean, inv_variance, success);
-    } else if (spatial_size % 2 == 0) {
-      return cuda::layer_norm::TryDispatchLayerNormBlockSMemImplBlockSize<LOAD, STORE, ComputeType,
-                                                                          2>(
-          stream, load, store, rows, cols, epsilon, mean, inv_variance, success);
-    } else {
-      return cuda::layer_norm::TryDispatchLayerNormBlockSMemImplBlockSize<LOAD, STORE, ComputeType,
-                                                                          1>(
-          stream, load, store, rows, cols, epsilon, mean, inv_variance, success);
-    }
-  }
-};
-
-template<typename LOAD, typename STORE, typename ComputeType>
-inline cudaError_t TryDispatchGroupNormBlockSMemImpl(cudaStream_t stream, LOAD load, STORE store,
-                                                     const int64_t rows, const int64_t cols,
-                                                     const int64_t spatial_size,
-                                                     const double epsilon, ComputeType* mean,
-                                                     ComputeType* inv_variance, bool* success) {
-  return TryDispatchGroupNormBlockSMemImplPackSize<LOAD, STORE, ComputeType>()(
-      stream, load, store, rows, cols, spatial_size, epsilon, mean, inv_variance, success);
-}
-
-template<typename LOAD, typename STORE, typename ComputeType>
-struct DispatchGroupNormBlockUncachedImplPackSize {
-  cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
-                         const int64_t cols, const int64_t spatial_size, const double epsilon,
-                         ComputeType* mean, ComputeType* inv_variance) {
-    if (spatial_size % 4 == 0) {
-      return cuda::layer_norm::LaunchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, 4>(
-          stream, load, store, rows, cols, epsilon, mean, inv_variance);
-    } else if (spatial_size % 2 == 0) {
-      return cuda::layer_norm::LaunchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, 2>(
-          stream, load, store, rows, cols, epsilon, mean, inv_variance);
-    } else {
-      return cuda::layer_norm::LaunchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, 1>(
-          stream, load, store, rows, cols, epsilon, mean, inv_variance);
-    }
-  }
-};
-
-template<typename LOAD, typename STORE, typename ComputeType>
-inline cudaError_t DispatchGroupNormBlockUncachedImpl(cudaStream_t stream, LOAD load, STORE store,
-                                                      const int64_t rows, const int64_t cols,
-                                                      const int64_t spatial_size,
-                                                      const double epsilon, ComputeType* mean,
-                                                      ComputeType* inv_variance) {
-  return DispatchGroupNormBlockUncachedImplPackSize<LOAD, STORE, ComputeType>()(
-      stream, load, store, rows, cols, spatial_size, epsilon, mean, inv_variance);
-}
-
-template<typename LOAD, typename STORE, typename ComputeType>
-inline typename std::enable_if<!std::is_same<ComputeType, double>::value, cudaError_t>::type
-DispatchGroupNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
-                  const int64_t cols, const int64_t spatial_size, const double epsilon,
-                  ComputeType* mean, ComputeType* inv_variance) {
-  if (cols <= 1024) {
-    return DispatchGroupNormWarpImpl<LOAD, STORE, ComputeType>(
-        stream, load, store, rows, cols, spatial_size, epsilon, mean, inv_variance);
-  } else {
-    bool dispatch_smem_impl_success;
-    {
-      cudaError_t err = TryDispatchGroupNormBlockSMemImpl<LOAD, STORE, ComputeType>(
-          stream, load, store, rows, cols, spatial_size, epsilon, mean, inv_variance,
-          &dispatch_smem_impl_success);
-      if (err != cudaSuccess) { return err; }
-    }
-    if (!dispatch_smem_impl_success) {
-      return DispatchGroupNormBlockUncachedImpl<LOAD, STORE, ComputeType>(
-          stream, load, store, rows, cols, spatial_size, epsilon, mean, inv_variance);
-    }
-    return cudaSuccess;
-  }
-}
-
-template<typename LOAD, typename STORE, typename ComputeType>
-inline typename std::enable_if<std::is_same<ComputeType, double>::value, cudaError_t>::type
-DispatchGroupNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
-                  const int64_t cols, const int64_t spatial_size, const double epsilon,
-                  ComputeType* mean, ComputeType* inv_variance) {
-  return DispatchGroupNormBlockUncachedImpl<LOAD, STORE, ComputeType>(
-      stream, load, store, rows, cols, spatial_size, epsilon, mean, inv_variance);
-}
 
 template<typename T, bool affine>
 void GroupNormForwardGpu(ep::Stream* stream, const int64_t num_instances, const int64_t norm_size,
@@ -228,9 +110,9 @@ void GroupNormForwardGpu(ep::Stream* stream, const int64_t num_instances, const 
   AffineStore<ComputeType, T, affine> store(y_ptr, norm_size, channel_size, spatial_size, gamma_ptr,
                                             beta_ptr);
 
-  DispatchGroupNorm<decltype(load), decltype(store), ComputeType>(
-      stream->As<ep::CudaStream>()->cuda_stream(), load, store, num_instances, norm_size,
-      spatial_size, epsilon, mean->mut_dptr<ComputeType>(), inv_variance->mut_dptr<ComputeType>());
+  cuda::layer_norm::DispatchLayerNorm<decltype(load), decltype(store), ComputeType>(
+      stream->As<ep::CudaStream>()->cuda_stream(), load, store, num_instances, norm_size, epsilon,
+      mean->mut_dptr<ComputeType>(), inv_variance->mut_dptr<ComputeType>());
 }
 
 template<typename T>
@@ -248,125 +130,6 @@ void DispatchGroupNormForwardGpu(ep::Stream* stream, const int64_t num_instances
   }
 }
 
-template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
-struct DispatchGroupNormGradWarpImplPackSize {
-  cudaError_t operator()(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
-                         STORE store, const ComputeType* mean, const ComputeType* inv_variance,
-                         const int64_t rows, const int64_t cols, const int64_t spatial_size) {
-    if (spatial_size % 2 == 0) {
-      return cuda::layer_norm::DispatchLayerNormGradWarpImplCols<LOAD_X, LOAD_SCALED_DY, STORE,
-                                                                 ComputeType, 2>(
-          stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
-    } else {
-      return cuda::layer_norm::DispatchLayerNormGradWarpImplCols<LOAD_X, LOAD_SCALED_DY, STORE,
-                                                                 ComputeType, 1>(
-          stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
-    }
-  }
-};
-
-template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
-inline cudaError_t DispatchGroupNormGradWarpImpl(cudaStream_t stream, LOAD_X load_x,
-                                                 LOAD_SCALED_DY load_scaled_dy, STORE store,
-                                                 const ComputeType* mean,
-                                                 const ComputeType* inv_variance,
-                                                 const int64_t rows, const int64_t cols,
-                                                 const int64_t spatial_size) {
-  return DispatchGroupNormGradWarpImplPackSize<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType>()(
-      stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols, spatial_size);
-}
-
-template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
-struct TryDispatchGroupNormGradBlockSMemImplPackSize {
-  cudaError_t operator()(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
-                         STORE store, const ComputeType* mean, const ComputeType* inv_variance,
-                         const int64_t rows, const int64_t cols, const int64_t spatial_size,
-                         bool* success) {
-    if (spatial_size % 2 == 0) {
-      return cuda::layer_norm::TryDispatchLayerNormGradBlockSMemImplBlockSize<
-          LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, 2>(stream, load_x, load_scaled_dy, store,
-                                                         mean, inv_variance, rows, cols, success);
-    } else {
-      return cuda::layer_norm::TryDispatchLayerNormGradBlockSMemImplBlockSize<
-          LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, 1>(stream, load_x, load_scaled_dy, store,
-                                                         mean, inv_variance, rows, cols, success);
-    }
-  }
-};
-
-template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
-inline cudaError_t TryDispatchGroupNormGradBlockSMemImpl(
-    cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy, STORE store,
-    const ComputeType* mean, const ComputeType* inv_variance, const int64_t rows,
-    const int64_t cols, const int64_t spatial_size, bool* success) {
-  return TryDispatchGroupNormGradBlockSMemImplPackSize<LOAD_X, LOAD_SCALED_DY, STORE,
-                                                       ComputeType>()(
-      stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols, spatial_size, success);
-}
-
-template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
-struct DispatchGroupNormGradBlockUncachedImplPackSize {
-  cudaError_t operator()(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
-                         STORE store, const ComputeType* mean, const ComputeType* inv_variance,
-                         const int64_t rows, const int64_t cols, const int64_t spatial_size) {
-    if (spatial_size % 2 == 0 && spatial_size > cuda::layer_norm::kWarpSize) {
-      return cuda::layer_norm::LaunchLayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE,
-                                                                    ComputeType, 2>(
-          stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
-    } else {
-      return cuda::layer_norm::LaunchLayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE,
-                                                                    ComputeType, 1>(
-          stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
-    }
-  }
-};
-
-template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
-inline cudaError_t DispatchGroupNormGradBlockUncachedImpl(cudaStream_t stream, LOAD_X load_x,
-                                                          LOAD_SCALED_DY load_scaled_dy,
-                                                          STORE store, const ComputeType* mean,
-                                                          const ComputeType* inv_variance,
-                                                          const int64_t rows, const int64_t cols,
-                                                          const int64_t spatial_size) {
-  return DispatchGroupNormGradBlockUncachedImplPackSize<LOAD_X, LOAD_SCALED_DY, STORE,
-                                                        ComputeType>()(
-      stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols, spatial_size);
-}
-
-template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
-inline typename std::enable_if<!std::is_same<ComputeType, double>::value, cudaError_t>::type
-DispatchGroupNormGrad(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
-                      STORE store, const ComputeType* mean, const ComputeType* inv_variance,
-                      const int64_t rows, const int64_t cols, const int64_t spatial_size) {
-  if (cols <= 1024) {
-    return DispatchGroupNormGradWarpImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType>(
-        stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols, spatial_size);
-  } else {
-    bool dispatch_smem_impl_success;
-    {
-      cudaError_t err =
-          TryDispatchGroupNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType>(
-              stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols, spatial_size,
-              &dispatch_smem_impl_success);
-      if (err != cudaSuccess) { return err; }
-    }
-    if (!dispatch_smem_impl_success) {
-      return DispatchGroupNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType>(
-          stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols, spatial_size);
-    }
-    return cudaSuccess;
-  }
-}
-
-template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
-inline typename std::enable_if<std::is_same<ComputeType, double>::value, cudaError_t>::type
-DispatchGroupNormGrad(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
-                      STORE store, const ComputeType* mean, const ComputeType* inv_variance,
-                      const int64_t rows, const int64_t cols, const int64_t spatial_size) {
-  return DispatchGroupNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType>(
-      stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols, spatial_size);
-}
-
 template<typename T, bool affine>
 void GroupNormBackwardGpu(ep::Stream* stream, const int64_t num_instances, const int64_t norm_size,
                           const int64_t channel_size, const int64_t spatial_size, const T* dy_ptr,
@@ -377,11 +140,10 @@ void GroupNormBackwardGpu(ep::Stream* stream, const int64_t num_instances, const
   ScaleLoad<T, ComputeType, affine> load_scaled_dy(dy_ptr, gamma_ptr, norm_size, channel_size,
                                                    spatial_size);
   cuda::layer_norm::DirectStore<ComputeType, T> store(dx_ptr, norm_size);
-  OF_CUDA_CHECK((DispatchGroupNormGrad<decltype(load_x), decltype(load_scaled_dy), decltype(store),
-                                       ComputeType>(
+  OF_CUDA_CHECK((cuda::layer_norm::DispatchLayerNormGrad<decltype(load_x), decltype(load_scaled_dy),
+                                                         decltype(store), ComputeType>(
       stream->As<ep::CudaStream>()->cuda_stream(), load_x, load_scaled_dy, store,
-      mean->dptr<ComputeType>(), inv_variance->dptr<ComputeType>(), num_instances, norm_size,
-      spatial_size)));
+      mean->dptr<ComputeType>(), inv_variance->dptr<ComputeType>(), num_instances, norm_size)));
 }
 
 template<typename T>

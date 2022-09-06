@@ -161,6 +161,7 @@ struct DirectLoad {
 #pragma unroll
     for (int i = 0; i < N; ++i) { dst[i] = static_cast<DST>(pack.elem[i]); }
   }
+  bool CanPackAs(size_t pack_size) { return true; }
   const SRC* src;
   int64_t row_size;
 };
@@ -176,6 +177,7 @@ struct DirectStore {
     for (int i = 0; i < N; ++i) { pack.elem[i] = static_cast<DST>(src[i]); }
     *(reinterpret_cast<PackType<DST, N>*>(dst) + offset) = pack.storage;
   }
+  bool CanPackAs(size_t pack_size) { return true; }
   DST* dst;
   int64_t row_size;
 };
@@ -526,10 +528,10 @@ struct DispatchLayerNormWarpImplPackSize {
   cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
                          const int64_t cols, const double epsilon, ComputeType* mean,
                          ComputeType* inv_variance) {
-    if (cols % 4 == 0) {
+    if (load.CanPackAs(4) && store.CanPackAs(4)) {
       return DispatchLayerNormWarpImplCols<LOAD, STORE, ComputeType, 4>(
           stream, load, store, rows, cols, epsilon, mean, inv_variance);
-    } else if (cols % 2 == 0) {
+    } else if (load.CanPackAs(2) && store.CanPackAs(2)) {
       return DispatchLayerNormWarpImplCols<LOAD, STORE, ComputeType, 2>(
           stream, load, store, rows, cols, epsilon, mean, inv_variance);
     } else {
@@ -685,10 +687,10 @@ struct TryDispatchLayerNormBlockSMemImplPackSize {
   cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
                          const int64_t cols, const double epsilon, ComputeType* mean,
                          ComputeType* inv_variance, bool* success) {
-    if (cols % 4 == 0) {
+    if (load.CanPackAs(4) && store.CanPackAs(4)) {
       return TryDispatchLayerNormBlockSMemImplBlockSize<LOAD, STORE, ComputeType, 4>(
           stream, load, store, rows, cols, epsilon, mean, inv_variance, success);
-    } else if (cols % 2 == 0) {
+    } else if (load.CanPackAs(2) && store.CanPackAs(2)) {
       return TryDispatchLayerNormBlockSMemImplBlockSize<LOAD, STORE, ComputeType, 2>(
           stream, load, store, rows, cols, epsilon, mean, inv_variance, success);
     } else {
@@ -772,10 +774,10 @@ struct DispatchLayerNormBlockUncachedImplPackSize {
   cudaError_t operator()(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
                          const int64_t cols, const double epsilon, ComputeType* mean,
                          ComputeType* inv_variance) {
-    if (cols % 4 == 0) {
+    if (load.CanPackAs(4) && store.CanPackAs(4)) {
       return LaunchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, 4>(
           stream, load, store, rows, cols, epsilon, mean, inv_variance);
-    } else if (cols % 2 == 0) {
+    } else if (load.CanPackAs(2) && store.CanPackAs(2)) {
       return LaunchLayerNormBlockUncachedImpl<LOAD, STORE, ComputeType, 2>(
           stream, load, store, rows, cols, epsilon, mean, inv_variance);
     } else {
@@ -1059,7 +1061,7 @@ struct DispatchLayerNormGradWarpImplPackSize {
   cudaError_t operator()(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
                          STORE store, const ComputeType* mean, const ComputeType* inv_variance,
                          const int64_t rows, const int64_t cols) {
-    if (cols % 2 == 0) {
+    if (load.CanPackAs(2) && store.CanPackAs(2)) {
       return DispatchLayerNormGradWarpImplCols<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, 2>(
           stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
     } else {
@@ -1230,7 +1232,7 @@ struct TryDispatchLayerNormGradBlockSMemImplPackSize {
   cudaError_t operator()(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
                          STORE store, const ComputeType* mean, const ComputeType* inv_variance,
                          const int64_t rows, const int64_t cols, bool* success) {
-    if (cols % 2 == 0) {
+    if (load.CanPackAs(2) && store.CanPackAs(2)) {
       return TryDispatchLayerNormGradBlockSMemImplBlockSize<LOAD_X, LOAD_SCALED_DY, STORE,
                                                             ComputeType, 2>(
           stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols, success);
@@ -1328,7 +1330,7 @@ struct DispatchLayerNormGradBlockUncachedImplPackSize {
   cudaError_t operator()(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
                          STORE store, const ComputeType* mean, const ComputeType* inv_variance,
                          const int64_t rows, const int64_t cols) {
-    if (cols % 2 == 0 && cols > kWarpSize) {
+    if (load.CanPackAs(2) && store.CanPackAs(2) && cols > kWarpSize) {
       return LaunchLayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, 2>(
           stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
     } else {
