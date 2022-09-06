@@ -58,7 +58,7 @@ class TimeCounter final {
 
   inline void Reset() { start_ = Clock::now(); }
 
-  double Count(const std::string& log_prefix = "", int v_log_level = 0);
+  void Count(const std::string& log_prefix = "", int v_log_level = 0);
  private:
   using Clock = std::conditional_t<std::chrono::high_resolution_clock::is_steady,
                                    std::chrono::high_resolution_clock, std::chrono::steady_clock>;
@@ -68,7 +68,7 @@ class TimeCounter final {
 };
 
 template<class Resolution>
-double TimeCounter<Resolution>::Count(const std::string& log_prefix, int v_log_level) {
+void TimeCounter<Resolution>::Count(const std::string& log_prefix, int v_log_level) {
   const auto end = Clock::now();
   auto dur = std::chrono::duration_cast<Resolution>(end - start_).count();
   if (with_log_ && v_log_level >= 0) {
@@ -82,8 +82,6 @@ double TimeCounter<Resolution>::Count(const std::string& log_prefix, int v_log_l
     }
   }
   start_ = end;
-  double time_cnt = static_cast<double>(dur);
-  return time_cnt;
 }
 
 }  // namespace oneflow

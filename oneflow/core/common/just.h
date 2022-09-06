@@ -115,7 +115,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
           ::oneflow::private_details::JustGetError(_just_value_to_check_),                   \
           [](const char* function) {                                                         \
             thread_local static auto frame = ::oneflow::SymbolOf(::oneflow::ErrorStackFrame( \
-                __FILE__, __LINE__, function, OF_PP_STRINGIZE(__VA_ARGS__)));                \
+                __FILE__, __LINE__, function, #__VA_ARGS__));                \
             return frame;                                                                    \
           }(__FUNCTION__));                                                                  \
     }                                                                                        \
@@ -127,7 +127,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
     auto&& _just_value_to_check_ = __JustStackCheckWrapper__(__VA_ARGS__);              \
     if (!::oneflow::private_details::JustIsOk(_just_value_to_check_)) {                 \
       thread_local static auto frame = ::oneflow::SymbolOf(::oneflow::ErrorStackFrame(  \
-          __FILE__, __LINE__, _just_closure_func_name_, OF_PP_STRINGIZE(__VA_ARGS__))); \
+          __FILE__, __LINE__, _just_closure_func_name_, #__VA_ARGS__)); \
       LOG(FATAL) << ::oneflow::GetFormatedSerializedError(                              \
           ::oneflow::private_details::JustErrorAddStackFrame(                           \
               ::oneflow::private_details::JustGetError(_just_value_to_check_), frame)); \
@@ -144,10 +144,10 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
           ::oneflow::Error(::oneflow::private_details::JustGetError(_just_value_to_check_))      \
               .AddStackFrame([](const char* function) {                                          \
                 thread_local static auto frame = ::oneflow::SymbolOf(::oneflow::ErrorStackFrame( \
-                    __FILE__, __LINE__, function, OF_PP_STRINGIZE(value)));                      \
+                    __FILE__, __LINE__, function, #value));                      \
                 return frame;                                                                    \
               }(__FUNCTION__)),                                                                  \
-          "\nError message from " __FILE__, ":", __LINE__, "\n\t", OF_PP_STRINGIZE(value), ": ", \
+          "\nError message from " __FILE__, ":", __LINE__, "\n\t", #value, ": ", \
           __VA_ARGS__, "\n");                                                                    \
     }                                                                                            \
     std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_);                        \
@@ -158,12 +158,12 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
     auto&& _just_value_to_check_ = (value);                                                     \
     if (!::oneflow::private_details::JustIsOk(_just_value_to_check_)) {                         \
       thread_local static auto frame = ::oneflow::SymbolOf(::oneflow::ErrorStackFrame(          \
-          __FILE__, __LINE__, _just_closure_func_name_, OF_PP_STRINGIZE(value)));               \
+          __FILE__, __LINE__, _just_closure_func_name_, #value));               \
       LOG(FATAL) << ::oneflow::GetFormatedSerializedError(                                      \
           ::oneflow::private_details::JustErrorAddFrameMessage(                                 \
               ::oneflow::Error(::oneflow::private_details::JustGetError(_just_value_to_check_)) \
                   .AddStackFrame(frame),                                                        \
-              "\nError message from " __FILE__, ":", __LINE__, "\n\t", OF_PP_STRINGIZE(value),  \
+              "\nError message from " __FILE__, ":", __LINE__, "\n\t", #value,  \
               ": ", __VA_ARGS__, "\n")                                                          \
               .stacked_error());                                                                \
     }                                                                                           \
