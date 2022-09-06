@@ -46,7 +46,11 @@ Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   // only for nchw
   FOR_RANGE(int64_t, i, 0, std::min(2, (int)tensor.shape().NumAxes())) {
-    ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("x", 0), i)
+        .Split(user_op::OpArg("y", 0), i)
+        .Split(user_op::OpArg("index", 0), i)
+        .Build();
   }
   return Maybe<void>::Ok();
 }
@@ -58,6 +62,7 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
         .Split(user_op::OpArg("x", 0), i)
         .Split(user_op::OpArg("dy", 0), i)
         .Split(user_op::OpArg("dx", 0), i)
+        .Split(user_op::OpArg("index", 0), i)
         .Build();
   }
   return Maybe<void>::Ok();
@@ -94,6 +99,24 @@ Maybe<void> InferBWDataType(user_op::InferContext* ctx) {
   /* static */ Maybe<void> op_class_name_prefix##Op::InferDataType(user_op::InferContext* ctx) { \
     return InferFWDataType(ctx);                                                                 \
   }
+
+/* static */ Maybe<void> AdaptiveMaxPool2DGradOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferBWTensorDesc(ctx);
+}
+
+/*static*/
+Maybe<void> AdaptiveMaxPool2DGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */
+Maybe<void> AdaptiveMaxPool2DGradOp::GetSbp(user_op::SbpContext* ctx) { return BwGetSbpFn(ctx); }
+
+/* static */
+Maybe<void> AdaptiveMaxPool2DGradOp::InferDataType(user_op::InferContext* ctx) {
+  return InferBWDataType(ctx);
+}
 
 DEF_ADAPTIVE_MAX_POOL_OP(AdaptiveMaxPool1D);
 DEF_ADAPTIVE_MAX_POOL_OP(AdaptiveMaxPool2D);

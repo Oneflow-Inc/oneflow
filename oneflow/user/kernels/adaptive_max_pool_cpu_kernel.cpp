@@ -81,6 +81,47 @@ void AdapativeMaxPoolForward(user_op::KernelComputeContext* ctx) {
     }
   }
 }
+
+template<typename T, int32_t dim>
+void AdaptiveMaxPoolBackward(user_op::KernelComputeContext* ctx) {
+  user_op::Tensor* grad_input = ctx->Tensor4ArgNameAndIndex("dx", 0);
+  const user_op::Tensor* grad_output = ctx->Tensor4ArgNameAndIndex("dy", 0);
+  const user_op::Tensor* return_indices = ctx->Tensor4ArgNameAndIndex("index", 0);
+  const Shape& dx_shape = ctx->TensorDesc4ArgNameAndIndex("dx", 0)->shape();
+  const Shape& dy_shape = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->shape();
+
+  // TODO (Tianyu): Support 'channels_last'
+  std::string data_format = "channels_first";
+  const Shape& in = GetShape5D(dx_shape, data_format, dim);
+  const Shape& out = GetShape5D(dy_shape, data_format, dim);
+
+  const T* dy_ptr = grad_output->dptr<T>();
+  const int64_t* indices_ptr = return_indices->dptr<int64_t>();
+  T* dx_ptr = grad_input->mut_dptr<T>();
+
+  std::fill(dx_ptr, dx_ptr + grad_input->shape_view().elem_cnt(), static_cast<T>(0));
+
+  const int64_t output_width = out.Count(4);
+  const int64_t output_image_size = out.Count(3);
+  const int64_t input_size = in.Count(2);
+  const int64_t output_size = out.Count(2);
+
+  FOR_RANGE(int64_t, n, 0, in.At(0)) {
+    FOR_RANGE(int64_t, c, 0, in.At(1)) {
+      FOR_RANGE(int64_t, od, 0, out.At(2)) {
+        FOR_RANGE(int64_t, oh, 0, out.At(3)) {
+          FOR_RANGE(int64_t, ow, 0, out.At(4)) {
+            auto i = od * output_image_size + oh * output_width + ow;
+            dx_ptr[indices_ptr[i]] = dy_ptr[i];
+          }
+        }
+        dx_ptr += input_size;
+        dy_ptr += output_size;
+        indices_ptr += output_size;
+      }
+    }
+  }
+}
 }  // namespace
 
 template<typename T, int32_t dim>
@@ -96,10 +137,30 @@ class AdaptiveMaxPoolNDCpuKernel final : public user_op::OpKernel {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-#define REGISTER_ADAPTIVE_MAX_POOLND_CPU(optypename, dtype, dim)      \
-  REGISTER_USER_KERNEL(optypename)                                    \
-      .SetCreateFn<AdaptiveMaxPoolNDCpuKernel<dtype, dim>>()          \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
+
+template<typename T, int32_t dim>
+class AdaptiveMaxPoolNDGradCpuKernel final : public user_op::OpKernel {
+ public:
+  AdaptiveMaxPoolNDGradCpuKernel() = default;
+  ~AdaptiveMaxPoolNDGradCpuKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    AdaptiveMaxPoolBackward<T, dim>(ctx);
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_ADAPTIVE_MAX_POOLND_CPU(optypename, dtype, dim)                        \
+  REGISTER_USER_KERNEL(optypename)                                                      \
+      .SetCreateFn<AdaptiveMaxPoolNDCpuKernel<dtype, dim>>()                            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                   \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
+                                                                                        \
+  REGISTER_USER_KERNEL(optypename "_grad")                                              \
+      .SetCreateFn<AdaptiveMaxPoolNDGradCpuKernel<dtype, dim>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                   \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_ADAPTIVE_MAX_POOL_CPU(optypename, dim)      \
