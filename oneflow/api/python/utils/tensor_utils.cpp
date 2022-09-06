@@ -157,7 +157,7 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
                                       const bool requires_grad, const bool pin_memory) {
   PyObject* array = NULL;
   PyArray_Descr* np_dtype =
-      dtype.has_value()
+      dtype.has_value() && JUST(dtype)->data_type() != DataType::kBFloat16
           ? PyArray_DescrFromType(JUST(numpy::OFDataTypeToNumpyType(JUST(dtype)->data_type())))
           : nullptr;
   // PyArray_FromAny steals a reference to np_dtype object, so no need to decref it.
