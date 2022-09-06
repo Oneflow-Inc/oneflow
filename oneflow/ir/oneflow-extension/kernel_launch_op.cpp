@@ -89,6 +89,7 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
     auto& block = body.front();
     CHECK(!block.empty());
     auto& op = block.front();
+    op.dump();
     for (const auto& operand_id : ::llvm::enumerate(
              ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedOperandSegments>(&op))) {
       user_op::NaiveTensorDesc tensor_desc{};
@@ -121,14 +122,18 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
       }
       CHECK(arg2tensor_desc_.emplace(result_id.value(), tensor_desc).second) << "duplicate key";
     }
-    op.dump();
+    auto dev_tag = mlir::OpTrait::IsOpConfCompatible<void>::getDeviceTag(&op);
+    if (dev_tag == "cpu") {
+      device_type_ = DeviceType::kCPU;
+    } else if (dev_tag == "cuda") {
+      device_type_ = DeviceType::kCUDA;
+    } else {
+      LOG(FATAL) << "Unsupported device tag: " << dev_tag.str();
+    }
   }
 
   ~KernelLaunchOpKernelRegContext() = default;
-  DeviceType device_type() const override {
-    TODO() << "create from device attr in op in mlir";
-    return device_type_;
-  }
+  DeviceType device_type() const override { return device_type_; }
   const ParallelContext& parallel_ctx() const override {
     TODO() << "create from device attr in op in mlir";
     ParallelContext* parallel_ctx = nullptr;
