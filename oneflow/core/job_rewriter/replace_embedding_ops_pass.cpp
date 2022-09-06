@@ -208,8 +208,7 @@ void BuildEmbeddingGradientShuffle(
     const user_op::UserOpConfWrapper& embedding_op, const std::string& inverse_indices_lbn,
     const std::string& inner_inverse_unique_partition_indices_lbn,
     const std::string& num_unique_matrix_lbn, const std::string& update_embedding_grad,
-    const bool has_clip_grad, std::string* cur_rank_unique_embedding_grad_lbn,
-    const int64_t padding_idx, const bool has_padding_idx) {
+    const bool has_clip_grad, std::string* cur_rank_unique_embedding_grad_lbn) {
   std::string update_embedding_grad_lbn = update_embedding_grad;
   if (ctx->job_desc().enable_auto_mixed_precision()
       && !ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_GRADIENT_SHUFFLE_USE_FP16", true)) {
@@ -258,7 +257,6 @@ void BuildEmbeddingGradientShuffle(
             .Attr<std::string>("embedding_name", embedding_name)
             .Attr<int64_t>("embedding_size", embedding_size)
             .Attr<bool>("only_zero_valid_grad", only_zero_valid_grad)
-            .Attr<int64_t>("padding_idx", padding_idx)
             .ScopeSymbolId(embedding_scope_symbol_id)
             .Build();
     OperatorConf embedding_gradient_shuffle_new_op_conf = embedding_gradient_shuffle_op.op_conf();
@@ -1058,8 +1056,6 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     std::string inverse_indices_lbn;
     std::string num_unique_matrix_lbn;
 
-    const int64_t padding_idx = embedding_op.attr<int64_t>("padding_idx");
-    const bool has_padding_idx = embedding_op.attr<bool>("has_padding_idx");
     BuildIdShuffle(use_system_gather, options.Name(), embedding_op, &add_ops,
                    &inner_inverse_unique_partition_indices_lbn, &num_unique_ids_lbn,
                    &unique_ids_lbn, &unique_table_ids_lbn, &inverse_indices_lbn,
@@ -1139,7 +1135,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             embedding_parallel_conf, embedding_scope_symbol_id, embedding_op, inverse_indices_lbn,
             inner_inverse_unique_partition_indices_lbn, num_unique_matrix_lbn,
             update_op_conf.input("embedding_grad", 0), embedding_optimizer_conf.has_clip_conf(),
-            &embedding_grad_lbn, padding_idx, has_padding_idx);
+            &embedding_grad_lbn);
 
         const OpNode* shadow_node = op_graph.OpNode4OpName(shadow_op_name);
         const VariableOpConf& shadow_variable_conf = shadow_node->op().op_conf().variable_conf();

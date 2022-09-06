@@ -9610,8 +9610,6 @@ def OneFlow_EmbeddingGradientShuffleOp : OneFlow_BaseOp<"embedding_gradient_shuf
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
     DefaultValuedAttr<BoolAttr, "false">:$only_zero_valid_grad,
     DefaultValuedAttr<BoolAttr, "false">:$skip_first_scatter,
-    DefaultValuedAttr<SI64Attr, "-1">:$padding_idx,
-    DefaultValuedAttr<BoolAttr, "false">:$has_padding_idx,
     StrAttr:$embedding_name
   );
   let same_output_regst_num = 1;
