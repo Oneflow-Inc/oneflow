@@ -273,7 +273,7 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
     OF_PP_FOR_EACH_TUPLE(SWITCH_EAGER_TENSOR_TO_NUMPY, POD_DATA_TYPE_SEQ)
     case DataType::kFloat16: return ASSERT(EagerLocalTensorToNumpy<float16>(self));
     default: {
-      return PyErr_Format(PyExc_RuntimeError, ("Invalid datatype " + ToString(data_type)).data());
+      return PyErr_Format(PyExc_RuntimeError, ("Invalid datatype " + DataType_Name(data_type)).data());
     }
   }
 #undef SWITCH_EAGER_TENSOR_TO_NUMPY
