@@ -27,7 +27,7 @@ namespace {
 class UsingThreadUidSet final {
  public:
   UsingThreadUidSet()
-      : using_thread_uids_({Stream::kDefaultStreamThreadUid, Stream::kTmpStreamThreadUid}),
+      : using_thread_uids_({Stream::kDefaultStreamThreadUid}),
         thread_limits_(using_thread_uids_.size()
                        + ThreadLocalEnvInteger<ONEFLOW_VM_WORKER_THREAD_LIMIT>()) {}
   ~UsingThreadUidSet() = default;
@@ -51,8 +51,6 @@ class UsingThreadUidSet final {
     std::unique_lock<std::mutex> lock(mutex_);
     CHECK_NE_OR_RETURN(thread_uid, Stream::kDefaultStreamThreadUid)
         << "default thread_uid should not be erased. value: " << thread_uid;
-    CHECK_NE_OR_RETURN(thread_uid, Stream::kTmpStreamThreadUid)
-        << "temporary thread_uid should not be erased. value: " << thread_uid;
     CHECK_OR_RETURN(using_thread_uids_.erase(thread_uid) > 0)
         << "no thread_uid found. (current: " << thread_uid << ").";
     return Maybe<void>::Ok();
