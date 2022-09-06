@@ -47,6 +47,11 @@ Maybe<int> OFDataTypeToNumpyType(DataType of_data_type) {
     case DataType::kInt64: return NPY_INT64;
     case DataType::kUInt8: return NPY_UINT8;
     case DataType::kFloat16: return NPY_FLOAT16;
+#if defined(WITH_CUDA)
+#if CUDA_VERSION >= 11000
+    case DataType::kBFloat16: return NPY_FLOAT16;
+#endif  // CUDA_VERSION >= 11000
+#endif  // defined(WITH_CUDA)
     default:
       return Error::InvalidValueError() << "OneFlow data type " << DataType_Name(of_data_type)
                                         << " is not valid to Numpy data type.";

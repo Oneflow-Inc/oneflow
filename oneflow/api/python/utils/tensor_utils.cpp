@@ -195,6 +195,9 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   JUST(SwitchCopyLocalTensorFromUntypedArray(SwitchCase(data_type), tensor, array));
 
   Py_DECREF(array);
+  if (dtype && JUST(dtype)->data_type() != data_type) {
+    tensor = JUST(functional::To(tensor, JUST(dtype), false));
+  }
   JUST(tensor->set_requires_grad(requires_grad));
   return tensor;
 }

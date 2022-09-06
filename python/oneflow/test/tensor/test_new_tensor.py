@@ -62,6 +62,14 @@ class TestNewTensor(flow.unittest.TestCase):
         test_case.assertEqual(new_tensor.dtype, tensor.dtype)
         test_case.assertEqual(new_tensor.placement, placement)
         test_case.assertEqual(new_tensor.sbp, (flow.sbp.broadcast,))
+    
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    @flow.unittest.skip_unless_1n1d()
+    def test_new_cuda_bfloat16_local_tensor_with_numpy(test_case):
+        np_array = np.random.rand(4, 4)
+        tensor = flow.tensor(np_array, dtype=flow.bfloat16, device="cuda")
+        test_case.assertEqual(tensor.dtype, flow.bfloat16)
+        test_case.assertEqual(tensor.device, flow.device("cuda"))
 
 
 if __name__ == "__main__":
