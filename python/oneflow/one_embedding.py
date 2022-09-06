@@ -305,7 +305,7 @@ class Embedding(Module):
 
 
 def make_device_mem_store_options(
-    persistent_path, capacity, size_factor=1, physical_block_size=512, padding_idx=-1
+    persistent_path, capacity, size_factor=1, physical_block_size=512
 ):
     """make GPU only store_options param of MultiTableEmbedding
 
@@ -330,7 +330,6 @@ def make_device_mem_store_options(
                     "policy": "full",
                     "capacity": int(capacity),
                     "value_memory_kind": "device",
-                    "padding_idx": int(padding_idx),
                 }
             ],
             "persistent_table": {
