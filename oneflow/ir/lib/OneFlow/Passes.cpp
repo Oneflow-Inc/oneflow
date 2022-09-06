@@ -235,7 +235,7 @@ func::FuncOp GetOrInsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operat
 
 func::FuncOp GetOrInsertKernelLLVMFuncOp(::mlir::PatternRewriter& rewriter, func::FuncOp op) {
   auto loc = op->getLoc();
-  auto llvm_ptr_type = LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 32));
+  auto llvm_ptr_type = LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8));
   auto parent_module_op = op->getParentOfType<ModuleOp>();
   if (!parent_module_op) {
     emitError(loc) << "null ModuleOp " << *op;
