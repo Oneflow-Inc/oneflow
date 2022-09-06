@@ -820,6 +820,14 @@ void PlanUtil::SetForceInplaceMemBlock(Plan* plan) {
       }
     }
   }
+
+  // tmp debug log
+  for (int i = 0; i < plan->task_size(); i++) {
+    TaskProto* task = plan->mutable_task(i);
+    if (task->task_type() == kRepeat && task->produced_regst_desc().size() > 1) {
+      LOG(WARNING) << " bad repeat : " << task->DebugString();
+    }
+  }
 }
 
 void PlanUtil::DumpCtrlRegstInfoToPlan(Plan* plan) {

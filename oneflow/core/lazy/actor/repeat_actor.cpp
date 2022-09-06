@@ -104,7 +104,6 @@ void RepeatActor::VirtualActorInit(const TaskProto& proto) {
 
   // input
   const auto& consumed_ids = proto.consumed_regst_desc_id();
-  CHECK_EQ(consumed_ids.size(), 1);
   CHECK(consumed_ids.find("in") != consumed_ids.end());
   const auto& in_ids = consumed_ids.at("in");
   CHECK_EQ(in_ids.regst_desc_id_size(), 1);
@@ -114,7 +113,6 @@ void RepeatActor::VirtualActorInit(const TaskProto& proto) {
 
   // output
   const auto& produced_ids = proto.produced_regst_desc();
-  CHECK_EQ(produced_ids.size(), 1);
   CHECK(produced_ids.find("out") != produced_ids.end());
   const RegstDescProto& out_regst_desc = produced_ids.at("out");
   CHECK(!out_regst_desc.enable_reuse_mem());
@@ -124,18 +122,39 @@ void RepeatActor::VirtualActorInit(const TaskProto& proto) {
   produced_repeat_var_regst_desc_id_ = out_regst_desc.regst_desc_id();
   produced_repeat_var_rs_.InsertRegstDescId(produced_repeat_var_regst_desc_id_);
   produced_repeat_var_rs_.InitedDone();
-  // Regst number hacking
-  for (int64_t i = 1; i < repeat_num_; ++i) {
-    Singleton<RegstMgr>::Get()->NewRegsts(out_regst_desc, [this](Regst* regst) {
-      produced_regsts_[this->produced_repeat_var_regst_desc_id_].emplace_back(regst);
-      produced_regst2reading_cnt_[regst] = 0;
-    });
+
+  // NOTE(chengcheng): repeat actor may has output ctrl regst. ctrl regst also need hack regst num.
+  for (const auto& pair : proto.produced_regst_desc()) {
+    const RegstDescProto& regst_desc = pair.second;
+    int64_t regst_desc_id = regst_desc.regst_desc_id();
+    // This iter begins from 1 because first ctrl regst was already inserted in
+    // TakeOverNaiveProduced
+    for (int64_t i = 1; i < repeat_num_; ++i) {
+      Singleton<RegstMgr>::Get()->NewRegsts(regst_desc, [this, regst_desc_id](Regst* regst) {
+        produced_regsts_[regst_desc_id].emplace_back(regst);
+        produced_regst2reading_cnt_[regst] = 0;
+        if (regst_desc_id != produced_repeat_var_regst_desc_id_) {
+          CHECK_EQ(0, naive_produced_rs_.TryPushBackRegst(regst));
+        }
+      });
+    }
   }
 
   ForEachProducedRegst([&](Regst* regst) {
-    if (regst->regst_desc_id() != produced_repeat_var_regst_desc_id_) { return; }
-    CHECK_EQ(0, produced_repeat_var_rs_.TryPushBackRegst(regst));
+    if (regst->regst_desc_id() == produced_repeat_var_regst_desc_id_) {
+      CHECK_EQ(0, produced_repeat_var_rs_.TryPushBackRegst(regst));
+    }
   });
+
+  for (const auto& pair : proto.produced_regst_desc()) {
+    const RegstDescProto& regst_desc = pair.second;
+    int64_t regst_desc_id = regst_desc.regst_desc_id();
+    if (regst_desc_id == produced_repeat_var_regst_desc_id_) {
+      CHECK_EQ(produced_repeat_var_rs_.GetReadyRegstSize(regst_desc_id), repeat_num_);
+    } else {
+      CHECK_EQ(naive_produced_rs_.GetReadyRegstSize(regst_desc_id), repeat_num_);
+    }
+  }
 
   OF_SET_MSG_HANDLER(&RepeatActor::HandlerNormal);
 }
