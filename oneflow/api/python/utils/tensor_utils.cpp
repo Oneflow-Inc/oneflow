@@ -156,7 +156,7 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
                                       const Optional<Symbol<Device>>& device,
                                       const bool requires_grad, const bool pin_memory) {
   bool is_bfloat16_dtype = dtype ? JUST(dtype)->data_type() == DataType::kBFloat16 : false;
-  bool is_cuda_device = device ?  JUST(device)->enum_type() == DeviceType::kCUDA : false;
+  bool is_cuda_device = device ? JUST(device)->enum_type() == DeviceType::kCUDA : false;
   if (is_bfloat16_dtype && !is_cuda_device) {
     return Error::RuntimeError() << "Can build a bfloat16 tensor on cpu.";
   }
