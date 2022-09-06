@@ -89,10 +89,37 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
     auto& block = body.front();
     CHECK(!block.empty());
     auto& op = block.front();
-    for (auto& id :
-         ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedOperandSegments>(&op)) {
+    for (const auto& operand_id : ::llvm::enumerate(
+             ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedOperandSegments>(&op))) {
       user_op::NaiveTensorDesc tensor_desc{};
-      CHECK(cached_tensor_descs_.emplace(id, tensor_desc).second) << "duplicate key";
+      auto operand = op.getOperand(operand_id.index());
+      if (auto rankedTensorType = operand.getType().dyn_cast<mlir::RankedTensorType>()) {
+        *tensor_desc.mut_shape() =
+            Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()};
+        *tensor_desc.mut_data_type() =
+            mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType());
+        // TODO: set stride
+        // TODO: set is_dynamic
+      } else {
+        LOG(FATAL) << "Unranked tensor type not supported";
+      }
+      CHECK(arg2tensor_desc_.emplace(operand_id.value(), tensor_desc).second) << "duplicate key";
+    }
+    for (const auto& result_id : ::llvm::enumerate(
+             ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedResultSegments>(&op))) {
+      user_op::NaiveTensorDesc tensor_desc{};
+      auto result = op.getResult(result_id.index());
+      if (auto rankedTensorType = result.getType().dyn_cast<mlir::RankedTensorType>()) {
+        *tensor_desc.mut_shape() =
+            Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()};
+        *tensor_desc.mut_data_type() =
+            mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType());
+        // TODO: set stride
+        // TODO: set is_dynamic
+      } else {
+        LOG(FATAL) << "Unranked tensor type not supported";
+      }
+      CHECK(arg2tensor_desc_.emplace(result_id.value(), tensor_desc).second) << "duplicate key";
     }
     op.dump();
   }
@@ -109,10 +136,9 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
   }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
-    LOG(ERROR) << "arg_name: " << arg_name << " index: " << index;
-
-    TODO() << "query and build tensor desc from op in mlir";
-    return nullptr;
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; }
+    return &(it->second);
   }
   const ArgVec& inputs() const override {
     TODO() << "query inputs from op in mlir";
@@ -138,7 +164,7 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
   ::mlir::func::FuncOp func_op_;
   ::mlir::ModuleOp owned_module_;
   DeviceType device_type_;
-  std::unordered_map<ArgID, user_op::NaiveTensorDesc> cached_tensor_descs_{};
+  std::unordered_map<ArgID, user_op::NaiveTensorDesc> arg2tensor_desc_{};
 };
 
 template<typename T>
