@@ -23,6 +23,7 @@ limitations under the License.
 #include "llvm/Support/TargetSelect.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
+#include "OneFlow/UserOpReflection.h"
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/switch_func.h"
@@ -82,6 +83,27 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
       return ::mlir::WalkResult::interrupt();
     });
     if (!func_op_) { LOG(FATAL) << "FuncOp not found in module"; }
+
+    // init blob descriptors
+    auto& body = func_op_->getRegion(0);
+    auto& block = body.front();
+    CHECK(!block.empty());
+    auto& op = block.front();
+    std::vector<std::string> keys{};
+    std::vector<int32_t> sizes{};
+    if (failed(::mlir::oneflow::user_op::GetFilteredSegmentKeyAndSizes<
+               mlir::OpTrait::AttrSizedOperandSegments>(&op, keys, sizes))) {
+      LOG(FATAL) << "fail to convert user op inputs";
+    }
+    for (int i = 0; i < keys.size(); i += 1) {
+      auto& key = keys[i];
+      for (size_t j = 0; j < sizes.size(); j += 1) {
+        ArgID id{key, j};
+        user_op::NaiveTensorDesc tensor_desc{};
+        CHECK(cached_tensor_descs_.emplace(id, tensor_desc).second) << "duplicate key";
+      }
+    }
+    op.dump();
   }
 
   ~KernelLaunchOpKernelRegContext() = default;
@@ -97,11 +119,7 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
     LOG(ERROR) << "arg_name: " << arg_name << " index: " << index;
-    auto& body = func_op_->getRegion(0);
-    auto& block = body.front();
-    CHECK(!block.empty());
-    auto& op = block.front();
-    op.dump();
+
     TODO() << "query and build tensor desc from op in mlir";
     return nullptr;
   }
