@@ -193,11 +193,11 @@
   bind_python: True
 
 - name: "pow_x_grad"
-  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => PowXGrad"
+  signature: "Tensor (Tensor x, Tensor y, Tensor dz) => PowXGrad"
   bind_python: False
 
 - name: "pow_y_grad"
-  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => PowYGrad"
+  signature: "Tensor (Tensor x, Tensor y, Tensor dz) => PowYGrad"
   bind_python: False
 
 - name: "searchsorted"
@@ -221,11 +221,11 @@
   bind_python: False
 
 - name: "broadcast_pow_x_grad"
-  signature: "Tensor (Tensor dz, Tensor x, Tensor y, Tensor z) => BroadcastPowXGrad"
+  signature: "Tensor (Tensor x, Tensor y, Tensor dz) => BroadcastPowXGrad"
   bind_python: False
 
 - name: "broadcast_pow_y_grad"
-  signature: "Tensor (Tensor dz, Tensor x, Tensor y, Tensor z) => BroadcastPowYGrad"
+  signature: "Tensor (Tensor x, Tensor y, Tensor dz) => BroadcastPowYGrad"
   bind_python: False
 
 - name: "floor_divide"
@@ -911,10 +911,6 @@
   signature: "Tensor (Tensor x, Shape shape) => Expand"
   bind_python: True
 
-- name: "expand_grad"
-  signature: "Tensor (Tensor dy, Int32List out, Int32List expand) => ExpandGrad"
-  bind_python: False
-
 - name: "repeat"
   signature: "Tensor (Tensor input, Shape repeat_shape) => Repeat"
   bind_python: True
@@ -1149,8 +1145,12 @@
   bind_python: True
 
 - name: "cross_entropy"
-  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index=-100, String reduction=\"mean\") => CrossEntropy"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index=-100, String reduction=\"mean\", Double label_smoothing=0.0) => CrossEntropy"
   bind_python: True
+
+- name: "cross_entropy_label_smoothing"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index=-100, String reduction=\"mean\", Double label_smoothing=0.0) => CrossEntropyLabelSmoothing"
+  bind_python: False
 
 - name: "distributed_sparse_cross_entropy_grad"
   signature: "Tensor (Tensor prediction, Tensor label, Tensor dy, Int64 depth) => SparseCrossEntropyMsGrad"
@@ -2606,3 +2606,103 @@
 - name: "batch_norm_backward_elemt"
   signature: "Tensor (Tensor grad_out, Tensor input, Tensor mean, Tensor invstd, Tensor weight, Tensor sum_dy, Tensor sum_dy_xmu, Tensor count, Int32 axis) => BatchNormBackwardElemt"
   bind_python: True
+
+- name: "tan_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  TanGradGrad" 
+  bind_python: False
+
+- name: "sinh_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  SinhGradGrad" 
+  bind_python: False
+
+- name: "cosh_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  CoshGradGrad" 
+  bind_python: False
+
+- name: "tanh_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  TanhGradGrad" 
+  bind_python: False
+
+- name: "acos_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  AcosGradGrad" 
+  bind_python: False
+
+- name: "asin_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  AsinGradGrad" 
+  bind_python: False
+
+- name: "atan_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  AtanGradGrad" 
+  bind_python: False
+
+- name: "asinh_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  AsinhGradGrad" 
+  bind_python: False
+
+- name: "acosh_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  AcoshGradGrad" 
+  bind_python: False
+
+- name: "atanh_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  AtanhGradGrad" 
+  bind_python: False
+
+- name: "erf_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  ErfGradGrad" 
+  bind_python: False
+
+- name: "erfc_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  ErfcGradGrad" 
+  bind_python: False
+
+- name: "exp_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  ExpGradGrad" 
+  bind_python: False
+
+- name: "expm1_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  Expm1GradGrad" 
+  bind_python: False
+
+- name: "log_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  LogGradGrad" 
+  bind_python: False
+
+- name: "logsigmoid_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  LogSigmoidGradGrad" 
+  bind_python: False
+
+- name: "log2_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  Log2GradGrad" 
+  bind_python: False
+
+- name: "log10_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  Log10GradGrad" 
+  bind_python: False
+
+- name: "log1p_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  Log1pGradGrad" 
+  bind_python: False
+
+- name: "reciprocal_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  ReciprocalGradGrad" 
+  bind_python: False
+
+- name: "reciprocal_no_nan_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  ReciprocalNoNanGradGrad" 
+  bind_python: False
+
+- name: "rsqrt_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  RsqrtGradGrad" 
+  bind_python: False
+
+- name: "sqrt_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  SqrtGradGrad" 
+  bind_python: False
+
+- name: "square_grad_grad"  
+  signature: "Tensor (Tensor x, Tensor dydx) =>  SquareGradGrad" 
+  bind_python: False
+
+- name: "sigmoid_grad_grad"  
+  signature: "Tensor (Tensor y, Tensor dydx) =>  SigmoidGradGrad" 
+  bind_python: False

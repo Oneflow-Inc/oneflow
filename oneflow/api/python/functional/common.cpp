@@ -50,7 +50,10 @@ template<typename T, typename std::enable_if<!std::is_base_of<py::object, T>::va
 const T& cast_fast(PyObject* obj) {
   auto vh = reinterpret_cast<py::detail::instance*>(obj)->get_value_and_holder();
   auto*& vptr = vh.value_ptr();
-  if (!vptr) { THROW(RuntimeError) << "Lazy allocation is not allowed"; }
+  if (!vptr) {
+    throw py::cast_error("Unable to cast from object to T& since lazy allocation is not allowed "
+                         "for fast cast, please use pybind11::cast instead");
+  }
   return *reinterpret_cast<T*>(&vptr);
 }
 
@@ -60,7 +63,7 @@ template<typename T, typename std::enable_if<!std::is_base_of<py::object, T>::va
 const T& cast_fast(PyObject* obj) {
   auto vh = reinterpret_cast<py::detail::instance*>(obj)->get_value_and_holder();
   if (!vh.holder_constructed()) {
-    throw py::cast_error("Unable to cast from non-held to held instance (T& to Holder<T>) ");
+    throw py::cast_error("Unable to cast from non-held to held instance (T& to Holder<T>)");
   }
   return vh.template holder<T>();
 }

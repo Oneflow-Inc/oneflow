@@ -211,7 +211,7 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
   // empty op.
   if (parallel_id.has_value() && shape->elem_cnt() != 0) {
     const auto& cur_rank_phy_tensor_meta =
-        SymbolOf(LocalTensorMeta(cur_rank_phy_shape, dtype, device));
+        SymbolOf(LocalTensorMeta(*cur_rank_phy_shape, dtype, device));
     auto cur_rank_phy_tensor_impl = std::make_shared<EagerLocalTensorImpl>(requires_grad, is_leaf);
     const auto& dep_object = NewLocalDepObject();
     JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(cur_rank_phy_tensor_meta, dep_object));
