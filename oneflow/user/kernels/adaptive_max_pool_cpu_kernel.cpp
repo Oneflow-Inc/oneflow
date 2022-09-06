@@ -112,7 +112,7 @@ void AdaptiveMaxPoolBackward(user_op::KernelComputeContext* ctx) {
         FOR_RANGE(int64_t, oh, 0, out.At(3)) {
           FOR_RANGE(int64_t, ow, 0, out.At(4)) {
             auto i = od * output_image_size + oh * output_width + ow;
-            dx_ptr[indices_ptr[i]] = dy_ptr[i];
+            dx_ptr[indices_ptr[i]] += dy_ptr[i];
           }
         }
         dx_ptr += input_size;
@@ -161,7 +161,7 @@ class AdaptiveMaxPoolNDGradCpuKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(optypename "_grad")                                              \
       .SetCreateFn<AdaptiveMaxPoolNDGradCpuKernel<dtype, dim>>()                        \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                   \
-                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_ADAPTIVE_MAX_POOL_CPU(optypename, dim)      \
   REGISTER_ADAPTIVE_MAX_POOLND_CPU(optypename, double, dim); \

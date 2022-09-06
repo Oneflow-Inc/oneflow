@@ -2608,5 +2608,5 @@
 
 - name: "adaptive_max_pool2d_grad"
   signature:
-    "Tensor (Tensor x, Tensor index, Tensor dy, Int32 ndims) => AdaptiveMaxPool2dGrad"
+    "Tensor (Tensor x, Tensor index, Tensor dy, Int32 ndims) => AdaptiveMaxPoolNdGrad"
   bind_python: True

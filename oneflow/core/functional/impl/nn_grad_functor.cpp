@@ -183,7 +183,7 @@ class MaxPoolNdGradFunctor {
 class AdaptiveMaxPoolNdGradFunctor {
  public:
   AdaptiveMaxPoolNdGradFunctor() {
-    for (int ndims = 1; ndims <= 3; ++ndims) {
+    for (int ndims = 2; ndims <= 2; ++ndims) {
       const auto& op_type_name = GetOpTypeName(ndims);
       op_expr_map_[op_type_name] = CHECK_JUST(
           one::OpBuilder(op_type_name).Input("x").Input("dy").Input("index").Output("dx").Build());
@@ -193,15 +193,15 @@ class AdaptiveMaxPoolNdGradFunctor {
     return "adaptive_max_pool" + std::to_string(ndims) + "d_grad";
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& index,
-                           const std::shared_ptr<one::Tensor>& dy, const int32_t& ndims) const {
+                           const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& index, const int32_t& ndims) const {
     const auto& op_type_name = GetOpTypeName(ndims);
     const auto& it = op_expr_map_.find(op_type_name);
     CHECK_OR_RETURN(it != op_expr_map_.end())
         << Error::RuntimeError() << "Encounter unsupported op " << op_type_name
         << " in AdaptiveMaxPoolNdGradFunctor.";
     CHECK_NOTNULL_OR_RETURN(it->second);  // NOLINT(maybe-need-error-msg)
-    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, index, dy});
+    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, dy, index});
   }
 
  protected:
@@ -1334,6 +1334,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AffineGridGradFunctor>("AffineGridGrad");
   m.add_functor<impl::GridSampleGradFunctor>("GridSampleGrad");
   m.add_functor<impl::MaxPoolNdGradFunctor>("MaxPoolNdGrad");
+  m.add_functor<impl::AdaptiveMaxPoolNdGradFunctor>("AdaptiveMaxPoolNdGrad");
   m.add_functor<impl::PadGradFunctor>("PadGrad");
   m.add_functor<impl::AvgPoolNdGradFunctor>("AvgPoolNdGrad");
   m.add_functor<impl::NormalizationGradFunctor>("NormalizationGrad");
