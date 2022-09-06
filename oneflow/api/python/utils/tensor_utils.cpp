@@ -155,14 +155,14 @@ DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, CopyLocalTensorFromUntypedArray,  // NOLI
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                       const Optional<Symbol<Device>>& device,
                                       const bool requires_grad, const bool pin_memory) {
-  bool is_bfloat16_dtype = dtype ? false : JUST(dtype)->data_type() != DataType::kBFloat16;
+  bool is_bfloat16_dtype = dtype ? false : JUST(dtype)->data_type() == DataType::kBFloat16;
   bool is_cuda_device = device ? false : JUST(device)->enum_type() == DeviceType::kCUDA;
   if (is_bfloat16_dtype && !is_cuda_device) {
     return Error::RuntimeError() << "Can build a bfloat16 tensor on cpu.";
   }
   PyObject* array = NULL;
   PyArray_Descr* np_dtype =
-      dtype.has_value() && JUST(dtype)->data_type() != DataType::kBFloat16
+      dtype.has_value() && is_bfloat16_dtype
           ? PyArray_DescrFromType(JUST(numpy::OFDataTypeToNumpyType(JUST(dtype)->data_type())))
           : nullptr;
   // PyArray_FromAny steals a reference to np_dtype object, so no need to decref it.
