@@ -89,19 +89,10 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
     auto& block = body.front();
     CHECK(!block.empty());
     auto& op = block.front();
-    std::vector<std::string> keys{};
-    std::vector<int32_t> sizes{};
-    if (failed(::mlir::oneflow::user_op::GetFilteredSegmentKeyAndSizes<
-               mlir::OpTrait::AttrSizedOperandSegments>(&op, keys, sizes))) {
-      LOG(FATAL) << "fail to convert user op inputs";
-    }
-    for (int i = 0; i < keys.size(); i += 1) {
-      auto& key = keys[i];
-      for (size_t j = 0; j < sizes.size(); j += 1) {
-        ArgID id{key, j};
-        user_op::NaiveTensorDesc tensor_desc{};
-        CHECK(cached_tensor_descs_.emplace(id, tensor_desc).second) << "duplicate key";
-      }
+    for (auto& id :
+         ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedOperandSegments>(&op)) {
+      user_op::NaiveTensorDesc tensor_desc{};
+      CHECK(cached_tensor_descs_.emplace(id, tensor_desc).second) << "duplicate key";
     }
     op.dump();
   }
