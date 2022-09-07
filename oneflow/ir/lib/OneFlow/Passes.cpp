@@ -194,9 +194,7 @@ LLVM::GlobalOp DeclareorGetGlobalString(::mlir::PatternRewriter& rewriter, mlir:
 ModuleOp GetModuleOpFromJobBodyOp(Operation* op) {
   auto parent_func_op = op->getParentOfType<oneflow::Job>();
   if (!parent_func_op) { return nullptr; }
-  auto parent_module_op = parent_func_op->getParentOfType<ModuleOp>();
-  if (!parent_module_op) { return nullptr; }
-  return parent_module_op;
+  return parent_func_op->getParentOfType<ModuleOp>();
 }
 
 func::FuncOp GetOrInsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operation* op) {
