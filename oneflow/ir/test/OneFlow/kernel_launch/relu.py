@@ -20,4 +20,10 @@ class GraphToRun(flow.nn.Graph):
 x = flow.Tensor([1, -1])
 graph_to_run = GraphToRun()
 lazy_relu = graph_to_run(x)
-assert flow.all(flow.equal(lazy_relu, flow.Tensor([1, 0])))
+
+
+def assert_equal(a, b):
+    assert flow.all(flow.equal(a, b)), {"left": a, "right": b}
+
+
+assert_equal(lazy_relu, flow.Tensor([1, 0]))
