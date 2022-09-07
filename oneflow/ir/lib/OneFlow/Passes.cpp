@@ -244,7 +244,6 @@ LLVM::LLVMFuncOp GetOrInsertKernelLLVMFuncOp(::mlir::PatternRewriter& rewriter, 
   StringRef c_api_callee = "kernel_launch";
   LLVM::LLVMFuncOp c_api_func =
       DeclareKernelLaunchCInterface(rewriter, loc, &parent_module_op, c_api_callee, llvm_ptr_type);
-  auto global = DeclareorGetGlobalString(rewriter, loc, &parent_module_op, op.getSymName());
 
   auto func_name = std::string("_mlir_ciface_") + op.getSymName().str();
   auto void_type = LLVM::LLVMVoidType::get(rewriter.getContext());
@@ -259,16 +258,9 @@ LLVM::LLVMFuncOp GetOrInsertKernelLLVMFuncOp(::mlir::PatternRewriter& rewriter, 
   func.getBody().addArgument(llvm_ptr_type, loc);
   OpBuilder::InsertionGuard guard_func(rewriter);
   rewriter.setInsertionPointToStart(&func.getBody().front());
-  Value globalPtr = rewriter.create<LLVM::AddressOfOp>(loc, global);
-  Value cst0 =
-      rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), rewriter.getIndexAttr(0));
-  auto gep_op =
-      rewriter.create<LLVM::GEPOp>(loc, llvm_ptr_type, globalPtr, ArrayRef<Value>({cst0, cst0}));
 
   auto ctx_ptr = func.getBody().getArgument(0);
   auto kernel_ptr = func.getBody().getArgument(1);
-  // TODO: str ptr will work on step 3
-  // auto str_ptr = gep_op->getResult(0);
   rewriter.create<LLVM::CallOp>(loc, c_api_func, ValueRange{ctx_ptr, kernel_ptr});
   rewriter.create<LLVM::ReturnOp>(loc, ValueRange());
 
