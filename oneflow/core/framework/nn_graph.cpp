@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
 #include <memory>
+#include <string>
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
@@ -36,9 +37,11 @@ limitations under the License.
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/critical_section_instance.h"
 #include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/profiler/profiler.h"
@@ -354,21 +357,73 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   }
   tc->Count("Graph name: " + name_ + " ReleaseTaskGraph", 1);
   if (GlobalProcessCtx::WorldSize() > 1) {
-    std::string plan_name = "plan:" + job_name();
+    std::string plan_name_prefix = "plan_" + job_name() + "_r_";
     if (GlobalProcessCtx::IsThisProcessMaster()) {
-      // TODO(chengcheng): split plan for each rank.
-      Singleton<CtrlClient>::Get()->PushKV(plan_name, plan_);
+      for (int64_t rank_id = 1; rank_id < GlobalProcessCtx::WorldSize(); ++rank_id) {
+        // Creat sub-plan.
+        Plan sub_plan;
+        sub_plan.mutable_job_confs()->CopyFrom(plan_.job_confs());
+        sub_plan.mutable_collective_boxing_plan()->CopyFrom(plan_.collective_boxing_plan());
+        sub_plan.mutable_ctrl_regst_desc_info()->CopyFrom(plan_.ctrl_regst_desc_info());
+        for (auto& pair : plan_.job_id2op_attribute_ref_table()) {
+          sub_plan.mutable_job_id2op_attribute_ref_table()->insert(pair);
+        }
+        for (auto& task_proto : plan_.task()) {
+          if (task_proto.machine_id() == rank_id) {
+            sub_plan.add_task()->CopyFrom(task_proto);
+          }
+        }
+        for (auto& mem_block_proto : plan_.block_chunk_list().mem_block()) {
+          if (mem_block_proto.machine_id() == rank_id) {
+            sub_plan.mutable_block_chunk_list()->add_mem_block()->CopyFrom(mem_block_proto);
+          }
+        }
+        for (auto& chunk_proto : plan_.block_chunk_list().chunk()) {
+          if (chunk_proto.machine_id() == rank_id) {
+            sub_plan.mutable_block_chunk_list()->add_chunk()->CopyFrom(chunk_proto);
+          }
+        }
+        LOG(ERROR) << "rank id " << rank_id << " plan " << sub_plan.DebugString();
+
+        std::string rank_plan_name = plan_name_prefix + std::to_string(rank_id);
+        Singleton<CtrlClient>::Get()->PushKV(rank_plan_name, sub_plan);
+        LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " push plan " << rank_plan_name;
+      }
     } else {
-      Singleton<CtrlClient>::Get()->PullKV(plan_name, &plan_);
+      std::string rank_plan_name = plan_name_prefix + std::to_string(GlobalProcessCtx::Rank());
+      Singleton<CtrlClient>::Get()->PullKV(rank_plan_name, &plan_);
+      LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " pull plan " << rank_plan_name;
     }
     OF_SESSION_BARRIER();
     // NOTE(zwx): After barrier plan is synchronized between all ranks,
     //     then it can be cleared for saving mem.
     if (GlobalProcessCtx::IsThisProcessMaster()) {
-      Singleton<CtrlClient>::Get()->ClearKV(plan_name);
+      for (int64_t rank_id = 1; rank_id < GlobalProcessCtx::WorldSize(); ++rank_id) {
+        std::string rank_plan_name = plan_name_prefix + std::to_string(rank_id);
+        Singleton<CtrlClient>::Get()->ClearKV(rank_plan_name);
+      }
     }
     tc->Count("Graph name: " + name_ + " Push or Pull plan", 1);
   }
+
+  // tc->Count("Graph name: " + name_ + " CreateSubPlan", 1);
+  // if (GlobalProcessCtx::WorldSize() > 1) {
+  //   std::string plan_name = "plan:" + job_name();
+  //   if (GlobalProcessCtx::IsThisProcessMaster()) {
+  //     // TODO(chengcheng): split plan for each rank.
+  //     Singleton<CtrlClient>::Get()->PushKV(plan_name, plan_);
+  //   } else {
+  //     Singleton<CtrlClient>::Get()->PullKV(plan_name, &plan_);
+  //   }
+  //   OF_SESSION_BARRIER();
+  //   // NOTE(zwx): After barrier plan is synchronized between all ranks,
+  //   //     then it can be cleared for saving mem.
+  //   if (GlobalProcessCtx::IsThisProcessMaster()) {
+  //     Singleton<CtrlClient>::Get()->ClearKV(plan_name);
+  //   }
+  //   tc->Count("Graph name: " + name_ + " Push or Pull plan", 1);
+  // }
+
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
   tc->Count("Graph name: " + name_ + " PopulateOpAttribute", 1);
