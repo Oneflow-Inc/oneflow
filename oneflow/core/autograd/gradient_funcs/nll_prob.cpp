@@ -29,8 +29,8 @@ struct NLLProbCaptureState : public AutoGradCaptureState {
 class NLLProbGradFunction : public OpExprGradFunction<NLLProbCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(NLLProbCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const AttrMap& attrs) const override;
+  Maybe<void> Capture(NLLProbCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override;
   Maybe<void> Apply(const NLLProbCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
@@ -46,7 +46,7 @@ Maybe<void> NLLProbGradFunction::Init(const OpExpr& op) {
 }
 
 Maybe<void> NLLProbGradFunction::Capture(NLLProbCaptureState* ctx, const TensorTuple& inputs,
-                                     const TensorTuple& outputs, const AttrMap& attrs) const {
+                                         const TensorTuple& outputs, const AttrMap& attrs) const {
   auto input = JUST(VectorAt(inputs, 0));
   ctx->requires_grad = input->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -62,7 +62,7 @@ Maybe<void> NLLProbGradFunction::Capture(NLLProbCaptureState* ctx, const TensorT
 }
 
 Maybe<void> NLLProbGradFunction::Apply(const NLLProbCaptureState* ctx, const TensorTuple& out_grads,
-                                   TensorTuple* in_grads) const {
+                                       TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   // CHECK_EQ_OR_RETURN(out_grads.size(), 2);  // NOLINT(maybe-need-error-msg)

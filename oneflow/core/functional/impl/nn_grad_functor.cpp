@@ -433,7 +433,8 @@ class NLLProbGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& out_grad,
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
-                           const Optional<one::Tensor>& weight, const double label_smoothing) const {
+                           const Optional<one::Tensor>& weight,
+                           const double label_smoothing) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("label_smoothing");
     attrs.SetAllAttrs(label_smoothing);
 

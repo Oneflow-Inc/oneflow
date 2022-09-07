@@ -23,12 +23,12 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 struct NLLProbKernelUtil {
   static void Forward(ep::Stream* stream, const int32_t num_samples, const int64_t num_classes,
-                      const T* input, const T* probs,
-                      const T* weight, const double label_smoothing, T* out);
+                      const T* input, const T* probs, const T* weight, const double label_smoothing,
+                      T* out);
 
   static void Backward(ep::Stream* stream, const int32_t num_samples, const int64_t num_classes,
-                       const T* out_grad,
-                       const T* probs, const T* weight, const double label_smoothing, T* in_grad);
+                       const T* out_grad, const T* probs, const T* weight,
+                       const double label_smoothing, T* in_grad);
 };
 
 }  // namespace oneflow

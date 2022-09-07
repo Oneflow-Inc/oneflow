@@ -24,8 +24,7 @@ namespace {
 
 class NLLProbKernelCache final : public user_op::OpKernelCache {
  public:
-  explicit NLLProbKernelCache(int64_t num_classes)
-      : num_classes_(num_classes) {}
+  explicit NLLProbKernelCache(int64_t num_classes) : num_classes_(num_classes) {}
   ~NLLProbKernelCache() override = default;
 
   int64_t num_classes() const { return num_classes_; }
@@ -99,25 +98,23 @@ class NLLProbKernel final : public user_op::OpKernel {
 
     // T* label_smoothing_dptr = nullptr;
     // T label_smoothing_d = T{0};
-    std::cout << "run1 -----"<< std::endl;
+    std::cout << "run1 -----" << std::endl;
     double label_smoothing = ctx->Attr<double>("label_smoothing");
     std::cout << "run1.5 -----" << label_smoothing << std::endl;
     // if(label_smoothing > 0) {
     //   label_smoothing_d = static_cast<T>(label_smoothing);
     //   label_smoothing_dptr = &label_smoothing_d;
     // }
-    std::cout << "run2 -----"<< std::endl;
-
+    std::cout << "run2 -----" << std::endl;
 
     const T* weight_dptr = nullptr;
     if (ctx->has_input("weight", 0)) {
       weight_dptr = CHECK_NOTNULL(ctx->Tensor4ArgNameAndIndex("weight", 0))->dptr<T>();
     }
 
-    NLLProbKernelUtil<device_type, T>::Forward(ctx->stream(), static_cast<int32_t>(N),
-                                              static_cast<int64_t>(C), 
-                                              input->dptr<T>(), target->dptr<T>(), weight_dptr, label_smoothing,
-                                              output->mut_dptr<T>());
+    NLLProbKernelUtil<device_type, T>::Forward(
+        ctx->stream(), static_cast<int32_t>(N), static_cast<int64_t>(C), input->dptr<T>(),
+        target->dptr<T>(), weight_dptr, label_smoothing, output->mut_dptr<T>());
   }
 };
 
@@ -154,7 +151,6 @@ class NLLProbGradKernel final : public user_op::OpKernel {
                                              << ", got " << spec_cache->num_classes();
     }
 
-
     const T* weight_dptr = nullptr;
     if (ctx->has_input("weight", 0)) {
       weight_dptr = CHECK_NOTNULL(ctx->Tensor4ArgNameAndIndex("weight", 0))->dptr<T>();
@@ -162,21 +158,22 @@ class NLLProbGradKernel final : public user_op::OpKernel {
     double label_smoothing = ctx->Attr<double>("label_smoothing");
 
     NLLProbKernelUtil<device_type, T>::Backward(
-        ctx->stream(), static_cast<int32_t>(N), static_cast<int64_t>(C), 
-        out_grad->dptr<T>(), target->dptr<T>(), weight_dptr, label_smoothing, in_grad->mut_dptr<T>());
+        ctx->stream(), static_cast<int32_t>(N), static_cast<int64_t>(C), out_grad->dptr<T>(),
+        target->dptr<T>(), weight_dptr, label_smoothing, in_grad->mut_dptr<T>());
   }
 };
 
-#define REGISTER_NLL_PROB_KERNELS(device, dtype)                                            \
-  REGISTER_USER_KERNEL("nll_prob").SetCreateFn<NLLProbKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == device)                                                    \
-      && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)                      \
-      && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value));                   \
-  REGISTER_USER_KERNEL("nll_prob_grad")                                                            \
-      .SetCreateFn<NLLProbGradKernel<device, dtype>>()                                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
-                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)     \
-                       && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value)    \
+#define REGISTER_NLL_PROB_KERNELS(device, dtype)                                             \
+  REGISTER_USER_KERNEL("nll_prob")                                                           \
+      .SetCreateFn<NLLProbKernel<device, dtype>>()                                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                  \
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)    \
+                       && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("nll_prob_grad")                                                      \
+      .SetCreateFn<NLLProbGradKernel<device, dtype>>()                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                  \
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)    \
+                       && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value)   \
                        && (user_op::HobDataType("out_grad", 0) == GetDataType<dtype>::value))
 
 REGISTER_NLL_PROB_KERNELS(DeviceType::kCPU, float);

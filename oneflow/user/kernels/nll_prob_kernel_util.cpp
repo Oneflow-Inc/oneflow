@@ -20,10 +20,12 @@ namespace oneflow {
 template<typename T>
 struct NLLProbKernelUtil<DeviceType::kCPU, T> {
   static void Forward(ep::Stream* stream, const int32_t num_samples, const int64_t num_classes,
-                      const T* input, const T* probs,
-                      const T* weight, const double label_smoothing, T* out) {
+                      const T* input, const T* probs, const T* weight, const double label_smoothing,
+                      T* out) {
     FOR_RANGE(int32_t, i, 0, num_samples * num_classes) {
-      T prob = label_smoothing? probs[i] * (T{1} - static_cast<T>(label_smoothing)) + static_cast<T>(label_smoothing) / static_cast<T>(num_classes) : probs[i];
+      T prob = label_smoothing ? probs[i] * (T{1} - static_cast<T>(label_smoothing))
+                                     + static_cast<T>(label_smoothing) / static_cast<T>(num_classes)
+                               : probs[i];
       std::cout << "prob: " << prob << " input: " << input[i] << std::endl;
       T w = weight ? weight[i % num_classes] : T{1};
       T y = -input[i] * w * prob;
@@ -32,12 +34,14 @@ struct NLLProbKernelUtil<DeviceType::kCPU, T> {
   }
 
   static void Backward(ep::Stream* stream, const int32_t num_samples, const int64_t num_classes,
-                       const T* out_grad,
-                       const T* probs, const T* weight, const double label_smoothing, T* in_grad) {
+                       const T* out_grad, const T* probs, const T* weight,
+                       const double label_smoothing, T* in_grad) {
     Memset<DeviceType::kCPU>(stream, in_grad, 0,
                              RoundUp(num_samples * num_classes * sizeof(T), kBlobBodyAlignSize));
     FOR_RANGE(int32_t, i, 0, num_samples * num_classes) {
-      T prob = label_smoothing? probs[i] * (T{1} - static_cast<T>(label_smoothing)) + static_cast<T>(label_smoothing) / static_cast<T>(num_classes) : probs[i];
+      T prob = label_smoothing ? probs[i] * (T{1} - static_cast<T>(label_smoothing))
+                                     + static_cast<T>(label_smoothing) / static_cast<T>(num_classes)
+                               : probs[i];
       T w = weight ? weight[i % num_classes] : T{1};
       in_grad[i] = -w * prob * out_grad[i];
     }

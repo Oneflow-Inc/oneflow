@@ -1398,29 +1398,25 @@ class CrossEntropyLabelSmoothingFunctor {
   std::shared_ptr<OpExpr> op_nll_weight_;
 };
 
-class CrossEntropyProbFunctor: public LossFunctorBase {
-  public:
-    CrossEntropyProbFunctor() {
-      op_log_softmax_ = CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
+class CrossEntropyProbFunctor : public LossFunctorBase {
+ public:
+  CrossEntropyProbFunctor() {
+    op_log_softmax_ = CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
 
-      op_nll_prob_ = CHECK_JUST(one::OpBuilder("nll_prob")
-                              .Input("input")
-                              .Input("target")
-                              .Output("output")
-                              .Build());
+    op_nll_prob_ = CHECK_JUST(
+        one::OpBuilder("nll_prob").Input("input").Input("target").Output("output").Build());
 
-      op_nll_weight_prob_ = CHECK_JUST(one::OpBuilder("nll_prob")
-                                      .Input("input")
-                                      .Input("target")
-                                      .Input("weight")
-                                      .Output("output")
-                                      .Build());
-    }
+    op_nll_weight_prob_ = CHECK_JUST(one::OpBuilder("nll_prob")
+                                         .Input("input")
+                                         .Input("target")
+                                         .Input("weight")
+                                         .Output("output")
+                                         .Build());
+  }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
-                           const Optional<one::Tensor>& weight, 
-                           const std::string& reduction, const double& label_smoothing) const {
-    
+                           const Optional<one::Tensor>& weight, const std::string& reduction,
+                           const double& label_smoothing) const {
     CHECK_OR_RETURN(reduction == "none" || reduction == "sum" || reduction == "mean")
         << Error::RuntimeError() << "Reduction should be none, sum or mean.";
     const auto& input_shape = input->shape();
@@ -1438,48 +1434,32 @@ class CrossEntropyProbFunctor: public LossFunctorBase {
                                  })
                                  .call(input, input_perm));
     const auto target_ = JUST(sequence_function(functional::Transpose)
-                                 .then(std::bind(functional::Reshape, std::placeholders::_1,
-                                                 Shape({-1, target_shape->At(1)})))
-                                 .call(target, input_perm));
-    // std::vector<int32_t> inv_reshape(input_shape->NumAxes(), 0);
-    // DimVector inv_reshape(input_shape->NumAxes(), 0);
-    // for(size_t i = 0; i < inv_reshape.size(); ++i) {
-    //   inv_reshape[i] = input_shape->At(input_perm[i]);
-    // }
-
-    // input_perm[1] = input_perm.size() - 1;
-    // for(int i = 2; i < input_perm.size(); ++i) {
-    //   input_perm[i] = i - 1;
-    // }
-    // const auto input_log_softmax = JUST(Transpose(JUST(Reshape(input_, Shape(inv_reshape))), input_perm));
-    // return input_log_softmax;
-
+                                  .then(std::bind(functional::Reshape, std::placeholders::_1,
+                                                  Shape({-1, target_shape->At(1)})))
+                                  .call(target, input_perm));
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("label_smoothing");
     attrs.SetAllAttrs(label_smoothing);
 
-    std::shared_ptr<TensorTuple> nll_result;
+    std::shared_ptr<Tensor> nll_result_tensor;
     if (weight) {
-      nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+      nll_result_tensor = JUST(OpInterpUtil::Dispatch<Tensor>(
           *op_nll_weight_prob_, {input_, target_, JUST(weight)}, attrs));
     } else {
-      std::cout << input_->dtype()->name() << std::endl;
-      std::cout << target_->dtype()->name() << std::endl;
-      nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_prob_, {input_, target_}, attrs));
+      nll_result_tensor =
+          JUST(OpInterpUtil::Dispatch<Tensor>(*op_nll_prob_, {input_, target_}, attrs));
+          // JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_prob_, {input_, target_}, attrs));
     }
 
-    auto output = JUST(VectorAt(*nll_result, 0));
-    output = JUST(functional::Reshape(output, *target_shape));
-    output = JUST(ReduceSum(output, {1}, false));
+    auto output = JUST(functional::Reshape(nll_result_tensor, *target_shape));
+    output = JUST(ReduceSum(output, {-1}, false));
     return apply_reduction(output, reduction);
   }
 
-
-
-  private:
-    std::shared_ptr<OpExpr> op_log_softmax_;
-    std::shared_ptr<OpExpr> op_nll_prob_;
-    std::shared_ptr<OpExpr> op_nll_weight_prob_;
+ private:
+  std::shared_ptr<OpExpr> op_log_softmax_;
+  std::shared_ptr<OpExpr> op_nll_prob_;
+  std::shared_ptr<OpExpr> op_nll_weight_prob_;
 };
 
 class SparseCrossEntropyFunctor {
