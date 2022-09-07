@@ -40,6 +40,11 @@ namespace ir {
 
 namespace jit {
 
+Maybe<void> SetTensorDateType(user_op::InferContext* ctx) {
+  ctx->SetDtype4ArgNameAndIndex("out", 0, ctx->InputDType("in", 0));
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   auto mlir_assembly_str = ctx->Attr<std::string>("mlir_assembly");
   mlir::DialectRegistry registry;
@@ -83,10 +88,12 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   int32_t res_i = 0;
   for (mlir::Type res_type : funcType.getResults()) {
     if (auto rankedTensorType = res_type.dyn_cast<mlir::RankedTensorType>()) {
-      *ctx->MutOutputShape("out", res_i) =
-          Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()};
-      *ctx->MutOutputDType("out", res_i) =
-          mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType());
+      ctx->SetOutputShape(
+          "out", res_i,
+          Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()});
+      ctx->SetOutputDType(
+          "out", res_i,
+          mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType()));
       res_i += 1;
     } else {
       std::string res_type_str = "";

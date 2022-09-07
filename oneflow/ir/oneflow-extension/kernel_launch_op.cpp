@@ -62,8 +62,7 @@ Maybe<void> KernelLaunchOp::GetSbp(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> KernelLaunchOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
-  return Maybe<void>::Ok();
+  return ir::jit::SetTensorDateType(ctx);
 }
 
 namespace {
@@ -90,10 +89,10 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
       user_op::NaiveTensorDesc tensor_desc{};
       auto operand = op.getOperand(operand_id.index());
       if (auto rankedTensorType = operand.getType().dyn_cast<mlir::RankedTensorType>()) {
-        *tensor_desc.mut_shape() =
-            Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()};
-        *tensor_desc.mut_data_type() =
-            mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType());
+        tensor_desc.set_shape(
+            Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()});
+        tensor_desc.set_data_type(
+            mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType()));
         // TODO: set stride
         // TODO: set is_dynamic
       } else {
@@ -107,10 +106,10 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
       user_op::NaiveTensorDesc tensor_desc{};
       auto result = op.getResult(result_id.index());
       if (auto rankedTensorType = result.getType().dyn_cast<mlir::RankedTensorType>()) {
-        *tensor_desc.mut_shape() =
-            Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()};
-        *tensor_desc.mut_data_type() =
-            mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType());
+        tensor_desc.set_shape(
+            Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()});
+        tensor_desc.set_data_type(
+            mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType()));
         // TODO: set stride
         // TODO: set is_dynamic
       } else {
