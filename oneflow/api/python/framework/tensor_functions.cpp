@@ -580,6 +580,7 @@ DATATYPE_FUNC(PyTensorObject_long, DType::Int64());
 DATATYPE_FUNC(PyTensorObject_half, DType::Float16());
 DATATYPE_FUNC(PyTensorObject_float, DType::Float());
 DATATYPE_FUNC(PyTensorObject_double, DType::Double());
+DATATYPE_FUNC(PyTensorObject_bfloat16, DType::BFloat16());
 
 static PyObject* PyTensorObject_view(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
@@ -782,7 +783,7 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
     if (functional::PyScalarCheck(value)) {
       Scalar value_scalar = functional::PyUnpackScalar(value);
       value_tensor = ASSERT_PTR(
-          functional::GlobalConstant({1}, value_scalar, tensor->dtype(), placement, sbp));
+          functional::GlobalConstant(Shape({}), value_scalar, tensor->dtype(), placement, sbp));
     } else {
       value_tensor = PyTensor_Unpack(value);
       CHECK_OR_THROW(value_tensor->is_global())
@@ -795,7 +796,7 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
     if (functional::PyScalarCheck(value)) {
       Scalar value_scalar = functional::PyUnpackScalar(value);
       value_tensor = ASSERT_PTR(
-          functional::Constant({1}, value_scalar, tensor->dtype(), ASSERT(tensor->device())));
+          functional::Constant(Shape({}), value_scalar, tensor->dtype(), ASSERT(tensor->device())));
     } else {
       value_tensor = PyTensor_Unpack(value);
       CHECK_OR_THROW(value_tensor->is_local())
@@ -835,6 +836,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"half", PyTensorObject_half, METH_NOARGS, NULL},
     {"float", PyTensorObject_float, METH_NOARGS, NULL},
     {"double", PyTensorObject_double, METH_NOARGS, NULL},
+    {"bfloat16", PyTensorObject_bfloat16, METH_NOARGS, NULL},
     {"local_to_global", (PyCFunction)PyTensorObject_local_to_global, METH_VARARGS | METH_KEYWORDS,
      NULL},
     {"global_to_global", (PyCFunction)PyTensorObject_global_to_global, METH_VARARGS | METH_KEYWORDS,

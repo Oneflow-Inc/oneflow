@@ -34,7 +34,7 @@ namespace oneflow {
                  indices.shape().dim_vec().cend());
   dim_vec.insert(dim_vec.end(), in.shape().dim_vec().cbegin() + axis + 1,
                  in.shape().dim_vec().end());
-  *out->mut_shape() = Shape(dim_vec);
+  out->set_shape(Shape(dim_vec));
   out->set_is_dynamic(indices.is_dynamic() || in.is_dynamic());
   return Maybe<void>::Ok();
 }
@@ -85,27 +85,8 @@ namespace oneflow {
   const user_op::TensorDesc& indices = ctx->InputTensorDesc("indices", 0);
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   CHECK_OR_RETURN(IsIndexDataType(indices.data_type()));
-  *out->mut_data_type() = in.data_type();
+  out->set_data_type(in.data_type());
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("gather").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                          user_op::AddOpFn AddOp) -> Maybe<void> {
-  bool need_grad_in = op.NeedGenGradTensor4OpInput("in", 0);
-  if (need_grad_in) {
-    user_op::UserOpConfWrapperBuilder in_grad_builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper in_grad_op =
-        in_grad_builder.Op("unsorted_segment_sum_like")
-            .Input("data", op.GetGradTensorWithOpOutput("out", 0))
-            .Input("segment_ids", op.input("indices", 0))
-            .Input("like", op.input("in", 0))
-            .Output("out")
-            .Attr("axis", op.attr<int64_t>("axis"))
-            .Build();
-    op.BindGradTensorWithOpInput(in_grad_op.output("out", 0), "in", 0);
-    AddOp(in_grad_op);
-  }
-  return Maybe<void>::Ok();
-});
 
 }  // namespace oneflow

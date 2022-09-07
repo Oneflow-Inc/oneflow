@@ -25,6 +25,7 @@ import multiprocessing as python_multiprocessing
 import oneflow.multiprocessing as multiprocessing
 from oneflow._utils import ExceptionWrapper
 import oneflow as flow
+import numpy as np
 
 string_classes = (str, bytes)
 
@@ -502,8 +503,10 @@ class _BaseDataLoaderIter(object):
         self._collate_fn = loader.collate_fn
         self._sampler_iter = iter(self._index_sampler)
         self._generator = loader.generator
-        self._base_seed = flow.tensor([0], dtype=flow.int64).uniform_().numpy().item()
         # self._base_seed = flow.empty((), dtype=flow.int64).random_(generator=loader.generator).item()
+        self._base_seed = flow.randint(
+            0, np.iinfo(np.int64).max, (), generator=loader.generator
+        ).item()
         self._persistent_workers = loader.persistent_workers
         self._num_yielded = 0
         self._profile_name = "enumerate(DataLoader)#{}.__next__".format(

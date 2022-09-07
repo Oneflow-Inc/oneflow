@@ -66,14 +66,14 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   y_dim_vec[c_idx] = x_shape.At(c_idx);
   y_dim_vec[w_idx] = w_x + padding[0] + padding[1];
 
-  *ctx->MutOutputShape("y", 0) = Shape(y_dim_vec);
+  ctx->SetOutputShape("y", 0, Shape(y_dim_vec));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReplicationPad1DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return ReplicationPad1DOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ReplicationPad1DOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReplicationPad1DOp::ModifyInputArg(
@@ -102,14 +102,14 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   dx_dim_vec[c_idx] = dy_shape.At(1);
   dx_dim_vec[w_idx] = w_dy - padding[0] - padding[1];
 
-  *ctx->MutOutputShape("dx", 0) = Shape(dx_dim_vec);
+  ctx->SetOutputShape("dx", 0, Shape(dx_dim_vec));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReplicationPad1DGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return ReplicationPad2DGradOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ReplicationPad1DGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
   return Maybe<void>::Ok();
 }
 
@@ -134,14 +134,14 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   y_dim_vec[h_idx] = h_x + padding[2] + padding[3];
   y_dim_vec[w_idx] = w_x + padding[0] + padding[1];
 
-  *ctx->MutOutputShape("y", 0) = Shape(y_dim_vec);
+  ctx->SetOutputShape("y", 0, Shape(y_dim_vec));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReplicationPad2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return ReplicationPad2DOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ReplicationPad2DOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReplicationPad2DOp::ModifyInputArg(
@@ -173,49 +173,15 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   dx_dim_vec[h_idx] = h_dy - padding[2] - padding[3];
   dx_dim_vec[w_idx] = w_dy - padding[0] - padding[1];
 
-  *ctx->MutOutputShape("dx", 0) = Shape(dx_dim_vec);
+  ctx->SetOutputShape("dx", 0, Shape(dx_dim_vec));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReplicationPad2DGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return ReplicationPad2DGradOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ReplicationPad2DGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("replication_pad1d")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("replication_pad1d_grad")
-                .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                .Output("dx")
-                .Attr("padding", op.attr<std::vector<int64_t>>("padding"))
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
-
-REGISTER_USER_OP_GRAD("replication_pad2d")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("replication_pad2d_grad")
-                .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                .Output("dx")
-                .Attr("padding", op.attr<std::vector<int64_t>>("padding"))
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

@@ -39,10 +39,10 @@ Maybe<Symbol<Stream>> MakeCastStream(const Symbol<Device>& in_device,
 /* static */ Maybe<void> CastOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* output_tensor_desc = ctx->MutOutputTensorDesc("out", 0);
-  *output_tensor_desc->mut_shape() = input_tensor_desc.shape();
-  *output_tensor_desc->mut_stride() =
-      input_tensor_desc.stride();  // output's stride should consistent with input's
-  *output_tensor_desc->mut_is_dynamic() = input_tensor_desc.is_dynamic();
+  output_tensor_desc->set_shape(input_tensor_desc.shape());
+  output_tensor_desc->set_stride(
+      input_tensor_desc.stride());  // output's stride should consistent with input's
+  output_tensor_desc->set_is_dynamic(input_tensor_desc.is_dynamic());
   return Maybe<void>::Ok();
 }
 
@@ -61,8 +61,7 @@ Maybe<Symbol<Stream>> MakeCastStream(const Symbol<Device>& in_device,
 
 /* static */ Maybe<void> CastOp::InferDataType(user_op::InferContext* ctx) {
   user_op::TensorDesc* output_tensor_desc = ctx->MutOutputTensorDesc("out", 0);
-  DataType* dtype = output_tensor_desc->mut_data_type();
-  *dtype = ctx->Attr<DataType>("dtype");
+  output_tensor_desc->set_data_type(ctx->Attr<DataType>("dtype"));
   return Maybe<void>::Ok();
 }
 
@@ -74,22 +73,5 @@ Maybe<Symbol<Stream>> MakeCastStream(const Symbol<Device>& in_device,
   const bool pin_memory = ctx->Attr<bool>("pin_memory");
   return MakeCastStream(in_device, out_device, pin_memory);
 }
-
-REGISTER_USER_OP_GRAD("cast").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                        user_op::AddOpFn AddOp) -> Maybe<void> {
-  if (op.NeedGenGradTensor4OpInput("in", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    DataType dtype = op.TensorDesc4ArgNameAndIndex("in", 0).data_type();
-    user_op::UserOpConfWrapper cast_grad_op =
-        builder.Op("cast")
-            .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-            .Output("out")
-            .Attr<DataType>("dtype", dtype)
-            .Build();
-    op.BindGradTensorWithOpInput(cast_grad_op.output("out", 0), "in", 0);
-    AddOp(cast_grad_op);
-  }
-  return Maybe<void>::Ok();
-});
 
 }  // namespace oneflow

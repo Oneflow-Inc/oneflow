@@ -221,6 +221,19 @@ Maybe<void> FillLogicalBlobDescSignature(
   return Maybe<void>::Ok();
 }
 
+Maybe<bool> SupportNonContiguous(const Operator* op) {
+  const auto& op_conf = op->op_conf();
+  if (op_conf.has_user_conf()) {
+    const auto* registry =
+        user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf.user_conf().op_type_name());
+    CHECK_NOTNULL_OR_RETURN(registry)
+        << "The op(operation) " << op_conf.user_conf().op_type_name()
+        << " is not found. Please check whether it has been registered correctly.";
+    return registry->non_contiguous_supported;
+  }
+  return false;
+}
+
 }  // namespace
 
 Maybe<void> Operator::FillLogicalInBlobDesc(
@@ -317,11 +330,14 @@ Maybe<void> Operator::InferLogicalOutBlobDescsIf() {
   output_index2logical_blob_desc_->resize(output_bns().size());
   for (int32_t i = 0; i < output_bns().size(); ++i) {
     auto& out_blob_desc = output_logical_blob_desc_vec[i];
-    // initialize stride by shape if stride is empty
-    if (out_blob_desc->stride().empty()
-        && out_blob_desc->shape().size() != out_blob_desc->stride().size()) {
-      out_blob_desc->mut_stride() = Stride(out_blob_desc->shape());
+    // initialize stride by shape if the op does not support non-contiguous
+    if (!JUST(SupportNonContiguous(this))) {
+      out_blob_desc->set_stride(Stride(out_blob_desc->shape()));
     }
+    CHECK_EQ_OR_RETURN(out_blob_desc->stride().size(), out_blob_desc->shape().size())
+        << Error::RuntimeError() << "stride and shape size mismatch since stride is "
+        << out_blob_desc->stride().ToString() << " but shape is "
+        << out_blob_desc->shape().ToString();
     (*output_index2logical_blob_desc_)[i] = out_blob_desc;
   }
   return Maybe<void>::Ok();
@@ -341,11 +357,14 @@ Maybe<void> Operator::InferOutBlobDescsIf(
   JUST(InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx));
   for (const auto& bn : output_bns()) {
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(bn);
-    // initialize stride by shape if stride is empty
-    if (out_blob_desc->stride().empty()
-        && out_blob_desc->shape().size() != out_blob_desc->stride().size()) {
-      out_blob_desc->mut_stride() = Stride(out_blob_desc->shape());
+    // initialize stride by shape if the op does not support non-contiguous
+    if (!JUST(SupportNonContiguous(this))) {
+      out_blob_desc->set_stride(Stride(out_blob_desc->shape()));
     }
+    CHECK_EQ_OR_RETURN(out_blob_desc->stride().size(), out_blob_desc->shape().size())
+        << Error::RuntimeError() << "stride and shape size mismatch since stride is "
+        << out_blob_desc->stride().ToString() << " but shape is "
+        << out_blob_desc->shape().ToString();
   }
   return Maybe<void>::Ok();
 }
@@ -369,8 +388,8 @@ Maybe<void> Operator::InferOutBlobDescs(
       BlobDesc* desc = GetBlobDesc4BnInOp(bn);
       *desc = *JUST(GetLogicalBlobDesc4Obn(bn));
       const auto& nd_sbp = nd_sbp_signature->bn_in_op2nd_sbp().at(bn);
-      desc->mut_shape() =
-          *JUST(GetPhysicalShape(desc->shape(), nd_sbp, *parallel_desc, *parallel_ctx));
+      desc->set_shape(
+          *JUST(GetPhysicalShape(desc->shape(), nd_sbp, *parallel_desc, *parallel_ctx)));
     }
   }
   return Maybe<void>::Ok();

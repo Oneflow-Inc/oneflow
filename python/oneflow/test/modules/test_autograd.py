@@ -21,7 +21,6 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
-
 from oneflow.test_utils.test_util import GenArgList
 
 
@@ -173,6 +172,24 @@ class TestAutograd(flow.unittest.TestCase):
         y = random_tensor(4, *random_shape, requires_grad=True)
         x += y
         return x
+
+    @autotest(n=1, check_graph=False)
+    def test_retain_grad_for_leaf_tensor(test_case):
+        random_shape = [random(1, 10).to(int) for _ in range(4)]
+        x = random_tensor(4, *random_shape, requires_grad=True)
+        y = x * 2
+        x.retain_grad()
+        return y
+
+    @autotest(n=1, auto_backward=False, check_graph=False)
+    def test_no_grad_domain_call_backward(test_case):
+        random_shape = [random(1, 10).to(int).value() for _ in range(4)]
+        with flow.no_grad():
+            x = flow.rand(*random_shape).requires_grad_()
+            with flow.enable_grad():
+                y = x * 2
+            flow.autograd.backward(y, flow.ones_like(y))
+        test_case.assertTrue(np.array_equal(x.grad.numpy(), np.full(random_shape, 2.0)))
 
 
 if __name__ == "__main__":

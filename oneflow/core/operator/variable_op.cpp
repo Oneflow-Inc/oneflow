@@ -52,7 +52,7 @@ Maybe<void> VariableOp::InferLogicalOutBlobDescs(
     const ParallelDesc& parallel_desc) const {
   const VariableOpConf& variable_conf = op_conf().variable_conf();
   BlobDesc* out_blob_desc = BlobDesc4BnInOp("out");
-  out_blob_desc->mut_shape() = Shape(variable_conf.shape());
+  out_blob_desc->set_shape(Shape(variable_conf.shape()));
   CHECK_OR_RETURN(variable_conf.has_data_type());
   out_blob_desc->set_data_type(variable_conf.data_type());
   return Maybe<void>::Ok();
@@ -68,8 +68,8 @@ Maybe<void> VariableOp::InferOutBlobDescs(
   out_blob_desc->set_data_type(variable_conf.data_type());
   NdSbp nd_sbp;
   JUST(ParseNdSbpFromConf(variable_conf, parallel_desc, &nd_sbp));
-  out_blob_desc->mut_shape() =
-      *JUST(GetPhysicalShape(Shape(variable_conf.shape()), nd_sbp, parallel_desc, *parallel_ctx));
+  out_blob_desc->set_shape(
+      *JUST(GetPhysicalShape(Shape(variable_conf.shape()), nd_sbp, parallel_desc, *parallel_ctx)));
   return Maybe<void>::Ok();
 }
 

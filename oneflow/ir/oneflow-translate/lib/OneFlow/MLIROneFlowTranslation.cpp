@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
@@ -579,13 +580,6 @@ LogicalResult JobImporter::ProcessJob() {
     }
   });
   if (is_succeeded == false) { return failure(); }
-  SmallVector<mlir::Value, 4> loss_tensors;
-  for (auto& loss_lbn : job_wrapper_.job()->job_conf().train_conf().loss_lbn()) {
-    loss_tensors.push_back(lbn2result_.at(loss_lbn));
-  }
-  if (job_wrapper_.job()->job_conf().train_conf().loss_lbn_size() > 0) {
-    GetBuilder().create<mlir::oneflow::LossMarkerOp>(GetRootLocation(), loss_tensors);
-  }
   mlir::oneflow::ReturnOp return_op;
   if (!entryBlock->empty()) { return_op = dyn_cast<mlir::oneflow::ReturnOp>(entryBlock->back()); }
   if (!return_op) { GetBuilder().create<mlir::oneflow::ReturnOp>(GetRootLocation(), results); }
@@ -866,7 +860,9 @@ std::string ConvertJobToTosaIR(RoundTripOneFlowJobWrapperInterface& job_wrapper)
   if (succeeded(imp.ProcessJob())) {
     mlir::PassManager pm(&context);
     pm.addPass(createCanonicalizerPass());
+    pm.addPass(createConvertToSignlessForTosaPass());
     pm.addPass(createLowerOneFlowToTosaPass());
+    pm.addNestedPass<func::FuncOp>(tosa::createTosaMakeBroadcastablePass());
     if (mlir::failed(pm.run(*module))) {
       module->emitError("Failed to run oneflow-to-tosa pass");
       exit(EXIT_FAILURE);
