@@ -386,9 +386,6 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
       && producer_stream->device()->enum_type() != DeviceType::kCPU) {
     return Maybe<void>::Ok();
   }
-  if (last_used_stream != producer_stream) {
-    JUST(RecordEvent({JUST(eager_blob_object->compute_local_dep_object())}, last_used_stream));
-  }
   Optional<Symbol<Stream>> stream{};
   if (*one::CurrentDevVmDepObjectConsumeMode() == one::DevVmDepObjectConsumeMode::NONE) {
     stream = Optional<Symbol<Stream>>(NullOpt);
@@ -401,6 +398,15 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
     stream = Optional<Symbol<Stream>>(NullOpt);
   } else {
     stream = producer_stream;
+  }
+  if (last_used_stream != producer_stream) {
+    if (stream.has_value()) {
+      JUST(SoftSyncStreamBetween({JUST(eager_blob_object->compute_local_dep_object())},
+                                 last_used_stream, JUST(stream)));
+    } else {
+      JUST(RecordEvent({JUST(eager_blob_object->compute_local_dep_object())}, last_used_stream));
+    }
+    eager_blob_object->set_last_used_stream(producer_stream);
   }
   auto vm_stream = stream.map([](Symbol<Stream> stream) -> vm::Stream* {
     return CHECK_JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
@@ -505,14 +511,14 @@ namespace {
 
 bool SupportingStreamWait(Symbol<Stream> from_stream, Symbol<Stream> to_stream) {
   if (from_stream->device() == to_stream->device()
-      && from_stream->stream_type() == to_stream->stream_type()) {
+      && from_stream->stream_type() == to_stream->stream_type()
+      && from_stream->thread_uid() == to_stream->thread_uid()) {
     CHECK(from_stream == to_stream);
   }
   if (unlikely(!ThreadLocalEnvBool<ONEFLOW_VM_ENABLE_STREAM_WAIT>())) { return false; }
   DeviceType from_device_type = from_stream->device()->enum_type();
   DeviceType to_device_type = from_stream->device()->enum_type();
   return from_stream->device() == to_stream->device() && from_device_type == DeviceType::kCUDA
-         && from_stream->thread_uid() == to_stream->thread_uid()
          && StreamSupportStreamWait::Visit(from_stream->stream_type(), from_device_type)
          && StreamSupportStreamWait::Visit(to_stream->stream_type(), to_device_type);
 }

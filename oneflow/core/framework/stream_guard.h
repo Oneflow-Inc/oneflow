@@ -33,14 +33,8 @@ class StreamConverter final {
       : stream_set_(stream_set) {}
 
   Maybe<Symbol<Stream>> TryConvertStream(Symbol<Stream> stream) {
-    auto key = std::make_pair(stream->device(), stream->stream_type());
-    auto* map = stream_set_->mut_device_stream_type2stream();
-    const auto& iter = map->find(key);
-    if (iter != map->end()) { return iter->second; }
     size_t thread_uid = stream_set_->worker_thread_id();
-    Symbol<Stream> ret = JUST(Stream::New(stream->device(), stream->stream_type(), thread_uid));
-    CHECK_OR_RETURN(map->emplace(key, ret).second) << "illegal memory access";
-    return ret;
+    return Stream::New(stream->device(), stream->stream_type(), thread_uid);
   }
 
  private:
