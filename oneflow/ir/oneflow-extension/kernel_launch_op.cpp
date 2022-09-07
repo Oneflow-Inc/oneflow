@@ -61,7 +61,10 @@ Maybe<void> KernelLaunchOp::GetSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> KernelLaunchOp::InferDataType(user_op::InferContext* ctx) { return Maybe<void>::Ok(); }
+Maybe<void> KernelLaunchOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  return Maybe<void>::Ok();
+}
 
 namespace {
 
