@@ -16,11 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_USER_OP_KERNEL_REGISTRY_H_
 #define ONEFLOW_CORE_FRAMEWORK_USER_OP_KERNEL_REGISTRY_H_
 
-#include <sys/types.h>
-#include <cstddef>
-#include <string>
-#include <unordered_map>
-#include <utility>
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/singleton.h"
@@ -30,6 +25,12 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/common/high_order_bool.h"
 #include "oneflow/core/operator/operator.h"
+
+#include <sys/types.h>
+#include <cstddef>
+#include <string>
+#include <unordered_map>
+#include <utility>
 
 namespace oneflow {
 
