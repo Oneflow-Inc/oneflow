@@ -127,7 +127,10 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
   }
 
   ~KernelLaunchOpKernelRegContext() = default;
-  DeviceType device_type() const override { return device_type_; }
+  DeviceType device_type() const override {
+    LOG(ERROR) << device_type_;
+    return device_type_;
+  }
   const ParallelContext& parallel_ctx() const override {
     TODO() << "create from device attr in op in mlir";
     ParallelContext* parallel_ctx = nullptr;
@@ -156,7 +159,7 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
  private:
   ::mlir::func::FuncOp func_op_;
   ::mlir::ModuleOp owned_module_;
-  DeviceType device_type_;
+  DeviceType device_type_ = DeviceType::kInvalidDevice;
   std::unordered_map<ArgID, user_op::NaiveTensorDesc> arg2tensor_desc_{};
   ArgVec inputs_;
   ArgVec outputs_;
