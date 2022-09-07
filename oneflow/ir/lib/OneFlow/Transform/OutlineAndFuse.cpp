@@ -13,8 +13,10 @@ limitations under the License.
 */
 #include <iostream>
 #include <string>
+#include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/Passes.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -35,7 +37,8 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
   }
 };
 
-class KernelLaunchWithLLVMPass : public KernelLaunchWithLLVMPassBase<KernelLaunchWithLLVMPass> {
+class ConvertOFKLCalleeToLLVMPass
+    : public ConvertOFKLCalleeToLLVMPassBase<ConvertOFKLCalleeToLLVMPass> {
   void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<LLVM::LLVMDialect>();
   }
@@ -43,7 +46,7 @@ class KernelLaunchWithLLVMPass : public KernelLaunchWithLLVMPassBase<KernelLaunc
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    populateKernelWithLLVMPasses(patterns);
+    populateConvertOFKLCalleeToLLVMPasses(patterns);
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
@@ -76,8 +79,8 @@ std::unique_ptr<Pass> createKernelLaunchFunctionPass() {
   return std::make_unique<KernelLaunchFunctionPass>();
 }
 
-std::unique_ptr<mlir::Pass> createKernelLaunchWithLLVMPass() {
-  return std::make_unique<KernelLaunchWithLLVMPass>();
+std::unique_ptr<mlir::Pass> createConvertOFKLCalleeToLLVMPass() {
+  return std::make_unique<ConvertOFKLCalleeToLLVMPass>();
 }
 
 std::unique_ptr<Pass> createFuseIntoExistingOpPass() {

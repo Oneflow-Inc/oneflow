@@ -1,5 +1,5 @@
 // RUN: oneflow-opt %s \
-// RUN: -kernel-launch-with-llvm | FileCheck %s
+// RUN: -convert-ofkl-callee-to-llvm | FileCheck %s
 
 // CHECK: oneflow.kernel_launch
 

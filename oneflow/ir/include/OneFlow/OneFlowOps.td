@@ -274,9 +274,9 @@ def KernelLaunchFunctionPass : Pass<"kernel-launch-function", "ModuleOp"> {
   let constructor = "mlir::oneflow::createKernelLaunchFunctionPass()";
 }
 
-def KernelLaunchWithLLVMPass : Pass<"kernel-launch-with-llvm", "ModuleOp"> {
-  let summary = "generate llvm op for kernel launch ops to call c interface";
-  let constructor = "mlir::oneflow::createKernelLaunchWithLLVMPass()";
+def ConvertOFKLCalleeToLLVMPass : Pass<"convert-ofkl-callee-to-llvm", "ModuleOp"> {
+  let summary = "convert oneflow kernel launch callee to llvm ir";
+  let constructor = "mlir::oneflow::createConvertOFKLCalleeToLLVMPass()";
 }
 
 def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {

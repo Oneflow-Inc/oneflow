@@ -945,8 +945,8 @@ void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLI
   results.insert<BroadcastMulToScalarMulPattern>(context);
 }
 
-struct KernelLaunchWithLLVMPattern : public mlir::OpRewritePattern<func::FuncOp> {
-  explicit KernelLaunchWithLLVMPattern(mlir::MLIRContext* context)
+struct ConvertOFKLCalleeToLLVMPattern : public mlir::OpRewritePattern<func::FuncOp> {
+  explicit ConvertOFKLCalleeToLLVMPattern(mlir::MLIRContext* context)
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
@@ -1007,7 +1007,7 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
 
 LogicalResult LowerKernelLaunchModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   mlir::PassManager pm(context);
-  pm.addPass(createKernelLaunchWithLLVMPass());      // kernel-launch-with-llvm
+  pm.addPass(createConvertOFKLCalleeToLLVMPass());          // convert-ofkl-callee-to-llvm
   pm.addPass(createConvertFuncToLLVMPass());         // convert-func-to-llvm
   pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
   return pm.run(module);
@@ -1059,8 +1059,8 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<MulCastPattern>(patterns.getContext());
 }
-void populateKernelWithLLVMPasses(::mlir::RewritePatternSet& patterns) {
-  patterns.add<KernelLaunchWithLLVMPattern>(patterns.getContext());
+void populateConvertOFKLCalleeToLLVMPasses(::mlir::RewritePatternSet& patterns) {
+  patterns.add<ConvertOFKLCalleeToLLVMPattern>(patterns.getContext());
 }
 
 void populateKernelWrapperPasses(::mlir::RewritePatternSet& patterns) {
