@@ -270,7 +270,7 @@ def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
 }
 
 def KernelLaunchFunctionPass : Pass<"kernel-launch-function", "ModuleOp"> {
-  let summary = "move user ops to kernel launch ops";
+  let summary = "wrap user ops with kernel launch ops in callee";
   let constructor = "mlir::oneflow::createKernelLaunchFunctionPass()";
 }
 
