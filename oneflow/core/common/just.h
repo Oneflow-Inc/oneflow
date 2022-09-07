@@ -107,68 +107,68 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
 
 #if defined(__GNUC__) || defined(__CUDACC__) || defined(__clang__)
 
-#define JUST(...)                                                                            \
-  ::oneflow::private_details::RemoveRValConst(({                                             \
-    auto&& _just_value_to_check_ = __JustStackCheckWrapper__(__VA_ARGS__);                   \
-    if (!::oneflow::private_details::JustIsOk(_just_value_to_check_)) {                      \
-      return ::oneflow::private_details::JustErrorAddStackFrame(                             \
-          ::oneflow::private_details::JustGetError(_just_value_to_check_),                   \
-          [](const char* function) {                                                         \
-            thread_local static auto frame = ::oneflow::SymbolOf(::oneflow::ErrorStackFrame( \
-                __FILE__, __LINE__, function, #__VA_ARGS__));                \
-            return frame;                                                                    \
-          }(__FUNCTION__));                                                                  \
-    }                                                                                        \
-    std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_);                    \
+#define JUST(...)                                                                        \
+  ::oneflow::private_details::RemoveRValConst(({                                         \
+    auto&& _just_value_to_check_ = __JustStackCheckWrapper__(__VA_ARGS__);               \
+    if (!::oneflow::private_details::JustIsOk(_just_value_to_check_)) {                  \
+      return ::oneflow::private_details::JustErrorAddStackFrame(                         \
+          ::oneflow::private_details::JustGetError(_just_value_to_check_),               \
+          [](const char* function) {                                                     \
+            thread_local static auto frame = ::oneflow::SymbolOf(                        \
+                ::oneflow::ErrorStackFrame(__FILE__, __LINE__, function, #__VA_ARGS__)); \
+            return frame;                                                                \
+          }(__FUNCTION__));                                                              \
+    }                                                                                    \
+    std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_);                \
   })).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
-#define CHECK_JUST(...)                                                                 \
-  ([&](const char* _just_closure_func_name_) {                                          \
-    auto&& _just_value_to_check_ = __JustStackCheckWrapper__(__VA_ARGS__);              \
-    if (!::oneflow::private_details::JustIsOk(_just_value_to_check_)) {                 \
-      thread_local static auto frame = ::oneflow::SymbolOf(::oneflow::ErrorStackFrame(  \
-          __FILE__, __LINE__, _just_closure_func_name_, #__VA_ARGS__)); \
-      LOG(FATAL) << ::oneflow::GetFormatedSerializedError(                              \
-          ::oneflow::private_details::JustErrorAddStackFrame(                           \
-              ::oneflow::private_details::JustGetError(_just_value_to_check_), frame)); \
-    }                                                                                   \
-    return std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_);        \
-  })(__FUNCTION__)                                                                      \
+#define CHECK_JUST(...)                                                                            \
+  ([&](const char* _just_closure_func_name_) {                                                     \
+    auto&& _just_value_to_check_ = __JustStackCheckWrapper__(__VA_ARGS__);                         \
+    if (!::oneflow::private_details::JustIsOk(_just_value_to_check_)) {                            \
+      thread_local static auto frame = ::oneflow::SymbolOf(                                        \
+          ::oneflow::ErrorStackFrame(__FILE__, __LINE__, _just_closure_func_name_, #__VA_ARGS__)); \
+      LOG(FATAL) << ::oneflow::GetFormatedSerializedError(                                         \
+          ::oneflow::private_details::JustErrorAddStackFrame(                                      \
+              ::oneflow::private_details::JustGetError(_just_value_to_check_), frame));            \
+    }                                                                                              \
+    return std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_);                   \
+  })(__FUNCTION__)                                                                                 \
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
-#define JUST_MSG(value, ...)                                                                     \
-  ::oneflow::private_details::RemoveRValConst(({                                                 \
-    auto&& _just_value_to_check_ = (value);                                                      \
-    if (!::oneflow::private_details::JustIsOk(_just_value_to_check_)) {                          \
-      return ::oneflow::private_details::JustErrorAddFrameMessage(                               \
-          ::oneflow::Error(::oneflow::private_details::JustGetError(_just_value_to_check_))      \
-              .AddStackFrame([](const char* function) {                                          \
-                thread_local static auto frame = ::oneflow::SymbolOf(::oneflow::ErrorStackFrame( \
-                    __FILE__, __LINE__, function, #value));                      \
-                return frame;                                                                    \
-              }(__FUNCTION__)),                                                                  \
-          "\nError message from " __FILE__, ":", __LINE__, "\n\t", #value, ": ", \
-          __VA_ARGS__, "\n");                                                                    \
-    }                                                                                            \
-    std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_);                        \
+#define JUST_MSG(value, ...)                                                                  \
+  ::oneflow::private_details::RemoveRValConst(({                                              \
+    auto&& _just_value_to_check_ = (value);                                                   \
+    if (!::oneflow::private_details::JustIsOk(_just_value_to_check_)) {                       \
+      return ::oneflow::private_details::JustErrorAddFrameMessage(                            \
+          ::oneflow::Error(::oneflow::private_details::JustGetError(_just_value_to_check_))   \
+              .AddStackFrame([](const char* function) {                                       \
+                thread_local static auto frame = ::oneflow::SymbolOf(                         \
+                    ::oneflow::ErrorStackFrame(__FILE__, __LINE__, function, #value));        \
+                return frame;                                                                 \
+              }(__FUNCTION__)),                                                               \
+          "\nError message from " __FILE__, ":", __LINE__, "\n\t", #value, ": ", __VA_ARGS__, \
+          "\n");                                                                              \
+    }                                                                                         \
+    std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_);                     \
   })).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
-#define CHECK_JUST_MSG(value, ...)                                                              \
-  ([&](const char* _just_closure_func_name_) {                                                  \
-    auto&& _just_value_to_check_ = (value);                                                     \
-    if (!::oneflow::private_details::JustIsOk(_just_value_to_check_)) {                         \
-      thread_local static auto frame = ::oneflow::SymbolOf(::oneflow::ErrorStackFrame(          \
-          __FILE__, __LINE__, _just_closure_func_name_, #value));               \
-      LOG(FATAL) << ::oneflow::GetFormatedSerializedError(                                      \
-          ::oneflow::private_details::JustErrorAddFrameMessage(                                 \
-              ::oneflow::Error(::oneflow::private_details::JustGetError(_just_value_to_check_)) \
-                  .AddStackFrame(frame),                                                        \
-              "\nError message from " __FILE__, ":", __LINE__, "\n\t", #value,  \
-              ": ", __VA_ARGS__, "\n")                                                          \
-              .stacked_error());                                                                \
-    }                                                                                           \
-    return std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_);                \
-  })(__FUNCTION__)                                                                              \
+#define CHECK_JUST_MSG(value, ...)                                                                \
+  ([&](const char* _just_closure_func_name_) {                                                    \
+    auto&& _just_value_to_check_ = (value);                                                       \
+    if (!::oneflow::private_details::JustIsOk(_just_value_to_check_)) {                           \
+      thread_local static auto frame = ::oneflow::SymbolOf(                                       \
+          ::oneflow::ErrorStackFrame(__FILE__, __LINE__, _just_closure_func_name_, #value));      \
+      LOG(FATAL) << ::oneflow::GetFormatedSerializedError(                                        \
+          ::oneflow::private_details::JustErrorAddFrameMessage(                                   \
+              ::oneflow::Error(::oneflow::private_details::JustGetError(_just_value_to_check_))   \
+                  .AddStackFrame(frame),                                                          \
+              "\nError message from " __FILE__, ":", __LINE__, "\n\t", #value, ": ", __VA_ARGS__, \
+              "\n")                                                                               \
+              .stacked_error());                                                                  \
+    }                                                                                             \
+    return std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_);                  \
+  })(__FUNCTION__)                                                                                \
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define JUST_OPT(...)                                                      \
