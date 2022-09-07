@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_kernel.h"
+#include "oneflow/core/kernel/blob_tensor_view.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/ir/include/OneFlow/Passes.h"
@@ -64,9 +65,9 @@ Maybe<void> KernelLaunchOp::InferDataType(user_op::InferContext* ctx) { return M
 namespace {
 
 // this context should support querying information about the kernel from representation in MLIR
+using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
   using ArgID = std::pair<std::string, int32_t>;
-  using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
  public:
   explicit KernelLaunchOpKernelRegContext(::mlir::ModuleOp module_op) {
@@ -82,6 +83,7 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
     auto& block = body.front();
     CHECK(!block.empty());
     auto& op = block.front();
+    op_ = &op;
     for (const auto& operand_id : ::llvm::enumerate(
              ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedOperandSegments>(&op))) {
       user_op::NaiveTensorDesc tensor_desc{};
@@ -153,9 +155,12 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
     return user_op_conf().Attr4Name(attr_name);
   }
 
+  ::mlir::Operation* GetOp() const { return op_; }
+
  private:
   ::mlir::func::FuncOp func_op_;
   ::mlir::ModuleOp owned_module_;
+  ::mlir::Operation* op_;
   DeviceType device_type_ = DeviceType::kInvalidDevice;
   std::unordered_map<ArgID, user_op::NaiveTensorDesc> arg2tensor_desc_{};
   ArgVec inputs_;
@@ -169,7 +174,36 @@ class KernelLaunchComputeContext final : public user_op::KernelComputeContext {
       : reg_ctx_(std::move(reg)), comp_ctx_(comp) {}
   ~KernelLaunchComputeContext() = default;
 
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                        int32_t index) const override {
+    return reg_ctx_->TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
+
+  user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    // auto it = comp_ctx_->find(std::make_pair(arg_name, index));
+    // if (it == comp_ctx_->end()) { return nullptr; }
+    // return it->second.tensor.get();
+    TODO() << "from op in mlir";
+    return nullptr;
+  }
+
+  ep::Stream* stream() override { return comp_ctx_->stream(); }
+
+  DeviceType device_type() const override { return reg_ctx_->device_type(); }
+  const ParallelContext& parallel_ctx() const override { return reg_ctx_->parallel_ctx(); }
+
+  const ArgVec& inputs() const override { return reg_ctx_->inputs(); }
+  const ArgVec& outputs() const override { return reg_ctx_->outputs(); }
+
+  const user_op::UserOpConfWrapper& user_op_conf() const override {
+    return reg_ctx_->user_op_conf();
+  }
+
  private:
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4Name(attr_name);
+  }
   std::unique_ptr<KernelLaunchOpKernelRegContext> reg_ctx_;
   KernelComputeContext* comp_ctx_ = nullptr;
 };
@@ -196,7 +230,7 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
     auto reg_ctx = std::make_unique<KernelLaunchOpKernelRegContext>(module_op.get());
     const user_op::OpKernelRegistryResult* res =
         CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult("relu", *reg_ctx));
-    KernelLaunchComputeContext comp_ctx(std::move(reg_ctx), ctx);
+    KernelLaunchComputeContext kl_comp_ctx(std::move(reg_ctx), ctx);
     const oneflow::user_op::OpKernel* kernel = res->create_fn();
     if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(&mlir_ctx, *module_op))) {
       LOG(ERROR) << "Fail lowering kernel launch Module to llvm ir";
@@ -212,8 +246,7 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
     CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
                           << llvm::toString(jit_or_error.takeError());
     auto jit = std::move(jit_or_error.get());
-    auto error = jit->invoke("relu2D0", ctx, kernel);
-    module_op->dump();
+    auto error = jit->invoke("relu2D0", ctx, &kl_comp_ctx);
     CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
     module_op->dump();
   }
