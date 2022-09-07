@@ -28,14 +28,11 @@ enum class StreamType {
   kCompute,
   kHost2Device,
   kDevice2Host,
-  kAsyncedDevice2Host,
-  kSyncedLaunchedCommNet,
-  kAsyncedLaunchedCommNet,
+  kCcl,
   kBarrier,
   kCriticalSection,
   kLazyJobLauncher,
-  kPinnedCompute,
-  kTmpCompute
+  kPinnedCompute
 };
 
 template<typename DerivedT>
@@ -47,12 +44,7 @@ struct StreamTypeVisitor {
       case StreamType::kCompute: return DerivedT::VisitCompute(std::forward<Args>(args)...);
       case StreamType::kHost2Device: return DerivedT::VisitHost2Device(std::forward<Args>(args)...);
       case StreamType::kDevice2Host: return DerivedT::VisitDevice2Host(std::forward<Args>(args)...);
-      case StreamType::kAsyncedDevice2Host:
-        return DerivedT::VisitAsyncedDevice2Host(std::forward<Args>(args)...);
-      case StreamType::kSyncedLaunchedCommNet:
-        return DerivedT::VisitSyncedLaunchedCommNet(std::forward<Args>(args)...);
-      case StreamType::kAsyncedLaunchedCommNet:
-        return DerivedT::VisitAsyncedLaunchedCommNet(std::forward<Args>(args)...);
+      case StreamType::kCcl: return DerivedT::VisitCcl(std::forward<Args>(args)...);
       case StreamType::kBarrier: return DerivedT::VisitBarrier(std::forward<Args>(args)...);
       case StreamType::kCriticalSection:
         return DerivedT::VisitCriticalSection(std::forward<Args>(args)...);
@@ -60,7 +52,6 @@ struct StreamTypeVisitor {
         return DerivedT::VisitLazyJobLauncher(std::forward<Args>(args)...);
       case StreamType::kPinnedCompute:
         return DerivedT::VisitPinnedCompute(std::forward<Args>(args)...);
-      case StreamType::kTmpCompute: return DerivedT::VisitTmpCompute(std::forward<Args>(args)...);
     }
     LOG(FATAL) << "invalid stream type";
   }

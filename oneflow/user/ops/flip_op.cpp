@@ -25,7 +25,7 @@ namespace oneflow {
   CHECK_OR_RETURN(dims.size() <= input_dims) << "len of dims must less than len of input tensor";
   for (auto x : dims) { CHECK_OR_RETURN(x < input_dims) << "dims parameter is illegal."; }
   user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
-  *y_desc->mut_shape() = x_desc.shape();
+  y_desc->set_shape(x_desc.shape());
   return Maybe<void>::Ok();
 }
 /*static*/ auto FlipOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
@@ -49,7 +49,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ auto FlipOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
