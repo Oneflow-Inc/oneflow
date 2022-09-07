@@ -384,11 +384,11 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
             sub_plan.mutable_block_chunk_list()->add_chunk()->CopyFrom(chunk_proto);
           }
         }
-        LOG(ERROR) << "rank id " << rank_id << " plan " << sub_plan.DebugString();
+        // LOG(ERROR) << "rank id " << rank_id << " plan " << sub_plan.DebugString();
 
         std::string rank_plan_name = plan_name_prefix + std::to_string(rank_id);
         Singleton<CtrlClient>::Get()->PushKV(rank_plan_name, sub_plan);
-        LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " push plan " << rank_plan_name << " size " << plan_.ByteSizeLong();
+        LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " push plan " << rank_plan_name << " size " << sub_plan.ByteSizeLong();
       }
     } else {
       std::string rank_plan_name = plan_name_prefix + std::to_string(GlobalProcessCtx::Rank());
