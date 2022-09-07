@@ -73,7 +73,6 @@ using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
  public:
   explicit KernelLaunchOpKernelRegContext(::mlir::ModuleOp module_op) : owned_module_(module_op) {
-
     module_op.getBody()->walk([&](::mlir::func::FuncOp func_op) {
       func_op_ = func_op;
       return ::mlir::WalkResult::interrupt();

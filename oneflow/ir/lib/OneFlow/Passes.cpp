@@ -997,7 +997,7 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
 
 LogicalResult LowerKernelLaunchModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   mlir::PassManager pm(context);
-  pm.addPass(createConvertOFKLCalleeToLLVMPass());          // convert-ofkl-callee-to-llvm
+  pm.addPass(createConvertOFKLCalleeToLLVMPass());   // convert-ofkl-callee-to-llvm
   pm.addPass(createConvertFuncToLLVMPass());         // convert-func-to-llvm
   pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
   return pm.run(module);
