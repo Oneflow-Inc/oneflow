@@ -37,11 +37,7 @@ def generate_necessity_for_cross_entropy_or_nll_loss(dim: int, prob: bool):
 
     if prob:
         target_tensor = random_tensor(
-            dim,
-            batch_size,
-            num_classes,
-            *extra_dim,
-            requires_grad=False,
+            dim, batch_size, num_classes, *extra_dim, requires_grad=False,
         ).to(device)
     else:
         target_tensor = random_tensor(
@@ -50,7 +46,7 @@ def generate_necessity_for_cross_entropy_or_nll_loss(dim: int, prob: bool):
             *extra_dim,
             low=0,
             high=num_classes,
-            dtype=int if not prob else float,
+            dtype=int,
             requires_grad=False,
         ).to(device)
     return (

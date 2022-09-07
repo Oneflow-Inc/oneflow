@@ -22,13 +22,11 @@ namespace {
 template<typename T, bool HasLabelSmoothing>
 __global__ void NLLProbForward(const int32_t num_samples, const int64_t num_classes, const T* input,
                                const T* probs, const T* weight, const T one_minus_label_smoothing,
-                               const T label_smoothing_rest_factor,
-                               T* out) {
+                               const T label_smoothing_rest_factor, T* out) {
   const T one = GetOneVal<T>();
   CUDA_1D_KERNEL_LOOP(i, num_samples * num_classes) {
-    T prob = HasLabelSmoothing
-                 ? probs[i] * one_minus_label_smoothing + label_smoothing_rest_factor
-                 : probs[i];
+    T prob = HasLabelSmoothing ? probs[i] * one_minus_label_smoothing + label_smoothing_rest_factor
+                               : probs[i];
     T w = weight ? weight[i % num_classes] : one;
     T y = -input[i] * w * prob;
     out[i] = y;
@@ -38,12 +36,12 @@ __global__ void NLLProbForward(const int32_t num_samples, const int64_t num_clas
 template<typename T, bool HasLabelSmoothing>
 __global__ void NLLProbBackward(const int32_t num_samples, const int64_t num_classes,
                                 const T* out_grad, const T* probs, const T* weight,
-                                const T one_minus_label_smoothing, const T label_smoothing_rest_factor, T* in_grad) {
+                                const T one_minus_label_smoothing,
+                                const T label_smoothing_rest_factor, T* in_grad) {
   const T one = GetOneVal<T>();
   CUDA_1D_KERNEL_LOOP_T(int64_t, i, num_samples * num_classes) {
-    T prob = HasLabelSmoothing
-                 ? probs[i] * one_minus_label_smoothing + label_smoothing_rest_factor
-                 : probs[i];
+    T prob = HasLabelSmoothing ? probs[i] * one_minus_label_smoothing + label_smoothing_rest_factor
+                               : probs[i];
     T w = weight ? weight[i % num_classes] : one;
     in_grad[i] = -w * prob * out_grad[i];
   }
@@ -54,19 +52,25 @@ __global__ void NLLProbBackward(const int32_t num_samples, const int64_t num_cla
 template<typename T, bool HasLabelSmoothing>
 struct NLLProbKernelUtil<DeviceType::kCUDA, T, HasLabelSmoothing> {
   static void Forward(ep::Stream* stream, const int32_t num_samples, const int64_t num_classes,
-                      const T* input, const T* probs, const T* weight, const T one_minus_label_smoothing, const T label_smoothing_rest_factor,
+                      const T* input, const T* probs, const T* weight,
+                      const T one_minus_label_smoothing, const T label_smoothing_rest_factor,
                       T* out) {
-    NLLProbForward<T, HasLabelSmoothing><<<BlocksNum4ThreadsNum(num_samples), kCudaThreadsNumPerBlock, 0,
-                     stream->As<ep::CudaStream>()->cuda_stream()>>>(
-        num_samples, num_classes, input, probs, weight, one_minus_label_smoothing, label_smoothing_rest_factor, out);
+    NLLProbForward<T, HasLabelSmoothing>
+        <<<BlocksNum4ThreadsNum(num_samples), kCudaThreadsNumPerBlock, 0,
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(num_samples, num_classes, input, probs,
+                                                          weight, one_minus_label_smoothing,
+                                                          label_smoothing_rest_factor, out);
   }
 
   static void Backward(ep::Stream* stream, const int32_t num_samples, const int64_t num_classes,
                        const T* out_grad, const T* probs, const T* weight,
-                       const T one_minus_label_smoothing, const T label_smoothing_rest_factor, T* in_grad) {
-    NLLProbBackward<T, HasLabelSmoothing><<<BlocksNum4ThreadsNum(num_samples), kCudaThreadsNumPerBlock, 0,
-                      stream->As<ep::CudaStream>()->cuda_stream()>>>(
-        num_samples, num_classes, out_grad, probs, weight, one_minus_label_smoothing, label_smoothing_rest_factor, in_grad);
+                       const T one_minus_label_smoothing, const T label_smoothing_rest_factor,
+                       T* in_grad) {
+    NLLProbBackward<T, HasLabelSmoothing>
+        <<<BlocksNum4ThreadsNum(num_samples), kCudaThreadsNumPerBlock, 0,
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(num_samples, num_classes, out_grad, probs,
+                                                          weight, one_minus_label_smoothing,
+                                                          label_smoothing_rest_factor, in_grad);
   }
 };
 

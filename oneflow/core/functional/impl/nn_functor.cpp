@@ -14,23 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/common/error.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/optional.h"
-#include "oneflow/core/common/scalar.h"
-#include "oneflow/core/common/shape_vec.h"
-#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/tensor_util.h"
-#include "oneflow/core/framework/op_interpreter.h"
-#include "oneflow/core/framework/random_generator.h"
+// #include "oneflow/core/framework/op_interpreter.h"
+// #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
@@ -1253,10 +1243,12 @@ class CrossEntropyFunctor {
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight, const int64_t& ignore_index,
                            const std::string& reduction, const double& label_smoothing) const {
-    if(input->nelement() == target->nelement())
-    {
-      CHECK_OR_RETURN(target->dtype()->is_floating_point()) << "Expected floating point type for target with class probabilities, got " << target->dtype()->name();
-      CHECK_LT_OR_RETURN(ignore_index, 0) << "ignore_index is not supported for floating point targe";
+    if (input->shape() == target->shape()) {
+      CHECK_OR_RETURN(target->dtype()->is_floating_point())
+          << "Expected floating point type for target with class probabilities, got "
+          << target->dtype()->name();
+      CHECK_LT_OR_RETURN(ignore_index, 0)
+          << "ignore_index is not supported for floating point targe";
       return CrossEntropyProb(input, target, weight, reduction, label_smoothing);
     }
     if (label_smoothing > 0.0)
@@ -1453,7 +1445,7 @@ class CrossEntropyProbFunctor : public LossFunctorBase {
     }
 
     DimVector target_reshape_(input->ndim() - 1);
-    for(size_t i = 0 ;  i < target_reshape_.size(); ++i) {
+    for (size_t i = 0; i < target_reshape_.size(); ++i) {
       target_reshape_[i] = input_shape->At(input_perm[i]);
     }
 
