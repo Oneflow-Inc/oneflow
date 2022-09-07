@@ -384,6 +384,17 @@ class TestUpsample2d(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @unittest.skip(
+        "The nearest interpolate operation in pytorch has bug, https://github.com/pytorch/pytorch/issues/65200"
+    )
+    @autotest()
+    def test_upsample2d_nearest_half(test_case):
+        device = random_device()
+        x = random_tensor().to(device=device, dtype=torch.float16)
+        m = torch.nn.Upsample(scale_factor=random().to(float), mode="nearest")
+        y = m(x)
+        return y
+
     # The forward and backward result in cpu and cuda of bilinear interpolate operation in PyTorch is different
     # in some corner cases. OneFlow has the same cpu and cuda results with PyTorch's cuda result.
     # So here we only test cuda device forward result.
