@@ -360,36 +360,50 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     std::string plan_name_prefix = "plan_" + job_name() + "_r_";
     if (GlobalProcessCtx::IsThisProcessMaster()) {
       LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " plan size " << plan_.ByteSizeLong();
+      const int64_t sub_plan_num = GlobalProcessCtx::WorldSize() - 1;
+      const int64_t cpu_num = std::thread::hardware_concurrency();
+      const int64_t thread_pool_size = std::min(sub_plan_num, cpu_num);
+      BlockingCounter counter(sub_plan_num);
+      std::mutex mtx;
+      ThreadPool thread_pool(thread_pool_size);
       for (int64_t rank_id = 1; rank_id < GlobalProcessCtx::WorldSize(); ++rank_id) {
-        // Creat sub-plan.
-        Plan sub_plan;
-        sub_plan.mutable_job_confs()->CopyFrom(plan_.job_confs());
-        sub_plan.mutable_collective_boxing_plan()->CopyFrom(plan_.collective_boxing_plan());
-        sub_plan.mutable_ctrl_regst_desc_info()->CopyFrom(plan_.ctrl_regst_desc_info());
-        for (auto& pair : plan_.job_id2op_attribute_ref_table()) {
-          sub_plan.mutable_job_id2op_attribute_ref_table()->insert(pair);
-        }
-        for (auto& task_proto : plan_.task()) {
-          if (task_proto.machine_id() == rank_id) {
-            sub_plan.add_task()->CopyFrom(task_proto);
+        thread_pool.AddWork([this, rank_id, &plan_name_prefix, &counter, &mtx]() {
+          // Creat sub-plan.
+          Plan sub_plan;
+          sub_plan.mutable_job_confs()->CopyFrom(plan_.job_confs());
+          sub_plan.mutable_collective_boxing_plan()->CopyFrom(plan_.collective_boxing_plan());
+          sub_plan.mutable_ctrl_regst_desc_info()->CopyFrom(plan_.ctrl_regst_desc_info());
+          for (auto& pair : plan_.job_id2op_attribute_ref_table()) {
+            sub_plan.mutable_job_id2op_attribute_ref_table()->insert(pair);
           }
-        }
-        for (auto& mem_block_proto : plan_.block_chunk_list().mem_block()) {
-          if (mem_block_proto.machine_id() == rank_id) {
-            sub_plan.mutable_block_chunk_list()->add_mem_block()->CopyFrom(mem_block_proto);
+          for (auto& task_proto : plan_.task()) {
+            if (task_proto.machine_id() == rank_id) {
+              sub_plan.add_task()->CopyFrom(task_proto);
+            }
           }
-        }
-        for (auto& chunk_proto : plan_.block_chunk_list().chunk()) {
-          if (chunk_proto.machine_id() == rank_id) {
-            sub_plan.mutable_block_chunk_list()->add_chunk()->CopyFrom(chunk_proto);
+          for (auto& mem_block_proto : plan_.block_chunk_list().mem_block()) {
+            if (mem_block_proto.machine_id() == rank_id) {
+              sub_plan.mutable_block_chunk_list()->add_mem_block()->CopyFrom(mem_block_proto);
+            }
           }
-        }
-        // LOG(ERROR) << "rank id " << rank_id << " plan " << sub_plan.DebugString();
+          for (auto& chunk_proto : plan_.block_chunk_list().chunk()) {
+            if (chunk_proto.machine_id() == rank_id) {
+              sub_plan.mutable_block_chunk_list()->add_chunk()->CopyFrom(chunk_proto);
+            }
+          }
+          // LOG(ERROR) << "rank id " << rank_id << " plan " << sub_plan.DebugString();
 
-        std::string rank_plan_name = plan_name_prefix + std::to_string(rank_id);
-        Singleton<CtrlClient>::Get()->PushKV(rank_plan_name, sub_plan);
-        LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " push plan " << rank_plan_name << " size " << sub_plan.ByteSizeLong();
+          std::string rank_plan_name = plan_name_prefix + std::to_string(rank_id);
+          {
+            // TODO(strint): try to rm this.
+            std::unique_lock<std::mutex> guard(mtx);
+            Singleton<CtrlClient>::Get()->PushKV(rank_plan_name, sub_plan);
+          }
+          LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " push plan " << rank_plan_name << " size " << sub_plan.ByteSizeLong();
+          counter.Decrease();
+        });
       }
+      counter.WaitForeverUntilCntEqualZero();
     } else {
       std::string rank_plan_name = plan_name_prefix + std::to_string(GlobalProcessCtx::Rank());
       Singleton<CtrlClient>::Get()->PullKV(rank_plan_name, &plan_);
