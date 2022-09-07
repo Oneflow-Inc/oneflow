@@ -48,7 +48,6 @@ namespace oneflow {
 
 Maybe<void> KernelLaunchOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
-  ;
 }
 
 Maybe<void> KernelLaunchOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -157,7 +156,7 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
  private:
   ::mlir::func::FuncOp func_op_;
   ::mlir::ModuleOp owned_module_;
-  DeviceType device_type_;
+  DeviceType device_type_ = DeviceType::kInvalidDevice;
   std::unordered_map<ArgID, user_op::NaiveTensorDesc> arg2tensor_desc_{};
   ArgVec inputs_;
   ArgVec outputs_;
@@ -185,7 +184,7 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
     KernelLaunchOpKernelRegContext reg_ctx(module_op.get());
     const user_op::OpKernelRegistryResult* res =
         CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult("relu", reg_ctx));
-    auto kernel = res->create_fn();
+    const oneflow::user_op::OpKernel* kernel = res->create_fn();
     if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(&mlir_ctx, *module_op))) {
       LOG(ERROR) << "Fail lowering kernel launch Module to llvm ir";
       exit(1);
@@ -200,7 +199,7 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
     CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
                           << llvm::toString(jit_or_error.takeError());
     auto jit = std::move(jit_or_error.get());
-    auto error = jit->invoke("relu2D0", &reg_ctx, kernel);
+    auto error = jit->invoke("relu2D0", ctx, kernel);
     module_op->dump();
     CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
     module_op->dump();
