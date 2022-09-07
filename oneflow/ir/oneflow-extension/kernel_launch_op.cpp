@@ -142,7 +142,9 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
-    if (it == arg2tensor_desc_.end()) { return nullptr; }
+    if (it == arg2tensor_desc_.end()) {
+      LOG(FATAL) << "TensorDesc not found for arg_name: " << arg_name << " index: " << index;
+    }
     return &(it->second);
   }
   const ArgVec& inputs() const override { return inputs_; }
