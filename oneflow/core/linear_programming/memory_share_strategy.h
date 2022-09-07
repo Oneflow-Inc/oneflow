@@ -29,15 +29,37 @@ class MemoryShareStrategy {
   size_t mem_block_size_;
   std::vector<int64_t> register_offset_;
   std::vector<int64_t> register_size_;
-  HashMap<RegstDescProto*, int32_t> register2index;
+  HashMap<RegstDescProto*, int32_t> register2index_;
+  std::vector<RegstDescProto*> index2register_;
   // A large enough number M
   double large_m_;
+  int32_t start_row_exclusion, end_row_exclusion;
+  int32_t start_column_exclusion, end_column_exclusion;
+  const int32_t num_row_group = 3;
 
   void ConstructMip4MemoryOnly(
       const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
 
   void ExportMemoryOffsets(size_t* mem_block_size,
                            HashMap<RegstDescProto*, int64_t>* regst_desc2offset);
+
+  void StealPosition(const HashMap<RegstDescProto*, int64_t>& regst_desc2offset);
+
+  void StealCompactPosition(
+      const HashMap<RegstDescProto*, int64_t>& regst_desc2offset,
+      const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
+
+ private:
+  // Initialization
+  void InitRegister(
+      const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
+  void InitRegisterInformation();
+
+  // Assemble x_i + l_i <= z
+  // z = max(x_i) for all the i
+  void AssembleZ(int32_t* row);
+  // Assemble cost for minimizing z
+  void MinimizeZ();
 };
 }  // namespace linear_programming
 }  // namespace oneflow

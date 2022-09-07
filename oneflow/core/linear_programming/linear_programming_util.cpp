@@ -173,7 +173,11 @@ void SparsePrimalMatrix::ExpandArtificialVariables() {
     columns_all2compact_.resize(columns_.size());
   }
   for (int32_t i = 0; i < rows_.size(); i++) {
-    if (rows_all2compact_[i] >= 0) { columns_all2compact_[i + original_column_size_] = 1; }
+    if (rows_all2compact_[i] >= 0) {
+      columns_all2compact_[i + original_column_size_] = 1;
+    } else {
+      columns_all2compact_[i + original_column_size_] = -1;
+    }
   }
 }
 
