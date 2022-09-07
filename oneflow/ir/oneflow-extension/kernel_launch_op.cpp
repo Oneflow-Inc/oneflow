@@ -72,8 +72,8 @@ namespace {
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
  public:
-  explicit KernelLaunchOpKernelRegContext(::mlir::ModuleOp module_op) {
-    owned_module_ = module_op;
+  explicit KernelLaunchOpKernelRegContext(::mlir::ModuleOp module_op) : owned_module_(module_op) {
+
     module_op.getBody()->walk([&](::mlir::func::FuncOp func_op) {
       func_op_ = func_op;
       return ::mlir::WalkResult::interrupt();
@@ -133,7 +133,7 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
   ~KernelLaunchOpKernelRegContext() = default;
   DeviceType device_type() const override { return device_type_; }
   const ParallelContext& parallel_ctx() const override {
-    TODO() << "create parallel_ctx from op in mlir";
+    // TODO: create parallel_ctx from op in mlir
     ParallelContext* parallel_ctx = nullptr;
     return *parallel_ctx;
   }
@@ -149,7 +149,7 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
   const ArgVec& outputs() const override { return outputs_; }
 
   const user_op::UserOpConfWrapper& user_op_conf() const override {
-    TODO() << "from op in mlir";
+    // TODO: get user op conf rom op in mlir
     OperatorConf user_op_conf;
     return user_op::UserOpConfWrapper(std::make_shared<OperatorConf>(user_op_conf));
   }
@@ -232,6 +232,43 @@ class KernelLaunchComputeContext final : public user_op::KernelComputeContext {
   std::unordered_map<mlir::oneflow::user_op::ArgID, user_op::Tensor*> tensor_desc_{};
 };
 
+namespace {
+
+void KernelLaunchCompute(user_op::KernelComputeContext* ctx) {
+  llvm::SmallVector<llvm::StringRef, 4> ext_libs(
+      {SharedLibPaths()->begin(), SharedLibPaths()->end()});
+  mlir::DialectRegistry registry;
+  registry
+      .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
+              mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect, mlir::LLVM::LLVMDialect>();
+  mlir::registerLLVMDialectTranslation(registry);
+  mlir::MLIRContext mlir_ctx(registry);
+  mlir::OwningOpRef<mlir::ModuleOp> module_op =
+      mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
+
+  auto reg_ctx = std::make_unique<KernelLaunchOpKernelRegContext>(module_op.get());
+  const user_op::OpKernelRegistryResult* res =
+      CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult("relu", *reg_ctx));
+  KernelLaunchComputeContext kl_comp_ctx(std::move(reg_ctx), ctx);
+  const oneflow::user_op::OpKernel* kernel = res->create_fn();
+  if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(&mlir_ctx, *module_op))) {
+    LOG(ERROR) << "Fail lowering kernel launch Module to llvm ir";
+    exit(1);
+  }
+  mlir::ExecutionEngineOptions jitOptions;
+  jitOptions.transformer = {};
+  jitOptions.jitCodeGenOptLevel = llvm::None;
+  jitOptions.sharedLibPaths = ext_libs;
+
+  auto jit_or_error = mlir::ExecutionEngine::create(*module_op, jitOptions);
+  CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
+                        << llvm::toString(jit_or_error.takeError());
+  auto jit = std::move(jit_or_error.get());
+  auto error = jit->invoke("relu2D0", &kl_comp_ctx, kernel);
+  CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
+}
+}  // namespace
+
 template<typename T>
 class KernelLaunchCpuKernel final : public user_op::OpKernel {
  public:
@@ -239,41 +276,7 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
   ~KernelLaunchCpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    llvm::SmallVector<llvm::StringRef, 4> ext_libs(
-        {SharedLibPaths()->begin(), SharedLibPaths()->end()});
-    mlir::DialectRegistry registry;
-    registry
-        .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
-                mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect, mlir::LLVM::LLVMDialect>();
-    mlir::registerLLVMDialectTranslation(registry);
-    mlir::MLIRContext mlir_ctx(registry);
-    mlir::OwningOpRef<mlir::ModuleOp> module_op =
-        mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
-
-    auto reg_ctx = std::make_unique<KernelLaunchOpKernelRegContext>(module_op.get());
-    const user_op::OpKernelRegistryResult* res =
-        CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult("relu", *reg_ctx));
-    KernelLaunchComputeContext kl_comp_ctx(std::move(reg_ctx), ctx);
-    const oneflow::user_op::OpKernel* kernel = res->create_fn();
-    if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(&mlir_ctx, *module_op))) {
-      LOG(ERROR) << "Fail lowering kernel launch Module to llvm ir";
-      exit(1);
-    }
-    mlir::ExecutionEngineOptions jitOptions;
-    jitOptions.transformer = {};
-    jitOptions.jitCodeGenOptLevel = llvm::None;
-    jitOptions.sharedLibPaths = ext_libs;
-
-    auto jit_or_error = mlir::ExecutionEngine::create(*module_op, jitOptions);
-    module_op->dump();
-    CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
-                          << llvm::toString(jit_or_error.takeError());
-    auto jit = std::move(jit_or_error.get());
-    auto error = jit->invoke("relu2D0", &kl_comp_ctx, kernel);
-    CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
-    module_op->dump();
-  }
+  void Compute(user_op::KernelComputeContext* ctx) const override { KernelLaunchCompute(ctx); }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
@@ -300,9 +303,7 @@ class KernelLaunchGpuKernel final : public user_op::OpKernel {
   ~KernelLaunchGpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    // TODO
-  }
+  void Compute(user_op::KernelComputeContext* ctx) const override { KernelLaunchCompute(ctx); }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
