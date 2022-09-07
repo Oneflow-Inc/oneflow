@@ -23,7 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 
 def _assert_true(test_case, value1, value2, name=""):
     is_equal = np.allclose(
-        value1.detach().cpu().numpy(), value2.detach().numpy(), rtol=1e-05, atol=1e-05,
+        value1.detach().cpu().numpy(), value2.detach().numpy(), rtol=1e-04, atol=1e-04,
     )
     test_case.assertTrue(is_equal, f"{name} is not equal." if name else "")
 
@@ -69,7 +69,7 @@ def calculate_and_compare_loss(test_case, input, target, model, order=2):
                 test_case,
                 grad_inputs[j].pytorch,
                 grad_inputs[j].oneflow,
-                f"{order}-grad_inputs[{j}]",
+                f"{i}-grad_inputs[{j}]",
             )
 
 
@@ -78,7 +78,7 @@ def generate_necessity_for_default_loss():
     device = random_device()
     shape = [random().to(int) for _ in range(ndim)]
     input_requires_grad = True
-    target_requires_grad = oneof(True, False).value()
+    target_requires_grad = random_bool().value()
     # input, target
     return (
         random_tensor(ndim, *shape, requires_grad=input_requires_grad).to(device),
@@ -90,7 +90,7 @@ def generate_necessity_for_nll_loss():
     ndim = random(2, 6).to(int).value()
     device = random_device()
     num_classes = random(low=2).to(int)
-    batch_size = random(low=2, high=10).to(int)
+    batch_size = random(low=2, high=5).to(int)
     ignore_index = (
         random(0, num_classes).to(int) | nothing()
         if num_classes.value() > 2
@@ -117,10 +117,10 @@ def generate_necessity_for_bce_loss():
     ndim = random(2, 6).to(int).value()
     device = random_device()
     num_classes = random(low=3).to(int)
-    batch_size = random(low=2, high=10).to(int)
+    batch_size = random(low=2, high=5).to(int)
     extra_dim = [random().to(int) for _ in range(ndim - 2)]
     input_requires_grad = True
-    target_requires_grad = oneof(True, False).value()
+    target_requires_grad = random_bool().value()
     # input, target, weight, pos_weight
     return (
         random_tensor(
@@ -193,8 +193,7 @@ def _test_bce_loss_grad_grad_impl(test_case, with_logits=False):
             y = y.detach().clone().requires_grad_(False)
     else:
         m = torch.nn.BCELoss(
-            weight=oneof(weight, nothing()),
-            reduction=oneof("none", "sum", "mean"),
+            weight=oneof(weight, nothing()), reduction=oneof("none", "sum", "mean"),
         )
     m.to(x.device)
 
@@ -216,28 +215,23 @@ def _test_nll_loss_grad_grad_impl(test_case):
 @flow.unittest.skip_unless_1n1d()
 class TestLossHigherDerivative(flow.unittest.TestCase):
     def test_smooth_l1_loss_grad_grad(test_case):
-        for i in range(10):
-            print("1", end="", flush=True)
+        for i in range(5):
             _test_smooth_l1_loss_grad_grad_impl(test_case)
 
     def test_kl_div_loss_grad_grad(test_case):
-        for i in range(10):
-            print("2", end="", flush=True)
+        for i in range(5):
             _test_kl_div_loss_grad_grad_impl(test_case)
 
     def test_nll_loss_grad_grad(test_case):
-        for i in range(10):
-            print("3", end="", flush=True)
+        for i in range(5):
             _test_nll_loss_grad_grad_impl(test_case)
 
     def test_bce_loss_grad_grad(test_case):
-        for i in range(10):
-            print("4", end="", flush=True)
+        for i in range(5):
             _test_bce_loss_grad_grad_impl(test_case)
 
     def test_bce_with_logits_loss_grad_grad(test_case):
-        for i in range(10):
-            print("5", end="", flush=True)
+        for i in range(5):
             _test_bce_loss_grad_grad_impl(test_case, with_logits=True)
 
 

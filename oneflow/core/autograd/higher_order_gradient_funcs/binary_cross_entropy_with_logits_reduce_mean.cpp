@@ -80,22 +80,30 @@ Maybe<void> BinaryCrossEntropyWithLogitsReduceMeanGradGrad::Apply(
     const auto& input = ctx->SavedTensors()[ctx->input_index];
     const auto& target = ctx->SavedTensors()[ctx->target_index];
     (*in_grads)[0] = JUST(
-        functional::BinaryCrossEntropyWithLogitsReduceMeanLossGrad(out_grads[0], input, target));
+        functional::sequence_function(functional::Sigmoid)
+            .then(std::bind(functional::Sub, std::placeholders::_1, target, /*alpha=*/1,
+                            /*inplace=*/false))
+            .then(std::bind(functional::Mul, std::placeholders::_1, out_grads[0]))
+            .then(std::bind(functional::ReduceMean, std::placeholders::_1, std::vector<int32_t>{},
+                            /*keepdim=*/false))
+            .call(input));
   }
   if (ctx->input_requires_grad) {
     const auto& grad = ctx->SavedTensors()[ctx->grad_index];
     const auto& input = ctx->SavedTensors()[ctx->input_index];
+    const auto& mean_grad = JUST(functional::ScalarMul(1.0 / out_grads[0]->nelement(), grad));
     (*in_grads)[1] =
         JUST(functional::sequence_function(functional::Sigmoid)
                  .then(std::bind(functional::SigmoidGrad, std::placeholders::_1, out_grads[0]))
-                 .then(std::bind(functional::Mul, std::placeholders::_1, grad))
+                 .then(std::bind(functional::Mul, std::placeholders::_1, mean_grad))
                  .call(input));
   }
   if (ctx->target_requires_grad) {
     const auto& grad = ctx->SavedTensors()[ctx->grad_index];
+    const auto& mean_grad = JUST(functional::ScalarMul(1.0 / out_grads[0]->nelement(), grad));
     (*in_grads)[2] = JUST(functional::sequence_function(functional::Mul)
                               .then(functional::Negative)
-                              .call(out_grads[0], grad));
+                              .call(out_grads[0], mean_grad));
   }
   return Maybe<void>::Ok();
 }

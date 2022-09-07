@@ -23,10 +23,8 @@ from oneflow.test_utils.automated_test_util import *
 
 def _assert_true(test_case, value1, value2, name=""):
     is_equal = np.allclose(
-        value1.detach().cpu().numpy(), value2.detach().numpy(), rtol=1e-05, atol=1e-05,
+        value1.detach().cpu().numpy(), value2.detach().numpy(), rtol=1e-04, atol=1e-04,
     )
-    if not is_equal:
-        print(">" * 100, value1, "\n", value2, "<" * 100)
     test_case.assertTrue(is_equal, f"{name} is not equal." if name else "")
 
 
@@ -53,7 +51,7 @@ def generate_grads_for_variables(variables):
 
 def calculate_and_compare_loss(test_case, input, target, model, order=2):
     output = model(input, target)
-    _assert_true(test_case, output.pytorch, output.oneflow)
+    _assert_true(test_case, output.pytorch, output.oneflow, "output")
 
     init_inputs = [input, target]
     grad_inputs = [output]
@@ -167,8 +165,7 @@ def _test_kl_div_loss_grad_grad_impl(test_case, placement):
     x, y = generate_necessity_for_default_loss(placement)
 
     m = torch.nn.KLDivLoss(
-        reduction="none",
-        # reduction=oneof("none", "sum", "mean", nothing()),
+        reduction=oneof("none", "sum", "mean", nothing()),
         log_target=oneof(True, False),
     )
 
@@ -179,20 +176,20 @@ def _test_bce_loss_grad_grad_impl(test_case, placement, with_logits=False):
     x, y, weight, pos_weight = generate_necessity_for_bce_loss(placement)
 
     if with_logits:
-        weight = oneof(weight, nothing())
+        weight = weight if random_bool().value() else None
         has_pos_weight = random_bool().value()
         pos_weight = pos_weight if has_pos_weight else nothing()
         m = torch.nn.BCEWithLogitsLoss(
-            weight=(weight if random_bool().value() else None),
-            pos_weight=(pos_weight if random_bool().value() else None),
-            reduction=oneof("none", "sum", "mean").value(),
+            weight=weight,
+            pos_weight=pos_weight,
+            reduction=oneof("none", "sum", "mean"),
         )
         if has_pos_weight:
             y = y.detach().clone().requires_grad_(False)
     else:
         m = torch.nn.BCELoss(
             weight=(weight if random_bool().value() else None),
-            reduction=oneof("none", "sum", "mean", nothing()),
+            reduction=oneof("none", "sum", "mean"),
         )
 
     calculate_and_compare_loss(test_case, x, y, m)
@@ -211,40 +208,35 @@ def _test_nll_loss_grad_grad_impl(test_case, placement):
 
 
 class TestGlobalLossHigherDerivative(flow.unittest.TestCase):
-    # @globaltest
-    # def test_smooth_l1_loss_grad_grad(test_case):
-    #     for i in range(10):
-    #         for placement in all_placement():
-    #             print("1", end="", flush=True)
-    #             _test_smooth_l1_loss_grad_grad_impl(test_case, placement)
+    @globaltest
+    def test_smooth_l1_loss_grad_grad(test_case):
+        for i in range(5):
+            for placement in all_placement():
+                _test_smooth_l1_loss_grad_grad_impl(test_case, placement)
 
     @globaltest
     def test_kl_div_loss_grad_grad(test_case):
-        for i in range(10):
+        for i in range(5):
             for placement in all_placement():
-                print("2", end="", flush=True)
                 _test_kl_div_loss_grad_grad_impl(test_case, placement)
 
-    # @globaltest
-    # def test_nll_loss_grad_grad(test_case):
-    #     for i in range(10):
-    #         for placement in all_placement():
-    #             print("3", end="", flush=True)
-    #             _test_nll_loss_grad_grad_impl(test_case, placement)
+    @globaltest
+    def test_nll_loss_grad_grad(test_case):
+        for i in range(5):
+            for placement in all_placement():
+                _test_nll_loss_grad_grad_impl(test_case, placement)
 
-    # @globaltest
-    # def test_bce_loss_grad_grad(test_case):
-    #     for i in range(10):
-    #         for placement in all_placement():
-    #             print("4", end="", flush=True)
-    #             _test_bce_loss_grad_grad_impl(test_case, placement)
+    @globaltest
+    def test_bce_loss_grad_grad(test_case):
+        for i in range(5):
+            for placement in all_placement():
+                _test_bce_loss_grad_grad_impl(test_case, placement)
 
-    # @globaltest
-    # def test_bce_with_logits_loss_grad_grad(test_case):
-    #     for i in range(10):
-    #         for placement in all_placement():
-    #             print("5", end="", flush=True)
-    #             _test_bce_loss_grad_grad_impl(test_case, placement, with_logits=True)
+    @globaltest
+    def test_bce_with_logits_loss_grad_grad(test_case):
+        for i in range(5):
+            for placement in all_placement():
+                _test_bce_loss_grad_grad_impl(test_case, placement, with_logits=True)
 
 
 if __name__ == "__main__":

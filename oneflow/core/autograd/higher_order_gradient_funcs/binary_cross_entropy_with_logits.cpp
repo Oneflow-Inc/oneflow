@@ -87,6 +87,7 @@ Maybe<void> BinaryCrossEntropyWithLogitsGradGrad::Apply(
   const auto& weight = ctx->has_weight ? Optional<one::Tensor>(ctx->SavedTensors()[3]) : NullOpt;
   const auto& pos_weight =
       ctx->has_pos_weight ? Optional<one::Tensor>(ctx->SavedTensors()[pos_weight_index]) : NullOpt;
+
   // dx = grad * weight * (-target*(1-input.sigmoid())*pos_weight + input.sigmoid()*(1-target))
   // grad_for_input = out_grad * grad * weight * sig * (1-sig) * [pos_weight * target + 1 - target]
   // grad_for_target = -out_grad * grad * weight * [pos_weight + sig - pos_weight * sig]

@@ -28,7 +28,6 @@ struct KLDivLossGradGradCaptureState : public AutoGradCaptureState {
   bool target_requires_grad = false;
   bool log_target = false;
 
-  size_t grad_index = 0;
   size_t input_index = 0;
   size_t target_index = 0;
 };
@@ -67,14 +66,6 @@ Maybe<void> KLDivLossGradGrad::Capture(KLDivLossGradGradCaptureState* ctx,
     ctx->input_index = ctx->SaveTensorForBackward(inputs[1]);   // input
     ctx->target_index = ctx->SaveTensorForBackward(inputs[2]);  // target
   }
-  if (ctx->target_requires_grad) {
-    if (ctx->log_target) {
-      // we can save grad_for_input in forward to calculate double_grad_for_target
-      ctx->grad_index = ctx->SaveTensorForBackward(outputs[0]);  // grad for input
-    } else {
-      ctx->grad_index = ctx->SaveTensorForBackward(inputs[0]);
-    }
-  }
 
   return Maybe<void>::Ok();
 }
@@ -82,25 +73,13 @@ Maybe<void> KLDivLossGradGrad::Apply(const KLDivLossGradGradCaptureState* ctx,
                                      const TensorTuple& out_grads, TensorTuple* in_grads) const {
   in_grads->resize(3);
 
-  // log_target=False: output = target * (target.log() - input)
-  //    dx = -target * grad, ddx = 0, ddy = -1 * grad * out_grad
-  // log_target=True: output = target.exp() * (target - input),
-  //    dx = -target.exp() * grad, ddx = 0, ddy = dx * out_grad
   if (ctx->grad_requires_grad) {
     const auto& input = ctx->SavedTensors()[ctx->input_index];
     const auto& target = ctx->SavedTensors()[ctx->target_index];
     (*in_grads)[0] = JUST(functional::KLDivLossGrad(out_grads[0], input, target, ctx->log_target));
   }
   if (ctx->input_requires_grad) { (*in_grads)[1] = JUST(functional::ZerosLike(out_grads[0])); }
-  if (ctx->target_requires_grad) {
-    (*in_grads)[2] = JUST(functional::ZerosLike(out_grads[0]));
-    // const auto& grad = ctx->SavedTensors()[ctx->grad_index];
-    // if (ctx->log_target) {
-    //   (*in_grads)[2] = JUST(functional::Mul(out_grads[0], grad));
-    // } else {
-    //   (*in_grads)[2] = JUST(functional::Negative(JUST(functional::Mul(out_grads[0], grad))));
-    // }
-  }
+  if (ctx->target_requires_grad) { (*in_grads)[2] = JUST(functional::ZerosLike(out_grads[0])); }
 
   return Maybe<void>::Ok();
 }

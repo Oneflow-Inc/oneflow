@@ -70,7 +70,7 @@ Maybe<void> BinaryCrossEntropyGradGrad::Apply(const BinaryCrossEntropyGradGradCa
   // dx = grad * [-target/input + (1-target)/(1-input)]
   // grad_for_grad = out_grad * [-target/input + (1-target)/(1-input)]
   // grad_for_input = out_grad * grad * [target/(input*input) + (1-target)/((1-input)*(1-input))]
-  // grad_for_target = out_grad * grad * [-1/input - 1/(1-input)]
+  // grad_for_target = out_grad * grad * [1/(input*(1-input))]
   if (ctx->grad_requires_grad) {
     const auto& weight = ctx->has_weight ? Optional<one::Tensor>(ctx->SavedTensors()[3]) : NullOpt;
     (*in_grads)[0] =
@@ -78,9 +78,9 @@ Maybe<void> BinaryCrossEntropyGradGrad::Apply(const BinaryCrossEntropyGradGradCa
   }
   if (ctx->input_requires_grad) {
     auto one_sub_input = JUST(functional::ScalarSub(1, input, /*alpha=*/1));
-    auto one_sub_target = JUST(functional::ScalarSub(1, target, /*alpha=*/1));
+    auto target_sub_one = JUST(functional::ScalarAdd(-1, target, /*alpha=*/1));
     auto a = JUST(functional::Div(target, JUST(functional::Square(input))));
-    auto b = JUST(functional::Div(one_sub_target, JUST(functional::Square(one_sub_input))));
+    auto b = JUST(functional::ReciprocalGrad(one_sub_input, target_sub_one));
     auto c = JUST(functional::Add(a, b, /*alpha=*/1, /*inplace=*/false));
     auto r = JUST(functional::sequence_function(functional::Mul)
                       .then(std::bind(functional::Mul, std::placeholders::_1, c))
@@ -88,13 +88,11 @@ Maybe<void> BinaryCrossEntropyGradGrad::Apply(const BinaryCrossEntropyGradGradCa
     (*in_grads)[1] = ctx->has_weight ? JUST(functional::Mul(ctx->SavedTensors()[3], r)) : r;
   }
   if (ctx->target_requires_grad) {
-    auto one_sub_input = JUST(functional::ScalarSub(1, input, /*alpha=*/1));
-    auto a = JUST(functional::ScalarDiv(-1, input));
-    auto b = JUST(functional::ScalarDiv(-1, one_sub_input));
-    auto c = JUST(functional::Add(a, b, /*alpha=*/1, /*inplace=*/false));
+    auto input_sub_one = JUST(functional::ScalarAdd(-1, input, /*alpha=*/1));
     auto r = JUST(functional::sequence_function(functional::Mul)
-                      .then(std::bind(functional::Mul, std::placeholders::_1, c))
-                      .call(out_grads[0], grad));
+                      .then(std::bind(functional::LogGrad, std::placeholders::_1, out_grads[0]))
+                      .then(std::bind(functional::Mul, std::placeholders::_1, grad))
+                      .call(input, input_sub_one));
     (*in_grads)[2] = ctx->has_weight ? JUST(functional::Mul(ctx->SavedTensors()[3], r)) : r;
   }
 

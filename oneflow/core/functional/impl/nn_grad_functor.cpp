@@ -613,9 +613,8 @@ class BinaryCrossEntropyWithLogitsReduceMeanLossTargetGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target) const {
-    return functional::sequence_function(functional::Mul)
-        .then(functional::Negative)
-        .call(dy, input);
+    auto neg_mean_dy = JUST(functional::ScalarMul(-1.0 / input->nelement(), dy));
+    return functional::Mul(input, neg_mean_dy);
   }
 };
 
