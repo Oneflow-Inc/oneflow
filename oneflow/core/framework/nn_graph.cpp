@@ -359,6 +359,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name_prefix = "plan_" + job_name() + "_r_";
     if (GlobalProcessCtx::IsThisProcessMaster()) {
+      LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " plan size " << plan_.ByteSizeLong();
       for (int64_t rank_id = 1; rank_id < GlobalProcessCtx::WorldSize(); ++rank_id) {
         // Creat sub-plan.
         Plan sub_plan;
@@ -387,7 +388,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
         std::string rank_plan_name = plan_name_prefix + std::to_string(rank_id);
         Singleton<CtrlClient>::Get()->PushKV(rank_plan_name, sub_plan);
-        LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " push plan " << rank_plan_name;
+        LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " push plan " << rank_plan_name << " size " << plan_.ByteSizeLong();
       }
     } else {
       std::string rank_plan_name = plan_name_prefix + std::to_string(GlobalProcessCtx::Rank());
