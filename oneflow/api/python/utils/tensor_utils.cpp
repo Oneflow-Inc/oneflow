@@ -162,7 +162,7 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   }
   PyObject* array = NULL;
   PyArray_Descr* np_dtype =
-      dtype.has_value() && is_bfloat16_dtype
+      dtype.has_value() && !is_bfloat16_dtype
           ? PyArray_DescrFromType(JUST(numpy::OFDataTypeToNumpyType(JUST(dtype)->data_type())))
           : nullptr;
   // PyArray_FromAny steals a reference to np_dtype object, so no need to decref it.
