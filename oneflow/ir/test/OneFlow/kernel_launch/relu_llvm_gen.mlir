@@ -1,7 +1,7 @@
 // RUN: oneflow-opt %s \
 // RUN: -convert-ofkl-callee-to-llvm | FileCheck %s
 
-// CHECK: oneflow.kernel_launch
+// CHECK: llvm.call @kernel_launch
 
 module {
   func.func public @relu2D0(%arg0: tensor<1xf32>) -> tensor<1xf32> attributes {llvm.emit_c_interface} {
