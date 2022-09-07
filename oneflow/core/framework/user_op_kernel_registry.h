@@ -88,8 +88,7 @@ class OpKernelRegistry final {
 
   template<typename T>
   OpKernelRegistry& SetCreateFn() {
-    auto fn = []() -> const OpKernel* { return NewOpKernel<T>(); };
-    return SetCreateFn(fn);
+    return SetCreateFn([]() -> const OpKernel* { return NewOpKernel<T>(); });
   }
   template<typename T>
   OpKernelRegistry& SetIsMatchedHob(const T& hob) {
