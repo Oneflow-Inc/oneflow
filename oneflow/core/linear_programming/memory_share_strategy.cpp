@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/linear_programming/memory_share_strategy.h"
 #include <glog/logging.h>
+#include <algorithm>
 #include "oneflow/core/register/runtime_register_desc.h"
 
 namespace oneflow {
@@ -158,7 +159,6 @@ void MemoryShareStrategy::InitRegister(
 
 void MemoryShareStrategy::InitRegisterInformation() {
   int32_t total_register_num = index2register_.size();
-  register_offset_.resize(total_register_num);
   register_size_.resize(total_register_num);
   int64_t large_m = 1;
   for (int32_t register_id = 0; register_id < total_register_num; register_id++) {
@@ -186,18 +186,8 @@ void MemoryShareStrategy::StealCompactPosition(
   // Update other information
   InitRegisterInformation();
 
-  // left registers store the first registers on the left, which have smaller offsets.
-  // For example, 1 < 2 < 3 < 5
-  //                  2 < 4 < 5
-  // Then
-  //      left_registers[1] = {}
-  //      left_registers[2] = {1}
-  //      left_registers[3] = {2}
-  //      left_registers[4] = {2}
-  //      left_registers[5] = {3, 4}
-  //  We know that 1 < 3, but 1 is not in left_registers[3],
-  //  since we only store the first registers.
-  std::vector<std::vector<int32_t>> left_registers(total_register_num);
+  left_registers.clear();
+  left_registers.resize(total_register_num);
   // should_visit[i] indicates whether we should visit register[order[i]].
   std::vector<bool> should_visit(total_register_num, false);
   // Find all the k < i, eliminates k < j,
@@ -309,6 +299,35 @@ void MemoryShareStrategy::MinimizeZ() {
   // c = [1, 0, 0, 0, ..., 0]
   mips_.lps_.primal_cost_.resize(end_column_exclusion);
   mips_.lps_.primal_cost_[0] = 1.0;
+}
+
+// Compute optimal cost with compact relationship
+size_t MemoryShareStrategy::ComputeOptimalCost4CompactRelationship() {
+  int32_t total_register_num = index2register_.size();
+  register_offset_.clear();
+  register_offset_.resize(total_register_num, -1);
+  int64_t mem_block_size = 0;
+  for (int32_t i = 0; i < total_register_num; i++) {
+    mem_block_size =
+        std::max(mem_block_size, ComputeOffset4CompactRelationship(i) + register_size_[i]);
+  }
+  mem_block_size_ = size_t(mem_block_size);
+  return mem_block_size_;
+}
+
+// Compute offset with compact relationship
+int64_t MemoryShareStrategy::ComputeOffset4CompactRelationship(int32_t i) {
+  if (register_offset_[i] < 0) {
+    if (left_registers[i].size() == 0) {
+      register_offset_[i] = 0;
+    } else {
+      for (int32_t j : left_registers[i]) {
+        register_offset_[i] =
+            std::max(register_offset_[i], ComputeOffset4CompactRelationship(j) + register_size_[j]);
+      }
+    }
+  }
+  return register_offset_[i];
 }
 
 }  // namespace linear_programming

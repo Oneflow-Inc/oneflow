@@ -50,6 +50,18 @@ class MemoryShareStrategy {
       const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
 
  private:
+  // left registers store the first registers on the left, which have smaller offsets.
+  // For example, 1 < 2 < 3 < 5
+  //                  2 < 4 < 5
+  // Then
+  //      left_registers[1] = {}
+  //      left_registers[2] = {1}
+  //      left_registers[3] = {2}
+  //      left_registers[4] = {2}
+  //      left_registers[5] = {3, 4}
+  //  We know that 1 < 3, but 1 is not in left_registers[3],
+  //  since we only store the first registers.
+  std::vector<std::vector<int32_t>> left_registers;
   // Initialization
   void InitRegister(
       const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
@@ -60,6 +72,10 @@ class MemoryShareStrategy {
   void AssembleZ(int32_t* row);
   // Assemble cost for minimizing z
   void MinimizeZ();
+  // Compute optimal cost with compact relationship
+  size_t ComputeOptimalCost4CompactRelationship();
+  // Compute offset with compact relationship
+  int64_t ComputeOffset4CompactRelationship(int32_t i);
 };
 }  // namespace linear_programming
 }  // namespace oneflow
