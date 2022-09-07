@@ -38,7 +38,6 @@ limitations under the License.
 extern "C" {
 
 void kernel_launch(void* ctx, void* kernel) {
-  TODO() << "in kernel launch";
   auto new_kernel = (oneflow::user_op::OpKernel*)kernel;
   new_kernel->Compute((oneflow::user_op::KernelComputeContext*)ctx);
 }
@@ -99,6 +98,7 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
         LOG(FATAL) << "Unranked tensor type not supported";
       }
       CHECK(arg2tensor_desc_.emplace(operand_id.value(), tensor_desc).second) << "duplicate key";
+      inputs_.push_back(operand_id.value());
     }
     for (const auto& result_id : ::llvm::enumerate(
              ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedResultSegments>(&op))) {
@@ -115,6 +115,7 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
         LOG(FATAL) << "Unranked tensor type not supported";
       }
       CHECK(arg2tensor_desc_.emplace(result_id.value(), tensor_desc).second) << "duplicate key";
+      outputs_.push_back(result_id.value());
     }
     auto dev_tag = mlir::OpTrait::IsOpConfCompatible<void>::getDeviceTag(&op);
     if (dev_tag == "cpu") {
@@ -139,14 +140,8 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
     if (it == arg2tensor_desc_.end()) { return nullptr; }
     return &(it->second);
   }
-  const ArgVec& inputs() const override {
-    TODO() << "query inputs from op in mlir";
-    return {};
-  }
-  const ArgVec& outputs() const override {
-    TODO() << "query outputs from op in mlir";
-    return {};
-  }
+  const ArgVec& inputs() const override { return inputs_; }
+  const ArgVec& outputs() const override { return outputs_; }
 
   const user_op::UserOpConfWrapper& user_op_conf() const override {
     TODO() << "from op in mlir";
@@ -164,6 +159,8 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
   ::mlir::ModuleOp owned_module_;
   DeviceType device_type_;
   std::unordered_map<ArgID, user_op::NaiveTensorDesc> arg2tensor_desc_{};
+  ArgVec inputs_;
+  ArgVec outputs_;
 };
 
 template<typename T>
