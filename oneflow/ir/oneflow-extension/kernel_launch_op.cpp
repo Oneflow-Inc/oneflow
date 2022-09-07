@@ -187,7 +187,7 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
     KernelLaunchOpKernelRegContext reg_ctx(module_op.get());
     const user_op::OpKernelRegistryResult* res =
         CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult("relu", reg_ctx));
-    auto kernel = res->create_fn();
+    const oneflow::user_op::OpKernel* kernel = res->create_fn();
     if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(&mlir_ctx, *module_op))) {
       LOG(ERROR) << "Fail lowering kernel launch Module to llvm ir";
       exit(1);
