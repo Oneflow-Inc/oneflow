@@ -359,15 +359,14 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name_prefix = "plan_" + job_name() + "_r_";
     if (GlobalProcessCtx::IsThisProcessMaster()) {
-      LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " plan size " << plan_.ByteSizeLong();
+      // LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " plan size " << plan_.ByteSizeLong();
       const int64_t sub_plan_num = GlobalProcessCtx::WorldSize() - 1;
       const int64_t cpu_num = std::thread::hardware_concurrency();
       const int64_t thread_pool_size = std::min(sub_plan_num, cpu_num);
       BlockingCounter counter(sub_plan_num);
-      std::mutex mtx;
       ThreadPool thread_pool(thread_pool_size);
       for (int64_t rank_id = 1; rank_id < GlobalProcessCtx::WorldSize(); ++rank_id) {
-        thread_pool.AddWork([this, rank_id, &plan_name_prefix, &counter, &mtx]() {
+        thread_pool.AddWork([this, rank_id, &plan_name_prefix, &counter]() {
           // Creat sub-plan.
           Plan sub_plan;
           sub_plan.mutable_job_confs()->CopyFrom(plan_.job_confs());
@@ -394,12 +393,8 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
           // LOG(ERROR) << "rank id " << rank_id << " plan " << sub_plan.DebugString();
 
           std::string rank_plan_name = plan_name_prefix + std::to_string(rank_id);
-          {
-            // TODO(strint): try to rm this.
-            std::unique_lock<std::mutex> guard(mtx);
-            Singleton<CtrlClient>::Get()->PushKV(rank_plan_name, sub_plan);
-          }
-          LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " push plan " << rank_plan_name << " size " << sub_plan.ByteSizeLong();
+          Singleton<CtrlClient>::Get()->PushKV(rank_plan_name, sub_plan);
+          // LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " push plan " << rank_plan_name << " size " << sub_plan.ByteSizeLong();
           counter.Decrease();
         });
       }
@@ -407,7 +402,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     } else {
       std::string rank_plan_name = plan_name_prefix + std::to_string(GlobalProcessCtx::Rank());
       Singleton<CtrlClient>::Get()->PullKV(rank_plan_name, &plan_);
-      LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " pull plan " << rank_plan_name;
+      // LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " pull plan " << rank_plan_name;
     }
     OF_SESSION_BARRIER();
     // NOTE(zwx): After barrier plan is synchronized between all ranks,
@@ -420,24 +415,6 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     }
     tc->Count("Graph name: " + name_ + " Push or Pull plan", 1);
   }
-
-  // tc->Count("Graph name: " + name_ + " CreateSubPlan", 1);
-  // if (GlobalProcessCtx::WorldSize() > 1) {
-  //   std::string plan_name = "plan:" + job_name();
-  //   if (GlobalProcessCtx::IsThisProcessMaster()) {
-  //     // TODO(chengcheng): split plan for each rank.
-  //     Singleton<CtrlClient>::Get()->PushKV(plan_name, plan_);
-  //   } else {
-  //     Singleton<CtrlClient>::Get()->PullKV(plan_name, &plan_);
-  //   }
-  //   OF_SESSION_BARRIER();
-  //   // NOTE(zwx): After barrier plan is synchronized between all ranks,
-  //   //     then it can be cleared for saving mem.
-  //   if (GlobalProcessCtx::IsThisProcessMaster()) {
-  //     Singleton<CtrlClient>::Get()->ClearKV(plan_name);
-  //   }
-  //   tc->Count("Graph name: " + name_ + " Push or Pull plan", 1);
-  // }
 
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
