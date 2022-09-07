@@ -22,29 +22,40 @@ import torch as torch_original
 from packaging import version
 
 
-def generate_necessity_for_cross_entropy_or_nll_loss(dim: int):
+def generate_necessity_for_cross_entropy_or_nll_loss(dim: int, prob: bool):
     if dim > 5 or dim < 2:
         raise ValueError("dim should be less than 5 or greater than 1. ")
     device = random_device()
     num_classes = random(low=2).to(int)
-    batch_size = random(low=10, high=100).to(int)
+    batch_size = random(low=3, high=5).to(int)
     ignore_index = (
         random(0, num_classes).to(int) | nothing()
-        if num_classes.value() > 2
+        if num_classes.value() > 2 and not prob
         else nothing()
     )
     extra_dim = [random().to(int) for _ in range(dim - 2)]
-    return (
-        random_tensor(dim, batch_size, num_classes, *extra_dim).to(device),
-        random_tensor(
-            dim - 1,
+
+    if prob:
+        target_tensor = random_tensor(
+            dim,
+            batch_size,
+            num_classes,
+            *extra_dim,
+            requires_grad=False,
+        ).to(device)
+    else:
+        target_tensor = random_tensor(
+            dim - 1 if not prob else dim,
             batch_size,
             *extra_dim,
             low=0,
             high=num_classes,
-            dtype=int,
+            dtype=int if not prob else float,
             requires_grad=False,
-        ).to(device),
+        ).to(device)
+    return (
+        random_tensor(dim, batch_size, num_classes, *extra_dim).to(device),
+        target_tensor,
         random_tensor(1, num_classes, low=0, high=3, requires_grad=False).to(device),
         ignore_index,
         device,
@@ -83,14 +94,15 @@ def generate_necessity_for_bce_loss(dim: int):
     )
 
 
-def _test_cross_entropy_loss(dim=int):
+def _test_cross_entropy_loss(dim: int, prob: bool):
     (
         x,
         target,
         weight,
         ignore_index,
         device,
-    ) = generate_necessity_for_cross_entropy_or_nll_loss(dim)
+    ) = generate_necessity_for_cross_entropy_or_nll_loss(dim, prob)
+    # import ipdb; ipdb.set_trace()
     m = torch.nn.CrossEntropyLoss(
         reduction=oneof("none", "sum", "mean", nothing()),
         ignore_index=ignore_index,
@@ -107,14 +119,14 @@ def _test_cross_entropy_loss(dim=int):
     return y
 
 
-def _test_nn_functional_cross_entropy_loss(dim=int):
+def _test_nn_functional_cross_entropy_loss(dim: int, prob: bool):
     (
         x,
         target,
         weight,
         ignore_index,
         device,
-    ) = generate_necessity_for_cross_entropy_or_nll_loss(dim)
+    ) = generate_necessity_for_cross_entropy_or_nll_loss(dim, prob)
     y1 = torch.nn.functional.cross_entropy(x, target)
     y2 = torch.nn.functional.cross_entropy(x, target, weight)
     return y1 + y2
@@ -124,24 +136,45 @@ def _test_nn_functional_cross_entropy_loss(dim=int):
 class TestCrossEntropyLossModule(flow.unittest.TestCase):
     @autotest(n=5)
     def test_cross_entropy_loss_with_random_data_dim_2(test_case):
-        return _test_cross_entropy_loss(2)
+        return _test_cross_entropy_loss(2, prob=False)
 
     @autotest(n=5)
     def test_cross_entropy_loss_with_random_data_dim_3(test_case):
-        return _test_cross_entropy_loss(3)
+        return _test_cross_entropy_loss(3, prob=False)
 
     @autotest(n=5)
     def test_cross_entropy_loss_with_random_data_dim_4(test_case):
-        return _test_cross_entropy_loss(4)
+        return _test_cross_entropy_loss(4, prob=False)
 
     @autotest(n=5)
     def test_cross_entropy_loss_with_random_data_dim_5(test_case):
-        return _test_cross_entropy_loss(5)
+        return _test_cross_entropy_loss(5, prob=False)
 
     @autotest(n=5)
     def test_nn_functional_cross_entropy_with_random_data_dim(test_case):
         dim = random(2, 6).to(int).value()
-        return _test_nn_functional_cross_entropy_loss(dim)
+        return _test_nn_functional_cross_entropy_loss(dim, prob=False)
+
+    @autotest(n=5)
+    def test_cross_entropy_prob_loss_with_random_data_dim_2(test_case):
+        return _test_cross_entropy_loss(2, prob=True)
+
+    @autotest(n=5)
+    def test_cross_entropy_prob_loss_with_random_data_dim_3(test_case):
+        return _test_cross_entropy_loss(3, prob=True)
+
+    @autotest(n=5)
+    def test_cross_entropy_prob_loss_with_random_data_dim_4(test_case):
+        return _test_cross_entropy_loss(4, prob=True)
+
+    @autotest(n=5)
+    def test_cross_entropy_prob_loss_with_random_data_dim_5(test_case):
+        return _test_cross_entropy_loss(5, prob=True)
+
+    @autotest(n=5)
+    def test_nn_functional_prob_cross_entropy_with_random_data_dim(test_case):
+        dim = random(2, 6).to(int).value()
+        return _test_nn_functional_cross_entropy_loss(dim, prob=True)
 
 
 def _test_nll_loss(dim=int):

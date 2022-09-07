@@ -23,12 +23,13 @@ namespace oneflow {
 template<DeviceType device_type, typename T, bool HasLabelSmoothing>
 struct NLLProbKernelUtil {
   static void Forward(ep::Stream* stream, const int32_t num_samples, const int64_t num_classes,
-                      const T* input, const T* probs, const T* weight, const double label_smoothing,
+                      const T* input, const T* probs, const T* weight, const T one_minus_label_smoothing,
+                      const T label_smoothing_rest_factor,
                       T* out);
 
   static void Backward(ep::Stream* stream, const int32_t num_samples, const int64_t num_classes,
                        const T* out_grad, const T* probs, const T* weight,
-                       const double label_smoothing, T* in_grad);
+                       const T one_minus_label_smoothing, const T label_smoothing_rest_factor, T* in_grad);
 };
 
 }  // namespace oneflow

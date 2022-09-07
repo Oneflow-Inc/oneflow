@@ -20,12 +20,12 @@ namespace oneflow {
 template<typename T, bool HasLabelSmoothing>
 struct NLLProbKernelUtil<DeviceType::kCPU, T, HasLabelSmoothing> {
   static void Forward(ep::Stream* stream, const int32_t num_samples, const int64_t num_classes,
-                      const T* input, const T* probs, const T* weight, const double label_smoothing,
+                      const T* input, const T* probs, const T* weight, const T one_minus_label_smoothing,
+                      const T label_smoothing_rest_factor,
                       T* out) {
     FOR_RANGE(int32_t, i, 0, num_samples * num_classes) {
       T prob = HasLabelSmoothing
-                   ? probs[i] * (T{1} - static_cast<T>(label_smoothing))
-                         + static_cast<T>(label_smoothing) / static_cast<T>(num_classes)
+                   ? probs[i] * one_minus_label_smoothing  + label_smoothing_rest_factor
                    : probs[i];
       T w = weight ? weight[i % num_classes] : T{1};
       T y = -input[i] * w * prob;
@@ -35,13 +35,12 @@ struct NLLProbKernelUtil<DeviceType::kCPU, T, HasLabelSmoothing> {
 
   static void Backward(ep::Stream* stream, const int32_t num_samples, const int64_t num_classes,
                        const T* out_grad, const T* probs, const T* weight,
-                       const double label_smoothing, T* in_grad) {
+                       const T one_minus_label_smoothing, const T label_smoothing_rest_factor, T* in_grad) {
     Memset<DeviceType::kCPU>(stream, in_grad, 0,
                              RoundUp(num_samples * num_classes * sizeof(T), kBlobBodyAlignSize));
     FOR_RANGE(int32_t, i, 0, num_samples * num_classes) {
       T prob = HasLabelSmoothing
-                   ? probs[i] * (T{1} - static_cast<T>(label_smoothing))
-                         + static_cast<T>(label_smoothing) / static_cast<T>(num_classes)
+                   ? probs[i] * one_minus_label_smoothing + label_smoothing_rest_factor
                    : probs[i];
       T w = weight ? weight[i % num_classes] : T{1};
       in_grad[i] = -w * prob * out_grad[i];

@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <memory>
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/error.h"
@@ -1254,6 +1253,12 @@ class CrossEntropyFunctor {
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight, const int64_t& ignore_index,
                            const std::string& reduction, const double& label_smoothing) const {
+    if(input->nelement() == target->nelement())
+    {
+      CHECK_OR_RETURN(target->dtype()->is_floating_point()) << "Expected floating point type for target with class probabilities, got " << target->dtype()->name();
+      CHECK_LT_OR_RETURN(ignore_index, 0) << "ignore_index is not supported for floating point targe";
+      return CrossEntropyProb(input, target, weight, reduction, label_smoothing);
+    }
     if (label_smoothing > 0.0)
       return CrossEntropyLabelSmoothing(input, target, weight, ignore_index, reduction,
                                         label_smoothing);
@@ -1447,7 +1452,15 @@ class CrossEntropyProbFunctor : public LossFunctorBase {
       nll_result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_nll_prob_, {input_, target_}, attrs));
     }
 
-    nll_result = JUST(ReduceSum(JUST(Reshape(nll_result, *target_shape)), {-1}, /*keepdim=*/false));
+    DimVector target_reshape_(input->ndim() - 1);
+    for(size_t i = 0 ;  i < target_reshape_.size(); ++i) {
+      target_reshape_[i] = input_shape->At(input_perm[i]);
+    }
+
+    nll_result = JUST(Reshape(nll_result, Shape({-1, target_shape->At(1)})));
+    nll_result = JUST(ReduceSum(nll_result, {-1}, false));
+    nll_result = JUST(Reshape(nll_result, Shape(target_reshape_)));
+
     return apply_reduction(nll_result, reduction);
   }
 

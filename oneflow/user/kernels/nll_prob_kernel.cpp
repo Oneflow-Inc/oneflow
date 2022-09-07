@@ -97,6 +97,8 @@ class NLLProbKernel final : public user_op::OpKernel {
     }
 
     const double label_smoothing = ctx->Attr<double>("label_smoothing");
+    const double one_minus_label_smoothing = static_cast<double>(1) - label_smoothing;
+    const double label_smoothing_rest_factor = label_smoothing / static_cast<double>(C);
 
     const T* weight_dptr = nullptr;
     if (ctx->has_input("weight", 0)) {
@@ -105,11 +107,11 @@ class NLLProbKernel final : public user_op::OpKernel {
     if (label_smoothing > 0) {
       NLLProbKernelUtil<device_type, T, true>::Forward(
           ctx->stream(), static_cast<int32_t>(N), static_cast<int64_t>(C), input->dptr<T>(),
-          target->dptr<T>(), weight_dptr, label_smoothing, output->mut_dptr<T>());
+          target->dptr<T>(), weight_dptr, static_cast<T>(one_minus_label_smoothing), static_cast<T>(label_smoothing_rest_factor), output->mut_dptr<T>());
     } else {
       NLLProbKernelUtil<device_type, T, false>::Forward(
           ctx->stream(), static_cast<int32_t>(N), static_cast<int64_t>(C), input->dptr<T>(),
-          target->dptr<T>(), weight_dptr, label_smoothing, output->mut_dptr<T>());
+          target->dptr<T>(), weight_dptr, static_cast<T>(one_minus_label_smoothing), static_cast<T>(label_smoothing_rest_factor), output->mut_dptr<T>());
     }
   }
 };
@@ -151,15 +153,17 @@ class NLLProbGradKernel final : public user_op::OpKernel {
       weight_dptr = CHECK_NOTNULL(ctx->Tensor4ArgNameAndIndex("weight", 0))->dptr<T>();
     }
     const double label_smoothing = ctx->Attr<double>("label_smoothing");
+    const double one_minus_label_smoothing = static_cast<double>(1) - label_smoothing;
+    const double label_smoothing_rest_factor = label_smoothing / static_cast<double>(C);
     if (label_smoothing > 0) {
       NLLProbKernelUtil<device_type, T, true>::Backward(
           ctx->stream(), static_cast<int32_t>(N), static_cast<int64_t>(C), out_grad->dptr<T>(),
-            target->dptr<T>(), weight_dptr, label_smoothing, in_grad->mut_dptr<T>());
+            target->dptr<T>(), weight_dptr, static_cast<T>(one_minus_label_smoothing), static_cast<T>(label_smoothing_rest_factor), in_grad->mut_dptr<T>());
       }
      else {
         NLLProbKernelUtil<device_type, T, false>::Backward(
             ctx->stream(), static_cast<int32_t>(N), static_cast<int64_t>(C), out_grad->dptr<T>(),
-            target->dptr<T>(), weight_dptr, label_smoothing, in_grad->mut_dptr<T>());
+            target->dptr<T>(), weight_dptr, static_cast<T>(one_minus_label_smoothing), static_cast<T>(label_smoothing_rest_factor), in_grad->mut_dptr<T>());
       }
   };
 };
