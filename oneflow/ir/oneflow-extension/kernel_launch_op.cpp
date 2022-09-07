@@ -131,7 +131,7 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
   ~KernelLaunchOpKernelRegContext() = default;
   DeviceType device_type() const override { return device_type_; }
   const ParallelContext& parallel_ctx() const override {
-    TODO() << "create from device attr in op in mlir";
+    TODO() << "create parallel_ctx from op in mlir";
     ParallelContext* parallel_ctx = nullptr;
     return *parallel_ctx;
   }
@@ -190,7 +190,7 @@ class KernelLaunchComputeContext final : public user_op::KernelComputeContext {
   ep::Stream* stream() override { return comp_ctx_->stream(); }
 
   DeviceType device_type() const override { return reg_ctx_->device_type(); }
-  const ParallelContext& parallel_ctx() const override { return reg_ctx_->parallel_ctx(); }
+  const ParallelContext& parallel_ctx() const override { return comp_ctx_->parallel_ctx(); }
 
   const ArgVec& inputs() const override { return reg_ctx_->inputs(); }
   const ArgVec& outputs() const override { return reg_ctx_->outputs(); }
