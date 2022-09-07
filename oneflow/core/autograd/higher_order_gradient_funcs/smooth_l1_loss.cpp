@@ -44,7 +44,7 @@ class SmoothL1LossGradGrad : public OpExprGradFunction<SmoothL1LossGradGradCaptu
 
   Maybe<void> Capture(SmoothL1LossGradGradCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    // dy, input, target
+    // grad, input, target
     CHECK_EQ_OR_RETURN(inputs.size(), 3);  // NOLINT(maybe-need-error-msg)
 
     ctx->grad_requires_grad = inputs[0]->requires_grad();
@@ -65,14 +65,14 @@ class SmoothL1LossGradGrad : public OpExprGradFunction<SmoothL1LossGradGradCaptu
   Maybe<void> Apply(const SmoothL1LossGradGradCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->resize(3);
-    const auto& input = ctx->SavedTensors().at(ctx->input_index);
-    const auto& target = ctx->SavedTensors().at(ctx->target_index);
+    const auto& input = ctx->SavedTensors()[ctx->input_index];
+    const auto& target = ctx->SavedTensors()[ctx->target_index];
 
     if (ctx->grad_requires_grad) {
       (*in_grads)[0] = JUST(functional::SmoothL1LossGrad(out_grads[0], input, target, ctx->beta));
     }
     if (ctx->input_requires_grad || ctx->target_requires_grad) {
-      const auto& grad = ctx->SavedTensors().at(ctx->grad_index);
+      const auto& grad = ctx->SavedTensors()[ctx->grad_index];
       auto condition = JUST(functional::sequence_function(functional::Sub)
                                 .then(functional::Abs)
                                 .then([&ctx](const std::shared_ptr<Tensor>& input) {

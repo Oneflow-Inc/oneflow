@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstddef>
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
 
@@ -20,7 +22,9 @@ namespace oneflow {
 namespace one {
 
 struct BinaryCrossEntropyWithLogitsCaptureState : public AutoGradCaptureState {
-  bool requires_grad = false;
+  bool input_requires_grad = false;
+  bool target_requires_grad = false;
+  bool has_weight = false;
   bool has_pos_weight = false;
 };
 
@@ -47,13 +51,16 @@ Maybe<void> BinaryCrossEntropyWithLogits::Capture(BinaryCrossEntropyWithLogitsCa
                                                   const TensorTuple& inputs,
                                                   const TensorTuple& outputs,
                                                   const AttrMap& attrs) const {
-  ctx->requires_grad = inputs.at(0)->requires_grad();
-  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+  CHECK_OR_RETURN(inputs.size() >= 2 && inputs.size() <= 4);  // NOLINT(maybe-need-error-msg)
+  ctx->input_requires_grad = inputs.at(0)->requires_grad();
+  ctx->target_requires_grad = inputs.at(1)->requires_grad();
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->has_pos_weight = JUST(composed_attrs.GetAttr<bool>("has_pos_weight"));
+  ctx->has_weight = inputs.size() == 4 || (inputs.size() == 3 && !ctx->has_pos_weight);
   ctx->SaveTensorForBackward(inputs.at(0));  // input
   ctx->SaveTensorForBackward(inputs.at(1));  // target
+
   if (inputs.size() == 3) {
     ctx->SaveTensorForBackward(inputs.at(2));  // weight or pos_weight
   }
@@ -66,8 +73,6 @@ Maybe<void> BinaryCrossEntropyWithLogits::Capture(BinaryCrossEntropyWithLogitsCa
 Maybe<void> BinaryCrossEntropyWithLogits::Apply(const BinaryCrossEntropyWithLogitsCaptureState* ctx,
                                                 const TensorTuple& out_grads,
                                                 TensorTuple* in_grads) const {
-  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   const auto& dy = out_grads.at(0);
   const auto& input = ctx->SavedTensors().at(0);
@@ -75,25 +80,21 @@ Maybe<void> BinaryCrossEntropyWithLogits::Apply(const BinaryCrossEntropyWithLogi
 
   in_grads->resize(ctx->SavedTensors().size());
 
-  if (ctx->SavedTensors().size() == 3) {
-    if (ctx->has_pos_weight) {
-      const auto& pos_weight = ctx->SavedTensors().at(2);
-      in_grads->at(0) = JUST(
-          functional::BinaryCrossEntropyWithLogitsLossGrad(dy, input, target, NullOpt, pos_weight));
-    } else {
-      const auto& weight = ctx->SavedTensors().at(2);
-      in_grads->at(0) = JUST(
-          functional::BinaryCrossEntropyWithLogitsLossGrad(dy, input, target, weight, NullOpt));
-    }
-  } else if (ctx->SavedTensors().size() == 4) {
-    const auto& weight = ctx->SavedTensors().at(2);
-    const auto& pos_weight = ctx->SavedTensors().at(3);
+  size_t pos_weight_index = ctx->has_weight ? 3 : 2;
+  auto weight = ctx->has_weight ? Optional<one::Tensor>(ctx->SavedTensors().at(2)) : NullOpt;
+  auto pos_weight = ctx->has_pos_weight
+                        ? Optional<one::Tensor>(ctx->SavedTensors().at(pos_weight_index))
+                        : NullOpt;
+
+  if (ctx->input_requires_grad) {
     in_grads->at(0) = JUST(
         functional::BinaryCrossEntropyWithLogitsLossGrad(dy, input, target, weight, pos_weight));
-  } else {
-    in_grads->at(0) =
-        JUST(functional::BinaryCrossEntropyWithLogitsLossGrad(dy, input, target, NullOpt, NullOpt));
   }
+  if (ctx->target_requires_grad) {
+    in_grads->at(1) = JUST(functional::BinaryCrossEntropyWithLogitsLossTargetGrad(
+        dy, input, target, weight, pos_weight));
+  }
+
   return Maybe<void>::Ok();
 }
 REGISTER_OP_EXPR_GRAD_FUNCTION("binary_cross_entropy_with_logits", BinaryCrossEntropyWithLogits);
