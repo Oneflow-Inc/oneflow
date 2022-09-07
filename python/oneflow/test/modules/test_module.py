@@ -411,12 +411,13 @@ class TestModule(flow.unittest.TestCase):
                 super(ConvBNModule, self).__init__()
                 self.conv = nn.Conv2d(1, 2, 1, 1)
                 self.bn = nn.BatchNorm2d(2)
-            
+
             def forward(self, x):
                 return self.bn(self.conv(x))
-        
+
         m = ConvBNModule()
         delattr(m, "bn")
+
 
 if __name__ == "__main__":
     unittest.main()
