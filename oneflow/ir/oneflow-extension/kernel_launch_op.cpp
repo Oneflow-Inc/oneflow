@@ -162,6 +162,18 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
   ArgVec outputs_;
 };
 
+class KernelLaunchComputeContext final : public user_op::KernelComputeContext {
+ public:
+  explicit KernelLaunchComputeContext(std::unique_ptr<KernelLaunchOpKernelRegContext> reg,
+                                      KernelComputeContext* comp)
+      : reg_ctx_(std::move(reg)), comp_ctx_(comp) {}
+  ~KernelLaunchComputeContext() = default;
+
+ private:
+  std::unique_ptr<KernelLaunchOpKernelRegContext> reg_ctx_;
+  KernelComputeContext* comp_ctx_ = nullptr;
+};
+
 template<typename T>
 class KernelLaunchCpuKernel final : public user_op::OpKernel {
  public:
@@ -181,9 +193,10 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
     mlir::OwningOpRef<mlir::ModuleOp> module_op =
         mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
 
-    KernelLaunchOpKernelRegContext reg_ctx(module_op.get());
+    auto reg_ctx = std::make_unique<KernelLaunchOpKernelRegContext>(module_op.get());
     const user_op::OpKernelRegistryResult* res =
-        CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult("relu", reg_ctx));
+        CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult("relu", *reg_ctx));
+    KernelLaunchComputeContext comp_ctx(std::move(reg_ctx), ctx);
     const oneflow::user_op::OpKernel* kernel = res->create_fn();
     if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(&mlir_ctx, *module_op))) {
       LOG(ERROR) << "Fail lowering kernel launch Module to llvm ir";
@@ -221,7 +234,6 @@ REGISTER_KERNEL_LAUNCH_CPU_KERNEL(float)
 REGISTER_KERNEL_LAUNCH_CPU_KERNEL(double)
 REGISTER_KERNEL_LAUNCH_CPU_KERNEL(int32_t)
 REGISTER_KERNEL_LAUNCH_CPU_KERNEL(int64_t)
-
 #undef REGISTER_KERNEL_LAUNCH_CPU_KERNEL
 
 template<typename T>
