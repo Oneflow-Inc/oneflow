@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/ir/include/OneFlow/Passes.h"
@@ -36,16 +37,10 @@ limitations under the License.
 
 extern "C" {
 
-void launch_kernel(void* ctx, std::string name) {
-  auto res = ::oneflow::user_op::UserOpRegistryMgr::Get().GetAllOpRegistryResults();
-  auto it = res.find(name);
-  if (it == res.end()) return;
-  TODO() << "LookUp";
-  // auto instance = oneflow::Singleton<oneflow::user_op::KernelLaunchRegistry>::Get();
-  // auto name = instance->getName(index);
-  // auto kernel = instance->LookUp(name)();
-  auto converted_ctx = (oneflow::user_op::KernelComputeContext*)ctx;
-  // kernel->Compute(converted_ctx);
+void kernel_launch(void* ctx, void* kernel) {
+  TODO() << "in kernel launch";
+  auto new_kernel = (oneflow::user_op::OpKernel*)kernel;
+  new_kernel->Compute((oneflow::user_op::KernelComputeContext*)ctx);
 }
 
 }  // extern "C"
@@ -89,7 +84,6 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
     auto& block = body.front();
     CHECK(!block.empty());
     auto& op = block.front();
-    op.dump();
     for (const auto& operand_id : ::llvm::enumerate(
              ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedOperandSegments>(&op))) {
       user_op::NaiveTensorDesc tensor_desc{};
@@ -191,27 +185,28 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
     mlir::OwningOpRef<mlir::ModuleOp> module_op =
         mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
 
+    KernelLaunchOpKernelRegContext reg_ctx(module_op.get());
+    const user_op::OpKernelRegistryResult* res =
+        CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult("relu", reg_ctx));
+    auto kernel = res->create_fn();
     if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(&mlir_ctx, *module_op))) {
       LOG(ERROR) << "Fail lowering kernel launch Module to llvm ir";
       exit(1);
     }
-    module_op->dump();
-    KernelLaunchOpKernelRegContext reg_ctx(module_op.get());
-    const auto* res =
-        CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult("relu", reg_ctx));
-
     mlir::ExecutionEngineOptions jitOptions;
     jitOptions.transformer = {};
     jitOptions.jitCodeGenOptLevel = llvm::None;
     jitOptions.sharedLibPaths = ext_libs;
 
     auto jit_or_error = mlir::ExecutionEngine::create(*module_op, jitOptions);
+    module_op->dump();
     CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
                           << llvm::toString(jit_or_error.takeError());
     auto jit = std::move(jit_or_error.get());
-    auto error = jit->invoke("relu2D0", &reg_ctx);
+    auto error = jit->invoke("relu2D0", &reg_ctx, kernel);
+    module_op->dump();
     CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
-    TODO() << "run the kernel::compute func";
+    module_op->dump();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

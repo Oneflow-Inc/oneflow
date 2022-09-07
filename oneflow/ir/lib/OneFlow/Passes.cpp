@@ -14,7 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
+#include "llvm-c/Analysis.h"
+#include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
@@ -155,19 +158,18 @@ LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, T op) {
   return success();
 }
 
-func::FuncOp DeclareKernelLaunchCInterface(::mlir::PatternRewriter& rewriter, mlir::Location loc,
-                                           ModuleOp* module, StringRef c_api_callee,
-                                           Type llvm_ptr_type) {
-  func::FuncOp func;
-  if (!(func = module->lookupSymbol<func::FuncOp>(c_api_callee))) {
+LLVM::LLVMFuncOp DeclareKernelLaunchCInterface(::mlir::PatternRewriter& rewriter,
+                                               mlir::Location loc, ModuleOp* module,
+                                               StringRef c_api_callee, Type llvm_ptr_type) {
+  LLVM::LLVMFuncOp func;
+  if (!(func = module->lookupSymbol<LLVM::LLVMFuncOp>(c_api_callee))) {
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(module->getBody());
-    func = mlir::func::FuncOp(rewriter.create<func::FuncOp>(
-        loc, c_api_callee, rewriter.getFunctionType({llvm_ptr_type, llvm_ptr_type}, {}),
-        rewriter.getStringAttr("private")));
+    auto void_type = LLVM::LLVMVoidType::get(rewriter.getContext());
+    auto func_type = LLVM::LLVMFunctionType::get(void_type, {llvm_ptr_type, llvm_ptr_type}, false);
+    func = rewriter.create<LLVM::LLVMFuncOp>(loc, c_api_callee, func_type, LLVM::Linkage::External);
 
     func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
-    func->setAttr("whitelist", rewriter.getStringAttr("true"));
   }
   return func;
 }
@@ -233,7 +235,7 @@ func::FuncOp GetOrInsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operat
   return func;
 }
 
-func::FuncOp GetOrInsertKernelLLVMFuncOp(::mlir::PatternRewriter& rewriter, func::FuncOp op) {
+LLVM::LLVMFuncOp GetOrInsertKernelLLVMFuncOp(::mlir::PatternRewriter& rewriter, func::FuncOp op) {
   auto loc = op->getLoc();
   auto llvm_ptr_type = LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8));
   auto parent_module_op = op->getParentOfType<ModuleOp>();
@@ -242,18 +244,20 @@ func::FuncOp GetOrInsertKernelLLVMFuncOp(::mlir::PatternRewriter& rewriter, func
     return nullptr;
   }
   StringRef c_api_callee = "kernel_launch";
-  func::FuncOp c_api_func =
+  LLVM::LLVMFuncOp c_api_func =
       DeclareKernelLaunchCInterface(rewriter, loc, &parent_module_op, c_api_callee, llvm_ptr_type);
-
   auto global = DeclareorGetGlobalString(rewriter, loc, &parent_module_op, op.getSymName());
 
-  auto func_name = op.getSymName();
-  auto func_type = rewriter.getFunctionType(TypeRange({llvm_ptr_type}), TypeRange({}));
+  auto func_name = std::string("_mlir_ciface_") + op.getSymName().str();
+  auto void_type = LLVM::LLVMVoidType::get(rewriter.getContext());
+  auto func_type = LLVM::LLVMFunctionType::get(void_type, {llvm_ptr_type, llvm_ptr_type}, false);
   OpBuilder::InsertionGuard guard_module(rewriter);
-  rewriter.setInsertionPointToStart(parent_module_op.getBody());
-  auto func = rewriter.create<func::FuncOp>(loc, func_name, func_type);
+  rewriter.setInsertionPointToEnd(parent_module_op.getBody());
+
+  auto func = rewriter.create<LLVM::LLVMFuncOp>(loc, func_name, func_type);
   func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
   func.getBody().emplaceBlock();
+  func.getBody().addArgument(llvm_ptr_type, loc);
   func.getBody().addArgument(llvm_ptr_type, loc);
   OpBuilder::InsertionGuard guard_func(rewriter);
   rewriter.setInsertionPointToStart(&func.getBody().front());
@@ -264,9 +268,11 @@ func::FuncOp GetOrInsertKernelLLVMFuncOp(::mlir::PatternRewriter& rewriter, func
       rewriter.create<LLVM::GEPOp>(loc, llvm_ptr_type, globalPtr, ArrayRef<Value>({cst0, cst0}));
 
   auto ctx_ptr = func.getBody().getArgument(0);
-  auto str_ptr = gep_op->getResult(0);
-  rewriter.create<func::CallOp>(loc, c_api_func, ValueRange{ctx_ptr, str_ptr});
-  rewriter.create<func::ReturnOp>(loc);
+  auto kernel_ptr = func.getBody().getArgument(1);
+  // TODO: str ptr will work on step 3
+  // auto str_ptr = gep_op->getResult(0);
+  rewriter.create<LLVM::CallOp>(loc, c_api_func, ValueRange{ctx_ptr, kernel_ptr});
+  rewriter.create<LLVM::ReturnOp>(loc, ValueRange());
 
   return func;
 }
@@ -944,9 +950,7 @@ struct KernelLaunchWithLLVMPattern : public mlir::OpRewritePattern<func::FuncOp>
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    if (op->hasAttr("whitelist")) { return success(); }
-    auto new_op = GetOrInsertKernelLLVMFuncOp(rewriter, op);
-    new_op->setAttr("whitelist", rewriter.getStringAttr("true"));
+    GetOrInsertKernelLLVMFuncOp(rewriter, op);
     op->remove();
     return success();
   }
@@ -1003,7 +1007,9 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
 
 LogicalResult LowerKernelLaunchModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   mlir::PassManager pm(context);
-  pm.addPass(createKernelLaunchWithLLVMPass());  // kernel-launch-with-llvm
+  pm.addPass(createKernelLaunchWithLLVMPass());      // kernel-launch-with-llvm
+  pm.addPass(createConvertFuncToLLVMPass());         // convert-func-to-llvm
+  pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
   return pm.run(module);
 }
 
