@@ -22,8 +22,8 @@ graph_to_run = GraphToRun()
 lazy_relu = graph_to_run(x)
 
 
-def assert_equal(a, b):
-    assert flow.all(flow.equal(a, b)), {"left": a, "right": b}
+def assert_equal(expected, got):
+    assert flow.all(flow.equal(expected, got)), {"expected": expected, "got": got}
 
 
-assert_equal(lazy_relu, flow.Tensor([1, 0]))
+assert_equal(flow.Tensor([1, 0]), lazy_relu)
