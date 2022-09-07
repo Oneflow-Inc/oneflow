@@ -520,7 +520,9 @@ bool SupportingStreamWait(Symbol<Stream> from_stream, Symbol<Stream> to_stream) 
   DeviceType to_device_type = from_stream->device()->enum_type();
   return from_stream->device() == to_stream->device() && from_device_type == DeviceType::kCUDA
          && StreamSupportStreamWait::Visit(from_stream->stream_type(), from_device_type)
-         && StreamSupportStreamWait::Visit(to_stream->stream_type(), to_device_type);
+         && StreamSupportStreamWait::Visit(to_stream->stream_type(), to_device_type)
+         && !StreamOnIndependentThread::Visit(from_stream->stream_type())
+         && !StreamOnIndependentThread::Visit(to_stream->stream_type());
 }
 
 }  // namespace
