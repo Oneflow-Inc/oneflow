@@ -4932,6 +4932,24 @@ def OneFlow_NLLOp : OneFlow_BaseOp<"nll", [NoSideEffect, DeclareOpInterfaceMetho
   let has_input_arg_modify_fn = 1;
 }
 
+def OneFlow_NLLProbOp : OneFlow_BaseOp<"nll_prob", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$target,
+    Optional<OneFlow_Tensor>:$weight
+  );
+  let output = (outs
+    OneFlow_Tensor:$output
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F64Attr, "0">:$label_smoothing
+  );
+  let has_data_type_infer_fn = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_input_arg_modify_fn = 1;
+}
+
 def OneFlow_NLLGradOp : OneFlow_BaseOp<"nll_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$out_grad,
@@ -4944,6 +4962,24 @@ def OneFlow_NLLGradOp : OneFlow_BaseOp<"nll_grad", [NoSideEffect, DeclareOpInter
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$ignore_index
+  );
+  let has_data_type_infer_fn = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+}
+
+def OneFlow_NLLProbGradOp : OneFlow_BaseOp<"nll_prob_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$out_grad,
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$target,
+    Optional<OneFlow_Tensor>:$weight
+  );
+  let output = (outs
+    OneFlow_Tensor:$in_grad
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F64Attr, "0">:$label_smoothing
   );
   let has_data_type_infer_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
