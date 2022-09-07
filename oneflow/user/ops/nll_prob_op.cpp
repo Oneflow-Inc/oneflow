@@ -45,11 +45,10 @@ namespace oneflow {
   CHECK_GE_OR_RETURN(K, 2) << ctx->op_name() << ": expected 2 or more dimensions for input";
   CHECK_EQ_OR_RETURN(target_desc.shape().NumAxes(), K)
       << ctx->op_name() << ": expected same diemensions with input for target";
-  const int64_t N = target_desc.shape().elem_cnt();
   const int64_t C = input_desc.shape().At(input_desc.shape().NumAxes() - 1);
-  // CHECK_EQ_OR_RETURN(input_desc.shape().elem_cnt(), N * C)
-  //     << ctx->op_name() << ": expected input size " << input_desc.shape().ToString()
-  //     << " to match target size " << target_desc.shape().ToString();
+  CHECK_EQ_OR_RETURN(input_desc.shape().elem_cnt(), target_desc.shape().elem_cnt())
+      << ctx->op_name() << ": expected input size " << input_desc.shape().ToString()
+      << " to match target size " << target_desc.shape().ToString();
 
   if (ctx->has_input("weight", 0)) {
     const auto& weight_desc = ctx->InputTensorDesc("weight", 0);
@@ -62,7 +61,7 @@ namespace oneflow {
 
   user_op::TensorDesc* output_desc = ctx->MutOutputTensorDesc("output", 0);
   output_desc->set_is_dynamic(is_dynamic);
-  output_desc->set_shape(Shape({N}));
+  output_desc->set_shape(input_desc.shape());
 
   return Maybe<void>::Ok();
 }
@@ -140,13 +139,12 @@ namespace oneflow {
       << ctx->op_name() << ": expected out_grad size " << N << ", got "
       << out_grad_desc.shape().ToString();
 
-  const int64_t C = input_desc.shape().At(input_desc.shape().NumAxes() - 1);
-  // CHECK_EQ_OR_RETURN(input_desc.shape().elem_cnt(), N * C)
   CHECK_EQ_OR_RETURN(input_desc.shape().elem_cnt(), N)
       << ctx->op_name() << ": expected input size " << N << ", got "
       << input_desc.shape().ToString();
 
   if (ctx->has_input("weight", 0)) {
+    const int64_t C = input_desc.shape().At(input_desc.shape().NumAxes() - 1);
     const auto& weight_desc = ctx->InputTensorDesc("weight", 0);
     CHECK_EQ_OR_RETURN(weight_desc.shape().elem_cnt(), C)
         << ctx->op_name() << ": expected weight size " << C << ", got "

@@ -19,8 +19,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor_util.h"
-// #include "oneflow/core/framework/op_interpreter.h"
-// #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
@@ -1449,7 +1447,6 @@ class CrossEntropyProbFunctor : public LossFunctorBase {
       target_reshape_[i] = input_shape->At(input_perm[i]);
     }
 
-    nll_result = JUST(Reshape(nll_result, Shape({-1, target_shape->At(1)})));
     nll_result = JUST(ReduceSum(nll_result, {-1}, false));
     nll_result = JUST(Reshape(nll_result, Shape(target_reshape_)));
 
