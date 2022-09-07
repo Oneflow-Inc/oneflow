@@ -127,10 +127,7 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
   }
 
   ~KernelLaunchOpKernelRegContext() = default;
-  DeviceType device_type() const override {
-    LOG(ERROR) << device_type_;
-    return device_type_;
-  }
+  DeviceType device_type() const override { return device_type_; }
   const ParallelContext& parallel_ctx() const override {
     TODO() << "create from device attr in op in mlir";
     ParallelContext* parallel_ctx = nullptr;
