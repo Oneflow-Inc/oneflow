@@ -66,6 +66,9 @@ class TestNewTensor(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n1d()
     def test_new_cuda_bfloat16_local_tensor_with_numpy(test_case):
+        from oneflow import sysconfig
+        if sysconfig.get_cuda_version() < 11000:
+            return
         np_array = np.random.rand(4, 4)
         tensor = flow.tensor(np_array, dtype=flow.bfloat16, device="cuda")
         test_case.assertEqual(tensor.dtype, flow.bfloat16)
