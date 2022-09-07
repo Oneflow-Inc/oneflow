@@ -73,11 +73,9 @@ bool IsBreakpointOpNode(const OpNode* node) {
 
   if (op_conf.has_user_conf()) {
     const std::string& user_type_name = op_conf.user_conf().op_type_name();
-    // TODO(chengcheng): acc node can be merged in chain.
-    if (user_type_name == "repeat" || user_type_name == "acc" || user_type_name == "pack"
-        || user_type_name == "unpack" || user_type_name == "identity_buffer"
-        || user_type_name == "copy_h2d" || user_type_name == "copy_d2h"
-        || user_type_name == "acc_ctrl_tick") {
+    if (user_type_name == "repeat" || user_type_name == "pack" || user_type_name == "unpack"
+        || user_type_name == "identity_buffer" || user_type_name == "copy_h2d"
+        || user_type_name == "copy_d2h" || user_type_name == "acc_ctrl_tick") {
       return true;
     }
   }
@@ -455,14 +453,30 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
                 .ScopeSymbolId(first_chain_sink_op->op().op_conf().scope_symbol_id())
                 .Build();
 
-        OperatorConf sink_acc_tick_conf;
-        sink_acc_tick_conf.set_name(std::string("Sys-LogicalChainSink-AccTick_") + NewUniqueId());
-        sink_acc_tick_conf.set_scope_symbol_id(
-            first_chain_sink_op->op().op_conf().scope_symbol_id());
-        auto* acc_conf = sink_acc_tick_conf.mutable_acc_tick_conf();
-        acc_conf->set_one(cast_to_tick_op.output("out", 0));
-        acc_conf->set_acc("acc");
-        acc_conf->set_max_acc_num(acc_num);
+        CHECK_JUST(job_builder->AddOp(first_chain_sink_op->parallel_desc().parallel_conf(),
+                                      cast_to_tick_op.op_conf()));
+
+        std::string acc_tick_output_lbn = cast_to_tick_op.output("out", 0);
+        if (!IsAccOpNode(first_chain_sink_op)) {
+          // NOTE(chengcheng): Acc Op can be merged in fw/bw chain, if the last op is acc op,
+          //  there is no need and CANNOT insert acc tick op.
+
+          OperatorConf sink_acc_tick_conf;
+          sink_acc_tick_conf.set_name(std::string("Sys-LogicalChainSink-AccTick_") + NewUniqueId());
+          sink_acc_tick_conf.set_scope_symbol_id(
+              first_chain_sink_op->op().op_conf().scope_symbol_id());
+          auto* acc_conf = sink_acc_tick_conf.mutable_acc_tick_conf();
+          acc_conf->set_one(cast_to_tick_op.output("out", 0));
+          acc_conf->set_acc("acc");
+          acc_conf->set_max_acc_num(acc_num);
+          acc_tick_output_lbn = GenLogicalBlobName(sink_acc_tick_conf.name(), "acc");
+
+          VLOG(3) << " insert acc tick op : " << sink_acc_tick_conf.name()
+                  << " of last op in fw/bw chain.";
+
+          CHECK_JUST(job_builder->AddOp(first_chain_sink_op->parallel_desc().parallel_conf(),
+                                        sink_acc_tick_conf));
+        }
 
         OperatorConf sink_final_tick_conf;
         sink_final_tick_conf.set_name(std::string("Sys-LogicalChainSink-FinalTick-DeviceTick_")
@@ -470,18 +484,14 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
         sink_final_tick_conf.set_scope_symbol_id(
             first_chain_sink_op->op().op_conf().scope_symbol_id());
         auto* tick_conf = sink_final_tick_conf.mutable_device_tick_conf();
-        tick_conf->add_tick(GenLogicalBlobName(sink_acc_tick_conf.name(), "acc"));
+        tick_conf->add_tick(acc_tick_output_lbn);
         tick_conf->set_out("out");
+
+        CHECK_JUST(job_builder->AddOp(first_chain_sink_op->parallel_desc().parallel_conf(),
+                                      sink_final_tick_conf));
 
         JUST(MapAt(mut_op_name2conf, info.after_acc_logical_chain->begin_op->op().op_name()))
             .add_ctrl_in_op_name(sink_final_tick_conf.name());
-
-        CHECK_JUST(job_builder->AddOp(first_chain_sink_op->parallel_desc().parallel_conf(),
-                                      cast_to_tick_op.op_conf()));
-        CHECK_JUST(job_builder->AddOp(first_chain_sink_op->parallel_desc().parallel_conf(),
-                                      sink_acc_tick_conf));
-        CHECK_JUST(job_builder->AddOp(first_chain_sink_op->parallel_desc().parallel_conf(),
-                                      sink_final_tick_conf));
 
         // NOTE(chengcheng):
         //   3. merge first chain and acc chain
