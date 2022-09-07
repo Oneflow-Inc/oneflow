@@ -202,7 +202,7 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
     CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
                           << llvm::toString(jit_or_error.takeError());
     auto jit = std::move(jit_or_error.get());
-    auto error = jit->invoke("relu2D0", &reg_ctx, kernel);
+    auto error = jit->invoke("relu2D0", ctx, kernel);
     module_op->dump();
     CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
     module_op->dump();
