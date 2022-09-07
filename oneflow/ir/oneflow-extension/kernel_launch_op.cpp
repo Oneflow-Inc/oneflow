@@ -37,9 +37,9 @@ limitations under the License.
 
 extern "C" {
 
-void kernel_launch(void* ctx, void* kernel) {
-  auto new_kernel = (oneflow::user_op::OpKernel*)kernel;
-  new_kernel->Compute((oneflow::user_op::KernelComputeContext*)ctx);
+void kernel_launch(void* ctx, void* kernel_opaque) {
+  auto kernel = (oneflow::user_op::OpKernel*)kernel_opaque;
+  kernel->Compute((oneflow::user_op::KernelComputeContext*)ctx);
 }
 
 }  // extern "C"
