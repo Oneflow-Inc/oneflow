@@ -1417,12 +1417,10 @@ class CrossEntropyProbFunctor : public LossFunctorBase {
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight, const std::string& reduction,
                            const double& label_smoothing) const {
-    CHECK_OR_RETURN(reduction == "none" || reduction == "sum" || reduction == "mean")
-        << Error::RuntimeError() << "Reduction should be none, sum or mean.";
     const auto& input_shape = input->shape();
     const auto& target_shape = target->shape();
 
-    std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
+    std::vector<int> input_perm(input_shape->NumAxes(), 0);
     input_perm[input_perm.size() - 1] = 1;
     for (size_t i = 1; i < input_perm.size() - 1; ++i) { input_perm[i] = i + 1; }
 
@@ -1441,19 +1439,16 @@ class CrossEntropyProbFunctor : public LossFunctorBase {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("label_smoothing");
     attrs.SetAllAttrs(label_smoothing);
 
-    std::shared_ptr<Tensor> nll_result_tensor;
+    std::shared_ptr<Tensor> nll_result;
     if (weight) {
-      nll_result_tensor = JUST(OpInterpUtil::Dispatch<Tensor>(
-          *op_nll_weight_prob_, {input_, target_, JUST(weight)}, attrs));
+      nll_result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_nll_weight_prob_,
+                                                       {input_, target_, JUST(weight)}, attrs));
     } else {
-      nll_result_tensor =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*op_nll_prob_, {input_, target_}, attrs));
-          // JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_prob_, {input_, target_}, attrs));
+      nll_result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_nll_prob_, {input_, target_}, attrs));
     }
 
-    auto output = JUST(functional::Reshape(nll_result_tensor, *target_shape));
-    output = JUST(ReduceSum(output, {-1}, false));
-    return apply_reduction(output, reduction);
+    nll_result = JUST(ReduceSum(JUST(Reshape(nll_result, *target_shape)), {-1}, /*keepdim=*/false));
+    return apply_reduction(nll_result, reduction);
   }
 
  private:

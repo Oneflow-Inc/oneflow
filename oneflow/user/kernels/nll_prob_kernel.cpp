@@ -96,25 +96,21 @@ class NLLProbKernel final : public user_op::OpKernel {
                                              << ", got " << spec_cache->num_classes();
     }
 
-    // T* label_smoothing_dptr = nullptr;
-    // T label_smoothing_d = T{0};
-    std::cout << "run1 -----" << std::endl;
-    double label_smoothing = ctx->Attr<double>("label_smoothing");
-    std::cout << "run1.5 -----" << label_smoothing << std::endl;
-    // if(label_smoothing > 0) {
-    //   label_smoothing_d = static_cast<T>(label_smoothing);
-    //   label_smoothing_dptr = &label_smoothing_d;
-    // }
-    std::cout << "run2 -----" << std::endl;
+    const double label_smoothing = ctx->Attr<double>("label_smoothing");
 
     const T* weight_dptr = nullptr;
     if (ctx->has_input("weight", 0)) {
       weight_dptr = CHECK_NOTNULL(ctx->Tensor4ArgNameAndIndex("weight", 0))->dptr<T>();
     }
-
-    NLLProbKernelUtil<device_type, T>::Forward(
-        ctx->stream(), static_cast<int32_t>(N), static_cast<int64_t>(C), input->dptr<T>(),
-        target->dptr<T>(), weight_dptr, label_smoothing, output->mut_dptr<T>());
+    if (label_smoothing > 0) {
+      NLLProbKernelUtil<device_type, T, true>::Forward(
+          ctx->stream(), static_cast<int32_t>(N), static_cast<int64_t>(C), input->dptr<T>(),
+          target->dptr<T>(), weight_dptr, label_smoothing, output->mut_dptr<T>());
+    } else {
+      NLLProbKernelUtil<device_type, T, false>::Forward(
+          ctx->stream(), static_cast<int32_t>(N), static_cast<int64_t>(C), input->dptr<T>(),
+          target->dptr<T>(), weight_dptr, label_smoothing, output->mut_dptr<T>());
+    }
   }
 };
 
@@ -138,8 +134,7 @@ class NLLProbGradKernel final : public user_op::OpKernel {
     const auto* out_grad = ctx->Tensor4ArgNameAndIndex("out_grad", 0);
     auto* in_grad = ctx->Tensor4ArgNameAndIndex("in_grad", 0);
 
-    // const int64_t N = target->shape_view().elem_cnt();
-    const int64_t N = in_grad->shape_view().At(0);
+    const int64_t N = in_grad->shape_view().At(0); // batch size
     const int64_t C = in_grad->shape_view().At(in_grad->shape_view().NumAxes() - 1);
     CHECK_LE(N, std::numeric_limits<int32_t>::max())
         << "Expected batch size not exceed int32 numeric limits";
@@ -155,12 +150,18 @@ class NLLProbGradKernel final : public user_op::OpKernel {
     if (ctx->has_input("weight", 0)) {
       weight_dptr = CHECK_NOTNULL(ctx->Tensor4ArgNameAndIndex("weight", 0))->dptr<T>();
     }
-    double label_smoothing = ctx->Attr<double>("label_smoothing");
-
-    NLLProbKernelUtil<device_type, T>::Backward(
-        ctx->stream(), static_cast<int32_t>(N), static_cast<int64_t>(C), out_grad->dptr<T>(),
-        target->dptr<T>(), weight_dptr, label_smoothing, in_grad->mut_dptr<T>());
-  }
+    const double label_smoothing = ctx->Attr<double>("label_smoothing");
+    if (label_smoothing > 0) {
+      NLLProbKernelUtil<device_type, T, true>::Backward(
+          ctx->stream(), static_cast<int32_t>(N), static_cast<int64_t>(C), out_grad->dptr<T>(),
+            target->dptr<T>(), weight_dptr, label_smoothing, in_grad->mut_dptr<T>());
+      }
+     else {
+        NLLProbKernelUtil<device_type, T, false>::Backward(
+            ctx->stream(), static_cast<int32_t>(N), static_cast<int64_t>(C), out_grad->dptr<T>(),
+            target->dptr<T>(), weight_dptr, label_smoothing, in_grad->mut_dptr<T>());
+      }
+  };
 };
 
 #define REGISTER_NLL_PROB_KERNELS(device, dtype)                                             \
@@ -176,19 +177,14 @@ class NLLProbGradKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value)   \
                        && (user_op::HobDataType("out_grad", 0) == GetDataType<dtype>::value))
 
-REGISTER_NLL_PROB_KERNELS(DeviceType::kCPU, float);
-// REGISTER_NLL_PROB_KERNELS(DeviceType::kCPU, float);
-REGISTER_NLL_PROB_KERNELS(DeviceType::kCPU, double);
-// REGISTER_NLL_PROB_KERNELS(DeviceType::kCPU, double);
+  REGISTER_NLL_PROB_KERNELS(DeviceType::kCPU, float);
+  REGISTER_NLL_PROB_KERNELS(DeviceType::kCPU, double);
 
 #ifdef WITH_CUDA
 
-// REGISTER_NLL_PROB_KERNELS(DeviceType::kCUDA, float);
-REGISTER_NLL_PROB_KERNELS(DeviceType::kCUDA, float);
-// REGISTER_NLL_PROB_KERNELS(DeviceType::kCUDA, double);
-REGISTER_NLL_PROB_KERNELS(DeviceType::kCUDA, double);
-// REGISTER_NLL_PROB_KERNELS(DeviceType::kCUDA, half);
-REGISTER_NLL_PROB_KERNELS(DeviceType::kCUDA, half);
+  REGISTER_NLL_PROB_KERNELS(DeviceType::kCUDA, float);
+  REGISTER_NLL_PROB_KERNELS(DeviceType::kCUDA, double);
+  REGISTER_NLL_PROB_KERNELS(DeviceType::kCUDA, half);
 
 #endif  // WITH_CUDA
 

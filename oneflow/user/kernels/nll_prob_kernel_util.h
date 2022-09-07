@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename T, bool HasLabelSmoothing>
 struct NLLProbKernelUtil {
   static void Forward(ep::Stream* stream, const int32_t num_samples, const int64_t num_classes,
                       const T* input, const T* probs, const T* weight, const double label_smoothing,
