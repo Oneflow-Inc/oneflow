@@ -25,6 +25,8 @@ limitations under the License.
 #include <cuda_bf16.h>
 #endif  // CUDA_VERSION >= 11000
 #endif
+#include "oneflow/core/common/bfloat16.h"
+#include "oneflow/core/common/bfloat16_math.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/record/record.pb.h"
@@ -42,10 +44,20 @@ struct IsFloat16;
 template<>
 struct IsFloat16<float16> : std::true_type {};
 
+template<>
+struct IsFloat16<bfloat16> : std::true_type {};
+
 #ifdef WITH_CUDA
 
 template<>
 struct IsFloat16<half> : std::true_type {};
+
+#if CUDA_VERSION >= 11000
+
+template<>
+struct IsFloat16<nv_bfloat16> : std::true_type {};
+
+#endif  // CUDA_VERSION >= 11000
 
 #endif  // WITH_CUDA
 
@@ -236,7 +248,14 @@ struct DevDType<DeviceType::kCUDA, float16> {
   static_assert(sizeof(float16) == sizeof(half), "sizeof(float16) != sizeof(half)");
   typedef half type;
 };
-#endif
+#if CUDA_VERSION >= 11000
+template<>
+struct DevDType<DeviceType::kCUDA, bfloat16> {
+  static_assert(sizeof(bfloat16) == sizeof(nv_bfloat16), "sizeof(float16) != sizeof(half)");
+  typedef half type;
+};
+#endif  // CUDA_VERSION >= 11000
+#endif  // defined(WITH_CUDA)
 
 // Func
 

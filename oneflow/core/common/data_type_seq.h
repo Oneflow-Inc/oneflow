@@ -43,7 +43,7 @@ limitations under the License.
 
 #define POD_DATA_TYPE_SEQ \
   ARITHMETIC_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ
-#define POD_AND_HALF_DATA_TYPE_SEQ POD_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ
+#define POD_AND_HALF_DATA_TYPE_SEQ POD_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
 #define PB_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(OFRecord, DataType::kOFRecord)
 #define ALL_DATA_TYPE_SEQ POD_DATA_TYPE_SEQ PB_DATA_TYPE_SEQ
 
@@ -51,18 +51,21 @@ limitations under the License.
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
-#define FLOAT16_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float16, DataType::kFloat16)
+#define FLOAT16_DATA_TYPE_SEQ                       \
+  OF_PP_MAKE_TUPLE_SEQ(float16, DataType::kFloat16) \
+  OF_PP_MAKE_TUPLE_SEQ(bfloat16, DataType::kBFloat16)
 
 #if defined(WITH_CUDA)
-#define HALF_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)
 #if CUDA_VERSION >= 11000
-#define BFLOAT16_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16)
+#define HALF_DATA_TYPE_SEQ                       \
+  OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16) \
+  OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16)
 #else
-#define BFLOAT16_DATA_TYPE_SEQ
+#define HALF_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)
 #endif
-#else
-#define BFLOAT16_DATA_TYPE_SEQ
-#endif
+#else  // CUDA_VERSION >= 11000
+#define HALF_DATA_TYPE_SEQ
+#endif  // defined(WITH_CUDA)
 
 #define IMAGE_DATA_TYPE_SEQ                       \
   OF_PP_MAKE_TUPLE_SEQ(uint8_t, DataType::kUInt8) \
