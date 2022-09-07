@@ -71,8 +71,6 @@ namespace {
 // this context should support querying information about the kernel from representation in MLIR
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
-  using ArgID = std::pair<std::string, int32_t>;
-
  public:
   explicit KernelLaunchOpKernelRegContext(::mlir::ModuleOp module_op) {
     owned_module_ = module_op;
@@ -168,7 +166,7 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
   ::mlir::ModuleOp owned_module_;
   ::mlir::Operation* op_;
   DeviceType device_type_ = DeviceType::kInvalidDevice;
-  std::unordered_map<ArgID, user_op::NaiveTensorDesc> arg2tensor_desc_{};
+  std::unordered_map<mlir::oneflow::user_op::ArgID, user_op::NaiveTensorDesc> arg2tensor_desc_{};
   ArgVec inputs_;
   ArgVec outputs_;
 };
@@ -186,11 +184,30 @@ class KernelLaunchComputeContext final : public user_op::KernelComputeContext {
   }
 
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    // auto it = comp_ctx_->find(std::make_pair(arg_name, index));
-    // if (it == comp_ctx_->end()) { return nullptr; }
-    // return it->second.tensor.get();
-    TODO() << "from op in mlir";
-    return nullptr;
+    auto op = reg_ctx_->GetOp();
+    auto id = std::make_pair(arg_name, index);
+    for (const auto& operand_id : ::llvm::enumerate(
+             ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedOperandSegments>(op))) {
+      if (operand_id.value() == id) {
+        if (auto arg = op->getOperand(operand_id.index()).dyn_cast<mlir::BlockArgument>()) {
+          return comp_ctx_->Tensor4ArgNameAndIndex("in", arg.getArgNumber());
+        }
+      }
+    }
+    for (const auto& result_id : ::llvm::enumerate(
+             ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedResultSegments>(op))) {
+      if (result_id.value() == id) {
+        auto value = op->getResult(result_id.index());
+        if (value.hasOneUse()) {
+          mlir::Operation* first_user = value.use_begin()->getOwner();
+          if (auto ret = llvm::dyn_cast_or_null<mlir::func::ReturnOp>(first_user)) {
+            return comp_ctx_->Tensor4ArgNameAndIndex("out",
+                                                     value.getUses().begin()->getOperandNumber());
+          }
+        }
+      }
+    }
+    LOG(FATAL) << "Not supported";
   }
 
   ep::Stream* stream() override { return comp_ctx_->stream(); }
@@ -212,6 +229,7 @@ class KernelLaunchComputeContext final : public user_op::KernelComputeContext {
   }
   std::unique_ptr<KernelLaunchOpKernelRegContext> reg_ctx_;
   KernelComputeContext* comp_ctx_ = nullptr;
+  std::unordered_map<mlir::oneflow::user_op::ArgID, user_op::Tensor*> tensor_desc_{};
 };
 
 template<typename T>
