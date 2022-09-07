@@ -44,10 +44,10 @@ BlobDesc* FindValidBlobDescOfBnsInOp(
 
 user_op::NaiveTensorDesc GenTensorDescFromBlobDesc(const BlobDesc* blob_desc) {
   user_op::NaiveTensorDesc tensor_desc;
-  *tensor_desc.mut_shape() = blob_desc->shape();
-  *tensor_desc.mut_stride() = blob_desc->stride();
-  *tensor_desc.mut_data_type() = blob_desc->data_type();
-  *tensor_desc.mut_is_dynamic() = blob_desc->is_dynamic();
+  tensor_desc.set_shape(blob_desc->shape());
+  tensor_desc.set_stride(blob_desc->stride());
+  tensor_desc.set_data_type(blob_desc->data_type());
+  tensor_desc.set_is_dynamic(blob_desc->is_dynamic());
   return tensor_desc;
 }
 
@@ -187,8 +187,8 @@ class UserOpInferContext final : public user_op::InferContext {
   const Shape& OutputShape(const std::string& arg_name, int32_t index) const override {
     return Shape4ArgNameAndIndex(arg_name, index);
   }
-  Shape* MutOutputShape(const std::string& arg_name, int32_t index) override {
-    return MutShape4ArgNameAndIndex(arg_name, index);
+  void SetOutputShape(const std::string& arg_name, int32_t index, const Shape& shape) override {
+    SetShape4ArgNameAndIndex(arg_name, index, shape);
   }
   const Shape& Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
@@ -198,10 +198,11 @@ class UserOpInferContext final : public user_op::InferContext {
     };
     return it->second.shape();
   }
-  Shape* MutShape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  void SetShape4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                const Shape& shape) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
-    if (it == arg2tensor_desc_.end()) { return nullptr; };
-    return it->second.mut_shape();
+    if (it == arg2tensor_desc_.end()) { return; };
+    return it->second.set_shape(shape);
   }
   const Stride& InputStride(const std::string& arg_name, int32_t index) const override {
     return Stride4ArgNameAndIndex(arg_name, index);
@@ -209,8 +210,8 @@ class UserOpInferContext final : public user_op::InferContext {
   const Stride& OutputStride(const std::string& arg_name, int32_t index) const override {
     return Stride4ArgNameAndIndex(arg_name, index);
   }
-  Stride* MutOutputStride(const std::string& arg_name, int32_t index) override {
-    return MutStride4ArgNameAndIndex(arg_name, index);
+  void SetOutputStride(const std::string& arg_name, int32_t index, const Stride& stride) override {
+    return SetStride4ArgNameAndIndex(arg_name, index, stride);
   }
   const Stride& Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
@@ -220,10 +221,11 @@ class UserOpInferContext final : public user_op::InferContext {
     };
     return it->second.stride();
   }
-  Stride* MutStride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  void SetStride4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                 const Stride& stride) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
-    if (it == arg2tensor_desc_.end()) { return nullptr; };
-    return it->second.mut_stride();
+    if (it == arg2tensor_desc_.end()) { return; };
+    return it->second.set_stride(stride);
   }
   DataType InputDType(const std::string& arg_name, int32_t index) const override {
     return Dtype4ArgNameAndIndex(arg_name, index);
@@ -231,18 +233,19 @@ class UserOpInferContext final : public user_op::InferContext {
   DataType OutputDType(const std::string& arg_name, int32_t index) const override {
     return Dtype4ArgNameAndIndex(arg_name, index);
   }
-  DataType* MutOutputDType(const std::string& arg_name, int32_t index) override {
-    return MutDtype4ArgNameAndIndex(arg_name, index);
+  void SetOutputDType(const std::string& arg_name, int32_t index, DataType data_type) override {
+    return SetDtype4ArgNameAndIndex(arg_name, index, data_type);
   }
   DataType Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_desc_.end()) { return DataType::kInvalidDataType; };
     return it->second.data_type();
   }
-  DataType* MutDtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  void SetDtype4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                DataType data_type) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
-    if (it == arg2tensor_desc_.end()) { return nullptr; };
-    return it->second.mut_data_type();
+    if (it == arg2tensor_desc_.end()) { return; };
+    return it->second.set_data_type(data_type);
   }
   bool InputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return IsDynamic4ArgNameAndIndex(arg_name, index);
@@ -250,18 +253,19 @@ class UserOpInferContext final : public user_op::InferContext {
   bool OutputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return IsDynamic4ArgNameAndIndex(arg_name, index);
   }
-  bool* MutOutputIsDynamic(const std::string& arg_name, int32_t index) override {
-    return MutIsDynamic4ArgNameAndIndex(arg_name, index);
+  void SetOutputIsDynamic(const std::string& arg_name, int32_t index, bool is_dynamic) override {
+    return SetIsDynamic4ArgNameAndIndex(arg_name, index, is_dynamic);
   }
   bool IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_desc_.end()) { return false; };
     return it->second.is_dynamic();
   }
-  bool* MutIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  void SetIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                    bool is_dynamic) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
-    if (it == arg2tensor_desc_.end()) { return nullptr; };
-    return it->second.mut_is_dynamic();
+    if (it == arg2tensor_desc_.end()) { return; };
+    return it->second.set_is_dynamic(is_dynamic);
   }
 
   const ArgVec& inputs() const override { return op_->inputs(); }
@@ -599,8 +603,8 @@ Maybe<void> UserOp::InferInternalBlobDescs(
     BlobDesc* tmp_buffer_blob = GetBlobDesc4BnInOp(GenRepeatedBn("tmp_buffer", 0));
     CHECK_NOTNULL_OR_RETURN(tmp_buffer_blob);
     tmp_buffer_blob->set_data_type(DataType::kChar);
-    tmp_buffer_blob->mut_shape() = Shape({static_cast<int64_t>(tmp_size)});
-    tmp_buffer_blob->mut_stride() = Stride({static_cast<int64_t>(tmp_size)});
+    tmp_buffer_blob->set_shape(Shape({static_cast<int64_t>(tmp_size)}));
+    tmp_buffer_blob->set_stride(Stride({static_cast<int64_t>(tmp_size)}));
   }
   return Maybe<void>::Ok();
 }
@@ -629,11 +633,11 @@ Maybe<void> UserOp::InferLogicalOutBlobDescs(
     BlobDesc* out_blob_desc = BlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
     const user_op::TensorDesc& tensor_desc = infer_ctx.OutputTensorDesc(pair.first, pair.second);
     out_blob_desc->set_data_type(tensor_desc.data_type());
-    out_blob_desc->mut_shape() = tensor_desc.shape();
+    out_blob_desc->set_shape(tensor_desc.shape());
     if (val_->non_contiguous_supported) {
-      out_blob_desc->mut_stride() = tensor_desc.stride();
+      out_blob_desc->set_stride(tensor_desc.stride());
     } else {
-      out_blob_desc->mut_stride() = Stride(out_blob_desc->shape());
+      out_blob_desc->set_stride(Stride(out_blob_desc->shape()));
     }
     CHECK_EQ_OR_RETURN(out_blob_desc->stride().size(), out_blob_desc->shape().size())
         << Error::RuntimeError() << "stride and shape size mismatch since stride is "
@@ -669,11 +673,11 @@ Maybe<void> UserOp::InferOutBlobDescs(
     for (const auto& pair : infer_ctx.outputs()) {
       BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
       out_blob_desc->set_data_type(infer_ctx.OutputDType(pair.first, pair.second));
-      out_blob_desc->mut_shape() = infer_ctx.OutputShape(pair.first, pair.second);
+      out_blob_desc->set_shape(infer_ctx.OutputShape(pair.first, pair.second));
       if (val_->non_contiguous_supported) {
-        out_blob_desc->mut_stride() = infer_ctx.OutputStride(pair.first, pair.second);
+        out_blob_desc->set_stride(infer_ctx.OutputStride(pair.first, pair.second));
       } else {
-        out_blob_desc->mut_stride() = Stride(out_blob_desc->shape());
+        out_blob_desc->set_stride(Stride(out_blob_desc->shape()));
       }
       CHECK_EQ_OR_RETURN(out_blob_desc->stride().size(), out_blob_desc->shape().size())
           << Error::RuntimeError() << "stride and shape size mismatch since stride is "

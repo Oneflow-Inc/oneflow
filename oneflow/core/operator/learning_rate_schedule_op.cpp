@@ -51,7 +51,7 @@ Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& B
   CHECK_EQ(train_step->shape().elem_cnt(), 1);
   CHECK_EQ(train_step->data_type(), DataType::kInt64);
   BlobDesc* out = BlobDesc4BnInOp("out");
-  out->mut_shape() = Shape({1});
+  out->set_shape(Shape({1}));
   out->set_data_type(DataType::kFloat);
   return Maybe<void>::Ok();
 }
