@@ -24,35 +24,43 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_okl_relu_with_cpu(test_case:flow.unittest.TestCase):
+def _test_okl_relu_with_cpu(test_case: flow.unittest.TestCase):
     class GraphToRun(flow.nn.Graph):
         def __init__(self):
             super().__init__()
+
         def build(self, x):
             return flow.relu(x)
+
     x = flow.Tensor([1, -1])
     graph_to_run = GraphToRun()
     lazy_relu = graph_to_run(x)
     test_case.assertTrue(flow.all(flow.equal(flow.Tensor([1, 0]), lazy_relu)))
 
-def _test_okl_relu_with_cuda(test_case:flow.unittest.TestCase):
+
+def _test_okl_relu_with_cuda(test_case: flow.unittest.TestCase):
     class GraphToRun(flow.nn.Graph):
         def __init__(self):
             super().__init__()
+
         def build(self, x):
             return flow.relu(x)
+
     x = flow.Tensor([1, -1]).cuda()
     graph_to_run = GraphToRun()
     lazy_relu = graph_to_run(x)
     test_case.assertTrue(flow.all(flow.equal(flow.Tensor([1, 0]).cuda(), lazy_relu)))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestOKLRelu(flow.unittest.TestCase):
     def test_okl_relu_with_cpu(test_case):
         _test_okl_relu_with_cpu(test_case)
+
     @unittest.skipUnless(flow.sysconfig.with_cuda(), "only test cpu cases")
     def test_okl_relu_with_cuda(test_case):
         _test_okl_relu_with_cuda(test_case)
+
 
 if __name__ == "__main__":
     unittest.main()
