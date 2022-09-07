@@ -3,6 +3,7 @@ oneflow_add_mlir_library(
   extension.cpp
   sharedlibs.cpp
   mlir_jit_op.cpp
+  mlir_jit_op_infer.cpp
   kernel_launch_op.cpp
   ir_pass.cpp
   lr_jit.cpp

@@ -24,6 +24,8 @@ limitations under the License.
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/UserOpReflection.h"
+#include "OneFlow/Passes.h"
+#include "OneFlow/Extension.h"
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/switch_func.h"
@@ -32,9 +34,8 @@ limitations under the License.
 #include "oneflow/core/kernel/blob_tensor_view.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
-#include "oneflow/ir/include/OneFlow/Passes.h"
-#include "oneflow/ir/include/OneFlow/Extension.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/JITOpInfer.h"
 
 extern "C" {
 
@@ -48,11 +49,11 @@ void kernel_launch(void* ctx, void* kernel_opaque) {
 namespace oneflow {
 
 Maybe<void> KernelLaunchOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  return Maybe<void>::Ok();
+  return ir::jit::InferTensorDesc(ctx);
 }
 
 Maybe<void> KernelLaunchOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return Maybe<void>::Ok();
+  return ir::jit::InferTensorDesc(ctx);
 }
 
 Maybe<void> KernelLaunchOp::GetSbp(user_op::SbpContext* ctx) {
