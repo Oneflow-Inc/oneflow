@@ -40,32 +40,34 @@ Maybe<void> BinaryCrossEntropy::Capture(BinaryCrossEntropyCaptureState* ctx,
                                         const TensorTuple& inputs, const TensorTuple& outputs,
                                         const AttrMap& attrs) const {
   CHECK_OR_RETURN(inputs.size() >= 2 && inputs.size() <= 3);  // NOLINT(maybe-need-error-msg)
-  ctx->input_requires_grad = inputs.at(0)->requires_grad();
-  ctx->target_requires_grad = inputs.at(1)->requires_grad();
+  ctx->input_requires_grad = inputs[0]->requires_grad();
+  ctx->target_requires_grad = inputs[1]->requires_grad();
   ctx->has_weight = inputs.size() == 3;
 
-  ctx->SaveTensorForBackward(inputs.at(0));  // input
-  ctx->SaveTensorForBackward(inputs.at(1));  // target
+  ctx->SaveTensorForBackward(inputs[0]);  // input
+  ctx->SaveTensorForBackward(inputs[1]);  // target
   if (ctx->has_weight) {
-    ctx->SaveTensorForBackward(inputs.at(2));  // weight
+    ctx->SaveTensorForBackward(inputs[2]);  // weight
   }
   return Maybe<void>::Ok();
 }
 Maybe<void> BinaryCrossEntropy::Apply(const BinaryCrossEntropyCaptureState* ctx,
                                       const TensorTuple& out_grads, TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(ctx->SavedTensors().size(),
+                     2 + ctx->has_weight);  // NOLINT(maybe-need-error-msg)
   in_grads->resize(2 + ctx->has_weight);
 
-  const auto& dy = out_grads.at(0);
-  const auto& input = ctx->SavedTensors().at(0);
-  const auto& target = ctx->SavedTensors().at(1);
-  const auto& weight = ctx->has_weight ? Optional<one::Tensor>(ctx->SavedTensors().at(2)) : NullOpt;
+  const auto& dy = out_grads[0];
+  const auto& input = ctx->SavedTensors()[0];
+  const auto& target = ctx->SavedTensors()[1];
+  const auto& weight = ctx->has_weight ? Optional<one::Tensor>(ctx->SavedTensors()[2]) : NullOpt;
 
   if (ctx->input_requires_grad) {
-    in_grads->at(0) = JUST(functional::BinaryCrossEntropyLossGrad(dy, input, target, weight));
+    (*in_grads)[0] = JUST(functional::BinaryCrossEntropyLossGrad(dy, input, target, weight));
   }
   if (ctx->target_requires_grad) {
-    in_grads->at(1) = JUST(functional::BinaryCrossEntropyLossTargetGrad(dy, input, target, weight));
+    (*in_grads)[1] = JUST(functional::BinaryCrossEntropyLossTargetGrad(dy, input, target, weight));
   }
   return Maybe<void>::Ok();
 }

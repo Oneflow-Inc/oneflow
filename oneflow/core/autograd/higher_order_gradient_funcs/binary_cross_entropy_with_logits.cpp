@@ -13,11 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstddef>
-#include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 
 namespace oneflow {
@@ -79,6 +76,9 @@ Maybe<void> BinaryCrossEntropyWithLogitsGradGrad::Capture(
 Maybe<void> BinaryCrossEntropyWithLogitsGradGrad::Apply(
     const BinaryCrossEntropyWithLogitsGradGradCaptureState* ctx, const TensorTuple& out_grads,
     TensorTuple* in_grads) const {
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(ctx->SavedTensors().size(),
+                     3 + ctx->has_weight + ctx->has_pos_weight);  // NOLINT(maybe-need-error-msg)
   in_grads->resize(3 + ctx->has_weight + ctx->has_pos_weight);
   const auto& grad = ctx->SavedTensors()[0];
   const auto& input = ctx->SavedTensors()[1];

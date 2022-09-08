@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 
 namespace oneflow {
@@ -71,14 +70,15 @@ Maybe<void> BinaryCrossEntropyWithLogitsReduceMeanGradGrad::Capture(
 Maybe<void> BinaryCrossEntropyWithLogitsReduceMeanGradGrad::Apply(
     const BinaryCrossEntropyWithLogitsReduceMeanGradGradCaptureState* ctx,
     const TensorTuple& out_grads, TensorTuple* in_grads) const {
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   in_grads->resize(3);
 
   // dx = grad * weight * (input.sigmoid() - target)
   // grad_for_input = out_grad * grad * weight * sig * (1-sig)
   // grad_for_target = -out_grad * grad * weight
   if (ctx->grad_requires_grad) {
-    const auto& input = ctx->SavedTensors()[ctx->input_index];
-    const auto& target = ctx->SavedTensors()[ctx->target_index];
+    const auto& input = JUST(VectorAt(ctx->SavedTensors(), ctx->input_index));
+    const auto& target = JUST(VectorAt(ctx->SavedTensors(), ctx->target_index));
     (*in_grads)[0] = JUST(
         functional::sequence_function(functional::Sigmoid)
             .then(std::bind(functional::Sub, std::placeholders::_1, target, /*alpha=*/1,
@@ -89,8 +89,8 @@ Maybe<void> BinaryCrossEntropyWithLogitsReduceMeanGradGrad::Apply(
             .call(input));
   }
   if (ctx->input_requires_grad) {
-    const auto& grad = ctx->SavedTensors()[ctx->grad_index];
-    const auto& input = ctx->SavedTensors()[ctx->input_index];
+    const auto& grad = JUST(VectorAt(ctx->SavedTensors(), ctx->grad_index));
+    const auto& input = JUST(VectorAt(ctx->SavedTensors(), ctx->input_index));
     const auto& mean_grad = JUST(functional::ScalarMul(1.0 / out_grads[0]->nelement(), grad));
     (*in_grads)[1] =
         JUST(functional::sequence_function(functional::Sigmoid)
@@ -99,7 +99,7 @@ Maybe<void> BinaryCrossEntropyWithLogitsReduceMeanGradGrad::Apply(
                  .call(input));
   }
   if (ctx->target_requires_grad) {
-    const auto& grad = ctx->SavedTensors()[ctx->grad_index];
+    const auto& grad = JUST(VectorAt(ctx->SavedTensors(), ctx->grad_index));
     const auto& mean_grad = JUST(functional::ScalarMul(1.0 / out_grads[0]->nelement(), grad));
     (*in_grads)[2] = JUST(functional::sequence_function(functional::Mul)
                               .then(functional::Negative)

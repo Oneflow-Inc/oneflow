@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/functional/sequence_function.h"
 
 namespace oneflow {
@@ -64,15 +64,16 @@ class SmoothL1LossGradGrad : public OpExprGradFunction<SmoothL1LossGradGradCaptu
 
   Maybe<void> Apply(const SmoothL1LossGradGradCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(3);
-    const auto& input = ctx->SavedTensors()[ctx->input_index];
-    const auto& target = ctx->SavedTensors()[ctx->target_index];
+    const auto& input = JUST(VectorAt(ctx->SavedTensors(), ctx->input_index));
+    const auto& target = JUST(VectorAt(ctx->SavedTensors(), ctx->target_index));
 
     if (ctx->grad_requires_grad) {
       (*in_grads)[0] = JUST(functional::SmoothL1LossGrad(out_grads[0], input, target, ctx->beta));
     }
     if (ctx->input_requires_grad || ctx->target_requires_grad) {
-      const auto& grad = ctx->SavedTensors()[ctx->grad_index];
+      const auto& grad = JUST(VectorAt(ctx->SavedTensors(), ctx->grad_index));
       auto condition = JUST(functional::sequence_function(functional::Sub)
                                 .then(functional::Abs)
                                 .then([&ctx](const std::shared_ptr<Tensor>& input) {

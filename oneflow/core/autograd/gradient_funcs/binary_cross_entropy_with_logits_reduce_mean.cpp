@@ -61,11 +61,11 @@ Maybe<void> BinaryCrossEntropyWithLogitsReduceMean::Apply(
   in_grads->resize(2);
 
   if (ctx->input_requires_grad) {
-    JUST(VectorAt(*in_grads, 0)) =
+    (*in_grads)[0] =
         JUST(functional::BinaryCrossEntropyWithLogitsReduceMeanLossGrad(dy, input, target));
   }
   if (ctx->target_requires_grad) {
-    JUST(VectorAt(*in_grads, 1)) =
+    (*in_grads)[1] =
         JUST(functional::BinaryCrossEntropyWithLogitsReduceMeanLossTargetGrad(dy, input, target));
   }
   return Maybe<void>::Ok();

@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 
 namespace oneflow {
@@ -62,6 +61,9 @@ Maybe<void> BinaryCrossEntropyGradGrad::Capture(BinaryCrossEntropyGradGradCaptur
 Maybe<void> BinaryCrossEntropyGradGrad::Apply(const BinaryCrossEntropyGradGradCaptureState* ctx,
                                               const TensorTuple& out_grads,
                                               TensorTuple* in_grads) const {
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(ctx->SavedTensors().size(),
+                     3 + ctx->has_weight);  // NOLINT(maybe-need-error-msg)
   in_grads->resize(3 + ctx->has_weight);
   const auto& grad = ctx->SavedTensors()[0];
   const auto& input = ctx->SavedTensors()[1];

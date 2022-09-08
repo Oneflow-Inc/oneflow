@@ -54,13 +54,15 @@ class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossCaptureState> {
 
   Maybe<void> Apply(const SmoothL1LossCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);            // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(ctx->SavedTensors().size(), 2);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(2);
     const auto& input = ctx->SavedTensors().at(0);
     const auto& target = ctx->SavedTensors().at(1);
     const auto& grad = JUST(functional::SmoothL1LossGrad(out_grads[0], input, target, ctx->beta));
 
-    if (ctx->input_requires_grad) { in_grads->at(0) = grad; }
-    if (ctx->target_requires_grad) { in_grads->at(1) = JUST(functional::Negative(grad)); }
+    if (ctx->input_requires_grad) { (*in_grads)[0] = grad; }
+    if (ctx->target_requires_grad) { (*in_grads)[1] = JUST(functional::Negative(grad)); }
     return Maybe<void>::Ok();
   }
 

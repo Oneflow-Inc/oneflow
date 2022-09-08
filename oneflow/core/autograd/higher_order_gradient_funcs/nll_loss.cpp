@@ -68,12 +68,13 @@ Maybe<void> NLLLossGradGrad::Capture(NLLCaptureState* ctx, const TensorTuple& in
 
 Maybe<void> NLLLossGradGrad::Apply(const NLLCaptureState* ctx, const TensorTuple& out_grads,
                                    TensorTuple* in_grads) const {
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   in_grads->resize(3 + ctx->has_weight);
 
   if (ctx->grad_requires_grad) {
-    const auto& target = ctx->SavedTensors()[0];
+    const auto& target = JUST(VectorAt(ctx->SavedTensors(), 0));
     if (ctx->has_weight) {
-      auto weight = ctx->SavedTensors()[1];
+      auto weight = JUST(VectorAt(ctx->SavedTensors(), 1));
       (*in_grads)[0] =
           JUST(functional::NLLLoss(out_grads[0], target, weight, ctx->ignore_index, "none"));
     } else {
