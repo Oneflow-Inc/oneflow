@@ -36,14 +36,16 @@ namespace oneflow {
   user_op::TensorDesc* mapped_label = ctx->MutOutputTensorDesc("mapped_label", 0);
   user_op::TensorDesc* sampled_weight = ctx->MutOutputTensorDesc("sampled_weight", 0);
   user_op::TensorDesc* sampled_label = ctx->MutOutputTensorDesc("sampled_label", 0);
-  *mapped_label->mut_shape() = label.shape();
-  *mapped_label->mut_is_dynamic() = label.is_dynamic();
-  *sampled_weight->mut_shape() = weight.shape();
-  sampled_weight->mut_shape()->Set(0, num_sample);
-  *sampled_weight->mut_is_dynamic() = weight.is_dynamic();
-  *sampled_label->mut_shape() = label.shape();
-  sampled_label->mut_shape()->Set(0, num_sample);
-  *sampled_label->mut_is_dynamic() = label.is_dynamic();
+  mapped_label->set_shape(label.shape());
+  mapped_label->set_is_dynamic(label.is_dynamic());
+  Shape sampled_weight_shape = weight.shape();
+  sampled_weight_shape.Set(0, num_sample);
+  sampled_weight->set_shape(sampled_weight_shape);
+  sampled_weight->set_is_dynamic(weight.is_dynamic());
+  Shape sampled_label_shape = label.shape();
+  sampled_label_shape.Set(0, num_sample);
+  sampled_label->set_shape(sampled_label_shape);
+  sampled_label->set_is_dynamic(label.is_dynamic());
   return Maybe<void>::Ok();
 }
 
@@ -58,20 +60,22 @@ namespace oneflow {
   user_op::TensorDesc* mapped_label = ctx->MutOutputTensorDesc("mapped_label", 0);
   user_op::TensorDesc* sampled_weight = ctx->MutOutputTensorDesc("sampled_weight", 0);
   user_op::TensorDesc* sampled_label = ctx->MutOutputTensorDesc("sampled_label", 0);
-  *mapped_label->mut_shape() = label.shape();
-  *mapped_label->mut_is_dynamic() = label.is_dynamic();
-  *sampled_weight->mut_shape() = weight.shape();
-  sampled_weight->mut_shape()->Set(0, num_sample_per_rank);
-  *sampled_weight->mut_is_dynamic() = weight.is_dynamic();
-  *sampled_label->mut_shape() = label.shape();
-  sampled_label->mut_shape()->Set(0, num_sample_per_rank);
-  *sampled_label->mut_is_dynamic() = label.is_dynamic();
+  mapped_label->set_shape(label.shape());
+  mapped_label->set_is_dynamic(label.is_dynamic());
+  Shape sampled_weight_shape = weight.shape();
+  sampled_weight_shape.Set(0, num_sample_per_rank);
+  sampled_weight->set_shape(sampled_weight_shape);
+  sampled_weight->set_is_dynamic(weight.is_dynamic());
+  Shape sampled_label_shape = label.shape();
+  sampled_label_shape.Set(0, num_sample_per_rank);
+  sampled_label->set_shape(sampled_label_shape);
+  sampled_label->set_is_dynamic(label.is_dynamic());
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> DistributedPartialFcSampleOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("mapped_label", 0) = ctx->InputDType("label", 0);
-  *ctx->MutOutputDType("sampled_weight", 0) = ctx->InputDType("weight", 0);
-  *ctx->MutOutputDType("sampled_label", 0) = ctx->InputDType("label", 0);
+  ctx->SetOutputDType("mapped_label", 0, ctx->InputDType("label", 0));
+  ctx->SetOutputDType("sampled_weight", 0, ctx->InputDType("weight", 0));
+  ctx->SetOutputDType("sampled_label", 0, ctx->InputDType("label", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> DistributedPartialFcSampleOp::ModifyInputArg(
@@ -95,73 +99,41 @@ namespace oneflow {
     user_op::InferContext* ctx) {
   user_op::TensorDesc* boxing_disabled_sampled_weight_diff =
       ctx->MutOutputTensorDesc("boxing_disabled_sampled_weight_diff", 0);
-  *boxing_disabled_sampled_weight_diff->mut_shape() = ctx->InputShape("sampled_weight_diff", 0);
-  CHECK_EQ_OR_RETURN(boxing_disabled_sampled_weight_diff->shape().At(0) % ctx->parallel_num(), 0);
-  boxing_disabled_sampled_weight_diff->mut_shape()->Set(
-      0, boxing_disabled_sampled_weight_diff->shape().At(0) / ctx->parallel_num());
-  *boxing_disabled_sampled_weight_diff->mut_is_dynamic() =
-      ctx->InputIsDynamic("sampled_weight_diff", 0);
+  Shape boxing_disabled_sampled_weight_diff_shape = ctx->InputShape("sampled_weight_diff", 0);
+  CHECK_EQ_OR_RETURN(boxing_disabled_sampled_weight_diff_shape.At(0) % ctx->parallel_num(), 0);
+  boxing_disabled_sampled_weight_diff_shape.Set(
+      0, boxing_disabled_sampled_weight_diff_shape.At(0) / ctx->parallel_num());
+  boxing_disabled_sampled_weight_diff->set_shape(boxing_disabled_sampled_weight_diff_shape);
+  boxing_disabled_sampled_weight_diff->set_is_dynamic(
+      ctx->InputIsDynamic("sampled_weight_diff", 0));
   user_op::TensorDesc* boxing_disabled_sampled_label =
       ctx->MutOutputTensorDesc("boxing_disabled_sampled_label", 0);
-  *boxing_disabled_sampled_label->mut_shape() = ctx->InputShape("sampled_label", 0);
-  CHECK_EQ_OR_RETURN(boxing_disabled_sampled_label->shape().At(0) % ctx->parallel_num(), 0);
-  boxing_disabled_sampled_label->mut_shape()->Set(
-      0, boxing_disabled_sampled_label->shape().At(0) / ctx->parallel_num());
-  *boxing_disabled_sampled_label->mut_is_dynamic() = ctx->InputIsDynamic("sampled_label", 0);
+  Shape boxing_disabled_sampled_label_shape = ctx->InputShape("sampled_label", 0);
+  ;
+  CHECK_EQ_OR_RETURN(boxing_disabled_sampled_label_shape.At(0) % ctx->parallel_num(), 0);
+  boxing_disabled_sampled_label_shape.Set(
+      0, boxing_disabled_sampled_label_shape.At(0) / ctx->parallel_num());
+  boxing_disabled_sampled_label->set_shape(boxing_disabled_sampled_label_shape);
+  boxing_disabled_sampled_label->set_is_dynamic(ctx->InputIsDynamic("sampled_label", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> DistributedPartialFcSampleDisableBoxingOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("boxing_disabled_sampled_weight_diff", 0) =
-      ctx->InputShape("sampled_weight_diff", 0);
-  *ctx->MutOutputIsDynamic("boxing_disabled_sampled_weight_diff", 0) =
-      ctx->InputIsDynamic("sampled_weight_diff", 0);
-  *ctx->MutOutputShape("boxing_disabled_sampled_label", 0) = ctx->InputShape("sampled_label", 0);
-  *ctx->MutOutputIsDynamic("boxing_disabled_sampled_label", 0) =
-      ctx->InputIsDynamic("sampled_label", 0);
+  ctx->SetOutputShape("boxing_disabled_sampled_weight_diff", 0,
+                      ctx->InputShape("sampled_weight_diff", 0));
+  ctx->SetOutputIsDynamic("boxing_disabled_sampled_weight_diff", 0,
+                          ctx->InputIsDynamic("sampled_weight_diff", 0));
+  ctx->SetOutputShape("boxing_disabled_sampled_label", 0, ctx->InputShape("sampled_label", 0));
+  ctx->SetOutputIsDynamic("boxing_disabled_sampled_label", 0,
+                          ctx->InputIsDynamic("sampled_label", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> DistributedPartialFcSampleDisableBoxingOp::InferDataType(
     user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("boxing_disabled_sampled_weight_diff", 0) =
-      ctx->InputDType("sampled_weight_diff", 0);
-  *ctx->MutOutputDType("boxing_disabled_sampled_label", 0) = ctx->InputDType("sampled_label", 0);
+  ctx->SetOutputDType("boxing_disabled_sampled_weight_diff", 0,
+                      ctx->InputDType("sampled_weight_diff", 0));
+  ctx->SetOutputDType("boxing_disabled_sampled_label", 0, ctx->InputDType("sampled_label", 0));
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("distributed_partial_fc_sample")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      const auto disable_boxing_op_name = ctx->FwOp().op_name() + "_disable_boxing";
-      ctx->DefineOp(disable_boxing_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("distributed_partial_fc_sample_disable_boxing")
-            .InputBind("sampled_weight_diff", ctx->FwOp().output_grad("sampled_weight", 0))
-            .InputBind("sampled_label", ctx->FwOp().output("sampled_label", 0))
-            .Output("boxing_disabled_sampled_weight_diff")
-            .Output("boxing_disabled_sampled_label")
-            .Build();
-      });
-      const auto unsorted_segment_sum_like_op_name =
-          ctx->FwOp().op_name() + "_grad_unsorted_segment_sum_like";
-      ctx->DefineOp(unsorted_segment_sum_like_op_name, [&ctx, &disable_boxing_op_name](
-                                                           user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("unsorted_segment_sum_like")
-            .InputBind(
-                "data",
-                ctx->GetOp(disable_boxing_op_name).output("boxing_disabled_sampled_weight_diff", 0))
-            .InputBind(
-                "segment_ids",
-                ctx->GetOp(disable_boxing_op_name).output("boxing_disabled_sampled_label", 0))
-            .InputBind("like", ctx->FwOp().input("weight", 0))
-            .Output("out")
-            .Attr("axis", static_cast<int64_t>(0))
-            .Build();
-      });
-      ctx->FwOp().InputGradBind(
-          user_op::OpArg("weight", 0),
-          [&ctx, &unsorted_segment_sum_like_op_name]() -> const std::string& {
-            return ctx->GetOp(unsorted_segment_sum_like_op_name).output("out", 0);
-          });
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

@@ -26,13 +26,11 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReluOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& in_shape = ctx->InputShape("x", 0);
-  Shape* out_shape = ctx->MutOutputShape("y", 0);
-  *out_shape = in_shape;
+  ctx->SetOutputShape("y", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReluOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -50,39 +48,17 @@ namespace oneflow {
 /*static*/ Maybe<void> ReluGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& y_shape = ctx->InputShape("y", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  Shape* dx_shape = ctx->MutOutputShape("dx", 0);
   CHECK_OR_RETURN(dy_shape == y_shape)
       << Error::RuntimeError() << "Tensors y and dy must have the same shape";
-  *dx_shape = dy_shape;
+  ctx->SetOutputShape("dx", 0, dy_shape);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReluGradOp::InferDataType(user_op::InferContext* ctx) {
   DataType data_type = ctx->InputDType("y", 0);
   CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), data_type)
       << Error::TypeError() << "Tensors dy and y must have the same type";
-  *ctx->MutOutputDType("dx", 0) = data_type;
+  ctx->SetOutputDType("dx", 0, data_type);
   return Maybe<void>::Ok();
 }
-
-namespace {
-
-REGISTER_USER_OP_GRAD("relu").SetBackwardOpConfGenFn(
-    [](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      const auto relu_grad_op_name = ctx->FwOp().op_name() + "_grad";
-      ctx->DefineOp(relu_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("relu_grad")
-            .InputBind("y", ctx->FwOp().output("y", 0))
-            .InputBind("dy", ctx->FwOp().output_grad("y", 0))
-            .Output("dx")
-            .Build();
-      });
-      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
-                                [&ctx, &relu_grad_op_name]() -> const std::string& {
-                                  return ctx->GetOp(relu_grad_op_name).output("dx", 0);
-                                });
-      return Maybe<void>::Ok();
-    });
-
-}  // namespace
 
 }  // namespace oneflow

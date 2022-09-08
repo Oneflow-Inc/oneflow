@@ -43,7 +43,7 @@ namespace oneflow {
 
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   out_desc->set_is_dynamic(false);
-  *out_desc->mut_shape() = Shape(out_dim_vec);
+  out_desc->set_shape(Shape(out_dim_vec));
   return Maybe<void>::Ok();
 }
 
@@ -53,7 +53,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> DiagOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -61,7 +61,7 @@ namespace oneflow {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
   const Shape& in_shape = in.shape();
   user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
-  *dx_desc->mut_shape() = Shape(in_shape.dim_vec());
+  dx_desc->set_shape(Shape(in_shape.dim_vec()));
   return Maybe<void>::Ok();
 }
 
@@ -71,25 +71,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> DiagGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("diag").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx)
-                                                         -> Maybe<void> {
-  const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
-  ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("diag_grad")
-        .InputBind("in", ctx->FwOp().input("in", 0))
-        .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-        .Attr<int32_t>("diagonal", ctx->FwOp().attr<int32_t>("diagonal"))
-        .Output("dx")
-        .Build();
-  });
-
-  ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), [&ctx, &grad_op_name]() -> const std::string& {
-    return ctx->GetOp(grad_op_name).output("dx", 0);
-  });
-  return Maybe<void>::Ok();
-});
 }  // namespace oneflow

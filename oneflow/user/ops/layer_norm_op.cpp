@@ -36,7 +36,9 @@ Shape InferBnParamShape(const Shape& x_shape, const int64_t begin_norm_axis) {
 }
 
 oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
-  return x_data_type == DataType::kFloat16 ? DataType::kFloat : x_data_type;
+  return (x_data_type == DataType::kFloat16 || x_data_type == DataType::kBFloat16)
+             ? DataType::kFloat
+             : x_data_type;
 }
 
 }  // namespace
@@ -50,8 +52,8 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   const bool scale = ctx->Attr<bool>("scale");
   const int64_t begin_params_axis =
       ShiftNegativeAxisIfNeed(x.shape(), ctx->Attr<int64_t>("begin_params_axis"));
-  *y->mut_shape() = x.shape();
-  *y->mut_is_dynamic() = x.is_dynamic();
+  y->set_shape(x.shape());
+  y->set_is_dynamic(x.is_dynamic());
   DimVector param_shape_dim_vec;
   param_shape_dim_vec.insert(param_shape_dim_vec.end(),
                              x.shape().dim_vec().cbegin() + begin_params_axis,
@@ -71,7 +73,7 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
     return Error::RuntimeError() << "begin_norm_axis must equal to begin_params_axis, but got "
                                  << begin_norm_axis << " vs " << begin_params_axis;
   }
-  *mean->mut_shape() = InferBnParamShape(x.shape(), begin_norm_axis);
+  mean->set_shape(InferBnParamShape(x.shape(), begin_norm_axis));
   *inv_variance = *mean;
   return Maybe<void>::Ok();
 }
@@ -96,7 +98,7 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   const bool center = ctx->Attr<bool>("center");
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
-  *y->mut_data_type() = x.data_type();
+  y->set_data_type(x.data_type());
   if (center) {
     const user_op::TensorDesc& beta = ctx->InputTensorDesc("beta", 0);
     CHECK_EQ_OR_RETURN(beta.data_type(), x.data_type());
@@ -108,8 +110,8 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   }
   user_op::TensorDesc* mean = ctx->MutOutputTensorDesc("mean", 0);
   user_op::TensorDesc* inv_variance = ctx->MutOutputTensorDesc("inv_variance", 0);
-  *mean->mut_data_type() = InferBnParamDataType(x.data_type());
-  *inv_variance->mut_data_type() = mean->data_type();
+  mean->set_data_type(InferBnParamDataType(x.data_type()));
+  inv_variance->set_data_type(mean->data_type());
   return Maybe<void>::Ok();
 }
 
@@ -125,8 +127,8 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   const Shape& bn_param_shape = InferBnParamShape(x.shape(), begin_norm_axis);
   CHECK_EQ_OR_RETURN(mean.shape(), bn_param_shape);
   CHECK_EQ_OR_RETURN(inv_variance.shape(), bn_param_shape);
-  *dx->mut_shape() = dy.shape();
-  *dx->mut_is_dynamic() = dy.is_dynamic();
+  dx->set_shape(dy.shape());
+  dx->set_is_dynamic(dy.is_dynamic());
   if (ctx->has_input("_add_to_output", 0)) {
     const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
     CHECK_EQ_OR_RETURN(add_to_output.shape(), dx->shape());
@@ -160,7 +162,7 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   CHECK_EQ_OR_RETURN(mean.data_type(), bn_param_data_type);
   CHECK_EQ_OR_RETURN(inv_variance.data_type(), bn_param_data_type);
   user_op::TensorDesc* dx = ctx->MutOutputTensorDesc("dx", 0);
-  *dx->mut_data_type() = dy.data_type();
+  dx->set_data_type(dy.data_type());
   if (ctx->has_input("_add_to_output", 0)) {
     const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
     CHECK_EQ_OR_RETURN(add_to_output.data_type(), dx->data_type());
@@ -193,11 +195,11 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   const Shape param_shape(param_shape_dim_vec);
   if (has_beta_diff) {
     user_op::TensorDesc* beta_diff = ctx->MutOutputTensorDesc("beta_diff", 0);
-    *beta_diff->mut_shape() = param_shape;
+    beta_diff->set_shape(param_shape);
   }
   if (has_gamma_diff) {
     user_op::TensorDesc* gamma_diff = ctx->MutOutputTensorDesc("gamma_diff", 0);
-    *gamma_diff->mut_shape() = param_shape;
+    gamma_diff->set_shape(param_shape);
   }
   return Maybe<void>::Ok();
 }
@@ -226,66 +228,13 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
   if (has_beta_diff) {
     user_op::TensorDesc* beta_diff = ctx->MutOutputTensorDesc("beta_diff", 0);
-    *beta_diff->mut_data_type() = dy.data_type();
+    beta_diff->set_data_type(dy.data_type());
   }
   if (has_gamma_diff) {
     user_op::TensorDesc* gamma_diff = ctx->MutOutputTensorDesc("gamma_diff", 0);
-    *gamma_diff->mut_data_type() = dy.data_type();
+    gamma_diff->set_data_type(dy.data_type());
   }
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("layer_norm")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      const bool center = op.attr<bool>("center");
-      const bool scale = op.attr<bool>("scale");
-      const bool has_beta = center;
-      const bool has_gamma = scale;
-      const bool has_beta_diff = has_beta && op.NeedGenGradTensor4OpInput("beta", 0);
-      const bool has_gamma_diff = has_gamma && op.NeedGenGradTensor4OpInput("gamma", 0);
-      const Shape& x_shape = op.TensorDesc4ArgNameAndIndex("x", 0).shape();
-      const int64_t begin_norm_axis =
-          ShiftNegativeAxisIfNeed(x_shape, op.attr<int64_t>("begin_norm_axis"));
-      const int64_t begin_params_axis =
-          ShiftNegativeAxisIfNeed(x_shape, op.attr<int64_t>("begin_params_axis"));
-      if (has_beta_diff || has_gamma_diff) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_param_grad");
-        auto grad_op_builder = builder.Op("layer_norm_param_grad")
-                                   .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                                   .Input("x", op.input("x", 0))
-                                   .Input("mean", op.output("mean", 0))
-                                   .Input("inv_variance", op.output("inv_variance", 0))
-                                   .Attr("begin_params_axis", begin_params_axis);
-        if (has_beta_diff) { grad_op_builder.Output("beta_diff"); }
-        if (has_gamma_diff) { grad_op_builder.Output("gamma_diff"); }
-        auto grad_op = grad_op_builder.Build();
-        if (has_beta_diff) {
-          op.BindGradTensorWithOpInput(grad_op.output("beta_diff", 0), "beta", 0);
-        }
-        if (has_gamma_diff) {
-          op.BindGradTensorWithOpInput(grad_op.output("gamma_diff", 0), "gamma", 0);
-        }
-        AddOp(grad_op);
-      }
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        builder.Op("layer_norm_grad")
-            .Input("x", op.input("x", 0))
-            .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-            .Input("mean", op.output("mean", 0))
-            .Input("inv_variance", op.output("inv_variance", 0))
-            .Output("dx")
-            .Attr("begin_norm_axis", begin_norm_axis)
-            .Attr("epsilon", op.attr<double>("epsilon"));
-        if (op.user_op_conf().has_input("gamma", 0)) {
-          builder.Input("gamma", op.input("gamma", 0));
-        }
-        user_op::UserOpConfWrapper grad_op = builder.Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

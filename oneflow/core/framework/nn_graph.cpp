@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/graph/op_graph.h"
@@ -279,6 +280,8 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
   // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
   one::TensorNameScope::Global()->Clear();
+  // Clear all backward pass scope
+  ClearAllBackwardPassScope();
 
   // NOTE(chengcheng): Singleton<JobDesc> need be clear before GlobalJobDescScope construct.
   if (Singleton<JobDesc>::Get() != nullptr) { Singleton<JobDesc>::Delete(); }

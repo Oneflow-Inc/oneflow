@@ -44,11 +44,11 @@ namespace oneflow {
       << "The element number of the in tensor must be equal to the element number of the "
          "like tensor, "
       << "but got " << in_shape.elem_cnt() << " and " << like_shape.elem_cnt();
-  *ctx->MutOutputShape("out", 0) = like_shape;
+  ctx->SetOutputShape("out", 0, like_shape);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReshapeLikeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReshapeLikeOp::ModifyInputArg(
@@ -58,34 +58,5 @@ namespace oneflow {
   like_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("reshape_like")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("in", 0)) {
-        const auto& in_desc = op.TensorDesc4ArgNameAndIndex("in", 0);
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        if (in_desc.is_dynamic()) {
-          user_op::UserOpConfWrapper reshape_grad_op =
-              builder.Op("reshape_like")
-                  .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                  .Input("like", op.input("in", 0))
-                  .Output("out")
-                  .Build();
-          op.BindGradTensorWithOpInput(reshape_grad_op.output("out", 0), "in", 0);
-          AddOp(reshape_grad_op);
-        } else {
-          user_op::UserOpConfWrapper reshape_grad_op =
-              builder.Op("reshape")
-                  .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                  .Attr("shape", in_desc.shape())
-                  .Output("out")
-                  .Build();
-          op.BindGradTensorWithOpInput(reshape_grad_op.output("out", 0), "in", 0);
-          AddOp(reshape_grad_op);
-        }
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

@@ -26,7 +26,7 @@ namespace oneflow {
   DimVector dim_vec(1 + static_shape.NumAxes());
   dim_vec[0] = in_tensor.shape().At(0);
   FOR_RANGE(int64_t, i, 1, dim_vec.size()) { dim_vec[i] = static_shape.At(i - 1); }
-  *out_tensor->mut_shape() = Shape(dim_vec);
+  out_tensor->set_shape(Shape(dim_vec));
   out_tensor->set_is_dynamic(ctx->Attr<bool>("is_dynamic"));
   return Maybe<void>::Ok();
 }
@@ -63,7 +63,7 @@ namespace oneflow {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   CHECK_OR_RETURN(in_tensor.data_type() == DataType::kTensorBuffer);
-  *out_tensor->mut_data_type() = ctx->Attr<DataType>("data_type");
+  out_tensor->set_data_type(ctx->Attr<DataType>("data_type"));
   return Maybe<void>::Ok();
 }
 

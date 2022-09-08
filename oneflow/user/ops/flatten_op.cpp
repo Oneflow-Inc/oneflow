@@ -31,9 +31,7 @@ namespace oneflow {
   CHECK_LT_OR_RETURN(true_end_dim, in_shape.NumAxes());
   CHECK_LE_OR_RETURN(start_dim, true_end_dim);
 
-  *out_tensor_desc->mut_is_dynamic() = in_tensor_desc.is_dynamic();
-
-  Shape* out_shape = out_tensor_desc->mut_shape();
+  out_tensor_desc->set_is_dynamic(in_tensor_desc.is_dynamic());
 
   DimVector dim_vec;
 
@@ -45,8 +43,8 @@ namespace oneflow {
     dim_vec.emplace_back(in_shape.At(i));
   }
 
-  *out_shape = Shape(dim_vec);
-  CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());
+  out_tensor_desc->set_shape(Shape(dim_vec));
+  CHECK_EQ_OR_RETURN(out_tensor_desc->shape().elem_cnt(), in_shape.elem_cnt());
   return Maybe<void>::Ok();
 }
 
@@ -80,24 +78,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FlattenOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("flatten").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                           user_op::AddOpFn AddOp) -> Maybe<void> {
-  if (op.NeedGenGradTensor4OpInput("in", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper reshape_grad_op =
-        builder.Op("reshape_like")
-            .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-            .Input("like", op.input("in", 0))
-            .Output("out")
-            .Build();
-    op.BindGradTensorWithOpInput(reshape_grad_op.output("out", 0), "in", 0);
-    AddOp(reshape_grad_op);
-  }
-  return Maybe<void>::Ok();
-});
 
 }  // namespace oneflow

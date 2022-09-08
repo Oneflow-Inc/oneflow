@@ -27,12 +27,12 @@ namespace oneflow {
     return Maybe<void>::Ok();                                                                    \
   }                                                                                              \
   /*static*/ Maybe<void> name##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {          \
-    *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);                                   \
-    *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);                           \
+    ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));                                     \
+    ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));                             \
     return Maybe<void>::Ok();                                                                    \
   }                                                                                              \
   /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {                   \
-    *ctx->MutOutputDType("out", 0) = DataType::kBool;                                            \
+    ctx->SetOutputDType("out", 0, DataType::kBool);                                              \
     return Maybe<void>::Ok();                                                                    \
   }
 

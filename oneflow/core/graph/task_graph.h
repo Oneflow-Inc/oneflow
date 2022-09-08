@@ -122,8 +122,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
     struct Hasher {
       inline size_t operator()(const ProxyKey& key) const {
-        return std::hash<TaskNode*>{}(key.src_node) ^ std::hash<LogicalBlobId>{}(key.lbi)
-               ^ key.dst_mem_zone_id.hash();
+        return Hash(key.src_node, key.lbi, key.dst_mem_zone_id.hash());
       }
     };
   };

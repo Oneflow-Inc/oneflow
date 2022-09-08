@@ -22,14 +22,14 @@ namespace {
 
 Maybe<void> InferMaskedFillTensorDesc(user_op::InferContext* ctx) {
   const Shape& mask_shape = ctx->InputShape("mask", 0);
-  *ctx->MutOutputShape("out", 0) = mask_shape;
+  ctx->SetOutputShape("out", 0, mask_shape);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferMaskedFillDataType(user_op::InferContext* ctx) {
   DataType mask_dtype = ctx->InputDType("mask", 0);
   CHECK_OR_RETURN(IsIntegralDataType(mask_dtype) || IsBoolDataType(mask_dtype));
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -84,32 +84,5 @@ Maybe<void> GetMaskedFillInputArgModify(const user_op::GetInputArgModifier& GetI
 /* static */ Maybe<void> MaskedFillOp::InferDataType(user_op::InferContext* ctx) {
   return InferMaskedFillDataType(ctx);
 }
-
-namespace {
-Maybe<void> GenMaskedFillGradOp(user_op::BackwardOpConfContext* ctx) {
-  const std::string zero_like_op = ctx->FwOp().op_name() + "_grad_zero_like_op";
-  ctx->DefineOp(zero_like_op, [&](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("zero_like")
-        .InputBind("like", ctx->FwOp().input("x", 0))
-        .Output("out")
-        .Build();
-  });
-  const std::string where_op = ctx->FwOp().op_name() + "_grad_where_op";
-  ctx->DefineOp(where_op, [&](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("where")
-        .InputBind("condition", ctx->FwOp().input("mask", 0))
-        .InputBind("x", ctx->GetOp(zero_like_op).output("out", 0))
-        .InputBind("y", ctx->FwOp().GetGradTensorWithOpOutput("out", 0))
-        .Output("out")
-        .Build();
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), [&]() -> const std::string& {
-    return ctx->GetOp(where_op).output("out", 0);
-  });
-  return Maybe<void>::Ok();
-}
-}  // namespace
-
-REGISTER_USER_OP_GRAD("masked_fill").SetBackwardOpConfGenFn(GenMaskedFillGradOp);
 
 }  // namespace oneflow

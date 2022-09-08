@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> LogSoftmaxOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("prob", 0) = ctx->InputShape("in", 0);
+  ctx->SetOutputShape("prob", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -35,16 +35,15 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> LogSoftmaxOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("prob", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("prob", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> LogSoftmaxGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& y_shape = ctx->InputShape("prob", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  Shape* dx_shape = ctx->MutOutputShape("dx", 0);
   CHECK_OR_RETURN(dy_shape == y_shape);
-  *dx_shape = dy_shape;
+  ctx->SetOutputShape("dx", 0, dy_shape);
   return Maybe<void>::Ok();
 }
 
@@ -62,25 +61,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> LogSoftmaxGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("prob", 0), ctx->InputDType("dy", 0));
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("prob", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("prob", 0));
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("log_softmax")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("in", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper logsoftmax_grad_op =
-            builder.Op("log_softmax_grad")
-                .Input("prob", op.output("prob", 0))
-                .Input("dy", op.GetGradTensorWithOpOutput("prob", 0))
-                .Output("dx")
-                .Build();
-        op.BindGradTensorWithOpInput(logsoftmax_grad_op.output("dx", 0), "in", 0);
-        AddOp(logsoftmax_grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

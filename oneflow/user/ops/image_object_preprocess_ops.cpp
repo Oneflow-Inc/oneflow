@@ -35,8 +35,8 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& flip_code_desc = ctx->InputTensorDesc("flip_code", 0);
   CHECK_EQ_OR_RETURN(flip_code_desc.shape().elem_cnt(), N);
 
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -47,7 +47,7 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
 /* static */ Maybe<void> ImageFlipOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   CHECK_EQ_OR_RETURN(in_desc.data_type(), DataType::kTensorBuffer);
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -62,8 +62,8 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& flip_code_desc = ctx->InputTensorDesc("flip_code", 0);
   CHECK_EQ_OR_RETURN(flip_code_desc.shape().elem_cnt(), N);
 
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("bbox", 0);
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("bbox", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("bbox", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("bbox", 0));
   return Maybe<void>::Ok();
 }
 
@@ -78,7 +78,7 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   CHECK_EQ_OR_RETURN(image_size_desc.data_type(), DataType::kInt32);
   const user_op::TensorDesc& flip_code_desc = ctx->InputTensorDesc("flip_code", 0);
   CHECK_EQ_OR_RETURN(flip_code_desc.data_type(), DataType::kInt8);
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("bbox", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("bbox", 0));
   return Maybe<void>::Ok();
 }
 
@@ -90,8 +90,8 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& scale_desc = ctx->InputTensorDesc("scale", 0);
   CHECK_EQ_OR_RETURN(scale_desc.shape().elem_cnt(), N * 2);
 
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("bbox", 0);
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("bbox", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("bbox", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("bbox", 0));
   return Maybe<void>::Ok();
 }
 
@@ -104,7 +104,7 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   CHECK_EQ_OR_RETURN(bbox_desc.data_type(), DataType::kTensorBuffer);
   const user_op::TensorDesc& scale_desc = ctx->InputTensorDesc("scale", 0);
   CHECK_EQ_OR_RETURN(scale_desc.data_type(), DataType::kFloat);
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("bbox", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("bbox", 0));
   return Maybe<void>::Ok();
 }
 
@@ -120,8 +120,8 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& flip_code_desc = ctx->InputTensorDesc("flip_code", 0);
   CHECK_EQ_OR_RETURN(flip_code_desc.shape().elem_cnt(), N);
 
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("poly", 0);
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("poly", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("poly", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("poly", 0));
   return Maybe<void>::Ok();
 }
 
@@ -137,7 +137,7 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   CHECK_EQ_OR_RETURN(image_size_desc.data_type(), DataType::kInt32);
   const user_op::TensorDesc& flip_code_desc = ctx->InputTensorDesc("flip_code", 0);
   CHECK_EQ_OR_RETURN(flip_code_desc.data_type(), DataType::kInt8);
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("poly", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("poly", 0));
   return Maybe<void>::Ok();
 }
 
@@ -150,8 +150,8 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& scale_desc = ctx->InputTensorDesc("scale", 0);
   CHECK_EQ_OR_RETURN(scale_desc.shape().elem_cnt(), N * 2);
 
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("poly", 0);
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("poly", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("poly", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("poly", 0));
   return Maybe<void>::Ok();
 }
 
@@ -165,15 +165,15 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   CHECK_EQ_OR_RETURN(poly_desc.data_type(), DataType::kTensorBuffer);
   const user_op::TensorDesc& scale_desc = ctx->InputTensorDesc("scale", 0);
   CHECK_EQ_OR_RETURN(scale_desc.data_type(), DataType::kFloat);
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("poly", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("poly", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> ImageNormalizeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   CHECK_EQ_OR_RETURN(in_desc.shape().NumAxes(), 1);
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -184,7 +184,7 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
 /* static */ Maybe<void> ImageNormalizeOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   CHECK_EQ_OR_RETURN(in_desc.data_type(), DataType::kTensorBuffer);
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -201,8 +201,8 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& image_size_desc = ctx->InputTensorDesc("image_size", 0);
   CHECK_EQ_OR_RETURN(image_size_desc.shape().elem_cnt(), N * 2);
 
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("poly", 0);
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("poly", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("poly", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("poly", 0));
   return Maybe<void>::Ok();
 }
 
@@ -218,7 +218,7 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
   CHECK_EQ_OR_RETURN(poly_index_desc.data_type(), DataType::kTensorBuffer);
   const user_op::TensorDesc& image_size_desc = ctx->InputTensorDesc("image_size", 0);
   CHECK_EQ_OR_RETURN(image_size_desc.data_type(), DataType::kInt32);
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("poly", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("poly", 0));
   return Maybe<void>::Ok();
 }
 

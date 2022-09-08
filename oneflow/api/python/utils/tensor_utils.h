@@ -95,6 +95,7 @@ inline Maybe<void> CopyBetweenLocalTensorAndNumpy(
     void (*Copy)(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&, const NumPyArrayPtr&),
     const std::string& modifier, bool block_host_until_done) {
   auto tensor = JUST(t->AsLocalTensor());
+  CHECK_OR_RETURN(tensor->is_contiguous()) << "contiguous tensors supported only.";
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only.";
 
   if (block_host_until_done) {

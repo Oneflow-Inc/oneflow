@@ -88,14 +88,12 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   CHECK_OR_RETURN(!broadcast_axes.empty());
   const Shape& in_shape = ctx->InputShape("x", 0);
   const Shape& like_shape = ctx->InputShape("like", 0);
-  Shape* out_shape = ctx->MutOutputShape("y", 0);
-  Stride* out_stride = ctx->MutOutputStride("y", 0);
   const AxisVector axis_vec = {broadcast_axes.begin(), broadcast_axes.end()};
   CHECK_OR_RETURN(IsAxesLegal(axis_vec, like_shape, in_shape))
       << Error::RuntimeError() << "Invalid input parameter: like shape:" << like_shape.ToString()
       << ", in shape:" << in_shape.ToString() << ", axis_vec size:" << axis_vec.size();
-  *out_shape = like_shape;
-  *out_stride = Stride(like_shape);
+  ctx->SetOutputShape("y", 0, like_shape);
+  ctx->SetOutputStride("y", 0, Stride(like_shape));
   return Maybe<void>::Ok();
 }
 
@@ -118,27 +116,8 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> BroadcastLikeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("like", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("like", 0));
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("broadcast_like")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      const auto x_grad_op_name = ctx->FwOp().op_name() + "_x_grad";
-      ctx->DefineOp(x_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("reduce_sum_like")
-            .InputBind("x", ctx->FwOp().output_grad("y", 0))
-            .InputBind("like", ctx->FwOp().input("x", 0))
-            .Output("y")
-            .Attr("axis", ctx->FwOp().attr<std::vector<int32_t>>("broadcast_axes"))
-            .Build();
-      });
-
-      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
-                                [&ctx, &x_grad_op_name]() -> const std::string& {
-                                  return ctx->GetOp(x_grad_op_name).output("y", 0);
-                                });
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

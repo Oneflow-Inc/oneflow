@@ -27,11 +27,11 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> SquareSumOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
-  *y->mut_shape() = Shape({1});
+  y->set_shape(Shape({1}));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SquareSumOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -48,7 +48,7 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> MultiSquareSumOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
-  *y->mut_shape() = Shape({1});
+  y->set_shape(Shape({1}));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> MultiSquareSumOp::InferDataType(user_op::InferContext* ctx) {
@@ -61,7 +61,7 @@ namespace oneflow {
         << "All tensors are expected to have the same dtype, but found at least two dtypes, "
         << DataType_Name(x_i.data_type()) << " and " << DataType_Name(x_0.data_type());
   }
-  *y->mut_data_type() = x_0.data_type();
+  y->set_data_type(x_0.data_type());
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> MultiSquareSumOp::CheckAttr(const user_op::UserOpDefWrapper&,

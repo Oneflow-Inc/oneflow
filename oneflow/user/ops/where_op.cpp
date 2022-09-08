@@ -81,11 +81,11 @@ Maybe<void> InferWhereTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& y_shape = ctx->InputShape("y", 0);
   if (x_shape == y_shape && y_shape == cond_shape) {
-    *ctx->MutOutputShape("out", 0) = cond_shape;
+    ctx->SetOutputShape("out", 0, cond_shape);
   } else {
     Shape max_shape = *JUST(GetBroadcastShape(cond_shape, x_shape));
     max_shape = *JUST(GetBroadcastShape(max_shape, y_shape));
-    *ctx->MutOutputShape("out", 0) = max_shape;
+    ctx->SetOutputShape("out", 0, max_shape);
   }
   return Maybe<void>::Ok();
 }
@@ -94,10 +94,10 @@ Maybe<void> InferWhereXScalarTensorDesc(user_op::InferContext* ctx) {
   const Shape& cond_shape = ctx->InputShape("condition", 0);
   const Shape& y_shape = ctx->InputShape("y", 0);
   if (cond_shape == y_shape) {
-    *ctx->MutOutputShape("out", 0) = cond_shape;
+    ctx->SetOutputShape("out", 0, cond_shape);
   } else {
     Shape max_shape = *JUST(GetBroadcastShape(cond_shape, y_shape));
-    *ctx->MutOutputShape("out", 0) = max_shape;
+    ctx->SetOutputShape("out", 0, max_shape);
   }
   return Maybe<void>::Ok();
 }
@@ -106,16 +106,16 @@ Maybe<void> InferWhereYScalarTensorDesc(user_op::InferContext* ctx) {
   const Shape& cond_shape = ctx->InputShape("condition", 0);
   const Shape& x_shape = ctx->InputShape("x", 0);
   if (cond_shape == x_shape) {
-    *ctx->MutOutputShape("out", 0) = cond_shape;
+    ctx->SetOutputShape("out", 0, cond_shape);
   } else {
     Shape max_shape = *JUST(GetBroadcastShape(cond_shape, x_shape));
-    *ctx->MutOutputShape("out", 0) = max_shape;
+    ctx->SetOutputShape("out", 0, max_shape);
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferWhereXYScalarTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("condition", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("condition", 0));
   return Maybe<void>::Ok();
 }
 
@@ -210,7 +210,7 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
   CHECK_OR_RETURN(IsBoolDataType(cond_dtype) || IsIntegralDataType(cond_dtype));
   DataType x_dtype = ctx->InputDType("x", 0);
   CHECK_EQ_OR_RETURN(x_dtype, ctx->InputDType("y", 0));
-  *ctx->MutOutputDType("out", 0) = x_dtype;
+  ctx->SetOutputDType("out", 0, x_dtype);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> WhereOp::ModifyInputArg(const GetInputArgModifier& f,
@@ -238,7 +238,7 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
     CHECK_EQ_OR_RETURN(y_dtype, GetDataType<bool>::value)
         << "expected scalar type " << GetDataType<bool>::value << "but found " << y_dtype;
   }
-  *ctx->MutOutputDType("out", 0) = y_dtype;
+  ctx->SetOutputDType("out", 0, y_dtype);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> WhereScalarXOp::ModifyInputArg(const GetInputArgModifier& f,
@@ -266,7 +266,7 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
     CHECK_EQ_OR_RETURN(x_dtype, GetDataType<bool>::value)
         << "expected scalar type " << GetDataType<bool>::value << "but found " << x_dtype;
   }
-  *ctx->MutOutputDType("out", 0) = x_dtype;
+  ctx->SetOutputDType("out", 0, x_dtype);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> WhereScalarYOp::ModifyInputArg(const GetInputArgModifier& f,
@@ -284,11 +284,11 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
   DataType cond_dtype = ctx->InputDType("condition", 0);
   CHECK_OR_RETURN(IsBoolDataType(cond_dtype) || IsIntegralDataType(cond_dtype));
   if (ctx->Attr<bool>("has_x_bool_operand") && ctx->Attr<bool>("has_y_bool_operand")) {
-    *ctx->MutOutputDType("out", 0) = GetDataType<bool>::value;
+    ctx->SetOutputDType("out", 0, GetDataType<bool>::value);
   } else if (ctx->Attr<bool>("has_x_int_operand") && ctx->Attr<bool>("has_y_int_operand")) {
-    *ctx->MutOutputDType("out", 0) = GetDataType<int64_t>::value;
+    ctx->SetOutputDType("out", 0, GetDataType<int64_t>::value);
   } else if (ctx->Attr<bool>("has_x_float_operand") && ctx->Attr<bool>("has_y_float_operand")) {
-    *ctx->MutOutputDType("out", 0) = GetDataType<double>::value;
+    ctx->SetOutputDType("out", 0, GetDataType<double>::value);
   } else {
     UNIMPLEMENTED();
   }
@@ -298,46 +298,5 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
                                                        const user_op::UserOpConfWrapper& conf) {
   return GetWhereInputArgModify(f, conf);
 }
-
-REGISTER_USER_OP_GRAD("where").SetBackwardOpConfGenFn(
-    [](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      const auto zero_op_name = ctx->FwOp().op_name() + "_zero_grad";
-      ctx->DefineOp(zero_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("zero_like")
-            .InputBind("like", ctx->FwOp().input("x", 0))
-            .Output("out")
-            .Build();
-      });
-
-      const auto x_grad_op_name = ctx->FwOp().op_name() + "_x_grad";
-      ctx->DefineOp(x_grad_op_name, [&ctx, &zero_op_name](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("where")
-            .InputBind("condition", ctx->FwOp().input("condition", 0))
-            .InputBind("x", ctx->FwOp().output_grad("out", 0))
-            .InputBind("y", ctx->GetOp(zero_op_name).output("out", 0))
-            .Output("out")
-            .Build();
-      });
-
-      const auto y_grad_op_name = ctx->FwOp().op_name() + "_y_grad";
-      ctx->DefineOp(y_grad_op_name, [&ctx, &zero_op_name](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("where")
-            .InputBind("condition", ctx->FwOp().input("condition", 0))
-            .InputBind("x", ctx->GetOp(zero_op_name).output("out", 0))
-            .InputBind("y", ctx->FwOp().output_grad("out", 0))
-            .Output("out")
-            .Build();
-      });
-
-      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
-                                [&ctx, &x_grad_op_name]() -> const std::string& {
-                                  return ctx->GetOp(x_grad_op_name).output("out", 0);
-                                });
-      ctx->FwOp().InputGradBind(user_op::OpArg("y", 0),
-                                [&ctx, &y_grad_op_name]() -> const std::string& {
-                                  return ctx->GetOp(y_grad_op_name).output("out", 0);
-                                });
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow
