@@ -21,8 +21,9 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=2, check_graph=False)
-def _test_sort_impl(test_case, placement, sbp):
+@autotest(n=5, auto_backward=False, check_graph=False)
+def _test_sort_impl(test_case, placement):
+    sbp = random_sbp(placement, max_dim=4)
     x_dims = [random(2, 4) * 8 for _ in range(4)]
     x = random_tensor(4, *x_dims)
     dim = random(0, 4).to(int).value()
@@ -38,8 +39,7 @@ class TestSortGlobal(flow.unittest.TestCase):
     @globaltest
     def test_sort(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=4):
-                _test_sort_impl(test_case, placement, sbp)
+            _test_sort_impl(test_case, placement)
 
 
 if __name__ == "__main__":
