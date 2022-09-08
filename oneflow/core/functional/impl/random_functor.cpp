@@ -427,6 +427,46 @@ class GlobalRandPermFunctor {
  private:
   std::shared_ptr<OpExpr> randperm_op_;
 };
+
+class ExponentialFunctor {
+ public:
+  ExponentialFunctor() { op_ = CHECK_JUST(one::OpBuilder("exponential").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const float& lambd,
+                           const Optional<one::Generator>& generator) const {
+    DataType dtype_val = x->dtype()->data_type();
+    const Shape& out_shape = *(x->shape());
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;    
+    if (x->is_global()) {
+      const auto& placement = JUST(x->parallel_desc());
+      const auto& nd_sbp = JUST(x->nd_sbp());
+      auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("seed", "lambd", "dtype", "out_shape", "nd_sbp");
+      if (LazyMode::is_enabled()) {
+        attrs.SetAllAttrs(static_cast<int64_t>(gen->current_seed()), lambd, dtype_val, out_shape,
+                          *JUST(GetNdSbpStrList(nd_sbp)));
+      } else {
+        attrs.SetAllAttrs(static_cast<int64_t>(gen->current_seed()), lambd, dtype_val, out_shape, NullOpt);
+      } 
+      JUST(OpInterpUtil::Dispatch(
+          *op_, {}, outputs.get(), OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
+    } else {
+      auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("seed", "lambd", "dtype", "out_shape");
+      attrs.SetAllAttrs(static_cast<int64_t>(gen->current_seed()), lambd, dtype_val, out_shape);
+      OpExprInterpContext ctx(attrs, distribution_state);
+      ctx.device = JUST(x->device());
+      JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(), ctx));
+    }
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -444,6 +484,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<GlobalRandIntFunctor, GlobalRandInt2Functor>("GlobalRandInt");
   m.add_functor<RandIntLikeFunctor, RandIntLike2Functor>("RandIntLike");
   m.add_functor<GlobalRandIntLikeFunctor, GlobalRandIntLike2Functor>("GlobalRandIntLike");
+  m.add_functor<ExponentialFunctor>("Exponential");
 };
 
 }  // namespace functional

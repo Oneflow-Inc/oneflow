@@ -2693,3 +2693,7 @@
 - name: "sigmoid_grad_grad"  
   signature: "Tensor (Tensor y, Tensor dydx) =>  SigmoidGradGrad" 
   bind_python: False
+
+- name: "exponential_"
+  signature: "Tensor (Tensor x, Float lambd=1.0, Generator generator=None) => Exponential"
+  bind_python: True

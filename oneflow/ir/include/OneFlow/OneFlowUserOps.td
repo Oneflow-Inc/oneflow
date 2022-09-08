@@ -5140,6 +5140,25 @@ def OneFlow_UniformIntOp : OneFlow_BaseOp<"uniform_int", [NoSideEffect, NoGrad, 
   let has_nd_sbp_infer_fn = 1;
 }
 
+def OneFlow_ExponentialOp : OneFlow_BaseOp<"exponential", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$seed,
+    DefaultValuedAttr<F32Attr, "1.0">:$lambd,
+    OneFlow_DataType:$dtype,
+    ShapeAttr:$out_shape,
+    StrArrayAttr:$nd_sbp
+  );
+  let same_output_regst_num = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_nd_sbp_infer_fn = 1;
+}
+
 def OneFlow_UniqueWithCountsOp : OneFlow_BaseOp<"unique_with_counts", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x
@@ -9873,28 +9892,6 @@ def OneFlow_RocAucScoreOp : OneFlow_BaseOp<"roc_auc_score", [NoSideEffect, NoGra
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedLstmCellOp : OneFlow_BaseOp<"fused_lstm_cell", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    OneFlow_Tensor:$input_gates,
-    OneFlow_Tensor:$hidden_gates,
-    OneFlow_Tensor:$cx,
-    Optional<OneFlow_Tensor>:$input_bias,
-    Optional<OneFlow_Tensor>:$hidden_bias
-  );
-  let output = (outs
-    OneFlow_Tensor:$hy,
-    OneFlow_Tensor:$cy,
-    OneFlow_Tensor:$workspace
-  );
-  let trait_attrs = (ins
-    I32ElementsAttr:$operand_segment_sizes
-  );
-  let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
-  let has_get_sbp_fn = 1;
-  let has_data_type_infer_fn = 1;
-}
-
 def OneFlow_FillOp : OneFlow_BaseOp<"fill_", [NoSideEffect, SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in
@@ -9920,6 +9917,39 @@ def OneFlow_FillTensorOp : OneFlow_BaseOp<"fill_tensor_", [NoSideEffect, Support
   );
   let output = (outs
     OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+#endif // GET_ONEFLOW_ONE_EMBEDDING_OP_DEFINITIONS
+
+// Group: fused rnn cell.
+// fused_lstm_cell
+// fused_lstm_cell_grad
+// fused_gru_cell
+// fused_gru_cell_grad
+// Total: 4
+
+#ifdef GET_ONEFLOW_FUSED_RNN_CELL_OP_DEFINITIONS
+
+def OneFlow_FusedLstmCellOp : OneFlow_BaseOp<"fused_lstm_cell", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$input_gates,
+    OneFlow_Tensor:$hidden_gates,
+    OneFlow_Tensor:$cx,
+    Optional<OneFlow_Tensor>:$input_bias,
+    Optional<OneFlow_Tensor>:$hidden_bias
+  );
+  let output = (outs
+    OneFlow_Tensor:$hy,
+    OneFlow_Tensor:$cy,
+    OneFlow_Tensor:$workspace
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -9990,6 +10020,18 @@ def OneFlow_FusedGruCellGradOp : OneFlow_BaseOp<"fused_gru_cell_grad", [NoSideEf
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
+
+#endif // GET_ONEFLOW_FUSED_RNN_CELL_OP_DEFINITIONS
+
+// Group: sync batchnorm.
+// batch_norm_stats
+// batch_norm_gather_stats_with_counts
+// batch_norm_elemt
+// batch_norm_backward_reduce
+// batch_norm_backward_elemt
+// Total: 5
+
+#ifdef GET_ONEFLOW_SYNC_BATCHNORM_OP_DEFINITIONS
 
 def OneFlow_BatchNormStatsOp : OneFlow_BaseOp<"batch_norm_stats", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
@@ -10102,8 +10144,8 @@ def OneFlow_BatchNormBackwardElemtOp : OneFlow_BaseOp<"batch_norm_backward_elemt
   let has_data_type_infer_fn = 1;
 }
 
+#endif // GET_ONEFLOW_SYNC_BATCHNORM_OP_DEFINITIONS
 
-#endif // GET_ONEFLOW_ONE_EMBEDDING_OP_DEFINITIONS
 
 // Group: linear algebra.
 // inv
