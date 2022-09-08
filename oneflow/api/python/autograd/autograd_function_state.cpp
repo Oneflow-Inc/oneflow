@@ -78,9 +78,9 @@ static PyObject* PyAutogradFunctionState_mark_non_differentiable(PyObject* self,
 
 static PyMethodDef PyAutogradFunctionState_methods[] = {
     {"save_for_backward", (PyCFunction)PyAutogradFunctionState_save_for_backward, METH_VARARGS,
-     NULL},
+     "Saves given tensors for a future call to ``backward()``."},
     {"mark_non_differentiable", (PyCFunction)PyAutogradFunctionState_mark_non_differentiable,
-     METH_VARARGS, NULL},
+     METH_VARARGS, "Marks outputs as non-differentiable."},
     {NULL} /* Sentinel */
 };
 // PyMethodDef end
@@ -92,8 +92,8 @@ static PyObject* PyAutogradFunctionState_saved_tensors(PyObject* self, void*) {
 }
 
 static PyGetSetDef PyAutogradFunctionState_properties[] = {
-    {PYGETSET_NAME("saved_tensors"), (getter)PyAutogradFunctionState_saved_tensors, NULL, NULL,
-     NULL},
+    {PYGETSET_NAME("saved_tensors"), (getter)PyAutogradFunctionState_saved_tensors, NULL,
+     "Get saved tensors in ctx.", NULL},
     {NULL} /* Sentinel */
 };
 // PyAutogradFunctionState_getset end
@@ -175,7 +175,9 @@ PyObject* PyAutogradFunctionState_NewFromPtr(
 ONEFLOW_API_PYBIND11_MODULE("autograd.Function", m) {
   if (PyType_Ready(&PyAutogradFunctionState_Type) < 0) { return; }
   Py_INCREF(&PyAutogradFunctionState_Type);
-  if (PyModule_AddObject(m.ptr(), "_ctx", (PyObject*)&PyAutogradFunctionState_Type) < 0) { return; }
+  if (PyModule_AddObject(m.ptr(), "FunctionCtx", (PyObject*)&PyAutogradFunctionState_Type) < 0) {
+    return;
+  }
 }
 
 }  // namespace one
