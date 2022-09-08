@@ -23,17 +23,13 @@ namespace test {
 float float_from_bytes(uint32_t sign, uint32_t exponent, uint32_t fraction) {
   // reference: pytorch/c10/test/util/bfloat16_test.cpp
   // https://github.com/pytorch/pytorch/blob/release/1.12/c10/test/util/bfloat16_test.cpp
-  // NOLINTBEGIN(maybe-need-error-msg)
-  uint32_t bytes;
-  bytes = 0;
+  uint32_t bytes = 0;
   bytes |= sign;
   bytes <<= 8;
   bytes |= exponent;
   bytes <<= 23;
   bytes |= fraction;
-
-  // NOLINTEND(maybe-need-error-msg)
-  float res;
+  float res = NAN;
   std::memcpy(&res, &bytes, sizeof(res));
   return res;
 }
