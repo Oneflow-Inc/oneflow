@@ -67,8 +67,12 @@ void RuntimeBlobShapeInferHelper::UpdateInputBlobDescs7OpInferCacheKey(
     const Blob* blob = BnInOp2Blob(ibn);
     if (blob == nullptr) { return Symbol<Shape>(); }
     BlobDesc* blob_desc = BlobDesc4BnInOp(ibn, blob->blob_desc());
-    blob_desc->mut_shape().LeftOnesExtendedAssign(blob->shape());
-    blob_desc->mut_stride().CheckNumAxesIdenticalAndAssign(blob->stride());
+    Shape blob_shape = blob_desc->shape();
+    blob_shape.LeftOnesExtendedAssign(blob->shape());
+    blob_desc->set_shape(blob_shape);
+    Stride blob_stride = blob_desc->stride();
+    blob_stride.CheckNumAxesIdenticalAndAssign(blob->stride());
+    blob_desc->set_stride(blob_stride);
     return SymbolOf(blob_desc->shape());
   };
   const auto& input_bns = op_->input_bns();

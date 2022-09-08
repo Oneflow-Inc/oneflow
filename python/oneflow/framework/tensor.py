@@ -29,18 +29,10 @@ def _ndim(self):
 
 
 def _backward(self, gradient=None, retain_graph=False, create_graph=False):
-    if not lazy_mode.is_enabled():
-        flow.autograd.backward(self, gradient, retain_graph, create_graph)
-    else:
+    if lazy_mode.is_enabled():
         assert (
             self.is_lazy
         ), "nn.Graph only accept lazy tensor to call backward() in lazy mode."
-        assert (
-            self.shape.numel() == 1
-        ), " loss_tensor.backward(), loss_tensor must be a scalar in nn.Graph, please use loss_tensor.sum() or loss_tensor.mean() to make it a scalar tensor."
-        assert (
-            gradient is None
-        ), "nn.Graph donot accept 'gradient' argument in backward() at the moment."
         assert (
             not retain_graph
         ), "nn.Graph donot accept 'retain_graph' argument in backward() at the moment."
@@ -48,6 +40,7 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
             not create_graph
         ), "nn.Graph donot accept 'create_graph' argument in backward() at the moment."
         flow._oneflow_internal.nn.graph.AddTensorAsGraphLoss(self)
+    flow.autograd.backward(self, gradient, retain_graph, create_graph)
 
 
 def _str(self):
@@ -502,6 +495,18 @@ def _cumprod(self, dim, dtype=None):
     return flow._C.cumprod(self, dim, dtype=dtype)
 
 
+def _inv(self):
+    return flow._C.inv(self)
+
+
+def _trunc(self):
+    """trunc() -> Tensor
+
+    See :func:`oneflow.trunc`
+    """
+    return flow._C.trunc(self)
+
+
 def RegisterMethods():
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
@@ -566,6 +571,8 @@ def RegisterMethods():
     Tensor.cumsum = _cumsum
     Tensor.cumprod = _cumprod
     Tensor.mv = _mv
+    Tensor.inverse = _inv
+    Tensor.trunc = _trunc
 
 
 def register_tensor_op(op_name):

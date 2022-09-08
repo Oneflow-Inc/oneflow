@@ -88,9 +88,9 @@ const std::string& CastFromGlobalOpExpr::op_type_name() const {
     return false;                                                                         \
   }
 
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FeedInputOpConf, true);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FeedVariableOpConf, true);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FetchOutputOpConf, true);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FeedInputOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FeedVariableOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FetchOutputOpConf, false);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(VariableOpConf, true);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(
     ImageDecoderRandomCropResizeOpConf, true);
@@ -253,21 +253,22 @@ class UserOpExprInferContext : public user_op::InferContext {
     return tensor_meta4input_index_(tuple_index)->shape();
   }
 
-  Shape* MutOutputShape(const std::string& name, int32_t index) override {
+  void SetOutputShape(const std::string& name, int32_t index, const Shape& shape) override {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
     int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
     TensorMeta* tensor_meta_ptr = tensor_meta4output_index_(tuple_index);
     CHECK_NOTNULL(dynamic_cast<MutTensorMeta*>(tensor_meta_ptr));
-    return tensor_meta_ptr->mut_shape();
+    return tensor_meta_ptr->set_shape(shape);
   }
 
   const Shape& Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->shape();
   }
 
-  Shape* MutShape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
+  void SetShape4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                const Shape& shape) override {
+    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->set_shape(shape);
   }
 
   const Stride& InputStride(const std::string& name, int32_t index) const override {
@@ -284,21 +285,22 @@ class UserOpExprInferContext : public user_op::InferContext {
     return tensor_meta4output_index_(tuple_index)->stride();
   }
 
-  Stride* MutOutputStride(const std::string& name, int32_t index) override {
+  void SetOutputStride(const std::string& name, int32_t index, const Stride& stride) override {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
     int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
     TensorMeta* tensor_meta_ptr = tensor_meta4output_index_(tuple_index);
     CHECK_NOTNULL(dynamic_cast<MutTensorMeta*>(tensor_meta_ptr));
-    return tensor_meta_ptr->mut_stride();
+    return tensor_meta_ptr->set_stride(stride);
   }
 
   const Stride& Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->stride();
   }
 
-  Stride* MutStride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->mut_stride();
+  void SetStride4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                 const Stride& stride) override {
+    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->set_stride(stride);
   }
 
   DataType InputDType(const std::string& arg_name, int32_t index) const override {
@@ -307,14 +309,15 @@ class UserOpExprInferContext : public user_op::InferContext {
   DataType OutputDType(const std::string& arg_name, int32_t index) const override {
     return Dtype4ArgNameAndIndex(arg_name, index);
   }
-  DataType* MutOutputDType(const std::string& arg_name, int32_t index) override {
-    return MutDtype4ArgNameAndIndex(arg_name, index);
+  void SetOutputDType(const std::string& arg_name, int32_t index, DataType data_type) override {
+    return SetDtype4ArgNameAndIndex(arg_name, index, data_type);
   }
   DataType Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->data_type();
   }
-  DataType* MutDtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
+  void SetDtype4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                DataType data_type) override {
+    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->set_data_type(data_type);
   }
   bool InputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return IsDynamic4ArgNameAndIndex(arg_name, index);
@@ -322,14 +325,15 @@ class UserOpExprInferContext : public user_op::InferContext {
   bool OutputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return IsDynamic4ArgNameAndIndex(arg_name, index);
   }
-  bool* MutOutputIsDynamic(const std::string& arg_name, int32_t index) override {
-    return MutIsDynamic4ArgNameAndIndex(arg_name, index);
+  void SetOutputIsDynamic(const std::string& arg_name, int32_t index, bool is_dynamic) override {
+    return SetIsDynamic4ArgNameAndIndex(arg_name, index, is_dynamic);
   }
   bool IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->is_dynamic();
   }
-  bool* MutIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
+  void SetIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                    bool is_dynamic) override {
+    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->set_is_dynamic(is_dynamic);
   }
   const std::string& input(const std::string& arg_name, int32_t index) const override {
     const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
@@ -603,7 +607,12 @@ Maybe<void> BuiltinOpExprImpl<FeedInputOpConf>::BuildOpConf(OperatorConf* op_con
 
 template<>
 Maybe<OpExprGradClosure> BuiltinOpExprImpl<FeedInputOpConf>::GetOrCreateOpGradClosure() const {
-  UNIMPLEMENTED_THEN_RETURN();
+  if (!op_grad_func_.get()) {
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("graph_feed_and_fetch"));
+    CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());  // NOLINT
+    JUST(op_grad_func_->Init(*this));
+  }
+  return std::make_shared<OpExprGradClosure>(op_grad_func_);
 }
 
 template<>
@@ -617,7 +626,12 @@ Maybe<void> BuiltinOpExprImpl<FeedVariableOpConf>::BuildOpConf(OperatorConf* op_
 
 template<>
 Maybe<OpExprGradClosure> BuiltinOpExprImpl<FeedVariableOpConf>::GetOrCreateOpGradClosure() const {
-  UNIMPLEMENTED_THEN_RETURN();
+  if (!op_grad_func_.get()) {
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("graph_feed_and_fetch"));
+    CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());  // NOLINT
+    JUST(op_grad_func_->Init(*this));
+  }
+  return std::make_shared<OpExprGradClosure>(op_grad_func_);
 }
 
 template<>
@@ -632,7 +646,12 @@ Maybe<void> BuiltinOpExprImpl<FetchOutputOpConf>::BuildOpConf(OperatorConf* op_c
 
 template<>
 Maybe<OpExprGradClosure> BuiltinOpExprImpl<FetchOutputOpConf>::GetOrCreateOpGradClosure() const {
-  UNIMPLEMENTED_THEN_RETURN();
+  if (!op_grad_func_.get()) {
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("graph_feed_and_fetch"));
+    CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());  // NOLINT
+    JUST(op_grad_func_->Init(*this));
+  }
+  return std::make_shared<OpExprGradClosure>(op_grad_func_);
 }
 
 template<>
@@ -809,7 +828,9 @@ Maybe<OpExprGradClosure> SelectTopNOpExpr::GetOrCreateOpGradClosure() const {
 void FunctionOpExpr::reset_state() const { state_.reset(new FunctionAutoGradCaptureState); }
 
 Maybe<OpExprGradClosure> FunctionOpExpr::GetOrCreateOpGradClosure() const {
-  if (!op_grad_func_) { op_grad_func_.reset(new FunctionOpExprGradFunction(backward_fn_)); }
+  if (!op_grad_func_) {
+    op_grad_func_.reset(new FunctionOpExprGradFunction(func_name_, backward_fn_));
+  }
   return std::make_shared<OpExprGradClosure>(op_grad_func_, state_);
 }
 

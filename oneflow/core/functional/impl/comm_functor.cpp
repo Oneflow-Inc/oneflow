@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/attr_value.h"
+#include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -141,10 +142,10 @@ Maybe<one::UserOpExpr> EagerNcclS2S(Symbol<ParallelDesc> parallel_desc, Symbol<S
 
 auto* CachedEagerNcclS2SOpExpr = DECORATE(&EagerNcclS2S, ThreadLocal);
 
-Maybe<one::UserOpExpr> EagerNcclReduce(Symbol<ParallelDesc> parallel_desc, int64_t root) {
-  CHECK_OR_RETURN(JUST(CheckCclKernelRegistered("eager_nccl_reduce", parallel_desc->device_type())))
+Maybe<one::UserOpExpr> EagerCclReduce(Symbol<ParallelDesc> parallel_desc, int64_t root) {
+  CHECK_OR_RETURN(JUST(CheckCclKernelRegistered("eager_ccl_reduce", parallel_desc->device_type())))
       << OF_KERNEL_NOT_SUPPORT_ERROR("Reduce", parallel_desc->device_type());
-  return one::OpBuilder("eager_nccl_reduce", *JUST(UniqueStr("eager_nccl_reduce")))
+  return one::OpBuilder("eager_ccl_reduce", *JUST(UniqueStr("eager_ccl_reduce")))
       .Input("in")
       .Output("out")
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
@@ -152,7 +153,7 @@ Maybe<one::UserOpExpr> EagerNcclReduce(Symbol<ParallelDesc> parallel_desc, int64
       .Build();
 }
 
-auto* CachedEagerNcclReduceOpExpr = DECORATE(&EagerNcclReduce, ThreadLocal);
+auto* CachedEagerCclReduceOpExpr = DECORATE(&EagerCclReduce, ThreadLocal);
 
 Maybe<one::UserOpExpr> RankGroupAndDeviceType2AllReduceOpExpr(Symbol<RankGroup> rank_group,
                                                               DeviceType device_type) {
@@ -163,7 +164,6 @@ Maybe<one::UserOpExpr> RankGroupAndDeviceType2AllReduceOpExpr(Symbol<RankGroup> 
       .Input("in")
       .Output("out")
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      .Attr<bool>("async_launch", true)
       .Build();
 }
 
@@ -332,19 +332,17 @@ class SendFunctor {
  public:
   SendFunctor() { op_expr_ = CHECK_JUST(one::OpBuilder("send").Input("in").Build()); }
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& x, int64_t dst, bool send_meta) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("dst_process_id", dst));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dst_process_id");
+    attrs.SetAllAttrs(dst);
     if (send_meta) {
       std::shared_ptr<FlatShape> flat_shape = JUST(FlatShape::New(*x->shape()));
-      JUST(ccl::Send<DeviceType::kCPU>(flat_shape.get(), sizeof(*flat_shape), DataType::kChar, dst,
-                                       nullptr));
+      JUST(ccl::CpuSend(flat_shape.get(), sizeof(*flat_shape), dst));
 
       DataType dtype = x->dtype()->data_type();
-      JUST(ccl::Send<DeviceType::kCPU>(&dtype, sizeof(dtype), DataType::kChar, dst, nullptr));
+      JUST(ccl::CpuSend(&dtype, sizeof(dtype), dst));
 
       DeviceType device_type = JUST(Device::GetPlacement(*JUST(x->device())))->device_type();
-      JUST(ccl::Send<DeviceType::kCPU>(&device_type, sizeof(device_type), DataType::kChar, dst,
-                                       nullptr));
+      JUST(ccl::CpuSend(&device_type, sizeof(device_type), dst));
     }
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_expr_, {x}, attrs));
     return Maybe<void>::Ok();
@@ -361,8 +359,6 @@ class RecvFunctor {
                            const Optional<Symbol<DType>>& optional_dtype,
                            const Optional<Symbol<Device>>& optional_device,
                            const Optional<one::Tensor>& out) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("src_process_id", src));
     Shape shape;
     DataType data_type = DataType::kInvalidDataType;
     Symbol<Device> device;
@@ -373,25 +369,21 @@ class RecvFunctor {
     } else if (!optional_shape.has_value() && !optional_dtype.has_value()
                && !optional_device.has_value()) {
       FlatShape flat_shape{};
-      JUST(ccl::Recv<DeviceType::kCPU>(&flat_shape, sizeof(flat_shape), DataType::kChar, src,
-                                       nullptr));
+      JUST(ccl::CpuRecv(&flat_shape, sizeof(flat_shape), src));
       shape = *JUST(flat_shape.ToShape());
 
-      JUST(ccl::Recv<DeviceType::kCPU>(&data_type, sizeof(data_type), DataType::kChar, src,
-                                       nullptr));
+      JUST(ccl::CpuRecv(&data_type, sizeof(data_type), src));
 
       DeviceType device_type = DeviceType::kInvalidDevice;
-      JUST(ccl::Recv<DeviceType::kCPU>(&device_type, sizeof(device_type), DataType::kChar, src,
-                                       nullptr));
+      JUST(ccl::CpuRecv(&device_type, sizeof(device_type), src));
       device = JUST(Device::New(*JUST(DeviceTag4DeviceType(device_type))));
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "All or none of shape, dtype and device should have value.";
     }
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", data_type));
-    JUST(attrs.SetAttr<std::string>("device_type", device->type()));
-    JUST(attrs.SetAttr<int64_t>("device_id", device->device_id()));
 
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("src_process_id", "shape", "dtype", "device_type",
+                                                 "device_id");
+    attrs.SetAllAttrs(src, shape, data_type, device->type(), device->device_id());
     OpExprInterpContext op_expr_interp_context(attrs, device);
 
     if (out.has_value()) {
@@ -416,12 +408,13 @@ class LocalReduceFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t dst, bool inplace) const {
     const auto& device = JUST(x->device());
     { CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank()); }
-    static thread_local std::unordered_map<Symbol<RankGroup>, Symbol<ParallelDesc>>
-        rank_group2parallel_desc;
+    static thread_local std::unordered_map<std::pair<Symbol<RankGroup>, Symbol<Device>>,
+                                           Symbol<ParallelDesc>>
+        rank_group_with_device2parallel_desc;
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
-    auto iter = rank_group2parallel_desc.find(rank_group);
+    auto iter = rank_group_with_device2parallel_desc.find({rank_group, device});
     Symbol<ParallelDesc> parallel_desc;
-    if (iter == rank_group2parallel_desc.end()) {
+    if (iter == rank_group_with_device2parallel_desc.end()) {
       ParallelConf parallel_conf;
       parallel_conf.set_device_tag(device->type());
       JUST(rank_group->ForEachRank([&parallel_conf](int64_t rank) -> Maybe<void> {
@@ -430,11 +423,11 @@ class LocalReduceFunctor {
         return Maybe<void>::Ok();
       }));
       parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
-      rank_group2parallel_desc[rank_group] = parallel_desc;
+      rank_group_with_device2parallel_desc[{rank_group, device}] = parallel_desc;
     } else {
       parallel_desc = iter->second;
     }
-    std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerNcclReduceOpExpr(parallel_desc, dst));
+    std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerCclReduceOpExpr(parallel_desc, dst));
     if (inplace) {
       TensorTuple outputs{x};
       JUST(OpInterpUtil::Dispatch(*op_expr, {x}, &outputs));
