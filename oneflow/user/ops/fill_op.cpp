@@ -20,10 +20,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> FillOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
-  Shape* out_shape = ctx->MutOutputShape("out", 0);
-  *out_shape = in_shape;
-  Stride* out_stride = ctx->MutOutputStride("out", 0);
-  *out_stride = ctx->InputStride("in", 0);
+  ctx->SetOutputShape("out", 0, in_shape);
+  ctx->SetOutputStride("out", 0, ctx->InputStride("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -36,16 +34,14 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FillOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> FillTensorOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
-  Shape* out_shape = ctx->MutOutputShape("out", 0);
-  *out_shape = in_shape;
-  Stride* out_stride = ctx->MutOutputStride("out", 0);
-  *out_stride = ctx->InputStride("in", 0);
+  ctx->SetOutputShape("out", 0, in_shape);
+  ctx->SetOutputStride("out", 0, ctx->InputStride("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -67,57 +63,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FillTensorOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("fill_").SetGenBackwardOpConfFn(
-    [](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("in", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name());
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("fill_")
-                .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                .Output("out")
-                .Attr<double>("floating_value", 0.)
-                .Attr<bool>("is_floating_value", true)
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
-
-REGISTER_USER_OP_GRAD("fill_tensor_")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("value", 0)) {
-        const int64_t num_axes = op.TensorDesc4ArgNameAndIndex("in", 0).shape().NumAxes();
-        std::vector<int32_t> axes_vec(num_axes);
-        std::iota(axes_vec.begin(), axes_vec.end(), 0);
-        user_op::UserOpConfWrapperBuilder builder(op.op_name());
-        auto grad_op = builder.Op("reduce_sum")
-                           .Input("input_tensor", op.GetGradTensorWithOpOutput("out", 0))
-                           .Output("output_tensor")
-                           .Attr("axis", axes_vec)
-                           .Attr("keepdims", false)
-                           .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "value", 0);
-        AddOp(grad_op);
-      }
-      if (op.NeedGenGradTensor4OpInput("in", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name());
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("fill_")
-                .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                .Output("out")
-                .Attr<double>("floating_value", 0.)
-                .Attr<bool>("is_floating_value", true)
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

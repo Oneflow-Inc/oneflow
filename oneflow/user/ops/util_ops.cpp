@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> IsNanOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -34,12 +34,12 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> IsNanOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = DataType::kBool;
+  ctx->SetOutputDType("out", 0, DataType::kBool);
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> IsInfOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -54,12 +54,12 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> IsInfOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = DataType::kBool;
+  ctx->SetOutputDType("out", 0, DataType::kBool);
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> IsFiniteOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -74,7 +74,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> IsFiniteOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = DataType::kBool;
+  ctx->SetOutputDType("out", 0, DataType::kBool);
   return Maybe<void>::Ok();
 }
 

@@ -29,6 +29,7 @@ oneflow._oneflow_internal.CheckAndClearRegistryFlag()
 Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
+
 locals()["dtype"] = oneflow._oneflow_internal.dtype
 locals()["bool"] = oneflow._oneflow_internal.bool
 locals()["float16"] = oneflow._oneflow_internal.float16
@@ -127,7 +128,7 @@ from oneflow._C import atan
 from oneflow._C import atan as arctan
 from oneflow._C import atan2
 from oneflow._C import ceil
-from oneflow._C import clamp, clamp_
+from oneflow._C import clamp, clamp_, clamp_min, clamp_min_, clamp_max, clamp_max_
 from oneflow._C import clip, clip_
 from oneflow._C import cos
 from oneflow._C import cosh
@@ -138,6 +139,7 @@ from oneflow._C import expm1
 from oneflow._C import fmod
 from oneflow._C import flatten
 from oneflow._C import in_top_k
+from oneflow._C import lgamma
 from oneflow._C import log
 from oneflow._C import log2
 from oneflow._C import minimum
@@ -163,6 +165,7 @@ from oneflow._C import softplus
 from oneflow._C import threshold
 from oneflow._C import tril
 from oneflow._C import triu
+from oneflow._C import trunc
 from oneflow._C import pad
 from oneflow._C import transpose
 from oneflow._C import relu
@@ -173,7 +176,8 @@ from oneflow._C import argmax
 from oneflow._C import argmin
 from oneflow._C import std
 from oneflow._C import var
-from oneflow._C import stack
+from oneflow._C import stack, hstack, vstack, dstack, column_stack, row_stack
+from oneflow._C import atleast_1d, atleast_2d, atleast_3d
 from oneflow._C import squeeze
 from oneflow._C import narrow
 from oneflow._C import unsqueeze
@@ -212,6 +216,8 @@ from oneflow._C import index_select
 from oneflow._C import isnan
 from oneflow._C import isinf
 from oneflow._C import isfinite
+from oneflow._C import inv as inverse
+from oneflow._C import iinfo, finfo
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
@@ -234,6 +240,7 @@ __oneflow_global_unique_env = env_util.GetEnv()
 session_ctx.NewDefaultSession(__oneflow_global_unique_env)
 
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
+oneflow._oneflow_internal.autograd.graph.register_saved_tensors_hook_manager()
 oneflow._oneflow_internal.InitDefaultGlobalTransportTokenScope()
 
 
@@ -308,7 +315,8 @@ from oneflow.framework.generator import (
 
 # NOTE(chengcheng) oneflow.Model is unavailable now.
 # from oneflow.framework.model import Model
-import oneflow.utils.torch
+import oneflow.utils.tensor
+import oneflow.utils.global_view
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
 from oneflow.framework.type_tensor import *
@@ -337,6 +345,7 @@ from oneflow.nn.modules.constant import new_ones_op as new_ones
 from oneflow.nn.modules.constant import new_zeros_op as new_zeros
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.empty import new_empty_op as new_empty
+from oneflow.nn.modules.empty import empty_like_op as empty_like
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
@@ -394,6 +403,7 @@ import oneflow.utils.data
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing
+import oneflow.asyncs
 import oneflow.one_embedding
 import oneflow.profiler
 

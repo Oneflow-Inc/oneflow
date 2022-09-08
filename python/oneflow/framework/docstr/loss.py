@@ -81,6 +81,8 @@ add_docstr(
 add_docstr(
     oneflow._C.cross_entropy,
     r"""
+    cross_entropy(input, target, weight=None, ignore_index=-100, reduction="mean", label_smoothing=0.0)
+
     See :class:`~oneflow.nn.CrossEntropyLoss` for details.
 
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.cross_entropy.html.
@@ -108,6 +110,11 @@ add_docstr(
             elements in the output, ``'sum'``: the output will be summed. Note: :attr:`size_average`
             and :attr:`reduce` are in the process of being deprecated, and in the meantime,
             specifying either of those two args will override :attr:`reduction`. Default: ``'mean'``
+        label_smoothing (float, optinoal): A float in [0.0, 1.0]. Specifies the amount
+            of smoothing when computing the loss, where 0.0 means no smoothing.
+            The targets become a mixture of the original ground truth and a uniform
+            distribution as described in `Rethinking the Inception Architecture for Computer Vision <https://arxiv.org/abs/1512.00567>`_.
+            Default: :math:`0.0`.
 
     For example:
 
@@ -120,6 +127,62 @@ add_docstr(
         >>> loss = F.cross_entropy(input, target)
         >>> loss.backward()
 
+
+    """,
+)
+
+add_docstr(
+    oneflow._C.l1_loss,
+    r"""
+    l1_loss(input, target, reduction="mean") -> Tensor
+
+    This operator computes the L1 loss between each element in input and target.
+
+    see :class:`~oneflow.nn.L1Loss` for details.
+
+    Args:
+        input (Tensor): The input Tensor.
+        target (Tensor): The target Tensor.
+        reduction (string, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
+    
+    Examples::
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn.functional as F
+        >>> input = flow.randn(3, 4, requires_grad=True)
+        >>> target = flow.rand(3, 4, requires_grad=False)
+        >>> loss = F.l1_loss(input, target)
+        >>> loss.backward()
+
+    """,
+)
+
+add_docstr(
+    oneflow._C.mse_loss,
+    r"""
+    mse_loss(input, target, reduction="mean") -> Tensor
+
+    This operator computes the mean squared error (squared L2 norm) 
+    loss between each element in input and target.
+
+    see :class:`~oneflow.nn.MSELoss` for details.
+
+    Args:
+        input (Tensor): The input Tensor.
+        target (Tensor): The target Tensor.
+        reduction (string, optional): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
+            ``'mean'``: the sum of the output will be divided by the number of
+            elements in the output, ``'sum'``: the output will be summed. Default: ``'mean'``
+
+    Examples::
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn.functional as F
+        >>> input = flow.randn(3, 4, requires_grad=True)
+        >>> target = flow.rand(3, 4, requires_grad=False)
+        >>> loss = F.mse_loss(input, target)
+        >>> loss.backward()
 
     """,
 )

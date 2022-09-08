@@ -18,6 +18,8 @@ import unittest
 from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
+import torch as torch_original
+from packaging import version
 
 
 def generate_necessity_for_cross_entropy_or_nll_loss(dim: int):
@@ -93,6 +95,10 @@ def _test_cross_entropy_loss(dim=int):
         reduction=oneof("none", "sum", "mean", nothing()),
         ignore_index=ignore_index,
         weight=oneof(weight, nothing()),
+        # TODO(wangyi): PyTorch under 1.12 has bug here, which returns wrong result when ignore_index >= 0 and label_smoothing > 0
+        label_smoothing=random(low=0, high=1)
+        if version.parse(torch_original.__version__) >= version.parse("1.12.0")
+        else 0,
     )
     m.train(random())
     m.to(device)
@@ -288,6 +294,19 @@ class TestL1LossModule(flow.unittest.TestCase):
         y = m(x, target)
         return y
 
+    @autotest(n=5)
+    def _test_nn_functional_l1_loss(test_case):
+        device = random_device()
+        shape = random_tensor().oneflow.shape
+
+        x = random_tensor(len(shape), *shape).to(device)
+        target = random_tensor(len(shape), *shape, requires_grad=False).to(device)
+
+        y = torch.nn.functional.l1_loss(
+            x, target, reduction=oneof("none", "sum", "mean", nothing())
+        )
+        return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestSmoothL1LossModule(flow.unittest.TestCase):
@@ -324,6 +343,19 @@ class TestMSELossModule(flow.unittest.TestCase):
         m.to(device)
 
         y = m(x, target)
+        return y
+
+    @autotest(n=5)
+    def _test_nn_functional_mse_loss(test_case):
+        device = random_device()
+        shape = random_tensor().oneflow.shape
+
+        x = random_tensor(len(shape), *shape).to(device)
+        target = random_tensor(len(shape), *shape, requires_grad=False).to(device)
+
+        y = torch.nn.functional.mse_loss(
+            x, target, reduction=oneof("none", "sum", "mean", nothing())
+        )
         return y
 
 

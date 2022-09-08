@@ -580,8 +580,6 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
                                                   *JUST(op->GetParallelDesc4BnInOp(bn)));
   }
   JUST(AddLbiParallelConf2BlobPlacement(op, ParallelDesc4Obn));
-  // Infer whether input/output blobs are backward used
-  JUST(InferBlobBackwardSignature(op));
   // Check splitability
   JUST(CheckOpBlobSplitability(op, parallel_desc.parallel_num()));
 
@@ -606,6 +604,42 @@ Maybe<void> JobBuildAndInferCtx::AddLossGlobalBlobName(const std::string& lbn) {
       << Error::UnknownJobBuildAndInferError()
       << "job has no TrainConf when adding loss logical blob name";
   job_->mutable_job_conf()->mutable_train_conf()->add_loss_lbn(lbn);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> JobBuildAndInferCtx::MarkVariableGradientBlobNames(
+    const HashMap<std::string, std::string>& variable_grad_lbns) {
+  CHECK_OR_RETURN(job_->job_conf().has_train_conf())
+      << Error::UnknownJobBuildAndInferError()
+      << "job has no TrainConf when add variable gradient logical blob name";
+  auto* train_conf = job_->mutable_job_conf()->mutable_train_conf();
+  for (int i = 0; i < train_conf->optimizer_conf_size(); ++i) {
+    auto* optimizer_conf = train_conf->mutable_optimizer_conf(i);
+    for (const auto& variable_op_name : optimizer_conf->variable_op_names()) {
+      const auto& it = variable_grad_lbns.find(variable_op_name + "/out");
+      if (it != variable_grad_lbns.end()) {
+        optimizer_conf->add_variable_grad_lbns(it->second);
+      } else {
+        // add an empty gradient lbn for variable that has no gradient
+        optimizer_conf->add_variable_grad_lbns("");
+      }
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> JobBuildAndInferCtx::MarkOutputGradientBlobNames(
+    const HashMap<std::string, std::string>& output_gradient_lbns) {
+  CHECK_OR_RETURN(job_->job_conf().has_train_conf())
+      << Error::UnknownJobBuildAndInferError()
+      << "job has no TrainConf when add variable gradient logical blob name";
+  auto* train_conf = job_->mutable_job_conf()->mutable_train_conf();
+  for (const auto& loss_lbn : train_conf->loss_lbn()) {
+    const auto& it = output_gradient_lbns.find(loss_lbn);
+    CHECK_OR_RETURN(it != output_gradient_lbns.end())
+        << Error::UnknownJobBuildAndInferError() << "gradient is missing for loss " << loss_lbn;
+    train_conf->add_loss_grad_lbn(it->second);
+  }
   return Maybe<void>::Ok();
 }
 
@@ -938,13 +972,21 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   }
 
   if (GlobalJobDesc().Bool("__is_user_function__")) {
-    JUST(DoPass("ModelUpdateConfCompatiblePass"));
+    // insert pinned identity to prevent the loss, loss initial gradient and
+    // variable gradient from being eliminated by IRRoundTripBeforeAD pass
+    JUST(DoPass("InsertPinnedIdentityOpPass"));
+    // prune the dangling constant which are the 0 gradients initialized by
+    // the autograd engine for those tensors that have no gradients
+    JUST(DoPass("EliminateDeadNodesPass"));
     JUST(DoPass("NormalizationExponentialAverageAutoTickPass"));
 #ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
 #endif
     JUST(DoPass("PruneAmpWhiteIdentityOpPass"));
     JUST(DoPass("OptimizerPlacementOptimizationPass"));
+    // run FuseAddToOutputPass before IRRoundTripBeforeAD since add_2 maybe
+    // fused as add_n in IRRoundTripBeforeAD pass
+    JUST(DoPass("FuseAddToOutputPass"));
 #ifdef WITH_MLIR
     JUST(DoPass("IRRoundTripBeforeAD"));
 #endif  // WITH_MLIR
@@ -955,7 +997,10 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("AutoTrainStep"));
     JUST(DoPass("AutoLearningRate"));
     JUST(DoPass("QuantAwareTraining"));
-    JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
+    JUST(DoPass("GenerateOptimizerOpConfs"));
+    // pinned identity can be pruned since GenerateOptimizerOpConfs pass has
+    // already construct a complete computational graph
+    JUST(DoPass("PrunePinnedIdentityOpPass"));
     JUST(DoPass("ReplaceEmbeddingOps"));
     JUST(DoPass("FuseEmbeddingShuffleInteractionPass"));
     JUST(DoPass("FuseBCEReduceMeanFwBwPass"));
@@ -966,10 +1011,10 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
 #ifdef WITH_MLIR
     JUST(DoPass("IRRoundTrip"));
 #endif  // WITH_MLIR
-    JUST(DoPass("FuseAddToOutputPass"));
     // run this pass again to fuse ops created in the first run.
     // TODO(guoran): loop multiple times inside the pass
     JUST(DoPass("FuseAddToOutputPass", 1));
+    JUST(DoPass("FuseConsecutiveAddPass"));
     JUST(DoPass("IndexedSlicesOptimizerRewritePass"));
     JUST(DoPass("SplitSparseSoftmaxCrossEntropyOpPass"));
     JUST(DoPass("DoParallelCastBeforeWideningTypeCast"));
@@ -986,82 +1031,6 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   pass_tc->Count("Graph name: " + job_name + " CompilePasses", 1);
   JUST(CheckJob());
   pass_tc->Count("Graph name: " + job_name + " CheckJob", 1);
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> JobBuildAndInferCtx::InferBlobBackwardSignature(Operator* op) {
-  std::function<bool(const LogicalBlobId&)> IsLbiBackwardUsed;
-  JUST(InferBlobBackwardSignature(*op, &IsLbiBackwardUsed));
-  auto* map = op->mut_blob_backward_used_signature()->mutable_bn_in_op2blob_backward_used();
-  const auto& SetIsBlobBackwardUsed = [&](const std::string& bn_in_op) {
-    (*map)[bn_in_op] = IsLbiBackwardUsed(op->BnInOp2Lbi(bn_in_op));
-  };
-  for (const auto& ibn : op->input_bns()) { SetIsBlobBackwardUsed(ibn); }
-  for (const auto& obn : op->output_bns()) { SetIsBlobBackwardUsed(obn); }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> JobBuildAndInferCtx::InferBlobBackwardSignature(
-    const Operator& op, std::function<bool(const LogicalBlobId&)>* IsLbiBackwardUsed) {
-  const bool is_train = job().job_conf().has_train_conf();
-  if (!is_train) {
-    *IsLbiBackwardUsed = [](const LogicalBlobId&) { return false; };
-    return Maybe<void>::Ok();
-  }
-  const auto& Op4Name = [&](const std::string& op_name) { return CHECK_JUST(Op4OpName(op_name)); };
-  UpdateOpName2AncestorsNeedNoGrad(op, Op4Name, is_train, &op_name2ancestors_need_no_grad_);
-  // always return true if output_size > 1
-  if (op.output_bns().size() > 1) {
-    *IsLbiBackwardUsed = [](const LogicalBlobId&) { return true; };
-    return Maybe<void>::Ok();
-  }
-  std::vector<OperatorConf> bw_op_confs;
-  LogicalBlobId fake_diff_lbi;
-  fake_diff_lbi.set_op_name("fake_op_name");
-  fake_diff_lbi.set_blob_name("fake_blob_name");
-  HashMap<std::string, LogicalBlobId> in_diff2lbi;
-  const auto& DiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
-    const auto& input_bns = op.input_bns();
-    const auto& output_bns = op.output_bns();
-    if (std::find(input_bns.begin(), input_bns.end(), bn) != input_bns.end()) {
-      const auto& lbi = op.BnInOp2Lbi(bn);
-      if (op_name2ancestors_need_no_grad_.at(lbi.op_name())) { return nullptr; }
-      if (op.InputBlobModifier4Ibn(bn).requires_grad() == false) { return nullptr; }
-      return &in_diff2lbi[bn];
-    } else if (std::find(output_bns.begin(), output_bns.end(), bn) != output_bns.end()) {
-      return &fake_diff_lbi;
-    } else {
-      LOG(FATAL) << "diff lbi for bn in op not found, bn: " << op.op_name() << "/" << bn;
-    }
-    return nullptr;
-  };
-  const auto& FwLogicalBlobDescPtr4Lbi = [&](const LogicalBlobId& lbi) -> const BlobDesc* {
-    const auto& iter = lbi2logical_blob_desc_.find(lbi);
-    if (iter != lbi2logical_blob_desc_.end()) { return iter->second.get(); }
-    return nullptr;
-  };
-  const auto& LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
-    const LogicalBlobId& lbi = op.BnInOp2Lbi(bn);
-    const auto* logical_blob_desc = FwLogicalBlobDescPtr4Lbi(lbi);
-    CHECK_NOTNULL(logical_blob_desc);
-    return *logical_blob_desc;
-  };
-  const auto& maybe_ok =
-      TRY(GenerateBackwardOpConfIf(op, &bw_op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp));
-  CHECK_OR_RETURN(maybe_ok.IsOk() || maybe_ok.error()->has_gradient_function_not_found_error())
-      << GetFormatedSerializedError(::oneflow::private_details::JustGetError(maybe_ok));
-  // find backward used logical blob ids
-  auto backward_used_lbis = std::make_shared<HashSet<LogicalBlobId>>();
-  for (const auto& bw_op_conf : bw_op_confs) {
-    const auto& bw_op = JUST(ConstructOp(bw_op_conf, op.device_type()));
-    for (const auto& ibn : bw_op->input_bns()) {
-      const auto& lbi = bw_op->BnInOp2Lbi(ibn);
-      if (FwLogicalBlobDescPtr4Lbi(lbi) != nullptr) { backward_used_lbis->insert(lbi); }
-    }
-  }
-  *IsLbiBackwardUsed = [backward_used_lbis](const LogicalBlobId& lbi) {
-    return backward_used_lbis->find(lbi) != backward_used_lbis->end();
-  };
   return Maybe<void>::Ok();
 }
 

@@ -25,7 +25,7 @@ namespace oneflow {
   CHECK_OR_RETURN(dims.size() <= input_dims) << "len of dims must less than len of input tensor";
   for (auto x : dims) { CHECK_OR_RETURN(x < input_dims) << "dims parameter is illegal."; }
   user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
-  *y_desc->mut_shape() = x_desc.shape();
+  y_desc->set_shape(x_desc.shape());
   return Maybe<void>::Ok();
 }
 /*static*/ auto FlipOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
@@ -46,25 +46,8 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ auto FlipOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("flip").SetBackwardOpConfGenFn(
-    [](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      const std::string ref_grad_op_name = ctx->FwOp().op_name() + "_x_grad";
-      const auto dims = ctx->FwOp().attr<std::vector<int32_t>>("dims");
-      ctx->DefineOp(ref_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("flip")
-            .InputBind("x", ctx->FwOp().output_grad("y", 0))
-            .Attr("dims", dims)
-            .Output("y")
-            .Build();
-      });
-      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), [&]() -> const std::string& {
-        return ctx->GetOp(ref_grad_op_name).output("y", 0);
-      });
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

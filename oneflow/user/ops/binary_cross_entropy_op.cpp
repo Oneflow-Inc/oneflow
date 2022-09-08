@@ -34,8 +34,8 @@ Maybe<void> InferTensorDescFn_(user_op::InferContext* ctx) {
   }
 
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
-  *out_desc->mut_is_dynamic() = input_desc.is_dynamic();
-  *out_desc->mut_shape() = input_desc.shape();
+  out_desc->set_is_dynamic(input_desc.is_dynamic());
+  out_desc->set_shape(input_desc.shape());
 
   return Maybe<void>::Ok();
 }
@@ -49,7 +49,7 @@ Maybe<void> InferDataType_(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(weight_desc.data_type(), input_desc.data_type());
   }
 
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("input", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("input", 0));
 
   return Maybe<void>::Ok();
 }
@@ -68,8 +68,8 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   }
 
   user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
-  *dx_desc->mut_is_dynamic() = input_desc.is_dynamic();
-  *dx_desc->mut_shape() = input_desc.shape();
+  dx_desc->set_is_dynamic(input_desc.is_dynamic());
+  dx_desc->set_shape(input_desc.shape());
 
   return Maybe<void>::Ok();
 }
@@ -82,7 +82,7 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(weight_desc.data_type(), input_desc.data_type());
   }
 
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
 
   return Maybe<void>::Ok();
 }
@@ -120,25 +120,5 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
 /* static */ Maybe<void> BinaryCrossEntropyGradOp::InferDataType(user_op::InferContext* ctx) {
   return InferGradDataType(ctx);
 }
-
-REGISTER_USER_OP_GRAD("binary_cross_entropy")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("input", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        builder.Op("binary_cross_entropy_grad")
-            .Input("input", op.input("input", 0))
-            .Input("target", op.input("target", 0))
-            .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-            .Output("dx");
-        if (op.user_op_conf().has_input("weight", 0)) {
-          builder.Input("weight", op.input("weight", 0));
-        }
-        user_op::UserOpConfWrapper grad_op = builder.Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "input", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

@@ -20,9 +20,9 @@ namespace oneflow {
 
 /* static */ Maybe<void> DropoutOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
-  *ctx->MutOutputShape("out", 0) = in_shape;
-  *ctx->MutOutputShape("mask", 0) = in_shape;
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, in_shape);
+  ctx->SetOutputShape("mask", 0, in_shape);
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -42,15 +42,15 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> DropoutOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
-  *ctx->MutOutputDType("mask", 0) = DataType::kBool;
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
+  ctx->SetOutputDType("mask", 0, DataType::kBool);
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> DropoutGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  *ctx->MutOutputShape("dx", 0) = dy_shape;
-  *ctx->MutOutputIsDynamic("dx", 0) = ctx->InputIsDynamic("dy", 0);
+  ctx->SetOutputShape("dx", 0, dy_shape);
+  ctx->SetOutputIsDynamic("dx", 0, ctx->InputIsDynamic("dy", 0));
   CHECK_EQ_OR_RETURN(ctx->InputShape("mask", 0), dy_shape);
   return Maybe<void>::Ok();
 }
@@ -75,13 +75,13 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> DropoutGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
   CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kBool);
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> RandomMaskLikeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("like", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("like", 0));
   return Maybe<void>::Ok();
 }
 
@@ -105,28 +105,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> RandomMaskLikeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = DataType::kBool;
+  ctx->SetOutputDType("out", 0, DataType::kBool);
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("dropout").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                           user_op::AddOpFn AddOp) -> Maybe<void> {
-  if (op.NeedGenGradTensor4OpInput("in", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    const float rate = op.attr<float>("rate");
-    float scale = 0.0f;  // When dropout rate = 1.0, we set scale as zero.
-    if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
-    user_op::UserOpConfWrapper dropout_grad_op =
-        builder.Op("dropout_grad")
-            .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-            .Input("mask", op.output("mask", 0))
-            .Output("dx")
-            .Attr("scale", scale)
-            .Build();
-    op.BindGradTensorWithOpInput(dropout_grad_op.output("dx", 0), "in", 0);
-    AddOp(dropout_grad_op);
-  }
-  return Maybe<void>::Ok();
-});
 
 }  // namespace oneflow

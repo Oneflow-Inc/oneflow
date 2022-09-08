@@ -34,9 +34,8 @@ namespace std {
 template<>
 struct hash<oneflow::BiasCorrectionFactorCacheKey> {
   size_t operator()(const oneflow::BiasCorrectionFactorCacheKey& key) const {
-    const auto& float_hash = std::hash<float>();
-    const auto& parallel_conf_hash = std::hash<oneflow::ParallelConf>();
-    return float_hash(key.beta) ^ parallel_conf_hash(key.parallel_conf);
+    using namespace oneflow;
+    return Hash(key.beta, key.parallel_conf);
   }
 };
 

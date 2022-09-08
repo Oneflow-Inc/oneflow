@@ -46,12 +46,12 @@ namespace oneflow {
     CHECK_OR_RETURN((alpha_shape.At(i - 1) == x_desc.shape().At(i))
                     || (alpha_shape.At(i - 1) == 1));
   }
-  *y_desc->mut_shape() = x_desc.shape();
-  *y_desc->mut_is_dynamic() = x_desc.is_dynamic();
+  y_desc->set_shape(x_desc.shape());
+  y_desc->set_is_dynamic(x_desc.is_dynamic());
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> TfPreluOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -97,47 +97,16 @@ namespace oneflow {
   }
   CHECK_EQ_OR_RETURN(dy_desc.shape(), x_desc.shape());
   CHECK_EQ_OR_RETURN(dy_desc.data_type(), x_desc.data_type());
-  *dx_desc->mut_shape() = x_desc.shape();
-  *dx_desc->mut_is_dynamic() = x_desc.is_dynamic();
-  *ctx->MutOutputShape("alpha_diff", 0) = alpha_desc.shape();
-  *ctx->MutOutputIsDynamic("alpha_diff", 0) = alpha_desc.is_dynamic();
+  dx_desc->set_shape(x_desc.shape());
+  dx_desc->set_is_dynamic(x_desc.is_dynamic());
+  ctx->SetOutputShape("alpha_diff", 0, alpha_desc.shape());
+  ctx->SetOutputIsDynamic("alpha_diff", 0, alpha_desc.is_dynamic());
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> TfPreluGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
-  *ctx->MutOutputDType("alpha_diff", 0) = ctx->InputDType("alpha", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
+  ctx->SetOutputDType("alpha_diff", 0, ctx->InputDType("alpha", 0));
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("tf_prelu")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("x", 0) || op.NeedGenGradTensor4OpInput("alpha", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op = builder.Op("tf_prelu_grad")
-                                                 .Input("x", op.input("x", 0))
-                                                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                                                 .Input("alpha", op.input("alpha", 0))
-                                                 .Output("dx")
-                                                 .Output("alpha_diff")
-                                                 .Build();
-        AddOp(grad_op);
-
-        if (op.NeedGenGradTensor4OpInput("x", 0)) {
-          op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-        }
-        if (op.NeedGenGradTensor4OpInput("alpha", 0)) {
-          auto alpha_identity_op =
-              user_op::UserOpConfWrapperBuilder(op.op_name() + "_alpha_identity")
-                  .Op("identity")
-                  .Input("in", grad_op.output("alpha_diff", 0))
-                  .Output("out")
-                  .Build();
-          AddOp(alpha_identity_op);
-          op.BindGradTensorWithOpInput(alpha_identity_op.output("out", 0), "alpha", 0);
-        }
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

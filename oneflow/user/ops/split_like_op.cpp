@@ -98,7 +98,7 @@ namespace oneflow {
     FOR_RANGE(int64_t, j, like_num_axes, in_num_axes) {
       out_i_dim_vec.emplace_back(in_desc.shape().At(j));
     }
-    *out_i_desc->mut_shape() = Shape(out_i_dim_vec);
+    out_i_desc->set_shape(Shape(out_i_dim_vec));
     out_i_desc->set_is_dynamic(like_i_desc.is_dynamic());
   }
   if (dynamic_dim_size == 0) {
@@ -118,7 +118,7 @@ namespace oneflow {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
     user_op::TensorDesc* out_i_desc = ctx->MutOutputTensorDesc("out", i);
-    *out_i_desc->mut_data_type() = in_desc.data_type();
+    out_i_desc->set_data_type(in_desc.data_type());
   }
   return Maybe<void>::Ok();
 }
@@ -140,46 +140,5 @@ namespace oneflow {
       << Error::RuntimeError() << "The number of output should be greater than or equal to 1";
   return Maybe<void>::Ok();
 }
-
-namespace {
-
-Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
-  const int64_t axis = op.attr<int64_t>("axis");
-  const int32_t out_size = op.output_size("out");
-  int64_t max_dim_size = 0;
-  FOR_RANGE(int32_t, i, 0, out_size) {
-    max_dim_size += op.TensorDesc4ArgNameAndIndex("like", i).shape().At(axis);
-  }
-  if (op.NeedGenGradTensor4OpInput("in", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    builder = builder.Op("concat");
-    FOR_RANGE(int32_t, i, 0, out_size) {
-      std::string out_diff_lbn;
-      if (op.HasGradTensor4OpOutput("out", i)) {
-        out_diff_lbn = op.GetGradTensorWithOpOutput("out", i);
-      } else {
-        auto zero_like_op = user_op::UserOpConfWrapperBuilder(op.op_name() + "_grad_zero_like_out_"
-                                                              + std::to_string(i))
-                                .Op("zero_like")
-                                .Input("like", op.output("out", i))
-                                .Output("out")
-                                .Build();
-        AddOp(zero_like_op);
-        out_diff_lbn = zero_like_op.output("out", 0);
-      }
-      builder = builder.Input("in", out_diff_lbn);
-    }
-    user_op::UserOpConfWrapper grad_op =
-        builder.Output("out").Attr("axis", axis).Attr("max_dim_size", max_dim_size).Build();
-
-    op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
-    AddOp(grad_op);
-  }
-  return Maybe<void>::Ok();
-}
-
-}  // namespace
-
-REGISTER_USER_OP_GRAD("split_like").SetGenBackwardOpConfFn(GenGradOp);
 
 }  // namespace oneflow
