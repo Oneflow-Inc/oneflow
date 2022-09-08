@@ -479,18 +479,13 @@ class BinaryCrossEntropyLossTargetGradFunctor {
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight) const {
-    auto grad = functional::sequence_function(functional::Reciprocal)
-                    .then([](const std::shared_ptr<Tensor>& input) {
-                      return functional::ScalarAdd(-1, input, /*alpha=*/Scalar(1));
-                    })
-                    .then(functional::Log)
+    auto log_one_sub_input = JUST(functional::Log(JUST(ScalarSub(1, input, /*alpha=*/1))));
+    auto grad = functional::sequence_function(functional::Log)
+                    .then(std::bind(functional::Sub, log_one_sub_input, std::placeholders::_1,
+                                    /*alpha=*/1, /*inplace=*/false))
                     .then(std::bind(functional::Mul, dy, std::placeholders::_1))
                     .call(input);
-    if (weight) {
-      return functional::Mul(JUST(grad), JUST(weight));
-    } else {
-      return grad;
-    }
+    return weight ? Mul(JUST(grad), JUST(weight)) : grad;
   }
 };
 
@@ -568,12 +563,13 @@ class BinaryCrossEntropyWithLogitsLossTargetGradFunctor {
                            const Optional<one::Tensor>& pos_weight) const {
     if (pos_weight) {
       auto sig = JUST(functional::Sigmoid(input));
-      auto one_sub_sig = JUST(functional::ScalarSub(1, sig, /*alpha=*/1));
-      auto a = JUST(functional::sequence_function(functional::Log)
-                        .then(std::bind(functional::Mul, std::placeholders::_1, JUST(pos_weight)))
-                        .call(sig));
-      auto b = JUST(functional::Log(one_sub_sig));
-      auto grad = functional::Sub(b, a, /*alpha=*/1, false);
+      auto log_one_sub_sig =
+          JUST(functional::Log(JUST(functional::ScalarSub(1, sig, /*alpha=*/1))));
+      auto grad = functional::sequence_function(functional::Log)
+                      .then(std::bind(functional::Mul, std::placeholders::_1, JUST(pos_weight)))
+                      .then(std::bind(functional::Sub, log_one_sub_sig, std::placeholders::_1,
+                                      /*alpha=*/1, false))
+                      .call(sig);
 
       return weight ? functional::Mul(JUST(grad), JUST(weight)) : grad;
     } else {

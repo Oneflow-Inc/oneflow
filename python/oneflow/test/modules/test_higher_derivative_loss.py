@@ -79,7 +79,6 @@ def generate_necessity_for_default_loss():
     shape = [random().to(int) for _ in range(ndim)]
     input_requires_grad = True
     target_requires_grad = random_bool().value()
-    # input, target
     return (
         random_tensor(ndim, *shape, requires_grad=input_requires_grad).to(device),
         random_tensor(ndim, *shape, requires_grad=target_requires_grad).to(device),
@@ -116,12 +115,11 @@ def generate_necessity_for_nll_loss():
 def generate_necessity_for_bce_loss():
     ndim = random(2, 6).to(int).value()
     device = random_device()
-    num_classes = random(low=3).to(int)
+    num_classes = 2
     batch_size = random(low=2, high=5).to(int)
     extra_dim = [random().to(int) for _ in range(ndim - 2)]
     input_requires_grad = True
     target_requires_grad = random_bool().value()
-    # input, target, weight, pos_weight
     return (
         random_tensor(
             ndim, batch_size, num_classes, *extra_dim, requires_grad=input_requires_grad
