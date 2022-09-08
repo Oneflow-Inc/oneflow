@@ -45,6 +45,7 @@ class JobDesc final {
   const std::string& job_name() const { return job_conf_.job_name(); }
   int64_t concurrency_width() const { return job_conf_.concurrency_width(); }
   const JobConfigProto& job_conf() const { return job_conf_; }
+  const JobConfigProto& data() const { return job_conf_; }
   DataType DefaultDataType() const { return job_conf_.default_data_type(); }
   bool EnableCudnn() const { return job_conf_.enable_cudnn(); }
   bool IsTrain() const { return job_conf_.has_train_conf(); }
@@ -52,6 +53,7 @@ class JobDesc final {
   bool enable_reuse_mem() const { return job_conf_.enable_reuse_mem(); }
   bool enable_inplace() const { return job_conf_.enable_inplace(); }
   bool enable_auto_mixed_precision() const { return job_conf_.enable_auto_mixed_precision(); }
+  DataType mixed_precision_data_type() const { return job_conf_.mixed_precision_data_type(); }
   bool do_parallel_cast_before_widening_type_cast() const {
     return job_conf_.do_parallel_cast_before_widening_type_cast();
   };
@@ -59,9 +61,6 @@ class JobDesc final {
   bool prune_cast_to_static_shape_ops() const { return job_conf_.prune_cast_to_static_shape_ops(); }
   bool prune_amp_white_identity_ops() const { return job_conf_.prune_amp_white_identity_ops(); }
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
-
-  bool has_xrt_config() const { return job_conf_.has_xrt_config(); }
-  const XrtConfig& xrt_config() const { return job_conf_.xrt_config(); }
 
 #define DEFINE_FUNCTION_CONFIG_GETTER(T, func_name, field_name) \
   T func_name(const std::string& field_name) const {            \

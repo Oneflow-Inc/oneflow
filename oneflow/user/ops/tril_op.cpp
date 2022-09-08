@@ -36,10 +36,10 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> TrilOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   CHECK_GE_OR_RETURN(in.shape().NumAxes(), 2);
-  *out->mut_shape() = in.shape();
-  *out->mut_is_dynamic() = in.is_dynamic();
+  out->set_shape(in.shape());
+  out->set_is_dynamic(in.is_dynamic());
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> TrilOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -47,25 +47,10 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> TrilOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
-  *out->mut_data_type() = in.data_type();
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
+  out->set_data_type(in.data_type());
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("tril").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                        user_op::AddOpFn AddOp) -> Maybe<void> {
-  if (op.NeedGenGradTensor4OpInput("in", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper grad_op = builder.Op("tril")
-                                             .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                                             .Output("out")
-                                             .Attr("diagonal", op.attr<int64_t>("diagonal"))
-                                             .Build();
-    op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
-    AddOp(grad_op);
-  }
-  return Maybe<void>::Ok();
-});
 
 /*static*/ Maybe<void> FusedScaleTrilOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& in = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
@@ -85,10 +70,10 @@ REGISTER_USER_OP_GRAD("tril").SetGenBackwardOpConfFn([](const user_op::UserOpWra
 }
 /*static*/ Maybe<void> FusedScaleTrilOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   CHECK_GE_OR_RETURN(in.shape().NumAxes(), 2);
-  *out->mut_shape() = in.shape();
-  *out->mut_is_dynamic() = in.is_dynamic();
+  out->set_shape(in.shape());
+  out->set_is_dynamic(in.is_dynamic());
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> FusedScaleTrilOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -96,29 +81,9 @@ REGISTER_USER_OP_GRAD("tril").SetGenBackwardOpConfFn([](const user_op::UserOpWra
 }
 /*static*/ Maybe<void> FusedScaleTrilOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
-  *out->mut_data_type() = in.data_type();
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
+  out->set_data_type(in.data_type());
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("fused_scale_tril")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("in", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("fused_scale_tril")
-                .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                .Output("out")
-                .Attr("diagonal", op.attr<int64_t>("diagonal"))
-                .Attr("floating_scale_value", op.attr<double>("floating_scale_value"))
-                .Attr("integer_scale_value", op.attr<int64_t>("integer_scale_value"))
-                .Attr("is_floating_scale_value", op.attr<bool>("is_floating_scale_value"))
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

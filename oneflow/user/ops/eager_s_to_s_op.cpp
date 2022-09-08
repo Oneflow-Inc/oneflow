@@ -38,7 +38,7 @@ namespace oneflow {
     int64_t parallel_id = opt_parallel_id->value_or(0);
     dim_vec[out_split_axis] = bs.At(parallel_id).size();
   }
-  *ctx->OutputShape("out", 0) = Shape(dim_vec);
+  ctx->SetOutputShape("out", 0, Shape(dim_vec));
   return Maybe<void>::Ok();
 }
 
@@ -47,21 +47,21 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EagerNaiveSToSOp::GetSbp(user_op::SbpContext* ctx) {
-  return Error::TypeError() << "eager_naive_s_to_s op doesn't support consistent tensor!";
+  return Error::TypeError() << "eager_naive_s_to_s op doesn't support global tensor!";
 }
 
 /* static */ Maybe<void> EagerNaiveSToSOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  return Error::TypeError() << "eager_naive_s_to_s op doesn't support consistent tensor!";
+  return Error::TypeError() << "eager_naive_s_to_s op doesn't support global tensor!";
 }
 
 /* static */ Maybe<void> EagerNaiveSToSOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<Symbol<Stream>> EagerNaiveSToSOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 }  // namespace oneflow

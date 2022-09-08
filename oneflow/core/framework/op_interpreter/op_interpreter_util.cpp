@@ -19,26 +19,26 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
-#include "oneflow/core/framework/py_distribute.h"
 #include "oneflow/core/framework/tensor_impl.h"
+#include "oneflow/core/functional/tensor_processor.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace one {
 
 namespace {
 
-std::shared_ptr<AutogradInterpreter> BuildEagerInterpreter(const bool& is_mirrored) {
+std::shared_ptr<AutogradInterpreter> BuildEagerInterpreter(const bool& is_local) {
   std::shared_ptr<OpExprInterpreter> internal;
-  if (is_mirrored) {
-    internal = std::make_shared<EagerMirroredInterpreter>();
+  if (is_local) {
+    internal = std::make_shared<EagerLocalInterpreter>();
   } else {
-    internal = std::make_shared<EagerConsistentInterpreter>();
+    internal = std::make_shared<EagerGlobalInterpreter>();
   }
   return std::make_shared<AutogradInterpreter>(internal);
 }
@@ -58,7 +58,7 @@ std::string ErrorString4Inputs(const TensorTuple& inputs, const OpExpr& op_expr)
     if (tensor->is_local()) {
       error_str << "local";
     } else {
-      error_str << "consistent";
+      error_str << "global";
     }
     if (++idx != inputs.size()) { error_str << ", "; }
   }
@@ -68,36 +68,36 @@ std::string ErrorString4Inputs(const TensorTuple& inputs, const OpExpr& op_expr)
 Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExprInterpContext& ctx,
                                           const OpExpr& op_expr) {
   static const auto& g_lazy_interpreter = BuildLazyInterpreter();
-  static const auto& g_eager_consistent_interpreter = BuildEagerInterpreter(/*is_mirrored=*/false);
-  static const auto& g_eager_mirrored_interpreter = BuildEagerInterpreter(/*is_mirrored=*/true);
+  static const auto& g_eager_global_interpreter = BuildEagerInterpreter(/*is_local=*/false);
+  static const auto& g_eager_local_interpreter = BuildEagerInterpreter(/*is_local=*/true);
   if (!LazyMode::is_enabled()) {
     if (inputs.empty()) {
       if (ctx.parallel_desc.has_value()) {
         JUST(ctx.nd_sbp);
         CHECK_OR_RETURN(!ctx.device.has_value());
-        return g_eager_consistent_interpreter;
+        return g_eager_global_interpreter;
       } else {
         CHECK_OR_RETURN(!ctx.nd_sbp.has_value());
-        return g_eager_mirrored_interpreter;
+        return g_eager_local_interpreter;
       }
     } else {
-      if (inputs.at(0)->is_consistent()) {
+      if (inputs[0]->is_global()) {
         if (inputs.size() == 1) {
           // do nothing
         } else if (inputs.size() == 2) {
-          CHECK_OR_RETURN(inputs.at(1)->is_consistent())
+          CHECK_OR_RETURN(inputs[1]->is_global())      // NOLINT
               << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
         } else if (inputs.size() == 3) {
-          CHECK_OR_RETURN(inputs.at(1)->is_consistent())
+          CHECK_OR_RETURN(inputs[1]->is_global())
               << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-          CHECK_OR_RETURN(inputs.at(2)->is_consistent())
+          CHECK_OR_RETURN(inputs[2]->is_global())
               << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
         } else {
           for (const auto& tensor : inputs) {
-            CHECK_OR_RETURN(tensor->is_consistent()) << ErrorString4Inputs(inputs, op_expr);
+            CHECK_OR_RETURN(tensor->is_global()) << ErrorString4Inputs(inputs, op_expr);
           }
         }
-        return g_eager_consistent_interpreter;
+        return g_eager_global_interpreter;
       } else {
         if (inputs.size() == 1) {
           // do nothing
@@ -114,7 +114,7 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExp
             CHECK_OR_RETURN(tensor->is_local()) << ErrorString4Inputs(inputs, op_expr);
           }
         }
-        return g_eager_mirrored_interpreter;
+        return g_eager_local_interpreter;
       }
     }
     UNIMPLEMENTED_THEN_RETURN();
@@ -127,8 +127,11 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExp
 template<>
 /* static */ Maybe<TensorTuple> OpInterpUtil::Dispatch<TensorTuple>(
     const OpExpr& op_expr, const TensorTuple& inputs, const OpExprInterpContext& ctx) {
+  OF_PROFILER_RANGE_GUARD("Dispatch");
+  functional::TensorLayoutProcessor processor(inputs, JUST(op_expr.SupportNonContiguous()));
+  JUST(processor.Apply());
   auto outputs = std::make_shared<TensorTuple>(op_expr.output_size());
-  JUST(Dispatch(op_expr, inputs, outputs.get(), ctx));
+  JUST(Dispatch(op_expr, processor.inputs(), outputs.get(), ctx));
   return outputs;
 }
 
@@ -136,23 +139,29 @@ template<>
 /* static */ Maybe<Tensor> OpInterpUtil::Dispatch<Tensor>(const OpExpr& op_expr,
                                                           const TensorTuple& inputs,
                                                           const OpExprInterpContext& ctx) {
+  OF_PROFILER_RANGE_GUARD("Dispatch");
   return JUST(Dispatch<TensorTuple>(op_expr, inputs, ctx))->at(0);
 }
 
 /* static */ Maybe<void> OpInterpUtil::Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
                                                 TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) {
-  return JUST(GetInterpreter(inputs, ctx, op_expr))->Apply(op_expr, inputs, outputs, ctx);
+  OF_PROFILER_RANGE_GUARD("Dispatch");
+  functional::TensorLayoutProcessor processor(inputs, outputs,
+                                              JUST(op_expr.SupportNonContiguous()));
+  JUST(processor.Apply());
+  return JUST(GetInterpreter(processor.inputs(), ctx, op_expr))
+      ->Apply(op_expr, processor.inputs(), processor.outputs(), ctx);
 }
 
 /* static */ Maybe<OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(
-    const OperatorConf& op_conf, const bool is_mirrored_strategy_enabled) {
+    const OperatorConf& op_conf, const bool is_local_strategy_enabled) {
   std::shared_ptr<OpAttribute> op_attribute = JUST([&]() -> Maybe<OpAttribute> {
     auto infer_ctx = JUST(GetCurInferCtx());
-    if (is_mirrored_strategy_enabled) {
-      return infer_ctx->AddAndInferMirroredOp(op_conf);
+    if (is_local_strategy_enabled) {
+      return infer_ctx->AddAndInferLocalOp(op_conf);
     } else {
-      return infer_ctx->AddAndInferConsistentOp(op_conf);
+      return infer_ctx->AddAndInferGlobalOp(op_conf);
     }
   }());
   return op_attribute;
@@ -163,55 +172,6 @@ template<>
   auto op_conf = std::make_shared<OperatorConf>();
   JUST(op_expr.BuildOpConf(op_conf.get(), attrs));
   return op_conf;
-}
-
-/* static */ Maybe<Tensor> OpInterpUtil::BuildTensor(
-    const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
-    const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr, const bool is_lazy,
-    const bool is_local) {
-  const auto& dtype = DataType(blob_attr->get_dtype());
-  if (is_local) {
-    const auto& device =
-        JUST(Device::MakeDeviceByParallelDesc(*parallel_attr->parallel_desc_symbol()));
-    const auto& tensor =
-        JUST(MirroredTensor::MakeTensor(blob_attr->shape(), blob_attr->stride(), dtype, device,
-                                        is_lazy, /*requires_grad=*/false, /*is_leaf=*/true));
-    return static_cast<std::shared_ptr<Tensor>>(tensor);
-  } else {
-    const auto& nd_sbp = std::make_shared<NdSbp>();
-    *nd_sbp->mutable_sbp_parallel()->Add() = *(parallel_attr->sbp_parallel());
-    const auto& tensor =
-        JUST(ConsistentTensor::MakeTensor(blob_attr->shape(), dtype, SymbolOf(*nd_sbp),
-                                          SymbolOf(*parallel_attr->parallel_desc_symbol()), is_lazy,
-                                          /*requires_grad=*/false, /*is_leaf=*/true));
-    return static_cast<std::shared_ptr<Tensor>>(tensor);
-  }
-}
-
-/* static */ Maybe<void> OpInterpUtil::CheckTensorMatchAttr(
-    const std::shared_ptr<Tensor>& tensor,
-    const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
-    const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr, const bool is_lazy,
-    const bool is_local, const bool requires_grad, const bool is_leaf) {
-  CHECK_EQ_OR_RETURN(*tensor->shape(), *blob_attr->shape());
-  CHECK_EQ_OR_RETURN(tensor->is_lazy(), is_lazy);
-  CHECK_EQ_OR_RETURN(tensor->is_local(), is_local);
-  const auto& dtype = DataType(blob_attr->get_dtype());
-  CHECK_EQ_OR_RETURN(tensor->dtype()->data_type(), dtype);
-  CHECK_EQ_OR_RETURN(tensor->requires_grad(), requires_grad);
-  CHECK_EQ_OR_RETURN(tensor->is_leaf(), is_leaf);
-  if (is_local) {
-    const auto& device =
-        JUST(Device::MakeDeviceByParallelDesc(*parallel_attr->parallel_desc_symbol()));
-    CHECK_OR_RETURN(JUST(tensor->device()) == device);
-  } else {
-    const auto& nd_sbp = std::make_shared<NdSbp>();
-    *nd_sbp->mutable_sbp_parallel()->Add() = *(parallel_attr->sbp_parallel());
-    CHECK_OR_RETURN(JUST(tensor->nd_sbp()) == SymbolOf(*nd_sbp));
-    CHECK_OR_RETURN(JUST(tensor->parallel_desc())
-                    == SymbolOf(*parallel_attr->parallel_desc_symbol()));
-  }
-  return Maybe<void>::Ok();
 }
 
 }  // namespace one

@@ -31,12 +31,13 @@ namespace oneflow {
 namespace {
 
 inline size_t HashDevice(const std::string& type, int64_t device_id) {
-  return std::hash<std::string>()(type) ^ std::hash<int64_t>()(device_id);
+  return Hash(type, device_id);
 }
 
 void CheckDeviceType(const std::string& type) {
   if (!TRY(DeviceType4DeviceTag(type)).IsOk()) {
-    std::string error_msg = "Device type `" + type + "` not found.";
+    std::string error_msg = "Expected one of " + PrintAvailableDevices()
+                            + " device type at start of device string: " + type;
     throw std::runtime_error(error_msg);
   }
 }
@@ -55,7 +56,7 @@ Maybe<void> Device::Init() {
   {
     DeviceType dev_type = enum_type_;
     if (dev_type == kMockDevice) { dev_type = DeviceType::kCPU; }
-    mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, device_id_);
+    mem_case_ = memory::MakeMemCaseShared(enum_type_, device_id_);
   }
   return Maybe<void>::Ok();
 }
@@ -78,21 +79,30 @@ Maybe<void> Device::Init() {
   return iter->second;
 }
 
+/* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(
+    const std::string& type_or_type_with_device_id) {
+  static thread_local HashMap<std::string, Symbol<Device>> map;
+  auto iter = map.find(type_or_type_with_device_id);
+  if (iter == map.end()) {
+    std::string type;
+    int device_id = -1;
+    JUST(ParsingDeviceTag(type_or_type_with_device_id, &type, &device_id));
+    CheckDeviceType(type);
+    if (device_id == -1) { device_id = GlobalProcessCtx::LocalRank(); }
+    Device device(type, device_id);
+    JUST(device.Init());
+    iter = map.emplace(type_or_type_with_device_id, SymbolOf(device)).first;
+  }
+  return iter->second;
+}
+
 /* static */ Maybe<Symbol<Device>> Device::New(const std::string& type) {
   return New(type, GlobalProcessCtx::LocalRank());
 }
 
 /* static */ Maybe<Symbol<Device>> Device::ParseAndNew(
     const std::string& type_or_type_with_device_id) {
-  std::string type;
-  int device_id = -1;
-  JUST(ParsingDeviceTag(type_or_type_with_device_id, &type, &device_id));
-  CheckDeviceType(type);
-  if (device_id == -1) {
-    return Device::New(type);
-  } else {
-    return Device::New(type, device_id);
-  }
+  return ThreadLocalGetOrNew(type_or_type_with_device_id);
 }
 
 std::string Device::ToRepr() const {

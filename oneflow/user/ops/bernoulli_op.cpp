@@ -19,9 +19,9 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> BernoulliOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
-  *out_tensor->mut_shape() = in_tensor.shape();
+  out_tensor->set_shape(in_tensor.shape());
   return Maybe<void>::Ok();
 }
 
@@ -38,8 +38,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> BernoulliOp::InferDataType(user_op::InferContext* ctx) {
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
-  *out_tensor->mut_data_type() = ctx->Attr<DataType>("dtype");
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
+  out_tensor->set_data_type(ctx->Attr<DataType>("dtype"));
   return Maybe<void>::Ok();
 }
 

@@ -32,13 +32,19 @@ struct hash<oneflow::DeviceType> final {
 namespace oneflow {
 
 inline std::string PrintAvailableDevices() {
-  std::string str("[");
-  str += "\"cpu\"";
+  std::string str("cpu");
 #ifdef WITH_CUDA
-  str += ", \"cuda\"";
+  str += ", cuda";
 #endif
-  str += ", \"auto\"";  // "auto" is a fake device type for random generator.
-  str += "]";
+  return str;
+}
+
+inline std::string PrintGeneratorAvailableDevices() {
+  std::string str("cpu");
+#ifdef WITH_CUDA
+  str += ", cuda";
+#endif
+  str += ", auto";  // "auto" is a fake device type for random generator.
   return str;
 }
 

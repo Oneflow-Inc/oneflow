@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> ArgSortOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -40,12 +40,15 @@ namespace oneflow {
 /* static */ Maybe<void> ArgSortOp::CheckAttr(const user_op::UserOpDefWrapper& def,
                                               const user_op::UserOpConfWrapper& conf) {
   const std::string& direction = conf.attr<std::string>("direction");
-  CHECK_OR_RETURN(direction == "ASCENDING" || direction == "DESCENDING");
+  CHECK_OR_RETURN(direction == "ASCENDING" || direction == "DESCENDING")
+      << Error::RuntimeError()
+      << "expected the input direction parameter value is \"ASCENDING\" or \"DESCENDING\", "
+      << "but found the value is " << direction;
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> ArgSortOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kInt32;
+  ctx->SetOutputDType("out", 0, DataType::kInt32);
   return Maybe<void>::Ok();
 }
 

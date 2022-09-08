@@ -14,6 +14,9 @@ include "mlir/Pass/PassBase.td"
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
+
+include "OneFlow/SBP/SBPOps.td"
+
 def OneFlow_NormalizationAddReluOp : OneFlow_NormalizationAddReluBaseOp {
   let builders = [
     OpBuilder<(ins
@@ -85,11 +88,6 @@ def OneFlow_FrozenVariableOp : OneFlow_IROp<"variable_ir", [ConstantLike, NoSide
   let hasFolder = 1;
 }
 
-def OneFlow_LossMarkerOp : OneFlow_IROp<"loss_marker", []> {
-  let summary = "mark a result as loss to prevent its defining op from optimized away";
-  let arguments = (ins Variadic<AnyType>:$loss);
-}
-
 def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {
   let summary = "";
   let input = (ins
@@ -99,40 +97,6 @@ def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceM
   let output = (outs AnyType:$out);
 }
 
-// JIT ops
-
-def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpInterfaceMethods<UserOpCompatibleInterface> ] > {
-  let input = (ins Variadic<AnyType>:$data_input);
-  let output = (outs Variadic<AnyType>:$data_output);
-  let attrs = (ins
-    FlatSymbolRefAttr:$callee,
-    StrAttr:$mlir_assembly
-  );
-  let builders = [
-    OpBuilder<(ins "func::FuncOp":$callee,
-      "NamedAttrList":$attributes,
-      CArg<"ValueRange", "{}">:$data_input), [{
-      $_state.addOperands(data_input);
-      $_state.addAttributes(attributes);
-      $_state.addAttribute("callee", SymbolRefAttr::get(callee));
-      $_state.addTypes(callee.getFunctionType().getResults());
-    }]>
-  ];
-  let extraClassDeclaration = [{
-    operand_range getArgOperands() {
-      return {arg_operand_begin(), arg_operand_end()};
-    }
-
-    operand_iterator arg_operand_begin() { return operand_begin(); }
-    operand_iterator arg_operand_end() { return operand_end(); }
-    CallInterfaceCallable getCallableForCallee() {
-      return (*this)->getAttrOfType<SymbolRefAttr>("callee");
-    }
-  }];
-  let assemblyFormat = [{
-    $callee `(` $data_input `)` attr-dict `:` functional-type($data_input, results)
-  }];
-}
 
 class OneFlow_ConcreteSystemOp<string mnemonic, list<Trait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [OneFlow_IsOpConfCompatible,
@@ -164,7 +128,7 @@ def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", [OneFlow_TensorSou
     DefaultValuedAttr<BoolAttr, "true">:$trainable,
     OptionalAttr<F32Attr>:$float_initializer,
     OptionalAttr<SI64Attr>:$integer_initializer,
-    StrArrayAttr:$nd_sbp
+    OptionalAttr<SBP_ParallelSignatureAttr>:$parallel
   );
 }
 
@@ -282,12 +246,10 @@ def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createLowerOneFlowToTosaPass()";
   let dependentDialects = ["tosa::TosaDialect", "memref::MemRefDialect", "mlir::func::FuncDialect"];
-}
-
-def MapSCFToGPUPass : Pass<"gpu-greedy-parallel-loop-mapping", "ModuleOp"> {
-  let summary = "Greedily maps all parallel loops to gpu hardware ids";
-  let constructor = "mlir::oneflow::createMapSCFToGPUPass()";
-  let dependentDialects = ["scf::SCFDialect"];
+  let options = [
+    Option<"variableAsConstant", "variable-as-constant", "int", "0",
+           "convert variable op as const op of tosa">,
+  ];
 }
 
 def BufferHostRegisterPass : Pass<"buffer-host-register", "func::FuncOp"> {
@@ -330,6 +292,16 @@ def ConvertInferenceOpPass : Pass<"convert-inference-op", "ModuleOp"> {
 def PostConvertInferenceOpPass : Pass<"post-convert-inference-op", "ModuleOp"> {
   let summary = "Convert variable ir op to variable op after contant folding.";
   let constructor = "mlir::oneflow::createPostConvertInferenceOpPass()";
+}
+
+
+def ConvertToSignlessForTosaPass : Pass<"convert-to-signless-for-tosa", "ModuleOp"> {
+  let summary = "convert func type to unsigned before lowering to tosa";
+  let description = [{
+    In oneflow, int typed tensor is explicit signed. Convert them before lowering to TOSA.
+  }];
+  let constructor = "mlir::oneflow::createConvertToSignlessForTosaPass()";
+  let dependentDialects = ["func::FuncDialect"];
 }
 
 #endif // ONEFLOW_PASSES

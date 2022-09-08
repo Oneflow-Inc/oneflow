@@ -33,7 +33,7 @@ class _WeightedLoss(_Loss):
         self, weight: Optional[Tensor] = None, reduction: str = "mean"
     ) -> None:
         super(_WeightedLoss, self).__init__(reduction=reduction)
-        self.weight = weight
+        self.register_buffer("weight", weight)
 
 
 class L1Loss(_Loss):
@@ -124,10 +124,20 @@ class CrossEntropyLoss(_WeightedLoss):
     (see below).
 
     Args:
+        ignore_index (int, optional): Specifies a target value that is ignored and does not
+            contribute to the input gradient. When ``reduction`` is ``mean``, the loss is averaged
+            over non-ignored targets. Note that ``ignore_index`` is only applicable when the target
+            contains class indices.
         reduction (string, optional): Specifies the reduction to apply to the output:
             ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will
             be applied, ``'mean'``: the weighted mean of the output is taken,
             ``'sum'``: the output will be summed. Default: ``'mean'``
+        label_smoothing (float, optinoal): A float in [0.0, 1.0]. Specifies the amount
+            of smoothing when computing the loss, where 0.0 means no smoothing.
+            The targets become a mixture of the original ground truth and a uniform
+            distribution as described in `Rethinking the Inception Architecture for Computer Vision <https://arxiv.org/abs/1512.00567>`_.
+            Default: :math:`0.0`.
+
 
     For example:
 
@@ -150,6 +160,12 @@ class CrossEntropyLoss(_WeightedLoss):
         >>> out_mean = flow.nn.CrossEntropyLoss(reduction="mean")(input, target)
         >>> out_mean
         tensor(0.7590, dtype=oneflow.float32)
+        >>> out_ignore_0 = flow.nn.CrossEntropyLoss(reduction="none", ignore_index=0)(input, target)
+        >>> out_ignore_0
+        tensor([0.0000, 1.1167, 0.3583], dtype=oneflow.float32)
+        >>> out_label_smoothing = flow.nn.CrossEntropyLoss(reduction="none", label_smoothing=0.5)(input, target)
+        >>> out_label_smoothing
+        tensor([1.0586, 1.1654, 0.8864], dtype=oneflow.float32)
 
     """
 
@@ -158,13 +174,24 @@ class CrossEntropyLoss(_WeightedLoss):
         weight: Optional[Tensor] = None,
         ignore_index: int = -100,
         reduction: str = "mean",
+        label_smoothing: float = 0.0,
     ) -> None:
         super(CrossEntropyLoss, self).__init__(weight, reduction)
         self.ignore_index = ignore_index
+        self.label_smoothing = label_smoothing
+        if self.label_smoothing < 0.0 or self.label_smoothing > 1.0:
+            raise ValueError(
+                "label_smoothing must be between 0.0 and 1.0. Got: ", label_smoothing
+            )
 
     def forward(self, input, target):
         return flow._C.cross_entropy(
-            input, target, self.weight, self.ignore_index, self.reduction
+            input,
+            target,
+            self.weight,
+            self.ignore_index,
+            self.reduction,
+            self.label_smoothing,
         )
 
 
@@ -335,10 +362,7 @@ class NLLLoss(_WeightedLoss):
 
 
 class KLDivLoss(_Loss):
-    """The interface is consistent with PyTorch.
-    The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.nn.KLDivLoss.html.
-
+    """
     The Kullback-Leibler divergence loss measure
 
     `Kullback-Leibler divergence`_ is a useful distance measure for continuous
@@ -374,6 +398,10 @@ class KLDivLoss(_Loss):
     ``'batchmean'`` in the next major release.
 
     .. _`kullback-leibler divergence`: https://en.wikipedia.org/wiki/Kullback-Leibler_divergence
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.KLDivLoss.html.
 
     Args:
         reduction (string, optional): Specifies the reduction to apply to the output:
@@ -430,10 +458,7 @@ class KLDivLoss(_Loss):
 
 
 class MSELoss(_Loss):
-    """The interface is consistent with PyTorch.
-    The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.nn.MSELoss.html.
-
+    """
     Creates a criterion that measures the mean squared error (squared L2 norm) between
     each element in the input :math:`x` and target :math:`y`.
 
@@ -459,6 +484,10 @@ class MSELoss(_Loss):
     The mean operation still operates over all the elements, and divides by :math:`n`.
 
     The division by :math:`n` can be avoided if one sets ``reduction = 'sum'``.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.MSELoss.html.
 
     Args:
         reduction (string, optional): Specifies the reduction to apply to the output:
@@ -881,10 +910,19 @@ class SmoothL1Loss(_Loss):
 
 
 class CombinedMarginLoss(Module):
-    """The operation implements "margin_softmax" in InsightFace:
+    r"""The operation implements "margin_softmax" in InsightFace:
     https://github.com/deepinsight/insightface/blob/master/recognition/arcface_mxnet/train.py
     The implementation of margin_softmax in InsightFace is composed of multiple operators.
     We fuse them for speed up.
+
+    Applies the function:
+
+    .. math::
+
+        {\rm CombinedMarginLoss}(x_i, label) =
+        \left\{\begin{matrix} \cos(m_1\cdot\arccos x_i+m_2) - m_3 & {\rm if} \ i == label \\
+        x_i & {\rm otherwise} \end{matrix}\right.
+
 
     Args:
         x (oneflow.Tensor): A Tensor
@@ -892,6 +930,16 @@ class CombinedMarginLoss(Module):
         m1 (float): loss m1 parameter
         m2 (float): loss m2 parameter
         m3 (float): loss m3 parameter
+
+    .. note::
+
+        Here are some special cases:
+
+        - when :math:`m_1=1, m_2\neq 0, m_3=0`, CombineMarginLoss has the same parameter as `ArcFace <https://arxiv.org/abs/1801.07698>`__ .
+
+        - when :math:`m_1=1, m_2=0, m_3\neq 0`, CombineMarginLoss has the same parameter as `CosFace (a.k.a AM-Softmax) <https://arxiv.org/abs/1801.09414>`__ .
+
+        - when :math:`m_1\gt 1, m_2=m_3=0`, CombineMarginLoss has the same parameter as `A-Softmax <https://arxiv.org/abs/1704.08063>`__.
 
     Returns:
         oneflow.Tensor: A Tensor

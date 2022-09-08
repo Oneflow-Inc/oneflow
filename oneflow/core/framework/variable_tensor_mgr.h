@@ -25,7 +25,7 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T, typename Kind>
-class Global;
+class Singleton;
 namespace one {
 
 class Tensor;
@@ -45,9 +45,10 @@ class VariableTensorMgr final {
                    const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors);
   std::tuple<std::vector<std::string>, std::vector<std::shared_ptr<one::Tensor>>> Dump();
   std::vector<std::string> DumpNames();
+  void Clear();
 
  private:
-  friend class Global<VariableTensorMgr>;
+  friend class Singleton<VariableTensorMgr>;
   VariableTensorMgr() = default;
 
   std::map<std::string, std::shared_ptr<one::Tensor>> variables_;

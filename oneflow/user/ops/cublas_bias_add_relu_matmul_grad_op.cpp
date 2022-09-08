@@ -28,8 +28,8 @@ Maybe<void> InferTensorDesc4FusedMatmulBackward(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   const int64_t bias_size = weight_desc.shape().At(1);
   Shape d_grad_shape({dy_desc.shape().At(0), weight_desc.shape().At(1)});
-  *ctx->OutputShape("d_grad", 0) = d_grad_shape;
-  *ctx->OutputShape("d_bias", 0) = Shape({bias_size});
+  ctx->SetOutputShape("d_grad", 0, d_grad_shape);
+  ctx->SetOutputShape("d_bias", 0, Shape({bias_size}));
   return Maybe<void>::Ok();
 }
 
@@ -38,11 +38,11 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   CHECK_EQ_OR_RETURN(weight_desc.data_type(), dy_desc.data_type());
 
-  user_op::TensorDesc* d_grad_desc = ctx->OutputTensorDesc("d_grad", 0);
-  user_op::TensorDesc* d_bias_desc = ctx->OutputTensorDesc("d_bias", 0);
+  user_op::TensorDesc* d_grad_desc = ctx->MutOutputTensorDesc("d_grad", 0);
+  user_op::TensorDesc* d_bias_desc = ctx->MutOutputTensorDesc("d_bias", 0);
 
-  *d_grad_desc->mut_data_type() = dy_desc.data_type();
-  *d_bias_desc->mut_data_type() = dy_desc.data_type();
+  d_grad_desc->set_data_type(dy_desc.data_type());
+  d_bias_desc->set_data_type(dy_desc.data_type());
   return Maybe<void>::Ok();
 }
 

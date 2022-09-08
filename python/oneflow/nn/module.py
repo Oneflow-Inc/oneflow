@@ -56,7 +56,7 @@ class Module(object):
     
     This class is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.Module.html.
+    https://pytorch.org/docs/1.10/generated/torch.nn.Module.html.
 
     Your models should also subclass this class.
 
@@ -100,6 +100,37 @@ class Module(object):
         self._state_dict_hooks = OrderedDict()
         self._load_state_dict_pre_hooks = OrderedDict()
         self._modules = OrderedDict()
+        self._is_ddp_module = False
+
+    def __getstate__(self):
+        if not self._is_ddp_module:
+            if (
+                len(self._backward_hooks) > 0
+                or len(self._forward_hooks) > 0
+                or len(self._forward_pre_hooks) > 0
+                or len(self._state_dict_hooks) > 0
+                or len(self._load_state_dict_pre_hooks) > 0
+            ):
+                warnings.warn("The module hooks will not be remained after serializing")
+
+        state = self.__dict__.copy()
+        del state["_backward_hooks"]
+        del state["_forward_hooks"]
+        del state["_forward_pre_hooks"]
+        del state["_state_dict_hooks"]
+        del state["_load_state_dict_pre_hooks"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._backward_hooks = OrderedDict()
+        self._forward_hooks = OrderedDict()
+        self._forward_pre_hooks = OrderedDict()
+        self._state_dict_hooks = OrderedDict()
+        self._load_state_dict_pre_hooks = OrderedDict()
+        if hasattr(self, "_is_ddp_module") and self._is_ddp_module:
+            # flow.nn.parallel.DistributedDataParallel updates the module inplace
+            flow.nn.parallel.DistributedDataParallel(self)
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError()
@@ -323,6 +354,17 @@ class Module(object):
                     buffers[name] = value
                 else:
                     object.__setattr__(self, name, value)
+
+    def __delattr__(self, name):
+        if name in self._parameters:
+            del self._parameters[name]
+        elif name in self._buffers:
+            del self._buffers[name]
+            self._non_persistent_buffers_set.discard(name)
+        elif name in self._modules:
+            del self._modules[name]
+        else:
+            super().__delattr__(name)
 
     def _named_members(self, get_members_fn, prefix="", recurse=True):
         memo = set()
@@ -610,6 +652,29 @@ class Module(object):
         """
         return self.train(False)
 
+    def requires_grad_(self: T, requires_grad: bool = True) -> T:
+        r"""Change if autograd should record operations on parameters in this
+        module.
+        The interface is consistent with PyTorch.
+        The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Module.html?highlight=requires_grad_#torch.nn.Module.requires_grad_.
+
+        This method sets the parameters' :attr:`requires_grad` attributes
+        in-place.
+
+        This method is helpful for freezing part of the module for finetuning
+        or training parts of a model individually (e.g., GAN training).
+
+        Args:
+            requires_grad (bool): whether autograd should record operations on
+                                  parameters in this module. Default: ``True``.
+
+        Returns:
+            Module: self
+        """
+        for p in self.parameters():
+            p.requires_grad_(requires_grad)
+        return self
+
     def zero_grad(self, set_to_none: bool = False) -> None:
         r"""
         zero_grad(set_to_none=False)
@@ -688,6 +753,24 @@ class Module(object):
                         )
                     )
                     continue
+                if (
+                    isinstance(input_param, flow.Tensor)
+                    and input_param.is_global != param.is_global
+                ):
+                    if param.is_global:
+                        help_msg = "Maybe you need to convert the checkpoint param to global, or set global_src_rank=0 when using flow.load to load model's state_dict"
+                    else:
+                        help_msg = "Maybe you need to convert your model to global."
+                    error_msgs.append(
+                        'local / global mismatch for "{}":  param from checkpoint is {} tensor, but the param in current model is {} tensor. {}'.format(
+                            key,
+                            "global" if input_param.is_global else "local",
+                            "global" if param.is_global else "local",
+                            help_msg,
+                        )
+                    )
+                    continue
+
                 try:
                     with flow.no_grad():
                         param.copy_(input_param)

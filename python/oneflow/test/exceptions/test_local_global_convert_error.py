@@ -64,7 +64,7 @@ class TestModule(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_call_to_local_for_local_tensor(test_case):
         x = flow.tensor([1, 2, 3, 4])
-        with test_case.assertRaises(AssertionError) as ctx:
+        with test_case.assertRaises(RuntimeError) as ctx:
             y = x.to_local()
         test_case.assertTrue(
             "Expected global tensor for to_local but got local tensor!"

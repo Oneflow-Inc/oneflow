@@ -74,6 +74,8 @@ class ParallelDesc final {
   int64_t device_num_of_each_machine() const { return device_num_of_each_machine_; }
   const ParallelConf& parallel_conf() const { return parallel_conf_; }
 
+  const ParallelConf& data() const { return parallel_conf_; }
+
   Maybe<void> GetParallelContext(ParallelContext* parallel_ctx, int64_t machine_id,
                                  int64_t device_id) const;
   std::shared_ptr<Shape> hierarchy() const { return hierarchy_; }
@@ -157,6 +159,7 @@ std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
 
 ParallelConf GenParallelConfOfCpuZeroOnMaster();
 ParallelConf GenParallelConfOfCpuZeroOnAllMachines();
+ParallelConf GenParallelConfOfCpuOnAllRanks();
 
 namespace private_details {
 
@@ -174,16 +177,16 @@ namespace std {
 template<>
 struct hash<oneflow::ParallelDesc> {
   size_t operator()(const oneflow::ParallelDesc& pr) const {
+    using namespace oneflow;
     size_t ret = 0;
     int i = 0;
     int shift_roundtrip = (sizeof(size_t) / 2);
     for (int machine_id : pr.sorted_machine_ids()) {
       int shift = i++ % shift_roundtrip;
-      ret ^= machine_id << shift_roundtrip << shift;
-      ret ^= pr.sorted_dev_phy_ids(machine_id).size() << shift;
+      AddHash(&ret, machine_id << shift_roundtrip << shift);
+      AddHash(&ret, pr.sorted_dev_phy_ids(machine_id).size() << shift);
     }
-    const auto& shape_hash = std::hash<oneflow::Shape>();
-    ret ^= shape_hash(*pr.hierarchy());
+    AddHash(&ret, *pr.hierarchy());
     return hash<size_t>()(ret);
   }
 };

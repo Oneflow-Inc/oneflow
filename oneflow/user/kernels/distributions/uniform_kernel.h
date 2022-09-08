@@ -47,7 +47,7 @@ class UniformKernel final : public user_op::OpKernel {
     const double from = ctx->Attr<double>("from");
     const double to = ctx->Attr<double>("to");
     check_from_to_in_range<T>(from, to);
-    int64_t elem_cnt = out->shape().elem_cnt();
+    int64_t elem_cnt = out->shape_view().elem_cnt();
     T* out_dptr = out->mut_dptr<T>();
     auto* distribution_state = dynamic_cast<DistributionKernelState*>(state);
     CHECK_NOTNULL(distribution_state);

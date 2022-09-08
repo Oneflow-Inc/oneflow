@@ -23,12 +23,14 @@ limitations under the License.
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/boxing_identity_task_node.h"
 #include "oneflow/core/job/scope.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 #include "oneflow/core/graph/task_stream_index_manager.h"
 #include "oneflow/core/ep/include/primitive/memcpy.h"
+#include "oneflow/core/graph/straighten_nodes.h"
 
 namespace oneflow {
 
@@ -55,28 +57,6 @@ bool IsConnectToTickOp(const TaskNode* node) {
   return false;
 }
 
-std::string GetOpConfCalculationPassName(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_scope_symbol_id());
-  int64_t scope_symbol_id = op_conf.scope_symbol_id();
-  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id))
-      << " Error! op : \n " << op_conf.DebugString()
-      << " has error scope_symbol_id = " << scope_symbol_id
-      << " which cannot find in Global<symbol::Storage<Scope>>::Get()\n";
-  const Scope& scope = Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
-  return scope.scope_proto().calculation_pass_name();
-}
-
-bool IsOptimizerPassOp(const Operator* op) {
-  // NOTE(chengcheng): use scope::calculation_pass_name instead of area_id to not merge optimizer
-  // ops with fw/bw ops
-  if (!op->op_conf().has_scope_symbol_id()) {
-    // NOTE(chengcheng): Some system op insert to OpGraph may not set scope_symbol_id, it MUST NOT
-    // optimizer subgraph ops.
-    return false;
-  }
-  return GetOpConfCalculationPassName(op->op_conf()) == kOptimizerPass;
-}
-
 bool IsSubsetTickOpConf(const OperatorConf& op_conf) {
   return op_conf.has_src_subset_tick_conf() || op_conf.has_dst_subset_tick_conf();
 }
@@ -99,11 +79,6 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
         || user_type_name == "unpack" || user_type_name == "identity_buffer") {
       return true;
     }
-  }
-  // NOTE(chengcheng): ONLY nccl_use_compute_stream = false will exclude optimizer pass ops
-  if (!Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
-      && IsOptimizerPassOp(op)) {
-    return true;
   }
   return false;
 }
@@ -248,7 +223,7 @@ bool IsInplaceAllowed(
 }
 
 std::unique_ptr<BoxingLogger> CreateBoxingLogger() {
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     return std::unique_ptr<BoxingLogger>(
         new CsvBoxingLogger(StrCat("boxing/log/", GlobalJobDesc().job_id()) + ".csv"));
   } else {
@@ -293,10 +268,10 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
       if (op_node->op().op_conf().has_stream_name_hint()) {
         const std::string& stream_name_hint = op_node->op().op_conf().stream_name_hint();
         VLOG(3) << "set op: " << op_node->op().op_name() << " to stream: " << stream_name_hint;
-        stream_index = Global<TaskStreamIndexManager>::Get()->GetNamedTaskStreamIndex(
+        stream_index = Singleton<TaskStreamIndexManager>::Get()->GetNamedTaskStreamIndex(
             device_id, stream_name_hint);
       } else {
-        stream_index = Global<TaskStreamIndexManager>::Get()->GetTaskStreamIndex(
+        stream_index = Singleton<TaskStreamIndexManager>::Get()->GetTaskStreamIndex(
             comp_task_node->GetTaskType(), device_id);
       }
       comp_task_node->set_thrd_id(EncodeStreamIdToInt64(StreamId{device_id, stream_index}));
@@ -419,8 +394,8 @@ void ForEachOpGraphNecessaryCtrlEdge(
 
 }  // namespace
 
-TaskGraph::TaskGraph() {
-  OpGraph* op_graph = Global<OpGraph>::Get();
+TaskGraph::TaskGraph(bool enable_straighten_algorithm) {
+  OpGraph* op_graph = Singleton<OpGraph>::Get();
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
   hierarchical_sub_tsk_gph_builder_.reset(new DispatchHierarchicalSubTskGphBuilder());
@@ -450,8 +425,12 @@ TaskGraph::TaskGraph() {
     }
   });
 
-  SetOrderInGraphForEachNode();
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
+  if (enable_straighten_algorithm && GlobalProcessCtx::WorldSize() > 1) {
+    StraightenNodes(this, &ordered_task_nodes_);
+  } else {
+    SetOrderInGraphForEachNode();
+  }
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 }
 
 TaskGraph::~TaskGraph() = default;
@@ -487,7 +466,7 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
         // src must be not on the cpu mem zone, copy d2h first
         CHECK(IsMemcpyDtoHSupported(src_mem_zone_id.device_type()));
         CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-        copy_task->Init(CopyHdOpConf::D2H, src_mem_zone_id, lbi);
+        copy_task->Init(CopyHdType::D2H, src_mem_zone_id, lbi);
         Connect<TaskNode>(src_node, NewTaskEdgeWithLbi(lbi), copy_task);
         proxy2node[key] = copy_task;
         return copy_task;
@@ -507,7 +486,7 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
           GetProxyNode(src_node, lbi, GetNodeCPUMemZoneId(dst_mem_zone_id.rank()));
       CHECK(IsMemcpyHtoDSupported(dst_mem_zone_id.device_type()));
       CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-      copy_task->Init(CopyHdOpConf::H2D, dst_mem_zone_id, lbi);
+      copy_task->Init(CopyHdType::H2D, dst_mem_zone_id, lbi);
       Connect<TaskNode>(proxy_on_dst_host, NewTaskEdgeWithLbi(lbi), copy_task);
       proxy2node[key] = copy_task;
       return copy_task;
@@ -657,7 +636,7 @@ void TaskGraph::GetSafeInplaceOpBlobArgList(
   InplaceLbiGraph origin_graph(obas_info, Op4OpName);
   InplaceLbiGraph safe_graph(*safe_obas_info, Op4OpName);
   origin_graph.ComputeSafeInplaceObns(safe_obas_info, IsLbiAllConsumersReachable);
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     origin_graph.ToDotWithFilePath(
         JoinPath("dot", "InplaceLbiGraph", GlobalJobDesc().job_name() + "_origin.dot"));
     safe_graph.ToDotWithFilePath(
@@ -721,6 +700,12 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     const ParallelDesc& src_parallel_desc = src_op_node->parallel_desc();
     const ParallelDesc& dst_parallel_desc = dst_op_node->parallel_desc();
     const BlobDesc& blob_desc = src_op_node->LogicalBlobDesc4Lbi(lbi);
+    VLOG(3) << "src op: " << src_op_node->op().op_name()
+            << " dst op: " << dst_op_node->op().op_name()
+            << " src_parallel_conf: " << src_parallel_desc.parallel_conf().DebugString()
+            << " dst parallel conf: " << dst_parallel_desc.parallel_conf().DebugString()
+            << " src_nd_sbp " << src_nd_sbp.DebugString() << " dst nd_sbp "
+            << dst_nd_sbp.DebugString();
     auto status = CHECK_JUST(hierarchical_sub_tsk_gph_builder_->Build(
         sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks, src_parallel_desc,
         dst_parallel_desc, lbi, blob_desc, src_nd_sbp, dst_nd_sbp,

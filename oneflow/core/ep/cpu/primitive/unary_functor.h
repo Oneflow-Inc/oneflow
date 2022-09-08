@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/ep/common/primitive/unary_functor.h"
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
-#include <cmath>
 
 namespace oneflow {
 namespace ep {
@@ -23,6 +22,8 @@ namespace primitive {
 
 template<typename Dst, typename Src>
 struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kGelu, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     return static_cast<Src>(0.5) * src * (static_cast<Src>(1.0) + std::erf(inv_sqrt2 * src));
   }
@@ -31,7 +32,59 @@ struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kGelu, Dst, Src> {
 
 template<typename Dst, typename Src>
 struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kTanh, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
   OF_DEVICE_FUNC Dst operator()(Src src) const { return std::tanh(src); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kIsInf, bool, float> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(float src) const { return std::isinf(src); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kIsInf, bool, double> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(double src) const { return std::isinf(src); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kIsNan, bool, float> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(float src) const { return std::isnan(src); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kIsNan, bool, double> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(double src) const { return std::isnan(src); }
+};
+
+template<typename Src>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kIsFinite, bool, Src> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(Src src) const { return std::isfinite(src); }
+};
+
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kTrunc, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(std::trunc(src)); }
+};
+
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kRsqrt, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return static_cast<Dst>(static_cast<Src>(1.0) / static_cast<Src>(std::sqrt(src)));
+  }
 };
 
 }  // namespace primitive

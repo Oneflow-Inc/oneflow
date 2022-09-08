@@ -17,15 +17,17 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
+#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/core/vm/symbol_storage.h"
 
 namespace oneflow {
 
-COMMAND(Global<symbol::Storage<ParallelDesc>>::SetAllocated(new symbol::Storage<ParallelDesc>()));
-COMMAND(Global<symbol::Storage<Scope>>::SetAllocated(new symbol::Storage<Scope>()));
-COMMAND(Global<symbol::Storage<JobDesc>>::SetAllocated(new symbol::Storage<JobDesc>()));
-COMMAND(Global<symbol::Storage<OperatorConfSymbol>>::SetAllocated(
+COMMAND(
+    Singleton<symbol::Storage<ParallelDesc>>::SetAllocated(new symbol::Storage<ParallelDesc>()));
+COMMAND(Singleton<symbol::Storage<Scope>>::SetAllocated(new symbol::Storage<Scope>()));
+COMMAND(Singleton<symbol::Storage<JobDesc>>::SetAllocated(new symbol::Storage<JobDesc>()));
+COMMAND(Singleton<symbol::Storage<OperatorConfSymbol>>::SetAllocated(
     new symbol::Storage<OperatorConfSymbol>()));
 
 }  // namespace oneflow

@@ -18,35 +18,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) {
-  bool need_grad = false;
-  const int32_t in_size = op.input_size("in");
-  FOR_RANGE(int32_t, i, 0, in_size) {
-    if (op.NeedGenGradTensor4OpInput("in", i)) { need_grad = true; }
-  }
-  if (need_grad) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    builder = builder.Op("split_like");
-    FOR_RANGE(int32_t, i, 0, in_size) { builder = builder.Input("like", op.input("in", i)); }
-    user_op::UserOpConfWrapper grad_op = builder.Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                                             .Output("out", in_size)
-                                             .Attr("axis", op.attr<int64_t>("axis"))
-                                             .Build();
-
-    FOR_RANGE(int32_t, i, 0, in_size) {
-      if (op.NeedGenGradTensor4OpInput("in", i)) {
-        op.BindGradTensorWithOpInput(grad_op.output("out", i), "in", i);
-      }
-    }
-    AddOp(grad_op);
-  }
-  return Maybe<void>::Ok();
-}
-
-}  // namespace
-
 /* static */ Maybe<void> ConcatOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& first_in_desc = ctx->InputTensorDesc("in", 0);
   const int64_t axis = ctx->Attr<int64_t>("axis");
@@ -72,7 +43,7 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
     }
   }
 
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   const int64_t max_dim_size = ctx->Attr<int64_t>("max_dim_size");
   CHECK_LE_OR_RETURN(out_dim_vec.at(axis), max_dim_size);
   if (dynamic_dim_size == 0) {
@@ -81,7 +52,7 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
     out_desc->set_is_dynamic(true);
     out_dim_vec.at(axis) = max_dim_size;
   }
-  *out_desc->mut_shape() = Shape(out_dim_vec);
+  out_desc->set_shape(Shape(out_dim_vec));
   return Maybe<void>::Ok();
 }
 
@@ -107,8 +78,8 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
         ctx->InputTensorDesc(in_arg_pair.first, in_arg_pair.second);
     CHECK_EQ_OR_RETURN(in_desc.data_type(), first_in_desc.data_type());
   }
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
-  *out_desc->mut_data_type() = first_in_desc.data_type();
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
+  out_desc->set_data_type(first_in_desc.data_type());
   return Maybe<void>::Ok();
 }
 
@@ -117,7 +88,5 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
   CHECK_OR_RETURN(op_conf.input_size("in") >= 2);
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("concat").SetGenBackwardOpConfFn(GenGradOp);
 
 }  // namespace oneflow

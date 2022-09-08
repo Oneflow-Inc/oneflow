@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> IsNanOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -38,12 +38,12 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> IsNanOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kBool;
+  ctx->SetOutputDType("out", 0, DataType::kBool);
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> IsInfOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -62,7 +62,31 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> IsInfOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kBool;
+  ctx->SetOutputDType("out", 0, DataType::kBool);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> IsFiniteOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> IsFiniteOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> IsFiniteOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
+  const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  for (int i = 0; i < in_tensor.shape().NumAxes(); ++i) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+  }
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> IsFiniteOp::InferDataType(user_op::InferContext* ctx) {
+  ctx->SetOutputDType("out", 0, DataType::kBool);
   return Maybe<void>::Ok();
 }
 

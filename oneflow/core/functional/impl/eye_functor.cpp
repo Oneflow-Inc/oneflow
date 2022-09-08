@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -46,10 +47,8 @@ class EyeDevcieFunctor {
   Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device,
                            const bool& requires_grad) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("rows", JUST(rows.As<int64_t>())));
-    JUST(attrs.SetAttr<int64_t>("cols", JUST(cols.value_or(rows).As<int64_t>())));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rows", "cols", "dtype");
+    attrs.SetAllAttrs(rows.As<int64_t>(), cols.value_or(rows).As<int64_t>(), dtype->data_type());
     OpExprInterpContext ctx(attrs);
     ctx.device = device;
     auto res = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
@@ -71,14 +70,13 @@ class EyeDeviceStrFunctor {
   }
 };
 
-class ConsistentEyeSbpListFunctor {
+class GlobalEyeSbpListFunctor {
  public:
-  ConsistentEyeSbpListFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
+  GlobalEyeSbpListFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
   Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Symbol<DType>& dtype, const bool& requires_grad,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
-    MutableAttrMap attrs;
     CHECK_EQ_OR_RETURN(sbp_tuple.size(), placement->hierarchy()->NumAxes())
         << "len(sbp) == len(placement.hierarchy) required, but "
         << "len(sbp)==" << sbp_tuple.size() << ", "
@@ -88,10 +86,7 @@ class ConsistentEyeSbpListFunctor {
       CHECK_OR_RETURN(sbp_tuple.at(i)->has_broadcast_parallel())
           << "sbp of eye should be broadcast only";
     }
-
-    JUST(attrs.SetAttr<int64_t>("rows", JUST(rows.As<int64_t>())));
-    JUST(attrs.SetAttr<int64_t>("cols", JUST(cols.value_or(rows).As<int64_t>())));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rows", "cols", "dtype", "nd_sbp");
     if (LazyMode::is_enabled()) {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
       {
@@ -99,8 +94,13 @@ class ConsistentEyeSbpListFunctor {
           nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
         }
       }
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
+      attrs.SetAllAttrs(rows.As<int64_t>(), cols.value_or(rows).As<int64_t>(), dtype->data_type(),
+                        nd_sbp);
+    } else {
+      attrs.SetAllAttrs(rows.As<int64_t>(), cols.value_or(rows).As<int64_t>(), dtype->data_type(),
+                        NullOpt);
     }
+
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
     auto res = JUST(
         OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp)));
@@ -112,7 +112,7 @@ class ConsistentEyeSbpListFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ConsistentEyeSbpFunctor {
+class GlobalEyeSbpFunctor {
  public:
   Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Symbol<DType>& dtype, const bool& requires_grad,
@@ -125,11 +125,31 @@ class ConsistentEyeSbpFunctor {
 
 }  // namespace impl
 
+class EyeInplaceFunctor {
+ public:
+  EyeInplaceFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    JUST(CheckInplaceValid(x));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rows", "cols", "dtype");
+    attrs.SetAllAttrs(x->shape()->At(0), x->shape()->At(1), x->dtype()->data_type());
+    OpExprInterpContext ctx(attrs);
+    ctx.device = JUST(x->device());
+    JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(), ctx));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 using namespace impl;
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  m.add_functor<EyeDevcieFunctor, EyeDeviceStrFunctor, ConsistentEyeSbpListFunctor,
-                ConsistentEyeSbpFunctor>("Eye");
+  m.add_functor<EyeDevcieFunctor, EyeDeviceStrFunctor, GlobalEyeSbpListFunctor,
+                GlobalEyeSbpFunctor>("Eye");
+  m.add_functor<EyeInplaceFunctor>("EyeInplace");
 };
 
 }  // namespace functional

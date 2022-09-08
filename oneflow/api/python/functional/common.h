@@ -42,7 +42,7 @@ namespace functional {
 
 struct PyObjectPtrDeleter {
   inline void operator()(PyObject* obj) {
-    CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+    CHECK_JUST(Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
       if (obj) { Py_DECREF(obj); }
       obj = NULL;
       return Maybe<void>::Ok();
@@ -123,6 +123,10 @@ Symbol<DType> PyUnpackDType(PyObject* obj);
 // DType list
 bool PyDTypeSequenceCheck(PyObject* obj);
 std::vector<Symbol<DType>> PyUnpackDTypeSequence(PyObject* obj);
+
+// Shape
+bool PyShapeCheck(PyObject* obj);
+Shape PyUnpackShape(PyObject* obj);
 
 // Shape list
 bool PyShapeSequenceCheck(PyObject* obj);

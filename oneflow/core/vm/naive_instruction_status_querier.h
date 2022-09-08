@@ -25,6 +25,7 @@ class NaiveInstrStatusQuerier {
  public:
   ~NaiveInstrStatusQuerier() = default;
 
+  bool launched() const { return done_; }
   bool done() const { return done_; }
   void set_done() { done_ = true; }
 

@@ -13,22 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <iostream>
-#include <vector>
+#include "OneFlow/OneFlowTypes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 
 #include "mlir/IR/MLIRContext.h"
-#include "oneflow/api/common/ofblob.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/just.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/memory/memory_case_util.h"
 
+#include <iostream>
+#include <vector>
 namespace mlir {
 
 namespace oneflow {
@@ -69,19 +72,23 @@ namespace {
   return ::oneflow::Device::ParseAndNew(device_info).GetOrThrow();
 }
 
-template<typename T>
+template<typename T, typename MLIR_T>
 mlir::DenseElementsAttr __TensorToDenseElementsAttr(
-    const std::shared_ptr<::oneflow::one::Tensor>& tensor, const mlir::FloatType& float_type) {
+    const std::shared_ptr<::oneflow::one::Tensor>& tensor, const MLIR_T& mlir_type) {
   ::oneflow::LazyMode::Guard guard{false};
   const auto tensor_ = ::oneflow::one::functional::ToContiguous(tensor).GetPtrOrThrow();
   auto shape = tensor_->shape();
   std::vector<int64_t> shape_vec(shape->dim_vec().begin(), shape->dim_vec().end());
   std::vector<T> data(shape->elem_cnt());
-  const auto& callback = [&](uint64_t ofblob_ptr) {
-    CHECK_JUST(::oneflow::BlobBufferCopyUtil<T>::To(ofblob_ptr, data.data(), data.size()));
-  };
+  const auto& callback =
+      [&](::oneflow::ep::Stream* stream,
+          const std::shared_ptr<::oneflow::vm::EagerBlobObject>& eager_blob_object) {
+        ::oneflow::AutoMemcpy(stream, data.data(), eager_blob_object->dptr(),
+                              data.size() * sizeof(T), ::oneflow::memory::MakeHostMemCase(),
+                              eager_blob_object->mem_case());
+      };
   ::oneflow::one::SyncAccessTensorWithTimeOut(tensor_, callback, "const").GetOrThrow();
-  return mlir::DenseElementsAttr::get(mlir::RankedTensorType::get(shape_vec, float_type),
+  return mlir::DenseElementsAttr::get(mlir::RankedTensorType::get(shape_vec, mlir_type),
                                       llvm::makeArrayRef(data));
 }
 
@@ -101,10 +108,13 @@ std::shared_ptr<::oneflow::one::Tensor> __DenseElementsAttrToTensor(
           .GetPtrOrThrow();
 
   std::vector<T> data(dense_attr.getValues<T>().begin(), dense_attr.getValues<T>().end());
-  const auto& callback = [&](uint64_t of_blob_ptr) {
-    ::oneflow::BlobBufferCopyUtil<T>::From(of_blob_ptr, data.data(), tensor->shape()->elem_cnt())
-        .GetOrThrow();
-  };
+  const auto& callback =
+      [&](::oneflow::ep::Stream* stream,
+          const std::shared_ptr<::oneflow::vm::EagerBlobObject>& eager_blob_object) {
+        ::oneflow::AutoMemcpy(stream, eager_blob_object->mut_dptr(), data.data(),
+                              tensor->shape()->elem_cnt() * sizeof(T),
+                              eager_blob_object->mem_case(), ::oneflow::memory::MakeHostMemCase());
+      };
   ::oneflow::one::SyncAccessTensorWithTimeOut(tensor, callback, "mut").GetOrThrow();
   return tensor;
 }
@@ -115,7 +125,12 @@ mlir::DenseElementsAttr TensorToDenseElementsAttr(
     const std::shared_ptr<::oneflow::one::Tensor>& tensor, MLIRContext* ctx) {
   const auto dtype = tensor->dtype()->data_type();
   if (dtype == ::oneflow::DataType::kFloat) {
-    return __TensorToDenseElementsAttr<float>(tensor, mlir::FloatType::getF32(ctx));
+    return __TensorToDenseElementsAttr<float, mlir::FloatType>(tensor,
+                                                               mlir::FloatType::getF32(ctx));
+  } else if (dtype == ::oneflow::DataType::kInt64) {
+    auto mlir_type = mlir::IntegerType::IntegerType::get(
+        ctx, 64, mlir::IntegerType::SignednessSemantics::Signed);
+    return __TensorToDenseElementsAttr<int64_t, mlir::IntegerType>(tensor, mlir_type);
   }
   llvm::errs() << "Converting oneflow::Tensor to mlir::DenseElementsAttr only support float32 now."
                << "\n";
@@ -132,11 +147,35 @@ std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
     return __DenseElementsAttrToTensor<float>(dense_attr_, device_tag_attr, device_name_attr,
                                               ::oneflow::DataType::kFloat);
   }
-  llvm::errs() << "Converting mlir::DenseElementsAttr to oneflow::Tensor only support float32 now."
-               << "\n";
+  llvm::errs()
+      << "Converting mlir::DenseElementsAttr to oneflow::Tensor only support float32 and int64 now."
+      << "\n";
   exit(EXIT_FAILURE);
 }
 
+::oneflow::DataType GetDataTypeFromMLIRType(Type dt) {
+  if (dt.dyn_cast<InvalidElementType>()) { return ::oneflow::DataType::kInvalidDataType; }
+  if (dt.dyn_cast<CharElementType>()) { return ::oneflow::DataType::kChar; }
+  if (dt.dyn_cast<OFRecordElementType>()) { return ::oneflow::DataType::kOFRecord; }
+  if (dt.dyn_cast<TensorBufferElementType>()) { return ::oneflow::DataType::kTensorBuffer; }
+  if (dt.isF16()) { return ::oneflow::DataType::kFloat16; }
+  if (dt.isF32()) { return ::oneflow::DataType::kFloat; }
+  if (dt.isF64()) { return ::oneflow::DataType::kDouble; }
+
+  if (dt.isSignlessInteger(8)) { return ::oneflow::DataType::kBool; }
+  if (dt.isSignlessInteger(16)) { return ::oneflow::DataType::kUInt16; }
+  if (dt.isSignlessInteger(32)) { return ::oneflow::DataType::kUInt32; }
+  if (dt.isSignlessInteger(64)) { return ::oneflow::DataType::kUInt64; }
+  if (dt.isSignlessInteger(128)) { return ::oneflow::DataType::kUInt128; }
+
+  if (dt.isSignedInteger(8)) { return ::oneflow::DataType::kInt8; }
+  if (dt.isSignedInteger(16)) { return ::oneflow::DataType::kInt16; }
+  if (dt.isSignedInteger(32)) { return ::oneflow::DataType::kInt32; }
+  if (dt.isSignedInteger(64)) { return ::oneflow::DataType::kInt64; }
+  if (dt.isSignedInteger(128)) { return ::oneflow::DataType::kInt128; }
+  llvm::errs() << "unsupported data type: " << dt << "\n";
+  exit(1);
+}
 }  // namespace support
 
 }  // namespace oneflow

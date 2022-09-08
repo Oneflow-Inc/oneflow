@@ -21,13 +21,13 @@ namespace oneflow {
 /* static */ Maybe<void> CombinedMarginLossOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& label = ctx->InputTensorDesc("label", 0);
-  user_op::TensorDesc* theta = ctx->OutputTensorDesc("theta", 0);
+  user_op::TensorDesc* theta = ctx->MutOutputTensorDesc("theta", 0);
   CHECK_EQ_OR_RETURN(label.shape().At(0), x.shape().At(0));
   CHECK_GE_OR_RETURN(x.shape().NumAxes(), 2);
-  *ctx->OutputShape("y", 0) = ctx->InputShape("x", 0);
-  *ctx->IsDynamic4ArgNameAndIndex("y", 0) = ctx->InputIsDynamic("x", 0);
-  *theta->mut_is_dynamic() = x.is_dynamic();
-  *theta->mut_shape() = label.shape();
+  ctx->SetOutputShape("y", 0, ctx->InputShape("x", 0));
+  ctx->SetIsDynamic4ArgNameAndIndex("y", 0, ctx->InputIsDynamic("x", 0));
+  theta->set_is_dynamic(x.is_dynamic());
+  theta->set_shape(label.shape());
   return Maybe<void>::Ok();
 }
 
@@ -59,8 +59,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CombinedMarginLossOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
-  *ctx->OutputDType("theta", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
+  ctx->SetOutputDType("theta", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -72,8 +72,8 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(label.shape().At(0), dy.shape().At(0));
   CHECK_EQ_OR_RETURN(label.shape().At(0), theta.shape().At(0));
   CHECK_GE_OR_RETURN(dy.shape().NumAxes(), 2);
-  *ctx->OutputShape("dx", 0) = ctx->InputShape("dy", 0);
-  *ctx->IsDynamic4ArgNameAndIndex("dx", 0) = ctx->InputIsDynamic("dy", 0);
+  ctx->SetOutputShape("dx", 0, ctx->InputShape("dy", 0));
+  ctx->SetIsDynamic4ArgNameAndIndex("dx", 0, ctx->InputIsDynamic("dy", 0));
   return Maybe<void>::Ok();
 }
 
@@ -99,29 +99,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CombinedMarginLossGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("combined_margin_loss")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op = builder.Op("combined_margin_loss_grad")
-                                                 .Input("label", op.input("label", 0))
-                                                 .Input("theta", op.output("theta", 0))
-                                                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                                                 .Output("dx")
-                                                 .Attr("m1", op.attr<float>("m1"))
-                                                 .Attr("m2", op.attr<float>("m2"))
-                                                 .Attr("m3", op.attr<float>("m3"))
-                                                 .Attr("depth", op.attr<int64_t>("depth"))
-                                                 .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

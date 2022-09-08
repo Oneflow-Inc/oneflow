@@ -32,10 +32,10 @@ class CpuPReluKernel final : public user_op::OpKernel {
     const T* x_ptr = x->dptr<T>();
     const T* alpha_ptr = alpha->dptr<T>();
     T* y_ptr = y->mut_dptr<T>();
-    const int32_t elem_cnt = x->shape().elem_cnt();
-    const int32_t alpha_size = alpha->shape().elem_cnt();
-    const int batch = x->shape().At(0);
-    const int channels = (x->shape().NumAxes() == 1) ? 1 : x->shape().At(1);
+    const int32_t elem_cnt = x->shape_view().elem_cnt();
+    const int32_t alpha_size = alpha->shape_view().elem_cnt();
+    const int batch = x->shape_view().At(0);
+    const int channels = (x->shape_view().NumAxes() == 1) ? 1 : x->shape_view().At(1);
     const int32_t inner_size = elem_cnt / batch / channels;
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
       y_ptr[i] = x_ptr[i] > 0 ? x_ptr[i] : x_ptr[i] * alpha_ptr[(i / inner_size) % alpha_size];
@@ -71,14 +71,14 @@ class CpuPReluGradKernel final : public user_op::OpKernel {
     T* dx_ptr = dx->mut_dptr<T>();
     T* alpha_diff_ptr = alpha_diff->mut_dptr<T>();
 
-    const int32_t elem_cnt = x->shape().elem_cnt();
-    const int32_t alpha_size = alpha->shape().elem_cnt();
-    const int batch = x->shape().At(0);
-    const int channels = (x->shape().NumAxes() == 1) ? 1 : x->shape().At(1);
+    const int32_t elem_cnt = x->shape_view().elem_cnt();
+    const int32_t alpha_size = alpha->shape_view().elem_cnt();
+    const int batch = x->shape_view().At(0);
+    const int channels = (x->shape_view().NumAxes() == 1) ? 1 : x->shape_view().At(1);
     const int32_t inner_size = elem_cnt / batch / channels;
 
     Memset<DeviceType::kCPU>(ctx->stream(), alpha_diff->mut_dptr<T>(), 0,
-                             alpha_diff->shape().elem_cnt() * sizeof(T));
+                             alpha_diff->shape_view().elem_cnt() * sizeof(T));
 
     for (int i = 0; i < elem_cnt; i++) {
       const T x_i = x_ptr[i];

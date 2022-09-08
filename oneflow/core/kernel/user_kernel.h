@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
-#include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/kernel/kernel.h"
 
 #ifdef WITH_CUDA
@@ -51,6 +50,7 @@ class UserKernel final : public Kernel {
   void ForwardUserKernel(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                          user_op::OpKernelState* opkernel_state) const;
   bool IsCudaGraphSupported() const;
+  bool IsReadyForCudaGraphCapture(KernelContext* ctx) const;
 
  private:
   void VirtualKernelInit(KernelContext* ctx) override;

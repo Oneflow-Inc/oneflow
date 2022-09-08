@@ -15,6 +15,6 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - uses: Oneflow-Inc/get-oneflow/update-benchmark-history@update-open-vino-img
+      - uses: Oneflow-Inc/get-oneflow/update-benchmark-history@support-iree-ci
         name: Update benchmark history
         timeout-minutes: 10

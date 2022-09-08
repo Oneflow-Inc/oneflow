@@ -21,8 +21,6 @@ add_docstr(
     """
     searchsorted() -> oneflow.Tensor
 
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.searchsorted.html?highlight=searchsorted
-
     Find the indices from the innermost dimension of sorted_sequence such that, if the corresponding values
     in values were inserted before the indices, the order of the corresponding innermost dimension within
     sorted_sequence would be preserved. Return a new tensor with the same size as values. If right is False
@@ -39,6 +37,8 @@ add_docstr(
     N-D                 True       sorted_sequence[m][n]...[l][i-1] <= values[m][n]...[l][x] 
                                                     sorted_sequence[m][n]...[l][i]
     =================  =========  ==========================================================================
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.searchsorted.html
 
     Args:
         sorted_sequence (Tensor): N-D or 1-D tensor, containing monotonically increasing sequence on the

@@ -22,8 +22,6 @@ namespace oneflow {
 namespace {
 
 typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn;
-typedef std::function<Maybe<void>(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
-    GenBackwardOpConfFn;
 
 TensorDescInferFn MaxPoolMakeForwardTensorDescInferFn(const int32_t dim) {
   return [dim](user_op::InferContext* ctx) -> Maybe<void> {
@@ -47,15 +45,14 @@ TensorDescInferFn MaxPoolMakeForwardTensorDescInferFn(const int32_t dim) {
 
     const MaxPoolParams3D params_3d(dim, x_shape, data_format, padding, kernel_size, stride,
                                     dilation, return_indices, ceil_mode);
-    user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
+    user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
     *y_desc = ctx->InputTensorDesc("x", 0);
-    *y_desc->mut_shape() = params_3d.GetYShape();
+    y_desc->set_shape(params_3d.GetYShape());
 
-    user_op::TensorDesc* indice_desc = ctx->OutputTensorDesc("indice", 0);
-    *indice_desc = *ctx->OutputTensorDesc("y", 0);
-    *indice_desc->mut_shape() = *y_desc->mut_shape();
-    DataType* dtype = indice_desc->mut_data_type();
-    *dtype = kInt64;
+    user_op::TensorDesc* indice_desc = ctx->MutOutputTensorDesc("indice", 0);
+    *indice_desc = *ctx->MutOutputTensorDesc("y", 0);
+    indice_desc->set_shape(y_desc->shape());
+    indice_desc->set_data_type(kInt64);
     return Maybe<void>::Ok();
   };
 }
@@ -85,43 +82,18 @@ Maybe<void> MaxPoolBackwardGetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-GenBackwardOpConfFn MaxPoolMakeBackwardOpConfFn(const int32_t dim) {
-  return [dim](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {
-    if (op.NeedGenGradTensor4OpInput("x", 0)) {
-      user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-      user_op::UserOpConfWrapper grad_op =
-          builder.Op("max_pool_" + std::to_string(dim) + "d_grad")
-              .Input("x", op.input("x", 0))
-              .Input("indice", op.output("indice", 0))
-              .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-              .Output("dx")
-              .Attr("data_format", op.attr<std::string>("data_format"))
-              .Attr("padding", op.attr<std::vector<int32_t>>("padding"))
-              .Attr("kernel_size", op.attr<std::vector<int32_t>>("kernel_size"))
-              .Attr("stride", op.attr<std::vector<int32_t>>("stride"))
-              .Attr("dilation", op.attr<std::vector<int32_t>>("dilation"))
-              .Attr("return_indices", op.attr<bool>("return_indices"))
-              .Attr("ceil_mode", op.attr<bool>("ceil_mode"))
-              .Build();
-      op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-      AddOp(grad_op);
-    }
-    return Maybe<void>::Ok();
-  };
-}
-
 Maybe<void> BackwardTensorDescInferFn(user_op::InferContext* ctx) {
-  *ctx->OutputTensorDesc("dx", 0) = ctx->InputTensorDesc("x", 0);
+  *ctx->MutOutputTensorDesc("dx", 0) = ctx->InputTensorDesc("x", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> FwInferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 }  // namespace
@@ -163,23 +135,5 @@ IMPLEMENT_MAXPOOL_BACKWARD_FUNCS(MaxPool1D)
 IMPLEMENT_MAXPOOL_BACKWARD_FUNCS(MaxPool2D)
 IMPLEMENT_MAXPOOL_BACKWARD_FUNCS(MaxPool3D)
 #undef IMPLEMENT_MAXPOOL_BACKWARD_FUNCS
-
-REGISTER_USER_OP_GRAD("max_pool_1d").SetGenBackwardOpConfFn(MaxPoolMakeBackwardOpConfFn(1));
-REGISTER_USER_OP_GRAD("max_pool_2d").SetGenBackwardOpConfFn(MaxPoolMakeBackwardOpConfFn(2));
-REGISTER_USER_OP_GRAD("max_pool_3d").SetGenBackwardOpConfFn(MaxPoolMakeBackwardOpConfFn(3));
-
-#define IMPLEMENT_AVGPOOL_FUNCS(name, ndim)                                              \
-  /*static*/ Maybe<void> name##Op::GetSbp(user_op::SbpContext* ctx) {                    \
-    return AvgPoolForwardGetSbpFn(ctx);                                                  \
-  }                                                                                      \
-  /*static*/ Maybe<void> name##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
-    return AvgPoolMakeForwardTensorDescInferFn(ndim)(ctx);                               \
-  }                                                                                      \
-  /*static*/ Maybe<void> name##Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
-    return InferLogicalTensorDesc(ctx);                                                  \
-  }                                                                                      \
-  /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {           \
-    return FwInferDataType(ctx);                                                         \
-  }
 
 }  // namespace oneflow

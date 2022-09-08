@@ -29,6 +29,15 @@ import oneflow.nn as nn
 import oneflow.unittest
 
 
+class CustomModuleForSaveLoad(flow.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.param = flow.nn.Parameter(flow.randn(1, 3, 3, 3))
+
+    def forward(self, x):
+        return self.param + x
+
+
 def np_relu(np_arr):
     return np.where(np_arr > 0, np_arr, 0)
 
@@ -176,6 +185,49 @@ class TestModule(flow.unittest.TestCase):
         test_case.assertEqual(module_num, 2)
 
     @flow.unittest.skip_unless_1n1d()
+    def test_load_map_location(test_case):
+        x = flow.ones(1, 2, 3)
+        y = flow.ones(2, 3, 4)
+        with tempfile.TemporaryDirectory() as save_dir:
+            flow.save({"x": x, "y": y}, save_dir)
+            loaded = flow.load(save_dir, map_location="cuda")
+        assert np.array_equal(loaded["x"].numpy(), x.numpy())
+        assert loaded["x"].device == flow.device("cuda")
+        assert np.array_equal(loaded["y"].numpy(), y.numpy())
+        assert loaded["y"].device == flow.device("cuda")
+
+        with tempfile.TemporaryDirectory() as save_dir:
+            flow.save({"x": x, "y": y}, save_dir)
+            loaded = flow.load(save_dir, map_location="cpu")
+        assert np.array_equal(loaded["x"].numpy(), x.numpy())
+        assert loaded["x"].device == flow.device("cpu")
+        assert np.array_equal(loaded["y"].numpy(), y.numpy())
+        assert loaded["y"].device == flow.device("cpu")
+
+        x = x.to_global(sbp=flow.sbp.broadcast, placement=flow.placement("cuda", [0]))
+        y = y.to_global(sbp=flow.sbp.broadcast, placement=flow.placement("cuda", [0]))
+
+        with tempfile.TemporaryDirectory() as save_dir:
+            flow.save({"x": x, "y": y}, save_dir, global_dst_rank=0)
+            loaded = flow.load(
+                save_dir, global_src_rank=0, map_location=flow.placement("cuda", [0])
+            )
+        assert np.array_equal(loaded["x"].numpy(), x.numpy())
+        assert loaded["x"].placement == flow.placement("cuda", [0])
+        assert np.array_equal(loaded["y"].numpy(), y.numpy())
+        assert loaded["y"].placement == flow.placement("cuda", [0])
+
+        with tempfile.TemporaryDirectory() as save_dir:
+            flow.save({"x": x, "y": y}, save_dir, global_dst_rank=0)
+            loaded = flow.load(
+                save_dir, global_src_rank=0, map_location=flow.placement("cpu", [0])
+            )
+        assert np.array_equal(loaded["x"].numpy(), x.numpy())
+        assert loaded["y"].placement == flow.placement("cpu", [0])
+        assert np.array_equal(loaded["y"].numpy(), y.numpy())
+        assert loaded["y"].placement == flow.placement("cpu", [0])
+
+    @flow.unittest.skip_unless_1n1d()
     def test_save_state_dict(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):
@@ -201,8 +253,7 @@ class TestModule(flow.unittest.TestCase):
         res2 = m()
         test_case.assertTrue(np.array_equal(res1.numpy(), res2.numpy()))
 
-    @flow.unittest.skip_unless_1n4d()
-    def test_save_and_load_global_from_nested_dict(test_case):
+    def _test_save_and_load_global_from_nested_dict(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -254,6 +305,38 @@ class TestModule(flow.unittest.TestCase):
             res2 = m1() + m2()
 
         test_case.assertTrue(np.array_equal(res1.numpy(), res2.numpy()))
+
+    @flow.unittest.skip_unless_1n4d()
+    def test_save_and_load_global_from_nested_dict_1n4d(test_case):
+        test_case._test_save_and_load_global_from_nested_dict()
+
+    @flow.unittest.skip_unless_2n2d()
+    def test_save_and_load_global_from_nested_dict_2n2d(test_case):
+        test_case._test_save_and_load_global_from_nested_dict()
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_save_load_module_directly(test_case):
+        x = flow.randn(1, 3, 3, 3)
+
+        m = CustomModuleForSaveLoad()
+
+        with tempfile.TemporaryDirectory() as f:
+            flow.save(m, f)
+            new_m = flow.load(f)
+            res = m(x)
+            new_res = new_m(x)
+            test_case.assertTrue(np.array_equal(res.numpy(), new_res.numpy()))
+
+        m = flow.nn.parallel.DistributedDataParallel(m)
+        test_case.assertTrue(m._is_ddp_module)
+
+        with tempfile.TemporaryDirectory() as f:
+            flow.save(m, f)
+            new_m = flow.load(f)
+            test_case.assertTrue(new_m._is_ddp_module)
+            res = m(x)
+            new_res = new_m(x)
+            test_case.assertTrue(np.array_equal(res.numpy(), new_res.numpy()))
 
     @flow.unittest.skip_unless_1n1d()
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -320,6 +403,20 @@ class TestModule(flow.unittest.TestCase):
         input = flow.tensor(np.random.randn(4, 10, 32, 32), dtype=flow.float32)
         output = model(input, "conv", "relu")
         test_case.assertEqual(output.shape, flow.Size([4, 10, 30, 30]))
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_module_delattr(test_case):
+        class ConvBNModule(nn.Module):
+            def __init__(self):
+                super(ConvBNModule, self).__init__()
+                self.conv = nn.Conv2d(1, 2, 1, 1)
+                self.bn = nn.BatchNorm2d(2)
+
+            def forward(self, x):
+                return self.bn(self.conv(x))
+
+        m = ConvBNModule()
+        delattr(m, "bn")
 
 
 if __name__ == "__main__":

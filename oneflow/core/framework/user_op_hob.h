@@ -46,6 +46,7 @@ ALWAYS_INLINE inline auto HobDataType(const std::string& tensor_name, int tensor
   return hob::make_custom(
       string_stream.str(), [tensor_name, tensor_idx](const KernelRegContext& ctx) -> DataType {
         const user_op::TensorDesc* desc = ctx.TensorDesc4ArgNameAndIndex(tensor_name, tensor_idx);
+        CHECK(desc != nullptr) << "key `" << tensor_name << "_" << tensor_idx << "` not found.";
         return desc->data_type();
       });
 }

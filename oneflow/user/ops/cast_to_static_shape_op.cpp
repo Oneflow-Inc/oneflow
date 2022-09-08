@@ -20,8 +20,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> CastToStaticShapeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
-  user_op::TensorDesc* output_desc = ctx->OutputTensorDesc("output", 0);
-  *output_desc->mut_shape() = input_desc.shape();
+  user_op::TensorDesc* output_desc = ctx->MutOutputTensorDesc("output", 0);
+  output_desc->set_shape(input_desc.shape());
   output_desc->set_is_dynamic(false);
   return Maybe<void>::Ok();
 }
@@ -46,24 +46,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CastToStaticShapeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("output", 0) = ctx->InputDType("input", 0);
+  ctx->SetOutputDType("output", 0, ctx->InputDType("input", 0));
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("cast_to_static_shape")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("input", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper identity_op =
-            builder.Op("identity")
-                .Input("in", op.GetGradTensorWithOpOutput("output", 0))
-                .Output("out")
-                .Build();
-        op.BindGradTensorWithOpInput(identity_op.output("out", 0), "input", 0);
-        AddOp(identity_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

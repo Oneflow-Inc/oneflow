@@ -14,130 +14,180 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/ndarray/ndarray_util.h"
-#include "oneflow/user/kernels/loss_kernel_util.h"
+#include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/job/nd_sbp_util.h"
+#include "oneflow/user/kernels/nll_kernel_util.h"
 
 namespace oneflow {
-namespace user_op {
+
 namespace {
 
-using namespace loss;
+class NLLKernelCache final : public user_op::OpKernelCache {
+ public:
+  NLLKernelCache(int64_t class_start, int64_t num_classes)
+      : class_start_(class_start), num_classes_(num_classes) {}
+  ~NLLKernelCache() override = default;
 
-template<typename T, typename K>
-void ComputeNllOut(int64_t num_instances, K num_classes, K ignore_index, const T* input,
-                   const K* target, T* out, const T* weight, T* total_weight) {
-  *total_weight = 0;
-  FOR_RANGE(int64_t, i, 0, num_instances) {
-    K label = target[i];
-    if (label == ignore_index) {
-      out[i] = 0;
-      continue;
+  int64_t class_start() const { return class_start_; }
+  int64_t num_classes() const { return num_classes_; }
+
+ private:
+  const int64_t class_start_;
+  const int64_t num_classes_;
+};
+
+std::shared_ptr<user_op::OpKernelCache> CreateNLLKernelCache(user_op::KernelCacheContext* ctx) {
+  CHECK_GT(ctx->parallel_ctx().parallel_num(), 0) << ctx->op_name() << ": invalid parallel_ctx";
+  if (ctx->parallel_ctx().parallel_num() == 1) { return nullptr; }
+
+  const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("input", 0);
+  const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
+  CHECK_EQ(nd_sbp.sbp_parallel_size(), hierarchy.NumAxes())
+      << ctx->op_name() << ": Expected input sbp " << NdSbpToString(nd_sbp) << " match hierarchy "
+      << hierarchy.ToString();
+
+  const Shape& shape = ctx->LogicalTensorDesc4ArgNameAndIndex("input", 0)->shape();
+  const int64_t class_axis = shape.NumAxes() - 1;
+
+  bool split_class_dim = false;
+  for (const auto& sbp : nd_sbp.sbp_parallel()) {
+    if (sbp.has_split_parallel() && sbp.split_parallel().axis() == class_axis) {
+      split_class_dim = true;
+      break;
     }
-    CHECK_GE(label, 0);
-    CHECK_LT(label, num_classes);
-    T cur_weight = weight == nullptr ? 1 : weight[label];
-    *total_weight += cur_weight;
-    out[i] = -input[i * num_classes + label] * cur_weight;
   }
+
+  if (!split_class_dim) { return nullptr; }
+
+  TensorSliceView view =
+      GetTensorSliceView4ParallelId(hierarchy, nd_sbp, shape, ctx->parallel_ctx().parallel_id());
+  return std::make_shared<NLLKernelCache>(view.At(class_axis).begin(), view.At(class_axis).size());
 }
-template<typename T, typename K>
-void ComputeNllGradOut(int64_t num_instances, K num_classes, K ignore_index, const K* target,
-                       const T* dy, T* dx, const T* weight, const T* total_weight) {
-  FOR_RANGE(int64_t, i, 0, num_instances) {
-    K label = target[i];
-    if (label == ignore_index) { continue; }
-    CHECK_GE(label, 0);
-    CHECK_LT(label, num_classes);
-    T cur_weight = weight == nullptr ? -1 : -weight[label];
-    dx[i * num_classes + label] = dy[i] * cur_weight;
-  }
-}
-template<typename T, typename K>
-class NllKernel final : public user_op::OpKernel {
- public:
-  NllKernel() = default;
-  ~NllKernel() = default;
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto* input_blob = ctx->Tensor4ArgNameAndIndex("input", 0);
-    const auto* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
-    auto* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    auto* total_weight_blob = ctx->Tensor4ArgNameAndIndex("total_weight", 0);
-
-    const int64_t num_instances = target_blob->shape().elem_cnt();
-    CHECK_EQ(input_blob->shape().elem_cnt() % num_instances, 0);
-    const K num_classes = static_cast<K>(input_blob->shape().elem_cnt() / num_instances);
-    const K ignore_index = static_cast<K>(ctx->Attr<int64_t>("ignore_index"));
-
-    const T* input = input_blob->dptr<T>();
-    const K* target = target_blob->dptr<K>();
-    T* out = out_blob->mut_dptr<T>();
-    T* total_weight = total_weight_blob->mut_dptr<T>();
-    const T* weight =
-        ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
-
-    ComputeNllOut(num_instances, num_classes, ignore_index, input, target, out, weight,
-                  total_weight);
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-template<typename T, typename K>
-class NllGradKernel final : public user_op::OpKernel {
- public:
-  NllGradKernel() = default;
-  ~NllGradKernel() = default;
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto* input_blob = ctx->Tensor4ArgNameAndIndex("input", 0);
-    const auto* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
-    const auto* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    auto* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    auto* total_weight_blob = ctx->Tensor4ArgNameAndIndex("total_weight", 0);
-
-    const int64_t num_instances = target_blob->shape().elem_cnt();
-    const int64_t input_elem_cnt = input_blob->shape().elem_cnt();
-    CHECK_EQ(input_elem_cnt % num_instances, 0);
-    const K num_classes = static_cast<K>(input_elem_cnt / num_instances);
-    const K ignore_index = static_cast<K>(ctx->Attr<int64_t>("ignore_index"));
-
-    const T* dy = dy_blob->dptr<T>();
-    const K* target = target_blob->dptr<K>();
-    const T* total_weight = total_weight_blob->dptr<T>();
-    T* dx = dx_blob->mut_dptr<T>();
-    const T* weight =
-        ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>() : nullptr;
-    Memset<DeviceType::kCPU>(ctx->stream(), dx, 0, GetCudaAlignedSize(input_elem_cnt * sizeof(T)));
-    ComputeNllGradOut(num_instances, num_classes, ignore_index, target, dy, dx, weight,
-                      total_weight);
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
 
 }  // namespace
-#define REGISTER_NLL_KERNEL(dtype_pair, ltype_pair)                                            \
-  REGISTER_USER_KERNEL("nll")                                                                  \
-      .SetCreateFn<NllKernel<OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ltype_pair)>>()    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                          \
-                       && (user_op::HobDataType("target", 0) == OF_PP_PAIR_SECOND(ltype_pair)) \
-                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
-#define REGISTER_NLL_GRAD_KERNEL(dtype_pair, ltype_pair)                                        \
-  REGISTER_USER_KERNEL("nll_grad")                                                              \
-      .SetCreateFn<NllGradKernel<OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ltype_pair)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
-                       && (user_op::HobDataType("target", 0) == OF_PP_PAIR_SECOND(ltype_pair))  \
-                       && (user_op::HobDataType("dy", 0) == OF_PP_PAIR_SECOND(dtype_pair))      \
-                       && (user_op::HobDataType("dx", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
+template<DeviceType device_type, typename T, typename K>
+class NLLKernel final : public user_op::OpKernel {
+ public:
+  NLLKernel() = default;
+  ~NLLKernel() override = default;
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_NLL_KERNEL, FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateNLLKernelCache(ctx);
+  }
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_NLL_GRAD_KERNEL, FLOATING_DATA_TYPE_SEQ,
-                                 INDEX_DATA_TYPE_SEQ)
-}  // namespace user_op
+ private:
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache* cache) const override {
+    const auto* input = ctx->Tensor4ArgNameAndIndex("input", 0);
+    const auto* target = ctx->Tensor4ArgNameAndIndex("target", 0);
+    auto* output = ctx->Tensor4ArgNameAndIndex("output", 0);
+    auto* out_weight = ctx->Tensor4ArgNameAndIndex("out_weight", 0);
+
+    const int64_t N = target->shape_view().elem_cnt();
+    const int64_t C = input->shape_view().At(input->shape_view().NumAxes() - 1);
+    CHECK_LE(N, std::numeric_limits<int32_t>::max())
+        << "Expected batch size not exceed int32 numeric limits";
+
+    K class_start = 0;
+    if (cache) {
+      const auto* spec_cache = dynamic_cast<const NLLKernelCache*>(cache);
+      CHECK_NOTNULL(spec_cache);
+      CHECK_EQ(spec_cache->num_classes(), C) << ctx->op_name() << ": expected num_classes " << C
+                                             << ", got " << spec_cache->num_classes();
+      class_start = spec_cache->class_start();
+    }
+
+    const K ignore_index = static_cast<K>(ctx->Attr<int64_t>("ignore_index"));
+
+    const T* weight_dptr = nullptr;
+    if (ctx->has_input("weight", 0)) {
+      weight_dptr = CHECK_NOTNULL(ctx->Tensor4ArgNameAndIndex("weight", 0))->dptr<T>();
+    }
+
+    NLLKernelUtil<device_type, T, K>::Forward(ctx->stream(), static_cast<int32_t>(N),
+                                              static_cast<K>(C), class_start, ignore_index,
+                                              input->dptr<T>(), target->dptr<K>(), weight_dptr,
+                                              output->mut_dptr<T>(), out_weight->mut_dptr<T>());
+  }
+};
+
+template<DeviceType device_type, typename T, typename K>
+class NLLGradKernel final : public user_op::OpKernel {
+ public:
+  NLLGradKernel() = default;
+  ~NLLGradKernel() override = default;
+
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateNLLKernelCache(ctx);
+  }
+
+ private:
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache* cache) const override {
+    const auto* target = ctx->Tensor4ArgNameAndIndex("target", 0);
+    const auto* out_grad = ctx->Tensor4ArgNameAndIndex("out_grad", 0);
+    auto* in_grad = ctx->Tensor4ArgNameAndIndex("in_grad", 0);
+
+    const int64_t N = target->shape_view().elem_cnt();
+    const int64_t C = in_grad->shape_view().At(in_grad->shape_view().NumAxes() - 1);
+    CHECK_LE(N, std::numeric_limits<int32_t>::max())
+        << "Expected batch size not exceed int32 numeric limits";
+
+    K class_start = 0;
+    if (cache) {
+      const auto* spec_cache = dynamic_cast<const NLLKernelCache*>(cache);
+      CHECK_NOTNULL(spec_cache);
+      CHECK_EQ(spec_cache->num_classes(), C) << ctx->op_name() << ": expected num_classes " << C
+                                             << ", got " << spec_cache->num_classes();
+      class_start = spec_cache->class_start();
+    }
+
+    const K ignore_index = static_cast<K>(ctx->Attr<int64_t>("ignore_index"));
+
+    const T* weight_dptr = nullptr;
+    if (ctx->has_input("weight", 0)) {
+      weight_dptr = CHECK_NOTNULL(ctx->Tensor4ArgNameAndIndex("weight", 0))->dptr<T>();
+    }
+
+    NLLKernelUtil<device_type, T, K>::Backward(
+        ctx->stream(), static_cast<int32_t>(N), static_cast<K>(C), class_start, ignore_index,
+        out_grad->dptr<T>(), target->dptr<K>(), weight_dptr, in_grad->mut_dptr<T>());
+  }
+};
+
+#define REGISTER_NLL_KERNELS(device, dtype, ltype)                                            \
+  REGISTER_USER_KERNEL("nll").SetCreateFn<NLLKernel<device, dtype, ltype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == device)                                                    \
+      && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)                      \
+      && (user_op::HobDataType("target", 0) == GetDataType<ltype>::value));                   \
+  REGISTER_USER_KERNEL("nll_grad")                                                            \
+      .SetCreateFn<NLLGradKernel<device, dtype, ltype>>()                                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)     \
+                       && (user_op::HobDataType("target", 0) == GetDataType<ltype>::value)    \
+                       && (user_op::HobDataType("out_grad", 0) == GetDataType<dtype>::value))
+
+REGISTER_NLL_KERNELS(DeviceType::kCPU, float, int32_t);
+REGISTER_NLL_KERNELS(DeviceType::kCPU, float, int64_t);
+REGISTER_NLL_KERNELS(DeviceType::kCPU, double, int32_t);
+REGISTER_NLL_KERNELS(DeviceType::kCPU, double, int64_t);
+
+#ifdef WITH_CUDA
+
+REGISTER_NLL_KERNELS(DeviceType::kCUDA, float, int32_t);
+REGISTER_NLL_KERNELS(DeviceType::kCUDA, float, int64_t);
+REGISTER_NLL_KERNELS(DeviceType::kCUDA, double, int32_t);
+REGISTER_NLL_KERNELS(DeviceType::kCUDA, double, int64_t);
+REGISTER_NLL_KERNELS(DeviceType::kCUDA, half, int32_t);
+REGISTER_NLL_KERNELS(DeviceType::kCUDA, half, int64_t);
+
+#endif  // WITH_CUDA
+
 }  // namespace oneflow

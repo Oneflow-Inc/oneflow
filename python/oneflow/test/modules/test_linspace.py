@@ -28,7 +28,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestLinspace(flow.unittest.TestCase):
-    @autotest(n=30, auto_backward=False, rtol=1e-5, atol=1e-5, check_graph=True)
+    @autotest(n=5, auto_backward=False, rtol=1e-5, atol=1e-5, check_graph=True)
     def test_linspace_int_with_random_data(test_case):
         start = random().to(int)
         end = start + random().to(int)
@@ -38,7 +38,7 @@ class TestLinspace(flow.unittest.TestCase):
         x.to(device)
         return x
 
-    @autotest(n=30, auto_backward=False, rtol=1e-5, atol=1e-5, check_graph=True)
+    @autotest(n=5, auto_backward=False, rtol=1e-5, atol=1e-5, check_graph=True)
     def test_linspace_float_with_random_data(test_case):
         start = random()
         end = start + random()
@@ -47,6 +47,14 @@ class TestLinspace(flow.unittest.TestCase):
         device = random_device()
         x.to(device)
         return x
+
+    @autotest(n=5, auto_backward=False)
+    def test_linspace_with_scalar_tensor_as_params(test_case):
+        start = random_tensor(2, 3, 4, requires_grad=False).mean()
+        end = start + random_tensor(2, 3, 4, requires_grad=False).mean()
+        steps = random(0, 10).to(int)
+        y = torch.linspace(start=start, end=end, steps=steps)
+        return y
 
     def test_global_naive(test_case):
         placement = flow.placement("cpu", ranks=[0])

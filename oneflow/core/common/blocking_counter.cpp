@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/env_var/env_var.h"
 
@@ -36,7 +36,7 @@ int64_t BlockingCounter::Decrease() {
 }
 
 Maybe<void> BlockingCounter::WaitUntilCntEqualZero(size_t timeout_seconds) {
-  return Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
+  return Singleton<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
     std::chrono::duration<size_t> seconds(timeout_seconds);
     std::unique_lock<std::mutex> lck(mtx_);
     CHECK_OR_RETURN(cond_.wait_for(lck, seconds, [this]() { return cnt_val_ == 0; }))

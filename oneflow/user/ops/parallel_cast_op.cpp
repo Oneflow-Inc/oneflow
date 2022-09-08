@@ -23,15 +23,15 @@ namespace oneflow {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }
 /*static*/ Maybe<void> ParallelCastOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ParallelCastOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return ParallelCastOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ParallelCastOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ParallelCastOp::InferSbpSignature(user_op::InferSbpSignatureFnContext* ctx) {
@@ -59,30 +59,5 @@ namespace oneflow {
   }
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("parallel_cast")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      if (ctx->FwOp().NeedGenGradTensor4OpInput("in", 0)) {
-        const auto& grad_sbp_parallel_str = ctx->FwOp().attr<std::string>("grad_sbp_parallel");
-        if (grad_sbp_parallel_str.empty()) {
-          ctx->FwOp().BindGradTensorWithOpInput(ctx->FwOp().GetGradTensorWithOpOutput("out", 0),
-                                                "in", 0);
-        } else {
-          CHECK_OR_RETURN(IsValidSbpParallelString(grad_sbp_parallel_str));
-          const std::string grad_op_name = "System-AutoGrad-" + ctx->FwOp().op_name();
-          ctx->DefineOp(grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
-            return builder.OpTypeName("parallel_cast")
-                .InputBind("in", ctx->FwOp().output_grad("out", 0))
-                .Output("out")
-                .Attr("sbp_parallel", grad_sbp_parallel_str)
-                .Build();
-          });
-          ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), [&]() -> const std::string& {
-            return ctx->GetOp(grad_op_name).output("out", 0);
-          });
-        }
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

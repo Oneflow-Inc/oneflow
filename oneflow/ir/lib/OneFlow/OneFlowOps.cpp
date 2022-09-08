@@ -17,6 +17,7 @@ limitations under the License.
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/Passes.h"
+#include "OneFlow/SBP/SBPAttributes.h"
 #include "llvm/ADT/StringRef.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -29,7 +30,6 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
-#include "oneflow/api/common/ofblob.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/job/lazy_mode.h"
@@ -155,6 +155,7 @@ struct ConcreteUserOps : public OpRewritePattern<UserOp> {
       NamedAttrList attributes(op->getAttrDictionary());
       attributes.erase(op.input_sizesAttrName());
       attributes.erase(op.output_sizesAttrName());
+      attributes.erase(op.output_lbnsAttrName());
       attributes.erase(OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr());
       attributes.erase(OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr());
       llvm::SmallVector<int32_t> input_sizes, output_sizes;

@@ -31,8 +31,8 @@ namespace oneflow {
 
   CHECK_OR_RETURN(current_train_step.NumAxes() == 1 && current_train_step.At(0) == 1);
 
-  *ctx->OutputShape("scale", 0) = Shape({1});
-  *ctx->OutputShape("zero_point", 0) = Shape({1});
+  ctx->SetOutputShape("scale", 0, Shape({1}));
+  ctx->SetOutputShape("zero_point", 0, Shape({1}));
   return Maybe<void>::Ok();
 }
 
@@ -87,8 +87,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> MovingAverageMinMaxObserverOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("scale", 0) = ctx->InputDType("in", 0);
-  *ctx->OutputDType("zero_point", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("scale", 0, ctx->InputDType("in", 0));
+  ctx->SetOutputDType("zero_point", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 

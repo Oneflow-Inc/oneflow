@@ -58,6 +58,7 @@ void TestCache(Cache* cache, uint32_t line_size) {
   uint32_t* n_evicted;
   int64_t* d_evicted_keys;
   int64_t* evicted_keys;
+  uint8_t* mask;
   const size_t keys_size = n_keys * sizeof(int64_t);
   OF_CUDA_CHECK(cudaMalloc(&d_keys, keys_size));
   OF_CUDA_CHECK(cudaMallocHost(&keys, keys_size));
@@ -77,6 +78,7 @@ void TestCache(Cache* cache, uint32_t line_size) {
   OF_CUDA_CHECK(cudaMallocHost(&n_evicted, sizeof(uint32_t)));
   OF_CUDA_CHECK(cudaMalloc(&d_evicted_keys, keys_size));
   OF_CUDA_CHECK(cudaMallocHost(&evicted_keys, keys_size));
+  OF_CUDA_CHECK(cudaMalloc(&mask, n_keys));
   std::vector<int64_t> random_keys(n_keys * 32);
   std::iota(random_keys.begin(), random_keys.end(), 1);
   std::random_device rd;
@@ -118,6 +120,9 @@ void TestCache(Cache* cache, uint32_t line_size) {
 
     // get
     OF_CUDA_CHECK(cudaDeviceSynchronize());
+    if (cache->Policy() == CacheOptions::Policy::kFull) {
+      cache->Get(stream, n_keys, d_keys, d_values, mask);
+    }
     cache->Get(stream, n_keys, d_keys, d_values, d_n_missing, d_missing_keys, d_missing_indices);
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     OF_CUDA_CHECK(cudaMemcpy(n_missing, d_n_missing, sizeof(uint32_t), cudaMemcpyDefault));
@@ -202,6 +207,7 @@ void TestCache(Cache* cache, uint32_t line_size) {
   OF_CUDA_CHECK(cudaFreeHost(n_evicted));
   OF_CUDA_CHECK(cudaFree(d_evicted_keys));
   OF_CUDA_CHECK(cudaFreeHost(evicted_keys));
+  OF_CUDA_CHECK(cudaFree(mask));
   device->DestroyStream(stream);
 }
 

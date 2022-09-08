@@ -14,51 +14,83 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/expand_kernel_utils.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 
 namespace oneflow {
 
+namespace {
+
+Maybe<void> InferExpandOutputStride(const Shape& input_shape, const Stride& input_stride,
+                                    const Shape& expand_shape, Stride* output_stride) {
+  CHECK_EQ_OR_RETURN(input_shape.size(), input_stride.size());  // NOLINT(maybe-need-error-msg)
+  size_t lpad = expand_shape.size() - input_shape.size();
+  CHECK_GE_OR_RETURN(lpad, 0);  // NOLINT(maybe-need-error-msg)
+
+  output_stride->resize(expand_shape.size(), 0);
+  for (int i = expand_shape.size() - 1; i >= 0; --i) {
+    int64_t dim = i < lpad ? 1 : input_shape[i - lpad];
+    if (dim == expand_shape[i]) {
+      if (i >= lpad) {
+        output_stride->at(i) = input_stride[i - lpad];
+      } else if (i < expand_shape.size() - 1) {
+        output_stride->at(i) = output_stride->at(i + 1) * expand_shape[i + 1];
+      }
+    } else {
+      CHECK_EQ_OR_RETURN(dim, 1);  // NOLINT(maybe-need-error-msg)
+    }
+  }
+  // NOTE: expand op only can output contiguous stride,
+  // because lazy don't support to_contiguous op for now
+  *output_stride = Stride(expand_shape);
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
 /* static */ Maybe<void> ExpandOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& input_shape = ctx->InputShape("in", 0);
-  const std::vector<int32_t>& logical_expand_shape =
-      ctx->Attr<std::vector<int32_t>>("logical_expand_shape");
+  const Stride& input_stride = ctx->InputStride("in", 0);
+  const Shape& expand_shape = ctx->Attr<Shape>("expand_shape");
 
-  std::vector<int32_t> in_shape;
-  in_shape.resize(input_shape.NumAxes());
-  for (int i = 0; i < input_shape.NumAxes(); ++i) { in_shape[i] = input_shape.At(i); }
+  ctx->SetOutputShape("out", 0, expand_shape);
 
-  std::vector<int32_t> out_shape;
-  std::vector<int32_t> stride;
-  CHECK_JUST(getOutShapeAndStrideForFp(in_shape, logical_expand_shape, out_shape, stride));
-
-  Shape* output_shape = ctx->OutputShape("out", 0);
-  DimVector dim_vec(out_shape.begin(), out_shape.end());
-  *output_shape = Shape(dim_vec);
-
+  Stride output_stride;
+  JUST(InferExpandOutputStride(input_shape, input_stride, expand_shape, &output_stride));
+  ctx->SetOutputStride("out", 0, output_stride);
   return Maybe<void>::Ok();
 }
 
 /*static*/ Maybe<void> ExpandOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
+  const Shape& input_shape = ctx->InputShape("in", 0);
+  const Stride& input_stride = ctx->InputStride("in", 0);
+
+  const auto& global_expand_shape = ctx->Attr<Shape>("expand_shape");
+  const auto& output_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  const auto& device_mesh = *ctx->parallel_desc().hierarchy();
+  const auto& rank = ctx->parallel_ctx().parallel_id();
+  const auto local_view =
+      GetTensorSliceView4ParallelId(device_mesh, output_sbp, global_expand_shape, rank);
+  const auto& local_expand_shape = local_view.shape();
+  ctx->SetOutputShape("out", 0, local_expand_shape);
+
+  Stride output_stride;
+  JUST(InferExpandOutputStride(input_shape, input_stride, local_expand_shape, &output_stride));
+  ctx->SetOutputStride("out", 0, output_stride);
+  return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> ExpandOp::GetSbp(user_op::SbpContext* ctx) {
-  const std::vector<int32_t>& logical_in_shape =
-      ctx->Attr<std::vector<int32_t>>("logical_in_shape");
-  const std::vector<int32_t>& logical_expand_shape =
-      ctx->Attr<std::vector<int32_t>>("logical_expand_shape");
-  std::vector<int32_t> logical_out_shape;
-  std::vector<int32_t> stride;
-  CHECK_JUST(
-      getOutShapeAndStride(logical_in_shape, logical_expand_shape, logical_out_shape, stride));
+  const auto& global_in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
+  const auto& global_expand_shape = ctx->Attr<Shape>("expand_shape");
+  size_t lpad = global_expand_shape.size() - global_in_shape.size();
+  CHECK_GE_OR_RETURN(lpad, 0);  // NOLINT(maybe-need-error-msg)
 
-  int offset = logical_out_shape.size() - logical_in_shape.size();
-  FOR_RANGE(int64_t, i, 0, logical_in_shape.size()) {
-    if (logical_in_shape[i] == logical_out_shape[i + offset]) {
+  for (size_t i = 0; i < global_in_shape.size(); ++i) {
+    if (global_in_shape[i] == global_expand_shape[i + lpad]) {
       ctx->NewBuilder()
           .Split(user_op::OpArg("in", 0), i)
-          .Split(user_op::OpArg("out", 0), i + offset)
+          .Split(user_op::OpArg("out", 0), i + lpad)
           .Build();
     }
   }
@@ -67,85 +99,13 @@ namespace oneflow {
       .PartialSum(user_op::OpArg("in", 0))
       .PartialSum(user_op::OpArg("out", 0))
       .Build();
+
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> ExpandOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
-
-/* static */ Maybe<void> ExpandGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& input_shape = ctx->InputShape("in", 0);
-  const std::vector<int32_t>& logical_out_shape =
-      ctx->Attr<std::vector<int32_t>>("logical_out_shape");
-  const std::vector<int32_t>& logical_expand_shape =
-      ctx->Attr<std::vector<int32_t>>("logical_expand_shape");
-
-  std::vector<int32_t> in_shape;
-  in_shape.resize(input_shape.NumAxes());
-  for (int i = 0; i < input_shape.NumAxes(); ++i) { in_shape[i] = input_shape.At(i); }
-  std::vector<int32_t> out_shape;
-  std::vector<int32_t> stride;
-  CHECK_JUST(getOutShapeAndStrideForBp(logical_out_shape, logical_expand_shape, in_shape, out_shape,
-                                       stride));
-
-  Shape* output_shape = ctx->OutputShape("out", 0);
-  DimVector dim_vec(out_shape.begin(), out_shape.end());
-  *output_shape = Shape(dim_vec);
-  return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> ExpandGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
-/* static */ Maybe<void> ExpandGradOp::GetSbp(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& input_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-  const std::vector<int32_t>& logical_out_shape =
-      ctx->Attr<std::vector<int32_t>>("logical_out_shape");
-  const std::vector<int32_t>& logical_expand_shape =
-      ctx->Attr<std::vector<int32_t>>("logical_expand_shape");
-
-  int offset = input_tensor.shape().NumAxes() - logical_out_shape.size();
-  FOR_RANGE(int64_t, i, 0, logical_out_shape.size()) {
-    if (logical_out_shape[i] == input_tensor.shape().At(i + offset)) {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("in", 0), i + offset)
-          .Split(user_op::OpArg("out", 0), i)
-          .Build();
-    }
-  }
-
-  ctx->NewBuilder()
-      .PartialSum(user_op::OpArg("in", 0))
-      .PartialSum(user_op::OpArg("out", 0))
-      .Build();
-  return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> ExpandGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-  return Maybe<void>::Ok();
-}
-
-REGISTER_USER_OP_GRAD("expand").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                          user_op::AddOpFn AddOp) -> Maybe<void> {
-  if (op.NeedGenGradTensor4OpInput("in", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper grad_op =
-        builder.Op("expand_grad")
-            .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-            .Output("out")
-            .Attr<std::vector<int32_t>>("logical_out_shape",
-                                        op.attr<std::vector<int32_t>>("logical_in_shape"))
-            .Attr<std::vector<int32_t>>("logical_expand_shape",
-                                        op.attr<std::vector<int32_t>>("logical_expand_shape"))
-            .Build();
-    op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
-    AddOp(grad_op);
-  }
-  return Maybe<void>::Ok();
-});
 
 }  // namespace oneflow

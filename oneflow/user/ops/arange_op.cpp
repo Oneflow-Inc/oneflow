@@ -21,7 +21,6 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> ArangeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  Shape* out_shape = ctx->OutputShape("out", 0);
   DataType dtype = ctx->Attr<DataType>("dtype");
   int64_t range_elem_cnt = 0;
   if (IsIntegralDataType(dtype)) {
@@ -46,7 +45,7 @@ namespace oneflow {
         << "RuntimeError: upper bound and larger bound inconsistent with step sign";
     range_elem_cnt = std::ceil(static_cast<double>(float_limit - float_start) / float_delta);
   }
-  *out_shape = Shape({range_elem_cnt});
+  ctx->SetOutputShape("out", 0, Shape({range_elem_cnt}));
   return Maybe<void>::Ok();
 }
 
@@ -84,10 +83,11 @@ namespace oneflow {
   const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
 
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-  const Shape& physical_shape =
-      GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id).shape();
+  const auto tensor_slice_view =
+      GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id);
+  const Shape& physical_shape = tensor_slice_view.shape();
 
-  *ctx->OutputShape("out", 0) = physical_shape;
+  ctx->SetOutputShape("out", 0, physical_shape);
 
   return Maybe<void>::Ok();
 }
@@ -104,7 +104,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> ArangeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
+  ctx->SetOutputDType("out", 0, ctx->Attr<DataType>("dtype"));
   return Maybe<void>::Ok();
 }
 
