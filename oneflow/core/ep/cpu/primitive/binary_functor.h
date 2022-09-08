@@ -65,7 +65,7 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFmod, bfloat16, bfloat16> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC bfloat16 operator()(bfloat16 src0, bfloat16 src1) const {
-    return static_cast<bfloat16>(std::fmod(static_cast<float>(src0), static_cast<float>(src1)));
+    return std::fmod(src0, src1);
   }
 };
 
@@ -99,7 +99,7 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorDiv, bfloat16, bfloat16> 
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC bfloat16 operator()(bfloat16 src0, bfloat16 src1) const {
-    return static_cast<bfloat16>(std::floor(static_cast<float>(src0) / static_cast<float>(src1)));
+    return std::floor(src0 / src1);
   }
 };
 

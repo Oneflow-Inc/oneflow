@@ -74,7 +74,7 @@ class TestNewTensor(flow.unittest.TestCase):
         tensor = flow.tensor(np_array, dtype=flow.bfloat16, device="cuda")
         test_case.assertEqual(tensor.dtype, flow.bfloat16)
         test_case.assertEqual(tensor.device, flow.device("cuda"))
-    
+
     @flow.unittest.skip_unless_1n1d()
     def test_new_cpu_bfloat16_local_tensor_with_numpy(test_case):
         np_array = np.random.rand(4, 4)
