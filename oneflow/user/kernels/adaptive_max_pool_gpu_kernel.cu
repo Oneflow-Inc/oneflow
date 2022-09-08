@@ -86,11 +86,12 @@ __global__ void AdaptiveMaxPoolCudaKernel(const T* input, T* output, int64_t* re
 }
 
 template<typename T>
-__global__ void AdaptiveMaxPoolGradCudaKernel(T* input, const T* output, int num_elems, int in_d,
-                                              int in_h, int in_w, int out_d, int out_h, int out_w) {
+__global__ void AdaptiveMaxPoolGradCudaKernel(T* input, const T* output, const int64_t* index,
+                                              int num_elems, int in_d, int in_h, int in_w,
+                                              int out_d, int out_h, int out_w) {
   const int out_panel_size = out_d * out_h * out_w;
   const int in_panel_size = in_d * in_h * in_w;
-
+  printf("in_d, in_h, in_w, num_elems: %d, %d, %d, %d, %d\n", in_d, in_h, in_w, num_elems);
   CUDA_1D_KERNEL_LOOP(idx, num_elems) {
     // TODO (Tianyu): Replace following codes with 'NdIndexOffsetHelper'
     int bc_idx = idx / out_panel_size;
@@ -110,18 +111,8 @@ __global__ void AdaptiveMaxPoolGradCudaKernel(T* input, const T* output, int num
     int in_end_w = END_IND(out_w_idx, out_w, in_w);
     int k_w = in_end_w - in_start_w;
 
-    const T grad_delta = output[idx] / k_d / k_h / k_w;
-    T* input_ptr =
-        input + bc_idx * in_panel_size + in_start_d * in_h * in_w + in_start_h * in_w + in_start_w;
-    for (int id = 0; id < k_d; ++id) {
-      for (int ih = 0; ih < k_h; ++ih) {
-        for (int iw = 0; iw < k_w; ++iw) {
-          // TODO (Tianyu): Use 'atmoic::Add' when necessary
-          cuda::atomic::Add(input_ptr + ih * in_w + iw, grad_delta);
-        }
-      }
-      input_ptr += in_h * in_w;  // next input depth
-    }
+    T* input_ptr = input + bc_idx * in_panel_size;
+    cuda::atomic::Add(input_ptr + index[idx], output[idx]);
   }
 }
 
@@ -154,8 +145,11 @@ template<typename T, int32_t dim>
 void MaxBackwardCompute(KernelComputeContext* ctx) {
   const Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
   Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
+  const user_op::Tensor* return_indices = ctx->Tensor4ArgNameAndIndex("index", 0);
+
   const T* out_ptr = out_tensor->dptr<T>();
   T* in_ptr = in_tensor->mut_dptr<T>();
+  const int64_t* index_ptr = return_indices->dptr<int64_t>();
 
   const Shape& dx_shape = ctx->TensorDesc4ArgNameAndIndex("dx", 0)->shape();
   const Shape& dy_shape = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->shape();
@@ -170,7 +164,8 @@ void MaxBackwardCompute(KernelComputeContext* ctx) {
 
   RUN_CUDA_KERNEL((InitPtr<T>), ctx->stream(), in_elems, in_elems, in_ptr);
   RUN_CUDA_KERNEL((AdaptiveMaxPoolGradCudaKernel<T>), ctx->stream(), out_elems, in_ptr, out_ptr,
-                  out_elems, in.At(2), in.At(3), in.At(4), out.At(2), out.At(3), out.At(4));
+                  index_ptr, out_elems, in.At(2), in.At(3), in.At(4), out.At(2), out.At(3),
+                  out.At(4));
 }
 
 template<DeviceType device_type, typename T, int32_t dim>
