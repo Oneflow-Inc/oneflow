@@ -119,7 +119,7 @@ def generate_necessity_for_bce_loss():
     batch_size = random(low=2, high=5).to(int)
     extra_dim = [random().to(int) for _ in range(ndim - 2)]
     input_requires_grad = True
-    target_requires_grad = random_bool().value()
+    target_requires_grad = False
     return (
         random_tensor(
             ndim, batch_size, num_classes, *extra_dim, requires_grad=input_requires_grad
