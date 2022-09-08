@@ -21,7 +21,6 @@ import os
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 os.environ["ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"] = "1"
 import oneflow as flow
-import oneflow.unittest
 
 
 def _test_okl_relu_with_cpu(test_case: flow.unittest.TestCase):

@@ -10203,20 +10203,12 @@ class OneFlow_JITLikeOp <string mnemonic> : OneFlow_BaseOp<mnemonic, [CallOpInte
 
 // Group: MLIR_JIT
 // mlir_jit
-// Total: 1
+// Total: 2
 
 #ifdef GET_ONEFLOW_MLIR_JIT_OP_DEFINITIONS
 
 def OneFlow_MlirJitOp : OneFlow_JITLikeOp<"mlir_jit"> {}
 
-#endif // GET_ONEFLOW_MLIR_JIT_OP_DEFINITIONS
-
-// Group: KERNEL_LAUNCH
-// kernel_launch
-// Total: 1
-
-#ifdef GET_ONEFLOW_KERNEL_LAUNCH_OP_DEFINITIONS
-
 def OneFlow_KernelLaunchOp : OneFlow_JITLikeOp<"kernel_launch"> {}
 
-#endif // GET_ONEFLOW_KERNEL_LAUNCH_OP_DEFINITIONS
+#endif // GET_ONEFLOW_MLIR_JIT_OP_DEFINITIONS
