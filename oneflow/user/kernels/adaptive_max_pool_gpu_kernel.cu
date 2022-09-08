@@ -91,26 +91,8 @@ __global__ void AdaptiveMaxPoolGradCudaKernel(T* input, const T* output, const i
                                               int out_d, int out_h, int out_w) {
   const int out_panel_size = out_d * out_h * out_w;
   const int in_panel_size = in_d * in_h * in_w;
-  printf("in_d, in_h, in_w, num_elems: %d, %d, %d, %d, %d\n", in_d, in_h, in_w, num_elems);
   CUDA_1D_KERNEL_LOOP(idx, num_elems) {
-    // TODO (Tianyu): Replace following codes with 'NdIndexOffsetHelper'
     int bc_idx = idx / out_panel_size;
-    int out_d_idx = (idx % out_panel_size) / out_w / out_h;
-    int out_h_idx = (idx % out_panel_size) % (out_h * out_w) / out_w;
-    int out_w_idx = (idx % out_panel_size) % (out_h * out_w) % out_w;
-
-    int in_start_d = START_IND(out_d_idx, out_d, in_d);
-    int in_end_d = END_IND(out_d_idx, out_d, in_d);
-    int k_d = in_end_d - in_start_d;
-
-    int in_start_h = START_IND(out_h_idx, out_h, in_h);
-    int in_end_h = END_IND(out_h_idx, out_h, in_h);
-    int k_h = in_end_h - in_start_h;
-
-    int in_start_w = START_IND(out_w_idx, out_w, in_w);
-    int in_end_w = END_IND(out_w_idx, out_w, in_w);
-    int k_w = in_end_w - in_start_w;
-
     T* input_ptr = input + bc_idx * in_panel_size;
     cuda::atomic::Add(input_ptr + index[idx], output[idx]);
   }
