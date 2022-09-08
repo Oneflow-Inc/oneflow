@@ -246,7 +246,8 @@ void KernelLaunchCompute(user_op::KernelComputeContext* ctx) {
 
   auto reg_ctx = std::make_unique<KernelLaunchOpKernelRegContext>(module_op.get());
   const user_op::OpKernelRegistryResult* res =
-      CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult("relu", *reg_ctx));
+      CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
+          reg_ctx->GetOp()->getName().stripDialect().str(), *reg_ctx));
   KernelLaunchComputeContext kl_comp_ctx(std::move(reg_ctx), ctx);
   const oneflow::user_op::OpKernel* kernel = res->create_fn();
   if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(&mlir_ctx, *module_op))) {
@@ -262,7 +263,7 @@ void KernelLaunchCompute(user_op::KernelComputeContext* ctx) {
   CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
                         << llvm::toString(jit_or_error.takeError());
   auto jit = std::move(jit_or_error.get());
-  auto error = jit->invoke("relu2D0", &kl_comp_ctx, kernel);
+  auto error = jit->invoke(ctx->op_name(), &kl_comp_ctx, kernel);
   CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
 }
 }  // namespace
