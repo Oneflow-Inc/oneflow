@@ -14,35 +14,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-
-import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=3, check_graph=False)
-def _test_roll_impl(test_case, placement, sbp):
-    shifts = (
-        random(-100, 100).to(int).value(),
-        random(-100, 100).to(int).value(),
-        random(-100, 100).to(int).value(),
-        random(-100, 100).to(int).value(),
+@autotest(n=1, check_graph=False)
+def _test_vector_matrix_product(test_case, placement, sbp):
+    dim = random(1, 6)
+    vec = random_tensor(1, dim0=dim).to_global(placement=placement, sbp=sbp)
+    mat = random_tensor(2, dim0=dim, dim1=constant(4)).to_global(
+        placement=placement, sbp=sbp
     )
-    dims = (0, 1, 2, 3)
-    x_dims = [random(2, 4) * 8 for _ in range(4)]
-    x = random_tensor(4, *x_dims)
-    y = x.to_global(placement=placement, sbp=sbp)
-    z = torch.roll(y, shifts, dims)
-    return z
+    return torch.matmul(vec, mat)
 
 
-class TestRollConsistent(flow.unittest.TestCase):
+class TestGlobalVectorMatrixProduct(flow.unittest.TestCase):
     @globaltest
-    def test_roll(test_case):
+    def test_vector_matrix_product(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=4):
-                _test_roll_impl(test_case, placement, sbp)
+            for sbp in all_sbp(placement):
+                _test_vector_matrix_product(test_case, placement, sbp)
 
 
 if __name__ == "__main__":

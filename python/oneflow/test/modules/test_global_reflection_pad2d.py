@@ -18,27 +18,33 @@ import unittest
 
 import oneflow as flow
 import oneflow.unittest
+
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=2, check_graph=False)
-def _test_repeat_impl(test_case, ndim, placement, sbp):
-    dims = [random(1, 4).to(int).value() * 8 for _ in range(ndim)]
-    repeat_size = [random(1, 3).to(int).value() for _ in range(ndim)]
-    x = random_tensor(ndim, *dims)
+@autotest(n=1, check_graph=False)
+def _test_reflection_pad2d_impl(test_case, padding, placement, sbp):
+    m = torch.nn.ReflectionPad2d(padding=padding)
+    dims = [random(2, 4) * 8 for _ in range(4)]
+    x = random_tensor(4, *dims)
     y = x.to_global(placement=placement, sbp=sbp)
-    z = y.repeat(repeat_size)
+    z = m(y)
     return z
 
 
-class TestRepeatConsistent(flow.unittest.TestCase):
+class TestReflectionPad2dGlobal(flow.unittest.TestCase):
     @globaltest
-    def test_repeat(test_case):
-        # random ndim in range [1,3]
-        ndim = random(1, 4).to(int).value()
+    def test_reflection_pad2d(test_case):
+        padding = [
+            (2, 2, 1, 1),
+            1,
+            (1, 0, 1, 0),
+            (0, 1, 0, 1),
+        ]
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=ndim):
-                _test_repeat_impl(test_case, ndim, placement, sbp)
+            for sbp in all_sbp(placement, max_dim=4):
+                for pad in padding:
+                    _test_reflection_pad2d_impl(test_case, pad, placement, sbp)
 
 
 if __name__ == "__main__":

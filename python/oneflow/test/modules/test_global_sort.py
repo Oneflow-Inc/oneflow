@@ -18,26 +18,28 @@ from collections import OrderedDict
 
 import oneflow as flow
 import oneflow.unittest
-
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
-def _test_round_impl(test_case, ndim, placement, sbp):
-    x_dims = [random(2, 4) * 8 for _ in range(ndim)]
-    x = random_tensor(ndim, *x_dims)
+@autotest(n=2, check_graph=False)
+def _test_sort_impl(test_case, placement, sbp):
+    x_dims = [random(2, 4) * 8 for _ in range(4)]
+    x = random_tensor(4, *x_dims)
+    dim = random(0, 4).to(int).value()
+    descending = random().to(bool).value()
+
     y = x.to_global(placement=placement, sbp=sbp)
-    z = torch.round(y)
-    return z
+    sort_result = torch.sort(y, dim=dim, descending=descending)
+    value = sort_result[0]
+    return value
 
 
-class TestRoundConsistent(flow.unittest.TestCase):
+class TestSortGlobal(flow.unittest.TestCase):
     @globaltest
-    def test_round(test_case):
-        ndim = random(1, 5).to(int).value()
+    def test_sort(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=ndim):
-                _test_round_impl(test_case, ndim, placement, sbp)
+            for sbp in all_sbp(placement, max_dim=4):
+                _test_sort_impl(test_case, placement, sbp)
 
 
 if __name__ == "__main__":

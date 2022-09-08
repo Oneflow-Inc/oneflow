@@ -14,32 +14,35 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-from collections import OrderedDict
 
+import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=2, check_graph=False)
-def _test_sort_impl(test_case, placement, sbp):
+@autotest(n=3, check_graph=False)
+def _test_roll_impl(test_case, placement, sbp):
+    shifts = (
+        random(-100, 100).to(int).value(),
+        random(-100, 100).to(int).value(),
+        random(-100, 100).to(int).value(),
+        random(-100, 100).to(int).value(),
+    )
+    dims = (0, 1, 2, 3)
     x_dims = [random(2, 4) * 8 for _ in range(4)]
     x = random_tensor(4, *x_dims)
-    dim = random(0, 4).to(int).value()
-    descending = random().to(bool).value()
-
     y = x.to_global(placement=placement, sbp=sbp)
-    sort_result = torch.sort(y, dim=dim, descending=descending)
-    value = sort_result[0]
-    return value
+    z = torch.roll(y, shifts, dims)
+    return z
 
 
-class TestSortConsistent(flow.unittest.TestCase):
+class TestRollGlobal(flow.unittest.TestCase):
     @globaltest
-    def test_sort(test_case):
+    def test_roll(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):
-                _test_sort_impl(test_case, placement, sbp)
+                _test_roll_impl(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
