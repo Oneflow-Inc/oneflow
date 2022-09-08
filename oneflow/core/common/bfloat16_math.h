@@ -51,15 +51,9 @@ inline oneflow::bfloat16 rsqrt(oneflow::bfloat16 a) {
   return 1.0 / std::sqrt(static_cast<float>(a));
 }
 inline oneflow::bfloat16 abs(oneflow::bfloat16 a) { return std::abs(static_cast<float>(a)); }
-#if defined(_MSC_VER) && defined(__CUDACC__)
-inline oneflow::bfloat16 pow(oneflow::bfloat16 a, double b) {
-  return std::pow(static_cast<float>(a), static_cast<float>(b));
-}
-#else
 inline oneflow::bfloat16 pow(oneflow::bfloat16 a, double b) {
   return std::pow(static_cast<float>(a), b);
 }
-#endif
 inline oneflow::bfloat16 pow(oneflow::bfloat16 a, oneflow::bfloat16 b) {
   return std::pow(static_cast<float>(a), static_cast<float>(b));
 }

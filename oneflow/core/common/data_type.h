@@ -44,20 +44,10 @@ struct IsFloat16;
 template<>
 struct IsFloat16<float16> : std::true_type {};
 
-template<>
-struct IsFloat16<bfloat16> : std::true_type {};
-
 #ifdef WITH_CUDA
 
 template<>
 struct IsFloat16<half> : std::true_type {};
-
-#if CUDA_VERSION >= 11000
-
-template<>
-struct IsFloat16<nv_bfloat16> : std::true_type {};
-
-#endif  // CUDA_VERSION >= 11000
 
 #endif  // WITH_CUDA
 
