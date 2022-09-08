@@ -49,6 +49,8 @@ class MemoryShareStrategy {
       const HashMap<RegstDescProto*, int64_t>& regst_desc2offset,
       const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
 
+  size_t ComputeOptimalAdjustedCost();
+
  private:
   // left registers store the first registers on the left, which have smaller offsets.
   // For example, 1 < 2 < 3 < 5
@@ -61,11 +63,35 @@ class MemoryShareStrategy {
   //      left_registers[5] = {3, 4}
   //  We know that 1 < 3, but 1 is not in left_registers[3],
   //  since we only store the first registers.
-  std::vector<std::vector<int32_t>> left_registers;
+  std::vector<HashSet<int32_t>> left_registers;
+  // Store all the registers which exist simultaneously.
+  std::vector<HashSet<int32_t>> excluded_registers;
+  // Back up the changes
+  std::vector<HashSet<int32_t>> backup_registers;
+  HashSet<int32_t> backup_register_behind_i;
+  // A buffer which implies whether we should visit a register
+  std::vector<int32_t> should_visit;
+  int32_t total_register_num_;
   // Initialization
   void InitRegister(
       const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
   void InitRegisterInformation();
+  // Eliminate one register
+  void EliminateRegister(int32_t i);
+  // Find all the left registers of i and link those compact excluded ones for j.
+  // Not including i itself.
+  void LookForwardLink(int32_t i, int32_t j);
+  // Whether x_i < x_j is compact
+  // Return false even if x_i < x_k < x_j, where i, j, k are excluded.
+  bool CompactLessThan(int32_t i, int32_t j);
+  // Whether i and j occurs simultaneously
+  bool Exclude(int32_t i, int32_t j);
+  // If the previous strategy without the elimination of i has fewer cost, recover to the previous
+  // one from the backup.
+  void RecoverFromBackup(int32_t i);
+  // Let x_i occupy some space [x_i, x_i + l_i), then we recompute the optimal cost
+  size_t ComputeOptimalCostWithOccupation(int32_t i, int64_t x_i,
+                                          const std::vector<int64_t>& register_offset_backup);
 
   // Assemble x_i + l_i <= z
   // z = max(x_i) for all the i
@@ -74,6 +100,7 @@ class MemoryShareStrategy {
   void MinimizeZ();
   // Compute optimal cost with compact relationship
   size_t ComputeOptimalCost4CompactRelationship();
+  size_t ComputeOptimalCostFrom0();
   // Compute offset with compact relationship
   int64_t ComputeOffset4CompactRelationship(int32_t i);
 };
