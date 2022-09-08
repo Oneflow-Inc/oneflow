@@ -33,9 +33,7 @@ def _test_flow_tensor_global_broadcast_matmul_with_random_data(
 
 
 @autotest(n=1, check_graph=False)
-def _test_flow_tensor_global_x_broadcast_y_matmul(
-    test_case, placement, x_sbp, y_sbp
-):
+def _test_flow_tensor_global_x_broadcast_y_matmul(test_case, placement, x_sbp, y_sbp):
     batch_dim = random(1, 6) * 8
     k = random(1, 6) * 4
     x = random_tensor(ndim=2, dim1=k).to_global(placement=placement, sbp=x_sbp)
