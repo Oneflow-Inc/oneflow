@@ -367,44 +367,54 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
       ThreadPool thread_pool(thread_pool_size);
       for (int64_t rank_id = 1; rank_id < GlobalProcessCtx::WorldSize(); ++rank_id) {
         thread_pool.AddWork([this, rank_id, &plan_name_prefix, &counter]() {
+          std::string rank_plan_name = plan_name_prefix + std::to_string(rank_id);
           // Creat sub-plan.
+          auto tc_sub_plan = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
           Plan sub_plan;
           sub_plan.mutable_job_confs()->CopyFrom(plan_.job_confs());
+          tc_sub_plan->Count(rank_plan_name + " add job conf", 1);
           sub_plan.mutable_collective_boxing_plan()->CopyFrom(plan_.collective_boxing_plan());
+          tc_sub_plan->Count(rank_plan_name + " add collective boxing", 1);
           sub_plan.mutable_ctrl_regst_desc_info()->CopyFrom(plan_.ctrl_regst_desc_info());
+          tc_sub_plan->Count(rank_plan_name + " add ctrl regst", 1);
           for (auto& pair : plan_.job_id2op_attribute_ref_table()) {
             sub_plan.mutable_job_id2op_attribute_ref_table()->insert(pair);
           }
+          tc_sub_plan->Count(rank_plan_name + " add op attr", 1);
           for (auto& task_proto : plan_.task()) {
             if (task_proto.machine_id() == rank_id) {
               sub_plan.add_task()->CopyFrom(task_proto);
             }
           }
+          tc_sub_plan->Count(rank_plan_name + " add task", 1);
           for (auto& mem_block_proto : plan_.block_chunk_list().mem_block()) {
             if (mem_block_proto.machine_id() == rank_id) {
               sub_plan.mutable_block_chunk_list()->add_mem_block()->CopyFrom(mem_block_proto);
             }
           }
+          tc_sub_plan->Count(rank_plan_name + " add mem block", 1);
           for (auto& chunk_proto : plan_.block_chunk_list().chunk()) {
             if (chunk_proto.machine_id() == rank_id) {
               sub_plan.mutable_block_chunk_list()->add_chunk()->CopyFrom(chunk_proto);
             }
           }
+          tc_sub_plan->Count(rank_plan_name + " add chunk", 1);
           // LOG(ERROR) << "rank id " << rank_id << " plan " << sub_plan.DebugString();
-
-          std::string rank_plan_name = plan_name_prefix + std::to_string(rank_id);
           Singleton<CtrlClient>::Get()->PushKV(rank_plan_name, sub_plan);
+          tc_sub_plan->Count(rank_plan_name + " PushKV", 1);
           // LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " push plan " << rank_plan_name << " size " << sub_plan.ByteSizeLong();
           counter.Decrease();
         });
       }
       counter.WaitForeverUntilCntEqualZero();
+      tc->Count("Graph name: " + name_ + " Push plan", 1);
     } else {
       std::string rank_plan_name = plan_name_prefix + std::to_string(GlobalProcessCtx::Rank());
       Singleton<CtrlClient>::Get()->PullKV(rank_plan_name, &plan_);
       // LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " pull plan " << rank_plan_name;
     }
     OF_SESSION_BARRIER();
+    tc->Count("Graph name: " + name_ + " Pull plan", 1);
     // NOTE(zwx): After barrier plan is synchronized between all ranks,
     //     then it can be cleared for saving mem.
     if (GlobalProcessCtx::IsThisProcessMaster()) {
@@ -413,7 +423,8 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
         Singleton<CtrlClient>::Get()->ClearKV(rank_plan_name);
       }
     }
-    tc->Count("Graph name: " + name_ + " Push or Pull plan", 1);
+    tc->Count("Graph name: " + name_ + " Clear plan", 1);
+    // tc->Count("Graph name: " + name_ + " Push or Pull plan", 1);
   }
 
   // NOTE(chengcheng): recovery op_attr
