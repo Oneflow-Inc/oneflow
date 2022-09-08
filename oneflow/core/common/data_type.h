@@ -241,8 +241,8 @@ struct DevDType<DeviceType::kCUDA, float16> {
 #if CUDA_VERSION >= 11000
 template<>
 struct DevDType<DeviceType::kCUDA, bfloat16> {
-  static_assert(sizeof(bfloat16) == sizeof(nv_bfloat16), "sizeof(float16) != sizeof(half)");
-  typedef half type;
+  static_assert(sizeof(bfloat16) == sizeof(nv_bfloat16), "sizeof(bfloat16) != sizeof(nv_bfloat16)");
+  typedef nv_bfloat16 type;
 };
 #endif  // CUDA_VERSION >= 11000
 #endif  // defined(WITH_CUDA)
