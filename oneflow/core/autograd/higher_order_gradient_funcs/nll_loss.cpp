@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 
 namespace oneflow {
 
