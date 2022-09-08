@@ -355,6 +355,17 @@ class Module(object):
                 else:
                     object.__setattr__(self, name, value)
 
+    def __delattr__(self, name):
+        if name in self._parameters:
+            del self._parameters[name]
+        elif name in self._buffers:
+            del self._buffers[name]
+            self._non_persistent_buffers_set.discard(name)
+        elif name in self._modules:
+            del self._modules[name]
+        else:
+            super().__delattr__(name)
+
     def _named_members(self, get_members_fn, prefix="", recurse=True):
         memo = set()
         modules = self.named_modules(prefix=prefix) if recurse else [(prefix, self)]

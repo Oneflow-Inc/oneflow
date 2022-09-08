@@ -575,11 +575,13 @@ REDUCE_FUNC(PyTensorObject_mean, functional::reduce_mean, functional::ReduceMean
     END_HANDLE_ERRORS                                                      \
   }
 
+DATATYPE_FUNC(PyTensorObject_bool, DType::Bool());
 DATATYPE_FUNC(PyTensorObject_int, DType::Int32());
 DATATYPE_FUNC(PyTensorObject_long, DType::Int64());
 DATATYPE_FUNC(PyTensorObject_half, DType::Float16());
 DATATYPE_FUNC(PyTensorObject_float, DType::Float());
 DATATYPE_FUNC(PyTensorObject_double, DType::Double());
+DATATYPE_FUNC(PyTensorObject_bfloat16, DType::BFloat16());
 
 static PyObject* PyTensorObject_view(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
@@ -830,11 +832,13 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"addcdiv", (PyCFunction)PyTensorObject_addcdiv, METH_VARARGS | METH_KEYWORDS, NULL},
     {"addcdiv_", (PyCFunction)PyTensorObject_addcdiv_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"matmul", (PyCFunction)PyTensorObject_matmul, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bool", PyTensorObject_bool, METH_NOARGS, NULL},
     {"int", PyTensorObject_int, METH_NOARGS, NULL},
     {"long", PyTensorObject_long, METH_NOARGS, NULL},
     {"half", PyTensorObject_half, METH_NOARGS, NULL},
     {"float", PyTensorObject_float, METH_NOARGS, NULL},
     {"double", PyTensorObject_double, METH_NOARGS, NULL},
+    {"bfloat16", PyTensorObject_bfloat16, METH_NOARGS, NULL},
     {"local_to_global", (PyCFunction)PyTensorObject_local_to_global, METH_VARARGS | METH_KEYWORDS,
      NULL},
     {"global_to_global", (PyCFunction)PyTensorObject_global_to_global, METH_VARARGS | METH_KEYWORDS,
