@@ -95,22 +95,6 @@ ONEFLOW_API_PYBIND11_MODULE("autograd", m) {
                         *input_tensor_tuple));
                     return PackTensorTuple(*res);
                   });
-
-  py::class_<FunctionAutoGradCaptureState, std::shared_ptr<FunctionAutoGradCaptureState>>(
-      m, "FunctionAutoGradCaptureState")
-      .def(py::init([]() { return std::make_shared<FunctionAutoGradCaptureState>(); }))
-      .def("save_for_backward",
-           [](FunctionAutoGradCaptureState& ctx, const py::args& input) {
-             const auto& tensors = UnpackTensorTuple(input).GetOrThrow();
-             for (const auto& tensor : tensors) { ctx.SaveTensorForBackward(tensor); }
-           })
-      .def_property_readonly(
-          "saved_tensors",
-          [](const FunctionAutoGradCaptureState& ctx) { return py::cast(ctx.SavedTensors()); })
-      .def("mark_non_differentiable", [](FunctionAutoGradCaptureState& ctx, const py::args& input) {
-        const auto& tensors = UnpackTensorTuple(input).GetOrThrow();
-        for (const auto& tensor : tensors) { ctx.MarkNonDifferentiable(tensor); }
-      });
 }
 
 }  // namespace one
