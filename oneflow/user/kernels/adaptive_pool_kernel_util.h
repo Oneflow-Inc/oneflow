@@ -33,6 +33,12 @@ inline int64_t end_index(int64_t a, int64_t b, int64_t c) {
   return (int64_t)std::ceil((float)((a + 1) * c) / b);
 }
 
+#define START_IND(a, b, c) (int)std::floor((float)(a * c) / b)
+#define END_IND(a, b, c) (int)std::ceil((float)((a + 1) * c) / b)
+
+#define START_IND_INT(a, b, c) ((a * c) / b)
+#define END_IND_INT(a, b, c) (((a + 1) * c + b - 1) / b)
+
 inline Shape GetShape5D(const Shape& shape, const std::string& data_format, int32_t dim) {
   FixedDimVector shape_3d = {GetInDim(shape, data_format, 0, dim),
                              GetInDim(shape, data_format, 1, dim),

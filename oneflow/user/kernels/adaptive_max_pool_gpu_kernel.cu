@@ -21,20 +21,11 @@ limitations under the License.
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/operator/operator_util.h"
 #include "oneflow/user/utils/pool_util.h"
-
-#include <algorithm>
-#include <cfloat>
-#include <cmath>
+#include "oneflow/user/kernels/adaptive_pool_kernel_util.h"
 
 namespace oneflow {
 
 namespace user_op {
-
-#define START_IND(a, b, c) (int)std::floor((float)(a * c) / b)
-#define END_IND(a, b, c) (int)std::ceil((float)((a + 1) * c) / b)
-
-#define START_IND_INT(a, b, c) ((a * c) / b)
-#define END_IND_INT(a, b, c) (((a + 1) * c + b - 1) / b)
 
 template<typename T>
 __global__ void InitPtr(int elements, T* ptr) {
@@ -46,21 +37,14 @@ __global__ void InitPtr(int elements, T* ptr) {
   }
 }
 
-inline Shape GetShape5D(const Shape& shape, const std::string& data_format, int32_t dim) {
-  FixedDimVector shape_3d = {GetInDim(shape, data_format, 0, dim),
-                             GetInDim(shape, data_format, 1, dim),
-                             GetInDim(shape, data_format, 2, dim)};
-  return Shape({shape.At(0), shape.At(1), shape_3d.at(0), shape_3d.at(1), shape_3d.at(2)});
-}
-
 template<typename T>
-__global__ void AdaptiveMaxPoolCudaKernel(const T* input, T* output, int num_elems, int in_d,
-                                          int in_h, int in_w, int out_d, int out_h, int out_w) {
+__global__ void AdaptiveMaxPoolCudaKernel(const T* input, T* output, int64_t* return_index,
+                                          int num_elems, int in_d, int in_h, int in_w, int out_d,
+                                          int out_h, int out_w) {
   const int out_panel_size = out_d * out_h * out_w;
   const int in_panel_size = in_d * in_h * in_w;
 
   CUDA_1D_KERNEL_LOOP(idx, num_elems) {
-    // TODO (Tianyu): Replace following codes with 'NdIndexOffsetHelper'
     int bc_idx = idx / out_panel_size;
     int out_d_idx = (idx % out_panel_size) / out_w / out_h;
     int out_h_idx = (idx % out_panel_size) % (out_h * out_w) / out_w;
@@ -78,20 +62,26 @@ __global__ void AdaptiveMaxPoolCudaKernel(const T* input, T* output, int num_ele
     int in_end_w = END_IND(out_w_idx, out_w, in_w);
     int k_w = in_end_w - in_start_w;
 
+    int64_t batch_idx_base = bc_idx * in_panel_size;
     const T* in_ptr =
-        input + bc_idx * in_panel_size + in_start_d * in_h * in_w + in_start_h * in_w + in_start_w;
-    T sum = static_cast<T>(0);
+        input + batch_idx_base + in_start_d * in_h * in_w + in_start_h * in_w + in_start_w;
+    T local_max = in_ptr[0];
+    int64_t local_max_index = static_cast<int64_t>(in_ptr - input) - batch_idx_base;
     for (int id = 0; id < k_d; ++id) {
       for (int ih = 0; ih < k_h; ++ih) {
         for (int iw = 0; iw < k_w; ++iw) {
           T val = *(in_ptr + ih * in_w + iw);
-          sum += val;
+          if (val > local_max) {
+            local_max = val;
+            local_max_index = in_ptr - input - batch_idx_base + ih * in_w + iw;
+          }
         }
       }
       in_ptr += in_h * in_w;  // next input depth
     }
     // Update output
-    output[idx] = sum / k_d / k_h / k_w;
+    output[idx] = local_max;
+    return_index[idx] = local_max_index;
   }
 }
 
@@ -139,8 +129,11 @@ template<typename T, int32_t dim>
 void MaxForwardCompute(KernelComputeContext* ctx) {
   const Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
   Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
+  Tensor* return_indices = ctx->Tensor4ArgNameAndIndex("index", 0);
+
   const T* in_ptr = in_tensor->dptr<T>();
   T* out_ptr = out_tensor->mut_dptr<T>();
+  int64_t* index_ptr = return_indices->mut_dptr<int64_t>();
 
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
   const Shape& y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
@@ -153,7 +146,8 @@ void MaxForwardCompute(KernelComputeContext* ctx) {
   const int out_elems = out_tensor->shape_view().elem_cnt();
 
   RUN_CUDA_KERNEL((AdaptiveMaxPoolCudaKernel<T>), ctx->stream(), out_elems, in_ptr, out_ptr,
-                  out_elems, in.At(2), in.At(3), in.At(4), out.At(2), out.At(3), out.At(4));
+                  index_ptr, out_elems, in.At(2), in.At(3), in.At(4), out.At(2), out.At(3),
+                  out.At(4));
 }
 
 template<typename T, int32_t dim>
