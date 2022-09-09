@@ -368,16 +368,13 @@ class OneFlow_AdaptiveMaxPoolBaseOp<string mnemonic, list<Trait> traits = []> :
 
 class OneFlow_AdaptiveMaxPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
-  let summary = "OneFlow adaptive pool operation";
+  let summary = "OneFlow adaptive max pool grad operation";
   let input = (ins
     AnyType:$x,
     AnyType:$dy,
     AnyType:$index
   );
   let output = (outs AnyType:$dx);
-  let attrs = (ins
-    SI64ArrayAttr:$output_size
-  );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
