@@ -81,6 +81,8 @@ class MemoryShareStrategy {
   // Find all the left registers of i and link those compact excluded ones for j.
   // Not including i itself.
   void LookForwardLink(int32_t i, int32_t j);
+  // Eliminate children of j but ignore i.
+  void EliminateRedundantRelationshipIgnore(int32_t i, int32_t j);
   // Whether x_i < x_j is compact
   // Return false even if x_i < x_k < x_j, where i, j, k are excluded.
   bool CompactLessThan(int32_t i, int32_t j);
@@ -89,9 +91,16 @@ class MemoryShareStrategy {
   // If the previous strategy without the elimination of i has fewer cost, recover to the previous
   // one from the backup.
   void RecoverFromBackup(int32_t i);
+  // Clear backup
+  void ClearBackup();
   // Let x_i occupy some space [x_i, x_i + l_i), then we recompute the optimal cost
   size_t ComputeOptimalCostWithOccupation(int32_t i, int64_t x_i,
                                           const std::vector<int64_t>& register_offset_backup);
+  // Insert register i at position [x_i, x_i + l_i)
+  void InsertRegister(int32_t i, int64_t x_i, const std::vector<int64_t>& original_register_offset);
+  // Visit j and add the compact relationship while inserting i
+  void VisitForwardEliminateCompactRelationship(int32_t i, int32_t j);
+  void VisitBackwardInsertCompactRelationship(int32_t i, int32_t j);
 
   // Assemble x_i + l_i <= z
   // z = max(x_i) for all the i
