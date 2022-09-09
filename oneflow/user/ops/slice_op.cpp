@@ -101,6 +101,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   auto* y_desc = ctx->MutOutputTensorDesc("y", 0);
   y_desc->set_shape(ref_desc.shape());
   y_desc->set_is_dynamic(ref_desc.is_dynamic());
+  y_desc->set_stride(ref_desc.stride());
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceUpdateOp::InferDataType(user_op::InferContext* ctx) {
@@ -110,8 +111,6 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
       << Error::TypeError() << "Tensors ref and value must have same type";
   auto* y_desc = ctx->MutOutputTensorDesc("y", 0);
   y_desc->set_data_type(ref_desc.data_type());
-  // TODO(): move this into infer logical / physical tensor desc
-  y_desc->set_stride(ref_desc.stride());
   return Maybe<void>::Ok();
 }
 
