@@ -370,13 +370,27 @@ class TestKLDivLossModule(flow.unittest.TestCase):
         target = random_tensor(len(shape), *shape, requires_grad=False).to(device)
 
         m = torch.nn.KLDivLoss(
-            reduction=oneof("none", "sum", "mean", nothing()),
+            reduction=oneof("none", "sum", "mean", "batchmean", nothing()),
             log_target=oneof(True, False),
         )
         m.train(random())
         m.to(device)
 
         y = m(x, target)
+        return y
+
+    @autotest(n=5)
+    def test_nn_functional_kl_div(test_case):
+        device = random_device()
+        shape = random_tensor().oneflow.shape
+        x = random_tensor(len(shape), *shape).to(device)
+        target = random_tensor(len(shape), *shape, requires_grad=False).to(device)
+        y = torch.nn.functional.kl_div(
+            x,
+            target,
+            reduction=oneof("none", "sum", "mean", "batchmean", nothing()),
+            log_target=oneof(True, False),
+        )
         return y
 
 
