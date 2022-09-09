@@ -693,6 +693,7 @@ Maybe<void> UserOp::InferOutBlobDescs(
     desc->set_shape(*JUST(GetPhysicalShape(desc->shape(), nd_sbp, *parallel_desc, *parallel_ctx)));
     // NOTE(strint): use output shape as stride.
     desc->set_stride(Stride(desc->shape()));
+  }
   return Maybe<void>::Ok();
 }
 
