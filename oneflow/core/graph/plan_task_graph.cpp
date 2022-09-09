@@ -19,7 +19,6 @@ namespace oneflow {
 
 int64_t PlanTaskNode::chain_id() const {
   int64_t chain_id = task_proto_->task_set_info().chain_id();
-  CHECK_NE(chain_id, -1);
   return chain_id;
 }
 

@@ -84,7 +84,7 @@ void TaskNode::set_thrd_id(int64_t val) {
 }
 
 void TaskNode::set_chain_id(int64_t val) {
-  CHECK_EQ(chain_id_, -1);
+  CHECK(!IsValidChainId(chain_id_));
   chain_id_ = val;
 }
 

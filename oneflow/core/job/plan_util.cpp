@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/graph/task_node.h"
 
 namespace oneflow {
 
@@ -221,7 +222,7 @@ void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
     DeviceType device_type = stream_id.device_id().device_type();
     // TODO(zwx): eliminate this special 'is cpu' determine
     if (device_type == DeviceType::kCPU) { continue; }
-    if (task->task_set_info().chain_id() == -1) { continue; }
+    if (!IsValidChainId(task->task_set_info().chain_id())) { continue; }
     int64_t logical_chain_id = task->task_set_info().chain_id();
 
     for (auto& pair : *(task->mutable_produced_regst_desc())) {
@@ -282,7 +283,7 @@ void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
     DeviceType device_type = stream_id.device_id().device_type();
     // TODO(zwx): eliminate this special 'is cpu' determine
     if (device_type == DeviceType::kCPU) { continue; }
-    if (task->task_set_info().chain_id() == -1) { continue; }
+    if (!IsValidChainId(task->task_set_info().chain_id())) { continue; }
 
     for (auto& pair : *(task->mutable_produced_regst_desc())) {
       RegstDescProto* regst_desc = &pair.second;
