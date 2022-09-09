@@ -55,6 +55,7 @@ Maybe<void> BinaryCrossEntropyWithLogitsReduceMean::Capture(
 Maybe<void> BinaryCrossEntropyWithLogitsReduceMean::Apply(
     const BinaryCrossEntropyWithLogitsReduceMeanCaptureState* ctx, const TensorTuple& out_grads,
     TensorTuple* in_grads) const {
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   const auto& dy = JUST(VectorAt(out_grads, 0));
   const auto& input = JUST(VectorAt(ctx->SavedTensors(), 0));
   const auto& target = JUST(VectorAt(ctx->SavedTensors(), 1));

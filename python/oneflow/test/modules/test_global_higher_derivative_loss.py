@@ -30,21 +30,20 @@ def _assert_true(test_case, value1, value2, name=""):
 
 def generate_grads_for_variables(variables):
     if isinstance(variables, list):
-        variables_shape = [i.pytorch.shape for i in variables]
+        shape_and_sbp = [(i.oneflow.shape, i.oneflow.sbp) for i in variables]
         placement = variables[0].oneflow.placement
     elif hasattr(variables, "pytorch"):
-        variables_shape = [i.shape for i in variables.pytorch]
+        shape_and_sbp = [(i.shape, i.sbp) for i in variables.oneflow]
         placement = variables.oneflow[0].placement
     else:
         assert False
-
     grads = [
         random_tensor(
             len(shape), *shape, requires_grad=random_bool().value()
         ).to_global(
-            placement=placement, sbp=random_sbp(placement, max_dim=min(2, len(shape)))
+            placement=placement, sbp=sbp
         )
-        for shape in variables_shape
+        for shape, sbp in shape_and_sbp
     ]
     return grads
 
