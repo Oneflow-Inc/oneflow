@@ -27,7 +27,7 @@ def generate_necessity_for_cross_entropy_or_nll_loss(dim: int, prob: bool):
         raise ValueError("dim should be less than 5 or greater than 1. ")
     device = random_device()
     num_classes = random(low=2).to(int)
-    batch_size = random(low=3, high=5).to(int)
+    batch_size = random(low=10, high=100).to(int)
     ignore_index = (
         random(0, num_classes).to(int) | nothing()
         if num_classes.value() > 2 and not prob
@@ -41,7 +41,7 @@ def generate_necessity_for_cross_entropy_or_nll_loss(dim: int, prob: bool):
         ).to(device)
     else:
         target_tensor = random_tensor(
-            dim - 1 if not prob else dim,
+            dim - 1,
             batch_size,
             *extra_dim,
             low=0,
@@ -90,7 +90,7 @@ def generate_necessity_for_bce_loss(dim: int):
     )
 
 
-def _test_cross_entropy_loss(dim: int, prob: bool):
+def _test_cross_entropy_loss(dim: int, prob: bool = False):
     (
         x,
         target,
@@ -98,7 +98,6 @@ def _test_cross_entropy_loss(dim: int, prob: bool):
         ignore_index,
         device,
     ) = generate_necessity_for_cross_entropy_or_nll_loss(dim, prob)
-    # import ipdb; ipdb.set_trace()
     m = torch.nn.CrossEntropyLoss(
         reduction=oneof("none", "sum", "mean", nothing()),
         ignore_index=ignore_index,
