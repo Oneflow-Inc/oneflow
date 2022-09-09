@@ -34,7 +34,7 @@ class StreamWaitEventInstructionPolicy final : public vm::InstructionPolicy {
   StreamWaitEventInstructionPolicy(
       const small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>& dependences,
       const std::shared_ptr<StreamRecordEventInstructionPolicy>&
-          strem_record_event_instruction_policy);
+          stream_record_event_instruction_policy);
   ~StreamWaitEventInstructionPolicy() = default;
 
   std::string DebugName(const vm::Instruction&) const override { return "StreamWaitEvent"; }
@@ -52,7 +52,7 @@ class StreamWaitEventInstructionPolicy final : public vm::InstructionPolicy {
   small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize> dependences_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;
-  std::shared_ptr<StreamRecordEventInstructionPolicy> strem_record_event_instruction_policy_;
+  std::shared_ptr<StreamRecordEventInstructionPolicy> stream_record_event_instruction_policy_;
 };
 
 }  // namespace vm

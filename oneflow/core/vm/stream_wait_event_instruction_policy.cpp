@@ -29,22 +29,22 @@ namespace vm {
 StreamWaitEventInstructionPolicy::StreamWaitEventInstructionPolicy(
     const small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>& dependences,
     const std::shared_ptr<StreamRecordEventInstructionPolicy>&
-        strem_record_event_instruction_policy)
+        stream_record_event_instruction_policy)
     : dependences_(dependences),
       input_dependences_(),
       output_dependences_(),
-      strem_record_event_instruction_policy_(strem_record_event_instruction_policy) {
+      stream_record_event_instruction_policy_(stream_record_event_instruction_policy) {
   for (const auto& dep : dependences_) { output_dependences_.push_back(dep.get()); }
 }
 
 void StreamWaitEventInstructionPolicy::DeleteInstructionStatus(Instruction* instruction) {
   auto* stream = instruction->mut_stream();
   instruction->stream_policy().DeleteInstructionStatus(*stream, instruction->mut_status_buffer());
-  strem_record_event_instruction_policy_->mut_ep_event().reset();
+  stream_record_event_instruction_policy_->mut_ep_event().reset();
 }
 
 void StreamWaitEventInstructionPolicy::Compute(vm::Instruction* instruction) {
-  const auto& ep_event = strem_record_event_instruction_policy_->mut_ep_event();
+  const auto& ep_event = stream_record_event_instruction_policy_->mut_ep_event();
   // Wait event.
   auto* ep_stream_policy_base =
       dynamic_cast<EpStreamPolicyBase*>(instruction->mut_stream()->mut_stream_policy());
