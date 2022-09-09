@@ -871,7 +871,35 @@ class _AdaptiveMaxPoolNd(Module):
 
 
 class AdaptiveMaxPool1d(_AdaptiveMaxPoolNd):
-    r"""
+    r"""Applies a 1D adaptive max pooling over an input signal composed of several input planes.
+
+        The documentation is referenced from:
+        https://pytorch.org/docs/1.10/generated/torch.nn.AdaptiveMaxPool1d.html.
+        
+        The output size is :math:`L_{out}`, for any input size.
+        The number of output features is equal to the number of input planes.
+
+        Args:
+            output_size: the target output size :math:`L_{out}`.
+            return_indices: if ``True``, will return the indices along with the outputs.
+                            Default: ``False``
+
+        Shape:
+            - Input: :math:`(N, C, L_{in})`.
+            - Output: :math:`(N, C, L_{out})`, where :math:`L_{out}=\text{output_size}`.
+
+        Examples:
+
+        .. code-block:: python
+
+            >>> import oneflow as flow
+            >>> # target output size of 5
+            >>> m = flow.nn.AdaptiveMaxPool1d(5)
+            >>> input = flow.randn(1, 64, 8)
+            >>> output = m(input)
+            >>> print(output.shape)
+            oneflow.Size([1, 64, 5])
+
     """
 
     def forward(self, input):
@@ -886,7 +914,45 @@ class AdaptiveMaxPool1d(_AdaptiveMaxPoolNd):
 
 
 class AdaptiveMaxPool2d(_AdaptiveMaxPoolNd):
-    r"""
+    r"""Applies a 2D adaptive max pooling over an input signal composed of several input planes.
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.AdaptiveMaxPool2d.html.
+
+    The output is of size :math:`H_{out} \times W_{out}`, for any input size.
+    The number of output features is equal to the number of input planes.
+
+    Args:
+        output_size: the target output size of the image of the form :math:`H_{out} \times W_{out}`.
+                     Can be a tuple :math:`(H_{out}, W_{out})` or a single :math:`H_{out}` for a
+                     square image :math:`H_{out} \times H_{out}`. :math:`H_{out}` and :math:`W_{out}`
+                     should be a ``int``.
+        return_indices: if ``True``, will return the indices along with the outputs.
+                        Default: ``False``
+
+    Shape:
+        - Input: :math:`(N, C, H_{in}, W_{in})`.
+        - Output: :math:`(N, C, H_{out}, W_{out})`, where
+          :math:`(H_{out}, W_{out})=\text{output_size}`.
+
+    Examples:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+        >>> # target output size of 5x7
+        >>> m = nn.AdaptiveMaxPool2d((5,7))
+        >>> input = flow.randn(1, 64, 8, 9)
+        >>> output = m(input)
+        >>> print(output.shape)
+        oneflow.Size([1, 64, 5, 7])
+        >>> # target output size of 7x7 (square)
+        >>> m = nn.AdaptiveMaxPool2d(7)
+        >>> input = flow.randn(1, 64, 10, 9)
+        >>> output = m(input)
+        >>> print(output.shape)
+        oneflow.Size([1, 64, 7, 7])
     """
 
     def forward(self, input):
@@ -901,7 +967,47 @@ class AdaptiveMaxPool2d(_AdaptiveMaxPoolNd):
 
 
 class AdaptiveMaxPool3d(_AdaptiveMaxPoolNd):
-    r"""
+    r"""Applies a 3D adaptive max pooling over an input signal composed of several input planes.
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.AdaptiveMaxPool3d.html.
+
+    The output is of size :math:`D_{out} \times H_{out} \times W_{out}`, for any input size.
+    The number of output features is equal to the number of input planes.
+
+    Args:
+        output_size: the target output size of the image of the form :math:`D_{out} \times H_{out} \times W_{out}`.
+                     Can be a tuple :math:`(D_{out}, H_{out}, W_{out})` or a single
+                     :math:`D_{out}` for a cube :math:`D_{out} \times D_{out} \times D_{out}`.
+                     :math:`D_{out}`, :math:`H_{out}` and :math:`W_{out}` should be a
+                     ``int``.
+
+        return_indices: if ``True``, will return the indices along with the outputs.
+                        Default: ``False``
+
+    Shape:
+        - Input: :math:`(N, C, D_{in}, H_{in}, W_{in})`.
+        - Output: :math:`(N, C, D_{out}, H_{out}, W_{out})`,
+          where :math:`(D_{out}, H_{out}, W_{out})=\text{output_size}`.
+
+    Examples:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+        >>> # target output size of 5x7x9
+        >>> m = nn.AdaptiveMaxPool3d((5,7,9))
+        >>> input = flow.randn(1, 64, 8, 9, 10)
+        >>> output = m(input)
+        >>> print(output.shape)
+        oneflow.Size([1, 64, 5, 7, 9])
+        >>> # target output size of 7x7x7 (cube)
+        >>> m = nn.AdaptiveMaxPool3d(7)
+        >>> input = flow.randn(1, 64, 10, 9, 8)
+        >>> output = m(input)
+        >>> print(output.shape)
+        oneflow.Size([1, 64, 7, 7, 7])
     """
 
     def forward(self, input):
