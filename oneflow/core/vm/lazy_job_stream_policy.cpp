@@ -56,6 +56,11 @@ void LazyJobStreamPolicy::DeleteInstructionStatus(const Stream& stream,
   ptr->~NaiveInstrStatusQuerier();
 }
 
+bool LazyJobStreamPolicy::QueryInstructionStatusLaunched(
+    const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
+  return NaiveInstrStatusQuerier::Cast(status_buffer.buffer())->launched();
+}
+
 bool LazyJobStreamPolicy::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
   return NaiveInstrStatusQuerier::Cast(status_buffer.buffer())->done();
