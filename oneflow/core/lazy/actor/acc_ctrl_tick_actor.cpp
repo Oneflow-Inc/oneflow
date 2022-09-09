@@ -44,9 +44,7 @@ class AccCtrlTickActor : public Actor {
     bool is_ready_ready = (!inplace_consume_) && consumed_tick_rs_.IsCurSlotReady();
     return (!inplace_consume_) && consumed_tick_rs_.IsCurSlotReady();
   }
-  bool IsCustomizedWriteReady() const override {
-    return produced_tick_rs_.IsCurSlotReady();
-  }
+  bool IsCustomizedWriteReady() const override { return produced_tick_rs_.IsCurSlotReady(); }
 
   void NormalProcessCustomizedEordMsg(const ActorMsg&) override {}
   bool IsCustomizedReadAlwaysUnReadyFromNow() const override {
@@ -99,7 +97,7 @@ void AccCtrlTickActor::VirtualActorInit(const TaskProto& proto) {
 
   // output
   CHECK_EQ(proto.produced_regst_desc().size(), 1);
-  
+
   const auto& produced_ids = proto.produced_regst_desc();
   CHECK_EQ(produced_ids.size(), 1);
   CHECK(produced_ids.find("out") != produced_ids.end());
@@ -113,7 +111,7 @@ void AccCtrlTickActor::VirtualActorInit(const TaskProto& proto) {
     CHECK_EQ(0, produced_tick_rs_.TryPushBackRegst(regst));
   });
 
-   OF_SET_MSG_HANDLER(&AccCtrlTickActor::HandlerNormal);
+  OF_SET_MSG_HANDLER(&AccCtrlTickActor::HandlerNormal);
 }
 
 void AccCtrlTickActor::Act() {
@@ -132,8 +130,7 @@ void AccCtrlTickActor::AsyncSendCustomizedProducedRegstMsgToConsumer() {
     Regst* const tick_regst = produced_tick_rs_.Front(produced_tick_regst_desc_id_);
     CHECK_GT(HandleRegstToConsumer(tick_regst), 0);
     produced_tick_rs_.PopFrontRegsts({produced_tick_regst_desc_id_});
-
-  } 
+  }
 }
 
 void AccCtrlTickActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {

@@ -816,7 +816,7 @@ void PlanUtil::SetForceInplaceMemBlock(Plan* plan) {
               in_regst_desc->separated_header_mem_block_id());
         }
         VLOG(3) << " cclog: set force inplace from " << regst_desc->DebugString() << " to "
-                  << in_regst_desc->DebugString();
+                << in_regst_desc->DebugString();
       }
     }
   }
