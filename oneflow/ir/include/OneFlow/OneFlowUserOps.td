@@ -3602,7 +3602,6 @@ def OneFlow_WkvGradOp : OneFlow_BaseOp<"wkv_grad", [NoSideEffect, DeclareOpInter
   let has_data_type_infer_fn = 1;
 }
 
-
 def OneFlow_Expm1Op : OneFlow_BaseOp<"expm1", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x
