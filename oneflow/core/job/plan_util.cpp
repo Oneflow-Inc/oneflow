@@ -213,8 +213,6 @@ void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
   HashMap<int64_t, HashSet<RegstDescProto*>> mem_block_id2regsts;
   HashMap<int64_t, HashMap<int64_t, int64_t>> logical_chain_id2machine_id2mem_block_id;
 
-  // HashMap<int64_t, int64_t> mem_block_id2machine_id;
-
   for (int64_t i = 0; i < plan->task_size(); ++i) {
     TaskProto* task = plan->mutable_task(i);
     const StreamId stream_id = PlanUtil::GetStreamId(*task);
@@ -238,14 +236,6 @@ void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
         } else {
           CHECK_EQ(rank2blocks->at(machine_id), mem_block_id);
         }
-
-        /*
-        if (mem_block_id2machine_id.find(mem_block_id) == mem_block_id2machine_id.end()) {
-          mem_block_id2machine_id.emplace(mem_block_id, machine_id);
-        } else {
-          CHECK_EQ(mem_block_id2machine_id.at(mem_block_id), machine_id);
-        }
-        */
       }
     }
   }

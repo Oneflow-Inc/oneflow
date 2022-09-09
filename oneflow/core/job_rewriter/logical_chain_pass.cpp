@@ -237,7 +237,6 @@ void CreateAfterAccLogicalChain(const std::shared_ptr<LogicalChain>& after_acc_l
     CHECK(after_acc_chain_ops.insert(cur_node).second);
 
     for (const OpEdge* in_edge : cur_node->in_edges()) {
-      // NOTE(chengcheng): maybe bad case for too early source op before repeat.
       SearchToNextNode(cur_node, in_edge->src_node(), in_edge);
     }
     for (const OpEdge* out_edge : cur_node->out_edges()) {
