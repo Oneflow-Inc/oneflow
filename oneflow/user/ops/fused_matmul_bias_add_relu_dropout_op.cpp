@@ -65,12 +65,12 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
     // Set Middle result shape.
     long cublas_aligned_aux_ld = AlignReluAuxLd(cublas_aux_ld);
     int64_t aux_size = cublas_aligned_aux_ld / 32;  // Cause we use int32_t as dtype
-    *ctx->MutOutputShape("cublas_aux", idx) = Shape({m, aux_size});
-    *ctx->MutOutputShape("hidden", idx) = Shape({m, n});
+    ctx->SetOutputShape("cublas_aux", idx, Shape({m, aux_size}));
+    ctx->SetOutputShape("hidden", idx, Shape({m, n}));
     // Set for next layer.
     k = n;
   }
-  *ctx->MutOutputShape("out", 0) = {m, n};
+  ctx->SetOutputShape("out", 0, Shape({m, n}));
   return Maybe<void>::Ok();
 }
 
@@ -85,16 +85,16 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   }
 
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
-  *out_desc->mut_data_type() = first_in_desc.data_type();
+  out_desc->set_data_type(first_in_desc.data_type());
 
   for (int32_t i = 0; i < ctx->output_size("hidden"); i++) {
     user_op::TensorDesc* hidden_desc = ctx->MutOutputTensorDesc("hidden", i);
-    *hidden_desc->mut_data_type() = first_in_desc.data_type();
+    hidden_desc->set_data_type(first_in_desc.data_type());
   }
 
   for (int32_t i = 0; i < ctx->output_size("cublas_aux"); i++) {
     user_op::TensorDesc* aux_desc = ctx->MutOutputTensorDesc("cublas_aux", i);
-    *aux_desc->mut_data_type() = DataType::kInt32;
+    aux_desc->set_data_type(DataType::kInt32);
   }
 
   return Maybe<void>::Ok();
@@ -105,11 +105,6 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
 /* static */ Maybe<void> FusedMatmulBiasAddReluDropoutOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferTensorDesc4FusedMatmul(ctx);
-}
-
-/*static*/ Maybe<void> FusedMatmulBiasAddReluDropoutOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> FusedMatmulBiasAddReluDropoutOp::GetSbp(user_op::SbpContext* ctx) {

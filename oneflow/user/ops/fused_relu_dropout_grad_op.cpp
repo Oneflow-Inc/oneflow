@@ -25,12 +25,12 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferTensorDesc4FusedReluDropoutGrad(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("dx", 0) = ctx->InputShape("dy", 0);
+  ctx->SetOutputShape("dx", 0, ctx->InputShape("dy", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferDataType4FusedReluDropoutGrad(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
   return Maybe<void>::Ok();
 }
 
@@ -39,10 +39,6 @@ Maybe<void> InferDataType4FusedReluDropoutGrad(user_op::InferContext* ctx) {
 /* static */ Maybe<void> FusedReluDropoutGradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferTensorDesc4FusedReluDropoutGrad(ctx);
-}
-
-/*static*/ Maybe<void> FusedReluDropoutGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> FusedReluDropoutGradOp::GetSbp(user_op::SbpContext* ctx) {

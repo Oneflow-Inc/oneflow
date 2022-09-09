@@ -21,12 +21,8 @@ namespace oneflow {
 
 /*static*/ auto GenerateRandomBatchPermutationIndicesOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) -> Maybe<void> {
-  *ctx->MutOutputShape("y", 0) = Shape({ctx->InputShape("x", 0).At(0)});
+  ctx->SetOutputShape("y", 0, Shape({ctx->InputShape("x", 0).At(0)}));
   return Maybe<void>::Ok();
-}
-/*static*/ auto GenerateRandomBatchPermutationIndicesOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) -> Maybe<void> {
-  return GenerateRandomBatchPermutationIndicesOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ auto GenerateRandomBatchPermutationIndicesOp::GetSbp(user_op::SbpContext* ctx)
     -> Maybe<void> {
@@ -39,7 +35,7 @@ namespace oneflow {
 }
 /*static*/ auto GenerateRandomBatchPermutationIndicesOp::InferDataType(user_op::InferContext* ctx)
     -> Maybe<void> {
-  *ctx->MutOutputDType("y", 0) = DataType::kInt32;
+  ctx->SetOutputDType("y", 0, DataType::kInt32);
   return Maybe<void>::Ok();
 }
 

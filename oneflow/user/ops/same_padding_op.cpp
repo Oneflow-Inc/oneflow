@@ -36,8 +36,8 @@ namespace oneflow {
 /*static*/ Maybe<void> SamePaddingOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
-  *y_desc->mut_shape() = x_desc.shape();
-  *y_desc->mut_is_dynamic() = x_desc.is_dynamic();
+  y_desc->set_shape(x_desc.shape());
+  y_desc->set_is_dynamic(x_desc.is_dynamic());
   const std::string& data_format = ctx->Attr<std::string>("data_format");
   const auto& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
   const auto& strides = ctx->Attr<std::vector<int32_t>>("strides");
@@ -64,14 +64,11 @@ namespace oneflow {
                          strides.at(i), &padding_small, &padding_large));
     y_dim_vec[idx_offset + i] = x_desc.shape().At(idx_offset + i) + padding_small + padding_large;
   }
-  *y_desc->mut_shape() = Shape(y_dim_vec);
+  y_desc->set_shape(Shape(y_dim_vec));
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SamePaddingOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SamePaddingOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -108,15 +105,12 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SamePaddingGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("dx", 0) = ctx->InputShape("x_like", 0);
-  *ctx->MutOutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x_like", 0);
+  ctx->SetOutputShape("dx", 0, ctx->InputShape("x_like", 0));
+  ctx->SetOutputIsDynamic("dx", 0, ctx->InputIsDynamic("x_like", 0));
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SamePaddingGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SamePaddingGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x_like", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x_like", 0));
   return Maybe<void>::Ok();
 }
 

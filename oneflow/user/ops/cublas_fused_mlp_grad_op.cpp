@@ -25,10 +25,10 @@ Maybe<void> InferTensorDesc4FusedMatmulBackward(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   for (int idx = weight_num - 1; idx >= 0; idx--) {
     const user_op::TensorDesc& weight_desc = ctx->InputTensorDesc("weights", idx);
-    *ctx->MutOutputShape("d_weights", idx) = weight_desc.shape();
-    *ctx->MutOutputShape("d_biases", idx) = Shape({weight_desc.shape().At(0)});
+    ctx->SetOutputShape("d_weights", idx, weight_desc.shape());
+    ctx->SetOutputShape("d_biases", idx, Shape({weight_desc.shape().At(0)}));
   }
-  *ctx->MutOutputShape("d_x", 0) = x_desc.shape();
+  ctx->SetOutputShape("d_x", 0, x_desc.shape());
   return Maybe<void>::Ok();
 }
 
@@ -41,10 +41,10 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx) {
                                       "Because last layer's bias_grad is computed by ReduceSum. ";
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   for (int idx = weight_num - 1; idx >= 0; idx--) {
-    *ctx->MutOutputDType("d_weights", idx) = dy_desc.data_type();
-    *ctx->MutOutputDType("d_biases", idx) = dy_desc.data_type();
+    ctx->SetOutputDType("d_weights", idx, dy_desc.data_type());
+    ctx->SetOutputDType("d_biases", idx, dy_desc.data_type());
   }
-  *ctx->MutOutputDType("d_x", 0) = dy_desc.data_type();
+  ctx->SetOutputDType("d_x", 0, dy_desc.data_type());
   return Maybe<void>::Ok();
 }
 
@@ -52,10 +52,6 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx) {
 
 /* static */ Maybe<void> CublasFusedMLPGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferTensorDesc4FusedMatmulBackward(ctx);
-}
-
-/*static*/ Maybe<void> CublasFusedMLPGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> CublasFusedMLPGradOp::GetSbp(user_op::SbpContext* ctx) {

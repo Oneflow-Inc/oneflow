@@ -29,7 +29,8 @@ class CallbackNotifyCompTaskNode final : public CompTaskNode {
  private:
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
-  void BuildExecGphAndRegst() override;
+  void BuildExecGph() override;
+  void InferRegst() override {}
 };
 
 void CallbackNotifyCompTaskNode::ProduceAllRegstsAndBindEdges() {}
@@ -38,7 +39,7 @@ void CallbackNotifyCompTaskNode::ConsumeAllRegsts() {
   ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
 }
 
-void CallbackNotifyCompTaskNode::BuildExecGphAndRegst() {
+void CallbackNotifyCompTaskNode::BuildExecGph() {
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = this->op();
   for (const std::string& ibn : node->op()->input_bns()) {

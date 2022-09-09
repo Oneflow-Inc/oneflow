@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/time_util.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/to_string.h"
@@ -27,6 +28,7 @@ limitations under the License.
 #include "oneflow/user/summary/summary_converter.h"
 
 #include <google/protobuf/text_format.h>
+#include <memory>
 #include "nlohmann/json.hpp"
 
 namespace oneflow {
@@ -911,15 +913,17 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   CHECK_NOTNULL(Singleton<JobDesc>::Get());
   Singleton<JobDesc>::Delete();
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
+  auto pass_tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
+
   JobPassCtx job_pass_ctx(GlobalJobDesc());
   const auto job_name = job().job_conf().job_name();
   auto LogJob = [&](const std::string& name_suffix) -> void {
     std::string full_log_name =
         job_name + "-job_id_" + std::to_string(job_id()) + "-" + name_suffix;
     TeePersistentLogStream::Create(full_log_name)->Write(job());
-    Singleton<OpGraph>::New(job());
-    Singleton<OpGraph>::Get()->ToDotWithFilePath(full_log_name + ".dot");
-    Singleton<OpGraph>::Delete();
+    auto tmp_graph = std::make_unique<OpGraph>(job());
+    tmp_graph->ToDotWithFilePath(full_log_name + ".dot");
+    tmp_graph.reset();
   };
   std::string debug_pass_name = GetStringFromEnv("ONEFLOW_DEBUG_PASS", "");
   auto NeedLogJob = [&](const std::string& pass_name) -> bool {
@@ -942,7 +946,9 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
       LogJob("pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name + cnt_str + "-before");
       FLAGS_v = 3;
     }
+    auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
     JUST(JobPass4Name(pass_name)(mut_job(), &job_pass_ctx));
+    tc->Count("Graph name: " + job_name + " " + pass_name, 1);
     if (unlikely(NeedLogJob(pass_name))) {
       FLAGS_v = prev_v;
       std::string cnt_str = cnt > 0 ? std::to_string(cnt) : "";
@@ -958,10 +964,11 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()
       || Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
     TeePersistentLogStream::Create(StrCat("forward_graph", job_id()))->Write(job());
-    Singleton<OpGraph>::New(job());
-    Singleton<OpGraph>::Get()->ToDotWithFilePath("forward_dlnet_" + std::to_string(job_id())
+    auto tmp_graph = std::make_unique<OpGraph>(job());
+    tmp_graph->ToDotWithFilePath("forward_dlnet_" + std::to_string(job_id())
                                                  + "_op_graph.dot");
-    Singleton<OpGraph>::Delete();
+    tmp_graph.reset();
+    pass_tc->Count("Graph name: " + job_name + " LogForwardGraph", 1);
   }
 
   if (GlobalJobDesc().Bool("__is_user_function__")) {
@@ -1021,7 +1028,9 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("DumpVariableInfoPass"));
   }
   JUST(DoPass("DumpBlobParallelConfPass"));
+  pass_tc->Count("Graph name: " + job_name + " CompilePasses", 1);
   JUST(CheckJob());
+  pass_tc->Count("Graph name: " + job_name + " CheckJob", 1);
   return Maybe<void>::Ok();
 }
 

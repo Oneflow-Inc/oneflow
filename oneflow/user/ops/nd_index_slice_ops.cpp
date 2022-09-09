@@ -42,12 +42,12 @@ Maybe<void> InferScatterNdTensorDesc(user_op::InferContext* ctx) {
   const Shape& updates_shape = ctx->InputShape("updates", 0);
   const Shape& params_shape = ctx->Attr<Shape>("shape");
   JUST(CheckScatterNdShape(params_shape, indices_shape, updates_shape));
-  *ctx->MutOutputShape("out", 0) = params_shape;
+  ctx->SetOutputShape("out", 0, params_shape);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferScatterNdDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("updates", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("updates", 0));
   return Maybe<void>::Ok();
 }
 
@@ -56,12 +56,12 @@ Maybe<void> InferScatterNdLikeTensorDesc(user_op::InferContext* ctx) {
   const Shape& updates_shape = ctx->InputShape("updates", 0);
   const Shape& like_shape = ctx->InputShape("like", 0);
   JUST(CheckScatterNdShape(like_shape, indices_shape, updates_shape));
-  *ctx->MutOutputShape("out", 0) = like_shape;
+  ctx->SetOutputShape("out", 0, like_shape);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferScatterNdLikeDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("updates", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("updates", 0));
   return Maybe<void>::Ok();
 }
 
@@ -70,13 +70,13 @@ Maybe<void> InferTensorScatterNdOptTensorDesc(user_op::InferContext* ctx) {
   const Shape& updates_shape = ctx->InputShape("updates", 0);
   const Shape& indices_shape = ctx->InputShape("indices", 0);
   JUST(CheckScatterNdShape(params_shape, indices_shape, updates_shape));
-  *ctx->MutOutputShape("out", 0) = params_shape;
-  *ctx->MutOutputStride("out", 0) = ctx->InputStride("params", 0);
+  ctx->SetOutputShape("out", 0, params_shape);
+  ctx->SetOutputStride("out", 0, ctx->InputStride("params", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferTensorScatterNdOptDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("params", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("params", 0));
   return Maybe<void>::Ok();
 }
 
@@ -127,12 +127,8 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
   bool is_out_of_bounds = params_shape.Count(0) == 0 && out_shape.Count(0) != 0;
   CHECK_OR_RETURN(!is_out_of_bounds)
       << Error::IndexError() << "The index is out of bounds for dimension with size 0";
-  *ctx->MutOutputShape("out", 0) = out_shape;
+  ctx->SetOutputShape("out", 0, out_shape);
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> GatherNdOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> GatherNdOp::GetSbp(user_op::SbpContext* ctx) {
@@ -173,16 +169,12 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
 }
 
 /* static */ Maybe<void> GatherNdOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("params", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("params", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> ScatterNdOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferScatterNdTensorDesc(ctx);
-}
-
-/*static*/ Maybe<void> ScatterNdOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> ScatterNdOp::GetSbp(user_op::SbpContext* ctx) {
@@ -230,10 +222,6 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
   return InferScatterNdLikeTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> ScatterNdLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> ScatterNdLikeOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& indices_tensor =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
@@ -275,11 +263,6 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
   return InferTensorScatterNdOptTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> TensorScatterNdUpdateOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> TensorScatterNdUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   return GetTensorScatterNdOptSbpSignatures(ctx);
 }
@@ -298,10 +281,6 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
 
 /* static */ Maybe<void> TensorScatterNdAddOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferTensorScatterNdOptTensorDesc(ctx);
-}
-
-/*static*/ Maybe<void> TensorScatterNdAddOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> TensorScatterNdAddOp::GetSbp(user_op::SbpContext* ctx) {

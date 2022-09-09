@@ -41,12 +41,12 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
         << Error::RuntimeError() << "The size of prediction (" << prediction_desc.shape().At(i)
         << ") must match the size of label (" << label_desc.shape().At(i) << ") at dimension " << i;
   }
-  *ctx->MutOutputIsDynamic("prob", 0) = prediction_desc.is_dynamic();
+  ctx->SetOutputIsDynamic("prob", 0, prediction_desc.is_dynamic());
   // 'prob' is just for compute prediction's grad, prob's grad will be ignored
-  *ctx->MutOutputShape("prob", 0) = prediction_desc.shape();
+  ctx->SetOutputShape("prob", 0, prediction_desc.shape());
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
-  *out_desc->mut_is_dynamic() = prediction_desc.is_dynamic();
-  *out_desc->mut_shape() = label_desc.shape();
+  out_desc->set_is_dynamic(prediction_desc.is_dynamic());
+  out_desc->set_shape(label_desc.shape());
   return Maybe<void>::Ok();
 }
 
@@ -75,8 +75,8 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(dy_desc.shape(), label_desc.shape())
       << Error::RuntimeError() << "The size of dy " << dy_desc.shape()
       << " must match the size of label " << label_desc.shape();
-  *ctx->MutOutputShape("prediction_diff", 0) = prob_desc.shape();
-  *ctx->MutOutputIsDynamic("prediction_diff", 0) = prob_desc.is_dynamic();
+  ctx->SetOutputShape("prediction_diff", 0, prob_desc.shape());
+  ctx->SetOutputIsDynamic("prediction_diff", 0, prob_desc.is_dynamic());
   return Maybe<void>::Ok();
 }
 
@@ -85,8 +85,8 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
   CHECK_OR_RETURN(IsIndexDataType(label_desc.data_type()))
       << Error::TypeError() << "The dtype of label must be integer, but found "
       << DataType_Name(label_desc.data_type());
-  *ctx->MutOutputDType("prob", 0) = ctx->InputDType("prediction", 0);
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("prediction", 0);
+  ctx->SetOutputDType("prob", 0, ctx->InputDType("prediction", 0));
+  ctx->SetOutputDType("out", 0, ctx->InputDType("prediction", 0));
   return Maybe<void>::Ok();
 }
 
@@ -100,7 +100,7 @@ Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(dy_desc.data_type(), prob_desc.data_type())
       << Error::TypeError() << "dy and prob are expected to have the same dtype, but found "
       << DataType_Name(dy_desc.data_type()) << " and " << DataType_Name(prob_desc.data_type());
-  *ctx->MutOutputDType("prediction_diff", 0) = prob_desc.data_type();
+  ctx->SetOutputDType("prediction_diff", 0, prob_desc.data_type());
   return Maybe<void>::Ok();
 }
 
@@ -172,9 +172,6 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   /*static*/ Maybe<void> op_name##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {      \
     return InferTensorDescFn(ctx);                                                              \
   }                                                                                             \
-  /*static*/ Maybe<void> op_name##Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) {     \
-    return InferLogicalTensorDesc(ctx);                                                         \
-  }                                                                                             \
   /*static*/ Maybe<void> op_name##Op::InferDataType(user_op::InferContext* ctx) {               \
     return oneflow::InferDataType(ctx);                                                         \
   }                                                                                             \
@@ -196,9 +193,6 @@ IMPLEMENT_SPAESE_SOFTMAX_CROSS_ENTROPY_OP_FUNCS(SparseSoftmaxCrossEntropyMs, Add
   }                                                                                             \
   /*static*/ Maybe<void> op_name##GradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
     return InferGradTensorDescFn(ctx);                                                          \
-  }                                                                                             \
-  /*static*/ Maybe<void> op_name##GradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
-    return InferLogicalTensorDesc(ctx);                                                         \
   }                                                                                             \
   /*static*/ Maybe<void> op_name##GradOp::InferDataType(user_op::InferContext* ctx) {           \
     return InferDataTypeGrad(ctx);                                                              \

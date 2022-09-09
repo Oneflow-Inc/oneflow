@@ -21,12 +21,12 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferNmsTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = Shape({ctx->InputShape("in", 0).At(0)});
+  ctx->SetOutputShape("out", 0, Shape({ctx->InputShape("in", 0).At(0)}));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferNmsDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = DataType::kInt8;
+  ctx->SetOutputDType("out", 0, DataType::kInt8);
   return Maybe<void>::Ok();
 }
 
@@ -34,10 +34,6 @@ Maybe<void> InferNmsDataType(user_op::InferContext* ctx) {
 
 /* static */ Maybe<void> NmsOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferNmsTensorDesc(ctx);
-}
-
-/*static*/ Maybe<void> NmsOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> NmsOp::GetSbp(user_op::SbpContext* ctx) {

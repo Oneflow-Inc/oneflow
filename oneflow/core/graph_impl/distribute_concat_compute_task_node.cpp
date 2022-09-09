@@ -30,7 +30,7 @@ class DistributeConcatCompTaskNode final : public CompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kDistributeConcat; }
 
  private:
-  void BuildExecGphAndRegst() override;
+  void BuildExecGph() override;
   void BuildExecGphStructAndBindInRegst();
   void BuildOutRegst();
 };
@@ -49,10 +49,9 @@ void DistributeConcatCompTaskNode::ConsumeAllRegsts() {
   CHECK_EQ(cnt, 1);
 }
 
-void DistributeConcatCompTaskNode::BuildExecGphAndRegst() {
+void DistributeConcatCompTaskNode::BuildExecGph() {
   BuildExecGphStructAndBindInRegst();
   BuildOutRegst();
-  mut_exec_gph().TopoForEachNode([this](ExecNode* node) { node->InferBlobDescs(parallel_ctx()); });
 }
 
 void DistributeConcatCompTaskNode::BuildExecGphStructAndBindInRegst() {

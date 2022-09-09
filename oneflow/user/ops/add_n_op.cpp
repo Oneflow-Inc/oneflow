@@ -30,13 +30,9 @@ namespace oneflow {
           << "but got " << in_0.shape().elem_cnt() << " and " << cur_in.shape().elem_cnt();
     }
   }
-  *out->mut_shape() = in_0.shape();
-  *out->mut_is_dynamic() = in_0.is_dynamic();
+  out->set_shape(in_0.shape());
+  out->set_is_dynamic(in_0.is_dynamic());
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> AddNOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> AddNOp::GetSbp(user_op::SbpContext* ctx) {
@@ -59,7 +55,7 @@ namespace oneflow {
         << " expected all tenser to have same type, but found " << DataType_Name(in_0.data_type())
         << " and " << DataType_Name(cur_in.data_type());
   }
-  *out->mut_data_type() = in_0.data_type();
+  out->set_data_type(in_0.data_type());
   return Maybe<void>::Ok();
 }
 

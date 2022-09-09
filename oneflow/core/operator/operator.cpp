@@ -332,7 +332,7 @@ Maybe<void> Operator::InferLogicalOutBlobDescsIf() {
     auto& out_blob_desc = output_logical_blob_desc_vec[i];
     // initialize stride by shape if the op does not support non-contiguous
     if (!JUST(SupportNonContiguous(this))) {
-      out_blob_desc->mut_stride() = Stride(out_blob_desc->shape());
+      out_blob_desc->set_stride(Stride(out_blob_desc->shape()));
     }
     CHECK_EQ_OR_RETURN(out_blob_desc->stride().size(), out_blob_desc->shape().size())
         << Error::RuntimeError() << "stride and shape size mismatch since stride is "
@@ -359,7 +359,7 @@ Maybe<void> Operator::InferOutBlobDescsIf(
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(bn);
     // initialize stride by shape if the op does not support non-contiguous
     if (!JUST(SupportNonContiguous(this))) {
-      out_blob_desc->mut_stride() = Stride(out_blob_desc->shape());
+      out_blob_desc->set_stride(Stride(out_blob_desc->shape()));
     }
     CHECK_EQ_OR_RETURN(out_blob_desc->stride().size(), out_blob_desc->shape().size())
         << Error::RuntimeError() << "stride and shape size mismatch since stride is "
@@ -388,8 +388,8 @@ Maybe<void> Operator::InferOutBlobDescs(
       BlobDesc* desc = GetBlobDesc4BnInOp(bn);
       *desc = *JUST(GetLogicalBlobDesc4Obn(bn));
       const auto& nd_sbp = nd_sbp_signature->bn_in_op2nd_sbp().at(bn);
-      desc->mut_shape() =
-          *JUST(GetPhysicalShape(desc->shape(), nd_sbp, *parallel_desc, *parallel_ctx));
+      desc->set_shape(
+          *JUST(GetPhysicalShape(desc->shape(), nd_sbp, *parallel_desc, *parallel_ctx)));
     }
   }
   return Maybe<void>::Ok();
@@ -559,20 +559,6 @@ Maybe<void> Operator::FillNdSbpSignature(const NdSbpSignature& signature) {
     NdSbpSignatureToSbpSignature(signature, &sbp_signature);
     sbp_signature_.reset(new SbpSignature(sbp_signature));
   }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> Operator::InferSbpSignatureIf(
-    const SbpSignature& sbp_sig_conf,
-    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-    const std::function<Maybe<const SbpInferHint*>(const std::string&)>& SbpInferHint4Ibn,
-    const ParallelDesc& parallel_desc) {
-  SbpSignature signature;
-
-  JUST(InferSbpSignature(&signature, sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
-                         parallel_desc));
-
-  JUST(FillSbpSignature(signature));
   return Maybe<void>::Ok();
 }
 
@@ -1032,7 +1018,7 @@ bool HasBlobDescWithField(std::function<const BlobDesc*(const std::string&)> Get
 
 void Operator::GenKernelConf(
     const std::function<const BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+    const ParallelContext* parallel_ctx, const bool need_op_attr, KernelConf* kernel_conf) const {
   auto* dtype_signature = kernel_conf->mutable_dtype_signature();
   for (const std::string& ibn : input_bns()) {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(ibn);
@@ -1040,7 +1026,9 @@ void Operator::GenKernelConf(
     (*dtype_signature->mutable_name2dtype())[ibn] = blob_desc->data_type();
   }
 
-  CHECK_JUST(ToOpAttribute(kernel_conf->mutable_op_attribute()));
+  if (need_op_attr) {
+    CHECK_JUST(ToOpAttribute(kernel_conf->mutable_op_attribute()));
+  }
   kernel_conf->set_all_blobs_are_static(
       !HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
                             [](const BlobDesc* blob_desc) { return blob_desc->is_dynamic(); }));
@@ -1455,27 +1443,6 @@ bool operator==(const OperatorConf& lhs, const OperatorConf& rhs) {
 
 namespace {
 
-Maybe<void> InferOpOutSbpParallel(
-    Operator* op, const OpNodeSignature& upstream_signature,
-    const std::function<const BlobDesc&(const std::string&)>& ConstBlobDesc4Ibn,
-    const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc) {
-  const auto& SbpParallel4Ibn = [&](const std::string& ibn) -> const SbpParallel* {
-    const auto& map = upstream_signature.sbp_signature().bn_in_op2sbp_parallel();
-    return &map.at(ibn);
-  };
-  HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
-  for (const std::string& ibn : op->input_bns()) {
-    const ParallelDesc* pd = &parallel_desc;
-    const BlobDesc* logical_blob_desc = &ConstBlobDesc4Ibn(ibn);
-    const SbpParallel* sbp_parallel = SbpParallel4Ibn(ibn);
-    ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(pd, logical_blob_desc, sbp_parallel));
-  }
-  SbpSignature sbp_signature;
-  JUST(op->InferSbpSignature(&sbp_signature, sbp_sig_conf, ibn2sbp_infer_hint));
-  JUST(op->FillSbpSignature(sbp_signature));
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> InferLocalSignature(Operator* op, const OpNodeSignature& upstream_signature,
                                 bool is_local, const ParallelDesc& parallel_desc) {
   HashMap<std::string, LocalSigInferHint> ibn2local_sig_infer_hint;
@@ -1517,33 +1484,6 @@ Maybe<void> CheckOpInputSignature(const Operator& op, const OpNodeSignature& ups
 }
 
 }  // namespace
-
-Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
-                                    const OpNodeSignature& upstream_signature, const Scope& scope) {
-  const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
-  bool is_local = scope.opt_local_parallel_conf().has_local_parallel();
-  const auto& op = JUST(ConstructOp(op_conf));
-  JUST(CheckOpInputSignature(*op, upstream_signature));
-  JUST(op->FillOpParallelDesc(parallel_desc));
-  HashMap<std::string, std::unique_ptr<BlobDesc>> bn_in_op2blob_desc;
-  for (const auto& ibn : op->input_bns()) {
-    const auto& map = upstream_signature.logical_blob_desc_signature().bn_in_op2blob_desc();
-    bn_in_op2blob_desc[ibn].reset(new BlobDesc(map.at(ibn)));
-  }
-  const auto& ConstBlobDesc4Ibn = [&](const std::string& ibn) -> const BlobDesc& {
-    return *bn_in_op2blob_desc.at(ibn);
-  };
-  JUST(op->FillLogicalInBlobDesc(ConstBlobDesc4Ibn));
-  // infer is_local
-  JUST(InferLocalSignature(op.get(), upstream_signature, is_local, parallel_desc));
-  SbpSignature sbp_sig_conf;
-  // iner sbp
-  JUST(InferOpOutSbpParallel(op.get(), upstream_signature, ConstBlobDesc4Ibn, sbp_sig_conf,
-                             parallel_desc));
-  // infer logical blob_desc
-  JUST(op->InferLogicalOutBlobDescsIf());
-  return op;
-}
 
 namespace {
 

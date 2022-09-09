@@ -88,14 +88,12 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   CHECK_OR_RETURN(!broadcast_axes.empty());
   const Shape& in_shape = ctx->InputShape("x", 0);
   const Shape& like_shape = ctx->InputShape("like", 0);
-  Shape* out_shape = ctx->MutOutputShape("y", 0);
-  Stride* out_stride = ctx->MutOutputStride("y", 0);
   const AxisVector axis_vec = {broadcast_axes.begin(), broadcast_axes.end()};
   CHECK_OR_RETURN(IsAxesLegal(axis_vec, like_shape, in_shape))
       << Error::RuntimeError() << "Invalid input parameter: like shape:" << like_shape.ToString()
       << ", in shape:" << in_shape.ToString() << ", axis_vec size:" << axis_vec.size();
-  *out_shape = like_shape;
-  *out_stride = Stride(like_shape);
+  ctx->SetOutputShape("y", 0, like_shape);
+  ctx->SetOutputStride("y", 0, Stride(like_shape));
   return Maybe<void>::Ok();
 }
 
@@ -103,10 +101,6 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 
 /* static */ Maybe<void> BroadcastLikeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferTensorDesc(ctx);
-}
-
-/*static*/ Maybe<void> BroadcastLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> BroadcastLikeOp::GetSbp(user_op::SbpContext* ctx) {
@@ -122,7 +116,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> BroadcastLikeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("like", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("like", 0));
   return Maybe<void>::Ok();
 }
 

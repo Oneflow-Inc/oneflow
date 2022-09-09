@@ -73,18 +73,15 @@ Maybe<void> GridSampleOp::CheckAttr(const user_op::UserOpDefWrapper& def,
   } else {
     CHECK_OR_RETURN(false) << "MUST be 4D or 5D input";
   }
-  *output.mut_is_dynamic() = grid.is_dynamic();
+  output.set_is_dynamic(grid.is_dynamic());
   if (is_4d_input) {
-    *(output.mut_shape()) = {input_shape.At(0), input_shape.At(1), grid_shape.At(1),
-                             grid_shape.At(2)};
+    output.set_shape(
+        Shape({input_shape.At(0), input_shape.At(1), grid_shape.At(1), grid_shape.At(2)}));
   } else {
-    *(output.mut_shape()) = {input_shape.At(0), input_shape.At(1), grid_shape.At(1),
-                             grid_shape.At(2), grid_shape.At(3)};
+    output.set_shape(Shape({input_shape.At(0), input_shape.At(1), grid_shape.At(1),
+                            grid_shape.At(2), grid_shape.At(3)}));
   }
   return Maybe<void>::Ok();
-}
-/*static*/ auto GridSampleOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
-  return GridSampleOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ auto GridSampleOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   ctx->NewBuilder()
@@ -100,7 +97,7 @@ Maybe<void> GridSampleOp::CheckAttr(const user_op::UserOpDefWrapper& def,
   return Maybe<void>::Ok();
 }
 /*static*/ auto GridSampleOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
-  *ctx->MutOutputDType("output", 0) = ctx->InputDType("input", 0);
+  ctx->SetOutputDType("output", 0, ctx->InputDType("input", 0));
   return Maybe<void>::Ok();
 }
 
@@ -111,13 +108,9 @@ Maybe<void> GridSampleGradOp::CheckAttr(const user_op::UserOpDefWrapper& def,
 
 /*static*/ auto GridSampleGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
-  *(ctx->MutOutputTensorDesc("dinput", 0)->mut_shape()) = ctx->InputTensorDesc("input", 0).shape();
-  *(ctx->MutOutputTensorDesc("dgrid", 0)->mut_shape()) = ctx->InputTensorDesc("grid", 0).shape();
+  ctx->MutOutputTensorDesc("dinput", 0)->set_shape(ctx->InputTensorDesc("input", 0).shape());
+  ctx->MutOutputTensorDesc("dgrid", 0)->set_shape(ctx->InputTensorDesc("grid", 0).shape());
   return Maybe<void>::Ok();
-}
-/*static*/ auto GridSampleGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
-    -> Maybe<void> {
-  return GridSampleGradOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ auto GridSampleGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   ctx->NewBuilder()
@@ -137,8 +130,8 @@ Maybe<void> GridSampleGradOp::CheckAttr(const user_op::UserOpDefWrapper& def,
   return Maybe<void>::Ok();
 }
 /*static*/ auto GridSampleGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
-  *ctx->MutOutputDType("dinput", 0) = ctx->InputDType("input", 0);
-  *ctx->MutOutputDType("dgrid", 0) = ctx->InputDType("grid", 0);
+  ctx->SetOutputDType("dinput", 0, ctx->InputDType("input", 0));
+  ctx->SetOutputDType("dgrid", 0, ctx->InputDType("grid", 0));
   return Maybe<void>::Ok();
 }
 

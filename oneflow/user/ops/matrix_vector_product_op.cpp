@@ -26,7 +26,7 @@ Maybe<void> InferTensorDesc4MatrixVectorProduct(user_op::InferContext* ctx) {
   int64_t m = a.shape().At(0);
   int64_t k = a.shape().At(1);
   CHECK_EQ_OR_RETURN(k, b.shape().At(0)) << "Dim K should be equal to vector b's dim0. ";
-  *ctx->MutOutputShape("out", 0) = Shape({m});
+  ctx->SetOutputShape("out", 0, Shape({m}));
   return Maybe<void>::Ok();
 }
 
@@ -34,7 +34,7 @@ Maybe<void> InferDataType4MatrixVectorProduct(user_op::InferContext* ctx) {
   DataType dtype = ctx->InputDType("a", 0);
   CHECK_EQ_OR_RETURN(ctx->InputDType("b", 0), dtype)
       << "Matrix A datatype should be equal to Vector B. ";
-  *ctx->MutOutputDType("out", 0) = dtype;
+  ctx->SetOutputDType("out", 0, dtype);
   return Maybe<void>::Ok();
 }
 
@@ -47,7 +47,7 @@ Maybe<void> InferTensorDesc4MatrixVectorProductGradA(user_op::InferContext* ctx)
   const user_op::TensorDesc& b = ctx->InputTensorDesc("b", 0);
   int64_t m = dy.shape().At(0);
   int64_t n = b.shape().At(0);
-  *ctx->MutOutputShape("dx", 0) = Shape({m, n});
+  ctx->SetOutputShape("dx", 0, Shape({m, n}));
   return Maybe<void>::Ok();
 }
 
@@ -58,13 +58,13 @@ Maybe<void> InferTensorDesc4MatrixVectorProductGradB(user_op::InferContext* ctx)
   */
   const user_op::TensorDesc& a = ctx->InputTensorDesc("a", 0);
   int64_t n = a.shape().At(1);
-  *ctx->MutOutputShape("dx", 0) = Shape({n});
+  ctx->SetOutputShape("dx", 0, Shape({n}));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferDataType4Grad(user_op::InferContext* ctx) {
   DataType dtype = ctx->InputDType("dy", 0);
-  *ctx->MutOutputDType("dx", 0) = dtype;
+  ctx->SetOutputDType("dx", 0, dtype);
   return Maybe<void>::Ok();
 }
 
@@ -72,10 +72,6 @@ Maybe<void> InferDataType4Grad(user_op::InferContext* ctx) {
 
 /* static */ Maybe<void> MatrixVectorProductOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferTensorDesc4MatrixVectorProduct(ctx);
-}
-
-/*static*/ Maybe<void> MatrixVectorProductOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> MatrixVectorProductOp::GetSbp(user_op::SbpContext* ctx) {
@@ -111,11 +107,6 @@ Maybe<void> InferDataType4Grad(user_op::InferContext* ctx) {
   return InferTensorDesc4MatrixVectorProductGradA(ctx);
 }
 
-/*static*/ Maybe<void> MatrixVectorProductGradAOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> MatrixVectorProductGradAOp::GetSbp(user_op::SbpContext* ctx) {
   /*
   A(m, k) matmul B(k) -> (m, k) matmul (k, 1) -> (m, 1) -> (m)
@@ -146,11 +137,6 @@ Maybe<void> InferDataType4Grad(user_op::InferContext* ctx) {
 /* static */ Maybe<void> MatrixVectorProductGradBOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferTensorDesc4MatrixVectorProductGradB(ctx);
-}
-
-/*static*/ Maybe<void> MatrixVectorProductGradBOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> MatrixVectorProductGradBOp::GetSbp(user_op::SbpContext* ctx) {

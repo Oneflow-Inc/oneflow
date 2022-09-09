@@ -21,8 +21,8 @@ namespace oneflow {
 /*static*/ auto FusedSelfAttentionQueryMulKeyAndValueOp::InferDataType(user_op::InferContext* ctx)
     -> Maybe<void> {
   DataType dtype = ctx->InputDType("hidden_states", 0);
-  *ctx->MutOutputDType("query_mul_key", 0) = dtype;
-  *ctx->MutOutputDType("value", 0) = dtype;
+  ctx->SetOutputDType("query_mul_key", 0, dtype);
+  ctx->SetOutputDType("value", 0, dtype);
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedSelfAttentionQueryMulKeyAndValueOp::InferLogicalTensorDesc(
@@ -41,14 +41,10 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(hidden_size % (head_size * 3), 0);
   int64_t num_heads = hidden_size / (head_size * 3);
 
-  *ctx->MutOutputShape("query_mul_key", 0) = Shape({batch_size, num_heads, seq_len, seq_len});
-  *ctx->MutOutputShape("value", 0) = Shape({batch_size, num_heads, seq_len, head_size});
+  ctx->SetOutputShape("query_mul_key", 0, Shape({batch_size, num_heads, seq_len, seq_len}));
+  ctx->SetOutputShape("value", 0, Shape({batch_size, num_heads, seq_len, head_size}));
 
   return Maybe<void>::Ok();
-}
-/*static*/ auto FusedSelfAttentionQueryMulKeyAndValueOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) -> Maybe<void> {
-  return FusedSelfAttentionQueryMulKeyAndValueOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ auto FusedSelfAttentionQueryMulKeyAndValueOp::GetSbp(user_op::SbpContext* ctx)
     -> Maybe<void> {
@@ -69,7 +65,7 @@ namespace oneflow {
     user_op::InferContext* ctx) -> Maybe<void> {
   DataType dtype = ctx->InputDType("query_mul_key_grad", 0);
   CHECK_EQ_OR_RETURN(ctx->InputDType("value_grad", 0), dtype);
-  *ctx->MutOutputDType("hidden_states_grad", 0) = dtype;
+  ctx->SetOutputDType("hidden_states_grad", 0, dtype);
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedSelfAttentionQueryMulKeyAndValueGradOp::InferLogicalTensorDesc(
@@ -98,12 +94,8 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(qmk_grad_shape.At(2), seq_len);
   CHECK_EQ_OR_RETURN(qmk_grad_shape.At(3), seq_len);
 
-  *ctx->MutOutputShape("hidden_states_grad", 0) = h_shape;
+  ctx->SetOutputShape("hidden_states_grad", 0, h_shape);
   return Maybe<void>::Ok();
-}
-/*static*/ auto FusedSelfAttentionQueryMulKeyAndValueGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) -> Maybe<void> {
-  return FusedSelfAttentionQueryMulKeyAndValueGradOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ auto FusedSelfAttentionQueryMulKeyAndValueGradOp::GetSbp(user_op::SbpContext* ctx)
     -> Maybe<void> {

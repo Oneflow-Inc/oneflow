@@ -42,15 +42,12 @@ Maybe<void> GetSbp4ScalarMul(user_op::SbpContext* ctx) {
 #define IMPLEMENT_SCALAR_MATH_OP_FUNCS(op_name, get_sbp_fn)                                        \
   /*static*/ Maybe<void> op_name##Op::GetSbp(user_op::SbpContext* ctx) { return get_sbp_fn(ctx); } \
   /*static*/ Maybe<void> op_name##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {         \
-    *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);                                     \
-    *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);                             \
+    ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));                                       \
+    ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));                               \
     return Maybe<void>::Ok();                                                                      \
   }                                                                                                \
-  /*static*/ Maybe<void> op_name##Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) {        \
-    return InferLogicalTensorDesc(ctx);                                                            \
-  }                                                                                                \
   /*static*/ Maybe<void> op_name##Op::InferDataType(user_op::InferContext* ctx) {                  \
-    *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);                                     \
+    ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));                                       \
     return Maybe<void>::Ok();                                                                      \
   }
 
@@ -71,16 +68,13 @@ IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarReversePow, GetSbp4ScalarMath)
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ScalarPowGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("dx", 0) = ctx->InputShape("x", 0);
+  ctx->SetOutputShape("dx", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> ScalarPowGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ScalarPowGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0))
       << Error::TypeError() << "Tensors dy and x must have same type";
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -92,16 +86,13 @@ IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarReversePow, GetSbp4ScalarMath)
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ScalarReversePowGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("dx", 0) = ctx->InputShape("x", 0);
+  ctx->SetOutputShape("dx", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> ScalarReversePowGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ScalarReversePowGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0))
       << Error::TypeError() << "Tensors dy and x must have same type";
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 

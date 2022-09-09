@@ -30,12 +30,8 @@ namespace oneflow {
     CHECK_EQ_OR_RETURN(zero_point_shape.elem_cnt(), in_shape.At(0));
   }
 
-  *ctx->MutOutputShape("out", 0) = in_shape;
+  ctx->SetOutputShape("out", 0, in_shape);
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> FakeQuantizationOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> FakeQuantizationOp::GetSbp(user_op::SbpContext* ctx) {
@@ -104,7 +100,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FakeQuantizationOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 

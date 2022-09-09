@@ -57,6 +57,7 @@ class Operator {
   const std::string& op_loc() const { return op_conf().loc(); }
   DeviceType device_type() const;
   const OperatorConf& op_conf() const;
+  Maybe<bool> IsFromLogicalGraph() const { return is_from_logical_graph_; }
   std::shared_ptr<const OperatorConf> shared_op_conf() const;
   const PbMessage& GetCustomizedConf() const {
     return GetMessageInPbMessage(op_conf(), op_conf().op_type_case());
@@ -81,6 +82,8 @@ class Operator {
   const PbRpf<std::string>& output_bns() const;
   const PbRpf<std::string>& tmp_bns() const;
   const PbRpf<std::string>& input_output_bns() const;
+
+  Maybe<void> SetIsFromLogicalGraph(bool flag) { is_from_logical_graph_ = flag; return Maybe<void>::Ok();}
 
   Maybe<void> FillOpParallelDesc(const ParallelDesc& parallel_desc);
   Maybe<void> FillOpParallelDesc(std::shared_ptr<const ParallelDesc> parallel_desc);
@@ -143,11 +146,6 @@ class Operator {
                                 const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint) const;
   Maybe<void> FillSbpSignature(const SbpSignature& sbp_signature);
   Maybe<void> FillNdSbpSignature(const NdSbpSignature& signature);
-  Maybe<void> InferSbpSignatureIf(
-      const SbpSignature& sbp_sig_conf,
-      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-      const std::function<Maybe<const SbpInferHint*>(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc);
   Maybe<void> InferNdSbpSignatureIf(
       const NdSbpSignature& nd_sbp_constraints, const ParallelDesc& parallel_desc,
       std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn);
@@ -156,7 +154,7 @@ class Operator {
       std::function<Maybe<const LocalSigInferHint*>(const std::string&)> LocalSigInferHint4Ibn,
       bool is_local_parallel_view_conf, const ParallelDesc& parallel_desc);
   void GenKernelConf(const std::function<const BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
-                     const ParallelContext*, KernelConf*) const;
+                     const ParallelContext*, const bool, KernelConf*) const;
   const InputBlobModifier& InputBlobModifier4Ibn(const std::string& ibn) const;
   const OutputBlobModifier& OutputBlobModifier4Obn(const std::string& obn) const;
   Maybe<const SbpParallel*> SbpParallel4BnInOp(const std::string& bn_in_op) const;
@@ -322,6 +320,7 @@ class Operator {
 
   HashMap<std::string, std::pair<BlobNameTag, int32_t>> bn2index_pair_;
   HashMap<LogicalBlobId, int32_t> lbi2output_index_;
+  bool is_from_logical_graph_{false};
 };
 
 std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx);
@@ -423,9 +422,6 @@ std::string ReplaceInputLbnInOpCustomizedConf(OperatorConf* op_conf,
                                               const std::string& new_val);
 
 bool operator==(const OperatorConf& lhs, const OperatorConf& rhs);
-
-Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
-                                    const OpNodeSignature& upstream_signature, const Scope& scope);
 
 Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
                               const ParallelDesc& parallel_desc,

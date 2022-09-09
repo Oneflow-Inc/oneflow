@@ -36,8 +36,8 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
 
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
 
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("a", 0);
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("a", 0);
+  Shape output = ctx->InputShape("a", 0);
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("a", 0));
 
   int64_t m, n, k;  // tensor a (no trans): m*k, tensor b (no trans): k*n
   if (!transpose_a) {
@@ -54,8 +54,9 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(k, b.shape().At(num_axes - 1));
     n = b.shape().At(num_axes - 2);
   }
-  out->mut_shape()->Set(num_axes - 2, m);
-  out->mut_shape()->Set(num_axes - 1, n);
+  output.Set(num_axes - 2, m);
+  output.Set(num_axes - 1, n);
+  out->set_shape(output);
   if (ctx->has_input("_add_to_output", 0)) {
     const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
     CHECK_EQ_OR_RETURN(add_to_output.shape(), out->shape());
@@ -69,7 +70,7 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   if (ctx->has_input("_add_to_output", 0)) {
     CHECK_EQ_OR_RETURN(ctx->InputDType("_add_to_output", 0), dtype);
   }
-  *ctx->MutOutputDType("out", 0) = dtype;
+  ctx->SetOutputDType("out", 0, dtype);
   return Maybe<void>::Ok();
 }
 
@@ -77,10 +78,6 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
 
 /* static */ Maybe<void> MatmulOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferTensorDesc4Matmul(ctx);
-}
-
-/*static*/ Maybe<void> MatmulOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> MatmulOp::GetSbp(user_op::SbpContext* ctx) {
@@ -144,10 +141,6 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
 
 /* static */ Maybe<void> BatchMatmulOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferTensorDesc4Matmul(ctx);
-}
-
-/*static*/ Maybe<void> BatchMatmulOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> BatchMatmulOp::GetSbp(user_op::SbpContext* ctx) {
@@ -269,7 +262,7 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   }
   out_dim_vec.at(num_max_batch_dims) = m;
   out_dim_vec.at(num_max_batch_dims + 1) = n;
-  *out->mut_shape() = Shape(out_dim_vec);
+  out->set_shape(Shape(out_dim_vec));
 
   if (ctx->has_input("_add_to_output", 0)) {
     const user_op::TensorDesc& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
@@ -277,10 +270,6 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   }
 
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> BroadcastMatmulOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> BroadcastMatmulOp::GetSbp(user_op::SbpContext* ctx) {
@@ -414,8 +403,8 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   for (int i = 0; i < a.shape().NumAxes() - 1; ++i) {
     CHECK_EQ_OR_RETURN(a.shape().At(i), b.shape().At(i));
   }
-  *out->mut_shape() =
-      Shape({a.shape().At(a.shape().NumAxes() - 1), b.shape().At(b.shape().NumAxes() - 1)});
+  out->set_shape(
+      Shape({a.shape().At(a.shape().NumAxes() - 1), b.shape().At(b.shape().NumAxes() - 1)}));
 
   if (ctx->has_input("_add_to_output", 0)) {
     const user_op::TensorDesc& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
@@ -423,10 +412,6 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   }
 
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> BroadcastMatmulGradBOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> BroadcastMatmulGradBOp::GetSbp(user_op::SbpContext* ctx) {

@@ -26,7 +26,7 @@ class WaitAndSendIdsCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override {}
-  void BuildExecGphAndRegst() override;
+  void BuildExecGph() override;
   bool IsMeaningLess() override { return false; }
 
   TaskType GetTaskType() const override { return TaskType::kWaitAndSendIds; }
@@ -40,7 +40,7 @@ void WaitAndSendIdsCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", out_regst); });
 }
 
-void WaitAndSendIdsCompTaskNode::BuildExecGphAndRegst() {
+void WaitAndSendIdsCompTaskNode::BuildExecGph() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = op();
@@ -49,7 +49,6 @@ void WaitAndSendIdsCompTaskNode::BuildExecGphAndRegst() {
     out_regst->AddLbi(lbi);
     node->BindBnWithRegst(obn, out_regst);
   }
-  node->InferBlobDescs(parallel_ctx());
 }
 
 void WaitAndSendIdsCompTaskNode::InferProducedDataRegstTimeShape() {

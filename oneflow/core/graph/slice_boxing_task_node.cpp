@@ -50,7 +50,7 @@ void SliceBoxingTaskNode::ConsumeAllRegsts() {
   CHECK_EQ(in_data_edge_cnt, ordered_in_data_edges_.size());
 }
 
-void SliceBoxingTaskNode::BuildExecGphAndRegst() {
+void SliceBoxingTaskNode::BuildExecGph() {
   ExecNode* node = mut_exec_gph().NewNode();
   std::shared_ptr<Operator> op = CHECK_JUST(ConstructOp(GetBoxingOpConf()));
   node->mut_op() = op;
@@ -63,7 +63,6 @@ void SliceBoxingTaskNode::BuildExecGphAndRegst() {
   out_regst->AddLbi(lbi());
   node->BindBnWithRegst(op->SoleObn(), out_regst);
   node->AddBnToRegstAndBindIt(&Operator::tmp_bns, GetProducedRegst("tmp"));
-  node->InferBlobDescs(parallel_ctx());
 }
 
 void SliceBoxingTaskNode::InferProducedDataRegstTimeShape() {

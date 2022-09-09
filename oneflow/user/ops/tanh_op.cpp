@@ -24,9 +24,6 @@ namespace oneflow {
 /*static*/ Maybe<void> TanhOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return user_op::TensorDescInferFnUtil::Unchanged(ctx);
 }
-/*static*/ Maybe<void> TanhOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> TanhOp::InferDataType(user_op::InferContext* ctx) {
   return user_op::TensorDescInferFnUtil::UnchangedDataType(ctx);
 }
@@ -36,9 +33,6 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> TanhGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return user_op::TensorDescInferFnUtil::Unchanged(ctx);
-}
-/*static*/ Maybe<void> TanhGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> TanhGradOp::InferDataType(user_op::InferContext* ctx) {
   return user_op::TensorDescInferFnUtil::UnchangedDataType(ctx);

@@ -13,32 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_ONEFLOW_H_
-#define ONEFLOW_CORE_JOB_ONEFLOW_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_SAVED_TENSOR_HOOKS_H_
+#define ONEFLOW_CORE_FRAMEWORK_SAVED_TENSOR_HOOKS_H_
 
-#include "oneflow/core/job/job_set.pb.h"
-#include "oneflow/core/job/plan.pb.h"
-#include "oneflow/core/control/ctrl_server.h"
-#include "oneflow/core/job/runtime.h"
-#include "oneflow/core/job/runtime_buffers_scope.h"
-#include "oneflow/core/job/inter_user_job_info.pb.h"
+#include "oneflow/core/framework/tensor.h"
 
 namespace oneflow {
-
-class Oneflow final {
+namespace one {
+class SavedTensorHook {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Oneflow);
-  Oneflow() {}
-  ~Oneflow();
-
-  Maybe<void> Init(const oneflow::JobSet& job_set);
-
- private:
-  Plan plan_;
-  std::unique_ptr<RuntimeBuffersScope> runtime_buffers_scope_;
-  std::unique_ptr<Runtime> runtime_;
+  virtual ~SavedTensorHook() = default;
+  virtual void pack(const std::shared_ptr<Tensor>& tensor) = 0;
+  virtual std::shared_ptr<Tensor> unpack() = 0;
 };
 
+class SavedTensorHookCreator {
+ public:
+  virtual ~SavedTensorHookCreator() = default;
+  virtual std::unique_ptr<SavedTensorHook> new_saved_tensor_hook() const = 0;
+};
+
+}  // namespace one
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_ONEFLOW_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_SAVED_TENSOR_HOOKS_H_

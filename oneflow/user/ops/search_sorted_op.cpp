@@ -19,12 +19,8 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> SearchSortedOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("values", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("values", 0));
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> SearchSortedOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> SearchSortedOp::GetSbp(user_op::SbpContext* ctx) {
@@ -46,20 +42,16 @@ namespace oneflow {
 /* static */ Maybe<void> SearchSortedOp::InferDataType(user_op::InferContext* ctx) {
   const bool& out_int32 = ctx->Attr<bool>("out_int32");
   if (out_int32) {
-    *ctx->MutOutputDType("out", 0) = DataType::kInt32;
+    ctx->SetOutputDType("out", 0, DataType::kInt32);
   } else {
-    *ctx->MutOutputDType("out", 0) = DataType::kInt64;
+    ctx->SetOutputDType("out", 0, DataType::kInt64);
   }
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> SearchSortedScalarOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = Shape({});
+  ctx->SetOutputShape("out", 0, Shape({}));
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> SearchSortedScalarOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> SearchSortedScalarOp::GetSbp(user_op::SbpContext* ctx) {
@@ -74,9 +66,9 @@ namespace oneflow {
 /* static */ Maybe<void> SearchSortedScalarOp::InferDataType(user_op::InferContext* ctx) {
   const bool& out_int32 = ctx->Attr<bool>("out_int32");
   if (out_int32) {
-    *ctx->MutOutputDType("out", 0) = DataType::kInt32;
+    ctx->SetOutputDType("out", 0, DataType::kInt32);
   } else {
-    *ctx->MutOutputDType("out", 0) = DataType::kInt64;
+    ctx->SetOutputDType("out", 0, DataType::kInt64);
   }
   return Maybe<void>::Ok();
 }

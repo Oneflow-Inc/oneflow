@@ -56,7 +56,7 @@ void NcclSendRecvBoxingTaskNode::ConsumeAllRegsts() {
       [&](TaskEdge* in_edge) { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); });
 }
 
-void NcclSendRecvBoxingTaskNode::BuildExecGphAndRegst() {
+void NcclSendRecvBoxingTaskNode::BuildExecGph() {
   ExecNode* node = mut_exec_gph().NewNode();
   OperatorConf op_conf;
   op_conf.set_name("System-Nccl-Send-Recv-Boxing-" + NewUniqueId());
@@ -83,7 +83,6 @@ void NcclSendRecvBoxingTaskNode::BuildExecGphAndRegst() {
     node->BindBnWithRegst(sole_op->SoleObn(), out_regst);
   }
   node->AddBnToRegstAndBindIt(&Operator::tmp_bns, GetProducedRegst("tmp"));
-  node->InferBlobDescs(parallel_ctx());
 }
 
 void NcclSendRecvBoxingTaskNode::InferProducedDataRegstTimeShape() {

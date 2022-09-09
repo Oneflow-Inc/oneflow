@@ -38,13 +38,9 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(in.is_dynamic(), index.is_dynamic());
 
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("output", 0);
-  *out->mut_shape() = index.shape();
+  out->set_shape(index.shape());
 
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> DimGatherOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> DimGatherOp::GetSbp(user_op::SbpContext* ctx) {
@@ -88,7 +84,7 @@ namespace oneflow {
   CHECK_OR_RETURN(IsIndexDataType(index.data_type()));
   const user_op::TensorDesc& in = ctx->InputTensorDesc("input", 0);
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("output", 0);
-  *out->mut_data_type() = in.data_type();
+  out->set_data_type(in.data_type());
   return Maybe<void>::Ok();
 }
 

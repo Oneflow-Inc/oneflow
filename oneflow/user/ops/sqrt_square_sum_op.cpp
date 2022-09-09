@@ -27,14 +27,11 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> SqrtSquareSumOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
-  *y->mut_shape() = Shape({});
+  y->set_shape(Shape({}));
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SqrtSquareSumOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SqrtSquareSumOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 

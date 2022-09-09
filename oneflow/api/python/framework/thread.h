@@ -13,15 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_ENV_VAR_AUTOGRAD_H_
-#define ONEFLOW_CORE_COMMON_ENV_VAR_AUTOGRAD_H_
+#ifndef ONEFLOW_API_PYTHON_FRAMEWORK_THREAD_H_
+#define ONEFLOW_API_PYTHON_FRAMEWORK_THREAD_H_
 
-#include "oneflow/core/common/env_var/env_var.h"
+#include "oneflow/core/framework/stream.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_AD_PUT_LOSS_ON_TMP_COMPUTE_STREAM, true);
+class AsyncThread final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(AsyncThread);
+  ~AsyncThread();
 
-}
+  static Maybe<AsyncThread> New();
 
-#endif  // ONEFLOW_CORE_COMMON_ENV_VAR_AUTOGRAD_H_
+  int64_t thread_uid() const { return thread_uid_; }
+
+ private:
+  AsyncThread(int64_t thread_uid) : thread_uid_(thread_uid) {}
+
+  int64_t thread_uid_;
+};
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_API_PYTHON_FRAMEWORK_THREAD_H_

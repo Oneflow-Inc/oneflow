@@ -505,10 +505,6 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
   return InferSGDUpdateTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> SgdUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> SgdUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
   FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
@@ -536,11 +532,6 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
 /* static */ Maybe<void> IndexedSlicesSgdUpdateOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferIndexedSlicesSGDUpdateTensorDesc(ctx);
-}
-
-/*static*/ Maybe<void> IndexedSlicesSgdUpdateOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> IndexedSlicesSgdUpdateOp::GetSbp(user_op::SbpContext* ctx) {
@@ -577,10 +568,6 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
   return InferMomentumUpdateTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> MomentumUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> MomentumUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
   FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
@@ -606,11 +593,6 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
 /* static */ Maybe<void> IndexedSlicesMomentumUpdateOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferIndexedSlicesMomentumUpdateTensorDesc(ctx);
-}
-
-/*static*/ Maybe<void> IndexedSlicesMomentumUpdateOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> IndexedSlicesMomentumUpdateOp::GetSbp(user_op::SbpContext* ctx) {
@@ -649,10 +631,6 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
   return InferAdamUpdateTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> AdamUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> AdamUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
   FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
@@ -684,10 +662,6 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
   return InferAdagradUpdateTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> AdagradUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> AdagradUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
   FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
@@ -713,11 +687,6 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
 /* static */ Maybe<void> IndexedSlicesAdamUpdateOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferIndexedSlicesAdamUpdateTensorDesc(ctx);
-}
-
-/*static*/ Maybe<void> IndexedSlicesAdamUpdateOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> IndexedSlicesAdamUpdateOp::GetSbp(user_op::SbpContext* ctx) {
@@ -763,10 +732,6 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
   return InferLambUpdateTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> LambUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> LambUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }
@@ -782,13 +747,8 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
 
 /* static */ Maybe<void> AdamBiasCorrectionFactorOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("train_step", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("train_step", 0));
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> AdamBiasCorrectionFactorOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> AdamBiasCorrectionFactorOp::GetSbp(user_op::SbpContext* ctx) {
@@ -796,16 +756,12 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> AdamBiasCorrectionFactorOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = DataType::kFloat;
+  ctx->SetOutputDType("out", 0, DataType::kFloat);
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> RmspropUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferRmsPropUpdateTensorDesc(ctx);
-}
-
-/*static*/ Maybe<void> RmspropUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> RmspropUpdateOp::GetSbp(user_op::SbpContext* ctx) {
@@ -845,10 +801,6 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
   return InferLarsUpdateTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> LarsUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> LarsUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
   FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
@@ -880,10 +832,6 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
   return InferFtrlUpdateTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> FtrlUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> FtrlUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
   FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
@@ -909,10 +857,6 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
 
 /* static */ Maybe<void> AdadeltaUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferAdadeltaUpdateTensorDesc(ctx);
-}
-
-/*static*/ Maybe<void> AdadeltaUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> AdadeltaUpdateOp::GetSbp(user_op::SbpContext* ctx) {

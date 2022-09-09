@@ -31,27 +31,23 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> PackOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
-  const Shape& in_shape = in_desc.shape();
   const int32_t pack_num = ctx->Attr<int32_t>("pack_num");
   CHECK_GT_OR_RETURN(pack_num, 0);
+  Shape out_shape = in_desc.shape();
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
-  *out_desc->mut_is_dynamic() = in_desc.is_dynamic();
-  if (in_shape.NumAxes() > 0) {
-    *out_desc->mut_shape() = in_shape;
-    out_desc->mut_shape()->Set(0, in_shape.At(0) * pack_num);
+  out_desc->set_is_dynamic(in_desc.is_dynamic());
+  if (out_shape.NumAxes() > 0) {
+    out_shape.Set(0, out_shape.At(0) * pack_num);
+    out_desc->set_shape(out_shape);
   } else {
     // NOTE(chengcheng): for Scalar input pack
-    CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), 1);
-    *out_desc->mut_shape() = Shape({pack_num});
+    CHECK_EQ_OR_RETURN(out_shape.elem_cnt(), 1);
+    out_desc->set_shape(Shape({pack_num}));
   }
   return Maybe<void>::Ok();
 }
-
-/*static*/ Maybe<void> PackOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return PackOp::InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> PackOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> PackOp::InferOutputBlobTimeShape(

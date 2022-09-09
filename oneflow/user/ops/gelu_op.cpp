@@ -19,13 +19,8 @@ limitations under the License.
 namespace oneflow {
 
 /*static*/ auto GeluOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
-  const Shape& in_shape = ctx->InputShape("in", 0);
-  Shape* out_shape = ctx->MutOutputShape("out", 0);
-  *out_shape = in_shape;
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
-}
-/*static*/ auto GeluOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
-  return GeluOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ auto GeluOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
@@ -35,20 +30,16 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ auto GeluOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /*static*/ auto GeluGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  Shape* dx_shape = ctx->MutOutputShape("dx", 0);
   CHECK_OR_RETURN(dy_shape == x_shape);
-  *dx_shape = dy_shape;
+  ctx->SetOutputShape("dx", 0, dy_shape);
   return Maybe<void>::Ok();
-}
-/*static*/ auto GeluGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
-  return GeluGradOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ auto GeluGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
@@ -68,7 +59,7 @@ namespace oneflow {
 }
 /*static*/ auto GeluGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
   CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0));
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 

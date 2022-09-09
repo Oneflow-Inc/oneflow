@@ -28,18 +28,14 @@ namespace oneflow {
   int64_t channels = ctx->Attr<int64_t>("channels");
 
   user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
-  *out_tensor->mut_shape() = Shape({batch_size, target_height, target_width, channels});
+  out_tensor->set_shape(Shape({batch_size, target_height, target_width, channels}));
   out_tensor->set_is_dynamic(in_tensor.is_dynamic());
 
   user_op::TensorDesc* scale_tensor = ctx->MutOutputTensorDesc("scale", 0);
-  *scale_tensor->mut_shape() = Shape({batch_size, 2});
+  scale_tensor->set_shape(Shape({batch_size, 2}));
   scale_tensor->set_is_dynamic(in_tensor.is_dynamic());
 
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> ImageResizeToFixedOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> ImageResizeToFixedOp::GetSbp(user_op::SbpContext* ctx) {
@@ -78,9 +74,9 @@ namespace oneflow {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
   CHECK_OR_RETURN(in_tensor.data_type() == DataType::kTensorBuffer);
   user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
-  *out_tensor->mut_data_type() = ctx->Attr<DataType>("data_type");
+  out_tensor->set_data_type(ctx->Attr<DataType>("data_type"));
   user_op::TensorDesc* scale_tensor = ctx->MutOutputTensorDesc("scale", 0);
-  *scale_tensor->mut_data_type() = DataType::kFloat;
+  scale_tensor->set_data_type(DataType::kFloat);
   return Maybe<void>::Ok();
 }
 
@@ -89,17 +85,12 @@ namespace oneflow {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   CHECK_OR_RETURN(in_desc.shape().NumAxes() == 1 && in_desc.shape().At(0) > 0);
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
-  *out_desc->mut_shape() = in_desc.shape();
+  out_desc->set_shape(in_desc.shape());
   user_op::TensorDesc* size_desc = ctx->MutOutputTensorDesc("size", 0);
-  *size_desc->mut_shape() = in_desc.shape();
+  size_desc->set_shape(in_desc.shape());
   user_op::TensorDesc* scale_desc = ctx->MutOutputTensorDesc("scale", 0);
-  *scale_desc->mut_shape() = in_desc.shape();
+  scale_desc->set_shape(in_desc.shape());
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> ImageResizeKeepAspectRatioOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> ImageResizeKeepAspectRatioOp::GetSbp(user_op::SbpContext* ctx) {
@@ -133,11 +124,11 @@ namespace oneflow {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   CHECK_OR_RETURN(in_desc.data_type() == DataType::kTensorBuffer);
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
-  *out_desc->mut_data_type() = DataType::kTensorBuffer;
+  out_desc->set_data_type(DataType::kTensorBuffer);
   user_op::TensorDesc* size_desc = ctx->MutOutputTensorDesc("size", 0);
-  *size_desc->mut_data_type() = DataType::kTensorBuffer;
+  size_desc->set_data_type(DataType::kTensorBuffer);
   user_op::TensorDesc* scale_desc = ctx->MutOutputTensorDesc("scale", 0);
-  *scale_desc->mut_data_type() = DataType::kTensorBuffer;
+  scale_desc->set_data_type(DataType::kTensorBuffer);
   return Maybe<void>::Ok();
 }
 

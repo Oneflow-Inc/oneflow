@@ -23,32 +23,32 @@ namespace oneflow {
 Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   const Shape& input_shape = ctx->InputShape("input_tensor", 0);
   const auto& reduce_axes = ctx->Attr<std::vector<int32_t>>("axis");
-  Shape* output_shape = ctx->MutOutputShape("output_tensor", 0);
-  Stride* output_stride = ctx->MutOutputStride("output_tensor", 0);
+  Shape output_shape;
   // For 0-dim Tensor
   if (reduce_axes.empty()) {
-    *output_shape = input_shape;
+    output_shape = input_shape;
   } else {
     const AxisVector reduce_axes_vec = {reduce_axes.begin(), reduce_axes.end()};
     const Shape& reduce_shape = CreateReducedShape(input_shape, reduce_axes_vec);
     const bool keepdims = ctx->Attr<bool>("keepdims");
     if (keepdims) {
-      *output_shape = reduce_shape;
+      output_shape = reduce_shape;
     } else {
-      *output_shape = reduce_shape.RemoveOnes(reduce_axes_vec);
+      output_shape = reduce_shape.RemoveOnes(reduce_axes_vec);
     }
   }
-  *output_stride = Stride(*output_shape);
+  ctx->SetOutputShape("output_tensor", 0, output_shape);
+  ctx->SetOutputStride("output_tensor", 0, Stride(output_shape));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("output_tensor", 0) = ctx->InputDType("input_tensor", 0);
+  ctx->SetOutputDType("output_tensor", 0, ctx->InputDType("input_tensor", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferLogicalDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("output_tensor", 0) = DataType::kBool;
+  ctx->SetOutputDType("output_tensor", 0, DataType::kBool);
   return Maybe<void>::Ok();
 }
 
@@ -96,9 +96,6 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   }                                                                                      \
   /*static*/ Maybe<void> name##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
     return InferTensorDescFn(ctx);                                                       \
-  }                                                                                      \
-  /*static*/ Maybe<void> name##Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
-    return InferLogicalTensorDesc(ctx);                                                  \
   }                                                                                      \
   /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {           \
     return infer_dtype_func(ctx);                                                        \

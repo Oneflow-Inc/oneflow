@@ -21,7 +21,7 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferClipTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("y", 0) = ctx->InputShape("x", 0);
+  ctx->SetOutputShape("y", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -34,7 +34,7 @@ Maybe<void> GetClipSbpSignature(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> InferClipGradTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("dx", 0) = ctx->InputShape("x", 0);
+  ctx->SetOutputShape("dx", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -56,12 +56,12 @@ Maybe<void> GetClipGradSbpSignature(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> InferClipTensorDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferClipGradDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -71,11 +71,6 @@ Maybe<void> InferClipGradDataType(user_op::InferContext* ctx) {
   /* static */ Maybe<void> op_class_name_prefix##Op::InferLogicalTensorDesc(                     \
       user_op::InferContext* ctx) {                                                              \
     return InferClipTensorDesc(ctx);                                                             \
-  }                                                                                              \
-                                                                                                 \
-  /*static*/ Maybe<void> op_class_name_prefix##Op::InferPhysicalTensorDesc(                      \
-      user_op::InferContext* ctx) {                                                              \
-    return InferLogicalTensorDesc(ctx);                                                          \
   }                                                                                              \
                                                                                                  \
   /* static */ Maybe<void> op_class_name_prefix##Op::GetSbp(user_op::SbpContext* ctx) {          \
@@ -88,10 +83,6 @@ Maybe<void> InferClipGradDataType(user_op::InferContext* ctx) {
   /* static */ Maybe<void> op_class_name_prefix##GradOp::InferLogicalTensorDesc(                 \
       user_op::InferContext* ctx) {                                                              \
     return InferClipGradTensorDesc(ctx);                                                         \
-  }                                                                                              \
-  /*static*/ Maybe<void> op_class_name_prefix##GradOp::InferPhysicalTensorDesc(                  \
-      user_op::InferContext* ctx) {                                                              \
-    return InferLogicalTensorDesc(ctx);                                                          \
   }                                                                                              \
   /* static */ Maybe<void> op_class_name_prefix##GradOp::GetSbp(user_op::SbpContext* ctx) {      \
     return GetClipGradSbpSignature(ctx);                                                         \

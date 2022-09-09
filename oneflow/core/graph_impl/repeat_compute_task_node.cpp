@@ -30,7 +30,7 @@ class RepeatCompTaskNode final : public CompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kRepeat; }
 
  private:
-  void BuildExecGphAndRegst() override;
+  void BuildExecGph() override;
 };
 
 void RepeatCompTaskNode::ConsumeAllRegsts() {
@@ -42,7 +42,7 @@ void RepeatCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", out_regst); });
 }
 
-void RepeatCompTaskNode::BuildExecGphAndRegst() {
+void RepeatCompTaskNode::BuildExecGph() {
   ExecNode* node = mut_exec_gph().NewNode();
   std::shared_ptr<const Operator> sole_op = op();
   node->mut_op() = sole_op;
@@ -50,7 +50,6 @@ void RepeatCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   out_regst->AddLbi(sole_op->BnInOp2Lbi(sole_op->SoleObn()));
   node->BindBnWithRegst(sole_op->SoleObn(), out_regst);
-  node->InferBlobDescs(parallel_ctx());
 }
 
 REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kRepeat);

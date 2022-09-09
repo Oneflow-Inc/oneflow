@@ -19,12 +19,8 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<void> CumsumOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("y", 0) = ctx->InputShape("x", 0);
+  ctx->SetOutputShape("y", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
-}
-
-Maybe<void> CumsumOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 Maybe<void> CumsumOp::GetSbp(user_op::SbpContext* ctx) {
@@ -37,17 +33,13 @@ Maybe<void> CumsumOp::GetSbp(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> CumsumOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> CumProdOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("y", 0) = ctx->InputShape("x", 0);
+  ctx->SetOutputShape("y", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
-}
-
-Maybe<void> CumProdOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 Maybe<void> CumProdOp::GetSbp(user_op::SbpContext* ctx) {
@@ -60,17 +52,13 @@ Maybe<void> CumProdOp::GetSbp(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> CumProdOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> CumProdGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("dx", 0) = ctx->InputShape("dy", 0);
+  ctx->SetOutputShape("dx", 0, ctx->InputShape("dy", 0));
   return Maybe<void>::Ok();
-}
-
-Maybe<void> CumProdGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 Maybe<void> CumProdGradOp::GetSbp(user_op::SbpContext* ctx) {
@@ -87,7 +75,7 @@ Maybe<void> CumProdGradOp::GetSbp(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> CumProdGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
   return Maybe<void>::Ok();
 }
 

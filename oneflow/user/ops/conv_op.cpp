@@ -48,8 +48,8 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
       JUST(CalcConvOut(in.shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
                        strides.at(i), padding_before.at(i), &out_shape.at(idx_offset + i)));
     }
-    *out->mut_is_dynamic() = in.is_dynamic();
-    *out->mut_shape() = Shape(out_shape);
+    out->set_is_dynamic(in.is_dynamic());
+    out->set_shape(Shape(out_shape));
   }
 
   {
@@ -166,10 +166,6 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
   return InferTensorDesc4Conv<1>(ctx);
 }
 
-/*static*/ Maybe<void> Conv1DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> Conv1DOp::GetSbp(user_op::SbpContext* ctx) {
   return GetSbpSignatures4Conv(ctx);
 }
@@ -180,16 +176,12 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
 }
 
 /* static */ Maybe<void> Conv1DOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> Conv2DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferTensorDesc4Conv<2>(ctx);
-}
-
-/*static*/ Maybe<void> Conv2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> Conv2DOp::GetSbp(user_op::SbpContext* ctx) {
@@ -202,16 +194,12 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
 }
 
 /* static */ Maybe<void> Conv2DOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> Conv3DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferTensorDesc4Conv<3>(ctx);
-}
-
-/*static*/ Maybe<void> Conv3DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> Conv3DOp::GetSbp(user_op::SbpContext* ctx) {
@@ -224,7 +212,7 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
 }
 
 /* static */ Maybe<void> Conv3DOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -240,13 +228,9 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
     const user_op::TensorDesc& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
     CHECK_EQ_OR_RETURN(add_to_output.shape(), x_like.shape());
   }
-  *ctx->MutOutputShape("dx", 0) = ctx->InputShape("x_like", 0);
-  *ctx->MutOutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x_like", 0);
+  ctx->SetOutputShape("dx", 0, ctx->InputShape("x_like", 0));
+  ctx->SetOutputIsDynamic("dx", 0, ctx->InputIsDynamic("x_like", 0));
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> ConvDataGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> ConvDataGradOp::GetSbp(user_op::SbpContext* ctx) {
@@ -274,7 +258,7 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
     const user_op::TensorDesc& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
     CHECK_EQ_OR_RETURN(add_to_output.data_type(), x_like.data_type());
   }
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x_like", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x_like", 0));
   return Maybe<void>::Ok();
 }
 
@@ -311,14 +295,10 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
   }
 
   user_op::TensorDesc* filter_diff = ctx->MutOutputTensorDesc("filter_diff", 0);
-  *filter_diff->mut_shape() = Shape(filter_diff_dim_vec);
+  filter_diff->set_shape(Shape(filter_diff_dim_vec));
   filter_diff->set_is_dynamic(false);
 
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> ConvFilterGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> ConvFilterGradOp::GetSbp(user_op::SbpContext* ctx) {
@@ -340,7 +320,7 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   CHECK_EQ_OR_RETURN(x.data_type(), dy.data_type());
   user_op::TensorDesc* filter_diff = ctx->MutOutputTensorDesc("filter_diff", 0);
-  *filter_diff->mut_data_type() = x.data_type();
+  filter_diff->set_data_type(x.data_type());
   return Maybe<void>::Ok();
 }
 
@@ -355,17 +335,13 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
   CHECK_LE_OR_RETURN(num_spatial_dims, 3);
   CHECK_EQ_OR_RETURN(dy.shape().NumAxes(), num_spatial_dims + 2);
   if (data_format == "channels_first") {
-    *bias_diff->mut_shape() = Shape({dy.shape().At(1)});
+    bias_diff->set_shape(Shape({dy.shape().At(1)}));
   } else if (data_format == "channels_last") {
-    *bias_diff->mut_shape() = Shape({dy.shape().At(dy.shape().NumAxes() - 1)});
+    bias_diff->set_shape(Shape({dy.shape().At(dy.shape().NumAxes() - 1)}));
   } else {
     OF_UNIMPLEMENTED();
   }
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> ConvBiasGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> ConvBiasGradOp::GetSbp(user_op::SbpContext* ctx) {
@@ -389,7 +365,7 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
 /* static */ Maybe<void> ConvBiasGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
   user_op::TensorDesc* bias_diff = ctx->MutOutputTensorDesc("bias_diff", 0);
-  *bias_diff->mut_data_type() = dy.data_type();
+  bias_diff->set_data_type(dy.data_type());
   return Maybe<void>::Ok();
 }
 

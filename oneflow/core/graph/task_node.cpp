@@ -156,7 +156,21 @@ void TaskNode::ForEachProducedDataRegst(
   }
 }
 
-void TaskNode::Build() { BuildExecGphAndRegst(); }
+void TaskNode::Build() {
+  BuildExecGph();
+  InferRegst();
+}
+
+void TaskNode::InferRegst() {
+  if (mut_exec_gph().node_num() == 1) {
+    auto node = mut_exec_gph().SoleNode();
+    node->InferBlobDescs(op_node(), parallel_ctx());
+  } else if (mut_exec_gph().node_num() > 1) {
+    mut_exec_gph().TopoForEachNode([this](ExecNode* node) { 
+      node->InferBlobDescs(op_node(), parallel_ctx());
+    });
+  }
+}
 
 void TaskNode::EraseUninitializedShapeProducedBlob() {
   for (auto& pair : produced_regsts_) { pair.second->EraseUninitializedShapeBlob(); }
@@ -214,7 +228,8 @@ void TaskNode::ToProto(TaskProto* task_proto) const {
   task_proto->mutable_task_set_info()->set_order_in_graph(order_in_graph_);
 
   // Step2: process exec_gph.
-  exec_gph_.ToExecSequence(parallel_ctx(), task_proto->mutable_exec_sequence());
+  const bool need_op_attr = !op_node();
+  exec_gph_.ToExecSequence(parallel_ctx(), need_op_attr, task_proto->mutable_exec_sequence());
 
   // Step3: process produced_regst.
   auto* produced_regst_proto = task_proto->mutable_produced_regst_desc();

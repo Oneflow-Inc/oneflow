@@ -30,7 +30,7 @@ class CriticalSectionWaitTickCompTaskNode final : public CompTaskNode {
  private:
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
-  void BuildExecGphAndRegst() override;
+  void BuildExecGph() override;
 };
 
 void CriticalSectionWaitTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
@@ -43,7 +43,7 @@ void CriticalSectionWaitTickCompTaskNode::ConsumeAllRegsts() {
   ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
 }
 
-void CriticalSectionWaitTickCompTaskNode::BuildExecGphAndRegst() {
+void CriticalSectionWaitTickCompTaskNode::BuildExecGph() {
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = op();
   const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
@@ -56,7 +56,6 @@ void CriticalSectionWaitTickCompTaskNode::BuildExecGphAndRegst() {
     out_regst->AddLbi(lbi);
     node->BindBnWithRegst(obn, out_regst);
   }
-  node->InferBlobDescs(parallel_ctx());
 }
 
 REGISTER_INDEPENDENT_TASK_STREAM_INDEX_GETTER(TaskType::kCriticalSectionWaitTick);

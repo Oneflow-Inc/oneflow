@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/intra_job_mem_sharing_util.h"
+#include <string>
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/common/time_util.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/register/runtime_register_desc.h"
@@ -200,10 +202,8 @@ void GenMemChainTasksAndRegsts(
                                          std::string* op_name) -> bool {
     if (task_proto->task_type() == TaskType::kNormalForward
         && task_proto->exec_sequence().exec_node_size() == 1) {
-      *op_name = PlanUtil::GetOpAttribute(plan, task_proto->job_id(),
-                                          task_proto->exec_sequence().exec_node(0).kernel_conf())
-                     .op_conf()
-                     .name();
+      *op_name = PlanUtil::GetOpName(plan, task_proto->job_id(),
+                                          task_proto->exec_sequence().exec_node(0).kernel_conf());
       return true;
     }
     return false;
@@ -765,16 +765,19 @@ void InitAlgo2Result(HashMap<MemAllocAlgoType, MemBlockResultInfo>* algo2result)
 void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
     Plan* plan, const std::function<bool(const std::string&, const std::string&)>&
                     IsOpNameDataOrCtrlReachable) {
+  auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
   // 1 device 1 mem chain
   HashMap<int64_t, std::vector<TaskProto*>> mem_chain2sorted_tasks;
   HashMap<int64_t, HashSet<RegstDescProto*>> mem_chain2mem_reused_regsts;
   GenMemChainTasksAndRegsts(plan, IsOpNameDataOrCtrlReachable, &mem_chain2sorted_tasks,
                             &mem_chain2mem_reused_regsts);
+  tc->Count("GenMemChainTasksAndRegsts", 1);
   if (mem_chain2mem_reused_regsts.empty()) { return; }
   HashSet<int64_t> mem_chains;
   for (const auto& pair : mem_chain2mem_reused_regsts) { mem_chains.insert(pair.first); }
   HashMap<int64_t, RegstDescProto*> regst_desc_id2regst_desc;
   GenRegstDescId2RegstDesc(plan, &regst_desc_id2regst_desc);
+  tc->Count("GenRegstDescId2RegstDesc", 1);
   // info for algorithm
   HashMap<int64_t, std::vector<HashSet<RegstDescProto*>>> mem_chain2task2alloc_regsts;
   HashMap<int64_t, std::vector<HashSet<RegstDescProto*>>> mem_chain2task2free_regsts;
@@ -782,41 +785,66 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
       mem_chain2regst2mutual_exclusion_regsts;
   // info for inplace
   HashMap<int64_t, HashMap<RegstDescProto*, RegstDescProto*>> mem_chain2consumer2inplaced_regst;
-
-  // step 1: generate regst alloc/free queue AND regst mutual exclusions
-  for (const auto& pair : mem_chain2mem_reused_regsts) {
-    GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
-        mem_chain2sorted_tasks.at(pair.first), pair.second, regst_desc_id2regst_desc,
-        &mem_chain2task2alloc_regsts[pair.first], &mem_chain2task2free_regsts[pair.first],
-        &mem_chain2regst2mutual_exclusion_regsts[pair.first],
-        &mem_chain2consumer2inplaced_regst[pair.first]);
-  }
-
-  // step 2: multi-thread run several algorithm for each mem chain
   HashMap<int64_t, HashMap<MemAllocAlgoType, MemBlockResultInfo>> mem_chain2algo2result;
+
+  for (int64_t mem_chain_id : mem_chains) {
+    CHECK(mem_chain2task2alloc_regsts[mem_chain_id].empty());
+    CHECK(mem_chain2task2free_regsts[mem_chain_id].empty());
+    CHECK(mem_chain2regst2mutual_exclusion_regsts[mem_chain_id].empty());
+    CHECK(mem_chain2consumer2inplaced_regst[mem_chain_id].empty());
+    CHECK(mem_chain2algo2result[mem_chain_id].empty());
+  }
+  tc->Count("InitForEachMemChain", 1);
+  // step 1: generate regst alloc/free queue AND regst mutual exclusions
+  {
+    int64_t work_size = mem_chain2mem_reused_regsts.size();
+    int64_t thread_pool_size = std::min<int64_t>(work_size, std::thread::hardware_concurrency());
+    BlockingCounter counter(work_size);
+    ThreadPool thread_pool(thread_pool_size);
+    // Parallel run between chain
+    for (int64_t mem_chain_id : mem_chains) {
+      thread_pool.AddWork([&, mem_chain_id]() {
+        auto reused = mem_chain2mem_reused_regsts.at(mem_chain_id);
+        GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
+            mem_chain2sorted_tasks.at(mem_chain_id), reused, regst_desc_id2regst_desc,
+            &mem_chain2task2alloc_regsts[mem_chain_id], &mem_chain2task2free_regsts[mem_chain_id],
+            &mem_chain2regst2mutual_exclusion_regsts[mem_chain_id],
+            &mem_chain2consumer2inplaced_regst[mem_chain_id]);
+        InitAlgo2Result(&mem_chain2algo2result[mem_chain_id]);
+        counter.Decrease();
+      });
+    }
+    counter.WaitForeverUntilCntEqualZero();
+  }
+  tc->Count("GenRegstAllocFreeTimeLineAndRegstMutualExclusions", 1);
+  // step 2: multi-thread run several algorithm for each mem chain
   {
     int64_t work_size = mem_chain2mem_reused_regsts.size() * CountMemAllocAlgoNum();
     int64_t thread_pool_size = std::min<int64_t>(work_size, std::thread::hardware_concurrency());
     BlockingCounter counter(work_size);
     ThreadPool thread_pool(thread_pool_size);
+    // Parallel run between chain
     for (int64_t mem_chain_id : mem_chains) {
-      InitAlgo2Result(&mem_chain2algo2result[mem_chain_id]);
+      // Paralle run between alg
       for (auto& pair : mem_chain2algo2result.at(mem_chain_id)) {
         MemAllocAlgoType algo_id = pair.first;
         MemBlockResultInfo* result = &pair.second;
         thread_pool.AddWork([algo_id, mem_chain_id, &mem_chain2task2alloc_regsts,
                              &mem_chain2task2free_regsts, &mem_chain2regst2mutual_exclusion_regsts,
                              result, &counter]() {
+          // auto tc_alg = std::make_unique<TimeCounter<std::chrono::microseconds>>(true);
           SelectAlgorithmGenMemBlockOffset4Regsts(
               algo_id, mem_chain2task2alloc_regsts.at(mem_chain_id),
               mem_chain2task2free_regsts.at(mem_chain_id),
               mem_chain2regst2mutual_exclusion_regsts.at(mem_chain_id), result);
           counter.Decrease();
+          // tc_alg->Count("OneAlg " + std::to_string(mem_chain_id) + "_" + std::to_string(algo_id), 1);
         });
       }
     }
     counter.WaitForeverUntilCntEqualZero();
   }
+  tc->Count("SelectAlgorithmGenMemBlockOffset4Regsts", 1);
 
   // step 3: choose best one for each mem chain and set offset for inplace consumer regst
   for (const auto& pair : mem_chain2algo2result) {
@@ -867,6 +895,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
       consumer_regst_desc->set_inplace_consumed_regst_desc_id(hint);
     }
   }
+  tc->Count("ChooseBestOneForEachMemChain", 1);
 }
 
 }  // namespace oneflow

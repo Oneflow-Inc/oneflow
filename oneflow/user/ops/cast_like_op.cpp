@@ -19,13 +19,9 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> CastLikeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> CastLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> CastLikeOp::GetSbp(user_op::SbpContext* ctx) {
@@ -66,7 +62,7 @@ namespace oneflow {
 /* static */ Maybe<void> CastLikeOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dtype_like_tensor_desc = ctx->InputTensorDesc("dtype_like", 0);
   user_op::TensorDesc* output_tensor_desc = ctx->MutOutputTensorDesc("out", 0);
-  *output_tensor_desc->mut_data_type() = dtype_like_tensor_desc.data_type();
+  output_tensor_desc->set_data_type(dtype_like_tensor_desc.data_type());
   return Maybe<void>::Ok();
 }
 

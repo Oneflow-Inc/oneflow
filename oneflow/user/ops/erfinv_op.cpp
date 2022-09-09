@@ -20,13 +20,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> ErfInvOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
-  Shape* y_shape = ctx->MutOutputShape("y", 0);
-  *y_shape = x_shape;
+  ctx->SetOutputShape("y", 0, x_shape);
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> ErfInvOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> ErfInvOp::GetSbp(user_op::SbpContext* ctx) {
@@ -38,7 +33,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> ErfInvOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 

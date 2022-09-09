@@ -34,14 +34,10 @@ namespace oneflow {
   CHECK_GE_OR_RETURN(ctx->Attr<int32_t>("blank"), 0);
   CHECK_LT_OR_RETURN(ctx->Attr<int32_t>("blank"), log_probs.shape().At(2));
 
-  *ctx->MutOutputShape("loss", 0) = Shape({batch_size});
-  *ctx->MutOutputShape("alpha", 0) =
-      Shape({batch_size, log_probs.shape().At(0), 2 * max_target_length + 1});
+  ctx->SetOutputShape("loss", 0, Shape({batch_size}));
+  ctx->SetOutputShape("alpha", 0,
+                      Shape({batch_size, log_probs.shape().At(0), 2 * max_target_length + 1}));
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> CtcLossOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> CtcLossOp::GetSbp(user_op::SbpContext* ctx) {
@@ -57,8 +53,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CtcLossOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("loss", 0) = ctx->InputDType("log_probs", 0);
-  *ctx->MutOutputDType("alpha", 0) = ctx->InputDType("log_probs", 0);
+  ctx->SetOutputDType("loss", 0, ctx->InputDType("log_probs", 0));
+  ctx->SetOutputDType("alpha", 0, ctx->InputDType("log_probs", 0));
   return Maybe<void>::Ok();
 }
 
@@ -78,12 +74,8 @@ namespace oneflow {
   CHECK_GE_OR_RETURN(ctx->Attr<int32_t>("blank"), 0);
   CHECK_LT_OR_RETURN(ctx->Attr<int32_t>("blank"), log_probs.shape().At(2));
 
-  *ctx->MutOutputShape("grad", 0) = log_probs.shape();
+  ctx->SetOutputShape("grad", 0, log_probs.shape());
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> CtcLossGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> CtcLossGradOp::GetSbp(user_op::SbpContext* ctx) {
@@ -101,7 +93,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CtcLossGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("grad", 0) = ctx->InputDType("log_probs", 0);
+  ctx->SetOutputDType("grad", 0, ctx->InputDType("log_probs", 0));
   return Maybe<void>::Ok();
 }
 
@@ -110,13 +102,9 @@ namespace oneflow {
   const user_op::TensorDesc& input_lengths = ctx->InputTensorDesc("input_lengths", 0);
   const int64_t batch_size = log_probs.shape().At(1);
   CHECK_EQ_OR_RETURN(batch_size, input_lengths.shape().At(0));
-  *ctx->MutOutputShape("decoded", 0) = Shape({batch_size, log_probs.shape().At(0)});
-  *ctx->MutOutputShape("neg_sum_logits", 0) = Shape({batch_size, 1});
+  ctx->SetOutputShape("decoded", 0, Shape({batch_size, log_probs.shape().At(0)}));
+  ctx->SetOutputShape("neg_sum_logits", 0, Shape({batch_size, 1}));
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> CtcGreedyDecoderOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> CtcGreedyDecoderOp::GetSbp(user_op::SbpContext* ctx) {
@@ -130,8 +118,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CtcGreedyDecoderOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("decoded", 0) = ctx->InputDType("input_lengths", 0);
-  *ctx->MutOutputDType("neg_sum_logits", 0) = ctx->InputDType("log_probs", 0);
+  ctx->SetOutputDType("decoded", 0, ctx->InputDType("input_lengths", 0));
+  ctx->SetOutputDType("neg_sum_logits", 0, ctx->InputDType("log_probs", 0));
   return Maybe<void>::Ok();
 }
 

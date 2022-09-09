@@ -55,7 +55,7 @@ TensorDescInferFn AvgPoolMakeForwardTensorDescInferFn(const int32_t dim) {
                                     ceil_mode, count_include_pad, divisor_override);
     user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
     *y_desc = ctx->InputTensorDesc("x", 0);
-    *y_desc->mut_shape() = params_3d.GetYShape();
+    y_desc->set_shape(params_3d.GetYShape());
 
     return Maybe<void>::Ok();
   };
@@ -86,12 +86,12 @@ Maybe<void> BackwardTensorDescInferFn(user_op::InferContext* ctx) {
 }
 
 Maybe<void> FwInferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -103,9 +103,6 @@ Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
   }                                                                                      \
   /*static*/ Maybe<void> name##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
     return AvgPoolMakeForwardTensorDescInferFn(ndim)(ctx);                               \
-  }                                                                                      \
-  /*static*/ Maybe<void> name##Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
-    return InferLogicalTensorDesc(ctx);                                                  \
   }                                                                                      \
   /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {           \
     return FwInferDataType(ctx);                                                         \
@@ -122,9 +119,6 @@ IMPLEMENT_AVGPOOL_FUNCS(AvgPool3D, 3)
   }                                                                                          \
   /*static*/ Maybe<void> name##GradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
     return BackwardTensorDescInferFn(ctx);                                                   \
-  }                                                                                          \
-  /*static*/ Maybe<void> name##GradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
-    return InferLogicalTensorDesc(ctx);                                                      \
   }                                                                                          \
   /*static*/ Maybe<void> name##GradOp::InferDataType(user_op::InferContext* ctx) {           \
     return BwInferDataType(ctx);                                                             \

@@ -29,14 +29,11 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SoftmaxOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SoftmaxOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SoftmaxOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -54,21 +51,17 @@ namespace oneflow {
 /*static*/ Maybe<void> SoftmaxGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& y_shape = ctx->InputShape("y", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  Shape* dx_shape = ctx->MutOutputShape("dx", 0);
   CHECK_OR_RETURN(dy_shape == y_shape) << Error::RuntimeError() << "The size of dy " << dy_shape
                                        << " must match the size of y " << y_shape;
-  *dx_shape = dy_shape;
+  ctx->SetOutputShape("dx", 0, dy_shape);
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> SoftmaxGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SoftmaxGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), ctx->InputDType("y", 0))
       << Error::TypeError() << "dy and y are expected to have the same dtype, but found "
       << DataType_Name(ctx->InputDType("dy", 0)) << " and "
       << DataType_Name(ctx->InputDType("y", 0));
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("y", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("y", 0));
   return Maybe<void>::Ok();
 }
 

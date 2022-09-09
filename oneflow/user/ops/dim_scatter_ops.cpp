@@ -74,7 +74,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   }
 
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("output", 0);
-  *out->mut_shape() = input ? input->shape() : like->shape();
+  out->set_shape(input ? input->shape() : like->shape());
   return Maybe<void>::Ok();
 }
 
@@ -97,7 +97,7 @@ Maybe<void> InferScalarTensorDesc(user_op::InferContext* ctx) {
   }
 
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("output", 0);
-  *out->mut_shape() = input.shape();
+  out->set_shape(input.shape());
   return Maybe<void>::Ok();
 }
 
@@ -185,14 +185,14 @@ Maybe<void> InferDtype(user_op::InferContext* ctx) {
   } else {
     CHECK_EQ_OR_RETURN(ctx->InputDType("like", 0), ctx->InputDType("src", 0));
   }
-  *ctx->MutOutputDType("output", 0) = ctx->InputDType("src", 0);
+  ctx->SetOutputDType("output", 0, ctx->InputDType("src", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferScalarDtype(user_op::InferContext* ctx) {
   const user_op::TensorDesc& index = ctx->InputTensorDesc("index", 0);
   CHECK_OR_RETURN(IsIndexDataType(index.data_type()));
-  *ctx->MutOutputDType("output", 0) = ctx->InputDType("input", 0);
+  ctx->SetOutputDType("output", 0, ctx->InputDType("input", 0));
   return Maybe<void>::Ok();
 }
 
@@ -200,10 +200,6 @@ Maybe<void> InferScalarDtype(user_op::InferContext* ctx) {
 
 /* static */ Maybe<void> DimScatterAddLikeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferTensorDesc(ctx);
-}
-
-/*static*/ Maybe<void> DimScatterAddLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> DimScatterAddLikeOp::GetSbp(user_op::SbpContext* ctx) {
@@ -224,10 +220,6 @@ Maybe<void> InferScalarDtype(user_op::InferContext* ctx) {
     return InferTensorDesc(ctx);                                                                  \
   }                                                                                               \
                                                                                                   \
-  /*static*/ Maybe<void> op_class_name::InferPhysicalTensorDesc(user_op::InferContext* ctx) {     \
-    return InferLogicalTensorDesc(ctx);                                                           \
-  }                                                                                               \
-                                                                                                  \
   /* static */ Maybe<void> op_class_name::GetSbp(user_op::SbpContext* ctx) {                      \
     return SetSbpScatter(ctx);                                                                    \
   }                                                                                               \
@@ -244,10 +236,6 @@ Maybe<void> InferScalarDtype(user_op::InferContext* ctx) {
 #define DEF_SCATTER_SCALAR_OP(optypename)                                                         \
   /* static */ Maybe<void> optypename::InferLogicalTensorDesc(user_op::InferContext* ctx) {       \
     return InferScalarTensorDesc(ctx);                                                            \
-  }                                                                                               \
-                                                                                                  \
-  /*static*/ Maybe<void> optypename::InferPhysicalTensorDesc(user_op::InferContext* ctx) {        \
-    return InferLogicalTensorDesc(ctx);                                                           \
   }                                                                                               \
                                                                                                   \
   /* static */ Maybe<void> optypename::GetSbp(user_op::SbpContext* ctx) {                         \

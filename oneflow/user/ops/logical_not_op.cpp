@@ -21,7 +21,7 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferDataTypeLogicalNot(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = DataType::kBool;
+  ctx->SetOutputDType("y", 0, DataType::kBool);
   return Maybe<void>::Ok();
 }
 
@@ -29,10 +29,6 @@ Maybe<void> InferDataTypeLogicalNot(user_op::InferContext* ctx) {
 
 /* static */ Maybe<void> LogicalNotOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return user_op::TensorDescInferFnUtil::Unchanged(ctx);
-}
-
-/*static*/ Maybe<void> LogicalNotOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> LogicalNotOp::GetSbp(user_op::SbpContext* ctx) {

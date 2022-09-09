@@ -52,12 +52,8 @@ namespace oneflow {
     out_desc->set_is_dynamic(true);
     out_dim_vec.at(axis) = max_dim_size;
   }
-  *out_desc->mut_shape() = Shape(out_dim_vec);
+  out_desc->set_shape(Shape(out_dim_vec));
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> ConcatOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> ConcatOp::GetSbp(user_op::SbpContext* ctx) {
@@ -79,7 +75,7 @@ namespace oneflow {
     CHECK_EQ_OR_RETURN(in_desc.data_type(), first_in_desc.data_type());
   }
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
-  *out_desc->mut_data_type() = first_in_desc.data_type();
+  out_desc->set_data_type(first_in_desc.data_type());
   return Maybe<void>::Ok();
 }
 

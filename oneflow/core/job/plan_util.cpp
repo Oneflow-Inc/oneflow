@@ -13,16 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <memory>
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/memory/chunk_manager.h"
 #include "oneflow/core/memory/memory_case_util.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
@@ -64,11 +67,6 @@ void PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan) {
       }
     }
   }
-}
-
-void PlanUtil::GenMemBlockAndChunk4Plan(Plan* plan) {
-  HashSet<std::string> variable_op_names;
-  PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names);
 }
 
 namespace {
@@ -189,15 +187,13 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
 }  // namespace
 
 void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
-    Plan* plan, const HashSet<std::string>& variable_op_names) {
+    Plan* plan, std::shared_ptr<const TaskGraph> task_graph, const HashSet<std::string>& variable_op_names) {
   HashMap<int64_t, std::unique_ptr<MemBlockProto>> mem_block_id2mem_block;
 
   auto IsVariableRegst = [&](const TaskProto* task, std::string* name) -> bool {
     if (variable_op_names.empty()) { return false; }
     if (task->exec_sequence().exec_node_size() != 1) { return false; }
-    const auto& op_conf =
-        GetOpAttribute(plan, task->job_id(), task->exec_sequence().exec_node(0).kernel_conf())
-            .op_conf();
+    const auto& op_conf = GetOpConf(task_graph, task->exec_sequence().exec_node(0).kernel_conf());
     if (!op_conf.has_variable_conf()) { return false; }
     const std::string& var_name = op_conf.name();
     if (variable_op_names.find(var_name) == variable_op_names.end()) {
@@ -386,7 +382,7 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
   }
 }
 
-void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
+void PlanUtil::ToDotFile(const Plan& plan, std::shared_ptr<const TaskGraph> task_graph, const std::string& filepath) {
   const auto& process_ranks = Singleton<ResourceDesc, ForSession>::Get()->process_ranks();
   size_t gpu_device_num =
       Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(DeviceType::kCUDA);
@@ -481,8 +477,7 @@ void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
     std::string op_name = "";
     std::string pass_tag = kNoPassTag;
     for (const ExecNodeProto& exec_node : task_proto.exec_sequence().exec_node()) {
-      const auto& op_conf =
-          GetOpAttribute(&plan, task_proto.job_id(), exec_node.kernel_conf()).op_conf();
+      const auto& op_conf = GetOpConf(task_graph, exec_node.kernel_conf());
       op_name += op_conf.name();
       if (op_conf.has_pass_tag()) { pass_tag = op_conf.pass_tag(); }
     }
@@ -695,11 +690,9 @@ const boxing::collective::RankDesc& GetRankDesc(const OperatorConf& conf) {
   }
 }
 
-const boxing::collective::RankDesc& GetRankDesc(Plan* plan, const TaskProto& task_proto) {
+const boxing::collective::RankDesc& GetRankDesc(const TaskProto& task_proto, std::shared_ptr<const TaskGraph> task_graph) {
   CHECK_EQ(task_proto.exec_sequence().exec_node_size(), 1);
-  return GetRankDesc(PlanUtil::GetOpAttribute(plan, task_proto.job_id(),
-                                              task_proto.exec_sequence().exec_node(0).kernel_conf())
-                         .op_conf());
+  return GetRankDesc(PlanUtil::GetOpConf(task_graph, task_proto.exec_sequence().exec_node(0).kernel_conf()));
 }
 
 struct CollectiveBoxingRequestInfo {
@@ -719,7 +712,7 @@ void GetDeviceDesc(const TaskProto* task_proto, boxing::collective::DeviceDesc* 
 
 }  // namespace
 
-void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
+void PlanUtil::GenCollectiveBoxingPlan(Job* job, std::shared_ptr<const TaskGraph> task_graph, Plan* plan) {
   using namespace boxing::collective;
 
   RequestSet* request_set = &(*plan->mutable_collective_boxing_plan()
@@ -780,7 +773,7 @@ void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
     HashMap<std::string, CollectiveBoxingRequestInfo> name2request_info;
     for (const PlanTaskNode* node : collective_boxing_nodes) {
       const TaskProto* task_proto = node->task_proto();
-      const RankDesc& rank_desc = GetRankDesc(plan, *task_proto);
+      const RankDesc& rank_desc = GetRankDesc(*task_proto, task_graph);
       CHECK_GE(rank_desc.rank(), 0);
       CHECK_LT(rank_desc.rank(), rank_desc.op_desc().num_ranks());
       const std::string& name = rank_desc.op_desc().name();
@@ -1172,21 +1165,24 @@ void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name) {
   }
 }
 
-const oneflow::OpAttribute& PlanUtil::GetOpAttribute(const Plan* plan, int64_t job_id,
-                                                     const oneflow::KernelConf& kernel_conf) {
+const OperatorConf& PlanUtil::GetOpConf(std::shared_ptr<const TaskGraph> task_graph, const KernelConf& kernel_conf) {
   if (kernel_conf.has_op_attribute()) {
-    return kernel_conf.op_attribute();
+    return kernel_conf.op_attribute().op_conf();
   } else if (kernel_conf.has_op_attribute_ref()) {
-    auto table_it = plan->job_id2op_attribute_ref_table().find(job_id);
-    CHECK(table_it != plan->job_id2op_attribute_ref_table().end())
-        << "op attribute ref table not found for job id: " << job_id;
-    ;
-    auto it = table_it->second.op_name2op_attribute().find(kernel_conf.op_attribute_ref());
-    CHECK(it != table_it->second.op_name2op_attribute().end())
-        << "op attribute ref: " << kernel_conf.op_attribute_ref() << " not found";
-    return it->second;
+    return task_graph->GetOpGraph()->OpNode4OpName(kernel_conf.op_attribute_ref())->op().op_conf();
   } else {
-    UNIMPLEMENTED() << "kernel_conf must has either op_attribute or op_attribute_ref. kernel_conf: "
+    UNIMPLEMENTED() << " kernel_conf must has either op_attribute or op_attribute_ref, kernel_conf: "
+                    << kernel_conf.DebugString();
+  }
+}
+
+std::string PlanUtil::GetOpName(const Plan* plan, int64_t job_id, const KernelConf& kernel_conf) {
+  if (kernel_conf.has_op_attribute()) {
+    return kernel_conf.op_attribute().op_conf().name();
+  } else if (kernel_conf.has_op_attribute_ref()) {
+    return kernel_conf.op_attribute_ref();
+  } else {
+    UNIMPLEMENTED() << " kernel_conf must has either op_attribute or op_attribute_ref. kernel_conf: "
                     << kernel_conf.DebugString();
   }
 }

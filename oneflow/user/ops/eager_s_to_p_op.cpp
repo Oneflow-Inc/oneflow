@@ -24,12 +24,8 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> EagerSToPOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = Shape(ctx->Attr<Shape>("shape").dim_vec());
+  ctx->SetOutputShape("out", 0, Shape(ctx->Attr<Shape>("shape").dim_vec()));
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> EagerSToPOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> EagerSToPOp::GetSbp(user_op::SbpContext* ctx) {
@@ -41,13 +37,13 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EagerSToPOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<Symbol<Stream>> EagerSToPOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 }  // namespace oneflow

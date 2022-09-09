@@ -24,17 +24,12 @@ namespace oneflow {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& weight_shape = ctx->InputShape("weight", 0);
   CHECK_EQ_OR_RETURN(x_shape.At(1), weight_shape.At(1)) << "Matmul K dims should be equal. ";
-  *ctx->MutOutputShape("matmul_result", 0) = Shape({x_shape.At(0), weight_shape.At(0)});
+  ctx->SetOutputShape("matmul_result", 0, Shape({x_shape.At(0), weight_shape.At(0)}));
   const Shape& x0_shape = ctx->InputShape("x0", 0);
   const Shape& bias_shape = ctx->InputShape("bias", 0);
   CHECK_EQ_OR_RETURN(bias_shape.At(0), x0_shape.At(1)) << "Bias dim should be equal to X0 dim1. ";
-  *ctx->MutOutputShape("out", 0) = x0_shape;
+  ctx->SetOutputShape("out", 0, x0_shape);
   return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> FusedCrossFeatureInteractionOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> FusedCrossFeatureInteractionOp::GetSbp(user_op::SbpContext* ctx) {
@@ -50,8 +45,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FusedCrossFeatureInteractionOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("x", 0);
-  *ctx->MutOutputDType("matmul_result", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("x", 0));
+  ctx->SetOutputDType("matmul_result", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -59,16 +54,11 @@ namespace oneflow {
     user_op::InferContext* ctx) {
   const Shape& x0_shape = ctx->InputShape("x0", 0);
   const Shape& weight_shape = ctx->InputShape("weight", 0);
-  *ctx->MutOutputShape("dx0", 0) = x0_shape;
-  *ctx->MutOutputShape("dw", 0) = weight_shape;
-  *ctx->MutOutputShape("dx", 0) = x0_shape;
-  *ctx->MutOutputShape("dbias", 0) = Shape({x0_shape.At(1)});
+  ctx->SetOutputShape("dx0", 0, x0_shape);
+  ctx->SetOutputShape("dw", 0, weight_shape);
+  ctx->SetOutputShape("dx", 0, x0_shape);
+  ctx->SetOutputShape("dbias", 0, Shape({x0_shape.At(1)}));
   return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> FusedCrossFeatureInteractionV1GradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> FusedCrossFeatureInteractionV1GradOp::GetSbp(user_op::SbpContext* ctx) {
@@ -89,10 +79,10 @@ namespace oneflow {
 
 /* static */ Maybe<void> FusedCrossFeatureInteractionV1GradOp::InferDataType(
     user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx0", 0) = ctx->InputDType("x", 0);
-  *ctx->MutOutputDType("dw", 0) = ctx->InputDType("x", 0);
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
-  *ctx->MutOutputDType("dbias", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("dx0", 0, ctx->InputDType("x", 0));
+  ctx->SetOutputDType("dw", 0, ctx->InputDType("x", 0));
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
+  ctx->SetOutputDType("dbias", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -100,16 +90,11 @@ namespace oneflow {
     user_op::InferContext* ctx) {
   const Shape& x0_shape = ctx->InputShape("x0", 0);
   const Shape& weight_shape = ctx->InputShape("weight", 0);
-  *ctx->MutOutputShape("dx0", 0) = x0_shape;
-  *ctx->MutOutputShape("dw", 0) = weight_shape;
-  *ctx->MutOutputShape("dx", 0) = x0_shape;
-  *ctx->MutOutputShape("dbias", 0) = Shape({x0_shape.At(1)});
+  ctx->SetOutputShape("dx0", 0, x0_shape);
+  ctx->SetOutputShape("dw", 0, weight_shape);
+  ctx->SetOutputShape("dx", 0, x0_shape);
+  ctx->SetOutputShape("dbias", 0, Shape({x0_shape.At(1)}));
   return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> FusedCrossFeatureInteractionV2GradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> FusedCrossFeatureInteractionV2GradOp::GetSbp(user_op::SbpContext* ctx) {
@@ -131,10 +116,10 @@ namespace oneflow {
 
 /* static */ Maybe<void> FusedCrossFeatureInteractionV2GradOp::InferDataType(
     user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx0", 0) = ctx->InputDType("x", 0);
-  *ctx->MutOutputDType("dw", 0) = ctx->InputDType("x", 0);
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
-  *ctx->MutOutputDType("dbias", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("dx0", 0, ctx->InputDType("x", 0));
+  ctx->SetOutputDType("dw", 0, ctx->InputDType("x", 0));
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
+  ctx->SetOutputDType("dbias", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 

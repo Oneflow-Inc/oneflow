@@ -49,8 +49,8 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
   JUST(CheckPredictionLabelDesc(&prediction_desc, &label_desc));
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
-  *out_desc->mut_is_dynamic() = prediction_desc.is_dynamic();
-  *out_desc->mut_shape() = label_desc.shape();
+  out_desc->set_is_dynamic(prediction_desc.is_dynamic());
+  out_desc->set_shape(label_desc.shape());
   return Maybe<void>::Ok();
 }
 
@@ -62,8 +62,8 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(dy_desc.shape(), label_desc.shape())
       << Error::RuntimeError() << "The size of dy " << dy_desc.shape()
       << " must match the size of label " << label_desc.shape();
-  *ctx->MutOutputShape("prediction_diff", 0) = prediction_desc.shape();
-  *ctx->MutOutputIsDynamic("prediction_diff", 0) = prediction_desc.is_dynamic();
+  ctx->SetOutputShape("prediction_diff", 0, prediction_desc.shape());
+  ctx->SetOutputIsDynamic("prediction_diff", 0, prediction_desc.is_dynamic());
   return Maybe<void>::Ok();
 }
 
@@ -74,7 +74,7 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
       << Error::TypeError() << "The dtype of label must be integer, but found "
       << DataType_Name(label_desc.data_type());
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
-  *out_desc->mut_data_type() = prediction_desc.data_type();
+  out_desc->set_data_type(prediction_desc.data_type());
   return Maybe<void>::Ok();
 }
 
@@ -89,7 +89,7 @@ Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
       << Error::TypeError() << "dy and prediction are expected to have the same dtype, but found "
       << DataType_Name(dy_desc.data_type()) << " and "
       << DataType_Name(prediction_desc.data_type());
-  *ctx->MutOutputDType("prediction_diff", 0) = prediction_desc.data_type();
+  ctx->SetOutputDType("prediction_diff", 0, prediction_desc.data_type());
   return Maybe<void>::Ok();
 }
 
@@ -105,9 +105,6 @@ Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
 }
 /*static*/ Maybe<void> SparseCrossEntropyOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferTensorDescFn(ctx);
-}
-/*static*/ Maybe<void> SparseCrossEntropyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SparseCrossEntropyOp::InferDataType(user_op::InferContext* ctx) {
   return oneflow::InferDataType(ctx);
@@ -138,9 +135,6 @@ Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
 /*static*/ Maybe<void> SparseCrossEntropyMsOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferTensorDescFn(ctx);
 }
-/*static*/ Maybe<void> SparseCrossEntropyMsOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SparseCrossEntropyMsOp::InferDataType(user_op::InferContext* ctx) {
   return oneflow::InferDataType(ctx);
 }
@@ -164,10 +158,6 @@ Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
 /*static*/ Maybe<void> SparseCrossEntropyGradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferGradTensorDescFn(ctx);
-}
-/*static*/ Maybe<void> SparseCrossEntropyGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SparseCrossEntropyGradOp::InferDataType(user_op::InferContext* ctx) {
   return InferDataTypeGrad(ctx);
@@ -193,10 +183,6 @@ Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
 /*static*/ Maybe<void> SparseCrossEntropyMsGradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferGradTensorDescFn(ctx);
-}
-/*static*/ Maybe<void> SparseCrossEntropyMsGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SparseCrossEntropyMsGradOp::InferDataType(user_op::InferContext* ctx) {
   return InferDataTypeGrad(ctx);

@@ -26,10 +26,10 @@ void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void CopyTaskNode::ConsumeAllRegsts() { ConsumeRegst("copy_in", SoleInDataEdge()->GetSoleRegst()); }
 
-void CopyTaskNode::BuildExecGphAndRegst() {
+void CopyTaskNode::BuildExecGph() {
   auto out_regst = GetProducedRegst("copy_out");
   auto in_regst = GetSoleConsumedRegst("copy_in");
-  out_regst->CopyBlobDescFrom(in_regst.get());
+  out_regst->AddLbiFrom(in_regst.get());
   ExecNode* node = mut_exec_gph().NewNode();
   auto constructed = CHECK_JUST(ConstructOp(NewCopyOpConf()));
 
@@ -45,6 +45,13 @@ void CopyTaskNode::BuildExecGphAndRegst() {
   node->BindBnWithRegst(node->op()->SoleIbn(), in_regst);
   node->BindBnWithRegst(node->op()->SoleObn(), out_regst);
 }
+
+void CopyTaskNode::InferRegst() {
+  auto out_regst = GetProducedRegst("copy_out");
+  auto in_regst = GetSoleConsumedRegst("copy_in");
+  // NOTE(strint): This is strange, need to be removed.
+  out_regst->CopyBlobDescWithoutAddLbi(in_regst.get());
+};
 
 void CopyTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
 

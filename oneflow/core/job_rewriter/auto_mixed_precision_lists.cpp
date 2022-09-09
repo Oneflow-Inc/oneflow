@@ -115,7 +115,6 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "embedding",
                                "embedding_grad",
                                "expand",
-                               "expand_grad",
                                "expand_dims",
                                "cast_to_static_shape",
                                "parallel_cast",

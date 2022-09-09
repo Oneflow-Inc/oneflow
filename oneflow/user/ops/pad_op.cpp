@@ -40,14 +40,11 @@ namespace oneflow {
   FOR_RANGE(int64_t, i, 0, x_shape.NumAxes()) {
     y_dim_vec[i] = x_shape.At(i) + padding_before[i] + padding_after[i];
   }
-  *ctx->MutOutputShape("y", 0) = Shape(y_dim_vec);
+  ctx->SetOutputShape("y", 0, Shape(y_dim_vec));
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> PadOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return PadOp::InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> PadOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 

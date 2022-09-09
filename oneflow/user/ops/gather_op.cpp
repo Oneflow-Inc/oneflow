@@ -34,12 +34,9 @@ namespace oneflow {
                  indices.shape().dim_vec().cend());
   dim_vec.insert(dim_vec.end(), in.shape().dim_vec().cbegin() + axis + 1,
                  in.shape().dim_vec().end());
-  *out->mut_shape() = Shape(dim_vec);
+  out->set_shape(Shape(dim_vec));
   out->set_is_dynamic(indices.is_dynamic() || in.is_dynamic());
   return Maybe<void>::Ok();
-}
-/*static*/ auto GatherOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
-  return GatherOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ auto GatherOp::ModifyInputArg(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                          const user_op::UserOpConfWrapper&) -> Maybe<void> {
@@ -85,7 +82,7 @@ namespace oneflow {
   const user_op::TensorDesc& indices = ctx->InputTensorDesc("indices", 0);
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   CHECK_OR_RETURN(IsIndexDataType(indices.data_type()));
-  *out->mut_data_type() = in.data_type();
+  out->set_data_type(in.data_type());
   return Maybe<void>::Ok();
 }
 

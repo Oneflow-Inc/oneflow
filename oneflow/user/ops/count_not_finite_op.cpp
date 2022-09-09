@@ -20,12 +20,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> CountNotFiniteOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
-  *y_desc->mut_shape() = Shape({1});
+  y_desc->set_shape(Shape({1}));
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> CountNotFiniteOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> CountNotFiniteOp::GetSbp(user_op::SbpContext* ctx) {
@@ -38,18 +34,14 @@ namespace oneflow {
 
 /* static */ Maybe<void> CountNotFiniteOp::InferDataType(user_op::InferContext* ctx) {
   user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
-  *y_desc->mut_data_type() = DataType::kInt64;
+  y_desc->set_data_type(DataType::kInt64);
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> MultiCountNotFiniteOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
-  *y_desc->mut_shape() = Shape({1});
+  y_desc->set_shape(Shape({1}));
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> MultiCountNotFiniteOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> MultiCountNotFiniteOp::GetSbp(user_op::SbpContext* ctx) {
@@ -71,7 +63,7 @@ namespace oneflow {
     CHECK_EQ_OR_RETURN(x_desc.data_type(), first_x_desc.data_type());
   }
   user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
-  *y_desc->mut_data_type() = DataType::kInt64;
+  y_desc->set_data_type(DataType::kInt64);
   return Maybe<void>::Ok();
 }
 

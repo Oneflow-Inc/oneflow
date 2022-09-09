@@ -36,18 +36,16 @@ namespace oneflow {
   const auto unpack_num = ctx->Attr<int32_t>("unpack_num");
   CHECK_EQ_OR_RETURN(in_shape.At(0) % unpack_num, 0);
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
-  *out_desc->mut_shape() = in_desc.shape();
-  out_desc->mut_shape()->Set(0, in_shape.At(0) / unpack_num);
-  *out_desc->mut_is_dynamic() = in_desc.is_dynamic();
+  Shape out_shape = in_desc.shape();
+  out_shape.Set(0, in_shape.At(0) / unpack_num);
+  out_desc->set_shape(out_shape);
+  out_desc->set_is_dynamic(in_desc.is_dynamic());
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> UnpackOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> UnpackOp::InferDataType(user_op::InferContext* ctx) {
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
-  *out_desc->mut_data_type() = in_desc.data_type();
+  out_desc->set_data_type(in_desc.data_type());
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnpackOp::InferOutputBlobTimeShape(

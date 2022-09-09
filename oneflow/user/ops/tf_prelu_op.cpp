@@ -46,15 +46,12 @@ namespace oneflow {
     CHECK_OR_RETURN((alpha_shape.At(i - 1) == x_desc.shape().At(i))
                     || (alpha_shape.At(i - 1) == 1));
   }
-  *y_desc->mut_shape() = x_desc.shape();
-  *y_desc->mut_is_dynamic() = x_desc.is_dynamic();
+  y_desc->set_shape(x_desc.shape());
+  y_desc->set_is_dynamic(x_desc.is_dynamic());
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> TfPreluOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> TfPreluOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -100,18 +97,15 @@ namespace oneflow {
   }
   CHECK_EQ_OR_RETURN(dy_desc.shape(), x_desc.shape());
   CHECK_EQ_OR_RETURN(dy_desc.data_type(), x_desc.data_type());
-  *dx_desc->mut_shape() = x_desc.shape();
-  *dx_desc->mut_is_dynamic() = x_desc.is_dynamic();
-  *ctx->MutOutputShape("alpha_diff", 0) = alpha_desc.shape();
-  *ctx->MutOutputIsDynamic("alpha_diff", 0) = alpha_desc.is_dynamic();
+  dx_desc->set_shape(x_desc.shape());
+  dx_desc->set_is_dynamic(x_desc.is_dynamic());
+  ctx->SetOutputShape("alpha_diff", 0, alpha_desc.shape());
+  ctx->SetOutputIsDynamic("alpha_diff", 0, alpha_desc.is_dynamic());
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> TfPreluGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> TfPreluGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
-  *ctx->MutOutputDType("alpha_diff", 0) = ctx->InputDType("alpha", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
+  ctx->SetOutputDType("alpha_diff", 0, ctx->InputDType("alpha", 0));
   return Maybe<void>::Ok();
 }
 

@@ -27,15 +27,11 @@ namespace oneflow {
   CHECK_GE_OR_RETURN(indices_desc.shape().NumAxes(), 0)
       << "indices dim must be great or equal than 0";
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
-  *out_desc->mut_is_dynamic() = indices_desc.is_dynamic();
+  out_desc->set_is_dynamic(indices_desc.is_dynamic());
   DimVector dim_vec = indices_desc.shape().dim_vec();
   dim_vec.emplace_back(depth);
-  *out_desc->mut_shape() = Shape(dim_vec);
+  out_desc->set_shape(Shape(dim_vec));
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> OneHotOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> OneHotOp::GetSbp(user_op::SbpContext* ctx) {
@@ -64,7 +60,7 @@ namespace oneflow {
   CHECK_OR_RETURN(IsIndexDataType(indices_desc.data_type()));
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   DataType dtype = ctx->Attr<DataType>("dtype");
-  *out_desc->mut_data_type() = dtype;
+  out_desc->set_data_type(dtype);
   return Maybe<void>::Ok();
 }
 

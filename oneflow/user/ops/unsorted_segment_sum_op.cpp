@@ -52,7 +52,6 @@ namespace oneflow {
   const Shape& data_shape = ctx->InputShape("data", 0);
   const int64_t axis = ctx->Attr<int64_t>("axis");
   const int64_t num_segments = ctx->Attr<int64_t>("num_segments");
-  Shape* out_shape = ctx->MutOutputShape("out", 0);
   const Shape& segment_ids_shape = ctx->InputShape("segment_ids", 0);
 
   DimVector dim_vec;
@@ -61,15 +60,12 @@ namespace oneflow {
   dim_vec.emplace_back(num_segments);
   dim_vec.insert(dim_vec.end(), data_shape.dim_vec().cbegin() + axis + segment_ids_shape.NumAxes(),
                  data_shape.dim_vec().end());
-  *out_shape = Shape(dim_vec);
+  ctx->SetOutputShape("out", 0, Shape(dim_vec));
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> UnsortedSegmentSumOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> UnsortedSegmentSumOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_OR_RETURN(IsIndexDataType(ctx->InputDType("segment_ids", 0)));
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("data", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("data", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnsortedSegmentSumOp::ModifyInputArg(
@@ -144,20 +140,16 @@ namespace oneflow {
   FOR_RANGE(int64_t, i, axis + 1, like_shape.NumAxes()) {
     CHECK_EQ_OR_RETURN(like_shape.At(i), data_shape.At(i + segment_ids_shape.NumAxes() - 1));
   }
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("like", 0);
-  *ctx->MutIsDynamic4ArgNameAndIndex("out", 0) = ctx->InputIsDynamic("like", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("like", 0));
+  ctx->SetIsDynamic4ArgNameAndIndex("out", 0, ctx->InputIsDynamic("like", 0));
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> UnsortedSegmentSumLikeOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> UnsortedSegmentSumLikeOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& data = ctx->InputTensorDesc("data", 0);
   const user_op::TensorDesc& like = ctx->InputTensorDesc("like", 0);
   CHECK_EQ_OR_RETURN(data.data_type(), like.data_type());
   CHECK_OR_RETURN(IsIndexDataType(ctx->InputDType("segment_ids", 0)));
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("like", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("like", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnsortedSegmentSumLikeOp::ModifyInputArg(

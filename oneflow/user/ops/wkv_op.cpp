@@ -38,9 +38,6 @@ namespace oneflow {
   *ctx->MutOutputShape("y", 0) = v_shape;
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> WkvOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> WkvOp::InferDataType(user_op::InferContext* ctx) {
   DataType v_dtype = ctx->InputDType("v", 0);
   *ctx->MutOutputDType("y", 0) = v_dtype;
@@ -71,9 +68,6 @@ namespace oneflow {
   *ctx->MutOutputShape("gk", 0) = gy_shape;
   *ctx->MutOutputShape("gv", 0) = gy_shape;
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> WkvGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> WkvGradOp::InferDataType(user_op::InferContext* ctx) {
   DataType gy_dtype = ctx->InputDType("gy", 0);

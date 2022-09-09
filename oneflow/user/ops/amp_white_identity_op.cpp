@@ -21,13 +21,9 @@ namespace oneflow {
 /* static */ Maybe<void> AmpWhiteIdentityOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
-  *out->mut_shape() = in.shape();
-  *out->mut_is_dynamic() = in.is_dynamic();
+  out->set_shape(in.shape());
+  out->set_is_dynamic(in.is_dynamic());
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> AmpWhiteIdentityOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> AmpWhiteIdentityOp::GetSbp(user_op::SbpContext* ctx) {
@@ -42,7 +38,7 @@ namespace oneflow {
 /* static */ Maybe<void> AmpWhiteIdentityOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
-  *out->mut_data_type() = in.data_type();
+  out->set_data_type(in.data_type());
   return Maybe<void>::Ok();
 }
 

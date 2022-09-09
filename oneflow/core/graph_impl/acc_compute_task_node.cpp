@@ -24,7 +24,7 @@ class AccCompTaskNode final : public CompTaskNode {
   AccCompTaskNode() = default;
   ~AccCompTaskNode() = default;
   TaskType GetTaskType() const override { return TaskType::kAcc; }
-  void BuildExecGphAndRegst() override;
+  void BuildExecGph() override;
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
 };
@@ -36,7 +36,7 @@ void AccCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void AccCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); }
 
-void AccCompTaskNode::BuildExecGphAndRegst() {
+void AccCompTaskNode::BuildExecGph() {
   std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   ExecNode* exec_node = mut_exec_gph().NewNode();
@@ -44,11 +44,6 @@ void AccCompTaskNode::BuildExecGphAndRegst() {
   exec_node->BindBnWithRegst(op()->SoleIbn(), in_regst);
   out_regst->AddLbi(op()->BnInOp2Lbi(op()->SoleObn()));
   exec_node->BindBnWithRegst(op()->SoleObn(), out_regst);
-  exec_node->InferBlobDescs(parallel_ctx());
-  out_regst->ForEachLbi([out_regst](const LogicalBlobId& lbi) {
-    const BlobDesc* blob_desc = out_regst->GetBlobDesc(lbi);
-    CHECK_EQ(blob_desc->is_dynamic(), false);
-  });
 }
 
 REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kAcc);

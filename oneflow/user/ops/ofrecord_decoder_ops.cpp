@@ -27,12 +27,8 @@ namespace oneflow {
   DimVector dim_vec(1 + conf_shape.NumAxes());
   dim_vec[0] = in_tensor.shape().At(0);
   for (int i = 1; i < dim_vec.size(); ++i) { dim_vec[i] = conf_shape.At(i - 1); }
-  *out_tensor->mut_shape() = Shape(dim_vec);
+  out_tensor->set_shape(Shape(dim_vec));
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> OfrecordRawDecoderOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> OfrecordRawDecoderOp::GetSbp(user_op::SbpContext* ctx) {
@@ -52,7 +48,7 @@ namespace oneflow {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   CHECK_OR_RETURN(in_tensor.data_type() == DataType::kOFRecord);
-  *out_tensor->mut_data_type() = ctx->Attr<DataType>("data_type");
+  out_tensor->set_data_type(ctx->Attr<DataType>("data_type"));
   return Maybe<void>::Ok();
 }
 
@@ -60,13 +56,9 @@ namespace oneflow {
     user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
-  *out->mut_is_dynamic() = in.is_dynamic();
-  *out->mut_shape() = in.shape();
+  out->set_is_dynamic(in.is_dynamic());
+  out->set_shape(in.shape());
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> OfrecordBytesDecoderOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> OfrecordBytesDecoderOp::GetSbp(user_op::SbpContext* ctx) {
@@ -85,7 +77,7 @@ namespace oneflow {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   CHECK_OR_RETURN(in.data_type() == DataType::kOFRecord);
-  *out->mut_data_type() = DataType::kTensorBuffer;
+  out->set_data_type(DataType::kTensorBuffer);
   return Maybe<void>::Ok();
 }
 
@@ -94,12 +86,8 @@ namespace oneflow {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   CHECK_OR_RETURN(in_tensor.shape().NumAxes() == 1 && in_tensor.shape().At(0) >= 1);
-  *out_tensor->mut_shape() = in_tensor.shape();
+  out_tensor->set_shape(in_tensor.shape());
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> OfrecordImageDecoderOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> OfrecordImageDecoderOp::GetSbp(user_op::SbpContext* ctx) {
@@ -119,7 +107,7 @@ namespace oneflow {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   CHECK_OR_RETURN(in_tensor.data_type() == DataType::kOFRecord);
-  *out_tensor->mut_data_type() = DataType::kTensorBuffer;
+  out_tensor->set_data_type(DataType::kTensorBuffer);
   return Maybe<void>::Ok();
 }
 
@@ -128,13 +116,8 @@ namespace oneflow {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   CHECK_OR_RETURN(in_tensor.shape().NumAxes() == 1 && in_tensor.shape().At(0) >= 1);
-  *out_tensor->mut_shape() = in_tensor.shape();
+  out_tensor->set_shape(in_tensor.shape());
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> OfrecordImageDecoderRandomCropOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> OfrecordImageDecoderRandomCropOp::GetSbp(user_op::SbpContext* ctx) {
@@ -155,7 +138,7 @@ namespace oneflow {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   CHECK_OR_RETURN(in_tensor.data_type() == DataType::kOFRecord);
-  *out_tensor->mut_data_type() = DataType::kTensorBuffer;
+  out_tensor->set_data_type(DataType::kTensorBuffer);
   return Maybe<void>::Ok();
 }
 

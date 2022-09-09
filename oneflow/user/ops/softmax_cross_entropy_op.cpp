@@ -51,15 +51,12 @@ namespace oneflow {
   FOR_RANGE(int64_t, i, 0, num_out_axes) {
     out_dim_vector.emplace_back(prediction_desc.shape().At(i));
   }
-  *ctx->MutOutputShape("prob", 0) = ctx->InputShape("prediction", 0);
-  *ctx->MutOutputIsDynamic("prob", 0) = ctx->InputIsDynamic("prediction", 0);
+  ctx->SetOutputShape("prob", 0, ctx->InputShape("prediction", 0));
+  ctx->SetOutputIsDynamic("prob", 0, ctx->InputIsDynamic("prediction", 0));
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
-  *out_desc->mut_is_dynamic() = prediction_desc.is_dynamic();
-  *out_desc->mut_shape() = Shape(out_dim_vector);
+  out_desc->set_is_dynamic(prediction_desc.is_dynamic());
+  out_desc->set_shape(Shape(out_dim_vector));
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> SoftmaxCrossEntropyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SoftmaxCrossEntropyOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
@@ -69,9 +66,9 @@ namespace oneflow {
       << "label and prediction are expected to have the same dtype, but found "
       << DataType_Name(label_desc.data_type()) << " and "
       << DataType_Name(prediction_desc.data_type());
-  *ctx->MutOutputDType("prob", 0) = ctx->InputDType("prediction", 0);
+  ctx->SetOutputDType("prob", 0, ctx->InputDType("prediction", 0));
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
-  *out_desc->mut_data_type() = prediction_desc.data_type();
+  out_desc->set_data_type(prediction_desc.data_type());
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SoftmaxCrossEntropyOp::ModifyInputArg(
@@ -118,13 +115,9 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(label_desc.shape(), prob_desc.shape())
       << Error::RuntimeError() << "The size of label " << label_desc.shape()
       << " must match the size of prob " << prob_desc.shape();
-  *ctx->MutOutputShape("prediction_diff", 0) = ctx->InputShape("prob", 0);
-  *ctx->MutOutputIsDynamic("prediction_diff", 0) = ctx->InputIsDynamic("prob", 0);
+  ctx->SetOutputShape("prediction_diff", 0, ctx->InputShape("prob", 0));
+  ctx->SetOutputIsDynamic("prediction_diff", 0, ctx->InputIsDynamic("prob", 0));
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> SoftmaxCrossEntropyGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SoftmaxCrossEntropyGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& prob_desc = ctx->InputTensorDesc("prob", 0);
@@ -136,7 +129,7 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(dy_desc.data_type(), prob_desc.data_type())
       << Error::TypeError() << "dy and prob are expected to have the same dtype, but found "
       << DataType_Name(dy_desc.data_type()) << " and " << DataType_Name(prob_desc.data_type());
-  *ctx->MutOutputDType("prediction_diff", 0) = ctx->InputDType("prob", 0);
+  ctx->SetOutputDType("prediction_diff", 0, ctx->InputDType("prob", 0));
   return Maybe<void>::Ok();
 }
 

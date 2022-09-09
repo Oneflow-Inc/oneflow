@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_graph.h"
+#include <memory>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/register/blob_desc.h"
@@ -57,28 +58,6 @@ bool IsConnectToTickOp(const TaskNode* node) {
   return false;
 }
 
-std::string GetOpConfCalculationPassName(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_scope_symbol_id());
-  int64_t scope_symbol_id = op_conf.scope_symbol_id();
-  CHECK(Singleton<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id))
-      << " Error! op : \n " << op_conf.DebugString()
-      << " has error scope_symbol_id = " << scope_symbol_id
-      << " which cannot find in Singleton<symbol::Storage<Scope>>::Get()\n";
-  const Scope& scope = Singleton<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
-  return scope.scope_proto().calculation_pass_name();
-}
-
-bool IsOptimizerPassOp(const Operator* op) {
-  // NOTE(chengcheng): use scope::calculation_pass_name instead of area_id to not merge optimizer
-  // ops with fw/bw ops
-  if (!op->op_conf().has_scope_symbol_id()) {
-    // NOTE(chengcheng): Some system op insert to OpGraph may not set scope_symbol_id, it MUST NOT
-    // optimizer subgraph ops.
-    return false;
-  }
-  return GetOpConfCalculationPassName(op->op_conf()) == kOptimizerPass;
-}
-
 bool IsSubsetTickOpConf(const OperatorConf& op_conf) {
   return op_conf.has_src_subset_tick_conf() || op_conf.has_dst_subset_tick_conf();
 }
@@ -102,11 +81,14 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
       return true;
     }
   }
+<<<<<<< HEAD
   // NOTE(chengcheng): ONLY nccl_use_compute_stream = false will exclude optimizer pass ops
   // if (!Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
   //     && IsOptimizerPassOp(op)) {
   //   return true;
   // }
+=======
+>>>>>>> feat/reduce_plan_send_time
   return false;
 }
 
@@ -303,6 +285,10 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
       }
       comp_task_node->set_thrd_id(EncodeStreamIdToInt64(StreamId{device_id, stream_index}));
       comp_task_node->set_op_node(op_node);
+      // TODO(strint): Create a task compile context per device for parallel run task compile ?
+      // DeviceCompileCtx4Task
+      //     - one mutex for each device, inner device use this mutex to sequentially run, inter device do parallelly run
+      // Seperate into machine_id + dev_phy_id -> tasks to enable parallel?
       sorted_comp_tasks->emplace_back(comp_task_node);
     }
   }
@@ -399,7 +385,7 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const OpEdge* op_edge) {
 }
 
 void ForEachOpGraphNecessaryCtrlEdge(
-    const OpGraph* op_graph, const std::function<void(const OpNode*, const OpNode*)>& Handler) {
+    std::shared_ptr<const OpGraph> op_graph, const std::function<void(const OpNode*, const OpNode*)>& Handler) {
   auto IsOpGraphDataReachable = op_graph->MakePredicatorIsReachable();
   op_graph->ForEachNode([&](OpNode* dst) {
     for (const auto& ctrl_in_op_name : dst->op().op_conf().ctrl_in_op_name()) {
@@ -421,26 +407,25 @@ void ForEachOpGraphNecessaryCtrlEdge(
 
 }  // namespace
 
-TaskGraph::TaskGraph(bool enable_straighten_algorithm) {
-  OpGraph* op_graph = Singleton<OpGraph>::Get();
+TaskGraph::TaskGraph(std::shared_ptr<const OpGraph> op_graph, bool enable_straighten_algorithm): op_graph_(op_graph) {
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
   hierarchical_sub_tsk_gph_builder_.reset(new DispatchHierarchicalSubTskGphBuilder());
   HashMap<const OpNode*, std::vector<CompTaskNode*>> op_node2sorted_comp_tasks;
 
-  op_graph->ForEachNode([&](const OpNode* op_node) {
+  op_graph_->ForEachNode([&](const OpNode* op_node) {
     std::vector<CompTaskNode*>* sorted_comp_tasks = &(op_node2sorted_comp_tasks[op_node]);
     GenSortedCompTaskNodes(op_node, sorted_comp_tasks);
     for (CompTaskNode* comp_task : *sorted_comp_tasks) { AddAllocatedNode(comp_task); }
   });
 
-  op_graph->ForEachEdge([&](const OpEdge* op_edge) {
+  op_graph_->ForEachEdge([&](const OpEdge* op_edge) {
     BldSubTskGphMthd method = GetMthdForBldSubTskGph(op_edge);
     (this->*method)(op_edge, op_node2sorted_comp_tasks.at(op_edge->src_node()),
                     op_node2sorted_comp_tasks.at(op_edge->dst_node()));
   });
 
-  ForEachOpGraphNecessaryCtrlEdge(op_graph, [&](const OpNode* src, const OpNode* dst) {
+  ForEachOpGraphNecessaryCtrlEdge(op_graph_, [&](const OpNode* src, const OpNode* dst) {
     const auto& src_task_nodes = op_node2sorted_comp_tasks.at(src);
     const auto& dst_task_nodes = op_node2sorted_comp_tasks.at(dst);
     if (src->op().op_conf().has_src_subset_tick_conf()) {

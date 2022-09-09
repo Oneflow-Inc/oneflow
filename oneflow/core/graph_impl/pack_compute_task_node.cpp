@@ -30,7 +30,7 @@ class PackCompTaskNode final : public CompTaskNode {
   void ConsumeAllRegsts() override;
 
  private:
-  void BuildExecGphAndRegst() override;
+  void BuildExecGph() override;
 };
 
 void PackCompTaskNode::ProduceAllRegstsAndBindEdges() {
@@ -40,7 +40,7 @@ void PackCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void PackCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); }
 
-void PackCompTaskNode::BuildExecGphAndRegst() {
+void PackCompTaskNode::BuildExecGph() {
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = op();
   std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
@@ -49,8 +49,6 @@ void PackCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   out_regst->AddLbi(op()->BnInOp2Lbi(op()->SoleObn()));
   exec_node->BindBnWithRegst(op()->SoleObn(), out_regst);
-
-  exec_node->InferBlobDescs(parallel_ctx());
 }
 
 REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kPack);

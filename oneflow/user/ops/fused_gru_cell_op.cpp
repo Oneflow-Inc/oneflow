@@ -14,20 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/expand_kernel_utils.h"
 #include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
 /* static */ Maybe<void> FusedGruCellOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& hx_shape = ctx->InputShape("hx", 0);
-  *ctx->MutOutputShape("hy", 0) = hx_shape;
-  *ctx->MutOutputShape("workspace", 0) = Shape({hx_shape.At(0), hx_shape.At(1) * 5});
+  ctx->SetOutputShape("hy", 0, hx_shape);
+  ctx->SetOutputShape("workspace", 0, Shape({hx_shape.At(0), hx_shape.At(1) * 5}));
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> FusedGruCellOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> FusedGruCellOp::GetSbp(user_op::SbpContext* ctx) {
@@ -61,29 +56,25 @@ namespace oneflow {
 
 /* static */ Maybe<void> FusedGruCellOp::InferDataType(user_op::InferContext* ctx) {
   DataType in_types = ctx->InputDType("hx", 0);
-  *ctx->MutOutputDType("hy", 0) = in_types;
-  *ctx->MutOutputDType("workspace", 0) = in_types;
+  ctx->SetOutputDType("hy", 0, in_types);
+  ctx->SetOutputDType("workspace", 0, in_types);
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> FusedGruCellGradOp ::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& grad_hy_shape = ctx->InputShape("grad_hy", 0);
   DimVector dim_vec({grad_hy_shape.At(0), grad_hy_shape.At(1) * 3});
-  *ctx->MutOutputShape("grad_input_gates", 0) = Shape(dim_vec);
-  *ctx->MutOutputShape("grad_hidden_gates", 0) = Shape(dim_vec);
+  ctx->SetOutputShape("grad_input_gates", 0, Shape(dim_vec));
+  ctx->SetOutputShape("grad_hidden_gates", 0, Shape(dim_vec));
 
-  if (ctx->has_output("grad_hx", 0)) { *ctx->MutOutputShape("grad_hx", 0) = grad_hy_shape; }
+  if (ctx->has_output("grad_hx", 0)) { ctx->SetOutputShape("grad_hx", 0, grad_hy_shape); }
 
   if (ctx->has_output("grad_input_bias", 0) && ctx->has_output("grad_hidden_bias", 0)) {
-    *ctx->MutOutputShape("grad_input_bias", 0) = Shape({grad_hy_shape.At(1) * 3});
-    *ctx->MutOutputShape("grad_hidden_bias", 0) = Shape({grad_hy_shape.At(1) * 3});
+    ctx->SetOutputShape("grad_input_bias", 0, Shape({grad_hy_shape.At(1) * 3}));
+    ctx->SetOutputShape("grad_hidden_bias", 0, Shape({grad_hy_shape.At(1) * 3}));
   }
 
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> FusedGruCellGradOp ::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> FusedGruCellGradOp ::GetSbp(user_op::SbpContext* ctx) {
@@ -118,14 +109,14 @@ namespace oneflow {
 
 /* static */ Maybe<void> FusedGruCellGradOp ::InferDataType(user_op::InferContext* ctx) {
   DataType in_types = ctx->InputDType("grad_hy", 0);
-  *ctx->MutOutputDType("grad_input_gates", 0) = in_types;
-  *ctx->MutOutputDType("grad_hidden_gates", 0) = in_types;
-  if (ctx->has_output("grad_hx", 0)) { *ctx->MutOutputDType("grad_hx", 0) = in_types; }
+  ctx->SetOutputDType("grad_input_gates", 0, in_types);
+  ctx->SetOutputDType("grad_hidden_gates", 0, in_types);
+  if (ctx->has_output("grad_hx", 0)) { ctx->SetOutputDType("grad_hx", 0, in_types); }
   if (ctx->has_output("grad_input_bias", 0)) {
-    *ctx->MutOutputDType("grad_input_bias", 0) = in_types;
+    ctx->SetOutputDType("grad_input_bias", 0, in_types);
   }
   if (ctx->has_output("grad_hidden_bias", 0)) {
-    *ctx->MutOutputDType("grad_hidden_bias", 0) = in_types;
+    ctx->SetOutputDType("grad_hidden_bias", 0, in_types);
   }
   return Maybe<void>::Ok();
 }

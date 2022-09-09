@@ -81,11 +81,11 @@ Maybe<void> InferWhereTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& y_shape = ctx->InputShape("y", 0);
   if (x_shape == y_shape && y_shape == cond_shape) {
-    *ctx->MutOutputShape("out", 0) = cond_shape;
+    ctx->SetOutputShape("out", 0, cond_shape);
   } else {
     Shape max_shape = *JUST(GetBroadcastShape(cond_shape, x_shape));
     max_shape = *JUST(GetBroadcastShape(max_shape, y_shape));
-    *ctx->MutOutputShape("out", 0) = max_shape;
+    ctx->SetOutputShape("out", 0, max_shape);
   }
   return Maybe<void>::Ok();
 }
@@ -94,10 +94,10 @@ Maybe<void> InferWhereXScalarTensorDesc(user_op::InferContext* ctx) {
   const Shape& cond_shape = ctx->InputShape("condition", 0);
   const Shape& y_shape = ctx->InputShape("y", 0);
   if (cond_shape == y_shape) {
-    *ctx->MutOutputShape("out", 0) = cond_shape;
+    ctx->SetOutputShape("out", 0, cond_shape);
   } else {
     Shape max_shape = *JUST(GetBroadcastShape(cond_shape, y_shape));
-    *ctx->MutOutputShape("out", 0) = max_shape;
+    ctx->SetOutputShape("out", 0, max_shape);
   }
   return Maybe<void>::Ok();
 }
@@ -106,16 +106,16 @@ Maybe<void> InferWhereYScalarTensorDesc(user_op::InferContext* ctx) {
   const Shape& cond_shape = ctx->InputShape("condition", 0);
   const Shape& x_shape = ctx->InputShape("x", 0);
   if (cond_shape == x_shape) {
-    *ctx->MutOutputShape("out", 0) = cond_shape;
+    ctx->SetOutputShape("out", 0, cond_shape);
   } else {
     Shape max_shape = *JUST(GetBroadcastShape(cond_shape, x_shape));
-    *ctx->MutOutputShape("out", 0) = max_shape;
+    ctx->SetOutputShape("out", 0, max_shape);
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferWhereXYScalarTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("condition", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("condition", 0));
   return Maybe<void>::Ok();
 }
 
@@ -205,15 +205,12 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
 /*static*/ Maybe<void> WhereOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferWhereTensorDesc(ctx);
 }
-/*static*/ Maybe<void> WhereOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> WhereOp::InferDataType(user_op::InferContext* ctx) {
   DataType cond_dtype = ctx->InputDType("condition", 0);
   CHECK_OR_RETURN(IsBoolDataType(cond_dtype) || IsIntegralDataType(cond_dtype));
   DataType x_dtype = ctx->InputDType("x", 0);
   CHECK_EQ_OR_RETURN(x_dtype, ctx->InputDType("y", 0));
-  *ctx->MutOutputDType("out", 0) = x_dtype;
+  ctx->SetOutputDType("out", 0, x_dtype);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> WhereOp::ModifyInputArg(const GetInputArgModifier& f,
@@ -226,9 +223,6 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
 }
 /*static*/ Maybe<void> WhereScalarXOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferWhereXScalarTensorDesc(ctx);
-}
-/*static*/ Maybe<void> WhereScalarXOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> WhereScalarXOp::InferDataType(user_op::InferContext* ctx) {
   DataType cond_dtype = ctx->InputDType("condition", 0);
@@ -244,7 +238,7 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
     CHECK_EQ_OR_RETURN(y_dtype, GetDataType<bool>::value)
         << "expected scalar type " << GetDataType<bool>::value << "but found " << y_dtype;
   }
-  *ctx->MutOutputDType("out", 0) = y_dtype;
+  ctx->SetOutputDType("out", 0, y_dtype);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> WhereScalarXOp::ModifyInputArg(const GetInputArgModifier& f,
@@ -257,9 +251,6 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
 }
 /*static*/ Maybe<void> WhereScalarYOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferWhereYScalarTensorDesc(ctx);
-}
-/*static*/ Maybe<void> WhereScalarYOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> WhereScalarYOp::InferDataType(user_op::InferContext* ctx) {
   DataType cond_dtype = ctx->InputDType("condition", 0);
@@ -275,7 +266,7 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
     CHECK_EQ_OR_RETURN(x_dtype, GetDataType<bool>::value)
         << "expected scalar type " << GetDataType<bool>::value << "but found " << x_dtype;
   }
-  *ctx->MutOutputDType("out", 0) = x_dtype;
+  ctx->SetOutputDType("out", 0, x_dtype);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> WhereScalarYOp::ModifyInputArg(const GetInputArgModifier& f,
@@ -289,18 +280,15 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
 /*static*/ Maybe<void> WhereScalarXyOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferWhereXYScalarTensorDesc(ctx);
 }
-/*static*/ Maybe<void> WhereScalarXyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> WhereScalarXyOp::InferDataType(user_op::InferContext* ctx) {
   DataType cond_dtype = ctx->InputDType("condition", 0);
   CHECK_OR_RETURN(IsBoolDataType(cond_dtype) || IsIntegralDataType(cond_dtype));
   if (ctx->Attr<bool>("has_x_bool_operand") && ctx->Attr<bool>("has_y_bool_operand")) {
-    *ctx->MutOutputDType("out", 0) = GetDataType<bool>::value;
+    ctx->SetOutputDType("out", 0, GetDataType<bool>::value);
   } else if (ctx->Attr<bool>("has_x_int_operand") && ctx->Attr<bool>("has_y_int_operand")) {
-    *ctx->MutOutputDType("out", 0) = GetDataType<int64_t>::value;
+    ctx->SetOutputDType("out", 0, GetDataType<int64_t>::value);
   } else if (ctx->Attr<bool>("has_x_float_operand") && ctx->Attr<bool>("has_y_float_operand")) {
-    *ctx->MutOutputDType("out", 0) = GetDataType<double>::value;
+    ctx->SetOutputDType("out", 0, GetDataType<double>::value);
   } else {
     UNIMPLEMENTED();
   }

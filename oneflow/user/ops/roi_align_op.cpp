@@ -43,14 +43,11 @@ namespace oneflow {
       << Error::RuntimeError() << "The size of rois tensor must be equal to 5 at dimension 1, "
       << "but got " << rois_shape.At(1);
   // y: (R, C, pool_h, pool_w)
-  *ctx->MutOutputShape("y", 0) = Shape({rois_shape.At(0), x_shape.At(1), pooled_h, pooled_w});
+  ctx->SetOutputShape("y", 0, Shape({rois_shape.At(0), x_shape.At(1), pooled_h, pooled_w}));
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> RoiAlignOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> RoiAlignOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> RoiAlignOp::ModifyInputArg(const GetInputArgModifier& GetInputArgModifierFn,
@@ -96,17 +93,14 @@ namespace oneflow {
   const Shape& y_shape = Shape({rois_shape.At(0), x_like_shape.At(1), pooled_h, pooled_w});
   CHECK_EQ_OR_RETURN(y_shape, dy_shape)
       << Error::RuntimeError() << "Tensors y and dy must have same shape";
-  *ctx->MutOutputShape("dx", 0) = x_like_shape;
+  ctx->SetOutputShape("dx", 0, x_like_shape);
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> RoiAlignGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> RoiAlignGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), ctx->InputDType("x_like", 0))
       << Error::TypeError() << "The dy tensor and x_like tensor must have same type";
 
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x_like", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x_like", 0));
   return Maybe<void>::Ok();
 }
 

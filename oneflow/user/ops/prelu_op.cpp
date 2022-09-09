@@ -40,17 +40,13 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> PreluOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
-  Shape* y_shape = ctx->MutOutputShape("y", 0);
   const Shape& alpha_shape = ctx->InputShape("alpha", 0);
   CHECK_EQ_OR_RETURN(alpha_shape.NumAxes(), 1);
-  *y_shape = x_shape;
+  ctx->SetOutputShape("y", 0, x_shape);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> PreluOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> PreluOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -91,22 +87,17 @@ namespace oneflow {
 /*static*/ Maybe<void> PreluGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  Shape* dx_shape = ctx->MutOutputShape("dx", 0);
-  Shape* alpha_diff_shape = ctx->MutOutputShape("alpha_diff", 0);
   const Shape& alpha_shape = ctx->InputShape("alpha", 0);
   CHECK_EQ_OR_RETURN(alpha_shape.NumAxes(), 1);
   CHECK_OR_RETURN((alpha_shape.At(0) == x_shape.At(1)) || (alpha_shape.At(0) == 1));
   CHECK_EQ_OR_RETURN(dy_shape, x_shape);
-  *dx_shape = x_shape;
-  *alpha_diff_shape = alpha_shape;
+  ctx->SetOutputShape("dx", 0, x_shape);
+  ctx->SetOutputShape("alpha_diff", 0, alpha_shape);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> PreluGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> PreluGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
-  *ctx->MutOutputDType("alpha_diff", 0) = ctx->InputDType("alpha", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
+  ctx->SetOutputDType("alpha_diff", 0, ctx->InputDType("alpha", 0));
   return Maybe<void>::Ok();
 }
 

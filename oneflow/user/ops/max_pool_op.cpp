@@ -47,13 +47,12 @@ TensorDescInferFn MaxPoolMakeForwardTensorDescInferFn(const int32_t dim) {
                                     dilation, return_indices, ceil_mode);
     user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
     *y_desc = ctx->InputTensorDesc("x", 0);
-    *y_desc->mut_shape() = params_3d.GetYShape();
+    y_desc->set_shape(params_3d.GetYShape());
 
     user_op::TensorDesc* indice_desc = ctx->MutOutputTensorDesc("indice", 0);
     *indice_desc = *ctx->MutOutputTensorDesc("y", 0);
-    *indice_desc->mut_shape() = *y_desc->mut_shape();
-    DataType* dtype = indice_desc->mut_data_type();
-    *dtype = kInt64;
+    indice_desc->set_shape(y_desc->shape());
+    indice_desc->set_data_type(kInt64);
     return Maybe<void>::Ok();
   };
 }
@@ -89,12 +88,12 @@ Maybe<void> BackwardTensorDescInferFn(user_op::InferContext* ctx) {
 }
 
 Maybe<void> FwInferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 }  // namespace
@@ -105,9 +104,6 @@ Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
   }                                                                                      \
   /*static*/ Maybe<void> name##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
     return MaxPoolMakeForwardTensorDescInferFn(dim)(ctx);                                \
-  }                                                                                      \
-  /*static*/ Maybe<void> name##Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
-    return InferLogicalTensorDesc(ctx);                                                  \
   }                                                                                      \
   /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {           \
     return FwInferDataType(ctx);                                                         \
@@ -124,9 +120,6 @@ IMPLEMENT_MAXPOOL_FUNCS(MaxPool3D, 3)
   }                                                                                          \
   /*static*/ Maybe<void> name##GradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
     return BackwardTensorDescInferFn(ctx);                                                   \
-  }                                                                                          \
-  /*static*/ Maybe<void> name##GradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
-    return InferLogicalTensorDesc(ctx);                                                      \
   }                                                                                          \
   /*static*/ Maybe<void> name##GradOp::InferDataType(user_op::InferContext* ctx) {           \
     return BwInferDataType(ctx);                                                             \

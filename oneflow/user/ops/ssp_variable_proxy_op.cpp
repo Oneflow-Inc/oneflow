@@ -31,16 +31,13 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> SspVariableProxyOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& var_shape = ctx->InputShape("var", 0);
-  *ctx->MutOutputShape("ref", 0) = var_shape;
-  *ctx->MutOutputShape("value", 0) = var_shape;
+  ctx->SetOutputShape("ref", 0, var_shape);
+  ctx->SetOutputShape("value", 0, var_shape);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SspVariableProxyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SspVariableProxyOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("ref", 0) = ctx->InputDType("var", 0);
-  *ctx->MutOutputDType("value", 0) = ctx->InputDType("var", 0);
+  ctx->SetOutputDType("ref", 0, ctx->InputDType("var", 0));
+  ctx->SetOutputDType("value", 0, ctx->InputDType("var", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SspVariableProxyOp::ModifyOutputArg(

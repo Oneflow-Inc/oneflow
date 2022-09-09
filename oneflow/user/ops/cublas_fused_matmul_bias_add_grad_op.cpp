@@ -36,8 +36,8 @@ Maybe<void> InferTensorDesc4MatmulBiasAddBackward(user_op::InferContext* ctx) {
 
   const int64_t bias_size = dy_desc.shape().At(1);
   Shape w_grad_shape({dy_desc.shape().At(1), x_desc.shape().At(1)});
-  *ctx->MutOutputShape("w_grad", 0) = w_grad_shape;
-  *ctx->MutOutputShape("b_grad", 0) = Shape({bias_size});
+  ctx->SetOutputShape("w_grad", 0, w_grad_shape);
+  ctx->SetOutputShape("b_grad", 0, Shape({bias_size}));
   return Maybe<void>::Ok();
 }
 
@@ -50,8 +50,8 @@ Maybe<void> InferDataType4MatmulBiasAddBackward(user_op::InferContext* ctx) {
   user_op::TensorDesc* w_grad_desc = ctx->MutOutputTensorDesc("w_grad", 0);
   user_op::TensorDesc* b_grad_desc = ctx->MutOutputTensorDesc("b_grad", 0);
 
-  *w_grad_desc->mut_data_type() = dy_desc.data_type();
-  *b_grad_desc->mut_data_type() = dy_desc.data_type();
+  w_grad_desc->set_data_type(dy_desc.data_type());
+  b_grad_desc->set_data_type(dy_desc.data_type());
   return Maybe<void>::Ok();
 }
 
@@ -60,11 +60,6 @@ Maybe<void> InferDataType4MatmulBiasAddBackward(user_op::InferContext* ctx) {
 /* static */ Maybe<void> CublasMatmulBiasAddGradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferTensorDesc4MatmulBiasAddBackward(ctx);
-}
-
-/*static*/ Maybe<void> CublasMatmulBiasAddGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> CublasMatmulBiasAddGradOp::GetSbp(user_op::SbpContext* ctx) {

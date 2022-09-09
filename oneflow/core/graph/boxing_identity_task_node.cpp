@@ -34,7 +34,7 @@ void BoxingIdentityTaskNode::ConsumeAllRegsts() {
       [&](TaskEdge* in_edge) { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); });
 }
 
-void BoxingIdentityTaskNode::BuildExecGphAndRegst() {
+void BoxingIdentityTaskNode::BuildExecGph() {
   ExecNode* node = mut_exec_gph().NewNode();
   OperatorConf op_conf;
   op_conf.set_name("System-Boxing-Identity-" + NewUniqueId());
@@ -46,7 +46,6 @@ void BoxingIdentityTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   out_regst->AddLbi(sole_op->BnInOp2Lbi(sole_op->SoleObn()));
   node->BindBnWithRegst(sole_op->SoleObn(), out_regst);
-  node->InferBlobDescs(nullptr);
 }
 
 void BoxingIdentityTaskNode::InferProducedDataRegstTimeShape() {

@@ -50,9 +50,9 @@ Maybe<void> InferTensorDesc_(InferContext* ctx) {
   TensorDesc* tensor_dx = ctx->MutOutputTensorDesc("dx", 0);
   TensorDesc* tensor_dy = ctx->MutOutputTensorDesc("dy", 0);
 
-  if (tensor_dx) { *tensor_dx->mut_shape() = tensor_x.shape(); }
+  if (tensor_dx) { tensor_dx->set_shape(tensor_x.shape()); }
 
-  if (tensor_dy) { *tensor_dy->mut_shape() = tensor_y.shape(); }
+  if (tensor_dy) { tensor_dy->set_shape(tensor_y.shape()); }
 
   return Maybe<void>::Ok();
 }
@@ -62,9 +62,9 @@ Maybe<void> InferDataType_(InferContext* ctx) {
   TensorDesc* tensor_dx = ctx->MutOutputTensorDesc("dx", 0);
   TensorDesc* tensor_dy = ctx->MutOutputTensorDesc("dy", 0);
 
-  if (tensor_dx) { *tensor_dx->mut_data_type() = tensor_dz.data_type(); }
+  if (tensor_dx) { tensor_dx->set_data_type(tensor_dz.data_type()); }
 
-  if (tensor_dy) { *tensor_dy->mut_data_type() = tensor_dz.data_type(); }
+  if (tensor_dy) { tensor_dy->set_data_type(tensor_dz.data_type()); }
 
   return Maybe<void>::Ok();
 }
@@ -75,11 +75,6 @@ Maybe<void> InferDataType_(InferContext* ctx) {
   /* static */ Maybe<void> op_class_name_prefix##Op::InferLogicalTensorDesc(                     \
       user_op::InferContext* ctx) {                                                              \
     return user_op::TensorDescInferFnUtil::Unchanged(ctx);                                       \
-  }                                                                                              \
-                                                                                                 \
-  /*static*/ Maybe<void> op_class_name_prefix##Op::InferPhysicalTensorDesc(                      \
-      user_op::InferContext* ctx) {                                                              \
-    return InferLogicalTensorDesc(ctx);                                                          \
   }                                                                                              \
                                                                                                  \
   /* static */ Maybe<void> op_class_name_prefix##Op::GetSbp(user_op::SbpContext* ctx) {          \
@@ -94,11 +89,6 @@ Maybe<void> InferDataType_(InferContext* ctx) {
   /* static */ Maybe<void> op_class_name_prefix##BackwardOp::InferLogicalTensorDesc(            \
       user_op::InferContext* ctx) {                                                             \
     return InferTensorDesc_(ctx);                                                               \
-  }                                                                                             \
-                                                                                                \
-  /*static*/ Maybe<void> op_class_name_prefix##BackwardOp::InferPhysicalTensorDesc(             \
-      user_op::InferContext* ctx) {                                                             \
-    return InferLogicalTensorDesc(ctx);                                                         \
   }                                                                                             \
                                                                                                 \
   /* static */ Maybe<void> op_class_name_prefix##BackwardOp::GetSbp(user_op::SbpContext* ctx) { \
