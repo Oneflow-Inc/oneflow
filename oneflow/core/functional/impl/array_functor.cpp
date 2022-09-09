@@ -1539,30 +1539,24 @@ class CopyFunctor {
 #ifdef WITH_CUDA
     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
 #endif
-    int64_t thread_uid = Stream::kDefaultStreamThreadUid;
-    int64_t stream_set_id = Stream::kDefaultStreamSetId;
-    JUST(GetThreadUidAndStreamSetId(*x, &thread_uid, &stream_set_id));
-    if (thread_uid == Stream::kDefaultStreamThreadUid
-        && stream_set_id == Stream::kDefaultStreamSetId) {
+    int64_t thread_uid = JUST(GetThreadUid(*x));
+    if (thread_uid == Stream::kDefaultStreamThreadUid) {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
     } else {
-      auto stream_set = std::make_shared<StreamSet>(thread_uid);
-      StreamGuard guard(StreamConverter(stream_set, /*exclude_ccl=*/false));
+      auto stream_set = JUST(StreamSet::New(thread_uid));
+      StreamGuard guard{StreamConverter(stream_set)};
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
     }
   }
 
-  Maybe<void> GetThreadUidAndStreamSetId(const one::Tensor& x, int64_t* thread_uid,
-                                         int64_t* stream_set_id) const {
-    if (!x.is_eager()) { return Maybe<void>::Ok(); }
-    if (!x.is_local()) { return Maybe<void>::Ok(); }
+  Maybe<int64_t> GetThreadUid(const one::Tensor& x) const {
+    if (!x.is_eager()) { return Stream::kDefaultStreamThreadUid; }
+    if (!x.is_local()) { return Stream::kDefaultStreamThreadUid; }
     const auto& eager_blob_object = JUST(x.eager_blob_object());
     const auto& opt_last_used_stream = eager_blob_object->last_used_stream();
-    if (!opt_last_used_stream.has_value()) { return Maybe<void>::Ok(); }
+    if (!opt_last_used_stream.has_value()) { return Stream::kDefaultStreamThreadUid; }
     auto last_used_stream = JUST(opt_last_used_stream);
-    *thread_uid = last_used_stream->thread_uid();
-    *stream_set_id = last_used_stream->stream_set_id();
-    return Maybe<void>::Ok();
+    return last_used_stream->thread_uid();
   }
 
  private:

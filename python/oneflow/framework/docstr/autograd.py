@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,16 +12,20 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_CORE_COMMON_ENV_VAR_AUTOGRAD_H_
-#define ONEFLOW_CORE_COMMON_ENV_VAR_AUTOGRAD_H_
+"""
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
+from oneflow._oneflow_internal.autograd.Function import FunctionCtx
 
-#include "oneflow/core/common/env_var/env_var.h"
+add_docstr(
+    FunctionCtx.saved_tensors, "Get saved tensors in ctx.",
+)
 
-namespace oneflow {
+add_docstr(
+    FunctionCtx.save_for_backward,
+    "Saves given tensors for a future call to ``backward()``.",
+)
 
-DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_AD_PUT_LOSS_ON_TMP_COMPUTE_STREAM, true);
-
-}
-
-#endif  // ONEFLOW_CORE_COMMON_ENV_VAR_AUTOGRAD_H_
+add_docstr(
+    FunctionCtx.mark_non_differentiable, "Marks outputs as non-differentiable.",
+)
