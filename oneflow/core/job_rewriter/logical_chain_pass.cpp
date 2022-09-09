@@ -467,8 +467,6 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
         it->second.ordered_acc_op_nodes.emplace_back(this_node);
       }
     }
-    JUST(MapAt(mut_op_name2conf, this_node->op().op_name()))
-        .set_logical_order(JUST(MapAt(op_node2global_order, this_node)));
   }
 
   auto InsertCtrlEdgeInChain = [&](const std::vector<const OpNode*>& ordered_op_nodes) {

@@ -815,17 +815,9 @@ void PlanUtil::SetForceInplaceMemBlock(Plan* plan) {
           regst_desc->set_separated_header_mem_block_id(
               in_regst_desc->separated_header_mem_block_id());
         }
-        LOG(INFO) << " cclog: set force inplace from " << regst_desc->DebugString() << " to "
+        VLOG(3) << " cclog: set force inplace from " << regst_desc->DebugString() << " to "
                   << in_regst_desc->DebugString();
       }
-    }
-  }
-
-  // tmp debug log
-  for (int i = 0; i < plan->task_size(); i++) {
-    TaskProto* task = plan->mutable_task(i);
-    if (task->task_type() == kRepeat && task->produced_regst_desc().size() > 1) {
-      LOG(WARNING) << " bad repeat : " << task->DebugString();
     }
   }
 }

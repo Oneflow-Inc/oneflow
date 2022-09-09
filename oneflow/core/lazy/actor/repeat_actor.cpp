@@ -48,15 +48,9 @@ class RepeatActor final : public Actor {
 
   bool IsCustomizedReadReady() const override {
     bool is_ready_ready = (!wait_all_regst_return_) && consumed_var_rs_.IsCurSlotReady();
-    LOG(INFO) << " ccActorLog: actor: " << actor_id() << " is_ready_ready: " << is_ready_ready
-              << " of wait_all_regst_return_ = " << wait_all_regst_return_
-              << " consumed_var_rs_.IsCurSlotReady = " << consumed_var_rs_.IsCurSlotReady();
     return (!wait_all_regst_return_) && consumed_var_rs_.IsCurSlotReady();
   }
   bool IsCustomizedWriteReady() const override {
-    LOG(INFO) << " ccActorLog: actor: " << actor_id()
-              << " is_write_ready: " << (!wait_all_regst_return_)
-        && produced_repeat_var_rs_.IsCurSlotReady();
     return (!wait_all_regst_return_) && produced_repeat_var_rs_.IsCurSlotReady();
   }
 
@@ -170,8 +164,6 @@ void RepeatActor::Act() {
   Regst* out_regst = produced_repeat_var_rs_.Front(produced_repeat_var_regst_desc_id_);
   Regst* in_regst = consumed_var_rs_.Front(consumed_var_regst_desc_id_);
   CHECK(out_regst && in_regst);
-  // LOG(WARNING) << "cclog: RepeatVarActor: "
-  //             << out_regst->regst_desc()->regst_desc_type().DebugString();
   CHECK(out_regst->main_mem_ptr() == in_regst->main_mem_ptr());
   CHECK(out_regst->separated_header_mem_ptr() == in_regst->separated_header_mem_ptr());
   CHECK_EQ(out_regst->regst_desc()->MainByteSize4OneRegst(),
@@ -185,23 +177,15 @@ void RepeatActor::AsyncSendCustomizedProducedRegstMsgToConsumer() {
   Regst* const repeat_var_regst = produced_repeat_var_rs_.Front(produced_repeat_var_regst_desc_id_);
   CHECK_GT(HandleRegstToConsumer(repeat_var_regst), 0);
   produced_repeat_var_rs_.PopFrontRegsts({produced_repeat_var_regst_desc_id_});
-
-  LOG(INFO) << "ccActorLog: repeat actor: " << actor_id() << " in repeat count: " << repeat_count_
-            << " Send var regst " << produced_repeat_var_regst_desc_id_ << " to Consumer.";
 }
 
 void RepeatActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
   // NOTE(chengcheng): do nothing. consumed var regst will return in inplace done.
-  LOG(INFO) << "ccActorLog: repeat actor: " << actor_id() << " in repeat count: " << repeat_count_
-            << " NOT return var regst for waiting inplace var regst returned. ";
 }
 
 void RepeatActor::UpdtStateAsCustomizedProducedRegst(Regst* regst) {
   CHECK_EQ(regst->regst_desc_id(), produced_repeat_var_regst_desc_id_);
   CHECK_EQ(produced_repeat_var_rs_.TryPushBackRegst(regst), 0);
-  LOG(INFO) << "ccActorLog: repeat actor: " << actor_id() << " in count: " << repeat_count_
-            << " regst_desc_id: " << produced_repeat_var_regst_desc_id_ << " ready size = "
-            << produced_repeat_var_rs_.GetReadyRegstSize(produced_repeat_var_regst_desc_id_);
 
   if (wait_all_regst_return_
       && produced_repeat_var_rs_.GetReadyRegstSize(produced_repeat_var_regst_desc_id_)
@@ -211,17 +195,11 @@ void RepeatActor::UpdtStateAsCustomizedProducedRegst(Regst* regst) {
     AsyncSendRegstMsgToProducer(in_regst);
     CHECK_EQ(0, consumed_var_rs_.TryPopFrontRegst(consumed_var_regst_desc_id_));
     wait_all_regst_return_ = false;
-
-    LOG(INFO) << "ccActorLog: repeat actor: " << actor_id() << " in count: " << repeat_count_
-              << " consumed_var_regst_desc_id: " << consumed_var_regst_desc_id_
-              << " return with all produced regst.";
   }
 }
 
 void RepeatActor::NormalProcessCustomizedReadableRegstMsg(const ActorMsg& msg) {
   CHECK_EQ(0, consumed_var_rs_.TryPushBackRegst(msg.regst()));
-  LOG(INFO) << "ccActorLog: actor: " << actor_id() << " in count: " << repeat_count_
-            << " receive var regst: " << msg.regst()->regst_desc_id();
 }
 REGISTER_ACTOR(TaskType::kRepeat, RepeatActor);
 
