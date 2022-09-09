@@ -35,17 +35,16 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> WkvOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& v_shape = ctx->InputShape("v", 0);
-  *ctx->MutOutputShape("y", 0) = v_shape;
+  ctx->SetOutputShape("y", 0, v_shape);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> WkvOp::InferDataType(user_op::InferContext* ctx) {
   DataType v_dtype = ctx->InputDType("v", 0);
-  *ctx->MutOutputDType("y", 0) = v_dtype;
+  ctx->SetOutputDType("y", 0, v_dtype);
   return Maybe<void>::Ok();
 }
 
 /*static*/ Maybe<void> WkvGradOp::GetSbp(user_op::SbpContext* ctx) {
-  // return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("w", 0))
       .Broadcast(user_op::OpArg("u", 0))
@@ -63,18 +62,18 @@ namespace oneflow {
   const int64_t B = ctx->Attr<int64_t>("B");
   const int64_t C = ctx->Attr<int64_t>("C");
   const Shape& gy_shape = ctx->InputShape("gy", 0);
-  *ctx->MutOutputShape("gw", 0) = Shape({B, C});
-  *ctx->MutOutputShape("gu", 0) = Shape({B, C});
-  *ctx->MutOutputShape("gk", 0) = gy_shape;
-  *ctx->MutOutputShape("gv", 0) = gy_shape;
+  ctx->SetOutputShape("gw", 0, Shape({B, C}));
+  ctx->SetOutputShape("gu", 0, Shape({B, C}));
+  ctx->SetOutputShape("gk", 0, gy_shape);
+  ctx->SetOutputShape("gv", 0, gy_shape);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> WkvGradOp::InferDataType(user_op::InferContext* ctx) {
   DataType gy_dtype = ctx->InputDType("gy", 0);
-  *ctx->MutOutputDType("gw", 0) = gy_dtype;
-  *ctx->MutOutputDType("gu", 0) = gy_dtype;
-  *ctx->MutOutputDType("gk", 0) = gy_dtype;
-  *ctx->MutOutputDType("gv", 0) = gy_dtype;
+  ctx->SetOutputDType("gw", 0, gy_dtype);
+  ctx->SetOutputDType("gu", 0, gy_dtype);
+  ctx->SetOutputDType("gk", 0, gy_dtype);
+  ctx->SetOutputDType("gv", 0, gy_dtype);
   return Maybe<void>::Ok();
 }
 
