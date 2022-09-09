@@ -271,7 +271,8 @@ def _worker_loop(
         flow.set_num_threads(1)
         seed = base_seed + worker_id
         random.seed(seed)
-        generator.manual_seed(seed)  # PyTorch use torch.manual_seed(seed)
+        flow.manual_seed(seed)
+        generator.manual_seed(seed)  # different with PyTorch here
 
         global _worker_info
         _worker_info = WorkerInfo(
