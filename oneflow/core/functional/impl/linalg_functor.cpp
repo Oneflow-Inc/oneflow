@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
+#include "oneflow/core/functional/impl/common.h"
 
 namespace oneflow {
 namespace one {
@@ -43,12 +44,12 @@ class CrossFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& other,
                            const Optional<int64_t>& dim) const {
-    CHECK_EQ_OR_RETURN(*input->shape(), *other->shape())
-        << Error::RuntimeError() << "input and other should have same shape.";
-
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim");
 
-    const auto do_dispatch_base_on_device = [&](const int64_t dim) -> Maybe<Tensor> {
+    const auto do_dispatch_base_on_device = [&attrs, this](
+                                                const std::shared_ptr<one::Tensor>& input,
+                                                const std::shared_ptr<one::Tensor>& other,
+                                                const int64_t dim) -> Maybe<Tensor> {
       DeviceType device{};
 
       if (input->is_global()) {
@@ -77,18 +78,31 @@ class CrossFunctor {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {input, other}, attrs);
     };
 
-    if (!dim.has_value()) { return do_dispatch_base_on_device(JUST(FindValidDim(input))); }
+    Shape shape_to_broadcast;
+    std::pair<bool, bool> need_broadcast;
+
+    std::tie(shape_to_broadcast, need_broadcast.first, need_broadcast.second) =
+        *JUST(InferUnifiedShapeForBroadcasting(*input->shape(), *other->shape()));
+    const auto new_input =
+        need_broadcast.first ? JUST(functional::Expand(input, shape_to_broadcast)) : input;
+    const auto new_other =
+        need_broadcast.second ? JUST(functional::Expand(other, shape_to_broadcast)) : other;
+
+    if (!dim.has_value()) {
+      return do_dispatch_base_on_device(new_input, new_other,
+                                        JUST(FindValidDim(shape_to_broadcast)));
+    }
 
     int64_t new_dim = JUST(dim);
-    if (new_dim < 0) { new_dim += input->ndim(); }
+    if (new_dim < 0) { new_dim += shape_to_broadcast.NumAxes(); }
 
-    return do_dispatch_base_on_device(new_dim);
+    return do_dispatch_base_on_device(new_input, new_other, new_dim);
   }
 
  private:
-  Maybe<int64_t> FindValidDim(const std::shared_ptr<one::Tensor>& t) const {
+  Maybe<int64_t> FindValidDim(const Shape& shape) const {
     int64_t valid_dim = -1;
-    const auto& dim_vec = t->shape()->dim_vec();
+    const auto& dim_vec = shape.dim_vec();
     for (size_t i = 0; i < dim_vec.size(); ++i) {
       if (dim_vec[i] == 3) {
         valid_dim = i;

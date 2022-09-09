@@ -23,18 +23,64 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestLinalgCross(flow.unittest.TestCase):
-    @autotest(n=20, auto_backward=True)
+    @autotest(n=5)
     def test_linalg_cross_with_random_data(test_case):
         device = random_device()
         ndim = np.random.randint(2, 6)
         shape = list(np.random.randint(16, size=ndim))
         index = np.random.randint(ndim)
         shape[index] = 3
-        print(ndim, index, shape)
 
         x = random_tensor(ndim, *shape).to(device)
         y = random_tensor(ndim, *shape).to(device)
         return torch.linalg.cross(x, y, dim=index)
+
+    @autotest(n=10)
+    def test_linalg_cross_with_random_data_broadcast(test_case):
+        device = random_device()
+        ndim = np.random.randint(3, 6)
+        shape = list(np.random.randint(16, size=ndim))
+        indexes = list(np.random.choice(ndim, 3))
+        shape[indexes[0]] = 3
+        x_shape = shape
+        y_shape = shape[:]
+        x_shape[indexes[1]] = 1
+        y_shape[indexes[2]] = 1
+
+        x = random_tensor(ndim, *x_shape).to(device)
+        y = random_tensor(ndim, *y_shape).to(device)
+        return torch.linalg.cross(x, y, dim=indexes[0])
+
+    @autotest(n=1)
+    def test_linalg_cross_with_random_data_broadcast_different_num_axes(test_case):
+        device = random_device()
+        x = random_tensor(4, 4, 5, 3, 5).to(device)
+        y = random_tensor(3, 1, 3, 5).to(device)
+        return torch.linalg.cross(x, y, dim=2)
+
+    @autotest(n=5)
+    def test_linalg_cross_with_random_data_default_dim(test_case):
+        device = random_device()
+        ndim = np.random.randint(2, 6)
+        shape = list(np.random.randint(16, size=ndim))
+        index = np.random.randint(ndim)
+        shape[index] = 3
+
+        x = random_tensor(ndim, *shape).to(device)
+        y = random_tensor(ndim, *shape).to(device)
+        return torch.linalg.cross(x, y)
+
+    @autotest(n=5)
+    def test_cross_with_random_data_default_dim(test_case):
+        device = random_device()
+        ndim = np.random.randint(2, 6)
+        shape = list(np.random.randint(16, size=ndim))
+        index = np.random.randint(ndim)
+        shape[index] = 3
+
+        x = random_tensor(ndim, *shape).to(device)
+        y = random_tensor(ndim, *shape).to(device)
+        return torch.cross(x, y)
 
 
 if __name__ == "__main__":
