@@ -40,9 +40,7 @@ def generate_grads_for_variables(variables):
     grads = [
         random_tensor(
             len(shape), *shape, requires_grad=random_bool().value()
-        ).to_global(
-            placement=placement, sbp=sbp
-        )
+        ).to_global(placement=placement, sbp=sbp)
         for shape, sbp in shape_and_sbp
     ]
     return grads
