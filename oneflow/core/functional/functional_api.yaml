@@ -2595,7 +2595,7 @@
   bind_python: True
 
 - name: "adaptive_max_pool1d"
-  signature: "TensorTuple (Tensor input, Int64List[2] output_size) => AdaptiveMaxPool1D"
+  signature: "TensorTuple (Tensor input, Int64List[1] output_size) => AdaptiveMaxPool1D"
   bind_python: True
 
 - name: "adaptive_max_pool2d"

@@ -28,16 +28,6 @@ namespace oneflow {
 namespace user_op {
 
 template<typename T>
-__global__ void InitPtr(int elements, T* ptr) {
-  int gid = (blockDim.x * blockIdx.x) + threadIdx.x;
-  int step = gridDim.x * blockDim.x;
-  while (gid < elements) {
-    ptr[gid] = static_cast<T>(0);
-    gid += step;
-  }
-}
-
-template<typename T>
 __global__ void AdaptiveMaxPoolCudaKernel(const T* input, T* output, int64_t* return_index,
                                           int num_elems, int in_d, int in_h, int in_w, int out_d,
                                           int out_h, int out_w) {
@@ -79,7 +69,7 @@ __global__ void AdaptiveMaxPoolCudaKernel(const T* input, T* output, int64_t* re
       }
       in_ptr += in_h * in_w;  // next input depth
     }
-    // Update output
+
     output[idx] = local_max;
     return_index[idx] = local_max_index;
   }
@@ -87,11 +77,12 @@ __global__ void AdaptiveMaxPoolCudaKernel(const T* input, T* output, int64_t* re
 
 template<typename T>
 __global__ void AdaptiveMaxPoolGradCudaKernel(T* input, const T* output, const int64_t* index,
-                                              int num_elems, int in_d, int in_h, int in_w,
-                                              int out_d, int out_h, int out_w) {
+                                              int dy_elems, int in_d, int in_h, int in_w, int out_d,
+                                              int out_h, int out_w) {
   const int out_panel_size = out_d * out_h * out_w;
   const int in_panel_size = in_d * in_h * in_w;
-  CUDA_1D_KERNEL_LOOP(idx, num_elems) {
+
+  CUDA_1D_KERNEL_LOOP(idx, dy_elems) {
     int bc_idx = idx / out_panel_size;
     T* input_ptr = input + bc_idx * in_panel_size;
     cuda::atomic::Add(input_ptr + index[idx], output[idx]);
@@ -111,7 +102,7 @@ void MaxForwardCompute(KernelComputeContext* ctx) {
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
   const Shape& y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
 
-  // TODO (Tianyu): Support 'channels_last'
+  // TODO: Support 'channels_last'
   std::string data_format = "channels_first";
   const Shape& in = GetShape5D(x_shape, data_format, dim);
   const Shape& out = GetShape5D(y_shape, data_format, dim);
@@ -144,7 +135,7 @@ void MaxBackwardCompute(KernelComputeContext* ctx) {
   const int in_elems = in_tensor->shape_view().elem_cnt();
   const int out_elems = out_tensor->shape_view().elem_cnt();
 
-  RUN_CUDA_KERNEL((InitPtr<T>), ctx->stream(), in_elems, in_elems, in_ptr);
+  Memset<DeviceType::kCUDA>(ctx->stream(), in_ptr, 0, in_elems * sizeof(T));
   RUN_CUDA_KERNEL((AdaptiveMaxPoolGradCudaKernel<T>), ctx->stream(), out_elems, in_ptr, out_ptr,
                   index_ptr, out_elems, in.At(2), in.At(3), in.At(4), out.At(2), out.At(3),
                   out.At(4));

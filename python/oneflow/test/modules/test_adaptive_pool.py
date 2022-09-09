@@ -85,6 +85,53 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n1d()
+class TestAdaptiveMaxPool(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_adaptive_maxpool1d(test_case):
+        m = torch.nn.AdaptiveMaxPool1d(output_size=random().to(_size_1_t))
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=3).to(device)
+        y = m(x)
+        return y
+
+    @autotest(n=5)
+    def test_adaptive_maxpool2d(test_case):
+        m = torch.nn.AdaptiveMaxPool2d(output_size=random().to(_size_2_opt_t_not_none))
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=4).to(device)
+        y = m(x)
+        return y
+
+    # @autotest(n=5)
+    # def test_adaptive_maxpool3d(test_case):
+    #     m = torch.nn.AdaptiveMaxPool3d(output_size=random().to(_size_3_opt_t_not_none))
+    #     m.train(random())
+    #     device = random_device()
+    #     m.to(device)
+    #     x = random_tensor(ndim=5).to(device)
+    #     y = m(x)
+    #     return y
+
+    @profile(torch.nn.functional.adaptive_max_pool1d)
+    def profile_adaptive_max_pool1d(test_case):
+        torch.nn.functional.adaptive_max_pool1d(torch.ones(1, 64, 8), 5)
+
+    @profile(torch.nn.functional.adaptive_max_pool2d)
+    def profile_adaptive_max_pool2d(test_case):
+        torch.nn.functional.adaptive_max_pool2d(torch.ones(1, 64, 10, 9), 7)
+        torch.nn.functional.adaptive_max_pool2d(torch.ones(1, 64, 8, 9), (5, 7))
+
+    @profile(torch.nn.functional.adaptive_max_pool3d)
+    def profile_adaptive_max_pool3d(test_case):
+        torch.nn.functional.adaptive_max_pool3d(torch.ones(1, 64, 8, 9, 10), (5, 7, 9))
+        torch.nn.functional.adaptive_max_pool3d(torch.ones(1, 64, 10, 9, 8), 7)
+
+
+@flow.unittest.skip_unless_1n1d()
 class TestAdaptiveAvgPoolFunctional(flow.unittest.TestCase):
     @autotest(n=5)
     def test_adaptive_avgpool1d_functional(test_case):

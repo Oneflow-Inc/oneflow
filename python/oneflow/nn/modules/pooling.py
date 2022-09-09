@@ -860,6 +860,61 @@ def adaptive_avg_pool3d(input, output_size):
     return AdaptiveAvgPool3d(output_size)(input)
 
 
+class _AdaptiveMaxPoolNd(Module):
+    def __init__(self, output_size, return_indices: bool = False) -> None:
+        super(_AdaptiveMaxPoolNd, self).__init__()
+        self.output_size = output_size
+        self.return_indices = return_indices
+
+    def extra_repr(self) -> str:
+        return "output_size={}".format(self.output_size)
+
+
+class AdaptiveMaxPool1d(_AdaptiveMaxPoolNd):
+    r"""
+    """
+
+    def forward(self, input):
+        self.output_size = _single(self.output_size)
+        assert (
+            len(input.shape) == 3 and len(self.output_size) == 1
+        ), "the length of 'output_size' does not match the input size, 1 expected"
+        new_output_size = _generate_output_size(input.shape, self.output_size)
+        return flow.nn.functional.adaptive_max_pool1d(
+            input, self.output_size, self.return_indices
+        )
+
+
+class AdaptiveMaxPool2d(_AdaptiveMaxPoolNd):
+    r"""
+    """
+
+    def forward(self, input):
+        self.output_size = _pair(self.output_size)
+        assert (
+            len(input.shape) == 4
+        ), f"expected 4-dimensional tensor, but got {len(input.shape)}-dimensional tensor"
+        new_output_size = _generate_output_size(input.shape, self.output_size)
+        return flow.nn.functional.adaptive_max_pool2d(
+            input, self.output_size, self.return_indices
+        )
+
+
+class AdaptiveMaxPool3d(_AdaptiveMaxPoolNd):
+    r"""
+    """
+
+    def forward(self, input):
+        self.output_size = _triple(self.output_size)
+        assert (
+            len(input.shape) == 5
+        ), f"expected 5-dimensional tensor, but got {len(input.shape)}-dimensional tensor"
+        new_output_size = _generate_output_size(input.shape, self.output_size)
+        return flow.nn.functional.adaptive_max_pool3d(
+            input, self.output_size, self.return_indices
+        )
+
+
 if __name__ == "__main__":
     import doctest
 
