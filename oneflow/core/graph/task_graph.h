@@ -81,7 +81,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
                         const std::vector<CompTaskNode*>& dst_task_nodes);
 
   void SetOrderInGraphForEachNode();
-  void MergeChain();
+  void MergeChainByPhysicalTaskGraph();
+  void MergeChainByLogicalChainId();
   void BuildCtrlRegstDescInSameChain();
 
   // inplace

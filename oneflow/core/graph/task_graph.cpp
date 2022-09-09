@@ -538,7 +538,12 @@ void TaskGraph::RemoveEmptyRegsts() {
 }
 
 void TaskGraph::MergeChainAndAddOrderingCtrlEdgeInSameChain() {
-  MergeChain();
+  if (EnableLogicalChain()) {
+    MergeChainByLogicalChainId();
+  } else {
+    // TODO(chengcheng): erase old chain version in the future.
+    MergeChainByPhysicalTaskGraph();
+  }
   BuildCtrlRegstDescInSameChain();
 }
 
@@ -552,30 +557,30 @@ void TaskGraph::SetOrderInGraphForEachNode() {
   TopoForEachNode(SetOrderInGraph);
 }
 
-void TaskGraph::MergeChain() {
-  if (EnableLogicalChain()) {
-    for (TaskNode* this_node : ordered_task_nodes_) {
-      CompTaskNode* comp_node = dynamic_cast<CompTaskNode*>(this_node);
-      if (!comp_node) { continue; }
-      const int64_t logical_chain_id = comp_node->op()->op_conf().logical_chain_id();
-      if (logical_chain_id != -1) { this_node->set_chain_id(logical_chain_id); }
-    }
-  } else {
-    int64_t chain_id = 0;
-    for (auto* this_node : ordered_task_nodes_) {
-      // skip if this node has been set in a chain.
-      if (this_node->chain_id() != -1) { continue; }
+void TaskGraph::MergeChainByPhysicalTaskGraph() {
+  int64_t chain_id = 0;
+  for (auto* this_node : ordered_task_nodes_) {
+    // skip if this node has been set in a chain.
+    if (this_node->chain_id() != -1) { continue; }
 
-      CHECK_EQ(this_node->chain_id(), -1);
-      if (CanBeMergedInChain(this_node)) {
-        TraverseConnectedSubGraphMergeInThisChain(this_node, chain_id);
-      } else {
-        this_node->set_chain_id(chain_id);
-      }
-
-      ++chain_id;
+    CHECK_EQ(this_node->chain_id(), -1);
+    if (CanBeMergedInChain(this_node)) {
+      TraverseConnectedSubGraphMergeInThisChain(this_node, chain_id);
+    } else {
+      this_node->set_chain_id(chain_id);
     }
-    for (auto* node : ordered_task_nodes_) { CHECK_NE(node->chain_id(), -1); }
+
+    ++chain_id;
+  }
+  for (auto* node : ordered_task_nodes_) { CHECK_NE(node->chain_id(), -1); }
+}
+
+void TaskGraph::MergeChainByLogicalChainId() {
+  for (TaskNode* this_node : ordered_task_nodes_) {
+    CompTaskNode* comp_node = dynamic_cast<CompTaskNode*>(this_node);
+    if (!comp_node) { continue; }
+    const int64_t logical_chain_id = comp_node->op()->op_conf().logical_chain_id();
+    if (logical_chain_id != -1) { this_node->set_chain_id(logical_chain_id); }
   }
 }
 
