@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/decorator.h"
-#include "oneflow/core/common/thread_local_guard.h"
 #include "oneflow/core/common/env_var/stream.h"
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/stream_set.h"
@@ -41,15 +40,24 @@ class StreamConverter final {
   const std::shared_ptr<StreamSet> stream_set_;
 };
 
-class StreamGuard final : public ThreadLocalGuard<StreamConverter> {
+class StreamGuard final {
  public:
-  using ThreadLocalGuard<StreamConverter>::ThreadLocalGuard;
-  ~StreamGuard() = default;
+  explicit StreamGuard(const std::shared_ptr<StreamConverter>& stream_converter) {
+    old_value_ = Current();
+    *MutCurrent() = stream_converter;
+  }
+  ~StreamGuard() { *MutCurrent() = old_value_; }
 
   static Maybe<Symbol<Stream>> TryConvertStream(Symbol<Stream> stream) {
     if (!Current().has_value()) { return stream; }
     return JUST(Current())->TryConvertStream(stream);
   }
+
+ private:
+  static const Optional<StreamConverter>& Current() { return *MutCurrent(); }
+  static Optional<StreamConverter>* MutCurrent();
+
+  Optional<StreamConverter> old_value_;
 };
 
 }  // namespace oneflow
