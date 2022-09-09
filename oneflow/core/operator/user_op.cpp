@@ -685,19 +685,14 @@ Maybe<void> UserOp::InferOutBlobDescs(
   for (const auto& bn : output_bns()) {
     BlobDesc* desc = GetBlobDesc4BnInOp(bn);
     *desc = *JUST(GetLogicalBlobDesc4Obn(bn));
+    CHECK_EQ_OR_RETURN(desc->stride(), Stride(desc->shape()))
+        << Error::RuntimeError() << "user op logical stride is expected to the same as logical shape here, the stride is "
+        << desc->stride().ToString() << ", but shape is "
+        << desc->shape().ToString();
     const auto& nd_sbp = nd_sbp_signature->bn_in_op2nd_sbp().at(bn);
     desc->set_shape(*JUST(GetPhysicalShape(desc->shape(), nd_sbp, *parallel_desc, *parallel_ctx)));
+    // NOTE(strint): use output shape as stride.
     desc->set_stride(Stride(desc->shape()));
-    // TODO(strint): fix stride
-    // if (val_->non_contiguous_supported) {
-    //   out_blob_desc->set_stride(infer_ctx.OutputStride(pair.first, pair.second));
-    // } else {
-    //   out_blob_desc->set_stride(Stride(out_blob_desc->shape()));
-    // }
-    // CHECK_EQ_OR_RETURN(out_blob_desc->stride().size(), out_blob_desc->shape().size())
-    //     << Error::RuntimeError() << "stride and shape size mismatch since stride is "
-    //     << out_blob_desc->stride().ToString() << " but shape is "
-    //     << out_blob_desc->shape().ToString();
   }
   return Maybe<void>::Ok();
 }
