@@ -42,7 +42,7 @@ namespace mlir {
 
 namespace oneflow {
 
-LogicalResult LowerKernelLaunchModuleToLLVM(mlir::MLIRContext* context, ModuleOp module);
+LogicalResult LowerKernelLaunchModuleToLLVM(ModuleOp module);
 LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module);
 #ifdef WITH_MLIR_CUDA_CODEGEN
 LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module);

@@ -232,9 +232,26 @@ class KernelLaunchComputeContext final : public user_op::KernelComputeContext {
 
 namespace {
 
-void KernelLaunchCompute(user_op::KernelComputeContext* ctx) {
+template<class... Args>
+void runJIT(mlir::ModuleOp module_op, Args... args) {
   llvm::SmallVector<llvm::StringRef, 4> ext_libs(
       {SharedLibPaths()->begin(), SharedLibPaths()->end()});
+  mlir::ExecutionEngineOptions jitOptions;
+  jitOptions.transformer = {};
+  jitOptions.jitCodeGenOptLevel = llvm::None;
+  jitOptions.sharedLibPaths = ext_libs;
+
+  auto jit_or_error = mlir::ExecutionEngine::create(module_op, jitOptions);
+  CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
+                        << llvm::toString(jit_or_error.takeError());
+  auto jit = std::move(jit_or_error.get());
+  // ctx->op_name(), &kl_comp_ctx, kernel
+  auto error = jit->invoke(args...);
+  CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
+}
+
+void KernelLaunchCompute(user_op::KernelComputeContext* ctx,
+                         const oneflow::user_op::OpKernel* kernel) {
   mlir::DialectRegistry registry;
   registry
       .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
@@ -245,26 +262,19 @@ void KernelLaunchCompute(user_op::KernelComputeContext* ctx) {
       mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
 
   auto reg_ctx = std::make_unique<KernelLaunchOpKernelRegContext>(module_op.get());
-  const user_op::OpKernelRegistryResult* res =
-      CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-          reg_ctx->GetOp()->getName().stripDialect().str(), *reg_ctx));
+  if (kernel == nullptr) {
+    const user_op::OpKernelRegistryResult* res =
+        CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
+            reg_ctx->GetOp()->getName().stripDialect().str(), *reg_ctx));
+    kernel = res->create_fn();
+  }
   KernelLaunchComputeContext kl_comp_ctx(std::move(reg_ctx), ctx);
-  const oneflow::user_op::OpKernel* kernel = res->create_fn();
-  if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(&mlir_ctx, *module_op))) {
+
+  if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(*module_op))) {
     LOG(ERROR) << "Fail lowering kernel launch Module to llvm ir";
     exit(1);
   }
-  mlir::ExecutionEngineOptions jitOptions;
-  jitOptions.transformer = {};
-  jitOptions.jitCodeGenOptLevel = llvm::None;
-  jitOptions.sharedLibPaths = ext_libs;
-
-  auto jit_or_error = mlir::ExecutionEngine::create(*module_op, jitOptions);
-  CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
-                        << llvm::toString(jit_or_error.takeError());
-  auto jit = std::move(jit_or_error.get());
-  auto error = jit->invoke(ctx->op_name(), &kl_comp_ctx, kernel);
-  CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
+  runJIT(module_op.get(), ctx->op_name(), &kl_comp_ctx, kernel);
 }
 }  // namespace
 
@@ -275,7 +285,10 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
   ~KernelLaunchCpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override { KernelLaunchCompute(ctx); }
+  const oneflow::user_op::OpKernel* kernel;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    KernelLaunchCompute(ctx, kernel);
+  }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
@@ -302,7 +315,10 @@ class KernelLaunchGpuKernel final : public user_op::OpKernel {
   ~KernelLaunchGpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override { KernelLaunchCompute(ctx); }
+  const oneflow::user_op::OpKernel* kernel;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    KernelLaunchCompute(ctx, kernel);
+  }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
