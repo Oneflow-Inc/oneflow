@@ -47,7 +47,6 @@ class RepeatActor final : public Actor {
   }
 
   bool IsCustomizedReadReady() const override {
-    bool is_ready_ready = (!wait_all_regst_return_) && consumed_var_rs_.IsCurSlotReady();
     return (!wait_all_regst_return_) && consumed_var_rs_.IsCurSlotReady();
   }
   bool IsCustomizedWriteReady() const override {

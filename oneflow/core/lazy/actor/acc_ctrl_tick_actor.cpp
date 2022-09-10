@@ -41,7 +41,6 @@ class AccCtrlTickActor : public Actor {
   }
 
   bool IsCustomizedReadReady() const override {
-    bool is_ready_ready = (!inplace_consume_) && consumed_tick_rs_.IsCurSlotReady();
     return (!inplace_consume_) && consumed_tick_rs_.IsCurSlotReady();
   }
   bool IsCustomizedWriteReady() const override { return produced_tick_rs_.IsCurSlotReady(); }
