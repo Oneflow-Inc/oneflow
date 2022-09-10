@@ -26,7 +26,7 @@ void AdapativeMaxPoolForward(user_op::KernelComputeContext* ctx) {
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
   const Shape& y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
 
-  // TODO (Yao Chi): Support 'channels_last'
+  // TODO : Support 'channels_last'
   std::string data_format = "channels_first";
   const Shape& in = GetShape5D(x_shape, data_format, dim);
   const Shape& out = GetShape5D(y_shape, data_format, dim);
@@ -90,7 +90,7 @@ void AdaptiveMaxPoolBackward(user_op::KernelComputeContext* ctx) {
   const Shape& dx_shape = ctx->TensorDesc4ArgNameAndIndex("dx", 0)->shape();
   const Shape& dy_shape = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->shape();
 
-  // TODO (Tianyu): Support 'channels_last'
+  // TODO : Support 'channels_last'
   std::string data_format = "channels_first";
   const Shape& in = GetShape5D(dx_shape, data_format, dim);
   const Shape& out = GetShape5D(dy_shape, data_format, dim);

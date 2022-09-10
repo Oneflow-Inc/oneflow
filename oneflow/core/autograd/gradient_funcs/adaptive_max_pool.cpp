@@ -37,14 +37,12 @@ class AdaptiveMaxPoolNdGrad : public OpExprGradFunction<AdaptiveMaxPoolCaptureSt
                     TensorTuple* in_grads) const override;
 
  private:
-  AttrMap base_attrs_;
   int32_t ndims_;
 };
 
 Maybe<void> AdaptiveMaxPoolNdGrad::Init(const OpExpr& op, const int& ndims) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
-  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   ndims_ = ndims;
   return Maybe<void>::Ok();
 }
