@@ -13,9 +13,4 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.utils.torch.from_or_to_torch_tensor import from_torch, to_torch
-
-__all__ = [
-    "from_torch",
-    "to_torch",
-]
+from .thread import Thread, thread

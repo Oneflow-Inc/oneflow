@@ -22,7 +22,7 @@ namespace oneflow {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   CHECK_OR_RETURN(in_desc.shape().NumAxes() == 1 && in_desc.shape().At(0) >= 1);
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
-  *out_desc->mut_shape() = in_desc.shape();
+  out_desc->set_shape(in_desc.shape());
   return Maybe<void>::Ok();
 }
 
@@ -59,7 +59,7 @@ namespace oneflow {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   CHECK_OR_RETURN(in_desc.data_type() == DataType::kTensorBuffer);
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
-  *out_desc->mut_data_type() = DataType::kTensorBuffer;
+  out_desc->set_data_type(DataType::kTensorBuffer);
   return Maybe<void>::Ok();
 }
 

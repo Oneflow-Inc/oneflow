@@ -100,6 +100,37 @@ class Module(object):
         self._state_dict_hooks = OrderedDict()
         self._load_state_dict_pre_hooks = OrderedDict()
         self._modules = OrderedDict()
+        self._is_ddp_module = False
+
+    def __getstate__(self):
+        if not self._is_ddp_module:
+            if (
+                len(self._backward_hooks) > 0
+                or len(self._forward_hooks) > 0
+                or len(self._forward_pre_hooks) > 0
+                or len(self._state_dict_hooks) > 0
+                or len(self._load_state_dict_pre_hooks) > 0
+            ):
+                warnings.warn("The module hooks will not be remained after serializing")
+
+        state = self.__dict__.copy()
+        del state["_backward_hooks"]
+        del state["_forward_hooks"]
+        del state["_forward_pre_hooks"]
+        del state["_state_dict_hooks"]
+        del state["_load_state_dict_pre_hooks"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._backward_hooks = OrderedDict()
+        self._forward_hooks = OrderedDict()
+        self._forward_pre_hooks = OrderedDict()
+        self._state_dict_hooks = OrderedDict()
+        self._load_state_dict_pre_hooks = OrderedDict()
+        if hasattr(self, "_is_ddp_module") and self._is_ddp_module:
+            # flow.nn.parallel.DistributedDataParallel updates the module inplace
+            flow.nn.parallel.DistributedDataParallel(self)
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError()
@@ -323,6 +354,17 @@ class Module(object):
                     buffers[name] = value
                 else:
                     object.__setattr__(self, name, value)
+
+    def __delattr__(self, name):
+        if name in self._parameters:
+            del self._parameters[name]
+        elif name in self._buffers:
+            del self._buffers[name]
+            self._non_persistent_buffers_set.discard(name)
+        elif name in self._modules:
+            del self._modules[name]
+        else:
+            super().__delattr__(name)
 
     def _named_members(self, get_members_fn, prefix="", recurse=True):
         memo = set()
