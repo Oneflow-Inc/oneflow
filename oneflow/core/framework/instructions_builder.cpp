@@ -400,7 +400,8 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
     stream = producer_stream;
   }
   if (last_used_stream != producer_stream) {
-    if (stream.has_value()) {
+    if (stream.has_value() && last_used_stream->device() == producer_stream->device()
+        && last_used_stream->stream_type() == producer_stream->stream_type()) {
       JUST(SoftSyncStreamBetween({JUST(eager_blob_object->compute_local_dep_object())},
                                  last_used_stream, JUST(stream)));
     } else {
