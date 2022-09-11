@@ -187,7 +187,8 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
 }  // namespace
 
 void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
-    Plan* plan, std::shared_ptr<const TaskGraph> task_graph, const HashSet<std::string>& variable_op_names) {
+    Plan* plan, std::shared_ptr<const TaskGraph> task_graph,
+    const HashSet<std::string>& variable_op_names) {
   HashMap<int64_t, std::unique_ptr<MemBlockProto>> mem_block_id2mem_block;
 
   auto IsVariableRegst = [&](const TaskProto* task, std::string* name) -> bool {
@@ -382,7 +383,8 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
   }
 }
 
-void PlanUtil::ToDotFile(const Plan& plan, std::shared_ptr<const TaskGraph> task_graph, const std::string& filepath) {
+void PlanUtil::ToDotFile(const Plan& plan, std::shared_ptr<const TaskGraph> task_graph,
+                         const std::string& filepath) {
   const auto& process_ranks = Singleton<ResourceDesc, ForSession>::Get()->process_ranks();
   size_t gpu_device_num =
       Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(DeviceType::kCUDA);
@@ -690,9 +692,11 @@ const boxing::collective::RankDesc& GetRankDesc(const OperatorConf& conf) {
   }
 }
 
-const boxing::collective::RankDesc& GetRankDesc(const TaskProto& task_proto, std::shared_ptr<const TaskGraph> task_graph) {
+const boxing::collective::RankDesc& GetRankDesc(const TaskProto& task_proto,
+                                                std::shared_ptr<const TaskGraph> task_graph) {
   CHECK_EQ(task_proto.exec_sequence().exec_node_size(), 1);
-  return GetRankDesc(PlanUtil::GetOpConf(task_graph, task_proto.exec_sequence().exec_node(0).kernel_conf()));
+  return GetRankDesc(
+      PlanUtil::GetOpConf(task_graph, task_proto.exec_sequence().exec_node(0).kernel_conf()));
 }
 
 struct CollectiveBoxingRequestInfo {
@@ -712,7 +716,8 @@ void GetDeviceDesc(const TaskProto* task_proto, boxing::collective::DeviceDesc* 
 
 }  // namespace
 
-void PlanUtil::GenCollectiveBoxingPlan(Job* job, std::shared_ptr<const TaskGraph> task_graph, Plan* plan) {
+void PlanUtil::GenCollectiveBoxingPlan(Job* job, std::shared_ptr<const TaskGraph> task_graph,
+                                       Plan* plan) {
   using namespace boxing::collective;
 
   RequestSet* request_set = &(*plan->mutable_collective_boxing_plan()
@@ -1165,14 +1170,16 @@ void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name) {
   }
 }
 
-const OperatorConf& PlanUtil::GetOpConf(std::shared_ptr<const TaskGraph> task_graph, const KernelConf& kernel_conf) {
+const OperatorConf& PlanUtil::GetOpConf(std::shared_ptr<const TaskGraph> task_graph,
+                                        const KernelConf& kernel_conf) {
   if (kernel_conf.has_op_attribute()) {
     return kernel_conf.op_attribute().op_conf();
   } else if (kernel_conf.has_op_attribute_ref()) {
     return task_graph->GetOpGraph()->OpNode4OpName(kernel_conf.op_attribute_ref())->op().op_conf();
   } else {
-    UNIMPLEMENTED() << " kernel_conf must has either op_attribute or op_attribute_ref, kernel_conf: "
-                    << kernel_conf.DebugString();
+    UNIMPLEMENTED()
+        << " kernel_conf must has either op_attribute or op_attribute_ref, kernel_conf: "
+        << kernel_conf.DebugString();
   }
 }
 
@@ -1182,8 +1189,9 @@ std::string PlanUtil::GetOpName(const Plan* plan, int64_t job_id, const KernelCo
   } else if (kernel_conf.has_op_attribute_ref()) {
     return kernel_conf.op_attribute_ref();
   } else {
-    UNIMPLEMENTED() << " kernel_conf must has either op_attribute or op_attribute_ref. kernel_conf: "
-                    << kernel_conf.DebugString();
+    UNIMPLEMENTED()
+        << " kernel_conf must has either op_attribute or op_attribute_ref. kernel_conf: "
+        << kernel_conf.DebugString();
   }
 }
 

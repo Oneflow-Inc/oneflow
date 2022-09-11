@@ -60,8 +60,10 @@ void ExecNode::UnbindBnWithEmptyRegst() {
       });
 }
 
-void ExecNode::ToProto(const ParallelContext* parallel_ctx, const bool need_op_attr, ExecNodeProto* ret) const {
-  op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), parallel_ctx, need_op_attr, ret->mutable_kernel_conf());
+void ExecNode::ToProto(const ParallelContext* parallel_ctx, const bool need_op_attr,
+                       ExecNodeProto* ret) const {
+  op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), parallel_ctx, need_op_attr,
+                     ret->mutable_kernel_conf());
   for (const auto& bn_regst : bn_in_op2regst_) {
     const std::string& bn_in_op = bn_regst.first;
     auto regst = bn_regst.second;
@@ -140,8 +142,10 @@ std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc() 
   };
 }
 
-void ExecGraph::ToExecSequence(const ParallelContext* parallel_ctx, const bool need_op_attr, ExecSequence* ret) const {
-  TopoForEachNode([&](ExecNode* node) { node->ToProto(parallel_ctx, need_op_attr, ret->add_exec_node()); });
+void ExecGraph::ToExecSequence(const ParallelContext* parallel_ctx, const bool need_op_attr,
+                               ExecSequence* ret) const {
+  TopoForEachNode(
+      [&](ExecNode* node) { node->ToProto(parallel_ctx, need_op_attr, ret->add_exec_node()); });
 }
 
 }  // namespace oneflow

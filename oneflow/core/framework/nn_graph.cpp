@@ -298,13 +298,15 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     PlanCompiler::Compile(&job_, &plan_, task_graph);
     CHECK_OR_RETURN(task_graph);
     tc->Count("Graph name: " + name_ + " Compile plan", 1);
-    PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, std::const_pointer_cast<const TaskGraph>(task_graph), variable_op_names_);
+    PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
+        &plan_, std::const_pointer_cast<const TaskGraph>(task_graph), variable_op_names_);
     tc->Count("Graph name: " + name_ + " Generate MemBlock and Chunk", 1);
 
     PlanUtil::GenRegisterHint(&plan_);
     tc->Count("Graph name: " + name_ + " GenRegisterHint", 1);
     // TODO(chengcheng): test collective boxing for multi-job.
-    PlanUtil::GenCollectiveBoxingPlan(&job_, std::const_pointer_cast<const TaskGraph>(task_graph), &plan_);
+    PlanUtil::GenCollectiveBoxingPlan(&job_, std::const_pointer_cast<const TaskGraph>(task_graph),
+                                      &plan_);
     tc->Count("Graph name: " + name_ + " GenCollectiveBoxingPlan", 1);
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
@@ -330,18 +332,18 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
       task_graph->ForEachNode([&](TaskNode* task_node) {
         thread_pool.AddWork([task_node, op_name2op_attribute, &counter, &mtx]() {
           if (!task_node->IsMeaningLess() && task_node->op_node()) {
-              auto op_node = task_node->op_node();
-              const std::string op_name = op_node->op().op_name();
-              {
-                std::unique_lock<std::mutex> guard(mtx);
-                auto find_it = op_name2op_attribute->find(op_name);
-                if (find_it == op_name2op_attribute->end()) {
-                  OpAttribute op_attr;
-                  CHECK_JUST(op_node->op().ToOpAttribute(&op_attr));
-                  // TODO(strint): Try to optimize here
-                  op_name2op_attribute->insert({op_name, op_attr});
-                }  // guard(mtx)
-              }
+            auto op_node = task_node->op_node();
+            const std::string op_name = op_node->op().op_name();
+            {
+              std::unique_lock<std::mutex> guard(mtx);
+              auto find_it = op_name2op_attribute->find(op_name);
+              if (find_it == op_name2op_attribute->end()) {
+                OpAttribute op_attr;
+                CHECK_JUST(op_node->op().ToOpAttribute(&op_attr));
+                // TODO(strint): Try to optimize here
+                op_name2op_attribute->insert({op_name, op_attr});
+              }  // guard(mtx)
+            }
           }
           counter.Decrease();
         } /* thread_pool.AddWork */);

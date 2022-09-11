@@ -279,7 +279,8 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
       comp_task_node->set_op_node(op_node);
       // TODO(strint): Create a task compile context per device for parallel run task compile ?
       // DeviceCompileCtx4Task
-      //     - one mutex for each device, inner device use this mutex to sequentially run, inter device do parallelly run
+      //     - one mutex for each device, inner device use this mutex to sequentially run, inter
+      //     device do parallelly run
       // Seperate into machine_id + dev_phy_id -> tasks to enable parallel?
       sorted_comp_tasks->emplace_back(comp_task_node);
     }
@@ -377,7 +378,8 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const OpEdge* op_edge) {
 }
 
 void ForEachOpGraphNecessaryCtrlEdge(
-    std::shared_ptr<const OpGraph> op_graph, const std::function<void(const OpNode*, const OpNode*)>& Handler) {
+    std::shared_ptr<const OpGraph> op_graph,
+    const std::function<void(const OpNode*, const OpNode*)>& Handler) {
   auto IsOpGraphDataReachable = op_graph->MakePredicatorIsReachable();
   op_graph->ForEachNode([&](OpNode* dst) {
     for (const auto& ctrl_in_op_name : dst->op().op_conf().ctrl_in_op_name()) {
@@ -399,7 +401,8 @@ void ForEachOpGraphNecessaryCtrlEdge(
 
 }  // namespace
 
-TaskGraph::TaskGraph(std::shared_ptr<const OpGraph> op_graph, bool enable_straighten_algorithm): op_graph_(op_graph) {
+TaskGraph::TaskGraph(std::shared_ptr<const OpGraph> op_graph, bool enable_straighten_algorithm)
+    : op_graph_(op_graph) {
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
   hierarchical_sub_tsk_gph_builder_.reset(new DispatchHierarchicalSubTskGphBuilder());

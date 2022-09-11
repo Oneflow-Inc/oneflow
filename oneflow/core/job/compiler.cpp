@@ -54,15 +54,15 @@ void PlanCompiler::Compile(Job* job, Plan* plan, std::shared_ptr<TaskGraph>& tas
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()
       || Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
     TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
-    op_graph->ToDotWithFilePath(
-        "optimized_dlnet_" + std::to_string(job_desc.job_id()) + "_op_graph.dot");
+    op_graph->ToDotWithFilePath("optimized_dlnet_" + std::to_string(job_desc.job_id())
+                                + "_op_graph.dot");
   }
   tc->Count("Graph name: " + job_name + " LogOptimizedJob", 1);
 
   // Step2: build task_gph.
   // TODO(levi): we can rewrite this part of code in visitor pattern.
-  task_gph =
-      std::make_shared<TaskGraph>(op_graph, job->job_conf().enable_straighten_algorithm_in_task_graph());
+  task_gph = std::make_shared<TaskGraph>(
+      op_graph, job->job_conf().enable_straighten_algorithm_in_task_graph());
   tc->Count("Graph name: " + job_name + " NewTaskGraph", 1);
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));

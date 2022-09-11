@@ -32,18 +32,22 @@ struct PlanUtil {
   static std::function<const TaskProto*(int64_t)> MakeGetterTaskProto4TaskId(const Plan& plan);
   static void SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan);
   static void GenMemBlockAndChunkWithVariableOpNames4Plan(
-      Plan* plan, std::shared_ptr<const TaskGraph> task_graph, const HashSet<std::string>& variable_op_names);
+      Plan* plan, std::shared_ptr<const TaskGraph> task_graph,
+      const HashSet<std::string>& variable_op_names);
   static void CleanUselessMemBlockAndCheckValid(Plan* plan);
-  static void ToDotFile(const Plan& plan, std::shared_ptr<const TaskGraph> task_graph, const std::string& filepath);
+  static void ToDotFile(const Plan& plan, std::shared_ptr<const TaskGraph> task_graph,
+                        const std::string& filepath);
   static std::function<RegstDescProto*(int64_t)> MakeMutRegstDesc4Id(Plan* plan);
   static void SetForceInplaceMemBlock(Plan* plan);
   static void DumpCtrlRegstInfoToPlan(Plan* plan);
-  static void GenCollectiveBoxingPlan(Job* job, std::shared_ptr<const TaskGraph> task_graph, Plan* plan);
+  static void GenCollectiveBoxingPlan(Job* job, std::shared_ptr<const TaskGraph> task_graph,
+                                      Plan* plan);
   static void GenRegisterHint(Plan* plan);
   static void GenLightPlan(Plan* plan, const std::string& plan_name);
   static void PlanMemoryLog(Plan* plan, const std::string& plan_name);
   static std::string GetOpName(const Plan* plan, int64_t job_id, const KernelConf& kernel_conf);
-  static const OperatorConf& GetOpConf(std::shared_ptr<const TaskGraph> task_graph, const KernelConf& kernel_conf);
+  static const OperatorConf& GetOpConf(std::shared_ptr<const TaskGraph> task_graph,
+                                       const KernelConf& kernel_conf);
   // NOTE(chengcheng): recovery op_attr
   static void PopulateOpAttribute(
       Plan* plan,

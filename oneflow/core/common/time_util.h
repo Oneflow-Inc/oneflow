@@ -59,6 +59,7 @@ class TimeCounter final {
   inline void Reset() { start_ = Clock::now(); }
 
   double Count(const std::string& log_prefix = "", int v_log_level = 0);
+
  private:
   using Clock = std::conditional_t<std::chrono::high_resolution_clock::is_steady,
                                    std::chrono::high_resolution_clock, std::chrono::steady_clock>;

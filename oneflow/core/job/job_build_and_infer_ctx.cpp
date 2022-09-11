@@ -965,8 +965,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
       || Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
     TeePersistentLogStream::Create(StrCat("forward_graph", job_id()))->Write(job());
     auto tmp_graph = std::make_unique<OpGraph>(job());
-    tmp_graph->ToDotWithFilePath("forward_dlnet_" + std::to_string(job_id())
-                                                 + "_op_graph.dot");
+    tmp_graph->ToDotWithFilePath("forward_dlnet_" + std::to_string(job_id()) + "_op_graph.dot");
     tmp_graph.reset();
     pass_tc->Count("Graph name: " + job_name + " LogForwardGraph", 1);
   }

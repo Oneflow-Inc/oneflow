@@ -203,7 +203,7 @@ void GenMemChainTasksAndRegsts(
     if (task_proto->task_type() == TaskType::kNormalForward
         && task_proto->exec_sequence().exec_node_size() == 1) {
       *op_name = PlanUtil::GetOpName(plan, task_proto->job_id(),
-                                          task_proto->exec_sequence().exec_node(0).kernel_conf());
+                                     task_proto->exec_sequence().exec_node(0).kernel_conf());
       return true;
     }
     return false;
@@ -838,7 +838,8 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
               mem_chain2task2free_regsts.at(mem_chain_id),
               mem_chain2regst2mutual_exclusion_regsts.at(mem_chain_id), result);
           counter.Decrease();
-          // tc_alg->Count("OneAlg " + std::to_string(mem_chain_id) + "_" + std::to_string(algo_id), 1);
+          // tc_alg->Count("OneAlg " + std::to_string(mem_chain_id) + "_" + std::to_string(algo_id),
+          // 1);
         });
       }
     }
