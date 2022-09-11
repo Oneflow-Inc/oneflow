@@ -460,6 +460,11 @@ class BroadcastLikeFunctor {
     const Shape& x_shape = *x->shape();
     const Shape& like_shape = *like->shape();
     if (x_shape == like_shape) { return x; }
+    CHECK_GE_OR_RETURN(like_shape.NumAxes(), x_shape.NumAxes())
+        << Error::RuntimeError() << "The number of sizes provided (" << like_shape.NumAxes()
+        << ") must be greater or equal to the number of dimensions in the tensor ("
+        << x_shape.NumAxes() << ")"
+        << ". Target sizes: " << like_shape.ToString() << ". Tensor sizes: " << x_shape.ToString();
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("broadcast_axes");
     if (broadcast_axes.empty()) {
       int64_t like_ndim = like_shape.NumAxes();
