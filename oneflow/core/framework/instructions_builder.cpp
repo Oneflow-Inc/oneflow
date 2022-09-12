@@ -399,9 +399,25 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   } else {
     stream = producer_stream;
   }
+  struct EnableStreamWaitOnReleaseTensor final
+      : public StreamTypeVisitor<EnableStreamWaitOnReleaseTensor> {
+    static bool VisitCompute() { return true; }
+    static bool VisitHost2Device() { return true; }
+    static bool VisitDevice2Host() { return true; }
+    static bool VisitCcl() { return false; }
+    static bool VisitBarrier() { return false; }
+    static bool VisitCriticalSection() { return false; }
+    static bool VisitLazyJobLauncher() { return false; }
+    static bool VisitPinnedCompute() { return VisitCompute(); }
+  };
+  const auto& EnableStreamWait = [&] {
+    if (last_used_stream->device() != producer_stream->device()) { return false; }
+    if (last_used_stream->stream_type() == producer_stream->stream_type()) { return true; }
+    return EnableStreamWaitOnReleaseTensor::Visit(last_used_stream->stream_type())
+           && EnableStreamWaitOnReleaseTensor::Visit(producer_stream->stream_type());
+  };
   if (last_used_stream != producer_stream) {
-    if (stream.has_value() && last_used_stream->device() == producer_stream->device()
-        && last_used_stream->stream_type() == producer_stream->stream_type()) {
+    if (stream.has_value() && EnableStreamWait()) {
       JUST(SoftSyncStreamBetween({JUST(eager_blob_object->compute_local_dep_object())},
                                  last_used_stream, JUST(stream)));
     } else {
