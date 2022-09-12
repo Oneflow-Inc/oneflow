@@ -13,15 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_ENV_VAR_AUTOGRAD_H_
-#define ONEFLOW_CORE_COMMON_ENV_VAR_AUTOGRAD_H_
-
-#include "oneflow/core/common/env_var/env_var.h"
+#include "oneflow/core/framework/stream_guard.h"
 
 namespace oneflow {
 
-DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_AD_PUT_LOSS_ON_TMP_COMPUTE_STREAM, true);
-
+/*static*/ Optional<StreamConverter>* StreamGuard::MutCurrent() {
+  static thread_local Optional<StreamConverter> current;
+  return &current;
 }
 
-#endif  // ONEFLOW_CORE_COMMON_ENV_VAR_AUTOGRAD_H_
+}  // namespace oneflow
