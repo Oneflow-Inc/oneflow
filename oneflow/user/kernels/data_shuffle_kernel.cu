@@ -92,7 +92,7 @@ __global__ void HashTableUniqueAndPartitionPairs(
           if (counter >= table_capacity) { __trap(); }
         }
       }
-      reverse_index[i] = partition_id * num_keys + r_index_plus_one - 1;
+    reverse_index[i] = partition_id * num_keys + r_index_plus_one - 1;
     }
   }
 }
@@ -356,25 +356,6 @@ __global__ void ContiguousInverseUniquePartitionIndices(const int32_t num_ids, I
     inverse_ptr[i] = new_offset + partition_indice;
   }
 }
-
-template<typename T>
-__device__ __forceinline__ bool IsZero(T v) {
-  return v == 0;
-}
-
-template<>
-__device__ __forceinline__ bool IsZero<half>(half v) {
-  return v == static_cast<half>(0);
-}
-
-#if CUDA_VERSION >= 11000 && __CUDA_ARCH__ >= 800
-
-template<>
-__device__ __forceinline__ bool IsZero<nv_bfloat16>(nv_bfloat16 v) {
-  return v == static_cast<nv_bfloat16>(0);
-}
-
-#endif
 
 template<>
 __device__ __forceinline__ bool IsZero<half2>(half2 v) {
