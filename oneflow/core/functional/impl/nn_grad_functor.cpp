@@ -411,46 +411,6 @@ class NLLGradFunctor {
   std::shared_ptr<OpExpr> op_weight_;
 };
 
-class NLLProbGradFunctor {
- public:
-  NLLProbGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("nll_prob_grad")
-                         .Input("out_grad")
-                         .Input("input")
-                         .Input("target")
-                         .Output("in_grad")
-                         .Build());
-
-    op_weight_ = CHECK_JUST(one::OpBuilder("nll_prob_grad")
-                                .Input("out_grad")
-                                .Input("input")
-                                .Input("target")
-                                .Input("weight")
-                                .Output("in_grad")
-                                .Build());
-  }
-
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& out_grad,
-                           const std::shared_ptr<one::Tensor>& input,
-                           const std::shared_ptr<one::Tensor>& target,
-                           const Optional<one::Tensor>& weight,
-                           const double label_smoothing) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("label_smoothing");
-    attrs.SetAllAttrs(label_smoothing);
-
-    if (weight) {
-      return OpInterpUtil::Dispatch<one::Tensor>(*op_weight_,
-                                                 {out_grad, input, target, JUST(weight)}, attrs);
-    } else {
-      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {out_grad, input, target}, attrs);
-    }
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-  std::shared_ptr<OpExpr> op_weight_;
-};
-
 class BinaryCrossEntropyLossGradFunctor {
  public:
   BinaryCrossEntropyLossGradFunctor() {
@@ -1289,7 +1249,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AdaptivePoolNdGradFunctor>("AdaptivePoolNdGrad");
   m.add_functor<impl::KLDivLossGradFunctor>("KLDivLossGrad");
   m.add_functor<impl::NLLGradFunctor>("NLLGrad");
-  m.add_functor<impl::NLLProbGradFunctor>("NLLProbGrad");
   m.add_functor<impl::BinaryCrossEntropyLossGradFunctor>("BinaryCrossEntropyLossGrad");
   m.add_functor<impl::BinaryCrossEntropyWithLogitsLossGradFunctor>(
       "BinaryCrossEntropyWithLogitsLossGrad");

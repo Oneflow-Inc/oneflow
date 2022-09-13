@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -1397,16 +1396,6 @@ class CrossEntropyProbFunctor : public LossFunctorBase {
  public:
   CrossEntropyProbFunctor() {
     op_log_softmax_ = CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
-
-    op_nll_prob_ = CHECK_JUST(
-        one::OpBuilder("nll_prob").Input("input").Input("target").Output("output").Build());
-
-    op_nll_weight_prob_ = CHECK_JUST(one::OpBuilder("nll_prob")
-                                         .Input("input")
-                                         .Input("target")
-                                         .Input("weight")
-                                         .Output("output")
-                                         .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
@@ -1426,37 +1415,34 @@ class CrossEntropyProbFunctor : public LossFunctorBase {
                                    return OpInterpUtil::Dispatch<Tensor>(*op_log_softmax_, {x});
                                  })
                                  .call(input, input_perm));
-    const auto target_ = JUST(sequence_function(functional::Transpose)
-                                  .then(std::bind(functional::Reshape, std::placeholders::_1,
-                                                  Shape({-1, target_shape->At(1)})))
-                                  .call(target, input_perm));
-
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("label_smoothing");
-    attrs.SetAllAttrs(label_smoothing);
-
-    std::shared_ptr<Tensor> nll_result;
-    if (weight) {
-      nll_result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_nll_weight_prob_,
-                                                       {input_, target_, JUST(weight)}, attrs));
-    } else {
-      nll_result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_nll_prob_, {input_, target_}, attrs));
+    std::shared_ptr<Tensor> target_ =
+        JUST(sequence_function(functional::Transpose)
+                 .then(std::bind(functional::Reshape, std::placeholders::_1,
+                                 Shape({-1, target_shape->At(1)})))
+                 .call(target, input_perm));
+    if (label_smoothing > 0) {
+      int32_t num_classes = input_->shape()->At(1);
+      target_ =
+          JUST(ScalarAdd(JUST(ScalarMul(target_, static_cast<double>(1) - label_smoothing, false)),
+                         label_smoothing / static_cast<double>(num_classes), 1, false));
     }
 
+    auto nll_result = JUST(Negative(JUST(Mul(input_, target_))));
+    if (weight) {
+      const auto& weight_expand = JUST(Unsqueeze(JUST(weight), 0));
+      nll_result = JUST(Mul(nll_result, weight_expand));
+    }
     DimVector target_reshape_(input->ndim() - 1);
     for (size_t i = 0; i < target_reshape_.size(); ++i) {
       target_reshape_[i] = input_shape->At(input_perm[i]);
     }
-
     nll_result = JUST(ReduceSum(nll_result, {-1}, false));
     nll_result = JUST(Reshape(nll_result, Shape(target_reshape_)));
-
     return apply_reduction(nll_result, reduction);
   }
 
  private:
   std::shared_ptr<OpExpr> op_log_softmax_;
-  std::shared_ptr<OpExpr> op_nll_prob_;
-  std::shared_ptr<OpExpr> op_nll_weight_prob_;
 };
 
 class SparseCrossEntropyFunctor {
