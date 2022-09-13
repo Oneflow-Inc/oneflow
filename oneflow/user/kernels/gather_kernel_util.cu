@@ -25,8 +25,6 @@ namespace oneflow {
 
 namespace {
 
-constexpr uint32_t PADDING_REV_INDEX = 0xffffffff;
-
 template<typename T, typename K, typename IDX>
 __global__ void GatherForwardGpu(const IDX elem_cnt, NdIndexOffsetHelper<IDX, 3> in_helper,
                                  NdIndexOffsetHelper<IDX, 3> out_helper, const K* indices,
@@ -37,11 +35,6 @@ __global__ void GatherForwardGpu(const IDX elem_cnt, NdIndexOffsetHelper<IDX, 3>
     index[1] = indices[index[1]] - offset;
     T v{};
     if (index[1] >= 0 && index[1] < gather_dim_size) { v = in[in_helper.NdIndexToOffset(index)]; }
-    if (index[1] == PADDING_REV_INDEX) {
-      // For padding idx
-      T zero{0};
-      v = zero;
-    }
     out[i] = v;
   }
 }
