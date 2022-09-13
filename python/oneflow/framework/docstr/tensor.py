@@ -1982,8 +1982,30 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.bool,
+    r"""``Tensor.bool()`` is equivalent to ``Tensor.to(oneflow.bool)``. See :class:`oneflow.Tensor.to()`.
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
+        >>> input = input.bool()
+        >>> input.dtype
+        oneflow.bool
+
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.int,
-    r"""`Tensor.int()` is equivalent to `Tensor.to(flow.int32)`. See to().
+    r"""``Tensor.int()`` is equivalent to ``Tensor.to(flow.int32)``. See :class:`oneflow.Tensor.to()`.
 
     Args:
         input  (Tensor): the input tensor.
@@ -2004,7 +2026,7 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.long,
-    r"""`Tensor.long()` is equivalent to `Tensor.to(flow.int64)`. See to().
+    r"""``Tensor.long()`` is equivalent to ``Tensor.to(flow.int64)``. See :class:`oneflow.Tensor.to()`.
 
     Args:
         input  (Tensor): the input tensor.
@@ -2025,7 +2047,7 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.float,
-    r"""`Tensor.float()` is equivalent to `Tensor.to(flow.float32)`. See to().
+    r"""``Tensor.float()`` is equivalent to ``Tensor.to(flow.float32)``. See :class:`oneflow.Tensor.to()`.
 
     Args:
         input  (Tensor): the input tensor.
@@ -2046,7 +2068,7 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.double,
-    r"""`Tensor.double()` is equivalent to `Tensor.to(flow.float64)`. See to().
+    r"""``Tensor.double()`` is equivalent to ``Tensor.to(flow.float64)``. See :class:`oneflow.Tensor.to()`.
 
     Args:
         input  (Tensor): the input tensor.

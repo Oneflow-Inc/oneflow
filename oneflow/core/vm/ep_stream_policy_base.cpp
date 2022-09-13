@@ -33,6 +33,11 @@ void EpStreamPolicyBase::DeleteInstructionStatus(const Stream& stream,
   ptr->~EpOptionalEventRecordStatusQuerier();
 }
 
+bool EpStreamPolicyBase::QueryInstructionStatusLaunched(
+    const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
+  return EpOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer())->launched();
+}
+
 bool EpStreamPolicyBase::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
   return EpOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer())->done();

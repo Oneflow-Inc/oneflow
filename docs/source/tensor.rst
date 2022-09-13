@@ -193,6 +193,7 @@ Tensor class reference
     Tensor.atanh
     Tensor.backward
     Tensor.bmm
+    Tensor.bool
     Tensor.byte
     Tensor.cast
     Tensor.ceil
