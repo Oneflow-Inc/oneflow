@@ -379,8 +379,8 @@ void GenerateSplitSignature(const NdSbp& var_nd_sbp, const OperatorConf& new_var
 }
 void ShardSequence(JobBuilder* builder, const int64_t threshold, const ParallelDesc& pd,
                    std::vector<SequencePtr>&& sorted_sequences) {
-  // For all sorted sequnence, set the variable op in the sequence to S
-  // and add ctrl edge to control the exectuion order between variable ops.
+  // For all sorted sequence, set the variable op in the sequence to S
+  // and add ctrl edge to control the execution order between variable ops.
   // A sequence is a variable op and its cast(fp32 to fp16) op. This is because the forward pass
   // consume the fp16 variable and the optimizer consume the fp32 variable.
   std::string prev_allowed_op_name = "";
@@ -401,11 +401,11 @@ void ShardSequence(JobBuilder* builder, const int64_t threshold, const ParallelD
     }
 
     bool split_is_allowed = true;
-    if (split_is_allowed) {
+    {
       NdSbp new_nd_sbp;
       std::vector<std::string> nd_sbp_str_vec;
       for (const auto& sbp_str : new_var_op_conf.variable_conf().nd_sbp()) {
-        nd_sbp_str_vec.push_back(sbp_str);
+        nd_sbp_str_vec.emplace_back(sbp_str);
       }
       ParseNdSbpFromStringList(nd_sbp_str_vec, &new_nd_sbp);
       // check allowed by min shard size and evenly split
@@ -429,7 +429,7 @@ void ShardSequence(JobBuilder* builder, const int64_t threshold, const ParallelD
       }
     }
     if (!split_is_allowed) {
-      VLOG(3) << var_node->op().op_name() << " failed to change form B to  S "
+      VLOG(3) << var_node->op().op_name() << " failed to change form B to S "
               << " with op conf " << new_var_op_conf.variable_conf().DebugString();
       continue;
     }
@@ -519,6 +519,10 @@ class OptimizerPlacementOptimizationPass final : public JobPass {
     if (!(ctx->job_desc().IsTrain()
           && ctx->job_desc().job_conf().has_optimizer_placement_optimization_mode()
           && ctx->job_desc().job_conf().optimizer_placement_optimization_mode() != "none")) {
+      return Maybe<void>::Ok();
+    }
+    if (job->job_conf().enable_auto_parallel()) {
+      VLOG(google::WARNING) << "ZeRO optimization is unnecessary when enabled AutoParallel";
       return Maybe<void>::Ok();
     }
     const std::string& mode = ctx->job_desc().job_conf().optimizer_placement_optimization_mode();

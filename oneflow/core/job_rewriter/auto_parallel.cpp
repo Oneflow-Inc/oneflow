@@ -86,8 +86,7 @@ Maybe<void> AutoParallelPass::RemoveParallelCastOps(Job* job) const {
     return op_conf.has_user_conf()
            && (op_conf.user_conf().op_type_name() == "parallel_cast"
                || op_conf.user_conf().op_type_name() == "hierarchical_parallel_cast"
-               || op_conf.user_conf().op_type_name() == "hierarchical_parallel_cast_like"
-               || op_conf.user_conf().op_type_name() == "identity");
+               || op_conf.user_conf().op_type_name() == "hierarchical_parallel_cast_like");
   };
   std::vector<std::string> del_op_names;
   HashSet<std::string> del_op_name_set;
