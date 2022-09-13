@@ -13,30 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_STREAM_SET_H_
-#define ONEFLOW_CORE_FRAMEWORK_STREAM_SET_H_
-
-#include <unordered_map>
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/common/optional.h"
-#include "oneflow/core/framework/stream.h"
+#include "oneflow/core/framework/stream_guard.h"
 
 namespace oneflow {
 
-class StreamSet final {
- public:
-  ~StreamSet();
-
-  static Maybe<StreamSet> New(int64_t worker_thread_id);
-
-  int64_t worker_thread_id() const { return worker_thread_id_; }
-
- private:
-  StreamSet(int64_t worker_thread_id);
-
-  int64_t worker_thread_id_;
-};
+/*static*/ Optional<StreamConverter>* StreamGuard::MutCurrent() {
+  static thread_local Optional<StreamConverter> current;
+  return &current;
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_FRAMEWORK_STREAM_SET_H_

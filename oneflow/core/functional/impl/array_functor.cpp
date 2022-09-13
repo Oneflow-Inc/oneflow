@@ -47,7 +47,6 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/framework/tensor_util.h"
-#include "oneflow/core/framework/stream_guard.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/tensor_util.h"
@@ -1544,24 +1543,7 @@ class CopyFunctor {
 #ifdef WITH_CUDA
     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
 #endif
-    int64_t thread_uid = JUST(GetThreadUid(*x));
-    if (thread_uid == Stream::kDefaultStreamThreadUid) {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-    } else {
-      auto stream_set = JUST(StreamSet::New(thread_uid));
-      StreamGuard guard{StreamConverter(stream_set)};
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-    }
-  }
-
-  Maybe<int64_t> GetThreadUid(const one::Tensor& x) const {
-    if (!x.is_eager()) { return Stream::kDefaultStreamThreadUid; }
-    if (!x.is_local()) { return Stream::kDefaultStreamThreadUid; }
-    const auto& eager_blob_object = JUST(x.eager_blob_object());
-    const auto& opt_last_used_stream = eager_blob_object->last_used_stream();
-    if (!opt_last_used_stream.has_value()) { return Stream::kDefaultStreamThreadUid; }
-    auto last_used_stream = JUST(opt_last_used_stream);
-    return last_used_stream->thread_uid();
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
