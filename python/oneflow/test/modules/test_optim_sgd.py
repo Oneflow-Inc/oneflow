@@ -265,7 +265,11 @@ class TestOptimizers(flow.unittest.TestCase):
             compare_with_numpy_sgd_clip_grad(test_case, **arg)
 
     def test_eager_global_zero_grad_sbp(test_case):
-        x = flow.nn.Parameter(flow.zeros((10,)).to_global(sbp=flow.sbp.broadcast, placement=flow.placement('cuda', [0])))
+        x = flow.nn.Parameter(
+            flow.zeros((10,)).to_global(
+                sbp=flow.sbp.broadcast, placement=flow.placement("cuda", [0])
+            )
+        )
         x.grad = flow.ones_like(x)
         t = x.grad
         test_case.assertEqual(len(t.sbp), 1)
@@ -275,6 +279,7 @@ class TestOptimizers(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(t.numpy(), 0.0))
         test_case.assertEqual(len(t.sbp), 1)
         test_case.assertEqual(t.sbp[0], flow.sbp.partial_sum)
+
 
 if __name__ == "__main__":
     unittest.main()

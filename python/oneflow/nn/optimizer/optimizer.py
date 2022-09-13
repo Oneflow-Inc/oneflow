@@ -394,7 +394,6 @@ class Optimizer(object):
             for param in param_group.parameters:
                 param._zero_grad_(set_to_none)
 
-
     def _parse_input_parameters(self, parameters):
         """
         Supports such parameters:
