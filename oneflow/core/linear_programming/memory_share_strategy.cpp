@@ -17,6 +17,8 @@ limitations under the License.
 #include "oneflow/core/linear_programming/memory_share_strategy.h"
 #include <glog/logging.h>
 #include <algorithm>
+#include "oneflow/core/common/just.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 
 namespace oneflow {
@@ -353,60 +355,77 @@ size_t MemoryShareStrategy::ComputeOptimalAdjustedCost() {
   // };
   backup_registers.clear();
   backup_registers.resize(index2register_.size());
-  for (int32_t i = 0; i < index2register_.size(); i++) {
-    std::cout << "i: " << i << std::endl;
-    EliminateRegister(i);
-    size_t cost_without_i = ComputeOptimalCostFrom0();
-    std::cout << "Get rid of " << i << ", size: " << register_size_[i]
-              << ", Guess cost: " << cost_without_i << std::endl;
-    if (cost_without_i < optimal_cost) {
-      // const auto& excluded_register = excluded_registers[i];
-      // // Sort all the excluded registers.
-      // order.resize(excluded_register.size());
-      // int32_t index = 0;
-      // for (int32_t k : excluded_register) {
-      //   order[index] = k;
-      //   index++;
-      // }
-      // std::sort(order.begin(), order.end(), CompareRegisterPosition);
-      // Back up the current register offset with elimination of i
-      auto register_offset_backup = register_offset_;
-      // Try to insert the register i into the sorted excluded registers
-      HashSet<int32_t> all_x_i;
-      // Find the minimum cost
-      int64_t min_cost = optimal_cost;
+  // The number of steps that the optimal cost does not decrease
+  int32_t step_no_decrease = 0;
+  for (int32_t m = 0; m < total_register_num_; m++) {
+    for (int32_t i = 0; i < index2register_.size(); i++) {
+      std::cout << "i: " << i << ", step no decrease: " << step_no_decrease << std::endl;
+      EliminateRegister(i);
+      size_t cost_without_i = ComputeOptimalCostFrom0();
+      std::cout << "Get rid of " << i << ", size: " << register_size_[i]
+                << ", Guess cost: " << cost_without_i << std::endl;
+      // Find the offset of i which has the minimum cost
       int64_t min_x_i = -1;
-      for (int32_t j : excluded_registers[i]) {
-        // Insert i before j
-        all_x_i.insert(register_offset_backup[j]);
-        // Insert i after j
-        all_x_i.insert(register_offset_backup[j] + register_size_[j]);
-      }
+      if (cost_without_i < optimal_cost) {
+        // Find the minimum cost
+        int64_t min_cost = optimal_cost;
+        // const auto& excluded_register = excluded_registers[i];
+        // // Sort all the excluded registers.
+        // order.resize(excluded_register.size());
+        // int32_t index = 0;
+        // for (int32_t k : excluded_register) {
+        //   order[index] = k;
+        //   index++;
+        // }
+        // std::sort(order.begin(), order.end(), CompareRegisterPosition);
+        // Back up the current register offset with elimination of i
+        auto register_offset_backup = register_offset_;
+        // Try to insert the register i into the sorted excluded registers
+        HashSet<int32_t> all_x_i;
+        for (int32_t j : excluded_registers[i]) {
+          // Insert i before j
+          all_x_i.insert(register_offset_backup[j]);
+          // Insert i after j
+          all_x_i.insert(register_offset_backup[j] + register_size_[j]);
+        }
 
-      for (int32_t x_i : all_x_i) {
-        int32_t cost_insert_i = ComputeOptimalCostWithOccupation(i, x_i, register_offset_backup);
-        std::cout << "Insert i at " << x_i << ", cost: " << cost_insert_i << ", Less? "
-                  << (cost_insert_i < optimal_cost) << std::endl;
-        // Check if we found a smaller cost
-        if (cost_insert_i < min_cost) {
-          min_cost = cost_insert_i;
-          min_x_i = x_i;
-          if (min_cost <= cost_without_i) { break; }
+        for (int32_t x_i : all_x_i) {
+          int32_t cost_insert_i = ComputeOptimalCostWithOccupation(i, x_i, register_offset_backup);
+          std::cout << "Insert i at " << x_i << ", cost: " << cost_insert_i << ", Less? "
+                    << (cost_insert_i < optimal_cost) << std::endl;
+          // Check if we found a smaller cost
+          if (cost_insert_i < min_cost) {
+            min_cost = cost_insert_i;
+            min_x_i = x_i;
+            if (min_cost <= cost_without_i) { break; }
+          }
+        }
+        // Found a smaller cost
+        if (min_x_i >= 0) {
+          InsertRegister(i, min_x_i, register_offset_backup);
+          optimal_cost = ComputeOptimalCostFrom0();
+          std::cout << "Insert cost: " << min_cost << ", optimal cost: " << optimal_cost
+                    << std::endl;
         }
       }
       // Found a smaller cost
       if (min_x_i >= 0) {
-        InsertRegister(i, min_x_i, register_offset_backup);
-        optimal_cost = ComputeOptimalCostFrom0();
-        std::cout << "Finally Insert i at " << min_x_i << ", cost: " << optimal_cost << std::endl;
+        // Move to a new status with smaller cost, dump the backup of the offset.
         ClearBackup();
+        step_no_decrease = 0;
       } else {
         // Recover to the original status
         RecoverFromBackup(i);
+        // Terminate it if no cost reduce for any of the adjustment.
+        step_no_decrease++;
+        if (step_no_decrease >= total_register_num_) { break; }
       }
-    } else {
-      RecoverFromBackup(i);
+      int32_t recovery_cost = ComputeOptimalCostFrom0();
+      std::cout << "After recovery: " << recovery_cost << " Less? "
+                << (recovery_cost < optimal_cost) << std::endl;
+      CHECK_JUST(CheckConflict());
     }
+    if (step_no_decrease >= total_register_num_) { break; }
   }
   return 0;
 }
@@ -421,7 +440,9 @@ size_t MemoryShareStrategy::ComputeOptimalCostWithOccupation(
   for (int32_t k : excluded_registers[i]) {
     // x_k + l_k > x_i
     // k is behind i
-    if (register_offset_backup[k] + register_size_[k] > x_i) { register_offset_[k] = -e_i - 1; }else{
+    if (register_offset_backup[k] + register_size_[k] > x_i) {
+      register_offset_[k] = -e_i - 1;
+    } else {
       register_offset_[k] = register_offset_backup[k];
     }
   }
@@ -604,6 +625,21 @@ void MemoryShareStrategy::EliminateRedundantRelationshipIgnore(int32_t i, int32_
       should_visit[k] = 0;
     }
   }
+}
+
+// Check whether the current offset does not introduce any conflict
+Maybe<void> MemoryShareStrategy::CheckConflict() {
+  CHECK_EQ_OR_RETURN(index2register_.size(), register_offset_.size())
+      << "Not equal size, we might be calling CheckConflict() at a wrong time.";
+  for (int32_t i = 0; i < index2register_.size(); i++) {
+    CHECK_GE_OR_RETURN(register_offset_[i], 0) << "Register offset is not computed.";
+    for (int32_t j : excluded_registers[i]) {
+      CHECK_OR_RETURN(register_offset_[i] + register_size_[i] <= register_offset_[j]
+                      || register_offset_[j] + register_size_[j] <= register_offset_[i])
+          << "Two registers overlap";
+    }
+  }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace linear_programming

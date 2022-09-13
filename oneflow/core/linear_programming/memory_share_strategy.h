@@ -21,6 +21,8 @@ limitations under the License.
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/linear_programming/mix_integer_programming_util.h"
 #include "oneflow/core/register/register_desc.pb.h"
+#include "oneflow/core/common/maybe.h"
+
 namespace oneflow {
 namespace linear_programming {
 class MemoryShareStrategy {
@@ -112,6 +114,8 @@ class MemoryShareStrategy {
   size_t ComputeOptimalCostFrom0();
   // Compute offset with compact relationship
   int64_t ComputeOffset4CompactRelationship(int32_t i);
+  // Check whether the current offset does not introduce any conflict
+  Maybe<void> CheckConflict();
 };
 }  // namespace linear_programming
 }  // namespace oneflow
