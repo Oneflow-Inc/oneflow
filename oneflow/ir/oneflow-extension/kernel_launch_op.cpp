@@ -131,7 +131,7 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
   ~KernelLaunchOpKernelRegContext() = default;
   DeviceType device_type() const override { return device_type_; }
   const ParallelContext& parallel_ctx() const override {
-    // TODO: create parallel_ctx from op in mlir
+    TODO() << "create parallel_ctx from op in mlir";
     ParallelContext* parallel_ctx = nullptr;
     return *parallel_ctx;
   }
@@ -147,7 +147,7 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
   const ArgVec& outputs() const override { return outputs_; }
 
   const user_op::UserOpConfWrapper& user_op_conf() const override {
-    // TODO: get user op conf rom op in mlir
+    TODO() << "get user op conf rom op in mlir";
     OperatorConf user_op_conf;
     return user_op::UserOpConfWrapper(std::make_shared<OperatorConf>(user_op_conf));
   }
