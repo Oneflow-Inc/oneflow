@@ -34,7 +34,8 @@ enum AutoCastColor { kWhite, kGray, kClear, kBlack };
 
 class AutoCastMeta final {
  public:
-  AutoCastMeta(int args_num)
+  AutoCastMeta() : AutoCastMeta(0) {}
+  explicit AutoCastMeta(int args_num)
       : autocast_color_(kBlack), is_args_autocast_eligible_(args_num, false) {}
 
   AutoCastColor autocast_color() const;
