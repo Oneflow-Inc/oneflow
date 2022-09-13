@@ -1154,7 +1154,7 @@
 
 - name: "cross_entropy_prob"
   signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, String reduction=\"mean\", Double label_smoothing=0.0) => CrossEntropyProb"
-  bind_python: True
+  bind_python: False
 
 - name: "distributed_sparse_cross_entropy_grad"
   signature: "Tensor (Tensor prediction, Tensor label, Tensor dy, Int64 depth) => SparseCrossEntropyMsGrad"
