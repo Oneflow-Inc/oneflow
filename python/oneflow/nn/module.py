@@ -15,7 +15,7 @@ limitations under the License.
 """
 import itertools
 from collections import OrderedDict, namedtuple
-from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple, TypeVar, Union
+from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple, TypeVar, Union, overload
 import traceback
 import warnings
 
@@ -1072,14 +1072,37 @@ class Module(object):
         fn(self)
         return self
 
-    def to(self, device: Optional[Union[str, flow.device]] = None):
-        r"""
-        to(device=None)
-        
-        Moves the parameters and buffers.
+    @overload
+    def to(self: T, device: Optional[Union[int, flow.device]] = ..., dtype: Optional[Union[flow.dtype, str]] = ...) -> T:
+        ...
 
-        Its signature is similar to :meth:`oneflow.Tensor.to`.
-        The parameters and buffers will be moved :attr:`device`, if that is given.
+    @overload
+    def to(self: T, dtype: Union[flow.dtype, str]) -> T:
+        ...
+
+    @overload
+    def to(self: T, tensor: Tensor) -> T:
+        ...
+
+    def to(self, *args, **kwargs):
+        r"""Moves and/or casts the parameters and buffers.
+
+        This can be called as
+
+        .. function:: to(device=None, dtype=None)
+           :noindex:
+
+        .. function:: to(dtype)
+           :noindex:
+
+        .. function:: to(tensor)
+           :noindex:
+
+        Its signature is similar to :meth:`oneflow.Tensor.to`, but only accepts
+        floating point :attr:`dtype`\ s. In addition, this method will
+        only cast the floating point parameters and buffers to :attr:`dtype`
+        (if given). The integral parameters and buffers will be moved
+        :attr:`device`, if that is given, but with dtypes unchanged.
 
         See below for examples.
 
@@ -1089,6 +1112,10 @@ class Module(object):
         Args:
             device (:class:`oneflow.device`): the desired device of the parameters
                 and buffers in this module
+            dtype (:class:`oneflow.dtype`): the desired floating point dtype of
+                the parameters and buffers in this module
+            tensor (oneflow.Tensor): Tensor whose dtype and device are the desired
+                dtype and device for all parameters and buffers in this module
 
         Returns:
             Module: self
@@ -1100,11 +1127,19 @@ class Module(object):
             >>> linear = nn.Linear(2, 2)
             >>> linear.weight.device
             device(type='cpu', index=0)
+            >>> linear.weight.dtype
+            oneflow.float32
+            >>> linear.to(flow.double)
+            Linear(in_features=2, out_features=2, bias=True)
+            >>> linear.weight.dtype
+            oneflow.float64
             >>> gpu1 = flow.device("cuda:1")
-            >>> linear.to(gpu1)
+            >>> linear.to(gpu1, dtype=flow.half)
             Linear(in_features=2, out_features=2, bias=True)
             >>> linear.weight.device
             device(type='cuda', index=1)
+            >>> linear.weight.dtype
+            oneflow.float16
             >>> cpu = flow.device("cpu")
             >>> linear.to(cpu)
             Linear(in_features=2, out_features=2, bias=True)
@@ -1113,8 +1148,42 @@ class Module(object):
 
         """
 
+        device = None
+        dtype = None
+        if len(args) + len(kwargs) == 2:
+            device = kwargs.pop("device", None) or args[0]
+            dtype = kwargs.pop("dtype", None) or args[1]
+        elif len(args) + len(kwargs) == 1:
+            if len(args) == 1:
+                arg = args[0]
+                if isinstance(arg, Tensor):
+                    device = arg.device
+                    dtype = arg.dtype
+                elif isinstance(arg, flow.dtype):
+                    dtype = arg
+                    device = None
+                elif isinstance(arg, flow.device):
+                    dtype = None
+                    device = arg
+                else:
+                    raise ValueError(f"Unsupported parameters in module.to: {arg}")
+            else:
+                dtype = kwargs.pop("dtype", None)
+                tensor = kwargs.pop("tensor", None)
+                if tensor is not None:
+                    device = tensor.device
+                    dtype = tensor.dtype
+        else:
+            raise ValueError(f"Unsupported parameters in module.to: {args} and {kwargs}")
+
+
+        if dtype is not None:
+            if not dtype.is_floating_point:
+                raise TypeError('nn.Module.to only accepts floating point '
+                                'dtypes, but got desired dtype={}'.format(dtype))
+
         def convert(t):
-            return t.to(device)
+            return t.to(device, dtype if t.is_floating_point() else None)
 
         return self._apply(convert)
 
