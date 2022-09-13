@@ -1312,6 +1312,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.log10,
+    """
+    See :func:`oneflow.log10`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.ndim,
     """
     See :func:`oneflow.Tensor.dim`
