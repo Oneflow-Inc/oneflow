@@ -167,6 +167,34 @@ TensorLayoutProcessor::~TensorLayoutProcessor() {
   }
 }
 
+Maybe<void> TensorAutoCastProcessor::Apply() {
+  auto autocast_device_type = autocast::get_autocast_device_type();
+  auto autocast_dtype = autocast::get_autocast_dtype();
+  if (autocast::is_enabled()
+      && autocast_meta_.is_autocast_eligible(autocast_device_type, autocast_dtype)) {
+    const auto& args_eligible = autocast_meta_.is_args_autocast_eligible();
+    CHECK_EQ_OR_RETURN(args_eligible.size(), inputs_.size())
+        << Error::RuntimeError() << "argument autocast eligible size should equal to input size";
+
+    auto IsDeviceType = [](const std::shared_ptr<Tensor>& tensor,
+                           DeviceType device_type) -> Maybe<bool> {
+      return tensor->is_local() ? JUST(tensor->device())->enum_type() == device_type
+                                : JUST(tensor->parallel_desc())->device_type() == device_type;
+    };
+    autocast_inputs_.resize(inputs_.size());
+    for (int i = 0; i < inputs_.size(); ++i) {
+      if (args_eligible[i] && JUST(IsDeviceType(inputs_[i], autocast_device_type))
+          && inputs_[i]->dtype() != autocast_dtype) {
+        autocast_inputs_[i] = JUST(functional::To(inputs_[i], autocast_dtype, /*copy*/ false));
+      } else {
+        autocast_inputs_[i] = inputs_[i];
+      }
+    }
+    converted_ = true;
+  }
+  return Maybe<void>::Ok();
+}
+
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow

@@ -128,8 +128,13 @@ template<>
 /* static */ Maybe<TensorTuple> OpInterpUtil::Dispatch<TensorTuple>(
     const OpExpr& op_expr, const TensorTuple& inputs, const OpExprInterpContext& ctx) {
   OF_PROFILER_RANGE_GUARD("Dispatch");
-  functional::TensorLayoutProcessor processor(inputs, JUST(op_expr.SupportNonContiguous()));
-  JUST(processor.Apply());
+  // functional::TensorLayoutProcessor processor(inputs, JUST(op_expr.SupportNonContiguous()));
+  functional::TensorProcessorPipe processor(inputs);
+  JUST(processor.Apply<functional::TensorLayoutProcessor>(JUST(op_expr.SupportNonContiguous())));
+  if (autocast::is_enabled()) {
+    JUST(processor.Apply<functional::TensorAutoCastProcessor>(
+        *JUST(op_expr.GetOrCreateAutoCastMeta())));
+  }
   auto outputs = std::make_shared<TensorTuple>(op_expr.output_size());
   JUST(Dispatch(op_expr, processor.inputs(), outputs.get(), ctx));
   return outputs;
@@ -147,9 +152,12 @@ template<>
                                                 TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) {
   OF_PROFILER_RANGE_GUARD("Dispatch");
-  functional::TensorLayoutProcessor processor(inputs, outputs,
-                                              JUST(op_expr.SupportNonContiguous()));
-  JUST(processor.Apply());
+  functional::TensorProcessorPipe processor(inputs, outputs);
+  JUST(processor.Apply<functional::TensorLayoutProcessor>(JUST(op_expr.SupportNonContiguous())));
+  if (autocast::is_enabled()) {
+    JUST(processor.Apply<functional::TensorAutoCastProcessor>(
+        *JUST(op_expr.GetOrCreateAutoCastMeta())));
+  }
   return JUST(GetInterpreter(processor.inputs(), ctx, op_expr))
       ->Apply(op_expr, processor.inputs(), processor.outputs(), ctx);
 }

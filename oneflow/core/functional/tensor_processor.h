@@ -16,8 +16,14 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FUNCTIONAL_TENSOR_PROCESSOR_H_
 #define ONEFLOW_CORE_FUNCTIONAL_TENSOR_PROCESSOR_H_
 
+#include <algorithm>
+#include <functional>
+#include <memory>
+#include <tuple>
+
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/functional/impl/common.h"
+#include "oneflow/core/framework/autocast.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 
 namespace oneflow {
@@ -76,6 +82,96 @@ class TensorLayoutProcessor final {
   TensorTuple contiguous_inputs_;
   std::vector<int> post_process_output_indices_;
   TensorTuple post_process_outputs_;
+};
+
+class TensorAutoCastProcessor final {
+ public:
+  TensorAutoCastProcessor(const TensorTuple& inputs, const autocast::AutoCastMeta& autocast_meta)
+      : TensorAutoCastProcessor(inputs, nullptr, autocast_meta) {}
+  TensorAutoCastProcessor(const TensorTuple& inputs, TensorTuple* outputs,
+                          const autocast::AutoCastMeta& autocast_meta)
+      : inputs_(inputs), outputs_(outputs), autocast_meta_(autocast_meta), converted_(false) {}
+
+  ~TensorAutoCastProcessor() = default;
+
+  Maybe<void> Apply();
+
+  const TensorTuple& inputs() const {
+    if (converted_) { return autocast_inputs_; }
+    return inputs_;
+  }
+
+ private:
+  const TensorTuple& inputs_;
+  TensorTuple* outputs_;
+  const autocast::AutoCastMeta& autocast_meta_;
+  bool converted_;
+  TensorTuple autocast_inputs_;
+};
+
+template<typename... TPArgs>
+struct TupleTrait {
+  constexpr static size_t size = sizeof...(TPArgs);
+  constexpr static size_t max_storage_size = std::max({sizeof(TPArgs)...});
+  constexpr static size_t alignment = std::max({alignof(TPArgs)...});
+  using type = std::tuple<TPArgs...>;
+};
+
+struct TensorProcessorTuple {
+  using trait = TupleTrait<TensorLayoutProcessor, TensorAutoCastProcessor>;
+  constexpr static size_t size = trait::size;
+  constexpr static size_t max_storage_size = trait::max_storage_size;
+  constexpr static size_t alignment = trait::alignment;
+  using type = typename trait::type;
+};
+
+class TensorProcessorStorage {
+ public:
+  constexpr static size_t TPSize = TensorProcessorTuple::max_storage_size;
+
+  TensorProcessorStorage() = default;
+  ~TensorProcessorStorage() {
+    if (deleter_) { deleter_(buffer_); }
+  }
+
+  template<typename TP, typename... Args>
+  void New(Args&&... args) {
+    static_assert(sizeof(TP) <= TPSize, "Insufficient buffer size");
+    new (buffer_) TP(std::forward<Args>(args)...);
+    deleter_ = [](char* buffer) { reinterpret_cast<TP*>(buffer)->~TP(); };
+  }
+
+  template<typename TP>
+  TP* As() {
+    return reinterpret_cast<TP*>(buffer_);
+  }
+
+ private:
+  alignas(TensorProcessorTuple::alignment) char buffer_[TPSize];
+  std::function<void(char*)> deleter_;
+};
+
+class TensorProcessorPipe final {
+ public:
+  TensorProcessorPipe(const TensorTuple& inputs) : TensorProcessorPipe(inputs, nullptr) {}
+  TensorProcessorPipe(const TensorTuple& inputs, TensorTuple* outputs)
+      : inputs_(&inputs), outputs_(outputs) {}
+
+  template<typename TP, typename... Args>
+  Maybe<void> Apply(Args&&... args) {
+    processors_.resize(processors_.size() + 1);
+    processors_.back().New<TP>(*inputs_, outputs_, std::forward<Args>(args)...);
+    return processors_.back().As<TP>()->Apply();
+  }
+
+  const TensorTuple& inputs() const { return *inputs_; }
+
+  TensorTuple* outputs() const { return outputs_; }
+
+ private:
+  const TensorTuple* inputs_;
+  TensorTuple* outputs_;
+  std::vector<TensorProcessorStorage> processors_;
 };
 
 }  // namespace functional

@@ -30,6 +30,11 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+Maybe<autocast::AutoCastMeta> OpExpr::GetOrCreateAutoCastMeta() const {
+  static auto autocast_meta = std::make_shared<autocast::AutoCastMeta>();
+  return autocast_meta;
+}
+
 BuiltinOpExpr::BuiltinOpExpr(const std::string& op_name,
                              const std::vector<std::string>& indexed_ibns,
                              const std::vector<std::string>& indexed_obns)
@@ -163,6 +168,14 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<UserOpConf>::GetOrCreateOpGradClosure
     JUST(op_grad_func_->Init(*this));
   }
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
+}
+
+template<>
+Maybe<autocast::AutoCastMeta> BuiltinOpExprImpl<UserOpConf>::GetOrCreateAutoCastMeta() const {
+  if (!autocast_meta_) {
+    autocast_meta_ = autocast::MakeAutoCastMeta(proto().op_type_name(), indexed_ibns());
+  }
+  return autocast_meta_;
 }
 
 namespace {
