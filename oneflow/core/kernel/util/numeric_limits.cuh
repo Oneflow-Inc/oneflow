@@ -138,8 +138,8 @@ struct numeric_limits<half> {
 
 static __device__ unsigned short int NV_BFLOAT16_LOWEST = 0xff7f;
 static __device__ unsigned short int NV_BFLOAT16_MAX = 0x7f7f;
-static __device__ unsigned short int NV_BFLOAT16_LOWER_BOUND = 0xff00;
-static __device__ unsigned short int NV_BFLOAT16_UPPER_BOUND = 0x7f00;
+static __device__ unsigned short int NV_BFLOAT16_LOWER_BOUND = 0xff80;
+static __device__ unsigned short int NV_BFLOAT16_UPPER_BOUND = 0x7f80;
 template<>
 struct numeric_limits<nv_bfloat16> {
   static inline __device__ nv_bfloat16 lowest() {
