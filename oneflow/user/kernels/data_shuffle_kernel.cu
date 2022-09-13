@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
-#include "oneflow/user/kernels/gather_kernel_util.h"
 #include "oneflow/user/kernels/unsorted_segment_sum_kernel_util.h"
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/embedding/hash_functions.cuh"
@@ -33,6 +32,98 @@ namespace oneflow {
 namespace {
 
 constexpr uint32_t PADDING_REV_INDEX = 0xffffffff;
+
+template<typename T, typename K, typename IDX>
+__global__ void GatherForwardGpu(const IDX elem_cnt, NdIndexOffsetHelper<IDX, 3> in_helper,
+                                 NdIndexOffsetHelper<IDX, 3> out_helper, const K* indices,
+                                 const T* in, const IDX gather_dim_size, T* out, const IDX offset) {
+  IDX index[3];
+  CUDA_1D_KERNEL_LOOP_T(IDX, i, elem_cnt) {
+    out_helper.OffsetToNdIndex(i, index);
+    index[1] = indices[index[1]] - offset;
+    T v{};
+    if (index[1] >= 0 && index[1] < gather_dim_size) { v = in[in_helper.NdIndexToOffset(index)]; }
+    if (index[1] == PADDING_REV_INDEX) {
+      // For padding idx
+      T zero{0};
+      v = zero;
+    }
+    out[i] = v;
+  }
+}
+
+bool IsSafeUseIndex32(int64_t outer_dim_size, int64_t gather_dim_size, int64_t inner_dim_size,
+                      int64_t num_indices) {
+  const int64_t in_elem_cnt = outer_dim_size * gather_dim_size * inner_dim_size;
+  const int64_t out_elem_cnt = outer_dim_size * num_indices * inner_dim_size;
+  return std::max(out_elem_cnt, in_elem_cnt) < GetMaxVal<int32_t>() / 2;
+}
+
+template<typename T, typename K>
+void DispatchIndexSize(ep::Stream* stream, int64_t outer_dim_size, int64_t gather_dim_size,
+                       int64_t inner_dim_size, int64_t num_indices, int64_t offset,
+                       const K* indices, const T* in, T* out) {
+  const int64_t out_elem_cnt = outer_dim_size * num_indices * inner_dim_size;
+  if (IsSafeUseIndex32(outer_dim_size, gather_dim_size, inner_dim_size, num_indices)) {
+    NdIndexOffsetHelper<int32_t, 3> in_helper(outer_dim_size, gather_dim_size, inner_dim_size);
+    NdIndexOffsetHelper<int32_t, 3> out_helper(outer_dim_size, num_indices, inner_dim_size);
+    GatherForwardGpu<T, K, int32_t><<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock,
+                                      0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        out_elem_cnt, in_helper, out_helper, indices, in, gather_dim_size, out, offset);
+  } else {
+    NdIndexOffsetHelper<int64_t, 3> in_helper(outer_dim_size, gather_dim_size, inner_dim_size);
+    NdIndexOffsetHelper<int64_t, 3> out_helper(outer_dim_size, num_indices, inner_dim_size);
+    GatherForwardGpu<T, K, int64_t><<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock,
+                                      0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        out_elem_cnt, in_helper, out_helper, indices, in, gather_dim_size, out, offset);
+  }
+}
+
+template<typename K, typename T>
+bool TryDispatchMovementType(ep::Stream* stream, int64_t outer_dim_size, int64_t gather_dim_size,
+                             int64_t inner_dim_size, int64_t num_indices, int64_t offset,
+                             const K* indices, const void* in, void* out) {
+  if (reinterpret_cast<uintptr_t>(in) % sizeof(T) == 0
+      && reinterpret_cast<uintptr_t>(out) % sizeof(T) == 0 && inner_dim_size % sizeof(T) == 0) {
+    DispatchIndexSize<T, K>(stream, outer_dim_size, gather_dim_size, inner_dim_size / sizeof(T),
+                            num_indices, offset, indices, static_cast<const T*>(in),
+                            static_cast<T*>(out));
+    return true;
+  } else {
+    return false;
+  }
+}
+
+template<typename K>
+void DispatchMovementSize(ep::Stream* stream, int64_t outer_dim_size, int64_t gather_dim_size,
+                          int64_t inner_dim_size, int64_t num_indices, int64_t offset,
+                          const K* indices, const void* in, void* out) {
+  using Func = bool (*)(ep::Stream * stream, int64_t outer_dim_size, int64_t gather_dim_size,
+                        int64_t inner_dim_size, int64_t num_indices, int64_t offset,
+                        const K* indices, const void* in, void* out);
+  Func funcs[] = {
+      TryDispatchMovementType<K, ulonglong2>,  // 16B
+      TryDispatchMovementType<K, uint64_t>,    // 8B
+      TryDispatchMovementType<K, uint32_t>,    // 4B
+      TryDispatchMovementType<K, uint16_t>,    // 2B
+      TryDispatchMovementType<K, uint8_t>,     // 1B
+  };
+  for (size_t i = 0; i < sizeof(funcs) / sizeof(funcs[0]); ++i) {
+    if (funcs[i](stream, outer_dim_size, gather_dim_size, inner_dim_size, num_indices, offset,
+                 indices, in, out)) {
+      break;
+    }
+  }
+}
+
+template<typename T, typename K>
+struct GatherGpuKernel final {
+  static void Forward(ep::Stream* stream, const K* indices, int64_t num_indices, const T* in,
+                      const Shape& flat_in_shape, T* out, const int64_t offset) {
+    DispatchMovementSize(stream, flat_in_shape.At(0), flat_in_shape.At(1),
+                         flat_in_shape.At(2) * sizeof(T), num_indices, offset, indices, in, out);
+  }
+};
 
 template<typename K>
 struct TableEntry {
@@ -1100,7 +1191,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       void* reverse_unique_cur_rank_embeddings;
       allocator->Allocate(&reverse_unique_cur_rank_embeddings,
                           cur_rank_num_ids * embedding_size * sizeof(T));
-      GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
+      GatherGpuKernel<T, IDX>::Forward(
           ctx->stream(), reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
           cur_rank_num_ids, cur_rank_embeddings_ptr, Shape({1, num_unique, embedding_size}),
           reinterpret_cast<T*>(reverse_unique_cur_rank_embeddings), 0);
@@ -1126,7 +1217,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
 
         // 3. reverse unique_partition, from (unique_partitioned_num_ids, embedding_size) to
         // (num_ids, embedding_size)
-        GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
+        GatherGpuKernel<T, IDX>::Forward(
             ctx->stream(), reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
             num_ids, reinterpret_cast<T*>(received_embeddings),
             Shape({1, unique_partitioned_num_ids, embedding_size}), embeddings->mut_dptr<T>(), 0);
@@ -1152,7 +1243,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       allocator->Allocate(&reverse_unique_cur_rank_embeddings,
                           cur_rank_num_ids * embedding_size * sizeof(int8_t));
 
-      GatherKernelUtilImpl<DeviceType::kCUDA, int8_t, IDX>::Forward(
+      GatherGpuKernel<int8_t, IDX>::Forward(
           ctx->stream(), reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
           cur_rank_num_ids, reinterpret_cast<int8_t*>(quantize_cur_rank_embeddings),
           Shape({1, num_unique, embedding_size}),
@@ -1163,7 +1254,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       void* reverse_cur_rank_quantize_factor;  // T
       allocator->Allocate(&reverse_cur_rank_quantize_factor, cur_rank_num_ids * sizeof(T));
 
-      GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
+      GatherGpuKernel<T, IDX>::Forward(
           ctx->stream(), reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
           cur_rank_num_ids, reinterpret_cast<T*>(cur_rank_quantize_factor),
           Shape({1, num_unique, 1}), reinterpret_cast<T*>(reverse_cur_rank_quantize_factor), 0);
@@ -1191,7 +1282,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       allocator->Allocate(&reverse_recv_quantize_cur_rank_embeddings,
                           num_ids * embedding_size * sizeof(int8_t));
 
-      GatherKernelUtilImpl<DeviceType::kCUDA, int8_t, IDX>::Forward(
+      GatherGpuKernel<int8_t, IDX>::Forward(
           ctx->stream(), reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
           num_ids, reinterpret_cast<int8_t*>(received_embeddings),
           Shape({1, unique_partitioned_num_ids, embedding_size}),
@@ -1201,7 +1292,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       void* reverse_recv_quantize_factor;  // T
       allocator->Allocate(&reverse_recv_quantize_factor, num_ids * sizeof(T));
 
-      GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
+      GatherGpuKernel<T, IDX>::Forward(
           ctx->stream(), reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
           num_ids, reinterpret_cast<T*>(recv_quantize_factor),
           Shape({1, unique_partitioned_num_ids, 1}),
