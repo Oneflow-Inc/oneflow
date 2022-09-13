@@ -252,7 +252,6 @@ void runJIT(mlir::ModuleOp module_op, llvm::StringRef name, Args... args) {
   CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
                         << llvm::toString(jit_or_error.takeError());
   auto jit = std::move(jit_or_error.get());
-  // ctx->op_name(), &kl_comp_ctx, kernel
   auto error = jit->invoke(name, args...);
   CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
 }
