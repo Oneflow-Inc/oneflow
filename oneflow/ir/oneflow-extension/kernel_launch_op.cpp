@@ -37,11 +37,16 @@ limitations under the License.
 #include "oneflow/core/framework/op_generated.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/JITOpInfer.h"
 
+namespace oneflow {
+using TypeKernelLaunchArgs =
+    std::tuple<oneflow::user_op::KernelComputeContext*, const oneflow::user_op::OpKernel*>;
+}
+
 extern "C" {
 
 void kernel_launch(void* ctx, void* kernel_opaque) {
-  auto kernel = (oneflow::user_op::OpKernel*)kernel_opaque;
-  kernel->Compute((oneflow::user_op::KernelComputeContext*)ctx);
+  auto kernel = (typename std::tuple_element_t<1, oneflow::TypeKernelLaunchArgs>)kernel_opaque;
+  kernel->Compute((typename std::tuple_element_t<0, oneflow::TypeKernelLaunchArgs>)ctx);
 }
 
 }  // extern "C"
@@ -232,8 +237,10 @@ class KernelLaunchComputeContext final : public user_op::KernelComputeContext {
 
 namespace {
 
-template<class... Args>
-void runJIT(mlir::ModuleOp module_op, Args... args) {
+template<typename ArgsT, class... Args>
+void runJIT(mlir::ModuleOp module_op, llvm::StringRef name, Args... args) {
+  using Tuple = std::tuple<Args...>;
+  static_assert(std::is_same<ArgsT, Tuple>::value, "args of jit function don't match");
   llvm::SmallVector<llvm::StringRef, 4> ext_libs(
       {SharedLibPaths()->begin(), SharedLibPaths()->end()});
   mlir::ExecutionEngineOptions jitOptions;
@@ -246,7 +253,7 @@ void runJIT(mlir::ModuleOp module_op, Args... args) {
                         << llvm::toString(jit_or_error.takeError());
   auto jit = std::move(jit_or_error.get());
   // ctx->op_name(), &kl_comp_ctx, kernel
-  auto error = jit->invoke(args...);
+  auto error = jit->invoke(name, args...);
   CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
 }
 
@@ -274,7 +281,8 @@ void KernelLaunchCompute(user_op::KernelComputeContext* ctx,
     LOG(ERROR) << "Fail lowering kernel launch Module to llvm ir";
     exit(1);
   }
-  runJIT(module_op.get(), ctx->op_name(), &kl_comp_ctx, kernel);
+  runJIT<TypeKernelLaunchArgs>(module_op.get(), ctx->op_name(),
+                               dynamic_cast<user_op::KernelComputeContext*>(&kl_comp_ctx), kernel);
 }
 }  // namespace
 
