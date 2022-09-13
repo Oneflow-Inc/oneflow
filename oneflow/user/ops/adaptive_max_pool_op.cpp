@@ -31,14 +31,14 @@ Maybe<void> InferFWTensorDesc(user_op::InferContext* ctx) {
     out_shape[i] = output_size.size() > i - 2 ? output_size[i - 2] : output_size[0];
   }
 
-  *ctx->MutOutputShape("y", 0) = Shape(out_shape);
-  *ctx->MutOutputShape("index", 0) = Shape(out_shape);
+  ctx->SetOutputShape("y", 0, Shape(out_shape));
+  ctx->SetOutputShape("index", 0, Shape(out_shape));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferBWTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("dx", 0) = ctx->InputShape("x", 0);
-  *ctx->MutOutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x", 0);
+  ctx->SetOutputShape("dx", 0, ctx->InputShape("x", 0));
+  ctx->SetOutputIsDynamic("dx", 0, ctx->InputIsDynamic("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -69,13 +69,13 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> InferFWDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
-  *ctx->MutOutputDType("index", 0) = DataType::kInt64;
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
+  ctx->SetOutputDType("index", 0, DataType::kInt64);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferBWDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
