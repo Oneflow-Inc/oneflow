@@ -532,6 +532,150 @@ class TestBfloat16Activatian(flow.unittest.TestCase):
             )
         )
 
+    def test_elu_with_random_data(test_case):
+        np_array = np.random.rand(4, 4)
+        x = flow.tensor(np_array, dtype=flow.bfloat16, device="cpu")
+        fp32_x = x.float()
+        elu = flow.nn.ELU()
+        y = elu(x)
+        fp32_y = elu(fp32_x)
+        test_case.assertTrue(
+            np.allclose(
+                y.float().numpy(),
+                fp32_y.bfloat16().float().numpy(),
+                atol=1e-4,
+                rtol=1e-4,
+            )
+        )
+
+    def test_celu_with_random_data(test_case):
+        np_array = np.random.rand(4, 4)
+        x = flow.tensor(np_array, dtype=flow.bfloat16, device="cpu")
+        fp32_x = x.float()
+        celu = flow.nn.CELU()
+        y = celu(x)
+        fp32_y = celu(fp32_x)
+        test_case.assertTrue(
+            np.allclose(
+                y.float().numpy(),
+                fp32_y.bfloat16().float().numpy(),
+                atol=1e-4,
+                rtol=1e-4,
+            )
+        )
+
+    def test_hardswish_with_random_data(test_case):
+        np_array = np.random.rand(4, 4)
+        x = flow.tensor(np_array, dtype=flow.bfloat16, device="cpu")
+        fp32_x = x.float()
+        hardswish = flow.nn.Hardswish()
+        y = hardswish(x)
+        fp32_y = hardswish(fp32_x)
+        test_case.assertTrue(
+            np.allclose(
+                y.float().numpy(),
+                fp32_y.bfloat16().float().numpy(),
+                atol=1e-4,
+                rtol=1e-4,
+            )
+        )
+
+    def test_hardswish_with_random_data(test_case):
+        np_array = np.random.rand(4, 4)
+        x = flow.tensor(np_array, dtype=flow.bfloat16, device="cpu")
+        fp32_x = x.float()
+        hardsigmoid = flow.nn.Hardsigmoid()
+        y = hardsigmoid(x)
+        fp32_y = hardsigmoid(fp32_x)
+        test_case.assertTrue(
+            np.allclose(
+                y.float().numpy(),
+                fp32_y.bfloat16().float().numpy(),
+                atol=1e-4,
+                rtol=1e-4,
+            )
+        )
+
+    def test_hardshrink_with_random_data(test_case):
+        np_array = np.random.rand(4, 4)
+        x = flow.tensor(np_array, dtype=flow.bfloat16, device="cpu")
+        fp32_x = x.float()
+        hardshrink = flow.nn.Hardshrink()
+        y = hardshrink(x)
+        fp32_y = hardshrink(fp32_x)
+        test_case.assertTrue(
+            np.allclose(
+                y.float().numpy(),
+                fp32_y.bfloat16().float().numpy(),
+                atol=1e-4,
+                rtol=1e-4,
+            )
+        )
+
+    def test_hardtanh_with_random_data(test_case):
+        np_array = np.random.rand(4, 4)
+        x = flow.tensor(np_array, dtype=flow.bfloat16, device="cpu")
+        fp32_x = x.float()
+        hardtanh = flow.nn.Hardtanh()
+        y = hardtanh(x)
+        fp32_y = hardtanh(fp32_x)
+        test_case.assertTrue(
+            np.allclose(
+                y.float().numpy(),
+                fp32_y.bfloat16().float().numpy(),
+                atol=1e-4,
+                rtol=1e-4,
+            )
+        )
+
+    def test_leakyrelu_with_random_data(test_case):
+        np_array = np.random.rand(4, 4)
+        x = flow.tensor(np_array, dtype=flow.bfloat16, device="cpu")
+        fp32_x = x.float()
+        leakyrelu = flow.nn.LeakyReLU(0.1)
+        y = leakyrelu(x)
+        fp32_y = leakyrelu(fp32_x)
+        test_case.assertTrue(
+            np.allclose(
+                y.float().numpy(),
+                fp32_y.bfloat16().float().numpy(),
+                atol=1e-4,
+                rtol=1e-4,
+            )
+        )
+
+    def test_threshold_with_random_data(test_case):
+        np_array = np.random.rand(4, 4)
+        x = flow.tensor(np_array, dtype=flow.bfloat16, device="cpu")
+        fp32_x = x.float()
+        th = flow.nn.Threshold(threshold=0.5, value=0.2)
+        y = th(x)
+        fp32_y = th(fp32_x)
+        test_case.assertTrue(
+            np.allclose(
+                y.float().numpy(),
+                fp32_y.bfloat16().float().numpy(),
+                atol=1e-4,
+                rtol=1e-4,
+            )
+        )
+
+    def test_logsinmoid_with_random_data(test_case):
+        np_array = np.random.rand(4, 4)
+        x = flow.tensor(np_array, dtype=flow.bfloat16, device="cpu")
+        fp32_x = x.float()
+        logsigmoid = flow.nn.LogSigmoid()
+        y = logsigmoid(x)
+        fp32_y = logsigmoid(fp32_x)
+        test_case.assertTrue(
+            np.allclose(
+                y.float().numpy(),
+                fp32_y.bfloat16().float().numpy(),
+                atol=1e-4,
+                rtol=1e-4,
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
