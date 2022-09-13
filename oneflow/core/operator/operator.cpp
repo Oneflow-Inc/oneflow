@@ -221,6 +221,19 @@ Maybe<void> FillLogicalBlobDescSignature(
   return Maybe<void>::Ok();
 }
 
+Maybe<bool> SupportNonContiguous(const Operator* op) {
+  const auto& op_conf = op->op_conf();
+  if (op_conf.has_user_conf()) {
+    const auto* registry =
+        user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf.user_conf().op_type_name());
+    CHECK_NOTNULL_OR_RETURN(registry)
+        << "The op(operation) " << op_conf.user_conf().op_type_name()
+        << " is not found. Please check whether it has been registered correctly.";
+    return registry->non_contiguous_supported;
+  }
+  return false;
+}
+
 }  // namespace
 
 Maybe<void> Operator::FillLogicalInBlobDesc(
@@ -316,7 +329,16 @@ Maybe<void> Operator::InferLogicalOutBlobDescsIf() {
   output_index2logical_blob_desc_.reset(new std::vector<std::shared_ptr<const BlobDesc>>());
   output_index2logical_blob_desc_->resize(output_bns().size());
   for (int32_t i = 0; i < output_bns().size(); ++i) {
-    output_index2logical_blob_desc_->at(i) = output_logical_blob_desc_vec.at(i);
+    auto& out_blob_desc = output_logical_blob_desc_vec[i];
+    // initialize stride by shape if the op does not support non-contiguous
+    if (!JUST(SupportNonContiguous(this))) {
+      out_blob_desc->set_stride(Stride(out_blob_desc->shape()));
+    }
+    CHECK_EQ_OR_RETURN(out_blob_desc->stride().size(), out_blob_desc->shape().size())
+        << Error::RuntimeError() << "stride and shape size mismatch since stride is "
+        << out_blob_desc->stride().ToString() << " but shape is "
+        << out_blob_desc->shape().ToString();
+    (*output_index2logical_blob_desc_)[i] = out_blob_desc;
   }
   return Maybe<void>::Ok();
 }
@@ -332,7 +354,19 @@ Maybe<void> Operator::InferBlobDescsIf(
 Maybe<void> Operator::InferOutBlobDescsIf(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  return InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
+  JUST(InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx));
+  for (const auto& bn : output_bns()) {
+    BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(bn);
+    // initialize stride by shape if the op does not support non-contiguous
+    if (!JUST(SupportNonContiguous(this))) {
+      out_blob_desc->set_stride(Stride(out_blob_desc->shape()));
+    }
+    CHECK_EQ_OR_RETURN(out_blob_desc->stride().size(), out_blob_desc->shape().size())
+        << Error::RuntimeError() << "stride and shape size mismatch since stride is "
+        << out_blob_desc->stride().ToString() << " but shape is "
+        << out_blob_desc->shape().ToString();
+  }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> Operator::InferOutBlobDescs(
@@ -354,8 +388,8 @@ Maybe<void> Operator::InferOutBlobDescs(
       BlobDesc* desc = GetBlobDesc4BnInOp(bn);
       *desc = *JUST(GetLogicalBlobDesc4Obn(bn));
       const auto& nd_sbp = nd_sbp_signature->bn_in_op2nd_sbp().at(bn);
-      desc->mut_shape() =
-          *JUST(GetPhysicalShape(desc->shape(), nd_sbp, *parallel_desc, *parallel_ctx));
+      desc->set_shape(
+          *JUST(GetPhysicalShape(desc->shape(), nd_sbp, *parallel_desc, *parallel_ctx)));
     }
   }
   return Maybe<void>::Ok();
@@ -531,19 +565,13 @@ Maybe<void> Operator::FillNdSbpSignature(const NdSbpSignature& signature) {
 Maybe<void> Operator::InferSbpSignatureIf(
     const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+    const std::function<Maybe<const SbpInferHint*>(const std::string&)>& SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) {
   SbpSignature signature;
-  if (parallel_desc.parallel_num() == 1) {
-    auto* bn2sbp = signature.mutable_bn_in_op2sbp_parallel();
-    for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn].mutable_broadcast_parallel(); }
-    for (const auto& obn : output_bns()) { (*bn2sbp)[obn].mutable_broadcast_parallel(); }
-  } else if (parallel_desc.parallel_num() > 1) {
-    JUST(InferSbpSignature(&signature, sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
-                           parallel_desc));
-  } else {
-    UNIMPLEMENTED();
-  }
+
+  JUST(InferSbpSignature(&signature, sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
+                         parallel_desc));
+
   JUST(FillSbpSignature(signature));
   return Maybe<void>::Ok();
 }
@@ -597,16 +625,10 @@ Maybe<void> Operator::InferSbpSignature(
   } else {
     CalcOrderValue4SbpSig = [](const SbpSignature&) -> int32_t { return 0; };
   }
-  if (op_parallel_desc_->parallel_num() == 1) {
-    auto* bn2sbp = infered_sbp_signature->mutable_bn_in_op2sbp_parallel();
-    for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn].mutable_broadcast_parallel(); }
-    for (const auto& obn : output_bns()) { (*bn2sbp)[obn].mutable_broadcast_parallel(); }
-  } else if (op_parallel_desc_->parallel_num() > 1) {
-    JUST(InferSbpSignature(infered_sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig,
-                           SbpInferHint4Ibn, *op_parallel_desc_));
-  } else {
-    UNIMPLEMENTED();
-  }
+
+  JUST(InferSbpSignature(infered_sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig,
+                         SbpInferHint4Ibn, *op_parallel_desc_));
+
   return Maybe<void>::Ok();
 }
 
@@ -974,8 +996,8 @@ Maybe<const NdSbp*> Operator::NdSbp4BnInOp(const std::string& bn_in_op) const {
   CHECK_OR_RETURN(nd_sbp_signature_) << "parallel distribution signature not infered";
   const auto& map = nd_sbp_signature_->bn_in_op2nd_sbp();
   const auto& iter = map.find(bn_in_op);
-  CHECK_OR_RETURN(iter != map.end())
-      << "blob_name " << bn_in_op << " not found in parallel distribution";
+  CHECK_OR_RETURN(iter != map.end()) << "op_name " << op_name() << " blob_name " << bn_in_op
+                                     << " not found in parallel distribution";
   return &iter->second;
 }
 

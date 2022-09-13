@@ -39,14 +39,14 @@ class OpCallInstructionPolicy final : public InstructionPolicy {
   OpCallInstructionPolicy(const OpCallInstructionPolicy&) = delete;
   OpCallInstructionPolicy(OpCallInstructionPolicy&&) = delete;
 
-  OpCallInstructionPolicy(
-      Stream* vm_stream, const std::shared_ptr<one::StatefulOpKernel>& opkernel,
-      EagerBlobObjectList&& inputs, EagerBlobObjectList&& outputs,
-      const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
-      const one::OpExprInterpContext& op_interp_ctx,
-      const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode);
-
   ~OpCallInstructionPolicy() override = default;
+
+  template<typename... Args>
+  static Maybe<OpCallInstructionPolicy> New(Args&&... args) {
+    auto* ptr = new OpCallInstructionPolicy(std::forward<Args>(args)...);
+    JUST(ptr->Init());
+    return std::shared_ptr<OpCallInstructionPolicy>(ptr);
+  }
 
   const one::StatefulOpKernel& opkernel() const { return *opkernel_; }
   const EagerBlobObjectList& inputs() const { return call_ctx_.inputs(); }
@@ -100,6 +100,12 @@ class OpCallInstructionPolicy final : public InstructionPolicy {
   std::string DebugName(const vm::Instruction& instruction) const override;
 
  private:
+  OpCallInstructionPolicy(
+      Stream* vm_stream, const std::shared_ptr<one::StatefulOpKernel>& opkernel,
+      EagerBlobObjectList&& inputs, EagerBlobObjectList&& outputs,
+      const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
+      const one::OpExprInterpContext& op_interp_ctx,
+      const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode);
   Maybe<void> Init();
   void InitStreamSequentialDependence();
   Maybe<void> Prepare(Instruction* instruction) override;

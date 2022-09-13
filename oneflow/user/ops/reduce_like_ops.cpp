@@ -22,12 +22,11 @@ namespace oneflow {
 /*static*/ Maybe<void> ReduceSumLikeOp::GetSbp(user_op::SbpContext* ctx) {
   int32_t num_axes = 0;
   HashSet<int32_t> conf_axes;
-  {
-    const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-    num_axes = in_tensor.shape().NumAxes();
-    const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
-    ReduceSbpUtil::GetRegularAxes(num_axes, reduced_axes, &conf_axes);
-  }
+
+  const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+  num_axes = in_tensor.shape().NumAxes();
+  const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
+  ReduceSbpUtil::GetRegularAxes(num_axes, reduced_axes, &conf_axes);
 
   const auto& like_num_axes =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();
@@ -35,7 +34,9 @@ namespace oneflow {
   auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, num_axes);
   int64_t num_reduced_axes = 0;
   FOR_RANGE(int64_t, i, 0, num_axes) {
-    if (IsReducedAxis(i)) {
+    if (in_tensor.shape().at(i) == 1) {
+      num_reduced_axes += 1;
+    } else if (IsReducedAxis(i)) {
       ctx->NewBuilder()
           .Split(user_op::OpArg("x", 0), i)
           .Broadcast(user_op::OpArg("like", 0))
@@ -75,8 +76,8 @@ namespace oneflow {
   }
 
   user_op::TensorDesc* y_tensor = ctx->MutOutputTensorDesc("y", 0);
-  *y_tensor->mut_shape() = like_tensor.shape();
-  *y_tensor->mut_is_dynamic() = like_tensor.is_dynamic();
+  y_tensor->set_shape(like_tensor.shape());
+  y_tensor->set_is_dynamic(like_tensor.is_dynamic());
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReduceSumLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -87,7 +88,7 @@ namespace oneflow {
   const user_op::TensorDesc& like_tensor = ctx->InputTensorDesc("like", 0);
   CHECK_EQ_OR_RETURN(x_tensor.data_type(), like_tensor.data_type())
       << Error::TypeError() << "Tensors x and like must have the same type";
-  *ctx->MutOutputDType("y", 0) = like_tensor.data_type();
+  ctx->SetOutputDType("y", 0, like_tensor.data_type());
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReduceSumLikeOp::ModifyInputArg(

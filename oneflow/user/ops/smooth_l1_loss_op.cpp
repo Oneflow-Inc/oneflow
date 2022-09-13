@@ -41,8 +41,8 @@ namespace oneflow {
       << ctx->Attr<float>("beta");
 
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
-  *out_desc->mut_is_dynamic() = input_desc.is_dynamic();
-  *out_desc->mut_shape() = input_desc.shape();
+  out_desc->set_is_dynamic(input_desc.is_dynamic());
+  out_desc->set_shape(input_desc.shape());
 
   return Maybe<void>::Ok();
 }
@@ -56,7 +56,7 @@ namespace oneflow {
       << Error::TypeError() << "input and target are expected to have the same dtype, but found "
       << DataType_Name(input_desc.data_type()) << " and " << DataType_Name(target_desc.data_type());
 
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("input", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("input", 0));
 
   return Maybe<void>::Ok();
 }
@@ -100,8 +100,8 @@ namespace oneflow {
       << ctx->Attr<float>("beta");
 
   user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
-  *dx_desc->mut_is_dynamic() = input_desc.is_dynamic();
-  *dx_desc->mut_shape() = input_desc.shape();
+  dx_desc->set_is_dynamic(input_desc.is_dynamic());
+  dx_desc->set_shape(input_desc.shape());
 
   return Maybe<void>::Ok();
 }
@@ -115,28 +115,9 @@ namespace oneflow {
       << Error::TypeError() << "input and target are expected to have the same dtype, but found "
       << DataType_Name(input_desc.data_type()) << " and " << DataType_Name(target_desc.data_type());
 
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
 
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("smooth_l1_loss")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("input", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("smooth_l1_loss_grad")
-                .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-                .Input("input", op.input("input", 0))
-                .Input("target", op.input("target", 0))
-                .Output("dx")
-                .Attr("beta", op.attr<float>("beta"))
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "input", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

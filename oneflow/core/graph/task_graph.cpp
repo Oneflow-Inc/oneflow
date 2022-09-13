@@ -57,28 +57,6 @@ bool IsConnectToTickOp(const TaskNode* node) {
   return false;
 }
 
-std::string GetOpConfCalculationPassName(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_scope_symbol_id());
-  int64_t scope_symbol_id = op_conf.scope_symbol_id();
-  CHECK(Singleton<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id))
-      << " Error! op : \n " << op_conf.DebugString()
-      << " has error scope_symbol_id = " << scope_symbol_id
-      << " which cannot find in Singleton<symbol::Storage<Scope>>::Get()\n";
-  const Scope& scope = Singleton<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
-  return scope.scope_proto().calculation_pass_name();
-}
-
-bool IsOptimizerPassOp(const Operator* op) {
-  // NOTE(chengcheng): use scope::calculation_pass_name instead of area_id to not merge optimizer
-  // ops with fw/bw ops
-  if (!op->op_conf().has_scope_symbol_id()) {
-    // NOTE(chengcheng): Some system op insert to OpGraph may not set scope_symbol_id, it MUST NOT
-    // optimizer subgraph ops.
-    return false;
-  }
-  return GetOpConfCalculationPassName(op->op_conf()) == kOptimizerPass;
-}
-
 bool IsSubsetTickOpConf(const OperatorConf& op_conf) {
   return op_conf.has_src_subset_tick_conf() || op_conf.has_dst_subset_tick_conf();
 }
@@ -101,11 +79,6 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
         || user_type_name == "unpack" || user_type_name == "identity_buffer") {
       return true;
     }
-  }
-  // NOTE(chengcheng): ONLY nccl_use_compute_stream = false will exclude optimizer pass ops
-  if (!Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
-      && IsOptimizerPassOp(op)) {
-    return true;
   }
   return false;
 }
@@ -493,7 +466,7 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
         // src must be not on the cpu mem zone, copy d2h first
         CHECK(IsMemcpyDtoHSupported(src_mem_zone_id.device_type()));
         CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-        copy_task->Init(CopyHdOpConf::D2H, src_mem_zone_id, lbi);
+        copy_task->Init(CopyHdType::D2H, src_mem_zone_id, lbi);
         Connect<TaskNode>(src_node, NewTaskEdgeWithLbi(lbi), copy_task);
         proxy2node[key] = copy_task;
         return copy_task;
@@ -513,7 +486,7 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
           GetProxyNode(src_node, lbi, GetNodeCPUMemZoneId(dst_mem_zone_id.rank()));
       CHECK(IsMemcpyHtoDSupported(dst_mem_zone_id.device_type()));
       CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-      copy_task->Init(CopyHdOpConf::H2D, dst_mem_zone_id, lbi);
+      copy_task->Init(CopyHdType::H2D, dst_mem_zone_id, lbi);
       Connect<TaskNode>(proxy_on_dst_host, NewTaskEdgeWithLbi(lbi), copy_task);
       proxy2node[key] = copy_task;
       return copy_task;

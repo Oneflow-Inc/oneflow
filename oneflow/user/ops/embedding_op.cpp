@@ -20,7 +20,7 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> EmbeddingRenormOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -33,7 +33,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> EmbeddingRenormOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -47,7 +47,7 @@ namespace oneflow {
   out_dim_vec.push_back(weight_shape.At(1));
 
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
-  *out_desc->mut_shape() = Shape(out_dim_vec);
+  out_desc->set_shape(Shape(out_dim_vec));
   return Maybe<void>::Ok();
 }
 
@@ -73,7 +73,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> EmbeddingOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("weight", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("weight", 0));
   return Maybe<void>::Ok();
 }
 
@@ -88,7 +88,7 @@ namespace oneflow {
 /* static */ Maybe<void> EmbeddingGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& weight_shape = ctx->InputShape("weight", 0);
   user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
-  *dx_desc->mut_shape() = weight_shape;
+  dx_desc->set_shape(weight_shape);
 
   return Maybe<void>::Ok();
 }
@@ -126,26 +126,8 @@ namespace oneflow {
 /*static*/ Maybe<void> EmbeddingGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("weight", 0), ctx->InputDType("dy", 0))
       << "input grad has different type with weight";
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("embedding")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      const auto embedding_grad_op_name = ctx->FwOp().op_name() + "_grad";
-      ctx->DefineOp(embedding_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("embedding_grad")
-            .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-            .InputBind("weight", ctx->FwOp().input("weight", 0))
-            .InputBind("indices", ctx->FwOp().input("indices", 0))
-            .Output("dx")
-            .Build();
-      });
-      ctx->FwOp().InputGradBind(user_op::OpArg("weight", 0),
-                                [&ctx, &embedding_grad_op_name]() -> const std::string& {
-                                  return ctx->GetOp(embedding_grad_op_name).output("dx", 0);
-                                });
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

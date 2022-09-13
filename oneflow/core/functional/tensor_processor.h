@@ -27,12 +27,15 @@ namespace functional {
 class TensorProcessor final {
  public:
   TensorProcessor()
-      : common_dtype_(DType::InvalidDataType()), promote_inputs_to_common_dtype_(false){};
+      : common_dtype_(DType::InvalidDataType()),
+        promote_inputs_to_common_dtype_(false),
+        promote_integer_inputs_to_float_(false){};
   TensorProcessor& AddInputs(const TensorTuple& init_list);
   TensorProcessor& AddInputs(const TensorTuple& init_list, Symbol<DType> tensor_lowest_dtype);
 
   Maybe<void> Apply();
   TensorProcessor& PromoteInputsToCommonDtype(bool is_promote);
+  TensorProcessor& PromoteIntegerInputsToFloatDtype(bool is_promote);
   Maybe<TensorTuple&> GetInputs() { return tensor_tuple_; };
 
  private:
@@ -41,6 +44,7 @@ class TensorProcessor final {
   std::vector<Symbol<DType>> inputs_lowest_dtype_vec_;
 
   bool promote_inputs_to_common_dtype_;
+  bool promote_integer_inputs_to_float_;
 };
 
 class TensorLayoutProcessor final {
@@ -53,6 +57,8 @@ class TensorLayoutProcessor final {
         outputs_(outputs),
         non_contiguous_enabled_(non_contiguous_enabled),
         converted_(false) {}
+
+  ~TensorLayoutProcessor();
 
   Maybe<void> Apply();
 
@@ -68,6 +74,8 @@ class TensorLayoutProcessor final {
   bool non_contiguous_enabled_;
   bool converted_;
   TensorTuple contiguous_inputs_;
+  std::vector<int> post_process_output_indices_;
+  TensorTuple post_process_outputs_;
 };
 
 }  // namespace functional

@@ -207,7 +207,7 @@ static PyObject* PyTensorObject_retain_grad(PyObject* self, PyObject* unused) {
     return PyErr_Format(PyExc_RuntimeError,
                         "can't retain_grad on Tensor that has requires_grad=False");
   }
-  ASSERT(t->set_retain_grad(true));
+  if (!t->is_leaf()) { ASSERT(t->set_retain_grad(true)); }
   Py_RETURN_NONE;
   END_HANDLE_ERRORS
 }
@@ -314,7 +314,8 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
     OF_PP_FOR_EACH_TUPLE(SWITCH_EAGER_TENSOR_TO_NUMPY, POD_DATA_TYPE_SEQ)
     case DataType::kFloat16: return ASSERT(EagerLocalTensorToNumpy<float16>(self));
     default: {
-      return PyErr_Format(PyExc_RuntimeError, "Invalid datatype");
+      return PyErr_Format(PyExc_RuntimeError,
+                          ("Invalid datatype " + DataType_Name(data_type)).data());
     }
   }
 #undef SWITCH_EAGER_TENSOR_TO_NUMPY

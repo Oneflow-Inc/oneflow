@@ -29,7 +29,7 @@ namespace {
 
 Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
   BlobDesc* blob_desc = BlobDesc4BnInOp("out");
-  blob_desc->mut_shape() = Shape({1});
+  blob_desc->set_shape(Shape({1}));
   blob_desc->set_data_type(DataType::kInt8);
   return Maybe<void>::Ok();
 }
@@ -49,7 +49,10 @@ Maybe<void> SinkTickOp::InferOutBlobDescs(
 }
 
 Maybe<void> SinkTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder().Broadcast(input_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  SbpSignatureBuilder()
+      .Broadcast(input_bns())
+      .Broadcast(output_bns())
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 

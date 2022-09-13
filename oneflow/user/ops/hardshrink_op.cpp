@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> HardShrinkOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -36,16 +36,15 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> HardShrinkOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> HardShrinkGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& y_shape = ctx->InputShape("y", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  Shape* dx_shape = ctx->MutOutputShape("dx", 0);
   CHECK_OR_RETURN(dy_shape == y_shape) << "The shape of y_grad and y must be same.";
-  *dx_shape = dy_shape;
+  ctx->SetOutputShape("dx", 0, dy_shape);
   return Maybe<void>::Ok();
 }
 
@@ -68,25 +67,8 @@ namespace oneflow {
 /* static */ Maybe<void> HardShrinkGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), ctx->InputDType("y", 0))
       << "The dtype of y_grad and y must be same.";
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("y", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("y", 0));
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("hardshrink")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      const auto hardshrink_grad_op_name = ctx->FwOp().op_name() + "_grad";
-      ctx->DefineOp(hardshrink_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("hardshrink_grad")
-            .InputBind("y", ctx->FwOp().output("y", 0))
-            .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-            .Attr<double>("lambd", ctx->FwOp().attr<double>("lambd"))
-            .Output("dx")
-            .Build();
-      });
-      ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
-                                [&ctx, &hardshrink_grad_op_name]() -> const std::string& {
-                                  return ctx->GetOp(hardshrink_grad_op_name).output("dx", 0);
-                                });
-      return Maybe<void>::Ok();
-    });
 }  // namespace oneflow
