@@ -397,6 +397,13 @@ struct UnaryFunctor<device, UnaryOp::kLog2, Dst, Src> {
 };
 
 template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kLog10, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(log10(src)); }
+};
+
+template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kLog1p, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
