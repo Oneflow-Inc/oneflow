@@ -30,20 +30,33 @@ void set_autocast_device_type(DeviceType device_type);
 Symbol<DType> get_autocast_dtype();
 void set_autocast_dtype(Symbol<DType> dtype);
 
+enum AutoCastColor { kWhite, kGray, kClear, kBlack };
+
 class AutoCastMeta final {
  public:
-  AutoCastMeta() = default;
+  AutoCastMeta(int args_num)
+      : autocast_color_(kBlack), is_args_autocast_eligible_(args_num, false) {}
+
+  AutoCastColor autocast_color() const;
 
   bool is_autocast_eligible(DeviceType device_type, Symbol<DType> dtype) const;
+
+  bool is_args_autocast_eligible(int arg_index) const;
   const std::vector<bool>& is_args_autocast_eligible() const;
 
+  void set_autocast_color(AutoCastColor color);
+  void set_autocast_eligible(DeviceType device_type, Symbol<DType> dtype);
+  void set_arg_autocast_eligible(int arg_index);
+
  private:
+  AutoCastColor autocast_color_;
   std::vector<std::vector<bool>> is_autocast_eligible_;
   std::vector<bool> is_args_autocast_eligible_;
 };
 
-std::shared_ptr<AutoCastMeta> MakeAutoCastMeta(const std::string& op_type_name,
-                                               const std::vector<std::string>& input_names);
+std::shared_ptr<AutoCastMeta> MakeAutoCastMeta(
+    const std::string& op_type_name,
+    const std::vector<std::pair<std::string, int32_t>>& input_args);
 
 }  // namespace autocast
 }  // namespace oneflow

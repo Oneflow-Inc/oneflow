@@ -173,7 +173,8 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<UserOpConf>::GetOrCreateOpGradClosure
 template<>
 Maybe<autocast::AutoCastMeta> BuiltinOpExprImpl<UserOpConf>::GetOrCreateAutoCastMeta() const {
   if (!autocast_meta_) {
-    autocast_meta_ = autocast::MakeAutoCastMeta(proto().op_type_name(), indexed_ibns());
+    autocast_meta_ =
+        autocast::MakeAutoCastMeta(proto().op_type_name(), this->indexed_input_pairs());
   }
   return autocast_meta_;
 }
