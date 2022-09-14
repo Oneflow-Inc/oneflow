@@ -377,10 +377,6 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     }
 
     if (regst_separated_size > 0) {
-      if (regst_desc->has_separated_header_mem_block_id()) {
-        LOG(INFO) << "ccdebuglog: wrong, sep id, regst: " << regst_desc->regst_desc_id()
-                  << " , debug: " << regst_desc->DebugString();
-      }
       CHECK(regst_desc->has_separated_header_mem_block_id()) << regst_desc->DebugString();
       int64_t separated_mem_block_id = regst_desc->separated_header_mem_block_id();
       CHECK_NE(separated_mem_block_id, -1);

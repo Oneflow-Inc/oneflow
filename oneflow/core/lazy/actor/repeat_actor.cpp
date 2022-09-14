@@ -73,7 +73,6 @@ class RepeatActor final : public Actor {
   int64_t produced_repeat_var_regst_desc_id_;
   RegstSlot consumed_var_rs_;
   RegstSlot produced_repeat_var_rs_;
-  // Regst* var_regst_;
 };
 
 void RepeatActor::VirtualActorInit(const TaskProto& proto) {
