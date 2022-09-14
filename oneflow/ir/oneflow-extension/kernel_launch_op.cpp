@@ -314,6 +314,7 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
  public:
   KernelLaunchCpuKernel() = default;
   ~KernelLaunchCpuKernel() = default;
+
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     // use ctx to create module, reg_ctx and fn;
@@ -352,16 +353,18 @@ class KernelLaunchGpuKernel final : public user_op::OpKernel {
  public:
   KernelLaunchGpuKernel() = default;
   ~KernelLaunchGpuKernel() = default;
+
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     // use ctx to create module, reg_ctx and fn;
-    auto res = std::make_shared<KernelLaunchState>(ctx);
+    std::shared_ptr<user_op::OpKernelState> res(new KernelLaunchState(ctx));
+    return res;
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto okl_state = dynamic_cast<KernelLaunchState*>(state);
+    auto* okl_state = dynamic_cast<KernelLaunchState*>(state);
     runJIT<TypeKernelLaunchArgs>(okl_state->GetModule(), ctx->op_name(),
                                  okl_state->GetKernelComputeContext(ctx), okl_state->GetFn()());
   }
