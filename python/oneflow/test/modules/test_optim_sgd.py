@@ -17,6 +17,7 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 import tempfile
+import os
 
 import numpy as np
 from oneflow.test_utils.test_util import GenArgDict
@@ -264,6 +265,7 @@ class TestOptimizers(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             compare_with_numpy_sgd_clip_grad(test_case, **arg)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_eager_global_zero_grad_sbp(test_case):
         x = flow.nn.Parameter(
             flow.zeros((10,)).to_global(
