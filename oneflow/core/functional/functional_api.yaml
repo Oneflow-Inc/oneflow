@@ -19,7 +19,10 @@
 #   "BoolList", "DataType", "Shape", "Generator", "TensorIndex", "Device", "Placement",
 #   "Sbp", "SbpList"
 # }
-
+- name: "spmm_coo"
+  signature: "Tensor (Tensor a_cooRowInd, Tensor a_cooColInd, Tensor a_cooValues, Int64 a_rows, Int64 a_cols, Tensor b) => SpmmCoo"
+  bind_python: True
+  
 - name: "add"
   signature:
     [

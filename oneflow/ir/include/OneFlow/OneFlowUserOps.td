@@ -4,6 +4,27 @@
 
 #ifdef GET_ONEFLOW_ASSIGN_OP_DEFINITIONS
 
+def OneFlow_SpmmCooOp : OneFlow_BaseOp<"spmm_coo", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$a_cooRowInd,
+    OneFlow_Tensor:$a_cooColInd,
+    OneFlow_Tensor:$a_cooValues,
+    OneFlow_Tensor:$b
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$a_rows,
+    DefaultValuedAttr<SI64Attr, "0">:$a_cols
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+
 def OneFlow_AssignUserOp : OneFlow_BaseOp<"assign", [NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$ref,
