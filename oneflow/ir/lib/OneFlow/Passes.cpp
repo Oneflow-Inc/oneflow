@@ -1040,7 +1040,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   pm.addNestedPass<func::FuncOp>(createGpuCopyArgPass());                // buffer-host-register
   pm.addPass(createGpuToLLVMConversionPass());
   pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
-  if (enable_ir_printing) pm.enableIRPrinting();
+  if (enable_ir_printing) { pm.enableIRPrinting(); }
   return pm.run(module);
 }
 

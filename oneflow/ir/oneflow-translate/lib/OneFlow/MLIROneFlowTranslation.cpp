@@ -783,7 +783,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   bool enable_ir_printing =
       ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_IR_PRINTING", false);
   context->disableMultithreading(enable_ir_printing);
-  if (enable_ir_printing) pm.enableIRPrinting();
+  if (enable_ir_printing) { pm.enableIRPrinting(); }
   // this canonicalizer should create concrete ops and create fuse opportunities
   pm.addPass(createCanonicalizerPass());
   std::string graphviz;
