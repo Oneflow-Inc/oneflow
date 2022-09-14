@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include <cstddef>
 #include <memory>
 
 #include "oneflow/core/common/maybe.h"
@@ -128,7 +127,6 @@ template<>
 /* static */ Maybe<TensorTuple> OpInterpUtil::Dispatch<TensorTuple>(
     const OpExpr& op_expr, const TensorTuple& inputs, const OpExprInterpContext& ctx) {
   OF_PROFILER_RANGE_GUARD("Dispatch");
-  // functional::TensorLayoutProcessor processor(inputs, JUST(op_expr.SupportNonContiguous()));
   functional::TensorProcessorPipe processor(inputs);
   JUST(processor.Apply<functional::TensorLayoutProcessor>(JUST(op_expr.SupportNonContiguous())));
   if (autocast::is_enabled()) {
