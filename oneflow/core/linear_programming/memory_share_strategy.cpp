@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/linear_programming/memory_share_strategy.h"
 #include <glog/logging.h>
 #include <algorithm>
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/register/runtime_register_desc.h"
@@ -292,6 +293,17 @@ void MemoryShareStrategy::StealCompactPosition(
   primal_matrix.ActivateAllRowColumns();
 }
 
+void MemoryShareStrategy::GenerateCompactPosition(
+    const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts) {
+  HashMap<RegstDescProto*, int64_t> regst_desc2offset;
+  int64_t offset = 0;
+  for (const auto& pair : regst2mutual_exclusion_regsts) {
+    regst_desc2offset[pair.first] = offset;
+    offset++;
+  }
+  StealCompactPosition(regst_desc2offset, regst2mutual_exclusion_regsts);
+}
+
 void MemoryShareStrategy::AssembleZ(int32_t* row) {
   int32_t total_register_num = register_size_.size();
   auto& primal_matrix = mips_.lps_.primal_matrix_;
@@ -381,7 +393,7 @@ size_t MemoryShareStrategy::ComputeOptimalAdjustedCost() {
         // Back up the current register offset with elimination of i
         auto register_offset_backup = register_offset_;
         // Try to insert the register i into the sorted excluded registers
-        HashSet<int32_t> all_x_i;
+        HashSet<int64_t> all_x_i;
         for (int32_t j : excluded_registers[i]) {
           // Insert i before j
           all_x_i.insert(register_offset_backup[j]);
@@ -389,8 +401,8 @@ size_t MemoryShareStrategy::ComputeOptimalAdjustedCost() {
           all_x_i.insert(register_offset_backup[j] + register_size_[j]);
         }
 
-        for (int32_t x_i : all_x_i) {
-          int32_t cost_insert_i = ComputeOptimalCostWithOccupation(i, x_i, register_offset_backup);
+        for (int64_t x_i : all_x_i) {
+          int64_t cost_insert_i = ComputeOptimalCostWithOccupation(i, x_i, register_offset_backup);
           std::cout << "Insert i at " << x_i << ", cost: " << cost_insert_i << ", Less? "
                     << (cost_insert_i < optimal_cost) << std::endl;
           // Check if we found a smaller cost
@@ -420,7 +432,7 @@ size_t MemoryShareStrategy::ComputeOptimalAdjustedCost() {
         step_no_decrease++;
         if (step_no_decrease >= total_register_num_) { break; }
       }
-      int32_t recovery_cost = ComputeOptimalCostFrom0();
+      int64_t recovery_cost = ComputeOptimalCostFrom0();
       std::cout << "After recovery: " << recovery_cost << " Less? "
                 << (recovery_cost < optimal_cost) << std::endl;
       CHECK_JUST(CheckConflict());

@@ -51,6 +51,9 @@ class MemoryShareStrategy {
       const HashMap<RegstDescProto*, int64_t>& regst_desc2offset,
       const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
 
+  void GenerateCompactPosition(
+      const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
+
   size_t ComputeOptimalAdjustedCost();
 
  private:
