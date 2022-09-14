@@ -22,6 +22,11 @@ import numpy as np
 from collections import OrderedDict
 
 import oneflow as flow
+from oneflow.test_utils.automated_test_util.torch_flow_dual_object import (
+    autotest,
+    random_tensor,
+)
+from oneflow.test_utils.automated_test_util import oneof
 import oneflow.unittest
 import torch
 from oneflow.nn.parameter import Parameter
@@ -833,6 +838,95 @@ class CosineAnnealingWarmRestartsTestCase(flow.unittest.TestCase):
             np.allclose(lrs, expected_lrs),
             f"\nexpected_lrs: {expected_lrs}\nvs.\ncalculated lrs: {lrs}",
         )
+
+
+def _test_cyclic_lr_scheduler(test_case, *args, **kwargs):
+    num_iters = kwargs.get("num_iters", 10000)
+    kwargs.pop("num_iters", None)
+    num_models = kwargs.get("num_models", 1)
+    kwargs.pop("num_models", None)
+
+    # oneflow
+    models = [flow.nn.Linear(3, 3) for _ in range(num_models)]
+    optimizer = flow.optim.SGD(
+        [{"params": x.parameters()} for x in models], lr=0.1, momentum=0.9
+    )
+    sch = flow.optim.lr_scheduler.CyclicLR(optimizer, **kwargs)
+    of_lrs = [sch.get_last_lr()[0]]
+    for _ in range(num_iters):
+        sch.step()
+        of_lrs.append(sch.get_last_lr()[0])
+
+    # torch
+    models = [torch.nn.Linear(3, 3) for _ in range(num_models)]
+    optimizer = torch.optim.SGD(
+        [{"params": x.parameters()} for x in models], lr=0.1, momentum=0.9
+    )
+    sch = torch.optim.lr_scheduler.CyclicLR(optimizer, **kwargs)
+    torch_lrs = [sch.get_last_lr()[0]]
+    for _ in range(num_iters):
+        sch.step()
+        torch_lrs.append(sch.get_last_lr()[0])
+
+    test_case.assertTrue(
+        np.allclose(of_lrs, torch_lrs),
+        f"\ntorch_lrs: {torch_lrs}\nvs.\ncalculated lrs: {of_lrs}",
+    )
+
+
+@flow.unittest.skip_unless_1n1d()
+class CyclicLRTestCase(flow.unittest.TestCase):
+    @autotest(n=100, check_graph=False)
+    def test_default(test_case):
+        _test_cyclic_lr_scheduler(
+            test_case,
+            num_iters=10,
+            num_models=random.randint(1, 5),
+            base_lr=random.random() / 10,
+            max_lr=random.random() / 2 + 0.5,
+            step_size_up=random.randint(10, 2000),
+            step_size_down=random.randint(10, 2000),
+            mode=random.choice(["triangular", "triangular2", "exp_range"]),
+            cycle_momentum=random.choice([True, False]),
+            base_momentum=random.random() / 10,
+            max_momentum=random.random() / 2 + 0.5,
+        )
+    
+    @autotest(n=100, check_graph=False)
+    def test_gamma(test_case):
+        _test_cyclic_lr_scheduler(
+            test_case,
+            num_iters=10,
+            num_models=random.randint(1, 5),
+            base_lr=random.random() * 100,
+            max_lr=random.random() * 100 + 100,
+            step_size_up=random.randint(10, 20),
+            step_size_down=random.randint(10, 20),
+            mode="exp_range",
+            gamma=random.random() / 10 + 0.9,
+            cycle_momentum=random.choice([True, False]),
+            base_momentum=random.random() / 10,
+            max_momentum=random.random() / 2 + 0.5,
+        )
+
+    # @autotest(n=100, check_graph=False)
+    # def test_multi_lr(test_case):
+    #     num_models = random.randint(1, 5)
+    #     _test_cyclic_lr_scheduler(
+    #         test_case,
+    #         num_iters=10,
+    #         num_models=num_models,
+    #         base_lr=[random.random() / 10 for _ in range(num_models)],
+    #         max_lr=[random.random() / 2 + 0.5 for _ in range(num_models)],
+    #         step_size_up=random.randint(10, 2000),
+    #         step_size_down=random.randint(10, 2000),
+    #         mode=random.choice(["triangular", "triangular2", "exp_range"]),
+    #         cycle_momentum=random.choice([True, False]),
+    #         base_momentum=[random.random() / 10 for _ in range(num_models)],
+    #         max_momentum=[random.random() / 2 + 0.5 for _ in range(num_models)],
+    #     )
+
+
 
 
 if __name__ == "__main__":
