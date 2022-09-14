@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/linear_programming/memory_share_strategy.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/graph/task_node.h"
@@ -819,14 +820,21 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
   }
 
   // step 3: choose best one for each mem chain and set offset for inplace consumer regst
-  for (const auto& pair : mem_chain2algo2result) {
-    const MemBlockResultInfo* best_result = nullptr;
-    for (const auto& algo_result_pair : pair.second) {
+  for (auto& pair : mem_chain2algo2result) {
+    MemBlockResultInfo* best_result = nullptr;
+    for (auto& algo_result_pair : pair.second) {
       if (!best_result || algo_result_pair.second.mem_block_size < best_result->mem_block_size) {
         best_result = &algo_result_pair.second;
       }
     }
     CHECK(best_result != nullptr);
+
+    // Update the offset with a smaller total memory size
+    linear_programming::MemoryShareStrategy mss;
+    mss.StealCompactPosition(best_result->regst_desc2offset,
+                             mem_chain2regst2mutual_exclusion_regsts.at(pair.first));
+    mss.UpdateOffset(&best_result->mem_block_size, &best_result->regst_desc2offset);
+
     int64_t mem_block_id = Singleton<IDMgr>::Get()->NewMemBlockId();
     CHECK_EQ(mem_chain2mem_reused_regsts.at(pair.first).size(),
              (best_result->regst_desc2offset.size()

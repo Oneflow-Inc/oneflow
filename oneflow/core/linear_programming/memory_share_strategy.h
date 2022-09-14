@@ -54,7 +54,10 @@ class MemoryShareStrategy {
   void GenerateCompactPosition(
       const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
 
+  // Adjust the original strategy, return the updated optimal cost
   size_t ComputeOptimalAdjustedCost();
+  // Update the offset with the adjusted strategy
+  void UpdateOffset(size_t* mem_block_size, HashMap<RegstDescProto*, int64_t>* regst_desc2offset);
 
  private:
   // left registers store the first registers on the left, which have smaller offsets.

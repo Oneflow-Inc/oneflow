@@ -435,11 +435,13 @@ size_t MemoryShareStrategy::ComputeOptimalAdjustedCost() {
       int64_t recovery_cost = ComputeOptimalCostFrom0();
       std::cout << "After recovery: " << recovery_cost << " Less? "
                 << (recovery_cost < optimal_cost) << std::endl;
-      CHECK_JUST(CheckConflict());
     }
     if (step_no_decrease >= total_register_num_) { break; }
   }
-  return 0;
+  // After recovery, adjust the offset
+  ComputeOptimalCostFrom0();
+  CHECK_JUST(CheckConflict());
+  return optimal_cost;
 }
 
 // Let x_i occupy some space [x_i, x_i + l_i), then we recompute the optimal cost
@@ -652,6 +654,20 @@ Maybe<void> MemoryShareStrategy::CheckConflict() {
     }
   }
   return Maybe<void>::Ok();
+}
+
+// Update the offset with the adjusted strategy
+void MemoryShareStrategy::UpdateOffset(size_t* mem_block_size,
+                                       HashMap<RegstDescProto*, int64_t>* regst_desc2offset) {
+  size_t optimal_cost = ComputeOptimalAdjustedCost();
+  if (optimal_cost < *mem_block_size) {
+    std::cout << "Original cost: " << *mem_block_size << ", updated cost: " << optimal_cost
+              << std::endl;
+    *mem_block_size = optimal_cost;
+    for (auto& pair : *regst_desc2offset) {
+      pair.second = register_offset_[register2index_[pair.first]];
+    }
+  }
 }
 
 }  // namespace linear_programming
