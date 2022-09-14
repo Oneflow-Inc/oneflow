@@ -31,8 +31,12 @@ limitations under the License.
 #include "oneflow/core/graph/task_stream_index_manager.h"
 #include "oneflow/core/ep/include/primitive/memcpy.h"
 #include "oneflow/core/graph/straighten_nodes.h"
+#include "oneflow/core/common/env_var/env_var.h"
 
 namespace oneflow {
+
+// TODO(Chengcheng): default false.
+DEFINE_ENV_BOOL(ONEFLOW_ENABLE_OUTDATED_OPT_FW_CHAIN_MERGE, true);
 
 namespace {
 
@@ -65,6 +69,28 @@ bool IsTickOpConf(const OperatorConf& conf) {
   return IsClassRegistered<int32_t, IsTickTockOpTypeCase>(conf.op_type_case());
 }
 
+std::string GetOpConfCalculationPassName(const OperatorConf& op_conf) {
+  CHECK(op_conf.has_scope_symbol_id());
+  int64_t scope_symbol_id = op_conf.scope_symbol_id();
+  CHECK(Singleton<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id))
+      << " Error! op : \n " << op_conf.DebugString()
+      << " has error scope_symbol_id = " << scope_symbol_id
+      << " which cannot find in Singleton<symbol::Storage<Scope>>::Get()\n";
+  const Scope& scope = Singleton<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
+  return scope.scope_proto().calculation_pass_name();
+}
+
+bool IsOptimizerPassOp(const Operator* op) {
+  // NOTE(chengcheng): use scope::calculation_pass_name instead of area_id to not merge optimizer
+  // ops with fw/bw ops
+  if (!op->op_conf().has_scope_symbol_id()) {
+    // NOTE(chengcheng): Some system op insert to OpGraph may not set scope_symbol_id, it MUST NOT
+    // optimizer subgraph ops.
+    return false;
+  }
+  return GetOpConfCalculationPassName(op->op_conf()) == kOptimizerPass;
+}
+
 bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
   const OperatorConf& op_conf = op->op_conf();
   if (op_conf.has_variable_conf() || op_conf.has_tick_conf() || op_conf.has_device_tick_conf()
@@ -79,6 +105,11 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
         || user_type_name == "unpack" || user_type_name == "identity_buffer") {
       return true;
     }
+  }
+  // NOTE(chengcheng): ONLY nccl_use_compute_stream = false will exclude optimizer pass ops
+  if (!Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
+      && IsOptimizerPassOp(op) && EnvBool<ONEFLOW_ENABLE_OUTDATED_OPT_FW_CHAIN_MERGE>()) {
+    return true;
   }
   return false;
 }
