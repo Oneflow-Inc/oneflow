@@ -53,7 +53,46 @@ std::function<const TaskProto*(int64_t)> PlanUtil::MakeGetterTaskProto4TaskId(co
   return [task_id2task_proto](int64_t task_id) { return task_id2task_proto->at(task_id); };
 }
 
+namespace {
+
+void SetVariableOpNamesForVariableAndRepeatRegst(Plan* plan) {
+  // NOTE(chengcheng): set variable_op_name before set separated header because var regst alway
+  //  separated.
+  HashMap<int64_t, std::string> regst_id2var_name;
+  for (int i = 0; i < plan->task_size(); i++) {
+    TaskProto* task = plan->mutable_task(i);
+    if (task->exec_sequence().exec_node_size() == 1) {
+      const auto& op_conf =
+          PlanUtil::GetOpAttribute(plan, task->job_id(),
+                                   task->exec_sequence().exec_node(0).kernel_conf())
+              .op_conf();
+      if (op_conf.has_variable_conf()) {
+        RegstDescProto* regst = PlanUtil::GetSoleProducedDataRegst(task);
+        regst_id2var_name.emplace(regst->regst_desc_id(), op_conf.name());
+        regst->set_variable_op_name(op_conf.name());
+      }
+    }
+  }
+
+  for (int i = 0; i < plan->task_size(); i++) {
+    TaskProto* task = plan->mutable_task(i);
+    if (task->task_type() == TaskType::kRepeat) {
+      RegstDescProto* regst = PlanUtil::GetSoleProducedDataRegst(task);
+      CHECK(regst->has_force_inplace_consumed_regst_desc_id());
+      int64_t force_inplace_regst_id = regst->force_inplace_consumed_regst_desc_id();
+      if (regst_id2var_name.find(force_inplace_regst_id) != regst_id2var_name.end()) {
+        regst->set_variable_op_name(regst_id2var_name.at(force_inplace_regst_id));
+        VLOG(3) << " set var op name to repeat regst : " << regst->DebugString();
+      }
+    }
+  }
+}
+
+}  // namespace
+
 void PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan) {
+  SetVariableOpNamesForVariableAndRepeatRegst(plan);
+
   for (int i = 0; i < plan->task_size(); i++) {
     TaskProto* task = plan->mutable_task(i);
 
@@ -63,14 +102,6 @@ void PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan) {
         CHECK_EQ(regst_desc->mem_block_offset(), -1);
         regst_desc->set_mem_block_id(Singleton<IDMgr>::Get()->NewMemBlockId());
         regst_desc->set_mem_block_offset(0);
-      }
-      // NOTE(chengcheng): set variable_op_name before set separated header because var regst alway
-      //  separated.
-      if (task->exec_sequence().exec_node_size() == 1) {
-        const auto& op_conf =
-            GetOpAttribute(plan, task->job_id(), task->exec_sequence().exec_node(0).kernel_conf())
-                .op_conf();
-        if (op_conf.has_variable_conf()) { regst_desc->set_variable_op_name(op_conf.name()); }
       }
 
       RtRegstDesc rt_regst_desc(*regst_desc);
@@ -799,7 +830,7 @@ void PlanUtil::SetForceInplaceMemBlock(Plan* plan) {
           regst_desc->set_separated_header_mem_block_id(
               in_regst_desc->separated_header_mem_block_id());
         }
-        VLOG(3) << " cclog: set force inplace from " << regst_desc->DebugString() << " to "
+        VLOG(3) << " set force inplace from " << regst_desc->DebugString() << " to "
                 << in_regst_desc->DebugString();
       }
     }
