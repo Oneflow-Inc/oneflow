@@ -13,7 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.framework.config_util import api_load_library as load_library
-from oneflow.utils import tensor
-from oneflow.utils import global_view
-from . import checkpoint
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
+from oneflow._oneflow_internal.autograd.Function import FunctionCtx
+
+add_docstr(
+    FunctionCtx.saved_tensors, "Get saved tensors in ctx.",
+)
+
+add_docstr(
+    FunctionCtx.save_for_backward,
+    "Saves given tensors for a future call to ``backward()``.",
+)
+
+add_docstr(
+    FunctionCtx.mark_non_differentiable, "Marks outputs as non-differentiable.",
+)
