@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <sys/types.h>
+#include "mlir/IR/DialectRegistry.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -36,6 +37,8 @@ limitations under the License.
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/framework/op_generated.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/JITOpInfer.h"
+
+#include <memory>
 
 namespace oneflow {
 using TypeKernelLaunchArgs =
@@ -256,45 +259,72 @@ void runJIT(mlir::ModuleOp module_op, llvm::StringRef name, Args... args) {
   CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
 }
 
-void KernelLaunchCompute(user_op::KernelComputeContext* ctx,
-                         const oneflow::user_op::OpKernel* kernel) {
+mlir::DialectRegistry getRegistry() {
   mlir::DialectRegistry registry;
   registry
       .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
               mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect, mlir::LLVM::LLVMDialect>();
   mlir::registerLLVMDialectTranslation(registry);
-  mlir::MLIRContext mlir_ctx(registry);
-  mlir::OwningOpRef<mlir::ModuleOp> module_op =
-      mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
-
-  auto reg_ctx = std::make_unique<KernelLaunchOpKernelRegContext>(module_op.get());
-  if (kernel == nullptr) {
-    const user_op::OpKernelRegistryResult* res =
-        CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-            reg_ctx->GetOp()->getName().stripDialect().str(), *reg_ctx));
-    kernel = res->create_fn();
-  }
-  KernelLaunchComputeContext kl_comp_ctx(std::move(reg_ctx), ctx);
-
-  if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(*module_op))) {
-    LOG(ERROR) << "Fail lowering kernel launch Module to llvm ir";
-    exit(1);
-  }
-  runJIT<TypeKernelLaunchArgs>(module_op.get(), ctx->op_name(),
-                               dynamic_cast<user_op::KernelComputeContext*>(&kl_comp_ctx), kernel);
+  return registry;
 }
+
 }  // namespace
+
+class KernelLaunchState : public user_op::OpKernelState {
+ public:
+  explicit KernelLaunchState(user_op::KernelInitContext* ctx) : mlir_ctx(getRegistry()) {
+    // get raw module from ctx attr
+    module =
+        mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx)
+            .get();
+    // reg_ctx is needed
+    reg_ctx = std::make_unique<KernelLaunchOpKernelRegContext>(module);
+    // get constructor of kernel
+    fn = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
+                        reg_ctx->GetOp()->getName().stripDialect().str(), *reg_ctx))
+             ->create_fn;
+    // use okl2llvm pass to get llvm ir module
+    if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(module))) {
+      LOG(ERROR) << "Fail lowering kernel launch Module to llvm ir";
+      exit(1);
+    }
+  };
+  mlir::MLIRContext* GetContext() { return &mlir_ctx; }
+  mlir::ModuleOp GetModule() { return module; }
+  user_op::OpKernelCreateFn GetFn() { return fn; }
+  user_op::KernelComputeContext* GetKernelComputeContext(user_op::KernelComputeContext* ctx) {
+    if (reg_ctx) {
+      okl_ctx = std::make_shared<KernelLaunchComputeContext>(std::move(reg_ctx), ctx);
+    }
+    // if reg_ctx is consumed, return pointer directly
+    return dynamic_cast<user_op::KernelComputeContext*>(okl_ctx.get());
+  }
+
+ private:
+  mlir::MLIRContext mlir_ctx;
+  mlir::ModuleOp module;
+  std::unique_ptr<KernelLaunchOpKernelRegContext> reg_ctx;
+  std::shared_ptr<KernelLaunchComputeContext> okl_ctx;
+  user_op::OpKernelCreateFn fn;
+};
 
 template<typename T>
 class KernelLaunchCpuKernel final : public user_op::OpKernel {
  public:
   KernelLaunchCpuKernel() = default;
   ~KernelLaunchCpuKernel() = default;
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    // use ctx to create module, reg_ctx and fn;
+    auto res = std::make_shared<KernelLaunchState>(ctx);
+  }
 
  private:
-  const oneflow::user_op::OpKernel* kernel;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    KernelLaunchCompute(ctx, kernel);
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
+    auto okl_state = dynamic_cast<KernelLaunchState*>(state);
+    runJIT<TypeKernelLaunchArgs>(okl_state->GetModule(), ctx->op_name(),
+                                 okl_state->GetKernelComputeContext(ctx), okl_state->GetFn()());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -320,11 +350,18 @@ class KernelLaunchGpuKernel final : public user_op::OpKernel {
  public:
   KernelLaunchGpuKernel() = default;
   ~KernelLaunchGpuKernel() = default;
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    // use ctx to create module, reg_ctx and fn;
+    auto res = std::make_shared<KernelLaunchState>(ctx);
+  }
 
  private:
-  const oneflow::user_op::OpKernel* kernel;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    KernelLaunchCompute(ctx, kernel);
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
+    auto okl_state = dynamic_cast<KernelLaunchState*>(state);
+    runJIT<TypeKernelLaunchArgs>(okl_state->GetModule(), ctx->op_name(),
+                                 okl_state->GetKernelComputeContext(ctx), okl_state->GetFn()());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
