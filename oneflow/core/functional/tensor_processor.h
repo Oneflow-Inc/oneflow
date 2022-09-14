@@ -101,6 +101,8 @@ class TensorAutoCastProcessor final {
     return inputs_;
   }
 
+  TensorTuple* outputs() const { return outputs_; }
+
  private:
   const TensorTuple& inputs_;
   TensorTuple* outputs_;
@@ -127,16 +129,18 @@ struct TensorProcessorTuple {
 
 class TensorProcessorStorage {
  public:
-  constexpr static size_t TPSize = TensorProcessorTuple::max_storage_size;
+  constexpr static size_t TPMaxStorageSize = TensorProcessorTuple::max_storage_size;
 
   TensorProcessorStorage() = default;
+  TensorProcessorStorage(TensorProcessorStorage&& other) = default;
+
   ~TensorProcessorStorage() {
     if (deleter_) { deleter_(buffer_); }
   }
 
   template<typename TP, typename... Args>
   void New(Args&&... args) {
-    static_assert(sizeof(TP) <= TPSize, "Insufficient buffer size");
+    static_assert(sizeof(TP) <= TPMaxStorageSize, "Insufficient buffer size");
     new (buffer_) TP(std::forward<Args>(args)...);
     deleter_ = [](char* buffer) { reinterpret_cast<TP*>(buffer)->~TP(); };
   }
@@ -147,21 +151,30 @@ class TensorProcessorStorage {
   }
 
  private:
-  alignas(TensorProcessorTuple::alignment) char buffer_[TPSize];
+  alignas(TensorProcessorTuple::alignment) char buffer_[TPMaxStorageSize];
   std::function<void(char*)> deleter_;
 };
 
 class TensorProcessorPipe final {
  public:
+  constexpr static size_t TPSize = TensorProcessorTuple::size;
+
   TensorProcessorPipe(const TensorTuple& inputs) : TensorProcessorPipe(inputs, nullptr) {}
   TensorProcessorPipe(const TensorTuple& inputs, TensorTuple* outputs)
-      : inputs_(&inputs), outputs_(outputs) {}
+      : inputs_(&inputs), outputs_(outputs), index_(0) {}
 
   template<typename TP, typename... Args>
   Maybe<void> Apply(Args&&... args) {
-    processors_.resize(processors_.size() + 1);
-    processors_.back().New<TP>(*inputs_, outputs_, std::forward<Args>(args)...);
-    return processors_.back().As<TP>()->Apply();
+    CHECK_LT_OR_RETURN(index_, static_cast<int>(TPSize))
+        << Error::RuntimeError() << "The tensor processor pipe can only be applied up to "
+        << static_cast<int>(TPSize) << " times";
+    processors_[index_].New<TP>(*inputs_, outputs_, std::forward<Args>(args)...);
+    auto* processor = processors_[index_].As<TP>();
+    JUST(processor->Apply());
+    inputs_ = &(processor->inputs());
+    outputs_ = processor->outputs();
+    ++index_;
+    return Maybe<void>::Ok();
   }
 
   const TensorTuple& inputs() const { return *inputs_; }
@@ -171,7 +184,8 @@ class TensorProcessorPipe final {
  private:
   const TensorTuple* inputs_;
   TensorTuple* outputs_;
-  std::vector<TensorProcessorStorage> processors_;
+  int index_;
+  TensorProcessorStorage processors_[TPSize];
 };
 
 }  // namespace functional
