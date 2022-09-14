@@ -13,8 +13,8 @@ def _test_exponential(test_case, device, seed, lambd, dtype):
     torch.manual_seed(seed)
     flow.manual_seed(seed)
 
-    dim1 = random.randint(8, 8)
-    dim2 = random.randint(8, 8)
+    dim1 = random.randint(8, 64)
+    dim2 = random.randint(8, 64)
 
     torch_arr = torch.zeros(dim1, device=device, dtype=torch.float32 if dtype == "float" else torch.float64).exponential_(lambd=lambd, generator=None)
     oneflow_arr = flow.zeros(dim1, device=device, dtype=flow.float32 if dtype == "float" else flow.float64).exponential_(lambd=lambd, generator=None)
@@ -50,9 +50,8 @@ class TestExponential(flow.unittest.TestCase):
         arg_dict["seed"] = [0, 2, 4]
         arg_dict["lambd"] = [1, 0.5, 0.1]
         arg_dict["dtype"] = ["double", "float"]
-        for i in range(5):
-            for arg in GenArgList(arg_dict):
-                _test_exponential(test_case, *arg[0:])
+        for arg in GenArgList(arg_dict):
+            _test_exponential(test_case, *arg[0:])
 
 
 if __name__ == "__main__":
