@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/copy_nd.h"
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/embedding/embedding_manager.h"
-#include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
 
