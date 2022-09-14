@@ -270,7 +270,7 @@ mlir::DialectRegistry getRegistry() {
 
 }  // namespace
 
-class KernelLaunchState : public user_op::OpKernelState {
+class KernelLaunchState final : public user_op::OpKernelState {
  public:
   explicit KernelLaunchState(user_op::KernelInitContext* ctx) : mlir_ctx(getRegistry()) {
     // get raw module from ctx attr
@@ -288,6 +288,8 @@ class KernelLaunchState : public user_op::OpKernelState {
       exit(1);
     }
   };
+  ~KernelLaunchState() = default;
+
   mlir::MLIRContext* GetContext() { return &mlir_ctx; }
   mlir::ModuleOp GetModule() { return *module; }
   user_op::OpKernelCreateFn GetFn() { return fn; }
@@ -315,13 +317,14 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     // use ctx to create module, reg_ctx and fn;
-    auto res = std::make_shared<KernelLaunchState>(ctx);
+    std::shared_ptr<user_op::OpKernelState> res(new KernelLaunchState(ctx));
+    return res;
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto okl_state = dynamic_cast<KernelLaunchState*>(state);
+    auto* okl_state = dynamic_cast<KernelLaunchState*>(state);
     runJIT<TypeKernelLaunchArgs>(okl_state->GetModule(), ctx->op_name(),
                                  okl_state->GetKernelComputeContext(ctx), okl_state->GetFn()());
   }
