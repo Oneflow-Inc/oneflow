@@ -66,10 +66,11 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
   task_gph->TopoForEachNode(&TaskNode::Build);
   task_gph->RemoveEmptyRegsts();
+  task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
+  task_gph->DecideExecutionOrder();
   task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
   auto IsReachable = Singleton<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
   if (job_desc.enable_inplace()) { task_gph->EnableInplaceMemSharing(IsReachable); }
-  task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
 
   // Step3: put infomation from task_gph into plan.

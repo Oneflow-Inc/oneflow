@@ -13,12 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <memory>
 #include "oneflow/core/graph/straighten_nodes.h"
+#include "oneflow/core/common/shape.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/task.pb.h"
+#include "oneflow/core/register/runtime_register_desc.h"
 
 namespace oneflow {
 
@@ -39,6 +42,7 @@ class TopoStruct {
   bool on_mainstem = false;
   int32_t counter = 0;
   int32_t min_distance2transfer = -1;
+  int64_t memory_increment = -1;
   TopoStruct* next_same_node = nullptr;
   // We can have some other nodes in it for example
   // SbpNode<NdSbpSignature>* node;
@@ -55,14 +59,19 @@ class TopoStruct {
   // The minimum computation distance from the beginning of this op to the next transfer
   int32_t GetMinDistance2Transfer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
 
+  // Memory increment = (memory of out registers) - (memory of in registers)
+  void GetMeomoryIncrement();
+
   // deciding parameter
   // i = 0: those with small tributary layers go first
   // i = 1: those with small minimum distance to transfer go first
   // i = 2: first in first out
-  // i = 3: those with large tributary layers go first
-  // i = 4: those with long distance to transfer go first
-  // i = 5: last in first out
-  int32_t GetDecidingParameter(int32_t i) const;
+  // i = 3: those with small memory increment go first
+  // i = 4: those with large tributary layers go first
+  // i = 5: those with long distance to transfer go first
+  // i = 6: last in first out
+  // i = 7: those with large memory increment go first
+  int64_t GetDecidingParameter(int32_t i) const;
 };
 
 // move the head from source to target
@@ -198,23 +207,50 @@ int32_t TopoStruct::GetMinDistance2Transfer(HashMap<TaskNode*, TopoStruct>* task
   return min_distance2transfer;
 }
 
+// Memory increment = (memory of out registers) - (memory of in registers)
+void TopoStruct::GetMeomoryIncrement() {
+  if (memory_increment < 0) {
+    memory_increment = 0;
+    for (const auto& produced_register : node->produced_regsts()) {
+      if (produced_register.second->enable_reuse_mem()) {
+        RegstDescProto temp_proto;
+        produced_register.second->ToProto(&temp_proto);
+        memory_increment += RtRegstDesc(temp_proto).TotalMainByteSize4AllRegst();
+      }
+    }
+    for (const auto& consumed_register_list : node->consumed_regsts()) {
+      for (const auto& consumed_register : consumed_register_list.second) {
+        if (consumed_register->enable_reuse_mem()) {
+          RegstDescProto temp_proto;
+          consumed_register->ToProto(&temp_proto);
+          memory_increment -= RtRegstDesc(temp_proto).TotalMainByteSize4AllRegst()
+                              / consumed_register->consumers().size();
+        }
+      }
+    }
+  }
+}
+
 // deciding parameter
 // i = 0: those with small tributary layers go first
 // i = 1: those with small minimum distance to transfer go first
 // i = 2: first in first out
-// i = 3: those with large tributary layers go first
-// i = 4: those with long distance to transfer go first
-// i = 5: last in first out
-int32_t TopoStruct::GetDecidingParameter(int32_t i) const {
-  int32_t sign = 1;
-  if (i >= 3) {
-    i -= 3;
+// i = 3: those with small memory increment go first
+// i = 4: those with large tributary layers go first
+// i = 5: those with long distance to transfer go first
+// i = 6: last in first out
+// i = 7: those with large memory increment go first
+int64_t TopoStruct::GetDecidingParameter(int32_t i) const {
+  int64_t sign = 1;
+  if (i >= 4) {
+    i -= 4;
     sign = -1;
   }
   switch (i) {
     case 0: return sign * tributary_layer;
     case 1: return sign * min_distance2transfer;
     case 2: return sign * min_layer;
+    case 3: return sign * memory_increment;
   }
   return 0;
 }
@@ -264,6 +300,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   task_graph->TopoForEachNode([&](TaskNode* node) {
     auto& topo_struct = task_node2topo_struct[node];
     topo_struct.node = node;
+    topo_struct.GetMeomoryIncrement();
     if (node->in_edges().empty()) {
       topo_struct.min_layer = 0;
     } else {
@@ -330,14 +367,15 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   struct comp {
     bool operator()(const TopoStruct* a, const TopoStruct* b) const {
       // NOTE: Leave these code for debugging in the future
-      // static std::vector<int64_t> decide_parameters({ParseIntegerFromEnv("Parameter0", 5),
-      //                                                ParseIntegerFromEnv("Parameter1", 3),
-      //                                                ParseIntegerFromEnv("Parameter2", 5)});
-      // The best parameter set is {5, 3}
-      static std::vector<int64_t> decide_parameters({5, 3});
+      // static std::vector<int64_t> decide_parameters({ParseIntegerFromEnv("Parameter0", 3),
+      //                                                ParseIntegerFromEnv("Parameter1", 0),
+      //                                                ParseIntegerFromEnv("Parameter2", 3)});
+      // The best parameter set for saving time is {6, 4}
+      // The best parameter set for saving memory is {3, 0}
+      static std::vector<int64_t> decide_parameters({3, 0});
       for (int32_t decide_parameter : decide_parameters) {
-        int32_t decide_parameter_a = a->GetDecidingParameter(decide_parameter);
-        int32_t decide_parameter_b = b->GetDecidingParameter(decide_parameter);
+        int64_t decide_parameter_a = a->GetDecidingParameter(decide_parameter);
+        int64_t decide_parameter_b = b->GetDecidingParameter(decide_parameter);
         if (decide_parameter_a != decide_parameter_b) {
           return decide_parameter_a < decide_parameter_b;
         }

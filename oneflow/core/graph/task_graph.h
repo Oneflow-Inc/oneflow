@@ -48,6 +48,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
   void MergeChainAndAddOrderingCtrlEdgeInSameChain();
+  void DecideExecutionOrder();
 
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
                                    IsOpNameDataOrCtrlReachable);
@@ -123,6 +124,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   };
 
   HashMap<ProxyKey, TaskNode*, ProxyKey::Hasher> proxy2node;
+  bool enable_straighten_algorithm_;
 };
 
 }  // namespace oneflow
