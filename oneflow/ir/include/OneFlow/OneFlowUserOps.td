@@ -5723,7 +5723,7 @@ def OneFlow_GroupNormOp : OneFlow_BaseOp<"group_norm", [NoSideEffect, AttrSizedO
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_GroupNormGradOp : OneFlow_BaseOp<"group_norm_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_GroupNormGradOp : OneFlow_BaseOp<"group_norm_grad", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
     OneFlow_Tensor:$x,
@@ -5747,7 +5747,7 @@ def OneFlow_GroupNormGradOp : OneFlow_BaseOp<"group_norm_grad", [NoSideEffect, D
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_GroupNormParamGradOp : OneFlow_BaseOp<"group_norm_param_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_GroupNormParamGradOp : OneFlow_BaseOp<"group_norm_param_grad", [NoSideEffect, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
     OneFlow_Tensor:$x,
@@ -5759,7 +5759,7 @@ def OneFlow_GroupNormParamGradOp : OneFlow_BaseOp<"group_norm_param_grad", [NoSi
     OneFlow_Tensor:$dbeta
   );
   let trait_attrs = (ins
-    I32ElementsAttr:$operand_segment_sizes
+    I32ElementsAttr:$result_segment_sizes
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
