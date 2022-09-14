@@ -273,6 +273,7 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
 
 Maybe<void> NNGraph::CompileAndInitRuntime() {
   CHECK_OR_RETURN(!runtime_inited_);
+  auto compile_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true);
   auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
   tc->Count("Graph name: " + name_ + " RegisterFreeEagerTensorsToVariableOpNames", 1);
@@ -451,8 +452,9 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
   // Start graph runtime.
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));
-  tc->Count("Graph name: " + name_ + " Runtime Init", 1);
+  tc->Count("Graph name: " + name_ + " RuntimeInit", 1);
   runtime_inited_ = true;
+  compile_tc->Count("Graph name: " + name_ + " TotalCompileAndInit", 1);
   return Maybe<void>::Ok();
 }
 
