@@ -33,7 +33,7 @@ thread_local bool cache_enabled = true;
 }  // namespace
 
 bool is_enabled() { return autocast_enabled; }
-void set_enabled(bool enabled) { autocast_enabled = true; }
+void set_enabled(bool enabled) { autocast_enabled = enabled; }
 
 DeviceType get_autocast_device_type() { return autocast_device_type; }
 void set_autocast_device_type(DeviceType device_type) { autocast_device_type = device_type; }
