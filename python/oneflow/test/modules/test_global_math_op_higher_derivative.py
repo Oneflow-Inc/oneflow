@@ -21,9 +21,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-def _global_math_op_grad_grad_impl(
-    test_case, op_name, placement, sbp, atol=1e-4, rtol=1e-4
-):
+def _global_math_op_grad_grad_impl(test_case, op_name, placement, sbp):
     x = (
         random_tensor(2, dim0=8, dim1=8, low=-2, high=2)
         .to_global(placement=placement, sbp=sbp)
@@ -37,8 +35,8 @@ def _global_math_op_grad_grad_impl(
         np.allclose(
             x_grad.pytorch.detach().cpu().numpy(),
             x_grad.oneflow.detach().numpy(),
-            atol=atol,
-            rtol=rtol,
+            atol=1e-4,
+            rtol=1e-4,
             equal_nan=True,
         )
     )
@@ -48,8 +46,8 @@ def _global_math_op_grad_grad_impl(
         np.allclose(
             x_grad_grad.pytorch.detach().cpu().numpy(),
             x_grad_grad.oneflow.detach().numpy(),
-            atol=atol,
-            rtol=rtol,
+            atol=1e-4,
+            rtol=1e-4,
             equal_nan=True,
         )
     )
@@ -60,8 +58,8 @@ def _global_math_op_grad_grad_impl(
         np.allclose(
             dgrad.pytorch.detach().cpu().numpy(),
             dgrad.oneflow.detach().numpy(),
-            atol=atol,
-            rtol=rtol,
+            atol=1e-4,
+            rtol=1e-4,
             equal_nan=True,
         )
     )
@@ -138,9 +136,7 @@ class TestGlobalMathOpHigherDerivative(flow.unittest.TestCase):
     def test_global_atanh_grad_grad(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
-                _global_math_op_grad_grad_impl(
-                    test_case, "atanh", placement, sbp, atol=1e-3, rtol=1e-3
-                )
+                _global_math_op_grad_grad_impl(test_case, "atanh", placement, sbp)
 
     @globaltest
     def test_global_erf_grad_grad(test_case):
