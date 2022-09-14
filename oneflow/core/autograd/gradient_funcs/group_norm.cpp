@@ -87,10 +87,10 @@ Maybe<void> GroupNorm::Apply(const GroupNormCaptureState* ctx, const TensorTuple
   } else {
     in_grads->resize(1);
   }
-  std::shared_ptr<Tensor> dy = out_grads.at(0);
-  std::shared_ptr<Tensor> x = saved_tensors.at(ctx->x_index);
-  std::shared_ptr<Tensor> mean = saved_tensors.at(ctx->mean_index);
-  std::shared_ptr<Tensor> inv_variance = saved_tensors.at(ctx->inv_variance_index);
+  const auto& dy = out_grads.at(0);
+  const auto& x = saved_tensors.at(ctx->x_index);
+  const auto& mean = saved_tensors.at(ctx->mean_index);
+  const auto& inv_variance = saved_tensors.at(ctx->inv_variance_index);
 
   if (ctx->affine) {
     const auto& results = JUST(functional::GroupNormParamGrad(dy, x, mean, inv_variance));
