@@ -94,5 +94,6 @@ class TestSyncBatchNorm(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(torch_out, of_res.numpy(), atol=1e-8))
         test_case.assertTrue(np.allclose(torch_grad, of_input.grad.numpy(), atol=1e-8,))
 
+
 if __name__ == "__main__":
     unittest.main()
