@@ -3754,116 +3754,49 @@ class OneEmbeddingFtrlUpdateFunctor {
 class DeformConv2dFunctor {
  public:
   DeformConv2dFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder(" deform_conv2d")
-                         .Input("input")
-                         .Input("weight")
-                         .Input("offset")
-                         .Output("out")
-                         .Build());
+    bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
+    deformconv2d_op_ = CHECK_JUST(one::OpBuilder("deform_conv2d")
+                                      .Input("input")
+                                      .Input("weight")
+                                      .Input("offset")
+                                      .Input("mask")
+                                      .Output("output")
+                                      .Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& weight,
                            const std::shared_ptr<one::Tensor>& offset,
-                           const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
-                           const std::vector<int32_t>& padding, const int32_t& groups,
-                           const std::vector<int32_t>& dilation,
-                           const int32_t& deformable_groups) const {
+                           const std::shared_ptr<one::Tensor>& mask,
+                           const Optional<one::Tensor>& bias, const int32_t& stride_h,
+                           const int32_t& stride_w, const int32_t& pad_h, const int32_t& pad_w,
+                           const int32_t& dilation_h, const int32_t& dilation_w,
+                           const int32_t& groups, const int32_t& offset_groups,
+                           const bool& use_mask) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("kW", weight->shape()->at(3)));
-    JUST(attrs.SetAttr<int32_t>("kH", weight->shape()->at(2)));
-    JUST(attrs.SetAttr<int32_t>("dW", stride[0]));
-    JUST(attrs.SetAttr<int32_t>("dH", stride[0]));
-    JUST(attrs.SetAttr<int32_t>("padW", padding[0]));
-    JUST(attrs.SetAttr<int32_t>("padH", padding[0]));
-    JUST(attrs.SetAttr<int32_t>("dilationW", dilation[0]));
-    JUST(attrs.SetAttr<int32_t>("dilationH", dilation[0]));
-    JUST(attrs.SetAttr<int32_t>("group", groups));
-    JUST(attrs.SetAttr<int32_t>("deformable_group", deformable_groups));
+    JUST(attrs.SetAttr<int32_t>("stride_h", stride_h));
+    JUST(attrs.SetAttr<int32_t>("stride_w", stride_w));
+    JUST(attrs.SetAttr<int32_t>("pad_h", pad_h));
+    JUST(attrs.SetAttr<int32_t>("pad_w", pad_w));
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, weight, offset}, attrs);
+    JUST(attrs.SetAttr<int32_t>("dilation_h", dilation_h));
+    JUST(attrs.SetAttr<int32_t>("dilation_w", dilation_w));
+    JUST(attrs.SetAttr<int32_t>("groups", groups));
+    JUST(attrs.SetAttr<int32_t>("offset_groups", offset_groups));
+    JUST(attrs.SetAttr<bool>("use_mask", use_mask));
+    const std::shared_ptr<one::Tensor>& deformconv2d_out = JUST(
+        OpInterpUtil::Dispatch<Tensor>(*deformconv2d_op_, {input, weight, offset, mask}, attrs));
+    if (bias) {
+      MutableAttrMap bias_attrs;
+      JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
+      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {deformconv2d_out, JUST(bias)}, bias_attrs);
+    }
+    return deformconv2d_out;
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class DeformConv2dInputGradFunctor {
- public:
-  DeformConv2dInputGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("deform_conv2d_input_grad")
-                         .Input("output_grad")
-                         .Input("input")
-                         .Input("weight")
-                         .Input("offset")
-                         .Output("input_grad")
-                         .Output("offset_grad")
-                         .Build());
-  }
-
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& output_grad,
-                           const std::shared_ptr<one::Tensor>& input,
-                           const std::shared_ptr<one::Tensor>& weight,
-                           const std::shared_ptr<one::Tensor>& offset,
-                           const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
-                           const std::vector<int32_t>& padding, const int32_t& groups,
-                           const std::vector<int32_t>& dilation,
-                           const int32_t& deformable_groups) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("kW", weight->shape()->at(3)));
-    JUST(attrs.SetAttr<int32_t>("kH", weight->shape()->at(2)));
-    JUST(attrs.SetAttr<int32_t>("dW", stride[0]));
-    JUST(attrs.SetAttr<int32_t>("dH", stride[0]));
-    JUST(attrs.SetAttr<int32_t>("padW", padding[0]));
-    JUST(attrs.SetAttr<int32_t>("padH", padding[0]));
-    JUST(attrs.SetAttr<int32_t>("dilationW", dilation[0]));
-    JUST(attrs.SetAttr<int32_t>("dilationH", dilation[0]));
-    JUST(attrs.SetAttr<int32_t>("group", groups));
-    JUST(attrs.SetAttr<int32_t>("deformable_group", deformable_groups));
-
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, weight, offset}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class DeformConv2dParamGradFunctor {
- public:
-  DeformConv2dParamGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("deform_conv2d_input_grad")
-                         .Input("output_grad")
-                         .Input("input")
-                         .Input("offset")
-                         .Output("weight_grad")
-                         .Build());
-  }
-
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& output_grad,
-                           const std::shared_ptr<one::Tensor>& input,
-                           const std::shared_ptr<one::Tensor>& weight,
-                           const std::shared_ptr<one::Tensor>& offset,
-                           const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
-                           const std::vector<int32_t>& padding, const int32_t& groups,
-                           const std::vector<int32_t>& dilation,
-                           const int32_t& deformable_groups) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("kW", weight->shape()->at(3)));
-    JUST(attrs.SetAttr<int32_t>("kH", weight->shape()->at(2)));
-    JUST(attrs.SetAttr<int32_t>("dW", stride[0]));
-    JUST(attrs.SetAttr<int32_t>("dH", stride[0]));
-    JUST(attrs.SetAttr<int32_t>("padW", padding[0]));
-    JUST(attrs.SetAttr<int32_t>("padH", padding[0]));
-    JUST(attrs.SetAttr<int32_t>("dilationW", dilation[0]));
-    JUST(attrs.SetAttr<int32_t>("dilationH", dilation[0]));
-    JUST(attrs.SetAttr<int32_t>("group", groups));
-    JUST(attrs.SetAttr<int32_t>("deformable_group", deformable_groups));
-
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, output_grad, offset}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> deformconv2d_op_;
+  std::shared_ptr<OpExpr> bias_op_;
 };
 
 class RocAucScoreFunctor {
@@ -4099,8 +4032,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MultiTensorSgdUpdateFunctor>("MultiTensorSgdUpdate");
   m.add_functor<impl::MultiTensorAdamUpdateFunctor>("MultiTensorAdamUpdate");
   m.add_functor<impl::DeformConv2dFunctor>("DeformConv2d");
-  m.add_functor<impl::DeformConv2dInputGradFunctor>("DeformConv2dInputGrad");
-  m.add_functor<impl::DeformConv2dParamGradFunctor>("DeformConv2dParamGrad");
 }
 
 }  // namespace functional

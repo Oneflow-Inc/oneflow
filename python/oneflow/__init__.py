@@ -188,6 +188,7 @@ from oneflow._C import vsplit
 from oneflow._C import concat
 from oneflow._C import concat as cat
 from oneflow._C import dim_gather as gather
+from oneflow._C import deform_conv2d
 from oneflow._C import gather_nd
 from oneflow._C import roi_align
 from oneflow._C import decode_onerec

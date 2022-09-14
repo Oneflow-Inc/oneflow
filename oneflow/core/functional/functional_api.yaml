@@ -2565,25 +2565,31 @@
   signature: "Tensor (Tensor x, Tensor dydx, Double alpha) => EluGradGrad"  
   bind_python: False
 
+
+- name: "deform_conv2d"
+  signature:
+    "Tensor (Tensor input,Tensor weight,Tensor offset,Tensor mask,Tensor bias=None, Int32 stride_h,Int32 stride_w,Int32 pad_h,
+    Int32 pad_w,Int32 dilation_h,Int32 dilation_w,Int32 groups,Int32 offset_groups,Bool use_mask) => DeformConv2d"
+  bind_python: True
+
+
+- name: "deform_conv2d_input_grad"
+  signature:
+    "TensorTuple (Tensor output_grad,Tensor input,Tensor weight,Tensor offset,Tensor mask=None, Int32 stride_h,Int32 stride_w,Int32 pad_h,
+    Int32 pad_w,Int32 dilation_h,Int32 dilation_w,Int32 groups,Int32 offset_groups,Bool use_mask) => DeformConv2dInputGrad"
+  bind_python: False
+
+- name: "deform_conv2d_param_grad"
+  signature:
+    "Tensor (Tensor output_grad,Tensor input,Tensor weight,Tensor offset,Tensor mask, Int32 stride_h,Int32 stride_w,Int32 pad_h,
+    Int32 pad_w,Int32 dilation_h,Int32 dilation_w,Int32 groups,Int32 offset_groups,Bool use_mask) => DeformConv2dParamGrad"
+  bind_python: False
+
+
 - name: "celu_grad_grad"
   signature: "Tensor (Tensor x, Tensor dydx, Double alpha) => CeluGradGrad"  
   bind_python: False
 
 
-- name: "deform_conv2d"
-  signature:
-    "Tensor (Tensor input, Tensor offset,Tensor weight, Int32List[1] stride=1,
-    Int32List[1] padding=0, Int32List[1] dilation=1, Int32 groups=1,Int32 derormable_groups=1) => Deformconv2d"
-  bind_python: True
 
-- name: "deform_conv2d_input_grad"
-  signature:
-    "Tensor (Tensor output_grad,Tensor input, Tensor offset,Tensor weight, Int32List[1] stride=1,
-    Int32List[1] padding=0, Int32List[1] dilation=1, Int32 groups=1,Int32 derormable_groups=1) => Deformconv2dInputGrad"
-  bind_python: False
 
-- name: "deform_conv2d_param_grad"
-  signature:
-    "Tensor (Tensor input, Tensor offset,Tensor output_grad, Int32List[1] stride=1,
-    Int32List[1] padding=0, Int32List[1] dilation=1, Int32 groups=1,Int32 derormable_groups=1) => Deformconv2dParamGrad"
-  bind_python: False 

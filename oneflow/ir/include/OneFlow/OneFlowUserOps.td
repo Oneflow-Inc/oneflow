@@ -10227,8 +10227,10 @@ def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpI
 def OneFlow_DeformConv2dOp : OneFlow_BaseOp<"deform_conv2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$input,
+    OneFlow_Tensor:$offset,
     OneFlow_Tensor:$weight,
-    OneFlow_Tensor:$offset
+    Optional<OneFlow_Tensor>:$bias,
+    OneFlow_Tensor:$mask
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -10236,16 +10238,15 @@ def OneFlow_DeformConv2dOp : OneFlow_BaseOp<"deform_conv2d", [NoSideEffect, Decl
 
 
   let attrs = (ins
-    DefaultValuedAttr<SI32Attr, "0">:$kW,
-    DefaultValuedAttr<SI32Attr, "0">:$kH,
-    DefaultValuedAttr<SI32Attr, "0">:$dW,
-    DefaultValuedAttr<SI32Attr, "0">:$dH,
-    DefaultValuedAttr<SI32Attr, "0">:$padW,
-    DefaultValuedAttr<SI32Attr, "0">:$padH,
-    DefaultValuedAttr<SI32Attr, "0">:$dilationW,
-    DefaultValuedAttr<SI32Attr, "0">:$dilationH,
-    DefaultValuedAttr<SI32Attr, "0">:$group,
-    DefaultValuedAttr<SI32Attr, "0">:$deformable_group    
+    DefaultValuedAttr<SI32Attr, "0">:$stride_h,
+    DefaultValuedAttr<SI32Attr, "0">:$stride_w,
+    DefaultValuedAttr<SI32Attr, "0">:$pad_h,
+    DefaultValuedAttr<SI32Attr, "0">:$pad_w,
+    DefaultValuedAttr<SI32Attr, "0">:$dilation_h,
+    DefaultValuedAttr<SI32Attr, "0">:$dilation_w,
+    DefaultValuedAttr<SI32Attr, "0">:$groups,
+    DefaultValuedAttr<SI32Attr, "0">:$offset_groups,
+    DefaultValuedAttr<BoolAttr, "false">:$use_mask
   );
 
   let has_logical_tensor_desc_infer_fn = 1;
@@ -10255,32 +10256,32 @@ def OneFlow_DeformConv2dOp : OneFlow_BaseOp<"deform_conv2d", [NoSideEffect, Decl
   let has_check_fn=1;
 }
 
-def OneFlow_DeformConv2dInputGradOp : OneFlow_BaseOp<"deform_conv2d_input_grap", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_DeformConv2dInputGradOp : OneFlow_BaseOp<"deform_conv2d_input_grad", [NoSideEffect,
+DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$output_grad,
     OneFlow_Tensor:$input,
+    OneFlow_Tensor:$offset,
     OneFlow_Tensor:$weight,
-    OneFlow_Tensor:$offset
+    OneFlow_Tensor:$mask
   );
   let output = (outs
     OneFlow_Tensor:$input_grad,
-    OneFlow_Tensor:$offset_grad
+    //OneFlow_Tensor:$weight_grad,
+    OneFlow_Tensor:$offset_grad,
+    OneFlow_Tensor:$mask_grad
   );
 
-
   let attrs = (ins
-    DefaultValuedAttr<SI32Attr, "0">:$kW,
-    DefaultValuedAttr<SI32Attr, "0">:$kH,
-    DefaultValuedAttr<SI32Attr, "0">:$dW,
-    DefaultValuedAttr<SI32Attr, "0">:$dH,
-    DefaultValuedAttr<SI32Attr, "0">:$padW,
-    DefaultValuedAttr<SI32Attr, "0">:$padH,
-    DefaultValuedAttr<SI32Attr, "0">:$dilationW,
-    DefaultValuedAttr<SI32Attr, "0">:$dilationH,
-    DefaultValuedAttr<SI32Attr, "0">:$group,
-    DefaultValuedAttr<SI32Attr, "0">:$deformable_group
-
-
+    DefaultValuedAttr<SI32Attr, "0">:$stride_h,
+    DefaultValuedAttr<SI32Attr, "0">:$stride_w,
+    DefaultValuedAttr<SI32Attr, "0">:$pad_h,
+    DefaultValuedAttr<SI32Attr, "0">:$pad_w,
+    DefaultValuedAttr<SI32Attr, "0">:$dilation_h,
+    DefaultValuedAttr<SI32Attr, "0">:$dilation_w,
+    DefaultValuedAttr<SI32Attr, "0">:$groups,
+    DefaultValuedAttr<SI32Attr, "0">:$offset_groups,
+    DefaultValuedAttr<BoolAttr, "false">:$use_mask
   );
 
   let has_logical_tensor_desc_infer_fn = 1;
@@ -10289,30 +10290,29 @@ def OneFlow_DeformConv2dInputGradOp : OneFlow_BaseOp<"deform_conv2d_input_grap",
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_DeformConv2dParamGradOp : OneFlow_BaseOp<"deform_conv2d_param_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_DeformConv2dParamGradOp : OneFlow_BaseOp<"deform_conv2d_param_grad", [NoSideEffect,
+DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$output_grad,
     OneFlow_Tensor:$input,
-    OneFlow_Tensor:$offset
+    OneFlow_Tensor:$offset,
+    OneFlow_Tensor:$weight,
+    OneFlow_Tensor:$mask
   );
   let output = (outs
     OneFlow_Tensor:$weight_grad
   );
 
-
   let attrs = (ins
-    DefaultValuedAttr<SI32Attr, "0">:$kW,
-    DefaultValuedAttr<SI32Attr, "0">:$kH,
-    DefaultValuedAttr<SI32Attr, "0">:$dW,
-    DefaultValuedAttr<SI32Attr, "0">:$dH,
-    DefaultValuedAttr<SI32Attr, "0">:$padW,
-    DefaultValuedAttr<SI32Attr, "0">:$padH,
-    DefaultValuedAttr<SI32Attr, "0">:$dilationW,
-    DefaultValuedAttr<SI32Attr, "0">:$dilationH,
-    DefaultValuedAttr<SI32Attr, "0">:$group,
-    DefaultValuedAttr<SI32Attr, "0">:$deformable_group
-
-
+    DefaultValuedAttr<SI32Attr, "0">:$stride_h,
+    DefaultValuedAttr<SI32Attr, "0">:$stride_w,
+    DefaultValuedAttr<SI32Attr, "0">:$pad_h,
+    DefaultValuedAttr<SI32Attr, "0">:$pad_w,
+    DefaultValuedAttr<SI32Attr, "0">:$dilation_h,
+    DefaultValuedAttr<SI32Attr, "0">:$dilation_w,
+    DefaultValuedAttr<SI32Attr, "0">:$groups,
+    DefaultValuedAttr<SI32Attr, "0">:$offset_groups,
+    DefaultValuedAttr<BoolAttr, "false">:$use_mask
   );
 
   let has_logical_tensor_desc_infer_fn = 1;
