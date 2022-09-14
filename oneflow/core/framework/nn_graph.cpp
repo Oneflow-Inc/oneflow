@@ -449,12 +449,13 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   auto* vm = JUST(SingletonMaybe<VirtualMachine>());
   JUST(vm->ShrinkAllMem());
   tc->Count("Graph name: " + name_ + " VM::ShrinkAllMem", 1);
+  compile_tc->Count("Graph name: " + name_ + " TotalCompileAndInit", 1);
+  CHECK_OR_RETURN(false);
 
   // Start graph runtime.
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));
   tc->Count("Graph name: " + name_ + " RuntimeInit", 1);
   runtime_inited_ = true;
-  compile_tc->Count("Graph name: " + name_ + " TotalCompileAndInit", 1);
   return Maybe<void>::Ok();
 }
 
