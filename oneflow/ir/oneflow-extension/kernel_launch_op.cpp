@@ -275,22 +275,21 @@ class KernelLaunchState : public user_op::OpKernelState {
   explicit KernelLaunchState(user_op::KernelInitContext* ctx) : mlir_ctx(getRegistry()) {
     // get raw module from ctx attr
     module =
-        mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx)
-            .get();
+        mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
     // reg_ctx is needed
-    reg_ctx = std::make_unique<KernelLaunchOpKernelRegContext>(module);
+    reg_ctx = std::make_unique<KernelLaunchOpKernelRegContext>(*module);
     // get constructor of kernel
     fn = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
                         reg_ctx->GetOp()->getName().stripDialect().str(), *reg_ctx))
              ->create_fn;
     // use okl2llvm pass to get llvm ir module
-    if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(module))) {
+    if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(*module))) {
       LOG(ERROR) << "Fail lowering kernel launch Module to llvm ir";
       exit(1);
     }
   };
   mlir::MLIRContext* GetContext() { return &mlir_ctx; }
-  mlir::ModuleOp GetModule() { return module; }
+  mlir::ModuleOp GetModule() { return *module; }
   user_op::OpKernelCreateFn GetFn() { return fn; }
   user_op::KernelComputeContext* GetKernelComputeContext(user_op::KernelComputeContext* ctx) {
     if (reg_ctx) {
@@ -302,7 +301,7 @@ class KernelLaunchState : public user_op::OpKernelState {
 
  private:
   mlir::MLIRContext mlir_ctx;
-  mlir::ModuleOp module;
+  mlir::OwningOpRef<mlir::ModuleOp> module;
   std::unique_ptr<KernelLaunchOpKernelRegContext> reg_ctx;
   std::shared_ptr<KernelLaunchComputeContext> okl_ctx;
   user_op::OpKernelCreateFn fn;
