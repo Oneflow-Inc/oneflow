@@ -15,7 +15,9 @@ limitations under the License.
 """
 import oneflow as flow
 
-ONEREC_URL = "https://oneflow-public.oss-cn-beijing.aliyuncs.com/sync_bn_test_datas.tar.gz"
+ONEREC_URL = (
+    "https://oneflow-public.oss-cn-beijing.aliyuncs.com/sync_bn_test_datas.tar.gz"
+)
 MD5 = "537ff00fb47be8be90df75f47a883b76"
 
 
@@ -68,10 +70,15 @@ def ensure_datas():
         assert MD5 == md5(absolute_file_path)
 
         import tarfile
+
         my_tar = tarfile.open(str(absolute_file_path))
-        my_tar.extractall(data_dir) # specify which folder to extract to
+        my_tar.extractall(data_dir)  # specify which folder to extract to
         my_tar.close()
-    
+
     flow.comm.barrier()
 
-    return os.path.join(os.getenv("ONEFLOW_TEST_CACHE_DIR", "./data-test"), "sync_bn", "sync_bn_test_datas")
+    return os.path.join(
+        os.getenv("ONEFLOW_TEST_CACHE_DIR", "./data-test"),
+        "sync_bn",
+        "sync_bn_test_datas",
+    )
