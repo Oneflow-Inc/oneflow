@@ -193,6 +193,7 @@ UNARY_METHOD(PyTensorObject_selu, functional::Selu);
 UNARY_METHOD(PyTensorObject_softsign, functional::SoftSign);
 UNARY_METHOD(PyTensorObject_log1p, functional::Log1p);
 UNARY_METHOD(PyTensorObject_log2, functional::Log2);
+UNARY_METHOD(PyTensorObject_log10, functional::Log10);
 UNARY_METHOD(PyTensorObject_reciprocal, functional::Reciprocal);
 UNARY_METHOD(PyTensorObject_ceil, functional::Ceil);
 UNARY_METHOD(PyTensorObject_erf, functional::Erf);
@@ -575,6 +576,7 @@ REDUCE_FUNC(PyTensorObject_mean, functional::reduce_mean, functional::ReduceMean
     END_HANDLE_ERRORS                                                      \
   }
 
+DATATYPE_FUNC(PyTensorObject_bool, DType::Bool());
 DATATYPE_FUNC(PyTensorObject_int, DType::Int32());
 DATATYPE_FUNC(PyTensorObject_long, DType::Int64());
 DATATYPE_FUNC(PyTensorObject_half, DType::Float16());
@@ -831,6 +833,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"addcdiv", (PyCFunction)PyTensorObject_addcdiv, METH_VARARGS | METH_KEYWORDS, NULL},
     {"addcdiv_", (PyCFunction)PyTensorObject_addcdiv_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"matmul", (PyCFunction)PyTensorObject_matmul, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bool", PyTensorObject_bool, METH_NOARGS, NULL},
     {"int", PyTensorObject_int, METH_NOARGS, NULL},
     {"long", PyTensorObject_long, METH_NOARGS, NULL},
     {"half", PyTensorObject_half, METH_NOARGS, NULL},
@@ -931,6 +934,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"softsign", PyTensorObject_softsign, METH_NOARGS, NULL},
     {"log1p", PyTensorObject_log1p, METH_NOARGS, NULL},
     {"log2", PyTensorObject_log2, METH_NOARGS, NULL},
+    {"log10", PyTensorObject_log10, METH_NOARGS, NULL},
     {"reciprocal", PyTensorObject_reciprocal, METH_NOARGS, NULL},
     {"asin", PyTensorObject_asin, METH_NOARGS, NULL},
     {"arcsin", PyTensorObject_asin, METH_NOARGS, NULL},
