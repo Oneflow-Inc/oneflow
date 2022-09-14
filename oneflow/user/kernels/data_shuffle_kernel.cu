@@ -92,7 +92,7 @@ __global__ void HashTableUniqueAndPartitionPairs(
           if (counter >= table_capacity) { __trap(); }
         }
       }
-    reverse_index[i] = partition_id * num_keys + r_index_plus_one - 1;
+      reverse_index[i] = partition_id * num_keys + r_index_plus_one - 1;
     }
   }
 }
@@ -355,11 +355,6 @@ __global__ void ContiguousInverseUniquePartitionIndices(const int32_t num_ids, I
     int new_offset = indices_offset[partition_id];
     inverse_ptr[i] = new_offset + partition_indice;
   }
-}
-
-template<>
-__device__ __forceinline__ bool IsZero<half2>(half2 v) {
-  return v.x == static_cast<half>(0) && v.y == static_cast<half>(0);
 }
 
 }  // namespace
