@@ -78,9 +78,6 @@ void PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan) {
       if (regst_separated_size > 0) {
         int64_t separated_mem_block_id = Singleton<IDMgr>::Get()->NewMemBlockId();
         regst_desc->set_separated_header_mem_block_id(separated_mem_block_id);
-        LOG(INFO) << "set sep id, regst: " << regst_desc->regst_desc_id()
-                  << " , sep : " << separated_mem_block_id
-                  << " , debug: " << regst_desc->DebugString();
       }
     }
   }
