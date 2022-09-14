@@ -27,7 +27,7 @@ def _test_cumprod_impl(test_case, ndim, placement, sbp):
     x = random_tensor(ndim, *dims)
     y = x.to_global(placement=placement, sbp=sbp)
     dim = random(0, ndim).to(int).value()
-    z = torch.cumprod(y, dim)
+    z = torch.cumprod(x, dim)
     return z
 
 
