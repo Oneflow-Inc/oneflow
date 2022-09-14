@@ -188,7 +188,6 @@ Maybe<void> AutoMixedPrecision::Apply(Job* job, JobPassCtx* ctx) const {
   if (!ctx->job_desc().enable_auto_mixed_precision()) { return Maybe<void>::Ok(); }
   const OpGraph op_graph(*job);
   JobBuilder job_builder(job);
-  CHECK_GE(CUDA_VERSION, 10000);
   CHECK(GlobalJobDesc().DefaultDataType() == DataType::kFloat);
 
   VerifyAMPList(white_list_);
@@ -311,7 +310,7 @@ void AutoMixedPrecision::InsertCastOp(const OpGraph& op_graph, const HashSet<OpN
   InsertCastOpImpl(false, op_graph, white_set, mixed_precision_data_type, job_builder);
 }
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) && defined(CUDA_VERSION) && CUDA_VERSION >= 1000
 REGISTER_JOB_PASS("AutoMixedPrecision", AutoMixedPrecision);
 #endif  // WITH_CUDA
 

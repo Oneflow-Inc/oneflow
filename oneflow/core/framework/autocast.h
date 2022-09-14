@@ -27,8 +27,18 @@ void set_enabled(bool enabled);
 
 DeviceType get_autocast_device_type();
 void set_autocast_device_type(DeviceType device_type);
+
 Symbol<DType> get_autocast_dtype();
+Symbol<DType> get_autocast_cpu_dtype();
+Symbol<DType> get_autocast_gpu_dtype();
+
 void set_autocast_dtype(Symbol<DType> dtype);
+void set_autocast_cpu_dtype(Symbol<DType> dtype);
+void set_autocast_gpu_dtype(Symbol<DType> dtype);
+
+bool is_autocast_cache_enabled();
+void set_autocast_cache_enabled(bool enabled);
+void clear_cache();
 
 enum AutoCastColor { kWhite, kGray, kClear, kBlack };
 

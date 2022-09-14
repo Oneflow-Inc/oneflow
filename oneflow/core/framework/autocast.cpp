@@ -23,16 +23,34 @@ namespace autocast {
 
 namespace {
 thread_local bool autocast_enabled = false;
-thread_local DeviceType autocast_device_type = kCPU;
+thread_local DeviceType autocast_device_type = kCUDA;
 thread_local Symbol<DType> autocast_dtype = DType::Float16();
+
+thread_local Symbol<DType> autocast_cpu_dtype = DType::BFloat16();
+thread_local Symbol<DType> autocast_gpu_dtype = DType::Float16();
+
+thread_local bool cache_enabled = true;
 }  // namespace
 
 bool is_enabled() { return autocast_enabled; }
 void set_enabled(bool enabled) { autocast_enabled = true; }
+
 DeviceType get_autocast_device_type() { return autocast_device_type; }
 void set_autocast_device_type(DeviceType device_type) { autocast_device_type = device_type; }
+
 Symbol<DType> get_autocast_dtype() { return autocast_dtype; }
+Symbol<DType> get_autocast_cpu_dtype() { return autocast_cpu_dtype; }
+Symbol<DType> get_autocast_gpu_dtype() { return autocast_gpu_dtype; }
+
 void set_autocast_dtype(Symbol<DType> dtype) { autocast_dtype = dtype; }
+void set_autocast_cpu_dtype(Symbol<DType> dtype) { autocast_cpu_dtype = dtype; }
+void set_autocast_gpu_dtype(Symbol<DType> dtype) { autocast_gpu_dtype = dtype; }
+
+bool is_autocast_cache_enabled() { return cache_enabled; }
+void set_autocast_cache_enabled(bool enabled) { cache_enabled = enabled; }
+void clear_cache() {
+  // TODO(hjchen2)
+}
 
 AutoCastColor AutoCastMeta::autocast_color() const { return autocast_color_; }
 
