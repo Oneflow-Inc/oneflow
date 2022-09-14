@@ -15,155 +15,95 @@ limitations under the License.
 """
 import os
 import unittest
-import datetime
 import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
-
-import torch
-
+from download_datas import ensure_datas
 
 @flow.unittest.skip_unless_1n2d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestSyncBatchNorm(flow.unittest.TestCase):
     def test_sync_batchnorm3d(test_case):
+        data_path = ensure_datas()
         os.environ["ONEFLOW_ENABLE_NHWC"] = "0"
         channel = 8
-        torch.distributed.init_process_group(
-            backend="gloo",
-            group_name="test_sync_batchnorm3d",
-            timeout=datetime.timedelta(seconds=3600),
-        )
-
-        torch_input = torch.rand(
-            32,
-            channel,
-            32,
-            32,
-            32,
-            requires_grad=True,
-            dtype=torch.float32,
-            device=f"cuda:{torch.distributed.get_rank()}",
-        )
-        torch_bn = torch.nn.BatchNorm3d(channel)
-        torch_bn = torch.nn.SyncBatchNorm.convert_sync_batchnorm(torch_bn).cuda(
-            torch.distributed.get_rank()
-        )
-        torch_res = torch_bn(torch_input)
+        input_np = np.load(f"{data_path}/sync_bn3d_nchw_input_rank{flow.env.get_rank()}.npy")
+        torch_out = np.load(f"{data_path}/sync_bn3d_nchw_torch_output_rank{flow.env.get_rank()}.npy")
+        torch_grad = np.load(f"{data_path}/sync_bn3d_nchw_torch_grad_rank{flow.env.get_rank()}.npy")
 
         of_input = flow.tensor(
-            torch_input.detach().cpu().numpy(), requires_grad=True, device="cuda"
+            input_np, requires_grad=True, device="cuda"
         )
         of_bn = flow.nn.BatchNorm3d(channel)
         of_bn = flow.nn.SyncBatchNorm.convert_sync_batchnorm(of_bn).cuda()
         of_res = of_bn(of_input)
-
         of_res.sum().backward()
-        torch_res.sum().backward()
 
         test_case.assertTrue(
-            np.allclose(torch_res.detach().cpu().numpy(), of_res.numpy(), atol=1e-8)
+            np.allclose(torch_out, of_res.numpy(), atol=1e-8)
         )
         test_case.assertTrue(
             np.allclose(
-                torch_input.grad.detach().cpu().numpy(),
+                torch_grad,
                 of_input.grad.numpy(),
                 atol=1e-8,
             )
         )
-        torch.distributed.destroy_process_group()
 
     def test_sync_batchnorm2d(test_case):
+        data_path = ensure_datas()
         os.environ["ONEFLOW_ENABLE_NHWC"] = "0"
         channel = 8
-        torch.distributed.init_process_group(
-            backend="gloo",
-            group_name="test_sync_batchnorm2d",
-            timeout=datetime.timedelta(seconds=3600),
-        )
-
-        torch_input = torch.rand(
-            32,
-            channel,
-            256,
-            256,
-            requires_grad=True,
-            dtype=torch.float32,
-            device=f"cuda:{torch.distributed.get_rank()}",
-        )
-        torch_bn = torch.nn.BatchNorm2d(channel)
-        torch_bn = torch.nn.SyncBatchNorm.convert_sync_batchnorm(torch_bn).cuda(
-            torch.distributed.get_rank()
-        )
-        torch_res = torch_bn(torch_input)
+        input_np = np.load(f"{data_path}/sync_bn2d_nchw_input_rank{flow.env.get_rank()}.npy")
+        torch_out = np.load(f"{data_path}/sync_bn2d_nchw_torch_output_rank{flow.env.get_rank()}.npy")
+        torch_grad = np.load(f"{data_path}/sync_bn2d_nchw_torch_grad_rank{flow.env.get_rank()}.npy")
 
         of_input = flow.tensor(
-            torch_input.detach().cpu().numpy(), requires_grad=True, device="cuda"
+            input_np, requires_grad=True, device="cuda"
         )
         of_bn = flow.nn.BatchNorm2d(channel)
         of_bn = flow.nn.SyncBatchNorm.convert_sync_batchnorm(of_bn).cuda()
         of_res = of_bn(of_input)
-
         of_res.sum().backward()
-        torch_res.sum().backward()
 
         test_case.assertTrue(
-            np.allclose(torch_res.detach().cpu().numpy(), of_res.numpy(), atol=1e-8)
+            np.allclose(torch_out, of_res.numpy(), atol=1e-8)
         )
         test_case.assertTrue(
             np.allclose(
-                torch_input.grad.detach().cpu().numpy(),
+                torch_grad,
                 of_input.grad.numpy(),
                 atol=1e-8,
             )
         )
-        torch.distributed.destroy_process_group()
 
     def test_sync_batchnorm1d(test_case):
+        data_path = ensure_datas()
         os.environ["ONEFLOW_ENABLE_NHWC"] = "0"
         channel = 8
-        torch.distributed.init_process_group(
-            backend="gloo",
-            group_name="test_sync_batchnorm1d",
-            timeout=datetime.timedelta(seconds=3600),
-        )
-
-        torch_input = torch.rand(
-            32,
-            channel,
-            256,
-            requires_grad=True,
-            dtype=torch.float32,
-            device=f"cuda:{torch.distributed.get_rank()}",
-        )
-        torch_bn = torch.nn.BatchNorm1d(channel)
-        torch_bn = torch.nn.SyncBatchNorm.convert_sync_batchnorm(torch_bn).cuda(
-            torch.distributed.get_rank()
-        )
-        torch_res = torch_bn(torch_input)
+        input_np = np.load(f"{data_path}/sync_bn2d_nchw_input_rank{flow.env.get_rank()}.npy")
+        torch_out = np.load(f"{data_path}/sync_bn2d_nchw_torch_output_rank{flow.env.get_rank()}.npy")
+        torch_grad = np.load(f"{data_path}/sync_bn2d_nchw_torch_grad_rank{flow.env.get_rank()}.npy")
 
         of_input = flow.tensor(
-            torch_input.detach().cpu().numpy(), requires_grad=True, device="cuda"
+            input_np, requires_grad=True, device="cuda"
         )
         of_bn = flow.nn.BatchNorm1d(channel)
         of_bn = flow.nn.SyncBatchNorm.convert_sync_batchnorm(of_bn).cuda()
         of_res = of_bn(of_input)
-
         of_res.sum().backward()
-        torch_res.sum().backward()
 
         test_case.assertTrue(
-            np.allclose(torch_res.detach().cpu().numpy(), of_res.numpy(), atol=1e-8)
+            np.allclose(torch_out, of_res.numpy(), atol=1e-8)
         )
         test_case.assertTrue(
             np.allclose(
-                torch_input.grad.detach().cpu().numpy(),
+                torch_grad,
                 of_input.grad.numpy(),
                 atol=1e-8,
             )
         )
-        torch.distributed.destroy_process_group()
 
 
 if __name__ == "__main__":

@@ -15,65 +15,45 @@ limitations under the License.
 """
 import os
 import unittest
-import datetime
 import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
-
-import torch
-
+from download_datas import ensure_datas
 
 @flow.unittest.skip_unless_1n2d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestSyncBatchNormChannelLast(flow.unittest.TestCase):
     def test_sync_batchnorm2d_nhwc(test_case):
+        data_path = ensure_datas()
         os.environ["ONEFLOW_ENABLE_NHWC"] = "1"
-
         channel = 8
-        of_input = flow.rand(
-            32, 256, 256, channel, requires_grad=True, dtype=flow.float32, device="cuda"
-        )
+        input_np = np.load(f"{data_path}/sync_bn2d_nhwc_input_rank{flow.env.get_rank()}.npy")
+        torch_out = np.load(f"{data_path}/sync_bn2d_nhwc_torch_output_rank{flow.env.get_rank()}.npy")
+        torch_grad = np.load(f"{data_path}/sync_bn2d_nhwc_torch_grad_rank{flow.env.get_rank()}.npy")
+
+        of_input = flow.tensor(input_np, requires_grad=True, dtype=flow.float32, device="cuda")
+
         of_bn = flow.nn.BatchNorm2d(channel)
         of_bn = flow.nn.SyncBatchNorm.convert_sync_batchnorm(of_bn).cuda()
         of_res = of_bn(of_input)
-
-        torch.distributed.init_process_group(
-            backend="gloo",
-            group_name="test_sync_batchnorm2d_nhwc",
-            timeout=datetime.timedelta(seconds=3600),
-        )
-        torch_input = torch.tensor(
-            of_input.numpy(),
-            requires_grad=True,
-            device=f"cuda:{torch.distributed.get_rank()}",
-        )
-        torch_input1 = torch_input.permute(0, 3, 1, 2)
-        torch_input1 = torch_input1.to(memory_format=torch.channels_last)
-        torch_bn = torch.nn.BatchNorm2d(channel)
-        torch_bn = torch.nn.SyncBatchNorm.convert_sync_batchnorm(torch_bn).cuda(
-            torch.distributed.get_rank()
-        )
-        torch_res = torch_bn(torch_input1)
-
         of_res.sum().backward()
-        torch_res.sum().backward()
 
         test_case.assertTrue(
             np.allclose(
-                torch_res.detach().permute(0, 2, 3, 1).contiguous().cpu().numpy(),
+                torch_out,
                 of_res.numpy(),
                 atol=1e-5,
             )
         )
+
         test_case.assertTrue(
             np.allclose(
-                torch_input.grad.detach().cpu().numpy(),
+                torch_grad,
                 of_input.grad.numpy(),
                 atol=1e-5,
             )
         )
-        torch.distributed.destroy_process_group()
 
 
 if __name__ == "__main__":
