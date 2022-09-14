@@ -172,9 +172,8 @@ class Embedding(Module):
         key_type,
         tables,
         store_options,
-        padding_idx,
         default_initializer=None,
-        has_padding_idx=False,
+        padding_idx=None,
     ):
         super().__init__()
         self.dtype = dtype
@@ -200,7 +199,6 @@ class Embedding(Module):
         )
         self.shadow = flow.nn.Parameter(flow.Tensor(1))
         self.padding_idx = padding_idx
-        self.has_padding_idx = has_padding_idx
 
     def _save_to_state_dict(self, destination, prefix, keep_vars):
         super()._save_to_state_dict(destination, prefix, keep_vars)
@@ -300,7 +298,6 @@ class Embedding(Module):
             self.embedding_tables,
             self.key_value_store_options,
             padding_idx=self.padding_idx,
-            has_padding_idx=self.has_padding_idx,
         )
 
 
@@ -578,7 +575,9 @@ class MultiTableEmbedding(Embedding):
         tables (list): list of table param which can be made by flow.one_embedding.make_table_options
         store_options (dict): store option of Embedding
         default_initializer (dict, optional): if tables param is None, use default_initializer to initialize table. Defaults to None.
-    
+        padding_idx (int, optional): If specified, the entries at :attr:`padding_idx` do not contribute to the gradient;
+                                     therefore, the embedding vector at :attr:`padding_idx` is not updated during training,
+                                     the embedding vector at :attr:`padding_idx` will default to all zeros.
     For example:
 
     .. code-block:: python
@@ -651,9 +650,8 @@ class MultiTableEmbedding(Embedding):
         key_type,
         tables,
         store_options,
-        padding_idx,
         default_initializer=None,
-        has_padding_idx=False,
+        padding_idx=None,
     ):
         assert isinstance(embedding_dim, int)
         super().__init__(
@@ -663,9 +661,8 @@ class MultiTableEmbedding(Embedding):
             key_type,
             tables,
             store_options,
-            padding_idx,
             default_initializer,
-            has_padding_idx,
+            padding_idx,
         )
 
 
@@ -680,7 +677,9 @@ class MultiTableMultiColumnEmbedding(Embedding):
         tables (list): list of table param which can be made by flow.one_embedding.make_table_options
         store_options (dict): store option of Embedding
         default_initializer (dict, optional): if tables param is None, use default_initializer to initialize table. Defaults to None.
-    
+        padding_idx (int, optional): If specified, the entries at :attr:`padding_idx` do not contribute to the gradient;
+                                     therefore, the embedding vector at :attr:`padding_idx` is not updated during training,
+                                     the embedding vector at :attr:`padding_idx` will default to all zeros.
     For example:
 
     .. code-block:: python
@@ -757,9 +756,8 @@ class MultiTableMultiColumnEmbedding(Embedding):
         key_type,
         tables,
         store_options,
-        padding_idx,
         default_initializer=None,
-        has_padding_idx=False,
+        padding_idx=None,
     ):
         if isinstance(embedding_dim, (list, tuple)):
             for dim in embedding_dim:
@@ -774,9 +772,8 @@ class MultiTableMultiColumnEmbedding(Embedding):
             key_type,
             tables,
             store_options,
-            padding_idx,
             default_initializer,
-            has_padding_idx,
+            padding_idx,
         )
 
 
