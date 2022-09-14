@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/linear_programming/memory_share_strategy.h"
+#include "oneflow/core/job/memory_share_strategy.h"
 #include <glog/logging.h>
 #include <algorithm>
 #include "oneflow/core/common/hash_container.h"
@@ -23,130 +23,6 @@ limitations under the License.
 #include "oneflow/core/register/runtime_register_desc.h"
 
 namespace oneflow {
-namespace linear_programming {
-
-void MemoryShareStrategy::ConstructMip4MemoryOnly(
-    const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts) {
-  // Initialization
-  InitRegister(regst2mutual_exclusion_regsts);
-  InitRegisterInformation();
-
-  int32_t total_register_num = regst2mutual_exclusion_regsts.size();
-  int32_t row = 0;
-  auto& primal_matrix = mips_.lps_.primal_matrix_;
-  auto& primal_b = mips_.lps_.primal_constrain_b_;
-  // Compute total number of rows
-  // Which requires that regst2mutual_exclusion_regsts is symmetric.
-  // If register_i exclude register_j, then register_j exclude register_i.
-  int32_t total_row = 0;
-  for (const auto& register_i2exclusive_registers : regst2mutual_exclusion_regsts) {
-    total_row += register_i2exclusive_registers.second.size();
-  }
-  total_row = total_row / 2 * 3 + total_register_num;
-  primal_b.resize(total_row);
-
-  // Assemble x_i + l_i <= z
-  AssembleZ(&row);
-
-  // Assemble x_i + l_i <= x_j + M * t1_ij
-  //          x_j + l_j <= x_i + M * t2_ij
-  //          t1_ij + t2_ij = 1
-  //          t1_ij, t2_ij belongs to {0, 1}
-  // Transfer to
-  //          -x_i + x_j + M * t1_ij - s1_ij = l_i
-  //          x_i - x_j + M * t2_ij - s2_ij = l_j
-  // Suppose each pair (i, j) s.t. i<j, is corresponding to an index
-  // t1_ij: 2*total_register_num + 4*index + 1
-  // t2_ij: 2*total_register_num + 4*index + 2
-  // s1_ij: 2*total_register_num + 4*index + 3
-  // s2_ij: 2*total_register_num + 4*index + 4
-  start_row_exclusion = row;
-  start_column_exclusion = 2 * total_register_num + 1;
-  int32_t column = start_column_exclusion;
-  for (const auto& register_i2exclusive_registers : regst2mutual_exclusion_regsts) {
-    int32_t i = register2index_[register_i2exclusive_registers.first];
-    for (const auto& register_j : register_i2exclusive_registers.second) {
-      int32_t j = register2index_[register_j];
-      if (i < j) {
-        // -x_i + x_j + M * t1_ij - s1_ij = l_i
-        primal_matrix.Insert(row, i + 1, -1.0);       // -x_i
-        primal_matrix.Insert(row, j + 1, 1.0);        // x_j
-        primal_matrix.Insert(row, column, large_m_);  // M * t1_ij
-        primal_matrix.Insert(row, column + 2, -1.0);  // -s1_ij
-        primal_b[row] = register_size_[i];            // l_i
-        row++;
-
-        // x_i - x_j + M * t2_ij - s2_ij = l_j
-        primal_matrix.Insert(row, i + 1, 1.0);            // x_i
-        primal_matrix.Insert(row, j + 1, -1.0);           // -x_j
-        primal_matrix.Insert(row, column + 1, large_m_);  // M * t2_ij
-        primal_matrix.Insert(row, column + 3, -1.0);      // -s2_ij
-        primal_b[row] = register_size_[j];                // l_j
-        row++;
-
-        // t1_ij + t2_ij = 1
-        primal_matrix.Insert(row, column, 1.0);      // t1_ij
-        primal_matrix.Insert(row, column + 1, 1.0);  // t2_ij
-        primal_b[row] = 1.0;                         // 1
-        row++;
-
-        column += 4;
-      }
-    }
-  }
-  end_row_exclusion = row;
-  end_column_exclusion = column;
-
-  CHECK_EQ(row, primal_b.size())
-      << "Inconsistent rows, bug occurs while assembling mix-integer programming";
-
-  // Assemble cost for minimizing z
-  MinimizeZ();
-}
-
-void MemoryShareStrategy::ExportMemoryOffsets(
-    size_t* mem_block_size, HashMap<RegstDescProto*, int64_t>* regst_desc2offset) {
-  *mem_block_size = mem_block_size_;
-  for (const auto& pair : register2index_) {
-    (*regst_desc2offset)[pair.first] = register_size_[pair.second];
-  }
-}
-
-void MemoryShareStrategy::StealPosition(
-    const HashMap<RegstDescProto*, int64_t>& regst_desc2offset) {
-  auto& primal_matrix = mips_.lps_.primal_matrix_;
-  primal_matrix.ActivateAllRowColumns();
-  for (int32_t start_row = start_row_exclusion; start_row < end_row_exclusion;
-       start_row += num_row_group) {
-    int32_t i = -1;
-    int32_t j = -1;
-    // -x_i + x_j + M * t1_ij - s1_ij = l_i
-    for (const auto& pair : primal_matrix.rows_[start_row]) {
-      if (pair.first < start_column_exclusion) {
-        if (pair.second < 0.0) {
-          i = pair.first - 1;  // -x_i, i+1 -> -1.0
-        } else {
-          j = pair.first - 1;  // x_j, j+1 -> 1.0
-        }
-      }
-    }
-    if (regst_desc2offset.at(index2register_[i]) < regst_desc2offset.at(index2register_[j])) {
-      // x_i < x_j --> x_i + l_i <= x_j
-      // Eliminate the other row
-      primal_matrix.HideRow(start_row + 1);
-    } else {
-      // x_j <= x_i --> x_j + l_j <= x_i
-      // Eliminate the other row
-      primal_matrix.HideRow(start_row);
-    }
-    // Eliminate the row: t1_ij + t2_ij = 1
-    primal_matrix.HideRow(start_row + 2);
-    // Eliminate the columns: t1_ij, t2_ij and the corresponding artificial variable
-    for (const auto& pair : primal_matrix.rows_[start_row + num_row_group - 1]) {
-      primal_matrix.HideColumn(pair.first);
-    }
-  }
-}
 
 // Initialization
 void MemoryShareStrategy::InitRegister(
@@ -163,15 +39,12 @@ void MemoryShareStrategy::InitRegister(
 void MemoryShareStrategy::InitRegisterInformation() {
   total_register_num_ = index2register_.size();
   register_size_.resize(total_register_num_);
-  int64_t large_m = 1;
   for (int32_t register_id = 0; register_id < total_register_num_; register_id++) {
     const auto& register_ = index2register_[register_id];
     int64_t register_size = RtRegstDesc(*register_).TotalMainByteSize4AllRegst();
     register_size_[register_id] = register_size;
     register2index_[register_] = register_id;
-    large_m += register_size;
   }
-  large_m_ = double(large_m);
 }
 
 void MemoryShareStrategy::StealCompactPosition(
@@ -247,50 +120,6 @@ void MemoryShareStrategy::StealCompactPosition(
       should_visit[i] = 0;
     }
   }
-
-  // Compute total number of rows
-  int32_t total_row = total_register_num;
-  for (const auto& left_register : left_registers) { total_row += left_register.size(); }
-
-  // Reserve the space
-  auto& primal_matrix = mips_.lps_.primal_matrix_;
-  auto& primal_b = mips_.lps_.primal_constrain_b_;
-  primal_b.resize(total_row);
-
-  int32_t row = 0;
-  // Assemble x_i + l_i <= z
-  AssembleZ(&row);
-
-  // Assemble x_i + l_i <= x_j
-  // Transfer to
-  //          -x_i + x_j - s_ij = l_i
-  // Suppose each pair (i, j) s.t. i<j, is corresponding to an index
-  // s1_ij: 2*total_register_num + index (column)
-  start_row_exclusion = row;
-  start_column_exclusion = 2 * total_register_num + 1;
-  int32_t column = start_column_exclusion;
-  for (int32_t j = 0; j < total_register_num; j++) {
-    for (int32_t i : left_registers[j]) {
-      // -x_i + x_j - s_ij = l_i
-      primal_matrix.Insert(row, i + 1, -1.0);   // -x_i
-      primal_matrix.Insert(row, j + 1, 1.0);    // x_j
-      primal_matrix.Insert(row, column, -1.0);  // -s_ij
-      primal_b[row] = register_size_[i];        // l_i
-      row++;
-      column++;
-    }
-  }
-  end_row_exclusion = row;
-  end_column_exclusion = column;
-
-  CHECK_EQ(row, primal_b.size())
-      << "Inconsistent rows, bug occurs while assembling mix-integer programming";
-
-  // Assemble cost for minimizing z
-  MinimizeZ();
-
-  // Activate all the rows and columns since it is compact already
-  primal_matrix.ActivateAllRowColumns();
 }
 
 void MemoryShareStrategy::GenerateCompactPosition(
@@ -302,34 +131,6 @@ void MemoryShareStrategy::GenerateCompactPosition(
     offset++;
   }
   StealCompactPosition(regst_desc2offset, regst2mutual_exclusion_regsts);
-}
-
-void MemoryShareStrategy::AssembleZ(int32_t* row) {
-  int32_t total_register_num = register_size_.size();
-  auto& primal_matrix = mips_.lps_.primal_matrix_;
-  auto& primal_b = mips_.lps_.primal_constrain_b_;
-  // Assemble x_i + l_i <= z,
-  // where z is the total size of the memory block.
-  // We need to make sure that the right hand size >= 0. We transfer the formula to
-  // z - x_i - s_i = l_i
-  // z: 0
-  // x_i: [1, total_register_num], i+1
-  // s_i: [total_register_num+1, 2*total_register_num], i+total_register_num+1
-  for (int32_t i = 0; i < total_register_num; i++) {
-    primal_matrix.Insert(*row, 0, 1.0);                            // z
-    primal_matrix.Insert(*row, i + 1, -1.0);                       // -x_i
-    primal_matrix.Insert(*row, i + total_register_num + 1, -1.0);  // -s_i
-    primal_b[*row] = register_size_[i];                            // l_i
-    (*row)++;
-  }
-}
-
-// Assemble cost for minimizing z
-void MemoryShareStrategy::MinimizeZ() {
-  // Minimize z
-  // c = [1, 0, 0, 0, ..., 0]
-  mips_.lps_.primal_cost_.resize(end_column_exclusion);
-  mips_.lps_.primal_cost_[0] = 1.0;
 }
 
 // Compute optimal cost with compact relationship
@@ -371,25 +172,16 @@ size_t MemoryShareStrategy::ComputeOptimalAdjustedCost() {
   int32_t step_no_decrease = 0;
   for (int32_t m = 0; m < total_register_num_; m++) {
     for (int32_t i = 0; i < index2register_.size(); i++) {
-      std::cout << "i: " << i << ", step no decrease: " << step_no_decrease << std::endl;
+      // std::cout << "i: " << i << ", step no decrease: " << step_no_decrease << std::endl;
       EliminateRegister(i);
       size_t cost_without_i = ComputeOptimalCostFrom0();
-      std::cout << "Get rid of " << i << ", size: " << register_size_[i]
-                << ", Guess cost: " << cost_without_i << std::endl;
+      // std::cout << "Get rid of " << i << ", size: " << register_size_[i]
+      //           << ", Guess cost: " << cost_without_i << std::endl;
       // Find the offset of i which has the minimum cost
       int64_t min_x_i = -1;
       if (cost_without_i < optimal_cost) {
         // Find the minimum cost
         int64_t min_cost = optimal_cost;
-        // const auto& excluded_register = excluded_registers[i];
-        // // Sort all the excluded registers.
-        // order.resize(excluded_register.size());
-        // int32_t index = 0;
-        // for (int32_t k : excluded_register) {
-        //   order[index] = k;
-        //   index++;
-        // }
-        // std::sort(order.begin(), order.end(), CompareRegisterPosition);
         // Back up the current register offset with elimination of i
         auto register_offset_backup = register_offset_;
         // Try to insert the register i into the sorted excluded registers
@@ -403,8 +195,8 @@ size_t MemoryShareStrategy::ComputeOptimalAdjustedCost() {
 
         for (int64_t x_i : all_x_i) {
           int64_t cost_insert_i = ComputeOptimalCostWithOccupation(i, x_i, register_offset_backup);
-          std::cout << "Insert i at " << x_i << ", cost: " << cost_insert_i << ", Less? "
-                    << (cost_insert_i < optimal_cost) << std::endl;
+          // std::cout << "Insert i at " << x_i << ", cost: " << cost_insert_i << ", Less? "
+          //           << (cost_insert_i < optimal_cost) << std::endl;
           // Check if we found a smaller cost
           if (cost_insert_i < min_cost) {
             min_cost = cost_insert_i;
@@ -432,9 +224,9 @@ size_t MemoryShareStrategy::ComputeOptimalAdjustedCost() {
         step_no_decrease++;
         if (step_no_decrease >= total_register_num_) { break; }
       }
-      int64_t recovery_cost = ComputeOptimalCostFrom0();
-      std::cout << "After recovery: " << recovery_cost << " Less? "
-                << (recovery_cost < optimal_cost) << std::endl;
+      // int64_t recovery_cost = ComputeOptimalCostFrom0();
+      // std::cout << "After recovery: " << recovery_cost << " Less? "
+      //           << (recovery_cost < optimal_cost) << std::endl;
     }
     if (step_no_decrease >= total_register_num_) { break; }
   }
@@ -670,5 +462,4 @@ void MemoryShareStrategy::UpdateOffset(size_t* mem_block_size,
   }
 }
 
-}  // namespace linear_programming
 }  // namespace oneflow

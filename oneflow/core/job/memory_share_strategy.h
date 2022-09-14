@@ -14,38 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_LINEAR_PROGRAMMING_MEMORY_SHARE_STRATEGY_H_
-#define ONEFLOW_CORE_LINEAR_PROGRAMMING_MEMORY_SHARE_STRATEGY_H_
+#ifndef ONEFLOW_CORE_JOB_MEMORY_SHARE_STRATEGY_H_
+#define ONEFLOW_CORE_JOB_MEMORY_SHARE_STRATEGY_H_
 
 #include <vector>
 #include "oneflow/core/common/hash_container.h"
-#include "oneflow/core/linear_programming/mix_integer_programming_util.h"
 #include "oneflow/core/register/register_desc.pb.h"
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
-namespace linear_programming {
 class MemoryShareStrategy {
  public:
-  MixIntegerProgrammingSolver mips_;
   size_t mem_block_size_;
   std::vector<int64_t> register_offset_;
   std::vector<int64_t> register_size_;
   HashMap<RegstDescProto*, int32_t> register2index_;
   std::vector<RegstDescProto*> index2register_;
-  // A large enough number M
-  double large_m_;
-  int32_t start_row_exclusion, end_row_exclusion;
-  int32_t start_column_exclusion, end_column_exclusion;
-  const int32_t num_row_group = 3;
-
-  void ConstructMip4MemoryOnly(
-      const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
-
-  void ExportMemoryOffsets(size_t* mem_block_size,
-                           HashMap<RegstDescProto*, int64_t>* regst_desc2offset);
-
-  void StealPosition(const HashMap<RegstDescProto*, int64_t>& regst_desc2offset);
 
   void StealCompactPosition(
       const HashMap<RegstDescProto*, int64_t>& regst_desc2offset,
@@ -110,11 +94,6 @@ class MemoryShareStrategy {
   void VisitForwardEliminateCompactRelationship(int32_t i, int32_t j);
   void VisitBackwardInsertCompactRelationship(int32_t i, int32_t j);
 
-  // Assemble x_i + l_i <= z
-  // z = max(x_i) for all the i
-  void AssembleZ(int32_t* row);
-  // Assemble cost for minimizing z
-  void MinimizeZ();
   // Compute optimal cost with compact relationship
   size_t ComputeOptimalCost4CompactRelationship();
   size_t ComputeOptimalCostFrom0();
@@ -123,7 +102,6 @@ class MemoryShareStrategy {
   // Check whether the current offset does not introduce any conflict
   Maybe<void> CheckConflict();
 };
-}  // namespace linear_programming
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_LINEAR_PROGRAMMING_MEMORY_SHARE_STRATEGY_H_
+#endif  // ONEFLOW_CORE_JOB_MEMORY_SHARE_STRATEGY_H_

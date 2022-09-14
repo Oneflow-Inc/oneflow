@@ -18,11 +18,8 @@ limitations under the License.
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/job/id_manager.h"
-#include "oneflow/core/linear_programming/linear_programming_util.h"
-#include "oneflow/core/linear_programming/memory_share_strategy.h"
-#include "oneflow/core/linear_programming/mix_integer_programming_util.h"
+#include "oneflow/core/job/memory_share_strategy.h"
 #include "oneflow/core/register/runtime_register_desc.h"
-#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/plan_util.h"
@@ -833,7 +830,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
     CHECK(best_result != nullptr);
 
     // Update the offset with a smaller total memory size
-    linear_programming::MemoryShareStrategy mss;
+    MemoryShareStrategy mss;
     mss.StealCompactPosition(best_result->regst_desc2offset,
                              mem_chain2regst2mutual_exclusion_regsts.at(pair.first));
     mss.UpdateOffset(&best_result->mem_block_size, &best_result->regst_desc2offset);
@@ -877,101 +874,6 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
       CHECK_EQ(consumer_regst_desc->register_num(), in_regst_desc->register_num());
       consumer_regst_desc->set_inplace_consumed_regst_desc_id(hint);
     }
-  }
-
-  // testing
-  if (GlobalProcessCtx::Rank() == 0) {
-    linear_programming::LinearProgrammingSolver lps;
-    // lps.primal_matrix_.Insert(0, 0, 2);
-    // lps.primal_matrix_.Insert(0, 1, 1);
-    // lps.primal_matrix_.Insert(1, 0, 1);
-    // lps.primal_matrix_.Insert(1, 1, 3);
-    // lps.primal_constrain_b_.resize(2);
-    // lps.primal_constrain_b_[0] = 0;
-    // lps.primal_constrain_b_[1] = 0;
-    // lps.primal_cost_.push_back(-1);
-    // lps.primal_cost_.push_back(1);
-
-    // lps.primal_matrix_.Insert(0, 0, 6);
-    // lps.primal_matrix_.Insert(0, 1, 3);
-    // lps.primal_matrix_.Insert(0, 2, -9);
-    // lps.primal_matrix_.Insert(1, 0, 2);
-    // lps.primal_matrix_.Insert(1, 1, 1);
-    // lps.primal_matrix_.Insert(1, 2, -3);
-    // lps.primal_matrix_.Insert(2, 0, 4);
-    // lps.primal_matrix_.Insert(2, 1, 2);
-    // lps.primal_matrix_.Insert(2, 2, -6);
-    // lps.primal_constrain_b_.resize(3);
-    // lps.primal_constrain_b_[0] = 8;
-    // lps.primal_constrain_b_[1] = 5;
-    // lps.primal_constrain_b_[2] = 6;
-    // lps.primal_cost_.push_back(-1);
-    // lps.primal_cost_.push_back(-2);
-    // lps.primal_cost_.push_back(1);
-
-    lps.primal_matrix_.Insert(0, 0, 1);
-    lps.primal_matrix_.Insert(0, 1, 2);
-    lps.primal_matrix_.Insert(0, 2, 3);
-    lps.primal_matrix_.Insert(1, 0, -1);
-    lps.primal_matrix_.Insert(1, 1, 2);
-    lps.primal_matrix_.Insert(1, 2, 6);
-    lps.primal_matrix_.Insert(2, 1, 4);
-    lps.primal_matrix_.Insert(2, 2, 9);
-    lps.primal_matrix_.Insert(3, 2, 3);
-    lps.primal_matrix_.Insert(3, 3, 1);
-    lps.primal_constrain_b_.resize(4);
-    lps.primal_constrain_b_[0] = 3;
-    lps.primal_constrain_b_[1] = 2;
-    lps.primal_constrain_b_[2] = 5;
-    lps.primal_constrain_b_[3] = 1;
-    lps.primal_cost_.push_back(-1);
-    lps.primal_cost_.push_back(-2);
-    lps.primal_cost_.push_back(1);
-    lps.primal_cost_.push_back(0);
-
-    // lps.primal_matrix_.Insert(0, 0, 1);
-    // lps.primal_matrix_.Insert(0, 1, 2);
-    // lps.primal_matrix_.Insert(0, 2, 2);
-    // lps.primal_matrix_.Insert(1, 0, 2);
-    // lps.primal_matrix_.Insert(1, 1, 1);
-    // lps.primal_matrix_.Insert(1, 2, 2);
-    // lps.primal_matrix_.Insert(2, 0, 2);
-    // lps.primal_matrix_.Insert(2, 1, 2);
-    // lps.primal_matrix_.Insert(2, 2, 1);
-    // lps.primal_constrain_b_.resize(3);
-    // lps.primal_constrain_b_[0] = 20;
-    // lps.primal_constrain_b_[1] = 20;
-    // lps.primal_constrain_b_[2] = 20;
-    // lps.primal_cost_.push_back(-10);
-    // lps.primal_cost_.push_back(-12);
-    // lps.primal_cost_.push_back(-12);
-
-    std::cout << "Init lsp" << std::endl;
-    lps.primal_matrix_.ActivateAllRowColumns();
-    lps.Solve4FeasibleSolution();
-    std::cout << "Test recovery" << std::endl;
-    lps.Recovery();
-    lps.Solve4FeasibleSolution();
-
-    std::cout << "Test no recovery" << std::endl;
-    lps.Recovery();
-    lps.Solve4FeasibleSolution();
-
-    std::cout << "Test hide rows" << std::endl;
-    lps.Recovery();
-    lps.primal_matrix_.HideRow(3);
-    lps.Solve4FeasibleSolution();
-
-    std::cout << "Hide rows 2" << std::endl;
-    lps.Recovery();
-    lps.primal_matrix_.ActivateRow(3);
-    lps.primal_matrix_.HideRow(2);
-    lps.Solve4FeasibleSolution();
-
-    std::cout << "Hide rows 1, 2" << std::endl;
-    lps.Recovery();
-    lps.primal_matrix_.HideRow(1);
-    lps.Solve4FeasibleSolution();
   }
 }
 
