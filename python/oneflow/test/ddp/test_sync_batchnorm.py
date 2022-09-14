@@ -19,7 +19,7 @@ import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
-from download_datas import ensure_datas
+from sync_batchnorm_test_util import ensure_datas
 
 @flow.unittest.skip_unless_1n2d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
