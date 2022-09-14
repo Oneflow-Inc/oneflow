@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/common/util.h"
