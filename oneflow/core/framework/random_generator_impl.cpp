@@ -174,6 +174,18 @@ void CUDAGeneratorImpl::set_current_seed(uint64_t seed) {
   CHECK_JUST(CUDASynchronize());
   seed_ = seed;
   detail::InitCurandStates(seed_, max_block_num_, max_thread_num_, curand_states_, cuda_gen_state_);
+  philox_offset_per_thread_ = 0;
+}
+
+// NOTE(Liang Depeng): The implementation of ` CUDAGeneratorImpl::get_philox_offset` is modified from
+//      https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/cuda/CUDAGeneratorImpl.cpp#L269 
+uint64_t CUDAGeneratorImpl::get_philox_offset(uint64_t increment) {
+   // rounds increment up to the nearest multiple of 4
+  increment = ((increment + 3) / 4) * 4;
+  CHECK_EQ(this->philox_offset_per_thread_ % 4, 0);
+  uint64_t offset = this->philox_offset_per_thread_;
+  this->philox_offset_per_thread_ += increment;
+  return offset;
 }
 
 Maybe<Tensor> CUDAGeneratorImpl::GetState() const {

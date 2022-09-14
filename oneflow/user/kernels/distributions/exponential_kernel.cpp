@@ -26,10 +26,10 @@ namespace {
 
 REGISTER_EXPONENTIAL_KERNEL(DeviceType::kCPU, float)
 REGISTER_EXPONENTIAL_KERNEL(DeviceType::kCPU, double)
-// #ifdef WITH_CUDA
-// REGISTER_EXPONENTIAL_KERNEL(DeviceType::kCUDA, float)
-// REGISTER_EXPONENTIAL_KERNEL(DeviceType::kCUDA, double)
-// #endif  // WITH_CUDA
+#ifdef WITH_CUDA
+REGISTER_EXPONENTIAL_KERNEL(DeviceType::kCUDA, float)
+REGISTER_EXPONENTIAL_KERNEL(DeviceType::kCUDA, double)
+#endif  // WITH_CUDA
 
 }  // namespace
 }  // namespace oneflow

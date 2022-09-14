@@ -18,10 +18,10 @@ limitations under the License.
 
 #include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/framework/random_generator.h"
-// #ifdef WITH_CUDA
-// #include <curand.h>
-// #include <curand_kernel.h>
-// #endif
+#ifdef WITH_CUDA
+#include <curand.h>
+#include <curand_kernel.h>
+#endif
 
 namespace oneflow {
 
@@ -42,21 +42,21 @@ class ExponentialDistribution<DeviceType::kCPU, T> final {
   const T lambd_;
 };
 
-// #ifdef WITH_CUDA
-// template<typename T>
-// class ExponentialDistribution<DeviceType::kCUDA, T> final {
-//  public:
-//   OF_DISALLOW_COPY_AND_MOVE(ExponentialDistribution);
-//   ExponentialDistribution(T lambd) : lambd_(lambd) {}
-//   ~ExponentialDistribution() = default;
+#ifdef WITH_CUDA
+template<typename T>
+class ExponentialDistribution<DeviceType::kCUDA, T> final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ExponentialDistribution);
+  ExponentialDistribution(T lambd) : lambd_(lambd) {}
+  ~ExponentialDistribution() = default;
 
-//   void operator()(ep::Stream* stream, const int64_t elem_cnt, T* dptr,
-//                   const std::shared_ptr<one::Generator>& generator) const;
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, T* dptr,
+                  const std::shared_ptr<one::Generator>& generator) const;
 
-//  private:
-//   const T lambd_;
-// };
-// #endif  // WITH_CUDA
+ private:
+  const T lambd_;
+};
+#endif  // WITH_CUDA
 
 }  // namespace oneflow
 

@@ -135,11 +135,16 @@ class CUDAGeneratorImpl : public DeviceGeneratorImpl {
   Maybe<Tensor> GetState() const override;
   Maybe<void> SetState(const std::shared_ptr<Tensor>& tensor_state) override;
 
+  uint64_t get_philox_offset(uint64_t increment);
+
+  std::mutex mutex_;
+
  private:
   int32_t max_block_num_;
   int32_t max_thread_num_;
   curandState* curand_states_;
   CUDAGeneratorState* cuda_gen_state_;
+  uint64_t philox_offset_per_thread_ = 0;
 };
 
 namespace detail {
