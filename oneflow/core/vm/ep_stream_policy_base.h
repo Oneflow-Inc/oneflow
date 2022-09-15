@@ -68,6 +68,9 @@ class EpStreamPolicyBase : public StreamPolicy {
   void DeleteInstructionStatus(const Stream& stream,
                                InstructionStatusBuffer* status_buffer) const override;
 
+  bool QueryInstructionStatusLaunched(const Stream& stream,
+                                      const InstructionStatusBuffer& status_buffer) const override;
+
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
 

@@ -972,6 +972,34 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.log10,
+    """
+    oneflow.log10(input) -> Tensor
+
+    Returns a new tensor with the natural logarithm to the base 10 of the elements of :attr:`input`.
+
+    .. math::
+        y_{i} = \\log10_{e} (x_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.ones(3, 3) * 10
+        >>> output = flow.log10(x)
+        >>> output
+        tensor([[1., 1., 1.],
+                [1., 1., 1.],
+                [1., 1., 1.]], dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
     oneflow.minimum,
     r"""Computes the element-wise minimum of x and y.
 

@@ -47,7 +47,6 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/framework/tensor_util.h"
-#include "oneflow/core/framework/stream_guard.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/tensor_util.h"
@@ -460,6 +459,11 @@ class BroadcastLikeFunctor {
     const Shape& x_shape = *x->shape();
     const Shape& like_shape = *like->shape();
     if (x_shape == like_shape) { return x; }
+    CHECK_GE_OR_RETURN(like_shape.NumAxes(), x_shape.NumAxes())
+        << Error::RuntimeError() << "The number of sizes provided (" << like_shape.NumAxes()
+        << ") must be greater or equal to the number of dimensions in the tensor ("
+        << x_shape.NumAxes() << ")"
+        << ". Target sizes: " << like_shape.ToString() << ". Tensor sizes: " << x_shape.ToString();
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("broadcast_axes");
     if (broadcast_axes.empty()) {
       int64_t like_ndim = like_shape.NumAxes();
@@ -1539,30 +1543,7 @@ class CopyFunctor {
 #ifdef WITH_CUDA
     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
 #endif
-    int64_t thread_uid = Stream::kDefaultStreamThreadUid;
-    int64_t stream_set_id = Stream::kDefaultStreamSetId;
-    JUST(GetThreadUidAndStreamSetId(*x, &thread_uid, &stream_set_id));
-    if (thread_uid == Stream::kDefaultStreamThreadUid
-        && stream_set_id == Stream::kDefaultStreamSetId) {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-    } else {
-      auto stream_set = std::make_shared<StreamSet>(thread_uid);
-      StreamGuard guard(StreamConverter(stream_set, /*exclude_ccl=*/false));
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-    }
-  }
-
-  Maybe<void> GetThreadUidAndStreamSetId(const one::Tensor& x, int64_t* thread_uid,
-                                         int64_t* stream_set_id) const {
-    if (!x.is_eager()) { return Maybe<void>::Ok(); }
-    if (!x.is_local()) { return Maybe<void>::Ok(); }
-    const auto& eager_blob_object = JUST(x.eager_blob_object());
-    const auto& opt_last_used_stream = eager_blob_object->last_used_stream();
-    if (!opt_last_used_stream.has_value()) { return Maybe<void>::Ok(); }
-    auto last_used_stream = JUST(opt_last_used_stream);
-    *thread_uid = last_used_stream->thread_uid();
-    *stream_set_id = last_used_stream->stream_set_id();
-    return Maybe<void>::Ok();
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:

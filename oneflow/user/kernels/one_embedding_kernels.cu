@@ -1111,7 +1111,7 @@ class EmbeddingLookupPlaceholderKernelState final : public user_op::OpKernelStat
 
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
-    // Note(guoran): This op not have optimizer info, so set embedding states initializer constant
+    // Note(guoran): This op have no optimizer info, so set embedding states initializer constant
     // 0, which may make error in optimizer with initial_accumulator_value like adagrad and ftrl.
     std::string state_initializer;
     MakeConstantInitializerAttr(embedding_size, line_size, {}, &state_initializer);
@@ -1437,7 +1437,7 @@ class EmbeddingLookupPlaceholderLocalKernelState final : public user_op::OpKerne
 
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
-    // Note(guoran): This op not have optimizer info, so set embedding states initializer constant
+    // Note(guoran): This op have no optimizer info, so set embedding states initializer constant
     // 0, which may make error in optimizer with initial_accumulator_value like adagrad and ftrl.
     std::string state_initializer;
     MakeConstantInitializerAttr(embedding_size, line_size, {}, &state_initializer);

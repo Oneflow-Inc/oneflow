@@ -492,6 +492,14 @@
   signature: "Tensor (Tensor x, Tensor dy) => Log2Grad"
   bind_python: False
 
+- name: "log10"
+  signature: "Tensor (Tensor x) => Log10"
+  bind_python: True
+
+- name: "log10_grad"
+  signature: "Tensor (Tensor x, Tensor dy) => Log10Grad"
+  bind_python: False
+
 - name: "sqrt"
   signature: "Tensor (Tensor x) => Sqrt"
   bind_python: True
@@ -1097,7 +1105,7 @@
   bind_python: True
 
 - name: "kl_div_loss"
-  signature: "Tensor(Tensor input, Tensor target, Bool log_target, String reduction) => KLDivLoss"
+  signature: "Tensor(Tensor input, Tensor target, Bool log_target, String reduction=\"mean\") => KLDivLoss"
   bind_python: True
 
 - name: "kl_div_loss_grad"
