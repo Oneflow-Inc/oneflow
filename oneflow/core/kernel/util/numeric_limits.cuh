@@ -134,7 +134,6 @@ struct numeric_limits<half> {
 };
 
 #if CUDA_VERSION >= 11000
-#endif  // CUDA_VERSION >= 11000
 
 static __device__ unsigned short int NV_BFLOAT16_LOWEST = 0xff7f;
 static __device__ unsigned short int NV_BFLOAT16_MAX = 0x7f7f;
@@ -155,6 +154,8 @@ struct numeric_limits<nv_bfloat16> {
     return *reinterpret_cast<const __nv_bfloat16*>(&NV_BFLOAT16_UPPER_BOUND);
   }
 };
+
+#endif  // CUDA_VERSION >= 11000
 
 #endif  // defined(__CUDACC__)
 
