@@ -128,31 +128,39 @@ class OneCycleLR(LRScheduler):
                 },
             ]
 
-        max_lrs = self._format_param('max_lr', self.optimizer, max_lr)
+        max_lrs = self._format_param("max_lr", self.optimizer, max_lr)
         if last_step == -1:
             for idx, group in enumerate(self.optimizer.param_groups):
-                group['initial_lr'] = max_lrs[idx] / div_factor
-                group['max_lr'] = max_lrs[idx]
-                group['min_lr'] = group['initial_lr'] / final_div_factor
+                group["initial_lr"] = max_lrs[idx] / div_factor
+                group["max_lr"] = max_lrs[idx]
+                group["min_lr"] = group["initial_lr"] / final_div_factor
 
         # Initialize momentum variables
         self.cycle_momentum = cycle_momentum
         if self.cycle_momentum:
-            if 'momentum' not in self.optimizer.defaults and 'betas' not in self.optimizer.defaults:
-                raise ValueError('optimizer must support momentum with `cycle_momentum` option enabled')
-            self.use_beta1 = 'betas' in self.optimizer.defaults
-            max_momentums = self._format_param('max_momentum', optimizer, max_momentum)
-            base_momentums = self._format_param('base_momentum', optimizer, base_momentum)
+            if (
+                "momentum" not in self.optimizer.defaults
+                and "betas" not in self.optimizer.defaults
+            ):
+                raise ValueError(
+                    "optimizer must support momentum with `cycle_momentum` option enabled"
+                )
+            self.use_beta1 = "betas" in self.optimizer.defaults
+            max_momentums = self._format_param("max_momentum", optimizer, max_momentum)
+            base_momentums = self._format_param(
+                "base_momentum", optimizer, base_momentum
+            )
             if last_step == -1:
-                for m_momentum, b_momentum, group in zip(max_momentums, base_momentums, optimizer.param_groups):
+                for m_momentum, b_momentum, group in zip(
+                    max_momentums, base_momentums, optimizer.param_groups
+                ):
                     if self.use_beta1:
-                        _, beta2 = group['betas']
-                        group['betas'] = (m_momentum, beta2)
+                        _, beta2 = group["betas"]
+                        group["betas"] = (m_momentum, beta2)
                     else:
-                        group['momentum'] = m_momentum
-                    group['max_momentum'] = m_momentum
-                    group['base_momentum'] = b_momentum
-
+                        group["momentum"] = m_momentum
+                    group["max_momentum"] = m_momentum
+                    group["base_momentum"] = b_momentum
 
         super().__init__(optimizer, last_step, verbose)
 
@@ -160,35 +168,44 @@ class OneCycleLR(LRScheduler):
         """Return correctly formatted lr/momentum for each param group."""
         if isinstance(param, (list, tuple)):
             if len(param) != len(optimizer.param_groups):
-                raise ValueError("expected {} values for {}, got {}".format(
-                    len(optimizer.param_groups), name, len(param)))
+                raise ValueError(
+                    "expected {} values for {}, got {}".format(
+                        len(optimizer.param_groups), name, len(param)
+                    )
+                )
             return param
         else:
             return [param] * len(optimizer.param_groups)
-            
+
     def get_lr(self, base_lr, step):
         lrs = []
         for group in self.optimizer.param_groups:
             start_step = 0
             for i, phase in enumerate(self._schedule_phases):
-                start_step, end_step = phase['start_step'], phase['end_step']
+                start_step, end_step = phase["start_step"], phase["end_step"]
                 if step <= end_step or i == len(self._schedule_phases) - 1:
                     pct = (step - start_step) / (end_step - start_step)
-                    computed_lr = self.anneal_func(group[phase['start_lr']], group[phase['end_lr']], pct)
+                    computed_lr = self.anneal_func(
+                        group[phase["start_lr"]], group[phase["end_lr"]], pct
+                    )
                     if self.cycle_momentum:
-                        computed_momentum = self.anneal_func(group[phase['start_momentum']], group[phase['end_momentum']], pct)
+                        computed_momentum = self.anneal_func(
+                            group[phase["start_momentum"]],
+                            group[phase["end_momentum"]],
+                            pct,
+                        )
                     break
 
             lrs.append(computed_lr)
             if self.cycle_momentum:
                 if self.use_beta1:
-                    _, beta2 = group['betas']
-                    group['betas'] = (computed_momentum, beta2)
+                    _, beta2 = group["betas"]
+                    group["betas"] = (computed_momentum, beta2)
                 else:
-                    group['momentum'] = computed_momentum
-            
+                    group["momentum"] = computed_momentum
+
         return lrs
-    
+
     def step(self):
         self.last_step += 1
         lrs = self.get_lr(None, self.last_step)
