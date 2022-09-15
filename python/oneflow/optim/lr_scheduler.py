@@ -32,3 +32,4 @@ from oneflow.nn.optimizer.cosine_annealing_warm_restarts import (
 from oneflow.nn.optimizer.chained_scheduler import ChainedScheduler
 from oneflow.nn.optimizer.sequential_lr import SequentialLR
 from oneflow.nn.optimizer.cyclic_lr import CyclicLR
+from oneflow.nn.optimizer.onecycle_lr import OneCycleLR

@@ -82,6 +82,18 @@ message CosineAnnealingWarmRestartsConf {
   required int64 restart_limit = 5;
 }
 
+message CyclicLRConf {
+  required double base_lr = 1;
+  required double max_lr = 2;
+  required int64 step_size_up = 3;
+  required int64 step_size_down = 4;
+  required int32 mode = 5;
+  required double gamma = 6;
+  required double scale_fn = 7;
+  required int32 scale_mode = 8;
+  required int64 step_size_total = 9;
+}
+
 message SequentialSchedulerConf {
   repeated LearningRateDecayConf schedulers = 1;
   repeated int64 milestones = 2;
@@ -108,5 +120,6 @@ message LearningRateDecayConf {
     ConstantLRConf constant_lr_conf = 2012;
     CosineAnnealingWarmRestartsConf cosine_annealing_warm_restarts_conf = 2013;
     SequentialSchedulerConf sequential_scheduler_conf = 2014;
+    CyclicLRConf cyclic_lr_conf = 2015;
   }
 }

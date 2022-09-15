@@ -105,6 +105,7 @@ class CyclicLR(LRScheduler):
 
     .. _Cyclical Learning Rates for Training Neural Networks: https://arxiv.org/abs/1506.01186
     """
+
     def __init__(
         self,
         optimizer: Optimizer,
@@ -125,8 +126,7 @@ class CyclicLR(LRScheduler):
         if not isinstance(optimizer, Optimizer):
             raise TypeError("{} is not an Optimizer".format(type(optimizer).__name__))
 
-        self.base_lr = base_lr
-        self.max_lr = max_lr
+        self.max_lrs = self._format_param("max_lr", optimizer, max_lr)
         self.step_size_up = step_size_up
         self.step_size_down = (
             step_size_down if step_size_down is not None else step_size_up
@@ -173,6 +173,10 @@ class CyclicLR(LRScheduler):
                 "max_momentum", optimizer, max_momentum
             )
 
+        self.base_lrs = self._format_param("base_lr", optimizer, base_lr)
+        for group, _base_lr in zip(optimizer.param_groups, self.base_lrs):
+            if "initial_lr" not in group:
+                group.setdefault("initial_lr", _base_lr)
         super().__init__(optimizer, last_step, verbose)
 
     def _format_param(self, name, optimizer, param):
@@ -188,19 +192,23 @@ class CyclicLR(LRScheduler):
         else:
             return [param] * len(optimizer.param_groups)
 
-    def get_lr(self, base_lr, step):
+    def get_lr(self, _, step):
+        lrs = []
         offset_ratio = step % self.step_size_total / self.step_size_total
         if offset_ratio <= self.step_up_ratio:
             scale_factor = offset_ratio / self.step_up_ratio
         else:
             scale_factor = (1 - offset_ratio) / (1 - self.step_up_ratio)
-        height = (self.max_lr - self.base_lr) * scale_factor
 
-        if self.scale_mode == "cycle":
-            cycle_num = 1.0 + step // self.step_size_total
-            lr = self.base_lr + height * self.scale_fn(cycle_num)
-        else:
-            lr = self.base_lr + height * self.scale_fn(step)
+        for base_lr, max_lr in zip(self.base_lrs, self.max_lrs):
+            height = (max_lr - base_lr) * scale_factor
+
+            if self.scale_mode == "cycle":
+                cycle_num = 1.0 + step // self.step_size_total
+                lr = base_lr + height * self.scale_fn(cycle_num)
+            else:
+                lr = base_lr + height * self.scale_fn(step)
+            lrs.append(lr)
 
         if self.cycle_momentum:
             momentums = []
@@ -211,26 +219,37 @@ class CyclicLR(LRScheduler):
                 if self.scale_mode == "cycle":
                     momentum = max_momentum - base_height * self.scale_fn(cycle_num)
                 else:
-                    momentum = max_momentum - base_height * self.scale_fn(
-                        self.last_step
-                    )
+                    momentum = max_momentum - base_height * self.scale_fn(step)
                 momentums.append(momentum)
             for param_group, momentum in zip(self.optimizer.param_groups, momentums):
                 param_group["momentum"] = momentum
 
-        return lr
+        return lrs
+
+    def step(self):
+        self.last_step += 1
+        lrs = self.get_lr(None, self.last_step)
+        self.update_lrs(lrs)
 
     def _generate_conf_for_graph(self, lr_conf):
+        if self.cycle_momentum == True:
+            raise RuntimeError("cycle_momentum == True is not supported in graph mode.")
+        if isinstance(self.max_lrs, (list, tuple)):
+            raise RuntimeError("multi lr is not supported in graph mode.")
+
+        mode_dict = {"trianglular": 0, "triangular2": 1, "exp_range": 2}
+        scale_mode_dict = {
+            "cycle": 0,
+            "iterations": 1,
+        }
         lr_conf.cyclic_lr_conf.SetInParent()
         cyclic_lr_conf = lr_conf.cyclic_lr_conf
         cyclic_lr_conf.base_lr = self.base_lr
         cyclic_lr_conf.max_lr = self.max_lr
         cyclic_lr_conf.step_size_up = self.step_size_up
         cyclic_lr_conf.step_size_down = self.step_size_down
-        cyclic_lr_conf.mode = self.mode
+        cyclic_lr_conf.step_size_total = self.step_size_total
+        cyclic_lr_conf.mode = mode_dict[self.mode]
         cyclic_lr_conf.gamma = self.gamma
         cyclic_lr_conf.scale_fn = self.scale_fn
-        cyclic_lr_conf.scale_mode = self.scale_mode
-        cyclic_lr_conf.cycle_momentum = self.cycle_momentum
-        cyclic_lr_conf.base_momentum = self.base_momentums
-        cyclic_lr_conf.max_momentum = self.max_momentums
+        cyclic_lr_conf.scale_mode = scale_mode_dict[self.scale_mode]
