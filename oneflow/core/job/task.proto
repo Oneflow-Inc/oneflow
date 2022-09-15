@@ -37,7 +37,6 @@ enum TaskType {
   kBoxingZeros = 64;
   kCriticalSectionWaitTick = 65;
   kNcclSendRecvBoxing = 66;
-  kIdShuffle = 67;
 };
 
 message RegstDescIdSet {
