@@ -491,8 +491,8 @@ class MaxPoolNdGradGradFunctor {
           .then(std::bind(functional::Reshape, std::placeholders::_1, *indices->shape()))
           .call(outgrad_view, -1, indices_view, /*sparse_grad=*/false);
     } else {
-      return functional::Empty(*indices->shape(), dydx->dtype(), JUST(dydx->device()),
-                               /*pin_memory=*/false);
+      // empty inputs, return 0size tensor
+      return functional::ZerosLike(indices);
     }
   }
 };
