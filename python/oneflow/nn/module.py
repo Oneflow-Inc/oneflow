@@ -15,7 +15,18 @@ limitations under the License.
 """
 import itertools
 from collections import OrderedDict, namedtuple
-from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple, TypeVar, Union, overload
+from typing import (
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    TypeVar,
+    Union,
+    overload,
+)
 import traceback
 import warnings
 
@@ -1073,7 +1084,11 @@ class Module(object):
         return self
 
     @overload
-    def to(self: T, device: Optional[Union[int, flow.device]] = ..., dtype: Optional[Union[flow.dtype, str]] = ...) -> T:
+    def to(
+        self: T,
+        device: Optional[Union[int, flow.device]] = ...,
+        dtype: Optional[Union[flow.dtype, str]] = ...,
+    ) -> T:
         ...
 
     @overload
@@ -1174,13 +1189,16 @@ class Module(object):
                     device = tensor.device
                     dtype = tensor.dtype
         else:
-            raise ValueError(f"Unsupported parameters in module.to: {args} and {kwargs}")
-
+            raise ValueError(
+                f"Unsupported parameters in module.to: {args} and {kwargs}"
+            )
 
         if dtype is not None:
             if not dtype.is_floating_point:
-                raise TypeError('nn.Module.to only accepts floating point '
-                                'dtypes, but got desired dtype={}'.format(dtype))
+                raise TypeError(
+                    "nn.Module.to only accepts floating point "
+                    "dtypes, but got desired dtype={}".format(dtype)
+                )
 
         def convert(t):
             return t.to(device, dtype if t.is_floating_point() else None)
