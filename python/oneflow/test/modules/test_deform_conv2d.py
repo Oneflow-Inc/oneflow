@@ -26,36 +26,27 @@ import torch
 
 def GetRamdomData():
 
-    #     torch.Size([30, 24, 10, 13])
-    # torch_offset:
-    # torch.Size([30, 2, 14, 6])
-    # torch_weight:
-    # torch.Size([63, 24, 1, 1])
-    # torch_mask:
-    # torch.Size([30, 1, 14, 6])
-    # torch_bias:
-    # torch.Size([63])
-
-    batch_sz = 3  # np.random.randint(30, 32)
-    n_out_channels = 5  # np.random.randint(60, 64)
-    n_in_channels = 3  # np.random.randint(1, n_out_channels)
-
+    batch_sz = 30  # np.random.randint(1, 320)
+    n_out_channels = 500  # np.random.randint(1, 640)
+    n_in_channels = 500  # np.random.randint(1, 640)
     n_weight_grps = 1
     n_offset_grps = 1
-    random_stride_h = 3  # np.random.randint(1, 5)
-    random_stride_w = 3  # np.random.randint(1, 5)
-    random_pad_h = 1  # np.random.randint(0, 3)
-    random_pad_w = 1  # np.random.randint(0, 3)
-    random_dilation_h = 1  # np.random.randint(1, 3)
-    random_dilation_w = 1  # np.random.randint(1, 3)
-    # TODO(yzm):support rectangle convolution kernel
-    # NOTE:Now use the rectangular convolution kernel is not aligned with PyTorch
-    # NOTE:Added after alignment using a rectangular convolution kernel
-    random_kernel_h = 3  # np.random.randint(1, 10)
-    random_kernel_w = random_kernel_h  # np.random.randint(1, 5)
+    random_stride_h = np.random.randint(1, 5)
+    random_stride_w = np.random.randint(1, 5)
+    random_pad_h =np.random.randint(0, 3)
+    random_pad_w =np.random.randint(0, 3)
 
-    random_in_h = 10  # np.random.randint(1, 15)
-    random_in_w = 10  # np.random.randint(1, 15)
+    random_dilation_h =  np.random.randint(1, 3)
+    random_dilation_w =  np.random.randint(1, 3)
+
+    # BUG(yzm):Now use the rectangular convolution kernel is not aligned with PyTorch
+    # NOTE:Added after alignment using a rectangular convolution kernel
+    random_kernel_h = 5#np.random.randint(1, 11)
+    random_kernel_w = 5#random_kernel_h  # np.random.randint(1, 11)
+
+    random_in_h =  np.random.randint(1, 15)
+    random_in_w =  np.random.randint(1, 15)
+
     stride = (random_stride_h, random_stride_w)
     pad = (random_pad_h, random_pad_w)
     dilation = (random_dilation_h, random_dilation_w)
@@ -76,7 +67,7 @@ def GetRamdomData():
     )
 
 
-def GetFunArgs():
+def GetRamdomFunArgs():
     out_w = 0
     out_h = 0
     while out_w <= 0 or out_h <= 0:
@@ -102,9 +93,6 @@ def GetFunArgs():
         in_h, in_w = (random_in_h, random_in_w)
         out_h = (in_h + 2 * pad_h - (dil_h * (weight_h - 1) + 1)) // stride_h + 1
         out_w = (in_w + 2 * pad_w - (dil_w * (weight_w - 1) + 1)) // stride_w + 1
-
-    print(out_h)
-    print(out_w)
 
     input_np = np.random.rand(batch_sz, n_in_channels, in_h, in_w)
 
@@ -140,16 +128,6 @@ def _test_deform_conv2d_forward(
     torch_offset = torch.from_numpy(offset_np).to(device)
     torch_mask = torch.from_numpy(mask_np).to(device)
     torch_bias = torch.from_numpy(bias_np).to(device)
-    print("torch_input:")
-    print(torch_input.shape)
-    print("torch_offset:")
-    print(torch_offset.shape)
-    print("torch_weight:")
-    print(torch_weight.shape)
-    print("torch_mask:")
-    print(torch_mask.shape)
-    print("torch_bias:")
-    print(torch_bias.shape)
 
     torch_out = torchvision.ops.deform_conv2d(
         torch_input,
@@ -161,7 +139,6 @@ def _test_deform_conv2d_forward(
         mask=torch_mask,
         bias=torch_bias,
     )
-    print(torch_out.shape)
     print(torch_out)
     flow_input = flow.tensor(input_np).to(device)
     flow_weight = flow.tensor(weight_np).to(device)
@@ -180,48 +157,9 @@ def _test_deform_conv2d_forward(
         bias=flow_bias,
     )
     print(flow_out)
-    # test_case.assertTrue(
-    #     np.allclose(flow_out.numpy(), torch_out.cpu().numpy(), rtol=1e-4, atol=1e-4)
-    # )
-
-
-def test_deform_conv2d(test_case, device):
-    (
-        input_np,
-        weight_np,
-        offset_np,
-        mask_np,
-        bias_np,
-        stride,
-        padding,
-        dilation,
-    ) = GetFunArgs()
-
-    _test_deform_conv2d_forward(
-        test_case,
-        device,
-        input_np,
-        weight_np,
-        offset_np,
-        mask_np,
-        bias_np,
-        stride,
-        padding,
-        dilation,
+    test_case.assertTrue(
+        np.allclose(flow_out.numpy(), torch_out.cpu().numpy(), rtol=1e-5, atol=1e-5,)
     )
-    print("finish")
-    # _test_deform_conv2d_backward(
-    #     test_case,
-    #     device,
-    #     input_np,
-    #     weight_np,
-    #     offset_np,
-    #     mask_np,
-    #     bias_np,
-    #     stride,
-    #     padding,
-    #     dilation,
-    # )
 
 
 def _test_deform_conv2d_backward(
@@ -246,7 +184,7 @@ def _test_deform_conv2d_backward(
         stride,
         padding,
         dilation,
-    ) = GetFunArgs()
+    ) = GetRamdomFunArgs()
     torch_input = torch.from_numpy(input_np).to(device).requires_grad_(True)
     torch_weight = torch.from_numpy(weight_np).to(device).requires_grad_(True)
     torch_offset = torch.from_numpy(offset_np).to(device).requires_grad_(True)
@@ -260,10 +198,11 @@ def _test_deform_conv2d_backward(
         stride=stride,
         padding=padding,
         dilation=dilation,
-        # mask=torch_mask,
-        # bias=torch_bias,
+        mask=torch_mask,
+        bias=torch_bias,
     )
     torch_out.sum().backward()
+    print("torch finish")
 
     flow_input = flow.tensor(input_np).to(device).requires_grad_(True)
     flow_weight = flow.tensor(weight_np).to(device).requires_grad_(True)
@@ -278,8 +217,8 @@ def _test_deform_conv2d_backward(
         stride=stride,
         padding=padding,
         dilation=dilation,
-        # mask=flow_mask,
-        # bias=flow_bias,
+        mask=flow_mask,
+        bias=flow_bias,
     )
     flow_out.sum().backward()
 
@@ -317,6 +256,44 @@ def _test_deform_conv2d_backward(
         np.allclose(
             flow_bias.grad.numpy(), torch_bias.grad.cpu().numpy(), rtol=1e-5, atol=1e-5
         )
+    )
+
+
+def test_deform_conv2d(test_case, device):
+    (
+        input_np,
+        weight_np,
+        offset_np,
+        mask_np,
+        bias_np,
+        stride,
+        padding,
+        dilation,
+    ) = GetRamdomFunArgs()
+
+    # _test_deform_conv2d_forward(
+    #     test_case,
+    #     device,
+    #     input_np,
+    #     weight_np,
+    #     offset_np,
+    #     mask_np,
+    #     bias_np,
+    #     stride,
+    #     padding,
+    #     dilation,
+    # )
+    _test_deform_conv2d_backward(
+        test_case,
+        device,
+        input_np,
+        weight_np,
+        offset_np,
+        mask_np,
+        bias_np,
+        stride,
+        padding,
+        dilation,
     )
 
 
