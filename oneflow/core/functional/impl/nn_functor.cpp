@@ -3540,13 +3540,15 @@ class OneEmbeddingLookupFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& shadow,
                            const std::shared_ptr<one::Tensor>& ids,
                            const Optional<one::Tensor>& table_ids, const Symbol<DType>& dtype,
-                           const int64_t embedding_size, const int32_t num_tables,
-                           const std::string& embedding_tables,
-                           const std::string& key_value_store_options) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "embedding_size", "num_tables",
-                                                 "embedding_tables", "key_value_store_options");
-    attrs.SetAllAttrs(dtype->data_type(), embedding_size, num_tables, embedding_tables,
-                      key_value_store_options);
+                           const std::string& embedding_name, const int64_t line_size,
+                           const int64_t embedding_size, const bool is_full_cache,
+                           const int32_t num_tables, const std::string& embedding_tables,
+                           const int64_t seed) const {
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "embedding_name", "line_size", "embedding_size",
+                                       "is_full_cache", "num_tables", "embedding_tables", "seed");
+    attrs.SetAllAttrs(dtype->data_type(), embedding_name, line_size, embedding_size, is_full_cache,
+                      num_tables, embedding_tables, seed);
     if (table_ids) {
       return OpInterpUtil::Dispatch<Tensor>(*op_has_table_ids_, {shadow, ids, JUST(table_ids)},
                                             attrs);
@@ -3571,9 +3573,10 @@ class OneEmbeddingLookupGradFunctor {
 
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ids,
                          const std::shared_ptr<one::Tensor>& embedding_grad,
-                         const std::string& key_value_store_options) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("key_value_store_options");
-    attrs.SetAllAttrs(key_value_store_options);
+                         const std::string& embedding_name, const int64_t line_size,
+                         const int64_t embedding_size) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("embedding_name", "line_size", "embedding_size");
+    attrs.SetAllAttrs(embedding_name, line_size, embedding_size);
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ids, embedding_grad}, attrs));
     return Maybe<void>::Ok();
   }
