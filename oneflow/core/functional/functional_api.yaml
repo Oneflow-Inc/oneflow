@@ -1116,6 +1116,10 @@
   signature: "Tensor(Tensor dy, Tensor input, Tensor target, Bool log_target) => KLDivLossGrad"
   bind_python: False
 
+- name: "kl_div_loss_target_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Bool log_target) => KLDivLossTargetGrad"
+  bind_python: False
+
 - name: "nll_loss"
   signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction) => NLLLoss"
   bind_python: True
@@ -1132,6 +1136,10 @@
   signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None) => BinaryCrossEntropyLossGrad"
   bind_python: False
 
+- name: "binary_cross_entropy_loss_target_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None) => BinaryCrossEntropyLossTargetGrad"
+  bind_python: False
+
 - name: "binary_cross_entropy_with_logits_loss"
   signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None, String reduction=\"mean\") => BinaryCrossEntropyWithLogitsLoss"
   bind_python: True
@@ -1140,8 +1148,16 @@
   signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None) => BinaryCrossEntropyWithLogitsLossGrad"
   bind_python: True
 
+- name: "binary_cross_entropy_with_logits_loss_target_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None) => BinaryCrossEntropyWithLogitsLossTargetGrad"
+  bind_python: False
+
 - name: "binary_cross_entropy_with_logits_reduce_mean_loss_grad"
   signature: "Tensor(Tensor dy, Tensor input, Tensor target) => BinaryCrossEntropyWithLogitsReduceMeanLossGrad"
+  bind_python: False
+
+- name: "binary_cross_entropy_with_logits_reduce_mean_loss_target_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target) => BinaryCrossEntropyWithLogitsReduceMeanLossTargetGrad"
   bind_python: False
 
 - name: "sparse_cross_entropy"
