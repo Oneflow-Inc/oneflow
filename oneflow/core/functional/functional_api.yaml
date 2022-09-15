@@ -1105,7 +1105,7 @@
   bind_python: True
 
 - name: "kl_div_loss"
-  signature: "Tensor(Tensor input, Tensor target, Bool log_target, String reduction) => KLDivLoss"
+  signature: "Tensor(Tensor input, Tensor target, Bool log_target, String reduction=\"mean\") => KLDivLoss"
   bind_python: True
 
 - name: "kl_div_loss_grad"
