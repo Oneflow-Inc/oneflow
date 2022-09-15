@@ -13,9 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.utils.torch.from_or_to_torch_tensor import from_torch, to_torch
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
+from oneflow._oneflow_internal.autograd.Function import FunctionCtx
 
-__all__ = [
-    "from_torch",
-    "to_torch",
-]
+add_docstr(
+    FunctionCtx.saved_tensors, "Get saved tensors in ctx.",
+)
+
+add_docstr(
+    FunctionCtx.save_for_backward,
+    "Saves given tensors for a future call to ``backward()``.",
+)
+
+add_docstr(
+    FunctionCtx.mark_non_differentiable, "Marks outputs as non-differentiable.",
+)

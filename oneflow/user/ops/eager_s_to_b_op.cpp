@@ -47,7 +47,7 @@ namespace oneflow {
 
 /* static */ Maybe<Symbol<Stream>> EagerSToBOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 }  // namespace oneflow

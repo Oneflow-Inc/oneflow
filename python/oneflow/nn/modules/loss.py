@@ -450,7 +450,12 @@ class KLDivLoss(_Loss):
     """
 
     def __init__(self, reduction: str = "mean", log_target: bool = False) -> None:
-        super(KLDivLoss, self).__init__(reduction)
+        if reduction == "batchmean":
+            super(KLDivLoss, self).__init__("sum")
+            self.reduction = "batchmean"
+        else:
+            super(KLDivLoss, self).__init__(reduction)
+
         self.log_target = log_target
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
