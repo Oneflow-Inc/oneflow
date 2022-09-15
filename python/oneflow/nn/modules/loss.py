@@ -226,8 +226,8 @@ class CrossEntropyLoss(_WeightedLoss):
         >>> out_label_smoothing
         tensor([1.0586, 1.1654, 0.8864], dtype=oneflow.float32)
         >>> probs = flow.tensor([[ 0.99495536,  0.28255007, -0.2775054 ],
-            [ 0.42397153,  0.01075112,  0.56527734],
-            [ 0.72356546, -0.1304398 ,  0.4068744 ]], dtype=flow.float32)
+        ...    [ 0.42397153,  0.01075112,  0.56527734],
+        ...    [ 0.72356546, -0.1304398 ,  0.4068744 ]], dtype=flow.float32)
         >>> out = flow.nn.CrossEntropyLoss()(input, probs)
         >>> out
         >>> tensor(1.3305, dtype=oneflow.float32)

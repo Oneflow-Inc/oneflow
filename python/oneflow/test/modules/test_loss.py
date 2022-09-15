@@ -22,7 +22,7 @@ import torch as torch_original
 from packaging import version
 
 
-def generate_necessity_for_cross_entropy_or_nll_loss(dim: int, prob: bool):
+def generate_necessity_for_cross_entropy_or_nll_loss(dim: int, prob: bool = False):
     if dim > 5 or dim < 2:
         raise ValueError("dim should be less than 5 or greater than 1. ")
     device = random_device()
