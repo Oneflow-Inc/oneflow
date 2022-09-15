@@ -89,6 +89,7 @@ from oneflow._C import greater_equal
 from oneflow._C import greater_equal as ge
 from oneflow._C import log
 from oneflow._C import log2
+from oneflow._C import log10
 from oneflow._C import logical_and
 from oneflow._C import logical_or
 from oneflow._C import logical_xor
@@ -140,8 +141,6 @@ from oneflow._C import fmod
 from oneflow._C import flatten
 from oneflow._C import in_top_k
 from oneflow._C import lgamma
-from oneflow._C import log
-from oneflow._C import log2
 from oneflow._C import minimum
 from oneflow._C import maximum
 from oneflow._C import max
@@ -217,6 +216,7 @@ from oneflow._C import isnan
 from oneflow._C import isinf
 from oneflow._C import isfinite
 from oneflow._C import inv as inverse
+from oneflow._C import iinfo, finfo
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
@@ -314,7 +314,8 @@ from oneflow.framework.generator import (
 
 # NOTE(chengcheng) oneflow.Model is unavailable now.
 # from oneflow.framework.model import Model
-import oneflow.utils.torch
+import oneflow.utils.tensor
+import oneflow.utils.global_view
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
 from oneflow.framework.type_tensor import *
