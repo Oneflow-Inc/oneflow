@@ -230,7 +230,7 @@ class CrossEntropyLoss(_WeightedLoss):
         ...    [ 0.72356546, -0.1304398 ,  0.4068744 ]], dtype=flow.float32)
         >>> out = flow.nn.CrossEntropyLoss()(input, probs)
         >>> out
-        >>> tensor(1.3305, dtype=oneflow.float32)
+        tensor(1.3305, dtype=oneflow.float32)
 
     """
 
