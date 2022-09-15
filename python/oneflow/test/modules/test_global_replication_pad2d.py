@@ -15,30 +15,36 @@ limitations under the License.
 """
 
 import unittest
+
 import oneflow as flow
 import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=2, auto_backward=True, check_graph=True)
-def _test_cumprod_impl(test_case, ndim, placement, sbp):
-    dims = [random(1, 4) * 8 for i in range(ndim)]
-    x = random_tensor(ndim, *dims)
+@autotest(n=1, check_graph=False)
+def _test_replication_pad2d_impl(test_case, padding, placement, sbp):
+    m = torch.nn.ReplicationPad2d(padding=padding)
+    dims = [random(2, 4) * 8 for _ in range(4)]
+    x = random_tensor(4, *dims)
     y = x.to_global(placement=placement, sbp=sbp)
-    dim = random(0, ndim).to(int).value()
-    z = torch.cumprod(y, dim)
+    z = m(y)
     return z
 
 
-class TestCumprodGlobal(flow.unittest.TestCase):
+class TestReplicationPad2dGlobal(flow.unittest.TestCase):
     @globaltest
-    def test_cumprod(test_case):
-        # random ndim in range [1,4]
-        ndim = random(1, 5).to(int).value()
+    def test_replication_pad2d(test_case):
+        padding = [
+            (2, 2, 1, 1),
+            1,
+            (1, 0, 1, 0),
+            (0, 1, 0, 1),
+        ]
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=min(2, ndim)):
-                _test_cumprod_impl(test_case, ndim, placement, sbp)
+            for sbp in all_sbp(placement, max_dim=4):
+                for pad in padding:
+                    _test_replication_pad2d_impl(test_case, pad, placement, sbp)
 
 
 if __name__ == "__main__":

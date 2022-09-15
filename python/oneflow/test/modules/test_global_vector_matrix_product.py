@@ -13,32 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import unittest
 import oneflow as flow
 import oneflow.unittest
-
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=2, auto_backward=True, check_graph=True)
-def _test_cumprod_impl(test_case, ndim, placement, sbp):
-    dims = [random(1, 4) * 8 for i in range(ndim)]
-    x = random_tensor(ndim, *dims)
-    y = x.to_global(placement=placement, sbp=sbp)
-    dim = random(0, ndim).to(int).value()
-    z = torch.cumprod(y, dim)
-    return z
+@autotest(n=1, check_graph=False)
+def _test_vector_matrix_product(test_case, placement, sbp):
+    dim = random(1, 6)
+    vec = random_tensor(1, dim0=dim).to_global(placement=placement, sbp=sbp)
+    mat = random_tensor(2, dim0=dim, dim1=constant(4)).to_global(
+        placement=placement, sbp=sbp
+    )
+    return torch.matmul(vec, mat)
 
 
-class TestCumprodGlobal(flow.unittest.TestCase):
+class TestGlobalVectorMatrixProduct(flow.unittest.TestCase):
     @globaltest
-    def test_cumprod(test_case):
-        # random ndim in range [1,4]
-        ndim = random(1, 5).to(int).value()
+    def test_vector_matrix_product(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=min(2, ndim)):
-                _test_cumprod_impl(test_case, ndim, placement, sbp)
+            for sbp in all_sbp(placement):
+                _test_vector_matrix_product(test_case, placement, sbp)
 
 
 if __name__ == "__main__":

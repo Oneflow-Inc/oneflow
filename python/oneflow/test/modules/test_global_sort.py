@@ -13,32 +13,33 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import unittest
+from collections import OrderedDict
+
 import oneflow as flow
 import oneflow.unittest
-
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=2, auto_backward=True, check_graph=True)
-def _test_cumprod_impl(test_case, ndim, placement, sbp):
-    dims = [random(1, 4) * 8 for i in range(ndim)]
-    x = random_tensor(ndim, *dims)
+@autotest(n=5, auto_backward=False, check_graph=False)
+def _test_sort_impl(test_case, placement):
+    sbp = random_sbp(placement, max_dim=4)
+    x_dims = [random(2, 4) * 8 for _ in range(4)]
+    x = random_tensor(4, *x_dims)
+    dim = random(0, 4).to(int).value()
+    descending = random().to(bool).value()
+
     y = x.to_global(placement=placement, sbp=sbp)
-    dim = random(0, ndim).to(int).value()
-    z = torch.cumprod(y, dim)
-    return z
+    sort_result = torch.sort(y, dim=dim, descending=descending)
+    value = sort_result[0]
+    return value
 
 
-class TestCumprodGlobal(flow.unittest.TestCase):
+class TestSortGlobal(flow.unittest.TestCase):
     @globaltest
-    def test_cumprod(test_case):
-        # random ndim in range [1,4]
-        ndim = random(1, 5).to(int).value()
+    def test_sort(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=min(2, ndim)):
-                _test_cumprod_impl(test_case, ndim, placement, sbp)
+            _test_sort_impl(test_case, placement)
 
 
 if __name__ == "__main__":

@@ -15,30 +15,29 @@ limitations under the License.
 """
 
 import unittest
+
 import oneflow as flow
 import oneflow.unittest
-
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=2, auto_backward=True, check_graph=True)
-def _test_cumprod_impl(test_case, ndim, placement, sbp):
-    dims = [random(1, 4) * 8 for i in range(ndim)]
+@autotest(n=2, check_graph=False)
+def _test_reciprocal_impl(test_case, ndim, placement, sbp):
+    dims = [random(1, 4) * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dims)
     y = x.to_global(placement=placement, sbp=sbp)
-    dim = random(0, ndim).to(int).value()
-    z = torch.cumprod(y, dim)
+    z = torch.reciprocal(y)
     return z
 
 
-class TestCumprodGlobal(flow.unittest.TestCase):
+class TestReciprocalGlobal(flow.unittest.TestCase):
     @globaltest
-    def test_cumprod(test_case):
+    def test_reciprocal(test_case):
         # random ndim in range [1,4]
         ndim = random(1, 5).to(int).value()
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=min(2, ndim)):
-                _test_cumprod_impl(test_case, ndim, placement, sbp)
+            for sbp in all_sbp(placement, max_dim=ndim):
+                _test_reciprocal_impl(test_case, ndim, placement, sbp)
 
 
 if __name__ == "__main__":
