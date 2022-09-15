@@ -43,7 +43,7 @@ class AdaptiveAvgPoolNdNdGradGrad
     ctx->grad_requires_grad = inputs[0]->requires_grad();
     ctx->input_requires_grad = inputs[1]->requires_grad();
     if (ctx->grad_requires_grad) {
-      const auto grad_shape = *inputs[0]->shape();
+      const auto& grad_shape = *inputs[0]->shape();
       if (ndims == 1) {
         ctx->pool_output_size = {grad_shape[grad_shape.size() - 1]};
       } else if (ndims == 2) {
