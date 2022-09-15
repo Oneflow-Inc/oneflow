@@ -207,6 +207,15 @@ class TestPow(flow.unittest.TestCase):
         y = random_tensor(ndim=2, dim1=2).to(device)
         return torch.pow(x, y)
 
+    @autotest(n=5)
+    def test_scalar_pow_with_random_devices(test_case):
+        x1_device = random_device()
+        x2_device = random_device()
+        x1 = random_tensor(2, 2, 3).to(x1_device).mean()
+        x2 = random_tensor(2, 2, 3).to(x2_device)
+        y = torch.pow(x1, x2)
+        return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestAsin(flow.unittest.TestCase):
@@ -499,6 +508,52 @@ class TestPow(flow.unittest.TestCase):
         x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
         y = random().to(int)
         return torch.pow(x, y)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestAbsModule(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_abs_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return torch.abs(x)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestCoshModule(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_cosh_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return torch.cosh(x)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestLgammaModule(flow.unittest.TestCase):
+    # TODO: Add lgamma backward.
+    @autotest(n=5, auto_backward=False)
+    def test_lgamma_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return torch.lgamma(x)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestLog2Module(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_log2_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return torch.log2(x)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestLog10Module(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_log10_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return torch.log10(x)
 
 
 if __name__ == "__main__":

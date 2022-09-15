@@ -111,6 +111,7 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kTanhBackwardWithDyX, Src, Dst
   }
 };
 
+
 template<typename Dst>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kScalarExpPowerGrad, int, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {}
@@ -148,6 +149,14 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kScalarExpPowerGrad, int64_t, 
 
   OF_DEVICE_FUNC Dst operator()(int src0, int src1) const {
     return static_cast<Dst>(float_functor(static_cast<float>(src0), static_cast<float>(src1)));
+
+template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kAtanhBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    const Src one = static_cast<Src>(1.0);
+    return dy * one / (one - static_cast<Src>(pow(x, 2)));
+
   }
 };
 
@@ -189,6 +198,28 @@ SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSoftshrinkBackwardWithD
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kTanhBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kThresholdBackwardWithDyX);
 
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kAcosBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kAcoshBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kAsinBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kAsinhBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kCosBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kCoshBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kErfBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kErfcBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kExpBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kExpm1BackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kLog2BackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kLog10BackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kLogSigmoidBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kReciprocalNoNanBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kRsqrtBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSinBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSinhBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSqrtBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kTanBackwardWithDyX);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSigmoidBackwardWithDyY);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kAtanhBackwardWithDyX);
+
 #endif  // CUDA_VERSION >= 11000
 
 #define SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(op)                                         \
@@ -221,6 +252,28 @@ SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSoftsignBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSoftshrinkBackwardWithDyY);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kThresholdBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kTanhBackwardWithDyX);
+
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kAcosBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kAcoshBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kAsinBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kAsinhBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kCosBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kCoshBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kErfBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kErfcBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kExpBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kExpm1BackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kLog2BackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kLog10BackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kLogSigmoidBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kReciprocalNoNanBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kRsqrtBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSinBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSinhBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSqrtBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kTanBackwardWithDyX);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSigmoidBackwardWithDyY);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kAtanhBackwardWithDyX);
 
 #define SPECIALIZATION_GPU_BINARY_FUNCTOR(op, type)                                          \
   template<>                                                                                 \

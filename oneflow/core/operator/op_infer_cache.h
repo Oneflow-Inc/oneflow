@@ -55,12 +55,10 @@ struct hash<oneflow::OpInferCacheKey> final {
     using namespace oneflow;
     size_t ibn_idx2shape_sym_hash_value = 0;
     for (const auto& shape_sym : op_infer_cache_key.ibn_idx2shape_sym) {
-      ibn_idx2shape_sym_hash_value ^= std::hash<Symbol<Shape>>()(shape_sym);
+      AddHash(&ibn_idx2shape_sym_hash_value, shape_sym);
     }
-    return std::hash<const void*>()(op_infer_cache_key.scope)
-           ^ std::hash<Symbol<OperatorConf>>()(op_infer_cache_key.op_conf_sym)
-           ^ ibn_idx2shape_sym_hash_value
-           ^ std::hash<Symbol<DTypeSignature>>()(op_infer_cache_key.dtype_signature_sym);
+    return Hash(op_infer_cache_key.scope, op_infer_cache_key.op_conf_sym,
+                ibn_idx2shape_sym_hash_value, op_infer_cache_key.dtype_signature_sym);
   }
 };
 

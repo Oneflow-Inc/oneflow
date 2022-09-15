@@ -33,6 +33,11 @@ namespace functional {
 
 namespace impl {
 
+std::string TensorDeviceToString(const std::shared_ptr<Tensor>& tensor) {
+  if (tensor->is_global()) { return CHECK_JUST(tensor->parallel_desc())->device_tag(); }
+  return CHECK_JUST(tensor->device())->ToString();
+}
+
 class AddFunctor {
  public:
   AddFunctor() {
@@ -44,21 +49,28 @@ class AddFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& other, const Scalar& alpha,
                            bool inplace) const {
-    if (IsIntegralDataType(input->dtype()->data_type())
+    auto input_tensor = input;
+    if (IsScalarTensor(input)) {
+      // NOTE:If tensor x is scalar and it's device not equal to tensor y,
+      // then need move it to the target device first.(This behavior aligns to PyTorch)
+      std::string device_str = TensorDeviceToString(other);
+      input_tensor = JUST(functional::To(input, device_str));
+    }
+    if (IsIntegralDataType(input_tensor->dtype()->data_type())
         && IsIntegralDataType(other->dtype()->data_type()) && alpha.IsFloatingPoint()) {
       return Error::RuntimeError()
              << "For integral input tensors, argument alpha must not be a floating point number.";
     }
 
-    bool input_static_zeros = IsStaticZerosTensor(input);
+    bool input_static_zeros = IsStaticZerosTensor(input_tensor);
     if (input_static_zeros || IsStaticZerosTensor(other)) {
-      CHECK_OR_RETURN(JUST(input->device()) == JUST(other->device()))
+      CHECK_OR_RETURN(JUST(input_tensor->device()) == JUST(other->device()))
           << Error::RuntimeError()
           << "Expected all tensors to be on the same device, but found at least two devices, "
-          << JUST(input->device())->ToString() << " and " << JUST(other->device())->ToString()
-          << "!";
-      CHECK_OR_RETURN(*input->shape() == *other->shape())
-          << Error::RuntimeError() << "The size of tensor a " << input->shape()->ToString()
+          << JUST(input_tensor->device())->ToString() << " and "
+          << JUST(other->device())->ToString() << "!";
+      CHECK_OR_RETURN(*input_tensor->shape() == *other->shape())
+          << Error::RuntimeError() << "The size of tensor a " << input_tensor->shape()->ToString()
           << " must match the size of tensor b " << other->shape();
       if (input_static_zeros) {
         if ((alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
@@ -70,7 +82,7 @@ class AddFunctor {
           return JUST(functional::ScalarMul(alpha, other));
         }
       }
-      return input;
+      return input_tensor;
     }
 
     const OpExpr* op = nullptr;
@@ -79,10 +91,12 @@ class AddFunctor {
     if ((alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
         || (alpha.IsFloatingPoint()
             && std::fabs(alpha.Value<double>() - 1.0) < std::numeric_limits<double>::epsilon())) {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({input, other}).Apply());
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+               .AddInputs({input_tensor, other})
+               .Apply());
     } else {
       JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-               .AddInputs({input, JUST(functional::ScalarMul(alpha, other))})
+               .AddInputs({input_tensor, JUST(functional::ScalarMul(alpha, other))})
                .Apply());
     }
     TensorTuple input_vec = JUST(tensor_processor.GetInputs());
@@ -95,8 +109,8 @@ class AddFunctor {
       op = broadcast_add_op_.get();
     }
     if (inplace) {
-      JUST(CheckInplaceCastValid(input, input_cast));
-      JUST(CheckInplaceValid(input));
+      JUST(CheckInplaceCastValid(input_tensor, input_cast));
+      JUST(CheckInplaceValid(input_tensor));
       JUST(CheckInplaceShapeCanExpandTo(*other_cast->shape(), *input_cast->shape()));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = input_cast;
@@ -150,8 +164,15 @@ class MulFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
+    auto tensor_x = x;
+    if (IsScalarTensor(x)) {
+      // NOTE:If tensor x is scalar and it's device not equal to tensor y,
+      // then need move it to the target device first.(This behavior aligns to PyTorch)
+      std::string device_str = TensorDeviceToString(y);
+      tensor_x = JUST(functional::To(x, device_str));
+    }
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({tensor_x, y}).Apply());
     TensorTuple input_vec = JUST(tensor_processor.GetInputs());
 
     return OpInterpUtil::Dispatch<Tensor>(*broadcast_mul_op_, input_vec);
