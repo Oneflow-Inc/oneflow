@@ -66,12 +66,15 @@ class AdaptiveAvgPoolNdNdGradGrad
     in_grads->resize(2);
 
     if (ctx->grad_requires_grad) {
-      const auto pool_op =
-          (ndims == 1 ? functional::AdaptiveAvgPool1D
-                      : (ndims == 2 ? functional::AdaptiveAvgPool2D
-                                    : (ndims == 3 ? functional::AdaptiveAvgPool3D : nullptr)));
-      CHECK_NOTNULL_OR_RETURN(pool_op);  // NOLINT(maybe-need-error-msg)
-      (*in_grads)[0] = JUST(pool_op(out_grads[0], ctx->pool_output_size));
+      if (ndims == 1) {
+        (*in_grads)[0] = JUST(functional::AdaptiveAvgPool1D(out_grads[0], ctx->pool_output_size));
+      } else if (ndims == 2) {
+        (*in_grads)[0] = JUST(functional::AdaptiveAvgPool2D(out_grads[0], ctx->pool_output_size));
+      } else if (ndims == 3) {
+        (*in_grads)[0] = JUST(functional::AdaptiveAvgPool3D(out_grads[0], ctx->pool_output_size));
+      } else {
+        UNIMPLEMENTED_THEN_RETURN();
+      }
     }
     if (ctx->input_requires_grad) { (*in_grads)[1] = JUST(functional::ZerosLike(out_grads[0])); }
     return Maybe<void>::Ok();
