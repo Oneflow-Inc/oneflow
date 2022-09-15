@@ -57,7 +57,7 @@ from oneflow._C import threshold
 from oneflow._C import silu
 from oneflow._C import mish
 from oneflow.nn.modules.normalization import layer_norm
-from oneflow._C import dropout
+from oneflow._C import dropout, dropout1d, dropout2d, dropout3d
 from oneflow._C import smooth_l1_loss
 from .functional_pad import pad
 from oneflow._C import triplet_margin_loss
@@ -77,3 +77,4 @@ from oneflow.nn.modules.activation import relu6
 from oneflow.nn.modules.upsampling import Upsample as upsample
 from oneflow._C import unfold
 from oneflow._C import fold
+from oneflow._C import kl_div_loss as kl_div

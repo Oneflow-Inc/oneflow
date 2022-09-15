@@ -62,24 +62,24 @@ def _test_div_grad_grad_impl(test_case):
         np.allclose(
             ddx_and_ddy_and_ddz.pytorch[0].detach().cpu().numpy(),
             ddx_and_ddy_and_ddz.oneflow[0].detach().numpy(),
-            rtol=1e-4,
-            atol=1e-4,
+            rtol=1e-3,
+            atol=1e-3,
         )
     )
     test_case.assertTrue(
         np.allclose(
             ddx_and_ddy_and_ddz.pytorch[1].detach().cpu().numpy(),
             ddx_and_ddy_and_ddz.oneflow[1].detach().numpy(),
-            rtol=1e-4,
-            atol=1e-4,
+            rtol=1e-3,
+            atol=1e-3,
         )
     )
     test_case.assertTrue(
         np.allclose(
             ddx_and_ddy_and_ddz.pytorch[2].detach().cpu().numpy(),
             ddx_and_ddy_and_ddz.oneflow[2].detach().numpy(),
-            rtol=1e-4,
-            atol=1e-4,
+            rtol=1e-3,
+            atol=1e-3,
         )
     )
 

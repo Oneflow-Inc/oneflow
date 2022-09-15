@@ -348,23 +348,31 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   JUST(TransposeFront(input, *expanded_indices, &transposed_input, &valid_indices));
   if (valid_indices.empty()) { return input; }
   int index_ndim = valid_indices.at(0)->ndim();
-  auto packed_indices = JUST(Stack(valid_indices, 0));
-  int packed_ndim = packed_indices->ndim();
-  CHECK_GT_OR_RETURN(packed_ndim, 0)
-      << Error::RuntimeError() << "Index array dimension should be greater than 0.";
-  std::vector<int> permute(packed_ndim);
-  permute[packed_ndim - 1] = 0;
-  std::iota(permute.begin(), permute.end() - 1, 1);
-  packed_indices = JUST(Transpose(packed_indices, permute))->contiguous();
+  std::shared_ptr<Tensor> packed_indices;
+  if (valid_indices.size() == 1) {
+    packed_indices = JUST(functional::Unsqueeze(valid_indices.at(0), -1));
+  } else {
+    packed_indices = JUST(Stack(valid_indices, 0));
+    int packed_ndim = packed_indices->ndim();
+    CHECK_GT_OR_RETURN(packed_ndim, 0)
+        << Error::RuntimeError() << "Index array dimension should be greater than 0.";
+    std::vector<int> permute(packed_ndim);
+    permute[packed_ndim - 1] = 0;
+    std::iota(permute.begin(), permute.end() - 1, 1);
+    packed_indices = JUST(Transpose(packed_indices, permute))->contiguous();
+  }
 
+  // Align device or placement between input and indices.
   if (transposed_input->is_global()) {
-    const auto& placement = JUST(transposed_input->parallel_desc());
-    const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
-    int n = JUST(input->nd_sbp())->sbp_parallel_size();
-    std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-    packed_indices =
-        JUST(ToGlobal(packed_indices, placement, std::vector<Symbol<SbpParallel>>(n, broadcast_sbp),
-                      grad_sbp_tuple, /* check_meta */ false, /*copy=*/false));
+    if (packed_indices->is_local()) {
+      const auto& placement = JUST(transposed_input->parallel_desc());
+      const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
+      int n = JUST(input->nd_sbp())->sbp_parallel_size();
+      std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
+      packed_indices = JUST(ToGlobal(packed_indices, placement,
+                                     std::vector<Symbol<SbpParallel>>(n, broadcast_sbp),
+                                     grad_sbp_tuple, /* check_meta */ false, /*copy=*/false));
+    }
   } else {
     Symbol<Device> device = JUST(transposed_input->device());
     if (JUST(packed_indices->device()) != device) {
@@ -487,18 +495,7 @@ Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
   const auto& stride = *JUST(input->stride());
   const int32_t storage_offset = JUST(input->storage_offset()) + pos_index * stride[pos_dim];
   std::vector<int32_t> strides(stride.begin() + 1, stride.end());
-
-  if (view::IsViewApplicable(input)) {
-    return view::AsStrided(input, sizes, strides, storage_offset);
-  } else {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("size", sizes));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("stride", strides));
-    JUST(attrs.SetAttr<int32_t>("storage_offset", storage_offset));
-    std::shared_ptr<OpExpr> op_ =
-        JUST(one::OpBuilder("as_strided").Input("input").Output("output").Build());
-    return one::OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
-  }
+  return functional::AsStrided(input, sizes, strides, storage_offset);
 }
 
 Maybe<void> UnifyLocalTensorAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,

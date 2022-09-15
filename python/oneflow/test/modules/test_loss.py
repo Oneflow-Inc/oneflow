@@ -18,6 +18,8 @@ import unittest
 from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
+import torch as torch_original
+from packaging import version
 
 
 def generate_necessity_for_cross_entropy_or_nll_loss(dim: int):
@@ -93,6 +95,10 @@ def _test_cross_entropy_loss(dim=int):
         reduction=oneof("none", "sum", "mean", nothing()),
         ignore_index=ignore_index,
         weight=oneof(weight, nothing()),
+        # TODO(wangyi): PyTorch under 1.12 has bug here, which returns wrong result when ignore_index >= 0 and label_smoothing > 0
+        label_smoothing=random(low=0, high=1)
+        if version.parse(torch_original.__version__) >= version.parse("1.12.0")
+        else 0,
     )
     m.train(random())
     m.to(device)
@@ -364,13 +370,27 @@ class TestKLDivLossModule(flow.unittest.TestCase):
         target = random_tensor(len(shape), *shape, requires_grad=False).to(device)
 
         m = torch.nn.KLDivLoss(
-            reduction=oneof("none", "sum", "mean", nothing()),
+            reduction=oneof("none", "sum", "mean", "batchmean", nothing()),
             log_target=oneof(True, False),
         )
         m.train(random())
         m.to(device)
 
         y = m(x, target)
+        return y
+
+    @autotest(n=5)
+    def test_nn_functional_kl_div(test_case):
+        device = random_device()
+        shape = random_tensor().oneflow.shape
+        x = random_tensor(len(shape), *shape).to(device)
+        target = random_tensor(len(shape), *shape, requires_grad=False).to(device)
+        y = torch.nn.functional.kl_div(
+            x,
+            target,
+            reduction=oneof("none", "sum", "mean", "batchmean", nothing()),
+            log_target=oneof(True, False),
+        )
         return y
 
 
