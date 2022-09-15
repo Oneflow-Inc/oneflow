@@ -522,7 +522,7 @@ class OptimizerPlacementOptimizationPass final : public JobPass {
       return Maybe<void>::Ok();
     }
     if (job->job_conf().enable_auto_parallel()) {
-      VLOG(google::WARNING) << "ZeRO optimization is unnecessary when enabled AutoParallel";
+      LOG(WARNING) << "ZeRO optimization will be ignored when enabling AutoParallel";
       return Maybe<void>::Ok();
     }
     const std::string& mode = ctx->job_desc().job_conf().optimizer_placement_optimization_mode();
