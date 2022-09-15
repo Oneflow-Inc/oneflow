@@ -3609,10 +3609,10 @@ class OneEmbeddingUniqueKeyValuePairFunctor {
   }
 
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& keys,
-                                const Optional<one::Tensor>& values,
-                                const int32_t num_tables) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_tables");
-    attrs.SetAllAttrs(num_tables);
+                                const Optional<one::Tensor>& values, const int32_t num_tables,
+                                const std::string& embedding_name) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_tables", "embedding_name");
+    attrs.SetAllAttrs(num_tables, embedding_name);
     if (values) {
       return OpInterpUtil::Dispatch<TensorTuple>(*op_has_input_value_, {keys, JUST(values)}, attrs);
     } else {

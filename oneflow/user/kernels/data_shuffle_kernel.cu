@@ -109,9 +109,8 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
         parallel_desc_.parallel_num() * parallel_desc_.parallel_num() * sizeof(IDX)));
     const std::string& embedding_name = ctx->Attr<std::string>("embedding_name");
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-    embedding_state_ = dynamic_cast<embedding::EmbeddingState*>(
-        Singleton<embedding::EmbeddingManager>::Get()->GetEmbeddingState(embedding_name,
-                                                                         parallel_id));
+    embedding_state_ = Singleton<embedding::EmbeddingManager>::Get()->GetEmbeddingState(
+        embedding_name, parallel_id);
   }
   ~DataShuffleKernelState() {
     CudaCurrentDeviceGuard guard(device_index_);
@@ -1168,16 +1167,50 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_GRADIENT_SHUFFLE_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
 
+template<typename IDX>
+class EmbeddingUniqueKeyValuePairKernelState final : public user_op::OpKernelState {
+ public:
+  explicit EmbeddingUniqueKeyValuePairKernelState(user_op::KernelInitContext* ctx)
+      : device_index_(-1) {
+    OF_CUDA_CHECK(cudaGetDevice(&device_index_));
+    OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
+    const std::string& embedding_name = ctx->Attr<std::string>("embedding_name");
+    const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+    embedding_state_ = Singleton<embedding::EmbeddingManager>::Get()->GetEmbeddingState(
+        embedding_name, parallel_id);
+  }
+  ~EmbeddingUniqueKeyValuePairKernelState() {
+    CudaCurrentDeviceGuard guard(device_index_);
+    OF_CUDA_CHECK(cudaFreeHost(host_num_keys_));
+  }
+
+  embedding::EmbeddingState* EmbeddingState() { return embedding_state_; }
+
+  IDX* HostNumKeys() { return host_num_keys_; }
+
+ private:
+  int device_index_;
+  embedding::EmbeddingState* embedding_state_;
+  IDX* host_num_keys_;
+};
+
 template<typename K, typename V, typename IDX>
 class UniqueKeyValuePairKernel final : public user_op::OpKernel {
  public:
-  UniqueKeyValuePairKernel() = default;
+  UniqueKeyValuePairKernel() : current_iter_(0){};
   ~UniqueKeyValuePairKernel() override = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<EmbeddingUniqueKeyValuePairKernelState<IDX>>(ctx);
+  }
 
  private:
   using user_op::OpKernel::Compute;
-
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
+    auto* kernel_state = dynamic_cast<EmbeddingUniqueKeyValuePairKernelState<IDX>*>(state);
+    CHECK(kernel_state != nullptr);
     const user_op::Tensor* keys = ctx->Tensor4ArgNameAndIndex("keys", 0);
     user_op::Tensor* num_unique = ctx->Tensor4ArgNameAndIndex("num_unique", 0);
     user_op::Tensor* unique_keys = ctx->Tensor4ArgNameAndIndex("unique_keys", 0);
@@ -1217,8 +1250,20 @@ class UniqueKeyValuePairKernel final : public user_op::OpKernel {
         reinterpret_cast<V*>(unique_values->mut_dptr()),
         reinterpret_cast<IDX*>(inverse_indices->mut_dptr()), workspace_ptr, workspace_bytes,
         need_process_table_ids);
+
+    IDX* host_num_keys = kernel_state->HostNumKeys();
+    OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, num_unique->mut_dptr(), sizeof(IDX),
+                                  cudaMemcpyDefault, cuda_stream));
+    CHECK_JUST(ctx->stream()->Sync());
+    uint32_t num_unique_ids = *host_num_keys;
+    embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
+    std::vector<uint32_t> num_unique_matrix_vec({num_unique_ids});
+    embedding_state->SetIdNumUniqueMatrix(num_unique_matrix_vec, current_iter_);
+    embedding_state->SetIdFinalNumUnique(num_unique_ids, current_iter_);
+    current_iter_++;
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  mutable int64_t current_iter_;
 };
 
 #define REGISTER_CUDA_UNIQUE_KEY_VALUE_PAIR_KERNEL(k_dtype_pair, value_dtype_pair, idx_dtype_pair) \
@@ -1248,7 +1293,55 @@ class UniqueKeyValuePairKernel final : public user_op::OpKernel {
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_UNIQUE_KEY_VALUE_PAIR_KERNEL, ID_DATA_TYPE_SEQ,
-                                 ID_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
+                                 TABLE_ID_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
+
+template<typename T, typename IDX>
+class EmbeddingGatherKernel final : public user_op::OpKernel {
+ public:
+  EmbeddingGatherKernel() : current_iter_(0) {}
+  ~EmbeddingGatherKernel() override = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<EmbeddingUniqueKeyValuePairKernelState<IDX>>(ctx);
+  }
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
+    auto* kernel_state = dynamic_cast<EmbeddingUniqueKeyValuePairKernelState<IDX>*>(state);
+    CHECK(kernel_state != nullptr);
+    embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
+    embedding_state->OnEmbeddingGatherStart(ctx, current_iter_);
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
+    const int64_t num_indices = indices->shape_view().elem_cnt();
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
+    const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+    const T* in_ptr = reinterpret_cast<const T*>(embedding_state->EmbeddingGatherIn(current_iter_));
+    GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
+        ctx->stream(), reinterpret_cast<const IDX*>(indices->dptr()), num_indices, in_ptr,
+        Shape({1, num_unique, embedding_size}), out->mut_dptr<T>(), 0);
+    embedding_state->OnEmbeddingGatherEnd(ctx, current_iter_);
+    current_iter_++;
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  mutable int64_t current_iter_;
+};
+
+#define REGISTER_EMBEDDING_GATHER_KERNEL(in_type, indices_type)                               \
+  REGISTER_USER_KERNEL("embedding_gather")                                                    \
+      .SetCreateFn<                                                                           \
+          EmbeddingGatherKernel<OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>() \
+      .SetIsMatchedHob(                                                                       \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                     \
+          && (user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(in_type))                    \
+          && (user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(indices_type)));
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_EMBEDDING_GATHER_KERNEL,
+                                 FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
 
 REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("id_shuffle");
 REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("embedding_shuffle");

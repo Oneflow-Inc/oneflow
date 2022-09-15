@@ -358,6 +358,7 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
         .Output("unique_values")
         .Output("inverse_indices")
         .Attr<int32_t>("num_tables", num_tables)
+        .Attr<std::string>("embedding_name", embedding_name)
         .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id());
     if (embedding_op.has_input("table_ids", 0)) {
       unique_op_builder.Input("values", embedding_op.input("table_ids", 0));
@@ -1042,8 +1043,8 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     const int64_t seed = embedding_op.attr<int64_t>("seed");
     const int64_t parallel_num = op_node->parallel_desc().parallel_num();
     const bool use_system_gather =
-        (parallel_num == 1 && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_USE_SYSTEM_GATHER", false)
-         && !embedding::UseDynamicMemoryAllocation());
+        (parallel_num == 1
+         && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_USE_SYSTEM_GATHER", false));
     std::string new_embeddings_lbn;
 
     std::string inner_inverse_unique_partition_indices_lbn;
@@ -1072,13 +1073,17 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                          &embedding_lookup_op_conf);
 
     if (use_system_gather) {
-      user_op::UserOpConfWrapperBuilder gather_op_builder(embedding_op.op_name() + "_gather");
-      user_op::UserOpConfWrapper gather_op = gather_op_builder.OpTypeName("gather")
-                                                 .Input("in", embedding_lbn)
-                                                 .Input("indices", inverse_indices_lbn)
-                                                 .Output("out")
-                                                 .ScopeSymbolId(embedding_scope_symbol_id)
-                                                 .Build();
+      user_op::UserOpConfWrapperBuilder gather_op_builder(embedding_op.op_name()
+                                                          + "_embedding_gather");
+      user_op::UserOpConfWrapper gather_op =
+          gather_op_builder.OpTypeName("embedding_gather")
+              .Input("in", embedding_lbn)
+              .Input("indices", inverse_indices_lbn)
+              .Output("out")
+              .Attr<int64_t>("embedding_size", embedding_size)
+              .Attr<std::string>("embedding_name", embedding_name)
+              .ScopeSymbolId(embedding_scope_symbol_id)
+              .Build();
       add_ops.push_back(gather_op.op_conf());
       new_embeddings_lbn = gather_op.output("out", 0);
     } else {

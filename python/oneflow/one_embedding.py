@@ -175,6 +175,7 @@ class Embedding(Module):
         tables,
         store_options,
         default_initializer=None,
+        seed=0,
     ):
         super().__init__()
         self.dtype = dtype
@@ -191,6 +192,7 @@ class Embedding(Module):
         )
         self.storage_dim = key_value_store_options["storage_dim"]
         self.embedding_name = key_value_store_options["name"]
+        self.seed = seed
         self.is_full_cache = (
             len(key_value_store_options["kv_store"]["caches"]) > 0
             and key_value_store_options["kv_store"]["caches"][0]["policy"] == "full"
@@ -308,6 +310,7 @@ class Embedding(Module):
             self.is_full_cache,
             self.num_tables,
             self.embedding_tables,
+            self.seed,
         )
         if embedding.requires_grad and not graph_build_util.lazy_mode.is_enabled():
             if self.embedding is not None:
@@ -323,36 +326,62 @@ class Embedding(Module):
 
     def shuffle_and_lookup(self, state_initializer):
         embedding_grad = self.embedding.grad
-        (
-            num_unique_matrix,
-            inverse_unique_partition_indices,
-            cur_rank_num_unique,
-            cur_rank_unique_ids,
-            cur_rank_unique_table_ids,
-            cur_rank_inverse_indices,
-        ) = flow._C.one_embedding_id_shuffle(
-            self.ids, self.table_ids, self.num_tables, self.embedding_name
-        )
-        unique_values = flow._C.one_embedding_lookup_embedding(
-            cur_rank_num_unique,
-            cur_rank_unique_ids,
-            cur_rank_unique_table_ids,
-            self.dtype,
-            self.dtype,
-            self.storage_dim,
-            self.embedding_dim,
-            self.embedding_name,
-            self.embedding_tables,
-            state_initializer,
-            seed=0,
-        )
-        cur_rank_unique_embedding_grad = flow._C.one_embedding_embedding_gradient_shuffle(
-            embedding_grad,
-            num_unique_matrix,
-            cur_rank_inverse_indices,
-            inverse_unique_partition_indices,
-            self.embedding_name,
-        )
+        if self.world_size > 1:
+            (
+                num_unique_matrix,
+                inverse_unique_partition_indices,
+                cur_rank_num_unique,
+                cur_rank_unique_ids,
+                cur_rank_unique_table_ids,
+                cur_rank_inverse_indices,
+            ) = flow._C.one_embedding_id_shuffle(
+                self.ids, self.table_ids, self.num_tables, self.embedding_name
+            )
+            unique_values = flow._C.one_embedding_lookup_embedding(
+                cur_rank_num_unique,
+                cur_rank_unique_ids,
+                cur_rank_unique_table_ids,
+                self.dtype,
+                self.dtype,
+                self.storage_dim,
+                self.embedding_dim,
+                self.embedding_name,
+                self.embedding_tables,
+                state_initializer,
+                seed=self.seed,
+            )
+            cur_rank_unique_embedding_grad = flow._C.one_embedding_embedding_gradient_shuffle(
+                embedding_grad,
+                num_unique_matrix,
+                cur_rank_inverse_indices,
+                inverse_unique_partition_indices,
+                self.embedding_name,
+            )
+        else:
+            (
+                cur_rank_num_unique,
+                cur_rank_unique_ids,
+                cur_rank_unique_table_ids,
+                inverse_indices,
+            ) = flow._C.one_embedding_unique_key_value_pair(
+                self.ids, self.table_ids, self.num_tables, self.embedding_name
+            )
+            unique_values = flow._C.one_embedding_lookup_embedding(
+                cur_rank_num_unique,
+                cur_rank_unique_ids,
+                cur_rank_unique_table_ids,
+                self.dtype,
+                self.dtype,
+                self.storage_dim,
+                self.embedding_dim,
+                self.embedding_name,
+                self.embedding_tables,
+                state_initializer,
+                seed=self.seed,
+            )
+            cur_rank_unique_embedding_grad = flow._C.unsorted_segment_sum_like(
+                embedding_grad, inverse_indices, unique_values, axis=0,
+            )
         self.embedding = None
         return (
             cur_rank_num_unique,
