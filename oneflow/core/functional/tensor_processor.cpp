@@ -176,19 +176,25 @@ Maybe<void> TensorAutoCastProcessor::Apply() {
     return tensor->is_local() ? JUST(tensor->device())->enum_type() == device_type
                               : JUST(tensor->parallel_desc())->device_type() == device_type;
   };
-  if (autocast_meta_.is_autocast_eligible(autocast_device_type, autocast_dtype)) {
+  bool is_autocast_eligible = [&]() {
+    if (!autocast_meta_.is_autocast_eligible(autocast_device_type, autocast_dtype)) {
+      return false;
+    }
     // Skip autocast if output data type is float32
     if (outputs_) {
       for (const auto& output : *outputs_) {
-        if (output && output->dtype() != autocast_dtype) { return Maybe<void>::Ok(); }
+        if (output && output->dtype() != autocast_dtype) { return false; }
       }
     }
     // Skip autocast if any input is float32 for gray or clear list
     if (autocast_meta_.autocast_color() != autocast::kWhite) {
       for (const auto& input : inputs_) {
-        if (input->dtype() != autocast_dtype) { return Maybe<void>::Ok(); }
+        if (input->dtype() != autocast_dtype) { return false; }
       }
     }
+    return true;
+  }();
+  if (is_autocast_eligible) {
     const auto& args_eligible = autocast_meta_.is_args_autocast_eligible();
     CHECK_EQ_OR_RETURN(args_eligible.size(), inputs_.size())
         << Error::RuntimeError() << "argument autocast eligible size should equal to input size";
@@ -202,7 +208,7 @@ Maybe<void> TensorAutoCastProcessor::Apply() {
       }
     }
   } else {
-    // fallback to float32 for black list
+    // fallback to float32
     auto common_dtype = ComputeCommonDType(inputs_);
     auto promote_dtype = promoteTypes(common_dtype, DType::Float());
     autocast_inputs_.resize(inputs_.size());
