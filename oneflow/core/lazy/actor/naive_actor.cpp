@@ -37,4 +37,5 @@ REGISTER_ACTOR(TaskType::kDecodeH2D, NaiveActor);
 REGISTER_ACTOR(TaskType::kCriticalSectionWaitTick, NaiveActor);
 REGISTER_ACTOR(TaskType::kCopyHd, NaiveActor);
 REGISTER_ACTOR(TaskType::kCollectiveBoxingGeneric, NaiveActor);
+REGISTER_ACTOR(TaskType::kIdShuffle, NaiveActor);
 }  // namespace oneflow
