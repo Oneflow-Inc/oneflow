@@ -194,6 +194,8 @@ Maybe<void> TensorAutoCastProcessor::Apply() {
     }
     return true;
   }();
+  // Disable autocast temporarily to avoid going into a dead loop
+  autocast::set_enabled(false);
   if (is_autocast_eligible) {
     const auto& args_eligible = autocast_meta_.is_args_autocast_eligible();
     CHECK_EQ_OR_RETURN(args_eligible.size(), inputs_.size())
@@ -208,7 +210,7 @@ Maybe<void> TensorAutoCastProcessor::Apply() {
       }
     }
   } else {
-    // fallback to float32
+    // Fallback to float32
     auto common_dtype = ComputeCommonDType(inputs_);
     auto promote_dtype = promoteTypes(common_dtype, DType::Float());
     autocast_inputs_.resize(inputs_.size());
@@ -221,6 +223,8 @@ Maybe<void> TensorAutoCastProcessor::Apply() {
       }
     }
   }
+  // Enable autocast to restore autocast state
+  autocast::set_enabled(true);
   return Maybe<void>::Ok();
 }
 
