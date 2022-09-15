@@ -926,6 +926,7 @@ class CyclicLRTestCase(flow.unittest.TestCase):
             max_momentum=[random.random() / 2 + 0.5 for _ in range(num_models)],
         )
 
+
 def _test_onecycle_lr_scheduler(test_case, *args, **kwargs):
     num_iters = kwargs.get("num_iters", 10000)
     kwargs.pop("num_iters", None)
@@ -959,21 +960,42 @@ def _test_onecycle_lr_scheduler(test_case, *args, **kwargs):
         f"\ntorch_lrs: {torch_lrs}\nvs.\ncalculated lrs: {of_lrs}",
     )
 
+
 @flow.unittest.skip_unless_1n1d()
 class OneCycleLRTestCase(flow.unittest.TestCase):
     @autotest(n=10, check_graph=False)
     def test_default(test_case):
         num_models = random.randint(1, 5)
-        num_iters=random.randint(0, 10000)
+        num_iters = random.randint(0, 10000)
         _test_onecycle_lr_scheduler(
             test_case,
             num_models=num_models,
             num_iters=num_iters,
             max_lr=0.1,
             total_steps=num_iters,
+            pct_start=random.random() * 0.8 + 0.1,  # [0.1, 0.9]
+            anneal_strategy=random.choice(["cos", "linear"]),
+            div_factor=random.random() * 99 + 1,  # [1.0, 100.0]
+            final_div_factor=random.random() * 999 + 1,  # [1.0, 1000.0]
+            three_phase=random.choice([True, False]),
         )
 
-    
+    @autotest(n=10, check_graph=False)
+    def test_multi_max_lr(test_case):
+        num_models = random.randint(1, 5)
+        num_iters = random.randint(0, 10000)
+        _test_onecycle_lr_scheduler(
+            test_case,
+            num_models=num_models,
+            num_iters=num_iters,
+            max_lr=[random.random() for _ in range(num_models)],
+            total_steps=num_iters,
+            pct_start=random.random() * 0.8 + 0.1,  # [0.1, 0.9]
+            anneal_strategy=random.choice(["cos", "linear"]),
+            div_factor=random.random() * 99 + 1,  # [1.0, 100.0]
+            final_div_factor=random.random() * 999 + 1,  # [1.0, 1000.0]
+            three_phase=random.choice([True, False]),
+        )
 
 
 if __name__ == "__main__":

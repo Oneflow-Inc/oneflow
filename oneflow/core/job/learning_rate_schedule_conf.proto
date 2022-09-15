@@ -94,6 +94,16 @@ message CyclicLRConf {
   required int64 step_size_total = 9;
 }
 
+message OneCycleLRConf {
+  required double max_lr = 1;
+  required double div_factor = 2;
+  required double final_div_factor = 3;
+  required int64 total_steps = 4;
+  required bool three_phase = 5;
+  required double pct_start = 6;
+  required int32 anneal_strategy = 7;
+}
+
 message SequentialSchedulerConf {
   repeated LearningRateDecayConf schedulers = 1;
   repeated int64 milestones = 2;
@@ -121,5 +131,6 @@ message LearningRateDecayConf {
     CosineAnnealingWarmRestartsConf cosine_annealing_warm_restarts_conf = 2013;
     SequentialSchedulerConf sequential_scheduler_conf = 2014;
     CyclicLRConf cyclic_lr_conf = 2015;
+    OneCycleLRConf onecycle_lr_conf = 2016;
   }
 }

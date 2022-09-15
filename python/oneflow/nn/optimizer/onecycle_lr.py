@@ -43,7 +43,6 @@ class OneCycleLR(LRScheduler):
     ):
         assert isinstance(optimizer, Optimizer)
         self.optimizer = optimizer
-        self.max_lr = max_lr
         if total_steps is None and (epochs is None or steps_per_epoch is None):
             raise ValueError(
                 "You must define either total_steps OR (epochs AND steps_per_epoch)"
@@ -69,15 +68,19 @@ class OneCycleLR(LRScheduler):
             raise ValueError(
                 f"Expected float between 0 and 1 pct_start, but got {pct_start}"
             )
+        self.pct_start = pct_start
 
         if anneal_strategy not in ["cos", "linear"]:
             raise ValueError(
                 f"anneal_strategy must by one of 'cos' or 'linear', instead got {anneal_strategy}"
             )
         elif anneal_strategy == "cos":
-            self.anneal_func = lambda start, end, pct: end + (start - end) / 2.0 * (math.cos(math.pi * pct) + 1)
+            self.anneal_func = lambda start, end, pct: end + (start - end) / 2.0 * (
+                math.cos(math.pi * pct) + 1
+            )
         elif anneal_strategy == "linear":
             self.anneal_func = lambda start, end, pct: (end - start) * pct + start
+        self.anneal_strategy = anneal_strategy
 
         if three_phase:
             self._schedule_phases = [
@@ -125,69 +128,116 @@ class OneCycleLR(LRScheduler):
                     "end_momentum": "max_momentum",
                 },
             ]
+        self.three_phase = three_phase
 
-        max_lrs = self._format_param('max_lr', self.optimizer, max_lr)
+        max_lrs = self._format_param("max_lr", self.optimizer, max_lr)
+        self.max_lrs = max_lrs
         if last_step == -1:
             for idx, group in enumerate(self.optimizer.param_groups):
-                group['initial_lr'] = max_lrs[idx] / div_factor
-                group['max_lr'] = max_lrs[idx]
-                group['min_lr'] = group['initial_lr'] / final_div_factor
+                group["initial_lr"] = max_lrs[idx] / div_factor
+                group["max_lr"] = max_lrs[idx]
+                group["min_lr"] = group["initial_lr"] / final_div_factor
+        else:
+            for idx, group in enumerate(self.optimizer.param_groups):
+                if "max_lr" not in group or "min_lr" not in group:
+                    raise KeyError(
+                        "OneCycleLR expects optimizer has 'max_lr' and 'min_lr'."
+                    )
+
+        self.div_factor = div_factor
+        self.final_div_factor = final_div_factor
 
         # Initialize momentum variables
         self.cycle_momentum = cycle_momentum
         if self.cycle_momentum:
-            if 'momentum' not in self.optimizer._default_options and 'betas' not in self.optimizer._default_options:
-                raise ValueError('optimizer must support momentum with `cycle_momentum` option enabled')
-            self.use_beta1 = 'betas' in self.optimizer._default_options
-            max_momentums = self._format_param('max_momentum', optimizer, max_momentum)
-            base_momentums = self._format_param('base_momentum', optimizer, base_momentum)
+            if (
+                "momentum" not in self.optimizer._default_options
+                and "betas" not in self.optimizer._default_options
+            ):
+                raise ValueError(
+                    "optimizer must support momentum with `cycle_momentum` option enabled"
+                )
+            self.use_beta1 = "betas" in self.optimizer._default_options
+            max_momentums = self._format_param("max_momentum", optimizer, max_momentum)
+            base_momentums = self._format_param(
+                "base_momentum", optimizer, base_momentum
+            )
             if last_step == -1:
-                for m_momentum, b_momentum, group in zip(max_momentums, base_momentums, optimizer.param_groups):
+                for m_momentum, b_momentum, group in zip(
+                    max_momentums, base_momentums, optimizer.param_groups
+                ):
                     if self.use_beta1:
-                        _, beta2 = group['betas']
-                        group['betas'] = (m_momentum, beta2)
+                        _, beta2 = group["betas"]
+                        group["betas"] = (m_momentum, beta2)
                     else:
-                        group['momentum'] = m_momentum
-                    group['max_momentum'] = m_momentum
-                    group['base_momentum'] = b_momentum
+                        group["momentum"] = m_momentum
+                    group["max_momentum"] = m_momentum
+                    group["base_momentum"] = b_momentum
         super().__init__(optimizer, last_step, verbose)
 
     def _format_param(self, name, optimizer, param):
         """Return correctly formatted lr/momentum for each param group."""
         if isinstance(param, (list, tuple)):
             if len(param) != len(optimizer.param_groups):
-                raise ValueError("expected {} values for {}, got {}".format(
-                    len(optimizer.param_groups), name, len(param)))
+                raise ValueError(
+                    "expected {} values for {}, got {}".format(
+                        len(optimizer.param_groups), name, len(param)
+                    )
+                )
             return param
         else:
             return [param] * len(optimizer.param_groups)
-            
+
     def get_lr(self, base_lr, step):
         lrs = []
         for group in self.optimizer.param_groups:
             for i, phase in enumerate(self._schedule_phases):
-                start_step, end_step = phase['start_step'], phase['end_step']
+                start_step, end_step = phase["start_step"], phase["end_step"]
                 if step <= end_step or i == len(self._schedule_phases) - 1:
                     pct = (step - start_step) / (end_step - start_step)
-                    computed_lr = self.anneal_func(group[phase['start_lr']], group[phase['end_lr']], pct)
+                    lr = self.anneal_func(
+                        group[phase["start_lr"]], group[phase["end_lr"]], pct
+                    )
                     if self.cycle_momentum:
-                        computed_momentum = self.anneal_func(group[phase['start_momentum']], group[phase['end_momentum']], pct)
+                        computed_momentum = self.anneal_func(
+                            group[phase["start_momentum"]],
+                            group[phase["end_momentum"]],
+                            pct,
+                        )
                     break
 
-            lrs.append(computed_lr)
+            lrs.append(lr)
             if self.cycle_momentum:
                 if self.use_beta1:
-                    _, beta2 = group['betas']
-                    group['betas'] = (computed_momentum, beta2)
+                    _, beta2 = group["betas"]
+                    group["betas"] = (computed_momentum, beta2)
                 else:
-                    group['momentum'] = computed_momentum
-            
+                    group["momentum"] = computed_momentum
+
         return lrs
-    
+
     def step(self):
         self.last_step += 1
         lrs = self.get_lr(None, self.last_step)
         self.update_lrs(lrs)
 
     def _generate_conf_for_graph(self, lr_conf):
-        pass
+        if self.cycle_momentum:
+            raise RuntimeError("Graph mode doesn't support param 'cycle_momentum=True'")
+        if len(self.max_lrs) > 1:
+            raise RuntimeError("Graph mode doesn't support list of max_lrs")
+
+        anneal_strategy_dict = {
+            "cos": 0,
+            "linear": 1,
+        }
+
+        lr_conf.onecycle_lr_conf.SetInParent()
+        onecycle_lr_conf = lr_conf.onecycle_lr_conf
+        onecycle_lr_conf.max_lr = self.max_lrs[0]
+        onecycle_lr_conf.div_factor = self.div_factor
+        onecycle_lr_conf.final_div_factor = self.final_div_factor
+        onecycle_lr_conf.total_steps = self.total_steps
+        onecycle_lr_conf.three_phase = self.three_phase
+        onecycle_lr_conf.pct_start = self.pct_start
+        onecycle_lr_conf.anneal_strategy = anneal_strategy_dict[self.anneal_strategy]

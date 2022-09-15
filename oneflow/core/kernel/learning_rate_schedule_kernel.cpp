@@ -242,6 +242,47 @@ double CyclicLearningRate(const CyclicLRConf& conf, const double lr_, int64_t cu
   return lr;
 }
 
+double OneCycleLR(const OneCycleLRConf& conf, const double base_lr, int64_t step) {
+  std::function<double(double, double, double)> anneal_fn;
+  if (conf.anneal_strategy() == 0) {  // "cos"
+    anneal_fn = [](double start, double end, double pct) {
+      double offset = (std::cos(M_PI * pct) + static_cast<double>(1)) / 2.0;
+      return end + (end - start) * offset;
+    };
+  } else if (conf.anneal_strategy() == 1) {  // "linear"
+    anneal_fn = [](double start, double end, double pct) { return start + (end - start) * pct; };
+  }
+  double max_lr = conf.max_lr();
+  double min_lr = max_lr / conf.final_div_factor();
+  double initial_lr = max_lr / conf.div_factor();
+  double total_steps = static_cast<double>(conf.total_steps());
+  double milestone = conf.pct_start() * total_steps - 1;
+  double step_double = static_cast<double>(step);
+  double pct = 0;
+  double lr = 0;
+  if (conf.three_phase()) {
+    if (lr < milestone) {
+      pct = step_double / milestone;
+      lr = anneal_fn(initial_lr, max_lr, pct);
+    } else if (lr < milestone * 2) {
+      pct = step_double / milestone - 1;
+      lr = anneal_fn(max_lr, initial_lr, pct);
+    } else {
+      pct = (step_double - milestone * 2) / (total_steps - 1);
+      lr = anneal_fn(initial_lr, min_lr, pct);
+    }
+  } else {
+    if (lr < milestone) {
+      pct = step_double / milestone;
+      lr = anneal_fn(initial_lr, max_lr, pct);
+    } else {
+      pct = (step_double - milestone) / (total_steps - 1);
+      lr = anneal_fn(max_lr, min_lr, pct);
+    }
+  }
+  return lr;
+}
+
 double CosineAnnealingWarmRestartsLearningRate(const CosineAnnealingWarmRestartsConf& conf,
                                                const double base_lr, const int64_t step) {
   int64_t epoch_steps = conf.t_initial();
@@ -320,6 +361,8 @@ double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int6
     return SequentialScheduler(conf.sequential_scheduler_conf(), lr, cur_batch_num);
   } else if (conf.has_cyclic_lr_conf()) {
     return CyclicLearningRate(conf.cyclic_lr_conf(), lr, cur_batch_num);
+  } else if (conf.has_onecycle_lr_conf()) {
+    return OneCycleLR(conf.onecycle_lr_conf(), lr, cur_batch_num);
   } else {
     UNIMPLEMENTED();
   }
