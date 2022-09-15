@@ -108,34 +108,10 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
                           const int64_t seed, bool has_embedding_prefetch,
                           const ParallelConf& parallel_conf,
                           const user_op::UserOpConfWrapper& embedding_op,
-                          const std::string& num_unique_ids_lbn, const std::string& unique_ids_lbn,
+                          const std::string& context_lbn, const std::string& num_unique_ids_lbn,
+                          const std::string& unique_ids_lbn,
                           const std::string& unique_table_ids_lbn, std::string* embedding_lbn,
-                          std::string* unique_values_lbn, OperatorConf* embedding_prefetch_op_conf,
-                          OperatorConf* embedding_lookup_op_conf) {
-  std::string context_lbn;
-  if (has_embedding_prefetch) {
-    // embedding prefetch op
-    user_op::UserOpConfWrapperBuilder embedding_prefetch_op_builder(
-        embedding_op.op_name() + "_embedding_prefetch" + NewUniqueId());
-    user_op::UserOpConfWrapper embedding_prefetch_op =
-        embedding_prefetch_op_builder.OpTypeName("embedding_prefetch")
-            .Input("num_unique_ids", num_unique_ids_lbn)
-            .Input("unique_ids", unique_ids_lbn)
-            .Input("table_ids", unique_table_ids_lbn)
-            .Output("context")
-            .Attr<int64_t>("embedding_size", embedding_size)
-            .Attr<int64_t>("line_size", line_size)
-            .Attr<std::string>("embedding_tables",
-                               embedding_op.attr<std::string>("embedding_tables"))
-            .Attr<std::string>("embedding_name", embedding_name)
-            .Attr<int64_t>("seed", seed)
-            .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
-            .Build();
-    *embedding_prefetch_op_conf = embedding_prefetch_op.op_conf();
-    embedding_prefetch_op_conf->set_stream_name_hint(embedding_name + "_EMBEDDING");
-    context_lbn = embedding_prefetch_op.output("context", 0);
-  }
-
+                          std::string* unique_values_lbn, OperatorConf* embedding_lookup_op_conf) {
   // embedding lookup op
   user_op::UserOpConfWrapperBuilder embedding_lookup_op_builder(
       embedding_op.op_name() + "_embedding_lookup" + NewUniqueId());
@@ -341,12 +317,13 @@ double GetLossInstanceNumScaleFactor(const OpGraph& op_graph, JobBuilder* job_bu
 }
 
 void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
-                    const user_op::UserOpConfWrapper& embedding_op,
+                    const user_op::UserOpConfWrapper& embedding_op, bool has_embedding_prefetch,
                     std::vector<OperatorConf>* add_ops,
                     std::string* inner_inverse_unique_partition_indices_lbn,
                     std::string* num_unique_ids_lbn, std::string* unique_ids_lbn,
                     std::string* unique_table_ids_lbn, std::string* inverse_indices_lbn,
-                    std::string* num_unique_matrix_lbn) {
+                    std::string* num_unique_matrix_lbn, OperatorConf* embedding_prefetch_op_conf,
+                    std::string* context_lbn) {
   const int32_t num_tables = embedding_op.attr<int32_t>("num_tables");
   if (use_system_gather) {
     user_op::UserOpConfWrapperBuilder unique_op_builder(embedding_op.op_name()
@@ -392,6 +369,28 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
     id_shuffle_new_op_conf.set_stream_name_hint(embedding_name + "_ID_SHUFFLE");
     add_ops->push_back(id_shuffle_new_op_conf);
 
+    if (has_embedding_prefetch) {
+      // embedding prefetch op
+      user_op::UserOpConfWrapperBuilder embedding_prefetch_op_builder(
+          embedding_op.op_name() + "_embedding_prefetch" + NewUniqueId());
+      user_op::UserOpConfWrapper embedding_prefetch_op =
+          embedding_prefetch_op_builder.OpTypeName("embedding_prefetch")
+              .Input("num_unique_ids", id_shuffle_op.output("cur_rank_num_unique", 0))
+              .Input("unique_ids", id_shuffle_op.output("cur_rank_unique_ids", 0))
+              .Input("table_ids", id_shuffle_op.output("cur_rank_unique_table_ids", 0))
+              .Output("context")
+              .Attr<int64_t>("embedding_size", embedding_op.attr<int64_t>("embedding_size"))
+              .Attr<int64_t>("line_size", embedding_op.attr<int64_t>("line_size"))
+              .Attr<std::string>("embedding_tables",
+                                 embedding_op.attr<std::string>("embedding_tables"))
+              .Attr<std::string>("embedding_name", embedding_name)
+              .Attr<int64_t>("seed", embedding_op.attr<int64_t>("seed"))
+              .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
+              .Build();
+      *embedding_prefetch_op_conf = embedding_prefetch_op.op_conf();
+      embedding_prefetch_op_conf->set_stream_name_hint(embedding_name + "_EMBEDDING");
+      *context_lbn = embedding_prefetch_op.output("context", 0);
+    }
     if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ADD_ID_SHUFFLE_COPY_OUT", true)) {
       user_op::UserOpConfWrapperBuilder identity_op_builder(
           embedding_op.op_name() + "_id_shuffle_copy_out_" + NewUniqueId());
@@ -1052,24 +1051,24 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     std::string unique_table_ids_lbn;
     std::string inverse_indices_lbn;
     std::string num_unique_matrix_lbn;
-
-    BuildIdShuffle(use_system_gather, embedding_name, embedding_op, &add_ops,
-                   &inner_inverse_unique_partition_indices_lbn, &num_unique_ids_lbn,
-                   &unique_ids_lbn, &unique_table_ids_lbn, &inverse_indices_lbn,
-                   &num_unique_matrix_lbn);
     const bool is_train_job = job_builder->job().job_conf().has_train_conf();
     const bool no_optimizer_states = (embedding_size == line_size);
     const bool has_embedding_prefetch = (!is_full_cache) && (is_train_job || no_optimizer_states);
 
     OperatorConf embedding_prefetch_op_conf;
+    std::string context_lbn;
+    BuildIdShuffle(use_system_gather, embedding_name, embedding_op, has_embedding_prefetch,
+                   &add_ops, &inner_inverse_unique_partition_indices_lbn, &num_unique_ids_lbn,
+                   &unique_ids_lbn, &unique_table_ids_lbn, &inverse_indices_lbn,
+                   &num_unique_matrix_lbn, &embedding_prefetch_op_conf, &context_lbn);
+
     OperatorConf embedding_lookup_op_conf;
     // embedding lookup op
     std::string embedding_lbn, unique_values_lbn;
     BuildEmbeddingLookup(ctx, job_builder, embedding_size, line_size, embedding_name, seed,
-                         has_embedding_prefetch, embedding_parallel_conf, embedding_op,
+                         has_embedding_prefetch, embedding_parallel_conf, embedding_op, context_lbn,
                          num_unique_ids_lbn, unique_ids_lbn, unique_table_ids_lbn, &embedding_lbn,
-                         &unique_values_lbn, &embedding_prefetch_op_conf,
-                         &embedding_lookup_op_conf);
+                         &unique_values_lbn, &embedding_lookup_op_conf);
 
     if (use_system_gather) {
       user_op::UserOpConfWrapperBuilder gather_op_builder(embedding_op.op_name() + "_gather");
