@@ -38,23 +38,10 @@ limitations under the License.
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/framework/op_generated.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/JITOpInfer.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/JITEngine.h"
 
 #include <memory>
 #include <sys/types.h>
-
-namespace oneflow {
-using TypeKernelLaunchArgs =
-    std::tuple<oneflow::user_op::KernelComputeContext*, const oneflow::user_op::OpKernel*>;
-}
-
-extern "C" {
-
-void kernel_launch(void* ctx, void* kernel_opaque) {
-  auto kernel = (typename std::tuple_element_t<1, oneflow::TypeKernelLaunchArgs>)kernel_opaque;
-  kernel->Compute((typename std::tuple_element_t<0, oneflow::TypeKernelLaunchArgs>)ctx);
-}
-
-}  // extern "C"
 
 namespace oneflow {
 
@@ -268,22 +255,12 @@ class KernelLaunchState final : public user_op::OpKernelState {
     }
 
     // create expected wrapped exec engine shared pointer
-    llvm::SmallVector<llvm::StringRef, 4> ext_libs(
-        {SharedLibPaths()->begin(), SharedLibPaths()->end()});
-    mlir::ExecutionEngineOptions jitOptions;
-    jitOptions.transformer = {};
-    jitOptions.jitCodeGenOptLevel = llvm::None;
-    jitOptions.sharedLibPaths = ext_libs;
-
-    auto jit_or_error = mlir::ExecutionEngine::create(*module_, jitOptions);
-    CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
-                          << llvm::toString((jit_or_error).takeError());
-    jit_or_error->swap(jit_);
+    engine_ = std::make_shared<JIT_Engine>(*module_);
   };
   ~KernelLaunchState() = default;
 
   void Compute(user_op::KernelComputeContext* ctx, const std::string& name) {
-    Compute<TypeKernelLaunchArgs>(name, GetKernelComputeContext(ctx), kernel_);
+    DoCompute(name, GetKernelComputeContext(ctx), kernel_);
   }
 
  private:
@@ -292,15 +269,12 @@ class KernelLaunchState final : public user_op::OpKernelState {
   mlir::OwningOpRef<mlir::ModuleOp> module_;
   std::unique_ptr<KernelLaunchOpKernelRegContext> reg_ctx_;
   std::shared_ptr<KernelLaunchComputeContext> okl_ctx_;
-  std::unique_ptr<mlir::ExecutionEngine> jit_;
+  std::shared_ptr<JIT_Engine> engine_;
   const user_op::OpKernel* kernel_;
 
-  template<typename ArgsT, class... Args>
-  void Compute(const std::string& name, Args... args) {
-    using Tuple = std::tuple<Args...>;
-    static_assert(std::is_same<ArgsT, Tuple>::value, "args of jit function don't match");
-    auto error = jit_->invoke(name, args...);
-    CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
+  void DoCompute(const std::string& name, user_op::KernelComputeContext* okl_ctx,
+                 const user_op::OpKernel* kernel) {
+    engine_->Run<TypeKernelLaunchArgs>(name, okl_ctx, kernel);
   }
 
   user_op::KernelComputeContext* GetKernelComputeContext(user_op::KernelComputeContext* ctx) {
