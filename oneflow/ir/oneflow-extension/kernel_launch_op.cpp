@@ -274,14 +274,14 @@ class KernelLaunchState final : public user_op::OpKernelState {
  public:
   explicit KernelLaunchState(user_op::KernelInitContext* ctx) : mlir_ctx_(getRegistry()) {
     // get raw module from ctx attr
-    module_ =
-        mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx_);
+    module_ = mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
+                                                      &mlir_ctx_);
     // reg_ctx is needed
     reg_ctx_ = std::make_unique<KernelLaunchOpKernelRegContext>(*module_);
     // get constructor of kernel
     kernel_ = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-                        reg_ctx_->GetOp()->getName().stripDialect().str(), *reg_ctx_))
-             ->create_fn();
+                             reg_ctx_->GetOp()->getName().stripDialect().str(), *reg_ctx_))
+                  ->create_fn();
     // use okl2llvm pass to get llvm ir module
     if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(*module_))) {
       LOG(ERROR) << "Fail lowering kernel launch Module to llvm ir";
