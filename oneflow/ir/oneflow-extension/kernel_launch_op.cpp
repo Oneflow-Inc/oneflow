@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <sys/types.h>
+#include "llvm/Support/Error.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -238,61 +239,69 @@ class KernelLaunchComputeContext final : public user_op::KernelComputeContext {
   std::unordered_map<mlir::oneflow::user_op::ArgID, user_op::Tensor*> tensor_desc_{};
 };
 
-namespace {
-
-template<typename ArgsT, class... Args>
-void runJIT(mlir::ModuleOp module_op, llvm::StringRef name, Args... args) {
-  using Tuple = std::tuple<Args...>;
-  static_assert(std::is_same<ArgsT, Tuple>::value, "args of jit function don't match");
-  llvm::SmallVector<llvm::StringRef, 4> ext_libs(
-      {SharedLibPaths()->begin(), SharedLibPaths()->end()});
-  mlir::ExecutionEngineOptions jitOptions;
-  jitOptions.transformer = {};
-  jitOptions.jitCodeGenOptLevel = llvm::None;
-  jitOptions.sharedLibPaths = ext_libs;
-
-  auto jit_or_error = mlir::ExecutionEngine::create(module_op, jitOptions);
-  CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
-                        << llvm::toString(jit_or_error.takeError());
-  auto jit = std::move(jit_or_error.get());
-  auto error = jit->invoke(name, args...);
-  CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
-}
-
-mlir::DialectRegistry getRegistry() {
-  mlir::DialectRegistry registry;
-  registry
-      .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
-              mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect, mlir::LLVM::LLVMDialect>();
-  mlir::registerLLVMDialectTranslation(registry);
-  return registry;
-}
-
-}  // namespace
-
 class KernelLaunchState final : public user_op::OpKernelState {
+  static mlir::DialectRegistry GetRegistry() {
+    mlir::DialectRegistry registry;
+    registry
+        .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
+                mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect, mlir::LLVM::LLVMDialect>();
+    mlir::registerLLVMDialectTranslation(registry);
+    return registry;
+  }
+
  public:
-  explicit KernelLaunchState(user_op::KernelInitContext* ctx) : mlir_ctx_(getRegistry()) {
+  explicit KernelLaunchState(user_op::KernelInitContext* ctx) : mlir_ctx_(GetRegistry()) {
     // get raw module from ctx attr
-    module_ =
-        mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx_);
+    module_ = mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
+                                                      &mlir_ctx_);
     // reg_ctx is needed
     reg_ctx_ = std::make_unique<KernelLaunchOpKernelRegContext>(*module_);
     // get constructor of kernel
     kernel_ = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-                        reg_ctx_->GetOp()->getName().stripDialect().str(), *reg_ctx_))
-             ->create_fn();
+                             reg_ctx_->GetOp()->getName().stripDialect().str(), *reg_ctx_))
+                  ->create_fn();
     // use okl2llvm pass to get llvm ir module
     if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(*module_))) {
       LOG(ERROR) << "Fail lowering kernel launch Module to llvm ir";
       exit(1);
     }
+
+    // create expected wrapped exec engine shared pointer
+    llvm::SmallVector<llvm::StringRef, 4> ext_libs(
+        {SharedLibPaths()->begin(), SharedLibPaths()->end()});
+    mlir::ExecutionEngineOptions jitOptions;
+    jitOptions.transformer = {};
+    jitOptions.jitCodeGenOptLevel = llvm::None;
+    jitOptions.sharedLibPaths = ext_libs;
+
+    auto jit_or_error = mlir::ExecutionEngine::create(*module_, jitOptions);
+    CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
+                          << llvm::toString((jit_or_error).takeError());
+    jit_or_error->swap(jit_);
   };
   ~KernelLaunchState() = default;
 
-  mlir::MLIRContext* GetContext() { return &mlir_ctx_; }
-  mlir::ModuleOp GetModule() { return *module_; }
-  const user_op::OpKernel* GetKernel() { return kernel_; }
+  void Compute(user_op::KernelComputeContext* ctx, const std::string& name) {
+    Compute<TypeKernelLaunchArgs>(name, GetKernelComputeContext(ctx), kernel_);
+  }
+
+ private:
+  mlir::MLIRContext mlir_ctx_;
+
+  mlir::OwningOpRef<mlir::ModuleOp> module_;
+  std::unique_ptr<KernelLaunchOpKernelRegContext> reg_ctx_;
+  std::shared_ptr<KernelLaunchComputeContext> okl_ctx_;
+  std::unique_ptr<mlir::ExecutionEngine> jit_;
+  const user_op::OpKernel* kernel_;
+
+  template<typename ArgsT, class... Args>
+  void Compute(const std::string& name, Args... args) {
+    using Tuple = std::tuple<Args...>;
+    static_assert(std::is_same<ArgsT, Tuple>::value, "args of jit function don't match");
+    auto error = jit_->invoke(name, args...);
+    CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
+  }
+
   user_op::KernelComputeContext* GetKernelComputeContext(user_op::KernelComputeContext* ctx) {
     if (reg_ctx_) {
       okl_ctx_ = std::make_shared<KernelLaunchComputeContext>(std::move(reg_ctx_), ctx);
@@ -300,13 +309,6 @@ class KernelLaunchState final : public user_op::OpKernelState {
     // if reg_ctx is consumed, return pointer directly
     return dynamic_cast<user_op::KernelComputeContext*>(okl_ctx_.get());
   }
-
- private:
-  mlir::MLIRContext mlir_ctx_;
-  mlir::OwningOpRef<mlir::ModuleOp> module_;
-  std::unique_ptr<KernelLaunchOpKernelRegContext> reg_ctx_;
-  std::shared_ptr<KernelLaunchComputeContext> okl_ctx_;
-  const user_op::OpKernel* kernel_;
 };
 
 template<typename T>
@@ -326,8 +328,7 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
     auto* okl_state = dynamic_cast<KernelLaunchState*>(state);
-    runJIT<TypeKernelLaunchArgs>(okl_state->GetModule(), ctx->op_name(),
-                                 okl_state->GetKernelComputeContext(ctx), okl_state->GetKernel());
+    okl_state->Compute(ctx, ctx->op_name());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -365,8 +366,7 @@ class KernelLaunchGpuKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
     auto* okl_state = dynamic_cast<KernelLaunchState*>(state);
-    runJIT<TypeKernelLaunchArgs>(okl_state->GetModule(), ctx->op_name(),
-                                 okl_state->GetKernelComputeContext(ctx), okl_state->GetKernel());
+    okl_state->Compute(ctx, ctx->op_name());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
