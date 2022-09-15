@@ -492,6 +492,14 @@
   signature: "Tensor (Tensor x, Tensor dy) => Log2Grad"
   bind_python: False
 
+- name: "log10"
+  signature: "Tensor (Tensor x) => Log10"
+  bind_python: True
+
+- name: "log10_grad"
+  signature: "Tensor (Tensor x, Tensor dy) => Log10Grad"
+  bind_python: False
+
 - name: "sqrt"
   signature: "Tensor (Tensor x) => Sqrt"
   bind_python: True
@@ -1097,7 +1105,7 @@
   bind_python: True
 
 - name: "kl_div_loss"
-  signature: "Tensor(Tensor input, Tensor target, Bool log_target, String reduction) => KLDivLoss"
+  signature: "Tensor(Tensor input, Tensor target, Bool log_target, String reduction=\"mean\") => KLDivLoss"
   bind_python: True
 
 - name: "kl_div_loss_grad"
@@ -2376,11 +2384,11 @@
   bind_python: True
 
 - name: "one_embedding_lookup"
-  signature: "Tensor (Tensor shadow, Tensor ids, Tensor table_ids=None, DataType dtype, Int64 embedding_size, Int32 num_tables, String embedding_tables, String embedding_store_options) => OneEmbeddingLookup"
+  signature: "Tensor (Tensor shadow, Tensor ids, Tensor table_ids=None, DataType dtype, String embedding_name, Int64 line_size, Int64 embedding_size, Bool is_full_cache, Int32 num_tables, String embedding_tables, Int64 seed=0) => OneEmbeddingLookup"
   bind_python: True
 
 - name: "one_embedding_lookup_grad"
-  signature: "Void (Tensor ids, Tensor embedding_grad, String embedding_store_options) => OneEmbeddingLookupGrad"
+  signature: "Void (Tensor ids, Tensor embedding_grad, String embedding_name, Int64 line_size, Int64 embedding_size) => OneEmbeddingLookupGrad"
   bind_python: True
 
 - name: "one_embedding_unique_key_value_pair"
