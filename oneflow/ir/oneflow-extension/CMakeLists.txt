@@ -8,6 +8,7 @@ oneflow_add_mlir_library(
   ir_pass.cpp
   lr_jit.cpp
   mlir_gen.cpp
+  jit_engine.cpp
   DEPENDS
   LINK_LIBS
   PUBLIC
