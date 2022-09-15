@@ -25,16 +25,16 @@ namespace oneflow {
 
 class AutoCastMode {
  public:
-  AutoCastMode(const std::string& device_type, Symbol<DType> dtype, bool enabled,
-               bool cache_enabled) {
-    // cache current autocast state
-    prev_enabled_ = autocast::is_enabled();
-    prev_cache_enabled_ = autocast::is_autocast_cache_enabled();
-    prev_device_type_ = autocast::get_autocast_device_type();
-    prev_dtype_ = autocast::get_autocast_dtype();
-    prev_gpu_dtype_ = autocast::get_autocast_gpu_dtype();
-    prev_cpu_dtype_ = autocast::get_autocast_cpu_dtype();
+  OF_DISALLOW_COPY_AND_MOVE(AutoCastMode);
 
+  AutoCastMode(const std::string& device_type, Symbol<DType> dtype, bool enabled,
+               bool cache_enabled)
+      : prev_enabled_(autocast::is_enabled()),
+        prev_cache_enabled_(autocast::is_autocast_cache_enabled()),
+        prev_device_type_(autocast::get_autocast_device_type()),
+        prev_dtype_(autocast::get_autocast_dtype()),
+        prev_gpu_dtype_(autocast::get_autocast_gpu_dtype()),
+        prev_cpu_dtype_(autocast::get_autocast_cpu_dtype()) {
     // update autocast state
     autocast::set_enabled(enabled);
     autocast::set_autocast_cache_enabled(cache_enabled);
