@@ -657,6 +657,10 @@
   signature: "Tensor (Tensor x, Int64 dim=None) => LogSoftmax"
   bind_python: True
 
+- name: "log_softmax_grad"
+  signature: "Tensor (Tensor dy, Tensor y) => LogSoftmaxGrad"
+  bind_python: False
+
 - name: "hardswish"
   signature: "Tensor (Tensor x) => HardSwish"
   bind_python: True
@@ -2716,4 +2720,8 @@
 
 - name: "sigmoid_grad_grad"  
   signature: "Tensor (Tensor y, Tensor dydx) =>  SigmoidGradGrad" 
+  bind_python: False
+
+- name: "max_pool_grad_grad"  
+  signature: "Tensor (Tensor dydx, Tensor indices, Int32 ndims) =>  MaxPoolNdGradGrad" 
   bind_python: False
