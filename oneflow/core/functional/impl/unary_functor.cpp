@@ -53,6 +53,7 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("expm1", Expm1)               \
   OF_PP_MAKE_TUPLE_SEQ("log", Log)                   \
   OF_PP_MAKE_TUPLE_SEQ("log2", Log2)                 \
+  OF_PP_MAKE_TUPLE_SEQ("log10", Log10)               \
   OF_PP_MAKE_TUPLE_SEQ("log1p", Log1p)               \
   OF_PP_MAKE_TUPLE_SEQ("reciprocal", Reciprocal)     \
   OF_PP_MAKE_TUPLE_SEQ("rsqrt", Rsqrt)               \
@@ -182,6 +183,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   ADD_UNARY_FUNCTOR_WITH_DY_X(Lgamma, "Lgamma");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Log, "Log");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Log2, "Log2");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Log10, "Log10");
   ADD_UNARY_FUNCTOR_WITH_DY_X(Log1p, "Log1p");
   ADD_UNARY_FUNCTOR_WITH_DY_X(LogSigmoid, "LogSigmoid");
   m.add_functor<NegativeFunctor>("Negative");
