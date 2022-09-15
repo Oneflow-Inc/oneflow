@@ -2693,3 +2693,7 @@
 - name: "sigmoid_grad_grad"  
   signature: "Tensor (Tensor y, Tensor dydx) =>  SigmoidGradGrad" 
   bind_python: False
+
+- name: "max_pool_grad_grad"  
+  signature: "Tensor (Tensor dydx, Tensor indices, Int32 ndims) =>  MaxPoolNdGradGrad" 
+  bind_python: False
