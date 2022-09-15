@@ -13,24 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_JITOPINFER_H_
-#define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_JITOPINFER_H_
+#ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_JITENGINE_H_
+#define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_JITENGINE_H_
 
-#include "oneflow/core/framework/infer_util.h"
-
-namespace oneflow {
-
-namespace ir {
-
-namespace jit {
-
-Maybe<void> InferTensorDesc(user_op::InferContext* ctx);
-Maybe<void> SetTensorDateType(user_op::InferContext* ctx);
-
-}  // namespace jit
-
-}  // namespace ir
-
-}  // namespace oneflow
-
-#endif  // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_JITOPINFER_H_
+#endif  // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_JITENGINE_H_

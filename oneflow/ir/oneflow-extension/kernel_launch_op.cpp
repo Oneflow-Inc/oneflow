@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <sys/types.h>
+
 #include "llvm/Support/Error.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/Parser/Parser.h"
@@ -40,6 +40,7 @@ limitations under the License.
 #include "oneflow/ir/oneflow-extension/include/OneFlow/JITOpInfer.h"
 
 #include <memory>
+#include <sys/types.h>
 
 namespace oneflow {
 using TypeKernelLaunchArgs =
