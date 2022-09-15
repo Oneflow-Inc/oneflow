@@ -281,7 +281,7 @@ class KernelLaunchState final : public user_op::OpKernelState {
     // get constructor of kernel
     fn = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
                         reg_ctx->GetOp()->getName().stripDialect().str(), *reg_ctx))
-             ->create_fn;
+             ->create_fn();
     // use okl2llvm pass to get llvm ir module
     if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(*module))) {
       LOG(ERROR) << "Fail lowering kernel launch Module to llvm ir";
@@ -292,7 +292,7 @@ class KernelLaunchState final : public user_op::OpKernelState {
 
   mlir::MLIRContext* GetContext() { return &mlir_ctx; }
   mlir::ModuleOp GetModule() { return *module; }
-  user_op::OpKernelCreateFn GetFn() { return fn; }
+  const user_op::OpKernel* GetFn() { return fn; }
   user_op::KernelComputeContext* GetKernelComputeContext(user_op::KernelComputeContext* ctx) {
     if (reg_ctx) {
       okl_ctx = std::make_shared<KernelLaunchComputeContext>(std::move(reg_ctx), ctx);
@@ -306,7 +306,7 @@ class KernelLaunchState final : public user_op::OpKernelState {
   mlir::OwningOpRef<mlir::ModuleOp> module;
   std::unique_ptr<KernelLaunchOpKernelRegContext> reg_ctx;
   std::shared_ptr<KernelLaunchComputeContext> okl_ctx;
-  user_op::OpKernelCreateFn fn;
+  const user_op::OpKernel* fn;
 };
 
 template<typename T>
@@ -327,7 +327,7 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     auto* okl_state = dynamic_cast<KernelLaunchState*>(state);
     runJIT<TypeKernelLaunchArgs>(okl_state->GetModule(), ctx->op_name(),
-                                 okl_state->GetKernelComputeContext(ctx), okl_state->GetFn()());
+                                 okl_state->GetKernelComputeContext(ctx), okl_state->GetFn());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -366,7 +366,7 @@ class KernelLaunchGpuKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     auto* okl_state = dynamic_cast<KernelLaunchState*>(state);
     runJIT<TypeKernelLaunchArgs>(okl_state->GetModule(), ctx->op_name(),
-                                 okl_state->GetKernelComputeContext(ctx), okl_state->GetFn()());
+                                 okl_state->GetKernelComputeContext(ctx), okl_state->GetFn());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
