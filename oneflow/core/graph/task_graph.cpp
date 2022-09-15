@@ -32,8 +32,12 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/memcpy.h"
 #include "oneflow/core/graph/straighten_nodes.h"
 #include "oneflow/core/register/runtime_register_desc.h"
+#include "oneflow/core/common/env_var/env_var.h"
 
 namespace oneflow {
+
+// TODO(Chengcheng): default false.
+DEFINE_ENV_BOOL(ONEFLOW_ENABLE_OUTDATED_OPT_FW_CHAIN_MERGE, true);
 
 namespace {
 
@@ -58,6 +62,14 @@ bool IsConnectToTickOp(const TaskNode* node) {
   return false;
 }
 
+bool IsSubsetTickOpConf(const OperatorConf& op_conf) {
+  return op_conf.has_src_subset_tick_conf() || op_conf.has_dst_subset_tick_conf();
+}
+
+bool IsTickOpConf(const OperatorConf& conf) {
+  return IsClassRegistered<int32_t, IsTickTockOpTypeCase>(conf.op_type_case());
+}
+
 std::string GetOpConfCalculationPassName(const OperatorConf& op_conf) {
   CHECK(op_conf.has_scope_symbol_id());
   int64_t scope_symbol_id = op_conf.scope_symbol_id();
@@ -80,14 +92,6 @@ bool IsOptimizerPassOp(const Operator* op) {
   return GetOpConfCalculationPassName(op->op_conf()) == kOptimizerPass;
 }
 
-bool IsSubsetTickOpConf(const OperatorConf& op_conf) {
-  return op_conf.has_src_subset_tick_conf() || op_conf.has_dst_subset_tick_conf();
-}
-
-bool IsTickOpConf(const OperatorConf& conf) {
-  return IsClassRegistered<int32_t, IsTickTockOpTypeCase>(conf.op_type_case());
-}
-
 bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
   const OperatorConf& op_conf = op->op_conf();
   if (op_conf.has_variable_conf() || op_conf.has_tick_conf() || op_conf.has_device_tick_conf()
@@ -105,7 +109,7 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
   }
   // NOTE(chengcheng): ONLY nccl_use_compute_stream = false will exclude optimizer pass ops
   if (!Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
-      && IsOptimizerPassOp(op)) {
+      && IsOptimizerPassOp(op) && EnvBool<ONEFLOW_ENABLE_OUTDATED_OPT_FW_CHAIN_MERGE>()) {
     return true;
   }
   return false;
