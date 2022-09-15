@@ -145,11 +145,11 @@ template<>
                                                 const OpExprInterpContext& ctx) {
   OF_PROFILER_RANGE_GUARD("Dispatch");
   functional::TensorProcessorPipe processor(inputs, outputs);
-  JUST(processor.Apply<functional::TensorLayoutProcessor>(JUST(op_expr.SupportNonContiguous())));
   if (autocast::is_enabled()) {
     JUST(processor.Apply<functional::TensorAutoCastProcessor>(
         *JUST(op_expr.GetOrCreateAutoCastMeta())));
   }
+  JUST(processor.Apply<functional::TensorLayoutProcessor>(JUST(op_expr.SupportNonContiguous())));
   return JUST(GetInterpreter(processor.inputs(), ctx, op_expr))
       ->Apply(op_expr, processor.inputs(), processor.outputs(), ctx);
 }

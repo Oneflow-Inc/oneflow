@@ -59,17 +59,14 @@ class TensorLayoutProcessor final {
       : TensorLayoutProcessor(inputs, nullptr, non_contiguous_enabled) {}
   TensorLayoutProcessor(const TensorTuple& inputs, TensorTuple* outputs,
                         bool non_contiguous_enabled)
-      : inputs_(inputs),
-        outputs_(outputs),
-        non_contiguous_enabled_(non_contiguous_enabled),
-        converted_(false) {}
+      : inputs_(inputs), outputs_(outputs), non_contiguous_enabled_(non_contiguous_enabled) {}
 
   ~TensorLayoutProcessor();
 
   Maybe<void> Apply();
 
   const TensorTuple& inputs() const {
-    if (converted_) { return contiguous_inputs_; }
+    if (!contiguous_inputs_.empty()) { return contiguous_inputs_; }
     return inputs_;
   }
   TensorTuple* outputs() const { return outputs_; }
@@ -78,7 +75,6 @@ class TensorLayoutProcessor final {
   const TensorTuple& inputs_;
   TensorTuple* outputs_;
   bool non_contiguous_enabled_;
-  bool converted_;
   TensorTuple contiguous_inputs_;
   std::vector<int> post_process_output_indices_;
   TensorTuple post_process_outputs_;
@@ -90,14 +86,14 @@ class TensorAutoCastProcessor final {
       : TensorAutoCastProcessor(inputs, nullptr, autocast_meta) {}
   TensorAutoCastProcessor(const TensorTuple& inputs, TensorTuple* outputs,
                           const autocast::AutoCastMeta& autocast_meta)
-      : inputs_(inputs), outputs_(outputs), autocast_meta_(autocast_meta), converted_(false) {}
+      : inputs_(inputs), outputs_(outputs), autocast_meta_(autocast_meta) {}
 
   ~TensorAutoCastProcessor() = default;
 
   Maybe<void> Apply();
 
   const TensorTuple& inputs() const {
-    if (converted_) { return autocast_inputs_; }
+    if (!autocast_inputs_.empty()) { return autocast_inputs_; }
     return inputs_;
   }
 
@@ -107,7 +103,6 @@ class TensorAutoCastProcessor final {
   const TensorTuple& inputs_;
   TensorTuple* outputs_;
   const autocast::AutoCastMeta& autocast_meta_;
-  bool converted_;
   TensorTuple autocast_inputs_;
 };
 

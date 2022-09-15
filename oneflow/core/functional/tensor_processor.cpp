@@ -136,7 +136,6 @@ Maybe<void> TensorLayoutProcessor::Apply() {
   if (!non_contiguous_enabled_ && !IsAllContiguous(inputs_)) {
     contiguous_inputs_.resize(inputs_.size());
     for (int i = 0; i < inputs_.size(); ++i) { contiguous_inputs_[i] = inputs_[i]->contiguous(); }
-    converted_ = true;
   }
   // inplace operation is not allowed if input is non-contiguous and non-contiguous is
   // not supported for this operation
@@ -168,19 +167,26 @@ TensorLayoutProcessor::~TensorLayoutProcessor() {
 }
 
 Maybe<void> TensorAutoCastProcessor::Apply() {
+  if (!autocast::is_enabled()) { return Maybe<void>::Ok(); }
+
   auto autocast_device_type = autocast::get_autocast_device_type();
   auto autocast_dtype = autocast::get_autocast_dtype();
-  if (autocast::is_enabled()
-      && autocast_meta_.is_autocast_eligible(autocast_device_type, autocast_dtype)) {
-    auto IsDeviceType = [](const std::shared_ptr<Tensor>& tensor,
-                           DeviceType device_type) -> Maybe<bool> {
-      return tensor->is_local() ? JUST(tensor->device())->enum_type() == device_type
-                                : JUST(tensor->parallel_desc())->device_type() == device_type;
-    };
+  auto IsDeviceType = [](const std::shared_ptr<Tensor>& tensor,
+                         DeviceType device_type) -> Maybe<bool> {
+    return tensor->is_local() ? JUST(tensor->device())->enum_type() == device_type
+                              : JUST(tensor->parallel_desc())->device_type() == device_type;
+  };
+  if (autocast_meta_.is_autocast_eligible(autocast_device_type, autocast_dtype)) {
     // Skip autocast if output data type is float32
     if (outputs_) {
       for (const auto& output : *outputs_) {
         if (output && output->dtype() != autocast_dtype) { return Maybe<void>::Ok(); }
+      }
+    }
+    // Skip autocast if any input is float32 for gray or clear list
+    if (autocast_meta_.autocast_color() != autocast::kWhite) {
+      for (const auto& input : inputs_) {
+        if (input->dtype() != autocast_dtype) { return Maybe<void>::Ok(); }
       }
     }
     const auto& args_eligible = autocast_meta_.is_args_autocast_eligible();
@@ -189,13 +195,25 @@ Maybe<void> TensorAutoCastProcessor::Apply() {
     autocast_inputs_.resize(inputs_.size());
     for (int i = 0; i < inputs_.size(); ++i) {
       if (args_eligible[i] && JUST(IsDeviceType(inputs_[i], autocast_device_type))
-          && inputs_[i]->dtype() != autocast_dtype) {
+          && inputs_[i]->dtype()->is_floating_point() && inputs_[i]->dtype() != autocast_dtype) {
         autocast_inputs_[i] = JUST(functional::To(inputs_[i], autocast_dtype, /*copy*/ false));
       } else {
         autocast_inputs_[i] = inputs_[i];
       }
     }
-    converted_ = true;
+  } else {
+    // fallback to float32 for black list
+    auto common_dtype = ComputeCommonDType(inputs_);
+    auto promote_dtype = promoteTypes(common_dtype, DType::Float());
+    autocast_inputs_.resize(inputs_.size());
+    for (int i = 0; i < inputs_.size(); ++i) {
+      if (JUST(IsDeviceType(inputs_[i], autocast_device_type))
+          && inputs_[i]->dtype()->is_floating_point() && inputs_[i]->dtype() != promote_dtype) {
+        autocast_inputs_[i] = JUST(functional::To(inputs_[i], promote_dtype, /*copy*/ false));
+      } else {
+        autocast_inputs_[i] = inputs_[i];
+      }
+    }
   }
   return Maybe<void>::Ok();
 }
