@@ -272,41 +272,41 @@ mlir::DialectRegistry getRegistry() {
 
 class KernelLaunchState final : public user_op::OpKernelState {
  public:
-  explicit KernelLaunchState(user_op::KernelInitContext* ctx) : mlir_ctx(getRegistry()) {
+  explicit KernelLaunchState(user_op::KernelInitContext* ctx) : mlir_ctx_(getRegistry()) {
     // get raw module from ctx attr
-    module =
-        mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
+    module_ =
+        mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx_);
     // reg_ctx is needed
-    reg_ctx = std::make_unique<KernelLaunchOpKernelRegContext>(*module);
+    reg_ctx_ = std::make_unique<KernelLaunchOpKernelRegContext>(*module_);
     // get constructor of kernel
-    fn = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-                        reg_ctx->GetOp()->getName().stripDialect().str(), *reg_ctx))
+    kernel_ = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
+                        reg_ctx_->GetOp()->getName().stripDialect().str(), *reg_ctx_))
              ->create_fn();
     // use okl2llvm pass to get llvm ir module
-    if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(*module))) {
+    if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(*module_))) {
       LOG(ERROR) << "Fail lowering kernel launch Module to llvm ir";
       exit(1);
     }
   };
   ~KernelLaunchState() = default;
 
-  mlir::MLIRContext* GetContext() { return &mlir_ctx; }
-  mlir::ModuleOp GetModule() { return *module; }
-  const user_op::OpKernel* GetFn() { return fn; }
+  mlir::MLIRContext* GetContext() { return &mlir_ctx_; }
+  mlir::ModuleOp GetModule() { return *module_; }
+  const user_op::OpKernel* GetKernel() { return kernel_; }
   user_op::KernelComputeContext* GetKernelComputeContext(user_op::KernelComputeContext* ctx) {
-    if (reg_ctx) {
-      okl_ctx = std::make_shared<KernelLaunchComputeContext>(std::move(reg_ctx), ctx);
+    if (reg_ctx_) {
+      okl_ctx_ = std::make_shared<KernelLaunchComputeContext>(std::move(reg_ctx_), ctx);
     }
     // if reg_ctx is consumed, return pointer directly
-    return dynamic_cast<user_op::KernelComputeContext*>(okl_ctx.get());
+    return dynamic_cast<user_op::KernelComputeContext*>(okl_ctx_.get());
   }
 
  private:
-  mlir::MLIRContext mlir_ctx;
-  mlir::OwningOpRef<mlir::ModuleOp> module;
-  std::unique_ptr<KernelLaunchOpKernelRegContext> reg_ctx;
-  std::shared_ptr<KernelLaunchComputeContext> okl_ctx;
-  const user_op::OpKernel* fn;
+  mlir::MLIRContext mlir_ctx_;
+  mlir::OwningOpRef<mlir::ModuleOp> module_;
+  std::unique_ptr<KernelLaunchOpKernelRegContext> reg_ctx_;
+  std::shared_ptr<KernelLaunchComputeContext> okl_ctx_;
+  const user_op::OpKernel* kernel_;
 };
 
 template<typename T>
@@ -327,7 +327,7 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     auto* okl_state = dynamic_cast<KernelLaunchState*>(state);
     runJIT<TypeKernelLaunchArgs>(okl_state->GetModule(), ctx->op_name(),
-                                 okl_state->GetKernelComputeContext(ctx), okl_state->GetFn());
+                                 okl_state->GetKernelComputeContext(ctx), okl_state->GetKernel());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -366,7 +366,7 @@ class KernelLaunchGpuKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     auto* okl_state = dynamic_cast<KernelLaunchState*>(state);
     runJIT<TypeKernelLaunchArgs>(okl_state->GetModule(), ctx->op_name(),
-                                 okl_state->GetKernelComputeContext(ctx), okl_state->GetFn());
+                                 okl_state->GetKernelComputeContext(ctx), okl_state->GetKernel());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
