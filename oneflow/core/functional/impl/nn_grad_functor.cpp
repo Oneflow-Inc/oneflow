@@ -134,7 +134,7 @@ class MaxPoolNdGradFunctor {
     for (int ndims = 1; ndims <= 3; ++ndims) {
       const auto& op_type_name = GetOpTypeName(ndims);
       op_expr_map_[op_type_name] = CHECK_JUST(
-          one::OpBuilder(op_type_name).Input("x").Input("indice").Input("dy").Output("dx").Build());
+          one::OpBuilder(op_type_name).Input("dy").Input("x").Input("indice").Output("dx").Build());
     }
   }
   static std::string GetOpTypeName(const int32_t& ndims) {
@@ -157,7 +157,7 @@ class MaxPoolNdGradFunctor {
         << Error::RuntimeError() << "Encounter unsupported op " << op_type_name
         << " in MaxPoolNdGradFunctor.";
     CHECK_NOTNULL_OR_RETURN(it->second);  // NOLINT(maybe-need-error-msg)
-    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, indice, dy}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*it->second, {dy, x, indice}, attrs);
   }
 
  protected:
@@ -211,7 +211,7 @@ class AdaptivePoolNdGradFunctor {
       for (int ndims = 1; ndims <= 3; ++ndims) {
         const auto& op_type_name = GetOpTypeName(mode, ndims);
         op_expr_map_[op_type_name] =
-            CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Input("dy").Output("dx").Build());
+            CHECK_JUST(one::OpBuilder(op_type_name).Input("dy").Input("x").Output("dx").Build());
       }
     }
   }
@@ -227,7 +227,7 @@ class AdaptivePoolNdGradFunctor {
         << Error::RuntimeError() << "Encounter unsupported op " << op_type_name
         << " in AdaptivePoolNdGradFunctor.";
     CHECK_NOTNULL_OR_RETURN(it->second);  // NOLINT(maybe-need-error-msg)
-    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, dy});
+    return OpInterpUtil::Dispatch<Tensor>(*it->second, {dy, x});
   }
 
  protected:
@@ -763,7 +763,7 @@ class AvgPoolNdGradFunctor {
     for (int ndims = 1; ndims <= 3; ++ndims) {
       const auto& op_type_name = GetOpTypeName(ndims);
       op_expr_map_[op_type_name] =
-          CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Input("dy").Output("dx").Build());
+          CHECK_JUST(one::OpBuilder(op_type_name).Input("dy").Input("x").Output("dx").Build());
     }
   }
   static std::string GetOpTypeName(const int32_t& ndims) {
@@ -786,7 +786,7 @@ class AvgPoolNdGradFunctor {
         << Error::RuntimeError() << "Encounter unsupported op " << op_type_name
         << " in AvgPoolNdGradFunctor.";
     CHECK_NOTNULL_OR_RETURN(it->second);  // NOLINT(maybe-need-error-msg)
-    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, dy}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*it->second, {dy, x}, attrs);
   }
 
  protected:
