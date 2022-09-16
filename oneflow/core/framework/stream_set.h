@@ -29,19 +29,12 @@ class StreamSet final {
 
   static Maybe<StreamSet> New(int64_t worker_thread_id);
 
-  std::unordered_map<std::pair<Symbol<Device>, StreamType>, Symbol<Stream>>*
-  mut_device_stream_type2stream() {
-    return &device_stream_type2stream_;
-  }
-
   int64_t worker_thread_id() const { return worker_thread_id_; }
 
  private:
   StreamSet(int64_t worker_thread_id);
 
   int64_t worker_thread_id_;
-  std::unordered_map<std::pair<Symbol<Device>, StreamType>, Symbol<Stream>>
-      device_stream_type2stream_;
 };
 
 }  // namespace oneflow
