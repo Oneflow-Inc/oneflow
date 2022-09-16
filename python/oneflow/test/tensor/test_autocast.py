@@ -21,6 +21,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "skip test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestAutoCast(flow.unittest.TestCase):
     @autotest(n=1, auto_backward=True, check_graph=False)
