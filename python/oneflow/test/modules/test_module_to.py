@@ -100,13 +100,13 @@ class TestModuleTo(flow.unittest.TestCase):
 
     def test_module_to_tensor(test_case):
         m = DummyModule()
-        m.to(flow.zeros(1, dtype=flow.float16, device='cuda'))
+        m.to(flow.zeros(1, dtype=flow.float16, device="cuda"))
         test_case.assertEqual(m.dummy_buf.dtype, flow.float16)
         test_case.assertEqual(m.dummy_para.dtype, flow.float16)
         test_case.assertEqual(m.dummy_para_int.dtype, flow.int32)
-        test_case.assertEqual(m.dummy_buf.device.type, 'cuda')
-        test_case.assertEqual(m.dummy_para.device.type, 'cuda')
-        test_case.assertEqual(m.dummy_para_int.device.type, 'cuda')
+        test_case.assertEqual(m.dummy_buf.device.type, "cuda")
+        test_case.assertEqual(m.dummy_para.device.type, "cuda")
+        test_case.assertEqual(m.dummy_para_int.device.type, "cuda")
 
     def test_module_to_with_var_reuse(test_case):
         class ReuseVarModule(flow.nn.Module):
