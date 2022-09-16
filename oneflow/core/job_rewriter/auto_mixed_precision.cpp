@@ -310,7 +310,7 @@ void AutoMixedPrecision::InsertCastOp(const OpGraph& op_graph, const HashSet<OpN
   InsertCastOpImpl(false, op_graph, white_set, mixed_precision_data_type, job_builder);
 }
 
-#if defined(WITH_CUDA) && defined(CUDA_VERSION) && CUDA_VERSION >= 1000
+#if defined(WITH_CUDA) && defined(CUDA_VERSION) && CUDA_VERSION >= 10000
 REGISTER_JOB_PASS("AutoMixedPrecision", AutoMixedPrecision);
 #endif  // WITH_CUDA
 
