@@ -78,9 +78,7 @@ __global__ void AdaptiveMaxPoolCudaKernel(const T* input, T* output, int64_t* re
 
 template<typename T>
 __global__ void AdaptiveMaxPoolGradCudaKernel(T* input, const T* output, const int64_t* index,
-                                              int dy_elems, int in_panel_size, int out_panel_size
-                                              /*int in_d, int in_h, int in_w, int out_d,
-                                              int out_h, int out_w*/) {
+                                              int dy_elems, int in_panel_size, int out_panel_size) {
   CUDA_1D_KERNEL_LOOP(idx, dy_elems) {
     int bc_idx = idx / out_panel_size;
     T* input_ptr = input + bc_idx * in_panel_size;
