@@ -282,7 +282,7 @@ class KernelLaunchState final : public user_op::OpKernelState {
   }
 
   user_op::KernelComputeContext* GetKernelComputeContext(user_op::KernelComputeContext* ctx) {
-    if (reg_ctx_) {
+    if (!okl_ctx_) {
       okl_ctx_ = std::make_shared<KernelLaunchComputeContext>(std::move(reg_ctx_), ctx);
     }
     // if reg_ctx is consumed, return pointer directly
