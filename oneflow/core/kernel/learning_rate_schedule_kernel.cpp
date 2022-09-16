@@ -253,8 +253,8 @@ double OneCycleLR(const OneCycleLRConf& conf, const double base_lr, int64_t step
     anneal_fn = [](double start, double end, double pct) { return start + (end - start) * pct; };
   }
   double max_lr = conf.max_lr();
-  double min_lr = max_lr / conf.final_div_factor();
   double initial_lr = max_lr / conf.div_factor();
+  double min_lr = initial_lr / conf.final_div_factor();
   double total_steps = static_cast<double>(conf.total_steps());
   double milestone = conf.pct_start() * total_steps - 1;
   double step_double = static_cast<double>(step);

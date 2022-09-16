@@ -322,3 +322,5 @@ algorithms.
     lr_scheduler.ChainedScheduler
     lr_scheduler.SequentialLR
     lr_scheduler.CosineAnnealingWarmRestarts
+    lr_scheduler.CyclicLR
+    lr_scheduler.OneCycleLR

@@ -12,6 +12,9 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+Reference from PyTorch implementation.
+https://github.com/pytorch/pytorch/blob/0ec19db7ac88e307135100ddcfc418ae3925844f/torch/optim/lr_scheduler.py#L1080
 """
 from typing import Callable
 from .optimizer import Optimizer
@@ -43,7 +46,7 @@ class CyclicLR(LRScheduler):
       at each cycle iteration.
 
     Args:
-        optimizer (Optimizer): Wrapped optimizer.
+        optimizer (oneflow.optim.Optimizer): Wrapped optimizer.
         base_lr (float or list): Initial learning rate which is the
             lower boundary in the cycle for each parameter group.
         max_lr (float or list): Upper learning rate boundaries in the cycle
@@ -104,6 +107,10 @@ class CyclicLR(LRScheduler):
 
 
     .. _Cyclical Learning Rates for Training Neural Networks: https://arxiv.org/abs/1506.01186
+
+    .. note::
+        In Graph mode, param 'max_lr' doesn't support list input, and cycle_momentum=True is not supported.
+
     """
 
     def __init__(
@@ -173,11 +180,12 @@ class CyclicLR(LRScheduler):
                 "max_momentum", optimizer, max_momentum
             )
 
-        self.base_lrs = self._format_param("base_lr", optimizer, base_lr)
-        for group, _base_lr in zip(optimizer.param_groups, self.base_lrs):
+        base_lrs = self._format_param("base_lr", optimizer, base_lr)
+        for group, _base_lr in zip(optimizer.param_groups, base_lrs):
             if "initial_lr" not in group:
                 group.setdefault("initial_lr", _base_lr)
         super().__init__(optimizer, last_step, verbose)
+        self.base_lrs = base_lrs
 
     def _format_param(self, name, optimizer, param):
         """Return correctly formatted lr/momentum for each param group."""
@@ -233,9 +241,9 @@ class CyclicLR(LRScheduler):
 
     def _generate_conf_for_graph(self, lr_conf):
         if self.cycle_momentum == True:
-            raise RuntimeError("cycle_momentum == True is not supported in graph mode.")
-        if isinstance(self.max_lrs, (list, tuple)):
-            raise RuntimeError("multi lr is not supported in graph mode.")
+            raise RuntimeError("cycle_momentum=True is not supported in graph mode.")
+        if len(self.max_lrs) > 1:
+            raise RuntimeError("Graph mode doesn't support list of max_lrs")
 
         mode_dict = {"trianglular": 0, "triangular2": 1, "exp_range": 2}
         scale_mode_dict = {

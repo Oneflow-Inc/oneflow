@@ -12,15 +12,111 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+Reference from PyTorch implementation.
+https://github.com/pytorch/pytorch/blob/0ec19db7ac88e307135100ddcfc418ae3925844f/torch/optim/lr_scheduler.py#L1430
 """
 import math
-from typing import Callable
 from .optimizer import Optimizer
 from .lr_scheduler import LRScheduler
 
 
 class OneCycleLR(LRScheduler):
     """
+    The interface is consistent with PyTorch.
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.optim.lr_scheduler.OneCycleLR.html.
+
+    Sets the learning rate of each parameter group according to the
+    1cycle learning rate policy. The 1cycle policy anneals the learning
+    rate from an initial learning rate to some maximum learning rate and then
+    from that maximum learning rate to some minimum learning rate much lower
+    than the initial learning rate.
+    This policy was initially described in the paper `Super-Convergence:
+    Very Fast Training of Neural Networks Using Large Learning Rates`_.
+
+    The 1cycle learning rate policy changes the learning rate after every batch.
+    `step` should be called after a batch has been used for training.
+
+    This scheduler is not chainable.
+
+    Note also that the total number of steps in the cycle can be determined in one
+    of two ways (listed in order of precedence):
+
+    #. A value for total_steps is explicitly provided.
+    #. A number of epochs (epochs) and a number of steps per epoch
+       (steps_per_epoch) are provided.
+       In this case, the number of total steps is inferred by
+       total_steps = epochs * steps_per_epoch
+
+    You must either provide a value for total_steps or provide a value for both
+    epochs and steps_per_epoch.
+
+    The default behaviour of this scheduler follows the fastai implementation of 1cycle, which
+    claims that "unpublished work has shown even better results by using only two phases". To
+    mimic the behaviour of the original paper instead, set ``three_phase=True``.
+
+    Args:
+        optimizer (Optimizer): Wrapped optimizer.
+        max_lr (float or list): Upper learning rate boundaries in the cycle
+            for each parameter group.
+        total_steps (int): The total number of steps in the cycle. Note that
+            if a value is not provided here, then it must be inferred by providing
+            a value for epochs and steps_per_epoch.
+            Default: None
+        epochs (int): The number of epochs to train for. This is used along
+            with steps_per_epoch in order to infer the total number of steps in the cycle
+            if a value for total_steps is not provided.
+            Default: None
+        steps_per_epoch (int): The number of steps per epoch to train for. This is
+            used along with epochs in order to infer the total number of steps in the
+            cycle if a value for total_steps is not provided.
+            Default: None
+        pct_start (float): The percentage of the cycle (in number of steps) spent
+            increasing the learning rate.
+            Default: 0.3
+        anneal_strategy (str): {'cos', 'linear'}
+            Specifies the annealing strategy: "cos" for cosine annealing, "linear" for
+            linear annealing.
+            Default: 'cos'
+        cycle_momentum (bool): If ``True``, momentum is cycled inversely
+            to learning rate between 'base_momentum' and 'max_momentum'.
+            Default: True
+        base_momentum (float or list): Lower momentum boundaries in the cycle
+            for each parameter group. Note that momentum is cycled inversely
+            to learning rate; at the peak of a cycle, momentum is
+            'base_momentum' and learning rate is 'max_lr'.
+            Default: 0.85
+        max_momentum (float or list): Upper momentum boundaries in the cycle
+            for each parameter group. Functionally,
+            it defines the cycle amplitude (max_momentum - base_momentum).
+            Note that momentum is cycled inversely
+            to learning rate; at the start of a cycle, momentum is 'max_momentum'
+            and learning rate is 'base_lr'
+            Default: 0.95
+        div_factor (float): Determines the initial learning rate via
+            initial_lr = max_lr/div_factor
+            Default: 25
+        final_div_factor (float): Determines the minimum learning rate via
+            min_lr = initial_lr/final_div_factor
+            Default: 1e4
+        three_phase (bool): If ``True``, use a third phase of the schedule to annihilate the
+            learning rate according to 'final_div_factor' instead of modifying the second
+            phase (the first two phases will be symmetrical about the step indicated by
+            'pct_start').
+        last_epoch (int): The index of the last batch. This parameter is used when
+            resuming a training job. Since `step()` should be invoked after each
+            batch instead of after each epoch, this number represents the total
+            number of *batches* computed, not the total number of epochs computed.
+            When last_epoch=-1, the schedule is started from the beginning.
+            Default: -1
+        verbose (bool): If ``True``, prints a message to stdout for
+            each update. Default: ``False``.
+
+    .. note::
+        In Graph mode, param 'max_lr' doesn't support list input, and cycle_momentum=True is not supported.
+
     """
 
     def __init__(
@@ -188,7 +284,7 @@ class OneCycleLR(LRScheduler):
         else:
             return [param] * len(optimizer.param_groups)
 
-    def get_lr(self, base_lr, step):
+    def get_lr(self, _, step):
         lrs = []
         for group in self.optimizer.param_groups:
             for i, phase in enumerate(self._schedule_phases):
@@ -222,8 +318,8 @@ class OneCycleLR(LRScheduler):
         self.update_lrs(lrs)
 
     def _generate_conf_for_graph(self, lr_conf):
-        if self.cycle_momentum:
-            raise RuntimeError("Graph mode doesn't support param 'cycle_momentum=True'")
+        if self.cycle_momentum == True:
+            raise RuntimeError("cycle_momentum=True is not supported in graph mode.")
         if len(self.max_lrs) > 1:
             raise RuntimeError("Graph mode doesn't support list of max_lrs")
 
