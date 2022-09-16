@@ -23,7 +23,7 @@ namespace oneflow {
 namespace one {
 
 struct AdaptiveMaxPoolCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
+  bool requires_grad = false;
 };
 
 class AdaptiveMaxPoolNdGrad : public OpExprGradFunction<AdaptiveMaxPoolCaptureState> {
@@ -37,7 +37,7 @@ class AdaptiveMaxPoolNdGrad : public OpExprGradFunction<AdaptiveMaxPoolCaptureSt
                     TensorTuple* in_grads) const override;
 
  private:
-  int32_t ndims_;
+  int32_t ndims_ = 0;
 };
 
 Maybe<void> AdaptiveMaxPoolNdGrad::Init(const OpExpr& op, const int& ndims) {

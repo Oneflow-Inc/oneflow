@@ -41,6 +41,7 @@ class TestAdaptiveMaxPool(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_adaptive_maxpool2d_manually(test_case):
         def _test_adaptive_max_pool_nd(input_shape, output_shape, m1, m2):
             input_np = np.random.rand(2, 3, *input_shape)
