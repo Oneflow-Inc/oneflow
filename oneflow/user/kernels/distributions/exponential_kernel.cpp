@@ -19,10 +19,11 @@ namespace oneflow {
 
 namespace {
 
-#define REGISTER_EXPONENTIAL_KERNEL(device, dtype)                                                 \
-  REGISTER_USER_KERNEL("exponential").SetCreateFn<ExponentialKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == device)                                                     \
-      && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
+#define REGISTER_EXPONENTIAL_KERNEL(device, dtype)          \
+  REGISTER_USER_KERNEL("exponential")                       \
+      .SetCreateFn<ExponentialKernel<device, dtype>>()      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
+                       && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
 REGISTER_EXPONENTIAL_KERNEL(DeviceType::kCPU, float)
 REGISTER_EXPONENTIAL_KERNEL(DeviceType::kCPU, double)
@@ -33,4 +34,3 @@ REGISTER_EXPONENTIAL_KERNEL(DeviceType::kCUDA, double)
 
 }  // namespace
 }  // namespace oneflow
-

@@ -178,12 +178,13 @@ void CUDAGeneratorImpl::set_current_seed(uint64_t seed) {
   philox_offset_per_thread_ = 0;
 }
 
-// NOTE(Liang Depeng): The implementation of ` CUDAGeneratorImpl::get_philox_offset` is modified from
-//      https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/cuda/CUDAGeneratorImpl.cpp#L269 
-//      in order to make distribution related cuda kernels to have the same output as pytorch 
+// NOTE(Liang Depeng): The implementation of ` CUDAGeneratorImpl::get_philox_offset` is modified
+// from
+//      https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/cuda/CUDAGeneratorImpl.cpp#L269
+//      in order to make distribution related cuda kernels to have the same output as pytorch
 //      when setting the same seed.
 uint64_t CUDAGeneratorImpl::get_philox_offset(uint64_t increment) {
-   // rounds increment up to the nearest multiple of 4
+  // rounds increment up to the nearest multiple of 4
   increment = ((increment + 3) / 4) * 4;
   CHECK_EQ(this->philox_offset_per_thread_ % 4, 0);
   uint64_t offset = this->philox_offset_per_thread_;

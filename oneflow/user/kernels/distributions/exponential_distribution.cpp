@@ -27,10 +27,12 @@ inline uint64_t make64BitsFrom32Bits(uint32_t hi, uint32_t lo) {
   return (static_cast<uint64_t>(hi) << 32) | lo;
 }
 
-template <typename T, typename V>
+template<typename T, typename V>
 inline T uniform_real(V val, T from, T to) {
-  constexpr auto MASK = static_cast<V>((static_cast<uint64_t>(1) << std::numeric_limits<T>::digits) - 1);
-  constexpr auto DIVISOR = static_cast<T>(1) / (static_cast<uint64_t>(1) << std::numeric_limits<T>::digits);
+  constexpr auto MASK =
+      static_cast<V>((static_cast<uint64_t>(1) << std::numeric_limits<T>::digits) - 1);
+  constexpr auto DIVISOR =
+      static_cast<T>(1) / (static_cast<uint64_t>(1) << std::numeric_limits<T>::digits);
   T x = (val & MASK) * DIVISOR;
   return (x * (to - from) + from);
 }
@@ -51,9 +53,9 @@ void ExponentialDistribution<DeviceType::kCPU, T>::operator()(
   }
 }
 
-#define INITIATE_CPU_UNIFORM_DISTRIBUTION(T, typeproto)               \
+#define INITIATE_CPU_UNIFORM_DISTRIBUTION(T, typeproto)                   \
   template void ExponentialDistribution<DeviceType::kCPU, T>::operator()( \
-      ep::Stream* stream, const int64_t elem_cnt, T* dptr,            \
+      ep::Stream* stream, const int64_t elem_cnt, T* dptr,                \
       const std::shared_ptr<one::Generator>& generator) const;
 
 OF_PP_FOR_EACH_TUPLE(INITIATE_CPU_UNIFORM_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
