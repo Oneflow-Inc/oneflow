@@ -996,7 +996,7 @@ def _test_onecycle_lr_scheduler(test_case, *args, **kwargs):
 
 @flow.unittest.skip_unless_1n1d()
 class OneCycleLRTestCase(flow.unittest.TestCase):
-    @autotest(n=100, check_graph=False)
+    @autotest(n=10, check_graph=False)
     def test_default(test_case):
         num_models = random.randint(1, 5)
         total_iters = random.randint(10000, 20000) 
@@ -1018,7 +1018,7 @@ class OneCycleLRTestCase(flow.unittest.TestCase):
             last_step=random.choice([-1, total_iters - num_iters - 1]),
         )
 
-    @autotest(n=100, check_graph=False)
+    @autotest(n=10, check_graph=False)
     def test_multi_max_lr(test_case):
         num_models = random.randint(1, 5)
         total_iters = random.randint(10000, 20000) 

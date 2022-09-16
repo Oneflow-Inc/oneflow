@@ -204,7 +204,7 @@ double MultiStepLearningRate(const MultiStepConf& conf, double lr, int64_t cur_b
   return lr * std::pow(gamma, i);
 }
 
-double CyclicLearningRate(const CyclicLRConf& conf, const double lr_, int64_t cur_batch_num) {
+double CyclicLearningRate(const CyclicLRConf& conf, int64_t cur_batch_num) {
   double lr = 0;
   double gamma = conf.gamma();
   double base_lr = conf.base_lr();
@@ -242,7 +242,7 @@ double CyclicLearningRate(const CyclicLRConf& conf, const double lr_, int64_t cu
   return lr;
 }
 
-double OneCycleLR(const OneCycleLRConf& conf, const double base_lr, int64_t step) {
+double OneCycleLR(const OneCycleLRConf& conf, int64_t step) {
   std::function<double(double, double, double)> anneal_fn;
   if (conf.anneal_strategy() == 0) {  // "cos"
     anneal_fn = [](double start, double end, double pct) {
@@ -360,9 +360,9 @@ double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int6
   } else if (conf.has_sequential_scheduler_conf()) {
     return SequentialScheduler(conf.sequential_scheduler_conf(), lr, cur_batch_num);
   } else if (conf.has_cyclic_lr_conf()) {
-    return CyclicLearningRate(conf.cyclic_lr_conf(), lr, cur_batch_num);
+    return CyclicLearningRate(conf.cyclic_lr_conf(), cur_batch_num);
   } else if (conf.has_onecycle_lr_conf()) {
-    return OneCycleLR(conf.onecycle_lr_conf(), lr, cur_batch_num);
+    return OneCycleLR(conf.onecycle_lr_conf(), cur_batch_num);
   } else {
     UNIMPLEMENTED();
   }
