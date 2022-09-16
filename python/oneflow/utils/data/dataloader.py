@@ -932,7 +932,6 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                     self._auto_collation,
                     self._collate_fn,
                     self._drop_last,
-                    self._generator,
                     self._base_seed,
                     self._worker_init_fn,
                     i,

@@ -241,7 +241,6 @@ def _worker_loop(
     auto_collation,
     collate_fn,
     drop_last,
-    generator,
     base_seed,
     init_fn,
     worker_id,
