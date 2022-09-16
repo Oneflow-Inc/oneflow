@@ -41,6 +41,7 @@ limitations under the License.
 #include "oneflow/ir/oneflow-extension/include/OneFlow/JITEngine.h"
 
 #include <memory>
+#include <tuple>
 #include <utility>
 #include <sys/types.h>
 
@@ -169,7 +170,7 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
 
 class KernelLaunchComputeContext final : public user_op::KernelComputeContext {
  public:
-  explicit KernelLaunchComputeContext(std::shared_ptr<KernelLaunchOpKernelRegContext> reg,
+  explicit KernelLaunchComputeContext(std::unique_ptr<KernelLaunchOpKernelRegContext> reg,
                                       KernelComputeContext* comp)
       : reg_ctx_(std::move(reg)), comp_ctx_(comp) {}
   ~KernelLaunchComputeContext() = default;
@@ -223,7 +224,7 @@ class KernelLaunchComputeContext final : public user_op::KernelComputeContext {
       const std::string& attr_name) const override {
     return user_op_conf().Attr4Name(attr_name);
   }
-  std::shared_ptr<KernelLaunchOpKernelRegContext> reg_ctx_;
+  std::unique_ptr<KernelLaunchOpKernelRegContext> reg_ctx_;
   KernelComputeContext* comp_ctx_ = nullptr;
   std::unordered_map<mlir::oneflow::user_op::ArgID, user_op::Tensor*> tensor_desc_{};
 };
@@ -248,7 +249,30 @@ class KernelLaunchState final : public user_op::OpKernelState {
       exit(1);
     }
     // reg_ctx is needed
-    reg_ctx_ = std::make_shared<KernelLaunchOpKernelRegContext>(*module_);
+  };
+  ~KernelLaunchState() = default;
+
+  void DoCompute(user_op::KernelComputeContext* ctx, const std::string& name) {
+    if (!is_initalized_) { LazyInitWithCtx(ctx); }
+    JITCompute(name, dynamic_cast<user_op::KernelComputeContext*>(okl_ctx_.get()), kernel_);
+  }
+
+ private:
+  mlir::MLIRContext mlir_ctx_;
+  mlir::OwningOpRef<mlir::ModuleOp> module_;
+  bool is_initalized_;
+  std::shared_ptr<KernelLaunchComputeContext> okl_ctx_;
+  std::shared_ptr<JIT_Engine> engine_;
+  const user_op::OpKernel* kernel_{};
+
+  void JITCompute(const std::string& name, user_op::KernelComputeContext* okl_ctx,
+                  const user_op::OpKernel* kernel) {
+    engine_->Run<TypeKernelLaunchArgs>(name, okl_ctx, kernel);
+  }
+
+  void LazyInitWithCtx(user_op::KernelComputeContext* ctx) {
+    std::unique_ptr<KernelLaunchOpKernelRegContext> reg_ctx_ =
+        std::make_unique<KernelLaunchOpKernelRegContext>(*module_);
     // get constructor of kernel
     kernel_ = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
                              reg_ctx_->GetOp()->getName().stripDialect().str(), *reg_ctx_))
@@ -261,31 +285,7 @@ class KernelLaunchState final : public user_op::OpKernelState {
 
     // create expected wrapped exec engine shared pointer
     engine_ = std::make_shared<JIT_Engine>(*module_);
-  };
-  ~KernelLaunchState() = default;
-
-  void DoCompute(user_op::KernelComputeContext* ctx, const std::string& name) {
-    JITCompute(name, GetKernelComputeContext(ctx), kernel_);
-  }
-
- private:
-  mlir::MLIRContext mlir_ctx_;
-
-  mlir::OwningOpRef<mlir::ModuleOp> module_;
-  std::shared_ptr<KernelLaunchOpKernelRegContext> reg_ctx_;
-  std::shared_ptr<KernelLaunchComputeContext> okl_ctx_;
-  std::shared_ptr<JIT_Engine> engine_;
-  const user_op::OpKernel* kernel_;
-
-  void JITCompute(const std::string& name, user_op::KernelComputeContext* okl_ctx,
-                  const user_op::OpKernel* kernel) {
-    engine_->Run<TypeKernelLaunchArgs>(name, okl_ctx, kernel);
-  }
-
-  user_op::KernelComputeContext* GetKernelComputeContext(user_op::KernelComputeContext* ctx) {
-    if (!okl_ctx_) { okl_ctx_ = std::make_shared<KernelLaunchComputeContext>(reg_ctx_, ctx); }
-    // if reg_ctx is consumed, return pointer directly
-    return dynamic_cast<user_op::KernelComputeContext*>(okl_ctx_.get());
+    okl_ctx_ = std::make_shared<KernelLaunchComputeContext>(std::move(reg_ctx_), ctx);
   }
 };
 
