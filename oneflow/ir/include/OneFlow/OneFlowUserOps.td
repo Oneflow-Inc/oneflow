@@ -3669,8 +3669,8 @@ def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", [NoSideEf
 #endif // GET_ONEFLOW_LOSS_OP_DEFINITIONS
 
 // Group: MATH
-// abs_grad, ceil_grad, erf, erf_grad, exp, exp_grad, expm1, expm1_grad, floor_grad, floordiv_x_grad, floordiv_y_grad, lgamma, lgamma_grad, log, log1p, log1p_grad, log2_grad, log_grad, log_sigmoid, log_sigmoid_grad, negative_grad, reciprocal_grad, reciprocal_no_nan, reciprocal_no_nan_grad, rint_grad, round_grad, rsqrt, rsqrt_grad, sigmoid_v2, sigmoid_v2_grad, sign_grad, softplus, softplus_grad, softsign_grad, var, sqrt, sqrt_grad, square, square_grad, xlogy_x_grad, xlogy_y_grad, cumsum, erfinv
-// Total: 44
+// abs_grad, ceil_grad, erf, erf_grad, exp, exp_grad, expm1, expand_grad, expm1, expm1_grad, floor_grad, floordiv_x_grad, floordiv_y_grad, lgamma, lgamma_grad, log, log1p, log1p_grad, log2_grad, log10_grad, log_grad, log_sigmoid, log_sigmoid_grad, negative_grad, reciprocal_grad, reciprocal_no_nan, reciprocal_no_nan_grad, rint_grad, round_grad, rsqrt, rsqrt_grad, sigmoid_v2, sigmoid_v2_grad, sign_grad, softplus, softplus_grad, softsign_grad, var, sqrt, sqrt_grad, square, square_grad, xlogy_x_grad, xlogy_y_grad, cumsum, erfinv
+// Total: 46
 
 #ifdef GET_ONEFLOW_MATH_OP_DEFINITIONS
 
@@ -3868,6 +3868,20 @@ def OneFlow_Log1pGradOp : OneFlow_BaseOp<"log1p_grad", [NoSideEffect, DeclareOpI
 }
 
 def OneFlow_Log2GradOp : OneFlow_BaseOp<"log2_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_Log10GradOp : OneFlow_BaseOp<"log10_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
     OneFlow_Tensor:$dy
@@ -6479,6 +6493,15 @@ def OneFlow_AdaptiveAvgPool3DOp : OneFlow_AdaptivePoolBaseOp<"adaptive_avg_pool3
 
 def OneFlow_AdaptiveAvgPool3DGradOp : OneFlow_AdaptivePoolGradBaseOp<"adaptive_avg_pool3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
+def OneFlow_AdaptiveMaxPool1DOp : OneFlow_AdaptiveMaxPoolBaseOp<"adaptive_max_pool1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AdaptiveMaxPool1DGradOp : OneFlow_AdaptiveMaxPoolGradBaseOp<"adaptive_max_pool1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+
+def OneFlow_AdaptiveMaxPool2DOp : OneFlow_AdaptiveMaxPoolBaseOp<"adaptive_max_pool2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AdaptiveMaxPool2DGradOp : OneFlow_AdaptiveMaxPoolGradBaseOp<"adaptive_max_pool2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+
+def OneFlow_AdaptiveMaxPool3DOp : OneFlow_AdaptiveMaxPoolBaseOp<"adaptive_max_pool3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AdaptiveMaxPool3DGradOp : OneFlow_AdaptiveMaxPoolGradBaseOp<"adaptive_max_pool3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+
 def OneFlow_AvgPool1DOp : OneFlow_AvgPoolBaseOp<"avg_pool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
 def OneFlow_AvgPool1DGradOp : OneFlow_AvgPoolGradBaseOp<"avg_pool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
@@ -8244,8 +8267,8 @@ def OneFlow_NotEqualZeroOp : OneFlow_BaseOp<"not_equal_zero", [NoSideEffect, Dec
 #endif // GET_ONEFLOW_TRIGONOMETRIC_OP_DEFINITIONS
 
 // Group: UNARY
-// acc, affine_grid, affine_grid_grad, bernoulli, cast, cast_to_static_shape, cast_to_tick, celu, copy, count_not_finite, diag, diagonal, elu, expand, expand_dims, flatten, flip, fold, gelu, hardsigmoid, hardshrink, hardswish, leaky_relu, log2, logical_not, mish, narrow, one_hot, pack, random_mask_like, repeat, roll, selu, silu, softshrink, softsign, sort, square_sum, squeeze, threshold, transpose, tril, triu, unfold, unfold_tensor, unpack, zero_like, to_contiguous, isnan, isinf, isfinite, repeat_interleave, mutable_cast_once, trunc
-// Total: 54
+// acc, affine_grid, affine_grid_grad, bernoulli, cast, cast_to_static_shape, cast_to_tick, celu, copy, count_not_finite, diag, diagonal, elu, expand, expand_dims, flatten, flip, fold, gelu, hardsigmoid, hardshrink, hardswish, leaky_relu, log2, log10, logical_not, mish, narrow, one_hot, pack, random_mask_like, repeat, roll, selu, silu, softshrink, softsign, sort, square_sum, squeeze, threshold, transpose, tril, triu, unfold, unfold_tensor, unpack, zero_like, to_contiguous, isnan, isinf, isfinite, repeat_interleave, mutable_cast_once, trunc
+// Total: 55
 
 #ifdef GET_ONEFLOW_UNARY_OP_DEFINITIONS
 
@@ -8636,6 +8659,19 @@ def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", [NoSideEffect, DeclareOpI
 }
 
 def OneFlow_Log2Op : OneFlow_BaseOp<"log2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_Log10Op : OneFlow_BaseOp<"log10", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x
   );
@@ -9488,10 +9524,13 @@ def OneFlow_EmbeddingLookupPlaceholderOp : OneFlow_BaseOp<"embedding_lookup_plac
   );
   let attrs = (ins
     OneFlow_DataType:$dtype,
+    StrAttr:$embedding_name,
+    DefaultValuedAttr<SI64Attr, "0">:$line_size,
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
+    DefaultValuedAttr<BoolAttr, "false">:$is_full_cache,
     DefaultValuedAttr<SI32Attr, "1">:$num_tables,
     StrAttr:$embedding_tables,
-    StrAttr:$key_value_store_options
+    DefaultValuedAttr<SI64Attr, "0">:$seed
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -9506,7 +9545,9 @@ def OneFlow_EmbeddingUpdatePlaceholderOp : OneFlow_BaseOp<"embedding_update_plac
     OneFlow_Tensor:$embedding_grad
   );
   let attrs = (ins
-    StrAttr:$key_value_store_options
+    StrAttr:$embedding_name,
+    DefaultValuedAttr<SI64Attr, "0">:$line_size,
+    DefaultValuedAttr<SI64Attr, "0">:$embedding_size
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -9646,7 +9687,8 @@ def OneFlow_EmbeddingPrefetchOp : OneFlow_BaseOp<"embedding_prefetch", [NoSideEf
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
     StrAttr:$embedding_name,
     StrAttr:$embedding_tables,
-    StrAttr:$state_initializer
+    StrAttr:$state_initializer,
+    DefaultValuedAttr<SI64Attr, "0">:$seed
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9673,7 +9715,8 @@ def OneFlow_EmbeddingLookupOp : OneFlow_BaseOp<"embedding_lookup", [NoSideEffect
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
     StrAttr:$embedding_name,
     StrAttr:$embedding_tables,
-    StrAttr:$state_initializer
+    StrAttr:$state_initializer,
+    DefaultValuedAttr<SI64Attr, "0">:$seed
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
