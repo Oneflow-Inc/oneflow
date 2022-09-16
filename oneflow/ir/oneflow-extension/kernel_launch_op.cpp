@@ -248,7 +248,6 @@ class KernelLaunchState final : public user_op::OpKernelState {
       LOG(ERROR) << "Fail to load mlir assembly";
       exit(1);
     }
-    // reg_ctx is needed
   };
   ~KernelLaunchState() = default;
 
