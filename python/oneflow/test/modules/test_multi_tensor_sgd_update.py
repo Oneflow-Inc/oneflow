@@ -103,7 +103,7 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cuda"]
         arg_dict["x_shape"] = [(2,)]
-        arg_dict["tensor_num"] = [4]
+        arg_dict["tensor_num"] = [129]
         arg_dict["weight_decay"] = [0.0, 0.5]
         arg_dict["learning_rate"] = [1.0, 1e-3]
         arg_dict["train_iters"] = [10]

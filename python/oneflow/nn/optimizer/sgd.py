@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import collections
 import warnings
 from typing import Callable, Dict, Iterator, List, Union
+import pdb
 
 import oneflow as flow
 from oneflow.nn.parameter import Parameter
@@ -105,6 +105,7 @@ class SGD(Optimizer):
         weight_decay: float = 0.0,
         nesterov: bool = False,
         maximize: bool = False,
+        foreach: bool = False,
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert momentum >= 0.0, f"Invalid momentum: {momentum}"
@@ -120,6 +121,7 @@ class SGD(Optimizer):
         options["weight_decay"] = weight_decay
         options["nesterov"] = nesterov
         options["maximize"] = maximize
+        options["foreach"] = foreach
         super().__init__(params, options)
 
         for param_group in self.param_groups:
@@ -138,6 +140,53 @@ class SGD(Optimizer):
             flow.stateful_op("sgd_update").Input("model").Input("model_diff").Build()
         )
 
+    def _single_tensor_update(self, param_group):
+        lr = param_group['lr']
+        l2 = param_group['weight_decay']
+        for param in param_group.parameters:
+            if param.grad is None:
+                continue
+            if param_group["momentum"] == 0.0:
+                # TODO: Support param `maximize` in Naive SGD Optimizer. (zhengzekang)
+                flow._C.dispatch_sgd_update(
+                    self._sgd, (param, param.grad), learning_rate=lr, l2=l2
+                )
+            else:
+                if "momentum_buf" not in self._state[param]:
+                    self._state[param]["momentum_buf"] = flow.zeros_like(param)
+                momentum_buf = self._state[param]["momentum_buf"]
+                beta = param_group["momentum"]
+                dampening = param_group["dampening"]
+                nesterov = param_group["nesterov"]
+                maximize = param_group["maximize"]
+                flow._C.dispatch_momentum_update(
+                    self._momentum_sgd,
+                    (param, param.grad, momentum_buf),
+                    learning_rate=lr,
+                    l2=l2,
+                    beta=beta,
+                    dampening=dampening,
+                    nesterov=nesterov,
+                    maximize=maximize,
+                )
+
+    def _multi_tensor_update(self, param_group):
+        assert len(param_group.parameters) != 0
+        lr = flow.Tensor(param_group['lr'], device=param_group.parameters[0].device)
+        wd = param_group['weight_decay']
+        param_list = []
+        param_grad_list = []
+        for param in param_group.parameters:
+            if param.grad is None:
+                continue
+            param_list.append(param)
+            param_grad_list.append(param.grad)
+
+        #print(type(param_list), type(param_grad_list), type(lr), type(wd), type(param_list[0]))
+        flow._C.multi_tensor_sgd_update(
+            param_list, param_grad_list, lr, 1.0, wd
+        )
+
     def step(self, closure: Callable = None):
         """Performs a single optimization step.
 
@@ -150,36 +199,13 @@ class SGD(Optimizer):
             if closure is not None:
                 loss = closure()
             for param_group in self.param_groups:
-                lr = param_group["lr"]
-                l2 = param_group["weight_decay"]
-                for param in param_group.parameters:
-                    if param.grad is None:
-                        continue
-                    if param_group["momentum"] == 0.0:
-                        # TODO: Support param `maximize` in Naive SGD Optimizer. (zhengzekang)
-                        flow._C.dispatch_sgd_update(
-                            self._sgd, (param, param.grad), learning_rate=lr, l2=l2
-                        )
-                    else:
-                        if "momentum_buf" not in self._state[param]:
-                            self._state[param]["momentum_buf"] = flow.zeros_like(param)
-                        momentum_buf = self._state[param]["momentum_buf"]
-                        beta = param_group["momentum"]
-                        dampening = param_group["dampening"]
-                        nesterov = param_group["nesterov"]
-                        maximize = param_group["maximize"]
-                        flow._C.dispatch_momentum_update(
-                            self._momentum_sgd,
-                            (param, param.grad, momentum_buf),
-                            learning_rate=lr,
-                            l2=l2,
-                            beta=beta,
-                            dampening=dampening,
-                            nesterov=nesterov,
-                            maximize=maximize,
-                        )
-            self._state["step"] = self._state["step"] + 1
-            return loss
+                if param_group['foreach']:
+                    self._multi_tensor_update(param_group)
+                else:
+                    self._single_tensor_update(param_group)
+
+        self._state["step"] = self._state["step"] + 1
+        return loss
 
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []

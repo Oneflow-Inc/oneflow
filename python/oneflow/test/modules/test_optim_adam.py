@@ -253,6 +253,7 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict["save_load_by_pickle"] = [False, True]
 
         for arg in GenArgList(arg_dict):
+            import pdb; pdb.set_trace()
             compare_with_numpy_adam(test_case, *arg)
 
     def test_adam_clip_grad(test_case):
