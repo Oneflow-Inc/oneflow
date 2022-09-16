@@ -22,8 +22,8 @@ namespace oneflow {
 template<typename T>
 class CpuLinalgCrossKernel final : public user_op::OpKernel {
  public:
-  CpuLinalgCrossKernel() {}
-  ~CpuLinalgCrossKernel() {}
+  CpuLinalgCrossKernel() = default;
+  ~CpuLinalgCrossKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {

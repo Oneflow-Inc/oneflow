@@ -36,8 +36,8 @@ namespace oneflow {
 template<typename T>
 class CudaLinalgCrossKernel final : public user_op::OpKernel {
  public:
-  CudaLinalgCrossKernel() {}
-  ~CudaLinalgCrossKernel() {}
+  CudaLinalgCrossKernel() = default;
+  ~CudaLinalgCrossKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
