@@ -152,21 +152,21 @@ class AdaptiveMaxPoolNDGradCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_ADAPTIVE_MAX_POOLND_CPU(optypename, dtype, dim)                        \
-  REGISTER_USER_KERNEL(optypename)                                                      \
+#define REGISTER_ADAPTIVE_MAX_POOLND_CPU(op_type_name, dtype, dim)                      \
+  REGISTER_USER_KERNEL(op_type_name)                                                    \
       .SetCreateFn<AdaptiveMaxPoolNDCpuKernel<dtype, dim>>()                            \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                   \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
                                                                                         \
-  REGISTER_USER_KERNEL(optypename "_grad")                                              \
+  REGISTER_USER_KERNEL(op_type_name "_grad")                                            \
       .SetCreateFn<AdaptiveMaxPoolNDGradCpuKernel<dtype, dim>>()                        \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                   \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-#define REGISTER_ADAPTIVE_MAX_POOL_CPU(optypename, dim)      \
-  REGISTER_ADAPTIVE_MAX_POOLND_CPU(optypename, double, dim); \
-  REGISTER_ADAPTIVE_MAX_POOLND_CPU(optypename, float, dim);  \
-  REGISTER_ADAPTIVE_MAX_POOLND_CPU(optypename, int, dim);
+#define REGISTER_ADAPTIVE_MAX_POOL_CPU(op_type_name, dim)      \
+  REGISTER_ADAPTIVE_MAX_POOLND_CPU(op_type_name, double, dim); \
+  REGISTER_ADAPTIVE_MAX_POOLND_CPU(op_type_name, float, dim);  \
+  REGISTER_ADAPTIVE_MAX_POOLND_CPU(op_type_name, int, dim);
 
 REGISTER_ADAPTIVE_MAX_POOL_CPU("adaptive_max_pool1d", 1);
 REGISTER_ADAPTIVE_MAX_POOL_CPU("adaptive_max_pool2d", 2);

@@ -932,7 +932,7 @@ class AdaptiveMaxPoolBaseFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
                                 const std::vector<int64_t>& output_size) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("output_size");
-    attrs.SetAttr<std::vector<int64_t>>("output_size", output_size);
+    attrs.SetAllAttrs(output_size);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
   }
 

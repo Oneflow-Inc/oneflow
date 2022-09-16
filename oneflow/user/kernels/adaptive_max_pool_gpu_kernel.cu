@@ -33,10 +33,11 @@ __global__ void AdaptiveMaxPoolCudaKernel(const T* input, T* output, int64_t* re
                                           int out_h, int out_w) {
   const int out_panel_size = out_d * out_h * out_w;
   const int in_panel_size = in_d * in_h * in_w;
+  const int out_hw = out_w * out_h;
 
   CUDA_1D_KERNEL_LOOP(idx, num_elems) {
     int bc_idx = idx / out_panel_size;
-    int out_d_idx = (idx % out_panel_size) / out_w / out_h;
+    int out_d_idx = (idx % out_panel_size) / out_hw;
     int out_h_idx = (idx % out_panel_size) % (out_h * out_w) / out_w;
     int out_w_idx = (idx % out_panel_size) % (out_h * out_w) % out_w;
 
@@ -77,11 +78,9 @@ __global__ void AdaptiveMaxPoolCudaKernel(const T* input, T* output, int64_t* re
 
 template<typename T>
 __global__ void AdaptiveMaxPoolGradCudaKernel(T* input, const T* output, const int64_t* index,
-                                              int dy_elems, int in_d, int in_h, int in_w, int out_d,
-                                              int out_h, int out_w) {
-  const int out_panel_size = out_d * out_h * out_w;
-  const int in_panel_size = in_d * in_h * in_w;
-
+                                              int dy_elems, int in_panel_size, int out_panel_size
+                                              /*int in_d, int in_h, int in_w, int out_d,
+                                              int out_h, int out_w*/) {
   CUDA_1D_KERNEL_LOOP(idx, dy_elems) {
     int bc_idx = idx / out_panel_size;
     T* input_ptr = input + bc_idx * in_panel_size;
@@ -135,10 +134,13 @@ void MaxBackwardCompute(KernelComputeContext* ctx) {
   const int in_elems = in_tensor->shape_view().elem_cnt();
   const int out_elems = out_tensor->shape_view().elem_cnt();
 
-  Memset<DeviceType::kCUDA>(ctx->stream(), in_ptr, 0, in_elems * sizeof(T));
+  std::unique_ptr<ep::primitive::Memset> memset_primitive =
+      ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
+  CHECK(memset_primitive);
+  memset_primitive->Launch(ctx->stream(), in_ptr, 0, in_elems * sizeof(T));
   RUN_CUDA_KERNEL((AdaptiveMaxPoolGradCudaKernel<T>), ctx->stream(), out_elems, in_ptr, out_ptr,
-                  index_ptr, out_elems, in.At(2), in.At(3), in.At(4), out.At(2), out.At(3),
-                  out.At(4));
+                  index_ptr, out_elems, in.At(2) * in.At(3) * in.At(4),
+                  out.At(2) * out.At(3) * out.At(4));
 }
 
 template<DeviceType device_type, typename T, int32_t dim>
