@@ -27,11 +27,34 @@ def _test_exponential(test_case, device, seed, lambd, dtype):
         )
     )
 
+    torch_arr = torch.zeros(dim1, device=device, dtype=torch.float32 if dtype == "float" else torch.float64).exponential_(lambd=lambd, generator=None)
+    oneflow_arr = flow.zeros(dim1, device=device, dtype=flow.float32 if dtype == "float" else flow.float64).exponential_(lambd=lambd, generator=None)
+
+    test_case.assertTrue(
+        np.allclose(
+            torch_arr.cpu().numpy(),
+            oneflow_arr.cpu().numpy(),
+            atol=1e-8,
+        )
+    )
+
     torch_gen = torch.Generator(device=device)
     torch_gen.manual_seed(seed)
-    torch_arr = torch.zeros(dim1, device=device, dtype=torch.float32 if dtype == "float" else torch.float64).exponential_(lambd=lambd, generator=torch_gen)
     oneflow_gen = flow.Generator(device=device)
     oneflow_gen.manual_seed(seed)
+
+    torch_arr = torch.zeros(dim1, device=device, dtype=torch.float32 if dtype == "float" else torch.float64).exponential_(lambd=lambd, generator=torch_gen)
+    oneflow_arr = flow.zeros(dim1, device=device, dtype=flow.float32 if dtype == "float" else flow.float64).exponential_(lambd=lambd, generator=oneflow_gen)
+
+    test_case.assertTrue(
+        np.allclose(
+            torch_arr.cpu().numpy(),
+            oneflow_arr.cpu().numpy(),
+            atol=1e-8,
+        )
+    )
+
+    torch_arr = torch.zeros(dim1, device=device, dtype=torch.float32 if dtype == "float" else torch.float64).exponential_(lambd=lambd, generator=torch_gen)
     oneflow_arr = flow.zeros(dim1, device=device, dtype=flow.float32 if dtype == "float" else flow.float64).exponential_(lambd=lambd, generator=oneflow_gen)
 
     test_case.assertTrue(
