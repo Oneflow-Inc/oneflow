@@ -83,7 +83,7 @@ FLAT_MSG_BEGIN(FlatMetaInfoConsistency);
         JUST(SyncedSymbolMap<ParallelDesc>::Symbol4SyncedSymbolId(
             this->placement_symbol_id()));
     CHECK_OR_RETURN(this_placement == placement) << "Each rank must have same input placement";
-    CHECK_EQ_OR_RETURN(nd_sbp.has_value(), this->has_nd_sbp_symbol_id());
+    CHECK_EQ_OR_RETURN(nd_sbp.has_value(), this->has_nd_sbp_symbol_id()) << "Either has value or no value";
     if (this->has_nd_sbp_symbol_id()) {
       const auto& that_nd_sbp =
           JUST(SyncedSymbolMap<NdSbp>::Symbol4SyncedSymbolId(

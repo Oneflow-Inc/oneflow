@@ -67,7 +67,7 @@ Maybe<void> Device::Init() {
 
 /* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(const std::string& type,
                                                                int64_t device_id) {
-  CHECK_GE_OR_RETURN(device_id, 0);
+  CHECK_GE_OR_RETURN(device_id, 0) << "Device ID should be greater than or equal to zero";
   static thread_local HashMap<std::string, HashMap<int64_t, Symbol<Device>>> map;
   auto* device_id2symbol = &map[type];
   auto iter = device_id2symbol->find(device_id);
@@ -129,13 +129,13 @@ Maybe<Symbol<Device>> Device::MakeDeviceByParallelDesc(const ParallelDesc& paral
   for (const auto& item : parallel_desc.parallel_conf().device_name()) {
     machine_device_ids.emplace_back(item);
   }
-  CHECK_EQ_OR_RETURN(machine_device_ids.size(), 1);
+  CHECK_EQ_OR_RETURN(machine_device_ids.size(), 1) << "Number of machine device should be one";
   const std::string& machine_device_id = machine_device_ids.at(0);
   size_t pos = machine_device_id.find(':');
-  CHECK_NE_OR_RETURN(pos, std::string::npos) << "device_name: " << machine_device_id;
+  CHECK_NE_OR_RETURN(pos, std::string::npos) << "Invalid device ID: " << machine_device_id;
   std::string device_id = machine_device_id.substr(pos + 1);
-  CHECK_EQ_OR_RETURN(device_id.find('-'), std::string::npos);
-  CHECK_OR_RETURN(IsStrInt(device_id));
+  CHECK_EQ_OR_RETURN(device_id.find('-'), std::string::npos)<< "Device ID should be greater than or equal to zero";
+  CHECK_OR_RETURN(IsStrInt(device_id)) << "Invalid Integer format";
   return Device::New(type, std::stoi(device_id));
 }
 
