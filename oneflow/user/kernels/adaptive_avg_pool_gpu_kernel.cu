@@ -21,20 +21,11 @@ limitations under the License.
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/operator/operator_util.h"
 #include "oneflow/user/utils/pool_util.h"
-
-#include <algorithm>
-#include <cfloat>
-#include <cmath>
+#include "oneflow/user/kernels/adaptive_pool_kernel_util.h"
 
 namespace oneflow {
 
 namespace user_op {
-
-#define START_IND(a, b, c) (int)std::floor((float)(a * c) / b)
-#define END_IND(a, b, c) (int)std::ceil((float)((a + 1) * c) / b)
-
-#define START_IND_INT(a, b, c) ((a * c) / b)
-#define END_IND_INT(a, b, c) (((a + 1) * c + b - 1) / b)
 
 template<typename T>
 __global__ void InitPtr(int elements, T* ptr) {
