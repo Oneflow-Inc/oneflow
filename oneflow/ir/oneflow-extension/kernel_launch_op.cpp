@@ -263,8 +263,8 @@ class KernelLaunchState final : public user_op::OpKernelState {
   };
   ~KernelLaunchState() = default;
 
-  void Compute(user_op::KernelComputeContext* ctx, const std::string& name) {
-    DoCompute(name, GetKernelComputeContext(ctx), kernel_);
+  void DoCompute(user_op::KernelComputeContext* ctx, const std::string& name) {
+    JITCompute(name, GetKernelComputeContext(ctx), kernel_);
   }
 
  private:
@@ -276,7 +276,7 @@ class KernelLaunchState final : public user_op::OpKernelState {
   std::shared_ptr<JIT_Engine> engine_;
   const user_op::OpKernel* kernel_;
 
-  void DoCompute(const std::string& name, user_op::KernelComputeContext* okl_ctx,
+  void JITCompute(const std::string& name, user_op::KernelComputeContext* okl_ctx,
                  const user_op::OpKernel* kernel) {
     engine_->Run<TypeKernelLaunchArgs>(name, okl_ctx, kernel);
   }
@@ -307,7 +307,7 @@ class KernelLaunchCpuKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
     auto* okl_state = dynamic_cast<KernelLaunchState*>(state);
-    okl_state->Compute(ctx, ctx->op_name());
+    okl_state->DoCompute(ctx, ctx->op_name());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -345,7 +345,7 @@ class KernelLaunchGpuKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
     auto* okl_state = dynamic_cast<KernelLaunchState*>(state);
-    okl_state->Compute(ctx, ctx->op_name());
+    okl_state->DoCompute(ctx, ctx->op_name());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
