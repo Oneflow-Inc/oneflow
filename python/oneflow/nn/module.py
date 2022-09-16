@@ -1162,7 +1162,7 @@ class Module(object):
                 elif isinstance(arg, flow.dtype):
                     dtype = arg
                     device = None
-                elif isinstance(arg, flow.device):
+                elif isinstance(arg, (flow.device, str)):
                     dtype = None
                     device = arg
                 else:
