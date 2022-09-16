@@ -132,7 +132,7 @@ void BuildEmbeddingLookup(
             .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
             .Build();
     *embedding_prefetch_op_conf = embedding_prefetch_op.op_conf();
-    if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_OVERLAP", true)) {
+    if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINE", false)) {
       embedding_prefetch_op_conf->set_stream_name_hint(embedding_name + "_EMBEDDING");
     }
     context_lbn = embedding_prefetch_op.output("context", 0);
@@ -165,7 +165,7 @@ void BuildEmbeddingLookup(
   }
   user_op::UserOpConfWrapper embedding_lookup_op = embedding_lookup_op_builder.Build();
   *embedding_lookup_op_conf = embedding_lookup_op.op_conf();
-  if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_OVERLAP", true)) {
+  if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINE", false)) {
     embedding_lookup_op_conf->set_stream_name_hint(embedding_name + "_EMBEDDING");
   }
   if (has_embeddings_output) {
@@ -201,8 +201,7 @@ void BuildEmbeddingShuffle(JobBuilder* job_builder, const std::string& embedding
           .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
           .Build();
   OperatorConf embedding_shuffle_new_op_conf = embedding_shuffle_op.op_conf();
-  bool enable_overlap = ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_OVERLAP", true);
-  if (enable_overlap
+  if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINE", false)
       && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_EMBEDDING_SHUFFLE_INDEPENTENT_STREAM", true)) {
     embedding_shuffle_new_op_conf.set_stream_name_hint(embedding_name + "_EMBEDDING");
   }
@@ -271,8 +270,7 @@ void BuildEmbeddingGradientShuffle(
             .ScopeSymbolId(embedding_scope_symbol_id)
             .Build();
     OperatorConf embedding_gradient_shuffle_new_op_conf = embedding_gradient_shuffle_op.op_conf();
-    bool enable_overlap = ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_OVERLAP", true);
-    if (enable_overlap
+    if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINE", false)
         && ParseBooleanFromEnv(
             "ONEFLOW_ONE_EMBEDDING_EMBEDDING_GRADIENT_SHUFFLE_INDEPENTENT_STREAM", true)) {
       embedding_gradient_shuffle_new_op_conf.set_stream_name_hint(embedding_name + "_EMBEDDING");
@@ -362,7 +360,7 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
                     std::string* unique_table_ids_lbn, std::string* inverse_indices_lbn,
                     std::string* num_unique_matrix_lbn) {
   const int32_t num_tables = embedding_op.attr<int32_t>("num_tables");
-  bool enable_overlap = ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_OVERLAP", true);
+  bool enable_pipeline = !ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINE", false);
 
   if (use_system_gather) {
     user_op::UserOpConfWrapperBuilder unique_op_builder(embedding_op.op_name()
@@ -380,7 +378,9 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
     }
     user_op::UserOpConfWrapper unique_op = unique_op_builder.Build();
     OperatorConf unique_new_op_conf = unique_op.op_conf();
-    if (enable_overlap) { unique_new_op_conf.set_stream_name_hint(embedding_name + "_ID_SHUFFLE"); }
+    if (enable_pipeline) {
+      unique_new_op_conf.set_stream_name_hint(embedding_name + "_ID_SHUFFLE");
+    }
     add_ops->push_back(unique_new_op_conf);
     *num_unique_ids_lbn = unique_op.output("num_unique", 0);
     *unique_ids_lbn = unique_op.output("unique_keys", 0);
@@ -408,7 +408,7 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
     }
     user_op::UserOpConfWrapper id_shuffle_op = id_shuffle_op_builder.Build();
     OperatorConf id_shuffle_new_op_conf = id_shuffle_op.op_conf();
-    if (enable_overlap) {
+    if (enable_pipeline) {
       id_shuffle_new_op_conf.set_stream_name_hint(embedding_name + "_ID_SHUFFLE");
     }
     add_ops->push_back(id_shuffle_new_op_conf);
@@ -438,7 +438,7 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
               .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
               .Build();
       OperatorConf identity_op_conf = identity_op.op_conf();
-      if (enable_overlap) { identity_op_conf.set_stream_name_hint(embedding_name + "_EMBEDDING"); }
+      if (enable_pipeline) { identity_op_conf.set_stream_name_hint(embedding_name + "_EMBEDDING"); }
       add_ops->push_back(identity_op_conf);
       *inner_inverse_unique_partition_indices_lbn =
           identity_op.output("out_inverse_unique_partition_indices", 0);
@@ -602,7 +602,7 @@ void BuildEmbeddingUpdate(
             .ScopeSymbolId(embedding_scope_symbol_id)
             .Build();
     *embedding_update_new_op_conf = fused_embedding_update_put_op.op_conf();
-    if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_OVERLAP", true)) {
+    if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINE", false)) {
       embedding_update_new_op_conf->set_stream_name_hint(embedding_name + "_EMBEDDING");
     }
     return;
@@ -690,7 +690,7 @@ void BuildEmbeddingUpdate(
           .ScopeSymbolId(embedding_scope_symbol_id)
           .Build();
   *embedding_update_new_op_conf = embedding_update_op.op_conf();
-  if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_OVERLAP", true)) {
+  if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINE", false)) {
     embedding_update_new_op_conf->set_stream_name_hint(embedding_name + "_EMBEDDING");
   }
 
@@ -705,7 +705,7 @@ void BuildEmbeddingUpdate(
           .ScopeSymbolId(embedding_scope_symbol_id)
           .Build();
   OperatorConf embedding_put_new_op_conf = embedding_put_op.op_conf();
-  if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_OVERLAP", true)) {
+  if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINE", false)) {
     embedding_put_new_op_conf.set_stream_name_hint(embedding_name + "_EMBEDDING");
   }
   job_builder->AddOps(embedding_parallel_conf, {embedding_put_new_op_conf});
@@ -1225,7 +1225,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                                      embedding_scope_symbol_id, embedding_parallel_conf));
   }
   for (const auto& pair : op_name2op_conf) { job_builder->MutOpsOnlyOnce({pair.second}); }
-  if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_OVERLAP", true)) {
+  if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINE", false)) {
     // if disable overlap, all shuffle op will be in compute stream, so sort and add ctrl edge in
     // ops.
     std::string pre_embedding_shuffle_name;
