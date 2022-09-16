@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "fmt/core.h"
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/error.pb.h"
@@ -95,6 +96,9 @@ class CrossFunctor {
 
     int64_t new_dim = JUST(dim);
     if (new_dim < 0) { new_dim += shape_to_broadcast.NumAxes(); }
+    CHECK_EQ_OR_RETURN(shape_to_broadcast.At(new_dim), 3)
+        << Error::RuntimeError()
+        << fmt::format("the size of the specified dimension(which is {}) is not 3.", JUST(dim));
 
     return do_dispatch_base_on_device(new_input, new_other, new_dim);
   }

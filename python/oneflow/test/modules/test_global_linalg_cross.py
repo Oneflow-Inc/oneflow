@@ -22,7 +22,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=1, check_graph=False)
 def _test_linalg_cross(test_case, ndim, placement, sbp):
-    shape = [x * 8 for x in list(np.random.randint(1, 5, size=ndim))]
+    shape = [random(1, 4) * 8 for i in range(ndim)]
     index = random(0, ndim).to(int).value()
     shape[index] = 3
     x = random_tensor(ndim, *shape)
@@ -35,7 +35,7 @@ def _test_linalg_cross(test_case, ndim, placement, sbp):
 class TestLinalgCrossGlobal(flow.unittest.TestCase):
     @globaltest
     def test_linalg_cross(test_case):
-        ndim = random(2, 3).to(int).value()
+        ndim = random(1, 5).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
                 _test_linalg_cross(test_case, ndim, placement, sbp)

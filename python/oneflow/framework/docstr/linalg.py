@@ -22,10 +22,12 @@ add_docstr(
 
     Computes the cross product of two 3-dimensional vectors.
 
-    Supports input of float, double, cfloat and cdouble dtypes. 
+    Supports input of float and double dtypes. 
     Also supports batches of vectors, for which it computes the product along the dimension dim. 
     In this case, the output has the same batch dimensions as the inputs broadcast to a common shape.
-    
+
+    The documentation is referenced from: https://pytorch.org/docs/1.11/generated/torch.linalg.cross.html
+
     Args:
         input (Tensor): the first input tensor.
         other (Tensor): the second input tensor.
@@ -49,9 +51,9 @@ add_docstr(
         ...                  [ -0.9688, -0.7153,  0.2159]])
         >>> flow.linalg.cross(a, b)
         tensor([[ 1.0844, -0.5281,  0.6120],
-        ...     [-2.4491, -1.5687,  1.9791],
-        ...     [-0.8304, -1.3036,  0.5651],
-        ...     [-1.2329,  1.9883,  1.0551]], dtype=oneflow.float32)
+                [-2.4491, -1.5687,  1.9791],
+                [-0.8304, -1.3036,  0.5651],
+                [-1.2329,  1.9883,  1.0551]], dtype=oneflow.float32)
     """,
 )
 
@@ -61,12 +63,14 @@ add_docstr(
 
     Returns the cross product of vectors in dimension `dim` of `input` and `other`.
 
-    Supports input of float, double, cfloat and cdouble dtypes. 
+    Supports input of float and double dtypes. 
     Also supports batches of vectors, for which it computes the product along the dimension `dim`. 
     In this case, the output has the same batch dimensions as the inputs.
 
     If `dim` is not given, it defaults to the first dimension found with the size 3. Note that this might be unexpected.
-    
+
+    The documentation is referenced from: https://pytorch.org/docs/1.11/generated/torch.cross.html
+
     .. warning::
         This function may change in a future PyTorch release to match the default behaviour in :func:`oneflow.linalg.cross`. We recommend using :func:`oneflow.linalg.cross`.
     Args:
@@ -89,8 +93,8 @@ add_docstr(
         ...                  [ -0.9688, -0.7153,  0.2159]])
         >>> flow.cross(a, b)
         tensor([[ 1.0844, -0.5281,  0.6120],
-        ...     [-2.4491, -1.5687,  1.9791],
-        ...     [-0.8304, -1.3036,  0.5651],
-        ...     [-1.2329,  1.9883,  1.0551]], dtype=oneflow.float32)
+                [-2.4491, -1.5687,  1.9791],
+                [-0.8304, -1.3036,  0.5651],
+                [-1.2329,  1.9883,  1.0551]], dtype=oneflow.float32)
     """,
 )

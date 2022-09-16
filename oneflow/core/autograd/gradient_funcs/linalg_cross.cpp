@@ -21,9 +21,9 @@ namespace oneflow {
 namespace one {
 
 struct LinalgCrossCaptureState : public AutoGradCaptureState {
-  int64_t dim;
-  bool input_requires_grad;
-  bool other_requires_grad;
+  int64_t dim = -1;
+  bool input_requires_grad = false;
+  bool other_requires_grad = false;
 };
 
 class LinalgCross : public OpExprGradFunction<LinalgCrossCaptureState> {
