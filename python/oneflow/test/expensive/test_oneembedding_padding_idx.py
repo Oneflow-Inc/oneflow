@@ -168,11 +168,9 @@ def _test_one_embedding_padding_idx(
         for i in range(padding_feature_idx.size):
             idx = int(padding_feature_idx[i])
             test_case.assertTrue(
-                np.allclose(
+                np.array_equal(
                     embedding_val[idx].numpy(),
-                    np.zeros((len(table_size_array), embedding_size), dtype=np.float32),
-                    atol=1e-4,
-                    rtol=1e-4,
+                    np.zeros((len(table_size_array), embedding_size), dtype=np.float32)
                 )
             )
 
@@ -181,11 +179,9 @@ def _test_one_embedding_padding_idx(
         for i in range(padding_feature_idx.size):
             idx = int(padding_feature_idx[i])
             test_case.assertTrue(
-                np.allclose(
+                np.array_equal(
                     embedding_val[idx].numpy(),
-                    np.zeros((len(table_size_array), embedding_size), dtype=np.float32),
-                    atol=1e-4,
-                    rtol=1e-4,
+                    np.zeros((len(table_size_array), embedding_size), dtype=np.float32)
                 )
             )
 
