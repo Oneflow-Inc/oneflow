@@ -74,7 +74,7 @@ Then run the following codes to configure the storage attribute of the Embedding
     persistent_path="/your_path_to_ssd", 
     capacity=40000000,
     size_factor=1,              
-    physical_block_size=512
+    physical_block_size=4096
     )
 
 Storage Method
