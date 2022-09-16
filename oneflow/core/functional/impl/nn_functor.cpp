@@ -3704,7 +3704,7 @@ class MultiTensorSgdUpdateFunctor {
       size_t size = (i + kMaxInputCount) < weight_size ? kMaxInputCount : weight_size - i;
       TensorTuple input(2 * size + 1);
       std::copy(model.begin() + i, model.begin() + i + size, input.begin());
-      std::copy(model_diff.begin() + i, model_diff.begin() + size, input.begin() + size);
+      std::copy(model_diff.begin() + i, model_diff.begin() + i + size, input.begin() + size);
       input[2 * size] = learning_rate;
       JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[size - 1], input, attrs));
     }
