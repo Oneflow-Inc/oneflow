@@ -57,16 +57,14 @@ Maybe<void> SequentialOneEmbeddingOpsPass::Apply(const OpGraph& op_graph,
     }
     const auto& it = stream_name_hint2shuffle_op_names.find(stream_name);
     if (it != stream_name_hint2shuffle_op_names.end()) {
-      const auto& shuffle_op_names = it->second;
-      if (shuffle_op_names.size() > 0) {
-        std::string pre_shuffle_op_name = shuffle_op_names.at(shuffle_op_names.size() - 1);
+      if (it->second.size() > 0) {
+        std::string pre_shuffle_op_name = it->second.back();
         op_conf.add_ctrl_in_op_name(pre_shuffle_op_name);
         job_builder->MutOpsOnlyOnce({op_conf});
       }
       it->second.push_back(op_conf.name());
     } else {
-      std::vector<std::string> shuffle_ops;
-      shuffle_ops.push_back(op_conf.name());
+      std::vector<std::string> shuffle_ops{op_conf.name()};
       CHECK(stream_name_hint2shuffle_op_names.emplace(stream_name, shuffle_ops).second);
     }
   });
