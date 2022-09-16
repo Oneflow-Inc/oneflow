@@ -89,8 +89,12 @@ limitations under the License.
 #include <string>
 
 namespace mlir {
-
 namespace oneflow {
+
+extern StringRef sanitizeIdentifier(StringRef name, SmallString<16>& buffer,
+                                    StringRef allowedPunctChars = "$._",
+                                    bool allowTrailingDigit = true);
+
 template<typename T>
 LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, T op) {
   // TODO: now we only need one JIT engine
