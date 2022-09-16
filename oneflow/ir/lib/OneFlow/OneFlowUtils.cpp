@@ -17,8 +17,8 @@ limitations under the License.
 
 namespace mlir {
 namespace oneflow {
-StringRef sanitizeIdentifier(StringRef name, SmallString<16>& buffer,
-                             StringRef allowedPunctChars, bool allowTrailingDigit) {
+StringRef sanitizeIdentifier(StringRef name, SmallString<16>& buffer, StringRef allowedPunctChars,
+                             bool allowTrailingDigit) {
   assert(!name.empty() && "Shouldn't have an empty name here");
 
   auto copyNameToBuffer = [&] {
