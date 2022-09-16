@@ -370,8 +370,8 @@ class OneFlow_AdaptiveMaxPoolGradBaseOp<string mnemonic, list<Trait> traits = []
        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
   let summary = "OneFlow adaptive max pool grad operation";
   let input = (ins
-    AnyType:$x,
     AnyType:$dy,
+    AnyType:$x,
     AnyType:$index
   );
   let output = (outs AnyType:$dx);
