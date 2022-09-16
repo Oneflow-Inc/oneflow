@@ -356,6 +356,8 @@ void GpuDecodeHandle::DecodeRandomCrop(const unsigned char* data, size_t length,
   if (roi.x != 0 || roi.y != 0 || roi.w != orig_width || roi.h != orig_height) {
     // hardware_acceleration not support nvjpegDecodeParamsSetROI
     OF_NVJPEG_CHECK(nvjpegDecodeParamsSetROI(jpeg_decode_params_, roi.x, roi.y, roi.w, roi.h));
+  } else {
+    OF_NVJPEG_CHECK(nvjpegDecodeParamsSetROI(jpeg_decode_params_, 0, 0, -1, -1));
   }
   OF_NVJPEG_CHECK(nvjpegStateAttachPinnedBuffer(jpeg_state, jpeg_pinned_buffer_));
   OF_NVJPEG_CHECK(nvjpegStateAttachDeviceBuffer(jpeg_state, jpeg_device_buffer_));
