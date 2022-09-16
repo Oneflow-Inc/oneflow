@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/common/container_util.h"
@@ -133,7 +134,7 @@ class MaxPoolNdGradFunctor {
     for (int ndims = 1; ndims <= 3; ++ndims) {
       const auto& op_type_name = GetOpTypeName(ndims);
       op_expr_map_[op_type_name] = CHECK_JUST(
-          one::OpBuilder(op_type_name).Input("x").Input("indice").Input("dy").Output("dx").Build());
+          one::OpBuilder(op_type_name).Input("dy").Input("x").Input("indice").Output("dx").Build());
     }
   }
   static std::string GetOpTypeName(const int32_t& ndims) {
@@ -156,7 +157,7 @@ class MaxPoolNdGradFunctor {
         << Error::RuntimeError() << "Encounter unsupported op " << op_type_name
         << " in MaxPoolNdGradFunctor.";
     CHECK_NOTNULL_OR_RETURN(it->second);  // NOLINT(maybe-need-error-msg)
-    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, indice, dy}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*it->second, {dy, x, indice}, attrs);
   }
 
  protected:
@@ -238,7 +239,7 @@ class AdaptivePoolNdGradFunctor {
       for (int ndims = 1; ndims <= 3; ++ndims) {
         const auto& op_type_name = GetOpTypeName(mode, ndims);
         op_expr_map_[op_type_name] =
-            CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Input("dy").Output("dx").Build());
+            CHECK_JUST(one::OpBuilder(op_type_name).Input("dy").Input("x").Output("dx").Build());
       }
     }
   }
@@ -254,7 +255,7 @@ class AdaptivePoolNdGradFunctor {
         << Error::RuntimeError() << "Encounter unsupported op " << op_type_name
         << " in AdaptivePoolNdGradFunctor.";
     CHECK_NOTNULL_OR_RETURN(it->second);  // NOLINT(maybe-need-error-msg)
-    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, dy});
+    return OpInterpUtil::Dispatch<Tensor>(*it->second, {dy, x});
   }
 
  protected:
@@ -380,9 +381,9 @@ class KLDivLossGradFunctor {
  public:
   KLDivLossGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("kl_div_loss_grad")
+                         .Input("dy")
                          .Input("input")
                          .Input("target")
-                         .Input("dy")
                          .Output("dx")
                          .Build());
   }
@@ -393,11 +394,38 @@ class KLDivLossGradFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("log_target");
     attrs.SetAllAttrs(log_target);
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, target, dy}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, input, target}, attrs);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class KLDivLossTargetGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const bool log_target) const {
+    if (log_target) {
+      return functional::sequence_function(functional::Sub)
+          .then([](const std::shared_ptr<Tensor>& input) {
+            return functional::ScalarAdd(1, input, /*alpha=*/Scalar(1));
+          })
+          .then(std::bind(functional::Mul, std::placeholders::_1, JUST(functional::Exp(target))))
+          .then(std::bind(functional::Mul, std::placeholders::_1, dy))
+          .call(target, input, /*alpha=*/1, /*inplace=*/false);
+    } else {
+      return functional::sequence_function(functional::Log)
+          .then([](const std::shared_ptr<Tensor>& input) {
+            return functional::ScalarAdd(1, input, /*alpha=*/Scalar(1));
+          })
+          .then(std::bind(functional::Sub, std::placeholders::_1, input, /*alpha=*/1,
+                          /*inplace=*/false))
+          .then(std::bind(functional::Mul, std::placeholders::_1, dy))
+          .call(target);
+    }
+  }
 };
 
 class NLLGradFunctor {
@@ -427,8 +455,8 @@ class NLLGradFunctor {
     attrs.SetAllAttrs(ignore_index);
 
     if (weight) {
-      return OpInterpUtil::Dispatch<one::Tensor>(*op_weight_,
-                                                 {out_grad, input, target, JUST(weight)}, attrs);
+      return OpInterpUtil::Dispatch<one::Tensor>(
+          *op_weight_, {out_grad, input, target, JUST(JUST(weight)->detach())}, attrs);
     } else {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_, {out_grad, input, target}, attrs);
     }
@@ -443,16 +471,16 @@ class BinaryCrossEntropyLossGradFunctor {
  public:
   BinaryCrossEntropyLossGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_grad")
+                         .Input("dy")
                          .Input("input")
                          .Input("target")
-                         .Input("dy")
                          .Output("dx")
                          .Build());
     op_weight_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_grad")
+                                .Input("dy")
                                 .Input("input")
                                 .Input("target")
                                 .Input("weight")
-                                .Input("dy")
                                 .Output("dx")
                                 .Build());
   }
@@ -461,9 +489,9 @@ class BinaryCrossEntropyLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight) const {
     if (weight) {
-      return OpInterpUtil::Dispatch<one::Tensor>(*op_weight_, {input, target, JUST(weight), dy});
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_weight_, {dy, input, target, JUST(weight)});
     } else {
-      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {input, target, dy});
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, input, target});
     }
   }
 
@@ -472,35 +500,51 @@ class BinaryCrossEntropyLossGradFunctor {
   std::shared_ptr<OpExpr> op_weight_;
 };
 
+class BinaryCrossEntropyLossTargetGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const Optional<one::Tensor>& weight) const {
+    auto log_one_sub_input = JUST(functional::Log(JUST(ScalarSub(1, input, /*alpha=*/1))));
+    auto grad = functional::sequence_function(functional::Log)
+                    .then(std::bind(functional::Sub, log_one_sub_input, std::placeholders::_1,
+                                    /*alpha=*/1, /*inplace=*/false))
+                    .then(std::bind(functional::Mul, dy, std::placeholders::_1))
+                    .call(input);
+    return weight ? Mul(JUST(grad), JUST(weight)) : grad;
+  }
+};
+
 class BinaryCrossEntropyWithLogitsLossGradFunctor {
  public:
   BinaryCrossEntropyWithLogitsLossGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits_grad")
+                         .Input("dy")
                          .Input("input")
                          .Input("target")
-                         .Input("dy")
                          .Output("dx")
                          .Build());
     op_weight_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits_grad")
+                                .Input("dy")
                                 .Input("input")
                                 .Input("target")
                                 .Input("weight")
-                                .Input("dy")
                                 .Output("dx")
                                 .Build());
     op_pos_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits_grad")
+                             .Input("dy")
                              .Input("input")
                              .Input("target")
                              .Input("pos_weight")
-                             .Input("dy")
                              .Output("dx")
                              .Build());
     op_weight_pos_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits_grad")
+                                    .Input("dy")
                                     .Input("input")
                                     .Input("target")
                                     .Input("weight")
                                     .Input("pos_weight")
-                                    .Input("dy")
                                     .Output("dx")
                                     .Build());
   }
@@ -515,17 +559,17 @@ class BinaryCrossEntropyWithLogitsLossGradFunctor {
     if (weight) {
       if (pos_weight) {
         return OpInterpUtil::Dispatch<one::Tensor>(
-            *op_weight_pos_, {input, target, JUST(weight), JUST(pos_weight), dy}, attrs);
+            *op_weight_pos_, {dy, input, target, JUST(weight), JUST(pos_weight)}, attrs);
       } else {
-        return OpInterpUtil::Dispatch<one::Tensor>(*op_weight_, {input, target, JUST(weight), dy},
+        return OpInterpUtil::Dispatch<one::Tensor>(*op_weight_, {dy, input, target, JUST(weight)},
                                                    attrs);
       }
     } else {
       if (pos_weight) {
-        return OpInterpUtil::Dispatch<one::Tensor>(*op_pos_, {input, target, JUST(pos_weight), dy},
+        return OpInterpUtil::Dispatch<one::Tensor>(*op_pos_, {dy, input, target, JUST(pos_weight)},
                                                    attrs);
       } else {
-        return OpInterpUtil::Dispatch<one::Tensor>(*op_, {input, target, dy}, attrs);
+        return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, input, target}, attrs);
       }
     }
   }
@@ -535,6 +579,33 @@ class BinaryCrossEntropyWithLogitsLossGradFunctor {
   std::shared_ptr<OpExpr> op_weight_;
   std::shared_ptr<OpExpr> op_pos_;
   std::shared_ptr<OpExpr> op_weight_pos_;
+};
+
+class BinaryCrossEntropyWithLogitsLossTargetGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const Optional<one::Tensor>& weight,
+                           const Optional<one::Tensor>& pos_weight) const {
+    if (pos_weight) {
+      auto sig = JUST(functional::Sigmoid(input));
+      auto log_one_sub_sig =
+          JUST(functional::Log(JUST(functional::ScalarSub(1, sig, /*alpha=*/1))));
+      auto grad = functional::sequence_function(functional::Log)
+                      .then(std::bind(functional::Mul, std::placeholders::_1, JUST(pos_weight)))
+                      .then(std::bind(functional::Sub, log_one_sub_sig, std::placeholders::_1,
+                                      /*alpha=*/1, false))
+                      .call(sig);
+
+      return weight ? functional::Mul(JUST(grad), JUST(weight)) : grad;
+    } else {
+      auto grad = functional::sequence_function(functional::Negative)
+                      .then(std::bind(functional::Mul, std::placeholders::_1, dy))
+                      .call(input);
+      return weight ? functional::Mul(JUST(grad), JUST(weight)) : grad;
+    }
+  }
 };
 
 class BinaryCrossEntropyWithLogitsReduceMeanLossGradFunctor {
@@ -559,6 +630,17 @@ class BinaryCrossEntropyWithLogitsReduceMeanLossGradFunctor {
   std::shared_ptr<OpExpr> op_pos_;
   std::shared_ptr<OpExpr> op_weight_pos_;
 };
+
+class BinaryCrossEntropyWithLogitsReduceMeanLossTargetGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target) const {
+    auto neg_mean_dy = JUST(functional::ScalarMul(-1.0 / input->nelement(), dy));
+    return functional::Mul(input, neg_mean_dy);
+  }
+};
+
 class CombinedMarginLossGradFunctor {
  public:
   CombinedMarginLossGradFunctor() {
@@ -709,7 +791,7 @@ class AvgPoolNdGradFunctor {
     for (int ndims = 1; ndims <= 3; ++ndims) {
       const auto& op_type_name = GetOpTypeName(ndims);
       op_expr_map_[op_type_name] =
-          CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Input("dy").Output("dx").Build());
+          CHECK_JUST(one::OpBuilder(op_type_name).Input("dy").Input("x").Output("dx").Build());
     }
   }
   static std::string GetOpTypeName(const int32_t& ndims) {
@@ -732,7 +814,7 @@ class AvgPoolNdGradFunctor {
         << Error::RuntimeError() << "Encounter unsupported op " << op_type_name
         << " in AvgPoolNdGradFunctor.";
     CHECK_NOTNULL_OR_RETURN(it->second);  // NOLINT(maybe-need-error-msg)
-    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, dy}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*it->second, {dy, x}, attrs);
   }
 
  protected:
@@ -1276,10 +1358,14 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TFPoolNdGradFunctor>("TFPoolNdGrad");
   m.add_functor<impl::AdaptivePoolNdGradFunctor>("AdaptivePoolNdGrad");
   m.add_functor<impl::KLDivLossGradFunctor>("KLDivLossGrad");
+  m.add_functor<impl::KLDivLossTargetGradFunctor>("KLDivLossTargetGrad");
   m.add_functor<impl::NLLGradFunctor>("NLLGrad");
   m.add_functor<impl::BinaryCrossEntropyLossGradFunctor>("BinaryCrossEntropyLossGrad");
+  m.add_functor<impl::BinaryCrossEntropyLossTargetGradFunctor>("BinaryCrossEntropyLossTargetGrad");
   m.add_functor<impl::BinaryCrossEntropyWithLogitsLossGradFunctor>(
       "BinaryCrossEntropyWithLogitsLossGrad");
+  m.add_functor<impl::BinaryCrossEntropyWithLogitsLossTargetGradFunctor>(
+      "BinaryCrossEntropyWithLogitsLossTargetGrad");
   m.add_functor<impl::SparseCrossEntropyGradFunctor>("SparseCrossEntropyGrad");
   m.add_functor<impl::SparseCrossEntropyMsGradFunctor>("SparseCrossEntropyMsGrad");
   m.add_functor<impl::SparseSoftmaxCrossEntropyGrad>("SparseSoftmaxCrossEntropyGrad");
@@ -1314,6 +1400,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedMLPGradFunctor>("FusedMLPGrad");
   m.add_functor<impl::BinaryCrossEntropyWithLogitsReduceMeanLossGradFunctor>(
       "BinaryCrossEntropyWithLogitsReduceMeanLossGrad");
+  m.add_functor<impl::BinaryCrossEntropyWithLogitsReduceMeanLossTargetGradFunctor>(
+      "BinaryCrossEntropyWithLogitsReduceMeanLossTargetGrad");
   m.add_functor<impl::MatrixVectorProductGradAFunctor>("MatrixVectorProductGradA");
   m.add_functor<impl::MatrixVectorProductGradBFunctor>("MatrixVectorProductGradB");
   m.add_functor<impl::VectorMatrixProductGradAFunctor>("VectorMatrixProductGradA");

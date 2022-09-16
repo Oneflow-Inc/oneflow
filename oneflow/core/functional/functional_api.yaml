@@ -657,6 +657,10 @@
   signature: "Tensor (Tensor x, Int64 dim=None) => LogSoftmax"
   bind_python: True
 
+- name: "log_softmax_grad"
+  signature: "Tensor (Tensor dy, Tensor y) => LogSoftmaxGrad"
+  bind_python: False
+
 - name: "hardswish"
   signature: "Tensor (Tensor x) => HardSwish"
   bind_python: True
@@ -1105,11 +1109,15 @@
   bind_python: True
 
 - name: "kl_div_loss"
-  signature: "Tensor(Tensor input, Tensor target, Bool log_target, String reduction) => KLDivLoss"
+  signature: "Tensor(Tensor input, Tensor target, Bool log_target, String reduction=\"mean\") => KLDivLoss"
   bind_python: True
 
 - name: "kl_div_loss_grad"
   signature: "Tensor(Tensor dy, Tensor input, Tensor target, Bool log_target) => KLDivLossGrad"
+  bind_python: False
+
+- name: "kl_div_loss_target_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Bool log_target) => KLDivLossTargetGrad"
   bind_python: False
 
 - name: "nll_loss"
@@ -1128,6 +1136,10 @@
   signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None) => BinaryCrossEntropyLossGrad"
   bind_python: False
 
+- name: "binary_cross_entropy_loss_target_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None) => BinaryCrossEntropyLossTargetGrad"
+  bind_python: False
+
 - name: "binary_cross_entropy_with_logits_loss"
   signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None, String reduction=\"mean\") => BinaryCrossEntropyWithLogitsLoss"
   bind_python: True
@@ -1136,8 +1148,16 @@
   signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None) => BinaryCrossEntropyWithLogitsLossGrad"
   bind_python: True
 
+- name: "binary_cross_entropy_with_logits_loss_target_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None) => BinaryCrossEntropyWithLogitsLossTargetGrad"
+  bind_python: False
+
 - name: "binary_cross_entropy_with_logits_reduce_mean_loss_grad"
   signature: "Tensor(Tensor dy, Tensor input, Tensor target) => BinaryCrossEntropyWithLogitsReduceMeanLossGrad"
+  bind_python: False
+
+- name: "binary_cross_entropy_with_logits_reduce_mean_loss_target_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target) => BinaryCrossEntropyWithLogitsReduceMeanLossTargetGrad"
   bind_python: False
 
 - name: "sparse_cross_entropy"
@@ -2384,11 +2404,11 @@
   bind_python: True
 
 - name: "one_embedding_lookup"
-  signature: "Tensor (Tensor shadow, Tensor ids, Tensor table_ids=None, DataType dtype, Int64 embedding_size, Int32 num_tables, String embedding_tables, String embedding_store_options) => OneEmbeddingLookup"
+  signature: "Tensor (Tensor shadow, Tensor ids, Tensor table_ids=None, DataType dtype, String embedding_name, Int64 line_size, Int64 embedding_size, Bool is_full_cache, Int32 num_tables, String embedding_tables, Int64 seed=0) => OneEmbeddingLookup"
   bind_python: True
 
 - name: "one_embedding_lookup_grad"
-  signature: "Void (Tensor ids, Tensor embedding_grad, String embedding_store_options) => OneEmbeddingLookupGrad"
+  signature: "Void (Tensor ids, Tensor embedding_grad, String embedding_name, Int64 line_size, Int64 embedding_size) => OneEmbeddingLookupGrad"
   bind_python: True
 
 - name: "one_embedding_unique_key_value_pair"
@@ -2717,4 +2737,8 @@
 
 - name: "sigmoid_grad_grad"  
   signature: "Tensor (Tensor y, Tensor dydx) =>  SigmoidGradGrad" 
+  bind_python: False
+
+- name: "max_pool_grad_grad"  
+  signature: "Tensor (Tensor dydx, Tensor indices, Int32 ndims) =>  MaxPoolNdGradGrad" 
   bind_python: False
