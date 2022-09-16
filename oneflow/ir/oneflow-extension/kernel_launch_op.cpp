@@ -277,7 +277,7 @@ class KernelLaunchState final : public user_op::OpKernelState {
   const user_op::OpKernel* kernel_;
 
   void JITCompute(const std::string& name, user_op::KernelComputeContext* okl_ctx,
-                 const user_op::OpKernel* kernel) {
+                  const user_op::OpKernel* kernel) {
     engine_->Run<TypeKernelLaunchArgs>(name, okl_ctx, kernel);
   }
 
