@@ -207,7 +207,7 @@ namespace oneflow {
 }
 
 REGISTER_USER_OP_SAME_OUTPUT_BLOB_REGST_NUM_WITH_FUNC("id_shuffle", []() {
-  if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_OVERLAP", true)) {
+  if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINE", false)) {
     return 2;
   } else {
     return 1;
