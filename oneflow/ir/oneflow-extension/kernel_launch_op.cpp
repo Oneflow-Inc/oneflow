@@ -242,6 +242,10 @@ class KernelLaunchState final : public user_op::OpKernelState {
     // get raw module from ctx attr
     module_ = mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
                                                       &mlir_ctx_);
+    if (!module_) {
+      LOG(ERROR) << "Fail to load mlir assembly";
+      exit(1);
+    }
     // reg_ctx is needed
     reg_ctx_ = std::make_unique<KernelLaunchOpKernelRegContext>(*module_);
     // get constructor of kernel

@@ -30,6 +30,7 @@ limitations under the License.
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
+#include "OneFlow/OneFlowUtils.h"
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/SBP/SBPAttributes.h"
 #include "mlir-c/BuiltinAttributes.h"
@@ -90,10 +91,6 @@ limitations under the License.
 
 namespace mlir {
 namespace oneflow {
-
-extern StringRef sanitizeIdentifier(StringRef name, SmallString<16>& buffer,
-                                    StringRef allowedPunctChars = "$._",
-                                    bool allowTrailingDigit = true);
 
 template<typename T>
 LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, T op) {
