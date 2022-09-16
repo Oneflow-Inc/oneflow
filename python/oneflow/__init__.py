@@ -29,6 +29,7 @@ oneflow._oneflow_internal.CheckAndClearRegistryFlag()
 Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
+
 locals()["dtype"] = oneflow._oneflow_internal.dtype
 locals()["bool"] = oneflow._oneflow_internal.bool
 locals()["float16"] = oneflow._oneflow_internal.float16
@@ -88,6 +89,7 @@ from oneflow._C import greater_equal
 from oneflow._C import greater_equal as ge
 from oneflow._C import log
 from oneflow._C import log2
+from oneflow._C import log10
 from oneflow._C import logical_and
 from oneflow._C import logical_or
 from oneflow._C import logical_xor
@@ -139,8 +141,6 @@ from oneflow._C import fmod
 from oneflow._C import flatten
 from oneflow._C import in_top_k
 from oneflow._C import lgamma
-from oneflow._C import log
-from oneflow._C import log2
 from oneflow._C import minimum
 from oneflow._C import maximum
 from oneflow._C import max
@@ -216,6 +216,7 @@ from oneflow._C import isnan
 from oneflow._C import isinf
 from oneflow._C import isfinite
 from oneflow._C import inv as inverse
+from oneflow._C import iinfo, finfo
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
@@ -238,6 +239,7 @@ __oneflow_global_unique_env = env_util.GetEnv()
 session_ctx.NewDefaultSession(__oneflow_global_unique_env)
 
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
+oneflow._oneflow_internal.autograd.graph.register_saved_tensors_hook_manager()
 oneflow._oneflow_internal.InitDefaultGlobalTransportTokenScope()
 
 
@@ -312,7 +314,8 @@ from oneflow.framework.generator import (
 
 # NOTE(chengcheng) oneflow.Model is unavailable now.
 # from oneflow.framework.model import Model
-import oneflow.utils.torch
+import oneflow.utils.tensor
+import oneflow.utils.global_view
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
 from oneflow.framework.type_tensor import *
@@ -399,6 +402,7 @@ import oneflow.utils.data
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing
+import oneflow.asyncs
 import oneflow.one_embedding
 import oneflow.profiler
 

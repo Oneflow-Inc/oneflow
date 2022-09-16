@@ -92,7 +92,7 @@ Maybe<void> NcclSendRecvBoxingOp::InferInternalBlobDescs(
       buf_count += out->shape().elem_cnt();
     }
   }
-  buf->mut_shape() = Shape({buf_count});
+  buf->set_shape(Shape({buf_count}));
   return Maybe<void>::Ok();
 }
 
@@ -131,7 +131,7 @@ Maybe<void> NcclSendRecvBoxingOp::InferOutBlobDescs(
         JUST(dst_parallel_desc.ParallelId4MachineDeviceId(machine_id, device_index));
     std::shared_ptr<Shape> out_shape =
         JUST(GetPhysicalShape(logical_shape, dst_nd_sbp, dst_parallel_desc, dst_parallel_id));
-    out_blob_desc->mut_shape() = *out_shape;
+    out_blob_desc->set_shape(*out_shape);
     out_blob_desc->set_data_type(conf.data_type());
   }
   return Maybe<void>::Ok();
