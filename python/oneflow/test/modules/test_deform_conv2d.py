@@ -237,14 +237,14 @@ def test_deform_conv2d(test_case, device):
     max_batch_size = 32
     for batch_size in range(max_batch_size):
         input, weight, offset, mask, bias, stride, padding, dilation = GetFunArgs(
-        device, batch_size
+            device, batch_size
         )
         _test_deform_conv2d_forward(
-        test_case, input, weight, offset, mask, bias, stride, padding, dilation
+            test_case, input, weight, offset, mask, bias, stride, padding, dilation
         )
         _test_deform_conv2d_backward(
-        test_case, input, weight, offset, mask, bias, stride, padding, dilation
-    )
+            test_case, input, weight, offset, mask, bias, stride, padding, dilation
+        )
 
 
 @flow.unittest.skip_unless_1n1d()
