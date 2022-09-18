@@ -36,7 +36,6 @@ namespace oneflow {
   CHECK_OR_RETURN(dW > 0 && dH > 0)
       << Error::RuntimeError() << "The stride must be greater than 0,but got " << dW << " and "
       << dH;
-
   CHECK_OR_RETURN(kW > 0 && kH > 0)
       << Error::RuntimeError() << "The weight must be greater than 0,but got " << kW << " and "
       << kH;
@@ -65,7 +64,7 @@ namespace oneflow {
         << " expected: " << deformable_group * kW * kH;
   }
   CHECK_EQ_OR_RETURN(offset_shape.At(0), input_shape.At(0))
-      << Error::RuntimeError() << "invalid batch size of offset  got: " << offset_shape.At(0)
+      << Error::RuntimeError() << "invalid batch size of offset:got: " << offset_shape.At(0)
       << " ,expected: " << input_shape.At(0);
 
   int64_t outputWidth = (input_shape.At(3) + 2 * padW - (dilationW * (kW - 1) + 1)) / dW + 1;
@@ -74,12 +73,17 @@ namespace oneflow {
       << Error::RuntimeError() << "Calculated output size too small - out_h: " << outputHeight
       << " ,out_w: " << outputWidth;
   CHECK_OR_RETURN(offset_shape.At(2) == outputHeight && offset_shape.At(3) == outputWidth)
-      << Error::RuntimeError() << "offset output dims: (" << offset_shape.At(2) << ", "
-      << offset_shape.At(3) << ") - "
-      << "computed output dims: (" << outputHeight << ", " << outputWidth << ")";
+      << Error::RuntimeError() << "invalid offset output dims: got ( " << offset_shape.At(2) << ", "
+      << offset_shape.At(3) << ")"
+      << ",expected: "
+      << "(" << outputHeight << ", " << outputWidth << ")";
 
   if (use_mask) {
-    CHECK_OR_RETURN(mask_shape.At(2) == outputHeight && mask_shape.At(3) == outputWidth);
+    CHECK_OR_RETURN(mask_shape.At(2) == outputHeight && mask_shape.At(3) == outputWidth)
+        << Error::RuntimeError() << "invalid mask output dims: got ( " << mask_shape.At(2) << ", "
+        << mask_shape.At(3) << ")"
+        << ",expected: "
+        << "(" << outputHeight << ", " << outputWidth << ")";
   }
   ctx->SetOutputShape("output", 0,
                       Shape({input_shape.At(0), weight_shape.At(0), outputHeight, outputWidth}));

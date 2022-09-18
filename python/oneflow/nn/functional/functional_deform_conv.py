@@ -32,7 +32,7 @@ def deform_conv2d(
     use_mask = mask is not None
 
     if mask is None:
-        mask = flow.zeros((input.shape[0], 0), dtype=flow.float64).to(input.device)
+        mask = flow.zeros((input.shape[0], 0), dtype=input.dtype).to(input.device)
 
     stride_h = stride[0]
     stride_w = stride[1]

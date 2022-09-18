@@ -252,7 +252,7 @@ class TestDeformConv2d(flow.unittest.TestCase):
     def test_roi_align(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [test_deform_conv2d]
-        arg_dict["device"] = ["cpu"]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
