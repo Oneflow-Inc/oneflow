@@ -35,6 +35,8 @@ enum class BinaryOp {
   kFmod,
   kFloorDiv,
   kFloorMod,
+  kScalarBasePowerGrad,
+  kScalarExpPowerGrad,
   // Comparision
   kEqual,
   kNotEqual,
