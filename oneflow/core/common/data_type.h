@@ -262,6 +262,11 @@ void CheckDataType(DataType data_type) {
       << data_type << " " << GetDataType<T>::value;
 }
 
+int64_t GetIntMaxVal(DataType datatype);
+int64_t GetIntMinVal(DataType datatype);
+double GetFloatMaxVal(DataType datatype);
+double GetFloatMinVal(DataType datatype);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_DATA_TYPE_H_

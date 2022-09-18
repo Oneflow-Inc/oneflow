@@ -263,6 +263,7 @@ Pointwise Ops
     log 
     log1p 
     log2 
+    log10
     logical_and 
     logical_not 
     logical_or 
@@ -290,6 +291,7 @@ Pointwise Ops
     sub 
     tan 
     tanh
+    trunc
     floor_divide
 
 Reduction Ops

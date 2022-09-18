@@ -81,11 +81,10 @@ namespace oneflow {
   if (use_mask) {
     CHECK_OR_RETURN(mask_shape.At(2) == outputHeight && mask_shape.At(3) == outputWidth);
   }
+  ctx->SetOutputShape("output", 0,
+                      Shape({input_shape.At(0), weight_shape.At(0), outputHeight, outputWidth}));
+  ctx->SetOutputIsDynamic("output", 0, ctx->InputIsDynamic("input", 0));
 
-  *ctx->MutOutputShape("output", 0) =
-      Shape({input_shape.At(0), weight_shape.At(0), outputHeight, outputWidth});
-
-  *ctx->MutOutputIsDynamic("output", 0) = ctx->InputIsDynamic("input", 0);
   return Maybe<void>::Ok();
 }
 
@@ -111,14 +110,16 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(output_grad_shape.At(2), outputHeight);
   CHECK_EQ_OR_RETURN(output_grad_shape.At(3), outputWidth);
   CHECK_EQ_OR_RETURN(output_grad_shape.At(1), weight_shape.At(0));
-  *ctx->MutOutputShape("input_grad", 0) = ctx->InputShape("input", 0);
-  *ctx->MutOutputShape("offset_grad", 0) = ctx->InputShape("offset", 0);
-  *ctx->MutOutputIsDynamic("input_grad", 0) = ctx->InputIsDynamic("input", 0);
-  *ctx->MutOutputIsDynamic("offset_grad", 0) = false;
+  ctx->SetOutputShape("input_grad", 0, ctx->InputShape("input", 0));
+  ctx->SetOutputShape("offset_grad", 0, ctx->InputShape("offset", 0));
+  ctx->SetOutputIsDynamic("input_grad", 0, ctx->InputIsDynamic("input", 0));
+  ctx->SetOutputIsDynamic("offset_grad", 0, false);
+
   if (use_mask) {
-    *ctx->MutOutputShape("mask_grad", 0) =
-        Shape({offset_shape.At(0), offset_shape.At(1) / 2, offset_shape.At(2), offset_shape.At(3)});
-    *ctx->MutOutputIsDynamic("mask_grad", 0) = false;
+    ctx->SetOutputShape("mask_grad", 0,
+                        Shape({offset_shape.At(0), offset_shape.At(1) / 2, offset_shape.At(2),
+                               offset_shape.At(3)}));
+    ctx->SetOutputIsDynamic("mask_grad", 0, false);
   }
   return Maybe<void>::Ok();
 }
@@ -139,8 +140,8 @@ Maybe<void> DeformConv2dParamGradOp::InferLogicalTensorDesc(user_op::InferContex
   int64_t outputHeight = (input_shape.At(2) + 2 * padH - (dilationH * (kH - 1) + 1)) / dH + 1;
   CHECK_EQ_OR_RETURN(output_grad_shape.At(2), outputHeight);
   CHECK_EQ_OR_RETURN(output_grad_shape.At(3), outputWidth);
-  *ctx->MutOutputShape("weight_grad", 0) = ctx->InputShape("weight", 0);
-  *ctx->MutOutputIsDynamic("weight_grad", 0) = false;
+  ctx->SetOutputShape("weight_grad", 0, ctx->InputShape("weight", 0));
+  ctx->SetOutputIsDynamic("weight_grad", 0, false);
   return Maybe<void>::Ok();
 }
 
@@ -159,21 +160,20 @@ Maybe<void> DeformConv2dParamGradOp::InferLogicalTensorDesc(user_op::InferContex
 }
 
 /* static */ Maybe<void> DeformConv2dOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("output", 0) = ctx->InputDType("input", 0);
+  ctx->SetOutputDType("output", 0, ctx->InputDType("input", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> DeformConv2dInputGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("input_grad", 0) = ctx->InputDType("input", 0);
-  *ctx->MutOutputDType("offset_grad", 0) = ctx->InputDType("offset", 0);
+  ctx->SetOutputDType("input_grad", 0, ctx->InputDType("input", 0));
+  ctx->SetOutputDType("offset_grad", 0, ctx->InputDType("offset", 0));
   const bool use_mask = ctx->Attr<bool>("use_mask");
-
-  if (use_mask) { *ctx->MutOutputDType("mask_grad", 0) = ctx->InputDType("mask", 0); }
+  if (use_mask) { ctx->SetOutputDType("mask_grad", 0, ctx->InputDType("mask", 0)); }
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> DeformConv2dParamGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("weight_grad", 0) = ctx->InputDType("input", 0);
+  ctx->SetOutputDType("weight_grad", 0, ctx->InputDType("input", 0));
   return Maybe<void>::Ok();
 }
 

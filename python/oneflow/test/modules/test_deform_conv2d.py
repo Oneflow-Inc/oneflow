@@ -139,7 +139,6 @@ def _test_deform_conv2d_forward(
         mask=torch_mask,
         bias=torch_bias,
     )
-    print(torch_out)
     flow_out = oneflow.nn.functional.deform_conv2d(
         flow_input,
         flow_offset,
@@ -150,7 +149,6 @@ def _test_deform_conv2d_forward(
         mask=flow_mask,
         bias=flow_bias,
     )
-    print(flow_out)
     test_case.assertTrue(
         np.allclose(
             flow_out.numpy(), torch_out.detach().cpu().numpy(), rtol=1e-5, atol=1e-5
@@ -236,18 +234,17 @@ def _test_deform_conv2d_backward(
 
 def test_deform_conv2d(test_case, device):
 
-    # max_batch_size = 2
-    # for batch_size in range(max_batch_size):
-    batch_size = 2
-    input, weight, offset, mask, bias, stride, padding, dilation = GetFunArgs(
+    max_batch_size = 32
+    for batch_size in range(max_batch_size):
+        input, weight, offset, mask, bias, stride, padding, dilation = GetFunArgs(
         device, batch_size
-    )
-    _test_deform_conv2d_forward(
+        )
+        _test_deform_conv2d_forward(
+        test_case, input, weight, offset, mask, bias, stride, padding, dilation
+        )
+        _test_deform_conv2d_backward(
         test_case, input, weight, offset, mask, bias, stride, padding, dilation
     )
-    # _test_deform_conv2d_backward(
-    #     test_case, input, weight, offset, mask, bias, stride, padding, dilation
-    # )
 
 
 @flow.unittest.skip_unless_1n1d()
