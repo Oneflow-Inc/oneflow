@@ -26,15 +26,6 @@ namespace oneflow {
 
 namespace {
 
-const int kMaxParallelImgs = 32;
-
-int get_greatest_divisor_below_bound(int n, int bound) {
-  for (int k = bound; k > 1; --k) {
-    if (n % k == 0) { return k; }
-  }
-  return 1;
-}
-
 template<typename scalar_t>
 scalar_t get_coordinate_weight(const scalar_t* im_data, int height, int width, scalar_t y,
                                scalar_t x, bool is_y_direction) {
@@ -402,7 +393,7 @@ class DeformableConv2dCpuKernel final : public user_op::OpKernel {
     const ShapeView& output_shape = output->shape_view();
     const ShapeView& weight_shape = weight->shape_view();
     const int64_t out_elem_cnt = output_shape.elem_cnt();
-    const int64_t output_bytes = GetCudaAlignedSize(out_elem_cnt * sizeof(T));
+    const int64_t output_bytes = (out_elem_cnt * sizeof(T));
 
     T* column_tmp_buffer = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + output_bytes);
     const int32_t kW = weight->shape_view().At(2);
@@ -424,8 +415,6 @@ class DeformableConv2dCpuKernel final : public user_op::OpKernel {
     const int64_t column_nums = input_shape.At(1) * input_shape.At(0) * outputHeight * outputWidth;
 
     if (column_nums > 0) {
-      std::cout << "cuda im2col column_nums:" << column_nums << std::endl;
-
       DeformableIm2Col<T>(column_nums, input->dptr<T>(), offset->dptr<T>(), mask->dptr<T>(),
                           input_shape.At(2), input_shape.At(3), kH, kW, padH, padW, dH, dW,
                           dilationH, dilationW, input_shape.At(0), input_shape.At(1),
@@ -532,7 +521,6 @@ class DeformableConv2dInputGradCpuKernel final : public user_op::OpKernel {
                        output_grad->dptr<T>() + g * output_grad_group_offset, static_cast<T>(0),
                        tmp_buffer->mut_dptr<T>() + g * column_group_offset);
       }
-
       DeformableCol2ImCoord<T>(
           nthreads_coord, tmp_buffer->dptr<T>(), input->dptr<T>(), offset->dptr<T>(), data_mask,
           input_shape.At(1), input_shape.At(2), input_shape.At(3), kH, kW, padH, padW, dH, dW,
@@ -568,7 +556,7 @@ class DeformableConv2dParamGradCpuKernel final : public user_op::OpKernel {
     const ShapeView& weight_grad_shape = weight_grad->shape_view();
     const ShapeView& input_shape = input->shape_view();
     const int64_t out_elem_cnt = output_grad_shape.elem_cnt();
-    const int64_t output_bytes = GetCudaAlignedSize(out_elem_cnt * sizeof(T));
+    const int64_t output_bytes = (out_elem_cnt * sizeof(T));
 
     T* column_tmp_buffer = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + output_bytes);
     const int32_t kW = weight->shape_view().At(2);
@@ -631,33 +619,31 @@ class DeformableConv2dParamGradCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DEFORM_CONV2D_CPU_KERNEL(dtype)                                                  \
-  REGISTER_USER_KERNEL("deform_conv2d")                                                           \
-      .SetCreateFn<DeformableConv2dCpuKernel<dtype>>()                                            \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                             \
-                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value))        \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
-        const Shape& input_shape = ctx->InputShape("input", 0);                                   \
-        const Shape& output_shape = ctx->OutputShape("output", 0);                                \
-        const Shape& weight_shape = ctx->InputShape("weight", 0);                                 \
-        const int32_t kW = weight_shape.At(2);                                                    \
-        const int32_t kH = weight_shape.At(3);                                                    \
-        const int32_t dW = ctx->Attr<int32_t>("stride_w");                                        \
-        const int32_t dH = ctx->Attr<int32_t>("stride_h");                                        \
-        const int32_t padW = ctx->Attr<int32_t>("pad_w");                                         \
-        const int32_t padH = ctx->Attr<int32_t>("pad_h");                                         \
-        const int32_t dilationW = ctx->Attr<int32_t>("dilation_w");                               \
-        const int32_t dilationH = ctx->Attr<int32_t>("dilation_h");                               \
-        const int64_t outputWidth =                                                               \
-            ((input_shape.At(3) + 2 * padW - (dilationW * (kW - 1) + 1)) / dW) + 1;               \
-        const int64_t outputHeight =                                                              \
-            ((input_shape.At(2) + 2 * padH - (dilationH * (kH - 1) + 1)) / dH) + 1;               \
-        int batch_size = input_shape.At(0);                                                       \
-        const int64_t column_bytes =                                                              \
-            GetCudaAlignedSize(input_shape.At(1) * kW * kH * input_shape.At(0) * outputHeight     \
-                               * outputWidth * sizeof(dtype));                                    \
-        const int64_t output_bytes = GetCudaAlignedSize(output_shape.elem_cnt() * sizeof(dtype)); \
-        return column_bytes + output_bytes;                                                       \
+#define REGISTER_DEFORM_CONV2D_CPU_KERNEL(dtype)                                           \
+  REGISTER_USER_KERNEL("deform_conv2d")                                                    \
+      .SetCreateFn<DeformableConv2dCpuKernel<dtype>>()                                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                      \
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                  \
+        const Shape& input_shape = ctx->InputShape("input", 0);                            \
+        const Shape& output_shape = ctx->OutputShape("output", 0);                         \
+        const Shape& weight_shape = ctx->InputShape("weight", 0);                          \
+        const int32_t kW = weight_shape.At(2);                                             \
+        const int32_t kH = weight_shape.At(3);                                             \
+        const int32_t dW = ctx->Attr<int32_t>("stride_w");                                 \
+        const int32_t dH = ctx->Attr<int32_t>("stride_h");                                 \
+        const int32_t padW = ctx->Attr<int32_t>("pad_w");                                  \
+        const int32_t padH = ctx->Attr<int32_t>("pad_h");                                  \
+        const int32_t dilationW = ctx->Attr<int32_t>("dilation_w");                        \
+        const int32_t dilationH = ctx->Attr<int32_t>("dilation_h");                        \
+        const int64_t outputWidth =                                                        \
+            ((input_shape.At(3) + 2 * padW - (dilationW * (kW - 1) + 1)) / dW) + 1;        \
+        const int64_t outputHeight =                                                       \
+            ((input_shape.At(2) + 2 * padH - (dilationH * (kH - 1) + 1)) / dH) + 1;        \
+        const int64_t column_bytes = (input_shape.At(1) * kW * kH * input_shape.At(0)      \
+                                      * outputHeight * outputWidth * sizeof(dtype));       \
+        const int64_t output_bytes = (output_shape.elem_cnt() * sizeof(dtype));            \
+        return column_bytes + output_bytes;                                                \
       });
 REGISTER_DEFORM_CONV2D_CPU_KERNEL(float)
 REGISTER_DEFORM_CONV2D_CPU_KERNEL(double)
@@ -691,34 +677,32 @@ REGISTER_DEFORM_CONV2D_CPU_KERNEL(double)
 REGISTER_DEFORM_CONV2D_INPUT_GRAD_CPU_KERNEL(float)
 REGISTER_DEFORM_CONV2D_INPUT_GRAD_CPU_KERNEL(double)
 
-#define REGISTER_DEFORM_CONV2D_PARAM_GRAD_CPU_KERNEL(dtype)                                   \
-  REGISTER_USER_KERNEL("deform_conv2d_param_grad")                                            \
-      .SetCreateFn<DeformableConv2dParamGradCpuKernel<dtype>>()                               \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                         \
-                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)     \
-                       && (user_op::HobDataType("offset", 0) == GetDataType<dtype>::value))   \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                     \
-        const Shape& input_shape = ctx->InputShape("input", 0);                               \
-        const Shape& output_grad_shape = ctx->InputShape("output_grad", 0);                   \
-        const Shape& weight_shape = ctx->InputShape("weight", 0);                             \
-        const int32_t kW = weight_shape.At(2);                                                \
-        const int32_t kH = weight_shape.At(3);                                                \
-        const int32_t dW = ctx->Attr<int32_t>("stride_w");                                    \
-        const int32_t dH = ctx->Attr<int32_t>("stride_h");                                    \
-        const int32_t padW = ctx->Attr<int32_t>("pad_w");                                     \
-        const int32_t padH = ctx->Attr<int32_t>("pad_h");                                     \
-        const int32_t dilationW = ctx->Attr<int32_t>("dilation_w");                           \
-        const int32_t dilationH = ctx->Attr<int32_t>("dilation_h");                           \
-        const int64_t outputWidth =                                                           \
-            (input_shape.At(3) + 2 * padW - (dilationW * (kW - 1) + 1)) / dW + 1;             \
-        const int64_t outputHeight =                                                          \
-            (input_shape.At(2) + 2 * padH - (dilationH * (kH - 1) + 1)) / dH + 1;             \
-        const int64_t column_bytes =                                                          \
-            GetCudaAlignedSize(input_shape.At(1) * kW * kH * input_shape.At(0) * outputHeight \
-                               * outputWidth * sizeof(dtype));                                \
-        const int64_t output_bytes =                                                          \
-            GetCudaAlignedSize(output_grad_shape.elem_cnt() * sizeof(dtype));                 \
-        return column_bytes + output_bytes;                                                   \
+#define REGISTER_DEFORM_CONV2D_PARAM_GRAD_CPU_KERNEL(dtype)                                 \
+  REGISTER_USER_KERNEL("deform_conv2d_param_grad")                                          \
+      .SetCreateFn<DeformableConv2dParamGradCpuKernel<dtype>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                       \
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)   \
+                       && (user_op::HobDataType("offset", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   \
+        const Shape& input_shape = ctx->InputShape("input", 0);                             \
+        const Shape& output_grad_shape = ctx->InputShape("output_grad", 0);                 \
+        const Shape& weight_shape = ctx->InputShape("weight", 0);                           \
+        const int32_t kW = weight_shape.At(2);                                              \
+        const int32_t kH = weight_shape.At(3);                                              \
+        const int32_t dW = ctx->Attr<int32_t>("stride_w");                                  \
+        const int32_t dH = ctx->Attr<int32_t>("stride_h");                                  \
+        const int32_t padW = ctx->Attr<int32_t>("pad_w");                                   \
+        const int32_t padH = ctx->Attr<int32_t>("pad_h");                                   \
+        const int32_t dilationW = ctx->Attr<int32_t>("dilation_w");                         \
+        const int32_t dilationH = ctx->Attr<int32_t>("dilation_h");                         \
+        const int64_t outputWidth =                                                         \
+            (input_shape.At(3) + 2 * padW - (dilationW * (kW - 1) + 1)) / dW + 1;           \
+        const int64_t outputHeight =                                                        \
+            (input_shape.At(2) + 2 * padH - (dilationH * (kH - 1) + 1)) / dH + 1;           \
+        const int64_t column_bytes = (input_shape.At(1) * kW * kH * input_shape.At(0)       \
+                                      * outputHeight * outputWidth * sizeof(dtype));        \
+        const int64_t output_bytes = (output_grad_shape.elem_cnt() * sizeof(dtype));        \
+        return column_bytes + output_bytes;                                                 \
       });
 REGISTER_DEFORM_CONV2D_PARAM_GRAD_CPU_KERNEL(float)
 REGISTER_DEFORM_CONV2D_PARAM_GRAD_CPU_KERNEL(double)

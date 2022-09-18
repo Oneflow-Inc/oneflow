@@ -21,7 +21,8 @@ namespace oneflow {
 /* static */ Maybe<void> DeformConv2dOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& input_shape = ctx->InputShape("input", 0);
   const Shape& weight_shape = ctx->InputShape("weight", 0);
-
+  const Shape& offset_shape = ctx->InputShape("offset", 0);
+  const Shape& mask_shape = ctx->InputShape("mask", 0);
   const int32_t kW = weight_shape.at(3);
   const int32_t kH = weight_shape.at(2);
   const int32_t dW = ctx->Attr<int32_t>("stride_w");
@@ -30,11 +31,56 @@ namespace oneflow {
   const int32_t padH = ctx->Attr<int32_t>("pad_h");
   const int32_t dilationW = ctx->Attr<int32_t>("dilation_w");
   const int32_t dilationH = ctx->Attr<int32_t>("dilation_h");
+  const int32_t deformable_group = ctx->Attr<int32_t>("offset_groups");
+  const bool use_mask = ctx->Attr<bool>("use_mask");
+  CHECK_OR_RETURN(dW > 0 && dH > 0)
+      << Error::RuntimeError() << "The stride must be greater than 0,but got " << dW << " and "
+      << dH;
+
+  CHECK_OR_RETURN(kW > 0 && kH > 0)
+      << Error::RuntimeError() << "The weight must be greater than 0,but got " << kW << " and "
+      << kH;
+
+  CHECK_OR_RETURN(padW >= 0 && padH >= 0)
+      << Error::RuntimeError() << "The pad must be greater than or equal to 0,but got " << padW
+      << " and " << padH;
+  CHECK_OR_RETURN(dilationW > 0 && dilationH > 0)
+      << Error::RuntimeError() << "The dilation must be greater than 0,but got " << dilationH
+      << " and " << dilationW;
+
+  CHECK_EQ_OR_RETURN(input_shape.NumAxes(), 4);
   CHECK_EQ_OR_RETURN(weight_shape.NumAxes(), 4);
+  CHECK_EQ_OR_RETURN(offset_shape.NumAxes(), 4);
+  if (use_mask) { CHECK_EQ_OR_RETURN(mask_shape.NumAxes(), 4); }
   CHECK_EQ_OR_RETURN(weight_shape.At(2), kH);
   CHECK_EQ_OR_RETURN(weight_shape.At(3), kW);
+
+  CHECK_EQ_OR_RETURN(offset_shape.At(1), deformable_group * 2 * kW * kH)
+      << Error::RuntimeError() << "offset.shape[1] is not valid: got: " << offset_shape.At(1)
+      << " ,expected: " << deformable_group * 2 * kW * kH;
+
+  if (use_mask) {
+    CHECK_EQ_OR_RETURN(mask_shape.At(1), deformable_group * kW * kH)
+        << Error::RuntimeError() << "mask.shape[1] is not valid: got: " << mask_shape.At(1)
+        << " expected: " << deformable_group * kW * kH;
+  }
+  CHECK_EQ_OR_RETURN(offset_shape.At(0), input_shape.At(0))
+      << Error::RuntimeError() << "invalid batch size of offset  got: " << offset_shape.At(0)
+      << " ,expected: " << input_shape.At(0);
+
   int64_t outputWidth = (input_shape.At(3) + 2 * padW - (dilationW * (kW - 1) + 1)) / dW + 1;
   int64_t outputHeight = (input_shape.At(2) + 2 * padH - (dilationH * (kH - 1) + 1)) / dH + 1;
+  CHECK_OR_RETURN(outputWidth > 0 && outputHeight > 0)
+      << Error::RuntimeError() << "Calculated output size too small - out_h: " << outputHeight
+      << " ,out_w: " << outputWidth;
+  CHECK_OR_RETURN(offset_shape.At(2) == outputHeight && offset_shape.At(3) == outputWidth)
+      << Error::RuntimeError() << "offset output dims: (" << offset_shape.At(2) << ", "
+      << offset_shape.At(3) << ") - "
+      << "computed output dims: (" << outputHeight << ", " << outputWidth << ")";
+
+  if (use_mask) {
+    CHECK_OR_RETURN(mask_shape.At(2) == outputHeight && mask_shape.At(3) == outputWidth);
+  }
 
   *ctx->MutOutputShape("output", 0) =
       Shape({input_shape.At(0), weight_shape.At(0), outputHeight, outputWidth});
@@ -58,9 +104,7 @@ namespace oneflow {
   const int32_t dilationW = ctx->Attr<int32_t>("dilation_w");
   const int32_t dilationH = ctx->Attr<int32_t>("dilation_h");
   const bool use_mask = ctx->Attr<bool>("use_mask");
-  CHECK_EQ_OR_RETURN(weight_shape.NumAxes(), 4)
-      << Error::RuntimeError() << "The dimension of tensor weight must be 4,but got "
-      << weight_shape.NumAxes();
+  CHECK_EQ_OR_RETURN(weight_shape.NumAxes(), 4);
 
   int64_t outputWidth = (input_shape.At(3) + 2 * padW - (dilationW * (kW - 1) + 1)) / dW + 1;
   int64_t outputHeight = (input_shape.At(2) + 2 * padH - (dilationH * (kH - 1) + 1)) / dH + 1;
@@ -130,24 +174,6 @@ Maybe<void> DeformConv2dParamGradOp::InferLogicalTensorDesc(user_op::InferContex
 
 /* static */ Maybe<void> DeformConv2dParamGradOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("weight_grad", 0) = ctx->InputDType("input", 0);
-  return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> DeformConv2dOp::CheckAttr(const user_op::UserOpDefWrapper& op_def,
-                                                   const user_op::UserOpConfWrapper& op_conf) {
-  const int32_t dW = op_conf.attr<int32_t>("stride_w");
-  const int32_t dH = op_conf.attr<int32_t>("stride_h");
-  const int32_t dilationH = op_conf.attr<int32_t>("dilation_h");
-  const int32_t dilationW = op_conf.attr<int32_t>("dilation_w");
-
-  CHECK_OR_RETURN(dW > 0 && dH > 0)
-      << Error::RuntimeError() << "The stride must be greater than 0,but got " << dW << " and "
-      << dH;
-
-  CHECK_OR_RETURN(dilationW > 0 && dilationH > 0)
-      << Error::RuntimeError() << "The dilation must be greater than 0,but got " << dilationH
-      << " and " << dilationW;
-
   return Maybe<void>::Ok();
 }
 

@@ -41,6 +41,16 @@ def deform_conv2d(
     dil_h = dilation[0]
     dil_w = dilation[1]
     weights_h, weights_w = weight.shape[-2:]
+
+    if use_mask and len(mask.shape) != 4:
+        raise RuntimeError("The dimension of mask tensor weight must be 4")
+    if len(input.shape) != 4:
+        raise RuntimeError("The dimension of input tensor weight must be 4")
+    if len(weight.shape) != 4:
+        raise RuntimeError("The dimension of weight tensor weight must be 4")
+    if len(offset.shape) != 4:
+        raise RuntimeError("The dimension of offset tensor weight must be 4")
+
     _, n_in_channels, _, _ = input.shape
 
     n_offset_grps = offset.shape[1] // (2 * weights_h * weights_w)

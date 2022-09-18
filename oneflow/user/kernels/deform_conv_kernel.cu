@@ -25,15 +25,6 @@ namespace oneflow {
 
 namespace {
 
-const int kMaxParallelImgs = 32;
-
-int get_greatest_divisor_below_bound(int n, int bound) {
-  for (int k = bound; k > 1; --k) {
-    if (n % k == 0) { return k; }
-  }
-  return 1;
-}
-
 __device__ __forceinline__ float Add(float* address, float val) { return atomicAdd(address, val); }
 
 __device__ __forceinline__ double Add(double* address, double val) {
@@ -198,8 +189,8 @@ __device__ T GetCoordinateWeight(T argmax_h, T argmax_w, const int height, const
 }
 
 template<typename scalar_t>
-__global__ void DeformableCol2Im(int n, const scalar_t* col, const scalar_t* offset_ptr,
-                                 const scalar_t* mask_ptr, int channels, int height, int width,
+__global__ void DeformableCol2Im(int n, const scalar_t* col, const scalar_t* offset_data,
+                                 const scalar_t* mask_data, int channels, int height, int width,
                                  int kernel_h, int kernel_w, int pad_h, int pad_w, int stride_h,
                                  int stride_w, int dilation_h, int dilation_w, int batch_sz,
                                  int n_offset_grps, int out_h, int out_w, bool use_mask,
@@ -214,9 +205,10 @@ __global__ void DeformableCol2Im(int n, const scalar_t* col, const scalar_t* off
 
     int c_per_offset_grp = channels / n_offset_grps;
     const int offset_grp = c / c_per_offset_grp;
+    auto offset_ptr = offset_data;
 
     offset_ptr += (b * n_offset_grps + offset_grp) * 2 * kernel_h * kernel_w * out_h * out_w;
-
+    auto mask_ptr = mask_data;
     if (use_mask) {
       mask_ptr += (b * n_offset_grps + offset_grp) * kernel_h * kernel_w * out_h * out_w;
     }
@@ -300,8 +292,8 @@ __global__ void DeformableIm2Col(int n, const scalar_t* input, const scalar_t* o
 }
 
 template<typename scalar_t>
-__global__ void DeformableCol2imCoord(int n, const scalar_t* col_ptr, const scalar_t* im_ptr,
-                                      const scalar_t* offset_ptr, const scalar_t* mask_ptr,
+__global__ void DeformableCol2imCoord(int n, const scalar_t* col_data, const scalar_t* im_data,
+                                      const scalar_t* offset_data, const scalar_t* mask_data,
                                       int channels, int height, int width, int weight_h,
                                       int weight_w, int pad_h, int pad_w, int stride_h,
                                       int stride_w, int dilation_h, int dilation_w, int batch_sz,
@@ -323,11 +315,13 @@ __global__ void DeformableCol2imCoord(int n, const scalar_t* col_ptr, const scal
     const int col_step = weight_h * weight_w;
 
     int c_per_offset_grp = channels / n_offset_grps;
-
+    auto col_ptr = col_data;
     col_ptr += offset_grp * c_per_offset_grp * weight_h * weight_w * batch_sz * out_w * out_h;
+    auto im_ptr = im_data;
     im_ptr += (b * n_offset_grps + offset_grp) * c_per_offset_grp * height * width;
+    auto offset_ptr = offset_data;
     offset_ptr += (b * n_offset_grps + offset_grp) * 2 * weight_h * weight_w * out_h * out_w;
-
+    auto mask_ptr = mask_data;
     if (use_mask) {
       mask_ptr += (b * n_offset_grps + offset_grp) * weight_h * weight_w * out_h * out_w;
     }
@@ -528,9 +522,9 @@ class DeformableConv2dInputGradKernel final : public user_op::OpKernel {
                       input_grad->shape_view().elem_cnt() * sizeof(T));
 
     const int64_t nthreads_coord =
-        outputHeight * outputWidth * 2 * kH * kW * deformable_group * input_shape.At(0);
+        outputHeight * outputWidth * 2 * deformable_group * input_shape.At(0) * kW * kH;
     const int64_t nthreads_feat =
-        outputHeight * outputWidth * input_shape.At(0) * kH * kW * input_shape.At(1);
+        outputHeight * outputWidth * input_shape.At(0) * input_shape.At(1) * kW * kH;
     if (nthreads_coord > 0 && nthreads_feat > 0) {
       const int64_t weight_group_offset = weight_shape.elem_cnt() / group;
       const int64_t output_grad_group_offset = output_grad_shape.Count(1) / group;
@@ -604,7 +598,6 @@ class DeformableConv2dParamGradKernel final : public user_op::OpKernel {
     const T* data_mask = nullptr;
     if (use_mask) { data_mask = ctx->Tensor4ArgNameAndIndex("mask", 0)->dptr<T>(); }
     const int64_t column_nums = input_shape.At(1) * input_shape.At(0) * outputHeight * outputWidth;
-
     if (column_nums > 0) {
       DeformableIm2Col<T><<<BlocksNum4ThreadsNum(column_nums), kCudaThreadsNumPerBlock, 0,
                             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(

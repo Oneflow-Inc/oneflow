@@ -10253,7 +10253,6 @@ def OneFlow_DeformConv2dOp : OneFlow_BaseOp<"deform_conv2d", [NoSideEffect, Decl
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_check_fn=1;
 }
 
 def OneFlow_DeformConv2dInputGradOp : OneFlow_BaseOp<"deform_conv2d_input_grad", [NoSideEffect,

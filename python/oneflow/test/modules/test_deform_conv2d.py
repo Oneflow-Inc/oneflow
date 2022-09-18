@@ -18,34 +18,35 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
+from oneflow.test_utils.automated_test_util.torch_flow_dual_object import random_tensor
 from oneflow.test_utils.test_util import GenArgList
 import oneflow.unittest
 import torchvision.ops
 import torch
 
 
-def GetRamdomData():
+def GetRamdomData(max_batch_sz):
 
-    batch_sz = 30  # np.random.randint(1, 320)
-    n_out_channels = 500  # np.random.randint(1, 640)
-    n_in_channels = 500  # np.random.randint(1, 640)
-    n_weight_grps = 1
-    n_offset_grps = 1
+    batch_sz = max_batch_sz
+    n_out_channels = 2 * np.random.randint(1, 10)
+    n_in_channels = 6 * np.random.randint(1, 5)
+    n_weight_grps = 2
+    n_offset_grps = 3
     random_stride_h = np.random.randint(1, 5)
     random_stride_w = np.random.randint(1, 5)
-    random_pad_h =np.random.randint(0, 3)
-    random_pad_w =np.random.randint(0, 3)
+    random_pad_h = np.random.randint(0, 3)
+    random_pad_w = np.random.randint(0, 3)
 
-    random_dilation_h =  np.random.randint(1, 3)
-    random_dilation_w =  np.random.randint(1, 3)
+    random_dilation_h = np.random.randint(1, 3)
+    random_dilation_w = np.random.randint(1, 3)
 
     # BUG(yzm):Now use the rectangular convolution kernel is not aligned with PyTorch
     # NOTE:Added after alignment using a rectangular convolution kernel
-    random_kernel_h = 5#np.random.randint(1, 11)
-    random_kernel_w = 5#random_kernel_h  # np.random.randint(1, 11)
+    random_kernel_h = np.random.randint(1, 11)
+    random_kernel_w = random_kernel_h  # np.random.randint(1, 11)
 
-    random_in_h =  np.random.randint(1, 15)
-    random_in_w =  np.random.randint(1, 15)
+    random_in_h = np.random.randint(5, 30)
+    random_in_w = np.random.randint(5, 30)
 
     stride = (random_stride_h, random_stride_w)
     pad = (random_pad_h, random_pad_w)
@@ -67,7 +68,7 @@ def GetRamdomData():
     )
 
 
-def GetRamdomFunArgs():
+def GetFunArgs(device, max_batch_size):
     out_w = 0
     out_h = 0
     while out_w <= 0 or out_h <= 0:
@@ -84,7 +85,7 @@ def GetRamdomFunArgs():
             random_kernel_w,
             random_in_h,
             random_in_w,
-        ) = GetRamdomData()
+        ) = GetRamdomData(max_batch_size)
         stride_h, stride_w = stride
         pad_h, pad_w = pad
         dil_h, dil_w = dilation
@@ -94,40 +95,39 @@ def GetRamdomFunArgs():
         out_h = (in_h + 2 * pad_h - (dil_h * (weight_h - 1) + 1)) // stride_h + 1
         out_w = (in_w + 2 * pad_w - (dil_w * (weight_w - 1) + 1)) // stride_w + 1
 
-    input_np = np.random.rand(batch_sz, n_in_channels, in_h, in_w)
+    input_dims = [batch_sz, n_in_channels, in_h, in_w]
+    input = random_tensor(4, *input_dims).to(device)
 
-    offset_np = np.random.rand(batch_sz, 2 * weight_h * weight_w, out_h, out_w,)
+    offset_dims = [batch_sz, 2 * n_offset_grps * weight_h * weight_w, out_h, out_w]
+    offset = random_tensor(4, *offset_dims).to(device)
 
-    mask_np = np.random.rand(
-        batch_sz, n_offset_grps * weight_h * weight_w, out_h, out_w
-    )
+    mask_dims = [batch_sz, n_offset_grps * weight_h * weight_w, out_h, out_w]
+    mask = random_tensor(4, *mask_dims).to(device)
 
-    weight_np = np.random.rand(
-        n_out_channels, n_in_channels // n_weight_grps, weight_h, weight_w,
-    )
+    weight_dims = [n_out_channels, n_in_channels // n_weight_grps, weight_h, weight_w]
+    weight = random_tensor(4, *weight_dims).to(device)
 
-    bias_np = np.random.rand(n_out_channels)
-    return input_np, weight_np, offset_np, mask_np, bias_np, stride, pad, dilation
+    bias_dims = [n_out_channels]
+    bias = random_tensor(1, *bias_dims).to(device)
+
+    return input, weight, offset, mask, bias, stride, pad, dilation
 
 
 def _test_deform_conv2d_forward(
-    test_case,
-    device,
-    input_np,
-    weight_np,
-    offset_np,
-    mask_np,
-    bias_np,
-    stride,
-    padding,
-    dilation,
+    test_case, input, weight, offset, mask, bias, stride, padding, dilation,
 ):
 
-    torch_input = torch.from_numpy(input_np).to(device)
-    torch_weight = torch.from_numpy(weight_np).to(device)
-    torch_offset = torch.from_numpy(offset_np).to(device)
-    torch_mask = torch.from_numpy(mask_np).to(device)
-    torch_bias = torch.from_numpy(bias_np).to(device)
+    flow_input = input.oneflow
+    flow_weight = weight.oneflow
+    flow_offset = offset.oneflow
+    flow_mask = mask.oneflow
+    flow_bias = bias.oneflow
+
+    torch_input = input.pytorch
+    torch_weight = weight.pytorch
+    torch_offset = offset.pytorch
+    torch_mask = mask.pytorch
+    torch_bias = bias.pytorch
 
     torch_out = torchvision.ops.deform_conv2d(
         torch_input,
@@ -140,12 +140,6 @@ def _test_deform_conv2d_forward(
         bias=torch_bias,
     )
     print(torch_out)
-    flow_input = flow.tensor(input_np).to(device)
-    flow_weight = flow.tensor(weight_np).to(device)
-    flow_offset = flow.tensor(offset_np).to(device)
-    flow_mask = flow.tensor(mask_np).to(device)
-    flow_bias = flow.tensor(bias_np).to(device)
-
     flow_out = oneflow.nn.functional.deform_conv2d(
         flow_input,
         flow_offset,
@@ -158,38 +152,27 @@ def _test_deform_conv2d_forward(
     )
     print(flow_out)
     test_case.assertTrue(
-        np.allclose(flow_out.numpy(), torch_out.cpu().numpy(), rtol=1e-5, atol=1e-5,)
+        np.allclose(
+            flow_out.numpy(), torch_out.detach().cpu().numpy(), rtol=1e-5, atol=1e-5
+        )
     )
 
 
 def _test_deform_conv2d_backward(
-    test_case,
-    device,
-    input_np,
-    weight_np,
-    offset_np,
-    mask_np,
-    bias_np,
-    stride,
-    padding,
-    dilation,
+    test_case, input, weight, offset, mask, bias, stride, padding, dilation
 ):
 
-    (
-        input_np,
-        weight_np,
-        offset_np,
-        mask_np,
-        bias_np,
-        stride,
-        padding,
-        dilation,
-    ) = GetRamdomFunArgs()
-    torch_input = torch.from_numpy(input_np).to(device).requires_grad_(True)
-    torch_weight = torch.from_numpy(weight_np).to(device).requires_grad_(True)
-    torch_offset = torch.from_numpy(offset_np).to(device).requires_grad_(True)
-    torch_mask = torch.from_numpy(mask_np).to(device).requires_grad_(True)
-    torch_bias = torch.from_numpy(bias_np).to(device).requires_grad_(True)
+    flow_input = input.oneflow.detach().requires_grad_()
+    flow_weight = weight.oneflow.detach().requires_grad_()
+    flow_offset = offset.oneflow.detach().requires_grad_()
+    flow_mask = mask.oneflow.detach().requires_grad_()
+    flow_bias = bias.oneflow.detach().requires_grad_()
+
+    torch_input = input.pytorch.detach().requires_grad_()
+    torch_weight = weight.pytorch.detach().requires_grad_()
+    torch_offset = offset.pytorch.detach().requires_grad_()
+    torch_mask = mask.pytorch.detach().requires_grad_()
+    torch_bias = bias.pytorch.detach().requires_grad_()
 
     torch_out = torchvision.ops.deform_conv2d(
         torch_input,
@@ -202,13 +185,6 @@ def _test_deform_conv2d_backward(
         bias=torch_bias,
     )
     torch_out.sum().backward()
-    print("torch finish")
-
-    flow_input = flow.tensor(input_np).to(device).requires_grad_(True)
-    flow_weight = flow.tensor(weight_np).to(device).requires_grad_(True)
-    flow_offset = flow.tensor(offset_np).to(device).requires_grad_(True)
-    flow_mask = flow.tensor(mask_np).to(device).requires_grad_(True)
-    flow_bias = flow.tensor(bias_np).to(device).requires_grad_(True)
 
     flow_out = oneflow.nn.functional.deform_conv2d(
         flow_input,
@@ -230,7 +206,6 @@ def _test_deform_conv2d_backward(
             atol=1e-5,
         )
     )
-
     test_case.assertTrue(
         np.allclose(
             flow_weight.grad.numpy(),
@@ -260,52 +235,29 @@ def _test_deform_conv2d_backward(
 
 
 def test_deform_conv2d(test_case, device):
-    (
-        input_np,
-        weight_np,
-        offset_np,
-        mask_np,
-        bias_np,
-        stride,
-        padding,
-        dilation,
-    ) = GetRamdomFunArgs()
 
-    # _test_deform_conv2d_forward(
-    #     test_case,
-    #     device,
-    #     input_np,
-    #     weight_np,
-    #     offset_np,
-    #     mask_np,
-    #     bias_np,
-    #     stride,
-    #     padding,
-    #     dilation,
-    # )
-    _test_deform_conv2d_backward(
-        test_case,
-        device,
-        input_np,
-        weight_np,
-        offset_np,
-        mask_np,
-        bias_np,
-        stride,
-        padding,
-        dilation,
+    # max_batch_size = 2
+    # for batch_size in range(max_batch_size):
+    batch_size = 2
+    input, weight, offset, mask, bias, stride, padding, dilation = GetFunArgs(
+        device, batch_size
     )
+    _test_deform_conv2d_forward(
+        test_case, input, weight, offset, mask, bias, stride, padding, dilation
+    )
+    # _test_deform_conv2d_backward(
+    #     test_case, input, weight, offset, mask, bias, stride, padding, dilation
+    # )
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestRoIAlign(flow.unittest.TestCase):
+class TestDeformConv2d(flow.unittest.TestCase):
     def test_roi_align(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [test_deform_conv2d]
-        arg_dict["device"] = ["cuda"]
+        arg_dict["device"] = ["cpu"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-        print("over")
 
 
 if __name__ == "__main__":
