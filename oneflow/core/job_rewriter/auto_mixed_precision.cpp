@@ -14,13 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifdef WITH_CUDA
-
+#include "oneflow/core/job_rewriter/auto_mixed_precision.h"
 #include "oneflow/core/job_rewriter/auto_mixed_precision_lists.h"
 
 #include <algorithm>
 
-#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/pass_util.h"
@@ -37,7 +35,6 @@ void VerifyAMPList(const AMPList& amp_list) {
   }
 }
 
-using OpArg = std::pair<std::string, int32_t>;
 using NoCastRegistry = std::multimap<std::string, OpArg>;
 
 NoCastRegistry* GetNoCastRegistry() {
@@ -191,7 +188,6 @@ Maybe<void> AutoMixedPrecision::Apply(Job* job, JobPassCtx* ctx) const {
   if (!ctx->job_desc().enable_auto_mixed_precision()) { return Maybe<void>::Ok(); }
   const OpGraph op_graph(*job);
   JobBuilder job_builder(job);
-  CHECK_GE(CUDA_VERSION, 10000);
   CHECK(GlobalJobDesc().DefaultDataType() == DataType::kFloat);
 
   VerifyAMPList(white_list_);
@@ -314,7 +310,9 @@ void AutoMixedPrecision::InsertCastOp(const OpGraph& op_graph, const HashSet<OpN
   InsertCastOpImpl(false, op_graph, white_set, mixed_precision_data_type, job_builder);
 }
 
+#if defined(WITH_CUDA) && defined(CUDA_VERSION) && CUDA_VERSION >= 10000
 REGISTER_JOB_PASS("AutoMixedPrecision", AutoMixedPrecision);
+#endif  // WITH_CUDA
 
 }  // namespace
 
@@ -360,6 +358,12 @@ REGISTER_NO_CAST_REGISTRY("layer_norm_param_grad", "inv_variance", 0)
 
 }  // namespace
 
-}  // namespace oneflow
+namespace amp {
 
-#endif  // WITH_CUDA
+bool IsNoCast(const std::string& op_type, const OpArg& op_arg) {
+  return FindInNoCastRegisry(op_type, op_arg);
+}
+
+}  // namespace amp
+
+}  // namespace oneflow

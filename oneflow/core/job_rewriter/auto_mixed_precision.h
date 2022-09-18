@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,22 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-from .grad_scaler import GradScaler
-from .grad_scaler import StaticGradScaler
-from .autocast_mode import *
+*/
+#ifndef ONEFLOW_CORE_JOB_REWRITER_AUTO_MIXED_PRECISION_H_
+#define ONEFLOW_CORE_JOB_REWRITER_AUTO_MIXED_PRECISION_H_
+
+#include <string>
+
+namespace oneflow {
+
+using OpArg = std::pair<std::string, int32_t>;
+
+namespace amp {
+
+bool IsNoCast(const std::string& op_type, const OpArg& op_arg);
+
+}  // namespace amp
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_JOB_REWRITER_AUTO_MIXED_PRECISION_H_
