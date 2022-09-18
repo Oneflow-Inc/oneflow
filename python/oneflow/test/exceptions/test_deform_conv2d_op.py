@@ -27,8 +27,7 @@ class TestDeformConv(flow.unittest.TestCase):
         with test_case.assertRaises(RuntimeError) as ctx:
             out = flow.nn.functional.deform_conv2d(input, offset, weight)
         test_case.assertTrue(
-            "The dimension of input tensor weight must be " in str(
-                ctx.exception)
+            "The dimension of input tensor weight must be " in str(ctx.exception)
         )
 
     def test_deform_conv2d_offset_wrong_sizes(test_case):
@@ -38,8 +37,7 @@ class TestDeformConv(flow.unittest.TestCase):
         with test_case.assertRaises(RuntimeError) as ctx:
             out = flow.nn.functional.deform_conv2d(input, offset, weight)
         test_case.assertTrue(
-            "The dimension of offset tensor weight must be " in str(
-                ctx.exception)
+            "The dimension of offset tensor weight must be " in str(ctx.exception)
         )
 
     def test_deform_conv2d_weight_wrong_sizes(test_case):
@@ -49,8 +47,7 @@ class TestDeformConv(flow.unittest.TestCase):
         with test_case.assertRaises(RuntimeError) as ctx:
             out = flow.nn.functional.deform_conv2d(input, offset, weight)
         test_case.assertTrue(
-            "The dimension of weight tensor weight must be " in str(
-                ctx.exception)
+            "The dimension of weight tensor weight must be " in str(ctx.exception)
         )
 
     def test_deform_conv2d_mask_wrong_sizes(test_case):
@@ -59,11 +56,9 @@ class TestDeformConv(flow.unittest.TestCase):
         offset = flow.randn(2, 3, 1, 1)
         mask = flow.randn(2, 3, 1)
         with test_case.assertRaises(RuntimeError) as ctx:
-            out = flow.nn.functional.deform_conv2d(
-                input, offset, weight, mask=mask)
+            out = flow.nn.functional.deform_conv2d(input, offset, weight, mask=mask)
         test_case.assertTrue(
-            "The dimension of mask tensor weight must be " in str(
-                ctx.exception)
+            "The dimension of mask tensor weight must be " in str(ctx.exception)
         )
 
     def test_deform_conv2d_dilation_wrong_parm(test_case):
@@ -74,20 +69,16 @@ class TestDeformConv(flow.unittest.TestCase):
             out = flow.nn.functional.deform_conv2d(
                 input, offset, weight, dilation=(-1, 0)
             )
-        test_case.assertTrue(
-            "The dilation must be greater than" in str(ctx.exception))
-        
+        test_case.assertTrue("The dilation must be greater than" in str(ctx.exception))
+
     def test_deform_conv2d_wrong_pad_parm(test_case):
         input = flow.randn(4, 3, 10, 10)
         weight = flow.randn(5, 3, 3, 3)
         offset = flow.randn(4, 18, 8, 8)
         with test_case.assertRaises(RuntimeError) as ctx:
-            out = flow.nn.functional.deform_conv2d(
-                input, offset, weight, pad=(-1, 0)
-            )
-        test_case.assertTrue(
-            "The pad must be greater than" in str(ctx.exception))
-    
+            out = flow.nn.functional.deform_conv2d(input, offset, weight, pad=(-1, 0))
+        test_case.assertTrue("The pad must be greater than" in str(ctx.exception))
+
     def test_deform_conv2d_wrong_stride_parm(test_case):
         input = flow.randn(4, 3, 10, 10)
         weight = flow.randn(5, 3, 3, 3)
@@ -96,11 +87,8 @@ class TestDeformConv(flow.unittest.TestCase):
             out = flow.nn.functional.deform_conv2d(
                 input, offset, weight, stride=(-1, 0)
             )
-        test_case.assertTrue(
-            "The stride must be greater than" in str(ctx.exception))
+        test_case.assertTrue("The stride must be greater than" in str(ctx.exception))
 
-
-    
 
 if __name__ == "__main__":
     unittest.main()
