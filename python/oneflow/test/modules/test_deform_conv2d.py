@@ -28,10 +28,11 @@ import torch
 def GetRamdomData(max_batch_sz):
 
     batch_sz = max_batch_sz
-    n_out_channels = 2 * np.random.randint(1, 10)
-    n_in_channels = 6 * np.random.randint(1, 5)
-    n_weight_grps = 2
-    n_offset_grps = 3
+    n_weight_grps = np.random.randint(1, 2)
+    n_offset_grps = np.random.randint(1, 2)
+    n_out_channels = n_offset_grps * np.random.randint(1, 15)
+    n_in_channels = n_offset_grps * np.random.randint(1, 15)
+
     random_stride_h = np.random.randint(1, 5)
     random_stride_w = np.random.randint(1, 5)
     random_pad_h = np.random.randint(0, 3)
@@ -41,9 +42,10 @@ def GetRamdomData(max_batch_sz):
     random_dilation_w = np.random.randint(1, 3)
 
     # BUG(yzm):Now use the rectangular convolution kernel is not aligned with PyTorch
-    # NOTE:Added after alignment using a rectangular convolution kernel
+    # NOTE:Modify the following program after alignment using a rectangular convolution kernel
     random_kernel_h = np.random.randint(1, 11)
-    random_kernel_w = random_kernel_h  # np.random.randint(1, 11)
+    random_kernel_w = random_kernel_h
+    #random_kernel_w=np.random.randint(1, 11)
 
     random_in_h = np.random.randint(5, 30)
     random_in_w = np.random.randint(5, 30)

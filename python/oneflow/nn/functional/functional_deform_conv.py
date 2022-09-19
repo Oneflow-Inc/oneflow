@@ -13,8 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
 from typing import Optional, Tuple, Union
+
+import oneflow as flow
 from oneflow.framework.tensor import Tensor
 
 
@@ -41,7 +42,12 @@ def deform_conv2d(
     dil_h = dilation[0]
     dil_w = dilation[1]
     weights_h, weights_w = weight.shape[-2:]
-
+    
+    #TODO(yzm):Support rectangle convolution
+    #NOTE:Delete the following error reporting program after support rectangle convolution
+    if weights_h!=weights_w:
+        raise RuntimeError("Rectangle convolution is not currently supported, please try square convolution")
+    
     if use_mask and len(mask.shape) != 4:
         raise RuntimeError("The dimension of mask tensor weight must be 4")
     if len(input.shape) != 4:
