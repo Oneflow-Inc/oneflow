@@ -170,7 +170,7 @@ def _test_one_embedding_padding_idx(
             test_case.assertTrue(
                 np.array_equal(
                     embedding_val[idx].numpy(),
-                    np.zeros((len(table_size_array), embedding_size), dtype=np.float32)
+                    np.zeros((len(table_size_array), embedding_size), dtype=np.float32),
                 )
             )
 
@@ -181,7 +181,7 @@ def _test_one_embedding_padding_idx(
             test_case.assertTrue(
                 np.array_equal(
                     embedding_val[idx].numpy(),
-                    np.zeros((len(table_size_array), embedding_size), dtype=np.float32)
+                    np.zeros((len(table_size_array), embedding_size), dtype=np.float32),
                 )
             )
 

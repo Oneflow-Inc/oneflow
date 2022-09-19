@@ -40,17 +40,14 @@ __global__ void GenerateTableIds(int32_t elem_cnt, int32_t num_tables, U* table_
 
 namespace {
 
-constexpr uint32_t PADDING_REV_INDEX = 0xffffffff; 
+constexpr uint32_t PADDING_REV_INDEX = 0xffffffff;
 
 template<typename K, typename V, typename IDX, typename HASH>
-__global__ void HashTableUniqueAndPartitionPairs(const uint32_t table_capacity,
-                                                 const uint32_t num_keys, int32_t num_partition,
-                                                 IDX* unique_counts, TableEntry<K>* table,
-                                                 const K* keys, const V* values,
-                                                 K* partitioned_unique_keys,
-                                                 V* partitioned_unique_values, IDX* reverse_index,
-                                                 bool need_process_values, 
-                                                 const bool has_padding_idx, const int64_t padding_idx) {
+__global__ void HashTableUniqueAndPartitionPairs(
+    const uint32_t table_capacity, const uint32_t num_keys, int32_t num_partition,
+    IDX* unique_counts, TableEntry<K>* table, const K* keys, const V* values,
+    K* partitioned_unique_keys, V* partitioned_unique_values, IDX* reverse_index,
+    bool need_process_values, const bool has_padding_idx, const int64_t padding_idx) {
   CUDA_1D_KERNEL_LOOP_T(uint32_t, i, num_keys) {
     IDX r_index_plus_one = 0;
     const K key = keys[i];
@@ -477,8 +474,7 @@ template<typename K, typename U, typename IDX>
 void IdShuffle(ep::Stream* stream, ncclComm_t comm, const IdShuffleDataPtrs<K, U, IDX>& data_ptrs,
                int64_t num_ids, int64_t parallel_id, int64_t parallel_num,
                DataType num_unique_matrix_dtype, DataType ids_dtype, DataType table_ids_dtype,
-               bool need_process_table_ids, 
-               const bool has_padding_idx, const int64_t padding_idx, 
+               bool need_process_table_ids, const bool has_padding_idx, const int64_t padding_idx,
                IDX* host_num_unique_matrix, IDX* host_num_keys) {
   cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
   size_t hash_table_capacity = parallel_num * num_ids;
@@ -486,7 +482,8 @@ void IdShuffle(ep::Stream* stream, ncclComm_t comm, const IdShuffleDataPtrs<K, U
       cuda_stream, num_ids, hash_table_capacity, parallel_num, data_ptrs.ids_ptr,
       data_ptrs.table_ids_ptr, data_ptrs.num_partitioned_unique, data_ptrs.partitioned_unique_ids,
       data_ptrs.partitioned_unique_table_ids, data_ptrs.inverse_unique_partition_indices_ptr,
-      data_ptrs.workspace_ptr, data_ptrs.workspace_size, need_process_table_ids, has_padding_idx, padding_idx);
+      data_ptrs.workspace_ptr, data_ptrs.workspace_size, need_process_table_ids, has_padding_idx,
+      padding_idx);
 
   OF_NCCL_CHECK(ncclAllGather(data_ptrs.num_partitioned_unique, data_ptrs.num_unique_matrix_ptr,
                               parallel_num, GetNcclDataType(num_unique_matrix_dtype), comm,

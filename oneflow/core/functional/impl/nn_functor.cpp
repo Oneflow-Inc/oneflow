@@ -909,6 +909,44 @@ class AdaptiveAvgPool3DFunctor : public AdaptivePoolNDFunctor {
   }
 };
 
+class AdaptiveMaxPoolBaseFunctor {
+ public:
+  AdaptiveMaxPoolBaseFunctor() = default;
+  virtual ~AdaptiveMaxPoolBaseFunctor() = default;
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
+                                const std::vector<int64_t>& output_size) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("output_size");
+    attrs.SetAllAttrs(output_size);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class AdaptiveMaxPool1DFunctor : public AdaptiveMaxPoolBaseFunctor {
+ public:
+  AdaptiveMaxPool1DFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("adaptive_max_pool1d").Input("x").Output("y").Output("index").Build());
+  }
+};
+
+class AdaptiveMaxPool2DFunctor : public AdaptiveMaxPoolBaseFunctor {
+ public:
+  AdaptiveMaxPool2DFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("adaptive_max_pool2d").Input("x").Output("y").Output("index").Build());
+  }
+};
+
+class AdaptiveMaxPool3DFunctor : public AdaptiveMaxPoolBaseFunctor {
+ public:
+  AdaptiveMaxPool3DFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("adaptive_max_pool3d").Input("x").Output("y").Output("index").Build());
+  }
+};
 class LossFunctorBase {
  public:
   Maybe<Tensor> apply_reduction(const Maybe<Tensor>& x, const std::string& reduction) const {
@@ -3543,16 +3581,16 @@ class OneEmbeddingLookupFunctor {
                            const std::string& embedding_name, const int64_t line_size,
                            const int64_t embedding_size, const bool is_full_cache,
                            const int32_t num_tables, const std::string& embedding_tables,
-                           const int64_t seed, const Optional<int64_t>& padding_idx) const {
+                           const Optional<int64_t>& padding_idx, const int64_t seed) const {
     int64_t padding_idx_val = -1;
     bool has_padding_idx = false;
     if (padding_idx.has_value()) {
       padding_idx_val = JUST(padding_idx);
       has_padding_idx = true;
     }
-    auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "embedding_name", "line_size", "embedding_size",
-                                       "is_full_cache", "num_tables", "embedding_tables", "seed", "padding_idx", "has_padding_idx");
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
+        "dtype", "embedding_name", "line_size", "embedding_size", "is_full_cache", "num_tables",
+        "embedding_tables", "seed", "padding_idx", "has_padding_idx");
     attrs.SetAllAttrs(dtype->data_type(), embedding_name, line_size, embedding_size, is_full_cache,
                       num_tables, embedding_tables, seed, padding_idx_val, has_padding_idx);
     if (table_ids) {
@@ -4134,6 +4172,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
+  m.add_functor<impl::AdaptiveMaxPool1DFunctor>("AdaptiveMaxPool1D");
+  m.add_functor<impl::AdaptiveMaxPool2DFunctor>("AdaptiveMaxPool2D");
+  m.add_functor<impl::AdaptiveMaxPool3DFunctor>("AdaptiveMaxPool3D");
   m.add_functor<impl::L1LossFunctor>("L1Loss");
   m.add_functor<impl::MseLossFunctor>("MseLoss");
   m.add_functor<impl::KLDivLossFunctor>("KLDivLoss");

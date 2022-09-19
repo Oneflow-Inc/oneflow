@@ -242,8 +242,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
     data_shuffle::IdShuffle(ctx->stream(), comm, data_ptrs, num_ids, parallel_id, parallel_num,
                             num_unique_matrix->data_type(), ids->data_type(),
                             cur_rank_unique_table_ids->data_type(), need_process_table_ids,
-                            has_padding_idx, padding_idx, 
-                            host_num_unique_matrix, host_num_keys);
+                            has_padding_idx, padding_idx, host_num_unique_matrix, host_num_keys);
 
     embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
     std::vector<uint32_t> num_unique_matrix_vec(parallel_num * parallel_num);

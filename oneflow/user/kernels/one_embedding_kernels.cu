@@ -1324,7 +1324,8 @@ class EmbeddingLookupPlaceholderKernel final : public user_op::OpKernel {
 
     data_shuffle::IdShuffle(ctx->stream(), comm, data_ptrs, num_ids, parallel_id, parallel_num,
                             num_unique_matrix_dtype, ids->data_type(), table_ids_dtype,
-                            need_process_table_ids, has_padding_idx, padding_idx, host_num_unique_matrix, host_num_keys);
+                            need_process_table_ids, has_padding_idx, padding_idx,
+                            host_num_unique_matrix, host_num_keys);
     uint32_t num_unique = *host_num_keys;
 
     // lookup and put, if is_full_cache, not put to store.
