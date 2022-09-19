@@ -29,12 +29,9 @@ def deform_conv2d(
     dilation: Tuple[int, int] = (1, 1),
     mask: Optional[Tensor] = None,
 ) -> Tensor:
-
     use_mask = mask is not None
-
     if mask is None:
         mask = flow.zeros((input.shape[0], 0), dtype=input.dtype).to(input.device)
-
     stride_h = stride[0]
     stride_w = stride[1]
     pad_h = padding[0]
@@ -43,15 +40,11 @@ def deform_conv2d(
     dil_w = dilation[1]
     weights_h, weights_w = weight.shape[-2:]
 
-    # TODO(yzm):Support rectangle convolution
-    # NOTE:Delete the following error reporting program after support rectangle convolution
+    # TODO(yzm): Support rectangle convolution
     if weights_h != weights_w:
-        raise RuntimeError(
-            "Rectangle convolution is not currently supported, please try square convolution"
+        raise NotImplementedError(
+            "Rectangle convolution is not supported currently."
         )
-    if bias is not None:
-        if len(bias.shape) != 1 or bias.shape[0] != weight.shape[0]:
-            raise RuntimeError("invalid bias shape:got:" f"{bias.shape}")
 
     if use_mask and len(mask.shape) != 4:
         raise RuntimeError("The dimension of mask tensor weight must be 4")
@@ -63,7 +56,6 @@ def deform_conv2d(
         raise RuntimeError("The dimension of offset tensor weight must be 4")
 
     _, n_in_channels, _, _ = input.shape
-
     n_offset_grps = offset.shape[1] // (2 * weights_h * weights_w)
     n_weight_grps = n_in_channels // weight.shape[1]
 

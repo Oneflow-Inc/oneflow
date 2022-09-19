@@ -10269,7 +10269,6 @@ def OneFlow_DeformConv2dOp : OneFlow_BaseOp<"deform_conv2d", [NoSideEffect, Decl
     OneFlow_Tensor:$out
   );
 
-
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$stride_h,
     DefaultValuedAttr<SI32Attr, "0">:$stride_w,

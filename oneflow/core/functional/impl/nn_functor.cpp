@@ -3885,9 +3885,6 @@ class DeformConv2dFunctor {
         OpInterpUtil::Dispatch<Tensor>(*deformconv2d_op_, {input, weight, offset, mask}, attrs));
     if (bias) {
       auto bias_shape = JUST(bias)->shape();
-      // CHECK_OR_RETURN(bias_shape->NumAxes() == 1 && bias_shape->At(0) == weight->shape()->At(0))
-      //     << Error::RuntimeError() << "invalid bias shape:got:" << bias_shape->ToString()
-      //     << ",expect:(" << weight->shape()->At(0) << ")";
       auto& bias_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis");
       bias_attrs.SetAllAttrs(static_cast<int32_t>(1));
       return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {deformconv2d_out, JUST(bias)}, bias_attrs);
