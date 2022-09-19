@@ -426,8 +426,16 @@ void ForEachOpGraphNecessaryCtrlEdge(
 
 }  // namespace
 
-TaskGraph::TaskGraph(bool enable_straighten_algorithm)
-    : enable_straighten_algorithm_(enable_straighten_algorithm) {
+TaskGraph::TaskGraph(int32_t straighten_algorithm_tag) {
+  // Set up the tag for the straighten algorithm
+  if (straighten_algorithm_tag == 3) {
+    straighten_algorithm_tag_ = StraightenAlgorithmTag::kCompressMemory;
+  } else if (straighten_algorithm_tag == 2) {
+    straighten_algorithm_tag_ = StraightenAlgorithmTag::kOverlap4ModelParallelism;
+  } else {
+    straighten_algorithm_tag_ = StraightenAlgorithmTag::kDisable;
+  }
+
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
@@ -862,11 +870,19 @@ void TaskGraph::BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const Logi
 }
 
 void TaskGraph::DecideExecutionOrder() {
-  if (enable_straighten_algorithm_ && GlobalProcessCtx::WorldSize() > 1) {
+  // For one machine with no transfer available, the straighten algorithm for overlaps consume a lot
+  // of memory
+  if (straighten_algorithm_tag_ == StraightenAlgorithmTag::kCompressMemory
+      || (straighten_algorithm_tag_ == StraightenAlgorithmTag::kOverlap4ModelParallelism
+          && GlobalProcessCtx::WorldSize() > 1)) {
     StraightenNodes(this, &ordered_task_nodes_);
   } else {
     SetOrderInGraphForEachNode();
   }
+}
+
+StraightenAlgorithmTag TaskGraph::GetStraightenAlgorithmTag() const {
+  return straighten_algorithm_tag_;
 }
 
 }  // namespace oneflow

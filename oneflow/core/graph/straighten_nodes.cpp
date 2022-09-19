@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/graph/straighten_nodes.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/common/protobuf.h"
@@ -73,6 +74,28 @@ class TopoStruct {
   // i = 7: those with large memory increment go first
   int64_t GetDecidingParameter(int32_t i) const;
 };
+
+// NOTE: Leave these code for debugging in the future
+// static std::vector<int64_t> decide_parameters({ParseIntegerFromEnv("Parameter0", 3),
+//                                                ParseIntegerFromEnv("Parameter1", 0),
+//                                                ParseIntegerFromEnv("Parameter2", 3)});
+// The best parameter set for saving time is {6, 4}
+// The best parameter set for saving memory is {3, 0}
+static std::vector<int64_t> decide_parameters;
+
+// SAT, a.k.a. Scholastic Aptitude Test, is the college admission test in the United States of
+// America.
+void InitDecideParameters(StraightenAlgorithmTag sat) {
+  decide_parameters.clear();
+  if (sat == StraightenAlgorithmTag::kCompressMemory) {
+    decide_parameters.push_back(3);
+    decide_parameters.push_back(0);
+  } else {
+    // sat==StraightenAlgorithmTag::kOverlap4ModelParallelism
+    decide_parameters.push_back(6);
+    decide_parameters.push_back(4);
+  }
+}
 
 // move the head from source to target
 void MoveFrontBetweenMaps(std::map<int32_t, TopoStruct*>& source,
@@ -360,19 +383,14 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   // Generate other parameters in the topological data structure
   FindMainstem(&task_node2topo_struct);
 
-  VLOG(3) << "Straightening order: " << 5 << ", " << 3;
+  // Decide which node should run first
+  InitDecideParameters(task_graph->GetStraightenAlgorithmTag());
+  VLOG(3) << "Straightening order: ";
+  for (int32_t decide_parameter : decide_parameters) { VLOG(3) << decide_parameter; }
 
   // Order in the waiting sets
-  // Decide which node should run first
   struct comp {
     bool operator()(const TopoStruct* a, const TopoStruct* b) const {
-      // NOTE: Leave these code for debugging in the future
-      // static std::vector<int64_t> decide_parameters({ParseIntegerFromEnv("Parameter0", 3),
-      //                                                ParseIntegerFromEnv("Parameter1", 0),
-      //                                                ParseIntegerFromEnv("Parameter2", 3)});
-      // The best parameter set for saving time is {6, 4}
-      // The best parameter set for saving memory is {3, 0}
-      static std::vector<int64_t> decide_parameters({3, 0});
       for (int32_t decide_parameter : decide_parameters) {
         int64_t decide_parameter_a = a->GetDecidingParameter(decide_parameter);
         int64_t decide_parameter_b = b->GetDecidingParameter(decide_parameter);
