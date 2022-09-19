@@ -51,14 +51,11 @@ SbpGraph::~SbpGraph() {
 
 void SbpGraph::RandomSbpSignature(bool use_sbp_collector) const {
   for (const auto& this_node : node_list_) {
-    if (use_sbp_collector) {
-      if (this_node->sbp_sig_list_.size() > 0) {
-        this_node->final_sbp_sig_id_ = rand() % this_node->sbp_sig_list_.size();
-      } else {
-        this_node->final_sbp_sig_id_ = rand() % this_node->parallel_candidates_.size();
-      }
-    } else {
+    if (this_node->sbp_sig_list_.size() > 0) {
       this_node->final_sbp_sig_id_ = rand() % this_node->sbp_sig_list_.size();
+    } else {
+      // It must be a proxy when this_node->sbp_sig_list_.size() == 0
+      this_node->final_sbp_sig_id_ = rand() % this_node->parallel_candidates_.size();
     }
   }
 };
@@ -404,7 +401,7 @@ void SbpGraph::DfsAddNbhCost(std::vector<int32_t>& nbh_id2node_list_id,
   // We have finished visiting the neighborhood
   if (order >= nbh_id2node_list_id.size()) {
     // relative difference > 1e-12
-    if (curr_cost < min_cost * float_deviation_minus) {
+    if (curr_cost < min_cost * kFloatDeviationMinus) {
       min_cost = curr_cost;
       for (int32_t nbh_id = 0; nbh_id < nbh_id2node_list_id.size(); nbh_id++) {
         min_sbp_sig_id[nbh_id] = node_list_[nbh_id2node_list_id[nbh_id]]->final_sbp_sig_id_;
@@ -602,7 +599,7 @@ double SbpGraph::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id) co
     // diff: -4.65661e-10, relative diff:2.09279e-16
     // Therefore, we use a threshold to filter out such fake true detection to
     // avoid unlimited search.
-    if (original_cost * float_deviation_minus > min_cost) { return min_cost - original_cost; }
+    if (original_cost * kFloatDeviationMinus > min_cost) { return min_cost - original_cost; }
   }
   return 0.0;
 }

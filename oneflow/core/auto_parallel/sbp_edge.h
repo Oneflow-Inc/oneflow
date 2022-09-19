@@ -19,6 +19,7 @@ limitations under the License.
 #include <assert.h>
 #include <algorithm>
 #include <unordered_set>
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
@@ -29,6 +30,8 @@ limitations under the License.
 namespace oneflow {
 namespace auto_parallel {
 
+// An edge structure to deal with the SBP strategy.
+// Please see SbpGraph for the whole algorithm and introduction.
 class SbpEdge final {
   /* There are 3 types of edges:
    * 1. start_node_ -> end_node_
@@ -50,10 +53,7 @@ class SbpEdge final {
   // Deconstructor
   ~SbpEdge();
 
-  SbpEdge(const SbpEdge&) = delete;
-  SbpEdge& operator=(SbpEdge&) = delete;
-  SbpEdge(SbpEdge&&) = delete;
-  SbpEdge& operator=(SbpEdge&&) = delete;
+  OF_DISALLOW_COPY_AND_MOVE(SbpEdge);
   bool operator==(const SbpEdge& other) { return this == &other; }
 
   // Update copy cost for type 2 and 3

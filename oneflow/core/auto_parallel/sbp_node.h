@@ -32,6 +32,8 @@ namespace auto_parallel {
 
 class SbpEdge;
 
+// A node structure to deal with the SBP strategy.
+// Please see SbpGraph for the whole algorithm and introduction.
 class SbpNode final {
  public:
   // default constructor
@@ -42,10 +44,7 @@ class SbpNode final {
 
   ~SbpNode();
 
-  SbpNode(const SbpNode&) = delete;
-  SbpNode& operator=(SbpNode&) = delete;
-  SbpNode(SbpNode&&) = delete;
-  SbpNode& operator=(SbpNode&&) = delete;
+  OF_DISALLOW_COPY_AND_MOVE(SbpNode);
   bool operator==(const SbpNode& other) { return this == &other; }
 
   // another node point to this node

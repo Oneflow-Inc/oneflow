@@ -22,10 +22,14 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/sbp_node.h"
 #include "oneflow/core/auto_parallel/sbp_edge.h"
 #include "oneflow/core/auto_parallel/algorithm_util.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 namespace auto_parallel {
 
+// A graph structure to deal with the SBP strategy.
+// It contains a lot of eliminations to shrink the topography structure of the original graph.
+// Furthermore, it contains some adjustment tricks for search a good strategy in the shrunk graph.
 class SbpGraph final {
  public:
   // Constructor
@@ -34,10 +38,7 @@ class SbpGraph final {
   // Deconstructor
   ~SbpGraph();
 
-  SbpGraph(const SbpGraph&) = delete;
-  SbpGraph& operator=(SbpGraph&) = delete;
-  SbpGraph(SbpGraph&&) = delete;
-  SbpGraph& operator=(SbpGraph&&) = delete;
+  OF_DISALLOW_COPY_AND_MOVE(SbpGraph);
   bool operator==(const SbpGraph& other) { return this == &other; }
 
   // Randomly assign a SbpSignature strategy

@@ -22,7 +22,7 @@ namespace oneflow {
 namespace auto_parallel {
 
 // Judge whether we need the same SBP for both producer and consumer
-bool IsSameSbp(const OpNode* consumer, const std::string& ibn);
+bool RequireSameSbp(const OpNode* consumer, const std::string& ibn);
 
 }  // namespace auto_parallel
 }  // namespace oneflow

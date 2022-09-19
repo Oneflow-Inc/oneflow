@@ -20,17 +20,17 @@ namespace auto_parallel {
 
 namespace {
 // A static function for initialization of log_2 mapping
-std::unordered_map<kBinarySetEntryType, int32_t> InitLog2() {
-  std::unordered_map<kBinarySetEntryType, int32_t> log_2;
-  for (int32_t i = 0; i < 8 * sizeof(kBinarySetEntryType); i++) {
-    log_2[(kBinarySetEntryType)(1 << i)] = i;
+std::unordered_map<BinarySetEntryType, int32_t> InitLog2() {
+  std::unordered_map<BinarySetEntryType, int32_t> log_2;
+  for (int32_t i = 0; i < 8 * sizeof(BinarySetEntryType); i++) {
+    log_2[static_cast<BinarySetEntryType>(1 << i)] = i;
   }
   return log_2;
 }
 
 // Initialization of log_2 mapping
 // Take log2 of a integer value: 2^n -> n.
-const std::unordered_map<kBinarySetEntryType, int32_t> log_2 = InitLog2();
+const std::unordered_map<BinarySetEntryType, int32_t> log_2 = InitLog2();
 
 }  // namespace
 
@@ -95,7 +95,7 @@ void BinarySet::IntersectionTo(const BinarySet& bs, BinarySet& i) const {
 int32_t BinarySet::Total() const {
   int32_t t = 0;
   for (int32_t k = 0; k < binary_set_values_.size(); k++) {
-    kBinarySetEntryType bsv = binary_set_values_[k];
+    BinarySetEntryType bsv = binary_set_values_[k];
     bsv = (bsv & 0x5555555555555555) + ((bsv >> 1) & 0x5555555555555555);
     bsv = (bsv & 0x3333333333333333) + ((bsv >> 2) & 0x3333333333333333);
     bsv = (bsv & 0x0F0F0F0F0F0F0F0F) + ((bsv >> 4) & 0x0F0F0F0F0F0F0F0F);
@@ -119,8 +119,8 @@ void BinarySet::Output(std::vector<int32_t>& out) const {
 void BinarySet::QuickOutput(std::vector<int32_t>& out) const {
   out.clear();
   for (int32_t i = 0; i < binary_set_values_.size(); i++) {
-    kBinarySetEntryType x = binary_set_values_[i];
-    kBinarySetEntryType y = 0;
+    BinarySetEntryType x = binary_set_values_[i];
+    BinarySetEntryType y = 0;
     while (x) {
       y = x;
       x &= x - 1;

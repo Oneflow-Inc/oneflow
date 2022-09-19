@@ -196,7 +196,7 @@ void SbpCollector::InitializeCopyCostFromProxy2Consumer(
 
     // check is_mutable in consumer
     OpNode* consumer = sbp_node_consumer->op_node_;
-    CHECK(!IsSameSbp(consumer, ibn)) << "Create a proxy for an unsuitable consumer!\n";
+    CHECK(!RequireSameSbp(consumer, ibn)) << "Create a proxy for an unsuitable consumer!\n";
 
     // Connect sbp proxy and consumer
     sbp_proxy->PointTo(sbp_node_consumer);
@@ -253,7 +253,7 @@ void SbpCollector::ProxySbpCandidate(const OpGraph& op_graph,
     if (IsClassRegistered<int32_t, DisableInputBoxingGroup>(op_type_case)) { return; }
     for (const std::string& ibn : node->op().input_bns()) {
       // Skip those blobs who enforce same SBP.
-      if (IsSameSbp(node, ibn)) {
+      if (RequireSameSbp(node, ibn)) {
         // Enforcing same SBP. Can not collect sbp from this blob.
         continue;
       }

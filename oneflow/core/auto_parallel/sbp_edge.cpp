@@ -248,9 +248,9 @@ void SbpEdge::InitializeCopyCost(const std::string& ibn, bool compute_cost,
     // SbpParallel. Use producer or op_node?
     const BlobDesc& logical_blob_desc = producer->LogicalBlobDesc4Lbi(lbi);
     const std::string& obn = *CHECK_JUST(producer->op().obn4lbi(lbi));
-    // If we are deciding whether we need the wait time, then make is_same_sbp true.
+    // If we are deciding whether we need the wait time, then make require_same_sbp true.
     // B->S cause cudaEventSynchronize in current implementation.
-    bool is_same_sbp = (!compute_cost) || IsSameSbp(consumer, ibn);
+    bool require_same_sbp = (!compute_cost) || RequireSameSbp(consumer, ibn);
     int32_t consumer_sbp_size = end_node_->sbp_sig_list_.size();
     LazyMode::Guard enable_lazy_mode(true);
 
@@ -272,7 +272,7 @@ void SbpEdge::InitializeCopyCost(const std::string& ibn, bool compute_cost,
         // compute copy cost for a specific logical blob
         double curr_edge_cost = CHECK_JUST(ComputeCopyCostWithMiddleNodes(
             sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
-            consumer_parallel_desc, is_same_sbp));
+            consumer_parallel_desc, require_same_sbp));
         if (curr_edge_cost < GetValidMaxCopyCost()) {
           cost_[sbp_id_producer][sbp_id_consumer] +=
               CHECK_JUST(producer->op().GetOpTimeShape())->elem_cnt() * curr_edge_cost;

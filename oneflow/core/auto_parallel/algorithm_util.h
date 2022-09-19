@@ -74,8 +74,8 @@ void InverseOrder(const std::vector<int32_t>& order, std::vector<int32_t>& inver
 
 }  // namespace auto_parallel
 
-static const double float_deviation_minus = 0.9999999;
-static const double float_deviation_plus = 1.0000001;
+static const double kFloatDeviationMinus = 0.9999999;
+static const double kFloatDeviationPlus = 1.0000001;
 
 }  // namespace oneflow
 

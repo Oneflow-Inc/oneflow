@@ -24,7 +24,7 @@ namespace oneflow {
 namespace auto_parallel {
 
 // Judge whether we need the same SBP for both producer and consumer
-bool IsSameSbp(const OpNode* consumer, const std::string& ibn) {
+bool RequireSameSbp(const OpNode* consumer, const std::string& ibn) {
   // is mutable
   const auto& input_blob_modifier_ = consumer->op().InputBlobModifier4Ibn(ibn);
   if (input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable()) { return true; }

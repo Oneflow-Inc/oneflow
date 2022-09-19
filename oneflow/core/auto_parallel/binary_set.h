@@ -26,7 +26,7 @@ namespace auto_parallel {
 
 // log_2_ index only support 32-bit int. Don't know why.
 // Don't have any other bugs for unsigned int.
-using kBinarySetEntryType = unsigned int;
+using BinarySetEntryType = unsigned int;
 
 class BinarySet {
  public:
@@ -66,12 +66,12 @@ class BinarySet {
   friend struct BinarySetHasher;
   // binary_set_values_ contains a vector of 64-bit or 32-bit int.
   // Each bit means whether an entry is in the set
-  std::vector<kBinarySetEntryType> binary_set_values_;
+  std::vector<BinarySetEntryType> binary_set_values_;
 
   int32_t size_of_set_ = -1;
 
   // total bits of the entry type in vector binary_set_values_.
-  static constexpr int32_t bit_entry_type_ = 8 * sizeof(kBinarySetEntryType);
+  static constexpr int32_t bit_entry_type_ = 8 * sizeof(BinarySetEntryType);
 };
 
 struct BinarySetHasher {
@@ -81,7 +81,7 @@ struct BinarySetHasher {
 
     size_t h = 0;
     for (int i = 0; i < bs.binary_set_values_.size(); i++) {
-      h = HashCombine(h, hash<kBinarySetEntryType>()(bs.binary_set_values_[i]));
+      h = HashCombine(h, hash<BinarySetEntryType>()(bs.binary_set_values_[i]));
     }
     return h;
   };

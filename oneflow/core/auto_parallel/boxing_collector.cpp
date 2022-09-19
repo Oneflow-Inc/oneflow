@@ -849,9 +849,9 @@ Maybe<void> BoxingCollector::Generate1Combination4DiffHierarchy(
 
       min_path_length = path_length;
       // Find a candidate with small cost
-      if (curr_cost < min_cost * float_deviation_plus) {
+      if (curr_cost < min_cost * kFloatDeviationPlus) {
         // Find a smaller cost, clear the previous path.
-        if (curr_cost < min_cost * float_deviation_minus) {
+        if (curr_cost < min_cost * kFloatDeviationMinus) {
           min_cost = curr_cost;
           diag_nodes.clear();
         }
