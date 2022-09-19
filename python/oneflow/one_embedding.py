@@ -432,7 +432,8 @@ class Embedding(Module):
         beta2 = param_group["betas"][1]
         epsilon = param_group["eps"]
         do_bias_correction = param_group["do_bias_correction"]
-        amsgrad = param_group["amsgrad"]  # one_embedding not support amsgrad
+        amsgrad = param_group["amsgrad"]
+        assert amsgrad == False, "one_embedding's adam not support amsgrad"
         state_initializer = [make_constant_initializer(0), make_constant_initializer(0)]
         (
             cur_rank_num_unique,
