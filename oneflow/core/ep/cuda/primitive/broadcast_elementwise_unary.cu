@@ -275,18 +275,16 @@ void DispatchNumDims(CudaStream* stream, size_t pack_size, size_t num_dims, cons
        continuous_output, attr0, attr1);
 }
 
-bool IsContiguous(int64_t* dims, int64_t* strides, size_t num_dims){
-  bool is_contiguous= true;
+bool IsContiguous(int64_t* dims, int64_t* strides, size_t num_dims) {
+  bool is_contiguous = true;
   for (int i = num_dims - 1; i >= 0; i--) {
     if ((i == num_dims - 1 && strides[i] != 1)
-        || (i != num_dims - 1
-            && strides[i]
-                   != strides[i + 1] * dims[i + 1])) {
+        || (i != num_dims - 1 && strides[i] != strides[i + 1] * dims[i + 1])) {
       is_contiguous = false;
       break;
     }
   }
-  return is_contiguous; 
+  return is_contiguous;
 }
 
 template<UnaryOp op, typename Src, typename Dst>
@@ -295,12 +293,14 @@ void LaunchWithSimplified(CudaStream* stream, size_t simplified_num_dims,
                           const Src* src, int64_t* simplified_dst_dims,
                           int64_t* simplified_dst_strides, Dst* dst, Scalar attr0, Scalar attr1) {
   CHECK_LE(simplified_num_dims, kMaxNumDims);
-  bool continuous_output = IsContiguous(simplified_dst_dims, simplified_dst_strides, simplified_num_dims); 
+  bool continuous_output =
+      IsContiguous(simplified_dst_dims, simplified_dst_strides, simplified_num_dims);
   bool src_enable_pack = (simplified_src_strides[simplified_num_dims - 1] == 1);
   bool dst_enable_pack = (simplified_dst_strides[simplified_num_dims - 1] == 1);
   size_t pack_size = 1;
   if (src_enable_pack && dst_enable_pack) {
-    pack_size = GetPackSize<kMaxPackSize, Src, Dst>(simplified_num_dims, simplified_src_dims, src, simplified_dst_dims, dst);
+    pack_size = GetPackSize<kMaxPackSize, Src, Dst>(simplified_num_dims, simplified_src_dims, src,
+                                                    simplified_dst_dims, dst);
     simplified_src_dims[simplified_num_dims - 1] /= pack_size;
     simplified_dst_dims[simplified_num_dims - 1] /= pack_size;
     for (int i = 0; i < simplified_num_dims - 1; i++) {
