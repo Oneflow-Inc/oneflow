@@ -261,7 +261,7 @@ class KernelLaunchState final : public user_op::OpKernelState {
  private:
   mlir::MLIRContext mlir_ctx_;
   mlir::OwningOpRef<mlir::ModuleOp> module_;
-  bool is_initalized_;
+  bool is_initalized_ = false;
   std::shared_ptr<KernelLaunchComputeContext> okl_ctx_;
   std::shared_ptr<JIT_Engine> engine_;
   const user_op::OpKernel* kernel_{};
