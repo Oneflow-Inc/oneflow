@@ -406,7 +406,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
           // LOG(ERROR) << "rank id " << rank_id << " plan " << sub_plan.DebugString();
           Singleton<CtrlClient>::Get()->PushKV(rank_plan_name, sub_plan);
           tc_sub_plan->Count(rank_plan_name + " PushKV", 1);
-          // LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " push plan " << rank_plan_name << " size " << sub_plan.ByteSizeLong();
+          VLOG(1) << "[elapsed]rank id " << GlobalProcessCtx::Rank() << " push plan " << rank_plan_name << " size " << sub_plan.ByteSizeLong();
           counter.Decrease();
         });
       }
