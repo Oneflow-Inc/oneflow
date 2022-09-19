@@ -61,6 +61,15 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFmod, float16, float16> {
 };
 
 template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFmod, bfloat16, bfloat16> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bfloat16 operator()(bfloat16 src0, bfloat16 src1) const {
+    return std::fmod(src0, src1);
+  }
+};
+
+template<>
 struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorDiv, float, float> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
@@ -82,6 +91,15 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorDiv, float16, float16> {
 
   OF_DEVICE_FUNC float16 operator()(float16 src0, float16 src1) const {
     return static_cast<float16>(std::floor(static_cast<float>(src0) / static_cast<float>(src1)));
+  }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorDiv, bfloat16, bfloat16> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bfloat16 operator()(bfloat16 src0, bfloat16 src1) const {
+    return std::floor(src0 / src1);
   }
 };
 
@@ -118,6 +136,16 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorMod, float16, float16> {
 
   OF_DEVICE_FUNC float16 operator()(float16 src0, float16 src1) const {
     return static_cast<float16>(float_functor(static_cast<float>(src0), static_cast<float>(src1)));
+  }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorMod, bfloat16, bfloat16> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {}
+  BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorMod, float, float> float_functor;
+
+  OF_DEVICE_FUNC bfloat16 operator()(bfloat16 src0, bfloat16 src1) const {
+    return static_cast<bfloat16>(float_functor(static_cast<float>(src0), static_cast<float>(src1)));
   }
 };
 
