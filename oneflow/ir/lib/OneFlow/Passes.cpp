@@ -978,7 +978,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
           ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_IR_PRINTING", false);
       enable_ir_printing) {
     context->disableMultithreading(enable_ir_printing);
-    if (enable_ir_printing) { pm.enableIRPrinting(); }
+    pm.enableIRPrinting();
   }
   AddLowerToLinalgMemRefPasses(pm);
   pm.addNestedPass<func::FuncOp>(
