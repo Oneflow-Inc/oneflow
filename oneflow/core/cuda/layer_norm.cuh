@@ -1331,13 +1331,12 @@ __global__ void LayerNormGradBlockUncachedImpl(LOAD_X load_x, LOAD_SCALED_DY loa
 }
 
 template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType,
-         int pack_size>
+         int pack_size, int block_size>
 inline cudaError_t LaunchLayerNormGradBlockUncachedImpl(cudaStream_t stream, LOAD_X load_x,
                                                         LOAD_SCALED_DY load_scaled_dy, STORE store,
                                                         const ComputeType* mean,
                                                         const ComputeType* inv_variance,
                                                         const int64_t rows, const int64_t cols) {
-  constexpr int block_size = 1024;
   constexpr int waves = 32;
   int grid_dim_x;
   {
@@ -1353,6 +1352,58 @@ inline cudaError_t LaunchLayerNormGradBlockUncachedImpl(cudaStream_t stream, LOA
   return cudaPeekAtLastError();
 }
 
+template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType,
+         int pack_size>
+inline cudaError_t TryDispatchLaunchLayerNormGradBlockUncachedImplBlockSize(
+    cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy, STORE store,
+    const ComputeType* mean, const ComputeType* inv_variance, const int64_t rows,
+    const int64_t cols) {
+  int max_active_blocks = 0;
+  constexpr int block_size_conf_1 = 1024;
+  {
+    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &max_active_blocks,
+        LayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
+                                       block_size_conf_1>,
+        block_size_conf_1, 0);
+    if (max_active_blocks > 0) {
+      return LaunchLayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType,
+                                                  pack_size, block_size_conf_1>(
+          stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
+    }
+  }
+  constexpr int block_size_conf_2 = 512;
+  {
+    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &max_active_blocks,
+        LayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
+                                       block_size_conf_2>,
+        block_size_conf_2, 0);
+    if (max_active_blocks > 0) {
+      return LaunchLayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType,
+                                                  pack_size, block_size_conf_2>(
+          stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
+    }
+  }
+  constexpr int block_size_conf_3 = 256;
+  {
+    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &max_active_blocks,
+        LayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
+                                       block_size_conf_3>,
+        block_size_conf_2, 0);
+    if (max_active_blocks > 0) {
+      return LaunchLayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType,
+                                                  pack_size, block_size_conf_3>(
+          stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
+    }
+  }
+  constexpr int block_size_conf_4 = 128;
+  return LaunchLayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
+                                              block_size_conf_4>(
+      stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
+}
+
 template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
 struct DispatchLayerNormGradBlockUncachedImplPackSize {
   cudaError_t operator()(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
@@ -1361,10 +1412,12 @@ struct DispatchLayerNormGradBlockUncachedImplPackSize {
     if (cols % 2 == 0 && CanPackAs<LOAD_X>(load_x, 2)
         && CanPackAs<LOAD_SCALED_DY>(load_scaled_dy, 2) && CanPackAs<STORE>(store, 2)
         && cols > kWarpSize) {
-      return LaunchLayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, 2>(
+      return TryDispatchLaunchLayerNormGradBlockUncachedImplBlockSize<LOAD_X, LOAD_SCALED_DY, STORE,
+                                                                      ComputeType, 2>(
           stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
     } else {
-      return LaunchLayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, 1>(
+      return TryDispatchLaunchLayerNormGradBlockUncachedImplBlockSize<LOAD_X, LOAD_SCALED_DY, STORE,
+                                                                      ComputeType, 1>(
           stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
     }
   }
