@@ -23,6 +23,7 @@ limitations under the License.
 namespace mlir {
 namespace oneflow {
 void CheckEnableIRPrinting(mlir::PassManager& pm);
+// sanitize identifier to make the special name allowed as a legal token
 StringRef SanitizeIdentifier(StringRef name, SmallString<16>& buffer,
                              StringRef allowedPunctChars = "$._", bool allowTrailingDigit = true);
 }  // namespace oneflow
