@@ -908,6 +908,20 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatible
 }
 
 Maybe<void> LazyJobBuildAndInferCtx::Complete() {
+  // cpu job to cuda
+  for (auto& op : *mut_job()->mutable_net()->mutable_op()) {
+    // if (op.name().rfind("alexnet", 0) == 0) {
+    //   *op.mutable_device_tag() = "cpu";
+    // }
+    *op.mutable_device_tag() = "cuda";
+  }
+  for (auto& op_pl : *mut_job()->mutable_placement()->mutable_placement_group()) {
+    *op_pl.mutable_parallel_conf()->mutable_device_tag() = "cuda";
+  }
+  for (auto& blob_pl : *mut_job()->mutable_placement()->mutable_blob_placement_group()) {
+    *blob_pl.mutable_parallel_conf()->mutable_device_tag() = "cuda";
+  }
+
   CHECK_GT_OR_RETURN(job().net().op_size(), 0)
       << " Sorry, nn.Graph need at least 1 op in net, but get 0 now.";
   CHECK_NOTNULL(Singleton<JobDesc>::Get());
