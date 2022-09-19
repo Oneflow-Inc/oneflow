@@ -544,7 +544,7 @@ class Embedding(Module):
 
 
 def make_device_mem_store_options(
-    persistent_path, capacity, size_factor=1, physical_block_size=512
+    persistent_path, capacity, size_factor=1, physical_block_size=4096
 ):
     """make GPU only store_options param of MultiTableEmbedding
 
@@ -552,7 +552,7 @@ def make_device_mem_store_options(
         persistent_path (str, list): persistent storage path of Embedding. If passed a str, current rank Embedding will be saved in path/rank_id-num_ranks path. If passed a list, the list length must equals num_ranks, each elem of list represent the path of rank_id Embedding.
         capacity (int): total capacity of Embedding
         size_factor (int, optional): store size factor of embedding_dim, if SGD update, and momentum = 0, should be 1, if momentum > 0, it should be 2. if Adam, should be 3. Defaults to 1.
-        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512.
+        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 4096.
 
     Returns:
         dict: GPU only store_options param of MultiTableEmbedding
@@ -587,7 +587,7 @@ def make_cached_ssd_store_options(
     persistent_path,
     capacity=None,
     size_factor=1,
-    physical_block_size=512,
+    physical_block_size=4096,
     host_cache_budget_mb=0,
 ):
     """make SSD use GPU and host as cache store_options param of MultiTableEmbedding. If cache_budget_mb > 0 and host_cache_budget_mb > 0, use GPU and host memory as multi-level cache.
@@ -597,7 +597,7 @@ def make_cached_ssd_store_options(
         persistent_path (str, list): persistent storage path of Embedding, must use fast SSD because of frequently random disk access during training. If passed a str, current rank Embedding will be saved in path/rank_id-num_ranks path. If passed a list, the list length must equals num_ranks, each elem of list represent the path of rank_id Embedding.
         capacity (int): total capacity of Embedding
         size_factor (int, optional): store size factor of embedding_dim, if SGD update, and momentum = 0, should be 1, if momentum > 0, it should be 2. if Adam, should be 3. Defaults to 1.
-        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512.
+        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 4096.
         host_cache_budget_mb (int): the MB budget of host memory as cache per rank. Defaults to 0.
 
     Returns:
@@ -654,7 +654,7 @@ def make_cached_ssd_store_options(
 
 
 def make_cached_host_mem_store_options(
-    cache_budget_mb, persistent_path, capacity, size_factor=1, physical_block_size=512,
+    cache_budget_mb, persistent_path, capacity, size_factor=1, physical_block_size=4096,
 ):
     """make host use GPU as cache store_options param of MultiTableEmbedding
 
@@ -663,7 +663,7 @@ def make_cached_host_mem_store_options(
         persistent_path (str, list): persistent storage path of Embedding. If passed a str, current rank Embedding will be saved in path/rank_id-num_ranks path. If passed a list, the list length must equals num_ranks, each elem of list represent the path of rank_id Embedding.
         capacity (int): total capacity of Embedding
         size_factor (int, optional): store size factor of embedding_dim, if SGD update, and momentum = 0, should be 1, if momentum > 0, it should be 2. if Adam, should be 3. Defaults to 1.
-        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512.
+        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 4096.
 
     Returns:
         dict: host use GPU as cache store_options param of MultiTableEmbedding
@@ -1174,7 +1174,7 @@ class Ftrl(Optimizer):
 
 
 def make_persistent_table_reader(
-    paths, snapshot_name, key_type, value_type, storage_dim, physical_block_size=512,
+    paths, snapshot_name, key_type, value_type, storage_dim, physical_block_size=4096,
 ):
     r"""Creates a reader for reading persistent table.
 
@@ -1184,7 +1184,7 @@ def make_persistent_table_reader(
         key_type (flow.dtype): the data type of key
         value_type (flow.dtype): the data type of value
         storage_dim (int): number of elements in each value
-        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512
+        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 4096
     """
     return PersistentTableReader(
         paths,
@@ -1198,7 +1198,7 @@ def make_persistent_table_reader(
 
 
 def make_persistent_table_writer(
-    paths, snapshot_name, key_type, value_type, storage_dim, physical_block_size=512,
+    paths, snapshot_name, key_type, value_type, storage_dim, physical_block_size=4096,
 ):
     r"""Creates a writer for writing persistent table.
 
@@ -1208,7 +1208,7 @@ def make_persistent_table_writer(
         key_type (flow.dtype): the data type of key
         value_type (flow.dtype): the data type of value
         storage_dim (int): number of elements in each value
-        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512
+        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 4096
     """
     return PersistentTableWriter(
         paths,
