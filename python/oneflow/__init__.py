@@ -388,6 +388,20 @@ from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
 from oneflow.ops.stateful_ops import StatefulOp as stateful_op
 
+# autocast
+from oneflow._oneflow_internal import (
+    is_autocast_enabled,
+    set_autocast_enabled,
+    get_autocast_gpu_dtype,
+    get_autocast_cpu_dtype,
+    set_autocast_gpu_dtype,
+    set_autocast_cpu_dtype,
+    is_autocast_cache_enabled,
+    set_autocast_cache_enabled,
+    clear_autocast_cache,
+)
+from oneflow.amp.autocast_mode import *
+
 from . import (
     autograd,
     distributed,

@@ -746,6 +746,44 @@ class LayerNormAffineFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class GroupNormFunctor {
+ public:
+  GroupNormFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("group_norm")
+                         .Input("x")
+                         .Output("y")
+                         .Output("mean")
+                         .Output("inv_variance")
+                         .Attr("affine", false)
+                         .Build());
+    affine_op_ = CHECK_JUST(one::OpBuilder("group_norm")
+                                .Input("x")
+                                .Input("gamma")
+                                .Input("beta")
+                                .Output("y")
+                                .Output("mean")
+                                .Output("inv_variance")
+                                .Attr("affine", true)
+                                .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<one::Tensor>& gamma, const Optional<one::Tensor>& beta,
+                           const bool affine, const int32_t num_groups,
+                           const double& epsilon) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_groups", "epsilon");
+    attrs.SetAllAttrs(num_groups, epsilon);
+    if (affine) {
+      return OpInterpUtil::Dispatch<Tensor>(*affine_op_, {x, JUST(gamma), JUST(beta)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> affine_op_;
+};
+
 class PixelShuffleFunctor {
  public:
   PixelShuffleFunctor() {}
@@ -909,6 +947,44 @@ class AdaptiveAvgPool3DFunctor : public AdaptivePoolNDFunctor {
   }
 };
 
+class AdaptiveMaxPoolBaseFunctor {
+ public:
+  AdaptiveMaxPoolBaseFunctor() = default;
+  virtual ~AdaptiveMaxPoolBaseFunctor() = default;
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
+                                const std::vector<int64_t>& output_size) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("output_size");
+    attrs.SetAllAttrs(output_size);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class AdaptiveMaxPool1DFunctor : public AdaptiveMaxPoolBaseFunctor {
+ public:
+  AdaptiveMaxPool1DFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("adaptive_max_pool1d").Input("x").Output("y").Output("index").Build());
+  }
+};
+
+class AdaptiveMaxPool2DFunctor : public AdaptiveMaxPoolBaseFunctor {
+ public:
+  AdaptiveMaxPool2DFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("adaptive_max_pool2d").Input("x").Output("y").Output("index").Build());
+  }
+};
+
+class AdaptiveMaxPool3DFunctor : public AdaptiveMaxPoolBaseFunctor {
+ public:
+  AdaptiveMaxPool3DFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("adaptive_max_pool3d").Input("x").Output("y").Output("index").Build());
+  }
+};
 class LossFunctorBase {
  public:
   Maybe<Tensor> apply_reduction(const Maybe<Tensor>& x, const std::string& reduction) const {
@@ -4121,6 +4197,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedMatmulBiasAddReluDropoutFunctor>("FusedMatmulBiasAddReluDropout");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
+  m.add_functor<impl::GroupNormFunctor>("GroupNorm");
   m.add_functor<impl::TFAvgPool2DFunctor>("TFAvgPool2D");
   m.add_functor<impl::MaxPool1DFunctor>("MaxPool1D");
   m.add_functor<impl::MaxPool2DFunctor>("MaxPool2D");
@@ -4128,6 +4205,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
+  m.add_functor<impl::AdaptiveMaxPool1DFunctor>("AdaptiveMaxPool1D");
+  m.add_functor<impl::AdaptiveMaxPool2DFunctor>("AdaptiveMaxPool2D");
+  m.add_functor<impl::AdaptiveMaxPool3DFunctor>("AdaptiveMaxPool3D");
   m.add_functor<impl::L1LossFunctor>("L1Loss");
   m.add_functor<impl::MseLossFunctor>("MseLoss");
   m.add_functor<impl::KLDivLossFunctor>("KLDivLoss");
