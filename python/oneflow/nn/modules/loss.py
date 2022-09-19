@@ -124,10 +124,20 @@ class CrossEntropyLoss(_WeightedLoss):
     (see below).
 
     Args:
+        ignore_index (int, optional): Specifies a target value that is ignored and does not
+            contribute to the input gradient. When ``reduction`` is ``mean``, the loss is averaged
+            over non-ignored targets. Note that ``ignore_index`` is only applicable when the target
+            contains class indices.
         reduction (string, optional): Specifies the reduction to apply to the output:
             ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will
             be applied, ``'mean'``: the weighted mean of the output is taken,
             ``'sum'``: the output will be summed. Default: ``'mean'``
+        label_smoothing (float, optinoal): A float in [0.0, 1.0]. Specifies the amount
+            of smoothing when computing the loss, where 0.0 means no smoothing.
+            The targets become a mixture of the original ground truth and a uniform
+            distribution as described in `Rethinking the Inception Architecture for Computer Vision <https://arxiv.org/abs/1512.00567>`_.
+            Default: :math:`0.0`.
+
 
     For example:
 
@@ -150,6 +160,12 @@ class CrossEntropyLoss(_WeightedLoss):
         >>> out_mean = flow.nn.CrossEntropyLoss(reduction="mean")(input, target)
         >>> out_mean
         tensor(0.7590, dtype=oneflow.float32)
+        >>> out_ignore_0 = flow.nn.CrossEntropyLoss(reduction="none", ignore_index=0)(input, target)
+        >>> out_ignore_0
+        tensor([0.0000, 1.1167, 0.3583], dtype=oneflow.float32)
+        >>> out_label_smoothing = flow.nn.CrossEntropyLoss(reduction="none", label_smoothing=0.5)(input, target)
+        >>> out_label_smoothing
+        tensor([1.0586, 1.1654, 0.8864], dtype=oneflow.float32)
 
     """
 
@@ -158,13 +174,24 @@ class CrossEntropyLoss(_WeightedLoss):
         weight: Optional[Tensor] = None,
         ignore_index: int = -100,
         reduction: str = "mean",
+        label_smoothing: float = 0.0,
     ) -> None:
         super(CrossEntropyLoss, self).__init__(weight, reduction)
         self.ignore_index = ignore_index
+        self.label_smoothing = label_smoothing
+        if self.label_smoothing < 0.0 or self.label_smoothing > 1.0:
+            raise ValueError(
+                "label_smoothing must be between 0.0 and 1.0. Got: ", label_smoothing
+            )
 
     def forward(self, input, target):
         return flow._C.cross_entropy(
-            input, target, self.weight, self.ignore_index, self.reduction
+            input,
+            target,
+            self.weight,
+            self.ignore_index,
+            self.reduction,
+            self.label_smoothing,
         )
 
 
@@ -423,7 +450,12 @@ class KLDivLoss(_Loss):
     """
 
     def __init__(self, reduction: str = "mean", log_target: bool = False) -> None:
-        super(KLDivLoss, self).__init__(reduction)
+        if reduction == "batchmean":
+            super(KLDivLoss, self).__init__("sum")
+            self.reduction = "batchmean"
+        else:
+            super(KLDivLoss, self).__init__(reduction)
+
         self.log_target = log_target
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
