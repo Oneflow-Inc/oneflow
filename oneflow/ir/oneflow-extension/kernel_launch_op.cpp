@@ -39,7 +39,6 @@ limitations under the License.
 #include "mlir/ExecutionEngine/MemRefUtils.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 
-
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TargetSelect.h"
 
