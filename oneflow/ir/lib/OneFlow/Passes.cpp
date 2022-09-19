@@ -153,7 +153,6 @@ ModuleOp GetModuleOpFromJobBodyOp(Operation* op) {
 }
 
 func::FuncOp GetOrInsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operation* op) {
-  func::FuncOp func;
   auto loc = op->getLoc();
   auto module = GetModuleOpFromJobBodyOp(op);
   if (!module) {
@@ -168,7 +167,7 @@ func::FuncOp GetOrInsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operat
   auto func_name = op->getAttr("op_name").cast<StringAttr>().strref();
   auto func_type =
       rewriter.getFunctionType(TypeRange(op->getOperandTypes()), TypeRange(op->getResultTypes()));
-  func = rewriter.create<func::FuncOp>(loc, func_name, func_type);
+  func::FuncOp func = rewriter.create<func::FuncOp>(loc, func_name, func_type);
   func.setSymVisibilityAttr(rewriter.getStringAttr("public"));
   func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
   func.getBody().emplaceBlock();
