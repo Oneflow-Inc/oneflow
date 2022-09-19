@@ -281,10 +281,14 @@ set(FMT_URL https://github.com/fmtlib/fmt/archive/e9ca7ea472a387639cef65a93037af
 use_mirror(VARIABLE FMT_URL URL ${FMT_URL})
 set(FMT_MD5 f126df4cffec775e118837db0c64b920)
 
+# set(KINETO_URL
+#     https://github.com/pytorch/kineto/archive/ff8dba20499a660650632952be76450bd70a52a6.zip)
 set(KINETO_URL
     https://github.com/pytorch/kineto/archive/1d7ad5d078a9481f9bbaed9e6e797e214a34a09d.zip)
 use_mirror(VARIABLE KINETO_URL URL ${KINETO_URL})
-set(KINETO_MD5 f9b550591b3899fb267270c19484933f)
+# set(KINETO_MD5 f9b550591b3899fb267270c19484933f)
+set(KINETO_MD5 c8eae8522fe012e317a6691fa3d113c3)
+
 
 include(cuda)
 add_subdirectory(external)
