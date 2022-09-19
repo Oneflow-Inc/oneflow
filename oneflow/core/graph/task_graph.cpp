@@ -851,7 +851,7 @@ void TaskGraph::LogStat() {
     }
   });
   for (auto & pair : node_type2cnt) {
-    VLOG(1) << " task type " << TaskType_Name(pair.first) << " count " << pair.second;
+    VLOG(1) << "[elapsed] task type " << TaskType_Name(pair.first) << " count " << pair.second;
   }
 }
 
