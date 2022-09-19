@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/ep/include/primitive/matmul.h"
@@ -43,9 +42,8 @@ __device__ __forceinline__ double Add(double* address, double val) {
 #endif
 }
 
-template<typename scalar_t>
-__device__ scalar_t bilinear_interpolate(const scalar_t* in, int height, int width, scalar_t h,
-                                         scalar_t w) {
+template<typename T>
+__device__ T bilinear_interpolate(const T* in, int height, int width, T h, T w) {
   if (h <= -1 || height <= h || w <= -1 || width <= w) { return 0; }
 
   int h_low = floor(h);
@@ -53,22 +51,22 @@ __device__ scalar_t bilinear_interpolate(const scalar_t* in, int height, int wid
   int h_high = h_low + 1;
   int w_high = w_low + 1;
 
-  scalar_t lh = h - h_low;
-  scalar_t lw = w - w_low;
-  scalar_t hh = 1 - lh, hw = 1 - lw;
+  T lh = h - h_low;
+  T lw = w - w_low;
+  T hh = 1 - lh, hw = 1 - lw;
 
-  scalar_t v1 = 0;
+  T v1 = 0;
   if (h_low >= 0 && w_low >= 0) v1 = in[h_low * width + w_low];
-  scalar_t v2 = 0;
+  T v2 = 0;
   if (h_low >= 0 && w_high <= width - 1) v2 = in[h_low * width + w_high];
-  scalar_t v3 = 0;
+  T v3 = 0;
   if (h_high <= height - 1 && w_low >= 0) v3 = in[h_high * width + w_low];
-  scalar_t v4 = 0;
+  T v4 = 0;
   if (h_high <= height - 1 && w_high <= width - 1) v4 = in[h_high * width + w_high];
 
-  scalar_t w1 = hh * hw, w2 = hh * lw, w3 = lh * hw, w4 = lh * lw;
+  T w1 = hh * hw, w2 = hh * lw, w3 = lh * hw, w4 = lh * lw;
 
-  scalar_t val = (w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4);
+  T val = (w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4);
   return val;
 }
 
@@ -99,9 +97,9 @@ __device__ T DeformableIm2ColBilinear(const T* bottom_data, const int data_width
   return val;
 }
 
-template<typename scalar_t>
-__device__ scalar_t get_coordinate_weight(const scalar_t* im_data, int height, int width,
-                                          scalar_t y, scalar_t x, bool is_y_direction) {
+template<typename T>
+__device__ T get_coordinate_weight(const T* im_data, int height, int width, T y, T x,
+                                   bool is_y_direction) {
   int y_l = floor(y);
   int x_l = floor(x);
   int y_h = y_l + 1;
@@ -112,17 +110,17 @@ __device__ scalar_t get_coordinate_weight(const scalar_t* im_data, int height, i
   bool valid_x_l = 0 <= x_l && x_l < width;
   bool valid_x_h = 0 <= x_h && x_h < width;
 
-  scalar_t zero = 0;
-  scalar_t v_yx = (valid_y_l && valid_x_l) ? im_data[y_l * width + x_l] : zero;
-  scalar_t v_yX = (valid_y_l && valid_x_h) ? im_data[y_l * width + x_h] : zero;
-  scalar_t v_Yx = (valid_y_h && valid_x_l) ? im_data[y_h * width + x_l] : zero;
-  scalar_t v_YX = (valid_y_h && valid_x_h) ? im_data[y_h * width + x_h] : zero;
+  T zero = 0;
+  T v_yx = (valid_y_l && valid_x_l) ? im_data[y_l * width + x_l] : zero;
+  T v_yX = (valid_y_l && valid_x_h) ? im_data[y_l * width + x_h] : zero;
+  T v_Yx = (valid_y_h && valid_x_l) ? im_data[y_h * width + x_l] : zero;
+  T v_YX = (valid_y_h && valid_x_h) ? im_data[y_h * width + x_h] : zero;
 
   if (is_y_direction) {
-    scalar_t dx = x - x_l;
+    T dx = x - x_l;
     return dx * (v_YX - v_yX) + (1 - dx) * (v_Yx - v_yx);
   } else {
-    scalar_t dy = y - y_l;
+    T dy = y - y_l;
     return dy * (v_YX - v_Yx) + (1 - dy) * (v_yX - v_yx);
   }
 }
@@ -132,7 +130,7 @@ __device__ T GetGradientWeight(T argmax_h, T argmax_w, const int h, const int w,
                                const int width) {
   if (argmax_h <= -1 || argmax_h >= height || argmax_w <= -1 || argmax_w >= width) {
     // empty
-    return 0;
+    return static_cast<T>(0);
   }
 
   int argmax_h_low = floor(argmax_h);
@@ -188,13 +186,12 @@ __device__ T GetCoordinateWeight(T argmax_h, T argmax_w, const int height, const
   return weight;
 }
 
-template<typename scalar_t>
-__global__ void DeformableCol2Im(int n, const scalar_t* col, const scalar_t* offset_data,
-                                 const scalar_t* mask_data, int channels, int height, int width,
-                                 int kernel_h, int kernel_w, int pad_h, int pad_w, int stride_h,
-                                 int stride_w, int dilation_h, int dilation_w, int batch_sz,
-                                 int n_offset_grps, int out_h, int out_w, bool use_mask,
-                                 scalar_t* grad_im) {
+template<typename T>
+__global__ void DeformableCol2Im(int n, const T* col, const T* offset_data, const T* mask_data,
+                                 int channels, int height, int width, int kernel_h, int kernel_w,
+                                 int pad_h, int pad_w, int stride_h, int stride_w, int dilation_h,
+                                 int dilation_w, int batch_sz, int n_offset_grps, int out_h,
+                                 int out_w, bool use_mask, T* grad_im) {
   CUDA_1D_KERNEL_LOOP(index, n) {
     const int out_x = index % out_w;
     const int out_y = (index / out_w) % out_h;
@@ -219,23 +216,22 @@ __global__ void DeformableCol2Im(int n, const scalar_t* col, const scalar_t* off
     const int offset_h_ptr = ((offset_idx)*out_h + out_y) * out_w + out_x;
     const int offset_w_ptr = ((offset_idx + 1) * out_h + out_y) * out_w + out_x;
 
-    const scalar_t offset_h = offset_ptr[offset_h_ptr];
-    const scalar_t offset_w = offset_ptr[offset_w_ptr];
+    const T offset_h = offset_ptr[offset_h_ptr];
+    const T offset_w = offset_ptr[offset_w_ptr];
 
-    scalar_t mask_value = 1;
+    T mask_value = 1;
     if (use_mask) { mask_value = mask_ptr[(mask_idx * out_h + out_y) * out_w + out_x]; }
 
-    const scalar_t y = (out_y * stride_h - pad_h) + i * dilation_h + offset_h;
-    const scalar_t x = (out_x * stride_w - pad_w) + j * dilation_w + offset_w;
+    const T y = (out_y * stride_h - pad_h) + i * dilation_h + offset_h;
+    const T x = (out_x * stride_w - pad_w) + j * dilation_w + offset_w;
 
     for (int dy = -1; dy <= 1; dy++) {
       for (int dx = -1; dx <= 1; dx++) {
         int yp = (int)y + dy;
         int xp = (int)x + dx;
-        if (0 <= yp && yp < height && 0 <= xp && xp < width && std::abs(y - yp) < 1
-            && std::abs(x - xp) < 1) {
+        if (0 <= yp && yp < height && 0 <= xp && xp < width && abs(y - yp) < 1 && abs(x - xp) < 1) {
           int grad_pos = ((b * channels + c) * height + yp) * width + xp;
-          scalar_t weight = (1 - std::abs(y - yp)) * (1 - std::abs(x - xp));
+          T weight = (1 - abs(y - yp)) * (1 - abs(x - xp));
           Add(grad_im + grad_pos, mask_value * weight * col[index]);
         }
       }
@@ -243,13 +239,12 @@ __global__ void DeformableCol2Im(int n, const scalar_t* col, const scalar_t* off
   }
 }
 
-template<typename scalar_t>
-__global__ void DeformableIm2Col(int n, const scalar_t* input, const scalar_t* offset,
-                                 const scalar_t* mask, int height, int width, int weight_h,
-                                 int weight_w, int pad_h, int pad_w, int stride_h, int stride_w,
-                                 int dilation_h, int dilation_w, int batch_sz, int n_in_channels,
-                                 int n_offset_grps, int out_h, int out_w, bool use_mask,
-                                 scalar_t* columns) {
+template<typename T>
+__global__ void DeformableIm2Col(int n, const T* input, const T* offset, const T* mask, int height,
+                                 int width, int weight_h, int weight_w, int pad_h, int pad_w,
+                                 int stride_h, int stride_w, int dilation_h, int dilation_w,
+                                 int batch_sz, int n_in_channels, int n_offset_grps, int out_h,
+                                 int out_w, bool use_mask, T* columns) {
   CUDA_1D_KERNEL_LOOP(index, n) {
     const int out_x = index % out_w;
     const int out_y = (index / out_w) % out_h;
@@ -276,14 +271,13 @@ __global__ void DeformableIm2Col(int n, const scalar_t* input, const scalar_t* o
         const int mask_idx = i * weight_w + j;
         const int offset_idx = 2 * mask_idx;
 
-        scalar_t mask_value = 1;
+        T mask_value = 1;
         if (use_mask) { mask_value = mask_ptr[mask_idx * (out_h * out_w) + out_y * out_w + out_x]; }
 
-        const scalar_t offset_h = offset_ptr[offset_idx * (out_h * out_w) + out_y * out_w + out_x];
-        const scalar_t offset_w =
-            offset_ptr[(offset_idx + 1) * (out_h * out_w) + out_y * out_w + out_x];
-        const scalar_t y = (out_y * stride_h - pad_h) + i * dilation_h + offset_h;
-        const scalar_t x = (out_x * stride_w - pad_w) + j * dilation_w + offset_w;
+        const T offset_h = offset_ptr[offset_idx * (out_h * out_w) + out_y * out_w + out_x];
+        const T offset_w = offset_ptr[(offset_idx + 1) * (out_h * out_w) + out_y * out_w + out_x];
+        const T y = (out_y * stride_h - pad_h) + i * dilation_h + offset_h;
+        const T x = (out_x * stride_w - pad_w) + j * dilation_w + offset_w;
         *columns_ptr = mask_value * bilinear_interpolate(input_ptr, height, width, y, x);
         columns_ptr += batch_sz * out_h * out_w;
       }
@@ -291,18 +285,17 @@ __global__ void DeformableIm2Col(int n, const scalar_t* input, const scalar_t* o
   }
 }
 
-template<typename scalar_t>
-__global__ void DeformableCol2imCoord(int n, const scalar_t* col_data, const scalar_t* im_data,
-                                      const scalar_t* offset_data, const scalar_t* mask_data,
-                                      int channels, int height, int width, int weight_h,
-                                      int weight_w, int pad_h, int pad_w, int stride_h,
-                                      int stride_w, int dilation_h, int dilation_w, int batch_sz,
-                                      int offset_channels, int n_offset_grps, int out_h, int out_w,
-                                      const bool use_mask, scalar_t* grad_offset,
-                                      scalar_t* grad_mask) {
+template<typename T>
+__global__ void DeformableCol2imCoord(int n, const T* col_data, const T* im_data,
+                                      const T* offset_data, const T* mask_data, int channels,
+                                      int height, int width, int weight_h, int weight_w, int pad_h,
+                                      int pad_w, int stride_h, int stride_w, int dilation_h,
+                                      int dilation_w, int batch_sz, int offset_channels,
+                                      int n_offset_grps, int out_h, int out_w, const bool use_mask,
+                                      T* grad_offset, T* grad_mask) {
   CUDA_1D_KERNEL_LOOP(index, n) {
-    scalar_t grad_offset_val = 0;
-    scalar_t grad_mask_val = 0;
+    T grad_offset_val = 0;
+    T grad_mask_val = 0;
 
     int w = index % out_w;
     int h = (index / out_w) % out_h;
@@ -342,16 +335,16 @@ __global__ void DeformableCol2imCoord(int n, const scalar_t* col_data, const sca
 
       const int offset_h_ptr = (((2 * mask_idx) * out_h + out_y) * out_w + out_x);
       const int offset_w_ptr = (((2 * mask_idx + 1) * out_h + out_y) * out_w + out_x);
-      const scalar_t offset_h = offset_ptr[offset_h_ptr];
-      const scalar_t offset_w = offset_ptr[offset_w_ptr];
+      const T offset_h = offset_ptr[offset_h_ptr];
+      const T offset_w = offset_ptr[offset_w_ptr];
 
-      scalar_t mask_value = 1;
+      T mask_value = 1;
       if (use_mask) { mask_value = mask_ptr[(mask_idx * out_h + out_y) * out_w + out_x]; }
 
-      scalar_t y = (out_y * stride_h - pad_h) + i * dilation_h + offset_h;
-      scalar_t x = (out_x * stride_w - pad_w) + j * dilation_w + offset_w;
+      T y = (out_y * stride_h - pad_h) + i * dilation_h + offset_h;
+      T x = (out_x * stride_w - pad_w) + j * dilation_w + offset_w;
 
-      const scalar_t weight = get_coordinate_weight(im_ptr, height, width, y, x, is_y_direction);
+      const T weight = get_coordinate_weight(im_ptr, height, width, y, x, is_y_direction);
       grad_offset_val += mask_value * weight * col_ptr[col_pos];
 
       if (use_mask && is_y_direction) {
@@ -374,8 +367,6 @@ __global__ void DeformableCol2imCoord(int n, const scalar_t* col_data, const sca
 }
 
 }  // namespace
-
-using namespace ep::primitive;
 
 ep::primitive::BlasTransposeType GetBlasTransposeType(bool transpose) {
   return transpose ? ep::primitive::BlasTransposeType::T : ep::primitive::BlasTransposeType::N;

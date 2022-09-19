@@ -117,9 +117,8 @@ Maybe<void> DeformConvNd::Apply(const DeformConvNdCaptureState* ctx, const Tenso
     if (ctx->offset_requires_grad) {
       in_grads->at(2) = grads_tuple->at(1);  // offset_grad
     }
-    if (ctx->use_mask && ctx->mask_requires_grad)  // mask_grad
-    {
-      in_grads->at(3) = grads_tuple->at(2);
+    if (ctx->use_mask && ctx->mask_requires_grad) {
+      in_grads->at(3) = grads_tuple->at(2);  // mask_grad
     }
   }
 

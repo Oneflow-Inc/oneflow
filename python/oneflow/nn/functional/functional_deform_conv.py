@@ -42,12 +42,17 @@ def deform_conv2d(
     dil_h = dilation[0]
     dil_w = dilation[1]
     weights_h, weights_w = weight.shape[-2:]
-    
-    #TODO(yzm):Support rectangle convolution
-    #NOTE:Delete the following error reporting program after support rectangle convolution
-    if weights_h!=weights_w:
-        raise RuntimeError("Rectangle convolution is not currently supported, please try square convolution")
-    
+
+    # TODO(yzm):Support rectangle convolution
+    # NOTE:Delete the following error reporting program after support rectangle convolution
+    if weights_h != weights_w:
+        raise RuntimeError(
+            "Rectangle convolution is not currently supported, please try square convolution"
+        )
+    if bias is not None:
+        if len(bias.shape) != 1 or bias.shape[0] != weight.shape[0]:
+            raise RuntimeError("invalid bias shape:got:" f"{bias.shape}")
+
     if use_mask and len(mask.shape) != 4:
         raise RuntimeError("The dimension of mask tensor weight must be 4")
     if len(input.shape) != 4:

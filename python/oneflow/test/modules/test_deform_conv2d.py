@@ -25,7 +25,7 @@ import torchvision.ops
 import torch
 
 
-def GetRamdomData(max_batch_sz):
+def GetRandomData(max_batch_sz):
 
     batch_sz = max_batch_sz
     n_weight_grps = np.random.randint(1, 2)
@@ -45,7 +45,7 @@ def GetRamdomData(max_batch_sz):
     # NOTE:Modify the following program after alignment using a rectangular convolution kernel
     random_kernel_h = np.random.randint(1, 11)
     random_kernel_w = random_kernel_h
-    #random_kernel_w=np.random.randint(1, 11)
+    # random_kernel_w=np.random.randint(1, 11)
 
     random_in_h = np.random.randint(5, 30)
     random_in_w = np.random.randint(5, 30)
@@ -87,7 +87,7 @@ def GetFunArgs(device, max_batch_size):
             random_kernel_w,
             random_in_h,
             random_in_w,
-        ) = GetRamdomData(max_batch_size)
+        ) = GetRandomData(max_batch_size)
         stride_h, stride_w = stride
         pad_h, pad_w = pad
         dil_h, dil_w = dilation
@@ -111,7 +111,6 @@ def GetFunArgs(device, max_batch_size):
 
     bias_dims = [n_out_channels]
     bias = random_tensor(1, *bias_dims).to(device)
-
     return input, weight, offset, mask, bias, stride, pad, dilation
 
 

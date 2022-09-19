@@ -33,6 +33,12 @@ namespace oneflow {
   const int32_t dilationH = ctx->Attr<int32_t>("dilation_h");
   const int32_t deformable_group = ctx->Attr<int32_t>("offset_groups");
   const bool use_mask = ctx->Attr<bool>("use_mask");
+  bool has_bias = ctx->has_input("bias", 0);
+  if (has_bias) {
+    const Shape& bias_shape = ctx->InputShape("bias", 0);
+    std::cout << "bias_shape:" << bias_shape.ToString() << std::endl;
+    CHECK_EQ_OR_RETURN(bias_shape.At(0), weight_shape.At(0));
+  }
   CHECK_OR_RETURN(dW > 0 && dH > 0)
       << Error::RuntimeError() << "The stride must be greater than 0,but got " << dW << " and "
       << dH;
@@ -47,12 +53,12 @@ namespace oneflow {
       << Error::RuntimeError() << "The dilation must be greater than 0,but got " << dilationH
       << " and " << dilationW;
 
-  CHECK_EQ_OR_RETURN(input_shape.NumAxes(), 4);
-  CHECK_EQ_OR_RETURN(weight_shape.NumAxes(), 4);
-  CHECK_EQ_OR_RETURN(offset_shape.NumAxes(), 4);
-  if (use_mask) { CHECK_EQ_OR_RETURN(mask_shape.NumAxes(), 4); }
-  CHECK_EQ_OR_RETURN(weight_shape.At(2), kH);
-  CHECK_EQ_OR_RETURN(weight_shape.At(3), kW);
+  CHECK_EQ_OR_RETURN(input_shape.NumAxes(), 4);                   // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(weight_shape.NumAxes(), 4);                  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(offset_shape.NumAxes(), 4);                  // NOLINT(maybe-need-error-msg)
+  if (use_mask) { CHECK_EQ_OR_RETURN(mask_shape.NumAxes(), 4); }  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(weight_shape.At(2), kH);                     // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(weight_shape.At(3), kW);                     // NOLINT(maybe-need-error-msg)
 
   CHECK_EQ_OR_RETURN(offset_shape.At(1), deformable_group * 2 * kW * kH)
       << Error::RuntimeError() << "offset.shape[1] is not valid: got: " << offset_shape.At(1)
@@ -111,9 +117,9 @@ namespace oneflow {
 
   int64_t outputWidth = (input_shape.At(3) + 2 * padW - (dilationW * (kW - 1) + 1)) / dW + 1;
   int64_t outputHeight = (input_shape.At(2) + 2 * padH - (dilationH * (kH - 1) + 1)) / dH + 1;
-  CHECK_EQ_OR_RETURN(output_grad_shape.At(2), outputHeight);
-  CHECK_EQ_OR_RETURN(output_grad_shape.At(3), outputWidth);
-  CHECK_EQ_OR_RETURN(output_grad_shape.At(1), weight_shape.At(0));
+  CHECK_EQ_OR_RETURN(output_grad_shape.At(2), outputHeight);        // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(output_grad_shape.At(3), outputWidth);         // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(output_grad_shape.At(1), weight_shape.At(0));  // NOLINT(maybe-need-error-msg)
   ctx->SetOutputShape("input_grad", 0, ctx->InputShape("input", 0));
   ctx->SetOutputShape("offset_grad", 0, ctx->InputShape("offset", 0));
   ctx->SetOutputIsDynamic("input_grad", 0, ctx->InputIsDynamic("input", 0));
@@ -142,8 +148,8 @@ Maybe<void> DeformConv2dParamGradOp::InferLogicalTensorDesc(user_op::InferContex
   const int32_t dilationH = ctx->Attr<int32_t>("dilation_h");
   int64_t outputWidth = (input_shape.At(3) + 2 * padW - (dilationW * (kW - 1) + 1)) / dW + 1;
   int64_t outputHeight = (input_shape.At(2) + 2 * padH - (dilationH * (kH - 1) + 1)) / dH + 1;
-  CHECK_EQ_OR_RETURN(output_grad_shape.At(2), outputHeight);
-  CHECK_EQ_OR_RETURN(output_grad_shape.At(3), outputWidth);
+  CHECK_EQ_OR_RETURN(output_grad_shape.At(2), outputHeight);  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(output_grad_shape.At(3), outputWidth);   // NOLINT(maybe-need-error-msg)
   ctx->SetOutputShape("weight_grad", 0, ctx->InputShape("weight", 0));
   ctx->SetOutputIsDynamic("weight_grad", 0, false);
   return Maybe<void>::Ok();
@@ -186,10 +192,10 @@ Maybe<void> DeformConv2dParamGradOp::InferLogicalTensorDesc(user_op::InferContex
       .Split(user_op::OpArg("input", 0), 0)
       .Split(user_op::OpArg("offset", 0), 0)
       .Split(user_op::OpArg("mask", 0), 0)
-      .Split(user_op::OpArg("bias", 0), 0)
       .Broadcast(user_op::OpArg("weight", 0))
       .Split(user_op::OpArg("output", 0), 0)
       .Build();
+
   return Maybe<void>::Ok();
 }
 
