@@ -14,15 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "llvm/Support/Error.h"
-#include "mlir/IR/DialectRegistry.h"
-#include "mlir/Parser/Parser.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/ExecutionEngine/ExecutionEngine.h"
-#include "mlir/ExecutionEngine/MemRefUtils.h"
-#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
-#include "llvm/Support/TargetSelect.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/UserOpReflection.h"
@@ -39,6 +30,18 @@ limitations under the License.
 #include "oneflow/core/framework/op_generated.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/JITOpInfer.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/JITEngine.h"
+
+#include "mlir/IR/DialectRegistry.h"
+#include "mlir/Parser/Parser.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/ExecutionEngine/ExecutionEngine.h"
+#include "mlir/ExecutionEngine/MemRefUtils.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+
+
+#include "llvm/Support/Error.h"
+#include "llvm/Support/TargetSelect.h"
 
 #include <memory>
 #include <tuple>

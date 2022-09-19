@@ -27,10 +27,10 @@ template<template<typename T> class Trait>
 LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::string>& keys,
                                             std::vector<int32_t>& sizes);
 
+using ArgID = std::pair<std::string, int32_t>;
+
 template<template<typename T> class Trait>
 class ArgIds {
-  using ArgID = std::pair<std::string, int32_t>;
-
  public:
   explicit ArgIds(Operation* op);
   std::vector<ArgID>::const_iterator begin() const { return ids_.begin(); }
