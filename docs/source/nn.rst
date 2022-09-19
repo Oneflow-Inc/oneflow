@@ -108,6 +108,9 @@ Pooling Layers
     nn.AdaptiveAvgPool1d 
     nn.AdaptiveAvgPool2d 
     nn.AdaptiveAvgPool3d
+    nn.AdaptiveMaxPool1d 
+    nn.AdaptiveMaxPool2d 
+    nn.AdaptiveMaxPool3d
     nn.AvgPool1d 
     nn.AvgPool2d 
     nn.AvgPool3d
