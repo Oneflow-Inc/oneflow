@@ -129,7 +129,7 @@ LLVM::LLVMFuncOp DeclareKernelLaunchCInterface(::mlir::PatternRewriter& rewriter
   return func;
 }
 
-LLVM::GlobalOp DeclareorGetGlobalString(::mlir::PatternRewriter& rewriter, mlir::Location loc,
+LLVM::GlobalOp DeclareOrGetGlobalString(::mlir::PatternRewriter& rewriter, mlir::Location loc,
                                         ModuleOp* module, StringRef func_name) {
   LLVM::GlobalOp global;
   StringRef variable = rewriter.getStringAttr(func_name + "_var");
