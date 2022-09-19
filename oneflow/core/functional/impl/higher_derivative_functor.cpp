@@ -478,6 +478,25 @@ class CeluGradGradFunctor {
   }
 };
 
+class MaxPoolNdGradGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& dydx,
+                           const std::shared_ptr<Tensor>& indices, const int ndims) const {
+    if (indices->nelement()) {
+      Shape view_shape(indices->shape()->begin(), indices->shape()->end() - ndims);
+      view_shape.push_back(-1);
+      auto indices_view = JUST(functional::Reshape(indices, view_shape));
+      auto outgrad_view = JUST(functional::Reshape(dydx, view_shape));
+      return functional::sequence_function(functional::DimGather)
+          .then(std::bind(functional::Reshape, std::placeholders::_1, *indices->shape()))
+          .call(outgrad_view, -1, indices_view, /*sparse_grad=*/false);
+    } else {
+      // empty inputs, return 0size tensor
+      return functional::ZerosLike(indices);
+    }
+  }
+};
+
 class MishGradGradFunctor {
  public:
   // y = x ∗ tanh(softplus(x))
@@ -566,6 +585,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SoftplusGradGradFunctor>("SoftplusGradGrad");
   m.add_functor<impl::EluGradGradFunctor>("EluGradGrad");
   m.add_functor<impl::CeluGradGradFunctor>("CeluGradGrad");
+  m.add_functor<impl::MaxPoolNdGradGradFunctor>("MaxPoolNdGradGrad");
   m.add_functor<impl::MishGradGradFunctor>("MishGradGrad");
   m.add_functor<impl::GeluGradGradFunctor>("GeluGradGrad");
 }

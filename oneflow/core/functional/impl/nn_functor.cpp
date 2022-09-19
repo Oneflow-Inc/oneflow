@@ -14,34 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/common/error.h"
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/optional.h"
-#include "oneflow/core/common/scalar.h"
-#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/tensor_util.h"
-#include "oneflow/core/framework/op_interpreter.h"
-#include "oneflow/core/framework/random_generator.h"
-#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
-#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
 #include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/user/kernels/distributions/common.h"
-#include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
 namespace one {
@@ -762,6 +746,44 @@ class LayerNormAffineFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class GroupNormFunctor {
+ public:
+  GroupNormFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("group_norm")
+                         .Input("x")
+                         .Output("y")
+                         .Output("mean")
+                         .Output("inv_variance")
+                         .Attr("affine", false)
+                         .Build());
+    affine_op_ = CHECK_JUST(one::OpBuilder("group_norm")
+                                .Input("x")
+                                .Input("gamma")
+                                .Input("beta")
+                                .Output("y")
+                                .Output("mean")
+                                .Output("inv_variance")
+                                .Attr("affine", true)
+                                .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<one::Tensor>& gamma, const Optional<one::Tensor>& beta,
+                           const bool affine, const int32_t num_groups,
+                           const double& epsilon) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_groups", "epsilon");
+    attrs.SetAllAttrs(num_groups, epsilon);
+    if (affine) {
+      return OpInterpUtil::Dispatch<Tensor>(*affine_op_, {x, JUST(gamma), JUST(beta)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> affine_op_;
+};
+
 class PixelShuffleFunctor {
  public:
   PixelShuffleFunctor() {}
@@ -925,6 +947,44 @@ class AdaptiveAvgPool3DFunctor : public AdaptivePoolNDFunctor {
   }
 };
 
+class AdaptiveMaxPoolBaseFunctor {
+ public:
+  AdaptiveMaxPoolBaseFunctor() = default;
+  virtual ~AdaptiveMaxPoolBaseFunctor() = default;
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
+                                const std::vector<int64_t>& output_size) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("output_size");
+    attrs.SetAllAttrs(output_size);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class AdaptiveMaxPool1DFunctor : public AdaptiveMaxPoolBaseFunctor {
+ public:
+  AdaptiveMaxPool1DFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("adaptive_max_pool1d").Input("x").Output("y").Output("index").Build());
+  }
+};
+
+class AdaptiveMaxPool2DFunctor : public AdaptiveMaxPoolBaseFunctor {
+ public:
+  AdaptiveMaxPool2DFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("adaptive_max_pool2d").Input("x").Output("y").Output("index").Build());
+  }
+};
+
+class AdaptiveMaxPool3DFunctor : public AdaptiveMaxPoolBaseFunctor {
+ public:
+  AdaptiveMaxPool3DFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("adaptive_max_pool3d").Input("x").Output("y").Output("index").Build());
+  }
+};
 class LossFunctorBase {
  public:
   Maybe<Tensor> apply_reduction(const Maybe<Tensor>& x, const std::string& reduction) const {
@@ -1258,6 +1318,14 @@ class CrossEntropyFunctor {
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight, const int64_t& ignore_index,
                            const std::string& reduction, const double& label_smoothing) const {
+    if (input->shape() == target->shape()) {
+      CHECK_OR_RETURN(target->dtype()->is_floating_point())
+          << "Expected floating point type for target with class probabilities, got "
+          << target->dtype()->name();
+      CHECK_LT_OR_RETURN(ignore_index, 0)
+          << "ignore_index is not supported for floating point targe";
+      return CrossEntropyProb(input, target, weight, reduction, label_smoothing);
+    }
     if (label_smoothing > 0.0)
       return CrossEntropyLabelSmoothing(input, target, weight, ignore_index, reduction,
                                         label_smoothing);
@@ -1400,6 +1468,59 @@ class CrossEntropyLabelSmoothingFunctor {
   std::shared_ptr<OpExpr> op_log_softmax_;
   std::shared_ptr<OpExpr> op_nll_;
   std::shared_ptr<OpExpr> op_nll_weight_;
+};
+
+class CrossEntropyProbFunctor : public LossFunctorBase {
+ public:
+  CrossEntropyProbFunctor() {
+    op_log_softmax_ = CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const Optional<one::Tensor>& weight, const std::string& reduction,
+                           const double& label_smoothing) const {
+    const auto& input_shape = input->shape();
+    const auto& target_shape = target->shape();
+
+    std::vector<int> input_perm(input_shape->NumAxes(), 0);
+    input_perm[input_perm.size() - 1] = 1;
+    for (size_t i = 1; i < input_perm.size() - 1; ++i) { input_perm[i] = i + 1; }
+
+    const auto input_ = JUST(sequence_function(functional::Transpose)
+                                 .then(std::bind(functional::Reshape, std::placeholders::_1,
+                                                 Shape({-1, input_shape->At(1)})))
+                                 .then([this](const std::shared_ptr<one::Tensor>& x) {
+                                   return OpInterpUtil::Dispatch<Tensor>(*op_log_softmax_, {x});
+                                 })
+                                 .call(input, input_perm));
+    std::shared_ptr<Tensor> target_ =
+        JUST(sequence_function(functional::Transpose)
+                 .then(std::bind(functional::Reshape, std::placeholders::_1,
+                                 Shape({-1, target_shape->At(1)})))
+                 .call(target, input_perm));
+    if (label_smoothing > 0) {
+      int32_t num_classes = input_->shape()->At(1);
+      target_ =
+          JUST(ScalarAdd(JUST(ScalarMul(target_, static_cast<double>(1) - label_smoothing, false)),
+                         label_smoothing / static_cast<double>(num_classes), 1, false));
+    }
+
+    auto nll_result = JUST(Negative(JUST(Mul(input_, target_))));
+    if (weight) {
+      const auto& weight_expand = JUST(Unsqueeze(JUST(weight), 0));
+      nll_result = JUST(Mul(nll_result, weight_expand));
+    }
+    DimVector target_reshape_(input->ndim() - 1);
+    for (size_t i = 0; i < target_reshape_.size(); ++i) {
+      target_reshape_[i] = input_shape->At(input_perm[i]);
+    }
+    nll_result = JUST(ReduceSum(nll_result, {-1}, false));
+    nll_result = JUST(Reshape(nll_result, Shape(target_reshape_)));
+    return apply_reduction(nll_result, reduction);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_log_softmax_;
 };
 
 class SparseCrossEntropyFunctor {
@@ -4076,6 +4197,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedMatmulBiasAddReluDropoutFunctor>("FusedMatmulBiasAddReluDropout");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
+  m.add_functor<impl::GroupNormFunctor>("GroupNorm");
   m.add_functor<impl::TFAvgPool2DFunctor>("TFAvgPool2D");
   m.add_functor<impl::MaxPool1DFunctor>("MaxPool1D");
   m.add_functor<impl::MaxPool2DFunctor>("MaxPool2D");
@@ -4083,6 +4205,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
+  m.add_functor<impl::AdaptiveMaxPool1DFunctor>("AdaptiveMaxPool1D");
+  m.add_functor<impl::AdaptiveMaxPool2DFunctor>("AdaptiveMaxPool2D");
+  m.add_functor<impl::AdaptiveMaxPool3DFunctor>("AdaptiveMaxPool3D");
   m.add_functor<impl::L1LossFunctor>("L1Loss");
   m.add_functor<impl::MseLossFunctor>("MseLoss");
   m.add_functor<impl::KLDivLossFunctor>("KLDivLoss");
@@ -4093,6 +4218,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SparseCrossEntropyMsFunctor>("SparseCrossEntropyMs");
   m.add_functor<impl::CrossEntropyFunctor>("CrossEntropy");
   m.add_functor<impl::CrossEntropyLabelSmoothingFunctor>("CrossEntropyLabelSmoothing");
+  m.add_functor<impl::CrossEntropyProbFunctor>("CrossEntropyProb");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
   m.add_functor<impl::SoftmaxCrossEntropyFunctor>("SoftmaxCrossEntropy");
   m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");
