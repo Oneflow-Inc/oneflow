@@ -746,6 +746,44 @@ class LayerNormAffineFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class GroupNormFunctor {
+ public:
+  GroupNormFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("group_norm")
+                         .Input("x")
+                         .Output("y")
+                         .Output("mean")
+                         .Output("inv_variance")
+                         .Attr("affine", false)
+                         .Build());
+    affine_op_ = CHECK_JUST(one::OpBuilder("group_norm")
+                                .Input("x")
+                                .Input("gamma")
+                                .Input("beta")
+                                .Output("y")
+                                .Output("mean")
+                                .Output("inv_variance")
+                                .Attr("affine", true)
+                                .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<one::Tensor>& gamma, const Optional<one::Tensor>& beta,
+                           const bool affine, const int32_t num_groups,
+                           const double& epsilon) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_groups", "epsilon");
+    attrs.SetAllAttrs(num_groups, epsilon);
+    if (affine) {
+      return OpInterpUtil::Dispatch<Tensor>(*affine_op_, {x, JUST(gamma), JUST(beta)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> affine_op_;
+};
+
 class PixelShuffleFunctor {
  public:
   PixelShuffleFunctor() {}
@@ -4159,6 +4197,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedMatmulBiasAddReluDropoutFunctor>("FusedMatmulBiasAddReluDropout");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
+  m.add_functor<impl::GroupNormFunctor>("GroupNorm");
   m.add_functor<impl::TFAvgPool2DFunctor>("TFAvgPool2D");
   m.add_functor<impl::MaxPool1DFunctor>("MaxPool1D");
   m.add_functor<impl::MaxPool2DFunctor>("MaxPool2D");
