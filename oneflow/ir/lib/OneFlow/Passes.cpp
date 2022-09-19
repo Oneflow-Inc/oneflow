@@ -177,8 +177,8 @@ func::FuncOp GetOrInsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operat
     mapping.map(std::get<0>(argument_pair), std::get<1>(argument_pair));
   }
   rewriter.setInsertionPointToStart(&func.getBody().front());
-  ImplicitLocOpBuilder nb(loc, rewriter);
-  nb.clone(*op, mapping);
+  ImplicitLocOpBuilder new_block(loc, rewriter);
+  new_block.clone(*op, mapping);
   SmallVector<::mlir::Value, 4> mapped_results;
   for (auto result : ValueRange(op->getResults())) {
     mapped_results.push_back(mapping.lookup(result));
