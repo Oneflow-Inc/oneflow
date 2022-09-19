@@ -34,8 +34,6 @@ class MemoryShareStrategy {
   void GenerateCompactPosition(
       const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
 
-  // Adjust the original strategy, return the updated optimal cost
-  size_t ComputeOptimalAdjustedCost();
   // Update the offset with the adjusted strategy
   void UpdateOffset(size_t* mem_block_size, HashMap<RegstDescProto*, int64_t>* regst_desc2offset);
 
@@ -70,16 +68,12 @@ class MemoryShareStrategy {
   void InitRegister(
       const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
   void InitRegisterInformation();
+  // Adjust the original strategy, return the updated optimal cost
+  size_t ComputeOptimalAdjustedCost();
   // Eliminate one register
   void EliminateRegister(int32_t i);
-  // Find all the left registers of i and link those compact excluded ones for j.
-  // Not including i itself.
-  void LookForwardLink(int32_t i, int32_t j);
   // Eliminate children of j but ignore i.
   void EliminateRedundantRelationshipIgnore(int32_t i, int32_t j);
-  // Whether x_i < x_j is compact
-  // Return false even if x_i < x_k < x_j, where i, j, k are excluded.
-  bool CompactLessThan(int32_t i, int32_t j);
   // Whether i and j occurs simultaneously
   bool Exclude(int32_t i, int32_t j);
   // If the previous strategy without the elimination of i has fewer cost, recover to the previous
@@ -92,9 +86,6 @@ class MemoryShareStrategy {
                                           const std::vector<int64_t>& register_offset_backup);
   // Insert register i at position [x_i, x_i + l_i)
   void InsertRegister(int32_t i, int64_t x_i, const std::vector<int64_t>& original_register_offset);
-  // Visit j and add the compact relationship while inserting i
-  void VisitForwardEliminateCompactRelationship(int32_t i, int32_t j);
-  void VisitBackwardInsertCompactRelationship(int32_t i, int32_t j);
 
   // Compute optimal cost with compact relationship
   size_t ComputeOptimalCost4CompactRelationship();
