@@ -64,6 +64,7 @@ class MemoryShareStrategy {
   // A buffer which implies whether we should visit a register
   std::vector<int32_t> should_visit;
   int32_t total_register_num_;
+  std::vector<int32_t> order;
   // Initialization
   void InitRegister(
       const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
@@ -101,6 +102,11 @@ class MemoryShareStrategy {
   int64_t ComputeOffset4CompactRelationship(int32_t i);
   // Check whether the current offset does not introduce any conflict
   Maybe<void> CheckConflict();
+  // Reset the compact position for the registers with should_visit = 0
+  void ResetCompactPosition(int32_t j);
+  // Find all the k < i, eliminates k < j,
+  // since k < i and i < j have already implied that.
+  void EliminateRedundantRelationship(int32_t i);
 };
 }  // namespace oneflow
 
