@@ -319,7 +319,7 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
                .str())
             .toStringRef(op_name_storage);
     SmallString<16> tempBuffer;
-    op_name = sanitizeIdentifier(op_name, tempBuffer);
+    op_name = SanitizeIdentifier(op_name, tempBuffer);
     SmallVector<::mlir::Value, 2> operands;
     operands.push_back(cast_op.in());
     operands.push_back(scale);
@@ -917,7 +917,7 @@ struct KernelLaunchPattern : public RewritePattern {
       return success();
     }
     SmallString<16> tempBuffer;
-    op_name = sanitizeIdentifier(op->getAttr("op_name").cast<StringAttr>(), tempBuffer);
+    op_name = SanitizeIdentifier(op->getAttr("op_name").cast<StringAttr>(), tempBuffer);
     op->setAttr("op_name", rewriter.getStringAttr(op_name));
 
     ValueRange in = op->getOperands();
