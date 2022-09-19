@@ -974,9 +974,12 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
 LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module) {
   InitializeLLVMNVPTXBackend();
   mlir::PassManager pm(context);
-  bool enable_ir_printing =
-      ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_IR_PRINTING", false);
-  context->disableMultithreading(enable_ir_printing);
+  if (bool enable_ir_printing =
+          ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_IR_PRINTING", false);
+      enable_ir_printing) {
+    context->disableMultithreading(enable_ir_printing);
+    if (enable_ir_printing) { pm.enableIRPrinting(); }
+  }
   AddLowerToLinalgMemRefPasses(pm);
   pm.addNestedPass<func::FuncOp>(
       createConvertLinalgToParallelLoopsPass());  // convert-linalg-to-parallel-loops
@@ -994,7 +997,6 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   pm.addNestedPass<func::FuncOp>(createGpuCopyArgPass());                // buffer-host-register
   pm.addPass(createGpuToLLVMConversionPass());
   pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
-  if (enable_ir_printing) { pm.enableIRPrinting(); }
   return pm.run(module);
 }
 

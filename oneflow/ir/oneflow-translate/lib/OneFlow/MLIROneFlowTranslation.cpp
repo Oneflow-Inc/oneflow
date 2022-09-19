@@ -780,10 +780,12 @@ void DumpMLIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, ModuleOp module,
 LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wrapper,
                                      MLIRContext* context, OwningOpRef<ModuleOp>& module) {
   mlir::PassManager pm(context);
-  bool enable_ir_printing =
-      ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_IR_PRINTING", false);
-  context->disableMultithreading(enable_ir_printing);
-  if (enable_ir_printing) { pm.enableIRPrinting(); }
+  if (bool enable_ir_printing =
+          ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_IR_PRINTING", false);
+      enable_ir_printing) {
+    context->disableMultithreading(enable_ir_printing);
+    if (enable_ir_printing) { pm.enableIRPrinting(); }
+  }
   // this canonicalizer should create concrete ops and create fuse opportunities
   pm.addPass(createCanonicalizerPass());
   std::string graphviz;
