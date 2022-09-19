@@ -144,11 +144,8 @@ size_t MemoryShareStrategy::ComputeOptimalAdjustedCost() {
   int32_t step_no_decrease = 0;
   for (int32_t m = 0; m < total_register_num_; m++) {
     for (int32_t i = 0; i < index2register_.size(); i++) {
-      // std::cout << "i: " << i << ", step no decrease: " << step_no_decrease << std::endl;
       EliminateRegister(i);
       size_t cost_without_i = ComputeOptimalCostFrom0();
-      // std::cout << "Get rid of " << i << ", size: " << register_size_[i]
-      //           << ", Guess cost: " << cost_without_i << std::endl;
       // Find the offset of i which has the minimum cost
       int64_t min_x_i = -1;
       if (cost_without_i < optimal_cost) {
@@ -167,8 +164,6 @@ size_t MemoryShareStrategy::ComputeOptimalAdjustedCost() {
 
         for (int64_t x_i : all_x_i) {
           int64_t cost_insert_i = ComputeOptimalCostWithOccupation(i, x_i, register_offset_backup);
-          // std::cout << "Insert i at " << x_i << ", cost: " << cost_insert_i << ", Less? "
-          //           << (cost_insert_i < optimal_cost) << std::endl;
           // Check if we found a smaller cost
           if (cost_insert_i < min_cost) {
             min_cost = cost_insert_i;
@@ -180,8 +175,6 @@ size_t MemoryShareStrategy::ComputeOptimalAdjustedCost() {
         if (min_x_i >= 0) {
           InsertRegister(i, min_x_i, register_offset_backup);
           optimal_cost = ComputeOptimalCostFrom0();
-          std::cout << "Insert cost: " << min_cost << ", optimal cost: " << optimal_cost
-                    << std::endl;
         }
       }
       // Found a smaller cost
