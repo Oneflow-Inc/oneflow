@@ -75,6 +75,8 @@ class NNGraph final : public NNGraphIf {
   Maybe<void> Close();
 
  private:
+  Maybe<void> NaiveCompile();
+  Maybe<void> RankPerThreadCompile();
   Maybe<void> RegisterFreeEagerTensorsToVariableOpNames();
   Maybe<void> RegisterNewVariableOpInJobPass();
   Maybe<void> DeleteOutdatedVariableInVariableTensorMgr();

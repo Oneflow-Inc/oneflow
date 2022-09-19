@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/local_sig_infer_hint.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
 
@@ -574,5 +575,21 @@ Maybe<void> OpGraph::ForEachOpNode(const std::function<Maybe<void>(const OpNode&
   }
   return Maybe<void>::Ok();
 }
+
+/*static*/Maybe<void> OpGraph::WithSingleton(const Job* job, const std::function<Maybe<void>()>& Callback) {
+  // new Singleton<OpGraph> and set log configs.
+  Singleton<OpGraph>::New(*job);
+  const JobDesc& job_desc = GlobalJobDesc();
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()
+      || Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+    TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
+    Singleton<OpGraph>::Get()->ToDotWithFilePath(
+        "optimized_dlnet_" + std::to_string(job_desc.job_id()) + "_op_graph.dot");
+  }
+  JUST(Callback());
+  Singleton<OpGraph>::Delete();
+  return Maybe<void>::Ok();
+}
+
 
 }  // namespace oneflow

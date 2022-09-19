@@ -29,6 +29,8 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/compiler.h"
+#include "oneflow/core/job/rank_compiler.h"
+#include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_instance.h"
@@ -41,6 +43,7 @@ limitations under the License.
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
+#include "oneflow/core/common/env_var/lazy.h"
 
 namespace oneflow {
 
@@ -263,25 +266,60 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NNGraph::CompileAndInitRuntime() {
-  CHECK_OR_RETURN(!runtime_inited_);
-  JUST(RegisterFreeEagerTensorsToVariableOpNames());
-  JUST(RegisterNewVariableOpInJobPass());
-  JUST(DeleteOutdatedVariableInVariableTensorMgr());
+Maybe<void> NNGraph::RankPerThreadCompile() {
+  if (GlobalProcessCtx::IsThisProcessMaster()) {
+    std::vector<Plan> plans(GlobalProcessCtx::WorldSize());
+    JUST(OpGraph::WithSingleton(&job_, [&]()->Maybe<void>{
+      auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
+      JUST(BoxingTaskGraph::New())->ToProto(boxing_task_graph_proto.get());
+      for (int i = 0; i < GlobalProcessCtx::WorldSize(); ++i) {
+        auto* plan = &plans[i];
+        double start = GetCurTime();
+        // TODO(chengcheng): new memory reused by chunk
+        JUST(RankCompiler(boxing_task_graph_proto, i).Compile(&job_, plan));
+        PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
 
-  // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
-  one::TensorNameScope::Global()->Clear();
-  // Clear all backward pass scope
-  ClearAllBackwardPassScope();
+        VLOG(1) << "Graph name: " << name_ << " compile time: " << (GetCurTime() - start) / 1000000000.0
+                << " seconds.";
+        if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+          TeePersistentLogStream::Create("job_" + name_ + "_plan" + std::to_string(i))->Write(*plan);
+          PlanUtil::ToDotFile(*plan, "job_" + name_ + "_plan"+std::to_string(i)+".dot");
+        }
+        PlanUtil::GenRegisterHint(plan);
+        // TODO(chengcheng): test collective boxing for multi-job.
+        PlanUtil::GenCollectiveBoxingPlan(&job_, plan);
+        // PlanUtil::SetForceInplaceMemBlock(plan); NOTE(chengcheng): only for ssp.
+        PlanUtil::DumpCtrlRegstInfoToPlan(plan);
+        PlanUtil::PlanMemoryLog(plan, name_);
+        if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+          PlanUtil::GenLightPlan(plan, name_);
+        }
+        std::string plan_name = "plan:" + job_name() + ":" + std::to_string(i);
+        Singleton<CtrlClient>::Get()->PushKV(plan_name, *plan);
+      }
+    }));
+    plan_ = plans[0];
+  } else {
+    std::string plan_name = "plan:" + job_name() + ":" + std::to_string(GlobalProcessCtx::Rank());
+    Singleton<CtrlClient>::Get()->PullKV(plan_name, &plan_);
+  }
+  OF_SESSION_BARRIER();
+  // NOTE(zwx): After barrier plan is synchronized between all ranks,
+  //     then it can be cleared for saving mem.
+  if (GlobalProcessCtx::IsThisProcessMaster()) {
+    for (int i = 0; i < GlobalProcessCtx::WorldSize(); ++i) {
+      std::string plan_name = "plan:" + job_name() + ":" + std::to_string(i);
+      Singleton<CtrlClient>::Get()->ClearKV(plan_name);
+    }
+  }
+  OF_SESSION_BARRIER();
+  // NOTE(chengcheng): recovery op_attr
+  PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
 
-  // NOTE(chengcheng): Singleton<JobDesc> need be clear before GlobalJobDescScope construct.
-  if (Singleton<JobDesc>::Get() != nullptr) { Singleton<JobDesc>::Delete(); }
+  return Maybe<void>::Ok();
+}
 
-  auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id_);
-
-  // NOTE(chengcheng): do job compeleter for each rank.
-  JUST(JobCompleter().Complete(&job_));
-
+Maybe<void> NNGraph::NaiveCompile() {
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     double start = GetCurTime();
     // TODO(chengcheng): new memory reused by chunk
@@ -321,6 +359,38 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   }
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
+
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> NNGraph::CompileAndInitRuntime() {
+  CHECK_OR_RETURN(!runtime_inited_);
+  JUST(RegisterFreeEagerTensorsToVariableOpNames());
+  JUST(RegisterNewVariableOpInJobPass());
+  JUST(DeleteOutdatedVariableInVariableTensorMgr());
+
+  // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
+  one::TensorNameScope::Global()->Clear();
+  // Clear all backward pass scope
+  ClearAllBackwardPassScope();
+
+  // NOTE(chengcheng): Singleton<JobDesc> need be clear before GlobalJobDescScope construct.
+  if (Singleton<JobDesc>::Get() != nullptr) { Singleton<JobDesc>::Delete(); }
+
+  auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id_);
+
+  // NOTE(chengcheng): do job compeleter for each rank.
+  JUST(JobCompleter().Complete(&job_));
+  if (ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>() == kNaiveCompiler) {
+    JUST(NaiveCompile());
+  } else if (ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>() == kRankPerThreadCompiler) {
+    JUST(RankPerThreadCompile());
+  } else {
+    UNIMPLEMENTED_THEN_RETURN()
+        << "ONEFLOW_LAZY_COMPILER(value: " << ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>()
+        << ") is invalid. valid options: \""<< kNaiveCompiler <<"\", \""
+        << kRankPerThreadCompiler <<  "\"";
+  }
 
   NewRuntimeBuffers();
 

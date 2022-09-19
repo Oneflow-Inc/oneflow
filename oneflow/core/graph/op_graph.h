@@ -127,6 +127,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
 
   Maybe<void> Init(const Job& job);
 
+  static Maybe<void> WithSingleton(const Job* job, const std::function<Maybe<void>()>& Callback);
  private:
   void InitNodes(const Job& job);
   void InitEdges();

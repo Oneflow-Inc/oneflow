@@ -36,6 +36,10 @@ class TransportTaskNode : public TaskNode {
   virtual Maybe<void> InitFromProto(const TransportTaskProto&, const TaskGraphRebuildCtx& ctx) = 0;
   virtual void ToProto(TransportTaskProto*) const = 0;
 
+  ExecNode::InferBlobDescsMethod InferBlobDescs() const override {
+    return &ExecNode::InferBlobDescsByInputs;
+  }
+
  private:
   LogicalBlobId lbi_;
 };

@@ -55,7 +55,7 @@ void CollectiveBoxingGenericTaskNode::BuildExecGphAndRegst() {
     node->BindBnWithRegst(obn, out_regst);
     out_regst->AddLbi(boxing_op->BnInOp2Lbi(obn));
   }
-  node->InferBlobDescs(nullptr);
+  (node->*InferBlobDescs())(nullptr);
 }
 
 void CollectiveBoxingGenericTaskNode::InferProducedDataRegstTimeShape() {

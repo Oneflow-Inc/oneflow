@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/common/env_var/lazy.h"
 
 namespace oneflow {
 
@@ -43,6 +44,20 @@ class CompTaskNode : public TaskNode {
 
   // op
   std::shared_ptr<const Operator> op() const { return op_node_->shared_op(); }
+
+  ExecNode::InferBlobDescsMethod InferBlobDescs() const override {
+    if (ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>() == "naive") {
+      return &ExecNode::InferBlobDescsByInputs;
+    } else if (ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>() == "rank_per_thread") {
+      return &ExecNode::InferBlobDescsByNdSbp;
+    } else {
+    UNIMPLEMENTED()
+        << "ONEFLOW_LAZY_COMPILER(value: " << ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>()
+        << ") is invalid. valid options: \""<< kNaiveCompiler <<"\", \""
+        << kRankPerThreadCompiler <<  "\"";
+    }
+    return nullptr;
+  }
 
  protected:
   const OpNode* GetOneSuccOpNodeOnEdge(TaskEdge* edge);

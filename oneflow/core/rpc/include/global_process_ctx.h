@@ -21,6 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 struct GlobalProcessCtx {
+  static int64_t GetMachineId(int64_t rank);
   static void GetMachineIdAndDeviceId(int64_t rank, int64_t* machine_id, int64_t* device_id);
   static void GetCurrentMachineIdAndDeviceId(int64_t* machine_id, int64_t* device_id);
   static int64_t Rank();

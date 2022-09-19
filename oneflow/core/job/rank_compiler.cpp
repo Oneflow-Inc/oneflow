@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job/compiler.h"
+#include "oneflow/core/job/rank_compiler.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/intra_job_mem_sharing_util.h"
 #include "oneflow/core/job/plan_util.h"
@@ -49,21 +49,12 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
 
 }
 
-void Compiler::Compile(Job* job, Plan* plan) const {
-  // Step1: new Singleton<OpGraph> and set log configs.
-  Singleton<OpGraph>::New(*job);
-  const JobDesc& job_desc = GlobalJobDesc();
-  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()
-      || Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
-    TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
-    Singleton<OpGraph>::Get()->ToDotWithFilePath(
-        "optimized_dlnet_" + std::to_string(job_desc.job_id()) + "_op_graph.dot");
-  }
-
-  // Step2: build task_gph.
+Maybe<void> RankCompiler::Compile(Job* job, Plan* plan) const {
+  // build task_gph.
   // TODO(levi): we can rewrite this part of code in visitor pattern.
   auto task_gph =
-      std::make_unique<GlobalTaskGraph>(job->job_conf().enable_straighten_algorithm_in_task_graph());
+      JUST(RankTaskGraph::New(boxing_task_graph_proto_, rank_,
+                              job->job_conf().enable_straighten_algorithm_in_task_graph()));
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
@@ -76,41 +67,29 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
 
-  // Step3: put infomation from task_gph into plan.
-  const int64_t node_num = task_gph->node_num();
-  const int64_t cpu_num = std::thread::hardware_concurrency();
-  const int64_t thread_pool_size = std::min(node_num, cpu_num);
-  BlockingCounter counter(node_num);
-  std::mutex mtx;
-  ThreadPool thread_pool(thread_pool_size);
+  // put infomation from task_gph into plan.
   task_gph->ForEachNode([&](TaskNode* task_node) {
-    thread_pool.AddWork([task_node, plan, &job_desc, &counter, &mtx]() {
-      if (!task_node->IsMeaningLess()) {
-        TaskProto task_proto;
-        task_node->ToProto(&task_proto);
-        {
-          std::unique_lock<std::mutex> guard(mtx);
-          if (task_node->GetTaskType() == kNormalForward || task_node->GetTaskType() == kRepeat
-              || task_node->GetTaskType() == kAcc) {
-            CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto);
-          }
-          plan->mutable_task()->Add(std::move(task_proto));
-        }  // guard(mtx)
-      }
-      counter.Decrease();
-    } /* thread_pool.AddWork */);
-  } /* task_gph->ForEachNode */);
-  counter.WaitForeverUntilCntEqualZero();
+    if (task_node->IsMeaningLess()) { return; }
+    int64_t machine_id = GlobalProcessCtx::GetMachineId(rank_);
+    if (machine_id != task_node->machine_id()) { return; }
+    TaskProto task_proto;
+    task_node->ToProto(&task_proto);
+    if (task_node->GetTaskType() == kNormalForward || task_node->GetTaskType() == kRepeat
+        || task_node->GetTaskType() == kAcc) {
+      CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto);
+    }
+    plan->mutable_task()->Add(std::move(task_proto));
+  });
   // NOTE(levi): release task_gph here to decrise memory peak.
   task_gph.reset();
 
-  // Step4: post-process for plan and delete Singleton<OpGraph>.
+  // post-process for plan and delete Singleton<OpGraph>.
   auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
   (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
   // NOTE(chengcheng): infer mem blob id & set inplace & add ctrl
   IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan, IsReachable);
   PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
-  Singleton<OpGraph>::Delete();
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow
