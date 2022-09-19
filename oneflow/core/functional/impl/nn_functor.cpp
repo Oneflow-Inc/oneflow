@@ -3590,7 +3590,7 @@ class OneEmbeddingLookupFunctor {
     if (table_ids) {
       const auto& table_ids_shape = JUST(table_ids)->shape();
       const auto& ids_shape = ids->shape();
-      auto broad_table_ids = JUST(table_ids);
+      auto broadcast_table_ids = JUST(table_ids);
       if (table_ids_shape != ids_shape) {
         CHECK_EQ_OR_RETURN(table_ids_shape->NumAxes() + 1, ids_shape->NumAxes())
             << Error::RuntimeError()
@@ -3607,9 +3607,9 @@ class OneEmbeddingLookupFunctor {
         // dtype as like tensor. should be replaced by broadcast_to when have broadcast_to support.
         auto like_tensor =
             JUST(functional::Cast(ids, JUST(table_ids)->dtype(), /*pin_memory=*/false));
-        broad_table_ids = JUST(functional::BroadcastLike(JUST(table_ids), like_tensor, {0}));
+        broadcast_table_ids = JUST(functional::BroadcastLike(JUST(table_ids), like_tensor, {0}));
       }
-      return OpInterpUtil::Dispatch<Tensor>(*op_has_table_ids_, {shadow, ids, broad_table_ids},
+      return OpInterpUtil::Dispatch<Tensor>(*op_has_table_ids_, {shadow, ids, broadcast_table_ids},
                                             attrs);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_no_table_ids_, {shadow, ids}, attrs);
