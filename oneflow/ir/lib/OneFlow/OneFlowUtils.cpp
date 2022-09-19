@@ -17,6 +17,14 @@ limitations under the License.
 
 namespace mlir {
 namespace oneflow {
+
+void CheckEnableIRPrinting(mlir::PassManager& pm) {
+  bool enable_ir_printing =
+      ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_IR_PRINTING", false);
+  pm.getContext()->disableMultithreading(enable_ir_printing);
+  if (enable_ir_printing) { pm.enableIRPrinting(); }
+}
+
 StringRef SanitizeIdentifier(StringRef name, SmallString<16>& buffer, StringRef allowedPunctChars,
                              bool allowTrailingDigit) {
   assert(!name.empty() && "Shouldn't have an empty name here");

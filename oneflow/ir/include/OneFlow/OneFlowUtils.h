@@ -16,11 +16,13 @@ limitations under the License.
 
 #ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWUTILS_H_
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWUTILS_H_
+#include "oneflow/core/common/util.h"
+#include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringExtras.h"
-
 namespace mlir {
 namespace oneflow {
+void CheckEnableIRPrinting(mlir::PassManager& pm);
 StringRef SanitizeIdentifier(StringRef name, SmallString<16>& buffer,
                              StringRef allowedPunctChars = "$._", bool allowTrailingDigit = true);
 }  // namespace oneflow

@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
@@ -27,7 +26,9 @@ limitations under the License.
 #include "OneFlow/OneFlowOpTraits.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/MLIROneFlowTranslation.h"
+#include "OneFlow/OneFlowUtils.h"
 
+#include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -780,12 +781,7 @@ void DumpMLIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, ModuleOp module,
 LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wrapper,
                                      MLIRContext* context, OwningOpRef<ModuleOp>& module) {
   mlir::PassManager pm(context);
-  if (bool enable_ir_printing =
-          ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_IR_PRINTING", false);
-      enable_ir_printing) {
-    context->disableMultithreading(enable_ir_printing);
-    pm.enableIRPrinting();
-  }
+  mlir::oneflow::CheckEnableIRPrinting(pm);
   // this canonicalizer should create concrete ops and create fuse opportunities
   pm.addPass(createCanonicalizerPass());
   std::string graphviz;

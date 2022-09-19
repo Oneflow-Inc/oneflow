@@ -29,6 +29,7 @@ limitations under the License.
 #include "OneFlow/SBP/SBPImporter.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/OneFlowUtils.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/OneFlowUtils.h"
 #include "OneFlow/OneFlowSupport.h"
@@ -974,12 +975,7 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
 LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module) {
   InitializeLLVMNVPTXBackend();
   mlir::PassManager pm(context);
-  if (bool enable_ir_printing =
-          ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_IR_PRINTING", false);
-      enable_ir_printing) {
-    context->disableMultithreading(enable_ir_printing);
-    pm.enableIRPrinting();
-  }
+  mlir::oneflow::CheckEnableIRPrinting(pm);
   AddLowerToLinalgMemRefPasses(pm);
   pm.addNestedPass<func::FuncOp>(
       createConvertLinalgToParallelLoopsPass());  // convert-linalg-to-parallel-loops
