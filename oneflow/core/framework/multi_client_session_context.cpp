@@ -53,7 +53,7 @@ int32_t GetCpuDeviceNum() { return std::thread::hardware_concurrency(); }
 MultiClientSessionContext::MultiClientSessionContext(
     const std::shared_ptr<EnvGlobalObjectsScope>& env_ctx)
     : env_ctx_(env_ctx) {
-  CHECK(Singleton<MultiClientSessionContext>::Get() == nullptr);
+  CHECK(Singleton<MultiClientSessionContext>::Get() == nullptr) << "Duplicate multi client session context";
   Singleton<MultiClientSessionContext>::SetAllocated(this);
 }
 

@@ -135,7 +135,8 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const vm::EagerBlobObjectListPtr&
     {
       for (const auto& op_name : nn_graph->inputs_op_names()) {
         const auto& event_record = std::make_shared<SharedEventRecord>();
-        CHECK_OR_RETURN(input_op_name2end_event_record->emplace(op_name, event_record).second);
+        CHECK_OR_RETURN(input_op_name2end_event_record->emplace(op_name, event_record).second)
+            << "Duplicate Op name " << op_name;
       }
 
       auto stream = JUST(GetCriticalSectionStream());
@@ -150,7 +151,8 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const vm::EagerBlobObjectListPtr&
     {
       for (const auto& op_name : nn_graph->outputs_op_names()) {
         const auto& event_record = std::make_shared<SharedEventRecord>();
-        CHECK_OR_RETURN(output_op_name2end_event_record->emplace(op_name, event_record).second);
+        CHECK_OR_RETURN(output_op_name2end_event_record->emplace(op_name, event_record).second)
+            << "Duplicate Op name " << op_name;
       }
       auto stream = JUST(GetCriticalSectionStream());
       auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));

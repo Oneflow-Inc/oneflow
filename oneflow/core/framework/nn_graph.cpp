@@ -112,15 +112,17 @@ int64_t NNGraph::variable_op_size() const { return variable_op_names_.size(); }
 Maybe<void> NNGraph::RegisterAdditionalVarOpNamesAndTensorsToBeLoaded(
     const std::vector<std::string>& additional_var_names,
     const std::vector<std::shared_ptr<one::Tensor>>& additional_var_tensors) {
-  CHECK_EQ_OR_RETURN(additional_var_names.size(), additional_var_tensors.size());
+  CHECK_EQ_OR_RETURN(additional_var_names.size(), additional_var_tensors.size())
+      << "Number of additional variable names and tensors mismatch";
   CHECK_OR_RETURN(additional_variable_op_tobe_loaded_name2tensor_.empty())
       << " The additional variables (states in Optimizer or LRScheduler) of nn.Graph " << name_
-      << " are register repeatedly.";
+      << " are registered repeatedly.";
   FOR_RANGE(size_t, i, 0, additional_var_names.size()) {
     CHECK_OR_RETURN(additional_variable_op_tobe_loaded_name2tensor_
                         .emplace(JUST(VectorAt(additional_var_names, i)),
                                  JUST(VectorAt(additional_var_tensors, i)))
-                        .second);
+                        .second)
+        << "Duplicate variable name: " << additional_var_names.at(i);
   }
   return Maybe<void>::Ok();
 }
@@ -128,11 +130,14 @@ Maybe<void> NNGraph::RegisterAdditionalVarOpNamesAndTensorsToBeLoaded(
 Maybe<void> NNGraph::RegisterInputOpNamesAndTensors(
     const std::vector<std::string>& inputs_op_names,
     const std::vector<std::shared_ptr<one::Tensor>>& input_tensors) {
-  CHECK_EQ_OR_RETURN(inputs_op_names.size(), input_tensors.size());
+  CHECK_EQ_OR_RETURN(inputs_op_names.size(), input_tensors.size())
+      << "Number of input op names and tensors mismatch";
   CHECK_OR_RETURN(inputs_op_names_.empty())
-      << " The input tensors of nn.Graph " << name_ << " are register repeatedly.";
-  CHECK_OR_RETURN(input_tensors_valid_.empty());
-  CHECK_OR_RETURN(inputs_tensor_meta_str_.empty());
+      << " The input tensors of nn.Graph " << name_ << " are registered repeatedly.";
+  CHECK_OR_RETURN(input_tensors_valid_.empty())
+      << " The input tensors of nn.Graph " << name_ << " are registered repeatedly.";
+  CHECK_OR_RETURN(inputs_tensor_meta_str_.empty())
+      << " The input tensors of nn.Graph " << name_ << " are registered repeatedly.";
   inputs_op_names_.assign(inputs_op_names.begin(), inputs_op_names.end());
   input_tensors_valid_.reserve(input_tensors.size());
   inputs_tensor_meta_str_.reserve(input_tensors.size());
@@ -147,11 +152,14 @@ Maybe<void> NNGraph::RegisterInputOpNamesAndTensors(
 Maybe<void> NNGraph::RegisterOutputOpNamesAndTensors(
     const std::vector<std::string>& outputs_op_names,
     const std::vector<std::shared_ptr<one::Tensor>>& output_tensors) {
-  CHECK_EQ_OR_RETURN(outputs_op_names.size(), output_tensors.size());
+  CHECK_EQ_OR_RETURN(outputs_op_names.size(), output_tensors.size())
+      << "Number of output op names and tensors mismatch";
   CHECK_OR_RETURN(outputs_op_names_.empty())
       << " The output tensors of nn.Graph " << name_ << " are register repeatedly.";
-  CHECK_OR_RETURN(output_tensors_valid_.empty());
-  CHECK_OR_RETURN(outputs_tensor_meta_str_.empty());
+  CHECK_OR_RETURN(output_tensors_valid_.empty())
+      << " The output tensors of nn.Graph " << name_ << " are register repeatedly.";
+  CHECK_OR_RETURN(outputs_tensor_meta_str_.empty())
+      << " The output tensors of nn.Graph " << name_ << " are register repeatedly.";
   outputs_op_names_.assign(outputs_op_names.begin(), outputs_op_names.end());
   output_tensors_valid_.reserve(output_tensors.size());
   outputs_tensor_meta_str_.reserve(output_tensors.size());
@@ -167,13 +175,15 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
     const std::vector<std::string>& variable_op_names,
     const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors) {
   JUST(vm::CurrentRankSync());
-  CHECK_EQ_OR_RETURN(variable_op_names.size(), variable_tensors.size());
+  CHECK_EQ_OR_RETURN(variable_op_names.size(), variable_tensors.size())
+      << "Number of variable names and tensors mismatch";
   for (int32_t i = 0; i < variable_op_names.size(); ++i) {
     const std::shared_ptr<one::Tensor>& var = variable_tensors.at(i);
-    CHECK_OR_RETURN(var->is_eager());
+    CHECK_OR_RETURN(var->is_eager()) << "Tensor variable should be eager";
     const std::string& var_name = variable_op_names.at(i);
-    CHECK_OR_RETURN(!var_name.empty());
-    CHECK_OR_RETURN(variable_op_name2tensor_.emplace(var_name, var).second);
+    CHECK_OR_RETURN(!var_name.empty()) << "Empty variable name";
+    CHECK_OR_RETURN(variable_op_name2tensor_.emplace(var_name, var).second)
+        << "Duplicate variable name: " << var_name;
     CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
   }
   return Maybe<void>::Ok();
@@ -185,9 +195,10 @@ Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
   for (const auto& pair : free_eager_tensors) {
     const std::string& var_name = pair.first;
     const std::shared_ptr<one::Tensor>& var = pair.second;
-    CHECK_OR_RETURN(var->is_eager());
-    CHECK_OR_RETURN(!var_name.empty());
-    CHECK_OR_RETURN(variable_op_name2tensor_.emplace(var_name, var).second);
+    CHECK_OR_RETURN(var->is_eager()) << "Tensor variable should be eager";
+    CHECK_OR_RETURN(!var_name.empty()) << "Empty variable name";
+    CHECK_OR_RETURN(variable_op_name2tensor_.emplace(var_name, var).second)
+        << "Duplicate variable name: " << var_name;
     CHECK_OR_RETURN(additional_variable_op_name_.insert(var_name).second);
     CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
   }
@@ -204,7 +215,7 @@ Maybe<std::vector<std::shared_ptr<one::Tensor>>> NNGraph::GetAdditionalVarOpTens
   std::vector<std::shared_ptr<one::Tensor>> tensors;
   for (const auto& iter : additional_variable_op_name_) {
     auto find_iter = variable_op_name2tensor_.find(iter);
-    CHECK_OR_RETURN(find_iter != variable_op_name2tensor_.end());
+    CHECK_OR_RETURN(find_iter != variable_op_name2tensor_.end()) << iter << " not found.";
     tensors.push_back(find_iter->second);
   }
   return tensors;
@@ -243,6 +254,7 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
   }));
   return Maybe<void>::Ok();
 }
+
 Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
   std::set<std::string> variable_names = [&]() -> Maybe<std::set<std::string>> {
     std::set<std::string> variable_names_;
@@ -264,7 +276,7 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
 }
 
 Maybe<void> NNGraph::CompileAndInitRuntime() {
-  CHECK_OR_RETURN(!runtime_inited_);
+  CHECK_OR_RETURN(!runtime_inited_) << "nn.Graph runtime is already initialized";
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
   JUST(RegisterNewVariableOpInJobPass());
   JUST(DeleteOutdatedVariableInVariableTensorMgr());
@@ -515,7 +527,7 @@ Maybe<void> MakeEagerBlobObjectList(vm::EagerBlobObjectList* blob_list,
                                     const one::TensorTuple& tensor_list) {
   blob_list->reserve(tensor_list.size());
   for (const auto& tensor : tensor_list) {
-    CHECK_OR_RETURN(tensor->is_eager());
+    CHECK_OR_RETURN(tensor->is_eager()) << "Tensor should be eager";
     if (tensor->is_global()) {
       blob_list->emplace_back(JUST(JUST(tensor->cur_rank_phy_tensor())->eager_blob_object()));
     } else {
@@ -530,13 +542,16 @@ Maybe<void> MakeEagerBlobObjectList(vm::EagerBlobObjectList* blob_list,
 Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTuple& outputs,
                            const one::TensorTuple& parameters,
                            const std::shared_ptr<NNGraph>& nn_graph) {
-  CHECK_EQ_OR_RETURN(inputs.size(), nn_graph->inputs_op_names().size());
-  CHECK_EQ_OR_RETURN(outputs.size(), nn_graph->outputs_op_names().size());
+  CHECK_EQ_OR_RETURN(inputs.size(), nn_graph->inputs_op_names().size())
+      << "Number of inputs and NNGraph::inputs_op_names mismatch";
+  CHECK_EQ_OR_RETURN(outputs.size(), nn_graph->outputs_op_names().size())
+      << "Number of outputs and NNGraph::outputs_op_names mismatch";
   // NOTE(chengcheng):
   //   parameters not used in LaunchLazyJobInstrucntion;
   //   the args: parameters is all variable tensor hold by nn.Graph
   //   but the NNGraph::variable_op_size may has FreeEagerTensor as sepcial variable op.
-  CHECK_LE_OR_RETURN(parameters.size(), nn_graph->variable_op_size());
+  CHECK_LE_OR_RETURN(parameters.size(), nn_graph->variable_op_size())
+      << "Parameter size should be less than or equal to variable size";
   for (int i = 0; i < inputs.size(); ++i) {
     // TODO(chengcheng, liufengwei):
     //   use TensorMeta.to_string and equal.
@@ -550,7 +565,8 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
   }
   for (int i = 0; i < outputs.size(); ++i) {
     CHECK_OR_RETURN(nn_graph->outputs_tensor_meta_str().at(i)
-                    == *JUST(GetTensorMetaString(outputs.at(i))));
+                    == *JUST(GetTensorMetaString(outputs.at(i))))
+        << "Output tensor meta string mismatch";
   }
   vm::EagerBlobObjectList input_blobs;
   vm::EagerBlobObjectList output_blobs;
