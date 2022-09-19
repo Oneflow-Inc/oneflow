@@ -165,7 +165,7 @@ def SetDefaultMultiClientEnvVars():
     os.environ["MASTER_ADDR"] = "127.0.0.1"
     os.environ["MASTER_PORT"] = str(_FindFreePort())
     os.environ["WORLD_SIZE"] = "1"
-    os.environ["RANK"] = "0"
+    os.environ["RANK"] = "-1"
     os.environ["LOCAL_RANK"] = "0"
 
 
