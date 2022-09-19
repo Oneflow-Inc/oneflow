@@ -60,9 +60,9 @@ void process_mem_usage(double& vm_usage, double& resident_set)
 
    stat_stream.close();
 
-   long page_size_kb = sysconf(_SC_PAGE_SIZE) >> 20; // in case x86-64 is configured to use 2MB pages
+   long page_size_kb = sysconf(_SC_PAGE_SIZE); // in case x86-64 is configured to use 2MB pages
    vm_usage     = vsize >> 20;
-   resident_set = rss * page_size_kb;
+   resident_set = (rss * page_size_kb) >> 20;
 }
 }  // namespace
 
@@ -120,9 +120,9 @@ double TimeCounter<Resolution>::Count(const std::string& log_prefix, int v_log_l
     double vm=0, rss=0;
     process_mem_usage(vm, rss);
     if (v_log_level == 0) {
-      LOG(INFO) << oss.str() << ", mem size vm " << vm << " rss " << rss << " MB";
+      LOG(INFO) << oss.str() << ", mem size vm " << vm << " MB, rss " << rss << " MB";
     } else {
-      VLOG(v_log_level) << oss.str() << ", mem size vm " << vm << " rss " << rss << " MB";
+      VLOG(v_log_level) << oss.str() << ", mem size vm " << vm << "MB, rss " << rss << " MB";
     }
   }
   start_ = end;
