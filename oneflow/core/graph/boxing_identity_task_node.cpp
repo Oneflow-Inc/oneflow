@@ -53,4 +53,17 @@ void BoxingIdentityTaskNode::InferProducedDataRegstTimeShape() {
   NaiveInferProducedDataRegstTimeShape();
 }
 
+Maybe<void> BoxingIdentityTaskNode::InitFromProto(const TransportTaskProto& transport_task_proto, transport_task_proto, const TaskGraphRebuildCtx& ctx) {
+  InitFromProto(transport_task_proto.task(), /*check=*/false);
+  CHECK_OR_RETURN(transport_task_proto.has_boxing_identity_task())
+    << "not a serialized BoxingIdentityTaskNode. debug string: "
+    << transport_task_proto.DebugString();
+  return Maybe<void>::Ok();
+}
+
+void BoxingIdentityTaskNode::ToProto(TransportTaskProto* transport_task_proto) const {
+  ToProto(transport_task_proto->mutable_task());
+  transport_task_proto->mutable_boxing_identity_task();
+}
+
 }  // namespace oneflow

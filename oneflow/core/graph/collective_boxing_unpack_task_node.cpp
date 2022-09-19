@@ -66,4 +66,26 @@ void CollectiveBoxingUnpackTaskNode::InferProducedDataRegstTimeShape() {
   NaiveInferProducedDataRegstTimeShape();
 }
 
+Maybe<void> CollectiveBoxingUnpackTaskNode::InitFromProto(const TransportTaskProto& transport_task_proto, transport_task_proto, const TaskGraphRebuildCtx& ctx) {
+  InitFromProto(transport_task_proto.task(), /*check=*/false);
+  CHECK_OR_RETURN(transport_task_proto.has_collective_boxing_unpack_task())
+    << "not a serialized CollectiveBoxingUnpackTaskNode. debug string: "
+    << transport_task_proto.DebugString();
+  const auto& proto = transport_task_proto.collective_boxing_unpack_task();
+  logical_shape_ = Shape(proto.logical_shape());
+  src_sbp_parallel_ = proto.src_sbp_parallel();
+  dst_sbp_parallel_ = proto.dst_sbp_parallel();
+  parallel_num_ = proto.parallel_num();
+  return Maybe<void>::Ok();
+}
+
+void CollectiveBoxingUnpackTaskNode::ToProto(TransportTaskProto* transport_task_proto) const {
+  ToProto(transport_task_proto->mutable_task());
+  auto* proto = transport_task_proto->mutable_collective_boxing_unpack_task();
+  logical_shape_.ToProto(proto->mutable_logical_shape());
+  *proto->mutable_src_sbp_parallel() = src_sbp_parallel_;
+  *proto->mutable_dst_sbp_parallel() = dst_sbp_parallel_;
+  proto->set_parallel_num(parallel_num_);
+}
+
 }  // namespace oneflow

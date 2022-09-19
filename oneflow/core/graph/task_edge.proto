@@ -1,0 +1,12 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/register/logical_blob_id.proto";
+
+message TaskEdgeProto {
+  required int64 task_edge_uid = 1;
+  required int64 src_task_id = 2;
+  required int64 dst_task_id = 3;
+  repeated LogicalBlobId lbi = 4;
+  map<string, int64> name_in_producer2regst_desc_id = 5;
+};

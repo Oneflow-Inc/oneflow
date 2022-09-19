@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/graph/exec_graph.h"
 #include "oneflow/core/job/task.pb.h"
+#include "oneflow/core/graph/task_edge.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/memory/memory_zone.h"
@@ -93,7 +94,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual TaskType GetTaskType() const { return TaskType::kInvalid; }
   std::string VisualStr() const override;
   virtual bool IsMeaningLess();
-  virtual void ToProto(TaskProto*) const;
+  virtual void InitFromProto(const TaskProto& task_proto);
+  void ToProto(TaskProto* task_proto) const { ToProto(task_proto, /*check*/ true); }
+  virtual void ToProto(TaskProto* task_proto, bool check) const;
   void BindEdgeWithProducedRegst(TaskEdge*, const std::string& name);
   virtual MemZoneId MemZoneId121() const;
   bool BuildCtrlRegstDescIfNeed(TaskNode* dst_node, std::string* name);
@@ -155,6 +158,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   HashMap<std::string, std::list<std::shared_ptr<RegstDesc>>> consumed_regsts_;
 };
 
+class TaskGraphRebuildCtx;
+
 class TaskEdge final : public Edge<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskEdge);
@@ -171,6 +176,11 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
   void AddLbis(const std::vector<LogicalBlobId>& lbis) { lbis_.insert(lbis.begin(), lbis.end()); }
 
   void CheckRegstLbiValid() const;
+
+  Maybe<void> InitFromProto(const TaskEdgeProto& proto,
+                            const TaskGraphRebuildCtx& task_graph_rebuild_ctx);
+
+  void ToProto(TaskEdgeProto* proto) const;
 
  private:
   HashSet<LogicalBlobId> lbis_;

@@ -16,17 +16,12 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_SLICE_BOXING_TASK_NODE_H_
 #define ONEFLOW_CORE_GRAPH_SLICE_BOXING_TASK_NODE_H_
 
+#include "oneflow/core/graph/slice_boxing_task_mode.pb.h"
 #include "oneflow/core/graph/transport_task_node.h"
 #include "oneflow/core/register/tensor_slice_view.h"
 #include "oneflow/core/memory/memory_zone.h"
 
 namespace oneflow {
-
-enum SliceBoxingTaskMode {
-  kSliceBoxingTaskModeInvalid,
-  kSliceBoxingTaskModeCopy,
-  kSliceBoxingTaskModeAdd,
-};
 
 class SliceBoxingTaskNode final : public TransportTaskNode {
  public:
@@ -42,6 +37,9 @@ class SliceBoxingTaskNode final : public TransportTaskNode {
   void SetInDataEdgeSlice(const TaskEdge* edge, const TensorSliceView& slice);
   void ConnectToSrcNodeWithSlice(TaskNode* src, TaskEdge* edge, const TensorSliceView& slice);
   void SetOutShape(const Shape& shape);
+
+  Maybe<void> InitFromProto(const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) override;
+  void ToProto(TransportTaskProto*) const override;
 
  private:
   void BuildExecGphAndRegst() override;

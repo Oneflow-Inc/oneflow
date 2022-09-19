@@ -21,6 +21,9 @@ limitations under the License.
 
 namespace oneflow {
 
+class TransportTaskProto;
+class TaskGraphRebuildCtx;
+
 class TransportTaskNode : public TaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TransportTaskNode);
@@ -29,6 +32,9 @@ class TransportTaskNode : public TaskNode {
 
   void set_lbi(const LogicalBlobId& lbi) { lbi_ = lbi; }
   LogicalBlobId lbi() const { return lbi_; }
+
+  virtual Maybe<void> InitFromProto(const TransportTaskProto&, const TaskGraphRebuildCtx& ctx) = 0;
+  virtual void ToProto(TransportTaskProto*) const = 0;
 
  private:
   LogicalBlobId lbi_;

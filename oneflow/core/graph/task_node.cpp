@@ -202,9 +202,29 @@ std::string TaskNode::VisualStr() const {
 
 bool TaskNode::IsMeaningLess() { return produced_regsts_.empty() && consumed_regsts_.empty(); }
 
-void TaskNode::ToProto(TaskProto* task_proto) const {
+void TaskNode::InitFromProto(const TaskProto& task_proto) {
+  // Step1: init some scalar items.
+  CHECK(task_proto.task_type() == GetTaskType());
+  machine_id_ = task_proto.machine_id();
+  thrd_id_ = task_proto.thrd_id();
+  task_id_ = task_proto.task_id();
+  CHECK(task_proto.job_id() == GlobalJobDesc().job_id());
+  chain_id_ = task_proto.task_set_info().chain_id();
+  order_in_graph_ = task_proto.task_set_info().order_in_graph();
+  // Step2: check exec_gph empty.
+  CHECK(task_proto.exec_sequence().exec_node().empty());
+  // Step3: init produced_regst.
+  for (const auto& pair : task_proto.produced_regst_desc()) {
+    const auto& regst_desc = ProduceRegst(pair.first, pair.second.enable_reuse_mem());
+    regst_desc->InitFromProto(pair.second);
+  }
+  // Step4: check consumed_regst empty.
+  CHECK(task_proto.consumed_regst_desc_id().empty());
+}
+
+void TaskNode::ToProto(TaskProto* task_proto, bool check) const {
   // Step1: process some scalar items.
-  CHECK_NE(chain_id_, -1);
+  if (check) { CHECK_NE(chain_id_, -1); }
   task_proto->set_task_type(GetTaskType());
   task_proto->set_machine_id(machine_id_);
   task_proto->set_thrd_id(thrd_id_);
@@ -460,5 +480,27 @@ TaskEdge* TaskNode::SoleOutDataEdge() const { return GetSoleEdge(&TaskNode::ForE
 size_t TaskNode::in_data_edges_size() const { return GetEdgesSize(&TaskNode::ForEachInDataEdge); }
 
 size_t TaskNode::out_data_edges_size() const { return GetEdgesSize(&TaskNode::ForEachOutDataEdge); }
+
+Maybe<void> TaskEdge::InitFromProto(const TaskEdgeProto& proto,
+                                    const TaskGraphRebuildCtx& task_graph_rebuild_ctx) {
+  CHECK_NE_OR_RETURN(proto.src_task_id(), proto.dst_task_id()) << "self-loop are not supported";
+  JUST(task_graph_rebuild_ctx.TaskNode4Id(proto.src_task_id()));
+  JUST(task_graph_rebuild_ctx.TaskNode4Id(proto.dst_task_id()));
+  lbis_.insert(proto.lbi().begin(), proto.lbi().end());
+  for (const auto& pair : proto.name_in_producer2regst_desc_id()) {
+    AddRegst(pair.first, JUST(task_graph_rebuild_ctx.RegstDesc4Id(pair.second)));
+  }
+  return Maybe<void>::Ok();
+}
+
+void TaskEdge::ToProto(TaskEdgeProto* proto) const {
+  proto->set_src_task_id(src_node()->task_id());
+  proto->set_dst_task_id(dst_node()->task_id());
+  *proto->mutable_lbi() = {lbis_.begin(), lbis_.end()};
+  auto* map = proto->mutable_name_in_producer2regst_desc_id();
+  for (const auto& pair : name_in_producer2regst_) {
+    CHECK(map->insert({pair.first, pair.second->regst_desc_id()}).second);
+  }
+}
 
 }  // namespace oneflow
