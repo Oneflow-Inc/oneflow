@@ -25,16 +25,12 @@ limitations under the License.
 namespace oneflow {
 class MemoryShareStrategy {
  public:
-  size_t mem_block_size_;
-  std::vector<int64_t> register_offset_;
-  std::vector<int64_t> register_size_;
-  HashMap<RegstDescProto*, int32_t> register2index_;
-  std::vector<RegstDescProto*> index2register_;
-
+  // Steal a compact position as the initial strategy
   void StealCompactPosition(
       const HashMap<RegstDescProto*, int64_t>& regst_desc2offset,
       const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
 
+  // Generate a compact position with the order of occurrence
   void GenerateCompactPosition(
       const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
 
@@ -44,27 +40,32 @@ class MemoryShareStrategy {
   void UpdateOffset(size_t* mem_block_size, HashMap<RegstDescProto*, int64_t>* regst_desc2offset);
 
  private:
+  size_t mem_block_size_;
+  std::vector<int64_t> register_offset_;
+  std::vector<int64_t> register_size_;
+  HashMap<RegstDescProto*, int32_t> register2index_;
+  std::vector<RegstDescProto*> index2register_;
   // left registers store the first registers on the left, which have smaller offsets.
   // For example, 1 < 2 < 3 < 5
   //                  2 < 4 < 5
   // Then
-  //      left_registers[1] = {}
-  //      left_registers[2] = {1}
-  //      left_registers[3] = {2}
-  //      left_registers[4] = {2}
-  //      left_registers[5] = {3, 4}
-  //  We know that 1 < 3, but 1 is not in left_registers[3],
+  //      left_registers_[1] = {}
+  //      left_registers_[2] = {1}
+  //      left_registers_[3] = {2}
+  //      left_registers_[4] = {2}
+  //      left_registers_[5] = {3, 4}
+  //  We know that 1 < 3, but 1 is not in left_registers_[3],
   //  since we only store the first registers.
-  std::vector<HashSet<int32_t>> left_registers;
+  std::vector<HashSet<int32_t>> left_registers_;
   // Store all the registers which exist simultaneously.
-  std::vector<HashSet<int32_t>> excluded_registers;
+  std::vector<HashSet<int32_t>> excluded_registers_;
   // Back up the changes
-  std::vector<HashSet<int32_t>> backup_registers;
-  HashSet<int32_t> backup_register_behind_i;
+  std::vector<HashSet<int32_t>> backup_registers_;
+  HashSet<int32_t> backup_register_behind_i_;
   // A buffer which implies whether we should visit a register
-  std::vector<int32_t> should_visit;
+  std::vector<int32_t> should_visit_;
   int32_t total_register_num_;
-  std::vector<int32_t> order;
+  std::vector<int32_t> order_;
   // Initialization
   void InitRegister(
       const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
@@ -102,7 +103,7 @@ class MemoryShareStrategy {
   int64_t ComputeOffset4CompactRelationship(int32_t i);
   // Check whether the current offset does not introduce any conflict
   Maybe<void> CheckConflict();
-  // Reset the compact position for the registers with should_visit = 0
+  // Reset the compact position for the registers with should_visit_ = 0
   void ResetCompactPosition(int32_t j);
   // Find all the k < i, eliminates k < j,
   // since k < i and i < j have already implied that.

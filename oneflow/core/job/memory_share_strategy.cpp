@@ -45,10 +45,11 @@ void MemoryShareStrategy::InitRegisterInformation() {
     register_size_[register_id] = register_size;
     register2index_[register_] = register_id;
   }
-  order.resize(total_register_num_);
-  for (int32_t i = 0; i < total_register_num_; i++) { order[i] = i; }
+  order_.resize(total_register_num_);
+  for (int32_t i = 0; i < total_register_num_; i++) { order_[i] = i; }
 }
 
+// Steal a compact position as the initial strategy
 void MemoryShareStrategy::StealCompactPosition(
     const HashMap<RegstDescProto*, int64_t>& regst_desc2offset,
     const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts) {
@@ -64,23 +65,23 @@ void MemoryShareStrategy::StealCompactPosition(
   // Update other information
   InitRegisterInformation();
 
-  left_registers.clear();
-  left_registers.resize(total_register_num);
-  excluded_registers.clear();
-  excluded_registers.resize(total_register_num);
-  // should_visit[i] indicates whether we should visit register[i].
-  // should_visit[i] = 0: should not visit i, or have already visited i..
-  // should_visit[i] = 1: should visit i, i is excluded with j
-  // should_visit[i] = 2: should visit i, i is not excluded with j
-  should_visit.clear();
-  should_visit.resize(total_register_num, 0);
+  left_registers_.clear();
+  left_registers_.resize(total_register_num);
+  excluded_registers_.clear();
+  excluded_registers_.resize(total_register_num);
+  // should_visit_[i] indicates whether we should visit register[i].
+  // should_visit_[i] = 0: should not visit i, or have already visited i..
+  // should_visit_[i] = 1: should visit i, i is excluded with j
+  // should_visit_[i] = 2: should visit i, i is not excluded with j
+  should_visit_.clear();
+  should_visit_.resize(total_register_num, 0);
   register_offset_.resize(total_register_num_);
   // Generate a compact relationship of position
   // For example we have 3 relationship: x1 < x2, x2 < x3, x1 < x3
   // We would delete the redundant relationship (x1 < x3)
   for (int32_t j = 0; j < total_register_num; j++) {
     register_offset_[j] = regst_desc2offset.at(index2register_[j]);
-    auto& excluded_register_j = excluded_registers[j];
+    auto& excluded_register_j = excluded_registers_[j];
     // Init should visit with all orders of the excluded register
     for (const auto& register_i : regst2mutual_exclusion_regsts.at(index2register_[j])) {
       // Copy the data to excluded registers
@@ -91,6 +92,7 @@ void MemoryShareStrategy::StealCompactPosition(
   for (int32_t j = 0; j < total_register_num; j++) { ResetCompactPosition(j); }
 }
 
+// Generate a compact position with the order of occurrence
 void MemoryShareStrategy::GenerateCompactPosition(
     const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts) {
   HashMap<RegstDescProto*, int64_t> regst_desc2offset;
@@ -119,7 +121,7 @@ int64_t MemoryShareStrategy::ComputeOffset4CompactRelationship(int32_t i) {
   if (register_offset_[i] < 0) {
     // An initial value x would be store as -x - 1.
     register_offset_[i] = -register_offset_[i] - 1;
-    for (int32_t j : left_registers[i]) {
+    for (int32_t j : left_registers_[i]) {
       register_offset_[i] =
           std::max(register_offset_[i], ComputeOffset4CompactRelationship(j) + register_size_[j]);
     }
@@ -131,12 +133,12 @@ size_t MemoryShareStrategy::ComputeOptimalAdjustedCost() {
   // Initial optimal cost
   size_t optimal_cost = ComputeOptimalCostFrom0();
   // All the registers excluded with register i are sorted from left to right
-  // std::vector<int32_t> order;
+  // std::vector<int32_t> order_;
   // auto CompareRegisterPosition = [&](int32_t i, int32_t j) {
   //   return register_offset_[i] < register_offset_[j];
   // };
-  backup_registers.clear();
-  backup_registers.resize(index2register_.size());
+  backup_registers_.clear();
+  backup_registers_.resize(index2register_.size());
   // The number of steps that the optimal cost does not decrease
   int32_t step_no_decrease = 0;
   for (int32_t m = 0; m < total_register_num_; m++) {
@@ -155,7 +157,7 @@ size_t MemoryShareStrategy::ComputeOptimalAdjustedCost() {
         auto register_offset_backup = register_offset_;
         // Try to insert the register i into the sorted excluded registers
         HashSet<int64_t> all_x_i;
-        for (int32_t j : excluded_registers[i]) {
+        for (int32_t j : excluded_registers_[i]) {
           // Insert i before j
           all_x_i.insert(register_offset_backup[j]);
           // Insert i after j
@@ -193,7 +195,7 @@ size_t MemoryShareStrategy::ComputeOptimalAdjustedCost() {
         step_no_decrease++;
         if (step_no_decrease >= total_register_num_) { break; }
       }
-      // Adjust the offset after recovery 
+      // Adjust the offset after recovery
       ComputeOptimalCostFrom0();
     }
     if (step_no_decrease >= total_register_num_) { break; }
@@ -211,7 +213,7 @@ size_t MemoryShareStrategy::ComputeOptimalCostWithOccupation(
   int64_t e_i = x_i + register_size_[i];
   register_offset_.clear();
   register_offset_.resize(total_register_num_, -1);
-  for (int32_t k : excluded_registers[i]) {
+  for (int32_t k : excluded_registers_[i]) {
     // x_k + l_k > x_i
     // k is behind i
     if (register_offset_backup[k] + register_size_[k] > x_i) {
@@ -228,81 +230,81 @@ size_t MemoryShareStrategy::ComputeOptimalCostWithOccupation(
 void MemoryShareStrategy::EliminateRegister(int32_t i) {
   int32_t total_register_num = index2register_.size();
   // TODO: Init back up registers
-  backup_registers[i] = left_registers[i];
-  for (auto j : excluded_registers[i]) {
+  backup_registers_[i] = left_registers_[i];
+  for (auto j : excluded_registers_[i]) {
     if (register_offset_[i] < register_offset_[j]) {
-      should_visit.clear();
-      should_visit.resize(total_register_num, 0);
-      // should_visit[i] = 0: should not visit i, or have already visited i..
-      // should_visit[i] = 1: should visit i, i is excluded with j
-      // should_visit[i] = 2: should visit i, i is not excluded with j
-      // should_visit[i] = -1: i is visited, i is excluded with j
-      // should_visit[i] = -2: i is visited, i is not excluded with j
+      should_visit_.clear();
+      should_visit_.resize(total_register_num, 0);
+      // should_visit_[i] = 0: should not visit i, or have already visited i..
+      // should_visit_[i] = 1: should visit i, i is excluded with j
+      // should_visit_[i] = 2: should visit i, i is not excluded with j
+      // should_visit_[i] = -1: i is visited, i is excluded with j
+      // should_visit_[i] = -2: i is visited, i is not excluded with j
       for (int32_t k = 0; k < total_register_num; k++) {
         if (register_offset_[k] < register_offset_[j]) {
           if (Exclude(k, j)) {
-            should_visit[k] = 1;
+            should_visit_[k] = 1;
           } else {
-            should_visit[k] = 2;
+            should_visit_[k] = 2;
           }
         }
       }
       // Eliminate all the grandsons of the excluded registers
-      for (int32_t k : excluded_registers[j]) {
-        if (should_visit[k] == 1) { EliminateRedundantRelationshipIgnore(i, k); }
+      for (int32_t k : excluded_registers_[j]) {
+        if (should_visit_[k] == 1) { EliminateRedundantRelationshipIgnore(i, k); }
       }
-      for (int32_t k : excluded_registers[j]) {
-        if (should_visit[k] == -1) {
-          if (left_registers[j].insert(k).second) { backup_registers[j].insert(k); }
+      for (int32_t k : excluded_registers_[j]) {
+        if (should_visit_[k] == -1) {
+          if (left_registers_[j].insert(k).second) { backup_registers_[j].insert(k); }
         }
       }
-      if (left_registers[j].erase(i)) { backup_register_behind_i.insert(j); }
+      if (left_registers_[j].erase(i)) { backup_register_behind_i_.insert(j); }
     }
   }
-  left_registers[i].clear();
+  left_registers_[i].clear();
 }
 
 // Find all the left registers of i and link those compact excluded ones for j.
 // Not including i itself.
 void MemoryShareStrategy::LookForwardLink(int32_t i, int32_t j) {
-  for (int32_t k : left_registers[i]) {
+  for (int32_t k : left_registers_[i]) {
     if (Exclude(k, j)) {
-      left_registers[j].insert(k);
-      backup_registers[j].insert(k);
-    } else if (should_visit[k]) {
+      left_registers_[j].insert(k);
+      backup_registers_[j].insert(k);
+    } else if (should_visit_[k]) {
       LookForwardLink(k, j);
-      should_visit[k] = 0;
+      should_visit_[k] = 0;
     }
   }
 }
 
 // Whether x_i < x_j
 bool MemoryShareStrategy::CompactLessThan(int32_t i, int32_t j) {
-  return left_registers[j].find(i) != left_registers[j].end();
+  return left_registers_[j].find(i) != left_registers_[j].end();
 }
 
 // Whether i and j occurs simultaneously
 bool MemoryShareStrategy::Exclude(int32_t i, int32_t j) {
-  return excluded_registers[i].find(j) != excluded_registers[i].end();
+  return excluded_registers_[i].find(j) != excluded_registers_[i].end();
 }
 
 // If the previous strategy has fewer cost, recover to the previous one from the backup.
 void MemoryShareStrategy::RecoverFromBackup(int32_t i) {
   for (int32_t j = 0; j < total_register_num_; j++) {
     if (i == j) {
-      left_registers[i] = backup_registers[i];
+      left_registers_[i] = backup_registers_[i];
     } else {
-      for (int32_t k : backup_registers[j]) { left_registers[j].erase(k); }
+      for (int32_t k : backup_registers_[j]) { left_registers_[j].erase(k); }
     }
   }
-  for (int32_t j : backup_register_behind_i) { left_registers[j].insert(i); }
+  for (int32_t j : backup_register_behind_i_) { left_registers_[j].insert(i); }
   ClearBackup();
 }
 
 // Clear backup
 void MemoryShareStrategy::ClearBackup() {
-  for (auto& backup_register : backup_registers) { backup_register.clear(); }
-  backup_register_behind_i.clear();
+  for (auto& backup_register : backup_registers_) { backup_register.clear(); }
+  backup_register_behind_i_.clear();
 }
 
 size_t MemoryShareStrategy::ComputeOptimalCostFrom0() {
@@ -314,55 +316,55 @@ size_t MemoryShareStrategy::ComputeOptimalCostFrom0() {
 // Insert register i at position [x_i, x_i + l_i)
 void MemoryShareStrategy::InsertRegister(int32_t i, int64_t x_i,
                                          const std::vector<int64_t>& original_register_offset) {
-  // should_visit[j] = -1, j is visited and x_i < x_j is implied by left_registers
-  // should_visit[j] = -2, j is visited and x_j < x_i is implied by left_registers
-  // should_visit[j] = -3, j is not excluded with i, irrelevant to i.
-  // should_visit[j] = 0, j is not excluded with i, but we have not visit j yet.
-  // should_visit[j] = 1, j is excluded with i, x_i < x_j, but we have not visit j yet.
-  // should_visit[j] = 2, j is excluded with i, x_j < x_i, but we have not visit j yet.
-  // should_visit.clear();
-  // should_visit.resize(total_register_num_, 0);
-  // for (int32_t j : excluded_registers[i]) {
+  // should_visit_[j] = -1, j is visited and x_i < x_j is implied by left_registers_
+  // should_visit_[j] = -2, j is visited and x_j < x_i is implied by left_registers_
+  // should_visit_[j] = -3, j is not excluded with i, irrelevant to i.
+  // should_visit_[j] = 0, j is not excluded with i, but we have not visit j yet.
+  // should_visit_[j] = 1, j is excluded with i, x_i < x_j, but we have not visit j yet.
+  // should_visit_[j] = 2, j is excluded with i, x_j < x_i, but we have not visit j yet.
+  // should_visit_.clear();
+  // should_visit_.resize(total_register_num_, 0);
+  // for (int32_t j : excluded_registers_[i]) {
   //   if (original_register_offset[j] + register_size_[j] > x_i) {
   //     // e_j = x_j + l_j > x_i, move j behind i
-  //     should_visit[j] = 1;
+  //     should_visit_[j] = 1;
   //   } else {
   //     // e_j < x_i, j is in front of i, we do not need to move j
-  //     should_visit[j] = 2;
+  //     should_visit_[j] = 2;
   //   }
   // }
   // // Kill all the grandsons
-  // for (int32_t j : excluded_registers[i]) {
-  //   if (should_visit[j] == 2) { VisitForwardEliminateCompactRelationship(i, j); }
+  // for (int32_t j : excluded_registers_[i]) {
+  //   if (should_visit_[j] == 2) { VisitForwardEliminateCompactRelationship(i, j); }
   // }
-  // // All the grandsons are visited. Those left with should_visit[j] == 2 are children of i.
-  // for (int32_t j : excluded_registers[i]) {
-  //   if (should_visit[j] == 2) {
-  //     left_registers[i].insert(j);
-  //     should_visit[j] = -2;
+  // // All the grandsons are visited. Those left with should_visit_[j] == 2 are children of i.
+  // for (int32_t j : excluded_registers_[i]) {
+  //   if (should_visit_[j] == 2) {
+  //     left_registers_[i].insert(j);
+  //     should_visit_[j] = -2;
   //   }
   // }
   // // Visit the fathers and grandpas of i
-  // for (int32_t j : excluded_registers[i]) { VisitBackwardInsertCompactRelationship(i, j); }
+  // for (int32_t j : excluded_registers_[i]) { VisitBackwardInsertCompactRelationship(i, j); }
   ComputeOptimalCostWithOccupation(i, x_i, original_register_offset);
-  std::sort(order.begin(), order.end(),
+  std::sort(order_.begin(), order_.end(),
             [&](int32_t k, int32_t j) { return register_offset_[k] < register_offset_[j]; });
-  for (int32_t j : order) {
+  for (int32_t j : order_) {
     if (register_offset_[i] <= register_offset_[j]) { ResetCompactPosition(j); }
   }
 }
 
 // Visit j and add the compact relationship while inserting i
 // Find all the k s.t. x_k < x_j < x_i, j is excluded with i.
-// Thus the first input must satisfy should_visit[j] = 2.
-// After that, we may have should_visit[k] = 0.
+// Thus the first input must satisfy should_visit_[j] = 2.
+// After that, we may have should_visit_[k] = 0.
 void MemoryShareStrategy::VisitForwardEliminateCompactRelationship(int32_t i, int32_t j) {
   // If we have not visited j.
-  if (should_visit[j] >= 0) {
+  if (should_visit_[j] >= 0) {
     // Visit all the children of j, they will not have compact relationship with i
-    for (int32_t k : left_registers[j]) {
+    for (int32_t k : left_registers_[j]) {
       VisitForwardEliminateCompactRelationship(i, k);
-      should_visit[k] = -2;
+      should_visit_[k] = -2;
     }
   }
 }
@@ -371,25 +373,25 @@ void MemoryShareStrategy::VisitForwardEliminateCompactRelationship(int32_t i, in
 // Look through all the undetermined j, define the status of them.
 void MemoryShareStrategy::VisitBackwardInsertCompactRelationship(int32_t i, int32_t j) {
   // If we have not visited j.
-  // NOTE: should_visit[j] != 2 at the current moment.
-  if (should_visit[j] >= 0) {
+  // NOTE: should_visit_[j] != 2 at the current moment.
+  if (should_visit_[j] >= 0) {
     // Visit all the children of j
-    for (int32_t k : left_registers[j]) {
+    for (int32_t k : left_registers_[j]) {
       // Visit k if k is not visited and not excluded.
-      if (should_visit[k] == 0) { VisitBackwardInsertCompactRelationship(i, k); }
+      if (should_visit_[k] == 0) { VisitBackwardInsertCompactRelationship(i, k); }
       // x_i < x_k, then x_i < x_k < x_j
-      if (should_visit[k] == 1 || should_visit[k] == -1) {
-        should_visit[j] = -1;
+      if (should_visit_[k] == 1 || should_visit_[k] == -1) {
+        should_visit_[j] = -1;
         return;
       }
     }
     // Look through all the children, can not found i in the grandsons.
-    if (should_visit[j] == 0) {
-      should_visit[j] = -3;
+    if (should_visit_[j] == 0) {
+      should_visit_[j] = -3;
     } else {
-      // should_visit[j] == 1
-      left_registers[j].insert(i);
-      should_visit[j] = -1;
+      // should_visit_[j] == 1
+      left_registers_[j].insert(i);
+      should_visit_[j] = -1;
     }
   }
 }
@@ -398,12 +400,12 @@ void MemoryShareStrategy::VisitBackwardInsertCompactRelationship(int32_t i, int3
 void MemoryShareStrategy::EliminateRedundantRelationshipIgnore(int32_t i, int32_t j) {
   // Ignore i
   if (i == j) { return; }
-  if (should_visit[j] > 0) {
+  if (should_visit_[j] > 0) {
     // Do not look into it again
-    should_visit[j] = -should_visit[j];
-    for (int32_t k : left_registers[j]) {
+    should_visit_[j] = -should_visit_[j];
+    for (int32_t k : left_registers_[j]) {
       EliminateRedundantRelationshipIgnore(i, k);
-      should_visit[k] = 0;
+      should_visit_[k] = 0;
     }
   }
 }
@@ -414,7 +416,7 @@ Maybe<void> MemoryShareStrategy::CheckConflict() {
       << "Not equal size, we might be calling CheckConflict() at a wrong time.";
   for (int32_t i = 0; i < index2register_.size(); i++) {
     CHECK_GE_OR_RETURN(register_offset_[i], 0) << "Register offset is not computed.";
-    for (int32_t j : excluded_registers[i]) {
+    for (int32_t j : excluded_registers_[i]) {
       CHECK_OR_RETURN(register_offset_[i] + register_size_[i] <= register_offset_[j]
                       || register_offset_[j] + register_size_[j] <= register_offset_[i])
           << "Two registers overlap";
@@ -441,50 +443,50 @@ void MemoryShareStrategy::UpdateOffset(size_t* mem_block_size,
 // since k < i and i < j have already implied that.
 void MemoryShareStrategy::EliminateRedundantRelationship(int32_t i) {
   // If i is already eliminate, skip it.
-  if (should_visit[i]) {
-    for (int32_t k : left_registers[i]) {
+  if (should_visit_[i]) {
+    for (int32_t k : left_registers_[i]) {
       // Eliminate all the k < i
       EliminateRedundantRelationship(k);
       // Eliminate left[i]
-      should_visit[k] = 0;
+      should_visit_[k] = 0;
     }
   }
 }
 
 // Reset the compact position for the registers
 void MemoryShareStrategy::ResetCompactPosition(int32_t j) {
-  left_registers[j].clear();
+  left_registers_[j].clear();
   // Mark all the registers on the left
   for (int32_t i = 0; i < total_register_num_; i++) {
     if (register_offset_[i] < register_offset_[j]) {
       if (Exclude(i, j)) {
-        should_visit[i] = 1;
+        should_visit_[i] = 1;
       } else {
-        should_visit[i] = 2;
+        should_visit_[i] = 2;
       }
     } else {
-      // Might be unnecessary since we clear up should_visit before.
-      should_visit[i] = 0;
+      // Might be unnecessary since we clear up should_visit_ before.
+      should_visit_[i] = 0;
     }
   }
 
   for (int32_t i = 0; i < total_register_num_; i++) {
-    if (should_visit[i] == 1) {
+    if (should_visit_[i] == 1) {
       // Find all the k < i, eliminates k < j,
       // since k < i and i < j have already implied that.
-      // Also reset should_visit[i] to false,
+      // Also reset should_visit_[i] to false,
       // since we have already visited i.
       EliminateRedundantRelationship(i);
     }
   }
 
   for (int32_t i = 0; i < total_register_num_; i++) {
-    if (should_visit[i] == 1) {
+    if (should_visit_[i] == 1) {
       // i < j
-      left_registers[j].insert(i);
+      left_registers_[j].insert(i);
     }
-    // Might be unnecessary since we clear up should_visit before.
-    should_visit[i] = 0;
+    // Might be unnecessary since we clear up should_visit_ before.
+    should_visit_[i] = 0;
   }
 }
 
