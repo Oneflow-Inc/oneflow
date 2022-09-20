@@ -307,7 +307,7 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
     std::vector<HashSet<RegstDescProto*>>* alloc_regsts_timeline,
     std::vector<HashSet<RegstDescProto*>>* free_regsts_timeline,
     HashMap<RegstDescProto*, std::vector<RegstDescProto*>>* regst2mutual_exclusion_regsts,
-    HashMap<RegstDescProto*, RegstDescProto*>* consumer2inplaced_regst) {
+    HashMap<RegstDescProto*, RegstDescProto*>* consumer2inplaced_regst, size_t* peak_memory) {
   CHECK(alloc_regsts_timeline->empty() && free_regsts_timeline->empty());
   CHECK(regst2mutual_exclusion_regsts->empty());
   CHECK(consumer2inplaced_regst->empty());
@@ -380,6 +380,8 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
   }
 
   HashSet<RegstDescProto*> remain_regsts;
+  size_t remain_memory = 0;
+  *peak_memory = 0;
   for (int64_t i = 0; i < sorted_tasks.size(); ++i) {
     for (RegstDescProto* alloc_regst : alloc_regsts_timeline->at(i)) {
       CHECK(regst2mutual_exclusion_regsts->emplace(alloc_regst, std::vector<RegstDescProto*>())
@@ -389,13 +391,17 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
         regst2mutual_exclusion_regsts->at(remain_regst).emplace_back(alloc_regst);
       }
       CHECK(remain_regsts.insert(alloc_regst).second);
+      remain_memory += RtRegstDesc(*alloc_regst).TotalMainByteSize4AllRegst();
       // NOTE(chengcheng): insert time line to regst proto
       alloc_regst->set_mem_block_total_actor_count(sorted_tasks.size());
       alloc_regst->set_alloc_before_actor(i);
     }
+    // Update the peak of memory during execution
+    if (*peak_memory < remain_memory) { *peak_memory = remain_memory; }
     for (RegstDescProto* free_regst : free_regsts_timeline->at(i)) {
       CHECK_EQ(remain_regsts.erase(free_regst), 1);
       free_regst->set_free_after_actor(i);
+      remain_memory -= RtRegstDesc(*free_regst).TotalMainByteSize4AllRegst();
     }
   }
   CHECK(remain_regsts.empty());
@@ -783,6 +789,8 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
       mem_chain2regst2mutual_exclusion_regsts;
   // info for inplace
   HashMap<int64_t, HashMap<RegstDescProto*, RegstDescProto*>> mem_chain2consumer2inplaced_regst;
+  // info for straighten
+  HashMap<int64_t, size_t> mem_chain2peak_memory;
 
   // step 1: generate regst alloc/free queue AND regst mutual exclusions
   for (const auto& pair : mem_chain2mem_reused_regsts) {
@@ -790,7 +798,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
         mem_chain2sorted_tasks.at(pair.first), pair.second, regst_desc_id2regst_desc,
         &mem_chain2task2alloc_regsts[pair.first], &mem_chain2task2free_regsts[pair.first],
         &mem_chain2regst2mutual_exclusion_regsts[pair.first],
-        &mem_chain2consumer2inplaced_regst[pair.first]);
+        &mem_chain2consumer2inplaced_regst[pair.first], &mem_chain2peak_memory[pair.first]);
   }
 
   // step 2: multi-thread run several algorithm for each mem chain
@@ -829,11 +837,16 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
     }
     CHECK(best_result != nullptr);
 
-    // Update the offset with a smaller total memory size
-    MemoryShareStrategy mss;
-    mss.StealCompactPosition(best_result->regst_desc2offset,
-                             mem_chain2regst2mutual_exclusion_regsts.at(pair.first));
-    mss.UpdateOffset(&best_result->mem_block_size, &best_result->regst_desc2offset);
+    // Update the offset with a smaller total memory size if the current size is greater than the
+    // lower bound
+    if (best_result->mem_block_size > mem_chain2peak_memory[pair.first]) {
+      std::cout << "current size: " << best_result->mem_block_size
+                << ", lower bound : " << mem_chain2peak_memory[pair.first] << std::endl;
+      MemoryShareStrategy mss;
+      mss.StealCompactPosition(best_result->regst_desc2offset,
+                               mem_chain2regst2mutual_exclusion_regsts.at(pair.first));
+      mss.UpdateOffset(&best_result->mem_block_size, &best_result->regst_desc2offset);
+    }
 
     int64_t mem_block_id = Singleton<IDMgr>::Get()->NewMemBlockId();
     CHECK_EQ(mem_chain2mem_reused_regsts.at(pair.first).size(),
