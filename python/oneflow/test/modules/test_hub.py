@@ -41,8 +41,10 @@ class TestHub(flow.unittest.TestCase):
     def test_hub_download_url_to_file__api(test_case):
         flow.hub.download_url_to_file('https://oneflow-public.oss-cn-beijing.aliyuncs.com/model_zoo/flowvision/classification/ResNet/resnet18.zip', '/tmp/temporary_file')
     
-    # def test_hub_load_state_dict_from_url_api(test_case):
-    #     state_dict = flow.hub.load_state_dict_from_url('https://oneflow-public.oss-cn-beijing.aliyuncs.com/model_zoo/flowvision/classification/ResNet/resnet18.zip')
+    def test_hub_load_state_dict_from_url_api(test_case):
+        state_dict = flow.hub.load_state_dict_from_url('https://oneflow-public.oss-cn-beijing.aliyuncs.com/model_zoo/flowvision/classification/ResNet/resnet18.zip')
+        test_case.assertEqual('layer3.1.bn2.bias' in state_dict.keys(), True)
+
 
 if __name__ == "__main__":
     unittest.main()

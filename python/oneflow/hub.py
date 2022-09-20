@@ -730,28 +730,20 @@ def download_url_to_file(url, dst, hash_prefix=None, progress=True):
 
 
 # Hub used to support automatically extracts from zipfile manually compressed by users.
-# The legacy zip format expects only one file from oneflow.save() < 1.6 in the zip.
 # We should remove this support since zipfile is now default zipfile format for oneflow.save().
 def _is_legacy_zip_format(filename):
     if zipfile.is_zipfile(filename):
-        infolist = zipfile.ZipFile(filename).infolist()
-        return len(infolist) == 1 and not infolist[0].is_dir()
-    return False
+        return True
+    else:
+        return False
 
 
 def _legacy_zip_load(filename, model_dir, map_location):
-    warnings.warn(
-        "Falling back to the old format < 1.6. This support will be "
-        "deprecated in favor of default zipfile format introduced in 1.6. "
-        "Please redo oneflow.save() to save it in the new zipfile format."
-    )
     # Note: extractall() defaults to overwrite file if exists. No need to clean up beforehand.
     #       We deliberately don't handle tarfile here since our legacy serialization format was in tar.
     #       E.g. resnet18-5c106cde.pth which is widely used.
     with zipfile.ZipFile(filename) as f:
         members = f.infolist()
-        if len(members) != 1:
-            raise RuntimeError("Only one file(not dir) is allowed in the zipfile")
         f.extractall(model_dir)
         extraced_name = members[0].filename
         extracted_file = os.path.join(model_dir, extraced_name)
@@ -823,11 +815,7 @@ def load_state_dict_from_url(
             hash_prefix = r.group(1) if r else None
         download_url_to_file(url, cached_file, hash_prefix, progress=progress)
 
-    # if _is_legacy_zip_format(cached_file):
-    #     return _legacy_zip_load(cached_file, model_dir, map_location)
-    if cached_file.endswith(".zip"):
-        with zipfile.ZipFile(cached_file, 'r') as zip_ref:
-            zip_ref.extractall(cached_file[:-4])
-        return flow.load(cached_file[:-4], map_location=map_location)
+    if _is_legacy_zip_format(cached_file):
+        return _legacy_zip_load(cached_file, model_dir, map_location)
 
     return flow.load(cached_file, map_location=map_location)
