@@ -57,9 +57,9 @@ class TestOKLRelu(flow.unittest.TestCase):
     def test_okl_relu_with_cpu(test_case):
         _test_okl_relu_with_cpu(test_case)
 
-    # @unittest.skipUnless(flow.sysconfig.with_cuda(), "only test cpu cases")
-    # def test_okl_relu_with_cuda(test_case):
-    #     _test_okl_relu_with_cuda(test_case)
+    @unittest.skipUnless(flow.sysconfig.with_cuda(), "only test cpu cases")
+    def test_okl_relu_with_cuda(test_case):
+        _test_okl_relu_with_cuda(test_case)
 
 
 if __name__ == "__main__":
