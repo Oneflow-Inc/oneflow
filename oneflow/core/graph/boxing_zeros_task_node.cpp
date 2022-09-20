@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/boxing_zeros_task_node.h"
+#include "oneflow/core/graph/boxing_task_graph.pb.h"
 
 namespace oneflow {
 
@@ -57,11 +58,12 @@ void BoxingZerosTaskNode::InferProducedDataRegstTimeShape() {
   GetProducedRegst("out")->mut_data_regst_time_shape()->reset(new Shape(time_shape_));
 }
 
-Maybe<void> BoxingZerosTaskNode::InitFromProto(const TransportTaskProto& transport_task_proto, transport_task_proto, const TaskGraphRebuildCtx& ctx) {
-  InitFromProto(transport_task_proto.task());
+Maybe<void> BoxingZerosTaskNode::InitTransportTaskFromProto(
+    const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
+  InitFromProto(transport_task_proto.task_proto());
   CHECK_OR_RETURN(transport_task_proto.has_boxing_zeros_task())
-    << "not a serialized BoxingZerosTaskNode. debug string: "
-    << transport_task_proto.DebugString();
+      << "not a serialized BoxingZerosTaskNode. debug string: "
+      << transport_task_proto.DebugString();
   const auto& proto = transport_task_proto.boxing_zeros_task();
   shape_ = Shape(proto.shape());
   data_type_ = proto.data_type();
@@ -69,8 +71,8 @@ Maybe<void> BoxingZerosTaskNode::InitFromProto(const TransportTaskProto& transpo
   return Maybe<void>::Ok();
 }
 
-void BoxingIdentityTaskNode::ToProto(TransportTaskProto* transport_task_proto) const {
-  ToProto(transport_task_proto->mutable_task(), /*check=*/false);
+void BoxingZerosTaskNode::ToTransportTaskProto(TransportTaskProto* transport_task_proto) const {
+  ToProto(transport_task_proto->mutable_task_proto(), /*check=*/false);
   auto* proto = transport_task_proto->mutable_boxing_zeros_task();
   shape_.ToProto(proto->mutable_shape());
   proto->set_data_type(data_type_);

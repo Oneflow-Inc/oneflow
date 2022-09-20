@@ -38,8 +38,9 @@ class SliceBoxingTaskNode final : public TransportTaskNode {
   void ConnectToSrcNodeWithSlice(TaskNode* src, TaskEdge* edge, const TensorSliceView& slice);
   void SetOutShape(const Shape& shape);
 
-  Maybe<void> InitFromProto(const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) override;
-  void ToProto(TransportTaskProto*) const override;
+  Maybe<void> InitTransportTaskFromProto(const TransportTaskProto& transport_task_proto,
+                                         const TaskGraphRebuildCtx& ctx) override;
+  void ToTransportTaskProto(TransportTaskProto*) const override;
 
  private:
   void BuildExecGphAndRegst() override;

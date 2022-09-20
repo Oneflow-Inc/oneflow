@@ -32,8 +32,9 @@ class CollectiveBoxingUnpackTaskNode : public TransportTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kCollectiveBoxingUnpack; }
 
-  Maybe<void> InitFromProto(const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) override;
-  void ToProto(TransportTaskProto*) const override;
+  Maybe<void> InitTransportTaskFromProto(const TransportTaskProto& transport_task_proto,
+                                         const TaskGraphRebuildCtx& ctx) override;
+  void ToTransportTaskProto(TransportTaskProto*) const override;
 
  private:
   void BuildExecGphAndRegst() override;

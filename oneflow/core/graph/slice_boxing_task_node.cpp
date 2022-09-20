@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
 #include "oneflow/core/graph/task_graph_rebuild_ctx.h"
+#include "oneflow/core/graph/boxing_task_graph.pb.h"
 
 namespace oneflow {
 
@@ -109,19 +110,20 @@ OperatorConf SliceBoxingTaskNode::GetBoxingOpConf() {
   return op_conf;
 }
 
-Maybe<void> SliceBoxingTaskNode::InitFromProto(const TransportTaskProto& transport_task_proto, transport_task_proto, const TaskGraphRebuildCtx& ctx) {
-  InitFromProto(transport_task_proto.task(), /*check=*/false);
+Maybe<void> SliceBoxingTaskNode::InitTransportTaskFromProto(
+    const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
+  InitFromProto(transport_task_proto.task_proto());
   CHECK_OR_RETURN(transport_task_proto.has_slice_boxing_task())
-    << "not a serialized SliceBoxingTaskNode. debug string: "
-    << transport_task_proto.DebugString();
+      << "not a serialized SliceBoxingTaskNode. debug string: "
+      << transport_task_proto.DebugString();
   const auto& proto = transport_task_proto.slice_boxing_task();
   for (const auto& pair : proto.in_data_edge_uid2slice()) {
-    const auto* edge = JUST(ctx.TaskEdge2Uid(pair.first));
+    const auto* edge = JUST(ctx.TaskEdge4Uid(pair.first));
     CHECK_OR_RETURN(in_data_edge2slice_.emplace(edge, pair.second).second)
         << "redundant edge found. edge_uid: " << pair.first;
   }
   for (int64_t edge_uid : proto.ordered_in_data_edge_uid()) {
-    ordered_in_data_edges_.push_back(JUST(ctx.TaskEdge2Uid(edge_uid)));
+    ordered_in_data_edges_.push_back(JUST(ctx.TaskEdge4Uid(edge_uid)));
   }
   out_slice_ = TensorSliceView(proto.out_slice());
   out_shape_ = Shape(proto.out_shape());
@@ -129,15 +131,15 @@ Maybe<void> SliceBoxingTaskNode::InitFromProto(const TransportTaskProto& transpo
   return Maybe<void>::Ok();
 }
 
-void SliceBoxingTaskNode::ToProto(TransportTaskProto* transport_task_proto) const {
-  ToProto(transport_task_proto->mutable_task());
+void SliceBoxingTaskNode::ToTransportTaskProto(TransportTaskProto* transport_task_proto) const {
+  ToProto(transport_task_proto->mutable_task_proto());
   auto* proto = transport_task_proto->mutable_slice_boxing_task();
   for (const auto& pair : in_data_edge2slice_) {
-    int64_t edge_uid = static_cast<int64_t>(pair.first);
+    int64_t edge_uid = reinterpret_cast<int64_t>(pair.first);
     pair.second.ToProto(&(*proto->mutable_in_data_edge_uid2slice())[edge_uid]);
   }
   for (const auto* edge : ordered_in_data_edges_) {
-    proto->add_ordered_in_data_edge_uid(static_cast<int64_t>(edge)); 
+    proto->add_ordered_in_data_edge_uid(reinterpret_cast<int64_t>(edge));
   }
   out_slice_.ToProto(proto->mutable_out_slice());
   out_shape_.ToProto(proto->mutable_out_shape());

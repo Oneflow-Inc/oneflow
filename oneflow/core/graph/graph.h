@@ -294,7 +294,8 @@ void Graph<NodeType, EdgeType>::ForEachEdge(std::function<void(EdgeType*)> EdgeH
 }
 
 template<typename NodeType, typename EdgeType>
-Maybe<void> Graph<NodeType, EdgeType>::MaybeForEachEdge(std::function<void(EdgeType*)> EdgeHandler) const {
+Maybe<void> Graph<NodeType, EdgeType>::MaybeForEachEdge(
+    std::function<Maybe<void>(EdgeType*)> EdgeHandler) const {
   for (auto& x : edges_) {
     if (x->src_node() == nullptr && x->dst_node() == nullptr) { continue; }
     JUST(EdgeHandler(x.get()));

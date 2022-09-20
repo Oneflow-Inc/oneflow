@@ -110,27 +110,35 @@ Maybe<void> InferPhysicalBlobDesc(
     const std::function<BlobDesc*(const std::string&)>& GetPhysicalBlobDesc) {
   const std::shared_ptr<const ParallelDesc> op_parallel_desc = JUST(op.GetOpParallelDesc());
   for (const auto& bn : bns) {
-    const BlobDesc* physical_blob_desc = GetPhysicalBlobDesc(bn);
+    BlobDesc* physical_blob_desc = GetPhysicalBlobDesc(bn);
     const auto& logical_blob_desc = *JUST(GetLogicalBlobDesc(bn));
     CHECK_NOTNULL_OR_RETURN(physical_blob_desc)
         << "physical_blob_desc should not be nullptr. op location: " << op.op_loc();
-    *physical_blob_desc = logical_blob_desc.shape();
-    const auto& physical_shape = *JUST_MSG(GetPhysicalShape(logical_blob_desc.shape(),
-            nd_sbp_signature->bn_in_op2nd_sbp().at(bn), *op_parallel_desc, *parallel_ctx),
-            std::stringstream() << " check physical shape failed, op name " << op.op_loc());
-    physical_blob_desc->set_shape(physical_shape);
+    *physical_blob_desc = logical_blob_desc;
+    const auto& physical_shape = JUST_MSG(
+        GetPhysicalShape(logical_blob_desc.shape(), nd_sbp_signature->bn_in_op2nd_sbp().at(bn),
+                         *op_parallel_desc, *parallel_ctx),
+        std::stringstream() << " check physical shape failed, op name " << op.op_loc());
+    physical_blob_desc->set_shape(*physical_shape);
   }
   return Maybe<void>::Ok();
 }
-
 
 }  // namespace
 
 void ExecNode::InferBlobDescsByNdSbp(const ParallelContext* parallel_ctx) {
   const HashSet<std::string> ibns{op()->input_bns().begin(), op()->input_bns().end()};
   HashMap<std::string, BlobDesc> ibn2blob_desc{};
-  const auto& GetBlobDesc4BnInOp = [this](const std::string& bn_in_op) -> BlobDesc* {
-    if (ibns.count(bn_in_op) > 0) { return &ibn2blob_desc[bn_in_op]; }
+  const auto& GetBlobDesc4BnInOp = [&](const std::string& bn_in_op) -> BlobDesc* {
+    if (ibns.count(bn_in_op) > 0) {
+      auto iter = ibn2blob_desc.find(bn_in_op);
+      if (iter == ibn2blob_desc.end()) {
+        iter = ibn2blob_desc.emplace(bn_in_op, kInvalidDataType).first;
+      }
+      return &iter->second;
+    }
+    auto it = bn_in_op2regst_.find(bn_in_op);
+    if (it == bn_in_op2regst_.end()) { return nullptr; }
     std::shared_ptr<RegstDesc> regst = it->second;
     CHECK(regst);
     return regst->MutBlobDesc(op()->BnInOp2Lbi(bn_in_op));

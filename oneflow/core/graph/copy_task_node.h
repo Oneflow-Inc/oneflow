@@ -60,8 +60,9 @@ class CopyHdTaskNode final : public CopyTaskNode {
     return kInvalidMemZoneId;
   }
 
-  Maybe<void> InitFromProto(const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) override;
-  void ToProto(TransportTaskProto*) const override;
+  Maybe<void> InitTransportTaskFromProto(const TransportTaskProto& transport_task_proto,
+                                         const TaskGraphRebuildCtx& ctx) override;
+  void ToTransportTaskProto(TransportTaskProto*) const override;
 
  private:
   void InitProducedRegstMemCase(MemoryCase*) override;
@@ -80,8 +81,9 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
 
   void Init(int64_t machine_id, const LogicalBlobId& lbi);
 
-  Maybe<void> InitFromProto(const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) override;
-  void ToProto(TransportTaskProto*) const override;
+  Maybe<void> InitTransportTaskFromProto(const TransportTaskProto& transport_task_proto,
+                                         const TaskGraphRebuildCtx& ctx) override;
+  void ToTransportTaskProto(TransportTaskProto*) const override;
 
  private:
   OperatorConf NewCopyOpConf() override;

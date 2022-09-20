@@ -47,7 +47,7 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
   kernel_conf->set_allocated_op_attribute(nullptr);
 }
 
-}
+}  // namespace
 
 void Compiler::Compile(Job* job, Plan* plan) const {
   // Step1: new Singleton<OpGraph> and set log configs.
@@ -62,8 +62,8 @@ void Compiler::Compile(Job* job, Plan* plan) const {
 
   // Step2: build task_gph.
   // TODO(levi): we can rewrite this part of code in visitor pattern.
-  auto task_gph =
-      std::make_unique<GlobalTaskGraph>(job->job_conf().enable_straighten_algorithm_in_task_graph());
+  auto task_gph = std::make_unique<GlobalTaskGraph>(
+      job->job_conf().enable_straighten_algorithm_in_task_graph());
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));

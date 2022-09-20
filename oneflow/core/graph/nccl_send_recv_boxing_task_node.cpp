@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/nccl_send_recv_boxing_task_node.h"
+#include "oneflow/core/graph/boxing_task_graph.pb.h"
+#include "oneflow/core/job/placement.pb.h"
 
 namespace oneflow {
 
@@ -93,11 +95,12 @@ void NcclSendRecvBoxingTaskNode::InferProducedDataRegstTimeShape() {
   tmp_regst->mut_data_regst_time_shape()->reset(new Shape({1, 1}));
 }
 
-Maybe<void> NcclSendRecvBoxingTaskNode::InitFromProto(const TransportTaskProto& transport_task_proto, transport_task_proto, const TaskGraphRebuildCtx& ctx) {
-  InitFromProto(transport_task_proto.task());
+Maybe<void> NcclSendRecvBoxingTaskNode::InitTransportTaskFromProto(
+    const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
+  InitFromProto(transport_task_proto.task_proto());
   CHECK_OR_RETURN(transport_task_proto.has_nccl_send_recv_boxing_task())
-    << "not a serialized NcclSendRecvBoxingTaskNode. debug string: "
-    << transport_task_proto.DebugString();
+      << "not a serialized NcclSendRecvBoxingTaskNode. debug string: "
+      << transport_task_proto.DebugString();
   const auto& proto = transport_task_proto.nccl_send_recv_boxing_task();
   logical_shape_ = Shape(proto.logical_shape());
   data_type_ = proto.data_type();
@@ -113,8 +116,9 @@ Maybe<void> NcclSendRecvBoxingTaskNode::InitFromProto(const TransportTaskProto& 
   return Maybe<void>::Ok();
 }
 
-void NcclSendRecvBoxingTaskNode::ToProto(TransportTaskProto* transport_task_proto) const {
-  ToProto(transport_task_proto->mutable_task(), /*check=*/false);
+void NcclSendRecvBoxingTaskNode::ToTransportTaskProto(
+    TransportTaskProto* transport_task_proto) const {
+  ToProto(transport_task_proto->mutable_task_proto(), /*check=*/false);
   auto* proto = transport_task_proto->mutable_nccl_send_recv_boxing_task();
   logical_shape_.ToProto(proto->mutable_logical_shape());
   proto->set_data_type(data_type_);
@@ -123,7 +127,7 @@ void NcclSendRecvBoxingTaskNode::ToProto(TransportTaskProto* transport_task_prot
   *proto->mutable_src_parallel_conf() = src_parallel_conf_;
   *proto->mutable_dst_parallel_conf() = dst_parallel_conf_;
   *proto->mutable_parallel_conf() = parallel_conf_;
-  *proto->parallel_ctx() = parallel_ctx_;
+  *proto->mutable_parallel_ctx() = parallel_ctx_;
   proto->set_has_input(has_input_);
   proto->set_has_output(has_output_);
   proto->set_stream_name(stream_name_);

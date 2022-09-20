@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include <glog/logging.h>
 #include "oneflow/core/job/task.pb.h"
 
@@ -9,7 +24,8 @@ struct TaskTypeVisitor {
   static auto Visit(TaskType task_type, Args&&... args) {
     switch (task_type) {
       case TaskType::kInvalid: LOG(FATAL) << "invalid task type";
-      case TaskType::kNormalForward: return DerivedT::VisitNormalForward(std::forward<Args>(args)...);
+      case TaskType::kNormalForward:
+        return DerivedT::VisitNormalForward(std::forward<Args>(args)...);
       case TaskType::kCopyHd: return DerivedT::VisitCopyHd(std::forward<Args>(args)...);
       case TaskType::kCopyCommNet: return DerivedT::VisitCopyCommNet(std::forward<Args>(args)...);
       case TaskType::kDeviceTick: return DerivedT::VisitDeviceTick(std::forward<Args>(args)...);
@@ -17,34 +33,38 @@ struct TaskTypeVisitor {
       case TaskType::kUnpack: return DerivedT::VisitUnpack(std::forward<Args>(args)...);
       case TaskType::kRepeat: return DerivedT::VisitRepeat(std::forward<Args>(args)...);
       case TaskType::kAcc: return DerivedT::VisitAcc(std::forward<Args>(args)...);
-      case TaskType::kSrcSubsetTick: return DerivedT::VisitSrcSubsetTick(std::forward<Args>(args)...);
-      case TaskType::kDstSubsetTick: return DerivedT::VisitDstSubsetTick(std::forward<Args>(args)...);
+      case TaskType::kSrcSubsetTick:
+        return DerivedT::VisitSrcSubsetTick(std::forward<Args>(args)...);
+      case TaskType::kDstSubsetTick:
+        return DerivedT::VisitDstSubsetTick(std::forward<Args>(args)...);
       case TaskType::kSourceTick: return DerivedT::VisitSourceTick(std::forward<Args>(args)...);
       case TaskType::kTick: return DerivedT::VisitTick(std::forward<Args>(args)...);
       case TaskType::kAccTick: return DerivedT::VisitAccTick(std::forward<Args>(args)...);
       case TaskType::kCase: return DerivedT::VisitCase(std::forward<Args>(args)...);
       case TaskType::kEsac: return DerivedT::VisitEsac(std::forward<Args>(args)...);
-      case TaskType::kWaitAndSendIds: return DerivedT::VisitWaitAndSendIds(std::forward<Args>(args)...);
-      case TaskType::kReentrantLock: return DerivedT::VisitReentrantLock(std::forward<Args>(args)...);
-      case TaskType::kCallbackNotify: return DerivedT::VisitCallbackNotify(std::forward<Args>(args)...);
-      case TaskType::kDistributeConcat: return DerivedT::VisitDistributeConcat(std::forward<Args>(args)...);
-      case TaskType::kDistributeSplit: return DerivedT::VisitDistributeSplit(std::forward<Args>(args)...);
-      case TaskType::kSliceBoxing:
-        return DerivedT::VisitSliceBoxing(std::forward<Args>(args)...);
+      case TaskType::kWaitAndSendIds:
+        return DerivedT::VisitWaitAndSendIds(std::forward<Args>(args)...);
+      case TaskType::kReentrantLock:
+        return DerivedT::VisitReentrantLock(std::forward<Args>(args)...);
+      case TaskType::kCallbackNotify:
+        return DerivedT::VisitCallbackNotify(std::forward<Args>(args)...);
+      case TaskType::kDistributeConcat:
+        return DerivedT::VisitDistributeConcat(std::forward<Args>(args)...);
+      case TaskType::kDistributeSplit:
+        return DerivedT::VisitDistributeSplit(std::forward<Args>(args)...);
+      case TaskType::kSliceBoxing: return DerivedT::VisitSliceBoxing(std::forward<Args>(args)...);
       case TaskType::kCollectiveBoxingGeneric:
         return DerivedT::VisitCollectiveBoxingGeneric(std::forward<Args>(args)...);
       case TaskType::kBoxingIdentity:
         return DerivedT::VisitBoxingIdentity(std::forward<Args>(args)...);
-      case TaskType::kDecodeH2D:
-        return DerivedT::VisitDecodeH2D(std::forward<Args>(args)...);
+      case TaskType::kDecodeH2D: return DerivedT::VisitDecodeH2D(std::forward<Args>(args)...);
       case TaskType::kCollectiveBoxingPack:
         return DerivedT::VisitCollectiveBoxingPack(std::forward<Args>(args)...);
       case TaskType::kCollectiveBoxingUnpack:
         return DerivedT::VisitCollectiveBoxingUnpack(std::forward<Args>(args)...);
       case TaskType::kSspVariableProxy:
         return DerivedT::VisitSspVariableProxy(std::forward<Args>(args)...);
-      case TaskType::kBoxingZeros:
-        return DerivedT::VisitBoxingZeros(std::forward<Args>(args)...);
+      case TaskType::kBoxingZeros: return DerivedT::VisitBoxingZeros(std::forward<Args>(args)...);
       case TaskType::kCriticalSectionWaitTick:
         return DerivedT::VisitCriticalSectionWaitTick(std::forward<Args>(args)...);
       case TaskType::kNcclSendRecvBoxing:
@@ -96,24 +116,21 @@ struct TransportTaskTypeVisitor {
       case TaskType::kInvalid: LOG(FATAL) << "invalid task type";
       case TaskType::kCopyHd: return DerivedT::VisitCopyHd(std::forward<Args>(args)...);
       case TaskType::kCopyCommNet: return DerivedT::VisitCopyCommNet(std::forward<Args>(args)...);
-      case TaskType::kSliceBoxing:
-        return DerivedT::VisitSliceBoxing(std::forward<Args>(args)...);
+      case TaskType::kSliceBoxing: return DerivedT::VisitSliceBoxing(std::forward<Args>(args)...);
       case TaskType::kCollectiveBoxingGeneric:
         return DerivedT::VisitCollectiveBoxingGeneric(std::forward<Args>(args)...);
       case TaskType::kBoxingIdentity:
         return DerivedT::VisitBoxingIdentity(std::forward<Args>(args)...);
       case TaskType::kNcclSendRecvBoxing:
         return DerivedT::VisitNcclSendRecvBoxing(std::forward<Args>(args)...);
-      case TaskType::kBoxingZeros:
-        return DerivedT::VisitBoxingZeros(std::forward<Args>(args)...);
+      case TaskType::kBoxingZeros: return DerivedT::VisitBoxingZeros(std::forward<Args>(args)...);
       case TaskType::kCollectiveBoxingPack:
         return DerivedT::VisitCollectiveBoxingPack(std::forward<Args>(args)...);
       case TaskType::kCollectiveBoxingUnpack:
         return DerivedT::VisitCollectiveBoxingUnpack(std::forward<Args>(args)...);
-      default:
-        LOG(FATAL) << "invalid task type";
+      default: LOG(FATAL) << "invalid task type";
     }
   }
 };
 
-}
+}  // namespace oneflow

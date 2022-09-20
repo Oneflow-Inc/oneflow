@@ -28,8 +28,9 @@ bool OpEdge::NeedBoxing() const {
   if (src_node()->parallel_desc().parallel_num() == 1) { return false; }
   for (const auto& lbi : *lbis_) {
     const auto& obn = CHECK_JUST(MapAt(*lbi2obn_, lbi));
-    const auto& ibn = CHECK_JUST(MapAt(*lbi2ibns_, lbi));
-    if (src_node()->NdSbp4BnInOp(obn) != dst_node()->NdSbp4BnInOp(ibn)) { return true; }
+    for (const auto& ibn : CHECK_JUST(MapAt(*lbi2ibns_, lbi))) {
+      if (src_node()->NdSbp4BnInOp(obn) != dst_node()->NdSbp4BnInOp(ibn)) { return true; }
+    }
   }
   return false;
 }
@@ -205,11 +206,10 @@ void OpGraph::CheckIsDAG() const {
 
 namespace {
 
-std::function<Symbol<ParallelDesc>(const std::string&)>
-MakeGetterParallelDesc4OpName(const Job& job) {
+std::function<Symbol<ParallelDesc>(const std::string&)> MakeGetterParallelDesc4OpName(
+    const Job& job) {
   const Placement& placement = job.placement();
-  auto op_name2parallel_desc =
-      std::make_shared<HashMap<std::string, std::shared_ptr<const ParallelDesc>>>();
+  auto op_name2parallel_desc = std::make_shared<HashMap<std::string, Symbol<ParallelDesc>>>();
   op_name2parallel_desc->reserve(job.net().op_size());
   for (const auto& placement_group : placement.placement_group()) {
     const ParallelConf& parallel_conf = placement_group.parallel_conf();
@@ -576,7 +576,8 @@ Maybe<void> OpGraph::ForEachOpNode(const std::function<Maybe<void>(const OpNode&
   return Maybe<void>::Ok();
 }
 
-/*static*/Maybe<void> OpGraph::WithSingleton(const Job* job, const std::function<Maybe<void>()>& Callback) {
+/*static*/ Maybe<void> OpGraph::WithSingleton(const Job* job,
+                                              const std::function<Maybe<void>()>& Callback) {
   // new Singleton<OpGraph> and set log configs.
   Singleton<OpGraph>::New(*job);
   const JobDesc& job_desc = GlobalJobDesc();
@@ -590,6 +591,5 @@ Maybe<void> OpGraph::ForEachOpNode(const std::function<Maybe<void>(const OpNode&
   Singleton<OpGraph>::Delete();
   return Maybe<void>::Ok();
 }
-
 
 }  // namespace oneflow

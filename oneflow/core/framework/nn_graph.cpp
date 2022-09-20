@@ -269,7 +269,7 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
 Maybe<void> NNGraph::RankPerThreadCompile() {
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     std::vector<Plan> plans(GlobalProcessCtx::WorldSize());
-    JUST(OpGraph::WithSingleton(&job_, [&]()->Maybe<void>{
+    JUST(OpGraph::WithSingleton(&job_, [&]() -> Maybe<void> {
       auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
       JUST(BoxingTaskGraph::New())->ToProto(boxing_task_graph_proto.get());
       for (int i = 0; i < GlobalProcessCtx::WorldSize(); ++i) {
@@ -279,11 +279,12 @@ Maybe<void> NNGraph::RankPerThreadCompile() {
         JUST(RankCompiler(boxing_task_graph_proto, i).Compile(&job_, plan));
         PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
 
-        VLOG(1) << "Graph name: " << name_ << " compile time: " << (GetCurTime() - start) / 1000000000.0
-                << " seconds.";
+        VLOG(1) << "Graph name: " << name_
+                << " compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.";
         if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          TeePersistentLogStream::Create("job_" + name_ + "_plan" + std::to_string(i))->Write(*plan);
-          PlanUtil::ToDotFile(*plan, "job_" + name_ + "_plan"+std::to_string(i)+".dot");
+          TeePersistentLogStream::Create("job_" + name_ + "_plan" + std::to_string(i))
+              ->Write(*plan);
+          PlanUtil::ToDotFile(*plan, "job_" + name_ + "_plan" + std::to_string(i) + ".dot");
         }
         PlanUtil::GenRegisterHint(plan);
         // TODO(chengcheng): test collective boxing for multi-job.
@@ -297,6 +298,7 @@ Maybe<void> NNGraph::RankPerThreadCompile() {
         std::string plan_name = "plan:" + job_name() + ":" + std::to_string(i);
         Singleton<CtrlClient>::Get()->PushKV(plan_name, *plan);
       }
+      return Maybe<void>::Ok();
     }));
     plan_ = plans[0];
   } else {
@@ -386,10 +388,10 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   } else if (ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>() == kRankPerThreadCompiler) {
     JUST(RankPerThreadCompile());
   } else {
-    UNIMPLEMENTED_THEN_RETURN()
-        << "ONEFLOW_LAZY_COMPILER(value: " << ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>()
-        << ") is invalid. valid options: \""<< kNaiveCompiler <<"\", \""
-        << kRankPerThreadCompiler <<  "\"";
+    UNIMPLEMENTED_THEN_RETURN() << "ONEFLOW_LAZY_COMPILER(value: "
+                                << ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>()
+                                << ") is invalid. valid options: \"" << kNaiveCompiler << "\", \""
+                                << kRankPerThreadCompiler << "\"";
   }
 
   NewRuntimeBuffers();

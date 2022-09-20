@@ -1,4 +1,7 @@
 syntax = "proto2";
 package oneflow;
 
-enum CopyHdType { H2D = 0, D2H = 1 };
+enum CopyHdType {
+  H2D = 0;
+  D2H = 1;
+}

@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/memory/memory_case_util.h"
+#include "oneflow/core/graph/task_graph_rebuild_ctx.h"
 
 namespace oneflow {
 

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/global_for.h"
@@ -281,18 +282,19 @@ Maybe<void> MakeGetterTaskNode4MachineId7ThrdId(
   return Maybe<void>::Ok();
 }
 
-TaskNode* GenCompTaskNode(const OpNode* op_node, int64_t parallel_id) {
+CompTaskNode* GenCompTaskNode(const OpNode* op_node, int64_t parallel_id) {
   const ParallelDesc& parallel_desc = op_node->parallel_desc();
   int64_t parallel_num = parallel_desc.parallel_num();
   CompTaskNode* comp_task_node = NewCompTaskNode4OpNode(op_node);
+  int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
+  int64_t dev_phy_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
   comp_task_node->set_machine_id(machine_id);
   comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_id);
   comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
 
-  DeviceId::device_index_t device_index =
-      parallel_desc.device_type() == DeviceType::kCPU
-          ? 0
-          : static_cast<DeviceId::device_index_t>(dev_phy_id);
+  DeviceId::device_index_t device_index = parallel_desc.device_type() == DeviceType::kCPU
+                                              ? 0
+                                              : static_cast<DeviceId::device_index_t>(dev_phy_id);
   DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), parallel_desc.device_type(),
                      device_index};
   StreamId::stream_index_t stream_index = 0;
@@ -312,10 +314,13 @@ TaskNode* GenCompTaskNode(const OpNode* op_node, int64_t parallel_id) {
 
 void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* sorted_comp_tasks) {
   int64_t parallel_idx = 0;
+  const ParallelDesc& parallel_desc = op_node->parallel_desc();
   for (int64_t machine_id : parallel_desc.sorted_machine_ids()) {
     for (int64_t dev_phy_id : parallel_desc.sorted_dev_phy_ids(machine_id)) {
       sorted_comp_tasks->emplace_back(GenCompTaskNode(op_node, parallel_idx++));
+      (void)dev_phy_id;
     }
+    (void)machine_id;
   }
 }
 
@@ -432,6 +437,8 @@ void ForEachOpGraphNecessaryCtrlEdge(
 
 }  // namespace
 
+TaskGraph::TaskGraph() {}
+
 TaskGraph::TaskGraph(bool enable_straighten_algorithm) {
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
@@ -545,7 +552,7 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
   return GetProxyNode(src_node, lbi, mem_zone_id);
 }
 
-void TaskGraph::ConnectCtrlEdge(const CompTaskNode* src_task_node, const CompTaskNode* dst_task_node) {
+void TaskGraph::ConnectCtrlEdge(CompTaskNode* src_task_node, CompTaskNode* dst_task_node) {
   std::string regst_desc_name;
   src_task_node->BuildCtrlRegstDesc(dst_task_node, &regst_desc_name);
   TaskEdge* edge = NewEdge();
@@ -902,34 +909,40 @@ void BoxingTaskGraph::ToProto(BoxingTaskGraphProto* proto) const {
   auto* map = proto->mutable_op_name2compute_tasks();
   HashSet<const TaskNode*> comp_task_nodes{};
   for (const auto& pair : op_node2sorted_comp_tasks_) {
-    auto* compute_task_protos = (*map)[pair.first->op_name()].mutable_parallel_id2task();
+    auto* compute_task_protos = (*map)[pair.first->op().op_name()].mutable_parallel_id2task();
     for (const auto* task_node : pair.second) {
       task_node->ToProto(compute_task_protos->Add(), /*check=*/false);
       comp_task_nodes.insert(task_node);
     }
   }
-  ForEachNode([&](TaskNode* node){
+  ForEachNode([&](TaskNode* node) {
     if (comp_task_nodes.count(node) > 0) { return; }
     const auto* transport_task_node = dynamic_cast<TransportTaskNode*>(node);
     CHECK(transport_task_node != nullptr) << "task_type: " << node->GetTaskType();
-    transport_task_node->ToProto(proto->mutable_transport_task()->Add());
+    transport_task_node->ToTransportTaskProto(proto->mutable_transport_task()->Add());
   });
-  ForEachEdge([&](TaskEdge* edge){ edge->ToProto(proto->mutable_task_edge()->Add()); });
+  ForEachEdge([&](TaskEdge* edge) { edge->ToProto(proto->mutable_task_edge()->Add()); });
 }
 
-Maybe<TaskNode*> RankTaskGraph::TryGetBoxingRelatedComTaskNode(const OpNode* op_node, int64_t parallel_id) {
-  auto iter = boxing_task_graph_proto_.op_name2compute_tasks.find(op_node);
-  if (iter == boxing_task_graph_proto_.op_name2compute_tasks.end()) { return nullptr; }
-  int64_t task_id = JUST(VectorAt(pair.second, parallel_id));
-  return JUST(task_graph_rebuild_ctx_->TaskNode4Id(task_id));
+RankTaskGraph::RankTaskGraph(const std::shared_ptr<BoxingTaskGraphProto>& boxing_task_graph_proto,
+                             int64_t rank)
+    : boxing_task_graph_proto_(boxing_task_graph_proto),
+      rank_(rank),
+      task_graph_rebuild_ctx_(std::make_unique<TaskGraphRebuildCtx>()) {}
+
+Maybe<CompTaskNode*> RankTaskGraph::TryGetBoxingRelatedComTaskNode(const OpNode* op_node,
+                                                                   int64_t parallel_id) {
+  const auto& op_name = op_node->op().op_name();
+  auto iter = boxing_task_graph_proto_->op_name2compute_tasks().find(op_name);
+  if (iter == boxing_task_graph_proto_->op_name2compute_tasks().end()) { return nullptr; }
+  int64_t task_id = JUST(VectorAt(iter->second.parallel_id2task(), parallel_id)).task_id();
+  auto* task_node = JUST(task_graph_rebuild_ctx_->TaskNode4Id(task_id));
+  auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
+  CHECK_NOTNULL_OR_RETURN(comp_task_node) << "invalid task_type. task_id: " << task_id;
+  return comp_task_node;
 }
 
-RankTaskGraph::RankTaskGraph(
-    const std::shared_ptr<BoxingTaskGraphProto>& boxing_task_graph_proto, int64_t rank)
-      : boxing_task_graph_proto_(boxing_task_graph_proto),
-        rank_(rank), task_graph_rebuild_ctx_(make_unique<TaskGraphRebuildCtx>()) {}
-
-Maybe<TaskNode*> RankTaskGraph::TryCreateOrFindRankCompTaskNode(const OpNode* op_node) {
+Maybe<CompTaskNode*> RankTaskGraph::TryCreateOrFindRankCompTaskNode(const OpNode* op_node) {
   int64_t parallel_id = -1;
   if (!op_node->parallel_desc().TryGetParallelId(rank_, &parallel_id)) { return nullptr; }
   {
@@ -945,7 +958,7 @@ Maybe<TaskNode*> RankTaskGraph::TryCreateOrFindRankCompTaskNode(const OpNode* op
   }
 }
 
-Maybe<TaskNode*> RankTaskGraph::TryGetRankCompTaskNode(const OpNode* op_node) {
+Maybe<CompTaskNode*> RankTaskGraph::TryGetRankCompTaskNode(const OpNode* op_node) {
   int64_t parallel_id = -1;
   if (!op_node->parallel_desc().TryGetParallelId(rank_, &parallel_id)) { return nullptr; }
   auto* comp_task_node = JUST(TryGetBoxingRelatedComTaskNode(op_node, parallel_id));
@@ -955,7 +968,7 @@ Maybe<TaskNode*> RankTaskGraph::TryGetRankCompTaskNode(const OpNode* op_node) {
 
 Maybe<void> RankTaskGraph::AddBoxingReletedCompTaskNodesFromProto() {
   OpGraph* op_graph = Singleton<OpGraph>::Get();
-  for (const auto& pair : boxing_task_graph_proto_.op_name2compute_tasks()) {
+  for (const auto& pair : boxing_task_graph_proto_->op_name2compute_tasks()) {
     const OpNode* op_node = op_graph->OpNode4OpName(pair.first);
     for (const auto& task_proto : pair.second.parallel_id2task()) {
       CompTaskNode* comp_task_node = NewCompTaskNode4OpNode(op_node);
@@ -969,7 +982,8 @@ Maybe<void> RankTaskGraph::AddBoxingReletedCompTaskNodesFromProto() {
 
 Maybe<void> RankTaskGraph::CreateAndPartiallyInitTransportTaskNodesFromProto() {
   for (const auto& transport_task_proto : boxing_task_graph_proto_->transport_task()) {
-    auto* task_node = CreateTransportTask::Visit(transport_task_proto.task_proto().task_type());
+    auto* task_node =
+        JUST(CreateTransportTask::Visit(transport_task_proto.task_proto().task_type()));
     AddAllocatedNode(task_node);
     task_node->InitFromProto(transport_task_proto.task_proto());
     JUST(task_graph_rebuild_ctx_->AddTaskNode(task_node));
@@ -980,11 +994,11 @@ Maybe<void> RankTaskGraph::CreateAndPartiallyInitTransportTaskNodesFromProto() {
 Maybe<void> RankTaskGraph::AddTransportTaskEdgesFromProto() {
   for (const auto& task_edge_proto : boxing_task_graph_proto_->task_edge()) {
     TaskEdge* edge = NewEdge();
-    auto* src_task_node = JUST(task_graph_rebuild_ctx_->TaskNode4Id(task_edge_proto->src_task_id()));
-    auto* dst_task_node = JUST(task_graph_rebuild_ctx_->TaskNode4Id(task_edge_proto->dst_task_id()));
+    auto* src_task_node = JUST(task_graph_rebuild_ctx_->TaskNode4Id(task_edge_proto.src_task_id()));
+    auto* dst_task_node = JUST(task_graph_rebuild_ctx_->TaskNode4Id(task_edge_proto.dst_task_id()));
     Connect<TaskNode>(src_task_node, edge, dst_task_node);
-    JUST(edge->InitFromEdge(task_edge_proto, *task_graph_rebuild_ctx_));
-    JUST(task_graph_rebuild_ctx_->AddTaskEdge(edge, task_edge_proto->task_edge_uid()));
+    JUST(edge->InitFromProto(task_edge_proto, *task_graph_rebuild_ctx_));
+    JUST(task_graph_rebuild_ctx_->AddTaskEdge(edge, task_edge_proto.task_edge_uid()));
   }
   return Maybe<void>::Ok();
 }
@@ -992,11 +1006,12 @@ Maybe<void> RankTaskGraph::AddTransportTaskEdgesFromProto() {
 Maybe<void> RankTaskGraph::InitTransportTaskNodesFromProto() {
   for (const auto& transport_task_proto : boxing_task_graph_proto_->transport_task()) {
     int64_t task_id = transport_task_proto.task_proto().task_id();
-    auto* task_node = JUST(task_graph_rebuild_ctx_.TaskNode4Id(task_id));
+    auto* task_node = JUST(task_graph_rebuild_ctx_->TaskNode4Id(task_id));
     auto* transport_task_node = dynamic_cast<TransportTaskNode*>(task_node);
     CHECK_NOTNULL_OR_RETURN(transport_task_node)
         << "task node is not a TransportTaskNode. task_id" << task_id;
-    JUST(transport_task_node->InitFromProto(transport_task_proto, *task_graph_rebuild_ctx_));
+    JUST(transport_task_node->InitTransportTaskFromProto(transport_task_proto,
+                                                         *task_graph_rebuild_ctx_));
   }
   return Maybe<void>::Ok();
 }
@@ -1007,31 +1022,32 @@ Maybe<void> RankTaskGraph::Init(bool enable_straighten_algorithm) {
   JUST(AddTransportTaskEdgesFromProto());
   JUST(InitTransportTaskNodesFromProto());
   OpGraph* op_graph = Singleton<OpGraph>::Get();
-  const auto& ContainThisRank(const OpNode* op_node) {
+  const auto& ContainThisRank = [&](const OpNode* op_node) {
     int64_t parallel_id = -1;
     return op_node->parallel_desc().TryGetParallelId(rank_, &parallel_id);
   };
-  JUST(op_graph->MaybeForEachEdge([&](const OpEdge* op_edge) {
-    if (op_edge->NeedBoxing()) { return; }
+  JUST(op_graph->MaybeForEachEdge([&](const OpEdge* op_edge) -> Maybe<void> {
+    if (op_edge->NeedBoxing()) { return Maybe<void>::Ok(); }
     auto* src_task_node = JUST(TryCreateOrFindRankCompTaskNode(op_edge->src_node()));
     auto* dst_task_node = JUST(TryCreateOrFindRankCompTaskNode(op_edge->dst_node()));
     if (ContainThisRank(op_edge->src_node())) {
-      CHECK_NOTNULL_OR_RETURN(src_task_node)
-          << "src_task_node should not be nullptr. op_name: " << op_edge->src_node()->op_name();
+      CHECK_NOTNULL_OR_RETURN(src_task_node) << "src_task_node should not be nullptr. op_name: "
+                                             << op_edge->src_node()->op().op_name();
     }
     if (ContainThisRank(op_edge->dst_node())) {
-      CHECK_NOTNULL_OR_RETURN(dst_task_node)
-          << "dst_task_node should not be nullptr. op_name: " << op_edge->dst_node()->op_name();
+      CHECK_NOTNULL_OR_RETURN(dst_task_node) << "dst_task_node should not be nullptr. op_name: "
+                                             << op_edge->dst_node()->op().op_name();
     }
     if (src_task_node != nullptr && dst_task_node != nullptr) {
       Connect<TaskNode>(src_task_node, NewTaskEdgeWithLbis(op_edge->lbis()), dst_task_node);
     }
+    return Maybe<void>::Ok();
   }));
 
   ForEachOpGraphNecessaryCtrlEdge(op_graph, [&](const OpNode* src, const OpNode* dst) {
     if (!(ContainThisRank(src) && ContainThisRank(dst))) { return; }
-    const auto* src_task_node = CHECK_JUST(TryGetRankCompTaskNode(src));
-    const auto* dst_task_node = CHECK_JUST(TryGetRankCompTaskNode(dst));
+    auto* src_task_node = CHECK_JUST(TryGetRankCompTaskNode(src));
+    auto* dst_task_node = CHECK_JUST(TryGetRankCompTaskNode(dst));
     if (src->op().op_conf().has_src_subset_tick_conf()) {
       UNIMPLEMENTED();
     } else if (dst->op().op_conf().has_dst_subset_tick_conf()) {
@@ -1049,5 +1065,7 @@ Maybe<void> RankTaskGraph::Init(bool enable_straighten_algorithm) {
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
   return Maybe<void>::Ok();
 }
+
+RankTaskGraph::~RankTaskGraph() {}
 
 }  // namespace oneflow

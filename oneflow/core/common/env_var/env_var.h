@@ -73,12 +73,12 @@ DEFINE_THREAD_LOCAL_ENV_INTEGER(ONEFLOW_THRAED_LOCAL_CACHED_SIZE, 128 * 1024);
 template<typename env_var>
 const std::string& ThreadLocalEnvString();
 
-#define DEFINE_THREAD_LOCAL_ENV_STRING(env_var, default_value)                                 \
-  struct env_var {};                                                                           \
-  template<>                                                                                   \
-  inline const std::string& ThreadLocalEnvString<env_var>() {                                            \
+#define DEFINE_THREAD_LOCAL_ENV_STRING(env_var, default_value)                                  \
+  struct env_var {};                                                                            \
+  template<>                                                                                    \
+  inline const std::string& ThreadLocalEnvString<env_var>() {                                   \
     thread_local std::string value = GetStringFromEnv(OF_PP_STRINGIZE(env_var), default_value); \
-    return value;                                                                              \
+    return value;                                                                               \
   }
 
 }  // namespace oneflow

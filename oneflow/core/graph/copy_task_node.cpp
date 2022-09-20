@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/graph/task_stream_id.h"
+#include "oneflow/core/graph/boxing_task_graph.pb.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 
 namespace oneflow {
@@ -115,30 +116,31 @@ OperatorConf CopyCommNetTaskNode::NewCopyOpConf() {
   return conf;
 }
 
-Maybe<void> CopyHdTaskNode::InitFromProto(const TransportTaskProto& transport_task_proto, transport_task_proto, const TaskGraphRebuildCtx& ctx) {
-  InitFromProto(transport_task_proto.task());
+Maybe<void> CopyHdTaskNode::InitTransportTaskFromProto(
+    const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
+  InitFromProto(transport_task_proto.task_proto());
   CHECK_OR_RETURN(transport_task_proto.has_copy_hd_task())
-    << "not a serialized CopyHdTaskNode. debug string: "
-    << transport_task_proto.DebugString();
+      << "not a serialized CopyHdTaskNode. debug string: " << transport_task_proto.DebugString();
   copy_type_ = transport_task_proto.copy_hd_task().copy_type();
   return Maybe<void>::Ok();
 }
 
-void CopyHdTaskNode::ToProto(TransportTaskProto* transport_task_proto) const {
-  ToProto(transport_task_proto->mutable_task(), /*check=*/false);
+void CopyHdTaskNode::ToTransportTaskProto(TransportTaskProto* transport_task_proto) const {
+  ToProto(transport_task_proto->mutable_task_proto(), /*check=*/false);
   transport_task_proto->mutable_copy_hd_task()->set_copy_type(copy_type_);
 }
 
-Maybe<void> CopyCommNetTaskNode::InitFromProto(const TransportTaskProto& transport_task_proto, transport_task_proto, const TaskGraphRebuildCtx& ctx) {
-  InitFromProto(transport_task_proto.task());
+Maybe<void> CopyCommNetTaskNode::InitTransportTaskFromProto(
+    const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
+  InitFromProto(transport_task_proto.task_proto());
   CHECK_OR_RETURN(transport_task_proto.has_copy_comm_net_task())
-    << "not a serialized CopyCommNetTaskNode. debug string: "
-    << transport_task_proto.DebugString();
+      << "not a serialized CopyCommNetTaskNode. debug string: "
+      << transport_task_proto.DebugString();
   return Maybe<void>::Ok();
 }
 
-void CopyCommNetTaskNode::ToProto(TransportTaskProto* transport_task_proto) const {
-  ToProto(transport_task_proto->mutable_task(), /*check=*/false);
+void CopyCommNetTaskNode::ToTransportTaskProto(TransportTaskProto* transport_task_proto) const {
+  ToProto(transport_task_proto->mutable_task_proto(), /*check=*/false);
   transport_task_proto->mutable_copy_comm_net_task();
 }
 

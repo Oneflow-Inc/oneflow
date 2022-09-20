@@ -35,8 +35,9 @@ class NcclSendRecvBoxingTaskNode : public TransportTaskNode {
   TaskType GetTaskType() const override { return TaskType::kNcclSendRecvBoxing; }
   const ParallelContext* parallel_ctx() const override { return &parallel_ctx_; }
 
-  Maybe<void> InitFromProto(const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) override;
-  void ToProto(TransportTaskProto*) const override;
+  Maybe<void> InitTransportTaskFromProto(const TransportTaskProto& transport_task_proto,
+                                         const TaskGraphRebuildCtx& ctx) override;
+  void ToTransportTaskProto(TransportTaskProto*) const override;
 
  private:
   void BuildExecGphAndRegst() override;

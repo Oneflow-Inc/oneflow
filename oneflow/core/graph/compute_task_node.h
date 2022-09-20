@@ -51,10 +51,10 @@ class CompTaskNode : public TaskNode {
     } else if (ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>() == "rank_per_thread") {
       return &ExecNode::InferBlobDescsByNdSbp;
     } else {
-    UNIMPLEMENTED()
-        << "ONEFLOW_LAZY_COMPILER(value: " << ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>()
-        << ") is invalid. valid options: \""<< kNaiveCompiler <<"\", \""
-        << kRankPerThreadCompiler <<  "\"";
+      UNIMPLEMENTED() << "ONEFLOW_LAZY_COMPILER(value: "
+                      << ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>()
+                      << ") is invalid. valid options: \"" << kNaiveCompiler << "\", \""
+                      << kRankPerThreadCompiler << "\"";
     }
     return nullptr;
   }

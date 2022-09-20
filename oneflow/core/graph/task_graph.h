@@ -39,9 +39,6 @@ class TaskGraph;
 using BldSubTskGphMthd = void(TaskGraph::*) BLD_SUB_TSK_GPH_MTHD_ARGS();
 
 class TaskGraph : public Graph<TaskNode, TaskEdge> {
- proteced:
-  explicit TaskGraph(bool enable_straighten_algorithm);
-
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
   virtual ~TaskGraph() override;
@@ -75,13 +72,16 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByDstSubsetConnect);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D);
 
- private:
+ protected:
+  TaskGraph();
+  explicit TaskGraph(bool enable_straighten_algorithm);
+
   void BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi);
 
   void ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
                         const std::vector<CompTaskNode*>& dst_task_nodes);
 
-  void ConnectCtrlEdge(const CompTaskNode* src_task_node, const CompTaskNode* dst_task_node);
+  void ConnectCtrlEdge(CompTaskNode* src_task_node, CompTaskNode* dst_task_node);
 
   void SetOrderInGraphForEachNode();
   void MergeChain();
@@ -132,7 +132,7 @@ class GlobalTaskGraph final : public TaskGraph {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GlobalTaskGraph);
   explicit GlobalTaskGraph(bool enable_straighten_algorithm)
-    : TaskGraph(enable_straighten_algorithm) {}
+      : TaskGraph(enable_straighten_algorithm) {}
 };
 
 class BoxingTaskGraphProto;
@@ -162,31 +162,32 @@ class TaskGraphRebuildCtx;
 class RankTaskGraph final : public TaskGraph {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RankTaskGraph);
-  ~RankTaskGraph() = default;
+  ~RankTaskGraph();
 
-  static Maybe<RankTaskGraph> New(const std::shared_ptr<BoxingTaskGraphProto>& boxing_task_graph_proto, int64_t rank, bool enable_straighten_algorithm) {
+  static Maybe<RankTaskGraph> New(
+      const std::shared_ptr<BoxingTaskGraphProto>& boxing_task_graph_proto, int64_t rank,
+      bool enable_straighten_algorithm) {
     std::shared_ptr<RankTaskGraph> graph(new RankTaskGraph(boxing_task_graph_proto, rank));
     JUST(graph->Init(enable_straighten_algorithm));
     return graph;
   }
 
  private:
-  RankTaskGraph(const std::shared_ptr<BoxingTaskGraphProto>& boxing_task_graph_proto, int64_t rank)
-      : boxing_task_graph_proto_(boxing_task_graph_proto), rank_(rank) {}
+  RankTaskGraph(const std::shared_ptr<BoxingTaskGraphProto>& boxing_task_graph_proto, int64_t rank);
 
   Maybe<void> Init(bool enable_straighten_algorithm);
   Maybe<void> AddBoxingReletedCompTaskNodesFromProto();
   Maybe<void> CreateAndPartiallyInitTransportTaskNodesFromProto();
   Maybe<void> AddTransportTaskEdgesFromProto();
   Maybe<void> InitTransportTaskNodesFromProto();
-  Maybe<TaskNode*> TryGetBoxingRelatedComTaskNode(const OpNode* op_node, int64_t parallel_id);
-  Maybe<TaskNode*> TryCreateOrFindRankCompTaskNode(const OpNode* op_node);
-  Maybe<TaskNode*> TryGetRankCompTaskNode(const OpNode* op_node);
+  Maybe<CompTaskNode*> TryGetBoxingRelatedComTaskNode(const OpNode* op_node, int64_t parallel_id);
+  Maybe<CompTaskNode*> TryCreateOrFindRankCompTaskNode(const OpNode* op_node);
+  Maybe<CompTaskNode*> TryGetRankCompTaskNode(const OpNode* op_node);
 
   std::shared_ptr<BoxingTaskGraphProto> boxing_task_graph_proto_;
   const int64_t rank_;
   std::unique_ptr<TaskGraphRebuildCtx> task_graph_rebuild_ctx_;
-  HashMap<const OpNode*, TaskNode*> op_node2comp_task_node_;
+  HashMap<const OpNode*, CompTaskNode*> op_node2comp_task_node_;
 };
 
 }  // namespace oneflow

@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -47,7 +48,7 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
   kernel_conf->set_allocated_op_attribute(nullptr);
 }
 
-}
+}  // namespace
 
 Maybe<void> RankCompiler::Compile(Job* job, Plan* plan) const {
   // build task_gph.
@@ -63,6 +64,7 @@ Maybe<void> RankCompiler::Compile(Job* job, Plan* plan) const {
   task_gph->RemoveEmptyRegsts();
   task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
   auto IsReachable = Singleton<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
+  const JobDesc& job_desc = GlobalJobDesc();
   if (job_desc.enable_inplace()) { task_gph->EnableInplaceMemSharing(IsReachable); }
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
