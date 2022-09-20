@@ -19,6 +19,7 @@ import oneflow._oneflow_internal.lazy_mode as lazy_mode
 
 import numpy as np
 from typing import Union
+from functools import partial
 
 Tensor = flow._oneflow_internal.Tensor
 TensorTuple = flow._oneflow_internal.TensorTuple
@@ -498,6 +499,7 @@ def _cumprod(self, dim, dtype=None):
 def _inv(self):
     return flow._C.inv(self)
 
+
 def _trunc(self):
     """trunc() -> Tensor
 
@@ -505,8 +507,9 @@ def _trunc(self):
     """
     return flow._C.trunc(self)
 
-def _scatter_(self, dim, index, src):
-    return flow._C.scatter(self, dim, index, src, inplace=True)
+
+def _scatter(self, dim, index, src, inplace):
+    return flow._C.scatter(self, dim, index, src, inplace=inplace)
 
 
 def RegisterMethods():
@@ -575,7 +578,9 @@ def RegisterMethods():
     Tensor.mv = _mv
     Tensor.inverse = _inv
     Tensor.trunc = _trunc
-    Tensor.scatter_ = _scatter_
+    Tensor.scatter = partial(_scatter, inplace=False)
+    Tensor.scatter_ = partial(_scatter, inplace=True)
+    
 
 
 def register_tensor_op(op_name):
