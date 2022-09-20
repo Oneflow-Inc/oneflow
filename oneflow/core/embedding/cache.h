@@ -79,6 +79,8 @@ class Cache {
   virtual void DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
                              uint32_t* n_dumped, void* keys, void* values) = 0;
 
+  virtual void ClearDirtyFlags() = 0;
+                             
   virtual void Clear() = 0;
 };
 

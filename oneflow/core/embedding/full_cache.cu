@@ -377,6 +377,7 @@ class OrdinalEncoder {
     OF_CUDA_CHECK(cudaMalloc(&table_indices_, table_capacity_ * sizeof(Index)));
     OF_CUDA_CHECK(cudaMalloc(&table_dirty_flags_, table_capacity_ * sizeof(bool)));
     Clear();
+    ClearDirtyFlags(); 
   }
   ~OrdinalEncoder() {
     CudaCurrentDeviceGuard guard(device_index_);
@@ -409,11 +410,13 @@ class OrdinalEncoder {
 
   void DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
                      uint32_t* n_dumped, Key* keys, Index* context) {
-    OF_CUDA_CHECK(cudaMemsetAsync(n_dumped, 0, sizeof(uint32_t),
-                                  stream->As<ep::CudaStream>()->cuda_stream()));
     RUN_CUDA_KERNEL((OrdinalEncodeDumpDirtyOnlyKernel<Key, Index>), stream,
                     end_key_index - start_key_index, table_keys_, table_indices_, table_dirty_flags_,
                     start_key_index, end_key_index, n_dumped, keys, context);
+  }
+
+  void ClearDirtyFlags() {
+    OF_CUDA_CHECK(cudaMemset(table_dirty_flags_, 0, table_capacity_ * sizeof(bool)));
   }
 
   void Clear() {
@@ -523,6 +526,8 @@ class CacheImpl : public Cache {
 
   void DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
                      uint32_t* n_dumped, void* keys, void* values) override;
+  
+  void ClearDirtyFlags() override; 
 
   void Clear() override;
 
@@ -648,18 +653,23 @@ template<typename Key, typename Elem, typename Index, size_t pack_size>
 void CacheImpl<Key, Elem, Index, pack_size>::DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index,
                                                            uint64_t end_key_index, uint32_t* n_dumped,
                                                            void* keys, void* values) {
-  // encoder_.Dump(stream, start_key_index, end_key_index, n_dumped, static_cast<Key*>(keys),
-  //               encoding_buffer_);
-  // RUN_CUDA_KERNEL((DumpValueKernel<Key, Elem, Index>), stream,
-  //                 num_elem_per_value_ * (end_key_index - start_key_index), num_elem_per_value_,
-  //                 n_dumped, encoding_buffer_, values_, static_cast<Elem*>(values));
-  return; 
+  encoder_.DumpDirtyOnly(stream, start_key_index, end_key_index, n_dumped, static_cast<Key*>(keys),
+                encoding_buffer_);
+  RUN_CUDA_KERNEL((DumpValueKernel<Key, Elem, Index>), stream,
+                  num_elem_per_value_ * (end_key_index - start_key_index), num_elem_per_value_,
+                  n_dumped, encoding_buffer_, values_, static_cast<Elem*>(values));
+}
+
+template<typename Key, typename Elem, typename Index, size_t pack_size>
+void CacheImpl<Key, Elem, Index, pack_size>::ClearDirtyFlags() {
+  encoder_.ClearDirtyFlags();
 }
 
 template<typename Key, typename Elem, typename Index, size_t pack_size>
 void CacheImpl<Key, Elem, Index, pack_size>::Clear() {
   encoder_.Clear();
 }
+
 
 template<typename Key, typename Index>
 std::unique_ptr<Cache> DispatchValueType(const CacheOptions& options) {
