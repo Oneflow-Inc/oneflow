@@ -553,9 +553,8 @@ class LruCache : public Cache {
   }
 
   void Put(ep::Stream* stream, uint32_t n_keys, const void* keys, const void* values,
-           const void* dirty_flags, uint32_t* n_evicted, void* evicted_keys,
+           uint32_t* n_evicted, void* evicted_keys,
            void* evicted_values) override {
-    、
         // todo, refine dirty flags
         CHECK_LE(n_keys, max_query_length_);
     auto cuda_stream = stream->As<ep::CudaStream>();

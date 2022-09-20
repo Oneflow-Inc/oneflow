@@ -285,8 +285,25 @@ __global__ void EncodeLookupMaskKernel(uint32_t value_length, const Elem* __rest
 }
 
 template<typename Elem, typename Index, size_t pack_size>
-__global__ void UpdateKernel(uint32_t value_length, Elem* cache_values, bool* dirty_flags,
+__global__ void UpdateKernel(uint32_t value_length, Elem* cache_values, 
                              uint32_t values_elem_cnt, const Index* context, const Elem* values) {
+  const int packed_values_elem_cnt = values_elem_cnt / pack_size;
+  const uint32_t packed_elem_cnt = value_length / pack_size;
+  auto* packed_cache_values = reinterpret_cast<Pack<Elem, pack_size>*>(cache_values);
+  auto* packed_values = reinterpret_cast<const Pack<Elem, pack_size>*>(values);
+  CUDA_1D_KERNEL_LOOP(i, packed_values_elem_cnt) {
+    const uint64_t key_id = i / packed_elem_cnt;
+    const uint64_t ctx = context[key_id];
+    if (ctx == 0) { continue; }
+    const uint64_t row_id = ctx - 1;
+    const uint64_t col_id = i - key_id * packed_elem_cnt;
+    packed_cache_values[row_id * packed_elem_cnt + col_id] = packed_values[i];
+  }
+}
+
+template<typename Elem, typename Index, size_t pack_size>
+__global__ void UpdateDirtyOnlyKernel(uint32_t value_length, Elem* cache_values, bool* dirty_flags,
+                                      uint32_t values_elem_cnt, const Index* context, const Elem* values) {
   const int packed_values_elem_cnt = values_elem_cnt / pack_size;
   const uint32_t packed_elem_cnt = value_length / pack_size;
   auto* packed_cache_values = reinterpret_cast<Pack<Elem, pack_size>*>(cache_values);
@@ -358,6 +375,7 @@ class OrdinalEncoder {
     OF_CUDA_CHECK(cudaMallocHost(&table_size_host_, sizeof(Index)));
     OF_CUDA_CHECK(cudaMalloc(&table_keys_, table_capacity_ * sizeof(Key)));
     OF_CUDA_CHECK(cudaMalloc(&table_indices_, table_capacity_ * sizeof(Index)));
+    OF_CUDA_CHECK(cudaMalloc(&table_dirty_flags_, table_capacity_ * sizeof(bool)));
     Clear();
   }
   ~OrdinalEncoder() {
@@ -366,6 +384,7 @@ class OrdinalEncoder {
     OF_CUDA_CHECK(cudaFreeHost(table_size_host_));
     OF_CUDA_CHECK(cudaFree(table_keys_));
     OF_CUDA_CHECK(cudaFree(table_indices_));
+    OF_CUDA_CHECK(cudaFree(table_dirty_flags_));
   }
 
   template<bool insert>
@@ -393,7 +412,7 @@ class OrdinalEncoder {
     OF_CUDA_CHECK(cudaMemsetAsync(n_dumped, 0, sizeof(uint32_t),
                                   stream->As<ep::CudaStream>()->cuda_stream()));
     RUN_CUDA_KERNEL((OrdinalEncodeDumpDirtyOnlyKernel<Key, Index>), stream,
-                    end_key_index - start_key_index, table_keys_, table_indices_, dirty_flags_,
+                    end_key_index - start_key_index, table_keys_, table_indices_, table_dirty_flags_,
                     start_key_index, end_key_index, n_dumped, keys, context);
   }
 
@@ -413,6 +432,7 @@ class OrdinalEncoder {
   int device_index_{};
   Key* table_keys_;
   Index* table_indices_;
+  bool* table_dirty_flags_; 
   uint64_t capacity_;
   uint64_t table_capacity_;
   Index* table_size_{};
@@ -493,8 +513,8 @@ class CacheImpl : public Cache {
            uint8_t* mask) override;
 
   void Put(ep::Stream* stream, uint32_t n_keys, const void* keys, const void* values,
-           const void* dirty_flags, uint32_t* n_evicted, void* evicted_keys,
-           void* evicted_values) override;
+           uint32_t* n_evicted, void* evicted_keys, void* evicted_values) override;
+
   void FusedHalfUpdatePut(ep::Stream* stream, uint32_t n_keys, const void* keys, const void* values,
                           const void* update, const float* lr, float scale, uint32_t* n_evicted,
                           void* evicted_keys, void* evicted_values) override;
@@ -502,7 +522,7 @@ class CacheImpl : public Cache {
             uint32_t* n_dumped, void* keys, void* values) override;
 
   void DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
-                     uint32_t* n_dumped, Key* keys, Index* context) override;
+                     uint32_t* n_dumped, void* keys, void* values) override;
 
   void Clear() override;
 
@@ -571,18 +591,32 @@ void CacheImpl<Key, Elem, Index, pack_size>::Get(ep::Stream* stream, uint32_t n_
 template<typename Key, typename Elem, typename Index, size_t pack_size>
 void CacheImpl<Key, Elem, Index, pack_size>::Put(ep::Stream* stream, uint32_t n_keys,
                                                  const void* keys, const void* values,
-                                                 const void* dirty_flags, uint32_t* n_evicted,
+                                                 uint32_t* n_evicted,
                                                  void* evicted_keys, void* evicted_values) {
   if (n_keys == 0) { return; }
-  // OF_CUDA_CHECK(cudaMemsetAsync(dirty_flags, 0, options_.capacity * sizeof(bool),
-  // stream->As<ep::CudaStream>()->cuda_stream()));
   CHECK_LE(n_keys, max_query_length_);
   encoder_.template Encode<true>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
   RUN_CUDA_KERNEL((UpdateKernel<Elem, Index, pack_size>), stream, values_elem_cnt / pack_size,
-                  num_elem_per_value_, values_, dirty_flags, values_elem_cnt, encoding_buffer_,
+                  num_elem_per_value_, values_, values_elem_cnt, encoding_buffer_,
                   static_cast<const Elem*>(values));
 }
+
+// template<typename Key, typename Elem, typename Index, size_t pack_size>
+// void CacheImpl<Key, Elem, Index, pack_size>::Put(ep::Stream* stream, uint32_t n_keys,
+//                                                  const void* keys, const void* values,
+//                                                  const void* dirty_flags, uint32_t* n_evicted,
+//                                                  void* evicted_keys, void* evicted_values) {
+//   if (n_keys == 0) { return; }
+//   // OF_CUDA_CHECK(cudaMemsetAsync(dirty_flags, 0, options_.capacity * sizeof(bool),
+//   // stream->As<ep::CudaStream>()->cuda_stream()));
+//   CHECK_LE(n_keys, max_query_length_);
+//   encoder_.template Encode<true>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
+//   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
+//   RUN_CUDA_KERNEL((UpdateKernel<Elem, Index, pack_size>), stream, values_elem_cnt / pack_size,
+//                   num_elem_per_value_, values_, dirty_flags, values_elem_cnt, encoding_buffer_,
+//                   static_cast<const Elem*>(values));
+// }
 
 template<typename Key, typename Elem, typename Index, size_t pack_size>
 void CacheImpl<Key, Elem, Index, pack_size>::FusedHalfUpdatePut(
@@ -598,6 +632,7 @@ void CacheImpl<Key, Elem, Index, pack_size>::FusedHalfUpdatePut(
                   encoding_buffer_, static_cast<const Elem*>(values),
                   static_cast<const half*>(update), lr, scale);
 }
+
 template<typename Key, typename Elem, typename Index, size_t pack_size>
 void CacheImpl<Key, Elem, Index, pack_size>::Dump(ep::Stream* stream, uint64_t start_key_index,
                                                   uint64_t end_key_index, uint32_t* n_dumped,
@@ -607,6 +642,18 @@ void CacheImpl<Key, Elem, Index, pack_size>::Dump(ep::Stream* stream, uint64_t s
   RUN_CUDA_KERNEL((DumpValueKernel<Key, Elem, Index>), stream,
                   num_elem_per_value_ * (end_key_index - start_key_index), num_elem_per_value_,
                   n_dumped, encoding_buffer_, values_, static_cast<Elem*>(values));
+}
+
+template<typename Key, typename Elem, typename Index, size_t pack_size>
+void CacheImpl<Key, Elem, Index, pack_size>::DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index,
+                                                           uint64_t end_key_index, uint32_t* n_dumped,
+                                                           void* keys, void* values) {
+  // encoder_.Dump(stream, start_key_index, end_key_index, n_dumped, static_cast<Key*>(keys),
+  //               encoding_buffer_);
+  // RUN_CUDA_KERNEL((DumpValueKernel<Key, Elem, Index>), stream,
+  //                 num_elem_per_value_ * (end_key_index - start_key_index), num_elem_per_value_,
+  //                 n_dumped, encoding_buffer_, values_, static_cast<Elem*>(values));
+  return; 
 }
 
 template<typename Key, typename Elem, typename Index, size_t pack_size>
