@@ -57,16 +57,6 @@ def compare_with_sgd_foreach(
     for i in range(tensor_num):
         init_value_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
 
-    def get_run_time(func):
-        def wrap(*args, **kwargs):
-            start = time.time()
-            result = func(*args, **kwargs)
-            end = time.time()
-            
-            print("func:{}\t device:{}\t shape:[{}, {}]\t time:{}".format(
-                func.__name__, device, x_shape, tensor_num, end-start))
-            return result
-        return wrap
 
     def _train_with_sgd(foreach):
         x = []
@@ -81,7 +71,6 @@ def compare_with_sgd_foreach(
             foreach=foreach
         )
 
-        @get_run_time
         def train_one_iter(grad):
             loss = 0.0
             for i in range(tensor_num):
@@ -96,16 +85,33 @@ def compare_with_sgd_foreach(
             sgd.step()
             sgd.zero_grad()
 
-        for i in range(train_iters):
-            train_one_iter(random_grad_seq[i])
-            if i == reload_state_step:
-                state_dict = sgd.state_dict()
-                sgd = flow.optim.SGD(x)
-                if save_load_by_pickle:
-                    with tempfile.TemporaryDirectory() as save_dir:
-                        flow.save(state_dict, save_dir)
-                        state_dict = flow.load(save_dir)
-                sgd.load_state_dict(state_dict)
+        def get_run_time(func):
+            def wrap(*args, **kwargs):
+                start = time.time()
+                result = func(*args, **kwargs)
+                end = time.time()
+
+                print("foreach:{}\t device:{}\t shape:[{}, {}]\t time:{}".format(
+                    foreach, device, x_shape, tensor_num, end-start))
+                return result
+            return wrap
+
+        @get_run_time
+        def _train():
+            for i in range(train_iters):
+                train_one_iter(random_grad_seq[i])
+                # if i == reload_state_step:
+                    # state_dict = sgd.state_dict()
+                    # sgd = flow.optim.SGD(x)
+                    # if save_load_by_pickle:
+                    #     with tempfile.TemporaryDirectory() as save_dir:
+                    #         flow.save(state_dict, save_dir)
+                    #         state_dict = flow.load(save_dir)
+                    # sgd.load_state_dict(state_dict)
+            flow.cuda.synchronize()
+
+        _train()
+
         return x
 
     def train_not_foreach():
@@ -133,16 +139,16 @@ class TestOptimizers(flow.unittest.TestCase):
         #arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["device"] = ["cuda"]
         arg_dict["x_shape"] = [(10,), (100,), (1000,), (10000,)]
-        arg_dict["tensor_num"] = [10, 100]
+        arg_dict["tensor_num"] = [10, 10, 100, 200] #first for memory warm up
         # arg_dict["momentum"] = [0.0, 0.9]
         # arg_dict["dampening"] = [0.0, 0.9]
         # arg_dict["nesterov"] = [True, False]
         # arg_dict["maximize"] = [True, False]
-        arg_dict["weight_decay"] = [0.9, 0.0]
-        arg_dict["learning_rate"] = [1.0, 0.1, 1e-3]
-        arg_dict["train_iters"] = [10, 100]
+        arg_dict["weight_decay"] = [0.9]
+        arg_dict["learning_rate"] = [0.1]
+        arg_dict["train_iters"] = [100]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
-        arg_dict["save_load_by_pickle"] = [False, True]
+        arg_dict["save_load_by_pickle"] = [False]
         for arg in GenArgDict(arg_dict):
             compare_with_sgd_foreach(test_case, **arg)
 
