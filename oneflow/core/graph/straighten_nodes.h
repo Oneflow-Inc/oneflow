@@ -20,9 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-void StraightenNodes(
-    TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes,
-    const std::function<bool(const std::string&, const std::string&)>& IsOpNameDataOrCtrlReachable);
+void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes);
 
 }  // namespace oneflow
 
