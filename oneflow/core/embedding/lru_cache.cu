@@ -553,8 +553,11 @@ class LruCache : public Cache {
   }
 
   void Put(ep::Stream* stream, uint32_t n_keys, const void* keys, const void* values,
-           uint32_t* n_evicted, void* evicted_keys, void* evicted_values) override {
-    CHECK_LE(n_keys, max_query_length_);
+           const void* dirty_flags, uint32_t* n_evicted, void* evicted_keys,
+           void* evicted_values) override {
+    、
+        // todo, refine dirty flags
+        CHECK_LE(n_keys, max_query_length_);
     auto cuda_stream = stream->As<ep::CudaStream>();
     OF_CUDA_CHECK(cudaMemsetAsync(n_evicted, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
     if (n_keys == 0) { return; }
@@ -579,6 +582,11 @@ class LruCache : public Cache {
                              0),
         ctx_, start_key_index, end_key_index, n_dumped, static_cast<Key*>(keys),
         static_cast<Elem*>(values));
+  }
+
+  void DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
+                     uint32_t* n_dumped, void* keys, void* values) override {
+    // todo
   }
 
   void Clear() override { ClearLruCacheContext<Key, Elem>(&ctx_); }

@@ -132,6 +132,23 @@ __global__ void OrdinalEncodeDumpKernel(const Key* table_keys, const Index* tabl
   }
 }
 
+template<typename Key, typename Index>
+__global__ void OrdinalEncodeDumpDirtyOnlyKernel(const Key* table_keys, const Index* table_indices,
+                                                 const bool* dirty_flags, uint64_t start_key_index,
+                                                 uint64_t end_key_index, uint32_t* n_dumped,
+                                                 Key* keys, Index* context) {
+  CUDA_1D_KERNEL_LOOP(i, (end_key_index - start_key_index)) {
+    Key entry_key = table_keys[i + start_key_index];
+    Index entry_index = table_indices[i + start_key_index];
+    bool dirty_flag = dirty_flags[i + start_key_index];
+    if (entry_index != 0 && dirty_flag) {
+      uint32_t index = cuda::atomic::Add(n_dumped, static_cast<uint32_t>(1));
+      keys[index] = ((entry_key ^ 0x1) | (entry_index & 0x1));
+      context[index] = (entry_index >> 1U);
+    }
+  }
+}
+
 template<typename Key, typename Elem, typename Index, bool return_value>
 __global__ void LookupKernel(uint32_t value_length, const Elem* cache_values,
                              uint32_t values_elem_cnt, const Key* keys, const Index* context,
@@ -268,8 +285,8 @@ __global__ void EncodeLookupMaskKernel(uint32_t value_length, const Elem* __rest
 }
 
 template<typename Elem, typename Index, size_t pack_size>
-__global__ void UpdateKernel(uint32_t value_length, Elem* cache_values, uint32_t values_elem_cnt,
-                             const Index* context, const Elem* values) {
+__global__ void UpdateKernel(uint32_t value_length, Elem* cache_values, bool* dirty_flags,
+                             uint32_t values_elem_cnt, const Index* context, const Elem* values) {
   const int packed_values_elem_cnt = values_elem_cnt / pack_size;
   const uint32_t packed_elem_cnt = value_length / pack_size;
   auto* packed_cache_values = reinterpret_cast<Pack<Elem, pack_size>*>(cache_values);
@@ -281,6 +298,7 @@ __global__ void UpdateKernel(uint32_t value_length, Elem* cache_values, uint32_t
     const uint64_t row_id = ctx - 1;
     const uint64_t col_id = i - key_id * packed_elem_cnt;
     packed_cache_values[row_id * packed_elem_cnt + col_id] = packed_values[i];
+    dirty_flags[row_id] = true;
   }
 }
 
@@ -370,6 +388,15 @@ class OrdinalEncoder {
                     context);
   }
 
+  void DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
+                     uint32_t* n_dumped, Key* keys, Index* context) {
+    OF_CUDA_CHECK(cudaMemsetAsync(n_dumped, 0, sizeof(uint32_t),
+                                  stream->As<ep::CudaStream>()->cuda_stream()));
+    RUN_CUDA_KERNEL((OrdinalEncodeDumpDirtyOnlyKernel<Key, Index>), stream,
+                    end_key_index - start_key_index, table_keys_, table_indices_, dirty_flags_,
+                    start_key_index, end_key_index, n_dumped, keys, context);
+  }
+
   void Clear() {
     OF_CUDA_CHECK(cudaMemset(table_size_, 0, sizeof(Index)));
     OF_CUDA_CHECK(cudaMemset(table_keys_, 0, table_capacity_ * sizeof(Key)));
@@ -405,12 +432,17 @@ class CacheImpl : public Cache {
     const uint64_t values_size = options.capacity * options.value_size;
     if (options.value_memory_kind == CacheOptions::MemoryKind::kDevice) {
       OF_CUDA_CHECK(cudaMalloc(&values_, values_size));
+      OF_CUDA_CHECK(cudaMalloc(&dirty_flags_, options.capacity * sizeof(bool)));
     } else if (options.value_memory_kind == CacheOptions::MemoryKind::kHost) {
       if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_NUMA_AWARE_ALLOCATION", false)) {
         OF_CUDA_CHECK(cudaMallocHost(&values_, values_size));
+        OF_CUDA_CHECK(cudaMallocHost(&dirty_flags_, options.capacity * sizeof(bool)));
       } else {
         OF_CUDA_CHECK(NumaAwareCudaMallocHost(device_index_, reinterpret_cast<void**>(&values_),
                                               values_size));
+        OF_CUDA_CHECK(NumaAwareCudaMallocHost(device_index_,
+                                              reinterpret_cast<void**>(&dirty_flags_),
+                                              options.capacity * sizeof(bool)));
       }
     } else {
       UNIMPLEMENTED();
@@ -421,8 +453,10 @@ class CacheImpl : public Cache {
     CudaCurrentDeviceGuard guard(device_index_);
     if (options_.value_memory_kind == CacheOptions::MemoryKind::kDevice) {
       OF_CUDA_CHECK(cudaFree(values_));
+      OF_CUDA_CHECK(cudaFree(dirty_flags_));
     } else if (options_.value_memory_kind == CacheOptions::MemoryKind::kHost) {
       OF_CUDA_CHECK(cudaFreeHost(values_));
+      OF_CUDA_CHECK(cudaFreeHost(dirty_flags_));
     } else {
       UNIMPLEMENTED();
     }
@@ -459,12 +493,16 @@ class CacheImpl : public Cache {
            uint8_t* mask) override;
 
   void Put(ep::Stream* stream, uint32_t n_keys, const void* keys, const void* values,
-           uint32_t* n_evicted, void* evicted_keys, void* evicted_values) override;
+           const void* dirty_flags, uint32_t* n_evicted, void* evicted_keys,
+           void* evicted_values) override;
   void FusedHalfUpdatePut(ep::Stream* stream, uint32_t n_keys, const void* keys, const void* values,
                           const void* update, const float* lr, float scale, uint32_t* n_evicted,
                           void* evicted_keys, void* evicted_values) override;
   void Dump(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
             uint32_t* n_dumped, void* keys, void* values) override;
+
+  void DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
+                     uint32_t* n_dumped, Key* keys, Index* context) override;
 
   void Clear() override;
 
@@ -473,6 +511,7 @@ class CacheImpl : public Cache {
   int device_index_;
   uint32_t num_elem_per_value_{};
   Elem* values_;
+  bool* dirty_flags_;
   Index* encoding_buffer_{};
   CacheOptions options_;
   uint32_t max_query_length_;
@@ -532,14 +571,16 @@ void CacheImpl<Key, Elem, Index, pack_size>::Get(ep::Stream* stream, uint32_t n_
 template<typename Key, typename Elem, typename Index, size_t pack_size>
 void CacheImpl<Key, Elem, Index, pack_size>::Put(ep::Stream* stream, uint32_t n_keys,
                                                  const void* keys, const void* values,
-                                                 uint32_t* n_evicted, void* evicted_keys,
-                                                 void* evicted_values) {
+                                                 const void* dirty_flags, uint32_t* n_evicted,
+                                                 void* evicted_keys, void* evicted_values) {
   if (n_keys == 0) { return; }
+  // OF_CUDA_CHECK(cudaMemsetAsync(dirty_flags, 0, options_.capacity * sizeof(bool),
+  // stream->As<ep::CudaStream>()->cuda_stream()));
   CHECK_LE(n_keys, max_query_length_);
   encoder_.template Encode<true>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
   RUN_CUDA_KERNEL((UpdateKernel<Elem, Index, pack_size>), stream, values_elem_cnt / pack_size,
-                  num_elem_per_value_, values_, values_elem_cnt, encoding_buffer_,
+                  num_elem_per_value_, values_, dirty_flags, values_elem_cnt, encoding_buffer_,
                   static_cast<const Elem*>(values));
 }
 
