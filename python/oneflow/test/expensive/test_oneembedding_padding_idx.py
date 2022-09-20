@@ -186,6 +186,7 @@ def _test_one_embedding_padding_idx(
             )
 
 
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class OneEmbeddingWithPaddingIdxTestCase(flow.unittest.TestCase):
     def test_one_embedding_padding_idx(test_case):
@@ -197,8 +198,10 @@ class OneEmbeddingWithPaddingIdxTestCase(flow.unittest.TestCase):
         arg_dict["embedding_size"] = [12]
         arg_dict["test_opt"] = ["SGD"]
         arg_dict["padding_idx"] = [2]
+        os.environ["ONEFLOW_TIMEOUT_SECONDS"] = "300"
         for kwargs in GenArgDict(arg_dict):
             _test_one_embedding_padding_idx(test_case, **kwargs)
+        os.environ["ONEFLOW_TIMEOUT_SECONDS"] = "90"
 
 
 if __name__ == "__main__":
