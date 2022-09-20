@@ -37,7 +37,10 @@ def _cpu_global_tensor(tensor):
 
 
 def _assert_tensor_equal(test_case, tensor1, tensor2, atol=0.0, rtol=0.0):
-    test_case.assertTrue(np.allclose(tensor1.numpy(), tensor2.numpy(), atol, rtol), f"{tensor1.numpy()} vs {tensor2.numpy()}")
+    test_case.assertTrue(
+        np.allclose(tensor1.numpy(), tensor2.numpy(), atol, rtol),
+        f"{tensor1.numpy()} vs {tensor2.numpy()}",
+    )
 
 
 def global_broadcast_consec(size, start=1):
@@ -50,7 +53,7 @@ def global_broadcast_consec(size, start=1):
 
 
 def _test_basic_slice(test_case, placement):
-    broadcast_for_placement = [flow.sbp.broadcast, ] * len(placement.ranks.shape)
+    broadcast_for_placement = [flow.sbp.broadcast,] * len(placement.ranks.shape)
 
     ref_sbp = random_sbp(placement, max_dim=3).value()
     reference = global_broadcast_consec((8, 8, 8)).to_global(placement, ref_sbp)
@@ -58,19 +61,35 @@ def _test_basic_slice(test_case, placement):
     # empty tensor indexing
     _assert_tensor_equal(
         test_case,
-        reference[_cpu_global_tensor(flow.LongTensor()).to_global(placement, broadcast_for_placement)],
+        reference[
+            _cpu_global_tensor(flow.LongTensor()).to_global(
+                placement, broadcast_for_placement
+            )
+        ],
         flow.empty(0, 8, 8),
         atol=0,
         rtol=0,
     )
 
-    _assert_tensor_equal(test_case, reference[0], global_broadcast_consec((8, 8)), atol=0, rtol=0)
-    _assert_tensor_equal(test_case, reference[1], global_broadcast_consec((8, 8), 65), atol=0, rtol=0)
-    _assert_tensor_equal(test_case, reference[2], global_broadcast_consec((8, 8), 129), atol=0, rtol=0)
-    _assert_tensor_equal(test_case, reference[0, 1], global_broadcast_consec((8,), 9), atol=0, rtol=0)
-    _assert_tensor_equal(test_case, reference[0:2], global_broadcast_consec((2, 8, 8)), atol=0, rtol=0)
+    _assert_tensor_equal(
+        test_case, reference[0], global_broadcast_consec((8, 8)), atol=0, rtol=0
+    )
+    _assert_tensor_equal(
+        test_case, reference[1], global_broadcast_consec((8, 8), 65), atol=0, rtol=0
+    )
+    _assert_tensor_equal(
+        test_case, reference[2], global_broadcast_consec((8, 8), 129), atol=0, rtol=0
+    )
+    _assert_tensor_equal(
+        test_case, reference[0, 1], global_broadcast_consec((8,), 9), atol=0, rtol=0
+    )
+    _assert_tensor_equal(
+        test_case, reference[0:2], global_broadcast_consec((2, 8, 8)), atol=0, rtol=0
+    )
     test_case.assertEqual(reference[2, 2, 2].item(), 147)
-    _assert_tensor_equal(test_case, reference[:], global_broadcast_consec((8, 8, 8)), atol=0, rtol=0)
+    _assert_tensor_equal(
+        test_case, reference[:], global_broadcast_consec((8, 8, 8)), atol=0, rtol=0
+    )
 
     # indexing with Ellipsis
     _assert_tensor_equal(
@@ -81,7 +100,11 @@ def _test_basic_slice(test_case, placement):
         rtol=0,
     )
     _assert_tensor_equal(
-        test_case, reference[0, ..., 2], flow.tensor([3, 11, 19, 27, 35, 43, 51, 59]), atol=0, rtol=0
+        test_case,
+        reference[0, ..., 2],
+        flow.tensor([3, 11, 19, 27, 35, 43, 51, 59]),
+        atol=0,
+        rtol=0,
     )
     _assert_tensor_equal(
         test_case, reference[..., 2], reference[:, :, 2], atol=0, rtol=0
@@ -98,7 +121,9 @@ def _test_basic_slice(test_case, placement):
     test_case.assertEqual(reference[2, 2, 2, ...].item(), 147)
     _assert_tensor_equal(test_case, reference[...], reference, atol=0, rtol=0)
 
-    reference_5d = global_broadcast_consec((8, 8, 8, 8, 8)).to_global(placement, sbp=random_sbp(placement, max_dim=5).value())
+    reference_5d = global_broadcast_consec((8, 8, 8, 8, 8)).to_global(
+        placement, sbp=random_sbp(placement, max_dim=5).value()
+    )
     _assert_tensor_equal(
         test_case, reference_5d[..., 1, 0], reference_5d[:, :, :, 1, 0], atol=0, rtol=0
     )
@@ -121,7 +146,9 @@ def _test_basic_slice(test_case, placement):
     # LongTensor indexing
     sbp = random_sbp(placement, max_dim=3).value()
     reference = global_broadcast_consec((8, 8, 8)).to_global(placement, sbp)
-    idx = _cpu_global_tensor(flow.LongTensor([2, 4])).to_global(placement, broadcast_for_placement)
+    idx = _cpu_global_tensor(flow.LongTensor([2, 4])).to_global(
+        placement, broadcast_for_placement
+    )
     _assert_tensor_equal(
         test_case, reference[idx], flow.stack([reference[2], reference[4]])
     )
@@ -185,7 +212,9 @@ def _test_basic_slice(test_case, placement):
     )
 
     #  random check
-    lst = [list(range(i, i + 16)) for i in range(0, 256, 16)]  # arange(64).reshape(8, 8)
+    lst = [
+        list(range(i, i + 16)) for i in range(0, 256, 16)
+    ]  # arange(64).reshape(8, 8)
     tensor = _cpu_global_tensor(flow.DoubleTensor(lst))
     for _ in range(5):
         sbp = random_sbp(placement, max_dim=2).value()
@@ -215,7 +244,9 @@ def _test_advanced_indexing(test_case, placement, dtype):
     def ri(indices):
         choice = _randint(0, 2)
         if choice == 0:
-            return _cpu_global_tensor(flow.LongTensor(indices)).to_global(placement, broadcast_for_placement)
+            return _cpu_global_tensor(flow.LongTensor(indices)).to_global(
+                placement, broadcast_for_placement
+            )
         elif choice == 1:
             return list(indices)
         else:
@@ -226,37 +257,29 @@ def _test_advanced_indexing(test_case, placement, dtype):
         _assert_tensor_equal(test_case, x[ri([0]),], global_broadcast_consec((1,)))
         _assert_tensor_equal(test_case, x[ri([3]),], global_broadcast_consec((1,), 4))
         _assert_tensor_equal(test_case, x[[2, 3, 4]], global_broadcast_consec((3,), 3))
-        _assert_tensor_equal(test_case, x[ri([2, 3, 4]),], global_broadcast_consec((3,), 3))
         _assert_tensor_equal(
-            test_case,
-            x[ri([0, 2, 4]),],
-            flow.tensor([1, 3, 5], dtype=dtype),
+            test_case, x[ri([2, 3, 4]),], global_broadcast_consec((3,), 3)
+        )
+        _assert_tensor_equal(
+            test_case, x[ri([0, 2, 4]),], flow.tensor([1, 3, 5], dtype=dtype),
         )
 
     def validate_setting(x):
         x[[0]] = -2
-        _assert_tensor_equal(
-            test_case, x[[0]], flow.tensor([-2], dtype=dtype)
-        )
+        _assert_tensor_equal(test_case, x[[0]], flow.tensor([-2], dtype=dtype))
         x[[0]] = -1
-        _assert_tensor_equal(
-            test_case, x[ri([0]),], flow.tensor([-1], dtype=dtype)
-        )
+        _assert_tensor_equal(test_case, x[ri([0]),], flow.tensor([-1], dtype=dtype))
         x[[2, 3, 4]] = 4
         _assert_tensor_equal(
             test_case, x[[2, 3, 4]], flow.tensor([4, 4, 4], dtype=dtype)
         )
         x[ri([2, 3, 4]),] = 3
         _assert_tensor_equal(
-            test_case,
-            x[ri([2, 3, 4]),],
-            flow.tensor([3, 3, 3], dtype=dtype),
+            test_case, x[ri([2, 3, 4]),], flow.tensor([3, 3, 3], dtype=dtype),
         )
         x[ri([0, 2, 4]),] = flow.tensor([5, 4, 3], dtype=dtype)
         _assert_tensor_equal(
-            test_case,
-            x[ri([0, 2, 4]),],
-            flow.tensor([5, 4, 3], dtype=dtype),
+            test_case, x[ri([0, 2, 4]),], flow.tensor([5, 4, 3], dtype=dtype),
         )
 
     # 1d tensor and integer index setitem and getitem
