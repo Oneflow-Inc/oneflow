@@ -80,7 +80,7 @@ class Cache {
                              uint32_t* n_dumped, void* keys, void* values) = 0;
 
   virtual void ClearDirtyFlags() = 0;
-                             
+
   virtual void Clear() = 0;
 };
 
