@@ -78,7 +78,7 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
 // b. If there is any splitting sbp parallel, the computation cost will be divided by number of
 // machines. If we use S(1) at matrix a and S(0) at matrix b, then it will be P at output matrix.
 // This is why we don't use SbpParallel at output matrix.
-Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
   bool transpose_b = ctx->Attr<bool>("transpose_b");
   Shape* shape_b = ctx->Shape4ArgNameAndIndex("b", 0);
   int64_t n = 0;
@@ -112,7 +112,7 @@ Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
 }
 
 /*static*/ Maybe<double> MatmulOp::GetComputeComplexity(user_op::ComputeComplexityFnContext* ctx) {
-  return GetComputationCostFn(ctx);
+  return GetComputationCost(ctx);
 }
 
 /* static */ Maybe<void> MatmulOp::GetSbp(user_op::SbpContext* ctx) {
@@ -241,7 +241,7 @@ Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
 
 /*static*/ Maybe<double> BatchMatmulOp::GetComputeComplexity(
     user_op::ComputeComplexityFnContext* ctx) {
-  return GetComputationCostFn(ctx);
+  return GetComputationCost(ctx);
 }
 
 /* static */ Maybe<void> BatchMatmulOp::InferDataType(user_op::InferContext* ctx) {
@@ -443,7 +443,7 @@ Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
 
 /*static*/ Maybe<double> BroadcastMatmulOp::GetComputeComplexity(
     user_op::ComputeComplexityFnContext* ctx) {
-  return GetComputationCostFn(ctx);
+  return GetComputationCost(ctx);
 }
 
 /* static */ Maybe<void> BroadcastMatmulGradBOp::InferLogicalTensorDesc(

@@ -28,6 +28,10 @@ class Job;
 
 namespace auto_parallel {
 
+// A constructor which will assemble the sbp_graph with the information from oneflow.
+// SbpGraph contains the algorithms for elimination and search which is mainly for the strategy
+// itself. Constructor mainly deal with the assemblage of each node, edge and the cost computation,
+// activation of functions.
 class SbpConstructor final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SbpConstructor);

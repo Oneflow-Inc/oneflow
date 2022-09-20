@@ -24,7 +24,7 @@ namespace {
 // Logically computation cost of pool op is the product of output data amount and pool kernal data
 // amount. After adding sbp, we just divide it by parallel number if output data is splitted because
 // splitting input and using partial sum for output is not a valid sbp for this op for now.
-Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
   const std::vector<int32_t> pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
   double logical_computation_cost =
       std::accumulate(pool_size.begin(), pool_size.end(),
@@ -118,7 +118,7 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
   }                                                                                             \
   /*static*/ Maybe<double> name##Op::GetComputeComplexity(                                      \
       user_op::ComputeComplexityFnContext* ctx) {                                               \
-    return GetComputationCostFn(ctx);                                                           \
+    return GetComputationCost(ctx);                                                             \
   }
 
 IMPLEMENT_TF_POOL_FUNCS(TfAvgPool1D, 1)
@@ -144,7 +144,7 @@ IMPLEMENT_TF_POOL_FUNCS(TfMaxPool3D, 3)
   }                                                                                          \
   /*static*/ Maybe<double> name##GradOp::GetComputeComplexity(                               \
       user_op::ComputeComplexityFnContext* ctx) {                                            \
-    return GetComputationCostFn(ctx);                                                        \
+    return GetComputationCost(ctx);                                                          \
   }
 
 IMPLEMENT_TF_POOL_BACKWARD_FUNCS(TfAvgPool1D)

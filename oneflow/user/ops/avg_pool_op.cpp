@@ -83,8 +83,8 @@ Maybe<void> AvgPoolBackwardGetSbpFn(user_op::SbpContext* ctx) {
 // Logically computation cost of pool op is the product of output data amount and pool kernal data
 // amount. After adding sbp, we just divide it by parallel number if output data is splitted because
 // splitting input and using partial sum for output is not a valid sbp for this op for now.
-Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx,
-                                   const std::string& blob_name) {
+Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx,
+                                 const std::string& blob_name) {
   const std::vector<int32_t> pool_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
   double logical_computation_cost = std::accumulate(
       pool_size.begin(), pool_size.end(), ctx->Shape4ArgNameAndIndex(blob_name, 0)->elem_cnt(),
@@ -131,7 +131,7 @@ Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
   }                                                                                      \
   /*static*/ Maybe<double> name##Op::GetComputeComplexity(                               \
       user_op::ComputeComplexityFnContext* ctx) {                                        \
-    return GetComputationCostFn(ctx, "y");                                               \
+    return GetComputationCost(ctx, "y");                                                 \
   }
 
 IMPLEMENT_AVGPOOL_FUNCS(AvgPool1D, 1)
@@ -154,7 +154,7 @@ IMPLEMENT_AVGPOOL_FUNCS(AvgPool3D, 3)
   }                                                                                          \
   /*static*/ Maybe<double> name##GradOp::GetComputeComplexity(                               \
       user_op::ComputeComplexityFnContext* ctx) {                                            \
-    return GetComputationCostFn(ctx, "dy");                                                  \
+    return GetComputationCost(ctx, "dy");                                                    \
   }
 
 IMPLEMENT_AVGPOOL_BACKWARD_FUNCS(AvgPool1D)
