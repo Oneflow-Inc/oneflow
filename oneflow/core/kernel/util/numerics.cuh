@@ -16,6 +16,7 @@ limitations under the License.
 // reference: https://github.com/pytorch/pytorch/blob/master/aten/src/THC/THCNumerics.cuh
 #ifndef ONEFLOW_CORE_KERNEL_UTIL_NUMERICS_H
 #define ONEFLOW_CORE_KERNEL_UTIL_NUMERICS_H
+#include "third_party_install/half/include/half.hpp"
 #pragma once
 
 #include <limits.h>

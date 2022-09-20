@@ -39,8 +39,8 @@ namespace oneflow {
 #define LOGICAL_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, LOGICAL_BINARY_FUNC_NAME_SEQ)
 
-#define REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)(Any)(All)(NanSum)
-#define ARITHMETIC_REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)(NanSum)
+#define REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)(Any)(All)
+#define ARITHMETIC_REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)
 #define LOGICAL_REDUCE_BINARY_FUNC_NAME_SEQ (Any)(All)
 #define REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ)
@@ -48,6 +48,8 @@ namespace oneflow {
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, ARITHMETIC_REDUCE_BINARY_FUNC_NAME_SEQ)
 #define LOGICAL_REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, LOGICAL_REDUCE_BINARY_FUNC_NAME_SEQ)
+#define NANSUM_REDUCE_BINARY_FUNC_SEQ \
+  OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, (NanSum))
 
 #define NO_HALF_UTIL_FOUND         \
   printf("cuda arch must >= 530"); \
@@ -71,6 +73,9 @@ struct BinaryFuncTrait final {
 template<typename T>
 struct BinaryFuncNanSum final {
   static OF_DEVICE_FUNC T Invoke(const T x, const T y) { 
+    // if (oneflow::detail::numerics<T>::isnan(x))
+    //   return oneflow::detail::numerics<T>::isnan(y) ? T{0} : y;
+    // return oneflow::detail::numerics<T>::isnan(y) ? x : x + y;
     if (std::isnan(x))
       return std::isnan(y) ? T{0} : y;
     return std::isnan(y) ? x : x + y;
