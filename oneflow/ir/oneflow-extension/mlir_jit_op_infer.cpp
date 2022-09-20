@@ -72,6 +72,7 @@ static const mlir::FunctionType GetFunctionType(user_op::InferContext* ctx,
       LOG(FATAL) << "Unsupported arg type " << arg_type_str;
     }
   }
+  return funcType;
 }
 
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
