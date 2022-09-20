@@ -67,9 +67,9 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   task_gph->TopoForEachNode(&TaskNode::Build);
   task_gph->RemoveEmptyRegsts();
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
-  task_gph->DecideExecutionOrder();
-  task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
   auto IsReachable = Singleton<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
+  task_gph->DecideExecutionOrder(IsReachable);
+  task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
   if (job_desc.enable_inplace()) { task_gph->EnableInplaceMemSharing(IsReachable); }
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
 

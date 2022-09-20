@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/task.pb.h"
+#include "oneflow/core/register/register_desc.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 
 namespace oneflow {
@@ -61,7 +62,8 @@ class TopoStruct {
   int32_t GetMinDistance2Transfer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
 
   // Memory increment = (memory of out registers) - (memory of in registers)
-  void GetMeomoryIncrement();
+  void GetMeomoryIncrement(
+      const HashMap<const RegstDesc*, HashSet<const TaskNode*>>& register2terminating_task_nodes);
 
   // deciding parameter
   // i = 0: those with small tributary layers go first
@@ -231,7 +233,8 @@ int32_t TopoStruct::GetMinDistance2Transfer(HashMap<TaskNode*, TopoStruct>* task
 }
 
 // Memory increment = (memory of out registers) - (memory of in registers)
-void TopoStruct::GetMeomoryIncrement() {
+void TopoStruct::GetMeomoryIncrement(
+    const HashMap<const RegstDesc*, HashSet<const TaskNode*>>& register2terminating_task_nodes) {
   if (memory_increment < 0) {
     memory_increment = 0;
     for (const auto& produced_register : node->produced_regsts()) {
@@ -243,11 +246,14 @@ void TopoStruct::GetMeomoryIncrement() {
     }
     for (const auto& consumed_register_list : node->consumed_regsts()) {
       for (const auto& consumed_register : consumed_register_list.second) {
-        if (consumed_register->enable_reuse_mem()) {
+        const auto& it = register2terminating_task_nodes.find(consumed_register.get());
+        // If this node might terminate the register
+        if (it != register2terminating_task_nodes.end()
+            && it->second.find(node) != it->second.end()) {
           RegstDescProto temp_proto;
           consumed_register->ToProto(&temp_proto);
-          memory_increment -= RtRegstDesc(temp_proto).TotalMainByteSize4AllRegst()
-                              / consumed_register->consumers().size();
+          memory_increment -=
+              RtRegstDesc(temp_proto).TotalMainByteSize4AllRegst() / it->second.size();
         }
       }
     }
@@ -309,7 +315,9 @@ void FindMainstem(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
 
 }  // anonymous namespace
 
-void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes) {
+void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes,
+                     const std::function<bool(const std::string&, const std::string&)>&
+                         IsOpNameDataOrCtrlReachable) {
   // The function for settle the order in the graph
   int64_t order_in_graph = 0;
 
@@ -320,10 +328,46 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
       task_type2machine_id2node_id2topo_structs;
   std::map<int32_t, TopoStruct*> min_node_id2topo_struct;
   int32_t previous_min_layer = 0;
+
+  // Asking whether it exists a chain from the source node to the destination node
+  auto IsTaskNodeReachable = [&](const TaskNode* src_node, const TaskNode* dst_node) {
+    const CompTaskNode* comp_src_node = dynamic_cast<const CompTaskNode*>(src_node);
+    if (comp_src_node == nullptr) { return false; }
+    const CompTaskNode* comp_dst_node = dynamic_cast<const CompTaskNode*>(dst_node);
+    if (comp_dst_node == nullptr) { return false; }
+    return IsOpNameDataOrCtrlReachable(comp_src_node->op()->op_name(),
+                                       comp_dst_node->op()->op_name());
+  };
+
+  HashMap<const RegstDesc*, HashSet<const TaskNode*>> register2terminating_task_nodes;
+
+  // Go through all the registers, find all the possible consumer which might kill the register
+  task_graph->TopoForEachNode([&](TaskNode* node) {
+    for (const auto& consumed_register_list : node->consumed_regsts()) {
+      for (const auto& consumed_register : consumed_register_list.second) {
+        if (consumed_register->enable_reuse_mem()) {
+          bool is_source = true;
+          for (const auto& consumer_node : consumed_register->consumers()) {
+            if (consumer_node != node) {
+              if (IsTaskNodeReachable(node, consumer_node)) {
+                is_source = false;
+                std::cout << "Found one from " << node->VisualStr() << " to "
+                          << consumer_node->VisualStr() << std::endl;
+                break;
+              }
+            }
+          }
+          if (is_source) { register2terminating_task_nodes[consumed_register.get()].insert(node); }
+        }
+      }
+    }
+  });
+
+  // Get the topography structure for each task node
   task_graph->TopoForEachNode([&](TaskNode* node) {
     auto& topo_struct = task_node2topo_struct[node];
     topo_struct.node = node;
-    topo_struct.GetMeomoryIncrement();
+    topo_struct.GetMeomoryIncrement(register2terminating_task_nodes);
     if (node->in_edges().empty()) {
       topo_struct.min_layer = 0;
     } else {

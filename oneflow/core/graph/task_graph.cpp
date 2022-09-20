@@ -869,13 +869,15 @@ void TaskGraph::BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const Logi
   ConnectWithLbi(proxy_node, dst_node, lbi);
 }
 
-void TaskGraph::DecideExecutionOrder() {
+void TaskGraph::DecideExecutionOrder(
+    const std::function<bool(const std::string&, const std::string&)>&
+        IsOpNameDataOrCtrlReachable) {
   // For one machine with no transfer available, the straighten algorithm for overlaps consume a lot
   // of memory
   if (straighten_algorithm_tag_ == StraightenAlgorithmTag::kCompressMemory
       || (straighten_algorithm_tag_ == StraightenAlgorithmTag::kOverlap4ModelParallelism
           && GlobalProcessCtx::WorldSize() > 1)) {
-    StraightenNodes(this, &ordered_task_nodes_);
+    StraightenNodes(this, &ordered_task_nodes_, IsOpNameDataOrCtrlReachable);
   } else {
     SetOrderInGraphForEachNode();
   }

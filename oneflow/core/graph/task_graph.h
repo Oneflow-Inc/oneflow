@@ -54,7 +54,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
   void MergeChainAndAddOrderingCtrlEdgeInSameChain();
-  void DecideExecutionOrder();
+  void DecideExecutionOrder(const std::function<bool(const std::string&, const std::string&)>&
+                                IsOpNameDataOrCtrlReachable);
   StraightenAlgorithmTag GetStraightenAlgorithmTag() const;
 
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
