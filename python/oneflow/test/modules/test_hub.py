@@ -28,7 +28,7 @@ class TestHub(flow.unittest.TestCase):
         test_case.assertEqual('densenet121' in entrypoints, True)
     
     def test_hub_help_api(test_case):
-        help_info = flow.hub.help('Oneflow-Inc/vision', 'resnet18', force_reload=True)
+        help_info = flow.hub.help('Oneflow-Inc/vision', 'resnet18', force_reload=False)
         print(help_info)
     
     def test_hub_load_api(test_case):
