@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/job_rewriter/dynamic_loss_scale_job_pass_state.h"
 #include "oneflow/core/job_rewriter/autograd.h"
-#include "oneflow/core/embedding/key_value_store_options.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/job_rewriter/clip_by_global_norm_job_pass_state.h"
 #include "oneflow/core/embedding/embedding_manager.h"
@@ -104,14 +103,15 @@ Maybe<void> DynamicLossScaleAddGradient(
   return Maybe<void>::Ok();
 }
 
-void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_t embedding_size,
-                          const int64_t line_size, const std::string& embedding_name,
-                          bool has_embedding_prefetch, const ParallelConf& parallel_conf,
-                          const user_op::UserOpConfWrapper& embedding_op,
-                          const std::string& num_unique_ids_lbn, const std::string& unique_ids_lbn,
-                          const std::string& unique_table_ids_lbn, std::string* embedding_lbn,
-                          std::string* unique_values_lbn, OperatorConf* embedding_prefetch_op_conf,
-                          OperatorConf* embedding_lookup_op_conf) {
+void BuildEmbeddingLookup(
+    JobPassCtx* ctx, JobBuilder* job_builder, const int64_t embedding_size, const int64_t line_size,
+    const std::string& embedding_name, const int64_t seed, bool has_embedding_prefetch,
+    const ParallelConf& parallel_conf, const user_op::UserOpConfWrapper& embedding_op,
+    const std::string& prefetch_num_unique_ids_lbn, const std::string& prefetch_unique_ids_lbn,
+    const std::string& prefetch_unique_table_ids_lbn, const std::string& num_unique_ids_lbn,
+    const std::string& unique_ids_lbn, const std::string& unique_table_ids_lbn,
+    std::string* embedding_lbn, std::string* unique_values_lbn,
+    OperatorConf* embedding_prefetch_op_conf, OperatorConf* embedding_lookup_op_conf) {
   std::string context_lbn;
   if (has_embedding_prefetch) {
     // embedding prefetch op
@@ -119,19 +119,22 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
         embedding_op.op_name() + "_embedding_prefetch" + NewUniqueId());
     user_op::UserOpConfWrapper embedding_prefetch_op =
         embedding_prefetch_op_builder.OpTypeName("embedding_prefetch")
-            .Input("num_unique_ids", num_unique_ids_lbn)
-            .Input("unique_ids", unique_ids_lbn)
-            .Input("table_ids", unique_table_ids_lbn)
+            .Input("num_unique_ids", prefetch_num_unique_ids_lbn)
+            .Input("unique_ids", prefetch_unique_ids_lbn)
+            .Input("table_ids", prefetch_unique_table_ids_lbn)
             .Output("context")
             .Attr<int64_t>("embedding_size", embedding_size)
             .Attr<int64_t>("line_size", line_size)
             .Attr<std::string>("embedding_tables",
                                embedding_op.attr<std::string>("embedding_tables"))
             .Attr<std::string>("embedding_name", embedding_name)
+            .Attr<int64_t>("seed", seed)
             .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
             .Build();
     *embedding_prefetch_op_conf = embedding_prefetch_op.op_conf();
-    embedding_prefetch_op_conf->set_stream_name_hint(embedding_name + "_EMBEDDING");
+    if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINED_EXECUTION", false)) {
+      embedding_prefetch_op_conf->set_stream_name_hint(embedding_name + "_EMBEDDING");
+    }
     context_lbn = embedding_prefetch_op.output("context", 0);
   }
 
@@ -148,6 +151,7 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
       .Attr<int64_t>("line_size", line_size)
       .Attr<std::string>("embedding_tables", embedding_op.attr<std::string>("embedding_tables"))
       .Attr<std::string>("embedding_name", embedding_name)
+      .Attr<int64_t>("seed", seed)
       .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id());
   if (has_embedding_prefetch) { embedding_lookup_op_builder.Input("context", context_lbn); }
   bool has_embeddings_output =
@@ -161,7 +165,9 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
   }
   user_op::UserOpConfWrapper embedding_lookup_op = embedding_lookup_op_builder.Build();
   *embedding_lookup_op_conf = embedding_lookup_op.op_conf();
-  embedding_lookup_op_conf->set_stream_name_hint(embedding_name + "_EMBEDDING");
+  if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINED_EXECUTION", false)) {
+    embedding_lookup_op_conf->set_stream_name_hint(embedding_name + "_EMBEDDING");
+  }
   if (has_embeddings_output) {
     *embedding_lbn = embedding_lookup_op.output("embeddings", 0);
   } else {
@@ -194,7 +200,8 @@ void BuildEmbeddingShuffle(JobBuilder* job_builder, const std::string& embedding
           .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
           .Build();
   OperatorConf embedding_shuffle_new_op_conf = embedding_shuffle_op.op_conf();
-  if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_EMBEDDING_SHUFFLE_INDEPENTENT_STREAM", true)) {
+  if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINED_EXECUTION", false)
+      && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_EMBEDDING_SHUFFLE_INDEPENTENT_STREAM", true)) {
     embedding_shuffle_new_op_conf.set_stream_name_hint(embedding_name + "_EMBEDDING");
   }
   add_ops->push_back(embedding_shuffle_new_op_conf);
@@ -260,8 +267,9 @@ void BuildEmbeddingGradientShuffle(
             .ScopeSymbolId(embedding_scope_symbol_id)
             .Build();
     OperatorConf embedding_gradient_shuffle_new_op_conf = embedding_gradient_shuffle_op.op_conf();
-    if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_EMBEDDING_GRADIENT_SHUFFLE_INDEPENTENT_STREAM",
-                            true)) {
+    if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINED_EXECUTION", false)
+        && ParseBooleanFromEnv(
+            "ONEFLOW_ONE_EMBEDDING_EMBEDDING_GRADIENT_SHUFFLE_INDEPENTENT_STREAM", true)) {
       embedding_gradient_shuffle_new_op_conf.set_stream_name_hint(embedding_name + "_EMBEDDING");
     }
     job_builder->AddOps(embedding_parallel_conf, {embedding_gradient_shuffle_new_op_conf});
@@ -340,12 +348,17 @@ double GetLossInstanceNumScaleFactor(const OpGraph& op_graph, JobBuilder* job_bu
 
 void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
                     const user_op::UserOpConfWrapper& embedding_op,
-                    std::vector<OperatorConf>* add_ops,
+                    std::vector<OperatorConf>* add_ops, std::string* prefetch_num_unique_lbn,
+                    std::string* prefetch_unique_ids_lbn,
+                    std::string* prefetch_unique_table_ids_lbn,
                     std::string* inner_inverse_unique_partition_indices_lbn,
                     std::string* num_unique_ids_lbn, std::string* unique_ids_lbn,
                     std::string* unique_table_ids_lbn, std::string* inverse_indices_lbn,
                     std::string* num_unique_matrix_lbn) {
   const int32_t num_tables = embedding_op.attr<int32_t>("num_tables");
+  bool enable_pipelined_execution =
+      !ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINED_EXECUTION", false);
+
   if (use_system_gather) {
     user_op::UserOpConfWrapperBuilder unique_op_builder(embedding_op.op_name()
                                                         + "_unique_ids_and_tables");
@@ -362,12 +375,17 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
     }
     user_op::UserOpConfWrapper unique_op = unique_op_builder.Build();
     OperatorConf unique_new_op_conf = unique_op.op_conf();
-    unique_new_op_conf.set_stream_name_hint(embedding_name + "_ID_SHUFFLE");
+    if (enable_pipelined_execution) {
+      unique_new_op_conf.set_stream_name_hint(embedding_name + "_ID_SHUFFLE");
+    }
     add_ops->push_back(unique_new_op_conf);
     *num_unique_ids_lbn = unique_op.output("num_unique", 0);
     *unique_ids_lbn = unique_op.output("unique_keys", 0);
     *unique_table_ids_lbn = unique_op.output("unique_values", 0);
     *inverse_indices_lbn = unique_op.output("inverse_indices", 0);
+    *prefetch_num_unique_lbn = *num_unique_ids_lbn;
+    *prefetch_unique_ids_lbn = *unique_ids_lbn;
+    *prefetch_unique_table_ids_lbn = *unique_table_ids_lbn;
   } else {
     user_op::UserOpConfWrapperBuilder id_shuffle_op_builder(embedding_op.op_name() + "_id_shuffle"
                                                             + NewUniqueId());
@@ -387,10 +405,12 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
     }
     user_op::UserOpConfWrapper id_shuffle_op = id_shuffle_op_builder.Build();
     OperatorConf id_shuffle_new_op_conf = id_shuffle_op.op_conf();
-    id_shuffle_new_op_conf.set_stream_name_hint(embedding_name + "_ID_SHUFFLE");
+    if (enable_pipelined_execution) {
+      id_shuffle_new_op_conf.set_stream_name_hint(embedding_name + "_ID_SHUFFLE");
+    }
     add_ops->push_back(id_shuffle_new_op_conf);
-
     if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ADD_ID_SHUFFLE_COPY_OUT", true)) {
+      // add id_shuffle_copy_out, so the consumer can use light_actor and cuda_graph.
       user_op::UserOpConfWrapperBuilder identity_op_builder(
           embedding_op.op_name() + "_id_shuffle_copy_out_" + NewUniqueId());
       user_op::UserOpConfWrapper identity_op =
@@ -414,9 +434,10 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
               .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
               .Build();
       OperatorConf identity_op_conf = identity_op.op_conf();
-      identity_op_conf.set_stream_name_hint(embedding_name + "_EMBEDDING");
+      if (enable_pipelined_execution) {
+        identity_op_conf.set_stream_name_hint(embedding_name + "_EMBEDDING");
+      }
       add_ops->push_back(identity_op_conf);
-
       *inner_inverse_unique_partition_indices_lbn =
           identity_op.output("out_inverse_unique_partition_indices", 0);
       *num_unique_ids_lbn = identity_op.output("out_cur_rank_num_unique", 0);
@@ -433,6 +454,9 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
       *inverse_indices_lbn = id_shuffle_op.output("cur_rank_inverse_indices", 0);
       *num_unique_matrix_lbn = id_shuffle_op.output("num_unique_matrix", 0);
     }
+    *prefetch_num_unique_lbn = id_shuffle_op.output("cur_rank_num_unique", 0);
+    *prefetch_unique_ids_lbn = id_shuffle_op.output("cur_rank_unique_ids", 0);
+    *prefetch_unique_table_ids_lbn = id_shuffle_op.output("cur_rank_unique_table_ids", 0);
   }
 }
 
@@ -576,7 +600,9 @@ void BuildEmbeddingUpdate(
             .ScopeSymbolId(embedding_scope_symbol_id)
             .Build();
     *embedding_update_new_op_conf = fused_embedding_update_put_op.op_conf();
-    embedding_update_new_op_conf->set_stream_name_hint(embedding_name + "_EMBEDDING");
+    if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINED_EXECUTION", false)) {
+      embedding_update_new_op_conf->set_stream_name_hint(embedding_name + "_EMBEDDING");
+    }
     return;
   }
 
@@ -662,7 +688,9 @@ void BuildEmbeddingUpdate(
           .ScopeSymbolId(embedding_scope_symbol_id)
           .Build();
   *embedding_update_new_op_conf = embedding_update_op.op_conf();
-  embedding_update_new_op_conf->set_stream_name_hint(embedding_name + "_EMBEDDING");
+  if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINED_EXECUTION", false)) {
+    embedding_update_new_op_conf->set_stream_name_hint(embedding_name + "_EMBEDDING");
+  }
 
   user_op::UserOpConfWrapperBuilder embedding_put_op_builder(embedding_op.op_name()
                                                              + "_embedding_put" + NewUniqueId());
@@ -675,7 +703,9 @@ void BuildEmbeddingUpdate(
           .ScopeSymbolId(embedding_scope_symbol_id)
           .Build();
   OperatorConf embedding_put_new_op_conf = embedding_put_op.op_conf();
-  embedding_put_new_op_conf.set_stream_name_hint(embedding_name + "_EMBEDDING");
+  if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINED_EXECUTION", false)) {
+    embedding_put_new_op_conf.set_stream_name_hint(embedding_name + "_EMBEDDING");
+  }
   job_builder->AddOps(embedding_parallel_conf, {embedding_put_new_op_conf});
 }
 
@@ -989,7 +1019,7 @@ class ReplaceEmbeddingOps final : public JobPass {
   ReplaceEmbeddingOps() = default;
   ~ReplaceEmbeddingOps() override = default;
 
-  bool IsEnabled(const JobPassCtx& ctx) const { return true; }
+  bool IsEnabled(const JobPassCtx& ctx) const { return ctx.job_desc().IsTrain(); }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder, JobPassCtx* ctx) const;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
@@ -1033,16 +1063,23 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     // assume all embeddings have same placement
     embedding_scope_symbol_id = embedding_op.op_conf().scope_symbol_id();
     embedding_parallel_conf = op_node->parallel_desc().parallel_conf();
-
-    embedding::KeyValueStoreOptions options(
-        embedding_op.attr<std::string>("key_value_store_options"));
+    const std::string& embedding_name = embedding_op.attr<std::string>("embedding_name");
+    const int64_t line_size = embedding_op.attr<int64_t>("line_size");
     const int64_t embedding_size = embedding_op.attr<int64_t>("embedding_size");
+    const bool is_full_cache = embedding_op.attr<bool>("is_full_cache");
+    const int64_t seed = embedding_op.attr<int64_t>("seed");
     const int64_t parallel_num = op_node->parallel_desc().parallel_num();
     const bool use_system_gather =
         (parallel_num == 1 && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_USE_SYSTEM_GATHER", false)
          && !embedding::UseDynamicMemoryAllocation());
     std::string new_embeddings_lbn;
 
+    // prefetch can not exec in advance when it consume id_shuffle_copy_out, because
+    // id_shuffle_copy_out's regster_num is 1. so we set id_shuffle out to
+    // prefetch_num_unique_ids_lbn and prefetch consume them for pipeline.
+    std::string prefetch_num_unique_ids_lbn;
+    std::string prefetch_unique_ids_lbn;
+    std::string prefetch_unique_table_ids_lbn;
     std::string inner_inverse_unique_partition_indices_lbn;
     std::string num_unique_ids_lbn;
     std::string unique_ids_lbn;
@@ -1050,24 +1087,24 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     std::string inverse_indices_lbn;
     std::string num_unique_matrix_lbn;
 
-    BuildIdShuffle(use_system_gather, options.Name(), embedding_op, &add_ops,
-                   &inner_inverse_unique_partition_indices_lbn, &num_unique_ids_lbn,
-                   &unique_ids_lbn, &unique_table_ids_lbn, &inverse_indices_lbn,
-                   &num_unique_matrix_lbn);
+    BuildIdShuffle(use_system_gather, embedding_name, embedding_op, &add_ops,
+                   &prefetch_num_unique_ids_lbn, &prefetch_unique_ids_lbn,
+                   &prefetch_unique_table_ids_lbn, &inner_inverse_unique_partition_indices_lbn,
+                   &num_unique_ids_lbn, &unique_ids_lbn, &unique_table_ids_lbn,
+                   &inverse_indices_lbn, &num_unique_matrix_lbn);
     const bool is_train_job = job_builder->job().job_conf().has_train_conf();
-    const bool no_optimizer_states = (embedding_size == options.LineSize());
-    const bool has_embedding_prefetch =
-        (!options.IsFullCache()) && (is_train_job || no_optimizer_states);
+    const bool no_optimizer_states = (embedding_size == line_size);
+    const bool has_embedding_prefetch = (!is_full_cache) && (is_train_job || no_optimizer_states);
 
     OperatorConf embedding_prefetch_op_conf;
     OperatorConf embedding_lookup_op_conf;
     // embedding lookup op
     std::string embedding_lbn, unique_values_lbn;
-    BuildEmbeddingLookup(ctx, job_builder, embedding_size, options.LineSize(), options.Name(),
-                         has_embedding_prefetch, embedding_parallel_conf, embedding_op,
-                         num_unique_ids_lbn, unique_ids_lbn, unique_table_ids_lbn, &embedding_lbn,
-                         &unique_values_lbn, &embedding_prefetch_op_conf,
-                         &embedding_lookup_op_conf);
+    BuildEmbeddingLookup(
+        ctx, job_builder, embedding_size, line_size, embedding_name, seed, has_embedding_prefetch,
+        embedding_parallel_conf, embedding_op, prefetch_num_unique_ids_lbn, prefetch_unique_ids_lbn,
+        prefetch_unique_table_ids_lbn, num_unique_ids_lbn, unique_ids_lbn, unique_table_ids_lbn,
+        &embedding_lbn, &unique_values_lbn, &embedding_prefetch_op_conf, &embedding_lookup_op_conf);
 
     if (use_system_gather) {
       user_op::UserOpConfWrapperBuilder gather_op_builder(embedding_op.op_name() + "_gather");
@@ -1081,7 +1118,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
       new_embeddings_lbn = gather_op.output("out", 0);
     } else {
       // embedding shuffle op
-      BuildEmbeddingShuffle(job_builder, options.Name(), embedding_size, embedding_parallel_conf,
+      BuildEmbeddingShuffle(job_builder, embedding_name, embedding_size, embedding_parallel_conf,
                             embedding_op, inverse_indices_lbn,
                             inner_inverse_unique_partition_indices_lbn, num_unique_matrix_lbn,
                             embedding_lbn, &add_ops, &new_embeddings_lbn);
@@ -1102,8 +1139,8 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
       if (consumer->op().op_conf().has_user_conf()) {
         const user_op::UserOpConfWrapper update_op_conf(consumer->op().op_conf());
         if (update_op_conf.op_type_name() != "embedding_update_placeholder") { continue; }
-        if (update_op_conf.attr<std::string>("key_value_store_options")
-            != embedding_op.attr<std::string>("key_value_store_options")) {
+        if (update_op_conf.attr<std::string>("embedding_name")
+            != embedding_op.attr<std::string>("embedding_name")) {
           continue;
         }
         delete_op_names.push_back(update_op_conf.op_name());
@@ -1125,7 +1162,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
 
         std::string embedding_grad_lbn;
         BuildEmbeddingGradientShuffle(
-            ctx, op_graph, job_builder, op_node, options.Name(), embedding_size, use_system_gather,
+            ctx, op_graph, job_builder, op_node, embedding_name, embedding_size, use_system_gather,
             embedding_parallel_conf, embedding_scope_symbol_id, embedding_op, inverse_indices_lbn,
             inner_inverse_unique_partition_indices_lbn, num_unique_matrix_lbn,
             update_op_conf.input("embedding_grad", 0), embedding_optimizer_conf.has_clip_conf(),
@@ -1147,9 +1184,9 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
         std::string new_embedding_grad_lbn;
         OperatorConf embedding_update_op_conf;
         BuildEmbeddingUpdate(ctx, op_graph, job_builder, embedding_parallel_conf,
-                             embedding_scope_symbol_id, options.IsFullCache(), embedding_size,
-                             options.LineSize(), l1, l2, options.Name(), embedding_optimizer_conf,
-                             embedding_op, num_unique_ids_lbn, unique_ids_lbn, unique_values_lbn,
+                             embedding_scope_symbol_id, is_full_cache, embedding_size, line_size,
+                             l1, l2, embedding_name, embedding_optimizer_conf, embedding_op,
+                             num_unique_ids_lbn, unique_ids_lbn, unique_values_lbn,
                              embedding_grad_lbn, learning_rate_lbn, &new_embedding_grad_lbn,
                              &state_initializer, &embedding_update_op_conf);
         shadow_op_name2grad_lbn[shadow_op_name] = new_embedding_grad_lbn;
@@ -1158,7 +1195,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     }
     if ((state_initializer.empty()) && !no_optimizer_states) {
       CHECK(!is_train_job) << "train job must have set state initializer";
-      MakeConstantInitializerAttr(embedding_size, options.LineSize(), {}, &state_initializer);
+      MakeConstantInitializerAttr(embedding_size, line_size, {}, &state_initializer);
     }
     auto state_initializer_attr = ::oneflow::AttrValue();
     state_initializer_attr.set_at_string(state_initializer);

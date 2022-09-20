@@ -37,6 +37,7 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator_impl.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -46,7 +47,6 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/framework/tensor_util.h"
-#include "oneflow/core/framework/stream_guard.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/tensor_util.h"
@@ -121,9 +121,12 @@ class ArgMinFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Optional<int32_t>& dim,
                            const Optional<bool>& keepdim,
                            const Optional<Symbol<DType>>& dtype) const {
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({input}, DType::Float()).Apply());
+    const auto x = JUST(tensor_processor.GetInputs()).at(0);
     return sequence_function(Negative)
         .then(std::bind(ArgMax, std::placeholders::_1, dim, keepdim, dtype))
-        .call(input);
+        .call(x);
   }
 };
 class GlobalConstantFunctor {
@@ -208,12 +211,10 @@ class EmptyFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device, const bool pin_memory) const {
     Symbol<Device> device_symbol = device.value_or(JUST(Device::New("cpu", 0)));
-    OF_PROFILER_RANGE_PUSH("AttrMap");
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "pin_memory", "device_type", "device_id");
     attrs.SetAllAttrs(shape, dtype->data_type(), pin_memory, device_symbol->type(),
                       device_symbol->device_id());
-    OF_PROFILER_RANGE_POP();
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
   }
 
@@ -458,6 +459,11 @@ class BroadcastLikeFunctor {
     const Shape& x_shape = *x->shape();
     const Shape& like_shape = *like->shape();
     if (x_shape == like_shape) { return x; }
+    CHECK_GE_OR_RETURN(like_shape.NumAxes(), x_shape.NumAxes())
+        << Error::RuntimeError() << "The number of sizes provided (" << like_shape.NumAxes()
+        << ") must be greater or equal to the number of dimensions in the tensor ("
+        << x_shape.NumAxes() << ")"
+        << ". Target sizes: " << like_shape.ToString() << ". Tensor sizes: " << x_shape.ToString();
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("broadcast_axes");
     if (broadcast_axes.empty()) {
       int64_t like_ndim = like_shape.NumAxes();
@@ -744,61 +750,48 @@ class ExpandFunctor {
  public:
   ExpandFunctor() { op_ = CHECK_JUST(one::OpBuilder("expand").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    CHECK_GE_OR_RETURN(shape.NumAxes(), x->shape()->NumAxes())
-        << Error::RuntimeError() << "expand(tensor{" << x->shape()->ToString()
-        << "}, size=" << x->shape()->NumAxes() << "): the number of sizes provided ("
-        << shape.NumAxes() << ") "
-        << "must be greater or equal to the number of dimensions in the tensor ("
-        << x->shape()->NumAxes() << ")";
-    std::vector<int32_t> in_shape(x->shape()->NumAxes());
-    for (int i = 0; i < in_shape.size(); ++i) { in_shape[i] = x->shape()->At(i); }
+    const Shape& in_shape = *x->shape();
+    size_t lpad = shape.size() - in_shape.size();
+    if (lpad < 0) {
+      return Error::RuntimeError()
+             << "expand(tensor{" << in_shape.ToString() << "}, size=" << in_shape.size()
+             << "): the number of sizes provided (" << shape.size() << ") "
+             << "must be greater or equal to the number of dimensions in the tensor ("
+             << in_shape.size() << ")";
+    }
 
-    // check the parameters
-    int shift = shape.NumAxes() - in_shape.size();
-    for (int i = shape.NumAxes() - 1; i >= 0; --i) {
-      int index = i - shift;
-      if (index >= 0) {
-        if (shape.At(i) != -1 && shape.At(i) != in_shape[index]) {
-          CHECK_OR_RETURN(shape.At(i) >= 0 && in_shape[index] == 1)
-              << Error::RuntimeError() << "The expanded size of the tensor (" << shape.At(i)
-              << ") must match the existing size (" << in_shape[index]
-              << ") at non-singleton dimension " << i << ".  Target sizes: " << shape.ToString()
-              << ".  Tensor sizes: " << x->shape()->ToString();
+    DimVector expand_shape_vec = shape.dim_vec();
+    for (size_t i = 0; i < shape.size(); ++i) {
+      const auto& t_dim = shape[i];
+      if (t_dim < -1) {
+        return Error::RuntimeError() << "Trying to create tensor with negative dimension " << t_dim;
+      }
+      if (i >= lpad) {
+        const auto& dim = in_shape[i - lpad];
+        if (dim != 1 && t_dim != -1 && t_dim != dim) {
+          return Error::RuntimeError()
+                 << "The expanded size of the tensor (" << t_dim
+                 << ") must match the existing size (" << dim << ") at non-singleton dimension "
+                 << i << ". Target sizes: " << shape.ToString()
+                 << ". Tensor sizes: " << in_shape.ToString();
         }
+        if (t_dim == -1) { expand_shape_vec[i] = dim; }
       } else {
-        CHECK_GE_OR_RETURN(shape.At(i), 0)
-            << Error::RuntimeError() << "The expanded size of the tensor (" << shape.At(i)
-            << ") isn't allowed in a leading, non-existing dimension " << i
-            << " .Target size: " << shape.ToString();
+        if (t_dim == -1) {
+          return Error::RuntimeError() << "The expanded size of the tensor (-1) isn't allowed in a "
+                                          "leading, non-existing dimension "
+                                       << i;
+        }
       }
     }
 
-    std::vector<int32_t> expand_shape(shape.NumAxes());
-    for (int i = 0; i < shape.NumAxes(); ++i) { expand_shape[i] = shape.dim_vec().at(i); }
-
     // if input tensor is eager local, then try return tensor's view
-    if (view::IsViewApplicable(x)) { return view::Expand(x, in_shape, expand_shape); }
+    Shape expand_shape(expand_shape_vec);
+    if (view::IsViewApplicable(x)) { return view::Expand(x, expand_shape); }
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("logical_in_shape", "logical_expand_shape");
-    attrs.SetAllAttrs(in_shape, expand_shape);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("expand_shape");
+    attrs.SetAllAttrs(expand_shape);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class ExpandGradFunctor {
- public:
-  ExpandGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("expand_grad").Input("in").Output("out").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
-                           const std::vector<int32_t>& logical_in_shape,
-                           const std::vector<int32_t>& logical_expand_shape) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("logical_out_shape", "logical_expand_shape");
-    attrs.SetAllAttrs(logical_in_shape, logical_expand_shape);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, attrs);
   }
 
  private:
@@ -1381,14 +1374,13 @@ class InplaceToContiguousFunctor {
     auto contiguous_tensor = JUST(functional::ToContiguous(input));
     CHECK_OR_RETURN(input->is_local() && contiguous_tensor->is_local())
         << "Both ref and value must be local tensor.";
-    std::shared_ptr<Stride> stride(new Stride(*input->shape()));
+    const Stride stride(*input->shape());
     // update stride
     const auto& blob_object = JUST(input->eager_blob_object());
     Symbol<LocalTensorMeta> old_tensor_meta = JUST(input->local_tensor_meta());
 
-    Symbol<LocalTensorMeta> new_tensor_meta =
-        SymbolOf(LocalTensorMeta(std::make_shared<Shape>(old_tensor_meta->shape()), stride,
-                                 old_tensor_meta->dtype(), old_tensor_meta->device()));
+    Symbol<LocalTensorMeta> new_tensor_meta = SymbolOf(LocalTensorMeta(
+        old_tensor_meta->shape(), stride, old_tensor_meta->dtype(), old_tensor_meta->device()));
 
     std::shared_ptr<EagerLocalTensorImpl> final_tensor_impl =
         std::make_shared<EagerLocalTensorImpl>(JUST(input->tensor_storage()),
@@ -1551,30 +1543,7 @@ class CopyFunctor {
 #ifdef WITH_CUDA
     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
 #endif
-    int64_t thread_uid = Stream::kDefaultStreamThreadUid;
-    int64_t stream_set_id = Stream::kDefaultStreamSetId;
-    JUST(GetThreadUidAndStreamSetId(*x, &thread_uid, &stream_set_id));
-    if (thread_uid == Stream::kDefaultStreamThreadUid
-        && stream_set_id == Stream::kDefaultStreamSetId) {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-    } else {
-      auto stream_set = std::make_shared<StreamSet>(thread_uid);
-      StreamGuard guard(StreamConverter(stream_set, /*exclude_ccl=*/false));
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-    }
-  }
-
-  Maybe<void> GetThreadUidAndStreamSetId(const one::Tensor& x, int64_t* thread_uid,
-                                         int64_t* stream_set_id) const {
-    if (!x.is_eager()) { return Maybe<void>::Ok(); }
-    if (!x.is_local()) { return Maybe<void>::Ok(); }
-    const auto& eager_blob_object = JUST(x.eager_blob_object());
-    const auto& opt_last_used_stream = eager_blob_object->last_used_stream();
-    if (!opt_last_used_stream.has_value()) { return Maybe<void>::Ok(); }
-    auto last_used_stream = JUST(opt_last_used_stream);
-    *thread_uid = last_used_stream->thread_uid();
-    *stream_set_id = last_used_stream->stream_set_id();
-    return Maybe<void>::Ok();
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -2354,46 +2323,32 @@ class DivGradFunctor {
 
 class BroadcastPowXGradFunctor {
  public:
-  BroadcastPowXGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("broadcast_pow_x_grad")
-                         .Input("dz")
-                         .Input("x")
-                         .Input("y")
-                         .Input("z")
-                         .Output("dx")
-                         .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dz,
-                           const std::shared_ptr<one::Tensor>& x,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y,
-                           const std::shared_ptr<one::Tensor>& z) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz, x, y, z});
+                           const std::shared_ptr<one::Tensor>& dz) const {
+    auto y_sub_one = JUST(functional::ScalarSub(y, 1, /*alpha=*/1, /*inplace=*/false));
+    auto result = functional::sequence_function(functional::BroadcastPow)
+                      .then(std::bind(functional::Mul, std::placeholders::_1, y))
+                      .then(std::bind(functional::Mul, std::placeholders::_1, dz))
+                      .then(std::bind(functional::BroadcastReduceSumLike, std::placeholders::_1, x))
+                      .call(x, y_sub_one);
+    return result;
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
 class BroadcastPowYGradFunctor {
  public:
-  BroadcastPowYGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("broadcast_pow_y_grad")
-                         .Input("dz")
-                         .Input("x")
-                         .Input("y")
-                         .Input("z")
-                         .Output("dy")
-                         .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dz,
-                           const std::shared_ptr<one::Tensor>& x,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y,
-                           const std::shared_ptr<one::Tensor>& z) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz, x, y, z});
+                           const std::shared_ptr<one::Tensor>& dz) const {
+    auto result =
+        functional::sequence_function(functional::BroadcastPow)
+            .then(std::bind(functional::Mul, std::placeholders::_1, JUST(functional::Log(x))))
+            .then(std::bind(functional::Mul, std::placeholders::_1, dz))
+            .then(std::bind(functional::BroadcastReduceSumLike, std::placeholders::_1, y))
+            .call(x, y);
+    return result;
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
 class IdentityFunctor {
@@ -3352,7 +3307,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RowStackFunctor>("RowStack");
   m.add_functor<impl::DStackFunctor>("DStack");
   m.add_functor<impl::ExpandFunctor>("Expand");
-  m.add_functor<impl::ExpandGradFunctor>("ExpandGrad");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::ExpandDimsFunctor>("Unsqueeze");
   m.add_functor<impl::UnsqueezeMultipleFunctor>("UnsqueezeMultiple");

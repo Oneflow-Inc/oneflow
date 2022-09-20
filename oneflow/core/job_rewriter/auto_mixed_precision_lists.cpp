@@ -111,7 +111,10 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "fused_bias_add_mask_scale",
                               "acc",
                               "reciprocal",
-                              "reciprocal_no_nan"};
+                              "reciprocal_no_nan",
+                              "group_norm",
+                              "group_norm_param_grad",
+                              "group_norm_grad"};
   return gray_list;
 }
 
@@ -150,7 +153,6 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "embedding",
                                "embedding_grad",
                                "expand",
-                               "expand_grad",
                                "expand_dims",
                                "cast_to_static_shape",
                                "parallel_cast",

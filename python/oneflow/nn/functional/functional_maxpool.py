@@ -162,3 +162,70 @@ def max_pool3d(
         return _max_pool_out
     else:
         return _max_pool_out[0]
+
+
+def adaptive_max_pool1d(input, output_size, return_indices: bool = False):
+    r"""Applies a 1D adaptive max pooling over an input signal composed of
+    several input planes.
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.functional.adaptive_max_pool1d.html
+
+    See :class:`~oneflow.nn.AdaptiveMaxPool1d` for details and output shape.
+
+    Args:
+        output_size: the target output size (single integer)
+        return_indices: whether to return pooling indices. Default: ``False``
+
+    """
+
+    _out = oneflow._C.adaptive_max_pool1d(input, output_size)
+    if return_indices:
+        return _out
+    else:
+        return _out[0]
+
+
+def adaptive_max_pool2d(input, output_size, return_indices: bool = False):
+    r"""Applies a 2D adaptive max pooling over an input signal composed of
+    several input planes.
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.functional.adaptive_max_pool2d.html
+
+    See :class:`~oneflow.nn.AdaptiveMaxPool2d` for details and output shape.
+
+    Args:
+        output_size: the target output size (single integer or
+            double-integer tuple)
+        return_indices: whether to return pooling indices. Default: ``False``
+
+    """
+    _out = oneflow._C.adaptive_max_pool2d(input, output_size)
+    if return_indices:
+        return _out
+    else:
+        return _out[0]
+
+
+def adaptive_max_pool3d(input, output_size, return_indices: bool = False):
+    r"""Applies a 3D adaptive max pooling over an input signal composed of
+    several input planes.
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.functional.adaptive_max_pool3d.html
+
+    See :class:`~oneflow.nn.AdaptiveMaxPool3d` for details and output shape.
+
+    Args:
+        output_size: the target output size (single integer or
+            triple-integer tuple)
+        return_indices: whether to return pooling indices. Default: ``False``
+
+    """
+
+    _out = oneflow._C.adaptive_max_pool3d(input, output_size)
+    if return_indices:
+        return _out
+    else:
+        return _out[0]

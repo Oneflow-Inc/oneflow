@@ -30,6 +30,11 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+Maybe<autocast::AutoCastMeta> OpExpr::GetOrCreateAutoCastMeta() const {
+  static auto autocast_meta = std::make_shared<autocast::AutoCastMeta>();
+  return autocast_meta;
+}
+
 BuiltinOpExpr::BuiltinOpExpr(const std::string& op_name,
                              const std::vector<std::string>& indexed_ibns,
                              const std::vector<std::string>& indexed_obns)
@@ -37,26 +42,38 @@ BuiltinOpExpr::BuiltinOpExpr(const std::string& op_name,
       input_arg_tuple_(new ArgTuple(indexed_ibns)),
       output_arg_tuple_(new ArgTuple(indexed_obns)) {}
 
-#define DEFINE_OPEXPR_OP_TYPE_NAME(_T, _op_type_name)              \
-  template<>                                                       \
-  const std::string& BuiltinOpExprImpl<_T>::op_type_name() const { \
-    static const std::string& name(_op_type_name);                 \
-    return name;                                                   \
+#define DEFINE_BUILTIN_OPEXPR_OP(T, op_type, disable_grad, support_non_contiguous)      \
+  template<>                                                                            \
+  const std::string& BuiltinOpExprImpl<T>::op_type_name() const {                       \
+    static const std::string& name(op_type);                                            \
+    return name;                                                                        \
+  }                                                                                     \
+  template<>                                                                            \
+  Maybe<bool> BuiltinOpExprImpl<T>::IsGradDisabled() const {                            \
+    return disable_grad;                                                                \
+  }                                                                                     \
+  template<>                                                                            \
+  Maybe<bool> BuiltinOpExprImpl<T>::SupportNonContiguous() const {                      \
+    return support_non_contiguous;                                                      \
+  }                                                                                     \
+  template<>                                                                            \
+  Maybe<autocast::AutoCastMeta> BuiltinOpExprImpl<T>::GetOrCreateAutoCastMeta() const { \
+    return OpExpr::GetOrCreateAutoCastMeta();                                           \
   }
 
-DEFINE_OPEXPR_OP_TYPE_NAME(FeedInputOpConf, "feed_input");
-DEFINE_OPEXPR_OP_TYPE_NAME(FeedVariableOpConf, "feed_variable");
-DEFINE_OPEXPR_OP_TYPE_NAME(FetchOutputOpConf, "fetch_output");
-DEFINE_OPEXPR_OP_TYPE_NAME(ImageDecoderRandomCropResizeOpConf, "image_gpu_decode");
-DEFINE_OPEXPR_OP_TYPE_NAME(VariableOpConf, "variable");
-DEFINE_OPEXPR_OP_TYPE_NAME(CastToLocalOpConf, "cast_to_local");
-DEFINE_OPEXPR_OP_TYPE_NAME(CastFromLocalOpConf, "cast_from_local");
-DEFINE_OPEXPR_OP_TYPE_NAME(DistributeSplitOpConf, "distribute_split");
-DEFINE_OPEXPR_OP_TYPE_NAME(DistributeCloneOpConf, "distribute_clone");
-DEFINE_OPEXPR_OP_TYPE_NAME(DistributeConcatOpConf, "distribute_concat");
-DEFINE_OPEXPR_OP_TYPE_NAME(DistributeAddOpConf, "distribute_add");
+DEFINE_BUILTIN_OPEXPR_OP(FeedInputOpConf, "feed_input", false, false);
+DEFINE_BUILTIN_OPEXPR_OP(FeedVariableOpConf, "feed_variable", false, false);
+DEFINE_BUILTIN_OPEXPR_OP(FetchOutputOpConf, "fetch_output", false, false);
+DEFINE_BUILTIN_OPEXPR_OP(ImageDecoderRandomCropResizeOpConf, "image_gpu_decode", true, false);
+DEFINE_BUILTIN_OPEXPR_OP(VariableOpConf, "variable", true, false);
+DEFINE_BUILTIN_OPEXPR_OP(CastToLocalOpConf, "cast_to_local", false, false);
+DEFINE_BUILTIN_OPEXPR_OP(CastFromLocalOpConf, "cast_from_local", false, false);
+DEFINE_BUILTIN_OPEXPR_OP(DistributeSplitOpConf, "distribute_split", false, false);
+DEFINE_BUILTIN_OPEXPR_OP(DistributeCloneOpConf, "distribute_clone", false, false);
+DEFINE_BUILTIN_OPEXPR_OP(DistributeConcatOpConf, "distribute_concat", false, false);
+DEFINE_BUILTIN_OPEXPR_OP(DistributeAddOpConf, "distribute_add", false, false);
 
-#undef DEFINE_OPEXPR_OP_TYPE_NAME
+#undef DEFINE_BUILTIN_OPEXPR_OP
 
 template<>
 const std::string& BuiltinOpExprImpl<UserOpConf>::op_type_name() const {
@@ -77,34 +94,6 @@ const std::string& CastFromGlobalOpExpr::op_type_name() const {
   static const std::string kOpTypeName = "cast_from_global";
   return kOpTypeName;
 }
-
-#define DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(_T, flag) \
-  template<>                                                                              \
-  Maybe<bool> BuiltinOpExprImpl<_T>::IsGradDisabled() const {                             \
-    return flag;                                                                          \
-  }                                                                                       \
-  template<>                                                                              \
-  Maybe<bool> BuiltinOpExprImpl<_T>::SupportNonContiguous() const {                       \
-    return false;                                                                         \
-  }
-
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FeedInputOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FeedVariableOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FetchOutputOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(VariableOpConf, true);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(
-    ImageDecoderRandomCropResizeOpConf, true);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(CastToLocalOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(CastFromLocalOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeSplitOpConf,
-                                                                        false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeCloneOpConf,
-                                                                        false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeConcatOpConf,
-                                                                        false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeAddOpConf, false);
-
-#undef DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE
 
 template<>
 Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
@@ -163,6 +152,15 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<UserOpConf>::GetOrCreateOpGradClosure
     JUST(op_grad_func_->Init(*this));
   }
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
+}
+
+template<>
+Maybe<autocast::AutoCastMeta> BuiltinOpExprImpl<UserOpConf>::GetOrCreateAutoCastMeta() const {
+  if (!autocast_meta_) {
+    autocast_meta_ =
+        autocast::MakeAutoCastMeta(proto().op_type_name(), this->indexed_input_pairs());
+  }
+  return autocast_meta_;
 }
 
 namespace {
@@ -253,21 +251,22 @@ class UserOpExprInferContext : public user_op::InferContext {
     return tensor_meta4input_index_(tuple_index)->shape();
   }
 
-  Shape* MutOutputShape(const std::string& name, int32_t index) override {
+  void SetOutputShape(const std::string& name, int32_t index, const Shape& shape) override {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
     int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
     TensorMeta* tensor_meta_ptr = tensor_meta4output_index_(tuple_index);
     CHECK_NOTNULL(dynamic_cast<MutTensorMeta*>(tensor_meta_ptr));
-    return tensor_meta_ptr->mut_shape();
+    return tensor_meta_ptr->set_shape(shape);
   }
 
   const Shape& Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->shape();
   }
 
-  Shape* MutShape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
+  void SetShape4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                const Shape& shape) override {
+    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->set_shape(shape);
   }
 
   const Stride& InputStride(const std::string& name, int32_t index) const override {
@@ -284,21 +283,22 @@ class UserOpExprInferContext : public user_op::InferContext {
     return tensor_meta4output_index_(tuple_index)->stride();
   }
 
-  Stride* MutOutputStride(const std::string& name, int32_t index) override {
+  void SetOutputStride(const std::string& name, int32_t index, const Stride& stride) override {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
     int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
     TensorMeta* tensor_meta_ptr = tensor_meta4output_index_(tuple_index);
     CHECK_NOTNULL(dynamic_cast<MutTensorMeta*>(tensor_meta_ptr));
-    return tensor_meta_ptr->mut_stride();
+    return tensor_meta_ptr->set_stride(stride);
   }
 
   const Stride& Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->stride();
   }
 
-  Stride* MutStride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->mut_stride();
+  void SetStride4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                 const Stride& stride) override {
+    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->set_stride(stride);
   }
 
   DataType InputDType(const std::string& arg_name, int32_t index) const override {
@@ -307,14 +307,15 @@ class UserOpExprInferContext : public user_op::InferContext {
   DataType OutputDType(const std::string& arg_name, int32_t index) const override {
     return Dtype4ArgNameAndIndex(arg_name, index);
   }
-  DataType* MutOutputDType(const std::string& arg_name, int32_t index) override {
-    return MutDtype4ArgNameAndIndex(arg_name, index);
+  void SetOutputDType(const std::string& arg_name, int32_t index, DataType data_type) override {
+    return SetDtype4ArgNameAndIndex(arg_name, index, data_type);
   }
   DataType Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->data_type();
   }
-  DataType* MutDtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
+  void SetDtype4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                DataType data_type) override {
+    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->set_data_type(data_type);
   }
   bool InputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return IsDynamic4ArgNameAndIndex(arg_name, index);
@@ -322,14 +323,15 @@ class UserOpExprInferContext : public user_op::InferContext {
   bool OutputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return IsDynamic4ArgNameAndIndex(arg_name, index);
   }
-  bool* MutOutputIsDynamic(const std::string& arg_name, int32_t index) override {
-    return MutIsDynamic4ArgNameAndIndex(arg_name, index);
+  void SetOutputIsDynamic(const std::string& arg_name, int32_t index, bool is_dynamic) override {
+    return SetIsDynamic4ArgNameAndIndex(arg_name, index, is_dynamic);
   }
   bool IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->is_dynamic();
   }
-  bool* MutIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
+  void SetIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                    bool is_dynamic) override {
+    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->set_is_dynamic(is_dynamic);
   }
   const std::string& input(const std::string& arg_name, int32_t index) const override {
     const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
