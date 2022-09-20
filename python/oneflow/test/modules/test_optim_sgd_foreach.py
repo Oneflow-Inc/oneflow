@@ -81,6 +81,7 @@ def compare_with_sgd_foreach(
             foreach=foreach
         )
 
+        @get_run_time
         def train_one_iter(grad):
             loss = 0.0
             for i in range(tensor_num):
@@ -107,11 +108,9 @@ def compare_with_sgd_foreach(
                 sgd.load_state_dict(state_dict)
         return x
 
-    @get_run_time
     def train_not_foreach():
         return _train_with_sgd(False)
 
-    @get_run_time
     def train_foreach():
         return _train_with_sgd(True)
 
