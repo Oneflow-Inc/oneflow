@@ -674,7 +674,7 @@ def download_url_to_file(url, dst, hash_prefix=None, progress=True):
     
     For example:
         >>> # xdoctest: +REQUIRES(POSIX)
-        >>> oneflow.hub.download_url_to_file('https://s3.amazonaws.com/pytorch/models/resnet18-5c106cde.pth', '/tmp/temporary_file')
+        >>> oneflow.hub.download_url_to_file('https://oneflow-public.oss-cn-beijing.aliyuncs.com/model_zoo/flowvision/classification/ResNet/resnet18.zip', '/tmp/temporary_file')
     """
     file_size = None
     req = Request(url, headers={"User-Agent": "oneflow.hub"})
@@ -780,7 +780,7 @@ def load_state_dict_from_url(
         file_name (str, optional): name for the downloaded file. Filename from ``url`` will be used if not set.
     
     For example:
-        >>> state_dict = oneflow.hub.load_state_dict_from_url('https://s3.amazonaws.com/pytorch/models/resnet18-5c106cde.pth')
+        >>> state_dict = oneflow.hub.load_state_dict_from_url('https://oneflow-public.oss-cn-beijing.aliyuncs.com/model_zoo/flowvision/classification/ResNet/resnet18.zip')
     """
     # Issue warning to move data if old env is set
     if os.getenv("ONEFLOW_MODEL_ZOO"):
