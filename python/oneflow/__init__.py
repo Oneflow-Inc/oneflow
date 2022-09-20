@@ -89,6 +89,7 @@ from oneflow._C import greater_equal
 from oneflow._C import greater_equal as ge
 from oneflow._C import log
 from oneflow._C import log2
+from oneflow._C import log10
 from oneflow._C import logical_and
 from oneflow._C import logical_or
 from oneflow._C import logical_xor
@@ -140,8 +141,6 @@ from oneflow._C import fmod
 from oneflow._C import flatten
 from oneflow._C import in_top_k
 from oneflow._C import lgamma
-from oneflow._C import log
-from oneflow._C import log2
 from oneflow._C import minimum
 from oneflow._C import maximum
 from oneflow._C import max
@@ -388,6 +387,20 @@ from oneflow.nn.modules.global_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
 from oneflow.ops.stateful_ops import StatefulOp as stateful_op
+
+# autocast
+from oneflow._oneflow_internal import (
+    is_autocast_enabled,
+    set_autocast_enabled,
+    get_autocast_gpu_dtype,
+    get_autocast_cpu_dtype,
+    set_autocast_gpu_dtype,
+    set_autocast_cpu_dtype,
+    is_autocast_cache_enabled,
+    set_autocast_cache_enabled,
+    clear_autocast_cache,
+)
+from oneflow.amp.autocast_mode import *
 
 from . import (
     autograd,
