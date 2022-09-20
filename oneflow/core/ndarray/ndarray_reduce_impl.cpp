@@ -48,6 +48,8 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_IMPL,
                                      UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
                                  REDUCE_BINARY_FUNC_SEQ);
 
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_IMPL, FLOATING_DATA_TYPE_SEQ, REDUCE_BINARY_NANSUM_SEQ); 
+
 template<typename T, int NDIMS, template<typename> class binary_func>
 struct NdarrayReduceCoreWrapper<DeviceType::kCPU, T, NDIMS, binary_func> final {
   static void ReduceAxis(ep::Stream* stream, const XpuReducedNdarray<T, NDIMS>& dst_reduced,

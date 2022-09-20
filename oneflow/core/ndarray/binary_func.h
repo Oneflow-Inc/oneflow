@@ -39,11 +39,19 @@ namespace oneflow {
 #define LOGICAL_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, LOGICAL_BINARY_FUNC_NAME_SEQ)
 
-#define REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)(Any)(All)(NanSum)
-#define ARITHMETIC_REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)(NanSum)
+// #define REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)(Any)(All)(NanSum)
+// #define ARITHMETIC_REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)(NanSum)
+
+#define REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)(Any)(All)
+#define ARITHMETIC_REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)
+
 #define LOGICAL_REDUCE_BINARY_FUNC_NAME_SEQ (Any)(All)
 #define REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ)
+
+#define REDUCE_BINARY_NANSUM_SEQ \
+  OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, (NanSum))
+
 #define ARITHMETIC_REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, ARITHMETIC_REDUCE_BINARY_FUNC_NAME_SEQ)
 #define LOGICAL_REDUCE_BINARY_FUNC_SEQ \
@@ -71,10 +79,21 @@ struct BinaryFuncTrait final {
 template<typename T>
 struct BinaryFuncNanSum final {
   static OF_DEVICE_FUNC T Invoke(const T x, const T y) { 
-    if (std::isnan(x))
-      return std::isnan(y) ? T{0} : y;
+    // if (std::isnan(x))
+    //   return std::isnan(y) ? T{0} : y;
+    // return std::isnan(y) ? x : x + y;
+    #if defined(__CUDACC__)
+    if (isnan(x)){
+        return isnan(y) ? T{0} : y;
+      }
+    return isnan(y) ? x : x + y;
+    #else
+      if (std::isnan(x)){
+        return std::isnan(y) ? T{0} : y;
+      }
     return std::isnan(y) ? x : x + y;
-    }
+    #endif
+  }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncNanSum);
 
@@ -305,10 +324,11 @@ struct BinaryFuncAdd<half> final {
 template<>
 struct BinaryFuncNanSum<half> final {
   static __device__ __forceinline__ half Invoke(const half x, const half y) { 
-    if (std::isnan(__half2float(x)))
-      return std::isnan(__half2float(y)) ? __double2half(0.) : y;
-    return  std::isnan(__half2float(y)) ? __hadd(x, y) : x;
-    }
+    if (isnan(__half2float(x))){
+        return isnan(__half2float(y)) ? __double2half(0.) : y;
+      }
+    return isnan(__half2float(y)) ? __hadd(x, y) : x;
+  }
 };
 
 template<>

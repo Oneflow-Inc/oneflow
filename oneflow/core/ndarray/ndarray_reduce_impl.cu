@@ -44,16 +44,9 @@ struct All {
 struct NanSum {
   template<typename T>
   __host__ __device__ __forceinline__ T operator()(const T& a, const T& b) const {
-    // if (UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsNan, bool, T>()(a))
-    //   return UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsNan, bool, T>()(b) ? T{0} : b;
-    // return UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsNan, bool, T>()(b) ? a + b : a;
-    if (oneflow::detail::numerics<T>::isnan(a))
-      return oneflow::detail::numerics<T>::isnan(b) ? T{0} : b;
-    return oneflow::detail::numerics<T>::isnan(b) ? a : a + b;
-    // if (std::isnan(a))
-    //   return std::isnan(b) ? T{0} : b;
-    // return std::isnan(b) ? a : a + b;
-
+    if (isnan(a))
+      return isnan(b) ? T{0} : b;
+    return isnan(b) ? a : a + b;
   }
 };
 }  // namespace cub
