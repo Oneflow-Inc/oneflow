@@ -13,14 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-# RUN: python3 %s | FileCheck %s
-# CHECK: oneflow.kernel_launch
+# RUN: python3 %s
 import unittest
 import os
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 os.environ["ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"] = "1"
-os.environ["ONEFLOW_MLIR_ENABLE_IR_PRINTING"] = "1"
+
 import oneflow as flow
 import oneflow.unittest
 
@@ -58,9 +57,9 @@ class TestOKLRelu(flow.unittest.TestCase):
     def test_okl_relu_with_cpu(test_case):
         _test_okl_relu_with_cpu(test_case)
 
-    @unittest.skipUnless(flow.sysconfig.with_cuda(), "only test cpu cases")
-    def test_okl_relu_with_cuda(test_case):
-        _test_okl_relu_with_cuda(test_case)
+    # @unittest.skipUnless(flow.sysconfig.with_cuda(), "only test cpu cases")
+    # def test_okl_relu_with_cuda(test_case):
+    #     _test_okl_relu_with_cuda(test_case)
 
 
 if __name__ == "__main__":
