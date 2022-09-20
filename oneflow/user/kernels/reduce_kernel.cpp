@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/ndarray/binary_func.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/core/kernel/kernel_util.h"
@@ -150,7 +151,8 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
 #define REGISTER_REDUCE_ARITHMETIC_KERNELS(device, dtype)                  \
   REGISTER_REDUCE_XPU_KERNEL("reduce_prod", BinaryFuncProd, device, dtype) \
   REGISTER_REDUCE_XPU_KERNEL("reduce_min", BinaryFuncMin, device, dtype)   \
-  REGISTER_REDUCE_XPU_KERNEL("reduce_max", BinaryFuncMax, device, dtype)
+  REGISTER_REDUCE_XPU_KERNEL("reduce_max", BinaryFuncMax, device, dtype) \
+  REGISTER_REDUCE_XPU_KERNEL("reduce_nansum", BinaryFuncNanSum, device, dtype)
 
 #define REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(device) \
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, bool)           \

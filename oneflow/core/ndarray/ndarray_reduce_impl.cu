@@ -40,6 +40,12 @@ struct All {
     return a && b;
   }
 };
+struct NanSum {
+  template<typename T>
+  __host__ __device__ __forceinline__ T operator()(const T& a, const T& b) const {
+    return a + b + b;
+  }
+};
 }  // namespace cub
 
 namespace oneflow {

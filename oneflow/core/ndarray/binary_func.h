@@ -20,6 +20,8 @@ limitations under the License.
 #include <climits>
 #include <cfloat>
 #include <cmath>
+#include "oneflow/core/ep/common/primitive/unary_functor.h"
+#include "oneflow/core/ep/include/primitive/unary_op.h"
 
 #if defined(__CUDACC__)
 #include <cuda_fp16.h>
@@ -37,8 +39,8 @@ namespace oneflow {
 #define LOGICAL_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, LOGICAL_BINARY_FUNC_NAME_SEQ)
 
-#define REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)(Any)(All)
-#define ARITHMETIC_REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)
+#define REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)(Any)(All)(NanSum)
+#define ARITHMETIC_REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)(Prod)(NanSum)
 #define LOGICAL_REDUCE_BINARY_FUNC_NAME_SEQ (Any)(All)
 #define REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ)
@@ -65,6 +67,16 @@ struct BinaryFuncTrait final {
       return func_struct<T>::Invoke(x, y);                                                    \
     }                                                                                         \
   }
+
+template<typename T>
+struct BinaryFuncNanSum final {
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { 
+    if (std::isnan(x))
+      return std::isnan(y) ? T{0} : y;
+    return std::isnan(y) ? x : x + y;
+    }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncNanSum);
 
 template<typename T>
 struct BinaryFuncAdd final {
@@ -288,6 +300,15 @@ SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncXOR);
 template<>
 struct BinaryFuncAdd<half> final {
   static __device__ __forceinline__ half Invoke(const half x, const half y) { return __hadd(x, y); }
+};
+
+template<>
+struct BinaryFuncNanSum<half> final {
+  static __device__ __forceinline__ half Invoke(const half x, const half y) { 
+    if (std::isnan(__half2float(x)))
+      return std::isnan(__half2float(y)) ? __double2half(0.) : y;
+    return  std::isnan(__half2float(y)) ? __hadd(x, y) : x;
+    }
 };
 
 template<>
@@ -516,6 +537,7 @@ struct UnitOfBinaryFunc;
     static OF_DEVICE_FUNC T Val() { return get_val<T>(); }   \
   };
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncAdd, GetZeroVal);
+SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncNanSum, GetZeroVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncSum, GetZeroVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMul, GetOneVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncProd, GetOneVal);

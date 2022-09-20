@@ -466,6 +466,29 @@ class ReduceSumFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ReduceNanSumFunctor {
+ public:
+  ReduceNanSumFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("reduce_nansum").Input("input_tensor").Output("output_tensor").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
+                           const bool& keepdims) const {
+    std::vector<int32_t> reduce_axis = *JUST(CheckAxis(axis, x->ndim()));
+    if (reduce_axis.size() == 0) { return x; }
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis", "keepdims");
+    attrs.SetAllAttrs(reduce_axis, keepdims);
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ReduceAllWholeFunctor {
  public:
   ReduceAllWholeFunctor() {
@@ -3080,6 +3103,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<AmaxFunctor>("Amax");
   m.add_functor<ReduceSumFunctor>("ReduceSum");
   m.add_functor<ReduceSumWholeFunctor>("ReduceSumWhole");
+  m.add_functor<ReduceNanSumFunctor>("ReduceNanSum");
   m.add_functor<ReduceAllFunctor>("ReduceAll");
   m.add_functor<ReduceAllWholeFunctor>("ReduceAllWhole");
   m.add_functor<ReduceAnyFunctor>("ReduceAny");

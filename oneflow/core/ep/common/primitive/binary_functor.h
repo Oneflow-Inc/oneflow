@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_PRIMITIVE_COMMON_BINARY_FUNCTOR_H_
 #define ONEFLOW_CORE_PRIMITIVE_COMMON_BINARY_FUNCTOR_H_
 
+#include "oneflow/core/common/device_type.pb.h"
+#include "oneflow/core/common/exception.h"
 #include "oneflow/core/ep/include/primitive/binary_op.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/scalar.h"

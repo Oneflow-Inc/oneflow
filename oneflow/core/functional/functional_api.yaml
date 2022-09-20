@@ -299,6 +299,11 @@
   ]
   bind_python: True
 
+- name: "reduce_nansum"
+  signature: 
+    "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => ReduceNanSum"
+  bind_python: True
+
 - name: "reduce_mean"
   signature: [
     "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => ReduceMean",

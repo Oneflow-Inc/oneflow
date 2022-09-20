@@ -100,6 +100,15 @@ void GenPartialSbpSign<BinaryFuncAdd>(user_op::SbpContext* ctx) {
       .Build();
 }
 
+// template<>
+// void GenPartialSbpSign<BinaryFuncNanAdd>(user_op::SbpContext* ctx) {
+//   ctx->NewBuilder()
+//       .PartialSum(user_op::OpArg("x", 0))
+//       .PartialSum(user_op::OpArg("y", 0))
+//       .PartialSum(user_op::OpArg("z", 0))
+//       .Build();
+// }
+
 template<>
 void GenPartialSbpSign<BinaryFuncSub>(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
