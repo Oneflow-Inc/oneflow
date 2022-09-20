@@ -200,18 +200,6 @@ class OneEmbeddingWithPaddingIdxTestCase(flow.unittest.TestCase):
         for kwargs in GenArgDict(arg_dict):
             _test_one_embedding_padding_idx(test_case, **kwargs)
 
-    def test_one_embedding_padding_idx2(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["batch_size"] = [16]
-        arg_dict["table_size_array"] = [
-            [16, 64, 24, 32, 16],
-        ]
-        arg_dict["embedding_size"] = [16]
-        arg_dict["test_opt"] = ["Adam"]
-        arg_dict["padding_idx"] = [4]
-        for kwargs in GenArgDict(arg_dict):
-            _test_one_embedding_padding_idx(test_case, **kwargs)
-
 
 if __name__ == "__main__":
     unittest.main()
