@@ -17,6 +17,14 @@ limitations under the License.
 #include "oneflow/ir/include/OneFlow/Extension.h"
 #include <glog/logging.h>
 
+namespace oneflow {
+SharedLibs* MutSharedLibPaths() {
+  static SharedLibs libs = {};
+  return &libs;
+}
+const SharedLibs* SharedLibPaths() { return MutSharedLibPaths(); }
+}  // namespace oneflow
+
 extern "C" {
 void kernel_launch(void* ctx, void* kernel_opaque) {
   auto kernel = (typename std::tuple_element_t<1, oneflow::TypeKernelLaunchArgs>)kernel_opaque;

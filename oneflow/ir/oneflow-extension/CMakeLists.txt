@@ -1,6 +1,5 @@
 oneflow_add_mlir_library(
   MLIROneFlowExtension
-  sharedlibs.cpp
   mlir_jit_op.cpp
   mlir_jit_op_infer.cpp
   mlir_jit_op_kernel.cpp
