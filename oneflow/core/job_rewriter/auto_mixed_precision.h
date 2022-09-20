@@ -13,24 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
-#include "oneflow/core/job/global_for.h"
-#include "oneflow/core/platform/include/ibv.h"
+#ifndef ONEFLOW_CORE_JOB_REWRITER_AUTO_MIXED_PRECISION_H_
+#define ONEFLOW_CORE_JOB_REWRITER_AUTO_MIXED_PRECISION_H_
 
-#if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
+#include <string>
 
 namespace oneflow {
 
-IBVerbsMemDesc::IBVerbsMemDesc(ibv_pd* pd, void* mem_ptr, size_t byte_size)
-    : mem_ptr_(mem_ptr), mem_size_(byte_size) {
-  mr_ = ibv::wrapper.ibv_reg_mr_wrap(
-      pd, mem_ptr, byte_size,
-      IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
-  PCHECK(mr_);
-}
+using OpArg = std::pair<std::string, int32_t>;
 
-IBVerbsMemDesc::~IBVerbsMemDesc() { PCHECK(ibv::wrapper.ibv_dereg_mr(mr_) == 0); }
+namespace amp {
+
+bool IsNoCast(const std::string& op_type, const OpArg& op_arg);
+
+}  // namespace amp
 
 }  // namespace oneflow
 
-#endif  // WITH_RDMA && OF_PLATFORM_POSIX
+#endif  // ONEFLOW_CORE_JOB_REWRITER_AUTO_MIXED_PRECISION_H_
