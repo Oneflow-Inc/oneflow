@@ -66,7 +66,7 @@ def deform_conv2d(
         >>> offset = flow.rand(4, 2 * kh * kw, 8, 8)
         >>> mask = flow.rand(4, kh * kw, 8, 8)
         >>> out = F.deform_conv2d(input, offset, weight, mask=mask)
-        >>> out.shape
+        >>> out.size()
         oneflow.Size([4, 5, 8, 8])
     """
     use_mask = mask is not None
