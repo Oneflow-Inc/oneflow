@@ -39,94 +39,93 @@ from gcn_spmm import GCN
 #     flow.cuda.manual_seed(args.seed)
 
 # Load data
-# adj, features, labels, idx_train, idx_val, idx_test = load_data()
-# cooRowInd, cooColInd, cooValues = adj
+adj, features, labels, idx_train, idx_val, idx_test = load_data()
+cooRowInd, cooColInd, cooValues = adj
 
 
-NODE_NUM, FEATURE_DIM = features.shape
-rows = NODE_NUM
-cols = NODE_NUM
-BATCH_SIZE = NODE_NUM
-HIDDEN_SIZE = 16
-CLASS = 7
-EDGE_NUM = len(cooRowInd)
-TRAIN_NUM = len(idx_train)
+num_nodes, feat_dim = features.shape
+rows = num_nodes
+cols = num_nodes
+batch_size = num_nodes
+hidden_size = 16
+class_size = 7
+num_edges = len(cooRowInd)
+train_num = len(idx_train)
 
-#len(cooRowInd) == len(cooColInd) == len(cooValues) == EDGE_NUM
-print(cooRowInd.dtype)
-print(cooColInd.dtype)
-print(cooValues.dtype)
-print(features.dtype)
-
-print(NODE_NUM, FEATURE_DIM, rows, cols, EDGE_NUM, TRAIN_NUM)
+#len(cooRowInd) == len(cooColInd) == len(cooValues) == num_edges
 
 
-input = flow.nn.Parameter(flow.FloatTensor(4, 4))
+print("num_nodes, feat_dim, rows, cols, num_edges, train_num")
+print(num_nodes, feat_dim, rows, cols, num_edges, train_num)
 
-weight = flow.nn.Parameter(flow.FloatTensor(4, 3))
-support = flow.mm(input, weight)
-print(support.shape[0])
-
+device = flow.device("cuda:1")
+print("Using {} device".format(device))
 
 # Model and optimizer
-model = GCN(nfeat=FEATURE_DIM,
-            nhid=HIDDEN_SIZE,
-            nclass=CLASS,
+model = GCN(nfeat=feat_dim,
+            nhid=hidden_size,
+            nclass=class_size,
             dropout=0.5)
+loss_fn = flow.nn.NLLLoss().to(device)
 optimizer = optim.Adam(model.parameters(),
                        lr=0.01, weight_decay=5e-4)
 # if args.cuda:
-# model.cuda()
-# features = features.cuda()
-# adj = adj.cuda()
-# labels = labels.cuda()
-# idx_train = idx_train.cuda()
-# idx_val = idx_val.cuda()
-# idx_test = idx_test.cuda()
 
 
-# def train(epoch):
-#     t = time.time()
-#     model.train()
-#     optimizer.zero_grad()
-#     output = model(features, adj)
-#     loss_train = F.nll_loss(output[idx_train], labels[idx_train])
-#     acc_train = accuracy(output[idx_train], labels[idx_train])
-#     loss_train.backward()
-#     optimizer.step()
+model.to(device)
+features = features.to(device)
+cooRowInd = cooRowInd.to(device)
+cooColInd = cooColInd.to(device)
+cooValues = cooValues.to(device)
+labels = labels.to(device)
+idx_train = idx_train.to(device)
+idx_val = idx_val.to(device)
+idx_test = idx_test.to(device)
 
-#     # if not args.fastmode:
-#     #     # Evaluate validation set performance separately,
-#     #     # deactivates dropout during validation run.
-#     #     model.eval()
-#     #     output = model(features, adj)
+adj_coo = [cooRowInd, cooColInd, cooValues, rows, cols]
 
-#     loss_val = F.nll_loss(output[idx_val], labels[idx_val])
-#     acc_val = accuracy(output[idx_val], labels[idx_val])
-#     print('Epoch: {:04d}'.format(epoch+1),
-#           'loss_train: {:.4f}'.format(loss_train.item()),
-#           'acc_train: {:.4f}'.format(acc_train.item()),
-#           'loss_val: {:.4f}'.format(loss_val.item()),
-#           'acc_val: {:.4f}'.format(acc_val.item()),
-#           'time: {:.4f}s'.format(time.time() - t))
+def train(epoch):
+    t = time.time()
+    model.train()
+    optimizer.zero_grad()
+    output = model(features, adj_coo)
+    loss_train = loss_fn(output[idx_train], labels[idx_train])
+    acc_train = accuracy(output[idx_train], labels[idx_train])
+    loss_train.backward()
+    optimizer.step()
+
+    # if not args.fastmode:
+    #     # Evaluate validation set performance separately,
+    #     # deactivates dropout during validation run.
+    #     model.eval()
+    #     output = model(features, adj)
+
+    loss_val = loss_fn(output[idx_val], labels[idx_val])
+    acc_val = accuracy(output[idx_val], labels[idx_val])
+    print('Epoch: {:04d}'.format(epoch+1),
+          'loss_train: {:.4f}'.format(loss_train.item()),
+          'acc_train: {:.4f}'.format(acc_train.item()),
+          'loss_val: {:.4f}'.format(loss_val.item()),
+          'acc_val: {:.4f}'.format(acc_val.item()),
+          'time: {:.4f}s'.format(time.time() - t))
 
 
-# def test():
-#     model.eval()
-#     output = model(features, adj)
-#     loss_test = F.nll_loss(output[idx_test], labels[idx_test])
-#     acc_test = accuracy(output[idx_test], labels[idx_test])
-#     print("Test set results:",
-#           "loss= {:.4f}".format(loss_test.item()),
-#           "accuracy= {:.4f}".format(acc_test.item()))
+def test():
+    model.eval()
+    output = model(features, adj_coo)
+    loss_test = loss_fn(output[idx_test], labels[idx_test])
+    acc_test = accuracy(output[idx_test], labels[idx_test])
+    print("Test set results:",
+          "loss= {:.4f}".format(loss_test.item()),
+          "accuracy= {:.4f}".format(acc_test.item()))
 
 
 # Train model
-# t_total = time.time()
-# for epoch in range(args.epochs):
-#     train(epoch)
-# print("Optimization Finished!")
-# print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
+t_total = time.time()
+for epoch in range(200):
+    train(epoch)
+print("Optimization Finished!")
+print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
 
 # # Testing
-# test()
+test()

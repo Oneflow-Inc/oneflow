@@ -31,9 +31,9 @@ class GraphConvolution(nn.Module):
     #     else:
     #         return output
 
-    def forward(self, input, cooRowInd, cooColInd, cooValues):
+    def forward(self, input, adj_coo):
         support = flow.mm(input, self.weight)
-        output = flow._C.spmm(cooRowInd, cooColInd, cooValues, support)
+        output = flow._C.spmm_coo(adj_coo[0], adj_coo[1], adj_coo[2], adj_coo[3], adj_coo[4], support)
         if self.bias is not None:
             return output + self.bias
         else:
@@ -47,10 +47,10 @@ class GCN(nn.Module):
         self.gc2 = GraphConvolution(nhid, nclass)
         self.dropout = dropout
 
-    def forward(self, x, cooRowInd, cooColInd, cooValues):
-        x = F.relu(self.gc1(x, cooRowInd, cooColInd, cooValues))
+    def forward(self, x, adj_coo):
+        x = F.relu(self.gc1(x, adj_coo))
         x = F.dropout(x, self.dropout, training=self.training)
-        x = self.gc2(x, cooRowInd, cooColInd, cooValues)
+        x = self.gc2(x, adj_coo)
         return F.log_softmax(x, dim=1)
 
-model = GCN(4, 4, 3, 0.5)
+

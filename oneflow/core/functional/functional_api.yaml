@@ -20,8 +20,12 @@
 #   "Sbp", "SbpList"
 # }
 - name: "spmm_coo"
-  signature: "Tensor (Tensor a_cooRowInd, Tensor a_cooColInd, Tensor a_cooValues, Int64 a_rows, Int64 a_cols, Tensor b) => SpmmCoo"
+  signature: "Tensor (Tensor a_coo_row, Tensor a_coo_col, Tensor a_coo_val, Int64 a_num_rows, Int64 a_num_cols, Tensor b) => SpmmCoo"
   bind_python: True
+  
+- name: "spmm_coo_grad"
+  signature: "Tensor (Tensor a_coo_row, Tensor a_coo_col, Tensor a_coo_val, Int64 a_num_rows, Int64 a_num_cols, Tensor dout) => SpmmCooGrad"
+  bind_python: False
   
 - name: "add"
   signature:
