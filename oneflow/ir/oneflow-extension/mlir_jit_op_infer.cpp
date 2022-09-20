@@ -45,23 +45,10 @@ Maybe<void> SetTensorDateType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
-  auto mlir_assembly_str = ctx->Attr<std::string>("mlir_assembly");
-  mlir::DialectRegistry registry;
-  mlir::registerAllDialects(registry);
-  mlir::MLIRContext context(registry);
-  context.loadDialect<mlir::func::FuncDialect>();
-  context.loadDialect<mlir::oneflow::OneFlowDialect>();
-
-  mlir::OwningOpRef<mlir::ModuleOp> module =
-      mlir::parseSourceString<mlir::ModuleOp>(mlir_assembly_str, &context);
-  if (!module) {
-    LOG(ERROR) << "Fail to load mlir assembly";
-    exit(1);
-  }
-
+static const mlir::FunctionType GetFunctionType(user_op::InferContext* ctx,
+                                                mlir::OwningOpRef<mlir::ModuleOp>& module) {
   mlir::func::FuncOp funcOp = mlir::SymbolTable::lookupNearestSymbolFrom<mlir::func::FuncOp>(
-      module.get(), mlir::SymbolRefAttr::get(&context, ctx->op_name()));
+      module.get(), mlir::SymbolRefAttr::get(module->getContext(), ctx->op_name()));
   CHECK(funcOp) << "Fail to find funcOp of symbol " << ctx->op_name();
   const auto funcType = funcOp.getFunctionType();
   CHECK_EQ(funcType.getNumInputs(), ctx->input_size("in"))
@@ -85,6 +72,23 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
       LOG(FATAL) << "Unsupported arg type " << arg_type_str;
     }
   }
+}
+
+Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
+  auto mlir_assembly_str = ctx->Attr<std::string>("mlir_assembly");
+  mlir::DialectRegistry registry;
+  mlir::registerAllDialects(registry);
+  mlir::MLIRContext context(registry);
+  context.loadDialect<mlir::func::FuncDialect>();
+  context.loadDialect<mlir::oneflow::OneFlowDialect>();
+
+  mlir::OwningOpRef<mlir::ModuleOp> module =
+      mlir::parseSourceString<mlir::ModuleOp>(mlir_assembly_str, &context);
+  if (!module) {
+    LOG(ERROR) << "Fail to load mlir assembly";
+    exit(1);
+  }
+  auto funcType = GetFunctionType(ctx, module);
   int32_t res_i = 0;
   for (mlir::Type res_type : funcType.getResults()) {
     if (auto rankedTensorType = res_type.dyn_cast<mlir::RankedTensorType>()) {
