@@ -90,6 +90,8 @@ class DeviceGeneratorImpl : public GeneratorImpl {
   const DeviceType& device_type() const { return device_type_; }
   int device_index() const { return device_index_; }
 
+  std::mutex mutex_;
+
  protected:
   DeviceType device_type_;
   int device_index_;
@@ -232,8 +234,6 @@ class CUDAGeneratorImpl : public DeviceGeneratorImpl {
   Maybe<void> SetState(const std::shared_ptr<Tensor>& tensor_state) override;
 
   uint64_t get_philox_offset(uint64_t increment);
-
-  std::mutex mutex_;
 
  private:
   int32_t max_block_num_;

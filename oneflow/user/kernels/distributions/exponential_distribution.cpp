@@ -23,12 +23,12 @@ limitations under the License.
 
 namespace oneflow {
 
-inline uint64_t make64BitsFrom32Bits(uint32_t hi, uint32_t lo) {
+static uint64_t make64BitsFrom32Bits(uint32_t hi, uint32_t lo) {
   return (static_cast<uint64_t>(hi) << 32) | lo;
 }
 
 template<typename T, typename V>
-inline T uniform_real(V val, T from, T to) {
+static T uniform_real(V val, T from, T to) {
   constexpr auto MASK =
       static_cast<V>((static_cast<uint64_t>(1) << std::numeric_limits<T>::digits) - 1);
   constexpr auto DIVISOR =
