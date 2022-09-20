@@ -24,30 +24,31 @@ import torchvision
 from oneflow.test_utils.automated_test_util import *
 
 
-def _test_deform_conv2d(test_case, placement, sbp):
+def _test_deform_conv2d(test_case, placement):
+    input_sbp = random_sbp(placement, max_dim=4)
     input_dims = [4, 3, 10, 10]
-    input = random_tensor(4, *input_dims).to_global(
-        placement=placement,
-        sbp=sbp,
-    )
+    input = random_tensor(
+        4, *input_dims).to_global(placement=placement, sbp=input_sbp)
 
+    offset_sbp = random_sbp(placement, max_dim=4)
     offset_dims = [4, 18, 8, 8]
-    offset = random_tensor(4, *offset_dims).to_global(
-        placement=placement,
-        sbp=sbp,
-    )
+    offset = random_tensor(
+        4, *offset_dims).to_global(placement=placement, sbp=offset_sbp)
 
-    mask_dims = [4, 3 * 3,8, 8]
-    mask = random_tensor(4, *mask_dims).to_global(
-        placement=placement,
-        sbp=sbp,
-    )
+    mask_sbp = random_sbp(placement, max_dim=4)
+    mask_dims = [4, 3 * 3, 8, 8]
+    mask = random_tensor(
+        4, *mask_dims).to_global(placement=placement, sbp=mask_sbp)
 
+    weight_sbp = random_sbp(placement, max_dim=4)
     weight_dims = [5, 3, 3, 3]
-    weight = random_tensor(4, *weight_dims).to_global(
-        placement=placement,
-        sbp=sbp,
-    )
+    weight = random_tensor(
+        4, *weight_dims).to_global(placement=placement, sbp=weight_sbp)
+
+    bias_sbp = random_sbp(placement, max_dim=1)
+    bias_dims = [5]
+    bias = random_tensor(
+        1, *bias_dims).to_global(placement=placement, sbp=bias_sbp)
 
     flow_input = input.oneflow.detach().requires_grad_()
     torch_input = input.pytorch.detach().requires_grad_()
@@ -55,20 +56,16 @@ def _test_deform_conv2d(test_case, placement, sbp):
     torch_offset = offset.pytorch.detach().requires_grad_()
     flow_weight = weight.oneflow.detach().requires_grad_()
     torch_weight = weight.pytorch.detach().requires_grad_()
-    flow_mask= mask.oneflow.detach().requires_grad_()
+    flow_mask = mask.oneflow.detach().requires_grad_()
     torch_mask = mask.pytorch.detach().requires_grad_()
+    flow_bias = bias.oneflow.detach().requires_grad_()
+    torch_bias = bias.pytorch.detach().requires_grad_()
 
     torch_out = torchvision.ops.deform_conv2d(
-        torch_input,
-        torch_offset,
-        torch_weight,
-        mask=torch_mask,
+        torch_input, torch_offset, torch_weight, mask=torch_mask, bias=torch_bias
     )
     flow_out = oneflow.nn.functional.deform_conv2d(
-        flow_input,
-        flow_offset,
-        flow_weight,
-        mask=flow_mask,
+        flow_input, flow_offset, flow_weight, mask=flow_mask, bias=flow_bias
     )
 
     # compare forward
@@ -81,7 +78,7 @@ def _test_deform_conv2d(test_case, placement, sbp):
     # compare backward
     flow_out.sum().backward()
     torch_out.sum().backward()
-    
+
     flow_input_grad = flow_input.grad
     torch_input_grad = torch_input.grad.detach().cpu()
     flow_weight_grad = flow_weight.grad
@@ -90,7 +87,9 @@ def _test_deform_conv2d(test_case, placement, sbp):
     torch_offset_grad = torch_offset.grad.detach().cpu()
     flow_mask_grad = flow_mask.grad
     torch_mask_grad = torch_mask.grad.detach().cpu()
-    
+    flow_bias_grad = flow_bias.grad
+    torch_bias_grad = torch_bias.grad.detach().cpu()
+
     test_case.assertTrue(
         np.allclose(
             flow_input_grad.numpy(), torch_input_grad.numpy(), rtol=1e-04, atol=1e-4
@@ -111,13 +110,19 @@ def _test_deform_conv2d(test_case, placement, sbp):
             flow_mask_grad.numpy(), torch_mask_grad.numpy(), rtol=1e-04, atol=1e-4
         )
     )
+    test_case.assertTrue(
+        np.allclose(
+            flow_bias_grad.numpy(), torch_bias_grad.numpy(), rtol=1e-04, atol=1e-4
+        )
+    )
+
 
 class TestGlobalDeformConv2d(flow.unittest.TestCase):
     @globaltest
     def test_deform_conv2d(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=4, except_partial_sum=True):
-                _test_deform_conv2d(test_case, placement, sbp)
+            for count in range(5):
+                _test_deform_conv2d(test_case, placement)
 
 
 if __name__ == "__main__":
