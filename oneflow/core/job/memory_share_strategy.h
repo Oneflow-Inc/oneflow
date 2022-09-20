@@ -28,10 +28,12 @@ class MemoryShareStrategy {
   // Steal a compact position as the initial strategy
   void StealCompactPosition(
       const HashMap<RegstDescProto*, int64_t>& regst_desc2offset,
+      const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
       const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
 
   // Generate a compact position with the order of occurrence
   void GenerateCompactPosition(
+      const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
       const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
 
   // Update the offset with the adjusted strategy
@@ -67,7 +69,7 @@ class MemoryShareStrategy {
   // Initialization
   void InitRegister(
       const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
-  void InitRegisterInformation();
+  void InitRegisterInformation(const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size);
   // Adjust the original strategy, return the updated optimal cost
   size_t ComputeOptimalAdjustedCost();
   // Eliminate one register

@@ -36,12 +36,13 @@ void MemoryShareStrategy::InitRegister(
   }
 }
 
-void MemoryShareStrategy::InitRegisterInformation() {
+void MemoryShareStrategy::InitRegisterInformation(
+    const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size) {
   total_register_num_ = index2register_.size();
   register_size_.resize(total_register_num_);
   for (int32_t register_id = 0; register_id < total_register_num_; register_id++) {
     const auto& register_ = index2register_[register_id];
-    int64_t register_size = RtRegstDesc(*register_).TotalMainByteSize4AllRegst();
+    int64_t register_size = mem_reused_regst2size.at(register_);
     register_size_[register_id] = register_size;
     register2index_[register_] = register_id;
   }
@@ -52,6 +53,7 @@ void MemoryShareStrategy::InitRegisterInformation() {
 // Steal a compact position as the initial strategy
 void MemoryShareStrategy::StealCompactPosition(
     const HashMap<RegstDescProto*, int64_t>& regst_desc2offset,
+    const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
     const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts) {
   // Initialization
   InitRegister(regst2mutual_exclusion_regsts);
@@ -63,7 +65,7 @@ void MemoryShareStrategy::StealCompactPosition(
               return regst_desc2offset.at(i) < regst_desc2offset.at(j);
             });
   // Update other information
-  InitRegisterInformation();
+  InitRegisterInformation(mem_reused_regst2size);
 
   left_registers_.clear();
   left_registers_.resize(total_register_num);
@@ -95,6 +97,7 @@ void MemoryShareStrategy::StealCompactPosition(
 // Generate a compact position with the order of occurrence
 // Not recommended
 void MemoryShareStrategy::GenerateCompactPosition(
+    const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
     const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts) {
   HashMap<RegstDescProto*, int64_t> regst_desc2offset;
   int64_t offset = 0;
@@ -102,7 +105,7 @@ void MemoryShareStrategy::GenerateCompactPosition(
     regst_desc2offset[pair.first] = offset;
     offset++;
   }
-  StealCompactPosition(regst_desc2offset, regst2mutual_exclusion_regsts);
+  StealCompactPosition(regst_desc2offset, mem_reused_regst2size, regst2mutual_exclusion_regsts);
 }
 
 // Compute optimal cost with compact relationship
