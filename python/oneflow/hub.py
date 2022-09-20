@@ -766,7 +766,7 @@ def load_state_dict_from_url(
     check_hash: bool = False,
     file_name: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Loads the Torch serialized object at the given URL.
+    """Loads the OneFlow serialized object at the given URL.
     If downloaded file is a zip file, it will be automatically
     decompressed.
     If the object is already present in `model_dir`, it's deserialized and
@@ -823,6 +823,11 @@ def load_state_dict_from_url(
             hash_prefix = r.group(1) if r else None
         download_url_to_file(url, cached_file, hash_prefix, progress=progress)
 
-    if _is_legacy_zip_format(cached_file):
-        return _legacy_zip_load(cached_file, model_dir, map_location)
+    # if _is_legacy_zip_format(cached_file):
+    #     return _legacy_zip_load(cached_file, model_dir, map_location)
+    if cached_file.endswith(".zip"):
+        with zipfile.ZipFile(cached_file, 'r') as zip_ref:
+            zip_ref.extractall(cached_file[:-4])
+        return flow.load(cached_file[:-4], map_location=map_location)
+
     return flow.load(cached_file, map_location=map_location)
