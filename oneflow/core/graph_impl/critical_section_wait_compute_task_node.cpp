@@ -30,6 +30,7 @@ class CriticalSectionWaitTickCompTaskNode final : public CompTaskNode {
  private:
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
+  void ConsumeFakeRegsts() override;
   void BuildExecGphAndRegst() override;
 };
 
@@ -41,6 +42,10 @@ void CriticalSectionWaitTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void CriticalSectionWaitTickCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in");
   ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
+}
+
+void CriticalSectionWaitTickCompTaskNode::ConsumeFakeRegsts() {
+  ConsumeRegst("in", std::make_shared<RegstDesc>());
 }
 
 void CriticalSectionWaitTickCompTaskNode::BuildExecGphAndRegst() {

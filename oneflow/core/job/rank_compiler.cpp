@@ -56,10 +56,25 @@ Maybe<void> RankCompiler::Compile(Job* job, Plan* plan) const {
   auto task_gph =
       JUST(RankTaskGraph::New(boxing_task_graph_proto_, rank_,
                               job->job_conf().enable_straighten_algorithm_in_task_graph()));
+  const int64_t machine_id = GlobalProcessCtx::GetMachineId(rank_);
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
-  task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
-  task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
+  task_gph->ForEachNode([&](TaskNode* task_node) {
+    auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
+    if (task_node->machine_id() != machine_id && comp_task_node != nullptr) {
+      comp_task_node->ConsumeFakeRegstsIf();
+    } else {
+      task_node->ConsumeAllRegsts();
+    }
+  });
+  task_gph->ForEachNode([&](TaskNode* task_node) {
+    auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
+    if (task_node->machine_id() != machine_id && comp_task_node != nullptr) {
+      // Do nothing. because all consumed registers are fake.
+    } else {
+      task_node->PinConsumedRegst();
+    }
+  });
   task_gph->TopoForEachNode(&TaskNode::Build);
   task_gph->RemoveEmptyRegsts();
   task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();

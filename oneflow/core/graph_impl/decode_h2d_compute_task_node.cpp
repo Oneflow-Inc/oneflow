@@ -27,6 +27,7 @@ class DecodeH2DCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
+  void ConsumeFakeRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kDecodeH2D; }
 
@@ -36,6 +37,10 @@ class DecodeH2DCompTaskNode final : public CompTaskNode {
 
 void DecodeH2DCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst());
+}
+
+void DecodeH2DCompTaskNode::ConsumeFakeRegsts() {
+  ConsumeRegst("in", std::make_shared<RegstDesc>());
 }
 
 void DecodeH2DCompTaskNode::ProduceAllRegstsAndBindEdges() {

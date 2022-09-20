@@ -85,6 +85,10 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
   });
 }
 
+void NormalForwardCompTaskNode::ConsumeFakeRegsts() {
+  ConsumeRegst("in", std::make_shared<RegstDesc>());
+}
+
 void NormalForwardCompTaskNode::BuildExecGphAndRegst() {
   BuildExecGphStructAndBindInRegst();
   BuildOutRegst();

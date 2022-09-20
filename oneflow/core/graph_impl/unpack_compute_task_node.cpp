@@ -28,6 +28,7 @@ class UnpackCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
+  void ConsumeFakeRegsts() override;
 
  private:
   void BuildExecGphAndRegst() override;
@@ -41,6 +42,8 @@ void UnpackCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void UnpackCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst());
 }
+
+void UnpackCompTaskNode::ConsumeFakeRegsts() { ConsumeRegst("in", std::make_shared<RegstDesc>()); }
 
 void UnpackCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* exec_node = mut_exec_gph().NewNode();

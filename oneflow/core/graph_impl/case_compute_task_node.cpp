@@ -26,6 +26,7 @@ class CaseCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
+  void ConsumeFakeRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kCase; }
 
@@ -35,6 +36,7 @@ class CaseCompTaskNode final : public CompTaskNode {
 };
 
 void CaseCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); }
+void CaseCompTaskNode::ConsumeFakeRegsts() { ConsumeRegst("in", std::make_shared<RegstDesc>()); }
 
 void CaseCompTaskNode::ProduceAllRegstsAndBindEdges() {
   HashMap<LogicalBlobId, int64_t> lbi2obn_id;

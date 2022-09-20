@@ -30,6 +30,7 @@ class ReentrantLockCompTaskNode final : public CompTaskNode {
  private:
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
+  void ConsumeFakeRegsts() override;
   void BuildExecGphAndRegst() override;
   void InferProducedDataRegstTimeShape() override;
 };
@@ -42,6 +43,10 @@ void ReentrantLockCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void ReentrantLockCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in");
   ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
+}
+
+void ReentrantLockCompTaskNode::ConsumeFakeRegsts() {
+  ConsumeRegst("in", std::make_shared<RegstDesc>());
 }
 
 void ReentrantLockCompTaskNode::BuildExecGphAndRegst() {

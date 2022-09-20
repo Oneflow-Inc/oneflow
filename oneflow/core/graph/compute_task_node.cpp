@@ -65,6 +65,19 @@ std::vector<CompTaskNode*> GetCompTaskNodesOnEdge(
 
 }  // namespace
 
+void CompTaskNode::ConsumeFakeRegstsIf() {
+  ConsumeFakeRegsts();
+  CHECK(consumed_regsts().size() == 0 || consumed_regsts().size() == 1);
+  const auto iter = consumed_regsts().begin();
+  if (iter != consumed_regsts().end()) {
+    CHECK(!iter->second.empty());
+    const auto& regst_desc = *iter->second.begin();
+    for (const auto& ibn : op_node()->op().input_bns()) {
+      regst_desc->AddLbi(op_node()->op().BnInOp2Lbi(ibn));
+    }
+  }
+}
+
 std::string CompTaskNode::VisualStr() const { return op_node_->op().op_name(); }
 
 void CompTaskNode::InitFromProto(const TaskProto& proto) {

@@ -31,6 +31,9 @@ class CompTaskNode : public TaskNode {
 
   virtual void InitFromProto(const TaskProto&) override;
   virtual void ToProto(TaskProto*, bool check) const override;
+  // ConsumeFakeRegsts is used for initializing CompTaskNode.consumed_regsts_ on other ranks.
+  virtual void ConsumeFakeRegsts() = 0;
+  void ConsumeFakeRegstsIf();
 
   // parallel_ctx_
   int64_t parallel_id() const { return parallel_ctx_.parallel_id(); }

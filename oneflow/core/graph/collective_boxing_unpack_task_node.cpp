@@ -83,7 +83,7 @@ Maybe<void> CollectiveBoxingUnpackTaskNode::InitTransportTaskFromProto(
 
 void CollectiveBoxingUnpackTaskNode::ToTransportTaskProto(
     TransportTaskProto* transport_task_proto) const {
-  ToProto(transport_task_proto->mutable_task_proto());
+  ToProto(transport_task_proto->mutable_task_proto(), /*check=*/false);
   auto* proto = transport_task_proto->mutable_collective_boxing_unpack_task();
   logical_shape_.ToProto(proto->mutable_logical_shape());
   *proto->mutable_src_sbp_parallel() = src_sbp_parallel_;

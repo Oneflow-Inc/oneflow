@@ -64,7 +64,7 @@ Maybe<void> BoxingIdentityTaskNode::InitTransportTaskFromProto(
 }
 
 void BoxingIdentityTaskNode::ToTransportTaskProto(TransportTaskProto* transport_task_proto) const {
-  ToProto(transport_task_proto->mutable_task_proto());
+  ToProto(transport_task_proto->mutable_task_proto(), /*check=*/false);
   transport_task_proto->mutable_boxing_identity_task();
 }
 

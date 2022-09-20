@@ -26,6 +26,7 @@ class SourceTickCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override {}
+  void ConsumeFakeRegsts() override {}
   void BuildExecGphAndRegst() override;
   bool IsMeaningLess() override { return false; }
 

@@ -972,6 +972,7 @@ Maybe<void> RankTaskGraph::AddBoxingReletedCompTaskNodesFromProto() {
     const OpNode* op_node = op_graph->OpNode4OpName(pair.first);
     for (const auto& task_proto : pair.second.parallel_id2task()) {
       CompTaskNode* comp_task_node = NewCompTaskNode4OpNode(op_node);
+      comp_task_node->set_op_node(op_node);
       AddAllocatedNode(comp_task_node);
       comp_task_node->InitFromProto(task_proto);
       JUST(task_graph_rebuild_ctx_->AddTaskNode(comp_task_node));
@@ -1039,7 +1040,7 @@ Maybe<void> RankTaskGraph::Init(bool enable_straighten_algorithm) {
                                              << op_edge->dst_node()->op().op_name();
     }
     if (src_task_node != nullptr && dst_task_node != nullptr) {
-      Connect<TaskNode>(src_task_node, NewTaskEdgeWithLbis(op_edge->lbis()), dst_task_node);
+      for (const auto& lbi : op_edge->lbis()) { ConnectWithLbi(src_task_node, dst_task_node, lbi); }
     }
     return Maybe<void>::Ok();
   }));

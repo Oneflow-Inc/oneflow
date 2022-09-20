@@ -221,6 +221,7 @@ void TaskNode::InitFromProto(const TaskProto& task_proto) {
   }
   // Step4: check consumed_regst empty.
   CHECK(task_proto.consumed_regst_desc_id().empty());
+  new_task_id_.reset(new TaskId(DecodeTaskIdFromInt64(task_id_)));
 }
 
 void TaskNode::ToProto(TaskProto* task_proto, bool check) const {
@@ -495,6 +496,7 @@ Maybe<void> TaskEdge::InitFromProto(const TaskEdgeProto& proto,
 }
 
 void TaskEdge::ToProto(TaskEdgeProto* proto) const {
+  proto->set_task_edge_uid(reinterpret_cast<int64_t>(this));
   proto->set_src_task_id(src_node()->task_id());
   proto->set_dst_task_id(dst_node()->task_id());
   *proto->mutable_lbi() = {lbis_.begin(), lbis_.end()};

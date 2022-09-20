@@ -26,6 +26,7 @@ class DistributeConcatCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
+  void ConsumeFakeRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kDistributeConcat; }
 
@@ -47,6 +48,10 @@ void DistributeConcatCompTaskNode::ConsumeAllRegsts() {
     ConsumeRegst("in", edge->GetSoleRegst());
   });
   CHECK_EQ(cnt, 1);
+}
+
+void DistributeConcatCompTaskNode::ConsumeFakeRegsts() {
+  ConsumeRegst("in", std::make_shared<RegstDesc>());
 }
 
 void DistributeConcatCompTaskNode::BuildExecGphAndRegst() {

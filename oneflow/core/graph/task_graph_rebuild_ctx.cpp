@@ -20,7 +20,9 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<TaskNode*> TaskGraphRebuildCtx::TaskNode4Id(int64_t task_id) const {
-  return JUST(MapAt(id2task_node_, task_id));
+  auto* task_node = JUST(MapAt(id2task_node_, task_id));
+  CHECK_EQ_OR_RETURN(task_node->task_id(), task_id);  // NOLINT
+  return task_node;
 }
 
 Maybe<TaskEdge*> TaskGraphRebuildCtx::TaskEdge4Uid(int64_t task_edge_uid) const {

@@ -132,7 +132,7 @@ Maybe<void> SliceBoxingTaskNode::InitTransportTaskFromProto(
 }
 
 void SliceBoxingTaskNode::ToTransportTaskProto(TransportTaskProto* transport_task_proto) const {
-  ToProto(transport_task_proto->mutable_task_proto());
+  ToProto(transport_task_proto->mutable_task_proto(), /*check=*/false);
   auto* proto = transport_task_proto->mutable_slice_boxing_task();
   for (const auto& pair : in_data_edge2slice_) {
     int64_t edge_uid = reinterpret_cast<int64_t>(pair.first);

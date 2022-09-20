@@ -26,6 +26,7 @@ class AccTickCompTaskNode final : public CompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kAccTick; }
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
+  void ConsumeFakeRegsts() override;
   void BuildExecGphAndRegst() override;
 };
 
@@ -37,6 +38,8 @@ void AccTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void AccTickCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst());
 }
+
+void AccTickCompTaskNode::ConsumeFakeRegsts() { ConsumeRegst("in", std::make_shared<RegstDesc>()); }
 
 void AccTickCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
