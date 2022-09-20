@@ -356,9 +356,10 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
                     std::string* unique_table_ids_lbn, std::string* inverse_indices_lbn,
                     std::string* num_unique_matrix_lbn) {
   const int32_t num_tables = embedding_op.attr<int32_t>("num_tables");
+  const int64_t padding_idx = embedding_op.attr<int64_t>("padding_idx");
+  const int64_t has_padding_idx = embedding_op.attr<bool>("has_padding_idx");
   bool enable_pipelined_execution =
       !ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINED_EXECUTION", false);
-
   if (use_system_gather) {
     user_op::UserOpConfWrapperBuilder unique_op_builder(embedding_op.op_name()
                                                         + "_unique_ids_and_tables");
@@ -369,6 +370,8 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
         .Output("unique_values")
         .Output("inverse_indices")
         .Attr<int32_t>("num_tables", num_tables)
+        .Attr<int64_t>("padding_idx", padding_idx)
+        .Attr<bool>("has_padding_idx", has_padding_idx)
         .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id());
     if (embedding_op.has_input("table_ids", 0)) {
       unique_op_builder.Input("values", embedding_op.input("table_ids", 0));
@@ -398,6 +401,8 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
         .Output("cur_rank_inverse_indices")
         .Output("num_unique_matrix")
         .Attr<int32_t>("num_tables", num_tables)
+        .Attr<int64_t>("padding_idx", padding_idx)
+        .Attr<bool>("has_padding_idx", has_padding_idx)
         .Attr<std::string>("embedding_name", embedding_name)
         .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id());
     if (embedding_op.has_input("table_ids", 0)) {
