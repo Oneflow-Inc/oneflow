@@ -24,12 +24,14 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/common/mem_util.h"
 
 namespace oneflow {
 namespace one {
 
 Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                    TensorTuple* outputs, const OpExprInterpContext& ctx) const {
+  LOG_MEM();
 #define APPLY_IF(op_type)                                              \
   if (const auto* op = dynamic_cast<const op_type##Expr*>(&op_expr)) { \
     return ApplyImpl(*op, inputs, outputs, ctx);                       \
@@ -50,6 +52,7 @@ Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inp
 
 Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                     TensorTuple* outputs, const OpExprInterpContext& ctx) const {
+  LOG_MEM();
 #define APPLY_IF(op_type)                                              \
   if (const auto* op = dynamic_cast<const op_type##Expr*>(&op_expr)) { \
     return ApplyImpl(*op, inputs, outputs, ctx);                       \

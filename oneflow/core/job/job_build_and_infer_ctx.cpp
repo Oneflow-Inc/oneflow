@@ -29,6 +29,8 @@ limitations under the License.
 
 #include <google/protobuf/text_format.h>
 #include <memory>
+#include <chrono>
+#include <thread>
 #include "nlohmann/json.hpp"
 
 namespace oneflow {
@@ -908,6 +910,7 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatible
 }
 
 Maybe<void> LazyJobBuildAndInferCtx::Complete() {
+  LOG_MEM();
   // cpu job to cuda
   for (auto& op : *mut_job()->mutable_net()->mutable_op()) {
     // if (op.name().rfind("alexnet", 0) == 0) {
