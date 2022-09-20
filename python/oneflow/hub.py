@@ -392,7 +392,7 @@ def get_dir():
 
 def set_dir(d):
     """
-    Optionally set the Torch Hub directory used to save downloaded models & weights.
+    Optionally set the OneFlow Hub directory used to save downloaded models & weights.
 
     Args:
         d (str): path to a local folder to save downloaded models & weights.
