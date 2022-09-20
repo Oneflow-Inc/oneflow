@@ -50,6 +50,10 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
                                    IsOpNameDataOrCtrlReachable);
 
+  void EnableInplaceMemSharing(const HashSet<TaskNode*>& dev_nodes,
+                               const std::function<bool(const std::string&, const std::string&)>&
+                                   IsOpNameDataOrCtrlReachable);
+
   TaskNode* GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
                          const MemZoneId& dst_mem_zone_id);
 
@@ -71,6 +75,9 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySrcSubsetConnect);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByDstSubsetConnect);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D);
+
+  void ForEachGpuDeviceNodes(
+      const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const;
 
  protected:
   TaskGraph();
@@ -97,9 +104,6 @@ class TaskGraph : public Graph<TaskNode, TaskEdge> {
           IsOpNameDataOrCtrlReachable) const;
   void SetTaskRegstInplaceInfo(const InplaceObasInfo& obas_info,
                                const HashSet<TaskNode*>& dev_nodes) const;
-  void ForEachGpuDeviceNodes(
-      const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const;
-
   std::vector<TaskNode*> ordered_task_nodes_;
   std::unique_ptr<HierarchicalSubTskGphBuilder> hierarchical_sub_tsk_gph_builder_;
   std::unique_ptr<SubTskGphBuilderCtx> sub_tsk_gph_builder_ctx_;

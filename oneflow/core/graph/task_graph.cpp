@@ -727,10 +727,17 @@ void TaskGraph::EnableInplaceMemSharing(
     const std::function<bool(const std::string&, const std::string&)>&
         IsOpNameDataOrCtrlReachable) {
   ForEachGpuDeviceNodes([&](const HashSet<TaskNode*>& dev_nodes) {
-    InplaceObasInfo safe_inplace_obas_info;
-    GetSafeInplaceOpBlobArgList(&safe_inplace_obas_info, dev_nodes, IsOpNameDataOrCtrlReachable);
-    SetTaskRegstInplaceInfo(safe_inplace_obas_info, dev_nodes);
+    EnableInplaceMemSharing(dev_nodes, IsOpNameDataOrCtrlReachable);
   });
+}
+
+void TaskGraph::EnableInplaceMemSharing(
+    const HashSet<TaskNode*>& dev_nodes,
+    const std::function<bool(const std::string&, const std::string&)>&
+        IsOpNameDataOrCtrlReachable) {
+  InplaceObasInfo safe_inplace_obas_info;
+  GetSafeInplaceOpBlobArgList(&safe_inplace_obas_info, dev_nodes, IsOpNameDataOrCtrlReachable);
+  SetTaskRegstInplaceInfo(safe_inplace_obas_info, dev_nodes);
 }
 
 #define DEFINE_BLD_SUB_TASK_GRAPH_METHOD(method_name) \
@@ -919,7 +926,7 @@ void BoxingTaskGraph::ToProto(BoxingTaskGraphProto* proto) const {
     if (comp_task_nodes.count(node) > 0) { return; }
     const auto* transport_task_node = dynamic_cast<TransportTaskNode*>(node);
     CHECK(transport_task_node != nullptr) << "task_type: " << node->GetTaskType();
-    transport_task_node->ToTransportTaskProto(proto->mutable_transport_task()->Add());
+    transport_task_node->ToTransportTaskProtoIf(proto->mutable_transport_task()->Add());
   });
   ForEachEdge([&](TaskEdge* edge) { edge->ToProto(proto->mutable_task_edge()->Add()); });
 }
@@ -1011,8 +1018,8 @@ Maybe<void> RankTaskGraph::InitTransportTaskNodesFromProto() {
     auto* transport_task_node = dynamic_cast<TransportTaskNode*>(task_node);
     CHECK_NOTNULL_OR_RETURN(transport_task_node)
         << "task node is not a TransportTaskNode. task_id" << task_id;
-    JUST(transport_task_node->InitTransportTaskFromProto(transport_task_proto,
-                                                         *task_graph_rebuild_ctx_));
+    JUST(transport_task_node->InitTransportTaskFromProtoIf(transport_task_proto,
+                                                           *task_graph_rebuild_ctx_));
   }
   return Maybe<void>::Ok();
 }

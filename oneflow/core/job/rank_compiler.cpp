@@ -80,7 +80,13 @@ Maybe<void> RankCompiler::Compile(Job* job, Plan* plan) const {
   task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
   auto IsReachable = Singleton<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
   const JobDesc& job_desc = GlobalJobDesc();
-  if (job_desc.enable_inplace()) { task_gph->EnableInplaceMemSharing(IsReachable); }
+  if (job_desc.enable_inplace()) {
+    task_gph->ForEachGpuDeviceNodes([&](const HashSet<TaskNode*>& dev_nodes) {
+      if (dev_nodes.empty()) { return; }
+      if ((*dev_nodes.begin())->machine_id() != machine_id) { return; }
+      task_gph->EnableInplaceMemSharing(dev_nodes, IsReachable);
+    });
+  }
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
 

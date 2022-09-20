@@ -1,6 +1,7 @@
 syntax = "proto2";
 package oneflow;
 
+import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/graph/copy_hd_type.proto";
@@ -74,6 +75,7 @@ message BoxingIdentityTaskProto {
 
 message TransportTaskProto {
   required TaskProto task_proto = 1;
+  required LogicalBlobId lbi = 11;
   oneof transport_task_type {
     CollectiveBoxingGenericTaskProto collective_boxing_generic_task = 2;
     NcclSendRecvBoxingTaskProto nccl_send_recv_boxing_task = 3;
