@@ -32,8 +32,9 @@ def _test_deform_conv2d(test_case, placement):
 
     offset_sbp = random_sbp(placement, max_dim=4)
     offset_dims = [4, 18, 8, 8]
-    offset = random_tensor(
-        4, *offset_dims).to_global(placement=placement, sbp=offset_sbp)
+    offset = random_tensor(4, *offset_dims).to_global(
+        placement=placement, sbp=offset_sbp
+    )
 
     mask_sbp = random_sbp(placement, max_dim=4)
     mask_dims = [4, 3 * 3, 8, 8]
@@ -42,8 +43,9 @@ def _test_deform_conv2d(test_case, placement):
 
     weight_sbp = random_sbp(placement, max_dim=4)
     weight_dims = [5, 3, 3, 3]
-    weight = random_tensor(
-        4, *weight_dims).to_global(placement=placement, sbp=weight_sbp)
+    weight = random_tensor(4, *weight_dims).to_global(
+        placement=placement, sbp=weight_sbp
+    )
 
     bias_sbp = random_sbp(placement, max_dim=1)
     bias_dims = [5]

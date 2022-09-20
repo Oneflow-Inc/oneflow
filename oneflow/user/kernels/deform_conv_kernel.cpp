@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/user_op_hob.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
