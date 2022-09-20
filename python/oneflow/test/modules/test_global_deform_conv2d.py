@@ -26,31 +26,28 @@ from oneflow.test_utils.automated_test_util import *
 
 def _test_deform_conv2d(test_case, placement):
     input_sbp = random_sbp(placement, max_dim=4)
-    input_dims = [4, 3, 10, 10]
-    input = random_tensor(
-        4, *input_dims).to_global(placement=placement, sbp=input_sbp)
+    input_dims = [4, 8, 8, 8]
+    input = random_tensor(4, *input_dims).to_global(placement=placement, sbp=input_sbp)
 
     offset_sbp = random_sbp(placement, max_dim=4)
-    offset_dims = [4, 18, 8, 8]
+    offset_dims = [4, 32, 5, 5]
     offset = random_tensor(4, *offset_dims).to_global(
         placement=placement, sbp=offset_sbp
     )
 
     mask_sbp = random_sbp(placement, max_dim=4)
-    mask_dims = [4, 3 * 3, 8, 8]
-    mask = random_tensor(
-        4, *mask_dims).to_global(placement=placement, sbp=mask_sbp)
+    mask_dims = [4, 4 * 4, 5, 5]
+    mask = random_tensor(4, *mask_dims).to_global(placement=placement, sbp=mask_sbp)
 
     weight_sbp = random_sbp(placement, max_dim=4)
-    weight_dims = [5, 3, 3, 3]
+    weight_dims = [8, 8, 4, 4]
     weight = random_tensor(4, *weight_dims).to_global(
         placement=placement, sbp=weight_sbp
     )
 
     bias_sbp = random_sbp(placement, max_dim=1)
-    bias_dims = [5]
-    bias = random_tensor(
-        1, *bias_dims).to_global(placement=placement, sbp=bias_sbp)
+    bias_dims = [8]
+    bias = random_tensor(1, *bias_dims).to_global(placement=placement, sbp=bias_sbp)
 
     flow_input = input.oneflow.detach().requires_grad_()
     torch_input = input.pytorch.detach().requires_grad_()
