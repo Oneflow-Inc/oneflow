@@ -17,12 +17,13 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+import torchvision.ops
+import torch
+
 import oneflow as flow
 from oneflow.test_utils.automated_test_util.torch_flow_dual_object import random_tensor
 from oneflow.test_utils.test_util import GenArgList
 import oneflow.unittest
-import torchvision.ops
-import torch
 
 
 def GetRandomData(max_batch_sz):
