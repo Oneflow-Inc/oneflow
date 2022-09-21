@@ -385,6 +385,14 @@ struct RuntimeRegstNum4OpSameOutputBlob final {
   REGISTER_CLASS_CREATOR(int32_t, op_type_case, RuntimeRegstNum4OpSameOutputBlob, \
                          ([] { return new RuntimeRegstNum4OpSameOutputBlob(num); }))
 
+#define REGISTER_USER_OP_SAME_OUTPUT_BLOB_REGST_NUM(op_type_name, num)                \
+  REGISTER_CLASS_CREATOR(std::string, op_type_name, RuntimeRegstNum4OpSameOutputBlob, \
+                         ([] { return new RuntimeRegstNum4OpSameOutputBlob(num); }))
+
+#define REGISTER_USER_OP_SAME_OUTPUT_BLOB_REGST_NUM_WITH_FUNC(op_type_name, func)     \
+  REGISTER_CLASS_CREATOR(std::string, op_type_name, RuntimeRegstNum4OpSameOutputBlob, \
+                         ([] { return new RuntimeRegstNum4OpSameOutputBlob(func); }));
+
 struct IsInterfaceOpConf4OpTypeCase final {};
 
 #define REGISTER_INTERFACE_OP(op_type_case)                                   \

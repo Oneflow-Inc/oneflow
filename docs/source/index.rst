@@ -23,6 +23,7 @@ OneFlow upholds the core concept and architecture of static compilation and stre
     nn.functional
     tensor
     tensor_attributes
+    type_info
     autograd
     cuda
     distributed
@@ -33,6 +34,8 @@ OneFlow upholds the core concept and architecture of static compilation and stre
     auto_parallel
     image
     utils.data
+    utils.global_view
+    utils.tensor
     one_embedding
     environment_variables
 

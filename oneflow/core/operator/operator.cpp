@@ -332,7 +332,7 @@ Maybe<void> Operator::InferLogicalOutBlobDescsIf() {
     auto& out_blob_desc = output_logical_blob_desc_vec[i];
     // initialize stride by shape if the op does not support non-contiguous
     if (!JUST(SupportNonContiguous(this))) {
-      out_blob_desc->mut_stride() = Stride(out_blob_desc->shape());
+      out_blob_desc->set_stride(Stride(out_blob_desc->shape()));
     }
     CHECK_EQ_OR_RETURN(out_blob_desc->stride().size(), out_blob_desc->shape().size())
         << Error::RuntimeError() << "stride and shape size mismatch since stride is "
@@ -359,7 +359,7 @@ Maybe<void> Operator::InferOutBlobDescsIf(
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(bn);
     // initialize stride by shape if the op does not support non-contiguous
     if (!JUST(SupportNonContiguous(this))) {
-      out_blob_desc->mut_stride() = Stride(out_blob_desc->shape());
+      out_blob_desc->set_stride(Stride(out_blob_desc->shape()));
     }
     CHECK_EQ_OR_RETURN(out_blob_desc->stride().size(), out_blob_desc->shape().size())
         << Error::RuntimeError() << "stride and shape size mismatch since stride is "
@@ -388,8 +388,8 @@ Maybe<void> Operator::InferOutBlobDescs(
       BlobDesc* desc = GetBlobDesc4BnInOp(bn);
       *desc = *JUST(GetLogicalBlobDesc4Obn(bn));
       const auto& nd_sbp = nd_sbp_signature->bn_in_op2nd_sbp().at(bn);
-      desc->mut_shape() =
-          *JUST(GetPhysicalShape(desc->shape(), nd_sbp, *parallel_desc, *parallel_ctx));
+      desc->set_shape(
+          *JUST(GetPhysicalShape(desc->shape(), nd_sbp, *parallel_desc, *parallel_ctx)));
     }
   }
   return Maybe<void>::Ok();

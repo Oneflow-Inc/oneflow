@@ -25,6 +25,8 @@ from oneflow._oneflow_internal import PersistentTableReader
 from oneflow._oneflow_internal import PersistentTableWriter
 import numpy as np
 import traceback
+from oneflow import nn
+import oneflow.framework.graph_build_util as graph_build_util
 
 
 def _check_initializer(initializer):
@@ -173,6 +175,8 @@ class Embedding(Module):
         tables,
         store_options,
         default_initializer=None,
+        padding_idx=None,
+        seed=0,
     ):
         super().__init__()
         self.dtype = dtype
@@ -187,6 +191,13 @@ class Embedding(Module):
             store_options,
             default_initializer,
         )
+        self.storage_dim = key_value_store_options["storage_dim"]
+        self.embedding_name = key_value_store_options["name"]
+        self.seed = seed
+        self.is_full_cache = (
+            len(key_value_store_options["kv_store"]["caches"]) > 0
+            and key_value_store_options["kv_store"]["caches"][0]["policy"] == "full"
+        )
         self.key_value_store_options = json.dumps(key_value_store_options)
         self.embedding_tables = json.dumps(embedding_tables)
         self.num_tables = len(embedding_tables["tables"])
@@ -196,7 +207,10 @@ class Embedding(Module):
         self.handler = OneEmbeddingHandler(
             self.key_value_store_options, self.local_rank, self.rank_id, self.world_size
         )
+
         self.shadow = flow.nn.Parameter(flow.Tensor(1))
+        self.padding_idx = padding_idx
+        self.embedding = None
 
     def _save_to_state_dict(self, destination, prefix, keep_vars):
         super()._save_to_state_dict(destination, prefix, keep_vars)
@@ -286,20 +300,35 @@ class Embedding(Module):
             flow.tensor: the result of embedding lookup
         """
         assert self.key_type == ids.dtype, "ids data_type must equals key_type"
-        return flow._C.one_embedding_lookup(
+        embedding = flow._C.one_embedding_lookup(
             self.shadow,
             ids,
             table_ids,
             self.dtype,
+            self.embedding_name,
+            self.storage_dim,
             self.embedding_dim,
+            self.is_full_cache,
             self.num_tables,
             self.embedding_tables,
-            self.key_value_store_options,
+            self.padding_idx,
+            self.seed,
         )
+        if embedding.requires_grad and not graph_build_util.lazy_mode.is_enabled():
+            if self.embedding is not None:
+                raise ValueError(
+                    "You are training in eager mode with no embedding optimizer, Please add flow.one_embedding.Optimizer after optimizer."
+                )
+
+            self.embedding = embedding
+            self.embedding.retain_grad()
+            self.ids = ids
+            self.table_ids = table_ids
+        return embedding
 
 
 def make_device_mem_store_options(
-    persistent_path, capacity, size_factor=1, physical_block_size=512
+    persistent_path, capacity, size_factor=1, physical_block_size=4096
 ):
     """make GPU only store_options param of MultiTableEmbedding
 
@@ -307,7 +336,7 @@ def make_device_mem_store_options(
         persistent_path (str, list): persistent storage path of Embedding. If passed a str, current rank Embedding will be saved in path/rank_id-num_ranks path. If passed a list, the list length must equals num_ranks, each elem of list represent the path of rank_id Embedding.
         capacity (int): total capacity of Embedding
         size_factor (int, optional): store size factor of embedding_dim, if SGD update, and momentum = 0, should be 1, if momentum > 0, it should be 2. if Adam, should be 3. Defaults to 1.
-        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512.
+        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 4096.
 
     Returns:
         dict: GPU only store_options param of MultiTableEmbedding
@@ -342,7 +371,7 @@ def make_cached_ssd_store_options(
     persistent_path,
     capacity=None,
     size_factor=1,
-    physical_block_size=512,
+    physical_block_size=4096,
     host_cache_budget_mb=0,
 ):
     """make SSD use GPU and host as cache store_options param of MultiTableEmbedding. If cache_budget_mb > 0 and host_cache_budget_mb > 0, use GPU and host memory as multi-level cache.
@@ -352,7 +381,7 @@ def make_cached_ssd_store_options(
         persistent_path (str, list): persistent storage path of Embedding, must use fast SSD because of frequently random disk access during training. If passed a str, current rank Embedding will be saved in path/rank_id-num_ranks path. If passed a list, the list length must equals num_ranks, each elem of list represent the path of rank_id Embedding.
         capacity (int): total capacity of Embedding
         size_factor (int, optional): store size factor of embedding_dim, if SGD update, and momentum = 0, should be 1, if momentum > 0, it should be 2. if Adam, should be 3. Defaults to 1.
-        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512.
+        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 4096.
         host_cache_budget_mb (int): the MB budget of host memory as cache per rank. Defaults to 0.
 
     Returns:
@@ -409,7 +438,7 @@ def make_cached_ssd_store_options(
 
 
 def make_cached_host_mem_store_options(
-    cache_budget_mb, persistent_path, capacity, size_factor=1, physical_block_size=512,
+    cache_budget_mb, persistent_path, capacity, size_factor=1, physical_block_size=4096,
 ):
     """make host use GPU as cache store_options param of MultiTableEmbedding
 
@@ -418,7 +447,7 @@ def make_cached_host_mem_store_options(
         persistent_path (str, list): persistent storage path of Embedding. If passed a str, current rank Embedding will be saved in path/rank_id-num_ranks path. If passed a list, the list length must equals num_ranks, each elem of list represent the path of rank_id Embedding.
         capacity (int): total capacity of Embedding
         size_factor (int, optional): store size factor of embedding_dim, if SGD update, and momentum = 0, should be 1, if momentum > 0, it should be 2. if Adam, should be 3. Defaults to 1.
-        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512.
+        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 4096.
 
     Returns:
         dict: host use GPU as cache store_options param of MultiTableEmbedding
@@ -572,7 +601,9 @@ class MultiTableEmbedding(Embedding):
         tables (list): list of table param which can be made by flow.one_embedding.make_table_options
         store_options (dict): store option of Embedding
         default_initializer (dict, optional): if tables param is None, use default_initializer to initialize table. Defaults to None.
-    
+        padding_idx (int, optional): If specified, the entries at :attr:`padding_idx` do not contribute to the gradient;
+                                     therefore, the embedding vector at :attr:`padding_idx` is not updated during training,
+                                     the embedding vector at :attr:`padding_idx` will default to all zeros.
     For example:
 
     .. code-block:: python
@@ -646,6 +677,8 @@ class MultiTableEmbedding(Embedding):
         tables,
         store_options,
         default_initializer=None,
+        padding_idx=None,
+        seed=0,
     ):
         assert isinstance(embedding_dim, int)
         super().__init__(
@@ -656,6 +689,8 @@ class MultiTableEmbedding(Embedding):
             tables,
             store_options,
             default_initializer,
+            padding_idx,
+            seed,
         )
 
 
@@ -670,7 +705,9 @@ class MultiTableMultiColumnEmbedding(Embedding):
         tables (list): list of table param which can be made by flow.one_embedding.make_table_options
         store_options (dict): store option of Embedding
         default_initializer (dict, optional): if tables param is None, use default_initializer to initialize table. Defaults to None.
-    
+        padding_idx (int, optional): If specified, the entries at :attr:`padding_idx` do not contribute to the gradient;
+                                     therefore, the embedding vector at :attr:`padding_idx` is not updated during training,
+                                     the embedding vector at :attr:`padding_idx` will default to all zeros.
     For example:
 
     .. code-block:: python
@@ -748,6 +785,8 @@ class MultiTableMultiColumnEmbedding(Embedding):
         tables,
         store_options,
         default_initializer=None,
+        padding_idx=None,
+        seed=0,
     ):
         if isinstance(embedding_dim, (list, tuple)):
             for dim in embedding_dim:
@@ -763,6 +802,8 @@ class MultiTableMultiColumnEmbedding(Embedding):
             tables,
             store_options,
             default_initializer,
+            padding_idx,
+            seed,
         )
 
 
@@ -929,7 +970,7 @@ class Ftrl(Optimizer):
 
 
 def make_persistent_table_reader(
-    paths, snapshot_name, key_type, value_type, storage_dim, physical_block_size=512,
+    paths, snapshot_name, key_type, value_type, storage_dim, physical_block_size=4096,
 ):
     r"""Creates a reader for reading persistent table.
 
@@ -939,7 +980,7 @@ def make_persistent_table_reader(
         key_type (flow.dtype): the data type of key
         value_type (flow.dtype): the data type of value
         storage_dim (int): number of elements in each value
-        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512
+        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 4096
     """
     return PersistentTableReader(
         paths,
@@ -953,7 +994,7 @@ def make_persistent_table_reader(
 
 
 def make_persistent_table_writer(
-    paths, snapshot_name, key_type, value_type, storage_dim, physical_block_size=512,
+    paths, snapshot_name, key_type, value_type, storage_dim, physical_block_size=4096,
 ):
     r"""Creates a writer for writing persistent table.
 
@@ -963,7 +1004,7 @@ def make_persistent_table_writer(
         key_type (flow.dtype): the data type of key
         value_type (flow.dtype): the data type of value
         storage_dim (int): number of elements in each value
-        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512
+        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 4096
     """
     return PersistentTableWriter(
         paths,

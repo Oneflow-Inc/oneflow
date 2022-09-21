@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/embedding/embedding_manager.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -32,10 +33,10 @@ namespace oneflow {
       CHECK_EQ_OR_RETURN(keys_shape.At(1), num_tables) << "keys cols must equal to num_tables";
     }
   }
-  *ctx->MutOutputShape("num_unique", 0) = Shape({1});
-  *ctx->MutOutputShape("unique_keys", 0) = Shape({keys_shape.elem_cnt()});
-  *ctx->MutOutputShape("unique_values", 0) = Shape({keys_shape.elem_cnt()});
-  *ctx->MutOutputShape("inverse_indices", 0) = keys_shape;
+  ctx->SetOutputShape("num_unique", 0, Shape({1}));
+  ctx->SetOutputShape("unique_keys", 0, Shape({keys_shape.elem_cnt()}));
+  ctx->SetOutputShape("unique_values", 0, Shape({keys_shape.elem_cnt()}));
+  ctx->SetOutputShape("inverse_indices", 0, keys_shape);
   return Maybe<void>::Ok();
 }
 
@@ -48,13 +49,13 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> UniqueKeyValuePairOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("num_unique", 0) = DataType::kInt32;
-  *ctx->MutOutputDType("unique_keys", 0) = ctx->InputDType("keys", 0);
-  *ctx->MutOutputDType("inverse_indices", 0) = DataType::kInt32;
+  ctx->SetOutputDType("num_unique", 0, DataType::kInt32);
+  ctx->SetOutputDType("unique_keys", 0, ctx->InputDType("keys", 0));
+  ctx->SetOutputDType("inverse_indices", 0, DataType::kInt32);
   if (ctx->has_input("values", 0)) {
-    *ctx->MutOutputDType("unique_values", 0) = ctx->InputDType("values", 0);
+    ctx->SetOutputDType("unique_values", 0, ctx->InputDType("values", 0));
   } else {
-    *ctx->MutOutputDType("unique_values", 0) = DataType::kInt32;
+    ctx->SetOutputDType("unique_values", 0, DataType::kInt32);
   }
   return Maybe<void>::Ok();
 }
@@ -74,12 +75,12 @@ namespace oneflow {
   }
   const int64_t num_ids = ids_shape.elem_cnt();
   const int64_t parallel_num = ctx->parallel_num();
-  *ctx->MutOutputShape("num_unique_matrix", 0) = Shape({parallel_num * parallel_num});
-  *ctx->MutOutputShape("inverse_unique_partition_indices", 0) = ids_shape;
-  *ctx->MutOutputShape("cur_rank_num_unique", 0) = Shape({1});
-  *ctx->MutOutputShape("cur_rank_unique_ids", 0) = Shape({num_ids * parallel_num});
-  *ctx->MutOutputShape("cur_rank_inverse_indices", 0) = Shape({num_ids * parallel_num});
-  *ctx->MutOutputShape("cur_rank_unique_table_ids", 0) = Shape({num_ids * parallel_num});
+  ctx->SetOutputShape("num_unique_matrix", 0, Shape({parallel_num * parallel_num}));
+  ctx->SetOutputShape("inverse_unique_partition_indices", 0, ids_shape);
+  ctx->SetOutputShape("cur_rank_num_unique", 0, Shape({1}));
+  ctx->SetOutputShape("cur_rank_unique_ids", 0, Shape({num_ids * parallel_num}));
+  ctx->SetOutputShape("cur_rank_inverse_indices", 0, Shape({num_ids * parallel_num}));
+  ctx->SetOutputShape("cur_rank_unique_table_ids", 0, Shape({num_ids * parallel_num}));
   return Maybe<void>::Ok();
 }
 
@@ -98,15 +99,15 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> IdShuffleOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("num_unique_matrix", 0) = DataType::kUInt32;
-  *ctx->MutOutputDType("inverse_unique_partition_indices", 0) = DataType::kUInt32;
-  *ctx->MutOutputDType("cur_rank_num_unique", 0) = DataType::kUInt32;
-  *ctx->MutOutputDType("cur_rank_unique_ids", 0) = ctx->InputDType("ids", 0);
-  *ctx->MutOutputDType("cur_rank_inverse_indices", 0) = DataType::kUInt32;
+  ctx->SetOutputDType("num_unique_matrix", 0, DataType::kUInt32);
+  ctx->SetOutputDType("inverse_unique_partition_indices", 0, DataType::kUInt32);
+  ctx->SetOutputDType("cur_rank_num_unique", 0, DataType::kUInt32);
+  ctx->SetOutputDType("cur_rank_unique_ids", 0, ctx->InputDType("ids", 0));
+  ctx->SetOutputDType("cur_rank_inverse_indices", 0, DataType::kUInt32);
   if (ctx->has_input("table_ids", 0)) {
-    *ctx->MutOutputDType("cur_rank_unique_table_ids", 0) = ctx->InputDType("table_ids", 0);
+    ctx->SetOutputDType("cur_rank_unique_table_ids", 0, ctx->InputDType("table_ids", 0));
   } else {
-    *ctx->MutOutputDType("cur_rank_unique_table_ids", 0) = DataType::kUInt8;
+    ctx->SetOutputDType("cur_rank_unique_table_ids", 0, DataType::kUInt8);
   }
   return Maybe<void>::Ok();
 }
@@ -135,7 +136,7 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(cur_rank_inverse_indices_shape.elem_cnt(), parallel_num * num_ids);
   DimVector out_dim_vec = inverse_unique_partition_indices_shape.dim_vec();
   out_dim_vec.push_back(embedding_size);
-  *ctx->MutOutputShape("embeddings", 0) = Shape(out_dim_vec);
+  ctx->SetOutputShape("embeddings", 0, Shape(out_dim_vec));
   return Maybe<void>::Ok();
 }
 
@@ -160,7 +161,7 @@ namespace oneflow {
   CHECK_OR_RETURN(ctx->InputDType("num_unique_matrix", 0) == DataType::kUInt32);
   CHECK_OR_RETURN(ctx->InputDType("cur_rank_inverse_indices", 0) == DataType::kUInt32);
   CHECK_OR_RETURN(ctx->InputDType("inverse_unique_partition_indices", 0) == DataType::kUInt32);
-  *ctx->MutOutputDType("embeddings", 0) = ctx->InputDType("cur_rank_embeddings", 0);
+  ctx->SetOutputDType("embeddings", 0, ctx->InputDType("cur_rank_embeddings", 0));
   return Maybe<void>::Ok();
 }
 
@@ -179,7 +180,7 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(cur_rank_inverse_indices_shape.elem_cnt(), parallel_num * num_ids);
   DimVector out_dim_vec = cur_rank_inverse_indices_shape.dim_vec();
   out_dim_vec.push_back(embedding_size);
-  *ctx->MutOutputShape("cur_rank_unique_embedding_grad", 0) = Shape(out_dim_vec);
+  ctx->SetOutputShape("cur_rank_unique_embedding_grad", 0, Shape(out_dim_vec));
   return Maybe<void>::Ok();
 }
 
@@ -201,8 +202,16 @@ namespace oneflow {
   CHECK_OR_RETURN(ctx->InputDType("num_unique_matrix", 0) == DataType::kUInt32);
   CHECK_OR_RETURN(ctx->InputDType("cur_rank_inverse_indices", 0) == DataType::kUInt32);
   CHECK_OR_RETURN(ctx->InputDType("inverse_unique_partition_indices", 0) == DataType::kUInt32);
-  *ctx->MutOutputDType("cur_rank_unique_embedding_grad", 0) = ctx->InputDType("embedding_grad", 0);
+  ctx->SetOutputDType("cur_rank_unique_embedding_grad", 0, ctx->InputDType("embedding_grad", 0));
   return Maybe<void>::Ok();
 }
+
+REGISTER_USER_OP_SAME_OUTPUT_BLOB_REGST_NUM_WITH_FUNC("id_shuffle", []() {
+  if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINED_EXECUTION", false)) {
+    return 2;
+  } else {
+    return 1;
+  }
+});
 
 }  // namespace oneflow

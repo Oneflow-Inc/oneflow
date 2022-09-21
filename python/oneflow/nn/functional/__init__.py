@@ -29,6 +29,9 @@ from oneflow._C import avg_pool3d
 from .functional_maxpool import max_pool1d
 from .functional_maxpool import max_pool2d
 from .functional_maxpool import max_pool3d
+from .functional_maxpool import adaptive_max_pool1d
+from .functional_maxpool import adaptive_max_pool2d
+from .functional_maxpool import adaptive_max_pool3d
 from oneflow._C import adaptive_avg_pool1d
 from oneflow._C import adaptive_avg_pool2d
 from oneflow._C import adaptive_avg_pool3d
@@ -77,3 +80,4 @@ from oneflow.nn.modules.activation import relu6
 from oneflow.nn.modules.upsampling import Upsample as upsample
 from oneflow._C import unfold
 from oneflow._C import fold
+from oneflow._C import kl_div_loss as kl_div
