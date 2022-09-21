@@ -65,7 +65,6 @@ Maybe<void> KernelLaunchOp::InferDataType(user_op::InferContext* ctx) {
 }
 
 namespace {
-
 // this context should support querying information about the kernel from representation in MLIR
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
