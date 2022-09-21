@@ -362,24 +362,9 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
     packed_indices = JUST(Transpose(packed_indices, permute))->contiguous();
   }
 
-  // Align device or placement between input and indices.
-  if (transposed_input->is_global()) {
-    if (packed_indices->is_local()) {
-      const auto& placement = JUST(transposed_input->parallel_desc());
-      const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
-      int n = JUST(input->nd_sbp())->sbp_parallel_size();
-      std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-      packed_indices = JUST(ToGlobal(packed_indices, placement,
-                                     std::vector<Symbol<SbpParallel>>(n, broadcast_sbp),
-                                     grad_sbp_tuple, /* check_meta */ false, /*copy=*/false));
-    }
-  } else {
-    Symbol<Device> device = JUST(transposed_input->device());
-    if (JUST(packed_indices->device()) != device) {
-      packed_indices =
-          JUST(Copy(packed_indices, device->type(), device->device_id(), /*pin_memory=*/false));
-    }
-  }
+  CHECK_EQ_OR_RETURN(transposed_input->is_local(), packed_indices->is_local())
+      << Error::RuntimeError() << "The input and indices must be both local or global.";
+
   auto result = JUST(GatherNd(transposed_input, packed_indices));
 
   int required_ndim = input->ndim() - valid_indices.size() + index_ndim;
@@ -405,10 +390,15 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
   std::shared_ptr<Tensor> transposed_input;
   TensorTuple valid_indices;
   JUST(TransposeFront(input, *expanded_indices, &transposed_input, &valid_indices));
-  CHECK_EQ_OR_RETURN(JUST(transposed_input->tensor_storage()), JUST(input->tensor_storage()))
-      << Error::RuntimeError()
-      << "This setitem operator must enable view mechanism, please try to set "
-         "ONEFLOW_DISABLE_VIEW=0";
+  // NOTE: For local tensor, we make sure that transposed_input is a view of input.
+  //       Therefore we need not transpose it back because we update the value in a same memory
+  //       by tensor_scatter_nd_update operator.
+  if (input->is_local()) {
+    CHECK_EQ_OR_RETURN(JUST(transposed_input->tensor_storage()), JUST(input->tensor_storage()))
+        << Error::RuntimeError()
+        << "This setitem operator must enable view mechanism, please try to set "
+           "ONEFLOW_DISABLE_VIEW=0";
+  }
 
   if (valid_indices.empty()) {
     CHECK_EQ_OR_RETURN(value->nelement(), 0) << Error::IndexError() << "invalid indices";
@@ -426,21 +416,8 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
     packed_indices = JUST(Transpose(packed_indices, permute))->contiguous();
   }
 
-  if (transposed_input->is_global()) {
-    const auto& placement = JUST(transposed_input->parallel_desc());
-    const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
-    int n = JUST(input->nd_sbp())->sbp_parallel_size();
-    std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-    packed_indices =
-        JUST(ToGlobal(packed_indices, placement, std::vector<Symbol<SbpParallel>>(n, broadcast_sbp),
-                      grad_sbp_tuple, /*check_meta=*/false, /*copy=*/false));
-  } else {
-    Symbol<Device> device = JUST(transposed_input->device());
-    if (JUST(packed_indices->device()) != device) {
-      packed_indices =
-          JUST(Copy(packed_indices, device->type(), device->device_id(), /*pin_memory=*/false));
-    }
-  }
+  CHECK_EQ_OR_RETURN(transposed_input->is_local(), packed_indices->is_local())
+      << Error::RuntimeError() << "The input and indices must be both local or global.";
 
   Shape expand_shape;
   {
@@ -498,8 +475,8 @@ Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
   return functional::AsStrided(input, sizes, strides, storage_offset);
 }
 
-Maybe<void> UnifyLocalTensorAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
-                                               TensorTuple& tensor_indices) {
+Maybe<void> UnifyInputAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
+                                         TensorTuple& tensor_indices) {
   if (x->is_local()) {
     const auto x_device = JUST(x->device());
     for (int64_t i = 0; i < tensor_indices.size(); ++i) {
@@ -511,6 +488,21 @@ Maybe<void> UnifyLocalTensorAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
           || (tensor_index_device->device_id() != x_device->device_id())) {
         tensor_indices[i] =
             JUST(Copy(tensor_index, x_device->type(), x_device->device_id(), /*pin_memory=*/false));
+      }
+    }
+  } else {
+    // global tensor
+    const auto& placement = JUST(x->parallel_desc());
+    const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
+    int n = JUST(x->nd_sbp())->sbp_parallel_size();
+    std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
+    for (int64_t i = 0; i < tensor_indices.size(); ++i) {
+      const auto tensor_index = tensor_indices[i];
+      if (tensor_index == nullptr) { continue; }
+      if (tensor_index->is_local()) {
+        tensor_indices[i] = JUST(ToGlobal(tensor_index, placement,
+                                          std::vector<Symbol<SbpParallel>>(n, broadcast_sbp),
+                                          grad_sbp_tuple, /*check_meta=*/false, /*copy=*/false));
       }
     }
   }

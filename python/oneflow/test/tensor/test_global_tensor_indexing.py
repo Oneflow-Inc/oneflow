@@ -277,70 +277,80 @@ def _test_advanced_indexing(test_case, placement, dtype):
         _assert_tensor_equal(
             test_case, x[ri([2, 3, 4]),], flow.tensor([3, 3, 3], dtype=dtype),
         )
-        x[ri([0, 2, 4]),] = flow.tensor([5, 4, 3], dtype=dtype)
+        x[ri([0, 2, 4]),] = _cpu_global_tensor(flow.tensor([5, 4, 3], dtype=dtype))
         _assert_tensor_equal(
             test_case, x[ri([0, 2, 4]),], flow.tensor([5, 4, 3], dtype=dtype),
         )
 
     # 1d tensor and integer index setitem and getitem
-    reference = global_broadcast_consec((8,))
+    sbp = random_sbp(placement, max_dim=1).value()
+    reference = global_broadcast_consec((8,)).to_global(placement, sbp)
     validate_indexing(reference)
     validate_setting(reference)
-    return None
 
-    # reference is 1 2
-    #              3 4
-    #              5 6
-    reference = consec((3, 2))
+    # reference is  1  2  3  4  5  6  7  8
+    #               9 10 11 12 13 14 15 16
+    #              17 18 19 20 21 22 23 24
+    #              25 26 27 28 29 30 31 32
+    #              33 34 35 36 37 38 39 40
+    #              41 42 43 44 45 46 47 48
+    #              49 50 51 52 53 54 55 56
+    #              57 58 59 60 61 62 63 64
+    sbp = random_sbp(placement, max_dim=2).value()
+    reference = global_broadcast_consec((8, 8)).to_global(placement, sbp)
     _assert_tensor_equal(
         test_case,
         reference[ri([0, 1, 2]), ri([0])],
-        flow.tensor([1, 3, 5], dtype=dtype, device=device),
+        flow.tensor([1, 9, 17], dtype=dtype),
     )
     _assert_tensor_equal(
         test_case,
         reference[ri([0, 1, 2]), ri([1])],
-        flow.tensor([2, 4, 6], dtype=dtype, device=device),
+        flow.tensor([2, 10, 18], dtype=dtype),
     )
-    _assert_tensor_equal(test_case, reference[ri([0]), ri([0])], consec((1,)))
-    _assert_tensor_equal(test_case, reference[ri([2]), ri([1])], consec((1,), 6))
+    _assert_tensor_equal(
+        test_case, reference[ri([0]), ri([0])], global_broadcast_consec((1,))
+    )
+    _assert_tensor_equal(
+        test_case, reference[ri([2]), ri([1])], global_broadcast_consec((1,), 18)
+    )
     _assert_tensor_equal(
         test_case,
         reference[[ri([0, 0]), ri([0, 1])]],
-        flow.tensor([1, 2], dtype=dtype, device=device),
+        flow.tensor([1, 2], dtype=dtype),
     )
     _assert_tensor_equal(
         test_case,
-        reference[[ri([0, 1, 1, 0, 2]), ri([1])]],
-        flow.tensor([2, 4, 4, 2, 6], dtype=dtype, device=device),
+        reference[[ri([0, 1, 1, 0, 2, 7]), ri([1])]],
+        flow.tensor([2, 10, 10, 2, 18, 58], dtype=dtype),
     )
     _assert_tensor_equal(
         test_case,
         reference[[ri([0, 0, 1, 1]), ri([0, 1, 0, 0])]],
-        flow.tensor([1, 2, 3, 3], dtype=dtype, device=device),
+        flow.tensor([1, 2, 9, 9], dtype=dtype),
     )
 
-    rows = ri([[0, 0], [1, 2]])
+    rows = ri([[0, 0], [1, 6]])
     columns = ([0],)
     _assert_tensor_equal(
         test_case,
         reference[rows, columns],
-        flow.tensor([[1, 1], [3, 5]], dtype=dtype, device=device),
+        flow.tensor([[1, 1], [9, 49]], dtype=dtype),
     )
 
-    rows = ri([[0, 0], [1, 2]])
-    columns = ri([1, 0])
+    rows = ri([[0, 0], [1, 6]])
+    columns = ri([6, 0])
     _assert_tensor_equal(
         test_case,
         reference[rows, columns],
-        flow.tensor([[2, 1], [4, 5]], dtype=dtype, device=device),
+        flow.tensor([[7, 1], [15, 49]], dtype=dtype),
     )
     rows = ri([[0, 0], [1, 2]])
-    columns = ri([[0, 1], [1, 0]])
+    columns = ri([[0, 1], [3, 7]])
     _assert_tensor_equal(
         test_case,
         reference[rows, columns],
-        flow.tensor([[1, 2], [4, 5]], dtype=dtype, device=device),
+        flow.tensor([[1, 2], [12, 24]], dtype=dtype),
     )
 
     # setting values
@@ -348,132 +358,48 @@ def _test_advanced_indexing(test_case, placement, dtype):
     _assert_tensor_equal(
         test_case,
         reference[ri([0]), ri([1])],
-        flow.tensor([-1], dtype=dtype, device=device),
+        flow.tensor([-1], dtype=dtype),
     )
-    reference[ri([0, 1, 2]), ri([0])] = flow.tensor(
-        [-1, 2, -4], dtype=dtype, device=device
-    )
+    reference[ri([0, 1, 2]), ri([0])] = _cpu_global_tensor(flow.tensor(
+        [-1, 2, -4], dtype=dtype
+    )).to_global(placement, broadcast_for_placement)
     _assert_tensor_equal(
         test_case,
         reference[ri([0, 1, 2]), ri([0])],
-        flow.tensor([-1, 2, -4], dtype=dtype, device=device),
+        flow.tensor([-1, 2, -4], dtype=dtype),
     )
-    reference[rows, columns] = flow.tensor([[4, 6], [2, 3]], dtype=dtype, device=device)
+    reference[rows, columns] = _cpu_global_tensor(flow.tensor([[4, 6], [2, 3]], dtype=dtype)).to_global(placement, broadcast_for_placement)
     _assert_tensor_equal(
         test_case,
         reference[rows, columns],
-        flow.tensor([[4, 6], [2, 3]], dtype=dtype, device=device),
-    )
-
-    # Test non-contiguous(by transpose) reference
-    # Transposed: [[0, 4, 8],
-    #              [1, 5, 9],
-    #              [2, 6, 10],
-    #              [3, 7, 11]]
-    reference = flow.tensor(
-        [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]], dtype=dtype, device=device
-    ).T
-
-    _assert_tensor_equal(
-        test_case,
-        reference[ri([0, 1, 2]), ri([0])],
-        flow.tensor([0, 1, 2], dtype=dtype, device=device),
-    )
-    _assert_tensor_equal(
-        test_case,
-        reference[ri([0, 1, 2]), ri([1])],
-        flow.tensor([4, 5, 6], dtype=dtype, device=device),
-    )
-    _assert_tensor_equal(
-        test_case,
-        reference[ri([0]), ri([0])],
-        flow.tensor([0], dtype=dtype, device=device),
-    )
-    _assert_tensor_equal(
-        test_case,
-        reference[ri([2]), ri([1])],
-        flow.tensor([6], dtype=dtype, device=device),
-    )
-    _assert_tensor_equal(
-        test_case,
-        reference[[ri([0, 0]), ri([0, 1])]],
-        flow.tensor([0, 4], dtype=dtype, device=device),
-    )
-    _assert_tensor_equal(
-        test_case,
-        reference[[ri([0, 1, 1, 0, 3]), ri([1])]],
-        flow.tensor([4, 5, 5, 4, 7], dtype=dtype, device=device),
-    )
-    _assert_tensor_equal(
-        test_case,
-        reference[[ri([0, 0, 1, 1]), ri([0, 1, 0, 0])]],
-        flow.tensor([0, 4, 1, 1], dtype=dtype, device=device),
-    )
-
-    rows = ri([[0, 0], [1, 2]])
-    columns = ([0],)
-    _assert_tensor_equal(
-        test_case,
-        reference[rows, columns],
-        flow.tensor([[0, 0], [1, 2]], dtype=dtype, device=device),
-    )
-
-    rows = ri([[0, 0], [1, 2]])
-    columns = ri([1, 0])
-    _assert_tensor_equal(
-        test_case,
-        reference[rows, columns],
-        flow.tensor([[4, 0], [5, 2]], dtype=dtype, device=device),
-    )
-    rows = ri([[0, 0], [1, 3]])
-    columns = ri([[0, 1], [1, 2]])
-    _assert_tensor_equal(
-        test_case,
-        reference[rows, columns],
-        flow.tensor([[0, 4], [5, 11]], dtype=dtype, device=device),
-    )
-
-    # setting values
-    reference[ri([0]), ri([1])] = -1
-    _assert_tensor_equal(
-        test_case,
-        reference[ri([0]), ri([1])],
-        flow.tensor([-1], dtype=dtype, device=device),
-    )
-    reference[ri([0, 1, 2]), ri([0])] = flow.tensor(
-        [-1, 2, -4], dtype=dtype, device=device
-    )
-    _assert_tensor_equal(
-        test_case,
-        reference[ri([0, 1, 2]), ri([0])],
-        flow.tensor([-1, 2, -4], dtype=dtype, device=device),
-    )
-    reference[rows, columns] = flow.tensor([[4, 6], [2, 3]], dtype=dtype, device=device)
-    _assert_tensor_equal(
-        test_case,
-        reference[rows, columns],
-        flow.tensor([[4, 6], [2, 3]], dtype=dtype, device=device),
+        flow.tensor([[4, 6], [2, 3]], dtype=dtype),
     )
 
     # Tests using less than the number of dims, and ellipsis
-    # reference is 1 2
-    #              3 4
-    #              5 6
-    reference = consec((3, 2))
+    # reference is  1  2  3  4  5  6  7  8
+    #               9 10 11 12 13 14 15 16
+    #              17 18 19 20 21 22 23 24
+    #              25 26 27 28 29 30 31 32
+    #              33 34 35 36 37 38 39 40
+    #              41 42 43 44 45 46 47 48
+    #              49 50 51 52 53 54 55 56
+    #              57 58 59 60 61 62 63 64
+    sbp = random_sbp(placement, max_dim=2).value()
+    reference = global_broadcast_consec((8, 8)).to_global(placement, sbp)
     _assert_tensor_equal(
         test_case,
         reference[ri([0, 2]),],
-        flow.tensor([[1, 2], [5, 6]], dtype=dtype, device=device),
+        flow.tensor([[1, 2, 3, 4, 5, 6, 7, 8], [17, 18, 19, 20, 21, 22, 23, 24]], dtype=dtype),
     )
     _assert_tensor_equal(
         test_case,
         reference[ri([1]), ...],
-        flow.tensor([[3, 4]], dtype=dtype, device=device),
+        flow.tensor([[9, 10, 11, 12, 13, 14, 15, 16]], dtype=dtype),
     )
     _assert_tensor_equal(
         test_case,
         reference[..., ri([1])],
-        flow.tensor([[2], [4], [6]], dtype=dtype, device=device),
+        flow.tensor([[2], [10], [18], [26], [34], [42], [50], [58]], dtype=dtype),
     )
 
     # verify too many indices fails
@@ -481,9 +407,10 @@ def _test_advanced_indexing(test_case, placement, dtype):
         reference[ri([1]), ri([0, 2]), ri([3])]
 
     # test invalid index fails
-    reference = flow.empty(10, dtype=dtype, device=device)
+    sbp = random_sbp(placement, max_dim=1).value()
+    reference = _cpu_global_tensor(flow.empty(8, dtype=dtype)).to_global(placement, sbp)
     for err_idx in (10, -11):
-        with test_case.assertRaisesRegex(IndexError, r"out of range"):
+        with test_case.assertRaisesRegex(IndexError, r"out of bounds"):
             reference[err_idx]
 
 
@@ -944,8 +871,8 @@ class TestGlobalIndexing(flow.unittest.TestCase):
         for placement in all_placement():
             #  for _ in range(5):
             for _ in range(50):
-                _test_basic_slice(test_case, placement)
-                #  _test_advanced_indexing(test_case, placement, dtype=flow.float32)
+                #  _test_basic_slice(test_case, placement)
+                _test_advanced_indexing(test_case, placement, dtype=flow.float32)
                 #  _test_combined_indexing(test_case, placement, dtype=flow.float32)
                 #  _test_single_int(test_case, placement)
                 #  _test_multiple_int(test_case, placement)

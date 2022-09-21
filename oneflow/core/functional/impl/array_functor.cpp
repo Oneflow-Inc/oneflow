@@ -1267,11 +1267,23 @@ class TensorScatterNdUpdateFunctor {
         << Error::RuntimeError() << "The dtype of tensor and updates must be same.";
     std::shared_ptr<Tensor> contiguous_index = JUST(functional::ToContiguous(indices));
     if (inplace) {
-      JUST(CheckInplaceValid(tensor));
-      auto outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = tensor;
-      JUST(OpInterpUtil::Dispatch(*op_, {tensor, contiguous_index, updates}, outputs.get()));
-      return outputs->at(0);
+      if (tensor->is_global()) {
+        // NOTE: global tensor_scatter_nd_update inplace must calculate on another tensor and assign
+        // back because of input's sbp limited
+        auto output =
+            JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {tensor, contiguous_index, updates}));
+        int64_t ndim = tensor->shape()->NumAxes();
+        std::vector<int64_t> start(ndim, 0);
+        std::vector<int64_t> stop(tensor->shape()->begin(), tensor->shape()->end());
+        std::vector<int64_t> step(ndim, 1);
+        return functional::SliceUpdate(tensor, output, start, stop, step, /*inplace=*/true);
+      } else {
+        JUST(CheckInplaceValid(tensor));
+        auto outputs = std::make_shared<TensorTuple>(1);
+        outputs->at(0) = tensor;
+        JUST(OpInterpUtil::Dispatch(*op_, {tensor, contiguous_index, updates}, outputs.get()));
+        return outputs->at(0);
+      }
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {tensor, contiguous_index, updates});
     }
@@ -2132,7 +2144,7 @@ class TensorGetItemFunctor {
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
     if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
     if (!tensor_indices.empty()) {
-      JUST(UnifyLocalTensorAndIndicesOnDevice(x, tensor_indices));
+      JUST(UnifyInputAndIndicesOnDevice(x, tensor_indices));
       result = JUST(ApplyAdvancedIndexing(result, tensor_indices));
     }
     return result;
@@ -2237,7 +2249,7 @@ class TensorSetItemFunctor {
         result = JUST(functional::View(result, target_shape));
       }
 
-      JUST(UnifyLocalTensorAndIndicesOnDevice(expand_input, tensor_indices));
+      JUST(UnifyInputAndIndicesOnDevice(result, tensor_indices));
       JUST(ApplyAdvancedIndexingUpdate(result, tensor_indices, value));
     }
     return Maybe<void>::Ok();
