@@ -1068,7 +1068,7 @@ class DimScatterScalarFunctorImpl {
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
- protected:
+ private:
   std::shared_ptr<OpExpr> op_;
 };
 
