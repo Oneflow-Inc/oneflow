@@ -2124,6 +2124,10 @@
   signature: "Tensor (Tensor in) => AmpWhiteIdentity"
   bind_python: True
 
+- name: "amp_black_identity"
+  signature: "Tensor (Tensor in) => AmpBlackIdentity"
+  bind_python: True
+
 - name: "reshape_like"
   signature: "Tensor (Tensor in, Tensor like) => ReshapeLike"
   bind_python: True
