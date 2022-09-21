@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/distributions/common.h"
 #include "oneflow/user/kernels/random_seed_util.h"
@@ -28,6 +43,8 @@ static uint64_t make64BitsFrom32Bits(uint32_t hi, uint32_t lo) {
   return (static_cast<uint64_t>(hi) << 32) | lo;
 }
 
+}  // namespace
+
 template<typename T>
 class MultinomialWithReplacementCpuKernel final : public user_op::OpKernel {
  public:
@@ -57,8 +74,6 @@ class MultinomialWithReplacementCpuKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    const int32_t num_samples = ctx->Attr<int32_t>("num_samples");
-
     const T* self_ptr = x->dptr<T>();
     int64_t* result_ptr = out->mut_dptr<int64_t>();
     /* cumulative probability distribution vector */
@@ -66,7 +81,8 @@ class MultinomialWithReplacementCpuKernel final : public user_op::OpKernel {
     
     int64_t n_categories = x->shape_view().At(x->shape_view().NumAxes() - 1);
     int64_t n_dist = x->shape_view().NumAxes() > 1 ? x->shape_view().At(0) : 1;
-    
+    const int32_t num_samples = ctx->Attr<int32_t>("num_samples");
+
     int64_t self_stride_0 = x->shape_view().NumAxes() > 1 ? x->stride().at(0) : 0;
     int64_t self_stride_1 = x->stride().at(x->shape_view().NumAxes() - 1);
     int64_t result_dist_stride_0 = out->shape_view().NumAxes() > 1 ? out->stride().at(0) : 0;
@@ -145,6 +161,4 @@ class MultinomialWithReplacementCpuKernel final : public user_op::OpKernel {
 REGISTER_MULTINOMIAL_WITH_REPLACEMENT_CPU_KERNEL(float)
 REGISTER_MULTINOMIAL_WITH_REPLACEMENT_CPU_KERNEL(double)
 
-
-}  // namespace
 }  // namespace oneflow

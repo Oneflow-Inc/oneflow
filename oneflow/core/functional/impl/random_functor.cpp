@@ -472,7 +472,10 @@ class ExponentialFunctor {
 //                    https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Distributions.cpp#L548
 class MultinomialFunctor {
   public:
-    MultinomialFunctor() { op_ = CHECK_JUST(one::OpBuilder("multinomial_with_replacement").Input("x").Output("out").Build()); }
+    MultinomialFunctor() { 
+      op_cpu_ = CHECK_JUST(one::OpBuilder("multinomial_with_replacement").Input("x").Output("out").Build()); 
+      op_gpu_ = CHECK_JUST(one::OpBuilder("multinomial_with_replacement").Input("x").Input("prefix_sum").Output("out").Build()); 
+    }
     Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                              const int& num_samples,
                              const bool& replacement,
@@ -526,11 +529,20 @@ class MultinomialFunctor {
     attrs.SetAllAttrs(static_cast<int64_t>(gen->current_seed()), num_samples);
     OpExprInterpContext ctx(attrs, distribution_state);
     ctx.device = JUST(x->device());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, ctx);
+    DeviceType input_device = JUST(x->device())->enum_type();
+    if (input_device == DeviceType::kCPU) {
+      return OpInterpUtil::Dispatch<Tensor>(*op_cpu_, {x}, ctx);
+    } else {
+      std::shared_ptr<Tensor> sum_last_dim = JUST(functional::ReduceSum(x, {-1}, true));
+      std::shared_ptr<Tensor> norm_dist = JUST(functional::Div(x, sum_last_dim));
+      std::shared_ptr<Tensor> prefix_sum = JUST(functional::Cumsum(norm_dist, -1, x->dtype()));
+      return OpInterpUtil::Dispatch<Tensor>(*op_gpu_, {norm_dist, prefix_sum}, ctx);
+    }
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_cpu_;
+  std::shared_ptr<OpExpr> op_gpu_;
 };
 
 }  // namespace impl

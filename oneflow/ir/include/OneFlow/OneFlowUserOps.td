@@ -5175,7 +5175,8 @@ def OneFlow_ExponentialOp : OneFlow_BaseOp<"exponential", [NoSideEffect, NoGrad,
 
 def OneFlow_MultinomialWithReplacementOp : OneFlow_BaseOp<"multinomial_with_replacement", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$x
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$prefix_sum
   );
   let output = (outs
     OneFlow_Tensor:$out
