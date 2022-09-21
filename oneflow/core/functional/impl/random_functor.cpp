@@ -471,18 +471,22 @@ class ExponentialFunctor {
 // NOTE(Liang Depeng): The implementation of MultinomialFunctor is modified from
 //                    https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Distributions.cpp#L548
 class MultinomialFunctor {
-  public:
-    MultinomialFunctor() { 
-      op_cpu_ = CHECK_JUST(one::OpBuilder("multinomial_with_replacement").Input("x").Output("out").Build()); 
-      op_gpu_ = CHECK_JUST(one::OpBuilder("multinomial_with_replacement").Input("x").Input("prefix_sum").Output("out").Build()); 
-    }
-    Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                             const int& num_samples,
-                             const bool& replacement,
-                             const Optional<one::Generator>& generator) const {
-    CHECK_OR_RETURN(x->ndim() > 0 && x->ndim() <= 2) 
-      << "The input probability tensor must be 1 or 2 dim, "
-      << "but got: " << x->ndim();
+ public:
+  MultinomialFunctor() {
+    op_cpu_ =
+        CHECK_JUST(one::OpBuilder("multinomial_with_replacement").Input("x").Output("out").Build());
+    op_gpu_ = CHECK_JUST(one::OpBuilder("multinomial_with_replacement")
+                             .Input("x")
+                             .Input("prefix_sum")
+                             .Output("out")
+                             .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int& num_samples,
+                           const bool& replacement,
+                           const Optional<one::Generator>& generator) const {
+    CHECK_OR_RETURN(x->ndim() > 0 && x->ndim() <= 2)
+        << "The input probability tensor must be 1 or 2 dim, "
+        << "but got: " << x->ndim();
     CHECK_OR_RETURN(x->dtype()->is_floating_point())
         << "multinomial only supports floating-point dtypes for input, but got: "
         << x->dtype()->name();

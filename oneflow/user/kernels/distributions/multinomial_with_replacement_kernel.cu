@@ -26,48 +26,40 @@ namespace oneflow {
 
 namespace {
 
-template <typename T>
-__device__ int binarySearchForMultinomial(const T* cumdist,
-                                          const T* dist,
-                                          int32_t size,
-                                          T val) {
-    int start = 0;
-    int end = size;
+template<typename T>
+__device__ int binarySearchForMultinomial(const T* cumdist, const T* dist, int32_t size, T val) {
+  int start = 0;
+  int end = size;
 
-    while (end - start > 0) {
-        int mid = start + (end - start) / 2;
-        T midVal = cumdist[mid];
-        if (midVal < val) {
-            start = mid + 1;
-        } else {
-            end = mid;
-        }
+  while (end - start > 0) {
+    int mid = start + (end - start) / 2;
+    T midVal = cumdist[mid];
+    if (midVal < val) {
+      start = mid + 1;
+    } else {
+      end = mid;
     }
+  }
 
-    if (start == size) {
-        // No probability mass or precision problems; just return the
-        // first non-zero element by setting start to size-1 here,
-        // the code below will move it to the last non-zero probability
-        // this actually can happen when the random number is 1
-        // (github pytorch issue #4858).
-        start = size - 1;
-    }
+  if (start == size) {
+    // No probability mass or precision problems; just return the
+    // first non-zero element by setting start to size-1 here,
+    // the code below will move it to the last non-zero probability
+    // this actually can happen when the random number is 1
+    // (github pytorch issue #4858).
+    start = size - 1;
+  }
 
-    while(start >= 1 && dist[start] == 0) start--;
+  while (start >= 1 && dist[start] == 0) start--;
 
-    return start;
+  return start;
 }
 
-template <typename T>
-__global__ void sampleMultinomialWithReplacement(
-                                                uint64_t seed,
-                                                uint64_t offset,
-                                                int32_t totalSamples,
-                                                int64_t* dest,
-                                                int64_t distributions,
-                                                int64_t categories,
-                                                const T* normDistPrefixSum,
-                                                const T* normDist) {
+template<typename T>
+__global__ void sampleMultinomialWithReplacement(uint64_t seed, uint64_t offset,
+                                                 int32_t totalSamples, int64_t* dest,
+                                                 int64_t distributions, int64_t categories,
+                                                 const T* normDistPrefixSum, const T* normDist) {
   // At the moment, each warp computes one sample value in the binary
   // search due to divergence. It seems possible to compute multiple
   // values and limit divergence though later on.
@@ -79,21 +71,18 @@ __global__ void sampleMultinomialWithReplacement(
 
   // The block determines the distribution for which we generate a point
   for (int64_t curDist = blockIdx.y; curDist < distributions; curDist += gridDim.y) {
-    for (int sample = blockIdx.x*blockDim.x + threadIdx.x; sample < totalSamples; sample += blockDim.x*gridDim.x) {
-      //we are losing 3 out of 4 generated numbers but it's ok
-      //this kernel is not very efficient anyway
+    for (int sample = blockIdx.x * blockDim.x + threadIdx.x; sample < totalSamples;
+         sample += blockDim.x * gridDim.x) {
+      // we are losing 3 out of 4 generated numbers but it's ok
+      // this kernel is not very efficient anyway
       auto rand = curand_uniform4(&state);
       T r = static_cast<T>(rand.x);
 
       // Find the bucket that a uniform sample lies in
-      int choice = binarySearchForMultinomial<T>(
-          normDistPrefixSum + curDist * categories,
-          normDist + curDist * categories,
-          categories,
-          r);
+      int choice = binarySearchForMultinomial<T>(normDistPrefixSum + curDist * categories,
+                                                 normDist + curDist * categories, categories, r);
 
       dest[curDist * totalSamples + sample] = choice;
-
     }
   }
 }
@@ -123,7 +112,7 @@ class MultinomialWithReplacementGpuKernel final : public user_op::OpKernel {
     const auto& generator = distribution_state->generator();
     CHECK_NOTNULL(generator);
     auto gpu_gen = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
-    
+
     const user_op::Tensor* norm_dist = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* prefix_sum = ctx->Tensor4ArgNameAndIndex("prefix_sum", 0);
     CHECK_NOTNULL(prefix_sum);
@@ -132,7 +121,7 @@ class MultinomialWithReplacementGpuKernel final : public user_op::OpKernel {
     const T* norm_dist_ptr = norm_dist->dptr<T>();
     const T* prefix_sum_ptr = prefix_sum->dptr<T>();
     int64_t* result_ptr = out->mut_dptr<int64_t>();
-    
+
     int64_t numCategories = norm_dist->shape_view().At(norm_dist->shape_view().NumAxes() - 1);
     int64_t numDist = norm_dist->shape_view().NumAxes() > 1 ? norm_dist->shape_view().At(0) : 1;
     const int32_t n_sample = ctx->Attr<int32_t>("num_samples");
@@ -141,39 +130,32 @@ class MultinomialWithReplacementGpuKernel final : public user_op::OpKernel {
     // with just a single thread), but for better utilization,
     // we need each block to have at least 4 warps.
     dim3 block(128);
-    
+
     ep::CudaStream* stream = ctx->stream()->As<ep::CudaStream>();
     // Each block will generate a sample from one
     // distribution concurrently.
     int grid_y = std::min<int>(numDist, stream->device_properties().maxGridSize[1]);
-    dim3 grid((n_sample-1)/block.x+1, grid_y);
+    dim3 grid((n_sample - 1) / block.x + 1, grid_y);
     uint64_t offset = 0;
     uint64_t seed = gpu_gen->current_seed();
     {
-        std::lock_guard<std::mutex> lock(gpu_gen->mutex_);
-        // each thread generates a single sample for (numdist/numblocks.y) distributions, however, since we have to use
-        // curand_uniform4 offset is 4 times that.
-        offset = gpu_gen->get_philox_offset(((numDist-1)/grid.y+1)*4);
+      std::lock_guard<std::mutex> lock(gpu_gen->mutex_);
+      // each thread generates a single sample for (numdist/numblocks.y) distributions, however,
+      // since we have to use curand_uniform4 offset is 4 times that.
+      offset = gpu_gen->get_philox_offset(((numDist - 1) / grid.y + 1) * 4);
     }
 
     // Sample with replacement
     sampleMultinomialWithReplacement<<<grid, block, 0, stream->cuda_stream()>>>(
-                seed,
-                offset,
-                n_sample,
-                result_ptr,
-                numDist,
-                numCategories,
-                prefix_sum_ptr,
-                norm_dist_ptr);
+        seed, offset, n_sample, result_ptr, numDist, numCategories, prefix_sum_ptr, norm_dist_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MULTINOMIAL_WITH_REPLACEMENT_GPU_KERNEL(dtype)          \
-  REGISTER_USER_KERNEL("multinomial_with_replacement")                       \
-      .SetCreateFn<MultinomialWithReplacementGpuKernel<dtype>>()      \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+#define REGISTER_MULTINOMIAL_WITH_REPLACEMENT_GPU_KERNEL(dtype)                       \
+  REGISTER_USER_KERNEL("multinomial_with_replacement")                                \
+      .SetCreateFn<MultinomialWithReplacementGpuKernel<dtype>>()                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobDataType("prefix_sum", 0) == GetDataType<dtype>::value));
 
