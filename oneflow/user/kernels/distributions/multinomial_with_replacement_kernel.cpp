@@ -159,8 +159,4 @@ class MultinomialWithReplacementCpuKernel final : public user_op::OpKernel {
 REGISTER_MULTINOMIAL_WITH_REPLACEMENT_CPU_KERNEL(float)
 REGISTER_MULTINOMIAL_WITH_REPLACEMENT_CPU_KERNEL(double)
 
-<<<<<<< HEAD
-=======
-}  // namespace
->>>>>>> a71b7bf47ed5e20e4990e69d408f377d5c0120c9
 }  // namespace oneflow
