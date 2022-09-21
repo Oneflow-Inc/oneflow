@@ -81,15 +81,15 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
 // This is why we don't use SbpParallel at output matrix.
 Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
   bool transpose_b = ctx->Attr<bool>("transpose_b");
-  Shape* shape_b = ctx->Shape4ArgNameAndIndex("b", 0);
+  const Shape& shape_b = ctx->Shape4ArgNameAndIndex("b", 0);
   int64_t n = 0;
   if (!transpose_b) {
-    n = shape_b->At(shape_b->NumAxes() - 1);
+    n = shape_b.At(shape_b.NumAxes() - 1);
   } else {
-    n = shape_b->At(shape_b->NumAxes() - 2);
+    n = shape_b.At(shape_b.NumAxes() - 2);
   }
 
-  double logical_computation_cost = 2 * ctx->Shape4ArgNameAndIndex("a", 0)->elem_cnt() * n;
+  double logical_computation_cost = 2 * ctx->Shape4ArgNameAndIndex("a", 0).elem_cnt() * n;
   const auto& nd_sbp_a = ctx->NdSbp4ArgNameAndIndex("a", 0);
   const auto& nd_sbp_b = ctx->NdSbp4ArgNameAndIndex("b", 0);
   const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
@@ -474,10 +474,10 @@ Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
 
 /*static*/ Maybe<double> BroadcastMatmulGradBOp::GetComputeComplexity(
     user_op::ComputeComplexityFnContext* ctx) {
-  Shape* shape_a = ctx->Shape4ArgNameAndIndex("a", 0);
-  int64_t n = shape_a->At(shape_a->NumAxes() - 2);
+  const Shape& shape_a = ctx->Shape4ArgNameAndIndex("a", 0);
+  int64_t n = shape_a.At(shape_a.NumAxes() - 2);
 
-  double logical_computation_cost = 2 * ctx->Shape4ArgNameAndIndex("b", 0)->elem_cnt() * n;
+  double logical_computation_cost = 2 * ctx->Shape4ArgNameAndIndex("b", 0).elem_cnt() * n;
   const auto& nd_sbp_a = ctx->NdSbp4ArgNameAndIndex("a", 0);
   const auto& nd_sbp_b = ctx->NdSbp4ArgNameAndIndex("b", 0);
   const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();

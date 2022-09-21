@@ -87,7 +87,7 @@ Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx,
                                  const std::string& blob_name) {
   const std::vector<int32_t> pool_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
   double logical_computation_cost = std::accumulate(
-      pool_size.begin(), pool_size.end(), ctx->Shape4ArgNameAndIndex(blob_name, 0)->elem_cnt(),
+      pool_size.begin(), pool_size.end(), ctx->Shape4ArgNameAndIndex(blob_name, 0).elem_cnt(),
       std::multiplies<double>());
   const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
   const auto& nd_sbp_y = ctx->NdSbp4ArgNameAndIndex(blob_name, 0);

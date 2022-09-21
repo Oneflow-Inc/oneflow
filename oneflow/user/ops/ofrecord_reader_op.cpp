@@ -63,7 +63,7 @@ namespace oneflow {
 /* static */ Maybe<double> OFRecordReaderOp::GetComputeComplexity(
     user_op::ComputeComplexityFnContext* ctx) {
   // Don't support broadcast.
-  return double(ctx->Shape4ArgNameAndIndex("out", 0)->elem_cnt()
+  return double(ctx->Shape4ArgNameAndIndex("out", 0).elem_cnt()
                 * GetSizeOfDataType(DataType::kOFRecord))
          / ctx->parallel_desc().hierarchy()->elem_cnt();
 }

@@ -578,20 +578,23 @@ class UserOpComputeComplexityFnContext : public user_op::ComputeComplexityFnCont
     if (it == arg2tensor_desc_.end()) { return nullptr; };
     return &(it->second);
   }
-  Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  const Shape& Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
-    if (it == arg2tensor_desc_.end()) { return nullptr; };
-    return it->second.mut_shape();
+    if (it == arg2tensor_desc_.end()) {
+      thread_local static Shape non_shape;
+      return non_shape;
+    };
+    return it->second.shape();
   }
-  DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  DataType Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
-    if (it == arg2tensor_desc_.end()) { return nullptr; };
-    return it->second.mut_data_type();
+    if (it == arg2tensor_desc_.end()) { return DataType::kInvalidDataType; };
+    return it->second.data_type();
   }
-  bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  bool IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
-    if (it == arg2tensor_desc_.end()) { return nullptr; };
-    return it->second.mut_is_dynamic();
+    if (it == arg2tensor_desc_.end()) { return false; };
+    return it->second.is_dynamic();
   }
 
   const NdSbp NdSbp4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {

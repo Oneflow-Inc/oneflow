@@ -32,8 +32,8 @@ class ComputeComplexityFnContext {
   virtual ~ComputeComplexityFnContext() = default;
 
   virtual TensorDesc* TensorDesc4ArgNameAndIndex(const std::string&, int32_t) = 0;
-  virtual Shape* Shape4ArgNameAndIndex(const std::string&, int32_t) = 0;
-  virtual DataType* Dtype4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual const Shape& Shape4ArgNameAndIndex(const std::string&, int32_t) const = 0;
+  virtual DataType Dtype4ArgNameAndIndex(const std::string&, int32_t) const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
   virtual const NdSbp NdSbp4ArgNameAndIndex(const std::string& arg_name, int32_t index) const = 0;
@@ -45,7 +45,7 @@ class ComputeComplexityFnContext {
   }
 
   virtual const ParallelDesc& parallel_desc() const = 0;
-  virtual bool* IsDynamic4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual bool IsDynamic4ArgNameAndIndex(const std::string&, int32_t) const = 0;
 
   const UserOpConfWrapper& user_op_conf() const { return conf_; }
 
