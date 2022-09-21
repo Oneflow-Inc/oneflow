@@ -66,6 +66,7 @@ def load_data_fashion_mnist(
     )
     return train_iter, test_iter
 
+
 def _parse_args():
     parser = argparse.ArgumentParser("flags for train alexnet")
     parser.add_argument(
