@@ -583,10 +583,12 @@ class LruCache : public Cache {
 
   void DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
                      uint32_t* n_dumped, void* keys, void* values) override {
-    // todo
+    Dump(stream, start_key_index, end_key_index, n_dumped, keys, values);
   }
-  void ClearDirtyFlags(ep::Stream* stream) override {
-    // todo
+
+  void ClearDirtyFlags() override {
+    // do nothing.
+    return;
   }
 
   void Clear() override { ClearLruCacheContext<Key, Elem>(&ctx_); }

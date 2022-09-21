@@ -29,8 +29,8 @@ using Key128 = ulonglong2;
 namespace {
 
 template<typename Key, typename Index>
-__device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, Index* table_size,
-                               Key key, Index* out) {
+__device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, bool* entry_dirty_flag,
+                               Index* table_size, Key key, Index* out) {
   Key key_hi = (key | 0x1);
   Key key_lo = (key & 0x1);
   Index index_plus_one = 0;
@@ -41,6 +41,7 @@ __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, Inde
       index_plus_one = index + 1;
       *entry_index = ((index_plus_one << 1U) | key_lo);
       *out = index_plus_one;
+      *entry_dirty_flag = true;
       return true;
     } else if (old_entry_key == key_hi) {
       const Index entry_index_val = *entry_index;
@@ -48,6 +49,7 @@ __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, Inde
         // do nothing
       } else if ((entry_index_val & 0x1) == key_lo) {
         *out = (entry_index_val >> 1U);
+        *entry_dirty_flag = true;
         return true;
       } else {
         return false;
@@ -61,13 +63,18 @@ __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, Inde
 
 template<typename Key, typename Index>
 __device__ bool GetOrInsertOne(const size_t capacity, Key* table_keys, Index* table_indices,
-                               Index* table_size, Key key, size_t hash, Index* out) {
+                               bool* table_dirty_flags, Index* table_size, Key key, size_t hash,
+                               Index* out) {
   const size_t start_idx = hash % capacity;
   for (size_t count = 0; count < capacity; ++count) {
     const size_t idx = (start_idx + count) % capacity;
     Key* entry_key = table_keys + idx;
     Index* entry_index = table_indices + idx;
-    if (TryGetOrInsert<Key, Index>(entry_key, entry_index, table_size, key, out)) { return true; }
+    bool* entry_dirty_flag = table_dirty_flags + idx;
+    if (TryGetOrInsert<Key, Index>(entry_key, entry_index, entry_dirty_flag, table_size, key,
+                                   out)) {
+      return true;
+    }
   }
   return false;
 }
@@ -96,13 +103,13 @@ __device__ bool GetOne(const size_t capacity, Key* table_keys, Index* table_indi
 
 template<typename Key, typename Index>
 __global__ void OrdinalEncodeKernel(uint64_t capacity, Key* table_keys, Index* table_indices,
-                                    Index* table_size, uint32_t num_keys, const Key* keys,
-                                    Index* context) {
+                                    bool* table_dirty_flags, Index* table_size, uint32_t num_keys,
+                                    const Key* keys, Index* context) {
   CUDA_1D_KERNEL_LOOP(i, num_keys) {
     Key key = keys[i];
     uint64_t hash = FullCacheHash()(key);
-    bool success = GetOrInsertOne<Key, Index>(capacity, table_keys, table_indices, table_size, key,
-                                              hash, context + i);
+    bool success = GetOrInsertOne<Key, Index>(
+        capacity, table_keys, table_indices, table_dirty_flags, table_size, key, hash, context + i);
     assert(success);
   }
 }
@@ -134,25 +141,18 @@ __global__ void OrdinalEncodeDumpKernel(const Key* table_keys, const Index* tabl
 
 template<typename Key, typename Index>
 __global__ void OrdinalEncodeDumpDirtyOnlyKernel(const Key* table_keys, const Index* table_indices,
-                                                 const bool* dirty_flags, uint64_t start_key_index,
-                                                 uint64_t end_key_index, uint32_t* n_dumped,
-                                                 Key* keys, Index* context) {
+                                                 const bool* table_dirty_flags,
+                                                 uint64_t start_key_index, uint64_t end_key_index,
+                                                 uint32_t* n_dumped, Key* keys, Index* context) {
   CUDA_1D_KERNEL_LOOP(i, (end_key_index - start_key_index)) {
     Key entry_key = table_keys[i + start_key_index];
     Index entry_index = table_indices[i + start_key_index];
-    int64_t entry_key_val = entry_key; 
-    int64_t entry_index_val = entry_index; 
-    bool flag = true; 
-    if (entry_index != 0) {
+    bool entry_dirty_flag = table_dirty_flags[i + start_key_index];
+    bool flag = true;
+    if (entry_index != 0 && entry_dirty_flag) {
       uint32_t index = cuda::atomic::Add(n_dumped, static_cast<uint32_t>(1));
-      if(dirty_flags[index]){
-        printf("Yes, its dirty and we need to dump!\n"); 
-        printf("index is: %u \n", index); 
-        keys[index] = ((entry_key ^ 0x1) | (entry_index & 0x1));
-        context[index] = (entry_index >> 1U);
-      } else {
-        cuda::atomic::Add(n_dumped, static_cast<int32_t>(-1));
-      }
+      keys[index] = ((entry_key ^ 0x1) | (entry_index & 0x1));
+      context[index] = (entry_index >> 1U);
     }
   }
 }
@@ -310,29 +310,6 @@ __global__ void UpdateKernel(uint32_t value_length, Elem* cache_values, uint32_t
 }
 
 template<typename Elem, typename Index, size_t pack_size>
-__global__ void UpdateDirtyOnlyKernel(uint32_t value_length, Elem* cache_values, bool* dirty_flags,
-                                      uint32_t values_elem_cnt, const Index* context,
-                                      const Elem* values) {
-  const int packed_values_elem_cnt = values_elem_cnt / pack_size;
-  const uint32_t packed_elem_cnt = value_length / pack_size;
-  auto* packed_cache_values = reinterpret_cast<Pack<Elem, pack_size>*>(cache_values);
-  auto* packed_values = reinterpret_cast<const Pack<Elem, pack_size>*>(values);
-  CUDA_1D_KERNEL_LOOP(i, packed_values_elem_cnt) {
-    const uint64_t key_id = i / packed_elem_cnt;
-    const uint64_t ctx = context[key_id];
-    if (ctx == 0) { continue; }
-    const uint64_t row_id = ctx - 1;
-    const uint64_t col_id = i - key_id * packed_elem_cnt;
-    packed_cache_values[row_id * packed_elem_cnt + col_id] = packed_values[i];
-    dirty_flags[row_id] = true;
-    if(dirty_flags[row_id]){
-      printf("Row id is: %lu \n", row_id); 
-      printf("Here dirty flag is true \n"); 
-    }
-  }
-}
-
-template<typename Elem, typename Index, size_t pack_size>
 __global__ typename std::enable_if<std::is_same<Elem, float>::value, void>::type
 FusedHalfUpdateKernel(uint32_t value_length, Elem* __restrict__ cache_values,
                       uint32_t values_elem_cnt, const Index* __restrict__ context,
@@ -388,6 +365,7 @@ class OrdinalEncoder {
     OF_CUDA_CHECK(cudaMallocHost(&table_size_host_, sizeof(Index)));
     OF_CUDA_CHECK(cudaMalloc(&table_keys_, table_capacity_ * sizeof(Key)));
     OF_CUDA_CHECK(cudaMalloc(&table_indices_, table_capacity_ * sizeof(Index)));
+    OF_CUDA_CHECK(cudaMalloc(&table_dirty_flags_, table_capacity_ * sizeof(bool)));
     Clear();
   }
   ~OrdinalEncoder() {
@@ -396,13 +374,15 @@ class OrdinalEncoder {
     OF_CUDA_CHECK(cudaFreeHost(table_size_host_));
     OF_CUDA_CHECK(cudaFree(table_keys_));
     OF_CUDA_CHECK(cudaFree(table_indices_));
+    OF_CUDA_CHECK(cudaFree(table_dirty_flags_));
   }
 
   template<bool insert>
   void Encode(ep::Stream* stream, uint32_t num_keys, const Key* keys, Index* context) {
     if (insert) {
       RUN_CUDA_KERNEL((OrdinalEncodeKernel<Key, Index>), stream, num_keys, table_capacity_,
-                      table_keys_, table_indices_, table_size_, num_keys, keys, context);
+                      table_keys_, table_indices_, table_dirty_flags_, table_size_, num_keys, keys,
+                      context);
     } else {
       RUN_CUDA_KERNEL((OrdinalEncodeLookupKernel<Key, Index>), stream, num_keys, table_capacity_,
                       table_keys_, table_indices_, num_keys, keys, context);
@@ -419,18 +399,21 @@ class OrdinalEncoder {
   }
 
   void DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
-                     uint32_t* n_dumped, Key* keys, Index* context, bool* dirty_flags) {
-    printf("start key index is: %lu \n", start_key_index); 
-    printf("end key index is: %lu \n", end_key_index); 
+                     uint32_t* n_dumped, Key* keys, Index* context) {
     RUN_CUDA_KERNEL((OrdinalEncodeDumpDirtyOnlyKernel<Key, Index>), stream,
                     end_key_index - start_key_index, table_keys_, table_indices_,
-                    dirty_flags, start_key_index, end_key_index, n_dumped, keys, context);
+                    table_dirty_flags_, start_key_index, end_key_index, n_dumped, keys, context);
+  }
+
+  void ClearDirtyFlags() {
+    OF_CUDA_CHECK(cudaMemset(table_dirty_flags_, 0, table_capacity_ * sizeof(bool)));
   }
 
   void Clear() {
     OF_CUDA_CHECK(cudaMemset(table_size_, 0, sizeof(Index)));
     OF_CUDA_CHECK(cudaMemset(table_keys_, 0, table_capacity_ * sizeof(Key)));
     OF_CUDA_CHECK(cudaMemset(table_indices_, 0, table_capacity_ * sizeof(Index)));
+    OF_CUDA_CHECK(cudaMemset(table_dirty_flags_, 0, table_capacity_ * sizeof(bool)));
   }
 
   uint64_t TableCapacity() const { return table_capacity_; }
@@ -463,17 +446,12 @@ class CacheImpl : public Cache {
     const uint64_t values_size = options.capacity * options.value_size;
     if (options.value_memory_kind == CacheOptions::MemoryKind::kDevice) {
       OF_CUDA_CHECK(cudaMalloc(&values_, values_size));
-      OF_CUDA_CHECK(cudaMalloc(&dirty_flags_, options.capacity * sizeof(bool)));
     } else if (options.value_memory_kind == CacheOptions::MemoryKind::kHost) {
       if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_NUMA_AWARE_ALLOCATION", false)) {
         OF_CUDA_CHECK(cudaMallocHost(&values_, values_size));
-        OF_CUDA_CHECK(cudaMallocHost(&dirty_flags_, options.capacity * sizeof(bool)));
       } else {
         OF_CUDA_CHECK(NumaAwareCudaMallocHost(device_index_, reinterpret_cast<void**>(&values_),
                                               values_size));
-        OF_CUDA_CHECK(NumaAwareCudaMallocHost(device_index_,
-                                              reinterpret_cast<void**>(&dirty_flags_),
-                                              options.capacity * sizeof(bool)));
       }
     } else {
       UNIMPLEMENTED();
@@ -484,10 +462,8 @@ class CacheImpl : public Cache {
     CudaCurrentDeviceGuard guard(device_index_);
     if (options_.value_memory_kind == CacheOptions::MemoryKind::kDevice) {
       OF_CUDA_CHECK(cudaFree(values_));
-      OF_CUDA_CHECK(cudaFree(dirty_flags_));
     } else if (options_.value_memory_kind == CacheOptions::MemoryKind::kHost) {
       OF_CUDA_CHECK(cudaFreeHost(values_));
-      OF_CUDA_CHECK(cudaFreeHost(dirty_flags_));
     } else {
       UNIMPLEMENTED();
     }
@@ -535,7 +511,7 @@ class CacheImpl : public Cache {
   void DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
                      uint32_t* n_dumped, void* keys, void* values) override;
 
-  void ClearDirtyFlags(ep::Stream* stream) override;
+  void ClearDirtyFlags() override;
 
   void Clear() override;
 
@@ -544,7 +520,6 @@ class CacheImpl : public Cache {
   int device_index_;
   uint32_t num_elem_per_value_{};
   Elem* values_;
-  bool* dirty_flags_;
   Index* encoding_buffer_{};
   CacheOptions options_;
   uint32_t max_query_length_;
@@ -610,11 +585,9 @@ void CacheImpl<Key, Elem, Index, pack_size>::Put(ep::Stream* stream, uint32_t n_
   CHECK_LE(n_keys, max_query_length_);
   encoder_.template Encode<true>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
-  printf("N keys is: %u \n", n_keys); 
-  printf("num_elem_per_value is: %u \n", num_elem_per_value_); 
-  RUN_CUDA_KERNEL((UpdateDirtyOnlyKernel<Elem, Index, pack_size>), stream,
-                  values_elem_cnt / pack_size, num_elem_per_value_, values_, dirty_flags_,
-                  values_elem_cnt, encoding_buffer_, static_cast<const Elem*>(values));
+  RUN_CUDA_KERNEL((UpdateKernel<Elem, Index, pack_size>), stream, values_elem_cnt / pack_size,
+                  num_elem_per_value_, values_, values_elem_cnt, encoding_buffer_,
+                  static_cast<const Elem*>(values));
 }
 
 template<typename Key, typename Elem, typename Index, size_t pack_size>
@@ -650,16 +623,15 @@ void CacheImpl<Key, Elem, Index, pack_size>::DumpDirtyOnly(ep::Stream* stream,
                                                            uint32_t* n_dumped, void* keys,
                                                            void* values) {
   encoder_.DumpDirtyOnly(stream, start_key_index, end_key_index, n_dumped, static_cast<Key*>(keys),
-                         encoding_buffer_, dirty_flags_);
+                         encoding_buffer_);
   RUN_CUDA_KERNEL((DumpValueKernel<Key, Elem, Index>), stream,
                   num_elem_per_value_ * (end_key_index - start_key_index), num_elem_per_value_,
                   n_dumped, encoding_buffer_, values_, static_cast<Elem*>(values));
 }
 
 template<typename Key, typename Elem, typename Index, size_t pack_size>
-void CacheImpl<Key, Elem, Index, pack_size>::ClearDirtyFlags(ep::Stream* stream) {
-  OF_CUDA_CHECK(cudaMemsetAsync(dirty_flags_, 0, Capacity() * sizeof(bool),
-                                stream->As<ep::CudaStream>()->cuda_stream()));
+void CacheImpl<Key, Elem, Index, pack_size>::ClearDirtyFlags() {
+  encoder_.ClearDirtyFlags();
 }
 
 template<typename Key, typename Elem, typename Index, size_t pack_size>
