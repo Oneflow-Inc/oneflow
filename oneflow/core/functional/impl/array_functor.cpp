@@ -320,9 +320,7 @@ class WhereScalarXFunctor {
     if (scalar.IsBool()) {
       attrs.SetAllAttrs(scalar.As<bool>(), true, NullOpt, false, NullOpt, false);
     } else if (scalar.IsFloatingPoint()) {
-      TensorProcessor tensor_processor;
-      JUST(tensor_processor.AddInputs({y}, DType::Double()).Apply());
-      input = JUST(tensor_processor.GetInputs()).at(0);
+      input = JUST(functional::Cast(y, DType::Double(), /*pin_memory=*/false));
       attrs.SetAllAttrs(NullOpt, false, scalar.As<double>(), true, NullOpt, false);
     } else if (scalar.IsIntegral()) {
       attrs.SetAllAttrs(NullOpt, false, NullOpt, false, scalar.As<int64_t>(), true);
@@ -351,9 +349,7 @@ class WhereScalarYFunctor {
     if (scalar.IsBool()) {
       attrs.SetAllAttrs(scalar.As<bool>(), true, NullOpt, false, NullOpt, false);
     } else if (scalar.IsFloatingPoint()) {
-      TensorProcessor tensor_processor;
-      JUST(tensor_processor.AddInputs({x}, DType::Double()).Apply());
-      input = JUST(tensor_processor.GetInputs()).at(0);
+      input = JUST(functional::Cast(x, DType::Double(), /*pin_memory=*/false));
       attrs.SetAllAttrs(NullOpt, false, scalar.As<double>(), true, NullOpt, false);
     } else if (scalar.IsIntegral()) {
       attrs.SetAllAttrs(NullOpt, false, NullOpt, false, scalar.As<int64_t>(), true);
