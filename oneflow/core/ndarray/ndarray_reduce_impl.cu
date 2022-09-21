@@ -46,16 +46,9 @@ struct All {
 struct NanSum {
   template<typename T>
   __host__ __device__ __forceinline__ T operator()(const T& a, const T& b) const {
-// #if defined (__CUDACC__)
-//     if (isnan(a))
-//       return isnan(b) ? T{0} : b;
-//     return isnan(b) ? a : a + b;
-// #else
     if (oneflow::detail::numerics<T>::isnan(a))
       return oneflow::detail::numerics<T>::isnan(b) ? T{0} : b;
     return oneflow::detail::numerics<T>::isnan(b) ? a : a + b;
-// #endif
-
   }
 };
 
@@ -379,22 +372,11 @@ struct NdarrayReduceCoreWrapper<DeviceType::kCUDA, T, NDIMS, binary_func> final 
   template struct NdarrayMatrixColReduce<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype), binary_func>; \
   template struct NdarrayXYZCubeXZReduce<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype), binary_func>;
 
-// template struct NdarrayScalarReduce<DeviceType::kCUDA,    float, BinaryFuncNanSum>;
-// template struct NdarrayMatrixRowReduce<DeviceType::kCUDA, float, BinaryFuncNanSum>;
-// template struct NdarrayMatrixColReduce<DeviceType::kCUDA, float, BinaryFuncNanSum>;
-// template struct NdarrayXYZCubeXZReduce<DeviceType::kCUDA, float, BinaryFuncNanSum>;
-
-// template struct NdarrayScalarReduce<DeviceType::kCUDA,    double, BinaryFuncNanSum>;
-// template struct NdarrayMatrixRowReduce<DeviceType::kCUDA, double, BinaryFuncNanSum>;
-// template struct NdarrayMatrixColReduce<DeviceType::kCUDA, double, BinaryFuncNanSum>;
-// template struct NdarrayXYZCubeXZReduce<DeviceType::kCUDA, double, BinaryFuncNanSum>;
-
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_IMPL,
                                  ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ
                                      UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
                                  ARITHMETIC_REDUCE_BINARY_FUNC_SEQ);
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_IMPL,
-                                FLOATING_DATA_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_IMPL, FLOATING_DATA_TYPE_SEQ,
                                  NANSUM_REDUCE_BINARY_FUNC_SEQ);
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_IMPL,
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
@@ -409,9 +391,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER,
                                      UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
                                  DIM_SEQ, ARITHMETIC_REDUCE_BINARY_FUNC_SEQ);
 
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER,
-FLOATING_DATA_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER, FLOATING_DATA_TYPE_SEQ,
                                  DIM_SEQ, NANSUM_REDUCE_BINARY_FUNC_SEQ);
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER,
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ

@@ -13,10 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/ndarray/binary_func.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/core/kernel/kernel_util.h"
@@ -99,9 +97,11 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
     const int32_t output_elem_cnt = output_tensor->shape_view().elem_cnt();
+    std::cout << "fuck" << std::endl;
 
     if (input_tensor->shape_view().elem_cnt() == 0) {
       if (output_tensor->shape_view().elem_cnt() != 0) {
+        std::cout << "run1" << std::endl;
         Scalar init_value = [&]() {
           if (std::is_same<BinaryFunc<T>, BinaryFuncAny<T>>::value) { return Scalar(0); }
           if (std::is_same<BinaryFunc<T>, BinaryFuncAll<T>>::value) { return Scalar(1); }
@@ -152,7 +152,10 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
 #define REGISTER_REDUCE_ARITHMETIC_KERNELS(device, dtype)                  \
   REGISTER_REDUCE_XPU_KERNEL("reduce_prod", BinaryFuncProd, device, dtype) \
   REGISTER_REDUCE_XPU_KERNEL("reduce_min", BinaryFuncMin, device, dtype)   \
-  REGISTER_REDUCE_XPU_KERNEL("reduce_max", BinaryFuncMax, device, dtype) \
+  REGISTER_REDUCE_XPU_KERNEL("reduce_max", BinaryFuncMax, device, dtype)
+
+#define REGISTER_REDUCE_NANSUM_KERNELS(device, dtype) \
+  REGISTER_REDUCE_XPU_KERNEL("reduce_nansum", BinaryFuncNanSum, device, dtype)
 
 #define REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(device) \
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, bool)           \
@@ -163,14 +166,15 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int32_t)        \
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int64_t)
 
-REGISTER_REDUCE_XPU_KERNEL("reduce_nansum", BinaryFuncNanSum, DeviceType::kCPU, float)
-REGISTER_REDUCE_XPU_KERNEL("reduce_nansum", BinaryFuncNanSum, DeviceType::kCPU, double)
-REGISTER_REDUCE_XPU_KERNEL("reduce_nansum", BinaryFuncNanSum, DeviceType::kCUDA, float)
-REGISTER_REDUCE_XPU_KERNEL("reduce_nansum", BinaryFuncNanSum, DeviceType::kCUDA, double)
+#define REGISTER_REDUCE_NANSUM_KERNELS_BY_DEVICE(device) \
+  REGISTER_REDUCE_NANSUM_KERNELS(device, float)          \
+  REGISTER_REDUCE_NANSUM_KERNELS(device, double)
 
 REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(DeviceType::kCPU)
+REGISTER_REDUCE_NANSUM_KERNELS_BY_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(DeviceType::kCUDA)
+REGISTER_REDUCE_NANSUM_KERNELS_BY_DEVICE(DeviceType::kCUDA)
 #endif
 
 #define REGISTER_REDUCE_SUM_KERNELS(device, dtype) \
