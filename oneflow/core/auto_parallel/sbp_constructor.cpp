@@ -324,6 +324,7 @@ Maybe<void> SbpConstructor::CheckSbpAgreement(const Job& job) {
   OpGraph op_graph(new_job);
   // Compare sbp in job
   JUST(op_graph.TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
+    if (op_node->parallel_desc().parallel_num() == 1) { return Maybe<void>::Ok(); }
     const std::string& op_name = op_node->op().op_name();
     const NdSbpSignature& auto_parallel_sbp =
         NdSbpSignature(job.job_parallel_view_conf().op_name2nd_sbp_signature_conf().at(op_name));
