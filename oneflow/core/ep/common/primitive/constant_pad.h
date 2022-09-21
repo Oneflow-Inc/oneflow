@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_PRIMITIVE_COMMON_CONSTANT_PAD_H_
 
 #include "oneflow/core/ep/include/primitive/primitive.h"
-// #include "oneflow/core/ep/include/primitive/fast_integer_math.h"
 #include "oneflow/core/ep/include/primitive/offset_to_index_calculator.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
