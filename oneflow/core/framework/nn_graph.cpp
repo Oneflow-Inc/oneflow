@@ -422,6 +422,28 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     // NOTE(zwx): After barrier plan is synchronized between all ranks,
     //     then it can be cleared for saving mem.
     if (GlobalProcessCtx::IsThisProcessMaster()) {
+      // Clear useless info of rank 0 plan
+      for (auto iter = plan_.mutable_task()->begin(); iter != plan_.mutable_task()->end();) {
+        if (iter->machine_id() != 0) {
+          iter = plan_.mutable_task()->erase(iter);
+        } else {
+          ++iter;
+        }
+      }
+      for (auto iter = plan_.mutable_block_chunk_list()->mutable_mem_block()->begin(); iter != plan_.mutable_block_chunk_list()->mutable_mem_block()->end();) {
+        if (iter->machine_id() != 0) {
+          iter = plan_.mutable_block_chunk_list()->mutable_mem_block()->erase(iter);
+        } else {
+          ++iter;
+        }
+      }
+      for (auto iter = plan_.mutable_block_chunk_list()->mutable_chunk()->begin(); iter != plan_.mutable_block_chunk_list()->mutable_chunk()->end();) {
+        if (iter->machine_id() != 0) {
+          iter = plan_.mutable_block_chunk_list()->mutable_chunk()->erase(iter);
+        } else {
+          ++iter;
+        }
+      }
       for (int64_t rank_id = 1; rank_id < GlobalProcessCtx::WorldSize(); ++rank_id) {
         std::string rank_plan_name = plan_name_prefix + std::to_string(rank_id);
         Singleton<CtrlClient>::Get()->ClearKV(rank_plan_name);
