@@ -994,9 +994,9 @@ std::string DimScatterTypeToString() {
 }
 
 template<DimScatterType T>
-class DimScatterFunctor {
+class DimScatterFunctorImpl {
  public:
-  DimScatterFunctor()
+  DimScatterFunctorImpl()
       : op_(CHECK_JUST(one::OpBuilder("dim_scatter" + DimScatterTypeToString<T>())
                            .Input("input")
                            .Input("index")
@@ -1023,10 +1023,30 @@ class DimScatterFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-template<DimScatterType T>
-class DimScatterScalarFunctor {
+class DimScatterFunctor {
  public:
-  DimScatterScalarFunctor()
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
+                           const std::shared_ptr<one::Tensor>& index,
+                           const std::shared_ptr<one::Tensor>& src,
+                           const Optional<std::string>& reduce, bool inplace) const {
+    if (reduce.has_value()) {
+      const std::string& reduce_str = *JUST(reduce);
+      if (reduce_str == "add") {
+        return DimScatterAdd(input, dim, index, src, inplace);
+      } else if (reduce_str == "multiply") {
+        return DimScatterMul(input, dim, index, src, inplace);
+      } else {
+        CHECK_OR_RETURN(false) << Error::RuntimeError() << "Invalid reduce type: " << reduce_str;
+      }
+    }
+    return functional::DimScatterUpdate(input, dim, index, src, inplace);
+  }
+};
+
+template<DimScatterType T>
+class DimScatterScalarFunctorImpl {
+ public:
+  DimScatterScalarFunctorImpl()
       : op_(CHECK_JUST(one::OpBuilder("dim_scatter" + DimScatterTypeToString<T>() + "_scalar")
                            .Input("input")
                            .Input("index")
@@ -1050,6 +1070,25 @@ class DimScatterScalarFunctor {
 
  protected:
   std::shared_ptr<OpExpr> op_;
+};
+
+class DimScatterScalarFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
+                           const std::shared_ptr<one::Tensor>& index, const Scalar& src,
+                           const Optional<std::string>& reduce, bool inplace) const {
+    if (reduce.has_value()) {
+      const std::string& reduce_str = *JUST(reduce);
+      if (reduce_str == "add") {
+        return DimScatterAddScalar(input, dim, index, src, inplace);
+      } else if (reduce_str == "multiply") {
+        return DimScatterMulScalar(input, dim, index, src, inplace);
+      } else {
+        CHECK_OR_RETURN(false) << Error::RuntimeError() << "Invalid reduce type: " << reduce_str;
+      }
+    }
+    return functional::DimScatterUpdateScalar(input, dim, index, src, inplace);
+  }
 };
 
 class DimScatterAddLikeFunctor {
@@ -3301,14 +3340,17 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DiagonalFunctor>("Diagonal");
   m.add_functor<impl::DiagonalGradFunctor>("DiagonalGrad");
   m.add_functor<impl::TensorGetItemFunctor>("TensorGetItem");
-  m.add_functor<impl::DimScatterFunctor<impl::DimScatterType::kUpdate>>("DimScatter");
-  m.add_functor<impl::DimScatterFunctor<impl::DimScatterType::kAdd>>("DimScatterAdd");
-  m.add_functor<impl::DimScatterFunctor<impl::DimScatterType::kMultiply>>("DimScatterMul");
-  m.add_functor<impl::DimScatterScalarFunctor<impl::DimScatterType::kUpdate>>(
+  m.add_functor<impl::DimScatterFunctorImpl<impl::DimScatterType::kUpdate>>("DimScatterUpdate");
+  m.add_functor<impl::DimScatterFunctorImpl<impl::DimScatterType::kAdd>>("DimScatterAdd");
+  m.add_functor<impl::DimScatterFunctorImpl<impl::DimScatterType::kMultiply>>("DimScatterMul");
+  m.add_functor<impl::DimScatterFunctor>("DimScatter");
+  m.add_functor<impl::DimScatterScalarFunctorImpl<impl::DimScatterType::kUpdate>>(
       "DimScatterUpdateScalar");
-  m.add_functor<impl::DimScatterScalarFunctor<impl::DimScatterType::kAdd>>("DimScatterAddScalar");
-  m.add_functor<impl::DimScatterScalarFunctor<impl::DimScatterType::kMultiply>>(
+  m.add_functor<impl::DimScatterScalarFunctorImpl<impl::DimScatterType::kAdd>>(
+      "DimScatterAddScalar");
+  m.add_functor<impl::DimScatterScalarFunctorImpl<impl::DimScatterType::kMultiply>>(
       "DimScatterMulScalar");
+  m.add_functor<impl::DimScatterFunctor>("DimScatterScalar");
   m.add_functor<impl::DimScatterAddLikeFunctor>("DimScatterAddLike");
 
   m.add_functor<impl::TensorSetItemFunctor>("TensorSetItem");

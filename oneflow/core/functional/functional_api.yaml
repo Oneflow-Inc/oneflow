@@ -1923,9 +1923,17 @@
   signature:
     [
       "Tensor (Tensor input, Int32 dim, Tensor index, Tensor src, *, Bool inplace=False) => DimScatter",
-      "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src, *, Bool inplace=False) => DimScatterUpdateScalar",
+      "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src, *, Bool inplace=False) => DimScatterScalar",
     ]
   bind_python: True
+
+- name: "scatter_update"
+  signature:
+    [
+      "Tensor (Tensor input, Int32 dim, Tensor index, Tensor src, *, Bool inplace=False) => DimScatterUpdate",
+      "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src, *, Bool inplace=False) => DimScatterUpdateScalar",
+    ]
+  bind_python: False
 
 - name: "scatter_add"
   signature:
@@ -1941,7 +1949,7 @@
       "Tensor (Tensor input, Int32 dim, Tensor index, Tensor src, *, Bool inplace=False) => DimScatterMul",
       "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src, *, Bool inplace=False) => DimScatterMulScalar",
     ]
-  bind_python: True
+  bind_python: False
 
 - name: "scatter_add_like"
   signature: "Tensor (Tensor like, Int32 dim, Tensor index, Tensor src) => DimScatterAddLike"
