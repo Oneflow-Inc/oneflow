@@ -71,6 +71,7 @@ def masked_select_op(input, mask):
 
     return gather_res.flatten()
 
+
 if __name__ == "__main__":
     import doctest
 
