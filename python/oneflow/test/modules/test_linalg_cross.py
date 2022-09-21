@@ -23,7 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestLinalgCross(flow.unittest.TestCase):
-    # TODO(peihong): PyTorch 1.10 has no torch.linalg.cross, so uncomment the below code when PyTorch in ci is upgraded to 1.10.
+    # TODO(peihong): PyTorch 1.10 has no torch.linalg.cross, so uncomment the below code when PyTorch in ci is upgraded to 1.11.
     # @autotest(n=5)
     # def test_linalg_cross_with_random_data(test_case):
     #     device = random_device()
