@@ -913,11 +913,11 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatible
 
 template<typename T>
 void HackPlacement(::google::protobuf::RepeatedPtrField<T>* pl_group) {
-  int32_t node_num = 2;
-  int32_t dev_per_node = 4;
+  int32_t node_num = 10;
+  int32_t dev_per_node = 100;
   for (auto& pl : *pl_group) {
     *pl.mutable_parallel_conf()->mutable_device_tag() = "cuda";
-    if (pl.mutable_parallel_conf()->device_name_size() == 2) {
+    if (pl.mutable_parallel_conf()->device_name_size() > 1) {
       pl.mutable_parallel_conf()->clear_device_name();
       for (int32_t m_idx = 0; m_idx < node_num; ++m_idx) {
           for (int32_t d_idx = 0; d_idx < dev_per_node; ++d_idx) {
