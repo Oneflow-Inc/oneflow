@@ -45,7 +45,6 @@ limitations under the License.
 #include <tuple>
 #include <utility>
 #include <sys/types.h>
-
 namespace oneflow {
 
 Maybe<void> KernelLaunchOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
