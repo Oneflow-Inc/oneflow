@@ -270,7 +270,7 @@ void CacheKeyValueStoreImpl<Key, Elem>::SyncCacheToStore() {
     cache_->DumpDirtyOnly(stream, start_key_index,
                           std::min(start_key_index + max_query_length_, dump_capacity), num_buffer_,
                           keys_buffer_, values_buffer_);
-    cache_->ClearDirtyFlags();
+    // cache_->ClearDirtyFlags();
     OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, num_buffer_, sizeof(uint32_t),
                                   cudaMemcpyDefault, cuda_stream->cuda_stream()));
     CHECK_JUST(stream->Sync());

@@ -140,11 +140,19 @@ __global__ void OrdinalEncodeDumpDirtyOnlyKernel(const Key* table_keys, const In
   CUDA_1D_KERNEL_LOOP(i, (end_key_index - start_key_index)) {
     Key entry_key = table_keys[i + start_key_index];
     Index entry_index = table_indices[i + start_key_index];
-    bool dirty_flag = dirty_flags[i + start_key_index];
-    if (entry_index != 0 && dirty_flag) {
+    int64_t entry_key_val = entry_key; 
+    int64_t entry_index_val = entry_index; 
+    bool flag = true; 
+    if (entry_index != 0) {
       uint32_t index = cuda::atomic::Add(n_dumped, static_cast<uint32_t>(1));
-      keys[index] = ((entry_key ^ 0x1) | (entry_index & 0x1));
-      context[index] = (entry_index >> 1U);
+      if(dirty_flags[index]){
+        printf("Yes, its dirty and we need to dump!\n"); 
+        printf("index is: %u \n", index); 
+        keys[index] = ((entry_key ^ 0x1) | (entry_index & 0x1));
+        context[index] = (entry_index >> 1U);
+      } else {
+        cuda::atomic::Add(n_dumped, static_cast<int32_t>(-1));
+      }
     }
   }
 }
@@ -317,6 +325,10 @@ __global__ void UpdateDirtyOnlyKernel(uint32_t value_length, Elem* cache_values,
     const uint64_t col_id = i - key_id * packed_elem_cnt;
     packed_cache_values[row_id * packed_elem_cnt + col_id] = packed_values[i];
     dirty_flags[row_id] = true;
+    if(dirty_flags[row_id]){
+      printf("Row id is: %lu \n", row_id); 
+      printf("Here dirty flag is true \n"); 
+    }
   }
 }
 
@@ -376,9 +388,7 @@ class OrdinalEncoder {
     OF_CUDA_CHECK(cudaMallocHost(&table_size_host_, sizeof(Index)));
     OF_CUDA_CHECK(cudaMalloc(&table_keys_, table_capacity_ * sizeof(Key)));
     OF_CUDA_CHECK(cudaMalloc(&table_indices_, table_capacity_ * sizeof(Index)));
-    OF_CUDA_CHECK(cudaMalloc(&table_dirty_flags_, table_capacity_ * sizeof(bool)));
     Clear();
-    ClearDirtyFlags();
   }
   ~OrdinalEncoder() {
     CudaCurrentDeviceGuard guard(device_index_);
@@ -386,7 +396,6 @@ class OrdinalEncoder {
     OF_CUDA_CHECK(cudaFreeHost(table_size_host_));
     OF_CUDA_CHECK(cudaFree(table_keys_));
     OF_CUDA_CHECK(cudaFree(table_indices_));
-    OF_CUDA_CHECK(cudaFree(table_dirty_flags_));
   }
 
   template<bool insert>
@@ -410,14 +419,12 @@ class OrdinalEncoder {
   }
 
   void DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
-                     uint32_t* n_dumped, Key* keys, Index* context) {
+                     uint32_t* n_dumped, Key* keys, Index* context, bool* dirty_flags) {
+    printf("start key index is: %lu \n", start_key_index); 
+    printf("end key index is: %lu \n", end_key_index); 
     RUN_CUDA_KERNEL((OrdinalEncodeDumpDirtyOnlyKernel<Key, Index>), stream,
                     end_key_index - start_key_index, table_keys_, table_indices_,
-                    table_dirty_flags_, start_key_index, end_key_index, n_dumped, keys, context);
-  }
-
-  void ClearDirtyFlags() {
-    OF_CUDA_CHECK(cudaMemset(table_dirty_flags_, 0, table_capacity_ * sizeof(bool)));
+                    dirty_flags, start_key_index, end_key_index, n_dumped, keys, context);
   }
 
   void Clear() {
@@ -528,7 +535,7 @@ class CacheImpl : public Cache {
   void DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
                      uint32_t* n_dumped, void* keys, void* values) override;
 
-  void ClearDirtyFlags() override;
+  void ClearDirtyFlags(ep::Stream* stream) override;
 
   void Clear() override;
 
@@ -603,6 +610,8 @@ void CacheImpl<Key, Elem, Index, pack_size>::Put(ep::Stream* stream, uint32_t n_
   CHECK_LE(n_keys, max_query_length_);
   encoder_.template Encode<true>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
+  printf("N keys is: %u \n", n_keys); 
+  printf("num_elem_per_value is: %u \n", num_elem_per_value_); 
   RUN_CUDA_KERNEL((UpdateDirtyOnlyKernel<Elem, Index, pack_size>), stream,
                   values_elem_cnt / pack_size, num_elem_per_value_, values_, dirty_flags_,
                   values_elem_cnt, encoding_buffer_, static_cast<const Elem*>(values));
@@ -641,15 +650,16 @@ void CacheImpl<Key, Elem, Index, pack_size>::DumpDirtyOnly(ep::Stream* stream,
                                                            uint32_t* n_dumped, void* keys,
                                                            void* values) {
   encoder_.DumpDirtyOnly(stream, start_key_index, end_key_index, n_dumped, static_cast<Key*>(keys),
-                         encoding_buffer_);
+                         encoding_buffer_, dirty_flags_);
   RUN_CUDA_KERNEL((DumpValueKernel<Key, Elem, Index>), stream,
                   num_elem_per_value_ * (end_key_index - start_key_index), num_elem_per_value_,
                   n_dumped, encoding_buffer_, values_, static_cast<Elem*>(values));
 }
 
 template<typename Key, typename Elem, typename Index, size_t pack_size>
-void CacheImpl<Key, Elem, Index, pack_size>::ClearDirtyFlags() {
-  encoder_.ClearDirtyFlags();
+void CacheImpl<Key, Elem, Index, pack_size>::ClearDirtyFlags(ep::Stream* stream) {
+  OF_CUDA_CHECK(cudaMemsetAsync(dirty_flags_, 0, Capacity() * sizeof(bool),
+                                stream->As<ep::CudaStream>()->cuda_stream()));
 }
 
 template<typename Key, typename Elem, typename Index, size_t pack_size>

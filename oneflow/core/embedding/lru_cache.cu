@@ -585,7 +585,7 @@ class LruCache : public Cache {
                      uint32_t* n_dumped, void* keys, void* values) override {
     // todo
   }
-  void ClearDirtyFlags() override {
+  void ClearDirtyFlags(ep::Stream* stream) override {
     // todo
   }
 
