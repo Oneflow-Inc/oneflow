@@ -20,7 +20,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@flow.unittest.skip_unless_1n1d()
+@unittest.skip(reason="network fluctuations can cause downloads to fail!")
 class TestHub(flow.unittest.TestCase):
     def test_hub_list_api(test_case):
         entrypoints = flow.hub.list("OneFlow-Inc/vision", force_reload=False)
