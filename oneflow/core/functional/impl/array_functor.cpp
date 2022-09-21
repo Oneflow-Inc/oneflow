@@ -316,16 +316,20 @@ class WhereScalarXFunctor {
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("bool_operand", "has_bool_operand", "float_operand",
                                        "has_float_operand", "int_operand", "has_int_operand");
+    auto input = y;
     if (scalar.IsBool()) {
       attrs.SetAllAttrs(scalar.As<bool>(), true, NullOpt, false, NullOpt, false);
     } else if (scalar.IsFloatingPoint()) {
+      TensorProcessor tensor_processor;
+      JUST(tensor_processor.AddInputs({y}, DType::Double()).Apply());
+      input = JUST(tensor_processor.GetInputs()).at(0);
       attrs.SetAllAttrs(NullOpt, false, scalar.As<double>(), true, NullOpt, false);
     } else if (scalar.IsIntegral()) {
       attrs.SetAllAttrs(NullOpt, false, NullOpt, false, scalar.As<int64_t>(), true);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be float or int.";
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, y}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, input}, attrs);
   }
 
  private:
@@ -343,16 +347,20 @@ class WhereScalarYFunctor {
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("bool_operand", "has_bool_operand", "float_operand",
                                        "has_float_operand", "int_operand", "has_int_operand");
+    auto input = x;
     if (scalar.IsBool()) {
       attrs.SetAllAttrs(scalar.As<bool>(), true, NullOpt, false, NullOpt, false);
     } else if (scalar.IsFloatingPoint()) {
+      TensorProcessor tensor_processor;
+      JUST(tensor_processor.AddInputs({x}, DType::Double()).Apply());
+      input = JUST(tensor_processor.GetInputs()).at(0);
       attrs.SetAllAttrs(NullOpt, false, scalar.As<double>(), true, NullOpt, false);
     } else if (scalar.IsIntegral()) {
       attrs.SetAllAttrs(NullOpt, false, NullOpt, false, scalar.As<int64_t>(), true);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be bool, float or int.";
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, input}, attrs);
   }
 
  private:
