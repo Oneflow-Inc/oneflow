@@ -484,21 +484,22 @@ class MultinomialFunctor {
       << "The input probability tensor must be 1 or 2 dim, "
       << "but got: " << x->ndim();
     CHECK_OR_RETURN(x->dtype()->is_floating_point())
-      << "multinomial only supports floating-point dtypes for input, but got: "
-      << x->dtype()->name();
+        << "multinomial only supports floating-point dtypes for input, but got: "
+        << x->dtype()->name();
     CHECK_OR_RETURN(num_samples > 0) << "cannot sample num_samples <= 0 samples";
     int64_t num_categories = x->dim(x->ndim() - 1);
     CHECK_OR_RETURN(replacement || num_samples <= num_categories)
-      << "cannot sample num_samples > prob_dist.size(-1) samples without replacement";
+        << "cannot sample num_samples > prob_dist.size(-1) samples without replacement";
 
     /* The largest consecutive integer representable in float32 (2^24) */
     constexpr int64_t FLOAT32_MAX_CONSECUTIVE_INT = 1 << (FLT_MANT_DIG);
     // Since the index tensor is float, numCategories cannot exceed max float integer precision
-    CHECK_OR_RETURN(num_categories <= FLOAT32_MAX_CONSECUTIVE_INT) << "number of categories cannot exceed 2^24";    
+    CHECK_OR_RETURN(num_categories <= FLOAT32_MAX_CONSECUTIVE_INT)
+        << "number of categories cannot exceed 2^24";
     // Fast-path for no replacement.
     // Reference:
     // https://github.com/pytorch/pytorch/issues/11931#issuecomment-625882503
-     if (!replacement) {
+    if (!replacement) {
       // The algorithm is from gumbel softmax.
       // s = argmax( logp - log(-log(eps)) ) where eps ~ U(0, 1)
       // Here we can apply exp to the formula which will not affect result of
@@ -506,7 +507,8 @@ class MultinomialFunctor {
       // s = argmax( p / (-log(eps)) ) where eps ~ U(0, 1).
       // We can also simplify the formula above by
       // s = argmax( p / q ) where q ~ Exp(1)
-      std::shared_ptr<Tensor> q = JUST(functional::Empty(*(x->shape()), x->dtype(), JUST(x->device()), false));
+      std::shared_ptr<Tensor> q =
+          JUST(functional::Empty(*(x->shape()), x->dtype(), JUST(x->device()), false));
       q = JUST(functional::Exponential(q, 1, generator));
       // In theory the probability to generate 0 from exponential distribution is
       // 0. However, on CUDA side there is a protection to avoid 0s, but on CPU

@@ -69,7 +69,7 @@ class MultinomialWithReplacementCpuKernel final : public user_op::OpKernel {
     CHECK_NOTNULL(generator);
     auto cpu_gen = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
     std::lock_guard<std::mutex> lock(cpu_gen->mutex_);
-    
+
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -78,7 +78,7 @@ class MultinomialWithReplacementCpuKernel final : public user_op::OpKernel {
     int64_t* result_ptr = out->mut_dptr<int64_t>();
     /* cumulative probability distribution vector */
     T* cum_dist_ptr = tmp_buffer->mut_dptr<T>();
-    
+
     int64_t n_categories = x->shape_view().At(x->shape_view().NumAxes() - 1);
     int64_t n_dist = x->shape_view().NumAxes() > 1 ? x->shape_view().At(0) : 1;
     const int32_t num_samples = ctx->Attr<int32_t>("num_samples");
@@ -91,74 +91,76 @@ class MultinomialWithReplacementCpuKernel final : public user_op::OpKernel {
     one::pytorch_mt19937_engine& engine = cpu_gen->torch_engine();
 
     for (int i = 0; i < n_dist; ++i) {
-        /* Get normalized cumulative distribution from prob distribution */
-        T sum = 0;
-        T val;
-        for (int j = 0; j < n_categories; ++j) {
-            val = self_ptr[i * self_stride_0 + j * self_stride_1];
-            CHECK(val >= 0) << "invalid multinomial distribution (encountering probability entry < 0)";
-            CHECK(std::isfinite(val)) << "invalid multinomial distribution (encountering probability entry = infinity or NaN)";
-            sum += val;
-            cum_dist_ptr[j] = sum;
+      /* Get normalized cumulative distribution from prob distribution */
+      T sum = 0;
+      T val;
+      for (int j = 0; j < n_categories; ++j) {
+        val = self_ptr[i * self_stride_0 + j * self_stride_1];
+        CHECK(val >= 0) << "invalid multinomial distribution (encountering probability entry < 0)";
+        CHECK(std::isfinite(val)) << "invalid multinomial distribution (encountering probability "
+                                     "entry = infinity or NaN)";
+        sum += val;
+        cum_dist_ptr[j] = sum;
+      }
+
+      CHECK(sum > 0) << "invalid multinomial distribution (sum of probabilities <= 0)";
+
+      /* normalize cumulative probability distribution so that last val is 1
+      i.e. doesn't assume original self row sums to one */
+      if ((sum > 0) || ((sum < 1.00001) && (sum > 0.99999))) {
+        for (int j = 0; j < n_categories; ++j) { cum_dist_ptr[j] /= sum; }
+      }
+
+      for (int j = 0; j < num_samples; ++j) {
+        /* sample a probability mass from a uniform distribution */
+        // at::uniform_real_distribution<double> uniform(0, 1);
+        // double uniform_sample = uniform(gen);
+        uint32_t random1 = engine();
+        uint32_t random2 = engine();
+        uint64_t rand_unit = make64BitsFrom32Bits(random1, random2);
+        double uniform_sample = uniform_real(rand_unit, 0.0, 1.0);
+
+        // Do a binary search for the slot in which the prob falls
+        // ie cum_dist[row][slot-1] < uniform_prob < cum_distr[row][slot]
+        int left_pointer = 0;
+        int right_pointer = n_categories;
+        int mid_pointer;
+        T cum_prob;
+        int sample_idx;
+        // Make sure the last cumulative distribution bucket sums to 1
+        cum_dist_ptr[(n_categories - 1)] = 1;
+
+        while (right_pointer - left_pointer > 0) {
+          mid_pointer = left_pointer + (right_pointer - left_pointer) / 2;
+          cum_prob = cum_dist_ptr[mid_pointer];
+          if (cum_prob < uniform_sample) {
+            left_pointer = mid_pointer + 1;
+          } else {
+            right_pointer = mid_pointer;
+          }
         }
+        sample_idx = left_pointer;
 
-        CHECK(sum > 0) << "invalid multinomial distribution (sum of probabilities <= 0)";
-
-        /* normalize cumulative probability distribution so that last val is 1
-        i.e. doesn't assume original self row sums to one */
-        if ((sum > 0) || ((sum < 1.00001) && (sum > 0.99999))) {
-            for (int j = 0; j < n_categories; ++j) {
-                cum_dist_ptr[j] /= sum;
-            }
-        }
-
-        for (int j = 0; j < num_samples; ++j) {
-            /* sample a probability mass from a uniform distribution */
-            // at::uniform_real_distribution<double> uniform(0, 1);
-            // double uniform_sample = uniform(gen);
-            uint32_t random1 = engine();
-            uint32_t random2 = engine();
-            uint64_t rand_unit = make64BitsFrom32Bits(random1, random2);
-            double uniform_sample = uniform_real(rand_unit, 0.0, 1.0);
-
-            // Do a binary search for the slot in which the prob falls
-            // ie cum_dist[row][slot-1] < uniform_prob < cum_distr[row][slot]
-            int left_pointer = 0;
-            int right_pointer = n_categories;
-            int mid_pointer;
-            T cum_prob;
-            int sample_idx;
-            // Make sure the last cumulative distribution bucket sums to 1
-            cum_dist_ptr[(n_categories - 1)] = 1;
-
-            while (right_pointer - left_pointer > 0) {
-                mid_pointer = left_pointer + (right_pointer - left_pointer) / 2;
-                cum_prob = cum_dist_ptr[mid_pointer];
-                if (cum_prob < uniform_sample) {
-                    left_pointer = mid_pointer + 1;
-                } else {
-                    right_pointer = mid_pointer;
-                }
-            }
-            sample_idx = left_pointer;
-
-            // store in result tensor (will be incremented for lua compat by wrapper)
-            result_ptr[i * result_dist_stride_0 + j * result_dist_stride_1] = sample_idx;
-        }
-
+        // store in result tensor (will be incremented for lua compat by wrapper)
+        result_ptr[i * result_dist_stride_0 + j * result_dist_stride_1] = sample_idx;
+      }
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MULTINOMIAL_WITH_REPLACEMENT_CPU_KERNEL(dtype)          \
-  REGISTER_USER_KERNEL("multinomial_with_replacement")                       \
-      .SetCreateFn<MultinomialWithReplacementCpuKernel<dtype>>()      \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
+#define REGISTER_MULTINOMIAL_WITH_REPLACEMENT_CPU_KERNEL(dtype)                        \
+  REGISTER_USER_KERNEL("multinomial_with_replacement")                                 \
+      .SetCreateFn<MultinomialWithReplacementCpuKernel<dtype>>()                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                  \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferTmpSizeForCpuKernel);
 
 REGISTER_MULTINOMIAL_WITH_REPLACEMENT_CPU_KERNEL(float)
 REGISTER_MULTINOMIAL_WITH_REPLACEMENT_CPU_KERNEL(double)
 
+<<<<<<< HEAD
+=======
+}  // namespace
+>>>>>>> a71b7bf47ed5e20e4990e69d408f377d5c0120c9
 }  // namespace oneflow
