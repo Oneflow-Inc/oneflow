@@ -1,7 +1,6 @@
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/cuda_util.h"
 
-#include <cusparse.h>
 
 #define CHECK_CUSPARSE(func)                                                   \
   {                                                                            \
@@ -56,32 +55,35 @@ class CudaSpmmCooKernel final : public user_op::OpKernel {
     cusparseHandle_t handle = NULL;
     cusparseSpMatDescr_t matA;
     cusparseDnMatDescr_t matB, matC;
+    auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
 
-    CHECK_CUSPARSE(cusparseCreate(&handle)) // inside stream
     // Create sparse matrix A in COO format
-    CHECK_CUSPARSE(cusparseCreateCoo(&matA, A_num_rows, A_num_cols, A_nnz, 
+    OF_CUSPARSE_CHECK(cusparseCreateCoo(&matA, A_num_rows, A_num_cols, A_nnz, 
                                    const_cast<int32_t*>(dA_rows), const_cast<int32_t*>(dA_columns), const_cast<float*>(dA_values),
                                    CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO,
-                                      CUDA_R_32F))
+                                      CUDA_R_32F));
     // Create dense matrix B
-    CHECK_CUSPARSE(cusparseCreateDnMat(&matB, B_num_rows, B_num_cols, ldb, const_cast<float*>(dB),
-                                       CUDA_R_32F, CUSPARSE_ORDER_ROW))
+    OF_CUSPARSE_CHECK(cusparseCreateDnMat(&matB, B_num_rows, B_num_cols, ldb, const_cast<float*>(dB),
+                                       CUDA_R_32F, CUSPARSE_ORDER_ROW));
     // Create dense matrix C
-    CHECK_CUSPARSE(cusparseCreateDnMat(&matC, A_num_rows, B_num_cols, ldc, dC,
-                                       CUDA_R_32F,CUSPARSE_ORDER_ROW))
+    OF_CUSPARSE_CHECK(cusparseCreateDnMat(&matC, A_num_rows, B_num_cols, ldc, dC,
+                                       CUDA_R_32F,CUSPARSE_ORDER_ROW));
 
     // execute SpMM
-    CHECK_CUSPARSE(cusparseSpMM(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
+/*     OF_CUSPARSE_CHECK(cusparseSpMM(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
                                 CUSPARSE_OPERATION_NON_TRANSPOSE,
                                 &alpha, matA, matB, &beta, matC,
-                                CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, nullptr))
-
+                                CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, nullptr)) */
+    OF_CUSPARSE_CHECK(cusparseSpMM(
+                cuda_stream->cusparse_handle(),  CUSPARSE_OPERATION_NON_TRANSPOSE,
+                CUSPARSE_OPERATION_NON_TRANSPOSE,
+                &alpha, matA, matB, &beta, matC,
+                CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, nullptr));
+      
     // destroy matrix/vector descriptors
-    CHECK_CUSPARSE(cusparseDestroySpMat(matA))
-    CHECK_CUSPARSE(cusparseDestroyDnMat(matB))
-    CHECK_CUSPARSE(cusparseDestroyDnMat(matC))
-    CHECK_CUSPARSE(cusparseDestroy(handle))
-
+    OF_CUSPARSE_CHECK(cusparseDestroySpMat(matA));
+    OF_CUSPARSE_CHECK(cusparseDestroyDnMat(matB));
+    OF_CUSPARSE_CHECK(cusparseDestroyDnMat(matC));
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

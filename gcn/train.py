@@ -6,37 +6,32 @@ import argparse
 import numpy as np
 
 import oneflow as flow
-import oneflow.nn.functional as F
-import oneflow.optim as optim
 
 from utils import load_data, accuracy
 from gcn_spmm import GCN
 
 # Training settings
-# parser = argparse.ArgumentParser()
-# parser.add_argument('--no-cuda', action='store_true', default=False,
-#                     help='Disables CUDA training.')
-# parser.add_argument('--fastmode', action='store_true', default=False,
-#                     help='Validate during training pass.')
-# parser.add_argument('--seed', type=int, default=42, help='Random seed.')
-# parser.add_argument('--epochs', type=int, default=200,
-#                     help='Number of epochs to train.')
-# parser.add_argument('--lr', type=float, default=0.01,
-#                     help='Initial learning rate.')
-# parser.add_argument('--weight_decay', type=float, default=5e-4,
-#                     help='Weight decay (L2 loss on parameters).')
-# parser.add_argument('--hidden', type=int, default=16,
-#                     help='Number of hidden units.')
-# parser.add_argument('--dropout', type=float, default=0.5,
-#                     help='Dropout rate (1 - keep probability).')
+parser = argparse.ArgumentParser()
 
-# args = parser.parse_args()
-# args.cuda = not args.no_cuda and flow.cuda.is_available()
+parser.add_argument('--fastmode', action='store_true', default=False,
+                    help='Validate during training pass.')
+parser.add_argument('--seed', type=int, default=42, help='Random seed.')
+parser.add_argument('--epochs', type=int, default=200,
+                    help='Number of epochs to train.')
+parser.add_argument('--lr', type=float, default=0.01,
+                    help='Initial learning rate.')
+parser.add_argument('--weight_decay', type=float, default=5e-4,
+                    help='Weight decay (L2 loss on parameters).')
+parser.add_argument('--hidden', type=int, default=16,
+                    help='Number of hidden units.')
+parser.add_argument('--dropout', type=float, default=0.5,
+                    help='Dropout rate (1 - keep probability).')
 
-# np.random.seed(args.seed)
-# flow.manual_seed(args.seed)
-# if args.cuda:
-#     flow.cuda.manual_seed(args.seed)
+args = parser.parse_args()
+
+np.random.seed(args.seed)
+flow.manual_seed(args.seed)
+flow.cuda.manual_seed(args.seed)
 
 # Load data
 adj, features, labels, idx_train, idx_val, idx_test = load_data()
@@ -47,28 +42,24 @@ num_nodes, feat_dim = features.shape
 rows = num_nodes
 cols = num_nodes
 batch_size = num_nodes
-hidden_size = 16
-class_size = 7
 num_edges = len(cooRowInd)
 train_num = len(idx_train)
 
-#len(cooRowInd) == len(cooColInd) == len(cooValues) == num_edges
 
+print("num_nodes, feat_dim, rows, cols, num_edges, train_num, num_class")
+print(num_nodes, feat_dim, rows, cols, num_edges, train_num, labels.max().item() + 1)
 
-print("num_nodes, feat_dim, rows, cols, num_edges, train_num")
-print(num_nodes, feat_dim, rows, cols, num_edges, train_num)
-
-device = flow.device("cuda:1")
+device = flow.device("cuda:0")
 print("Using {} device".format(device))
 
 # Model and optimizer
-model = GCN(nfeat=feat_dim,
-            nhid=hidden_size,
-            nclass=class_size,
-            dropout=0.5)
+model = GCN(nfeat=feat_dim,  #2708
+            nhid=args.hidden,  # 16
+            nclass=labels.max().item() + 1,  # 7
+            dropout=args.dropout)   
 loss_fn = flow.nn.NLLLoss().to(device)
-optimizer = optim.Adam(model.parameters(),
-                       lr=0.01, weight_decay=5e-4)
+optimizer = flow.optim.Adam(model.parameters(),
+                       lr=args.lr, weight_decay=args.weight_decay)
 # if args.cuda:
 
 
@@ -94,12 +85,6 @@ def train(epoch):
     loss_train.backward()
     optimizer.step()
 
-    # if not args.fastmode:
-    #     # Evaluate validation set performance separately,
-    #     # deactivates dropout during validation run.
-    #     model.eval()
-    #     output = model(features, adj)
-
     loss_val = loss_fn(output[idx_val], labels[idx_val])
     acc_val = accuracy(output[idx_val], labels[idx_val])
     print('Epoch: {:04d}'.format(epoch+1),
@@ -122,7 +107,7 @@ def test():
 
 # Train model
 t_total = time.time()
-for epoch in range(200):
+for epoch in range(args.epochs):
     train(epoch)
 print("Optimization Finished!")
 print("Total time elapsed: {:.4f}s".format(time.time() - t_total))

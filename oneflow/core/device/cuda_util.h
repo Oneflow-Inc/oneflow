@@ -20,6 +20,7 @@ limitations under the License.
 
 #ifdef WITH_CUDA
 
+#include <cusparse.h>
 #include <cublas_v2.h>
 #include <cuda.h>
 #if CUDA_VERSION >= 10010
@@ -67,6 +68,12 @@ const char* NvjpegGetErrorString(nvjpegStatus_t error);
        _of_cublas_check_status != CUBLAS_STATUS_SUCCESS;)                                          \
   LOG(FATAL) << "Check failed: " #condition " : " << CublasGetErrorString(_of_cublas_check_status) \
              << " (" << _of_cublas_check_status << ") "
+
+#define OF_CUSPARSE_CHECK(condition)                                                                 \
+  for (cusparseStatus_t _of_cusparse_check_status = (condition);                                       \
+       _of_cusparse_check_status != CUSPARSE_STATUS_SUCCESS;)                                          \
+  LOG(FATAL) << "Check failed: " #condition " : " << cusparseGetErrorString(_of_cusparse_check_status) \
+             << " (" << _of_cusparse_check_status << ") "                       
 
 #define OF_CURAND_CHECK(condition)                                                                 \
   for (curandStatus_t _of_curand_check_status = (condition);                                       \
