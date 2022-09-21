@@ -411,6 +411,7 @@ from . import (
     boxing,
     backends,
     amp,
+    hub,
 )
 import oneflow.utils.data
 import oneflow.framework.docstr as docstr
