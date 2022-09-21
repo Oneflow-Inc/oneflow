@@ -173,7 +173,6 @@ def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
     assert HasAllMultiClientEnvVars()
 
     def str2int(env_config):
-        assert env_config.isdigit()
         return int(env_config)
 
     bootstrap_conf = ctrl_bootstrap_pb.BootstrapConf()
