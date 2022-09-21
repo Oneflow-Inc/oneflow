@@ -94,7 +94,6 @@ enum class BinaryOp {
   kSqrtBackwardWithDyX,
   kSquareBackwardWithDyX,
   kTanBackwardWithDyX,
-  // kNanSum,
 };
 
 }
