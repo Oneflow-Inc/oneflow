@@ -365,5 +365,4 @@ REGISTER_KERNEL_LAUNCH_GPU_KERNEL(int64_t)
 #undef REGISTER_KERNEL_LAUNCH_GPU_KERNEL
 
 }  // namespace
-
 }  // namespace oneflow
