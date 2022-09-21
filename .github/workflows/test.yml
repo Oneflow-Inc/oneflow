@@ -339,8 +339,7 @@ jobs:
           src-dir: ${{ env.MANYLINUX_CACHE_DIR }}/build/cpack
           dst-dir: cpack
       - name: Upload whl
-        # if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' && matrix.entry != 'cu102_xla' }}
-        if: true
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' && matrix.entry != 'cu102_xla' }}
         uses: Oneflow-Inc/get-oneflow/digest/upload@support-pr-sym-link
         timeout-minutes: 10
         with:
