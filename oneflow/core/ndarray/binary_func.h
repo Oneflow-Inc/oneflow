@@ -20,8 +20,6 @@ limitations under the License.
 #include <climits>
 #include <cfloat>
 #include <cmath>
-#include "oneflow/core/ep/common/primitive/unary_functor.h"
-#include "oneflow/core/ep/include/primitive/unary_op.h"
 
 #if defined(__CUDACC__)
 #include <cuda_fp16.h>
@@ -48,8 +46,7 @@ namespace oneflow {
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, ARITHMETIC_REDUCE_BINARY_FUNC_NAME_SEQ)
 #define LOGICAL_REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, LOGICAL_REDUCE_BINARY_FUNC_NAME_SEQ)
-#define NANSUM_REDUCE_BINARY_FUNC_SEQ \
-  OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, (NanSum))
+#define NANSUM_REDUCE_BINARY_FUNC_SEQ OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, (NanSum))
 
 #define NO_HALF_UTIL_FOUND         \
   printf("cuda arch must >= 530"); \
@@ -72,14 +69,10 @@ struct BinaryFuncTrait final {
 
 template<typename T>
 struct BinaryFuncNanSum final {
-  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { 
-    // if (oneflow::detail::numerics<T>::isnan(x))
-    //   return oneflow::detail::numerics<T>::isnan(y) ? T{0} : y;
-    // return oneflow::detail::numerics<T>::isnan(y) ? x : x + y;
-    if (std::isnan(x))
-      return std::isnan(y) ? T{0} : y;
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) {
+    if (std::isnan(x)) return std::isnan(y) ? T{0} : y;
     return std::isnan(y) ? x : x + y;
-    }
+  }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncNanSum);
 
@@ -309,11 +302,10 @@ struct BinaryFuncAdd<half> final {
 
 template<>
 struct BinaryFuncNanSum<half> final {
-  static __device__ __forceinline__ half Invoke(const half x, const half y) { 
-    if (std::isnan(__half2float(x)))
-      return std::isnan(__half2float(y)) ? __double2half(0.) : y;
-    return  std::isnan(__half2float(y)) ? __hadd(x, y) : x;
-    }
+  static __device__ __forceinline__ half Invoke(const half x, const half y) {
+    if (std::isnan(__half2float(x))) return std::isnan(__half2float(y)) ? __double2half(0.) : y;
+    return std::isnan(__half2float(y)) ? __hadd(x, y) : x;
+  }
 };
 
 template<>
