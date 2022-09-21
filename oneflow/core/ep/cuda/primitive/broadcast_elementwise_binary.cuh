@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/ep/cuda/primitive/binary_functor.cuh"
-
+#include "oneflow/core/ep/include/primitive/offset_to_index_calculator.h"
 namespace oneflow {
 
 namespace ep {
@@ -50,7 +50,7 @@ template<size_t max_dims, typename IndexType>
 struct BroadcastElementwiseBinaryParams {
   NdIndexOffsetHelper<IndexType, max_dims> src0_index_helper;
   NdIndexOffsetHelper<IndexType, max_dims> src1_index_helper;
-  NdIndexOffsetHelper<IndexType, max_dims> dst_index_helper;
+  OffsetToIndexCalculator<IndexType, max_dims> dst_index_helper;
   size_t num_dims;
   IndexType src0_index_mask[max_dims];
   IndexType src1_index_mask[max_dims];
@@ -125,7 +125,7 @@ void LaunchKernel(Stream* stream, int num_dims, const int64_t* src0_dims, const 
   }
   params.src0_index_helper = NdIndexOffsetHelper<IndexType, max_dims>(src0_dims, num_dims);
   params.src1_index_helper = NdIndexOffsetHelper<IndexType, max_dims>(src1_dims, num_dims);
-  params.dst_index_helper = NdIndexOffsetHelper<IndexType, max_dims>(dst_dims, num_dims);
+  params.dst_index_helper = OffsetToIndexCalculator<IndexType, max_dims>(dst_dims, num_dims);
   params.num_dims = num_dims;
   params.src0 = src0;
   params.src1 = src1;
