@@ -349,6 +349,7 @@ jobs:
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
           src-dir: ${{ env.WHEELHOUSE_DIR }}
           dst-dir: whl
+          pr-sym-link: ${{ github.event.pull_request.number }}
 
   find-test-cache-distributed:
     name: "Find test cache (distributed)"
