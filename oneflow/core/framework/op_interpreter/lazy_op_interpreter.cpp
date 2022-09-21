@@ -219,6 +219,7 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
   JUST(GenVariableOpConfNdSbpStringByTensor(var_conf, input_tensor));
   // NOTE(chengcheng): Free EagerTensor not trainable
   var_conf->set_trainable(false);
+  var_conf->set_is_free_eager_tensor(true);
 
   auto infer_ctx = JUST(GetCurInferCtx());
   // NOTE(chengcheng): MUST reset unique op name before InferCtx::AddOp, FreeEagerTensor has no
