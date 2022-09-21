@@ -146,7 +146,7 @@ message VariableOpConf {
   optional RegularizerConf regularizer = 10;
   optional bool trainable = 11 [default = true];
   repeated string nd_sbp = 12;
-  optional bool is_free_eager_tensor = 13;
+  optional bool is_free_eager_tensor = 13 [default = false];
 }
 
 message TickOpConf {
