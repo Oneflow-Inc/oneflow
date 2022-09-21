@@ -13,21 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_OUTLINEJITFUNCTION_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_OUTLINEJITFUNCTION_H_
 
-#include "mlir/Pass/Pass.h"
-
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWUTILS_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWUTILS_H_
+#include "mlir/Pass/PassManager.h"
+#include "mlir/Support/LLVM.h"
+#include "llvm/ADT/StringExtras.h"
 namespace mlir {
-
 namespace oneflow {
-std::unique_ptr<mlir::Pass> createConvertOFKLCalleeToLLVMPass();
-std::unique_ptr<mlir::Pass> createKernelLaunchFunctionPass();
-std::unique_ptr<mlir::Pass> createOutlineJitFunctionPass();
-std::unique_ptr<mlir::Pass> createFuseIntoExistingOpPass();
-
+void CheckEnableIRPrinting(mlir::PassManager& pm);
+// sanitize identifier to make the special name allowed as a legal token
+StringRef SanitizeIdentifier(StringRef name, SmallString<16>& buffer,
+                             StringRef allowedPunctChars = "$._", bool allowTrailingDigit = true);
 }  // namespace oneflow
-
 }  // namespace mlir
 
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_OUTLINEJITFUNCTION_H_
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWUTILS_H_
