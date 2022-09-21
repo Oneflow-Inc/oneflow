@@ -13,19 +13,58 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import argparse
-import numpy as np
 import os
 import time
 import unittest
+import argparse
 
-import flowvision.transforms as transforms
+import numpy as np
+
 import oneflow as flow
 import oneflow.unittest
-
 from alexnet_model import alexnet
-from oneflow.test.dataloader.data_utils import load_data_fashion_mnist
+import flowvision as vision
+import flowvision.transforms as transforms
 
+
+def load_data_fashion_mnist(
+    batch_size,
+    resize=None,
+    root="./data-test/fashion-mnist",
+    download=True,
+    source_url=None,
+    num_workers=0,
+):
+    """Download the Fashion-MNIST dataset and then load into memory."""
+    root = os.path.expanduser(root)
+    trans = []
+    if resize:
+        trans.append(transforms.Resize(resize))
+    trans.append(transforms.ToTensor())
+    transform = transforms.Compose(trans)
+
+    mnist_train = vision.datasets.FashionMNIST(
+        root=root,
+        train=True,
+        transform=transform,
+        download=download,
+        source_url=source_url,
+    )
+    mnist_test = vision.datasets.FashionMNIST(
+        root=root,
+        train=False,
+        transform=transform,
+        download=download,
+        source_url=source_url,
+    )
+
+    train_iter = flow.utils.data.DataLoader(
+        mnist_train, batch_size, shuffle=True, num_workers=num_workers
+    )
+    test_iter = flow.utils.data.DataLoader(
+        mnist_test, batch_size, shuffle=False, num_workers=num_workers
+    )
+    return train_iter, test_iter
 
 def _parse_args():
     parser = argparse.ArgumentParser("flags for train alexnet")
