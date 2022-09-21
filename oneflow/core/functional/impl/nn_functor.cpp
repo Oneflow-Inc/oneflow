@@ -3649,12 +3649,18 @@ class OneEmbeddingLookupFunctor {
                            const std::string& embedding_name, const int64_t line_size,
                            const int64_t embedding_size, const bool is_full_cache,
                            const int32_t num_tables, const std::string& embedding_tables,
-                           const int64_t seed) const {
-    auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "embedding_name", "line_size", "embedding_size",
-                                       "is_full_cache", "num_tables", "embedding_tables", "seed");
+                           const Optional<int64_t>& padding_idx, const int64_t seed) const {
+    int64_t padding_idx_val = -1;
+    bool has_padding_idx = false;
+    if (padding_idx.has_value()) {
+      padding_idx_val = JUST(padding_idx);
+      has_padding_idx = true;
+    }
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
+        "dtype", "embedding_name", "line_size", "embedding_size", "is_full_cache", "num_tables",
+        "embedding_tables", "seed", "padding_idx", "has_padding_idx");
     attrs.SetAllAttrs(dtype->data_type(), embedding_name, line_size, embedding_size, is_full_cache,
-                      num_tables, embedding_tables, seed);
+                      num_tables, embedding_tables, seed, padding_idx_val, has_padding_idx);
     if (table_ids) {
       return OpInterpUtil::Dispatch<Tensor>(*op_has_table_ids_, {shadow, ids, JUST(table_ids)},
                                             attrs);

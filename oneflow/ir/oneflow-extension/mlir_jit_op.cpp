@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/user/ops/nn_util.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/JITOpInfer.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Block.h"
@@ -38,88 +39,26 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
-  auto mlir_assembly_str = ctx->Attr<std::string>("mlir_assembly");
-  mlir::DialectRegistry registry;
-  mlir::registerAllDialects(registry);
-  mlir::MLIRContext context(registry);
-  context.loadDialect<mlir::func::FuncDialect>();
-  context.loadDialect<mlir::oneflow::OneFlowDialect>();
-
-  mlir::OwningOpRef<mlir::ModuleOp> module =
-      mlir::parseSourceString<mlir::ModuleOp>(mlir_assembly_str, &context);
-  if (!module) {
-    LOG(ERROR) << "Fail to load mlir assembly";
-    exit(1);
-  }
-
-  mlir::func::FuncOp funcOp = mlir::SymbolTable::lookupNearestSymbolFrom<mlir::func::FuncOp>(
-      module.get(), mlir::SymbolRefAttr::get(&context, ctx->op_name()));
-  CHECK(funcOp) << "Fail to find funcOp of symbol " << ctx->op_name();
-  const auto funcType = funcOp.getFunctionType();
-  CHECK_EQ(funcType.getNumInputs(), ctx->input_size("in"))
-      << "input size mismatch with mlir assembly";
-  CHECK_EQ(funcType.getNumResults(), ctx->output_size("out"))
-      << "output size mismatch with mlir assembly";
-  int32_t arg_i = 0;
-  for (mlir::Type arg_type : funcType.getInputs()) {
-    if (auto rankedTensorType = arg_type.dyn_cast<mlir::RankedTensorType>()) {
-      CHECK_EQ((Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()}),
-               ctx->InputShape("in", arg_i))
-          << "arg #" << arg_i;
-      CHECK_EQ(mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType()),
-               ctx->InputDType("in", arg_i))
-          << "arg #" << arg_i;
-      arg_i += 1;
-    } else {
-      std::string arg_type_str = "";
-      llvm::raw_string_ostream os(arg_type_str);
-      arg_type.print(os);
-      LOG(FATAL) << "Unsupported arg type " << arg_type_str;
-    }
-  }
-  int32_t res_i = 0;
-  for (mlir::Type res_type : funcType.getResults()) {
-    if (auto rankedTensorType = res_type.dyn_cast<mlir::RankedTensorType>()) {
-      ctx->SetOutputShape(
-          "out", res_i,
-          Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()});
-      ctx->SetOutputDType(
-          "out", res_i,
-          mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType()));
-      res_i += 1;
-    } else {
-      std::string res_type_str = "";
-      llvm::raw_string_ostream os(res_type_str);
-      res_type.print(os);
-      LOG(FATAL) << "Unsupported arg type " << res_type_str;
-    }
-  }
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InferDataTypeFn(user_op::InferContext* ctx) {
-  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 }  // namespace
 
 Maybe<void> MlirJitOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  return InferTensorDesc(ctx);
+  return ir::jit::InferTensorDesc(ctx);
 }
 
 Maybe<void> MlirJitOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferTensorDesc(ctx);
+  return ir::jit::InferTensorDesc(ctx);
 }
 
 Maybe<void> MlirJitOp::GetSbp(user_op::SbpContext* ctx) { return GetSbpFn(ctx); }
 
-Maybe<void> MlirJitOp::InferDataType(user_op::InferContext* ctx) { return InferDataTypeFn(ctx); }
+Maybe<void> MlirJitOp::InferDataType(user_op::InferContext* ctx) {
+  return ir::jit::SetTensorDateType(ctx);
+  ;
+}
 
 }  // namespace oneflow

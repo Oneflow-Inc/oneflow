@@ -9576,6 +9576,8 @@ def OneFlow_EmbeddingLookupPlaceholderOp : OneFlow_BaseOp<"embedding_lookup_plac
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
     DefaultValuedAttr<BoolAttr, "false">:$is_full_cache,
     DefaultValuedAttr<SI32Attr, "1">:$num_tables,
+    DefaultValuedAttr<SI64Attr, "-1">:$padding_idx,
+    DefaultValuedAttr<BoolAttr, "false">:$has_padding_idx,
     StrAttr:$embedding_tables,
     DefaultValuedAttr<SI64Attr, "0">:$seed
   );
@@ -9614,7 +9616,9 @@ def OneFlow_UniqueKeyValuePairOp : OneFlow_BaseOp<"unique_key_value_pair", [NoSi
     OneFlow_Tensor:$inverse_indices
   );
   let attrs = (ins
-    DefaultValuedAttr<SI32Attr, "1">:$num_tables,
+    DefaultValuedAttr<SI32Attr, "1">:$num_tables, 
+    DefaultValuedAttr<SI64Attr, "-1">:$padding_idx, 
+    DefaultValuedAttr<BoolAttr, "false">:$has_padding_idx,
     StrAttr:$embedding_name
   );
   let same_output_regst_num = 1;
@@ -9639,6 +9643,8 @@ def OneFlow_IdShuffleOp : OneFlow_BaseOp<"id_shuffle", [NoSideEffect, DeclareOpI
   );
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "1">:$num_tables,
+    DefaultValuedAttr<SI64Attr, "-1">:$padding_idx,
+    DefaultValuedAttr<BoolAttr, "false">:$has_padding_idx,
     StrAttr:$embedding_name
   );
   let same_output_regst_num = 2;
@@ -10300,15 +10306,9 @@ def OneFlow_CopyD2HOp : OneFlow_BaseOp<"copy_d2h", [NoSideEffect, NoGrad, Declar
 
 #endif // GET_ONEFLOW_SYSTEM_OP_DEFINITIONS
 
-// Group: MLIR_JIT
-// mlir_jit
-// Total: 1
-
-#ifdef GET_ONEFLOW_MLIR_JIT_OP_DEFINITIONS
-
 include "mlir/Interfaces/CallInterfaces.td"
 
-def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpInterfaceMethods<UserOpCompatibleInterface> ] > {
+class OneFlow_JITLikeOp <string mnemonic> : OneFlow_BaseOp<mnemonic, [CallOpInterface, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins Variadic<AnyType>:$in);
   let output = (outs Variadic<AnyType>:$out);
   let attrs = (ins
@@ -10344,5 +10344,15 @@ def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpI
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
+
+// Group: MLIR_JIT
+// mlir_jit, kernel_launch
+// Total: 2
+
+#ifdef GET_ONEFLOW_MLIR_JIT_OP_DEFINITIONS
+
+def OneFlow_MlirJitOp : OneFlow_JITLikeOp<"mlir_jit"> {}
+
+def OneFlow_KernelLaunchOp : OneFlow_JITLikeOp<"kernel_launch"> {}
 
 #endif // GET_ONEFLOW_MLIR_JIT_OP_DEFINITIONS
