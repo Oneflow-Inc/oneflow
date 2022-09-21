@@ -438,7 +438,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
       // for (int64_t rank_id = 1; rank_id < GlobalProcessCtx::WorldSize(); ++rank_id) {
       for (int64_t rank_id = 1; rank_id < 2; ++rank_id) {
         std::string rank_plan_name = plan_name_prefix + std::to_string(rank_id);
-        Singleton<CtrlClient>::Get()->ClearMasterKV(rank_plan_name);
+        Singleton<CtrlClient>::Get()->ClearKV(rank_plan_name);
       }
     }
     tc->Count("Graph name: " + name_ + " Clear sub plan", 1);
