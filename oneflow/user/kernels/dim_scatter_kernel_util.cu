@@ -61,7 +61,6 @@ INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kCUDA, BinOpAddFunctor);
 INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kCUDA, BinOpMulFunctor);
 INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kCUDA, BinOpUpdateFunctor);
 
-
 }  // namespace user_op
 }  // namespace oneflow
 

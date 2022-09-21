@@ -508,8 +508,16 @@ def _trunc(self):
     return flow._C.trunc(self)
 
 
-def _scatter(self, dim, index, src, inplace):
-    return flow._C.scatter(self, dim, index, src, inplace=inplace)
+def _scatter(self, dim, index, src, reduce=""):
+    if reduce == "":
+        reduce = None
+    return flow._C.scatter(self, dim, index, src, reduce, inplace=False)
+
+
+def _scatter_inplace(self, dim, index, src, reduce=""):
+    if reduce == "":
+        reduce = None
+    return flow._C.scatter(self, dim, index, src, reduce, inplace=True)
 
 
 def RegisterMethods():
@@ -578,9 +586,8 @@ def RegisterMethods():
     Tensor.mv = _mv
     Tensor.inverse = _inv
     Tensor.trunc = _trunc
-    Tensor.scatter = partial(_scatter, inplace=False)
-    Tensor.scatter_ = partial(_scatter, inplace=True)
-    
+    Tensor.scatter = _scatter
+    Tensor.scatter_ = _scatter_inplace
 
 
 def register_tensor_op(op_name):

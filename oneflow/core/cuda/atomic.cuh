@@ -227,6 +227,56 @@ __device__ __forceinline__ T Add(T* address, U val) {
   return internal::AddImpl(address, Cast<T>(val));
 }
 
+__device__ __forceinline__ float Mul(int32_t* address, const int32_t val) {
+  int32_t old = *address, assumed;
+  do {
+    assumed = old;
+    old = atomicCAS(address, assumed, val * assumed);
+  } while (assumed != old);
+  return old;
+}
+
+__device__ __forceinline__ float Mul(uint32_t* address, const uint32_t val) {
+  uint32_t old = *address, assumed;
+  do {
+    assumed = old;
+    old = atomicCAS(address, assumed, val * assumed);
+  } while (assumed != old);
+  return old;
+}
+
+__device__ __forceinline__ float Mul(uint64_t* address, const uint64_t val) {
+  static_assert(sizeof(uint64_t) == sizeof(unsigned long long int), "");
+  unsigned long long int old = *reinterpret_cast<unsigned long long int*>(address), assumed;
+  do {
+    assumed = old;
+    old = atomicCAS(reinterpret_cast<unsigned long long int*>(address), assumed,
+                    static_cast<unsigned long long int>(val) * assumed);
+  } while (assumed != old);
+  return old;
+}
+
+__device__ __forceinline__ float Mul(float* address, const float val) {
+  int32_t* address_as_int = reinterpret_cast<int32_t*>(address);
+  int32_t old = *address_as_int, assumed;
+  do {
+    assumed = old;
+    old = atomicCAS(address_as_int, assumed, __float_as_int(val * __int_as_float(assumed)));
+  } while (assumed != old);
+  return __int_as_float(old);
+}
+
+__device__ __forceinline__ float Mul(double* address, const double val) {
+  unsigned long long int* address_as_ull = reinterpret_cast<unsigned long long int*>(address);
+  unsigned long long int old = *address_as_ull, assumed;
+  do {
+    assumed = old;
+    old = atomicCAS(address_as_ull, assumed,
+                    __double_as_longlong(val * __longlong_as_double(assumed)));
+  } while (assumed != old);
+  return __longlong_as_double(old);
+}
+
 __device__ __forceinline__ float Max(float* address, const float val) {
   int* address_as_i = (int*)address;
   int old = *address_as_i;

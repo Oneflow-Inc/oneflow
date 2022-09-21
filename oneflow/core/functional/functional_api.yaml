@@ -1922,8 +1922,8 @@
 - name: "scatter"
   signature:
     [
-      "Tensor (Tensor input, Int32 dim, Tensor index, Tensor src, *, Bool inplace=False) => DimScatter",
-      "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src, *, Bool inplace=False) => DimScatterScalar",
+      "Tensor (Tensor input, Int32 dim, Tensor index, Tensor src, String reduce=None, *, Bool inplace=False) => DimScatter",
+      "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src, String reduce=None, *, Bool inplace=False) => DimScatterScalar",
     ]
   bind_python: True
 

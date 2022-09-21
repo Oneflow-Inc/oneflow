@@ -92,10 +92,10 @@ class MedianWithIndices : public OpExprGradFunction<MedianWithIndicesCaptureStat
       const auto& input = JUST(VectorAt(ctx->SavedTensors(), 0));
       const auto& indices = JUST(functional::Unsqueeze(JUST(VectorAt(ctx->SavedTensors(), 1)), -1));
       const auto& dout = JUST(functional::Unsqueeze(JUST(VectorAt(out_grads, 0)), -1));
-      JUST(VectorAt(*in_grads, 0)) = JUST(
-          functional::DimScatterUpdate(JUST(functional::Constant(*(input->shape()), Scalar(0),
-                                                           *dout->dtype(), JUST(dout->device()))),
-                                 -1, indices, dout, /*inplace*/ false));
+      JUST(VectorAt(*in_grads, 0)) = JUST(functional::DimScatterUpdate(
+          JUST(functional::Constant(*(input->shape()), Scalar(0), *dout->dtype(),
+                                    JUST(dout->device()))),
+          -1, indices, dout, /*inplace*/ false));
     }
     return Maybe<void>::Ok();
   }

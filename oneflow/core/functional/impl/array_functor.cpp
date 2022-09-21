@@ -988,7 +988,7 @@ std::string DimScatterTypeToString() {
   switch (T) {
     case DimScatterType::kUpdate: return "_update";
     case DimScatterType::kAdd: return "_add";
-    case DimScatterType::kMultiply: return "_multiply";
+    case DimScatterType::kMultiply: return "_mul";
   }
   return "";
 }
@@ -3350,7 +3350,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "DimScatterAddScalar");
   m.add_functor<impl::DimScatterScalarFunctorImpl<impl::DimScatterType::kMultiply>>(
       "DimScatterMulScalar");
-  m.add_functor<impl::DimScatterFunctor>("DimScatterScalar");
+  m.add_functor<impl::DimScatterScalarFunctor>("DimScatterScalar");
   m.add_functor<impl::DimScatterAddLikeFunctor>("DimScatterAddLike");
 
   m.add_functor<impl::TensorSetItemFunctor>("TensorSetItem");
