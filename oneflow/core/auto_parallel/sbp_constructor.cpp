@@ -232,9 +232,9 @@ Maybe<void> SbpConstructor::InitComputationCost(const OpGraph& op_graph) {
       double comp_cost = JUST(op_node->op().GetComputeComplexity(
           &sbp_node->sbp_sig_list_[sbp_id], LogicalBlobDesc4Bn, parallel_desc));
       if (comp_cost > GetValidMaxCopyCost()) {
-        sbp_node->cost_.at(sbp_id) = comp_cost;
+        sbp_node->cost_[sbp_id] = comp_cost;
       } else {
-        sbp_node->cost_.at(sbp_id) =
+        sbp_node->cost_[sbp_id] =
             cost_ratio_ * comp_cost
             * JUST(op_node->op().GetInputOutputFastestTimeShape())->elem_cnt();
       }
