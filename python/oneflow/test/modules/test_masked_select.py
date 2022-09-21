@@ -98,6 +98,8 @@ class TestMaskedSelect(flow.unittest.TestCase):
         np_res = [1, 1, 1, 1, 1, 1]
         test_case.assertTrue(np.allclose(flow_res.numpy(), np_res, 1e-05, 1e-05))
 
+    # def test_masked_select_input_zero(test_case):
+
 
 if __name__ == "__main__":
     unittest.main()
