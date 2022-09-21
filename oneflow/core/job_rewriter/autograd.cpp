@@ -725,6 +725,7 @@ Maybe<void> ScaleInitialDiffByLossScale(
     const auto& parallel_conf = initial_diff_node->parallel_desc().parallel_conf();
 
     std::string loss_scale_val_lbn;
+    std::string loss_diff_lbn = GenLogicalBlobName(initial_diff_lbi);
     if (train_conf.has_dynamic_loss_scale_policy()) {
       const auto& dynamic_loss_scale_state =
           JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
@@ -743,16 +744,19 @@ Maybe<void> ScaleInitialDiffByLossScale(
     }
     const DataType data_type = op_graph.GetLogicalBlobDesc(initial_diff_lbi).data_type();
     if (data_type != DataType::kFloat) {
-      auto cast_op = user_op::UserOpConfWrapperBuilder(
-                         loss_lbi.op_name() + "_" + loss_lbi.blob_name() + "_loss_scale-cast_f2h")
-                         .Op("cast")
-                         .Input("in", loss_scale_val_lbn)
-                         .Output("out")
-                         .Attr<DataType>("dtype", data_type)
-                         .ScopeSymbolId(scope_symbol_id)
-                         .Build();
+      LOG(ERROR) << "ScaleInitialDiffByLossScale: loss_lbn=" << GenLogicalBlobName(loss_lbi)
+                 << ", initial_diff_lbn=" << GenLogicalBlobName(initial_diff_lbi);
+      auto cast_op =
+          user_op::UserOpConfWrapperBuilder(initial_diff_lbi.op_name() + "_"
+                                            + initial_diff_lbi.blob_name() + "_loss_scale-cast_h2f")
+              .Op("cast")
+              .Input("in", loss_diff_lbn)
+              .Output("out")
+              .Attr<DataType>("dtype", DataType::kFloat)
+              .ScopeSymbolId(scope_symbol_id)
+              .Build();
       job_builder->AddOps(parallel_conf, {cast_op.op_conf()});
-      loss_scale_val_lbn = cast_op.output("out", 0);
+      loss_diff_lbn = cast_op.output("out", 0);
     }
     const int64_t time_shape_elem_cnt =
         JUST(initial_diff_node->op().GetInputBlobFastestTimeShape())->elem_cnt();
@@ -773,13 +777,26 @@ Maybe<void> ScaleInitialDiffByLossScale(
         user_op::UserOpConfWrapperBuilder(initial_diff_lbi.op_name() + "_"
                                           + initial_diff_lbi.blob_name() + "_scale_initial_diff")
             .Op("scalar_mul_by_tensor")
-            .Input("x", GenLogicalBlobName(initial_diff_lbi))
+            .Input("x", loss_diff_lbn)
             .Input("scalar", loss_scale_val_lbn)
             .Output("y")
             .ScopeSymbolId(scope_symbol_id)
             .Build();
     job_builder->AddOps(parallel_conf, {scalar_mul_op.op_conf()});
-    auto scaled_initial_diff_lbi = GenLogicalBlobId(scalar_mul_op.output("y", 0));
+    std::string scaled_initial_diff_lbn = scalar_mul_op.output("y", 0);
+    if (data_type != DataType::kFloat) {
+      auto cast_op =
+          user_op::UserOpConfWrapperBuilder(initial_diff_lbi.op_name() + "_"
+                                            + initial_diff_lbi.blob_name() + "_loss_scale-cast_f2h")
+              .Op("cast")
+              .Input("in", scaled_initial_diff_lbn)
+              .Output("out")
+              .Attr<DataType>("dtype", data_type)
+              .ScopeSymbolId(scope_symbol_id)
+              .Build();
+      job_builder->AddOps(parallel_conf, {cast_op.op_conf()});
+      scaled_initial_diff_lbn = cast_op.output("out", 0);
+    }
     // update consumer input by scalar_mul_op output
     initial_diff_node->ForEachNodeOnOutEdge([&](const OpNode* out_node) {
       for (const std::string& ibn : out_node->op().input_bns()) {
@@ -789,14 +806,14 @@ Maybe<void> ScaleInitialDiffByLossScale(
           }
           OperatorConf& mut_consumer_op =
               CHECK_JUST(job_builder->MutOpTransactionGet(out_node->op().op_name()));
-          const auto& old_lbn = ReplaceInputLbnInOpCustomizedConf(
-              &mut_consumer_op, ibn, GenLogicalBlobName(scaled_initial_diff_lbi));
+          const auto& old_lbn =
+              ReplaceInputLbnInOpCustomizedConf(&mut_consumer_op, ibn, scaled_initial_diff_lbn);
           CHECK_EQ(old_lbn, GenLogicalBlobName(initial_diff_lbi));
         }
       }
     });
     // update initial diff lbi
-    it.second = scaled_initial_diff_lbi;
+    it.second = GenLogicalBlobId(scaled_initial_diff_lbn);
   }
   JUST(job_builder->MutOpTransactionCommit());
   return Maybe<void>::Ok();
