@@ -373,23 +373,21 @@ def _test_advanced_indexing(test_case, placement, dtype):
     # setting values
     reference[ri([0]), ri([1])] = -1
     _assert_tensor_equal(
-        test_case,
-        reference[ri([0]), ri([1])],
-        flow.tensor([-1], dtype=dtype),
+        test_case, reference[ri([0]), ri([1])], flow.tensor([-1], dtype=dtype),
     )
-    reference[ri([0, 1, 2]), ri([0])] = _cpu_global_tensor(flow.tensor(
-        [-1, 2, -4], dtype=dtype
-    )).to_global(placement, broadcast_for_placement)
+    reference[ri([0, 1, 2]), ri([0])] = _cpu_global_tensor(
+        flow.tensor([-1, 2, -4], dtype=dtype)
+    ).to_global(placement, broadcast_for_placement)
     _assert_tensor_equal(
         test_case,
         reference[ri([0, 1, 2]), ri([0])],
         flow.tensor([-1, 2, -4], dtype=dtype),
     )
-    reference[rows, columns] = _cpu_global_tensor(flow.tensor([[4, 6], [2, 3]], dtype=dtype)).to_global(placement, broadcast_for_placement)
+    reference[rows, columns] = _cpu_global_tensor(
+        flow.tensor([[4, 6], [2, 3]], dtype=dtype)
+    ).to_global(placement, broadcast_for_placement)
     _assert_tensor_equal(
-        test_case,
-        reference[rows, columns],
-        flow.tensor([[4, 6], [2, 3]], dtype=dtype),
+        test_case, reference[rows, columns], flow.tensor([[4, 6], [2, 3]], dtype=dtype),
     )
 
     # Tests using less than the number of dims, and ellipsis
@@ -406,7 +404,9 @@ def _test_advanced_indexing(test_case, placement, dtype):
     _assert_tensor_equal(
         test_case,
         reference[ri([0, 2]),],
-        flow.tensor([[1, 2, 3, 4, 5, 6, 7, 8], [17, 18, 19, 20, 21, 22, 23, 24]], dtype=dtype),
+        flow.tensor(
+            [[1, 2, 3, 4, 5, 6, 7, 8], [17, 18, 19, 20, 21, 22, 23, 24]], dtype=dtype
+        ),
     )
     _assert_tensor_equal(
         test_case,
