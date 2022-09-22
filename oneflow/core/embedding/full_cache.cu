@@ -36,12 +36,15 @@ __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, bool
   Index index_plus_one = 0;
   Key old_entry_key = cuda::atomic::CAS(entry_key, static_cast<Key>(0), key_hi);
   while (index_plus_one == 0) {
+    bool entry_flag_val = *entry_dirty_flag; 
     if (old_entry_key == static_cast<Key>(0)) {
       Index index = cuda::atomic::Add(table_size, static_cast<Index>(1));
       index_plus_one = index + 1;
       *entry_index = ((index_plus_one << 1U) | key_lo);
       *out = index_plus_one;
-      *entry_dirty_flag = true;
+      if(!entry_flag_val){
+        *entry_dirty_flag = true;
+      }
       return true;
     } else if (old_entry_key == key_hi) {
       const Index entry_index_val = *entry_index;
@@ -49,7 +52,9 @@ __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, bool
         // do nothing
       } else if ((entry_index_val & 0x1) == key_lo) {
         *out = (entry_index_val >> 1U);
-        *entry_dirty_flag = true;
+        if(!entry_flag_val){
+          *entry_dirty_flag = true;
+        }
         return true;
       } else {
         return false;
