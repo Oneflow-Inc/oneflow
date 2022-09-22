@@ -535,6 +535,15 @@ struct UnaryFunctor<device, UnaryOp::kNotEqualZero, Dst, Src> {
   }
 };
 
+template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kNanAssign, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return std::isnan(src) ? src : static_cast<Dst>(0.0);
+  }
+};
+
 }  // namespace primitive
 }  // namespace ep
 }  // namespace oneflow
