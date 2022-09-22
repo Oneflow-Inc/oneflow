@@ -30,14 +30,27 @@ def _test_multinomial(test_case, device, seed, replacement, dtype):
     n_categories = random.randint(8, 64)
     num_samples = random.randint(4, n_categories)
 
-    weights_torch = torch.rand(n_dists, n_categories, device=device, dtype=torch.float32 if dtype == "float" else torch.float64)
-    weights_oneflow = flow.tensor(weights_torch.cpu().numpy(), device=device, dtype=flow.float32 if dtype == "float" else flow.float64)
+    weights_torch = torch.rand(
+        n_dists,
+        n_categories,
+        device=device,
+        dtype=torch.float32 if dtype == "float" else torch.float64,
+    )
+    weights_oneflow = flow.tensor(
+        weights_torch.cpu().numpy(),
+        device=device,
+        dtype=flow.float32 if dtype == "float" else flow.float64,
+    )
 
     torch.manual_seed(seed)
     flow.manual_seed(seed)
 
-    torch_res = torch.multinomial(weights_torch, num_samples, replacement=replacement, generator=None)
-    flow_res = flow.multinomial(weights_oneflow, num_samples, replacement=replacement, generator=None)
+    torch_res = torch.multinomial(
+        weights_torch, num_samples, replacement=replacement, generator=None
+    )
+    flow_res = flow.multinomial(
+        weights_oneflow, num_samples, replacement=replacement, generator=None
+    )
 
     test_case.assertTrue(
         np.allclose(torch_res.cpu().numpy(), flow_res.cpu().numpy(), atol=1e-8,)
@@ -48,8 +61,12 @@ def _test_multinomial(test_case, device, seed, replacement, dtype):
     oneflow_gen = flow.Generator(device=device)
     oneflow_gen.manual_seed(seed)
 
-    torch_res = torch.multinomial(weights_torch, num_samples, replacement=replacement, generator=torch_gen)
-    flow_res = flow.multinomial(weights_oneflow, num_samples, replacement=replacement, generator=oneflow_gen)
+    torch_res = torch.multinomial(
+        weights_torch, num_samples, replacement=replacement, generator=torch_gen
+    )
+    flow_res = flow.multinomial(
+        weights_oneflow, num_samples, replacement=replacement, generator=oneflow_gen
+    )
 
     test_case.assertTrue(
         np.allclose(torch_res.cpu().numpy(), flow_res.cpu().numpy(), atol=1e-8,)

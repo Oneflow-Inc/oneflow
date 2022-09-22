@@ -392,6 +392,7 @@ from oneflow.ops.stateful_ops import StatefulOp as stateful_op
 from . import (
     autograd,
     distributed,
+    distributions,
     linalg,
     optim,
     comm,
