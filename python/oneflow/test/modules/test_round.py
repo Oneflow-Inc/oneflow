@@ -41,14 +41,14 @@ class TestRound(flow.unittest.TestCase):
         return y
 
 
-    @autotest(check_graph=True)
+    @profile(torch.ceil)
     def test_flow_round_half_to_even(test_case):
-        device = random_device()
-        # temp=torch.randint(0, 1000, (3,4))
-        # print(temp)
-        x = random_tensor().to(device)
-        y = torch.round(x)
-        return y
-    
+        random_shape = [random(1, 10).to(int) for _ in range(4)]
+        x=torch.randint(-99999,99999,random_shape)
+        y=torch.full(x.shape,0.5)
+        y+=x        
+        z=torch.round(y)
+        return z
+        
 if __name__ == "__main__":
     unittest.main()
