@@ -95,12 +95,10 @@ def GetFunArgs(device, max_batch_size):
         out_w = (in_w + 2 * pad_w - (dil_w * (weight_w - 1) + 1)) // stride_w + 1
 
     input_dims = [batch_sz, n_in_channels, in_h, in_w]
-    offset_dims = [batch_sz, 2 * n_offset_grps *
-                   weight_h * weight_w, out_h, out_w]
+    offset_dims = [batch_sz, 2 * n_offset_grps * weight_h * weight_w, out_h, out_w]
     mask_dims = [batch_sz, n_offset_grps * weight_h * weight_w, out_h, out_w]
-    weight_dims = [n_out_channels, n_in_channels //
-    n_weight_grps, weight_h, weight_w]
-    
+    weight_dims = [n_out_channels, n_in_channels // n_weight_grps, weight_h, weight_w]
+
     input = random_tensor(4, *input_dims).to(device)
     offset = random_tensor(4, *offset_dims).to(device)
     mask = random_tensor(4, *mask_dims).to(device)
@@ -229,7 +227,7 @@ def _test_deform_conv2d_backward(
 
 def _test_forward_and_backward(test_case, device):
     max_batch_size = 40
-    for batch_size in range(1,max_batch_size):
+    for batch_size in range(1, max_batch_size):
         input, weight, offset, mask, bias, stride, padding, dilation = GetFunArgs(
             device, batch_size
         )
@@ -246,7 +244,7 @@ class TestDeformConv2d(flow.unittest.TestCase):
     def test_deform_conv2d(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_forward_and_backward]
-        arg_dict["device"] = ["cpu","cuda"]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
