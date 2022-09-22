@@ -225,7 +225,7 @@ def _test_deform_conv2d_backward(
     )
 
 
-def test_deform_conv2d(test_case, device):
+def test_forward_and_backward(test_case, device):
     max_batch_size = 32
     for batch_size in range(max_batch_size):
         input, weight, offset, mask, bias, stride, padding, dilation = GetFunArgs(
@@ -241,9 +241,9 @@ def test_deform_conv2d(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestDeformConv2d(flow.unittest.TestCase):
-    def test_roi_align(test_case):
+    def test_deform_conv2d(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [test_deform_conv2d]
+        arg_dict["test_fun"] = [test_forward_and_backward]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
