@@ -49,7 +49,6 @@ Maybe<void> LinalgCross::Capture(LinalgCrossCaptureState* ctx, const TensorTuple
                                  const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->input_requires_grad = inputs.at(0)->requires_grad();
   ctx->other_requires_grad = inputs.at(1)->requires_grad();
-  if ((!ctx->input_requires_grad) && (!ctx->other_requires_grad)) { return Maybe<void>::Ok(); }
 
   if (ctx->input_requires_grad) { ctx->SaveTensorForBackward(inputs.at(1)); }
   if (ctx->other_requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
@@ -61,7 +60,6 @@ Maybe<void> LinalgCross::Capture(LinalgCrossCaptureState* ctx, const TensorTuple
 
 Maybe<void> LinalgCross::Apply(const LinalgCrossCaptureState* ctx, const TensorTuple& out_grads,
                                TensorTuple* in_grads) const {
-  if ((!ctx->input_requires_grad) && (!ctx->other_requires_grad)) { return Maybe<void>::Ok(); }
   in_grads->resize(ctx->SavedTensors().size());
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
 

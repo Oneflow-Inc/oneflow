@@ -34,7 +34,7 @@ add_docstr(
         dim (int, optional): the dimension along which to take the cross-product. Default: `-1`
 
     Raises:
-        RuntimeError:  If after broadcasting `input.size(dim) != 3` or `other.size(dim) != 3`.
+        RuntimeError:  If after broadcasting ``input.size(dim) != 3`` or ``other.size(dim) != 3``.
     
     Examples:
 
