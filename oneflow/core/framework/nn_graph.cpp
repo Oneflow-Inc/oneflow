@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
+#include <cstdint>
 #include <memory>
 #include <string>
 #include "oneflow/core/common/buffer_manager.h"
@@ -299,16 +300,30 @@ Maybe<void> NNGraph::RangePushPlan(const Plan& global_plan, const std::string& p
         Singleton<CtrlClient>::Get()->PushKV(rank_plan_name, sub_plan);
         tc_sub_plan->Count(rank_plan_name + " PushKV", 1);
         VLOG(1) << "[elapsed]rank id " << GlobalProcessCtx::Rank() << " push plan " << rank_plan_name << " size " << sub_plan.ByteSizeLong();
-        Singleton<CtrlClient>::Get()->WaitUntilDone(rank_plan_name);
-        tc_sub_plan->Count(rank_plan_name + " wait PullKV", 1);
-        Singleton<CtrlClient>::Get()->ClearKV(rank_plan_name);
-        tc_sub_plan->Count(rank_plan_name + " ClearKV", 1);
       }
       counter.Decrease();
     });
   }
   // Wait for all sub plan in range has finished.
   counter.WaitForeverUntilCntEqualZero();
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> NNGraph::RangePullPlan(const std::string& plan_name_prefix, int64_t start_rank, int64_t rank_range_size) {
+  const int64_t this_rank_id = GlobalProcessCtx::Rank();
+  if (this_rank_id >= start_rank && this_rank_id < start_rank + rank_range_size && this_rank_id != 0) {
+    std::string rank_plan_name = plan_name_prefix + std::to_string(this_rank_id);
+    Singleton<CtrlClient>::Get()->PullKV(rank_plan_name, &plan_);
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> NNGraph::RangeClearPlan(const std::string& plan_name_prefix, int64_t start_rank, int64_t rank_range_size) {
+  for (int64_t rank_id = start_rank; rank_id < start_rank + rank_range_size; ++rank_id) {
+    if (rank_id == 0) { continue; }
+    std::string rank_plan_name = plan_name_prefix + std::to_string(rank_id);
+    Singleton<CtrlClient>::Get()->ClearKV(rank_plan_name);
+  }
   return Maybe<void>::Ok();
 }
 
@@ -426,25 +441,28 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     plan_.Swap(&global_plan);
   } else if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name_prefix = "plan_" + job_name() + "_r_";
-    if (GlobalProcessCtx::IsThisProcessMaster()) {
-      int64_t rang_push_size = 4, cur_start_rank = 0, cur_range_size = 0;
-      while (cur_start_rank < GlobalProcessCtx::WorldSize()) {
-        cur_range_size = std::min(rang_push_size, static_cast<int64_t>(GlobalProcessCtx::WorldSize() - cur_start_rank));
-        // Use range push to limit memory consumption.
+    int64_t rang_push_size = 2, cur_start_rank = 0, cur_range_size = 0;
+    while (cur_start_rank < GlobalProcessCtx::WorldSize()) {
+      cur_range_size = std::min(rang_push_size, static_cast<int64_t>(GlobalProcessCtx::WorldSize() - cur_start_rank));
+      // Use range push to limit memory consumption.
+      if (GlobalProcessCtx::IsThisProcessMaster()) {
         JUST(RangePushPlan(global_plan, plan_name_prefix, cur_start_rank, cur_range_size));
         tc->Count("Graph name: " + name_ + " PushPlan" + std::to_string(cur_start_rank) + "to" + std::to_string(cur_start_rank + cur_range_size - 1), 1);
-        cur_start_rank += cur_range_size;
+      } else {
+        JUST(RangePullPlan(plan_name_prefix, cur_start_rank, cur_range_size));
+        tc->Count("Graph name: " + name_ + " PullPlan" + std::to_string(cur_start_rank) + "to" + std::to_string(cur_start_rank + cur_range_size - 1), 1);
       }
-      tc->Count("Graph name: " + name_ + " FinishPushSubPlan", 1);
-      global_plan.Clear();
-      tc->Count("Graph name: " + name_ + " ClearGlobalPlan", 1);
-    } else {
-      std::string rank_plan_name = plan_name_prefix + std::to_string(GlobalProcessCtx::Rank());
-      Singleton<CtrlClient>::Get()->PullKV(rank_plan_name, &plan_);
-      Singleton<CtrlClient>::Get()->NotifyDone(rank_plan_name);
+      // Sync to make sure this range of sub plans has been received.
+      OF_SESSION_BARRIER();
+      tc->Count("Graph name: " + name_ + " FinishPushSubPlan" + std::to_string(cur_start_rank) + "to" + std::to_string(cur_start_rank + cur_range_size - 1), 1);
+      if (GlobalProcessCtx::IsThisProcessMaster()) {
+        JUST(RangeClearPlan(plan_name_prefix, cur_start_rank, cur_range_size));
+      }
+      tc->Count("Graph name: " + name_ + " FinishClearSubPlan", 1);
+      cur_start_rank += cur_range_size;
     }
-    OF_SESSION_BARRIER();
-    tc->Count("Graph name: " + name_ + "FinishPushPullPlan", 1);
+    global_plan.Clear();
+    tc->Count("Graph name: " + name_ + " ClearGlobalPlan", 1);
   }
 
   // NOTE(chengcheng): recovery op_attr
