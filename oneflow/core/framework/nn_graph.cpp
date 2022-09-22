@@ -42,6 +42,7 @@ limitations under the License.
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/rpc/include/base.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -252,6 +253,65 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> NNGraph::RangePushPlan(const Plan& global_plan, const std::string& plan_name_prefix, int64_t start_rank, int64_t rank_range_size) {
+  const int64_t end_rank = start_rank + rank_range_size - 1;
+  const int64_t cpu_num = std::thread::hardware_concurrency();
+  const int64_t thread_pool_size = std::min(rank_range_size, cpu_num);
+  ThreadPool thread_pool(thread_pool_size);
+  BlockingCounter counter(rank_range_size);
+  for (int64_t rank_id = start_rank; rank_id <= end_rank ; ++rank_id) {
+    thread_pool.AddWork([this, rank_id, &global_plan, &plan_name_prefix, &counter]() {
+      std::string rank_plan_name = plan_name_prefix + std::to_string(rank_id);
+      // Creat sub-plan.
+      auto tc_sub_plan = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
+      Plan sub_plan;
+      sub_plan.mutable_job_confs()->CopyFrom(global_plan.job_confs());
+      tc_sub_plan->Count(rank_plan_name + " add job conf", 1);
+      sub_plan.mutable_collective_boxing_plan()->CopyFrom(global_plan.collective_boxing_plan());
+      tc_sub_plan->Count(rank_plan_name + " add collective boxing", 1);
+      sub_plan.mutable_ctrl_regst_desc_info()->CopyFrom(global_plan.ctrl_regst_desc_info());
+      tc_sub_plan->Count(rank_plan_name + " add ctrl regst", 1);
+      for (auto& pair : global_plan.job_id2op_attribute_ref_table()) {
+        sub_plan.mutable_job_id2op_attribute_ref_table()->insert(pair);
+      }
+      tc_sub_plan->Count(rank_plan_name + " add op attr", 1);
+      for (auto& task_proto : global_plan.task()) {
+        if (task_proto.machine_id() == rank_id) {
+          sub_plan.add_task()->CopyFrom(task_proto);
+        }
+      }
+      tc_sub_plan->Count(rank_plan_name + " add task", 1);
+      for (auto& mem_block_proto : global_plan.block_chunk_list().mem_block()) {
+        if (mem_block_proto.machine_id() == rank_id) {
+          sub_plan.mutable_block_chunk_list()->add_mem_block()->CopyFrom(mem_block_proto);
+        }
+      }
+      tc_sub_plan->Count(rank_plan_name + " add mem block", 1);
+      for (auto& chunk_proto : global_plan.block_chunk_list().chunk()) {
+        if (chunk_proto.machine_id() == rank_id) {
+          sub_plan.mutable_block_chunk_list()->add_chunk()->CopyFrom(chunk_proto);
+        }
+      }
+      tc_sub_plan->Count(rank_plan_name + " add chunk", 1);
+      if (rank_id == 0) {
+        plan_.Swap(&sub_plan);
+      } else {
+        Singleton<CtrlClient>::Get()->PushKV(rank_plan_name, sub_plan);
+        tc_sub_plan->Count(rank_plan_name + " PushKV", 1);
+        VLOG(1) << "[elapsed]rank id " << GlobalProcessCtx::Rank() << " push plan " << rank_plan_name << " size " << sub_plan.ByteSizeLong();
+        Singleton<CtrlClient>::Get()->WaitUntilDone(rank_plan_name);
+        tc_sub_plan->Count(rank_plan_name + " wait PullKV", 1);
+        Singleton<CtrlClient>::Get()->ClearKV(rank_plan_name);
+        tc_sub_plan->Count(rank_plan_name + " ClearKV", 1);
+      }
+      counter.Decrease();
+    });
+  }
+  // Wait for all sub plan in range has finished.
+  counter.WaitForeverUntilCntEqualZero();
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
   std::set<std::string> variable_names = *JUST([&]() -> Maybe<std::set<std::string>> {
     std::set<std::string> variable_names_;
@@ -296,26 +356,27 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   JUST(JobCompleter().Complete(&job_));
   tc->Count("Graph name: " + name_ + " Complete job", 1);
 
+  Plan global_plan;
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     // TODO(chengcheng): new memory reused by chunk
     std::shared_ptr<TaskGraph> task_graph;
-    PlanCompiler::Compile(&job_, &plan_, task_graph);
+    PlanCompiler::Compile(&job_, &global_plan, task_graph);
     CHECK_OR_RETURN(task_graph);
     tc->Count("Graph name: " + name_ + " Compile plan", 1);
-    PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, std::const_pointer_cast<const TaskGraph>(task_graph), variable_op_names_);
+    PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&global_plan, std::const_pointer_cast<const TaskGraph>(task_graph), variable_op_names_);
     tc->Count("Graph name: " + name_ + " Generate MemBlock and Chunk", 1);
 
-    PlanUtil::GenRegisterHint(&plan_);
+    PlanUtil::GenRegisterHint(&global_plan);
     tc->Count("Graph name: " + name_ + " GenRegisterHint", 1);
     // TODO(chengcheng): test collective boxing for multi-job.
-    PlanUtil::GenCollectiveBoxingPlan(&job_, std::const_pointer_cast<const TaskGraph>(task_graph), &plan_);
+    PlanUtil::GenCollectiveBoxingPlan(&job_, std::const_pointer_cast<const TaskGraph>(task_graph), &global_plan);
     tc->Count("Graph name: " + name_ + " GenCollectiveBoxingPlan", 1);
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
-    PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
+    PlanUtil::DumpCtrlRegstInfoToPlan(&global_plan);
     tc->Count("Graph name: " + name_ + " DumpCtrlRegstInfoToPlan", 1);
-    PlanUtil::PlanMemoryLog(&plan_, name_);
+    PlanUtil::PlanMemoryLog(&global_plan, name_);
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-      PlanUtil::GenLightPlan(&plan_, name_);
+      PlanUtil::GenLightPlan(&global_plan, name_);
     }
     tc->Count("Graph name: " + name_ + " Memory and Plan Log", 1);
 
@@ -328,7 +389,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
       std::mutex mtx;
       ThreadPool thread_pool(thread_pool_size);
 
-      auto* job_id2op_attribute_ref_table = plan_.mutable_job_id2op_attribute_ref_table();
+      auto* job_id2op_attribute_ref_table = global_plan.mutable_job_id2op_attribute_ref_table();
       auto* op_name2op_attribute =
           (*job_id2op_attribute_ref_table)[job_id_].mutable_op_name2op_attribute();
       task_graph->ForEachNode([&](TaskNode* task_node) {
@@ -354,115 +415,42 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
       tc->Count("Graph name: " + name_ + " AddOpAttrtoPlan", 1);
     }
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-      TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
-      PlanUtil::ToDotFile(plan_, task_graph, "job_" + name_ + "_plan.dot");
+      TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(global_plan);
+      PlanUtil::ToDotFile(global_plan, task_graph, "job_" + name_ + "_plan.dot");
       tc->Count("Graph name: " + name_ + " LogPlan", 1);
     }
+    VLOG(1) << "[elapsed]rank id " << GlobalProcessCtx::Rank() << " global plan size " << global_plan.ByteSizeLong();
   }
   tc->Count("Graph name: " + name_ + " ReleaseTaskGraph", 1);
   compile_tc->Count("Graph name: " + name_ + " TotalCompile", 1);
-  if (GlobalProcessCtx::WorldSize() > 1) {
+  if (GlobalProcessCtx::WorldSize() == 1) {
+    plan_.Swap(&global_plan);
+  } else if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name_prefix = "plan_" + job_name() + "_r_";
     if (GlobalProcessCtx::IsThisProcessMaster()) {
-      // LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " plan size " << plan_.ByteSizeLong();
-      const int64_t sub_plan_num = GlobalProcessCtx::WorldSize() - 1;
-      const int64_t cpu_num = std::thread::hardware_concurrency();
-      const int64_t thread_pool_size = std::min(sub_plan_num, cpu_num);
-      // BlockingCounter counter(sub_plan_num);
-      BlockingCounter counter(1);
-      ThreadPool thread_pool(thread_pool_size);
-      //for (int64_t rank_id = 1; rank_id < GlobalProcessCtx::WorldSize(); ++rank_id) {
-      for (int64_t rank_id = 1; rank_id < 2; ++rank_id) {
-        thread_pool.AddWork([this, rank_id, &plan_name_prefix, &counter]() {
-          std::string rank_plan_name = plan_name_prefix + std::to_string(rank_id);
-          // Creat sub-plan.
-          auto tc_sub_plan = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
-          Plan sub_plan;
-          sub_plan.mutable_job_confs()->CopyFrom(plan_.job_confs());
-          tc_sub_plan->Count(rank_plan_name + " add job conf", 1);
-          sub_plan.mutable_collective_boxing_plan()->CopyFrom(plan_.collective_boxing_plan());
-          tc_sub_plan->Count(rank_plan_name + " add collective boxing", 1);
-          sub_plan.mutable_ctrl_regst_desc_info()->CopyFrom(plan_.ctrl_regst_desc_info());
-          tc_sub_plan->Count(rank_plan_name + " add ctrl regst", 1);
-          for (auto& pair : plan_.job_id2op_attribute_ref_table()) {
-            sub_plan.mutable_job_id2op_attribute_ref_table()->insert(pair);
-          }
-          tc_sub_plan->Count(rank_plan_name + " add op attr", 1);
-          for (auto& task_proto : plan_.task()) {
-            if (task_proto.machine_id() == rank_id) {
-              sub_plan.add_task()->CopyFrom(task_proto);
-            }
-          }
-          tc_sub_plan->Count(rank_plan_name + " add task", 1);
-          for (auto& mem_block_proto : plan_.block_chunk_list().mem_block()) {
-            if (mem_block_proto.machine_id() == rank_id) {
-              sub_plan.mutable_block_chunk_list()->add_mem_block()->CopyFrom(mem_block_proto);
-            }
-          }
-          tc_sub_plan->Count(rank_plan_name + " add mem block", 1);
-          for (auto& chunk_proto : plan_.block_chunk_list().chunk()) {
-            if (chunk_proto.machine_id() == rank_id) {
-              sub_plan.mutable_block_chunk_list()->add_chunk()->CopyFrom(chunk_proto);
-            }
-          }
-          tc_sub_plan->Count(rank_plan_name + " add chunk", 1);
-          // LOG(ERROR) << "rank id " << rank_id << " plan " << sub_plan.DebugString();
-          Singleton<CtrlClient>::Get()->PushKV(rank_plan_name, sub_plan);
-          tc_sub_plan->Count(rank_plan_name + " PushKV", 1);
-          VLOG(1) << "[elapsed]rank id " << GlobalProcessCtx::Rank() << " push plan " << rank_plan_name << " size " << sub_plan.ByteSizeLong();
-          counter.Decrease();
-        });
+      int64_t rang_push_size = 4, cur_start_rank = 0, cur_range_size = 0;
+      while (cur_start_rank < GlobalProcessCtx::WorldSize()) {
+        cur_range_size = std::min(rang_push_size, static_cast<int64_t>(GlobalProcessCtx::WorldSize() - cur_start_rank));
+        // Use range push to limit memory consumption.
+        JUST(RangePushPlan(global_plan, plan_name_prefix, cur_start_rank, cur_range_size));
+        tc->Count("Graph name: " + name_ + " PushPlan" + std::to_string(cur_start_rank) + "to" + std::to_string(cur_start_rank + cur_range_size - 1), 1);
+        cur_start_rank += cur_range_size;
       }
-      counter.WaitForeverUntilCntEqualZero();
-      tc->Count("Graph name: " + name_ + " Push plan", 1);
+      tc->Count("Graph name: " + name_ + " FinishPushSubPlan", 1);
+      global_plan.Clear();
+      tc->Count("Graph name: " + name_ + " ClearGlobalPlan", 1);
     } else {
       std::string rank_plan_name = plan_name_prefix + std::to_string(GlobalProcessCtx::Rank());
-      if (GlobalProcessCtx::Rank() == 1) {
-        Singleton<CtrlClient>::Get()->PullKV(rank_plan_name, &plan_);
-      }
-      // Singleton<CtrlClient>::Get()->PullKV(rank_plan_name, &plan_);
-      // LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " pull plan " << rank_plan_name;
+      Singleton<CtrlClient>::Get()->PullKV(rank_plan_name, &plan_);
+      Singleton<CtrlClient>::Get()->NotifyDone(rank_plan_name);
     }
     OF_SESSION_BARRIER();
-    tc->Count("Graph name: " + name_ + " Pull plan", 1);
-    // NOTE(zwx): After barrier plan is synchronized between all ranks,
-    //     then it can be cleared for saving mem.
-    if (GlobalProcessCtx::IsThisProcessMaster()) {
-      // Clear useless info of rank 0 plan
-      for (auto iter = plan_.mutable_task()->begin(); iter != plan_.mutable_task()->end();) {
-        if (iter->machine_id() != 0) {
-          iter = plan_.mutable_task()->erase(iter);
-        } else {
-          ++iter;
-        }
-      }
-      for (auto iter = plan_.mutable_block_chunk_list()->mutable_mem_block()->begin(); iter != plan_.mutable_block_chunk_list()->mutable_mem_block()->end();) {
-        if (iter->machine_id() != 0) {
-          iter = plan_.mutable_block_chunk_list()->mutable_mem_block()->erase(iter);
-        } else {
-          ++iter;
-        }
-      }
-      for (auto iter = plan_.mutable_block_chunk_list()->mutable_chunk()->begin(); iter != plan_.mutable_block_chunk_list()->mutable_chunk()->end();) {
-        if (iter->machine_id() != 0) {
-          iter = plan_.mutable_block_chunk_list()->mutable_chunk()->erase(iter);
-        } else {
-          ++iter;
-        }
-      }
-      // for (int64_t rank_id = 1; rank_id < GlobalProcessCtx::WorldSize(); ++rank_id) {
-      for (int64_t rank_id = 1; rank_id < 2; ++rank_id) {
-        std::string rank_plan_name = plan_name_prefix + std::to_string(rank_id);
-        Singleton<CtrlClient>::Get()->ClearKV(rank_plan_name);
-      }
-    }
-    tc->Count("Graph name: " + name_ + " Clear plan", 1);
-    // tc->Count("Graph name: " + name_ + " Push or Pull plan", 1);
+    tc->Count("Graph name: " + name_ + "FinishPushPullPlan", 1);
   }
 
   // NOTE(chengcheng): recovery op_attr
   // PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
-  if (GlobalProcessCtx::Rank() < 2) {
+  if (GlobalProcessCtx::Rank() < 10) {
     PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
   }
   tc->Count("Graph name: " + name_ + " PopulateOpAttribute", 1);
