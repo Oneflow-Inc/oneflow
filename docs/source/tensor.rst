@@ -269,6 +269,7 @@ Tensor class reference
     Tensor.long
     Tensor.lt
     Tensor.masked_fill
+    Tensor.masked_fill_
     Tensor.masked_select
     Tensor.matmul
     Tensor.mm

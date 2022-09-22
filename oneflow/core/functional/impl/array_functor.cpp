@@ -2591,7 +2591,8 @@ class MaskedFillFunctor {
     op_ = CHECK_JUST(one::OpBuilder("masked_fill").Input("x").Input("mask").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& mask, const Scalar& value) const {
+                           const std::shared_ptr<one::Tensor>& mask, const Scalar& value,
+                           const bool inplace) const {
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("float_operand", "has_float_operand", "int_operand",
                                        "has_int_operand", "bool_operand", "has_bool_operand");
@@ -2606,6 +2607,14 @@ class MaskedFillFunctor {
     }
     const auto& x_shape = *(x->shape());
     const auto& mask_shape = *(mask->shape());
+
+    std::shared_ptr<TensorTuple> outputs;
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      outputs = std::make_shared<TensorTuple>(1);
+      (*outputs)[0] = x;
+    }
+
     if (x_shape != mask_shape) {
       Shape max_shape = Shape::Ones(std::max(x_shape.NumAxes(), mask_shape.NumAxes()));
       const Shape& x_extend_shape =
@@ -2615,9 +2624,23 @@ class MaskedFillFunctor {
       FOR_RANGE(int64_t, i, 0, max_shape.NumAxes()) {
         max_shape.Set(i, std::max(x_extend_shape.At(i), mask_extend_shape.At(i)));
       }
-      return OpInterpUtil::Dispatch<Tensor>(
-          *op_, {JUST(Expand(x, max_shape)), JUST(Expand(mask, max_shape))}, attrs);
+
+      if (inplace) {
+        JUST(OpInterpUtil::Dispatch(*op_,
+                                    {JUST(Expand(x, max_shape)), JUST(Expand(mask, max_shape))},
+                                    outputs.get(), attrs));
+        return outputs->at(0);
+      } else {
+        return OpInterpUtil::Dispatch<Tensor>(
+            *op_, {JUST(Expand(x, max_shape)), JUST(Expand(mask, max_shape))}, attrs);
+      }
     }
+
+    if (inplace) {
+      JUST(OpInterpUtil::Dispatch(*op_, {x, mask}, outputs.get(), attrs));
+      return outputs->at(0);
+    }
+
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mask}, attrs);
   }
 
