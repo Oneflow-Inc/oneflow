@@ -58,10 +58,16 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
       JUST(RankTaskGraph::New(boxing_task_graph_proto_, var_op_names, rank_,
                               job->job_conf().enable_straighten_algorithm_in_task_graph()));
   using std::placeholders::_1;
+  const auto& IsNotMyDuty = [&](const CompTaskNode* comp_task_node) {
+    if (comp_task_node == nullptr) { return false; }
+    const auto& parallel_desc = comp_task_node->op_node()->parallel_desc();
+    return !task_gph->IsDutyRank(parallel_desc, comp_task_node->machine_id());
+  };
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode([&](TaskNode* task_node) {
     auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
-    if (task_node->machine_id() != rank_ && comp_task_node != nullptr) {
+    int64_t rank = task_node->machine_id();
+    if (IsNotMyDuty(comp_task_node)) {
       comp_task_node->ConsumeFakeRegstsIf();
     } else {
       task_node->ConsumeAllRegsts();
@@ -69,7 +75,7 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
   });
   task_gph->ForEachNode([&](TaskNode* task_node) {
     auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
-    if (task_node->machine_id() != rank_ && comp_task_node != nullptr) {
+    if (IsNotMyDuty(comp_task_node)) {
       // Do nothing. because all consumed registers are fake.
     } else {
       task_node->PinConsumedRegst();
@@ -83,7 +89,7 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
   if (job_desc.enable_inplace()) {
     task_gph->ForEachGpuDeviceNodes([&](const HashSet<TaskNode*>& dev_nodes) {
       if (dev_nodes.empty()) { return; }
-      if ((*dev_nodes.begin())->machine_id() != rank_) { return; }
+      if ((*dev_nodes.begin())->machine_id() != rank_) { return; }  // other ranks are ignored.
       task_gph->EnableInplaceMemSharing(dev_nodes, IsReachable);
     });
   }
@@ -96,11 +102,14 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
     TaskProto task_proto;
     task_node->ToProto(&task_proto);
     auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
-    if (task_node->machine_id() != rank_ && comp_task_node != nullptr) {
-      for (const auto& pair : task_node->consumed_regsts()) {
-        for (const auto& regst : pair.second) {
-          task_proto.mutable_fake_consumed_regst_desc_ids()->add_regst_desc_id(
-              regst->regst_desc_id());
+    if (comp_task_node != nullptr) {
+      const auto& parallel_desc = comp_task_node->op_node()->parallel_desc();
+      if (!task_gph->IsDutyRank(parallel_desc, task_node->machine_id())) {
+        for (const auto& pair : task_node->consumed_regsts()) {
+          for (const auto& regst : pair.second) {
+            task_proto.mutable_fake_consumed_regst_desc_ids()->add_regst_desc_id(
+                regst->regst_desc_id());
+          }
         }
       }
     }

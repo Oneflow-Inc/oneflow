@@ -170,27 +170,39 @@ class RankTaskGraph final : public TaskGraph {
 
   static Maybe<RankTaskGraph> New(
       const std::shared_ptr<BoxingTaskGraphProto>& boxing_task_graph_proto,
-      const HashSet<std::string>& var_op_names, int64_t rank, bool enable_straighten_algorithm) {
-    std::shared_ptr<RankTaskGraph> graph(new RankTaskGraph(boxing_task_graph_proto, rank));
+      const HashSet<std::string>& var_op_names, int64_t current_rank,
+      bool enable_straighten_algorithm) {
+    std::shared_ptr<RankTaskGraph> graph(new RankTaskGraph(boxing_task_graph_proto, current_rank));
     JUST(graph->Init(var_op_names, enable_straighten_algorithm));
     return graph;
   }
+
+  // Is `rank` my duty.
+  bool IsDutyRank(const ParallelDesc& parallel_desc, int64_t rank) const;
 
  private:
   RankTaskGraph(const std::shared_ptr<BoxingTaskGraphProto>& boxing_task_graph_proto, int64_t rank);
 
   Maybe<void> Init(const HashSet<std::string>& var_op_names, bool enable_straighten_algorithm);
+  bool ContainRank(const OpNode* op_node, int64_t rank) const;
   Maybe<void> AddBoxingReletedCompTaskNodesFromProto();
   Maybe<void> CreateAndPartiallyInitTransportTaskNodesFromProto();
   Maybe<void> AddTransportTaskEdgesFromProto();
   Maybe<void> InitTransportTaskNodesFromProto();
+  template<typename DoEachRankT>
+  Maybe<void> ForEachDutyRank(const ParallelDesc& parallel_desc, const DoEachRankT& DoEachRank);
+
   Maybe<CompTaskNode*> TryGetBoxingRelatedComTaskNode(const OpNode* op_node, int64_t parallel_id);
-  Maybe<CompTaskNode*> CreateOrFindRankCompTaskNode(const OpNode* op_node, int64_t parallel_id);
-  Maybe<CompTaskNode*> CreateOrFindRankCompTaskNode(const OpNode* op_node);
-  Maybe<CompTaskNode*> TryGetRankCompTaskNode(const OpNode* op_node);
+  Maybe<CompTaskNode*> CreateOrFindRankCompTaskNodeByParallelId(const OpNode* op_node,
+                                                                int64_t parallel_id);
+  Maybe<CompTaskNode*> CreateOrFindRankCompTaskNodeByRank(const OpNode* op_node, int64_t rank);
+  Maybe<CompTaskNode*> TryGetRankCompTaskNode(const OpNode* op_node, int64_t rank);
+
+  Maybe<void> ConnectDataEdges(const OpEdge* op_edge, int64_t rank);
+  Maybe<void> ConnectCtrlEdges(const OpNode* src, const OpNode* dst, int64_t rank);
 
   std::shared_ptr<BoxingTaskGraphProto> boxing_task_graph_proto_;
-  const int64_t rank_;
+  const int64_t current_rank_;
   std::unique_ptr<TaskGraphRebuildCtx> task_graph_rebuild_ctx_;
   HashMap<const OpNode*, CompTaskNode*> op_node2comp_task_node_;
 };

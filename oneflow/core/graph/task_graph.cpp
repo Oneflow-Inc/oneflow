@@ -932,9 +932,9 @@ void BoxingTaskGraph::ToProto(BoxingTaskGraphProto* proto) const {
 }
 
 RankTaskGraph::RankTaskGraph(const std::shared_ptr<BoxingTaskGraphProto>& boxing_task_graph_proto,
-                             int64_t rank)
+                             int64_t current_rank)
     : boxing_task_graph_proto_(boxing_task_graph_proto),
-      rank_(rank),
+      current_rank_(current_rank),
       task_graph_rebuild_ctx_(std::make_unique<TaskGraphRebuildCtx>()) {}
 
 Maybe<CompTaskNode*> RankTaskGraph::TryGetBoxingRelatedComTaskNode(const OpNode* op_node,
@@ -949,8 +949,8 @@ Maybe<CompTaskNode*> RankTaskGraph::TryGetBoxingRelatedComTaskNode(const OpNode*
   return comp_task_node;
 }
 
-Maybe<CompTaskNode*> RankTaskGraph::CreateOrFindRankCompTaskNode(const OpNode* op_node,
-                                                                 int64_t parallel_id) {
+Maybe<CompTaskNode*> RankTaskGraph::CreateOrFindRankCompTaskNodeByParallelId(const OpNode* op_node,
+                                                                             int64_t parallel_id) {
   auto* comp_task_node = JUST(TryGetBoxingRelatedComTaskNode(op_node, parallel_id));
   if (comp_task_node != nullptr) { return comp_task_node; }
   auto** comp_task_node_ptr = &op_node2comp_task_node_[op_node];
@@ -960,19 +960,20 @@ Maybe<CompTaskNode*> RankTaskGraph::CreateOrFindRankCompTaskNode(const OpNode* o
   return *comp_task_node_ptr;
 }
 
-Maybe<CompTaskNode*> RankTaskGraph::CreateOrFindRankCompTaskNode(const OpNode* op_node) {
-  CHECK_OR_RETURN(op_node->parallel_desc().HasMachineId(rank_))
+Maybe<CompTaskNode*> RankTaskGraph::CreateOrFindRankCompTaskNodeByRank(const OpNode* op_node,
+                                                                       int64_t rank) {
+  CHECK_OR_RETURN(op_node->parallel_desc().HasMachineId(rank))
       << "rank is not contained in the placment";
   int64_t parallel_id = -1;
-  CHECK_OR_RETURN(JUST(op_node->parallel_desc().TryGetParallelId(rank_, &parallel_id)))
+  CHECK_OR_RETURN(JUST(op_node->parallel_desc().TryGetParallelId(rank, &parallel_id)))
       << "parallel_id not found.";
-  return CreateOrFindRankCompTaskNode(op_node, parallel_id);
+  return CreateOrFindRankCompTaskNodeByParallelId(op_node, parallel_id);
 }
 
-Maybe<CompTaskNode*> RankTaskGraph::TryGetRankCompTaskNode(const OpNode* op_node) {
-  if (!op_node->parallel_desc().HasMachineId(rank_)) { return nullptr; }
+Maybe<CompTaskNode*> RankTaskGraph::TryGetRankCompTaskNode(const OpNode* op_node, int64_t rank) {
+  if (!op_node->parallel_desc().HasMachineId(rank)) { return nullptr; }
   int64_t parallel_id = -1;
-  CHECK_OR_RETURN(JUST(op_node->parallel_desc().TryGetParallelId(rank_, &parallel_id)))
+  CHECK_OR_RETURN(JUST(op_node->parallel_desc().TryGetParallelId(rank, &parallel_id)))
       << "parallel_id not found.";
   auto* comp_task_node = JUST(TryGetBoxingRelatedComTaskNode(op_node, parallel_id));
   if (comp_task_node != nullptr) { return comp_task_node; }
@@ -1030,6 +1031,71 @@ Maybe<void> RankTaskGraph::InitTransportTaskNodesFromProto() {
   return Maybe<void>::Ok();
 }
 
+bool RankTaskGraph::ContainRank(const OpNode* op_node, int64_t rank) const {
+  return op_node->parallel_desc().HasMachineId(rank);
+}
+
+Maybe<void> RankTaskGraph::ConnectDataEdges(const OpEdge* op_edge, int64_t rank) {
+  if (!op_edge->NeedBoxing()) {
+    auto* src_task_node = JUST(TryGetRankCompTaskNode(op_edge->src_node(), rank));
+    auto* dst_task_node = JUST(TryGetRankCompTaskNode(op_edge->dst_node(), rank));
+    if (ContainRank(op_edge->src_node(), rank)) {
+      CHECK_NOTNULL_OR_RETURN(src_task_node) << "src_task_node should not be nullptr. op_name: "
+                                             << op_edge->src_node()->op().op_name();
+    }
+    if (ContainRank(op_edge->dst_node(), rank)) {
+      CHECK_NOTNULL_OR_RETURN(dst_task_node) << "dst_task_node should not be nullptr. op_name: "
+                                             << op_edge->dst_node()->op().op_name();
+    }
+    if (src_task_node != nullptr && dst_task_node != nullptr) {
+      for (const auto& lbi : op_edge->lbis()) { ConnectWithLbi(src_task_node, dst_task_node, lbi); }
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> RankTaskGraph::ConnectCtrlEdges(const OpNode* src, const OpNode* dst, int64_t rank) {
+  if ((ContainRank(src, rank) && ContainRank(dst, rank))) {
+    auto* src_task_node = CHECK_JUST(TryGetRankCompTaskNode(src, rank));
+    auto* dst_task_node = CHECK_JUST(TryGetRankCompTaskNode(dst, rank));
+    if (src->op().op_conf().has_src_subset_tick_conf()) {
+      UNIMPLEMENTED_THEN_RETURN() << "ctrl edge from src_subset_tick is not supported.";
+    } else if (dst->op().op_conf().has_dst_subset_tick_conf()) {
+      UNIMPLEMENTED_THEN_RETURN() << "ctrl edge to dst_subset_tick is not supported.";
+    } else {
+      ConnectCtrlEdge(CHECK_NOTNULL(src_task_node), CHECK_NOTNULL(dst_task_node));
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+bool RankTaskGraph::IsDutyRank(const ParallelDesc& parallel_desc, int64_t rank) const {
+  if (current_rank_ == 0) {
+    // make sure master knows at least one op_node.
+    return CHECK_JUST(parallel_desc.MachineId4ParallelId(0)) == rank;
+  } else if (parallel_desc.HasMachineId(current_rank_)) {
+    // workers only care their own rank.
+    return current_rank_ == rank;
+  } else {
+    return false;
+  }
+}
+
+template<typename DoEachRankT>
+Maybe<void> RankTaskGraph::ForEachDutyRank(const ParallelDesc& parallel_desc,
+                                           const DoEachRankT& DoEachRank) {
+  if (current_rank_ == 0) {
+    // make sure master knows at least one op_node.
+    DoEachRank(JUST(parallel_desc.MachineId4ParallelId(0)));
+  } else if (parallel_desc.HasMachineId(current_rank_)) {
+    // workers only care their own rank.
+    DoEachRank(current_rank_);
+  } else {
+    // Do nothing.
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names,
                                 bool enable_straighten_algorithm) {
   JUST(AddBoxingReletedCompTaskNodesFromProto());
@@ -1037,50 +1103,25 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names,
   JUST(AddTransportTaskEdgesFromProto());
   JUST(InitTransportTaskNodesFromProto());
   OpGraph* op_graph = Singleton<OpGraph>::Get();
-  const auto& ContainThisRank = [&](const OpNode* op_node) {
-    return op_node->parallel_desc().HasMachineId(rank_);
-  };
   JUST(op_graph->MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
-    const auto& op_name = op_node->op().op_name();
-    if (ContainThisRank(op_node)) {
-      JUST(CreateOrFindRankCompTaskNode(op_node));
-    } else if (var_op_names.count(op_name) > 0) {
+    JUST(ForEachDutyRank(op_node->parallel_desc(), [&](int64_t rank) -> Maybe<void> {
+      JUST(CreateOrFindRankCompTaskNodeByRank(op_node, rank));
+      return Maybe<void>::Ok();
+    }));
+    if (var_op_names.count(op_node->op().op_name()) > 0) {
       // To makes sure all ranks know all var_op_names, at least one task is needed.
-      JUST(CreateOrFindRankCompTaskNode(op_node, /*parallel_id=*/0));
-    } else {
-      // Do nothing.
+      JUST(CreateOrFindRankCompTaskNodeByParallelId(op_node, /*parallel_id=*/0));
     }
     return Maybe<void>::Ok();
   }));
   JUST(op_graph->MaybeForEachEdge([&](const OpEdge* op_edge) -> Maybe<void> {
-    if (op_edge->NeedBoxing()) { return Maybe<void>::Ok(); }
-    auto* src_task_node = JUST(TryGetRankCompTaskNode(op_edge->src_node()));
-    auto* dst_task_node = JUST(TryGetRankCompTaskNode(op_edge->dst_node()));
-    if (ContainThisRank(op_edge->src_node())) {
-      CHECK_NOTNULL_OR_RETURN(src_task_node) << "src_task_node should not be nullptr. op_name: "
-                                             << op_edge->src_node()->op().op_name();
-    }
-    if (ContainThisRank(op_edge->dst_node())) {
-      CHECK_NOTNULL_OR_RETURN(dst_task_node) << "dst_task_node should not be nullptr. op_name: "
-                                             << op_edge->dst_node()->op().op_name();
-    }
-    if (src_task_node != nullptr && dst_task_node != nullptr) {
-      for (const auto& lbi : op_edge->lbis()) { ConnectWithLbi(src_task_node, dst_task_node, lbi); }
-    }
-    return Maybe<void>::Ok();
+    return ForEachDutyRank(op_edge->src_node()->parallel_desc(),
+                           [&](int64_t rank) { return ConnectDataEdges(op_edge, rank); });
   }));
-
   ForEachOpGraphNecessaryCtrlEdge(op_graph, [&](const OpNode* src, const OpNode* dst) {
-    if (!(ContainThisRank(src) && ContainThisRank(dst))) { return; }
-    auto* src_task_node = CHECK_JUST(TryGetRankCompTaskNode(src));
-    auto* dst_task_node = CHECK_JUST(TryGetRankCompTaskNode(dst));
-    if (src->op().op_conf().has_src_subset_tick_conf()) {
-      UNIMPLEMENTED();
-    } else if (dst->op().op_conf().has_dst_subset_tick_conf()) {
-      UNIMPLEMENTED();
-    } else {
-      ConnectCtrlEdge(CHECK_NOTNULL(src_task_node), CHECK_NOTNULL(dst_task_node));
-    }
+    CHECK(src->parallel_desc_sym() == dst->parallel_desc_sym());
+    CHECK_JUST(ForEachDutyRank(src->parallel_desc(),
+                               [&](int64_t rank) { return ConnectCtrlEdges(src, dst, rank); }));
   });
 
   if (enable_straighten_algorithm && GlobalProcessCtx::WorldSize() > 1) {
