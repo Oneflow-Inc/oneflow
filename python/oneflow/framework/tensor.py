@@ -409,6 +409,7 @@ def _prod(self, dim=[], keepdim=False):
 def _masked_select(self, mask):
     return flow.masked_select(self, mask)
 
+
 def _masked_fill_inplace(self, mask, value):
     """
     In-place version of :meth:`oneflow.Tensor.masked_fill`.

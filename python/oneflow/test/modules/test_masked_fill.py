@@ -82,8 +82,9 @@ class TestMaskedFill(flow.unittest.TestCase):
         )
         mask = random_tensor(ndim=1, dim0=1, dim1=20).to(device)
         value = random().to(bool)
-        input.masked_fill_(mask>0.5, value)
+        input.masked_fill_(mask > 0.5, value)
         return input
+
 
 if __name__ == "__main__":
     unittest.main()
