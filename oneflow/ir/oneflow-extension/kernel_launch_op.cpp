@@ -357,6 +357,7 @@ class KernelLaunchGpuKernel final : public user_op::OpKernel {
         return Maybe<void>::Ok();                                                               \
       });
 
+
 REGISTER_KERNEL_LAUNCH_GPU_KERNEL(float)
 REGISTER_KERNEL_LAUNCH_GPU_KERNEL(double)
 REGISTER_KERNEL_LAUNCH_GPU_KERNEL(int32_t)
