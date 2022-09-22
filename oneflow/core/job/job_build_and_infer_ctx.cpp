@@ -995,6 +995,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     // already construct a complete computational graph
     JUST(DoPass("PrunePinnedIdentityOpPass"));
     JUST(DoPass("ReplaceEmbeddingOps"));
+    JUST(DoPass("SequentialOneEmbeddingOpsPass"));
     JUST(DoPass("FuseEmbeddingShuffleInteractionPass"));
     JUST(DoPass("FuseBCEReduceMeanFwBwPass"));
     JUST(DoPass("AddSspVariableProxy"));
