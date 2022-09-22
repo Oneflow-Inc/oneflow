@@ -28,12 +28,14 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/functional/tensor_processor.h"
 
+#include <cmath>
 #include <sstream>
 #include <bitset>
 
@@ -471,6 +473,8 @@ class ReduceNanSumFunctor {
   ReduceNanSumFunctor() {
     op_ = CHECK_JUST(
         one::OpBuilder("reduce_nansum").Input("input_tensor").Output("output_tensor").Build());
+    // replace_op_ = CHECK_JUST(
+    //     one::OpBuilder("nansum_replace").Input("input").Output("output").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
@@ -482,11 +486,19 @@ class ReduceNanSumFunctor {
     TensorProcessor tensor_processor;
     JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs));
+    if (result->nelement() == x->nelement()) {
+      const auto& mask = JUST(IsNan(result));
+      return MaskedFill(result, mask, 0.);
+    }
+    else {
+      return result;
+    }
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> replace_op_;
 };
 
 class ReduceNanSumWholeFunctor {
@@ -494,6 +506,8 @@ class ReduceNanSumWholeFunctor {
   ReduceNanSumWholeFunctor() {
     op_ = CHECK_JUST(
         one::OpBuilder("reduce_nansum").Input("input_tensor").Output("output_tensor").Build());
+    // replace_op_ = CHECK_JUST(
+    //     one::OpBuilder("nansum_replace").Input("input").Output("output").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     const int32_t naxis = x->ndim();
@@ -506,11 +520,19 @@ class ReduceNanSumWholeFunctor {
     TensorProcessor tensor_processor;
     JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs));
+    if (result->nelement() == x->nelement()) {
+      const auto& mask = JUST(IsNan(result));
+      return MaskedFill(result, mask, 0.);
+    }
+    else {
+      return result;
+    }
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+  // std::shared_ptr<OpExpr> replace_op_;
 };
 
 class ReduceAllWholeFunctor {

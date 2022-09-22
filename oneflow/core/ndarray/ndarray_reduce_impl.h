@@ -48,30 +48,6 @@ template<DeviceType device_type, typename T, template<typename> class binary_fun
          typename Enable = void>
 struct NdarrayNoReduce;
 
-// template<DeviceType device_type, typename T>
-// struct ReplaceNan {
-//   static void memcpy(ep::Stream* stream, const XpuVarNdarray<T>& y,
-//                       const XpuVarNdarray<const T>& x) {
-//       CHECK(y.shape() == x.shape());
-//       if (x.ptr() == y.ptr()) { return; }
-//       Memset<device_type>(stream, y.ptr(), static_cast<T>(0), y.shape().ElemNum() * sizeof(T));
-//       size_t n = x.shape().ElemNum();
-//       XPU_1D_KERNEL_LOOP_BEGIN(i, n);
-//       y.ptr()[i] = isnan(x.ptr()[i]) ? static_cast<T>(0.) : x.ptr()[i];
-//       XPU_1D_KERNEL_LOOP_END();
-//   }
-// };
-
-// template<DeviceType device_type>
-// struct ReplaceNan<device_type, half> {
-//   static void memcpy(ep::Stream* stream, const XpuVarNdarray<half>& y,
-//                         const XpuVarNdarray<const half>& x) {
-//         CHECK(y.shape() == x.shape());
-//         if (x.ptr() == y.ptr()) { return; }
-//         Memcpy<device_type>(stream, y.ptr(), x.ptr(), y.shape().ElemNum() * sizeof(half));
-//     }
-// };
-
 template<DeviceType device_type, typename T, template<typename> class binary_func>
 struct NdarrayNoReduce<device_type, T, binary_func,
                        typename std::enable_if<std::is_same<
@@ -84,7 +60,6 @@ struct NdarrayNoReduce<device_type, T, binary_func,
   static void Reduce(ep::Stream* ctx, const XpuVarNdarray<RetT>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
     if (std::is_same<binary_func<T>, BinaryFuncNanSum<T>>()) {
-      // ReplaceNan<device_type, T>::memcpy(ctx, y, x);
       XpuNdarrayAssign<device_type, RetT>::AssignNanSum(ctx, y, x);
     } else {
       XpuNdarrayAssign<device_type, RetT>::Assign(ctx, y, x);

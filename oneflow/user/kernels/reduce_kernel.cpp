@@ -97,11 +97,9 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
     const int32_t output_elem_cnt = output_tensor->shape_view().elem_cnt();
-    std::cout << "fuck" << std::endl;
 
     if (input_tensor->shape_view().elem_cnt() == 0) {
       if (output_tensor->shape_view().elem_cnt() != 0) {
-        std::cout << "run1" << std::endl;
         Scalar init_value = [&]() {
           if (std::is_same<BinaryFunc<T>, BinaryFuncAny<T>>::value) { return Scalar(0); }
           if (std::is_same<BinaryFunc<T>, BinaryFuncAll<T>>::value) { return Scalar(1); }
