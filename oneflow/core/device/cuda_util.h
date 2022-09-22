@@ -30,6 +30,9 @@ limitations under the License.
 #include <curand.h>
 #include <nccl.h>
 #include <cuda_fp16.h>
+#if CUDA_VERSION >= 11000
+#include <cuda_bf16.h>
+#endif  // CUDA_VERSION >= 11000
 #include "oneflow/core/device/cuda_pseudo_half.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 

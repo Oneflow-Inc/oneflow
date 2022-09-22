@@ -28,6 +28,7 @@ OneFlow upholds the core concept and architecture of static compilation and stre
     cuda
     distributed
     distributions
+    hub
     linalg
     nn.init
     optim

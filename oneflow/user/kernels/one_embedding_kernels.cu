@@ -642,7 +642,6 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
     const int64_t seed = ctx->Attr<int64_t>("seed");
-
     void* num_missing_ptr;
     allocator->Allocate(&num_missing_ptr, sizeof(uint32_t));
     void* missing_indices_ptr;
@@ -1282,6 +1281,8 @@ class EmbeddingLookupPlaceholderKernel final : public user_op::OpKernel {
     DataType value_dtype = ctx->Attr<DataType>("dtype");
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
+    const int64_t padding_idx = ctx->Attr<int64_t>("padding_idx");
+    const bool has_padding_idx = ctx->Attr<bool>("has_padding_idx");
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     bool need_unique_values = true;
     bool need_embeddings =
@@ -1323,7 +1324,8 @@ class EmbeddingLookupPlaceholderKernel final : public user_op::OpKernel {
 
     data_shuffle::IdShuffle(ctx->stream(), comm, data_ptrs, num_ids, parallel_id, parallel_num,
                             num_unique_matrix_dtype, ids->data_type(), table_ids_dtype,
-                            need_process_table_ids, host_num_unique_matrix, host_num_keys);
+                            need_process_table_ids, has_padding_idx, padding_idx,
+                            host_num_unique_matrix, host_num_keys);
     uint32_t num_unique = *host_num_keys;
 
     // lookup and put, if is_full_cache, not put to store.
@@ -1613,6 +1615,8 @@ class EmbeddingLookupPlaceholderLocalKernel final : public user_op::OpKernel {
     DataType value_dtype = ctx->Attr<DataType>("dtype");
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
+    const int64_t padding_idx = ctx->Attr<int64_t>("padding_idx");
+    const bool has_padding_idx = ctx->Attr<bool>("has_padding_idx");
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     bool need_embeddings =
         (line_size != embedding_size) || (value_dtype != embeddings->data_type());
@@ -1659,7 +1663,7 @@ class EmbeddingLookupPlaceholderLocalKernel final : public user_op::OpKernel {
         cuda_stream, num_ids, hash_capacity, 1, reinterpret_cast<const K*>(ids->dptr()),
         table_ids_ptr, num_unique_ptr, unique_ids_ptr, unique_table_ids_ptr, inverse_indices_ptr,
         reinterpret_cast<data_shuffle::TableEntry<K>*>(workspace_ptr), workspace_bytes,
-        need_process_table_ids);
+        need_process_table_ids, has_padding_idx, padding_idx);
 
     OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, num_unique_ptr, sizeof(IDX), cudaMemcpyDefault,
                                   cuda_stream));
