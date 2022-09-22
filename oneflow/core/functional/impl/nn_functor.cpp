@@ -3638,10 +3638,18 @@ class OneEmbeddingLookupFunctor {
       if (table_ids_shape != ids_shape) {
         const Shape& left_extended_shape =
             CreateLeftExtendedShape(ShapeView(table_ids_shape), ids_shape.NumAxes());
-        const AxisVector& broadcast_axis_vec = left_extended_shape.Axes4BroadcastTo(ids_shape);
-        broadcast_table_ids = JUST(functional::BroadcastLike(
-            JUST(table_ids), ids,
-            std::vector<int32_t>{broadcast_axis_vec.begin(), broadcast_axis_vec.end()}));
+        for (int64_t i = 0; i < ids_shape.NumAxes(); i++) {
+          if (left_extended_shape.at(i) != 1) {
+            CHECK_EQ_OR_RETURN(left_extended_shape.at(i), ids_shape.at(i))
+                << "when table_ids's shape not equals ids shape, table_ids must be able to be "
+                   "broadcast to ids_shape "
+                   "but got table_ids_shape: "
+                << table_ids_shape.DebugStr() << ", ids_shape: " << ids_shape.DebugStr();
+            ;
+          }
+        }
+        broadcast_table_ids =
+            JUST(functional::BroadcastLike(JUST(table_ids), ids, std::vector<int32_t>{}));
       }
       return OpInterpUtil::Dispatch<Tensor>(*op_has_table_ids_, {shadow, ids, broadcast_table_ids},
                                             attrs);
