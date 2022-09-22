@@ -301,8 +301,8 @@
 
 - name: "reduce_nansum"
   signature: [
-    "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => ReduceNanSum",
-    "Tensor (Tensor x) => ReduceNanSumWhole"
+    "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False, *, DataType dtype=None) => ReduceNanSum",
+    "Tensor (Tensor x, *, DataType dtype=None) => ReduceNanSumWhole"
   ]
   bind_python: True
 
@@ -329,8 +329,8 @@
 
 - name: "reduce_prod"
   signature: [
-    "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False, *, DataType dtype=None) => ReduceProd",
-    "Tensor (Tensor x, *, DataType dtype=None) => ReduceProdWhole",
+    "Tensor (Tensor input, Int32List[1] dim, Bool keepdim=False, *, DataType dtype=None) => ReduceProd",
+    "Tensor (Tensor input, *, DataType dtype=None) => ReduceProdWhole",
   ]
   bind_python: True
 

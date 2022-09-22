@@ -51,7 +51,6 @@ struct XpuNdarrayAssign<
   static void AssignNanSum(ep::Stream* stream, const XpuVarNdarray<T>& y,
                            const XpuVarNdarray<const T>& x) {
     CHECK(y.shape() == x.shape());
-    const size_t elem_cnt = y.shape().ElemNum();
     CHECK_EQ(device_type, stream->device_type()) << "Device type mismatch";
     std::unique_ptr<ep::primitive::ElementwiseUnary> primitive =
         ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(

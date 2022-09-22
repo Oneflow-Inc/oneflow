@@ -248,3 +248,42 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.nansum,
+    r"""oneflow.nansum(input, dim, keepdim=False, *, dtype=None) -> Tensor
+
+    Returns the sum of each row of the ``input`` tensor in the given dimension ``dim``,
+    treating Not a Numbers (NaNs) as zero. If ``dim`` is a list of dimensions, 
+    reduce over all of them.
+
+    If ``keepdim`` is ``True``, the output tensor is of the same size as ``input`` except 
+    in the dimension(s) ``dim`` where it is of size 1. 
+    Otherwise, ``dim`` is squeezed (see :class:`oneflow.squeeze()`), 
+    resulting in the output tensor having 1 (or ``len(dim)``) fewer dimension(s).
+
+    Args:
+        input (oneflow.Tensor): the Input Tensor
+        dim (int, optional): the dimension to reduce. Default: ``None``
+        keepdim (bool, optional): whether the output tensor has ``dim`` retained or not. Default: `False`
+        dtype (oneflow.dtype, optional): the desired data type of returned tensor. 
+        If specified, the input tensor is casted to dtype before the operation is performed. 
+        This is useful for preventing data type overflows. Default: ``None``.
+
+    Example:
+
+    .. code-block:: python
+    
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1., 2., float("nan")])
+        >>> flow.nansum(x)
+        tensor(3., dtype=oneflow.float32)
+        >>> x = flow.tensor([[1., float("nan")], [float("nan"), 2]])
+        >>> flow.nansum(x, dim=1)
+        tensor([1., 2.], dtype=oneflow.float32)
+        >>> x = flow.tensor([float("nan") for i in range(3)])
+        >>> flow.nansum(x)
+        tensor(0., dtype=oneflow.float32)
+
+    """
+)
