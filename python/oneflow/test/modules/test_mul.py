@@ -175,11 +175,15 @@ def _test_inplace_mul_scalar(test_case, device):
         np.allclose(np.full(arr.shape, y), of_x.grad.numpy(), 1e-05, 1e-05)
     )
 
+
 def _test_mul_inplace_0size_tensor(test_case, device):
     targets = flow.randn((0, 6), device=flow.device(device))
     height, width = 640, 640
-    targets[:, 2:] *= flow.tensor((width, height, width, height), device=flow.device(device))
+    targets[:, 2:] *= flow.tensor(
+        (width, height, width, height), device=flow.device(device)
+    )
     test_case.assertTrue(np.array_equal(targets.size(), (0, 6)))
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestMulModule(flow.unittest.TestCase):

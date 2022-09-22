@@ -83,6 +83,7 @@ Maybe<void> CheckInplaceShapeCanExpandTo(const Shape& shape, const Shape& expand
           << Error::RuntimeError() << "Tensor with shape " << expand_shape.ToString()
           << " doesn't match the broadcast shape in an inplace operation";
     } else {
+      // For 0-size tensor, expand_shape.At(i) can equal to 0.
       CHECK_OR_RETURN(expand_shape.At(i) >= 0);  // NOLINT(maybe-need-error-msg)
     }
   }
