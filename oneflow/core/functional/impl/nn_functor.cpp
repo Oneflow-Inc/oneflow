@@ -3632,26 +3632,16 @@ class OneEmbeddingLookupFunctor {
     attrs.SetAllAttrs(dtype->data_type(), embedding_name, line_size, embedding_size, is_full_cache,
                       num_tables, embedding_tables, seed, padding_idx_val, has_padding_idx);
     if (table_ids) {
-      const auto& table_ids_shape = JUST(table_ids)->shape();
-      const auto& ids_shape = ids->shape();
+      const auto& table_ids_shape = *(JUST(table_ids)->shape());
+      const auto& ids_shape = *(ids->shape());
       auto broadcast_table_ids = JUST(table_ids);
       if (table_ids_shape != ids_shape) {
-        CHECK_EQ_OR_RETURN(table_ids_shape->NumAxes() + 1, ids_shape->NumAxes())
-            << Error::RuntimeError()
-            << "when table_ids's shape not equals ids shape, table_ids num_axes + 1 should equals "
-               "ids num_axes, but got "
-            << std::to_string(table_ids_shape->NumAxes()) << ", "
-            << std::to_string(ids_shape->NumAxes());
-        CHECK_EQ_OR_RETURN(table_ids_shape->At(0), ids_shape->At(1))
-            << "when table_ids's shape not equals ids shape, table_ids should broadcast at batch "
-               "axis, table_ids_shape.At(0) should equals to ids_shape.at(1), but got "
-               "table_ids_shape: "
-            << table_ids_shape->DebugStr() << ", ids_shape: " << ids_shape->DebugStr();
-        // broadcast_like y's dtype is from like_tensor's dtype, so we cast ids dtype to table_ids
-        // dtype as like tensor. should be replaced by broadcast_to when have broadcast_to support.
-        auto like_tensor =
-            JUST(functional::Cast(ids, JUST(table_ids)->dtype(), /*pin_memory=*/false));
-        broadcast_table_ids = JUST(functional::BroadcastLike(JUST(table_ids), like_tensor, {0}));
+        const Shape& left_extended_shape =
+            CreateLeftExtendedShape(ShapeView(table_ids_shape), ids_shape.NumAxes());
+        const AxisVector& broadcast_axis_vec = left_extended_shape.Axes4BroadcastTo(ids_shape);
+        broadcast_table_ids = JUST(functional::BroadcastLike(
+            JUST(table_ids), ids,
+            std::vector<int32_t>{broadcast_axis_vec.begin(), broadcast_axis_vec.end()}));
       }
       return OpInterpUtil::Dispatch<Tensor>(*op_has_table_ids_, {shadow, ids, broadcast_table_ids},
                                             attrs);
