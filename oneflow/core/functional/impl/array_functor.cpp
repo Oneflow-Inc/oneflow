@@ -2608,10 +2608,9 @@ class MaskedFillFunctor {
     const auto& x_shape = *(x->shape());
     const auto& mask_shape = *(mask->shape());
 
-    std::shared_ptr<TensorTuple> outputs;
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     if (inplace) {
       JUST(CheckInplaceValid(x));
-      outputs = std::make_shared<TensorTuple>(1);
       (*outputs)[0] = x;
     }
 
@@ -2624,24 +2623,13 @@ class MaskedFillFunctor {
       FOR_RANGE(int64_t, i, 0, max_shape.NumAxes()) {
         max_shape.Set(i, std::max(x_extend_shape.At(i), mask_extend_shape.At(i)));
       }
-
-      if (inplace) {
-        JUST(OpInterpUtil::Dispatch(*op_,
-                                    {JUST(Expand(x, max_shape)), JUST(Expand(mask, max_shape))},
-                                    outputs.get(), attrs));
-        return outputs->at(0);
-      } else {
-        return OpInterpUtil::Dispatch<Tensor>(
-            *op_, {JUST(Expand(x, max_shape)), JUST(Expand(mask, max_shape))}, attrs);
-      }
-    } // if (x_shape != mask_shape)
-
-    if (inplace) {
-      JUST(OpInterpUtil::Dispatch(*op_, {x, mask}, outputs.get(), attrs));
+      JUST(OpInterpUtil::Dispatch(*op_, {JUST(Expand(x, max_shape)), JUST(Expand(mask, max_shape))},
+                                  outputs.get(), attrs));
       return outputs->at(0);
     }
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mask}, attrs);
+    JUST(OpInterpUtil::Dispatch(*op_, {x, mask}, outputs.get(), attrs));
+    return outputs->at(0);
   }
 
  private:
