@@ -719,7 +719,8 @@ void GetDeviceDesc(const TaskProto* task_proto, boxing::collective::DeviceDesc* 
 
 }  // namespace
 
-void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
+void PlanUtil::GenCollectiveBoxingPlan(
+    Job* job, Plan* plan, const std::function<std::unique_ptr<PlanTaskGraph>()>& GetPlanTaskGraph) {
   using namespace boxing::collective;
 
   RequestSet* request_set = &(*plan->mutable_collective_boxing_plan()
@@ -728,8 +729,8 @@ void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
       plan->task().cbegin(), plan->task().cend(),
       [](const TaskProto& task) { return IsCollectiveBoxingTaskType(task.task_type()); });
   if (cb_task_count == 0) { return; }
-
-  PlanTaskGraph plan_task_graph(*plan);
+  auto plan_task_graph_ptr = GetPlanTaskGraph();
+  auto& plan_task_graph = *plan_task_graph_ptr;
   int64_t dependency_depth = 0;
   int64_t order = 0;
   HashSet<const PlanTaskNode*> all_visited;
@@ -1121,6 +1122,9 @@ void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name) {
     for (int64_t i = 0; i < ordered_task_in_rank.size(); ++i) {
       CHECK_LT(i, ordered_task_in_rank.size());
       const auto* task = ordered_task_in_rank.at(i);
+      HashSet<int64_t> fake_regst_desc_ids{
+          task->fake_consumed_regst_desc_ids().regst_desc_id().begin(),
+          task->fake_consumed_regst_desc_ids().regst_desc_id().end()};
       int64_t task_id = task->task_id();
       CHECK(task_id2name.find(task_id) != task_id2name.end())
           << " task_id2name cannot find" << task_id;
@@ -1133,6 +1137,7 @@ void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name) {
       for (const auto& key2consume_regst : task->consumed_regst_desc_id()) {
         std::string key = key2consume_regst.first;
         for (int64_t consume_regst_id : key2consume_regst.second.regst_desc_id()) {
+          if (fake_regst_desc_ids.count(consume_regst_id) > 0) { continue; }
           std::string other_rank_str = "";
           CHECK(regst_id2proto.find(consume_regst_id) != regst_id2proto.end())
               << " regst_id2proto cannot find: " << consume_regst_id;

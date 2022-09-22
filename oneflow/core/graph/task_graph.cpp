@@ -949,25 +949,31 @@ Maybe<CompTaskNode*> RankTaskGraph::TryGetBoxingRelatedComTaskNode(const OpNode*
   return comp_task_node;
 }
 
-Maybe<CompTaskNode*> RankTaskGraph::TryCreateOrFindRankCompTaskNode(const OpNode* op_node) {
+Maybe<CompTaskNode*> RankTaskGraph::CreateOrFindRankCompTaskNode(const OpNode* op_node,
+                                                                 int64_t parallel_id) {
+  auto* comp_task_node = JUST(TryGetBoxingRelatedComTaskNode(op_node, parallel_id));
+  if (comp_task_node != nullptr) { return comp_task_node; }
+  auto** comp_task_node_ptr = &op_node2comp_task_node_[op_node];
+  if (*comp_task_node_ptr != nullptr) { return *comp_task_node_ptr; }
+  *comp_task_node_ptr = GenCompTaskNode(op_node, parallel_id);
+  AddAllocatedNode(*comp_task_node_ptr);
+  return *comp_task_node_ptr;
+}
+
+Maybe<CompTaskNode*> RankTaskGraph::CreateOrFindRankCompTaskNode(const OpNode* op_node) {
+  CHECK_OR_RETURN(op_node->parallel_desc().HasMachineId(rank_))
+      << "rank is not contained in the placment";
   int64_t parallel_id = -1;
-  if (!op_node->parallel_desc().TryGetParallelId(rank_, &parallel_id)) { return nullptr; }
-  {
-    auto* comp_task_node = JUST(TryGetBoxingRelatedComTaskNode(op_node, parallel_id));
-    if (comp_task_node != nullptr) { return comp_task_node; }
-  }
-  {
-    auto** comp_task_node = &op_node2comp_task_node_[op_node];
-    if (*comp_task_node != nullptr) { return *comp_task_node; }
-    *comp_task_node = GenCompTaskNode(op_node, parallel_id);
-    AddAllocatedNode(*comp_task_node);
-    return *comp_task_node;
-  }
+  CHECK_OR_RETURN(JUST(op_node->parallel_desc().TryGetParallelId(rank_, &parallel_id)))
+      << "parallel_id not found.";
+  return CreateOrFindRankCompTaskNode(op_node, parallel_id);
 }
 
 Maybe<CompTaskNode*> RankTaskGraph::TryGetRankCompTaskNode(const OpNode* op_node) {
+  if (!op_node->parallel_desc().HasMachineId(rank_)) { return nullptr; }
   int64_t parallel_id = -1;
-  if (!op_node->parallel_desc().TryGetParallelId(rank_, &parallel_id)) { return nullptr; }
+  CHECK_OR_RETURN(JUST(op_node->parallel_desc().TryGetParallelId(rank_, &parallel_id)))
+      << "parallel_id not found.";
   auto* comp_task_node = JUST(TryGetBoxingRelatedComTaskNode(op_node, parallel_id));
   if (comp_task_node != nullptr) { return comp_task_node; }
   return op_node2comp_task_node_[op_node];
@@ -1024,20 +1030,32 @@ Maybe<void> RankTaskGraph::InitTransportTaskNodesFromProto() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> RankTaskGraph::Init(bool enable_straighten_algorithm) {
+Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names,
+                                bool enable_straighten_algorithm) {
   JUST(AddBoxingReletedCompTaskNodesFromProto());
   JUST(CreateAndPartiallyInitTransportTaskNodesFromProto());
   JUST(AddTransportTaskEdgesFromProto());
   JUST(InitTransportTaskNodesFromProto());
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   const auto& ContainThisRank = [&](const OpNode* op_node) {
-    int64_t parallel_id = -1;
-    return op_node->parallel_desc().TryGetParallelId(rank_, &parallel_id);
+    return op_node->parallel_desc().HasMachineId(rank_);
   };
+  JUST(op_graph->MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
+    const auto& op_name = op_node->op().op_name();
+    if (ContainThisRank(op_node)) {
+      JUST(CreateOrFindRankCompTaskNode(op_node));
+    } else if (var_op_names.count(op_name) > 0) {
+      // To makes sure all ranks know all var_op_names, at least one task is needed.
+      JUST(CreateOrFindRankCompTaskNode(op_node, /*parallel_id=*/0));
+    } else {
+      // Do nothing.
+    }
+    return Maybe<void>::Ok();
+  }));
   JUST(op_graph->MaybeForEachEdge([&](const OpEdge* op_edge) -> Maybe<void> {
     if (op_edge->NeedBoxing()) { return Maybe<void>::Ok(); }
-    auto* src_task_node = JUST(TryCreateOrFindRankCompTaskNode(op_edge->src_node()));
-    auto* dst_task_node = JUST(TryCreateOrFindRankCompTaskNode(op_edge->dst_node()));
+    auto* src_task_node = JUST(TryGetRankCompTaskNode(op_edge->src_node()));
+    auto* dst_task_node = JUST(TryGetRankCompTaskNode(op_edge->dst_node()));
     if (ContainThisRank(op_edge->src_node())) {
       CHECK_NOTNULL_OR_RETURN(src_task_node) << "src_task_node should not be nullptr. op_name: "
                                              << op_edge->src_node()->op().op_name();

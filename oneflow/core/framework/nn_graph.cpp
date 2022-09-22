@@ -273,10 +273,11 @@ Maybe<void> NNGraph::RankPerThreadCompile() {
       auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
       JUST(BoxingTaskGraph::New())->ToProto(boxing_task_graph_proto.get());
       for (int i = 0; i < GlobalProcessCtx::WorldSize(); ++i) {
-        auto* plan = &plans[i];
+        Plan rank_plan;
+        auto* plan = (i > 0) ? &rank_plan : &plan_;
         double start = GetCurTime();
         // TODO(chengcheng): new memory reused by chunk
-        JUST(RankCompiler(boxing_task_graph_proto, i).Compile(&job_, plan));
+        JUST(RankCompiler(boxing_task_graph_proto, i).Compile(variable_op_names_, &job_, plan));
         PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
 
         VLOG(1) << "Graph name: " << name_
@@ -287,23 +288,25 @@ Maybe<void> NNGraph::RankPerThreadCompile() {
           PlanUtil::ToDotFile(*plan, "job_" + name_ + "_plan" + std::to_string(i) + ".dot");
         }
         PlanUtil::GenRegisterHint(plan);
-        // TODO(chengcheng): test collective boxing for multi-job.
-        PlanUtil::GenCollectiveBoxingPlan(&job_, plan);
-        // PlanUtil::SetForceInplaceMemBlock(plan); NOTE(chengcheng): only for ssp.
-        PlanUtil::DumpCtrlRegstInfoToPlan(plan);
-        PlanUtil::PlanMemoryLog(plan, name_);
-        if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          PlanUtil::GenLightPlan(plan, name_);
-        }
+        plan->mutable_collective_boxing_plan();
+        plan->mutable_ctrl_regst_desc_info();
         std::string plan_name = "plan:" + job_name() + ":" + std::to_string(i);
         Singleton<CtrlClient>::Get()->PushKV(plan_name, *plan);
       }
       return Maybe<void>::Ok();
     }));
-    plan_ = plans[0];
   } else {
     std::string plan_name = "plan:" + job_name() + ":" + std::to_string(GlobalProcessCtx::Rank());
     Singleton<CtrlClient>::Get()->PullKV(plan_name, &plan_);
+  }
+  // TODO(chengcheng): test collective boxing for multi-job.
+  PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_,
+                                    [&] { return std::make_unique<PlanTaskGraph>(plan_); });
+  // PlanUtil::SetForceInplaceMemBlock(plan); NOTE(chengcheng): only for ssp.
+  PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
+  PlanUtil::PlanMemoryLog(&plan_, name_);
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    PlanUtil::GenLightPlan(&plan_, name_);
   }
   OF_SESSION_BARRIER();
   // NOTE(zwx): After barrier plan is synchronized between all ranks,
@@ -336,7 +339,8 @@ Maybe<void> NNGraph::NaiveCompile() {
     }
     PlanUtil::GenRegisterHint(&plan_);
     // TODO(chengcheng): test collective boxing for multi-job.
-    PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);
+    PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_,
+                                      [&] { return std::make_unique<PlanTaskGraph>(plan_); });
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
     PlanUtil::PlanMemoryLog(&plan_, name_);

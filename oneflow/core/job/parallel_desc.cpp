@@ -188,11 +188,11 @@ Maybe<Symbol<Device>> GetTensorDevice4CurrentProcessCtx(Symbol<ParallelDesc> par
   return device_iter->second;
 }
 
-bool ParallelDesc::TryGetParallelId(int64_t rank, int64_t* parallel_id) const {
-  int64_t machine_id = -1;
-  int64_t device_id = -1;
-  GlobalProcessCtx::GetMachineIdAndDeviceId(rank, &machine_id, &device_id);
-  return TryGetParallelId(machine_id, device_id, parallel_id);
+Maybe<bool> ParallelDesc::TryGetParallelId(int64_t rank, int64_t* parallel_id) const {
+  if (!HasMachineId(rank)) { return false; }
+  const auto& device_ids = sorted_dev_phy_ids(rank);
+  CHECK_EQ_OR_RETURN(device_ids.size(), 1) << "only sole device_id supported.";
+  return TryGetParallelId(rank, device_ids.at(0), parallel_id);
 }
 
 bool ParallelDesc::TryGetParallelId(int64_t machine_id, int64_t device_id,

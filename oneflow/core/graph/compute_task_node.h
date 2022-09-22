@@ -49,9 +49,9 @@ class CompTaskNode : public TaskNode {
   std::shared_ptr<const Operator> op() const { return op_node_->shared_op(); }
 
   ExecNode::InferBlobDescsMethod InferBlobDescs() const override {
-    if (ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>() == "naive") {
+    if (ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>() == kNaiveCompiler) {
       return &ExecNode::InferBlobDescsByInputs;
-    } else if (ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>() == "rank_per_thread") {
+    } else if (ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>() == kRankPerThreadCompiler) {
       return &ExecNode::InferBlobDescsByNdSbp;
     } else {
       UNIMPLEMENTED() << "ONEFLOW_LAZY_COMPILER(value: "

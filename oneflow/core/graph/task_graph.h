@@ -169,23 +169,24 @@ class RankTaskGraph final : public TaskGraph {
   ~RankTaskGraph();
 
   static Maybe<RankTaskGraph> New(
-      const std::shared_ptr<BoxingTaskGraphProto>& boxing_task_graph_proto, int64_t rank,
-      bool enable_straighten_algorithm) {
+      const std::shared_ptr<BoxingTaskGraphProto>& boxing_task_graph_proto,
+      const HashSet<std::string>& var_op_names, int64_t rank, bool enable_straighten_algorithm) {
     std::shared_ptr<RankTaskGraph> graph(new RankTaskGraph(boxing_task_graph_proto, rank));
-    JUST(graph->Init(enable_straighten_algorithm));
+    JUST(graph->Init(var_op_names, enable_straighten_algorithm));
     return graph;
   }
 
  private:
   RankTaskGraph(const std::shared_ptr<BoxingTaskGraphProto>& boxing_task_graph_proto, int64_t rank);
 
-  Maybe<void> Init(bool enable_straighten_algorithm);
+  Maybe<void> Init(const HashSet<std::string>& var_op_names, bool enable_straighten_algorithm);
   Maybe<void> AddBoxingReletedCompTaskNodesFromProto();
   Maybe<void> CreateAndPartiallyInitTransportTaskNodesFromProto();
   Maybe<void> AddTransportTaskEdgesFromProto();
   Maybe<void> InitTransportTaskNodesFromProto();
   Maybe<CompTaskNode*> TryGetBoxingRelatedComTaskNode(const OpNode* op_node, int64_t parallel_id);
-  Maybe<CompTaskNode*> TryCreateOrFindRankCompTaskNode(const OpNode* op_node);
+  Maybe<CompTaskNode*> CreateOrFindRankCompTaskNode(const OpNode* op_node, int64_t parallel_id);
+  Maybe<CompTaskNode*> CreateOrFindRankCompTaskNode(const OpNode* op_node);
   Maybe<CompTaskNode*> TryGetRankCompTaskNode(const OpNode* op_node);
 
   std::shared_ptr<BoxingTaskGraphProto> boxing_task_graph_proto_;

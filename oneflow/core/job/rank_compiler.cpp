@@ -50,18 +50,18 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
 
 }  // namespace
 
-Maybe<void> RankCompiler::Compile(Job* job, Plan* plan) const {
+Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job* job,
+                                  Plan* plan) const {
   // build task_gph.
   // TODO(levi): we can rewrite this part of code in visitor pattern.
   auto task_gph =
-      JUST(RankTaskGraph::New(boxing_task_graph_proto_, rank_,
+      JUST(RankTaskGraph::New(boxing_task_graph_proto_, var_op_names, rank_,
                               job->job_conf().enable_straighten_algorithm_in_task_graph()));
-  const int64_t machine_id = GlobalProcessCtx::GetMachineId(rank_);
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode([&](TaskNode* task_node) {
     auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
-    if (task_node->machine_id() != machine_id && comp_task_node != nullptr) {
+    if (task_node->machine_id() != rank_ && comp_task_node != nullptr) {
       comp_task_node->ConsumeFakeRegstsIf();
     } else {
       task_node->ConsumeAllRegsts();
@@ -69,7 +69,7 @@ Maybe<void> RankCompiler::Compile(Job* job, Plan* plan) const {
   });
   task_gph->ForEachNode([&](TaskNode* task_node) {
     auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
-    if (task_node->machine_id() != machine_id && comp_task_node != nullptr) {
+    if (task_node->machine_id() != rank_ && comp_task_node != nullptr) {
       // Do nothing. because all consumed registers are fake.
     } else {
       task_node->PinConsumedRegst();
@@ -83,7 +83,7 @@ Maybe<void> RankCompiler::Compile(Job* job, Plan* plan) const {
   if (job_desc.enable_inplace()) {
     task_gph->ForEachGpuDeviceNodes([&](const HashSet<TaskNode*>& dev_nodes) {
       if (dev_nodes.empty()) { return; }
-      if ((*dev_nodes.begin())->machine_id() != machine_id) { return; }
+      if ((*dev_nodes.begin())->machine_id() != rank_) { return; }
       task_gph->EnableInplaceMemSharing(dev_nodes, IsReachable);
     });
   }
@@ -93,10 +93,17 @@ Maybe<void> RankCompiler::Compile(Job* job, Plan* plan) const {
   // put infomation from task_gph into plan.
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
-    int64_t machine_id = GlobalProcessCtx::GetMachineId(rank_);
-    if (machine_id != task_node->machine_id()) { return; }
     TaskProto task_proto;
     task_node->ToProto(&task_proto);
+    auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
+    if (task_node->machine_id() != rank_ && comp_task_node != nullptr) {
+      for (const auto& pair : task_node->consumed_regsts()) {
+        for (const auto& regst : pair.second) {
+          task_proto.mutable_fake_consumed_regst_desc_ids()->add_regst_desc_id(
+              regst->regst_desc_id());
+        }
+      }
+    }
     if (task_node->GetTaskType() == kNormalForward || task_node->GetTaskType() == kRepeat
         || task_node->GetTaskType() == kAcc) {
       CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto);

@@ -31,7 +31,7 @@ class RankCompiler final {
       : boxing_task_graph_proto_(boxing_task_graph_proto), rank_(rank) {}
   ~RankCompiler() = default;
 
-  Maybe<void> Compile(Job*, Plan*) const;
+  Maybe<void> Compile(const HashSet<std::string>& var_op_names, Job*, Plan*) const;
 
   Maybe<void> WithSingletonOpGraph(const Job* job, const std::function<Maybe<void>()>& Callback);
 

@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/graph/stream_id.h"
+#include "oneflow/core/graph/plan_task_graph.h"
 
 namespace oneflow {
 
@@ -37,7 +38,9 @@ struct PlanUtil {
   static std::function<RegstDescProto*(int64_t)> MakeMutRegstDesc4Id(Plan* plan);
   static void SetForceInplaceMemBlock(Plan* plan);
   static void DumpCtrlRegstInfoToPlan(Plan* plan);
-  static void GenCollectiveBoxingPlan(Job* job, Plan* plan);
+  static void GenCollectiveBoxingPlan(
+      Job* job, Plan* plan,
+      const std::function<std::unique_ptr<PlanTaskGraph>()>& GetPlanTaskGraph);
   static void GenRegisterHint(Plan* plan);
   static void GenLightPlan(Plan* plan, const std::string& plan_name);
   static void PlanMemoryLog(Plan* plan, const std::string& plan_name);
