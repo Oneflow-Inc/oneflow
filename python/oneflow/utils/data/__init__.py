@@ -32,6 +32,7 @@ from oneflow.utils.data.dataset import IterableDataset as IterDataPipe
 from oneflow.utils.data.dataloader import (
     DataLoader,
     _DatasetKind,
+    get_worker_info,
 )
 from oneflow.utils.data.decorator import (
     functional_datapipe,
@@ -55,6 +56,7 @@ __all__ = [
     "random_split",
     "DataLoader",
     "_DatasetKind",
+    "get_worker_info",
     "IterDataPipe",
     "functional_datapipe",
     "guaranteed_datapipes_determinism",

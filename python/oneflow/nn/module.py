@@ -1072,7 +1072,11 @@ class Module(object):
         fn(self)
         return self
 
-    def to(self, device: Optional[Union[str, flow.device]] = None):
+    def to(
+        self,
+        device: Optional[Union[str, flow.device]] = None,
+        dtype: Optional[flow.dtype] = None,
+    ):
         r"""
         to(device=None)
         
@@ -1114,7 +1118,7 @@ class Module(object):
         """
 
         def convert(t):
-            return t.to(device)
+            return t.to(device, dtype)
 
         return self._apply(convert)
 
