@@ -73,6 +73,7 @@ add_docstr(
 
     .. warning::
         This function may change in a future PyTorch release to match the default behaviour in :func:`oneflow.linalg.cross`. We recommend using :func:`oneflow.linalg.cross`.
+
     Args:
         input (Tensor): the first input tensor.
         other (Tensor): the second input tensor.
