@@ -744,8 +744,6 @@ Maybe<void> ScaleInitialDiffByLossScale(
     }
     const DataType data_type = op_graph.GetLogicalBlobDesc(initial_diff_lbi).data_type();
     if (data_type != DataType::kFloat) {
-      LOG(ERROR) << "ScaleInitialDiffByLossScale: loss_lbn=" << GenLogicalBlobName(loss_lbi)
-                 << ", initial_diff_lbn=" << GenLogicalBlobName(initial_diff_lbi);
       auto cast_op =
           user_op::UserOpConfWrapperBuilder(initial_diff_lbi.op_name() + "_"
                                             + initial_diff_lbi.blob_name() + "_loss_scale-cast_h2f")
