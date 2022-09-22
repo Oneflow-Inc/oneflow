@@ -29,7 +29,7 @@ import oneflow.unittest
 def _test_global_nansum_against_pytorch(test_case, placement, sbp):
     x = random_tensor(4, 8, 16, 8, 24).to_global(placement, sbp)
     mask = x < 0
-    x = x.masked_fill(x, float("nan"))
+    x = x.masked_fill(mask, float("nan"))
     y = torch.nansum(x)
     return y
 
@@ -38,7 +38,7 @@ def _test_global_nansum_against_pytorch(test_case, placement, sbp):
 def _test_global_nansum_with_0_size_tensor(test_case, placement, sbp):
     x = random_tensor(4, 8, 16, 0, 24).to_global(placement, sbp)
     mask = torch.ones_like(x).bool()
-    x = x.masked_fill(x, float("nan"))
+    x = x.masked_fill(mask, float("nan"))
     y = torch.nansum(x, dim=random(0, 3).to(int))
     return y
 
