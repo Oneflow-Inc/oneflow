@@ -174,7 +174,6 @@ void DeformableIm2Col(int n, const T* input, const T* offset, const T* mask, int
                       int dilation_h, int dilation_w, int batch_sz, int n_in_channels,
                       int n_offset_grps, int out_h, int out_w, bool use_mask, T* columns) {
   for (int index = 0; index != n; ++index) {
-    int colums_offset = 0;
     const int out_x = index % out_w;
     const int out_y = (index / out_w) % out_h;
     const int out_b = (index / (out_w * out_h)) % batch_sz;
