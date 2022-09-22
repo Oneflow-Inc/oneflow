@@ -48,6 +48,30 @@ template<DeviceType device_type, typename T, template<typename> class binary_fun
          typename Enable = void>
 struct NdarrayNoReduce;
 
+template<DeviceType device_type, typename T>
+struct ReplaceNan {
+  static void memcpy(ep::Stream* stream, const XpuVarNdarray<T>& y,
+                      const XpuVarNdarray<const T>& x) {
+      CHECK(y.shape() == x.shape());
+      if (x.ptr() == y.ptr()) { return; }
+      Memset<device_type>(stream, y.ptr(), static_cast<T>(0), y.shape().ElemNum() * sizeof(T));
+      size_t n = x.shape().ElemNum();
+      XPU_1D_KERNEL_LOOP_BEGIN(i, n);
+      y.ptr()[i] = isnan(x.ptr()[i]) ? static_cast<T>(0.) : x.ptr()[i]; 
+      XPU_1D_KERNEL_LOOP_END();
+  }
+};
+
+template<DeviceType device_type>
+struct ReplaceNan<device_type, half> {
+  static void memcpy(ep::Stream* stream, const XpuVarNdarray<half>& y,
+                        const XpuVarNdarray<const half>& x) {
+        CHECK(y.shape() == x.shape());
+        if (x.ptr() == y.ptr()) { return; }
+        Memcpy<device_type>(stream, y.ptr(), x.ptr(), y.shape().ElemNum() * sizeof(half));
+    }
+};
+
 template<DeviceType device_type, typename T, template<typename> class binary_func>
 struct NdarrayNoReduce<device_type, T, binary_func,
                        typename std::enable_if<std::is_same<
@@ -59,15 +83,10 @@ struct NdarrayNoReduce<device_type, T, binary_func,
   }
   static void Reduce(ep::Stream* ctx, const XpuVarNdarray<RetT>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
-    std::cout << "run31" << std::endl;
-    
     if (std::is_same<binary_func<T>, BinaryFuncNanSum<T>>()) {
-      
-      // replace_nan_to_zero<device_type, T>(ctx, y, x);
-    //   std::cout << "fuck template" << std::endl;
-    //   XpuNdarrayAssign<device_type, RetT>::AssignNanSum(ctx, y, x);
+      ReplaceNan<device_type, T>::memcpy(ctx, y, x);
     } else {
-    XpuNdarrayAssign<device_type, RetT>::Assign(ctx, y, x);
+      XpuNdarrayAssign<device_type, RetT>::Assign(ctx, y, x);
     }
   }
 };
@@ -170,31 +189,6 @@ struct NdarrayReduceCore final {
     XPU_1D_KERNEL_LOOP_END();
   }
 };
-
-template<typename T>
-__global__ void replace_nan_to_zero(const int64_t num_elements, const T* input, T* output) {
-  const T zero = GetZeroVal<T>();
-  CUDA_1D_KERNEL_LOOP(i, num_elements) { output[i] = isnan(input[i]) ? T{0.} : input[i]; }
-}
-
-template<typename T>
-void Compute(user_op::KernelComputeContext* ctx) {
-  const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("input", 0);
-  user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("output", 0);
-  user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-  const int64_t elements = in->shape_view().elem_cnt();
-  // NanSumKernelUtil<T>::Forward(ctx->stream(), elements, in->dptr<T>(), out->mut_dptr<T>());
-  replace_nan_to_zero<T><<<BlocksNum4ThreadsNum(elements), kCudaThreadsNumPerBlock, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(elements, in->dptr<T>(), out->mut_dptr<T>());
-}
-
-
-// template<typename T>
-// struct NanSumKernelUtil {
-//   static void Forward(ep::Stream* stream, const int64_t num_elements, const T* input, T* output) {
-//     replace_nan_to_zero<T><<<BlocksNum4ThreadsNum(num_elements), kCudaThreadsNumPerBlock, 0,
-//                    stream->As<ep::CudaStream>()->cuda_stream()>>>(num_elements, input, output);
-//   }
-// };
 
 }  // namespace oneflow
 

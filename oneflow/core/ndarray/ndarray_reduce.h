@@ -43,6 +43,7 @@ struct NdarrayReduce<
 
     CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
     if (NdarrayNoReduce<device_type, T, binary_func>::Matched(y, x)) {
+      std::cout << "run3" << std::endl;
       NdarrayNoReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
     } else if (NdarrayScalarReduce<device_type, T, binary_func>::Matched(y, x)) {
       NdarrayScalarReduce<device_type, T, binary_func>::Reduce(stream, y, x, tmp_storage);
