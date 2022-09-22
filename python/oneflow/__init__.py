@@ -388,6 +388,20 @@ from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
 from oneflow.ops.stateful_ops import StatefulOp as stateful_op
 
+# autocast
+from oneflow._oneflow_internal import (
+    is_autocast_enabled,
+    set_autocast_enabled,
+    get_autocast_gpu_dtype,
+    get_autocast_cpu_dtype,
+    set_autocast_gpu_dtype,
+    set_autocast_cpu_dtype,
+    is_autocast_cache_enabled,
+    set_autocast_cache_enabled,
+    clear_autocast_cache,
+)
+from oneflow.amp.autocast_mode import *
+
 from . import (
     autograd,
     distributed,
@@ -397,6 +411,7 @@ from . import (
     boxing,
     backends,
     amp,
+    hub,
 )
 import oneflow.utils.data
 import oneflow.framework.docstr as docstr
@@ -408,6 +423,8 @@ import oneflow.profiler
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__
-    if os.getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"):
+    if os.getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS") or os.getenv(
+        "ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"
+    ):
         print("MLIR JIT engine will load:", oneflow_internal_path, file=sys.stderr)
         oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)
