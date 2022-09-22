@@ -236,6 +236,23 @@ def _test_basic_slice(test_case, placement):
             tensor_indexed = cur_tensor[idx1]
         _assert_tensor_equal(test_case, flow.DoubleTensor(lst_indexed), tensor_indexed)
 
+    # error check
+    sbp = random_sbp(placement, max_dim=3).value()
+    reference = global_broadcast_consec((8, 8, 8)).to_global(placement, sbp)
+    test_case.assertRaises(RuntimeError, lambda: reference[1:9:0])
+    test_case.assertRaises(RuntimeError, lambda: reference[1:9:-1])
+
+    test_case.assertRaises(IndexError, lambda: reference[1, 1, 1, 1])
+    test_case.assertRaises(IndexError, lambda: reference[1, 1, 1, 1:1])
+    test_case.assertRaises(IndexError, lambda: reference[3, 3, 3, 3, 3, 3, 3, 3])
+
+    test_case.assertRaises(IndexError, lambda: reference[0.0])
+    test_case.assertRaises(RuntimeError, lambda: reference[0.0:2.0])
+    test_case.assertRaises(IndexError, lambda: reference[0.0, 0.0:2.0])
+    test_case.assertRaises(IndexError, lambda: reference[0.0, :, 0.0:2.0])
+    test_case.assertRaises(IndexError, lambda: reference[0.0, ..., 0.0:2.0])
+    test_case.assertRaises(IndexError, lambda: reference[0.0, :, 0.0])
+
 
 def _test_advanced_indexing(test_case, placement, dtype):
     broadcast_for_placement = [flow.sbp.broadcast] * len(placement.ranks.shape)
