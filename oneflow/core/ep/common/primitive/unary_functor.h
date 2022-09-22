@@ -456,7 +456,7 @@ template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kRound, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(round(src)); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(std::nearbyint(src)); }
 };
 
 template<DeviceType device, typename Dst, typename Src>
