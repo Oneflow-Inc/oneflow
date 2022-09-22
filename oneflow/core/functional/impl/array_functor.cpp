@@ -2634,7 +2634,7 @@ class MaskedFillFunctor {
         return OpInterpUtil::Dispatch<Tensor>(
             *op_, {JUST(Expand(x, max_shape)), JUST(Expand(mask, max_shape))}, attrs);
       }
-    }
+    } // if (x_shape != mask_shape)
 
     if (inplace) {
       JUST(OpInterpUtil::Dispatch(*op_, {x, mask}, outputs.get(), attrs));
