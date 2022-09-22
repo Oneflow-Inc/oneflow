@@ -443,6 +443,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
       std::string rank_plan_name = plan_name_prefix + std::to_string(GlobalProcessCtx::Rank());
       Singleton<CtrlClient>::Get()->PullKV(rank_plan_name, &plan_);
       Singleton<CtrlClient>::Get()->NotifyDone(rank_plan_name);
+      VLOG(1) << "[elapsed]rank id " << GlobalProcessCtx::Rank() << " pull plan " << rank_plan_name << " size " << plan_.ByteSizeLong();
     }
     OF_SESSION_BARRIER();
     tc->Count("Graph name: " + name_ + "FinishPushPullPlan", 1);
