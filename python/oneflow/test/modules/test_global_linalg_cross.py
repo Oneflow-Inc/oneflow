@@ -29,7 +29,9 @@ def _test_linalg_cross(test_case, ndim, placement, sbp):
     x = x.to_global(placement=placement, sbp=sbp)
     y = random_tensor(ndim, *shape)
     y = y.to_global(placement=placement, sbp=sbp)
-    return torch.cross(x, y, dim=index) # TODO(peihong): will convert to torch.linalg.cross when PyTorch in ci is upgraded to 1.11
+    return torch.cross(
+        x, y, dim=index
+    )  # TODO(peihong): will convert to torch.linalg.cross when PyTorch in ci is upgraded to 1.11
 
 
 class TestLinalgCrossGlobal(flow.unittest.TestCase):
