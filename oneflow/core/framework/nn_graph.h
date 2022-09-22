@@ -79,6 +79,7 @@ class NNGraph final : public NNGraphIf {
   Maybe<void> RegisterNewVariableOpInJobPass();
   Maybe<void> DeleteOutdatedVariableInVariableTensorMgr();
   Maybe<void> GetVariableRealBlobAfterSyncPlan();
+  Maybe<void> RangePushPlan(const Plan& global_plan, const std::string& plan_name_prefix, int64_t start_rank, int64_t rank_range_size);
 
   void NewRuntimeBuffers();
   void CloseRuntimeBuffers();

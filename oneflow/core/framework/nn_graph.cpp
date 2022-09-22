@@ -42,6 +42,7 @@ limitations under the License.
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/rpc/include/base.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -252,6 +253,65 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> NNGraph::RangePushPlan(const Plan& global_plan, const std::string& plan_name_prefix, int64_t start_rank, int64_t rank_range_size) {
+  const int64_t end_rank = start_rank + rank_range_size - 1;
+  const int64_t cpu_num = std::thread::hardware_concurrency();
+  const int64_t thread_pool_size = std::min(rank_range_size, cpu_num);
+  ThreadPool thread_pool(thread_pool_size);
+  BlockingCounter counter(rank_range_size);
+  for (int64_t rank_id = start_rank; rank_id <= end_rank ; ++rank_id) {
+    thread_pool.AddWork([this, rank_id, &global_plan, &plan_name_prefix, &counter]() {
+      std::string rank_plan_name = plan_name_prefix + std::to_string(rank_id);
+      // Creat sub-plan.
+      auto tc_sub_plan = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
+      Plan sub_plan;
+      sub_plan.mutable_job_confs()->CopyFrom(global_plan.job_confs());
+      tc_sub_plan->Count(rank_plan_name + " add job conf", 1);
+      sub_plan.mutable_collective_boxing_plan()->CopyFrom(global_plan.collective_boxing_plan());
+      tc_sub_plan->Count(rank_plan_name + " add collective boxing", 1);
+      sub_plan.mutable_ctrl_regst_desc_info()->CopyFrom(global_plan.ctrl_regst_desc_info());
+      tc_sub_plan->Count(rank_plan_name + " add ctrl regst", 1);
+      for (auto& pair : global_plan.job_id2op_attribute_ref_table()) {
+        sub_plan.mutable_job_id2op_attribute_ref_table()->insert(pair);
+      }
+      tc_sub_plan->Count(rank_plan_name + " add op attr", 1);
+      for (auto& task_proto : global_plan.task()) {
+        if (task_proto.machine_id() == rank_id) {
+          sub_plan.add_task()->CopyFrom(task_proto);
+        }
+      }
+      tc_sub_plan->Count(rank_plan_name + " add task", 1);
+      for (auto& mem_block_proto : global_plan.block_chunk_list().mem_block()) {
+        if (mem_block_proto.machine_id() == rank_id) {
+          sub_plan.mutable_block_chunk_list()->add_mem_block()->CopyFrom(mem_block_proto);
+        }
+      }
+      tc_sub_plan->Count(rank_plan_name + " add mem block", 1);
+      for (auto& chunk_proto : global_plan.block_chunk_list().chunk()) {
+        if (chunk_proto.machine_id() == rank_id) {
+          sub_plan.mutable_block_chunk_list()->add_chunk()->CopyFrom(chunk_proto);
+        }
+      }
+      tc_sub_plan->Count(rank_plan_name + " add chunk", 1);
+      if (rank_id == 0) {
+        plan_.Swap(&sub_plan);
+      } else {
+        Singleton<CtrlClient>::Get()->PushKV(rank_plan_name, sub_plan);
+        tc_sub_plan->Count(rank_plan_name + " PushKV", 1);
+        VLOG(1) << "[elapsed]rank id " << GlobalProcessCtx::Rank() << " push plan " << rank_plan_name << " size " << sub_plan.ByteSizeLong();
+        Singleton<CtrlClient>::Get()->WaitUntilDone(rank_plan_name);
+        tc_sub_plan->Count(rank_plan_name + " wait PullKV", 1);
+        Singleton<CtrlClient>::Get()->ClearKV(rank_plan_name);
+        tc_sub_plan->Count(rank_plan_name + " ClearKV", 1);
+      }
+      counter.Decrease();
+    });
+  }
+  // Wait for all sub plan in range has finished.
+  counter.WaitForeverUntilCntEqualZero();
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
   std::set<std::string> variable_names = *JUST([&]() -> Maybe<std::set<std::string>> {
     std::set<std::string> variable_names_;
@@ -367,77 +427,24 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   } else if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name_prefix = "plan_" + job_name() + "_r_";
     if (GlobalProcessCtx::IsThisProcessMaster()) {
-      // LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " plan size " << plan_.ByteSizeLong();
-      const int64_t sub_plan_num = GlobalProcessCtx::WorldSize();
-      const int64_t cpu_num = std::thread::hardware_concurrency();
-      const int64_t thread_pool_size = std::min(sub_plan_num, cpu_num);
-      BlockingCounter counter(sub_plan_num);
-      ThreadPool thread_pool(thread_pool_size);
-      for (int64_t rank_id = 0; rank_id < sub_plan_num; ++rank_id) {
-        thread_pool.AddWork([this, rank_id, &global_plan, &plan_name_prefix, &counter]() {
-          std::string rank_plan_name = plan_name_prefix + std::to_string(rank_id);
-          // Creat sub-plan.
-          auto tc_sub_plan = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
-          Plan sub_plan;
-          sub_plan.mutable_job_confs()->CopyFrom(global_plan.job_confs());
-          tc_sub_plan->Count(rank_plan_name + " add job conf", 1);
-          sub_plan.mutable_collective_boxing_plan()->CopyFrom(global_plan.collective_boxing_plan());
-          tc_sub_plan->Count(rank_plan_name + " add collective boxing", 1);
-          sub_plan.mutable_ctrl_regst_desc_info()->CopyFrom(global_plan.ctrl_regst_desc_info());
-          tc_sub_plan->Count(rank_plan_name + " add ctrl regst", 1);
-          for (auto& pair : global_plan.job_id2op_attribute_ref_table()) {
-            sub_plan.mutable_job_id2op_attribute_ref_table()->insert(pair);
-          }
-          tc_sub_plan->Count(rank_plan_name + " add op attr", 1);
-          for (auto& task_proto : global_plan.task()) {
-            if (task_proto.machine_id() == rank_id) {
-              sub_plan.add_task()->CopyFrom(task_proto);
-            }
-          }
-          tc_sub_plan->Count(rank_plan_name + " add task", 1);
-          for (auto& mem_block_proto : global_plan.block_chunk_list().mem_block()) {
-            if (mem_block_proto.machine_id() == rank_id) {
-              sub_plan.mutable_block_chunk_list()->add_mem_block()->CopyFrom(mem_block_proto);
-            }
-          }
-          tc_sub_plan->Count(rank_plan_name + " add mem block", 1);
-          for (auto& chunk_proto : global_plan.block_chunk_list().chunk()) {
-            if (chunk_proto.machine_id() == rank_id) {
-              sub_plan.mutable_block_chunk_list()->add_chunk()->CopyFrom(chunk_proto);
-            }
-          }
-          tc_sub_plan->Count(rank_plan_name + " add chunk", 1);
-          if (rank_id == 0) {
-            plan_.Swap(&sub_plan);
-          } else {
-            Singleton<CtrlClient>::Get()->PushKV(rank_plan_name, sub_plan);
-            tc_sub_plan->Count(rank_plan_name + " PushKV", 1);
-          }
-          VLOG(1) << "[elapsed]rank id " << GlobalProcessCtx::Rank() << " push plan " << rank_plan_name << " size " << sub_plan.ByteSizeLong();
-          counter.Decrease();
-        });
+      int64_t rang_push_size = 4, cur_start_rank = 0, cur_range_size = 0;
+      while (cur_start_rank < GlobalProcessCtx::WorldSize()) {
+        cur_range_size = std::min(rang_push_size, static_cast<int64_t>(GlobalProcessCtx::WorldSize() - cur_start_rank));
+        // Use range push to limit memory consumption.
+        JUST(RangePushPlan(global_plan, plan_name_prefix, cur_start_rank, cur_range_size));
+        tc->Count("Graph name: " + name_ + " PushPlan" + std::to_string(cur_start_rank) + "to" + std::to_string(cur_start_rank + cur_range_size - 1), 1);
+        cur_start_rank += cur_range_size;
       }
-      counter.WaitForeverUntilCntEqualZero();
-      tc->Count("Graph name: " + name_ + " Push plan", 1);
+      tc->Count("Graph name: " + name_ + " FinishPushSubPlan", 1);
+      global_plan.Clear();
+      tc->Count("Graph name: " + name_ + " ClearGlobalPlan", 1);
     } else {
       std::string rank_plan_name = plan_name_prefix + std::to_string(GlobalProcessCtx::Rank());
       Singleton<CtrlClient>::Get()->PullKV(rank_plan_name, &plan_);
-      // LOG(ERROR) << "rank id " << GlobalProcessCtx::Rank() << " pull plan " << rank_plan_name;
+      Singleton<CtrlClient>::Get()->NotifyDone(rank_plan_name);
     }
     OF_SESSION_BARRIER();
-    tc->Count("Graph name: " + name_ + " Pull plan", 1);
-    // NOTE(zwx): After barrier plan is synchronized between all ranks,
-    //     then it can be cleared for saving mem.
-    if (GlobalProcessCtx::IsThisProcessMaster()) {
-      for (int64_t rank_id = 1; rank_id < GlobalProcessCtx::WorldSize(); ++rank_id) {
-        std::string rank_plan_name = plan_name_prefix + std::to_string(rank_id);
-        Singleton<CtrlClient>::Get()->ClearKV(rank_plan_name);
-      }
-    }
-    tc->Count("Graph name: " + name_ + " Clear sub plan", 1);
-    global_plan.Clear();
-    tc->Count("Graph name: " + name_ + " Clear global plan", 1);
-    // tc->Count("Graph name: " + name_ + " Push or Pull plan", 1);
+    tc->Count("Graph name: " + name_ + "FinishPushPullPlan", 1);
   }
 
   // NOTE(chengcheng): recovery op_attr
