@@ -16,14 +16,15 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/functional/tensor_processor.h"
 
@@ -494,7 +495,8 @@ class ReduceNanSumWholeFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("reduce_nansum").Input("input_tensor").Output("output_tensor").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Symbol<DType>>& dtype) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<Symbol<DType>>& dtype) const {
     std::shared_ptr<one::Tensor> tensor = x;
     if (dtype.has_value() && (dtype != x->dtype())) {
       tensor = JUST(Cast(x, JUST(dtype), /*pin_memory=*/false));

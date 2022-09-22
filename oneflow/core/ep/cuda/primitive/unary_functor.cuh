@@ -147,7 +147,7 @@ template<typename Dst, typename Src>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kNanAssign, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src) const { return isnan(src) ? src : static_cast<Dst>(0.0); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return isnan(src) ?  static_cast<Dst>(0.0) : src; }
 };
 
 #if CUDA_VERSION >= 11000

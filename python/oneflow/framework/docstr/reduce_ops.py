@@ -262,18 +262,21 @@ add_docstr(
     Otherwise, ``dim`` is squeezed (see :class:`oneflow.squeeze()`), 
     resulting in the output tensor having 1 (or ``len(dim)``) fewer dimension(s).
 
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nansum.html.
+
     Args:
         input (oneflow.Tensor): the Input Tensor
         dim (int, optional): the dimension to reduce. Default: ``None``
         keepdim (bool, optional): whether the output tensor has ``dim`` retained or not. Default: `False`
         dtype (oneflow.dtype, optional): the desired data type of returned tensor. 
-        If specified, the input tensor is casted to dtype before the operation is performed. 
-        This is useful for preventing data type overflows. Default: ``None``.
+            If specified, the input tensor is casted to dtype before the operation is performed.
+            This is useful for preventing data type overflows. Default: ``None``.
 
     Example:
 
     .. code-block:: python
-    
+
         >>> import oneflow as flow
         >>> x = flow.tensor([1., 2., float("nan")])
         >>> flow.nansum(x)
@@ -285,5 +288,5 @@ add_docstr(
         >>> flow.nansum(x)
         tensor(0., dtype=oneflow.float32)
 
-    """
+    """,
 )

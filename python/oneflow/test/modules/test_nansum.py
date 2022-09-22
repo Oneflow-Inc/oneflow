@@ -28,14 +28,14 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestNanSumModule(flow.unittest.TestCase):
-    @autotest(n=100, check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_nansum_without_nan(test_case):
         device = random_device()
         x = random_tensor(4, random(0, 5), 2).to(device)
         y = torch.nansum(x)
         return y
 
-    @autotest(n=100, check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_nansum_with_partial_nan(test_case):
         device = random_device()
         x = random_tensor(4, random(0, 5), 2).to(device)
@@ -44,7 +44,7 @@ class TestNanSumModule(flow.unittest.TestCase):
         y = torch.nansum(x)
         return y
 
-    @autotest(n=100, check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_nansum_with_total_nan(test_case):
         device = random_device()
         x = random_tensor(4, random(0, 5), 2).to(device)
@@ -53,7 +53,7 @@ class TestNanSumModule(flow.unittest.TestCase):
         y = torch.nansum(x)
         return y
 
-    @autotest(n=100, check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_nansum_with_partial_nan_dims(test_case):
         device = random_device()
         x = random_tensor(4, random(0, 5), 2).to(device)
@@ -62,7 +62,7 @@ class TestNanSumModule(flow.unittest.TestCase):
         y = torch.nansum(x, dim=random(0, 4).to(int))
         return y
 
-    @autotest(n=100, check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_nansum_with_total_nan_dims(test_case):
         device = random_device()
         x = random_tensor(4, random(0, 5), 2).to(device)
@@ -71,14 +71,14 @@ class TestNanSumModule(flow.unittest.TestCase):
         y = torch.nansum(x, dim=random(0, 4).to(int))
         return y
 
-    @autotest(n=100, auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_sum_with_0_size_tensor(test_case):
         device = random_device()
         x = random_tensor(4, 4, 3, 0, 2).to(device)
         y = torch.nansum(x, dim=np.random.randint(0, 3))
         return y
 
-    @autotest(n=100, auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_sum_with_0dim_tensor(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)

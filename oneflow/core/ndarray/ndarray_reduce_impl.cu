@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <cub/cub.cuh>
-#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/kernel/util/numerics.cuh"
 #include "oneflow/core/ndarray/ndarray_reduce_impl.h"
 #include "oneflow/core/ndarray/binary_func.h"
@@ -22,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/permutation_iterator.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
-#include "oneflow/core/common/data_type.pb.h"
 
 namespace cub {
 struct Prod {
