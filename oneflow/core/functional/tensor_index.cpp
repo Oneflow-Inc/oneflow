@@ -153,8 +153,9 @@ Maybe<bool> IsContinuousSubspace(const TensorTuple& indices) {
 // NOTE(wyg):
 // Move indices subspace to be contiguous and ahead.
 // e.g. [:, index0, index1] -> [index0, index1, :]
-Maybe<void> TransposeFront(const std::shared_ptr<Tensor>& input, const TensorTuple& indices,
-                           std::shared_ptr<Tensor>* output, TensorTuple* valid_indices) {
+Maybe<std::vector<int>> TransposeFront(const std::shared_ptr<Tensor>& input,
+                                       const TensorTuple& indices, std::shared_ptr<Tensor>* output,
+                                       TensorTuple* valid_indices) {
   std::vector<int> permute;
   permute.reserve(input->ndim());
   for (int i = 0; i < input->ndim(); ++i) {
@@ -177,7 +178,7 @@ Maybe<void> TransposeFront(const std::shared_ptr<Tensor>& input, const TensorTup
   } else {
     *output = input;
   }
-  return Maybe<void>::Ok();
+  return permute;
 }
 
 Maybe<Tensor> AdjustSubspace(const std::shared_ptr<Tensor>& input, const TensorTuple& indices,
@@ -213,6 +214,35 @@ Maybe<bool> HasFalseIndex(const TensorIndex& index) {
   return std::any_of(index.begin(), index.end(), [](const detail::IndexItem& item) {
     return item.IsBoolean() && !item.boolean();
   });
+}
+
+// Permute back for global tensor which transpose dims to front
+Maybe<void> PermuteBackForGlobalTensor(const std::shared_ptr<Tensor>& result,
+                                       const std::shared_ptr<Tensor>& origin_input,
+                                       const std::vector<int>& permute) {
+  CHECK_OR_RETURN(result->is_global());                      // NOLINT
+  CHECK_EQ_OR_RETURN(result->ndim(), origin_input->ndim());  // NOLINT
+  CHECK_EQ_OR_RETURN(result->ndim(), permute.size());        // NOLINT
+  std::vector<int> inv_permute(permute.size());
+  for (int32_t i = 0; i < permute.size(); ++i) { inv_permute[permute.at(i)] = i; }
+
+  bool not_permute = true;
+  {
+    for (int32_t i = 0; i < permute.size(); ++i) {
+      if (inv_permute[i] != i) {
+        not_permute = false;
+        break;
+      }
+    }
+  }
+  if (!not_permute) {
+    const auto& tensor = JUST(Transpose(result, inv_permute));
+    std::vector<int64_t> start(result->ndim(), 0);
+    std::vector<int64_t> stop(result->shape()->begin(), result->shape()->end());
+    std::vector<int64_t> step(result->ndim(), 1);
+    JUST(functional::SliceUpdate(origin_input, tensor, start, stop, step, /*inplace=*/true));
+  }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
@@ -389,7 +419,8 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
   // transpose the input as long as the first index is null.
   std::shared_ptr<Tensor> transposed_input;
   TensorTuple valid_indices;
-  JUST(TransposeFront(input, *expanded_indices, &transposed_input, &valid_indices));
+  const auto& transposed_input_permute =
+      JUST(TransposeFront(input, *expanded_indices, &transposed_input, &valid_indices));
   // NOTE: For local tensor, we make sure that transposed_input is a view of input.
   //       Therefore we need not transpose it back because we update the value in a same memory
   //       by tensor_scatter_nd_update operator.
@@ -452,6 +483,10 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
     expand_value = JUST(AdjustSubspace(expand_value, indices, index_ndim, /*reverse*/ true));
   }
   JUST(TensorScatterNdUpdate(transposed_input, packed_indices, expand_value, /*inplace=*/true));
+  // Global tensor is not support view, so we should permute back and copy to origin input if need
+  if (transposed_input->is_global()) {
+    JUST(PermuteBackForGlobalTensor(transposed_input, input, *transposed_input_permute));
+  }
   return Maybe<void>::Ok();
 }
 

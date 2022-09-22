@@ -431,10 +431,11 @@ def _test_advanced_indexing(test_case, placement, dtype):
             reference[err_idx]
 
 
-def _test_combined_indexing(test_case, device, dtype):
+def _test_combined_indexing(test_case, placement, dtype):
+    broadcast_for_placement = [flow.sbp.broadcast,] * len(placement.ranks.shape)
+
     def tensor_indices_to_np(tensor, indices):
         # convert the flow Tensor to a numpy array
-        tensor = tensor.to(device="cpu")
         npt = tensor.numpy()
 
         # convert indices
@@ -447,13 +448,11 @@ def _test_combined_indexing(test_case, device, dtype):
     def get_numpy(tensor, indices):
         npt, idxs = tensor_indices_to_np(tensor, indices)
 
-        # index and return as a flow Tensor
-        return flow.tensor(npt[idxs], dtype=dtype, device=device)
+        # index and return as a oneflow local Tensor
+        return flow.tensor(npt[idxs], dtype=dtype)
 
     def set_numpy(tensor, indices, value):
         if not isinstance(value, int):
-            if device != "cpu":
-                value = value.cpu()
             value = value.numpy()
 
         npt, idxs = tensor_indices_to_np(tensor, indices)
@@ -467,45 +466,63 @@ def _test_combined_indexing(test_case, device, dtype):
         pyt = tensor.clone()
         np_ref = tensor.clone()
         pyt[indexer] = val
-        np_ref = flow.tensor(
-            set_numpy(np_ref, indexer, val), dtype=dtype, device=device
-        )
+        np_ref = flow.tensor(set_numpy(np_ref, indexer, val), dtype=dtype)
         _assert_tensor_equal(test_case, pyt, np_ref)
 
     def assert_backward_eq(tensor, indexer):
-        cpu = tensor.cpu().float().clone().detach().requires_grad_(True)
-        outcpu = cpu[indexer]
-        grad = flow.rand(outcpu.shape)
-        outcpu.backward(grad)
-        dev = cpu.to(device).detach().requires_grad_(True)
+        # compare gradient between cpu and cuda
+        # BUG(wyg): https://github.com/Oneflow-Inc/oneflow/issues/9130
+        #           cuda_placement detach behavior has some bug
+        #  cpu = tensor.float().clone().detach().to_global(placement, broadcast_for_placement).requires_grad_()
+        cpu = (
+            _cpu_global_tensor(flow.tensor(tensor.numpy()))
+            .to_global(placement, broadcast_for_placement)
+            .requires_grad_()
+        )
+        outcpu = cpu.clone()[indexer]
+        outcpu.sum().backward()
+        dev = (
+            _cpu_global_tensor(cpu.detach())
+            .to_global(
+                placement, random_sbp(placement, max_dim=len(tensor.shape)).value()
+            )
+            .requires_grad_(True)
+        )
         outdev = dev[indexer]
-        outdev.backward(grad.to(device))
+        outdev.sum().backward()
         _assert_tensor_equal(test_case, cpu.grad, dev.grad)
 
     def get_set_tensor(indexed, indexer):
         set_size = indexed[indexer].size()
         set_count = indexed[indexer].numel()
-        set_tensor = flow.randperm(set_count).view(set_size).to(dtype).to(device)
+        set_tensor = _cpu_global_tensor(
+            flow.arange(set_count, 0, -1).view(set_size).to(dtype)
+        ).to_global(placement, broadcast_for_placement)
         return set_tensor
 
-    # Tensor is  0  1  2  3  4
-    #            5  6  7  8  9
-    #           10 11 12 13 14
-    #           15 16 17 18 19
-    reference = flow.arange(0.0, 20, dtype=dtype, device=device).view(4, 5)
+    # Tensor is  1  2  3  4  5  6  7  8
+    #            9  10 11 12 13 14 15 16
+    #            17 18 19 20 21 22 23 24
+    #            25 26 27 28 29 30 31 32
+    #            33 34 35 36 37 38 39 40
+    #            41 42 43 44 45 46 47 48
+    #            49 50 51 52 53 54 55 56
+    #            57 58 59 60 61 62 63 64
+    sbp = random_sbp(placement, max_dim=2).value()
+    reference = global_broadcast_consec((8, 8)).to_global(placement, sbp)
 
     indices_to_test = [
         # grab the second, fourth columns
-        [slice(None), [1, 3]],
+        [slice(None), [4, 6]],
         # first, third rows,
-        [[0, 2], slice(None)],
+        [[0, 6], slice(None)],
         # TODO(wyg): only support getitem but not setitem
         #  # weird shape
         #  [slice(None), [[0, 1],
         #                 [2, 3]]],
         # negatives
         [[-1], [0]],
-        [[0, 2], [-1]],
+        [[0, 7], [-1]],
         [slice(None), [-1]],
     ]
 
@@ -516,7 +533,7 @@ def _test_combined_indexing(test_case, device, dtype):
     ]  # TODO: test setitem
     for indexer in get_indices_to_test:
         assert_get_eq(reference, indexer)
-        if device != "cpu":
+        if placement.type != "cpu":
             assert_backward_eq(reference, indexer)
 
     # test setitem
@@ -527,7 +544,8 @@ def _test_combined_indexing(test_case, device, dtype):
     #########################
     # test more dims tensor #
     #########################
-    reference = flow.arange(0.0, 160, dtype=dtype, device=device).view(4, 8, 5)
+    sbp = random_sbp(placement, max_dim=3).value()
+    reference = global_broadcast_consec((8, 8, 8), 0).float().to_global(placement, sbp)
 
     indices_to_test = [
         [slice(None), slice(None), [0, 3, 4]],
@@ -575,10 +593,11 @@ def _test_combined_indexing(test_case, device, dtype):
         assert_get_eq(reference, indexer)
         assert_set_eq(reference, indexer, 212)
         assert_set_eq(reference, indexer, get_set_tensor(reference, indexer))
-        if device != "cpu":
+        if placement.type != "cpu":
             assert_backward_eq(reference, indexer)
 
-    reference = flow.arange(0.0, 1296, dtype=dtype, device=device).view(3, 9, 8, 6)
+    sbp = random_sbp(placement, max_dim=4).value()
+    reference = global_broadcast_consec((8, 8, 8, 8), 0).float().to_global(placement, sbp)
 
     indices_to_test = [
         [slice(None), slice(None), slice(None), [0, 3, 4]],
@@ -653,7 +672,7 @@ def _test_combined_indexing(test_case, device, dtype):
     for indexer in indices_to_test:
         assert_get_eq(reference, indexer)
         assert_set_eq(reference, indexer, 1333)
-        if device != "cpu":
+        if placement.type != "cpu":
             assert_backward_eq(reference, indexer)
 
 
@@ -887,10 +906,10 @@ class TestGlobalIndexing(flow.unittest.TestCase):
     def test_global_slice(test_case):
         for placement in all_placement():
             #  for _ in range(5):
-            for _ in range(50):
+            for _ in range(20):
                 #  _test_basic_slice(test_case, placement)
-                _test_advanced_indexing(test_case, placement, dtype=flow.float32)
-                #  _test_combined_indexing(test_case, placement, dtype=flow.float32)
+                #  _test_advanced_indexing(test_case, placement, dtype=flow.float32)
+                _test_combined_indexing(test_case, placement, dtype=flow.float32)
                 #  _test_single_int(test_case, placement)
                 #  _test_multiple_int(test_case, placement)
                 #  _test_none(test_case, placement)
