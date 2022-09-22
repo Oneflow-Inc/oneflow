@@ -1056,11 +1056,11 @@ class TestTensorNumpy(flow.unittest.TestCase):
         return z
 
     @flow.unittest.skip_unless_1n2d()
-    @autotest(n=5)
+    @globaltest
     def test_global_tensor_detach(test_case):
-        device = random_device()
+        device = random_device().value()
         placement = flow.placement(device, [0, 1])
-        a = flow.ones(2, 3).to_global(placement, flow.sbp.broadcast)
+        a = flow.ones(4, 8).to_global(placement, flow.sbp.broadcast)
         test_case.assertTrue(a.is_leaf)
         b = a.float().clone().detach()
         test_case.assertTrue(b.is_leaf)
