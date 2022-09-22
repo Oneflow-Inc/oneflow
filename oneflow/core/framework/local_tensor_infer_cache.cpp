@@ -69,8 +69,10 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
                                                      int64_t index) override {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
     int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
-    CHECK_GE(tuple_index, 0);
-    CHECK_LT(tuple_index, user_op_expr_->output_size());
+    CHECK_GE(tuple_index, 0) << "tuple index should be non-negative, got " << tuple_index;
+    CHECK_LT(tuple_index, user_op_expr_->output_size())
+        << "tuple index " << tuple_index << " should be less than output size "
+        << user_op_expr_->output_size();
     return output_tensor_metas_->at(tuple_index).mut_device();
   }
 
@@ -78,8 +80,10 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
                                                    int64_t index) const override {
     const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
     int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
-    CHECK_GE(tuple_index, 0);
-    CHECK_LT(tuple_index, user_op_expr_->input_size());
+    CHECK_GE(tuple_index, 0) << "tuple index should be non-negative, got " << tuple_index;
+    CHECK_LT(tuple_index, user_op_expr_->input_size())
+        << "tuple index " << tuple_index << " should be less than input size "
+        << user_op_expr_->input_size();
     return infer_args_.input_local_tensor_metas().at(tuple_index)->device();
   }
 
