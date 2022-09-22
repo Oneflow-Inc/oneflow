@@ -186,8 +186,6 @@ void DeformableIm2Col(int n, const T* input, const T* offset, const T* mask, int
     auto columns_ptr =
         columns
         + (out_c * (batch_sz * out_h * out_w) + out_b * (out_h * out_w) + out_y * out_w + out_x);
-    colums_offset +=
-        (out_c * (batch_sz * out_h * out_w) + out_b * (out_h * out_w) + out_y * out_w + out_x);
     auto input_ptr = input + (out_b * (n_in_channels * height * width) + in_c * (height * width));
 
     auto offset_ptr =
