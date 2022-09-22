@@ -26,20 +26,20 @@ from oneflow.test_utils.automated_test_util import *
 
 def _test_deform_conv2d(test_case, placement):
     input_sbp = random_sbp(placement, max_dim=4)
-    input_dims = [4, 8, 8, 8]
+    input_dims = [8, 8, 8, 8]
     input = random_tensor(4, *input_dims).to_global(placement=placement, sbp=input_sbp)
 
-    offset_sbp = random_sbp(placement, max_dim=4)
-    offset_dims = [4, 32, 5, 5]
+    offset_sbp = random_sbp(placement, max_dim=2)
+    offset_dims = [8, 32, 5, 5]
     offset = random_tensor(4, *offset_dims).to_global(
         placement=placement, sbp=offset_sbp
     )
 
-    mask_sbp = random_sbp(placement, max_dim=4)
-    mask_dims = [4, 4 * 4, 5, 5]
+    mask_sbp = random_sbp(placement, max_dim=2)
+    mask_dims = [8, 4 * 4, 5, 5]
     mask = random_tensor(4, *mask_dims).to_global(placement=placement, sbp=mask_sbp)
 
-    weight_sbp = random_sbp(placement, max_dim=4)
+    weight_sbp = random_sbp(placement, max_dim=2)
     weight_dims = [8, 8, 4, 4]
     weight = random_tensor(4, *weight_dims).to_global(
         placement=placement, sbp=weight_sbp
