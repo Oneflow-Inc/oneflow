@@ -597,7 +597,9 @@ def _test_combined_indexing(test_case, placement, dtype):
             assert_backward_eq(reference, indexer)
 
     sbp = random_sbp(placement, max_dim=4).value()
-    reference = global_broadcast_consec((8, 8, 8, 8), 0).float().to_global(placement, sbp)
+    reference = (
+        global_broadcast_consec((8, 8, 8, 8), 0).float().to_global(placement, sbp)
+    )
 
     indices_to_test = [
         [slice(None), slice(None), slice(None), [0, 3, 4]],
