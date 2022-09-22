@@ -486,7 +486,6 @@ class ReduceNanSumFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
-  std::shared_ptr<OpExpr> replace_op_;
 };
 
 class ReduceNanSumWholeFunctor {
