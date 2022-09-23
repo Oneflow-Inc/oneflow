@@ -33,8 +33,7 @@ Maybe<void> TensorDescInferFnUtil::Unchanged(InferContext* ctx) {
     if (first_tensor_desc) {
       const TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
       CHECK_EQ_OR_RETURN(tensor_desc.shape(), first_tensor_desc->shape())
-          << Error::RuntimeError()
-          << "Tensor descriptions should have the same shape: expected "
+          << Error::RuntimeError() << "Tensor descriptions should have the same shape: expected "
           << first_tensor_desc->shape() << " but got " << tensor_desc.shape();
     } else {
       first_tensor_desc = &ctx->InputTensorDesc(input_arg.first, input_arg.second);
@@ -56,9 +55,9 @@ Maybe<void> TensorDescInferFnUtil::UnchangedDataType(InferContext* ctx) {
     if (first_tensor_desc) {
       const TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
       CHECK_EQ_OR_RETURN(tensor_desc.data_type(), first_tensor_desc->data_type())
-          << Error::TypeError()
-          << "Tensor descriptions should have the same type. Expected "
-          << first_tensor_desc->data_type() << ", but got " << tensor_desc.data_type();
+          << Error::TypeError() << "Tensor descriptions should have the same type. Expected "
+          << DataType_Name(first_tensor_desc->data_type()) << ", but got "
+          << DataType_Name(tensor_desc.data_type());
     } else {
       first_tensor_desc = &ctx->InputTensorDesc(input_arg.first, input_arg.second);
     }
@@ -73,8 +72,9 @@ Maybe<void> TensorDescInferFnUtil::UnchangedDataType(InferContext* ctx) {
 
 Maybe<void> TensorDescInferFnUtil::InOutCorrespond(InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->inputs().size(), ctx->outputs().size())
-      << Error::InvalidValueError() << "Different input and output size. Input size :"
-      << ctx->inputs().size() << ", output size: " << ctx->outputs().size();
+      << Error::InvalidValueError()
+      << "Different input and output size. Input size :" << ctx->inputs().size()
+      << ", output size: " << ctx->outputs().size();
   for (size_t i = 0; i < ctx->inputs().size(); ++i) {
     const auto& input_arg = ctx->inputs().at(i);
     const auto& output_arg = ctx->outputs().at(i);
