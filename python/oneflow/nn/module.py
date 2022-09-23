@@ -976,7 +976,9 @@ class Module(object):
             self._oneflow_internal_module_tensor_applied_dict__ = dict()
 
         for module in self.children():
-            module._oneflow_internal_module_tensor_applied_dict__ = self._oneflow_internal_module_tensor_applied_dict__
+            module._oneflow_internal_module_tensor_applied_dict__ = (
+                self._oneflow_internal_module_tensor_applied_dict__
+            )
             module._apply(fn)
             module._oneflow_internal_module_tensor_applied_dict__ = None
 
@@ -1003,12 +1005,16 @@ class Module(object):
                     grad_applied.requires_grad = param.grad.requires_grad
                     param_applied.grad = grad_applied
             else:
-                param_applied = self._oneflow_internal_module_tensor_applied_dict__[param]
+                param_applied = self._oneflow_internal_module_tensor_applied_dict__[
+                    param
+                ]
 
             if can_use_assign_copy(param_applied, param):
                 if need_apply:
                     self._parameters[key].data = param_applied
-                    self._oneflow_internal_module_tensor_applied_dict__[param] = param_applied
+                    self._oneflow_internal_module_tensor_applied_dict__[
+                        param
+                    ] = param_applied
                 else:
                     # The parameter's data has already been set when it can use assign copy.
                     pass
@@ -1016,18 +1022,26 @@ class Module(object):
                 if need_apply:
                     new_param = Parameter(param_applied, param.requires_grad)
                     self._parameters[key] = new_param
-                    self._oneflow_internal_module_tensor_applied_dict__[param] = new_param
+                    self._oneflow_internal_module_tensor_applied_dict__[
+                        param
+                    ] = new_param
                 else:
-                    self._parameters[key] = self._oneflow_internal_module_tensor_applied_dict__[param]
+                    self._parameters[
+                        key
+                    ] = self._oneflow_internal_module_tensor_applied_dict__[param]
 
         for (key, buf) in self._buffers.items():
             if buf is not None:
                 if buf not in self._oneflow_internal_module_tensor_applied_dict__:
                     buf_applied = fn(buf)
                     self._buffers[key] = buf_applied
-                    self._oneflow_internal_module_tensor_applied_dict__[buf] = buf_applied
+                    self._oneflow_internal_module_tensor_applied_dict__[
+                        buf
+                    ] = buf_applied
                 else:
-                    self._buffers[key] = self._oneflow_internal_module_tensor_applied_dict__[buf]
+                    self._buffers[
+                        key
+                    ] = self._oneflow_internal_module_tensor_applied_dict__[buf]
 
         self._oneflow_internal_module_tensor_applied_dict__ = None
         return self
