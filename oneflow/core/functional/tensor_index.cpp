@@ -413,8 +413,6 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
 Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
                                         const TensorTuple& indices,
                                         const std::shared_ptr<Tensor>& value) {
-  // std::cout << "indices size: " << indices.size() << std::endl;
-  // std::cout << "indices[0] shape: " << indices[0]->shape()->ToString() << std::endl;
   CHECK_GE_OR_RETURN(input->ndim(), indices.size())
       << Error::IndexError() << "Too many indices for tensor of dimension " << input->ndim();
   const auto& expanded_indices = JUST(ExpandIndices(indices));
