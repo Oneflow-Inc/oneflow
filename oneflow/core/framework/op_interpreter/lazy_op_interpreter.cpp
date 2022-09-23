@@ -36,6 +36,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/sbp_parallel.h"
@@ -104,10 +105,12 @@ Maybe<void> CheckTensorMatchAttr(const std::shared_ptr<Tensor>& tensor,
     auto nd_sbp_it = nd_sbp_sign_map.find(bn_in_op);
     CHECK_OR_RETURN(nd_sbp_it != nd_sbp_sign_map.end())
         << "nd_sbp of " << bn_in_op << " not found in op " << op_attribute.op_conf().name();
-    NdSbp nd_sbp(nd_sbp_it->second);
-    CHECK_OR_RETURN(JUST(tensor->nd_sbp()) == SymbolOf(nd_sbp))
-        << "The input sbp is not valid for an inplace operation, please try to use non-inplace. "
-        << NdSbpToString(JUST(tensor->nd_sbp())) << " vs " << NdSbpToString(nd_sbp);
+    if (!GlobalJobDesc().enable_auto_parallel()) {
+      NdSbp nd_sbp(nd_sbp_it->second);
+      CHECK_OR_RETURN(JUST(tensor->nd_sbp()) == SymbolOf(nd_sbp))
+          << "The input sbp is not valid for an inplace operation, please try to use non-inplace. "
+          << NdSbpToString(JUST(tensor->nd_sbp())) << " vs " << NdSbpToString(nd_sbp);
+    }
     CHECK_OR_RETURN(JUST(tensor->parallel_desc())  // NOLINT(maybe-need-error-msg)
                     == SymbolOf(*parallel_desc));  // NOLINT(maybe-need-error-msg)
   }
