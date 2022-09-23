@@ -278,13 +278,13 @@ Maybe<void> NNGraph::RankPerThreadCompile() {
       std::vector<HashSet<PortableCtrlEdge>> portable_ctrl_edges{GlobalProcessCtx::WorldSize()};
       // there are no op_names in plan, we must hold them by a container.
       HashMap<int64_t, std::string> comp_task_id2op_name;
-      for (int i = 0; i < GlobalProcessCtx::WorldSize(); ++i) {
+      MultiThreadLoop(GlobalProcessCtx::WorldSize(), [&](size_t i) {
         Plan rank_plan;
         auto* plan = (i > 0) ? &rank_plan : &plan_;
         double start = GetCurTime();
         // TODO(chengcheng): new memory reused by chunk
-        JUST(RankCompiler(boxing_task_graph_proto, i)
-                 .Compile(variable_op_names_, &job_, plan, &comp_task_id2op_name));
+        CHECK_JUST(RankCompiler(boxing_task_graph_proto, i)
+                       .Compile(variable_op_names_, &job_, plan, &comp_task_id2op_name));
         PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
 
         VLOG(1) << "Graph name: " << name_
@@ -304,7 +304,7 @@ Maybe<void> NNGraph::RankPerThreadCompile() {
           std::string plan_name = "plan:" + job_name() + ":" + std::to_string(i);
           Singleton<CtrlClient>::Get()->PushKV(plan_name, *plan);
         }
-      }
+      });
       {
         // use multi-thread to merge all ctrl edges into portable_ctrl_edges[0], which is belong to
         // master .
