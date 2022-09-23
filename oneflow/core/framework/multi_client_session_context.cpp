@@ -53,7 +53,8 @@ int32_t GetCpuDeviceNum() { return std::thread::hardware_concurrency(); }
 MultiClientSessionContext::MultiClientSessionContext(
     const std::shared_ptr<EnvGlobalObjectsScope>& env_ctx)
     : env_ctx_(env_ctx) {
-  CHECK(Singleton<MultiClientSessionContext>::Get() == nullptr) << "Duplicate multi client session context";
+  CHECK(Singleton<MultiClientSessionContext>::Get() == nullptr)
+      << "Duplicate multi client session context";
   Singleton<MultiClientSessionContext>::SetAllocated(this);
 }
 
@@ -120,14 +121,15 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
 Maybe<void> MultiClientSessionContext::TryInit(const std::string& config_proto_str) {
   ConfigProto config_proto;
   CHECK_OR_RETURN(TxtString2PbMessage(config_proto_str, &config_proto))
-      << "failed to parse config_proto: " << config_proto_str;
+      << Error::RuntimeError() << "failed to parse config_proto: " << config_proto_str;
   return TryInit(config_proto);
 }
 
 Maybe<void> MultiClientSessionContext::UpdateResource(const Resource& reso_proto) {
-  CHECK_OR_RETURN(is_inited_) << " session must be inited when updating resource.";
+  CHECK_OR_RETURN(is_inited_) << Error::RuntimeError()
+                              << " session must be inited when updating resource.";
   CHECK_NOTNULL_OR_RETURN((Singleton<ResourceDesc, ForSession>::Get()))
-      << "ResourceDesc get failed!";
+      << Error::RuntimeError() << "ResourceDesc get failed!";
   Singleton<ResourceDesc, ForSession>::Get()->Update(reso_proto);
   return Maybe<void>::Ok();
 }
@@ -135,7 +137,7 @@ Maybe<void> MultiClientSessionContext::UpdateResource(const Resource& reso_proto
 Maybe<void> MultiClientSessionContext::UpdateResource(const std::string& reso_proto_str) {
   Resource reso_proto;
   CHECK_OR_RETURN(TxtString2PbMessage(reso_proto_str, &reso_proto))
-      << "failed to parse config_proto: " << reso_proto_str;
+      << Error::RuntimeError() << "failed to parse config_proto: " << reso_proto_str;
   return UpdateResource(reso_proto);
 }
 
