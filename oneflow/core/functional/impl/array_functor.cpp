@@ -755,7 +755,7 @@ class ExpandFunctor {
   ExpandFunctor() { op_ = CHECK_JUST(one::OpBuilder("expand").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
     const Shape& in_shape = *x->shape();
-    size_t lpad = shape.size() - in_shape.size();
+    int lpad = shape.size() - in_shape.size();
     if (lpad < 0) {
       return Error::RuntimeError()
              << "expand(tensor{" << in_shape.ToString() << "}, size=" << in_shape.size()
