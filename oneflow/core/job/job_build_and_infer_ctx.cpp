@@ -562,10 +562,10 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
 
   // infer nd_sbp signature
   NdSbpSignature nd_sbp_sig_conf;
-  if (!job_desc->enable_auto_parallel()) {
-    nd_sbp_sig_conf = *JUST(InitConstraitNdSbpSignature(*op, ibn2disable_boxing));
-  } else {
+  if (job_desc->enable_auto_parallel()) {
     InitBroadcastNdSbpSignature(&nd_sbp_sig_conf, ibn2disable_boxing);
+  } else {
+    nd_sbp_sig_conf = *JUST(InitConstraitNdSbpSignature(*op, ibn2disable_boxing));
   }
   // Override constrait nd_sbp if sbp hint is given
   if (!sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
