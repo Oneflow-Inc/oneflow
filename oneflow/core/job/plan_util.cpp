@@ -18,7 +18,9 @@ limitations under the License.
 #include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/plan_util.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/graph/task_type.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/memory/chunk_manager.h"
@@ -1226,6 +1228,75 @@ void PlanUtil::PopulateOpAttribute(
 
 /*static*/ int64_t PlanUtil::GetDeviceIndex(const TaskProto& task) {
   return GetStreamId(task).device_id().device_index();
+}
+
+/*static*/ void PlanUtil::GenPortableCtrlEdges(
+    const PortableCtrlNode& src_node, const TaskProto& dst_task,
+    const HashMap<int64_t, std::string>& comp_task_id2op_name,
+    HashSet<PortableCtrlEdge>* portable_ctrl_edges) {
+  if (IsTransportTaskType::Visit(dst_task.task_type())) {
+    PortableCtrlEdge edge;
+    *edge.mutable_src() = src_node;
+    edge.mutable_dst()->set_transport_task_id(dst_task.task_id());
+    portable_ctrl_edges->insert(edge);
+  } else {
+    CHECK_EQ(dst_task.exec_sequence().exec_node_size(), 1);
+    const auto& op_name = CHECK_JUST(MapAt(comp_task_id2op_name, dst_task.task_id()));
+    PortableCtrlEdge edge;
+    *edge.mutable_src() = src_node;
+    edge.mutable_dst()->set_compute_task_op_name(op_name);
+    portable_ctrl_edges->insert(edge);
+  }
+}
+
+/*static*/ void PlanUtil::GenPortableCtrlEdges(
+    const TaskProto& src_task, const TaskProto& dst_task,
+    const HashMap<int64_t, std::string>& comp_task_id2op_name,
+    HashSet<PortableCtrlEdge>* portable_ctrl_edges) {
+  if (IsTransportTaskType::Visit(src_task.task_type())) {
+    PortableCtrlNode src_node;
+    src_node.set_transport_task_id(src_task.task_id());
+    GenPortableCtrlEdges(src_node, dst_task, comp_task_id2op_name, portable_ctrl_edges);
+  } else {
+    CHECK_GT(src_task.exec_sequence().exec_node_size(), 0);
+    const auto& op_name = CHECK_JUST(MapAt(comp_task_id2op_name, src_task.task_id()));
+    PortableCtrlNode src_node;
+    src_node.set_compute_task_op_name(op_name);
+    GenPortableCtrlEdges(src_node, dst_task, comp_task_id2op_name, portable_ctrl_edges);
+  }
+}
+
+/*static*/ void PlanUtil::GenPortableCtrlEdges(
+    const Plan& plan, const HashMap<int64_t, std::string>& comp_task_id2op_name,
+    HashSet<PortableCtrlEdge>* portable_ctrl_edges) {
+  const auto& ctrl_regst_desc_id2producer_task_id =
+      plan.ctrl_regst_desc_info().ctrl_regst_desc_id2producer_task_id();
+  HashMap<int64_t, const TaskProto*> id2task;
+  for (const TaskProto& task : plan.task()) {
+    CHECK(id2task.emplace(task.task_id(), &task).second);
+  }
+  for (const TaskProto& task : plan.task()) {
+    for (const auto& pair : task.consumed_regst_desc_id()) {
+      for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
+        const auto& iter = ctrl_regst_desc_id2producer_task_id.find(regst_desc_id);
+        if (iter != ctrl_regst_desc_id2producer_task_id.end()) {
+          int64_t producer_task_id = iter->second;
+          const auto* src_task = CHECK_JUST(MapAt(id2task, producer_task_id));
+          GenPortableCtrlEdges(*src_task, task, comp_task_id2op_name, portable_ctrl_edges);
+        }
+      }
+    }
+  }
+}
+
+/*static*/ void PlanUtil::MergePortableCtrlEdgesByMod(
+    size_t index, size_t n, std::vector<HashSet<PortableCtrlEdge>>* portable_ctrl_edges) {
+  index = index % n;
+  if (portable_ctrl_edges->size() <= n) { return; }
+  for (int j = index + n; j < portable_ctrl_edges->size(); j += n) {
+    (*portable_ctrl_edges)[index].insert((*portable_ctrl_edges)[j].begin(),
+                                         (*portable_ctrl_edges)[j].end());
+  }
 }
 
 }  // namespace oneflow

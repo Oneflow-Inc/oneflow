@@ -44,6 +44,8 @@ limitations under the License.
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
 #include "oneflow/core/common/env_var/lazy.h"
+#include "oneflow/core/job/portable_ctrl_edge.pb.h"
+#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
 
@@ -267,17 +269,22 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
 }
 
 Maybe<void> NNGraph::RankPerThreadCompile() {
+  constexpr int kWorkerStartRank = 1;
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     std::vector<Plan> plans(GlobalProcessCtx::WorldSize());
     JUST(OpGraph::WithSingleton(&job_, [&]() -> Maybe<void> {
       auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
       JUST(BoxingTaskGraph::New())->ToProto(boxing_task_graph_proto.get());
+      std::vector<HashSet<PortableCtrlEdge>> portable_ctrl_edges{GlobalProcessCtx::WorldSize()};
+      // there are no op_names in plan, we must hold them by a container.
+      HashMap<int64_t, std::string> comp_task_id2op_name;
       for (int i = 0; i < GlobalProcessCtx::WorldSize(); ++i) {
         Plan rank_plan;
         auto* plan = (i > 0) ? &rank_plan : &plan_;
         double start = GetCurTime();
         // TODO(chengcheng): new memory reused by chunk
-        JUST(RankCompiler(boxing_task_graph_proto, i).Compile(variable_op_names_, &job_, plan));
+        JUST(RankCompiler(boxing_task_graph_proto, i)
+                 .Compile(variable_op_names_, &job_, plan, &comp_task_id2op_name));
         PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
 
         VLOG(1) << "Graph name: " << name_
@@ -289,21 +296,54 @@ Maybe<void> NNGraph::RankPerThreadCompile() {
         }
         PlanUtil::GenRegisterHint(plan);
         plan->mutable_collective_boxing_plan();
-        plan->mutable_ctrl_regst_desc_info();
-        std::string plan_name = "plan:" + job_name() + ":" + std::to_string(i);
-        Singleton<CtrlClient>::Get()->PushKV(plan_name, *plan);
+        // PlanUtil::SetForceInplaceMemBlock(plan); NOTE(chengcheng): only for ssp.
+        PlanUtil::DumpCtrlRegstInfoToPlan(plan);
+        // collect ctrl edges of current rank for merging.
+        PlanUtil::GenPortableCtrlEdges(*plan, comp_task_id2op_name, &portable_ctrl_edges[i]);
+        if (i >= kWorkerStartRank /*skip master*/) {
+          std::string plan_name = "plan:" + job_name() + ":" + std::to_string(i);
+          Singleton<CtrlClient>::Get()->PushKV(plan_name, *plan);
+        }
+      }
+      {
+        // use multi-thread to merge all ctrl edges into portable_ctrl_edges[0], which is belong to
+        // master .
+        const auto& MergeInto = [&](size_t n) {
+          MultiThreadLoop(n, [&](size_t i) {
+            PlanUtil::MergePortableCtrlEdgesByMod(i, n, &portable_ctrl_edges);
+          });
+          portable_ctrl_edges.resize(n);
+        };
+        int n = portable_ctrl_edges.size();
+        if (n > 128) { MergeInto(n = 64); }
+        if (n > 32) { MergeInto(n = 16); }
+        if (n > 8) { MergeInto(n = 4); }
+        MergeInto(n = 1);
+      }
+      // TODO(chengcheng): test collective boxing for multi-job.
+      PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_, [&] {
+        return std::make_unique<RankPlanTaskGraph>(plan_, comp_task_id2op_name,
+                                                   portable_ctrl_edges.at(0));
+      });
+      std::string collective_boxing_info;
+      plan_.collective_boxing_plan().SerializeToString(&collective_boxing_info);
+      for (int i = kWorkerStartRank /*skip master*/; i < GlobalProcessCtx::WorldSize(); ++i) {
+        std::string name = "collective_boxing_info:" + job_name() + ":" + std::to_string(i);
+        Singleton<CtrlClient>::Get()->PushKV(name, collective_boxing_info);
       }
       return Maybe<void>::Ok();
     }));
   } else {
-    std::string plan_name = "plan:" + job_name() + ":" + std::to_string(GlobalProcessCtx::Rank());
-    Singleton<CtrlClient>::Get()->PullKV(plan_name, &plan_);
+    const std::string rank = std::to_string(GlobalProcessCtx::Rank());
+    {
+      std::string name = "plan:" + job_name() + ":" + rank;
+      Singleton<CtrlClient>::Get()->PullKV(name, &plan_);
+    }
+    {
+      std::string name = "collective_boxing_info:" + job_name() + ":" + rank;
+      Singleton<CtrlClient>::Get()->PullKV(name, plan_.mutable_collective_boxing_plan());
+    }
   }
-  // TODO(chengcheng): test collective boxing for multi-job.
-  PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_,
-                                    [&] { return std::make_unique<PlanTaskGraph>(plan_); });
-  // PlanUtil::SetForceInplaceMemBlock(plan); NOTE(chengcheng): only for ssp.
-  PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
   PlanUtil::PlanMemoryLog(&plan_, name_);
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     PlanUtil::GenLightPlan(&plan_, name_);
@@ -312,9 +352,13 @@ Maybe<void> NNGraph::RankPerThreadCompile() {
   // NOTE(zwx): After barrier plan is synchronized between all ranks,
   //     then it can be cleared for saving mem.
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    for (int i = 0; i < GlobalProcessCtx::WorldSize(); ++i) {
-      std::string plan_name = "plan:" + job_name() + ":" + std::to_string(i);
-      Singleton<CtrlClient>::Get()->ClearKV(plan_name);
+    for (int i = kWorkerStartRank /*skip master*/; i < GlobalProcessCtx::WorldSize(); ++i) {
+      std::string name = "plan:" + job_name() + ":" + std::to_string(i);
+      Singleton<CtrlClient>::Get()->ClearKV(name);
+    }
+    for (int i = kWorkerStartRank /*skip master*/; i < GlobalProcessCtx::WorldSize(); ++i) {
+      std::string name = "collective_boxing_info:" + job_name() + ":" + std::to_string(i);
+      Singleton<CtrlClient>::Get()->ClearKV(name);
     }
   }
   OF_SESSION_BARRIER();
@@ -340,7 +384,7 @@ Maybe<void> NNGraph::NaiveCompile() {
     PlanUtil::GenRegisterHint(&plan_);
     // TODO(chengcheng): test collective boxing for multi-job.
     PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_,
-                                      [&] { return std::make_unique<PlanTaskGraph>(plan_); });
+                                      [&] { return std::make_unique<FullPlanTaskGraph>(plan_); });
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
     PlanUtil::PlanMemoryLog(&plan_, name_);

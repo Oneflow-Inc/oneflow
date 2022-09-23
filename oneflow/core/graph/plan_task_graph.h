@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/graph/graph.h"
+#include "oneflow/core/job/portable_ctrl_edge.h"
 
 namespace oneflow {
 
@@ -45,21 +46,49 @@ class PlanTaskNode final : public Node<PlanTaskNode, PlanTaskEdge> {
   const TaskProto* task_proto_;
 };
 
-class PlanTaskGraph final : public Graph<const PlanTaskNode, PlanTaskEdge> {
+class PlanTaskGraph : public Graph<const PlanTaskNode, PlanTaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PlanTaskGraph);
   explicit PlanTaskGraph(const Plan& plan);
-  ~PlanTaskGraph() = default;
+  virtual ~PlanTaskGraph() = default;
 
   const TaskProto* TaskProto4TaskId(int64_t task_id) const;
   const Plan& plan() const { return *plan_; }
 
- private:
+ protected:
   void InitNodes();
   void InitEdges();
+  void TryConnect(PlanTaskNode* src, PlanTaskNode* dst);
 
   const Plan* plan_;
   HashMap<int64_t, PlanTaskNode*> task_id2plan_task_node_;
+  HashSet<std::pair<PlanTaskNode*, PlanTaskNode*>> edges_;
+};
+
+class FullPlanTaskGraph final : public PlanTaskGraph {
+ public:
+  using PlanTaskGraph::PlanTaskGraph;
+  ~FullPlanTaskGraph() override = default;
+};
+
+class RankPlanTaskGraph final : public PlanTaskGraph {
+ public:
+  RankPlanTaskGraph(const Plan& plan, const HashMap<int64_t, std::string>& comp_task_id2op_name,
+                    const HashSet<PortableCtrlEdge>& portable_ctrl_edges);
+  ~RankPlanTaskGraph() override = default;
+
+ private:
+  void InitCtrlEdges(const HashMap<int64_t, std::string>& comp_task_id2op_name,
+                     const HashSet<PortableCtrlEdge>& portable_ctrl_edges);
+  void TryConnectByTaskId(int64_t src_task_id, int64_t dst_task_id);
+  void TryConnectBySrcMachineId(int64_t src_task_id,
+                                const HashMap<int64_t, PlanTaskNode*>& machine_id2task_node);
+  void TryConnectByDstMachineId(const HashMap<int64_t, PlanTaskNode*>& machine_id2task_node,
+                                int64_t dst_task_id);
+  void TryConnectBetweenCompTaskNodes(
+      const HashMap<int64_t, PlanTaskNode*>& machine_id2src_task_node,
+      const HashMap<int64_t, PlanTaskNode*>& machine_id2dst_task_node);
+  PlanTaskNode* MutTaskNode4TaskId(int64_t task_id);
 };
 
 }  // namespace oneflow

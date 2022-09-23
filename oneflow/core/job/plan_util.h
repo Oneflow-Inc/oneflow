@@ -52,6 +52,18 @@ struct PlanUtil {
       const PbMap<int64_t, ::oneflow::OpAttributeRefTable>& job_id2op_attribute_ref_table);
   static StreamId GetStreamId(const TaskProto& task);
   static int64_t GetDeviceIndex(const TaskProto& task);
+  static void GenPortableCtrlEdges(const Plan&,
+                                   const HashMap<int64_t, std::string>& comp_task_id2op_name,
+                                   HashSet<PortableCtrlEdge>* portable_ctrl_edges);
+
+  static void GenPortableCtrlEdges(const PortableCtrlNode& src_node, const TaskProto& dst_task,
+                                   const HashMap<int64_t, std::string>& comp_task_id2op_name,
+                                   HashSet<PortableCtrlEdge>* portable_ctrl_edges);
+  static void GenPortableCtrlEdges(const TaskProto& src_task, const TaskProto& dst_task,
+                                   const HashMap<int64_t, std::string>& comp_task_id2op_name,
+                                   HashSet<PortableCtrlEdge>* portable_ctrl_edges);
+  static void MergePortableCtrlEdgesByMod(
+      size_t index, size_t n, std::vector<HashSet<PortableCtrlEdge>>* portable_ctrl_edges);
 };
 
 }  // namespace oneflow
