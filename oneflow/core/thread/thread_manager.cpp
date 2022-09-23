@@ -69,7 +69,7 @@ void ThreadMgr::DeleteThreads(const HashSet<int64_t>& thread_ids) {
   }
 }
 
-void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback) {
+void SingleThreadLoop(size_t num, const std::function<void(size_t i)>& Callback) {
   FOR_RANGE(size_t, i, 0, num) { Callback(i); }
 }
 

@@ -45,6 +45,7 @@ limitations under the License.
 #include "oneflow/core/framework/variable_tensor_mgr.h"
 #include "oneflow/core/common/env_var/lazy.h"
 #include "oneflow/core/job/portable_ctrl_edge.pb.h"
+#include "oneflow/core/job/compile_mode.h"
 #include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
@@ -268,7 +269,8 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NNGraph::RankPerThreadCompile() {
+template<void (*Loop)(size_t num, const std::function<void(size_t i)>& Callback)>
+Maybe<void> NNGraph::MasterRankCompile() {
   constexpr int kWorkerStartRank = 1;
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     std::vector<Plan> plans(GlobalProcessCtx::WorldSize());
@@ -278,7 +280,7 @@ Maybe<void> NNGraph::RankPerThreadCompile() {
       std::vector<HashSet<PortableCtrlEdge>> portable_ctrl_edges{GlobalProcessCtx::WorldSize()};
       // there are no op_names in plan, we must hold them by a container.
       HashMap<int64_t, std::string> comp_task_id2op_name;
-      MultiThreadLoop(GlobalProcessCtx::WorldSize(), [&](size_t i) {
+      Loop(GlobalProcessCtx::WorldSize(), [&](size_t i) {
         Plan rank_plan;
         auto* plan = (i > 0) ? &rank_plan : &plan_;
         double start = GetCurTime();
@@ -431,16 +433,17 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
   // NOTE(chengcheng): do job compeleter for each rank.
   JUST(JobCompleter().Complete(&job_));
-  if (ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>() == kNaiveCompiler) {
-    JUST(NaiveCompile());
-  } else if (ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>() == kRankPerThreadCompiler) {
-    JUST(RankPerThreadCompile());
-  } else {
-    UNIMPLEMENTED_THEN_RETURN() << "ONEFLOW_LAZY_COMPILER(value: "
-                                << ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>()
-                                << ") is invalid. valid options: \"" << kNaiveCompiler << "\", \""
-                                << kRankPerThreadCompiler << "\"";
-  }
+  typedef Maybe<void> (NNGraph::*CompileMethodT)();
+  struct GetCompileMethod final : public CompileModeVisitor<GetCompileMethod> {
+    static CompileMethodT VisitNaive() { return &NNGraph::NaiveCompile; }
+    static CompileMethodT VisitRankPerIter() {
+      return &NNGraph::MasterRankCompile<&SingleThreadLoop>;
+    }
+    static CompileMethodT VisitRankPerThread() {
+      return &NNGraph::MasterRankCompile<&MultiThreadLoop<std::function<void(size_t)>>>;
+    }
+  };
+  JUST((this->*GetCompileMethod::Visit(JUST(CurrentCompileMode())))());
 
   NewRuntimeBuffers();
 

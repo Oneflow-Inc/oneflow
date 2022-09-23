@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/common/env_var/lazy.h"
+#include "oneflow/core/job/compile_mode.h"
 
 namespace oneflow {
 
@@ -49,17 +49,7 @@ class CompTaskNode : public TaskNode {
   std::shared_ptr<const Operator> op() const { return op_node_->shared_op(); }
 
   ExecNode::InferBlobDescsMethod InferBlobDescs() const override {
-    if (ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>() == kNaiveCompiler) {
-      return &ExecNode::InferBlobDescsByInputs;
-    } else if (ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>() == kRankPerThreadCompiler) {
-      return &ExecNode::InferBlobDescsByNdSbp;
-    } else {
-      UNIMPLEMENTED() << "ONEFLOW_LAZY_COMPILER(value: "
-                      << ThreadLocalEnvString<ONEFLOW_LAZY_COMPILER>()
-                      << ") is invalid. valid options: \"" << kNaiveCompiler << "\", \""
-                      << kRankPerThreadCompiler << "\"";
-    }
-    return nullptr;
+    return GetInferBlobDescsMethod::Visit(CHECK_JUST(CurrentCompileMode()));
   }
 
  protected:
@@ -71,6 +61,16 @@ class CompTaskNode : public TaskNode {
   void InferProducedDataRegstTimeShape() override;
 
  private:
+  struct GetInferBlobDescsMethod final : public CompileModeVisitor<GetInferBlobDescsMethod> {
+    static ExecNode::InferBlobDescsMethod VisitNaive() { return &ExecNode::InferBlobDescsByInputs; }
+    static ExecNode::InferBlobDescsMethod VisitRankPerIter() {
+      return &ExecNode::InferBlobDescsByNdSbp;
+    }
+    static ExecNode::InferBlobDescsMethod VisitRankPerThread() {
+      return &ExecNode::InferBlobDescsByNdSbp;
+    }
+  };
+
   ParallelContext parallel_ctx_;
   const OpNode* op_node_;
 };

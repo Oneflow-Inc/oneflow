@@ -21,10 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
-// options: "naive", "rank_per_thread" .
-static const std::string kNaiveCompiler = "naive";
-static const std::string kRankPerThreadCompiler = "rank_per_thread";
-DEFINE_THREAD_LOCAL_ENV_STRING(ONEFLOW_LAZY_COMPILER, kNaiveCompiler);
+DEFINE_THREAD_LOCAL_ENV_STRING(ONEFLOW_LAZY_COMPILE_MODE, "naive");
 
 }  // namespace oneflow
 

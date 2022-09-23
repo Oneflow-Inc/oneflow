@@ -76,7 +76,8 @@ class NNGraph final : public NNGraphIf {
 
  private:
   Maybe<void> NaiveCompile();
-  Maybe<void> RankPerThreadCompile();
+  template<void (*Loop)(size_t num, const std::function<void(size_t i)>& Callback)>
+  Maybe<void> MasterRankCompile();
   Maybe<void> RegisterFreeEagerTensorsToVariableOpNames();
   Maybe<void> RegisterNewVariableOpInJobPass();
   Maybe<void> DeleteOutdatedVariableInVariableTensorMgr();

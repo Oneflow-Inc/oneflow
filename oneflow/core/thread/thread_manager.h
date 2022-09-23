@@ -48,7 +48,7 @@ class ThreadMgr final {
   std::mutex mutex4del_threads_;
 };
 
-void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);
+void SingleThreadLoop(size_t num, const std::function<void(size_t i)>& Callback);
 
 template<typename DoEachT>
 void MultiThreadLoop(size_t num, const DoEachT& DoEach) {
