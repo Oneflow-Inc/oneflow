@@ -18,21 +18,20 @@ import unittest
 import oneflow as flow
 import oneflow.unittest
 
+
 class TestPlacement(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_inconsistent_placement(test_case):
-        x = flow.randn(2,3)
+        x = flow.randn(2, 3)
         if flow.env.get_rank() == 0:
-            placement = flow.placement("cpu", [0,1])
+            placement = flow.placement("cpu", [0, 1])
         else:
             placement = flow.placement("cpu", [0])
         sbp = flow.sbp.split(1)
         with test_case.assertRaises(RuntimeError) as ctx:
             x_global = x.to_global(placement=placement, sbp=sbp)
-        test_case.assertTrue(
-            "Inconsistent parallel description"
-            in str(ctx.exception)
-        )
+        test_case.assertTrue("Inconsistent parallel description" in str(ctx.exception))
+
 
 if __name__ == "__main__":
     unittest.main()
