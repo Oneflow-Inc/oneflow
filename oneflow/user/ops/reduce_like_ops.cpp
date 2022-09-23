@@ -84,11 +84,7 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ReduceSumLikeOp::InferDataType(user_op::InferContext* ctx) {
-  const user_op::TensorDesc& x_tensor = ctx->InputTensorDesc("x", 0);
-  const user_op::TensorDesc& like_tensor = ctx->InputTensorDesc("like", 0);
-  CHECK_EQ_OR_RETURN(x_tensor.data_type(), like_tensor.data_type())
-      << Error::TypeError() << "Tensors x and like must have the same type";
-  ctx->SetOutputDType("y", 0, like_tensor.data_type());
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReduceSumLikeOp::ModifyInputArg(
