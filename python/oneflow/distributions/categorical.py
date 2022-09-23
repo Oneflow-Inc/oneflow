@@ -27,14 +27,17 @@ class Categorical(Distribution):
     r"""
     Creates a categorical distribution parameterized by either :attr:`probs` or
     :attr:`logits` (but not both).
+
     .. note::
         It is equivalent to the distribution that :func:`oneflow.multinomial`
         samples from.
+
     Samples are integers from :math:`\{0, \ldots, K-1\}` where `K` is ``probs.size(-1)``.
     If `probs` is 1-dimensional with length-`K`, each element is the relative probability
     of sampling the class at that index.
     If `probs` is N-dimensional, the first N-1 dimensions are treated as a batch of
     relative probability vectors.
+
     .. note:: The `probs` argument must be non-negative, finite and have a non-zero sum,
               and it will be normalized to sum to 1 along the last dimension. :attr:`probs`
               will return this normalized value.
