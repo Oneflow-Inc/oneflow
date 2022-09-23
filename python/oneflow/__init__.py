@@ -204,6 +204,7 @@ from oneflow._C import amax
 from oneflow._C import swapdims
 from oneflow._C import t
 from oneflow._C import masked_fill
+from oneflow._C import masked_fill_
 from oneflow._C import equal
 from oneflow._C import equal as eq
 from oneflow._C import not_equal
