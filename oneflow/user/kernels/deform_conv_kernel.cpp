@@ -698,8 +698,4 @@ REGISTER_DEFORM_CONV2D_PARAM_GRAD_CPU_KERNEL(float)
 REGISTER_DEFORM_CONV2D_PARAM_GRAD_CPU_KERNEL(double)
 
 }  // namespace
-<<<<<<< HEAD
 }  // namespace oneflow
-=======
-}  // namespace oneflow
->>>>>>> 301a99e9190980a175ffc3cd45d93c2094230f3e
