@@ -14,7 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
+#include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/SymbolTable.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/framework/sbp_context.h"
@@ -23,7 +29,9 @@ limitations under the License.
 #include "OneFlow/SBP/SBPImporter.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/OneFlowUtils.h"
 #include "OneFlow/Passes.h"
+#include "OneFlow/OneFlowUtils.h"
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/SBP/SBPAttributes.h"
 #include "mlir-c/BuiltinAttributes.h"
@@ -66,6 +74,7 @@ limitations under the License.
 #include "llvm/ADT/SmallVector.h"
 
 #include <algorithm>
+#include <memory>
 #include <vector>
 
 #ifdef WITH_MLIR_CUDA_CODEGEN
@@ -82,14 +91,14 @@ limitations under the License.
 #include <string>
 
 namespace mlir {
-
 namespace oneflow {
 
-LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
+template<typename T>
+LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, T op) {
   // TODO: now we only need one JIT engine
-  auto parent_func_op = op->getParentOfType<oneflow::Job>();
+  auto parent_func_op = op->template getParentOfType<oneflow::Job>();
   if (!parent_func_op) { return failure(); }
-  auto parent_module_op = parent_func_op->getParentOfType<ModuleOp>();
+  auto parent_module_op = parent_func_op->template getParentOfType<ModuleOp>();
   if (!parent_module_op) { return failure(); }
   SymbolTable symbol_table(parent_module_op);
   std::string mlir;
@@ -104,6 +113,113 @@ LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
   return success();
 }
 
+LLVM::LLVMFuncOp DeclareKernelLaunchCInterface(::mlir::PatternRewriter& rewriter,
+                                               mlir::Location loc, ModuleOp* module,
+                                               StringRef c_api_callee, Type llvm_ptr_type) {
+  LLVM::LLVMFuncOp func;
+  if (!(func = module->lookupSymbol<LLVM::LLVMFuncOp>(c_api_callee))) {
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPointToStart(module->getBody());
+    auto void_type = LLVM::LLVMVoidType::get(rewriter.getContext());
+    auto func_type = LLVM::LLVMFunctionType::get(void_type, {llvm_ptr_type, llvm_ptr_type}, false);
+    func = rewriter.create<LLVM::LLVMFuncOp>(loc, c_api_callee, func_type, LLVM::Linkage::External);
+
+    func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
+  }
+  return func;
+}
+
+LLVM::GlobalOp DeclareOrGetGlobalString(::mlir::PatternRewriter& rewriter, mlir::Location loc,
+                                        ModuleOp* module, StringRef func_name) {
+  LLVM::GlobalOp global;
+  StringRef variable = rewriter.getStringAttr(func_name + "_var");
+  if (!(global = module->lookupSymbol<LLVM::GlobalOp>(variable))) {
+    OpBuilder::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(module->getBody());
+    auto type =
+        LLVM::LLVMArrayType::get(IntegerType::get(rewriter.getContext(), 8), func_name.size());
+    global =
+        rewriter.create<LLVM::GlobalOp>(loc, type, /*isConstant=*/true, LLVM::Linkage::Internal,
+                                        variable, rewriter.getStringAttr(func_name),
+                                        /*alignment=*/0);
+  }
+  return global;
+}
+
+ModuleOp GetModuleOpFromJobBodyOp(Operation* op) {
+  auto parent_func_op = op->getParentOfType<oneflow::Job>();
+  if (!parent_func_op) { return nullptr; }
+  return parent_func_op->getParentOfType<ModuleOp>();
+}
+
+func::FuncOp GetOrInsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operation* op) {
+  auto loc = op->getLoc();
+  auto module = GetModuleOpFromJobBodyOp(op);
+  if (!module) {
+    emitError(loc) << "null ModuleOp " << *op;
+    return nullptr;
+  }
+
+  BlockAndValueMapping mapping;
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPointToStart(module.getBody());
+
+  auto func_name = op->getAttr("op_name").cast<StringAttr>().strref();
+  auto func_type =
+      rewriter.getFunctionType(TypeRange(op->getOperandTypes()), TypeRange(op->getResultTypes()));
+  func::FuncOp func = rewriter.create<func::FuncOp>(loc, func_name, func_type);
+  func.setSymVisibilityAttr(rewriter.getStringAttr("public"));
+  func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
+  func.getBody().emplaceBlock();
+  for (auto& arg : func_type.getInputs()) { func.getBody().addArguments(arg, loc); }
+  for (auto argument_pair :
+       llvm::zip(ValueRange(op->getOperands()), func.getBody().getArguments())) {
+    mapping.map(std::get<0>(argument_pair), std::get<1>(argument_pair));
+  }
+  rewriter.setInsertionPointToStart(&func.getBody().front());
+  ImplicitLocOpBuilder new_block(loc, rewriter);
+  new_block.clone(*op, mapping);
+  SmallVector<::mlir::Value, 4> mapped_results;
+  for (auto result : ValueRange(op->getResults())) {
+    mapped_results.push_back(mapping.lookup(result));
+  }
+  rewriter.create<func::ReturnOp>(loc, mapped_results);
+  return func;
+}
+
+LLVM::LLVMFuncOp GetOrInsertKernelLLVMFuncOp(::mlir::PatternRewriter& rewriter, func::FuncOp op) {
+  auto loc = op->getLoc();
+  auto llvm_ptr_type = LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8));
+  auto parent_module_op = op->getParentOfType<ModuleOp>();
+  if (!parent_module_op) {
+    emitError(loc) << "null ModuleOp " << *op;
+    return nullptr;
+  }
+  StringRef c_api_callee = "kernel_launch";
+  LLVM::LLVMFuncOp c_api_func =
+      DeclareKernelLaunchCInterface(rewriter, loc, &parent_module_op, c_api_callee, llvm_ptr_type);
+
+  auto func_name = std::string("_mlir_ciface_") + op.getSymName().str();
+  auto void_type = LLVM::LLVMVoidType::get(rewriter.getContext());
+  auto func_type = LLVM::LLVMFunctionType::get(void_type, {llvm_ptr_type, llvm_ptr_type}, false);
+  OpBuilder::InsertionGuard guard_module(rewriter);
+  rewriter.setInsertionPointToEnd(parent_module_op.getBody());
+
+  auto func = rewriter.create<LLVM::LLVMFuncOp>(loc, func_name, func_type);
+  func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
+  func.getBody().emplaceBlock();
+  func.getBody().addArgument(llvm_ptr_type, loc);
+  func.getBody().addArgument(llvm_ptr_type, loc);
+  OpBuilder::InsertionGuard guard_func(rewriter);
+  rewriter.setInsertionPointToStart(&func.getBody().front());
+
+  auto ctx_ptr = func.getBody().getArgument(0);
+  auto kernel_ptr = func.getBody().getArgument(1);
+  rewriter.create<LLVM::CallOp>(loc, c_api_func, ValueRange{ctx_ptr, kernel_ptr});
+  rewriter.create<LLVM::ReturnOp>(loc, ValueRange());
+
+  return func;
+}
 // TODO: cfg/multi block support
 func::FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc,
                                StringRef func_name, ValueRange operands, ValueRange results,
@@ -173,51 +289,6 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
   return attributes;
 }
 
-static StringRef sanitizeIdentifier(StringRef name, SmallString<16>& buffer,
-                                    StringRef allowedPunctChars = "$._",
-                                    bool allowTrailingDigit = true) {
-  assert(!name.empty() && "Shouldn't have an empty name here");
-
-  auto copyNameToBuffer = [&] {
-    for (char ch : name) {
-      if (llvm::isAlnum(ch) || allowedPunctChars.contains(ch))
-        buffer.push_back(ch);
-      else if (ch == ' ')
-        buffer.push_back('_');
-      else
-        buffer.append(llvm::utohexstr((unsigned char)ch));
-    }
-  };
-
-  // Check to see if this name is valid. If it starts with a digit, then it
-  // could conflict with the autogenerated numeric ID's, so add an underscore
-  // prefix to avoid problems.
-  if (isdigit(name[0])) {
-    buffer.push_back('_');
-    copyNameToBuffer();
-    return buffer;
-  }
-
-  // If the name ends with a trailing digit, add a '_' to avoid potential
-  // conflicts with autogenerated ID's.
-  if (!allowTrailingDigit && isdigit(name.back())) {
-    copyNameToBuffer();
-    buffer.push_back('_');
-    return buffer;
-  }
-
-  // Check to see that the name consists of only valid identifier characters.
-  for (char ch : name) {
-    if (!llvm::isAlnum(ch) && !allowedPunctChars.contains(ch)) {
-      copyNameToBuffer();
-      return buffer;
-    }
-  }
-
-  // If there are no invalid characters, return the original name.
-  return name;
-}
-
 ::llvm::SmallVector<::mlir::Value, 4> OutlineMulCast(::mlir::PatternRewriter& rewriter,
                                                      mlir::OpResult mul_res,
                                                      mlir::OpResult cast_res) {
@@ -248,7 +319,7 @@ static StringRef sanitizeIdentifier(StringRef name, SmallString<16>& buffer,
                .str())
             .toStringRef(op_name_storage);
     SmallString<16> tempBuffer;
-    op_name = sanitizeIdentifier(op_name, tempBuffer);
+    op_name = SanitizeIdentifier(op_name, tempBuffer);
     SmallVector<::mlir::Value, 2> operands;
     operands.push_back(cast_op.in());
     operands.push_back(scale);
@@ -818,6 +889,46 @@ void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLI
   results.insert<BroadcastMulToScalarMulPattern>(context);
 }
 
+struct ConvertOFKLCalleeToLLVMPattern : public mlir::OpRewritePattern<func::FuncOp> {
+  explicit ConvertOFKLCalleeToLLVMPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(func::FuncOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    GetOrInsertKernelLLVMFuncOp(rewriter, op);
+    op->remove();
+    return success();
+  }
+};
+
+struct KernelLaunchPattern : public RewritePattern {
+  explicit KernelLaunchPattern(::mlir::MLIRContext* context)
+      : RewritePattern(MatchAnyOpTypeTag(), 0, context){};
+
+  LogicalResult matchAndRewrite(Operation* op, ::mlir::PatternRewriter& rewriter) const override {
+    auto op_name = op->getName().getStringRef();
+    std::vector<StringRef> white_list{
+        KernelLaunchOp::getOperationName(),
+        OutputOp::getOperationName(),
+        InputOp::getOperationName(),
+        VariableOp::getOperationName(),
+    };
+    if (std::count(white_list.begin(), white_list.end(), op_name) || !op->getAttr("op_name")
+        || !GetModuleOpFromJobBodyOp(op)) {
+      return success();
+    }
+    SmallString<16> tempBuffer;
+    op_name = SanitizeIdentifier(op->getAttr("op_name").cast<StringAttr>(), tempBuffer);
+    op->setAttr("op_name", rewriter.getStringAttr(op_name));
+
+    ValueRange in = op->getOperands();
+    NamedAttrList attrs = op->getAttrs();
+    auto func = GetOrInsertKernelOFFuncOp(rewriter, op);
+    auto new_op = rewriter.replaceOpWithNewOp<KernelLaunchOp>(op, func, attrs, in);
+    if (failed(DumpAssembly(rewriter, new_op))) { exit(1); }
+    return success();
+  }
+};
+
 void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addPass(createConvertToSignlessForTosaPass());  // convert-to-signless-for-tosa
   pm.addNestedPass<func::FuncOp>(LLVM::createRequestCWrappersPass());  // llvm-request-c-wrappers
@@ -838,6 +949,14 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
       mlir::bufferization::createFinalizingBufferizePass());  // finalizing-bufferize
 }
 
+LogicalResult LowerKernelLaunchModuleToLLVM(ModuleOp module) {
+  mlir::PassManager pm(module->getContext());
+  pm.addPass(createConvertOFKLCalleeToLLVMPass());   // convert-ofkl-callee-to-llvm
+  pm.addPass(createConvertFuncToLLVMPass());         // convert-func-to-llvm
+  pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
+  return pm.run(module);
+}
+
 LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   mlir::PassManager pm(context);
   AddLowerToLinalgMemRefPasses(pm);
@@ -855,9 +974,7 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
 LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module) {
   InitializeLLVMNVPTXBackend();
   mlir::PassManager pm(context);
-  bool enable_ir_printing =
-      ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_IR_PRINTING", false);
-  context->disableMultithreading(enable_ir_printing);
+  mlir::oneflow::CheckEnableIRPrinting(pm);
   AddLowerToLinalgMemRefPasses(pm);
   pm.addNestedPass<func::FuncOp>(
       createConvertLinalgToParallelLoopsPass());  // convert-linalg-to-parallel-loops
@@ -875,7 +992,6 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   pm.addNestedPass<func::FuncOp>(createGpuCopyArgPass());                // buffer-host-register
   pm.addPass(createGpuToLLVMConversionPass());
   pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
-  if (enable_ir_printing) pm.enableIRPrinting();
   return pm.run(module);
 }
 
@@ -884,7 +1000,13 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<MulCastPattern>(patterns.getContext());
 }
+void populateConvertOFKLCalleeToLLVMPasses(::mlir::RewritePatternSet& patterns) {
+  patterns.add<ConvertOFKLCalleeToLLVMPattern>(patterns.getContext());
+}
 
+void populateKernelWrapperPasses(::mlir::RewritePatternSet& patterns) {
+  patterns.add<KernelLaunchPattern>(patterns.getContext());
+}
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedBiasAddGeluPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern>(patterns.getContext());

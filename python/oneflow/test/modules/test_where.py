@@ -191,6 +191,14 @@ def _test_where_x_y_none(test_case, device):
         )
 
 
+def _test_where_scalar(test_case, device):
+    x = flow.randn(5, 5)
+    y = flow.where(x > 0, x, 0.0)
+    test_case.assertTrue(np.array_equal(y.size(), (5, 5)))
+    y = flow.where(x > 0, 0.0, x)
+    test_case.assertTrue(np.array_equal(y.size(), (5, 5)))
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestWhere(flow.unittest.TestCase):
     def test_where(test_case):
@@ -204,6 +212,7 @@ class TestWhere(flow.unittest.TestCase):
             _test_where_broadcast_backward,
             _test_where_broadcast_x_backward,
             _test_where_x_y_none,
+            _test_where_scalar,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
