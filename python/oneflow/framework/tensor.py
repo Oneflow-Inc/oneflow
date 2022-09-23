@@ -19,7 +19,6 @@ import oneflow._oneflow_internal.lazy_mode as lazy_mode
 
 import numpy as np
 from typing import Union
-from functools import partial
 
 Tensor = flow._oneflow_internal.Tensor
 TensorTuple = flow._oneflow_internal.TensorTuple

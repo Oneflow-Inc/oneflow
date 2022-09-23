@@ -1008,7 +1008,7 @@ class DimScatterFunctorImpl {
                            const std::shared_ptr<one::Tensor>& src, bool inplace) const {
     const int32_t ndim = input->shape()->NumAxes();
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim");
-    attrs.SetAllAttrs(dim < 0 ? dim + ndim : dim);
+    attrs.SetAllAttrs(JUST(maybe_wrap_dim(dim, ndim)));
     if (inplace) {
       JUST(CheckInplaceValid(input));
       auto outputs = std::make_shared<TensorTuple>(1);
@@ -1057,7 +1057,7 @@ class DimScatterScalarFunctorImpl {
                            bool inplace) const {
     const int32_t ndim = input->shape()->NumAxes();
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim", "src_scalar");
-    attrs.SetAllAttrs(dim < 0 ? dim + ndim : dim, src.As<float>());
+    attrs.SetAllAttrs(JUST(maybe_wrap_dim(dim, ndim)), src.As<float>());
     if (inplace) {
       JUST(CheckInplaceValid(input));
       auto outputs = std::make_shared<TensorTuple>(1);
