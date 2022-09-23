@@ -237,9 +237,12 @@ Maybe<void> PermuteBackForGlobalTensor(const std::shared_ptr<Tensor>& result,
   }
   if (!not_permute) {
     const auto& tensor = JUST(Transpose(result, inv_permute));
-    std::vector<int64_t> start(result->ndim(), 0);
-    std::vector<int64_t> stop(result->shape()->begin(), result->shape()->end());
-    std::vector<int64_t> step(result->ndim(), 1);
+    CHECK_EQ_OR_RETURN(tensor->shape(), origin_input->shape())
+        << "global tensor setitem writing back tensor should have same shape, but result shape is "
+        << tensor->shape() << " and origin shape is " << origin_input->shape();
+    std::vector<int64_t> start(tensor->ndim(), 0);
+    std::vector<int64_t> stop(tensor->shape()->begin(), tensor->shape()->end());
+    std::vector<int64_t> step(tensor->ndim(), 1);
     JUST(functional::SliceUpdate(origin_input, tensor, start, stop, step, /*inplace=*/true));
   }
   return Maybe<void>::Ok();
@@ -410,6 +413,8 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
 Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
                                         const TensorTuple& indices,
                                         const std::shared_ptr<Tensor>& value) {
+  // std::cout << "indices size: " << indices.size() << std::endl;
+  // std::cout << "indices[0] shape: " << indices[0]->shape()->ToString() << std::endl;
   CHECK_GE_OR_RETURN(input->ndim(), indices.size())
       << Error::IndexError() << "Too many indices for tensor of dimension " << input->ndim();
   const auto& expanded_indices = JUST(ExpandIndices(indices));

@@ -892,12 +892,16 @@ def _test_setitem_scalars(test_case, placement):
 
     np_x = np.zeros((8, 8))
     np_x[0, 6] = 1.0
-    x = _cpu_global_tensor(flow.tensor(np_x)).to_global(placement, random_sbp(placement, max_dim=2).value())
+    x = _cpu_global_tensor(flow.tensor(np_x)).to_global(
+        placement, random_sbp(placement, max_dim=2).value()
+    )
     x[0, 6] = 1.0
     test_case.assertEqual(x.numpy().all(), np_x.all())
 
     # scalar indexed with scalars
-    r = _cpu_global_tensor(flow.tensor(1.0)).to_global(placement, random_sbp(placement, max_dim=0).value())
+    r = _cpu_global_tensor(flow.tensor(1.0)).to_global(
+        placement, random_sbp(placement, max_dim=0).value()
+    )
     with test_case.assertRaises(IndexError):
         r[:] = 8.8
     with test_case.assertRaises(IndexError):
@@ -908,15 +912,20 @@ def _test_setitem_scalars(test_case, placement):
     # scalar indexed with oneflow.Size([1])
     np_x = np.zeros((8, 8))
     np_x[0, 6] = np.ones(1)
-    x = _cpu_global_tensor(flow.tensor(np_x)).to_global(placement, random_sbp(placement, max_dim=2).value())
-    x[0, 0] = _cpu_global_tensor(flow.ones(1).to(flow.float64)).to_global(placement, broadcast_for_placement)
+    x = _cpu_global_tensor(flow.tensor(np_x)).to_global(
+        placement, random_sbp(placement, max_dim=2).value()
+    )
+    x[0, 0] = _cpu_global_tensor(flow.ones(1).to(flow.float64)).to_global(
+        placement, broadcast_for_placement
+    )
     test_case.assertEqual(x.numpy().all(), np_x.all())
 
 
-def _test_basic_advanced_combined(test_case, device):
-    x = flow.arange(0, 12, device=device).view(4, 3)
-    _assert_tensor_equal(test_case, x[1:2, 1:3], x[1:2, [1, 2]])
-    test_case.assertEqual(x[1:2, 1:3].tolist(), [[4, 5]])
+def _test_basic_advanced_combined(test_case, placement):
+    sbp = random_sbp(placement, max_dim=2).value()
+    x = global_broadcast_consec((8, 8)).to_global(placement, sbp)
+    _assert_tensor_equal(test_case, x[1:2, 3:5], x[1:2, [3, 4]])
+    test_case.assertEqual(x[1:2, 1:3].tolist(), [[10, 11]])
 
     # Check that it is a copy
     unmodified = x.clone()
@@ -929,46 +938,55 @@ def _test_basic_advanced_combined(test_case, device):
     test_case.assertFalse(np.array_equal(x.numpy(), unmodified.numpy()))
 
 
-def _test_ellipsis_tensor(test_case, device):
-    x = flow.arange(0, 9, device=device).view(3, 3)
-    idx = flow.tensor([0, 2], device=device)
-    test_case.assertEqual(x[..., idx].tolist(), [[0, 2], [3, 5], [6, 8]])
-    test_case.assertEqual(x[idx, ...].tolist(), [[0, 1, 2], [6, 7, 8]])
+def _test_ellipsis_tensor(test_case, placement):
+    broadcast_for_placement = [flow.sbp.broadcast,] * len(placement.ranks.shape)
+    sbp = random_sbp(placement, max_dim=2).value()
+    x = global_broadcast_consec((8, 8)).to_global(placement, sbp)
+    idx = _cpu_global_tensor(flow.tensor([0, 7])).to_global(
+        placement, broadcast_for_placement
+    )
+    test_case.assertEqual(
+        x[..., idx].tolist(),
+        [[1, 8], [9, 16], [17, 24], [25, 32], [33, 40], [41, 48], [49, 56], [57, 64]],
+    )
+    test_case.assertEqual(
+        x[idx, ...].tolist(),
+        [[1, 2, 3, 4, 5, 6, 7, 8], [57, 58, 59, 60, 61, 62, 63, 64]],
+    )
 
     # Test scalar ellipsis getitem
-    y = flow.tensor(1.0).to(device)
-    x_scalar = flow.tensor(9.9)
-    y = x_scalar[...]
-    test_case.assertEqual(y, 9.9)
+    x_scalar = _cpu_global_tensor(flow.tensor(9.9)).to_global(
+        placement, broadcast_for_placement
+    )
+    test_case.assertEqual(x_scalar[...], 9.9)
 
 
 class TestGlobalIndexing(flow.unittest.TestCase):
     @globaltest
     def test_global_slice(test_case):
         for placement in all_placement():
-            #  for _ in range(5):
-            for _ in range(20):
-                #  _test_basic_slice(test_case, placement)
-                #  _test_advanced_indexing(test_case, placement, dtype=flow.float32)
-                #  _test_combined_indexing(test_case, placement, dtype=flow.float32)
-                #  _test_single_int(test_case, placement)
-                #  _test_multiple_int(test_case, placement)
-                #  _test_none(test_case, placement)
-                #  _test_step(test_case, placement)
-                #  _test_step_assignment(test_case, placement)
-                #  _test_bool_indices(test_case, placement)
-                #  _test_multiple_bool_indices(test_case, placement)
-                #  _test_int_indices(test_case, placement)
-                #  _test_int_indices2d(test_case, placement)
-                #  _test_int_indices_broadcast(test_case, placement)
-                #  _test_empty_index(test_case, placement)
-                #  _test_empty_ndim_index(test_case, placement)
-                #  _test_empty_ndim_index_bool(test_case, placement)
-                #  _test_empty_slice(test_case, placement)
-                #  _test_index_getitem_copy_bools_slices(test_case, placement)
+            for _ in range(5):
+                _test_basic_slice(test_case, placement)
+                _test_advanced_indexing(test_case, placement, dtype=flow.float32)
+                _test_combined_indexing(test_case, placement, dtype=flow.float32)
+                _test_single_int(test_case, placement)
+                _test_multiple_int(test_case, placement)
+                _test_none(test_case, placement)
+                _test_step(test_case, placement)
+                _test_step_assignment(test_case, placement)
+                _test_bool_indices(test_case, placement)
+                _test_multiple_bool_indices(test_case, placement)
+                _test_int_indices(test_case, placement)
+                _test_int_indices2d(test_case, placement)
+                _test_int_indices_broadcast(test_case, placement)
+                _test_empty_index(test_case, placement)
+                _test_empty_ndim_index(test_case, placement)
+                _test_empty_ndim_index_bool(test_case, placement)
+                _test_empty_slice(test_case, placement)
+                _test_index_getitem_copy_bools_slices(test_case, placement)
                 _test_setitem_scalars(test_case, placement)
-                #  _test_basic_advanced_combined(test_case, placement)
-                #  _test_ellipsis_tensor(test_case, placement)
+                _test_basic_advanced_combined(test_case, placement)
+                _test_ellipsis_tensor(test_case, placement)
 
 
 if __name__ == "__main__":
