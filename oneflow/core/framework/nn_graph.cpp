@@ -466,7 +466,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   }
 
   // NOTE(chengcheng): recovery op_attr
-  PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
+  PlanUtil::PopulateOpAttribute(&plan_, plan_.mutable_job_id2op_attribute_ref_table());
   tc->Count("Graph name: " + name_ + " PopulateOpAttribute", 1);
   compile_tc->Count("Graph name: " + name_ + " TotalCompileAndInit", 1);
   CHECK_OR_RETURN(false);
