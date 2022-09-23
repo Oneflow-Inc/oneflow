@@ -3636,17 +3636,17 @@ class OneEmbeddingLookupFunctor {
       const auto& ids_shape = *(ids->shape());
       auto broadcast_table_ids = JUST(table_ids);
       if (table_ids_shape != ids_shape) {
-        const Shape& left_extended_shape =
-            CreateLeftExtendedShape(ShapeView(table_ids_shape), ids_shape.NumAxes());
-        for (int64_t i = 0; i < ids_shape.NumAxes(); i++) {
-          if (left_extended_shape.at(i) != 1) {
-            CHECK_EQ_OR_RETURN(left_extended_shape.at(i), ids_shape.at(i))
-                << "when table_ids's shape not equals ids shape, table_ids must be able to be "
-                   "broadcast to ids_shape "
-                   "but got table_ids_shape: "
-                << table_ids_shape.DebugStr() << ", ids_shape: " << ids_shape.DebugStr();
-            ;
-          }
+        CHECK_LE_OR_RETURN(table_ids_shape.NumAxes(), ids_shape.NumAxes())
+            << "table_ids num_axes should be less equal to ids num_axes, but got table_ids "
+               "num_axes "
+            << table_ids_shape.NumAxes() << " and ids num_axes " << ids_shape.NumAxes();
+        const int64_t left_extend_dims = ids_shape.NumAxes() - table_ids_shape.NumAxes();
+        for (int64_t i = 0; i < table_ids_shape.NumAxes(); i++) {
+          CHECK_EQ_OR_RETURN(table_ids_shape.at(i), ids_shape.at(left_extend_dims + i))
+              << "when table_ids's shape not equals ids shape, table_ids must be able to be "
+                 "broadcast to ids_shape "
+                 "but got table_ids_shape: "
+              << table_ids_shape.DebugStr() << ", ids_shape: " << ids_shape.DebugStr();
         }
         broadcast_table_ids =
             JUST(functional::BroadcastLike(JUST(table_ids), ids, std::vector<int32_t>{}));
