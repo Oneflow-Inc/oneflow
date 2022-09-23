@@ -190,6 +190,7 @@ from oneflow._C import vsplit
 from oneflow._C import concat
 from oneflow._C import concat as cat
 from oneflow._C import dim_gather as gather
+from oneflow._C import deform_conv2d
 from oneflow._C import gather_nd
 from oneflow._C import roi_align
 from oneflow._C import decode_onerec
@@ -411,6 +412,7 @@ from . import (
     boxing,
     backends,
     amp,
+    hub,
 )
 import oneflow.utils.data
 import oneflow.framework.docstr as docstr
@@ -422,6 +424,8 @@ import oneflow.profiler
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__
-    if os.getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"):
+    if os.getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS") or os.getenv(
+        "ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"
+    ):
         print("MLIR JIT engine will load:", oneflow_internal_path, file=sys.stderr)
         oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)
