@@ -13,29 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/operator/operator_util.h"
-#include "oneflow/user/utils/pool_util.h"
+#include "oneflow/user/kernels/adaptive_pool_kernel_util.h"
 
 namespace oneflow {
 
 namespace {
-
-inline int64_t start_index(int64_t a, int64_t b, int64_t c) {
-  return (int64_t)std::floor((float)(a * c) / b);
-}
-
-inline int64_t end_index(int64_t a, int64_t b, int64_t c) {
-  return (int64_t)std::ceil((float)((a + 1) * c) / b);
-}
-
-inline Shape GetShape5D(const Shape& shape, const std::string& data_format, int32_t dim) {
-  FixedDimVector shape_3d = {GetInDim(shape, data_format, 0, dim),
-                             GetInDim(shape, data_format, 1, dim),
-                             GetInDim(shape, data_format, 2, dim)};
-  return Shape({shape.At(0), shape.At(1), shape_3d.at(0), shape_3d.at(1), shape_3d.at(2)});
-}
 
 template<typename T>
 void AvgForwardCompute(user_op::KernelComputeContext* ctx, const int32_t& dim) {

@@ -23,10 +23,28 @@ namespace primitive {
 
 namespace {
 
-template<typename From, typename To>
-void CastCpu(const From* from, To* to, size_t count) {
-  for (size_t i = 0; i < count; ++i) { to[i] = static_cast<To>(from[i]); }
-}
+template<typename From, typename To, typename = void>
+struct CpuCastFunctor {
+  static void Call(const From* from, To* to, size_t count) {
+    for (size_t i = 0; i < count; ++i) { to[i] = static_cast<To>(from[i]); }
+  }
+};
+
+template<typename To>
+struct CpuCastFunctor<bfloat16, To,
+                      typename std::enable_if<!(std::is_same<To, bfloat16>::value)>::type> {
+  static void Call(const bfloat16* from, To* to, size_t count) {
+    for (size_t i = 0; i < count; ++i) { to[i] = static_cast<To>(static_cast<float>(from[i])); }
+  }
+};
+
+template<typename From>
+struct CpuCastFunctor<From, bfloat16,
+                      typename std::enable_if<!(std::is_same<From, bfloat16>::value)>::type> {
+  static void Call(const From* from, bfloat16* to, size_t count) {
+    for (size_t i = 0; i < count; ++i) { to[i] = bfloat16(static_cast<float>(from[i])); }
+  }
+};
 
 template<typename From, typename To>
 class CastImpl : public Cast {
@@ -36,7 +54,8 @@ class CastImpl : public Cast {
   ~CastImpl() override = default;
 
   void Launch(Stream* stream, const void* from, void* to, size_t count) override {
-    CastCpu(reinterpret_cast<const From*>(from), reinterpret_cast<To*>(to), count);
+    CpuCastFunctor<From, To>::Call(reinterpret_cast<const From*>(from), reinterpret_cast<To*>(to),
+                                   count);
   }
 };
 
@@ -56,7 +75,8 @@ std::unique_ptr<Cast> NewCast() {
   CPU_PRIMITIVE_UINT64_TYPE_SEQ     \
   CPU_PRIMITIVE_FLOAT_TYPE_SEQ      \
   CPU_PRIMITIVE_DOUBLE_TYPE_SEQ     \
-  CPU_PRIMITIVE_FLOAT16_TYPE_SEQ
+  CPU_PRIMITIVE_FLOAT16_TYPE_SEQ    \
+  CPU_PRIMITIVE_BFLOAT16_TYPE_SEQ
 
 class CastFactoryImpl : public CastFactory {
  public:

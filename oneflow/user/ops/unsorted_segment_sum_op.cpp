@@ -156,7 +156,7 @@ namespace oneflow {
   const user_op::TensorDesc& like = ctx->InputTensorDesc("like", 0);
   CHECK_EQ_OR_RETURN(data.data_type(), like.data_type());
   CHECK_OR_RETURN(IsIndexDataType(ctx->InputDType("segment_ids", 0)));
-  ctx->SetOutputDType("out", 0, ctx->InputDType("like", 0));
+  ctx->SetOutputDType("out", 0, ctx->InputDType("data", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnsortedSegmentSumLikeOp::ModifyInputArg(
