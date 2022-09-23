@@ -101,6 +101,7 @@ class Module(object):
         self._load_state_dict_pre_hooks = OrderedDict()
         self._modules = OrderedDict()
         self._is_ddp_module = False
+        self._oneflow_internal_module_tensor_applied_dict__ = None
 
     def __getstate__(self):
         if not self._is_ddp_module:
@@ -968,14 +969,18 @@ class Module(object):
         """
         self._forward_hooks[len(self._forward_hooks)] = hook
 
-    def _apply(self, fn, applied_dict=None):
+    def _apply(self, fn):
         # A dict to store tensors that has already been applied.
         # There is no need to apply multiple times on a same tensor.
-        if applied_dict is None:
-            applied_dict = dict()
+        if self._oneflow_internal_module_tensor_applied_dict__ is None:
+            self._oneflow_internal_module_tensor_applied_dict__ = dict()
 
         for module in self.children():
-            module._apply(fn, applied_dict)
+            module._oneflow_internal_module_tensor_applied_dict__ = (
+                self._oneflow_internal_module_tensor_applied_dict__
+            )
+            module._apply(fn)
+            module._oneflow_internal_module_tensor_applied_dict__ = None
 
         def can_use_assign_copy(tensor, tensor_applied):
             return tensor.is_local == tensor_applied.is_local
@@ -985,7 +990,7 @@ class Module(object):
                 continue
 
             need_apply = False
-            if param not in applied_dict:
+            if param not in self._oneflow_internal_module_tensor_applied_dict__:
                 need_apply = True
                 assert isinstance(param, Parameter)
                 assert param.is_leaf
@@ -1000,12 +1005,16 @@ class Module(object):
                     grad_applied.requires_grad = param.grad.requires_grad
                     param_applied.grad = grad_applied
             else:
-                param_applied = applied_dict[param]
+                param_applied = self._oneflow_internal_module_tensor_applied_dict__[
+                    param
+                ]
 
             if can_use_assign_copy(param_applied, param):
                 if need_apply:
                     self._parameters[key].data = param_applied
-                    applied_dict[param] = param_applied
+                    self._oneflow_internal_module_tensor_applied_dict__[
+                        param
+                    ] = param_applied
                 else:
                     # The parameter's data has already been set when it can use assign copy.
                     pass
@@ -1013,18 +1022,28 @@ class Module(object):
                 if need_apply:
                     new_param = Parameter(param_applied, param.requires_grad)
                     self._parameters[key] = new_param
-                    applied_dict[param] = new_param
+                    self._oneflow_internal_module_tensor_applied_dict__[
+                        param
+                    ] = new_param
                 else:
-                    self._parameters[key] = applied_dict[param]
+                    self._parameters[
+                        key
+                    ] = self._oneflow_internal_module_tensor_applied_dict__[param]
 
         for (key, buf) in self._buffers.items():
             if buf is not None:
-                if buf not in applied_dict:
+                if buf not in self._oneflow_internal_module_tensor_applied_dict__:
                     buf_applied = fn(buf)
                     self._buffers[key] = buf_applied
-                    applied_dict[buf] = buf_applied
+                    self._oneflow_internal_module_tensor_applied_dict__[
+                        buf
+                    ] = buf_applied
                 else:
-                    self._buffers[key] = applied_dict[buf]
+                    self._buffers[
+                        key
+                    ] = self._oneflow_internal_module_tensor_applied_dict__[buf]
+
+        self._oneflow_internal_module_tensor_applied_dict__ = None
         return self
 
     def apply(self: T, fn: Callable[["Module"], None]) -> T:
