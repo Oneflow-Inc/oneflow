@@ -167,7 +167,7 @@ Maybe<GlobalTensorImpl> LazyGlobalTensorImpl::detach() const {
 }
 
 EagerGlobalTensorImpl::EagerGlobalTensorImpl(
-    Symbol<GlobalTensorMeta> global_tensor_meta, bool requires_grad, bool is_leaf,
+    Symbol<GlobalTensorMeta> global_tensor_meta,
     const std::shared_ptr<LocalTensor>& cur_rank_phy_tensor)
     : GlobalTensorImpl(global_tensor_meta, cur_rank_phy_tensor->requires_grad(),
                        cur_rank_phy_tensor->is_leaf()),
@@ -224,15 +224,13 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
     JUST(cur_rank_phy_tensor->set_requires_grad(requires_grad));
     cur_rank_phy_tensor->set_is_leaf(is_leaf);
   }
-  auto* tensor_impl =
-      new EagerGlobalTensorImpl(global_tensor_meta, cur_rank_phy_tensor->requires_grad(),
-                                cur_rank_phy_tensor->is_leaf(), cur_rank_phy_tensor);
+  auto* tensor_impl = new EagerGlobalTensorImpl(global_tensor_meta, cur_rank_phy_tensor);
   return std::shared_ptr<EagerGlobalTensorImpl>(tensor_impl);
 }
 
 Maybe<GlobalTensorImpl> EagerGlobalTensorImpl::detach() const {
-  auto detached_impl = std::shared_ptr<EagerGlobalTensorImpl>(
-      new EagerGlobalTensorImpl(tensor_meta_, false, true, cur_rank_phy_tensor_));
+  auto detached_impl = std::shared_ptr<EagerGlobalTensorImpl>(new EagerGlobalTensorImpl(
+      tensor_meta_, JUST(JUST(cur_rank_phy_tensor_->detach())->AsLocalTensor())));
   detached_impl->consumer_nd_sbp_constraint_ = consumer_nd_sbp_constraint_;
   detached_impl->transport_token_ = transport_token_;
   return std::shared_ptr<GlobalTensorImpl>(detached_impl);

@@ -26,15 +26,15 @@ struct DeformConvNdCaptureState : public AutoGradCaptureState {
   bool weight_requires_grad = false;
   bool mask_requires_grad = false;
   bool bias_requires_grad = false;
-  int32_t stride_h;
-  int32_t stride_w;
-  int32_t pad_h;
-  int32_t pad_w;
-  int32_t dilation_h;
-  int32_t dilation_w;
-  int32_t groups;
-  int32_t offset_groups;
-  bool use_mask;
+  int32_t stride_h = 0;
+  int32_t stride_w = 0;
+  int32_t pad_h = 0;
+  int32_t pad_w = 0;
+  int32_t dilation_h = 0;
+  int32_t dilation_w = 0;
+  int32_t groups = 0;
+  int32_t offset_groups = 0;
+  bool use_mask = false;
 };
 
 class DeformConvNd : public OpExprGradFunction<DeformConvNdCaptureState> {
