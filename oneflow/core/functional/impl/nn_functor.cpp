@@ -3632,7 +3632,26 @@ class OneEmbeddingLookupFunctor {
     attrs.SetAllAttrs(dtype->data_type(), embedding_name, line_size, embedding_size, is_full_cache,
                       num_tables, embedding_tables, seed, padding_idx_val, has_padding_idx);
     if (table_ids) {
-      return OpInterpUtil::Dispatch<Tensor>(*op_has_table_ids_, {shadow, ids, JUST(table_ids)},
+      const auto& table_ids_shape = *(JUST(table_ids)->shape());
+      const auto& ids_shape = *(ids->shape());
+      auto broadcast_table_ids = JUST(table_ids);
+      if (table_ids_shape != ids_shape) {
+        CHECK_LE_OR_RETURN(table_ids_shape.NumAxes(), ids_shape.NumAxes())
+            << "table_ids num_axes should be less equal to ids num_axes, but got table_ids "
+               "num_axes "
+            << table_ids_shape.NumAxes() << " and ids num_axes " << ids_shape.NumAxes();
+        const int64_t left_extend_dims = ids_shape.NumAxes() - table_ids_shape.NumAxes();
+        for (int64_t i = 0; i < table_ids_shape.NumAxes(); i++) {
+          CHECK_EQ_OR_RETURN(table_ids_shape.at(i), ids_shape.at(left_extend_dims + i))
+              << "when table_ids's shape not equals ids shape, table_ids must be able to be "
+                 "broadcast to ids_shape "
+                 "but got table_ids_shape: "
+              << table_ids_shape.DebugStr() << ", ids_shape: " << ids_shape.DebugStr();
+        }
+        broadcast_table_ids =
+            JUST(functional::BroadcastLike(JUST(table_ids), ids, std::vector<int32_t>{}));
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*op_has_table_ids_, {shadow, ids, broadcast_table_ids},
                                             attrs);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_no_table_ids_, {shadow, ids}, attrs);
