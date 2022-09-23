@@ -724,8 +724,25 @@ Maybe<void> ScaleInitialDiffByLossScale(
     int64_t scope_symbol_id = initial_diff_node->op().op_conf().scope_symbol_id();
     const auto& parallel_conf = initial_diff_node->parallel_desc().parallel_conf();
 
-    std::string loss_scale_val_lbn;
     std::string loss_diff_lbn = GenLogicalBlobName(initial_diff_lbi);
+    const DataType init_diff_data_type = op_graph.GetLogicalBlobDesc(initial_diff_lbi).data_type();
+    // cast loss init diff from float16 to float32 since we need do loss scale (float32 multiply)
+    // later
+    if (init_diff_data_type != DataType::kFloat) {
+      std::string cast_op_name =
+          initial_diff_lbi.op_name() + "_" + initial_diff_lbi.blob_name() + "_loss_scale-cast_h2f";
+      auto cast_op = user_op::UserOpConfWrapperBuilder(cast_op_name)
+                         .Op("cast")
+                         .Input("in", loss_diff_lbn)
+                         .Output("out")
+                         .Attr<DataType>("dtype", DataType::kFloat)
+                         .ScopeSymbolId(scope_symbol_id)
+                         .Build();
+      job_builder->AddOps(parallel_conf, {cast_op.op_conf()});
+      loss_diff_lbn = cast_op.output("out", 0);
+    }
+
+    std::string loss_scale_val_lbn;
     if (train_conf.has_dynamic_loss_scale_policy()) {
       const auto& dynamic_loss_scale_state =
           JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
@@ -736,26 +753,15 @@ Maybe<void> ScaleInitialDiffByLossScale(
                                 + "_constant_like_loss_scale");
       constant_like_op.set_scope_symbol_id(scope_symbol_id);
       ConstantLikeOpConf* constant_like_conf = constant_like_op.mutable_constant_like_conf();
-      constant_like_conf->set_like(GenLogicalBlobName(initial_diff_lbi));
+      constant_like_conf->set_like(loss_diff_lbn);
       constant_like_conf->set_out("out");
       constant_like_conf->set_float_operand(train_conf.loss_scale_factor());
       job_builder->AddOps(parallel_conf, {constant_like_op});
       loss_scale_val_lbn = GenLogicalBlobName(constant_like_op.name(), constant_like_conf->out());
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "dynamic or static loss scale must be config";
     }
-    const DataType data_type = op_graph.GetLogicalBlobDesc(initial_diff_lbi).data_type();
-    if (data_type != DataType::kFloat) {
-      auto cast_op =
-          user_op::UserOpConfWrapperBuilder(initial_diff_lbi.op_name() + "_"
-                                            + initial_diff_lbi.blob_name() + "_loss_scale-cast_h2f")
-              .Op("cast")
-              .Input("in", loss_diff_lbn)
-              .Output("out")
-              .Attr<DataType>("dtype", DataType::kFloat)
-              .ScopeSymbolId(scope_symbol_id)
-              .Build();
-      job_builder->AddOps(parallel_conf, {cast_op.op_conf()});
-      loss_diff_lbn = cast_op.output("out", 0);
-    }
+
     const int64_t time_shape_elem_cnt =
         JUST(initial_diff_node->op().GetInputBlobFastestTimeShape())->elem_cnt();
     if (time_shape_elem_cnt != 1) {
@@ -771,6 +777,7 @@ Maybe<void> ScaleInitialDiffByLossScale(
       job_builder->AddOps(parallel_conf, {repeat_op.op_conf()});
       loss_scale_val_lbn = repeat_op.output("out", 0);
     }
+
     auto scalar_mul_op =
         user_op::UserOpConfWrapperBuilder(initial_diff_lbi.op_name() + "_"
                                           + initial_diff_lbi.blob_name() + "_scale_initial_diff")
@@ -782,19 +789,22 @@ Maybe<void> ScaleInitialDiffByLossScale(
             .Build();
     job_builder->AddOps(parallel_conf, {scalar_mul_op.op_conf()});
     std::string scaled_initial_diff_lbn = scalar_mul_op.output("y", 0);
-    if (data_type != DataType::kFloat) {
-      auto cast_op =
-          user_op::UserOpConfWrapperBuilder(initial_diff_lbi.op_name() + "_"
-                                            + initial_diff_lbi.blob_name() + "_loss_scale-cast_f2h")
-              .Op("cast")
-              .Input("in", scaled_initial_diff_lbn)
-              .Output("out")
-              .Attr<DataType>("dtype", data_type)
-              .ScopeSymbolId(scope_symbol_id)
-              .Build();
+
+    // cast loss initial diff back to float16
+    if (init_diff_data_type != DataType::kFloat) {
+      std::string cast_op_name =
+          initial_diff_lbi.op_name() + "_" + initial_diff_lbi.blob_name() + "_loss_scale-cast_f2h";
+      auto cast_op = user_op::UserOpConfWrapperBuilder(cast_op_name)
+                         .Op("cast")
+                         .Input("in", scaled_initial_diff_lbn)
+                         .Output("out")
+                         .Attr<DataType>("dtype", init_diff_data_type)
+                         .ScopeSymbolId(scope_symbol_id)
+                         .Build();
       job_builder->AddOps(parallel_conf, {cast_op.op_conf()});
       scaled_initial_diff_lbn = cast_op.output("out", 0);
     }
+
     // update consumer input by scalar_mul_op output
     initial_diff_node->ForEachNodeOnOutEdge([&](const OpNode* out_node) {
       for (const std::string& ibn : out_node->op().input_bns()) {
