@@ -3898,6 +3898,49 @@ class OneEmbeddingFtrlUpdateFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class DeformConv2dFunctor {
+ public:
+  DeformConv2dFunctor() {
+    bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
+    deformconv2d_op_ = CHECK_JUST(one::OpBuilder("deform_conv2d")
+                                      .Input("input")
+                                      .Input("weight")
+                                      .Input("offset")
+                                      .Input("mask")
+                                      .Output("output")
+                                      .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& offset,
+                           const std::shared_ptr<one::Tensor>& mask,
+                           const Optional<one::Tensor>& bias, const int32_t& stride_h,
+                           const int32_t& stride_w, const int32_t& pad_h, const int32_t& pad_w,
+                           const int32_t& dilation_h, const int32_t& dilation_w,
+                           const int32_t& groups, const int32_t& offset_groups,
+                           const bool& use_mask) const {
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("stride_h", "stride_w", "pad_h", "pad_w", "dilation_h",
+                                       "dilation_w", "groups", "offset_groups", "use_mask");
+    attrs.SetAllAttrs(stride_h, stride_w, pad_h, pad_w, dilation_h, dilation_w, groups,
+                      offset_groups, use_mask);
+    const std::shared_ptr<one::Tensor>& deformconv2d_out = JUST(
+        OpInterpUtil::Dispatch<Tensor>(*deformconv2d_op_, {input, weight, offset, mask}, attrs));
+    if (bias) {
+      auto bias_shape = JUST(bias)->shape();
+      auto& bias_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis");
+      bias_attrs.SetAllAttrs(static_cast<int32_t>(1));
+      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {deformconv2d_out, JUST(bias)}, bias_attrs);
+    }
+    return deformconv2d_out;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> deformconv2d_op_;
+  std::shared_ptr<OpExpr> bias_op_;
+};
+
 class RocAucScoreFunctor {
  public:
   RocAucScoreFunctor() {
@@ -4292,6 +4335,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RocAucScoreFunctor>("RocAucScore");
   m.add_functor<impl::MultiTensorSgdUpdateFunctor>("MultiTensorSgdUpdate");
   m.add_functor<impl::MultiTensorAdamUpdateFunctor>("MultiTensorAdamUpdate");
+  m.add_functor<impl::DeformConv2dFunctor>("DeformConv2d");
   m.add_functor<impl::BatchNormStatsFunctor>("BatchNormStats");
   m.add_functor<impl::BatchNormGatherStatsWithCountsFunctor>("BatchNormGatherStatsWithCounts");
   m.add_functor<impl::BatchNormElemtFunctor>("BatchNormElemt");
