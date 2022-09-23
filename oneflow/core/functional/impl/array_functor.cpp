@@ -2241,16 +2241,31 @@ class TensorSetItemFunctor {
       if (is_identity) {
         result = expand_input;
       } else {
-        CHECK_OR_RETURN(view::IsViewApplicable(expand_input))
-            << "combined slice setitem must enable view, please try to set ONEFLOW_DISABLE_VIEW=0";
-        result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/true));
+        if (expand_input->is_local()) {
+          CHECK_OR_RETURN(view::IsViewApplicable(expand_input))
+              << "combined slice setitem must enable view, please try to set "
+                 "ONEFLOW_DISABLE_VIEW=0";
+          result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/true));
+        } else {
+          // global tensor
+          result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/false));
+        }
       }
-      if (target_shape != *(result->shape())) {
+      const Shape& slice_result_shape = *(result->shape());
+      if (target_shape != slice_result_shape) {
         result = JUST(functional::View(result, target_shape));
       }
 
       JUST(UnifyInputAndIndicesOnDevice(result, tensor_indices));
       JUST(ApplyAdvancedIndexingUpdate(result, tensor_indices, value));
+
+      // Write the sliced tensor back to the original tensor.
+      if (result->is_global()) {
+        if (*result->shape() != slice_result_shape) {
+          result = JUST(functional::View(result, slice_result_shape));
+        }
+        JUST(SliceUpdate(expand_input, result, start, end, step, /*inplace=*/true));
+      }
     }
     return Maybe<void>::Ok();
   }

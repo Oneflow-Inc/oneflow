@@ -678,92 +678,120 @@ def _test_combined_indexing(test_case, placement, dtype):
             assert_backward_eq(reference, indexer)
 
 
-def _test_single_int(test_case, device):
-    v = flow.randn(5, 7, 3, device=device)
-    test_case.assertEqual(v[4].shape, (7, 3))
+def _test_single_int(test_case, placement):
+    sbp = random_sbp(placement, max_dim=1).value()
+    v = _cpu_global_tensor(flow.zeros(8, 7, 3)).to_global(placement, sbp)
+    test_case.assertEqual(v[2].shape, (7, 3))
+    test_case.assertEqual(v[6].shape, (7, 3))
 
 
-def _test_multiple_int(test_case, device):
-    v = flow.randn(5, 7, 3, device=device)
-    test_case.assertEqual(v[4].shape, (7, 3))
-    test_case.assertEqual(v[4, :, 1].shape, (7,))
+def _test_multiple_int(test_case, placement):
+    sbp = random_sbp(placement, max_dim=3).value()
+    v = _cpu_global_tensor(flow.zeros(8, 8, 8)).to_global(placement, sbp)
+    test_case.assertEqual(v[4, :, 1].shape, (8,))
 
 
-def _test_none(test_case, device):
-    v = flow.randn(5, 7, 3, device=device)
-    test_case.assertEqual(v[None].shape, (1, 5, 7, 3))
-    test_case.assertEqual(v[:, None].shape, (5, 1, 7, 3))
-    test_case.assertEqual(v[:, None, None].shape, (5, 1, 1, 7, 3))
-    test_case.assertEqual(v[..., None].shape, (5, 7, 3, 1))
+def _test_none(test_case, placement):
+    sbp = random_sbp(placement, max_dim=3).value()
+    v = _cpu_global_tensor(flow.zeros(8, 8, 8)).to_global(placement, sbp)
+    test_case.assertEqual(v[None].shape, (1, 8, 8, 8))
+    test_case.assertEqual(v[:, None].shape, (8, 1, 8, 8))
+    test_case.assertEqual(v[:, None, None].shape, (8, 1, 1, 8, 8))
+    test_case.assertEqual(v[..., None].shape, (8, 8, 8, 1))
 
 
-def _test_step(test_case, device):
-    v = flow.arange(10, device=device)
+def _test_step(test_case, placement):
+    sbp = random_sbp(placement, max_dim=1).value()
+    v = _cpu_global_tensor(flow.arange(8)).to_global(placement, sbp)
     _assert_tensor_equal(test_case, v[::1], v)
-    test_case.assertEqual(v[::2].tolist(), [0, 2, 4, 6, 8])
-    test_case.assertEqual(v[::3].tolist(), [0, 3, 6, 9])
+    test_case.assertEqual(v[::2].tolist(), [0, 2, 4, 6])
+    test_case.assertEqual(v[::3].tolist(), [0, 3, 6])
     test_case.assertEqual(v[::11].tolist(), [0])
     test_case.assertEqual(v[1:6:2].tolist(), [1, 3, 5])
 
 
-def _test_step_assignment(test_case, device):
-    v = flow.zeros(4, 4, device=device)
-    v[0, 1::2] = flow.tensor([3.0, 4.0], device=device)
-    test_case.assertEqual(v[0].tolist(), [0.0, 3.0, 0.0, 4.0])
+def _test_step_assignment(test_case, placement):
+    broadcast_for_placement = [flow.sbp.broadcast,] * len(placement.ranks.shape)
+    sbp = random_sbp(placement, max_dim=2).value()
+    v = _cpu_global_tensor(flow.zeros(8, 8)).to_global(placement, sbp)
+    v[0, 1::2] = _cpu_global_tensor(flow.tensor([3.0, 4.0, 5.0, 6.0])).to_global(
+        placement, broadcast_for_placement
+    )
+    test_case.assertEqual(v[0].tolist(), [0.0, 3.0, 0.0, 4.0, 0.0, 5.0, 0.0, 6.0])
     test_case.assertEqual(v[1:].sum(), 0)
 
 
-def _test_bool_indices(test_case, device):
-    v = flow.randn(5, 7, 3, device=device)
-    boolIndices = flow.tensor(
-        [True, False, True, True, False], dtype=flow.bool, device=device
-    )
-    test_case.assertEqual(v[boolIndices].shape, (3, 7, 3))
-    _assert_tensor_equal(test_case, v[boolIndices], flow.stack([v[0], v[2], v[3]]))
-
-    v = flow.tensor([True, False, True], dtype=flow.bool, device=device)
-    boolIndices = flow.tensor([True, False, False], dtype=flow.bool, device=device)
-    uint8Indices = flow.tensor([1, 0, 0], dtype=flow.uint8, device=device)
-    test_case.assertEqual(v[boolIndices].shape, v[uint8Indices].shape)
-    test_case.assertEqual(v[boolIndices], v[uint8Indices])
-    test_case.assertEqual(
-        v[boolIndices], flow.tensor([True], dtype=flow.bool, device=device)
+def _test_bool_indices(test_case, placement):
+    broadcast_for_placement = [flow.sbp.broadcast,] * len(placement.ranks.shape)
+    sbp = random_sbp(placement, max_dim=3).value()
+    v = global_broadcast_consec((8, 8, 8)).to_global(placement, sbp)
+    boolIndices = _cpu_global_tensor(
+        flow.tensor(
+            [True, False, True, True, False, False, False, True], dtype=flow.bool
+        )
+    ).to_global(placement, broadcast_for_placement)
+    test_case.assertEqual(v[boolIndices].shape, (4, 8, 8))
+    _assert_tensor_equal(
+        test_case, v[boolIndices], flow.stack([v[0], v[2], v[3], v[7]])
     )
 
 
-def _test_multiple_bool_indices(test_case, device):
-    v = flow.randn(5, 7, 3, device=device)
+def _test_multiple_bool_indices(test_case, placement):
+    broadcast_for_placement = [flow.sbp.broadcast,] * len(placement.ranks.shape)
+    sbp = random_sbp(placement, max_dim=2).value()
+    v = global_broadcast_consec((8, 8, 4)).to_global(placement, sbp)
     # NOTE: these broadcast together and are transposed to the first dim
-    mask1 = flow.tensor([1, 0, 1, 1, 0], dtype=flow.bool, device=device)
-    mask2 = flow.tensor([1, 1, 1], dtype=flow.bool, device=device)
-    test_case.assertEqual(v[mask1, :, mask2].shape, (3, 7))
+    mask1 = _cpu_global_tensor(
+        flow.tensor([1, 0, 1, 0, 0, 1, 0, 0], dtype=flow.bool)
+    ).to_global(placement, broadcast_for_placement)
+    mask2 = _cpu_global_tensor(flow.tensor([1, 1, 1, 0], dtype=flow.bool)).to_global(
+        placement, broadcast_for_placement
+    )
+    test_case.assertEqual(v[mask1, :, mask2].shape, (3, 8))
 
 
-def _test_int_indices(test_case, device):
-    v = flow.randn(5, 7, 3, device=device)
-    test_case.assertEqual(v[[0, 4, 2]].shape, (3, 7, 3))
-    test_case.assertEqual(v[:, [0, 4, 2]].shape, (5, 3, 3))
-    test_case.assertEqual(v[:, [[0, 1], [4, 3]]].shape, (5, 2, 2, 3))
+def _test_int_indices(test_case, placement):
+    sbp = random_sbp(placement, max_dim=3).value()
+    v = global_broadcast_consec((8, 8, 8)).to_global(placement, sbp)
+    test_case.assertEqual(v[[0, 4, 2]].shape, (3, 8, 8))
+    test_case.assertEqual(v[:, [0, 4, 2]].shape, (8, 3, 8))
+    test_case.assertEqual(v[:, [[0, 1], [4, 3]]].shape, (8, 2, 2, 8))
 
 
-def _test_int_indices2d(test_case, device):
-    x = flow.arange(0, 12, device=device).view(4, 3)
-    rows = flow.tensor([[0, 0], [3, 3]], device=device)
-    columns = flow.tensor([[0, 2], [0, 2]], device=device)
-    test_case.assertEqual(x[rows, columns].tolist(), [[0, 2], [9, 11]])
+def _test_int_indices2d(test_case, placement):
+    broadcast_for_placement = [flow.sbp.broadcast,] * len(placement.ranks.shape)
+    sbp = random_sbp(placement, max_dim=2).value()
+    x = global_broadcast_consec((8, 8)).to_global(placement, sbp)
+    rows = _cpu_global_tensor(flow.tensor([[0, 0], [6, 3]])).to_global(
+        placement, broadcast_for_placement
+    )
+    columns = _cpu_global_tensor(flow.tensor([[0, 2], [0, 7]])).to_global(
+        placement, broadcast_for_placement
+    )
+    test_case.assertEqual(x[rows, columns].tolist(), [[1, 3], [49, 32]])
 
 
-def _test_int_indices_broadcast(test_case, device):
-    x = flow.arange(0, 12, device=device).view(4, 3)
-    rows = flow.tensor([0, 3], device=device)
-    columns = flow.tensor([0, 2], device=device)
+def _test_int_indices_broadcast(test_case, placement):
+    broadcast_for_placement = [flow.sbp.broadcast,] * len(placement.ranks.shape)
+    sbp = random_sbp(placement, max_dim=2).value()
+    x = global_broadcast_consec((8, 8)).to_global(placement, sbp)
+    rows = _cpu_global_tensor(flow.tensor([0, 7])).to_global(
+        placement, broadcast_for_placement
+    )
+    columns = _cpu_global_tensor(flow.tensor([7, 2])).to_global(
+        placement, broadcast_for_placement
+    )
     result = x[rows[:, None], columns]
-    test_case.assertEqual(result.tolist(), [[0, 2], [9, 11]])
+    test_case.assertEqual(result.tolist(), [[8, 3], [64, 59]])
 
 
-def _test_empty_index(test_case, device):
-    x = flow.arange(0, 12, device=device).view(4, 3)
-    idx = flow.tensor([], dtype=flow.long, device=device)
+def _test_empty_index(test_case, placement):
+    broadcast_for_placement = [flow.sbp.broadcast,] * len(placement.ranks.shape)
+    sbp = random_sbp(placement, max_dim=2).value()
+    x = global_broadcast_consec((8, 8)).to_global(placement, sbp)
+    idx = _cpu_global_tensor(flow.tensor([], dtype=flow.long)).to_global(
+        placement, broadcast_for_placement
+    )
     test_case.assertEqual(x[idx].numel(), 0)
 
     # empty assignment should have no effect but not throw an exception
@@ -771,27 +799,29 @@ def _test_empty_index(test_case, device):
     y[idx] = -1
     _assert_tensor_equal(test_case, x, y)
 
-    mask = flow.zeros(4, 3, device=device).to(flow.bool)
+    mask = _cpu_global_tensor(flow.zeros(8, 8).to(flow.bool)).to_global(
+        placement, broadcast_for_placement
+    )
     y[mask] = -1
     _assert_tensor_equal(test_case, x, y)
 
 
-def _test_empty_ndim_index(test_case, device):
-    x = flow.randn(5, device=device)
+def _test_empty_ndim_index(test_case, placement):
+    broadcast_for_placement = [flow.sbp.broadcast,] * len(placement.ranks.shape)
+    sbp = random_sbp(placement, max_dim=1).value()
+    x = global_broadcast_consec((8,)).to_global(placement, sbp)
     _assert_tensor_equal(
         test_case,
-        flow.empty(0, 2, device=device),
-        x[flow.empty(0, 2, dtype=flow.int64, device=device)],
+        x[
+            _cpu_global_tensor(flow.empty(0, 2, dtype=flow.int64)).to_global(
+                placement, broadcast_for_placement
+            )
+        ],
+        flow.empty(0, 2),
     )
 
-    x = flow.randn(2, 3, 4, 5, device=device)
-    _assert_tensor_equal(
-        test_case,
-        flow.empty(2, 0, 6, 4, 5, device=device),
-        x[:, flow.empty(0, 6, dtype=flow.int64, device=device)],
-    )
-
-    x = flow.empty(10, 0, device=device)
+    sbp = random_sbp(placement, max_dim=1).value()
+    x = _cpu_global_tensor(flow.empty(8, 0)).to_global(placement, sbp)
     test_case.assertEqual(x[[1, 2]].shape, (2, 0))
     test_case.assertEqual(x[[], []].shape, (0,))
     test_case.assertEqual(x[[[]]].shape, (0, 0))
@@ -802,47 +832,56 @@ def _test_empty_ndim_index(test_case, device):
         x[:, [0, 1]]
 
 
-def _test_empty_ndim_index_bool(test_case, device):
-    x = flow.randn(5, device=device)
+def _test_empty_ndim_index_bool(test_case, placement):
+    broadcast_for_placement = [flow.sbp.broadcast,] * len(placement.ranks.shape)
+    sbp = random_sbp(placement, max_dim=1).value()
+    x = global_broadcast_consec((8,)).to_global(placement, sbp)
     test_case.assertRaises(
-        IndexError, lambda: x[flow.empty(0, 2, dtype=flow.uint8, device=device)]
+        IndexError,
+        lambda: x[
+            _cpu_global_tensor(flow.empty(0, 2, dtype=flow.uint8)).to_global(
+                placement, broadcast_for_placement
+            )
+        ],
     )
 
 
-def _test_empty_slice(test_case, device):
-    x = flow.randn(2, 3, 4, 5, device=device)
+def _test_empty_slice(test_case, placement):
+    sbp = random_sbp(placement, max_dim=1).value()
+    x = global_broadcast_consec((8, 8, 8, 8)).to_global(placement, sbp)
     y = x[:, :, :, 1]
     z = y[:, 1:1, :]
-    test_case.assertEqual((2, 0, 4), z.shape)
-    # this isn't technically necessary, but matches NumPy stride calculations.
-    test_case.assertEqual((60, 20, 5), z.stride())
-    test_case.assertTrue(z.is_contiguous())
+    test_case.assertEqual((8, 0, 8), z.shape)
 
 
-def _test_index_getitem_copy_bools_slices(test_case, device):
-    true = flow.tensor(1, dtype=flow.uint8, device=device)
-    false = flow.tensor(0, dtype=flow.uint8, device=device)
+def _test_index_getitem_copy_bools_slices(test_case, placement):
+    broadcast_for_placement = [flow.sbp.broadcast,] * len(placement.ranks.shape)
+    false = _cpu_global_tensor(flow.tensor(0, dtype=flow.uint8)).to_global(
+        placement, broadcast_for_placement
+    )
 
-    tensors = [flow.randn(2, 3, device=device), flow.tensor([1.0], device=device)]
+    sbp = random_sbp(placement, max_dim=1).value()
+    tensor = global_broadcast_consec((8, 8)).to_global(placement, sbp)
 
-    # TODO: compare tensor_storage after exporting the inferface
-    for a in tensors:
-        #  test_case.assertNotEqual(a.data_ptr(), a[True].data_ptr())
-        _assert_tensor_equal(test_case, flow.empty(0, *a.shape), a[False])
-        #  test_case.assertNotEqual(a.data_ptr(), a[true].data_ptr())
-        _assert_tensor_equal(test_case, flow.empty(0, *a.shape), a[false])
-        #  test_case.assertEqual(a.data_ptr(), a[None].data_ptr())
-        #  test_case.assertEqual(a.data_ptr(), a[...].data_ptr())
+    _assert_tensor_equal(test_case, flow.empty(0, *tensor.shape), tensor[False])
+    _assert_tensor_equal(test_case, flow.empty(0, *tensor.shape), tensor[false])
 
 
-def _test_setitem_scalars(test_case, device):
-    zero = flow.tensor(0, dtype=flow.int64)
+def _test_setitem_scalars(test_case, placement):
+    broadcast_for_placement = [flow.sbp.broadcast,] * len(placement.ranks.shape)
+    zero = _cpu_global_tensor(flow.tensor(0, dtype=flow.int64)).to_global(
+        placement, broadcast_for_placement
+    )
 
     # non-scalar indexed with scalars
-    a = flow.randn(2, 3, device=device)
+    a = global_broadcast_consec((8, 8)).to_global(
+        placement, random_sbp(placement, max_dim=2).value()
+    )
     a_set_with_number = a.clone()
     a_set_with_scalar = a.clone()
-    b = flow.randn(3, device=device)
+    b = global_broadcast_consec((8,), 233).to_global(
+        placement, random_sbp(placement, max_dim=1).value()
+    )
 
     a_set_with_number[0] = b
     a_set_with_scalar[zero] = b
@@ -851,14 +890,14 @@ def _test_setitem_scalars(test_case, device):
     value = a[1, 0].numpy()
     test_case.assertEqual(np.array(7.7, dtype=value.dtype), value)
 
-    np_x = np.random.rand(2, 3)
-    np_x[0, 0] = 1.0
-    x = flow.tensor(np_x)
-    x[0, 0] = 1.0
+    np_x = np.zeros((8, 8))
+    np_x[0, 6] = 1.0
+    x = _cpu_global_tensor(flow.tensor(np_x)).to_global(placement, random_sbp(placement, max_dim=2).value())
+    x[0, 6] = 1.0
     test_case.assertEqual(x.numpy().all(), np_x.all())
 
     # scalar indexed with scalars
-    r = flow.tensor(1.0).to(device)
+    r = _cpu_global_tensor(flow.tensor(1.0)).to_global(placement, random_sbp(placement, max_dim=0).value())
     with test_case.assertRaises(IndexError):
         r[:] = 8.8
     with test_case.assertRaises(IndexError):
@@ -867,10 +906,10 @@ def _test_setitem_scalars(test_case, device):
     test_case.assertEqual(r, 9.9)
 
     # scalar indexed with oneflow.Size([1])
-    np_x = np.random.rand(2, 3)
-    np_x[0, 0] = np.ones(1)
-    x = flow.tensor(np_x)
-    x[0, 0] = flow.ones(1).to(flow.float64)
+    np_x = np.zeros((8, 8))
+    np_x[0, 6] = np.ones(1)
+    x = _cpu_global_tensor(flow.tensor(np_x)).to_global(placement, random_sbp(placement, max_dim=2).value())
+    x[0, 0] = _cpu_global_tensor(flow.ones(1).to(flow.float64)).to_global(placement, broadcast_for_placement)
     test_case.assertEqual(x.numpy().all(), np_x.all())
 
 
@@ -911,7 +950,7 @@ class TestGlobalIndexing(flow.unittest.TestCase):
             for _ in range(20):
                 #  _test_basic_slice(test_case, placement)
                 #  _test_advanced_indexing(test_case, placement, dtype=flow.float32)
-                _test_combined_indexing(test_case, placement, dtype=flow.float32)
+                #  _test_combined_indexing(test_case, placement, dtype=flow.float32)
                 #  _test_single_int(test_case, placement)
                 #  _test_multiple_int(test_case, placement)
                 #  _test_none(test_case, placement)
@@ -927,7 +966,7 @@ class TestGlobalIndexing(flow.unittest.TestCase):
                 #  _test_empty_ndim_index_bool(test_case, placement)
                 #  _test_empty_slice(test_case, placement)
                 #  _test_index_getitem_copy_bools_slices(test_case, placement)
-                #  _test_setitem_scalars(test_case, placement)
+                _test_setitem_scalars(test_case, placement)
                 #  _test_basic_advanced_combined(test_case, placement)
                 #  _test_ellipsis_tensor(test_case, placement)
 
