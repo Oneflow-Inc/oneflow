@@ -410,13 +410,6 @@ def _masked_select(self, mask):
     return flow.masked_select(self, mask)
 
 
-def _masked_fill_inplace(self, mask, value):
-    """
-    In-place version of :meth:`oneflow.Tensor.masked_fill`.
-    """
-    return flow._C.masked_fill(self, mask, value, inplace=True)
-
-
 def _sort(self, dim: int = -1, descending: bool = False):
     return flow.sort(self, dim, descending)
 
@@ -580,7 +573,6 @@ def RegisterMethods():
     Tensor.mv = _mv
     Tensor.inverse = _inv
     Tensor.trunc = _trunc
-    Tensor.masked_fill_ = _masked_fill_inplace
 
 
 def register_tensor_op(op_name):

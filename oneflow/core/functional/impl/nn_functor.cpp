@@ -1440,7 +1440,7 @@ class CrossEntropyLabelSmoothingFunctor {
       smooth_loss = JUST(Mul(smooth_loss, weight_2d));
     }
     smooth_loss = JUST(Negative(JUST(ReduceSum(smooth_loss, {1}, false))));
-    smooth_loss = JUST(MaskedFill(smooth_loss, ignore_mask, 0.0, /*inplace=*/false));
+    smooth_loss = JUST(MaskedFill(smooth_loss, ignore_mask, 0.0));
     smooth_loss = JUST(Reshape(smooth_loss, *target_shape));
 
     int64_t n_classes = input->shape()->At(1);

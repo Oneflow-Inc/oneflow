@@ -2585,14 +2585,14 @@ class UnsortedBatchSegmentSumFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+template<bool inplace>
 class MaskedFillFunctor {
  public:
   MaskedFillFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("masked_fill").Input("x").Input("mask").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& mask, const Scalar& value,
-                           const bool inplace) const {
+                           const std::shared_ptr<one::Tensor>& mask, const Scalar& value) const {
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("float_operand", "has_float_operand", "int_operand",
                                        "has_int_operand", "bool_operand", "has_bool_operand");
@@ -3398,7 +3398,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");
   m.add_functor<impl::BatchGatherFunctor>("BatchGather");
   m.add_functor<impl::UnsortedBatchSegmentSumFunctor>("UnsortedBatchSegmentSum");
-  m.add_functor<impl::MaskedFillFunctor>("MaskedFill");
+  m.add_functor<impl::MaskedFillFunctor<false>>("MaskedFill");
+  m.add_functor<impl::MaskedFillFunctor<true>>("MaskedFillInplace");
   m.add_functor<impl::MeshgridFunctor>("Meshgrid");
   m.add_functor<impl::IndexSelectFunctor>("IndexSelect");
   m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor,
