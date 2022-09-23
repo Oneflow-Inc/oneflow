@@ -81,7 +81,7 @@ class TestMaskedFill(flow.unittest.TestCase):
             device=device, dtype=torch.bool
         )
         mask = random_tensor(ndim=1, dim0=1, dim1=20).to(device)
-        value = random().to(bool)
+        value = random().to(float)
         input.masked_fill_(mask > 0.5, value)
         return input
 
