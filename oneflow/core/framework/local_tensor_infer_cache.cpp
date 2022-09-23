@@ -184,7 +184,8 @@ Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTupl
       Stride stride(output_mut_metas.at(i).shape());
       output_mut_metas.at(i).set_stride(stride);
     }
-    CHECK_OR_RETURN(static_cast<bool>(output_mut_metas.at(i).device())) << Error::RuntimeError() << "device not infered";
+    CHECK_OR_RETURN(static_cast<bool>(output_mut_metas.at(i).device()))
+        << Error::RuntimeError() << "device not infered";
     mut_output_tensor_metas->at(i) = SymbolOf(
         LocalTensorMeta(output_mut_metas.at(i).shape(), output_mut_metas.at(i).stride(),
                         output_mut_metas.at(i).data_type(), output_mut_metas.at(i).device()));
