@@ -36,15 +36,13 @@ __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, bool
   Index index_plus_one = 0;
   Key old_entry_key = cuda::atomic::CAS(entry_key, static_cast<Key>(0), key_hi);
   while (index_plus_one == 0) {
-    bool entry_flag_val = *entry_dirty_flag; 
+    bool entry_flag_val = *entry_dirty_flag;
     if (old_entry_key == static_cast<Key>(0)) {
       Index index = cuda::atomic::Add(table_size, static_cast<Index>(1));
       index_plus_one = index + 1;
       *entry_index = ((index_plus_one << 1U) | key_lo);
       *out = index_plus_one;
-      if(!entry_flag_val){
-        *entry_dirty_flag = true;
-      }
+      if (!entry_flag_val) { *entry_dirty_flag = true; }
       return true;
     } else if (old_entry_key == key_hi) {
       const Index entry_index_val = *entry_index;
@@ -52,9 +50,7 @@ __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, bool
         // do nothing
       } else if ((entry_index_val & 0x1) == key_lo) {
         *out = (entry_index_val >> 1U);
-        if(!entry_flag_val){
-          *entry_dirty_flag = true;
-        }
+        if (!entry_flag_val) { *entry_dirty_flag = true; }
         return true;
       } else {
         return false;
@@ -462,6 +458,7 @@ class CacheImpl : public Cache {
       UNIMPLEMENTED();
     }
     num_elem_per_value_ = options_.value_size / sizeof(Elem);
+    if_dump_dirty_ = ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DUMP_DIRTY_ONLY", false);
   }
   ~CacheImpl() {
     CudaCurrentDeviceGuard guard(device_index_);
@@ -528,6 +525,7 @@ class CacheImpl : public Cache {
   Index* encoding_buffer_{};
   CacheOptions options_;
   uint32_t max_query_length_;
+  bool if_dump_dirty_;
 };
 
 template<typename Key, typename Elem, typename Index, size_t pack_size>
@@ -627,8 +625,13 @@ void CacheImpl<Key, Elem, Index, pack_size>::DumpDirtyOnly(ep::Stream* stream,
                                                            uint64_t end_key_index,
                                                            uint32_t* n_dumped, void* keys,
                                                            void* values) {
-  encoder_.DumpDirtyOnly(stream, start_key_index, end_key_index, n_dumped, static_cast<Key*>(keys),
-                         encoding_buffer_);
+  if (if_dump_dirty_) {
+    encoder_.DumpDirtyOnly(stream, start_key_index, end_key_index, n_dumped,
+                           static_cast<Key*>(keys), encoding_buffer_);
+  } else {
+    encoder_.Dump(stream, start_key_index, end_key_index, n_dumped, static_cast<Key*>(keys),
+                  encoding_buffer_);
+  }
   RUN_CUDA_KERNEL((DumpValueKernel<Key, Elem, Index>), stream,
                   num_elem_per_value_ * (end_key_index - start_key_index), num_elem_per_value_,
                   n_dumped, encoding_buffer_, values_, static_cast<Elem*>(values));
