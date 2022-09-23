@@ -471,18 +471,17 @@ def _test_combined_indexing(test_case, placement, dtype):
 
     def assert_backward_eq(tensor, indexer):
         # compare gradient between cpu and cuda
-        # BUG(wyg): https://github.com/Oneflow-Inc/oneflow/issues/9130
-        #           cuda_placement detach behavior has some bug
-        #  cpu = tensor.float().clone().detach().to_global(placement, broadcast_for_placement).requires_grad_()
         cpu = (
-            _cpu_global_tensor(flow.tensor(tensor.numpy()))
+            tensor.float()
+            .clone()
+            .detach()
             .to_global(placement, broadcast_for_placement)
             .requires_grad_()
         )
         outcpu = cpu.clone()[indexer]
         outcpu.sum().backward()
         dev = (
-            _cpu_global_tensor(cpu.detach())
+            cpu.detach()
             .to_global(
                 placement, random_sbp(placement, max_dim=len(tensor.shape)).value()
             )

@@ -220,9 +220,9 @@ Maybe<bool> HasFalseIndex(const TensorIndex& index) {
 Maybe<void> PermuteBackForGlobalTensor(const std::shared_ptr<Tensor>& result,
                                        const std::shared_ptr<Tensor>& origin_input,
                                        const std::vector<int>& permute) {
-  CHECK_OR_RETURN(result->is_global());                      // NOLINT
-  CHECK_EQ_OR_RETURN(result->ndim(), origin_input->ndim());  // NOLINT
-  CHECK_EQ_OR_RETURN(result->ndim(), permute.size());        // NOLINT
+  CHECK_OR_RETURN(result->is_global());                      // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(result->ndim(), origin_input->ndim());  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(result->ndim(), permute.size());        // NOLINT(maybe-need-error-msg)
   std::vector<int> inv_permute(permute.size());
   for (int32_t i = 0; i < permute.size(); ++i) { inv_permute[permute.at(i)] = i; }
 
