@@ -44,7 +44,6 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> MultinomialWithReplacementOp::InferDataType(user_op::InferContext* ctx) {
-  DataType in_types = ctx->InputDType("x", 0);
   ctx->SetOutputDType("out", 0, DataType::kInt64);
   return Maybe<void>::Ok();
 }
