@@ -124,9 +124,9 @@ class MultinomialWithReplacementCpuKernel final : public user_op::OpKernel {
         // ie cum_dist[row][slot-1] < uniform_prob < cum_distr[row][slot]
         int left_pointer = 0;
         int right_pointer = n_categories;
-        int mid_pointer;
+        int mid_pointer = 0;
         T cum_prob;
-        int sample_idx;
+        int sample_idx = 0;
         // Make sure the last cumulative distribution bucket sums to 1
         cum_dist_ptr[(n_categories - 1)] = 1;
 
