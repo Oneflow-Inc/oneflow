@@ -82,16 +82,16 @@ FLAT_MSG_BEGIN(FlatMetaInfoConsistency);
     const auto& this_placement =
         JUST(SyncedSymbolMap<ParallelDesc>::Symbol4SyncedSymbolId(
             this->placement_symbol_id()));
-    CHECK_OR_RETURN(this_placement == placement) << Error::RuntimeError() << "Each rank must have same input placement";
-    CHECK_EQ_OR_RETURN(nd_sbp.has_value(), this->has_nd_sbp_symbol_id())<< Error::RuntimeError()  << "Either both have value or not";
+    CHECK_OR_RETURN(this_placement == placement) << Error::RuntimeError() << "Each rank must have the same input placement";
+    CHECK_EQ_OR_RETURN(nd_sbp.has_value(), this->has_nd_sbp_symbol_id()) << Error::RuntimeError()  << "Either all ranks have sbp or not";
     if (this->has_nd_sbp_symbol_id()) {
       const auto& that_nd_sbp =
           JUST(SyncedSymbolMap<NdSbp>::Symbol4SyncedSymbolId(
               this->nd_sbp_symbol_id()));
       const auto& this_nd_sbp = JUST(nd_sbp);
-      CHECK_OR_RETURN(this_nd_sbp == that_nd_sbp) << Error::RuntimeError() << "Each rank must have same input sbp";
+      CHECK_OR_RETURN(this_nd_sbp == that_nd_sbp) << Error::RuntimeError() << "Each rank must have the same input sbp";
     }
-    CHECK_EQ_OR_RETURN(grad_nd_sbp.has_value(), this->has_grad_nd_sbp_symbol_id())<< Error::RuntimeError() << "Either both have value or not";
+    CHECK_EQ_OR_RETURN(grad_nd_sbp.has_value(), this->has_grad_nd_sbp_symbol_id()) << Error::RuntimeError() << "Either all ranks have grad sbp or not";
     if (this->has_grad_nd_sbp_symbol_id()) {
        const auto& that_grad_nd_sbp =
           JUST(SyncedSymbolMap<NdSbp>::Symbol4SyncedSymbolId(
