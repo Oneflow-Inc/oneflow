@@ -1189,20 +1189,23 @@ std::string PlanUtil::GetOpName(const Plan* plan, int64_t job_id, const KernelCo
 
 void PlanUtil::PopulateOpAttribute(
     Plan* plan,
-    const PbMap<int64_t, ::oneflow::OpAttributeRefTable>& job_id2op_attribute_ref_table) {
+    PbMap<int64_t, ::oneflow::OpAttributeRefTable>* job_id2op_attribute_ref_table) {
   for (auto& task : *plan->mutable_task()) {
     if (task.exec_sequence().exec_node_size() == 1
         && task.exec_sequence().exec_node(0).kernel_conf().has_op_attribute_ref()) {
+      // NOTE(strint): If this exec node has op_attribute_ref, this exec node is expanded from logical op.
       auto* kernel_conf = task.mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
-      auto table_it = job_id2op_attribute_ref_table.find(task.job_id());
-      CHECK(table_it != job_id2op_attribute_ref_table.end())
+      auto table_it = job_id2op_attribute_ref_table->find(task.job_id());
+      CHECK(table_it != job_id2op_attribute_ref_table->end())
           << "op attribute ref table not found for job id: " << task.job_id();
-      auto it = table_it->second.op_name2op_attribute().find(kernel_conf->op_attribute_ref());
+      auto it = table_it->second.mutable_op_name2op_attribute()->find(kernel_conf->op_attribute_ref());
       CHECK(it != table_it->second.op_name2op_attribute().end())
           << "ref: " << kernel_conf->op_attribute_ref() << " not found";
-      *kernel_conf->mutable_op_attribute() = it->second;
+      // NOTE(strint): task op attribute share the pointer of job_id2op_attribute_ref_table to save memory.
+      kernel_conf->set_allocated_op_attribute(&it->second);
       kernel_conf->clear_op_attribute_ref();
     } else {
+      // NOTE(strint): If this exec node has no op_attribute_ref, this node's op attribute is created in task graph.
       for (auto& exec_node : task.exec_sequence().exec_node()) {
         CHECK(exec_node.kernel_conf().has_op_attribute())
             << "op_attribute absent, exec_node: " << exec_node.DebugString();
