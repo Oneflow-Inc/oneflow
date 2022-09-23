@@ -3597,9 +3597,9 @@ class OneEmbeddingEmbeddingGradientShuffleFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class OneEmbeddingLookupEmbeddingFunctor {
+class OneEmbeddingLookupFunctor {
  public:
-  OneEmbeddingLookupEmbeddingFunctor() {
+  OneEmbeddingLookupFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("embedding_lookup")
                          .Input("num_unique_ids")
                          .Input("unique_ids")
@@ -3627,16 +3627,16 @@ class OneEmbeddingLookupEmbeddingFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class OneEmbeddingLookupFunctor {
+class OneEmbeddingFusedLookupFunctor {
  public:
-  OneEmbeddingLookupFunctor() {
-    op_has_table_ids_ = CHECK_JUST(one::OpBuilder("embedding_lookup_placeholder")
+  OneEmbeddingFusedLookupFunctor() {
+    op_has_table_ids_ = CHECK_JUST(one::OpBuilder("one_embedding_fused_lookup")
                                        .Input("shadow")
                                        .Input("ids")
                                        .Input("table_ids")
                                        .Output("embeddings")
                                        .Build());
-    op_no_table_ids_ = CHECK_JUST(one::OpBuilder("embedding_lookup_placeholder")
+    op_no_table_ids_ = CHECK_JUST(one::OpBuilder("one_embedding_fused_lookup")
                                       .Input("shadow")
                                       .Input("ids")
                                       .Output("embeddings")
@@ -3674,10 +3674,10 @@ class OneEmbeddingLookupFunctor {
   std::shared_ptr<OpExpr> op_no_table_ids_;
 };
 
-class OneEmbeddingLookupGradFunctor {
+class OneEmbeddingFusedLookupGradFunctor {
  public:
-  OneEmbeddingLookupGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("embedding_update_placeholder")
+  OneEmbeddingFusedLookupGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("one_embedding_fused_lookup_grad")
                          .Input("ids")
                          .Input("embedding_grad")
                          .Build());
@@ -3766,20 +3766,20 @@ class OneEmbeddingSgdUpdateFunctor {
     // input, we also define functor with all optional input just for unittest. when the optional
     // input learning_rate tensor has passed in, we think all optional input are not None and check
     // them.
-    sgd_no_optional_input_op_ = CHECK_JUST(one::OpBuilder("sgd_embedding_update")
+    sgd_no_optional_input_op_ = CHECK_JUST(one::OpBuilder("one_embedding_sgd_update")
                                                .Input("num_unique_ids")
                                                .Input("unique_embeddings")
                                                .Input("embedding_grad")
                                                .Output("updated_unique_embeddings")
                                                .Build());
-    momentum_no_optional_input_op_ = CHECK_JUST(one::OpBuilder("momentum_embedding_update")
+    momentum_no_optional_input_op_ = CHECK_JUST(one::OpBuilder("one_embedding_momentum_update")
                                                     .Input("num_unique_ids")
                                                     .Input("unique_embeddings")
                                                     .Input("embedding_grad")
                                                     .Output("updated_unique_embeddings")
                                                     .Build());
     // This functor is just for unittest
-    sgd_op_ = CHECK_JUST(one::OpBuilder("sgd_embedding_update")
+    sgd_op_ = CHECK_JUST(one::OpBuilder("one_embedding_sgd_update")
                              .Input("num_unique_ids")
                              .Input("unique_embeddings")
                              .Input("embedding_grad")
@@ -3788,7 +3788,7 @@ class OneEmbeddingSgdUpdateFunctor {
                              .Input("skip_if")
                              .Output("updated_unique_embeddings")
                              .Build());
-    momentum_op_ = CHECK_JUST(one::OpBuilder("momentum_embedding_update")
+    momentum_op_ = CHECK_JUST(one::OpBuilder("one_embedding_momentum_update")
                                   .Input("num_unique_ids")
                                   .Input("unique_embeddings")
                                   .Input("embedding_grad")
@@ -3864,14 +3864,14 @@ class OneEmbeddingAdamUpdateFunctor {
     // input, we also define functor with all optional input just for unittest. when the optional
     // input learning_rate tensor has passed in, we think all optional input are not None and check
     // them.
-    no_optional_input_op_ = CHECK_JUST(one::OpBuilder("adam_embedding_update")
+    no_optional_input_op_ = CHECK_JUST(one::OpBuilder("one_embedding_adam_update")
                                            .Input("num_unique_ids")
                                            .Input("unique_embeddings")
                                            .Input("embedding_grad")
                                            .Output("updated_unique_embeddings")
                                            .Build());
     // This functor is just for unittest
-    no_bias_correction_op_ = CHECK_JUST(one::OpBuilder("adam_embedding_update")
+    no_bias_correction_op_ = CHECK_JUST(one::OpBuilder("one_embedding_adam_update")
                                             .Input("num_unique_ids")
                                             .Input("unique_embeddings")
                                             .Input("embedding_grad")
@@ -3880,7 +3880,7 @@ class OneEmbeddingAdamUpdateFunctor {
                                             .Input("skip_if")
                                             .Output("updated_unique_embeddings")
                                             .Build());
-    do_bias_correction_op_ = CHECK_JUST(one::OpBuilder("adam_embedding_update")
+    do_bias_correction_op_ = CHECK_JUST(one::OpBuilder("one_embedding_adam_update")
                                             .Input("num_unique_ids")
                                             .Input("unique_embeddings")
                                             .Input("embedding_grad")
@@ -3953,14 +3953,14 @@ class OneEmbeddingAdagradUpdateFunctor {
     // input, we also define functor with all optional input just for unittest. when the optional
     // input learning_rate tensor has passed in, we think all optional input are not None and check
     // them.
-    op_no_optional_input_ = CHECK_JUST(one::OpBuilder("adagrad_embedding_update")
+    op_no_optional_input_ = CHECK_JUST(one::OpBuilder("one_embedding_adagrad_update")
                                            .Input("num_unique_ids")
                                            .Input("unique_embeddings")
                                            .Input("embedding_grad")
                                            .Output("updated_unique_embeddings")
                                            .Build());
     // This functor is just for unittest
-    op_ = CHECK_JUST(one::OpBuilder("adagrad_embedding_update")
+    op_ = CHECK_JUST(one::OpBuilder("one_embedding_adagrad_update")
                          .Input("num_unique_ids")
                          .Input("unique_embeddings")
                          .Input("embedding_grad")
@@ -4018,14 +4018,14 @@ class OneEmbeddingFtrlUpdateFunctor {
     // input, we also define functor with all optional input just for unittest. when the optional
     // input learning_rate tensor has passed in, we think all optional input are not None and check
     // them.
-    op_no_optional_input_ = CHECK_JUST(one::OpBuilder("ftrl_embedding_update")
+    op_no_optional_input_ = CHECK_JUST(one::OpBuilder("one_embedding_ftrl_update")
                                            .Input("num_unique_ids")
                                            .Input("unique_embeddings")
                                            .Input("embedding_grad")
                                            .Output("updated_unique_embeddings")
                                            .Build());
     // This functor is just for unittest
-    op_ = CHECK_JUST(one::OpBuilder("ftrl_embedding_update")
+    op_ = CHECK_JUST(one::OpBuilder("one_embedding_ftrl_update")
                          .Input("num_unique_ids")
                          .Input("unique_embeddings")
                          .Input("embedding_grad")
@@ -4452,9 +4452,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingEmbeddingShuffleFunctor>("OneEmbeddingEmbeddingShuffle");
   m.add_functor<impl::OneEmbeddingEmbeddingGradientShuffleFunctor>(
       "OneEmbeddingEmbeddingGradientShuffle");
-  m.add_functor<impl::OneEmbeddingLookupEmbeddingFunctor>("OneEmbeddingLookupEmbedding");
   m.add_functor<impl::OneEmbeddingLookupFunctor>("OneEmbeddingLookup");
-  m.add_functor<impl::OneEmbeddingLookupGradFunctor>("OneEmbeddingLookupGrad");
+  m.add_functor<impl::OneEmbeddingFusedLookupFunctor>("OneEmbeddingFusedLookup");
+  m.add_functor<impl::OneEmbeddingFusedLookupGradFunctor>("OneEmbeddingFusedLookupGrad");
   m.add_functor<impl::OneEmbeddingEmbeddingPutFunctor>("OneEmbeddingEmbeddingPut");
   m.add_functor<impl::OneEmbeddingUniqueKeyValuePairFunctor>("OneEmbeddingUniqueKeyValuePair");
   m.add_functor<impl::NormalFunctor>("Normal");

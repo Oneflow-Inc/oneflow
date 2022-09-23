@@ -300,7 +300,7 @@ class Embedding(Module):
             flow.tensor: the result of embedding lookup
         """
         assert self.key_type == ids.dtype, "ids data_type must equals key_type"
-        embedding = flow._C.one_embedding_lookup(
+        embedding = flow._C.one_embedding_fused_lookup(
             self.shadow,
             ids,
             table_ids,
@@ -339,7 +339,7 @@ class Embedding(Module):
             ) = flow._C.one_embedding_id_shuffle(
                 self.ids, self.table_ids, self.num_tables, self.embedding_name
             )
-            unique_values = flow._C.one_embedding_lookup_embedding(
+            unique_values = flow._C.one_embedding_lookup(
                 cur_rank_num_unique,
                 cur_rank_unique_ids,
                 cur_rank_unique_table_ids,
@@ -368,7 +368,7 @@ class Embedding(Module):
             ) = flow._C.one_embedding_unique_key_value_pair(
                 self.ids, self.table_ids, self.num_tables, self.embedding_name
             )
-            unique_values = flow._C.one_embedding_lookup_embedding(
+            unique_values = flow._C.one_embedding_lookup(
                 cur_rank_num_unique,
                 cur_rank_unique_ids,
                 cur_rank_unique_table_ids,

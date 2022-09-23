@@ -305,8 +305,8 @@ class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
   OF_PP_MAKE_TUPLE_SEQ(uint32_t, DataType::kUInt32) \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
 
-#define REGISTER_CUDA_SGD_EMBEDDING_UPDATE_KERNEL(t_dtype_pair, g_type_pair, idx_dtype_pair)      \
-  REGISTER_USER_KERNEL("sgd_embedding_update")                                                    \
+#define REGISTER_CUDA_ONE_EMBEDDING_SGD_UPDATE_KERNEL(t_dtype_pair, g_type_pair, idx_dtype_pair)  \
+  REGISTER_USER_KERNEL("one_embedding_sgd_update")                                                \
       .SetCreateFn<                                                                               \
           SgdEmbeddingUpdateKernel<OF_PP_PAIR_FIRST(t_dtype_pair), OF_PP_PAIR_FIRST(g_type_pair), \
                                    OF_PP_PAIR_FIRST(idx_dtype_pair)>>()                           \
@@ -316,8 +316,9 @@ class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
           && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(g_type_pair))        \
           && (user_op::HobDataType("unique_embeddings", 0) == OF_PP_PAIR_SECOND(t_dtype_pair)));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_SGD_EMBEDDING_UPDATE_KERNEL, FLOATING_DATA_TYPE_SEQ,
-                                 FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_ONE_EMBEDDING_SGD_UPDATE_KERNEL,
+                                 FLOATING_DATA_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
+                                 IDX_DATA_TYPE_SEQ)
 
 template<typename T, typename G, typename IDX>
 class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
@@ -399,18 +400,19 @@ class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
   mutable int64_t current_iter_;
 };
 
-#define REGISTER_CUDA_MOMENTUM_EMBEDDING_UPDATE_KERNEL(t_dtype_pair, g_type_pair, idx_dtype_pair) \
-  REGISTER_USER_KERNEL("momentum_embedding_update")                                               \
-      .SetCreateFn<MomentumEmbeddingUpdateKernel<OF_PP_PAIR_FIRST(t_dtype_pair),                  \
-                                                 OF_PP_PAIR_FIRST(g_type_pair),                   \
-                                                 OF_PP_PAIR_FIRST(idx_dtype_pair)>>()             \
-      .SetIsMatchedHob(                                                                           \
-          (user_op::HobDeviceType() == DeviceType::kCUDA)                                         \
-          && (user_op::HobDataType("num_unique_ids", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair))     \
-          && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(g_type_pair))        \
+#define REGISTER_CUDA_ONE_EMBEDDING_MOMENTUM_UPDATE_KERNEL(t_dtype_pair, g_type_pair,         \
+                                                           idx_dtype_pair)                    \
+  REGISTER_USER_KERNEL("one_embedding_momentum_update")                                       \
+      .SetCreateFn<MomentumEmbeddingUpdateKernel<OF_PP_PAIR_FIRST(t_dtype_pair),              \
+                                                 OF_PP_PAIR_FIRST(g_type_pair),               \
+                                                 OF_PP_PAIR_FIRST(idx_dtype_pair)>>()         \
+      .SetIsMatchedHob(                                                                       \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                     \
+          && (user_op::HobDataType("num_unique_ids", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair)) \
+          && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(g_type_pair))    \
           && (user_op::HobDataType("unique_embeddings", 0) == OF_PP_PAIR_SECOND(t_dtype_pair)));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_MOMENTUM_EMBEDDING_UPDATE_KERNEL,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_ONE_EMBEDDING_MOMENTUM_UPDATE_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
                                  IDX_DATA_TYPE_SEQ)
 
@@ -509,8 +511,8 @@ class AdamEmbeddingUpdateKernel final : public user_op::OpKernel {
   mutable int64_t current_iter_;
 };
 
-#define REGISTER_CUDA_ADAM_EMBEDDING_UPDATE_KERNEL(t_dtype_pair, g_type_pair, idx_dtype_pair)      \
-  REGISTER_USER_KERNEL("adam_embedding_update")                                                    \
+#define REGISTER_CUDA_ONE_EMBEDDING_ADAM_UPDATE_KERNEL(t_dtype_pair, g_type_pair, idx_dtype_pair)  \
+  REGISTER_USER_KERNEL("one_embedding_adam_update")                                                \
       .SetCreateFn<                                                                                \
           AdamEmbeddingUpdateKernel<OF_PP_PAIR_FIRST(t_dtype_pair), OF_PP_PAIR_FIRST(g_type_pair), \
                                     OF_PP_PAIR_FIRST(idx_dtype_pair)>>()                           \
@@ -520,8 +522,9 @@ class AdamEmbeddingUpdateKernel final : public user_op::OpKernel {
           && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(g_type_pair))         \
           && (user_op::HobDataType("unique_embeddings", 0) == OF_PP_PAIR_SECOND(t_dtype_pair)));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_ADAM_EMBEDDING_UPDATE_KERNEL, FLOATING_DATA_TYPE_SEQ,
-                                 FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_ONE_EMBEDDING_ADAM_UPDATE_KERNEL,
+                                 FLOATING_DATA_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
+                                 IDX_DATA_TYPE_SEQ)
 
 template<typename T, typename G, typename IDX>
 class AdagradEmbeddingUpdateKernel final : public user_op::OpKernel {
@@ -610,18 +613,19 @@ class AdagradEmbeddingUpdateKernel final : public user_op::OpKernel {
   mutable int64_t current_iter_;
 };
 
-#define REGISTER_CUDA_ADAGRAD_EMBEDDING_UPDATE_KERNEL(t_dtype_pair, g_type_pair, idx_dtype_pair) \
-  REGISTER_USER_KERNEL("adagrad_embedding_update")                                               \
-      .SetCreateFn<AdagradEmbeddingUpdateKernel<OF_PP_PAIR_FIRST(t_dtype_pair),                  \
-                                                OF_PP_PAIR_FIRST(g_type_pair),                   \
-                                                OF_PP_PAIR_FIRST(idx_dtype_pair)>>()             \
-      .SetIsMatchedHob(                                                                          \
-          (user_op::HobDeviceType() == DeviceType::kCUDA)                                        \
-          && (user_op::HobDataType("num_unique_ids", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair))    \
-          && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(g_type_pair))       \
+#define REGISTER_CUDA_ONE_EMBEDDING_ADAGRAD_UPDATE_KERNEL(t_dtype_pair, g_type_pair,          \
+                                                          idx_dtype_pair)                     \
+  REGISTER_USER_KERNEL("one_embedding_adagrad_update")                                        \
+      .SetCreateFn<AdagradEmbeddingUpdateKernel<OF_PP_PAIR_FIRST(t_dtype_pair),               \
+                                                OF_PP_PAIR_FIRST(g_type_pair),                \
+                                                OF_PP_PAIR_FIRST(idx_dtype_pair)>>()          \
+      .SetIsMatchedHob(                                                                       \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                     \
+          && (user_op::HobDataType("num_unique_ids", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair)) \
+          && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(g_type_pair))    \
           && (user_op::HobDataType("unique_embeddings", 0) == OF_PP_PAIR_SECOND(t_dtype_pair)));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_ADAGRAD_EMBEDDING_UPDATE_KERNEL,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_ONE_EMBEDDING_ADAGRAD_UPDATE_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
                                  IDX_DATA_TYPE_SEQ)
 
@@ -710,8 +714,8 @@ class FtrlEmbeddingUpdateKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   mutable int64_t current_iter_;
 };
-#define REGISTER_CUDA_FTRL_EMBEDDING_UPDATE_KERNEL(t_dtype_pair, g_type_pair, idx_dtype_pair)      \
-  REGISTER_USER_KERNEL("ftrl_embedding_update")                                                    \
+#define REGISTER_CUDA_ONE_EMBEDDING_FTRL_UPDATE_KERNEL(t_dtype_pair, g_type_pair, idx_dtype_pair)  \
+  REGISTER_USER_KERNEL("one_embedding_ftrl_update")                                                \
       .SetCreateFn<                                                                                \
           FtrlEmbeddingUpdateKernel<OF_PP_PAIR_FIRST(t_dtype_pair), OF_PP_PAIR_FIRST(g_type_pair), \
                                     OF_PP_PAIR_FIRST(idx_dtype_pair)>>()                           \
@@ -720,7 +724,8 @@ class FtrlEmbeddingUpdateKernel final : public user_op::OpKernel {
           && (user_op::HobDataType("num_unique_ids", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair))      \
           && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(g_type_pair))         \
           && (user_op::HobDataType("unique_embeddings", 0) == OF_PP_PAIR_SECOND(t_dtype_pair)));
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_FTRL_EMBEDDING_UPDATE_KERNEL, FLOATING_DATA_TYPE_SEQ,
-                                 FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_ONE_EMBEDDING_FTRL_UPDATE_KERNEL,
+                                 FLOATING_DATA_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
+                                 IDX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

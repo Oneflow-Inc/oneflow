@@ -206,7 +206,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EmbeddingGatherOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingGatherOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
   const Shape& indices_shape = ctx->InputShape("indices", 0);
   const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
@@ -228,16 +228,16 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EmbeddingGatherOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> OneEmbeddingGatherOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> EmbeddingGatherOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingGatherOp::GetSbp(user_op::SbpContext* ctx) {
   // Only used in parallel_num = 1.
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EmbeddingGatherOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingGatherOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }

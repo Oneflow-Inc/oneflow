@@ -2420,16 +2420,16 @@
   signature: "Tensor (Tensor embedding_grad, Tensor num_unique_matrix, Tensor cur_rank_inverse_indices, Tensor inverse_unique_partition_indices, String embedding_name) => OneEmbeddingEmbeddingGradientShuffle"
   bind_python: True
 
-- name: "one_embedding_lookup_embedding"
-  signature: "Tensor (Tensor num_unique_ids, Tensor unique_ids, Tensor table_ids, DataType dtype, DataType embedding_dtype, Int64 line_size, Int64 embedding_size, String embedding_name, String embedding_tables, String state_initializer, Int64 seed=0) => OneEmbeddingLookupEmbedding"
-  bind_python: True
-
 - name: "one_embedding_lookup"
-  signature: "Tensor (Tensor shadow, Tensor ids, Tensor table_ids=None, DataType dtype, String embedding_name, Int64 line_size, Int64 embedding_size, Bool is_full_cache, Int32 num_tables, String embedding_tables, Int64 padding_idx=None, Int64 seed=0) => OneEmbeddingLookup"
+  signature: "Tensor (Tensor num_unique_ids, Tensor unique_ids, Tensor table_ids, DataType dtype, DataType embedding_dtype, Int64 line_size, Int64 embedding_size, String embedding_name, String embedding_tables, String state_initializer, Int64 seed=0) => OneEmbeddingLookup"
   bind_python: True
 
-- name: "one_embedding_lookup_grad"
-  signature: "Void (Tensor ids, Tensor embedding_grad, String embedding_name, Int64 line_size, Int64 embedding_size) => OneEmbeddingLookupGrad"
+- name: "one_embedding_fused_lookup"
+  signature: "Tensor (Tensor shadow, Tensor ids, Tensor table_ids=None, DataType dtype, String embedding_name, Int64 line_size, Int64 embedding_size, Bool is_full_cache, Int32 num_tables, String embedding_tables, Int64 padding_idx=None, Int64 seed=0) => OneEmbeddingFusedLookup"
+  bind_python: True
+
+- name: "one_embedding_fused_lookup_grad"
+  signature: "Void (Tensor ids, Tensor embedding_grad, String embedding_name, Int64 line_size, Int64 embedding_size) => OneEmbeddingFusedLookupGrad"
   bind_python: True
 
 - name: "one_embedding_unique_key_value_pair"

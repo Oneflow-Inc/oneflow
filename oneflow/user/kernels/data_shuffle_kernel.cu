@@ -1300,10 +1300,10 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_UNIQUE_KEY_VALUE_PAIR_KERNEL, ID_
                                  TABLE_ID_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
 
 template<typename T, typename IDX>
-class EmbeddingGatherKernel final : public user_op::OpKernel {
+class OneEmbeddingGatherKernel final : public user_op::OpKernel {
  public:
-  EmbeddingGatherKernel() : current_iter_(0) {}
-  ~EmbeddingGatherKernel() override = default;
+  OneEmbeddingGatherKernel() : current_iter_(0) {}
+  ~OneEmbeddingGatherKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
@@ -1335,16 +1335,16 @@ class EmbeddingGatherKernel final : public user_op::OpKernel {
   mutable int64_t current_iter_;
 };
 
-#define REGISTER_EMBEDDING_GATHER_KERNEL(in_type, indices_type)                               \
-  REGISTER_USER_KERNEL("embedding_gather")                                                    \
-      .SetCreateFn<                                                                           \
-          EmbeddingGatherKernel<OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>() \
-      .SetIsMatchedHob(                                                                       \
-          (user_op::HobDeviceType() == DeviceType::kCUDA)                                     \
-          && (user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(in_type))                    \
+#define REGISTER_ONE_EMBEDDING_GATHER_KERNEL(in_type, indices_type)                              \
+  REGISTER_USER_KERNEL("one_embedding_gather")                                                   \
+      .SetCreateFn<                                                                              \
+          OneEmbeddingGatherKernel<OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>() \
+      .SetIsMatchedHob(                                                                          \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                        \
+          && (user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(in_type))                       \
           && (user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_EMBEDDING_GATHER_KERNEL,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ONE_EMBEDDING_GATHER_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
 
 REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("id_shuffle");

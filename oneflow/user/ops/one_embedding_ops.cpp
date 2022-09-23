@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-/* static */ Maybe<void> EmbeddingLookupPlaceholderOp::InferLogicalTensorDesc(
+/* static */ Maybe<void> OneEmbeddingFusedLookupOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   const Shape& ids_shape = ctx->InputShape("ids", 0);
   if (ctx->has_input("table_ids", 0)) {
@@ -34,12 +34,12 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EmbeddingLookupPlaceholderOp::InferPhysicalTensorDesc(
+/*static*/ Maybe<void> OneEmbeddingFusedLookupOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> EmbeddingLookupPlaceholderOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingFusedLookupOp::GetSbp(user_op::SbpContext* ctx) {
   auto builder = ctx->NewBuilder()
                      .Broadcast(user_op::OpArg("shadow", 0))
                      .Split(user_op::OpArg("ids", 0), 0)
@@ -51,7 +51,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EmbeddingLookupPlaceholderOp::ModifyInputArg(
+/* static */ Maybe<void> OneEmbeddingFusedLookupOp::ModifyInputArg(
     const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* shadow = GetInputArgModifierFn("shadow", 0);
   CHECK_OR_RETURN(shadow != nullptr) << "shadow is nullptr";
@@ -67,22 +67,22 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EmbeddingLookupPlaceholderOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingFusedLookupOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("embeddings", 0, ctx->InputDType("shadow", 0));
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EmbeddingUpdatePlaceholderOp::InferLogicalTensorDesc(
+/* static */ Maybe<void> OneEmbeddingFusedLookupGradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EmbeddingUpdatePlaceholderOp::InferPhysicalTensorDesc(
+/*static*/ Maybe<void> OneEmbeddingFusedLookupGradOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> EmbeddingUpdatePlaceholderOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingFusedLookupGradOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("ids", 0), 0)
       .Split(user_op::OpArg("embedding_grad", 0), 0)
@@ -90,7 +90,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EmbeddingUpdatePlaceholderOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingFusedLookupGradOp::InferDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
@@ -271,17 +271,17 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedSgdEmbeddingUpdatePutOp::InferLogicalTensorDesc(
+/* static */ Maybe<void> OneEmbeddingFusedSgdUpdatePutOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> FusedSgdEmbeddingUpdatePutOp::InferPhysicalTensorDesc(
+/*static*/ Maybe<void> OneEmbeddingFusedSgdUpdatePutOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> FusedSgdEmbeddingUpdatePutOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingFusedSgdUpdatePutOp::GetSbp(user_op::SbpContext* ctx) {
   auto builder = ctx->NewBuilder()
                      .Broadcast(user_op::OpArg("learning_rate", 0))
                      .Broadcast(user_op::OpArg("num_unique_ids", 0))
@@ -295,11 +295,13 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedSgdEmbeddingUpdatePutOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingFusedSgdUpdatePutOp::InferDataType(
+    user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> SgdEmbeddingUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingSgdUpdateOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
   const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
   const int64_t line_size = ctx->Attr<int64_t>("line_size");
@@ -314,22 +316,23 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> SgdEmbeddingUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> OneEmbeddingSgdUpdateOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> SgdEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingSgdUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> SgdEmbeddingUpdateOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingSgdUpdateOp::InferDataType(user_op::InferContext* ctx) {
   JUST(CheckDataType(ctx));
   ctx->SetOutputDType("updated_unique_embeddings", 0, ctx->InputDType("unique_embeddings", 0));
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> MomentumEmbeddingUpdateOp::InferLogicalTensorDesc(
+/* static */ Maybe<void> OneEmbeddingMomentumUpdateOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
   const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
@@ -346,23 +349,24 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> MomentumEmbeddingUpdateOp::InferPhysicalTensorDesc(
+/*static*/ Maybe<void> OneEmbeddingMomentumUpdateOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> MomentumEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingMomentumUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> MomentumEmbeddingUpdateOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingMomentumUpdateOp::InferDataType(user_op::InferContext* ctx) {
   JUST(CheckDataType(ctx));
   ctx->SetOutputDType("updated_unique_embeddings", 0, ctx->InputDType("unique_embeddings", 0));
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> AdamEmbeddingUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingAdamUpdateOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
   const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
   const int64_t line_size = ctx->Attr<int64_t>("line_size");
@@ -378,22 +382,23 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> AdamEmbeddingUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> OneEmbeddingAdamUpdateOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> AdamEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingAdamUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> AdamEmbeddingUpdateOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingAdamUpdateOp::InferDataType(user_op::InferContext* ctx) {
   JUST(CheckDataType(ctx));
   ctx->SetOutputDType("updated_unique_embeddings", 0, ctx->InputDType("unique_embeddings", 0));
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> AdagradEmbeddingUpdateOp::InferLogicalTensorDesc(
+/* static */ Maybe<void> OneEmbeddingAdagradUpdateOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
   const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
@@ -410,23 +415,24 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> AdagradEmbeddingUpdateOp::InferPhysicalTensorDesc(
+/*static*/ Maybe<void> OneEmbeddingAdagradUpdateOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> AdagradEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingAdagradUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> AdagradEmbeddingUpdateOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingAdagradUpdateOp::InferDataType(user_op::InferContext* ctx) {
   JUST(CheckDataType(ctx));
   ctx->SetOutputDType("updated_unique_embeddings", 0, ctx->InputDType("unique_embeddings", 0));
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FtrlEmbeddingUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingFtrlUpdateOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
   const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
   const int64_t line_size = ctx->Attr<int64_t>("line_size");
@@ -442,16 +448,17 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> FtrlEmbeddingUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> OneEmbeddingFtrlUpdateOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> FtrlEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingFtrlUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FtrlEmbeddingUpdateOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingFtrlUpdateOp::InferDataType(user_op::InferContext* ctx) {
   JUST(CheckDataType(ctx));
   ctx->SetOutputDType("updated_unique_embeddings", 0, ctx->InputDType("unique_embeddings", 0));
   return Maybe<void>::Ok();
