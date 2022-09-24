@@ -140,6 +140,23 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
     // do nothing
   }
 
+  void OnEmbeddingGatherStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    // do nothing
+  }
+
+  const void* EmbeddingGatherIn(int64_t iter) override {
+    if (has_lookup_embeddings_) {
+      return lookup_embeddings_;
+    } else {
+      CHECK(has_lookup_values_);
+      return lookup_values_;
+    }
+  }
+
+  void OnEmbeddingGatherEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    // do nothing
+  }
+
   void OnEmbeddingShuffleStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
     // do nothing
   }
@@ -331,6 +348,17 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
     has_lookup_embeddings_ = false;
   }
 
+  void OnEmbeddingGatherStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    embedding_gather_in_ = in->dptr();
+  }
+
+  const void* EmbeddingGatherIn(int64_t iter) override { return embedding_gather_in_; }
+
+  void OnEmbeddingGatherEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    embedding_gather_in_ = nullptr;
+  }
+
   void OnEmbeddingShuffleStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
     const user_op::Tensor* cur_rank_embeddings =
         ctx->Tensor4ArgNameAndIndex("cur_rank_embeddings", 0);
@@ -427,6 +455,7 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
   void* lookup_unique_values_;
   void* lookup_embeddings_;
   bool has_lookup_embeddings_;
+  const void* embedding_gather_in_;
   const void* embedding_shuffle_cur_rank_embeddings_;
   const void* embeding_update_unique_embeddings_;
   void* embeding_update_updated_unique_embeddings_;
