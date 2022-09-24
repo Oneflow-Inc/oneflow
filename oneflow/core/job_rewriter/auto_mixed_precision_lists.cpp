@@ -52,7 +52,7 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
 
 const AMPList& AutoMixedPrecisionLists::BlackList() {
   // TODO(niuchong): reduce_mean?
-  static AMPList black_list = {};
+  static AMPList black_list = {"amp_black_identity"};
   return black_list;
 }
 

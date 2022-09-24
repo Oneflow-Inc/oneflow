@@ -13,31 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import unittest
-from collections import OrderedDict
 
+import unittest
 import oneflow as flow
 import oneflow.unittest
 
-from oneflow.test_utils.automated_test_util import *
 
-
-@autotest(n=1, check_graph=False)
-def _test_round_impl(test_case, ndim, placement, sbp):
-    x_dims = [random(2, 4) * 8 for _ in range(ndim)]
-    x = random_tensor(ndim, *x_dims)
-    y = x.to_global(placement=placement, sbp=sbp)
-    z = torch.round(y)
-    return z
-
-
-class TestRoundGlobal(flow.unittest.TestCase):
-    @globaltest
-    def test_round(test_case):
-        ndim = random(1, 5).to(int).value()
-        for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=ndim):
-                _test_round_impl(test_case, ndim, placement, sbp)
+class TestPlacement(flow.unittest.TestCase):
+    @flow.unittest.skip_unless_1n2d()
+    def test_inconsistent_placement(test_case):
+        x = flow.randn(2, 3)
+        if flow.env.get_rank() == 0:
+            placement = flow.placement("cpu", [0, 1])
+        else:
+            placement = flow.placement("cpu", [0])
+        sbp = flow.sbp.split(1)
+        with test_case.assertRaises(RuntimeError) as ctx:
+            x_global = x.to_global(placement=placement, sbp=sbp)
+        test_case.assertTrue("Inconsistent parallel description" in str(ctx.exception))
 
 
 if __name__ == "__main__":
