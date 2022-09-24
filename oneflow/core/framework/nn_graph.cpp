@@ -254,7 +254,7 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NNGraph::RangePushPlan(const Plan& global_plan, const std::string& plan_name_prefix, int64_t start_rank, int64_t rank_range_size) {
+Maybe<void> NNGraph::RangePushPlan(Plan* global_plan, const std::string& plan_name_prefix, int64_t start_rank, int64_t rank_range_size) {
   const int64_t end_rank = start_rank + rank_range_size - 1;
   const int64_t cpu_num = std::thread::hardware_concurrency();
   const int64_t thread_pool_size = std::min(rank_range_size, cpu_num);
@@ -266,34 +266,42 @@ Maybe<void> NNGraph::RangePushPlan(const Plan& global_plan, const std::string& p
       // Creat sub-plan.
       auto tc_sub_plan = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
       Plan sub_plan;
-      sub_plan.mutable_job_confs()->CopyFrom(global_plan.job_confs());
-      // tc_sub_plan->Count(rank_plan_name + " add job conf", 1);
-      sub_plan.mutable_collective_boxing_plan()->CopyFrom(global_plan.collective_boxing_plan());
-      // tc_sub_plan->Count(rank_plan_name + " add collective boxing", 1);
-      sub_plan.mutable_ctrl_regst_desc_info()->CopyFrom(global_plan.ctrl_regst_desc_info());
-      // tc_sub_plan->Count(rank_plan_name + " add ctrl regst", 1);
-      for (auto& pair : global_plan.job_id2op_attribute_ref_table()) {
+      sub_plan.set_allocated_job_confs(global_plan->mutable_job_confs());
+      tc_sub_plan->Count(rank_plan_name + " add job conf", 1);
+
+      sub_plan.set_allocated_collective_boxing_plan(global_plan->mutable_collective_boxing_plan());
+      tc_sub_plan->Count(rank_plan_name + " add collective boxing", 1);
+
+      sub_plan.set_allocated_ctrl_regst_desc_info(global_plan->mutable_ctrl_regst_desc_info());
+      tc_sub_plan->Count(rank_plan_name + " add ctrl regst", 1);
+
+	    // TODO(): rm copy.
+      for (auto& pair : *global_plan->mutable_job_id2op_attribute_ref_table()) {
         sub_plan.mutable_job_id2op_attribute_ref_table()->insert(pair);
       }
-      // tc_sub_plan->Count(rank_plan_name + " add op attr", 1);
-      for (auto& task_proto : global_plan.task()) {
+      tc_sub_plan->Count(rank_plan_name + " add op attr", 1);
+
+      for (auto& task_proto : *global_plan->mutable_task()) {
         if (task_proto.machine_id() == rank_id) {
-          sub_plan.add_task()->CopyFrom(task_proto);
+          sub_plan.mutable_task()->AddAllocated(&task_proto);
         }
       }
-      // tc_sub_plan->Count(rank_plan_name + " add task", 1);
-      for (auto& mem_block_proto : global_plan.block_chunk_list().mem_block()) {
+      tc_sub_plan->Count(rank_plan_name + " add task", 1);
+
+      for (auto& mem_block_proto : *global_plan->mutable_block_chunk_list()->mutable_mem_block()) {
         if (mem_block_proto.machine_id() == rank_id) {
-          sub_plan.mutable_block_chunk_list()->add_mem_block()->CopyFrom(mem_block_proto);
+          sub_plan.mutable_block_chunk_list()->mutable_mem_block()->AddAllocated(&mem_block_proto);
         }
       }
-      // tc_sub_plan->Count(rank_plan_name + " add mem block", 1);
-      for (auto& chunk_proto : global_plan.block_chunk_list().chunk()) {
+      tc_sub_plan->Count(rank_plan_name + " add mem block", 1);
+
+      for (auto& chunk_proto : *global_plan->mutable_block_chunk_list()->mutable_chunk()) {
         if (chunk_proto.machine_id() == rank_id) {
-          sub_plan.mutable_block_chunk_list()->add_chunk()->CopyFrom(chunk_proto);
+          sub_plan.mutable_block_chunk_list()->mutable_chunk()->AddAllocated(&chunk_proto);
         }
       }
-      // tc_sub_plan->Count(rank_plan_name + " add chunk", 1);
+      tc_sub_plan->Count(rank_plan_name + " add chunk", 1);
+
       if (rank_id == 0) {
         plan_.Swap(&sub_plan);
       } else {
@@ -446,7 +454,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
       cur_range_size = std::min(rang_push_size, static_cast<int64_t>(GlobalProcessCtx::WorldSize() - cur_start_rank));
       // Use range push to limit memory consumption.
       if (GlobalProcessCtx::IsThisProcessMaster()) {
-        JUST(RangePushPlan(global_plan, plan_name_prefix, cur_start_rank, cur_range_size));
+        JUST(RangePushPlan(&global_plan, plan_name_prefix, cur_start_rank, cur_range_size));
         tc->Count("Graph name: " + name_ + " PushPlan" + std::to_string(cur_start_rank) + "to" + std::to_string(cur_start_rank + cur_range_size - 1), 1);
       } else {
         JUST(RangePullPlan(plan_name_prefix, cur_start_rank, cur_range_size));
