@@ -475,9 +475,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   }
 
   // NOTE(chengcheng): recovery op_attr
-  if (GlobalProcessCtx::Rank() < 2) {
-    PlanUtil::PopulateOpAttribute(&plan_, plan_.mutable_job_id2op_attribute_ref_table());
-  }
+  PlanUtil::PopulateOpAttribute(&plan_, plan_.mutable_job_id2op_attribute_ref_table());
   tc->Count("Graph name: " + name_ + " PopulateOpAttribute", 1);
   compile_tc->Count("Graph name: " + name_ + " PlanSync", 1);
   CHECK_OR_RETURN(false);
