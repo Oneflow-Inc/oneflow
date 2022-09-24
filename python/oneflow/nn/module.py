@@ -1105,13 +1105,13 @@ class Module(object):
     @overload
     def to(
         self: T,
-        device: Optional[Union[int, flow.device]] = ...,
-        dtype: Optional[Union[flow.dtype, str]] = ...,
+        device: Optional[Union[int, str, flow.device]] = ...,
+        dtype: Optional[flow.dtype] = ...,
     ) -> T:
         ...
 
     @overload
-    def to(self: T, dtype: Union[flow.dtype, str]) -> T:
+    def to(self: T, dtype: flow.dtype) -> T:
         ...
 
     @overload
@@ -1196,12 +1196,13 @@ class Module(object):
                 elif isinstance(arg, flow.dtype):
                     dtype = arg
                     device = None
-                elif isinstance(arg, (flow.device, str)):
+                elif isinstance(arg, (flow.device, str, int)):
                     dtype = None
                     device = arg
                 else:
                     raise ValueError(f"Unsupported parameters in module.to: {arg}")
             else:
+                device = kwargs.pop("device", None)
                 dtype = kwargs.pop("dtype", None)
                 tensor = kwargs.pop("tensor", None)
                 if tensor is not None:
