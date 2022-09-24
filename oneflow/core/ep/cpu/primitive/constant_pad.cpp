@@ -56,6 +56,11 @@ float16 GetValue<float16>(Scalar value) {
   return static_cast<float16>(GetValue<float>(value));
 }
 
+template<>
+bfloat16 GetValue<bfloat16>(Scalar value) {
+  return static_cast<bfloat16>(GetValue<float>(value));
+}
+
 template<size_t num_dims, typename IndexType, typename StorageType>
 void LaunchKernel(ConstantPadParams<num_dims, IndexType> params, StorageType packed_pad_val) {
   ConstantPadKernel<num_dims, IndexType, StorageType>(params, packed_pad_val);

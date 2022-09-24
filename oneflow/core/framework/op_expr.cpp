@@ -30,6 +30,11 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+Maybe<autocast::AutoCastMeta> OpExpr::GetOrCreateAutoCastMeta() const {
+  static auto autocast_meta = std::make_shared<autocast::AutoCastMeta>();
+  return autocast_meta;
+}
+
 BuiltinOpExpr::BuiltinOpExpr(const std::string& op_name,
                              const std::vector<std::string>& indexed_ibns,
                              const std::vector<std::string>& indexed_obns)
@@ -37,26 +42,38 @@ BuiltinOpExpr::BuiltinOpExpr(const std::string& op_name,
       input_arg_tuple_(new ArgTuple(indexed_ibns)),
       output_arg_tuple_(new ArgTuple(indexed_obns)) {}
 
-#define DEFINE_OPEXPR_OP_TYPE_NAME(_T, _op_type_name)              \
-  template<>                                                       \
-  const std::string& BuiltinOpExprImpl<_T>::op_type_name() const { \
-    static const std::string& name(_op_type_name);                 \
-    return name;                                                   \
+#define DEFINE_BUILTIN_OPEXPR_OP(T, op_type, disable_grad, support_non_contiguous)      \
+  template<>                                                                            \
+  const std::string& BuiltinOpExprImpl<T>::op_type_name() const {                       \
+    static const std::string& name(op_type);                                            \
+    return name;                                                                        \
+  }                                                                                     \
+  template<>                                                                            \
+  Maybe<bool> BuiltinOpExprImpl<T>::IsGradDisabled() const {                            \
+    return disable_grad;                                                                \
+  }                                                                                     \
+  template<>                                                                            \
+  Maybe<bool> BuiltinOpExprImpl<T>::SupportNonContiguous() const {                      \
+    return support_non_contiguous;                                                      \
+  }                                                                                     \
+  template<>                                                                            \
+  Maybe<autocast::AutoCastMeta> BuiltinOpExprImpl<T>::GetOrCreateAutoCastMeta() const { \
+    return OpExpr::GetOrCreateAutoCastMeta();                                           \
   }
 
-DEFINE_OPEXPR_OP_TYPE_NAME(FeedInputOpConf, "feed_input");
-DEFINE_OPEXPR_OP_TYPE_NAME(FeedVariableOpConf, "feed_variable");
-DEFINE_OPEXPR_OP_TYPE_NAME(FetchOutputOpConf, "fetch_output");
-DEFINE_OPEXPR_OP_TYPE_NAME(ImageDecoderRandomCropResizeOpConf, "image_gpu_decode");
-DEFINE_OPEXPR_OP_TYPE_NAME(VariableOpConf, "variable");
-DEFINE_OPEXPR_OP_TYPE_NAME(CastToLocalOpConf, "cast_to_local");
-DEFINE_OPEXPR_OP_TYPE_NAME(CastFromLocalOpConf, "cast_from_local");
-DEFINE_OPEXPR_OP_TYPE_NAME(DistributeSplitOpConf, "distribute_split");
-DEFINE_OPEXPR_OP_TYPE_NAME(DistributeCloneOpConf, "distribute_clone");
-DEFINE_OPEXPR_OP_TYPE_NAME(DistributeConcatOpConf, "distribute_concat");
-DEFINE_OPEXPR_OP_TYPE_NAME(DistributeAddOpConf, "distribute_add");
+DEFINE_BUILTIN_OPEXPR_OP(FeedInputOpConf, "feed_input", false, false);
+DEFINE_BUILTIN_OPEXPR_OP(FeedVariableOpConf, "feed_variable", false, false);
+DEFINE_BUILTIN_OPEXPR_OP(FetchOutputOpConf, "fetch_output", false, false);
+DEFINE_BUILTIN_OPEXPR_OP(ImageDecoderRandomCropResizeOpConf, "image_gpu_decode", true, false);
+DEFINE_BUILTIN_OPEXPR_OP(VariableOpConf, "variable", true, false);
+DEFINE_BUILTIN_OPEXPR_OP(CastToLocalOpConf, "cast_to_local", false, false);
+DEFINE_BUILTIN_OPEXPR_OP(CastFromLocalOpConf, "cast_from_local", false, false);
+DEFINE_BUILTIN_OPEXPR_OP(DistributeSplitOpConf, "distribute_split", false, false);
+DEFINE_BUILTIN_OPEXPR_OP(DistributeCloneOpConf, "distribute_clone", false, false);
+DEFINE_BUILTIN_OPEXPR_OP(DistributeConcatOpConf, "distribute_concat", false, false);
+DEFINE_BUILTIN_OPEXPR_OP(DistributeAddOpConf, "distribute_add", false, false);
 
-#undef DEFINE_OPEXPR_OP_TYPE_NAME
+#undef DEFINE_BUILTIN_OPEXPR_OP
 
 template<>
 const std::string& BuiltinOpExprImpl<UserOpConf>::op_type_name() const {
@@ -77,34 +94,6 @@ const std::string& CastFromGlobalOpExpr::op_type_name() const {
   static const std::string kOpTypeName = "cast_from_global";
   return kOpTypeName;
 }
-
-#define DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(_T, flag) \
-  template<>                                                                              \
-  Maybe<bool> BuiltinOpExprImpl<_T>::IsGradDisabled() const {                             \
-    return flag;                                                                          \
-  }                                                                                       \
-  template<>                                                                              \
-  Maybe<bool> BuiltinOpExprImpl<_T>::SupportNonContiguous() const {                       \
-    return false;                                                                         \
-  }
-
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FeedInputOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FeedVariableOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FetchOutputOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(VariableOpConf, true);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(
-    ImageDecoderRandomCropResizeOpConf, true);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(CastToLocalOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(CastFromLocalOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeSplitOpConf,
-                                                                        false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeCloneOpConf,
-                                                                        false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeConcatOpConf,
-                                                                        false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeAddOpConf, false);
-
-#undef DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE
 
 template<>
 Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
@@ -163,6 +152,15 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<UserOpConf>::GetOrCreateOpGradClosure
     JUST(op_grad_func_->Init(*this));
   }
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
+}
+
+template<>
+Maybe<autocast::AutoCastMeta> BuiltinOpExprImpl<UserOpConf>::GetOrCreateAutoCastMeta() const {
+  if (!autocast_meta_) {
+    autocast_meta_ =
+        autocast::MakeAutoCastMeta(proto().op_type_name(), this->indexed_input_pairs());
+  }
+  return autocast_meta_;
 }
 
 namespace {

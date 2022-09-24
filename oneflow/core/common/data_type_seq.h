@@ -53,16 +53,14 @@ limitations under the License.
 
 #define FLOAT16_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float16, DataType::kFloat16)
 
+#define BFLOAT16_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(bfloat16, DataType::kBFloat16)
+
 #if defined(WITH_CUDA)
 #define HALF_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)
 #if CUDA_VERSION >= 11000
-#define BFLOAT16_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16)
-#else
-#define BFLOAT16_DATA_TYPE_SEQ
-#endif
-#else
-#define BFLOAT16_DATA_TYPE_SEQ
-#endif
+#define NV_BFLOAT16_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16)
+#endif  // CUDA_VERSION >= 11000
+#endif  // defined(WITH_CUDA)
 
 #define IMAGE_DATA_TYPE_SEQ                       \
   OF_PP_MAKE_TUPLE_SEQ(uint8_t, DataType::kUInt8) \

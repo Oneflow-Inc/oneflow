@@ -80,4 +80,5 @@ from oneflow.nn.modules.activation import relu6
 from oneflow.nn.modules.upsampling import Upsample as upsample
 from oneflow._C import unfold
 from oneflow._C import fold
+from .functional_deform_conv import deform_conv2d
 from oneflow._C import kl_div_loss as kl_div
