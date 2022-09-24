@@ -316,16 +316,18 @@ class WhereScalarXFunctor {
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("bool_operand", "has_bool_operand", "float_operand",
                                        "has_float_operand", "int_operand", "has_int_operand");
+    auto input = y;
     if (scalar.IsBool()) {
       attrs.SetAllAttrs(scalar.As<bool>(), true, NullOpt, false, NullOpt, false);
     } else if (scalar.IsFloatingPoint()) {
+      input = JUST(functional::Cast(y, DType::Double(), /*pin_memory=*/false));
       attrs.SetAllAttrs(NullOpt, false, scalar.As<double>(), true, NullOpt, false);
     } else if (scalar.IsIntegral()) {
       attrs.SetAllAttrs(NullOpt, false, NullOpt, false, scalar.As<int64_t>(), true);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be float or int.";
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, y}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, input}, attrs);
   }
 
  private:
@@ -343,16 +345,18 @@ class WhereScalarYFunctor {
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("bool_operand", "has_bool_operand", "float_operand",
                                        "has_float_operand", "int_operand", "has_int_operand");
+    auto input = x;
     if (scalar.IsBool()) {
       attrs.SetAllAttrs(scalar.As<bool>(), true, NullOpt, false, NullOpt, false);
     } else if (scalar.IsFloatingPoint()) {
+      input = JUST(functional::Cast(x, DType::Double(), /*pin_memory=*/false));
       attrs.SetAllAttrs(NullOpt, false, scalar.As<double>(), true, NullOpt, false);
     } else if (scalar.IsIntegral()) {
       attrs.SetAllAttrs(NullOpt, false, NullOpt, false, scalar.As<int64_t>(), true);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be bool, float or int.";
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, input}, attrs);
   }
 
  private:
@@ -459,6 +463,11 @@ class BroadcastLikeFunctor {
     const Shape& x_shape = *x->shape();
     const Shape& like_shape = *like->shape();
     if (x_shape == like_shape) { return x; }
+    CHECK_GE_OR_RETURN(like_shape.NumAxes(), x_shape.NumAxes())
+        << Error::RuntimeError() << "The number of sizes provided (" << like_shape.NumAxes()
+        << ") must be greater or equal to the number of dimensions in the tensor ("
+        << x_shape.NumAxes() << ")"
+        << ". Target sizes: " << like_shape.ToString() << ". Tensor sizes: " << x_shape.ToString();
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("broadcast_axes");
     if (broadcast_axes.empty()) {
       int64_t like_ndim = like_shape.NumAxes();

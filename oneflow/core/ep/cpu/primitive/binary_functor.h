@@ -61,6 +61,15 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFmod, float16, float16> {
 };
 
 template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFmod, bfloat16, bfloat16> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bfloat16 operator()(bfloat16 src0, bfloat16 src1) const {
+    return std::fmod(src0, src1);
+  }
+};
+
+template<>
 struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorDiv, float, float> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
@@ -82,6 +91,15 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorDiv, float16, float16> {
 
   OF_DEVICE_FUNC float16 operator()(float16 src0, float16 src1) const {
     return static_cast<float16>(std::floor(static_cast<float>(src0) / static_cast<float>(src1)));
+  }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorDiv, bfloat16, bfloat16> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bfloat16 operator()(bfloat16 src0, bfloat16 src1) const {
+    return std::floor(src0 / src1);
   }
 };
 
@@ -111,11 +129,20 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTruncDiv, float16, float16> {
 };
 
 template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTruncDiv, bfloat16, bfloat16> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bfloat16 operator()(bfloat16 src0, bfloat16 src1) const {
+    return std::trunc(src0 / src1);
+  }
+};
+
+template<>
 struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorMod, float, float> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC float operator()(float src0, float src1) const {
-    float trunc_mod = fmod(src0, src1);
+    float trunc_mod = std::fmod(src0, src1);
     return (trunc_mod != static_cast<float>(0))
                    && ((src1 < static_cast<float>(0)) != (trunc_mod < static_cast<float>(0)))
                ? trunc_mod + src1
@@ -128,7 +155,7 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorMod, double, double> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC double operator()(double src0, double src1) const {
-    double trunc_mod = fmod(src0, src1);
+    double trunc_mod = std::fmod(src0, src1);
     return (trunc_mod != static_cast<double>(0))
                    && ((src1 < static_cast<double>(0)) != (trunc_mod < static_cast<double>(0)))
                ? trunc_mod + src1
@@ -144,6 +171,80 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorMod, float16, float16> {
   OF_DEVICE_FUNC float16 operator()(float16 src0, float16 src1) const {
     return static_cast<float16>(float_functor(static_cast<float>(src0), static_cast<float>(src1)));
   }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorMod, bfloat16, bfloat16> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {}
+  BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorMod, float, float> float_functor;
+
+  OF_DEVICE_FUNC bfloat16 operator()(bfloat16 src0, bfloat16 src1) const {
+    return static_cast<bfloat16>(float_functor(static_cast<float>(src0), static_cast<float>(src1)));
+  }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarBasePowerGrad, float16, float16> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : scalar_operand(attr0.Value<float>()) {}
+
+  OF_DEVICE_FUNC float16 operator()(float16 src0, float16 src1) const {
+    return static_cast<float16>(
+        scalar_operand
+        * (std::pow(static_cast<float>(src0), scalar_operand - static_cast<float>(1)))
+        * static_cast<float>(src1));
+  }
+  float scalar_operand;
+};
+
+template<typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarExpPowerGrad, int, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {}
+  BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarExpPowerGrad, float, float> float_functor;
+
+  OF_DEVICE_FUNC Dst operator()(int src0, int src1) const {
+    return static_cast<Dst>(float_functor(static_cast<float>(src0), static_cast<float>(src1)));
+  }
+};
+
+template<typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarExpPowerGrad, int8_t, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {}
+  BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarExpPowerGrad, float, float> float_functor;
+
+  OF_DEVICE_FUNC Dst operator()(int8_t src0, int8_t src1) const {
+    return static_cast<Dst>(float_functor(static_cast<float>(src0), static_cast<float>(src1)));
+  }
+};
+
+template<typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarExpPowerGrad, uint8_t, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {}
+  BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarExpPowerGrad, float, float> float_functor;
+
+  OF_DEVICE_FUNC Dst operator()(uint8_t src0, uint8_t src1) const {
+    return static_cast<Dst>(float_functor(static_cast<float>(src0), static_cast<float>(src1)));
+  }
+};
+
+template<typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarExpPowerGrad, int64_t, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {}
+  BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarExpPowerGrad, float, float> float_functor;
+
+  OF_DEVICE_FUNC Dst operator()(int src0, int src1) const {
+    return static_cast<Dst>(float_functor(static_cast<float>(src0), static_cast<float>(src1)));
+  }
+};
+
+template<typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarExpPowerGrad, float16, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : scalar_operand(attr0.Value<float>()) {}
+
+  OF_DEVICE_FUNC Dst operator()(float16 src0, float16 src1) const {
+    return static_cast<Dst>(std::pow(scalar_operand, static_cast<float>(src0))
+                            * std::log(scalar_operand) * static_cast<float>(src1));
+  }
+  float scalar_operand;
 };
 
 template<typename Src, typename Dst>
@@ -235,11 +336,15 @@ SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFmod, bool);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFloorDiv, bool);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kTruncDiv, bool);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFloorMod, bool);
+SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kScalarBasePowerGrad, bool);
+SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kScalarExpPowerGrad, bool);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kPow, char);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFmod, char);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFloorDiv, char);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kTruncDiv, char);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFloorMod, char);
+SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kScalarBasePowerGrad, char);
+SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kScalarExpPowerGrad, char);
 
 }  // namespace broadcast_elementwise_binary
 }  // namespace primitive

@@ -13,15 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/attr_map.h"
+
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
 
-// FloorDiv derivatives function isn't exists. (author: zhengzekang)
-struct ScalarFloorDivCaptureState : public AutoGradCaptureState {};
+struct ScalarFloorDivCaptureState : public AutoGradCaptureState {
+  bool requires_grad;
+};
 
 class ScalarFloorDiv : public OpExprGradFunction<ScalarFloorDivCaptureState> {
  public:
@@ -29,17 +30,18 @@ class ScalarFloorDiv : public OpExprGradFunction<ScalarFloorDivCaptureState> {
 
   Maybe<void> Capture(ScalarFloorDivCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);  // NOLINT(maybe-need-error-msg)
+    ctx->requires_grad = inputs.at(0)->requires_grad();
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const ScalarFloorDivCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    UNIMPLEMENTED_THEN_RETURN() << "RuntimeError: derivative for floor_divide is not implemented";
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
+    in_grads->resize(1);
+    if (ctx->requires_grad) { in_grads->at(0) = JUST(functional::ZerosLike(out_grads.at(0))); }
     return Maybe<void>::Ok();
   }
-
- private:
-  AttrMap base_attrs_;
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("scalar_floordiv", ScalarFloorDiv);

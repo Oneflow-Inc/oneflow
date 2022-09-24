@@ -186,7 +186,7 @@ class ScalarSub2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& input,
                            const Scalar& alpha) const {
-    return ScalarAdd(scalar, JUST(ScalarMul(input, Scalar(-1), false)), alpha);
+    return ScalarAdd(scalar, input, Scalar(-1) * alpha);
   }
 };
 
@@ -221,7 +221,7 @@ class ScalarDivFunctor : public ScalarMathBaseFunctor {
 class ScalarDiv2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
-    return functional::ScalarMul(JUST(functional::ReciprocalNoNan(x)), scalar, /*inplace=*/false);
+    return functional::ScalarMul(JUST(functional::Reciprocal(x)), scalar, /*inplace=*/false);
   }
 };
 
