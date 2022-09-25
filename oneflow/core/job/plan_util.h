@@ -47,7 +47,7 @@ struct PlanUtil {
   // NOTE(chengcheng): recovery op_attr
   static void PopulateOpAttribute(
       Plan* plan,
-      const PbMap<int64_t, ::oneflow::OpAttributeRefTable>& job_id2op_attribute_ref_table);
+      PbMap<int64_t, ::oneflow::OpAttributeRefTable>* job_id2op_attribute_ref_table);
   static StreamId GetStreamId(const TaskProto& task);
   static int64_t GetDeviceIndex(const TaskProto& task);
 };

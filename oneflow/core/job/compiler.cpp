@@ -64,6 +64,9 @@ void PlanCompiler::Compile(Job* job, Plan* plan, std::shared_ptr<TaskGraph>& tas
   // TODO(levi): we can rewrite this part of code in visitor pattern.
   task_gph =
       std::make_shared<TaskGraph>(op_graph, job->job_conf().enable_straighten_algorithm_in_task_graph());
+  VLOG(1) << "[elapsed] op graph node num " << op_graph->node_num() << ", edge num " << op_graph->edge_num();
+  VLOG(1) << "[elapsed] task graph node num " << task_gph->node_num() << ", edge num " << task_gph->edge_num();
+  task_gph->LogStat();
   tc->Count("Graph name: " + job_name + " NewTaskGraph", 1);
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));

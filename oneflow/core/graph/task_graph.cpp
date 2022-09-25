@@ -14,9 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_graph.h"
+#include <cstdint>
 #include <memory>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
+#include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/variable_op.h"
@@ -835,6 +837,22 @@ void TaskGraph::ConnectWithLbi(TaskNode* src_node, TaskNode* dst_node, const Log
 void TaskGraph::BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi) {
   TaskNode* proxy_node = GetProxyNode(src_node, lbi, dst_node->MemZoneId121());
   ConnectWithLbi(proxy_node, dst_node, lbi);
+}
+
+void TaskGraph::LogStat() {
+  HashMap<TaskType, int64_t> node_type2cnt;
+  ForEachNode([&node_type2cnt](TaskNode* task_node) {
+    auto task_type = task_node->GetTaskType();
+    auto find_type_iter = node_type2cnt.find(task_type);
+    if (find_type_iter != node_type2cnt.end()) {
+      node_type2cnt[task_type] += 1;
+    } else {
+      node_type2cnt[task_type] = 1;
+    }
+  });
+  for (auto & pair : node_type2cnt) {
+    VLOG(1) << " task type " << TaskType_Name(pair.first) << " count " << pair.second;
+  }
 }
 
 }  // namespace oneflow
