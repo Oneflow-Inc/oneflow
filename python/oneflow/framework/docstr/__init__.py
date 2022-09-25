@@ -80,3 +80,4 @@ from .distance import *
 from .addcdiv import *
 from .hann_window import *
 from .convolution import *
+from .linalg import *
