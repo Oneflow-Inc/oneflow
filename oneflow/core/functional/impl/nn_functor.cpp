@@ -14,34 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/common/error.h"
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/optional.h"
-#include "oneflow/core/common/scalar.h"
-#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/tensor_util.h"
-#include "oneflow/core/framework/op_interpreter.h"
-#include "oneflow/core/framework/random_generator.h"
-#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
-#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
 #include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/user/kernels/distributions/common.h"
-#include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
 namespace one {
@@ -762,6 +746,44 @@ class LayerNormAffineFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class GroupNormFunctor {
+ public:
+  GroupNormFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("group_norm")
+                         .Input("x")
+                         .Output("y")
+                         .Output("mean")
+                         .Output("inv_variance")
+                         .Attr("affine", false)
+                         .Build());
+    affine_op_ = CHECK_JUST(one::OpBuilder("group_norm")
+                                .Input("x")
+                                .Input("gamma")
+                                .Input("beta")
+                                .Output("y")
+                                .Output("mean")
+                                .Output("inv_variance")
+                                .Attr("affine", true)
+                                .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<one::Tensor>& gamma, const Optional<one::Tensor>& beta,
+                           const bool affine, const int32_t num_groups,
+                           const double& epsilon) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_groups", "epsilon");
+    attrs.SetAllAttrs(num_groups, epsilon);
+    if (affine) {
+      return OpInterpUtil::Dispatch<Tensor>(*affine_op_, {x, JUST(gamma), JUST(beta)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> affine_op_;
+};
+
 class PixelShuffleFunctor {
  public:
   PixelShuffleFunctor() {}
@@ -925,6 +947,44 @@ class AdaptiveAvgPool3DFunctor : public AdaptivePoolNDFunctor {
   }
 };
 
+class AdaptiveMaxPoolBaseFunctor {
+ public:
+  AdaptiveMaxPoolBaseFunctor() = default;
+  virtual ~AdaptiveMaxPoolBaseFunctor() = default;
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
+                                const std::vector<int64_t>& output_size) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("output_size");
+    attrs.SetAllAttrs(output_size);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class AdaptiveMaxPool1DFunctor : public AdaptiveMaxPoolBaseFunctor {
+ public:
+  AdaptiveMaxPool1DFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("adaptive_max_pool1d").Input("x").Output("y").Output("index").Build());
+  }
+};
+
+class AdaptiveMaxPool2DFunctor : public AdaptiveMaxPoolBaseFunctor {
+ public:
+  AdaptiveMaxPool2DFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("adaptive_max_pool2d").Input("x").Output("y").Output("index").Build());
+  }
+};
+
+class AdaptiveMaxPool3DFunctor : public AdaptiveMaxPoolBaseFunctor {
+ public:
+  AdaptiveMaxPool3DFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("adaptive_max_pool3d").Input("x").Output("y").Output("index").Build());
+  }
+};
 class LossFunctorBase {
  public:
   Maybe<Tensor> apply_reduction(const Maybe<Tensor>& x, const std::string& reduction) const {
@@ -995,7 +1055,14 @@ class KLDivLossFunctor : public LossFunctorBase {
                            const std::string& reduction) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("log_target");
     attrs.SetAllAttrs(log_target);
-    return apply_reduction(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs), reduction);
+    if (reduction == "batchmean" && input->ndim() != 0) {
+      const auto& result = JUST(
+          apply_reduction(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs), "sum"));
+      return ScalarDiv(result, input->shape()->At(0));
+    } else {
+      return apply_reduction(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs),
+                             reduction);
+    }
   }
 
  private:
@@ -1251,6 +1318,14 @@ class CrossEntropyFunctor {
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight, const int64_t& ignore_index,
                            const std::string& reduction, const double& label_smoothing) const {
+    if (input->shape() == target->shape()) {
+      CHECK_OR_RETURN(target->dtype()->is_floating_point())
+          << "Expected floating point type for target with class probabilities, got "
+          << target->dtype()->name();
+      CHECK_LT_OR_RETURN(ignore_index, 0)
+          << "ignore_index is not supported for floating point targe";
+      return CrossEntropyProb(input, target, weight, reduction, label_smoothing);
+    }
     if (label_smoothing > 0.0)
       return CrossEntropyLabelSmoothing(input, target, weight, ignore_index, reduction,
                                         label_smoothing);
@@ -1393,6 +1468,59 @@ class CrossEntropyLabelSmoothingFunctor {
   std::shared_ptr<OpExpr> op_log_softmax_;
   std::shared_ptr<OpExpr> op_nll_;
   std::shared_ptr<OpExpr> op_nll_weight_;
+};
+
+class CrossEntropyProbFunctor : public LossFunctorBase {
+ public:
+  CrossEntropyProbFunctor() {
+    op_log_softmax_ = CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const Optional<one::Tensor>& weight, const std::string& reduction,
+                           const double& label_smoothing) const {
+    const auto& input_shape = input->shape();
+    const auto& target_shape = target->shape();
+
+    std::vector<int> input_perm(input_shape->NumAxes(), 0);
+    input_perm[input_perm.size() - 1] = 1;
+    for (size_t i = 1; i < input_perm.size() - 1; ++i) { input_perm[i] = i + 1; }
+
+    const auto input_ = JUST(sequence_function(functional::Transpose)
+                                 .then(std::bind(functional::Reshape, std::placeholders::_1,
+                                                 Shape({-1, input_shape->At(1)})))
+                                 .then([this](const std::shared_ptr<one::Tensor>& x) {
+                                   return OpInterpUtil::Dispatch<Tensor>(*op_log_softmax_, {x});
+                                 })
+                                 .call(input, input_perm));
+    std::shared_ptr<Tensor> target_ =
+        JUST(sequence_function(functional::Transpose)
+                 .then(std::bind(functional::Reshape, std::placeholders::_1,
+                                 Shape({-1, target_shape->At(1)})))
+                 .call(target, input_perm));
+    if (label_smoothing > 0) {
+      int32_t num_classes = input_->shape()->At(1);
+      target_ =
+          JUST(ScalarAdd(JUST(ScalarMul(target_, static_cast<double>(1) - label_smoothing, false)),
+                         label_smoothing / static_cast<double>(num_classes), 1, false));
+    }
+
+    auto nll_result = JUST(Negative(JUST(Mul(input_, target_))));
+    if (weight) {
+      const auto& weight_expand = JUST(Unsqueeze(JUST(weight), 0));
+      nll_result = JUST(Mul(nll_result, weight_expand));
+    }
+    DimVector target_reshape_(input->ndim() - 1);
+    for (size_t i = 0; i < target_reshape_.size(); ++i) {
+      target_reshape_[i] = input_shape->At(input_perm[i]);
+    }
+    nll_result = JUST(ReduceSum(nll_result, {-1}, false));
+    nll_result = JUST(Reshape(nll_result, Shape(target_reshape_)));
+    return apply_reduction(nll_result, reduction);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_log_softmax_;
 };
 
 class SparseCrossEntropyFunctor {
@@ -3472,13 +3600,43 @@ class OneEmbeddingEmbeddingGradientShuffleFunctor {
 class OneEmbeddingLookupFunctor {
  public:
   OneEmbeddingLookupFunctor() {
-    op_has_table_ids_ = CHECK_JUST(one::OpBuilder("embedding_lookup_placeholder")
+    op_ = CHECK_JUST(one::OpBuilder("embedding_lookup")
+                         .Input("num_unique_ids")
+                         .Input("unique_ids")
+                         .Input("table_ids")
+                         .Output("unique_values")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& num_unique_ids,
+                           const std::shared_ptr<one::Tensor>& unique_ids,
+                           const std::shared_ptr<one::Tensor>& table_ids,
+                           const Symbol<DType>& dtype, const Symbol<DType>& embedding_dtype,
+                           const int64_t line_size, const int64_t embedding_size,
+                           const std::string& embedding_name, const std::string& embedding_tables,
+                           const std::string& state_initializer, const int64_t seed) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "embedding_dtype", "line_size",
+                                                 "embedding_size", "embedding_name",
+                                                 "embedding_tables", "state_initializer", "seed");
+    attrs.SetAllAttrs(dtype->data_type(), embedding_dtype->data_type(), line_size, embedding_size,
+                      embedding_name, embedding_tables, state_initializer, seed);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {num_unique_ids, unique_ids, table_ids}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class OneEmbeddingFusedLookupFunctor {
+ public:
+  OneEmbeddingFusedLookupFunctor() {
+    op_has_table_ids_ = CHECK_JUST(one::OpBuilder("one_embedding_fused_lookup")
                                        .Input("shadow")
                                        .Input("ids")
                                        .Input("table_ids")
                                        .Output("embeddings")
                                        .Build());
-    op_no_table_ids_ = CHECK_JUST(one::OpBuilder("embedding_lookup_placeholder")
+    op_no_table_ids_ = CHECK_JUST(one::OpBuilder("one_embedding_fused_lookup")
                                       .Input("shadow")
                                       .Input("ids")
                                       .Output("embeddings")
@@ -3488,15 +3646,42 @@ class OneEmbeddingLookupFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& shadow,
                            const std::shared_ptr<one::Tensor>& ids,
                            const Optional<one::Tensor>& table_ids, const Symbol<DType>& dtype,
-                           const int64_t embedding_size, const int32_t num_tables,
-                           const std::string& embedding_tables,
-                           const std::string& key_value_store_options) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "embedding_size", "num_tables",
-                                                 "embedding_tables", "key_value_store_options");
-    attrs.SetAllAttrs(dtype->data_type(), embedding_size, num_tables, embedding_tables,
-                      key_value_store_options);
+                           const std::string& embedding_name, const int64_t line_size,
+                           const int64_t embedding_size, const bool is_full_cache,
+                           const int32_t num_tables, const std::string& embedding_tables,
+                           const Optional<int64_t>& padding_idx, const int64_t seed) const {
+    int64_t padding_idx_val = -1;
+    bool has_padding_idx = false;
+    if (padding_idx.has_value()) {
+      padding_idx_val = JUST(padding_idx);
+      has_padding_idx = true;
+    }
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
+        "dtype", "embedding_name", "line_size", "embedding_size", "is_full_cache", "num_tables",
+        "embedding_tables", "seed", "padding_idx", "has_padding_idx");
+    attrs.SetAllAttrs(dtype->data_type(), embedding_name, line_size, embedding_size, is_full_cache,
+                      num_tables, embedding_tables, seed, padding_idx_val, has_padding_idx);
     if (table_ids) {
-      return OpInterpUtil::Dispatch<Tensor>(*op_has_table_ids_, {shadow, ids, JUST(table_ids)},
+      const auto& table_ids_shape = *(JUST(table_ids)->shape());
+      const auto& ids_shape = *(ids->shape());
+      auto broadcast_table_ids = JUST(table_ids);
+      if (table_ids_shape != ids_shape) {
+        CHECK_LE_OR_RETURN(table_ids_shape.NumAxes(), ids_shape.NumAxes())
+            << "table_ids num_axes should be less equal to ids num_axes, but got table_ids "
+               "num_axes "
+            << table_ids_shape.NumAxes() << " and ids num_axes " << ids_shape.NumAxes();
+        const int64_t left_extend_dims = ids_shape.NumAxes() - table_ids_shape.NumAxes();
+        for (int64_t i = 0; i < table_ids_shape.NumAxes(); i++) {
+          CHECK_EQ_OR_RETURN(table_ids_shape.at(i), ids_shape.at(left_extend_dims + i))
+              << "when table_ids's shape not equals ids shape, table_ids must be able to be "
+                 "broadcast to ids_shape "
+                 "but got table_ids_shape: "
+              << table_ids_shape.DebugStr() << ", ids_shape: " << ids_shape.DebugStr();
+        }
+        broadcast_table_ids =
+            JUST(functional::BroadcastLike(JUST(table_ids), ids, std::vector<int32_t>{}));
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*op_has_table_ids_, {shadow, ids, broadcast_table_ids},
                                             attrs);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_no_table_ids_, {shadow, ids}, attrs);
@@ -3508,10 +3693,10 @@ class OneEmbeddingLookupFunctor {
   std::shared_ptr<OpExpr> op_no_table_ids_;
 };
 
-class OneEmbeddingLookupGradFunctor {
+class OneEmbeddingFusedLookupGradFunctor {
  public:
-  OneEmbeddingLookupGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("embedding_update_placeholder")
+  OneEmbeddingFusedLookupGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("one_embedding_fused_lookup_grad")
                          .Input("ids")
                          .Input("embedding_grad")
                          .Build());
@@ -3519,10 +3704,36 @@ class OneEmbeddingLookupGradFunctor {
 
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ids,
                          const std::shared_ptr<one::Tensor>& embedding_grad,
-                         const std::string& key_value_store_options) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("key_value_store_options");
-    attrs.SetAllAttrs(key_value_store_options);
+                         const std::string& embedding_name, const int64_t line_size,
+                         const int64_t embedding_size) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("embedding_name", "line_size", "embedding_size");
+    attrs.SetAllAttrs(embedding_name, line_size, embedding_size);
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ids, embedding_grad}, attrs));
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class OneEmbeddingEmbeddingPutFunctor {
+ public:
+  OneEmbeddingEmbeddingPutFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("embedding_put")
+                         .Input("num_unique_ids")
+                         .Input("unique_ids")
+                         .Input("unique_embeddings")
+                         .Build());
+  }
+
+  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& num_unique_ids,
+                         const std::shared_ptr<one::Tensor>& unique_ids,
+                         const std::shared_ptr<one::Tensor>& unique_embeddings,
+                         const std::string& embedding_name, const int64_t line_size) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("embedding_name", "line_size");
+    attrs.SetAllAttrs(embedding_name, line_size);
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {num_unique_ids, unique_ids, unique_embeddings},
+                                             attrs));
     return Maybe<void>::Ok();
   }
 
@@ -3551,10 +3762,10 @@ class OneEmbeddingUniqueKeyValuePairFunctor {
   }
 
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& keys,
-                                const Optional<one::Tensor>& values,
-                                const int32_t num_tables) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_tables");
-    attrs.SetAllAttrs(num_tables);
+                                const Optional<one::Tensor>& values, const int32_t num_tables,
+                                const std::string& embedding_name) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_tables", "embedding_name");
+    attrs.SetAllAttrs(num_tables, embedding_name);
     if (values) {
       return OpInterpUtil::Dispatch<TensorTuple>(*op_has_input_value_, {keys, JUST(values)}, attrs);
     } else {
@@ -3570,8 +3781,24 @@ class OneEmbeddingUniqueKeyValuePairFunctor {
 class OneEmbeddingSgdUpdateFunctor {
  public:
   OneEmbeddingSgdUpdateFunctor() {
+    // This functor is only used in one_embedding eager mode with lr passed by attr and no optional
+    // input, we also define functor with all optional input just for unittest. when the optional
+    // input learning_rate tensor has passed in, we think all optional input are not None and check
+    // them.
+    sgd_no_optional_input_op_ = CHECK_JUST(one::OpBuilder("one_embedding_sgd_update")
+                                               .Input("num_unique_ids")
+                                               .Input("unique_embeddings")
+                                               .Input("embedding_grad")
+                                               .Output("updated_unique_embeddings")
+                                               .Build());
+    momentum_no_optional_input_op_ = CHECK_JUST(one::OpBuilder("one_embedding_momentum_update")
+                                                    .Input("num_unique_ids")
+                                                    .Input("unique_embeddings")
+                                                    .Input("embedding_grad")
+                                                    .Output("updated_unique_embeddings")
+                                                    .Build());
     // This functor is just for unittest
-    sgd_op_ = CHECK_JUST(one::OpBuilder("sgd_embedding_update")
+    sgd_op_ = CHECK_JUST(one::OpBuilder("one_embedding_sgd_update")
                              .Input("num_unique_ids")
                              .Input("unique_embeddings")
                              .Input("embedding_grad")
@@ -3580,7 +3807,7 @@ class OneEmbeddingSgdUpdateFunctor {
                              .Input("skip_if")
                              .Output("updated_unique_embeddings")
                              .Build());
-    momentum_op_ = CHECK_JUST(one::OpBuilder("momentum_embedding_update")
+    momentum_op_ = CHECK_JUST(one::OpBuilder("one_embedding_momentum_update")
                                   .Input("num_unique_ids")
                                   .Input("unique_embeddings")
                                   .Input("embedding_grad")
@@ -3594,38 +3821,76 @@ class OneEmbeddingSgdUpdateFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& num_unique_ids,
                            const std::shared_ptr<one::Tensor>& unique_embeddings,
                            const std::shared_ptr<one::Tensor>& embedding_grad,
-                           const std::shared_ptr<one::Tensor>& learning_rate,
-                           const std::shared_ptr<one::Tensor>& down_scale_by_tensor,
-                           const std::shared_ptr<one::Tensor>& skip_if, const double scale,
-                           const float weight_decay, const float momentum, const int64_t line_size,
-                           const int64_t embedding_size) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "line_size",
-                                                 "embedding_size", "beta");
+                           const Optional<one::Tensor>& learning_rate,
+                           const Optional<one::Tensor>& down_scale_by_tensor,
+                           const Optional<one::Tensor>& skip_if, const float learning_rate_val,
+                           const double scale, const float weight_decay, const float momentum,
+                           const int64_t line_size, const int64_t embedding_size,
+                           const std::string& embedding_name) const {
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("learning_rate_val", "scale", "weight_decay", "line_size",
+                                       "embedding_size", "embedding_name", "beta");
     if (momentum == 0) {
-      attrs.SetAllAttrs(scale, weight_decay, line_size, embedding_size, NullOpt);
-      return OpInterpUtil::Dispatch<Tensor>(*sgd_op_,
-                                            {num_unique_ids, unique_embeddings, embedding_grad,
-                                             learning_rate, down_scale_by_tensor, skip_if},
-                                            attrs);
+      attrs.SetAllAttrs(learning_rate_val, scale, weight_decay, line_size, embedding_size,
+                        embedding_name, NullOpt);
+
+      if (learning_rate) {
+        CHECK(down_scale_by_tensor);
+        CHECK(skip_if);
+        return OpInterpUtil::Dispatch<Tensor>(
+            *sgd_op_,
+            {num_unique_ids, unique_embeddings, embedding_grad, JUST(learning_rate),
+             JUST(down_scale_by_tensor), JUST(skip_if)},
+            attrs);
+      } else {
+        CHECK(!down_scale_by_tensor);
+        CHECK(!skip_if);
+        return OpInterpUtil::Dispatch<Tensor>(
+            *sgd_no_optional_input_op_, {num_unique_ids, unique_embeddings, embedding_grad}, attrs);
+      }
     } else {
-      attrs.SetAllAttrs(scale, weight_decay, line_size, embedding_size, momentum);
-      return OpInterpUtil::Dispatch<Tensor>(*momentum_op_,
-                                            {num_unique_ids, unique_embeddings, embedding_grad,
-                                             learning_rate, down_scale_by_tensor, skip_if},
-                                            attrs);
+      attrs.SetAllAttrs(learning_rate_val, scale, weight_decay, line_size, embedding_size,
+                        embedding_name, momentum);
+      if (learning_rate) {
+        CHECK(down_scale_by_tensor);
+        CHECK(skip_if);
+        return OpInterpUtil::Dispatch<Tensor>(
+            *momentum_op_,
+            {num_unique_ids, unique_embeddings, embedding_grad, JUST(learning_rate),
+             JUST(down_scale_by_tensor), JUST(skip_if)},
+            attrs);
+      } else {
+        CHECK(!down_scale_by_tensor);
+        CHECK(!skip_if);
+        return OpInterpUtil::Dispatch<Tensor>(*momentum_no_optional_input_op_,
+                                              {num_unique_ids, unique_embeddings, embedding_grad},
+                                              attrs);
+      }
     }
   }
 
  private:
+  std::shared_ptr<OpExpr> sgd_no_optional_input_op_;
   std::shared_ptr<OpExpr> sgd_op_;
+  std::shared_ptr<OpExpr> momentum_no_optional_input_op_;
   std::shared_ptr<OpExpr> momentum_op_;
 };
 
 class OneEmbeddingAdamUpdateFunctor {
  public:
   OneEmbeddingAdamUpdateFunctor() {
+    // This functor is only used in one_embedding eager mode with lr passed by attr and no optional
+    // input, we also define functor with all optional input just for unittest. when the optional
+    // input learning_rate tensor has passed in, we think all optional input are not None and check
+    // them.
+    no_optional_input_op_ = CHECK_JUST(one::OpBuilder("one_embedding_adam_update")
+                                           .Input("num_unique_ids")
+                                           .Input("unique_embeddings")
+                                           .Input("embedding_grad")
+                                           .Output("updated_unique_embeddings")
+                                           .Build());
     // This functor is just for unittest
-    no_bias_correction_op_ = CHECK_JUST(one::OpBuilder("adam_embedding_update")
+    no_bias_correction_op_ = CHECK_JUST(one::OpBuilder("one_embedding_adam_update")
                                             .Input("num_unique_ids")
                                             .Input("unique_embeddings")
                                             .Input("embedding_grad")
@@ -3634,7 +3899,7 @@ class OneEmbeddingAdamUpdateFunctor {
                                             .Input("skip_if")
                                             .Output("updated_unique_embeddings")
                                             .Build());
-    do_bias_correction_op_ = CHECK_JUST(one::OpBuilder("adam_embedding_update")
+    do_bias_correction_op_ = CHECK_JUST(one::OpBuilder("one_embedding_adam_update")
                                             .Input("num_unique_ids")
                                             .Input("unique_embeddings")
                                             .Input("embedding_grad")
@@ -3647,48 +3912,74 @@ class OneEmbeddingAdamUpdateFunctor {
                                             .Build());
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& num_unique_ids,
-                           const std::shared_ptr<one::Tensor>& unique_embeddings,
-                           const std::shared_ptr<one::Tensor>& embedding_grad,
-                           const std::shared_ptr<one::Tensor>& learning_rate,
-                           const std::shared_ptr<one::Tensor>& down_scale_by_tensor,
-                           const std::shared_ptr<one::Tensor>& skip_if,
-                           const Optional<one::Tensor>& bias_correction1,
-                           const Optional<one::Tensor>& bias_correction2, const double scale,
-                           const float weight_decay, const float beta1, const float beta2,
-                           const float epsilon, const bool do_bias_correction,
-                           const int64_t line_size, const int64_t embedding_size) const {
-    auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "beta1", "beta2", "epsilon",
-                                       "do_bias_correction", "line_size", "embedding_size");
-    attrs.SetAllAttrs(scale, weight_decay, beta1, beta2, epsilon, do_bias_correction, line_size,
-                      embedding_size);
-    if (do_bias_correction) {
-      CHECK(bias_correction1);
-      CHECK(bias_correction2);
-      return OpInterpUtil::Dispatch<Tensor>(
-          *do_bias_correction_op_,
-          {num_unique_ids, unique_embeddings, embedding_grad, learning_rate, down_scale_by_tensor,
-           skip_if, JUST(bias_correction1), JUST(bias_correction2)},
-          attrs);
+  Maybe<Tensor> operator()(
+      const std::shared_ptr<one::Tensor>& num_unique_ids,
+      const std::shared_ptr<one::Tensor>& unique_embeddings,
+      const std::shared_ptr<one::Tensor>& embedding_grad,
+      const Optional<one::Tensor>& learning_rate, const Optional<one::Tensor>& down_scale_by_tensor,
+      const Optional<one::Tensor>& skip_if, const Optional<one::Tensor>& bias_correction1,
+      const Optional<one::Tensor>& bias_correction2, const float learning_rate_val,
+      const double scale, const float weight_decay, const float beta1, const float beta2,
+      const float& bias_correction1_val, const float& bias_correction2_val, const float epsilon,
+      const bool do_bias_correction, const int64_t line_size, const int64_t embedding_size,
+      const std::string& embedding_name) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
+        "learning_rate_val", "scale", "weight_decay", "beta1", "beta2", "epsilon",
+        "bias_correction1_val", "bias_correction2_val", "do_bias_correction", "line_size",
+        "embedding_size", "embedding_name");
+    attrs.SetAllAttrs(learning_rate_val, scale, weight_decay, beta1, beta2, epsilon,
+                      bias_correction1_val, bias_correction2_val, do_bias_correction, line_size,
+                      embedding_size, embedding_name);
+    if (learning_rate) {
+      CHECK(down_scale_by_tensor);
+      CHECK(skip_if);
+      if (do_bias_correction) {
+        CHECK(bias_correction1);
+        CHECK(bias_correction2);
+        return OpInterpUtil::Dispatch<Tensor>(
+            *do_bias_correction_op_,
+            {num_unique_ids, unique_embeddings, embedding_grad, JUST(learning_rate),
+             JUST(down_scale_by_tensor), JUST(skip_if), JUST(bias_correction1),
+             JUST(bias_correction2)},
+            attrs);
+      } else {
+        return OpInterpUtil::Dispatch<Tensor>(
+            *no_bias_correction_op_,
+            {num_unique_ids, unique_embeddings, embedding_grad, JUST(learning_rate),
+             JUST(down_scale_by_tensor), JUST(skip_if)},
+            attrs);
+      }
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*no_bias_correction_op_,
-                                            {num_unique_ids, unique_embeddings, embedding_grad,
-                                             learning_rate, down_scale_by_tensor, skip_if},
-                                            attrs);
+      CHECK(!down_scale_by_tensor);
+      CHECK(!skip_if);
+      CHECK(!bias_correction1);
+      CHECK(!bias_correction2);
+      return OpInterpUtil::Dispatch<Tensor>(
+          *no_optional_input_op_, {num_unique_ids, unique_embeddings, embedding_grad}, attrs);
     }
   }
 
  private:
   std::shared_ptr<OpExpr> no_bias_correction_op_;
   std::shared_ptr<OpExpr> do_bias_correction_op_;
+  std::shared_ptr<OpExpr> no_optional_input_op_;
 };
 
 class OneEmbeddingAdagradUpdateFunctor {
  public:
   OneEmbeddingAdagradUpdateFunctor() {
+    // This functor is only used in one_embedding eager mode with lr passed by attr and no optional
+    // input, we also define functor with all optional input just for unittest. when the optional
+    // input learning_rate tensor has passed in, we think all optional input are not None and check
+    // them.
+    op_no_optional_input_ = CHECK_JUST(one::OpBuilder("one_embedding_adagrad_update")
+                                           .Input("num_unique_ids")
+                                           .Input("unique_embeddings")
+                                           .Input("embedding_grad")
+                                           .Output("updated_unique_embeddings")
+                                           .Build());
     // This functor is just for unittest
-    op_ = CHECK_JUST(one::OpBuilder("adagrad_embedding_update")
+    op_ = CHECK_JUST(one::OpBuilder("one_embedding_adagrad_update")
                          .Input("num_unique_ids")
                          .Input("unique_embeddings")
                          .Input("embedding_grad")
@@ -3703,31 +3994,57 @@ class OneEmbeddingAdagradUpdateFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& num_unique_ids,
                            const std::shared_ptr<one::Tensor>& unique_embeddings,
                            const std::shared_ptr<one::Tensor>& embedding_grad,
-                           const std::shared_ptr<one::Tensor>& learning_rate,
-                           const std::shared_ptr<one::Tensor>& down_scale_by_tensor,
-                           const std::shared_ptr<one::Tensor>& skip_if,
-                           const std::shared_ptr<one::Tensor>& train_step, const double scale,
+                           const Optional<one::Tensor>& learning_rate,
+                           const Optional<one::Tensor>& down_scale_by_tensor,
+                           const Optional<one::Tensor>& skip_if,
+                           const Optional<one::Tensor>& train_step, const int64_t train_step_val,
+                           const float learning_rate_val, const double scale,
                            const float weight_decay, const float lr_decay, const float epsilon,
-                           const int64_t line_size, const int64_t embedding_size) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "lr_decay", "epsilon",
-                                                 "line_size", "embedding_size");
-    attrs.SetAllAttrs(scale, weight_decay, lr_decay, epsilon, line_size, embedding_size);
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_,
-        {num_unique_ids, unique_embeddings, embedding_grad, learning_rate, down_scale_by_tensor,
-         skip_if, train_step},
-        attrs);
+                           const int64_t line_size, const int64_t embedding_size,
+                           const std::string& embedding_name) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("train_step_val", "learning_rate_val", "scale",
+                                                 "weight_decay", "lr_decay", "epsilon", "line_size",
+                                                 "embedding_size", "embedding_name");
+    attrs.SetAllAttrs(train_step_val, learning_rate_val, scale, weight_decay, lr_decay, epsilon,
+                      line_size, embedding_size, embedding_name);
+    if (learning_rate) {
+      CHECK(down_scale_by_tensor);
+      CHECK(skip_if);
+      CHECK(train_step);
+      return OpInterpUtil::Dispatch<Tensor>(
+          *op_,
+          {num_unique_ids, unique_embeddings, embedding_grad, JUST(learning_rate),
+           JUST(down_scale_by_tensor), JUST(skip_if), JUST(train_step)},
+          attrs);
+    } else {
+      CHECK(!down_scale_by_tensor);
+      CHECK(!skip_if);
+      CHECK(!train_step);
+      return OpInterpUtil::Dispatch<Tensor>(
+          *op_no_optional_input_, {num_unique_ids, unique_embeddings, embedding_grad}, attrs);
+    }
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_no_optional_input_;
 };
 
 class OneEmbeddingFtrlUpdateFunctor {
  public:
   OneEmbeddingFtrlUpdateFunctor() {
+    // This functor is only used in one_embedding eager mode with lr passed by attr and no optional
+    // input, we also define functor with all optional input just for unittest. when the optional
+    // input learning_rate tensor has passed in, we think all optional input are not None and check
+    // them.
+    op_no_optional_input_ = CHECK_JUST(one::OpBuilder("one_embedding_ftrl_update")
+                                           .Input("num_unique_ids")
+                                           .Input("unique_embeddings")
+                                           .Input("embedding_grad")
+                                           .Output("updated_unique_embeddings")
+                                           .Build());
     // This functor is just for unittest
-    op_ = CHECK_JUST(one::OpBuilder("ftrl_embedding_update")
+    op_ = CHECK_JUST(one::OpBuilder("one_embedding_ftrl_update")
                          .Input("num_unique_ids")
                          .Input("unique_embeddings")
                          .Input("embedding_grad")
@@ -3741,24 +4058,80 @@ class OneEmbeddingFtrlUpdateFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& num_unique_ids,
                            const std::shared_ptr<one::Tensor>& unique_embeddings,
                            const std::shared_ptr<one::Tensor>& embedding_grad,
-                           const std::shared_ptr<one::Tensor>& learning_rate,
-                           const std::shared_ptr<one::Tensor>& down_scale_by_tensor,
-                           const std::shared_ptr<one::Tensor>& skip_if, const double scale,
-                           const float weight_decay, const float lr_power, const float lambda1,
-                           const float lambda2, const float beta, const int64_t line_size,
-                           const int64_t embedding_size) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "lr_power", "lambda1",
-                                                 "lambda2", "beta", "line_size", "embedding_size");
-    attrs.SetAllAttrs(scale, weight_decay, lr_power, lambda1, lambda2, beta, line_size,
-                      embedding_size);
-    return OpInterpUtil::Dispatch<Tensor>(*op_,
-                                          {num_unique_ids, unique_embeddings, embedding_grad,
-                                           learning_rate, down_scale_by_tensor, skip_if},
-                                          attrs);
+                           const Optional<one::Tensor>& learning_rate,
+                           const Optional<one::Tensor>& down_scale_by_tensor,
+                           const Optional<one::Tensor>& skip_if, const float learning_rate_val,
+                           const double scale, const float weight_decay, const float lr_power,
+                           const float lambda1, const float lambda2, const float beta,
+                           const int64_t line_size, const int64_t embedding_size,
+                           const std::string& embedding_name) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("learning_rate_val", "scale", "weight_decay",
+                                                 "lr_power", "lambda1", "lambda2", "beta",
+                                                 "line_size", "embedding_size", "embedding_name");
+    attrs.SetAllAttrs(learning_rate_val, scale, weight_decay, lr_power, lambda1, lambda2, beta,
+                      line_size, embedding_size, embedding_name);
+    if (learning_rate) {
+      CHECK(down_scale_by_tensor);
+      CHECK(skip_if);
+      return OpInterpUtil::Dispatch<Tensor>(
+          *op_,
+          {num_unique_ids, unique_embeddings, embedding_grad, JUST(learning_rate),
+           JUST(down_scale_by_tensor), JUST(skip_if)},
+          attrs);
+    } else {
+      CHECK(!down_scale_by_tensor);
+      CHECK(!skip_if);
+      return OpInterpUtil::Dispatch<Tensor>(
+          *op_no_optional_input_, {num_unique_ids, unique_embeddings, embedding_grad}, attrs);
+    }
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_no_optional_input_;
+};
+
+class DeformConv2dFunctor {
+ public:
+  DeformConv2dFunctor() {
+    bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
+    deformconv2d_op_ = CHECK_JUST(one::OpBuilder("deform_conv2d")
+                                      .Input("input")
+                                      .Input("weight")
+                                      .Input("offset")
+                                      .Input("mask")
+                                      .Output("output")
+                                      .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& offset,
+                           const std::shared_ptr<one::Tensor>& mask,
+                           const Optional<one::Tensor>& bias, const int32_t& stride_h,
+                           const int32_t& stride_w, const int32_t& pad_h, const int32_t& pad_w,
+                           const int32_t& dilation_h, const int32_t& dilation_w,
+                           const int32_t& groups, const int32_t& offset_groups,
+                           const bool& use_mask) const {
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("stride_h", "stride_w", "pad_h", "pad_w", "dilation_h",
+                                       "dilation_w", "groups", "offset_groups", "use_mask");
+    attrs.SetAllAttrs(stride_h, stride_w, pad_h, pad_w, dilation_h, dilation_w, groups,
+                      offset_groups, use_mask);
+    const std::shared_ptr<one::Tensor>& deformconv2d_out = JUST(
+        OpInterpUtil::Dispatch<Tensor>(*deformconv2d_op_, {input, weight, offset, mask}, attrs));
+    if (bias) {
+      auto bias_shape = JUST(bias)->shape();
+      auto& bias_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis");
+      bias_attrs.SetAllAttrs(static_cast<int32_t>(1));
+      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {deformconv2d_out, JUST(bias)}, bias_attrs);
+    }
+    return deformconv2d_out;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> deformconv2d_op_;
+  std::shared_ptr<OpExpr> bias_op_;
 };
 
 class RocAucScoreFunctor {
@@ -4066,6 +4439,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedMatmulBiasAddReluDropoutFunctor>("FusedMatmulBiasAddReluDropout");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
+  m.add_functor<impl::GroupNormFunctor>("GroupNorm");
   m.add_functor<impl::TFAvgPool2DFunctor>("TFAvgPool2D");
   m.add_functor<impl::MaxPool1DFunctor>("MaxPool1D");
   m.add_functor<impl::MaxPool2DFunctor>("MaxPool2D");
@@ -4073,6 +4447,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
+  m.add_functor<impl::AdaptiveMaxPool1DFunctor>("AdaptiveMaxPool1D");
+  m.add_functor<impl::AdaptiveMaxPool2DFunctor>("AdaptiveMaxPool2D");
+  m.add_functor<impl::AdaptiveMaxPool3DFunctor>("AdaptiveMaxPool3D");
   m.add_functor<impl::L1LossFunctor>("L1Loss");
   m.add_functor<impl::MseLossFunctor>("MseLoss");
   m.add_functor<impl::KLDivLossFunctor>("KLDivLoss");
@@ -4083,6 +4460,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SparseCrossEntropyMsFunctor>("SparseCrossEntropyMs");
   m.add_functor<impl::CrossEntropyFunctor>("CrossEntropy");
   m.add_functor<impl::CrossEntropyLabelSmoothingFunctor>("CrossEntropyLabelSmoothing");
+  m.add_functor<impl::CrossEntropyProbFunctor>("CrossEntropyProb");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
   m.add_functor<impl::SoftmaxCrossEntropyFunctor>("SoftmaxCrossEntropy");
   m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");
@@ -4137,7 +4515,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingEmbeddingGradientShuffleFunctor>(
       "OneEmbeddingEmbeddingGradientShuffle");
   m.add_functor<impl::OneEmbeddingLookupFunctor>("OneEmbeddingLookup");
-  m.add_functor<impl::OneEmbeddingLookupGradFunctor>("OneEmbeddingLookupGrad");
+  m.add_functor<impl::OneEmbeddingFusedLookupFunctor>("OneEmbeddingFusedLookup");
+  m.add_functor<impl::OneEmbeddingFusedLookupGradFunctor>("OneEmbeddingFusedLookupGrad");
+  m.add_functor<impl::OneEmbeddingEmbeddingPutFunctor>("OneEmbeddingEmbeddingPut");
   m.add_functor<impl::OneEmbeddingUniqueKeyValuePairFunctor>("OneEmbeddingUniqueKeyValuePair");
   m.add_functor<impl::NormalFunctor>("Normal");
   m.add_functor<impl::Normal2Functor>("Normal2");
@@ -4150,6 +4530,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RocAucScoreFunctor>("RocAucScore");
   m.add_functor<impl::MultiTensorSgdUpdateFunctor>("MultiTensorSgdUpdate");
   m.add_functor<impl::MultiTensorAdamUpdateFunctor>("MultiTensorAdamUpdate");
+  m.add_functor<impl::DeformConv2dFunctor>("DeformConv2d");
   m.add_functor<impl::BatchNormStatsFunctor>("BatchNormStats");
   m.add_functor<impl::BatchNormGatherStatsWithCountsFunctor>("BatchNormGatherStatsWithCounts");
   m.add_functor<impl::BatchNormElemtFunctor>("BatchNormElemt");

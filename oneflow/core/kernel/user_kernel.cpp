@@ -618,6 +618,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   UserKernelBaseContext base_ctx_;
 };
 
+// kernel registry context used in kernel creation
 class UserKernelRegContext final : public user_op::KernelRegContext {
  public:
   explicit UserKernelRegContext(const KernelConf& kernel_conf)

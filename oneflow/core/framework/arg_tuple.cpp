@@ -37,7 +37,8 @@ void InitArgName2BnIndex2TensorTupleIndex(
     const int32_t bn_index = pair.second;
     // vector is auto created by [] if arg_name doesn't exist in map
     auto* bn_index2tensor_tuple_index = &(*arg_name2bn_index2tensor_tuple_index)[arg_name];
-    CHECK_EQ(bn_index2tensor_tuple_index->size(), bn_index);
+    CHECK_EQ(bn_index2tensor_tuple_index->size(), bn_index)
+        << "Duplicate index of " << arg_name << ": " << bn_index;
     bn_index2tensor_tuple_index->emplace_back(i);
   }
 }

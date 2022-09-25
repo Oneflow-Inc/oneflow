@@ -263,6 +263,7 @@ Pointwise Ops
     log 
     log1p 
     log2 
+    log10
     logical_and 
     logical_not 
     logical_or 
@@ -381,6 +382,7 @@ Other Ops
     tril
     repeat_interleave
     triu
+    cross
 
 BLAS and LAPACK Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

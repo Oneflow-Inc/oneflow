@@ -25,6 +25,8 @@ from oneflow._oneflow_internal import PersistentTableReader
 from oneflow._oneflow_internal import PersistentTableWriter
 import numpy as np
 import traceback
+from oneflow import nn
+import oneflow.framework.graph_build_util as graph_build_util
 
 
 def _check_initializer(initializer):
@@ -173,6 +175,8 @@ class Embedding(Module):
         tables,
         store_options,
         default_initializer=None,
+        padding_idx=None,
+        seed=0,
     ):
         super().__init__()
         self.dtype = dtype
@@ -187,6 +191,13 @@ class Embedding(Module):
             store_options,
             default_initializer,
         )
+        self.storage_dim = key_value_store_options["storage_dim"]
+        self.embedding_name = key_value_store_options["name"]
+        self.seed = seed
+        self.is_full_cache = (
+            len(key_value_store_options["kv_store"]["caches"]) > 0
+            and key_value_store_options["kv_store"]["caches"][0]["policy"] == "full"
+        )
         self.key_value_store_options = json.dumps(key_value_store_options)
         self.embedding_tables = json.dumps(embedding_tables)
         self.num_tables = len(embedding_tables["tables"])
@@ -196,7 +207,10 @@ class Embedding(Module):
         self.handler = OneEmbeddingHandler(
             self.key_value_store_options, self.local_rank, self.rank_id, self.world_size
         )
+
         self.shadow = flow.nn.Parameter(flow.Tensor(1))
+        self.padding_idx = padding_idx
+        self.embedding = None
 
     def _save_to_state_dict(self, destination, prefix, keep_vars):
         super()._save_to_state_dict(destination, prefix, keep_vars)
@@ -286,20 +300,254 @@ class Embedding(Module):
             flow.tensor: the result of embedding lookup
         """
         assert self.key_type == ids.dtype, "ids data_type must equals key_type"
-        return flow._C.one_embedding_lookup(
+        embedding = flow._C.one_embedding_fused_lookup(
             self.shadow,
             ids,
             table_ids,
             self.dtype,
+            self.embedding_name,
+            self.storage_dim,
             self.embedding_dim,
+            self.is_full_cache,
             self.num_tables,
             self.embedding_tables,
-            self.key_value_store_options,
+            self.padding_idx,
+            self.seed,
+        )
+        if embedding.requires_grad and not graph_build_util.lazy_mode.is_enabled():
+            if self.embedding is not None:
+                raise ValueError(
+                    "You are training without set embedding optimizer, Please add flow.one_embedding.Optimizer after optimizer."
+                )
+
+            self.embedding = embedding
+            self.embedding.retain_grad()
+            self.ids = ids
+            self.table_ids = table_ids
+        return embedding
+
+    def shuffle_and_lookup(self, state_initializer):
+        embedding_grad = self.embedding.grad
+        if self.world_size > 1:
+            (
+                num_unique_matrix,
+                inverse_unique_partition_indices,
+                cur_rank_num_unique,
+                cur_rank_unique_ids,
+                cur_rank_unique_table_ids,
+                cur_rank_inverse_indices,
+            ) = flow._C.one_embedding_id_shuffle(
+                self.ids, self.table_ids, self.num_tables, self.embedding_name
+            )
+            unique_values = flow._C.one_embedding_lookup(
+                cur_rank_num_unique,
+                cur_rank_unique_ids,
+                cur_rank_unique_table_ids,
+                self.dtype,
+                self.dtype,
+                self.storage_dim,
+                self.embedding_dim,
+                self.embedding_name,
+                self.embedding_tables,
+                state_initializer,
+                seed=self.seed,
+            )
+            cur_rank_unique_embedding_grad = flow._C.one_embedding_embedding_gradient_shuffle(
+                embedding_grad,
+                num_unique_matrix,
+                cur_rank_inverse_indices,
+                inverse_unique_partition_indices,
+                self.embedding_name,
+            )
+        else:
+            (
+                cur_rank_num_unique,
+                cur_rank_unique_ids,
+                cur_rank_unique_table_ids,
+                inverse_indices,
+            ) = flow._C.one_embedding_unique_key_value_pair(
+                self.ids, self.table_ids, self.num_tables, self.embedding_name
+            )
+            unique_values = flow._C.one_embedding_lookup(
+                cur_rank_num_unique,
+                cur_rank_unique_ids,
+                cur_rank_unique_table_ids,
+                self.dtype,
+                self.dtype,
+                self.storage_dim,
+                self.embedding_dim,
+                self.embedding_name,
+                self.embedding_tables,
+                state_initializer,
+                seed=self.seed,
+            )
+            cur_rank_unique_embedding_grad = flow._C.unsorted_segment_sum_like(
+                embedding_grad, inverse_indices, unique_values, axis=0,
+            )
+        self.embedding = None
+        return (
+            cur_rank_num_unique,
+            cur_rank_unique_ids,
+            unique_values,
+            cur_rank_unique_embedding_grad,
+        )
+
+    def sgd_update(self, param_group, step):
+        lr = param_group["lr"]
+        l2 = param_group["weight_decay"]
+        momentum = param_group["momentum"]
+        (
+            cur_rank_num_unique,
+            cur_rank_unique_ids,
+            unique_values,
+            cur_rank_unique_embedding_grad,
+        ) = self.shuffle_and_lookup("")
+        updated_values = flow._C.one_embedding_sgd_update(
+            cur_rank_num_unique,
+            unique_values,
+            cur_rank_unique_embedding_grad,
+            learning_rate_val=lr,
+            scale=1.0,
+            weight_decay=l2,
+            momentum=momentum,
+            line_size=self.storage_dim,
+            embedding_size=self.embedding_dim,
+            embedding_name=self.embedding_name,
+        )
+        flow._C.one_embedding_embedding_put(
+            cur_rank_num_unique,
+            cur_rank_unique_ids,
+            updated_values,
+            self.embedding_name,
+            self.storage_dim,
+        )
+
+    def adam_update(self, param_group, step):
+        line_size = self.storage_dim
+        embedding_size = self.embedding_dim
+        lr = param_group["lr"]
+        # not adjust, because it has been set in optimizer's step
+        bias_correction1 = param_group["bias_correction1"]
+        bias_correction2 = param_group["bias_correction2"]
+        l2 = param_group["weight_decay"]
+        beta1 = param_group["betas"][0]
+        beta2 = param_group["betas"][1]
+        epsilon = param_group["eps"]
+        do_bias_correction = param_group["do_bias_correction"]
+        amsgrad = param_group["amsgrad"]
+        assert amsgrad == False, "one_embedding's adam not support amsgrad"
+        state_initializer = [make_constant_initializer(0), make_constant_initializer(0)]
+        (
+            cur_rank_num_unique,
+            cur_rank_unique_ids,
+            unique_values,
+            cur_rank_unique_embedding_grad,
+        ) = self.shuffle_and_lookup(json.dumps(state_initializer))
+        updated_values = flow._C.one_embedding_adam_update(
+            cur_rank_num_unique,
+            unique_values,
+            cur_rank_unique_embedding_grad,
+            learning_rate_val=lr,
+            scale=1.0,
+            weight_decay=l2,
+            beta1=beta1,
+            beta2=beta2,
+            bias_correction1_val=bias_correction1,
+            bias_correction2_val=bias_correction2,
+            epsilon=epsilon,
+            do_bias_correction=do_bias_correction,
+            line_size=line_size,
+            embedding_size=embedding_size,
+            embedding_name=self.embedding_name,
+        )
+        flow._C.one_embedding_embedding_put(
+            cur_rank_num_unique,
+            cur_rank_unique_ids,
+            updated_values,
+            self.embedding_name,
+            line_size,
+        )
+
+    def adagrad_update(self, param_group, step):
+        lr = param_group["lr"]
+        l2 = param_group["weight_decay"]
+        epsilon = param_group["eps"]
+        lr_decay = param_group["lr_decay"]
+        train_step_val = step
+        initial_accumulator_value = param_group["initial_accumulator_value"]
+        state_initializer = [make_constant_initializer(initial_accumulator_value)]
+        (
+            cur_rank_num_unique,
+            cur_rank_unique_ids,
+            unique_values,
+            cur_rank_unique_embedding_grad,
+        ) = self.shuffle_and_lookup(json.dumps(state_initializer))
+        updated_values = flow._C.one_embedding_adagrad_update(
+            cur_rank_num_unique,
+            unique_values,
+            cur_rank_unique_embedding_grad,
+            train_step_val=step,
+            learning_rate_val=lr,
+            scale=1.0,
+            weight_decay=l2,
+            lr_decay=lr_decay,
+            epsilon=epsilon,
+            line_size=self.storage_dim,
+            embedding_size=self.embedding_dim,
+            embedding_name=self.embedding_name,
+        )
+        flow._C.one_embedding_embedding_put(
+            cur_rank_num_unique,
+            cur_rank_unique_ids,
+            updated_values,
+            self.embedding_name,
+            self.storage_dim,
+        )
+
+    def ftrl_update(self, param_group, step):
+        lr = param_group["lr"]
+        l2 = param_group["weight_decay"]
+        lr_power = param_group["lr_power"]
+        lambda1 = param_group["lambda1"]
+        lambda2 = param_group["lambda2"]
+        beta = param_group["beta"]
+        initial_accumulator_value = param_group["initial_accumulator_value"]
+        state_initializer = [
+            make_constant_initializer(initial_accumulator_value),
+            make_constant_initializer(initial_accumulator_value),
+        ]
+        (
+            cur_rank_num_unique,
+            cur_rank_unique_ids,
+            unique_values,
+            cur_rank_unique_embedding_grad,
+        ) = self.shuffle_and_lookup(json.dumps(state_initializer))
+        updated_values = flow._C.one_embedding_ftrl_update(
+            cur_rank_num_unique,
+            unique_values,
+            cur_rank_unique_embedding_grad,
+            learning_rate_val=lr,
+            scale=1.0,
+            weight_decay=l2,
+            lr_power=lr_power,
+            lambda1=lambda1,
+            lambda2=lambda2,
+            beta=beta,
+            line_size=self.storage_dim,
+            embedding_size=self.embedding_dim,
+            embedding_name=self.embedding_name,
+        )
+        flow._C.one_embedding_embedding_put(
+            cur_rank_num_unique,
+            cur_rank_unique_ids,
+            updated_values,
+            self.embedding_name,
+            self.storage_dim,
         )
 
 
 def make_device_mem_store_options(
-    persistent_path, capacity, size_factor=1, physical_block_size=512
+    persistent_path, capacity, size_factor=1, physical_block_size=4096
 ):
     """make GPU only store_options param of MultiTableEmbedding
 
@@ -307,7 +555,7 @@ def make_device_mem_store_options(
         persistent_path (str, list): persistent storage path of Embedding. If passed a str, current rank Embedding will be saved in path/rank_id-num_ranks path. If passed a list, the list length must equals num_ranks, each elem of list represent the path of rank_id Embedding.
         capacity (int): total capacity of Embedding
         size_factor (int, optional): store size factor of embedding_dim, if SGD update, and momentum = 0, should be 1, if momentum > 0, it should be 2. if Adam, should be 3. Defaults to 1.
-        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512.
+        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 4096.
 
     Returns:
         dict: GPU only store_options param of MultiTableEmbedding
@@ -342,7 +590,7 @@ def make_cached_ssd_store_options(
     persistent_path,
     capacity=None,
     size_factor=1,
-    physical_block_size=512,
+    physical_block_size=4096,
     host_cache_budget_mb=0,
 ):
     """make SSD use GPU and host as cache store_options param of MultiTableEmbedding. If cache_budget_mb > 0 and host_cache_budget_mb > 0, use GPU and host memory as multi-level cache.
@@ -352,7 +600,7 @@ def make_cached_ssd_store_options(
         persistent_path (str, list): persistent storage path of Embedding, must use fast SSD because of frequently random disk access during training. If passed a str, current rank Embedding will be saved in path/rank_id-num_ranks path. If passed a list, the list length must equals num_ranks, each elem of list represent the path of rank_id Embedding.
         capacity (int): total capacity of Embedding
         size_factor (int, optional): store size factor of embedding_dim, if SGD update, and momentum = 0, should be 1, if momentum > 0, it should be 2. if Adam, should be 3. Defaults to 1.
-        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512.
+        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 4096.
         host_cache_budget_mb (int): the MB budget of host memory as cache per rank. Defaults to 0.
 
     Returns:
@@ -409,7 +657,7 @@ def make_cached_ssd_store_options(
 
 
 def make_cached_host_mem_store_options(
-    cache_budget_mb, persistent_path, capacity, size_factor=1, physical_block_size=512,
+    cache_budget_mb, persistent_path, capacity, size_factor=1, physical_block_size=4096,
 ):
     """make host use GPU as cache store_options param of MultiTableEmbedding
 
@@ -418,7 +666,7 @@ def make_cached_host_mem_store_options(
         persistent_path (str, list): persistent storage path of Embedding. If passed a str, current rank Embedding will be saved in path/rank_id-num_ranks path. If passed a list, the list length must equals num_ranks, each elem of list represent the path of rank_id Embedding.
         capacity (int): total capacity of Embedding
         size_factor (int, optional): store size factor of embedding_dim, if SGD update, and momentum = 0, should be 1, if momentum > 0, it should be 2. if Adam, should be 3. Defaults to 1.
-        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512.
+        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 4096.
 
     Returns:
         dict: host use GPU as cache store_options param of MultiTableEmbedding
@@ -572,7 +820,9 @@ class MultiTableEmbedding(Embedding):
         tables (list): list of table param which can be made by flow.one_embedding.make_table_options
         store_options (dict): store option of Embedding
         default_initializer (dict, optional): if tables param is None, use default_initializer to initialize table. Defaults to None.
-    
+        padding_idx (int, optional): If specified, the entries at :attr:`padding_idx` do not contribute to the gradient;
+                                     therefore, the embedding vector at :attr:`padding_idx` is not updated during training,
+                                     the embedding vector at :attr:`padding_idx` will default to all zeros.
     For example:
 
     .. code-block:: python
@@ -646,6 +896,8 @@ class MultiTableEmbedding(Embedding):
         tables,
         store_options,
         default_initializer=None,
+        padding_idx=None,
+        seed=0,
     ):
         assert isinstance(embedding_dim, int)
         super().__init__(
@@ -656,6 +908,8 @@ class MultiTableEmbedding(Embedding):
             tables,
             store_options,
             default_initializer,
+            padding_idx,
+            seed,
         )
 
 
@@ -670,7 +924,9 @@ class MultiTableMultiColumnEmbedding(Embedding):
         tables (list): list of table param which can be made by flow.one_embedding.make_table_options
         store_options (dict): store option of Embedding
         default_initializer (dict, optional): if tables param is None, use default_initializer to initialize table. Defaults to None.
-    
+        padding_idx (int, optional): If specified, the entries at :attr:`padding_idx` do not contribute to the gradient;
+                                     therefore, the embedding vector at :attr:`padding_idx` is not updated during training,
+                                     the embedding vector at :attr:`padding_idx` will default to all zeros.
     For example:
 
     .. code-block:: python
@@ -748,6 +1004,8 @@ class MultiTableMultiColumnEmbedding(Embedding):
         tables,
         store_options,
         default_initializer=None,
+        padding_idx=None,
+        seed=0,
     ):
         if isinstance(embedding_dim, (list, tuple)):
             for dim in embedding_dim:
@@ -763,6 +1021,8 @@ class MultiTableMultiColumnEmbedding(Embedding):
             tables,
             store_options,
             default_initializer,
+            padding_idx,
+            seed,
         )
 
 
@@ -931,7 +1191,7 @@ class Ftrl(Optimizer):
 
 
 def make_persistent_table_reader(
-    paths, snapshot_name, key_type, value_type, storage_dim, physical_block_size=512,
+    paths, snapshot_name, key_type, value_type, storage_dim, physical_block_size=4096,
 ):
     r"""Creates a reader for reading persistent table.
 
@@ -941,7 +1201,7 @@ def make_persistent_table_reader(
         key_type (flow.dtype): the data type of key
         value_type (flow.dtype): the data type of value
         storage_dim (int): number of elements in each value
-        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512
+        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 4096
     """
     return PersistentTableReader(
         paths,
@@ -955,7 +1215,7 @@ def make_persistent_table_reader(
 
 
 def make_persistent_table_writer(
-    paths, snapshot_name, key_type, value_type, storage_dim, physical_block_size=512,
+    paths, snapshot_name, key_type, value_type, storage_dim, physical_block_size=4096,
 ):
     r"""Creates a writer for writing persistent table.
 
@@ -965,7 +1225,7 @@ def make_persistent_table_writer(
         key_type (flow.dtype): the data type of key
         value_type (flow.dtype): the data type of value
         storage_dim (int): number of elements in each value
-        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512
+        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 4096
     """
     return PersistentTableWriter(
         paths,
@@ -976,3 +1236,43 @@ def make_persistent_table_writer(
         4 * 1024,
         physical_block_size,
     )
+
+
+class Optimizer(Optimizer):
+    def __init__(
+        self, optimizer: Optimizer, embeddings: List[Embedding],
+    ):
+        self.optimizer = optimizer
+        self.embeddings = embeddings
+        self.param_groups = optimizer.param_groups
+        self._default_options = optimizer._default_options
+        self._state = optimizer._state
+        self.embedding_param_group_dict = {}
+        for embedding in self.embeddings:
+            for group in self.param_groups:
+                param_set = set()
+                for param in group.parameters:
+                    param_set.add(param)
+                if embedding.shadow in param_set:
+                    self.embedding_param_group_dict[embedding.embedding_name] = group
+            if not embedding.embedding_name in self.embedding_param_group_dict:
+                raise ValueError("embedding must in optimizers param_group")
+
+    def step(self, closure: Callable = None):
+        step = self.optimizer._state["step"]
+        for embedding in self.embeddings:
+            param_group = self.embedding_param_group_dict[embedding.embedding_name]
+            if type(self.optimizer) is flow.nn.optimizer.sgd.SGD:
+                embedding.sgd_update(param_group, step)
+            elif type(self.optimizer) is flow.nn.optimizer.adam.Adam:
+                embedding.adam_update(param_group, step)
+            elif type(self.optimizer) is flow.nn.optimizer.adagrad.Adagrad:
+                embedding.adagrad_update(param_group, step)
+            elif type(self.optimizer) is flow.one_embedding.Ftrl:
+                embedding.ftrl_update(param_group, step)
+            else:
+                raise NotImplementedError("only support sgd, adam, adagrad and ftrl")
+        self.optimizer.step()
+
+    def _generate_conf_for_graph(self, train_conf, vars_conf):
+        return self.optimizer._generate_conf_for_graph(train_conf, vars_conf)

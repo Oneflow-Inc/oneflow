@@ -193,6 +193,7 @@ Tensor class reference
     Tensor.atanh
     Tensor.backward
     Tensor.bmm
+    Tensor.bool
     Tensor.byte
     Tensor.cast
     Tensor.ceil
@@ -260,6 +261,7 @@ Tensor class reference
     Tensor.log
     Tensor.log1p
     Tensor.log2
+    Tensor.log10
     Tensor.logical_and
     Tensor.logical_or
     Tensor.logical_not
@@ -363,4 +365,5 @@ Tensor class reference
     Tensor.nms
     Tensor.pin_memory
     Tensor.is_pinned
+    Tensor.cross
 

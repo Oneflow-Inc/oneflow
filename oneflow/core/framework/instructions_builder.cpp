@@ -40,6 +40,8 @@ limitations under the License.
 #include "oneflow/core/vm/global_sync_instruction_policy.h"
 #include "oneflow/core/vm/op_call_instruction_policy.h"
 #include "oneflow/core/vm/stream_wait_instruction_policy.h"
+#include "oneflow/core/vm/stream_record_event_instruction_policy.h"
+#include "oneflow/core/vm/stream_wait_event_instruction_policy.h"
 #include "oneflow/core/vm/touch_tensors_instruction_policy.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -133,7 +135,8 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const vm::EagerBlobObjectListPtr&
     {
       for (const auto& op_name : nn_graph->inputs_op_names()) {
         const auto& event_record = std::make_shared<SharedEventRecord>();
-        CHECK_OR_RETURN(input_op_name2end_event_record->emplace(op_name, event_record).second);
+        CHECK_OR_RETURN(input_op_name2end_event_record->emplace(op_name, event_record).second)
+            << Error::RuntimeError() << "Duplicate Op name " << op_name;
       }
 
       auto stream = JUST(GetCriticalSectionStream());
@@ -148,7 +151,8 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const vm::EagerBlobObjectListPtr&
     {
       for (const auto& op_name : nn_graph->outputs_op_names()) {
         const auto& event_record = std::make_shared<SharedEventRecord>();
-        CHECK_OR_RETURN(output_op_name2end_event_record->emplace(op_name, event_record).second);
+        CHECK_OR_RETURN(output_op_name2end_event_record->emplace(op_name, event_record).second)
+            << Error::RuntimeError() << "Duplicate Op name " << op_name;
       }
       auto stream = JUST(GetCriticalSectionStream());
       auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
@@ -384,9 +388,6 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
       && producer_stream->device()->enum_type() != DeviceType::kCPU) {
     return Maybe<void>::Ok();
   }
-  if (last_used_stream != producer_stream) {
-    JUST(RecordEvent({JUST(eager_blob_object->compute_local_dep_object())}, last_used_stream));
-  }
   Optional<Symbol<Stream>> stream{};
   if (*one::CurrentDevVmDepObjectConsumeMode() == one::DevVmDepObjectConsumeMode::NONE) {
     stream = Optional<Symbol<Stream>>(NullOpt);
@@ -399,6 +400,32 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
     stream = Optional<Symbol<Stream>>(NullOpt);
   } else {
     stream = producer_stream;
+  }
+  struct EnableStreamWaitOnReleaseTensor final
+      : public StreamTypeVisitor<EnableStreamWaitOnReleaseTensor> {
+    static bool VisitCompute() { return true; }
+    static bool VisitHost2Device() { return true; }
+    static bool VisitDevice2Host() { return true; }
+    static bool VisitCcl() { return false; }
+    static bool VisitBarrier() { return false; }
+    static bool VisitCriticalSection() { return false; }
+    static bool VisitLazyJobLauncher() { return false; }
+    static bool VisitPinnedCompute() { return VisitCompute(); }
+  };
+  const auto& EnableStreamWait = [&] {
+    if (last_used_stream->device() != producer_stream->device()) { return false; }
+    if (last_used_stream->stream_type() == producer_stream->stream_type()) { return true; }
+    return EnableStreamWaitOnReleaseTensor::Visit(last_used_stream->stream_type())
+           && EnableStreamWaitOnReleaseTensor::Visit(producer_stream->stream_type());
+  };
+  if (last_used_stream != producer_stream) {
+    if (stream.has_value() && EnableStreamWait()) {
+      JUST(SoftSyncStreamBetween({JUST(eager_blob_object->compute_local_dep_object())},
+                                 last_used_stream, JUST(stream)));
+    } else {
+      JUST(RecordEvent({JUST(eager_blob_object->compute_local_dep_object())}, last_used_stream));
+    }
+    eager_blob_object->set_last_used_stream(producer_stream);
   }
   auto vm_stream = stream.map([](Symbol<Stream> stream) -> vm::Stream* {
     return CHECK_JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
@@ -502,11 +529,15 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(const vm::EagerBlobObjectList& e
 namespace {
 
 bool SupportingStreamWait(Symbol<Stream> from_stream, Symbol<Stream> to_stream) {
+  if (from_stream->device() == to_stream->device()
+      && from_stream->stream_type() == to_stream->stream_type()
+      && from_stream->thread_uid() == to_stream->thread_uid()) {
+    CHECK(from_stream == to_stream);
+  }
   if (unlikely(!ThreadLocalEnvBool<ONEFLOW_VM_ENABLE_STREAM_WAIT>())) { return false; }
   DeviceType from_device_type = from_stream->device()->enum_type();
   DeviceType to_device_type = from_stream->device()->enum_type();
   return from_stream->device() == to_stream->device() && from_device_type == DeviceType::kCUDA
-         && from_stream->thread_uid() == to_stream->thread_uid()
          && StreamSupportStreamWait::Visit(from_stream->stream_type(), from_device_type)
          && StreamSupportStreamWait::Visit(to_stream->stream_type(), to_device_type)
          && !StreamOnIndependentThread::Visit(from_stream->stream_type())
@@ -532,10 +563,23 @@ Maybe<void> InstructionsBuilder::StreamWait(
     Symbol<Stream> from_stream, Symbol<Stream> to_stream) {
   auto* from_vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(from_stream));
   auto* to_vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(to_stream));
-  auto instruction = intrusive::make_shared<vm::Instruction>(
-      to_vm_stream, std::make_unique<vm::StreamWaitInstructionPolicy>(
-                        std::move(dependences), from_vm_stream, to_vm_stream));
-  instruction_list_->EmplaceBack(std::move(instruction));
+  if (from_vm_stream->mut_thread_ctx() != to_vm_stream->mut_thread_ctx()) {
+    auto stream_record_event =
+        std::make_shared<vm::StreamRecordEventInstructionPolicy>(dependences);
+    auto record_instruction =
+        intrusive::make_shared<vm::Instruction>(from_vm_stream, stream_record_event);
+    instruction_list_->EmplaceBack(std::move(record_instruction));
+    auto stream_wait_event =
+        std::make_shared<vm::StreamWaitEventInstructionPolicy>(dependences, stream_record_event);
+    auto wait_instruction =
+        intrusive::make_shared<vm::Instruction>(to_vm_stream, stream_wait_event);
+    instruction_list_->EmplaceBack(std::move(wait_instruction));
+  } else {
+    auto instruction = intrusive::make_shared<vm::Instruction>(
+        to_vm_stream, std::make_unique<vm::StreamWaitInstructionPolicy>(
+                          std::move(dependences), from_vm_stream, to_vm_stream));
+    instruction_list_->EmplaceBack(std::move(instruction));
+  }
   return Maybe<void>::Ok();
 }
 

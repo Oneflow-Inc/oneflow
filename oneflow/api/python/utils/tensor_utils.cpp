@@ -155,9 +155,17 @@ DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, CopyLocalTensorFromUntypedArray,  // NOLI
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                       const Optional<Symbol<Device>>& device,
                                       const bool requires_grad, const bool pin_memory) {
+  bool is_bfloat16_dtype = dtype ? JUST(dtype)->data_type() == DataType::kBFloat16 : false;
+  bool is_cuda_device = device ? JUST(device)->enum_type() == DeviceType::kCUDA : false;
+  if (is_bfloat16_dtype && is_cuda_device) {
+#if CUDA_VERSION < 11000
+    return Error::RuntimeError()
+           << "Cannot create a bfloat16 tensor on gpu under cuda version: 11000";
+#endif  // CUDA_VERSION >= 11000
+  }
   PyObject* array = NULL;
   PyArray_Descr* np_dtype =
-      dtype.has_value()
+      dtype.has_value() && !is_bfloat16_dtype
           ? PyArray_DescrFromType(JUST(numpy::OFDataTypeToNumpyType(JUST(dtype)->data_type())))
           : nullptr;
   // PyArray_FromAny steals a reference to np_dtype object, so no need to decref it.
@@ -182,7 +190,7 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   auto* np_arr = reinterpret_cast<PyArrayObject*>(array);
   const npy_intp* dims_ptr = PyArray_SHAPE(np_arr);
   const Shape shape(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));
-  DataType data_type = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
+  DataType np_data_type = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
 
   Symbol<Device> device_;
   if (device) {
@@ -191,10 +199,13 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
     device_ = JUST(Device::New("cpu"));
   }
   std::shared_ptr<Tensor> tensor = JUST(
-      functional::Empty(shape, JUST(DType::Get(data_type)), device_, /*pin_memory=*/pin_memory));
-  JUST(SwitchCopyLocalTensorFromUntypedArray(SwitchCase(data_type), tensor, array));
+      functional::Empty(shape, JUST(DType::Get(np_data_type)), device_, /*pin_memory=*/pin_memory));
+  JUST(SwitchCopyLocalTensorFromUntypedArray(SwitchCase(np_data_type), tensor, array));
 
   Py_DECREF(array);
+  if (dtype && JUST(dtype)->data_type() != np_data_type) {
+    tensor = JUST(functional::To(tensor, JUST(dtype), false));
+  }
   JUST(tensor->set_requires_grad(requires_grad));
   return tensor;
 }

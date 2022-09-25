@@ -270,3 +270,56 @@ add_docstr(
         >>> loss.backward()
     """,
 )
+
+add_docstr(
+    oneflow._C.kl_div_loss,
+    r"""
+    kl_div_loss(input, target, reduction="mean", log_target=False)
+
+    `The Kullback-Leibler divergence loss measure <https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence>`_
+
+    See :class:`~oneflow.nn.KLDivLoss` for details.
+
+    Args:
+        reduction (string, optional): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'batchmean'`` | ``'sum'`` | ``'mean'``.
+            ``'none'``: no reduction will be applied.
+            ``'batchmean'``: the sum of the output will be divided by batchsize.
+            ``'sum'``: the output will be summed.
+            ``'mean'``: the output will be divided by the number of elements in the output.
+            Default: ``'mean'``
+        log_target (bool, optional): Specifies whether `target` is passed in the log space.
+            Default: ``False``
+
+    .. note::
+        :attr:`reduction` = ``'mean'`` doesn't return the true kl divergence value, please use
+        :attr:`reduction` = ``'batchmean'`` which aligns with KL math definition.
+        In the next major release, ``'mean'`` will be changed to be the same as ``'batchmean'``.
+
+    Shape:
+        - Input: :math:`(N, *)` where :math:`*` means, any number of additional
+          dimensions
+        - Target: :math:`(N, *)`, same shape as the input
+        - Output: scalar by default. If :attr:``reduction`` is ``'none'``, then :math:`(N, *)`,
+          the same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> input = flow.tensor([-0.9021705, 0.08798598, 1.04686249], dtype=flow.float32)
+        >>> target = flow.tensor([1.22386942, -0.89729659, 0.01615712], dtype=flow.float32)
+        >>> out = flow.nn.functional.kl_div(input, target, reduction="none", log_target=False)
+        >>> out
+        tensor([ 1.3514,  0.0000, -0.0836], dtype=oneflow.float32)
+        >>> out = flow.nn.functional.kl_div(input, target, reduction="mean", log_target=False)
+        >>> out
+        tensor(0.4226, dtype=oneflow.float32)
+        >>> out = flow.nn.functional.kl_div(input, target, reduction="sum", log_target=True)
+        >>> out
+        tensor(5.7801, dtype=oneflow.float32)
+
+    """,
+)
