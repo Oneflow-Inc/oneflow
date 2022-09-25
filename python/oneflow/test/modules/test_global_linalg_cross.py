@@ -20,27 +20,31 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
-def _test_linalg_cross(test_case, ndim, placement, sbp):
-    shape = [random(1, 4) * 8 for i in range(ndim)]
-    index = random(0, ndim).to(int).value()
-    shape[index] = 3
+@autotest(n=1)
+def _test_linalg_cross(test_case, index_size_equal_3, ndim, placement, sbp):
+    shape = [random(1, 4).to(int) * 8 for i in range(ndim)]
+    shape[index_size_equal_3] = 3
     x = random_tensor(ndim, *shape)
     x = x.to_global(placement=placement, sbp=sbp)
     y = random_tensor(ndim, *shape)
     y = y.to_global(placement=placement, sbp=sbp)
     return torch.cross(
-        x, y, dim=index
+        x, y, dim=index_size_equal_3
     )  # TODO(peihong): will convert to torch.linalg.cross when PyTorch in ci is upgraded to 1.11
 
 
 class TestLinalgCrossGlobal(flow.unittest.TestCase):
     @globaltest
     def test_linalg_cross(test_case):
-        ndim = random(1, 5).to(int).value()
+        ndim = random(2, 5).to(int).value()
+        index_size_equal_3 = random(0, ndim).to(int).value()
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=ndim):
-                _test_linalg_cross(test_case, ndim, placement, sbp)
+            for sbp in all_sbp(
+                placement,
+                max_dim=ndim,
+                valid_split_axis=[i for i in range(ndim) if i != index_size_equal_3],
+            ):
+                _test_linalg_cross(test_case, index_size_equal_3, ndim, placement, sbp)
 
 
 if __name__ == "__main__":
