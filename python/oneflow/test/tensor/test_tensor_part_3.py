@@ -39,31 +39,39 @@ def _get_indexes(device):
     )
 
 
-def _test_scatter_random_data(test_case, test_scalar: bool, dim: int):
-    device = random_device()
-    input = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
-    src = 3.14 if test_scalar else random_tensor(ndim=2, dim0=2, dim1=2).to(device)
-    y = torch.scatter(input, dim, oneof(*_get_indexes(device)), src)
-    return y
-
-
-def _test_scatter_add_random_data(test_case, dim: int):
-    device = random_device()
-    input = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
-    src = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
-    y = torch.scatter_add(input, dim, oneof(*_get_indexes(device)), src)
-    return y
-
-
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
-class TestScatterOpsModule(flow.unittest.TestCase):
+class TestTensor(flow.unittest.TestCase):
     @autotest(n=10)
-    def test_scatter_with_random_data(test_case):
-        return _test_scatter_random_data(test_case, oneof(True, False), oneof(0, 1, -1))
+    def test_scatter_random_data(test_case):
+        device = random_device()
+        input = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        src = oneof(3.14, random_tensor(ndim=2, dim0=2, dim1=2).to(device))
+        inplace = oneof(True, False)
+        dim = oneof(0, 1, -1)
+        if inplace:
+            y = input + 1
+            y.scatter_(dim, oneof(*_get_indexes(device)), src)
+            return y
+        return input.scatter(dim, oneof(*_get_indexes(device)), src)
 
-    @autotest(n=5)
-    def test_scatter_add_with_random_data(test_case):
-        return _test_scatter_add_random_data(test_case, oneof(0, 1))
+    @autotest(
+        n=10, auto_backward=False
+    )  # peihong: pytorch 1.10 dose not support backward when reduce is add or multiply
+    def test_scatter_add_or_multiply_random_data(test_case):
+        device = random_device()
+        input = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        src = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        inplace = oneof(True, False)
+        reduce = oneof("add", "multiply")
+        dim = oneof(0, 1)
+        if inplace:
+            y = input + 1
+            y.scatter_(
+                dim, oneof(*_get_indexes(device)), src, reduce=reduce,
+            )
+            return y
+        return input.scatter(dim, oneof(*_get_indexes(device)), src, reduce=reduce,)
 
 
 if __name__ == "__main__":

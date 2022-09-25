@@ -509,6 +509,16 @@ def _trunc(self):
 
 def _cross(self, other, dim=None):
     return flow._C.cross(self, other, dim)
+def _scatter(self, dim, index, src, reduce=""):
+    if reduce == "":
+        reduce = None
+    return flow._C.scatter(self, dim, index, src, reduce, inplace=False)
+
+
+def _scatter_inplace(self, dim, index, src, reduce=""):
+    if reduce == "":
+        reduce = None
+    return flow._C.scatter(self, dim, index, src, reduce, inplace=True)
 
 
 def RegisterMethods():
@@ -578,6 +588,8 @@ def RegisterMethods():
     Tensor.inverse = _inv
     Tensor.trunc = _trunc
     Tensor.cross = _cross
+    Tensor.scatter = _scatter
+    Tensor.scatter_ = _scatter_inplace
 
 
 def register_tensor_op(op_name):

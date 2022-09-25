@@ -2249,6 +2249,14 @@ add_docstr(
     """,
 )
 
+
+add_docstr(
+    oneflow.Tensor.scatter_,
+    """
+    Inplace version of :func:`oneflow.scatter`
+    """,
+)
+
 add_docstr(
     oneflow.Tensor.cross,
     """
