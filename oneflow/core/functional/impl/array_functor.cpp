@@ -755,7 +755,7 @@ class ExpandFunctor {
   ExpandFunctor() { op_ = CHECK_JUST(one::OpBuilder("expand").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
     const Shape& in_shape = *x->shape();
-    size_t lpad = shape.size() - in_shape.size();
+    int lpad = shape.size() - in_shape.size();
     if (lpad < 0) {
       return Error::RuntimeError()
              << "expand(tensor{" << in_shape.ToString() << "}, size=" << in_shape.size()
@@ -2363,6 +2363,19 @@ class AmpWhiteIdentityFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class AmpBlackIdentityFunctor {
+ public:
+  AmpBlackIdentityFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("amp_black_identity").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ReduceSumLikeFunctor {
  public:
   ReduceSumLikeFunctor() {
@@ -3366,6 +3379,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DivGradFunctor>("DivGrad");
   m.add_functor<impl::IdentityFunctor>("Identity");
   m.add_functor<impl::AmpWhiteIdentityFunctor>("AmpWhiteIdentity");
+  m.add_functor<impl::AmpBlackIdentityFunctor>("AmpBlackIdentity");
   m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
   m.add_functor<impl::BroadcastReduceSumLikeFunctor>("BroadcastReduceSumLike");
   m.add_functor<impl::SplitFunctor>("Split");

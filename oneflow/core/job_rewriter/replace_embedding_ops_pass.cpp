@@ -372,6 +372,7 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
         .Attr<int32_t>("num_tables", num_tables)
         .Attr<int64_t>("padding_idx", padding_idx)
         .Attr<bool>("has_padding_idx", has_padding_idx)
+        .Attr<std::string>("embedding_name", embedding_name)
         .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id());
     if (embedding_op.has_input("table_ids", 0)) {
       unique_op_builder.Input("values", embedding_op.input("table_ids", 0));
@@ -592,7 +593,7 @@ void BuildEmbeddingUpdate(
     user_op::UserOpConfWrapperBuilder fused_embedding_update_put_op_builder(
         embedding_op.op_name() + "_fused_embedding_update_put" + NewUniqueId());
     user_op::UserOpConfWrapper fused_embedding_update_put_op =
-        fused_embedding_update_put_op_builder.OpTypeName("fused_sgd_embedding_update_put")
+        fused_embedding_update_put_op_builder.OpTypeName("one_embedding_fused_sgd_update_put")
             .Input("num_unique_ids", num_unique_ids_lbn)
             .Input("unique_ids", unique_ids_lbn)
             .Input("unique_embeddings", unique_values_lbn)
@@ -628,13 +629,13 @@ void BuildEmbeddingUpdate(
       embedding_op.op_name() + "_embedding_update" + NewUniqueId());
   std::vector<float> state_constant_init_values;
   if (optimizer_conf.has_naive_conf()) {
-    embedding_update_op_builder.OpTypeName("sgd_embedding_update");
+    embedding_update_op_builder.OpTypeName("one_embedding_sgd_update");
   } else if (optimizer_conf.has_momentum_conf()) {
-    embedding_update_op_builder.OpTypeName("momentum_embedding_update")
+    embedding_update_op_builder.OpTypeName("one_embedding_momentum_update")
         .Attr<float>("beta", optimizer_conf.momentum_conf().beta());
   } else if (optimizer_conf.has_adam_conf()) {
     const AdamModelUpdateConf& adam_conf = optimizer_conf.adam_conf();
-    embedding_update_op_builder.OpTypeName("adam_embedding_update")
+    embedding_update_op_builder.OpTypeName("one_embedding_adam_update")
         .Attr<float>("beta1", adam_conf.beta1())
         .Attr<float>("beta2", adam_conf.beta2())
         .Attr<float>("epsilon", adam_conf.epsilon())
@@ -650,7 +651,7 @@ void BuildEmbeddingUpdate(
   } else if (optimizer_conf.has_adagrad_conf()) {
     const AdagradModelUpdateConf& adagrad_conf = optimizer_conf.adagrad_conf();
     state_constant_init_values.push_back(adagrad_conf.initial_accumulator_value());
-    embedding_update_op_builder.OpTypeName("adagrad_embedding_update")
+    embedding_update_op_builder.OpTypeName("one_embedding_adagrad_update")
         .Input("train_step", train_conf.train_step_lbn())
         .Attr<float>("lr_decay", adagrad_conf.lr_decay())
         .Attr<float>("epsilon", adagrad_conf.epsilon());
@@ -659,7 +660,7 @@ void BuildEmbeddingUpdate(
     state_constant_init_values.push_back(ftrl_conf.initial_accumulator_value());
     // For `z`, its init value is 0.0.
     state_constant_init_values.push_back(0.0);
-    embedding_update_op_builder.OpTypeName("ftrl_embedding_update")
+    embedding_update_op_builder.OpTypeName("one_embedding_ftrl_update")
         .Attr<float>("lr_power", ftrl_conf.lr_power())
         .Attr<float>("lambda1", ftrl_conf.lambda1())
         .Attr<float>("lambda2", ftrl_conf.lambda2())
@@ -1045,7 +1046,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_user_conf()) { return; }
-    if (!(op_conf.user_conf().op_type_name() == "embedding_lookup_placeholder")) { return; }
+    if (!(op_conf.user_conf().op_type_name() == "one_embedding_fused_lookup")) { return; }
     std::vector<OperatorConf> add_ops;
     std::vector<std::string> delete_op_names;
     const user_op::UserOpConfWrapper embedding_op(op_node->op().op_conf());
@@ -1075,8 +1076,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     const int64_t seed = embedding_op.attr<int64_t>("seed");
     const int64_t parallel_num = op_node->parallel_desc().parallel_num();
     const bool use_system_gather =
-        (parallel_num == 1 && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_USE_SYSTEM_GATHER", false)
-         && !embedding::UseDynamicMemoryAllocation());
+        (parallel_num == 1 && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_USE_SYSTEM_GATHER", true));
     std::string new_embeddings_lbn;
 
     // prefetch can not exec in advance when it consume id_shuffle_copy_out, because
@@ -1112,13 +1112,17 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
         &embedding_lbn, &unique_values_lbn, &embedding_prefetch_op_conf, &embedding_lookup_op_conf);
 
     if (use_system_gather) {
-      user_op::UserOpConfWrapperBuilder gather_op_builder(embedding_op.op_name() + "_gather");
-      user_op::UserOpConfWrapper gather_op = gather_op_builder.OpTypeName("gather")
-                                                 .Input("in", embedding_lbn)
-                                                 .Input("indices", inverse_indices_lbn)
-                                                 .Output("out")
-                                                 .ScopeSymbolId(embedding_scope_symbol_id)
-                                                 .Build();
+      user_op::UserOpConfWrapperBuilder gather_op_builder(embedding_op.op_name()
+                                                          + "_one_embedding_gather");
+      user_op::UserOpConfWrapper gather_op =
+          gather_op_builder.OpTypeName("one_embedding_gather")
+              .Input("in", embedding_lbn)
+              .Input("indices", inverse_indices_lbn)
+              .Output("out")
+              .Attr<int64_t>("embedding_size", embedding_size)
+              .Attr<std::string>("embedding_name", embedding_name)
+              .ScopeSymbolId(embedding_scope_symbol_id)
+              .Build();
       add_ops.push_back(gather_op.op_conf());
       new_embeddings_lbn = gather_op.output("out", 0);
     } else {
@@ -1143,7 +1147,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
       const OpNode* consumer = edge->dst_node();
       if (consumer->op().op_conf().has_user_conf()) {
         const user_op::UserOpConfWrapper update_op_conf(consumer->op().op_conf());
-        if (update_op_conf.op_type_name() != "embedding_update_placeholder") { continue; }
+        if (update_op_conf.op_type_name() != "one_embedding_fused_lookup_grad") { continue; }
         if (update_op_conf.attr<std::string>("embedding_name")
             != embedding_op.attr<std::string>("embedding_name")) {
           continue;
