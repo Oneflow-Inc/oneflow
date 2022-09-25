@@ -44,7 +44,7 @@ Maybe<void> PruneAmpWhiteIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const 
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_user_conf()) { return; }
     const std::string& op_type_name = op_conf.user_conf().op_type_name();
-    if (op_type_name != "amp_white_identity") { return; }
+    if (op_type_name != "amp_white_identity" || op_type_name != "amp_black_identity") { return; }
     if (!op_conf.ctrl_in_op_name().empty()) { return; }
     if (ctrl_in_op_names.find(op_conf.name()) != ctrl_in_op_names.end()) { return; }
     if (op_node->in_edges().size() != 1) { return; }
