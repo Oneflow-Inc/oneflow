@@ -1277,6 +1277,7 @@ class TensorScatterNdUpdateFunctor {
         auto output =
             JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {tensor, contiguous_index, updates}));
         int64_t ndim = tensor->shape()->NumAxes();
+        // TODO: use inplace copy op to write back to origin tensor
         std::vector<int64_t> start(ndim, 0);
         std::vector<int64_t> stop(tensor->shape()->begin(), tensor->shape()->end());
         std::vector<int64_t> step(ndim, 1);
