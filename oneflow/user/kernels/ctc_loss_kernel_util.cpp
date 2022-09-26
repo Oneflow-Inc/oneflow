@@ -22,7 +22,7 @@ int64_t get_target_prime(const TARGET* targets_ptr, const IDX* target_lengths_pt
                          int64_t max_target_length, int64_t b, int64_t s, int64_t blank,
                          const int32_t targets_ndim) {
   if (s % 2 == 0) {
-    return static_cast<int64_t>(blank);
+    return blank;
   } else {
     int64_t idx = 0;
     if (targets_ndim == 1) {
@@ -31,7 +31,7 @@ int64_t get_target_prime(const TARGET* targets_ptr, const IDX* target_lengths_pt
       idx = b * max_target_length;
     }
     idx += s / 2;
-    return targets_ptr[idx];
+    return static_cast<int64_t>(targets_ptr[idx]);
   }
 }
 
