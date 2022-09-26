@@ -402,6 +402,8 @@ class OrdinalEncoder {
 
   void DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
                      uint32_t* n_dumped, Key* keys, Index* context) {
+    OF_CUDA_CHECK(cudaMemsetAsync(n_dumped, 0, sizeof(uint32_t),
+                                  stream->As<ep::CudaStream>()->cuda_stream()));
     RUN_CUDA_KERNEL((OrdinalEncodeDumpDirtyOnlyKernel<Key, Index>), stream,
                     end_key_index - start_key_index, table_keys_, table_indices_,
                     table_dirty_flags_, start_key_index, end_key_index, n_dumped, keys, context);
