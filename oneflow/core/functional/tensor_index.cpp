@@ -222,7 +222,7 @@ Maybe<Tensor> PermuteBackForGlobalTensor(const std::shared_ptr<Tensor>& result,
   CHECK_OR_RETURN(result->is_global());                // NOLINT(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(result->ndim(), permute.size());  // NOLINT(maybe-need-error-msg)
   std::vector<int> inv_permute(permute.size());
-  for (int32_t i = 0; i < permute.size(); ++i) { inv_permute[permute.at(i)] = i; }
+  for (int32_t i = 0; i < permute.size(); ++i) { inv_permute[permute[i]] = i; }
 
   bool not_permute = true;
   {

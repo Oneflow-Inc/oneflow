@@ -1267,9 +1267,9 @@ class TensorScatterNdUpdateFunctor {
       } else {
         JUST(CheckInplaceValid(tensor));
         auto outputs = std::make_shared<TensorTuple>(1);
-        outputs->at(0) = tensor;
+        (*outputs)[0] = tensor;
         JUST(OpInterpUtil::Dispatch(*op_, {tensor, contiguous_index, updates}, outputs.get()));
-        return outputs->at(0);
+        return (*outputs)[0];
       }
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {tensor, contiguous_index, updates});
