@@ -197,6 +197,8 @@ class SGD(Optimizer):
             maximize = param_group["maximize"]
 
             optimizer_conf.base_learning_rate = lr
+            self._generate_lr_scale_for_optim_conf(param_group, optimizer_conf)
+
             if beta == 0:
                 optimizer_conf.naive_conf.SetInParent()
             else:

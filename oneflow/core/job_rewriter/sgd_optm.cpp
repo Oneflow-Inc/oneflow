@@ -32,6 +32,9 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
       .Input("learning_rate", optimizer_conf.learning_rate_lbn())
       .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(optimizer_conf, *var_op))
       .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
+  if (optimizer_conf.has_lr_scale()) {
+    sgd_update_op_builder.Attr<float>("learning_rate_scale", optimizer_conf.lr_scale());
+  }
   SetDynamicLossScaleSkipIf(ctx, &sgd_update_op_builder);
   user_op::UserOpConfWrapper sgd_update_op = sgd_update_op_builder.Build();
   job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {sgd_update_op.op_conf()});

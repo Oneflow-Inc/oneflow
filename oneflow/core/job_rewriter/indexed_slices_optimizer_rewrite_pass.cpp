@@ -107,7 +107,8 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
     indexed_slices_op_builder.OpTypeName("indexed_slices_" + user_op_conf.op_type_name())
         .Input("model", user_op_conf.input("model", 0))
         .Input("learning_rate", user_op_conf.input("learning_rate", 0))
-        .Attr<float>("weight_decay", user_op_conf.attr<float>("weight_decay"));
+        .Attr<float>("weight_decay", user_op_conf.attr<float>("weight_decay"))
+        .Attr<float>("learning_rate_scale", user_op_conf.attr<float>("learning_rate_scale"));
 
     if (user_op_conf.op_type_name() == "sgd_update") {
       // do nothing
