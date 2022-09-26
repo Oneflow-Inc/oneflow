@@ -501,9 +501,9 @@ class ReduceNanSumWholeFunctor {
       tensor = JUST(Cast(x, JUST(dtype), /*pin_memory=*/false));
     }
 
-    const int32_t naxis = tensor->ndim();
-    if (naxis == 0) { return tensor; }  // for 0-dim Tensor
-    std::vector<int32_t> axis(naxis);
+    const int32_t ndim = tensor->ndim();
+    if (ndim == 0) { return tensor; }  // for 0-dim Tensor
+    std::vector<int32_t> axis(ndim);
     std::iota(axis.begin(), axis.end(), 0);
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis", "keepdims");
