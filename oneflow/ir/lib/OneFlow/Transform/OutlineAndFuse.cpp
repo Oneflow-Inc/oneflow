@@ -13,13 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <iostream>
-#include <string>
+#include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/OneFlowOps.h"
 #include "OneFlow/Passes.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
+#include <iostream>
+#include <string>
+
 using namespace mlir;
+
+namespace mlir {
+namespace oneflow {
 
 namespace {
 
@@ -27,7 +35,30 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    oneflow::populateFuserPasses(patterns);
+    populateFuserPasses(patterns);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
+class ConvertOFKLCalleeToLLVMPass
+    : public ConvertOFKLCalleeToLLVMPassBase<ConvertOFKLCalleeToLLVMPass> {
+  void getDependentDialects(DialectRegistry& registry) const override {
+    registry.insert<LLVM::LLVMDialect>();
+  }
+
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    populateConvertOFKLCalleeToLLVMPasses(patterns);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
+class KernelLaunchFunctionPass : public KernelLaunchFunctionPassBase<KernelLaunchFunctionPass> {
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    populateKernelWrapperPasses(patterns);
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
@@ -36,19 +67,23 @@ class FuseIntoExistingOpPass : public FuseIntoExistingOpPassBase<FuseIntoExistin
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    oneflow::populateFuserForExistingOp(patterns);
+    populateFuserForExistingOp(patterns);
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
 
 }  // namespace
 
-namespace mlir {
-
-namespace oneflow {
-
 std::unique_ptr<Pass> createOutlineJitFunctionPass() {
   return std::make_unique<OutlineJitFunctionPass>();
+}
+
+std::unique_ptr<Pass> createKernelLaunchFunctionPass() {
+  return std::make_unique<KernelLaunchFunctionPass>();
+}
+
+std::unique_ptr<mlir::Pass> createConvertOFKLCalleeToLLVMPass() {
+  return std::make_unique<ConvertOFKLCalleeToLLVMPass>();
 }
 
 std::unique_ptr<Pass> createFuseIntoExistingOpPass() {
@@ -56,5 +91,4 @@ std::unique_ptr<Pass> createFuseIntoExistingOpPass() {
 }
 
 }  // namespace oneflow
-
 }  // namespace mlir
