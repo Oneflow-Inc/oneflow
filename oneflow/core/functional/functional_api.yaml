@@ -2804,3 +2804,15 @@
     "Tensor (Tensor output_grad,Tensor input,Tensor weight,Tensor offset,Tensor mask, Int32 stride_h,Int32 stride_w,Int32 pad_h,
     Int32 pad_w,Int32 dilation_h,Int32 dilation_w,Int32 groups,Int32 offset_groups,Bool use_mask) => DeformConv2dParamGrad"
   bind_python: False
+
+- name: "broadcast_shapes"
+  signature: "Shape (ShapeList shapes) => BroadcastShapes"
+  bind_python: True
+
+- name: "broadcast_tensors"
+  signature: "Tensor (TensorTuple tensors) => BroadcastTensors"
+  bind_python: True
+
+- name: "broadcast_to"
+  signature: "Tensor (Tensor x, Shape shape) => Expand"
+  bind_python: True

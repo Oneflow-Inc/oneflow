@@ -39,9 +39,11 @@ Maybe<void> CheckInplaceShapeCanExpandTo(const Shape& shape, const Shape& expand
 Optional<Stride> ComputeStride(const Shape& shape, const Stride& stride, const Shape& target_shape);
 Maybe<Shape> InferShapeUnspecifiedDim(const int64_t& elem_count, const Shape& shape);
 
-// returns tuple<unified_shape, input_need_to_broadcast, other_need_to_broadcast>
-Maybe<std::tuple<Shape, bool, bool>> InferUnifiedShapeForBroadcasting(const Shape& input_shape,
-                                                                      const Shape& other_shape);
+// returns unified_shape
+Maybe<Shape> InferUnifiedShapeForBroadcasting(const std::vector<Shape>& shapes);
+// returns tuple<unified_shape, need_to_broadcasts>
+Maybe<std::tuple<Shape, std::deque<bool>>> InferUnifiedShapeForBroadcastingWithInfo(
+    const std::vector<Shape>& shapes);
 
 }  // namespace functional
 }  // namespace one

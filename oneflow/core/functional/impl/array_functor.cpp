@@ -3270,6 +3270,36 @@ class FillTensorFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class BroadcastShapesFunctor {
+ public:
+  Maybe<Shape> operator()(const std::vector<Shape>& shapes) const {
+    return InferUnifiedShapeForBroadcasting(shapes);
+  }
+};
+
+class BroadcastTensorsFunctor {
+ public:
+  Maybe<TensorTuple> operator()(const TensorTuple& tensors) const {
+    Shape shape_to_broadcast;
+    std::deque<bool> need_to_broadcast;
+
+    std::tie(shape_to_broadcast, need_to_broadcast) =
+        *JUST(InferUnifiedShapeForBroadcastingWithInfo([tensors] {
+          std::vector<Shape> shapes;
+          for (auto& x : tensors) { shapes.push_back(*x->shape()); }
+          return shapes;
+        }()));
+
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>();
+    for (size_t i = 0; i < tensors.size(); ++i) {
+      outputs->emplace_back(need_to_broadcast.at(i)
+                                ? JUST(functional::Expand(tensors.at(i), shape_to_broadcast))
+                                : tensors.at(i));
+    }
+    return outputs;
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -3408,6 +3438,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TransposeAllDimFunctionFunctor>("TransposeAllDimFunction");
   m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
   m.add_functor<impl::PinMemoryFunctor>("PinMemory");
+  m.add_functor<impl::BroadcastShapesFunctor>("BroadcastShapes");
+  m.add_functor<impl::BroadcastTensorsFunctor>("BroadcastTensors");
 };
 
 }  // namespace functional

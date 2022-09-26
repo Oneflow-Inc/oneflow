@@ -369,6 +369,7 @@ from oneflow._C import randn
 from oneflow._C import randint
 from oneflow._C import randint_like
 from oneflow._C import randperm
+from oneflow._C import broadcast_to
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.slice import slice_op as slice
@@ -388,6 +389,8 @@ from oneflow.nn.modules.global_cast import to_global_op as to_global
 from oneflow.nn.modules.global_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
+from oneflow.nn.modules.broadcast_ops import broadcast_tensors_op as broadcast_tensors
+from oneflow.nn.modules.broadcast_ops import broadcast_shapes_op as broadcast_shapes
 from oneflow.ops.stateful_ops import StatefulOp as stateful_op
 
 # autocast
