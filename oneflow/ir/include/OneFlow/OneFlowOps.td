@@ -269,6 +269,16 @@ def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
   let constructor = "mlir::oneflow::createOutlineJitFunctionPass()";
 }
 
+def KernelLaunchFunctionPass : Pass<"kernel-launch-function", "ModuleOp"> {
+  let summary = "wrap user ops with kernel launch ops in callee";
+  let constructor = "mlir::oneflow::createKernelLaunchFunctionPass()";
+}
+
+def ConvertOFKLCalleeToLLVMPass : Pass<"convert-ofkl-callee-to-llvm", "ModuleOp"> {
+  let summary = "convert oneflow kernel launch callee to llvm ir";
+  let constructor = "mlir::oneflow::createConvertOFKLCalleeToLLVMPass()";
+}
+
 def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";

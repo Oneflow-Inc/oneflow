@@ -40,16 +40,16 @@ AttrMap::AttrInternal::AttrInternal(
 AttrMap::AttrMap() : internal_(std::make_shared<AttrMap::AttrInternal>()) {}
 
 AttrMap::AttrMap(const MutableAttrMap& other)
-    : internal_(std::make_shared<AttrMap::AttrInternal>(
-        other.max_size(), /*size*/ 0, /*hash_value*/ 0, other.ordered_attr_names())) {
+    : internal_(std::make_shared<AttrMap::AttrInternal>(other.max_size(), /*size*/ 0,
+                                                        /*hash_value*/ 0,
+                                                        other.ordered_attr_names())) {
   internal_->attrs.resize(internal_->max_size);
   for (int i = 0; i < internal_->max_size; ++i) {
     internal_->attrs[i].second = other.valid_masks()[i];
     if (other.valid_masks()[i]) {
       ++(internal_->size);
       internal_->attrs[i].first = other.attrs()[i];
-
-      HashCombine(&internal_->hash_value, (*internal_->ordered_attr_names)[i].size());
+      // compute hash code
       HashCombine(&internal_->hash_value, other.attrs()[i]->hash_value());
     }
   }
@@ -63,8 +63,7 @@ AttrMap::AttrMap(const UserOpConf& user_conf)
       ++(internal_->size);
       internal_->ordered_attr_names->emplace_back(kv.first);
       internal_->attrs.emplace_back(CHECK_JUST(cpp_attr_value), true);
-
-      HashCombine(&internal_->hash_value, kv.first.size());
+      // compute hash code
       HashCombine(&internal_->hash_value, internal_->attrs.back().first->hash_value());
     } else {
       LOG(ERROR) << user_conf.DebugString()
@@ -102,7 +101,7 @@ Maybe<const T&> AttrMap::GetAttr(const std::string& attr_name) const {
   CHECK_OR_RETURN(attr) << Error::InvalidValueError()
                         << "no attribute found. attribute name: " << attr_name;
   const auto* ptr = dynamic_cast<const user_op::TypedAttrVal<T>*>(attr.get());
-  CHECK_NOTNULL_OR_RETURN(ptr);
+  CHECK_NOTNULL_OR_RETURN(ptr) << Error::RuntimeError() << "Ptr should be non-null";
   return ptr->val();
 }
 

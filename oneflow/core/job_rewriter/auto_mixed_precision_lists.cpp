@@ -40,8 +40,8 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "fused_relu_dropout_grad",
                                "fused_dot_feature_interaction",
                                "fused_dot_feature_interaction_grad",
-                               "embedding_lookup_placeholder",
-                               "embedding_update_placeholder",
+                               "one_embedding_fused_lookup",
+                               "one_embedding_fused_lookup_grad",
                                "binary_cross_entropy_with_logits_reduce_mean",
                                "binary_cross_entropy_with_logits_reduce_mean_grad",
                                "fused_cross_feature_interaction",
@@ -52,7 +52,7 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
 
 const AMPList& AutoMixedPrecisionLists::BlackList() {
   // TODO(niuchong): reduce_mean?
-  static AMPList black_list = {};
+  static AMPList black_list = {"amp_black_identity"};
   return black_list;
 }
 
@@ -111,7 +111,10 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "fused_bias_add_mask_scale",
                               "acc",
                               "reciprocal",
-                              "reciprocal_no_nan"};
+                              "reciprocal_no_nan",
+                              "group_norm",
+                              "group_norm_param_grad",
+                              "group_norm_grad"};
   return gray_list;
 }
 
@@ -150,7 +153,6 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "embedding",
                                "embedding_grad",
                                "expand",
-                               "expand_grad",
                                "expand_dims",
                                "cast_to_static_shape",
                                "parallel_cast",

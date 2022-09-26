@@ -55,15 +55,20 @@ class StreamPolicy {
                                      InstructionStatusBuffer* status_buffer) const = 0;
   virtual void DeleteInstructionStatus(const Stream& stream,
                                        InstructionStatusBuffer* status_buffer) const = 0;
+  virtual bool QueryInstructionStatusLaunched(
+      const Stream& stream, const InstructionStatusBuffer& status_buffer) const = 0;
   virtual bool QueryInstructionStatusDone(const Stream& stream,
                                           const InstructionStatusBuffer& status_buffer) const = 0;
-  virtual void Run(Instruction* instruction) const = 0;
-
   virtual bool OnSchedulerThread(StreamType stream_type) const;
   virtual bool SupportingTransportInstructions() const = 0;
 
+  void RunIf(Instruction* instruction) const;
+
  protected:
   StreamPolicy() = default;
+
+ private:
+  virtual void Run(Instruction* instruction) const = 0;
 };
 
 }  // namespace vm

@@ -25,6 +25,8 @@ limitations under the License.
 #include <cuda_bf16.h>
 #endif  // CUDA_VERSION >= 11000
 #endif
+#include "oneflow/core/common/bfloat16.h"
+#include "oneflow/core/common/bfloat16_math.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/record/record.pb.h"
@@ -236,7 +238,14 @@ struct DevDType<DeviceType::kCUDA, float16> {
   static_assert(sizeof(float16) == sizeof(half), "sizeof(float16) != sizeof(half)");
   typedef half type;
 };
-#endif
+#if CUDA_VERSION >= 11000
+template<>
+struct DevDType<DeviceType::kCUDA, bfloat16> {
+  static_assert(sizeof(bfloat16) == sizeof(nv_bfloat16), "sizeof(bfloat16) != sizeof(nv_bfloat16)");
+  typedef nv_bfloat16 type;
+};
+#endif  // CUDA_VERSION >= 11000
+#endif  // defined(WITH_CUDA)
 
 // Func
 
@@ -261,6 +270,11 @@ void CheckDataType(DataType data_type) {
                  && data_type != DataType::kChar && data_type != GetDataType<T>::value))
       << data_type << " " << GetDataType<T>::value;
 }
+
+int64_t GetIntMaxVal(DataType datatype);
+int64_t GetIntMinVal(DataType datatype);
+double GetFloatMaxVal(DataType datatype);
+double GetFloatMinVal(DataType datatype);
 
 }  // namespace oneflow
 
