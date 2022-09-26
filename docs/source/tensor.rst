@@ -156,6 +156,7 @@ Tensor class reference
     Tensor.new_empty
     Tensor.new_ones 
     Tensor.new_zeros
+    Tensor.new_full
     Tensor.new_tensor
     Tensor.is_cuda
     Tensor.is_global
