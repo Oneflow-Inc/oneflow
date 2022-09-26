@@ -278,7 +278,7 @@ Maybe<void> EagerLocalInterpreter::ApplyImpl(const GlobalToGlobalOpExpr& op_expr
 
 namespace {
 
-Maybe<void> RawLocalToGlobal(const CastToGlobalOpExpr& op_expr, const TensorTuple& inputs,
+Maybe<void> RawLocalToGlobal(const LocalToGlobalOpExpr& op_expr, const TensorTuple& inputs,
                              TensorTuple* outputs, const OpExprInterpContext& ctx) {
   std::shared_ptr<LocalTensor> input_local_tensor;
   {
@@ -323,7 +323,7 @@ static constexpr auto* LocalToGlobal = DECORATE(&RawLocalToGlobal, NonRecursiveI
 
 }  // namespace
 
-Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastToGlobalOpExpr& op_expr,
+Maybe<void> EagerLocalInterpreter::ApplyImpl(const LocalToGlobalOpExpr& op_expr,
                                              const TensorTuple& inputs, TensorTuple* outputs,
                                              const OpExprInterpContext& ctx) const {
   bool sync_data = JUST(ctx.attrs.GetAttr<bool>("sync_data"));
@@ -350,7 +350,7 @@ Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastToGlobalOpExpr& op_expr,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastFromGlobalOpExpr& op_expr,
+Maybe<void> EagerLocalInterpreter::ApplyImpl(const GlobalToLocalOpExpr& op_expr,
                                              const TensorTuple& inputs, TensorTuple* outputs,
                                              const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();

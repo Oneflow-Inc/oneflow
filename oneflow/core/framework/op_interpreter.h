@@ -81,8 +81,8 @@ class OpExprInterpreter {
   _macro(CastToLocalOp);             \
   _macro(CastFromLocalOp);           \
   _macro(GlobalToGlobalOp);          \
-  _macro(CastToGlobalOp);            \
-  _macro(CastFromGlobalOp);          \
+  _macro(LocalToGlobalOp);            \
+  _macro(GlobalToLocalOp);          \
   _macro(DistributeSplitOp);         \
   _macro(DistributeCloneOp);         \
   _macro(DistributeConcatOp);        \

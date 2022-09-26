@@ -85,13 +85,13 @@ const std::string& GlobalToGlobalOpExpr::op_type_name() const {
   return kOpTypeName;
 }
 
-const std::string& CastToGlobalOpExpr::op_type_name() const {
-  static const std::string kOpTypeName = "cast_to_global";
+const std::string& LocalToGlobalOpExpr::op_type_name() const {
+  static const std::string kOpTypeName = "local_to_global";
   return kOpTypeName;
 }
 
-const std::string& CastFromGlobalOpExpr::op_type_name() const {
-  static const std::string kOpTypeName = "cast_from_global";
+const std::string& GlobalToLocalOpExpr::op_type_name() const {
+  static const std::string kOpTypeName = "global_to_local";
   return kOpTypeName;
 }
 
@@ -580,17 +580,17 @@ GlobalToGlobalOpExpr::GlobalToGlobalOpExpr(const Optional<Symbol<NdSbp>>& grad_n
 
 CastGlobalOpExpr::CastGlobalOpExpr(const std::string& op_name) : op_name_(op_name) {}
 
-CastToGlobalOpExpr::CastToGlobalOpExpr(const std::string& op_name) : CastGlobalOpExpr(op_name) {}
+LocalToGlobalOpExpr::LocalToGlobalOpExpr(const std::string& op_name) : CastGlobalOpExpr(op_name) {}
 
-/* static */ Maybe<CastToGlobalOpExpr> CastToGlobalOpExpr::New(const std::string& op_name) {
-  return std::shared_ptr<CastToGlobalOpExpr>(new CastToGlobalOpExpr(op_name));
+/* static */ Maybe<LocalToGlobalOpExpr> LocalToGlobalOpExpr::New(const std::string& op_name) {
+  return std::shared_ptr<LocalToGlobalOpExpr>(new LocalToGlobalOpExpr(op_name));
 }
 
-CastFromGlobalOpExpr::CastFromGlobalOpExpr(const std::string& op_name)
+GlobalToLocalOpExpr::GlobalToLocalOpExpr(const std::string& op_name)
     : CastGlobalOpExpr(op_name) {}
 
-/* static */ Maybe<CastFromGlobalOpExpr> CastFromGlobalOpExpr::New(const std::string& op_name) {
-  return std::shared_ptr<CastFromGlobalOpExpr>(new CastFromGlobalOpExpr(op_name));
+/* static */ Maybe<GlobalToLocalOpExpr> GlobalToLocalOpExpr::New(const std::string& op_name) {
+  return std::shared_ptr<GlobalToLocalOpExpr>(new GlobalToLocalOpExpr(op_name));
 }
 
 template<>
@@ -733,18 +733,18 @@ Maybe<OpExprGradClosure> GlobalToGlobalOpExpr::GetOrCreateOpGradClosure() const 
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
 }
 
-Maybe<OpExprGradClosure> CastToGlobalOpExpr::GetOrCreateOpGradClosure() const {
+Maybe<OpExprGradClosure> LocalToGlobalOpExpr::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
-    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("cast_to_global"));
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("local_to_global"));
     CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
     JUST(op_grad_func_->Init(*this));
   }
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
 }
 
-Maybe<OpExprGradClosure> CastFromGlobalOpExpr::GetOrCreateOpGradClosure() const {
+Maybe<OpExprGradClosure> GlobalToLocalOpExpr::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
-    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("cast_from_global"));
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("global_to_local"));
     CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
     JUST(op_grad_func_->Init(*this));
   }

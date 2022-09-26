@@ -60,8 +60,8 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
   APPLY_IF(CastToLocalOp);
   APPLY_IF(CastFromLocalOp);
   APPLY_IF(GlobalToGlobalOp);
-  APPLY_IF(CastToGlobalOp);
-  APPLY_IF(CastFromGlobalOp);
+  APPLY_IF(LocalToGlobalOp);
+  APPLY_IF(GlobalToLocalOp);
   APPLY_IF(DistributeSplitOp);
   APPLY_IF(DistributeCloneOp);
   APPLY_IF(DistributeConcatOp);
