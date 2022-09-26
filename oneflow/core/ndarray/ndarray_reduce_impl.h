@@ -16,9 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_NDARRAY_NDARRAY_REDUCE_IMPL_H_
 #define ONEFLOW_CORE_NDARRAY_NDARRAY_REDUCE_IMPL_H_
 
-#include "oneflow/core/common/data_type.h"
-#include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/switch_func.h"

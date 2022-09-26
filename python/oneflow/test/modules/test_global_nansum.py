@@ -43,15 +43,15 @@ def _test_global_nansum_with_0_size_tensor(test_case, placement, sbp):
     return y
 
 
-class TestGlobalSumModule(flow.unittest.TestCase):
+class TestGlobalNanSumModule(flow.unittest.TestCase):
     @globaltest
-    def test_global_sum_against_pytorch(test_case):
+    def test_global_nansum_against_pytorch(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):
                 _test_global_nansum_against_pytorch(test_case, placement, sbp)
 
     @globaltest
-    def test_global_sum_with_0_size_tensor(test_case):
+    def test_global_nansum_with_0_size_tensor(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4, valid_split_axis=[0, 1, 3]):
                 _test_global_nansum_with_0_size_tensor(test_case, placement, sbp)
