@@ -177,22 +177,33 @@ class GpuAsStridedGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPUASSTRIDED_KERNEL(in_type)                                                 \
-  REGISTER_USER_KERNEL("as_strided")                                                          \
-      .SetCreateFn<GpuAsStridedKernel<in_type>>()                                             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                        \
-                       && (user_op::HobDataType("input", 0) == GetDataType<in_type>::value)); \
-  REGISTER_USER_KERNEL("as_strided_grad")                                                     \
-      .SetCreateFn<GpuAsStridedGradKernel<in_type>>()                                         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                        \
+#define REGISTER_GPUASSTRIDED_KERNEL(in_type)                          \
+  REGISTER_USER_KERNEL("as_strided")                                   \
+      .SetCreateFn<GpuAsStridedKernel<in_type>>()                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("input", 0) == GetDataType<in_type>::value));
 
 REGISTER_GPUASSTRIDED_KERNEL(half);
 REGISTER_GPUASSTRIDED_KERNEL(float);
 REGISTER_GPUASSTRIDED_KERNEL(double);
+REGISTER_GPUASSTRIDED_KERNEL(int8_t);
+REGISTER_GPUASSTRIDED_KERNEL(uint8_t);
+REGISTER_GPUASSTRIDED_KERNEL(int32_t);
 REGISTER_GPUASSTRIDED_KERNEL(int64_t);
 
 #undef REGISTER_GPUASSTRIDED_KERNEL
+
+#define REGISTER_GPUASSTRIDED_GRAD_KERNEL(in_type)                     \
+  REGISTER_USER_KERNEL("as_strided_grad")                              \
+      .SetCreateFn<GpuAsStridedGradKernel<in_type>>()                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+                       && (user_op::HobDataType("input", 0) == GetDataType<in_type>::value));
+
+REGISTER_GPUASSTRIDED_GRAD_KERNEL(half);
+REGISTER_GPUASSTRIDED_GRAD_KERNEL(float);
+REGISTER_GPUASSTRIDED_GRAD_KERNEL(double);
+
+#undef REGISTER_GPUASSTRIDED_GRAD_KERNEL
 
 REGISTER_USER_KERNEL("as_strided")
     .SetCreateFn<GpuAsStridedKernel<bool>>()
