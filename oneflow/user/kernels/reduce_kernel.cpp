@@ -152,6 +152,9 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
   REGISTER_REDUCE_XPU_KERNEL("reduce_min", BinaryFuncMin, device, dtype)   \
   REGISTER_REDUCE_XPU_KERNEL("reduce_max", BinaryFuncMax, device, dtype)
 
+#define REGISTER_REDUCE_NANSUM_KERNELS(device, dtype) \
+  REGISTER_REDUCE_XPU_KERNEL("reduce_nansum", BinaryFuncNanSum, device, dtype)
+
 #define REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(device) \
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, bool)           \
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, float)          \
@@ -161,9 +164,15 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int32_t)        \
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int64_t)
 
+#define REGISTER_REDUCE_NANSUM_KERNELS_BY_DEVICE(device) \
+  REGISTER_REDUCE_NANSUM_KERNELS(device, float)          \
+  REGISTER_REDUCE_NANSUM_KERNELS(device, double)
+
 REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(DeviceType::kCPU)
+REGISTER_REDUCE_NANSUM_KERNELS_BY_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(DeviceType::kCUDA)
+REGISTER_REDUCE_NANSUM_KERNELS_BY_DEVICE(DeviceType::kCUDA)
 #endif
 
 #define REGISTER_REDUCE_SUM_KERNELS(device, dtype) \
