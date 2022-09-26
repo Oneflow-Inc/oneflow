@@ -163,7 +163,7 @@ struct CubFunctor4BianryFunc;
   struct CubFunctor4BianryFunc<T, BinaryFunc##func_name> final { \
     using type = cub::func_name;                                 \
   };
-OF_PP_FOR_EACH_ATOMIC(SPECIALIZE_CUB_FUNCTOR_4_BINARY_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ (NanSum));
+OF_PP_FOR_EACH_ATOMIC(SPECIALIZE_CUB_FUNCTOR_4_BINARY_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ(NanSum));
 #undef SPECIALIZE_CUB_FUNCTOR_4_BINARY_FUNC
 
 struct RowOffsetFunctor final {
