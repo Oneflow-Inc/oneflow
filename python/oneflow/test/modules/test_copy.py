@@ -36,13 +36,22 @@ class Test_Copy_module(flow.unittest.TestCase):
         flow_base_grid[..., 0].copy_(flow_x_grid)
         test_case.assertTrue(np.allclose(torch_base_grid.numpy(), flow_base_grid.numpy()))
     
-    def test_non_contiguous_tensor_copy(test_case):
+    def test_non_contiguous_sliced_tensor_copy(test_case):
         torch_tensor = torch.arange(24, dtype=torch.float32).reshape(1,2,3,4)
         flow_tensor = flow.arange(24, dtype=flow.float32).reshape(1,2,3,4)
         torch_copy = torch.tensor([3.1415])
         flow_copy = flow.tensor([3.1415])
         torch_tensor[:,1:2,1:2,::2].copy_(torch_copy)
         flow_tensor[:,1:2,1:2,::2].copy_(flow_copy)
+        test_case.assertTrue(np.allclose(flow_tensor.numpy(), torch_tensor.numpy()))
+    
+    def test_non_contiguous_permuted_tensor_copy(test_case):
+        torch_tensor = torch.arange(24, dtype=torch.float32).reshape(1,2,3,4)
+        flow_tensor = flow.arange(24, dtype=flow.float32).reshape(1,2,3,4)
+        torch_copy = torch.tensor([3.1415])
+        flow_copy = flow.tensor([3.1415])
+        torch_tensor.permute(0, 2, 1, 3).copy_(torch_copy)
+        flow_tensor.permute(0, 2, 1, 3).copy_(flow_copy)
         test_case.assertTrue(np.allclose(flow_tensor.numpy(), torch_tensor.numpy()))
 
 
