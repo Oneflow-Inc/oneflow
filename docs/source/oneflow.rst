@@ -311,6 +311,7 @@ Reduction Ops
     mean  
     median
     prod
+    nansum
     std  
     sum  
     var
