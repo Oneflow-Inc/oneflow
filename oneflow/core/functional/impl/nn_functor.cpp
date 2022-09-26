@@ -3912,64 +3912,32 @@ class SpmmCooFunctor {
                                   .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a_coo_row,
-                           const std::shared_ptr<one::Tensor>& a_coo_col, 
-                           const std::shared_ptr<one::Tensor>& a_coo_val, 
-                           const int64_t& a_num_rows,
-                           const int64_t& a_num_cols,
-                           const std::shared_ptr<one::Tensor>& b) const {
+                           const std::shared_ptr<one::Tensor>& a_coo_col,
+                           const std::shared_ptr<one::Tensor>& a_coo_val, const int64_t& a_num_rows,
+                           const int64_t& a_num_cols, const std::shared_ptr<one::Tensor>& b) const {
     const auto& b_shape = b->shape();
     CHECK_GE_OR_RETURN(b_shape->NumAxes(), 1)
         << Error::RuntimeError() << "Tensor b's dim should >= 1";
-   
+
     CHECK_EQ_OR_RETURN(a_num_cols, b_shape->at(0))
-        << Error::RuntimeError() << "size mismatch, got " << a_num_rows
-        << ", " << a_num_cols << " x " << std::to_string(b_shape->at(0))
-        << ", " << std::to_string(b_shape->at(1));
-    
+        << Error::RuntimeError() << "size mismatch, got " << a_num_rows << ", " << a_num_cols
+        << " x " << std::to_string(b_shape->at(0)) << ", " << std::to_string(b_shape->at(1));
+
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("a_num_rows", a_num_rows));
     JUST(attrs.SetAttr<int64_t>("a_num_cols", a_num_cols));
-    return OpInterpUtil::Dispatch<Tensor>(*spmm_coo_op_, {a_coo_row, a_coo_col, a_coo_val, b}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*spmm_coo_op_, {a_coo_row, a_coo_col, a_coo_val, b},
+                                          attrs);
   }
 
-private:
+ private:
   std::shared_ptr<OpExpr> spmm_coo_op_;
-};  
-
-class SpmmCooGradFunctor {
- public:
-  SpmmCooGradFunctor() {
-    spmm_coo_grad_op_ = CHECK_JUST(one::OpBuilder("spmm_coo_grad")
-                                  .Input("a_coo_row")
-                                  .Input("a_coo_col")
-                                  .Input("a_coo_val")
-                                  .Input("dout")
-                                  .Output("db")
-                                  .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a_coo_row,
-                           const std::shared_ptr<one::Tensor>& a_coo_col, 
-                           const std::shared_ptr<one::Tensor>& a_coo_val, 
-                           const int64_t& a_num_rows,
-                           const int64_t& a_num_cols,
-                           const std::shared_ptr<one::Tensor>& dout) const {
-    const auto& dout_shape = dout->shape();
-    
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("a_num_rows", a_num_rows));
-    JUST(attrs.SetAttr<int64_t>("a_num_cols", a_num_cols));
-    return OpInterpUtil::Dispatch<Tensor>(*spmm_coo_grad_op_, {a_coo_row, a_coo_col, a_coo_val, dout}, attrs);
-  }
-
-private:
-  std::shared_ptr<OpExpr> spmm_coo_grad_op_;
-}; 
+};
 
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SpmmCooFunctor>("SpmmCoo");
-  m.add_functor<impl::SpmmCooGradFunctor>("SpmmCooGrad");
   m.add_functor<impl::BiasAddFunctor>("BiasAdd");
   m.add_functor<impl::Conv1dFunctor>("Conv1d");
   m.add_functor<impl::Conv2dFunctor>("Conv2d");

@@ -94,10 +94,10 @@ CudaStream::CudaStream(CudaDevice* device)
   // cublas_handle
   OF_CUBLAS_CHECK(cublasCreate(&cublas_handle_));
   OF_CUBLAS_CHECK(cublasSetStream(cublas_handle_, cuda_stream_));
-// cusparse_handle
+  // cusparse_handle
   OF_CUSPARSE_CHECK(cusparseCreate(&cusparse_handle_));
   OF_CUSPARSE_CHECK(cusparseSetStream(cusparse_handle_, cuda_stream_));
-    
+
 #if CUDA_VERSION >= 10010
   // cublas_lt_handle
   OF_CUBLAS_CHECK(cublasLtCreate(&cublas_lt_handle_));

@@ -90,7 +90,7 @@ class CudaStream : public Stream {
 #if CUDA_VERSION >= 10010
 
   cublasLtHandle_t cublas_lt_handle() const;
-  
+
 #endif
 
   cudnnHandle_t cudnn_handle() const;

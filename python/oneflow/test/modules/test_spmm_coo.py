@@ -9,7 +9,7 @@ You may obtain a copy of the License at
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY nnzIND, either express or implied.
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
@@ -22,6 +22,7 @@ import numpy as np
 
 
 from oneflow.test_utils.automated_test_util import *
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestSpmmCooModule(flow.unittest.TestCase):
@@ -40,10 +41,11 @@ class TestSpmmCooModule(flow.unittest.TestCase):
         acv = flow.tensor(a_coo_val, dtype=flow.float32, device=flow.device(device))
         bb = flow.tensor(b, dtype=flow.float32, device=flow.device(device))
         flow_y = flow._C.spmm_coo(acr, acc, acv, a_rows, a_cols, bb)
-        np_y = coo_matrix((a_coo_val, (a_coo_row, a_coo_col)), shape=(a_rows, a_cols)) * b
+        np_y = (
+            coo_matrix((a_coo_val, (a_coo_row, a_coo_col)), shape=(a_rows, a_cols)) * b
+        )
 
-        test_case.assertTrue(
-            np.allclose(flow_y.numpy(),np_y, 1e-05, 1e-05))
+        test_case.assertTrue(np.allclose(flow_y.numpy(), np_y, 1e-05, 1e-05))
 
 
 if __name__ == "__main__":
