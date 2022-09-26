@@ -76,18 +76,6 @@ void UpdateOpName2AncestorsNeedNoGrad(
   (*op_name2ancestors_need_no_grad)[op.op_name()] = no_grad;
 }
 
-void InitBroadcastNdSbpSignature(NdSbpSignature* nd_sbp_sig,
-                                 const HashMap<std::string, bool>& ibn2disable_boxing) {
-  for (const auto& it : ibn2disable_boxing) {
-    if (it.second) {
-      const auto& ibn = it.first;
-      (*(nd_sbp_sig->mutable_bn_in_op2nd_sbp()))[ibn]
-          .add_sbp_parallel()
-          ->mutable_broadcast_parallel();
-    }
-  }
-}
-
 }  // namespace
 
 JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id)
@@ -562,9 +550,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
 
   // infer nd_sbp signature
   NdSbpSignature nd_sbp_sig_conf;
-  if (job_desc->enable_auto_parallel()) {
-    InitBroadcastNdSbpSignature(&nd_sbp_sig_conf, ibn2disable_boxing);
-  } else {
+  if (!job_desc->enable_auto_parallel()) {
     nd_sbp_sig_conf = *JUST(InitConstraitNdSbpSignature(*op, ibn2disable_boxing));
   }
   // Override constrait nd_sbp if sbp hint is given
