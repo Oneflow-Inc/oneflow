@@ -10416,8 +10416,8 @@ def OneFlow_BatchNormBackwardElemtOp : OneFlow_BaseOp<"batch_norm_backward_elemt
 
 
 // Group: linear algebra.
-// inv
-// Total: 1
+// inv, linalg_cross
+// Total: 2
 
 #ifdef GET_ONEFLOW_LINEAR_ALGEBRA_OP_DEFINITIONS
 
@@ -10427,6 +10427,23 @@ def OneFlow_InvOp : OneFlow_BaseOp<"inv", [NoSideEffect, DeclareOpInterfaceMetho
   );
   let output = (outs
     OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_LinalgCrossOp : OneFlow_BaseOp<"linalg_cross", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$other
+  );
+  let attrs = (ins
+    SI64Attr:$dim
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

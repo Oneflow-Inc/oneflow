@@ -1827,6 +1827,10 @@
   signature: "Tensor (Tensor x) => Inv"
   bind_python: True
 
+- name: "linalg_cross"
+  signature: "Tensor (Tensor input, Tensor other, Int64 dim=None) => LinalgCross"
+  bind_python: True
+
 - name: "dropout"
   signature: "Tensor (Tensor input, Float p=0.5, Bool training=True, Bool inplace=False, Generator generator=None, *, Tensor addend=None) => Dropout"
   bind_python: True
@@ -1922,18 +1926,34 @@
 - name: "scatter"
   signature:
     [
-      "Tensor (Tensor input, Int32 dim, Tensor index, Tensor src) => DimScatter",
-      "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src) => DimScatterUpdateScalar",
+      "Tensor (Tensor input, Int32 dim, Tensor index, Tensor src, String reduce=None, *, Bool inplace=False) => DimScatter",
+      "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src, String reduce=None, *, Bool inplace=False) => DimScatterScalar",
     ]
   bind_python: True
+
+- name: "scatter_update"
+  signature:
+    [
+      "Tensor (Tensor input, Int32 dim, Tensor index, Tensor src, *, Bool inplace=False) => DimScatterUpdate",
+      "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src, *, Bool inplace=False) => DimScatterUpdateScalar",
+    ]
+  bind_python: False
 
 - name: "scatter_add"
   signature:
     [
-      "Tensor (Tensor input, Int32 dim, Tensor index, Tensor src) => DimScatterAdd",
-      "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src) => DimScatterAddScalar",
+      "Tensor (Tensor input, Int32 dim, Tensor index, Tensor src, *, Bool inplace=False) => DimScatterAdd",
+      "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src, *, Bool inplace=False) => DimScatterAddScalar",
     ]
   bind_python: True
+
+- name: "scatter_mul"
+  signature:
+    [
+      "Tensor (Tensor input, Int32 dim, Tensor index, Tensor src, *, Bool inplace=False) => DimScatterMul",
+      "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src, *, Bool inplace=False) => DimScatterMulScalar",
+    ]
+  bind_python: False
 
 - name: "scatter_add_like"
   signature: "Tensor (Tensor like, Int32 dim, Tensor index, Tensor src) => DimScatterAddLike"
