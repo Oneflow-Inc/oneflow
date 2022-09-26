@@ -392,11 +392,7 @@ class Optimizer(object):
         """
         for param_group in self.param_groups:
             for param in param_group.parameters:
-                if param.grad is not None:
-                    if set_to_none:
-                        param.grad = None
-                    else:
-                        param.grad.zero_()
+                param._zero_grad_(set_to_none)
 
     def _parse_input_parameters(self, parameters):
         """
