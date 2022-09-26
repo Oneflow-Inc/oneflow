@@ -107,7 +107,7 @@ message OptimizerConf {
   optional string learning_rate_lbn = 5;
   optional ClipConf clip_conf = 6;
   optional WeightDecayConf weight_decay_conf = 7;
-  optional float lr_scale = 8;
+  optional float lr_scale = 8 [default = 1.0];
   oneof normal_mdupdt {
     NaiveModelUpdateConf naive_conf = 1000;
     MomentumModelUpdateConf momentum_conf = 1001;
