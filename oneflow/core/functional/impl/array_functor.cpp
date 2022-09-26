@@ -2261,11 +2261,15 @@ class TensorSetItemFunctor {
       }
 
       JUST(UnifyInputAndIndicesOnDevice(result, tensor_indices));
-      JUST(ApplyAdvancedIndexingUpdate(result, tensor_indices, value));
+      result = JUST(ApplyAdvancedIndexingUpdate(result, tensor_indices, value));
 
       // Write the sliced tensor back to the original tensor.
       if (result->is_global()) {
         if (*result->shape() != slice_result_shape) {
+          CHECK_EQ_OR_RETURN(result->shape()->elem_cnt(), slice_result_shape.elem_cnt())
+              << Error::RuntimeError()
+              << "The global tensor size mismatch. Target sizes: " << slice_result_shape.ToString()
+              << ", value sizes: " << result->shape()->ToString();
           result = JUST(functional::View(result, slice_result_shape));
         }
         JUST(SliceUpdate(expand_input, result, start, end, step, /*inplace=*/true));

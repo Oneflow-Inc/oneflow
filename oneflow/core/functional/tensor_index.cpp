@@ -217,12 +217,10 @@ Maybe<bool> HasFalseIndex(const TensorIndex& index) {
 }
 
 // Permute back for global tensor which transpose dims to front
-Maybe<void> PermuteBackForGlobalTensor(const std::shared_ptr<Tensor>& result,
-                                       const std::shared_ptr<Tensor>& origin_input,
-                                       const std::vector<int>& permute) {
-  CHECK_OR_RETURN(result->is_global());                      // NOLINT(maybe-need-error-msg)
-  CHECK_EQ_OR_RETURN(result->ndim(), origin_input->ndim());  // NOLINT(maybe-need-error-msg)
-  CHECK_EQ_OR_RETURN(result->ndim(), permute.size());        // NOLINT(maybe-need-error-msg)
+Maybe<Tensor> PermuteBackForGlobalTensor(const std::shared_ptr<Tensor>& result,
+                                         const std::vector<int>& permute) {
+  CHECK_OR_RETURN(result->is_global());                // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(result->ndim(), permute.size());  // NOLINT(maybe-need-error-msg)
   std::vector<int> inv_permute(permute.size());
   for (int32_t i = 0; i < permute.size(); ++i) { inv_permute[permute.at(i)] = i; }
 
@@ -236,16 +234,10 @@ Maybe<void> PermuteBackForGlobalTensor(const std::shared_ptr<Tensor>& result,
     }
   }
   if (!not_permute) {
-    const auto& tensor = JUST(Transpose(result, inv_permute));
-    CHECK_EQ_OR_RETURN(tensor->shape(), origin_input->shape())
-        << "global tensor setitem writing back tensor should have same shape, but result shape is "
-        << tensor->shape() << " and origin shape is " << origin_input->shape();
-    std::vector<int64_t> start(tensor->ndim(), 0);
-    std::vector<int64_t> stop(tensor->shape()->begin(), tensor->shape()->end());
-    std::vector<int64_t> step(tensor->ndim(), 1);
-    JUST(functional::SliceUpdate(origin_input, tensor, start, stop, step, /*inplace=*/true));
+    return Transpose(result, inv_permute);
+  } else {
+    return result;
   }
-  return Maybe<void>::Ok();
 }
 
 }  // namespace
@@ -410,9 +402,9 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   return result;
 }
 
-Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
-                                        const TensorTuple& indices,
-                                        const std::shared_ptr<Tensor>& value) {
+Maybe<Tensor> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
+                                          const TensorTuple& indices,
+                                          const std::shared_ptr<Tensor>& value) {
   CHECK_GE_OR_RETURN(input->ndim(), indices.size())
       << Error::IndexError() << "Too many indices for tensor of dimension " << input->ndim();
   const auto& expanded_indices = JUST(ExpandIndices(indices));
@@ -436,7 +428,7 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
 
   if (valid_indices.empty()) {
     CHECK_EQ_OR_RETURN(value->nelement(), 0) << Error::IndexError() << "invalid indices";
-    return Maybe<void>::Ok();
+    return input;
   }
   int index_ndim = valid_indices[0]->ndim();
   auto packed_indices = JUST(Stack(valid_indices, 0));
@@ -488,9 +480,9 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
   JUST(TensorScatterNdUpdate(transposed_input, packed_indices, expand_value, /*inplace=*/true));
   // Global tensor is not support view, so we should permute back and copy to origin input if need
   if (transposed_input->is_global()) {
-    JUST(PermuteBackForGlobalTensor(transposed_input, input, *transposed_input_permute));
+    return PermuteBackForGlobalTensor(transposed_input, *transposed_input_permute);
   }
-  return Maybe<void>::Ok();
+  return transposed_input;
 }
 
 Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
