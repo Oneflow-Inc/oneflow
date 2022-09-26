@@ -37,3 +37,7 @@ def diagonal(self, input, offset=0, dim1=-2, dim2=-1):
     Alias for :func:`oneflow.diagonal` with defaults :attr:`dim1`\ `= -2`, :attr:`dim2`\ `= -1`.
     """
     return flow._C.diagonal(self, input, offset=offset, dim1=dim1, dim2=dim2)
+
+
+def cross(input, other, dim=-1):
+    return flow._C.linalg_cross(input, other, dim=dim)

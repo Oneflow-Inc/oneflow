@@ -40,8 +40,8 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "fused_relu_dropout_grad",
                                "fused_dot_feature_interaction",
                                "fused_dot_feature_interaction_grad",
-                               "embedding_lookup_placeholder",
-                               "embedding_update_placeholder",
+                               "one_embedding_fused_lookup",
+                               "one_embedding_fused_lookup_grad",
                                "binary_cross_entropy_with_logits_reduce_mean",
                                "binary_cross_entropy_with_logits_reduce_mean_grad",
                                "fused_cross_feature_interaction",
@@ -52,7 +52,7 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
 
 const AMPList& AutoMixedPrecisionLists::BlackList() {
   // TODO(niuchong): reduce_mean?
-  static AMPList black_list = {};
+  static AMPList black_list = {"amp_black_identity"};
   return black_list;
 }
 

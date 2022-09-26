@@ -152,6 +152,7 @@ from oneflow._C import reduce_sum as sum
 from oneflow._C import reduce_mean as mean
 from oneflow._C import reduce_all as all
 from oneflow._C import reduce_any as any
+from oneflow._C import reduce_nansum as nansum
 from oneflow._C import rsqrt
 from oneflow._C import sqrt
 from oneflow._C import square
@@ -218,6 +219,7 @@ from oneflow._C import isinf
 from oneflow._C import isfinite
 from oneflow._C import inv as inverse
 from oneflow._C import iinfo, finfo
+from oneflow._C import linalg_cross as cross
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
