@@ -53,7 +53,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   //        Could revert it back to
   // sbp_graph_.RandomSbpSignature(use_sbp_collector_);
   //        after settling down the synchronization of sbp strategy.
-  sbp_graph_.Set0SbpSignature();
+  sbp_graph_.SetDefaultSbpSig();
   double ori_cost = sbp_graph_.ComputeCost();
   LOG(INFO) << "Initial cost: " << ori_cost;
   // If we do not prune those identity, steal the initial strategy from user setting and semi-auto

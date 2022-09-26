@@ -28,6 +28,10 @@ namespace auto_parallel {
 // function in cpp. Should be put in one file due to use of template
 // Otherwise we will need to declare specific template at the end of cpp file.
 
+namespace {
+static const int32_t kMinNodeInGraphForMerging = 4;
+}  // anonymous namespace
+
 // Generate a node
 
 SbpNode* SbpGraph::GenerateNode() {
@@ -60,7 +64,7 @@ void SbpGraph::RandomSbpSignature(bool use_sbp_collector) const {
   }
 };
 
-void SbpGraph::Set0SbpSignature() const {
+void SbpGraph::SetDefaultSbpSig() const {
   for (const auto& this_node : node_list_) { this_node->final_sbp_sig_id_ = 0; }
 };
 
@@ -221,29 +225,15 @@ int32_t SbpGraph::EdgeElimination(SbpNode* this_node) const {
 }
 
 int32_t SbpGraph::ChildElimination(SbpNode* this_node) {
-  if (this_node->edges_in_.size() + this_node->edges_out_.size() == 1) {
-    if (this_node->edges_in_.size()) {
-      // edge in graph: father -> this_node
-      SbpNode* father = this_node->edges_in_[0]->start_node_;
-      father->children_.emplace_back(this_node);
-      CheckAndRemoveFrom<SbpEdge*>(father->edges_out_, this_node->edges_in_[0]);
-      father->SummarizeCost();
-    } else {
-      // edge in graph: this_node -> father
-      SbpNode* father = this_node->edges_out_[0]->end_node_;
-      father->children_.emplace_back(this_node);
-      CheckAndRemoveFrom<SbpEdge*>(father->edges_in_, this_node->edges_out_[0]);
-      father->SummarizeCost();
-    }
-
+  if (this_node->EliminateItselfAsChild()) {
     // eliminate this node from global node list
     RemoveFromNodeList(this_node);
-
     // successfully eliminate this node
     return 1;
+  } else {
+    // can not eliminate this node
+    return 0;
   }
-  // can not eliminate this node
-  return 0;
 }
 
 // Merge two nodes
@@ -607,7 +597,7 @@ double SbpGraph::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id) co
 // Select and Merge two nodes
 
 int32_t SbpGraph::PickAndMerge() {
-  if (node_list_.size() < 4) { return 0; }
+  if (node_list_.size() < kMinNodeInGraphForMerging) { return 0; }
   // Pick the one with the smallest cut ratio
   double min_cut_ratio = 1.0;
   double curr_cut_ratio = 0.0;

@@ -44,7 +44,7 @@ class SbpGraph final {
   // Randomly assign a SbpSignature strategy
   void RandomSbpSignature(bool use_sbp_collector) const;
   // assign 0 to a SbpSignature strategy to avoid randomness
-  void Set0SbpSignature() const;
+  void SetDefaultSbpSig() const;
 
   // Compute Cost for current strategy
   double ComputeCost() const;

@@ -194,6 +194,28 @@ void SbpNode::SummarizeCost() {
   }
 }
 
+bool SbpNode::EliminateItselfAsChild() {
+  if (edges_in_.size() + edges_out_.size() == 1) {
+    if (edges_in_.size()) {
+      // edge in graph: father -> this_node
+      SbpNode* father = edges_in_[0]->start_node_;
+      father->children_.emplace_back(this);
+      CheckAndRemoveFrom<SbpEdge*>(father->edges_out_, edges_in_[0]);
+      father->SummarizeCost();
+    } else {
+      // edge in graph: this_node -> father
+      SbpNode* father = edges_out_[0]->end_node_;
+      father->children_.emplace_back(this);
+      CheckAndRemoveFrom<SbpEdge*>(father->edges_in_, edges_out_[0]);
+      father->SummarizeCost();
+    }
+    // successfully eliminate this node
+    return true;
+  }
+  // can not eliminate this node
+  return false;
+}
+
 void SbpNode::FinalizeSbp() {
   if (!half_node_.empty()) {
     // Finalize Sbp of merged nodes

@@ -54,6 +54,10 @@ class SbpNode final {
 
   SbpEdge* FindEdgeWithNode(const SbpNode* other_node) const;
 
+  // Check and eliminate one child node.
+  // Only used by SbpGraph since it need to remove it from the NodeList after this.
+  bool EliminateItselfAsChild();
+
   // Initialize SbpSignature from Signature Objects
   void InitializeSbp();
   // Decide to use this SbpSignature
@@ -134,14 +138,16 @@ class SbpNode final {
   // compound edge out
   std::vector<SbpEdge*> edges_out_;
 
-  // Available SbpSignature object for this node
-  std::vector<NdSbpSignature> sbp_sig_list_;
+  // Location in node_list of SbpGraph
+  int32_t node_list_id_ = -1;
   // Global SbpSignature List Size
   int32_t global_sbp_sig_size_ = -1;
   // Decide to use SbpSignature with this id
   int32_t final_sbp_sig_id_;
-  // Location in node_list of SbpGraph
-  int32_t node_list_id_ = -1;
+  // Available SbpSignature object for this node
+  std::vector<NdSbpSignature> sbp_sig_list_;
+  // Cost[sbp] is Computation Cost when using sbp_sig_list_[sbp]
+  std::vector<double> cost_;
 
   // Child node list
   std::vector<SbpNode*> children_;
@@ -155,9 +161,6 @@ class SbpNode final {
   // We should delete those merged-signatures which has very large cost for speed up
   // New sbp_sig_list_ index map to each half_node_'s sig_index
   std::vector<std::pair<int32_t, int32_t>> merged_sig_id2children_sig_id_;
-
-  // Cost[sbp] is Computation Cost when using sbp_sig_list_[sbp]
-  std::vector<double> cost_;
 
   std::vector<BinarySet> parallel_candidates_;
 
