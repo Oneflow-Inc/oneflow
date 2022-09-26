@@ -70,8 +70,13 @@ struct BinaryFuncTrait final {
 template<typename T>
 struct BinaryFuncNanSum final {
   static OF_DEVICE_FUNC T Invoke(const T x, const T y) {
+#if defined(__CUDACC__)
+    if (isnan(x)) return isnan(y) ? T{0} : y;
+    return isnan(y) ? x : x + y;
+#else
     if (std::isnan(x)) return std::isnan(y) ? T{0} : y;
     return std::isnan(y) ? x : x + y;
+#endif
   }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncNanSum);
@@ -303,8 +308,8 @@ struct BinaryFuncAdd<half> final {
 template<>
 struct BinaryFuncNanSum<half> final {
   static __device__ __forceinline__ half Invoke(const half x, const half y) {
-    if (std::isnan(__half2float(x))) return std::isnan(__half2float(y)) ? __double2half(0.) : y;
-    return std::isnan(__half2float(y)) ? __hadd(x, y) : x;
+    if (isnan(__half2float(x))) return isnan(__half2float(y)) ? __double2half(0.) : y;
+    return isnan(__half2float(y)) ? __hadd(x, y) : x;
   }
 };
 
