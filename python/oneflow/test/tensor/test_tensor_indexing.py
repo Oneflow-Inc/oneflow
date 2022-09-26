@@ -68,14 +68,14 @@ def _test_numpy_scalar_advance_indexing(test_case, numpy_x, np_scalar):
     test_case.assertTrue(
         np.allclose(
             numpy_x[
-                    [np_scalar(0), np_scalar(1)],
-                    [np_scalar(0), np_scalar(1)],
-                    [np_scalar(1), np_scalar(0)],
+                [np_scalar(0), np_scalar(1)],
+                [np_scalar(0), np_scalar(1)],
+                [np_scalar(1), np_scalar(0)],
             ],
             x[
-                    [np_scalar(0), np_scalar(1)],
-                    [np_scalar(0), np_scalar(1)],
-                    [np_scalar(1), np_scalar(0)],
+                [np_scalar(0), np_scalar(1)],
+                [np_scalar(0), np_scalar(1)],
+                [np_scalar(1), np_scalar(0)],
             ].numpy(),
         )
     )
@@ -150,7 +150,8 @@ def _test_advanced_indexing(test_case, numpy_x):
     )
     test_case.assertTrue(
         np.allclose(
-            numpy_x[tuple([[0, 1], [0, 1], [1, 0]])], x[[[0, 1], [0, 1], [1, 0]]].numpy()
+            numpy_x[tuple([[0, 1], [0, 1], [1, 0]])],
+            x[[[0, 1], [0, 1], [1, 0]]].numpy(),
         )
     )
     test_case.assertTrue(np.allclose(numpy_x[tuple([[0], [1]])], x[[[0], [1]]].numpy()))
