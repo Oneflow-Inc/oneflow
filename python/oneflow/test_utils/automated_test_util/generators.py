@@ -195,6 +195,9 @@ class oneof(generator):
                 return self.args[i].value()
         raise RuntimeError()
 
+    def __call__(self, *args: Any, **kwds: Any) -> Any:
+        return self._calc_value()(*args, **kwds)
+
     def size(self):
         return sum([x.size() for x in self.args])
 
