@@ -85,7 +85,8 @@ void IndexedSlicesSGDUpdateKernelUtil<DeviceType::kCPU, T, K, IDX>::Update(
     int64_t feature_size, int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
     const float* learning_rate, const K* indices, const T* values, T* model) {
   const int64_t n = *num_unique_instance * feature_size;
-  const T lr = *learning_rate * lr_scale;
+  T lr = *learning_rate;
+  lr *= lr_scale;
   FOR_RANGE(int64_t, i, 0, n) {
     const IDX indices_idx = i / feature_size;
     const IDX inner_idx = i - indices_idx * feature_size;
@@ -151,7 +152,8 @@ void IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kCPU, T, K, IDX>::Updat
     int64_t upper_bound, const IDX* num_unique_instance, const float* learning_rate,
     const K* indices, const T* values, T* model, T* momentum) {
   const int64_t n = *num_unique_instance * feature_size;
-  const T lr = *learning_rate * lr_scale;
+  T lr = *learning_rate;
+  lr *= lr_scale;
   for (int64_t i = 0; i != n; ++i) {
     const IDX indices_idx = i / feature_size;
     const IDX inner_idx = i - indices_idx * feature_size;
@@ -414,7 +416,9 @@ void LarsUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
   if (model_norm > 0 && model_diff_norm > 0) {
     lars = lars_coefficient * model_norm / (epsilon + model_diff_norm + weight_decay * model_norm);
   }
-  T local_learning_rate = *learning_rate * lr_scale * lars;
+  T lr = *learning_rate;
+  lr *= lr_scale;
+  T local_learning_rate = lr * lars;
   FOR_RANGE(int64_t, i, 0, n) {
     LarsUpdateFunctor<T>()(model_diff_tmp + i, model + i, momentum_beta, momentum + i, weight_decay,
                            local_learning_rate);

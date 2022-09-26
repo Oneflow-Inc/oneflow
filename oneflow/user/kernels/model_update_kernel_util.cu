@@ -50,7 +50,8 @@ __global__ void IndexedSlicesSGDUpdateGpu(float weight_decay, float lr_scale,
                                           const float* learning_rate, const K* indices,
                                           const T* values, T* model) {
   const int64_t n = *num_unique_instance * feature_size;
-  const T lr = *learning_rate * lr_scale;
+  T lr = *learning_rate;
+  lr *= lr_scale;
   CUDA_1D_KERNEL_LOOP_T(IDX, i, n) {
     const IDX indices_idx = i / feature_size;
     const IDX inner_idx = i - indices_idx * feature_size;
@@ -200,7 +201,8 @@ __global__ void IndexedSlicesMomentumUpdateGpu(T beta, float dampening, bool nes
                                                const float* learning_rate, const K* indices,
                                                const T* values, T* model, T* momentum) {
   const int64_t n = *num_unique_instance * feature_size;
-  const T lr = *learning_rate * lr_scale;
+  T lr = *learning_rate;
+  lr *= lr_scale;
   CUDA_1D_KERNEL_LOOP(i, n) {
     const IDX indices_idx = i / feature_size;
     const IDX inner_idx = i - indices_idx * feature_size;
@@ -742,7 +744,9 @@ __global__ void LarsGetLocalLearningRateGpu(const float* learning_rate, float lr
     lars = lars_coefficient * (*model_norm)
            / (epsilon + (*model_diff_norm) + weight_decay * (*model_norm));
   }
-  *local_learning_rate = *learning_rate * lr_scale * lars;
+  T lr = *learning_rate;
+  lr *= lr_scale;
+  *local_learning_rate = lr * lars;
 }
 
 template<typename T>
