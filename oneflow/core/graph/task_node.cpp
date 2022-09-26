@@ -218,7 +218,8 @@ void TaskNode::InitFromProto(const TaskProto& task_proto) {
   // Step3: init produced_regst.
   for (const auto& pair : task_proto.produced_regst_desc()) {
     const auto& regst_desc = ProduceRegst(pair.first, pair.second.enable_reuse_mem());
-    regst_desc->InitFromProto(pair.second);
+    // regst_desc->consumers_ will be initialized by RegstDesc::InitConsumersFromProto.
+    regst_desc->InitFromProtoExceptConsumers(pair.second);
   }
   // Step4: check consumed_regst empty.
   CHECK(task_proto.consumed_regst_desc_id().empty());

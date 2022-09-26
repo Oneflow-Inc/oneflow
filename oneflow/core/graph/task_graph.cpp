@@ -985,6 +985,8 @@ Maybe<void> RankTaskGraph::AddBoxingReletedCompTaskNodesFromProto() {
   for (const auto& pair : boxing_task_graph_proto_->op_name2compute_tasks()) {
     const OpNode* op_node = op_graph->OpNode4OpName(pair.first);
     for (const auto& task_proto : pair.second.parallel_id2task()) {
+      CHECK_OR_RETURN(task_id2task_proto_.emplace(task_proto.task_id(), &task_proto).second)
+          << "redundant task_id.";
       CompTaskNode* comp_task_node = NewCompTaskNode4OpNode(op_node);
       comp_task_node->set_op_node(op_node);
       AddAllocatedNode(comp_task_node);
@@ -997,8 +999,10 @@ Maybe<void> RankTaskGraph::AddBoxingReletedCompTaskNodesFromProto() {
 
 Maybe<void> RankTaskGraph::CreateAndPartiallyInitTransportTaskNodesFromProto() {
   for (const auto& transport_task_proto : boxing_task_graph_proto_->transport_task()) {
-    auto* task_node =
-        JUST(CreateTransportTask::Visit(transport_task_proto.task_proto().task_type()));
+    const auto& task_proto = transport_task_proto.task_proto();
+    CHECK_OR_RETURN(task_id2task_proto_.emplace(task_proto.task_id(), &task_proto).second)
+        << "redundant task_id.";
+    auto* task_node = JUST(CreateTransportTask::Visit(task_proto.task_type()));
     AddAllocatedNode(task_node);
     task_node->InitFromProto(transport_task_proto.task_proto());
     JUST(task_graph_rebuild_ctx_->AddTaskNode(task_node));
@@ -1096,12 +1100,36 @@ Maybe<void> RankTaskGraph::ForEachDutyRank(const ParallelDesc& parallel_desc,
   return Maybe<void>::Ok();
 }
 
+Maybe<void> RankTaskGraph::InitRegstDescsConsumers() {
+  HashMap<int64_t, const RegstDescProto*> id2regst_desc;
+  {
+    for (const auto& task_pair : task_id2task_proto_) {
+      for (const auto& pair : task_pair.second->produced_regst_desc()) {
+        CHECK_OR_RETURN(id2regst_desc.emplace(pair.second.regst_desc_id(), &pair.second).second)
+            << "redundant regst_desc_id: " << pair.second.regst_desc_id();
+      }
+    }
+  }
+  const auto& TaskNode4TaskId = [&](int64_t task_id) -> Maybe<const TaskNode*> {
+    return JUST(task_graph_rebuild_ctx_->TaskNode4Id(task_id));
+  };
+  JUST(MaybeForEachNode([&](TaskNode* task_node) -> Maybe<void> {
+    for (const auto& pair : task_node->produced_regsts()) {
+      const auto& regst_desc_proto = *JUST(MapAt(id2regst_desc, pair.second->regst_desc_id()));
+      JUST(pair.second->InitConsumersFromProto(regst_desc_proto, TaskNode4TaskId));
+    }
+    return Maybe<void>::Ok();
+  }));
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names,
                                 bool enable_straighten_algorithm) {
   JUST(AddBoxingReletedCompTaskNodesFromProto());
   JUST(CreateAndPartiallyInitTransportTaskNodesFromProto());
   JUST(AddTransportTaskEdgesFromProto());
   JUST(InitTransportTaskNodesFromProto());
+  JUST(InitRegstDescsConsumers());
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   JUST(op_graph->MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
     JUST(ForEachDutyRank(op_node->parallel_desc(), [&](int64_t rank) -> Maybe<void> {

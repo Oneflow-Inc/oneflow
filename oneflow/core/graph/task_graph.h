@@ -189,6 +189,7 @@ class RankTaskGraph final : public TaskGraph {
   Maybe<void> CreateAndPartiallyInitTransportTaskNodesFromProto();
   Maybe<void> AddTransportTaskEdgesFromProto();
   Maybe<void> InitTransportTaskNodesFromProto();
+  Maybe<void> InitRegstDescsConsumers();
   template<typename DoEachRankT>
   Maybe<void> ForEachDutyRank(const ParallelDesc& parallel_desc, const DoEachRankT& DoEachRank);
 
@@ -202,6 +203,7 @@ class RankTaskGraph final : public TaskGraph {
   Maybe<void> ConnectCtrlEdges(const OpNode* src, const OpNode* dst, int64_t rank);
 
   std::shared_ptr<BoxingTaskGraphProto> boxing_task_graph_proto_;
+  HashMap<int64_t, const TaskProto*> task_id2task_proto_;
   const int64_t current_rank_;
   std::unique_ptr<TaskGraphRebuildCtx> task_graph_rebuild_ctx_;
   HashMap<const OpNode*, CompTaskNode*> op_node2comp_task_node_;

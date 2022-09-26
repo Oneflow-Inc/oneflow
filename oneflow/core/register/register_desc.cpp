@@ -120,10 +120,9 @@ void RegstDesc::EraseUninitializedShapeBlob() {
       });
 }
 
-void RegstDesc::InitFromProto(const RegstDescProto& proto) {
+void RegstDesc::InitFromProtoExceptConsumers(const RegstDescProto& proto) {
   regst_desc_id_ = proto.regst_desc_id();
   CHECK_EQ(proto.producer_task_id(), producer_->task_id());
-  CHECK(proto.consumer_task_id().empty());
   regst_desc_type_ = proto.regst_desc_type();
   if (regst_desc_type_.has_data_regst_desc()) {
     const DataRegstDesc& data_regst_desc_proto = proto.regst_desc_type().data_regst_desc();
@@ -145,6 +144,15 @@ void RegstDesc::InitFromProto(const RegstDescProto& proto) {
   mem_block_offset_ = proto.mem_block_offset();
   hint_inplace_consumed_regst_desc_id_ = proto.hint_inplace_consumed_regst_desc_id();
   force_inplace_consumed_regst_desc_id_ = proto.force_inplace_consumed_regst_desc_id();
+}
+
+Maybe<void> RegstDesc::InitConsumersFromProto(
+    const RegstDescProto& proto,
+    const std::function<Maybe<const TaskNode*>(int64_t)>& TaskNode4TaskId) {
+  for (int64_t consumer_task_id : proto.consumer_task_id()) {
+    AddConsumer(JUST(TaskNode4TaskId(consumer_task_id)));
+  }
+  return Maybe<void>::Ok();
 }
 
 void RegstDesc::ToProto(RegstDescProto* ret, bool check) const {
