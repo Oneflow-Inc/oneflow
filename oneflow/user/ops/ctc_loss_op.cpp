@@ -31,8 +31,8 @@ namespace oneflow {
   }
   CHECK_EQ_OR_RETURN(input_lengths.shape().At(0), batch_size);
   CHECK_EQ_OR_RETURN(target_lengths.shape().At(0), batch_size);
-  CHECK_GE_OR_RETURN(ctx->Attr<int32_t>("blank"), 0);
-  CHECK_LT_OR_RETURN(ctx->Attr<int32_t>("blank"), log_probs.shape().At(2));
+  CHECK_GE_OR_RETURN(ctx->Attr<int64_t>("blank"), 0);
+  CHECK_LT_OR_RETURN(ctx->Attr<int64_t>("blank"), log_probs.shape().At(2));
 
   ctx->SetOutputShape("loss", 0, Shape({batch_size}));
   ctx->SetOutputShape("alpha", 0,
@@ -75,8 +75,8 @@ namespace oneflow {
   }
   CHECK_EQ_OR_RETURN(input_lengths.shape().At(0), batch_size);
   CHECK_EQ_OR_RETURN(target_lengths.shape().At(0), batch_size);
-  CHECK_GE_OR_RETURN(ctx->Attr<int32_t>("blank"), 0);
-  CHECK_LT_OR_RETURN(ctx->Attr<int32_t>("blank"), log_probs.shape().At(2));
+  CHECK_GE_OR_RETURN(ctx->Attr<int64_t>("blank"), 0);
+  CHECK_LT_OR_RETURN(ctx->Attr<int64_t>("blank"), log_probs.shape().At(2));
 
   ctx->SetOutputShape("grad", 0, log_probs.shape());
   return Maybe<void>::Ok();
