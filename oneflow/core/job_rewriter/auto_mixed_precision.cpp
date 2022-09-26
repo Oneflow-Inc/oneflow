@@ -55,7 +55,7 @@ std::function<bool(OpNode*)> MakePredicatorIsAllowedToRunWithHalf(const OpGraph&
   op_graph.ForEachNode([&](OpNode* node) {
     if (node->parallel_desc().device_type() != DeviceType::kCUDA) { return; }
     if (node->op().output_bns().size() > 0
-        || IsUserOpWithTypeName(node->op().op_conf(), "embedding_update_placeholder")) {
+        || IsUserOpWithTypeName(node->op().op_conf(), "one_embedding_fused_lookup_grad")) {
       INSERT_CHECK(allowed_set->insert(node));
     }
   });
