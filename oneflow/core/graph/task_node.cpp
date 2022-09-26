@@ -209,6 +209,7 @@ void TaskNode::InitFromProto(const TaskProto& task_proto) {
   machine_id_ = task_proto.machine_id();
   thrd_id_ = task_proto.thrd_id();
   task_id_ = task_proto.task_id();
+  new_task_id_.reset(new TaskId(DecodeTaskIdFromInt64(task_id_)));
   CHECK(task_proto.job_id() == GlobalJobDesc().job_id());
   chain_id_ = task_proto.task_set_info().chain_id();
   order_in_graph_ = task_proto.task_set_info().order_in_graph();
@@ -221,7 +222,6 @@ void TaskNode::InitFromProto(const TaskProto& task_proto) {
   }
   // Step4: check consumed_regst empty.
   CHECK(task_proto.consumed_regst_desc_id().empty());
-  new_task_id_.reset(new TaskId(DecodeTaskIdFromInt64(task_id_)));
 }
 
 void TaskNode::ToProto(TaskProto* task_proto, bool check) const {
