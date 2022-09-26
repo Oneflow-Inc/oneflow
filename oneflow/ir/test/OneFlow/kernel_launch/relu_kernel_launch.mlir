@@ -1,5 +1,5 @@
 // RUN: oneflow-opt %s \
-// RUN: -kernel-launch-function  -canonicalize | FileCheck %s
+// RUN: -wrap-ops-to-kernel-launch  -canonicalize | FileCheck %s
 
 // CHECK: oneflow.kernel_launch
 
@@ -18,6 +18,13 @@ module {
       shape = [1 : si64]
       } : (tensor<1xf32>) -> tensor<1xf32>
     %0 = "oneflow.relu"(%output) {
+      device_name = ["@0:0"],
+      device_tag = "cpu",
+      hierarchy = [1],
+      op_name = "relu-0",
+      scope_symbol_id = 12 : i64
+    } : (tensor<1xf32>) -> tensor<1xf32>
+    %1 = "oneflow.relu"(%output) {
       device_name = ["@0:0"],
       device_tag = "cpu",
       hierarchy = [1],

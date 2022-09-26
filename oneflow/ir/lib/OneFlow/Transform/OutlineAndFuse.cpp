@@ -54,11 +54,11 @@ class ConvertOFKLCalleeToLLVMPass
   }
 };
 
-class KernelLaunchFunctionPass : public KernelLaunchFunctionPassBase<KernelLaunchFunctionPass> {
+class WrapOps2KernelLaunchPass : public WrapOps2KernelLaunchPassBase<WrapOps2KernelLaunchPass> {
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    populateKernelWrapperPasses(patterns);
+    populateWrapOps2KernelLaunchPasses(patterns);
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
@@ -78,8 +78,8 @@ std::unique_ptr<Pass> createOutlineJitFunctionPass() {
   return std::make_unique<OutlineJitFunctionPass>();
 }
 
-std::unique_ptr<Pass> createKernelLaunchFunctionPass() {
-  return std::make_unique<KernelLaunchFunctionPass>();
+std::unique_ptr<Pass> createWrapOps2KernelLaunchPass() {
+  return std::make_unique<WrapOps2KernelLaunchPass>();
 }
 
 std::unique_ptr<mlir::Pass> createConvertOFKLCalleeToLLVMPass() {
