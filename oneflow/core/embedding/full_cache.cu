@@ -126,32 +126,20 @@ __global__ void OrdinalEncodeLookupKernel(uint64_t capacity, Key* table_keys, In
   }
 }
 
-template<typename Key, typename Index>
+template<typename Key, typename Index, bool DumpDirtyOnly>
 __global__ void OrdinalEncodeDumpKernel(const Key* table_keys, const Index* table_indices,
-                                        uint64_t start_key_index, uint64_t end_key_index,
-                                        uint32_t* n_dumped, Key* keys, Index* context) {
+                                        const bool* table_dirty_flags, uint64_t start_key_index,
+                                        uint64_t end_key_index, uint32_t* n_dumped, Key* keys,
+                                        Index* context) {
   CUDA_1D_KERNEL_LOOP(i, (end_key_index - start_key_index)) {
     Key entry_key = table_keys[i + start_key_index];
     Index entry_index = table_indices[i + start_key_index];
-    if (entry_index != 0) {
-      uint32_t index = cuda::atomic::Add(n_dumped, static_cast<uint32_t>(1));
-      keys[index] = ((entry_key ^ 0x1) | (entry_index & 0x1));
-      context[index] = (entry_index >> 1U);
+    bool dump_flag = (entry_index != 0);
+    if (DumpDirtyOnly) {
+      bool entry_dirty_flag = table_dirty_flags[i + start_key_index];
+      dump_flag &= entry_dirty_flag;
     }
-  }
-}
-
-template<typename Key, typename Index>
-__global__ void OrdinalEncodeDumpDirtyOnlyKernel(const Key* table_keys, const Index* table_indices,
-                                                 const bool* table_dirty_flags,
-                                                 uint64_t start_key_index, uint64_t end_key_index,
-                                                 uint32_t* n_dumped, Key* keys, Index* context) {
-  CUDA_1D_KERNEL_LOOP(i, (end_key_index - start_key_index)) {
-    Key entry_key = table_keys[i + start_key_index];
-    Index entry_index = table_indices[i + start_key_index];
-    bool entry_dirty_flag = table_dirty_flags[i + start_key_index];
-    bool flag = true;
-    if (entry_index != 0 && entry_dirty_flag) {
+    if (dump_flag) {
       uint32_t index = cuda::atomic::Add(n_dumped, static_cast<uint32_t>(1));
       keys[index] = ((entry_key ^ 0x1) | (entry_index & 0x1));
       context[index] = (entry_index >> 1U);
@@ -395,16 +383,16 @@ class OrdinalEncoder {
             uint32_t* n_dumped, Key* keys, Index* context) {
     OF_CUDA_CHECK(cudaMemsetAsync(n_dumped, 0, sizeof(uint32_t),
                                   stream->As<ep::CudaStream>()->cuda_stream()));
-    RUN_CUDA_KERNEL((OrdinalEncodeDumpKernel<Key, Index>), stream, end_key_index - start_key_index,
-                    table_keys_, table_indices_, start_key_index, end_key_index, n_dumped, keys,
-                    context);
+    RUN_CUDA_KERNEL((OrdinalEncodeDumpKernel<Key, Index, false>), stream,
+                    end_key_index - start_key_index, table_keys_, table_indices_,
+                    table_dirty_flags_, start_key_index, end_key_index, n_dumped, keys, context);
   }
 
   void DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
                      uint32_t* n_dumped, Key* keys, Index* context) {
     OF_CUDA_CHECK(cudaMemsetAsync(n_dumped, 0, sizeof(uint32_t),
                                   stream->As<ep::CudaStream>()->cuda_stream()));
-    RUN_CUDA_KERNEL((OrdinalEncodeDumpDirtyOnlyKernel<Key, Index>), stream,
+    RUN_CUDA_KERNEL((OrdinalEncodeDumpKernel<Key, Index, true>), stream,
                     end_key_index - start_key_index, table_keys_, table_indices_,
                     table_dirty_flags_, start_key_index, end_key_index, n_dumped, keys, context);
   }
