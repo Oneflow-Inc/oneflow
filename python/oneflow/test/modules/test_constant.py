@@ -179,7 +179,7 @@ class TestConstantModule(flow.unittest.TestCase):
         x.new_zeros((2, 3))
         x.new_zeros((32, 3, 128, 128))
         x.new_zeros((1000, 1000, 1000, 1000))
-    
+
     @autotest(n=5)
     def test_new_full(test_case):
         device = random_device()

@@ -428,7 +428,13 @@ def full_like_op(
         new_requires_grad,
     ) = _handle_meta_args(input, None, dtype, device, placement, sbp, requires_grad)
     return Full(
-        new_size, fill_value, new_dtype, new_device, new_placement, new_sbp, new_requires_grad
+        new_size,
+        fill_value,
+        new_dtype,
+        new_device,
+        new_placement,
+        new_sbp,
+        new_requires_grad,
     )()
 
 
