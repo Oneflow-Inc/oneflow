@@ -308,7 +308,7 @@ struct BinaryFuncAdd<half> final {
 template<>
 struct BinaryFuncNanSum<half> final {
   static __device__ __forceinline__ half Invoke(const half x, const half y) {
-    if (isnan(__half2float(x))) return isnan(__half2float(y)) ? __double2half(0.) : y;
+    if (isnan(__half2float(x))) return isnan(__half2float(y)) ? __double2half(0.0) : y;
     return isnan(__half2float(y)) ? __hadd(x, y) : x;
   }
 };
