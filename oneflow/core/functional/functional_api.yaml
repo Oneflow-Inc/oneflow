@@ -303,6 +303,13 @@
     ]
   bind_python: True
 
+- name: "reduce_nansum"
+  signature: [
+    "Tensor (Tensor input, Int32List[1] dim, Bool keepdim=False, *, DataType dtype=None) => ReduceNanSum",
+    "Tensor (Tensor input, *, DataType dtype=None) => ReduceNanSumWhole"
+  ]
+  bind_python: True
+
 - name: "reduce_mean"
   signature:
     [
