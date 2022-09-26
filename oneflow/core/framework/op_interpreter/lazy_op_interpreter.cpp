@@ -105,6 +105,9 @@ Maybe<void> CheckTensorMatchAttr(const std::shared_ptr<Tensor>& tensor,
     auto nd_sbp_it = nd_sbp_sign_map.find(bn_in_op);
     CHECK_OR_RETURN(nd_sbp_it != nd_sbp_sign_map.end())
         << "nd_sbp of " << bn_in_op << " not found in op " << op_attribute.op_conf().name();
+    // Only check the nd_sbp if auto parallel is not enable,
+    // since the semi-auto parallellism rule might have inconsistency with the auto-parallel
+    // strategy.
     if (!GlobalJobDesc().enable_auto_parallel()) {
       NdSbp nd_sbp(nd_sbp_it->second);
       CHECK_OR_RETURN(JUST(tensor->nd_sbp()) == SymbolOf(nd_sbp))
