@@ -199,6 +199,21 @@ def _new_zeros(
     return flow.new_zeros(self, size, dtype, device, placement, sbp, requires_grad)
 
 
+def _new_full(
+    self,
+    size,
+    fill_value,
+    dtype=None,
+    device=None,
+    placement=None,
+    sbp=None,
+    requires_grad=False,
+):
+    return flow.new_full(
+        self, size, fill_value, dtype, device, placement, sbp, requires_grad
+    )
+
+
 def _mm(self, mat2):
     return flow._C.mm(self, mat2)
 
@@ -565,6 +580,7 @@ def RegisterMethods():
     Tensor.new_empty = _new_empty
     Tensor.new_ones = _new_ones
     Tensor.new_zeros = _new_zeros
+    Tensor.new_full = _new_full
     Tensor.where = _where
     Tensor.mm = _mm
     Tensor.norm = _norm
