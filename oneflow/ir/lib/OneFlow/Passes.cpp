@@ -24,6 +24,7 @@ limitations under the License.
 #include "mlir/IR/Location.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/TypeRange.h"
+#include "mlir/Support/LLVM.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/framework/sbp_context.h"
@@ -906,21 +907,24 @@ struct ConvertOFKLCalleeToLLVMPattern : public mlir::OpRewritePattern<func::Func
 func::FuncOp CreateWrapFunc(mlir::Location loc, std::vector<Operation*>& wrap_ops,
                             mlir::PatternRewriter& rewriter, int& name_index) {
   if (!wrap_ops.size()) return nullptr;
-  auto getProto = [&]() -> std::pair<mlir::ValueRange, mlir::ValueRange> {
+  auto getProto = [&]() -> std::pair<std::vector<Value>, std::vector<Value>> {
     std::vector<Value> ins;
     std::vector<Value> outs;
     for (auto op : wrap_ops) {
-      std::for_each(op->getOperands().begin(), op->getOperands().end(),
-                    [&](mlir::Value it) { ins.push_back(it); });
-      std::for_each(op->getResults().begin(), op->getResults().end(),
-                    [&](mlir::OpResult it) { outs.push_back(it); });
+      for (auto it = op->getOperands().begin(); it != op->getOperands().end(); ++it) {
+        ins.push_back(*it);
+      }
+      for (auto it = op->getResults().begin(); it != op->getResults().end(); ++it) {
+        outs.push_back(*it);
+      }
     }
-    return {mlir::ValueRange(ins), mlir::ValueRange(outs)};
+    return {ins, outs};
   };
 
-  auto proto = getProto();
-  auto func_type = mlir::FunctionType::get(rewriter.getContext(), proto.first.getTypes(),
-                                          proto.second.getTypes());
+  std::pair<std::vector<Value>, std::vector<Value>> proto = getProto();
+
+  auto func_type = rewriter.getFunctionType(TypeRange(ArrayRef<Value>(proto.first)), TypeRange(ArrayRef<Value>(proto.second)));
+  func_type.dump();
   auto func_name = "wrap" + std::to_string(name_index++);
 
   auto module = GetModuleOpFromJobBodyOp(wrap_ops[0]);
@@ -930,15 +934,14 @@ func::FuncOp CreateWrapFunc(mlir::Location loc, std::vector<Operation*>& wrap_op
   }
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPointToStart(module.getBody());
-  func_type.dump();
   auto function = rewriter.create<func::FuncOp>(loc, func_name, func_type);
   function.dump();
   function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
   function.getBody().emplaceBlock();
   function.dump();
-  for (auto arg : proto.first.getTypes()) {
+  for (auto arg : proto.first) {
     arg.dump();
-    function.getBody().addArgument(arg, loc);
+    function.getBody().addArgument(arg.getType(), loc);
   }
 
   BlockAndValueMapping mapping;

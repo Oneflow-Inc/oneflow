@@ -55,6 +55,10 @@ class ConvertOFKLCalleeToLLVMPass
 };
 
 class WrapOps2KernelLaunchPass : public WrapOps2KernelLaunchPassBase<WrapOps2KernelLaunchPass> {
+  void getDependentDialects(DialectRegistry& registry) const override {
+    registry.insert<oneflow::OneFlowDialect>();
+  }
+
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
