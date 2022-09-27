@@ -78,6 +78,9 @@ void GenerateAdagradOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
       .Attr<float>("lr_decay", lr_decay)
       .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(optimizer_conf, *var_op))
       .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
+  if (optimizer_conf.has_lr_scale()) {
+    adagrad_update_op_builder.Attr<float>("learning_rate_scale", optimizer_conf.lr_scale());
+  }
   SetDynamicLossScaleSkipIf(ctx, &adagrad_update_op_builder);
   const auto adagrad_update_op = adagrad_update_op_builder.Build();
   job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {adagrad_update_op.op_conf()});
