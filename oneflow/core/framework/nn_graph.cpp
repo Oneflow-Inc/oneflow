@@ -360,6 +360,10 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
 
+  if (ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false)) {
+    CHECK_OR_RETURN(false) << " Exit to finish dry run of graph compile.";
+  }
+
   NewRuntimeBuffers();
 
   JUST(GetVariableRealBlobAfterSyncPlan());
