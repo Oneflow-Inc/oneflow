@@ -1750,6 +1750,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.masked_fill_,
+    """
+    In-place version of :meth:`oneflow.Tensor.masked_fill`.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.masked_select,
     """
     See :func:`oneflow.masked_select`
