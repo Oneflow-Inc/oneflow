@@ -221,8 +221,6 @@ void TaskNode::InitFromProto(const TaskProto& task_proto) {
     // regst_desc->consumers_ will be initialized by RegstDesc::InitConsumersFromProto.
     regst_desc->InitFromProtoExceptConsumers(pair.second);
   }
-  // Step4: check consumed_regst empty.
-  CHECK(task_proto.consumed_regst_desc_id().empty());
 }
 
 void TaskNode::ToProto(TaskProto* task_proto, bool check) const {
