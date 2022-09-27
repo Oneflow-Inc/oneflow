@@ -549,7 +549,12 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   JUST(InferLocalSignature(op, is_local_parallel_view, parallel_desc));
 
   // infer nd_sbp signature
-  NdSbpSignature nd_sbp_sig_conf = *JUST(InitConstraitNdSbpSignature(*op, ibn2disable_boxing));
+  NdSbpSignature nd_sbp_sig_conf;
+  // Only infer nd_sbp signature if auto parallel is not enable,
+  // since the semi-auto parallellism rule might have inconsistency with the auto-parallel strategy.
+  if (!job_desc->enable_auto_parallel()) {
+    nd_sbp_sig_conf = *JUST(InitConstraitNdSbpSignature(*op, ibn2disable_boxing));
+  }
   // Override constrait nd_sbp if sbp hint is given
   if (!sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
     SbpSignatureToNdSbpSignature(sbp_sig_conf, &nd_sbp_sig_conf);
