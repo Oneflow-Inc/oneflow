@@ -99,7 +99,9 @@ namespace oneflow {
                     || (alpha_desc.shape().At(i - 1) == 1));
   }
   CHECK_EQ_OR_RETURN(dy_desc.shape(), x_desc.shape());
-  CHECK_EQ_OR_RETURN(dy_desc.data_type(), x_desc.data_type());
+  CHECK_EQ_OR_RETURN(dy_desc.data_type(), x_desc.data_type())
+      << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("dy", 0))
+      << ", but got " << DataType_Name(x_desc.data_type());
   dx_desc->set_shape(x_desc.shape());
   dx_desc->set_is_dynamic(x_desc.is_dynamic());
   ctx->SetOutputShape("alpha_diff", 0, alpha_desc.shape());

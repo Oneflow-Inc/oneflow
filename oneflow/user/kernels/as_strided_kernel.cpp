@@ -14,10 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <cstdint>
-#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
@@ -119,23 +116,35 @@ class CpuAsStridedGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPUASSTRIDED_KERNEL(in_type)                                                 \
-  REGISTER_USER_KERNEL("as_strided")                                                          \
-      .SetCreateFn<CpuAsStridedKernel<in_type>>()                                             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                         \
-                       && (user_op::HobDataType("input", 0) == GetDataType<in_type>::value)); \
-  REGISTER_USER_KERNEL("as_strided_grad")                                                     \
-      .SetCreateFn<CpuAsStridedGradKernel<in_type>>()                                         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                         \
+#define REGISTER_CPU_ASSTRIDED_KERNEL(in_type)                        \
+  REGISTER_USER_KERNEL("as_strided")                                  \
+      .SetCreateFn<CpuAsStridedKernel<in_type>>()                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        && (user_op::HobDataType("input", 0) == GetDataType<in_type>::value));
 
-REGISTER_CPUASSTRIDED_KERNEL(float);
-REGISTER_CPUASSTRIDED_KERNEL(double);
-REGISTER_CPUASSTRIDED_KERNEL(bool);
-REGISTER_CPUASSTRIDED_KERNEL(int8_t);
-REGISTER_CPUASSTRIDED_KERNEL(int32_t);
-REGISTER_CPUASSTRIDED_KERNEL(int64_t);
+REGISTER_CPU_ASSTRIDED_KERNEL(float);
+REGISTER_CPU_ASSTRIDED_KERNEL(double);
+REGISTER_CPU_ASSTRIDED_KERNEL(int8_t);
+REGISTER_CPU_ASSTRIDED_KERNEL(uint8_t);
+REGISTER_CPU_ASSTRIDED_KERNEL(int32_t);
+REGISTER_CPU_ASSTRIDED_KERNEL(int64_t);
 
-#undef REGISTER_CPUASSTRIDED_KERNEL
+#undef REGISTER_CPU_ASSTRIDED_KERNEL
+
+#define REGISTER_CPU_ASSTRIDED_GRAD_KERNEL(in_type)                   \
+  REGISTER_USER_KERNEL("as_strided_grad")                             \
+      .SetCreateFn<CpuAsStridedGradKernel<in_type>>()                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
+                       && (user_op::HobDataType("input", 0) == GetDataType<in_type>::value));
+
+REGISTER_CPU_ASSTRIDED_GRAD_KERNEL(float);
+REGISTER_CPU_ASSTRIDED_GRAD_KERNEL(double);
+
+#undef REGISTER_CPU_ASSTRIDED_GRAD_KERNEL
+
+REGISTER_USER_KERNEL("as_strided")
+    .SetCreateFn<CpuAsStridedKernel<bool>>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     && (user_op::HobDataType("input", 0) == GetDataType<bool>::value));
 
 }  // namespace oneflow
