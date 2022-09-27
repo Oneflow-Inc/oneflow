@@ -377,7 +377,7 @@ if(BUILD_PYTHON)
 
   # source this file to add oneflow in PYTHONPATH
   file(WRITE "${PROJECT_BINARY_DIR}/source.sh"
-       "export PYTHONPATH=${ONEFLOW_PYTHON_DIR}:$PYTHONPATH")
+       "export PYTHONPATH=${ONEFLOW_PYTHON_DIR}:$PYTHONPATH\nexport PATH=${ONEFLOW_PYTHON_DIR}:$PATH")
 
   add_dependencies(of_pyscript_copy of_protoobj)
 
