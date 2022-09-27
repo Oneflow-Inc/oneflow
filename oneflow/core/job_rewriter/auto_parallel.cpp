@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/auto_parallel/sbp_constructor.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
@@ -112,10 +113,24 @@ Maybe<void> AutoParallelPass::RemoveParallelCastOps(Job* job) const {
     user_op::UserOpConfWrapper conf_wrapper_out(op_conf);
     const LogicalBlobId& parallel_cast_out_lbi =
         GenLogicalBlobId(conf_wrapper_out.output("out", 0));
-    if (op_node->parallel_desc() != producer->parallel_desc()) { return; }
+    if (op_node->parallel_desc() != producer->parallel_desc()) {
+      VLOG(3) << op_node->op().op_name() << " (with placement: "
+              << *CHECK_JUST(PlacementToString(SymbolOf(op_node->parallel_desc())))
+              << ") can't be pruned, because producer " << producer->op().op_name()
+              << "'s placement is "
+              << *CHECK_JUST(PlacementToString(SymbolOf(producer->parallel_desc())));
+      return;
+    }
     for (const OpEdge* out_edge : op_node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
-      if (consumer->parallel_desc() != op_node->parallel_desc()) { return; }
+      if (consumer->parallel_desc() != op_node->parallel_desc()) {
+        VLOG(3) << op_node->op().op_name() << " (with placement: "
+                << *CHECK_JUST(PlacementToString(SymbolOf(op_node->parallel_desc())))
+                << ") can't be pruned, because consumer " << consumer->op().op_name()
+                << "'s placement is "
+                << *CHECK_JUST(PlacementToString(SymbolOf(consumer->parallel_desc())));
+        return;
+      }
     }
     op_name2nd_sbp_signature[producer->op().op_name()] = producer->nd_sbp_signature();
     for (const OpEdge* out_edge : op_node->out_edges()) {
