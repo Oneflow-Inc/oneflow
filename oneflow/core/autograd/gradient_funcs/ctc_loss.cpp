@@ -57,7 +57,7 @@ Maybe<void> CTCLoss::Capture(CTCLossCaptureState* ctx, const TensorTuple& inputs
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->max_target_length = JUST(composed_attrs.GetAttr<int64_t>("max_target_length"));
-  ctx->blank = JUST(composed_attrs.GetAttr<int32_t>("blank"));
+  ctx->blank = JUST(composed_attrs.GetAttr<int64_t>("blank"));
   ctx->zero_infinity = JUST(composed_attrs.GetAttr<bool>("zero_infinity"));
 
   CHECK_EQ_OR_RETURN(inputs.size(), 4);       // NOLINT(maybe-need-error-msg)
