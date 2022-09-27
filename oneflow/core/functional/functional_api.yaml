@@ -2804,3 +2804,7 @@
     "Tensor (Tensor output_grad,Tensor input,Tensor weight,Tensor offset,Tensor mask, Int32 stride_h,Int32 stride_w,Int32 pad_h,
     Int32 pad_w,Int32 dilation_h,Int32 dilation_w,Int32 groups,Int32 offset_groups,Bool use_mask) => DeformConv2dParamGrad"
   bind_python: False
+
+- name: "bincount"
+  signature: "Tensor (Tensor x, Tensor weight=None) => BinCount"
+  bind_python: True

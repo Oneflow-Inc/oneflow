@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <memory>
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
@@ -22,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -41,6 +43,7 @@ limitations under the License.
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
+#include "oneflow/core/functional/tensor_processor.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/global_for.h"
@@ -3270,6 +3273,60 @@ class FillTensorFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class BinCountFunctor {
+ public:
+  BinCountFunctor() {
+    op_ = CHECK_JUST(OpBuilder("bincount").Input("in").Output("out").Build());
+    weight_op_ =
+        CHECK_JUST(OpBuilder("bincount").Input("in").Input("weight").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
+                           const Optional<Tensor>& weight) const {
+    CHECK_OR_RETURN(!input->dtype()->is_floating_point()) << "bincount can only support int tensor";
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({input}, DType::Int64()).Apply());
+    const auto x = JUST(tensor_processor.GetInputs()).at(0);
+
+    // check min value
+    {
+      auto tensor_min = JUST(functional::Min(x));
+      int64_t min = 0;
+      const auto& callback = [&](ep::Stream* stream,
+                                 const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+        SyncAutoMemcpy(stream, &min, eager_blob_object->dptr(), sizeof(min),
+                       memory::MakeHostMemCase(), eager_blob_object->mem_case());
+      };
+      JUST(SyncAccessTensorWithTimeOut(tensor_min, callback, "const"));
+      CHECK_GE_OR_RETURN(min, 0) << "bincount only supports 1-d non-negative integral inputs.";
+    }
+
+    auto tensor_max = JUST(functional::Max(x));
+    int64_t max = 0;
+    const auto& callback = [&](ep::Stream* stream,
+                               const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+      SyncAutoMemcpy(stream, &max, eager_blob_object->dptr(), sizeof(max),
+                     memory::MakeHostMemCase(), eager_blob_object->mem_case());
+    };
+    JUST(SyncAccessTensorWithTimeOut(tensor_max, callback, "const"));
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("size");
+    attrs.SetAllAttrs(max + 1);
+    if (weight) {
+      // const auto weight_tensor = JUST(weight);
+      CHECK_EQ_OR_RETURN(JUST(weight)->nelement(), x->nelement())
+          << "input and weights should have the same length";
+      return OpInterpUtil::Dispatch<Tensor>(*weight_op_, {x, JUST(weight)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> weight_op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -3408,6 +3465,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TransposeAllDimFunctionFunctor>("TransposeAllDimFunction");
   m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
   m.add_functor<impl::PinMemoryFunctor>("PinMemory");
+  m.add_functor<impl::BinCountFunctor>("BinCount");
 };
 
 }  // namespace functional
