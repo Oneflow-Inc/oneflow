@@ -40,7 +40,7 @@ void PackCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void PackCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); }
-void PackCompTaskNode::ConsumeFakeRegsts() { ConsumeRegst("in", std::make_shared<RegstDesc>()); }
+void PackCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
 void PackCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* exec_node = mut_exec_gph().NewNode();

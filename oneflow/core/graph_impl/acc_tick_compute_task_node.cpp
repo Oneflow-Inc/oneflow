@@ -39,7 +39,7 @@ void AccTickCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst());
 }
 
-void AccTickCompTaskNode::ConsumeFakeRegsts() { ConsumeRegst("in", std::make_shared<RegstDesc>()); }
+void AccTickCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
 void AccTickCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");

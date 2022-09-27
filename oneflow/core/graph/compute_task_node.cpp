@@ -63,7 +63,17 @@ std::vector<CompTaskNode*> GetCompTaskNodesOnEdge(
   return comp_task_nodes;
 }
 
+std::shared_ptr<RegstDesc> NewFakeDataRegstDesc() {
+  auto regst_desc = std::make_shared<RegstDesc>();
+  regst_desc->mut_regst_desc_type()->mutable_data_regst_desc();
+  return regst_desc;
+}
+
 }  // namespace
+
+void CompTaskNode::ConsumeFakeRegst(const std::string& regst_name) {
+  ConsumeRegst(regst_name, NewFakeDataRegstDesc());
+}
 
 void CompTaskNode::ConsumeFakeRegstsIf() {
   ConsumeFakeRegsts();
@@ -73,6 +83,10 @@ void CompTaskNode::ConsumeFakeRegstsIf() {
       if (regst_desc->regst_desc_type().has_data_regst_desc()) {
         CHECK(data_regst_desc == nullptr);
         data_regst_desc = CHECK_NOTNULL(regst_desc.get());
+      } else if (regst_desc->regst_desc_type().has_ctrl_regst_desc()) {
+        // do nothing.
+      } else {
+        UNIMPLEMENTED();
       }
     }
   }

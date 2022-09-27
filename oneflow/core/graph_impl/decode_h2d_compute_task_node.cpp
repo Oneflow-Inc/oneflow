@@ -39,9 +39,7 @@ void DecodeH2DCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst());
 }
 
-void DecodeH2DCompTaskNode::ConsumeFakeRegsts() {
-  ConsumeRegst("in", std::make_shared<RegstDesc>());
-}
+void DecodeH2DCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
 void DecodeH2DCompTaskNode::ProduceAllRegstsAndBindEdges() {
   auto regst_num = ParseIntegerFromEnv("ONEFLOW_DECODE_H2D_REGST_NUM", 2);

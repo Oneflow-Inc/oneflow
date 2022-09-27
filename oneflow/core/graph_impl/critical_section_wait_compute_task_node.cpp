@@ -44,9 +44,7 @@ void CriticalSectionWaitTickCompTaskNode::ConsumeAllRegsts() {
   ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
 }
 
-void CriticalSectionWaitTickCompTaskNode::ConsumeFakeRegsts() {
-  ConsumeRegst("in", std::make_shared<RegstDesc>());
-}
+void CriticalSectionWaitTickCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
 void CriticalSectionWaitTickCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();

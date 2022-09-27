@@ -50,9 +50,7 @@ void DistributeConcatCompTaskNode::ConsumeAllRegsts() {
   CHECK_EQ(cnt, 1);
 }
 
-void DistributeConcatCompTaskNode::ConsumeFakeRegsts() {
-  ConsumeRegst("in", std::make_shared<RegstDesc>());
-}
+void DistributeConcatCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
 void DistributeConcatCompTaskNode::BuildExecGphAndRegst() {
   BuildExecGphStructAndBindInRegst();

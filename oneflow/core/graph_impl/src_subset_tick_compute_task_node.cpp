@@ -44,9 +44,7 @@ void SrcSubsetTickCompTaskNode::ConsumeAllRegsts() {
   ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
 }
 
-void SrcSubsetTickCompTaskNode::ConsumeFakeRegsts() {
-  ConsumeRegst("in", std::make_shared<RegstDesc>());
-}
+void SrcSubsetTickCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
 void SrcSubsetTickCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();

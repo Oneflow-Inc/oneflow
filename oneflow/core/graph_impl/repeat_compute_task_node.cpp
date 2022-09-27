@@ -38,7 +38,7 @@ void RepeatCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst());
 }
 
-void RepeatCompTaskNode::ConsumeFakeRegsts() { ConsumeRegst("in", std::make_shared<RegstDesc>()); }
+void RepeatCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
 void RepeatCompTaskNode::ProduceAllRegstsAndBindEdges() {
   std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 1, 1);

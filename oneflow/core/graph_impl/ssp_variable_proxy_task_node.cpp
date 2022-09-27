@@ -67,7 +67,7 @@ class SspVariableProxyCompTaskNode final : public CompTaskNode {
     ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("var", edge->GetSoleRegst()); });
   }
 
-  void ConsumeFakeRegsts() override { ConsumeRegst("var", std::make_shared<RegstDesc>()); }
+  void ConsumeFakeRegsts() override { ConsumeFakeRegst("var"); }
 
   TaskType GetTaskType() const override { return TaskType::kSspVariableProxy; }
 

@@ -43,7 +43,7 @@ void UnpackCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst());
 }
 
-void UnpackCompTaskNode::ConsumeFakeRegsts() { ConsumeRegst("in", std::make_shared<RegstDesc>()); }
+void UnpackCompTaskNode::ConsumeFakeRegsts() { ConsumeFakeRegst("in"); }
 
 void UnpackCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* exec_node = mut_exec_gph().NewNode();
