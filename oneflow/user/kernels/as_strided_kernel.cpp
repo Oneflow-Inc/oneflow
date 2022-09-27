@@ -122,7 +122,6 @@ class CpuAsStridedGradKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        && (user_op::HobDataType("input", 0) == GetDataType<in_type>::value));
 
-REGISTER_CPU_ASSTRIDED_KERNEL(half);
 REGISTER_CPU_ASSTRIDED_KERNEL(float);
 REGISTER_CPU_ASSTRIDED_KERNEL(double);
 REGISTER_CPU_ASSTRIDED_KERNEL(int8_t);
