@@ -56,7 +56,6 @@ void BoxingIdentityTaskNode::InferProducedDataRegstTimeShape() {
 
 Maybe<void> BoxingIdentityTaskNode::InitTransportTaskFromProto(
     const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
-  InitFromProto(transport_task_proto.task_proto());
   CHECK_OR_RETURN(transport_task_proto.has_boxing_identity_task())
       << "not a serialized BoxingIdentityTaskNode. debug string: "
       << transport_task_proto.DebugString();

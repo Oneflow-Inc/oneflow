@@ -203,7 +203,7 @@ std::string TaskNode::VisualStr() const {
 
 bool TaskNode::IsMeaningLess() { return produced_regsts_.empty() && consumed_regsts_.empty(); }
 
-void TaskNode::InitFromProto(const TaskProto& task_proto) {
+void TaskNode::InitFromProtoExceptConsumedRegsts(const TaskProto& task_proto) {
   // Step1: init some scalar items.
   CHECK(task_proto.task_type() == GetTaskType());
   machine_id_ = task_proto.machine_id();
@@ -221,6 +221,18 @@ void TaskNode::InitFromProto(const TaskProto& task_proto) {
     // regst_desc->consumers_ will be initialized by RegstDesc::InitConsumersFromProto.
     regst_desc->InitFromProtoExceptConsumers(pair.second);
   }
+}
+
+Maybe<void> TaskNode::InitConsumedRegstsFromProto(
+    const TaskProto& task_proto,
+    const std::function<Maybe<RegstDesc>(int64_t regst_desc_id)>& RegstDesc4Id) {
+  // Step3: init consumed_regst.
+  for (const auto& pair : task_proto.consumed_regst_desc_id()) {
+    for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
+      ConsumeRegst(pair.first, JUST(RegstDesc4Id(regst_desc_id)));
+    }
+  }
+  return Maybe<void>::Ok();
 }
 
 void TaskNode::ToProto(TaskProto* task_proto, bool check) const {

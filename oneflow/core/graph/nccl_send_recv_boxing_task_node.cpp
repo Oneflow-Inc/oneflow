@@ -97,7 +97,6 @@ void NcclSendRecvBoxingTaskNode::InferProducedDataRegstTimeShape() {
 
 Maybe<void> NcclSendRecvBoxingTaskNode::InitTransportTaskFromProto(
     const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
-  InitFromProto(transport_task_proto.task_proto());
   CHECK_OR_RETURN(transport_task_proto.has_nccl_send_recv_boxing_task())
       << "not a serialized NcclSendRecvBoxingTaskNode. debug string: "
       << transport_task_proto.DebugString();

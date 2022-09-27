@@ -29,7 +29,7 @@ class CompTaskNode : public TaskNode {
   CompTaskNode() = default;
   virtual ~CompTaskNode() = default;
 
-  virtual void InitFromProto(const TaskProto&) override;
+  virtual void InitFromProtoExceptConsumedRegsts(const TaskProto&) override;
   virtual void ToProto(TaskProto*, bool check) const override;
   // ConsumeFakeRegsts is used for initializing CompTaskNode.consumed_regsts_ on other ranks.
   virtual void ConsumeFakeRegsts() = 0;

@@ -80,8 +80,8 @@ void CompTaskNode::ConsumeFakeRegstsIf() {
 
 std::string CompTaskNode::VisualStr() const { return op_node_->op().op_name(); }
 
-void CompTaskNode::InitFromProto(const TaskProto& proto) {
-  TaskNode::InitFromProto(proto);
+void CompTaskNode::InitFromProtoExceptConsumedRegsts(const TaskProto& proto) {
+  TaskNode::InitFromProtoExceptConsumedRegsts(proto);
   parallel_ctx_ = proto.parallel_ctx();
 }
 

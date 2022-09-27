@@ -990,7 +990,7 @@ Maybe<void> RankTaskGraph::AddBoxingReletedCompTaskNodesFromProto() {
       CompTaskNode* comp_task_node = NewCompTaskNode4OpNode(op_node);
       comp_task_node->set_op_node(op_node);
       AddAllocatedNode(comp_task_node);
-      comp_task_node->InitFromProto(task_proto);
+      comp_task_node->InitFromProtoExceptConsumedRegsts(task_proto);
       JUST(task_graph_rebuild_ctx_->AddTaskNode(comp_task_node));
     }
   }
@@ -1004,7 +1004,7 @@ Maybe<void> RankTaskGraph::CreateAndPartiallyInitTransportTaskNodesFromProto() {
         << "redundant task_id.";
     auto* task_node = JUST(CreateTransportTask::Visit(task_proto.task_type()));
     AddAllocatedNode(task_node);
-    task_node->InitFromProto(transport_task_proto.task_proto());
+    task_node->InitFromProtoExceptConsumedRegsts(transport_task_proto.task_proto());
     JUST(task_graph_rebuild_ctx_->AddTaskNode(task_node));
   }
   return Maybe<void>::Ok();
@@ -1110,10 +1110,15 @@ Maybe<void> RankTaskGraph::InitRegstDescsConsumers() {
       }
     }
   }
+  const auto& RegstDesc4Id = [&](int64_t regst_desc_id) -> Maybe<RegstDesc> {
+    return JUST(task_graph_rebuild_ctx_->RegstDesc4Id(regst_desc_id));
+  };
   const auto& TaskNode4TaskId = [&](int64_t task_id) -> Maybe<const TaskNode*> {
     return JUST(task_graph_rebuild_ctx_->TaskNode4Id(task_id));
   };
   JUST(MaybeForEachNode([&](TaskNode* task_node) -> Maybe<void> {
+    const auto& task_proto = *JUST(MapAt(task_id2task_proto_, task_node->task_id()));
+    JUST(task_node->InitConsumedRegstsFromProto(task_proto, RegstDesc4Id));
     for (const auto& pair : task_node->produced_regsts()) {
       const auto& regst_desc_proto = *JUST(MapAt(id2regst_desc, pair.second->regst_desc_id()));
       JUST(pair.second->InitConsumersFromProto(regst_desc_proto, TaskNode4TaskId));

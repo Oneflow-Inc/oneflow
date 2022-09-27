@@ -69,7 +69,6 @@ void CollectiveBoxingPackTaskNode::InferProducedDataRegstTimeShape() {
 
 Maybe<void> CollectiveBoxingPackTaskNode::InitTransportTaskFromProto(
     const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
-  InitFromProto(transport_task_proto.task_proto());
   CHECK_OR_RETURN(transport_task_proto.has_collective_boxing_pack_task())
       << "not a serialized CollectiveBoxingPackTaskNode. debug string: "
       << transport_task_proto.DebugString();

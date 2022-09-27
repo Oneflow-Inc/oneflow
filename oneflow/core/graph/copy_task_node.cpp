@@ -118,7 +118,6 @@ OperatorConf CopyCommNetTaskNode::NewCopyOpConf() {
 
 Maybe<void> CopyHdTaskNode::InitTransportTaskFromProto(
     const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
-  InitFromProto(transport_task_proto.task_proto());
   CHECK_OR_RETURN(transport_task_proto.has_copy_hd_task())
       << "not a serialized CopyHdTaskNode. debug string: " << transport_task_proto.DebugString();
   copy_type_ = transport_task_proto.copy_hd_task().copy_type();
@@ -132,7 +131,6 @@ void CopyHdTaskNode::ToTransportTaskProto(TransportTaskProto* transport_task_pro
 
 Maybe<void> CopyCommNetTaskNode::InitTransportTaskFromProto(
     const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
-  InitFromProto(transport_task_proto.task_proto());
   CHECK_OR_RETURN(transport_task_proto.has_copy_comm_net_task())
       << "not a serialized CopyCommNetTaskNode. debug string: "
       << transport_task_proto.DebugString();

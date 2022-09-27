@@ -20,6 +20,7 @@ namespace oneflow {
 
 Maybe<void> TransportTaskNode::InitTransportTaskFromProtoIf(
     const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
+  CHECK(has_new_task_id());
   JUST(InitTransportTaskFromProto(transport_task_proto, ctx));
   lbi_ = transport_task_proto.lbi();
   return Maybe<void>::Ok();

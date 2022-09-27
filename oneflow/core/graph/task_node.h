@@ -96,7 +96,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual TaskType GetTaskType() const { return TaskType::kInvalid; }
   std::string VisualStr() const override;
   virtual bool IsMeaningLess();
-  virtual void InitFromProto(const TaskProto& task_proto);
+  virtual void InitFromProtoExceptConsumedRegsts(const TaskProto& task_proto);
+  Maybe<void> InitConsumedRegstsFromProto(
+      const TaskProto& task_proto,
+      const std::function<Maybe<RegstDesc>(int64_t regst_desc_id)>& RegstDesc4Id);
   void ToProto(TaskProto* task_proto) const { ToProto(task_proto, /*check*/ true); }
   virtual void ToProto(TaskProto* task_proto, bool check) const;
   void BindEdgeWithProducedRegst(TaskEdge*, const std::string& name);
@@ -144,6 +147,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
                             const) const;
   size_t GetEdgesSize(void (TaskNode::*ForEachEdge)(const std::function<void(TaskEdge*)>&)
                           const) const;
+  bool has_new_task_id() const { return static_cast<bool>(new_task_id_); }
 
  private:
   void UpdateTaskId();

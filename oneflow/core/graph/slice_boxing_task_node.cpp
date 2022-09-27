@@ -112,7 +112,6 @@ OperatorConf SliceBoxingTaskNode::GetBoxingOpConf() {
 
 Maybe<void> SliceBoxingTaskNode::InitTransportTaskFromProto(
     const TransportTaskProto& transport_task_proto, const TaskGraphRebuildCtx& ctx) {
-  InitFromProto(transport_task_proto.task_proto());
   CHECK_OR_RETURN(transport_task_proto.has_slice_boxing_task())
       << "not a serialized SliceBoxingTaskNode. debug string: "
       << transport_task_proto.DebugString();
