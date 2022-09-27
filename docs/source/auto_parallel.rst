@@ -62,7 +62,7 @@ Configuration API for auto parallelism
     :nosignatures:
 
     enable_auto_parallel
-    enable_auto_parallel_prune_parallel_cast_ops
+    enable_auto_parallel_ignore_user_sbp_config
     set_auto_parallel_computation_cost_ratio
     set_auto_parallel_wait_time
     enable_auto_parallel_mainstem_algo

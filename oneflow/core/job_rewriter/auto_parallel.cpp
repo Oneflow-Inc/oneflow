@@ -38,7 +38,7 @@ class AutoParallelPass final : public JobPass {
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!job->job_conf().enable_auto_parallel()) { return Maybe<void>::Ok(); }
     VLOG(3) << "=== Enable AutoParallel ===";
-    if (job->job_conf().enable_auto_parallel_prune_parallel_cast_ops()) {
+    if (job->job_conf().enable_auto_parallel_ignore_user_sbp_config()) {
       JUST(RemoveParallelCastOps(job));
     }
     const OpGraph op_graph(*job);

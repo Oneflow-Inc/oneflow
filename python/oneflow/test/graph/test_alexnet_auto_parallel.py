@@ -124,7 +124,7 @@ def _test_alexnet_graph(test_case, args, placement, sbp):
             self.cross_entropy = of_cross_entropy
             self.add_optimizer(of_sgd)
             self.config.enable_auto_parallel(True)
-            self.config.enable_auto_parallel_prune_parallel_cast_ops(True)
+            self.config.enable_auto_parallel_ignore_user_sbp_config(True)
             self.config.enable_auto_parallel_mainstem_algo(True)
             self.config.enable_auto_parallel_sbp_collector(True)
 
@@ -141,7 +141,7 @@ def _test_alexnet_graph(test_case, args, placement, sbp):
             super().__init__()
             self.alexnet = alexnet_module
             self.config.enable_auto_parallel(True)
-            self.config.enable_auto_parallel_prune_parallel_cast_ops(True)
+            self.config.enable_auto_parallel_ignore_user_sbp_config(True)
             self.config.enable_auto_parallel_mainstem_algo(True)
             self.config.enable_auto_parallel_sbp_collector(True)
 
