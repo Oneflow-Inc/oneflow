@@ -300,7 +300,7 @@ class Embedding(Module):
             flow.tensor: the result of embedding lookup
         """
         assert self.key_type == ids.dtype, "ids data_type must equals key_type"
-        embedding = flow._C.one_embedding_lookup(
+        embedding = flow._C.one_embedding_fused_lookup(
             self.shadow,
             ids,
             table_ids,
@@ -317,7 +317,7 @@ class Embedding(Module):
         if embedding.requires_grad and not graph_build_util.lazy_mode.is_enabled():
             if self.embedding is not None:
                 raise ValueError(
-                    "You are training in eager mode with no embedding optimizer, Please add flow.one_embedding.Optimizer after optimizer."
+                    "You are training without set embedding optimizer, Please add flow.one_embedding.Optimizer after optimizer."
                 )
 
             self.embedding = embedding
@@ -325,6 +325,225 @@ class Embedding(Module):
             self.ids = ids
             self.table_ids = table_ids
         return embedding
+
+    def shuffle_and_lookup(self, state_initializer):
+        embedding_grad = self.embedding.grad
+        if self.world_size > 1:
+            (
+                num_unique_matrix,
+                inverse_unique_partition_indices,
+                cur_rank_num_unique,
+                cur_rank_unique_ids,
+                cur_rank_unique_table_ids,
+                cur_rank_inverse_indices,
+            ) = flow._C.one_embedding_id_shuffle(
+                self.ids, self.table_ids, self.num_tables, self.embedding_name
+            )
+            unique_values = flow._C.one_embedding_lookup(
+                cur_rank_num_unique,
+                cur_rank_unique_ids,
+                cur_rank_unique_table_ids,
+                self.dtype,
+                self.dtype,
+                self.storage_dim,
+                self.embedding_dim,
+                self.embedding_name,
+                self.embedding_tables,
+                state_initializer,
+                seed=self.seed,
+            )
+            cur_rank_unique_embedding_grad = flow._C.one_embedding_embedding_gradient_shuffle(
+                embedding_grad,
+                num_unique_matrix,
+                cur_rank_inverse_indices,
+                inverse_unique_partition_indices,
+                self.embedding_name,
+            )
+        else:
+            (
+                cur_rank_num_unique,
+                cur_rank_unique_ids,
+                cur_rank_unique_table_ids,
+                inverse_indices,
+            ) = flow._C.one_embedding_unique_key_value_pair(
+                self.ids, self.table_ids, self.num_tables, self.embedding_name
+            )
+            unique_values = flow._C.one_embedding_lookup(
+                cur_rank_num_unique,
+                cur_rank_unique_ids,
+                cur_rank_unique_table_ids,
+                self.dtype,
+                self.dtype,
+                self.storage_dim,
+                self.embedding_dim,
+                self.embedding_name,
+                self.embedding_tables,
+                state_initializer,
+                seed=self.seed,
+            )
+            cur_rank_unique_embedding_grad = flow._C.unsorted_segment_sum_like(
+                embedding_grad, inverse_indices, unique_values, axis=0,
+            )
+        self.embedding = None
+        return (
+            cur_rank_num_unique,
+            cur_rank_unique_ids,
+            unique_values,
+            cur_rank_unique_embedding_grad,
+        )
+
+    def sgd_update(self, param_group, step):
+        lr = param_group["lr"]
+        l2 = param_group["weight_decay"]
+        momentum = param_group["momentum"]
+        (
+            cur_rank_num_unique,
+            cur_rank_unique_ids,
+            unique_values,
+            cur_rank_unique_embedding_grad,
+        ) = self.shuffle_and_lookup("")
+        updated_values = flow._C.one_embedding_sgd_update(
+            cur_rank_num_unique,
+            unique_values,
+            cur_rank_unique_embedding_grad,
+            learning_rate_val=lr,
+            scale=1.0,
+            weight_decay=l2,
+            momentum=momentum,
+            line_size=self.storage_dim,
+            embedding_size=self.embedding_dim,
+            embedding_name=self.embedding_name,
+        )
+        flow._C.one_embedding_embedding_put(
+            cur_rank_num_unique,
+            cur_rank_unique_ids,
+            updated_values,
+            self.embedding_name,
+            self.storage_dim,
+        )
+
+    def adam_update(self, param_group, step):
+        line_size = self.storage_dim
+        embedding_size = self.embedding_dim
+        lr = param_group["lr"]
+        # not adjust, because it has been set in optimizer's step
+        bias_correction1 = param_group["bias_correction1"]
+        bias_correction2 = param_group["bias_correction2"]
+        l2 = param_group["weight_decay"]
+        beta1 = param_group["betas"][0]
+        beta2 = param_group["betas"][1]
+        epsilon = param_group["eps"]
+        do_bias_correction = param_group["do_bias_correction"]
+        amsgrad = param_group["amsgrad"]
+        assert amsgrad == False, "one_embedding's adam not support amsgrad"
+        state_initializer = [make_constant_initializer(0), make_constant_initializer(0)]
+        (
+            cur_rank_num_unique,
+            cur_rank_unique_ids,
+            unique_values,
+            cur_rank_unique_embedding_grad,
+        ) = self.shuffle_and_lookup(json.dumps(state_initializer))
+        updated_values = flow._C.one_embedding_adam_update(
+            cur_rank_num_unique,
+            unique_values,
+            cur_rank_unique_embedding_grad,
+            learning_rate_val=lr,
+            scale=1.0,
+            weight_decay=l2,
+            beta1=beta1,
+            beta2=beta2,
+            bias_correction1_val=bias_correction1,
+            bias_correction2_val=bias_correction2,
+            epsilon=epsilon,
+            do_bias_correction=do_bias_correction,
+            line_size=line_size,
+            embedding_size=embedding_size,
+            embedding_name=self.embedding_name,
+        )
+        flow._C.one_embedding_embedding_put(
+            cur_rank_num_unique,
+            cur_rank_unique_ids,
+            updated_values,
+            self.embedding_name,
+            line_size,
+        )
+
+    def adagrad_update(self, param_group, step):
+        lr = param_group["lr"]
+        l2 = param_group["weight_decay"]
+        epsilon = param_group["eps"]
+        lr_decay = param_group["lr_decay"]
+        train_step_val = step
+        initial_accumulator_value = param_group["initial_accumulator_value"]
+        state_initializer = [make_constant_initializer(initial_accumulator_value)]
+        (
+            cur_rank_num_unique,
+            cur_rank_unique_ids,
+            unique_values,
+            cur_rank_unique_embedding_grad,
+        ) = self.shuffle_and_lookup(json.dumps(state_initializer))
+        updated_values = flow._C.one_embedding_adagrad_update(
+            cur_rank_num_unique,
+            unique_values,
+            cur_rank_unique_embedding_grad,
+            train_step_val=step,
+            learning_rate_val=lr,
+            scale=1.0,
+            weight_decay=l2,
+            lr_decay=lr_decay,
+            epsilon=epsilon,
+            line_size=self.storage_dim,
+            embedding_size=self.embedding_dim,
+            embedding_name=self.embedding_name,
+        )
+        flow._C.one_embedding_embedding_put(
+            cur_rank_num_unique,
+            cur_rank_unique_ids,
+            updated_values,
+            self.embedding_name,
+            self.storage_dim,
+        )
+
+    def ftrl_update(self, param_group, step):
+        lr = param_group["lr"]
+        l2 = param_group["weight_decay"]
+        lr_power = param_group["lr_power"]
+        lambda1 = param_group["lambda1"]
+        lambda2 = param_group["lambda2"]
+        beta = param_group["beta"]
+        initial_accumulator_value = param_group["initial_accumulator_value"]
+        state_initializer = [
+            make_constant_initializer(initial_accumulator_value),
+            make_constant_initializer(initial_accumulator_value),
+        ]
+        (
+            cur_rank_num_unique,
+            cur_rank_unique_ids,
+            unique_values,
+            cur_rank_unique_embedding_grad,
+        ) = self.shuffle_and_lookup(json.dumps(state_initializer))
+        updated_values = flow._C.one_embedding_ftrl_update(
+            cur_rank_num_unique,
+            unique_values,
+            cur_rank_unique_embedding_grad,
+            learning_rate_val=lr,
+            scale=1.0,
+            weight_decay=l2,
+            lr_power=lr_power,
+            lambda1=lambda1,
+            lambda2=lambda2,
+            beta=beta,
+            line_size=self.storage_dim,
+            embedding_size=self.embedding_dim,
+            embedding_name=self.embedding_name,
+        )
+        flow._C.one_embedding_embedding_put(
+            cur_rank_num_unique,
+            cur_rank_unique_ids,
+            updated_values,
+            self.embedding_name,
+            self.storage_dim,
+        )
 
 
 def make_device_mem_store_options(
@@ -946,6 +1165,8 @@ class Ftrl(Optimizer):
             beta = param_group["beta"]
 
             optimizer_conf.base_learning_rate = lr
+            self._generate_lr_scale_for_optim_conf(param_group, optimizer_conf)
+
             optimizer_conf.ftrl_conf.initial_accumulator_value = (
                 initial_accumulator_value
             )
@@ -1015,3 +1236,43 @@ def make_persistent_table_writer(
         4 * 1024,
         physical_block_size,
     )
+
+
+class Optimizer(Optimizer):
+    def __init__(
+        self, optimizer: Optimizer, embeddings: List[Embedding],
+    ):
+        self.optimizer = optimizer
+        self.embeddings = embeddings
+        self.param_groups = optimizer.param_groups
+        self._default_options = optimizer._default_options
+        self._state = optimizer._state
+        self.embedding_param_group_dict = {}
+        for embedding in self.embeddings:
+            for group in self.param_groups:
+                param_set = set()
+                for param in group.parameters:
+                    param_set.add(param)
+                if embedding.shadow in param_set:
+                    self.embedding_param_group_dict[embedding.embedding_name] = group
+            if not embedding.embedding_name in self.embedding_param_group_dict:
+                raise ValueError("embedding must in optimizers param_group")
+
+    def step(self, closure: Callable = None):
+        step = self.optimizer._state["step"]
+        for embedding in self.embeddings:
+            param_group = self.embedding_param_group_dict[embedding.embedding_name]
+            if type(self.optimizer) is flow.nn.optimizer.sgd.SGD:
+                embedding.sgd_update(param_group, step)
+            elif type(self.optimizer) is flow.nn.optimizer.adam.Adam:
+                embedding.adam_update(param_group, step)
+            elif type(self.optimizer) is flow.nn.optimizer.adagrad.Adagrad:
+                embedding.adagrad_update(param_group, step)
+            elif type(self.optimizer) is flow.one_embedding.Ftrl:
+                embedding.ftrl_update(param_group, step)
+            else:
+                raise NotImplementedError("only support sgd, adam, adagrad and ftrl")
+        self.optimizer.step()
+
+    def _generate_conf_for_graph(self, train_conf, vars_conf):
+        return self.optimizer._generate_conf_for_graph(train_conf, vars_conf)

@@ -74,6 +74,17 @@ class TestMaskedFill(flow.unittest.TestCase):
         value = random().to(bool)
         return input.masked_fill(mask > 0.5, value)
 
+    @autotest(auto_backward=False, n=3)
+    def test_flow_masked_fill_inplace_with_random_data(test_case):
+        device = random_device()
+        input = random_tensor(ndim=1, dim0=10, dim1=20).to(
+            device=device, dtype=torch.bool
+        )
+        mask = random_tensor(ndim=1, dim0=1, dim1=20).to(device)
+        value = random().to(float)
+        input.masked_fill_(mask > 0.5, value)
+        return input
+
 
 if __name__ == "__main__":
     unittest.main()

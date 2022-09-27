@@ -755,7 +755,7 @@ class ExpandFunctor {
   ExpandFunctor() { op_ = CHECK_JUST(one::OpBuilder("expand").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
     const Shape& in_shape = *x->shape();
-    size_t lpad = shape.size() - in_shape.size();
+    int lpad = shape.size() - in_shape.size();
     if (lpad < 0) {
       return Error::RuntimeError()
              << "expand(tensor{" << in_shape.ToString() << "}, size=" << in_shape.size()
@@ -985,22 +985,41 @@ class DimGatherFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class DimScatterFunctor {
- public:
-  DimScatterFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("dim_scatter_update")
-                         .Input("input")
-                         .Input("index")
-                         .Input("src")
-                         .Output("output")
-                         .Build());
+enum class DimScatterType { kUpdate, kAdd, kMultiply };
+
+template<DimScatterType T>
+std::string DimScatterTypeToString() {
+  switch (T) {
+    case DimScatterType::kUpdate: return "_update";
+    case DimScatterType::kAdd: return "_add";
+    case DimScatterType::kMultiply: return "_mul";
   }
+  return "";
+}
+
+template<DimScatterType T>
+class DimScatterFunctorImpl {
+ public:
+  DimScatterFunctorImpl()
+      : op_(CHECK_JUST(one::OpBuilder("dim_scatter" + DimScatterTypeToString<T>())
+                           .Input("input")
+                           .Input("index")
+                           .Input("src")
+                           .Output("output")
+                           .Build())) {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
-                           const std::shared_ptr<one::Tensor>& src) const {
+                           const std::shared_ptr<one::Tensor>& src, bool inplace) const {
     const int32_t ndim = input->shape()->NumAxes();
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim");
-    attrs.SetAllAttrs(dim < 0 ? dim + ndim : dim);
+    attrs.SetAllAttrs(static_cast<int32_t>(JUST(maybe_wrap_dim(dim, ndim))));
+    if (inplace) {
+      JUST(CheckInplaceValid(input));
+      auto outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = input;
+      JUST(OpInterpUtil::Dispatch(*op_, {input, index, src}, outputs.get(), attrs));
+      return outputs->at(0);
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
   }
 
@@ -1008,26 +1027,72 @@ class DimScatterFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class DimScatterAddFunctor {
+class DimScatterFunctor {
  public:
-  DimScatterAddFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("dim_scatter_add")
-                         .Input("input")
-                         .Input("index")
-                         .Input("src")
-                         .Output("output")
-                         .Build());
-  }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
-                           const std::shared_ptr<one::Tensor>& src) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim");
-    attrs.SetAllAttrs(dim);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
+                           const std::shared_ptr<one::Tensor>& src,
+                           const Optional<std::string>& reduce, bool inplace) const {
+    if (reduce.has_value()) {
+      const std::string& reduce_str = *JUST(reduce);
+      if (reduce_str == "add") {
+        return DimScatterAdd(input, dim, index, src, inplace);
+      } else if (reduce_str == "multiply") {
+        return DimScatterMul(input, dim, index, src, inplace);
+      } else {
+        CHECK_OR_RETURN(false) << Error::RuntimeError() << "Invalid reduce type: " << reduce_str;
+      }
+    }
+    return functional::DimScatterUpdate(input, dim, index, src, inplace);
+  }
+};
+
+template<DimScatterType T>
+class DimScatterScalarFunctorImpl {
+ public:
+  DimScatterScalarFunctorImpl()
+      : op_(CHECK_JUST(one::OpBuilder("dim_scatter" + DimScatterTypeToString<T>() + "_scalar")
+                           .Input("input")
+                           .Input("index")
+                           .Output("output")
+                           .Build())) {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
+                           const std::shared_ptr<one::Tensor>& index, const Scalar& src,
+                           bool inplace) const {
+    const int32_t ndim = input->shape()->NumAxes();
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim", "src_scalar");
+    attrs.SetAllAttrs(static_cast<int32_t>(JUST(maybe_wrap_dim(dim, ndim))), src.As<float>());
+    if (inplace) {
+      JUST(CheckInplaceValid(input));
+      auto outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = input;
+      JUST(OpInterpUtil::Dispatch(*op_, {input, index}, outputs.get(), attrs));
+      return outputs->at(0);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class DimScatterScalarFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
+                           const std::shared_ptr<one::Tensor>& index, const Scalar& src,
+                           const Optional<std::string>& reduce, bool inplace) const {
+    if (reduce.has_value()) {
+      const std::string& reduce_str = *JUST(reduce);
+      if (reduce_str == "add") {
+        return DimScatterAddScalar(input, dim, index, src, inplace);
+      } else if (reduce_str == "multiply") {
+        return DimScatterMulScalar(input, dim, index, src, inplace);
+      } else {
+        CHECK_OR_RETURN(false) << Error::RuntimeError() << "Invalid reduce type: " << reduce_str;
+      }
+    }
+    return functional::DimScatterUpdateScalar(input, dim, index, src, inplace);
+  }
 };
 
 class DimScatterAddLikeFunctor {
@@ -1046,89 +1111,6 @@ class DimScatterAddLikeFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim");
     attrs.SetAllAttrs(dim);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {like, index, src}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class DimScatterMulFunctor {
- public:
-  DimScatterMulFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("dim_scatter_mul")
-                         .Input("input")
-                         .Input("index")
-                         .Input("src")
-                         .Output("output")
-                         .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
-                           const std::shared_ptr<one::Tensor>& index,
-                           const std::shared_ptr<one::Tensor>& src) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim");
-    attrs.SetAllAttrs(dim);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class DimScatterUpdateScalarFunctor {
- public:
-  DimScatterUpdateScalarFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("dim_scatter_update_scalar")
-                         .Input("input")
-                         .Input("index")
-                         .Output("output")
-                         .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
-                           const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
-    const int32_t ndim = input->shape()->NumAxes();
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim", "src_scalar");
-    attrs.SetAllAttrs(dim < 0 ? dim + ndim : dim, src.As<float>());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class DimScatterAddScalarFunctor {
- public:
-  DimScatterAddScalarFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("dim_scatter_add_scalar")
-                         .Input("input")
-                         .Input("index")
-                         .Output("output")
-                         .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
-                           const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim", "src_scalar");
-    attrs.SetAllAttrs(dim, src.As<float>());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class DimScatterMulScalarFunctor {
- public:
-  DimScatterMulScalarFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("dim_scatter_mul_scalar")
-                         .Input("input")
-                         .Input("index")
-                         .Output("output")
-                         .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
-                           const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dim", "src_scalar");
-    attrs.SetAllAttrs(dim, src.As<float>());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
  private:
@@ -1271,11 +1253,24 @@ class TensorScatterNdUpdateFunctor {
         << Error::RuntimeError() << "The dtype of tensor and updates must be same.";
     std::shared_ptr<Tensor> contiguous_index = JUST(functional::ToContiguous(indices));
     if (inplace) {
-      JUST(CheckInplaceValid(tensor));
-      auto outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = tensor;
-      JUST(OpInterpUtil::Dispatch(*op_, {tensor, contiguous_index, updates}, outputs.get()));
-      return outputs->at(0);
+      if (tensor->is_global()) {
+        // NOTE: global tensor_scatter_nd_update inplace must calculate on another tensor and assign
+        // back because of input's sbp limited
+        auto output =
+            JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {tensor, contiguous_index, updates}));
+        int64_t ndim = tensor->shape()->NumAxes();
+        // TODO: use inplace copy op to write back to origin tensor
+        std::vector<int64_t> start(ndim, 0);
+        std::vector<int64_t> stop(tensor->shape()->begin(), tensor->shape()->end());
+        std::vector<int64_t> step(ndim, 1);
+        return functional::SliceUpdate(tensor, output, start, stop, step, /*inplace=*/true);
+      } else {
+        JUST(CheckInplaceValid(tensor));
+        auto outputs = std::make_shared<TensorTuple>(1);
+        (*outputs)[0] = tensor;
+        JUST(OpInterpUtil::Dispatch(*op_, {tensor, contiguous_index, updates}, outputs.get()));
+        return (*outputs)[0];
+      }
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {tensor, contiguous_index, updates});
     }
@@ -2136,7 +2131,7 @@ class TensorGetItemFunctor {
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
     if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
     if (!tensor_indices.empty()) {
-      JUST(UnifyLocalTensorAndIndicesOnDevice(x, tensor_indices));
+      JUST(UnifyInputAndIndicesOnDevice(x, tensor_indices));
       result = JUST(ApplyAdvancedIndexing(result, tensor_indices));
     }
     return result;
@@ -2233,16 +2228,35 @@ class TensorSetItemFunctor {
       if (is_identity) {
         result = expand_input;
       } else {
-        CHECK_OR_RETURN(view::IsViewApplicable(expand_input))
-            << "combined slice setitem must enable view, please try to set ONEFLOW_DISABLE_VIEW=0";
-        result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/true));
+        if (expand_input->is_local()) {
+          CHECK_OR_RETURN(view::IsViewApplicable(expand_input))
+              << "combined slice setitem must enable view, please try to set "
+                 "ONEFLOW_DISABLE_VIEW=0";
+          result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/true));
+        } else {
+          // global tensor
+          result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/false));
+        }
       }
-      if (target_shape != *(result->shape())) {
+      const Shape& slice_result_shape = *(result->shape());
+      if (target_shape != slice_result_shape) {
         result = JUST(functional::View(result, target_shape));
       }
 
-      JUST(UnifyLocalTensorAndIndicesOnDevice(expand_input, tensor_indices));
-      JUST(ApplyAdvancedIndexingUpdate(result, tensor_indices, value));
+      JUST(UnifyInputAndIndicesOnDevice(result, tensor_indices));
+      result = JUST(ApplyAdvancedIndexingUpdate(result, tensor_indices, value));
+
+      // Write the sliced tensor back to the original tensor.
+      if (result->is_global()) {
+        if (*result->shape() != slice_result_shape) {
+          CHECK_EQ_OR_RETURN(result->shape()->elem_cnt(), slice_result_shape.elem_cnt())
+              << Error::RuntimeError()
+              << "The global tensor size mismatch. Target sizes: " << slice_result_shape.ToString()
+              << ", value sizes: " << result->shape()->ToString();
+          result = JUST(functional::View(result, slice_result_shape));
+        }
+        JUST(SliceUpdate(expand_input, result, start, end, step, /*inplace=*/true));
+      }
     }
     return Maybe<void>::Ok();
   }
@@ -2372,6 +2386,19 @@ class AmpWhiteIdentityFunctor {
  public:
   AmpWhiteIdentityFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("amp_white_identity").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class AmpBlackIdentityFunctor {
+ public:
+  AmpBlackIdentityFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("amp_black_identity").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in) const {
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in});
@@ -2585,6 +2612,7 @@ class UnsortedBatchSegmentSumFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+template<bool inplace>
 class MaskedFillFunctor {
  public:
   MaskedFillFunctor() {
@@ -2606,6 +2634,13 @@ class MaskedFillFunctor {
     }
     const auto& x_shape = *(x->shape());
     const auto& mask_shape = *(mask->shape());
+
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      (*outputs)[0] = x;
+    }
+
     if (x_shape != mask_shape) {
       Shape max_shape = Shape::Ones(std::max(x_shape.NumAxes(), mask_shape.NumAxes()));
       const Shape& x_extend_shape =
@@ -2615,10 +2650,13 @@ class MaskedFillFunctor {
       FOR_RANGE(int64_t, i, 0, max_shape.NumAxes()) {
         max_shape.Set(i, std::max(x_extend_shape.At(i), mask_extend_shape.At(i)));
       }
-      return OpInterpUtil::Dispatch<Tensor>(
-          *op_, {JUST(Expand(x, max_shape)), JUST(Expand(mask, max_shape))}, attrs);
+      JUST(OpInterpUtil::Dispatch(*op_, {JUST(Expand(x, max_shape)), JUST(Expand(mask, max_shape))},
+                                  outputs.get(), attrs));
+      return outputs->at(0);
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mask}, attrs);
+
+    JUST(OpInterpUtil::Dispatch(*op_, {x, mask}, outputs.get(), attrs));
+    return outputs->at(0);
   }
 
  private:
@@ -3362,13 +3400,19 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DiagonalFunctor>("Diagonal");
   m.add_functor<impl::DiagonalGradFunctor>("DiagonalGrad");
   m.add_functor<impl::TensorGetItemFunctor>("TensorGetItem");
+  m.add_functor<impl::DimScatterFunctorImpl<impl::DimScatterType::kUpdate>>("DimScatterUpdate");
+  m.add_functor<impl::DimScatterFunctorImpl<impl::DimScatterType::kAdd>>("DimScatterAdd");
+  m.add_functor<impl::DimScatterFunctorImpl<impl::DimScatterType::kMultiply>>("DimScatterMul");
   m.add_functor<impl::DimScatterFunctor>("DimScatter");
-  m.add_functor<impl::DimScatterAddFunctor>("DimScatterAdd");
-  m.add_functor<impl::DimScatterMulFunctor>("DimScatterMul");
-  m.add_functor<impl::DimScatterUpdateScalarFunctor>("DimScatterUpdateScalar");
-  m.add_functor<impl::DimScatterAddScalarFunctor>("DimScatterAddScalar");
+  m.add_functor<impl::DimScatterScalarFunctorImpl<impl::DimScatterType::kUpdate>>(
+      "DimScatterUpdateScalar");
+  m.add_functor<impl::DimScatterScalarFunctorImpl<impl::DimScatterType::kAdd>>(
+      "DimScatterAddScalar");
+  m.add_functor<impl::DimScatterScalarFunctorImpl<impl::DimScatterType::kMultiply>>(
+      "DimScatterMulScalar");
+  m.add_functor<impl::DimScatterScalarFunctor>("DimScatterScalar");
   m.add_functor<impl::DimScatterAddLikeFunctor>("DimScatterAddLike");
-  m.add_functor<impl::DimScatterMulScalarFunctor>("DimScatterMulScalar");
+
   m.add_functor<impl::TensorSetItemFunctor>("TensorSetItem");
   m.add_functor<impl::CastLikeFunctor>("CastLike");
   m.add_functor<impl::ElementwiseMinimumGradFunctor>("ElementwiseMinGrad");
@@ -3378,6 +3422,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DivGradFunctor>("DivGrad");
   m.add_functor<impl::IdentityFunctor>("Identity");
   m.add_functor<impl::AmpWhiteIdentityFunctor>("AmpWhiteIdentity");
+  m.add_functor<impl::AmpBlackIdentityFunctor>("AmpBlackIdentity");
   m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
   m.add_functor<impl::BroadcastReduceSumLikeFunctor>("BroadcastReduceSumLike");
   m.add_functor<impl::SplitFunctor>("Split");
@@ -3387,7 +3432,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");
   m.add_functor<impl::BatchGatherFunctor>("BatchGather");
   m.add_functor<impl::UnsortedBatchSegmentSumFunctor>("UnsortedBatchSegmentSum");
-  m.add_functor<impl::MaskedFillFunctor>("MaskedFill");
+  m.add_functor<impl::MaskedFillFunctor<false>>("MaskedFill");
+  m.add_functor<impl::MaskedFillFunctor<true>>("MaskedFillInplace");
   m.add_functor<impl::MeshgridFunctor>("Meshgrid");
   m.add_functor<impl::IndexSelectFunctor>("IndexSelect");
   m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor,

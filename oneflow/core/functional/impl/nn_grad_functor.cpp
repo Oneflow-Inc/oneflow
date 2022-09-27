@@ -726,10 +726,20 @@ class CtcLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& input_lengths,
                            const std::shared_ptr<one::Tensor>& target_lengths,
                            const std::shared_ptr<one::Tensor>& loss,
-                           const std::shared_ptr<one::Tensor>& alpha, const int32_t& blank,
+                           const std::shared_ptr<one::Tensor>& alpha, const int64_t& blank,
                            const bool& zero_infinity, const int64_t& max_target_length) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("blank", "zero_infinity", "max_target_length");
     attrs.SetAllAttrs(blank, zero_infinity, max_target_length);
+    if (targets->dtype()->data_type() == DataType::kInt32) {
+      return OpInterpUtil::Dispatch<one::Tensor>(
+          *op_, {grad_out, log_probs, targets, input_lengths, target_lengths, loss, alpha}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(
+          *op_,
+          {grad_out, log_probs, JUST(functional::Cast(targets, DType::Int64(), false)),
+           input_lengths, target_lengths, loss, alpha},
+          attrs);
+    }
     return OpInterpUtil::Dispatch<one::Tensor>(
         *op_, {grad_out, log_probs, targets, input_lengths, target_lengths, loss, alpha}, attrs);
   }
@@ -1365,6 +1375,90 @@ class VectorMatrixProductGradBFunctor {
  private:
   std::shared_ptr<OpExpr> vector_matrix_product_grad_b_op_;
 };
+class DeformConv2dInputGradFunctor {
+ public:
+  DeformConv2dInputGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("deform_conv2d_input_grad")
+                         .Input("output_grad")
+                         .Input("input")
+                         .Input("weight")
+                         .Input("offset")
+                         .Output("input_grad")
+                         .Output("offset_grad")
+                         .Build());
+
+    mask_op_ = CHECK_JUST(one::OpBuilder("deform_conv2d_input_grad")
+                              .Input("output_grad")
+                              .Input("input")
+                              .Input("weight")
+                              .Input("offset")
+                              .Input("mask")
+                              .Output("input_grad")
+                              .Output("offset_grad")
+                              .Output("mask_grad")
+                              .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& output_grad,
+                                const std::shared_ptr<one::Tensor>& input,
+                                const std::shared_ptr<one::Tensor>& weight,
+                                const std::shared_ptr<one::Tensor>& offset,
+                                const Optional<one::Tensor>& mask, const int32_t& stride_h,
+                                const int32_t& stride_w, const int32_t& pad_h, const int32_t& pad_w,
+                                const int32_t& dilation_h, const int32_t& dilation_w,
+                                const int32_t& groups, const int32_t& offset_groups,
+                                const bool& use_mask) const {
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("stride_h", "stride_w", "pad_h", "pad_w", "dilation_h",
+                                       "dilation_w", "groups", "offset_groups", "use_mask");
+    attrs.SetAllAttrs(stride_h, stride_w, pad_h, pad_w, dilation_h, dilation_w, groups,
+                      offset_groups, use_mask);
+    if (mask) {
+      return OpInterpUtil::Dispatch<TensorTuple>(
+          *mask_op_, {output_grad, input, weight, offset, JUST(mask)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_, {output_grad, input, weight, offset}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> mask_op_;
+};
+
+class DeformConv2dParamGradFunctor {
+ public:
+  DeformConv2dParamGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("deform_conv2d_param_grad")
+                         .Input("output_grad")
+                         .Input("input")
+                         .Input("weight")
+                         .Input("offset")
+                         .Input("mask")
+                         .Output("weight_grad")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& output_grad,
+                           const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& offset,
+                           const std::shared_ptr<one::Tensor>& mask, const int32_t& stride_h,
+                           const int32_t& stride_w, const int32_t& pad_h, const int32_t& pad_w,
+                           const int32_t& dilation_h, const int32_t& dilation_w,
+                           const int32_t& groups, const int32_t& offset_groups,
+                           const bool& use_mask) const {
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("stride_h", "stride_w", "pad_h", "pad_w", "dilation_h",
+                                       "dilation_w", "groups", "offset_groups", "use_mask");
+    attrs.SetAllAttrs(stride_h, stride_w, pad_h, pad_w, dilation_h, dilation_w, groups,
+                      offset_groups, use_mask);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {output_grad, input, weight, offset, mask}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
 
 class FusedMLPGradFunctor {
  public:
@@ -1472,6 +1566,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MatrixVectorProductGradBFunctor>("MatrixVectorProductGradB");
   m.add_functor<impl::VectorMatrixProductGradAFunctor>("VectorMatrixProductGradA");
   m.add_functor<impl::VectorMatrixProductGradBFunctor>("VectorMatrixProductGradB");
+  m.add_functor<impl::DeformConv2dInputGradFunctor>("DeformConv2dInputGrad");
+  m.add_functor<impl::DeformConv2dParamGradFunctor>("DeformConv2dParamGrad");
 };
 
 }  // namespace functional

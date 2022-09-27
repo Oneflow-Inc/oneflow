@@ -311,6 +311,7 @@ Reduction Ops
     mean  
     median
     prod
+    nansum
     std  
     sum  
     var
@@ -382,6 +383,7 @@ Other Ops
     tril
     repeat_interleave
     triu
+    cross
 
 BLAS and LAPACK Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
