@@ -396,6 +396,14 @@ class LogSoftmaxGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+// TODO(hujiakui): Gumbel Softmax
+class GumbelSoftmaxFunctor : public SoftmaxFunctorBase {
+ public:
+  GumbelSoftmaxFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("gumbel_softmax").Input("in").Output("out").Build());
+  }
+};
+
 class HardSwishFunctor : public UnaryFunctor {
  public:
   HardSwishFunctor() {
@@ -635,6 +643,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SoftmaxGradFunctor>("SoftmaxGrad");
   m.add_functor<impl::LogSoftmaxFunctor>("LogSoftmax");
   m.add_functor<impl::LogSoftmaxGradFunctor>("LogSoftmaxGrad");
+  // TODO(hujiakui): GumbelSoftmax
+  m.add_functor<impl::GumbelSoftmaxFunctor>("GumbelSoftmax");
   m.add_functor<impl::HardSwishFunctor>("HardSwish");
   m.add_functor<impl::HardSwishGradFunctor>("HardSwishGrad");
   m.add_functor<impl::LeakyReluFunctor>("LeakyRelu");
