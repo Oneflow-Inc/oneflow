@@ -30,7 +30,9 @@ Maybe<void> CheckShapeLike(const user_op::TensorDesc* tensor_desc,
 }
 Maybe<void> CheckDataTypeLike(const user_op::TensorDesc* tensor_desc,
                               const user_op::TensorDesc* like) {
-  CHECK_EQ_OR_RETURN(tensor_desc->data_type(), like->data_type());
+  CHECK_EQ_OR_RETURN(tensor_desc->data_type(), like->data_type())
+      << "InferDataType Failed. Expected " << DataType_Name(tensor_desc->data_type())
+      << ", but got " << DataType_Name(like->data_type());
   return Maybe<void>::Ok();
 }
 
@@ -41,7 +43,9 @@ Maybe<void> CheckScalarShape(const user_op::TensorDesc* tensor_desc) {
   return Maybe<void>::Ok();
 }
 Maybe<void> CheckScalarDataType(const user_op::TensorDesc* tensor_desc, const DataType data_type) {
-  CHECK_EQ_OR_RETURN(tensor_desc->data_type(), data_type);
+  CHECK_EQ_OR_RETURN(tensor_desc->data_type(), data_type)
+      << "InferDataType Failed. Expected " << DataType_Name(tensor_desc->data_type())
+      << ", but got " << DataType_Name(data_type);
   return Maybe<void>::Ok();
 }
 
@@ -81,7 +85,9 @@ Maybe<void> CheckIndexedSlicesModelDiffDataType(const user_op::TensorDesc* model
                                                 const user_op::TensorDesc* model_diff_indices,
                                                 const user_op::TensorDesc* model_diff_values) {
   CHECK_OR_RETURN(IsIndexDataType(model_diff_indices->data_type()));
-  CHECK_EQ_OR_RETURN(model->data_type(), model_diff_values->data_type());
+  CHECK_EQ_OR_RETURN(model->data_type(), model_diff_values->data_type())
+      << "InferDataType Failed. Expected " << DataType_Name(model->data_type()) << ", but got "
+      << DataType_Name(model_diff_values->data_type());
   return Maybe<void>::Ok();
 }
 

@@ -89,14 +89,19 @@ namespace oneflow {
   CHECK_GE_OR_RETURN(feature_input_size, 1);
   DataType first_feature_dtype = ctx->InputDType("features", 0);
   for (int64_t i = 1; i < feature_input_size; ++i) {
-    CHECK_EQ_OR_RETURN(first_feature_dtype, ctx->InputDType("features", i));
+    CHECK_EQ_OR_RETURN(first_feature_dtype, ctx->InputDType("features", i))
+        << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("features", i))
+        << ", but got " << DataType_Name(first_feature_dtype);
   }
   if (ctx->has_input("output_concat", 0)) {
-    CHECK_EQ_OR_RETURN(first_feature_dtype, ctx->InputDType("output_concat", 0));
+    CHECK_EQ_OR_RETURN(first_feature_dtype, ctx->InputDType("output_concat", 0))
+        << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("output_concat", 0))
+        << ", but got " << DataType_Name(first_feature_dtype);
   }
   if (ctx->has_input("sparse_feature", 0)) {
     CHECK_EQ_OR_RETURN(first_feature_dtype, ctx->InputDType("sparse_feature", 0))
-        << "get " << first_feature_dtype << " and " << ctx->InputDType("sparse_feature", 0);
+        << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("sparse_feature", 0))
+        << ", but got " << DataType_Name(first_feature_dtype);
   }
   ctx->SetOutputDType("out", 0, first_feature_dtype);
   return Maybe<void>::Ok();

@@ -269,10 +269,14 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
 /* static */ Maybe<void> ConvDataGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
   const user_op::TensorDesc& x_like = ctx->InputTensorDesc("x_like", 0);
-  CHECK_EQ_OR_RETURN(x_like.data_type(), dy.data_type());
+  CHECK_EQ_OR_RETURN(x_like.data_type(), dy.data_type())
+      << "InferDataType Failed. Expected " << DataType_Name(dy.data_type()) << ", but got "
+      << DataType_Name(x_like.data_type());
   if (ctx->has_input("_add_to_output", 0)) {
     const user_op::TensorDesc& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
-    CHECK_EQ_OR_RETURN(add_to_output.data_type(), x_like.data_type());
+    CHECK_EQ_OR_RETURN(add_to_output.data_type(), x_like.data_type())
+        << "InferDataType Failed. Expected " << DataType_Name(add_to_output.data_type())
+        << ", but got " << DataType_Name(x_like.data_type());
   }
   ctx->SetOutputDType("dx", 0, ctx->InputDType("x_like", 0));
   return Maybe<void>::Ok();
@@ -338,7 +342,9 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
 /* static */ Maybe<void> ConvFilterGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-  CHECK_EQ_OR_RETURN(x.data_type(), dy.data_type());
+  CHECK_EQ_OR_RETURN(x.data_type(), dy.data_type())
+      << "InferDataType Failed. Expected " << DataType_Name(dy.data_type()) << ", but got "
+      << DataType_Name(x.data_type());
   user_op::TensorDesc* filter_diff = ctx->MutOutputTensorDesc("filter_diff", 0);
   filter_diff->set_data_type(x.data_type());
   return Maybe<void>::Ok();
