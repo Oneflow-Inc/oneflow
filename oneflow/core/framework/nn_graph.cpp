@@ -459,6 +459,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     VLOG(1) << "[elapsed]rank id " << GlobalProcessCtx::Rank() << " global plan size " << global_plan.ByteSizeLong();
   }
   tc->Count("Graph name: " + name_ + " ReleaseTaskGraph", 1);
+  compile_tc->Count("Graph name: " + name_ + " TotalCompile", 1);
   if (GlobalProcessCtx::WorldSize() == 1) {
     plan_.Swap(&global_plan);
   } else if (GlobalProcessCtx::WorldSize() > 1) {
@@ -490,7 +491,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.mutable_job_id2op_attribute_ref_table());
   tc->Count("Graph name: " + name_ + " PopulateOpAttribute", 1);
-  compile_tc->Count("Graph name: " + name_ + " TotalCompileAndInit", 1);
+  compile_tc->Count("Graph name: " + name_ + " PlanSync", 1);
   CHECK_OR_RETURN(false);
 
   NewRuntimeBuffers();

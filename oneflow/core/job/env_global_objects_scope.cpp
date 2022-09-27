@@ -53,6 +53,7 @@ limitations under the License.
 #endif  // WITH_RDMA
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/ep/cpu/cpu_device_manager.h"
+#include "oneflow/core/common/mem_util.h"
 
 namespace oneflow {
 
@@ -129,6 +130,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Singleton<EnvGlobalObjectsScope>::SetAllocated(this);
 
   InitLogging(env_proto.cpp_logging_conf());
+  LOG_MEM();
   Singleton<EnvDesc>::New(env_proto);
   Singleton<ProcessCtx>::New();
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in

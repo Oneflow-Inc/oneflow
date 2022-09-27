@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/time_util.h"
+#include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/to_string.h"
@@ -28,7 +29,10 @@ limitations under the License.
 #include "oneflow/user/summary/summary_converter.h"
 
 #include <google/protobuf/text_format.h>
+#include <cstdint>
 #include <memory>
+#include <chrono>
+#include <thread>
 #include "nlohmann/json.hpp"
 
 namespace oneflow {
@@ -907,7 +911,35 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatible
   return local_lbi;
 }
 
+template<typename T>
+void HackPlacement(::google::protobuf::RepeatedPtrField<T>* pl_group) {
+  int32_t node_num = 10;
+  int32_t dev_per_node = 100;
+  for (auto& pl : *pl_group) {
+    *pl.mutable_parallel_conf()->mutable_device_tag() = "cuda";
+    if (pl.mutable_parallel_conf()->device_name_size() > 1) {
+      pl.mutable_parallel_conf()->clear_device_name();
+      for (int32_t m_idx = 0; m_idx < node_num; ++m_idx) {
+          for (int32_t d_idx = 0; d_idx < dev_per_node; ++d_idx) {
+            pl.mutable_parallel_conf()->add_device_name(
+                std::string("@") + std::to_string(m_idx) + ":" + std::to_string(d_idx));
+          }
+      }
+      pl.mutable_parallel_conf()->mutable_hierarchy()->clear_dim();
+      pl.mutable_parallel_conf()->mutable_hierarchy()->add_dim(node_num * dev_per_node);
+    }
+  }
+}
+
 Maybe<void> LazyJobBuildAndInferCtx::Complete() {
+  LOG_MEM();
+  // cpu job to cuda
+  for (auto& op : *mut_job()->mutable_net()->mutable_op()) {
+    *op.mutable_device_tag() = "cuda";
+  }
+  HackPlacement<PlacementGroup>(mut_job()->mutable_placement()->mutable_placement_group());
+  HackPlacement<BlobPlacementGroup>(mut_job()->mutable_placement()->mutable_blob_placement_group());
+
   CHECK_GT_OR_RETURN(job().net().op_size(), 0)
       << " Sorry, nn.Graph need at least 1 op in net, but get 0 now.";
   CHECK_NOTNULL(Singleton<JobDesc>::Get());
