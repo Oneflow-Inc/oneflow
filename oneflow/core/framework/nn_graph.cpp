@@ -14,9 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
+#include <chrono>
+#include <memory>
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/common/time_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/control/ctrl_client.h"
@@ -321,13 +324,11 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   JUST(JobCompleter().Complete(&job_));
 
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    double start = GetCurTime();
+    auto compile_time_counter = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
     // TODO(chengcheng): new memory reused by chunk
     Compiler().Compile(&job_, &plan_);
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
-
-    VLOG(1) << "Graph name: " << name_ << " compile time: " << (GetCurTime() - start) / 1000000000.0
-            << " seconds.";
+    compile_time_counter->Count("Graph name: " + name_ + " compile plan", 1);
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
       PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
