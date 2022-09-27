@@ -586,8 +586,7 @@ LocalToGlobalOpExpr::LocalToGlobalOpExpr(const std::string& op_name) : CastGloba
   return std::shared_ptr<LocalToGlobalOpExpr>(new LocalToGlobalOpExpr(op_name));
 }
 
-GlobalToLocalOpExpr::GlobalToLocalOpExpr(const std::string& op_name)
-    : CastGlobalOpExpr(op_name) {}
+GlobalToLocalOpExpr::GlobalToLocalOpExpr(const std::string& op_name) : CastGlobalOpExpr(op_name) {}
 
 /* static */ Maybe<GlobalToLocalOpExpr> GlobalToLocalOpExpr::New(const std::string& op_name) {
   return std::shared_ptr<GlobalToLocalOpExpr>(new GlobalToLocalOpExpr(op_name));
