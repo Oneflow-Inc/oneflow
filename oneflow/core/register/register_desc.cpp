@@ -146,15 +146,6 @@ void RegstDesc::InitFromProtoExceptConsumers(const RegstDescProto& proto) {
   force_inplace_consumed_regst_desc_id_ = proto.force_inplace_consumed_regst_desc_id();
 }
 
-Maybe<void> RegstDesc::InitConsumersFromProto(
-    const RegstDescProto& proto,
-    const std::function<Maybe<const TaskNode*>(int64_t)>& TaskNode4TaskId) {
-  for (int64_t consumer_task_id : proto.consumer_task_id()) {
-    AddConsumer(JUST(TaskNode4TaskId(consumer_task_id)));
-  }
-  return Maybe<void>::Ok();
-}
-
 void RegstDesc::ToProto(RegstDescProto* ret, bool check) const {
   ret->set_regst_desc_id(regst_desc_id_);
   ret->set_producer_task_id(producer_->task_id());

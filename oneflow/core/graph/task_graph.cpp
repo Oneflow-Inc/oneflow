@@ -1101,28 +1101,12 @@ Maybe<void> RankTaskGraph::ForEachDutyRank(const ParallelDesc& parallel_desc,
 }
 
 Maybe<void> RankTaskGraph::InitRegstDescsConsumers() {
-  HashMap<int64_t, const RegstDescProto*> id2regst_desc;
-  {
-    for (const auto& task_pair : task_id2task_proto_) {
-      for (const auto& pair : task_pair.second->produced_regst_desc()) {
-        CHECK_OR_RETURN(id2regst_desc.emplace(pair.second.regst_desc_id(), &pair.second).second)
-            << "redundant regst_desc_id: " << pair.second.regst_desc_id();
-      }
-    }
-  }
   const auto& RegstDesc4Id = [&](int64_t regst_desc_id) -> Maybe<RegstDesc> {
     return JUST(task_graph_rebuild_ctx_->RegstDesc4Id(regst_desc_id));
-  };
-  const auto& TaskNode4TaskId = [&](int64_t task_id) -> Maybe<const TaskNode*> {
-    return JUST(task_graph_rebuild_ctx_->TaskNode4Id(task_id));
   };
   JUST(MaybeForEachNode([&](TaskNode* task_node) -> Maybe<void> {
     const auto& task_proto = *JUST(MapAt(task_id2task_proto_, task_node->task_id()));
     JUST(task_node->InitConsumedRegstsFromProto(task_proto, RegstDesc4Id));
-    for (const auto& pair : task_node->produced_regsts()) {
-      const auto& regst_desc_proto = *JUST(MapAt(id2regst_desc, pair.second->regst_desc_id()));
-      JUST(pair.second->InitConsumersFromProto(regst_desc_proto, TaskNode4TaskId));
-    }
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();

@@ -100,9 +100,6 @@ class RegstDesc final {
   // util
   void EraseUninitializedShapeBlob();
   void InitFromProtoExceptConsumers(const RegstDescProto& proto);
-  Maybe<void> InitConsumersFromProto(
-      const RegstDescProto& proto,
-      const std::function<Maybe<const TaskNode*>(int64_t)>& TaskNode4TaskId);
   void ToProto(RegstDescProto* proto) const { ToProto(proto, /*check*/ true); }
   void ToProto(RegstDescProto*, bool check) const;
   bool HasSameBlobDescs(const RegstDesc*);
