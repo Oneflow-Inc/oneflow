@@ -70,8 +70,12 @@ namespace oneflow {
 /* static */ Maybe<void> CategoricalOrdinalEncodeOp::InferDataType(user_op::InferContext* ctx) {
   DataType data_type = ctx->InputDType("in", 0);
   CHECK_OR_RETURN(IsIndexDataType(data_type));
-  CHECK_EQ_OR_RETURN(ctx->InputDType("table", 0), data_type);
-  CHECK_EQ_OR_RETURN(ctx->InputDType("size", 0), data_type);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("table", 0), data_type)
+      << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("table", 0))
+      << ", but got " << DataType_Name(data_type);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("size", 0), data_type)
+      << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("size", 0))
+      << ", but got " << DataType_Name(data_type);
   ctx->SetOutputDType("out", 0, data_type);
   return Maybe<void>::Ok();
 }
