@@ -927,7 +927,6 @@ func::FuncOp CreateWrapFunc(mlir::Location loc, std::vector<Operation*>& wrap_op
 
   auto func_type = rewriter.getFunctionType(TypeRange(ArrayRef<Value>(proto.first)),
                                             TypeRange(ArrayRef<Value>(proto.second)));
-  func_type.dump();
   auto func_name = "wrap" + std::to_string(name_index++);
 
   auto module = GetModuleOpFromJobBodyOp(wrap_ops[0]);
@@ -938,12 +937,9 @@ func::FuncOp CreateWrapFunc(mlir::Location loc, std::vector<Operation*>& wrap_op
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPointToStart(module.getBody());
   auto function = rewriter.create<func::FuncOp>(loc, func_name, func_type);
-  function.dump();
   function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
   function.getBody().emplaceBlock();
-  function.dump();
   for (auto arg : proto.first) {
-    arg.dump();
     function.getBody().addArgument(arg.getType(), loc);
   }
 
