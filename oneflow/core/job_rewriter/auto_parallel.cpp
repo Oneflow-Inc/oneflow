@@ -50,7 +50,6 @@ class AutoParallelPass final : public JobPass {
 
 Maybe<void> AutoParallelPass::Apply(const OpGraph& op_graph, Job* job) const {
   // auto-parallel
-  // TODO: recode this
   VLOG(2) << "Start Auto Parallel" << std::endl;
   auto time_begin = std::chrono::high_resolution_clock::now();
 
