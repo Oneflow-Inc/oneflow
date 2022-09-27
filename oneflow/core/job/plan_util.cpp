@@ -1202,6 +1202,7 @@ void PlanUtil::PopulateOpAttribute(
       CHECK(it != table_it->second.op_name2op_attribute().end())
           << "ref: " << kernel_conf->op_attribute_ref() << " not found";
       // NOTE(strint): task op attribute share the pointer of job_id2op_attribute_ref_table to save memory.
+      // TODO(strint): need to release ownership to avoid double free.
       kernel_conf->set_allocated_op_attribute(&it->second);
       kernel_conf->clear_op_attribute_ref();
     } else {

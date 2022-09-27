@@ -275,7 +275,7 @@ Maybe<void> NNGraph::RangePushPlan(Plan* global_plan, const std::string& plan_na
       sub_plan.set_allocated_ctrl_regst_desc_info(global_plan->mutable_ctrl_regst_desc_info());
       tc_sub_plan->Count(rank_plan_name + " add ctrl regst", 1);
 
-	    // TODO(): rm copy.
+	    // TODO(strint): rm copy.
       for (auto& pair : *global_plan->mutable_job_id2op_attribute_ref_table()) {
         sub_plan.mutable_job_id2op_attribute_ref_table()->insert(pair);
       }
@@ -303,11 +303,25 @@ Maybe<void> NNGraph::RangePushPlan(Plan* global_plan, const std::string& plan_na
       tc_sub_plan->Count(rank_plan_name + " add chunk", 1);
 
       if (rank_id == 0) {
-        plan_.Swap(&sub_plan);
+        // sub_plan used zero copy, so here needs copy.
+        plan_.CopyFrom(sub_plan);
       } else {
         Singleton<CtrlClient>::Get()->PushMasterKV(rank_plan_name, sub_plan);
         tc_sub_plan->Count(rank_plan_name + " PushKV", 1);
         VLOG(1) << "[elapsed]rank id " << GlobalProcessCtx::Rank() << " push plan " << rank_plan_name << " size " << sub_plan.ByteSizeLong();
+      }
+      // Set allocated needs to realease ownership to avoid double free.
+      sub_plan.release_job_confs();
+      sub_plan.release_collective_boxing_plan();
+      sub_plan.release_ctrl_regst_desc_info();
+      while(!sub_plan.task().empty()) {
+        sub_plan.mutable_task()->ReleaseLast();
+      }
+      while(!sub_plan.block_chunk_list().mem_block().empty()) {
+        sub_plan.mutable_block_chunk_list()->mutable_mem_block()->ReleaseLast();
+      }
+      while(!sub_plan.block_chunk_list().chunk().empty()) {
+        sub_plan.mutable_block_chunk_list()->mutable_chunk()->ReleaseLast();
       }
       counter.Decrease();
     });
