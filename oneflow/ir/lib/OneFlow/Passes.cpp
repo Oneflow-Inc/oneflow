@@ -98,7 +98,7 @@ namespace mlir {
 namespace oneflow {
 
 template<typename T>
-LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, T op) {
+LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, T op, StringRef func_name) {
   // TODO: now we only need one JIT engine
   auto parent_func_op = op->template getParentOfType<oneflow::Job>();
   if (!parent_func_op) { return failure(); }
@@ -107,7 +107,7 @@ LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, T op) {
   SymbolTable symbol_table(parent_module_op);
   std::string mlir;
   llvm::raw_string_ostream os_mlir(mlir);
-  if (auto found = symbol_table.lookup(op.op_name())) {
+  if (auto found = symbol_table.lookup(func_name)) {
     found->print(os_mlir);
   } else {
     parent_module_op->dump();
@@ -334,7 +334,7 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
     SmallVector<Operation*, 4> ops = {cast_op, mul_op};
     auto function = GetOrInsertFuncOp(rewriter, mul_op->getLoc(), op_name, operands, results, ops);
     auto created = rewriter.create<MlirJitOp>(mul_op->getLoc(), function, attributes, operands);
-    if (failed(DumpAssembly(rewriter, created))) { exit(1); }
+    if (failed(DumpAssembly(rewriter, created, created.op_name()))) { exit(1); }
     cast_op->dropAllUses();
     cast_op.erase();
     return created->getResults();
@@ -906,16 +906,13 @@ struct ConvertOFKLCalleeToLLVMPattern : public mlir::OpRewritePattern<func::Func
 
 func::FuncOp CreateWrapFunc(mlir::Location loc, std::vector<Operation*>& wrap_ops,
                             mlir::PatternRewriter& rewriter, int& name_index) {
-  if (!wrap_ops.size()) return nullptr;
   auto getProto = [&]() -> std::pair<std::vector<Value>, std::vector<Value>> {
     std::vector<Value> ins, outs, diff_ins;
     for (auto op : wrap_ops) {
-      for (auto it = op->getOperands().begin(); it != op->getOperands().end(); ++it) {
-        ins.push_back(*it);
-      }
-      for (auto it = op->getResults().begin(); it != op->getResults().end(); ++it) {
-        outs.push_back(*it);
-      }
+      auto operands = op->getOperands();
+      auto results = op->getResults();
+      for (auto it = operands.begin(); it != operands.end(); ++it) { ins.push_back(*it); }
+      for (auto it = results.begin(); it != results.end(); ++it) { outs.push_back(*it); }
     }
     for (auto in : ins) {
       if (std::find(outs.begin(), outs.end(), in) == outs.end()) { diff_ins.push_back(in); }
@@ -924,11 +921,9 @@ func::FuncOp CreateWrapFunc(mlir::Location loc, std::vector<Operation*>& wrap_op
   };
 
   std::pair<std::vector<Value>, std::vector<Value>> proto = getProto();
-
   auto func_type = rewriter.getFunctionType(TypeRange(ArrayRef<Value>(proto.first)),
                                             TypeRange(ArrayRef<Value>(proto.second)));
   auto func_name = "wrap" + std::to_string(name_index++);
-
   auto module = GetModuleOpFromJobBodyOp(wrap_ops[0]);
   if (!module) {
     emitError(loc) << "Fail to find parent ModuleOp";
@@ -939,9 +934,7 @@ func::FuncOp CreateWrapFunc(mlir::Location loc, std::vector<Operation*>& wrap_op
   auto function = rewriter.create<func::FuncOp>(loc, func_name, func_type);
   function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
   function.getBody().emplaceBlock();
-  for (auto arg : proto.first) {
-    function.getBody().addArgument(arg.getType(), loc);
-  }
+  for (auto arg : proto.first) { function.getBody().addArgument(arg.getType(), loc); }
 
   BlockAndValueMapping mapping;
   for (auto args_pair : llvm::zip(proto.first, function.getBody().getArguments())) {
@@ -954,10 +947,31 @@ func::FuncOp CreateWrapFunc(mlir::Location loc, std::vector<Operation*>& wrap_op
   SmallVector<::mlir::Value, 4> mapped_results;
   for (auto result : proto.second) { mapped_results.push_back(mapping.lookup(result)); }
   rewriter.create<func::ReturnOp>(loc, mapped_results);
-  function.dump();
   return function;
 };
 
+KernelLaunchOp CreateKernelLaunchFunc(mlir::Location loc, std::vector<Operation*>& wrap_ops,
+                                    mlir::PatternRewriter& rewriter, int& name_index) {
+  if (!wrap_ops.size()) return nullptr;
+  OpBuilder::InsertionGuard guard(rewriter);
+  auto wrap_func = CreateWrapFunc(loc, wrap_ops, rewriter, name_index);
+  auto module = wrap_func->getParentOfType<ModuleOp>();
+  rewriter.setInsertionPointAfter(wrap_ops.back());
+  auto func = rewriter.create<KernelLaunchOp>(wrap_ops[0]->getLoc(), wrap_func, wrap_ops[0]->getAttrs());
+  auto func_name = wrap_func.getSymNameAttr();
+  func->setAttr("op_name", func_name);
+  if (failed(DumpAssembly(rewriter, func, func_name))) { exit(1); }
+  int res_idx = 0;
+  for (auto op : wrap_ops) {
+    std::vector<Value> vals;
+    for(int idx=0;idx< op->getNumResults(); ++idx){
+      vals.push_back(func->getResult(res_idx++));
+    }
+    rewriter.replaceOp(op, vals);
+  }
+  wrap_ops.clear();
+  return func;
+}
 struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
   explicit KernelLaunchPattern(mlir::MLIRContext* context)
       : OpRewritePattern<oneflow::Job>(context, /*benefit=*/0) {}
@@ -976,12 +990,12 @@ struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
     for (auto op_it = ops.begin(); op_it != ops.end(); ++op_it) {
       if (std::count(white_list.begin(), white_list.end(), op_it->getName().getStringRef())
           || !op_it->getAttr("op_name") || !GetModuleOpFromJobBodyOp(&(*op_it))) {
-        CreateWrapFunc(op_it->getLoc(), wrap_ops, rewriter, name_index);
+        CreateKernelLaunchFunc(op_it->getLoc(), wrap_ops, rewriter, name_index);
         continue;
       }
       wrap_ops.push_back(&(*op_it));
     }
-    CreateWrapFunc(ops.back().getLoc(), wrap_ops, rewriter, name_index);
+    CreateKernelLaunchFunc(ops.back().getLoc(), wrap_ops, rewriter, name_index);
     return success();
   }
 };
