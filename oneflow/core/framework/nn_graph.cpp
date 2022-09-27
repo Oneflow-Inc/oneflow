@@ -315,7 +315,7 @@ Maybe<void> NNGraph::MasterRankCompile() {
             RankCompiler(boxing_task_graph_proto, i).Compile(variable_op_names_, &job_, plan));
         PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
 
-        VLOG(1) << "Graph name: " << name_
+        VLOG(1) << "Graph name: " << name_ << " rank: " << i
                 << " compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.";
         if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
           TeePersistentLogStream::Create("job_" + name_ + "_plan" + std::to_string(i))

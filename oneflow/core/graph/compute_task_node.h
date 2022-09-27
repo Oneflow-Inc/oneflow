@@ -18,12 +18,13 @@ limitations under the License.
 
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/graph/fake_consumed_regst_provider.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/job/compile_mode.h"
 
 namespace oneflow {
 
-class CompTaskNode : public TaskNode {
+class CompTaskNode : public TaskNode, public FakeConsumedRegstProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CompTaskNode);
   CompTaskNode() = default;
@@ -31,10 +32,12 @@ class CompTaskNode : public TaskNode {
 
   virtual void InitFromProtoExceptConsumedRegsts(const TaskProto&) override;
   virtual void ToProto(TaskProto*, bool check) const override;
+  void ConsumeFakeRegstsIf() override;
+  void EraseFakeRegstsIf() override;
+
   // ConsumeFakeRegsts is used for initializing CompTaskNode.consumed_regsts_ on other ranks.
   virtual void ConsumeFakeRegsts() = 0;
   void ConsumeFakeRegst(const std::string& regst_name);
-  void ConsumeFakeRegstsIf();
 
   // parallel_ctx_
   int64_t parallel_id() const { return parallel_ctx_.parallel_id(); }
@@ -74,6 +77,7 @@ class CompTaskNode : public TaskNode {
 
   ParallelContext parallel_ctx_;
   const OpNode* op_node_;
+  HashSet<std::string> fake_consumed_regst_names_;
 };
 
 class OpCompTaskNodeCreator {

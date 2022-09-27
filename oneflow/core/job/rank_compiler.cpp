@@ -67,7 +67,9 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
   task_gph->ForEachNode([&](TaskNode* task_node) {
     auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
     if (IsNotMyDuty(comp_task_node)) {
-      comp_task_node->ConsumeFakeRegstsIf();
+      auto* fake_consumed_regsts_provider =
+          dynamic_cast<FakeConsumedRegstProvider*>(comp_task_node);
+      CHECK_NOTNULL(fake_consumed_regsts_provider)->ConsumeFakeRegstsIf();
     } else {
       task_node->ConsumeAllRegsts();
     }
@@ -98,20 +100,17 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
   // put infomation from task_gph into plan.
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
-    TaskProto task_proto;
-    task_node->ToProto(&task_proto);
     auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
     if (comp_task_node != nullptr) {
       const auto& parallel_desc = comp_task_node->op_node()->parallel_desc();
       if (!task_gph->IsDutyRank(parallel_desc, task_node->machine_id())) {
-        for (const auto& pair : task_node->consumed_regsts()) {
-          for (const auto& regst : pair.second) {
-            task_proto.mutable_fake_consumed_regst_desc_ids()->add_regst_desc_id(
-                regst->regst_desc_id());
-          }
-        }
+        auto* fake_consumed_regsts_provider =
+            dynamic_cast<FakeConsumedRegstProvider*>(comp_task_node);
+        CHECK_NOTNULL(fake_consumed_regsts_provider)->EraseFakeRegstsIf();
       }
     }
+    TaskProto task_proto;
+    task_node->ToProto(&task_proto);
     if (task_node->GetTaskType() == kNormalForward || task_node->GetTaskType() == kRepeat
         || task_node->GetTaskType() == kAcc) {
       CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto);

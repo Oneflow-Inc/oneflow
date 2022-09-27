@@ -60,8 +60,6 @@ message TaskProto {
   map<string, RegstDescProto> produced_regst_desc = 8;
   map<string, RegstDescIdSet> consumed_regst_desc_id = 9;
   optional bool all_register_num_eq_one_hint = 10 [default = false];
-  // only for rank_per_thread compiler or rank_per_process compiler.
-  optional RegstDescIdSet fake_consumed_regst_desc_ids = 11;
   // compute task
   optional ParallelContext parallel_ctx = 1000; // CompTask
 };

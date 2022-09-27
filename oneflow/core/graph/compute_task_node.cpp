@@ -73,6 +73,7 @@ std::shared_ptr<RegstDesc> NewFakeDataRegstDesc() {
 
 void CompTaskNode::ConsumeFakeRegst(const std::string& regst_name) {
   ConsumeRegst(regst_name, NewFakeDataRegstDesc());
+  fake_consumed_regst_names_.insert(regst_name);
 }
 
 void CompTaskNode::ConsumeFakeRegstsIf() {
@@ -95,6 +96,13 @@ void CompTaskNode::ConsumeFakeRegstsIf() {
       data_regst_desc->AddLbi(op_node()->op().BnInOp2Lbi(ibn));
     }
   }
+}
+
+void CompTaskNode::EraseFakeRegstsIf() {
+  for (const auto& fake_consumed_regst_name : fake_consumed_regst_names_) {
+    EraseConsumedRegstsByName(fake_consumed_regst_name);
+  }
+  fake_consumed_regst_names_.clear();
 }
 
 std::string CompTaskNode::VisualStr() const { return op_node_->op().op_name(); }
