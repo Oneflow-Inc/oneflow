@@ -128,7 +128,9 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> TensorBufferToListOfTensorsOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
-  CHECK_EQ_OR_RETURN(in.data_type(), DataType::kTensorBuffer);
+  CHECK_EQ_OR_RETURN(in.data_type(), DataType::kTensorBuffer)
+      << "InferDataType Failed. Expected " << DataType_Name(DataType::kTensorBuffer) << ", but got "
+      << DataType_Name(in.data_type());
   const DataType out_dtype = ctx->Attr<DataType>("out_dtype");
   CHECK_OR_RETURN(IsPODDataType(out_dtype));
   int64_t num_tensor_buffers = ctx->outputs().size();
