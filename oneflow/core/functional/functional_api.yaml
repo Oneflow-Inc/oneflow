@@ -2806,5 +2806,5 @@
   bind_python: False
 
 - name: "bincount"
-  signature: "Tensor (Tensor x, Tensor weight=None) => BinCount"
+  signature: "Tensor (Tensor x, Tensor weights=None) => BinCount"
   bind_python: True

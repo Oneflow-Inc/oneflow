@@ -721,3 +721,38 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.bincount,
+    r"""oneflow.bincount(input, weights=None, minlength=0) → Tensor
+
+    The interface is consistent with PyTorch.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.bincount.html.
+    
+    Count the frequency of each value in an array of non-negative ints.
+
+    The number of bins (size 1) is one larger than the largest value in ``input`` unless ``input`` is empty,
+    in which case the result is a tensor of size 0. If ``minlength`` is specified,
+    the number of bins is at least ``minlength`` and if ``input`` is empty,
+    then the result is tensor of size ``minlength`` filled with zeros.
+    If ``n`` is the value at position ``i``, ``out[n] += weights[i]`` if ``weights`` is specified else ``out[n] += 1``.
+
+    Args:
+        input (oneflow.Tensor): 1-d int Tensor
+        weights (oneflow.Tensor): optional, weight for each value in the input tensor. Should be of same size as input tensor.
+        minlength (int): optional, minimum number of bins. Should be non-negative.
+    
+    For example:
+
+    .. code-block:: python 
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1, 2, 4, 6])
+        >>> flow.bincount(x)
+        tensor([0, 1, 1, 0, 1, 0, 1], dtype=oneflow.int64)
+        >>> weight = flow.tensor([0.1, 0.2, 0.3, 0.4])
+        >>> flow.bincount(x, weight=weight)
+        tensor([0.0000, 0.1000, 0.2000, 0.0000, 0.3000, 0.0000, 0.4000], dtype=oneflow.float32)
+    """
+)

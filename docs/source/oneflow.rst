@@ -383,6 +383,7 @@ Other Ops
     repeat_interleave
     triu
     cross
+    bincount
 
 BLAS and LAPACK Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

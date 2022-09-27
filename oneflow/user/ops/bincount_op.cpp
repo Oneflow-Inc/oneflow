@@ -24,7 +24,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* output_desc = ctx->MutOutputTensorDesc("out", 0);
   int64_t size = ctx->Attr<int64_t>("size");
   output_desc->set_shape(Shape({size}));
-  output_desc->set_is_dynamic(true);
+  // output_desc->set_is_dynamic(true);
   return Maybe<void>::Ok();
 }
 
