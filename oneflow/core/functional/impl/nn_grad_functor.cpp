@@ -726,10 +726,20 @@ class CtcLossGradFunctor {
                            const std::shared_ptr<one::Tensor>& input_lengths,
                            const std::shared_ptr<one::Tensor>& target_lengths,
                            const std::shared_ptr<one::Tensor>& loss,
-                           const std::shared_ptr<one::Tensor>& alpha, const int32_t& blank,
+                           const std::shared_ptr<one::Tensor>& alpha, const int64_t& blank,
                            const bool& zero_infinity, const int64_t& max_target_length) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("blank", "zero_infinity", "max_target_length");
     attrs.SetAllAttrs(blank, zero_infinity, max_target_length);
+    if (targets->dtype()->data_type() == DataType::kInt32) {
+      return OpInterpUtil::Dispatch<one::Tensor>(
+          *op_, {grad_out, log_probs, targets, input_lengths, target_lengths, loss, alpha}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(
+          *op_,
+          {grad_out, log_probs, JUST(functional::Cast(targets, DType::Int64(), false)),
+           input_lengths, target_lengths, loss, alpha},
+          attrs);
+    }
     return OpInterpUtil::Dispatch<one::Tensor>(
         *op_, {grad_out, log_probs, targets, input_lengths, target_lengths, loss, alpha}, attrs);
   }
