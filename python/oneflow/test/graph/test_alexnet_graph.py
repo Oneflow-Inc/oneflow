@@ -218,7 +218,7 @@ def _test_alexnet_graph(test_case, args):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestAlexnetGraph(oneflow.unittest.TestCase):
-    def _test_alexnet_graph_repr(test_case):
+    def test_alexnet_graph_repr(test_case):
         args, unknown_args = _parse_args()
         args.device = "cuda"
         _test_alexnet_graph_repr(test_case, args)
@@ -228,7 +228,7 @@ class TestAlexnetGraph(oneflow.unittest.TestCase):
         args.device = "cuda"
         _test_alexnet_graph(test_case, args)
 
-    def _test_alexnet_graph_cpu(test_case):
+    def test_alexnet_graph_cpu(test_case):
         args, unknown_args = _parse_args()
         args.device = "cpu"
         args.train_batch_size = 40
