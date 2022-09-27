@@ -75,7 +75,9 @@ Maybe<void> InferTensorDescBinaryBroadcastLogical(user_op::InferContext* ctx) {
 Maybe<void> InferDataTypeBinaryBroadcastNormal(user_op::InferContext* ctx) {
   const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
-  CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type());  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type())
+      << "InferDataType Failed. Expected " << DataType_Name(tensor_x.data_type()) << ", but got "
+      << DataType_Name(tensor_y.data_type());
   ctx->SetOutputDType("z", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
@@ -83,7 +85,9 @@ Maybe<void> InferDataTypeBinaryBroadcastNormal(user_op::InferContext* ctx) {
 Maybe<void> InferDataTypeBinaryBroadcastLogical(user_op::InferContext* ctx) {
   const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
-  CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type());  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type())
+      << "InferDataType Failed. Expected " << DataType_Name(tensor_x.data_type()) << ", but got "
+      << DataType_Name(tensor_y.data_type());
   ctx->SetOutputDType("z", 0, DataType::kBool);
   return Maybe<void>::Ok();
 }
