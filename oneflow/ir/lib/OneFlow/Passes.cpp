@@ -908,8 +908,7 @@ func::FuncOp CreateWrapFunc(mlir::Location loc, std::vector<Operation*>& wrap_op
                             mlir::PatternRewriter& rewriter, int& name_index) {
   if (!wrap_ops.size()) return nullptr;
   auto getProto = [&]() -> std::pair<std::vector<Value>, std::vector<Value>> {
-    std::vector<Value> ins;
-    std::vector<Value> outs;
+    std::vector<Value> ins, outs, diff_ins;
     for (auto op : wrap_ops) {
       for (auto it = op->getOperands().begin(); it != op->getOperands().end(); ++it) {
         ins.push_back(*it);
@@ -918,12 +917,16 @@ func::FuncOp CreateWrapFunc(mlir::Location loc, std::vector<Operation*>& wrap_op
         outs.push_back(*it);
       }
     }
-    return {ins, outs};
+    for (auto in : ins) {
+      if (std::find(outs.begin(), outs.end(), in) == outs.end()) { diff_ins.push_back(in); }
+    }
+    return {diff_ins, outs};
   };
 
   std::pair<std::vector<Value>, std::vector<Value>> proto = getProto();
 
-  auto func_type = rewriter.getFunctionType(TypeRange(ArrayRef<Value>(proto.first)), TypeRange(ArrayRef<Value>(proto.second)));
+  auto func_type = rewriter.getFunctionType(TypeRange(ArrayRef<Value>(proto.first)),
+                                            TypeRange(ArrayRef<Value>(proto.second)));
   func_type.dump();
   auto func_name = "wrap" + std::to_string(name_index++);
 
