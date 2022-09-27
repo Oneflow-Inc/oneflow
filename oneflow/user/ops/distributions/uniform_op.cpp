@@ -65,7 +65,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> UniformOp::DumpNdSbpSignatureForOpConfFn(const NdSbpSignature& nd_sbp_sig,
                                                                   OperatorConf* op_conf) {
-  return user_op::SetSourceOpNdSbp(nd_sbp_sig, "out_0", op_conf);
+  return user_op::SetSrcOpNdSbp(nd_sbp_sig, "out_0", op_conf);
 }
 
 }  // namespace oneflow
