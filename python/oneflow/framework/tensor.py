@@ -183,7 +183,7 @@ def _new_empty(
 
 def _new_ones(
     self,
-    size=None,
+    *size,
     dtype=None,
     device=None,
     placement=None,
