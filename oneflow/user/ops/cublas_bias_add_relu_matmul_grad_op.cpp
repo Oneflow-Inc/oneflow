@@ -36,7 +36,9 @@ Maybe<void> InferTensorDesc4FusedMatmulBackward(user_op::InferContext* ctx) {
 Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx) {
   const user_op::TensorDesc& weight_desc = ctx->InputTensorDesc("weight", 0);
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-  CHECK_EQ_OR_RETURN(weight_desc.data_type(), dy_desc.data_type());
+  CHECK_EQ_OR_RETURN(weight_desc.data_type(), dy_desc.data_type())
+      << "InferDataType Failed. Expected " << DataType_Name(dy_desc.data_type()) << ", but got "
+      << DataType_Name(weight_desc.data_type());
 
   user_op::TensorDesc* d_grad_desc = ctx->MutOutputTensorDesc("d_grad", 0);
   user_op::TensorDesc* d_bias_desc = ctx->MutOutputTensorDesc("d_bias", 0);
