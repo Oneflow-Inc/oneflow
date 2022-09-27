@@ -176,6 +176,10 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
         .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
   }
 
+  if (optimizer_conf.has_lr_scale()) {
+    lamb_update_op_builder.Attr<float>("learning_rate_scale", optimizer_conf.lr_scale());
+  }
+
   SetDynamicLossScaleSkipIf(ctx, &lamb_update_op_builder);
   const auto lamb_update_op = lamb_update_op_builder.Build();
   job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {lamb_update_op.op_conf()});
