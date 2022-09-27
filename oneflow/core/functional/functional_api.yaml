@@ -1771,6 +1771,10 @@
   signature: "Tensor (Tensor x, Int64 diagonal=0) => Triu"
   bind_python: True
 
+- name: "triu_"
+  signature: "Tensor (Tensor x, Int64 diagonal=0) => InplaceTriu"
+  bind_python: True
+
 - name: "clamp"
   signature: "Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clamp"
   bind_python: true

@@ -274,6 +274,7 @@ DIRECT_PASS_FUNC(PyTensorObject_maximum, functional::maximum)
 DIRECT_PASS_FUNC(PyTensorObject_minimum, functional::minimum)
 DIRECT_PASS_FUNC(PyTensorObject_tril, functional::tril)
 DIRECT_PASS_FUNC(PyTensorObject_triu, functional::triu)
+DIRECT_PASS_FUNC(PyTensorObject_triu_, functional::triu_)
 DIRECT_PASS_FUNC(PyTensorObject_softmax, functional::softmax)
 DIRECT_PASS_FUNC(PyTensorObject_log_softmax, functional::log_softmax)
 DIRECT_PASS_FUNC(PyTensorObject_roll, functional::roll)
@@ -743,9 +744,7 @@ static PyObject* PyTensorObject_to_global(PyObject* self, PyObject* args, PyObje
   PyObject* result = NULL;
   if (tensor->is_global())
     result = PyTensorObject_global_to_global(self, args, kwargs);
-  else {
-    result = PyTensorObject_local_to_global(self, args, kwargs);
-  }
+  else { result = PyTensorObject_local_to_global(self, args, kwargs); }
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
 
@@ -891,6 +890,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"minimum", (PyCFunction)PyTensorObject_minimum, METH_VARARGS | METH_KEYWORDS, NULL},
     {"tril", (PyCFunction)PyTensorObject_tril, METH_VARARGS | METH_KEYWORDS, NULL},
     {"triu", (PyCFunction)PyTensorObject_triu, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"triu_", (PyCFunction)PyTensorObject_triu_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"softmax", (PyCFunction)PyTensorObject_softmax, METH_VARARGS | METH_KEYWORDS, NULL},
     {"log_softmax", (PyCFunction)PyTensorObject_log_softmax, METH_VARARGS | METH_KEYWORDS, NULL},
     {"roll", (PyCFunction)PyTensorObject_roll, METH_VARARGS | METH_KEYWORDS, NULL},

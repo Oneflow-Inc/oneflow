@@ -59,6 +59,12 @@ class TestTriu(flow.unittest.TestCase):
         y = torch.triu(x)
         return y
 
+    @autotest(auto_backward=False, check_graph=True)
+    def test_inplace_triu_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(2, 3, 4, 5).to(device)
+        return x.triu_(diagonal=-1)
+
 
 if __name__ == "__main__":
     unittest.main()
