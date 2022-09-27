@@ -100,27 +100,37 @@ def _handle_meta_args(
         new_size = input.shape
     else:
         new_size = _handle_size_arg(size)
-    new_dtype = dtype
+    if dtype is None:
+        new_dtype = input.dtype
+    else:
+        new_dtype = dtype
     new_device = device
     new_placement = placement
     new_sbp = sbp
     new_requires_grad = requires_grad
 
-    if dtype is None:
-        new_dtype = input.dtype
-    if device is None:
+    if new_device is not None:
+        assert (
+            new_placement is None
+        ), "argument 'placement' must be None when argument 'device' exist"
+        assert (
+            new_sbp is None
+        ), "argument 'sbp' must be None when argument 'device' exist"
+    elif new_device is None and new_placement is None and new_sbp is None:
         new_device = input.device if input.is_local else None
-    if placement is None:
         new_placement = input.placement if input.is_global else None
-    if sbp is None:
         new_sbp = input.sbp if input.is_global else None
-    if new_placement is not None:
-        assert (
-            device is None
-        ), "argument 'device' must be None when argument 'placement' exist"
-        assert (
-            new_sbp is not None
-        ), "argument 'sbp' must not be None when argument 'placement' exist"
+    else:
+        if new_placement is None and new_sbp is not None:
+            assert (
+                input.is_global
+            ), "argument 'placement' must not be None when argument 'sbp' exist and Tensor is local"
+            new_placement = input.placement
+        elif new_placement is not None and new_sbp is None:
+            assert (
+                input.is_global
+            ), "argument 'sbp' must not be None when argument 'placement' exist and Tensor is local"
+            new_sbp = input.sbp
     assert isinstance(
         new_size, (int, tuple, list, flow.Size)
     ), f"argument 'size' must be tuple of ints, not %s" % (type(new_size))
@@ -144,7 +154,6 @@ def _handle_meta_args(
         new_requires_grad, bool
     ), f"argument 'requires_grad' must be bool, not %s" % (type(new_requires_grad))
 
-    # print("new_size:", new_size, "new_dtype:", new_dtype, "new_device:", new_device, "new_placement:", new_placement, "new_sbp:", new_sbp, "new_requires_grad:", new_requires_grad)
     return new_size, new_dtype, new_device, new_placement, new_sbp, new_requires_grad
 
 
