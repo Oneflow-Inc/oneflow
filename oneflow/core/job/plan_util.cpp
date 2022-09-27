@@ -680,15 +680,6 @@ void PlanUtil::DumpCtrlRegstInfoToPlan(Plan* plan) {
 
 namespace {
 
-bool IsCollectiveBoxingTaskType(TaskType task_type) {
-  return task_type == TaskType::kCollectiveBoxingGeneric;
-}
-
-bool IsCollectiveBoxingNode(const PlanTaskNode* node) {
-  const TaskType task_type = node->task_proto()->task_type();
-  return task_type == TaskType::kCollectiveBoxingGeneric;
-}
-
 const boxing::collective::RankDesc& GetRankDesc(const OperatorConf& conf) {
   if (conf.has_collective_boxing_generic_conf()) {
     return conf.collective_boxing_generic_conf().rank_desc();
@@ -721,6 +712,14 @@ void GetDeviceDesc(const TaskProto* task_proto, boxing::collective::DeviceDesc* 
 
 }  // namespace
 
+/*static*/ bool PlanUtil::IsCollectiveBoxingTaskType(TaskType task_type) {
+  return task_type == TaskType::kCollectiveBoxingGeneric;
+}
+
+/*static*/ bool PlanUtil::IsCollectiveBoxingTaskProto(const TaskProto& task_proto) {
+  return IsCollectiveBoxingTaskType(task_proto.task_type());
+}
+
 void PlanUtil::GenCollectiveBoxingPlan(
     Job* job, Plan* plan, const std::function<std::unique_ptr<PlanTaskGraph>()>& GetPlanTaskGraph) {
   using namespace boxing::collective;
@@ -729,7 +728,7 @@ void PlanUtil::GenCollectiveBoxingPlan(
                                    ->mutable_job_id2request_set())[GlobalJobDesc().job_id()];
   const int64_t cb_task_count = std::count_if(
       plan->task().cbegin(), plan->task().cend(),
-      [](const TaskProto& task) { return IsCollectiveBoxingTaskType(task.task_type()); });
+      [](const TaskProto& task) { return PlanUtil::IsCollectiveBoxingTaskType(task.task_type()); });
   if (cb_task_count == 0) { return; }
   auto plan_task_graph_ptr = GetPlanTaskGraph();
   auto& plan_task_graph = *plan_task_graph_ptr;
@@ -749,11 +748,17 @@ void PlanUtil::GenCollectiveBoxingPlan(
     });
     if (src_nodes.empty()) { break; }
     auto ForEachNodeOnInEdge = [&](const PlanTaskNode* node,
-                                   const std::function<void(const PlanTaskNode*)>& Handler) {
+                                   const std::function<void(const PlanTaskNode*)>& DoEach) {
       node->ForEachNodeOnInEdge([&](const PlanTaskNode* node_on_in_edge) {
-        if (all_visited.count(node_on_in_edge) == 0) { Handler(node_on_in_edge); }
+        if (all_visited.count(node_on_in_edge) == 0) { DoEach(node_on_in_edge); }
       });
     };
+
+    const auto& IsCollectiveBoxingNode = [&](const PlanTaskNode* node) {
+      const TaskType task_type = node->task_proto()->task_type();
+      return IsCollectiveBoxingTaskType(task_type);
+    };
+
     auto ForEachNodeOnOutEdge = [&](const PlanTaskNode* node,
                                     const std::function<void(const PlanTaskNode*)>& Handler) {
       if (!IsCollectiveBoxingNode(node)) {
@@ -1230,73 +1235,29 @@ void PlanUtil::PopulateOpAttribute(
   return GetStreamId(task).device_id().device_index();
 }
 
-/*static*/ void PlanUtil::GenPortableCtrlEdges(
-    const PortableCtrlNode& src_node, const TaskProto& dst_task,
-    const HashMap<int64_t, std::string>& comp_task_id2op_name,
-    HashSet<PortableCtrlEdge>* portable_ctrl_edges) {
-  if (IsTransportTaskType::Visit(dst_task.task_type())) {
-    PortableCtrlEdge edge;
-    *edge.mutable_src() = src_node;
-    edge.mutable_dst()->set_transport_task_id(dst_task.task_id());
-    portable_ctrl_edges->insert(edge);
-  } else {
-    CHECK_EQ(dst_task.exec_sequence().exec_node_size(), 1);
-    const auto& op_name = CHECK_JUST(MapAt(comp_task_id2op_name, dst_task.task_id()));
-    PortableCtrlEdge edge;
-    *edge.mutable_src() = src_node;
-    edge.mutable_dst()->set_compute_task_op_name(op_name);
-    portable_ctrl_edges->insert(edge);
-  }
-}
-
-/*static*/ void PlanUtil::GenPortableCtrlEdges(
-    const TaskProto& src_task, const TaskProto& dst_task,
-    const HashMap<int64_t, std::string>& comp_task_id2op_name,
-    HashSet<PortableCtrlEdge>* portable_ctrl_edges) {
-  if (IsTransportTaskType::Visit(src_task.task_type())) {
-    PortableCtrlNode src_node;
-    src_node.set_transport_task_id(src_task.task_id());
-    GenPortableCtrlEdges(src_node, dst_task, comp_task_id2op_name, portable_ctrl_edges);
-  } else {
-    CHECK_GT(src_task.exec_sequence().exec_node_size(), 0);
-    const auto& op_name = CHECK_JUST(MapAt(comp_task_id2op_name, src_task.task_id()));
-    PortableCtrlNode src_node;
-    src_node.set_compute_task_op_name(op_name);
-    GenPortableCtrlEdges(src_node, dst_task, comp_task_id2op_name, portable_ctrl_edges);
-  }
-}
-
-/*static*/ void PlanUtil::GenPortableCtrlEdges(
-    const Plan& plan, const HashMap<int64_t, std::string>& comp_task_id2op_name,
-    HashSet<PortableCtrlEdge>* portable_ctrl_edges) {
-  const auto& ctrl_regst_desc_id2producer_task_id =
-      plan.ctrl_regst_desc_info().ctrl_regst_desc_id2producer_task_id();
-  HashMap<int64_t, const TaskProto*> id2task;
-  for (const TaskProto& task : plan.task()) {
-    CHECK(id2task.emplace(task.task_id(), &task).second);
-  }
-  for (const TaskProto& task : plan.task()) {
-    for (const auto& pair : task.consumed_regst_desc_id()) {
-      for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
-        const auto& iter = ctrl_regst_desc_id2producer_task_id.find(regst_desc_id);
-        if (iter != ctrl_regst_desc_id2producer_task_id.end()) {
-          int64_t producer_task_id = iter->second;
-          const auto* src_task = CHECK_JUST(MapAt(id2task, producer_task_id));
-          GenPortableCtrlEdges(*src_task, task, comp_task_id2op_name, portable_ctrl_edges);
+/*static*/ void PlanUtil::GenReachableTaskPairs(
+    const Plan& plan, const std::function<bool(const TaskProto&)>& TaskProtoFilter,
+    HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>* reachable_task_pairs) {
+  NaivePlanTaskGraph plan_task_graph(plan);
+  HashMap<const PlanTaskNode*, std::set<const PlanTaskNode*>> node2nearest_filtered_nodes;
+  plan_task_graph.TopoForEachNode([&](const PlanTaskNode* task_node) {
+    auto* set = &node2nearest_filtered_nodes[task_node];
+    if (TaskProtoFilter(*task_node->task_proto())) {
+      int64_t dst_task_id = task_node->task_proto()->task_id();
+      task_node->ForEachNodeOnInEdge([&](PlanTaskNode* in_task_node) {
+        for (const auto* nearest_filtered_node : node2nearest_filtered_nodes[in_task_node]) {
+          int64_t src_task_id = nearest_filtered_node->task_proto()->task_id();
+          reachable_task_pairs->insert(std::make_pair(src_task_id, dst_task_id));
         }
-      }
+      });
+      set->insert(task_node);
+    } else {
+      task_node->ForEachNodeOnInEdge([&](PlanTaskNode* in_task_node) {
+        const auto& nearests = node2nearest_filtered_nodes[in_task_node];
+        set->insert(nearests.begin(), nearests.end());
+      });
     }
-  }
-}
-
-/*static*/ void PlanUtil::MergePortableCtrlEdgesByMod(
-    size_t index, size_t n, std::vector<HashSet<PortableCtrlEdge>>* portable_ctrl_edges) {
-  index = index % n;
-  if (portable_ctrl_edges->size() <= n) { return; }
-  for (int j = index + n; j < portable_ctrl_edges->size(); j += n) {
-    (*portable_ctrl_edges)[index].insert((*portable_ctrl_edges)[j].begin(),
-                                         (*portable_ctrl_edges)[j].end());
-  }
+  });
 }
 
 }  // namespace oneflow

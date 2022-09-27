@@ -44,7 +44,6 @@ limitations under the License.
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
 #include "oneflow/core/common/env_var/lazy.h"
-#include "oneflow/core/job/portable_ctrl_edge.pb.h"
 #include "oneflow/core/job/compile_mode.h"
 #include "oneflow/core/thread/thread_manager.h"
 
@@ -269,6 +268,33 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
   return Maybe<void>::Ok();
 }
 
+namespace {
+
+template<typename T>
+void MergeByMod(size_t index, size_t n, std::vector<HashSet<T>>* data) {
+  index = index % n;
+  if (data->size() <= n) { return; }
+  for (int j = index + n; j < data->size(); j += n) {
+    (*data)[index].insert((*data)[j].begin(), (*data)[j].end());
+  }
+}
+
+// use multi-thread to merge all data into (*data)[0]
+template<typename T>
+void MergeIntoFirst(std::vector<HashSet<T>>* data) {
+  const auto& MergeInto = [&](size_t n) {
+    MultiThreadLoop(n, [&](size_t i) { MergeByMod(i, n, data); });
+    data->resize(n);
+  };
+  int n = data->size();
+  if (n > 128) { MergeInto(n = 64); }
+  if (n > 32) { MergeInto(n = 16); }
+  if (n > 8) { MergeInto(n = 4); }
+  MergeInto(n = 1);
+}
+
+}  // namespace
+
 template<void (*Loop)(size_t num, const std::function<void(size_t i)>& Callback)>
 Maybe<void> NNGraph::MasterRankCompile() {
   constexpr int kWorkerStartRank = 1;
@@ -277,16 +303,16 @@ Maybe<void> NNGraph::MasterRankCompile() {
     JUST(OpGraph::WithSingleton(&job_, [&]() -> Maybe<void> {
       auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
       JUST(BoxingTaskGraph::New())->ToProto(boxing_task_graph_proto.get());
-      std::vector<HashSet<PortableCtrlEdge>> portable_ctrl_edges{GlobalProcessCtx::WorldSize()};
-      // there are no op_names in plan, we must hold them by a container.
-      HashMap<int64_t, std::string> comp_task_id2op_name;
+      // reachable collective boxing task pairs,
+      std::vector<HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>>
+          reachable_cb_pairs{GlobalProcessCtx::WorldSize()};
       Loop(GlobalProcessCtx::WorldSize(), [&](size_t i) {
         Plan rank_plan;
         auto* plan = (i > 0) ? &rank_plan : &plan_;
         double start = GetCurTime();
         // TODO(chengcheng): new memory reused by chunk
-        CHECK_JUST(RankCompiler(boxing_task_graph_proto, i)
-                       .Compile(variable_op_names_, &job_, plan, &comp_task_id2op_name));
+        CHECK_JUST(
+            RankCompiler(boxing_task_graph_proto, i).Compile(variable_op_names_, &job_, plan));
         PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
 
         VLOG(1) << "Graph name: " << name_
@@ -300,32 +326,20 @@ Maybe<void> NNGraph::MasterRankCompile() {
         plan->mutable_collective_boxing_plan();
         // PlanUtil::SetForceInplaceMemBlock(plan); NOTE(chengcheng): only for ssp.
         PlanUtil::DumpCtrlRegstInfoToPlan(plan);
-        // collect ctrl edges of current rank for merging.
-        PlanUtil::GenPortableCtrlEdges(*plan, comp_task_id2op_name, &portable_ctrl_edges[i]);
         if (i >= kWorkerStartRank /*skip master*/) {
+          // generate reachable collective boxing task pairs
+          PlanUtil::GenReachableTaskPairs(*plan, &PlanUtil::IsCollectiveBoxingTaskProto,
+                                          &reachable_cb_pairs[i]);
           std::string plan_name = "plan:" + job_name() + ":" + std::to_string(i);
           Singleton<CtrlClient>::Get()->PushKV(plan_name, *plan);
         }
       });
-      {
-        // use multi-thread to merge all ctrl edges into portable_ctrl_edges[0], which is belong to
-        // master .
-        const auto& MergeInto = [&](size_t n) {
-          MultiThreadLoop(n, [&](size_t i) {
-            PlanUtil::MergePortableCtrlEdgesByMod(i, n, &portable_ctrl_edges);
-          });
-          portable_ctrl_edges.resize(n);
-        };
-        int n = portable_ctrl_edges.size();
-        if (n > 128) { MergeInto(n = 64); }
-        if (n > 32) { MergeInto(n = 16); }
-        if (n > 8) { MergeInto(n = 4); }
-        MergeInto(n = 1);
-      }
+      // use multi-thread to merge reachable collective boxing task pairs into
+      // (*reachable_cb_pairs)[0], which is belong to master .
+      MergeIntoFirst(&reachable_cb_pairs);
       // TODO(chengcheng): test collective boxing for multi-job.
       PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_, [&] {
-        return std::make_unique<RankPlanTaskGraph>(plan_, comp_task_id2op_name,
-                                                   portable_ctrl_edges.at(0));
+        return std::make_unique<RankPlanTaskGraph>(plan_, reachable_cb_pairs.at(0));
       });
       std::string collective_boxing_info;
       plan_.collective_boxing_plan().SerializeToString(&collective_boxing_info);
@@ -386,7 +400,7 @@ Maybe<void> NNGraph::NaiveCompile() {
     PlanUtil::GenRegisterHint(&plan_);
     // TODO(chengcheng): test collective boxing for multi-job.
     PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_,
-                                      [&] { return std::make_unique<FullPlanTaskGraph>(plan_); });
+                                      [&] { return std::make_unique<NaivePlanTaskGraph>(plan_); });
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
     PlanUtil::PlanMemoryLog(&plan_, name_);

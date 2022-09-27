@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/graph/graph.h"
-#include "oneflow/core/job/portable_ctrl_edge.h"
 
 namespace oneflow {
 
@@ -65,29 +64,23 @@ class PlanTaskGraph : public Graph<const PlanTaskNode, PlanTaskEdge> {
   HashSet<std::pair<PlanTaskNode*, PlanTaskNode*>> edges_;
 };
 
-class FullPlanTaskGraph final : public PlanTaskGraph {
+class NaivePlanTaskGraph final : public PlanTaskGraph {
  public:
   using PlanTaskGraph::PlanTaskGraph;
-  ~FullPlanTaskGraph() override = default;
+  ~NaivePlanTaskGraph() override = default;
 };
 
 class RankPlanTaskGraph final : public PlanTaskGraph {
  public:
-  RankPlanTaskGraph(const Plan& plan, const HashMap<int64_t, std::string>& comp_task_id2op_name,
-                    const HashSet<PortableCtrlEdge>& portable_ctrl_edges);
+  RankPlanTaskGraph(const Plan& plan,
+                    const HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>&
+                        reachable_cb_pairs);
   ~RankPlanTaskGraph() override = default;
 
  private:
-  void InitCtrlEdges(const HashMap<int64_t, std::string>& comp_task_id2op_name,
-                     const HashSet<PortableCtrlEdge>& portable_ctrl_edges);
+  void InitCtrlEdges(const HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>&
+                         reachable_cb_pairs);
   void TryConnectByTaskId(int64_t src_task_id, int64_t dst_task_id);
-  void TryConnectBySrcMachineId(int64_t src_task_id,
-                                const HashMap<int64_t, PlanTaskNode*>& machine_id2task_node);
-  void TryConnectByDstMachineId(const HashMap<int64_t, PlanTaskNode*>& machine_id2task_node,
-                                int64_t dst_task_id);
-  void TryConnectBetweenCompTaskNodes(
-      const HashMap<int64_t, PlanTaskNode*>& machine_id2src_task_node,
-      const HashMap<int64_t, PlanTaskNode*>& machine_id2dst_task_node);
   PlanTaskNode* MutTaskNode4TaskId(int64_t task_id);
 };
 

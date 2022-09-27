@@ -58,11 +58,14 @@ const TaskProto* PlanTaskGraph::TaskProto4TaskId(int64_t task_id) const {
   return CHECK_JUST(MapAt(task_id2plan_task_node_, task_id))->task_proto();
 }
 
-RankPlanTaskGraph::RankPlanTaskGraph(const Plan& plan,
-                                     const HashMap<int64_t, std::string>& comp_task_id2op_name,
-                                     const HashSet<PortableCtrlEdge>& portable_ctrl_edges)
+RankPlanTaskGraph::RankPlanTaskGraph(
+    const Plan& plan,
+    const HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>& reachable_cb_pairs)
     : PlanTaskGraph(plan) {
-  InitCtrlEdges(comp_task_id2op_name, portable_ctrl_edges);
+  CHECK(!FindFirstNontrivialSCC());
+  InitCtrlEdges(reachable_cb_pairs);
+  CHECK(!FindFirstNontrivialSCC())
+      << "loop detected. caused by reachable collective boxing task pairs";
 }
 
 PlanTaskNode* RankPlanTaskGraph::MutTaskNode4TaskId(int64_t task_id) {
@@ -73,116 +76,10 @@ void RankPlanTaskGraph::TryConnectByTaskId(int64_t src_task_id, int64_t dst_task
   TryConnect(MutTaskNode4TaskId(src_task_id), MutTaskNode4TaskId(dst_task_id));
 }
 
-void RankPlanTaskGraph::TryConnectBySrcMachineId(
-    int64_t src_task_id, const HashMap<int64_t, PlanTaskNode*>& machine_id2task_node) {
-  auto* src_task_node = MutTaskNode4TaskId(src_task_id);
-  PlanTaskNode* dst_task_node = nullptr;
-  if (machine_id2task_node.size() == 1) {
-    dst_task_node = machine_id2task_node.begin()->second;
-  } else {
-    int64_t machine_id = src_task_node->task_proto()->machine_id();
-    dst_task_node = CHECK_JUST(MapAt(machine_id2task_node, machine_id));
-  }
-  TryConnect(src_task_node, dst_task_node);
-}
-
-void RankPlanTaskGraph::TryConnectByDstMachineId(
-    const HashMap<int64_t, PlanTaskNode*>& machine_id2task_node, int64_t dst_task_id) {
-  PlanTaskNode* src_task_node = nullptr;
-  auto* dst_task_node = MutTaskNode4TaskId(dst_task_id);
-  if (machine_id2task_node.size() == 1) {
-    src_task_node = machine_id2task_node.begin()->second;
-  } else {
-    int64_t machine_id = dst_task_node->task_proto()->machine_id();
-    src_task_node = CHECK_JUST(MapAt(machine_id2task_node, machine_id));
-  }
-  TryConnect(src_task_node, dst_task_node);
-}
-
-void RankPlanTaskGraph::TryConnectBetweenCompTaskNodes(
-    const HashMap<int64_t, PlanTaskNode*>& machine_id2src_task_node,
-    const HashMap<int64_t, PlanTaskNode*>& machine_id2dst_task_node) {
-  if (machine_id2src_task_node.size() == 1 && machine_id2dst_task_node.size() >= 1) {
-    // there may be some src task nodes missing in the plan.
-    // connecting the sole src task node to all dst task nodes will 100% ensure the ctrl-edge order.
-    auto* src_task_node = machine_id2src_task_node.begin()->second;
-    for (const auto& pair : machine_id2dst_task_node) {
-      auto* dst_task_node = pair.second;
-      TryConnect(src_task_node, dst_task_node);
-    }
-  } else if (machine_id2dst_task_node.size() == 1 && machine_id2src_task_node.size() >= 1) {
-    // there may be some dst task nodes missing in the plan.
-    // connecting all src task nodes to the sole dst task node will 100% ensure the ctrl-edge order.
-    auto* dst_task_node = machine_id2dst_task_node.begin()->second;
-    for (const auto& pair : machine_id2src_task_node) {
-      auto* src_task_node = pair.second;
-      TryConnect(src_task_node, dst_task_node);
-    }
-  } else if (machine_id2src_task_node.size() > 1 && machine_id2dst_task_node.size() > 1) {
-    // connect two boxing related comp_task_nodes. this plan have all of them.
-    for (const auto& pair : machine_id2src_task_node) {
-      int64_t machine_id = pair.first;
-      auto* src_task_node = pair.second;
-      const auto& iter = machine_id2dst_task_node.find(machine_id);
-      if (iter != machine_id2dst_task_node.end()) {
-        auto* dst_task_node = iter->second;
-        TryConnect(src_task_node, dst_task_node);
-      }
-    }
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-void RankPlanTaskGraph::InitCtrlEdges(const HashMap<int64_t, std::string>& comp_task_id2op_name,
-                                      const HashSet<PortableCtrlEdge>& portable_ctrl_edges) {
-  const auto op_name2machine_id2sole_comp_task_node = [&] {
-    HashMap<std::string, HashMap<int64_t, PlanTaskNode*>> map;
-    for (const auto& pair : task_id2plan_task_node_) {
-      auto* task_node = pair.second;
-      if (!IsTransportTaskType::Visit(task_node->task_proto()->task_type())) {
-        int64_t task_id = task_node->task_proto()->task_id();
-        int64_t machine_id = task_node->task_proto()->machine_id();
-        const auto& op_name = CHECK_JUST(MapAt(comp_task_id2op_name, task_id));
-        auto* task_node_ptr = &map[op_name][machine_id];
-        CHECK(*task_node_ptr == nullptr)
-            << "\n----------- old -----------\n"
-            << (*task_node_ptr)->task_proto()->DebugString() << "\n----------- new -----------\n"
-            << task_node->task_proto()->DebugString();
-        *task_node_ptr = task_node;
-      }
-    }
-    return map;
-  }();
-  for (const auto& edge : portable_ctrl_edges) {
-    if (edge.src().has_transport_task_id()) {
-      if (edge.dst().has_transport_task_id()) {
-        TryConnectByTaskId(edge.src().transport_task_id(), edge.dst().transport_task_id());
-      } else if (edge.dst().has_compute_task_op_name()) {
-        const auto& machine_id2task_proto = CHECK_JUST(
-            MapAt(op_name2machine_id2sole_comp_task_node, edge.dst().compute_task_op_name()));
-        TryConnectBySrcMachineId(edge.src().transport_task_id(), machine_id2task_proto);
-      } else {
-        UNIMPLEMENTED();
-      }
-    } else if (edge.src().has_compute_task_op_name()) {
-      const auto& src_machine_id2task_proto = CHECK_JUST_MSG(
-          MapAt(op_name2machine_id2sole_comp_task_node, edge.src().compute_task_op_name()),
-          std::stringstream() << "op_names_size: " << op_name2machine_id2sole_comp_task_node.size()
-                              << ", new_op_name: " << edge.src().compute_task_op_name());
-      if (edge.dst().has_transport_task_id()) {
-        TryConnectByDstMachineId(src_machine_id2task_proto, edge.dst().transport_task_id());
-      } else if (edge.dst().has_compute_task_op_name()) {
-        const auto& dst_machine_id2task_proto = CHECK_JUST(
-            MapAt(op_name2machine_id2sole_comp_task_node, edge.dst().compute_task_op_name()));
-        TryConnectBetweenCompTaskNodes(src_machine_id2task_proto, dst_machine_id2task_proto);
-      } else {
-        UNIMPLEMENTED();
-      }
-    } else {
-      UNIMPLEMENTED();
-    }
-  }
+void RankPlanTaskGraph::InitCtrlEdges(
+    const HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>&
+        reachable_cb_pairs) {
+  for (const auto& edge : reachable_cb_pairs) { TryConnectByTaskId(edge.first, edge.second); }
 }
 
 }  // namespace oneflow

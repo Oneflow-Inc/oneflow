@@ -50,8 +50,8 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
 
 }  // namespace
 
-Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job* job, Plan* plan,
-                                  HashMap<int64_t, std::string>* comp_task_id2op_name) const {
+Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job* job,
+                                  Plan* plan) const {
   // build task_gph.
   // TODO(levi): we can rewrite this part of code in visitor pattern.
   auto task_gph =
@@ -102,8 +102,6 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
     task_node->ToProto(&task_proto);
     auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
     if (comp_task_node != nullptr) {
-      (*comp_task_id2op_name)[comp_task_node->task_id()] =
-          comp_task_node->op_node()->op().op_name();
       const auto& parallel_desc = comp_task_node->op_node()->parallel_desc();
       if (!task_gph->IsDutyRank(parallel_desc, task_node->machine_id())) {
         for (const auto& pair : task_node->consumed_regsts()) {

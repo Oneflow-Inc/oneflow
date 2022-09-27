@@ -52,18 +52,12 @@ struct PlanUtil {
       const PbMap<int64_t, ::oneflow::OpAttributeRefTable>& job_id2op_attribute_ref_table);
   static StreamId GetStreamId(const TaskProto& task);
   static int64_t GetDeviceIndex(const TaskProto& task);
-  static void GenPortableCtrlEdges(const Plan&,
-                                   const HashMap<int64_t, std::string>& comp_task_id2op_name,
-                                   HashSet<PortableCtrlEdge>* portable_ctrl_edges);
 
-  static void GenPortableCtrlEdges(const PortableCtrlNode& src_node, const TaskProto& dst_task,
-                                   const HashMap<int64_t, std::string>& comp_task_id2op_name,
-                                   HashSet<PortableCtrlEdge>* portable_ctrl_edges);
-  static void GenPortableCtrlEdges(const TaskProto& src_task, const TaskProto& dst_task,
-                                   const HashMap<int64_t, std::string>& comp_task_id2op_name,
-                                   HashSet<PortableCtrlEdge>* portable_ctrl_edges);
-  static void MergePortableCtrlEdgesByMod(
-      size_t index, size_t n, std::vector<HashSet<PortableCtrlEdge>>* portable_ctrl_edges);
+  static bool IsCollectiveBoxingTaskType(TaskType task_type);
+  static bool IsCollectiveBoxingTaskProto(const TaskProto& task_proto);
+  static void GenReachableTaskPairs(
+      const Plan& plan, const std::function<bool(const TaskProto&)>& FilterTaskProto,
+      HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>* reachable_task_pairs);
 };
 
 }  // namespace oneflow
