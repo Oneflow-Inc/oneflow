@@ -68,18 +68,14 @@ def _test_numpy_scalar_advance_indexing(test_case, numpy_x, np_scalar):
     test_case.assertTrue(
         np.allclose(
             numpy_x[
-                [
-                    [np_scalar(0), np_scalar(1)],
-                    [np_scalar(0), np_scalar(1)],
-                    [np_scalar(1), np_scalar(0)],
-                ]
+                [np_scalar(0), np_scalar(1)],
+                [np_scalar(0), np_scalar(1)],
+                [np_scalar(1), np_scalar(0)],
             ],
             x[
-                [
-                    [np_scalar(0), np_scalar(1)],
-                    [np_scalar(0), np_scalar(1)],
-                    [np_scalar(1), np_scalar(0)],
-                ]
+                [np_scalar(0), np_scalar(1)],
+                [np_scalar(0), np_scalar(1)],
+                [np_scalar(1), np_scalar(0)],
             ].numpy(),
         )
     )
@@ -143,6 +139,8 @@ def _test_basic_slice(test_case, numpy_x):
     )
 
 
+# NOTE: When numpy>=1.23.0, the list of index will be seemed as basic indexing,
+#       and tuple of index will be seemed as advanced indexing.
 def _test_advanced_indexing(test_case, numpy_x):
     x = flow.tensor(numpy_x)
 
@@ -152,19 +150,20 @@ def _test_advanced_indexing(test_case, numpy_x):
     )
     test_case.assertTrue(
         np.allclose(
-            numpy_x[[[0, 1], [0, 1], [1, 0]]], x[[[0, 1], [0, 1], [1, 0]]].numpy()
+            numpy_x[tuple([[0, 1], [0, 1], [1, 0]])],
+            x[[[0, 1], [0, 1], [1, 0]]].numpy(),
         )
     )
-    test_case.assertTrue(np.allclose(numpy_x[[[0], [1]]], x[[[0], [1]]].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[tuple([[0], [1]])], x[[[0], [1]]].numpy()))
     test_case.assertTrue(
         np.allclose(
-            numpy_x[[[[0], [1]], [[0], [1]], [0, 1]]],
+            numpy_x[tuple([[[0], [1]], [[0], [1]], [0, 1]])],
             x[[[[0], [1]], [[0], [1]], [0, 1]]].numpy(),
         )
     )
     test_case.assertTrue(
         np.allclose(
-            numpy_x[[[[0, 1], [1, 1]], [[0, 0], [1, 1]], [0, 1]]],
+            numpy_x[tuple([[[0, 1], [1, 1]], [[0, 0], [1, 1]], [0, 1]])],
             x[[[[0, 1], [1, 1]], [[0, 0], [1, 1]], [0, 1]]].numpy(),
         )
     )
