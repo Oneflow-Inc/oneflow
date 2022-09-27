@@ -1266,7 +1266,11 @@
   bind_python: true
 
 - name: "masked_fill"
-  signature: "Tensor (Tensor x, Tensor mask, Scalar value) => MaskedFill"
+  signature: "Tensor (Tensor input, Tensor mask, Scalar value) => MaskedFill"
+  bind_python: true
+
+- name: "masked_fill_"
+  signature: "Tensor (Tensor input, Tensor mask, Scalar value) => MaskedFillInplace"
   bind_python: true
 
 - name: "movedim"
