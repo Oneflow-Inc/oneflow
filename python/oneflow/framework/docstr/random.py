@@ -327,3 +327,55 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.multinomial,
+    """
+    multinomial(input, num_samples, replacement=False, generator=None) -> LongTensor
+    
+    Returns a tensor where each row contains :attr:`num_samples` indices sampled
+    from the multinomial probability distribution located in the corresponding row
+    of tensor :attr:`input`.
+
+    .. note::
+      The rows of :attr:`input` do not need to sum to one (in which case we use
+      the values as weights), but must be non-negative, finite and have
+      a non-zero sum.
+
+    Indices are ordered from left to right according to when each was sampled
+    (first samples are placed in first column).
+
+    If :attr:`input` is a vector, :attr:`out` is a vector of size :attr:`num_samples`.
+
+    If :attr:`input` is a matrix with `m` rows, :attr:`out` is an matrix of shape
+    :math:`(m x num\_samples)`.
+
+    If replacement is ``True``, samples are drawn with replacement.
+
+    If not, they are drawn without replacement, which means that when a
+    sample index is drawn for a row, it cannot be drawn again for that row.
+
+    .. note::
+        When drawn without replacement, :attr:`num_samples` must be lower than
+        number of non-zero elements in :attr:`input` (or the min number of non-zero
+        elements in each row of :attr:`input` if it is a matrix).
+
+    Args:
+        input (Tensor): the input tensor containing probabilities
+        num_samples (int): number of samples to draw
+        replacement (bool, optional): whether to draw with replacement or not
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> gen = flow.manual_seed(0)
+        >>> weights = flow.tensor([0, 10, 3, 0], dtype=flow.float) # create a tensor of weights
+        >>> flow.multinomial(weights, 2)
+        tensor([1, 2], dtype=oneflow.int64)
+        >>> flow.multinomial(weights, 4, replacement=True)
+        tensor([1, 2, 1, 1], dtype=oneflow.int64)
+
+    """,
+)

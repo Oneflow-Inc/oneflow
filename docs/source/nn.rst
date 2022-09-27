@@ -184,7 +184,8 @@ Normalization Layers
 
     nn.BatchNorm1d 
     nn.BatchNorm2d 
-    nn.BatchNorm3d 
+    nn.BatchNorm3d
+    nn.SyncBatchNorm
     nn.FusedBatchNorm1d 
     nn.FusedBatchNorm2d
     nn.FusedBatchNorm3d 
