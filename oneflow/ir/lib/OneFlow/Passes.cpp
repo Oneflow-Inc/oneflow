@@ -907,18 +907,20 @@ func::FuncOp CreateWrapFunc(mlir::Location loc, std::vector<Operation*>& wrap_op
                             mlir::PatternRewriter& rewriter, int& name_index) {
   if (!wrap_ops.size()) return nullptr;
   auto getProto = [&]() -> std::pair<mlir::ValueRange, mlir::ValueRange> {
-    std::set<Value> ins, outs;
+    std::vector<Value> ins;
+    std::vector<Value> outs;
     for (auto op : wrap_ops) {
-      outs.insert(op->getResults().begin(), op->getResults().end());
-      ins.insert(op->getOperands().begin(), op->getOperands().end());
+      std::for_each(op->getOperands().begin(), op->getOperands().end(),
+                    [&](mlir::Value it) { ins.push_back(it); });
+      std::for_each(op->getResults().begin(), op->getResults().end(),
+                    [&](mlir::OpResult it) { outs.push_back(it); });
     }
-    return {mlir::ValueRange(std::vector<Value>(ins.begin(), ins.end())),
-            mlir::ValueRange(std::vector<Value>(outs.begin(), outs.end()))};
+    return {mlir::ValueRange(ins), mlir::ValueRange(outs)};
   };
 
   auto proto = getProto();
-  auto func_type = mlir::FunctionType::get(rewriter.getContext(), mlir::TypeRange(proto.first),
-                                           mlir::TypeRange(proto.second));
+  auto func_type = mlir::FunctionType::get(rewriter.getContext(), proto.first.getTypes(),
+                                          proto.second.getTypes());
   auto func_name = "wrap" + std::to_string(name_index++);
 
   auto module = GetModuleOpFromJobBodyOp(wrap_ops[0]);
@@ -928,10 +930,16 @@ func::FuncOp CreateWrapFunc(mlir::Location loc, std::vector<Operation*>& wrap_op
   }
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPointToStart(module.getBody());
+  func_type.dump();
   auto function = rewriter.create<func::FuncOp>(loc, func_name, func_type);
+  function.dump();
   function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
   function.getBody().emplaceBlock();
-  for (auto arg : proto.first) { function.getBody().addArguments(arg.getType(), loc); }
+  function.dump();
+  for (auto arg : proto.first.getTypes()) {
+    arg.dump();
+    function.getBody().addArgument(arg, loc);
+  }
 
   BlockAndValueMapping mapping;
   for (auto args_pair : llvm::zip(proto.first, function.getBody().getArguments())) {
@@ -954,6 +962,7 @@ struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
   mlir::LogicalResult matchAndRewrite(oneflow::Job op,
                                       mlir::PatternRewriter& rewriter) const override {
     auto& ops = op->getRegion(0).front();
+    if (ops.empty()) { return success(); }
     std::vector<StringRef> white_list{
         KernelLaunchOp::getOperationName(),
         OutputOp::getOperationName(),
@@ -963,14 +972,14 @@ struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
     int name_index = 0;
     std::vector<Operation*> wrap_ops;
     for (auto op_it = ops.begin(); op_it != ops.end(); ++op_it) {
-      if (std::count(white_list.begin(), white_list.end(), op.getOperationName())
-          || !op->getAttr("op_name") || !GetModuleOpFromJobBodyOp(op)) {
-        CreateWrapFunc(op.getLoc(), wrap_ops, rewriter, name_index);
+      if (std::count(white_list.begin(), white_list.end(), op_it->getName().getStringRef())
+          || !op_it->getAttr("op_name") || !GetModuleOpFromJobBodyOp(&(*op_it))) {
+        CreateWrapFunc(op_it->getLoc(), wrap_ops, rewriter, name_index);
         continue;
       }
       wrap_ops.push_back(&(*op_it));
     }
-    CreateWrapFunc(op.getLoc(), wrap_ops, rewriter, name_index);
+    CreateWrapFunc(ops.back().getLoc(), wrap_ops, rewriter, name_index);
     return success();
   }
 };
