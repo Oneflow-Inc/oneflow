@@ -2802,6 +2802,18 @@
   signature: "Tensor (Tensor dydx, Tensor indices, Int32 ndims) =>  MaxPoolNdGradGrad"
   bind_python: False
 
+- name: "exponential_"
+  signature: "Tensor (Tensor x, Float lambd=1.0, Generator generator=None) => Exponential"
+  bind_python: True
+
+- name: "multinomial"
+  signature: "Tensor (Tensor x, Int32 num_samples, Bool replacement=False, Generator generator=None) => Multinomial"
+  bind_python: True
+
+- name: "max_pool_grad_grad"  
+  signature: "Tensor (Tensor dydx, Tensor indices, Int32 ndims) =>  MaxPoolNdGradGrad" 
+  bind_python: False
+
 - name: "deform_conv2d"
   signature:
     "Tensor (Tensor input,Tensor weight,Tensor offset,Tensor mask,Tensor bias=None, Int32 stride_h,Int32 stride_w,Int32 pad_h,
