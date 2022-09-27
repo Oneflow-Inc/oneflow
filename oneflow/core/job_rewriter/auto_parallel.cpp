@@ -93,9 +93,15 @@ Maybe<void> AutoParallelPass::RemoveParallelCastOps(Job* job) const {
   std::function<void(const OpNode*)> Try2Delete = [&](const OpNode* op_node) {
     if (del_op_name_set.find(op_node->op().op_name()) != del_op_name_set.end()) { return; }
     const OperatorConf& op_conf = op_node->op().op_conf();
-    if (!op_conf.ctrl_in_op_name().empty()) { return; }
-    if (ctrl_in_op_names.find(op_conf.name()) != ctrl_in_op_names.end()) { return; }
     if (!IsParallelCastOp(op_conf)) { return; }
+    if (!op_conf.ctrl_in_op_name().empty()) {
+      VLOG(3) << "Skip " << op_conf.name() << ", because it has ctrl edge.";
+      return;
+    }
+    if (ctrl_in_op_names.find(op_conf.name()) != ctrl_in_op_names.end()) {
+      VLOG(3) << "Skip " << op_conf.name() << ", because it is a ctrl edge.";
+      return;
+    }
     if (op_node->in_edges().size() != 1) { return; }
 
     // Find the first op which won't be deleted
@@ -114,20 +120,18 @@ Maybe<void> AutoParallelPass::RemoveParallelCastOps(Job* job) const {
     const LogicalBlobId& parallel_cast_out_lbi =
         GenLogicalBlobId(conf_wrapper_out.output("out", 0));
     if (op_node->parallel_desc() != producer->parallel_desc()) {
-      VLOG(3) << op_node->op().op_name() << " (with placement: "
+      VLOG(3) << "Skip " << op_node->op().op_name() << "(with placement: "
               << *CHECK_JUST(PlacementToString(SymbolOf(op_node->parallel_desc())))
-              << ") can't be pruned, because producer " << producer->op().op_name()
-              << "'s placement is "
+              << "), because producer " << producer->op().op_name() << "'s placement is "
               << *CHECK_JUST(PlacementToString(SymbolOf(producer->parallel_desc())));
       return;
     }
     for (const OpEdge* out_edge : op_node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
       if (consumer->parallel_desc() != op_node->parallel_desc()) {
-        VLOG(3) << op_node->op().op_name() << " (with placement: "
+        VLOG(3) << "Skip " << op_node->op().op_name() << "(with placement: "
                 << *CHECK_JUST(PlacementToString(SymbolOf(op_node->parallel_desc())))
-                << ") can't be pruned, because consumer " << consumer->op().op_name()
-                << "'s placement is "
+                << "), because consumer " << consumer->op().op_name() << "'s placement is "
                 << *CHECK_JUST(PlacementToString(SymbolOf(consumer->parallel_desc())));
         return;
       }
