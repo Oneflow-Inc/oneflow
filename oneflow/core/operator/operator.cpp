@@ -527,13 +527,21 @@ Maybe<void> Operator::GetNdSbpSignatureList(
 
 Maybe<void> Operator::GetValidNdSbpSignatureList(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const {
+    const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list,
+    bool check_output) const {
   JUST(GetNdSbpSignatureList(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list));
   // Leave those valid Nd SBPs
-  JUST(FilterNdSbpSignatureListByLogicalShape(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list));
+  JUST(FilterNdSbpSignatureListByLogicalShape(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list,
+                                              check_output));
   CHECK_OR_RETURN(nd_sbp_sig_list->size() > 0)
       << "Empty sbp signature after filtering for " << op_name();
   return Maybe<void>::Ok();
+}
+
+Operator::DumpNdSbpSignatureForOpConfFn Operator::GetDumpNdSbpSignatureForOpConfFn() const {
+  return [](const NdSbpSignature& nd_sbp_sig, OperatorConf* op_conf) -> Maybe<void> {
+    return Maybe<void>::Ok();
+  };
 }
 
 void Operator::ForEachBnInOp(const std::function<void(const std::string&)>& Handler) const {
@@ -678,7 +686,8 @@ Maybe<void> Operator::FilterAndCheckValidSbpSignatureListByLogicalShape(
 
 Maybe<void> Operator::FilterNdSbpSignatureListByLogicalShape(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const {
+    const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list,
+    bool check_output) const {
   auto FilterSbp4Blobs = [&](const PbRpf<std::string>& bns,
                              const NdSbpSignature& nd_sbp_sig) -> Maybe<bool> {
     // {in_0 : (S(6), B), in_1 : (S(0), S(1)), out : (B, S(1))}
@@ -701,7 +710,9 @@ Maybe<void> Operator::FilterNdSbpSignatureListByLogicalShape(
   };
   // Go down from the tail to the head, since we might drop the tail.
   for (int32_t sbp_id = nd_sbp_sig_list->size() - 1; sbp_id >= 0; sbp_id--) {
-    if (JUST(FilterSbp4Blobs(input_bns(), JUST(VectorAt(*nd_sbp_sig_list, sbp_id))))) {
+    if (JUST(FilterSbp4Blobs(input_bns(), JUST(VectorAt(*nd_sbp_sig_list, sbp_id))))
+        || (check_output
+            && JUST(FilterSbp4Blobs(output_bns(), JUST(VectorAt(*nd_sbp_sig_list, sbp_id)))))) {
       // Remove the Nd SBP candidate
       (*nd_sbp_sig_list)[sbp_id] = JUST(VectorAt(*nd_sbp_sig_list, nd_sbp_sig_list->size() - 1));
       nd_sbp_sig_list->pop_back();
@@ -886,7 +897,8 @@ Maybe<void> Operator::InferNdSbpSignature(
       return JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc();
     };
     std::vector<NdSbpSignature> nd_sbp_sig_list;
-    JUST(GetValidNdSbpSignatureList(LogicalBlobDesc4Ibn, parallel_desc, &nd_sbp_sig_list));
+    JUST(GetValidNdSbpSignatureList(LogicalBlobDesc4Ibn, parallel_desc, &nd_sbp_sig_list,
+                                    /*check_output=*/false));
     // Filter nd_sbp according to `nd_sbp_constraints`
     for (int32_t i = nd_sbp_sig_list.size() - 1; i >= 0; --i) {
       // If any blob do not match nd_sbp_constraints, the candidate nd_sbp will be deleted.
@@ -913,6 +925,47 @@ Maybe<void> Operator::InferLocalSignatureIf(
     bool is_local_parallel_view_conf, const ParallelDesc& parallel_desc) {
   return InferLocalSignature(std::move(LocalSigInferHint4Ibn), is_local_parallel_view_conf,
                              parallel_desc);
+}
+
+// Compute time complexity for given blob description and sbp signature.
+// Use function to replace the HashMap from logical blob id to blob description pointer.
+Maybe<double> Operator::GetComputeComplexity(
+    NdSbpSignature* sbp_signature,
+    std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
+    const ParallelDesc& parallel_desc) const {
+  const auto& sbp_bn_in_op2nd_sbp = sbp_signature->bn_in_op2nd_sbp();
+  double complexity = 0;
+  const auto& parallel_hierarchy = *parallel_desc.hierarchy();
+
+  auto ComputeComplexity4Blobs = [&](const PbRpf<std::string>& bns) -> Maybe<void> {
+    for (const auto& bn : bns) {
+      const BlobDesc& logical_blob_desc = logical_blob_desc4bn(bn);
+      const NdSbp& nd_sbp = sbp_bn_in_op2nd_sbp.at(bn);
+      CHECK_EQ_OR_RETURN(nd_sbp.sbp_parallel_size(), parallel_hierarchy.NumAxes())
+          << "At this moment, the dimension of nd SBP should be equal to the depth of hierarchy in "
+          << "parallel description.";
+
+      double total_cost = logical_blob_desc.shape().elem_cnt();
+      for (int32_t sbp_dim = 0; sbp_dim < nd_sbp.sbp_parallel_size(); sbp_dim++) {
+        const auto& sbp = nd_sbp.sbp_parallel(sbp_dim);
+        if (sbp.has_split_parallel()) {
+          const int64_t axis = sbp.split_parallel().axis();
+          if (axis >= logical_blob_desc.shape().NumAxes()
+              || logical_blob_desc.shape().At(axis) < parallel_hierarchy.At(sbp_dim)) {
+            complexity = GetMaxVal<float>();
+            return Maybe<void>::Ok();
+          } else {
+            total_cost /= parallel_hierarchy.At(sbp_dim);
+          }
+        }
+      }
+      complexity += total_cost;
+    }
+    return Maybe<void>::Ok();
+  };
+  JUST(ComputeComplexity4Blobs(input_bns()));
+  JUST(ComputeComplexity4Blobs(output_bns()));
+  return complexity;
 }
 
 std::string DebugString4LocalHint(
