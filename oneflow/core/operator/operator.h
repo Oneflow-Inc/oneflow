@@ -151,10 +151,17 @@ class Operator {
   Maybe<void> InferNdSbpSignatureIf(
       const NdSbpSignature& nd_sbp_constraints, const ParallelDesc& parallel_desc,
       std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn);
+
+  // The function that how to dump nd_sbp for op_conf
+  using DumpNdSbpSignatureForOpConfFn =
+      std::function<Maybe<void>(const NdSbpSignature& nd_sbp_sig, OperatorConf* op_conf)>;
+  virtual DumpNdSbpSignatureForOpConfFn GetDumpNdSbpSignatureForOpConfFn() const;
+
   // Infer blob's LocalSignature
   Maybe<void> InferLocalSignatureIf(
       std::function<Maybe<const LocalSigInferHint*>(const std::string&)> LocalSigInferHint4Ibn,
       bool is_local_parallel_view_conf, const ParallelDesc& parallel_desc);
+
   void GenKernelConf(const std::function<const BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
                      const ParallelContext*, KernelConf*) const;
   const InputBlobModifier& InputBlobModifier4Ibn(const std::string& ibn) const;
@@ -169,9 +176,15 @@ class Operator {
   virtual Maybe<void> GetNdSbpSignatureList(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const;
+  virtual Maybe<double> GetComputeComplexity(
+      NdSbpSignature* sbp_signature,
+      std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
+      const ParallelDesc& parallel_desc) const;
+  // TODO: Will infer blob shape before inferring sbp and delete the check_output later
   Maybe<void> GetValidNdSbpSignatureList(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const;
+      const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list,
+      bool check_output) const;
 
   void ForEachBnInOp(const std::function<void(const std::string&)>&) const;
 
@@ -286,7 +299,8 @@ class Operator {
   // TODO(wyg): 1d and nd sbp use this function to filter and check
   Maybe<void> FilterNdSbpSignatureListByLogicalShape(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const;
+      const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list,
+      bool check_output) const;
   Maybe<void> GreedilyFindMinCopyCostNdSbp(
       NdSbpSignature* nd_sbp_signature,
       const std::function<Maybe<const NdSbpInferHint*>(const std::string&)>& NdSbpInferHint4Ibn,
