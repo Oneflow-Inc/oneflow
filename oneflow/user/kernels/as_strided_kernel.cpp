@@ -14,10 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <cstdint>
-#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
@@ -132,6 +129,7 @@ class CpuAsStridedGradKernel final : public user_op::OpKernel {
 REGISTER_CPUASSTRIDED_KERNEL(float);
 REGISTER_CPUASSTRIDED_KERNEL(double);
 REGISTER_CPUASSTRIDED_KERNEL(bool);
+REGISTER_CPUASSTRIDED_KERNEL(uint8_t);
 REGISTER_CPUASSTRIDED_KERNEL(int8_t);
 REGISTER_CPUASSTRIDED_KERNEL(int32_t);
 REGISTER_CPUASSTRIDED_KERNEL(int64_t);

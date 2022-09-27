@@ -15,9 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/cuda/atomic.cuh"
-#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
