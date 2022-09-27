@@ -648,12 +648,12 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
   CHECK_OR_THROW(tensor->is_local()) << Error::RuntimeError() << "input must be a local tensor";
   PyObject* placement_obj = Py_None;
   PyObject* sbp_obj = Py_None;
-  bool check_meta = true;
-  bool copy = false;
+  int check_meta = 1;
+  int copy = 0;
   static const char* keywords[5] = {"placement", "sbp", "check_meta", "copy", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$OO!:local_to_global",
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$pp:local_to_global",
                                    const_cast<char**>(keywords), &placement_obj, &sbp_obj,
-                                   &PyBool_Type, &check_meta, &PyBool_Type, &copy)) {
+                                   &check_meta, &copy)) {
     return NULL;
   };
 
@@ -688,12 +688,12 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
   Symbol<ParallelDesc> placement;
   std::vector<Symbol<SbpParallel>> sbp;
   std::vector<Symbol<SbpParallel>> grad_sbp;
-  bool check_meta = false;
-  bool copy = false;
+  int check_meta = 0;
+  int copy = 0;
   static const char* keywords[6] = {"placement", "sbp", "grad_sbp", "check_meta", "copy", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$OOO!:global_to_global",
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$Opp:global_to_global",
                                    const_cast<char**>(keywords), &placement_obj, &sbp_obj,
-                                   &grad_sbp_obj, &PyBool_Type, &check_meta, &PyBool_Type, &copy)) {
+                                   &grad_sbp_obj, &check_meta, &copy)) {
     return NULL;
   };
 
