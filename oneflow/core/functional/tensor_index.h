@@ -123,12 +123,12 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
 Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
                                   const TensorIndex& index);
 
-Maybe<void> UnifyLocalTensorAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
-                                               TensorTuple& tensor_indices);
+Maybe<void> UnifyInputAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
+                                         TensorTuple& tensor_indices);
 
-Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
-                                        const TensorTuple& indices,
-                                        const std::shared_ptr<Tensor>& value);
+Maybe<Tensor> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
+                                          const TensorTuple& indices,
+                                          const std::shared_ptr<Tensor>& value);
 
 }  // namespace functional
 }  // namespace one

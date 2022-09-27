@@ -303,6 +303,13 @@
     ]
   bind_python: True
 
+- name: "reduce_nansum"
+  signature: [
+    "Tensor (Tensor input, Int32List[1] dim, Bool keepdim=False, *, DataType dtype=None) => ReduceNanSum",
+    "Tensor (Tensor input, *, DataType dtype=None) => ReduceNanSumWhole"
+  ]
+  bind_python: True
+
 - name: "reduce_mean"
   signature:
     [
@@ -1229,7 +1236,7 @@
   bind_python: True
 
 - name: "ctc_loss"
-  signature: "Tensor (Tensor log_probs, Tensor targets, Tensor input_lengths, Tensor target_lengths, Int64 max_target_length, Int32 blank, Bool zero_infinity, String reduction) => CtcLoss"
+  signature: "Tensor (Tensor log_probs, Tensor targets, Tensor input_lengths, Tensor target_lengths, Int64 max_target_length, Int64 blank, Bool zero_infinity, String reduction) => CtcLoss"
   bind_python: True
 
 - name: "affine_grid"
@@ -1259,7 +1266,11 @@
   bind_python: true
 
 - name: "masked_fill"
-  signature: "Tensor (Tensor x, Tensor mask, Scalar value) => MaskedFill"
+  signature: "Tensor (Tensor input, Tensor mask, Scalar value) => MaskedFill"
+  bind_python: true
+
+- name: "masked_fill_"
+  signature: "Tensor (Tensor input, Tensor mask, Scalar value) => MaskedFillInplace"
   bind_python: true
 
 - name: "movedim"
@@ -1342,7 +1353,7 @@
 
 - name: "ctc_loss_grad"
   signature: "Tensor (Tensor loss_grad, Tensor log_probs, Tensor targets,
-    Tensor input_lengths, Tensor target_lengths, Tensor loss, Tensor alpha, Int32 blank, Bool zero_infinity, Int64 max_target_length) => CtcLossGrad"
+    Tensor input_lengths, Tensor target_lengths, Tensor loss, Tensor alpha, Int64 blank, Bool zero_infinity, Int64 max_target_length) => CtcLossGrad"
   bind_python: False
 
 - name: "adaptive_avg_pool1d"

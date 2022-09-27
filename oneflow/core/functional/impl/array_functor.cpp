@@ -1253,11 +1253,24 @@ class TensorScatterNdUpdateFunctor {
         << Error::RuntimeError() << "The dtype of tensor and updates must be same.";
     std::shared_ptr<Tensor> contiguous_index = JUST(functional::ToContiguous(indices));
     if (inplace) {
-      JUST(CheckInplaceValid(tensor));
-      auto outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = tensor;
-      JUST(OpInterpUtil::Dispatch(*op_, {tensor, contiguous_index, updates}, outputs.get()));
-      return outputs->at(0);
+      if (tensor->is_global()) {
+        // NOTE: global tensor_scatter_nd_update inplace must calculate on another tensor and assign
+        // back because of input's sbp limited
+        auto output =
+            JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {tensor, contiguous_index, updates}));
+        int64_t ndim = tensor->shape()->NumAxes();
+        // TODO: use inplace copy op to write back to origin tensor
+        std::vector<int64_t> start(ndim, 0);
+        std::vector<int64_t> stop(tensor->shape()->begin(), tensor->shape()->end());
+        std::vector<int64_t> step(ndim, 1);
+        return functional::SliceUpdate(tensor, output, start, stop, step, /*inplace=*/true);
+      } else {
+        JUST(CheckInplaceValid(tensor));
+        auto outputs = std::make_shared<TensorTuple>(1);
+        (*outputs)[0] = tensor;
+        JUST(OpInterpUtil::Dispatch(*op_, {tensor, contiguous_index, updates}, outputs.get()));
+        return (*outputs)[0];
+      }
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {tensor, contiguous_index, updates});
     }
@@ -2118,7 +2131,7 @@ class TensorGetItemFunctor {
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
     if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
     if (!tensor_indices.empty()) {
-      JUST(UnifyLocalTensorAndIndicesOnDevice(x, tensor_indices));
+      JUST(UnifyInputAndIndicesOnDevice(x, tensor_indices));
       result = JUST(ApplyAdvancedIndexing(result, tensor_indices));
     }
     return result;
@@ -2215,16 +2228,35 @@ class TensorSetItemFunctor {
       if (is_identity) {
         result = expand_input;
       } else {
-        CHECK_OR_RETURN(view::IsViewApplicable(expand_input))
-            << "combined slice setitem must enable view, please try to set ONEFLOW_DISABLE_VIEW=0";
-        result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/true));
+        if (expand_input->is_local()) {
+          CHECK_OR_RETURN(view::IsViewApplicable(expand_input))
+              << "combined slice setitem must enable view, please try to set "
+                 "ONEFLOW_DISABLE_VIEW=0";
+          result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/true));
+        } else {
+          // global tensor
+          result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/false));
+        }
       }
-      if (target_shape != *(result->shape())) {
+      const Shape& slice_result_shape = *(result->shape());
+      if (target_shape != slice_result_shape) {
         result = JUST(functional::View(result, target_shape));
       }
 
-      JUST(UnifyLocalTensorAndIndicesOnDevice(expand_input, tensor_indices));
-      JUST(ApplyAdvancedIndexingUpdate(result, tensor_indices, value));
+      JUST(UnifyInputAndIndicesOnDevice(result, tensor_indices));
+      result = JUST(ApplyAdvancedIndexingUpdate(result, tensor_indices, value));
+
+      // Write the sliced tensor back to the original tensor.
+      if (result->is_global()) {
+        if (*result->shape() != slice_result_shape) {
+          CHECK_EQ_OR_RETURN(result->shape()->elem_cnt(), slice_result_shape.elem_cnt())
+              << Error::RuntimeError()
+              << "The global tensor size mismatch. Target sizes: " << slice_result_shape.ToString()
+              << ", value sizes: " << result->shape()->ToString();
+          result = JUST(functional::View(result, slice_result_shape));
+        }
+        JUST(SliceUpdate(expand_input, result, start, end, step, /*inplace=*/true));
+      }
     }
     return Maybe<void>::Ok();
   }
@@ -2580,6 +2612,7 @@ class UnsortedBatchSegmentSumFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+template<bool inplace>
 class MaskedFillFunctor {
  public:
   MaskedFillFunctor() {
@@ -2601,6 +2634,13 @@ class MaskedFillFunctor {
     }
     const auto& x_shape = *(x->shape());
     const auto& mask_shape = *(mask->shape());
+
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      (*outputs)[0] = x;
+    }
+
     if (x_shape != mask_shape) {
       Shape max_shape = Shape::Ones(std::max(x_shape.NumAxes(), mask_shape.NumAxes()));
       const Shape& x_extend_shape =
@@ -2610,10 +2650,13 @@ class MaskedFillFunctor {
       FOR_RANGE(int64_t, i, 0, max_shape.NumAxes()) {
         max_shape.Set(i, std::max(x_extend_shape.At(i), mask_extend_shape.At(i)));
       }
-      return OpInterpUtil::Dispatch<Tensor>(
-          *op_, {JUST(Expand(x, max_shape)), JUST(Expand(mask, max_shape))}, attrs);
+      JUST(OpInterpUtil::Dispatch(*op_, {JUST(Expand(x, max_shape)), JUST(Expand(mask, max_shape))},
+                                  outputs.get(), attrs));
+      return outputs->at(0);
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mask}, attrs);
+
+    JUST(OpInterpUtil::Dispatch(*op_, {x, mask}, outputs.get(), attrs));
+    return outputs->at(0);
   }
 
  private:
@@ -3389,7 +3432,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");
   m.add_functor<impl::BatchGatherFunctor>("BatchGather");
   m.add_functor<impl::UnsortedBatchSegmentSumFunctor>("UnsortedBatchSegmentSum");
-  m.add_functor<impl::MaskedFillFunctor>("MaskedFill");
+  m.add_functor<impl::MaskedFillFunctor<false>>("MaskedFill");
+  m.add_functor<impl::MaskedFillFunctor<true>>("MaskedFillInplace");
   m.add_functor<impl::MeshgridFunctor>("Meshgrid");
   m.add_functor<impl::IndexSelectFunctor>("IndexSelect");
   m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor,

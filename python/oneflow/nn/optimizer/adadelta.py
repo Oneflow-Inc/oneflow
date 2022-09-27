@@ -180,6 +180,8 @@ class Adadelta(Optimizer):
             maximize = param_group["maximize"]
 
             optimizer_conf.base_learning_rate = lr
+            self._generate_lr_scale_for_optim_conf(param_group, optimizer_conf)
+
             optimizer_conf.adadelta_conf.rho = rho
             optimizer_conf.adadelta_conf.epsilon = epsilon
             optimizer_conf.adadelta_conf.maximize = maximize
