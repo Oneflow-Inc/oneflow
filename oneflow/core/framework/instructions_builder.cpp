@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <atomic>
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/framework/stream_guard.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
 #include "oneflow/core/device/event_record.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
@@ -39,6 +40,8 @@ limitations under the License.
 #include "oneflow/core/vm/global_sync_instruction_policy.h"
 #include "oneflow/core/vm/op_call_instruction_policy.h"
 #include "oneflow/core/vm/stream_wait_instruction_policy.h"
+#include "oneflow/core/vm/stream_record_event_instruction_policy.h"
+#include "oneflow/core/vm/stream_wait_event_instruction_policy.h"
 #include "oneflow/core/vm/touch_tensors_instruction_policy.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -358,6 +361,7 @@ Maybe<void> InstructionsBuilder::Call(
     vm::EagerBlobObjectList&& output_eager_blob_objects,
     const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
     const one::OpExprInterpContext& ctx, Symbol<Stream> stream) {
+  stream = JUST(StreamGuard::TryConvertStream(stream));
   JUST(SoftSyncStream(output_eager_blob_objects, stream));
   JUST(SoftSyncStream(input_eager_blob_objects, stream));
   for (const auto& output : output_eager_blob_objects) {
@@ -366,10 +370,10 @@ Maybe<void> InstructionsBuilder::Call(
   }
   auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
   auto instruction = intrusive::make_shared<vm::Instruction>(
-      vm_stream, std::make_shared<vm::OpCallInstructionPolicy>(
+      vm_stream, JUST(vm::OpCallInstructionPolicy::New(
                      vm_stream, opkernel, std::move(input_eager_blob_objects),
                      std::move(output_eager_blob_objects), global_tensor_infer_result, ctx,
-                     *one::CurrentDevVmDepObjectConsumeMode()));
+                     *one::CurrentDevVmDepObjectConsumeMode())));
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
@@ -381,9 +385,6 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   if (pthread_fork::IsForkedSubProcess()
       && producer_stream->device()->enum_type() != DeviceType::kCPU) {
     return Maybe<void>::Ok();
-  }
-  if (last_used_stream != producer_stream) {
-    JUST(RecordEvent({JUST(eager_blob_object->compute_local_dep_object())}, last_used_stream));
   }
   Optional<Symbol<Stream>> stream{};
   if (*one::CurrentDevVmDepObjectConsumeMode() == one::DevVmDepObjectConsumeMode::NONE) {
@@ -397,6 +398,32 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
     stream = Optional<Symbol<Stream>>(NullOpt);
   } else {
     stream = producer_stream;
+  }
+  struct EnableStreamWaitOnReleaseTensor final
+      : public StreamTypeVisitor<EnableStreamWaitOnReleaseTensor> {
+    static bool VisitCompute() { return true; }
+    static bool VisitHost2Device() { return true; }
+    static bool VisitDevice2Host() { return true; }
+    static bool VisitCcl() { return false; }
+    static bool VisitBarrier() { return false; }
+    static bool VisitCriticalSection() { return false; }
+    static bool VisitLazyJobLauncher() { return false; }
+    static bool VisitPinnedCompute() { return VisitCompute(); }
+  };
+  const auto& EnableStreamWait = [&] {
+    if (last_used_stream->device() != producer_stream->device()) { return false; }
+    if (last_used_stream->stream_type() == producer_stream->stream_type()) { return true; }
+    return EnableStreamWaitOnReleaseTensor::Visit(last_used_stream->stream_type())
+           && EnableStreamWaitOnReleaseTensor::Visit(producer_stream->stream_type());
+  };
+  if (last_used_stream != producer_stream) {
+    if (stream.has_value() && EnableStreamWait()) {
+      JUST(SoftSyncStreamBetween({JUST(eager_blob_object->compute_local_dep_object())},
+                                 last_used_stream, JUST(stream)));
+    } else {
+      JUST(RecordEvent({JUST(eager_blob_object->compute_local_dep_object())}, last_used_stream));
+    }
+    eager_blob_object->set_last_used_stream(producer_stream);
   }
   auto vm_stream = stream.map([](Symbol<Stream> stream) -> vm::Stream* {
     return CHECK_JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
@@ -500,6 +527,11 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(const vm::EagerBlobObjectList& e
 namespace {
 
 bool SupportingStreamWait(Symbol<Stream> from_stream, Symbol<Stream> to_stream) {
+  if (from_stream->device() == to_stream->device()
+      && from_stream->stream_type() == to_stream->stream_type()
+      && from_stream->thread_uid() == to_stream->thread_uid()) {
+    CHECK(from_stream == to_stream);
+  }
   if (unlikely(!ThreadLocalEnvBool<ONEFLOW_VM_ENABLE_STREAM_WAIT>())) { return false; }
   DeviceType from_device_type = from_stream->device()->enum_type();
   DeviceType to_device_type = from_stream->device()->enum_type();
@@ -529,10 +561,23 @@ Maybe<void> InstructionsBuilder::StreamWait(
     Symbol<Stream> from_stream, Symbol<Stream> to_stream) {
   auto* from_vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(from_stream));
   auto* to_vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(to_stream));
-  auto instruction = intrusive::make_shared<vm::Instruction>(
-      to_vm_stream, std::make_unique<vm::StreamWaitInstructionPolicy>(
-                        std::move(dependences), from_vm_stream, to_vm_stream));
-  instruction_list_->EmplaceBack(std::move(instruction));
+  if (from_vm_stream->mut_thread_ctx() != to_vm_stream->mut_thread_ctx()) {
+    auto stream_record_event =
+        std::make_shared<vm::StreamRecordEventInstructionPolicy>(dependences);
+    auto record_instruction =
+        intrusive::make_shared<vm::Instruction>(from_vm_stream, stream_record_event);
+    instruction_list_->EmplaceBack(std::move(record_instruction));
+    auto stream_wait_event =
+        std::make_shared<vm::StreamWaitEventInstructionPolicy>(dependences, stream_record_event);
+    auto wait_instruction =
+        intrusive::make_shared<vm::Instruction>(to_vm_stream, stream_wait_event);
+    instruction_list_->EmplaceBack(std::move(wait_instruction));
+  } else {
+    auto instruction = intrusive::make_shared<vm::Instruction>(
+        to_vm_stream, std::make_unique<vm::StreamWaitInstructionPolicy>(
+                          std::move(dependences), from_vm_stream, to_vm_stream));
+    instruction_list_->EmplaceBack(std::move(instruction));
+  }
   return Maybe<void>::Ok();
 }
 
@@ -641,6 +686,7 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(
   // `ndarray` may not be ones because instruction AccessBlobByCallback is prescheduled before
   // oneflow.ones actually finished.
   Symbol<Stream> stream = JUST(GetDefaultStreamByDevice(device));
+  stream = JUST(StreamGuard::TryConvertStream(stream));
   JUST(SoftSyncStream({eager_blob_object}, stream));
   auto instruction = intrusive::make_shared<vm::Instruction>(
       // Never replace `stream` with producer_stream or last_used_stream.

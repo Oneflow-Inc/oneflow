@@ -23,7 +23,7 @@ namespace oneflow {
   const user_op::TensorDesc& b = ctx->InputTensorDesc("b", 0);
   int64_t b_col = b.shape().At(1);
 
-  *ctx->MutOutputShape("out", 0) = {a_row, b_col};
+  ctx->SetOutputShape("out", 0,  Shape({a_row, b_col}));
 
   return Maybe<void>::Ok();
 }
@@ -44,7 +44,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> SpmmCooOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("b", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("b", 0));
 
   return Maybe<void>::Ok();
 }

@@ -169,6 +169,8 @@ int GetCudaDeviceCount();
 
 Maybe<double> GetCUDAMemoryUsed();
 
+cudaDeviceProp* GetDeviceProperties(int device_id);
+
 void SetCudaDeviceIndex(int device_id);
 
 void CudaSynchronize(int device_id);

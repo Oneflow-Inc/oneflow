@@ -38,9 +38,5 @@ class CpuSpmmCooKernel final : public user_op::OpKernel {
 
 REGISTER_CPU_SPMM_COO_KERNEL(float)
 REGISTER_CPU_SPMM_COO_KERNEL(double)
-REGISTER_CPU_SPMM_COO_KERNEL(uint8_t)
-REGISTER_CPU_SPMM_COO_KERNEL(int8_t)
-REGISTER_CPU_SPMM_COO_KERNEL(int32_t)
-REGISTER_CPU_SPMM_COO_KERNEL(int64_t)
 
 }  // namespace oneflow

@@ -177,12 +177,12 @@ Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTupl
   auto* mut_output_tensor_metas = result->mut_output_tensor_metas();
   for (int32_t i = 0; i < user_op_expr.output_size(); ++i) {
     if (!JUST(user_op_expr.SupportNonContiguous())) {
-      std::shared_ptr<Stride> stride(new Stride(output_mut_metas.at(i).shape()));
+      Stride stride(output_mut_metas.at(i).shape());
       output_mut_metas.at(i).set_stride(stride);
     }
     CHECK_OR_RETURN(static_cast<bool>(output_mut_metas.at(i).device())) << "device not infered";
     mut_output_tensor_metas->at(i) = SymbolOf(
-        LocalTensorMeta(output_mut_metas.at(i).shape_ptr(), output_mut_metas.at(i).stride_ptr(),
+        LocalTensorMeta(output_mut_metas.at(i).shape(), output_mut_metas.at(i).stride(),
                         output_mut_metas.at(i).data_type(), output_mut_metas.at(i).device()));
   }
   return std::shared_ptr<const LocalTensorInferResult>(std::move(result));
