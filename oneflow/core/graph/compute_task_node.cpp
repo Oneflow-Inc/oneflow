@@ -67,13 +67,18 @@ std::vector<CompTaskNode*> GetCompTaskNodesOnEdge(
 
 void CompTaskNode::ConsumeFakeRegstsIf() {
   ConsumeFakeRegsts();
-  CHECK(consumed_regsts().size() == 0 || consumed_regsts().size() == 1);
-  const auto iter = consumed_regsts().begin();
-  if (iter != consumed_regsts().end()) {
-    CHECK(!iter->second.empty());
-    const auto& regst_desc = *iter->second.begin();
+  RegstDesc* data_regst_desc = nullptr;
+  for (const auto& pair : consumed_regsts()) {
+    for (const auto& regst_desc : pair.second) {
+      if (regst_desc->regst_desc_type().has_data_regst_desc()) {
+        CHECK(data_regst_desc == nullptr);
+        data_regst_desc = CHECK_NOTNULL(regst_desc.get());
+      }
+    }
+  }
+  if (data_regst_desc != nullptr) {
     for (const auto& ibn : op_node()->op().input_bns()) {
-      regst_desc->AddLbi(op_node()->op().BnInOp2Lbi(ibn));
+      data_regst_desc->AddLbi(op_node()->op().BnInOp2Lbi(ibn));
     }
   }
 }
