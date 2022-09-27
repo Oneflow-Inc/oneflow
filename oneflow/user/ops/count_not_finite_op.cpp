@@ -68,7 +68,9 @@ namespace oneflow {
   const user_op::TensorDesc& first_x_desc = ctx->InputTensorDesc("x", 0);
   for (const auto& in_arg_pair : ctx->inputs()) {
     const user_op::TensorDesc& x_desc = ctx->InputTensorDesc(in_arg_pair.first, in_arg_pair.second);
-    CHECK_EQ_OR_RETURN(x_desc.data_type(), first_x_desc.data_type());
+    CHECK_EQ_OR_RETURN(x_desc.data_type(), first_x_desc.data_type())
+        << "InferDataType Failed. Expected " << DataType_Name(first_x_desc.data_type())
+        << ", but got " << DataType_Name(x_desc.data_type());
   }
   user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
   y_desc->set_data_type(DataType::kInt64);
