@@ -502,7 +502,6 @@ class _BaseDataLoaderIter(object):
         self._timeout = loader.timeout
         self._collate_fn = loader.collate_fn
         self._sampler_iter = iter(self._index_sampler)
-        self._generator = loader.generator
         # self._base_seed = flow.empty((), dtype=flow.int64).random_(generator=loader.generator).item()
         self._base_seed = flow.randint(
             0, np.iinfo(np.int64).max, (), generator=loader.generator
@@ -932,7 +931,6 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                     self._auto_collation,
                     self._collate_fn,
                     self._drop_last,
-                    self._generator,
                     self._base_seed,
                     self._worker_init_fn,
                     i,

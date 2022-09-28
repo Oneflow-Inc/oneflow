@@ -139,9 +139,9 @@ class BoxingCollector final {
                                   const BlobDesc& logical_blob_desc,
                                   std::vector<NdSbp>& middle_sbps);
   // Stores all the possible SbpParallel.
-  HashMap<::oneflow::SbpParallel, int32_t> sbp_parallel_universe_;
+  HashMap<SbpParallel, int32_t> sbp_parallel_universe_;
   // Relationship between id and Sbp Parallel
-  std::vector<::oneflow::SbpParallel> id2sbp_parallel_;
+  std::vector<SbpParallel> id2sbp_parallel_;
   // minimum cost
   // minimum_copy_cost[producer][consumer]
   std::vector<std::vector<double>> minimum_copy_cost_;
@@ -151,12 +151,12 @@ class BoxingCollector final {
   // nodes that needs to be inserted
   std::vector<std::vector<std::vector<std::vector<int32_t>>>> middle_nodes_;
   // Stores all the possible NdSbp.
-  std::unordered_map<::oneflow::NdSbp, int32_t> nd_sbp_universe_;
+  std::unordered_map<NdSbp, int32_t> nd_sbp_universe_;
   // Relationship between id and Nd Sbp
   std::vector<NdSbp> nd_sbp_lists_;
-  // The diagonal middle node for differe placements
+  // The diagonal middle node for different placements
   std::vector<std::vector<std::vector<std::vector<int32_t>>>> diag_node_diff_placement_;
-  // The diagonal middle node for differe hierarchies in the same placement
+  // The diagonal middle node for different hierarchies in the same placement
   std::vector<std::vector<std::vector<std::vector<int32_t>>>> diag_node_diff_hierarchy_;
   // Id Map from 1d sbp to 2d sbp
   // For example: B -> (B, B), S0 -> (S0, S0)

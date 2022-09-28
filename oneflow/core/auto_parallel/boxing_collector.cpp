@@ -16,6 +16,7 @@ limitations under the License.
 
 #include <memory>
 #include <string>
+#include "oneflow/core/auto_parallel/algorithm_util.h"
 #include "oneflow/core/auto_parallel/boxing_collector.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/device_type.pb.h"
@@ -35,9 +36,9 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-void DfsSetNdSbp(const std::vector<::oneflow::SbpParallel>& id2sbp_parallel, int32_t depth,
-                 int32_t max_depth, NdSbp& nd_sbp, std::vector<NdSbp>& nd_sbp_lists,
-                 std::unordered_map<::oneflow::NdSbp, int32_t>& nd_sbp_universe) {
+void DfsSetNdSbp(const std::vector<SbpParallel>& id2sbp_parallel, int32_t depth, int32_t max_depth,
+                 NdSbp& nd_sbp, std::vector<NdSbp>& nd_sbp_lists,
+                 std::unordered_map<NdSbp, int32_t>& nd_sbp_universe) {
   if (depth == max_depth) {
     nd_sbp_universe[nd_sbp] = nd_sbp_lists.size();
     nd_sbp_lists.push_back(nd_sbp);
@@ -128,7 +129,7 @@ Maybe<void> AskSbpCombinationFor1DSbp(const NdSbp& sbp_producer, const NdSbp& sb
 
 }  // namespace
 
-// A constructor with init, designed for uncustomized boxing collector
+// A constructor with init, designed for pre-stored boxing collector
 BoxingCollector::BoxingCollector(int32_t max_axis) { CHECK_JUST(Init(max_axis)); }
 
 // Construct a boxing collector with given maximum number of axis
@@ -315,7 +316,7 @@ Maybe<void> BoxingCollector::GenerateCombination4SamePlacement(int32_t max_middl
             minimum_copy_cost_[i][j] = curr_copy_cost;
           }
         }
-        // If the minimum copy cost remians infinity, adding one middle node does not make it.
+        // If the minimum copy cost remains infinity, adding one middle node does not make it.
         if (minimum_copy_cost_[i][j] > GetValidMaxCopyCost()) { continue; }
         // Find those middle nodes
         for (int32_t k = 0; k < n; k++) {
@@ -736,7 +737,7 @@ Maybe<void> BoxingCollector::AskSbpCombination4DiffPlacement(
     if (same_placement) {
       // Different hierarchies
       CHECK_OR_RETURN(diag_node_diff_hierarchy_.size() > 0)
-          << "Have not initialzie the combination table for different hierarchies yet! "
+          << "Have not initialized the combination table for different hierarchies yet! "
              "Please run JUST(GenerateCombination4DiffHierarchy(this, this)); "
              "before Asking sbp combination for different parallel description.";
       if (JUST(Ask1Combination4DiffPlacement(
@@ -748,7 +749,7 @@ Maybe<void> BoxingCollector::AskSbpCombination4DiffPlacement(
     } else {
       // Different placements
       CHECK_OR_RETURN(diag_node_diff_placement_.size() > 0)
-          << "Have not initialzie the combination table for different hierarchies yet! "
+          << "Have not initialized the combination table for different hierarchies yet! "
              "Please run JUST(GenerateCombination4DiffPlacement(this, this)); "
              "before Asking sbp combination for different parallel description.";
       if (JUST(Ask1Combination4DiffPlacement(
@@ -848,9 +849,9 @@ Maybe<void> BoxingCollector::Generate1Combination4DiffHierarchy(
 
       min_path_length = path_length;
       // Find a candidate with small cost
-      if (curr_cost < min_cost * 1.0000001) {
+      if (curr_cost < min_cost * kFloatDeviationPlus) {
         // Find a smaller cost, clear the previous path.
-        if (curr_cost < min_cost * 0.9999999) {
+        if (curr_cost < min_cost * kFloatDeviationMinus) {
           min_cost = curr_cost;
           diag_nodes.clear();
         }

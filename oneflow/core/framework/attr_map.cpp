@@ -101,7 +101,7 @@ Maybe<const T&> AttrMap::GetAttr(const std::string& attr_name) const {
   CHECK_OR_RETURN(attr) << Error::InvalidValueError()
                         << "no attribute found. attribute name: " << attr_name;
   const auto* ptr = dynamic_cast<const user_op::TypedAttrVal<T>*>(attr.get());
-  CHECK_NOTNULL_OR_RETURN(ptr);
+  CHECK_NOTNULL_OR_RETURN(ptr) << Error::RuntimeError() << "Ptr should be non-null";
   return ptr->val();
 }
 

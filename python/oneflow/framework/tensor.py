@@ -199,6 +199,21 @@ def _new_zeros(
     return flow.new_zeros(self, size, dtype, device, placement, sbp, requires_grad)
 
 
+def _new_full(
+    self,
+    size,
+    fill_value,
+    dtype=None,
+    device=None,
+    placement=None,
+    sbp=None,
+    requires_grad=False,
+):
+    return flow.new_full(
+        self, size, fill_value, dtype, device, placement, sbp, requires_grad
+    )
+
+
 def _mm(self, mat2):
     return flow._C.mm(self, mat2)
 
@@ -507,6 +522,22 @@ def _trunc(self):
     return flow._C.trunc(self)
 
 
+def _cross(self, other, dim=None):
+    return flow._C.cross(self, other, dim)
+
+
+def _scatter(self, dim, index, src, reduce=""):
+    if reduce == "":
+        reduce = None
+    return flow._C.scatter(self, dim, index, src, reduce, inplace=False)
+
+
+def _scatter_inplace(self, dim, index, src, reduce=""):
+    if reduce == "":
+        reduce = None
+    return flow._C.scatter(self, dim, index, src, reduce, inplace=True)
+
+
 def RegisterMethods():
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
@@ -544,6 +575,7 @@ def RegisterMethods():
     Tensor.new_empty = _new_empty
     Tensor.new_ones = _new_ones
     Tensor.new_zeros = _new_zeros
+    Tensor.new_full = _new_full
     Tensor.where = _where
     Tensor.mm = _mm
     Tensor.norm = _norm
@@ -573,6 +605,9 @@ def RegisterMethods():
     Tensor.mv = _mv
     Tensor.inverse = _inv
     Tensor.trunc = _trunc
+    Tensor.cross = _cross
+    Tensor.scatter = _scatter
+    Tensor.scatter_ = _scatter_inplace
 
 
 def register_tensor_op(op_name):

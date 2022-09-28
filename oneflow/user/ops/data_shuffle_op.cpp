@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/embedding/embedding_manager.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -54,7 +55,7 @@ namespace oneflow {
   if (ctx->has_input("values", 0)) {
     ctx->SetOutputDType("unique_values", 0, ctx->InputDType("values", 0));
   } else {
-    ctx->SetOutputDType("unique_values", 0, DataType::kInt32);
+    ctx->SetOutputDType("unique_values", 0, DataType::kUInt8);
   }
   return Maybe<void>::Ok();
 }
@@ -204,5 +205,49 @@ namespace oneflow {
   ctx->SetOutputDType("cur_rank_unique_embedding_grad", 0, ctx->InputDType("embedding_grad", 0));
   return Maybe<void>::Ok();
 }
+
+/* static */ Maybe<void> OneEmbeddingGatherOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& in_shape = ctx->InputShape("in", 0);
+  const Shape& indices_shape = ctx->InputShape("indices", 0);
+  const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+  const int64_t num_ids = indices_shape.elem_cnt();
+  const int64_t parallel_num = ctx->parallel_num();
+  if (embedding::UseDynamicMemoryAllocation()) {
+    CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), 1)
+        << "if use dynamic memory allocation, in elem_cnt should be 1.";
+  } else {
+    CHECK_EQ_OR_RETURN(in_shape.NumAxes(), 2) << "in num_axes should be 2.";
+    CHECK_EQ_OR_RETURN(in_shape.At(0), parallel_num * num_ids)
+        << " got " << in_shape.At(0) << " and " << parallel_num * num_ids;
+    CHECK_EQ_OR_RETURN(embedding_size, in_shape.At(1))
+        << " got " << embedding_size << " and " << in_shape.At(1);
+  }
+  DimVector out_dim_vec = indices_shape.dim_vec();
+  out_dim_vec.push_back(embedding_size);
+  ctx->SetOutputShape("out", 0, Shape(out_dim_vec));
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> OneEmbeddingGatherOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> OneEmbeddingGatherOp::GetSbp(user_op::SbpContext* ctx) {
+  // Only used in parallel_num = 1.
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> OneEmbeddingGatherOp::InferDataType(user_op::InferContext* ctx) {
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
+  return Maybe<void>::Ok();
+}
+
+REGISTER_USER_OP_SAME_OUTPUT_BLOB_REGST_NUM_WITH_FUNC("id_shuffle", []() {
+  if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINED_EXECUTION", false)) {
+    return 2;
+  } else {
+    return 1;
+  }
+});
 
 }  // namespace oneflow

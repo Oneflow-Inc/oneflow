@@ -176,6 +176,15 @@ def _test_inplace_mul_scalar(test_case, device):
     )
 
 
+def _test_mul_inplace_0size_tensor(test_case, device):
+    targets = flow.randn((0, 6), device=flow.device(device))
+    height, width = 640, 640
+    targets[:, 2:] *= flow.tensor(
+        (width, height, width, height), device=flow.device(device)
+    )
+    test_case.assertTrue(np.array_equal(targets.size(), (0, 6)))
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestMulModule(flow.unittest.TestCase):
     def test_mul(test_case):
@@ -184,6 +193,7 @@ class TestMulModule(flow.unittest.TestCase):
             _test_mul_impl,
             _test_inplace_mul_tensors,
             _test_inplace_mul_scalar,
+            _test_mul_inplace_0size_tensor,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
