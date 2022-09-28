@@ -66,7 +66,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> HardShrinkGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), ctx->InputDType("y", 0))
-      << "The dtype of y_grad and y must be same.";
+      << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("y", 0)) << ", but got "
+      << DataType_Name(ctx->InputDType("dy", 0));
   ctx->SetOutputDType("dx", 0, ctx->InputDType("y", 0));
   return Maybe<void>::Ok();
 }

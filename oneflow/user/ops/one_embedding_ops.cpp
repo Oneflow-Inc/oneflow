@@ -245,11 +245,15 @@ Maybe<void> CheckDataShape(user_op::InferContext* ctx) {
 Maybe<void> CheckDataType(user_op::InferContext* ctx) {
   if (ctx->has_input("learning_rate", 0)) {
     const DataType learning_rate_dtype = ctx->InputDType("learning_rate", 0);
-    CHECK_EQ_OR_RETURN(learning_rate_dtype, DataType::kFloat);
+    CHECK_EQ_OR_RETURN(learning_rate_dtype, DataType::kFloat)
+    << "InferDataType Failed. Expected " << DataType_Name(DataType::kFloat) << ", but got "
+      << DataType_Name(learning_rate_dtype);
   }
   if (ctx->has_input("down_scale_by_tensor", 0)) {
     CHECK_EQ_OR_RETURN(ctx->InputDType("down_scale_by_tensor", 0),
-                       ctx->InputDType("unique_embeddings", 0));
+                       ctx->InputDType("unique_embeddings", 0))
+                       << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("unique_embeddings", 0)) << ", but got "
+      << DataType_Name(ctx->InputDType("down_scale_by_tensor", 0));
   }
   return Maybe<void>::Ok();
 }

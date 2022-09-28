@@ -105,12 +105,16 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   y->set_data_type(x.data_type());
   if (center) {
     const user_op::TensorDesc& beta = ctx->InputTensorDesc("beta", 0);
-    CHECK_EQ_OR_RETURN(beta.data_type(), x.data_type());
+    CHECK_EQ_OR_RETURN(beta.data_type(), x.data_type())
+    << "InferDataType Failed. Expected " << DataType_Name(x.data_type()) << ", but got "
+      << DataType_Name(beta.data_type());
   }
   const bool scale = ctx->Attr<bool>("scale");
   if (scale) {
     const user_op::TensorDesc& gamma = ctx->InputTensorDesc("gamma", 0);
-    CHECK_EQ_OR_RETURN(gamma.data_type(), x.data_type());
+    CHECK_EQ_OR_RETURN(gamma.data_type(), x.data_type())
+    << "InferDataType Failed. Expected " << DataType_Name(x.data_type()) << ", but got "
+      << DataType_Name(gamma.data_type());
   }
   user_op::TensorDesc* mean = ctx->MutOutputTensorDesc("mean", 0);
   user_op::TensorDesc* inv_variance = ctx->MutOutputTensorDesc("inv_variance", 0);
@@ -163,17 +167,25 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
 /* static */ Maybe<void> LayerNormGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-  CHECK_EQ_OR_RETURN(dy.data_type(), x.data_type());
+  CHECK_EQ_OR_RETURN(dy.data_type(), x.data_type())
+  << "InferDataType Failed. Expected " << DataType_Name(x.data_type()) << ", but got "
+      << DataType_Name(dy.data_type());
   const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);
   const user_op::TensorDesc& inv_variance = ctx->InputTensorDesc("inv_variance", 0);
   DataType bn_param_data_type = InferBnParamDataType(x.data_type());
-  CHECK_EQ_OR_RETURN(mean.data_type(), bn_param_data_type);
-  CHECK_EQ_OR_RETURN(inv_variance.data_type(), bn_param_data_type);
+  CHECK_EQ_OR_RETURN(mean.data_type(), bn_param_data_type)
+  << "InferDataType Failed. Expected " << DataType_Name(bn_param_data_type) << ", but got "
+      << DataType_Name(mean.data_type());
+  CHECK_EQ_OR_RETURN(inv_variance.data_type(), bn_param_data_type)
+  << "InferDataType Failed. Expected " << DataType_Name(bn_param_data_type) << ", but got "
+      << DataType_Name(inv_variance.data_type());
   user_op::TensorDesc* dx = ctx->MutOutputTensorDesc("dx", 0);
   dx->set_data_type(dy.data_type());
   if (ctx->has_input("_add_to_output", 0)) {
     const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
-    CHECK_EQ_OR_RETURN(add_to_output.data_type(), dx->data_type());
+    CHECK_EQ_OR_RETURN(add_to_output.data_type(), dx->data_type())
+    << "InferDataType Failed. Expected " << DataType_Name(dx->data_type()) << ", but got "
+      << DataType_Name(add_to_output.data_type());
   }
   return Maybe<void>::Ok();
 }

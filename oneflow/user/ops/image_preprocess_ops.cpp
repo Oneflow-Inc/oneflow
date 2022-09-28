@@ -64,17 +64,23 @@ namespace oneflow {
 /* static */ Maybe<void> CropMirrorNormalizeFromTensorbufferOp::InferDataType(
     user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
-  CHECK_EQ_OR_RETURN(in_tensor.data_type(), DataType::kTensorBuffer);
+  CHECK_EQ_OR_RETURN(in_tensor.data_type(), DataType::kTensorBuffer)
+  << "InferDataType Failed. Expected " << DataType_Name(DataType::kTensorBuffer) << ", but got "
+      << DataType_Name(in_tensor.data_type());
   bool has_mirror = ctx->has_input("mirror", 0);
   if (has_mirror) {
     const user_op::TensorDesc& mirror_tensor = ctx->InputTensorDesc("mirror", 0);
-    CHECK_EQ_OR_RETURN(mirror_tensor.data_type(), DataType::kInt8);
+    CHECK_EQ_OR_RETURN(mirror_tensor.data_type(), DataType::kInt8)
+    << "InferDataType Failed. Expected " << DataType_Name(DataType::kInt8) << ", but got "
+      << DataType_Name(mirror_tensor.data_type());
   }
 
   user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   DataType output_dtype = ctx->Attr<DataType>("output_dtype");
   CHECK_EQ_OR_RETURN(output_dtype,
-                     DataType::kFloat);  // only support float now; for float16 in future
+                     DataType::kFloat)
+                     << "InferDataType Failed. Expected " << DataType_Name(DataType::kFloat) << ", but got "
+      << DataType_Name(output_dtype);  // only support float now; for float16 in future
   out_tensor->set_data_type(output_dtype);
 
   return Maybe<void>::Ok();
@@ -128,16 +134,22 @@ namespace oneflow {
 
 /* static */ Maybe<void> CropMirrorNormalizeFromUint8Op::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
-  CHECK_EQ_OR_RETURN(in_tensor.data_type(), DataType::kUInt8);
+  CHECK_EQ_OR_RETURN(in_tensor.data_type(), DataType::kUInt8)
+  << "InferDataType Failed. Expected " << DataType_Name(DataType::kUInt8) << ", but got "
+      << DataType_Name(in_tensor.data_type());
   bool has_mirror = ctx->has_input("mirror", 0);
   if (has_mirror) {
     const user_op::TensorDesc& mirror_tensor = ctx->InputTensorDesc("mirror", 0);
-    CHECK_EQ_OR_RETURN(mirror_tensor.data_type(), DataType::kInt8);
+    CHECK_EQ_OR_RETURN(mirror_tensor.data_type(), DataType::kInt8)
+    << "InferDataType Failed. Expected " << DataType_Name(DataType::kInt8) << ", but got "
+      << DataType_Name(mirror_tensor.data_type());
   }
   user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   DataType output_dtype = ctx->Attr<DataType>("output_dtype");
   CHECK_EQ_OR_RETURN(output_dtype,
-                     DataType::kFloat);  // only support float now; for float16 in future
+                     DataType::kFloat)
+                     << "InferDataType Failed. Expected " << DataType_Name(DataType::kFloat) << ", but got "
+      << DataType_Name(output_dtype);  // only support float now; for float16 in future
   out_tensor->set_data_type(output_dtype);
   return Maybe<void>::Ok();
 }

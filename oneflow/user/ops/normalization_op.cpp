@@ -179,11 +179,15 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn(
     const auto data_type = x.data_type();
     if (ctx->has_input("addend", 0)) {
       const auto& addend = ctx->InputTensorDesc("addend", 0);
-      CHECK_EQ_OR_RETURN(addend.data_type(), data_type);
+      CHECK_EQ_OR_RETURN(addend.data_type(), data_type)
+      << "InferDataType Failed. Expected " << DataType_Name(data_type) << ", but got "
+      << DataType_Name(addend.data_type());
     }
     if (ctx->has_input("_add_to_output", 0)) {
       const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
-      CHECK_EQ_OR_RETURN(add_to_output.data_type(), data_type);
+      CHECK_EQ_OR_RETURN(add_to_output.data_type(), data_type)
+      << "InferDataType Failed. Expected " << DataType_Name(data_type) << ", but got "
+      << DataType_Name(add_to_output.data_type());
     }
     *ctx->MutOutputTensorDesc("y", 0) = x;
     const DataType param_data_type =
@@ -465,7 +469,9 @@ Maybe<void> BwDataTypeInferFn(user_op::InferContext* ctx) {
       << DataType_Name(dy.data_type());
   if (ctx->has_input("y", 0)) {
     const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
-    CHECK_EQ_OR_RETURN(y.data_type(), x_type);
+    CHECK_EQ_OR_RETURN(y.data_type(), x_type)
+    << "InferDataType Failed. Expected " << DataType_Name(x_type) << ", but got "
+      << DataType_Name(y.data_type());
   }
   *ctx->MutOutputTensorDesc("dx", 0) = x;
   if (ctx->has_output("addend_diff", 0)) { *ctx->MutOutputTensorDesc("addend_diff", 0) = x; }

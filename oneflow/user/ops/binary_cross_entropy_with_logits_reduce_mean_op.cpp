@@ -59,7 +59,8 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_EQ_OR_RETURN(input_desc.data_type(), target_desc.data_type())
-      << "Input datatype should be equal to Target datatype. ";
+      << "InferDataType Failed. Expected " << DataType_Name(target_desc.data_type()) << ", but got "
+      << DataType_Name(input_desc.data_type());
   ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
   return Maybe<void>::Ok();
 }

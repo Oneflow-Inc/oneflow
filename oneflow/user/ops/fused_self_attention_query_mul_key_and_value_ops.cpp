@@ -68,7 +68,9 @@ namespace oneflow {
 /*static*/ auto FusedSelfAttentionQueryMulKeyAndValueGradOp::InferDataType(
     user_op::InferContext* ctx) -> Maybe<void> {
   DataType dtype = ctx->InputDType("query_mul_key_grad", 0);
-  CHECK_EQ_OR_RETURN(ctx->InputDType("value_grad", 0), dtype);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("value_grad", 0), dtype)
+  << "InferDataType Failed. Expected " << DataType_Name(dtype) << ", but got "
+      << DataType_Name(ctx->InputDType("value_grad", 0));
   ctx->SetOutputDType("hidden_states_grad", 0, dtype);
   return Maybe<void>::Ok();
 }

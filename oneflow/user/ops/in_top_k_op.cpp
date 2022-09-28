@@ -44,7 +44,9 @@ namespace oneflow {
   const user_op::TensorDesc& targets = ctx->InputTensorDesc("targets", 0);
   CHECK_OR_RETURN(IsIndexDataType(targets.data_type()));
   const user_op::TensorDesc& predictions = ctx->InputTensorDesc("predictions", 0);
-  CHECK_EQ_OR_RETURN(predictions.data_type(), DataType::kFloat);
+  CHECK_EQ_OR_RETURN(predictions.data_type(), DataType::kFloat)
+  << "InferDataType Failed. Expected " << DataType_Name(DataType::kFloat) << ", but got "
+      << DataType_Name(predictions.data_type());
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   out->set_data_type(kBool);
   return Maybe<void>::Ok();

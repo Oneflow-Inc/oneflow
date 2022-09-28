@@ -50,7 +50,9 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
 
 /* static */ Maybe<void> ImageFlipOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
-  CHECK_EQ_OR_RETURN(in_desc.data_type(), DataType::kTensorBuffer);
+  CHECK_EQ_OR_RETURN(in_desc.data_type(), DataType::kTensorBuffer)
+  << "InferDataType Failed. Expected " << DataType_Name(DataType::kTensorBuffer) << ", but got "
+      << DataType_Name(in_desc.data_type());
   ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
@@ -81,11 +83,17 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
 
 /* static */ Maybe<void> ObjectBboxFlipOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& bbox_desc = ctx->InputTensorDesc("bbox", 0);
-  CHECK_EQ_OR_RETURN(bbox_desc.data_type(), DataType::kTensorBuffer);
+  CHECK_EQ_OR_RETURN(bbox_desc.data_type(), DataType::kTensorBuffer)
+  << "InferDataType Failed. Expected " << DataType_Name(DataType::kTensorBuffer) << ", but got "
+      << DataType_Name(bbox_desc.data_type());
   const user_op::TensorDesc& image_size_desc = ctx->InputTensorDesc("image_size", 0);
-  CHECK_EQ_OR_RETURN(image_size_desc.data_type(), DataType::kInt32);
+  CHECK_EQ_OR_RETURN(image_size_desc.data_type(), DataType::kInt32)
+  << "InferDataType Failed. Expected " << DataType_Name(DataType::kInt32) << ", but got "
+      << DataType_Name(image_size_desc.data_type());
   const user_op::TensorDesc& flip_code_desc = ctx->InputTensorDesc("flip_code", 0);
-  CHECK_EQ_OR_RETURN(flip_code_desc.data_type(), DataType::kInt8);
+  CHECK_EQ_OR_RETURN(flip_code_desc.data_type(), DataType::kInt8)
+  << "InferDataType Failed. Expected " << DataType_Name(DataType::kInt8) << ", but got "
+      << DataType_Name(flip_code_desc.data_type());
   ctx->SetOutputDType("out", 0, ctx->InputDType("bbox", 0));
   return Maybe<void>::Ok();
 }
@@ -113,9 +121,13 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
 
 /* static */ Maybe<void> ObjectBboxScaleOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& bbox_desc = ctx->InputTensorDesc("bbox", 0);
-  CHECK_EQ_OR_RETURN(bbox_desc.data_type(), DataType::kTensorBuffer);
+  CHECK_EQ_OR_RETURN(bbox_desc.data_type(), DataType::kTensorBuffer)
+  << "InferDataType Failed. Expected " << DataType_Name(DataType::kTensorBuffer) << ", but got "
+      << DataType_Name(bbox_desc.data_type());
   const user_op::TensorDesc& scale_desc = ctx->InputTensorDesc("scale", 0);
-  CHECK_EQ_OR_RETURN(scale_desc.data_type(), DataType::kFloat);
+  CHECK_EQ_OR_RETURN(scale_desc.data_type(), DataType::kFloat)
+  << "InferDataType Failed. Expected " << DataType_Name(DataType::kFloat) << ", but got "
+      << DataType_Name(scale_desc.data_type());
   ctx->SetOutputDType("out", 0, ctx->InputDType("bbox", 0));
   return Maybe<void>::Ok();
 }
@@ -149,11 +161,17 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
 /* static */ Maybe<void> ObjectSegmentationPolygonFlipOp::InferDataType(
     user_op::InferContext* ctx) {
   const user_op::TensorDesc& poly_desc = ctx->InputTensorDesc("poly", 0);
-  CHECK_EQ_OR_RETURN(poly_desc.data_type(), DataType::kTensorBuffer);
+  CHECK_EQ_OR_RETURN(poly_desc.data_type(), DataType::kTensorBuffer)
+  << "InferDataType Failed. Expected " << DataType_Name(DataType::kTensorBuffer) << ", but got "
+      << DataType_Name(poly_desc.data_type());
   const user_op::TensorDesc& image_size_desc = ctx->InputTensorDesc("image_size", 0);
-  CHECK_EQ_OR_RETURN(image_size_desc.data_type(), DataType::kInt32);
+  CHECK_EQ_OR_RETURN(image_size_desc.data_type(), DataType::kInt32)
+  << "InferDataType Failed. Expected " << DataType_Name(DataType::kInt32) << ", but got "
+      << DataType_Name(image_size_desc.data_type());
   const user_op::TensorDesc& flip_code_desc = ctx->InputTensorDesc("flip_code", 0);
-  CHECK_EQ_OR_RETURN(flip_code_desc.data_type(), DataType::kInt8);
+  CHECK_EQ_OR_RETURN(flip_code_desc.data_type(), DataType::kInt8)
+  << "InferDataType Failed. Expected " << DataType_Name(DataType::kInt8) << ", but got "
+      << DataType_Name(flip_code_desc.data_type());
   ctx->SetOutputDType("out", 0, ctx->InputDType("poly", 0));
   return Maybe<void>::Ok();
 }
@@ -184,9 +202,13 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
 /* static */ Maybe<void> ObjectSegmentationPolygonScaleOp::InferDataType(
     user_op::InferContext* ctx) {
   const user_op::TensorDesc& poly_desc = ctx->InputTensorDesc("poly", 0);
-  CHECK_EQ_OR_RETURN(poly_desc.data_type(), DataType::kTensorBuffer);
+  CHECK_EQ_OR_RETURN(poly_desc.data_type(), DataType::kTensorBuffer)
+  << "InferDataType Failed. Expected " << DataType_Name(DataType::kTensorBuffer) << ", but got "
+      << DataType_Name(poly_desc.data_type());
   const user_op::TensorDesc& scale_desc = ctx->InputTensorDesc("scale", 0);
-  CHECK_EQ_OR_RETURN(scale_desc.data_type(), DataType::kFloat);
+  CHECK_EQ_OR_RETURN(scale_desc.data_type(), DataType::kFloat)
+  << "InferDataType Failed. Expected " << DataType_Name(DataType::kFloat) << ", but got "
+      << DataType_Name(scale_desc.data_type());
   ctx->SetOutputDType("out", 0, ctx->InputDType("poly", 0));
   return Maybe<void>::Ok();
 }
@@ -209,7 +231,9 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
 
 /* static */ Maybe<void> ImageNormalizeOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
-  CHECK_EQ_OR_RETURN(in_desc.data_type(), DataType::kTensorBuffer);
+  CHECK_EQ_OR_RETURN(in_desc.data_type(), DataType::kTensorBuffer)
+  << "InferDataType Failed. Expected " << DataType_Name(DataType::kTensorBuffer) << ", but got "
+      << DataType_Name(in_desc.data_type());
   ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
@@ -244,11 +268,17 @@ Maybe<void> ImageObjectGetSbp(user_op::SbpContext* ctx) {
 /* static */ Maybe<void> ObjectSegmentationPolygonToMaskOp::InferDataType(
     user_op::InferContext* ctx) {
   const user_op::TensorDesc& poly_desc = ctx->InputTensorDesc("poly", 0);
-  CHECK_EQ_OR_RETURN(poly_desc.data_type(), DataType::kTensorBuffer);
+  CHECK_EQ_OR_RETURN(poly_desc.data_type(), DataType::kTensorBuffer)
+  << "InferDataType Failed. Expected " << DataType_Name(DataType::kTensorBuffer) << ", but got "
+      << DataType_Name(poly_desc.data_type());
   const user_op::TensorDesc& poly_index_desc = ctx->InputTensorDesc("poly_index", 0);
-  CHECK_EQ_OR_RETURN(poly_index_desc.data_type(), DataType::kTensorBuffer);
+  CHECK_EQ_OR_RETURN(poly_index_desc.data_type(), DataType::kTensorBuffer)
+  << "InferDataType Failed. Expected " << DataType_Name(DataType::kTensorBuffer) << ", but got "
+      << DataType_Name(poly_desc.data_type());
   const user_op::TensorDesc& image_size_desc = ctx->InputTensorDesc("image_size", 0);
-  CHECK_EQ_OR_RETURN(image_size_desc.data_type(), DataType::kInt32);
+  CHECK_EQ_OR_RETURN(image_size_desc.data_type(), DataType::kInt32)
+  << "InferDataType Failed. Expected " << DataType_Name(DataType::kInt32) << ", but got "
+      << DataType_Name(image_size_desc.data_type());
   ctx->SetOutputDType("out", 0, ctx->InputDType("poly", 0));
   return Maybe<void>::Ok();
 }

@@ -65,7 +65,9 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> HardswishGradOp::InferDataType(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0));
+  CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0))
+  << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("dy", 0)) << ", but got "
+      << DataType_Name(ctx->InputDType("x", 0));
   ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
