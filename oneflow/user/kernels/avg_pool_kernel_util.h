@@ -459,11 +459,11 @@ OF_DEVICE_FUNC void HalfAvgpool1dForwardCompute(const NdIndexOffsetHelper<IDX, 2
         divide_factor = (lend - lstart);
       }
     }
-    half sum = 0;
+    float sum = 0;
 
     const half* data = src + start_idx;
-    for (IDX idx = lstart; idx < lend; idx += 1) { sum += data[idx]; }
-    dest[num] = __float2half(__half2float(sum) / divide_factor);
+    for (IDX idx = lstart; idx < lend; idx += 1) { sum += __half2float(data[idx]); }
+    dest[num] = __float2half(sum / divide_factor);
   }
 }
 
@@ -537,16 +537,15 @@ OF_DEVICE_FUNC void HalfAvgpool2dForwardCompute(
         divide_factor = (hend - hstart) * (wend - wstart);
       }
     }
-    half sum = 0;
+    float sum = 0;
     const half* data = src + start_idx;
     for (int64_t i = hstart; i < hend; i += 1) {
       for (int64_t j = wstart; j < wend; j += 1) {
         const IDX window_idx = i * x_width + j;
-        sum += data[window_idx];
+        sum += __half2float(data[window_idx]);
       }
     }
-    dest[num] = __float2half(__half2float(sum) / divide_factor);
-    // dest[num] = static_cast<half>(__half2float(sum) / divide_factor);
+    dest[num] = __float2half(sum / divide_factor);
   }
 }
 
@@ -585,7 +584,6 @@ OF_DEVICE_FUNC void HalfAvgpool2dBackwardCompute(
     }
 
     half grad_delta = __float2half(__half2float(src[num]) / divide_factor);
-    // half grad_delta = static_cast<half>(__half2float(src[num]) / divide_factor);
     half* data = dest + start_idx;
     for (IDX i = hstart; i < hend; i += 1) {
       for (IDX j = wstart; j < wend; j += 1) {
@@ -634,17 +632,17 @@ OF_DEVICE_FUNC void HalfAvgpool3dForwardCompute(
         divide_factor = (tend - tstart) * (hend - hstart) * (wend - wstart);
       }
     }
-    half sum = 0;
+    float sum = 0;
     const half* data = src + start_idx;
     for (IDX i = tstart; i < tend; i += 1) {
       for (IDX j = hstart; j < hend; j += 1) {
         for (IDX k = wstart; k < wend; k += 1) {
           const IDX window_idx = i * x_height * x_width + j * x_width + k;
-          sum += data[window_idx];
+          sum += __half2float(data[window_idx]);
         }
       }
     }
-    dest[num] = __float2half(__half2float(sum) / divide_factor);
+    dest[num] = __float2half(sum / divide_factor);
   }
 }
 
