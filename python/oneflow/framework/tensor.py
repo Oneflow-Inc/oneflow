@@ -182,13 +182,7 @@ def _new_empty(
 
 
 def _new_ones(
-    self,
-    *size,
-    dtype=None,
-    device=None,
-    placement=None,
-    sbp=None,
-    requires_grad=False,
+    self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
 ):
     return flow.new_ones(self, size, dtype, device, placement, sbp, requires_grad)
 
