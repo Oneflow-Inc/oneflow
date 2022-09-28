@@ -331,8 +331,7 @@ void MemoryShareStrategy::UpdateOffset(size_t* mem_block_size,
                                        HashMap<RegstDescProto*, int64_t>* regst_desc2offset) {
   size_t optimal_cost = ComputeOptimalAdjustedCost();
   if (optimal_cost < *mem_block_size) {
-    std::cout << "Original cost: " << *mem_block_size << ", updated cost: " << optimal_cost
-              << std::endl;
+    VLOG(3) << "Original cost: " << *mem_block_size << ", updated cost: " << optimal_cost;
     *mem_block_size = optimal_cost;
     for (auto& pair : *regst_desc2offset) {
       pair.second = register_offset_[register2index_[pair.first]];

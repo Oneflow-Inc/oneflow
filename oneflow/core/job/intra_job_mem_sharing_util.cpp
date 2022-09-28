@@ -849,12 +849,12 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
     // Update the offset with a smaller total memory size if the current size is greater than the
     // lower bound
     if (best_result->mem_block_size > mem_chain2peak_memory[pair.first]) {
-      std::cout << "Current size: " << best_result->mem_block_size
-                << ", lower bound : " << mem_chain2peak_memory[pair.first] << std::endl;
+      VLOG(3) << "Current size: " << best_result->mem_block_size
+              << ", lower bound : " << mem_chain2peak_memory[pair.first];
       MemoryShareStrategy mss;
       int32_t max_iteration_step =
           mss.UpdateMaxIteration(best_result->mem_block_size, mem_chain2peak_memory[pair.first]);
-      std::cout << "max iteration step: " << max_iteration_step << std::endl;
+      VLOG(3) << "max iteration step: " << max_iteration_step;
       if (max_iteration_step > 0) {
         mss.StealCompactPosition(best_result->regst_desc2offset, mem_reused_regst2size,
                                  mem_chain2regst2mutual_exclusion_regsts.at(pair.first));
