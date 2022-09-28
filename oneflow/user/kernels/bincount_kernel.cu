@@ -22,13 +22,15 @@ namespace oneflow {
 namespace user_op {
 namespace {
 
+// clang-format off
 template<typename IDX, typename T>
-__global__ static void BinCountWeightCompute(const IDX* in_ptr, const T* weight, T* out_ptr,
-                                             int64_t size){
-    CUDA_1D_KERNEL_LOOP(i, size){IDX idx = *(in_ptr + i);
-cuda::atomic::Add(out_ptr + idx, weight[i]);
-}  // namespace
-};  // namespace user_op
+__global__ static void BinCountCompute(const IDX* in_ptr, const T* weight, T* out_ptr, int64_t size) {
+  CUDA_1D_KERNEL_LOOP(i, size) {
+    IDX idx = *(in_ptr + i);
+    cuda::atomic::Add(out_ptr + idx, weight[i]);
+  }
+};
+// clang-format on
 
 template<typename IDX, typename T>
 __global__ static void BinCountCompute(const IDX* in_ptr, T* out_ptr, int64_t size) {
@@ -58,8 +60,8 @@ class CUDABinCountKernel final : public user_op::OpKernel {
     if (in_size == 0) { return; }
     if (ctx->has_input("weight", 0)) {
       const T* weight_ptr = ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>();
-      BinCountWeightCompute<IDX, T><<<BlocksNum4ThreadsNum(in_size), kCudaThreadsNumPerBlock, 0,
-                                      ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+      BinCountCompute<IDX, T><<<BlocksNum4ThreadsNum(in_size), kCudaThreadsNumPerBlock, 0,
+                                ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           in_ptr, weight_ptr, out_ptr, in_size);
     } else {
       BinCountCompute<IDX, T>
