@@ -545,6 +545,7 @@ const std::string& DTREagerBlobObject::compute_op_type_name() const {
 
 bool DTREagerBlobObject::is_evictable() const {
   if (!compute_op_) { return false; }
+  if (compute_op_->inputs().size() == 0) { return false; }
   // FIXME: set_tensor_inputs should also include other outputs of the compute_op
   if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "nll") { return false; }
   if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "copy") { return false; }
