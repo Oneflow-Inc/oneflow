@@ -18,37 +18,49 @@ limitations under the License.
 
 include "OneFlow/OKL/OKLDialect.td"
 include "OneFlow/OKL/OKLBase.td"
+include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 
-include "mlir/Interfaces/SideEffectInterfaces.td"
-include "mlir/IR/FunctionInterfaces.td"
-include "mlir/Interfaces/CallInterfaces.td"
-include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/Pass/PassBase.td"
-
-include "mlir/IR/OpBase.td"
-
-def BuildContextOp : OKL_Op<"reg_ctx"> {
+def RegContextOp : OKL_Op<"reg_ctx"> {
   let summary = "build reg context operation";
   let description = [{
     this context is generated from module op and used on kernel/run_ctx build phase.
     each wrapped op has their own reg_ctx with their own attrs.
   }];
+
+  let arguments = (ins
+    StrAttr:$mlir_assembly
+  );
+  let results = (outs LLVM_AnyPointer:$out);
 }
 
-def BuildContextOp : OKL_Op<"run_ctx"> {
+
+
+def RunContextOp : OKL_Op<"run_ctx"> {
   let summary = "build run context operation";
   let description = [{
     this context is generated from reg_ctx and compute_ctx.
     compute_ctx is passed by jit engine from llvm function operand.
     each wrapped op has their own run_ctx with their own reg_ctx.
   }];
+
+  let arguments = (ins
+    LLVM_AnyPointer:$reg_ctx,
+    LLVM_AnyPointer:$compute_ctx
+  );
+  let results = (outs LLVM_AnyPointer:$out);
 }
 
-def BuildKernelOp : OKL_Op<"kernel"> {
+def KernelOp : OKL_Op<"kernel"> {
   let summary = "build kernel operation";
   let description = [{
     kernel is generated from reg_ctx and op_name.
   }];
+
+  let arguments = (ins
+    StrAttr:$op_type_name,
+    LLVM_AnyPointer:$compute_ctx
+  );
+  let results = (outs LLVM_AnyPointer:$out);
 }
 
 def LaunchOp : OKL_Op<"launch"> {
@@ -56,6 +68,11 @@ def LaunchOp : OKL_Op<"launch"> {
   let description = [{
     launch use kernel and run_ctx to run the real kernel compute func.
   }];
+
+  let arguments = (ins
+    LLVM_AnyPointer:$run_ctx,
+    LLVM_AnyPointer:$kernel
+  );
 }
 
 #endif // ONEFLOW_IR_INCLUDE_OKL_OKLOPS_H_

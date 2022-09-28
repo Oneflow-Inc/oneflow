@@ -53,6 +53,7 @@ mlir_tablegen(SBPAttributes.cpp.inc -gen-attrdef-defs)
 add_public_tablegen_target(MLIRSBPIncGen)
 
 set(LLVM_TARGET_DEFINITIONS OKL/OKLOps.td)
+mlir_tablegen(OKL.gen_ops.h.inc -gen-op-decls)
 add_public_tablegen_target(MLIROKLIncGen)
 
 set(LLVM_TABLEGEN_FLAGS "")

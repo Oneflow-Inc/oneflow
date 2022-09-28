@@ -40,6 +40,7 @@ limitations under the License.
 #include "OneFlow/OneFlowUtils.h"
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/SBP/SBPAttributes.h"
+#include "OneFlow/OKL/OKLOps.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/OperationSupport.h"
@@ -193,11 +194,29 @@ func::FuncOp GetOrInsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operat
   return func;
 }
 
-LogicalResult Lower2OKLOp(::mlir::PatternRewriter& rewriter, Operation* op) {
+LogicalResult Lower2OKLOp(::mlir::PatternRewriter& rewriter, Operation* op, func::FuncOp okl_func) {
+  auto compute_ctx = okl_func->getOperand(0);
+  auto tmp_func_name = "tmp_func";
+  auto module = okl_func->getParentOfType<ModuleOp>();
+  auto llvm_ptr_type = LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8));
+  auto loc = op->getLoc();
   // create okl.reg_ctx(StringAttr: assembly)
+  // TODO: create tmp func to dump assembly
+  std::string mlir;
+  if (auto found = SymbolTable(module).lookup(tmp_func_name)) {
+    llvm::raw_string_ostream os_mlir(mlir);
+    found->print(os_mlir);
+  }
+  auto reg_ctx =
+      rewriter.create<okl::RegContextOp>(loc, llvm_ptr_type, rewriter.getStringAttr(mlir));
   // create okl.run_ctx(*reg_ctx, *compute_ctx)
+  auto run_ctx = rewriter.create<okl::RunContextOp>(loc, llvm_ptr_type, reg_ctx, compute_ctx);
   // create okl.kernel(StringAttr: op_type_name, *reg_ctx)
+
+  auto kernel = rewriter.create<okl::KernelOp>(
+      loc, llvm_ptr_type, op->getAttr("op_name").dyn_cast<StringAttr>(), compute_ctx);
   // create okl.launch(*run_ctx, *kernel)
+  rewriter.create<okl::LaunchOp>(loc, run_ctx, kernel);
   return success();
 }
 
@@ -939,7 +958,7 @@ struct Lower2OKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
         if (isa<func::ReturnOp>(op)) { break; }
         op.emitError("Failed to parse this op in kernel launch wrap func.");
       }
-      if (failed(Lower2OKLOp(rewriter, &op))) { return failure(); }
+      if (failed(Lower2OKLOp(rewriter, &op, okl_func))) { return failure(); }
     }
     op->dropAllUses();
     op->erase();
