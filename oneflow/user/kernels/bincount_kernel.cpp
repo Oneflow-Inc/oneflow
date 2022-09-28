@@ -13,23 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/device_type.pb.h"
-#include "oneflow/core/common/tensor_desc.h"
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/user_op_hob.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/thread/thread_manager.h"
-#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
-
-// template<typename IDX, typename T, bool has_weight>
-// struct BinCountCompute {
-//   static void Compute(const IDX* in_ptr, const T* weight, T* out_ptr, int64_t size) {}
-// };
 
 template<typename IDX, typename T>
 void BinCountComputeWeight(const IDX* in_ptr, const T* weight, T* out_ptr, int64_t size) {

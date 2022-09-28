@@ -14,15 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/cuda/atomic.cuh"
-#include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/device_type.h"
-#include "oneflow/core/cuda/elementwise.cuh"
-#include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/kernel/kernel_util.cuh"
-#include "oneflow/user/kernels/loss_kernel_util.h"
-#include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/framework/op_kernel.h"
+#include "oneflow/core/framework/user_op_hob.h"
 
 namespace oneflow {
 namespace user_op {
