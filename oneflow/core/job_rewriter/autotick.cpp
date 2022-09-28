@@ -81,7 +81,8 @@ Maybe<void> BuildDstSubsetTickOpAndParallelConf(const HashSet<LogicalBlobId>& ti
   }
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
-  for (int64_t machine_id : Singleton<ResourceDesc, ForSession>::Get()->process_ranks()) {
+  for (int64_t machine_id : Singleton<ResourceDesc, ForSession>::Get()->process_ranks(
+           ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false))) {
     parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":0");
   }
   JUST(job_builder->AddOp(parallel_conf, *dst_subset_tick_op));
@@ -96,7 +97,8 @@ Maybe<void> CreateDstSubsetTickAndSinkTicks(
   dst_subset_tick.mutable_dst_subset_tick_conf()->add_in(
       src_subset_tick.name() + "/" + src_subset_tick.src_subset_tick_conf().out());
   JUST(BuildDstSubsetTickOpAndParallelConf(tick_lbis, &dst_subset_tick, job_builder));
-  const auto& process_ranks = Singleton<ResourceDesc, ForSession>::Get()->process_ranks();
+  const auto& process_ranks = Singleton<ResourceDesc, ForSession>::Get()->process_ranks(
+      ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false));
   HashMap<int64_t, std::string> machine_id2gather_tick_in_lbns;
   for (int64_t machine_id : process_ranks) {
     ParallelConf parallel_conf;
@@ -161,7 +163,8 @@ Maybe<void> BuildSrcSubsetTickOpAndParallelConf(OperatorConf* src_subset_tick_op
   src_subset_tick_op->mutable_src_subset_tick_conf()->set_out("out");
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
-  for (int64_t machine_id : Singleton<ResourceDesc, ForSession>::Get()->process_ranks()) {
+  for (int64_t machine_id : Singleton<ResourceDesc, ForSession>::Get()->process_ranks(
+           ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false))) {
     parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":0");
   }
   JUST(job_builder->AddOp(parallel_conf, *src_subset_tick_op));
@@ -171,7 +174,8 @@ Maybe<void> BuildSrcSubsetTickOpAndParallelConf(OperatorConf* src_subset_tick_op
 Maybe<void> CreateSourceTicksAndSrcSubsetTick(
     OperatorConf* src_subset_tick_op, JobBuilder* job_builder,
     const std::function<Maybe<void>(int64_t machine_id, const std::string& op_name)>& DoEachSrc) {
-  for (int64_t machine_id : Singleton<ResourceDesc, ForSession>::Get()->process_ranks()) {
+  for (int64_t machine_id : Singleton<ResourceDesc, ForSession>::Get()->process_ranks(
+           ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false))) {
     ParallelConf parallel_conf;
     parallel_conf.set_device_tag("cpu");
     parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":0");

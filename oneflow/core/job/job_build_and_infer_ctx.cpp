@@ -913,17 +913,18 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatible
 namespace {
 template<typename T>
 void ExpandPlacement(::google::protobuf::RepeatedPtrField<T>* pl_group) {
-  int32_t node_num = 10;
-  int32_t dev_per_node = 100;
+  int64_t node_num = ParseIntegerFromEnv("ONEFLOW_DRY_RUN_COMPILE_NODE_NUM", 1);
+  int64_t dev_per_node = ParseIntegerFromEnv("ONEFLOW_DRY_RUN_COMPILE_DEV_NUM_PER_NODE", 20);
   for (auto& pl : *pl_group) {
     *pl.mutable_parallel_conf()->mutable_device_tag() = "cuda";
     if (pl.mutable_parallel_conf()->device_name_size() > 1) {
       pl.mutable_parallel_conf()->clear_device_name();
       for (int32_t m_idx = 0; m_idx < node_num; ++m_idx) {
-          for (int32_t d_idx = 0; d_idx < dev_per_node; ++d_idx) {
-            pl.mutable_parallel_conf()->add_device_name(
-                std::string("@") + std::to_string(m_idx) + ":" + std::to_string(d_idx));
-          }
+        for (int32_t d_idx = 0; d_idx < dev_per_node; ++d_idx) {
+          pl.mutable_parallel_conf()->add_device_name(std::string("@")
+                                                      + std::to_string(m_idx * dev_per_node + d_idx)
+                                                      + ":" + std::to_string(d_idx));
+        }
       }
       pl.mutable_parallel_conf()->mutable_hierarchy()->clear_dim();
       pl.mutable_parallel_conf()->mutable_hierarchy()->add_dim(node_num * dev_per_node);
@@ -932,9 +933,7 @@ void ExpandPlacement(::google::protobuf::RepeatedPtrField<T>* pl_group) {
 }
 
 Maybe<void> ExpandGraph(Job* job) {
-  for (auto& op : *job->mutable_net()->mutable_op()) {
-    *op.mutable_device_tag() = "cuda";
-  }
+  for (auto& op : *job->mutable_net()->mutable_op()) { *op.mutable_device_tag() = "cuda"; }
   ExpandPlacement<PlacementGroup>(job->mutable_placement()->mutable_placement_group());
   ExpandPlacement<BlobPlacementGroup>(job->mutable_placement()->mutable_blob_placement_group());
   return Maybe<void>::Ok();
@@ -944,9 +943,7 @@ Maybe<void> ExpandGraph(Job* job) {
 Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   CHECK_GT_OR_RETURN(job().net().op_size(), 0)
       << " Sorry, nn.Graph need at least 1 op in net, but get 0 now.";
-  if (ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false)) {
-    JUST(ExpandGraph(mut_job()));
-  }
+  if (ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false)) { JUST(ExpandGraph(mut_job())); }
   CHECK_NOTNULL(Singleton<JobDesc>::Get());
   Singleton<JobDesc>::Delete();
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
