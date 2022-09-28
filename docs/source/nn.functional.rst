@@ -146,6 +146,7 @@ Vision functions
     :toctree: generated
     :nosignatures:
 
+    deform_conv2d
     pad
     interpolate
     upsample
