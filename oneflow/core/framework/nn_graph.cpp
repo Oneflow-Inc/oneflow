@@ -418,7 +418,7 @@ Maybe<void> NNGraph::MasterRankCompile() {
   OF_SESSION_BARRIER();
   compile_time_counter->Count("Graph name: " + name_ + " compile and sync plan", 1);
   // NOTE(chengcheng): recovery op_attr
-  PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
+  // PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
   compile_time_counter->Count("Graph name: " + name_ + " complete plan", 1);
 
   return Maybe<void>::Ok();
@@ -429,8 +429,8 @@ Maybe<void> NNGraph::NaiveCompile() {
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     // TODO(chengcheng): new memory reused by chunk
     Compiler().Compile(&job_, &plan_);
-    PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
     compile_time_counter->Count("Graph name: " + name_ + " naive compile plan", 1);
+    PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
       PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
@@ -446,14 +446,17 @@ Maybe<void> NNGraph::NaiveCompile() {
       PlanUtil::GenLightPlan(&plan_, name_);
     }
   }
-  compile_time_counter->Count("Graph name: " + name_ + " naive compile plan", 1);
+  compile_time_counter->Count("Graph name: " + name_ + " naive compile full plan", 1);
   if (GlobalProcessCtx::WorldSize() > 1) {
+    auto sync_time_counter = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
     std::string plan_name = "plan:" + job_name();
     if (GlobalProcessCtx::IsThisProcessMaster()) {
       // TODO(chengcheng): split plan for each rank.
       Singleton<CtrlClient>::Get()->PushKV(plan_name, plan_);
+      sync_time_counter->Count("Graph name: " + name_ + " push kv", 1);
     } else {
       Singleton<CtrlClient>::Get()->PullKV(plan_name, &plan_);
+      sync_time_counter->Count("Graph name: " + name_ + " pull kv", 1);
     }
     OF_SESSION_BARRIER();
     // NOTE(zwx): After barrier plan is synchronized between all ranks,
@@ -464,7 +467,7 @@ Maybe<void> NNGraph::NaiveCompile() {
   }
   compile_time_counter->Count("Graph name: " + name_ + " naive sync plan", 1);
   // NOTE(chengcheng): recovery op_attr
-  PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
+  // PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
   compile_time_counter->Count("Graph name: " + name_ + " naive complete plan", 1);
 
   return Maybe<void>::Ok();
@@ -504,6 +507,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   JUST((this->*GetCompileMethod::Visit(JUST(CurrentCompileMode())))());
   compile_time_counter->Count("Graph name: " + name_ + " total compile plan", 1);
 
+  OF_SESSION_BARRIER();
   if (ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false)) {
     CHECK_OR_RETURN(false) << " Exit to finish dry run of graph compile.";
   }
