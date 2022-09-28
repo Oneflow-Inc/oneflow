@@ -40,7 +40,9 @@ std::function<Maybe<void>(const std::string&)> MakeCheckParamDataTypeFn(user_op:
   return [=](const std::string& bn) -> Maybe<void> {
     if (ctx->has_input(bn, 0)) {
       const auto& tensor_desc = ctx->InputTensorDesc(bn, 0);
-      CHECK_EQ_OR_RETURN(tensor_desc.data_type(), data_type);
+      CHECK_EQ_OR_RETURN(tensor_desc.data_type(), data_type)
+          << "InferDataType Failed. Expected " << DataType_Name(tensor_desc.data_type())
+          << ", but got " << DataType_Name(data_type);
     }
     return Maybe<void>::Ok();
   };
@@ -133,12 +135,16 @@ user_op::TensorDescInferFn MakeFwTensorDescInferFn(
     const Shape& x_shape = x.shape();
     if (ctx->has_input("addend", 0)) {
       const auto& addend = ctx->InputTensorDesc("addend", 0);
-      CHECK_EQ_OR_RETURN(addend.data_type(), data_type);
+      CHECK_EQ_OR_RETURN(addend.data_type(), data_type)
+          << "InferDataType Failed. Expected " << DataType_Name(addend.data_type()) << ", but got "
+          << DataType_Name(data_type);
       CHECK_EQ_OR_RETURN(addend.shape(), x_shape);
     }
     if (ctx->has_input("_add_to_output", 0)) {
       const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
-      CHECK_EQ_OR_RETURN(add_to_output.data_type(), data_type);
+      CHECK_EQ_OR_RETURN(add_to_output.data_type(), data_type)
+          << "InferDataType Failed. Expected " << DataType_Name(add_to_output.data_type())
+          << ", but got " << DataType_Name(data_type);
       CHECK_EQ_OR_RETURN(add_to_output.shape(), x_shape);
     }
     *ctx->MutOutputTensorDesc("y", 0) = x;
@@ -454,7 +460,9 @@ Maybe<void> BwDataTypeInferFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const DataType x_type = x.data_type();
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
-  CHECK_EQ_OR_RETURN(dy.data_type(), x_type);
+  CHECK_EQ_OR_RETURN(dy.data_type(), x_type)
+      << "InferDataType Failed. Expected " << DataType_Name(x_type) << ", but got "
+      << DataType_Name(dy.data_type());
   if (ctx->has_input("y", 0)) {
     const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
     CHECK_EQ_OR_RETURN(y.data_type(), x_type);
