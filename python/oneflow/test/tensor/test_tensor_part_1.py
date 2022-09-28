@@ -974,6 +974,12 @@ class TestTensor(flow.unittest.TestCase):
         return x.log2()
 
     @autotest(n=5)
+    def test_log10_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return x.log10()
+
+    @autotest(n=5)
     def test_neg_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)

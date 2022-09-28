@@ -196,6 +196,26 @@ struct BinaryFunctor<device, BinaryOp::kFloorMod, uint64_t, uint64_t> {
 };
 
 template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kScalarBasePowerGrad, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : scalar_operand(attr0.Value<Src>()) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const {
+    return scalar_operand * (pow(src0, scalar_operand - static_cast<Src>(1))) * src1;
+  }
+  Src scalar_operand;
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kScalarExpPowerGrad, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : scalar_operand(attr0.Value<Src>()) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const {
+    return (pow(scalar_operand, src0)) * log(scalar_operand) * src1;
+  }
+  Src scalar_operand;
+};
+
+template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kEluBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : alpha(attr0.Value<double>()) {}
 
@@ -489,6 +509,14 @@ struct BinaryFunctor<device, BinaryOp::kLog2BackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
     return dy * (static_cast<Src>(1.0) / (x * log(static_cast<Src>(2.0))));
+  }
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kLog10BackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    return dy * (static_cast<Src>(1.0) / (x * log(static_cast<Src>(10.0))));
   }
 };
 

@@ -20,10 +20,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> FillOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
-  Shape* out_shape = ctx->MutOutputShape("out", 0);
-  *out_shape = in_shape;
-  Stride* out_stride = ctx->MutOutputStride("out", 0);
-  *out_stride = ctx->InputStride("in", 0);
+  ctx->SetOutputShape("out", 0, in_shape);
+  ctx->SetOutputStride("out", 0, ctx->InputStride("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -40,16 +38,14 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FillOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> FillTensorOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
-  Shape* out_shape = ctx->MutOutputShape("out", 0);
-  *out_shape = in_shape;
-  Stride* out_stride = ctx->MutOutputStride("out", 0);
-  *out_stride = ctx->InputStride("in", 0);
+  ctx->SetOutputShape("out", 0, in_shape);
+  ctx->SetOutputStride("out", 0, ctx->InputStride("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -75,7 +71,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FillTensorOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 

@@ -57,31 +57,11 @@ class DecodeOneRecFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("reshape", "batch_padding", "key", "data_type",
                                                  "static_shape", "is_dynamic", "has_reshape",
                                                  "has_batch_padding");
-    bool has_reshape = false;
-    bool has_batch_padding = false;
-
-    if (reshape.has_value()) {
-      has_reshape = true;
-      attrs.SetAttr<Shape>("reshape", *JUST(reshape));
-    } else {
-      has_reshape = false;
-      attrs.SetAttr<Shape>("reshape", shape);
-    }
-
-    if (batch_padding.has_value()) {
-      has_batch_padding = true;
-      attrs.SetAttr<Shape>("batch_padding", *JUST(batch_padding));
-    } else {
-      has_batch_padding = false;
-      attrs.SetAttr<Shape>("batch_padding", shape);
-    }
-    attrs.SetAttr<std::string>("key", key);
-    attrs.SetAttr<DataType>("data_type", dtype->data_type());
-    attrs.SetAttr<Shape>("static_shape", shape);
-    attrs.SetAttr<bool>("is_dynamic", is_dynamic);
-    attrs.SetAttr<bool>("has_reshape", has_reshape);
-    attrs.SetAttr<bool>("has_batch_padding", has_batch_padding);
-
+    bool has_reshape = reshape.has_value();
+    bool has_batch_padding = batch_padding.has_value();
+    attrs.SetAllAttrs(has_reshape ? *JUST(reshape) : shape,
+                      has_batch_padding ? *JUST(batch_padding) : shape, key, dtype->data_type(),
+                      shape, is_dynamic, has_reshape, has_batch_padding);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 

@@ -301,7 +301,7 @@ class NamedArg(object):
     The input/output argument can be viewed as a tree. NamedArg basically wraps over each tree node on this tree.
     The recursive structure of the input/output arguments are kept, for example:
 
-    iuput = [1, {key: "value" }] will be constructed into: 
+    input = [1, {key: "value" }] will be constructed into: 
         
     named_input = NamedArg([NamedArg(1), NamedArg({key: NamedArg("value")})])
     """

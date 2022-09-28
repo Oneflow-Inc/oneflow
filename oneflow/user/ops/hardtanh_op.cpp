@@ -19,9 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> HardtanhOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& in_shape = ctx->InputShape("in", 0);
-  Shape* out_shape = ctx->MutOutputShape("out", 0);
-  *out_shape = in_shape;
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   double min_val = ctx->Attr<double>("min_val");
   double max_val = ctx->Attr<double>("max_val");
   CHECK_LE_OR_RETURN(min_val, max_val);
@@ -41,16 +39,15 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> HardtanhOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> HardtanhGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& y_shape = ctx->InputShape("y", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  Shape* dx_shape = ctx->MutOutputShape("dx", 0);
   CHECK_OR_RETURN(dy_shape == y_shape);
-  *dx_shape = dy_shape;
+  ctx->SetOutputShape("dx", 0, dy_shape);
   double min_val = ctx->Attr<double>("min_val");
   double max_val = ctx->Attr<double>("max_val");
   CHECK_LE_OR_RETURN(min_val, max_val);
@@ -75,7 +72,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> HardtanhGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("y", 0), ctx->InputDType("dy", 0));
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("y", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("y", 0));
   return Maybe<void>::Ok();
 }
 

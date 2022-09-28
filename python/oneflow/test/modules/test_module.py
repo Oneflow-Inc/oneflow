@@ -404,6 +404,20 @@ class TestModule(flow.unittest.TestCase):
         output = model(input, "conv", "relu")
         test_case.assertEqual(output.shape, flow.Size([4, 10, 30, 30]))
 
+    @flow.unittest.skip_unless_1n1d()
+    def test_module_delattr(test_case):
+        class ConvBNModule(nn.Module):
+            def __init__(self):
+                super(ConvBNModule, self).__init__()
+                self.conv = nn.Conv2d(1, 2, 1, 1)
+                self.bn = nn.BatchNorm2d(2)
+
+            def forward(self, x):
+                return self.bn(self.conv(x))
+
+        m = ConvBNModule()
+        delattr(m, "bn")
+
 
 if __name__ == "__main__":
     unittest.main()

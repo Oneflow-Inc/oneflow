@@ -34,8 +34,8 @@ class MutableAttrMap {
 
   explicit MutableAttrMap(const std::vector<std::string>& attr_names)
       : max_size_(attr_names.size()),
-        ordered_attr_names_(std::make_shared<OrderedStringList<8>>()),
-        valid_masks_(max_size_, 0) {
+        valid_masks_(max_size_, 0),
+        ordered_attr_names_(std::make_shared<OrderedStringList<8>>()) {
     for (const auto& attr_name : attr_names) { ordered_attr_names_->emplace_back(attr_name); }
     attrs_.resize(max_size_);
   }
@@ -62,30 +62,56 @@ class MutableAttrMap {
     SetAttrNoThrow(idx, attr_val);
   }
 
-  template<typename T>
-  inline void SetAttr(int idx, const T& attr_val) {
-    CHECK_LT_OR_THROW(idx, max_size_)
-        << "index " << idx << " is out of bound, and the max size is " << max_size_;
-    SetAttrNoThrow(idx, attr_val);
+  template<int I, typename T>
+  inline void SetAttr(const T& attr_val) {
+    CHECK_LT_OR_THROW(I, max_size_)
+        << "index " << I << " is out of bound, and the max size is " << max_size_;
+    SetAttrNoThrow(I, attr_val);
+  }
+
+  template<typename... Args>
+  inline void SetAllAttrs(Args&&... args) {
+    CHECK_EQ_OR_THROW(sizeof...(args), max_size_)
+        << "requires " << max_size_ << " arguments, but gives " << sizeof...(args);
+    SetAttrNoThrow<Args...>(std::forward<Args>(args)...,
+                            std::make_index_sequence<sizeof...(args)>{});
   }
 
  private:
-  template<typename T>
+  template<typename T, typename std::enable_if<!std::is_same<T, NullOptType>::value
+                                                   && !internal::IsOptional<T>::value,
+                                               int>::type = 0>
   inline void SetAttrNoThrow(int idx, const T& attr_val) {
-    if (!attrs_[idx] || attrs_[idx]->value_type() != user_op::GetAttrType<T>::value
+    valid_masks_[idx] = true;
+    if (!attrs_[idx] /*|| attrs_[idx]->type() != user_op::GetAttrType<T>::value*/
         || *static_cast<const T*>(attrs_[idx]->Ptr()) != attr_val) {
       attrs_[idx] = std::make_shared<user_op::TypedAttrVal<T>>(attr_val);
     }
-    valid_masks_[idx] = true;
+  }
+
+  template<typename T, typename std::enable_if<internal::IsOptional<T>::value, int>::type = 0>
+  inline void SetAttrNoThrow(int idx, const T& attr_val) {
+    if (attr_val) {
+      using U = typename T::value_type;
+      SetAttrNoThrow(idx, attr_val.value_or(U()));
+    }
+  }
+
+  template<typename T, typename std::enable_if<std::is_same<T, NullOptType>::value, int>::type = 0>
+  inline void SetAttrNoThrow(int idx, const T&) {}
+
+  template<typename... Args, size_t... I>
+  inline void SetAttrNoThrow(Args&&... args, std::index_sequence<I...>) {
+    __attribute__((__unused__)) int dummy[] = {(SetAttrNoThrow(I, std::forward<Args>(args)), 0)...};
   }
 
   // The actually count of all attributes
   size_t max_size_;
+  small_vector<bool, 8> valid_masks_;
+  small_vector<std::shared_ptr<user_op::AttrVal>, 8> attrs_;
   // The ordered attribute names is determined and should be shared
   // between other AttrMap
   std::shared_ptr<OrderedStringList<8>> ordered_attr_names_;
-  small_vector<bool, 8> valid_masks_;
-  small_vector<std::shared_ptr<user_op::AttrVal>, 8> attrs_;
 };
 
 #define THREAD_CACHED_MUTABLE_ATTR_MAP(...)                                          \

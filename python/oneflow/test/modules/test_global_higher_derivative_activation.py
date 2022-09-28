@@ -204,6 +204,8 @@ class TestActivationHigherDerivative(flow.unittest.TestCase):
         }
 
         op_names = [
+            "mish",
+            "gelu",
             "silu",
             "selu",
             "softsign",

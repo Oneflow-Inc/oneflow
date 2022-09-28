@@ -165,7 +165,7 @@ def SetDefaultMultiClientEnvVars():
     os.environ["MASTER_ADDR"] = "127.0.0.1"
     os.environ["MASTER_PORT"] = str(_FindFreePort())
     os.environ["WORLD_SIZE"] = "1"
-    os.environ["RANK"] = "0"
+    os.environ["RANK"] = "-1"
     os.environ["LOCAL_RANK"] = "0"
 
 
@@ -173,7 +173,6 @@ def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
     assert HasAllMultiClientEnvVars()
 
     def str2int(env_config):
-        assert env_config.isdigit()
         return int(env_config)
 
     bootstrap_conf = ctrl_bootstrap_pb.BootstrapConf()

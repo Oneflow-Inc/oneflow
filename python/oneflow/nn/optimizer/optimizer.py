@@ -392,11 +392,7 @@ class Optimizer(object):
         """
         for param_group in self.param_groups:
             for param in param_group.parameters:
-                if param.grad is not None:
-                    if set_to_none:
-                        param.grad = None
-                    else:
-                        param.grad.zero_()
+                param._zero_grad_(set_to_none)
 
     def _parse_input_parameters(self, parameters):
         """
@@ -437,6 +433,13 @@ class Optimizer(object):
         clip_grad_norm = optimizer_conf.clip_conf.clip_by_global_norm
         clip_grad_norm.max_norm = max_norm
         clip_grad_norm.norm_type = norm_type
+
+    def _generate_lr_scale_for_optim_conf(self, param_group, optimizer_conf):
+        if "lr_scale" not in param_group:
+            return
+
+        lr_scale = float(param_group["lr_scale"])
+        optimizer_conf.lr_scale = lr_scale
 
     @property
     def support_sparse(self):

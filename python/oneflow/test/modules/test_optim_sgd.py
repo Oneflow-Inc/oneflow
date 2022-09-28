@@ -17,6 +17,7 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 import tempfile
+import os
 
 import numpy as np
 from oneflow.test_utils.test_util import GenArgDict
@@ -263,6 +264,23 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["save_load_by_pickle"] = [False, True]
         for arg in GenArgDict(arg_dict):
             compare_with_numpy_sgd_clip_grad(test_case, **arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_eager_global_zero_grad_sbp(test_case):
+        x = flow.nn.Parameter(
+            flow.zeros((10,)).to_global(
+                sbp=flow.sbp.broadcast, placement=flow.placement("cuda", [0])
+            )
+        )
+        x.grad = flow.ones_like(x)
+        t = x.grad
+        test_case.assertEqual(len(t.sbp), 1)
+        test_case.assertEqual(t.sbp[0], flow.sbp.broadcast)
+        optimizer = flow.optim.SGD([x])
+        optimizer.zero_grad()
+        test_case.assertTrue(np.allclose(t.numpy(), 0.0))
+        test_case.assertEqual(len(t.sbp), 1)
+        test_case.assertEqual(t.sbp[0], flow.sbp.partial_sum)
 
 
 if __name__ == "__main__":

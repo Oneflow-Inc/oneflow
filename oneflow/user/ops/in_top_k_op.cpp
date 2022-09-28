@@ -27,7 +27,7 @@ namespace oneflow {
   const bool is_dynamic = targets.is_dynamic();
   CHECK_EQ_OR_RETURN(is_dynamic, predictions.is_dynamic());
   out->set_is_dynamic(is_dynamic);
-  *out->mut_shape() = targets.shape();
+  out->set_shape(targets.shape());
   return Maybe<void>::Ok();
 }
 
@@ -46,7 +46,7 @@ namespace oneflow {
   const user_op::TensorDesc& predictions = ctx->InputTensorDesc("predictions", 0);
   CHECK_EQ_OR_RETURN(predictions.data_type(), DataType::kFloat);
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
-  *out->mut_data_type() = kBool;
+  out->set_data_type(kBool);
   return Maybe<void>::Ok();
 }
 

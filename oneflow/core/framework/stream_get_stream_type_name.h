@@ -28,8 +28,7 @@ struct GetStreamTypeName : public StreamTypeVisitor<GetStreamTypeName> {
   static const char* VisitCompute() { return "compute"; }
   static const char* VisitHost2Device() { return "h2d"; }
   static const char* VisitDevice2Host() { return "d2h"; }
-  static const char* VisitSyncedLaunchedCommNet() { return "synced_launched_comm_net"; }
-  static const char* VisitAsyncedLaunchedCommNet() { return "asynced_launched_comm_net"; }
+  static const char* VisitCcl() { return "ccl"; }
   static const char* VisitBarrier() { return "barrier"; }
   static const char* VisitCriticalSection() { return "critical_section"; }
   static const char* VisitLazyJobLauncher() { return "lazy_job_launcher"; }

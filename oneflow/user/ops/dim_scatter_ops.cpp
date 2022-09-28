@@ -74,7 +74,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   }
 
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("output", 0);
-  *out->mut_shape() = input ? input->shape() : like->shape();
+  out->set_shape(input ? input->shape() : like->shape());
   return Maybe<void>::Ok();
 }
 
@@ -97,7 +97,7 @@ Maybe<void> InferScalarTensorDesc(user_op::InferContext* ctx) {
   }
 
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("output", 0);
-  *out->mut_shape() = input.shape();
+  out->set_shape(input.shape());
   return Maybe<void>::Ok();
 }
 
@@ -181,18 +181,22 @@ Maybe<void> InferDtype(user_op::InferContext* ctx) {
   const user_op::TensorDesc& index = ctx->InputTensorDesc("index", 0);
   CHECK_OR_RETURN(IsIndexDataType(index.data_type()));
   if (ctx->has_input("input", 0)) {
-    CHECK_EQ_OR_RETURN(ctx->InputDType("input", 0), ctx->InputDType("src", 0));
+    CHECK_EQ_OR_RETURN(ctx->InputDType("input", 0), ctx->InputDType("src", 0))
+        << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("src", 0))
+        << ", but got " << DataType_Name(ctx->InputDType("input", 0));
   } else {
-    CHECK_EQ_OR_RETURN(ctx->InputDType("like", 0), ctx->InputDType("src", 0));
+    CHECK_EQ_OR_RETURN(ctx->InputDType("like", 0), ctx->InputDType("src", 0))
+        << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("like", 0))
+        << ", but got " << DataType_Name(ctx->InputDType("src", 0));
   }
-  *ctx->MutOutputDType("output", 0) = ctx->InputDType("src", 0);
+  ctx->SetOutputDType("output", 0, ctx->InputDType("src", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferScalarDtype(user_op::InferContext* ctx) {
   const user_op::TensorDesc& index = ctx->InputTensorDesc("index", 0);
   CHECK_OR_RETURN(IsIndexDataType(index.data_type()));
-  *ctx->MutOutputDType("output", 0) = ctx->InputDType("input", 0);
+  ctx->SetOutputDType("output", 0, ctx->InputDType("input", 0));
   return Maybe<void>::Ok();
 }
 

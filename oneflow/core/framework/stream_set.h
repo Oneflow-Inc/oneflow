@@ -18,28 +18,23 @@ limitations under the License.
 
 #include <unordered_map>
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/stream.h"
 
 namespace oneflow {
 
 class StreamSet final {
  public:
-  explicit StreamSet(int64_t worker_thread_id);
   ~StreamSet();
 
-  std::unordered_map<std::pair<Symbol<Device>, StreamType>, Symbol<Stream>>*
-  mut_device_stream_type2stream() {
-    return &device_stream_type2stream_;
-  }
+  static Maybe<StreamSet> New(int64_t worker_thread_id);
 
-  int64_t stream_set_id() const { return stream_set_id_; }
   int64_t worker_thread_id() const { return worker_thread_id_; }
 
  private:
+  StreamSet(int64_t worker_thread_id);
+
   int64_t worker_thread_id_;
-  int64_t stream_set_id_;
-  std::unordered_map<std::pair<Symbol<Device>, StreamType>, Symbol<Stream>>
-      device_stream_type2stream_;
 };
 
 }  // namespace oneflow

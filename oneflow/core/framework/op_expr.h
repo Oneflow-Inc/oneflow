@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/autocast.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -51,6 +52,8 @@ class OpExpr {
   virtual Maybe<bool> SupportNonContiguous() const = 0;
 
   virtual Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const = 0;
+
+  virtual Maybe<autocast::AutoCastMeta> GetOrCreateAutoCastMeta() const;
 
  protected:
   OpExpr() = default;
@@ -113,6 +116,8 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
 
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
+  Maybe<autocast::AutoCastMeta> GetOrCreateAutoCastMeta() const override;
+
   Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrMap& attrs) const override;
 
  protected:
@@ -123,6 +128,7 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
 
   ProtoType op_proto_;
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
+  mutable std::shared_ptr<autocast::AutoCastMeta> autocast_meta_;
 };
 
 class StatefulOpKernel;

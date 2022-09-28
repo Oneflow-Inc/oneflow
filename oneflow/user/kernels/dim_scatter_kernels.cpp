@@ -112,12 +112,16 @@ class DimScatterKernel final : public user_op::OpKernel {
 #define REGISTER_DIM_SCATTER_CPU_KERNELS(dtype_pair, itype_pair)                            \
   REGISTER_DIM_SCATTER_KERNEL(dim_scatter_add, DeviceType::kCPU, dtype_pair, itype_pair,    \
                               BinOpAddFunctor);                                             \
+  REGISTER_DIM_SCATTER_KERNEL(dim_scatter_mul, DeviceType::kCPU, dtype_pair, itype_pair,    \
+                              BinOpMulFunctor);                                             \
   REGISTER_DIM_SCATTER_KERNEL(dim_scatter_update, DeviceType::kCPU, dtype_pair, itype_pair, \
                               BinOpUpdateFunctor);
 
 #define REGISTER_DIM_SCATTER_CUDA_KERNELS(dtype_pair, itype_pair)                            \
   REGISTER_DIM_SCATTER_KERNEL(dim_scatter_add, DeviceType::kCUDA, dtype_pair, itype_pair,    \
                               BinOpAddFunctor);                                              \
+  REGISTER_DIM_SCATTER_KERNEL(dim_scatter_mul, DeviceType::kCUDA, dtype_pair, itype_pair,    \
+                              BinOpMulFunctor);                                              \
   REGISTER_DIM_SCATTER_KERNEL(dim_scatter_update, DeviceType::kCUDA, dtype_pair, itype_pair, \
                               BinOpUpdateFunctor);
 

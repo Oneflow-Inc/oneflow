@@ -18,20 +18,28 @@ limitations under the License.
 
 #include <string>
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/optional.h"
 
 namespace oneflow {
 
-const static int kThreadGlobalIdMain = 0;
-const static int kThreadGlobalIdScheduler = 1;
-const static int kThreadGlobalIdWorkerStart = kThreadGlobalIdScheduler + 1;
+const static int kThreadGlobalIdDefaultWorker = 0;
+const static int kThreadGlobalIdMain = 7;
 
 size_t GetThreadGlobalIdCount();
 
 Maybe<void> InitThisThreadUniqueGlobalId(int64_t thread_global_id, const std::string& debug_string);
-Maybe<void> InitThisThreadGlobalId(int64_t thread_global_id, const std::string& debug_string);
-Maybe<void> CheckThreadGlobalIdAvailable(int64_t thread_global_id);
-Maybe<int64_t> GetThisThreadGlobalId();
+Maybe<void> CheckWorkerThreadThreadGlobalId(int64_t thread_global_id);
+const Optional<int64_t>& GetThisThreadGlobalId();
 Maybe<void> ResetThisThreadUniqueGlobalId();
+
+class ThreadGlobalIdGuard final {
+ public:
+  explicit ThreadGlobalIdGuard(int64_t thread_global_id);
+  ~ThreadGlobalIdGuard();
+
+ private:
+  Optional<int64_t> old_thread_global_id_;
+};
 
 }  // namespace oneflow
 

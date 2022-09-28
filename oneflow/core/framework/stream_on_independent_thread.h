@@ -25,8 +25,7 @@ struct StreamOnIndependentThread : public StreamTypeVisitor<StreamOnIndependentT
   static bool VisitCompute() { return false; }
   static bool VisitHost2Device() { return false; }
   static bool VisitDevice2Host() { return false; }
-  static bool VisitSyncedLaunchedCommNet() { return false; }
-  static bool VisitAsyncedLaunchedCommNet() { return false; }
+  static bool VisitCcl() { return false; }
   static bool VisitBarrier() { return false; }
   static bool VisitCriticalSection() { return true; }
   static bool VisitLazyJobLauncher() { return true; }

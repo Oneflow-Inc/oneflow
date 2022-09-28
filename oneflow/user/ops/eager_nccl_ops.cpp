@@ -25,7 +25,7 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> EagerCclAllReduceOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -39,13 +39,13 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EagerCclAllReduceOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<Symbol<Stream>> EagerCclAllReduceOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&IsAsyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 /* static */ Maybe<void> EagerCclBroadcastOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
@@ -53,7 +53,7 @@ namespace oneflow {
   const std::vector<Shape>& shape_list = ctx->Attr<std::vector<Shape>>("shape_list");
   CHECK_EQ_OR_RETURN(size, ctx->output_size("out"))
       << "the size of input tensor tuple should equal the size of output tensor tuple.";
-  for (int i = 0; i < size; ++i) { *ctx->MutOutputShape("out", i) = JUST(VectorAt(shape_list, i)); }
+  for (int i = 0; i < size; ++i) { ctx->SetOutputShape("out", i, JUST(VectorAt(shape_list, i))); }
   return Maybe<void>::Ok();
 }
 
@@ -72,13 +72,13 @@ namespace oneflow {
   size_t size = ctx->input_size("in");
   CHECK_EQ_OR_RETURN(size, ctx->output_size("out"))
       << "the size of input tensor tuple should equal the size of output tensor tuple.";
-  for (int i = 0; i < size; ++i) { *ctx->MutOutputDType("out", i) = ctx->InputDType("in", i); }
+  for (int i = 0; i < size; ++i) { ctx->SetOutputDType("out", i, ctx->InputDType("in", i)); }
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<Symbol<Stream>> EagerCclBroadcastOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&IsAsyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 /* static */ Maybe<void> EagerNcclTouchOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
@@ -100,11 +100,11 @@ namespace oneflow {
 
 /* static */ Maybe<Symbol<Stream>> EagerNcclTouchOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&IsAsyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 /* static */ Maybe<void> EagerCclReduceOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -117,25 +117,24 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EagerCclReduceOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<Symbol<Stream>> EagerCclReduceOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 /* static */ Maybe<void> EagerCclReduceScatterOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> EagerCclReduceScatterOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
-  Shape* out_shape = ctx->MutOutputShape("out", 0);
   const int64_t& parallel_num = ctx->parallel_ctx().parallel_num();
   if (parallel_num > 1) {
     const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
@@ -144,9 +143,9 @@ namespace oneflow {
     const auto tensor_slice_view =
         GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, in_shape, parallel_id);
     const Shape& physical_shape = tensor_slice_view.shape();
-    *out_shape = physical_shape;
+    ctx->SetOutputShape("out", 0, physical_shape);
   } else {
-    *out_shape = in_shape;
+    ctx->SetOutputShape("out", 0, in_shape);
   }
   return Maybe<void>::Ok();
 }
@@ -177,18 +176,18 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EagerCclReduceScatterOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<Symbol<Stream>> EagerCclReduceScatterOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 /* static */ Maybe<void> EagerCclAllGatherOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -224,18 +223,18 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EagerCclAllGatherOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<Symbol<Stream>> EagerCclAllGatherOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 /* static */ Maybe<void> EagerNcclS2sOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -269,13 +268,13 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EagerNcclS2sOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<Symbol<Stream>> EagerNcclS2sOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 }  // namespace oneflow
