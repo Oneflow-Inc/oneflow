@@ -499,6 +499,9 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     }
   };
   JUST((this->*GetCompileMethod::Visit(JUST(CurrentCompileMode())))());
+  if (ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false)) {
+    CHECK_OR_RETURN(false) << " Exit to finish dry run of graph compile.";
+  }
 
   NewRuntimeBuffers();
 
