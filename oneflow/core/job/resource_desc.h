@@ -34,7 +34,7 @@ class ResourceDesc final {
 
   ~ResourceDesc() = default;
 
-  const std::set<int64_t>& process_ranks() const { return process_ranks_; }
+  const std::set<int64_t>& process_ranks(bool dry_run = false) const;
   __attribute__((deprecated)) Machine machine(int32_t idx) const;
   size_t CommNetWorkerNum() const { return resource_.comm_net_worker_num(); }
   int32_t CpuDeviceNum() const { return resource_.cpu_device_num(); }
@@ -59,6 +59,7 @@ class ResourceDesc final {
  private:
   Resource resource_;
   std::set<int64_t> process_ranks_;
+  std::set<int64_t> dry_run_process_ranks_;
 };
 
 }  // namespace oneflow

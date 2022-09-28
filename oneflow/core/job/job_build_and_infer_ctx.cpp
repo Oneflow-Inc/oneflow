@@ -914,16 +914,17 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatible
 namespace {
 template<typename T>
 void ExpandPlacement(::google::protobuf::RepeatedPtrField<T>* pl_group) {
-  int32_t node_num = 10;
-  int32_t dev_per_node = 20;
+  int64_t node_num = ParseIntegerFromEnv("ONEFLOW_DRY_RUN_COMPILE_NODE_NUM", 1);
+  int64_t dev_per_node = ParseIntegerFromEnv("ONEFLOW_DRY_RUN_COMPILE_DEV_NUM_PER_NODE", 20);
   for (auto& pl : *pl_group) {
     *pl.mutable_parallel_conf()->mutable_device_tag() = "cuda";
     if (pl.mutable_parallel_conf()->device_name_size() > 1) {
       pl.mutable_parallel_conf()->clear_device_name();
       for (int32_t m_idx = 0; m_idx < node_num; ++m_idx) {
         for (int32_t d_idx = 0; d_idx < dev_per_node; ++d_idx) {
-          pl.mutable_parallel_conf()->add_device_name(std::string("@") + std::to_string(m_idx) + ":"
-                                                      + std::to_string(d_idx));
+          pl.mutable_parallel_conf()->add_device_name(std::string("@")
+                                                      + std::to_string(m_idx * dev_per_node + d_idx)
+                                                      + ":" + std::to_string(d_idx));
         }
       }
       pl.mutable_parallel_conf()->mutable_hierarchy()->clear_dim();

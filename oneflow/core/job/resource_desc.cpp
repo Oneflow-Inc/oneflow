@@ -32,6 +32,21 @@ ResourceDesc::ResourceDesc(const Resource& resource, int64_t num_process_per_nod
   for (int i = 0; i < GlobalProcessCtx::WorldSize(); ++i) {
     CHECK(process_ranks_.emplace(i).second);
   }
+  if (ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false)) {
+    int64_t node_num = ParseIntegerFromEnv("ONEFLOW_DRY_RUN_COMPILE_NODE_NUM", 1);
+    int64_t dev_per_node = ParseIntegerFromEnv("ONEFLOW_DRY_RUN_COMPILE_DEV_NUM_PER_NODE", 20);
+    for (int i = 0; i < node_num * dev_per_node; ++i) {
+      CHECK(dry_run_process_ranks_.emplace(i).second);
+    }
+  }
+}
+
+const std::set<int64_t>& ResourceDesc::process_ranks(bool dry_run) const {
+  if (!dry_run) {
+    return process_ranks_;
+  } else {
+    return dry_run_process_ranks_;
+  }
 }
 
 Machine ResourceDesc::machine(int32_t idx) const {
