@@ -37,31 +37,34 @@ class EvictDTRTensorInstructionType : public vm::InstructionType {
   EvictDTRTensorInstructionType() = default;
   ~EvictDTRTensorInstructionType() override = default;
 
+  void Run(const vm::InstructionMsg* instr_msg) const {
+    const auto& phy_instr_operand = instr_msg->phy_instr_operand();
+    CHECK(static_cast<bool>(phy_instr_operand));
+    const auto* ptr =
+        dynamic_cast<const vm::ReleaseTensorArgPhyInstrOperand*>(phy_instr_operand.get());
+    CHECK_NOTNULL(ptr);
+    if (EnvBool<OF_DTR_EE>()) {
+      const auto& ebo = CHECK_NOTNULL(
+          std::dynamic_pointer_cast<vm::DTREagerBlobObject>(ptr->eager_blob_object()));
+      if (dtr::debug_level() >= 2) {
+        LOG(INFO) << "eager eviction tensor " << ebo.get() << " of op "
+                  << ebo->compute_op_type_name() << " with size " << ebo->BlobBodyBytes();
+      }
+      if (!ebo->is_evictable()) {
+        if (dtr::debug_level() >= 2) { LOG(INFO) << "but skip because non evictable" << std::endl; }
+      } else if (ebo->is_pinned()) {
+        if (dtr::debug_level() >= 2) { LOG(INFO) << "but skip because pinned" << std::endl; }
+      } else {
+        CHECK_JUST(ebo->evict(true));
+      }
+    }
+  }
   void Compute(vm::Instruction* instruction) const override;
+  void ComputeInFuseMode(vm::InstructionMsg* instr_msg) const override { return Run(instr_msg); }
 };
 
 void EvictDTRTensorInstructionType::Compute(vm::Instruction* instruction) const {
-  const vm::InstructionMsg& instr_msg = instruction->instr_msg();
-  const auto& phy_instr_operand = instr_msg.phy_instr_operand();
-  CHECK(static_cast<bool>(phy_instr_operand));
-  const auto* ptr =
-      dynamic_cast<const vm::ReleaseTensorArgPhyInstrOperand*>(phy_instr_operand.get());
-  CHECK_NOTNULL(ptr);
-  if (EnvBool<OF_DTR_EE>()) {
-    const auto& ebo =
-        CHECK_NOTNULL(std::dynamic_pointer_cast<vm::DTREagerBlobObject>(ptr->eager_blob_object()));
-    if (dtr::debug_level() >= 2) {
-      LOG(INFO) << "eager eviction tensor " << ebo.get() << " of op " << ebo->compute_op_type_name()
-                << " with size " << ebo->BlobBodyBytes();
-    }
-    if (!ebo->is_evictable()) {
-      if (dtr::debug_level() >= 2) { LOG(INFO) << "but skip because non evictable" << std::endl; }
-    } else if (ebo->is_pinned()) {
-      if (dtr::debug_level() >= 2) { LOG(INFO) << "but skip because pinned" << std::endl; }
-    } else {
-      CHECK_JUST(ebo->evict(true));
-    }
-  }
+  return Run(&instruction->instr_msg());
 }
 
 class CpuEvictDTRTensorInstructionType final : public EvictDTRTensorInstructionType {
