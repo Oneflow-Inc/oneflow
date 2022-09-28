@@ -194,8 +194,10 @@ func::FuncOp GetOrInsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operat
 }
 
 LogicalResult Lower2OKLOp(::mlir::PatternRewriter& rewriter, Operation* op) {
-  OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPointAfter(op);
+  // create okl.reg_ctx(StringAttr: assembly)
+  // create okl.run_ctx(*reg_ctx, *compute_ctx)
+  // create okl.kernel(StringAttr: op_type_name, *reg_ctx)
+  // create okl.launch(*run_ctx, *kernel)
   return success();
 }
 
@@ -917,7 +919,21 @@ struct Lower2OKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
+    auto func_name = "okl_func";
+    if (op.getSymName() == func_name) { return success(); }
+
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPointAfter(op);
     auto& ops = op->getRegion(0).front();
+
+    auto llvm_ptr_type = LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8));
+    // the input[0] is compute ctx* of kernel launch
+    auto func_type = rewriter.getFunctionType({llvm_ptr_type}, {});
+    auto okl_func =
+        rewriter.create<func::FuncOp>(op->getLoc(), func_name, func_type, op->getAttrs());
+    okl_func.getBody().emplaceBlock();
+    for (auto& arg : func_type.getInputs()) { okl_func.getBody().addArguments(arg, op->getLoc()); }
+    rewriter.setInsertionPointToStart(&okl_func.getBody().front());
     for (auto& op : ops) {
       if (!op.hasAttr("op_name")) {
         if (isa<func::ReturnOp>(op)) { break; }
@@ -925,6 +941,8 @@ struct Lower2OKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
       }
       if (failed(Lower2OKLOp(rewriter, &op))) { return failure(); }
     }
+    op->dropAllUses();
+    op->erase();
     return success();
   }
 };
