@@ -680,6 +680,15 @@ void PlanUtil::DumpCtrlRegstInfoToPlan(Plan* plan) {
 
 namespace {
 
+bool IsCollectiveBoxingTaskType(TaskType task_type) {
+  return task_type == TaskType::kCollectiveBoxingGeneric;
+}
+
+bool IsCollectiveBoxingNode(const PlanTaskNode* node) {
+  const TaskType task_type = node->task_proto()->task_type();
+  return IsCollectiveBoxingTaskType(task_type);
+}
+
 const boxing::collective::RankDesc& GetRankDesc(const OperatorConf& conf) {
   if (conf.has_collective_boxing_generic_conf()) {
     return conf.collective_boxing_generic_conf().rank_desc();
@@ -712,14 +721,6 @@ void GetDeviceDesc(const TaskProto* task_proto, boxing::collective::DeviceDesc* 
 
 }  // namespace
 
-/*static*/ bool PlanUtil::IsCollectiveBoxingTaskType(TaskType task_type) {
-  return task_type == TaskType::kCollectiveBoxingGeneric;
-}
-
-/*static*/ bool PlanUtil::IsCollectiveBoxingTaskProto(const TaskProto& task_proto) {
-  return IsCollectiveBoxingTaskType(task_proto.task_type());
-}
-
 void PlanUtil::GenCollectiveBoxingPlan(
     Job* job, Plan* plan, const std::function<std::unique_ptr<PlanTaskGraph>()>& GetPlanTaskGraph) {
   using namespace boxing::collective;
@@ -728,7 +729,7 @@ void PlanUtil::GenCollectiveBoxingPlan(
                                    ->mutable_job_id2request_set())[GlobalJobDesc().job_id()];
   const int64_t cb_task_count = std::count_if(
       plan->task().cbegin(), plan->task().cend(),
-      [](const TaskProto& task) { return PlanUtil::IsCollectiveBoxingTaskType(task.task_type()); });
+      [](const TaskProto& task) { return IsCollectiveBoxingTaskType(task.task_type()); });
   if (cb_task_count == 0) { return; }
   auto plan_task_graph_ptr = GetPlanTaskGraph();
   auto& plan_task_graph = *plan_task_graph_ptr;
@@ -748,17 +749,11 @@ void PlanUtil::GenCollectiveBoxingPlan(
     });
     if (src_nodes.empty()) { break; }
     auto ForEachNodeOnInEdge = [&](const PlanTaskNode* node,
-                                   const std::function<void(const PlanTaskNode*)>& DoEach) {
+                                   const std::function<void(const PlanTaskNode*)>& Handler) {
       node->ForEachNodeOnInEdge([&](const PlanTaskNode* node_on_in_edge) {
-        if (all_visited.count(node_on_in_edge) == 0) { DoEach(node_on_in_edge); }
+        if (all_visited.count(node_on_in_edge) == 0) { Handler(node_on_in_edge); }
       });
     };
-
-    const auto& IsCollectiveBoxingNode = [&](const PlanTaskNode* node) {
-      const TaskType task_type = node->task_proto()->task_type();
-      return IsCollectiveBoxingTaskType(task_type);
-    };
-
     auto ForEachNodeOnOutEdge = [&](const PlanTaskNode* node,
                                     const std::function<void(const PlanTaskNode*)>& Handler) {
       if (!IsCollectiveBoxingNode(node)) {
@@ -1254,6 +1249,10 @@ void PlanUtil::PopulateOpAttribute(
       });
     }
   });
+}
+
+/*static*/ bool PlanUtil::IsCollectiveBoxingTaskProto(const TaskProto& task_proto) {
+  return IsCollectiveBoxingTaskType(task_proto.task_type());
 }
 
 }  // namespace oneflow
