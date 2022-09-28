@@ -41,12 +41,22 @@ def _test_triu(test_case, diagonal, device):
     np_grad = np.triu(np.ones(shape=arr_shape, dtype=np.float32), diagonal)
     test_case.assertTrue(np.allclose(input_tensor.grad.numpy(), np_grad, 1e-06, 1e-06))
 
+def _test_triu_(test_case, diagonal, device):
+    arr_shape = (4, 4, 8)
+    np_arr = np.random.randn(*arr_shape)
+    input = flow.tensor(
+        np_arr, dtype=flow.float32, device=flow.device(device)
+    )
+    np_out = np.triu(np_arr, diagonal)
+    test_case.assertFalse(np.allclose(input.numpy(), np_out))
+    input.triu_(diagonal=diagonal)
+    test_case.assertTrue(np.allclose(input.numpy(), np_out))
 
 @flow.unittest.skip_unless_1n1d()
 class TestTriu(flow.unittest.TestCase):
     def test_triu(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_triu]
+        arg_dict["test_fun"] = [_test_triu, _test_triu_]
         arg_dict["diagonal"] = [2, -1]
         arg_dict["device"] = ["cuda", "cpu"]
         for arg in GenArgList(arg_dict):
@@ -58,12 +68,6 @@ class TestTriu(flow.unittest.TestCase):
         x = random_tensor(4, 2, 1, 0, 3).to(device)
         y = torch.triu(x)
         return y
-
-    @autotest(auto_backward=False, check_graph=True)
-    def test_inplace_triu_with_random_data(test_case):
-        device = random_device()
-        x = random_tensor(2, 3, 4, 5).to(device)
-        return x.triu_(diagonal=-1)
 
 
 if __name__ == "__main__":
