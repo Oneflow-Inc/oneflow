@@ -26,13 +26,8 @@ def OKL_Dialect : Dialect {
     }];
     let cppNamespace = "::mlir::okl";
     let dependentDialects = [
-        "func::FuncDialect",
-        "oneflow::OneFlowDialect"
+        "func::FuncDialect"
     ];
-    let extraClassDeclaration = [{
-        void registerAttributes();
-    }];
-    let useDefaultAttributePrinterParser = 1;
 }
 
 #endif // ONEFLOW_IR_INCLUDE_OKL_OKLDIALECT_H_

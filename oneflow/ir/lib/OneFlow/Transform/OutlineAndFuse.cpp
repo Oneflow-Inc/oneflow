@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "OneFlow/OKL/OKLDialect.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/Passes.h"
@@ -43,6 +44,7 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
 class Lower2OKLPass : public Lower2OKLPassBase<Lower2OKLPass> {
   void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<LLVM::LLVMDialect>();
+    registry.insert<okl::OKLDialect>();
   }
 
   void runOnOperation() override {

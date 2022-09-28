@@ -14,17 +14,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "OneFlow/OKL/OKLDialect.h"
+#include "OneFlow/OKL/OKLOps.h"
+#include "OneFlow/OneFlowOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "OneFlow/OKLDialect.cpp.inc"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/TypeRange.h"
+#include "mlir/IR/Dialect.h"
 
+#define GET_OP_CLASSES
+#include "OneFlow/OKL.gen_ops.cpp.inc"
 namespace mlir {
 
-namespace sbp {
+namespace okl {
 
-void OKLDialect::initialize() { registerAttributes(); }
+void OKLDialect::initialize() {
+  addOperations<
+#define GET_OP_LIST
+#include "OneFlow/OKL.gen_ops.cpp.inc"
+      >();
+}
 
-}  // namespace sbp
+}  // namespace okl
 
 }  // namespace mlir

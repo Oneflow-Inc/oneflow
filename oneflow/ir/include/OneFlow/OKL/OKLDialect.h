@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The sbp Authors. All rights reserved.
+Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -13,16 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_OKL_OKLBASE_H_
-#define ONEFLOW_IR_INCLUDE_OKL_OKLBASE_H_
+#ifndef ONEFLOW_IR_INCLUDE_OKL_OKLDIALECT_H_
+#define ONEFLOW_IR_INCLUDE_OKL_OKLDIALECT_H_
 
-include "OneFlow/OKL/OKLDialect.td"
-include "mlir/IR/AttrTypeBase.td"
-include "mlir/IR/SymbolInterfaces.td"
-include "mlir/Interfaces/SideEffectInterfaces.td"
-include "mlir/Interfaces/InferTypeOpInterface.td"
+#include "mlir/IR/Dialect.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 
-class OKL_Op<string name, list<Trait> traits = []> :
-    Op<OKL_Dialect, name, traits>;
+#include "OneFlow/OKLDialect.h.inc"
 
-#endif // ONEFLOW_IR_INCLUDE_OKL_OKLBASE_H_
+#endif  // ONEFLOW_IR_INCLUDE_OKL_OKLDIALECT_H_

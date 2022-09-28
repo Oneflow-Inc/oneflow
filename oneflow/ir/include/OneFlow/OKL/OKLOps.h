@@ -25,6 +25,7 @@ limitations under the License.
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 namespace mlir {
 namespace func {

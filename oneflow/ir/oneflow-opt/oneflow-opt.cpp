@@ -25,6 +25,7 @@ limitations under the License.
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
+#include "OneFlow/OKL/OKLDialect.h"
 #include "OneFlow/SBP/SBPDialect.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
@@ -60,6 +61,7 @@ int32_t main(int32_t argc, char** argv) {
   mlir::registerConvertOFKLCalleeToLLVMPassPass();
   mlir::registerOutlineJitFunctionPassPass();
   mlir::DialectRegistry registry;
+  registry.insert<mlir::okl::OKLDialect>();
   registry.insert<mlir::sbp::SBPDialect>();
   registry.insert<mlir::oneflow::OneFlowDialect>();
   registry.insert<mlir::func::FuncDialect>();

@@ -153,15 +153,17 @@ LLVM::GlobalOp DeclareOrGetGlobalString(::mlir::PatternRewriter& rewriter, mlir:
   return global;
 }
 
+template<typename Wrap>
 ModuleOp GetModuleOpFromJobBodyOp(Operation* op) {
-  auto parent_func_op = op->getParentOfType<oneflow::Job>();
+  auto parent_func_op = op->getParentOfType<Wrap>();
   if (!parent_func_op) { return nullptr; }
-  return parent_func_op->getParentOfType<ModuleOp>();
+  return parent_func_op->template getParentOfType<ModuleOp>();
 }
 
-func::FuncOp GetOrInsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operation* op) {
+func::FuncOp InsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operation* op,
+                                  const std::string& func_name) {
   auto loc = op->getLoc();
-  auto module = GetModuleOpFromJobBodyOp(op);
+  auto module = GetModuleOpFromJobBodyOp<func::FuncOp>(op);
   if (!module) {
     emitError(loc) << "null ModuleOp " << *op;
     return nullptr;
@@ -171,12 +173,10 @@ func::FuncOp GetOrInsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operat
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPointToStart(module.getBody());
 
-  auto func_name = op->getAttr("op_name").cast<StringAttr>().strref();
   auto func_type =
       rewriter.getFunctionType(TypeRange(op->getOperandTypes()), TypeRange(op->getResultTypes()));
   func::FuncOp func = rewriter.create<func::FuncOp>(loc, func_name, func_type);
-  func.setSymVisibilityAttr(rewriter.getStringAttr("public"));
-  func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
+  func->setAttr("compiled", rewriter.getStringAttr("true"));
   func.getBody().emplaceBlock();
   for (auto& arg : func_type.getInputs()) { func.getBody().addArguments(arg, loc); }
   for (auto argument_pair :
@@ -194,27 +194,38 @@ func::FuncOp GetOrInsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operat
   return func;
 }
 
-LogicalResult Lower2OKLOp(::mlir::PatternRewriter& rewriter, Operation* op, func::FuncOp okl_func) {
-  auto compute_ctx = okl_func->getOperand(0);
-  auto tmp_func_name = "tmp_func";
-  auto module = okl_func->getParentOfType<ModuleOp>();
+LogicalResult Lower2OKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
+                          LLVM::LLVMFuncOp okl_func) {
+  auto op_type_name = op->getAttr("op_name").dyn_cast<StringAttr>();
+  if (!op_type_name) { return failure(); }
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPointToEnd(&okl_func.getBody().back());
+
   auto llvm_ptr_type = LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8));
+
+  auto compute_ctx = okl_func.getArgument(0);
+  SmallString<16> buffer;
+  auto tmp_func_name = SanitizeIdentifier(op_type_name, buffer);
+  auto module = okl_func->getParentOfType<ModuleOp>();
+
   auto loc = op->getLoc();
   // create okl.reg_ctx(StringAttr: assembly)
-  // TODO: create tmp func to dump assembly
   std::string mlir;
-  if (auto found = SymbolTable(module).lookup(tmp_func_name)) {
-    llvm::raw_string_ostream os_mlir(mlir);
-    found->print(os_mlir);
+  Operation* found = nullptr;
+  if (!(found = SymbolTable(module).lookup(tmp_func_name))) {
+    InsertKernelOFFuncOp(rewriter, op, buffer.c_str());
+    found = SymbolTable(module).lookup(tmp_func_name);
   }
+  llvm::raw_string_ostream os_mlir(mlir);
+  found->print(os_mlir);
+
   auto reg_ctx =
       rewriter.create<okl::RegContextOp>(loc, llvm_ptr_type, rewriter.getStringAttr(mlir));
+  // auto reg_ctx = compute_ctx;
   // create okl.run_ctx(*reg_ctx, *compute_ctx)
   auto run_ctx = rewriter.create<okl::RunContextOp>(loc, llvm_ptr_type, reg_ctx, compute_ctx);
   // create okl.kernel(StringAttr: op_type_name, *reg_ctx)
-
-  auto kernel = rewriter.create<okl::KernelOp>(
-      loc, llvm_ptr_type, op->getAttr("op_name").dyn_cast<StringAttr>(), compute_ctx);
+  auto kernel = rewriter.create<okl::KernelOp>(loc, llvm_ptr_type, op_type_name, reg_ctx);
   // create okl.launch(*run_ctx, *kernel)
   rewriter.create<okl::LaunchOp>(loc, run_ctx, kernel);
   return success();
@@ -938,21 +949,20 @@ struct Lower2OKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
+    if (op->hasAttr("compiled")) { return success(); }
+    op->setAttr("compiled", rewriter.getStringAttr("true"));
     auto func_name = "okl_func";
-    if (op.getSymName() == func_name) { return success(); }
-
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointAfter(op);
     auto& ops = op->getRegion(0).front();
 
+    auto void_type = LLVM::LLVMVoidType::get(rewriter.getContext());
     auto llvm_ptr_type = LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8));
     // the input[0] is compute ctx* of kernel launch
-    auto func_type = rewriter.getFunctionType({llvm_ptr_type}, {});
-    auto okl_func =
-        rewriter.create<func::FuncOp>(op->getLoc(), func_name, func_type, op->getAttrs());
+    auto func_type = LLVM::LLVMFunctionType::get(void_type, {llvm_ptr_type}, false);
+    auto okl_func = rewriter.create<LLVM::LLVMFuncOp>(op->getLoc(), func_name, func_type);
     okl_func.getBody().emplaceBlock();
-    for (auto& arg : func_type.getInputs()) { okl_func.getBody().addArguments(arg, op->getLoc()); }
-    rewriter.setInsertionPointToStart(&okl_func.getBody().front());
+    okl_func.getBody().addArguments(llvm_ptr_type, op->getLoc());
     for (auto& op : ops) {
       if (!op.hasAttr("op_name")) {
         if (isa<func::ReturnOp>(op)) { break; }
@@ -960,8 +970,12 @@ struct Lower2OKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
       }
       if (failed(Lower2OKLOp(rewriter, &op, okl_func))) { return failure(); }
     }
-    op->dropAllUses();
-    op->erase();
+
+    OpBuilder::InsertionGuard guard_ret(rewriter);
+    rewriter.setInsertionPointToEnd(&okl_func.getBody().back());
+    rewriter.create<LLVM::ReturnOp>(op->getLoc(), ValueRange());
+    auto module = op->getParentOfType<ModuleOp>();
+    module.dump();
     return success();
   }
 };
@@ -986,7 +1000,7 @@ func::FuncOp CreateWrapFunc(mlir::Location loc, std::vector<Operation*>& wrap_op
   auto func_type = rewriter.getFunctionType(TypeRange(ArrayRef<Value>(proto.first)),
                                             TypeRange(ArrayRef<Value>(proto.second)));
   auto func_name = "wrap" + std::to_string(name_index++);
-  auto module = GetModuleOpFromJobBodyOp(wrap_ops[0]);
+  auto module = GetModuleOpFromJobBodyOp<Job>(wrap_ops[0]);
   if (!module) {
     emitError(loc) << "Fail to find parent ModuleOp";
     return nullptr;
@@ -1017,7 +1031,6 @@ KernelLaunchOp CreateKernelLaunchFunc(mlir::Location loc, std::vector<Operation*
   if (!wrap_ops.size()) return nullptr;
   OpBuilder::InsertionGuard guard(rewriter);
   auto wrap_func = CreateWrapFunc(loc, wrap_ops, rewriter, name_index);
-  auto module = wrap_func->getParentOfType<ModuleOp>();
   rewriter.setInsertionPointAfter(wrap_ops.back());
   auto func =
       rewriter.create<KernelLaunchOp>(wrap_ops[0]->getLoc(), wrap_func, wrap_ops[0]->getAttrs());
@@ -1052,7 +1065,7 @@ struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
     std::vector<Operation*> wrap_ops;
     for (auto op_it = ops.begin(); op_it != ops.end(); ++op_it) {
       if (std::count(white_list.begin(), white_list.end(), op_it->getName().getStringRef())
-          || !op_it->getAttr("op_name") || !GetModuleOpFromJobBodyOp(&(*op_it))) {
+          || !op_it->getAttr("op_name") || !GetModuleOpFromJobBodyOp<Job>(&(*op_it))) {
         CreateKernelLaunchFunc(op_it->getLoc(), wrap_ops, rewriter, name_index);
         continue;
       }
