@@ -191,7 +191,8 @@ Maybe<Symbol<Device>> GetTensorDevice4CurrentProcessCtx(Symbol<ParallelDesc> par
 Maybe<bool> ParallelDesc::TryGetParallelId(int64_t rank, int64_t* parallel_id) const {
   if (!HasMachineId(rank)) { return false; }
   const auto& device_ids = sorted_dev_phy_ids(rank);
-  CHECK_EQ_OR_RETURN(device_ids.size(), 1) << "only sole device_id supported.";
+  CHECK_EQ_OR_RETURN(device_ids.size(), 1) << "only sole device_id supported. parallel_conf: \n"
+                                           << parallel_conf().DebugString();
   return TryGetParallelId(rank, device_ids.at(0), parallel_id);
 }
 
