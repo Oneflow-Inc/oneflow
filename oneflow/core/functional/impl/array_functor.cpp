@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <algorithm>
 #include <memory>
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/data_type.pb.h"
@@ -3281,8 +3282,8 @@ class BinCountFunctor {
         CHECK_JUST(OpBuilder("bincount").Input("in").Input("weight").Output("out").Build());
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
-                           const Optional<Tensor>& weight) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const Optional<Tensor>& weight,
+                           const Optional<int64_t>& minlength) const {
     CHECK_OR_RETURN(!input->dtype()->is_floating_point()) << "bincount can only support int tensor";
     TensorProcessor tensor_processor;
     JUST(tensor_processor.AddInputs({input}, DType::Int64()).Apply());
@@ -3309,11 +3310,15 @@ class BinCountFunctor {
                      memory::MakeHostMemCase(), eager_blob_object->mem_case());
     };
     JUST(SyncAccessTensorWithTimeOut(tensor_max, callback, "const"));
+    max += 1;
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("size");
-    attrs.SetAllAttrs(max + 1);
+    if (minlength) {
+      CHECK_GE_OR_RETURN(JUST(minlength), 0) << "minlength should be >= 0";
+      max = std::max(JUST(minlength), max);
+    }
+    attrs.SetAllAttrs(max);
     if (weight) {
-      // const auto weight_tensor = JUST(weight);
       CHECK_EQ_OR_RETURN(JUST(weight)->nelement(), x->nelement())
           << "input and weights should have the same length";
       return OpInterpUtil::Dispatch<Tensor>(*weight_op_, {x, JUST(weight)}, attrs);

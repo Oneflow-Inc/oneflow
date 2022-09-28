@@ -38,6 +38,22 @@ class TestBinCount(flow.unittest.TestCase):
         weight = random_tensor(1, 100).to(device)
         return torch.bincount(x, weights=weight)
 
+    @autotest(n=5, auto_backward=False, check_graph=False)
+    def test_bincount_minlength(test_case):
+        device = random_device()
+        x = random_tensor(1, 100, low=0, dtype=int).to(device)
+        weight = random_tensor(1, 100).to(device)
+        minlength = random(1, 200).to(int)
+        return torch.bincount(x, weights=weight, minlength=minlength)
+
+    @autotest(n=5, auto_backward=False, check_graph=False)
+    def test_bincount_0element(test_case):
+        device = random_device()
+        x = random_tensor(1, 0, low=0, dtype=int).to(device)
+        weight = random_tensor(1, 0).to(device)
+        minlength = random(1, 200).to(int)
+        return torch.bincount(x, weights=weight, minlength=minlength)
+
 
 if __name__ == "__main__":
     unittest.main()

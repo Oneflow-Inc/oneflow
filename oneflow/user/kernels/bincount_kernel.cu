@@ -29,21 +29,21 @@ namespace user_op {
 namespace {
 
 template<typename IDX, typename T>
-  __global__ static void BinCountWeightCompute(const IDX* in_ptr, const T* weight, T* out_ptr, int64_t size) {
-    CUDA_1D_KERNEL_LOOP(i, size) {
-      IDX idx = *(in_ptr + i);
-      cuda::atomic::Add(out_ptr + idx, weight[i]);
-    }
-  };
+__global__ static void BinCountWeightCompute(const IDX* in_ptr, const T* weight, T* out_ptr,
+                                             int64_t size){
+    CUDA_1D_KERNEL_LOOP(i, size){IDX idx = *(in_ptr + i);
+cuda::atomic::Add(out_ptr + idx, weight[i]);
+}  // namespace
+};  // namespace user_op
 
 template<typename IDX, typename T>
-  __global__ static void BinCountCompute(const IDX* in_ptr, T* out_ptr, int64_t size) {
-    T one = GetOneVal<T>();
-    CUDA_1D_KERNEL_LOOP(i, size) {
-      IDX idx = *(in_ptr + i);
-      cuda::atomic::Add(out_ptr + idx, one);
-    }
-  };
+__global__ static void BinCountCompute(const IDX* in_ptr, T* out_ptr, int64_t size) {
+  T one = GetOneVal<T>();
+  CUDA_1D_KERNEL_LOOP(i, size) {
+    IDX idx = *(in_ptr + i);
+    cuda::atomic::Add(out_ptr + idx, one);
+  }
+};
 
 template<typename IDX, typename T>
 class CUDABinCountKernel final : public user_op::OpKernel {
@@ -55,24 +55,28 @@ class CUDABinCountKernel final : public user_op::OpKernel {
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    int64_t size = in->shape_view().elem_cnt();
+    size_t out_size = ctx->Attr<int64_t>("size") * sizeof(T);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const IDX* in_ptr = in->dptr<IDX>();
     T* out_ptr = out->mut_dptr<T>();
-    Memset<DeviceType::kCUDA>(ctx->stream(), out_ptr, 0, size * sizeof(int64_t));
+    Memset<DeviceType::kCUDA>(ctx->stream(), out_ptr, 0, out_size);
+    int64_t in_size = in->shape_view().elem_cnt();
+    if (in_size == 0) { return; }
     if (ctx->has_input("weight", 0)) {
       const T* weight_ptr = ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>();
-      BinCountWeightCompute<IDX, T><<<BlocksNum4ThreadsNum(size), kCudaThreadsNumPerBlock, 0,
-             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(in_ptr, weight_ptr, out_ptr, size);
+      BinCountWeightCompute<IDX, T><<<BlocksNum4ThreadsNum(in_size), kCudaThreadsNumPerBlock, 0,
+                                      ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+          in_ptr, weight_ptr, out_ptr, in_size);
     } else {
-      BinCountCompute<IDX, T><<<BlocksNum4ThreadsNum(size), kCudaThreadsNumPerBlock, 0,
-             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(in_ptr, out_ptr, size);
+      BinCountCompute<IDX, T>
+          <<<BlocksNum4ThreadsNum(in_size), kCudaThreadsNumPerBlock, 0,
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(in_ptr, out_ptr, in_size);
     }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-}  // namespace
+}  // namespace oneflow
 
 #define REGISTER_CUDA_BINCOUNT_KERNEL(idx_type, dtype)                                    \
   REGISTER_USER_KERNEL("bincount")                                                        \
@@ -84,7 +88,6 @@ class CUDABinCountKernel final : public user_op::OpKernel {
 REGISTER_CUDA_BINCOUNT_KERNEL(int64_t, int64_t)
 REGISTER_CUDA_BINCOUNT_KERNEL(int64_t, float)
 REGISTER_CUDA_BINCOUNT_KERNEL(int64_t, double)
-
 
 }  // namespace user_op
 }  // namespace oneflow

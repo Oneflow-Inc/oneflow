@@ -26,30 +26,26 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename IDX, typename T, bool has_weight>
-struct BinCountCompute {
-  static void Compute(const IDX* in_ptr, const T* weight, T* out_ptr, int64_t size) {}
-};
+// template<typename IDX, typename T, bool has_weight>
+// struct BinCountCompute {
+//   static void Compute(const IDX* in_ptr, const T* weight, T* out_ptr, int64_t size) {}
+// };
 
 template<typename IDX, typename T>
-struct BinCountCompute<IDX, T, true> {
-  static void Compute(const IDX* in_ptr, const T* weight, T* out_ptr, int64_t size) {
-    FOR_RANGE(int64_t, i, 0, size) {
-      IDX idx = *(in_ptr + i);
-      out_ptr[idx] += weight[i];
-    }
+void BinCountComputeWeight(const IDX* in_ptr, const T* weight, T* out_ptr, int64_t size) {
+  FOR_RANGE(int64_t, i, 0, size) {
+    IDX idx = *(in_ptr + i);
+    out_ptr[idx] += weight[i];
   }
-};
+}
 
 template<typename IDX, typename T>
-struct BinCountCompute<IDX, T, false> {
-  static void Compute(const IDX* in_ptr, const T* weight, T* out_ptr, int64_t size) {
-    FOR_RANGE(int64_t, i, 0, size) {
-      IDX idx = *(in_ptr + i);
-      out_ptr[idx] += 1L;
-    }
+void BinCountCompute(const IDX* in_ptr, T* out_ptr, int64_t size) {
+  FOR_RANGE(int64_t, i, 0, size) {
+    IDX idx = *(in_ptr + i);
+    out_ptr[idx] += 1L;
   }
-};
+}
 
 template<typename IDX, typename T>
 class CpuBinCountKernel final : public user_op::OpKernel {
@@ -60,16 +56,17 @@ class CpuBinCountKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    int64_t size = in->shape_view().elem_cnt();
+    size_t out_size = ctx->Attr<int64_t>("size") * sizeof(T);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const IDX* in_ptr = in->dptr<IDX>();
     T* out_ptr = out->mut_dptr<T>();
-    Memset<DeviceType::kCPU>(ctx->stream(), out_ptr, 0, size * sizeof(int64_t));
+    Memset<DeviceType::kCPU>(ctx->stream(), out_ptr, 0, out_size);
+    int64_t in_size = in->shape_view().elem_cnt();
     if (ctx->has_input("weight", 0)) {
       const T* weight_ptr = ctx->Tensor4ArgNameAndIndex("weight", 0)->dptr<T>();
-      BinCountCompute<IDX, T, true>::Compute(in_ptr, weight_ptr, out_ptr, size);
+      BinCountComputeWeight<IDX, T>(in_ptr, weight_ptr, out_ptr, in_size);
     } else {
-      BinCountCompute<IDX, T, false>::Compute(in_ptr, nullptr, out_ptr, size);
+      BinCountCompute<IDX, T>(in_ptr, out_ptr, in_size);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

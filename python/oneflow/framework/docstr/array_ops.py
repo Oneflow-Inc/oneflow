@@ -751,8 +751,10 @@ add_docstr(
         >>> x = flow.tensor([1, 2, 4, 6])
         >>> flow.bincount(x)
         tensor([0, 1, 1, 0, 1, 0, 1], dtype=oneflow.int64)
-        >>> weight = flow.tensor([0.1, 0.2, 0.3, 0.4])
-        >>> flow.bincount(x, weight=weight)
+        >>> weights = flow.tensor([0.1, 0.2, 0.3, 0.4])
+        >>> flow.bincount(x, weights=weights)
         tensor([0.0000, 0.1000, 0.2000, 0.0000, 0.3000, 0.0000, 0.4000], dtype=oneflow.float32)
-    """
+        >>> flow.bincount(x, weights=weights, minlength=8)
+        tensor([0.0000, 0.1000, 0.2000, 0.0000, 0.3000, 0.0000, 0.4000, 0.0000], dtype=oneflow.float32)
+    """,
 )
