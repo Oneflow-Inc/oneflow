@@ -53,7 +53,6 @@ struct PlanUtil {
   static StreamId GetStreamId(const TaskProto& task);
   static int64_t GetDeviceIndex(const TaskProto& task);
 
-  static bool IsCollectiveBoxingTaskType(TaskType task_type);
   static bool IsCollectiveBoxingTaskProto(const TaskProto& task_proto);
   static void GenReachableTaskPairs(
       const Plan& plan, const std::function<bool(const TaskProto&)>& FilterTaskProto,
