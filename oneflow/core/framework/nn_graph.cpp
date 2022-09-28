@@ -306,40 +306,35 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NNGraph::CompileAndInitRuntime() {
-  CHECK_OR_RETURN(!runtime_inited_)
-      << Error::RuntimeError() << "nn.Graph runtime is already initialized";
-  JUST(RegisterFreeEagerTensorsToVariableOpNames());
-  JUST(RegisterNewVariableOpInJobPass());
-  JUST(DeleteOutdatedVariableInVariableTensorMgr());
-
-  template<typename T>
-  void MergeByMod(size_t index, size_t n, std::vector<HashSet<T>> * data) {
-    index = index % n;
-    if (data->size() <= n) { return; }
-    for (int j = index + n; j < data->size(); j += n) {
-      (*data)[index].insert((*data)[j].begin(), (*data)[j].end());
-    }
+namespace {
+template<typename T>
+void MergeByMod(size_t index, size_t n, std::vector<HashSet<T>>* data) {
+  index = index % n;
+  if (data->size() <= n) { return; }
+  for (int j = index + n; j < data->size(); j += n) {
+    (*data)[index].insert((*data)[j].begin(), (*data)[j].end());
   }
+}
 
-  // use multi-thread to merge all data into (*data)[0]
-  template<typename T>
-  void MergeIntoFirst(std::vector<HashSet<T>> * data) {
-    const auto& MergeInto = [&](size_t n) {
-      MultiThreadLoop(n, [&](size_t i) { MergeByMod(i, n, data); });
-      data->resize(n);
-    };
-    int n = data->size();
-    if (n > 128) { MergeInto(n = 64); }
-    if (n > 32) { MergeInto(n = 16); }
-    if (n > 8) { MergeInto(n = 4); }
-    MergeInto(n = 1);
-  }
+// use multi-thread to merge all data into (*data)[0]
+template<typename T>
+void MergeIntoFirst(std::vector<HashSet<T>>* data) {
+  const auto& MergeInto = [&](size_t n) {
+    MultiThreadLoop(n, [&](size_t i) { MergeByMod(i, n, data); });
+    data->resize(n);
+  };
+  int n = data->size();
+  if (n > 128) { MergeInto(n = 64); }
+  if (n > 32) { MergeInto(n = 16); }
+  if (n > 8) { MergeInto(n = 4); }
+  MergeInto(n = 1);
+}
 
 }  // namespace
 
 template<void (*Loop)(size_t num, const std::function<void(size_t i)>& Callback)>
 Maybe<void> NNGraph::MasterRankCompile() {
+  auto compile_time_counter = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
   constexpr int kWorkerStartRank = 1;
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     std::vector<Plan> plans(GlobalProcessCtx::WorldSize());
@@ -421,19 +416,21 @@ Maybe<void> NNGraph::MasterRankCompile() {
     }
   }
   OF_SESSION_BARRIER();
+  compile_time_counter->Count("Graph name: " + name_ + " compile and sync plan", 1);
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
+  compile_time_counter->Count("Graph name: " + name_ + " complete plan", 1);
 
   return Maybe<void>::Ok();
 }
 
 Maybe<void> NNGraph::NaiveCompile() {
+  auto compile_time_counter = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    auto compile_time_counter = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
     // TODO(chengcheng): new memory reused by chunk
     Compiler().Compile(&job_, &plan_);
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
-    compile_time_counter->Count("Graph name: " + name_ + " compile plan", 1);
+    compile_time_counter->Count("Graph name: " + name_ + " naive compile plan", 1);
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
       PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
@@ -449,6 +446,7 @@ Maybe<void> NNGraph::NaiveCompile() {
       PlanUtil::GenLightPlan(&plan_, name_);
     }
   }
+  compile_time_counter->Count("Graph name: " + name_ + " naive compile plan", 1);
   if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name = "plan:" + job_name();
     if (GlobalProcessCtx::IsThisProcessMaster()) {
@@ -464,8 +462,10 @@ Maybe<void> NNGraph::NaiveCompile() {
       Singleton<CtrlClient>::Get()->ClearKV(plan_name);
     }
   }
+  compile_time_counter->Count("Graph name: " + name_ + " naive sync plan", 1);
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
+  compile_time_counter->Count("Graph name: " + name_ + " naive complete plan", 1);
 
   return Maybe<void>::Ok();
 }
@@ -486,8 +486,11 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
   auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id_);
 
+  auto compile_time_counter = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
   // NOTE(chengcheng): do job compeleter for each rank.
   JUST(JobCompleter().Complete(&job_));
+  compile_time_counter->Count("Graph name: " + name_ + " complete job", 1);
+
   typedef Maybe<void> (NNGraph::*CompileMethodT)();
   struct GetCompileMethod final : public CompileModeVisitor<GetCompileMethod> {
     static CompileMethodT VisitNaive() { return &NNGraph::NaiveCompile; }
@@ -499,6 +502,8 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     }
   };
   JUST((this->*GetCompileMethod::Visit(JUST(CurrentCompileMode())))());
+  compile_time_counter->Count("Graph name: " + name_ + " total compile plan", 1);
+
   if (ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false)) {
     CHECK_OR_RETURN(false) << " Exit to finish dry run of graph compile.";
   }
@@ -630,7 +635,8 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
     CHECK_OR_RETURN(variable_op_name2eager_blob_object_.emplace(var_name, var_blob).second)
         << Error::RuntimeError() << kOfBugIssueUploadPrompt;
   }
-  // Initialize or check mem_ptr_for_allocation_computation_pipelining by TouchTensors instruction.
+  // Initialize or check mem_ptr_for_allocation_computation_pipelining by TouchTensors
+  // instruction.
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     auto eager_blob_objects = std::make_shared<vm::EagerBlobObjectList>();
     for (const auto& pair : variable_op_name2eager_blob_object_) {
