@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/embedding/hash_functions.cuh"
 
 namespace oneflow {
+
 namespace data_shuffle {
 
 template<typename K>
@@ -39,58 +40,62 @@ __global__ void GenerateTableIds(int32_t elem_cnt, int32_t num_tables, U* table_
 
 namespace {
 
+constexpr uint32_t PADDING_REV_INDEX = 0xffffffff;
+
 template<typename K, typename V, typename IDX, typename HASH>
-__global__ void HashTableUniqueAndPartitionPairs(const uint32_t table_capacity,
-                                                 const uint32_t num_keys, int32_t num_partition,
-                                                 IDX* unique_counts, TableEntry<K>* table,
-                                                 const K* keys, const V* values,
-                                                 K* partitioned_unique_keys,
-                                                 V* partitioned_unique_values, IDX* reverse_index,
-                                                 bool need_process_values) {
+__global__ void HashTableUniqueAndPartitionPairs(
+    const uint32_t table_capacity, const uint32_t num_keys, int32_t num_partition,
+    IDX* unique_counts, TableEntry<K>* table, const K* keys, const V* values,
+    K* partitioned_unique_keys, V* partitioned_unique_values, IDX* reverse_index,
+    bool need_process_values, const bool has_padding_idx, const int64_t padding_idx) {
   CUDA_1D_KERNEL_LOOP_T(uint32_t, i, num_keys) {
     IDX r_index_plus_one = 0;
     const K key = keys[i];
-    size_t key_hash = HASH()(key);
-    uint32_t partition_id = key_hash % num_partition;
-    IDX* unique_count = unique_counts + partition_id;
-    K* unique_keys = partitioned_unique_keys + partition_id * num_keys;
-    uint32_t pos = key_hash % table_capacity;
-    const K key_hi = (key | 0x1);
-    const K key_lo = (key & 0x1);
-    uint32_t counter = 0;
-    while (r_index_plus_one == 0) {
-      bool prob_next = false;
-      K* key_ptr = &table[pos].key;
-      volatile uint32_t* table_value_ptr = &table[pos].value;
-      const K old_key = cuda::atomic::CAS(key_ptr, 0, key_hi);
-      if (old_key == 0) {
-        IDX unique_pos = cuda::atomic::Add(unique_count, 1);
-        r_index_plus_one = unique_pos + 1;
-        unique_keys[unique_pos] = key;
-        if (need_process_values) {
-          partitioned_unique_values[partition_id * num_keys + unique_pos] = values[i];
-        }
-        *table_value_ptr = ((r_index_plus_one << 1U) | key_lo);
-      } else if (old_key == key_hi) {
-        const uint32_t value = *table_value_ptr;
-        if (value == 0) {
-          // do nothing
-        } else if ((value & 0x1) == key_lo) {
-          r_index_plus_one = (value >> 1U);
+    if (has_padding_idx && key == padding_idx) {
+      reverse_index[i] = PADDING_REV_INDEX;
+    } else {
+      size_t key_hash = HASH()(key);
+      uint32_t partition_id = key_hash % num_partition;
+      IDX* unique_count = unique_counts + partition_id;
+      K* unique_keys = partitioned_unique_keys + partition_id * num_keys;
+      uint32_t pos = key_hash % table_capacity;
+      const K key_hi = (key | 0x1);
+      const K key_lo = (key & 0x1);
+      uint32_t counter = 0;
+      while (r_index_plus_one == 0) {
+        bool prob_next = false;
+        K* key_ptr = &table[pos].key;
+        volatile uint32_t* table_value_ptr = &table[pos].value;
+        const K old_key = cuda::atomic::CAS(key_ptr, 0, key_hi);
+        if (old_key == 0) {
+          IDX unique_pos = cuda::atomic::Add(unique_count, 1);
+          r_index_plus_one = unique_pos + 1;
+          unique_keys[unique_pos] = key;
+          if (need_process_values) {
+            partitioned_unique_values[partition_id * num_keys + unique_pos] = values[i];
+          }
+          *table_value_ptr = ((r_index_plus_one << 1U) | key_lo);
+        } else if (old_key == key_hi) {
+          const uint32_t value = *table_value_ptr;
+          if (value == 0) {
+            // do nothing
+          } else if ((value & 0x1) == key_lo) {
+            r_index_plus_one = (value >> 1U);
+          } else {
+            prob_next = true;
+          }
         } else {
           prob_next = true;
         }
-      } else {
-        prob_next = true;
+        if (prob_next) {
+          pos += 1;
+          counter += 1;
+          if (pos >= table_capacity) { pos -= table_capacity; }
+          if (counter >= table_capacity) { __trap(); }
+        }
       }
-      if (prob_next) {
-        pos += 1;
-        counter += 1;
-        if (pos >= table_capacity) { pos -= table_capacity; }
-        if (counter >= table_capacity) { __trap(); }
-      }
+      reverse_index[i] = partition_id * num_keys + r_index_plus_one - 1;
     }
-    reverse_index[i] = partition_id * num_keys + r_index_plus_one - 1;
   }
 }
 
@@ -285,7 +290,8 @@ void UniqueAndPartition(cudaStream_t cuda_stream, int64_t num_ids, size_t capaci
                         int64_t num_partition, const K* ids, const V* table_ids,
                         IDX* num_partitioned_unique_ids_ptr, K* partitioned_unique_ids,
                         V* partitioned_unique_table_ids, IDX* inverse_unique_partition_indices,
-                        void* workspace_ptr, size_t workspace_bytes, bool need_process_table_ids) {
+                        void* workspace_ptr, size_t workspace_bytes, bool need_process_table_ids,
+                        const bool has_padding_idx, const int64_t padding_idx) {
   size_t table_capacity_bytes = capacity * sizeof(TableEntry<K>);
   CHECK_GE(workspace_bytes, table_capacity_bytes);
   OF_CUDA_CHECK(cudaMemsetAsync(workspace_ptr, 0, table_capacity_bytes, cuda_stream));
@@ -295,7 +301,8 @@ void UniqueAndPartition(cudaStream_t cuda_stream, int64_t num_ids, size_t capaci
       <<<BlocksNum4ThreadsNum(num_ids), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
           capacity, num_ids, num_partition, num_partitioned_unique_ids_ptr,
           reinterpret_cast<TableEntry<K>*>(workspace_ptr), ids, table_ids, partitioned_unique_ids,
-          partitioned_unique_table_ids, inverse_unique_partition_indices, need_process_table_ids);
+          partitioned_unique_table_ids, inverse_unique_partition_indices, need_process_table_ids,
+          has_padding_idx, padding_idx);
 }
 
 template<typename T, typename IDX>
@@ -467,14 +474,16 @@ template<typename K, typename U, typename IDX>
 void IdShuffle(ep::Stream* stream, ncclComm_t comm, const IdShuffleDataPtrs<K, U, IDX>& data_ptrs,
                int64_t num_ids, int64_t parallel_id, int64_t parallel_num,
                DataType num_unique_matrix_dtype, DataType ids_dtype, DataType table_ids_dtype,
-               bool need_process_table_ids, IDX* host_num_unique_matrix, IDX* host_num_keys) {
+               bool need_process_table_ids, const bool has_padding_idx, const int64_t padding_idx,
+               IDX* host_num_unique_matrix, IDX* host_num_keys) {
   cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
   size_t hash_table_capacity = parallel_num * num_ids;
   UniqueAndPartition<K, U, IDX, embedding::ShardingHash>(
       cuda_stream, num_ids, hash_table_capacity, parallel_num, data_ptrs.ids_ptr,
       data_ptrs.table_ids_ptr, data_ptrs.num_partitioned_unique, data_ptrs.partitioned_unique_ids,
       data_ptrs.partitioned_unique_table_ids, data_ptrs.inverse_unique_partition_indices_ptr,
-      data_ptrs.workspace_ptr, data_ptrs.workspace_size, need_process_table_ids);
+      data_ptrs.workspace_ptr, data_ptrs.workspace_size, need_process_table_ids, has_padding_idx,
+      padding_idx);
 
   OF_NCCL_CHECK(ncclAllGather(data_ptrs.num_partitioned_unique, data_ptrs.num_unique_matrix_ptr,
                               parallel_num, GetNcclDataType(num_unique_matrix_dtype), comm,
@@ -501,7 +510,7 @@ void IdShuffle(ep::Stream* stream, ncclComm_t comm, const IdShuffleDataPtrs<K, U
       data_ptrs.received_table_ids, data_ptrs.cur_rank_num_unique_ptr,
       data_ptrs.cur_rank_unique_ids_ptr, data_ptrs.cur_rank_unique_table_ids_ptr,
       data_ptrs.cur_rank_inverse_indices_ptr, data_ptrs.workspace_ptr, data_ptrs.workspace_size,
-      need_process_table_ids);
+      need_process_table_ids, has_padding_idx, padding_idx);
   if (!need_process_table_ids) {
     OF_CUDA_CHECK(cudaMemsetAsync(data_ptrs.cur_rank_unique_table_ids_ptr, 0,
                                   received_elem_cnt * sizeof(U), cuda_stream));

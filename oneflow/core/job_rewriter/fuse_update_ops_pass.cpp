@@ -139,7 +139,8 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
         .Attr<double>("scale", scale)
         .Attr<float>("l1", l1)
         .Attr<float>("l2", l2)
-        .Attr<float>("weight_decay", user_op_conf.attr<float>("weight_decay"));
+        .Attr<float>("weight_decay", user_op_conf.attr<float>("weight_decay"))
+        .Attr<float>("learning_rate_scale", user_op_conf.attr<float>("learning_rate_scale"));
     if (scale_by_tensor_lbn != "") {
       fused_op_builder.Input("scale_by_tensor", scale_by_tensor_lbn);
     }
