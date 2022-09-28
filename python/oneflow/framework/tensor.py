@@ -323,8 +323,13 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
                 other = flow._C.broadcast_like(other, self)
                 if not self.is_contiguous():
                     # NOTE: slice_update support non-contiguous input tensor
-                    with flow.no_grad:
+                    with flow.no_grad():
                         self[...] = other
+                    # requires_grad = self.requires_grad
+                    # if requires_grad:
+                    #     self.requires_grad=False
+                    # self[...] = other
+                    # self.requires_grad = requires_grad
                 else:
                     flow._C.assign_local_tensor(self, other)
                 return
