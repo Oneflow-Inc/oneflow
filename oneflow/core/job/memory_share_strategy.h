@@ -39,8 +39,12 @@ class MemoryShareStrategy {
   // Update the offset with the adjusted strategy
   void UpdateOffset(size_t* mem_block_size, HashMap<RegstDescProto*, int64_t>* regst_desc2offset);
 
+  // Update the maximum iteration step with the current size and lower bound
+  int32_t UpdateMaxIteration(size_t mem_block_size, size_t lower_bound);
+
  private:
   size_t mem_block_size_;
+  int32_t max_iteration_step_ = 10;
   std::vector<int64_t> register_offset_;
   std::vector<int64_t> register_size_;
   HashMap<RegstDescProto*, int32_t> register2index_;

@@ -143,7 +143,7 @@ size_t MemoryShareStrategy::ComputeOptimalAdjustedCost() {
   backup_registers_.resize(total_register_num_);
   // The number of steps that the optimal cost does not decrease
   int32_t step_no_decrease = 0;
-  for (int32_t m = 0; m < total_register_num_; m++) {
+  for (int32_t m = 0; m < max_iteration_step_; m++) {
     for (int32_t i = 0; i < total_register_num_; i++) {
       EliminateRegister(i);
       size_t cost_without_i = ComputeOptimalCostFrom0();
@@ -389,6 +389,16 @@ void MemoryShareStrategy::ResetCompactPosition(int32_t j) {
     // Might be unnecessary since we clear up should_visit_ before.
     should_visit_[i] = 0;
   }
+}
+
+// Update the maximum iteration step with the current size and lower bound
+int32_t MemoryShareStrategy::UpdateMaxIteration(size_t mem_block_size, size_t lower_bound) {
+  max_iteration_step_ = ((mem_block_size - lower_bound) * 100) / lower_bound;
+  // if mem_block_size is closed to the maximum number of type size_t, then we might have a negative
+  // value for (mem_block_size - lower_bound) * 100
+  // In this case, we just set a large max_iteration_step_
+  if (max_iteration_step_ < 0) { max_iteration_step_ = 100; }
+  return max_iteration_step_;
 }
 
 }  // namespace oneflow
