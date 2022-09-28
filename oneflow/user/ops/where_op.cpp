@@ -212,7 +212,9 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
   DataType cond_dtype = ctx->InputDType("condition", 0);
   CHECK_OR_RETURN(IsBoolDataType(cond_dtype) || IsIntegralDataType(cond_dtype));
   DataType x_dtype = ctx->InputDType("x", 0);
-  CHECK_EQ_OR_RETURN(x_dtype, ctx->InputDType("y", 0));
+  CHECK_EQ_OR_RETURN(x_dtype, ctx->InputDType("y", 0))
+      << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("y", 0)) << ", but got "
+      << DataType_Name(x_dtype);
   ctx->SetOutputDType("out", 0, x_dtype);
   return Maybe<void>::Ok();
 }
