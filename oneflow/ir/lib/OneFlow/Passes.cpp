@@ -19,9 +19,11 @@ limitations under the License.
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Location.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/TypeRange.h"
 #include "mlir/Support/LLVM.h"
@@ -189,6 +191,12 @@ func::FuncOp GetOrInsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operat
   }
   rewriter.create<func::ReturnOp>(loc, mapped_results);
   return func;
+}
+
+LogicalResult Lower2OKLOp(::mlir::PatternRewriter& rewriter, Operation* op) {
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPointAfter(op);
+  return success();
 }
 
 LLVM::LLVMFuncOp GetOrInsertKernelLLVMFuncOp(::mlir::PatternRewriter& rewriter, func::FuncOp op) {
@@ -904,6 +912,23 @@ struct ConvertOFKLCalleeToLLVMPattern : public mlir::OpRewritePattern<func::Func
   }
 };
 
+struct Lower2OKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
+  explicit Lower2OKLPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(func::FuncOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    auto& ops = op->getRegion(0).front();
+    for (auto& op : ops) {
+      if (!op.hasAttr("op_name")) {
+        if (isa<func::ReturnOp>(op)) { break; }
+        op.emitError("Failed to parse this op in kernel launch wrap func.");
+      }
+      if (failed(Lower2OKLOp(rewriter, &op))) { return failure(); }
+    }
+    return success();
+  }
+};
+
 func::FuncOp CreateWrapFunc(mlir::Location loc, std::vector<Operation*>& wrap_ops,
                             mlir::PatternRewriter& rewriter, int& name_index) {
   auto getProto = [&]() -> std::pair<std::vector<Value>, std::vector<Value>> {
@@ -951,20 +976,21 @@ func::FuncOp CreateWrapFunc(mlir::Location loc, std::vector<Operation*>& wrap_op
 };
 
 KernelLaunchOp CreateKernelLaunchFunc(mlir::Location loc, std::vector<Operation*>& wrap_ops,
-                                    mlir::PatternRewriter& rewriter, int& name_index) {
+                                      mlir::PatternRewriter& rewriter, int& name_index) {
   if (!wrap_ops.size()) return nullptr;
   OpBuilder::InsertionGuard guard(rewriter);
   auto wrap_func = CreateWrapFunc(loc, wrap_ops, rewriter, name_index);
   auto module = wrap_func->getParentOfType<ModuleOp>();
   rewriter.setInsertionPointAfter(wrap_ops.back());
-  auto func = rewriter.create<KernelLaunchOp>(wrap_ops[0]->getLoc(), wrap_func, wrap_ops[0]->getAttrs());
+  auto func =
+      rewriter.create<KernelLaunchOp>(wrap_ops[0]->getLoc(), wrap_func, wrap_ops[0]->getAttrs());
   auto func_name = wrap_func.getSymNameAttr();
   func->setAttr("op_name", func_name);
   if (failed(DumpAssembly(rewriter, func, func_name))) { exit(1); }
   int res_idx = 0;
   for (auto op : wrap_ops) {
     std::vector<Value> vals;
-    for(int idx=0;idx< op->getNumResults(); ++idx){
+    for (int idx = 0; idx < op->getNumResults(); ++idx) {
       vals.push_back(func->getResult(res_idx++));
     }
     rewriter.replaceOp(op, vals);
@@ -1071,6 +1097,11 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<MulCastPattern>(patterns.getContext());
 }
+
+void populateLower2OKLPasses(::mlir::RewritePatternSet& patterns) {
+  patterns.add<Lower2OKLPattern>(patterns.getContext());
+}
+
 void populateConvertOFKLCalleeToLLVMPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<ConvertOFKLCalleeToLLVMPattern>(patterns.getContext());
 }

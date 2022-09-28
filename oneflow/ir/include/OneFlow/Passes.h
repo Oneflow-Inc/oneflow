@@ -48,6 +48,7 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module);
 LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module);
 #endif  // WITH_MLIR_CUDA_CODEGEN
 void populateFuserPasses(::mlir::RewritePatternSet& patterns);
+void populateLower2OKLPasses(::mlir::RewritePatternSet& patterns);
 void populateConvertOFKLCalleeToLLVMPasses(::mlir::RewritePatternSet& patterns);
 void populateWrapOps2KernelLaunchPasses(::mlir::RewritePatternSet& patterns);
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns);

@@ -52,6 +52,9 @@ mlir_tablegen(SBPAttributes.h.inc -gen-attrdef-decls)
 mlir_tablegen(SBPAttributes.cpp.inc -gen-attrdef-defs)
 add_public_tablegen_target(MLIRSBPIncGen)
 
+set(LLVM_TARGET_DEFINITIONS OKL/OKLOps.td)
+add_public_tablegen_target(MLIROKLIncGen)
+
 set(LLVM_TABLEGEN_FLAGS "")
 add_mlir_dialect(
   OneFlowOps

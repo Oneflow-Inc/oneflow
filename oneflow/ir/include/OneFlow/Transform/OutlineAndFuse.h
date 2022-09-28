@@ -21,6 +21,7 @@ limitations under the License.
 namespace mlir {
 
 namespace oneflow {
+std::unique_ptr<mlir::Pass> createLower2OKLPass();
 std::unique_ptr<mlir::Pass> createConvertOFKLCalleeToLLVMPass();
 std::unique_ptr<mlir::Pass> createWrapOps2KernelLaunchPass();
 std::unique_ptr<mlir::Pass> createOutlineJitFunctionPass();

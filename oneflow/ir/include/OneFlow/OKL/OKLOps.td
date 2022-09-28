@@ -27,4 +27,16 @@ include "mlir/Pass/PassBase.td"
 
 include "mlir/IR/OpBase.td"
 
+def BuildContextOp : OKL_Op<"build_context"> {
+  let summary = "build context operation";
+}
+
+def BuildKernelOp : OKL_Op<"build_kernel"> {
+  let summary = "build kernel operation";
+}
+
+def LaunchOp : OKL_Op<"launch"> {
+  let summary = "launch operation";
+}
+
 #endif // ONEFLOW_IR_INCLUDE_OKL_OKLOPS_H_

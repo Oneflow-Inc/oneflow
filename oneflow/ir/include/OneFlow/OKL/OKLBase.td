@@ -22,4 +22,10 @@ include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 
+class OKL_Op<string mnemonic, list<Trait> traits = []> :
+    Op<OKL_Dialect, mnemonic, traits>;
+
+class OKL_Type<string name, list<Trait> traits = []>
+    : TypeDef<OKL_Dialect, name, traits> {
+}
 #endif // ONEFLOW_IR_INCLUDE_OKL_OKLBASE_H_
