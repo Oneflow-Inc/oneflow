@@ -152,6 +152,7 @@ from oneflow._C import reduce_sum as sum
 from oneflow._C import reduce_mean as mean
 from oneflow._C import reduce_all as all
 from oneflow._C import reduce_any as any
+from oneflow._C import reduce_nansum as nansum
 from oneflow._C import rsqrt
 from oneflow._C import sqrt
 from oneflow._C import square
@@ -205,6 +206,7 @@ from oneflow._C import amax
 from oneflow._C import swapdims
 from oneflow._C import t
 from oneflow._C import masked_fill
+from oneflow._C import masked_fill_
 from oneflow._C import equal
 from oneflow._C import equal as eq
 from oneflow._C import not_equal
@@ -218,6 +220,7 @@ from oneflow._C import isinf
 from oneflow._C import isfinite
 from oneflow._C import inv as inverse
 from oneflow._C import iinfo, finfo
+from oneflow._C import multinomial
 from oneflow._C import linalg_cross as cross
 from oneflow._C import bincount
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
@@ -345,6 +348,7 @@ from oneflow.nn.modules.constant import full_op as full
 from oneflow.nn.modules.constant import full_like_op as full_like
 from oneflow.nn.modules.constant import new_ones_op as new_ones
 from oneflow.nn.modules.constant import new_zeros_op as new_zeros
+from oneflow.nn.modules.constant import new_full_op as new_full
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.empty import new_empty_op as new_empty
 from oneflow.nn.modules.empty import empty_like_op as empty_like
@@ -408,6 +412,7 @@ from oneflow.amp.autocast_mode import *
 from . import (
     autograd,
     distributed,
+    distributions,
     linalg,
     optim,
     comm,

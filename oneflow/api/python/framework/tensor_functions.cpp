@@ -274,6 +274,7 @@ DIRECT_PASS_FUNC(PyTensorObject_maximum, functional::maximum)
 DIRECT_PASS_FUNC(PyTensorObject_minimum, functional::minimum)
 DIRECT_PASS_FUNC(PyTensorObject_tril, functional::tril)
 DIRECT_PASS_FUNC(PyTensorObject_triu, functional::triu)
+DIRECT_PASS_FUNC(PyTensorObject_triu_, functional::triu_)
 DIRECT_PASS_FUNC(PyTensorObject_softmax, functional::softmax)
 DIRECT_PASS_FUNC(PyTensorObject_log_softmax, functional::log_softmax)
 DIRECT_PASS_FUNC(PyTensorObject_roll, functional::roll)
@@ -290,6 +291,7 @@ DIRECT_PASS_FUNC(PyTensorObject_pow, functional::pow)
 DIRECT_PASS_FUNC(PyTensorObject_chunk, functional::chunk)
 DIRECT_PASS_FUNC(PyTensorObject_narrow, functional::narrow)
 DIRECT_PASS_FUNC(PyTensorObject_masked_fill, functional::masked_fill)
+DIRECT_PASS_FUNC(PyTensorObject_masked_fill_, functional::masked_fill_)
 DIRECT_PASS_FUNC(PyTensorObject_dot, functional::dot)
 
 // functions that parsing at Python C api layer
@@ -648,14 +650,16 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
   CHECK_OR_THROW(tensor->is_local()) << Error::RuntimeError() << "input must be a local tensor";
   PyObject* placement_obj = Py_None;
   PyObject* sbp_obj = Py_None;
-  bool check_meta = true;
-  bool copy = false;
+  PyObject* check_meta_obj = Py_True;
+  PyObject* copy_obj = Py_False;
   static const char* keywords[5] = {"placement", "sbp", "check_meta", "copy", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$OO!:local_to_global",
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$O!O!:local_to_global",
                                    const_cast<char**>(keywords), &placement_obj, &sbp_obj,
-                                   &PyBool_Type, &check_meta, &PyBool_Type, &copy)) {
+                                   &PyBool_Type, &check_meta_obj, &PyBool_Type, &copy_obj)) {
     return NULL;
-  };
+  }
+  const bool check_meta = (check_meta_obj == Py_True);
+  const bool copy = (copy_obj == Py_True);
 
   CHECK_OR_THROW(placement_obj != Py_None && sbp_obj != Py_None)
       << Error::InvalidValueError()
@@ -688,14 +692,16 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
   Symbol<ParallelDesc> placement;
   std::vector<Symbol<SbpParallel>> sbp;
   std::vector<Symbol<SbpParallel>> grad_sbp;
-  bool check_meta = false;
-  bool copy = false;
+  PyObject* check_meta_obj = Py_False;
+  PyObject* copy_obj = Py_False;
   static const char* keywords[6] = {"placement", "sbp", "grad_sbp", "check_meta", "copy", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$OOO!:global_to_global",
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$OO!O!:global_to_global",
                                    const_cast<char**>(keywords), &placement_obj, &sbp_obj,
-                                   &grad_sbp_obj, &PyBool_Type, &check_meta, &PyBool_Type, &copy)) {
+                                   &grad_sbp_obj, &PyBool_Type, &check_meta_obj, &copy_obj)) {
     return NULL;
-  };
+  }
+  const bool check_meta = (check_meta_obj == Py_True);
+  const bool copy = (copy_obj == Py_True);
 
   // sbp
   CHECK_OR_THROW(sbp_obj == Py_None || functional::PySbpParallelCheck(sbp_obj)
@@ -890,6 +896,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"minimum", (PyCFunction)PyTensorObject_minimum, METH_VARARGS | METH_KEYWORDS, NULL},
     {"tril", (PyCFunction)PyTensorObject_tril, METH_VARARGS | METH_KEYWORDS, NULL},
     {"triu", (PyCFunction)PyTensorObject_triu, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"triu_", (PyCFunction)PyTensorObject_triu_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"softmax", (PyCFunction)PyTensorObject_softmax, METH_VARARGS | METH_KEYWORDS, NULL},
     {"log_softmax", (PyCFunction)PyTensorObject_log_softmax, METH_VARARGS | METH_KEYWORDS, NULL},
     {"roll", (PyCFunction)PyTensorObject_roll, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -907,6 +914,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"chunk", (PyCFunction)PyTensorObject_chunk, METH_VARARGS | METH_KEYWORDS, NULL},
     {"narrow", (PyCFunction)PyTensorObject_narrow, METH_VARARGS | METH_KEYWORDS, NULL},
     {"masked_fill", (PyCFunction)PyTensorObject_masked_fill, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"masked_fill_", (PyCFunction)PyTensorObject_masked_fill, METH_VARARGS | METH_KEYWORDS, NULL},
     {"dot", (PyCFunction)PyTensorObject_dot, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
