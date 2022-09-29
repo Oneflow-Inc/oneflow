@@ -28,7 +28,7 @@ namespace oneflow {
 ResourceDesc::ResourceDesc(const Resource& resource, int64_t num_process_per_node)
     : resource_(resource) {
   CHECK_GT(resource_.machine_num(), 0);
-  CHECK_LE(resource_.machine_num(), Singleton<EnvDesc>::Get()->TotalMachineNum());
+  // CHECK_LE(resource_.machine_num(), Singleton<EnvDesc>::Get()->TotalMachineNum());
   for (int i = 0; i < GlobalProcessCtx::WorldSize(); ++i) {
     CHECK(process_ranks_.emplace(i).second);
   }

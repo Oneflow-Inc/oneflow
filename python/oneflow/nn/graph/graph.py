@@ -558,11 +558,11 @@ class Graph(object):
     def _ops_repr(self):
         r"""Generate operators' string representation of this graph
         """
-        if self._is_compiled and self._compiled_graph_proto is not None:
-            module_conf = self._compiled_graph_proto.module_name2module_conf[self.name]
+        if self._full_job_proto is not None:
+            module_conf = self._full_job_proto.module_name2module_conf[self.name]
             return operators_repr(
                 module_conf.ops,
-                self._compiled_graph_proto,
+                self._full_job_proto,
                 self._debug_op_repr_with_py_stack,
             )
 
@@ -620,7 +620,7 @@ class Graph(object):
 
     @property
     def _compiled_graph_proto(self):
-        if not self._is_compiled:
+        if self._compiled_job_proto is None:
             self.__print(
                 2,
                 0,
@@ -777,6 +777,7 @@ class Graph(object):
     def _compile(self, *args, **kwargs):
         self.__ensure_input_tensors_contiguous(*args, **kwargs)
         _, eager_outputs = self.build_graph(*args, **kwargs)
+        self.__print(0, 1, self.__repr__())
         self.finish_complie_and_init_runtime()
         return eager_outputs
 

@@ -454,9 +454,10 @@ Maybe<void> NNGraph::NaiveCompile() {
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
     PlanUtil::PlanMemoryLog(&plan_, name_);
-    if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-      PlanUtil::GenLightPlan(&plan_, name_);
-    }
+    // if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    //   PlanUtil::GenLightPlan(&plan_, name_);
+    // }
+    PlanUtil::GenLightPlan(&plan_, name_);
   }
   compile_time_counter->Count("Graph name: " + name_ + " naive compile full plan", 1);
   if (GlobalProcessCtx::WorldSize() > 1) {
