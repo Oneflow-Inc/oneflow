@@ -38,6 +38,7 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
     const float weight_decay = ctx->Attr<float>("weight_decay");
     const float* learning_rate_ptr = nullptr;
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
+    const float lr_scale = ctx->Attr<float>("learning_rate_scale");
 
     if (ctx->has_input("learning_rate", 0)) {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
@@ -75,7 +76,8 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
       if (count == kMaxTuples || tensor_idx == n_tensor - 1) {
         MultiTensorSGDUpdateKernelUtil<device_type, T, G>::Update(
             ctx->stream(), total_elem_cnt, count, static_cast<T>(scale), l1, l2, weight_decay,
-            learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, tensor_tuple_params);
+            learning_rate_val, lr_scale, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
+            tensor_tuple_params);
         count = 0;
         total_elem_cnt = 0;
       }
@@ -123,6 +125,7 @@ class MultiTensorAdamUpdateKernel final : public user_op::OpKernel,
 
     const float* learning_rate_ptr = nullptr;
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
+    const float lr_scale = ctx->Attr<float>("learning_rate_scale");
 
     if (ctx->has_input("learning_rate", 0)) {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
@@ -183,7 +186,7 @@ class MultiTensorAdamUpdateKernel final : public user_op::OpKernel,
         MultiTensorAdamUpdateKernelUtil<device_type, T, G>::Update(
             ctx->stream(), total_elem_cnt, count, static_cast<T>(scale), l1, l2, beta1, beta2,
             epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val,
-            bias_correction1_val, bias_correction2_val, learning_rate_ptr, scale_by_ptr,
+            bias_correction1_val, bias_correction2_val, lr_scale, learning_rate_ptr, scale_by_ptr,
             skip_if_ptr, bias_correction1_ptr, bias_correction2_ptr, tensor_tuple_params);
         count = 0;
         total_elem_cnt = 0;
@@ -223,6 +226,7 @@ class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
     const float weight_decay = ctx->Attr<float>("weight_decay");
     const float* learning_rate_ptr = nullptr;
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
+    const float lr_scale = ctx->Attr<float>("learning_rate_scale");
 
     if (ctx->has_input("learning_rate", 0)) {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
@@ -262,7 +266,8 @@ class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
       if (count == kMaxTuples || tensor_idx == n_tensor - 1) {
         MultiTensorSGDUpdateWithCastKernelUtil<device_type, T, G>::Update(
             ctx->stream(), total_elem_cnt, count, static_cast<T>(scale), l1, l2, weight_decay,
-            learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, tensor_tuple_params);
+            learning_rate_val, lr_scale, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
+            tensor_tuple_params);
         count = 0;
         total_elem_cnt = 0;
       }
@@ -310,6 +315,7 @@ class MultiTensorAdamUpdateWithCastKernel final : public user_op::OpKernel,
 
     const float* learning_rate_ptr = nullptr;
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
+    const float lr_scale = ctx->Attr<float>("learning_rate_scale");
 
     if (ctx->has_input("learning_rate", 0)) {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
@@ -372,7 +378,7 @@ class MultiTensorAdamUpdateWithCastKernel final : public user_op::OpKernel,
         MultiTensorAdamUpdateWithCastKernelUtil<device_type, T, G>::Update(
             ctx->stream(), total_elem_cnt, count, static_cast<T>(scale), l1, l2, beta1, beta2,
             epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val,
-            bias_correction1_val, bias_correction2_val, learning_rate_ptr, scale_by_ptr,
+            bias_correction1_val, bias_correction2_val, lr_scale, learning_rate_ptr, scale_by_ptr,
             skip_if_ptr, bias_correction1_ptr, bias_correction2_ptr, tensor_tuple_params);
         count = 0;
         total_elem_cnt = 0;
