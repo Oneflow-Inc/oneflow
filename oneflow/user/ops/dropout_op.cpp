@@ -84,7 +84,9 @@ namespace oneflow {
 
 /* static */ Maybe<void> DropoutGradOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
-  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kBool);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kBool)
+      << "InferDataType Failed. Expected " << DataType_Name(DataType::kBool) << ", but got "
+      << DataType_Name(ctx->InputDType("mask", 0));
   return Maybe<void>::Ok();
 }
 
