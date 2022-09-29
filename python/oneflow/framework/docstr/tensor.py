@@ -239,7 +239,7 @@ add_docstr(
     """
     Tensor.new_zeros(size=None, dtype=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
 
-    Returns a Tensor of size size filled with 0. By default, the returned Tensor has the same torch.dtype and torch.device as this tensor.
+    Returns a Tensor of size size filled with 0. By default, the returned Tensor has the same oneflow.dtype, oneflow.device or oneflow.placement and oneflow.sbp as this tensor.
 
     Args:
         size (int...): a list, tuple, or flow.Size of integers defining the shape of the output tensor.
@@ -261,6 +261,37 @@ add_docstr(
         >>> y
         tensor([[0., 0.],
                 [0., 0.]], dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.new_full,
+    """
+    Tensor.new_full(size, fill_value, dtype=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
+
+    Returns a Tensor of size size filled with fill_value. By default, the returned Tensor has the same oneflow.dtype, oneflow.device or oneflow.placement and oneflow.sbp as this tensor.
+
+    Args:
+        fill_value (scalar): the number to fill the output tensor with.
+        size (int...): a list, tuple, or flow.Size of integers defining the shape of the output tensor.
+        dtype (flow.dtype, optional):  the desired type of returned tensor. Default: if None, same flow.dtype as this tensor.
+        device (flow.device, optional): the desired device of returned tensor. Default: if None, same flow.device as this tensor.
+        placement (flow.placement, optional): the desired placement of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+
+        >>> tensor = flow.ones((2,), dtype=flow.float64)
+        >>> tensor.new_full((3, 4), 3.141592)
+        tensor([[3.1416, 3.1416, 3.1416, 3.1416],
+                [3.1416, 3.1416, 3.1416, 3.1416],
+                [3.1416, 3.1416, 3.1416, 3.1416]], dtype=oneflow.float64)
     """,
 )
 
@@ -1715,6 +1746,13 @@ add_docstr(
     oneflow.Tensor.masked_fill,
     """
     See :func:`oneflow.masked_fill`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.masked_fill_,
+    """
+    In-place version of :meth:`oneflow.Tensor.masked_fill`.
     """,
 )
 
