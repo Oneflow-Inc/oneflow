@@ -39,35 +39,40 @@ namespace functional {
 
 namespace detail {
 
+namespace {
+
 template<typename T>
 Maybe<T> GetItemInScalarTensor(PyObject* obj) {
-  auto tensor = PyTensor_Unpack(obj);
-  if (tensor->is_global()) {
-    Symbol<ParallelDesc> parallel_desc;
-    {
-      const ParallelConf parallel_conf = GenParallelConfOfCpuOnAllRanks();
-      JUST(PhysicalRun(
-          [&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-            parallel_desc = SymbolOf(*JUST(builder->GetParallelDescSymbol(parallel_conf)));
-            return Maybe<void>::Ok();
-          }));
+  std::shared_ptr<LocalTensor> local_tensor;
+  {
+    auto tensor = PyTensor_Unpack(obj);
+    if (tensor->is_global()) {
+      Symbol<ParallelDesc> parallel_desc;
+      {
+        const ParallelConf parallel_conf = GenParallelConfOfCpuOnAllRanks();
+        JUST(PhysicalRun(
+            [&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
+              parallel_desc = SymbolOf(*JUST(builder->GetParallelDescSymbol(parallel_conf)));
+              return Maybe<void>::Ok();
+            }));
+      }
+      const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
+      tensor = JUST(functional::ToGlobal(tensor, parallel_desc, {broadcast_sbp}, /*grad_sbp=*/{},
+                                         /*check_meta=*/false, /*copy=*/false));
+      tensor = JUST(functional::GlobalToLocal(tensor, /*copy=*/false));
     }
-    const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
-    tensor = JUST(functional::ToGlobal(tensor, parallel_desc, {broadcast_sbp}, /*grad_sbp=*/{},
-                                       /*check_meta=*/false, /*copy=*/false));
-    tensor = JUST(functional::GlobalToLocal(tensor, /*copy=*/false));
+    local_tensor = JUST(tensor->AsLocalTensor());
   }
-  std::shared_ptr<LocalTensor> local_tensor = JUST(tensor->AsLocalTensor());
 
   T scalar = 0;
-  if (JUST(tensor->device())->enum_type() == kCPU) {
+  if (JUST(local_tensor->device())->enum_type() == kCPU) {
     const auto& Callback = [&](ep::Stream*,
                                const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
       scalar = *eager_blob_object->mut_dptr<T>();
     };
     auto btb = std::make_shared<BlockingThenBusy>(1);
     JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(tensor, btb, Callback, "const");
+      return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, "const");
     }));
     JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
   } else {
@@ -78,12 +83,14 @@ Maybe<T> GetItemInScalarTensor(PyObject* obj) {
     };
     auto btb = std::make_shared<BlockingThenBusy>(1);
     JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(tensor, btb, Callback, "const");
+      return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, "const");
     }));
     JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
   }
   return scalar;
 }
+
+}  // namespace
 
 template<typename T, typename std::enable_if<!std::is_base_of<py::object, T>::value, int>::type = 0>
 bool isinstance_fast(PyObject* obj) {
