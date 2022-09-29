@@ -132,33 +132,6 @@ struct AvgPoolKernelUtil {
                                 const AvgPoolParams3D& params_3d);
 };
 
-template<DeviceType device_type, typename IDX>
-struct AvgPoolKernelUtil<device_type, half, IDX> {
-  static void Avgpool1dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
-                               const IDX elem_num, const half* src, half* dest,
-                               const AvgPoolParams3D& params_3d);
-
-  static void Avgpool1dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
-                                const IDX elem_num, const half* src, half* dest,
-                                const AvgPoolParams3D& params_3d);
-
-  static void Avgpool2dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 3>& index_helper,
-                               const IDX elem_num, const half* src, half* dest,
-                               const AvgPoolParams3D& params_3d);
-
-  static void Avgpool2dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 3>& index_helper,
-                                const IDX elem_num, const half* src, half* dest,
-                                const AvgPoolParams3D& params_3d);
-
-  static void Avgpool3dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 4>& index_helper,
-                               const IDX elem_num, const half* src, half* dest,
-                               const AvgPoolParams3D& params_3d);
-
-  static void Avgpool3dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 4>& index_helper,
-                                const IDX elem_num, const half* src, half* dest,
-                                const AvgPoolParams3D& params_3d);
-};
-
 template<typename T, typename IDX>
 OF_DEVICE_FUNC void Avgpool1dForwardCompute(const NdIndexOffsetHelper<IDX, 2> index_helper,
                                             IDX elem_num, const T* src, T* dest,
@@ -429,6 +402,34 @@ OF_DEVICE_FUNC void Avgpool3dBackwardCompute(
   }
 }
 
+#ifdef WITH_CUDA
+template<DeviceType device_type, typename IDX>
+struct AvgPoolKernelUtil<device_type, half, IDX> {
+  static void Avgpool1dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
+                               const IDX elem_num, const half* src, half* dest,
+                               const AvgPoolParams3D& params_3d);
+
+  static void Avgpool1dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
+                                const IDX elem_num, const half* src, half* dest,
+                                const AvgPoolParams3D& params_3d);
+
+  static void Avgpool2dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 3>& index_helper,
+                               const IDX elem_num, const half* src, half* dest,
+                               const AvgPoolParams3D& params_3d);
+
+  static void Avgpool2dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 3>& index_helper,
+                                const IDX elem_num, const half* src, half* dest,
+                                const AvgPoolParams3D& params_3d);
+
+  static void Avgpool3dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 4>& index_helper,
+                               const IDX elem_num, const half* src, half* dest,
+                               const AvgPoolParams3D& params_3d);
+
+  static void Avgpool3dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 4>& index_helper,
+                                const IDX elem_num, const half* src, half* dest,
+                                const AvgPoolParams3D& params_3d);
+};
+
 template<typename IDX>
 OF_DEVICE_FUNC void HalfAvgpool1dForwardCompute(const NdIndexOffsetHelper<IDX, 2> index_helper,
                                                 IDX elem_num, const half* src, half* dest,
@@ -693,6 +694,8 @@ OF_DEVICE_FUNC void HalfAvgpool3dBackwardCompute(
     }
   }
 }
+
+#endif  // WITH_CUDA
 
 #define INSTANTIATE_AVG_POOL_KERNEL_UTIL(device_type_v, dtype_pair, index_dtype_pair) \
   template struct AvgPoolKernelUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),      \
