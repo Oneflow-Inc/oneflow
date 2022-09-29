@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include <cstddef>
 #include <memory>
 
 #include "oneflow/core/common/maybe.h"
@@ -128,10 +127,8 @@ template<>
 /* static */ Maybe<TensorTuple> OpInterpUtil::Dispatch<TensorTuple>(
     const OpExpr& op_expr, const TensorTuple& inputs, const OpExprInterpContext& ctx) {
   OF_PROFILER_RANGE_GUARD("Dispatch");
-  functional::TensorLayoutProcessor processor(inputs, JUST(op_expr.SupportNonContiguous()));
-  JUST(processor.Apply());
   auto outputs = std::make_shared<TensorTuple>(op_expr.output_size());
-  JUST(Dispatch(op_expr, processor.inputs(), outputs.get(), ctx));
+  JUST(Dispatch(op_expr, inputs, outputs.get(), ctx));
   return outputs;
 }
 
@@ -147,9 +144,12 @@ template<>
                                                 TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) {
   OF_PROFILER_RANGE_GUARD("Dispatch");
-  functional::TensorLayoutProcessor processor(inputs, outputs,
-                                              JUST(op_expr.SupportNonContiguous()));
-  JUST(processor.Apply());
+  functional::TensorProcessorPipe processor(inputs, outputs);
+  if (autocast::is_enabled()) {
+    JUST(processor.Apply<functional::TensorAutoCastProcessor>(
+        *JUST(op_expr.GetOrCreateAutoCastMeta())));
+  }
+  JUST(processor.Apply<functional::TensorLayoutProcessor>(JUST(op_expr.SupportNonContiguous())));
   return JUST(GetInterpreter(processor.inputs(), ctx, op_expr))
       ->Apply(op_expr, processor.inputs(), processor.outputs(), ctx);
 }

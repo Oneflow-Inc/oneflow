@@ -58,7 +58,7 @@ Maybe<void> BoxingZerosOp::InferOutBlobDescs(
   const BoxingZerosOpConf& conf = this->op_conf().boxing_zeros_conf();
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   out->set_data_type(conf.data_type());
-  out->mut_shape() = Shape(conf.shape());
+  out->set_shape(Shape(conf.shape()));
   return Maybe<void>::Ok();
 }
 

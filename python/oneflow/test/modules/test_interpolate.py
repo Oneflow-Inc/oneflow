@@ -653,6 +653,27 @@ def _test_interpolate_area_3d(test_case, device):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-05, 1e-05))
 
 
+def _test_interpolate_output_size_arg_with_scalar(test_case, device):
+    mode = "bicubic"
+    x = flow.Tensor(8, 32, 64).to(device)
+
+    window = 16
+    t = x.shape[2]
+    x = x[:, None]
+
+    np_center = np.random.randint(window, t - window, (1,))[0]
+    np_warped = np.random.randint(np_center - window, np_center + window, (1,))[0] + 1
+
+    center = flow.tensor(np_center)
+    warped = flow.tensor(np_warped)
+
+    res = flow.nn.functional.interpolate(
+        x[:, :, :center], (warped, x.shape[3]), mode=mode, align_corners=False
+    )
+    test_case.assertTrue(np.array_equal(res.size()[0], 8))
+    test_case.assertTrue(np.array_equal(res.size()[1], 1))
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestInterpolate(flow.unittest.TestCase):
     def test_interpolate(test_case):
@@ -670,6 +691,7 @@ class TestInterpolate(flow.unittest.TestCase):
             _test_interpolate_area_1d,
             _test_interpolate_area_2d,
             _test_interpolate_area_3d,
+            _test_interpolate_output_size_arg_with_scalar,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

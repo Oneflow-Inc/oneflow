@@ -98,7 +98,7 @@ namespace oneflow {
     FOR_RANGE(int64_t, j, like_num_axes, in_num_axes) {
       out_i_dim_vec.emplace_back(in_desc.shape().At(j));
     }
-    *out_i_desc->mut_shape() = Shape(out_i_dim_vec);
+    out_i_desc->set_shape(Shape(out_i_dim_vec));
     out_i_desc->set_is_dynamic(like_i_desc.is_dynamic());
   }
   if (dynamic_dim_size == 0) {
@@ -121,7 +121,7 @@ namespace oneflow {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
     user_op::TensorDesc* out_i_desc = ctx->MutOutputTensorDesc("out", i);
-    *out_i_desc->mut_data_type() = in_desc.data_type();
+    out_i_desc->set_data_type(in_desc.data_type());
   }
   return Maybe<void>::Ok();
 }

@@ -221,6 +221,30 @@ class TestTensorOps(flow.unittest.TestCase):
         y = x.double()
         return y
 
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    def test_bool(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        y = x.bool()
+        return y
+
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    def test_bool_0dim(test_case):
+        device = random_device()
+        x = random_tensor(ndim=0).to(device)
+        y = x.bool()
+        return y
+
+    @autotest(n=5, auto_backward=False)
+    def test_bool_with_non_contiguous_input(test_case):
+        device = random_device()
+        permute_list = list(range(4))
+        shuffle(permute_list)
+        input = random_tensor(ndim=4).to(device)
+        x = input.permute(permute_list)
+        y = x.bool()
+        return y
+
     # Not check graph because of 2 reason.
     # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
     # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.

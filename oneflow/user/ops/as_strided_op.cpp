@@ -25,7 +25,7 @@ namespace oneflow {
   DimVector out_vec;
   out_vec.insert(out_vec.end(), size.cbegin(), size.cend());
   user_op::TensorDesc* output_desc = ctx->MutOutputTensorDesc("output", 0);
-  *output_desc->mut_shape() = Shape(out_vec);
+  output_desc->set_shape(Shape(out_vec));
   return Maybe<void>::Ok();
 }
 /*static*/ auto AsStridedOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
@@ -35,7 +35,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ auto AsStridedOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
-  *ctx->MutOutputDType("output", 0) = ctx->InputDType("input", 0);
+  ctx->SetOutputDType("output", 0, ctx->InputDType("input", 0));
   return Maybe<void>::Ok();
 }
 
@@ -43,7 +43,7 @@ namespace oneflow {
     -> Maybe<void> {
   const Shape& input_shape = ctx->InputShape("input", 0);
   user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
-  *dx_desc->mut_shape() = input_shape;
+  dx_desc->set_shape(input_shape);
   return Maybe<void>::Ok();
 }
 /*static*/ auto AsStridedGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
@@ -54,7 +54,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ auto AsStridedGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("input", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("input", 0));
   return Maybe<void>::Ok();
 }
 

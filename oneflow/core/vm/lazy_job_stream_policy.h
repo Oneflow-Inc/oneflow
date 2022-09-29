@@ -53,6 +53,8 @@ class LazyJobStreamPolicy final : public StreamPolicy {
                              InstructionStatusBuffer* status_buffer) const override;
   void DeleteInstructionStatus(const Stream& stream,
                                InstructionStatusBuffer* status_buffer) const override;
+  bool QueryInstructionStatusLaunched(const Stream& stream,
+                                      const InstructionStatusBuffer& status_buffer) const override;
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
   void Run(Instruction* instruction) const override;

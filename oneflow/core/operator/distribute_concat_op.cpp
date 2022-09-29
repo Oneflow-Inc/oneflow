@@ -77,7 +77,9 @@ Maybe<void> DistributeConcatOp::InferLogicalOutBlobDescs(
     }
     CHECK_EQ_OR_RETURN(in_i->data_type(), out->data_type());
   }
-  out->mut_shape().Set(concat_axis, concat_dim_size);
+  Shape output = out->shape();
+  output.Set(concat_axis, concat_dim_size);
+  out->set_shape(output);
   out->set_is_dynamic(false);
   return Maybe<void>::Ok();
 }
@@ -120,7 +122,7 @@ Maybe<void> DistributeConcatOp::InferOutBlobDescs(
   }
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *first_blob_desc;
-  out_blob_desc->mut_shape() = Shape(out_dim_vec);
+  out_blob_desc->set_shape(Shape(out_dim_vec));
   out_blob_desc->set_is_dynamic(false);
   return Maybe<void>::Ok();
 }

@@ -164,7 +164,6 @@ Maybe<one::UserOpExpr> RankGroupAndDeviceType2AllReduceOpExpr(Symbol<RankGroup> 
       .Input("in")
       .Output("out")
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      .Attr<bool>("async_launch", true)
       .Build();
 }
 

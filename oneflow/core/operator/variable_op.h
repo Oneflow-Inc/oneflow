@@ -47,6 +47,7 @@ class VariableOp final : public Operator {
                                   const ParallelDesc& parallel_desc,
                                   std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
                                       NdSbpInferHint4Ibn) const override;
+  DumpNdSbpSignatureForOpConfFn GetDumpNdSbpSignatureForOpConfFn() const override;
 };
 
 }  // namespace oneflow

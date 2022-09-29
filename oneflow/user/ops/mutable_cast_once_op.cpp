@@ -21,8 +21,8 @@ namespace oneflow {
 /* static */ Maybe<void> MutableCastOnceOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* output_tensor_desc = ctx->MutOutputTensorDesc("out", 0);
-  *output_tensor_desc->mut_shape() = input_tensor_desc.shape();
-  *output_tensor_desc->mut_is_dynamic() = input_tensor_desc.is_dynamic();
+  output_tensor_desc->set_shape(input_tensor_desc.shape());
+  output_tensor_desc->set_is_dynamic(input_tensor_desc.is_dynamic());
   return Maybe<void>::Ok();
 }
 
@@ -41,8 +41,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> MutableCastOnceOp::InferDataType(user_op::InferContext* ctx) {
   user_op::TensorDesc* output_tensor_desc = ctx->MutOutputTensorDesc("out", 0);
-  DataType* dtype = output_tensor_desc->mut_data_type();
-  *dtype = ctx->Attr<DataType>("dtype");
+  output_tensor_desc->set_data_type(ctx->Attr<DataType>("dtype"));
   return Maybe<void>::Ok();
 }
 
