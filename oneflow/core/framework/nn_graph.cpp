@@ -301,14 +301,24 @@ Maybe<void> NNGraph::MasterRankCompile() {
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     std::vector<Plan> plans(GlobalProcessCtx::WorldSize());
     JUST(OpGraph::WithSingleton(&job_, [&]() -> Maybe<void> {
-      auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
-      JUST(BoxingTaskGraph::New())->ToProto(boxing_task_graph_proto.get());
+      auto boxing_task_graph = JUST(BoxingTaskGraph::New());
       // reachable collective boxing task pairs,
       std::vector<HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>>
           reachable_cb_pairs{GlobalProcessCtx::WorldSize()};
       Loop(GlobalProcessCtx::WorldSize(), [&](size_t i) {
+        auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
+        auto PickTaskNode = [&]() -> std::function<bool(TaskNode*)> {
+          if (i >= kWorkerStartRank) {
+            return [i](TaskNode* task_node) {
+              return BoxingTaskGraph::SelectTaskNodeByRank(task_node, i);
+            };
+          } else {
+            return [](TaskNode*) { return true; };
+          }
+        }();
+        boxing_task_graph->ToProto(PickTaskNode, boxing_task_graph_proto.get());
         Plan rank_plan;
-        auto* plan = (i > 0) ? &rank_plan : &plan_;
+        auto* plan = (i >= kWorkerStartRank) ? &rank_plan : &plan_;
         double start = GetCurTime();
         // TODO(chengcheng): new memory reused by chunk
         CHECK_JUST(
@@ -380,7 +390,7 @@ Maybe<void> NNGraph::MasterRankCompile() {
   OF_SESSION_BARRIER();
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
-
+  LOG(ERROR) << "compile finished.";
   return Maybe<void>::Ok();
 }
 

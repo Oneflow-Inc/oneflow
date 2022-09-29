@@ -912,23 +912,91 @@ Maybe<void> BoxingTaskGraph::Init() {
   return Maybe<void>::Ok();
 }
 
-void BoxingTaskGraph::ToProto(BoxingTaskGraphProto* proto) const {
-  auto* map = proto->mutable_op_name2compute_tasks();
-  HashSet<const TaskNode*> comp_task_nodes{};
-  for (const auto& pair : op_node2sorted_comp_tasks_) {
-    auto* compute_task_protos = (*map)[pair.first->op().op_name()].mutable_parallel_id2task();
-    for (const auto* task_node : pair.second) {
-      task_node->ToProto(compute_task_protos->Add(), /*check=*/false);
-      comp_task_nodes.insert(task_node);
+namespace {
+
+bool IsComputTaskNodeDutyRank(int64_t current_rank, const ParallelDesc& parallel_desc,
+                              int64_t task_node_rank) {
+  if (current_rank == 0) {
+    // make sure master knows at least one op_node.
+    return CHECK_JUST(parallel_desc.MachineId4ParallelId(0)) == task_node_rank;
+  } else if (parallel_desc.HasMachineId(current_rank)) {
+    // workers only care their own rank.
+    return current_rank == task_node_rank;
+  } else {
+    return false;
+  }
+}
+
+template<typename RetT, typename HandleTansportTaskNodeT, typename HandleComputeTaskNodeT>
+RetT TaskNodeVisitor(TaskNode* task_node, const HandleTansportTaskNodeT& HandleTansportTaskNode,
+                     const HandleComputeTaskNodeT& HandleComputeTaskNode) {
+  auto* transport_task_node = dynamic_cast<TransportTaskNode*>(task_node);
+  if (transport_task_node != nullptr) {
+    return HandleTansportTaskNode(transport_task_node);
+  } else {
+    auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
+    if (comp_task_node != nullptr) {
+      return HandleComputeTaskNode(comp_task_node);
+    } else {
+      UNIMPLEMENTED();
     }
   }
-  ForEachNode([&](TaskNode* node) {
-    if (comp_task_nodes.count(node) > 0) { return; }
-    const auto* transport_task_node = dynamic_cast<TransportTaskNode*>(node);
-    CHECK(transport_task_node != nullptr) << "task_type: " << node->GetTaskType();
-    transport_task_node->ToTransportTaskProtoIf(proto->mutable_transport_task()->Add());
+}
+
+}  // namespace
+
+/*static*/ bool BoxingTaskGraph::SelectTaskNodeByRank(TaskNode* task_node, int64_t rank) {
+  return TaskNodeVisitor<bool>(
+      task_node, [&](TransportTaskNode* task_node) { return task_node->machine_id() == rank; },
+      [&](CompTaskNode* task_node) {
+        const auto& machine_id = task_node->machine_id();
+        return IsComputTaskNodeDutyRank(rank, task_node->op_node()->parallel_desc(), machine_id);
+      });
+}
+
+void BoxingTaskGraph::ToProto(const std::function<bool(TaskNode*)>& Pick,
+                              BoxingTaskGraphProto* proto) const {
+  const auto sources = [&]() -> std::list<TaskNode*> {
+    HashSet<TaskNode*> sources;
+    ForEachNode([&](TaskNode* task_node) {
+      if (Pick(task_node)) { sources.insert(task_node); }
+    });
+    for (auto* source : sources) {
+      // The consumed task_ids must be generated from out_nodes.
+      source->ForEachNodeOnOutEdge([&](TaskNode* out_node) { sources.insert(out_node); });
+    }
+    return std::list<TaskNode*>{sources.begin(), sources.end()};
+  }();
+  const auto& TransportTaskNodeToProto = [&](TransportTaskNode* task_node) {
+    task_node->ToTransportTaskProtoIf(proto->mutable_transport_task()->Add());
+  };
+  const auto& ComputeTaskNodeToProto = [&](CompTaskNode* task_node) {
+    auto* map = proto->mutable_op_name2compute_tasks();
+    const auto& op_name = task_node->op_node()->op().op_name();
+    auto* parallel_id2task_proto = (*map)[op_name].mutable_parallel_id2task();
+    int64_t parallel_id = task_node->parallel_id();
+    task_node->ToProto(&(*parallel_id2task_proto)[parallel_id], /*check=*/false);
+  };
+  HashSet<TaskNode*> rank_task_nodes;
+  BfsForEachNode(sources, &TaskNode::ForEachNodeOnInEdge, [&](TaskNode* task_node) {
+    rank_task_nodes.insert(task_node);
+    TaskNodeVisitor<void>(task_node, TransportTaskNodeToProto, ComputeTaskNodeToProto);
   });
-  ForEachEdge([&](TaskEdge* edge) { edge->ToProto(proto->mutable_task_edge()->Add()); });
+  const auto rank_task_edges = [&] {
+    HashSet<TaskEdge*> rank_task_edges;
+    const auto& TryInsertEdge = [&](TaskEdge* edge) {
+      if (rank_task_nodes.count(edge->src_node()) > 0
+          && rank_task_nodes.count(edge->dst_node()) > 0) {
+        rank_task_edges.insert(edge);
+      }
+    };
+    for (const auto* task_node : rank_task_nodes) {
+      for (auto* in_edge : task_node->in_edges()) { TryInsertEdge(in_edge); }
+      for (auto* out_edge : task_node->out_edges()) { TryInsertEdge(out_edge); }
+    }
+    return rank_task_edges;
+  }();
+  for (auto* edge : rank_task_edges) { edge->ToProto(proto->mutable_task_edge()->Add()); }
 }
 
 RankTaskGraph::RankTaskGraph(const std::shared_ptr<BoxingTaskGraphProto>& boxing_task_graph_proto,
@@ -942,7 +1010,7 @@ Maybe<CompTaskNode*> RankTaskGraph::TryGetBoxingRelatedComTaskNode(const OpNode*
   const auto& op_name = op_node->op().op_name();
   auto iter = boxing_task_graph_proto_->op_name2compute_tasks().find(op_name);
   if (iter == boxing_task_graph_proto_->op_name2compute_tasks().end()) { return nullptr; }
-  int64_t task_id = JUST(VectorAt(iter->second.parallel_id2task(), parallel_id)).task_id();
+  int64_t task_id = JUST(MapAt(iter->second.parallel_id2task(), parallel_id)).task_id();
   auto* task_node = JUST(task_graph_rebuild_ctx_->TaskNode4Id(task_id));
   auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
   CHECK_NOTNULL_OR_RETURN(comp_task_node) << "invalid task_type. task_id: " << task_id;
@@ -984,7 +1052,8 @@ Maybe<void> RankTaskGraph::AddBoxingReletedCompTaskNodesFromProto() {
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   for (const auto& pair : boxing_task_graph_proto_->op_name2compute_tasks()) {
     const OpNode* op_node = op_graph->OpNode4OpName(pair.first);
-    for (const auto& task_proto : pair.second.parallel_id2task()) {
+    for (const auto& pair : pair.second.parallel_id2task()) {
+      const auto& task_proto = pair.second;
       CHECK_OR_RETURN(task_id2task_proto_.emplace(task_proto.task_id(), &task_proto).second)
           << "redundant task_id.";
       CompTaskNode* comp_task_node = NewCompTaskNode4OpNode(op_node);
@@ -1074,15 +1143,7 @@ Maybe<void> RankTaskGraph::ConnectCtrlEdges(const OpNode* src, const OpNode* dst
 }
 
 bool RankTaskGraph::IsDutyRank(const ParallelDesc& parallel_desc, int64_t rank) const {
-  if (current_rank_ == 0) {
-    // make sure master knows at least one op_node.
-    return CHECK_JUST(parallel_desc.MachineId4ParallelId(0)) == rank;
-  } else if (parallel_desc.HasMachineId(current_rank_)) {
-    // workers only care their own rank.
-    return current_rank_ == rank;
-  } else {
-    return false;
-  }
+  return IsComputTaskNodeDutyRank(current_rank_, parallel_desc, rank);
 }
 
 template<typename DoEachRankT>

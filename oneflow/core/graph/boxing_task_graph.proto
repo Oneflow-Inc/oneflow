@@ -14,7 +14,7 @@ import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/register/tensor_slice_view.proto";
 
 message ComputeTasks {
-  repeated TaskProto parallel_id2task = 2;
+  map<int64, TaskProto> parallel_id2task = 2;
 }
 
 message CollectiveBoxingGenericTaskProto {
