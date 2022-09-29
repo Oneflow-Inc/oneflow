@@ -52,11 +52,11 @@ struct PyObjectPtrDeleter {
 
 using PyObjectPtr = std::unique_ptr<PyObject, PyObjectPtrDeleter>;
 
-#define INTEGER_TYPE_SEQ         \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t)  \
-  OF_PP_MAKE_TUPLE_SEQ(uint32_t) \
-  OF_PP_MAKE_TUPLE_SEQ(int64_t)  \
-  OF_PP_MAKE_TUPLE_SEQ(uint64_t) \
+#define INTEGER_AND_BOOL_TYPE_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t)   \
+  OF_PP_MAKE_TUPLE_SEQ(uint32_t)  \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t)   \
+  OF_PP_MAKE_TUPLE_SEQ(uint64_t)  \
   OF_PP_MAKE_TUPLE_SEQ(bool)
 
 #define FLOATING_TYPE_SEQ     \
@@ -82,7 +82,7 @@ inline std::vector<T> PyUnpackSequence(PyObject* obj, UnpackItemFunc unpack_item
 
 // Integer/Float list
 bool PyLongSequenceCheck(PyObject* obj);
-bool PyFloatSquenceCheck(PyObject* obj);
+bool PyFloatSequenceCheck(PyObject* obj);
 
 template<typename T>
 inline std::vector<T> PyUnpackLongSequence(PyObject* obj) {
@@ -107,6 +107,23 @@ std::string PyObjectToReprStr(PyObject* obj);
 // Scalar
 bool PyScalarCheck(PyObject* obj);
 Scalar PyUnpackScalar(PyObject* obj);
+
+// Scalar Tensor
+bool PyScalarTensorCheck(PyObject* obj);
+#define DefinePyTypeScalarTensorCheck(type, type_check_func)               \
+  inline bool Py##type##ScalarTensorCheck(PyObject* obj) {                 \
+    return PyScalarTensorCheck(obj)                                        \
+           && type_check_func(PyTensor_Unpack(obj)->dtype()->data_type()); \
+  }
+
+DefinePyTypeScalarTensorCheck(Bool, IsBoolDataType);         // PyBoolScalarTensorCheck
+DefinePyTypeScalarTensorCheck(Integer, IsIntegralDataType);  // PyIntegerScalarTensorCheck
+DefinePyTypeScalarTensorCheck(Float, IsFloatingDataType);    // PyFloatScalarTensorCheck
+#undef DefinePyTypeScalarTensorCheck
+
+bool PyUnpackBoolScalarTensor(PyObject* obj);
+long long PyUnpackIntegerScalarTensor_AsLongLong(PyObject* obj);
+double PyUnpackFloatScalarTensor_AsDouble(PyObject* obj);
 
 // Tensor list
 bool PyTensorSequenceCheck(PyObject* obj);
