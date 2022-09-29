@@ -36,6 +36,14 @@ class TestContiguous(flow.unittest.TestCase):
         z = y.contiguous()
         return y
 
+    @autotest(n=5, auto_backward=False)
+    def test_contiguous_with_half_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, requires_grad=False).to(device).to(torch.float16)
+        y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
+        z = y.contiguous()
+        return z
+
     @autotest(n=10, check_graph=True)
     def test_permute2d_tensor_with_random_data(test_case):
         device = random_device()
