@@ -250,9 +250,8 @@
     [
       "Tensor (Tensor input, Tensor other) => TruncDiv",
       "Tensor (Tensor input, Scalar other, *, Bool inplace=False) => ScalarTruncDiv",
-      "Tensor (Tensor input, Scalar other) => ScalarTruncDiv",
     ]
-  bind_python: False
+  bind_python: True
 
 - name: "truncdiv_x_grad"
   signature: "Tensor (Tensor dz, Tensor x, Tensor y) => TruncDivXGrad"

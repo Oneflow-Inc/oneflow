@@ -60,7 +60,7 @@ template<>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kTruncDiv, float, float> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC float operator()(float src0, float src1) const { return trunc(src0 / src1); }
+  OF_DEVICE_FUNC float operator()(float src0, float src1) const { return truncf(src0 / src1); }
 };
 
 template<>
