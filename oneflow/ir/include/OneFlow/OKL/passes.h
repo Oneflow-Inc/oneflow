@@ -13,22 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_OUTLINEJITFUNCTION_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_OUTLINEJITFUNCTION_H_
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_PASSES_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_PASSES_H_
 
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
+#include "OneFlow/OKL/Conversion/OKLToLLVM.h"
 
 namespace mlir {
 
-namespace oneflow {
-std::unique_ptr<mlir::Pass> createLowerToOKLPass();
-std::unique_ptr<mlir::Pass> createConvertOFKLCalleeToLLVMPass();
-std::unique_ptr<mlir::Pass> createWrapOps2KernelLaunchPass();
-std::unique_ptr<mlir::Pass> createOutlineJitFunctionPass();
-std::unique_ptr<mlir::Pass> createFuseIntoExistingOpPass();
+namespace okl {
 
-}  // namespace oneflow
+#define GEN_PASS_CLASSES
+#define GEN_PASS_REGISTRATION
+#include "OneFlow/OKLPasses.h.inc"
+
+}  // namespace okl
 
 }  // namespace mlir
 
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_OUTLINEJITFUNCTION_H_
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_PASSES_H_

@@ -41,7 +41,7 @@ class OutlineJitFunctionPass : public OutlineJitFunctionPassBase<OutlineJitFunct
   }
 };
 
-class Lower2OKLPass : public Lower2OKLPassBase<Lower2OKLPass> {
+class LowerToOKLPass : public LowerToOKLPassBase<LowerToOKLPass> {
   void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<LLVM::LLVMDialect>();
     registry.insert<okl::OKLDialect>();
@@ -50,7 +50,7 @@ class Lower2OKLPass : public Lower2OKLPassBase<Lower2OKLPass> {
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    populateLower2OKLPasses(patterns);
+    populateLowerToOKLPasses(patterns);
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
@@ -104,7 +104,7 @@ std::unique_ptr<mlir::Pass> createConvertOFKLCalleeToLLVMPass() {
   return std::make_unique<ConvertOFKLCalleeToLLVMPass>();
 }
 
-std::unique_ptr<mlir::Pass> createLower2OKLPass() { return std::make_unique<Lower2OKLPass>(); }
+std::unique_ptr<mlir::Pass> createLowerToOKLPass() { return std::make_unique<LowerToOKLPass>(); }
 
 std::unique_ptr<Pass> createFuseIntoExistingOpPass() {
   return std::make_unique<FuseIntoExistingOpPass>();

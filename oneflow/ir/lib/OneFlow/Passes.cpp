@@ -194,7 +194,7 @@ func::FuncOp InsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operation* 
   return func;
 }
 
-LogicalResult Lower2OKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
+LogicalResult LowerToOKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
                           LLVM::LLVMFuncOp okl_func) {
   auto op_type_name = op->getAttr("op_name").dyn_cast<StringAttr>();
   if (!op_type_name) { return failure(); }
@@ -944,8 +944,8 @@ struct ConvertOFKLCalleeToLLVMPattern : public mlir::OpRewritePattern<func::Func
   }
 };
 
-struct Lower2OKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
-  explicit Lower2OKLPattern(mlir::MLIRContext* context)
+struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
+  explicit LowerToOKLPattern(mlir::MLIRContext* context)
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
   mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                       mlir::PatternRewriter& rewriter) const override {
@@ -968,7 +968,7 @@ struct Lower2OKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
         if (isa<func::ReturnOp>(op)) { break; }
         op.emitError("Failed to parse this op in kernel launch wrap func.");
       }
-      if (failed(Lower2OKLOp(rewriter, &op, okl_func))) { return failure(); }
+      if (failed(LowerToOKLOp(rewriter, &op, okl_func))) { return failure(); }
     }
 
     OpBuilder::InsertionGuard guard_ret(rewriter);
@@ -1148,8 +1148,8 @@ void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<MulCastPattern>(patterns.getContext());
 }
 
-void populateLower2OKLPasses(::mlir::RewritePatternSet& patterns) {
-  patterns.add<Lower2OKLPattern>(patterns.getContext());
+void populateLowerToOKLPasses(::mlir::RewritePatternSet& patterns) {
+  patterns.add<LowerToOKLPattern>(patterns.getContext());
 }
 
 void populateConvertOFKLCalleeToLLVMPasses(::mlir::RewritePatternSet& patterns) {

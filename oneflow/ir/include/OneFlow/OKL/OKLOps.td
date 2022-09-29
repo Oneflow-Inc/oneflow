@@ -18,6 +18,7 @@ limitations under the License.
 
 include "OneFlow/OKL/OKLDialect.td"
 include "OneFlow/OKL/OKLBase.td"
+include "mlir/Pass/PassBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 
 def RegContextOp : OKL_Op<"reg_ctx"> {
@@ -58,7 +59,7 @@ def KernelOp : OKL_Op<"kernel"> {
 
   let arguments = (ins
     StrAttr:$op_type_name,
-    LLVM_AnyPointer:$compute_ctx
+    LLVM_AnyPointer:$reg_ctx
   );
   let results = (outs LLVM_AnyPointer:$out);
 }
@@ -73,6 +74,11 @@ def LaunchOp : OKL_Op<"launch"> {
     LLVM_AnyPointer:$run_ctx,
     LLVM_AnyPointer:$kernel
   );
+}
+
+def LowerOKLToLLVMPass : Pass<"lower-okl-to-llvm", "ModuleOp"> {
+  let summary = "convert okl dialect to llvm dialect";
+  let constructor = "mlir::okl::createLowerOKLToLLVMPass()";
 }
 
 #endif // ONEFLOW_IR_INCLUDE_OKL_OKLOPS_H_

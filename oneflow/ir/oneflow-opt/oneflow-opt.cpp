@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "mlir/IR/Dialect.h"
+#include "OneFlow/OKL/passes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllPasses.h"
@@ -50,6 +51,7 @@ int32_t main(int32_t argc, char** argv) {
   mlir::registerTestOneFlowTraitsPass();
   mlir::registerConvertToSignlessForTosaPassPass();
   mlir::registerLowerOneFlowToTosaPassPass();
+  mlir::okl::registerLowerOKLToLLVMPassPass();
   mlir::registerGpuMapParallelLoopsPassPass();
   mlir::registerBufferHostRegisterPassPass();
   mlir::registerGpuCopyArgPassPass();
@@ -57,7 +59,7 @@ int32_t main(int32_t argc, char** argv) {
   mlir::oneflow::registerGpuSerializeToCubinPass();
 #endif  // WITH_MLIR_CUDA_CODEGEN
   mlir::registerWrapOps2KernelLaunchPassPass();
-  mlir::registerLower2OKLPassPass();
+  mlir::registerLowerToOKLPassPass();
   mlir::registerConvertOFKLCalleeToLLVMPassPass();
   mlir::registerOutlineJitFunctionPassPass();
   mlir::DialectRegistry registry;

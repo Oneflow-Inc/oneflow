@@ -243,7 +243,7 @@ def OneFlow_NormalizationInferenceOp : OneFlow_NormalizationBaseOp<"normalizatio
 #define ONEFLOW_PASSES
 
 def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
-  let summary = "";
+  let summary = "lower oneflow dialect to tosa dialect";
   let constructor = "mlir::oneflow::createLowerOneFlowToTosaPass()";
   let dependentDialects = ["tosa::TosaDialect", "memref::MemRefDialect", "mlir::func::FuncDialect"];
   let options = [
@@ -274,9 +274,9 @@ def WrapOps2KernelLaunchPass : Pass<"wrap-ops-to-kernel-launch", "ModuleOp"> {
   let constructor = "mlir::oneflow::createWrapOps2KernelLaunchPass()";
 }
 
-def Lower2OKLPass : Pass<"lower-to-okl", "ModuleOp"> {
+def LowerToOKLPass : Pass<"lower-to-okl", "ModuleOp"> {
   let summary = "convert oneflow.kernel_launch to okl dialect";
-  let constructor = "mlir::oneflow::createLower2OKLPass()";
+  let constructor = "mlir::oneflow::createLowerToOKLPass()";
 }
 
 def ConvertOFKLCalleeToLLVMPass : Pass<"convert-ofkl-callee-to-llvm", "ModuleOp"> {
