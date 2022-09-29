@@ -2319,5 +2319,5 @@ add_docstr(
         >>> x.nansum(dim=1, keepdim=True)
         tensor([[1.],
                 [2.]], dtype=oneflow.float32)
-    """
+    """,
 )
