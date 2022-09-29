@@ -495,7 +495,7 @@ OF_DEVICE_FUNC void HalfAvgpool1dBackwardCompute(
         divide_factor = (lend - lstart);
       }
     }
-    half grad_delta = __float2half(__half2float(src[num]) / divide_factor);
+    half grad_delta = static_cast<half>(__half2float(src[num]) / divide_factor);
     half* data = dest + start_idx;
     for (IDX idx = lstart; idx < lend; idx += 1) { XPUAdd<half>::Invoke(&grad_delta, &data[idx]); }
   }
@@ -580,8 +580,7 @@ OF_DEVICE_FUNC void HalfAvgpool2dBackwardCompute(
         divide_factor = (hend - hstart) * (wend - wstart);
       }
     }
-
-    half grad_delta = __float2half(__half2float(src[num]) / divide_factor);
+    half grad_delta = static_cast<half>(__half2float(src[num]) / divide_factor);
     half* data = dest + start_idx;
     for (IDX i = hstart; i < hend; i += 1) {
       for (IDX j = wstart; j < wend; j += 1) {
@@ -682,7 +681,7 @@ OF_DEVICE_FUNC void HalfAvgpool3dBackwardCompute(
         divide_factor = (tend - tstart) * (hend - hstart) * (wend - wstart);
       }
     }
-    half grad_delta = __float2half(__half2float(src[num]) / divide_factor);
+    half grad_delta = static_cast<half>(__half2float(src[num]) / divide_factor);
     half* data = dest + start_idx;
     for (IDX i = tstart; i < tend; i += 1) {
       for (IDX j = hstart; j < hend; j += 1) {
