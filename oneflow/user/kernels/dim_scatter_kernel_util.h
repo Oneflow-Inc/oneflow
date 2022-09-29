@@ -62,24 +62,41 @@ struct BinOpAddFunctor {
   }
 };
 
-template<>
-struct BinOpAddFunctor<bool> {
-  OF_DEVICE_FUNC static void apply(const bool* x, bool* y) { *y += *x; }
+#define SPECIALIZE_BIN_OP_ADD_FUNCTOR(name, dtype)                           \
+  template<>                                                                 \
+  struct name<dtype> {                                                       \
+    OF_DEVICE_FUNC static void apply(const dtype* x, dtype* y) { *y += *x; } \
+  };
+
+SPECIALIZE_BIN_OP_ADD_FUNCTOR(BinOpAddFunctor, bool)
+SPECIALIZE_BIN_OP_ADD_FUNCTOR(BinOpAddFunctor, int8_t)
+SPECIALIZE_BIN_OP_ADD_FUNCTOR(BinOpAddFunctor, uint8_t)
+SPECIALIZE_BIN_OP_ADD_FUNCTOR(BinOpAddFunctor, int64_t)
+
+template<typename T>
+struct BinOpMulFunctor {
+  OF_DEVICE_FUNC static void apply(const T* x, T* y) {
+#ifdef __CUDA_ARCH__
+    cuda::atomic::Mul(y, *x);
+#else
+    *y *= *x;
+#endif
+  }
 };
 
-template<>
-struct BinOpAddFunctor<int8_t> {
-  OF_DEVICE_FUNC static void apply(const int8_t* x, int8_t* y) { *y += *x; }
-};
+#define SPECIALIZE_BIN_OP_MUL_FUNCTOR(name, dtype)                           \
+  template<>                                                                 \
+  struct name<dtype> {                                                       \
+    OF_DEVICE_FUNC static void apply(const dtype* x, dtype* y) { *y *= *x; } \
+  };
+
+SPECIALIZE_BIN_OP_ADD_FUNCTOR(BinOpMulFunctor, int8_t)
+SPECIALIZE_BIN_OP_ADD_FUNCTOR(BinOpMulFunctor, uint8_t)
+SPECIALIZE_BIN_OP_ADD_FUNCTOR(BinOpMulFunctor, int64_t)
 
 template<>
-struct BinOpAddFunctor<uint8_t> {
-  OF_DEVICE_FUNC static void apply(const uint8_t* x, uint8_t* y) { *y += *x; }
-};
-
-template<>
-struct BinOpAddFunctor<int64_t> {
-  OF_DEVICE_FUNC static void apply(const int64_t* x, int64_t* y) { *y += *x; }
+struct BinOpMulFunctor<bool> {
+  OF_DEVICE_FUNC static void apply(const bool* x, bool* y) { *y &= *x; }
 };
 
 template<typename T>

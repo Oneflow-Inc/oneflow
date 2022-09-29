@@ -182,13 +182,7 @@ def _new_empty(
 
 
 def _new_ones(
-    self,
-    size=None,
-    dtype=None,
-    device=None,
-    placement=None,
-    sbp=None,
-    requires_grad=False,
+    self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
 ):
     return flow.new_ones(self, size, dtype, device, placement, sbp, requires_grad)
 
@@ -197,6 +191,21 @@ def _new_zeros(
     self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
 ):
     return flow.new_zeros(self, size, dtype, device, placement, sbp, requires_grad)
+
+
+def _new_full(
+    self,
+    size,
+    fill_value,
+    dtype=None,
+    device=None,
+    placement=None,
+    sbp=None,
+    requires_grad=False,
+):
+    return flow.new_full(
+        self, size, fill_value, dtype, device, placement, sbp, requires_grad
+    )
 
 
 def _mm(self, mat2):
@@ -217,6 +226,10 @@ def _split(self, split_size_or_sections=None, dim=0):
 
 def _uniform(self, a=0, b=1):
     return flow.nn.init.uniform_(self, a, b)
+
+
+def _exponential(self, lambd=1.0, generator=None):
+    return flow._C.exponential_(self, lambd, generator)
 
 
 def _trunc_normal_(
@@ -300,7 +313,12 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
             ), "Only local tensor can be assigned to local tensor."
             if self.device == other.device:
                 other = flow._C.broadcast_like(other, self)
-                flow._C.assign_local_tensor(self, other)
+                if not self.is_contiguous():
+                    # NOTE: slice_update support non-contiguous input tensor
+                    with flow.no_grad():
+                        self[...] = other
+                else:
+                    flow._C.assign_local_tensor(self, other)
                 return
 
     # Possibility 2: `other` is a numpy array, or `self` and `other` are tensors on different devices/placements.
@@ -505,6 +523,22 @@ def _trunc(self):
     return flow._C.trunc(self)
 
 
+def _cross(self, other, dim=None):
+    return flow._C.cross(self, other, dim)
+
+
+def _scatter(self, dim, index, src, reduce=""):
+    if reduce == "":
+        reduce = None
+    return flow._C.scatter(self, dim, index, src, reduce, inplace=False)
+
+
+def _scatter_inplace(self, dim, index, src, reduce=""):
+    if reduce == "":
+        reduce = None
+    return flow._C.scatter(self, dim, index, src, reduce, inplace=True)
+
+
 def RegisterMethods():
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
@@ -524,6 +558,7 @@ def RegisterMethods():
     Tensor.__int__ = _scalar_int
     Tensor.__array__ = _numpy
     Tensor.uniform_ = _uniform
+    Tensor.exponential_ = _exponential
     Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform
     Tensor.kaiming_normal_ = _kaiming_normal
@@ -542,6 +577,7 @@ def RegisterMethods():
     Tensor.new_empty = _new_empty
     Tensor.new_ones = _new_ones
     Tensor.new_zeros = _new_zeros
+    Tensor.new_full = _new_full
     Tensor.where = _where
     Tensor.mm = _mm
     Tensor.norm = _norm
@@ -571,6 +607,9 @@ def RegisterMethods():
     Tensor.mv = _mv
     Tensor.inverse = _inv
     Tensor.trunc = _trunc
+    Tensor.cross = _cross
+    Tensor.scatter = _scatter
+    Tensor.scatter_ = _scatter_inplace
 
 
 def register_tensor_op(op_name):
