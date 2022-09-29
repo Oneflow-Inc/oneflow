@@ -91,7 +91,8 @@ struct ToContiguousUtil : ToContiguousUtilBase {
   OF_PP_MAKE_TUPLE_SEQ(int64_t)    \
   OF_PP_MAKE_TUPLE_SEQ(int8_t)     \
   OF_PP_MAKE_TUPLE_SEQ(uint8_t)    \
-  OF_PP_MAKE_TUPLE_SEQ(float16)
+  OF_PP_MAKE_TUPLE_SEQ(float16)    \
+  OF_PP_MAKE_TUPLE_SEQ(bfloat16)
 
 #define TO_CONTIGUOUS_CPU_TYPES TO_CONTIGUOUS_COMMON_TYPES
 
