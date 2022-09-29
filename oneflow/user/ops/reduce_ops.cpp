@@ -110,6 +110,7 @@ IMPLEMENT_REDUCE_OP_FUNCS(ReduceMin, BinaryFuncMin, oneflow::InferDataType)
 IMPLEMENT_REDUCE_OP_FUNCS(ReduceMax, BinaryFuncMax, oneflow::InferDataType)
 IMPLEMENT_REDUCE_OP_FUNCS(ReduceSum, BinaryFuncSum, oneflow::InferDataType)
 IMPLEMENT_REDUCE_OP_FUNCS(ReduceProd, BinaryFuncProd, oneflow::InferDataType)
+IMPLEMENT_REDUCE_OP_FUNCS(ReduceNanSum, BinaryFuncNanSum, oneflow::InferDataType)
 #undef IMPLEMENT_REDUCE_OP_FUNCS
 
 }  // namespace oneflow
