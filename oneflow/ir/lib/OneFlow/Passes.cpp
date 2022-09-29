@@ -974,8 +974,6 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     OpBuilder::InsertionGuard guard_ret(rewriter);
     rewriter.setInsertionPointToEnd(&okl_func.getBody().back());
     rewriter.create<LLVM::ReturnOp>(op->getLoc(), ValueRange());
-    auto module = op->getParentOfType<ModuleOp>();
-    module.dump();
     return success();
   }
 };
