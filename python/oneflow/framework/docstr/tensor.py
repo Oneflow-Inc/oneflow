@@ -2301,3 +2301,23 @@ add_docstr(
     See :func:`oneflow.cross`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.nansum,
+    """
+    See :func:`oneflow.nansum`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1., 2., float("nan")])
+        >>> x.nansum()
+        tensor(3., dtype=oneflow.float32)
+        >>> x = flow.tensor([[1., float("nan")], [float("nan"), 2]])
+        >>> x.nansum(dim=1, keepdim=True)
+        tensor([[1.],
+                [2.]], dtype=oneflow.float32)
+    """
+)
