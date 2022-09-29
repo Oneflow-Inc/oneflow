@@ -1071,6 +1071,22 @@
     Double alpha=1.0) => BatchMatMul"
   bind_python: True
 
+- name: "baddbmm"
+  signature:
+    "Tensor (Tensor input, Tensor batch1, Tensor batch2, *, Double beta=1.0, Double alpha=1.0) => BatchAddBatchMatMul"
+  bind_python: True
+
+- name: "scaled_dot_product_attention"
+  signature:
+    "TensorTuple (Tensor q, Tensor k, Tensor v, Tensor attn_mask=None, Float dropout=0.0) => ScaledDotProductAttention"
+  bind_python: True
+
+# - name: "multiheadattention"
+#   signature:
+#     # "TensorTuple (Tensor q, Tensor k, Tensor v, Int64 embed_dim, Int64 num_head, Tensor qkv_weight, Tensor qkv_bias, Tensor proj_weight, Tensor proj_bias, Tensor mask=None, Bool need_weights=False, Bool average_attn_weights=False, Int64 mask_type=0) => MultiHeadAttention"
+#     "TensorTuple (Tensor x, Tensor y) => MultiHeadAttention"
+#   bind_python: True
+
 - name: "matrix_vector_product"
   signature: "Tensor (Tensor input, Tensor vec) => MatrixVectorProduct"
   bind_python: True

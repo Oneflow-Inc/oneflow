@@ -4425,6 +4425,101 @@ class BatchNormBackwardElemtFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class BatchAddBatchMatMulFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
+                           const std::shared_ptr<Tensor>& batch1,
+                           const std::shared_ptr<Tensor>& batch2, const double& beta,
+                           const double& alpha) const {
+    const auto& bmm_result = JUST(BatchMatMul(batch1, batch2, false, false, alpha));
+    if (beta == 0) { return bmm_result; }
+    CHECK_EQ_OR_RETURN(input->ndim(), 3)
+        << Error::RuntimeError() << "Expected 3-dimensional tensor, but got " << input->ndim();
+    const auto& input_broadcast = JUST(BroadcastLike(input, bmm_result, {}));
+    return Add(input_broadcast, bmm_result, beta, false);
+  }
+};
+
+class ScaledDotProductAttentionFunctor {
+ public:
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& q, const std::shared_ptr<Tensor>& k,
+                                const std::shared_ptr<Tensor>& v, const Optional<Tensor>& attn_mask,
+                                const float& dropout) const {
+    auto emb_dim = q->shape()->At(2);
+    const auto& scaled_q = JUST(ScalarDiv(q, Scalar(sqrt(emb_dim))));
+    std::shared_ptr<Tensor> attn = nullptr;
+    const auto& transposed_k = JUST(Transpose(k, {-2, -1}));
+    if (attn_mask) {
+      attn = JUST(BatchAddBatchMatMul(JUST(attn_mask), scaled_q, transposed_k, 1, 1));
+    } else {
+      attn = JUST(BatchMatMul(scaled_q, transposed_k, false, false, 1));
+    }
+    if (dropout > 0) {
+      attn = JUST(Dropout(attn, dropout, /*training=*/false, /*inplace=*/false,
+                          /*generator=*/NullOpt, /*addend=*/NullOpt));
+    }
+    const auto& result = JUST(BatchMatMul(attn, v, false, false, 1.0));
+    return TensorTuple({result, attn});
+  }
+};
+
+class MultiHeadAttentionFunctor {
+ public:
+  Maybe<Tensor> qkv_projection(
+      const std::shared_ptr<Tensor>& query,
+      const std::shared_ptr<Tensor>& key,
+      const std::shared_ptr<Tensor>& value,
+      const int64_t& embed_dim, 
+      const std::shared_ptr<Tensor>& qkv_weight
+  ) const {
+    std::shared_ptr<Tensor> qkv = nullptr;
+    auto matmul = [](const std::shared_ptr<Tensor>& a, const std::shared_ptr<Tensor>& b) {
+      return MatMul(a, b, false, false, 1.0);
+    };
+    if (query == key) {
+      if (key == value) {
+        qkv = JUST(MatMul(query, qkv_weight, false, false, 1.0));
+      } else {
+        const auto& q_kv_weight_split = JUST(SplitWithSize(qkv_weight, {embed_dim, embed_dim * 2}, 0));
+        const auto& q = JUST(matmul(query, q_kv_weight_split->at(0)));
+        const auto& kv = JUST(matmul(key, q_kv_weight_split->at(1)));
+        qkv = JUST(Concat({q, kv}, 2));
+      }
+    } else {
+      const auto& q_k_v_weight_split = JUST(Chunk(qkv_weight, 3, 0));
+      const auto& q = JUST(matmul(query, q_k_v_weight_split->at(0)));
+      const auto& k = JUST(matmul(key, q_k_v_weight_split->at(1)));
+      const auto& v = JUST(matmul(value, q_k_v_weight_split->at(2)));
+      qkv = JUST(Concat({q, k, v}, 2));
+    }
+    return qkv;
+  };
+  // Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& q, const std::shared_ptr<Tensor>& k,
+  //                          const std::shared_ptr<Tensor>& v, const int64_t& embed_dim,
+  //                          const int64_t& num_head, const std::shared_ptr<Tensor>& qkv_weight,
+  //                          const std::shared_ptr<Tensor>& qkv_bias,
+  //                          const std::shared_ptr<Tensor>& proj_weight,
+  //                          const std::shared_ptr<Tensor>& proj_bias, const Optional<Tensor>& mask,
+  //                          const bool& need_weights, const bool& average_attn_weights,
+  //                          const Optional<int64_t>& mask_type) const {
+    // CHECK_EQ_OR_RETURN(q->ndim(), 3) << "expected 3-D `query`, got " << q->ndim() << "-D tensor";
+    // CHECK_EQ_OR_RETURN(k->ndim(), 3) << "expected 3-D `key`, got " << k->ndim() << "-D tensor";
+    // CHECK_EQ_OR_RETURN(v->ndim(), 3) << "expected 3-D `value`, got " << v->ndim() << "-D tensor";
+    // CHECK_EQ_OR_RETURN(qkv_weight->ndim(), 2)
+    //     << "expected 2-D `qkv_weight`, got " << qkv_weight->ndim() << "-D tensor";
+    // CHECK_EQ_OR_RETURN(qkv_weight->shape()->At(0), embed_dim * 3) << "expected `qkv_weight` first dim to be 3x embed_dim";
+    // CHECK_EQ_OR_RETURN(qkv_weight->shape()->At(1), embed_dim) << "expected `qkv_weight` second dim to be embed_dim";
+    // CHECK_EQ_OR_RETURN(qkv_bias->ndim(), 1) << "expected 2-D `qkv_bias`, got " << qkv_bias->ndim() << "-D tensor";
+    // CHECK_EQ_OR_RETURN(qkv_bias->shape()->At(0), embed_dim * 3) << "expected `qkv_bias` first dim and first dim of query to be equal";
+    // CHECK_EQ_OR_RETURN(embed_dim % num_head, 0) << "`embed_dim` must divide evenly by `num_heads`";
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& y) const {
+    if (x == y) {
+      std::cout << "is same" << std::endl;
+    }
+    return TensorTuple({x, y});
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -4440,6 +4535,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::MatMulNoBroadCastFunctor>("MatMulNoBroadCast");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
+  m.add_functor<impl::BatchAddBatchMatMulFunctor>("BatchAddBatchMatMul");
   m.add_functor<impl::MatrixVectorProductFunctor>("MatrixVectorProduct");
   m.add_functor<impl::VectorMatrixProductFunctor>("VectorMatrixProduct");
   m.add_functor<impl::TensorDotFunctor>("TensorDot");
@@ -4545,6 +4641,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BatchNormElemtFunctor>("BatchNormElemt");
   m.add_functor<impl::BatchNormBackwardReduceFunctor>("BatchNormBackwardReduce");
   m.add_functor<impl::BatchNormBackwardElemtFunctor>("BatchNormBackwardElemt");
+  m.add_functor<impl::ScaledDotProductAttentionFunctor>("ScaledDotProductAttention");
+  m.add_functor<impl::MultiHeadAttentionFunctor>("MultiHeadAttention");
 }
 
 }  // namespace functional
