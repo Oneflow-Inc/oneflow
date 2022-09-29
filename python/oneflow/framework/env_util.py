@@ -158,7 +158,9 @@ def HasAllMultiClientEnvVars():
     env_var_without_value = [x for x in env_var_names if os.getenv(x) is None]
     env_var_with_value = [x for x in env_var_names if os.getenv(x) is not None]
     if len(env_var_with_value) != 0 and len(env_var_without_value) != 0:
-        warnings.warn(f"Among five environment variables for distributed training, only {', '.join('`{0}`'.format(x) for x in env_var_with_value)} are set, but {', '.join('`{0}`'.format(x) for x in env_var_without_value)} are not set.")
+        warnings.warn(
+            f"Among five environment variables for distributed training, only {', '.join('`{0}`'.format(x) for x in env_var_with_value)} are set, but {', '.join('`{0}`'.format(x) for x in env_var_without_value)} are not set."
+        )
     return len(env_var_without_value) == 0
 
 
