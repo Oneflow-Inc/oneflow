@@ -126,6 +126,116 @@ class OffsetToIndexCalculator {
   FastIntegerMath<T> math_helper_[N];
 };
 
+template<typename T, int N>
+class StrideHelper {
+ public:
+  OF_DEVICE_FUNC StrideHelper() = default;
+
+  template<class... Ts>
+  OF_DEVICE_FUNC explicit StrideHelper(T d0, Ts... dims) {
+    constexpr int n = 1 + sizeof...(dims);
+    static_assert(n <= N, "");
+    T dims_arr[n] = {d0, static_cast<T>(dims)...};
+    InitStrides(dims_arr, n);
+  }
+
+  OF_DEVICE_FUNC explicit StrideHelper(const T* dims) { InitStrides(dims, N); }
+
+  template<typename U>
+  OF_DEVICE_FUNC explicit StrideHelper(const U* dims) {
+    T dims_arr[N];
+    for (int i = 0; i < N; ++i) { dims_arr[i] = dims[i]; }
+    InitStrides(dims_arr, N);
+  }
+
+  OF_DEVICE_FUNC explicit StrideHelper(const T* dims, int n) { InitStrides(dims, n); }
+
+  template<typename U>
+  OF_DEVICE_FUNC explicit StrideHelper(const U* dims, int n) {
+    T dims_arr[N];
+    for (int i = 0; i < N; ++i) {
+      if (i < n) { dims_arr[i] = dims[i]; }
+    }
+    InitStrides(dims_arr, n);
+  }
+
+  virtual ~StrideHelper() = default;
+
+  OF_DEVICE_FUNC T GetStride(const size_t i) const {
+    return stride_[i]; 
+  }
+ protected:
+  OF_DEVICE_FUNC void InitStrides(const T* dims, const int n) {
+    for (int i = n - 1; i < N; ++i) { stride_[i] = 1; }
+    for (int i = n - 2; i >= 0; --i) { stride_[i] = dims[i + 1] * stride_[i + 1]; }
+  }
+
+  T stride_[N];
+};
+
+template<typename T, int N>
+class FastMathStrideCalculator {
+ public:
+  FastMathStrideCalculator() {}
+  template<class... Ts>
+  OF_DEVICE_FUNC explicit FastMathStrideCalculator(T d0, Ts... dims) {
+    constexpr int n = 1 + sizeof...(dims);
+    static_assert(n <= N, "");
+    T dims_arr[n] = {d0, static_cast<T>(dims)...};
+    InitFastIntegerMath(dims_arr, n);
+  }
+
+  OF_DEVICE_FUNC explicit FastMathStrideCalculator(const T* dims) { InitFastIntegerMath(dims, N); }
+
+  template<typename U>
+  OF_DEVICE_FUNC explicit FastMathStrideCalculator(const U* dims) {
+    T dims_arr[N];
+    for (int i = 0; i < N; ++i) { dims_arr[i] = dims[i]; }
+    InitFastIntegerMath(dims_arr, N);
+  }
+
+  OF_DEVICE_FUNC explicit FastMathStrideCalculator(const T* dims, int n) {
+    InitFastIntegerMath(dims, n);
+  }
+
+  template<typename U>
+  OF_DEVICE_FUNC explicit FastMathStrideCalculator(const U* dims, int n) {
+    T dims_arr[N];
+    for (int i = 0; i < N; ++i) {
+      if (i < n) { dims_arr[i] = dims[i]; }
+    }
+    InitFastIntegerMath(dims_arr, n);
+  }
+
+  ~FastMathStrideCalculator() = default;
+
+  OF_DEVICE_FUNC T divides(T n, size_t idx) const {
+    return math_helper_[idx].divides(n);
+  }
+
+  OF_DEVICE_FUNC T mod(T n, size_t idx) const { return math_helper_[idx].mod(n); }
+  OF_DEVICE_FUNC T mul(T n, size_t idx) const { return math_helper_[idx].mul(n); }
+  OF_DEVICE_FUNC T add(T n, size_t idx) const { return math_helper_[idx].add(n); }
+  OF_DEVICE_FUNC T sub(T n, size_t idx) const { return math_helper_[idx].sub(n); }
+  OF_DEVICE_FUNC void divmod(T n, T* q, T* r, size_t idx) const {
+    return math_helper_[idx].divmod(n, q, r);
+  }
+
+ private:
+  OF_DEVICE_FUNC void InitFastIntegerMath(const T* dims, const int n) {
+    T stride_arr[N];
+    for (int i = n - 1; i < N; ++i) {
+      stride_arr[i] = 1;
+      math_helper_[i] = FastIntegerMath<T>(1);
+    }
+    for (int i = n - 2; i >= 0; --i) {
+      stride_arr[i] = dims[i + 1] * stride_arr[i + 1];
+      math_helper_[i] = FastIntegerMath<T>(stride_arr[i]);
+    }
+  }
+  FastIntegerMath<T> math_helper_[N];
+};
+
 }  // namespace primitive
 
 }  // namespace ep

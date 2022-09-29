@@ -82,7 +82,7 @@ OF_DEVICE_FUNC lohi<T> operator-(lohi<T> a, lohi<T> b) {
   return ret;
 }
 
-__host__ __device__ inline uint32_t div_lohi(uint32_t lo, uint32_t hi, uint32_t operand) {
+OF_DEVICE_FUNC uint32_t div_lohi(uint32_t lo, uint32_t hi, uint32_t operand) {
   return (static_cast<uint64_t>(hi) << 32 | lo) / operand;
 }
 
@@ -100,14 +100,14 @@ OF_DEVICE_FUNC lohi<uint64_t> mull(uint64_t a, uint64_t b) {
 }
 
 template <typename T>
-__host__ __device__ int ilog2(T x) noexcept {
+OF_DEVICE_FUNC int ilog2(T x) noexcept {
   int n = 0;
   while (x >>= 1)
     n++;
   return n;
 };
 
-__host__ __device__ inline uint64_t div_lohi(uint64_t lo, uint64_t hi, uint64_t operand) {
+OF_DEVICE_FUNC uint64_t div_lohi(uint64_t lo, uint64_t hi, uint64_t operand) {
 #if defined(__x86_64) && defined(__GNUC__) && !defined(__CUDA_ARCH__)
   // I hope this gets compiled to dividing rdx:rax register pair by a 64-bit value
   return (static_cast<unsigned __int128>(hi) << 64 | lo) / operand;
@@ -157,13 +157,13 @@ struct FastIntegerMath {
   uint8_t add_;
   uint8_t shift_;
 
-  __host__ __device__ FastIntegerMath() {}
+  OF_DEVICE_FUNC FastIntegerMath() {}
 
-  __host__ __device__ FastIntegerMath(T operand) {
+  OF_DEVICE_FUNC FastIntegerMath(T operand) {
     init(operand);
   }
 
-  __host__ __device__ void init(T operand) {
+  OF_DEVICE_FUNC void init(T operand) {
     this->operand_ = static_cast<uint64_t>(operand);
     this->mul_factor_ = 1;
     this->shift_ = 0;
@@ -195,7 +195,7 @@ struct FastIntegerMath {
       x = __umul64hi(x + add_, mul_factor_);
     return x >> shift_;
   #else
-    if (mul_factor) {
+    if (mul_factor_) {
       uint64_t hi = static_cast<unsigned __int128>(x + add_) * mul_factor_ >> 64;
       return hi >> shift_;
     } else {
@@ -221,13 +221,13 @@ struct FastIntegerMath<int32_t> {
   uint8_t add_;
   uint8_t shift_;
 
-  __host__ __device__ FastIntegerMath() {}
+  OF_DEVICE_FUNC FastIntegerMath() {}
 
-  __host__ __device__ FastIntegerMath(int32_t operand) {
+  OF_DEVICE_FUNC FastIntegerMath(int32_t operand) {
     init(operand);
   }
 
-  __host__ __device__ void init(int32_t operand) {
+  OF_DEVICE_FUNC void init(int32_t operand) {
     this->operand_ = static_cast<uint32_t>(operand);
     this->mul_factor_ = 1;
     this->shift_ = 0;
@@ -251,9 +251,19 @@ struct FastIntegerMath<int32_t> {
   }
 
   OF_DEVICE_FUNC int32_t divides(int32_t x) const {
-    if (mul_factor)
+    #ifdef __CUDA_ARCH__
+    if (mul_factor_){
       x = __umulhi(x + add_, mul_factor_);
+    }
     return x >> shift_;
+    #else 
+    if (mul_factor_) {
+      uint32_t hi = static_cast<uint64_t>(x + add_) * mul_factor_ >> 32;
+      return hi >> shift_;
+    } else {
+      return x >> shift_;
+    }
+    #endif
   }
 
   OF_DEVICE_FUNC int32_t mod(int32_t n) const { return n - divides(n) * operand_; }
