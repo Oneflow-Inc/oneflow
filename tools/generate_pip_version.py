@@ -13,6 +13,8 @@ args = parser.parse_args()
 local_label = ""
 version = f"0.8.1"
 
+os.environ["ONEFLOW_RELEASE_VERSION"] = version
+
 # set version if release of nightly
 assert (
     os.getenv("ONEFLOW_RELEASE_VERSION") != ""
@@ -40,7 +42,7 @@ if args.cuda:
 else:
     compute_platform = "cpu"
 assert compute_platform
-version += f"+{compute_platform}"
+# version += f"+{compute_platform}"
 
 try:
     git_hash = (
