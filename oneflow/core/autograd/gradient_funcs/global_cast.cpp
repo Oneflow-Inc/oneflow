@@ -32,13 +32,13 @@ struct CastGlobalCaptureState : public AutoGradCaptureState {
   Symbol<DType> dtype;
 };
 
-class CastToGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
+class LocalToGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
-    const auto* fw_op_expr = dynamic_cast<const CastToGlobalOpExpr*>(&op);
+    const auto* fw_op_expr = dynamic_cast<const LocalToGlobalOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     const std::string& op_name = fw_op_expr->op_name();
-    grad_op_ = JUST(one::CastFromGlobalOpExpr::New(GradientOpName(op_name)));
+    grad_op_ = JUST(one::GlobalToLocalOpExpr::New(GradientOpName(op_name)));
     return Maybe<void>::Ok();
   }
 
@@ -56,7 +56,7 @@ class CastToGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
     std::shared_ptr<Tensor> out_grad = out_grads.at(0);
     CHECK_OR_RETURN(out_grad->is_global())
         << Error::RuntimeError()
-        << "Expected global tensor for cast_to_global but got local tensor";
+        << "Expected global tensor for local_to_global but got local tensor";
     {
       Symbol<NdSbp> nd_sbp_constraint = ctx->nd_sbp;
       Symbol<ParallelDesc> parallel_desc_constraint = ctx->parallel_desc;
@@ -72,15 +72,15 @@ class CastToGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
   std::shared_ptr<OpExpr> grad_op_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("cast_to_global", CastToGlobal);
+REGISTER_OP_EXPR_GRAD_FUNCTION("local_to_global", LocalToGlobal);
 
-class CastFromGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
+class GlobalToLocal : public OpExprGradFunction<CastGlobalCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
-    const auto* fw_op_expr = dynamic_cast<const CastFromGlobalOpExpr*>(&op);
+    const auto* fw_op_expr = dynamic_cast<const GlobalToLocalOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     const std::string& op_name = fw_op_expr->op_name();
-    grad_op_ = JUST(one::CastToGlobalOpExpr::New(GradientOpName(op_name)));
+    grad_op_ = JUST(one::LocalToGlobalOpExpr::New(GradientOpName(op_name)));
     return Maybe<void>::Ok();
   }
 
@@ -89,7 +89,7 @@ class CastFromGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
     const auto& input = inputs.at(0);
     CHECK_OR_RETURN(input->is_global())
         << Error::RuntimeError()
-        << "Expected global tensor for cast_from_global but got local tensor";
+        << "Expected global tensor for global_to_local but got local tensor";
     ctx->parallel_desc = JUST(input->parallel_desc());
     ctx->nd_sbp = JUST(input->nd_sbp());
     ctx->shape = input->shape();
@@ -111,7 +111,7 @@ class CastFromGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
   std::shared_ptr<OpExpr> grad_op_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("cast_from_global", CastFromGlobal);
+REGISTER_OP_EXPR_GRAD_FUNCTION("global_to_local", GlobalToLocal);
 
 }  // namespace one
 }  // namespace oneflow
