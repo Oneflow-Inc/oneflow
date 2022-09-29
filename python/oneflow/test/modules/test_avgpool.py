@@ -57,7 +57,7 @@ class TestAvgPoolingModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    # TODO:(zhaoluyang) this test case has possible to fail in backward
+    # TODO:(zhaoluyang) this test case has probability to fail in backward
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @autotest(n=5, rtol=0.001, atol=0.001, auto_backward=False)
     def test_avgpool2d_with_half_data(test_case):
