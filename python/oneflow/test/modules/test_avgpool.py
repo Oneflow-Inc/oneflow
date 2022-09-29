@@ -56,7 +56,7 @@ class TestAvgPoolingModule(flow.unittest.TestCase):
         x = random_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(device)
         y = m(x)
         return y
-    
+
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @autotest(n=5)
     def test_avgpool2d_with_half_data(test_case):
@@ -71,7 +71,11 @@ class TestAvgPoolingModule(flow.unittest.TestCase):
         m.train(random())
         device = gpu_device()
         m.to(device)
-        x = random_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(device).to(torch.float16)
+        x = (
+            random_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22))
+            .to(device)
+            .to(torch.float16)
+        )
         y = m(x)
         return y
 
