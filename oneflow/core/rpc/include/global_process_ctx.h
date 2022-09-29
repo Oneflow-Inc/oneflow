@@ -30,7 +30,7 @@ struct GlobalProcessCtx {
   static int64_t ThisNodeId();
   static int64_t NumOfProcessPerNode();
   static bool IsThisProcessMaster();
-  static size_t WorldSize();
+  static size_t WorldSize(bool dry_run = false);
   static std::string LogDirEntry();
 };
 

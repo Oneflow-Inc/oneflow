@@ -298,7 +298,8 @@ Maybe<void> ParallelDesc::CheckDeviceIdsIsValid() const {
   const auto& sorted_dev_phy_ids_iter =
       machine_id2sorted_dev_phy_ids_->find(GlobalProcessCtx::Rank());
   for (int64_t machine_id : sorted_machine_ids_) {
-    CHECK_LT_OR_RETURN(machine_id, GlobalProcessCtx::WorldSize())
+    CHECK_LT_OR_RETURN(machine_id, GlobalProcessCtx::WorldSize(
+                                       ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false)))
         << Error::RuntimeError()
         << "Placement is invalid because rank must be less than world size!";
   }

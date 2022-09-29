@@ -39,6 +39,10 @@ int64_t GlobalProcessCtx::LocalRank() {
 }
 
 int64_t GlobalProcessCtx::NodeSize() {
+  if (ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false)) {
+    int64_t node_num = ParseIntegerFromEnv("ONEFLOW_DRY_RUN_COMPILE_NODE_NUM", 1);
+    return node_num;
+  }
   CHECK_NOTNULL(Singleton<ProcessCtx>::Get());
   return Singleton<ProcessCtx>::Get()->node_size();
 }
@@ -54,6 +58,10 @@ int64_t GlobalProcessCtx::NodeId(int64_t process_id) {
 }
 
 int64_t GlobalProcessCtx::NumOfProcessPerNode() {
+  if (ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false)) {
+    int64_t dev_per_node = ParseIntegerFromEnv("ONEFLOW_DRY_RUN_COMPILE_DEV_NUM_PER_NODE", 20);
+    return dev_per_node;
+  }
   CHECK_NOTNULL(Singleton<ProcessCtx>::Get());
   CHECK_EQ(WorldSize() % NodeSize(), 0);
   return int64_t(WorldSize() / NodeSize());
@@ -64,7 +72,12 @@ bool GlobalProcessCtx::IsThisProcessMaster() {
   return Singleton<ProcessCtx>::Get()->rank() == 0;
 }
 
-size_t GlobalProcessCtx::WorldSize() {
+size_t GlobalProcessCtx::WorldSize(bool dry_run) {
+  if (dry_run) {
+    int64_t node_num = ParseIntegerFromEnv("ONEFLOW_DRY_RUN_COMPILE_NODE_NUM", 1);
+    int64_t dev_per_node = ParseIntegerFromEnv("ONEFLOW_DRY_RUN_COMPILE_DEV_NUM_PER_NODE", 20);
+    return node_num * dev_per_node;
+  }
   CHECK_NOTNULL(Singleton<ProcessCtx>::Get());
   return Singleton<ProcessCtx>::Get()->ctrl_addr().size();
 }

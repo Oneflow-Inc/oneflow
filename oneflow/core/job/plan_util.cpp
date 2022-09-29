@@ -899,8 +899,9 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
   };
   std::sort(ordered_tasks.begin(), ordered_tasks.end(), CompTask);
 
-  std::vector<RankDeviceMemoryInfo> rank_device_memory_infos(GlobalProcessCtx::WorldSize(),
-                                                             RankDeviceMemoryInfo());
+  std::vector<RankDeviceMemoryInfo> rank_device_memory_infos(
+      GlobalProcessCtx::WorldSize(ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false)),
+      RankDeviceMemoryInfo());
   HashMap<int64_t, MemBlockMemoryInfo> mem_block_id2info;
   HashMap<int64_t, const RegstDescProto*> regst_desc_id2regst;
 
@@ -1106,13 +1107,16 @@ void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name) {
     }
     return ret;
   };
-  std::vector<std::vector<const TaskProto*>> rank2ordered_task(GlobalProcessCtx::WorldSize(),
-                                                               std::vector<const TaskProto*>());
+  std::vector<std::vector<const TaskProto*>> rank2ordered_task(
+      GlobalProcessCtx::WorldSize(ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false)),
+      std::vector<const TaskProto*>());
   for (const auto* task : ordered_tasks) {
     CHECK_LT(task->machine_id(), rank2ordered_task.size());
     rank2ordered_task.at(task->machine_id()).push_back(task);
   }
-  for (int64_t rank = 0; rank < GlobalProcessCtx::WorldSize(); ++rank) {
+  for (int64_t rank = 0; rank < GlobalProcessCtx::WorldSize(
+                             ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false));
+       ++rank) {
     auto file_stream =
         TeePersistentLogStream::Create(plan_name + "_rank_" + std::to_string(rank) + "_light_plan");
     file_stream << "rank : " << std::to_string(rank) << "\n";

@@ -249,7 +249,8 @@ void BoxingCollector::GenerateMap1d2nd() {
 Maybe<void> BoxingCollector::GenerateCombination4SamePlacement(int32_t max_middle_node_num) {
   // other parameters
   // NOTE: The performance of this function are all the same with different hierarchy
-  int32_t world_size = GlobalProcessCtx::WorldSize();
+  int32_t world_size =
+      GlobalProcessCtx::WorldSize(ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false));
   Shape hierarchy44({4 * world_size, 4 * world_size});
   int32_t virtual_range_size = hierarchy44.elem_cnt();
   std::shared_ptr<Shape> virtual_hierarchy = std::make_shared<Shape>(hierarchy44);

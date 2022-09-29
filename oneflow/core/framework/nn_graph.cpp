@@ -315,7 +315,99 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   // NOTE(chengcheng): Singleton<JobDesc> need be clear before GlobalJobDescScope construct.
   if (Singleton<JobDesc>::Get() != nullptr) { Singleton<JobDesc>::Delete(); }
 
+<<<<<<< Updated upstream
   auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id_);
+=======
+template<void (*Loop)(size_t num, const std::function<void(size_t i)>& Callback)>
+Maybe<void> NNGraph::MasterRankCompile() {
+  auto compile_time_counter = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
+  constexpr int kWorkerStartRank = 1;
+  if (GlobalProcessCtx::IsThisProcessMaster()) {
+    std::vector<Plan> plans(GlobalProcessCtx::WorldSize());
+    JUST(OpGraph::WithSingleton(&job_, [&]() -> Maybe<void> {
+      auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
+      JUST(BoxingTaskGraph::New())->ToProto(boxing_task_graph_proto.get());
+      // reachable collective boxing task pairs,
+      std::vector<HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>>
+          reachable_cb_pairs{GlobalProcessCtx::WorldSize(
+              ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false))};
+      Loop(GlobalProcessCtx::WorldSize(), [&](size_t i) {
+        Plan rank_plan;
+        auto* plan = (i > 0) ? &rank_plan : &plan_;
+        double start = GetCurTime();
+        // TODO(chengcheng): new memory reused by chunk
+        CHECK_JUST(
+            RankCompiler(boxing_task_graph_proto, i).Compile(variable_op_names_, &job_, plan));
+        PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
+
+        VLOG(1) << "Graph name: " << name_ << " rank: " << i
+                << " compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.";
+        if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+          TeePersistentLogStream::Create("job_" + name_ + "_plan" + std::to_string(i))
+              ->Write(*plan);
+          PlanUtil::ToDotFile(*plan, "job_" + name_ + "_plan" + std::to_string(i) + ".dot");
+        }
+        PlanUtil::GenRegisterHint(plan);
+        plan->mutable_collective_boxing_plan();
+        // PlanUtil::SetForceInplaceMemBlock(plan); NOTE(chengcheng): only for ssp.
+        PlanUtil::DumpCtrlRegstInfoToPlan(plan);
+        if (i >= kWorkerStartRank /*skip master*/) {
+          // generate reachable collective boxing task pairs
+          PlanUtil::GenReachableTaskPairs(*plan, &PlanUtil::IsCollectiveBoxingTaskProto,
+                                          &reachable_cb_pairs[i]);
+          std::string plan_name = "plan:" + job_name() + ":" + std::to_string(i);
+          Singleton<CtrlClient>::Get()->PushKV(plan_name, *plan);
+        }
+      });
+      // use multi-thread to merge reachable collective boxing task pairs into
+      // (*reachable_cb_pairs)[0], which is belong to master .
+      MergeIntoFirst(&reachable_cb_pairs);
+      // TODO(chengcheng): test collective boxing for multi-job.
+      PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_, [&] {
+        return std::make_unique<RankPlanTaskGraph>(plan_, reachable_cb_pairs.at(0));
+      });
+      std::string collective_boxing_info;
+      plan_.collective_boxing_plan().SerializeToString(&collective_boxing_info);
+      for (int i = kWorkerStartRank /*skip master*/; i < GlobalProcessCtx::WorldSize(); ++i) {
+        std::string name = "collective_boxing_info:" + job_name() + ":" + std::to_string(i);
+        Singleton<CtrlClient>::Get()->PushKV(name, collective_boxing_info);
+      }
+      return Maybe<void>::Ok();
+    }));
+  } else {
+    const std::string rank = std::to_string(GlobalProcessCtx::Rank());
+    {
+      std::string name = "plan:" + job_name() + ":" + rank;
+      Singleton<CtrlClient>::Get()->PullKV(name, &plan_);
+    }
+    {
+      std::string name = "collective_boxing_info:" + job_name() + ":" + rank;
+      Singleton<CtrlClient>::Get()->PullKV(name, plan_.mutable_collective_boxing_plan());
+    }
+  }
+  PlanUtil::PlanMemoryLog(&plan_, name_);
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    PlanUtil::GenLightPlan(&plan_, name_);
+  }
+  OF_SESSION_BARRIER();
+  // NOTE(zwx): After barrier plan is synchronized between all ranks,
+  //     then it can be cleared for saving mem.
+  if (GlobalProcessCtx::IsThisProcessMaster()) {
+    for (int i = kWorkerStartRank /*skip master*/; i < GlobalProcessCtx::WorldSize(); ++i) {
+      std::string name = "plan:" + job_name() + ":" + std::to_string(i);
+      Singleton<CtrlClient>::Get()->ClearKV(name);
+    }
+    for (int i = kWorkerStartRank /*skip master*/; i < GlobalProcessCtx::WorldSize(); ++i) {
+      std::string name = "collective_boxing_info:" + job_name() + ":" + std::to_string(i);
+      Singleton<CtrlClient>::Get()->ClearKV(name);
+    }
+  }
+  OF_SESSION_BARRIER();
+  compile_time_counter->Count("Graph name: " + name_ + " compile and sync plan", 1);
+  // NOTE(chengcheng): recovery op_attr
+  // PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
+  compile_time_counter->Count("Graph name: " + name_ + " complete plan", 1);
+>>>>>>> Stashed changes
 
   // NOTE(chengcheng): do job compeleter for each rank.
   JUST(JobCompleter().Complete(&job_));
