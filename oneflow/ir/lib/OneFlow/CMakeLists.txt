@@ -18,6 +18,7 @@ endforeach()
 oneflow_add_mlir_dialect_library(
   MLIROneFlow
   OKL/OKLDialect.cpp
+  OKL/Conversion/OKLToLLVM.cpp
   SBP/SBPDialect.cpp
   SBP/SBPAttributes.cpp
   SBP/SBPImporter.cpp
