@@ -21,80 +21,239 @@ limitations under the License.
 namespace oneflow {
 
 /*
-  Copyright microsoft/onnxruntime
-  https://github.com/microsoft/onnxruntime/blob/master/onnxruntime/core/providers/cuda/shared_inc/fast_divmod.h
+  Copyright NVIDIA/DALI
+  https://github.com/NVIDIA/DALI/blob/main/include/dali/core/fast_div.h
 */
-template<typename T>
-struct FastIntegerMath {
-  OF_DEVICE_FUNC FastIntegerMath() {}
-  OF_DEVICE_FUNC explicit FastIntegerMath(T operand) {
-#if defined(__CUDA_ARCH__)
-    int leading_zeroes = __clzll(operand);
+template <typename component>
+struct lohi {
+  component lo, hi;
+};
+
+template <typename T>
+OF_DEVICE_FUNC lohi<T> operator<<(lohi<T> x, unsigned sh) {
+  using U = typename std::make_unsigned<T>::type;
+  static constexpr unsigned bits = sizeof(T) * 8;
+  if (sh == 0) {
+    return x;
+  } else if (sh >= bits) {
+    return { 0, x.lo << (sh-bits) };
+  } else {
+    return {
+      x.lo << sh,
+      x.hi << sh | U(x.lo) >> (bits - sh)
+    };
+  }
+}
+
+template <typename T>
+OF_DEVICE_FUNC lohi<T> operator>>(lohi<T> x, unsigned sh) {
+  using U = typename std::make_unsigned<T>::type;
+  static constexpr unsigned bits = sizeof(T) * 8;
+  if (sh == 0) {
+    return x;
+  } else if (sh >= bits) {
+    return { x.hi >> (sh-bits), 0 };
+  } else {
+    return {
+      U(x.lo) >> sh | x.hi << (bits - sh),
+      x.hi >> sh
+    };
+  }
+}
+
+template <typename T>
+OF_DEVICE_FUNC lohi<T> &operator<<=(lohi<T> &x, unsigned sh) {
+  x = x << sh;
+  return x;
+}
+
+template <typename T>
+OF_DEVICE_FUNC lohi<T> &operator>>=(lohi<T> &x, unsigned sh) {
+  x = x >> sh;
+  return x;
+}
+
+template <typename T>
+OF_DEVICE_FUNC lohi<T> operator-(lohi<T> a, lohi<T> b) {
+  lohi<T> ret;
+  ret.lo = a.lo - b.lo;
+  int borrow = (b.lo && ret.lo > a.lo);
+  ret.hi = a.hi - b.hi - borrow;
+  return ret;
+}
+
+__host__ __device__ inline uint32_t div_lohi(uint32_t lo, uint32_t hi, uint32_t operand) {
+  return (static_cast<uint64_t>(hi) << 32 | lo) / operand;
+}
+
+OF_DEVICE_FUNC lohi<uint64_t> mull(uint64_t a, uint64_t b) {
+  lohi<uint64_t> ret;
+#ifdef __CUDA_ARCH__
+  ret.lo = a * b;
+  ret.hi = __umul64hi(a, b);
 #else
-    int leading_zeroes = __builtin_clz(operand);
+  unsigned __int128 m = (unsigned __int128)a * b;
+  ret.lo = m;
+  ret.hi = m >> 64;
 #endif
-    bool is_power_2 = ((operand & (operand - 1)) == 0);
-    if (is_power_2) {
-      log2_operand_ = 31 - leading_zeroes;
-    } else {
-      log2_operand_ = -1;  // Set as flag.
+  return ret;
+}
+
+template <typename T>
+__host__ __device__ int ilog2(T x) noexcept {
+  int n = 0;
+  while (x >>= 1)
+    n++;
+  return n;
+};
+
+__host__ __device__ inline uint64_t div_lohi(uint64_t lo, uint64_t hi, uint64_t operand) {
+#if defined(__x86_64) && defined(__GNUC__) && !defined(__CUDA_ARCH__)
+  // I hope this gets compiled to dividing rdx:rax register pair by a 64-bit value
+  return (static_cast<unsigned __int128>(hi) << 64 | lo) / operand;
+#else
+  #if CUDA_VERSION >= 11500
+    // NVCC support __int128 in device code in CUDA11.5 (zhengzekang)
+    return (static_cast<unsigned __int128>(hi) << 64 | lo) / operand;
+  #else
+    // NVCC doesn't support __int128 in device code, so we need a bit of hackery
+    if (!hi)  // No high part? Just divide in 64-bits and be done.
+      return lo / operand;
+
+    // long division:
+
+    int lnum = ilog2(hi) + 64;
+    int lden = ilog2(operand);
+
+    lohi<uint64_t> num = { lo, hi };
+    lohi<uint64_t> den = { operand, 0 };
+
+    // calculate MSB positions...
+    int sh = lnum - lden;
+    // .. and align numerator and denominator
+    den <<= sh;
+
+    uint64_t q = 0;
+
+    while (sh >= 0) {
+      lohi<uint64_t> dif = num - den;  // this serves both as difference and comparison
+      if (static_cast<int64_t>(dif.hi) >= 0) {
+        num = dif;
+        q |= static_cast<uint64_t>(1) << sh;
+      }
+      sh--;
+      den >>= 1;
     }
-    operand_ = operand == 0 ? 1 : operand;
-    assert(operand_ >= 1 && operand_ <= GetMaxVal<T>());
+    return q;
+  #endif
+#endif
+}
+
+// fast_div works only with unsigned integers. (zhengzekang)
+template <typename T>
+struct FastIntegerMath {
+  uint64_t operand_;
+  uint64_t mul_factor_;
+  uint8_t add_;
+  uint8_t shift_;
+
+  __host__ __device__ FastIntegerMath() {}
+
+  __host__ __device__ FastIntegerMath(T operand) {
+    init(operand);
   }
 
-  OF_DEVICE_FUNC T divides(T n) const {
-    if (log2_operand_ >= 0) {
-      return n >> log2_operand_;
-    } else {
-      return n / operand_;
+  __host__ __device__ void init(T operand) {
+    this->operand_ = static_cast<uint64_t>(operand);
+    this->mul_factor_ = 1;
+    this->shift_ = 0;
+    this->add_ = 0;
+    if (operand == 0) {
+      return;
     }
+
+    int log_div = ilog2(operand);
+    this->shift_ = log_div;
+
+    if ((operand & (operand - 1)) == 0) {
+      this->mul_factor_ = 0;
+      return;
+    }
+
+    uint64_t m_lo = div_lohi(0, uint64_t(1) << log_div, operand);
+    uint64_t m_hi = div_lohi(uint64_t(1) << log_div, uint64_t(1) << log_div, operand);
+    this->add_ = (m_lo == m_hi) ? 1 : 0;  // round-up failed, use round-down method
+    this->mul_factor_ = m_hi;
+  }
+
+  OF_DEVICE_FUNC T divides(T x) const {
+    // If the operand is a power of 2, the multiplier would be 2^64, which is out of range
+    // - therefore, powers of 2 get special treatment and the multiplication is skipped.
+    x = static_cast<uint64_t>(x); 
+  #ifdef __CUDA_ARCH__
+    if (mul_factor_)
+      x = __umul64hi(x + add_, mul_factor_);
+    return x >> shift_;
+  #else
+    if (mul_factor) {
+      uint64_t hi = static_cast<unsigned __int128>(x + add_) * mul_factor_ >> 64;
+      return hi >> shift_;
+    } else {
+      return x >> shift_;
+    }
+  #endif
   }
 
   OF_DEVICE_FUNC T mod(T n) const { return n - divides(n) * operand_; }
-  OF_DEVICE_FUNC T mul(T n) const {
-    if (log2_operand_ >= 0) {
-      return n << log2_operand_;
-    } else {
-      return n * operand_;
-    }
-  }
+  OF_DEVICE_FUNC T mul(T n) const { return n * operand_; }
   OF_DEVICE_FUNC T add(T n) const { return n + operand_; }
   OF_DEVICE_FUNC T sub(T n) const { return n - operand_; }
   OF_DEVICE_FUNC void divmod(T n, T* q, T* r) const {
     *q = divides(n);
     *r = n - *q * operand_;
   }
-
-  T operand_;
-  int32_t log2_operand_;
 };
 
-template<>
+template <>
 struct FastIntegerMath<int32_t> {
-  OF_DEVICE_FUNC FastIntegerMath() {}
+  uint32_t operand_;
+  uint32_t mul_factor_;
+  uint8_t add_;
+  uint8_t shift_;
 
-  OF_DEVICE_FUNC explicit FastIntegerMath(const int32_t operand) {
-    operand_ = operand == 0 ? 1 : operand;
-    assert(operand_ >= 1 && operand_ <= GetMaxVal<uint32_t>());
-    for (l_ = 0; l_ < 32; l_++)
-      if ((1U << l_) >= operand_) break;
+  __host__ __device__ FastIntegerMath() {}
 
-    uint64_t one = 1;
-    uint64_t m = ((one << 32) * ((one << l_) - operand_)) / operand_ + 1;
-    M_ = static_cast<uint32_t>(m);
-    assert(M_ > 0 && M_ == m);
+  __host__ __device__ FastIntegerMath(int32_t operand) {
+    init(operand);
   }
 
-  OF_DEVICE_FUNC int32_t divides(const int32_t n) const {
-#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
-    uint32_t t = __umulhi(M_, n);
-    return (t + n) >> l_;
-#else
-    // Using uint64_t for t, then t + n won't overflow.
-    uint64_t t = ((uint64_t)M_ * n) >> 32;
-    return static_cast<int>((t + n) >> l_);
-#endif
+  __host__ __device__ void init(int32_t operand) {
+    this->operand_ = static_cast<uint32_t>(operand);
+    this->mul_factor_ = 1;
+    this->shift_ = 0;
+    this->add_ = 0;
+    if (operand == 0) {
+      return;
+    }
+
+    int log_div = ilog2(operand);
+    this->shift_ = log_div;
+
+    if ((operand & (operand - 1)) == 0) {
+      this->mul_factor_ = 0;
+      return;
+    }
+
+    uint32_t m_lo = div_lohi(0, uint32_t(1) << log_div, operand);
+    uint32_t m_hi = div_lohi(uint32_t(1) << log_div, uint32_t(1) << log_div, operand);
+    this->add_ = (m_lo == m_hi) ? 1 : 0;  // round-up failed, use round-down method
+    this->mul_factor_ = m_hi;
+  }
+
+  OF_DEVICE_FUNC int32_t divides(int32_t x) const {
+    if (mul_factor)
+      x = __umulhi(x + add_, mul_factor_);
+    return x >> shift_;
   }
 
   OF_DEVICE_FUNC int32_t mod(int32_t n) const { return n - divides(n) * operand_; }
@@ -105,10 +264,6 @@ struct FastIntegerMath<int32_t> {
     *q = divides(n);
     *r = n - *q * operand_;
   }
-
-  uint32_t operand_;
-  uint32_t M_;  // m' in the paper.
-  uint32_t l_;  // l_ = ceil(log2(d_))
 };
 
 }  // namespace oneflow
