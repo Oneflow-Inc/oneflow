@@ -72,7 +72,9 @@ class TestAvgPoolingModule(flow.unittest.TestCase):
         device = gpu_device()
         m.to(device)
         x = (
-            random_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22), requires_grad=True)
+            random_tensor(
+                ndim=4, dim2=random(20, 22), dim3=random(20, 22), requires_grad=True
+            )
             .to(device)
             .to(torch.float16)
         )
