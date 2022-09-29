@@ -16,11 +16,15 @@ limitations under the License.
 
 #include "OneFlow/OKL/OKLDialect.h"
 #include "OneFlow/OKL/OKLOps.h"
+#include "OneFlow/OKL/passes.h"
+#include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LogicalResult.h"
@@ -53,9 +57,8 @@ LLVM::GEPOp GetGepOpFromGlobal(::mlir::PatternRewriter& rewriter, ModuleOp* modu
   Value addr = rewriter.create<LLVM::AddressOfOp>(loc, *global);
   Value cst0 =
       rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), rewriter.getIndexAttr(0));
-  auto gep =
-      rewriter.create<LLVM::GEPOp>(loc, GetPtrType(rewriter), addr, ArrayRef<Value>({cst0, cst0}))
-          ->getResult(0);
+  return rewriter.create<LLVM::GEPOp>(loc, GetPtrType(rewriter), addr,
+                                      ArrayRef<Value>({cst0, cst0}));
 }
 
 // declare key:string = vale in llvm ir global scope.
@@ -88,8 +91,7 @@ LLVM::GlobalOp DeclareOrGetGlobalString(::mlir::PatternRewriter& rewriter, Modul
 struct RegContextOpLowering final : public OpConversionPattern<RegContextOp> {
   // raw: create okl.reg_ctx(StringAttr: assembly) -> llvm_ptr<i8>
   // dst: llvm.call build_reg_ctx(gep_global_str: llvm_ptr<i8>) -> llvm_ptr<i8>
-  static LLVM::LLVMFuncOp DeclareBuildRegContext(::mlir::PatternRewriter& rewriter,
-                                                 ModuleOp* module) {
+  static StringRef DeclareBuildRegContext(::mlir::PatternRewriter& rewriter, ModuleOp* module) {
     auto func_name = "build_reg_ctx";
     LLVM::LLVMFuncOp func;
     if (!(func = module->lookupSymbol<LLVM::LLVMFuncOp>(func_name))) {
@@ -102,14 +104,13 @@ struct RegContextOpLowering final : public OpConversionPattern<RegContextOp> {
                                                LLVM::Linkage::External);
       func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
     }
-    return func;
+    return func_name;
   }
 
  public:
   using OpConversionPattern<RegContextOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(RegContextOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto loc = op->getLoc();
     auto mlir_asm = op.mlir_assembly();
 
     op->getParentOfType<LLVM::LLVMFuncOp>();
@@ -120,8 +121,9 @@ struct RegContextOpLowering final : public OpConversionPattern<RegContextOp> {
 
     auto build_reg_ctx = DeclareBuildRegContext(rewriter, &module);
 
-    auto res = rewriter.create<LLVM::CallOp>(loc, build_reg_ctx, ValueRange{gep})->getResult(0);
-    rewriter.replaceOp(op, ValueRange{res});
+    rewriter
+        .replaceOpWithNewOp<LLVM::CallOp>(op, op->getResultTypes(), build_reg_ctx, ValueRange{gep})
+        ->getResult(0);
     return success();
   }
 };
@@ -151,17 +153,14 @@ struct RunContextOpLowering final : public OpConversionPattern<RunContextOp> {
   using OpConversionPattern<RunContextOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(RunContextOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto loc = op->getLoc();
     auto func = op->getParentOfType<LLVM::LLVMFuncOp>();
 
+    auto module = GetModuleOpFromJobBodyOp<LLVM::LLVMFuncOp>(op);
     auto reg_ctx = op.reg_ctx();
     auto compute_ctx = func.getArgument(0);
 
-    auto module = GetModuleOpFromJobBodyOp<LLVM::LLVMFuncOp>(op);
     auto build_run_ctx = DeclareBuildRunContext(rewriter, &module);
-    auto res = rewriter.create<LLVM::CallOp>(loc, build_run_ctx, ValueRange{reg_ctx, compute_ctx})
-                   ->getResult(0);
-    rewriter.replaceOp(op, ValueRange{res});
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, build_run_ctx, ValueRange{reg_ctx, compute_ctx});
     return success();
   }
 };
@@ -190,8 +189,6 @@ struct KernelOpLowering final : public OpConversionPattern<KernelOp> {
   using OpConversionPattern<KernelOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(KernelOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto loc = op->getLoc();
-
     auto module = GetModuleOpFromJobBodyOp<LLVM::LLVMFuncOp>(op);
     auto build_launch = DeclareBuildKernel(rewriter, &module);
 
@@ -200,9 +197,8 @@ struct KernelOpLowering final : public OpConversionPattern<KernelOp> {
     auto gep = GetGepOpFromGlobal(rewriter, &module, &global_str);
     auto reg_ctx = op.reg_ctx();
 
-    auto res =
-        rewriter.create<LLVM::CallOp>(loc, build_launch, ValueRange{gep, reg_ctx})->getResult(0);
-    rewriter.replaceOp(op, ValueRange{res});
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, build_launch, ValueRange{gep, reg_ctx})
+        ->getResult(0);
     return success();
   }
 };
@@ -232,21 +228,19 @@ struct LaunchOpLowering final : public OpConversionPattern<LaunchOp> {
   using OpConversionPattern<LaunchOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(LaunchOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto loc = op->getLoc();
     auto module = GetModuleOpFromJobBodyOp<LLVM::LLVMFuncOp>(op);
 
     auto build_launch = DeclareBuildLaunch(rewriter, &module);
     auto run_ctx = op.run_ctx();
     auto kernel = op.kernel();
 
-    rewriter.create<LLVM::CallOp>(loc, build_launch, ValueRange{run_ctx, kernel});
-    rewriter.replaceOp(op, ValueRange{});
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, build_launch, ValueRange{run_ctx, kernel});
     return success();
   }
 };
 
 namespace {
-struct LowerOKLToLLVMPass : public LowerOneFlowToTosaPassBase<LowerOKLToLLVMPass> {
+struct LowerOKLToLLVMPass : public LowerOKLToLLVMPassBase<LowerOKLToLLVMPass> {
   void runOnOperation() override;
 };
 }  // namespace
@@ -256,10 +250,11 @@ std::unique_ptr<Pass> createLowerOKLToLLVMPass() { return std::make_unique<Lower
 void LowerOKLToLLVMPass::runOnOperation() {
   MLIRContext* context = &getContext();
   ConversionTarget target(*context);
-  target.addLegalDialect<LLVM::LLVMDialect>();
+  target.addLegalDialect<oneflow::OneFlowDialect, LLVM::LLVMDialect, func::FuncDialect>();
   target.addIllegalDialect<okl::OKLDialect>();
 
   TypeConverter typeConverter;
+  typeConverter.addConversion([](Type type) { return type; });
   RewritePatternSet patterns(context);
 
   patterns.add<KernelOpLowering, LaunchOpLowering, RegContextOpLowering, RunContextOpLowering>(
