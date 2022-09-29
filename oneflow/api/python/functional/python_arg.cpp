@@ -202,7 +202,9 @@ bool PythonArg::TypeCheck(ValueType type) const {
     case kUINT32:
     case kINT64:
     case kUINT64:
-    case kBOOL: return PyLong_Check(object_) || numpy::PyArrayCheckLongScalar(object_);
+    case kBOOL:
+      return PyLong_Check(object_) || numpy::PyArrayCheckLongScalar(object_)
+             || PyIntegerScalarTensorCheck(object_) || PyIntegerScalarTensorCheck(object_);
     case kINT32_LIST:
     case kUINT32_LIST:
     case kINT64_LIST:
@@ -211,7 +213,8 @@ bool PythonArg::TypeCheck(ValueType type) const {
     case kFLOAT:
     case kDOUBLE:
       return PyFloat_Check(object_) || PyLong_Check(object_)
-             || numpy::PyArrayCheckFloatScalar(object_) || numpy::PyArrayCheckLongScalar(object_);
+             || numpy::PyArrayCheckFloatScalar(object_) || numpy::PyArrayCheckLongScalar(object_)
+             || PyFloatScalarTensorCheck(object_);
     case kFLOAT_LIST:
     case kDOUBLE_LIST:
       return PyFloatSequenceCheck(object_)
