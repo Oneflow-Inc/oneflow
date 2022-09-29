@@ -1845,12 +1845,21 @@ class CtcLossFunctor {
                            const std::shared_ptr<one::Tensor>& targets,
                            const std::shared_ptr<one::Tensor>& input_lengths,
                            const std::shared_ptr<one::Tensor>& target_lengths,
-                           const int64_t& max_target_length, const int& blank,
+                           const int64_t& max_target_length, const int64_t& blank,
                            const bool& zero_infinity, const std::string& reduction) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_target_length", "blank", "zero_infinity");
     attrs.SetAllAttrs(max_target_length, blank, zero_infinity);
-    auto out = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *op_, {log_probs, targets, input_lengths, target_lengths}, attrs));
+    std::shared_ptr<one::Tensor> out;
+    if (targets->dtype()->data_type() == DataType::kInt32) {
+      out = JUST(OpInterpUtil::Dispatch<Tensor>(
+          *op_, {log_probs, targets, input_lengths, target_lengths}, attrs));
+    } else {
+      out = JUST(OpInterpUtil::Dispatch<Tensor>(
+          *op_,
+          {log_probs, JUST(functional::Cast(targets, DType::Int64(), false)), input_lengths,
+           target_lengths},
+          attrs));
+    }
     if (zero_infinity) {
       if (out->is_local()) {
         const auto create_constant = [&](const Scalar& scalar) -> Maybe<Tensor> {

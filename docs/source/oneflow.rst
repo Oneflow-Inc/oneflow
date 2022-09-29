@@ -150,6 +150,7 @@ Random sampling
     randint
     randn
     randperm
+    multinomial
     
 In-place random sampling
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -311,6 +312,7 @@ Reduction Ops
     mean  
     median
     prod
+    nansum
     std  
     sum  
     var

@@ -107,7 +107,19 @@ void ClearAllSymbol() {
 
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
-bool CommNetIBEnabled() { return ibv::IsAvailable(); }
+bool CommNetIBEnabled() {
+  if (!ibv::IsAvailable()) { return false; }
+  const auto* node_manager = Singleton<hardware::NodeDeviceDescriptorManager>::Get();
+  if (node_manager == nullptr) { return false; }
+  for (int64_t rank = 0; rank < GlobalProcessCtx::WorldSize(); ++rank) {
+    const auto& node = node_manager->GetNodeDeviceDescriptor(rank);
+    if (!node) { return false; }
+    const auto& list = node->GetDeviceDescriptorList("net_ib");
+    if (!list) { return false; }
+    if (list->DeviceCount() == 0) { return false; }
+  }
+  return true;
+}
 
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX
 

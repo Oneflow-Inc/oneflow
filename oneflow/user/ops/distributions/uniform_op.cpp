@@ -43,7 +43,11 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> UniformOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
+  const Shape& logical_shape = ctx->Attr<Shape>("shape");
+  int64_t num_axes = logical_shape.NumAxes();
+  for (int i = 0; i < num_axes; ++i) {
+    ctx->NewBuilder().Broadcast(ctx->inputs()).Split(ctx->outputs(), i).Build();
+  }
   return Maybe<void>::Ok();
 }
 
@@ -57,6 +61,11 @@ namespace oneflow {
   auto dtype = ctx->Attr<DataType>("dtype");
   ctx->SetOutputDType("out", 0, dtype);
   return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> UniformOp::DumpNdSbpSignatureForOpConfFn(const NdSbpSignature& nd_sbp_sig,
+                                                                  OperatorConf* op_conf) {
+  return user_op::SetSrcOpNdSbp(nd_sbp_sig, "out_0", op_conf);
 }
 
 }  // namespace oneflow
