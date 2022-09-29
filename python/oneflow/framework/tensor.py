@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from numbers import Number
 import oneflow as flow
 import oneflow.framework.tensor_str as tensor_str
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
@@ -542,6 +543,23 @@ def _scatter_inplace(self, dim, index, src, reduce=""):
     return flow._C.scatter(self, dim, index, src, reduce, inplace=True)
 
 
+def _contains(self, element):
+    r"""Check if `element` is present in tensor
+
+        Args:
+            element (Tensor or scalar): element to be checked
+                for presence in current tensor"
+        """
+    if isinstance(element, (flow.Tensor, Number)):
+        # type hint doesn't understand the __contains__ result array
+        return (element == self).any().item()  # type: ignore[union-attr]
+
+    raise RuntimeError(
+        "Tensor.__contains__ only supports Tensor or scalar, but you passed in a %s."
+        % type(element)
+    )
+
+
 def RegisterMethods():
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
@@ -552,6 +570,7 @@ def RegisterMethods():
     Tensor.backward = _backward
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
+    Tensor.__contains__ = _contains
     Tensor.__bool__ = is_nonzero
     Tensor.__iadd__ = _iadd
     Tensor.addmm = _addmm
