@@ -209,7 +209,7 @@ LogicalResult LowerToOKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
   auto module = okl_func->getParentOfType<ModuleOp>();
 
   auto loc = op->getLoc();
-  // create okl.reg_ctx(StringAttr: assembly)
+  // create okl.create_reg_ctx(StringAttr: assembly)
   std::string mlir;
   Operation* found = nullptr;
   if (!(found = SymbolTable(module).lookup(tmp_func_name))) {
@@ -222,12 +222,16 @@ LogicalResult LowerToOKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
   auto reg_ctx =
       rewriter.create<okl::RegContextOp>(loc, llvm_ptr_type, rewriter.getStringAttr(mlir));
   // auto reg_ctx = compute_ctx;
-  // create okl.run_ctx(*reg_ctx, *compute_ctx)
+  // create okl.create_run_ctx(*reg_ctx, *compute_ctx)
   auto run_ctx = rewriter.create<okl::RunContextOp>(loc, llvm_ptr_type, reg_ctx, compute_ctx);
-  // create okl.kernel(*reg_ctx, StringAttr: op_type_name)
+  // create okl.create_kernel(*reg_ctx, StringAttr: op_type_name)
   auto kernel = rewriter.create<okl::KernelOp>(loc, llvm_ptr_type, reg_ctx, op_type_name);
   // create okl.launch(*reg_ctx, *run_ctx, *kernel)
   rewriter.create<okl::LaunchOp>(loc, reg_ctx, run_ctx, kernel);
+  // create okl.destroy(reg_ctx);
+  rewriter.create<okl::DestroyRegContextOp>(loc, reg_ctx);
+  // create okl.destroy(run_ctx);
+  rewriter.create<okl::DestroyRunContextOp>(loc, run_ctx);
   return success();
 }
 

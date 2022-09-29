@@ -21,7 +21,7 @@ include "OneFlow/OKL/OKLBase.td"
 include "mlir/Pass/PassBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 
-def RegContextOp : OKL_Op<"reg_ctx"> {
+def RegContextOp : OKL_Op<"build_reg_ctx"> {
   let summary = "build reg context operation";
   let description = [{
     this context is generated from module op and used on kernel/run_ctx build phase.
@@ -34,9 +34,16 @@ def RegContextOp : OKL_Op<"reg_ctx"> {
   let results = (outs LLVM_AnyPointer:$out);
 }
 
+def DestroyRegContextOp : OKL_Op<"destroy_reg_ctx"> {
+  let summary = "destroy reg context operation";
+  let description = [{
+    delete the pointer source.
+  }];
 
+  let arguments = (ins LLVM_AnyPointer:$ptr);
+}
 
-def RunContextOp : OKL_Op<"run_ctx"> {
+def RunContextOp : OKL_Op<"build_run_ctx"> {
   let summary = "build run context operation";
   let description = [{
     this context is generated from reg_ctx and compute_ctx.
@@ -51,7 +58,16 @@ def RunContextOp : OKL_Op<"run_ctx"> {
   let results = (outs LLVM_AnyPointer:$out);
 }
 
-def KernelOp : OKL_Op<"kernel"> {
+def DestroyRunContextOp : OKL_Op<"destroy_run_ctx"> {
+  let summary = "destroy run context operation";
+  let description = [{
+    delete the pointer source.
+  }];
+
+  let arguments = (ins LLVM_AnyPointer:$ptr);
+}
+
+def KernelOp : OKL_Op<"build_op_kernel"> {
   let summary = "build kernel operation";
   let description = [{
     kernel is generated from reg_ctx and op_name.

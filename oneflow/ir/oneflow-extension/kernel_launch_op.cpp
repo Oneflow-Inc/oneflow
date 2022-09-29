@@ -409,8 +409,6 @@ class OKLRegContext final {
     auto* okl_ctx = dynamic_cast<oneflow::user_op::KernelComputeContext*>(run_ctx);
     kernel->Compute(okl_ctx);
     // TODO: better lifetime management
-    delete run_ctx;
-    delete this;
   }
 
  private:
@@ -422,13 +420,17 @@ extern "C" {
 // llvm.call build_reg_ctx(gep_global_str: llvm_ptr<i8>) -> llvm_ptr<i8>
 void* build_reg_ctx(void* gep_global_str) { return new OKLRegContext((const char*)gep_global_str); }
 
-void* build_kernel(void* op_name, void* reg_ctx) {
-  return (void*)((OKLRegContext*)reg_ctx)->BuildKernel((const char*)op_name);
-}
+void destroy_reg_ctx(void* reg_ctx) { delete (OKLRegContext*)reg_ctx; }
 
 void* build_run_ctx(void* reg_ctx, void* compute_ctx) {
   return (void*)((OKLRegContext*)reg_ctx)
       ->BuildRunContext((oneflow::user_op::KernelComputeContext*)compute_ctx);
+}
+
+void destroy_run_ctx(void* reg_ctx) { delete (oneflow::KernelLaunchComputeContext*)reg_ctx; }
+
+void* build_kernel(void* op_name, void* reg_ctx) {
+  return (void*)((OKLRegContext*)reg_ctx)->BuildKernel((const char*)op_name);
 }
 
 void launch(void* reg_ctx, void* run_ctx, void* kernel) {

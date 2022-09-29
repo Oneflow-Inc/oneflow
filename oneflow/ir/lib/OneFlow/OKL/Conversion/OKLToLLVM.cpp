@@ -235,11 +235,75 @@ struct LaunchOpLowering final : public OpConversionPattern<LaunchOp> {
     auto run_ctx = op.run_ctx();
     auto kernel = op.kernel();
 
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, build_launch, ValueRange{reg_ctx, run_ctx, kernel});
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, build_launch,
+                                              ValueRange{reg_ctx, run_ctx, kernel});
     return success();
   }
 };
 
+struct DestroyRegContextOpLowering final : public OpConversionPattern<DestroyRegContextOp> {
+  static LLVM::LLVMFuncOp DeclareDestroyRegContext(::mlir::PatternRewriter& rewriter,
+                                                   ModuleOp* module) {
+    auto func_name = "destory_reg_ctx";
+    LLVM::LLVMFuncOp func;
+    if (!(func = module->lookupSymbol<LLVM::LLVMFuncOp>(func_name))) {
+      OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToStart(module->getBody());
+
+      auto void_type = LLVM::LLVMVoidType::get(rewriter.getContext());
+      auto func_type = LLVM::LLVMFunctionType::get(void_type, {GetPtrType(rewriter)}, false);
+      func = rewriter.create<LLVM::LLVMFuncOp>(rewriter.getUnknownLoc(), func_name, func_type,
+                                               LLVM::Linkage::External);
+      func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
+    }
+    return func;
+  }
+
+ public:
+  using OpConversionPattern<DestroyRegContextOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(DestroyRegContextOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto module = GetModuleOpFromJobBodyOp<LLVM::LLVMFuncOp>(op);
+
+    auto build_launch = DeclareDestroyRegContext(rewriter, &module);
+    auto reg_ctx = op.ptr();
+
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, build_launch, ValueRange{reg_ctx});
+    return success();
+  }
+};
+
+struct DestroyRunContextOpLowering final : public OpConversionPattern<DestroyRunContextOp> {
+  static LLVM::LLVMFuncOp DeclareDestroyRunContext(::mlir::PatternRewriter& rewriter,
+                                                   ModuleOp* module) {
+    auto func_name = "destory_reg_ctx";
+    LLVM::LLVMFuncOp func;
+    if (!(func = module->lookupSymbol<LLVM::LLVMFuncOp>(func_name))) {
+      OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToStart(module->getBody());
+
+      auto void_type = LLVM::LLVMVoidType::get(rewriter.getContext());
+      auto func_type = LLVM::LLVMFunctionType::get(void_type, {GetPtrType(rewriter)}, false);
+      func = rewriter.create<LLVM::LLVMFuncOp>(rewriter.getUnknownLoc(), func_name, func_type,
+                                               LLVM::Linkage::External);
+      func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
+    }
+    return func;
+  }
+
+ public:
+  using OpConversionPattern<DestroyRunContextOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(DestroyRunContextOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto module = GetModuleOpFromJobBodyOp<LLVM::LLVMFuncOp>(op);
+
+    auto build_launch = DeclareDestroyRunContext(rewriter, &module);
+    auto reg_ctx = op.ptr();
+
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, build_launch, ValueRange{reg_ctx});
+    return success();
+  }
+};
 namespace {
 struct LowerOKLToLLVMPass : public LowerOKLToLLVMPassBase<LowerOKLToLLVMPass> {
   void runOnOperation() override;
@@ -258,8 +322,8 @@ void LowerOKLToLLVMPass::runOnOperation() {
   typeConverter.addConversion([](Type type) { return type; });
   RewritePatternSet patterns(context);
 
-  patterns.add<KernelOpLowering, LaunchOpLowering, RegContextOpLowering, RunContextOpLowering>(
-      typeConverter, context);
+  patterns.add<KernelOpLowering, LaunchOpLowering, RegContextOpLowering, RunContextOpLowering,
+               DestroyRegContextOpLowering, DestroyRunContextOpLowering>(typeConverter, context);
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     signalPassFailure();
     getOperation()->emitError("Failed to lower OKL to LLVM");

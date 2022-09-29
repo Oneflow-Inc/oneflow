@@ -274,7 +274,7 @@ def WrapOps2KernelLaunchPass : Pass<"wrap-ops-to-kernel-launch", "ModuleOp"> {
   let constructor = "mlir::oneflow::createWrapOps2KernelLaunchPass()";
 }
 
-def LowerToOKLPass : Pass<"lower-to-okl", "ModuleOp"> {
+def LowerToOKLPass : Pass<"lower-oneflow-to-okl", "ModuleOp"> {
   let summary = "convert oneflow.kernel_launch to okl dialect";
   let constructor = "mlir::oneflow::createLowerToOKLPass()";
 }

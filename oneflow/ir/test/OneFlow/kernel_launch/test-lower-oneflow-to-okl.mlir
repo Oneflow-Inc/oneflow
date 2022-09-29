@@ -1,5 +1,5 @@
 // RUN: oneflow-opt %s \
-// RUN: -lower-to-okl  -canonicalize | FileCheck %s
+// RUN: -lower-oneflow-to-okl  -canonicalize | FileCheck %s
 
 // CHECK: oneflow.kernel_launch
 module {
