@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "llvm/ADT/StringRef.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/Parser/Parser.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/JITEngine.h"
 #include "oneflow/ir/include/OneFlow/Extension.h"
 #include <glog/logging.h>
@@ -25,12 +28,6 @@ SharedLibs* MutSharedLibPaths() {
 const SharedLibs* SharedLibPaths() { return MutSharedLibPaths(); }
 }  // namespace oneflow
 
-extern "C" {
-void kernel_launch(void* ctx, void* kernel_opaque) {
-  auto kernel = (typename std::tuple_element_t<1, oneflow::TypeKernelLaunchArgs>)kernel_opaque;
-  kernel->Compute((typename std::tuple_element_t<0, oneflow::TypeKernelLaunchArgs>)ctx);
-}
-}  // extern "C"
 
 JIT_Engine::JIT_Engine(mlir::ModuleOp module) {
   llvm::SmallVector<llvm::StringRef, 4> ext_libs(

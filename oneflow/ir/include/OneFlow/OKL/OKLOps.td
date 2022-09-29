@@ -58,8 +58,8 @@ def KernelOp : OKL_Op<"kernel"> {
   }];
 
   let arguments = (ins
-    StrAttr:$op_type_name,
-    LLVM_AnyPointer:$reg_ctx
+    LLVM_AnyPointer:$reg_ctx,
+    StrAttr:$op_type_name
   );
   let results = (outs LLVM_AnyPointer:$out);
 }
@@ -71,6 +71,7 @@ def LaunchOp : OKL_Op<"launch"> {
   }];
 
   let arguments = (ins
+    LLVM_AnyPointer:$reg_ctx,
     LLVM_AnyPointer:$run_ctx,
     LLVM_AnyPointer:$kernel
   );

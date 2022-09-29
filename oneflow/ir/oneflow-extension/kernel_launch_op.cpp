@@ -19,11 +19,13 @@ limitations under the License.
 #include "OneFlow/UserOpReflection.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/Extension.h"
+#include "mlir/IR/MLIRContext.h"
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_kernel.h"
+#include "oneflow/core/framework/user_op_kernel_registry.h"
 #include "oneflow/core/kernel/blob_tensor_view.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
@@ -172,7 +174,7 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
 
 class KernelLaunchComputeContext final : public user_op::KernelComputeContext {
  public:
-  explicit KernelLaunchComputeContext(std::unique_ptr<KernelLaunchOpKernelRegContext> reg,
+  explicit KernelLaunchComputeContext(std::shared_ptr<KernelLaunchOpKernelRegContext> reg,
                                       KernelComputeContext* comp)
       : reg_ctx_(std::move(reg)), comp_ctx_(comp) {}
   ~KernelLaunchComputeContext() = default;
@@ -226,7 +228,7 @@ class KernelLaunchComputeContext final : public user_op::KernelComputeContext {
       const std::string& attr_name) const override {
     return user_op_conf().Attr4Name(attr_name);
   }
-  std::unique_ptr<KernelLaunchOpKernelRegContext> reg_ctx_;
+  std::shared_ptr<KernelLaunchOpKernelRegContext> reg_ctx_;
   KernelComputeContext* comp_ctx_ = nullptr;
   std::unordered_map<mlir::oneflow::user_op::ArgID, user_op::Tensor*> tensor_desc_{};
 };
@@ -370,3 +372,67 @@ REGISTER_KERNEL_LAUNCH_GPU_KERNEL(int64_t)
 }  // namespace
 
 }  // namespace oneflow
+
+class OKLRegContext final {
+  static mlir::DialectRegistry GetRegistry() {
+    mlir::DialectRegistry registry;
+    registry.insert<mlir::LLVM::LLVMDialect>();
+    mlir::registerLLVMDialectTranslation(registry);
+    return registry;
+  }
+
+ public:
+  explicit OKLRegContext(const char* mlir_asm) : mlir_ctx_(GetRegistry()) {
+    auto module = mlir::parseSourceString<mlir::ModuleOp>(mlir_asm, &mlir_ctx_);
+    if (!module) {
+      LOG(ERROR) << "Fail to load mlir assembly";
+      exit(1);
+    }
+
+    reg_ctx_ = std::make_shared<oneflow::KernelLaunchOpKernelRegContext>(*module);
+  };
+  ~OKLRegContext() = default;
+
+  oneflow::KernelLaunchComputeContext* BuildRunContext(
+      oneflow::user_op::KernelComputeContext* compute_ctx) {
+    // this will be gc after run jit
+    return new oneflow::KernelLaunchComputeContext(std::move(reg_ctx_), compute_ctx);
+  }
+
+  const oneflow::user_op::OpKernel* BuildKernel(const char* op_name) {
+    return CHECK_JUST(oneflow::user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
+                          reg_ctx_->GetOp()->getName().stripDialect().str(), *reg_ctx_))
+        ->create_fn();
+  }
+
+  void Launch(oneflow::KernelLaunchComputeContext* run_ctx, oneflow::user_op::OpKernel* kernel) {
+    auto* okl_ctx = dynamic_cast<oneflow::user_op::KernelComputeContext*>(run_ctx);
+    kernel->Compute(okl_ctx);
+    // TODO: better lifetime management
+    delete run_ctx;
+    delete this;
+  }
+
+ private:
+  mlir::MLIRContext mlir_ctx_;
+  std::shared_ptr<oneflow::KernelLaunchOpKernelRegContext> reg_ctx_;
+};
+
+extern "C" {
+// llvm.call build_reg_ctx(gep_global_str: llvm_ptr<i8>) -> llvm_ptr<i8>
+void* build_reg_ctx(void* gep_global_str) { return new OKLRegContext((const char*)gep_global_str); }
+
+void* build_kernel(void* op_name, void* reg_ctx) {
+  return (void*)((OKLRegContext*)reg_ctx)->BuildKernel((const char*)op_name);
+}
+
+void* build_run_ctx(void* reg_ctx, void* compute_ctx) {
+  return (void*)((OKLRegContext*)reg_ctx)
+      ->BuildRunContext((oneflow::user_op::KernelComputeContext*)compute_ctx);
+}
+
+void launch(void* reg_ctx, void* run_ctx, void* kernel) {
+  ((OKLRegContext*)reg_ctx)
+      ->Launch((oneflow::KernelLaunchComputeContext*)run_ctx, (oneflow::user_op::OpKernel*)kernel);
+}
+}  // extern "C"

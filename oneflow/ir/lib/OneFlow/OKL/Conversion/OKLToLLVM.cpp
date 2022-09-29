@@ -165,10 +165,10 @@ struct RunContextOpLowering final : public OpConversionPattern<RunContextOp> {
   }
 };
 
-// create okl.kernel(StringAttr: op_type_name, *reg_ctx)
+// create okl.kernel(*reg_ctx, StringAttr: op_type_name)
 struct KernelOpLowering final : public OpConversionPattern<KernelOp> {
-  // raw: create okl.kernel(StringAttr: op_type_name, *reg_ctx) -> llvm_ptr<i8>
-  // dst: llvm.call build_kernel(op_type_name: llvm_ptr<i8>, reg_ctx: llvm_ptr<i8>) -> llvm_ptr<i8>
+  // raw: create okl.kernel(*reg_ctx, StringAttr: op_type_name) -> llvm_ptr<i8>
+  // dst: llvm.call build_kernel(reg_ctx: llvm_ptr<i8>, op_type_name: llvm_ptr<i8>) -> llvm_ptr<i8>
   static LLVM::LLVMFuncOp DeclareBuildKernel(::mlir::PatternRewriter& rewriter, ModuleOp* module) {
     auto func_name = "build_kernel";
     LLVM::LLVMFuncOp func;
@@ -197,16 +197,16 @@ struct KernelOpLowering final : public OpConversionPattern<KernelOp> {
     auto gep = GetGepOpFromGlobal(rewriter, &module, &global_str);
     auto reg_ctx = op.reg_ctx();
 
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, build_launch, ValueRange{gep, reg_ctx})
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, build_launch, ValueRange{reg_ctx, gep})
         ->getResult(0);
     return success();
   }
 };
 
-// create okl.launch(*run_ctx, *kernel)
+// create okl.launch(*reg_ctx, *run_ctx, *kernel)
 struct LaunchOpLowering final : public OpConversionPattern<LaunchOp> {
-  // raw: create okl.launch(*run_ctx, *kernel) -> llvm_ptr<i8>
-  // dst: llvm.call launch(run_ctx: llvm_ptr<i8>, kernel: llvm_ptr<i8>)
+  // raw: create okl.launch(*reg_ctx, *run_ctx, *kernel) -> llvm_ptr<i8>
+  // dst: llvm.call launch(reg_ctx: llvm_ptr<i8>, run_ctx: llvm_ptr<i8>, kernel: llvm_ptr<i8>)
   static LLVM::LLVMFuncOp DeclareBuildLaunch(::mlir::PatternRewriter& rewriter, ModuleOp* module) {
     auto func_name = "launch";
     LLVM::LLVMFuncOp func;
@@ -216,7 +216,7 @@ struct LaunchOpLowering final : public OpConversionPattern<LaunchOp> {
 
       auto void_type = LLVM::LLVMVoidType::get(rewriter.getContext());
       auto func_type = LLVM::LLVMFunctionType::get(
-          void_type, {GetPtrType(rewriter), GetPtrType(rewriter)}, false);
+          void_type, {GetPtrType(rewriter), GetPtrType(rewriter), GetPtrType(rewriter)}, false);
       func = rewriter.create<LLVM::LLVMFuncOp>(rewriter.getUnknownLoc(), func_name, func_type,
                                                LLVM::Linkage::External);
       func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
@@ -231,10 +231,11 @@ struct LaunchOpLowering final : public OpConversionPattern<LaunchOp> {
     auto module = GetModuleOpFromJobBodyOp<LLVM::LLVMFuncOp>(op);
 
     auto build_launch = DeclareBuildLaunch(rewriter, &module);
+    auto reg_ctx = op.reg_ctx();
     auto run_ctx = op.run_ctx();
     auto kernel = op.kernel();
 
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, build_launch, ValueRange{run_ctx, kernel});
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, build_launch, ValueRange{reg_ctx, run_ctx, kernel});
     return success();
   }
 };

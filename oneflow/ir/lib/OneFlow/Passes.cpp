@@ -195,7 +195,7 @@ func::FuncOp InsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operation* 
 }
 
 LogicalResult LowerToOKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
-                          LLVM::LLVMFuncOp okl_func) {
+                           LLVM::LLVMFuncOp okl_func) {
   auto op_type_name = op->getAttr("op_name").dyn_cast<StringAttr>();
   if (!op_type_name) { return failure(); }
   OpBuilder::InsertionGuard guard(rewriter);
@@ -224,10 +224,10 @@ LogicalResult LowerToOKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
   // auto reg_ctx = compute_ctx;
   // create okl.run_ctx(*reg_ctx, *compute_ctx)
   auto run_ctx = rewriter.create<okl::RunContextOp>(loc, llvm_ptr_type, reg_ctx, compute_ctx);
-  // create okl.kernel(StringAttr: op_type_name, *reg_ctx)
-  auto kernel = rewriter.create<okl::KernelOp>(loc, llvm_ptr_type, op_type_name, reg_ctx);
-  // create okl.launch(*run_ctx, *kernel)
-  rewriter.create<okl::LaunchOp>(loc, run_ctx, kernel);
+  // create okl.kernel(*reg_ctx, StringAttr: op_type_name)
+  auto kernel = rewriter.create<okl::KernelOp>(loc, llvm_ptr_type, reg_ctx, op_type_name);
+  // create okl.launch(*reg_ctx, *run_ctx, *kernel)
+  rewriter.create<okl::LaunchOp>(loc, reg_ctx, run_ctx, kernel);
   return success();
 }
 
