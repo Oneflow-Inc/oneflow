@@ -635,18 +635,37 @@ void BuildEmbeddingUpdate(
         .Attr<float>("beta", optimizer_conf.momentum_conf().beta());
   } else if (optimizer_conf.has_adam_conf()) {
     const AdamModelUpdateConf& adam_conf = optimizer_conf.adam_conf();
-    embedding_update_op_builder.OpTypeName("one_embedding_adam_update")
-        .Attr<float>("beta1", adam_conf.beta1())
-        .Attr<float>("beta2", adam_conf.beta2())
-        .Attr<float>("epsilon", adam_conf.epsilon())
-        .Attr<bool>("do_bias_correction", adam_conf.do_bias_correction());
-    if (adam_conf.do_bias_correction()) {
-      const std::string bias_correction1_lbn =
-          AddAdamBiasCorrectionFactorOp(adam_conf.beta1(), "adam_bias_correction_factor1");
-      const std::string bias_correction2_lbn =
-          AddAdamBiasCorrectionFactorOp(adam_conf.beta2(), "adam_bias_correction_factor2");
-      embedding_update_op_builder.Input("bias_correction1", bias_correction1_lbn)
-          .Input("bias_correction2", bias_correction2_lbn);
+    const int64_t value_dtype_size = GetSizeOfDataType(embedding_op.attr<DataType>("dtype"));
+    const int64_t step_dtype_size = sizeof(int64_t);
+    const int64_t model_and_states_bytes = embedding_size * 3 * value_dtype_size;
+    const int64_t align_to_step_size_bytes =
+        (model_and_states_bytes + step_dtype_size - 1) / step_dtype_size * step_dtype_size;
+    const int64_t sparse_adam_line_size =
+        (align_to_step_size_bytes + step_dtype_size) / value_dtype_size;
+    if (line_size == sparse_adam_line_size) {
+      CHECK(adam_conf.do_bias_correction())
+          << "when use sparse adam, do_bias_correction should be true. but got "
+          << adam_conf.do_bias_correction();
+      embedding_update_op_builder.OpTypeName("one_embedding_sparse_adam_update")
+          .Input("train_step", train_conf.train_step_lbn())
+          .Attr<float>("beta1", adam_conf.beta1())
+          .Attr<float>("beta2", adam_conf.beta2())
+          .Attr<float>("epsilon", adam_conf.epsilon())
+          .Attr<bool>("do_bias_correction", adam_conf.do_bias_correction());
+    } else {
+      embedding_update_op_builder.OpTypeName("one_embedding_adam_update")
+          .Attr<float>("beta1", adam_conf.beta1())
+          .Attr<float>("beta2", adam_conf.beta2())
+          .Attr<float>("epsilon", adam_conf.epsilon())
+          .Attr<bool>("do_bias_correction", adam_conf.do_bias_correction());
+      if (adam_conf.do_bias_correction()) {
+        const std::string bias_correction1_lbn =
+            AddAdamBiasCorrectionFactorOp(adam_conf.beta1(), "adam_bias_correction_factor1");
+        const std::string bias_correction2_lbn =
+            AddAdamBiasCorrectionFactorOp(adam_conf.beta2(), "adam_bias_correction_factor2");
+        embedding_update_op_builder.Input("bias_correction1", bias_correction1_lbn)
+            .Input("bias_correction2", bias_correction2_lbn);
+      }
     }
   } else if (optimizer_conf.has_adagrad_conf()) {
     const AdagradModelUpdateConf& adagrad_conf = optimizer_conf.adagrad_conf();
