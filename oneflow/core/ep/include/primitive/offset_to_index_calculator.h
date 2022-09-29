@@ -80,14 +80,12 @@ class OffsetToIndexCalculator {
 #pragma unroll
 #endif
     for (int i = 0; i < N; ++i) {
-      if (i == n - 1) { break; }
-      if (i < n - 1) {
+      if (i < n) {
         const T idx = math_helper_[i].divides(remaining);
         index[i] = idx;
         remaining = remaining - math_helper_[i].mul(idx);
       }
     }
-    index[n - 1] = remaining;
   }
 
   template<class... Ts>
