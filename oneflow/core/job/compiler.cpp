@@ -64,6 +64,9 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   // TODO(levi): we can rewrite this part of code in visitor pattern.
   auto task_gph = std::make_unique<GlobalTaskGraph>(
       job->job_conf().enable_straighten_algorithm_in_task_graph());
+  LOG(ERROR) << "global task graph node " << task_gph->node_num() << " edge "
+             << task_gph->edge_num();
+  task_gph->LogStat();
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
@@ -102,6 +105,7 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   } /* task_gph->ForEachNode */);
   counter.WaitForeverUntilCntEqualZero();
   // NOTE(levi): release task_gph here to decrise memory peak.
+  task_gph->LogStat();
   task_gph.reset();
 
   // Step4: post-process for plan and delete Singleton<OpGraph>.

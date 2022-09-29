@@ -869,6 +869,22 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D) {
   }
 }
 
+void TaskGraph::LogStat() {
+  HashMap<TaskType, int64_t> node_type2cnt;
+  ForEachNode([&node_type2cnt](TaskNode* task_node) {
+    auto task_type = task_node->GetTaskType();
+    auto find_type_iter = node_type2cnt.find(task_type);
+    if (find_type_iter != node_type2cnt.end()) {
+      node_type2cnt[task_type] += 1;
+    } else {
+      node_type2cnt[task_type] = 1;
+    }
+  });
+  for (auto& pair : node_type2cnt) {
+    VLOG(1) << " task type " << TaskType_Name(pair.first) << " count " << pair.second;
+  }
+}
+
 void TaskGraph::ConnectWithLbi(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi) {
   if (src_node == dst_node) { return; }
   for (TaskEdge* out_edge : src_node->out_edges()) {
@@ -1115,8 +1131,14 @@ Maybe<void> RankTaskGraph::InitRegstDescsConsumers() {
 Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names,
                                 bool enable_straighten_algorithm) {
   JUST(AddBoxingReletedCompTaskNodesFromProto());
+  LOG(ERROR) << "rank task graph node " << this->node_num() << " edge " << this->edge_num();
+  LogStat();
   JUST(CreateAndPartiallyInitTransportTaskNodesFromProto());
+  LOG(ERROR) << "rank task graph node " << this->node_num() << " edge " << this->edge_num();
+  LogStat();
   JUST(AddTransportTaskEdgesFromProto());
+  LOG(ERROR) << "rank task graph node " << this->node_num() << " edge " << this->edge_num();
+  LogStat();
   JUST(InitTransportTaskNodesFromProto());
   JUST(InitRegstDescsConsumers());
   OpGraph* op_graph = Singleton<OpGraph>::Get();
@@ -1131,15 +1153,20 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names,
     }
     return Maybe<void>::Ok();
   }));
+  LOG(ERROR) << "rank task graph node " << this->node_num() << " edge " << this->edge_num();
+  LogStat();
   JUST(op_graph->MaybeForEachEdge([&](const OpEdge* op_edge) -> Maybe<void> {
     return ForEachDutyRank(op_edge->src_node()->parallel_desc(),
                            [&](int64_t rank) { return ConnectDataEdges(op_edge, rank); });
   }));
+  LOG(ERROR) << "rank task graph node " << this->node_num() << " edge " << this->edge_num();
   ForEachOpGraphNecessaryCtrlEdge(op_graph, [&](const OpNode* src, const OpNode* dst) {
     CHECK(src->parallel_desc_sym() == dst->parallel_desc_sym());
     CHECK_JUST(ForEachDutyRank(src->parallel_desc(),
                                [&](int64_t rank) { return ConnectCtrlEdges(src, dst, rank); }));
   });
+  LOG(ERROR) << "rank task graph node " << this->node_num() << " edge " << this->edge_num();
+  LogStat();
 
   if (enable_straighten_algorithm && GlobalProcessCtx::WorldSize() > 1) {
     StraightenNodes(this, &ordered_task_nodes_);

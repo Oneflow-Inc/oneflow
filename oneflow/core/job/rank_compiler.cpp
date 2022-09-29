@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/common/time_util.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
@@ -54,9 +55,12 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
                                   Plan* plan) const {
   // build task_gph.
   // TODO(levi): we can rewrite this part of code in visitor pattern.
+  auto rank_tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true, true);
   auto task_gph =
       JUST(RankTaskGraph::New(boxing_task_graph_proto_, var_op_names, rank_,
                               job->job_conf().enable_straighten_algorithm_in_task_graph()));
+  LOG(ERROR) << "rank task graph node " << task_gph->node_num() << " edge " << task_gph->edge_num();
+  rank_tc->Count("init tast graph", 1);
   using std::placeholders::_1;
   const auto& IsNotMyDuty = [&](const CompTaskNode* comp_task_node) {
     if (comp_task_node == nullptr) { return false; }
@@ -64,6 +68,7 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
     return !task_gph->IsDutyRank(parallel_desc, comp_task_node->machine_id());
   };
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
+  rank_tc->Count("ProduceAllRegstsAndBindEdges", 1);
   task_gph->ForEachNode([&](TaskNode* task_node) {
     auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
     if (IsNotMyDuty(comp_task_node)) {
@@ -74,6 +79,7 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
       task_node->ConsumeAllRegsts();
     }
   });
+  rank_tc->Count("ConsumeAllRegsts", 1);
   task_gph->ForEachNode([&](TaskNode* task_node) {
     auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
     if (IsNotMyDuty(comp_task_node)) {
@@ -82,9 +88,13 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
       task_node->PinConsumedRegst();
     }
   });
+  rank_tc->Count("PinConsumedRegst", 1);
   task_gph->TopoForEachNode(&TaskNode::Build);
+  rank_tc->Count("BuildNode", 1);
   task_gph->RemoveEmptyRegsts();
+  rank_tc->Count("RemoveEmptyRegsts", 1);
   task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
+  rank_tc->Count("MergeChainAndAddOrderingCtrlEdgeInSameChain", 1);
   auto IsReachable = Singleton<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
   const JobDesc& job_desc = GlobalJobDesc();
   if (job_desc.enable_inplace()) {
@@ -94,8 +104,11 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
       task_gph->EnableInplaceMemSharing(dev_nodes, IsReachable);
     });
   }
+  rank_tc->Count("EnableInplaceMemSharing", 1);
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
+  rank_tc->Count("InferTimeShapeIfMeaningful", 1);
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
+  rank_tc->Count("CheckRegstLbiValid", 1);
 
   // put infomation from task_gph into plan.
   task_gph->ForEachNode([&](TaskNode* task_node) {
@@ -117,8 +130,10 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
     }
     plan->mutable_task()->Add(std::move(task_proto));
   });
+  rank_tc->Count("CreateOpAttributeRef", 1);
   // NOTE(levi): release task_gph here to decrise memory peak.
   task_gph.reset();
+  rank_tc->Count("RelaseTaskGraph", 1);
 
   // post-process for plan and delete Singleton<OpGraph>.
   auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
@@ -126,6 +141,7 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
   // NOTE(chengcheng): infer mem blob id & set inplace & add ctrl
   IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan, IsReachable);
   PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
+  rank_tc->Count("InferMemBlockId4MemReusedRegst and Others", 1);
   return Maybe<void>::Ok();
 }
 

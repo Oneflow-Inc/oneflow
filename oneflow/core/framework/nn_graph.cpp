@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
+#include <memory>
+#include <string>
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
@@ -335,26 +337,32 @@ void MergeIntoFirst(std::vector<HashSet<T>>* data) {
 template<void (*Loop)(size_t num, const std::function<void(size_t i)>& Callback)>
 Maybe<void> NNGraph::MasterRankCompile() {
   auto compile_time_counter = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
+  int64_t world_size =
+      GlobalProcessCtx::WorldSize(ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false));
+  VLOG(1) << " master rank compile world size " << world_size;
   constexpr int kWorkerStartRank = 1;
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    std::vector<Plan> plans(GlobalProcessCtx::WorldSize());
+    auto master_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
+    LOG(ERROR) << "enter master";
+    std::vector<Plan> plans(world_size);
     JUST(OpGraph::WithSingleton(&job_, [&]() -> Maybe<void> {
+      LOG(ERROR) << "enter call compile";
       auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
       JUST(BoxingTaskGraph::New())->ToProto(boxing_task_graph_proto.get());
       // reachable collective boxing task pairs,
       std::vector<HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>>
-          reachable_cb_pairs{GlobalProcessCtx::WorldSize()};
-      Loop(GlobalProcessCtx::WorldSize(), [&](size_t i) {
+          reachable_cb_pairs(world_size);
+      Loop(world_size, [&](size_t i) {
+        LOG(ERROR) << "start compile sub plan " << i;
         Plan rank_plan;
         auto* plan = (i > 0) ? &rank_plan : &plan_;
-        double start = GetCurTime();
+        auto rank_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true);
         // TODO(chengcheng): new memory reused by chunk
         CHECK_JUST(
             RankCompiler(boxing_task_graph_proto, i).Compile(variable_op_names_, &job_, plan));
         PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
+        rank_tc->Count("RankPlan Compie of rank " + std::to_string(i), 1);
 
-        VLOG(1) << "Graph name: " << name_ << " rank: " << i
-                << " compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.";
         if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
           TeePersistentLogStream::Create("job_" + name_ + "_plan" + std::to_string(i))
               ->Write(*plan);
@@ -371,6 +379,7 @@ Maybe<void> NNGraph::MasterRankCompile() {
           std::string plan_name = "plan:" + job_name() + ":" + std::to_string(i);
           Singleton<CtrlClient>::Get()->PushKV(plan_name, *plan);
         }
+        rank_tc->Count("RankPlan Complete of rank " + std::to_string(i), 1);
       });
       // use multi-thread to merge reachable collective boxing task pairs into
       // (*reachable_cb_pairs)[0], which is belong to master .
@@ -381,13 +390,15 @@ Maybe<void> NNGraph::MasterRankCompile() {
       });
       std::string collective_boxing_info;
       plan_.collective_boxing_plan().SerializeToString(&collective_boxing_info);
-      for (int i = kWorkerStartRank /*skip master*/; i < GlobalProcessCtx::WorldSize(); ++i) {
+      for (int i = kWorkerStartRank /*skip master*/; i < world_size; ++i) {
         std::string name = "collective_boxing_info:" + job_name() + ":" + std::to_string(i);
         Singleton<CtrlClient>::Get()->PushKV(name, collective_boxing_info);
       }
       return Maybe<void>::Ok();
     }));
+    master_tc->Count("RanCompile master total", 1);
   } else {
+    auto client_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
     const std::string rank = std::to_string(GlobalProcessCtx::Rank());
     {
       std::string name = "plan:" + job_name() + ":" + rank;
@@ -397,6 +408,7 @@ Maybe<void> NNGraph::MasterRankCompile() {
       std::string name = "collective_boxing_info:" + job_name() + ":" + rank;
       Singleton<CtrlClient>::Get()->PullKV(name, plan_.mutable_collective_boxing_plan());
     }
+    client_tc->Count("Client pull");
   }
   PlanUtil::PlanMemoryLog(&plan_, name_);
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
@@ -406,11 +418,11 @@ Maybe<void> NNGraph::MasterRankCompile() {
   // NOTE(zwx): After barrier plan is synchronized between all ranks,
   //     then it can be cleared for saving mem.
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    for (int i = kWorkerStartRank /*skip master*/; i < GlobalProcessCtx::WorldSize(); ++i) {
+    for (int i = kWorkerStartRank /*skip master*/; i < world_size; ++i) {
       std::string name = "plan:" + job_name() + ":" + std::to_string(i);
       Singleton<CtrlClient>::Get()->ClearKV(name);
     }
-    for (int i = kWorkerStartRank /*skip master*/; i < GlobalProcessCtx::WorldSize(); ++i) {
+    for (int i = kWorkerStartRank /*skip master*/; i < world_size; ++i) {
       std::string name = "collective_boxing_info:" + job_name() + ":" + std::to_string(i);
       Singleton<CtrlClient>::Get()->ClearKV(name);
     }
@@ -429,8 +441,8 @@ Maybe<void> NNGraph::NaiveCompile() {
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     // TODO(chengcheng): new memory reused by chunk
     Compiler().Compile(&job_, &plan_);
-    compile_time_counter->Count("Graph name: " + name_ + " naive compile plan", 1);
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
+    compile_time_counter->Count("Graph name: " + name_ + " naive compile plan", 1);
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
       PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
@@ -493,6 +505,10 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   // NOTE(chengcheng): do job compeleter for each rank.
   JUST(JobCompleter().Complete(&job_));
   compile_time_counter->Count("Graph name: " + name_ + " complete job", 1);
+  {
+    auto op_graph = std::make_unique<OpGraph>(job_);
+    LOG(ERROR) << "op graph node " << op_graph->node_num() << " edge " << op_graph->edge_num();
+  }
 
   typedef Maybe<void> (NNGraph::*CompileMethodT)();
   struct GetCompileMethod final : public CompileModeVisitor<GetCompileMethod> {
@@ -509,7 +525,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
   OF_SESSION_BARRIER();
   if (ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false)) {
-    CHECK_OR_RETURN(false) << " Exit to finish dry run of graph compile.";
+    CHECK_OR_RETURN(false) << " >>> Exit to finish dry run of graph compile. <<<";
   }
 
   NewRuntimeBuffers();
