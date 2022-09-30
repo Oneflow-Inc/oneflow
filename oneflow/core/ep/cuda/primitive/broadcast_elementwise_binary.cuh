@@ -156,7 +156,7 @@ void DispatchIndexType(Stream* stream, size_t num_dims, const int64_t* src0_dims
                        const int64_t* src1_dims, const void* src1, const int64_t* dst_dims,
                        void* dst, Scalar attr0, Scalar attr1) {
   size_t count = GetElementCount(num_dims, dst_dims);
-  if (count < GetMaxVal<uint32_t>()) {
+  if (count < GetMaxVal<uint32_t>() / 2) {
     LaunchKernel<op, T, R, max_dims, src0_pack_size, src1_pack_size, uint32_t>(
         stream, num_dims, src0_dims, src0, src1_dims, src1, dst_dims, dst, count, attr0, attr1);
   } else {
