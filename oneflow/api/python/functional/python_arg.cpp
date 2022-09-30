@@ -94,6 +94,7 @@ INSTANCE_OBJECT_AS_SHARED_PTR(std::string)
 
 template<>
 Scalar PythonArg::ObjectAs<Scalar>() const {
+  if (PyScalarTensorCheck(object_)) { return PyUnpackScalarTensor(object_); }
   return PyUnpackScalar(object_);
 }
 INSTANCE_OBJECT_AS_SHARED_PTR(Scalar)
@@ -223,7 +224,7 @@ bool PythonArg::TypeCheck(ValueType type) const {
     case kSTRING_LIST: return PyStringSequenceCheck(object_);
     case kSCALAR:
       return PyScalarCheck(object_) || numpy::PyArrayCheckLongScalar(object_)
-             || numpy::PyArrayCheckFloatScalar(object_);
+             || numpy::PyArrayCheckFloatScalar(object_) || PyScalarTensorCheck(object_);
     case kTENSOR:
     case kTENSOR_REF: return PyTensor_Check(object_);
     case kTENSOR_TUPLE: return PyTensorTupleCheck(object_) || PyTensorSequenceCheck(object_);

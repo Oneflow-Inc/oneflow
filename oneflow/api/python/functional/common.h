@@ -110,6 +110,8 @@ Scalar PyUnpackScalar(PyObject* obj);
 
 // Scalar Tensor
 bool PyScalarTensorCheck(PyObject* obj);
+Scalar PyUnpackScalarTensor(PyObject* obj);
+
 #define DefinePyTypeScalarTensorCheck(type, type_check_func)               \
   inline bool Py##type##ScalarTensorCheck(PyObject* obj) {                 \
     return PyScalarTensorCheck(obj)                                        \

@@ -205,6 +205,20 @@ bool PyScalarTensorCheck(PyObject* obj) {
   return false;
 }
 
+Scalar PyUnpackScalarTensor(PyObject* obj) {
+  if (PyBoolScalarTensorCheck(obj)) {
+    return PyUnpackBoolScalarTensor(obj);
+  } else if (PyIntegerScalarTensorCheck(obj)) {
+    return PyUnpackIntegerScalarTensor_AsLongLong(obj);
+  } else if (PyFloatScalarTensorCheck(obj)) {
+    return PyUnpackFloatScalarTensor_AsDouble(obj);
+  }
+  THROW(RuntimeError) << "The object is not scalar tensor, but is " << Py_TYPE(obj)->tp_name
+                      << "with data type: "
+                      << DataType_Name(PyTensor_Unpack(obj)->dtype()->data_type());
+  return 0;
+}
+
 #define SWITCH_SCALAR_TENSOR_TO_SCALAR(cpp_type, of_type) \
   case of_type:                                           \
     return detail::GetItemInScalarTensor<cpp_type>(obj).GetOrThrow();
