@@ -58,7 +58,7 @@ int32_t main(int32_t argc, char** argv) {
 #ifdef WITH_MLIR_CUDA_CODEGEN
   mlir::oneflow::registerGpuSerializeToCubinPass();
 #endif  // WITH_MLIR_CUDA_CODEGEN
-  mlir::registerWrapOps2KernelLaunchPassPass();
+  mlir::registerWrapOpsToKernelLaunchPassPass();
   mlir::registerLowerToOKLPassPass();
   mlir::registerConvertOFKLCalleeToLLVMPassPass();
   mlir::registerOutlineJitFunctionPassPass();

@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
+#include "OneFlow/OKL/Conversion/OKLToLLVM.h"
+#include "OneFlow/Transform/OutlineAndFuse.h"
 #include "llvm/ADT/SetOperations.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -99,6 +101,10 @@ limitations under the License.
 
 namespace mlir {
 namespace oneflow {
+
+LLVM::LLVMPointerType GetPtr(::mlir::PatternRewriter& rewriter) {
+  return LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8));
+}
 
 template<typename T>
 LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, T op, StringRef func_name) {
@@ -195,7 +201,7 @@ func::FuncOp InsertKernelOFFuncOp(::mlir::PatternRewriter& rewriter, Operation* 
 }
 
 LogicalResult LowerToOKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
-                           LLVM::LLVMFuncOp okl_func) {
+                           func::FuncOp okl_func) {
   auto op_type_name = op->getAttr("op_name").dyn_cast<StringAttr>();
   if (!op_type_name) { return failure(); }
   OpBuilder::InsertionGuard guard(rewriter);
@@ -959,14 +965,13 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointAfter(op);
     auto& ops = op->getRegion(0).front();
+    auto loc = op->getLoc();
 
-    auto void_type = LLVM::LLVMVoidType::get(rewriter.getContext());
-    auto llvm_ptr_type = LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8));
-    // the input[0] is compute ctx* of kernel launch
-    auto func_type = LLVM::LLVMFunctionType::get(void_type, {llvm_ptr_type}, false);
-    auto okl_func = rewriter.create<LLVM::LLVMFuncOp>(op->getLoc(), func_name, func_type);
+    auto func_type = rewriter.getFunctionType({GetPtr(rewriter)}, TypeRange{});
+    auto okl_func = rewriter.create<func::FuncOp>(loc, func_name, func_type);
+    okl_func->setAttr("compiled", rewriter.getStringAttr("true"));
     okl_func.getBody().emplaceBlock();
-    okl_func.getBody().addArguments(llvm_ptr_type, op->getLoc());
+    okl_func.getBody().addArguments(GetPtr(rewriter), loc);
     for (auto& op : ops) {
       if (!op.hasAttr("op_name")) {
         if (isa<func::ReturnOp>(op)) { break; }
@@ -977,13 +982,15 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
 
     OpBuilder::InsertionGuard guard_ret(rewriter);
     rewriter.setInsertionPointToEnd(&okl_func.getBody().back());
-    rewriter.create<LLVM::ReturnOp>(op->getLoc(), ValueRange());
+    rewriter.create<func::ReturnOp>(loc);
     return success();
   }
 };
 
-func::FuncOp CreateWrapFunc(mlir::Location loc, std::vector<Operation*>& wrap_ops,
-                            mlir::PatternRewriter& rewriter, int& name_index) {
+// {func, ins}
+std::pair<func::FuncOp, std::vector<Value>> CreateWrapFuncAndReturnWithIns(
+    mlir::Location loc, std::vector<Operation*>& wrap_ops, mlir::PatternRewriter& rewriter,
+    int& name_index) {
   auto getProto = [&]() -> std::pair<std::vector<Value>, std::vector<Value>> {
     std::vector<Value> ins, outs, diff_ins;
     for (auto op : wrap_ops) {
@@ -1005,7 +1012,7 @@ func::FuncOp CreateWrapFunc(mlir::Location loc, std::vector<Operation*>& wrap_op
   auto module = GetModuleOpFromJobBodyOp<Job>(wrap_ops[0]);
   if (!module) {
     emitError(loc) << "Fail to find parent ModuleOp";
-    return nullptr;
+    return {nullptr, {}};
   }
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPointToStart(module.getBody());
@@ -1025,18 +1032,18 @@ func::FuncOp CreateWrapFunc(mlir::Location loc, std::vector<Operation*>& wrap_op
   SmallVector<::mlir::Value, 4> mapped_results;
   for (auto result : proto.second) { mapped_results.push_back(mapping.lookup(result)); }
   rewriter.create<func::ReturnOp>(loc, mapped_results);
-  return function;
+  return {function, proto.first};
 };
 
 KernelLaunchOp CreateKernelLaunchFunc(mlir::Location loc, std::vector<Operation*>& wrap_ops,
                                       mlir::PatternRewriter& rewriter, int& name_index) {
   if (!wrap_ops.size()) return nullptr;
   OpBuilder::InsertionGuard guard(rewriter);
-  auto wrap_func = CreateWrapFunc(loc, wrap_ops, rewriter, name_index);
+  auto wrap_func = CreateWrapFuncAndReturnWithIns(loc, wrap_ops, rewriter, name_index);
   rewriter.setInsertionPointAfter(wrap_ops.back());
-  auto func =
-      rewriter.create<KernelLaunchOp>(wrap_ops[0]->getLoc(), wrap_func, wrap_ops[0]->getAttrs());
-  auto func_name = wrap_func.getSymNameAttr();
+  auto func = rewriter.create<KernelLaunchOp>(wrap_ops[0]->getLoc(), wrap_func.first,
+                                              wrap_ops[0]->getAttrs(), wrap_func.second);
+  auto func_name = wrap_func.first.getSymNameAttr();
   func->setAttr("op_name", func_name);
   if (failed(DumpAssembly(rewriter, func, func_name))) { exit(1); }
   int res_idx = 0;
@@ -1100,9 +1107,11 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
 
 LogicalResult LowerKernelLaunchModuleToLLVM(ModuleOp module) {
   mlir::PassManager pm(module->getContext());
-  pm.addPass(createConvertOFKLCalleeToLLVMPass());   // convert-ofkl-callee-to-llvm
+  pm.addPass(createLowerToOKLPass());                // lower-oneflow-to-okl
+  pm.addPass(okl::createLowerOKLToLLVMPass());       // lower-okl-to-llvm
   pm.addPass(createConvertFuncToLLVMPass());         // convert-func-to-llvm
   pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
+  CheckEnableIRPrinting(pm);
   return pm.run(module);
 }
 
@@ -1158,7 +1167,7 @@ void populateConvertOFKLCalleeToLLVMPasses(::mlir::RewritePatternSet& patterns) 
   patterns.add<ConvertOFKLCalleeToLLVMPattern>(patterns.getContext());
 }
 
-void populateWrapOps2KernelLaunchPasses(::mlir::RewritePatternSet& patterns) {
+void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<KernelLaunchPattern>(patterns.getContext());
 }
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {

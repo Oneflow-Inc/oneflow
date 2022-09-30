@@ -113,8 +113,8 @@ struct RegContextOpLowering final : public OpConversionPattern<RegContextOp> {
                                 ConversionPatternRewriter& rewriter) const override {
     auto mlir_asm = op.mlir_assembly();
 
-    op->getParentOfType<LLVM::LLVMFuncOp>();
-    auto module = GetModuleOpFromJobBodyOp<LLVM::LLVMFuncOp>(op);
+    op->getParentOfType<func::FuncOp>();
+    auto module = GetModuleOpFromJobBodyOp<func::FuncOp>(op);
 
     auto global_str = DeclareOrGetGlobalString(rewriter, &module, "mlir_asm", mlir_asm, true);
     auto gep = GetGepOpFromGlobal(rewriter, &module, &global_str);
@@ -153,9 +153,9 @@ struct RunContextOpLowering final : public OpConversionPattern<RunContextOp> {
   using OpConversionPattern<RunContextOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(RunContextOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto func = op->getParentOfType<LLVM::LLVMFuncOp>();
+    auto func = op->getParentOfType<func::FuncOp>();
 
-    auto module = GetModuleOpFromJobBodyOp<LLVM::LLVMFuncOp>(op);
+    auto module = GetModuleOpFromJobBodyOp<func::FuncOp>(op);
     auto reg_ctx = op.reg_ctx();
     auto compute_ctx = func.getArgument(0);
 
@@ -189,7 +189,7 @@ struct KernelOpLowering final : public OpConversionPattern<KernelOp> {
   using OpConversionPattern<KernelOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(KernelOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto module = GetModuleOpFromJobBodyOp<LLVM::LLVMFuncOp>(op);
+    auto module = GetModuleOpFromJobBodyOp<func::FuncOp>(op);
     auto build_launch = DeclareBuildKernel(rewriter, &module);
 
     auto op_type_name = op.op_type_name();
@@ -228,7 +228,7 @@ struct LaunchOpLowering final : public OpConversionPattern<LaunchOp> {
   using OpConversionPattern<LaunchOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(LaunchOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto module = GetModuleOpFromJobBodyOp<LLVM::LLVMFuncOp>(op);
+    auto module = GetModuleOpFromJobBodyOp<func::FuncOp>(op);
 
     auto build_launch = DeclareBuildLaunch(rewriter, &module);
     auto reg_ctx = op.reg_ctx();
@@ -263,7 +263,7 @@ struct DestroyRegContextOpLowering final : public OpConversionPattern<DestroyReg
   using OpConversionPattern<DestroyRegContextOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(DestroyRegContextOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto module = GetModuleOpFromJobBodyOp<LLVM::LLVMFuncOp>(op);
+    auto module = GetModuleOpFromJobBodyOp<func::FuncOp>(op);
 
     auto build_launch = DeclareDestroyRegContext(rewriter, &module);
     auto reg_ctx = op.ptr();
@@ -295,7 +295,7 @@ struct DestroyRunContextOpLowering final : public OpConversionPattern<DestroyRun
   using OpConversionPattern<DestroyRunContextOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(DestroyRunContextOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto module = GetModuleOpFromJobBodyOp<LLVM::LLVMFuncOp>(op);
+    auto module = GetModuleOpFromJobBodyOp<func::FuncOp>(op);
 
     auto build_launch = DeclareDestroyRunContext(rewriter, &module);
     auto reg_ctx = op.ptr();

@@ -28,10 +28,8 @@ using TypeKernelLaunchArgs =
 class JIT_Engine {
  public:
   explicit JIT_Engine(mlir::ModuleOp module);
-  template<typename ArgsT, class... Args>
+  template<class... Args>
   void Run(const std::string& name, Args... args) const {
-    using Tuple = std::tuple<Args...>;
-    static_assert(std::is_same<ArgsT, Tuple>::value, "args of jit function don't match");
     auto error = engine_->invoke(name, args...);
     CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
   }

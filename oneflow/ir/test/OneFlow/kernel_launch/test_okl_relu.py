@@ -19,6 +19,7 @@ import os
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 os.environ["ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"] = "1"
+os.environ["ONEFLOW_MLIR_ENABLE_IR_PRINTING"] = "1"
 
 import oneflow as flow
 import oneflow.unittest
@@ -30,7 +31,8 @@ def _test_okl_relu_with_cpu(test_case: flow.unittest.TestCase):
             super().__init__()
 
         def build(self, x):
-            return flow.relu(x)
+            y = flow.relu(x)
+            return flow.relu(y)
 
     x = flow.Tensor([1, -1])
     graph_to_run = GraphToRun()
@@ -44,7 +46,8 @@ def _test_okl_relu_with_cuda(test_case: flow.unittest.TestCase):
             super().__init__()
 
         def build(self, x):
-            return flow.relu(x)
+            y = flow.relu(x)
+            return flow.relu(y)
 
     x = flow.Tensor([1, -1]).cuda()
     graph_to_run = GraphToRun()

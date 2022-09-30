@@ -68,7 +68,7 @@ class ConvertOFKLCalleeToLLVMPass
   }
 };
 
-class WrapOps2KernelLaunchPass : public WrapOps2KernelLaunchPassBase<WrapOps2KernelLaunchPass> {
+class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsToKernelLaunchPass> {
   void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<oneflow::OneFlowDialect>();
   }
@@ -76,7 +76,7 @@ class WrapOps2KernelLaunchPass : public WrapOps2KernelLaunchPassBase<WrapOps2Ker
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    populateWrapOps2KernelLaunchPasses(patterns);
+    populateWrapOpsToKernelLaunchPasses(patterns);
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
@@ -96,8 +96,8 @@ std::unique_ptr<Pass> createOutlineJitFunctionPass() {
   return std::make_unique<OutlineJitFunctionPass>();
 }
 
-std::unique_ptr<Pass> createWrapOps2KernelLaunchPass() {
-  return std::make_unique<WrapOps2KernelLaunchPass>();
+std::unique_ptr<Pass> createWrapOpsToKernelLaunchPass() {
+  return std::make_unique<WrapOpsToKernelLaunchPass>();
 }
 
 std::unique_ptr<mlir::Pass> createConvertOFKLCalleeToLLVMPass() {

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "OneFlow/OKL/OKLDialect.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/UserOpReflection.h"
@@ -233,146 +234,6 @@ class KernelLaunchComputeContext final : public user_op::KernelComputeContext {
   std::unordered_map<mlir::oneflow::user_op::ArgID, user_op::Tensor*> tensor_desc_{};
 };
 
-class KernelLaunchState final : public user_op::OpKernelState {
-  static mlir::DialectRegistry GetRegistry() {
-    mlir::DialectRegistry registry;
-    registry
-        .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
-                mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect, mlir::LLVM::LLVMDialect>();
-    mlir::registerLLVMDialectTranslation(registry);
-    return registry;
-  }
-
- public:
-  explicit KernelLaunchState(user_op::KernelInitContext* ctx) : mlir_ctx_(GetRegistry()) {
-    // get raw module from ctx attr
-    module_ = mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
-                                                      &mlir_ctx_);
-    if (!module_) {
-      LOG(ERROR) << "Fail to load mlir assembly";
-      exit(1);
-    }
-  };
-  ~KernelLaunchState() = default;
-
-  void DoCompute(user_op::KernelComputeContext* ctx, const std::string& name) {
-    if (!is_initalized_) { LazyInitWithCtx(ctx); }
-    JITCompute(name, dynamic_cast<user_op::KernelComputeContext*>(okl_ctx_.get()), kernel_);
-  }
-
- private:
-  mlir::MLIRContext mlir_ctx_;
-  mlir::OwningOpRef<mlir::ModuleOp> module_;
-  bool is_initalized_ = false;
-  std::shared_ptr<KernelLaunchComputeContext> okl_ctx_;
-  std::shared_ptr<JIT_Engine> engine_;
-  const user_op::OpKernel* kernel_{};
-
-  void JITCompute(const std::string& name, user_op::KernelComputeContext* okl_ctx,
-                  const user_op::OpKernel* kernel) const {
-    engine_->Run<TypeKernelLaunchArgs>(name, okl_ctx, kernel);
-  }
-
-  void LazyInitWithCtx(user_op::KernelComputeContext* ctx) {
-    std::unique_ptr<KernelLaunchOpKernelRegContext> reg_ctx_ =
-        std::make_unique<KernelLaunchOpKernelRegContext>(*module_);
-    // get constructor of kernel
-    kernel_ = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-                             reg_ctx_->GetOp()->getName().stripDialect().str(), *reg_ctx_))
-                  ->create_fn();
-    // use okl2llvm pass to get llvm ir module
-    if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(*module_))) {
-      LOG(ERROR) << "Fail lowering kernel launch Module to llvm ir";
-      exit(1);
-    }
-
-    // create expected wrapped exec engine shared pointer
-    engine_ = std::make_shared<JIT_Engine>(*module_);
-    okl_ctx_ = std::make_shared<KernelLaunchComputeContext>(std::move(reg_ctx_), ctx);
-  }
-};
-
-template<typename T>
-class KernelLaunchCpuKernel final : public user_op::OpKernel {
- public:
-  KernelLaunchCpuKernel() = default;
-  ~KernelLaunchCpuKernel() = default;
-
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    // use ctx to create module, reg_ctx and fn;
-    std::shared_ptr<user_op::OpKernelState> res(new KernelLaunchState(ctx));
-    return res;
-  }
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
-               const user_op::OpKernelCache*) const override {
-    auto* okl_state = dynamic_cast<KernelLaunchState*>(state);
-    okl_state->DoCompute(ctx, ctx->op_name());
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-#define REGISTER_KERNEL_LAUNCH_CPU_KERNEL(dtype)                                                \
-  REGISTER_USER_KERNEL("kernel_launch")                                                         \
-      .SetCreateFn<KernelLaunchCpuKernel<dtype>>()                                              \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        return Maybe<void>::Ok();                                                               \
-      });
-
-REGISTER_KERNEL_LAUNCH_CPU_KERNEL(float)
-REGISTER_KERNEL_LAUNCH_CPU_KERNEL(double)
-REGISTER_KERNEL_LAUNCH_CPU_KERNEL(int32_t)
-REGISTER_KERNEL_LAUNCH_CPU_KERNEL(int64_t)
-#undef REGISTER_KERNEL_LAUNCH_CPU_KERNEL
-
-template<typename T>
-class KernelLaunchGpuKernel final : public user_op::OpKernel {
- public:
-  KernelLaunchGpuKernel() = default;
-  ~KernelLaunchGpuKernel() = default;
-
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    // use ctx to create module, reg_ctx and fn;
-    std::shared_ptr<user_op::OpKernelState> res(new KernelLaunchState(ctx));
-    return res;
-  }
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
-               const user_op::OpKernelCache*) const override {
-    auto* okl_state = dynamic_cast<KernelLaunchState*>(state);
-    okl_state->DoCompute(ctx, ctx->op_name());
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-#define REGISTER_KERNEL_LAUNCH_GPU_KERNEL(dtype)                                                \
-  REGISTER_USER_KERNEL("kernel_launch")                                                         \
-      .SetCreateFn<KernelLaunchGpuKernel<dtype>>()                                              \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        return Maybe<void>::Ok();                                                               \
-      });
-
-REGISTER_KERNEL_LAUNCH_GPU_KERNEL(float)
-REGISTER_KERNEL_LAUNCH_GPU_KERNEL(double)
-REGISTER_KERNEL_LAUNCH_GPU_KERNEL(int32_t)
-REGISTER_KERNEL_LAUNCH_GPU_KERNEL(int64_t)
-
-#undef REGISTER_KERNEL_LAUNCH_GPU_KERNEL
-
-}  // namespace
-
-}  // namespace oneflow
-
 class OKLRegContext final {
   static mlir::DialectRegistry GetRegistry() {
     mlir::DialectRegistry registry;
@@ -416,25 +277,113 @@ class OKLRegContext final {
   std::shared_ptr<oneflow::KernelLaunchOpKernelRegContext> reg_ctx_;
 };
 
+void DoCompute(user_op::KernelComputeContext* ctx) {
+  auto kernel_func_name = "okl_func";
+  // generate the mlir ctx for lowering oneflow.kernel_launch to llvm dialect
+  mlir::DialectRegistry registry;
+  registry.insert<mlir::LLVM::LLVMDialect, mlir::func::FuncDialect, mlir::oneflow::OneFlowDialect,
+                  mlir::okl::OKLDialect>();
+  mlir::registerLLVMDialectTranslation(registry);
+  mlir::MLIRContext mlir_ctx(registry);
+  // fetch mlir_asm from ctx
+  auto module =
+      mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
+  if (!module) {
+    LOG(ERROR) << "Failed to fetch mlir_asm in wrap_func.";
+    exit(1);
+  }
+  module->dump();
+  // lower oneflow.kernel_launch to llvm dialect
+  if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(*module))) {
+    LOG(ERROR) << "Failed to lower oneflow.kernel_launch to llvm.";
+    exit(1);
+  }
+  module->dump();
+  // create and run jit engine with llvm ir
+  auto engine = std::make_shared<JIT_Engine>(*module);
+  engine->Run(kernel_func_name, (void*)ctx);
+}
+
+template<typename T>
+class KernelLaunchCpuKernel final : public user_op::OpKernel {
+ public:
+  KernelLaunchCpuKernel() = default;
+  ~KernelLaunchCpuKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override { DoCompute(ctx); }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_KERNEL_LAUNCH_CPU_KERNEL(dtype)                                                \
+  REGISTER_USER_KERNEL("kernel_launch")                                                         \
+      .SetCreateFn<KernelLaunchCpuKernel<dtype>>()                                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        return Maybe<void>::Ok();                                                               \
+      });
+
+REGISTER_KERNEL_LAUNCH_CPU_KERNEL(float)
+REGISTER_KERNEL_LAUNCH_CPU_KERNEL(double)
+REGISTER_KERNEL_LAUNCH_CPU_KERNEL(int32_t)
+REGISTER_KERNEL_LAUNCH_CPU_KERNEL(int64_t)
+#undef REGISTER_KERNEL_LAUNCH_CPU_KERNEL
+
+template<typename T>
+class KernelLaunchGpuKernel final : public user_op::OpKernel {
+ public:
+  KernelLaunchGpuKernel() = default;
+  ~KernelLaunchGpuKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override { DoCompute(ctx); }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_KERNEL_LAUNCH_GPU_KERNEL(dtype)                                                \
+  REGISTER_USER_KERNEL("kernel_launch")                                                         \
+      .SetCreateFn<KernelLaunchGpuKernel<dtype>>()                                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        return Maybe<void>::Ok();                                                               \
+      });
+
+REGISTER_KERNEL_LAUNCH_GPU_KERNEL(float)
+REGISTER_KERNEL_LAUNCH_GPU_KERNEL(double)
+REGISTER_KERNEL_LAUNCH_GPU_KERNEL(int32_t)
+REGISTER_KERNEL_LAUNCH_GPU_KERNEL(int64_t)
+
+#undef REGISTER_KERNEL_LAUNCH_GPU_KERNEL
+
+}  // namespace
+
+}  // namespace oneflow
+
 extern "C" {
 // llvm.call build_reg_ctx(gep_global_str: llvm_ptr<i8>) -> llvm_ptr<i8>
-void* build_reg_ctx(void* gep_global_str) { return new OKLRegContext((const char*)gep_global_str); }
+void* build_reg_ctx(void* gep_global_str) {
+  return new oneflow::OKLRegContext((const char*)gep_global_str);
+}
 
-void destroy_reg_ctx(void* reg_ctx) { delete (OKLRegContext*)reg_ctx; }
+void destroy_reg_ctx(void* reg_ctx) { delete (oneflow::OKLRegContext*)reg_ctx; }
 
 void* build_run_ctx(void* reg_ctx, void* compute_ctx) {
-  return (void*)((OKLRegContext*)reg_ctx)
+  return (void*)((oneflow::OKLRegContext*)reg_ctx)
       ->BuildRunContext((oneflow::user_op::KernelComputeContext*)compute_ctx);
 }
 
 void destroy_run_ctx(void* reg_ctx) { delete (oneflow::KernelLaunchComputeContext*)reg_ctx; }
 
 void* build_kernel(void* op_name, void* reg_ctx) {
-  return (void*)((OKLRegContext*)reg_ctx)->BuildKernel((const char*)op_name);
+  return (void*)((oneflow::OKLRegContext*)reg_ctx)->BuildKernel((const char*)op_name);
 }
 
 void launch(void* reg_ctx, void* run_ctx, void* kernel) {
-  ((OKLRegContext*)reg_ctx)
+  ((oneflow::OKLRegContext*)reg_ctx)
       ->Launch((oneflow::KernelLaunchComputeContext*)run_ctx, (oneflow::user_op::OpKernel*)kernel);
 }
 }  // extern "C"

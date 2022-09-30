@@ -37,6 +37,7 @@ JIT_Engine::JIT_Engine(mlir::ModuleOp module) {
   jitOptions.jitCodeGenOptLevel = llvm::None;
   jitOptions.sharedLibPaths = ext_libs;
 
+  module.dump();
   auto jit_or_error = mlir::ExecutionEngine::create(module, jitOptions);
   CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
                         << llvm::toString((jit_or_error).takeError());

@@ -1,7 +1,6 @@
 // RUN: oneflow-opt %s \
-// RUN: -lower-oneflow-to-okl  -canonicalize | FileCheck %s
+// RUN: -lower-oneflow-to-okl -lower-okl-to-llvm --convert-func-to-llvm
 
-// CHECK: oneflow.kernel_launch
 module {
   func.func @wrap0(%arg0: tensor<1xf32>) -> (tensor<1xf32>, tensor<1xf32>) attributes {llvm.emit_c_interface} {
     %0 = "oneflow.relu"(%arg0) {
