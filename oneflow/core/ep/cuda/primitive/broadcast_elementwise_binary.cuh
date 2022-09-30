@@ -48,14 +48,9 @@ union Pack {
 
 template<size_t max_dims, typename IndexType>
 struct BroadcastElementwiseBinaryParams {
-  // NdIndexOffsetHelper<IndexType, max_dims> src0_index_helper;
-  // NdIndexOffsetHelper<IndexType, max_dims> src1_index_helper;
-  // OffsetToIndexCalculator<IndexType, max_dims> dst_index_helper;
-  // NdIndexOffsetHelper<IndexType, max_dims> dst_index_helper;
-  
-  StrideHelper<IndexType, max_dims> src0_stride_helper; 
-  StrideHelper<IndexType, max_dims> src1_stride_helper; 
-  FastMathStrideCalculator<IndexType, max_dims> dst_fast_math_stride_calculator; 
+  StrideHelper<IndexType, max_dims> src0_stride_helper;
+  StrideHelper<IndexType, max_dims> src1_stride_helper;
+  FastMathStrideCalculator<IndexType, max_dims> dst_fast_math_stride_calculator;
 
   size_t num_dims;
   IndexType src0_index_mask[max_dims];
@@ -83,26 +78,20 @@ __global__ void BroadcastElementwiseBinaryGpu(
       reinterpret_cast<const PackType<Src, src1_pack_size>*>(params.src1);
   PackType<Dst, dst_pack_size>* dst = reinterpret_cast<PackType<Dst, dst_pack_size>*>(params.dst);
 
-  // IndexType src0_index[max_dims];
-  // IndexType src1_index[max_dims];
-  // IndexType dst_index[max_dims];
   size_t num_dims = params.num_dims;
   CUDA_1D_KERNEL_LOOP_T(IndexType, offset, params.count) {
-    // params.dst_index_helper.OffsetToNdIndex(offset, dst_index, num_dims);
-    IndexType src0_offset = 0; 
-    IndexType src1_offset = 0; 
+    IndexType src0_offset = 0;
+    IndexType src1_offset = 0;
     IndexType remaining = offset;
 #pragma unroll
     for (int i = 0; i < max_dims; ++i) {
       if (i < num_dims) {
         const IndexType idx = params.dst_fast_math_stride_calculator.divides(remaining, i);
         remaining = remaining - params.dst_fast_math_stride_calculator.mul(idx, i);
-        src0_offset += params.src0_index_mask[i] * idx * params.src0_stride_helper.GetStride(i); 
-        src1_offset += params.src1_index_mask[i] * idx * params.src1_stride_helper.GetStride(i); 
+        src0_offset += params.src0_index_mask[i] * idx * params.src0_stride_helper.GetStride(i);
+        src1_offset += params.src1_index_mask[i] * idx * params.src1_stride_helper.GetStride(i);
       }
     }
-    // const IndexType src0_offset = params.src0_index_helper.NdIndexToOffset(src0_index, num_dims);
-    // const IndexType src1_offset = params.src1_index_helper.NdIndexToOffset(src1_index, num_dims);
     Pack<Src, src0_pack_size> src0_pack;
     src0_pack.storage = src0[src0_offset];
     Pack<Src, src1_pack_size> src1_pack;
@@ -136,11 +125,11 @@ void LaunchKernel(Stream* stream, int num_dims, const int64_t* src0_dims, const 
   // params.dst_index_helper = OffsetToIndexCalculator<IndexType, max_dims>(dst_dims, num_dims);
   // params.dst_index_helper = NdIndexOffsetHelper<IndexType, max_dims>(dst_dims, num_dims);
 
-
   params.src0_stride_helper = StrideHelper<IndexType, max_dims>(src0_dims, num_dims);
   params.src1_stride_helper = StrideHelper<IndexType, max_dims>(src1_dims, num_dims);
-  params.dst_fast_math_stride_calculator = FastMathStrideCalculator<IndexType, max_dims>(dst_dims, num_dims);
-  
+  params.dst_fast_math_stride_calculator =
+      FastMathStrideCalculator<IndexType, max_dims>(dst_dims, num_dims);
+
   params.num_dims = num_dims;
   params.src0 = src0;
   params.src1 = src1;
@@ -148,16 +137,6 @@ void LaunchKernel(Stream* stream, int num_dims, const int64_t* src0_dims, const 
   params.count = static_cast<IndexType>(count);
   params.attr0 = attr0;
   params.attr1 = attr1;
-
-  // printf("Num dims is: %d \n", num_dims); 
-  // printf("count is: %d \n", count); 
-  // for (size_t i = 0; i < num_dims; ++i) {
-  //   printf("Idx is: %lu \n", i); 
-  //   printf("src 0 dims is: %ld \n", src0_dims[i]); 
-  //   printf("src 1 dims is: %ld \n", src1_dims[i]); 
-  //   printf("dst dims is: %ld \n", dst_dims[i]); 
-  // }
-
   auto* cuda_stream = stream->As<CudaStream>();
   BroadcastElementwiseBinaryGpu<op, T, R, max_dims, src0_pack_size, src1_pack_size, IndexType>
       <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0,

@@ -161,9 +161,8 @@ class StrideHelper {
 
   virtual ~StrideHelper() = default;
 
-  OF_DEVICE_FUNC T GetStride(const size_t i) const {
-    return stride_[i]; 
-  }
+  OF_DEVICE_FUNC T GetStride(const size_t i) const { return stride_[i]; }
+
  protected:
   OF_DEVICE_FUNC void InitStrides(const T* dims, const int n) {
     for (int i = n - 1; i < N; ++i) { stride_[i] = 1; }
@@ -209,9 +208,7 @@ class FastMathStrideCalculator {
 
   ~FastMathStrideCalculator() = default;
 
-  OF_DEVICE_FUNC T divides(T n, size_t idx) const {
-    return math_helper_[idx].divides(n);
-  }
+  OF_DEVICE_FUNC T divides(T n, size_t idx) const { return math_helper_[idx].divides(n); }
 
   OF_DEVICE_FUNC T mod(T n, size_t idx) const { return math_helper_[idx].mod(n); }
   OF_DEVICE_FUNC T mul(T n, size_t idx) const { return math_helper_[idx].mul(n); }
