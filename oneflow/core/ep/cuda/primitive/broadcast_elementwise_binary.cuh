@@ -120,11 +120,6 @@ void LaunchKernel(Stream* stream, int num_dims, const int64_t* src0_dims, const 
     params.src0_index_mask[i] = (src0_dims[i] == 1) ? 0 : 1;
     params.src1_index_mask[i] = (src1_dims[i] == 1) ? 0 : 1;
   }
-  // params.src0_index_helper = NdIndexOffsetHelper<IndexType, max_dims>(src0_dims, num_dims);
-  // params.src1_index_helper = NdIndexOffsetHelper<IndexType, max_dims>(src1_dims, num_dims);
-  // params.dst_index_helper = OffsetToIndexCalculator<IndexType, max_dims>(dst_dims, num_dims);
-  // params.dst_index_helper = NdIndexOffsetHelper<IndexType, max_dims>(dst_dims, num_dims);
-
   params.src0_stride_helper = StrideHelper<IndexType, max_dims>(src0_dims, num_dims);
   params.src1_stride_helper = StrideHelper<IndexType, max_dims>(src1_dims, num_dims);
   params.dst_fast_math_stride_calculator =
