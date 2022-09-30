@@ -57,8 +57,8 @@ class Test_Copy_module(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(flow_tensor.numpy(), torch_tensor.numpy()))
 
     def test_copy_fp16(test_case):
-        x = flow.tensor([1,2], dtype=flow.float16)
-        a = np.array([0,9],dtype=np.float16)
+        x = flow.tensor([1, 2], dtype=flow.float16)
+        a = np.array([0, 9], dtype=np.float16)
         x.copy_(a)
         test_case.assertTrue(np.array_equal(x.numpy(), a))
 
