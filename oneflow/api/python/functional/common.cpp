@@ -65,17 +65,7 @@ Maybe<T> GetItemInScalarTensor(PyObject* obj) {
   }
 
   T scalar = 0;
-  if (JUST(local_tensor->device())->enum_type() == kCPU) {
-    const auto& Callback = [&](ep::Stream*,
-                               const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
-      scalar = *eager_blob_object->mut_dptr<T>();
-    };
-    auto btb = std::make_shared<BlockingThenBusy>(1);
-    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, "const");
-    }));
-    JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
-  } else {
+  {
     const auto& Callback = [&](ep::Stream* stream,
                                const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
       SyncAutoMemcpy(stream, &scalar, eager_blob_object->mut_dptr(), sizeof(T),
