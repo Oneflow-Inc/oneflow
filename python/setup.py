@@ -99,6 +99,6 @@ setup(
     distclass=BinaryDistribution,
     cmdclass={"install": InstallPlatlib},
     entry_points={
-        'console_scripts': ['oneflow-torch=oneflow_torch:main']
+        'console_scripts': ['oneflow-mock-torch=mock_torch:main']
     }
 )
