@@ -237,13 +237,15 @@ class KernelLaunchComputeContext final : public user_op::KernelComputeContext {
 class OKLRegContext final {
   static mlir::DialectRegistry GetRegistry() {
     mlir::DialectRegistry registry;
-    registry.insert<mlir::LLVM::LLVMDialect>();
+    registry
+        .insert<mlir::LLVM::LLVMDialect, mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect>();
     mlir::registerLLVMDialectTranslation(registry);
     return registry;
   }
 
  public:
   explicit OKLRegContext(const char* mlir_asm) : mlir_ctx_(GetRegistry()) {
+    LOG(ERROR) << mlir_asm;
     auto module = mlir::parseSourceString<mlir::ModuleOp>(mlir_asm, &mlir_ctx_);
     if (!module) {
       LOG(ERROR) << "Fail to load mlir assembly";
