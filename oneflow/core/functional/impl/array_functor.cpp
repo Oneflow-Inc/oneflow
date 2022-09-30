@@ -1987,6 +1987,25 @@ class TriuFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class InplaceTriuFunctor {
+ public:
+  InplaceTriuFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("triu").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal) const {
+    JUST(CheckInplaceValid(x));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("diagonal");
+    attrs.SetAllAttrs(diagonal);
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class DiagFunctor {
  public:
   DiagFunctor() { op_ = CHECK_JUST(one::OpBuilder("diag").Input("in").Output("out").Build()); }
@@ -2612,6 +2631,7 @@ class UnsortedBatchSegmentSumFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+template<bool inplace>
 class MaskedFillFunctor {
  public:
   MaskedFillFunctor() {
@@ -2633,6 +2653,13 @@ class MaskedFillFunctor {
     }
     const auto& x_shape = *(x->shape());
     const auto& mask_shape = *(mask->shape());
+
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      (*outputs)[0] = x;
+    }
+
     if (x_shape != mask_shape) {
       Shape max_shape = Shape::Ones(std::max(x_shape.NumAxes(), mask_shape.NumAxes()));
       const Shape& x_extend_shape =
@@ -2642,10 +2669,13 @@ class MaskedFillFunctor {
       FOR_RANGE(int64_t, i, 0, max_shape.NumAxes()) {
         max_shape.Set(i, std::max(x_extend_shape.At(i), mask_extend_shape.At(i)));
       }
-      return OpInterpUtil::Dispatch<Tensor>(
-          *op_, {JUST(Expand(x, max_shape)), JUST(Expand(mask, max_shape))}, attrs);
+      JUST(OpInterpUtil::Dispatch(*op_, {JUST(Expand(x, max_shape)), JUST(Expand(mask, max_shape))},
+                                  outputs.get(), attrs));
+      return outputs->at(0);
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mask}, attrs);
+
+    JUST(OpInterpUtil::Dispatch(*op_, {x, mask}, outputs.get(), attrs));
+    return outputs->at(0);
   }
 
  private:
@@ -3384,6 +3414,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UnsortedSegmentSumLikeFunctor>("UnsortedSegmentSumLike");
   m.add_functor<impl::TrilFunctor>("Tril");
   m.add_functor<impl::TriuFunctor>("Triu");
+  m.add_functor<impl::InplaceTriuFunctor>("InplaceTriu");
   m.add_functor<impl::DiagFunctor>("Diag");
   m.add_functor<impl::DiagGradFunctor>("DiagGrad");
   m.add_functor<impl::DiagonalFunctor>("Diagonal");
@@ -3421,7 +3452,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");
   m.add_functor<impl::BatchGatherFunctor>("BatchGather");
   m.add_functor<impl::UnsortedBatchSegmentSumFunctor>("UnsortedBatchSegmentSum");
-  m.add_functor<impl::MaskedFillFunctor>("MaskedFill");
+  m.add_functor<impl::MaskedFillFunctor<false>>("MaskedFill");
+  m.add_functor<impl::MaskedFillFunctor<true>>("MaskedFillInplace");
   m.add_functor<impl::MeshgridFunctor>("Meshgrid");
   m.add_functor<impl::IndexSelectFunctor>("IndexSelect");
   m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor,

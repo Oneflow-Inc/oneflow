@@ -211,7 +211,7 @@ struct SetContext {
       : keys(ctx.keys + set_id * kWarpSize),
         mutex(reinterpret_cast<WarpMutex*>(ctx.mutex) + set_id),
         ages(ctx.ages + set_id * kWarpSize),
-        lines(ctx.lines + set_id * kWarpSize * ctx.line_size) {}
+        lines(ctx.lines + static_cast<size_t>(set_id) * kWarpSize * ctx.line_size) {}
 
   __device__ int Lookup(const ThreadContext& thread_ctx, Key key) {
     const Key lane_key = keys[thread_ctx.lane_id];
@@ -480,7 +480,8 @@ __global__ void DumpKernel(LruCacheContext<Key, Elem> cache_ctx, size_t start_ke
       __syncwarp();
       for (uint32_t j = thread_ctx.lane_id; j < cache_ctx.line_size; j += kWarpSize) {
         values[offset * cache_ctx.line_size + j] =
-            cache_ctx.lines[(warp_start_key_index + i) * cache_ctx.line_size + j];
+            cache_ctx
+                .lines[static_cast<size_t>(warp_start_key_index + i) * cache_ctx.line_size + j];
       }
       __syncwarp();
       offset += 1;
