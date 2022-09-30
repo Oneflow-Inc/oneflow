@@ -63,6 +63,9 @@ class TopoStruct {
   // Memory increment = (memory of out registers) - (memory of in registers)
   void GetMeomoryIncrement();
 
+  // TODO: We might design more deciding parameter and choose a right combination of them in the
+  // future.
+
   // deciding parameter
   // i = 0: those with small tributary layers go first
   // i = 1: those with small minimum distance to transfer go first

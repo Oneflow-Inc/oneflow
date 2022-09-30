@@ -33,6 +33,8 @@ class MemoryShareStrategy {
       HashMap<RegstDescProto*, int64_t>* regst_desc2offset);
 
   // Set the offset of registers to minimize the total memory
+  // Iterating from a random order might take a lot of steps to reach the optimal cost.
+  // Therefore, this function is not recommended with an initial offset provided.
   void GenerateOffset(
       const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
       const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts,
