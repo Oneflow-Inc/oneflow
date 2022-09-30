@@ -52,7 +52,7 @@ struct BroadcastElementwiseBinaryParams {
   IndexType src0_strides[max_dims];
   IndexType src1_strides[max_dims];
   IndexType dst_strides[max_dims];
-  FastDiv<IndexType> fast_dividers[max_dims];
+  FastDivide<IndexType> fast_dividers[max_dims];
 
   size_t num_dims;
   IndexType src0_index_mask[max_dims];
@@ -125,7 +125,7 @@ void LaunchKernel(Stream* stream, int num_dims, const int64_t* src0_dims, const 
   IndexType src0_strides[max_dims];
   IndexType src1_strides[max_dims];
   IndexType dst_strides[max_dims];
-  FastDiv<IndexType> fast_dividers[max_dims];
+  FastDivide<IndexType> fast_dividers[max_dims];
   InitStrides<IndexType, max_dims>(src0_dims, src0_strides, num_dims);
   InitStrides<IndexType, max_dims>(src1_dims, src1_strides, num_dims);
   InitStrides<IndexType, max_dims>(dst_dims, dst_strides, num_dims);

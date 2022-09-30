@@ -82,7 +82,7 @@ void LaunchKernel(Stream* stream, void* dst, const int64_t* dst_dims, const void
   ConstantPadParams<num_dims, IndexType> params;
   IndexType src_strides[num_dims];
   IndexType dst_strides[num_dims];
-  FastDiv<IndexType> fast_dividers[num_dims];
+  FastDivide<IndexType> fast_dividers[num_dims];
   InitStrides<IndexType, num_dims>(src_dims, src_strides, num_dims);
   InitStrides<IndexType, num_dims>(dst_dims, dst_strides, num_dims);
   InitFastDividers<IndexType>(dst_strides, fast_dividers, num_dims);

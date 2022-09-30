@@ -287,11 +287,11 @@ OF_DEVICE_FUNC int64_t libdivide_mullhi_s64(int64_t x, int64_t y) {
 }  // namespace
 
 template<typename T>
-class FastDiv {
+class FastDivide {
  public:
-  OF_DEVICE_FUNC FastDiv() = default;
+  OF_DEVICE_FUNC FastDivide() = default;
 
-  OF_DEVICE_FUNC FastDiv(T operand) { this->operand_ = operand; }
+  OF_DEVICE_FUNC FastDivide(T operand) { this->operand_ = operand; }
 
   OF_DEVICE_FUNC T divides(uint64_t x) const { return x / operand_; }
 
@@ -300,11 +300,11 @@ class FastDiv {
 };
 
 template<>
-class FastDiv<uint64_t> {
+class FastDivide<uint64_t> {
  public:
-  OF_DEVICE_FUNC FastDiv() = default;
+  OF_DEVICE_FUNC FastDivide() = default;
 
-  OF_DEVICE_FUNC FastDiv(uint64_t operand) { init(operand); }
+  OF_DEVICE_FUNC FastDivide(uint64_t operand) { init(operand); }
 
   OF_DEVICE_FUNC void init(uint64_t operand) {
     assert(operand != 0);
@@ -351,11 +351,11 @@ class FastDiv<uint64_t> {
 };
 
 template<>
-class FastDiv<uint32_t> {
+class FastDivide<uint32_t> {
  public:
-  OF_DEVICE_FUNC FastDiv() = default;
+  OF_DEVICE_FUNC FastDivide() = default;
 
-  OF_DEVICE_FUNC FastDiv(uint32_t operand) { init(operand); }
+  OF_DEVICE_FUNC FastDivide(uint32_t operand) { init(operand); }
 
   OF_DEVICE_FUNC void init(uint32_t operand) {
     assert(operand != 0);
@@ -399,10 +399,10 @@ class FastDiv<uint32_t> {
 };
 
 template<>
-class FastDiv<int32_t> {
+class FastDivide<int32_t> {
  public:
-  OF_DEVICE_FUNC FastDiv() = default;
-  OF_DEVICE_FUNC explicit FastDiv(int32_t operand) {
+  OF_DEVICE_FUNC FastDivide() = default;
+  OF_DEVICE_FUNC explicit FastDivide(int32_t operand) {
     assert(operand != 0);
     int branchfree = 0;
     uint32_t ud = (uint32_t)operand;
@@ -477,10 +477,10 @@ class FastDiv<int32_t> {
 };
 
 template<>
-class FastDiv<int64_t> {
+class FastDivide<int64_t> {
  public:
-  OF_DEVICE_FUNC FastDiv() = default;
-  OF_DEVICE_FUNC explicit FastDiv(int64_t operand) {
+  OF_DEVICE_FUNC FastDivide() = default;
+  OF_DEVICE_FUNC explicit FastDivide(int64_t operand) {
     int branchfree = 0;
     uint64_t ud = (uint64_t)operand;
     uint64_t absD = (operand < 0) ? -ud : ud;
@@ -575,8 +575,8 @@ void InitStrides(const int64_t* dims, T* strides, int n) {
 }
 
 template<typename T>
-void InitFastDividers(T* strides, FastDiv<T>* fast_dividers, int n) {
-  for (int i = n - 1; i >= 0; --i) { fast_dividers[i] = FastDiv<T>(strides[i]); }
+void InitFastDividers(T* strides, FastDivide<T>* fast_dividers, int n) {
+  for (int i = n - 1; i >= 0; --i) { fast_dividers[i] = FastDivide<T>(strides[i]); }
 }
 
 }  // namespace oneflow

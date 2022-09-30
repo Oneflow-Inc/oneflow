@@ -196,7 +196,7 @@ void LaunchGeneral(CpuStream* cpu_stream, size_t simplified_num_dims,
         IndexType src0_strides[kMaxNumDims];
         IndexType src1_strides[kMaxNumDims];
         IndexType dst_strides[kMaxNumDims];
-        FastDiv<IndexType> fast_dividers[kMaxNumDims];
+        FastDivide<IndexType> fast_dividers[kMaxNumDims];
         InitStrides<IndexType, kMaxNumDims>(simplified_src0_dims, src0_strides,
                                             simplified_num_dims);
         InitStrides<IndexType, kMaxNumDims>(simplified_src1_dims, src1_strides,

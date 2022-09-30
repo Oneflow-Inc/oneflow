@@ -69,7 +69,7 @@ template<size_t num_dims, typename IndexType>
 struct ConstantPadParams {
   IndexType src_strides[num_dims];
   IndexType dst_strides[num_dims];
-  FastDiv<IndexType> fast_dividers[num_dims];
+  FastDivide<IndexType> fast_dividers[num_dims];
   IndexType valid_start[num_dims];
   IndexType valid_end[num_dims];
   IndexType elem_cnt{};
