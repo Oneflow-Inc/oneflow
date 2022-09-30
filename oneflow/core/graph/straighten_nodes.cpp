@@ -61,7 +61,7 @@ class TopoStruct {
   int32_t GetMinDistance2Transfer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
 
   // Memory increment = (memory of out registers) - (memory of in registers)
-  void GetMeomoryIncrement();
+  void ComputeMeomoryIncrement();
 
   // TODO: We might design more deciding parameter and choose a right combination of them in the
   // future.
@@ -234,7 +234,7 @@ int32_t TopoStruct::GetMinDistance2Transfer(HashMap<TaskNode*, TopoStruct>* task
 }
 
 // Memory increment = (memory of out registers) - (memory of in registers)
-void TopoStruct::GetMeomoryIncrement() {
+void TopoStruct::ComputeMeomoryIncrement() {
   if (memory_increment < 0) {
     memory_increment = 0;
     for (const auto& produced_register : node->produced_regsts()) {
@@ -326,7 +326,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   task_graph->TopoForEachNode([&](TaskNode* node) {
     auto& topo_struct = task_node2topo_struct[node];
     topo_struct.node = node;
-    topo_struct.GetMeomoryIncrement();
+    topo_struct.ComputeMeomoryIncrement();
     if (node->in_edges().empty()) {
       topo_struct.min_layer = 0;
     } else {
