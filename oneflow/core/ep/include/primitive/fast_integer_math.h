@@ -180,7 +180,9 @@ struct FastIntegerMath {
     // - therefore, powers of 2 get special treatment and the multiplication is skipped.
     x = static_cast<uint64_t>(x);
 #ifdef __CUDA_ARCH__
-    if (mul_factor_) x = __umul64hi(x + add_, mul_factor_);
+    if (mul_factor_) {
+      x = __umul64hi(x + add_, mul_factor_);
+    }
     return x >> shift_;
 #else
     if (mul_factor_) {
