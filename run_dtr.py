@@ -85,6 +85,9 @@ parser.add_argument(
     "--me-style", action=PositiveArgAction, env_var_name="ONEFLOW_DTR_MEGENGINE_STYLE"
 )
 parser.add_argument(
+    "--dtr-no-free", action=PositiveArgAction, env_var_name="ONEFLOW_DTR_DTR_NO_FREE"
+)
+parser.add_argument(
     "--with-size",
     action=PositiveArgAction,
     env_var_name="ONEFLOW_DTR_HEURISTIC_WITH_SIZE",
@@ -120,7 +123,7 @@ ALL_ITERS = args.iters
 if args.allocator:
     heuristic = "eq_compute_time_and_last_access"
     # heuristic = "full_compute_time_and_last_access"
-    if args.me_style:
+    if args.me_style or args.dtr_no_free:
         heuristic = args.me_method
 
 else:
@@ -282,10 +285,15 @@ else:
 
 if args.dtr:
     flow.nn.ContiguousGrad(model)
+# zero_grad_set_to_none = False
 zero_grad_set_to_none = args.old_immutable
 
 
 def run_iter(train_data, train_label):
+    if args.allocator:
+        # clear num ops of initialization
+        flow._oneflow_internal.dtr.clear_num_ops_and_set_first()
+
     train_data = train_data.to("cuda")
     train_label = train_label.to("cuda")
 
@@ -307,6 +315,7 @@ def run_iter(train_data, train_label):
 
     flow.comm.barrier()
     if args.allocator:
+        # print(f'num ops: {flow._oneflow_internal.dtr.get_num_ops()}')
         flow._oneflow_internal.dtr.set_left(True)
 
 

@@ -44,6 +44,8 @@ class DtrCudaAllocator final : public Allocator {
 
   size_t iterate_group_index(bool high) const;
 
+  bool first_time = true;
+
  private:
   using offset_t = size_t;
 
@@ -94,7 +96,7 @@ class DtrCudaAllocator final : public Allocator {
   void MergeNeighbourFreePiece(Piece* lhs, Piece* rhs);
 
   Piece* EvictAndFindPieceOnce(size_t required_size);
-  Piece* EvictAndFindPieceMegEngineStyle(size_t size);
+  Piece* EvictAndFindPieceLoop(size_t required_size, bool consider_neighbor);
 
   int64_t device_id_;
   void* memory_ = nullptr;

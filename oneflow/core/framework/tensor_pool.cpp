@@ -35,7 +35,8 @@ TensorPool::TensorPool()
       num_eager_eviction_(0),
       num_forced_eviction_(0),
       num_recomputation_(0),
-      num_destruction_(0) {
+      num_destruction_(0),
+      num_ops_(0) {
   start_time_ = std::chrono::steady_clock::now();
 }
 
@@ -67,12 +68,13 @@ TensorPool::~TensorPool() {
       fs >> full_json;
     }
     full_json.merge_patch(cpp_summary);
-    if (auto* allocator = Global<vm::DtrCudaAllocator>::Get()) {
-      full_json.merge_patch(allocator->DumpSearchFreeMemCost());
-    }
     {
       std::ofstream fs(std::string(prefix) + ".json");
       fs << full_json;
+    }
+    if (auto* allocator = Global<vm::DtrCudaAllocator>::Get()) {
+      std::ofstream fs("overhead-" + std::string(prefix) + ".json");
+      fs << allocator->DumpSearchFreeMemCost();
     }
   }
 }

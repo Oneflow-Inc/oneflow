@@ -53,6 +53,11 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
         []() -> size_t { return Global<vm::DtrCudaAllocator>::Get()->allocated_memory(); });
   m.def("display_all_pieces",
         []() -> void { return Global<vm::DtrCudaAllocator>::Get()->DisplayAllPieces(); });
+  m.def("clear_num_ops_and_set_first", []() -> void {
+    Global<dtr::TensorPool>::Get()->clear_num_ops();
+    Global<vm::DtrCudaAllocator>::Get()->first_time = true;
+  });
+  m.def("get_num_ops", []() -> int { return Global<dtr::TensorPool>::Get()->num_ops(); });
   m.def("pool_display", []() -> Maybe<void> { return Global<dtr::TensorPool>::Get()->display(); });
   m.def("pool_verbose_display",
         []() -> Maybe<void> { return Global<dtr::TensorPool>::Get()->verbose_display(); });

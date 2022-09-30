@@ -318,11 +318,11 @@ void DtrNaiveCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
     if (AllocateBlockToExtendTotalMem(aligned_size)) { piece = FindPiece(aligned_size); }
   }
 
-  if (piece == nullptr) {
-    if (DeallocateFreeBlockForGarbageCollection() && AllocateBlockToExtendTotalMem(aligned_size)) {
-      piece = FindPiece(aligned_size);
-    }
-  }
+  // if (piece == nullptr) {
+  //   if (DeallocateFreeBlockForGarbageCollection() && AllocateBlockToExtendTotalMem(aligned_size)) {
+  //     piece = FindPiece(aligned_size);
+  //   }
+  // }
 
   // // test DTRMemoryThreshold
   // double test_thres = oneflow::GetDTRMemoryThreshold();
@@ -334,8 +334,10 @@ void DtrNaiveCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
 
   // if (oneflow::DTRDebugEnabled()) { std::cout << "dtr enabled condition" << std::endl; }
   // int it = 0;   // evict iteration times
+  bool has_eviction = false;
   while (piece == nullptr
          && CHECK_JUST(Global<dtr::TensorPool>::Get()->find_best_tensor_and_evict())) {
+    has_eviction = true;
     if (dtr::debug_level() >= 2) {
       LOG(INFO) << "total_memory_bytes after find best tensor and evict: "
                 << total_memory_bytes_ / 1024. / 1024.;
@@ -353,7 +355,7 @@ void DtrNaiveCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
     // it++;
   }
 
-  if (EnvBool<ONEFLOW_DTR_RECORD_MEM_FRAG_RATE>()) {
+  if (has_eviction && EnvBool<ONEFLOW_DTR_RECORD_MEM_FRAG_RATE>()) {
     size_t free_mem = 0;
 
     for (int32_t bin_num = 0; bin_num < kBinNumSize; ++bin_num) {

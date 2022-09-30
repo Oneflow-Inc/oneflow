@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/framework/symbol_storage_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
+#include "oneflow/core/framework/tensor_pool.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/memory/memory_case_util.h"
@@ -88,6 +89,7 @@ std::vector<TensorMeta*>* ThreadLocalDefaultOutputMutTensorMetas(int64_t size) {
 Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                            const Symbol<Device>& default_device, TensorTuple* outputs,
                            const OpExprInterpContext& ctx) {
+  Global<dtr::TensorPool>::Get()->add_num_ops();
   const auto& attrs = ctx.attrs;
   std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(inputs.size());

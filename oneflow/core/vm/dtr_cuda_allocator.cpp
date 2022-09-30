@@ -450,7 +450,8 @@ void DtrCudaAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
   DeallocatePiece(rhs);
 }
 
-DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceMegEngineStyle(size_t required_size) {
+DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceLoop(size_t required_size,
+                                                                 bool consider_neighbor) {
   if (EnvBool<ONEFLOW_DTR_OPERATION_LOG>()) {
     LOG(INFO) << "****"
               << "START-EvictAndFindPiece" << std::endl;
@@ -480,8 +481,11 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceMegEngineStyle(size_
       int coeff = -1;
       auto* tensor = it->second->tensor;
       if (tensor != nullptr && !tensor->is_pinned() && tensor->is_evictable()) {
-        auto cur_op_cost = get_cost(
-            tensor, coeff, GetSizeIncludingNeighborhood(it, ptr2piece_.begin(), ptr2piece_.end()));
+        auto cur_op_cost =
+            consider_neighbor
+                ? get_cost(tensor, coeff,
+                           GetSizeIncludingNeighborhood(it, ptr2piece_.begin(), ptr2piece_.end()))
+                : get_cost(tensor, coeff);
         if (cur_op_cost < min_cost) {
           min_cost = cur_op_cost;
           min_tensor = tensor;
@@ -627,8 +631,6 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceOnce(size_t required
   return nullptr;
 }
 
-bool first_time = true;
-
 void DtrCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
   if (size == 0) {
     *mem_ptr = nullptr;
@@ -642,11 +644,15 @@ void DtrCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
     if (first_time) {
       if (EnvBool<ONEFLOW_DTR_DISPLAY_IN_FIRST_TIME>()) { DisplayAllPieces(); }
       first_time = false;
+      std::cout << "first eviction op: " << Global<dtr::TensorPool>::Get()->num_ops()
+                << std::endl;
     }
     const auto started_at = profiler::GetTimeNow();
     const int evict_num1 = Global<dtr::TensorPool>::Get()->num_forced_eviction();
     if (EnvBool<ONEFLOW_DTR_MEGENGINE_STYLE>()) {
-      piece = EvictAndFindPieceMegEngineStyle(aligned_size);
+      piece = EvictAndFindPieceLoop(aligned_size, true);
+    } else if (EnvBool<ONEFLOW_DTR_DTR_NO_FREE>()) {
+      piece = EvictAndFindPieceLoop(aligned_size, false);
     } else {
       piece = EvictAndFindPieceOnce(aligned_size);
     }
