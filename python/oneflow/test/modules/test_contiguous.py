@@ -35,7 +35,7 @@ class TestContiguous(flow.unittest.TestCase):
         y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
         z = y.contiguous()
         return z
-    
+
     @autotest(n=5, auto_backward=False)
     def test_transpose_with_bool_data(test_case):
         device = random_device()
@@ -43,7 +43,7 @@ class TestContiguous(flow.unittest.TestCase):
         y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
         z = y.contiguous()
         return z
-    
+
     @autotest(n=5, auto_backward=False)
     def test_transpose_with_int_data(test_case):
         device = random_device()
