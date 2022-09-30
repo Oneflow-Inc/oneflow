@@ -28,12 +28,6 @@ limitations under the License.
 
 namespace oneflow {
 
-enum StraightenAlgorithmTag : int {
-  kDisable = 1,                   // Disable the straighten algorithm
-  kOverlap4ModelParallelism = 2,  // Designed for saving time
-  kCompressMemory = 3             // Designed for compressing memory
-};
-
 class SubTskGphBuilderCtx;
 class HierarchicalSubTskGphBuilder;
 
@@ -49,13 +43,12 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
   ~TaskGraph() override;
 
-  explicit TaskGraph(int32_t straighten_algorithm_tag);
+  explicit TaskGraph();
 
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
   void MergeChainAndAddOrderingCtrlEdgeInSameChain();
   void DecideExecutionOrder();
-  StraightenAlgorithmTag GetStraightenAlgorithmTag() const;
 
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
                                    IsOpNameDataOrCtrlReachable);
@@ -131,7 +124,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   };
 
   HashMap<ProxyKey, TaskNode*, ProxyKey::Hasher> proxy2node;
-  StraightenAlgorithmTag straighten_algorithm_tag_;
 };
 
 }  // namespace oneflow

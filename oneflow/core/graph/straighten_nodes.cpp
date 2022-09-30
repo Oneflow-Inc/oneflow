@@ -384,7 +384,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   FindMainstem(&task_node2topo_struct);
 
   // Decide which node should run first
-  InitDecideParameters(task_graph->GetStraightenAlgorithmTag());
+  InitDecideParameters(GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph());
   VLOG(3) << "Straightening order: ";
   for (int32_t decide_parameter : decide_parameters) { VLOG(3) << decide_parameter; }
 

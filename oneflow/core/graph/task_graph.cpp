@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
+#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/variable_op.h"
@@ -426,16 +427,7 @@ void ForEachOpGraphNecessaryCtrlEdge(
 
 }  // namespace
 
-TaskGraph::TaskGraph(int32_t straighten_algorithm_tag) {
-  // Set up the tag for the straighten algorithm
-  if (straighten_algorithm_tag == 3) {
-    straighten_algorithm_tag_ = StraightenAlgorithmTag::kCompressMemory;
-  } else if (straighten_algorithm_tag == 2) {
-    straighten_algorithm_tag_ = StraightenAlgorithmTag::kOverlap4ModelParallelism;
-  } else {
-    straighten_algorithm_tag_ = StraightenAlgorithmTag::kDisable;
-  }
-
+TaskGraph::TaskGraph() {
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
@@ -872,17 +864,15 @@ void TaskGraph::BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const Logi
 void TaskGraph::DecideExecutionOrder() {
   // For one machine with no transfer available, the straighten algorithm for overlaps consume a lot
   // of memory
-  if (straighten_algorithm_tag_ == StraightenAlgorithmTag::kCompressMemory
-      || (straighten_algorithm_tag_ == StraightenAlgorithmTag::kOverlap4ModelParallelism
+  StraightenAlgorithmTag straighten_algorithm_tag =
+      GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph();
+  if (straighten_algorithm_tag == StraightenAlgorithmTag::kCompressMemory
+      || (straighten_algorithm_tag == StraightenAlgorithmTag::kOverlap4ModelParallelism
           && GlobalProcessCtx::WorldSize() > 1)) {
     StraightenNodes(this, &ordered_task_nodes_);
   } else {
     SetOrderInGraphForEachNode();
   }
-}
-
-StraightenAlgorithmTag TaskGraph::GetStraightenAlgorithmTag() const {
-  return straighten_algorithm_tag_;
 }
 
 }  // namespace oneflow
