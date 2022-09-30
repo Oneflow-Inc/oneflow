@@ -848,18 +848,12 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
 
     // Update the offset with a smaller total memory size if the current size is greater than the
     // lower bound
-    if (best_result->mem_block_size > mem_chain2peak_memory[pair.first]) {
-      VLOG(3) << "Current size: " << best_result->mem_block_size
-              << ", lower bound : " << mem_chain2peak_memory[pair.first];
+    {
       MemoryShareStrategy mss;
-      int32_t max_iteration_step =
-          mss.UpdateMaxIteration(best_result->mem_block_size, mem_chain2peak_memory[pair.first]);
-      VLOG(3) << "max iteration step: " << max_iteration_step;
-      if (max_iteration_step > 0) {
-        mss.StealCompactPosition(best_result->regst_desc2offset, mem_reused_regst2size,
-                                 mem_chain2regst2mutual_exclusion_regsts.at(pair.first));
-        mss.UpdateOffset(&best_result->mem_block_size, &best_result->regst_desc2offset);
-      }
+      mss.AdaptivelyUpdateOffset(mem_reused_regst2size,
+                                 mem_chain2regst2mutual_exclusion_regsts.at(pair.first),
+                                 mem_chain2peak_memory[pair.first], &best_result->mem_block_size,
+                                 &best_result->regst_desc2offset);
     }
 
     int64_t mem_block_id = Singleton<IDMgr>::Get()->NewMemBlockId();

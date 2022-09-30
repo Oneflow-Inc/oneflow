@@ -24,6 +24,10 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+constexpr int32_t kMaxIterStep = 100;
+}  // anonymous namespace
+
 // Initialization
 void MemoryShareStrategy::InitRegister(
     const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts) {
@@ -391,13 +395,41 @@ void MemoryShareStrategy::ResetCompactPosition(int32_t j) {
 }
 
 // Update the maximum iteration step with the current size and lower bound
-int32_t MemoryShareStrategy::UpdateMaxIteration(size_t mem_block_size, size_t lower_bound) {
+void MemoryShareStrategy::UpdateMaxIteration(size_t mem_block_size, size_t lower_bound) {
   max_iteration_step_ = ((mem_block_size - lower_bound) * 100) / lower_bound;
   // if mem_block_size is closed to the maximum number of type size_t, then we might have a negative
   // value for (mem_block_size - lower_bound) * 100
   // In this case, we just set a large max_iteration_step_
-  if (max_iteration_step_ < 0) { max_iteration_step_ = 100; }
-  return max_iteration_step_;
+  if (max_iteration_step_ < 0) { max_iteration_step_ = kMaxIterStep; }
+}
+
+// Adaptively update the offset of registers to minimize the total memory
+void MemoryShareStrategy::AdaptivelyUpdateOffset(
+    const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
+    const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts,
+    size_t lower_bound, size_t* mem_block_size,
+    HashMap<RegstDescProto*, int64_t>* regst_desc2offset) {
+  if (*mem_block_size > lower_bound) {
+    VLOG(3) << "Current memory size: " << *mem_block_size << ", lower bound : " << lower_bound;
+    UpdateMaxIteration(*mem_block_size, lower_bound);
+    VLOG(3) << "max iteration step: " << max_iteration_step_;
+    if (max_iteration_step_ > 0) {
+      StealCompactPosition(*regst_desc2offset, mem_reused_regst2size,
+                           regst2mutual_exclusion_regsts);
+      UpdateOffset(mem_block_size, regst_desc2offset);
+    }
+  }
+}
+
+// Set the offset of registers to minimize the total memory
+void MemoryShareStrategy::GenerateOffset(
+    const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
+    const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts,
+    size_t* mem_block_size, HashMap<RegstDescProto*, int64_t>* regst_desc2offset) {
+  max_iteration_step_ = kMaxIterStep;
+  VLOG(3) << "max iteration step: " << max_iteration_step_;
+  GenerateCompactPosition(mem_reused_regst2size, regst2mutual_exclusion_regsts);
+  UpdateOffset(mem_block_size, regst_desc2offset);
 }
 
 }  // namespace oneflow
