@@ -67,7 +67,7 @@ void CopyFromNumpyArray(ep::Stream* stream,
 Maybe<void> CopyLocalTensorFromUntypedArray(const std::shared_ptr<Tensor>& tensor,
                                             PyObject* array) {
   return CopyBetweenLocalTensorAndNumpy(tensor, array, CopyFromNumpyArray, "mut",
-                                           /*block_host_until_done=*/false);
+                                        /*block_host_until_done=*/false);
 }
 
 Maybe<std::tuple<std::vector<Shape>, std::vector<Symbol<DType>>>>
