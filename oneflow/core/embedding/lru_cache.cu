@@ -582,11 +582,6 @@ class LruCache : public Cache {
         static_cast<Elem*>(values));
   }
 
-  void DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
-                     uint32_t* n_dumped, void* keys, void* values) override {
-    Dump(stream, start_key_index, end_key_index, n_dumped, keys, values);
-  }
-
   void ClearDirtyFlags() override {
     // do nothing.
     return;

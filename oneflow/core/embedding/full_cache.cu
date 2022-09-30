@@ -501,8 +501,8 @@ class CacheImpl : public Cache {
   void Dump(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
             uint32_t* n_dumped, void* keys, void* values) override;
 
-  void DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
-                     uint32_t* n_dumped, void* keys, void* values) override;
+  // void DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
+  //                    uint32_t* n_dumped, void* keys, void* values) override;
 
   void ClearDirtyFlags() override;
 
@@ -603,19 +603,6 @@ template<typename Key, typename Elem, typename Index, size_t pack_size>
 void CacheImpl<Key, Elem, Index, pack_size>::Dump(ep::Stream* stream, uint64_t start_key_index,
                                                   uint64_t end_key_index, uint32_t* n_dumped,
                                                   void* keys, void* values) {
-  encoder_.Dump(stream, start_key_index, end_key_index, n_dumped, static_cast<Key*>(keys),
-                encoding_buffer_);
-  RUN_CUDA_KERNEL((DumpValueKernel<Key, Elem, Index>), stream,
-                  num_elem_per_value_ * (end_key_index - start_key_index), num_elem_per_value_,
-                  n_dumped, encoding_buffer_, values_, static_cast<Elem*>(values));
-}
-
-template<typename Key, typename Elem, typename Index, size_t pack_size>
-void CacheImpl<Key, Elem, Index, pack_size>::DumpDirtyOnly(ep::Stream* stream,
-                                                           uint64_t start_key_index,
-                                                           uint64_t end_key_index,
-                                                           uint32_t* n_dumped, void* keys,
-                                                           void* values) {
   if (if_dump_dirty_) {
     encoder_.DumpDirtyOnly(stream, start_key_index, end_key_index, n_dumped,
                            static_cast<Key*>(keys), encoding_buffer_);
