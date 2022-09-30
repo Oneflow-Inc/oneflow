@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_PRIMITIVE_COMMON_BROADCAST_ELEMENTWISE_UNARY
 
 #include "oneflow/core/ep/include/primitive/broadcast_elementwise_unary.h"
-#include "oneflow/core/ep/include/primitive/fast_integer_math.h"
+#include "oneflow/core/ep/include/primitive/fast_div.h"
 #include "oneflow/core/ep/common/primitive/util.h"
 
 namespace oneflow {

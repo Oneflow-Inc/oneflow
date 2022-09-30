@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/ep/include/primitive/primitive.h"
 // #include "oneflow/core/ep/include/primitive/offset_to_index_calculator.h"
-#include "oneflow/core/ep/include/primitive/fast_integer_math.h"
+#include "oneflow/core/ep/include/primitive/fast_div.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {

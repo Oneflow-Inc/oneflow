@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/ep/cuda/primitive/binary_functor.cuh"
-#include "oneflow/core/ep/include/primitive/fast_integer_math.h"
+#include "oneflow/core/ep/include/primitive/fast_div.h"
 
 namespace oneflow {
 
