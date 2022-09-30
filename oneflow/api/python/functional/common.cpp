@@ -137,12 +137,15 @@ bool PySequenceCheck(PyObject* obj, const std::function<bool(PyObject*)>& item_c
 }
 
 bool PyLongSequenceCheck(PyObject* obj) {
-  return PySequenceCheck(obj, [](PyObject* item) { return PyLong_Check(item); });
+  return PySequenceCheck(
+      obj, [](PyObject* item) { return PyLong_Check(item) || PyIntegerScalarTensorCheck(item); });
 }
 
 bool PyFloatSequenceCheck(PyObject* obj) {
-  return PySequenceCheck(obj,
-                         [](PyObject* item) { return PyFloat_Check(item) || PyLong_Check(item); });
+  return PySequenceCheck(obj, [](PyObject* item) {
+    return PyFloat_Check(item) || PyLong_Check(item) || PyFloatScalarTensorCheck(item)
+           || PyIntegerScalarTensorCheck(item);
+  });
 }
 
 bool PyStringCheck(PyObject* obj) { return PyBytes_Check(obj) || PyUnicode_Check(obj); }
@@ -200,7 +203,7 @@ Scalar PyUnpackScalar(PyObject* obj) {
 bool PyScalarTensorCheck(PyObject* obj) {
   if (!LazyMode::is_enabled() && PyTensor_Check(obj)) {
     const auto& tensor = PyTensor_Unpack(obj);
-    return tensor->shape()->elem_cnt() == 1 && IsPODDataType(tensor->dtype()->data_type());
+    return tensor->shape()->size() == 0 && IsPODDataType(tensor->dtype()->data_type());
   }
   return false;
 }
@@ -239,8 +242,10 @@ Scalar PyUnpackScalarTensor(PyObject* obj) {
 SCALAR_TENSOR_UNPACK_FUNC_IMPL(PyUnpackBoolScalarTensor, bool,
                                BOOL_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ);
 SCALAR_TENSOR_UNPACK_FUNC_IMPL(PyUnpackIntegerScalarTensor_AsLongLong, long long,
-                               INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ);
-SCALAR_TENSOR_UNPACK_FUNC_IMPL(PyUnpackFloatScalarTensor_AsDouble, double, FLOATING_DATA_TYPE_SEQ);
+                               INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ
+                                   CHAR_DATA_TYPE_SEQ);
+SCALAR_TENSOR_UNPACK_FUNC_IMPL(PyUnpackFloatScalarTensor_AsDouble, double,
+                               FLOATING_DATA_TYPE_SEQ INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ);
 #undef SWITCH_SCALAR_TENSOR_TO_SCALAR
 #undef SCALAR_TENSOR_UNPACK_FUNC_IMPL
 

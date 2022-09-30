@@ -80,34 +80,6 @@ inline std::vector<T> PyUnpackSequence(PyObject* obj, UnpackItemFunc unpack_item
   return values;
 }
 
-// Integer/Float list
-bool PyLongSequenceCheck(PyObject* obj);
-bool PyFloatSequenceCheck(PyObject* obj);
-
-template<typename T>
-inline std::vector<T> PyUnpackLongSequence(PyObject* obj) {
-  return PyUnpackSequence<T>(
-      obj, [](PyObject* item) -> T { return static_cast<T>(PyLong_AsLongLong(item)); });
-}
-
-template<typename T>
-inline std::vector<T> PyUnpackFloatSequence(PyObject* obj) {
-  return PyUnpackSequence<T>(
-      obj, [](PyObject* item) -> T { return static_cast<T>(PyFloat_AsDouble(item)); });
-}
-
-// String
-bool PyStringCheck(PyObject* obj);
-bool PyStringSequenceCheck(PyObject* obj);
-
-std::string PyStringAsString(PyObject* obj);
-
-std::string PyObjectToReprStr(PyObject* obj);
-
-// Scalar
-bool PyScalarCheck(PyObject* obj);
-Scalar PyUnpackScalar(PyObject* obj);
-
 // Scalar Tensor
 bool PyScalarTensorCheck(PyObject* obj);
 Scalar PyUnpackScalarTensor(PyObject* obj);
@@ -126,6 +98,42 @@ DefinePyTypeScalarTensorCheck(Float, IsFloatingDataType);    // PyFloatScalarTen
 bool PyUnpackBoolScalarTensor(PyObject* obj);
 long long PyUnpackIntegerScalarTensor_AsLongLong(PyObject* obj);
 double PyUnpackFloatScalarTensor_AsDouble(PyObject* obj);
+
+// Integer/Float list
+bool PyLongSequenceCheck(PyObject* obj);
+bool PyFloatSequenceCheck(PyObject* obj);
+
+template<typename T>
+inline std::vector<T> PyUnpackLongSequence(PyObject* obj) {
+  return PyUnpackSequence<T>(obj, [](PyObject* item) -> T {
+    if (PyIntegerScalarTensorCheck(item)) {
+      return static_cast<T>(PyUnpackIntegerScalarTensor_AsLongLong(item));
+    }
+    return static_cast<T>(PyLong_AsLongLong(item));
+  });
+}
+
+template<typename T>
+inline std::vector<T> PyUnpackFloatSequence(PyObject* obj) {
+  return PyUnpackSequence<T>(obj, [](PyObject* item) -> T {
+    if (PyFloatScalarTensorCheck(item)) {
+      return static_cast<T>(PyUnpackFloatScalarTensor_AsDouble(item));
+    }
+    return static_cast<T>(PyFloat_AsDouble(item));
+  });
+}
+
+// String
+bool PyStringCheck(PyObject* obj);
+bool PyStringSequenceCheck(PyObject* obj);
+
+std::string PyStringAsString(PyObject* obj);
+
+std::string PyObjectToReprStr(PyObject* obj);
+
+// Scalar
+bool PyScalarCheck(PyObject* obj);
+Scalar PyUnpackScalar(PyObject* obj);
 
 // Tensor list
 bool PyTensorSequenceCheck(PyObject* obj);
