@@ -98,19 +98,17 @@ class OffsetToIndexWithStrideCalculator {
  public:
   OffsetToIndexWithStrideCalculator() {}
 
-  OF_DEVICE_FUNC explicit OffsetToIndexWithStrideCalculator(const T* dims) {
-    InitFastIntegerMath(dims, N);
-  }
+  OF_DEVICE_FUNC explicit OffsetToIndexWithStrideCalculator(const T* dims) { InitStrides(dims, N); }
 
   template<typename U>
   OF_DEVICE_FUNC explicit OffsetToIndexWithStrideCalculator(const U* dims) {
     T dims_arr[N];
     for (int i = 0; i < N; ++i) { dims_arr[i] = dims[i]; }
-    InitFastIntegerMath(dims_arr, N);
+    InitStrides(dims_arr, N);
   }
 
   OF_DEVICE_FUNC explicit OffsetToIndexWithStrideCalculator(const T* dims, int n) {
-    InitFastIntegerMath(dims, n);
+    InitStrides(dims, n);
   }
 
   template<typename U>
@@ -119,7 +117,7 @@ class OffsetToIndexWithStrideCalculator {
     for (int i = 0; i < N; ++i) {
       if (i < n) { dims_arr[i] = dims[i]; }
     }
-    InitFastIntegerMath(dims_arr, n);
+    InitStrides(dims_arr, n);
   }
 
   ~OffsetToIndexWithStrideCalculator() = default;
@@ -130,9 +128,9 @@ class OffsetToIndexWithStrideCalculator {
 #pragma unroll
 #endif
     for (int i = 0; i < N - 1; ++i) {
-      const T idx = math_helper_[i].divides(remaining);
+      const T idx = remaining / stride_[i];
       index[i] = idx;
-      remaining = remaining - math_helper_[i].mul(idx);
+      remaining = remaining - idx * stride_[i];
     }
     index[N - 1] = remaining;
   }
@@ -145,30 +143,22 @@ class OffsetToIndexWithStrideCalculator {
 #endif
     for (int i = 0; i < N; ++i) {
       if (i == n - 1) { break; }
-      if (i < n - 1) {
-        const T idx = math_helper_[i].divides(remaining);
+      if (i < n) {
+        const T idx = remaining / stride_[i];
         index[i] = idx;
-        remaining = remaining - math_helper_[i].mul(idx);
+        remaining = remaining - remaining - idx * stride_[i];
       }
     }
-    index[n - 1] = remaining;
   }
 
   OF_DEVICE_FUNC constexpr int Size() const { return N; }
 
  private:
-  OF_DEVICE_FUNC void InitFastIntegerMath(const T* dims, const int n) {
-    T stride_arr[N];
-    for (int i = n - 1; i < N; ++i) {
-      stride_arr[i] = 1;
-      math_helper_[i] = FastIntegerMath<T>(1);
-    }
-    for (int i = n - 2; i >= 0; --i) {
-      stride_arr[i] = dims[i + 1] * stride_arr[i + 1];
-      math_helper_[i] = FastIntegerMath<T>(stride_arr[i]);
-    }
+  OF_DEVICE_FUNC void InitStrides(const T* dims, const int n) {
+    for (int i = n - 1; i < N; ++i) { stride_[i] = 1; }
+    for (int i = n - 2; i >= 0; --i) { stride_[i] = dims[i + 1] * stride_[i + 1]; }
   }
-  FastIntegerMath<T> math_helper_[N];
+  T stride_[N];
 };
 
 #define UNARY_BROADCAST_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kIdentity)

@@ -19,7 +19,8 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/ep/cuda/primitive/binary_functor.cuh"
-#include "oneflow/core/ep/include/primitive/offset_to_index_calculator.h"
+#include "oneflow/core/ep/include/primitive/fast_integer_math.h"
+
 namespace oneflow {
 
 namespace ep {
@@ -48,9 +49,10 @@ union Pack {
 
 template<size_t max_dims, typename IndexType>
 struct BroadcastElementwiseBinaryParams {
-  StrideHelper<IndexType, max_dims> src0_stride_helper;
-  StrideHelper<IndexType, max_dims> src1_stride_helper;
-  FastMathStrideCalculator<IndexType, max_dims> dst_fast_math_stride_calculator;
+  IndexType src0_strides[max_dims];
+  IndexType src1_strides[max_dims];
+  IndexType dst_strides[max_dims];
+  FastDiv<IndexType> fast_dividers[max_dims];
 
   size_t num_dims;
   IndexType src0_index_mask[max_dims];
@@ -86,10 +88,10 @@ __global__ void BroadcastElementwiseBinaryGpu(
 #pragma unroll
     for (int i = 0; i < max_dims; ++i) {
       if (i < num_dims) {
-        const IndexType idx = params.dst_fast_math_stride_calculator.divides(remaining, i);
-        remaining = remaining - params.dst_fast_math_stride_calculator.mul(idx, i);
-        src0_offset += params.src0_index_mask[i] * idx * params.src0_stride_helper.GetStride(i);
-        src1_offset += params.src1_index_mask[i] * idx * params.src1_stride_helper.GetStride(i);
+        const IndexType idx = params.fast_dividers[i].divides(remaining);
+        remaining = remaining - idx * params.dst_strides[i];
+        src0_offset += params.src0_index_mask[i] * idx * params.src0_strides[i];
+        src1_offset += params.src1_index_mask[i] * idx * params.src1_strides[i];
       }
     }
     Pack<Src, src0_pack_size> src0_pack;
@@ -120,10 +122,20 @@ void LaunchKernel(Stream* stream, int num_dims, const int64_t* src0_dims, const 
     params.src0_index_mask[i] = (src0_dims[i] == 1) ? 0 : 1;
     params.src1_index_mask[i] = (src1_dims[i] == 1) ? 0 : 1;
   }
-  params.src0_stride_helper = StrideHelper<IndexType, max_dims>(src0_dims, num_dims);
-  params.src1_stride_helper = StrideHelper<IndexType, max_dims>(src1_dims, num_dims);
-  params.dst_fast_math_stride_calculator =
-      FastMathStrideCalculator<IndexType, max_dims>(dst_dims, num_dims);
+  IndexType src0_strides[max_dims];
+  IndexType src1_strides[max_dims];
+  IndexType dst_strides[max_dims];
+  FastDiv<IndexType> fast_dividers[max_dims];
+  InitStrides<IndexType, max_dims>(src0_dims, src0_strides, num_dims);
+  InitStrides<IndexType, max_dims>(src1_dims, src1_strides, num_dims);
+  InitStrides<IndexType, max_dims>(dst_dims, dst_strides, num_dims);
+  InitFastDividers<IndexType>(dst_strides, fast_dividers, num_dims);
+  for (int i = 0; i < max_dims; i++) {
+    params.src0_strides[i] = src0_strides[i];
+    params.src1_strides[i] = src1_strides[i];
+    params.dst_strides[i] = dst_strides[i];
+    params.fast_dividers[i] = fast_dividers[i];
+  }
 
   params.num_dims = num_dims;
   params.src0 = src0;
@@ -144,11 +156,11 @@ void DispatchIndexType(Stream* stream, size_t num_dims, const int64_t* src0_dims
                        const int64_t* src1_dims, const void* src1, const int64_t* dst_dims,
                        void* dst, Scalar attr0, Scalar attr1) {
   size_t count = GetElementCount(num_dims, dst_dims);
-  if (count < GetMaxVal<int32_t>()) {
-    LaunchKernel<op, T, R, max_dims, src0_pack_size, src1_pack_size, int32_t>(
+  if (count < GetMaxVal<uint32_t>()) {
+    LaunchKernel<op, T, R, max_dims, src0_pack_size, src1_pack_size, uint32_t>(
         stream, num_dims, src0_dims, src0, src1_dims, src1, dst_dims, dst, count, attr0, attr1);
   } else {
-    LaunchKernel<op, T, R, max_dims, src0_pack_size, src1_pack_size, int64_t>(
+    LaunchKernel<op, T, R, max_dims, src0_pack_size, src1_pack_size, uint64_t>(
         stream, num_dims, src0_dims, src0, src1_dims, src1, dst_dims, dst, count, attr0, attr1);
   }
 }

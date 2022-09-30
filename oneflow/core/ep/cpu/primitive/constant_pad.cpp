@@ -35,11 +35,11 @@ void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params, StorageTyp
     bool if_pad = false;
 #pragma unroll
     for (int i = 0; i < num_dims; i++) {
-      const IndexType idx = params.dst_fast_math_stride_calculator.divides(remaining, i);
+      const IndexType idx = params.fast_dividers[i].divides(remaining);
       if (idx >= params.valid_start[i] && idx < params.valid_end[i]) {
         IndexType src_index = idx - params.valid_start[i];
-        src_offset += src_index * params.src_stride_helper.GetStride(i);
-        remaining = remaining - params.dst_fast_math_stride_calculator.mul(idx, i);
+        src_offset += src_index * params.src_strides[i];
+        remaining = remaining - idx * params.dst_strides[i];
       } else {
         if_pad = true;
         break;
@@ -71,13 +71,20 @@ void LaunchKernel(void* dst, const int64_t* dst_dims, const void* src, const int
                   const int64_t* padding_before, const int64_t* padding_after,
                   StorageType packed_pad_val, size_t elem_cnt) {
   ConstantPadParams<num_dims, IndexType> params;
-  params.dst_fast_math_stride_calculator = FastMathStrideCalculator<IndexType, num_dims>(dst_dims);
-  params.src_stride_helper = StrideHelper<IndexType, num_dims>(src_dims);
+  IndexType src_strides[num_dims];
+  IndexType dst_strides[num_dims];
+  FastDiv<IndexType> fast_dividers[num_dims];
+  InitStrides<IndexType, num_dims>(src_dims, src_strides, num_dims);
+  InitStrides<IndexType, num_dims>(dst_dims, dst_strides, num_dims);
+  InitFastDividers<IndexType>(dst_strides, fast_dividers, num_dims);
   params.dst = dst;
   params.src = src;
   for (int i = 0; i < num_dims; i++) {
     params.valid_start[i] = padding_before[i];
     params.valid_end[i] = dst_dims[i] - padding_after[i];
+    params.src_strides[i] = src_strides[i];
+    params.dst_strides[i] = dst_strides[i];
+    params.fast_dividers[i] = fast_dividers[i];
   }
   params.elem_cnt = elem_cnt;
   LaunchKernel<num_dims, IndexType, StorageType>(params, packed_pad_val);
@@ -87,12 +94,12 @@ template<size_t num_dims, typename StorageType>
 void DispatchIndexType(void* dst, const int64_t* dst_dims, const void* src, const int64_t* src_dims,
                        const int64_t* padding_before, const int64_t* padding_after,
                        StorageType packed_pad_val, size_t elem_cnt) {
-  if (elem_cnt < GetMaxVal<int32_t>()) {
-    LaunchKernel<num_dims, int32_t, StorageType>(dst, dst_dims, src, src_dims, padding_before,
-                                                 padding_after, packed_pad_val, elem_cnt);
+  if (elem_cnt < GetMaxVal<uint32_t>()) {
+    LaunchKernel<num_dims, uint32_t, StorageType>(dst, dst_dims, src, src_dims, padding_before,
+                                                  padding_after, packed_pad_val, elem_cnt);
   } else {
-    LaunchKernel<num_dims, int64_t, StorageType>(dst, dst_dims, src, src_dims, padding_before,
-                                                 padding_after, packed_pad_val, elem_cnt);
+    LaunchKernel<num_dims, uint64_t, StorageType>(dst, dst_dims, src, src_dims, padding_before,
+                                                  padding_after, packed_pad_val, elem_cnt);
   }
 }
 

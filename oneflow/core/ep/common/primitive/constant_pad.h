@@ -17,7 +17,8 @@ limitations under the License.
 #define ONEFLOW_CORE_PRIMITIVE_COMMON_CONSTANT_PAD_H_
 
 #include "oneflow/core/ep/include/primitive/primitive.h"
-#include "oneflow/core/ep/include/primitive/offset_to_index_calculator.h"
+// #include "oneflow/core/ep/include/primitive/offset_to_index_calculator.h"
+#include "oneflow/core/ep/include/primitive/fast_integer_math.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
@@ -66,8 +67,9 @@ T GetValue(Scalar value) {
 
 template<size_t num_dims, typename IndexType>
 struct ConstantPadParams {
-  FastMathStrideCalculator<IndexType, num_dims> dst_fast_math_stride_calculator;
-  StrideHelper<IndexType, num_dims> src_stride_helper;
+  IndexType src_strides[num_dims];
+  IndexType dst_strides[num_dims];
+  FastDiv<IndexType> fast_dividers[num_dims];
   IndexType valid_start[num_dims];
   IndexType valid_end[num_dims];
   IndexType elem_cnt{};

@@ -29,6 +29,7 @@ namespace oneflow {
 */
 namespace {
 
+// DALI function
 template<typename component>
 struct lohi {
   component lo, hi;
@@ -147,33 +148,40 @@ OF_DEVICE_FUNC uint64_t div_lohi(uint64_t lo, uint64_t hi, uint64_t operand) {
 #endif
 }
 
-OF_DEVICE_FUNC uint32_t libdivide_64_div_32_to_32(
-    uint32_t u1, uint32_t u0, uint32_t v, uint32_t *r) {
-    uint64_t n = ((uint64_t)u1 << 32) | u0;
-    uint32_t result = (uint32_t)(n / v);
-    *r = (uint32_t)(n - result * (uint64_t)v);
-    return result;
+// libdivide function
+enum {
+  LIBDIVIDE_16_SHIFT_MASK = 0x1F,
+  LIBDIVIDE_32_SHIFT_MASK = 0x1F,
+  LIBDIVIDE_64_SHIFT_MASK = 0x3F,
+  LIBDIVIDE_ADD_MARKER = 0x40,
+  LIBDIVIDE_NEGATIVE_DIVISOR = 0x80
+};
+
+OF_DEVICE_FUNC uint32_t libdivide_64_div_32_to_32(uint32_t u1, uint32_t u0, uint32_t v,
+                                                  uint32_t* r) {
+  uint64_t n = ((uint64_t)u1 << 32) | u0;
+  uint32_t result = (uint32_t)(n / v);
+  *r = (uint32_t)(n - result * (uint64_t)v);
+  return result;
 }
 
 OF_DEVICE_FUNC int32_t static libdivide_mullhi_s32(int32_t x, int32_t y) {
-    int64_t xl = x, yl = y;
-    int64_t rl = xl * yl;
-    // needs to be arithmetic shift
-    return (int32_t)(rl >> 32);
+  int64_t xl = x, yl = y;
+  int64_t rl = xl * yl;
+  // needs to be arithmetic shift
+  return (int32_t)(rl >> 32);
 }
-
 
 OF_DEVICE_FUNC int32_t libdivide_count_leading_zeros64(uint64_t val) {
-  #if defined(__CUDA_ARCH__)
-    return __clzll(val);
-  #else
-    return __builtin_clzll(val);
-  #endif
+#if defined(__CUDA_ARCH__)
+  return __clzll(val);
+#else
+  return __builtin_clzll(val);
+#endif
 }
 
-
-OF_DEVICE_FUNC uint64_t libdivide_128_div_64_to_64(
-  uint64_t numhi, uint64_t numlo, uint64_t den, uint64_t *r) {
+OF_DEVICE_FUNC uint64_t libdivide_128_div_64_to_64(uint64_t numhi, uint64_t numlo, uint64_t den,
+                                                   uint64_t* r) {
   // We work in base 2**32.
   // A uint32 holds a single digit. A uint64 holds two digits.
   // Our numerator is conceptually [num3, num2, num1, num0].
@@ -207,8 +215,8 @@ OF_DEVICE_FUNC uint64_t libdivide_128_div_64_to_64(
 
   // Check for overflow and divide by 0.
   if (numhi >= den) {
-      if (r != NULL) *r = ~0ull;
-      return ~0ull;
+    if (r != NULL) *r = ~0ull;
+    return ~0ull;
   }
 
   // Determine the normalization factor. We multiply den by this, so that its leading digit is at
@@ -276,297 +284,300 @@ OF_DEVICE_FUNC int64_t libdivide_mullhi_s64(int64_t x, int64_t y) {
   return x1 * (int64_t)y1 + (t >> 32) + (w1 >> 32);
 }
 
-}  // namespace 
-
+}  // namespace
 
 template<typename T>
 class FastDiv {
-  public: 
-    OF_DEVICE_FUNC FastDiv() = delete; 
+ public:
+  OF_DEVICE_FUNC FastDiv() = default;
 
-    OF_DEVICE_FUNC FastDiv(T operand) {
-      this->operand_ = operand;
-    }
+  OF_DEVICE_FUNC FastDiv(T operand) { this->operand_ = operand; }
 
-    OF_DEVICE_FUNC T divides(uint64_t x) const {
-      return x / operand_; 
-    }
-  private: 
-    T operand_;
+  OF_DEVICE_FUNC T divides(uint64_t x) const { return x / operand_; }
+
+ private:
+  T operand_;
 };
-
 
 template<>
 class FastDiv<uint64_t> {
-  public: 
-    OF_DEVICE_FUNC FastDiv() = delete; 
+ public:
+  OF_DEVICE_FUNC FastDiv() = default;
 
-    OF_DEVICE_FUNC FastDiv(uint64_t operand) {
-      init(operand); 
+  OF_DEVICE_FUNC FastDiv(uint64_t operand) { init(operand); }
+
+  OF_DEVICE_FUNC void init(uint64_t operand) {
+    assert(operand != 0);
+    this->mul_factor_ = 1;
+    this->shift_ = 0;
+    this->add_ = 0;
+    if (operand == 0) { return; }
+
+    int log_div = ilog2(operand);
+    this->shift_ = log_div;
+
+    if ((operand & (operand - 1)) == 0) {
+      this->mul_factor_ = 0;
+      return;
     }
 
-    OF_DEVICE_FUNC void init(uint64_t operand) {
-      assert(operand != 0); 
-      this->mul_factor_ = 1;
-      this->shift_ = 0;
-      this->add_ = 0;
-      if (operand == 0) { return; }
+    uint64_t m_lo = div_lohi(0, uint64_t(1) << log_div, operand);
+    uint64_t m_hi = div_lohi(uint64_t(1) << log_div, uint64_t(1) << log_div, operand);
+    this->add_ = (m_lo == m_hi) ? 1 : 0;  // round-up failed, use round-down method
+    this->mul_factor_ = m_hi;
+  }
 
-      int log_div = ilog2(operand);
-      this->shift_ = log_div;
-
-      if ((operand & (operand - 1)) == 0) {
-        this->mul_factor_ = 0;
-        return;
-      }
-
-      uint64_t m_lo = div_lohi(0, uint64_t(1) << log_div, operand);
-      uint64_t m_hi = div_lohi(uint64_t(1) << log_div, uint64_t(1) << log_div, operand);
-      this->add_ = (m_lo == m_hi) ? 1 : 0;  // round-up failed, use round-down method
-      this->mul_factor_ = m_hi;
-    }
-
-    OF_DEVICE_FUNC uint64_t divides(uint64_t x) const {
-      // If the operand is a power of 2, the multiplier would be 2^64, which is out of range
-      // - therefore, powers of 2 get special treatment and the multiplication is skipped.
-      x = static_cast<uint64_t>(x);
-  #ifdef __CUDA_ARCH__
-      if (mul_factor_) { x = __umul64hi(x + add_, mul_factor_); }
+  OF_DEVICE_FUNC uint64_t divides(uint64_t x) const {
+    // If the operand is a power of 2, the multiplier would be 2^64, which is out of range
+    // - therefore, powers of 2 get special treatment and the multiplication is skipped.
+    x = static_cast<uint64_t>(x);
+#ifdef __CUDA_ARCH__
+    if (mul_factor_) { x = __umul64hi(x + add_, mul_factor_); }
+    return x >> shift_;
+#else
+    if (mul_factor_) {
+      uint64_t hi = static_cast<unsigned __int128>(x + add_) * mul_factor_ >> 64;
+      return hi >> shift_;
+    } else {
       return x >> shift_;
-  #else
-      if (mul_factor_) {
-        uint64_t hi = static_cast<unsigned __int128>(x + add_) * mul_factor_ >> 64;
-        return hi >> shift_;
-      } else {
-        return x >> shift_;
-      }
-  #endif
     }
-  private: 
-    uint64_t mul_factor_;
-    uint8_t add_;
-    uint8_t shift_;
+#endif
+  }
+
+ private:
+  uint64_t mul_factor_;
+  uint8_t add_;
+  uint8_t shift_;
 };
 
 template<>
 class FastDiv<uint32_t> {
-  public: 
-    OF_DEVICE_FUNC FastDiv() = delete; 
+ public:
+  OF_DEVICE_FUNC FastDiv() = default;
 
-    OF_DEVICE_FUNC FastDiv(uint32_t operand) { init(operand); }
+  OF_DEVICE_FUNC FastDiv(uint32_t operand) { init(operand); }
 
-    OF_DEVICE_FUNC void init(uint32_t operand) {
-      assert(operand != 0); 
-      this->mul_factor_ = 1;
-      this->shift_ = 0;
-      this->add_ = 0;
-      if (operand == 0) { return; }
+  OF_DEVICE_FUNC void init(uint32_t operand) {
+    assert(operand != 0);
+    this->mul_factor_ = 1;
+    this->shift_ = 0;
+    this->add_ = 0;
+    if (operand == 0) { return; }
 
-      int log_div = ilog2(operand);
-      this->shift_ = log_div;
+    int log_div = ilog2(operand);
+    this->shift_ = log_div;
 
-      if ((operand & (operand - 1)) == 0) {
-        this->mul_factor_ = 0;
-        return;
-      }
-
-      uint32_t m_lo = div_lohi(0, uint32_t(1) << log_div, operand);
-      uint32_t m_hi = div_lohi(uint32_t(1) << log_div, uint32_t(1) << log_div, operand);
-      this->add_ = (m_lo == m_hi) ? 1 : 0;  // round-up failed, use round-down method
-      this->mul_factor_ = m_hi;
+    if ((operand & (operand - 1)) == 0) {
+      this->mul_factor_ = 0;
+      return;
     }
 
-    OF_DEVICE_FUNC uint32_t divides(uint32_t x) const {
-  #ifdef __CUDA_ARCH__
-      if (mul_factor_) { x = __umulhi(x + add_, mul_factor_); }
+    uint32_t m_lo = div_lohi(0, uint32_t(1) << log_div, operand);
+    uint32_t m_hi = div_lohi(uint32_t(1) << log_div, uint32_t(1) << log_div, operand);
+    this->add_ = (m_lo == m_hi) ? 1 : 0;  // round-up failed, use round-down method
+    this->mul_factor_ = m_hi;
+  }
+
+  OF_DEVICE_FUNC uint32_t divides(uint32_t x) const {
+#ifdef __CUDA_ARCH__
+    if (mul_factor_) { x = __umulhi(x + add_, mul_factor_); }
+    return x >> shift_;
+#else
+    if (mul_factor_) {
+      uint32_t hi = static_cast<uint64_t>(x + add_) * mul_factor_ >> 32;
+      return hi >> shift_;
+    } else {
       return x >> shift_;
-  #else
-      if (mul_factor_) {
-        uint32_t hi = static_cast<uint64_t>(x + add_) * mul_factor_ >> 32;
-        return hi >> shift_;
-      } else {
-        return x >> shift_;
-      }
-  #endif
     }
-  private: 
-    uint32_t mul_factor_;
-    uint8_t add_;
-    uint8_t shift_;
+#endif
+  }
+
+ private:
+  uint32_t mul_factor_;
+  uint8_t add_;
+  uint8_t shift_;
 };
 
-template <>
-class FastIntegerMath<int32_t> {
-  public: 
-    __device__ __host__  FastIntegerMath() = delete; 
-    __device__ __host__  explicit FastIntegerMath(int32_t operand) {
-      assert(operand != 0); 
-      int branchfree = 0; 
-      uint32_t ud = (uint32_t)operand;
-      uint32_t absD = (operand < 0) ? -ud : ud;
-      #if defined(__CUDA_ARCH__)
-          uint32_t floor_log_2_d = 31 - __clz(operand);
-      #else
-          uint32_t floor_log_2_d = 31 - __builtin_clz(operand);
-      #endif
+template<>
+class FastDiv<int32_t> {
+ public:
+  OF_DEVICE_FUNC FastDiv() = default;
+  OF_DEVICE_FUNC explicit FastDiv(int32_t operand) {
+    assert(operand != 0);
+    int branchfree = 0;
+    uint32_t ud = (uint32_t)operand;
+    uint32_t absD = (operand < 0) ? -ud : ud;
+#if defined(__CUDA_ARCH__)
+    uint32_t floor_log_2_d = 31 - __clz(operand);
+#else
+    uint32_t floor_log_2_d = 31 - __builtin_clz(operand);
+#endif
 
-      // Power of 2
-      if ((absD & (absD - 1)) == 0) {
-          // Branchfree and normal paths are exactly the same
-          magic_ = 0;
-          more_ = (uint8_t)(floor_log_2_d | (operand < 0 ? LIBDIVIDE_NEGATIVE_DIVISOR : 0));
+    // Power of 2
+    if ((absD & (absD - 1)) == 0) {
+      // Branchfree and normal paths are exactly the same
+      magic_ = 0;
+      more_ = (uint8_t)(floor_log_2_d | (operand < 0 ? LIBDIVIDE_NEGATIVE_DIVISOR : 0));
+    } else {
+      assert(floor_log_2_d >= 1);
+      uint8_t more;
+      // the dividend here is 2**(floor_log_2_d + 31), so the low 32 bit word
+      // is 0 and the high word is floor_log_2_d - 1
+      uint32_t rem, proposed_m;
+      proposed_m = libdivide_64_div_32_to_32((uint32_t)1 << (floor_log_2_d - 1), 0, absD, &rem);
+      const uint32_t e = absD - rem;
+      if (!branchfree && e < ((uint32_t)1 << floor_log_2_d)) {
+        more = (uint8_t)(floor_log_2_d - 1);
       } else {
-          assert(floor_log_2_d >= 1);
-          uint8_t more;
-          // the dividend here is 2**(floor_log_2_d + 31), so the low 32 bit word
-          // is 0 and the high word is floor_log_2_d - 1
-          uint32_t rem, proposed_m;
-          proposed_m = libdivide_64_div_32_to_32((uint32_t)1 << (floor_log_2_d - 1), 0, absD, &rem);
-          const uint32_t e = absD - rem;
-          if (!branchfree && e < ((uint32_t)1 << floor_log_2_d)) {
-              more = (uint8_t)(floor_log_2_d - 1);
-          } else {
-              proposed_m += proposed_m;
-              const uint32_t twice_rem = rem + rem;
-              if (twice_rem >= absD || twice_rem < rem) proposed_m += 1;
-              more = (uint8_t)(floor_log_2_d | LIBDIVIDE_ADD_MARKER);
-          }
-
-          proposed_m += 1;
-          int32_t magic = (int32_t)proposed_m;
-          if (operand < 0) {
-              more |= LIBDIVIDE_NEGATIVE_DIVISOR;
-              if (!branchfree) {
-                  magic = -magic;
-              }
-          }
-          more_ = more; 
-          magic_ = magic; 
+        proposed_m += proposed_m;
+        const uint32_t twice_rem = rem + rem;
+        if (twice_rem >= absD || twice_rem < rem) proposed_m += 1;
+        more = (uint8_t)(floor_log_2_d | LIBDIVIDE_ADD_MARKER);
       }
-    }
 
-    __device__ __host__  int32_t divides(const int32_t numer) const {
-      uint8_t more = more_;
-      uint8_t shift = more & LIBDIVIDE_32_SHIFT_MASK;
-
-      if (!magic_) {
-          uint32_t sign = (int8_t)more >> 7;
-          uint32_t mask = ((uint32_t)1 << shift) - 1;
-          uint32_t uq = numer + ((numer >> 31) & mask);
-          int32_t q = (int32_t)uq;
-          q >>= shift;
-          q = (q ^ sign) - sign;
-          return q;
-      } else {
-          uint32_t uq = (uint32_t)libdivide_mullhi_s32(magic_, numer);
-          if (more & LIBDIVIDE_ADD_MARKER) {
-              int32_t sign = (int8_t)more >> 7;
-              uq += ((uint32_t)numer ^ sign) - sign;
-          }
-          int32_t q = (int32_t)uq;
-          q >>= shift;
-          q += (q < 0);
-          return q;
+      proposed_m += 1;
+      int32_t magic = (int32_t)proposed_m;
+      if (operand < 0) {
+        more |= LIBDIVIDE_NEGATIVE_DIVISOR;
+        if (!branchfree) { magic = -magic; }
       }
+      more_ = more;
+      magic_ = magic;
     }
-  private: 
-    int32_t magic_;
-    uint8_t more_;
+  }
+
+  OF_DEVICE_FUNC int32_t divides(const int32_t numer) const {
+    uint8_t more = more_;
+    uint8_t shift = more & LIBDIVIDE_32_SHIFT_MASK;
+
+    if (!magic_) {
+      uint32_t sign = (int8_t)more >> 7;
+      uint32_t mask = ((uint32_t)1 << shift) - 1;
+      uint32_t uq = numer + ((numer >> 31) & mask);
+      int32_t q = (int32_t)uq;
+      q >>= shift;
+      q = (q ^ sign) - sign;
+      return q;
+    } else {
+      uint32_t uq = (uint32_t)libdivide_mullhi_s32(magic_, numer);
+      if (more & LIBDIVIDE_ADD_MARKER) {
+        int32_t sign = (int8_t)more >> 7;
+        uq += ((uint32_t)numer ^ sign) - sign;
+      }
+      int32_t q = (int32_t)uq;
+      q >>= shift;
+      q += (q < 0);
+      return q;
+    }
+  }
+
+ private:
+  int32_t magic_;
+  uint8_t more_;
 };
 
-template <>
-class FastIntegerMath<int64_t> {
-  public: 
-    __device__ __host__  FastIntegerMath() = delete; 
-    __device__ __host__  explicit FastIntegerMath(int64_t operand) {
-        int branchfree = 0; 
-        uint64_t ud = (uint64_t)operand;
-        uint64_t absD = (operand < 0) ? -ud : ud;
+template<>
+class FastDiv<int64_t> {
+ public:
+  OF_DEVICE_FUNC FastDiv() = default;
+  OF_DEVICE_FUNC explicit FastDiv(int64_t operand) {
+    int branchfree = 0;
+    uint64_t ud = (uint64_t)operand;
+    uint64_t absD = (operand < 0) ? -ud : ud;
 
-        #if defined(__CUDA_ARCH__)
-          uint32_t floor_log_2_d = 63 - __clzll(absD);
-        #else
-          uint32_t floor_log_2_d = 63 - __builtin_clzll(absD);
-        #endif
-        // Power of 2
-        if ((absD & (absD - 1)) == 0) {
-          // Branchfree and non-branchfree cases are the same
-          magic_ = 0;
-          more_ = (uint8_t)(floor_log_2_d | (operand < 0 ? LIBDIVIDE_NEGATIVE_DIVISOR : 0));
-        } else {
-          // the dividend here is 2**(floor_log_2_d + 63), so the low 64 bit word
-          // is 0 and the high word is floor_log_2_d - 1
-          uint8_t more;
-          uint64_t rem, proposed_m;
-          proposed_m = libdivide_128_div_64_to_64((uint64_t)1 << (floor_log_2_d - 1), 0, absD, &rem);
-          const uint64_t e = absD - rem;
-  
-          // We are going to start with a power of floor_log_2_d - 1.
-          // This works if works if e < 2**floor_log_2_d.
-          if (!branchfree && e < ((uint64_t)1 << floor_log_2_d)) {
-              // This power works
-              more = (uint8_t)(floor_log_2_d - 1);
-          } else {
-              // We need to go one higher. This should not make proposed_m
-              // overflow, but it will make it negative when interpreted as an
-              // int32_t.
-              proposed_m += proposed_m;
-              const uint64_t twice_rem = rem + rem;
-              if (twice_rem >= absD || twice_rem < rem) proposed_m += 1;
-              // note that we only set the LIBDIVIDE_NEGATIVE_DIVISOR bit if we
-              // also set ADD_MARKER this is an annoying optimization that
-              // enables algorithm #4 to avoid the mask. However we always set it
-              // in the branchfree case
-              more = (uint8_t)(floor_log_2_d | LIBDIVIDE_ADD_MARKER);
-          }
-          proposed_m += 1;
-          int64_t magic = (int64_t)proposed_m;
-  
-          // Mark if we are negative
-          if (operand < 0) {
-              more |= LIBDIVIDE_NEGATIVE_DIVISOR;
-              if (!branchfree) {
-                  magic = -magic;
-              }
-          }
-          more_ = more;
-          magic_ = magic;
-        }
-    }
-  
-    __device__ __host__  int64_t divides(const int64_t numer) const {
-      uint8_t more = more_;
-      uint8_t shift = more & LIBDIVIDE_64_SHIFT_MASK;
+#if defined(__CUDA_ARCH__)
+    uint32_t floor_log_2_d = 63 - __clzll(absD);
+#else
+    uint32_t floor_log_2_d = 63 - __builtin_clzll(absD);
+#endif
+    // Power of 2
+    if ((absD & (absD - 1)) == 0) {
+      // Branchfree and non-branchfree cases are the same
+      magic_ = 0;
+      more_ = (uint8_t)(floor_log_2_d | (operand < 0 ? LIBDIVIDE_NEGATIVE_DIVISOR : 0));
+    } else {
+      // the dividend here is 2**(floor_log_2_d + 63), so the low 64 bit word
+      // is 0 and the high word is floor_log_2_d - 1
+      uint8_t more;
+      uint64_t rem, proposed_m;
+      proposed_m = libdivide_128_div_64_to_64((uint64_t)1 << (floor_log_2_d - 1), 0, absD, &rem);
+      const uint64_t e = absD - rem;
 
-      if (!magic_) {  // shift path
-          uint64_t mask = ((uint64_t)1 << shift) - 1;
-          uint64_t uq = numer + ((numer >> 63) & mask);
-          int64_t q = (int64_t)uq;
-          q >>= shift;
-          // must be arithmetic shift and then sign-extend
-          int64_t sign = (int8_t)more >> 7;
-          q = (q ^ sign) - sign;
-          return q;
+      // We are going to start with a power of floor_log_2_d - 1.
+      // This works if works if e < 2**floor_log_2_d.
+      if (!branchfree && e < ((uint64_t)1 << floor_log_2_d)) {
+        // This power works
+        more = (uint8_t)(floor_log_2_d - 1);
       } else {
-          uint64_t uq = (uint64_t)libdivide_mullhi_s64(magic_, numer);
-          if (more & LIBDIVIDE_ADD_MARKER) {
-              // must be arithmetic shift and then sign extend
-              int64_t sign = (int8_t)more >> 7;
-              // q += (more < 0 ? -numer : numer)
-              // cast required to avoid UB
-              uq += ((uint64_t)numer ^ sign) - sign;
-          }
-          int64_t q = (int64_t)uq;
-          q >>= shift;
-          q += (q < 0);
-          return q;
+        // We need to go one higher. This should not make proposed_m
+        // overflow, but it will make it negative when interpreted as an
+        // int32_t.
+        proposed_m += proposed_m;
+        const uint64_t twice_rem = rem + rem;
+        if (twice_rem >= absD || twice_rem < rem) proposed_m += 1;
+        // note that we only set the LIBDIVIDE_NEGATIVE_DIVISOR bit if we
+        // also set ADD_MARKER this is an annoying optimization that
+        // enables algorithm #4 to avoid the mask. However we always set it
+        // in the branchfree case
+        more = (uint8_t)(floor_log_2_d | LIBDIVIDE_ADD_MARKER);
       }
+      proposed_m += 1;
+      int64_t magic = (int64_t)proposed_m;
+
+      // Mark if we are negative
+      if (operand < 0) {
+        more |= LIBDIVIDE_NEGATIVE_DIVISOR;
+        if (!branchfree) { magic = -magic; }
+      }
+      more_ = more;
+      magic_ = magic;
     }
-  private: 
-    int64_t magic_;
-    uint8_t more_;
+  }
+
+  OF_DEVICE_FUNC int64_t divides(const int64_t numer) const {
+    uint8_t more = more_;
+    uint8_t shift = more & LIBDIVIDE_64_SHIFT_MASK;
+
+    if (!magic_) {  // shift path
+      uint64_t mask = ((uint64_t)1 << shift) - 1;
+      uint64_t uq = numer + ((numer >> 63) & mask);
+      int64_t q = (int64_t)uq;
+      q >>= shift;
+      // must be arithmetic shift and then sign-extend
+      int64_t sign = (int8_t)more >> 7;
+      q = (q ^ sign) - sign;
+      return q;
+    } else {
+      uint64_t uq = (uint64_t)libdivide_mullhi_s64(magic_, numer);
+      if (more & LIBDIVIDE_ADD_MARKER) {
+        // must be arithmetic shift and then sign extend
+        int64_t sign = (int8_t)more >> 7;
+        // q += (more < 0 ? -numer : numer)
+        // cast required to avoid UB
+        uq += ((uint64_t)numer ^ sign) - sign;
+      }
+      int64_t q = (int64_t)uq;
+      q >>= shift;
+      q += (q < 0);
+      return q;
+    }
+  }
+
+ private:
+  int64_t magic_;
+  uint8_t more_;
 };
 
+template<typename T, int N>
+void InitStrides(const int64_t* dims, T* strides, int n) {
+  for (int i = n - 1; i < N; ++i) { strides[i] = 1; }
+  for (int i = n - 2; i >= 0; --i) { strides[i] = dims[i + 1] * strides[i + 1]; }
+}
+
+template<typename T>
+void InitFastDividers(T* strides, FastDiv<T>* fast_dividers, int n) {
+  for (int i = n - 1; i >= 0; --i) { fast_dividers[i] = FastDiv<T>(strides[i]); }
+}
 
 }  // namespace oneflow
 

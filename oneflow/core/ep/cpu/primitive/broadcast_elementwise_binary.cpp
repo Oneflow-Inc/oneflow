@@ -16,7 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/ep/include/primitive/offset_to_index_calculator.h"
+#include "oneflow/core/ep/include/primitive/fast_integer_math.h"
 #include "oneflow/core/ep/common/primitive/broadcast_elementwise_binary.h"
 #include "oneflow/core/ep/cpu/primitive/binary_functor.h"
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
@@ -193,30 +193,28 @@ void LaunchGeneral(CpuStream* cpu_stream, size_t simplified_num_dims,
       0, dst_elem_cnt,
       [functor, src0, src1, dst, simplified_num_dims, simplified_src0_dims, simplified_src1_dims,
        simplified_dst_dims](int64_t begin, int64_t end) {
-        auto src0_index_helper =
-            NdIndexOffsetHelper<IndexType, kMaxNumDims>(simplified_src0_dims, simplified_num_dims);
-        auto src1_index_helper =
-            NdIndexOffsetHelper<IndexType, kMaxNumDims>(simplified_src1_dims, simplified_num_dims);
-        auto dst_index_helper = OffsetToIndexCalculator<IndexType, kMaxNumDims>(
-            simplified_dst_dims, simplified_num_dims);
-        IndexType src0_index[kMaxNumDims];
-        IndexType src1_index[kMaxNumDims];
-        IndexType dst_index[kMaxNumDims];
+        IndexType src0_strides[kMaxNumDims];
+        IndexType src1_strides[kMaxNumDims];
+        IndexType dst_strides[kMaxNumDims];
+        FastDiv<IndexType> fast_dividers[kMaxNumDims];
+        InitStrides<IndexType, kMaxNumDims>(simplified_src0_dims, src0_strides,
+                                            simplified_num_dims);
+        InitStrides<IndexType, kMaxNumDims>(simplified_src1_dims, src1_strides,
+                                            simplified_num_dims);
+        InitStrides<IndexType, kMaxNumDims>(simplified_dst_dims, dst_strides, simplified_num_dims);
+        InitFastDividers<IndexType>(dst_strides, fast_dividers, simplified_num_dims);
         for (IndexType offset = begin; offset < end; offset++) {
-          dst_index_helper.OffsetToNdIndex(offset, dst_index, simplified_num_dims);
+          IndexType src0_offset = 0;
+          IndexType src1_offset = 0;
+          IndexType remaining = offset;
           for (int i = 0; i < kMaxNumDims; i++) {
             if (i < simplified_num_dims) {
-              src0_index[i] = (simplified_src0_dims[i] != 1) ? dst_index[i] : 0;
-              src1_index[i] = (simplified_src1_dims[i] != 1) ? dst_index[i] : 0;
-            } else {
-              src0_index[i] = 0;
-              src1_index[i] = 0;
+              const IndexType idx = fast_dividers[i].divides(remaining);
+              remaining = remaining - idx * dst_strides[i];
+              src0_offset += (simplified_src0_dims[i] != 1) * idx * src0_strides[i];
+              src1_offset += (simplified_src1_dims[i] != 1) * idx * src1_strides[i];
             }
           }
-          const IndexType src0_offset =
-              src0_index_helper.NdIndexToOffset(src0_index, simplified_num_dims);
-          const IndexType src1_offset =
-              src1_index_helper.NdIndexToOffset(src1_index, simplified_num_dims);
           dst[offset] = functor(src0[src0_offset], src1[src1_offset]);
         }
       });
@@ -229,12 +227,12 @@ void LaunchGeneralDispatchIndexType(CpuStream* cpu_stream, size_t simplified_num
                                     const int64_t* simplified_dst_dims, Dst* dst, Scalar attr0,
                                     Scalar attr1) {
   const int64_t dst_elem_cnt = GetElementCount(simplified_num_dims, simplified_dst_dims);
-  if (dst_elem_cnt < (GetMaxVal<int32_t>() / 2)) {
-    LaunchGeneral<binary_op, Src, Dst, int32_t>(
+  if (dst_elem_cnt < (GetMaxVal<uint32_t>() / 2)) {
+    LaunchGeneral<binary_op, Src, Dst, uint32_t>(
         cpu_stream, simplified_num_dims, simplified_src0_dims, src0, simplified_src1_dims, src1,
         simplified_dst_dims, dst, dst_elem_cnt, attr0, attr1);
   } else {
-    LaunchGeneral<binary_op, Src, Dst, int64_t>(
+    LaunchGeneral<binary_op, Src, Dst, uint64_t>(
         cpu_stream, simplified_num_dims, simplified_src0_dims, src0, simplified_src1_dims, src1,
         simplified_dst_dims, dst, dst_elem_cnt, attr0, attr1);
   }
