@@ -212,11 +212,10 @@ bool PythonArg::TypeCheck(ValueType type) const {
     case kUINT64_LIST:
     case kBOOL_LIST: return PyLongSequenceCheck(object_) || (size_ > 0 && PyLong_Check(object_));
     case kFLOAT:
-    case kDOUBLE: {
+    case kDOUBLE:
       return PyFloat_Check(object_) || PyLong_Check(object_)
              || numpy::PyArrayCheckFloatScalar(object_) || numpy::PyArrayCheckLongScalar(object_)
              || PyFloatScalarTensorCheck(object_) || PyIntegerScalarTensorCheck(object_);
-    }
     case kFLOAT_LIST:
     case kDOUBLE_LIST:
       return PyFloatSequenceCheck(object_)
