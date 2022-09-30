@@ -182,13 +182,7 @@ def _new_empty(
 
 
 def _new_ones(
-    self,
-    size=None,
-    dtype=None,
-    device=None,
-    placement=None,
-    sbp=None,
-    requires_grad=False,
+    self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
 ):
     return flow.new_ones(self, size, dtype, device, placement, sbp, requires_grad)
 
@@ -321,7 +315,12 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
             ), "Only local tensor can be assigned to local tensor."
             if self.device == other.device:
                 other = flow._C.broadcast_like(other, self)
-                flow._C.assign_local_tensor(self, other)
+                if not self.is_contiguous():
+                    # NOTE: slice_update support non-contiguous input tensor
+                    with flow.no_grad():
+                        self[...] = other
+                else:
+                    flow._C.assign_local_tensor(self, other)
                 return
 
     # Possibility 2: `other` is a numpy array, or `self` and `other` are tensors on different devices/placements.

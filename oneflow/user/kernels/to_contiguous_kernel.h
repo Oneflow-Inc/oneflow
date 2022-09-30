@@ -83,14 +83,23 @@ struct ToContiguousUtil : ToContiguousUtilBase {
 
 }  // namespace oneflow
 
-#define TO_CONTIGUOUS_TYPES     \
-  OF_PP_MAKE_TUPLE_SEQ(bool)    \
-  OF_PP_MAKE_TUPLE_SEQ(float)   \
-  OF_PP_MAKE_TUPLE_SEQ(double)  \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t) \
-  OF_PP_MAKE_TUPLE_SEQ(int64_t) \
-  OF_PP_MAKE_TUPLE_SEQ(int8_t)  \
-  OF_PP_MAKE_TUPLE_SEQ(uint8_t)
-#define TO_CONTIGUOUS_CUDA_SPECIAL_TYPE OF_PP_MAKE_TUPLE_SEQ(float16)
+#define TO_CONTIGUOUS_COMMON_TYPES \
+  OF_PP_MAKE_TUPLE_SEQ(bool)       \
+  OF_PP_MAKE_TUPLE_SEQ(float)      \
+  OF_PP_MAKE_TUPLE_SEQ(double)     \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t)    \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t)    \
+  OF_PP_MAKE_TUPLE_SEQ(int8_t)     \
+  OF_PP_MAKE_TUPLE_SEQ(uint8_t)    \
+  OF_PP_MAKE_TUPLE_SEQ(float16)    \
+  OF_PP_MAKE_TUPLE_SEQ(bfloat16)
+
+#define TO_CONTIGUOUS_CPU_TYPES TO_CONTIGUOUS_COMMON_TYPES
+
+#if CUDA_VERSION >= 11000
+#define TO_CONTIGUOUS_CUDA_SPECIAL_TYPE OF_PP_MAKE_TUPLE_SEQ(half) OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16)
+#else
+#define TO_CONTIGUOUS_CUDA_SPECIAL_TYPE OF_PP_MAKE_TUPLE_SEQ(half)
+#endif
 
 #endif  // ONEFLOW_USER_KERNELS_TO_CONTIGUOUS_KERNEL_H_
