@@ -81,6 +81,12 @@ TensorProcessor& TensorProcessor::PromoteInputsToCommonDtype(bool is_promote) {
   return *this;
 }
 
+TensorProcessor& TensorProcessor::PromoteInputsToCommonDtype(bool is_promote, bool is_inplace) {
+  promote_inputs_to_common_dtype_ = is_promote;
+  is_inplace_ = is_inplace;
+  return *this;
+}
+
 TensorProcessor& TensorProcessor::PromoteIntegerInputsToFloatDtype(bool is_promote) {
   promote_integer_inputs_to_float_ = is_promote;
   CHECK_OR_THROW(!promote_integer_inputs_to_float_ || promote_inputs_to_common_dtype_)
@@ -93,12 +99,17 @@ Maybe<void> TensorProcessor::Apply() {
   if (promote_inputs_to_common_dtype_) {
     bool has_different_input_dtype = CheckHasDifferentInputDType(tensor_tuple_);
     if (has_different_input_dtype) {
-      common_dtype_ = ComputeCommonDType(tensor_tuple_);
-      if (promote_integer_inputs_to_float_ && common_dtype_->is_integer()) {
-        // Promotes common dtype to the default float scalar type, if needed.
-        // same to pytorch's computeTypes() in torch/csrc/jit/codegen/cuda/type_promotion.cpp
-        common_dtype_ = DType::Float();
+      if (!is_inplace_) {
+        common_dtype_ = ComputeCommonDType(tensor_tuple_);
+        if (promote_integer_inputs_to_float_ && common_dtype_->is_integer()) {
+          // Promotes common dtype to the default float scalar type, if needed.
+          // same to pytorch's computeTypes() in torch/csrc/jit/codegen/cuda/type_promotion.cpp
+          common_dtype_ = DType::Float();
+        }
+      } else {
+        common_dtype_ = tensor_tuple_[0]->dtype();
       }
+
       JUST(CastToSameType(tensor_tuple_, common_dtype_));
     } else {
       if (tensor_tuple_.size() == 1 && !tensor_tuple_[0]->dtype()->is_floating_point()) {

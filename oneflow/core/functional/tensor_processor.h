@@ -41,6 +41,7 @@ class TensorProcessor final {
 
   Maybe<void> Apply();
   TensorProcessor& PromoteInputsToCommonDtype(bool is_promote);
+  TensorProcessor& PromoteInputsToCommonDtype(bool is_promote, bool is_inplace);
   TensorProcessor& PromoteIntegerInputsToFloatDtype(bool is_promote);
   Maybe<TensorTuple&> GetInputs() { return tensor_tuple_; };
 
@@ -51,6 +52,7 @@ class TensorProcessor final {
 
   bool promote_inputs_to_common_dtype_;
   bool promote_integer_inputs_to_float_;
+  bool is_inplace_;
 };
 
 class TensorLayoutProcessor final {

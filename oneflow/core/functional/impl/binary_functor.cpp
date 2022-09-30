@@ -91,11 +91,11 @@ class AddFunctor {
     if ((alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
         || (alpha.IsFloatingPoint()
             && std::fabs(alpha.Value<double>() - 1.0) < std::numeric_limits<double>::epsilon())) {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true, inplace)
                .AddInputs({input_tensor, other})
                .Apply());
     } else {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true, inplace)
                .AddInputs({input_tensor, JUST(functional::ScalarMul(alpha, other))})
                .Apply());
     }
