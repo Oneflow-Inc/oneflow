@@ -61,7 +61,7 @@ NpuCurrentDeviceGuard::~NpuCurrentDeviceGuard() {
 int GetNpuDeviceIndex() { return GlobalProcessCtx::LocalRank(); }
 
 int GetNpuDeviceCount() {
-  std::cout<<"GetNpuDeviceCount"<<std::endl;
+  //std::cout<<"GetNpuDeviceCount"<<std::endl;
   /* static */ uint32_t npu_device_count = 0;
   NpuCurrentDeviceGuard dev_guard(GetNpuDeviceIndex());
   OF_NPU_CHECK(aclrtGetDeviceCount(&npu_device_count));
@@ -119,7 +119,7 @@ void InitNpuContextOnce(int device_id ) {
   static std::once_flag aclcontext;
   static aclrtContext context_;
   std::call_once(aclcontext,[&](){
-    std::cout<<"Init && Create Context Once"<<std::endl;
+    //std::cout<<"Init && Create Context Once"<<std::endl;
     static std::string json_path = "/data/acl_test/acl.json";
     OF_NPU_CHECK(aclInit(json_path.c_str()));
     OF_NPU_CHECK(aclrtCreateContext(&context_, device_id));

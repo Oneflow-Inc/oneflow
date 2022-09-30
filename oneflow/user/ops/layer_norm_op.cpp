@@ -300,4 +300,63 @@ REGISTER_USER_OP_GRAD("layer_norm")
       return Maybe<void>::Ok();
     });
 
+/* static */ Maybe<void> LayerNormNpuGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
+  const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+  const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);
+  const user_op::TensorDesc& inv_variance = ctx->InputTensorDesc("inv_variance", 0);
+  user_op::TensorDesc* dx = ctx->OutputTensorDesc("dx", 0);
+  CHECK_EQ_OR_RETURN(dy.shape(), x.shape());
+  const int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
+  CHECK_GT_OR_RETURN(begin_norm_axis, 0);
+  const Shape& bn_param_shape = InferBnParamShape(x.shape(), begin_norm_axis);
+  CHECK_EQ_OR_RETURN(mean.shape(), bn_param_shape);
+  CHECK_EQ_OR_RETURN(inv_variance.shape(), bn_param_shape);
+  *dx->mut_shape() = dy.shape();
+  *dx->mut_is_dynamic() = dy.is_dynamic();
+  if (ctx->has_input("_add_to_output", 0)) {
+    const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
+    CHECK_EQ_OR_RETURN(add_to_output.shape(), dx->shape());
+  }
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> LayerNormNpuGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> LayerNormNpuGradOp::GetSbp(user_op::SbpContext* ctx) {
+  std::vector<user_op::OpArg> broadcast_args;
+  if (ctx->user_op_conf().has_input("gamma", 0)) {
+    broadcast_args.emplace_back(user_op::OpArg("gamma", 0));
+  }
+  int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
+  for (int i = 0; i < begin_norm_axis; ++i) {
+    ctx->NewBuilder()
+        .Split(ctx->inputs(), i)
+        .Split(ctx->outputs(), i)
+        .Broadcast(broadcast_args)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> LayerNormNpuGradOp::InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
+  const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+  CHECK_EQ_OR_RETURN(dy.data_type(), x.data_type());
+  const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);
+  const user_op::TensorDesc& inv_variance = ctx->InputTensorDesc("inv_variance", 0);
+  const DataType& bn_param_data_type = InferBnParamDataType(x.data_type());
+  CHECK_EQ_OR_RETURN(mean.data_type(), bn_param_data_type);
+  CHECK_EQ_OR_RETURN(inv_variance.data_type(), bn_param_data_type);
+  user_op::TensorDesc* dx = ctx->OutputTensorDesc("dx", 0);
+  *dx->mut_data_type() = dy.data_type();
+  if (ctx->has_input("_add_to_output", 0)) {
+    const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
+    CHECK_EQ_OR_RETURN(add_to_output.data_type(), dx->data_type());
+  }
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow

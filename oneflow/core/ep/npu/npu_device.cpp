@@ -43,7 +43,6 @@ NpuDevice::NpuDevice(int device_index, DeviceManager* device_manager)
       const_zeros_buffer_(nullptr),
       const_ones_buffer_fp32_(nullptr),
       const_ones_buffer_fp16_(nullptr) {
-  std::cout<<"NpuDevice::NpuDevice(int,DM)"<<std::endl;
   NpuCurrentDeviceGuard guard(device_index_);
   const_buf_elem_cnt_ = ParseIntegerFromEnv("ONEFLOW_EP_NPU_CONST_BUFFER_ELEMENT_COUNT",
                                             kDefaultConstBufElementCount);
@@ -66,7 +65,7 @@ NpuDevice::~NpuDevice() {
 void NpuDevice::SetAsActiveDevice() { }
 
 Stream* NpuDevice::CreateStream() {
-  std::cout<<"NpuDevice::CreateStream()"<<std::endl;
+  //std::cout<<"NpuDevice::CreateStream()"<<std::endl;
   NpuCurrentDeviceGuard guard(device_index_);
   return new NpuStream(this);
 }

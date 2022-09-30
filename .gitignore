@@ -44,3 +44,4 @@ unittest-log-*
 /data-test
 /tmp
 /python/oneflow/test/dataloader/data-test/
+kernel_meta_*

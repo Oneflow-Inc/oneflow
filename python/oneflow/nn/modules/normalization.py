@@ -260,7 +260,7 @@ class LayerNorm(Module):
                     f"Given normalized_shape={self.normalized_shape}, expected input with shape [*, {str(self.normalized_shape)[1:-1]}], but got input of size {x.shape}"
                 )
 
-        if not x.is_cuda:
+        if not x.is_cuda and 'npu' not in x.device.type:
             reduce_axis = []
             for dim in range(len(x.shape)):
                 if dim >= self.begin_norm_axis:

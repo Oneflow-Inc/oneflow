@@ -5400,6 +5400,30 @@ def OneFlow_LayerNormParamGradOp : OneFlow_BaseOp<"layer_norm_param_grad", [NoSi
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_LayerNormNpuGradOp : OneFlow_BaseOp<"layer_norm_npu_grad", [NoSideEffect, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$mean,
+    OneFlow_Tensor:$inv_variance
+  );
+  let output = (outs
+    Optional<OneFlow_Tensor>:$dx,
+    Optional<OneFlow_Tensor>:$beta_diff,
+    Optional<OneFlow_Tensor>:$gamma_diff
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$begin_params_axis
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$result_segment_sizes
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_NormalOp : OneFlow_BaseOp<"normal", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
     OneFlow_Tensor:$out

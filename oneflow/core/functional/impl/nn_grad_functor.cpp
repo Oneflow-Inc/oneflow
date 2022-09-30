@@ -830,6 +830,34 @@ class LayerNormParamGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class LayerNormNpuGradFunctor {
+ public:
+  LayerNormNpuGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("layer_norm_npu_grad")
+                         .Input("dy")
+                         .Input("x")
+                         .Input("mean")
+                         .Input("inv_variance")
+                         .Output("dx")
+                         .Output("gamma_diff")
+                         .Output("beta_diff")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                                const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& mean,
+                                const std::shared_ptr<one::Tensor>& inv_variance,
+                                const int64_t& begin_params_axis, const double& epsilon) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("begin_params_axis", begin_params_axis));
+    JUST(attrs.SetAttr<double>("epsilon", epsilon));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, x, mean, inv_variance}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class BroadcastMatmulGradBFunctor {
  public:
   BroadcastMatmulGradBFunctor() {
