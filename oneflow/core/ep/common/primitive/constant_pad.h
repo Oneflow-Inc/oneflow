@@ -66,8 +66,12 @@ T GetValue(Scalar value) {
 
 template<size_t num_dims, typename IndexType>
 struct ConstantPadParams {
-  NdIndexOffsetHelper<IndexType, num_dims> src_index_helper;
-  OffsetToIndexCalculator<IndexType, num_dims> dst_index_helper;
+  // NdIndexOffsetHelper<IndexType, num_dims> src_index_helper;
+  // OffsetToIndexCalculator<IndexType, num_dims> dst_index_helper;
+
+  FastMathStrideCalculator<IndexType, num_dims> dst_fast_math_stride_calculator;
+  StrideHelper<IndexType, num_dims> src_stride_helper;
+
   IndexType valid_start[num_dims];
   IndexType valid_end[num_dims];
   IndexType elem_cnt{};

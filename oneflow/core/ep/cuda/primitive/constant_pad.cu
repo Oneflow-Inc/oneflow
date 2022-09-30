@@ -32,15 +32,39 @@ __global__ void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params,
                                   StorageType packed_pad_val) {
   const StorageType* src = reinterpret_cast<const StorageType*>(params.src);
   StorageType* dst = reinterpret_cast<StorageType*>(params.dst);
-  IndexType src_index[num_dims];
-  IndexType dst_index[num_dims];
+  // IndexType src_index[num_dims];
+  // IndexType dst_index[num_dims];
+
   CUDA_1D_KERNEL_LOOP_T(IndexType, linear_index, params.elem_cnt) {
-    params.dst_index_helper.OffsetToNdIndex(linear_index, dst_index);
+//     params.dst_index_helper.OffsetToNdIndex(linear_index, dst_index);
+//     bool if_pad = false;
+// #pragma unroll
+//     for (int i = 0; i < num_dims; i++) {
+//       if (dst_index[i] >= params.valid_start[i] && dst_index[i] < params.valid_end[i]) {
+//         src_index[i] = dst_index[i] - params.valid_start[i];
+//       } else {
+//         if_pad = true;
+//         break;
+//       }
+//     }
+//     StorageType dst_val = packed_pad_val;
+//     if (!if_pad) {
+//       const IndexType src_offset = params.src_index_helper.NdIndexToOffset(src_index);
+//       dst_val = src[src_offset];
+//     }
+//     dst[linear_index] = dst_val;
+
+    // params.dst_index_helper.OffsetToNdIndex(linear_index, dst_index);
+    IndexType src_offset = 0;
+    IndexType remaining = linear_index;
     bool if_pad = false;
-#pragma unroll
+    #pragma unroll
     for (int i = 0; i < num_dims; i++) {
-      if (dst_index[i] >= params.valid_start[i] && dst_index[i] < params.valid_end[i]) {
-        src_index[i] = dst_index[i] - params.valid_start[i];
+      const IndexType idx = params.dst_fast_math_stride_calculator.divides(remaining, i);
+      if (idx >= params.valid_start[i] && idx < params.valid_end[i]) {
+        IndexType src_index = idx - params.valid_start[i];
+        src_offset += src_index * params.src_stride_helper.GetStride(i);
+        remaining = remaining - params.dst_fast_math_stride_calculator.mul(idx, i);
       } else {
         if_pad = true;
         break;
@@ -48,7 +72,6 @@ __global__ void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params,
     }
     StorageType dst_val = packed_pad_val;
     if (!if_pad) {
-      const IndexType src_offset = params.src_index_helper.NdIndexToOffset(src_index);
       dst_val = src[src_offset];
     }
     dst[linear_index] = dst_val;
@@ -81,8 +104,12 @@ void LaunchKernel(Stream* stream, void* dst, const int64_t* dst_dims, const void
                   const int64_t* src_dims, const int64_t* padding_before,
                   const int64_t* padding_after, StorageType packed_pad_val, size_t elem_cnt) {
   ConstantPadParams<num_dims, IndexType> params;
-  params.dst_index_helper = OffsetToIndexCalculator<IndexType, num_dims>(dst_dims);
-  params.src_index_helper = NdIndexOffsetHelper<IndexType, num_dims>(src_dims);
+  // params.dst_index_helper = OffsetToIndexCalculator<IndexType, num_dims>(dst_dims);
+  // params.src_index_helper = NdIndexOffsetHelper<IndexType, num_dims>(src_dims);
+
+  params.dst_fast_math_stride_calculator = FastMathStrideCalculator<IndexType, num_dims>(dst_dims);
+  params.src_stride_helper = StrideHelper<IndexType, num_dims>(src_dims);
+
   params.dst = dst;
   params.src = src;
   for (int i = 0; i < num_dims; i++) {
