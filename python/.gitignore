@@ -132,7 +132,6 @@ dmypy.json
 /oneflow/core
 /oneflow/compatible/single_client/core
 /oneflow/version.py
-/oneflow/oneflow_tmp
 lib.py
 *.ast.py
 unittest-log-*
