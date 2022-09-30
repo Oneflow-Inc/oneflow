@@ -14,54 +14,102 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/functional/functional.h"
+#include "oneflow/user/ops/nn_util.h"
+#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/ep/include/primitive/softmax.h"
-#include "oneflow/core/ep/include/primitive/softmax_backward.h"
-#include "oneflow/core/kernel/cuda_graph_support.h"
+// #include "oneflow/core/ep/include/primitive/softmax_backward.h"
 
 namespace oneflow {
 
 namespace {
 
 template<typename Context>
-std::unique_ptr<ep::primitive::Softmax> NewGumbelSoftmaxPrimitive(Context* ctx) {
+std::unique_ptr<ep::primitive::Softmax> NewSoftmaxPrimitive(Context* ctx) {
   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("in", 0)->data_type();
   return ep::primitive::NewPrimitive<ep::primitive::SoftmaxFactory>(ctx->device_type(), data_type);
 }
 
-auto GumbelSoftmaxPrimitiveExists() {
-  return hob::make_custom("GumbelSoftmaxPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
-    return NewGumbelSoftmaxPrimitive(&ctx).operator bool();
+auto SoftmaxPrimitiveExists() {
+  return hob::make_custom("SoftmaxPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewSoftmaxPrimitive(&ctx).operator bool();
   });
 }
 
 }  //  namespace
 
-class GumbelSoftmaxKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+template<typename T>
+class GumbelSoftmaxKernel final : public user_op::OpKernel {
  public:
   GumbelSoftmaxKernel() = default;
   ~GumbelSoftmaxKernel() override = default;
 
  private:
-  // using user_op::OpKernel::Compute;
-
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const auto tau = ctx->Attr<double>("tau");
+    const auto hard = ctx->Attr<bool>("hard");
+    CHECK_EQ(in->shape_view().elem_cnt(), out->shape_view().elem_cnt());
+    CHECK_EQ(in->data_type(), out->data_type());
+
+    user_op::Tensor* gumbel_noise = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    CHECK_EQ(in->shape_view().elem_cnt(), gumbel_noise->shape_view().elem_cnt());
+
+    const T* in_ptr = in->dptr<T>();
+    T* out_ptr = out->mut_dptr<T>();
+    T* gumbel_noise_ptr = gumbel_noise->mut_dptr<T>();
 
     const ShapeView& in_shape = in->shape_view();
-    const int64_t num_classes = in_shape.At(in_shape.NumAxes() - 1);
-    const int64_t num_instances = in_shape.Count(0, in_shape.NumAxes() - 1);
+    const int32_t elem_cnt = in_shape.elem_cnt();
+    const int64_t cols = in_shape.At(in_shape.NumAxes() - 1);
+    const int64_t rows = in_shape.Count(0, in_shape.NumAxes() - 1);
 
-    // TODO(hujiakui): Gumbel Softmax Forward，這裡是直接搬來一個softmax測試一下前向是不是加上了算子
-    std::unique_ptr<ep::primitive::Softmax> primitive = NewGumbelSoftmaxPrimitive(ctx);
+    // 1. gumbel_noise = ↓ 
+    // 2. tmp = (gumbel_noise + input) / tau √
+    // 3. output_soft = softmax(tmp, dim) √
+    // 4. (if hard) output = one_hot(output_soft)
+
+    // gumbel_noise
+    // 1. generate uniform random TODO(Engine? Device?)
+    std::random_device rd;   // Will be used to obtain a seed for the random number engine
+    std::mt19937 gen(rd());  // Standard mersenne_twister_engine seeded with rd()
+    std::uniform_real_distribution<T> dist(0.00001, 1);
+    FOR_RANGE(int64_t, i, 0, elem_cnt) {
+      gumbel_noise_ptr[i] = dist(gen);
+    }
+
+    // TODO 2. gumbel_noise = -(-(random_noise.log())).log();
+
+    FOR_RANGE(int64_t, i, 0, elem_cnt) {
+      out_ptr[i] = (in_ptr[i] + gumbel_noise_ptr[i]) / tau;
+    }
+
+    std::unique_ptr<ep::primitive::Softmax> primitive = NewSoftmaxPrimitive(ctx);
     CHECK(primitive);
-    primitive->Launch(ctx->stream(), num_instances, num_classes, in->dptr(), out->mut_dptr());
+    primitive->Launch(ctx->stream(), rows, cols, out_ptr, out->mut_dptr());
+
+    // TODO: one_hot
+    if (hard) {
+      FOR_RANGE(int64_t, i, 0, elem_cnt) {
+        out_ptr[i] = (out_ptr[i] + gumbel_noise_ptr[i]) / tau;
+      }
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("gumbel_softmax")
-    .SetCreateFn<GumbelSoftmaxKernel>()
-    .SetIsMatchedHob(GumbelSoftmaxPrimitiveExists() == true);
+#define REGISTER_GUMBEL_SOFTMAX_KERNEL(dtype)                         \
+  REGISTER_USER_KERNEL("gumbel_softmax")                              \
+      .SetCreateFn<GumbelSoftmaxKernel<dtype>>()                      \
+      .SetIsMatchedHob((user_op::HobDataType("out", 0) == GetDataType<dtype>::value) \
+                       && (SoftmaxPrimitiveExists() == true))         \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {             \
+        const Shape& in_shape = ctx->InputShape("in", 0);             \
+        return in_shape.elem_cnt();                                   \
+      });
 
-}  //  namespace oneflow
+REGISTER_GUMBEL_SOFTMAX_KERNEL(float)
+REGISTER_GUMBEL_SOFTMAX_KERNEL(double)
+
+}  // namespace

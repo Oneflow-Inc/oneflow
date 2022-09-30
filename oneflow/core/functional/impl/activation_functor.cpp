@@ -397,11 +397,20 @@ class LogSoftmaxGradFunctor {
 };
 
 // TODO(hujiakui): Gumbel Softmax
-class GumbelSoftmaxFunctor : public SoftmaxFunctorBase {
+class GumbelSoftmaxFunctor {
  public:
   GumbelSoftmaxFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("gumbel_softmax").Input("in").Output("out").Build());
   }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, const double& tau,
+                           const bool& hard) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("tau", "hard");
+    attrs.SetAllAttrs(tau, hard);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class HardSwishFunctor : public UnaryFunctor {

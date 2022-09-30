@@ -669,7 +669,7 @@
   bind_python: False
 
 - name: "gumbel_softmax"
-  signature: "Tensor (Tensor x, Double tau=1.) => GumbelSoftmax"
+  signature: "Tensor (Tensor x, Double tau=1., Bool hard=False) => GumbelSoftmax"
   bind_python: True
 
 - name: "log_softmax"
