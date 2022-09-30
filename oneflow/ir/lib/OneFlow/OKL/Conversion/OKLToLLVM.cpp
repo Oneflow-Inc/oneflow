@@ -244,7 +244,7 @@ struct LaunchOpLowering final : public OpConversionPattern<LaunchOp> {
 struct DestroyRegContextOpLowering final : public OpConversionPattern<DestroyRegContextOp> {
   static LLVM::LLVMFuncOp DeclareDestroyRegContext(::mlir::PatternRewriter& rewriter,
                                                    ModuleOp* module) {
-    auto func_name = "destory_reg_ctx";
+    auto func_name = "destroy_reg_ctx";
     LLVM::LLVMFuncOp func;
     if (!(func = module->lookupSymbol<LLVM::LLVMFuncOp>(func_name))) {
       OpBuilder::InsertionGuard guard(rewriter);
@@ -276,7 +276,7 @@ struct DestroyRegContextOpLowering final : public OpConversionPattern<DestroyReg
 struct DestroyRunContextOpLowering final : public OpConversionPattern<DestroyRunContextOp> {
   static LLVM::LLVMFuncOp DeclareDestroyRunContext(::mlir::PatternRewriter& rewriter,
                                                    ModuleOp* module) {
-    auto func_name = "destory_reg_ctx";
+    auto func_name = "destroy_reg_ctx";
     LLVM::LLVMFuncOp func;
     if (!(func = module->lookupSymbol<LLVM::LLVMFuncOp>(func_name))) {
       OpBuilder::InsertionGuard guard(rewriter);

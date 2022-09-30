@@ -961,7 +961,8 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
                                       mlir::PatternRewriter& rewriter) const override {
     if (op->hasAttr("compiled")) { return success(); }
     op->setAttr("compiled", rewriter.getStringAttr("true"));
-    auto func_name = "okl_func";
+    const std::string& prefix_name = "_mlir__mlir_ciface_";
+    auto func_name = prefix_name + "okl_func";
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointAfter(op);
     auto& ops = op->getRegion(0).front();

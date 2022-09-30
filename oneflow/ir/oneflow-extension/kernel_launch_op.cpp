@@ -292,13 +292,11 @@ void DoCompute(user_op::KernelComputeContext* ctx) {
     LOG(ERROR) << "Failed to fetch mlir_asm in wrap_func.";
     exit(1);
   }
-  module->dump();
   // lower oneflow.kernel_launch to llvm dialect
   if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(*module))) {
     LOG(ERROR) << "Failed to lower oneflow.kernel_launch to llvm.";
     exit(1);
   }
-  module->dump();
   // create and run jit engine with llvm ir
   auto engine = std::make_shared<JIT_Engine>(*module);
   engine->Run(kernel_func_name, (void*)ctx);

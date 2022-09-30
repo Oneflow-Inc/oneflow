@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "llvm/ADT/StringRef.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Parser/Parser.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/JITEngine.h"
@@ -28,7 +30,6 @@ SharedLibs* MutSharedLibPaths() {
 const SharedLibs* SharedLibPaths() { return MutSharedLibPaths(); }
 }  // namespace oneflow
 
-
 JIT_Engine::JIT_Engine(mlir::ModuleOp module) {
   llvm::SmallVector<llvm::StringRef, 4> ext_libs(
       {oneflow::SharedLibPaths()->begin(), oneflow::SharedLibPaths()->end()});
@@ -37,7 +38,10 @@ JIT_Engine::JIT_Engine(mlir::ModuleOp module) {
   jitOptions.jitCodeGenOptLevel = llvm::None;
   jitOptions.sharedLibPaths = ext_libs;
 
-  module.dump();
+  module.getBody()->walk([&](mlir::func::FuncOp func_op) { func_op->erase(); });
+  module.getBody()->walk([&](mlir::LLVM::LLVMFuncOp func_op) {
+  });
+  module->dump();
   auto jit_or_error = mlir::ExecutionEngine::create(module, jitOptions);
   CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
                         << llvm::toString((jit_or_error).takeError());
