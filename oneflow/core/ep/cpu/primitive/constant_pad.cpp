@@ -29,32 +29,11 @@ template<size_t num_dims, typename IndexType, typename StorageType>
 void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params, StorageType packed_pad_val) {
   const StorageType* src = reinterpret_cast<const StorageType*>(params.src);
   StorageType* dst = reinterpret_cast<StorageType*>(params.dst);
-  // IndexType src_index[num_dims];
-  // IndexType dst_index[num_dims];
-  // for (IndexType linear_index = 0; linear_index < params.elem_cnt; ++linear_index) {
-  //   params.dst_index_helper.OffsetToNdIndex(linear_index, dst_index);
-  //   bool if_pad = false;
-  //   for (int i = 0; i < num_dims; i++) {
-  //     if (dst_index[i] >= params.valid_start[i] && dst_index[i] < params.valid_end[i]) {
-  //       src_index[i] = dst_index[i] - params.valid_start[i];
-  //     } else {
-  //       if_pad = true;
-  //       break;
-  //     }
-  //   }
-  //   StorageType dst_val = packed_pad_val;
-  //   if (!if_pad) {
-  //     const IndexType src_offset = params.src_index_helper.NdIndexToOffset(src_index);
-  //     dst_val = src[src_offset];
-  //   }
-  //   dst[linear_index] = dst_val;
-  // }
-
   for (IndexType linear_index = 0; linear_index < params.elem_cnt; ++linear_index) {
     IndexType src_offset = 0;
     IndexType remaining = linear_index;
     bool if_pad = false;
-    #pragma unroll
+#pragma unroll
     for (int i = 0; i < num_dims; i++) {
       const IndexType idx = params.dst_fast_math_stride_calculator.divides(remaining, i);
       if (idx >= params.valid_start[i] && idx < params.valid_end[i]) {
@@ -67,9 +46,7 @@ void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params, StorageTyp
       }
     }
     StorageType dst_val = packed_pad_val;
-    if (!if_pad) {
-      dst_val = src[src_offset];
-    }
+    if (!if_pad) { dst_val = src[src_offset]; }
     dst[linear_index] = dst_val;
   }
 }
@@ -94,8 +71,6 @@ void LaunchKernel(void* dst, const int64_t* dst_dims, const void* src, const int
                   const int64_t* padding_before, const int64_t* padding_after,
                   StorageType packed_pad_val, size_t elem_cnt) {
   ConstantPadParams<num_dims, IndexType> params;
-  // params.dst_index_helper = OffsetToIndexCalculator<IndexType, num_dims>(dst_dims);
-  // params.src_index_helper = NdIndexOffsetHelper<IndexType, num_dims>(src_dims);
   params.dst_fast_math_stride_calculator = FastMathStrideCalculator<IndexType, num_dims>(dst_dims);
   params.src_stride_helper = StrideHelper<IndexType, num_dims>(src_dims);
   params.dst = dst;
