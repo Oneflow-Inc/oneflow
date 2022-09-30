@@ -432,7 +432,8 @@ inline cudaError_t DispatchLayerNormWarpImplPadding(cudaStream_t stream, LOAD lo
                                                     const double epsilon, ComputeType* mean,
                                                     ComputeType* inv_variance) {
   if (cols == max_cols_per_thread * thread_group_width) {
-    //when not padding, min_cols_per_thread must equals to max_cols_per_thread, pass max_cols_per_thread as min_cols_per_thread and max_cols_per_thread param.
+    // when not padding, min_cols_per_thread must equals to max_cols_per_thread, pass
+    // max_cols_per_thread as min_cols_per_thread and max_cols_per_thread param.
     return LaunchLayerNormWarpImpl<LOAD, STORE, ComputeType, pack_size, max_cols_per_thread,
                                    max_cols_per_thread, thread_group_width, rows_per_access, false>(
         stream, load, store, rows, cols, epsilon, mean, inv_variance);
@@ -1035,7 +1036,8 @@ inline cudaError_t DispatchLayerNormGradWarpImplPadding(cudaStream_t stream, LOA
                                                         const ComputeType* inv_variance,
                                                         const int64_t rows, const int64_t cols) {
   if (cols == max_cols_per_thread * thread_group_width) {
-    //when not padding, min_cols_per_thread must equals to max_cols_per_thread, pass max_cols_per_thread as min_cols_per_thread and max_cols_per_thread param.
+    // when not padding, min_cols_per_thread must equals to max_cols_per_thread, pass
+    // max_cols_per_thread as min_cols_per_thread and max_cols_per_thread param.
     return LaunchLayerNormGradWarpImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType, pack_size,
                                        max_cols_per_thread, max_cols_per_thread, thread_group_width,
                                        rows_per_access, false>(
