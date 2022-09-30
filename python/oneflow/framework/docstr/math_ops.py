@@ -1373,6 +1373,10 @@ add_docstr(
 add_docstr(
     oneflow.round,
     r"""This operator rounds the value of Blob to the nearest integer.
+    
+    .. note::
+        This function implements the "round half to even" to break ties when a number is equidistant from two integers (e.g. `round(2.5)` is 2).
+    
     Args:
         input (oneflow.Tensor): A Tensor
     Returns:

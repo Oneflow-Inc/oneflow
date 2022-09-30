@@ -20,9 +20,15 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct AmpWhiteIdentityCaptureState : public AutoGradCaptureState {};
+enum class AmpIdentityType {
+  kWhite = 0,
+  kBlack,
+};
 
-class AmpWhiteIdentity : public OpExprGradFunction<AmpWhiteIdentityCaptureState> {
+struct AmpIdentityCaptureState : public AutoGradCaptureState {};
+
+template<AmpIdentityType type>
+class AmpIdentityGrad : public OpExprGradFunction<AmpIdentityCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -30,20 +36,27 @@ class AmpWhiteIdentity : public OpExprGradFunction<AmpWhiteIdentityCaptureState>
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(AmpWhiteIdentityCaptureState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(AmpIdentityCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const AmpWhiteIdentityCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const AmpIdentityCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->resize(1);
-    (*in_grads)[0] = JUST(functional::AmpWhiteIdentity(out_grads[0]));
+    if (type == AmpIdentityType::kWhite) {
+      (*in_grads)[0] = JUST(functional::AmpWhiteIdentity(out_grads[0]));
+    } else if (type == AmpIdentityType::kBlack) {
+      (*in_grads)[0] = JUST(functional::AmpBlackIdentity(out_grads[0]));
+    } else {
+      (*in_grads)[0] = out_grads[0];
+    }
     return Maybe<void>::Ok();
   }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("amp_white_identity", AmpWhiteIdentity);
+REGISTER_OP_EXPR_GRAD_FUNCTION("amp_white_identity", AmpIdentityGrad<AmpIdentityType::kWhite>);
+REGISTER_OP_EXPR_GRAD_FUNCTION("amp_black_identity", AmpIdentityGrad<AmpIdentityType::kBlack>);
 
 }  // namespace one
 }  // namespace oneflow

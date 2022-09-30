@@ -333,8 +333,8 @@ class EagerGlobalTensorImpl final : public GlobalTensorImpl {
   Maybe<GlobalTensorImpl> detach() const override;
 
  private:
-  EagerGlobalTensorImpl(Symbol<GlobalTensorMeta> global_tensor_meta, bool requires_grad,
-                        bool is_leaf, const std::shared_ptr<LocalTensor>& cur_rank_phy_tensor);
+  EagerGlobalTensorImpl(Symbol<GlobalTensorMeta> global_tensor_meta,
+                        const std::shared_ptr<LocalTensor>& cur_rank_phy_tensor);
 
   std::shared_ptr<LocalTensor> cur_rank_phy_tensor_;
 };
