@@ -179,7 +179,8 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "narrow_grad",
                                "ones_like",
                                "pinned_identity",
-                               "to_contiguous"};
+                               "to_contiguous",
+                               "copy"};
 
   return clear_list;
 }
