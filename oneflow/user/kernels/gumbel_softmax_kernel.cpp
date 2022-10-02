@@ -16,8 +16,10 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/user/ops/nn_util.h"
-#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/kernel_util.cuh"
+#include "oneflow/user/kernels/distributions/normal_kernel.h"
 #include "oneflow/core/ep/include/primitive/softmax.h"
+// #include "oneflow/core/ep/include/primitive/one_hot.h"
 // #include "oneflow/core/ep/include/primitive/softmax_backward.h"
 
 namespace oneflow {
@@ -44,26 +46,36 @@ class GumbelSoftmaxKernel final : public user_op::OpKernel {
   GumbelSoftmaxKernel() = default;
   ~GumbelSoftmaxKernel() override = default;
 
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    const auto& generator = CHECK_JUST(one::MakeGenerator(DeviceType::kCPU));
+    // When SBP is Split, each rank uses a different seeds, otherwise, ranks use the same seed
+    generator->set_current_seed(
+        CHECK_JUST(GetOpKernelRandomSeedInCurrentRank(ctx, ctx->Attr<int64_t>("seed"))));
+    return std::make_shared<DistributionKernelState>(generator);
+  }
+
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const auto tau = ctx->Attr<double>("tau");
-    const auto hard = ctx->Attr<bool>("hard");
+    // const auto tau = ctx->Attr<double>("tau");
+    // const auto hard = ctx->Attr<bool>("hard");
     CHECK_EQ(in->shape_view().elem_cnt(), out->shape_view().elem_cnt());
     CHECK_EQ(in->data_type(), out->data_type());
 
     user_op::Tensor* gumbel_noise = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     CHECK_EQ(in->shape_view().elem_cnt(), gumbel_noise->shape_view().elem_cnt());
 
-    const T* in_ptr = in->dptr<T>();
+    // const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
     T* gumbel_noise_ptr = gumbel_noise->mut_dptr<T>();
 
     const ShapeView& in_shape = in->shape_view();
     const int32_t elem_cnt = in_shape.elem_cnt();
-    const int64_t cols = in_shape.At(in_shape.NumAxes() - 1);
-    const int64_t rows = in_shape.Count(0, in_shape.NumAxes() - 1);
+    // const int64_t cols = in_shape.At(in_shape.NumAxes() - 1);
+    // const int64_t rows = in_shape.Count(0, in_shape.NumAxes() - 1);
 
     // 1. gumbel_noise = ↓ 
     // 2. tmp = (gumbel_noise + input) / tau √
@@ -71,30 +83,34 @@ class GumbelSoftmaxKernel final : public user_op::OpKernel {
     // 4. (if hard) output = one_hot(output_soft)
 
     // gumbel_noise
-    // 1. generate uniform random TODO(Engine? Device?)
-    std::random_device rd;   // Will be used to obtain a seed for the random number engine
-    std::mt19937 gen(rd());  // Standard mersenne_twister_engine seeded with rd()
-    std::uniform_real_distribution<T> dist(0.00001, 1);
+    // 1. generate uniform random TODO(Engine?)
+    auto* distribution_state = dynamic_cast<DistributionKernelState*>(state);
+    CHECK_NOTNULL(distribution_state);
+    const auto& generator = distribution_state->generator();
+    CHECK_NOTNULL(generator);
+    auto gen = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
+    std::exponential_distribution<T> dist(1);
     FOR_RANGE(int64_t, i, 0, elem_cnt) {
-      gumbel_noise_ptr[i] = dist(gen);
+      gumbel_noise_ptr[i] = dist(gen->engine());
     }
 
-    // TODO 2. gumbel_noise = -(-(random_noise.log())).log();
+    // TODO 2. gumbel_noise = -(exp_dist()).log();
+    // FOR_RANGE(int64_t, i, 0, elem_cnt) { gumbel_noise_ptr[i] = -1 * SafeLog(gumbel_noise_ptr[i]); }
 
-    FOR_RANGE(int64_t, i, 0, elem_cnt) {
-      out_ptr[i] = (in_ptr[i] + gumbel_noise_ptr[i]) / tau;
-    }
+    FOR_RANGE(int64_t, i, 0, elem_cnt) { out_ptr[i] = gumbel_noise_ptr[i]; }
 
-    std::unique_ptr<ep::primitive::Softmax> primitive = NewSoftmaxPrimitive(ctx);
-    CHECK(primitive);
-    primitive->Launch(ctx->stream(), rows, cols, out_ptr, out->mut_dptr());
+    // FOR_RANGE(int64_t, i, 0, elem_cnt) {
+    //   out_ptr[i] = (in_ptr[i] + gumbel_noise_ptr[i]) / tau;
+    // }
 
-    // TODO: one_hot
-    if (hard) {
-      FOR_RANGE(int64_t, i, 0, elem_cnt) {
-        out_ptr[i] = (out_ptr[i] + gumbel_noise_ptr[i]) / tau;
-      }
-    }
+    // std::unique_ptr<ep::primitive::Softmax> primitive = NewSoftmaxPrimitive(ctx);
+    // CHECK(primitive);
+    // primitive->Launch(ctx->stream(), rows, cols, out_ptr, out->mut_dptr());
+
+    // // TODO: one_hot
+    // if (hard) {
+      
+    // }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
