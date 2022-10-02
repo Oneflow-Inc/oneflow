@@ -18,7 +18,7 @@ import numpy as np
 
 from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
-import torch
+import torch as torch_original
 import oneflow.unittest
 
 
@@ -40,7 +40,7 @@ class TestTruncDivide(flow.unittest.TestCase):
         y.pytorch = y.pytorch.detach().requires_grad_()
 
         oneflow_out = flow._C.trunc_divide(x.oneflow, y.oneflow)
-        torch_out = torch.div(x.pytorch, y.pytorch, rounding_mode="trunc")
+        torch_out = torch_original.div(x.pytorch, y.pytorch, rounding_mode="trunc")
 
         test_case.assertTrue(
             np.allclose(
@@ -87,7 +87,7 @@ class TestTruncDivide(flow.unittest.TestCase):
         scalar = random().to(float).value()
 
         oneflow_out = oneflow._C.trunc_divide(x.oneflow, scalar)
-        torch_out = torch.div(x.pytorch, scalar, rounding_mode="trunc")
+        torch_out = torch_original.div(x.pytorch, scalar, rounding_mode="trunc")
 
         test_case.assertTrue(
             np.allclose(
