@@ -51,7 +51,7 @@ struct CPUGeneratorState {
 constexpr int64_t CPUGeneratorState::state_size;
 
 void CPUGeneratorImpl::set_current_seed(uint64_t seed) {
-  CHECK_JUST(CPUSynchronize());
+  // CHECK_JUST(CPUSynchronize());
   seed_ = seed;
   engine_.seed(seed_);
 }

@@ -402,11 +402,61 @@ class GumbelSoftmaxFunctor {
   GumbelSoftmaxFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("gumbel_softmax").Input("in").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, const double& tau,
-                           const bool& hard) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("tau", "hard");
-    attrs.SetAllAttrs(tau, hard);
+  Maybe<Tensor> operator()(
+      const std::shared_ptr<one::Tensor>& in, 
+      const double& tau, 
+      const Optional<one::Generator>& generator, 
+      const Optional<int64_t>& dim) const {
+    const auto in_shape = in->shape();
+    const int64_t num_axes = in_shape->NumAxes();
+
+    const auto get_dim = [num_axes]() -> int64_t {
+      const int64_t ndim = num_axes;
+      if (ndim == 0 || ndim == 1 || ndim == 3) {
+        return 0;
+      } else {
+        return 1;
+      }
+    };
+
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("tau", "seed");
+    attrs.SetAllAttrs(tau, static_cast<int64_t>(gen->current_seed()));
+
+    int64_t dim_ = dim ? JUST(dim) : get_dim();
+    if (dim_ < 0) { dim_ += num_axes; }
+    dim_ = JUST(maybe_wrap_dim(dim_, num_axes));
+    if (dim_ != num_axes - 1) {
+      std::vector<int> input_perm(in_shape->dim_vec().size(), 0);
+      for (size_t i = 1; i < input_perm.size(); ++i) { input_perm[i] = i; }
+      input_perm[dim_] = input_perm[input_perm.size() - 1];
+      input_perm[input_perm.size() - 1] = dim_;
+
+      return sequence_function(functional::Transpose)
+          .then([&](const std::shared_ptr<one::Tensor>& in) {
+            return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
+          })
+          .then(std::bind(functional::Transpose, std::placeholders::_1, input_perm))
+          .call(in, input_perm);
+    }
+
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class GumbelSoftmaxGradFunctor {
+ public:
+  GumbelSoftmaxGradFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("gumbel_softmax_grad").Input("y").Input("dy").Output("dx").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy});
   }
 
  private:

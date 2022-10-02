@@ -7759,7 +7759,21 @@ def OneFlow_GumbelSoftmaxOp : OneFlow_BaseOp<"gumbel_softmax", [NoSideEffect, De
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "1.">:$tau,
-    DefaultValuedAttr<BoolAttr, "false">:$hard
+    DefaultValuedAttr<SI64Attr, "0">:$seed
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_GumbelSoftmaxGradOp : OneFlow_BaseOp<"gumbel_softmax_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
