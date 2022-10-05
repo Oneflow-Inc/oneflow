@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
-using namespace boxing::collective;
+using namespace boxing::of_collective;
 
 namespace {
 
@@ -64,11 +64,28 @@ class OfCollectiveBoxingGenericKernel final : public Kernel {
 
 void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) const {
   VLOG(1) << "Enter OfCollectiveBoxingGenericKernel::ForwardDataContent";
-  Blob* in = ctx->BnInOp2Blob("in");
-  Blob* out = ctx->BnInOp2Blob("out");
-  AutoMemcpy(ctx->stream(), out, in);
+  // Blob* in = ctx->BnInOp2Blob("in");
+  // Blob* out = ctx->BnInOp2Blob("out");
+  // AutoMemcpy(ctx->stream(), out, in);
   
-  VLOG(1) << "OfCollectiveBoxingGenericKernel::ForwardDataContent Done";
+  const void* send_buff = nullptr;
+  void* recv_buff = nullptr;
+  const RankDesc& rank_desc = this->op_conf().of_collective_boxing_generic_conf().rank_desc();
+  const DataType data_type = rank_desc.op_desc().data_type();
+  if (GenericOpHasInput(rank_desc)) {
+    const Blob* in = ctx->BnInOp2Blob("in");
+    CHECK_EQ(in->data_type(), data_type);
+    CHECK(in->shape() == ShapeView(GenericOpGetInputShape(rank_desc)));
+    send_buff = in->dptr();
+  }
+  if (GenericOpHasOutput(rank_desc)) {
+    Blob* out = ctx->BnInOp2Blob("out");
+    CHECK_EQ(out->data_type(), data_type);
+    CHECK(out->shape() == ShapeView(GenericOpGetOutputShape(rank_desc)));
+    recv_buff = out->mut_dptr();
+  }
+  
+  VLOG(1) << "OfCollectiveBoxingGenericKernel::ForwardDataContent Done" << send_buff << recv_buff;
 }
 
 REGISTER_KERNEL(OperatorConf::kOfCollectiveBoxingGenericConf, OfCollectiveBoxingGenericKernel);

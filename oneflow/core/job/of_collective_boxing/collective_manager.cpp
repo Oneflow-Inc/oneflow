@@ -80,8 +80,8 @@ struct CollectiveMgr::Impl {
 
 CollectiveMgr::Impl::Impl() {
   request_store.reset(new OfRequestStore());
-  // collective_builder.reset(new CollectiveBuilderImpl());
-  // collective_builder->Init(request_store);
+  collective_builder.reset(new CollectiveBuilderImpl());
+  collective_builder->Init(request_store);
 }
 
 OfRequestId CollectiveMgr::GetOfRequestIdByName(const std::string& name) const {

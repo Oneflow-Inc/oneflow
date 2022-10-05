@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/common/shape.h"
 
 #include <nccl.h>
 
@@ -33,51 +34,9 @@ namespace oneflow {
 
 namespace boxing {
 
-// TODO: (Panlichen) !!!! UNFINISHED !!!!!
 namespace of_collective {
 
 namespace {
-
-ncclRedOp_t GetNcclReduceOp(ReduceMethod reduce_method) {
-  if (reduce_method == kReduceMethodSum) {
-    return ncclRedOp_t::ncclSum;
-  } else {
-    UNIMPLEMENTED();
-    return ncclRedOp_t{};
-  }
-}
-
-std::string GetNcclUniqueIdRpcKey(const std::string& name, int64_t stream_id) {
-  return "CollectiveBoxingExecutorNcclUniqueIdRpcKey-" + name + "-" + std::to_string(stream_id);
-}
-
-struct CopyParams {
-  void* dst;
-  const void* src;
-  int64_t count;
-};
-
-constexpr int64_t kMultiCopyParamsMaxSize = 128;
-constexpr int64_t kMultiCopyAlignSize = 32;
-
-int64_t GetMultiCopyAlignedSize(int64_t size) {
-  return ((size + kMultiCopyAlignSize - 1) / kMultiCopyAlignSize) * kMultiCopyAlignSize;
-}
-
-struct MultiCopyParams {
-  CopyParams params[kMultiCopyParamsMaxSize];
-  int64_t count;
-
-  MultiCopyParams() : count(0), params{} {}
-
-  void Add(void* dst, const void* src, int64_t count) {
-    CHECK_LT(this->count, kMultiCopyParamsMaxSize);
-    params[this->count].dst = dst;
-    params[this->count].src = src;
-    params[this->count].count = count;
-    this->count += 1;
-  }
-};
 
 class CommRank final {
  public:
@@ -175,113 +134,114 @@ class CommGroup final {
   int32_t global_rank_count_ = 0;
 };
 
-class StreamCtx {
- public:
-  OF_DISALLOW_COPY(StreamCtx);
-  StreamCtx(int32_t device_id, size_t fusion_buffer_size)
-      : device_id_(device_id), fusion_buffer_size_(fusion_buffer_size) {
-    CudaCurrentDeviceGuard guard(device_id_);
-    int priority;
-    OF_CUDA_CHECK(cudaDeviceGetStreamPriorityRange(nullptr, &priority));
-    OF_CUDA_CHECK(cudaStreamCreateWithPriority(&stream_, cudaStreamNonBlocking, priority));
-    OF_CUDA_CHECK(cudaMalloc(&fusion_buffer_, fusion_buffer_size_));
-    cb_event_poller_ = std::thread(&StreamCtx::PollEvent, this);
-  }
-  ~StreamCtx() {
-    cb_event_chan_.Close();
-    cb_event_poller_.join();
-    CudaCurrentDeviceGuard guard(device_id_);
-    OF_CUDA_CHECK(cudaStreamSynchronize(stream_));
-    OF_CUDA_CHECK(cudaStreamDestroy(stream_));
-    OF_CUDA_CHECK(cudaFree(fusion_buffer_));
-  }
-
-  void PollEvent() {
-    CudaCurrentDeviceGuard guard(device_id_);
-    while (true) {
-      std::pair<cudaEvent_t, std::function<void()>> cb_event;
-      ChannelStatus status = cb_event_chan_.Receive(&cb_event);
-      if (status == kChannelStatusErrorClosed) { break; }
-      CHECK_EQ(status, kChannelStatusSuccess);
-      OF_CUDA_CHECK(cudaEventSynchronize(cb_event.first));
-      cb_event.second();
-      OF_CUDA_CHECK(cudaEventDestroy(cb_event.first));
-    }
-  }
-
-  void AddCallback(const std::function<void()>& callback) {
-    cudaEvent_t event;
-    OF_CUDA_CHECK(cudaEventCreateWithFlags(&event, cudaEventDisableTiming));
-    OF_CUDA_CHECK(cudaEventRecord(event, stream_));
-    CHECK_EQ(cb_event_chan_.Send(std::make_pair(event, callback)), kChannelStatusSuccess);
-  }
-
-  int32_t device_id() const { return device_id_; }
-
-  cudaStream_t stream() const { return stream_; }
-
-  size_t fusion_buffer_size() const { return fusion_buffer_size_; }
-
-  char* fusion_buffer() const { return fusion_buffer_; }
-
- private:
-  int32_t device_id_;
-  cudaStream_t stream_ = nullptr;
-  size_t fusion_buffer_size_;
-  char* fusion_buffer_ = nullptr;
-  Channel<std::pair<cudaEvent_t, std::function<void()>>> cb_event_chan_;
-  std::thread cb_event_poller_;
+struct DeviceSet7CommGroup {
+  DeviceSet device_set;
+  CommGroup comm_group;
 };
 
+std::string GetOfcclUniqueIdRpcKey(const std::string& name, int64_t coll_id) {
+  return "CollectiveBoxingExecutorOfcclUniqueIdRpcKey-" + name + "-" + std::to_string(coll_id);
+}
+
+ncclRedOp_t OfcclGetReduceOp(ReduceMethod reduce_method) {
+  if (reduce_method == kReduceMethodSum) {
+    return ncclRedOp_t::ncclSum;
+  } else {
+    UNIMPLEMENTED();
+    return ncclRedOp_t{};
+  }
+}
 
 }  // namespace
 
 struct CollectiveBackendOfccl::Impl {
   Impl(const CollectiveBoxingConf& conf, std::shared_ptr<OfRequestStore> request_store)
       : conf(conf), request_store(std::move(request_store)) {
-    CHECK_GT(conf.nccl_num_streams(), 0);
-    num_streams = conf.nccl_num_streams();
-    current_stream_id = 0;
-    int nccl_version;
-    OF_NCCL_CHECK(ncclGetVersion(&nccl_version));
-    if (nccl_version == 21003) {
-      LOG(WARNING)
-          << "Current nccl version is 2.10.3, in this version, ncclGroup() with mixed "
-             "datatype/element/collective could induce crash or corruption, so we will not "
-             "fuse any request.";
-    }
-    InitStreamCtx();
   }
   ~Impl() {
-    stream_id2device_id2stream_ctx.clear();
-    device_set2stream_id2comm_group.clear();
+    coll_id2device_set7CommGroup.clear();
+    device_id2ofccl_rank_ctx.clear();
   }
 
   void InitCommGroup(int64_t job_id) {
+    request_store->ForEachMutOfRequestEntryInJob(
+      job_id, [&](OfRequestEntry* request_entry, int32_t i, const OfRequestId& request_id) {
+        const auto& request = request_entry->desc();
+        if (request.op_desc().backend() != Backend::kBackendOFCCL) { return; }
+        if (!request_entry->HasRankOnThisNode()) { return; }
+        int coll_id = (int)request.order();
+        const DeviceSet& device_set = request.device_set();
+        // 这里原来的结构是HashMap<DeviceSet, std::vector<CommGroup>> device_set2stream_id2comm_group;
+        // 我们应该考虑coll_id了。
+        // 给集合通信排coll_id应该发生在编译阶段。这时候multiclient的模式下，一个进程管一个rank，没法以全局视角分配coll_id
+        // plan_util里，给集合通信指定的order应该可以充当coll_id。dependency_depth一次++，可以对应order的好几次++。
+        // 创建了comm之后，要顺势完成prepare以及prepareDone，启动守护者kernel。
+        // prepare需要comm参数。
+
+        // 在每个rank上，每个集合通信都应该只被处理一次
+        CHECK(coll_id2device_set7CommGroup.find(coll_id) == coll_id2device_set7CommGroup.end());
+        coll_id2device_set7CommGroup[coll_id].device_set = device_set;
+        // 我们需要为每一个集合通信都创建一个comm。
+        coll_id2device_set7CommGroup[coll_id].comm_group.InitGroup(
+          device_set,
+          GetOfcclUniqueIdRpcKey(request.op_desc().name(), coll_id) // 不同rank上，同一个coll_id应该对应同样的op，会得到同样的rpc_key
+        ); // 准备好了comm，接下来还需要count和datatype、op、rankCtx才可以进行prepare
+        // 创建rankCtx之前，要set好device
+
+        for (int32_t j = 0; j < coll_id2device_set7CommGroup[coll_id].comm_group.local_rank_count(); ++j) {
+          // 准备rank_ctx
+          int curr_device_id = coll_id2device_set7CommGroup[coll_id].comm_group.GetCommRank(j).device_id();
+          OF_CUDA_CHECK(cudaSetDevice(curr_device_id));
+
+          if (device_id2ofccl_rank_ctx.find(curr_device_id) == device_id2ofccl_rank_ctx.end()) {
+            device_id2ofccl_rank_ctx[curr_device_id] = nullptr;
+            ofcclInitRankCtx(&device_id2ofccl_rank_ctx[curr_device_id], curr_device_id);
+          }
+
+          // 获取count和datatype、op信息。
+
+          // oneflow/oneflow/core/common/shape.proto message ShapeProto
+          // 根据ofccl/src/enqueue_ofccl.cc里 size_t channelSize = elem->count*ncclTypeSize(proxyOp->dtype)/elem->nChannels;的用法，可以认为count代表了元素个数，而不是字节数。
+          size_t count = 1;
+          const Shape shape = Shape(request.op_desc().shape());
+          FOR_RANGE(int, i, 0, shape.NumAxes()) { count *= shape.At(i); }
+          CHECK_GT(count, 0);
+          // oneflow/oneflow/core/common/data_type.proto enum DataType
+          ncclDataType_t nccl_data_type = GetNcclDataType(request.op_desc().data_type());
+          // oneflow/oneflow/core/graph/boxing/of_collective_boxing.proto enum ReduceMethod
+          ncclRedOp_t nccl_reduce_op = OfcclGetReduceOp(request.op_desc().reduce_method());
+          ncclComm_t comm = coll_id2device_set7CommGroup[coll_id].comm_group.GetCommRank(j).nccl_comm();
+          
+          // TODO: 目前只实现了AllReduce
+          if (request.op_desc().op_type() == kOpTypeAllReduce) {
+            OF_NCCL_CHECK(ofcclPrepareAllReduce(count, nccl_data_type, nccl_reduce_op, comm, coll_id, device_id2ofccl_rank_ctx[curr_device_id]));
+          } else {
+            UNIMPLEMENTED();
+          }
+          
+          // 只要没有一个rank被多个线程管理的情况，就不会发生同一个rank的信息会分裂到不同的rank_ctx实例中。
+        }
+      });
     return;
   }
 
-  void InitStreamCtx() {
-    int32_t num_devices;
-    OF_CUDA_CHECK(cudaGetDeviceCount(&num_devices));
-    stream_id2device_id2stream_ctx.resize(num_streams);
-    for (int64_t stream_id = 0; stream_id < num_streams; ++stream_id) {
-      stream_id2device_id2stream_ctx.at(stream_id).resize(num_devices);
+  void prepareDone() {
+    for (auto &device_id7ofcll_rank_ctx : device_id2ofccl_rank_ctx) {
+      ofcclPrepareDone(device_id7ofcll_rank_ctx.second);
     }
   }
 
-  int32_t NextStreamId() {
-    const int32_t stream_id = current_stream_id;
-    current_stream_id = (current_stream_id + 1) % num_streams;
-    return stream_id;
+  void destroy() {
+    for (auto &device_id7ofcll_rank_ctx : device_id2ofccl_rank_ctx) {
+      ofcclDestroy(device_id7ofcll_rank_ctx.second);
+    }
   }
 
   CollectiveBoxingConf conf;
-  int32_t num_streams;
-  int32_t current_stream_id;
   std::shared_ptr<OfRequestStore> request_store;
-  HashMap<DeviceSet, std::vector<CommGroup>> device_set2stream_id2comm_group;
-  std::vector<std::vector<std::unique_ptr<StreamCtx>>> stream_id2device_id2stream_ctx;
+
+  HashMap<int, DeviceSet7CommGroup> coll_id2device_set7CommGroup;
+  HashMap<int, ofcclRankCtx_t> device_id2ofccl_rank_ctx;
 };
 
 CollectiveBackendOfccl::CollectiveBackendOfccl() = default;
@@ -289,18 +249,24 @@ CollectiveBackendOfccl::CollectiveBackendOfccl() = default;
 CollectiveBackendOfccl::~CollectiveBackendOfccl() = default;
 
 void CollectiveBackendOfccl::Init(std::shared_ptr<OfRequestStore> request_store) {
+  // 我们复用了原来oneflow里的collective_boxing_conf
   impl_ = std::make_unique<Impl>(Singleton<ResourceDesc, ForSession>::Get()->collective_boxing_conf(),
                                  request_store);
 }
 
 void CollectiveBackendOfccl::InitJob(int64_t job_id) {
   CudaCurrentDeviceGuard guard;
-  impl_->InitCommGroup(job_id);
+  impl_->InitCommGroup(job_id); // 针对每个local rank创建了rank_ctx，并且对所有相关的集合通信执行了prepareColl（包括创建comm）
+  // 接下来对每个local rank执行prepareDone
+  impl_->prepareDone();
 }
 
-void CollectiveBackendOfccl::DeinitJob(int64_t job_id) {}
+void CollectiveBackendOfccl::DeinitJob(int64_t job_id) {
+  // 这个应该是最后退出执行要跑的，进行内存回收等等操作。
+  impl_->destroy();
+}
 
-}  // namespace collective
+}  // namespace of_collective
 
 }  // namespace boxing
 
