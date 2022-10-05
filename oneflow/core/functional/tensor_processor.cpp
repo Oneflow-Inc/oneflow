@@ -168,7 +168,7 @@ TensorLayoutProcessor::~TensorLayoutProcessor() {
 
 Maybe<void> TensorAutoCastProcessor::Apply() {
   if (!autocast::is_enabled()) { return Maybe<void>::Ok(); }
-
+  if (autocast_meta_.autocast_color() == autocast::kNoColor) { return Maybe<void>::Ok(); }
   auto autocast_device_type = autocast::get_autocast_device_type();
   auto autocast_dtype = autocast::get_autocast_dtype();
   auto IsDeviceType = [](const std::shared_ptr<Tensor>& tensor,
