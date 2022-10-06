@@ -46,7 +46,7 @@ class EagerHcclOpKernelCache final : public user_op::OpKernelCache {
       int64_t device_id = CHECK_JUST(parallel_desc_->DeviceId4ParallelId(parallel_id));
       device_set.emplace(std::make_pair(machine_id, device_id));
     }
-    comm_ = CHECK_NOTNULL(Global<EagerHcclCommMgr>::Get())->GetCommForDevice(device_set);
+    comm_ = CHECK_NOTNULL(Singleton<EagerHcclCommMgr>::Get())->GetCommForDevice(device_set);
   }
 
   Symbol<ParallelDesc> parallel_desc_;
@@ -88,13 +88,13 @@ class EagerHcclBroadcastKernel final : public user_op::OpKernel {
 
     // const void* in_ptr = nullptr;
     // if (GlobalProcessCtx::Rank() == root) {
-    //   CHECK_EQ(in->shape(), out->shape());
+    //   CHECK_EQ(in->shape_view(), out->shape_view());
     //   CHECK_EQ(in->data_type(), out->data_type());
     //   in_ptr = in->dptr();
     // }
     
     // 如果当前是root, 那么out与in的数据地址是一个
-    OF_HCCL_CHECK(HcclBroadcast(out->mut_dptr(), out->shape().elem_cnt(),
+    OF_HCCL_CHECK(HcclBroadcast(out->mut_dptr(), out->shape_view().elem_cnt(),
                                 GetHcclDataType(out->data_type()), hccl_root, kernel_cache->comm(),
                                 ctx->stream()->As<ep::NpuStream>()->npu_stream()));
   };
@@ -124,11 +124,11 @@ class EagerHcclAllReduceKernel final : public user_op::OpKernel {
     CHECK(kernel_cache != nullptr);
     user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(in->shape(), out->shape());
+    CHECK_EQ(in->shape_view(), out->shape_view());
     CHECK_EQ(in->data_type(), out->data_type());
     HcclReduceOp reduce_type = HCCL_REDUCE_SUM;
     if (in->data_type() == kBool) { reduce_type = HCCL_REDUCE_MAX; }
-    OF_HCCL_CHECK(HcclAllReduce(in->mut_dptr(), out->mut_dptr(), in->shape().elem_cnt(),
+    OF_HCCL_CHECK(HcclAllReduce(in->mut_dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
                                 GetHcclDataType(in->data_type()), reduce_type, kernel_cache->comm(),
                                 ctx->stream()->As<ep::NpuStream>()->npu_stream()));
 

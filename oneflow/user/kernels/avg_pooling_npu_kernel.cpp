@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/avg_pooling_kernel_util.h"
 #include "oneflow/user/ops/npu_command.h"
 
 namespace oneflow {
@@ -64,7 +63,7 @@ class AvgPool2dNpuKernel final : public user_op::OpKernel {
   };
 };
 #define REGISTER_AVG_POOLING_KERNELS(dtype)                                           \
-    REGISTER_USER_KERNEL("avgpool_2d")                                                \
+    REGISTER_USER_KERNEL("avg_pool_2d")                                                \
     .SetCreateFn<AvgPool2dNpuKernel>()                                                \
     .SetIsMatchedHob((user_op::HobDeviceType() == kNPU)                               \
                     && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));  \
@@ -98,14 +97,14 @@ class AvgPool2dGradNpuKernel final : public user_op::OpKernel {
     int32_t divisor_override = ctx->Attr<int32_t>("divisor_override");
 
     std::vector<int32_t> dx_shape;
-    for(size_t i=0; i<dx->shape().NumAxes();++i)
+    for(size_t i=0; i<dx->shape_view().NumAxes();++i)
     {
-      dx_shape.push_back(dx->shape().ptr()[i]);
+      dx_shape.push_back(dx->shape_view().ptr()[i]);
     }
     void* tensor_ptr = nullptr;
     std::vector<int64_t> shape_desc;
     shape_desc.push_back(dx_shape.size());
-    CHECK_EQ(mulVector(shape_desc)*sizeof(int32_t), tmp_buffer->shape().elem_cnt());
+    CHECK_EQ(mulVector(shape_desc)*sizeof(int32_t), tmp_buffer->shape_view().elem_cnt());
     std::string key = "AvgPool2dNpu" + ShapeToString(dx_shape);
     if(!const_tensor_map.count(key)) const_tensor_map[key] = dx_shape;
     if(!shape_map.count(key)) shape_map[key] = shape_desc;
@@ -141,7 +140,7 @@ class AvgPool2dGradNpuKernel final : public user_op::OpKernel {
   };
 };
 #define REGISTER_AVG_POOLING_NPU_KERNELS(dtype)                                                   \
-       REGISTER_USER_KERNEL("avgpool_2d_grad")                                                    \
+       REGISTER_USER_KERNEL("avg_pool_2d_grad")                                                    \
        .SetCreateFn<AvgPool2dGradNpuKernel<dtype>>()                                              \
        .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)                            \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value))            \

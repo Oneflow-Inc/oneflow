@@ -32,7 +32,7 @@ class ReluNpuKernel final : public user_op::OpKernel {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
     const user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);    
-    const int64_t elem_cnt = x->shape().elem_cnt();
+    const int64_t elem_cnt = x->shape_view().elem_cnt();
 
     if (elem_cnt != 0) {
       NpuCommand npu_command;
@@ -69,7 +69,7 @@ class ReluGradNpuKernel final : public user_op::OpKernel {
     user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const int64_t elem_cnt = y->shape().elem_cnt();
+    const int64_t elem_cnt = y->shape_view().elem_cnt();
     if (elem_cnt != 0) {
       NpuCommand npu_command;
       npu_command.OpName("ReluGrad")

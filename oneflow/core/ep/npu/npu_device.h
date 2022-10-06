@@ -46,7 +46,7 @@ class NpuDevice : public Device {
   Maybe<void> Alloc(const AllocationOptions& options, void** ptr, size_t size) override;
   void Free(const AllocationOptions& options, void* ptr) override;
 
-  Maybe<void> AllocPinned(const AllocationOptions& options, void** ptr, size_t size) override{return  Maybe<void>::Ok();}
+  Maybe<void> AllocPinned(const AllocationOptions& options, void** ptr, size_t size) override;
   void FreePinned(const AllocationOptions& options, void* ptr) override{};
 
   const void* GetConstZeros(DataType data_type, size_t n) const;

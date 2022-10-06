@@ -37,7 +37,7 @@ class ReduceSumLikeNpuKernel final : public user_op::OpKernel {
     std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("axis");
     NpuCommand npu_command;
     std::vector<int64_t> shape_desc = {static_cast<int64_t>(axis.size())};
-    CHECK_EQ(tmp_buffer->shape().elem_cnt(), sizeof(int));
+    CHECK_EQ(tmp_buffer->shape_view().elem_cnt(), sizeof(int));
     std::string key = "ReduceSumLike" + ShapeToString(axis);
     if(!const_tensor_map.count(key)) const_tensor_map[key] = axis;
     if(!shape_map.count(key)) shape_map[key] = shape_desc;

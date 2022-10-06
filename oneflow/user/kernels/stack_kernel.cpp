@@ -66,15 +66,15 @@ class StackKernel final : public user_op::OpKernel {
       }
     }
 
-    ctx->MutShapeView4ArgNameAndIndex("out", 0)->set_shape(Shape(out_dim_vec));
+    ctx->MutShapeView4ArgNameAndIndex("out", 0).set_shape(Shape(out_dim_vec));
   }
 
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    if (out_tensor->shape().elem_cnt() == 0) { return; }
+    if (out_tensor->shape_view().elem_cnt() == 0) { return; }
     const int64_t axis = ctx->Attr<int64_t>("axis");
-    const int64_t out_cols = out_tensor->shape().Count(axis);
-    const int64_t rows = out_tensor->shape().Count(0, axis);
+    const int64_t out_cols = out_tensor->shape_view().Count(axis);
+    const int64_t rows = out_tensor->shape_view().Count(0, axis);
     CHECK_GT(rows, 0) << "The multiplicative from axis 0 to axis " << axis - 1
                       << " should be greater than 0. ";
     auto primitive = NewCopyNdPrimitive(ctx);
@@ -83,9 +83,9 @@ class StackKernel final : public user_op::OpKernel {
     for (const auto& in_arg_pair : ctx->inputs()) {
       const user_op::Tensor* in_tensor =
           ctx->Tensor4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
-      if (in_tensor->shape().elem_cnt() == 0) { continue; }
-      const int64_t in_cols = in_tensor->shape().Count(axis);
-      CHECK_EQ(in_tensor->shape().elem_cnt(), rows * in_cols)
+      if (in_tensor->shape_view().elem_cnt() == 0) { continue; }
+      const int64_t in_cols = in_tensor->shape_view().Count(axis);
+      CHECK_EQ(in_tensor->shape_view().elem_cnt(), rows * in_cols)
           << "The element count of input tensor is not equal to `rows * in_cols`. ";
       if (in_cols > 0) {
         DimVector dst_shape = {rows, out_cols};
@@ -157,11 +157,10 @@ class StackGradKernel final : public user_op::OpKernel {
       }
 
       if (ctx->TensorDesc4ArgNameAndIndex("out", i)->is_dynamic()) {
-        auto* mut_shape_view = ctx->MutShapeView4ArgNameAndIndex("out", i);
-        CHECK_NOTNULL(mut_shape_view);
+        auto mut_shape_view = ctx->MutShapeView4ArgNameAndIndex("out", i);
         DimVector out_i_dim_vec;
         like_shape_view.ToDimVector(&out_i_dim_vec);
-        mut_shape_view->set_shape(Shape(out_i_dim_vec));
+        mut_shape_view.set_shape(Shape(out_i_dim_vec));
       }
     }
     CHECK_EQ(total_dim_size, in_shape_view.Count(axis))
@@ -173,8 +172,8 @@ class StackGradKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     const int64_t axis = ctx->Attr<int64_t>("axis");
-    const int64_t in_cols = in_tensor->shape().Count(axis);
-    const int64_t rows = in_tensor->shape().Count(0, axis);
+    const int64_t in_cols = in_tensor->shape_view().Count(axis);
+    const int64_t rows = in_tensor->shape_view().Count(0, axis);
     CHECK_GT(rows, 0) << "The multiplicative from axis 0 to axis " << axis - 1
                       << " should be greater than 0. ";
     auto primitive = NewCopyNdPrimitive(ctx);
@@ -183,8 +182,8 @@ class StackGradKernel final : public user_op::OpKernel {
     for (const auto& out_arg_pair : ctx->outputs()) {
       user_op::Tensor* out_tensor =
           ctx->Tensor4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second);
-      const int64_t out_cols = out_tensor->shape().Count(axis);
-      CHECK_EQ(out_tensor->shape().elem_cnt(), rows * out_cols)
+      const int64_t out_cols = out_tensor->shape_view().Count(axis);
+      CHECK_EQ(out_tensor->shape_view().elem_cnt(), rows * out_cols)
           << "The element count of output tensor is not equal to `rows * out_cols`. ";
       if (out_cols > 0) {
         DimVector dst_shape = {rows, out_cols};

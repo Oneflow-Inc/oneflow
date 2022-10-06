@@ -38,11 +38,11 @@ class ReduceSumNpuKernel final : public user_op::OpKernel {
     user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output_tensor", 0);
     //user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
-    if (input_tensor->shape().elem_cnt() == 0) {
-      if (output_tensor->shape().elem_cnt() != 0) {
+    if (input_tensor->shape_view().elem_cnt() == 0) {
+      if (output_tensor->shape_view().elem_cnt() != 0) {
         Memset<DeviceType::kNPU>(
             ctx->stream(), output_tensor->mut_dptr<void>(), 0,
-            output_tensor->shape().elem_cnt() * GetSizeOfDataType(output_tensor->data_type()));
+            output_tensor->shape_view().elem_cnt() * GetSizeOfDataType(output_tensor->data_type()));
       }
       return;
     }

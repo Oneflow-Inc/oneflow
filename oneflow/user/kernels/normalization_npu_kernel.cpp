@@ -42,10 +42,10 @@ class NormalizationInferenceNpuKernel final : public user_op::OpKernel {
     const auto epsilon = ctx->Attr<float>("epsilon");
 
     const DataType data_type = x->data_type();
-    CHECK_EQ(x->shape(), y->shape());
+    CHECK_EQ(x->shape_view(), y->shape_view());
     CHECK_EQ(y->data_type(), data_type);
     CHECK_GE(axis, 0);
-    CHECK_LT(axis, x->shape().NumAxes());
+    CHECK_LT(axis, x->shape_view().NumAxes());
 
     if (axis == 1) {  // NOTE(Liang Depeng): NCHW format
         NpuCommand npu_command;
@@ -113,17 +113,17 @@ void NormalizationTrainKernel<T>::Compute(user_op::KernelComputeContext* ctx) co
     float momentum = ctx->Attr<float>("momentum");
 
     const DataType data_type = x->data_type();
-    CHECK_EQ(x->shape(), y->shape());
+    CHECK_EQ(x->shape_view(), y->shape_view());
     CHECK_EQ(y->data_type(), data_type);
     CHECK_GE(axis, 0);
-    CHECK_LT(axis, x->shape().NumAxes());
+    CHECK_LT(axis, x->shape_view().NumAxes());
 
     user_op::Tensor* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
     user_op::Tensor* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
     user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
     user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
     
-    std::vector<int64_t> batch_desc = {x->shape().ptr()[axis]};
+    std::vector<int64_t> batch_desc = {x->shape_view().ptr()[axis]};
     size_t len_of_wrap = sizeof(float) * mulVector(batch_desc);
     char* tmp_ptr = tmp_buffer->mut_dptr<char>();
     AclTensorWrapper sum_warp(static_cast<void*>(tmp_ptr),
@@ -218,12 +218,12 @@ class NormalizationGradNpuKernel final : public user_op::OpKernel {
     float epsilon = ctx->Attr<float>("epsilon");
 
     const DataType data_type = x->data_type();
-    CHECK_EQ(dy->shape(), x->shape());
+    CHECK_EQ(dy->shape_view(), x->shape_view());
     CHECK_EQ(dy->data_type(), data_type);
-    CHECK_EQ(dx->shape(), x->shape());
+    CHECK_EQ(dx->shape_view(), x->shape_view());
     CHECK_EQ(dx->data_type(), data_type);
     CHECK_GE(axis, 0);
-    CHECK_LT(axis, x->shape().NumAxes());
+    CHECK_LT(axis, x->shape_view().NumAxes());
 
     if (ctx->op_type_name() == "normalization_grad") {
       // do nothing for npu

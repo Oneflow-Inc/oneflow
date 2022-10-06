@@ -36,7 +36,7 @@ class NllKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor*  input_blob = ctx->Tensor4ArgNameAndIndex("input", 0);
     user_op::Tensor*  target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
-    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
+    user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("output", 0);
     user_op::Tensor* total_weight_blob = ctx->Tensor4ArgNameAndIndex("total_weight", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     int64_t ignore_index = ctx->Attr<int64_t>("ignore_index");
@@ -46,12 +46,12 @@ class NllKernel final : public user_op::OpKernel {
 
     if(!weight)
     {
-        std::vector<float> weight_v(input_blob->shape().elem_cnt(), 1.0);
+        std::vector<float> weight_v(input_blob->shape_view().elem_cnt(), 1.0);
         std::vector<int64_t> weight_shape;
-        weight_shape.push_back(input_blob->shape().At(1));
-        CHECK_EQ(input_blob->shape().At(1)*sizeof(float), tmp_buffer->shape().elem_cnt() );
+        weight_shape.push_back(input_blob->shape_view().At(1));
+        CHECK_EQ(input_blob->shape_view().At(1)*sizeof(float), tmp_buffer->shape_view().elem_cnt() );
         AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(), ACL_FLOAT, weight_shape.size(), weight_shape.data(), ACL_FORMAT_ND,
-                                input_blob->shape().At(1)*sizeof(float), weight_v.data());
+                                input_blob->shape_view().At(1)*sizeof(float), weight_v.data());
         NpuCommand npu_command;
         npu_command.OpName("NLLLoss")
                   .Input(input_blob)
@@ -88,8 +88,8 @@ class NllGradKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* input_blob = ctx->Tensor4ArgNameAndIndex("input", 0);
     user_op::Tensor* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
-    user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("out_grad", 0);
+    user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("in_grad", 0);
     user_op::Tensor* total_weight_blob = ctx->Tensor4ArgNameAndIndex("total_weight", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     int64_t ignore_index = ctx->Attr<int64_t>("ignore_index");
@@ -98,12 +98,13 @@ class NllGradKernel final : public user_op::OpKernel {
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0) : nullptr;
     if(!weight)
     {
-        std::vector<float> weight_v(input_blob->shape().At(1), 1.0);
+        std::vector<float> weight_v(input_blob->shape_view().At(1), 1.0);
         std::vector<int64_t> weight_shape;
-        weight_shape.push_back(input_blob->shape().At(1));
-        CHECK_EQ(tmp_buffer->shape().elem_cnt(), input_blob->shape().At(1)*sizeof(float));
+        weight_shape.push_back(input_blob->shape_view().At(1));
+        CHECK_EQ(tmp_buffer->shape_view().elem_cnt(), input_blob->shape_view().At(1)*sizeof(float));
+        // dck_caution_here : use Fill to replace aclrtMemcpy
         AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(), ACL_FLOAT, weight_shape.size(), weight_shape.data(), ACL_FORMAT_ND,
-                                input_blob->shape().At(1)*sizeof(float), weight_v.data());
+                                input_blob->shape_view().At(1)*sizeof(float), weight_v.data());
         NpuCommand npu_command;
         npu_command.OpName("NLLLossGrad")
                 .Input(input_blob)
@@ -122,6 +123,10 @@ class NllGradKernel final : public user_op::OpKernel {
         // PrintResult(dx_blob);
         // std::cout<<"NLLLossGrad over"<<std::endl;
     }
+    else
+    {
+      UNIMPLEMENTED();
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -132,7 +137,7 @@ class NllGradKernel final : public user_op::OpKernel {
       .SetCreateFn<NllKernel<OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ltype_pair)>>()    \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)                          \
                        && (user_op::HobDataType("target", 0) == OF_PP_PAIR_SECOND(ltype_pair)) \
-                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))    \
+                       && (user_op::HobDataType("output", 0) == OF_PP_PAIR_SECOND(dtype_pair)))    \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t{                              \
           const auto& x = ctx->InputTensorDesc("input", 0);                                   \
           size_t tmp_size = 0;                                                                  \
@@ -141,12 +146,12 @@ class NllGradKernel final : public user_op::OpKernel {
           return tmp_size;                                                                      \
       });   
 #define REGISTER_NLL_GRAD_KERNEL(dtype_pair, ltype_pair)                                        \
-  REGISTER_USER_KERNEL("nll_grad")                                                              \
+  REGISTER_USER_KERNEL("nll_grad_npu")                                                              \
       .SetCreateFn<NllGradKernel<OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ltype_pair)>>() \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)                           \
                        && (user_op::HobDataType("target", 0) == OF_PP_PAIR_SECOND(ltype_pair))  \
-                       && (user_op::HobDataType("dy", 0) == OF_PP_PAIR_SECOND(dtype_pair))      \
-                       && (user_op::HobDataType("dx", 0) == OF_PP_PAIR_SECOND(dtype_pair)))     \
+                       && (user_op::HobDataType("out_grad", 0) == OF_PP_PAIR_SECOND(dtype_pair))\
+                       && (user_op::HobDataType("in_grad", 0) == OF_PP_PAIR_SECOND(dtype_pair)))\
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t{                              \
           const auto& x = ctx->InputTensorDesc("input", 0);                                     \
           size_t tmp_size = 0;                                                                  \

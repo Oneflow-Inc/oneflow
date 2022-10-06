@@ -17,6 +17,8 @@ import oneflow as flow
 
 
 def meshgrid_op(*tensors, indexing="ij"):
+    if isinstance(tensors[0], (list, tuple)):
+        return flow._C.meshgrid(tensors[0], indexing)
     return flow._C.meshgrid(tensors, indexing)
 
 

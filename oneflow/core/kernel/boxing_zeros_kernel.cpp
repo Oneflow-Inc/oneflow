@@ -34,7 +34,7 @@ class BoxingZerosKernel final : public Kernel {
 
 void BoxingZerosKernel::VirtualKernelInit(KernelContext* ctx) {
   primitive_ =
-      ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(this->op_conf().device_tag());
+      ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->stream()->device_type());
   CHECK(primitive_);
 }
 

@@ -35,13 +35,13 @@ class BroadcastLikeNpuKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("broadcast_axes");
     std::vector<int32_t> like_shape;
-    for(size_t i = 0;i<like_tensor->shape().NumAxes();++i)
+    for(size_t i = 0;i<like_tensor->shape_view().NumAxes();++i)
     {
-        like_shape.push_back(like_tensor->shape().ptr()[i]);
+        like_shape.push_back(like_tensor->shape_view().ptr()[i]);
     }
     std::vector<int64_t> shape_desc;
     shape_desc.push_back(like_shape.size());
-    CHECK_EQ(tmp_buffer->shape().elem_cnt(), mulVector(shape_desc)*sizeof(int32_t));
+    CHECK_EQ(tmp_buffer->shape_view().elem_cnt(), mulVector(shape_desc)*sizeof(int32_t));
     std::string key = "BroadcastLikeNpu" + ShapeToString(like_shape);
     if(!const_tensor_map.count(key))  const_tensor_map[key] = like_shape;
     AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(),

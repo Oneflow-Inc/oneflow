@@ -29,10 +29,10 @@ from oneflow.nn.modules.utils import (
 
 
 class MaxPool1d(Module):
-    r"""The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.MaxPool1d.html#torch.nn.MaxPool1d
-
-    Applies a 1D max pooling over an input signal composed of several input planes.
+    r"""Applies a 1D max pooling over an input signal composed of several input planes.
+    
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.MaxPool1d.html.
 
     In the simplest case, the output value of the layer with input size :math:`(N, C, L)`
     and output :math:`(N, C, L_{out})` can be precisely described as:
@@ -43,7 +43,7 @@ class MaxPool1d(Module):
 
     If :attr:`padding` is non-zero, then the input is implicitly padded with minimum value on both sides
     for :attr:`padding` number of points. :attr:`dilation` is the stride between the elements within the
-    sliding window. This `link`_ has a nice visualization of the pooling parameters.
+    sliding window. This link has a nice visualization of the pooling parameters.
 
     Note:
         When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
@@ -55,7 +55,6 @@ class MaxPool1d(Module):
         padding: Implicit negative infinity padding to be added on both sides, must be >= 0 and <= kernel_size / 2.
         dilation: The stride between elements within a sliding window, must be > 0.
         return_indices: If ``True``, will return the argmax along with the max values.
-                        Useful for :class:`torch.nn.MaxUnpool1d` later
         ceil_mode: If ``True``, will use `ceil` instead of `floor` to compute the output shape. This
                    ensures that every element in the input tensor is covered by a sliding window.
 
@@ -163,10 +162,10 @@ def calc_pool_padding(padding, dhw_offset, ndims):
 
 
 class MaxPool2d(Module):
-    r"""The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.MaxPool2d.html#torch.nn.MaxPool2d
-
-    Applies a 2D max pooling over an input signal composed of several input planes.
+    r"""Applies a 2D max pooling over an input signal composed of several input planes.
+    
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.MaxPool2d.html.
 
     In the simplest case, the output value of the layer with input size :math:`(N, C, H, W)`,
     output :math:`(N, C, H_{out}, W_{out})` and :attr:`kernel_size` :math:`(kH, kW)`
@@ -181,7 +180,7 @@ class MaxPool2d(Module):
 
     If :attr:`padding` is non-zero, then the input is implicitly minimum value padded on both sides
     for :attr:`padding` number of points. :attr:`dilation` controls the spacing between the kernel points.
-    It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
+    It is harder to describe, but this link has a nice visualization of what :attr:`dilation` does.
 
     Note:
         When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
@@ -278,10 +277,10 @@ class MaxPool2d(Module):
 
 
 class MaxPool3d(Module):
-    r"""The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.MaxPool3d.html#torch.nn.MaxPool3d
-
-    Applies a 3D max pooling over an input signal composed of several input planes.
+    r"""Applies a 3D max pooling over an input signal composed of several input planes.
+    
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.MaxPool3d.html.
 
     In the simplest case, the output value of the layer with input size :math:`(N, C, D, H, W)`,
     output :math:`(N, C, D_{out}, H_{out}, W_{out})` and :attr:`kernel_size` :math:`(kD, kH, kW)`
@@ -296,7 +295,7 @@ class MaxPool3d(Module):
 
     If :attr:`padding` is non-zero, then the input is implicitly minimum value on both sides
     for :attr:`padding` number of points. :attr:`dilation` controls the spacing between the kernel points.
-    It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
+    It is harder to describe, but this link has a nice visualization of what :attr:`dilation` does.
 
     Note:
         When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
@@ -859,6 +858,167 @@ def adaptive_avg_pool3d(input, output_size):
         output_size: the target output size (single integer or triple-integer tuple)
     """
     return AdaptiveAvgPool3d(output_size)(input)
+
+
+class _AdaptiveMaxPoolNd(Module):
+    def __init__(self, output_size, return_indices: bool = False) -> None:
+        super(_AdaptiveMaxPoolNd, self).__init__()
+        self.output_size = output_size
+        self.return_indices = return_indices
+
+    def extra_repr(self) -> str:
+        return "output_size={}".format(self.output_size)
+
+
+class AdaptiveMaxPool1d(_AdaptiveMaxPoolNd):
+    r"""Applies a 1D adaptive max pooling over an input signal composed of several input planes.
+
+        The documentation is referenced from:
+        https://pytorch.org/docs/1.10/generated/torch.nn.AdaptiveMaxPool1d.html.
+        
+        The output size is :math:`L_{out}`, for any input size.
+        The number of output features is equal to the number of input planes.
+
+        Args:
+            output_size: the target output size :math:`L_{out}`.
+            return_indices: if ``True``, will return the indices along with the outputs.
+                            Default: ``False``
+
+        Shape:
+            - Input: :math:`(N, C, L_{in})`.
+            - Output: :math:`(N, C, L_{out})`, where :math:`L_{out}=\text{output_size}`.
+
+        Examples:
+
+        .. code-block:: python
+
+            >>> import oneflow as flow
+            >>> # target output size of 5
+            >>> m = flow.nn.AdaptiveMaxPool1d(5)
+            >>> input = flow.randn(1, 64, 8)
+            >>> output = m(input)
+            >>> print(output.shape)
+            oneflow.Size([1, 64, 5])
+
+    """
+
+    def forward(self, input):
+        self.output_size = _single(self.output_size)
+        assert (
+            len(input.shape) == 3 and len(self.output_size) == 1
+        ), "the length of 'output_size' does not match the input size, 1 expected"
+        new_output_size = _generate_output_size(input.shape, self.output_size)
+        return flow.nn.functional.adaptive_max_pool1d(
+            input, self.output_size, self.return_indices
+        )
+
+
+class AdaptiveMaxPool2d(_AdaptiveMaxPoolNd):
+    r"""Applies a 2D adaptive max pooling over an input signal composed of several input planes.
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.AdaptiveMaxPool2d.html.
+
+    The output is of size :math:`H_{out} \times W_{out}`, for any input size.
+    The number of output features is equal to the number of input planes.
+
+    Args:
+        output_size: the target output size of the image of the form :math:`H_{out} \times W_{out}`.
+                     Can be a tuple :math:`(H_{out}, W_{out})` or a single :math:`H_{out}` for a
+                     square image :math:`H_{out} \times H_{out}`. :math:`H_{out}` and :math:`W_{out}`
+                     should be a ``int``.
+        return_indices: if ``True``, will return the indices along with the outputs.
+                        Default: ``False``
+
+    Shape:
+        - Input: :math:`(N, C, H_{in}, W_{in})`.
+        - Output: :math:`(N, C, H_{out}, W_{out})`, where
+          :math:`(H_{out}, W_{out})=\text{output_size}`.
+
+    Examples:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+        >>> # target output size of 5x7
+        >>> m = nn.AdaptiveMaxPool2d((5,7))
+        >>> input = flow.randn(1, 64, 8, 9)
+        >>> output = m(input)
+        >>> print(output.shape)
+        oneflow.Size([1, 64, 5, 7])
+        >>> # target output size of 7x7 (square)
+        >>> m = nn.AdaptiveMaxPool2d(7)
+        >>> input = flow.randn(1, 64, 10, 9)
+        >>> output = m(input)
+        >>> print(output.shape)
+        oneflow.Size([1, 64, 7, 7])
+    """
+
+    def forward(self, input):
+        self.output_size = _pair(self.output_size)
+        assert (
+            len(input.shape) == 4
+        ), f"expected 4-dimensional tensor, but got {len(input.shape)}-dimensional tensor"
+        new_output_size = _generate_output_size(input.shape, self.output_size)
+        return flow.nn.functional.adaptive_max_pool2d(
+            input, self.output_size, self.return_indices
+        )
+
+
+class AdaptiveMaxPool3d(_AdaptiveMaxPoolNd):
+    r"""Applies a 3D adaptive max pooling over an input signal composed of several input planes.
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.AdaptiveMaxPool3d.html.
+
+    The output is of size :math:`D_{out} \times H_{out} \times W_{out}`, for any input size.
+    The number of output features is equal to the number of input planes.
+
+    Args:
+        output_size: the target output size of the image of the form :math:`D_{out} \times H_{out} \times W_{out}`.
+                     Can be a tuple :math:`(D_{out}, H_{out}, W_{out})` or a single
+                     :math:`D_{out}` for a cube :math:`D_{out} \times D_{out} \times D_{out}`.
+                     :math:`D_{out}`, :math:`H_{out}` and :math:`W_{out}` should be a
+                     ``int``.
+
+        return_indices: if ``True``, will return the indices along with the outputs.
+                        Default: ``False``
+
+    Shape:
+        - Input: :math:`(N, C, D_{in}, H_{in}, W_{in})`.
+        - Output: :math:`(N, C, D_{out}, H_{out}, W_{out})`,
+          where :math:`(D_{out}, H_{out}, W_{out})=\text{output_size}`.
+
+    Examples:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+        >>> # target output size of 5x7x9
+        >>> m = nn.AdaptiveMaxPool3d((5,7,9))
+        >>> input = flow.randn(1, 64, 8, 9, 10)
+        >>> output = m(input)
+        >>> print(output.shape)
+        oneflow.Size([1, 64, 5, 7, 9])
+        >>> # target output size of 7x7x7 (cube)
+        >>> m = nn.AdaptiveMaxPool3d(7)
+        >>> input = flow.randn(1, 64, 10, 9, 8)
+        >>> output = m(input)
+        >>> print(output.shape)
+        oneflow.Size([1, 64, 7, 7, 7])
+    """
+
+    def forward(self, input):
+        self.output_size = _triple(self.output_size)
+        assert (
+            len(input.shape) == 5
+        ), f"expected 5-dimensional tensor, but got {len(input.shape)}-dimensional tensor"
+        new_output_size = _generate_output_size(input.shape, self.output_size)
+        return flow.nn.functional.adaptive_max_pool3d(
+            input, self.output_size, self.return_indices
+        )
 
 
 if __name__ == "__main__":

@@ -23,7 +23,6 @@ limitations under the License.
 #include "oneflow/core/framework/util.h"
 #include "oneflow/core/framework/user_op_tensor.h"
 #include "oneflow/core/framework/user_op_conf.h"
-#include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/ep/include/stream.h"
@@ -76,7 +75,6 @@ class KernelInitContext {
   }
   const std::string& op_name() const { return user_op_conf().op_name(); }
   const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
-  const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
   const OperatorConf& op_conf() const { return user_op_conf().op_conf(); }
 
   template<typename T>
@@ -133,7 +131,6 @@ class KernelCacheContext {
   }
   const std::string& op_name() const { return user_op_conf().op_name(); }
   const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
-  const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
   const OperatorConf& op_conf() const { return user_op_conf().op_conf(); }
 
   template<typename T>
@@ -164,10 +161,9 @@ class KernelInferContext {
 
   virtual ep::Stream* stream() = 0;
   virtual Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) = 0;
-  virtual const ShapeView& ShapeView4ArgNameAndIndex(const std::string& arg_name,
-                                                     int32_t arg_index) = 0;
-  virtual MutShapeView* MutShapeView4ArgNameAndIndex(const std::string& arg_name,
-                                                     int32_t arg_index) = 0;
+  virtual ShapeView ShapeView4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) = 0;
+  virtual MutShapeView MutShapeView4ArgNameAndIndex(const std::string& arg_name,
+                                                    int32_t arg_index) = 0;
 
   const std::string& input(const std::string& arg_name, int32_t index) const {
     return user_op_conf().input(arg_name, index);
@@ -189,7 +185,6 @@ class KernelInferContext {
   }
   const std::string& op_name() const { return user_op_conf().op_name(); }
   const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
-  const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
 
   template<typename T>
   const T& Attr(const std::string& attr_name) const {
@@ -250,7 +245,6 @@ class KernelComputeContext {
   }
   const std::string& op_name() const { return user_op_conf().op_name(); }
   const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
-  const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
 
   template<typename T>
   const T& Attr(const std::string& attr_name) const {
@@ -296,35 +290,29 @@ class OpKernel {
   virtual ~OpKernel() = default;
 
   std::shared_ptr<OpKernelState> CreateOpKernelStateIf(KernelInitContext* ctx) const {
-    SyncVmModeGuard guard(true);
+    SyncVmModeGuard guard(SyncVmMode::kEnable);
     return CreateOpKernelState(ctx);
   }
 std::shared_ptr<OpKernelCache> InitOpKernelCacheIf(KernelCacheContext* ctx) const {
-    SyncVmModeGuard guard(true);
+    SyncVmModeGuard guard(SyncVmMode::kEnable);
     return InitOpKernelCache(ctx);
   }
   void InitOpKernelCacheWithFlagsIf(KernelCacheContext* ctx, int8_t flag,
                                     std::shared_ptr<OpKernelCache>* cache_ptr) const {
-    SyncVmModeGuard guard(true);
+    SyncVmModeGuard guard(SyncVmMode::kEnable);
     return InitOpKernelCacheWithFlags(ctx, flag, cache_ptr);
   }
   void ComputeIf(KernelComputeContext* ctx, OpKernelState* state,
                  const OpKernelCache* cache) const {
-    SyncVmModeGuard guard(true);
+    SyncVmModeGuard guard(SyncVmMode::kEnable);
     return Compute(ctx, state, cache);
   }
   void InferShapeIf(KernelInferContext* ctx) const {
-    SyncVmModeGuard guard(true);
+    SyncVmModeGuard guard(SyncVmMode::kEnable);
     return InferShape(ctx);
   }
   virtual bool AlwaysComputeWhenAllOutputsEmpty() const = 0;
   virtual bool IsKernelLaunchSynchronized() const { return true; }
-
-  bool has_state_or_cache() const { return has_state_or_cache_; }
-
- protected:
-  OpKernel() : has_state_or_cache_(true) {}
-  
 
   virtual std::shared_ptr<OpKernelState> CreateOpKernelState(KernelInitContext* ctx) const {
     return std::shared_ptr<OpKernelState>();
@@ -344,6 +332,11 @@ std::shared_ptr<OpKernelCache> InitOpKernelCacheIf(KernelCacheContext* ctx) cons
   }
   virtual void Compute(KernelComputeContext*) const { LOG(WARNING) << "UNIMPLEMENTED"; }
   virtual void InferShape(KernelInferContext* ctx) const;
+
+  bool has_state_or_cache() const { return has_state_or_cache_; }
+
+ protected:
+  OpKernel() : has_state_or_cache_(true) {}
 
  private:
   template<typename T, typename... Args>

@@ -30,8 +30,6 @@ def GenCartesianProduct(sets):
     for set in sets:
         assert isinstance(set, Iterable)
         if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
-            if "gpu" in set:
-                set.remove("gpu")
             if "cuda" in set:
                 set.remove("cuda")
     return itertools.product(*sets)
@@ -70,7 +68,6 @@ type_name_to_flow_type = {
     "int8": flow.int8,
     "int32": flow.int32,
     "int64": flow.int64,
-    "char": flow.char,
     "uint8": flow.uint8,
 }
 type_name_to_np_type = {
@@ -80,7 +77,6 @@ type_name_to_np_type = {
     "int8": np.int8,
     "int32": np.int32,
     "int64": np.int64,
-    "char": np.byte,
     "uint8": np.uint8,
 }
 

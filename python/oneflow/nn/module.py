@@ -15,7 +15,18 @@ limitations under the License.
 """
 import itertools
 from collections import OrderedDict, namedtuple
-from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple, TypeVar, Union
+from typing import (
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    TypeVar,
+    Union,
+    overload,
+)
 import traceback
 import warnings
 
@@ -52,6 +63,42 @@ T = TypeVar("T", bound="Module")
 
 
 class Module(object):
+    r"""Base class for all neural network modules.
+    
+    This class is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.Module.html.
+
+    Your models should also subclass this class.
+
+    Modules can also contain other Modules, allowing to nest them in
+    a tree structure. You can assign the submodules as regular attributes::
+
+        import oneflow.nn as nn
+        import oneflow.nn.functional as F
+
+        class Model(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.conv1 = nn.Conv2d(1, 20, 5)
+                self.conv2 = nn.Conv2d(20, 20, 5)
+
+            def forward(self, x):
+                x = F.relu(self.conv1(x))
+                return F.relu(self.conv2(x))
+
+    Submodules assigned in this way will be registered, and will have their
+    parameters converted too when you call :meth:`to`, etc.
+
+    .. note::
+        As per the example above, an ``__init__()`` call to the parent class
+        must be made before assignment on the child.
+
+    :ivar training: Boolean represents whether this module is in training or
+                    evaluation mode.
+    :vartype training: bool
+    """
+
     def __init__(self):
         self.training = True
         self._parameters = OrderedDict()
@@ -64,6 +111,38 @@ class Module(object):
         self._state_dict_hooks = OrderedDict()
         self._load_state_dict_pre_hooks = OrderedDict()
         self._modules = OrderedDict()
+        self._is_ddp_module = False
+        self._oneflow_internal_module_tensor_applied_dict__ = None
+
+    def __getstate__(self):
+        if not self._is_ddp_module:
+            if (
+                len(self._backward_hooks) > 0
+                or len(self._forward_hooks) > 0
+                or len(self._forward_pre_hooks) > 0
+                or len(self._state_dict_hooks) > 0
+                or len(self._load_state_dict_pre_hooks) > 0
+            ):
+                warnings.warn("The module hooks will not be remained after serializing")
+
+        state = self.__dict__.copy()
+        del state["_backward_hooks"]
+        del state["_forward_hooks"]
+        del state["_forward_pre_hooks"]
+        del state["_state_dict_hooks"]
+        del state["_load_state_dict_pre_hooks"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._backward_hooks = OrderedDict()
+        self._forward_hooks = OrderedDict()
+        self._forward_pre_hooks = OrderedDict()
+        self._state_dict_hooks = OrderedDict()
+        self._load_state_dict_pre_hooks = OrderedDict()
+        if hasattr(self, "_is_ddp_module") and self._is_ddp_module:
+            # flow.nn.parallel.DistributedDataParallel updates the module inplace
+            flow.nn.parallel.DistributedDataParallel(self)
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError()
@@ -86,7 +165,10 @@ class Module(object):
         return res
 
     def add_module(self, name: str, module: Optional["Module"]) -> None:
-        """Adds a child module to the current module.
+        r"""
+        add_module(name, module)
+        
+        Adds a child module to the current module.
 
         The module can be accessed as an attribute using the given name.
 
@@ -110,6 +192,35 @@ class Module(object):
     def register_buffer(
         self, name: str, tensor: Optional[Tensor], persistent: bool = True
     ) -> None:
+        r"""
+        register_buffer(name, tensor, persistent=True)
+        
+        Adds a buffer to the module.
+
+        This is typically used to register a buffer that should not to be
+        considered a model parameter. For example, BatchNorm's ``running_mean``
+        is not a parameter, but is part of the module's state. Buffers, by
+        default, are persistent and will be saved alongside parameters. This
+        behavior can be changed by setting :attr:`persistent` to ``False``. The
+        only difference between a persistent buffer and a non-persistent buffer
+        is that the latter will not be a part of this module's
+        :attr:`state_dict`.
+
+        Buffers can be accessed as attributes using given names.
+
+        Args:
+            name (string): name of the buffer. The buffer can be accessed
+                from this module using the given name
+            tensor (Tensor or None): buffer to be registered. If ``None``, then operations
+                that run on buffers, such as :attr:`cuda`, are ignored. If ``None``,
+                the buffer is **not** included in the module's :attr:`state_dict`.
+            persistent (bool): whether the buffer is part of this module's
+                :attr:`state_dict`.
+                
+        Example::
+
+            >>> self.register_buffer('running_mean', oneflow.zeros(num_features)) # doctest: +SKIP
+        """
         if "_buffers" not in self.__dict__:
             raise AttributeError("cannot assign buffer before Module.__init__() call")
         elif not isinstance(name, str):
@@ -134,6 +245,21 @@ class Module(object):
                 self._non_persistent_buffers_set.add(name)
 
     def register_parameter(self, name: str, param: Optional[Parameter]) -> None:
+        r"""
+        register_parameter(name, param)
+        
+        Adds a parameter to the module.
+
+        The parameter can be accessed as an attribute using given name.
+
+        Args:
+            name (string): name of the parameter. The parameter can be accessed
+                from this module using the given name
+            param (Parameter or None): parameter to be added to the module. If
+                ``None``, then operations that run on parameters, such as :attr:`cuda`,
+                are ignored. If ``None``, the parameter is **not** included in the
+                module's :attr:`state_dict`.
+        """
         if "_parameters" not in self.__dict__:
             raise AttributeError(
                 "cannot assign parameter before Module.__init__() call"
@@ -241,6 +367,17 @@ class Module(object):
                 else:
                     object.__setattr__(self, name, value)
 
+    def __delattr__(self, name):
+        if name in self._parameters:
+            del self._parameters[name]
+        elif name in self._buffers:
+            del self._buffers[name]
+            self._non_persistent_buffers_set.discard(name)
+        elif name in self._modules:
+            del self._modules[name]
+        else:
+            super().__delattr__(name)
+
     def _named_members(self, get_members_fn, prefix="", recurse=True):
         memo = set()
         modules = self.named_modules(prefix=prefix) if recurse else [(prefix, self)]
@@ -254,12 +391,56 @@ class Module(object):
                 yield (name, v)
 
     def parameters(self, recurse: bool = True) -> Iterator[Parameter]:
+        r"""
+        parameters(recurse=True) -> Iterator[Parameter]
+        
+        Returns an iterator over module parameters.
+
+        This is typically passed to an optimizer.
+
+        Args:
+            recurse (bool): if True, then yields parameters of this module
+                and all submodules. Otherwise, yields only parameters that
+                are direct members of this module.
+
+        Yields:
+            Parameter: module parameter
+
+        Example::
+
+            >>> for param in model.parameters(): # doctest: +SKIP
+            ...     print(type(param), param.size()) # doctest: +SKIP
+            <class 'oneflow.Tensor'> oneflow.Size([10])
+
+        """
         for (name, param) in self.named_parameters(recurse=recurse):
             yield param
 
     def named_parameters(
         self, prefix: str = "", recurse: bool = True
     ) -> Iterator[Tuple[str, Tensor]]:
+        r"""
+        named_parameters(prefix="", recurse=True) -> Iterator[Tuple[str, Tensor]]
+        
+        Returns an iterator over module parameters, yielding both the
+        name of the parameter as well as the parameter itself.
+
+        Args:
+            prefix (str): prefix to prepend to all parameter names.
+            recurse (bool): if True, then yields parameters of this module
+                and all submodules. Otherwise, yields only parameters that
+                are direct members of this module.
+
+        Yields:
+            (string, Parameter): Tuple containing the name and parameter
+
+        Example::
+
+            >>> for name, param in self.named_parameters(): # doctest: +SKIP
+            ...    if name in ['bias']: # doctest: +SKIP
+            ...        print(param.size()) # doctest: +SKIP
+
+        """
         gen = self._named_members(
             lambda module: module._parameters.items(), prefix=prefix, recurse=recurse
         )
@@ -267,12 +448,54 @@ class Module(object):
             yield elem
 
     def buffers(self, recurse: bool = True) -> Iterator[Tensor]:
+        r"""
+        buffers(recurse=True) -> Iterator[Tensor]
+        
+        Returns an iterator over module buffers.
+
+        Args:
+            recurse (bool): if True, then yields buffers of this module
+                and all submodules. Otherwise, yields only buffers that
+                are direct members of this module.
+
+        Yields:
+            oneflow.Tensor: module buffer
+
+        Example::
+
+            >>> for buf in model.buffers(): # doctest: +SKIP
+            ...     print(type(buf), buf.size()) # doctest: +SKIP
+            <class 'oneflow.Tensor'> oneflow.Size([10])
+
+        """
         for (name, buf) in self.named_buffers(recurse=recurse):
             yield buf
 
     def named_buffers(
         self, prefix: str = "", recurse: bool = True
     ) -> Iterator[Tuple[str, Tensor]]:
+        r"""
+        named_buffers(prefix="", recurse=True) -> Iterator[Tuple[str, Tensor]]
+        
+        Returns an iterator over module buffers, yielding both the
+        name of the buffer as well as the buffer itself.
+
+        Args:
+            prefix (str): prefix to prepend to all buffer names.
+            recurse (bool): if True, then yields buffers of this module
+                and all submodules. Otherwise, yields only buffers that
+                are direct members of this module.
+
+        Yields:
+            (string, oneflow.Tensor): Tuple containing the name and buffer
+
+        Example::
+
+            >>> for name, buf in self.named_buffers(): # doctest: +SKIP
+            ...    if name in ['running_var']: # doctest: +SKIP
+            ...        print(buf.size()) # doctest: +SKIP
+
+        """
         gen = self._named_members(
             lambda module: module._buffers.items(), prefix=prefix, recurse=recurse
         )
@@ -280,10 +503,46 @@ class Module(object):
             yield elem
 
     def children(self) -> Iterator["Module"]:
+        r"""
+        children() -> Iterator["Module"]
+        
+        Returns an iterator over immediate children modules.
+
+        Yields:
+            Module: a child module
+            
+        Example::
+
+            >>> import oneflow.nn as nn
+            >>> l1 = nn.Linear(2, 2)
+            >>> l2 = nn.Linear(2, 2)
+            >>> net = nn.Sequential(l1, l2)
+            >>> for idx, m in enumerate(net.children()):
+            ...     print(idx, '->', m)
+            0 -> Linear(in_features=2, out_features=2, bias=True)
+            1 -> Linear(in_features=2, out_features=2, bias=True)
+
+        """
         for (name, module) in self.named_children():
             yield module
 
     def named_children(self) -> Iterator[Tuple[str, "Module"]]:
+        r"""
+        named_children() -> Iterator[Tuple[str, "Module"]]
+        
+        Returns an iterator over immediate children modules, yielding both
+        the name of the module as well as the module itself.
+
+        Yields:
+            (string, Module): Tuple containing a name and child module
+
+        Example::
+
+            >>> for name, module in model.named_children(): # doctest: +SKIP
+            ...     if name in ['conv4', 'conv5']: # doctest: +SKIP
+            ...         print(module) # doctest: +SKIP
+
+        """
         memo = set()
         for (name, module) in self._modules.items():
             if module is not None and module not in memo:
@@ -291,10 +550,67 @@ class Module(object):
                 yield (name, module)
 
     def modules(self) -> Iterator["Module"]:
+        r"""
+        modules() -> Iterator["Module"]
+        
+        Returns an iterator over all modules in the network.
+
+        Yields:
+            Module: a module in the network
+
+        Note:
+            Duplicate modules are returned only once. In the following
+            example, ``l`` will be returned only once.
+
+        Example::
+
+            >>> import oneflow.nn as nn
+            >>> l = nn.Linear(2, 2)
+            >>> net = nn.Sequential(l, l)
+            >>> for idx, m in enumerate(net.modules()):
+            ...     print(idx, '->', m)
+            0 -> Sequential(
+              (0): Linear(in_features=2, out_features=2, bias=True)
+              (1): Linear(in_features=2, out_features=2, bias=True)
+            )
+            1 -> Linear(in_features=2, out_features=2, bias=True)
+
+        """
         for (name, module) in self.named_modules():
             yield module
 
     def named_modules(self, memo: Optional[Set["Module"]] = None, prefix: str = ""):
+        r"""
+        named_modules(memo=None, prefix="")
+        
+        Returns an iterator over all modules in the network, yielding
+        both the name of the module as well as the module itself.
+
+        Args:
+            memo: a memo to store the set of modules already added to the result
+            prefix: a prefix that will be added to the name of the module
+
+        Yields:
+            (string, Module): Tuple of name and module
+
+        Note:
+            Duplicate modules are returned only once. In the following
+            example, ``l`` will be returned only once.
+
+        Example::
+
+            >>> import oneflow.nn as nn
+            >>> l = nn.Linear(2, 2)
+            >>> net = nn.Sequential(l, l)
+            >>> for idx, m in enumerate(net.named_modules()):
+            ...     print(idx, '->', m)
+            0 -> ('', Sequential(
+              (0): Linear(in_features=2, out_features=2, bias=True)
+              (1): Linear(in_features=2, out_features=2, bias=True)
+            ))
+            1 -> ('0', Linear(in_features=2, out_features=2, bias=True))
+
+        """
         if memo is None:
             memo = set()
         if self not in memo:
@@ -308,16 +624,74 @@ class Module(object):
                     yield m
 
     def train(self: T, mode: bool = True) -> T:
+        r"""
+        train(mode=True)
+        
+        Sets the module in training mode.
+
+        This has any effect only on certain modules. See documentations of
+        particular modules for details of their behaviors in training/evaluation
+        mode, if they are affected, e.g. :class:`Dropout`, :class:`BatchNorm1d`,
+        etc.
+
+        Args:
+            mode (bool): whether to set training mode (``True``) or evaluation
+                         mode (``False``). Default: ``True``.
+
+        Returns:
+            Module: self
+        """
         self.training = mode
         for module in self.children():
             module.train(mode)
         return self
 
     def eval(self: T) -> T:
+        r"""
+        eval()
+        
+        Sets the module in evaluation mode.
+
+        This has any effect only on certain modules. See documentations of
+        particular modules for details of their behaviors in training/evaluation
+        mode, if they are affected, e.g. :class:`Dropout`, :class:`BatchNorm1d`,
+        etc.
+
+        This is equivalent with :meth:`self.train(False) <oneflow.nn.Module.train>`.
+
+        Returns:
+            Module: self
+        """
         return self.train(False)
 
+    def requires_grad_(self: T, requires_grad: bool = True) -> T:
+        r"""Change if autograd should record operations on parameters in this
+        module.
+        The interface is consistent with PyTorch.
+        The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Module.html?highlight=requires_grad_#torch.nn.Module.requires_grad_.
+
+        This method sets the parameters' :attr:`requires_grad` attributes
+        in-place.
+
+        This method is helpful for freezing part of the module for finetuning
+        or training parts of a model individually (e.g., GAN training).
+
+        Args:
+            requires_grad (bool): whether autograd should record operations on
+                                  parameters in this module. Default: ``True``.
+
+        Returns:
+            Module: self
+        """
+        for p in self.parameters():
+            p.requires_grad_(requires_grad)
+        return self
+
     def zero_grad(self, set_to_none: bool = False) -> None:
-        r"""Sets gradients of all model parameters to zero. See similar function
+        r"""
+        zero_grad(set_to_none=False)
+        
+        Sets gradients of all model parameters to zero. See similar function
         under :class:`oneflow.optim.Optimizer` for more context.
 
         Args:
@@ -341,7 +715,7 @@ class Module(object):
                         p.grad.detach_()
                     else:
                         p.grad.requires_grad_(False)
-                    p.grad.zeros_()
+                    p.grad.zero_()
 
     def _save_to_state_dict(self, destination, prefix, keep_vars):
         for (name, param) in self._parameters.items():
@@ -391,6 +765,24 @@ class Module(object):
                         )
                     )
                     continue
+                if (
+                    isinstance(input_param, flow.Tensor)
+                    and input_param.is_global != param.is_global
+                ):
+                    if param.is_global:
+                        help_msg = "Maybe you need to convert the checkpoint param to global, or set global_src_rank=0 when using flow.load to load model's state_dict"
+                    else:
+                        help_msg = "Maybe you need to convert your model to global."
+                    error_msgs.append(
+                        'local / global mismatch for "{}":  param from checkpoint is {} tensor, but the param in current model is {} tensor. {}'.format(
+                            key,
+                            "global" if input_param.is_global else "local",
+                            "global" if param.is_global else "local",
+                            help_msg,
+                        )
+                    )
+                    continue
+
                 try:
                     with flow.no_grad():
                         param.copy_(input_param)
@@ -424,6 +816,31 @@ class Module(object):
         state_dict: Union[Dict[str, Tensor], Dict[str, Tensor]],
         strict: bool = True,
     ):
+        r"""
+        load_state_dict(state_dict, strict=True)
+        
+        Copies parameters and buffers from :attr:`state_dict` into
+        this module and its descendants. If :attr:`strict` is ``True``, then
+        the keys of :attr:`state_dict` must exactly match the keys returned
+        by this module's :meth:`~oneflow.nn.Module.state_dict` function.
+
+        Args:
+            state_dict (dict): a dict containing parameters and
+                persistent buffers.
+            strict (bool, optional): whether to strictly enforce that the keys
+                in :attr:`state_dict` match the keys returned by this module's
+                :meth:`~oneflow.nn.Module.state_dict` function. Default: ``True``
+
+        Returns:
+            ``NamedTuple`` with ``missing_keys`` and ``unexpected_keys`` fields:
+                * **missing_keys** is a list of str containing the missing keys
+                * **unexpected_keys** is a list of str containing the unexpected keys
+
+        Note:
+            If a parameter or buffer is registered as ``None`` and its corresponding key
+            exists in :attr:`state_dict`, :meth:`load_state_dict` will raise a
+            ``RuntimeError``.
+        """
         missing_keys = []
         unexpected_keys = []
         error_msgs = []
@@ -475,6 +892,41 @@ class Module(object):
     def state_dict(
         self, destination=None, prefix="", keep_vars=False
     ) -> Dict[str, Tensor]:
+        r"""
+        state_dict(destination=None, prefix="", keep_vars=False) -> Dict[str, Tensor]
+        
+        Returns a dictionary containing a whole state of the module.
+
+        Both parameters and persistent buffers (e.g. running averages) are
+        included. Keys are corresponding parameter and buffer names.
+        Parameters and buffers set to ``None`` are not included.
+
+        Args:
+            destination (dict, optional): Deprecated. This dict is returned
+                with the module state saved in it. It should also have an
+                attribute ``_metadata: dict`` to save metadata of the module
+                state. If it's not provided, an ``OrderedDict`` is created and
+                returned. Default: ``None``
+            prefix (str, optional): a prefix added to parameter and buffer
+                names to compose the keys in dict. Default: ``''``
+            keep_vars (bool, optional): by default the :class:`~oneflow.Tensor` s
+                returned in the state dict are detached from autograd. If it's
+                set to ``True``, detaching is not performed. Default: ``False``
+
+        Returns:
+            dict:
+                a dictionary containing a whole state of the module
+
+        Example::
+
+            >>> import oneflow.nn as nn
+            >>> l1 = nn.Linear(2, 2)
+            >>> l2 = nn.Linear(2, 2)
+            >>> net = nn.Sequential(l1, l2)
+            >>> net.state_dict().keys()
+            odict_keys(['0.weight', '0.bias', '1.weight', '1.bias'])
+
+        """
         if destination is None:
             destination = OrderedDict()
             destination._metadata = OrderedDict()
@@ -489,19 +941,57 @@ class Module(object):
         return destination
 
     def register_forward_pre_hook(self, hook: Callable[..., None]) -> None:
+        r"""
+        register_forward_pre_hook(hook)
+        
+        Registers a forward pre-hook on the module.
+
+        The hook will be called every time before :func:`forward` is invoked.
+        It should have the following signature::
+
+            hook(module, input) -> None or modified input
+
+        The input contains only the positional arguments given to the module.
+        Keyword arguments won't be passed to the hooks and only to the ``forward``.
+        The hook can modify the input. User can either return a tuple or a
+        single modified value in the hook. We will wrap the value into a tuple
+        if a single value is returned(unless that value is already a tuple).
+
+        """
         self._forward_pre_hooks[len(self._forward_pre_hooks)] = hook
 
     def register_forward_hook(self, hook: Callable[..., None]) -> None:
+        r"""
+        register_forward_hook(hook)
+        
+        Registers a forward hook on the module.
+
+        The hook will be called every time after :func:`forward` has computed an output.
+        It should have the following signature::
+
+            hook(module, input, output) -> None or modified output
+
+        The input contains only the positional arguments given to the module.
+        Keyword arguments won't be passed to the hooks and only to the ``forward``.
+        The hook can modify the output. It can modify the input inplace but
+        it will not have effect on forward since this is called after
+        :func:`forward` is called.
+
+        """
         self._forward_hooks[len(self._forward_hooks)] = hook
 
-    def _apply(self, fn, applied_dict=None):
+    def _apply(self, fn):
         # A dict to store tensors that has already been applied.
         # There is no need to apply multiple times on a same tensor.
-        if applied_dict is None:
-            applied_dict = dict()
+        if self._oneflow_internal_module_tensor_applied_dict__ is None:
+            self._oneflow_internal_module_tensor_applied_dict__ = dict()
 
         for module in self.children():
-            module._apply(fn, applied_dict)
+            module._oneflow_internal_module_tensor_applied_dict__ = (
+                self._oneflow_internal_module_tensor_applied_dict__
+            )
+            module._apply(fn)
+            module._oneflow_internal_module_tensor_applied_dict__ = None
 
         def can_use_assign_copy(tensor, tensor_applied):
             return tensor.is_local == tensor_applied.is_local
@@ -511,7 +1001,7 @@ class Module(object):
                 continue
 
             need_apply = False
-            if param not in applied_dict:
+            if param not in self._oneflow_internal_module_tensor_applied_dict__:
                 need_apply = True
                 assert isinstance(param, Parameter)
                 assert param.is_leaf
@@ -526,12 +1016,16 @@ class Module(object):
                     grad_applied.requires_grad = param.grad.requires_grad
                     param_applied.grad = grad_applied
             else:
-                param_applied = applied_dict[param]
+                param_applied = self._oneflow_internal_module_tensor_applied_dict__[
+                    param
+                ]
 
             if can_use_assign_copy(param_applied, param):
                 if need_apply:
                     self._parameters[key].data = param_applied
-                    applied_dict[param] = param_applied
+                    self._oneflow_internal_module_tensor_applied_dict__[
+                        param
+                    ] = param_applied
                 else:
                     # The parameter's data has already been set when it can use assign copy.
                     pass
@@ -539,29 +1033,195 @@ class Module(object):
                 if need_apply:
                     new_param = Parameter(param_applied, param.requires_grad)
                     self._parameters[key] = new_param
-                    applied_dict[param] = new_param
+                    self._oneflow_internal_module_tensor_applied_dict__[
+                        param
+                    ] = new_param
                 else:
-                    self._parameters[key] = applied_dict[param]
+                    self._parameters[
+                        key
+                    ] = self._oneflow_internal_module_tensor_applied_dict__[param]
 
         for (key, buf) in self._buffers.items():
             if buf is not None:
-                if buf not in applied_dict:
+                if buf not in self._oneflow_internal_module_tensor_applied_dict__:
                     buf_applied = fn(buf)
                     self._buffers[key] = buf_applied
-                    applied_dict[buf] = buf_applied
+                    self._oneflow_internal_module_tensor_applied_dict__[
+                        buf
+                    ] = buf_applied
                 else:
-                    self._buffers[key] = applied_dict[buf]
+                    self._buffers[
+                        key
+                    ] = self._oneflow_internal_module_tensor_applied_dict__[buf]
+
+        self._oneflow_internal_module_tensor_applied_dict__ = None
         return self
 
     def apply(self: T, fn: Callable[["Module"], None]) -> T:
+        r"""
+        apply(fn)
+        
+        Applies ``fn`` recursively to every submodule (as returned by ``.children()``)
+        as well as self. Typical use includes initializing the parameters of a model.
+
+        Args:
+            fn (:class:`Module` -> None): function to be applied to each submodule
+
+        Returns:
+            Module: self
+
+        Example::
+    
+            >>> import oneflow as flow
+            >>> import oneflow.nn as nn
+            >>> @flow.no_grad()
+            ... def init_weights(m):
+            ...     print(m)
+            ...     if type(m) == nn.Linear:
+            ...         m.weight.fill_(1.0)
+            ...         print(m.weight)
+            >>> net = nn.Sequential(nn.Linear(2, 2), nn.Linear(2, 2))
+            >>> net.apply(init_weights)
+            Linear(in_features=2, out_features=2, bias=True)
+            tensor([[1., 1.],
+                    [1., 1.]], dtype=oneflow.float32, requires_grad=True)
+            Linear(in_features=2, out_features=2, bias=True)
+            tensor([[1., 1.],
+                    [1., 1.]], dtype=oneflow.float32, requires_grad=True)
+            Sequential(
+              (0): Linear(in_features=2, out_features=2, bias=True)
+              (1): Linear(in_features=2, out_features=2, bias=True)
+            )
+            Sequential(
+              (0): Linear(in_features=2, out_features=2, bias=True)
+              (1): Linear(in_features=2, out_features=2, bias=True)
+            )
+        """
         for module in self.children():
             module.apply(fn)
         fn(self)
         return self
 
-    def to(self, device: Optional[Union[str, flow.device]] = None):
+    @overload
+    def to(
+        self: T,
+        device: Optional[Union[int, str, flow.device]] = ...,
+        dtype: Optional[flow.dtype] = ...,
+    ) -> T:
+        ...
+
+    @overload
+    def to(self: T, dtype: flow.dtype) -> T:
+        ...
+
+    @overload
+    def to(self: T, tensor: Tensor) -> T:
+        ...
+
+    def to(self, *args, **kwargs):
+        r"""Moves and/or casts the parameters and buffers.
+
+        This can be called as
+
+        .. function:: to(device=None, dtype=None)
+           :noindex:
+
+        .. function:: to(dtype)
+           :noindex:
+
+        .. function:: to(tensor)
+           :noindex:
+
+        Its signature is similar to :meth:`oneflow.Tensor.to`, but only accepts
+        floating point :attr:`dtype`\ s. In addition, this method will
+        only cast the floating point parameters and buffers to :attr:`dtype`
+        (if given). The integral parameters and buffers will be moved
+        :attr:`device`, if that is given, but with dtypes unchanged.
+
+        See below for examples.
+
+        .. note::
+            This method modifies the module in-place.
+
+        Args:
+            device (:class:`oneflow.device`): the desired device of the parameters
+                and buffers in this module
+            dtype (:class:`oneflow.dtype`): the desired floating point dtype of
+                the parameters and buffers in this module
+            tensor (oneflow.Tensor): Tensor whose dtype and device are the desired
+                dtype and device for all parameters and buffers in this module
+
+        Returns:
+            Module: self
+
+        Examples::
+
+            >>> import oneflow as flow
+            >>> import oneflow.nn as nn
+            >>> linear = nn.Linear(2, 2)
+            >>> linear.weight.device
+            device(type='cpu', index=0)
+            >>> linear.weight.dtype
+            oneflow.float32
+            >>> linear.to(flow.double)
+            Linear(in_features=2, out_features=2, bias=True)
+            >>> linear.weight.dtype
+            oneflow.float64
+            >>> gpu1 = flow.device("cuda:1")
+            >>> linear.to(gpu1, dtype=flow.half)
+            Linear(in_features=2, out_features=2, bias=True)
+            >>> linear.weight.device
+            device(type='cuda', index=1)
+            >>> linear.weight.dtype
+            oneflow.float16
+            >>> cpu = flow.device("cpu")
+            >>> linear.to(cpu)
+            Linear(in_features=2, out_features=2, bias=True)
+            >>> linear.weight.device
+            device(type='cpu', index=0)
+
+        """
+
+        device = None
+        dtype = None
+        if len(args) + len(kwargs) == 2:
+            device = kwargs.pop("device", None) or args[0]
+            dtype = kwargs.pop("dtype", None) or args[1]
+        elif len(args) + len(kwargs) == 1:
+            if len(args) == 1:
+                arg = args[0]
+                if isinstance(arg, Tensor):
+                    device = arg.device
+                    dtype = arg.dtype
+                elif isinstance(arg, flow.dtype):
+                    dtype = arg
+                    device = None
+                elif isinstance(arg, (flow.device, str, int)):
+                    dtype = None
+                    device = arg
+                else:
+                    raise ValueError(f"Unsupported parameters in module.to: {arg}")
+            else:
+                device = kwargs.pop("device", None)
+                dtype = kwargs.pop("dtype", None)
+                tensor = kwargs.pop("tensor", None)
+                if tensor is not None:
+                    device = tensor.device
+                    dtype = tensor.dtype
+        else:
+            raise ValueError(
+                f"Unsupported parameters in module.to: {args} and {kwargs}"
+            )
+
+        if dtype is not None:
+            if not dtype.is_floating_point:
+                raise TypeError(
+                    "nn.Module.to only accepts floating point "
+                    "dtypes, but got desired dtype={}".format(dtype)
+                )
+
         def convert(t):
-            return t.to(device)
+            return t.to(device, dtype if t.is_floating_point() else None)
 
         return self._apply(convert)
 
@@ -577,7 +1237,10 @@ class Module(object):
         return self._apply(convert)
 
     def cpu(self: T) -> T:
-        r"""Moves all model parameters and buffers to the CPU.
+        r"""
+        cpu()
+        
+        Moves all model parameters and buffers to the CPU.
 
         .. note::
             This method modifies the module in-place.
@@ -588,7 +1251,10 @@ class Module(object):
         return self._apply(lambda t: t.cpu())
 
     def cuda(self: T, device: Optional[Union[int, flow.device]] = None) -> T:
-        r"""Moves all model parameters and buffers to the GPU.
+        r"""
+        cuda(device=None)
+        
+        Moves all model parameters and buffers to the GPU.
 
         This also makes associated parameters and buffers different objects. So
         it should be called before constructing optimizer if the module will
@@ -607,7 +1273,10 @@ class Module(object):
         return self._apply(lambda t: t.cuda(device))
 
     def float(self: T) -> T:
-        r"""Casts all floating point parameters and buffers to ``float`` datatype.
+        r"""
+        float()
+        
+        Casts all floating point parameters and buffers to ``float`` datatype.
 
         .. note::
             This method modifies the module in-place.
@@ -618,7 +1287,10 @@ class Module(object):
         return self._apply(lambda t: t.float() if t.is_floating_point() else t)
 
     def double(self: T) -> T:
-        r"""Casts all floating point parameters and buffers to ``double`` datatype.
+        r"""
+        double()
+        
+        Casts all floating point parameters and buffers to ``double`` datatype.
 
         .. note::
             This method modifies the module in-place.
@@ -627,6 +1299,20 @@ class Module(object):
             Module: self
         """
         return self._apply(lambda t: t.double() if t.is_floating_point() else t)
+
+    def half(self: T) -> T:
+        r"""
+        half()
+        
+        Casts all floating point parameters and buffers to ``half`` datatype.
+
+        .. note::
+            This method modifies the module in-place.
+
+        Returns:
+            Module: self
+        """
+        return self._apply(lambda t: t.half() if t.is_floating_point() else t)
 
     def _get_name(self):
         return self.__class__.__name__

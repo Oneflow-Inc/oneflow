@@ -28,13 +28,13 @@ namespace {
 
 bool RawIsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_split_parallel(); }
 
-static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocal);
+static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocalCached);
 
 bool RawIsPartialSumSbp(Symbol<SbpParallel> sbp_parallel) {
   return sbp_parallel->has_partial_sum_parallel();
 }
 
-static constexpr auto* IsPartialSumSbp = DECORATE(&RawIsPartialSumSbp, ThreadLocal);
+static constexpr auto* IsPartialSumSbp = DECORATE(&RawIsPartialSumSbp, ThreadLocalCached);
 
 Maybe<one::UserOpExpr> EagerSymmetricSToP(Symbol<ParallelDesc> parallel_desc,
                                           Symbol<SbpParallel> src_sbp, const Shape& logical_shape) {
@@ -47,8 +47,9 @@ Maybe<one::UserOpExpr> EagerSymmetricSToP(Symbol<ParallelDesc> parallel_desc,
 }
 
 static constexpr auto* CachedEagerSymmetricSToPOpExpr =
-    DECORATE(&EagerSymmetricSToP, ThreadLocalCopiable);
+    DECORATE(&EagerSymmetricSToP, ThreadLocalCachedCopiable);
 
+// NOLINTBEGIN(maybe-need-error-msg)
 Maybe<void> RawCheckSymmetricSToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                                   const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
@@ -60,17 +61,24 @@ Maybe<void> RawCheckSymmetricSToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> ou
   CHECK_OR_RETURN(in->placement() == out->placement());
   return Maybe<void>::Ok();
 }
+// NOLINTEND(maybe-need-error-msg)
 
-static constexpr auto* CheckSymmetricSToP = DECORATE(&RawCheckSymmetricSToP, ThreadLocalCopiable);
+static constexpr auto* CheckSymmetricSToP =
+    DECORATE(&RawCheckSymmetricSToP, ThreadLocalCachedCopiable);
 
 }  // namespace
 
 Maybe<one::Tensor> SymmetricSToP(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
                                  Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
-  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
+  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp())
+      << Error::RuntimeError() << "The sbp of input tensor (" << NdSbpToString(tensor_nd_sbp)
+      << ") must match the input sbp (" << NdSbpToString(in->nd_sbp()) << ")";
   const auto& tensor_placement = JUST(tensor->parallel_desc());
-  CHECK_OR_RETURN(tensor_placement == in->placement());
+  CHECK_OR_RETURN(tensor_placement == in->placement())
+      << Error::RuntimeError() << "The placement of input tensor ("
+      << *JUST(PlacementToString(tensor_placement)) << ") must match the input placement ("
+      << *JUST(PlacementToString(in->placement())) << ")";
 
   std::shared_ptr<one::OpExpr> op_expr = JUST(CachedEagerSymmetricSToPOpExpr(
       tensor_placement, SymbolOf(tensor_nd_sbp->sbp_parallel(0)), *tensor->shape()));

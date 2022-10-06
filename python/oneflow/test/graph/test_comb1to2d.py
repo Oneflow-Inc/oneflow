@@ -24,7 +24,11 @@ import numpy as np
 import oneflow.unittest
 
 
-class TestModuleDiffHierarchy(nn.Module):
+os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
+os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "0"
+
+
+class _TestModuleDiffHierarchy(nn.Module):
     def forward(self, x):
         sbp_1ds = [
             flow.sbp.broadcast,
@@ -32,7 +36,6 @@ class TestModuleDiffHierarchy(nn.Module):
             flow.sbp.split(0),
             flow.sbp.split(1),
             flow.sbp.split(2),
-            flow.sbp.split(3),
         ]
 
         for sbp1 in sbp_1ds:
@@ -55,7 +58,7 @@ class TestModuleDiffHierarchy(nn.Module):
         return x
 
 
-class TestModuleDiffPlacement(nn.Module):
+class _TestModuleDiffPlacement(nn.Module):
     def forward(self, x):
         sbp_1ds = [
             flow.sbp.broadcast,
@@ -63,7 +66,6 @@ class TestModuleDiffPlacement(nn.Module):
             flow.sbp.split(0),
             flow.sbp.split(1),
             flow.sbp.split(2),
-            flow.sbp.split(3),
         ]
 
         for sbp1 in sbp_1ds:
@@ -87,7 +89,7 @@ class TestModuleDiffPlacement(nn.Module):
         return x
 
 
-class TestGraph(nn.Graph):
+class _TestGraph(nn.Graph):
     def __init__(self, model):
         super().__init__()
         self.model = model
@@ -106,19 +108,20 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
             4,
             12,
             4,
-            12,
             sbp=[flow.sbp.broadcast, flow.sbp.broadcast],
             placement=flow.placement(
                 type="cuda", ranks=np.array(range(4)).reshape(2, 2)
             ),
         )
 
-        model_diff_hierarchy = TestModuleDiffHierarchy()
-        graph_diff_hierarchy = TestGraph(model_diff_hierarchy)
+        flow.boxing.nccl.enable_use_compute_stream(False)
+
+        model_diff_hierarchy = _TestModuleDiffHierarchy()
+        graph_diff_hierarchy = _TestGraph(model_diff_hierarchy)
         y = graph_diff_hierarchy(x)
 
-        model_diff_placement = TestModuleDiffPlacement()
-        graph_diff_placement = TestGraph(model_diff_placement)
+        model_diff_placement = _TestModuleDiffPlacement()
+        graph_diff_placement = _TestGraph(model_diff_placement)
         z = graph_diff_placement(x)
 
 

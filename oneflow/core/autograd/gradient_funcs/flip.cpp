@@ -57,9 +57,7 @@ Maybe<void> Flip::Apply(const FlipCaptureState* ctx, const TensorTuple& out_grad
                         TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(1);
-  if (ctx->requires_grad) {
-    in_grads->at(0) = JUST(functional::FlipGrad(out_grads.at(0), ctx->dims));
-  }
+  if (ctx->requires_grad) { (*in_grads)[0] = JUST(functional::Flip(out_grads[0], ctx->dims)); }
   return Maybe<void>::Ok();
 }
 

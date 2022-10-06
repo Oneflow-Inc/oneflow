@@ -19,5 +19,5 @@ else:
     inputs = inputs_g.to("npu").to(flow.float16)
     out = cross_entropy(inputs, labels)
     print(out)
-    out.backward()
-    print(inputs_g.grad)
+    # out.backward()
+    # print(inputs_g.grad)

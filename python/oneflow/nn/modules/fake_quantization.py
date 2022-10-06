@@ -45,6 +45,9 @@ class FakeQuantization(Module):
             & (clamp(round(x / scale + zero\\_point), quant\\_min, quant\\_max) - zero\\_point) * scale
 
     Args:
+        input(oneflow.Tensor):  the input value(s), in ``oneflow.float32``.
+        scale(oneflow.Tensor): quantization scale.
+        zero_point(oneflow.Tensor): quantization zero_point.
         quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8.
         quantization_scheme (str): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric".
         quantization_formula (str): Support "google" or "cambricon".

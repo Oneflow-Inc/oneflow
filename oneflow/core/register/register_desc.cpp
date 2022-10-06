@@ -18,11 +18,12 @@ limitations under the License.
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/register/runtime_register_desc.h"
+#include "oneflow/core/memory/memory_case_util.h"
 
 namespace oneflow {
 
 RegstDesc::RegstDesc() {
-  regst_desc_id_ = Global<IDMgr>::Get()->NewRegstDescId();
+  regst_desc_id_ = Singleton<IDMgr>::Get()->NewRegstDescId();  // NOLINT
   producer_ = nullptr;
   min_register_num_ = 1;
   max_register_num_ = kMaxRegisterNum;
@@ -173,22 +174,16 @@ bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {
 
 void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_proto) {
   CHECK_NOTNULL(ctrl_regst_proto);
-  ctrl_regst_proto->set_regst_desc_id(Global<IDMgr>::Get()->NewRegstDescId());
+  ctrl_regst_proto->set_regst_desc_id(Singleton<IDMgr>::Get()->NewRegstDescId());
   ctrl_regst_proto->set_producer_task_id(producer_task_id);
   ctrl_regst_proto->set_min_register_num(1);
   ctrl_regst_proto->set_max_register_num(1);
   ctrl_regst_proto->set_register_num(1);
   ctrl_regst_proto->mutable_regst_desc_type()->mutable_ctrl_regst_desc();
-  ctrl_regst_proto->mutable_mem_case()->mutable_host_mem();
+  *ctrl_regst_proto->mutable_mem_case() = memory::MakeHostMemCase();
   ctrl_regst_proto->set_enable_reuse_mem(false);
   ctrl_regst_proto->set_mem_block_id(-1);
   ctrl_regst_proto->set_mem_block_offset(-1);
-}
-
-MemoryCase MakeHostMemCase() {
-  MemoryCase mem_case;
-  mem_case.mutable_host_mem();
-  return mem_case;
 }
 
 }  // namespace oneflow

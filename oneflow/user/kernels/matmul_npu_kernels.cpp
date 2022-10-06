@@ -36,13 +36,13 @@ class MatmulNpuKernel final : public user_op::OpKernel {
     bool trans_a = ctx->Attr<bool>("transpose_a");
     bool trans_b = ctx->Attr<bool>("transpose_b");
     user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
-    CHECK_EQ(a->shape().NumAxes(), 2);
+    CHECK_EQ(a->shape_view().NumAxes(), 2);
     const DataType data_type = a->data_type();
     user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
-    CHECK_EQ(b->shape().NumAxes(), 2);
+    CHECK_EQ(b->shape_view().NumAxes(), 2);
     CHECK_EQ(b->data_type(), data_type);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(out->shape().NumAxes(), 2);
+    CHECK_EQ(out->shape_view().NumAxes(), 2);
     CHECK_EQ(out->data_type(), data_type);
     int64_t offset_x = 0;
     NpuCommand npu_command;

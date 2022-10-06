@@ -28,7 +28,9 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestBatchNormModule(flow.unittest.TestCase):
-    @autotest(auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=True)
+    @autotest(
+        auto_backward=True, rtol=1e-3, atol=1e-3, check_grad_use_random_data=False
+    )
     def test_batchnorm1d_module_with_random_data(test_case):
         device = random_device()
         channel = random(1, 4).to(int)
@@ -44,7 +46,9 @@ class TestBatchNormModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=True)
+    @autotest(
+        auto_backward=True, rtol=1e-3, atol=1e-3, check_grad_use_random_data=False
+    )
     def test_batchnorm2d_module_with_random_data(test_case):
         device = random_device()
         channel = random(1, 4).to(int)
@@ -60,7 +64,9 @@ class TestBatchNormModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=True)
+    @autotest(
+        auto_backward=True, rtol=1e-3, atol=1e-3, check_grad_use_random_data=False
+    )
     def test_batchnorm3d_module_with_random_data(test_case):
         device = random_device()
         channel = random(1, 4).to(int)
@@ -73,6 +79,36 @@ class TestBatchNormModule(flow.unittest.TestCase):
         x = random_tensor(ndim=5, dim1=channel, requires_grad=True).to(device)
         y = m(x)
         return y
+
+    """
+    @profile(torch.nn.BatchNorm1d) 
+    def profile_BatchNorm1d(test_case):
+        m1 = torch.nn.BatchNorm1d(100)
+        m2 = torch.nn.BatchNorm1d(100, affine=False)
+        input1 = torch.ones(20, 100)
+        input2 = torch.ones(20, 100)
+        out1=m1(input1)
+        out2=m2(input2)
+
+    @profile(torch.nn.BatchNorm2d) 
+    def profile_BatchNorm2d(test_case):
+        m1 = torch.nn.BatchNorm2d(10)
+        m2 = torch.nn.BatchNorm2d(10, affine=False)
+        print(type(m1),type(m2))
+        input1 = torch.ones(2, 10, 8, 3)
+        input2 = torch.ones(2, 10, 8, 3)
+        out1=m1(input1)
+        out2=m2(input2)
+
+    @profile(torch.nn.BatchNorm3d) 
+    def profile_BatchNorm3d(test_case):
+        m1 = torch.nn.BatchNorm3d(10)
+        m2 = torch.nn.BatchNorm3d(10, affine=False)
+        input1 = torch.ones(2, 10, 5, 8, 4)
+        input2 = torch.ones(2, 10, 5, 8, 4)
+        out1=m1(input1)
+        out2=m2(input2)
+    """
 
 
 if __name__ == "__main__":

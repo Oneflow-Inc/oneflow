@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/ep/include/primitive/add.h"
 #include "oneflow/core/ep/include/primitive/copy_nd.h"
+#include "oneflow/core/ep/include/primitive/memset.h"
 
 namespace oneflow {
 
@@ -97,6 +98,9 @@ void SliceBoxingAddKernel::ForwardDataContent(KernelContext* ctx) const {
       ep::primitive::NewPrimitive<ep::primitive::AddFactory>(ctx->stream()->device_type(),
                                                              out->data_type());
   CHECK(primitive);
+  std::unique_ptr<ep::primitive::Memset> memset_primitive =
+      ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->stream()->device_type());
+  CHECK(memset_primitive);
   FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
     const Blob* in_i = ctx->BnInOp2Blob(GenRepeatedBn("in", i));
     if (i == 0) {
@@ -111,6 +115,8 @@ void SliceBoxingAddKernel::ForwardDataContent(KernelContext* ctx) const {
                           out->shape().elem_cnt());
       } else {
         Blob* buf = ctx->BnInOp2Blob("buf");
+        memset_primitive->Launch(ctx->stream(), buf->mut_dptr(), 0,
+                                 buf->shape().elem_cnt() * GetSizeOfDataType(buf->data_type()));
         this->tensor_slice_copier_vec().at(i)->Copy(ctx->stream(), buf, in_i);
         primitive->Launch(ctx->stream(), out->dptr(), buf->dptr(), out->mut_dptr(),
                           out->shape().elem_cnt());

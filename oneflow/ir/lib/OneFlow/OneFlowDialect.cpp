@@ -17,6 +17,9 @@ limitations under the License.
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowTypes.h"
 #include "OneFlow/OneFlowOpsDialect.cpp.inc"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Dialect.h"
+#include "mlir/IR/TypeRange.h"
 
 namespace mlir {
 
@@ -134,11 +137,27 @@ void OneFlowDialect::initialize() {
       ,
 #define GET_OP_LIST
 #include "OneFlow/OneFlow.one_embedding_ops.cpp.inc"
+      ,
+#define GET_OP_LIST
+#include "OneFlow/OneFlow.linear_algebra_ops.cpp.inc"
+      ,
+#define GET_OP_LIST
+#include "OneFlow/OneFlow.system_ops.cpp.inc"
+      ,
+#define GET_OP_LIST
+#include "OneFlow/OneFlow.mlir_jit_ops.cpp.inc"
       >();
   addTypes<
 #define GET_TYPEDEF_LIST
 #include "OneFlow/OneFlowOpsTypes.cpp.inc"
       >();
+}
+
+mlir::Operation* OneFlowDialect::materializeConstant(mlir::OpBuilder& builder,
+                                                     mlir::Attribute value, mlir::Type type,
+                                                     mlir::Location loc) {
+  return builder.create<FrozenVariableOp>(loc, type, ValueRange(),
+                                          value.cast<mlir::DictionaryAttr>().getValue());
 }
 
 }  // namespace oneflow

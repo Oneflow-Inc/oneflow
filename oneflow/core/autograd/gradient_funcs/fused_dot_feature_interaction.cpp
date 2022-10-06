@@ -31,6 +31,7 @@ struct FusedDotFeatureInteractionCaptureState : public AutoGradCaptureState {
   bool self_interaction = false;
   bool has_output_concat = false;
   bool has_output_concat_grad = false;
+  std::string pooling;
 };
 
 class FusedDotFeatureInteraction
@@ -56,7 +57,6 @@ Maybe<void> FusedDotFeatureInteraction::Capture(FusedDotFeatureInteractionCaptur
                                                 const TensorTuple& inputs,
                                                 const TensorTuple& outputs,
                                                 const AttrMap& attrs) const {
-  ctx->SaveTensorForBackward(JUST(oneflow::VectorAt(outputs, 1)));  // padded_concated_features
   ctx->has_output_concat = JUST(attrs.GetAttr<bool>("has_output_concat"));
   int32_t num_features = 0;
   if (ctx->has_output_concat) {
@@ -77,6 +77,7 @@ Maybe<void> FusedDotFeatureInteraction::Capture(FusedDotFeatureInteractionCaptur
     if (feature->requires_grad()) { ctx->need_grad_op = true; }
     ctx->SaveTensorForBackward(feature);
   }
+  ctx->pooling = JUST(attrs.GetAttr<std::string>("pooling"));
   if (!ctx->need_grad_op) { return Maybe<void>::Ok(); }
   ctx->self_interaction = JUST(attrs.GetAttr<bool>("self_interaction"));
   return Maybe<void>::Ok();
@@ -88,22 +89,21 @@ Maybe<void> FusedDotFeatureInteraction::Apply(const FusedDotFeatureInteractionCa
   if (!ctx->need_grad_op) { return Maybe<void>::Ok(); }
   int32_t num_features = ctx->features_requires_grad.size();
   in_grads->resize(num_features + 1);
-  const auto& padded_concated_features = JUST(oneflow::VectorAt(ctx->SavedTensors(), 0));
-  TensorTuple like(num_features);
+  TensorTuple features(num_features);
   for (int i = 0; i < num_features; ++i) {
-    like[i] = JUST(oneflow::VectorAt(ctx->SavedTensors(), i + 1));
+    features[i] = JUST(oneflow::VectorAt(ctx->SavedTensors(), i));
   }
-
-  const auto grads = JUST(functional::FusedDotFeatureInteractionGrad(
-      JUST(oneflow::VectorAt(out_grads, 0)), padded_concated_features, like, ctx->has_output_concat,
-      ctx->self_interaction, ctx->output_concat_grad_dim));
+  std::shared_ptr<oneflow::one::TensorTuple> grads;
+  grads = JUST(functional::FusedDotFeatureInteractionGrad(
+      JUST(oneflow::VectorAt(out_grads, 0)), features, ctx->has_output_concat,
+      ctx->self_interaction, ctx->output_concat_grad_dim, ctx->pooling));
   for (int32_t i = 0; i < num_features; ++i) {
     if (JUST(oneflow::VectorAt(ctx->features_requires_grad, i))) {
-      *JUST(oneflow::VectorAt(in_grads, i)) = JUST(oneflow::VectorAt(*grads, i));
+      JUST(oneflow::VectorAt(*in_grads, i)) = JUST(oneflow::VectorAt(*grads, i));
     }
   }
   if (ctx->has_output_concat_grad) {
-    *JUST(oneflow::VectorAt(in_grads, num_features)) =
+    JUST(oneflow::VectorAt(*in_grads, num_features)) =
         JUST(oneflow::VectorAt(*grads, num_features));
   }
   return Maybe<void>::Ok();

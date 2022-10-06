@@ -24,21 +24,20 @@ limitations under the License.
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/framework/to_string.h"
 
 namespace oneflow {
-
-const std::unordered_set<std::string> Device::type_supported({"cuda", "cpu", "npu"});
 
 namespace {
 
 inline size_t HashDevice(const std::string& type, int64_t device_id) {
-  return std::hash<std::string>()(type) ^ std::hash<int64_t>()(device_id);
+  return Hash(type, device_id);
 }
 
 void CheckDeviceType(const std::string& type) {
-  if (Device::type_supported.find(type) == Device::type_supported.end()) {
-    std::string error_msg =
-        "Expected one of cpu, cuda device type at start of device string " + type;
+  if (!TRY(DeviceType4DeviceTag(type)).IsOk()) {
+    std::string error_msg = "Expected one of " + PrintAvailableDevices()
+                            + " device type at start of device string: " + type;
     throw std::runtime_error(error_msg);
   }
 }
@@ -53,8 +52,12 @@ Device::Device(const std::string& type, int64_t device_id)
 
 Maybe<void> Device::Init() {
   if (type_ == "auto") { return Maybe<void>::Ok(); }
-  enum_type_ = JUST(DeviceType4DeviceTag(JUST(of_type())));
-  mem_case_ = MemoryCaseUtil::MakeMemCase(enum_type_, device_id_);
+  enum_type_ = JUST(DeviceType4DeviceTag(type()));
+  {
+    DeviceType dev_type = enum_type_;
+    if (dev_type == kMockDevice) { dev_type = DeviceType::kCPU; }
+    mem_case_ = memory::MakeMemCaseShared(enum_type_, device_id_);
+  }
   return Maybe<void>::Ok();
 }
 
@@ -64,7 +67,8 @@ Maybe<void> Device::Init() {
 
 /* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(const std::string& type,
                                                                int64_t device_id) {
-  CHECK_GE_OR_RETURN(device_id, 0);
+  CHECK_GE_OR_RETURN(device_id, 0)
+      << Error::InvalidValueError() << "Device ID should be non-negative";
   static thread_local HashMap<std::string, HashMap<int64_t, Symbol<Device>>> map;
   auto* device_id2symbol = &map[type];
   auto iter = device_id2symbol->find(device_id);
@@ -76,32 +80,31 @@ Maybe<void> Device::Init() {
   return iter->second;
 }
 
+/* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(
+    const std::string& type_or_type_with_device_id) {
+  static thread_local HashMap<std::string, Symbol<Device>> map;
+  auto iter = map.find(type_or_type_with_device_id);
+  if (iter == map.end()) {
+    std::string type;
+    int device_id = -1;
+    JUST(ParsingDeviceTag(type_or_type_with_device_id, &type, &device_id));
+    CheckDeviceType(type);
+    if (device_id == -1) { device_id = GlobalProcessCtx::LocalRank(); }
+    Device device(type, device_id);
+    JUST(device.Init());
+    iter = map.emplace(type_or_type_with_device_id, SymbolOf(device)).first;
+  }
+  return iter->second;
+}
+
 /* static */ Maybe<Symbol<Device>> Device::New(const std::string& type) {
   return New(type, GlobalProcessCtx::LocalRank());
 }
 
 /* static */ Maybe<Symbol<Device>> Device::ParseAndNew(
     const std::string& type_or_type_with_device_id) {
-  std::string type;
-  int device_id = -1;
-  JUST(ParsingDeviceTag(type_or_type_with_device_id, &type, &device_id));
-  CheckDeviceType(type);
-  if (device_id == -1) {
-    return Device::New(type);
-  } else {
-    return Device::New(type, device_id);
-  }
-}
 
-Maybe<const std::string&> Device::of_type() const {
-  static const HashMap<std::string, std::string> type2device_tag{
-      {"cpu", "cpu"},
-      {"gpu", "gpu"},
-      {"cuda", "gpu"},
-      {"npu", "npu"},
-      {"auto", "auto"},  // Only used for auto generator currently.
-  };
-  return MapAt(type2device_tag, type());
+  return ThreadLocalGetOrNew(type_or_type_with_device_id);
 }
 
 std::string Device::ToRepr() const {
@@ -122,24 +125,24 @@ std::string Device::ToString() const {
 }
 
 Maybe<Symbol<Device>> Device::MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc) {
-  std::string type = Type4DeviceTag(parallel_desc.device_tag());
+  const std::string& type = parallel_desc.device_tag();
   std::vector<std::string> machine_device_ids;
   machine_device_ids.reserve(parallel_desc.parallel_conf().device_name().size());
   for (const auto& item : parallel_desc.parallel_conf().device_name()) {
     machine_device_ids.emplace_back(item);
   }
-  CHECK_EQ_OR_RETURN(machine_device_ids.size(), 1);
+  CHECK_EQ_OR_RETURN(machine_device_ids.size(), 1)
+      << Error::InvalidValueError() << "Number of machine device should be one";
   const std::string& machine_device_id = machine_device_ids.at(0);
   size_t pos = machine_device_id.find(':');
-  CHECK_NE_OR_RETURN(pos, std::string::npos) << "device_name: " << machine_device_id;
+  CHECK_NE_OR_RETURN(pos, std::string::npos)
+      << Error::InvalidValueError() << "Invalid device ID: " << machine_device_id;
   std::string device_id = machine_device_id.substr(pos + 1);
-  CHECK_EQ_OR_RETURN(device_id.find('-'), std::string::npos);
-  CHECK_OR_RETURN(IsStrInt(device_id));
+  CHECK_EQ_OR_RETURN(device_id.find('-'), std::string::npos)
+      << Error::InvalidValueError() << "Device ID should be non-negative";
+  CHECK_OR_RETURN(IsStrInt(device_id))
+      << Error::InvalidValueError() << "Device ID is not integer: " << device_id;
   return Device::New(type, std::stoi(device_id));
-}
-
-std::string Device::Type4DeviceTag(const std::string& device_tag) {
-  return device_tag == "gpu" ? "cuda" : device_tag;
 }
 
 namespace {
@@ -148,7 +151,7 @@ Maybe<Symbol<ParallelDesc>> RawGetPlacement(const Device& device) {
   std::string machine_device_id =
       "@" + std::to_string(GlobalProcessCtx::Rank()) + ":" + std::to_string(device.device_id());
   ParallelConf parallel_conf;
-  parallel_conf.set_device_tag(JUST(device.of_type()));
+  parallel_conf.set_device_tag(device.type());
   parallel_conf.add_device_name(machine_device_id);
   return SymbolOf(ParallelDesc(parallel_conf));
 }
@@ -171,7 +174,8 @@ Maybe<void> ParsingDeviceTag(const std::string& device_tag, std::string* device_
     *device_index = -1;
   } else {
     std::string index_str = device_tag.substr(pos + 1);
-    CHECK_OR_RETURN(IsStrInt(index_str)) << "Invalid device " << device_tag;
+    CHECK_OR_RETURN(IsStrInt(index_str))
+        << Error::InvalidValueError() << "Invalid device tag " << device_tag;
     *device_name = device_tag.substr(0, pos);
     *device_index = std::stoi(index_str);
   }

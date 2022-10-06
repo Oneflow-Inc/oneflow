@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/register/register_desc.h"
 #include "oneflow/core/lazy/actor/actor_context.h"
+#include "oneflow/core/memory/memory_case_util.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -74,7 +75,7 @@ class SyncDynamicResizeGPUKernel final : public Kernel {
     AutoMemcpy(ctx->stream(), out->mut_dptr(), in->dptr(), in->ByteSizeOfBlobBody(),
                out->mem_case(), in->mem_case());
     AutoMemcpy(ctx->stream(), cuda_host_mem_ptr->Ptr(), size->dptr(), sizeof(SizeType),
-               MakeHostMemCase(), size->mem_case());
+               memory::MakeHostMemCase(), size->mem_case());
     const auto& UpdateShape = [out, cuda_host_mem_ptr, conf, this]() {
       const int64_t new_size = *reinterpret_cast<SizeType*>(cuda_host_mem_ptr->Ptr());
       CHECK_GE(new_size, 0);
@@ -104,7 +105,7 @@ class SyncDynamicResizeGPUKernel final : public Kernel {
 #define REGISTER_SYNC_DYNAMIC_RESIZE_GPU_KERNEL(stype)                                         \
   NEW_REGISTER_KERNEL(OperatorConf::kSyncDynamicResizeConf, SyncDynamicResizeGPUKernel<stype>) \
       .SetIsMatchedPred([](const KernelConf& kernel_conf) {                                    \
-        return (kernel_conf.op_attribute().op_conf().device_tag() == "gpu"                     \
+        return (kernel_conf.op_attribute().op_conf().device_tag() == "cuda"                    \
                 && GetDataType<stype>::value                                                   \
                        == kernel_conf.sync_dynamic_resize_conf().size_data_type());            \
       })

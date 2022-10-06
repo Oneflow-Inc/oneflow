@@ -13,8 +13,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/core/common/global.h"
-#include "oneflow/core/job/foreign_callback.h"
+#include "oneflow/core/common/singleton.h"
 
 namespace oneflow {
 
@@ -28,16 +27,7 @@ class IdentityEvalKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const ShapeView& in_shape = in->shape();
-    CHECK_EQ(out->shape(), in_shape);
-    const DataType in_data_type = in->data_type();
-    CHECK_EQ(out->data_type(), in_data_type);
-    Memcpy<device_type>(ctx->stream(), out->mut_dptr<void>(), in->dptr<void>(),
-                        in_shape.elem_cnt() * GetSizeOfDataType(in_data_type));
-    const std::string& code = ctx->Attr<std::string>("code");
-    (*CHECK_NOTNULL(Global<std::shared_ptr<ForeignCallback>>::Get()))->Eval(code);
+    UNIMPLEMENTED();
  }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

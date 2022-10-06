@@ -102,7 +102,7 @@ class CudaDeviceManagerFactory : public DeviceManagerFactory {
 
   DeviceType device_type() const override { return DeviceType::kCUDA; }
 
-  std::string device_type_name() const override { return "gpu"; }
+  std::string device_type_name() const override { return "cuda"; }
 
   void DumpVersionInfo() const override { CudaDumpVersionInfo(); }
 };

@@ -44,7 +44,7 @@ class SummaryWriteScalar final : public user_op::OpKernel {
     CHECK_NOTNULL(istep);
     int8_t* ctag = const_cast<int8_t*>(tag->dptr<int8_t>());
     CHECK_NOTNULL(ctag);
-    std::string tag_str(reinterpret_cast<char*>(ctag), tag->shape().elem_cnt());
+    std::string tag_str(reinterpret_cast<char*>(ctag), tag->shape_view().elem_cnt());
     EventWriterHelper<DeviceType::kCPU, T>::WriteScalarToFile(
         istep[0], static_cast<double>(tvalue[0]), tag_str);
   }
@@ -70,7 +70,7 @@ class CreateSummaryWriter final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const std::string& logdir = ctx->Attr<std::string>("logdir");
-    CHECK_JUST(Global<EventsWriter>::Get()->Init(logdir));
+    CHECK_JUST(Singleton<EventsWriter>::Get()->Init(logdir));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -86,7 +86,7 @@ class FlushSummaryWriter final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    Global<EventsWriter>::Get()->Flush();
+    Singleton<EventsWriter>::Get()->Flush();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -110,7 +110,7 @@ class SummaryWriteHistogram final : public user_op::OpKernel {
     CHECK_NOTNULL(istep);
     int8_t* ctag = const_cast<int8_t*>(tag->dptr<int8_t>());
     CHECK_NOTNULL(ctag);
-    std::string tag_str(reinterpret_cast<char*>(ctag), tag->shape().elem_cnt());
+    std::string tag_str(reinterpret_cast<char*>(ctag), tag->shape_view().elem_cnt());
     EventWriterHelper<DeviceType::kCPU, T>::WriteHistogramToFile(static_cast<float>(istep[0]),
                                                                  *value, tag_str);
   }
@@ -144,7 +144,7 @@ class SummaryWritePb final : public user_op::OpKernel {
     CHECK_NOTNULL(istep);
     int8_t* cvalue = const_cast<int8_t*>(value->dptr<int8_t>());
     CHECK_NOTNULL(cvalue);
-    std::string value_str(reinterpret_cast<char*>(cvalue), value->shape().elem_cnt());
+    std::string value_str(reinterpret_cast<char*>(cvalue), value->shape_view().elem_cnt());
     EventWriterHelper<DeviceType::kCPU, T>::WritePbToFile(istep[0], value_str);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
@@ -170,7 +170,7 @@ class SummaryWriteImage final : public user_op::OpKernel {
     CHECK_NOTNULL(istep);
     char* ctag = const_cast<char*>(tag->dptr<char>());
     CHECK_NOTNULL(ctag);
-    std::string tag_str(ctag, tag->shape().elem_cnt());
+    std::string tag_str(ctag, tag->shape_view().elem_cnt());
     EventWriterHelper<DeviceType::kCPU, T>::WriteImageToFile(static_cast<int64_t>(istep[0]), *value,
                                                              tag_str);
   }

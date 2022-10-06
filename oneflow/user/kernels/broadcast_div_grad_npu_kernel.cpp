@@ -34,7 +34,7 @@ class BroadcastDivGradNpuKernel final : public user_op::OpKernel {
     user_op::Tensor* dz = ctx->Tensor4ArgNameAndIndex("dz", 0);
     user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    CHECK_EQ(tmp_buffer->shape().elem_cnt(), sizeof(T));
+    CHECK_EQ(tmp_buffer->shape_view().elem_cnt(), sizeof(T));
     AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(), DataTypeTraits<T>::type, 0, nullptr, ACL_FORMAT_ND, sizeof(T));
     //dck_caution_here datatypetraits
     NpuCommand div_command;

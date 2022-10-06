@@ -17,34 +17,24 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<bool> SyncLaunched(user_op::DeviceAndStreamInferContext* ctx) { return false; }
-
-Maybe<bool> IsAsyncLaunched(user_op::DeviceAndStreamInferContext* ctx) {
-  return ctx->Attr<bool>("async_launch");
-}
-
 namespace {
 
-Maybe<Symbol<Stream>> RawGetNcclDevice(bool is_async_launced) {
-  StreamRole stream_role =
-      (is_async_launced ? StreamRole::kAsyncedLaunchedCommNet : StreamRole::kSyncedLaunchedCommNet);
-  return Stream::New(JUST(Device::New("cuda")), stream_role);
+Maybe<Symbol<Stream>> RawGetNcclDevice() {
+  return Stream::New(JUST(Device::New("cuda")), StreamType::kCcl);
 }
 
 Maybe<Symbol<Stream>> RawGetHcclDevice(bool is_async_launced) {
-  StreamRole stream_role =
-      (is_async_launced ? StreamRole::kAsyncedLaunchedCommNet : StreamRole::kSyncedLaunchedCommNet);
-  return Stream::New(JUST(Device::New("npu")), stream_role);
+  return Stream::New(JUST(Device::New("npu")), StreamType::kCcl);
 }
 
 Maybe<Symbol<Stream>> RawGetCpuTransportDevice() {
-  return Stream::New(JUST(Device::New("cpu")), StreamRole::kSyncedLaunchedCommNet);
+  return Stream::New(JUST(Device::New("cpu")), StreamType::kCcl);
 }
 
 }  // namespace
 
 decltype(GetNcclDevice) GetNcclDevice = DECORATE(&RawGetNcclDevice, ThreadLocal);
-decltype(GetHcclDevice) GetHcclDevice = DECORATE(&RawGetHcclDevice, ThreadLocal);
+// decltype(GetHcclDevice) GetHcclDevice = DECORATE(&RawGetHcclDevice, ThreadLocal);
 decltype(GetCpuTransportDevice) GetCpuTransportDevice =
     DECORATE(&RawGetCpuTransportDevice, ThreadLocal);
 

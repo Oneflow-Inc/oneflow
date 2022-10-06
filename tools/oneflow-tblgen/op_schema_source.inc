@@ -11,16 +11,16 @@ R"OP_SCHEMA_INC(
 namespace oneflow {
 
 #define REGISTER_OP_SCHEMA(op_type, schema) \
-  REGISTER_CLASS_CREATOR(std::string, op_type, OpBase, ([]() { return new schema; }))
+  REGISTER_CLASS_CREATOR(std::string, op_type, OpDefinitionBase, ([]() { return new schema; }))
 
 {% for opname, op in ops %}
-const HashSet<std::string>& {{opname}}::AttrNames() const {
+/*static*/ const HashSet<std::string>& {{opname}}::AttrNames() {
   static const HashSet<std::string> attr_names = { {%- for attr in op.attrs -%}"{{attr.name}}", {%- endfor -%} };
   return attr_names;
 }
 
 namespace schema {
-Maybe<AttrVal> {{opname}}::GetAttr(const std::string& attr_name) const {
+Maybe<AttrVal> {{opname}}::Attr(const std::string& attr_name) const {
   {% for attr in op.attrs %}if(attr_name == "{{attr.name}}") {
     return CastAttrValue(&{{attr.name}}_);
   }
@@ -64,6 +64,9 @@ REGISTER_USER_OP("{{op.name}}")
 {%- if op.no_grad -%}
     .NoGrad()
 {%- endif -%}
+{%- if op.support_non_contiguous -%}
+    .SupportNonContiguous()
+{%- endif -%}
 {%- if op.same_output_regst_num != -1 -%}
     .SetOutputBufferNum({{op.same_output_regst_num}})
 {%- endif -%}
@@ -72,6 +75,15 @@ REGISTER_USER_OP("{{op.name}}")
 {%- endif -%}
 {%- if op.has_get_sbp_fn -%}
     .SetGetSbpFn(&{{opname}}::GetSbp)
+{%- endif -%}
+{%- if op.has_get_nd_sbp_fn -%}
+    .SetGetNdSbpSignatureListFn(&{{opname}}::GetNdSbpSignatureList)
+{%- endif -%}
+{%- if op.has_dump_nd_sbp_signature_for_op_conf_fn -%}
+    .SetDumpNdSbpSignatureForOpConfFn(&{{opname}}::DumpNdSbpSignatureForOpConfFn)
+{%- endif -%}
+{%- if op.has_compute_complexity_fn -%}
+    .SetComputeComplexityFn(&{{opname}}::GetComputeComplexity)
 {%- endif -%}
 {%- if op.has_logical_tensor_desc_infer_fn -%}
     .SetLogicalTensorDescInferFn(&{{opname}}::InferLogicalTensorDesc)

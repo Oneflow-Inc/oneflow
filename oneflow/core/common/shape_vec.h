@@ -16,26 +16,15 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_SHAPE_VEC_H_
 #define ONEFLOW_CORE_COMMON_SHAPE_VEC_H_
 
-#include "oneflow/core/common/fixed_vector.h"
+#include "oneflow/core/common/small_vector.h"
 
 namespace oneflow {
 
-//#define DISABLE_FIXED_SHAPE_VEC
 #define SHAPE_MAX_AXIS_SIZE 20
 
-#if defined(DISABLE_FIXED_SHAPE_VEC)
+typedef small_vector<int64_t, SHAPE_MAX_AXIS_SIZE> DimVector;
+typedef small_vector<int64_t, SHAPE_MAX_AXIS_SIZE> AxisVector;
 
-typedef std::vector<int64_t> DimVector;
-typedef std::vector<int64_t> AxisVector;
-typedef std::vector<int64_t> StrideVector;
-
-#else
-
-typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> DimVector;
-typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> AxisVector;
-typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> StrideVector;
-
-#endif
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_SHAPE_VEC_H_

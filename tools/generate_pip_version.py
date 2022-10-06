@@ -4,27 +4,31 @@ import argparse
 from datetime import date
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--xla", default=False, action="store_true", required=False)
 parser.add_argument("--cuda", type=str, required=False)
+parser.add_argument("--cmake_project_binary_dir", type=str, required=False)
 parser.add_argument("--src", type=str, required=False)
 parser.add_argument("--out", type=str, required=False)
 args = parser.parse_args()
 
 local_label = ""
-version = f"0.7.0"
+version = f"0.8.1"
 
 os.environ["ONEFLOW_RELEASE_VERSION"] = version
 # set version if release of nightly
 assert (
     os.getenv("ONEFLOW_RELEASE_VERSION") != ""
 ), "ONEFLOW_RELEASE_VERSION should be either None or a valid string"
+is_release = False
+is_nightly = False
 if os.getenv("ONEFLOW_RELEASE_VERSION"):
     release_version = os.getenv("ONEFLOW_RELEASE_VERSION")
     version = f"{release_version}"
+    is_release = True
 elif os.getenv("ONEFLOW_RELEASE_NIGHTLY"):
     today = date.today()
     date_str = today.strftime("%Y%m%d")
     version += f".dev{date_str}"
+    is_nightly = True
 
 # append compute_platform
 compute_platform = ""
@@ -36,8 +40,6 @@ if args.cuda:
     compute_platform = "cu" + compute_platform
 else:
     compute_platform = "cpu"
-if args.xla:
-    compute_platform += ".xla"
 assert compute_platform
 version += f"+{compute_platform}"
 
@@ -62,3 +64,5 @@ assert args.out
 with open(args.out, "w+") as f:
     f.write(f'__version__ = "{version}"\n')
     f.write(f'__git_commit__ = "{git_hash}"\n')
+    if not (is_nightly or is_release):
+        f.write(f'__cmake_project_binary_dir__ = "{args.cmake_project_binary_dir}"\n')

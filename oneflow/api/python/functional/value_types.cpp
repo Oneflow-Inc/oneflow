@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/api/python/functional/value_types.h"
 
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/hash_container.h"
 
 namespace oneflow {
@@ -70,10 +71,10 @@ HashMap<ValueType, std::string>* GetValueTypeNameMap() {
   return &value_type_name_map;
 }
 
-Maybe<const std::string&> ValueTypeName(ValueType type) {
+const std::string& ValueTypeName(ValueType type) {
   const auto* type_name_map = GetValueTypeNameMap();
   const auto& it = type_name_map->find(type);
-  CHECK_OR_RETURN(it != type_name_map->end()) << "Value type " << type << " has no type name.";
+  CHECK_OR_THROW(it != type_name_map->end()) << "Value type " << type << " has no type name.";
   return it->second;
 }
 

@@ -75,10 +75,23 @@ add_docstr(
     r"""
     gelu(x: Tensor) -> Tensor 
 
-    The equation is:
+    Applies the Gaussian Error Linear Units function:
 
-    .. math::
-         out = 0.5 * x * (1 + tanh(\sqrt{\frac{2}{\pi}} * (x + 0.044715x^{3})))
+    .. math:: \\text{GELU}(x) = x * \Phi(x)
+
+    where :math:`\Phi(x)` is the Cumulative Distribution Function for Gaussian Distribution.
+
+    When the approximate argument is 'tanh', Gelu is estimated with:
+
+    .. math:: \\text{GELU}(x) = 0.5 * x * (1 + \\text{Tanh}(\sqrt(2 / \pi) * (x + 0.044715 * x^3)))
+
+    Args:
+        input (oneflow.Tensor): Input Tensor
+        approximate (string, optional): the gelu approximation algorithm to use:
+            ``'none'`` | ``'tanh'``. Default: ``'none'``
+
+    Returns:
+        oneflow.Tensor: A Tensor has same shape as the input.
     
     For example:
 
@@ -132,12 +145,15 @@ add_docstr(
 add_docstr(
     oneflow.softplus,
     r"""
-    softplus(x: Tensor) -> Tensor 
+    softplus(x: Tensor, beta: double = 1, threshold: double = 20) -> Tensor 
 
     Applies the element-wise function:
 
     .. math::
-        \text{Softplus}(x) = \frac{1}{\beta} * \log(1 + \exp(\beta * x))    
+        \text{Softplus}(x) = \frac{1}{\beta} * \log(1 + \exp(\beta * x))   
+
+    For numerical stability the implementation reverts to the linear function
+    when :math:`input \times \beta > threshold`. 
     
     See :class:`~oneflow.nn.Softplus` for more details.
     """,
@@ -334,7 +350,7 @@ add_docstr(
         >>> import numpy as np
         >>> import oneflow as flow
 
-        >>> x = flow.tensor(np.array([0.81733328, 0.43621480, 0.10351428]))
+        >>> x = np.array([0.81733328, 0.43621480, 0.10351428])
         >>> input = flow.tensor(x, dtype=flow.float32)
         >>> out = flow.nn.functional.sigmoid(input)
         >>> out
@@ -394,7 +410,11 @@ add_docstr(
     """
     selu(x: Tensor) -> Tensor
 
-    Applies element-wise function :math:`\text{SELU}(x) = scale * (\max(0,x) + \min(0, \alpha * (\exp(x) - 1)))`, with :math:`\alpha=1.6732632423543772848170429916717` and  :math:`scale=1.0507009873554804934193349852946`.
+    Applies element-wise function
+
+    .. math::
+
+        \text{SELU}(x) = scale * (\max(0,x) + \min(0, \alpha * (\exp(x) - 1)))`, with :math:`\alpha=1.6732632423543772848170429916717` and  :math:`scale=1.0507009873554804934193349852946`.
 
     See :class:`~oneflow.nn.SELU` for more details.
 
@@ -469,5 +489,38 @@ add_docstr(
         >>> out = flow.nn.functional.celu(input, alpha=0.5)
         >>> out
         tensor([-0.3161,  0.0000,  0.5000], dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
+    oneflow._C.threshold,
+    """
+    threshold(input: Tensor, threshold: float, value: float) -> Tensor
+
+    Thresholds each element of the input Tensor.
+
+    See :class:`~oneflow.nn.Threshold` for more details.
+    """,
+)
+
+add_docstr(
+    oneflow._C.hardshrink,
+    """
+    hardshrink(input: Tensor, lambd: float=0.5, inplace: bool=False) -> Tensor
+
+    Applies the hard shrinkage function in an element-wise manner.
+
+    See :class:`~oneflow.nn.Hardshrink` for more details.
+    """,
+)
+
+add_docstr(
+    oneflow._C.softshrink,
+    """
+    softshrink(input: Tensor, lambd: float=0.5, inplace: bool=False) -> Tensor
+
+    Applies the soft shrinkage function in an element-wise manner.
+
+    See :class:`~oneflow.nn.Softshrink` for more details.
     """,
 )

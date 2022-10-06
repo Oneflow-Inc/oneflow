@@ -43,17 +43,18 @@ NpuDevice::NpuDevice(int device_index, DeviceManager* device_manager)
       const_zeros_buffer_(nullptr),
       const_ones_buffer_fp32_(nullptr),
       const_ones_buffer_fp16_(nullptr) {
-  NpuCurrentDeviceGuard guard(device_index_);
-  const_buf_elem_cnt_ = ParseIntegerFromEnv("ONEFLOW_EP_NPU_CONST_BUFFER_ELEMENT_COUNT",
-                                            kDefaultConstBufElementCount);
-  if (const_buf_elem_cnt_ > 0) {
-    CreateConstBuffer<float>(&const_zeros_buffer_, static_cast<float>(0), const_buf_elem_cnt_);
-    CreateConstBuffer<float>(&const_ones_buffer_fp32_, static_cast<float>(1.0),
-                             const_buf_elem_cnt_);
-    CreateConstBuffer<aclFloat16>(&const_ones_buffer_fp16_, static_cast<aclFloat16>(1.0), const_buf_elem_cnt_);
+    NpuCurrentDeviceGuard guard(device_index_);
+    event_flags_ = ACL_EVENT_TIME_LINE;
+
+    const_buf_elem_cnt_ = ParseIntegerFromEnv("ONEFLOW_EP_CUDA_CONST_BUFFER_ELEMENT_COUNT",
+                                              kDefaultConstBufElementCount);
+    if (const_buf_elem_cnt_ > 0) {
+      CreateConstBuffer<float>(&const_zeros_buffer_, static_cast<float>(0), const_buf_elem_cnt_);
+      CreateConstBuffer<float>(&const_ones_buffer_fp32_, static_cast<float>(1.0),
+                              const_buf_elem_cnt_);
+      CreateConstBuffer<aclFloat16>(&const_ones_buffer_fp16_, static_cast<aclFloat16>(1.0), const_buf_elem_cnt_);
   }
 }
-
 NpuDevice::~NpuDevice() {
   NpuCurrentDeviceGuard guard(device_index_);
   //for (auto* event : events_) { delete event; }
@@ -62,7 +63,7 @@ NpuDevice::~NpuDevice() {
   OF_NPU_CHECK(aclrtFree(const_ones_buffer_fp16_));
 }
 
-void NpuDevice::SetAsActiveDevice() { }
+void NpuDevice::SetAsActiveDevice() { OF_NPU_CHECK(aclrtSetDevice(device_index_));}
 
 Stream* NpuDevice::CreateStream() {
   //std::cout<<"NpuDevice::CreateStream()"<<std::endl;
@@ -76,7 +77,6 @@ void NpuDevice::DestroyStream(Stream* stream) {
 }
 
 void NpuDevice::CreateEvents(Event** events, size_t count) {
-  std::cout<<"NpuDevice::CreateEvents()"<<std::endl;
   size_t copied = 0;
   {
     std::lock_guard<std::mutex> lock(events_mutex_);
@@ -92,27 +92,34 @@ void NpuDevice::CreateEvents(Event** events, size_t count) {
 }
 
 void NpuDevice::DestroyEvents(Event** events, size_t count) {
-  std::cout<<"NpuDevice::DestroyEvents()"<<std::endl;
   std::lock_guard<std::mutex> lock(events_mutex_);
   events_.insert(events_.end(), events, events + count);
 }
 
 Maybe<void> NpuDevice::Alloc(const AllocationOptions& options, void** ptr, size_t size) {
-  std::cout<<"NpuDevice::Alloc()"<<std::endl;
   NpuCurrentDeviceGuard guard(device_index_);
   CHECK(!options.HasPinnedDevice());
-  aclError err = aclrtMalloc(ptr, size, ACL_MEM_MALLOC_NORMAL_ONLY);
+  aclError err = aclrtMalloc(ptr, size, ACL_MEM_MALLOC_HUGE_FIRST);
   if (err != ACL_SUCCESS) {
-    return Error::RuntimeError() << err;
+    return Error::RuntimeError() << "NpuDevice Alloc Error "<< err;
   } else {
     return Maybe<void>::Ok();
   }
 }
 
 void NpuDevice::Free(const AllocationOptions& attr, void* ptr) {
-  std::cout<<"NpuDevice::Free()"<<std::endl;
   NpuCurrentDeviceGuard guard(device_index_);
   OF_NPU_CHECK(aclrtFree(ptr));
+}
+
+Maybe<void> NpuDevice::AllocPinned(const AllocationOptions& options, void** ptr, size_t size) {
+  NpuCurrentDeviceGuard guard(device_index_);
+  aclError err = aclrtMallocHost(ptr, size);
+  if (err != ACL_SUCCESS) {
+    return Error::RuntimeError() << " NpuDevice::AllocPinned Failed";
+  } else {
+    return Maybe<void>::Ok();
+  }
 }
 
 const void* NpuDevice::GetConstZeros(DataType data_type, size_t n) const {

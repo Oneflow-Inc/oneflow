@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/register/register_manager.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/str_util.h"
@@ -40,15 +41,16 @@ struct PackedChunkInfo {
 
 }  // namespace
 
-void RegstMgr::AddPlan(const Plan& plan,
-                       const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
+void RegstMgr::AddPlan(
+    const Plan& plan,
+    const HashMap<std::string, vm::EagerBlobObject*>& variable_op_name2eager_blob_object) {
   int64_t this_machine_id = GlobalProcessCtx::Rank();
 
   HashMap<int64_t, char*> chunk_id2ptr;
   for (const ChunkProto& chunk : plan.block_chunk_list().chunk()) {
     if (chunk.machine_id() != this_machine_id) { continue; }
     if (chunk.mem_size() == 0) { continue; }
-    char* chunk_ptr = Global<ChunkMgr>::Get()->FindOrCreateChunk(chunk);
+    char* chunk_ptr = Singleton<ChunkMgr>::Get()->FindOrCreateChunk(chunk);
     CHECK(chunk_id2ptr.emplace(chunk.chunk_id(), chunk_ptr).second);
   }
 
@@ -71,37 +73,36 @@ void RegstMgr::AddPlan(const Plan& plan,
       CHECK(!mem_block.enable_reuse_mem());
       const std::string& var_name = mem_block.variable_op_name();
       CHECK(!var_name.empty());
-      auto it = variable_op_name2eager_blob.find(var_name);
-      CHECK(it != variable_op_name2eager_blob.end())
+      auto it = variable_op_name2eager_blob_object.find(var_name);
+      CHECK(it != variable_op_name2eager_blob_object.end())
           << " CANNOT find variable op name: " << var_name;
       CHECK(mem_block.has_is_separated_header());
-      Blob* var_blob = it->second;
+      vm::EagerBlobObject* var_blob = it->second;
       CHECK(var_blob) << " variable op name: " << var_name << " in rank: " << this_machine_id
                       << " CANNNOT NULL.";
       if (mem_block.is_separated_header()) {
-        CHECK_GE(var_blob->blob_desc().AlignedByteSizeOfBlobHeader(), mem_block.mem_size());
-        CHECK_GE(mem_block.mem_size(), var_blob->blob_desc().ByteSizeOfBlobHeader());
+        CHECK_GE(var_blob->AlignedByteSizeOfBlobHeader(), mem_block.mem_size());
+        CHECK_GE(mem_block.mem_size(), var_blob->ByteSizeOfBlobHeader());
         CHECK(mem_block_id2ptr_.emplace(mem_block_id, var_blob->mut_header_ptr()).second);
-        CHECK(mem_block.mem_case().has_host_mem());
+        CHECK(memory::IsHostMem(mem_block.mem_case()));
       } else {
-        CHECK_GE(var_blob->blob_desc().AlignedByteSizeOfBlobBody(), mem_block.mem_size());
-        CHECK_GE(mem_block.mem_size(), var_blob->blob_desc().ByteSizeOfBlobBody());
-        CHECK(mem_block_id2ptr_.emplace(mem_block_id, var_blob->ForceMutDptr<char>()).second);
+        CHECK_GE(var_blob->AlignedByteSizeOfBlobBody(), mem_block.mem_size());
+        CHECK_GE(mem_block.mem_size(), var_blob->ByteSizeOfBlobBody());
+        CHECK(mem_block_id2ptr_.emplace(mem_block_id, var_blob->mut_dptr<char>()).second);
         // NOTE(chengcheng):
         //   CPU eager var tensor mem case is host_mem WITHOUT cuda pinned, but Lazy Complier
         //   will set variable op output blob mem_case with cuda pinned memory if this output
         //   blob has GPU op consume. We can JUST ignore this diff because it ONLY has little
         //   perf loss but correct.
         //   And this problem is NOT tensor.to("cuda") or tensor.to_global().
-        CHECK((mem_block.mem_case().has_host_mem() && var_blob->mem_case().has_host_mem())
-              || (mem_block.mem_case() == var_blob->mem_case()))
+        CHECK(memory::EqualsIgnorePinnedDevice(mem_block.mem_case(), var_blob->mem_case()))
             << " variable op name: " << var_name << " in rank: " << this_machine_id
             << " bind eager tensor failed. The eager var tensor mem_case is : "
             << var_blob->mem_case().DebugString()
             << " but graph expected_mem block mem_case is : " << mem_block.mem_case().DebugString();
       }
     } else {
-      int64_t zone_id = MemoryCaseUtil::GenMemZoneId(mem_block.mem_case());
+      int64_t zone_id = memory::GetMemCaseId(mem_block.mem_case());
       if (zone_id2packed_chunk.find(zone_id) == zone_id2packed_chunk.end()) {
         zone_id2packed_chunk.emplace(zone_id, PackedChunkInfo(mem_block.mem_case()));
       }
@@ -115,7 +116,7 @@ void RegstMgr::AddPlan(const Plan& plan,
   for (auto& pair : zone_id2packed_chunk) {
     PackedChunkInfo* packed_chunk = &pair.second;
     char* ptr =
-        Global<MemoryAllocator>::Get()->Allocate(packed_chunk->mem_case, packed_chunk->size);
+        Singleton<MemoryAllocator>::Get()->Allocate(packed_chunk->mem_case, packed_chunk->size);
     // sort blocks as thrd id
     std::vector<const MemBlockProto*>* blocks = &(packed_chunk->blocks);
     std::sort(blocks->begin(), blocks->end(),
@@ -154,8 +155,8 @@ void RegstMgr::AddPlan(const Plan& plan,
 }
 
 void RegstMgr::AddPlan(const Plan& plan) {
-  HashMap<std::string, Blob*> variable_op_name2eager_blob;
-  AddPlan(plan, variable_op_name2eager_blob);
+  HashMap<std::string, vm::EagerBlobObject*> variable_op_name2eager_blob_object;
+  AddPlan(plan, variable_op_name2eager_blob_object);
 }
 
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
@@ -207,11 +208,10 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
   char* cur_body_pointer = nullptr;
   char* cur_header_pointer = nullptr;
   if (separated_header_mem_size > 0) {
-    MemoryCase host_mem_case;
-    host_mem_case.mutable_host_mem();
+    MemoryCase host_mem_case = memory::MakeHostMemCase();
     if (separated_header_mem_ptr == nullptr) {
       separated_header_mem_ptr =
-          Global<MemoryAllocator>::Get()->Allocate(host_mem_case, separated_header_mem_size);
+          Singleton<MemoryAllocator>::Get()->Allocate(host_mem_case, separated_header_mem_size);
     }
     cur_header_pointer = separated_header_mem_ptr;
     cur_body_pointer = main_mem_ptr;
@@ -237,7 +237,7 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
     } else {
       blob_ptr.reset(new Blob(regst->regst_desc()->mem_case(), blob_desc,
                               cur_header_pointer + header_offset, cur_body_pointer + body_offset));
-      InitNonPODTypeBlobIfNeed(Global<MemoryAllocator>::Get(), blob_ptr.get());
+      InitNonPODTypeBlobIfNeed(Singleton<MemoryAllocator>::Get(), blob_ptr.get());
     }
     regst->SetBlobByOrdinal(ordinal, std::move(blob_ptr));
     const int64_t regst_desc_id = rt_regst_desc->regst_desc_id();

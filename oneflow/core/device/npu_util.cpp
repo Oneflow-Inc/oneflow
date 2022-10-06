@@ -17,7 +17,7 @@ limitations under the License.
 #ifdef WITH_NPU
 #include <mutex>
 #include "oneflow/core/device/npu_util.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/hardware/node_device_descriptor_manager.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/job/env_global_objects_scope.h"

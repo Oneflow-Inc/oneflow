@@ -58,9 +58,9 @@ class AdaptivePool2DNpuGradKernel final : public user_op::OpKernel {
         user_op::Tensor* grad_input = ctx->Tensor4ArgNameAndIndex("dx", 0);
         user_op::Tensor* grad_output = ctx->Tensor4ArgNameAndIndex("dy", 0);
         std::vector<int> dx_shape;
-        for(size_t i=0; i<grad_input->shape().NumAxes();++i)
+        for(size_t i=0; i<grad_input->shape_view().NumAxes();++i)
         {
-            dx_shape.push_back(grad_input->shape().ptr()[i]);
+            dx_shape.push_back(grad_input->shape_view().ptr()[i]);
         }  
         NpuCommand npu_command;
         npu_command.OpName("AdaptiveAvgPool2dGrad")

@@ -23,11 +23,11 @@ class AllReduce(Module):
     def __init__(self, parallel_conf_str: str):
         super().__init__()
         self._op = (
-            flow.stateful_op("eager_nccl_all_reduce").Input("in").Output("out").Build()
+            flow.stateful_op("eager_ccl_all_reduce").Input("in").Output("out").Build()
         )
         self.parallel_conf = parallel_conf_str
 
     def forward(self, x):
         assert x.device.type == "cuda"
         assert x.device.index == flow.env.get_local_rank()
-        return flow._C.dispatch_eager_nccl_all_reduce(self._op, parallel_conf)
+        return flow._C.dispatch_eager_ccl_all_reduce(self._op, parallel_conf)

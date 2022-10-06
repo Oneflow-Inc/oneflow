@@ -176,6 +176,15 @@ def _test_inplace_mul_scalar(test_case, device):
     )
 
 
+def _test_mul_inplace_0size_tensor(test_case, device):
+    targets = flow.randn((0, 6), device=flow.device(device))
+    height, width = 640, 640
+    targets[:, 2:] *= flow.tensor(
+        (width, height, width, height), device=flow.device(device)
+    )
+    test_case.assertTrue(np.array_equal(targets.size(), (0, 6)))
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestMulModule(flow.unittest.TestCase):
     def test_mul(test_case):
@@ -184,6 +193,7 @@ class TestMulModule(flow.unittest.TestCase):
             _test_mul_impl,
             _test_inplace_mul_tensors,
             _test_inplace_mul_scalar,
+            _test_mul_inplace_0size_tensor,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
@@ -197,6 +207,24 @@ class TestMulModule(flow.unittest.TestCase):
         x = x_0 + 1
         x.mul_(y)
         return x
+
+    @autotest(n=3)
+    def test_non_contiguous_inplace_mul(test_case):
+        device = random_device()
+        x = random_tensor(2, 2, 4).to(device)
+        y = x + 1
+        y = y[:, 1:3]
+        y *= random_tensor(2, 2, 2).to(device)
+        return y
+
+    @autotest(n=5)
+    def test_scalar_mul_with_random_devices(test_case):
+        x1_device = random_device()
+        x2_device = random_device()
+        x1 = random_tensor(2, 2, 3).to(x1_device).mean()
+        x2 = random_tensor(2, 2, 3).to(x2_device)
+        y = x1 * x2
+        return y
 
 
 if __name__ == "__main__":

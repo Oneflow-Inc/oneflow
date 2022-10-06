@@ -29,8 +29,8 @@ class IdentityNpuKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const ShapeView& in_shape = in->shape();
-    CHECK_EQ(out->shape(), in_shape);
+    const ShapeView& in_shape = in->shape_view();
+    CHECK_EQ(out->shape_view(), in_shape);
     const DataType in_data_type = in->data_type();
     CHECK_EQ(out->data_type(), in_data_type);
     std::cout<<"BN Identity"<<std::endl;

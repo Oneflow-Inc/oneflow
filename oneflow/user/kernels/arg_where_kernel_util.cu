@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/arg_where_kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
-#include "oneflow/core/common/fixed_vector.h"
+#include "oneflow/core/common/small_vector.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
@@ -80,6 +80,15 @@ cudaError_t SelectTrue(cudaStream_t stream, int num_items, void* temp_storage,
                                     output_iter, num_selected, num_items, stream, false);
 }
 
+template<typename IN_T, typename OUT_T>
+__global__ void SetOutputSizeKernel(const IN_T* input_ptr, OUT_T* output_size_ptr) {
+  if (*input_ptr == GetZeroVal<IN_T>()) {
+    *output_size_ptr = GetZeroVal<OUT_T>();
+  } else {
+    *output_size_ptr = GetOneVal<OUT_T>();
+  }
+}
+
 }  // namespace
 
 template<typename IN_T, typename OUT_T, int NDIM>
@@ -137,5 +146,13 @@ struct ArgWhereKernelUtil<DeviceType::kCUDA, IN_T, OUT_T, NDIM> {
 };
 
 INSTANTIATE_ARG_WHERE_KERNEL_UTIL_FOR_DEVICE(DeviceType::kCUDA)
+
+template<DeviceType device_type, typename IN_T, typename OUT_T>
+void SetOutputSize(ep::Stream* stream, const IN_T* input_ptr, OUT_T* output_size_ptr) {
+  SetOutputSizeKernel<IN_T, OUT_T>
+      <<<1, 1, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(input_ptr, output_size_ptr);
+}
+
+INSTANTIATE_SET_OUTPUT_SIZE_FOR_DEVICE(DeviceType::kCUDA)
 
 }  // namespace oneflow

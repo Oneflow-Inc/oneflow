@@ -115,7 +115,7 @@ TEST(Optional, optional_just_error_throw) {
         })()
             .GetOrThrow();
       },
-      ValueNotFoundException);
+      Exception);
 }
 
 TEST(Optional, monadic_operations) {

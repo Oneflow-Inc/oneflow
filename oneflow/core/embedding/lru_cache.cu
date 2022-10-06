@@ -114,6 +114,7 @@ struct LruCacheContext {
   void* mutex;
   uint64_t n_set;
   uint32_t line_size;
+  CacheOptions::MemoryKind value_memory_kind;
 };
 
 __global__ void InitCacheSetMutex(uint32_t n_set, void* mutex) {
@@ -164,7 +165,19 @@ void InitLruCacheContext(const CacheOptions& options, LruCacheContext<Key, Elem>
   const size_t keys_size = n_set * keys_size_per_set;
   OF_CUDA_CHECK(cudaMalloc(&(ctx->keys), keys_size));
   const size_t lines_size = n_set * lines_size_per_set;
-  OF_CUDA_CHECK(cudaMalloc(&(ctx->lines), lines_size));
+  if (options.value_memory_kind == CacheOptions::MemoryKind::kDevice) {
+    OF_CUDA_CHECK(cudaMalloc(&(ctx->lines), lines_size));
+  } else if (options.value_memory_kind == CacheOptions::MemoryKind::kHost) {
+    if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_NUMA_AWARE_ALLOCATION", false)) {
+      OF_CUDA_CHECK(cudaMallocHost(&(ctx->lines), lines_size));
+    } else {
+      OF_CUDA_CHECK(
+          NumaAwareCudaMallocHost(device, reinterpret_cast<void**>(&ctx->lines), lines_size));
+    }
+  } else {
+    UNIMPLEMENTED();
+  }
+  ctx->value_memory_kind = options.value_memory_kind;
   const size_t ages_size = n_set * ages_size_per_set;
   OF_CUDA_CHECK(cudaMalloc(&(ctx->ages), ages_size));
   const size_t mutex_size = n_set * mutex_size_per_set;
@@ -176,7 +189,13 @@ void InitLruCacheContext(const CacheOptions& options, LruCacheContext<Key, Elem>
 template<typename Key, typename Elem>
 void DestroyLruCacheContext(LruCacheContext<Key, Elem>* ctx) {
   OF_CUDA_CHECK(cudaFree(ctx->keys));
-  OF_CUDA_CHECK(cudaFree(ctx->lines));
+  if (ctx->value_memory_kind == CacheOptions::MemoryKind::kDevice) {
+    OF_CUDA_CHECK(cudaFree(ctx->lines));
+  } else if (ctx->value_memory_kind == CacheOptions::MemoryKind::kHost) {
+    OF_CUDA_CHECK(cudaFreeHost(ctx->lines));
+  } else {
+    UNIMPLEMENTED();
+  }
   OF_CUDA_CHECK(cudaFree(ctx->ages));
   OF_CUDA_CHECK(cudaFree(ctx->mutex));
 }
@@ -192,7 +211,7 @@ struct SetContext {
       : keys(ctx.keys + set_id * kWarpSize),
         mutex(reinterpret_cast<WarpMutex*>(ctx.mutex) + set_id),
         ages(ctx.ages + set_id * kWarpSize),
-        lines(ctx.lines + set_id * kWarpSize * ctx.line_size) {}
+        lines(ctx.lines + static_cast<size_t>(set_id) * kWarpSize * ctx.line_size) {}
 
   __device__ int Lookup(const ThreadContext& thread_ctx, Key key) {
     const Key lane_key = keys[thread_ctx.lane_id];
@@ -461,7 +480,8 @@ __global__ void DumpKernel(LruCacheContext<Key, Elem> cache_ctx, size_t start_ke
       __syncwarp();
       for (uint32_t j = thread_ctx.lane_id; j < cache_ctx.line_size; j += kWarpSize) {
         values[offset * cache_ctx.line_size + j] =
-            cache_ctx.lines[(warp_start_key_index + i) * cache_ctx.line_size + j];
+            cache_ctx
+                .lines[static_cast<size_t>(warp_start_key_index + i) * cache_ctx.line_size + j];
       }
       __syncwarp();
       offset += 1;
@@ -477,7 +497,8 @@ class LruCache : public Cache {
       : device_index_{},
         max_query_length_(0),
         query_indices_buffer_(nullptr),
-        query_keys_buffer_(nullptr) {
+        query_keys_buffer_(nullptr),
+        value_type_(options.value_type) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     InitLruCacheContext(options, &ctx_);
   }
@@ -492,6 +513,7 @@ class LruCache : public Cache {
 
   uint32_t KeySize() const override { return sizeof(Key); }
   uint32_t ValueSize() const override { return sizeof(Elem) * ctx_.line_size; }
+  DataType ValueType() const override { return value_type_; }
   uint64_t Capacity() const override { return ctx_.n_set * kWarpSize; }
   uint32_t MaxQueryLength() const override { return max_query_length_; }
 
@@ -568,6 +590,7 @@ class LruCache : public Cache {
   LruCacheContext<Key, Elem> ctx_;
   uint32_t* query_indices_buffer_;
   Key* query_keys_buffer_;
+  DataType value_type_;
 };
 
 template<typename Key>

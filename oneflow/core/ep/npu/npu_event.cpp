@@ -22,14 +22,12 @@ namespace oneflow {
 namespace ep {
 
 NpuEvent::NpuEvent(unsigned int flags) : npu_event_{} {
-  std::cout<<"NpuEvent::NpuEvent(unsigned int flags)"<<std::endl;
   OF_NPU_CHECK(aclrtCreateEventWithFlag(&npu_event_, flags));
 }
 
 NpuEvent::~NpuEvent() { OF_NPU_CHECK(aclrtDestroyEvent(npu_event_)); }
 
 Maybe<bool> NpuEvent::QueryDone() {
-  std::cout<<"NpuEvent::QueryDone()"<<std::endl;
   aclrtEventStatus status;
   aclError err = aclrtQueryEvent(npu_event_,&status);
   if (err == ACL_SUCCESS) {

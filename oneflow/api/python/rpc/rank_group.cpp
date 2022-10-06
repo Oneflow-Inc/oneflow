@@ -38,8 +38,7 @@ Maybe<void> CheckCurrentRankGroupConsistency() {
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("check_current_rank_group_consistency",
-        []() { return CheckCurrentRankGroupConsistency().GetOrThrow(); });
+  m.def("check_current_rank_group_consistency", &CheckCurrentRankGroupConsistency);
 }
 
 }  // namespace oneflow

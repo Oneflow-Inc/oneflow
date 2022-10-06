@@ -72,7 +72,7 @@ void PrintResult(void * out_buffers, uint32_t out_tensor_size, std::string type)
 void PrintResult(user_op::Tensor* out, std::string true_type)
 {
     PrintResult(out->mut_dptr<void>(),
-                out->shape().elem_cnt() * GetSizeOfDataType(out->data_type()),
+                out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type()),
                 true_type);
 }
 void PrintResult(void * out_buffers, uint32_t out_tensor_size, int data_len){
@@ -113,14 +113,14 @@ void PrintResult(void * out_buffers, uint32_t out_tensor_size, int data_len){
 void PrintResult(user_op::Tensor* out)
 {
     PrintResult(out->mut_dptr<void>(),
-                out->shape().elem_cnt() * GetSizeOfDataType(out->data_type()),
+                out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type()),
                 GetSizeOfDataType(out->data_type()));
 }
 
 aclTensorDesc* getTensorDesc(user_op::Tensor* tensor, std::string format, std::string real_type)
 {
     aclDataType datatype = dataTypeMap(tensor->data_type());
-    if(tensor->shape().NumAxes()==0)
+    if(tensor->shape_view().NumAxes()==0)
     {
         if(real_type != "") datatype = datatype_string_map[real_type];
         aclTensorDesc* descCast = aclCreateTensorDesc(datatype, 
@@ -134,8 +134,8 @@ aclTensorDesc* getTensorDesc(user_op::Tensor* tensor, std::string format, std::s
     {
         if(real_type != "") datatype = datatype_string_map[real_type];
         aclTensorDesc* descCast = aclCreateTensorDesc(datatype, 
-                                        tensor->shape().NumAxes(), 
-                                        tensor->shape().ptr(), 
+                                        tensor->shape_view().NumAxes(), 
+                                        tensor->shape_view().ptr(), 
                                         format_map[format]);
         NOT_NULLPTR_CHECK(descCast);    
         return descCast;       
@@ -201,7 +201,7 @@ aclTensorDesc* getTensorDesc(std::string key, int64_t len, aclDataType type)
 // }
 aclDataBuffer* getDataBuffer(user_op::Tensor* tensor)
 {
-    if(tensor->shape().NumAxes()==0)
+    if(tensor->shape_view().NumAxes()==0)
     {
         aclDataBuffer* data_buffer = aclCreateDataBuffer(tensor->mut_dptr<void>(), 
                                                     1 * GetSizeOfDataType(tensor->data_type())); 
@@ -211,7 +211,7 @@ aclDataBuffer* getDataBuffer(user_op::Tensor* tensor)
     else
     {
         aclDataBuffer* data_buffer = aclCreateDataBuffer(tensor->mut_dptr<void>(), 
-                                                    tensor->shape().elem_cnt() * GetSizeOfDataType(tensor->data_type())); 
+                                                    tensor->shape_view().elem_cnt() * GetSizeOfDataType(tensor->data_type())); 
         NOT_NULLPTR_CHECK(data_buffer);
         return data_buffer;
     }

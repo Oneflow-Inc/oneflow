@@ -34,10 +34,10 @@ class AccActor final : public Actor {
 };
 
 void AccActor::VirtualActorInit(const TaskProto& proto) {
-  const Shape& in_time_shape = Global<RegstMgr>::Get()
+  const Shape& in_time_shape = Singleton<RegstMgr>::Get()
                                    ->RegstDesc4RegstDescId(Name2SoleRegstDescId("in"))
                                    .data_regst_time_shape();
-  const Shape& out_time_shape = Global<RegstMgr>::Get()
+  const Shape& out_time_shape = Singleton<RegstMgr>::Get()
                                     ->RegstDesc4RegstDescId(Name2SoleRegstDescId("out"))
                                     .data_regst_time_shape();
   CHECK_GE(in_time_shape.elem_cnt(), out_time_shape.elem_cnt());

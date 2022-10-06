@@ -110,13 +110,13 @@ class ConvDataGradNpuKernel final : public user_op::OpKernel {
     std::vector<int64_t> dilations_64 = {1, 1, dilation[0], dilation[1]};
     
     std::vector<int> x_shape;
-    for(size_t i=0; i<dx->shape().NumAxes();++i)
+    for(size_t i=0; i<dx->shape_view().NumAxes();++i)
     {
-      x_shape.push_back(dx->shape().ptr()[i]);
+      x_shape.push_back(dx->shape_view().ptr()[i]);
     }    
     std::vector<int64_t> shape_desc;
     shape_desc.push_back(x_shape.size());
-    CHECK_EQ(tmp_buffer->shape().elem_cnt(), mulVector(shape_desc)*sizeof(int32_t));
+    CHECK_EQ(tmp_buffer->shape_view().elem_cnt(), mulVector(shape_desc)*sizeof(int32_t));
     std::string key = "ConvDataGradNpu" + ShapeToString(x_shape);
     if(!const_tensor_map.count(key))  const_tensor_map[key] = x_shape;
     if(!shape_map.count(key)) shape_map[key] = shape_desc;
@@ -194,14 +194,14 @@ class ConvFilterGradNpuKernel final : public user_op::OpKernel {
     std::vector<int64_t> paddings_64 = { padding[0], padding[0], padding[1], padding[1]};
     std::vector<int64_t> dilations_64 = {1, 1, dilation[0], dilation[1]};
     std::vector<int> filter_shape;
-    for(size_t i=0; i<filter_diff->shape().NumAxes();++i)
+    for(size_t i=0; i<filter_diff->shape_view().NumAxes();++i)
     {
-      filter_shape.push_back(filter_diff->shape().ptr()[i]);
+      filter_shape.push_back(filter_diff->shape_view().ptr()[i]);
     }
     
     std::vector<int64_t> shape_desc;
     shape_desc.push_back(filter_shape.size());
-    CHECK_EQ(tmp_buffer->shape().elem_cnt(), mulVector(shape_desc)*sizeof(int32_t));
+    CHECK_EQ(tmp_buffer->shape_view().elem_cnt(), mulVector(shape_desc)*sizeof(int32_t));
     std::string key = "ConvDataFilterNpu" + ShapeToString(filter_shape);
     if(!const_tensor_map.count(key)) const_tensor_map[key] = filter_shape;
     if(!shape_map.count(key)) shape_map[key] = shape_desc;

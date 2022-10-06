@@ -24,6 +24,7 @@ limitations under the License.
 #include "tensor.h"
 #include <cstddef>
 #include <string>
+#include <functional>
 #include <unordered_map>
 
 namespace oneflow {
@@ -63,8 +64,8 @@ class Graph {
   InputOutputInfos GetOutputInfos();
   IValue Forward(const IValue& inputs);
   void set_batch_size(int batch_size);
-  void enable_tensorrt();
-  void enable_openvino();
+
+  void RegisterJobPass(const std::function<std::string(const std::string& job)>& pass_fn);
 
   static Graph Load(const std::string& model_path, const Device& device = Device("cpu"));
 

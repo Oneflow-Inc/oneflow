@@ -74,7 +74,6 @@ Maybe<void> NpuStream::Sync() {
 }
 
 void NpuStream::RecordEvent(Event* event) {
-  std::cout<<"NpuStream::~RecordEvent()"<<std::endl;
   auto* npu_event = static_cast<NpuEvent*>(event);  // NOLINT
   OF_NPU_CHECK(aclrtRecordEvent(npu_event->npu_event(), npu_stream_));
 }

@@ -91,6 +91,7 @@ class CosineDecayLR(LRScheduler):
 
     def _generate_conf_for_graph(self, lr_conf):
         # CosineDecayLR is the same as CosineDecayConf in nn.Graph
-        cosine_decay_conf = lr_conf.mutable_cosine_conf()
-        cosine_decay_conf.set_decay_batches(self.decay_steps)
-        cosine_decay_conf.set_alpha(self.alpha)
+        lr_conf.cosine_conf.SetInParent()
+        cosine_decay_conf = lr_conf.cosine_conf
+        cosine_decay_conf.decay_batches = self.decay_steps
+        cosine_decay_conf.alpha = self.alpha

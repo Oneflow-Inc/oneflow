@@ -37,7 +37,7 @@ class UnpackActor final : public Actor {
 };
 
 void UnpackActor::VirtualActorInit(const TaskProto& proto) {
-  const Shape& out_time_shape = Global<RegstMgr>::Get()
+  const Shape& out_time_shape = Singleton<RegstMgr>::Get()
                                     ->RegstDesc4RegstDescId(Name2SoleRegstDescId("out"))
                                     .data_regst_time_shape();
   total_unpack_num_ = out_time_shape.At(out_time_shape.NumAxes() - 1);

@@ -2,7 +2,7 @@ include(ExternalProject)
 
 set(HALF_INCLUDE_DIR ${THIRD_PARTY_DIR}/half/include)
 
-set(HALF_URL https://github.com/Oneflow-Inc/half/archive/v2.1.0-fix-cuda-raise.zip)
+set(HALF_URL https://github.com/Oneflow-Inc/half/archive/refs/tags/v2.1.0-fix-cuda-raise.zip)
 use_mirror(VARIABLE HALF_URL URL ${HALF_URL})
 set(HALF_BASE_DIR ${CMAKE_CURRENT_BINARY_DIR}/half/src/half)
 set(HALF_URL_HASH 30b0dc289729f9e85ddf6995f2e6968f)

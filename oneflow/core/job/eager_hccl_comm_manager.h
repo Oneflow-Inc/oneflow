@@ -35,7 +35,7 @@ class EagerHcclCommMgr final {
                                            const std::string& stream_name);
 
  private:
-  friend class Global<EagerHcclCommMgr>;
+  friend class Singleton<EagerHcclCommMgr>;
   EagerHcclCommMgr() = default;
 
   std::map<std::set<std::pair<int64_t, int64_t>>, HashMap<int64_t, HcclComm>>

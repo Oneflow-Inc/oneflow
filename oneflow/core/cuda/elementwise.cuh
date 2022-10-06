@@ -70,11 +70,14 @@ union Pack {
 };
 
 template<typename T, int pack_size>
-__device__ inline Pack<T, pack_size> FetchPack(const PackType<T, pack_size>* ptr) {
-  Pack<T, pack_size> pack;
-  pack.storage = *ptr;
-  return pack;
-}
+struct alignas(sizeof(T) * pack_size) Packed {
+  __device__ Packed() {
+    // do nothing
+  }
+  union {
+    T elem[pack_size];
+  };
+};
 
 constexpr int kMaxPackBytes = 128 / 8;
 constexpr int kMaxPackSize = 8;
@@ -109,36 +112,35 @@ class HasApply2 {
 
 template<int pack_size, typename FunctorT, typename R, typename... IN>
 __device__ typename std::enable_if<HasApply2<FunctorT>::value == true && pack_size % 2 == 0,
-                                   PackType<R, pack_size>>::type
-ApplyPack(const FunctorT& functor, const IN... in[pack_size]) {
-  Pack<R, pack_size> ret;
+                                   Packed<R, pack_size>>::type
+ApplyPack(const FunctorT& functor, const Packed<IN, pack_size>... in) {
+  Packed<R, pack_size> ret;
 #pragma unroll
-  for (int j = 0; j < pack_size; j += 2) { functor.Apply2(ret.elem + j, (in + j)...); }
-  return ret.storage;
+  for (int j = 0; j < pack_size; j += 2) { functor.Apply2(ret.elem + j, (in.elem + j)...); }
+  return ret;
 }
 
 template<int pack_size, typename FunctorT, typename R, typename... IN>
-__device__
-    typename std::enable_if<HasApply2<FunctorT>::value == false, PackType<R, pack_size>>::type
-    ApplyPack(const FunctorT& functor, const IN... in[pack_size]) {
-  Pack<R, pack_size> ret;
+__device__ typename std::enable_if<HasApply2<FunctorT>::value == false || pack_size % 2 != 0,
+                                   Packed<R, pack_size>>::type
+ApplyPack(const FunctorT& functor, const Packed<IN, pack_size>... in) {
+  Packed<R, pack_size> ret;
 #pragma unroll
-  for (int j = 0; j < pack_size; ++j) { ret.elem[j] = functor((in[j])...); }
-  return ret.storage;
+  for (int j = 0; j < pack_size; ++j) { ret.elem[j] = functor((in.elem[j])...); }
+  return ret;
 }
 
-template<int pack_size, bool tail, typename FactoryT, typename R, typename... IN>
+template<int pack_size, typename FactoryT, typename R, typename... IN>
 __global__ void __launch_bounds__(kBlockSize)
-    ApplyGeneric(FactoryT factory, int64_t n_pack, PackType<R, pack_size>* pack_r,
-                 const PackType<IN, pack_size>*... pack_in, int64_t n_tail, R* tail_r,
+    ApplyGeneric(FactoryT factory, int64_t n_pack, Packed<R, pack_size>* pack_r,
+                 const Packed<IN, pack_size>*... pack_in, int64_t n_tail, R* tail_r,
                  const IN*... tail_in) {
   auto functor = factory();
   const int global_tid = blockIdx.x * kBlockSize + threadIdx.x;
   for (int64_t i = global_tid; i < n_pack; i += blockDim.x * gridDim.x) {
-    pack_r[i] = ApplyPack<pack_size, decltype(functor), R, IN...>(
-        functor, (FetchPack<IN, pack_size>(pack_in + i).elem)...);
+    pack_r[i] = ApplyPack<pack_size, decltype(functor), R, IN...>(functor, (pack_in[i])...);
   }
-  if (tail && global_tid < n_tail) { tail_r[global_tid] = functor((tail_in[global_tid])...); }
+  if (global_tid < n_tail) { tail_r[global_tid] = functor((tail_in[global_tid])...); }
 }
 
 template<typename FunctorT>
@@ -150,26 +152,44 @@ struct SimpleFactory {
   FunctorT tpl;
 };
 
+template<size_t pack_size>
+bool IsAlignedForPack() {
+  return true;
+}
+
+template<size_t pack_size, typename T, typename... Args>
+bool IsAlignedForPack(const T* ptr, const Args*... others) {
+  return reinterpret_cast<uintptr_t>(ptr) % sizeof(Pack<T, pack_size>) == 0
+         && IsAlignedForPack<pack_size, Args...>(others...);
+}
+
+template<size_t pack_size, typename FactoryT, typename R, typename... IN>
+cudaError_t LaunchKernel(FactoryT factory, int64_t n, R* r, const IN*... in, cudaStream_t stream) {
+  const int64_t n_pack = n / pack_size;
+  const int64_t tail_offset = n_pack * pack_size;
+  const int64_t n_tail = n - tail_offset;
+  int num_blocks;
+  {
+    cudaError_t err = GetNumBlocks(n_pack, &num_blocks);
+    if (err != cudaSuccess) { return err; }
+  }
+  ApplyGeneric<pack_size, FactoryT, R, IN...><<<num_blocks, kBlockSize, 0, stream>>>(
+      factory, n_pack, reinterpret_cast<Packed<R, pack_size>*>(r),
+      (reinterpret_cast<const Packed<IN, pack_size>*>(in))..., n_tail, r + tail_offset,
+      (in + tail_offset)...);
+  return cudaPeekAtLastError();
+}
+
 template<typename FactoryT, typename R, typename... IN>
 struct GenericLauncher {
   static cudaError_t Launch(FactoryT factory, int64_t n, R* r, const IN*... in,
                             cudaStream_t stream) {
-    constexpr int pack_size = PackSize<R, IN...>();
-    const int64_t n_pack = n / pack_size;
-    const int64_t tail_offset = n_pack * pack_size;
-    const int64_t n_tail = n - tail_offset;
-    int num_blocks;
-    {
-      cudaError_t err = GetNumBlocks(n_pack, &num_blocks);
-      if (err != cudaSuccess) { return err; }
+    constexpr int max_pack_size = PackSize<R, IN...>();
+    if (IsAlignedForPack<max_pack_size, R, IN...>(r, in...)) {
+      return LaunchKernel<max_pack_size, FactoryT, R, IN...>(factory, n, r, in..., stream);
+    } else {
+      return LaunchKernel<1, FactoryT, R, IN...>(factory, n, r, in..., stream);
     }
-    auto func = n_tail > 0 ? ApplyGeneric<pack_size, true, FactoryT, R, IN...>
-                           : ApplyGeneric<pack_size, false, FactoryT, R, IN...>;
-    func<<<num_blocks, kBlockSize, 0, stream>>>(
-        factory, n_pack, reinterpret_cast<PackType<R, pack_size>*>(r),
-        (reinterpret_cast<const PackType<IN, pack_size>*>(in))..., n_tail, r + tail_offset,
-        (in + tail_offset)...);
-    return cudaPeekAtLastError();
   }
 };
 

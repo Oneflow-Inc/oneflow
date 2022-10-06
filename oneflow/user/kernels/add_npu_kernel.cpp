@@ -35,7 +35,7 @@ class AddNpuKernel : public OpKernel {
   void Compute(KernelComputeContext* ctx) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const DataType data_type = out->data_type();
-    const size_t count = out->shape().elem_cnt();
+    const size_t count = out->shape_view().elem_cnt();
     size_t in_num = ctx->inputs().size();
     CHECK_EQ(in_num, 2)<<"Current only support AddV2, so input num should be 2. ";
     float alpha = ctx->Attr<float>("alpha");
@@ -43,7 +43,7 @@ class AddNpuKernel : public OpKernel {
     NpuCommand npu_command;
     for (size_t i = 0; i < in_num; ++i) {
       user_op::Tensor* in_i = ctx->Tensor4ArgNameAndIndex("in", i);
-      CHECK_EQ(in_i->shape().elem_cnt(), count);
+      CHECK_EQ(in_i->shape_view().elem_cnt(), count);
       CHECK_EQ(in_i->data_type(), data_type);
       npu_command.Input(in_i, "channels_nd");
     }

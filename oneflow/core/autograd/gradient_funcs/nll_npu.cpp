@@ -15,13 +15,13 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace one {
 struct NllNpuCaptureState : public AutoGradCaptureState {
   bool requires_grad = false;
   int64_t ignore_index = -100;
-  std::string reduction = "mean";
 };
 
 class NllNpu : public OpExprGradFunction<NllNpuCaptureState> {
@@ -37,23 +37,23 @@ class NllNpu : public OpExprGradFunction<NllNpuCaptureState> {
 };
 Maybe<void> NllNpu::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
 Maybe<void> NllNpu::Capture(NllNpuCaptureState* ctx, const TensorTuple& inputs,
                          const TensorTuple& outputs, const AttrMap& attrs) const {
-  ctx->requires_grad = inputs.at(0)->requires_grad();
+  auto input = JUST(VectorAt(inputs, 0));
+  ctx->requires_grad = input->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->ignore_index = JUST(composed_attrs.GetAttr<int64_t>("ignore_index"));
-  ctx->reduction = JUST(composed_attrs.GetAttr<std::string>("reduction"));
-  ctx->SaveTensorForBackward(inputs.at(0));   // input
-  ctx->SaveTensorForBackward(inputs.at(1));   // target
+  ctx->SaveTensorForBackward(input);                      // input
+  ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 1)));  // target
   ctx->SaveTensorForBackward(outputs.at(1));  // total_weight
   if (inputs.size() == 3) {
-    ctx->SaveTensorForBackward(inputs.at(2));  // weight
+    ctx->SaveTensorForBackward(inputs[2]);  // weight
   }
   return Maybe<void>::Ok();
 }
@@ -61,22 +61,28 @@ Maybe<void> NllNpu::Apply(const NllNpuCaptureState* ctx, const TensorTuple& out_
                        TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
-  CHECK_EQ_OR_RETURN(out_grads.size(), 2);
-  const auto& dy = out_grads.at(0);
-  const auto& input = ctx->SavedTensors().at(0);
-  const auto& target = ctx->SavedTensors().at(1);
-  const auto& total_weight = ctx->SavedTensors().at(2);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 2);  // NOLINT(maybe-need-error-msg)
+  CHECK_GE_OR_RETURN(ctx->SavedTensors().size(), 2)
+      << Error::RuntimeError()
+      << "The number of saved tensors is expected to be greater than or equal to 2, but got "
+      << ctx->SavedTensors().size();
+  const auto& out_grad = out_grads[0];
+  const auto& input = ctx->SavedTensors()[0];
+  const auto& target = ctx->SavedTensors()[1];
+  const auto& total_weight = ctx->SavedTensors()[2];
 
-  in_grads->resize(ctx->SavedTensors().size() - 1);
+  in_grads->resize(ctx->SavedTensors().size());
 
-  if (ctx->SavedTensors().size() == 4) {
-    const auto& weight = ctx->SavedTensors().at(3);
-    in_grads->at(0) =
-        JUST(functional::NllLossGrad(dy, input, target, weight, total_weight, ctx->ignore_index));
+  if (ctx->SavedTensors().size() == 3) {
+    JUST(VectorAt(*in_grads, 0)) =
+        JUST(functional::NLLGradNpu(out_grad, input, target, total_weight, NullOpt, ctx->ignore_index));
   } else {
-    in_grads->at(0) =
-        JUST(functional::NllLossGrad(dy, input, target, NullOpt, total_weight, ctx->ignore_index));
+    // has weight
+    auto weight = JUST(VectorAt(ctx->SavedTensors(), 2));
+    JUST(VectorAt(*in_grads, 0)) =
+        JUST(functional::NLLGradNpu(out_grad, input, target, total_weight, weight, ctx->ignore_index));
   }
+
   return Maybe<void>::Ok();
 }
 REGISTER_OP_EXPR_GRAD_FUNCTION("nll_npu", NllNpu);

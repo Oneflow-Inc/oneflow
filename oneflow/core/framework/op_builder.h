@@ -19,7 +19,6 @@ limitations under the License.
 #include <string>
 
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/user_op_attr.cfg.h"
 
 namespace oneflow {
 namespace one {

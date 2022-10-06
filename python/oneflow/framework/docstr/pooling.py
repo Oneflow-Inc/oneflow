@@ -94,3 +94,77 @@ add_docstr(
         >>> output = flow.nn.functional.adaptive_avg_pool3d(input, (2, 2, 2))
     """,
 )
+
+add_docstr(
+    oneflow._C.avg_pool1d,
+    """
+    avg_pool1d(input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True) -> Tensor
+
+    Applies a 1D average pooling over an input signal composed of several input planes.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.avg_pool1d.html
+
+    See :class:`~oneflow.nn.AvgPool1d` for details and output shape.
+
+    Args:
+        input: input tensor of shape :math:`(\\text{minibatch} , \\text{in_channels} , iW)`
+        kernel_size: the size of the window. Can be a single number or a tuple `(kW,)`
+        stride: the stride of the window. Can be a single number or a tuple `(sW,)`. Default: :attr:`kernel_size`
+        padding: implicit zero paddings on both sides of the input. Can be a single number or a tuple `(padW,)`. Default: 0
+        ceil_mode: when True, will use `ceil` instead of `floor` to compute the output shape. Default: ``False``
+        count_include_pad: when True, will include the zero-padding in the averaging calculation. Default: ``True``
+
+    Examples::
+
+        >>> # pool of square window of size=3, stride=2
+        >>> import oneflow
+        >>> input = oneflow.tensor([[[1, 2, 3, 4, 5, 6, 7]]], dtype=oneflow.float32)
+        >>> oneflow.nn.functional.avg_pool1d(input, kernel_size=3, stride=2)
+        tensor([[[2., 4., 6.]]], dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow._C.avg_pool2d,
+    """
+    avg_pool2d(input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True, divisor_override=0) -> Tensor
+
+    Applies 2D average-pooling operation in :math:`kH \\times kW` regions by step size :math:`sH \\times sW` steps. The number of output features is equal to the number of input planes.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.avg_pool2d.html.
+
+    See :class:`~oneflow.nn.AvgPool2d` for details and output shape.
+
+    Args:
+        input: input tensor :math:`(\\text{minibatch} , \\text{in_channels} , iH , iW)`
+        kernel_size: size of the pooling region. Can be a single number or a tuple `(kH, kW)`
+        stride: stride of the pooling operation. Can be a single number or a tuple `(sH, sW)`. Default: :attr:`kernel_size`
+        padding: implicit zero paddings on both sides of the input. Can be a single number or a tuple `(padH, padW)`. Default: 0
+        ceil_mode: when True, will use `ceil` instead of `floor` in the formula to compute the output shape. Default: ``False``
+        count_include_pad: when True, will include the zero-padding in the averaging calculation. Default: ``True``
+        divisor_override: if specified, it will be used as divisor, otherwise size of the pooling region will be used. Default: 0
+    """,
+)
+
+add_docstr(
+    oneflow._C.avg_pool3d,
+    """
+    avg_pool3d(input, kernel_size, stride=None, padding=0, ceil_mode=False, count_include_pad=True, divisor_override=0) -> Tensor
+
+    Applies 3D average-pooling operation in :math:`kT \\times kH \\times kW` regions by step size :math:`sT \\times sH \\times sW` steps. The number of output features is equal to :math:`\\lfloor\\frac{\\text{input planes}}{sT}\\rfloor`.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.avg_pool3d.html
+
+    See :class:`~oneflow.nn.AvgPool3d` for details and output shape.
+
+    Args:
+        input: input tensor :math:`(\\text{minibatch} , \\text{in_channels} , iT \\times iH , iW)`
+        kernel_size: size of the pooling region. Can be a single number or a tuple `(kT, kH, kW)`
+        stride: stride of the pooling operation. Can be a single number or a tuple `(sT, sH, sW)`. Default: :attr:`kernel_size`
+        padding: implicit zero paddings on both sides of the input. Can be a single number or a tuple `(padT, padH, padW)`, Default: 0
+        ceil_mode: when True, will use `ceil` instead of `floor` in the formula to compute the output shape
+        count_include_pad: when True, will include the zero-padding in the averaging calculation
+        divisor_override: if specified, it will be used as divisor, otherwise size of the pooling region will be used. Default: 0
+    """,
+)

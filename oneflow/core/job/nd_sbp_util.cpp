@@ -29,7 +29,7 @@ std::vector<TensorSliceView> GetTensorSliceView(const int64_t parallel_num,
     ranges[i].mut_begin() = 0;
     ranges[i].mut_end() = shape.At(i);
   }
-  if (shape.NumAxes() == 0 && shape.elem_cnt() == 1) {
+  if (shape.NumAxes() == 0) {
     // NOTE(chengcheng): For Scalar Tensor.
     ranges.emplace_back(0, 1);
   }
@@ -62,10 +62,6 @@ TensorSliceView GetTensorSliceView4ParallelRank(const Shape& parallel_hierarchy,
   FOR_RANGE(int64_t, i, 0, logical_shape.NumAxes()) {
     ranges[i].mut_begin() = 0;
     ranges[i].mut_end() = logical_shape.At(i);
-  }
-  if (logical_shape.NumAxes() == 0 && logical_shape.elem_cnt() == 1) {
-    // NOTE(chengcheng): For Scalar Tensor.
-    ranges.emplace_back(0, 1);
   }
   if (parallel_hierarchy.elem_cnt() == 1) { return TensorSliceView(ranges); }
   if (parallel_hierarchy.NumAxes() == 1) {
@@ -120,6 +116,45 @@ std::vector<TensorSliceView> GetTensorSliceView(const Shape& parallel_hierarchy,
 
 TensorSliceView GetBroadcastTensorSliceView(const BlobDesc& blob_desc) {
   return TensorSliceView(blob_desc.shape());
+}
+
+bool NdSbpHasPartialParallel(const NdSbp& nd_sbp) {
+  CHECK_GT(nd_sbp.sbp_parallel_size(), 0);
+  FOR_RANGE(int64_t, i, 0, nd_sbp.sbp_parallel_size()) {
+    if (nd_sbp.sbp_parallel(i).has_partial_sum_parallel()) { return true; }
+  }
+  return false;
+}
+
+bool NdSbpHasBroadcastParallel(const NdSbp& nd_sbp) {
+  CHECK_GT(nd_sbp.sbp_parallel_size(), 0);
+  FOR_RANGE(int64_t, i, 0, nd_sbp.sbp_parallel_size()) {
+    if (nd_sbp.sbp_parallel(i).has_broadcast_parallel()) { return true; }
+  }
+  return false;
+}
+
+bool NdSbpIsAllBroadcast(const NdSbp& nd_sbp) {
+  for (const auto& sbp_parallel : nd_sbp.sbp_parallel()) {
+    if (!sbp_parallel.has_broadcast_parallel()) { return false; }
+  }
+  return true;
+}
+
+bool NdSbpIsAllPartialSum(const NdSbp& nd_sbp) {
+  for (const auto& sbp_parallel : nd_sbp.sbp_parallel()) {
+    if (!sbp_parallel.has_partial_sum_parallel()) { return false; }
+  }
+  return true;
+}
+
+bool NdSbpIsAllSplit(const NdSbp& nd_sbp, int64_t axis) {
+  for (const auto& sbp_parallel : nd_sbp.sbp_parallel()) {
+    if (!(sbp_parallel.has_split_parallel() && sbp_parallel.split_parallel().axis() == axis)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 }  // namespace oneflow

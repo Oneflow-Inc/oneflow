@@ -21,8 +21,8 @@ limitations under the License.
 
 namespace oneflow {
 
-typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
-typedef fixed_vector<int32_t, SHAPE_MAX_AXIS_SIZE> FixedVector;
+typedef small_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
+typedef small_vector<int32_t, SHAPE_MAX_AXIS_SIZE> FixedVector;
 
 class Params3D {
  public:

@@ -30,7 +30,7 @@ class ConstantNpuKernel final : public OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     bool is_floating_value = ctx->Attr<bool>("is_floating_value");
-    const int64_t elem_cnt = out_tensor->shape().elem_cnt();
+    const int64_t elem_cnt = out_tensor->shape_view().elem_cnt();
     const int64_t len = elem_cnt * GetSizeOfDataType(out_tensor->data_type());
     CHECK_GE(elem_cnt, 0);
     if (elem_cnt == 0) { return; }

@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/control/global_process_ctx.h"
-#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 
@@ -26,27 +25,47 @@ ThreadMgr::~ThreadMgr() {
     ActorMsg msg = ActorMsg::BuildCommandMsg(-1, ActorCmd::kStopThread);
     thread_pair.second->GetMsgChannelPtr()->Send(msg);
     thread_pair.second.reset();
-    VLOG(3) << "actor thread " << thread_pair.first << " finish";
+    VLOG(1) << " Actor thread: " << thread_pair.first << " finished when process exits.";
   }
 }
 
 Thread* ThreadMgr::GetThrd(int64_t thrd_id) {
   auto iter = threads_.find(thrd_id);
-  CHECK(iter != threads_.end()) << "thread " << thrd_id << " not found";
+  CHECK(iter != threads_.end()) << " Thread: " << thrd_id << " not found";
   return iter->second.get();
 }
 
-void ThreadMgr::AddPlan(const Plan& plan) {
+void ThreadMgr::AddThreads(const HashSet<int64_t>& thread_ids) {
   const int64_t this_rank = GlobalProcessCtx::Rank();
-  for (const TaskProto& task : plan.task()) {
-    TaskId task_id = DecodeTaskIdFromInt64(task.task_id());
-    StreamId stream_id = task_id.stream_id();
+  for (int64_t thrd_id : thread_ids) {
+    const auto& it = threads_.find(thrd_id);
+    if (it != threads_.end()) {
+      // NOTE(chengcheng): check thread is not null.
+      CHECK(it->second) << " RuntimeError! Thread: " << thrd_id << " in manager must be NOT null.";
+      VLOG(1) << " Actor thread: " << thrd_id << " reused.";
+      continue;
+    }
+    StreamId stream_id = DecodeStreamIdFromInt64(thrd_id);
     if (stream_id.rank() != this_rank) { continue; }
-    int64_t thrd_id = EncodeStreamIdToInt64(stream_id);
-    if (threads_.find(thrd_id) != threads_.end()) { continue; }
     Thread* thread = new Thread(stream_id);
     CHECK_NOTNULL(thread);
     threads_[thrd_id].reset(thread);
+    VLOG(1) << " Actor thread: " << thrd_id << " created.";
+  }
+}
+
+void ThreadMgr::DeleteThreads(const HashSet<int64_t>& thread_ids) {
+  std::unique_lock<std::mutex> lock(mutex4del_threads_);
+  for (int64_t thrd_id : thread_ids) {
+    const auto& it = threads_.find(thrd_id);
+    CHECK((it != threads_.end()) && (it->second))
+        << " RuntimeError! Actor thread: " << thrd_id << " non-existent but want to delete";
+    auto& thread = it->second;
+    ActorMsg msg = ActorMsg::BuildCommandMsg(-1, ActorCmd::kStopThread);
+    thread->GetMsgChannelPtr()->Send(msg);
+    thread.reset();
+    VLOG(1) << " Actor thread: " << thrd_id << " finished when the graph is destructed.";
+    threads_.erase(it);
   }
 }
 

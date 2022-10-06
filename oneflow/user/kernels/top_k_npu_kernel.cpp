@@ -30,16 +30,16 @@ class TopKNpuKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
-    if (in->shape().elem_cnt() == 0) { return; }
+    if (in->shape_view().elem_cnt() == 0) { return; }
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const int64_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
-    const int64_t instance_num = in->shape().elem_cnt() / instance_size;
+    const int64_t instance_size = in->shape_view().At(in->shape_view().NumAxes() - 1);
+    const int64_t instance_num = in->shape_view().elem_cnt() / instance_size;
     
     const int64_t k = std::min(static_cast<int64_t>(ctx->Attr<int32_t>("k")), instance_size);
     std::vector<int64_t> k_shape ={1};
     std::vector<int> k_vec = {static_cast<int>(k)};
-    CHECK_EQ(tmp_buffer->shape().elem_cnt(), sizeof(int));
+    CHECK_EQ(tmp_buffer->shape_view().elem_cnt(), sizeof(int));
     std::string key = "TopKNpu" + ShapeToString(k_vec);
     if(!const_tensor_map.count(key))  const_tensor_map[key] = k_vec;
     if(!shape_map.count(key)) shape_map[key] = k_shape;

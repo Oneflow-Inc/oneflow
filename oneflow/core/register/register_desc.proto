@@ -46,4 +46,8 @@ message RegstDescProto {
   }
   // NOTE(chengcheng): mark this regst memory is shared with EagerParameter.
   optional string variable_op_name = 16 [default = ""];
+  // NOTE(chengcheng): for mem block debug.
+  optional int64 mem_block_total_actor_count = 20 [default = -1];
+  optional int64 alloc_before_actor = 21 [default = -1];
+  optional int64 free_after_actor = 22 [default = -1];
 }

@@ -33,12 +33,12 @@ class LayerNormNpuKernel final : public user_op::OpKernel {
     user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
     user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
     float epsilon = ctx->Attr<double>("epsilon");
-    const int64_t num_instances = mean->shape().elem_cnt();
-    const int64_t norm_size = x->shape().elem_cnt() / num_instances;
+    const int64_t num_instances = mean->shape_view().elem_cnt();
+    const int64_t norm_size = x->shape_view().elem_cnt() / num_instances;
     CHECK_EQ(ctx->has_input("gamma", 0), 1); 
     CHECK_EQ(ctx->has_input("beta", 0), 1); 
     user_op::Tensor* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
-    CHECK_EQ(gamma->shape().elem_cnt(), norm_size);
+    CHECK_EQ(gamma->shape_view().elem_cnt(), norm_size);
     user_op::Tensor* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
     int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
     int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
@@ -87,8 +87,8 @@ class LayerNormGradNpuKernel final : public user_op::OpKernel {
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     user_op::Tensor* gamma_diff = ctx->Tensor4ArgNameAndIndex("gamma_diff", 0);
     user_op::Tensor* beta_diff = ctx->Tensor4ArgNameAndIndex("beta_diff", 0);
-    const int64_t num_instances = mean->shape().elem_cnt();
-    const int64_t norm_size = x->shape().elem_cnt() / num_instances;
+    const int64_t num_instances = mean->shape_view().elem_cnt();
+    const int64_t norm_size = x->shape_view().elem_cnt() / num_instances;
 
     CHECK_EQ(ctx->has_input("gamma", 0), 1); 
     user_op::Tensor* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);

@@ -134,13 +134,14 @@ class SequentialLR(LRScheduler):
             self.schedulers[i].load_state_dict(s)
 
     def _generate_conf_for_graph(self, lr_conf):
-        seq_lr_conf = lr_conf.mutable_sequential_scheduler_conf()
+        lr_conf.sequential_scheduler_conf.SetInParent()
+        seq_lr_conf = lr_conf.sequential_scheduler_conf
 
         for scheduler in self.schedulers:
-            scheduler._generate_conf_for_graph(seq_lr_conf.mutable_schedulers().Add())
+            scheduler._generate_conf_for_graph(seq_lr_conf.schedulers.add())
 
         for m in self.milestones:
-            seq_lr_conf.add_milestones(m)
+            seq_lr_conf.milestones.append(m)
 
         for r in self.interval_rescaling:
-            seq_lr_conf.add_interval_rescaling(r)
+            seq_lr_conf.interval_rescaling.append(r)

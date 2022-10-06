@@ -105,7 +105,7 @@ class NmsGpuKernel final : public user_op::OpKernel {
     int8_t* keep = keep_blob->mut_dptr<int8_t>();
     int64_t* suppression_mask = tmp_blob->mut_dptr<int64_t>();
 
-    const int num_boxes = boxes_blob->shape().At(0);
+    const int num_boxes = boxes_blob->shape_view().At(0);
     int num_keep = ctx->Attr<int>("keep_n");
     if (num_keep <= 0 || num_keep > num_boxes) { num_keep = num_boxes; }
     const int num_blocks = CeilDiv<int>(num_boxes, kBlockSize);
@@ -132,8 +132,8 @@ class NmsGpuKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("out", 0) == DataType::kInt8)           \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                               \
-        Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                          \
-        int64_t num_boxes = in_shape->At(0);                                            \
+        const Shape& in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                    \
+        int64_t num_boxes = in_shape.At(0);                                             \
         int64_t blocks = CeilDiv<int64_t>(num_boxes, kBlockSize);                       \
         return num_boxes * blocks * sizeof(int64_t);                                    \
       });

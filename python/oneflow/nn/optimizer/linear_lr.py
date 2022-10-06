@@ -85,7 +85,8 @@ class LinearLR(LRScheduler):
         return base_lr * multiplier
 
     def _generate_conf_for_graph(self, lr_conf):
-        linear_lr_conf = lr_conf.mutable_linear_lr_conf()
-        linear_lr_conf.set_start_factor(self.start_factor)
-        linear_lr_conf.set_end_factor(self.end_factor)
-        linear_lr_conf.set_total_iters(self.total_iters)
+        lr_conf.linear_lr_conf.SetInParent()
+        linear_lr_conf = lr_conf.linear_lr_conf
+        linear_lr_conf.start_factor = self.start_factor
+        linear_lr_conf.end_factor = self.end_factor
+        linear_lr_conf.total_iters = self.total_iters

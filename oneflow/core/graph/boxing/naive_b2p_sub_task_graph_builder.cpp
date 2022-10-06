@@ -62,7 +62,7 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
         zeros_node->Init(out_machine_id, thrd_id, lbi, logical_blob_desc.shape(),
                          logical_blob_desc.data_type(), time_shape);
         nearest_in_node->BuildCtrlRegstDesc(zeros_node);
-        Connect<TaskNode>(nearest_in_node, ctx->task_graph()->NewEdge(), zeros_node);
+        ctx->task_graph()->ConnectWithLbi(nearest_in_node, zeros_node, lbi);
         sorted_out_tasks->emplace_back(zeros_node);
       }
     }

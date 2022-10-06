@@ -18,6 +18,7 @@ limitations under the License.
 #include <pybind11/functional.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
 
@@ -25,37 +26,26 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-std::shared_ptr<one::OpBuilder> OpBuilder_Input(const std::shared_ptr<one::OpBuilder>& builder,
-                                                const std::string& input_name,
-                                                const int input_num) {
-  builder->MaybeInput(input_name, input_num).GetOrThrow();
-  return builder;
-}
-
-std::shared_ptr<one::OpBuilder> OpBuilder_Output(const std::shared_ptr<one::OpBuilder>& builder,
-                                                 const std::string& output_name,
-                                                 const int output_num) {
-  builder->MaybeOutput(output_name, output_num).GetOrThrow();
-  return builder;
-}
-
-std::shared_ptr<one::OpBuilder> OpBuilder_Attr(const std::shared_ptr<one::OpBuilder>& builder,
-                                               const std::string& attr_name,
-                                               const cfg::AttrValue& attr_value) {
-  builder->MaybeAttr(attr_name, attr_value).GetOrThrow();
-  return builder;
-}
+namespace one {
 
 ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py::class_<one::OpBuilder, std::shared_ptr<one::OpBuilder>>(m, "OpBuilder")
       .def(py::init<const std::string&>())
       .def(py::init<const std::string&, const std::string&>())
-      .def("input", &OpBuilder_Input)
-      .def("output", &OpBuilder_Output)
-      .def("attr", &OpBuilder_Attr)
-      .def("build", [](const std::shared_ptr<one::OpBuilder>& builder) {
-        return builder->Build().GetPtrOrThrow();
-      });
+      .def("input", &OpBuilder::MaybeInput)
+      .def("output", &OpBuilder::MaybeOutput)
+      .def("attr",
+           [](const std::shared_ptr<one::OpBuilder>& x, const std::string& attr_name,
+              const std::string& attr_val_str) -> Maybe<OpBuilder&> {
+             AttrValue attr_val;
+             if (!TxtString2PbMessage(attr_val_str, &attr_val)) {
+               THROW(RuntimeError) << "attr val parse failed.\n" << attr_val_str;
+             }
+             return x->MaybeAttr(attr_name, attr_val);
+           })
+      .def("build", &OpBuilder::Build);
 }
+
+}  // namespace one
 
 }  // namespace oneflow

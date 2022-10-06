@@ -32,7 +32,7 @@ void WaitAndSendIdsKernel<T>::ForwardDataContent(KernelContext* ctx) const {
   if (status->out_idx_ >= status->out_num_) {
     CHECK(this->op_conf().wait_and_send_ids_conf().has_job_name());
     const auto& job_name = this->op_conf().wait_and_send_ids_conf().job_name();
-    auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
+    auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
     auto* buffer = buffer_mgr->Get(GetSourceTickBufferName(job_name));
     status->in_id_ = 0;
     {

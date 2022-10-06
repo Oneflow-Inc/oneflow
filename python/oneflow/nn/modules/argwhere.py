@@ -28,7 +28,7 @@ def argwhere_op(input, dtype: Optional[flow.dtype] = flow.int32):
     It returns a list in which each element is a coordinate that points to a non-zero element in the condition.
 
     Args:
-        input (oneflow.Tensor): The input Tensor.
+        input (oneflow.Tensor): the input Tensor.
         dtype (Optional[flow.dtype], optional): The data type of output. Defaults to None.
 
     Returns:

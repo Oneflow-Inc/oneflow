@@ -435,7 +435,48 @@ class TestConv1d(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest()
+    @autotest(n=3)
+    def test_nn_functional_conv1d(test_case):
+        device = random_device()
+        img = torch.ones((1, 3, 224), requires_grad=True).to(device)
+        kernel = torch.ones((3, 1, 3), requires_grad=True).to(device)
+        y = torch.nn.functional.conv1d(img, kernel, groups=3)
+        return y
+
+    @profile(torch.nn.functional.conv1d)
+    def profile_conv1d(test_case):
+        inputs = torch.ones(40, 16, 30)
+        weight_16c = torch.ones(20, 16, 5)
+        weight_16c_4g = torch.ones(20, 4, 5)
+        weight_3k_16c = torch.ones(20, 16, 3)
+        weight_1k_16c = torch.ones(20, 16, 1)
+        torch.nn.functional.conv1d(inputs, weight_16c)
+        torch.nn.functional.conv1d(inputs, weight_16c, bias=torch.ones(20))
+        torch.nn.functional.conv1d(inputs, weight_16c, bias=torch.ones(20), padding=2)
+        torch.nn.functional.conv1d(
+            inputs, weight_16c, bias=torch.ones(20), padding=2, stride=2
+        )
+        torch.nn.functional.conv1d(inputs, weight_16c_4g, groups=4)
+        torch.nn.functional.conv1d(inputs, weight_16c_4g, bias=torch.ones(20), groups=4)
+        torch.nn.functional.conv1d(
+            inputs, weight_16c_4g, bias=torch.ones(20), groups=4, stride=4
+        )
+        torch.nn.functional.conv1d(
+            inputs, weight_16c_4g, bias=torch.ones(20), groups=4, padding=2
+        )
+        torch.nn.functional.conv1d(inputs, weight_3k_16c)
+        torch.nn.functional.conv1d(inputs, weight_3k_16c, bias=torch.ones(20))
+        torch.nn.functional.conv1d(
+            inputs, weight_3k_16c, bias=torch.ones(20), padding=1
+        )
+        torch.nn.functional.conv1d(
+            inputs, weight_3k_16c, bias=torch.ones(20), padding=1, stride=2
+        )
+        torch.nn.functional.conv1d(inputs, weight_1k_16c)
+        torch.nn.functional.conv1d(inputs, weight_1k_16c, bias=torch.ones(20))
+        torch.nn.functional.conv1d(inputs, weight_1k_16c, bias=torch.ones(20), stride=2)
+
+    @autotest(n=5)
     def test_conv1d_with_random_data(test_case):
         channels = random(1, 6)
         m = torch.nn.Conv1d(
@@ -456,7 +497,7 @@ class TestConv1d(flow.unittest.TestCase):
         return y
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    @autotest(n=30, check_allclose=False)
+    @autotest(n=5, check_allclose=False)
     def test_conv1d_group_with_random_data(test_case):
         channels = 720  # lcm(1, 2, 3, 4, 5, 6)
         m = torch.nn.Conv1d(

@@ -16,8 +16,8 @@ class MathBinaryBroadcastAddKernel final : public user_op::OpKernel{
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* z = ctx->Tensor4ArgNameAndIndex("z", 0);
 
-    const int64_t x_elem_cnt = x->shape().elem_cnt();
-    const int64_t y_elem_cnt = y->shape().elem_cnt();
+    const int64_t x_elem_cnt = x->shape_view().elem_cnt();
+    const int64_t y_elem_cnt = y->shape_view().elem_cnt();
 
     if (x_elem_cnt != 0 && y_elem_cnt != 0) {
         NpuCommand npu_command;
@@ -56,8 +56,8 @@ class MathBinaryBroadcastDivKernel final : public user_op::OpKernel{
     user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* z = ctx->Tensor4ArgNameAndIndex("z", 0);
-    const int64_t x_elem_cnt = x->shape().elem_cnt();
-    const int64_t y_elem_cnt = y->shape().elem_cnt();
+    const int64_t x_elem_cnt = x->shape_view().elem_cnt();
+    const int64_t y_elem_cnt = y->shape_view().elem_cnt();
 
     if (x_elem_cnt != 0 && y_elem_cnt != 0) {
         NpuCommand npu_command;
@@ -95,8 +95,8 @@ class MathBinaryBroadcastEqualKernel final : public user_op::OpKernel{
     user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* z = ctx->Tensor4ArgNameAndIndex("z", 0);
-    const int64_t x_elem_cnt = x->shape().elem_cnt();
-    const int64_t y_elem_cnt = y->shape().elem_cnt();
+    const int64_t x_elem_cnt = x->shape_view().elem_cnt();
+    const int64_t y_elem_cnt = y->shape_view().elem_cnt();
 
     if (x_elem_cnt != 0 && y_elem_cnt != 0) {
         NpuCommand npu_command;

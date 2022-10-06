@@ -16,9 +16,7 @@ limitations under the License.
 #include "oneflow/core/job/session_global_objects_scope.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/global_process_ctx.h"
-#include "oneflow/core/hardware/node_device_descriptor_manager.h"
 #include "oneflow/core/framework/load_library.h"
-#include "oneflow/core/job/available_memory_desc.pb.h"
 #include "oneflow/core/job/collective_boxing/scheduler.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/global_for.h"
@@ -40,101 +38,38 @@ limitations under the License.
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/graph/task_stream_index_manager.h"
 
-#ifdef WITH_CUDA
-#include "oneflow/core/hardware/cuda_device_descriptor.h"
-#endif  // WITH_CUDA
-
 namespace oneflow {
-
-namespace {
-
-AvailableMemDescOfMachine GetAvailableMemDescOfMachine(int64_t rank) {
-  AvailableMemDescOfMachine machine_mem_desc;
-  const auto node_desc =
-      Global<hardware::NodeDeviceDescriptorManager>::Get()->GetNodeDeviceDescriptor(rank);
-#ifdef WITH_CUDA
-  const auto cuda_device_list =
-      node_desc->GetDeviceDescriptorList(hardware::kCudaDeviceDescriptorClassName);
-  CHECK(cuda_device_list);
-  FOR_RANGE(int, i, 0, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
-    if (i >= cuda_device_list->DeviceCount()) {
-      LOG(WARNING) << "Invalid CUDA device ordinal: rank " << rank << " ordinal " << i;
-      machine_mem_desc.add_zone_size(0);
-    } else {
-      const auto cuda_device = std::dynamic_pointer_cast<const hardware::CudaDeviceDescriptor>(
-          cuda_device_list->GetDevice(i));
-      CHECK(cuda_device);
-      machine_mem_desc.add_zone_size(cuda_device->GlobalMemorySizeBytes());
-    }
-  }
-#endif
-  machine_mem_desc.add_zone_size(node_desc->HostMemorySizeBytes());
-  return machine_mem_desc;
-}
-
-AvailableMemDesc GetAvailableMemDesc() {
-  AvailableMemDesc ret;
-  for (int64_t i : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
-    *ret.add_machine_amd() = GetAvailableMemDescOfMachine(i);
-  }
-  return ret;
-}
-
-AvailableMemDesc GetDryRunAvailableMemDesc() {
-  AvailableMemDescOfMachine this_machine_mem_desc;
-#ifdef WITH_CUDA
-  FOR_RANGE(int, i, 0, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
-    this_machine_mem_desc.add_zone_size(std::numeric_limits<size_t>::max());
-  }
-#endif
-  this_machine_mem_desc.add_zone_size(std::numeric_limits<size_t>::max());
-
-  AvailableMemDesc ret;
-  AvailableMemDescOfMachine machine_amd_i;
-  for (int64_t i = 0; i < Global<ResourceDesc, ForSession>::Get()->process_ranks().size(); ++i) {
-    *ret.add_machine_amd() = this_machine_mem_desc;
-  }
-  return ret;
-}
-
-}  // namespace
 
 SessionGlobalObjectsScope::SessionGlobalObjectsScope() {}
 
 Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   session_id_ = config_proto.session_id();
-  Global<ResourceDesc, ForSession>::Delete();
+  Singleton<ResourceDesc, ForSession>::Delete();
   DumpVersionInfo();
-  Global<ResourceDesc, ForSession>::New(config_proto.resource(),
-                                        GlobalProcessCtx::NumOfProcessPerNode());
-  Global<IDMgr>::New();
-  Global<TaskStreamIndexManager>::New();
+  Singleton<ResourceDesc, ForSession>::New(config_proto.resource(),
+                                           GlobalProcessCtx::NumOfProcessPerNode());
+  Singleton<IDMgr>::New();
+  Singleton<TaskStreamIndexManager>::New();
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    Global<AvailableMemDesc>::New();
-    if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
-      *Global<AvailableMemDesc>::Get() = GetDryRunAvailableMemDesc();
-    } else {
-      *Global<AvailableMemDesc>::Get() = GetAvailableMemDesc();
-    }
-    Global<JobName2JobId>::New();
-    Global<CriticalSectionDesc>::New();
-    Global<InterUserJobInfo>::New();
-    Global<LazyJobBuildAndInferCtxMgr>::New();
-    Global<JobSetCompileCtx>::New();
-    Global<RuntimeBufferManagersScope>::New();
+    Singleton<JobName2JobId>::New();
+    Singleton<CriticalSectionDesc>::New();
+    Singleton<InterUserJobInfo>::New();
+    Singleton<LazyJobBuildAndInferCtxMgr>::New();
+    Singleton<JobSetCompileCtx>::New();
+    Singleton<RuntimeBufferManagersScope>::New();
   }
-  for (const std::string& lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
+
   {
-    // NOTE(chengcheng): Init Global Runtime objects.
-    Global<RuntimeCtx>::New();
-    Global<MemoryAllocator>::New();
-    Global<ChunkMgr>::New();
-    Global<RegstMgr>::New();
-    Global<ActorMsgBus>::New();
-    Global<ThreadMgr>::New();
-    Global<RuntimeJobDescs>::New();
-    Global<summary::EventsWriter>::New();
-    Global<boxing::collective::Scheduler>::New();
+    // NOTE(chengcheng): Init Global(singleton) Runtime objects.
+    Singleton<RuntimeCtx>::New();
+    Singleton<MemoryAllocator>::New();
+    Singleton<ChunkMgr>::New();
+    Singleton<RegstMgr>::New();
+    Singleton<ActorMsgBus>::New();
+    Singleton<ThreadMgr>::New();
+    Singleton<RuntimeJobDescs>::New();
+    Singleton<summary::EventsWriter>::New();
+    Singleton<boxing::collective::Scheduler>::New();
   }
 
   return Maybe<void>::Ok();
@@ -142,41 +77,39 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
 
 Maybe<void> SessionGlobalObjectsScope::EagerInit(const ConfigProto& config_proto) {
   session_id_ = config_proto.session_id();
-  Global<ResourceDesc, ForSession>::Delete();
+  Singleton<ResourceDesc, ForSession>::Delete();
   DumpVersionInfo();
-  Global<ResourceDesc, ForSession>::New(config_proto.resource());
-  for (const std::string& lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
+  Singleton<ResourceDesc, ForSession>::New(config_proto.resource());
   return Maybe<void>::Ok();
 }
 
 SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   {
-    // NOTE(chengcheng): Delete Global Runtime objects.
-    Global<boxing::collective::Scheduler>::Delete();
-    Global<summary::EventsWriter>::Delete();
-    Global<RuntimeJobDescs>::Delete();
-    Global<ThreadMgr>::Delete();
-    Global<ActorMsgBus>::Delete();
-    Global<RegstMgr>::Delete();
-    Global<ChunkMgr>::Delete();
-    Global<MemoryAllocator>::Delete();
-    Global<RuntimeCtx>::Delete();
+    // NOTE(chengcheng): Delete Global(singleton) Runtime objects.
+    Singleton<boxing::collective::Scheduler>::Delete();
+    Singleton<summary::EventsWriter>::Delete();
+    Singleton<RuntimeJobDescs>::Delete();
+    Singleton<ThreadMgr>::Delete();
+    Singleton<ActorMsgBus>::Delete();
+    Singleton<RegstMgr>::Delete();
+    Singleton<ChunkMgr>::Delete();
+    Singleton<MemoryAllocator>::Delete();
+    Singleton<RuntimeCtx>::Delete();
   }
 
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    Global<RuntimeBufferManagersScope>::Delete();
-    Global<JobSetCompileCtx>::Delete();
-    Global<LazyJobBuildAndInferCtxMgr>::Delete();
-    Global<InterUserJobInfo>::Delete();
-    Global<CriticalSectionDesc>::Delete();
-    Global<JobName2JobId>::Delete();
-    Global<AvailableMemDesc>::Delete();
+    Singleton<RuntimeBufferManagersScope>::Delete();
+    Singleton<JobSetCompileCtx>::Delete();
+    Singleton<LazyJobBuildAndInferCtxMgr>::Delete();
+    Singleton<InterUserJobInfo>::Delete();
+    Singleton<CriticalSectionDesc>::Delete();
+    Singleton<JobName2JobId>::Delete();
   }
-  Global<TaskStreamIndexManager>::Delete();
-  Global<IDMgr>::Delete();
-  Global<ResourceDesc, ForSession>::Delete();
-  Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
-                                        GlobalProcessCtx::NumOfProcessPerNode());
+  Singleton<TaskStreamIndexManager>::Delete();
+  Singleton<IDMgr>::Delete();
+  Singleton<ResourceDesc, ForSession>::Delete();
+  Singleton<ResourceDesc, ForSession>::New(Singleton<ResourceDesc, ForEnv>::Get()->resource(),
+                                           GlobalProcessCtx::NumOfProcessPerNode());
 }
 
 }  // namespace oneflow

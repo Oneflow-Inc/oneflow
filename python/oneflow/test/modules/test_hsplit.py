@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+from random import shuffle
+
 from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
@@ -32,7 +34,23 @@ class TestHsplitVec(flow.unittest.TestCase):
             dim3=random(3, 6),
         ).to(device)
         z = torch.hsplit(x, (1, 2))
-        return z[0]
+        return z
+
+    @autotest(n=5)
+    def test_flow_hsplit_vec_with_stride(test_case):
+        device = random_device()
+        x = random_tensor(
+            ndim=4,
+            dim0=random(3, 6),
+            dim1=random(3, 6),
+            dim2=random(3, 6),
+            dim3=random(3, 6),
+        ).to(device)
+        perm = [0, 1, 2, 3]
+        shuffle(perm)
+        y = x.permute(perm)
+        z = torch.hsplit(y, (1, 2))
+        return z
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -45,7 +63,7 @@ class TestHsplitInt(flow.unittest.TestCase):
         ).to(device)
         split = oneof(2, 4, 6)
         z = torch.hsplit(x, split)
-        return z[0]
+        return z
 
 
 if __name__ == "__main__":

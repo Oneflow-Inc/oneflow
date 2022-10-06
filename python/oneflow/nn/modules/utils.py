@@ -96,13 +96,6 @@ def _check_axis(axis, shape):
     return axis
 
 
-def _check_inplace_valid(x):
-    if x.is_leaf and x.requires_grad:
-        raise RuntimeError(
-            "a leaf Tensor that requires grad is being used in an in-place operation"
-        )
-
-
 def _generate_output_size(input_size, output_size):
     new_output_size = []
     assert len(input_size) - 2 == len(

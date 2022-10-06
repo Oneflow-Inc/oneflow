@@ -33,7 +33,7 @@ class Cast : public OpExprGradFunction<CastCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     return Maybe<void>::Ok();
   }
 
@@ -46,7 +46,7 @@ class Cast : public OpExprGradFunction<CastCaptureState> {
   Maybe<void> Apply(const CastCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->resize(1);
-    in_grads->at(0) = JUST(functional::Cast(out_grads.at(0), ctx->dtype));
+    (*in_grads)[0] = JUST(functional::Cast(out_grads[0], ctx->dtype, /*pin_memory=*/false));
     return Maybe<void>::Ok();
   }
 };

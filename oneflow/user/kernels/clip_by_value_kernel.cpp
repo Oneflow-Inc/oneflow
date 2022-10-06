@@ -80,7 +80,7 @@ class ClipByScalarKernel final : public user_op::OpKernel {
     int64_t integral_max = ctx->Attr<int64_t>("integral_max");
     ClipByMinMaxFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_min, integral_min),
                                      GetDtypeMatchedValue<T>(floating_max, integral_max));
-    ClipKernelUtil<device_type, T>::Forward(ctx->stream(), clip_func, y->shape().elem_cnt(),
+    ClipKernelUtil<device_type, T>::Forward(ctx->stream(), clip_func, y->shape_view().elem_cnt(),
                                             x->dptr<T>(), y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -99,7 +99,7 @@ class ClipByScalarMinKernel final : public user_op::OpKernel {
     double floating_min = ctx->Attr<double>("floating_min");
     int64_t integral_min = ctx->Attr<int64_t>("integral_min");
     ClipByMinFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_min, integral_min));
-    ClipKernelUtil<device_type, T>::Forward(ctx->stream(), clip_func, y->shape().elem_cnt(),
+    ClipKernelUtil<device_type, T>::Forward(ctx->stream(), clip_func, y->shape_view().elem_cnt(),
                                             x->dptr<T>(), y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -118,7 +118,7 @@ class ClipByScalarMaxKernel final : public user_op::OpKernel {
     double floating_max = ctx->Attr<double>("floating_max");
     int64_t integral_max = ctx->Attr<int64_t>("integral_max");
     ClipByMaxFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_max, integral_max));
-    ClipKernelUtil<device_type, T>::Forward(ctx->stream(), clip_func, y->shape().elem_cnt(),
+    ClipKernelUtil<device_type, T>::Forward(ctx->stream(), clip_func, y->shape_view().elem_cnt(),
                                             x->dptr<T>(), y->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -141,7 +141,7 @@ class ClipByScalarGradKernel final : public user_op::OpKernel {
     int64_t integral_max = ctx->Attr<int64_t>("integral_max");
     ClipByMinMaxGradFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_min, integral_min),
                                          GetDtypeMatchedValue<T>(floating_max, integral_max));
-    ClipKernelUtil<device_type, T>::Backward(ctx->stream(), clip_func, dx->shape().elem_cnt(),
+    ClipKernelUtil<device_type, T>::Backward(ctx->stream(), clip_func, dx->shape_view().elem_cnt(),
                                              x->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -161,7 +161,7 @@ class ClipByScalarMinGradKernel final : public user_op::OpKernel {
     double floating_min = ctx->Attr<double>("floating_min");
     int64_t integral_min = ctx->Attr<int64_t>("integral_min");
     ClipByMinGradFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_min, integral_min));
-    ClipKernelUtil<device_type, T>::Backward(ctx->stream(), clip_func, dx->shape().elem_cnt(),
+    ClipKernelUtil<device_type, T>::Backward(ctx->stream(), clip_func, dx->shape_view().elem_cnt(),
                                              x->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -181,7 +181,7 @@ class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
     double floating_max = ctx->Attr<double>("floating_max");
     int64_t integral_max = ctx->Attr<int64_t>("integral_max");
     ClipByMaxGradFunctor<T> clip_func(GetDtypeMatchedValue<T>(floating_max, integral_max));
-    ClipKernelUtil<device_type, T>::Backward(ctx->stream(), clip_func, dx->shape().elem_cnt(),
+    ClipKernelUtil<device_type, T>::Backward(ctx->stream(), clip_func, dx->shape_view().elem_cnt(),
                                              x->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

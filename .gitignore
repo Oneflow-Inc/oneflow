@@ -2,6 +2,7 @@
 /build-*
 /docs/build/
 /docs/build-cn/
+/docs/source/generated
 /cmake-build-*
 /dist
 /third_party/
@@ -45,3 +46,9 @@ unittest-log-*
 /tmp
 /python/oneflow/test/dataloader/data-test/
 kernel_meta_*
+
+/target
+saved_model
+/devcontainer-cache
+
+op_prof.csv

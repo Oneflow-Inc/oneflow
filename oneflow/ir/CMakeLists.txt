@@ -22,6 +22,9 @@ endif()
 
 project(oneflow-dialect LANGUAGES CXX C)
 
+# https://github.com/llvm/llvm-project/issues/55010
+set(LLVM_ABI_BREAKING_CHECKS "FORCE_OFF" CACHE STRING "")
+
 if(LLVM_PROVIDER STREQUAL "in-tree")
   include(llvm-in-tree.cmake)
 elseif(LLVM_PROVIDER STREQUAL "install")
@@ -39,6 +42,7 @@ set(LLVM_INCLUDE_DIRS ${LLVM_INCLUDE_DIRS} PARENT_SCOPE)
 set(MLIR_INCLUDE_DIRS ${MLIR_INCLUDE_DIRS} PARENT_SCOPE)
 set(ONEFLOW_MLIR_SOURCE_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/include PARENT_SCOPE)
 set(ONEFLOW_MLIR_BINARY_INCLUDE_DIRS ${PROJECT_BINARY_DIR}/include PARENT_SCOPE)
+
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_BINARY_DIR}/include)
 link_directories(${LLVM_BUILD_LIBRARY_DIR})
@@ -89,3 +93,40 @@ if(WITH_MLIR)
   add_subdirectory(oneflow-extension)
   add_subdirectory(oneflow-runner)
 endif(WITH_MLIR)
+
+if(BUILD_PYTHON)
+  foreach(llvm_include_dir ${LLVM_INCLUDE_DIRS})
+    if(llvm_include_dir MATCHES "/include$")
+      list(APPEND LLVM_INSTALL_INCLUDE_DIRS "${llvm_include_dir}//")
+    else()
+      list(APPEND LLVM_INSTALL_INCLUDE_DIRS "${llvm_include_dir}")
+    endif()
+  endforeach()
+  install(
+    DIRECTORY ${LLVM_INSTALL_INCLUDE_DIRS}
+    DESTINATION ${ONEFLOW_INCLUDE_DIR}
+    COMPONENT oneflow_py_include
+    EXCLUDE_FROM_ALL FILES_MATCHING
+    PATTERN llvm/ADT/ArrayRef.h
+    PATTERN llvm/ADT/Hashing.h
+    PATTERN llvm/ADT/iterator.h
+    PATTERN llvm/ADT/None.h
+    PATTERN llvm/ADT/SmallVector.h
+    PATTERN llvm/ADT/STLExtras.h
+    PATTERN llvm/ADT/STLFunctionalExtras.h
+    PATTERN llvm/ADT/DenseMapInfo.h
+    PATTERN llvm/ADT/identity.h
+    PATTERN llvm/ADT/iterator_range.h
+    PATTERN llvm/ADT/Optional.h
+    PATTERN llvm/ADT/STLArrayExtras.h
+    PATTERN llvm/ADT/STLForwardCompat.h
+    PATTERN llvm/ADT/StringRef.h
+    PATTERN llvm/Config/abi-breaking.h
+    PATTERN llvm/Config/llvm-config.h
+    PATTERN llvm/Support/Compiler.h
+    PATTERN llvm/Support/DataTypes.h
+    PATTERN llvm/Support/ErrorHandling.h
+    PATTERN llvm/Support/SwapByteOrder.h
+    PATTERN llvm/Support/type_traits.h
+    PATTERN llvm-c/DataTypes.h)
+endif()

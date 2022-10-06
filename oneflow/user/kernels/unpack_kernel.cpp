@@ -37,16 +37,16 @@ class UnpackKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    CHECK_GT(in->shape().NumAxes(), 0);
+    CHECK_GT(in->shape_view().NumAxes(), 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->data_type(), out->data_type());
-    CHECK_EQ(in->shape().NumAxes(), out->shape().NumAxes());
+    CHECK_EQ(in->shape_view().NumAxes(), out->shape_view().NumAxes());
     const auto unpack_num = ctx->Attr<int32_t>("unpack_num");
-    CHECK_EQ(out->shape().At(0) * unpack_num, in->shape().At(0));
-    for (int64_t i = 1; i < in->shape().NumAxes(); ++i) {
-      CHECK_EQ(out->shape().At(i), in->shape().At(i));
+    CHECK_EQ(out->shape_view().At(0) * unpack_num, in->shape_view().At(0));
+    for (int64_t i = 1; i < in->shape_view().NumAxes(); ++i) {
+      CHECK_EQ(out->shape_view().At(i), in->shape_view().At(i));
     }
-    const int64_t copy_size = out->shape().elem_cnt() * GetSizeOfDataType(out->data_type());
+    const int64_t copy_size = out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type());
     auto* state_wrapper = dynamic_cast<OpKernelStateWrapper<std::pair<size_t, size_t>>*>(state);
     CHECK_NOTNULL(state_wrapper);
     const size_t index = state_wrapper->Get().first;

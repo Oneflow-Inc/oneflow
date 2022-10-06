@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/ep/include/primitive/add.h"
+#include "oneflow/core/ep/include/primitive/memset.h"
 
 namespace oneflow {
 
@@ -65,7 +66,6 @@ size_t InferEagerPToBKernelTmpBufferSize(user_op::InferContext* ctx) {
 
 }  // namespace
 
-template<DeviceType device_type>
 class EagerPToBKernel final : public user_op::OpKernel {
  public:
   EagerPToBKernel() = default;
@@ -91,8 +91,14 @@ class EagerPToBKernel final : public user_op::OpKernel {
     const int64_t total_elem_cnt = ctx->Attr<Shape>("shape").elem_cnt();
     const auto& p2p_pair = kernel_cache->p2p_pair();
 
-    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0,
-                        total_elem_cnt * GetSizeOfDataType(out->data_type()));
+    DeviceType device_type = ctx->device_type();
+
+    std::unique_ptr<ep::primitive::Memset> memset_primitive =
+        ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(device_type);
+    CHECK(memset_primitive) << "Can not create Memset primitive for device type " << device_type;
+    memset_primitive->Launch(ctx->stream(), out->mut_dptr(), 0,
+                             total_elem_cnt * GetSizeOfDataType(out->data_type()));
+
     std::unique_ptr<ep::primitive::Add> add_primitive =
         ep::primitive::NewPrimitive<ep::primitive::AddFactory>(ctx->device_type(), in->data_type());
     CHECK(add_primitive);
@@ -101,11 +107,11 @@ class EagerPToBKernel final : public user_op::OpKernel {
       int64_t dst = pair.second;
 
       if (GlobalProcessCtx::Rank() == src) {
-        CHECK_JUST(Send<device_type>(in_ptr, total_elem_cnt, in->data_type(), dst, ctx->stream()));
+        CHECK_JUST(Send(in_ptr, total_elem_cnt, in->data_type(), dst, device_type, ctx->stream()));
       }
       if (GlobalProcessCtx::Rank() == dst) {
-        CHECK_JUST(Recv<device_type>(tmp_buffer_ptr, total_elem_cnt, out->data_type(), src,
-                                     ctx->stream()));
+        CHECK_JUST(Recv(tmp_buffer_ptr, total_elem_cnt, out->data_type(), src, device_type,
+                        ctx->stream()));
         add_primitive->Launch(ctx->stream(), out->dptr(), tmp_buffer_ptr, out->mut_dptr(),
                               total_elem_cnt);
       }
@@ -114,15 +120,9 @@ class EagerPToBKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EAGER_P_TO_B_KERNEL(device)                 \
-  REGISTER_USER_KERNEL("eager_p_to_b")                       \
-      .SetCreateFn<EagerPToBKernel<device>>()                \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)) \
-      .SetInferTmpSizeFn(InferEagerPToBKernelTmpBufferSize);
-
-REGISTER_EAGER_P_TO_B_KERNEL(DeviceType::kCPU)
-#if defined(WITH_CUDA) && HAS_NCCL_SEND_RECV
-REGISTER_EAGER_P_TO_B_KERNEL(DeviceType::kCUDA)
-#endif
+REGISTER_USER_KERNEL("eager_p_to_b")
+    .SetCreateFn<EagerPToBKernel>()
+    .SetIsMatchedHob(HobIsSendAndRecvRegistered())
+    .SetInferTmpSizeFn(InferEagerPToBKernelTmpBufferSize);
 
 }  // namespace oneflow

@@ -33,29 +33,6 @@ class DeviceCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DeviceCtx);
   virtual ~DeviceCtx() = default;
-
-#ifdef WITH_CUDA
-  virtual cudaStream_t cuda_stream() const {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-  virtual cublasHandle_t cublas_handle() const {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-  virtual cudnnHandle_t cudnn_handle() const {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-#endif
-
-#ifdef WITH_NPU
-  virtual aclrtStream npu_stream() const {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-#endif
-
   virtual ep::Stream* stream() = 0;
 
   virtual vm::Allocator* mut_allocator() {

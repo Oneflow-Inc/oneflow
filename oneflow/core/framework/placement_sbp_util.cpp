@@ -17,7 +17,7 @@ limitations under the License.
 #include <algorithm>
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/framework/placed_nd_sbp.h"
-#include "oneflow/core/framework/tensor_meta.h"
+#include "oneflow/core/common/tensor_meta.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/util.h"
@@ -38,15 +38,8 @@ namespace private_details {
 namespace {
 
 using IndexVector = DimVector;
-using StrideVector = DimVector;
 
-void GetStrideVector(const Shape& shape, StrideVector* strides) {
-  strides->resize(shape.NumAxes());
-  for (int i = 0; i < shape.NumAxes(); ++i) { strides->at(i) = shape.Count(i + 1); }
-}
-
-Maybe<void> GetIndexesFromOffset(const StrideVector& strides, int64_t offset,
-                                 IndexVector* indexes) {
+Maybe<void> GetIndexesFromOffset(const Stride& strides, int64_t offset, IndexVector* indexes) {
   indexes->resize(strides.size());
   for (int i = 0; i < strides.size(); ++i) {
     indexes->at(i) = offset / strides.at(i);
@@ -56,9 +49,10 @@ Maybe<void> GetIndexesFromOffset(const StrideVector& strides, int64_t offset,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetOffsetFromIndexes(const StrideVector& strides, const IndexVector& indexes,
+Maybe<void> GetOffsetFromIndexes(const Stride& strides, const IndexVector& indexes,
                                  int64_t* offset) {
-  CHECK_EQ_OR_RETURN(strides.size(), indexes.size());
+  CHECK_EQ_OR_RETURN(strides.size(), indexes.size())
+      << Error::RuntimeError() << "Expected size of strides to match that of indexes";
   *offset = 0;
   for (int i = 0; i < strides.size(); ++i) { *offset += indexes.at(i) * strides.at(i); }
   return Maybe<void>::Ok();
@@ -122,19 +116,40 @@ static auto* GetSelectedSubParallelDesc = DECORATE(&CalcSelectedSubParallelDesc,
 
 }  // namespace
 
+Maybe<Symbol<ParallelDesc>> CalcSubParallelDesc4Axis(Symbol<ParallelDesc> parallel_desc, int axis) {
+  const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
+  int64_t parallel_id = JUST(*opt_parallel_id);
+  const auto& hierarchy_shape = *parallel_desc->hierarchy();
+  Stride hierarchy_strides(hierarchy_shape);
+
+  int64_t index = CalcIndex4Axis(parallel_id, hierarchy_strides, axis);
+
+  int64_t stride = hierarchy_strides.at(axis);
+
+  int64_t start_parallel_id = parallel_id - index * stride;
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag(parallel_desc->device_tag());
+  for (int64_t i = 0; i < hierarchy_shape.At(axis); ++i) {
+    int64_t id = start_parallel_id + i * stride;
+    int64_t machine_id = JUST(parallel_desc->MachineId4ParallelId(id));
+    int64_t device_id = JUST(parallel_desc->DeviceId4ParallelId(id));
+    parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":"
+                                  + std::to_string(device_id));
+  }
+  return SymbolOf(ParallelDesc(parallel_conf));
+}
+
 Maybe<std::vector<int64_t>> GetSelectedParallelIds(const Shape& hierarchy_shape,
                                                    const std::vector<int>& axis2is_selected,
                                                    int64_t parallel_id) {
   CHECK_EQ_OR_RETURN(hierarchy_shape.NumAxes(), axis2is_selected.size());
-  StrideVector hierarchy_strides{};
-  GetStrideVector(hierarchy_shape, &hierarchy_strides);
+  Stride hierarchy_strides(hierarchy_shape);
   IndexVector indexes{};
   JUST(GetIndexesFromOffset(hierarchy_strides, parallel_id, &indexes));
   std::function<void(const DimVector&, DimVector*)> SelectedIndex2OriginIndex;
   JUST(GetSelectedIndex2OriginIndex(indexes, axis2is_selected, &SelectedIndex2OriginIndex));
   const auto& broadcast_shape = JUST(GetSelectedShape(hierarchy_shape, axis2is_selected));
-  StrideVector broadcast_strides{};
-  GetStrideVector(*broadcast_shape, &broadcast_strides);
+  Stride broadcast_strides(*broadcast_shape);
   const auto& origin_offsets = std::make_shared<std::vector<int64_t>>(broadcast_shape->elem_cnt());
   for (int64_t i = 0; i < broadcast_shape->elem_cnt(); ++i) {
     IndexVector broadcast_indexes{};
@@ -224,7 +239,8 @@ Maybe<void> InitShapAxis2ExpandedDim(
   for (int i = 0; i < shape.NumAxes(); ++i) {
     int64_t total_dim = shape.At(i);
     shape_axis2expanded_dims->at(i).clear();
-    if (shape_axis2required_dim.at(i).empty()) {
+    if (JUST(VectorAt(shape_axis2required_dim, i)).empty()
+        || JUST(VectorAt(shape_axis2required_dim, i)).size() == 1) {
       shape_axis2expanded_dims->at(i).emplace_back(total_dim);
     } else {
       Shape inner_shape(shape_axis2required_dim.at(i));
@@ -313,16 +329,16 @@ namespace {
 // 3) (S1, S1) is not decomposable.
 // although `nd_sbp (S0, S0) on shape (4, 4)` is not decomposable, they could be transformed into a
 // decomposable form: `n_sbp (S0, S1) on shape (2, 2, 4)`.
-Maybe<std::pair<Symbol<one::ConsistentTensorMeta>, Symbol<NdSbp>>> CalcDecomposableEquivalent(
-    Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<NdSbp> dst_nd_sbp) {
+Maybe<std::pair<Symbol<one::GlobalTensorMeta>, Symbol<NdSbp>>> CalcDecomposableEquivalent(
+    Symbol<one::GlobalTensorMeta> tensor_meta, Symbol<NdSbp> dst_nd_sbp) {
   std::shared_ptr<const Shape> shape = tensor_meta->shape_ptr();
   Symbol<NdSbp> src_nd_sbp = tensor_meta->nd_sbp();
   const auto& hierarchy = tensor_meta->parallel_desc()->hierarchy();
   std::tie(shape, src_nd_sbp, dst_nd_sbp) = *JUST(
       CalcDecomposableEquivalentShapeAndNdSbpPair(*shape, *hierarchy, src_nd_sbp, dst_nd_sbp));
 
-  one::ConsistentTensorMeta decomposible_tensor_meta(shape, tensor_meta->dtype(), src_nd_sbp,
-                                                     tensor_meta->parallel_desc());
+  one::GlobalTensorMeta decomposible_tensor_meta(*shape, tensor_meta->dtype(), src_nd_sbp,
+                                                 tensor_meta->parallel_desc());
   return std::make_pair(SymbolOf(decomposible_tensor_meta), dst_nd_sbp);
 }
 
@@ -492,20 +508,32 @@ Maybe<Shape> GetPhysicalShape(const Shape& shape, Symbol<NdSbp> nd_sbp,
   return GetPhysicalShape(shape, *nd_sbp, *parallel_desc, JUST(*parallel_id));
 }
 
-Maybe<Symbol<one::ConsistentTensorMeta>> CalcSubConsistentTensorMeta(
-    Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<ParallelDesc> sub_parallel_desc,
-    Symbol<NdSbp> sub_nd_sbp) {
-  const auto& physical_shape = JUST(
-      GetPhysicalShape(tensor_meta->shape(), tensor_meta->nd_sbp(), tensor_meta->parallel_desc()));
-  const auto& logical_shape =
-      JUST(GetLogicalShape(*physical_shape, *sub_nd_sbp, *sub_parallel_desc));
-  one::ConsistentTensorMeta sub_consistent_tensor_meta(logical_shape, tensor_meta->dtype(),
-                                                       sub_nd_sbp, sub_parallel_desc);
-  return SymbolOf(sub_consistent_tensor_meta);
+Maybe<Shape> GetSubLogicalShape(Symbol<one::GlobalTensorMeta> tensor_meta,
+                                Symbol<ParallelDesc> sub_parallel_desc, Symbol<NdSbp> sub_nd_sbp) {
+  CHECK_EQ_OR_RETURN(sub_nd_sbp->sbp_parallel_size(), 1);  // NOLINT(maybe-need-error-msg)
+  const auto& logical_shape = tensor_meta->shape();
+  const auto& physical_shape =
+      JUST(GetPhysicalShape(logical_shape, tensor_meta->nd_sbp(), tensor_meta->parallel_desc()));
+
+  std::shared_ptr<Shape> sub_logical_shape = std::make_shared<Shape>(*physical_shape);
+  if (sub_nd_sbp->sbp_parallel(0).has_split_parallel()) {
+    const int64_t split_axis = sub_nd_sbp->sbp_parallel(0).split_parallel().axis();
+    sub_logical_shape->Set(split_axis, logical_shape.At(split_axis));
+  }
+  return sub_logical_shape;
 }
 
-static constexpr auto* GetSubConsistentTensorMeta =
-    DECORATE(&CalcSubConsistentTensorMeta, ThreadLocal);
+Maybe<Symbol<one::GlobalTensorMeta>> CalcSubGlobalTensorMeta(
+    Symbol<one::GlobalTensorMeta> tensor_meta, Symbol<ParallelDesc> sub_parallel_desc,
+    Symbol<NdSbp> sub_nd_sbp) {
+  CHECK_EQ_OR_RETURN(sub_nd_sbp->sbp_parallel_size(), 1);  // NOLINT(maybe-need-error-msg)
+  const auto& logical_shape = JUST(GetSubLogicalShape(tensor_meta, sub_parallel_desc, sub_nd_sbp));
+  one::GlobalTensorMeta sub_global_tensor_meta(*logical_shape, tensor_meta->dtype(), sub_nd_sbp,
+                                               sub_parallel_desc);
+  return SymbolOf(sub_global_tensor_meta);
+}
+
+static constexpr auto* GetSubGlobalTensorMeta = DECORATE(&CalcSubGlobalTensorMeta, ThreadLocal);
 
 Maybe<Symbol<NdSbp>> ReplaceNdSbpComponent(Symbol<NdSbp> nd_sbp, int64_t axis,
                                            Symbol<NdSbp> component) {
@@ -517,15 +545,15 @@ Maybe<Symbol<NdSbp>> ReplaceNdSbpComponent(Symbol<NdSbp> nd_sbp, int64_t axis,
   return SymbolOf(new_nd_sbp);
 }
 
-Maybe<Symbol<one::ConsistentTensorMeta>> ReplaceNdSbp(Symbol<one::ConsistentTensorMeta> tensor_meta,
-                                                      Symbol<NdSbp> nd_sbp) {
-  one::ConsistentTensorMeta new_tensor_meta(tensor_meta->shape_ptr(), tensor_meta->dtype(), nd_sbp,
-                                            tensor_meta->parallel_desc());
+Maybe<Symbol<one::GlobalTensorMeta>> ReplaceNdSbp(Symbol<one::GlobalTensorMeta> tensor_meta,
+                                                  Symbol<NdSbp> nd_sbp) {
+  one::GlobalTensorMeta new_tensor_meta(tensor_meta->shape(), tensor_meta->dtype(), nd_sbp,
+                                        tensor_meta->parallel_desc());
   return SymbolOf(new_tensor_meta);
 }
 
 Maybe<std::vector<NaiveBoxingTransformation>> DecomposeIntoNaiveTransformations(
-    Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<NdSbp> dst_nd_sbp) {
+    Symbol<one::GlobalTensorMeta> tensor_meta, Symbol<NdSbp> dst_nd_sbp) {
   std::tie(tensor_meta, dst_nd_sbp) = *JUST(GetDecomposableEquivalent(tensor_meta, dst_nd_sbp));
   const auto& parallel_desc = tensor_meta->parallel_desc();
   const auto& src_nd_sbp = tensor_meta->nd_sbp();
@@ -554,13 +582,13 @@ Maybe<std::vector<NaiveBoxingTransformation>> DecomposeIntoNaiveTransformations(
         JUST(GetSelectedSubParallelDesc(parallel_desc, SymbolOf(axis2selected)));
     const auto& sub_src_nd_sbp = JUST(MakeNdSbp(src_sbp));
     const auto& sub_dst_nd_sbp = JUST(MakeNdSbp(dst_sbp));
-    const auto& sub_consistent_tensor_meta =
-        JUST(GetSubConsistentTensorMeta(tensor_meta, sub_parallel_desc, sub_src_nd_sbp));
+    const auto& sub_global_tensor_meta =
+        JUST(GetSubGlobalTensorMeta(tensor_meta, sub_parallel_desc, sub_src_nd_sbp));
     const auto& new_src_nd_sbp =
         JUST(ReplaceNdSbpComponent(tensor_meta->nd_sbp(), axis, sub_dst_nd_sbp));
     tensor_meta = JUST(ReplaceNdSbp(tensor_meta, new_src_nd_sbp));
     transformations->emplace_back(NaiveBoxingTransformation{
-        .consistent_tensor_meta = sub_consistent_tensor_meta,
+        .global_tensor_meta = sub_global_tensor_meta,
         .dst_nd_sbp = sub_dst_nd_sbp,
     });
   }
@@ -608,14 +636,15 @@ Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> CalcBroadcastGroup(
         const auto& src_process_ids = node_iter->second;
         int64_t src_process_index = (node_id2counter[node_id]++) % src_process_ids.size();
         int64_t src_process_id = src_process_ids.at(src_process_index);
-        JUST(MapAt(&process_id2group, src_process_id))->emplace_back(process_id);
+        JUST(MapAt(process_id2group, src_process_id)).emplace_back(process_id);
       }
     }
   }
   // put remainder process ids into src groups.
   for (int i = 0; i < remainder_process_ids.size(); ++i) {
     int64_t src_process_id = src_process_ids.at(i % src_process_ids.size());
-    JUST(MapAt(&process_id2group, src_process_id))->emplace_back(remainder_process_ids.at(i));
+    JUST(MapAt(process_id2group, src_process_id))
+        .emplace_back(JUST(oneflow::VectorAt(remainder_process_ids, i)));
   }
   const auto& map = std::make_shared<std::unordered_map<int64_t, Symbol<ParallelDesc>>>();
   for (const auto& pair : process_id2group) {
@@ -676,6 +705,16 @@ Maybe<void> RawCheckIsNdSbpBoxingAcyclicWithDecompose(Symbol<PlacedNdSbp> in,
 }
 
 }  // namespace
+
+int64_t CalcIndex4Axis(int64_t offset, const Stride& stride, int axis) {
+  CHECK_LT(axis, stride.size()) << "Expected axis (" << axis << ") to be less than size of stride ("
+                                << stride.size() << ")";
+  if (axis == 0) {
+    return offset / stride.at(0);
+  } else {
+    return offset % stride.at(axis - 1) / stride.at(axis);
+  }
+}
 
 decltype(CheckIsNdSbpBoxingAcyclic) CheckIsNdSbpBoxingAcyclic =
     DECORATE(&RawCheckIsNdSbpBoxingAcyclic, ThreadLocal);

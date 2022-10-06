@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 
 inline Maybe<Job> GetCurrentJob() {
-  auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
+  auto* job_ctx_mgr = Singleton<LazyJobBuildAndInferCtxMgr>::Get();
   CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
   auto* job_ctx =
       JUST(job_ctx_mgr->FindJobBuildAndInferCtx(*JUST(job_ctx_mgr->GetCurrentJobName())));

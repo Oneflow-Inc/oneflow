@@ -40,7 +40,7 @@ struct SubTskGphBuilderUtil {
   static bool IsBoxingB2B(const SbpParallel& src, const SbpParallel& dst);
   static bool IsBoxingB2S(const SbpParallel& src, const SbpParallel& dst);
   static bool BlobHasDynamicShape(const BlobDesc& blob_desc);
-  static bool IsErrorBoxingNotSupported(const cfg::ErrorProto& error);
+  static bool IsErrorBoxingNotSupported(const ErrorProto& error);
   static int64_t GetDistance(int64_t src_machine_id, int64_t src_dev_phy_id,
                              DeviceType src_device_type, int64_t dst_machine_id,
                              int64_t dst_dev_phy_id, DeviceType dst_device_type);

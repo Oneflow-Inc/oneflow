@@ -43,8 +43,9 @@ class SqrtSquareSumKernel final : public user_op::OpKernel, public user_op::Cuda
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    SqrtSquareSumKernelUtil<device_type, T>::SqrtSquareSum(
-        ctx->stream(), x->shape().elem_cnt(), x->dptr<T>(), y->mut_dptr<T>(), tmp->mut_dptr<T>());
+    SqrtSquareSumKernelUtil<device_type, T>::SqrtSquareSum(ctx->stream(),
+                                                           x->shape_view().elem_cnt(), x->dptr<T>(),
+                                                           y->mut_dptr<T>(), tmp->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

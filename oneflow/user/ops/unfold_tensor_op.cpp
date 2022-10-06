@@ -57,23 +57,27 @@ namespace oneflow {
       out_shape.at(d) = in_size_at_d;
     }
   }
-  *ctx->OutputShape("y", 0) = Shape(out_shape);
+  ctx->SetOutputShape("y", 0, Shape(out_shape));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnfoldTensorOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> UnfoldTensorOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
 /*static*/ Maybe<void> UnfoldTensorGradOp::GetSbp(user_op::SbpContext* ctx) {
   const int32_t dimension = ctx->Attr<int32_t>("dimension");
-  const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dx", 0);
+  const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
     if (i != dimension) {
-      ctx->NewBuilder().Split(user_op::OpArg("dy", 0), i).Split(user_op::OpArg("dx", 0), i).Build();
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("dy", 0), i)
+          .Split(user_op::OpArg("x", 0), i)
+          .Split(user_op::OpArg("dx", 0), i)
+          .Build();
     }
   }
   ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
@@ -82,37 +86,16 @@ namespace oneflow {
 /*static*/ Maybe<void> UnfoldTensorGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("x", 0);
   const Shape& in_shape = in.shape();
-  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
-  *dx_desc->mut_shape() = Shape(in_shape.dim_vec());
+  user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
+  dx_desc->set_shape(Shape(in_shape.dim_vec()));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnfoldTensorGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> UnfoldTensorGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("unfold_tensor")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
-      ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("unfold_tensor_grad")
-            .InputBind("dy", ctx->FwOp().output_grad("y", 0))
-            .InputBind("x", ctx->FwOp().input("x", 0))
-            .Attr<int32_t>("dimension", ctx->FwOp().attr<int32_t>("dimension"))
-            .Attr<int32_t>("size", ctx->FwOp().attr<int32_t>("size"))
-            .Attr<int32_t>("step", ctx->FwOp().attr<int32_t>("step"))
-            .Output("dx")
-            .Build();
-      });
-
-      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
-                                [&ctx, &grad_op_name]() -> const std::string& {
-                                  return ctx->GetOp(grad_op_name).output("dx", 0);
-                                });
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

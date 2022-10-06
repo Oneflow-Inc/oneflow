@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/pooling_kernel_util.h"
 #include "oneflow/user/ops/npu_command.h"
 namespace oneflow {
 
@@ -56,8 +55,8 @@ class MaxPool2dNpuKernel final : public user_op::OpKernel {
     std::vector<int64_t> dilations_64 = {1, dilation[0], dilation[1], 1};
 
     MaxPoolTensorWrapper indice_wrap( indice->mut_dptr<void>(), ACL_UINT16, ACL_FORMAT_NCHW, ACL_FORMAT_NC1HWC0,
-                                        indice->shape().NumAxes(), indice->shape().ptr(), 
-                                        indice->shape().elem_cnt()*GetSizeOfDataType(indice->data_type()));
+                                        indice->shape_view().NumAxes(), indice->shape_view().ptr(), 
+                                        indice->shape_view().elem_cnt()*GetSizeOfDataType(indice->data_type()));
     std::string data_format = ctx->Attr<std::string>("data_format");
     
     NpuCommand npu_command;
@@ -111,8 +110,8 @@ class MaxPool2dGradNpuKernel final : public user_op::OpKernel {
     std::string data_format = ctx->Attr<std::string>("data_format");
     
     MaxPoolTensorWrapper wrap( indice->mut_dptr<void>(), ACL_UINT16, ACL_FORMAT_NCHW, ACL_FORMAT_NC1HWC0,
-                                indice->shape().NumAxes(), indice->shape().ptr(), 
-                                indice->shape().elem_cnt()*GetSizeOfDataType(indice->data_type()));
+                                indice->shape_view().NumAxes(), indice->shape_view().ptr(), 
+                                indice->shape_view().elem_cnt()*GetSizeOfDataType(indice->data_type()));
     NpuCommand npu_command;
     npu_command.OpName("MaxPoolGradWithArgmaxV1")
                .Input(x,data_format)
@@ -136,11 +135,11 @@ class MaxPool2dGradNpuKernel final : public user_op::OpKernel {
 
 };
 #define REGISTER_POOLING_NPU_KERNELS(dtype)                                             \
-  REGISTER_USER_KERNEL("maxpool_2d")                                                    \
+  REGISTER_USER_KERNEL("max_pool_2d")                                                    \
       .SetCreateFn<MaxPool2dNpuKernel<dtype>>()                                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)                   \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("maxpool_2d_grad")                                               \
+  REGISTER_USER_KERNEL("max_pool_2d_grad")                                               \
       .SetCreateFn<MaxPool2dGradNpuKernel<dtype>>()                                     \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)                   \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); 

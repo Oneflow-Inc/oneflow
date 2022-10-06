@@ -28,23 +28,28 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> TopKNpuOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& in_shape = ctx->InputShape("in", 0);
-  Shape* out_shape = ctx->OutputShape("out", 0);
-  *out_shape = in_shape;
-  out_shape->Set(in_shape.NumAxes() - 1, std::min(ctx->Attr<int32_t>("k"),
-                                                  static_cast<int32_t>(in_shape.dim_vec().back())));
-  Shape* indice_shape = ctx->OutputShape("indice",0);
-  *indice_shape = in_shape;
-  indice_shape->Set(in_shape.NumAxes() - 1, std::min(ctx->Attr<int32_t>("k"),
-                                                  static_cast<int32_t>(in_shape.dim_vec().back())));
+  Shape out_shape = ctx->InputShape("in", 0);
+  out_shape.Set(
+      out_shape.NumAxes() - 1,
+      std::min(ctx->Attr<int32_t>("k"), static_cast<int32_t>(out_shape.dim_vec().back())));
+  ctx->SetOutputShape("out", 0, out_shape);
   return Maybe<void>::Ok();
+  // const Shape& in_shape = ctx->InputShape("in", 0);
+  // Shape out_shape = ctx->OutputShape("out", 0);
+  // *out_shape = in_shape;
+  // out_shape->Set(in_shape.NumAxes() - 1, std::min(ctx->Attr<int32_t>("k"),
+  //                                                 static_cast<int32_t>(in_shape.dim_vec().back())));
+  // Shape* indice_shape = ctx->OutputShape("indice",0);
+  // *indice_shape = in_shape;
+  // indice_shape->Set(in_shape.NumAxes() - 1, std::min(ctx->Attr<int32_t>("k"),
+  //                                                 static_cast<int32_t>(in_shape.dim_vec().back())));
+  // return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> TopKNpuOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> TopKNpuOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kInt64;
-  *ctx->OutputDType("indice", 0) = DataType::kInt32;
+  ctx->SetOutputDType("out", 0, DataType::kInt64);
   return Maybe<void>::Ok();
 }
 

@@ -26,15 +26,17 @@ import oneflow.unittest
 
 
 def _test_fused_scale_mask_softmax(
-    test_case, batch_size, num_heads, seq_length, fill_value, scale_value,
+    test_case, batch_size, num_heads, seq_length, fill_value, scale_value, broadcast_dim
 ):
-
-    x = np.random.randn(batch_size, num_heads, seq_length, seq_length)
-    mask = np.random.randint(
-        0, 2, size=(batch_size, num_heads, seq_length, seq_length), dtype=np.bool
+    x = np.random.randn(batch_size, num_heads, seq_length, seq_length).astype(
+        np.float32
     )
+    mask_size = [batch_size, num_heads, seq_length, seq_length]
+    if broadcast_dim:
+        mask_size[broadcast_dim] = 1
 
-    fused_x_tensor = flow.tensor(x).to("cuda")
+    mask = np.random.randint(0, 2, size=mask_size, dtype=np.bool)
+    fused_x_tensor = flow.tensor(x, dtype=flow.float32).to("cuda")
     fused_mask_tensor = flow.tensor(mask, dtype=flow.bool).to("cuda")
     fused_x_tensor.requires_grad = True
 
@@ -77,6 +79,7 @@ class TestFusedScaleMaskSoftmax(flow.unittest.TestCase):
         args_dict["seq_length"] = [16, 32, 64]
         args_dict["fill_value"] = [-10000.0]
         args_dict["scale_value"] = [1.0, 2.0, 4.0]
+        args_dict["broadcast_dim"] = [None, 0, 1, 2]
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])

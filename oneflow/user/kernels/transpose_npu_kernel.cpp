@@ -43,12 +43,12 @@ class TransposeNpuKernel final : public OpKernel {
     Tensor* tensor_out = ctx->Tensor4ArgNameAndIndex("output", 0);
     std::vector<int32_t> perm = ctx->Attr<std::vector<int32_t>>("perm");
     Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const ShapeView& in_shape = tensor_in->shape();
+    const ShapeView& in_shape = tensor_in->shape_view();
     DataType dtype = tensor_out->data_type();
-    size_t num_dims = tensor_in->shape().NumAxes();
+    size_t num_dims = tensor_in->shape_view().NumAxes();
     const int64_t* src_dims = in_shape.ptr();
 
-    int64_t elem_cnt = tensor_out->shape().elem_cnt();
+    int64_t elem_cnt = tensor_out->shape_view().elem_cnt();
 
     if (elem_cnt != 0) {
       if (IsIdentity(perm)) {
@@ -58,7 +58,7 @@ class TransposeNpuKernel final : public OpKernel {
                    tensor_in->mem_case());
         //std::cout<<"Transpose aclrtMemcpy over"<<std::endl;
       } else {
-          CHECK_EQ(tmp_buffer->shape().elem_cnt(), perm.size()*sizeof(int));
+          CHECK_EQ(tmp_buffer->shape_view().elem_cnt(), perm.size()*sizeof(int));
           std::vector<int64_t> shape_desc = {static_cast<int64_t>(perm.size())};
           std::string key = "TransposeNpu" + ShapeToString(perm);
           if(!const_tensor_map.count(key))  const_tensor_map[key] = perm;

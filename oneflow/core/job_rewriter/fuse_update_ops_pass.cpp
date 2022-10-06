@@ -20,27 +20,6 @@ namespace oneflow {
 
 namespace {
 
-std::function<bool(const OpNode* op_node)> MakePredicatorIsSafeToDelete(const OpGraph& op_graph) {
-  HashSet<std::string> ctrl_in_op_names;
-  op_graph.ForEachNode([&](const OpNode* op_node) {
-    for (const std::string& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
-      ctrl_in_op_names.insert(ctrl_in_op_name);
-    }
-  });
-  return [=](const OpNode* op_node) {
-    if (op_node->out_edges().size() > 1) { return false; }
-    if (!op_node->op().op_conf().ctrl_in_op_name().empty()) { return false; }
-    if (ctrl_in_op_names.find(op_node->op().op_conf().name()) != ctrl_in_op_names.end()) {
-      return false;
-    }
-    return true;
-  };
-}
-
-bool IsUserOpWithTypeName(const OperatorConf& op_conf, const std::string& op_type_name) {
-  return op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == op_type_name;
-};
-
 class FuseUpdateOpsPass final : public JobPass {
  public:
   FuseUpdateOpsPass() = default;
@@ -69,7 +48,11 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
         && user_op_conf.op_type_name() != "momentum_update"
         && user_op_conf.op_type_name() != "adam_update"
         && user_op_conf.op_type_name() != "rmsprop_update"
-        && user_op_conf.op_type_name() != "lars_update") {
+        && user_op_conf.op_type_name() != "lars_update"
+        && user_op_conf.op_type_name() != "adagrad_update"
+        && user_op_conf.op_type_name() != "lamb_update"
+        && user_op_conf.op_type_name() != "ftrl_update"
+        && user_op_conf.op_type_name() != "adadelta_update") {
       return;
     }
     if (user_op_conf.attr<double>("scale") != 1.0 || user_op_conf.attr<float>("l1") != 0.0f
@@ -146,6 +129,8 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
 
     if (!fused) { return; }
 
+    const TrainConf& train_conf = job_builder->job().job_conf().train_conf();
+
     user_op::UserOpConfWrapperBuilder fused_op_builder(user_op_conf.op_name());
     fused_op_builder.OpTypeName(user_op_conf.op_type_name())
         .Input("model", user_op_conf.input("model", 0))
@@ -154,7 +139,8 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
         .Attr<double>("scale", scale)
         .Attr<float>("l1", l1)
         .Attr<float>("l2", l2)
-        .Attr<float>("weight_decay", user_op_conf.attr<float>("weight_decay"));
+        .Attr<float>("weight_decay", user_op_conf.attr<float>("weight_decay"))
+        .Attr<float>("learning_rate_scale", user_op_conf.attr<float>("learning_rate_scale"));
     if (scale_by_tensor_lbn != "") {
       fused_op_builder.Input("scale_by_tensor", scale_by_tensor_lbn);
     }
@@ -165,13 +151,18 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
       // do nothing
     } else if (user_op_conf.op_type_name() == "momentum_update") {
       fused_op_builder.Input("momentum", user_op_conf.input("momentum", 0))
-          .Attr<float>("beta", user_op_conf.attr<float>("beta"));
+          .Attr<float>("beta", user_op_conf.attr<float>("beta"))
+          .Attr<float>("dampening", user_op_conf.attr<float>("dampening"))
+          .Attr<bool>("nesterov", user_op_conf.attr<bool>("nesterov"))
+          .Attr<bool>("maximize", user_op_conf.attr<bool>("maximize"));
     } else if (user_op_conf.op_type_name() == "adam_update") {
       fused_op_builder.Input("m", user_op_conf.input("m", 0))
           .Input("v", user_op_conf.input("v", 0))
           .Attr<float>("beta1", user_op_conf.attr<float>("beta1"))
           .Attr<float>("beta2", user_op_conf.attr<float>("beta2"))
-          .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"));
+          .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"))
+          .Attr<bool>("amsgrad", user_op_conf.attr<bool>("amsgrad"))
+          .Attr<bool>("do_bias_correction", user_op_conf.attr<bool>("do_bias_correction"));
       if (user_op_conf.has_input("max_v", 0)) {
         fused_op_builder.Input("max_v", user_op_conf.input("max_v", 0));
       }
@@ -195,6 +186,37 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
           .Attr<float>("momentum_beta", user_op_conf.attr<float>("momentum_beta"))
           .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"))
           .Attr<float>("lars_coefficient", user_op_conf.attr<float>("lars_coefficient"));
+    } else if (user_op_conf.op_type_name() == "adagrad_update") {
+      fused_op_builder.Input("sum", user_op_conf.input("sum", 0))
+          .Input("train_step", train_conf.train_step_lbn())
+          .Attr<float>("lr_decay", user_op_conf.attr<float>("lr_decay"))
+          .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"));
+    } else if (user_op_conf.op_type_name() == "lamb_update") {
+      fused_op_builder.Input("m", user_op_conf.input("m", 0))
+          .Input("v", user_op_conf.input("v", 0))
+          .Attr<float>("beta1", user_op_conf.attr<float>("beta1"))
+          .Attr<float>("beta2", user_op_conf.attr<float>("beta2"))
+          .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"))
+          .Attr<bool>("do_bias_correction", user_op_conf.attr<bool>("do_bias_correction"));
+      if (user_op_conf.has_input("bias_correction1", 0)) {
+        fused_op_builder.Input("bias_correction1", user_op_conf.input("bias_correction1", 0));
+      }
+      if (user_op_conf.has_input("bias_correction2", 0)) {
+        fused_op_builder.Input("bias_correction2", user_op_conf.input("bias_correction2", 0));
+      }
+    } else if (user_op_conf.op_type_name() == "ftrl_update") {
+      fused_op_builder.Input("accumulate", user_op_conf.input("accumulate", 0))
+          .Input("z", user_op_conf.input("z", 0))
+          .Attr<float>("lr_power", user_op_conf.attr<float>("lr_power"))
+          .Attr<float>("lambda1", user_op_conf.attr<float>("lambda1"))
+          .Attr<float>("lambda2", user_op_conf.attr<float>("lambda2"))
+          .Attr<float>("beta", user_op_conf.attr<float>("beta"));
+    } else if (user_op_conf.op_type_name() == "adadelta_update") {
+      fused_op_builder.Input("square_avgs", user_op_conf.input("square_avgs", 0))
+          .Input("acc_deltas", user_op_conf.input("acc_deltas", 0))
+          .Attr<float>("rho", user_op_conf.attr<float>("rho"))
+          .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"))
+          .Attr<bool>("maximize", user_op_conf.attr<bool>("maximize"));
     } else {
       UNIMPLEMENTED();
     }

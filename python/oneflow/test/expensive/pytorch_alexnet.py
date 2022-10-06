@@ -15,16 +15,10 @@ limitations under the License.
 """
 import torch
 import torch.nn as nn
-from _internally_replaced_utils import load_state_dict_from_url
 from typing import Any
 
 
 __all__ = ["AlexNet", "alexnet"]
-
-
-model_urls = {
-    "alexnet": "https://download.pytorch.org/models/alexnet-owt-7be5be79.pth",
-}
 
 
 class AlexNet(nn.Module):
@@ -73,7 +67,4 @@ def alexnet(pretrained: bool = False, progress: bool = True, **kwargs: Any) -> A
         progress (bool): If True, displays a progress bar of the download to stderr
     """
     model = AlexNet(**kwargs)
-    if pretrained:
-        state_dict = load_state_dict_from_url(model_urls["alexnet"], progress=progress)
-        model.load_state_dict(state_dict)
     return model

@@ -61,10 +61,10 @@ void CreateHcclComm(HcclComm* comm, const int dev, const std::string& key,
 
   if (rank == 0) {
     OF_HCCL_CHECK(HcclGetRootInfo(&hccl_unique_id));
-    Global<CtrlClient>::Get()->PushKV(key,
+    Singleton<CtrlClient>::Get()->PushKV(key,
                                       std::string(hccl_unique_id.internal, HCCL_ROOT_INFO_BYTES));
   } else {
-    Global<CtrlClient>::Get()->PullKV(key, [&hccl_unique_id](const std::string& val) {
+    Singleton<CtrlClient>::Get()->PullKV(key, [&hccl_unique_id](const std::string& val) {
       memcpy(hccl_unique_id.internal, val.data(), HCCL_ROOT_INFO_BYTES);
     });
   }

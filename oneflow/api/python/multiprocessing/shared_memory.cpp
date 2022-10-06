@@ -29,8 +29,8 @@ ONEFLOW_API_PYBIND11_MODULE("multiprocessing", m) {
              return ipc::SharedMemory::Open(name, create).GetPtrOrThrow();
            }),
            py::arg("name") = "", py::arg("create") = false, py::arg("size") = 0)
-      .def("close", [](ipc::SharedMemory* shm) { return shm->Close().GetOrThrow(); })
-      .def("unlink", [](ipc::SharedMemory* shm) { return shm->Unlink().GetOrThrow(); })
+      .def("close", &ipc::SharedMemory::Close)
+      .def("unlink", &ipc::SharedMemory::Unlink)
       .def_property_readonly("buf",
                              [](ipc::SharedMemory* shm) {
                                return py::memoryview::from_memory(shm->mut_buf(), shm->size());
