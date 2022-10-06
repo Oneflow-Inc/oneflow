@@ -16,12 +16,13 @@ limitations under the License.
 
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace one {
 
 struct ScalarFloorDivCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
+  bool requires_grad = true;
 };
 
 class ScalarFloorDiv : public OpExprGradFunction<ScalarFloorDivCaptureState> {
@@ -31,7 +32,7 @@ class ScalarFloorDiv : public OpExprGradFunction<ScalarFloorDivCaptureState> {
   Maybe<void> Capture(ScalarFloorDivCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);  // NOLINT(maybe-need-error-msg)
-    ctx->requires_grad = inputs.at(0)->requires_grad();
+    ctx->requires_grad = JUST(VectorAt(inputs, 0))->requires_grad();
     return Maybe<void>::Ok();
   }
 
@@ -39,7 +40,9 @@ class ScalarFloorDiv : public OpExprGradFunction<ScalarFloorDivCaptureState> {
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(1);
-    if (ctx->requires_grad) { in_grads->at(0) = JUST(functional::ZerosLike(out_grads.at(0))); }
+    if (ctx->requires_grad) {
+      JUST(VectorAt(*in_grads, 0)) = JUST(functional::ZerosLike(JUST(VectorAt(out_grads, 0))));
+    }
     return Maybe<void>::Ok();
   }
 };

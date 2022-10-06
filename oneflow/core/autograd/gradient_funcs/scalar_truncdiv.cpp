@@ -16,12 +16,13 @@ limitations under the License.
 
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace one {
 
 struct ScalarTruncDivCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
+  bool requires_grad = true;
 };
 
 class ScalarTruncDiv : public OpExprGradFunction<ScalarTruncDivCaptureState> {
@@ -39,7 +40,9 @@ class ScalarTruncDiv : public OpExprGradFunction<ScalarTruncDivCaptureState> {
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(1);
-    if (ctx->requires_grad) { in_grads->at(0) = JUST(functional::ZerosLike(out_grads.at(0))); }
+    if (ctx->requires_grad) {
+      JUST(VectorAt(*in_grads, 0)) = JUST(functional::ZerosLike(JUST(VectorAt(out_grads, 0))));
+    }
     return Maybe<void>::Ok();
   }
 };

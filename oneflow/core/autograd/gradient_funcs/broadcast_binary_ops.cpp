@@ -350,11 +350,11 @@ class BroadcastFMod : public BroadcastBinaryGrad {
  public:
   Maybe<void> Apply(const BroadcastBinaryCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    const auto& out_shape = *(out_grads.at(0)->shape());
+    const auto& out_shape = *(JUST(VectorAt(out_grads, 0))->shape());
     in_grads->resize(2);
     if (ctx->x_requires_grad || ctx->y_requires_grad) {
-      const auto& x = ctx->SavedTensors().at(ctx->x_index);
-      const auto& y = ctx->SavedTensors().at(ctx->y_index);
+      const auto& x = JUST(VectorAt(ctx->SavedTensors(), ctx->x_index));
+      const auto& y = JUST(VectorAt(ctx->SavedTensors(), ctx->y_index));
       auto broad_x_ = x;
       auto broad_y_ = y;
       if (ctx->broadcast_x) {
@@ -385,14 +385,15 @@ class BroadcastFMod : public BroadcastBinaryGrad {
       }
       if (ctx->x_requires_grad) {
         if (ctx->broadcast_x) {
-          in_grads->at(0) = JUST(functional::BroadcastReduceSumLike(out_grads.at(0), x));
+          JUST(VectorAt(*in_grads, 0)) =
+              JUST(functional::BroadcastReduceSumLike(JUST(VectorAt(out_grads, 0)), x));
         } else {
-          in_grads->at(0) = out_grads.at(0);
+          JUST(VectorAt(*in_grads, 0)) = JUST(VectorAt(out_grads, 0));
         }
       }
       if (ctx->y_requires_grad) {
         auto result = JUST(functional::TruncDiv(broad_x_, broad_y_));
-        result = JUST(functional::Mul(out_grads.at(0), result));
+        result = JUST(functional::Mul(JUST(VectorAt(out_grads, 0)), result));
         JUST(functional::ScalarMul(result, Scalar(-1.f), true));
         if (ctx->broadcast_y) {
           in_grads->at(1) = JUST(functional::BroadcastReduceSumLike(result, y));
@@ -408,11 +409,11 @@ class BroadcastFMod : public BroadcastBinaryGrad {
   Maybe<void> SaveTensorForBackward(BroadcastBinaryCaptureState* ctx, const TensorTuple& inputs,
                                     const TensorTuple& outputs) const override {
     if (ctx->x_requires_grad && ctx->broadcast_x) {
-      ctx->x_index = ctx->SaveTensorForBackward(inputs.at(0));
+      ctx->x_index = ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 0)));
     }
     if (ctx->y_requires_grad) {
-      ctx->x_index = ctx->SaveTensorForBackward(inputs.at(0));
-      ctx->y_index = ctx->SaveTensorForBackward(inputs.at(1));
+      ctx->x_index = ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 0)));
+      ctx->y_index = ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 1)));
     }
     return Maybe<void>::Ok();
   }
