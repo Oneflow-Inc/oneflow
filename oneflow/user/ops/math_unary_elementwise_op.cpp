@@ -33,11 +33,30 @@ namespace oneflow {
     return user_op::TensorDescInferFnUtil::UnchangedDataType(ctx);                       \
   }
 
-#define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD(math_unary_elementwise_type, func_prefix) \
-  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##Op)                                          \
+#define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_X(math_unary_elementwise_type, \
+                                                              func_prefix)                 \
+  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##Op)                                       \
   MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##GradOp)
 
-OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD,
-                     MATH_UNARY_ELEMENTWISE_FUNC_SEQ_ODS)
+OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_X,
+                     MATH_UNARY_ELEMENTWISE_PRIMITIVE_FUNC_BWD_WITH_DY_X_SEQ)
+
+#define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_Y(math_unary_elementwise_type, \
+                                                              func_prefix)                 \
+  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##Op)                                       \
+  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##GradOp)
+
+OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_Y,
+                     MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_DY_Y_SEQ)
+
+#define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_FILL(math_unary_elementwise_type, \
+                                                              func_prefix)                 \
+  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##Op)
+
+OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_FILL,
+                     MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_FILL_SEQ)
+
+// Negative's grad function = negative(dy), so here register negative op separately.
+MATH_ELEMENTWISE_DEFAULT_SET_FUNC(NegativeOp)
 
 }  // namespace oneflow

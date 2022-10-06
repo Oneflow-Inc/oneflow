@@ -43,7 +43,12 @@ from oneflow.nn.modules.activation import (
 )
 
 from oneflow.nn.modules.all_reduce import AllReduce
-from oneflow.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d, BatchNorm3d
+from oneflow.nn.modules.batchnorm import (
+    BatchNorm1d,
+    BatchNorm2d,
+    BatchNorm3d,
+    SyncBatchNorm,
+)
 from oneflow.nn.modules.batchnorm_fused import (
     FusedBatchNorm1d,
     FusedBatchNorm2d,
@@ -138,6 +143,9 @@ from oneflow.nn.modules.pooling import (
     AdaptiveAvgPool1d,
     AdaptiveAvgPool2d,
     AdaptiveAvgPool3d,
+    AdaptiveMaxPool1d,
+    AdaptiveMaxPool2d,
+    AdaptiveMaxPool3d,
 )
 from oneflow.nn.modules.sparse import Embedding
 from oneflow.nn.modules.upsampling import (
@@ -155,9 +163,11 @@ from . import functional
 from . import parallel
 
 from oneflow.nn.modules.rnn import (
+    RNNCellBase,
     RNNCell,
     LSTMCell,
     GRUCell,
+    RNNBase,
     RNN,
     LSTM,
     GRU,

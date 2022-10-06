@@ -52,7 +52,7 @@ namespace oneflow {
     out_desc->set_is_dynamic(true);
     out_dim_vec.at(axis) = max_dim_size;
   }
-  *out_desc->mut_shape() = Shape(out_dim_vec);
+  out_desc->set_shape(Shape(out_dim_vec));
   return Maybe<void>::Ok();
 }
 
@@ -76,10 +76,12 @@ namespace oneflow {
   for (const auto& in_arg_pair : ctx->inputs()) {
     const user_op::TensorDesc& in_desc =
         ctx->InputTensorDesc(in_arg_pair.first, in_arg_pair.second);
-    CHECK_EQ_OR_RETURN(in_desc.data_type(), first_in_desc.data_type());
+    CHECK_EQ_OR_RETURN(in_desc.data_type(), first_in_desc.data_type())
+        << "InferDataType Failed. Expected " << DataType_Name(in_desc.data_type()) << ", but got "
+        << DataType_Name(first_in_desc.data_type());
   }
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
-  *out_desc->mut_data_type() = first_in_desc.data_type();
+  out_desc->set_data_type(first_in_desc.data_type());
   return Maybe<void>::Ok();
 }
 

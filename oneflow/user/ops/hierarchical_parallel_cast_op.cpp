@@ -21,8 +21,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> HierarchicalParallelCastOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -50,15 +50,31 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
+/* static */ Maybe<void> HierarchicalParallelCastOp::GetNdSbpSignatureList(
+    user_op::GetNdSbpSignatureListContext* ctx) {
+  const auto& conf = ctx->Attr<std::vector<std::string>>("nd_sbp");
+  NdSbpSignature nd_sbp_signature;
+  for (const std::string& sbp_str : conf) {
+    SbpParallel sbp_parallel;
+    CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_str, &sbp_parallel));
+    *(*nd_sbp_signature.mutable_bn_in_op2nd_sbp())[GenRepeatedBn("in", 0)].add_sbp_parallel() =
+        sbp_parallel;
+    *(*nd_sbp_signature.mutable_bn_in_op2nd_sbp())[GenRepeatedBn("out", 0)].add_sbp_parallel() =
+        sbp_parallel;
+  }
+  ctx->AddNdSbpSignature(nd_sbp_signature);
+  return Maybe<void>::Ok();
+}
+
 /* static */ Maybe<void> HierarchicalParallelCastOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> HierarchicalParallelCastLikeOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
+  ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
 }
 
@@ -84,7 +100,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> HierarchicalParallelCastLikeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 

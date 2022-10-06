@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/framework/user_op_def.h"
+#include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
 
 namespace oneflow {

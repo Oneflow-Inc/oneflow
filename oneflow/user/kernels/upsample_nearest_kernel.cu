@@ -308,6 +308,7 @@ class UpsampleNearest2DGradGPUKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_UPSAMPLE_NEAREST_2D_CUDA_KERNEL(float)
+REGISTER_UPSAMPLE_NEAREST_2D_CUDA_KERNEL(half)
 REGISTER_UPSAMPLE_NEAREST_2D_CUDA_KERNEL(double)
 
 template<typename T>

@@ -77,7 +77,7 @@ class TestArange(flow.unittest.TestCase):
     def test_arange_with_random_data(test_case):
         start = random().to(int)
         end = start + random().to(int)
-        step = random(0, end - start).to(int)
+        step = random(1, end - start + 1).to(int)
         x = torch.arange(start=start, end=end, step=step)
         device = random_device()
         x.to(device)
@@ -87,7 +87,7 @@ class TestArange(flow.unittest.TestCase):
     def test_arange_with_float_delta(test_case):
         start = random().to(int)
         end = start + random().to(int)
-        step = random(0, end - start).to(float)
+        step = random(1, end - start + 1).to(float)
         x = torch.arange(start=start, end=end, step=step)
         device = random_device()
         x.to(device)

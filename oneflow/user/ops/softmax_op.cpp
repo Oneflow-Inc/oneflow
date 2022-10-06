@@ -29,15 +29,30 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SoftmaxOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
+  ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SoftmaxOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SoftmaxOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
+}
+
+// Logically computation cost of pool op is the product of output data amount and pool kernal data
+// amount. After adding sbp, we just divide it by parallel number if output data is splitted because
+// splitting input and using partial sum for output is not a valid sbp for this op for now.
+/*static*/ Maybe<double> SoftmaxOp::GetComputeComplexity(user_op::ComputeComplexityFnContext* ctx) {
+  double logical_computation_cost = ctx->Shape4ArgNameAndIndex("in", 0).elem_cnt() * 10;
+  const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
+  const auto& nd_sbp_in = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  for (int32_t dim_sbp = 0; dim_sbp < nd_sbp_in.sbp_parallel_size(); dim_sbp++) {
+    if (nd_sbp_in.sbp_parallel(dim_sbp).has_split_parallel()) {
+      logical_computation_cost /= parallel_hierarchy->At(dim_sbp);
+    }
+  }
+  return logical_computation_cost;
 }
 
 /*static*/ Maybe<void> SoftmaxGradOp::GetSbp(user_op::SbpContext* ctx) {
@@ -54,10 +69,9 @@ namespace oneflow {
 /*static*/ Maybe<void> SoftmaxGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& y_shape = ctx->InputShape("y", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  Shape* dx_shape = ctx->MutOutputShape("dx", 0);
   CHECK_OR_RETURN(dy_shape == y_shape) << Error::RuntimeError() << "The size of dy " << dy_shape
                                        << " must match the size of y " << y_shape;
-  *dx_shape = dy_shape;
+  ctx->SetOutputShape("dx", 0, dy_shape);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SoftmaxGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -68,7 +82,7 @@ namespace oneflow {
       << Error::TypeError() << "dy and y are expected to have the same dtype, but found "
       << DataType_Name(ctx->InputDType("dy", 0)) << " and "
       << DataType_Name(ctx->InputDType("y", 0));
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("y", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("y", 0));
   return Maybe<void>::Ok();
 }
 

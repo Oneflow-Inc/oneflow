@@ -112,9 +112,9 @@ Maybe<void> SliceBoxingOp::InferOutBlobDescs(
   if (slice_boxing_conf.has_out_shape()) {
     const Shape out_shape(slice_boxing_conf.out_shape());
     CHECK_EQ(out_shape.elem_cnt(), out_slice.shape().elem_cnt());
-    out->mut_shape() = out_shape;
+    out->set_shape(out_shape);
   } else {
-    out->mut_shape() = out_slice.shape();
+    out->set_shape(out_slice.shape());
   }
   return Maybe<void>::Ok();
 }

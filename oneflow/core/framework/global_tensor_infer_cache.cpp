@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/env_var/eager.h"
 
 namespace oneflow {
 namespace one {
@@ -98,9 +99,7 @@ Maybe<void> GlobalTensorMetaInferArgs::MakeInputBlobDescs(const UserOpExpr& user
   blob_descs->reserve(input_arg_tuple.size());
   for (int i = 0; i < input_arg_tuple.size(); ++i) {
     const auto& tensor_meta = *input_global_tensor_metas_[i].tensor_meta();
-    const auto& shape = std::const_pointer_cast<Shape>(tensor_meta.shape_ptr());
-    const auto& stride = std::const_pointer_cast<Stride>(tensor_meta.stride_ptr());
-    blob_descs->emplace_back(shape, stride, tensor_meta.data_type());
+    blob_descs->emplace_back(tensor_meta.shape(), tensor_meta.stride(), tensor_meta.data_type());
   }
   return Maybe<void>::Ok();
 }
@@ -296,7 +295,7 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
     const auto& old_global_tensor_meta = infer_args.input_global_tensor_metas()[i].tensor_meta();
     const auto& ibn = user_op_expr.input_arg_tuple()->indexed_bns().at(i);
     const auto& nd_sbp = SymbolOf(*JUST(op->NdSbp4BnInOp(ibn)));
-    GlobalTensorMeta global_tensor_meta(old_global_tensor_meta->shape_ptr(),
+    GlobalTensorMeta global_tensor_meta(old_global_tensor_meta->shape(),
                                         old_global_tensor_meta->dtype(), nd_sbp,
                                         old_global_tensor_meta->parallel_desc());
     (*input_metas)[i] = SymbolOf(global_tensor_meta);
@@ -304,7 +303,7 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
   auto* output_metas = result->mut_output_tensor_metas();
   for (int32_t i = 0; i < user_op_expr.output_size(); ++i) {
     const auto& output_mut_meta = output_mut_metas.at(i);
-    const auto& shape = output_mut_meta.tensor_meta().shape_ptr();
+    const auto& shape = output_mut_meta.tensor_meta().shape();
     DataType data_type = output_mut_meta.tensor_meta().data_type();
     const auto& obn = user_op_expr.output_arg_tuple()->indexed_bns().at(i);
     const auto& nd_sbp = SymbolOf(*JUST(op->NdSbp4BnInOp(obn)));
@@ -335,7 +334,7 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
   auto* output_metas = result->mut_output_tensor_metas();
   for (int32_t i = 0; i < user_op_expr.output_size(); ++i) {
     const auto& output_mut_meta = output_mut_metas.at(i);
-    const auto& shape = output_mut_meta.tensor_meta().shape_ptr();
+    const auto& shape = output_mut_meta.tensor_meta().shape();
     DataType data_type = output_mut_meta.tensor_meta().data_type();
     const auto& nd_sbp = infer_args.nd_sbp();
     GlobalTensorMeta tensor_meta(shape, data_type, nd_sbp, parallel_desc);
@@ -349,6 +348,9 @@ Maybe<const GlobalTensorInferResult> GlobalTensorInferCache::GetOrInfer(
     const GlobalTensorMetaInferArgs& infer_args) {
   auto iter = cache_.find(infer_args);
   if (iter == cache_.end()) {
+    if (unlikely(cache_.size() >= ThreadLocalEnvInteger<ONEFLOW_EAGER_TENSOR_INFER_CACHE_SIZE>())) {
+      cache_.clear();
+    }
     const auto& user_op_expr = user_op_expr_.lock();
     CHECK_OR_RETURN(static_cast<bool>(user_op_expr));
     const auto& output_tensor_metas = JUST(Infer(*user_op_expr, infer_args));
@@ -361,6 +363,10 @@ Maybe<const GlobalTensorInferResult> GlobalTensorInferCache::GetOrInfer(
     const SrcOpGlobalTensorMetaInferArgs& infer_args) {
   auto iter = src_op_cache_.find(infer_args);
   if (iter == src_op_cache_.end()) {
+    if (unlikely(src_op_cache_.size()
+                 >= ThreadLocalEnvInteger<ONEFLOW_EAGER_TENSOR_INFER_CACHE_SIZE>())) {
+      src_op_cache_.clear();
+    }
     const auto& user_op_expr = user_op_expr_.lock();
     CHECK_OR_RETURN(static_cast<bool>(user_op_expr));
     const auto& output_tensor_metas = JUST(Infer(*user_op_expr, infer_args));

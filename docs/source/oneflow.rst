@@ -150,6 +150,7 @@ Random sampling
     randint
     randn
     randperm
+    multinomial
     
 In-place random sampling
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -263,6 +264,7 @@ Pointwise Ops
     log 
     log1p 
     log2 
+    log10
     logical_and 
     logical_not 
     logical_or 
@@ -290,6 +292,7 @@ Pointwise Ops
     sub 
     tan 
     tanh
+    trunc
     floor_divide
 
 Reduction Ops
@@ -309,6 +312,7 @@ Reduction Ops
     mean  
     median
     prod
+    nansum
     std  
     sum  
     var
@@ -380,6 +384,7 @@ Other Ops
     tril
     repeat_interleave
     triu
+    cross
 
 BLAS and LAPACK Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

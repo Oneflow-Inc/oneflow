@@ -50,9 +50,9 @@ Maybe<void> InferTensorDesc_(InferContext* ctx) {
   TensorDesc* tensor_dx = ctx->MutOutputTensorDesc("dx", 0);
   TensorDesc* tensor_dy = ctx->MutOutputTensorDesc("dy", 0);
 
-  if (tensor_dx) { *tensor_dx->mut_shape() = tensor_x.shape(); }
+  if (tensor_dx) { tensor_dx->set_shape(tensor_x.shape()); }
 
-  if (tensor_dy) { *tensor_dy->mut_shape() = tensor_y.shape(); }
+  if (tensor_dy) { tensor_dy->set_shape(tensor_y.shape()); }
 
   return Maybe<void>::Ok();
 }
@@ -62,9 +62,9 @@ Maybe<void> InferDataType_(InferContext* ctx) {
   TensorDesc* tensor_dx = ctx->MutOutputTensorDesc("dx", 0);
   TensorDesc* tensor_dy = ctx->MutOutputTensorDesc("dy", 0);
 
-  if (tensor_dx) { *tensor_dx->mut_data_type() = tensor_dz.data_type(); }
+  if (tensor_dx) { tensor_dx->set_data_type(tensor_dz.data_type()); }
 
-  if (tensor_dy) { *tensor_dy->mut_data_type() = tensor_dz.data_type(); }
+  if (tensor_dy) { tensor_dy->set_data_type(tensor_dz.data_type()); }
 
   return Maybe<void>::Ok();
 }

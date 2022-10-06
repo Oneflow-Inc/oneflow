@@ -232,13 +232,12 @@ class BroadcastPow : public BroadcastBinaryGrad {
                     TensorTuple* in_grads) const override {
     const auto& x = ctx->SavedTensors().at(ctx->x_index);
     const auto& y = ctx->SavedTensors().at(ctx->y_index);
-    const auto& z = ctx->SavedTensors().at(ctx->z_index);
     in_grads->resize(2);
     if (ctx->x_requires_grad) {
-      in_grads->at(0) = JUST(functional::BroadcastPowXGrad(out_grads.at(0), x, y, z));
+      (*in_grads)[0] = JUST(functional::BroadcastPowXGrad(x, y, out_grads[0]));
     }
     if (ctx->y_requires_grad) {
-      in_grads->at(1) = JUST(functional::BroadcastPowYGrad(out_grads.at(0), x, y, z));
+      (*in_grads)[1] = JUST(functional::BroadcastPowYGrad(x, y, out_grads[0]));
     }
     return Maybe<void>::Ok();
   }
@@ -246,9 +245,8 @@ class BroadcastPow : public BroadcastBinaryGrad {
  protected:
   Maybe<void> SaveTensorForBackward(BroadcastBinaryCaptureState* ctx, const TensorTuple& inputs,
                                     const TensorTuple& outputs) const override {
-    ctx->x_index = ctx->SaveTensorForBackward(inputs.at(0));
-    ctx->y_index = ctx->SaveTensorForBackward(inputs.at(1));
-    ctx->z_index = ctx->SaveTensorForBackward(outputs.at(0));
+    ctx->x_index = ctx->SaveTensorForBackward(inputs[0]);
+    ctx->y_index = ctx->SaveTensorForBackward(inputs[1]);
     return Maybe<void>::Ok();
   }
 };

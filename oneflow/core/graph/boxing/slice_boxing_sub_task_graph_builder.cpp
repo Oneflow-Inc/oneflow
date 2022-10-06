@@ -234,7 +234,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
       comment = "BuildSubTaskGphP2B";
     } else {
       BlobDesc flat_blob_desc(logical_blob_desc.data_type());
-      flat_blob_desc.mut_shape() = Shape({logical_blob_desc.shape().elem_cnt()});
+      flat_blob_desc.set_shape(Shape({logical_blob_desc.shape().elem_cnt()}));
       std::vector<TaskNode*> middle_nodes;
       SbpParallel middle_sbp;
       middle_sbp.mutable_split_parallel()->set_axis(0);

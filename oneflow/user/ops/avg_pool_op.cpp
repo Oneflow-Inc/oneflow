@@ -55,7 +55,7 @@ TensorDescInferFn AvgPoolMakeForwardTensorDescInferFn(const int32_t dim) {
                                     ceil_mode, count_include_pad, divisor_override);
     user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
     *y_desc = ctx->InputTensorDesc("x", 0);
-    *y_desc->mut_shape() = params_3d.GetYShape();
+    y_desc->set_shape(params_3d.GetYShape());
 
     return Maybe<void>::Ok();
   };
@@ -80,18 +80,37 @@ Maybe<void> AvgPoolBackwardGetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+// Logically computation cost of pool op is the product of output data amount and pool kernal data
+// amount. After adding sbp, we just divide it by parallel number if output data is splitted because
+// splitting input and using partial sum for output is not a valid sbp for this op for now.
+Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx,
+                                 const std::string& blob_name) {
+  const std::vector<int32_t> pool_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
+  double logical_computation_cost = std::accumulate(
+      pool_size.begin(), pool_size.end(), ctx->Shape4ArgNameAndIndex(blob_name, 0).elem_cnt(),
+      std::multiplies<double>());
+  const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
+  const auto& nd_sbp_y = ctx->NdSbp4ArgNameAndIndex(blob_name, 0);
+  for (int32_t dim_sbp = 0; dim_sbp < nd_sbp_y.sbp_parallel_size(); dim_sbp++) {
+    if (nd_sbp_y.sbp_parallel(dim_sbp).has_split_parallel()) {
+      logical_computation_cost /= parallel_hierarchy->At(dim_sbp);
+    }
+  }
+  return logical_computation_cost;
+}
+
 Maybe<void> BackwardTensorDescInferFn(user_op::InferContext* ctx) {
   *ctx->MutOutputTensorDesc("dx", 0) = ctx->InputTensorDesc("x", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> FwInferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -109,6 +128,10 @@ Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
   }                                                                                      \
   /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {           \
     return FwInferDataType(ctx);                                                         \
+  }                                                                                      \
+  /*static*/ Maybe<double> name##Op::GetComputeComplexity(                               \
+      user_op::ComputeComplexityFnContext* ctx) {                                        \
+    return GetComputationCost(ctx, "y");                                                 \
   }
 
 IMPLEMENT_AVGPOOL_FUNCS(AvgPool1D, 1)
@@ -128,6 +151,10 @@ IMPLEMENT_AVGPOOL_FUNCS(AvgPool3D, 3)
   }                                                                                          \
   /*static*/ Maybe<void> name##GradOp::InferDataType(user_op::InferContext* ctx) {           \
     return BwInferDataType(ctx);                                                             \
+  }                                                                                          \
+  /*static*/ Maybe<double> name##GradOp::GetComputeComplexity(                               \
+      user_op::ComputeComplexityFnContext* ctx) {                                            \
+    return GetComputationCost(ctx, "dy");                                                    \
   }
 
 IMPLEMENT_AVGPOOL_BACKWARD_FUNCS(AvgPool1D)
