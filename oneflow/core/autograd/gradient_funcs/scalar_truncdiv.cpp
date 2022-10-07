@@ -15,35 +15,39 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/op_expr_grad_function.h"
+#include "oneflow/core/functional/functional.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace one {
 
-struct BroadcastFModCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
+struct ScalarTruncDivCaptureState : public AutoGradCaptureState {
+  bool requires_grad = true;
 };
 
-class BroadcastFMod : public OpExprGradFunction<BroadcastFModCaptureState> {
+class ScalarTruncDiv : public OpExprGradFunction<ScalarTruncDivCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(BroadcastFModCaptureState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(ScalarTruncDivCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);  // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs.at(0)->requires_grad();
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const BroadcastFModCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const ScalarTruncDivCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
-    in_grads->resize(2);
-    if (ctx->requires_grad) { in_grads->at(0) = out_grads.at(0); }
+    in_grads->resize(1);
+    if (ctx->requires_grad) {
+      JUST(VectorAt(*in_grads, 0)) = JUST(functional::ZerosLike(JUST(VectorAt(out_grads, 0))));
+    }
     return Maybe<void>::Ok();
   }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_fmod", BroadcastFMod);
+REGISTER_OP_EXPR_GRAD_FUNCTION("scalar_truncdiv", ScalarTruncDiv);
 
 }  // namespace one
 }  // namespace oneflow
