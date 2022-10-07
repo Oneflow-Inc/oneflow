@@ -1065,6 +1065,16 @@ class TestTensorNumpy(flow.unittest.TestCase):
         b = a.float().clone().detach()
         test_case.assertTrue(b.is_leaf)
 
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(n=5)
+    def test_tensor_nansum(test_case):
+        device = random_device()
+        x = random_tensor(4, random(0, 5), 2).to(device)
+        mask = x < 0
+        x = x.masked_fill(mask, float("nan"))
+        y = x.nansum()
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()

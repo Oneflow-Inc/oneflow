@@ -284,6 +284,7 @@ Tensor class reference
     Tensor.mish
     Tensor.mul
     Tensor.mul_
+    Tensor.nansum
     Tensor.narrow
     Tensor.ndimension
     Tensor.ne
