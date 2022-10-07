@@ -2287,11 +2287,31 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow.Tensor.scatter,
+    """
+    See :func:`oneflow.scatter`
+    """,
+)
 
 add_docstr(
     oneflow.Tensor.scatter_,
     """
-    Inplace version of :func:`oneflow.scatter`
+    Inplace version of :func:`oneflow.Tensor.scatter`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.scatter_add,
+    """
+    See :func:`oneflow.scatter_add`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.scatter_add_,
+    """
+    Inplace version of :func:`oneflow.Tensor.scatter_add`
     """,
 )
 
