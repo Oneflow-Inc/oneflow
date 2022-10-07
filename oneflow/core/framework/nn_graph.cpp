@@ -346,18 +346,26 @@ Maybe<void> NNGraph::MasterRankCompile() {
     LOG(ERROR) << "enter master";
     std::vector<Plan> plans(world_size);
     JUST(OpGraph::WithSingleton(&job_, [&]() -> Maybe<void> {
-      LOG(ERROR) << "enter call compile";
-      auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
-      JUST(BoxingTaskGraph::New())->ToProto(boxing_task_graph_proto.get());
+      auto boxing_task_graph = JUST(BoxingTaskGraph::New());
       // reachable collective boxing task pairs,
       std::vector<HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>>
           reachable_cb_pairs(world_size);
       Loop(world_size, [&](size_t i) {
-        LOG(ERROR) << "start compile sub plan " << i;
+        auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
+        auto PickTaskNode = [&]() -> std::function<bool(TaskNode*)> {
+          if (i >= kWorkerStartRank) {
+            return [i](TaskNode* task_node) {
+              return BoxingTaskGraph::SelectTaskNodeByRank(task_node, i);
+            };
+          } else {
+            return [](TaskNode*) { return true; };
+          }
+        }();
+        boxing_task_graph->ToProto(PickTaskNode, boxing_task_graph_proto.get());
         Plan rank_plan;
-        auto* plan = (i > 0) ? &rank_plan : &plan_;
-        auto rank_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true);
+        auto* plan = (i >= kWorkerStartRank) ? &rank_plan : &plan_;
         // TODO(chengcheng): new memory reused by chunk
+        auto rank_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true);
         CHECK_JUST(
             RankCompiler(boxing_task_graph_proto, i).Compile(variable_op_names_, &job_, plan));
         PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);

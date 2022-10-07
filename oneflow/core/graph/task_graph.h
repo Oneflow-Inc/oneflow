@@ -154,7 +154,8 @@ class BoxingTaskGraph final : public TaskGraph {
     return graph;
   }
 
-  void ToProto(BoxingTaskGraphProto* proto) const;
+  void ToProto(const std::function<bool(TaskNode*)>& Pick, BoxingTaskGraphProto* proto) const;
+  static bool SelectTaskNodeByRank(TaskNode*, int64_t rank);
 
  private:
   BoxingTaskGraph() = default;
