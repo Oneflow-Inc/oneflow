@@ -28,7 +28,7 @@ using Key128 = ulonglong2;
 
 namespace {
 
-template<typename Key, typename Index>
+template<typename Key, typename Index, bool DumpDirtyOnly>
 __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, bool* entry_dirty_flag,
                                Index* table_size, Key key, Index* out) {
   Key key_hi = (key | 0x1);
@@ -41,8 +41,10 @@ __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, bool
       index_plus_one = index + 1;
       *entry_index = ((index_plus_one << 1U) | key_lo);
       *out = index_plus_one;
-      bool entry_flag_val = *entry_dirty_flag;
-      if (!entry_flag_val) { *entry_dirty_flag = true; }
+      if (DumpDirtyOnly) {
+        bool entry_flag_val = *entry_dirty_flag;
+        if (!entry_flag_val) { *entry_dirty_flag = true; }
+      }
       return true;
     } else if (old_entry_key == key_hi) {
       const Index entry_index_val = *entry_index;
@@ -50,8 +52,10 @@ __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, bool
         // do nothing
       } else if ((entry_index_val & 0x1) == key_lo) {
         *out = (entry_index_val >> 1U);
-        bool entry_flag_val = *entry_dirty_flag;
-        if (!entry_flag_val) { *entry_dirty_flag = true; }
+        if (DumpDirtyOnly) {
+          bool entry_flag_val = *entry_dirty_flag;
+          if (!entry_flag_val) { *entry_dirty_flag = true; }
+        }
         return true;
       } else {
         return false;
@@ -63,7 +67,7 @@ __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, bool
   return false;
 }
 
-template<typename Key, typename Index>
+template<typename Key, typename Index, bool DumpDirtyOnly>
 __device__ bool GetOrInsertOne(const size_t capacity, Key* table_keys, Index* table_indices,
                                bool* table_dirty_flags, Index* table_size, Key key, size_t hash,
                                Index* out) {
@@ -73,8 +77,8 @@ __device__ bool GetOrInsertOne(const size_t capacity, Key* table_keys, Index* ta
     Key* entry_key = table_keys + idx;
     Index* entry_index = table_indices + idx;
     bool* entry_dirty_flag = table_dirty_flags + idx;
-    if (TryGetOrInsert<Key, Index>(entry_key, entry_index, entry_dirty_flag, table_size, key,
-                                   out)) {
+    if (TryGetOrInsert<Key, Index, DumpDirtyOnly>(entry_key, entry_index, entry_dirty_flag,
+                                                  table_size, key, out)) {
       return true;
     }
   }
@@ -103,14 +107,14 @@ __device__ bool GetOne(const size_t capacity, Key* table_keys, Index* table_indi
   return false;
 }
 
-template<typename Key, typename Index>
+template<typename Key, typename Index, bool DumpDirtyOnly>
 __global__ void OrdinalEncodeKernel(uint64_t capacity, Key* table_keys, Index* table_indices,
                                     bool* table_dirty_flags, Index* table_size, uint32_t num_keys,
                                     const Key* keys, Index* context) {
   CUDA_1D_KERNEL_LOOP(i, num_keys) {
     Key key = keys[i];
     uint64_t hash = FullCacheHash()(key);
-    bool success = GetOrInsertOne<Key, Index>(
+    bool success = GetOrInsertOne<Key, Index, DumpDirtyOnly>(
         capacity, table_keys, table_indices, table_dirty_flags, table_size, key, hash, context + i);
     assert(success);
   }
@@ -367,12 +371,12 @@ class OrdinalEncoder {
     OF_CUDA_CHECK(cudaFree(table_dirty_flags_));
   }
 
-  template<bool insert>
+  template<bool insert, bool DumpDirtyOnly>
   void Encode(ep::Stream* stream, uint32_t num_keys, const Key* keys, Index* context) {
     if (insert) {
-      RUN_CUDA_KERNEL((OrdinalEncodeKernel<Key, Index>), stream, num_keys, table_capacity_,
-                      table_keys_, table_indices_, table_dirty_flags_, table_size_, num_keys, keys,
-                      context);
+      RUN_CUDA_KERNEL((OrdinalEncodeKernel<Key, Index, DumpDirtyOnly>), stream, num_keys,
+                      table_capacity_, table_keys_, table_indices_, table_dirty_flags_, table_size_,
+                      num_keys, keys, context);
     } else {
       RUN_CUDA_KERNEL((OrdinalEncodeLookupKernel<Key, Index>), stream, num_keys, table_capacity_,
                       table_keys_, table_indices_, num_keys, keys, context);
@@ -501,9 +505,6 @@ class CacheImpl : public Cache {
   void Dump(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
             uint32_t* n_dumped, void* keys, void* values) override;
 
-  // void DumpDirtyOnly(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
-  //                    uint32_t* n_dumped, void* keys, void* values) override;
-
   void ClearDirtyFlags() override;
 
   void Clear() override;
@@ -527,7 +528,13 @@ void CacheImpl<Key, Elem, Index, pack_size>::Test(ep::Stream* stream, uint32_t n
       cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), stream->As<ep::CudaStream>()->cuda_stream()));
   if (n_keys == 0) { return; }
   CHECK_LE(n_keys, max_query_length_);
-  encoder_.template Encode<false>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
+  if (if_dump_dirty_) {
+    encoder_.template Encode<false, true>(stream, n_keys, static_cast<const Key*>(keys),
+                                          encoding_buffer_);
+  } else {
+    encoder_.template Encode<false, false>(stream, n_keys, static_cast<const Key*>(keys),
+                                           encoding_buffer_);
+  }
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
   RUN_CUDA_KERNEL((LookupKernel<Key, Elem, Index, false>), stream, values_elem_cnt,
                   num_elem_per_value_, values_, values_elem_cnt, static_cast<const Key*>(keys),
@@ -577,7 +584,13 @@ void CacheImpl<Key, Elem, Index, pack_size>::Put(ep::Stream* stream, uint32_t n_
                                                  void* evicted_values) {
   if (n_keys == 0) { return; }
   CHECK_LE(n_keys, max_query_length_);
-  encoder_.template Encode<true>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
+  if (if_dump_dirty_) {
+    encoder_.template Encode<true, true>(stream, n_keys, static_cast<const Key*>(keys),
+                                         encoding_buffer_);
+  } else {
+    encoder_.template Encode<true, false>(stream, n_keys, static_cast<const Key*>(keys),
+                                          encoding_buffer_);
+  }
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
   RUN_CUDA_KERNEL((UpdateKernel<Elem, Index, pack_size>), stream, values_elem_cnt / pack_size,
                   num_elem_per_value_, values_, values_elem_cnt, encoding_buffer_,
@@ -591,7 +604,13 @@ void CacheImpl<Key, Elem, Index, pack_size>::FusedHalfUpdatePut(
   if (!std::is_same<Elem, float>::value) { UNIMPLEMENTED(); }
   if (n_keys == 0) { return; }
   CHECK_LE(n_keys, max_query_length_);
-  encoder_.template Encode<true>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
+  if (if_dump_dirty_) {
+    encoder_.template Encode<true, true>(stream, n_keys, static_cast<const Key*>(keys),
+                                         encoding_buffer_);
+  } else {
+    encoder_.template Encode<true, false>(stream, n_keys, static_cast<const Key*>(keys),
+                                          encoding_buffer_);
+  }
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
   RUN_CUDA_KERNEL((FusedHalfUpdateKernel<Elem, Index, pack_size>), stream,
                   values_elem_cnt / pack_size, num_elem_per_value_, values_, values_elem_cnt,
