@@ -60,7 +60,7 @@ def scatter(input, dim, index, src, *, reduce=None):
 
     Reducing with the addition operation is the same as using :func:`oneflow.scatter_add()`.
 
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.Tensor.scatter_.html
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.Tensor.scatter_.html.
 
     Args:
         input (Tensor): The input blob.
