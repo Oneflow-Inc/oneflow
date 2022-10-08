@@ -182,13 +182,7 @@ def _new_empty(
 
 
 def _new_ones(
-    self,
-    size=None,
-    dtype=None,
-    device=None,
-    placement=None,
-    sbp=None,
-    requires_grad=False,
+    self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
 ):
     return flow.new_ones(self, size, dtype, device, placement, sbp, requires_grad)
 
@@ -296,13 +290,11 @@ def _fill(self, value):
 
 
 def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
-    method_name = eager_local_tensor._get_copy_local_tensor_from_numpy_func_name()
-    copy_from_numpy = getattr(eager_local_tensor, method_name)
     assert np_arr.dtype == flow.convert_oneflow_dtype_to_numpy_dtype(
         eager_local_tensor.dtype
     )
     assert np_arr.shape == tuple(eager_local_tensor.shape)
-    copy_from_numpy(np_arr)
+    eager_local_tensor._copy_from_numpy(np_arr)
 
 
 def _copy(self, other: Union[Tensor, np.ndarray]):
@@ -321,7 +313,12 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
             ), "Only local tensor can be assigned to local tensor."
             if self.device == other.device:
                 other = flow._C.broadcast_like(other, self)
-                flow._C.assign_local_tensor(self, other)
+                if not self.is_contiguous():
+                    # NOTE: slice_update support non-contiguous input tensor
+                    with flow.no_grad():
+                        self[...] = other
+                else:
+                    flow._C.assign_local_tensor(self, other)
                 return
 
     # Possibility 2: `other` is a numpy array, or `self` and `other` are tensors on different devices/placements.
