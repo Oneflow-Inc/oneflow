@@ -2055,8 +2055,8 @@ class ScalarLogicalXor2Functor {
 class StandardDeviationFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
-                           const Optional<std::vector<int32_t>>& dim,
-                           const bool& unbiased, const bool& keepdim) const {
+                           const Optional<std::vector<int32_t>>& dim, const bool& unbiased,
+                           const bool& keepdim) const {
     std::vector<int32_t> axis;
     if (!dim) {
       for (int i = 0; i < input->ndim(); i++) { axis.emplace_back(i); }
@@ -2134,8 +2134,8 @@ class VarianceFunctor {
     op_ = CHECK_JUST(one::OpBuilder("var").Input("input").Output("output").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
-                           const Optional<std::vector<int32_t>>& dim,
-                           const bool& unbiased, const bool& keepdim) const {
+                           const Optional<std::vector<int32_t>>& dim, const bool& unbiased,
+                           const bool& keepdim) const {
     if (!IsFloatingDataType(input->dtype()->data_type())) {
       return Error::RuntimeError() << "var only support floating point dtypes";
     }
