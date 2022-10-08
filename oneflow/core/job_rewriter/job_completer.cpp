@@ -125,7 +125,7 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
   if (Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
     // NOTE(chengcheng): this pass need as last pass for insert correct op with nccl boxing.
     JUST(JobPass4Name("InsertNcclLogicalOpPass")(job, &job_pass_ctx));
-    // NOTE(chengcheng): Becasue insert new logical nccl op, MUST dump time shape, sbp again.
+    // NOTE(chengcheng): Because insert new logical nccl op, MUST dump time shape, sbp again.
     JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
   }
 #endif  // WITH_CUDA
