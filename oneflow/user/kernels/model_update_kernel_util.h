@@ -60,13 +60,14 @@ struct FusedSGDUpdateFunctor {
 template<DeviceType device_type, typename T, typename G, typename C>
 struct SGDUpdateKernelUtil {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float weight_decay,
-                     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
-                     const int64_t* skip_if, const G* model_diff, T* model, C* model_copy);
+                     float learning_rate_val, float lr_scale, const float* learning_rate,
+                     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
+                     C* model_copy);
 };
 
 template<DeviceType device_type, typename T, typename K, typename IDX>
 struct IndexedSlicesSGDUpdateKernelUtil final {
-  static void Update(ep::Stream* stream, float weight_decay, int64_t num_indices,
+  static void Update(ep::Stream* stream, float weight_decay, float lr_scale, int64_t num_indices,
                      int64_t feature_size, int64_t lower_bound, int64_t upper_bound,
                      const IDX* num_unique_instance, const float* learning_rate, const K* indices,
                      const T* values, T* model);
@@ -256,6 +257,29 @@ struct FtrlUpdateFunctor {
   }
 };
 
+template<typename T, typename G>
+struct AdadeltaUpdateFunctor {
+  OF_DEVICE_FUNC void operator()(const G* model_diff, T* model, T* square_avgs, T* acc_deltas,
+                                 T scale, float l1, float l2, float rho, float epsilon,
+                                 bool maximize, float weight_decay, float learning_rate) {
+    const T model_val = *model;
+    T model_diff_val = *model_diff;
+    if (maximize) { model_diff_val = -model_diff_val; }
+    T model_diff_t =
+        CastScaleRegularizeGradientFunctor<T, G>()(model_diff_val, model_val, scale, l1, l2);
+    T square_avgs_val = *square_avgs;
+    T new_square_avgs_val = square_avgs_val * rho + model_diff_t * model_diff_t * (1.0f - rho);
+    T square_avgs_std = sqrt(new_square_avgs_val + epsilon);
+    T acc_delta_val = *acc_deltas;
+    T delta = sqrt(acc_delta_val + epsilon) / square_avgs_std * model_diff_t;
+    T new_acc_deltas = acc_delta_val * rho + delta * delta * (1.0f - rho);
+    T new_model = model_val - learning_rate * delta;
+    *model = new_model;
+    *square_avgs = new_square_avgs_val;
+    *acc_deltas = new_acc_deltas;
+  }
+};
+
 template<DeviceType device_type>
 struct BiasCorrectionFactorKernelUtil {
  public:
@@ -267,14 +291,15 @@ template<DeviceType device_type, typename T, typename G>
 struct MomentumUpdateKernelUtil {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta,
                      float dampening, bool nesterov, bool maximize, float weight_decay,
-                     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
-                     const int64_t* skip_if, const G* model_diff, T* model, T* momentum);
+                     float learning_rate_val, float lr_scale, const float* learning_rate,
+                     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
+                     T* momentum);
 };
 
 template<DeviceType device_type, typename T, typename K, typename IDX>
 struct IndexedSlicesMomentumMdUpdateKernelUtil {
   static void Update(ep::Stream* stream, T beta, float dampening, bool nesterov, bool maximize,
-                     float weight_decay, int64_t num_instance, int64_t feature_size,
+                     float weight_decay, float lr_scale, int64_t num_instance, int64_t feature_size,
                      int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
                      const float* learning_rate, const K* indices, const T* values, T* model,
                      T* momentum);
@@ -284,18 +309,18 @@ template<DeviceType device_type, typename T, typename G, typename C>
 struct AdamUpdateKernelUtil {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta1,
                      float beta2, float epsilon, float weight_decay, bool amsgrad,
-                     bool do_bias_correction, float learning_rate_val, float bias_correction1_val,
-                     float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,
-                     const int64_t* skip_if, const float* bias_correction1,
-                     const float* bias_correction2, const G* model_diff, T* model, C* model_copy,
-                     T* m, T* v, T* max_v);
+                     bool do_bias_correction, float learning_rate_val, float lr_scale,
+                     float bias_correction1_val, float bias_correction2_val,
+                     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
+                     const float* bias_correction1, const float* bias_correction2,
+                     const G* model_diff, T* model, C* model_copy, T* m, T* v, T* max_v);
 };
 
 template<DeviceType device_type, typename T, typename G>
 struct AdagradUpdateKernelUtil {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float lr_decay,
-                     float epsilon, float weight_decay, float learning_rate_val, int64_t train_step,
-                     const float* learning_rate, const int64_t* train_step_ptr,
+                     float epsilon, float weight_decay, float learning_rate_val, float lr_scale,
+                     int64_t train_step, const float* learning_rate, const int64_t* train_step_ptr,
                      const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
                      T* sum);
 };
@@ -304,8 +329,8 @@ template<DeviceType device_type, typename T, typename K, typename IDX>
 struct IndexedSlicesAdamMdUpdateKernelUtil {
   static void Update(ep::Stream* stream, float beta1, float beta2, float epsilon,
                      float weight_decay, bool amsgrad, bool do_bias_correction, float lr,
-                     int64_t num_instance, int64_t feature_size, int64_t lower_bound,
-                     int64_t upper_bound, const IDX* num_unique_instance,
+                     float lr_scale, int64_t num_instance, int64_t feature_size,
+                     int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
                      const float* learning_rate, const float* bias_correction1_ptr,
                      const float* bias_correction2_ptr, const K* indices, const T* values, T* model,
                      T* m, T* v, T* max_v);
@@ -316,7 +341,7 @@ struct LambUpdateKernelUtil {
  public:
   static void Update(ep::Stream* stream, int64_t n, float scale, float l1, float l2, float beta1,
                      float beta2, float epsilon, float weight_decay, float learning_rate_val,
-                     bool do_bias_correction, float bias_correction1_val,
+                     float lr_scale, bool do_bias_correction, float bias_correction1_val,
                      float bias_correction2_val, const float* learning_rate_ptr,
                      const float* bias_correction1_ptr, const float* bias_correction2_ptr,
                      const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff,
@@ -327,8 +352,18 @@ template<DeviceType device_type, typename T, typename G>
 struct FtrlUpdateKernelUtil {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float lr_power,
                      float lambda1, float lambda2, float beta, float weight_decay,
-                     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
-                     const int64_t* skip_if, const G* model_diff, T* model, T* accumulate, T* z);
+                     float learning_rate_val, float lr_scale, const float* learning_rate,
+                     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
+                     T* accumulate, T* z);
+};
+
+template<DeviceType device_type, typename T, typename G>
+struct AdadeltaUpdateKernelUtil {
+  static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float rho,
+                     float epsilon, bool maximize, float weight_decay, float learning_rate_val,
+                     float lr_scale, const float* learning_rate, const T* scale_by_ptr,
+                     const int64_t* skip_if, const G* model_diff, T* model, T* square_avgs,
+                     T* acc_deltas);
 };
 
 template<typename T, typename G, bool centered>
@@ -359,8 +394,9 @@ template<DeviceType device_type, typename T, typename G>
 struct RmsPropUpdateKernelUtil {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, bool centered,
                      float epsilon, float weight_decay, float decay_rate, float learning_rate_val,
-                     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
-                     const G* model_diff, T* model, T* mean_square, T* mean_gradient);
+                     float lr_scale, const float* learning_rate, const T* scale_by_ptr,
+                     const int64_t* skip_if, const G* model_diff, T* model, T* mean_square,
+                     T* mean_gradient);
 };
 
 template<typename T>
@@ -380,8 +416,9 @@ template<DeviceType device_type, typename T, typename G>
 struct LarsUpdateKernelUtil {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2,
                      float momentum_beta, float epsilon, float lars_coefficient, float weight_decay,
-                     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
-                     const G* model_diff, T* model, T* momentum, T* data_tmp, T* model_diff_tmp);
+                     float lr_scale, const float* learning_rate, const T* scale_by_ptr,
+                     const int64_t* skip_if, const G* model_diff, T* model, T* momentum,
+                     T* data_tmp, T* model_diff_tmp);
 };
 
 #endif

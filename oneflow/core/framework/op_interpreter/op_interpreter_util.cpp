@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include <cstddef>
 #include <memory>
 
 #include "oneflow/core/common/maybe.h"
@@ -22,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/tensor_impl.h"
+#include "oneflow/core/functional/tensor_processor.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/operator/operator.h"
@@ -144,7 +144,14 @@ template<>
                                                 TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) {
   OF_PROFILER_RANGE_GUARD("Dispatch");
-  return JUST(GetInterpreter(inputs, ctx, op_expr))->Apply(op_expr, inputs, outputs, ctx);
+  functional::TensorProcessorPipe processor(inputs, outputs);
+  if (autocast::is_enabled()) {
+    JUST(processor.Apply<functional::TensorAutoCastProcessor>(
+        *JUST(op_expr.GetOrCreateAutoCastMeta())));
+  }
+  JUST(processor.Apply<functional::TensorLayoutProcessor>(JUST(op_expr.SupportNonContiguous())));
+  return JUST(GetInterpreter(processor.inputs(), ctx, op_expr))
+      ->Apply(op_expr, processor.inputs(), processor.outputs(), ctx);
 }
 
 /* static */ Maybe<OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(

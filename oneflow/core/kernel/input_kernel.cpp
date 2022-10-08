@@ -40,8 +40,8 @@ class InputKernel final : public Kernel {
     BufferStatus buffer_status = buffer->TryReceive(&critical_section_instance);
     CHECK_NE(buffer_status, kBufferStatusEmpty);
     if (buffer_status == kBufferStatusSuccess) {
-      OfBlob ofblob(ctx->stream(), ctx->BnInOp2Blob("out"));
-      critical_section_instance->AccessBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
+      critical_section_instance->AccessBlobByOpName(ctx->stream(), ctx->BnInOp2Blob("out"),
+                                                    op_name);
     }
   }
   void ForwardHeader(KernelContext* ctx) const override {}

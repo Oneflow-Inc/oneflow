@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include <type_traits>
 #include "oneflow/core/common/blocking_then_busy.h"
-#include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/stream_type.h"
 #include "oneflow/core/common/tensor_meta.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -31,7 +31,6 @@ limitations under the License.
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/control/global_process_ctx.h"
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/framework/stream_allocator_is_pinned.h"
 
 namespace oneflow {
@@ -68,11 +67,11 @@ Maybe<LocalTensorImpl> LazyLocalTensorImpl::detach() const {
   return std::shared_ptr<LocalTensorImpl>(detached_impl);
 }
 
-EagerLocalTensorImpl::EagerLocalTensorImpl() : LocalTensorImpl(false, false) {}
-
 EagerLocalTensorImpl::EagerLocalTensorImpl(const std::shared_ptr<TensorStorage>& tensor_storage,
-                                           bool requires_grad, bool is_leaf)
-    : LocalTensorImpl(requires_grad, is_leaf), tensor_storage_(tensor_storage) {}
+                                           int64_t storage_offset, bool requires_grad, bool is_leaf)
+    : LocalTensorImpl(requires_grad, is_leaf),
+      tensor_storage_(tensor_storage),
+      storage_offset_(storage_offset) {}
 
 EagerLocalTensorImpl::~EagerLocalTensorImpl() {}
 
@@ -126,7 +125,7 @@ Maybe<void> EagerLocalTensorImpl::InitEagerBlobObject(
 
 Maybe<bool> EagerLocalTensorImpl::is_pinned() const {
   if (!eager_blob_object_) { return false; }
-  return IsStreamAllocatorPinned::Visit(JUST(eager_blob_object_->producer_stream())->stream_role());
+  return IsStreamAllocatorPinned::Visit(JUST(eager_blob_object_->producer_stream())->stream_type());
 }
 
 Maybe<void> EagerLocalTensorImpl::set_eager_blob_object(
@@ -168,7 +167,7 @@ Maybe<GlobalTensorImpl> LazyGlobalTensorImpl::detach() const {
 }
 
 EagerGlobalTensorImpl::EagerGlobalTensorImpl(
-    Symbol<GlobalTensorMeta> global_tensor_meta, bool requires_grad, bool is_leaf,
+    Symbol<GlobalTensorMeta> global_tensor_meta,
     const std::shared_ptr<LocalTensor>& cur_rank_phy_tensor)
     : GlobalTensorImpl(global_tensor_meta, cur_rank_phy_tensor->requires_grad(),
                        cur_rank_phy_tensor->is_leaf()),
@@ -212,7 +211,7 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
   // empty op.
   if (parallel_id.has_value() && shape->elem_cnt() != 0) {
     const auto& cur_rank_phy_tensor_meta =
-        SymbolOf(LocalTensorMeta(cur_rank_phy_shape, dtype, device));
+        SymbolOf(LocalTensorMeta(*cur_rank_phy_shape, dtype, device));
     auto cur_rank_phy_tensor_impl = std::make_shared<EagerLocalTensorImpl>(requires_grad, is_leaf);
     const auto& dep_object = NewLocalDepObject();
     JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(cur_rank_phy_tensor_meta, dep_object));
@@ -225,15 +224,13 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
     JUST(cur_rank_phy_tensor->set_requires_grad(requires_grad));
     cur_rank_phy_tensor->set_is_leaf(is_leaf);
   }
-  auto* tensor_impl =
-      new EagerGlobalTensorImpl(global_tensor_meta, cur_rank_phy_tensor->requires_grad(),
-                                cur_rank_phy_tensor->is_leaf(), cur_rank_phy_tensor);
+  auto* tensor_impl = new EagerGlobalTensorImpl(global_tensor_meta, cur_rank_phy_tensor);
   return std::shared_ptr<EagerGlobalTensorImpl>(tensor_impl);
 }
 
 Maybe<GlobalTensorImpl> EagerGlobalTensorImpl::detach() const {
-  auto detached_impl = JUST(EagerGlobalTensorImpl::New(tensor_meta_, false, true));
-  detached_impl->cur_rank_phy_tensor_ = cur_rank_phy_tensor_;
+  auto detached_impl = std::shared_ptr<EagerGlobalTensorImpl>(new EagerGlobalTensorImpl(
+      tensor_meta_, JUST(JUST(cur_rank_phy_tensor_->detach())->AsLocalTensor())));
   detached_impl->consumer_nd_sbp_constraint_ = consumer_nd_sbp_constraint_;
   detached_impl->transport_token_ = transport_token_;
   return std::shared_ptr<GlobalTensorImpl>(detached_impl);

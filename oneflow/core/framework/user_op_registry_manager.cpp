@@ -49,25 +49,6 @@ const OpRegistryResult* UserOpRegistryMgr::GetOpRegistryResult(const std::string
   return nullptr;
 }
 
-OpGradRegistry UserOpRegistryMgr::CheckAndGetOpGradRegistry(const std::string& op_type_name) {
-  CHECK(!op_type_name.empty());
-  auto it = op_grad_reg_result_.find(op_type_name);
-  CHECK(it == op_grad_reg_result_.end());
-  return OpGradRegistry().Name(op_type_name);
-}
-
-Maybe<void> UserOpRegistryMgr::Register(OpGradRegistryResult result) {
-  CHECK_OR_RETURN(op_grad_reg_result_.emplace(result.op_type_name, result).second);
-  return Maybe<void>::Ok();
-}
-
-const OpGradRegistryResult* UserOpRegistryMgr::GetOpGradRegistryResult(
-    const std::string& op_type_name) {
-  auto it = op_grad_reg_result_.find(op_type_name);
-  if (it != op_grad_reg_result_.end()) { return &(it->second); }
-  return nullptr;
-}
-
 OpKernelRegistry UserOpRegistryMgr::CheckAndGetOpKernelRegistry(const std::string& op_type_name) {
   CHECK(!op_type_name.empty());
   return OpKernelRegistry().Name(op_type_name);
@@ -136,6 +117,30 @@ Maybe<const OpKernelRegistryResult*> UserOpRegistryMgr::GetOpKernelRegistryResul
   }
 
   return ret;
+}
+
+Maybe<bool> UserOpRegistryMgr::IsOpKernelRegistered(const std::string& op_type_name,
+                                                    const KernelRegContext& ctx) {
+  auto it = op_kernel_reg_result_.find(op_type_name);
+  if (it == op_kernel_reg_result_.end()) { return false; }
+  const OpKernelRegistryResult* ret = nullptr;
+  for (const auto& reg_val : it->second) {
+    if (reg_val.is_matched_hob->get(ctx)) {
+      if (ret != nullptr) {
+        std::vector<std::string> debug_msgs;
+        for (const auto& local_reg_val : it->second) {
+          if (local_reg_val.is_matched_hob->get(ctx)) {
+            debug_msgs.emplace_back(local_reg_val.is_matched_hob->DebugStr(ctx));
+          }
+        }
+        return Error::MultipleOpKernelsMatchedError(debug_msgs)
+               << "There are more than one kernels matching Current OperatorConf: " << op_type_name;
+      }
+      ret = &reg_val;
+    }
+  }
+  if (ret == nullptr) { return false; }
+  return true;
 }
 
 }  // namespace user_op

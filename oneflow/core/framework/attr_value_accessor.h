@@ -16,10 +16,11 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_ATTR_VAL_ACCESSOR_H_
 #define ONEFLOW_CORE_FRAMEWORK_ATTR_VAL_ACCESSOR_H_
 
-#include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
+
+class AttrValue;
 
 namespace user_op {
 

@@ -40,13 +40,6 @@ EagerBlobObject::EagerBlobObject(
       is_non_pod_object_placement_newed_(false),
       pin_memory_(false),
       compute_local_dep_object_(dep_object),
-      blob_desc_(static_cast<bool>(dynamic_local_tensor_meta)
-                     ? std::const_pointer_cast<Shape>(dynamic_local_tensor_meta->shape_ptr())
-                     : std::const_pointer_cast<Shape>(static_local_tensor_meta->shape_ptr()),
-                 static_cast<bool>(dynamic_local_tensor_meta)
-                     ? std::const_pointer_cast<Stride>(dynamic_local_tensor_meta->stride_ptr())
-                     : std::const_pointer_cast<Stride>(static_local_tensor_meta->stride_ptr()),
-                 data_type),
       static_local_tensor_meta_(static_local_tensor_meta),
       dynamic_local_tensor_meta_(dynamic_local_tensor_meta) {
   CHECK(static_cast<bool>(tensor_storage));
@@ -60,10 +53,6 @@ const Shape& EagerBlobObject::shape() const {
     return static_local_tensor_meta_->shape();
   }
 }
-Shape* EagerBlobObject::mut_shape() {
-  CHECK(dynamic_local_tensor_meta_);
-  return std::const_pointer_cast<one::MutLocalTensorMeta>(dynamic_local_tensor_meta_)->mut_shape();
-}
 const Stride& EagerBlobObject::stride() const {
   if (dynamic_local_tensor_meta_) {
     return dynamic_local_tensor_meta_->stride();
@@ -71,9 +60,19 @@ const Stride& EagerBlobObject::stride() const {
     return static_local_tensor_meta_->stride();
   }
 }
-Stride* EagerBlobObject::mut_stride() {
+
+void EagerBlobObject::set_shape(const Shape& shape) {
   CHECK(dynamic_local_tensor_meta_);
-  return std::const_pointer_cast<one::MutLocalTensorMeta>(dynamic_local_tensor_meta_)->mut_stride();
+  std::const_pointer_cast<one::MutLocalTensorMeta>(dynamic_local_tensor_meta_)->set_shape(shape);
+}
+void EagerBlobObject::set_stride(const Stride& stride) {
+  CHECK(dynamic_local_tensor_meta_);
+  std::const_pointer_cast<one::MutLocalTensorMeta>(dynamic_local_tensor_meta_)->set_stride(stride);
+}
+
+MutShapeView EagerBlobObject::mut_shape_view() {
+  CHECK(dynamic_local_tensor_meta_);
+  return *const_cast<Shape*>(dynamic_local_tensor_meta_->shape_ptr().get());
 }
 
 std::shared_ptr<const Shape> EagerBlobObject::shape_ptr() const {
@@ -89,13 +88,6 @@ std::shared_ptr<const Stride> EagerBlobObject::stride_ptr() const {
   } else {
     return static_local_tensor_meta_->stride_ptr();
   }
-}
-
-Blob* EagerBlobObject::blob() {
-  if (!blob_) {
-    blob_.reset(new Blob(*mem_case_, &blob_desc_, mut_header_ptr(), mut_dptr<char>()));
-  }
-  return blob_.get();
 }
 
 void EagerBlobObject::set_storage_offset(const int64_t offset) { storage_offset_ = offset; }
@@ -125,7 +117,7 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(vm::Allocator* allocator)
       allocator->Deallocate(dptr, required_body_bytes);
     };
     tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
-                                   required_body_bytes);
+                                   required_body_bytes, /*is_allocated_in_vm*/ true);
     InitMemPtrForAllocationComputationPipelining();
   }
   InitOrCheckMemPtrForAllocationComputationPipelining();

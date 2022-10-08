@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/framework/user_op_def.h"
+#include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
 
 namespace oneflow {
@@ -123,47 +124,6 @@ UserOpWrapper::UserOpWrapper(
   InitTensorDescFromOpArgs(op.user_conf().output());
 }
 
-bool UserOpWrapper::NeedGenGradTensor4OpInput(const std::string& input_arg_name,
-                                              int32_t index) const {
-  auto it = op_conf().user_conf().input().find(input_arg_name);
-  CHECK(it != op_conf().user_conf().input().end())
-      << "arg_name: " << input_arg_name << ", index: " << index;
-  CHECK(index >= 0 && index < it->second.s_size())
-      << "arg_name: " << input_arg_name << ", index: " << index;
-  return diff_fn_(GenRepeatedBn(input_arg_name, index)) != nullptr;
-}
-
-bool UserOpWrapper::HasGradTensor4OpOutput(const std::string& output_arg_name,
-                                           int32_t index) const {
-  auto it = op_conf().user_conf().output().find(output_arg_name);
-  CHECK(it != op_conf().user_conf().output().end())
-      << "arg_name: " << output_arg_name << ", index: " << index;
-  CHECK(index >= 0 && index < it->second.s_size())
-      << "arg_name: " << output_arg_name << ", index: " << index;
-  return diff_fn_(GenRepeatedBn(output_arg_name, index)) != nullptr;
-}
-
-std::string UserOpWrapper::output_grad(const std::string& output_arg_name, int32_t index) const {
-  auto it = op_conf().user_conf().output().find(output_arg_name);
-  CHECK(it != op_conf().user_conf().output().end())
-      << "arg_name: " << output_arg_name << ", index: " << index;
-  CHECK(index >= 0 && index < it->second.s_size())
-      << "arg_name: " << output_arg_name << ", index: " << index;
-  return GenLogicalBlobName(*diff_fn_(GenRepeatedBn(output_arg_name, index)));
-}
-
-std::string UserOpWrapper::GetGradTensorWithOpOutput(const std::string& output_arg_name,
-                                                     int32_t index) const {
-  return output_grad(output_arg_name, index);
-}
-
-void UserOpWrapper::BindGradTensorWithOpInput(const std::string& logical_grad_blob_name,
-                                              const std::string& input_arg_name,
-                                              int32_t index) const {
-  CHECK(NeedGenGradTensor4OpInput(input_arg_name, index));
-  *diff_fn_(GenRepeatedBn(input_arg_name, index)) = GenLogicalBlobId(logical_grad_blob_name);
-}
-
 const TensorDesc& UserOpWrapper::arg_tensor_desc(const std::string& arg_name, int32_t index) const {
   std::string bn = GenRepeatedBn(arg_name, index);
   CHECK(bn2tensor_desc_.find(bn) != bn2tensor_desc_.end());
@@ -173,13 +133,6 @@ const TensorDesc& UserOpWrapper::arg_tensor_desc(const std::string& arg_name, in
 const TensorDesc& UserOpWrapper::TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                             int32_t index) const {
   return arg_tensor_desc(arg_name, index);
-}
-
-void UserOpWrapper::InputGradBind(const user_op::OpArg& input,
-                                  const UserOpInputGradGetFn& grad_fn) {
-  if (NeedGenGradTensor4OpInput(input.name(), input.index())) {
-    BindGradTensorWithOpInput(grad_fn(), input.name(), input.index());
-  }
 }
 
 UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::InputBind(
@@ -242,33 +195,6 @@ UserOpConfWrapper UserOpConfWrapperBuilder::Build() {
   for (const auto& pair : attr_) { (*user_conf->mutable_attr())[pair.first] = pair.second; }
   wrapper_ = UserOpConfWrapper(*CHECK_JUST(CheckAndCompleteUserOpConfImpl(op_conf)));
   return wrapper_;
-}
-
-void BackwardOpConfContext::DefineOp(const std::string& op_name, const BackwardOpBuilderFn& fn) {
-  auto it = op_builder_fns_.find(op_name);
-  CHECK(it == op_builder_fns_.end()) << " op_name " << op_name << " has been defined.";
-  op_builder_fns_[op_name] = fn;
-}
-
-UserOpConfWrapper& BackwardOpConfContext::GetOp(const std::string& op_name) {
-  auto it = op_builder_results_.find(op_name);
-  if (it != op_builder_results_.end()) {
-    // return result from cache
-    return it->second;
-  } else {
-    // build and put result into cache
-    auto fn_it = op_builder_fns_.find(op_name);
-    CHECK(fn_it != op_builder_fns_.end()) << " op_name " << op_name << " has no builder function.";
-    CHECK(fn_it->second != nullptr) << " op_name " << op_name << " builder function is null.";
-    UserOpConfWrapperBuilder builder(op_name);
-    auto ret = op_builder_results_.emplace(std::make_pair(op_name, fn_it->second(builder)));
-    CHECK(ret.second == true) << " op_name " << op_name << " build result insert failed.";
-
-    // add new op conf
-    bw_op_confs_->emplace_back(ret.first->second.op_conf());
-
-    return ret.first->second;
-  }
 }
 
 }  // namespace user_op

@@ -181,11 +181,6 @@ class TestSlice(flow.unittest.TestCase):
     @globaltest
     def test_graph_slice(test_case):
         for placement in all_placement():
-            # TODO(wyg): It will be infer all broadcast sbp when 1n1d,
-            #            slice_update will get error when doing inplace operator.
-            #            Remove this judgement after refactor sbp infer method in Operator class.
-            if placement.ranks.size == 1:
-                continue
             _test_slice_with_grad(test_case, placement)
 
 

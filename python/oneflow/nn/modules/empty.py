@@ -32,38 +32,6 @@ def empty_op(
     requires_grad: bool = False,
     pin_memory: bool = False,
 ):
-    """
-    Returns a tensor filled with uninitialized data.
-    The shape of the tensor is defined by the variable argument ``size``.
-
-    Args:
-        size (int... or oneflow.Size): Defining the shape of the output tensor.
-          Can be a variable number of arguments or a collection like a list or tuple or oneflow.Size.
-        dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.float32``.
-        device (oneflow.device, optional): The desired device of returned local tensor. If None, uses the
-          current device.
-        placement (flow.placement, optional): The desired device of returned global tensor. If None, will
-          construct local tensor.
-        sbp (flow.sbp or List[flow.sbp], optional): The desired sbp of returned global tensor.
-        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
-        pin_memory (bool, optional) – If set, returned tensor would be allocated in the pinned memory. Works only for CPU tensors. Default: False.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> y = flow.empty(4, 5)  # construct local empty tensor
-        >>> y.shape
-        oneflow.Size([4, 5])
-        >>> y.is_global
-        False
-        >>> placement = flow.placement("cpu", ranks=[0])
-        >>> y = flow.empty(4, 5, placement=placement, sbp=flow.sbp.broadcast)  # construct consistent empty tensor
-        >>> y.is_global
-        True
-
-    """
     assert size is not None, "shape must not be None"
 
     shape = _single(_handle_size_arg(size))
@@ -103,6 +71,33 @@ def empty_op(
         tensor = flow._C.empty(shape, dtype=dtype, device=device, pin_memory=pin_memory)
     tensor.requires_grad_(requires_grad)
     return tensor
+
+
+def empty_like_op(
+    input,
+    dtype: Optional[flow.dtype] = None,
+    device: Union[flow.device, str, None] = None,
+    placement: flow.placement = None,
+    sbp: flow._oneflow_internal.sbp.sbp = None,
+    requires_grad: bool = False,
+):
+    new_size = _single(_handle_size_arg(input.size()))
+    if placement is None and input.is_global and input.placement is not None:
+        placement = input.placement
+    if sbp is None and input.is_global and input.sbp is not None:
+        sbp = input.sbp
+    if dtype is None:
+        dtype = input.dtype
+    if placement is None and device is None:
+        device = input.device
+    return empty_op(
+        new_size,
+        dtype=dtype,
+        device=device,
+        placement=placement,
+        sbp=sbp,
+        requires_grad=requires_grad,
+    )
 
 
 def new_empty_op(

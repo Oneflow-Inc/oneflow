@@ -21,7 +21,7 @@ namespace {
 
 Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp) {
   *GetBlobDesc4BnInOp("acc") = *GetBlobDesc4BnInOp("one");
-  GetBlobDesc4BnInOp("acc")->mut_shape() = Shape({1LL});
+  GetBlobDesc4BnInOp("acc")->set_shape(Shape({1LL}));
   return Maybe<void>::Ok();
 }
 

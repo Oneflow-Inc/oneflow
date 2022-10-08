@@ -63,14 +63,7 @@ Maybe<one::Tensor> CopyBoxingFunction(const std::shared_ptr<one::Tensor>& tensor
       << Error::RuntimeError() << "The placement of input tensor ("
       << *JUST(PlacementToString(tensor_placement)) << ") must match the input placement ("
       << *JUST(PlacementToString(in->placement())) << ")";
-  std::shared_ptr<one::Tensor> local_tensor = JUST(tensor->cur_rank_phy_tensor());
-  const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out->placement()));
-  if (!out_parallel_id->has_value()) {
-    const std::string& device_type = tensor_placement->device_tag();
-    local_tensor = JUST(one::functional::Empty(
-        *JUST(GetPhysicalShape(*tensor->shape(), *tensor_nd_sbp, *tensor_placement, 0)),
-        tensor->dtype(), JUST(Device::New(device_type)), /*pin_memory=*/false));
-  }
+  const std::shared_ptr<one::Tensor>& local_tensor = JUST(tensor->cur_rank_phy_tensor());
   const auto& sbp_list = JUST(GetSbpList(out->nd_sbp()));
   return JUST(one::functional::LocalToGlobal(local_tensor, out->placement(), *sbp_list,
                                              *tensor->shape(), tensor->dtype(),

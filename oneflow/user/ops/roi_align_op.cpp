@@ -43,14 +43,14 @@ namespace oneflow {
       << Error::RuntimeError() << "The size of rois tensor must be equal to 5 at dimension 1, "
       << "but got " << rois_shape.At(1);
   // y: (R, C, pool_h, pool_w)
-  *ctx->MutOutputShape("y", 0) = Shape({rois_shape.At(0), x_shape.At(1), pooled_h, pooled_w});
+  ctx->SetOutputShape("y", 0, Shape({rois_shape.At(0), x_shape.At(1), pooled_h, pooled_w}));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> RoiAlignOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> RoiAlignOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> RoiAlignOp::ModifyInputArg(const GetInputArgModifier& GetInputArgModifierFn,
@@ -96,7 +96,7 @@ namespace oneflow {
   const Shape& y_shape = Shape({rois_shape.At(0), x_like_shape.At(1), pooled_h, pooled_w});
   CHECK_EQ_OR_RETURN(y_shape, dy_shape)
       << Error::RuntimeError() << "Tensors y and dy must have same shape";
-  *ctx->MutOutputShape("dx", 0) = x_like_shape;
+  ctx->SetOutputShape("dx", 0, x_like_shape);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> RoiAlignGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -106,36 +106,8 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), ctx->InputDType("x_like", 0))
       << Error::TypeError() << "The dy tensor and x_like tensor must have same type";
 
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x_like", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x_like", 0));
   return Maybe<void>::Ok();
 }
-
-namespace {
-
-Maybe<void> GenerateBackwardOpConf4RoiAlign(const user_op::UserOpWrapper& op,
-                                            const user_op::AddOpFn& AddOp) {
-  if (op.NeedGenGradTensor4OpInput("x", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper grad_op =
-        builder.Op("roi_align_grad")
-            .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-            .Input("x_like", op.input("x", 0))
-            .Input("rois", op.input("rois", 0))
-            .Attr("pooled_h", op.attr<int32_t>("pooled_h"))
-            .Attr("pooled_w", op.attr<int32_t>("pooled_w"))
-            .Attr("spatial_scale", op.attr<float>("spatial_scale"))
-            .Attr("sampling_ratio", op.attr<int32_t>("sampling_ratio"))
-            .Attr("aligned", op.attr<bool>("aligned"))
-            .Output("dx")
-            .Build();
-    op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-    AddOp(grad_op);
-  }
-  return Maybe<void>::Ok();
-}
-
-}  // namespace
-
-REGISTER_USER_OP_GRAD("roi_align").SetGenBackwardOpConfFn(GenerateBackwardOpConf4RoiAlign);
 
 }  // namespace oneflow

@@ -54,7 +54,7 @@ namespace oneflow {
 
   DimVector dim_vec(data.shape().dim_vec());
   dim_vec.at(segment_ids.shape().NumAxes() - 1) = num_segments;
-  *out->mut_shape() = Shape(dim_vec);
+  out->set_shape(Shape(dim_vec));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnsortedBatchSegmentSumOp::InferPhysicalTensorDesc(
@@ -66,7 +66,7 @@ namespace oneflow {
   const user_op::TensorDesc& segment_ids = ctx->InputTensorDesc("segment_ids", 0);
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   CHECK_OR_RETURN(IsIndexDataType(segment_ids.data_type()));
-  *out->mut_data_type() = data.data_type();
+  out->set_data_type(data.data_type());
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnsortedBatchSegmentSumOp::ModifyInputArg(
@@ -76,23 +76,5 @@ namespace oneflow {
   segment_ids_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("unsorted_batch_segment_sum")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      bool need_grad_data = op.NeedGenGradTensor4OpInput("data", 0);
-      if (need_grad_data) {
-        user_op::UserOpConfWrapperBuilder data_grad_builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper data_grad_op =
-            data_grad_builder.Op("batch_gather")
-                .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                .Input("indices", op.input("segment_ids", 0))
-                .Output("out")
-                .Build();
-        op.BindGradTensorWithOpInput(data_grad_op.output("out", 0), "data", 0);
-        AddOp(data_grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

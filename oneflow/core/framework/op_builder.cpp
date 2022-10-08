@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/id_util.h"
 

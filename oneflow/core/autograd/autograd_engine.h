@@ -17,12 +17,15 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_AUTOGRAD_AUTOGRAD_ENGINE_H_
 #define ONEFLOW_CORE_AUTOGRAD_AUTOGRAD_ENGINE_H_
 
-#include <list>
-#include <vector>
-#include <memory>
 #include <functional>
-#include "oneflow/core/common/util.h"
+#include <list>
+#include <memory>
+#include <vector>
+
 #include "oneflow/core/autograd/autograd_meta.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/scope_util.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 
@@ -56,10 +59,13 @@ class FunctionNode {
   }
   const std::string& name() const { return name_; }
 
+  const std::shared_ptr<Scope>& scope() const { return scope_; }
+  void set_scope(const std::shared_ptr<Scope>& scope) { scope_ = scope; }
+
  protected:
   explicit FunctionNode(const std::string& name,
                         const std::shared_ptr<BackwardFunction>& backward_fn)
-      : name_(name), backward_fn_(backward_fn) {}
+      : name_(name), backward_fn_(backward_fn), scope_(nullptr) {}
 
   const std::string name_;
   std::vector<std::shared_ptr<FunctionNode>> next_functions_;
@@ -70,6 +76,9 @@ class FunctionNode {
 
   // Actual backward function builds in `AutogradInterpreter` to calculate one backward op
   std::shared_ptr<BackwardFunction> backward_fn_;
+
+  // The execution scope
+  std::shared_ptr<Scope> scope_;
 };
 
 class AutogradEngine {

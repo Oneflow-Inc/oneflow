@@ -194,17 +194,17 @@ class UserOpInferContextHelper final {
                            int32_t index) const {
     return Shape4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-  Shape* MutOutputShape(eager::CallContext* call_ctx, const std::string& arg_name,
-                        int32_t index) const {
-    return MutShape4ArgNameAndIndex(call_ctx, arg_name, index);
+  void SetOutputShape(eager::CallContext* call_ctx, const std::string& arg_name, int32_t index,
+                      const Shape& shape) const {
+    SetShape4ArgNameAndIndex(call_ctx, arg_name, index, shape);
   }
   const Shape& Shape4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
                                      int32_t index) const {
     return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index).shape();
   }
-  Shape* MutShape4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
-                                  int32_t index) const {
-    return MutNonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_shape();
+  void SetShape4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                int32_t index, const Shape& shape) const {
+    return MutNonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->set_shape(shape);
   }
   const Stride& InputStride(eager::CallContext* call_ctx, const std::string& arg_name,
                             int32_t index) const {
@@ -214,17 +214,17 @@ class UserOpInferContextHelper final {
                              int32_t index) const {
     return Stride4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-  Stride* MutOutputStride(eager::CallContext* call_ctx, const std::string& arg_name,
-                          int32_t index) const {
-    return MutStride4ArgNameAndIndex(call_ctx, arg_name, index);
+  void SetOutputStride(eager::CallContext* call_ctx, const std::string& arg_name, int32_t index,
+                       const Stride& stride) const {
+    return SetStride4ArgNameAndIndex(call_ctx, arg_name, index, stride);
   }
   const Stride& Stride4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
                                        int32_t index) const {
     return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index).stride();
   }
-  Stride* MutStride4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
-                                    int32_t index) const {
-    return MutNonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_stride();
+  void SetStride4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                 int32_t index, const Stride& stride) const {
+    return MutNonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->set_stride(stride);
   }
   DataType InputDType(eager::CallContext* call_ctx, const std::string& arg_name,
                       int32_t index) const {
@@ -234,17 +234,18 @@ class UserOpInferContextHelper final {
                        int32_t index) const {
     return Dtype4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-  DataType* MutOutputDType(eager::CallContext* call_ctx, const std::string& arg_name,
-                           int32_t index) const {
-    return MutDtype4ArgNameAndIndex(call_ctx, arg_name, index);
+  void SetOutputDType(eager::CallContext* call_ctx, const std::string& arg_name, int32_t index,
+                      DataType data_type) const {
+    return SetDtype4ArgNameAndIndex(call_ctx, arg_name, index, data_type);
   }
   DataType Dtype4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
                                  int32_t index) const {
     return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index).data_type();
   }
-  DataType* MutDtype4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
-                                     int32_t index) const {
-    return MutNonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_data_type();
+  void SetDtype4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                int32_t index, DataType data_type) const {
+    return MutNonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)
+        ->set_data_type(data_type);
   }
   bool InputIsDynamic(eager::CallContext* call_ctx, const std::string& arg_name,
                       int32_t index) const {
@@ -254,17 +255,18 @@ class UserOpInferContextHelper final {
                        int32_t index) const {
     return IsDynamic4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-  bool* MutOutputIsDynamic(eager::CallContext* call_ctx, const std::string& arg_name,
-                           int32_t index) const {
-    return MutIsDynamic4ArgNameAndIndex(call_ctx, arg_name, index);
+  void SetOutputIsDynamic(eager::CallContext* call_ctx, const std::string& arg_name, int32_t index,
+                          bool is_dynamic) const {
+    return SetIsDynamic4ArgNameAndIndex(call_ctx, arg_name, index, is_dynamic);
   }
   bool IsDynamic4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
                                  int32_t index) const {
     return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index).is_dynamic();
   }
-  bool* MutIsDynamic4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
-                                     int32_t index) const {
-    return MutNonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_is_dynamic();
+  void SetIsDynamic4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                    int32_t index, bool is_dynamic) const {
+    return MutNonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)
+        ->set_is_dynamic(is_dynamic);
   }
 
   const ArgVec& inputs() const { return zero_copy_base_ctx_helper_.inputs(); }
@@ -381,14 +383,15 @@ class UserOpInferContext : public user_op::InferContext {
   const Shape& OutputShape(const std::string& arg_name, int32_t index) const override {
     return helper_->OutputShape(call_ctx_, arg_name, index);
   }
-  Shape* MutOutputShape(const std::string& arg_name, int32_t index) override {
-    return helper_->MutOutputShape(call_ctx_, arg_name, index);
+  void SetOutputShape(const std::string& arg_name, int32_t index, const Shape& shape) override {
+    return helper_->SetOutputShape(call_ctx_, arg_name, index, shape);
   }
   const Shape& Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return helper_->Shape4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
-  Shape* MutShape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return helper_->MutShape4ArgNameAndIndex(call_ctx_, arg_name, index);
+  void SetShape4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                const Shape& shape) override {
+    return helper_->SetShape4ArgNameAndIndex(call_ctx_, arg_name, index, shape);
   }
   const Stride& InputStride(const std::string& arg_name, int32_t index) const override {
     return helper_->InputStride(call_ctx_, arg_name, index);
@@ -396,14 +399,15 @@ class UserOpInferContext : public user_op::InferContext {
   const Stride& OutputStride(const std::string& arg_name, int32_t index) const override {
     return helper_->InputStride(call_ctx_, arg_name, index);
   }
-  Stride* MutOutputStride(const std::string& arg_name, int32_t index) override {
-    return helper_->MutOutputStride(call_ctx_, arg_name, index);
+  void SetOutputStride(const std::string& arg_name, int32_t index, const Stride& stride) override {
+    return helper_->SetOutputStride(call_ctx_, arg_name, index, stride);
   }
   const Stride& Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return helper_->Stride4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
-  Stride* MutStride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return helper_->MutStride4ArgNameAndIndex(call_ctx_, arg_name, index);
+  void SetStride4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                 const Stride& stride) override {
+    return helper_->SetStride4ArgNameAndIndex(call_ctx_, arg_name, index, stride);
   }
   DataType InputDType(const std::string& arg_name, int32_t index) const override {
     return helper_->InputDType(call_ctx_, arg_name, index);
@@ -411,14 +415,15 @@ class UserOpInferContext : public user_op::InferContext {
   DataType OutputDType(const std::string& arg_name, int32_t index) const override {
     return helper_->OutputDType(call_ctx_, arg_name, index);
   }
-  DataType* MutOutputDType(const std::string& arg_name, int32_t index) override {
-    return helper_->MutOutputDType(call_ctx_, arg_name, index);
+  void SetOutputDType(const std::string& arg_name, int32_t index, DataType data_type) override {
+    return helper_->SetOutputDType(call_ctx_, arg_name, index, data_type);
   }
   DataType Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return helper_->Dtype4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
-  DataType* MutDtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return helper_->MutDtype4ArgNameAndIndex(call_ctx_, arg_name, index);
+  void SetDtype4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                DataType data_type) override {
+    return helper_->SetDtype4ArgNameAndIndex(call_ctx_, arg_name, index, data_type);
   }
   bool InputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return helper_->InputIsDynamic(call_ctx_, arg_name, index);
@@ -426,14 +431,15 @@ class UserOpInferContext : public user_op::InferContext {
   bool OutputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return helper_->OutputIsDynamic(call_ctx_, arg_name, index);
   }
-  bool* MutOutputIsDynamic(const std::string& arg_name, int32_t index) override {
-    return helper_->MutOutputIsDynamic(call_ctx_, arg_name, index);
+  void SetOutputIsDynamic(const std::string& arg_name, int32_t index, bool is_dynamic) override {
+    return helper_->SetOutputIsDynamic(call_ctx_, arg_name, index, is_dynamic);
   }
   bool IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
-    return helper_->MutIsDynamic4ArgNameAndIndex(call_ctx_, arg_name, index);
+    return helper_->IsDynamic4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
-  bool* MutIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return helper_->MutIsDynamic4ArgNameAndIndex(call_ctx_, arg_name, index);
+  void SetIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index,
+                                    bool is_dynamic) override {
+    return helper_->SetIsDynamic4ArgNameAndIndex(call_ctx_, arg_name, index, is_dynamic);
   }
 
   const ArgVec& inputs() const override { return helper_->inputs(); }

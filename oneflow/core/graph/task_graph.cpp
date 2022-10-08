@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
+#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/variable_op.h"
@@ -31,8 +32,13 @@ limitations under the License.
 #include "oneflow/core/graph/task_stream_index_manager.h"
 #include "oneflow/core/ep/include/primitive/memcpy.h"
 #include "oneflow/core/graph/straighten_nodes.h"
+#include "oneflow/core/register/runtime_register_desc.h"
+#include "oneflow/core/common/env_var/env_var.h"
 
 namespace oneflow {
+
+// TODO(Chengcheng): default false.
+DEFINE_ENV_BOOL(ONEFLOW_ENABLE_OUTDATED_OPT_FW_CHAIN_MERGE, true);
 
 namespace {
 
@@ -57,6 +63,14 @@ bool IsConnectToTickOp(const TaskNode* node) {
   return false;
 }
 
+bool IsSubsetTickOpConf(const OperatorConf& op_conf) {
+  return op_conf.has_src_subset_tick_conf() || op_conf.has_dst_subset_tick_conf();
+}
+
+bool IsTickOpConf(const OperatorConf& conf) {
+  return IsClassRegistered<int32_t, IsTickTockOpTypeCase>(conf.op_type_case());
+}
+
 std::string GetOpConfCalculationPassName(const OperatorConf& op_conf) {
   CHECK(op_conf.has_scope_symbol_id());
   int64_t scope_symbol_id = op_conf.scope_symbol_id();
@@ -79,14 +93,6 @@ bool IsOptimizerPassOp(const Operator* op) {
   return GetOpConfCalculationPassName(op->op_conf()) == kOptimizerPass;
 }
 
-bool IsSubsetTickOpConf(const OperatorConf& op_conf) {
-  return op_conf.has_src_subset_tick_conf() || op_conf.has_dst_subset_tick_conf();
-}
-
-bool IsTickOpConf(const OperatorConf& conf) {
-  return IsClassRegistered<int32_t, IsTickTockOpTypeCase>(conf.op_type_case());
-}
-
 bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
   const OperatorConf& op_conf = op->op_conf();
   if (op_conf.has_variable_conf() || op_conf.has_tick_conf() || op_conf.has_device_tick_conf()
@@ -104,7 +110,7 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
   }
   // NOTE(chengcheng): ONLY nccl_use_compute_stream = false will exclude optimizer pass ops
   if (!Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
-      && IsOptimizerPassOp(op)) {
+      && IsOptimizerPassOp(op) && EnvBool<ONEFLOW_ENABLE_OUTDATED_OPT_FW_CHAIN_MERGE>()) {
     return true;
   }
   return false;
@@ -421,7 +427,7 @@ void ForEachOpGraphNecessaryCtrlEdge(
 
 }  // namespace
 
-TaskGraph::TaskGraph(bool enable_straighten_algorithm) {
+TaskGraph::TaskGraph() {
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
@@ -452,11 +458,6 @@ TaskGraph::TaskGraph(bool enable_straighten_algorithm) {
     }
   });
 
-  if (enable_straighten_algorithm && GlobalProcessCtx::WorldSize() > 1) {
-    StraightenNodes(this, &ordered_task_nodes_);
-  } else {
-    SetOrderInGraphForEachNode();
-  }
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 }
 
@@ -493,7 +494,7 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
         // src must be not on the cpu mem zone, copy d2h first
         CHECK(IsMemcpyDtoHSupported(src_mem_zone_id.device_type()));
         CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-        copy_task->Init(CopyHdOpConf::D2H, src_mem_zone_id, lbi);
+        copy_task->Init(CopyHdType::D2H, src_mem_zone_id, lbi);
         Connect<TaskNode>(src_node, NewTaskEdgeWithLbi(lbi), copy_task);
         proxy2node[key] = copy_task;
         return copy_task;
@@ -513,7 +514,7 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
           GetProxyNode(src_node, lbi, GetNodeCPUMemZoneId(dst_mem_zone_id.rank()));
       CHECK(IsMemcpyHtoDSupported(dst_mem_zone_id.device_type()));
       CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-      copy_task->Init(CopyHdOpConf::H2D, dst_mem_zone_id, lbi);
+      copy_task->Init(CopyHdType::H2D, dst_mem_zone_id, lbi);
       Connect<TaskNode>(proxy_on_dst_host, NewTaskEdgeWithLbi(lbi), copy_task);
       proxy2node[key] = copy_task;
       return copy_task;
@@ -858,6 +859,20 @@ void TaskGraph::ConnectWithLbi(TaskNode* src_node, TaskNode* dst_node, const Log
 void TaskGraph::BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi) {
   TaskNode* proxy_node = GetProxyNode(src_node, lbi, dst_node->MemZoneId121());
   ConnectWithLbi(proxy_node, dst_node, lbi);
+}
+
+void TaskGraph::DecideExecutionOrder() {
+  // For one machine with no transfer available, the straighten algorithm for overlaps consume a lot
+  // of memory
+  StraightenAlgorithmTag straighten_algorithm_tag =
+      GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph();
+  if (straighten_algorithm_tag == StraightenAlgorithmTag::kCompressMemory
+      || (straighten_algorithm_tag == StraightenAlgorithmTag::kOverlap4ModelParallelism
+          && GlobalProcessCtx::WorldSize() > 1)) {
+    StraightenNodes(this, &ordered_task_nodes_);
+  } else {
+    SetOrderInGraphForEachNode();
+  }
 }
 
 }  // namespace oneflow

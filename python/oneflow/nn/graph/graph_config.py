@@ -20,6 +20,7 @@ from collections import OrderedDict
 import oneflow.boxing.nccl as nccl_config
 from oneflow.nn.graph.optimizer import OptDict
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
+import oneflow as flow
 
 
 class GraphConfig(object):
@@ -46,7 +47,7 @@ class GraphConfig(object):
             return False
         raise NotImplementedError
 
-    def enable_amp(self, mode: bool = True):
+    def enable_amp(self, mode: bool = True, *, dtype: flow.dtype = flow.float16):
         r"""If set to true, then graph will use mixed precision mode, it means use both float16 and float32 during model training.
 
         For example:
@@ -68,9 +69,14 @@ class GraphConfig(object):
         Args:
             mode (bool, optional): The default vaule is True.
 
+
         """
         assert type(mode) is bool
+        assert dtype in (flow.float16, flow.bfloat16)
         self.proto.enable_auto_mixed_precision = mode
+        self.proto.mixed_precision_data_type = flow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(
+            dtype
+        )
 
     def set_zero_redundancy_optimizer_mode(self, mode: str = "distributed_split"):
         raise RuntimeError(
@@ -278,14 +284,86 @@ class GraphConfig(object):
         """
         self.proto.cudnn_conv_heuristic_search_algo = mode
 
-    def enable_straighten_algorithm(self, mode: bool = True):
+    def enable_straighten_algorithm(self, mode: str = "MemoryFirst"):
         r""" Whether enable the straighten algorithm.
 
-        If using nccl compute stream, turning it on might not speed up the training.
-        If not using nccl compute stream, turning it on might slow down data parallelism by 0.6% and slow down model parallelism by 6%.
+        straighten_algorithm_tag 1: Disable
+        Disable the straighten algorithm in the task graph. 
+        Would use the original topography order for executing task nodes.
+
+        straighten_algorithm_tag 2: SpeedFirst
+        Under the second configuration, the straighten algorithm would try to speed up the training as much as possible.
+        If using nccl compute stream, setting the tag to 2 might not speed up the training.
+        If not using nccl compute stream, setting the tag to 2 might speed up data parallelism by 0.6% and model parallelism by 6%.
         Considering memory, enabling the straighten algorithm is forbidden with one machine/device only, and not recommended under pipeline parallelism. 
+
+        straighten_algorithm_tag 3: MemoryFirst
+        Under the third configuration, the straighten algorithm would try to compress memory as much as possible.
+        It might save up to 13% of the memory for some models.
+        And might save nothing for some models.
         """
-        self.proto.enable_straighten_algorithm_in_task_graph = mode
+        assert mode == "Disable" or mode == "SpeedFirst" or mode == "MemoryFirst"
+        if mode == "Disable":
+            self.proto.straighten_algorithm_tag_in_task_graph = 1
+        elif mode == "SpeedFirst":
+            self.proto.straighten_algorithm_tag_in_task_graph = 2
+        else:
+            self.proto.straighten_algorithm_tag_in_task_graph = 3
+
+    def enable_auto_parallel(self, mode: bool = True):
+        """If true, then graph will use the auto parallel algorithm to select a parallelism strategy.
+
+        Args:
+            mode (bool, optional): [description]. Default is True.
+        """
+        self.proto.enable_auto_parallel = mode
+
+    def enable_auto_parallel_ignore_user_sbp_config(self, mode: bool = True):
+        """If true, it will ignore all user configurations of SBP.
+
+        Args:
+            mode (bool, optional): [description]. Default is True.
+        """
+        self.proto.enable_auto_parallel_ignore_user_sbp_config = mode
+
+    def set_auto_parallel_computation_cost_ratio(self, ratio):
+        """
+        Set coefficient of computation cost in auto-parallel algorithm.
+        """
+        self.proto.auto_parallel_computation_cost_ratio = ratio
+
+    def set_auto_parallel_wait_time(self, cost):
+        """
+        Set wait time for auto-parallel algorithm.
+
+        wait time: An auto-parallel parameter. Describe the mutable extra time it will take when
+        communication between devices occurs. It will be added to the copy cost and may get reduced
+        when cover by computation cost.
+        """
+        self.proto.auto_parallel_wait_time = cost
+
+    def set_auto_parallel_transfer_cost(self, cost):
+        """
+        Set transfer cost for auto-parallel algorithm.
+        
+        transfer cost: An auto-parallel parameter. Describe the fixed extra time it will take when
+        communication between devices occurs. It will be added to the copy cost and can not be reduced.
+        Default value: 0
+        Using a positive number such as 1.65e8 would reduce the frequency of data transfer. 
+        """
+        self.proto.auto_parallel_transfer_cost = cost
+
+    def enable_auto_parallel_mainstem_algo(self, mode: bool = True):
+        """
+        Find the mainstem of the SBP graph, then reduce the wait time for tributaries.
+        """
+        self.proto.enable_auto_parallel_mainstem_algo = mode
+
+    def enable_auto_parallel_sbp_collector(self, mode: bool = True):
+        """
+        Use \"sbp collector\" to create \"sbp proxy\" for nodes with multiple downstream operators.
+        """
+        self.proto.enable_auto_parallel_sbp_collector = mode
 
     def _generate_optimizer_and_variable_configs(
         self, opt_dict: OptDict = None, variables_conf: OrderedDict = None,

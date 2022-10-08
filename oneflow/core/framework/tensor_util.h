@@ -20,17 +20,30 @@ limitations under the License.
 #include <string>
 
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/job/scope.h"
 
 namespace oneflow {
+
+namespace ep {
+class Stream;
+}
+
+namespace vm {
+class EagerBlobObject;
+}
+
 namespace one {
 
 class Tensor;
 
-Maybe<void> SyncAccessTensorWithTimeOut(const std::shared_ptr<Tensor>& tensor,
-                                        const std::function<void(uint64_t)>& callback,
-                                        const std::string& modifier);
+Maybe<void> SyncAccessTensorWithTimeOut(
+    const std::shared_ptr<Tensor>& tensor,
+    const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& callback,
+    const std::string& modifier);
 
 Maybe<void> CopyLocalTensorDataTo(const std::shared_ptr<Tensor>& input, void* mem_ptr, size_t size);
+
+Maybe<Scope> GetTensorScope(const std::shared_ptr<Tensor>& tensor);
 
 }  // namespace one
 }  // namespace oneflow

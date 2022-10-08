@@ -61,6 +61,57 @@ class CosineSimilarity(Module):
         return flow._C.cosine_similarity(x1, x2, self.dim, self.eps)
 
 
+class PairwiseDistance(Module):
+    r"""Computes the pairwise distance between vectors :math:`v_1`, :math:`v_2` using the p-norm:
+
+    .. math ::
+        \left \| x \right \| _p = (\sum_{i=1}^n \left | x_i \right |^p )^{\frac{1}{p}}
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.PairwiseDistance.html.
+
+    Args:
+        p (real): the norm degree. Default: 2
+        eps (float, optional): Small value to avoid division by zero. Default: 1e-6
+        keepdim (bool, optional): Determines whether or not to keep the vector dimension. Default: False
+
+    Shape:
+        - Input1: :math:`(N, D)` or :math:`(D)`, where N = batch dimension and D = vector dimension
+        - Input2: :math:`(N, D)` or :math:`(D)`, same shape as the input1
+        - Output: :math:`(N)` or :math:`()` based on input dimension. If keepdim is True, then :math:`(N, 1)` or :math:`(1)` based on input dimension.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> pdist = flow.nn.PairwiseDistance(p=2)
+        >>> x1 = flow.arange(12).reshape(3, 4)
+        >>> x2 = flow.arange(12).reshape(3, 4)
+        >>> pdist(x1, x2)
+        tensor([2.0000e-06, 2.0000e-06, 2.0000e-06], dtype=oneflow.float32)
+        >>> pdist(x1, x2).shape
+        oneflow.Size([3])
+
+    """
+
+    def __init__(
+        self,
+        p: Optional[float] = 2.0,
+        eps: Optional[float] = 1e-06,
+        keepdim: Optional[bool] = False,
+    ) -> None:
+        super().__init__()
+        self.p = p
+        self.eps = eps
+        self.keepdim = keepdim
+
+    def forward(self, x1: Tensor, x2: Tensor) -> Tensor:
+        return flow._C.pairwise_distance(
+            x1, x2, p=self.p, eps=self.eps, keepdim=self.keepdim
+        )
+
+
 if __name__ == "__main__":
     import doctest
 
