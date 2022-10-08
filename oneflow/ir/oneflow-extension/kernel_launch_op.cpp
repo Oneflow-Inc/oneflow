@@ -262,11 +262,10 @@ class OKLRegContext final {
   oneflow::KernelLaunchComputeContext* BuildRunContext(
       oneflow::user_op::KernelComputeContext* compute_ctx) {
     // this will be gc after run jit
-    return new oneflow::KernelLaunchComputeContext(std::move(reg_ctx_), compute_ctx);
+    return new oneflow::KernelLaunchComputeContext(reg_ctx_, compute_ctx);
   }
 
   const oneflow::user_op::OpKernel* BuildKernel(const char* op_name) {
-    LOG(ERROR) << op_name;
     auto* res = CHECK_JUST(oneflow::user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
                                op_name, *reg_ctx_))
                     ->create_fn();
@@ -385,7 +384,7 @@ void* build_run_ctx(void* reg_ctx, void* compute_ctx) {
 
 void destroy_run_ctx(void* reg_ctx) { delete (oneflow::KernelLaunchComputeContext*)reg_ctx; }
 
-void* build_kernel(void* op_name, void* reg_ctx) {
+void* build_kernel(void* reg_ctx, void* op_name) {
   return (void*)((oneflow::OKLRegContext*)reg_ctx)->BuildKernel((const char*)op_name);
 }
 
