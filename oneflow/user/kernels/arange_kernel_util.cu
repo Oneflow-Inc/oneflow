@@ -28,6 +28,13 @@ __global__ void ArangeForwardGpuKernel(const T start, const T delta, const int64
   DoArange<T>(start, delta, arange_elem_cnt, out);
 }
 
+template<>
+__global__ void ArangeForwardGpuKernel(const half start, const half delta,
+                                       const int64_t arange_elem_cnt, half* out) {
+  // Use Loop to set the value
+  XPU_1D_KERNEL_LOOP(i, arange_elem_cnt) { out[i] = start + static_cast<half>(i * 1.0) * delta; }
+}
+
 template<typename T>
 struct ArangeFunctor<DeviceType::kCUDA, T> final {
   void operator()(ep::Stream* stream, const T start, const T delta, const int64_t arange_elem_cnt,
