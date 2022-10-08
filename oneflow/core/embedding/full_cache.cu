@@ -28,7 +28,7 @@ using Key128 = ulonglong2;
 
 namespace {
 
-template<typename Key, typename Index, bool DumpDirtyOnly>
+template<typename Key, typename Index, bool dump_dirty_only>
 __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, bool* entry_dirty_flag,
                                Index* table_size, Key key, Index* out) {
   Key key_hi = (key | 0x1);
@@ -41,7 +41,7 @@ __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, bool
       index_plus_one = index + 1;
       *entry_index = ((index_plus_one << 1U) | key_lo);
       *out = index_plus_one;
-      if (DumpDirtyOnly) {
+      if (dump_dirty_only) {
         bool entry_flag_val = *entry_dirty_flag;
         if (!entry_flag_val) { *entry_dirty_flag = true; }
       }
@@ -52,7 +52,7 @@ __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, bool
         // do nothing
       } else if ((entry_index_val & 0x1) == key_lo) {
         *out = (entry_index_val >> 1U);
-        if (DumpDirtyOnly) {
+        if (dump_dirty_only) {
           bool entry_flag_val = *entry_dirty_flag;
           if (!entry_flag_val) { *entry_dirty_flag = true; }
         }
@@ -67,7 +67,7 @@ __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, bool
   return false;
 }
 
-template<typename Key, typename Index, bool DumpDirtyOnly>
+template<typename Key, typename Index, bool dump_dirty_only>
 __device__ bool GetOrInsertOne(const size_t capacity, Key* table_keys, Index* table_indices,
                                bool* table_dirty_flags, Index* table_size, Key key, size_t hash,
                                Index* out) {
@@ -77,8 +77,8 @@ __device__ bool GetOrInsertOne(const size_t capacity, Key* table_keys, Index* ta
     Key* entry_key = table_keys + idx;
     Index* entry_index = table_indices + idx;
     bool* entry_dirty_flag = table_dirty_flags + idx;
-    if (TryGetOrInsert<Key, Index, DumpDirtyOnly>(entry_key, entry_index, entry_dirty_flag,
-                                                  table_size, key, out)) {
+    if (TryGetOrInsert<Key, Index, dump_dirty_only>(entry_key, entry_index, entry_dirty_flag,
+                                                    table_size, key, out)) {
       return true;
     }
   }
@@ -107,14 +107,14 @@ __device__ bool GetOne(const size_t capacity, Key* table_keys, Index* table_indi
   return false;
 }
 
-template<typename Key, typename Index, bool DumpDirtyOnly>
+template<typename Key, typename Index, bool dump_dirty_only>
 __global__ void OrdinalEncodeKernel(uint64_t capacity, Key* table_keys, Index* table_indices,
                                     bool* table_dirty_flags, Index* table_size, uint32_t num_keys,
                                     const Key* keys, Index* context) {
   CUDA_1D_KERNEL_LOOP(i, num_keys) {
     Key key = keys[i];
     uint64_t hash = FullCacheHash()(key);
-    bool success = GetOrInsertOne<Key, Index, DumpDirtyOnly>(
+    bool success = GetOrInsertOne<Key, Index, dump_dirty_only>(
         capacity, table_keys, table_indices, table_dirty_flags, table_size, key, hash, context + i);
     assert(success);
   }
@@ -130,7 +130,7 @@ __global__ void OrdinalEncodeLookupKernel(uint64_t capacity, Key* table_keys, In
   }
 }
 
-template<typename Key, typename Index, bool DumpDirtyOnly>
+template<typename Key, typename Index, bool dump_dirty_only>
 __global__ void OrdinalEncodeDumpKernel(const Key* table_keys, const Index* table_indices,
                                         const bool* table_dirty_flags, uint64_t start_key_index,
                                         uint64_t end_key_index, uint32_t* n_dumped, Key* keys,
@@ -139,7 +139,7 @@ __global__ void OrdinalEncodeDumpKernel(const Key* table_keys, const Index* tabl
     Key entry_key = table_keys[i + start_key_index];
     Index entry_index = table_indices[i + start_key_index];
     bool dump_flag = (entry_index != 0);
-    if (DumpDirtyOnly) {
+    if (dump_dirty_only) {
       bool entry_dirty_flag = table_dirty_flags[i + start_key_index];
       dump_flag &= entry_dirty_flag;
     }
@@ -352,14 +352,18 @@ template<typename Key, typename Index>
 class OrdinalEncoder {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OrdinalEncoder);
-  explicit OrdinalEncoder(uint64_t capacity, float load_factor)
-      : capacity_(capacity), table_capacity_(capacity / load_factor) {
+  explicit OrdinalEncoder(uint64_t capacity, float load_factor, bool if_dump_dirty)
+      : capacity_(capacity),
+        table_capacity_(capacity / load_factor),
+        if_dump_dirty_(if_dump_dirty) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     OF_CUDA_CHECK(cudaMalloc(&table_size_, sizeof(Index)));
     OF_CUDA_CHECK(cudaMallocHost(&table_size_host_, sizeof(Index)));
     OF_CUDA_CHECK(cudaMalloc(&table_keys_, table_capacity_ * sizeof(Key)));
     OF_CUDA_CHECK(cudaMalloc(&table_indices_, table_capacity_ * sizeof(Index)));
-    OF_CUDA_CHECK(cudaMalloc(&table_dirty_flags_, table_capacity_ * sizeof(bool)));
+    if (if_dump_dirty_) {
+      OF_CUDA_CHECK(cudaMalloc(&table_dirty_flags_, table_capacity_ * sizeof(bool)));
+    }
     Clear();
   }
   ~OrdinalEncoder() {
@@ -368,13 +372,13 @@ class OrdinalEncoder {
     OF_CUDA_CHECK(cudaFreeHost(table_size_host_));
     OF_CUDA_CHECK(cudaFree(table_keys_));
     OF_CUDA_CHECK(cudaFree(table_indices_));
-    OF_CUDA_CHECK(cudaFree(table_dirty_flags_));
+    if (if_dump_dirty_) { OF_CUDA_CHECK(cudaFree(table_dirty_flags_)); }
   }
 
-  template<bool insert, bool DumpDirtyOnly>
+  template<bool insert, bool dump_dirty_only>
   void Encode(ep::Stream* stream, uint32_t num_keys, const Key* keys, Index* context) {
     if (insert) {
-      RUN_CUDA_KERNEL((OrdinalEncodeKernel<Key, Index, DumpDirtyOnly>), stream, num_keys,
+      RUN_CUDA_KERNEL((OrdinalEncodeKernel<Key, Index, dump_dirty_only>), stream, num_keys,
                       table_capacity_, table_keys_, table_indices_, table_dirty_flags_, table_size_,
                       num_keys, keys, context);
     } else {
@@ -402,14 +406,18 @@ class OrdinalEncoder {
   }
 
   void ClearDirtyFlags() {
-    OF_CUDA_CHECK(cudaMemset(table_dirty_flags_, 0, table_capacity_ * sizeof(bool)));
+    if (if_dump_dirty_) {
+      OF_CUDA_CHECK(cudaMemset(table_dirty_flags_, 0, table_capacity_ * sizeof(bool)));
+    }
   }
 
   void Clear() {
     OF_CUDA_CHECK(cudaMemset(table_size_, 0, sizeof(Index)));
     OF_CUDA_CHECK(cudaMemset(table_keys_, 0, table_capacity_ * sizeof(Key)));
     OF_CUDA_CHECK(cudaMemset(table_indices_, 0, table_capacity_ * sizeof(Index)));
-    OF_CUDA_CHECK(cudaMemset(table_dirty_flags_, 0, table_capacity_ * sizeof(bool)));
+    if (if_dump_dirty_) {
+      OF_CUDA_CHECK(cudaMemset(table_dirty_flags_, 0, table_capacity_ * sizeof(bool)));
+    }
   }
 
   uint64_t TableCapacity() const { return table_capacity_; }
@@ -425,6 +433,7 @@ class OrdinalEncoder {
   bool* table_dirty_flags_;
   uint64_t capacity_;
   uint64_t table_capacity_;
+  bool if_dump_dirty_;
   Index* table_size_{};
   Index* table_size_host_{};
 };
@@ -434,7 +443,8 @@ class CacheImpl : public Cache {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CacheImpl);
   explicit CacheImpl(const CacheOptions& options)
-      : encoder_(options.capacity, options.load_factor),
+      : if_dump_dirty_(ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DUMP_DIRTY_ONLY", false)),
+        encoder_(options.capacity, options.load_factor, if_dump_dirty_),
         device_index_(-1),
         options_(options),
         max_query_length_(0) {
@@ -453,7 +463,7 @@ class CacheImpl : public Cache {
       UNIMPLEMENTED();
     }
     num_elem_per_value_ = options_.value_size / sizeof(Elem);
-    if_dump_dirty_ = ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DUMP_DIRTY_ONLY", false);
+    // if_dump_dirty_ = ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DUMP_DIRTY_ONLY", false);
   }
   ~CacheImpl() {
     CudaCurrentDeviceGuard guard(device_index_);
