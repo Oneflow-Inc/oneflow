@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_AST_JIT_H_
-#define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_AST_JIT_H_
+#ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_ONEFLOW_LRJIT_REGISTRY_H_
+#define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_ONEFLOW_LRJIT_REGISTRY_H_
 
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/singleton.h"
@@ -50,4 +50,4 @@ class LRJITRegistry final {
   std::unordered_map<std::string, LRJITRegistry_Store_> functionId2engine_;
 };
 
-#endif  // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_AST_JIT_H_
+#endif  // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_ONEFLOW_LRJIT_REGISTRY_H_

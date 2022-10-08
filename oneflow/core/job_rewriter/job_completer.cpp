@@ -139,7 +139,7 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
     // NOTE(chengcheng): this pass need as last pass for insert correct op with nccl boxing.
     JUST(JobPass4Name("InsertNcclLogicalOpPass")(job, &job_pass_ctx));
     tc->Count("Graph name: " + job_name + " InsertNcclLogicalOpPass", 1);
-    // NOTE(chengcheng): Becasue insert new logical nccl op, MUST dump time shape, sbp again.
+    // NOTE(chengcheng): Because insert new logical nccl op, MUST dump time shape, sbp again.
     JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
     tc->Count("Graph name: " + job_name + " DumpBlobParallelConfPass", 1);
   }

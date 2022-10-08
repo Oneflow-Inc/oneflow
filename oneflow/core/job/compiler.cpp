@@ -55,15 +55,14 @@ void PlanCompiler::Compile(Job* job, Plan* plan, std::shared_ptr<TaskGraph>& tas
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()
       || Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
     TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
-    op_graph->ToDotWithFilePath(
-        "optimized_dlnet_" + std::to_string(job_desc.job_id()) + "_op_graph.dot");
+    op_graph->ToDotWithFilePath("optimized_dlnet_" + std::to_string(job_desc.job_id())
+                                + "_op_graph.dot");
   }
   tc->Count("Graph name: " + job_name + " LogOptimizedJob", 1);
 
   // Step2: build task_gph.
   // TODO(levi): we can rewrite this part of code in visitor pattern.
-  task_gph =
-      std::make_shared<TaskGraph>(op_graph, job->job_conf().enable_straighten_algorithm_in_task_graph());
+  task_gph = std::make_shared<TaskGraph>(op_graph);
   tc->Count("Graph name: " + job_name + " NewTaskGraph", 1);
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
@@ -118,13 +117,14 @@ void PlanCompiler::Compile(Job* job, Plan* plan, std::shared_ptr<TaskGraph>& tas
   tc->Count("Graph name: " + job_name + " TaskNode::InferOtherRegst", 1);
   task_gph->RemoveEmptyRegsts();
   tc->Count("Graph name: " + job_name + " RemoveEmptyRegsts", 1);
+  task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
+  task_gph->DecideExecutionOrder();
+  tc->Count("Graph name: " + job_name + " InferTimeShapeIfMeaningful", 1);
   task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
   tc->Count("Graph name: " + job_name + " MergeChainAndAddOrderingCtrlEdgeInSameChain", 1);
   auto IsReachable = op_graph->MakePredicatorIsOpNameDataOrCtrlReachable();
   if (job_desc.enable_inplace()) { task_gph->EnableInplaceMemSharing(IsReachable); }
   tc->Count("Graph name: " + job_name + " EnableInplaceMemSharing", 1);
-  task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
-  tc->Count("Graph name: " + job_name + " InferTimeShapeIfMeaningful", 1);
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
   tc->Count("Graph name: " + job_name + " CheckRegstLbiValid", 1);
 

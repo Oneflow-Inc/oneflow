@@ -117,15 +117,21 @@ int64_t NNGraph::variable_op_size() const { return variable_op_names_.size(); }
 Maybe<void> NNGraph::RegisterAdditionalVarOpNamesAndTensorsToBeLoaded(
     const std::vector<std::string>& additional_var_names,
     const std::vector<std::shared_ptr<one::Tensor>>& additional_var_tensors) {
-  CHECK_EQ_OR_RETURN(additional_var_names.size(), additional_var_tensors.size());
+  CHECK_EQ_OR_RETURN(additional_var_names.size(), additional_var_tensors.size())
+      << Error::RuntimeError()
+      << "Number of additional variable names and tensors mismatch. "
+         "Size of variable names: "
+      << additional_var_names.size() << ", size of tensors: " << additional_var_tensors.size();
   CHECK_OR_RETURN(additional_variable_op_tobe_loaded_name2tensor_.empty())
-      << " The additional variables (states in Optimizer or LRScheduler) of nn.Graph " << name_
-      << " are register repeatedly.";
+      << Error::RuntimeError()
+      << "The additional variables (states in Optimizer or LRScheduler) of nn.Graph " << name_
+      << " are registered repeatedly.";
   FOR_RANGE(size_t, i, 0, additional_var_names.size()) {
     CHECK_OR_RETURN(additional_variable_op_tobe_loaded_name2tensor_
                         .emplace(JUST(VectorAt(additional_var_names, i)),
                                  JUST(VectorAt(additional_var_tensors, i)))
-                        .second);
+                        .second)
+        << Error::RuntimeError() << "Duplicate variable name: " << additional_var_names[i];
   }
   return Maybe<void>::Ok();
 }
@@ -133,11 +139,20 @@ Maybe<void> NNGraph::RegisterAdditionalVarOpNamesAndTensorsToBeLoaded(
 Maybe<void> NNGraph::RegisterInputOpNamesAndTensors(
     const std::vector<std::string>& inputs_op_names,
     const std::vector<std::shared_ptr<one::Tensor>>& input_tensors) {
-  CHECK_EQ_OR_RETURN(inputs_op_names.size(), input_tensors.size());
+  CHECK_EQ_OR_RETURN(inputs_op_names.size(), input_tensors.size())
+      << Error::RuntimeError()
+      << "Number of input op names and tensors mismatch. "
+         "Size of op names: "
+      << inputs_op_names.size() << ", size of tensors: " << input_tensors.size();
   CHECK_OR_RETURN(inputs_op_names_.empty())
-      << " The input tensors of nn.Graph " << name_ << " are register repeatedly.";
-  CHECK_OR_RETURN(input_tensors_valid_.empty());
-  CHECK_OR_RETURN(inputs_tensor_meta_str_.empty());
+      << Error::RuntimeError() << "The input tensors of nn.Graph " << name_
+      << " are registered repeatedly.";
+  CHECK_OR_RETURN(input_tensors_valid_.empty())
+      << Error::RuntimeError() << "The input tensors of nn.Graph " << name_
+      << " are registered repeatedly.";
+  CHECK_OR_RETURN(inputs_tensor_meta_str_.empty())
+      << Error::RuntimeError() << "The input tensors of nn.Graph " << name_
+      << " are registered repeatedly.";
   inputs_op_names_.assign(inputs_op_names.begin(), inputs_op_names.end());
   input_tensors_valid_.reserve(input_tensors.size());
   inputs_tensor_meta_str_.reserve(input_tensors.size());
@@ -145,18 +160,26 @@ Maybe<void> NNGraph::RegisterInputOpNamesAndTensors(
     input_tensors_valid_.emplace_back(JUST(GetTensorValidInCurRank(input_tensor)));
     inputs_tensor_meta_str_.emplace_back(*JUST(GetTensorMetaString(input_tensor)));
   }
-  CHECK_EQ_OR_RETURN(input_tensors_valid_.size(), input_tensors.size());
+  CHECK_EQ_OR_RETURN(input_tensors_valid_.size(), input_tensors.size());  // NOLINE
   return Maybe<void>::Ok();
 }
 
 Maybe<void> NNGraph::RegisterOutputOpNamesAndTensors(
     const std::vector<std::string>& outputs_op_names,
     const std::vector<std::shared_ptr<one::Tensor>>& output_tensors) {
-  CHECK_EQ_OR_RETURN(outputs_op_names.size(), output_tensors.size());
+  CHECK_EQ_OR_RETURN(outputs_op_names.size(), output_tensors.size())
+      << "Number of output op names and tensors mismatch "
+         "Size of op names: "
+      << outputs_op_names.size() << ", size of tensors: " << output_tensors.size();
   CHECK_OR_RETURN(outputs_op_names_.empty())
-      << " The output tensors of nn.Graph " << name_ << " are register repeatedly.";
-  CHECK_OR_RETURN(output_tensors_valid_.empty());
-  CHECK_OR_RETURN(outputs_tensor_meta_str_.empty());
+      << Error::RuntimeError() << "The output tensors of nn.Graph " << name_
+      << " are registered repeatedly.";
+  CHECK_OR_RETURN(output_tensors_valid_.empty())
+      << Error::RuntimeError() << "The output tensors of nn.Graph " << name_
+      << " are registered repeatedly.";
+  CHECK_OR_RETURN(outputs_tensor_meta_str_.empty())
+      << Error::RuntimeError() << "The output tensors of nn.Graph " << name_
+      << " are registered repeatedly.";
   outputs_op_names_.assign(outputs_op_names.begin(), outputs_op_names.end());
   output_tensors_valid_.reserve(output_tensors.size());
   outputs_tensor_meta_str_.reserve(output_tensors.size());
@@ -164,7 +187,7 @@ Maybe<void> NNGraph::RegisterOutputOpNamesAndTensors(
     output_tensors_valid_.emplace_back(JUST(GetTensorValidInCurRank(output_tensor)));
     outputs_tensor_meta_str_.emplace_back(*JUST(GetTensorMetaString(output_tensor)));
   }
-  CHECK_EQ_OR_RETURN(output_tensors_valid_.size(), output_tensors.size());
+  CHECK_EQ_OR_RETURN(output_tensors_valid_.size(), output_tensors.size());  // NOLINT
   return Maybe<void>::Ok();
 }
 
@@ -172,14 +195,20 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
     const std::vector<std::string>& variable_op_names,
     const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors) {
   JUST(vm::CurrentRankSync());
-  CHECK_EQ_OR_RETURN(variable_op_names.size(), variable_tensors.size());
+  CHECK_EQ_OR_RETURN(variable_op_names.size(), variable_tensors.size())
+      << "Number of variable names and tensors mismatch. "
+         "Size of variable names: "
+      << variable_op_names.size() << ", size of tensors: " << variable_tensors.size();
   for (int32_t i = 0; i < variable_op_names.size(); ++i) {
-    const std::shared_ptr<one::Tensor>& var = variable_tensors.at(i);
-    CHECK_OR_RETURN(var->is_eager());
+    const std::shared_ptr<one::Tensor>& var = variable_tensors[i];
+    CHECK_OR_RETURN(var->is_eager())
+        << Error::InvalidValueError() << "Tensor variable to register in nn.Graph should be eager";
     const std::string& var_name = variable_op_names.at(i);
-    CHECK_OR_RETURN(!var_name.empty());
-    CHECK_OR_RETURN(variable_op_name2tensor_.emplace(var_name, var).second);
-    CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
+    CHECK_OR_RETURN(!var_name.empty()) << Error::InvalidValueError() << "Empty variable name";
+    CHECK_OR_RETURN(variable_op_name2tensor_.emplace(var_name, var).second)
+        << Error::RuntimeError() << "Duplicate variable name: " << var_name;
+    CHECK_OR_RETURN(variable_op_names_.insert(var_name).second)
+        << Error::RuntimeError() << "Duplicate variable name: " << var_name;
   }
   return Maybe<void>::Ok();
 }
@@ -190,11 +219,15 @@ Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
   for (const auto& pair : free_eager_tensors) {
     const std::string& var_name = pair.first;
     const std::shared_ptr<one::Tensor>& var = pair.second;
-    CHECK_OR_RETURN(var->is_eager());
-    CHECK_OR_RETURN(!var_name.empty());
-    CHECK_OR_RETURN(variable_op_name2tensor_.emplace(var_name, var).second);
-    CHECK_OR_RETURN(additional_variable_op_name_.insert(var_name).second);
-    CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
+    CHECK_OR_RETURN(var->is_eager())
+        << Error::RuntimeError() << "Free tensor variable to register in nn.Graph should be eager";
+    CHECK_OR_RETURN(!var_name.empty()) << Error::RuntimeError() << "Empty variable name";
+    CHECK_OR_RETURN(variable_op_name2tensor_.emplace(var_name, var).second)
+        << Error::RuntimeError() << "Duplicate variable name: " << var_name;
+    CHECK_OR_RETURN(additional_variable_op_name_.insert(var_name).second)
+        << Error::RuntimeError() << "Duplicate variable name: " << var_name;
+    CHECK_OR_RETURN(variable_op_names_.insert(var_name).second)
+        << Error::RuntimeError() << "Duplicate variable name: " << var_name;
   }
   return Maybe<void>::Ok();
 }
@@ -209,7 +242,8 @@ Maybe<std::vector<std::shared_ptr<one::Tensor>>> NNGraph::GetAdditionalVarOpTens
   std::vector<std::shared_ptr<one::Tensor>> tensors;
   for (const auto& iter : additional_variable_op_name_) {
     auto find_iter = variable_op_name2tensor_.find(iter);
-    CHECK_OR_RETURN(find_iter != variable_op_name2tensor_.end());
+    CHECK_OR_RETURN(find_iter != variable_op_name2tensor_.end())
+        << Error::RuntimeError() << "Additional variable op name " << iter << " not found.";
     tensors.push_back(find_iter->second);
   }
   return tensors;
@@ -223,26 +257,28 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
     const VariableOpConf& var_conf = variable_op.op_conf().variable_conf();
     const std::string& var_name = variable_op.op_name();
     CHECK_OR_RETURN(var_conf.has_initializer())
-        << " nn.Graph ONLY support variable op with initializer conf.";
+        << Error::RuntimeError() << "nn.Graph ONLY support variable op with initializer conf.";
     if (var_conf.initializer().has_constant_conf()
         || var_conf.initializer().has_constant_int_conf() /* vairable ops inserted by system */) {
       CHECK_OR_RETURN(variable_op_names_.insert(var_name).second)
-          << " ERROR! variable_op_name: " << var_name << " has been add in nn.Graph: " << name_;
+          << Error::RuntimeError() << "Variable_op_name: " << var_name
+          << " has been added in nn.Graph: " << name_;
       CHECK_OR_RETURN(
           variable_op_name2tensor_.insert({var_name, std::shared_ptr<one::Tensor>()}).second)
-          << " ERROR! variable Tensor with op_name: " << var_name
+          << Error::RuntimeError() << "Variable Tensor with op_name: " << var_name
           << " has been add in nn.Graph: " << name_;
       CHECK_OR_RETURN(additional_variable_op_name_.insert(var_name).second)
-          << " ERROR! variable Tensor with op_name: " << var_name
+          << Error::RuntimeError() << "Variable Tensor with op_name: " << var_name
           << " has been add in nn.Graph: " << name_;
     } else /* vairable ops from user code */ {
       CHECK_OR_RETURN(var_conf.initializer().has_empty_conf())
-          << " nn.Graph ONLY support variable_op with empty conf,"
-          << " because variable is inited by eager tensor."
-          << " This error variable conf is : " << variable_op.op_conf().DebugString()
+          << Error::RuntimeError() << "nn.Graph ONLY support variable_op with empty conf, "
+          << "because variable is inited by eager tensor. "
+          << "This error variable conf is: " << variable_op.op_conf().DebugString()
           << " in nn.Graph " << name_;
       CHECK_OR_RETURN(variable_op_names_.find(var_name) != variable_op_names_.end())
-          << " ERROR! " << var_name << " must be a variable created in nn.Graph: " << name_;
+          << Error::RuntimeError() << var_name
+          << " must be a variable created in nn.Graph: " << name_;
     }
     return Maybe<void>::Ok();
   }));
@@ -269,7 +305,8 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
 }
 
 Maybe<void> NNGraph::CompileAndInitRuntime() {
-  CHECK_OR_RETURN(!runtime_inited_);
+  CHECK_OR_RETURN(!runtime_inited_)
+      << Error::RuntimeError() << "nn.Graph runtime is already initialized";
   auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
   tc->Count("Graph name: " + name_ + " RegisterFreeEagerTensorsToVariableOpNames", 1);
@@ -298,13 +335,15 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     PlanCompiler::Compile(&job_, &plan_, task_graph);
     CHECK_OR_RETURN(task_graph);
     tc->Count("Graph name: " + name_ + " Compile plan", 1);
-    PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, std::const_pointer_cast<const TaskGraph>(task_graph), variable_op_names_);
+    PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
+        &plan_, std::const_pointer_cast<const TaskGraph>(task_graph), variable_op_names_);
     tc->Count("Graph name: " + name_ + " Generate MemBlock and Chunk", 1);
 
     PlanUtil::GenRegisterHint(&plan_);
     tc->Count("Graph name: " + name_ + " GenRegisterHint", 1);
     // TODO(chengcheng): test collective boxing for multi-job.
-    PlanUtil::GenCollectiveBoxingPlan(&job_, std::const_pointer_cast<const TaskGraph>(task_graph), &plan_);
+    PlanUtil::GenCollectiveBoxingPlan(&job_, std::const_pointer_cast<const TaskGraph>(task_graph),
+                                      &plan_);
     tc->Count("Graph name: " + name_ + " GenCollectiveBoxingPlan", 1);
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
@@ -330,18 +369,18 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
       task_graph->ForEachNode([&](TaskNode* task_node) {
         thread_pool.AddWork([task_node, op_name2op_attribute, &counter, &mtx]() {
           if (!task_node->IsMeaningLess() && task_node->op_node()) {
-              auto op_node = task_node->op_node();
-              const std::string op_name = op_node->op().op_name();
-              {
-                std::unique_lock<std::mutex> guard(mtx);
-                auto find_it = op_name2op_attribute->find(op_name);
-                if (find_it == op_name2op_attribute->end()) {
-                  OpAttribute op_attr;
-                  CHECK_JUST(op_node->op().ToOpAttribute(&op_attr));
-                  // TODO(strint): Try to optimize here
-                  op_name2op_attribute->insert({op_name, op_attr});
-                }  // guard(mtx)
-              }
+            auto op_node = task_node->op_node();
+            const std::string op_name = op_node->op().op_name();
+            {
+              std::unique_lock<std::mutex> guard(mtx);
+              auto find_it = op_name2op_attribute->find(op_name);
+              if (find_it == op_name2op_attribute->end()) {
+                OpAttribute op_attr;
+                CHECK_JUST(op_node->op().ToOpAttribute(&op_attr));
+                // TODO(strint): Try to optimize here
+                op_name2op_attribute->insert({op_name, op_attr});
+              }  // guard(mtx)
+            }
           }
           counter.Decrease();
         } /* thread_pool.AddWork */);
@@ -399,20 +438,22 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 }
 
 Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
-  CHECK_OR_RETURN(variable_op_name2eager_blob_object_.empty()) << kOfBugIssueUploadPrompt;
+  CHECK_OR_RETURN(variable_op_name2eager_blob_object_.empty())
+      << Error::RuntimeError() << kOfBugIssueUploadPrompt;
   JUST(vm::CurrentRankSync());
   // Create or Rebuild variable, then get the real blob.
   for (const std::string& var_name : variable_op_names_) {
     auto iter = variable_op_name2tensor_.find(var_name);
-    CHECK_OR_RETURN(iter != variable_op_name2tensor_.end()) << var_name << " not found.";
+    CHECK_OR_RETURN(iter != variable_op_name2tensor_.end())
+        << Error::RuntimeError() << "variable op name " << var_name << " not found.";
     std::shared_ptr<one::Tensor> tensor = iter->second;
     vm::EagerBlobObject* var_blob = nullptr;
     if (plan_.job_id2op_attribute_ref_table().at(job_id_).op_name2op_attribute().find(var_name)
         == plan_.job_id2op_attribute_ref_table().at(job_id_).op_name2op_attribute().end()) {
       // Deal with variable tensor not used in nn.Graph build.
-      CHECK(tensor != NULL)
-          << "the tensor of " << var_name
-          << " is not existed in job, so it's not created in nn.Graph and cannot be NULL.";
+      CHECK_OR_RETURN(tensor != NULL)
+          << Error::RuntimeError() << "The tensor of " << var_name
+          << " does not exist in the job, so it's not created in nn.Graph and cannot be NULL.";
       if (tensor->is_global()) {
         const std::shared_ptr<one::LocalTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
         var_blob = JUST(local_var->eager_blob_object()).get();
@@ -505,9 +546,9 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
     } else {
       var_blob = JUST(tensor->eager_blob_object()).get();
     }
-    CHECK_OR_RETURN(var_blob != nullptr) << kOfBugIssueUploadPrompt;
+    CHECK_OR_RETURN(var_blob != nullptr) << Error::RuntimeError() << kOfBugIssueUploadPrompt;
     CHECK_OR_RETURN(variable_op_name2eager_blob_object_.emplace(var_name, var_blob).second)
-        << kOfBugIssueUploadPrompt;
+        << Error::RuntimeError() << kOfBugIssueUploadPrompt;
   }
   // Initialize or check mem_ptr_for_allocation_computation_pipelining by TouchTensors instruction.
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
@@ -577,7 +618,8 @@ Maybe<void> MakeEagerBlobObjectList(vm::EagerBlobObjectList* blob_list,
                                     const one::TensorTuple& tensor_list) {
   blob_list->reserve(tensor_list.size());
   for (const auto& tensor : tensor_list) {
-    CHECK_OR_RETURN(tensor->is_eager());
+    CHECK_OR_RETURN(tensor->is_eager())
+        << Error::RuntimeError() << "Tensors in nn.Graph should be eager";
     if (tensor->is_global()) {
       blob_list->emplace_back(JUST(JUST(tensor->cur_rank_phy_tensor())->eager_blob_object()));
     } else {
@@ -592,27 +634,40 @@ Maybe<void> MakeEagerBlobObjectList(vm::EagerBlobObjectList* blob_list,
 Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTuple& outputs,
                            const one::TensorTuple& parameters,
                            const std::shared_ptr<NNGraph>& nn_graph) {
-  CHECK_EQ_OR_RETURN(inputs.size(), nn_graph->inputs_op_names().size());
-  CHECK_EQ_OR_RETURN(outputs.size(), nn_graph->outputs_op_names().size());
+  CHECK_EQ_OR_RETURN(inputs.size(), nn_graph->inputs_op_names().size())
+      << Error::RuntimeError()
+      << "Number of inputs and NNGraph::inputs_op_names mismatch. "
+         "Size of inputs: "
+      << inputs.size()
+      << ", size of NNGraph::inputs_op_names: " << nn_graph->inputs_op_names().size();
+  CHECK_EQ_OR_RETURN(outputs.size(), nn_graph->outputs_op_names().size())
+      << Error::RuntimeError()
+      << "Number of outputs and NNGraph::outputs_op_names mismatch. "
+         "Size of outputs: "
+      << outputs.size()
+      << ", size of NNGraph::outputs_op_names: " << nn_graph->outputs_op_names().size();
   // NOTE(chengcheng):
   //   parameters not used in LaunchLazyJobInstrucntion;
   //   the args: parameters is all variable tensor hold by nn.Graph
   //   but the NNGraph::variable_op_size may has FreeEagerTensor as sepcial variable op.
-  CHECK_LE_OR_RETURN(parameters.size(), nn_graph->variable_op_size());
+  CHECK_LE_OR_RETURN(parameters.size(), nn_graph->variable_op_size())
+      << Error::RuntimeError() << "Parameter size should be less than or equal to variable size";
   for (int i = 0; i < inputs.size(); ++i) {
     // TODO(chengcheng, liufengwei):
     //   use TensorMeta.to_string and equal.
     std::string tensor_meta_str = *JUST(GetTensorMetaString(inputs.at(i)));
     const std::string& static_meta_str = nn_graph->inputs_tensor_meta_str().at(i);
     CHECK_OR_RETURN(static_meta_str == tensor_meta_str)
-        << "\n  nn.Graph ONLY accepts static inputs tensor meta, please check whether your input "
-        << "tensor meta each step is the same as the input of first call graph. \n  The excepted "
-        << "tensor meta is : ( \n  " << static_meta_str
-        << " \n) , but the actual tensor meta is : ( \n  " << tensor_meta_str << " \n)";
+        << Error::RuntimeError()
+        << "nn.Graph ONLY accepts static inputs tensor meta, please check whether your input "
+        << "tensor meta each step is the same as the input of first call graph.\nThe excepted "
+        << "tensor meta is: " << static_meta_str
+        << ", but the actual tensor meta is: " << tensor_meta_str;
   }
   for (int i = 0; i < outputs.size(); ++i) {
     CHECK_OR_RETURN(nn_graph->outputs_tensor_meta_str().at(i)
-                    == *JUST(GetTensorMetaString(outputs.at(i))));
+                    == *JUST(GetTensorMetaString(outputs.at(i))))
+        << Error::RuntimeError() << "Output tensor meta string mismatch";
   }
   vm::EagerBlobObjectList input_blobs;
   vm::EagerBlobObjectList output_blobs;

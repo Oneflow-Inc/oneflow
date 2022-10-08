@@ -60,6 +60,7 @@ enum class UnaryOp {
   kLgamma,
   kLog,
   kLog2,
+  kLog10,
   kLog1p,
   kLogSigmoid,
   kNegative,
@@ -84,6 +85,7 @@ enum class UnaryOp {
   kIsInf,
   kIsNan,
   kIsFinite,
+  kNanAssign,
 };
 
 }

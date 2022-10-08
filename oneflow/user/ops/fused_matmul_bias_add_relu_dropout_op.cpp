@@ -81,7 +81,8 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
     const user_op::TensorDesc& in_desc =
         ctx->InputTensorDesc(in_arg_pair.first, in_arg_pair.second);
     CHECK_EQ_OR_RETURN(in_desc.data_type(), first_in_desc.data_type())
-        << "The Input's datatype should be equal. ";
+        << "InferDataType Failed. Expected " << DataType_Name(in_desc.data_type()) << ", but got "
+        << DataType_Name(first_in_desc.data_type());
   }
 
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);

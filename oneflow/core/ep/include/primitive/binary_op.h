@@ -34,7 +34,10 @@ enum class BinaryOp {
   kPow,
   kFmod,
   kFloorDiv,
+  kTruncDiv,
   kFloorMod,
+  kScalarBasePowerGrad,
+  kScalarExpPowerGrad,
   // Comparision
   kEqual,
   kNotEqual,
@@ -81,6 +84,7 @@ enum class BinaryOp {
   kLgammaBackwardWithDyX,
   kLogBackwardWithDyX,
   kLog2BackwardWithDyX,
+  kLog10BackwardWithDyX,
   kLog1pBackwardWithDyX,
   kLogSigmoidBackwardWithDyX,
   kReciprocalBackwardWithDyX,

@@ -156,6 +156,7 @@ Tensor class reference
     Tensor.new_empty
     Tensor.new_ones 
     Tensor.new_zeros
+    Tensor.new_full
     Tensor.new_tensor
     Tensor.is_cuda
     Tensor.is_global
@@ -261,6 +262,7 @@ Tensor class reference
     Tensor.log
     Tensor.log1p
     Tensor.log2
+    Tensor.log10
     Tensor.logical_and
     Tensor.logical_or
     Tensor.logical_not
@@ -268,6 +270,7 @@ Tensor class reference
     Tensor.long
     Tensor.lt
     Tensor.masked_fill
+    Tensor.masked_fill_
     Tensor.masked_select
     Tensor.matmul
     Tensor.mm
@@ -281,6 +284,7 @@ Tensor class reference
     Tensor.mish
     Tensor.mul
     Tensor.mul_
+    Tensor.nansum
     Tensor.narrow
     Tensor.ndimension
     Tensor.ne
@@ -364,4 +368,5 @@ Tensor class reference
     Tensor.nms
     Tensor.pin_memory
     Tensor.is_pinned
+    Tensor.cross
 

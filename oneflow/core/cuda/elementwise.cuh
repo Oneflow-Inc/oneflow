@@ -130,7 +130,7 @@ ApplyPack(const FunctorT& functor, const Packed<IN, pack_size>... in) {
   return ret;
 }
 
-template<int pack_size, bool tail, typename FactoryT, typename R, typename... IN>
+template<int pack_size, typename FactoryT, typename R, typename... IN>
 __global__ void __launch_bounds__(kBlockSize)
     ApplyGeneric(FactoryT factory, int64_t n_pack, Packed<R, pack_size>* pack_r,
                  const Packed<IN, pack_size>*... pack_in, int64_t n_tail, R* tail_r,
@@ -140,7 +140,7 @@ __global__ void __launch_bounds__(kBlockSize)
   for (int64_t i = global_tid; i < n_pack; i += blockDim.x * gridDim.x) {
     pack_r[i] = ApplyPack<pack_size, decltype(functor), R, IN...>(functor, (pack_in[i])...);
   }
-  if (tail && global_tid < n_tail) { tail_r[global_tid] = functor((tail_in[global_tid])...); }
+  if (global_tid < n_tail) { tail_r[global_tid] = functor((tail_in[global_tid])...); }
 }
 
 template<typename FunctorT>
@@ -153,14 +153,14 @@ struct SimpleFactory {
 };
 
 template<size_t pack_size>
-bool IsAligendForPack() {
+bool IsAlignedForPack() {
   return true;
 }
 
 template<size_t pack_size, typename T, typename... Args>
-bool IsAligendForPack(const T* ptr, const Args*... others) {
+bool IsAlignedForPack(const T* ptr, const Args*... others) {
   return reinterpret_cast<uintptr_t>(ptr) % sizeof(Pack<T, pack_size>) == 0
-         && IsAligendForPack<pack_size, Args...>(others...);
+         && IsAlignedForPack<pack_size, Args...>(others...);
 }
 
 template<size_t pack_size, typename FactoryT, typename R, typename... IN>
@@ -173,9 +173,7 @@ cudaError_t LaunchKernel(FactoryT factory, int64_t n, R* r, const IN*... in, cud
     cudaError_t err = GetNumBlocks(n_pack, &num_blocks);
     if (err != cudaSuccess) { return err; }
   }
-  auto func = n_tail > 0 ? ApplyGeneric<pack_size, true, FactoryT, R, IN...>
-                         : ApplyGeneric<pack_size, false, FactoryT, R, IN...>;
-  func<<<num_blocks, kBlockSize, 0, stream>>>(
+  ApplyGeneric<pack_size, FactoryT, R, IN...><<<num_blocks, kBlockSize, 0, stream>>>(
       factory, n_pack, reinterpret_cast<Packed<R, pack_size>*>(r),
       (reinterpret_cast<const Packed<IN, pack_size>*>(in))..., n_tail, r + tail_offset,
       (in + tail_offset)...);
@@ -187,7 +185,7 @@ struct GenericLauncher {
   static cudaError_t Launch(FactoryT factory, int64_t n, R* r, const IN*... in,
                             cudaStream_t stream) {
     constexpr int max_pack_size = PackSize<R, IN...>();
-    if (IsAligendForPack<max_pack_size, R, IN...>(r, in...)) {
+    if (IsAlignedForPack<max_pack_size, R, IN...>(r, in...)) {
       return LaunchKernel<max_pack_size, FactoryT, R, IN...>(factory, n, r, in..., stream);
     } else {
       return LaunchKernel<1, FactoryT, R, IN...>(factory, n, r, in..., stream);
