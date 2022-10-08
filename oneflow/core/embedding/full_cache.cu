@@ -444,7 +444,8 @@ class CacheImpl : public Cache {
   OF_DISALLOW_COPY_AND_MOVE(CacheImpl);
   explicit CacheImpl(const CacheOptions& options)
       : if_dump_dirty_(ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DUMP_DIRTY_ONLY", false)),
-        encoder_(options.capacity, options.load_factor, if_dump_dirty_),
+        encoder_(options.capacity, options.load_factor,
+                 ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DUMP_DIRTY_ONLY", false)),
         device_index_(-1),
         options_(options),
         max_query_length_(0) {
