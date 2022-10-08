@@ -13,12 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <nccl.h>
+#include <memory>
 #include "oneflow/core/common/singleton.h"
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/job/of_collective_boxing/collective_manager.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/graph/boxing/of_collective_boxing_util.h"
 #include "oneflow/core/lazy/actor/of_collective_boxing_actor_context.h"
+#include "oneflow/core/lazy/actor/actor_message.h"
+#include "oneflow/core/lazy/actor/actor_message_bus.h"
 
 namespace oneflow {
 
@@ -55,6 +60,10 @@ class OfCollectiveBoxingGenericKernel final : public Kernel {
   ~OfCollectiveBoxingGenericKernel() override = default;
 
  private:
+  struct CallBackArgs {
+    int coll_id;
+    int64_t actor_id;
+  };
   void VirtualKernelInit(KernelContext* ctx) override;
   //   bool IsKernelLaunchSynchronized() const override { return false; }
   void ForwardDataContent(KernelContext* ctx) const override;
@@ -70,25 +79,49 @@ void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) con
   // Blob* in = ctx->BnInOp2Blob("in");
   // Blob* out = ctx->BnInOp2Blob("out");
   // AutoMemcpy(ctx->stream(), out, in);
-
-  const void* send_buff = nullptr;
-  void* recv_buff = nullptr;
   const RankDesc& rank_desc = this->op_conf().of_collective_boxing_generic_conf().rank_desc();
-  const DataType data_type = rank_desc.op_desc().data_type();
-  if (GenericOpHasInput(rank_desc)) {
-    const Blob* in = ctx->BnInOp2Blob("in");
-    CHECK_EQ(in->data_type(), data_type);
-    CHECK(in->shape() == ShapeView(GenericOpGetInputShape(rank_desc)));
-    send_buff = in->dptr();
-  }
-  if (GenericOpHasOutput(rank_desc)) {
-    Blob* out = ctx->BnInOp2Blob("out");
-    CHECK_EQ(out->data_type(), data_type);
-    CHECK(out->shape() == ShapeView(GenericOpGetOutputShape(rank_desc)));
-    recv_buff = out->mut_dptr();
-  }
+  // TODO: 目前只实现了AllReduce  
+  if (rank_desc.op_desc().op_type() == kOpTypeAllReduce) {
+    const void* send_buff = nullptr;
+    void* recv_buff = nullptr;
+    const DataType data_type = rank_desc.op_desc().data_type();
+    if (GenericOpHasInput(rank_desc)) {
+      const Blob* in = ctx->BnInOp2Blob("in");
+      CHECK_EQ(in->data_type(), data_type);
+      CHECK(in->shape() == ShapeView(GenericOpGetInputShape(rank_desc)));
+      send_buff = in->dptr();
+    }
+    if (GenericOpHasOutput(rank_desc)) {
+      Blob* out = ctx->BnInOp2Blob("out");
+      CHECK_EQ(out->data_type(), data_type);
+      CHECK(out->shape() == ShapeView(GenericOpGetOutputShape(rank_desc)));
+      recv_buff = out->mut_dptr();
+    }
 
-  VLOG(1) << "OfCollectiveBoxingGenericKernel::ForwardDataContent Done" << send_buff << recv_buff;
+    int coll_id = dynamic_cast<OfCollectiveBoxingKernelState *>(ctx->state().get())->coll_id();
+
+    ofcclRankCtx_t ofccl_rank_ctx = dynamic_cast<OfCollectiveBoxingKernelState *>(ctx->state().get())->ofccl_rank_ctx();
+
+    int64_t actor_id = GetOfCollectiveBoxingActorContext(ctx)->actor_id();
+
+    CallBackArgs *args = new CallBackArgs();
+    // static成员可以在const函数中修改。
+    args->actor_id = actor_id;
+    args->coll_id = coll_id;
+
+    auto cb_lambda = [](int collIdFromCqe, void *args) {
+      int64_t actor_id = (static_cast<CallBackArgs *>(args))->actor_id; // void不是类名，不能用dynamic
+      Singleton<ActorMsgBus>::Get()->SendMsg(ActorMsg::BuildCollectiveMsg(actor_id, actor_id, CollectiveNegoCmd::kCollectiveDone));
+      delete static_cast<CallBackArgs *>(args);
+      return 0;
+    };
+
+    CallbackFunc cb_func = cb_lambda;
+
+    OF_NCCL_CHECK(ofcclRunAllReduce(send_buff, recv_buff, coll_id, cb_func, args, ofccl_rank_ctx));
+
+    VLOG(1) << "OfCollectiveBoxingGenericKernel::ForwardDataContent Done" << send_buff << recv_buff;
+  }
 }
 
 REGISTER_KERNEL(OperatorConf::kOfCollectiveBoxingGenericConf, OfCollectiveBoxingGenericKernel);

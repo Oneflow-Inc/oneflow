@@ -147,6 +147,7 @@ void OfCollectiveActor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
   actor_ctx_ = actor_ctx;
   const TaskProto& task_proto = actor_ctx->task_proto();
   actor_id_ = task_proto.task_id();
+  (dynamic_cast<OfCollectiveBoxingActorContext *>(actor_ctx_))->set_actor_id(actor_id_); // for kernel to invoke ofccl
   thrd_id_ = ThrdId4ActorId(actor_id_);
   job_id_ = task_proto.job_id();
   CHECK_EQ(task_proto.exec_sequence().exec_node_size(), 1);

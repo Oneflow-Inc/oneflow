@@ -24,7 +24,7 @@ namespace oneflow {
 class OfCollectiveBoxingActorContext : public ActorContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OfCollectiveBoxingActorContext);
-  OfCollectiveBoxingActorContext() = default;
+  OfCollectiveBoxingActorContext() : actor_id_(0) {};
   ~OfCollectiveBoxingActorContext() override = default;
 
   void Init(const TaskProto& task_proto, StreamContext* stream_ctx) override;
@@ -33,9 +33,13 @@ class OfCollectiveBoxingActorContext : public ActorContext {
   StreamContext* stream_ctx() const override;
   const TaskProto& task_proto() const override;
 
+  void set_actor_id(int64_t actor_id) { actor_id_ = actor_id; }
+  const int64_t actor_id() { return actor_id_; }
+
  private:
   StreamContext* stream_ctx_{};
   TaskProto task_proto_{};
+  int64_t actor_id_;
 };
 
 }  // namespace oneflow
