@@ -1568,6 +1568,13 @@ class FlipFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FlipIntDimFunctor {
+  public:
+    Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, int32_t dim) const {
+      return functional::Flip(x, {dim});
+    }
+};
+
 class UnfoldTensorFunctor {
  public:
   UnfoldTensorFunctor() {
@@ -3399,6 +3406,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SliceView1dContiguousFunctor>("SliceView1dContiguous");
   m.add_functor<impl::CopyFunctor>("Copy");
   m.add_functor<impl::FlipFunctor>("Flip");
+  m.add_functor<impl::FlipIntDimFunctor>("FlipIntDim");
   m.add_functor<impl::UnfoldTensorFunctor>("UnfoldTensor");
   m.add_functor<impl::UnfoldTensorGradFunctor>("UnfoldTensorGrad");
   m.add_functor<impl::UpsampleGradFunctor>("UpsampleGrad");

@@ -1488,7 +1488,10 @@
   bind_python: True
 
 - name: "flip"
-  signature: "Tensor (Tensor x, Int32List dims) => Flip"
+  signature: [
+    "Tensor (Tensor x, Int32List dims) => Flip",
+    "Tensor (Tensor x, Int32 dims) => FlipIntDim"
+  ]
   bind_python: True
 
 - name: "upsample"
