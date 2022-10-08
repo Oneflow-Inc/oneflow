@@ -289,7 +289,6 @@ def OneFlow_TruncdivOp : OneFlow_BaseOp<"truncdiv", [NoSideEffect, DeclareOpInte
     OneFlow_Tensor:$z
   );
   let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
@@ -3829,7 +3828,6 @@ def OneFlow_TruncdivXGradOp : OneFlow_BaseOp<"truncdiv_x_grad", [NoSideEffect, D
     OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
@@ -3844,7 +3842,6 @@ def OneFlow_TruncdivYGradOp : OneFlow_BaseOp<"truncdiv_y_grad", [NoSideEffect, D
     OneFlow_Tensor:$dy
   );
   let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
@@ -7071,7 +7068,6 @@ def OneFlow_ReduceNanSumOp : OneFlow_BaseOp<"reduce_nansum", [NoSideEffect, Decl
     DefaultValuedAttr<BoolAttr, "false">:$keepdims
   );
   let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
@@ -7320,7 +7316,6 @@ def OneFlow_ScalarTruncdivOp : OneFlow_BaseOp<"scalar_truncdiv", [NoSideEffect, 
     DefaultValuedAttr<F64Attr, "0.">:$float_operand
   );
   let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
@@ -8744,7 +8739,6 @@ def OneFlow_Log10Op : OneFlow_BaseOp<"log10", [NoSideEffect, DeclareOpInterfaceM
     OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
