@@ -2056,17 +2056,13 @@ class StandardDeviationFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<std::vector<int32_t>>& dim,
-                           const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
+                           const bool& unbiased, const bool& keepdim) const {
     std::vector<int32_t> axis;
     if (!dim) {
       for (int i = 0; i < input->ndim(); i++) { axis.emplace_back(i); }
     } else {
       axis = *JUST(CheckAxis(*JUST(dim), input->ndim()));
     }
-    bool unbias = true;
-    bool keepdims = false;
-    if (unbiased.has_value()) { unbias = JUST(unbiased); }
-    if (keepdim.has_value()) { keepdims = JUST(keepdim); }
 
     if (axis.size() == 0) {
       return functional::Constant(*input->shape(), Scalar(0), *input->dtype(), NullOpt);
@@ -2082,12 +2078,12 @@ class StandardDeviationFunctor {
     bool is_double = input->dtype()->data_type() == DataType::kDouble;
     if (is_double) {
       const auto& sum = JUST(functional::ScalarDiv(
-          JUST(functional::ReduceSum(JUST(functional::Square(input)), axis, keepdims)),
+          JUST(functional::ReduceSum(JUST(functional::Square(input)), axis, keepdim)),
           Scalar((double)reduce_count)));
       const auto& square = JUST(functional::Square(JUST(functional::ScalarDiv(
-          JUST(functional::ReduceSum(input, axis, keepdims)), Scalar((double)reduce_count)))));
+          JUST(functional::ReduceSum(input, axis, keepdim)), Scalar((double)reduce_count)))));
       const auto& sub = JUST(functional::Sub(sum, square, /*alpha=*/1.0, /*inplace=*/false));
-      if (unbias) {
+      if (unbiased) {
         return functional::Sqrt(JUST(functional::ScalarMul(
             sub, Scalar((double)reduce_count / (double)(reduce_count - 1)), false)));
       }
@@ -2115,13 +2111,13 @@ class StandardDeviationFunctor {
       const auto& double_input =
           JUST(functional::Cast(input, DType::Double(), /*pin_memory=*/false));
       const auto& sum = JUST(functional::ScalarDiv(
-          JUST(functional::ReduceSum(JUST(functional::Square(double_input)), axis, keepdims)),
+          JUST(functional::ReduceSum(JUST(functional::Square(double_input)), axis, keepdim)),
           Scalar((double)reduce_count)));
       const auto& square = JUST(functional::Square(
-          JUST(functional::ScalarDiv(JUST(functional::ReduceSum(double_input, axis, keepdims)),
+          JUST(functional::ScalarDiv(JUST(functional::ReduceSum(double_input, axis, keepdim)),
                                      Scalar((double)reduce_count)))));
       const auto& sub = JUST(functional::Sub(sum, square, /*alpha=*/1.0, /*inplace=*/false));
-      if (unbias) {
+      if (unbiased) {
         return functional::Cast(
             JUST(functional::Sqrt(JUST(functional::ScalarMul(
                 sub, Scalar((double)reduce_count / (double)(reduce_count - 1)), false)))),
@@ -2139,7 +2135,7 @@ class VarianceFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<std::vector<int32_t>>& dim,
-                           const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
+                           const bool& unbiased, const bool& keepdim) const {
     if (!IsFloatingDataType(input->dtype()->data_type())) {
       return Error::RuntimeError() << "var only support floating point dtypes";
     }
