@@ -223,14 +223,14 @@ LogicalResult LowerToOKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
   llvm::raw_string_ostream os_mlir(mlir);
   found->print(os_mlir);
 
-  auto reg_ctx = rewriter.create<okl::RegContextOp>(
+  auto reg_ctx = rewriter.create<okl::BuildRegContextOp>(
       loc, okl::RegContextType::get(rewriter.getContext()), rewriter.getStringAttr(mlir));
   // auto reg_ctx = compute_ctx;
   // create okl.create_run_ctx(*reg_ctx, *compute_ctx)
-  auto run_ctx = rewriter.create<okl::RunContextOp>(
+  auto run_ctx = rewriter.create<okl::BuildRunContextOp>(
       loc, okl::RunContextType::get(rewriter.getContext()), reg_ctx, launcher_ctx);
   // create okl.create_kernel(*reg_ctx, StringAttr: op_type_name)
-  auto kernel = rewriter.create<okl::KernelOp>(loc, okl::KernelType::get(rewriter.getContext()),
+  auto kernel = rewriter.create<okl::BuildKernelOp>(loc, okl::KernelType::get(rewriter.getContext()),
                                                reg_ctx, op->getName().stripDialect().str());
   // create okl.launch(*reg_ctx, *run_ctx, *kernel)
   rewriter.create<okl::LaunchOp>(loc, reg_ctx, run_ctx, kernel);

@@ -88,7 +88,7 @@ namespace okl {
 // }
 
 // // create okl.reg_ctx(StringAttr: assembly)
-// struct RegContextOpLowering final : public OpConversionPattern<RegContextOp> {
+// struct BuildRegContextOpLowering final : public OpConversionPattern<BuildRegContextOp> {
 //   // raw: create okl.reg_ctx(StringAttr: assembly) -> llvm_ptr<i8>
 //   // dst: llvm.call build_reg_ctx(gep_global_str: llvm_ptr<i8>) -> llvm_ptr<i8>
 //   static StringRef DeclareBuildRegContext(::mlir::PatternRewriter& rewriter, ModuleOp* module) {
@@ -108,8 +108,8 @@ namespace okl {
 //   }
 
 //  public:
-//   using OpConversionPattern<RegContextOp>::OpConversionPattern;
-//   LogicalResult matchAndRewrite(RegContextOp op, OpAdaptor adaptor,
+//   using OpConversionPattern<BuildRegContextOp>::OpConversionPattern;
+//   LogicalResult matchAndRewrite(BuildRegContextOp op, OpAdaptor adaptor,
 //                                 ConversionPatternRewriter& rewriter) const override {
 //     auto mlir_asm = op.mlir_assembly();
 
@@ -129,7 +129,7 @@ namespace okl {
 // };
 
 // // create okl.run_ctx(*reg_ctx, *compute_ctx)
-// struct RunContextOpLowering final : public OpConversionPattern<RunContextOp> {
+// struct BuildRunContextOpLowering final : public OpConversionPattern<BuildRunContextOp> {
 //   // raw: create okl.run_ctx(*reg_ctx, *compute_ctx) -> llvm_ptr<i8>
 //   // dst: llvm.call build_run_ctx(reg_ctx: llvm_ptr<i8>, compute_ctx: llvm_ptr<i8>) -> llvm_ptr<i8>
 //   static LLVM::LLVMFuncOp DeclareBuildRunContext(::mlir::PatternRewriter& rewriter,
@@ -150,8 +150,8 @@ namespace okl {
 //   }
 
 //  public:
-//   using OpConversionPattern<RunContextOp>::OpConversionPattern;
-//   LogicalResult matchAndRewrite(RunContextOp op, OpAdaptor adaptor,
+//   using OpConversionPattern<BuildRunContextOp>::OpConversionPattern;
+//   LogicalResult matchAndRewrite(BuildRunContextOp op, OpAdaptor adaptor,
 //                                 ConversionPatternRewriter& rewriter) const override {
 //     auto func = op->getParentOfType<func::FuncOp>();
 
@@ -166,7 +166,7 @@ namespace okl {
 // };
 
 // // create okl.kernel(*reg_ctx, StringAttr: op_type_name)
-// struct KernelOpLowering final : public OpConversionPattern<KernelOp> {
+// struct BuildKernelOpLowering final : public OpConversionPattern<BuildKernelOp> {
 //   // raw: create okl.kernel(*reg_ctx, StringAttr: op_type_name) -> llvm_ptr<i8>
 //   // dst: llvm.call build_kernel(reg_ctx: llvm_ptr<i8>, op_type_name: llvm_ptr<i8>) -> llvm_ptr<i8>
 //   static LLVM::LLVMFuncOp DeclareBuildKernel(::mlir::PatternRewriter& rewriter, ModuleOp* module) {
@@ -186,8 +186,8 @@ namespace okl {
 //   }
 
 //  public:
-//   using OpConversionPattern<KernelOp>::OpConversionPattern;
-//   LogicalResult matchAndRewrite(KernelOp op, OpAdaptor adaptor,
+//   using OpConversionPattern<BuildKernelOp>::OpConversionPattern;
+//   LogicalResult matchAndRewrite(BuildKernelOp op, OpAdaptor adaptor,
 //                                 ConversionPatternRewriter& rewriter) const override {
 //     auto module = GetModuleOpFromJobBodyOp<func::FuncOp>(op);
 //     auto build_launch = DeclareBuildKernel(rewriter, &module);
@@ -322,7 +322,7 @@ void LowerOKLToLLVMPass::runOnOperation() {
   typeConverter.addConversion([](Type type) { return type; });
   RewritePatternSet patterns(context);
 
-  // patterns.add<KernelOpLowering, LaunchOpLowering, RegContextOpLowering, RunContextOpLowering,
+  // patterns.add<BuildKernelOpLowering, LaunchOpLowering, BuildRegContextOpLowering, BuildRunContextOpLowering,
   //              DestroyRegContextOpLowering, DestroyRunContextOpLowering>(typeConverter, context);
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     signalPassFailure();

@@ -22,7 +22,7 @@ include "OneFlow/OKL/OKLTypes.td"
 include "mlir/Pass/PassBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 
-def RegContextOp : OKL_Op<"build_reg_ctx"> {
+def BuildRegContextOp : OKL_Op<"build_reg_ctx"> {
   let summary = "build reg context operation";
   let description = [{
     this context is generated from module op and used on kernel/run_ctx build phase.
@@ -44,7 +44,7 @@ def DestroyRegContextOp : OKL_Op<"destroy_reg_ctx"> {
   let arguments = (ins RegContextType:$ptr);
 }
 
-def RunContextOp : OKL_Op<"build_run_ctx"> {
+def BuildRunContextOp : OKL_Op<"build_run_ctx"> {
   let summary = "build run context operation";
   let description = [{
     this context is generated from reg_ctx and compute_ctx.
@@ -68,7 +68,7 @@ def DestroyRunContextOp : OKL_Op<"destroy_run_ctx"> {
   let arguments = (ins RunContextType:$ptr);
 }
 
-def KernelOp : OKL_Op<"build_op_kernel"> {
+def BuildKernelOp : OKL_Op<"build_op_kernel"> {
   let summary = "build kernel operation";
   let description = [{
     kernel is generated from reg_ctx and op_name.
