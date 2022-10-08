@@ -1268,6 +1268,11 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(x.numpy(), [1.0, 2.0, 3.0]))
         test_case.assertEqual(x.dtype, flow.int8)
 
+    def test_tensor_contains_magic_method(test_case):
+        x = flow.tensor([[1, 2, 3], [4, 5, 6]])
+        y = 1 in x
+        test_case.assertEqual(y, True)
+
     @profile(torch.Tensor.fill_)
     def profile_fill_(test_case):
         torch.Tensor.fill_(torch.ones(1, 8, 16, 16), 2)
