@@ -2326,5 +2326,5 @@ add_docstr(
     oneflow.Tensor.trunc,
     """
     See :func:`oneflow.trunc`
-    """
+    """,
 )

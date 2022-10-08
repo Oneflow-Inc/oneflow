@@ -229,7 +229,7 @@ def _uniform(self, a=0, b=1):
 
 
 # def _exponential(self, lambd=1.0, generator=None):
-    # return flow._C.exponential_(self, lambd, generator)
+# return flow._C.exponential_(self, lambd, generator)
 
 
 def _trunc_normal_(
