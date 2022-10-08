@@ -38,6 +38,8 @@ class CollectiveBuilderImpl : public CollectiveBuilder {
   void InitJob(int64_t job_id) override;
   void DeinitJob(int64_t job_id) override;
 
+  ofcclRankCtx_t KernelGetOfcclRankCtx(int rank) override;
+
  private:
   std::vector<std::unique_ptr<CollectiveBackend>> backends_;
   std::shared_ptr<OfRequestStore> request_store_;
@@ -72,6 +74,15 @@ void CollectiveBuilderImpl::DeinitJob(int64_t job_id) {
 #endif
 }
 
+ofcclRankCtx_t CollectiveBuilderImpl::KernelGetOfcclRankCtx(int rank) {
+#ifdef WITH_CUDA
+  if (backends_.at(Backend::kBackendOFCCL)) {
+    return backends_.at(Backend::kBackendOFCCL)->RetrieveOfcclRankCtx(rank);
+  }
+#endif
+  return nullptr;
+}
+
 struct CollectiveMgr::Impl {
   Impl();
   std::shared_ptr<OfRequestStore> request_store;
@@ -99,6 +110,17 @@ OfRequestEntry* CollectiveMgr::GetOfRequestEntry(void* token) {
   return impl_->request_store->GetOfRequestEntry(token);
 }
 
+int CollectiveMgr::KernelGetCollId(const RankDesc& rank_desc) {
+  const OfRequestId& request_id =
+      impl_->request_store->GetOfRequestIdByName(rank_desc.op_desc().name());
+  auto* request_entry = impl_->request_store->MutOfRequestEntry(request_id);
+  return request_entry->coll_id();
+}
+
+ofcclRankCtx_t CollectiveMgr::KernelGetOfcclRankCtx(int rank) {
+  return impl_->collective_builder->KernelGetOfcclRankCtx(rank);
+}
+
 class CollectiveMgrPlanToken {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CollectiveMgrPlanToken);
@@ -116,7 +138,7 @@ CollectiveMgrPlanToken* CollectiveMgr::AddPlan(const Plan& plan) {
     const int64_t job_id = job_id7request_set.first;
     job_ids.emplace_back(job_id);
     impl_->request_store->InitJob(job_id, job_id7request_set.second);
-    // impl_->collective_builder->InitJob(job_id);
+    impl_->collective_builder->InitJob(job_id);
   }
   return new CollectiveMgrPlanToken(job_ids);
 }

@@ -38,6 +38,7 @@ class CollectiveBackendOfccl : public CollectiveBackend {
   void Init(std::shared_ptr<OfRequestStore> request_store) override;
   void InitJob(int64_t job_id) override;
   void DeinitJob(int64_t job_id) override;
+  ofcclRankCtx_t RetrieveOfcclRankCtx(int rank) override;
 
   struct Impl;
   std::unique_ptr<Impl> impl_;

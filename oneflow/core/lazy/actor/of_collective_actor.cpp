@@ -413,7 +413,7 @@ int OfCollectiveActor::HandlerNormal(const ActorMsg& msg) {
         }
       }
     }
-    // for debug, skip negotiation and run normal regst-actor stuff directly
+    // TODO: (Panlichen) invoke Act() when ONEFLOW_OFCCL_SKIP_NEGO=1
     if (ParseBooleanFromEnv("ONEFLOW_OFCCL_SKIP_NEGO", false)) {
       collective_status_ = CollectiveStatus::kCanAct;
       VLOG(2) << "Actor " << actor_id_ << " UpdateCollectiveStatus to " << print_status_[collective_status_];

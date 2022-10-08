@@ -25,7 +25,6 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/shape.h"
 
-#include <nccl.h>
 
 #include <memory>
 #include <utility>
@@ -156,7 +155,7 @@ ncclRedOp_t OfcclGetReduceOp(ReduceMethod reduce_method) {
 
 struct CollectiveBackendOfccl::Impl {
   Impl(const CollectiveBoxingConf& conf, std::shared_ptr<OfRequestStore> request_store)
-      : conf(conf), request_store(std::move(request_store)) {
+      : conf(conf), request_store(request_store) {
   }
   ~Impl() {
     coll_id2device_set7CommGroup.clear();
@@ -169,7 +168,7 @@ struct CollectiveBackendOfccl::Impl {
         const auto& request = request_entry->desc();
         if (request.op_desc().backend() != Backend::kBackendOFCCL) { return; }
         if (!request_entry->HasRankOnThisNode()) { return; }
-        int coll_id = (int)request.order();
+        int coll_id = request_entry->coll_id();
         const DeviceSet& device_set = request.device_set();
         // 这里原来的结构是HashMap<DeviceSet, std::vector<CommGroup>> device_set2stream_id2comm_group;
         // 我们应该考虑coll_id了。
@@ -204,7 +203,7 @@ struct CollectiveBackendOfccl::Impl {
           // 根据ofccl/src/enqueue_ofccl.cc里 size_t channelSize = elem->count*ncclTypeSize(proxyOp->dtype)/elem->nChannels;的用法，可以认为count代表了元素个数，而不是字节数。
           size_t count = 1;
           const Shape shape = Shape(request.op_desc().shape());
-          FOR_RANGE(int, i, 0, shape.NumAxes()) { count *= shape.At(i); }
+          FOR_RANGE(int, shape_ax, 0, shape.NumAxes()) { count *= shape.At(shape_ax); }
           CHECK_GT(count, 0);
           // oneflow/oneflow/core/common/data_type.proto enum DataType
           ncclDataType_t nccl_data_type = GetNcclDataType(request.op_desc().data_type());
@@ -225,16 +224,21 @@ struct CollectiveBackendOfccl::Impl {
     return;
   }
 
-  void prepareDone() {
+  void PrepareDone() {
     for (auto &device_id7ofcll_rank_ctx : device_id2ofccl_rank_ctx) {
       ofcclPrepareDone(device_id7ofcll_rank_ctx.second);
     }
   }
 
-  void destroy() {
+  void Destroy() {
     for (auto &device_id7ofcll_rank_ctx : device_id2ofccl_rank_ctx) {
       ofcclDestroy(device_id7ofcll_rank_ctx.second);
     }
+  }
+
+  ofcclRankCtx_t RetrieveOfcclRankCtx(int rank) {
+    CHECK(device_id2ofccl_rank_ctx.find(rank) != device_id2ofccl_rank_ctx.end());
+    return device_id2ofccl_rank_ctx[rank];
   }
 
   CollectiveBoxingConf conf;
@@ -258,12 +262,16 @@ void CollectiveBackendOfccl::InitJob(int64_t job_id) {
   CudaCurrentDeviceGuard guard;
   impl_->InitCommGroup(job_id); // 针对每个local rank创建了rank_ctx，并且对所有相关的集合通信执行了prepareColl（包括创建comm）
   // 接下来对每个local rank执行prepareDone
-  impl_->prepareDone();
+  impl_->PrepareDone();
 }
 
 void CollectiveBackendOfccl::DeinitJob(int64_t job_id) {
   // 这个应该是最后退出执行要跑的，进行内存回收等等操作。
-  impl_->destroy();
+  impl_->Destroy();
+}
+
+ofcclRankCtx_t CollectiveBackendOfccl::RetrieveOfcclRankCtx(int rank) {
+  return impl_->RetrieveOfcclRankCtx(rank);
 }
 
 }  // namespace of_collective

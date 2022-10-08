@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_OF_COLLECTIVE_BOXING_COLLECTIVE_MANAGER_H_
 #define ONEFLOW_CORE_JOB_OF_COLLECTIVE_BOXING_COLLECTIVE_MANAGER_H_
 
+#include <nccl.h>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/of_collective_boxing/of_request_store.h"
 #include "oneflow/core/job/plan.pb.h"
@@ -43,6 +44,10 @@ class CollectiveMgr final {
   void DestroyOfRequestEntryToken(void* token);
 
   OfRequestEntry* GetOfRequestEntry(void* token);
+
+  int KernelGetCollId(const RankDesc& rank_desc);
+
+  ofcclRankCtx_t KernelGetOfcclRankCtx(int rank);
 
  private:
   friend class Singleton<CollectiveMgr>;

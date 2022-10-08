@@ -35,7 +35,7 @@ struct RuntimeNegoTreeInfo {
 class OfRequestEntry final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OfRequestEntry);
-  OfRequestEntry(const RequestDesc& desc);
+  OfRequestEntry(const RequestDesc& desc, int coll_id);
   ~OfRequestEntry() = default;
 
   const RequestDesc& desc() const { return desc_; }
@@ -60,6 +60,8 @@ class OfRequestEntry final {
 
   std::map<int64_t, RuntimeNegoTreeInfo> nego_tree_topo() const { return nego_tree_topo_; }
 
+  const int coll_id() { return coll_id_; }
+
  private:
   RequestDesc desc_;
   int32_t node_count_;
@@ -72,6 +74,9 @@ class OfRequestEntry final {
   std::map<int64_t, RuntimeNegoTreeInfo> nego_tree_topo_;
 
   Symbol<DeviceSet> device_set_symbol_;
+
+  // 一个request绑定一个coll_id。
+  int coll_id_;
 };
 
 struct OfRequestId {
@@ -138,6 +143,9 @@ class OfRequestStore {
  private:
   HashMap<int64_t, std::vector<std::unique_ptr<OfRequestEntry>>> job_id2request_entry_vec_;
   HashMap<std::string, OfRequestId> name2request_id_;
+
+  // 在RequestStore里维护跨越job边界的coll_id
+  int coll_id_counter_;
 };
 
 }  // namespace of_collective

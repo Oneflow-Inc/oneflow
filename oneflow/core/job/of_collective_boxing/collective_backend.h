@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_JOB_OF_COLLECTIVE_BOXING_COLLECTIVE_BACKEND_H_
 
 #include "oneflow/core/common/util.h"
+#include <nccl.h>
 
 namespace oneflow {
 
@@ -37,6 +38,7 @@ class CollectiveBackend {
   virtual void Init(std::shared_ptr<OfRequestStore> request_store) = 0;
   virtual void InitJob(int64_t job_id) = 0;
   virtual void DeinitJob(int64_t job_id) = 0;
+  virtual ofcclRankCtx_t RetrieveOfcclRankCtx(int rank) = 0;
 };
 
 }  // namespace of_collective
