@@ -32,7 +32,9 @@ template<>
 __global__ void ArangeForwardGpuKernel(const half start, const half delta,
                                        const int64_t arange_elem_cnt, half* out) {
   // Use Loop to set the value
-  XPU_1D_KERNEL_LOOP(i, arange_elem_cnt) { out[i] = start + static_cast<half>(i * 1.0) * delta; }
+  XPU_1D_KERNEL_LOOP(i, arange_elem_cnt) {
+    out[i] = start + static_cast<half>(static_cast<float>(i)) * delta;
+  }
 }
 
 template<typename T>
