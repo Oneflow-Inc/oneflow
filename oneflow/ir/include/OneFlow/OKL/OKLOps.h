@@ -26,6 +26,7 @@ limitations under the License.
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "OneFlow/OKL/OKLTypes.h"
 
 namespace mlir {
 namespace func {
@@ -34,6 +35,6 @@ class FuncOp;
 }  // namespace mlir
 
 #define GET_OP_CLASSES
-#include "OneFlow/OKL.gen_ops.h.inc"
+#include "OneFlow/OKLOps.h.inc"
 
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_OKLOPS_H_

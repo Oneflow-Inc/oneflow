@@ -189,6 +189,7 @@ class KernelLaunchComputeContext final : public user_op::KernelComputeContext {
 
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     auto op = reg_ctx_->GetOp();
+    LOG(ERROR) << "here";
     auto id = std::make_pair(arg_name, index);
     for (const auto& operand_id : ::llvm::enumerate(
              ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedOperandSegments>(op))) {

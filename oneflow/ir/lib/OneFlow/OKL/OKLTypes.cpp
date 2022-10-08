@@ -13,22 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_OKL_OKLDIALECT_H_
-#define ONEFLOW_IR_INCLUDE_OKL_OKLDIALECT_H_
+#include "OneFlow/OKL/OKLDialect.h"
+#include "OneFlow/OKL/OKLTypes.h"
+#include "mlir/IR/DialectImplementation.h"
+#include "llvm/ADT/TypeSwitch.h"
 
-include "mlir/IR/OpBase.td"
-
-def OKL_Dialect : Dialect {
-    let name = "okl";
-    let summary = "OneFlow Kernel Launch dialect.";
-    let description = [{
-        This dialect is the IR of abstract represent of OneFlow kernel launch.
-    }];
-    let cppNamespace = "::mlir::okl";
-    let dependentDialects = [
-        "func::FuncDialect"
-    ];
-    let useDefaultTypePrinterParser = 1;
-}
-
-#endif // ONEFLOW_IR_INCLUDE_OKL_OKLDIALECT_H_
+#define GET_TYPEDEF_CLASSES
+#include "OneFlow/OKLTypes.cpp.inc"

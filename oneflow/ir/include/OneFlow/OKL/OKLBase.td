@@ -25,4 +25,9 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 class OKL_Op<string name, list<Trait> traits = []> :
     Op<OKL_Dialect, name, traits>;
 
+class OKL_Type<string name, string typeMnemonic, list<Trait> traits = []>
+    : TypeDef<OKL_Dialect, name, traits> {
+  let mnemonic = typeMnemonic;
+}
+
 #endif // ONEFLOW_IR_INCLUDE_OKL_OKLBASE_H_

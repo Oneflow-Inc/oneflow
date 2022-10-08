@@ -43,6 +43,7 @@ limitations under the License.
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/SBP/SBPAttributes.h"
 #include "OneFlow/OKL/OKLOps.h"
+#include "OneFlow/OKL/OKLTypes.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/OperationSupport.h"
@@ -207,9 +208,7 @@ LogicalResult LowerToOKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPointToEnd(&okl_func.getBody().back());
 
-  auto llvm_ptr_type = LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8));
-
-  auto compute_ctx = okl_func.getArgument(0);
+  auto launcher_ctx = okl_func.getArgument(0);
   auto tmp_func_name = op_type_name;
   auto module = okl_func->getParentOfType<ModuleOp>();
 
@@ -224,13 +223,15 @@ LogicalResult LowerToOKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
   llvm::raw_string_ostream os_mlir(mlir);
   found->print(os_mlir);
 
-  auto reg_ctx =
-      rewriter.create<okl::RegContextOp>(loc, llvm_ptr_type, rewriter.getStringAttr(mlir));
+  auto reg_ctx = rewriter.create<okl::RegContextOp>(
+      loc, okl::RegContextType::get(rewriter.getContext()), rewriter.getStringAttr(mlir));
   // auto reg_ctx = compute_ctx;
   // create okl.create_run_ctx(*reg_ctx, *compute_ctx)
-  auto run_ctx = rewriter.create<okl::RunContextOp>(loc, llvm_ptr_type, reg_ctx, compute_ctx);
+  auto run_ctx = rewriter.create<okl::RunContextOp>(
+      loc, okl::RunContextType::get(rewriter.getContext()), reg_ctx, launcher_ctx);
   // create okl.create_kernel(*reg_ctx, StringAttr: op_type_name)
-  auto kernel = rewriter.create<okl::KernelOp>(loc, llvm_ptr_type, reg_ctx, op->getName().stripDialect().str());
+  auto kernel = rewriter.create<okl::KernelOp>(loc, okl::KernelType::get(rewriter.getContext()),
+                                               reg_ctx, op->getName().stripDialect().str());
   // create okl.launch(*reg_ctx, *run_ctx, *kernel)
   rewriter.create<okl::LaunchOp>(loc, reg_ctx, run_ctx, kernel);
   // create okl.destroy(reg_ctx);
@@ -909,7 +910,6 @@ void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLI
   results.insert<BroadcastMulToScalarMulPattern>(context);
 }
 
-
 struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
   explicit LowerToOKLPattern(mlir::MLIRContext* context)
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
@@ -924,11 +924,13 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     auto& ops = op->getRegion(0).front();
     auto loc = op->getLoc();
 
-    auto func_type = rewriter.getFunctionType({GetPtr(rewriter)}, TypeRange{});
+    auto func_type = rewriter.getFunctionType(
+        {mlir::okl::LauncherContextType::get(rewriter.getContext())}, TypeRange{});
     auto okl_func = rewriter.create<func::FuncOp>(loc, func_name, func_type);
     okl_func->setAttr("compiled", rewriter.getStringAttr("true"));
     okl_func.getBody().emplaceBlock();
-    okl_func.getBody().addArguments(GetPtr(rewriter), loc);
+    okl_func.getBody().addArguments(mlir::okl::LauncherContextType::get(rewriter.getContext()),
+                                    loc);
     for (auto& op : ops) {
       if (!op.hasAttr("op_name")) {
         if (isa<func::ReturnOp>(op)) { break; }

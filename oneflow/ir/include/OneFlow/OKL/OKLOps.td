@@ -18,6 +18,7 @@ limitations under the License.
 
 include "OneFlow/OKL/OKLDialect.td"
 include "OneFlow/OKL/OKLBase.td"
+include "OneFlow/OKL/OKLTypes.td"
 include "mlir/Pass/PassBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 
@@ -31,7 +32,7 @@ def RegContextOp : OKL_Op<"build_reg_ctx"> {
   let arguments = (ins
     StrAttr:$mlir_assembly
   );
-  let results = (outs LLVM_AnyPointer:$out);
+  let results = (outs RegContextType:$out);
 }
 
 def DestroyRegContextOp : OKL_Op<"destroy_reg_ctx"> {
@@ -40,7 +41,7 @@ def DestroyRegContextOp : OKL_Op<"destroy_reg_ctx"> {
     delete the pointer source.
   }];
 
-  let arguments = (ins LLVM_AnyPointer:$ptr);
+  let arguments = (ins RegContextType:$ptr);
 }
 
 def RunContextOp : OKL_Op<"build_run_ctx"> {
@@ -52,10 +53,10 @@ def RunContextOp : OKL_Op<"build_run_ctx"> {
   }];
 
   let arguments = (ins
-    LLVM_AnyPointer:$reg_ctx,
-    LLVM_AnyPointer:$compute_ctx
+    RegContextType:$reg_ctx,
+    LauncherContextType:$launcher_ctx
   );
-  let results = (outs LLVM_AnyPointer:$out);
+  let results = (outs RunContextType:$out);
 }
 
 def DestroyRunContextOp : OKL_Op<"destroy_run_ctx"> {
@@ -64,7 +65,7 @@ def DestroyRunContextOp : OKL_Op<"destroy_run_ctx"> {
     delete the pointer source.
   }];
 
-  let arguments = (ins LLVM_AnyPointer:$ptr);
+  let arguments = (ins RunContextType:$ptr);
 }
 
 def KernelOp : OKL_Op<"build_op_kernel"> {
@@ -74,10 +75,10 @@ def KernelOp : OKL_Op<"build_op_kernel"> {
   }];
 
   let arguments = (ins
-    LLVM_AnyPointer:$reg_ctx,
+    RegContextType:$reg_ctx,
     StrAttr:$op_type_name
   );
-  let results = (outs LLVM_AnyPointer:$out);
+  let results = (outs KernelType:$out);
 }
 
 def LaunchOp : OKL_Op<"launch"> {
@@ -87,9 +88,9 @@ def LaunchOp : OKL_Op<"launch"> {
   }];
 
   let arguments = (ins
-    LLVM_AnyPointer:$reg_ctx,
-    LLVM_AnyPointer:$run_ctx,
-    LLVM_AnyPointer:$kernel
+    RegContextType:$reg_ctx,
+    RunContextType:$run_ctx,
+    KernelType:$kernel
   );
 }
 

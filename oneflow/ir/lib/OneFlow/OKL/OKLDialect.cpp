@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "OneFlow/OKL/OKLDialect.h"
 #include "OneFlow/OKL/OKLOps.h"
+#include "OneFlow/OKL/OKLTypes.h"
 #include "OneFlow/OneFlowOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "OneFlow/OKLDialect.cpp.inc"
@@ -22,8 +23,6 @@ limitations under the License.
 #include "mlir/IR/TypeRange.h"
 #include "mlir/IR/Dialect.h"
 
-#define GET_OP_CLASSES
-#include "OneFlow/OKL.gen_ops.cpp.inc"
 namespace mlir {
 
 namespace okl {
@@ -31,7 +30,11 @@ namespace okl {
 void OKLDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
-#include "OneFlow/OKL.gen_ops.cpp.inc"
+#include "OneFlow/OKLOps.cpp.inc"
+      >();
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "OneFlow/OKLTypes.cpp.inc"
       >();
 }
 
