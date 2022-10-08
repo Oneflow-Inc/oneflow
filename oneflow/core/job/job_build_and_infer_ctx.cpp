@@ -934,6 +934,7 @@ void ExpandPlacement(::google::protobuf::RepeatedPtrField<T>* pl_group) {
 }
 
 Maybe<void> ExpandGraph(Job* job) {
+  job->mutable_job_conf()->set_world_size(GlobalProcessCtx::WorldSize(true));
   for (auto& op : *job->mutable_net()->mutable_op()) { *op.mutable_device_tag() = "cuda"; }
   ExpandPlacement<PlacementGroup>(job->mutable_placement()->mutable_placement_group());
   ExpandPlacement<BlobPlacementGroup>(job->mutable_placement()->mutable_blob_placement_group());
@@ -944,10 +945,10 @@ Maybe<void> ExpandGraph(Job* job) {
 Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   CHECK_GT_OR_RETURN(job().net().op_size(), 0)
       << " Sorry, nn.Graph need at least 1 op in net, but get 0 now.";
-  const int64_t world_size =
-      GlobalProcessCtx::WorldSize(ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false));
-  mut_job()->mutable_job_conf()->set_world_size(world_size);
+
   if (ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false)) { JUST(ExpandGraph(mut_job())); }
+  LOG(ERROR) << "job world size " << job().job_conf().world_size();
+
   CHECK_NOTNULL(Singleton<JobDesc>::Get());
   Singleton<JobDesc>::Delete();
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
