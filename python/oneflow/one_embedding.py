@@ -381,8 +381,11 @@ class Embedding(Module):
                 state_initializer,
                 seed=self.seed,
             )
-            cur_rank_unique_embedding_grad = flow._C.unsorted_segment_sum_like(
-                embedding_grad, inverse_indices, unique_values, axis=0,
+            cur_rank_unique_embedding_grad = flow._C.unsorted_segment_sum(
+                embedding_grad,
+                inverse_indices,
+                axis=0,
+                num_segments=unique_values.shape[0],
             )
         self.embedding = None
         return (
