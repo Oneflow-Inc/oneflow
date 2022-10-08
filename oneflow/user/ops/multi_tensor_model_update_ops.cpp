@@ -232,10 +232,6 @@ Maybe<void> AdamWithCastInputArgModifyFn(const user_op::GetInputArgModifier& Get
   return InferSGDUpdateTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> MultiTensorSgdUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> MultiTensorSgdUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().Broadcast(ctx->inputs()).Build();
   return Maybe<void>::Ok();
@@ -253,11 +249,6 @@ Maybe<void> AdamWithCastInputArgModifyFn(const user_op::GetInputArgModifier& Get
 /* static */ Maybe<void> MultiTensorAdamUpdateOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferAdamUpdateTensorDesc(ctx);
-}
-
-/*static*/ Maybe<void> MultiTensorAdamUpdateOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> MultiTensorAdamUpdateOp::GetSbp(user_op::SbpContext* ctx) {
@@ -279,11 +270,6 @@ Maybe<void> AdamWithCastInputArgModifyFn(const user_op::GetInputArgModifier& Get
   return InferSGDUpdateTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> MultiTensorSgdUpdateWithCastOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> MultiTensorSgdUpdateWithCastOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().Broadcast(ctx->inputs()).Build();
   return Maybe<void>::Ok();
@@ -301,11 +287,6 @@ Maybe<void> AdamWithCastInputArgModifyFn(const user_op::GetInputArgModifier& Get
 /* static */ Maybe<void> MultiTensorAdamUpdateWithCastOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferAdamUpdateWithCastTensorDesc(ctx);
-}
-
-/*static*/ Maybe<void> MultiTensorAdamUpdateWithCastOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> MultiTensorAdamUpdateWithCastOp::GetSbp(user_op::SbpContext* ctx) {

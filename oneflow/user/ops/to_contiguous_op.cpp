@@ -28,9 +28,6 @@ namespace oneflow {
   ctx->SetOutputStride("out", 0, Stride(in_desc.shape()));
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> ToContiguousOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> ToContiguousOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();

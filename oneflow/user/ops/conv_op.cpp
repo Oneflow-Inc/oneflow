@@ -197,10 +197,6 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
   return InferTensorDesc4Conv<1>(ctx);
 }
 
-/*static*/ Maybe<void> Conv1DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> Conv1DOp::GetSbp(user_op::SbpContext* ctx) {
   return GetSbpSignatures4Conv(ctx);
 }
@@ -224,10 +220,6 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
   return InferTensorDesc4Conv<2>(ctx);
 }
 
-/*static*/ Maybe<void> Conv2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> Conv2DOp::GetSbp(user_op::SbpContext* ctx) {
   return GetSbpSignatures4Conv(ctx);
 }
@@ -249,10 +241,6 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
 
 /* static */ Maybe<void> Conv3DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferTensorDesc4Conv<3>(ctx);
-}
-
-/*static*/ Maybe<void> Conv3DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> Conv3DOp::GetSbp(user_op::SbpContext* ctx) {
@@ -289,10 +277,6 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
   ctx->SetOutputShape("dx", 0, ctx->InputShape("x_like", 0));
   ctx->SetOutputIsDynamic("dx", 0, ctx->InputIsDynamic("x_like", 0));
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> ConvDataGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> ConvDataGradOp::GetSbp(user_op::SbpContext* ctx) {
@@ -391,10 +375,6 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> ConvFilterGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> ConvFilterGradOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("dy", 0), 0)
@@ -462,10 +442,6 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
     OF_UNIMPLEMENTED();
   }
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> ConvBiasGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> ConvBiasGradOp::GetSbp(user_op::SbpContext* ctx) {

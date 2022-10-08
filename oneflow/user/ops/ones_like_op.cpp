@@ -37,9 +37,6 @@ namespace oneflow {
   ctx->SetOutputStride("out", 0, ctx->InputStride("like", 0));
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> OnesLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return OnesLikeOp::InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> OnesLikeOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("out", 0, ctx->InputDType("like", 0));
   return Maybe<void>::Ok();

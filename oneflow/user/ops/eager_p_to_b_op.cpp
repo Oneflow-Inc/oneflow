@@ -28,10 +28,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EagerPToBOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> EagerPToBOp::GetSbp(user_op::SbpContext* ctx) {
   return Error::TypeError() << "eager_s_to_b op doesn't support global tensor!";
 }

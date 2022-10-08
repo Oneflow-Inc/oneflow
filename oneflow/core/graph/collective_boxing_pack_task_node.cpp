@@ -42,7 +42,7 @@ void CollectiveBoxingPackTaskNode::ConsumeAllRegsts() {
       [&](TaskEdge* in_edge) { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); });
 }
 
-void CollectiveBoxingPackTaskNode::BuildExecGphAndRegst() {
+void CollectiveBoxingPackTaskNode::BuildExecGph() {
   ExecNode* node = mut_exec_gph().NewNode();
   OperatorConf op_conf;
   op_conf.set_name("System-Collective-Boxing-Pack-" + NewUniqueId());
@@ -59,7 +59,6 @@ void CollectiveBoxingPackTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   out_regst->AddLbi(sole_op->BnInOp2Lbi(sole_op->SoleObn()));
   node->BindBnWithRegst(sole_op->SoleObn(), out_regst);
-  node->InferBlobDescs(op_node(), nullptr);
 }
 
 void CollectiveBoxingPackTaskNode::InferProducedDataRegstTimeShape() {

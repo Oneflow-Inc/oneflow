@@ -35,9 +35,6 @@ namespace oneflow {
   ctx->SetOutputShape("out", 0, out_shape);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> TopKOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> TopKOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("out", 0, DataType::kInt64);
   return Maybe<void>::Ok();

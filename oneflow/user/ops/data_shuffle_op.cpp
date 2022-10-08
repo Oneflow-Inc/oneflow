@@ -40,10 +40,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> UniqueKeyValuePairOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> UniqueKeyValuePairOp::GetSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
@@ -82,10 +78,6 @@ namespace oneflow {
   ctx->SetOutputShape("cur_rank_inverse_indices", 0, Shape({num_ids * parallel_num}));
   ctx->SetOutputShape("cur_rank_unique_table_ids", 0, Shape({num_ids * parallel_num}));
   return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> IdShuffleOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> IdShuffleOp::GetSbp(user_op::SbpContext* ctx) {
@@ -140,10 +132,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EmbeddingShuffleOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> EmbeddingShuffleOp::GetSbp(user_op::SbpContext* ctx) {
   auto builder = ctx->NewBuilder()
                      .Split(ctx->inputs(), 0)
@@ -182,11 +170,6 @@ namespace oneflow {
   out_dim_vec.push_back(embedding_size);
   ctx->SetOutputShape("cur_rank_unique_embedding_grad", 0, Shape(out_dim_vec));
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> EmbeddingGradientShuffleOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> EmbeddingGradientShuffleOp::GetSbp(user_op::SbpContext* ctx) {

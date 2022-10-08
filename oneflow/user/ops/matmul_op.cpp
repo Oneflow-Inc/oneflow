@@ -112,10 +112,6 @@ Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
   return InferTensorDesc4Matmul(ctx);
 }
 
-/*static*/ Maybe<void> MatmulOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /*static*/ Maybe<double> MatmulOp::GetComputeComplexity(user_op::ComputeComplexityFnContext* ctx) {
   return GetComputationCost(ctx);
 }
@@ -181,10 +177,6 @@ Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
 
 /* static */ Maybe<void> BatchMatmulOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferTensorDesc4Matmul(ctx);
-}
-
-/*static*/ Maybe<void> BatchMatmulOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> BatchMatmulOp::GetSbp(user_op::SbpContext* ctx) {
@@ -319,10 +311,6 @@ Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
   }
 
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> BroadcastMatmulOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> BroadcastMatmulOp::GetSbp(user_op::SbpContext* ctx) {
@@ -472,10 +460,6 @@ Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> BroadcastMatmulGradBOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /*static*/ Maybe<double> BroadcastMatmulGradBOp::GetComputeComplexity(
     user_op::ComputeComplexityFnContext* ctx) {
   const Shape& shape_a = ctx->Shape4ArgNameAndIndex("a", 0);
@@ -493,6 +477,7 @@ Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
   }
   return logical_computation_cost;
 }
+
 /* static */ Maybe<void> BroadcastMatmulGradBOp::GetSbp(user_op::SbpContext* ctx) {
   const auto& a_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0).shape();
   int64_t last_axis = a_shape.NumAxes() - 1;

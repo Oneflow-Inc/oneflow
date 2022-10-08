@@ -33,7 +33,7 @@ class NormalForwardCompTaskNode final : public CompTaskNode {
 
  private:
   void ProduceOutRegstByNameAndBlockNum(const std::string& name, size_t mem_block_num);
-  void BuildExecGphAndRegst() override;
+  void BuildExecGph() override;
   void BuildExecGphStructAndBindInRegst();
   void BuildOutRegst();
   void BuildTmp7BufRegsts();

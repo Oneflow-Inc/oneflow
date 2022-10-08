@@ -71,11 +71,6 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
   return InferTensorDescFn(ctx);
 }
 
-/*static*/ Maybe<void> BinaryCrossEntropyWithLogitsReduceMeanOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> BinaryCrossEntropyWithLogitsReduceMeanOp::GetSbp(
     user_op::SbpContext* ctx) {
   ctx->NewBuilder()
@@ -102,11 +97,6 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
 /* static */ Maybe<void> BinaryCrossEntropyWithLogitsReduceMeanGradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferGradTensorDescFn(ctx);
-}
-
-/*static*/ Maybe<void> BinaryCrossEntropyWithLogitsReduceMeanGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> BinaryCrossEntropyWithLogitsReduceMeanGradOp::GetSbp(
@@ -139,11 +129,6 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
   dx_desc->set_is_dynamic(false);
   dx_desc->set_shape(input_desc.shape());
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> FusedBCEReduceMeanFwBwOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> FusedBCEReduceMeanFwBwOp::GetSbp(user_op::SbpContext* ctx) {

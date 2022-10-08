@@ -36,7 +36,7 @@ class NcclSendRecvBoxingTaskNode : public TransportTaskNode {
   const ParallelContext* parallel_ctx() const override { return &parallel_ctx_; }
 
  private:
-  void BuildExecGphAndRegst() override;
+  void BuildExecGph() override;
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() final;
   void InferProducedDataRegstTimeShape() final;

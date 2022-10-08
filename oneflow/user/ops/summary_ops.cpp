@@ -45,9 +45,6 @@ Maybe<void> CheckInAndStepScalar(user_op::InferContext* ctx) {
 /*static*/ Maybe<void> CreateSummaryWriterOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> CreateSummaryWriterOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return Maybe<void>::Ok();
-}
 /*static*/ Maybe<void> CreateSummaryWriterOp::InferDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
@@ -56,9 +53,6 @@ Maybe<void> CheckInAndStepScalar(user_op::InferContext* ctx) {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }
 /*static*/ Maybe<void> FlushSummaryWriterOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> FlushSummaryWriterOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> FlushSummaryWriterOp::InferDataType(user_op::InferContext* ctx) {
@@ -71,9 +65,6 @@ Maybe<void> CheckInAndStepScalar(user_op::InferContext* ctx) {
 /*static*/ Maybe<void> SummaryWriteScalarOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return CheckInAndStepScalar(ctx);
 }
-/*static*/ Maybe<void> SummaryWriteScalarOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SummaryWriteScalarOp::InferDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
@@ -83,10 +74,6 @@ Maybe<void> CheckInAndStepScalar(user_op::InferContext* ctx) {
 }
 /*static*/ Maybe<void> SummaryWriteHistogramOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return CheckStepShapeInCtx(ctx);
-}
-/*static*/ Maybe<void> SummaryWriteHistogramOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SummaryWriteHistogramOp::InferDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
@@ -98,9 +85,6 @@ Maybe<void> CheckInAndStepScalar(user_op::InferContext* ctx) {
 /*static*/ Maybe<void> SummaryWritePbOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return CheckStepShapeInCtx(ctx);
 }
-/*static*/ Maybe<void> SummaryWritePbOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SummaryWritePbOp::InferDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
@@ -110,9 +94,6 @@ Maybe<void> CheckInAndStepScalar(user_op::InferContext* ctx) {
 }
 /*static*/ Maybe<void> SummaryWriteImageOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return CheckStepShapeInCtx(ctx);
-}
-/*static*/ Maybe<void> SummaryWriteImageOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SummaryWriteImageOp::InferDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();

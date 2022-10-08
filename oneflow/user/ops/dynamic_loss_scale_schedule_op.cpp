@@ -38,11 +38,6 @@ bool IsTensorWithType(const user_op::TensorDesc* desc, DataType data_type) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> DynamicLossScaleScheduleOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> DynamicLossScaleScheduleOp::GetSbp(user_op::SbpContext* ctx) {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }

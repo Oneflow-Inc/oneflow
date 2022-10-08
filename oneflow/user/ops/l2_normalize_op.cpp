@@ -32,10 +32,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> L2NormalizeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> L2NormalizeOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   const int32_t axis = ctx->Attr<int32_t>("axis");
@@ -76,10 +72,6 @@ namespace oneflow {
   }
   ctx->SetOutputShape("dx", 0, dy_shape);
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> L2NormalizeGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> L2NormalizeGradOp::GetSbp(user_op::SbpContext* ctx) {

@@ -48,6 +48,7 @@ namespace oneflow {
   sampled_label->set_is_dynamic(label.is_dynamic());
   return Maybe<void>::Ok();
 }
+
 /*static*/ Maybe<void> DistributedPartialFcSampleOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   const int64_t num_sample = ctx->Attr<int64_t>("num_sample");

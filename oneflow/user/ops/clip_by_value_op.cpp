@@ -73,11 +73,6 @@ Maybe<void> InferClipGradDataType(user_op::InferContext* ctx) {
     return InferClipTensorDesc(ctx);                                                             \
   }                                                                                              \
                                                                                                  \
-  /*static*/ Maybe<void> op_class_name_prefix##Op::InferPhysicalTensorDesc(                      \
-      user_op::InferContext* ctx) {                                                              \
-    return InferLogicalTensorDesc(ctx);                                                          \
-  }                                                                                              \
-                                                                                                 \
   /* static */ Maybe<void> op_class_name_prefix##Op::GetSbp(user_op::SbpContext* ctx) {          \
     return GetClipSbpSignature(ctx);                                                             \
   }                                                                                              \
@@ -88,10 +83,6 @@ Maybe<void> InferClipGradDataType(user_op::InferContext* ctx) {
   /* static */ Maybe<void> op_class_name_prefix##GradOp::InferLogicalTensorDesc(                 \
       user_op::InferContext* ctx) {                                                              \
     return InferClipGradTensorDesc(ctx);                                                         \
-  }                                                                                              \
-  /*static*/ Maybe<void> op_class_name_prefix##GradOp::InferPhysicalTensorDesc(                  \
-      user_op::InferContext* ctx) {                                                              \
-    return InferLogicalTensorDesc(ctx);                                                          \
   }                                                                                              \
   /* static */ Maybe<void> op_class_name_prefix##GradOp::GetSbp(user_op::SbpContext* ctx) {      \
     return GetClipGradSbpSignature(ctx);                                                         \

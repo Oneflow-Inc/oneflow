@@ -42,9 +42,6 @@ namespace oneflow {
   out_desc->set_is_dynamic(in_desc.is_dynamic());
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> UnpackOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> UnpackOp::InferDataType(user_op::InferContext* ctx) {
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);

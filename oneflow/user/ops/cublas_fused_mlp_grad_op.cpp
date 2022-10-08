@@ -54,10 +54,6 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx) {
   return InferTensorDesc4FusedMatmulBackward(ctx);
 }
 
-/*static*/ Maybe<void> CublasFusedMLPGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> CublasFusedMLPGradOp::GetSbp(user_op::SbpContext* ctx) {
   auto builder = ctx->NewBuilder().Split(user_op::OpArg("x", 0), 0);
   builder.Split(user_op::OpArg("dy", 0), 0);

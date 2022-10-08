@@ -38,9 +38,6 @@ namespace oneflow {
   out->set_is_dynamic(indices.is_dynamic() || in.is_dynamic());
   return Maybe<void>::Ok();
 }
-/*static*/ auto GatherOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
-  return GatherOp::InferLogicalTensorDesc(ctx);
-}
 /*static*/ auto GatherOp::ModifyInputArg(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                          const user_op::UserOpConfWrapper&) -> Maybe<void> {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);

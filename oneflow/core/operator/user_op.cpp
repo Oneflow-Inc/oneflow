@@ -13,13 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/sbp_context.h"
 #include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/framework/infer_output_blob_time_shape_fn_context.h"
 #include "oneflow/core/framework/infer_nd_sbp_fn_context.h"
+#include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/framework/compute_complexity_fn_context.h"
 #include "oneflow/core/framework/get_nd_sbp_signature_list_context.h"
 
@@ -700,11 +703,36 @@ Maybe<void> UserOp::InferInternalBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const JobDesc* job_desc) const {
   // tmp buffer size must be inferred after out shape/dtype
-  UserOpInferContext infer_ctx(this, parallel_ctx, job_desc, GetBlobDesc4BnInOp);
+  // Create input blob desc from logical blob desc for parallel run
+  // Infer with logical blob desc, sbp.
+  HashMap<std::string, std::shared_ptr<BlobDesc>> input_bn2blob_desc;
+  {
+    const auto& nd_sbp_signature = JUST(this->nd_sbp_signature());
+    const auto& parallel_desc = JUST(this->GetOpParallelDesc());
+    for (const auto& bn : input_bns()) {
+      auto logical_blob_desc = JUST(GetLogicalBlobDesc4Ibn(bn));
+      auto temp_blob_desc = std::make_shared<BlobDesc>(*logical_blob_desc);
+      const auto& nd_sbp = nd_sbp_signature->bn_in_op2nd_sbp().at(bn);
+      temp_blob_desc->set_shape(*JUST(
+          GetPhysicalShape(logical_blob_desc->shape(), nd_sbp, *parallel_desc, *parallel_ctx)));
+      CHECK_OR_RETURN(input_bn2blob_desc.emplace(bn, temp_blob_desc).second)
+          << " duplicate insert of input blob name " << bn;
+    }
+  }
+  // A wrapper getter for getting blob desc of input bn from logical blob desc.
+  auto temp_blob_desc_getter = [&](const std::string& bn_in_op) -> BlobDesc* {
+    auto find_iter = input_bn2blob_desc.find(bn_in_op);
+    if (find_iter != input_bn2blob_desc.end()) {
+      return find_iter->second.get();
+    } else {
+      return GetBlobDesc4BnInOp(bn_in_op);
+    }
+  };
+  UserOpInferContext infer_ctx(this, parallel_ctx, job_desc, temp_blob_desc_getter);
   const user_op::OpKernelRegistryResult* kernel_reg_val =
       JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
           op_conf().user_conf().op_type_name(),
-          UserOpKernelRegContext(this, GetBlobDesc4BnInOp, parallel_ctx)));
+          UserOpKernelRegContext(this, temp_blob_desc_getter, parallel_ctx)));
   CHECK_OR_RETURN(kernel_reg_val != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in kernel registry !";
 
@@ -761,42 +789,24 @@ Maybe<void> UserOp::InferLogicalOutBlobDescs(
 Maybe<void> UserOp::InferOutBlobDescs(
     const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  CHECK_OR_RETURN(val_ != nullptr)
-      << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
-  if (!val_->physical_tensor_desc_infer_fn) {
-    return Operator::InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
-  } else {
-    // default method set output blob desc (such as Dtype, is_dynamic, is_tensor_list)
-    // set out blob desc attr as first input blob desc (if has)
-    BlobDesc* first_in_blob_desc = FindValidBlobDescOfBnsInOp(GetBlobDesc4BnInOp, input_bns());
-    if (first_in_blob_desc) {
-      for (const std::string& obn : output_bns()) {
-        GetBlobDesc4BnInOp(obn)->CopyFrom(*first_in_blob_desc);
-      }
-    }
-    UserOpInferContext infer_ctx(this, parallel_ctx, nullptr, GetBlobDesc4BnInOp);
-
-    CHECK_OR_RETURN(val_->data_type_infer_fn)
-        << "No InferDataType function for " << val_->op_type_name;
-    JUST(val_->data_type_infer_fn(&infer_ctx));
-    JUST(val_->physical_tensor_desc_infer_fn(&infer_ctx));
-    for (const auto& pair : infer_ctx.outputs()) {
-      BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
-      out_blob_desc->set_data_type(infer_ctx.OutputDType(pair.first, pair.second));
-      out_blob_desc->set_shape(infer_ctx.OutputShape(pair.first, pair.second));
-      if (val_->non_contiguous_supported) {
-        out_blob_desc->set_stride(infer_ctx.OutputStride(pair.first, pair.second));
-      } else {
-        out_blob_desc->set_stride(Stride(out_blob_desc->shape()));
-      }
-      CHECK_EQ_OR_RETURN(out_blob_desc->stride().size(), out_blob_desc->shape().size())
-          << Error::RuntimeError() << "stride and shape size mismatch since stride is "
-          << out_blob_desc->stride().ToString() << " but shape is "
-          << out_blob_desc->shape().ToString();
-      out_blob_desc->set_is_dynamic(infer_ctx.OutputIsDynamic(pair.first, pair.second));
-    }
-    return Maybe<void>::Ok();
+  // Infer with logical blob desc, sbp.
+  CHECK_OR_RETURN(JUST(IsFromLogicalGraph())) << " User Op infer physical output blob with logical "
+                                                 "output must be an op from the logical graph.";
+  const auto& nd_sbp_signature = JUST(this->nd_sbp_signature());
+  const auto& parallel_desc = JUST(this->GetOpParallelDesc());
+  for (const auto& bn : output_bns()) {
+    BlobDesc* desc = GetBlobDesc4BnInOp(bn);
+    *desc = *JUST(GetLogicalBlobDesc4Obn(bn));
+    CHECK_EQ_OR_RETURN(desc->stride(), Stride(desc->shape()))
+        << Error::RuntimeError()
+        << "user op logical stride is expected to the same as logical shape here, the stride is "
+        << desc->stride().ToString() << ", but shape is " << desc->shape().ToString();
+    const auto& nd_sbp = nd_sbp_signature->bn_in_op2nd_sbp().at(bn);
+    desc->set_shape(*JUST(GetPhysicalShape(desc->shape(), nd_sbp, *parallel_desc, *parallel_ctx)));
+    // NOTE(strint): use output shape as stride.
+    desc->set_stride(Stride(desc->shape()));
   }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> UserOp::InferInplaceObn2Ibn(
@@ -804,11 +814,36 @@ Maybe<void> UserOp::InferInplaceObn2Ibn(
     HashMap<std::string, std::string>* con_inplace_obn2ibn,
     const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  UserOpInferContext infer_ctx(this, parallel_ctx, nullptr, GetBlobDesc4BnInOp);
+  // TODO(strint): do only once.
+  HashMap<std::string, std::shared_ptr<BlobDesc>> input_bn2blob_desc;
+  {
+    const auto& nd_sbp_signature = JUST(this->nd_sbp_signature());
+    const auto& parallel_desc = JUST(this->GetOpParallelDesc());
+    for (const auto& bn : input_bns()) {
+      auto logical_blob_desc = JUST(GetLogicalBlobDesc4Ibn(bn));
+      auto temp_blob_desc = std::make_shared<BlobDesc>(*logical_blob_desc);
+      const auto& nd_sbp = nd_sbp_signature->bn_in_op2nd_sbp().at(bn);
+      temp_blob_desc->set_shape(*JUST(
+          GetPhysicalShape(logical_blob_desc->shape(), nd_sbp, *parallel_desc, *parallel_ctx)));
+      CHECK_OR_RETURN(input_bn2blob_desc.emplace(bn, temp_blob_desc).second)
+          << " duplicate insert of input blob name " << bn;
+    }
+  }
+  // A wrapper getter for getting blob desc of input bn from logical blob desc.
+  auto temp_blob_desc_getter = [&](const std::string& bn_in_op) -> BlobDesc* {
+    auto find_iter = input_bn2blob_desc.find(bn_in_op);
+    if (find_iter != input_bn2blob_desc.end()) {
+      return find_iter->second.get();
+    } else {
+      return GetBlobDesc4BnInOp(bn_in_op);
+    }
+  };
+
+  UserOpInferContext infer_ctx(this, parallel_ctx, nullptr, temp_blob_desc_getter);
   const user_op::OpKernelRegistryResult* kernel_reg_val =
       JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
           op_conf().user_conf().op_type_name(),
-          UserOpKernelRegContext(this, GetBlobDesc4BnInOp, parallel_ctx)));
+          UserOpKernelRegContext(this, temp_blob_desc_getter, parallel_ctx)));
   CHECK_OR_RETURN(kernel_reg_val != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in kernel registry !";
   HashSet<std::string> bn_in_op_unique_check;

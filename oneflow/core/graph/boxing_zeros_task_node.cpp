@@ -37,7 +37,7 @@ void BoxingZerosTaskNode::ConsumeAllRegsts() {
   // do nothing
 }
 
-void BoxingZerosTaskNode::BuildExecGphAndRegst() {
+void BoxingZerosTaskNode::BuildExecGph() {
   ExecNode* node = mut_exec_gph().NewNode();
   OperatorConf op_conf;
   op_conf.set_name("System-Boxing-Zeros-" + NewUniqueId());
@@ -50,7 +50,6 @@ void BoxingZerosTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   out_regst->AddLbi(sole_op->BnInOp2Lbi(sole_op->SoleObn()));
   node->BindBnWithRegst(sole_op->SoleObn(), out_regst);
-  node->InferBlobDescs(op_node(), nullptr);
 }
 
 void BoxingZerosTaskNode::InferProducedDataRegstTimeShape() {

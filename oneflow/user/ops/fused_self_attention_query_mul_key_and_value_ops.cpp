@@ -46,10 +46,6 @@ namespace oneflow {
 
   return Maybe<void>::Ok();
 }
-/*static*/ auto FusedSelfAttentionQueryMulKeyAndValueOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) -> Maybe<void> {
-  return FusedSelfAttentionQueryMulKeyAndValueOp::InferLogicalTensorDesc(ctx);
-}
 /*static*/ auto FusedSelfAttentionQueryMulKeyAndValueOp::GetSbp(user_op::SbpContext* ctx)
     -> Maybe<void> {
   ctx->NewBuilder()
@@ -102,10 +98,6 @@ namespace oneflow {
 
   ctx->SetOutputShape("hidden_states_grad", 0, h_shape);
   return Maybe<void>::Ok();
-}
-/*static*/ auto FusedSelfAttentionQueryMulKeyAndValueGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) -> Maybe<void> {
-  return FusedSelfAttentionQueryMulKeyAndValueGradOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ auto FusedSelfAttentionQueryMulKeyAndValueGradOp::GetSbp(user_op::SbpContext* ctx)
     -> Maybe<void> {

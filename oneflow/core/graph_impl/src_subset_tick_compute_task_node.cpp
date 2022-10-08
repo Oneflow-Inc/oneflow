@@ -30,7 +30,7 @@ class SrcSubsetTickCompTaskNode final : public CompTaskNode {
  private:
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
-  void BuildExecGphAndRegst() override;
+  void BuildExecGph() override;
 };
 
 void SrcSubsetTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
@@ -43,7 +43,7 @@ void SrcSubsetTickCompTaskNode::ConsumeAllRegsts() {
   ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
 }
 
-void SrcSubsetTickCompTaskNode::BuildExecGphAndRegst() {
+void SrcSubsetTickCompTaskNode::BuildExecGph() {
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = op();
   const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
@@ -56,7 +56,6 @@ void SrcSubsetTickCompTaskNode::BuildExecGphAndRegst() {
     out_regst->AddLbi(lbi);
     node->BindBnWithRegst(obn, out_regst);
   }
-  node->InferBlobDescs(op_node(), parallel_ctx());
 }
 
 REGISTER_TICK_TASK_STREAM_INDEX_GETTER(TaskType::kSrcSubsetTick);

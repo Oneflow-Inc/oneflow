@@ -65,6 +65,14 @@ void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
   CopyBlobDescWithoutAddLbi(rhs);
 }
 
+void RegstDesc::AddLbiFrom(const RegstDesc* rhs) {
+  CHECK(lbi2blob_desc_.empty());
+  for (const auto& pair : rhs->lbi2blob_desc_) {
+    const LogicalBlobId& lbi = pair.first;
+    AddLbi(lbi);
+  }
+}
+
 void RegstDesc::CopyMemBlockInfoFrom(const RegstDesc* rhs) {
   enable_reuse_mem_ = rhs->enable_reuse_mem_;
   mem_block_id_ = rhs->mem_block_id_;

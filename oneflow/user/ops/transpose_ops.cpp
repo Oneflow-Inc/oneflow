@@ -56,9 +56,6 @@ void CheckIsPerm(const std::vector<int32_t>& perm) {
   out_tensor_desc->set_shape(out_shape);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> TransposeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> TransposeOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("output", 0, ctx->InputDType("input", 0));
   return Maybe<void>::Ok();

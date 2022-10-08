@@ -29,9 +29,6 @@ namespace oneflow {
   ctx->SetOutputShape("y", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> ReluOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> ReluOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
@@ -55,9 +52,6 @@ namespace oneflow {
       << Error::RuntimeError() << "Tensors y and dy must have the same shape";
   ctx->SetOutputShape("dx", 0, dy_shape);
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> ReluGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ReluGradOp::InferDataType(user_op::InferContext* ctx) {
   DataType data_type = ctx->InputDType("y", 0);

@@ -14,14 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/compiler.h"
-#include <memory>
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/intra_job_mem_sharing_util.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/operator/op_attribute.pb.h"
+#include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/blocking_counter.h"
@@ -70,8 +71,50 @@ void PlanCompiler::Compile(Job* job, Plan* plan, std::shared_ptr<TaskGraph>& tas
   tc->Count("Graph name: " + job_name + " ConsumeAllRegsts", 1);
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
   tc->Count("Graph name: " + job_name + " PinConsumedRegst", 1);
-  task_gph->TopoForEachNode(&TaskNode::Build);
-  tc->Count("Graph name: " + job_name + " TaskNode::Build", 1);
+  // NOTE(strint): register bind lbi and exec node bind register needs to run topologically.
+  task_gph->TopoForEachNode(&TaskNode::BuildExecGphIf);
+  tc->Count("Graph name: " + job_name + " TaskNode::BuildExecGraph", 1);
+
+  HashMap<uint64_t, std::vector<TaskNode*>> group_id2user_task_node;
+  uint64_t user_task_node_cnt = 0; 
+  std::vector<TaskNode*> other_task_node;
+  // TODO(strint): choose best thread num
+  const uint64_t cpu_core_num = std::thread::hardware_concurrency();
+  const uint64_t infer_thread_pool_size = std::min(static_cast<uint64_t>(GlobalProcessCtx::WorldSize() * std::max(static_cast<uint64_t>(1ULL), static_cast<uint64_t>(task_gph->node_num() / 6000))), cpu_core_num);
+  task_gph->TopoForEachNode([&](TaskNode* task_node) {
+    if (task_node->op_node()) {
+      if (dynamic_cast<const UserOp*>(&task_node->op_node()->op())) {
+        group_id2user_task_node[user_task_node_cnt % infer_thread_pool_size].push_back(task_node);
+        ++user_task_node_cnt;
+      } else {
+        other_task_node.push_back(task_node);
+      }
+    } else {
+      other_task_node.push_back(task_node);
+    }
+  });
+  tc->Count("Graph name: " + job_name + " TaskNode::CreateInferList", 1);
+  {
+    const int64_t node_num = group_id2user_task_node.size();
+    const int64_t cpu_num = std::thread::hardware_concurrency();
+    VLOG(2) << " TaskNode::InferUserRegst thread pool size " << infer_thread_pool_size << " node num " << user_task_node_cnt << " cpu num " << cpu_num << " world size " << GlobalProcessCtx::WorldSize();
+    BlockingCounter counter(node_num);
+    ThreadPool thread_pool(infer_thread_pool_size);
+    for (auto& task_group : group_id2user_task_node) {
+      thread_pool.AddWork([&task_group, &counter]() {
+        for (auto& task_node : task_group.second) {
+          task_node->InferRegstIf();
+        }
+        counter.Decrease();
+      });
+    }
+    counter.WaitForeverUntilCntEqualZero();
+  }
+  tc->Count("Graph name: " + job_name + " TaskNode::InferUserRegst", 1);
+  for (auto task_node : other_task_node) {
+    task_node->InferRegstIf();
+  }
+  tc->Count("Graph name: " + job_name + " TaskNode::InferOtherRegst", 1);
   task_gph->RemoveEmptyRegsts();
   tc->Count("Graph name: " + job_name + " RemoveEmptyRegsts", 1);
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);

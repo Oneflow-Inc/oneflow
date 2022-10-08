@@ -231,10 +231,6 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn() {
   return MakeFwTensorDescInferFn()(ctx);
 }
 
-/*static*/ Maybe<void> NormalizationOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> NormalizationOp::GetSbp(user_op::SbpContext* ctx) {
   return FwGetSbpFn(ctx);
 }
@@ -522,10 +518,6 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
   return BwTensorDescInferFn(ctx);
 }
 
-/*static*/ Maybe<void> NormalizationGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> NormalizationGradOp::GetSbp(user_op::SbpContext* ctx) {
   return BwGetSbpFn(ctx);
 }
@@ -537,11 +529,6 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
 /* static */ Maybe<void> NormalizationAddReluGradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return BwTensorDescInferFn(ctx);
-}
-
-/*static*/ Maybe<void> NormalizationAddReluGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> NormalizationAddReluGradOp::GetSbp(user_op::SbpContext* ctx) {
@@ -557,11 +544,6 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
 /* static */ Maybe<void> CudnnFusedNormalizationAddReluGradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return BwTensorDescInferFn(ctx);
-}
-
-/*static*/ Maybe<void> CudnnFusedNormalizationAddReluGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> CudnnFusedNormalizationAddReluGradOp::GetSbp(user_op::SbpContext* ctx) {

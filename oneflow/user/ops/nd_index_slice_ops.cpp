@@ -131,10 +131,6 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> GatherNdOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> GatherNdOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& params_tensor =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("params", 0);
@@ -179,10 +175,6 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
 
 /* static */ Maybe<void> ScatterNdOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferScatterNdTensorDesc(ctx);
-}
-
-/*static*/ Maybe<void> ScatterNdOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> ScatterNdOp::GetSbp(user_op::SbpContext* ctx) {
@@ -230,10 +222,6 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
   return InferScatterNdLikeTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> ScatterNdLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> ScatterNdLikeOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& indices_tensor =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
@@ -275,11 +263,6 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
   return InferTensorScatterNdOptTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> TensorScatterNdUpdateOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> TensorScatterNdUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   return GetTensorScatterNdOptSbpSignatures(ctx);
 }
@@ -298,10 +281,6 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
 
 /* static */ Maybe<void> TensorScatterNdAddOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferTensorScatterNdOptTensorDesc(ctx);
-}
-
-/*static*/ Maybe<void> TensorScatterNdAddOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> TensorScatterNdAddOp::GetSbp(user_op::SbpContext* ctx) {

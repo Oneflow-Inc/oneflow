@@ -35,9 +35,6 @@ namespace oneflow {
   ctx->SetOutputShape("value", 0, var_shape);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SspVariableProxyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SspVariableProxyOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("ref", 0, ctx->InputDType("var", 0));
   ctx->SetOutputDType("value", 0, ctx->InputDType("var", 0));

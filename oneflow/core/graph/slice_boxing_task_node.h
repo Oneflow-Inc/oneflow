@@ -44,7 +44,7 @@ class SliceBoxingTaskNode final : public TransportTaskNode {
   void SetOutShape(const Shape& shape);
 
  private:
-  void BuildExecGphAndRegst() override;
+  void BuildExecGph() override;
   void InferProducedDataRegstTimeShape() override;
   OperatorConf GetBoxingOpConf();
 

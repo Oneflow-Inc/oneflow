@@ -23,10 +23,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> ArgSortOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> ArgSortOp::GetSbp(user_op::SbpContext* ctx) {
   // The current implementation can only do arg_sort in the last dimension and should use
   // Broadcast (by default) instead of Split for that dimension

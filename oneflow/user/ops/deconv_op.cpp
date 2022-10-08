@@ -151,10 +151,6 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
   return InferTensorDesc4DeConv<1>(ctx);
 }
 
-/*static*/ Maybe<void> Deconv1DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> Deconv1DOp::GetSbp(user_op::SbpContext* ctx) {
   return GetSbpSignatures4DeConv(ctx);
 }
@@ -172,10 +168,6 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
   return InferTensorDesc4DeConv<2>(ctx);
 }
 
-/*static*/ Maybe<void> Deconv2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> Deconv2DOp::GetSbp(user_op::SbpContext* ctx) {
   return GetSbpSignatures4DeConv(ctx);
 }
@@ -191,10 +183,6 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
 
 /* static */ Maybe<void> Deconv3DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferTensorDesc4DeConv<3>(ctx);
-}
-
-/*static*/ Maybe<void> Deconv3DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> Deconv3DOp::GetSbp(user_op::SbpContext* ctx) {

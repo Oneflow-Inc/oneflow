@@ -33,7 +33,7 @@ class CollectiveBoxingUnpackTaskNode : public TransportTaskNode {
   TaskType GetTaskType() const override { return TaskType::kCollectiveBoxingUnpack; }
 
  private:
-  void BuildExecGphAndRegst() override;
+  void BuildExecGph() override;
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() final;
   void InferProducedDataRegstTimeShape() final;

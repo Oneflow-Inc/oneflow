@@ -22,9 +22,6 @@ namespace oneflow {
   ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
-/*static*/ auto GeluOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
-  return GeluOp::InferLogicalTensorDesc(ctx);
-}
 /*static*/ auto GeluOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
@@ -43,9 +40,6 @@ namespace oneflow {
   CHECK_OR_RETURN(dy_shape == x_shape);
   ctx->SetOutputShape("dx", 0, dy_shape);
   return Maybe<void>::Ok();
-}
-/*static*/ auto GeluGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
-  return GeluGradOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ auto GeluGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);

@@ -156,7 +156,21 @@ void TaskNode::ForEachProducedDataRegst(
   }
 }
 
-void TaskNode::Build() { BuildExecGphAndRegst(); }
+void TaskNode::Build() {
+  BuildExecGph();
+  InferRegst();
+}
+
+void TaskNode::InferRegst() {
+  if (mut_exec_gph().node_num() == 1) {
+    auto node = mut_exec_gph().SoleNode();
+    node->InferBlobDescs(op_node(), parallel_ctx());
+  } else if (mut_exec_gph().node_num() > 1) {
+    mut_exec_gph().TopoForEachNode([this](ExecNode* node) { 
+      node->InferBlobDescs(op_node(), parallel_ctx());
+    });
+  }
+}
 
 void TaskNode::EraseUninitializedShapeProducedBlob() {
   for (auto& pair : produced_regsts_) { pair.second->EraseUninitializedShapeBlob(); }

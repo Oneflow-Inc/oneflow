@@ -41,9 +41,6 @@ namespace oneflow {
   loss_desc->set_is_dynamic(prediction_desc.is_dynamic());
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> SigmoidCrossEntropyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> SigmoidCrossEntropyOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("loss", 0, ctx->InputDType("prediction", 0));
   return Maybe<void>::Ok();
@@ -83,10 +80,6 @@ namespace oneflow {
   prediction_diff->set_shape(prediction_desc.shape());
   prediction_diff->set_is_dynamic(prediction_desc.is_dynamic());
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> SigmoidCrossEntropyGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SigmoidCrossEntropyGradOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("prediction_diff", 0, ctx->InputDType("prediction", 0));

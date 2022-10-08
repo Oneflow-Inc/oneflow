@@ -43,9 +43,6 @@ namespace oneflow {
   ctx->SetOutputShape("y", 0, Shape(y_dim_vec));
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> PadOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return PadOp::InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> PadOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();

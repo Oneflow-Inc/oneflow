@@ -42,9 +42,6 @@ namespace oneflow {
   out->set_is_dynamic(in.is_dynamic());
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> TrilOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> TrilOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
@@ -75,9 +72,6 @@ namespace oneflow {
   out->set_shape(in.shape());
   out->set_is_dynamic(in.is_dynamic());
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> FusedScaleTrilOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> FusedScaleTrilOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);

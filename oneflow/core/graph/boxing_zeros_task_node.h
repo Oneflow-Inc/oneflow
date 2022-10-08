@@ -31,7 +31,7 @@ class BoxingZerosTaskNode : public TransportTaskNode {
   TaskType GetTaskType() const override { return TaskType::kBoxingZeros; }
 
  private:
-  void BuildExecGphAndRegst() override;
+  void BuildExecGph() override;
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() final;
   void InferProducedDataRegstTimeShape() final;

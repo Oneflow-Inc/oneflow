@@ -30,7 +30,7 @@ class CollectiveBoxingGenericTaskNode : public TransportTaskNode {
             const OperatorConf& op_conf);
 
  private:
-  void BuildExecGphAndRegst() override;
+  void BuildExecGph() override;
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() final;
   void InferProducedDataRegstTimeShape() final;

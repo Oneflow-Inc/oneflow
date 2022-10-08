@@ -28,7 +28,8 @@ class CopyTaskNode : public TransportTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
-  void BuildExecGphAndRegst() override;
+  void BuildExecGph() override;
+  void InferRegst() override;
 
  protected:
   virtual OperatorConf NewCopyOpConf() = 0;

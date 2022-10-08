@@ -36,10 +36,6 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   return InferTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> ArgwhereOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> ArgwhereOp::GetSbp(user_op::SbpContext* ctx) {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }

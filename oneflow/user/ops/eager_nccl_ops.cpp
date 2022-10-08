@@ -29,10 +29,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EagerCclAllReduceOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> EagerCclAllReduceOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().PartialSum(user_op::OpArg("in", 0)).Broadcast(user_op::OpArg("out", 0)).Build();
   return Maybe<void>::Ok();
@@ -55,10 +51,6 @@ namespace oneflow {
       << "the size of input tensor tuple should equal the size of output tensor tuple.";
   for (int i = 0; i < size; ++i) { ctx->SetOutputShape("out", i, JUST(VectorAt(shape_list, i))); }
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> EagerCclBroadcastOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> EagerCclBroadcastOp::GetSbp(user_op::SbpContext* ctx) {
@@ -85,10 +77,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EagerNcclTouchOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return Maybe<void>::Ok();
-}
-
 /* static */ Maybe<void> EagerNcclTouchOp::GetSbp(user_op::SbpContext* ctx) {
   // local only
   return Maybe<void>::Ok();
@@ -108,9 +96,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EagerCclReduceOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 
 /* static */ Maybe<void> EagerCclReduceOp::GetSbp(user_op::SbpContext* ctx) {
   UNIMPLEMENTED_THEN_RETURN() << "global tensor are not supported";
@@ -189,10 +174,6 @@ namespace oneflow {
   ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   ctx->SetOutputIsDynamic("out", 0, ctx->InputIsDynamic("in", 0));
   return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> EagerCclAllGatherOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> EagerCclAllGatherOp::GetSbp(user_op::SbpContext* ctx) {

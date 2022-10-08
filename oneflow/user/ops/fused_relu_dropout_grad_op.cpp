@@ -41,10 +41,6 @@ Maybe<void> InferDataType4FusedReluDropoutGrad(user_op::InferContext* ctx) {
   return InferTensorDesc4FusedReluDropoutGrad(ctx);
 }
 
-/*static*/ Maybe<void> FusedReluDropoutGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> FusedReluDropoutGradOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("dy", 0), 0)

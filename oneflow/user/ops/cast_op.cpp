@@ -46,10 +46,6 @@ Maybe<Symbol<Stream>> MakeCastStream(const Symbol<Device>& in_device,
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> CastOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> CastOp::GetSbp(user_op::SbpContext* ctx) {
   const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   for (int i = 0; i < in_tensor.shape().NumAxes(); ++i) {

@@ -123,9 +123,6 @@ Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
   /*static*/ Maybe<void> name##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
     return AvgPoolMakeForwardTensorDescInferFn(ndim)(ctx);                               \
   }                                                                                      \
-  /*static*/ Maybe<void> name##Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
-    return InferLogicalTensorDesc(ctx);                                                  \
-  }                                                                                      \
   /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {           \
     return FwInferDataType(ctx);                                                         \
   }                                                                                      \
@@ -145,9 +142,6 @@ IMPLEMENT_AVGPOOL_FUNCS(AvgPool3D, 3)
   }                                                                                          \
   /*static*/ Maybe<void> name##GradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
     return BackwardTensorDescInferFn(ctx);                                                   \
-  }                                                                                          \
-  /*static*/ Maybe<void> name##GradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
-    return InferLogicalTensorDesc(ctx);                                                      \
   }                                                                                          \
   /*static*/ Maybe<void> name##GradOp::InferDataType(user_op::InferContext* ctx) {           \
     return BwInferDataType(ctx);                                                             \

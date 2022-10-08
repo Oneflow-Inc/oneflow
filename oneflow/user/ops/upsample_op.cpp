@@ -39,9 +39,6 @@ namespace oneflow {
   }
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> UpsampleLinear1DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> UpsampleLinear1DOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
@@ -66,9 +63,6 @@ namespace oneflow {
                              static_cast<int64_t>(scale_factor * x_desc.shape().At(2))}));
   }
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> UpsampleNearest1DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> UpsampleNearest1DOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
@@ -98,9 +92,6 @@ namespace oneflow {
   }
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> UpsampleNearest2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> UpsampleNearest2DOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
@@ -129,9 +120,6 @@ namespace oneflow {
   }
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> UpsampleBilinear2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> UpsampleBilinear2DOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
@@ -159,9 +147,6 @@ namespace oneflow {
                              static_cast<int64_t>(width_scale * x_desc.shape().At(3))}));
   }
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> UpsampleBicubic2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> UpsampleBicubic2DOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
@@ -193,9 +178,6 @@ namespace oneflow {
   }
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> UpsampleNearest3DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> UpsampleNearest3DOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
@@ -226,9 +208,6 @@ namespace oneflow {
   }
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> UpsampleTrilinear3DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> UpsampleTrilinear3DOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
@@ -249,9 +228,6 @@ namespace oneflow {
       << "upsample_linear_1d_grad only supports NCH";
   ctx->SetOutputShape("dx", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> UpsampleLinear1DGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> UpsampleLinear1DGradOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
@@ -274,10 +250,6 @@ namespace oneflow {
   ctx->SetOutputShape("dx", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> UpsampleNearest1DGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> UpsampleNearest1DGradOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
   return Maybe<void>::Ok();
@@ -298,10 +270,6 @@ namespace oneflow {
       << "upsample_nearest_2d_grad only supports NCHW";
   ctx->SetOutputShape("dx", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> UpsampleNearest2DGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> UpsampleNearest2DGradOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
@@ -325,10 +293,6 @@ namespace oneflow {
   ctx->SetOutputShape("dx", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> UpsampleBilinear2DGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> UpsampleBilinear2DGradOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
   return Maybe<void>::Ok();
@@ -349,10 +313,6 @@ namespace oneflow {
       << "upsample_bicubic_2d_grad only supports NCHW";
   ctx->SetOutputShape("dx", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> UpsampleBicubic2DGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> UpsampleBicubic2DGradOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
@@ -375,10 +335,6 @@ namespace oneflow {
   ctx->SetOutputShape("dx", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> UpsampleNearest3DGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
 /*static*/ Maybe<void> UpsampleNearest3DGradOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
   return Maybe<void>::Ok();
@@ -400,10 +356,6 @@ namespace oneflow {
       << "upsample_trilinear_3d_grad only supports NCDHW";
   ctx->SetOutputShape("dx", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> UpsampleTrilinear3DGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> UpsampleTrilinear3DGradOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));

@@ -34,10 +34,6 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> OneHotOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> OneHotOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& indices_tensor =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);

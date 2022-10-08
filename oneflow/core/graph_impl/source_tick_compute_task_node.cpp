@@ -26,7 +26,7 @@ class SourceTickCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override {}
-  void BuildExecGphAndRegst() override;
+  void BuildExecGph() override;
   bool IsMeaningLess() override { return false; }
 
   TaskType GetTaskType() const override { return TaskType::kSourceTick; }
@@ -37,7 +37,7 @@ void SourceTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", out_regst); });
 }
 
-void SourceTickCompTaskNode::BuildExecGphAndRegst() {
+void SourceTickCompTaskNode::BuildExecGph() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = op();
@@ -46,7 +46,6 @@ void SourceTickCompTaskNode::BuildExecGphAndRegst() {
     out_regst->AddLbi(lbi);
     node->BindBnWithRegst(obn, out_regst);
   }
-  node->InferBlobDescs(op_node(), parallel_ctx());
 }
 
 REGISTER_TICK_TASK_STREAM_INDEX_GETTER(TaskType::kSourceTick);

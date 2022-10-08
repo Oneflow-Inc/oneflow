@@ -70,11 +70,9 @@ class SspVariableProxyCompTaskNode final : public CompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kSspVariableProxy; }
 
  private:
-  void BuildExecGphAndRegst() override {
+  void BuildExecGph() override {
     BuildExecGphStructAndBindInRegst();
     BuildOutRegst();
-    mut_exec_gph().TopoForEachNode(
-        [this](ExecNode* node) { node->InferBlobDescs(op_node(), parallel_ctx()); });
   }
 
   void BuildExecGphStructAndBindInRegst() {
