@@ -120,7 +120,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> BroadcastLikeOp::InferDataType(user_op::InferContext* ctx) {
-  ctx->SetOutputDType("y", 0, ctx->InputDType("like", 0));
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 

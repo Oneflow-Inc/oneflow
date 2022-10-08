@@ -75,7 +75,8 @@ Maybe<void> CumProdGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
 
 Maybe<void> CumProdGradOp::GetSbp(user_op::SbpContext* ctx) {
   const auto& dy_tensor_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
-  for (auto i = 0; i < dy_tensor_desc.shape().NumAxes(); i++) {
+  auto dim = ctx->Attr<int64_t>("dim");
+  for (auto i = dim + 1; i < dy_tensor_desc.shape().NumAxes(); i++) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("dy", 0), i)
         .Split(user_op::OpArg("output", 0), i)

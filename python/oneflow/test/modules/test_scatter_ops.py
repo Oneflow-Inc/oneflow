@@ -57,37 +57,13 @@ def _test_scatter_add_random_data(test_case, dim: int):
 
 @flow.unittest.skip_unless_1n1d()
 class TestScatterOpsModule(flow.unittest.TestCase):
-    @autotest(n=5)
-    def test_scatter_random_data_at_dim_0(test_case):
-        return _test_scatter_random_data(test_case, False, 0)
+    @autotest(n=10)
+    def test_scatter_with_random_data(test_case):
+        return _test_scatter_random_data(test_case, oneof(True, False), oneof(0, 1, -1))
 
     @autotest(n=5)
-    def test_scatter_random_data_at_dim_1(test_case):
-        return _test_scatter_random_data(test_case, False, 1)
-
-    @autotest(n=5)
-    def test_scatter_random_data_at_negative_dim1(test_case):
-        return _test_scatter_random_data(test_case, False, -1)
-
-    @autotest(n=5)
-    def test_scatter_scalar_random_data_at_dim0(test_case):
-        return _test_scatter_random_data(test_case, True, 0)
-
-    @autotest(n=5)
-    def test_scatter_scalar_random_data_at_dim1(test_case):
-        return _test_scatter_random_data(test_case, True, 1)
-
-    @autotest(n=5)
-    def test_scatter_scalar_random_data_at_negative_dim1(test_case):
-        return _test_scatter_random_data(test_case, True, -1)
-
-    @autotest(n=5)
-    def test_scatter_add_random_data_at_dim0(test_case):
-        return _test_scatter_add_random_data(test_case, 0)
-
-    @autotest(n=5)
-    def test_scatter_add_random_data_at_dim1(test_case):
-        return _test_scatter_add_random_data(test_case, 1)
+    def test_scatter_add_with_random_data(test_case):
+        return _test_scatter_add_random_data(test_case, oneof(0, 1))
 
 
 if __name__ == "__main__":

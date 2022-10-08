@@ -60,6 +60,7 @@ namespace primitive {
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLgamma)          \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLog)             \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLog2)            \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLog10)           \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLog1p)           \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLogSigmoid)      \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kNegative)        \
@@ -77,7 +78,8 @@ namespace primitive {
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSquare)          \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kTan)             \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kTrunc)           \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kNotEqualZero)
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kNotEqualZero)    \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kNanAssign)
 
 #define UNARY_INT_MATH_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAbs)
 

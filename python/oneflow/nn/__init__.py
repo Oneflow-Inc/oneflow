@@ -143,6 +143,9 @@ from oneflow.nn.modules.pooling import (
     AdaptiveAvgPool1d,
     AdaptiveAvgPool2d,
     AdaptiveAvgPool3d,
+    AdaptiveMaxPool1d,
+    AdaptiveMaxPool2d,
+    AdaptiveMaxPool3d,
 )
 from oneflow.nn.modules.sparse import Embedding
 from oneflow.nn.modules.upsampling import (
@@ -160,9 +163,11 @@ from . import functional
 from . import parallel
 
 from oneflow.nn.modules.rnn import (
+    RNNCellBase,
     RNNCell,
     LSTMCell,
     GRUCell,
+    RNNBase,
     RNN,
     LSTM,
     GRU,

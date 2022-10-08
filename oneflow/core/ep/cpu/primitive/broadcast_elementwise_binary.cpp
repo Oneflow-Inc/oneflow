@@ -45,6 +45,11 @@ float16 GetValue<float16>(Scalar value) {
   return static_cast<float16>(GetValue<float>(value));
 }
 
+template<>
+bfloat16 GetValue<bfloat16>(Scalar value) {
+  return static_cast<bfloat16>(GetValue<float>(value));
+}
+
 template<BinaryOp binary_op, typename Src, typename Dst>
 struct BinaryLhsScalarFunctor {
   BinaryLhsScalarFunctor(Src scalar, Scalar attr0, Scalar attr1)
