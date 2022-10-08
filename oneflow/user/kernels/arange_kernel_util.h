@@ -34,7 +34,7 @@ struct ArangeFunctor final {
 
 template<typename T>
 OF_DEVICE_FUNC void DoArange(const T start, const T delta, const int64_t arange_elem_cnt, T* out) {
-  XPU_1D_KERNEL_LOOP(i, arange_elem_cnt) { out[i] = start + i * delta; }
+  XPU_1D_KERNEL_LOOP(i, arange_elem_cnt) { out[i] = start + static_cast<T>(i * 1.0) * delta; }
 }
 
 #define INSTANTIATE_ARANGE_FUNCTOR(device_type_v, dtype_pair) \
