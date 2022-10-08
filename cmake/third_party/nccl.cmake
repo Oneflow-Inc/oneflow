@@ -34,6 +34,7 @@ else()
   set(NCCL_INCLUDE_DIR ${NCCL_INSTALL_DIR}/include)
   set(NCCL_LIBRARY_DIR ${NCCL_INSTALL_DIR}/lib)
 
+  # Versions 2.13 and above may cause deadlocks
   if(CUDA_VERSION VERSION_GREATER_EQUAL "11.8")
     set(NCCL_URL https://github.com/NVIDIA/nccl/archive/refs/tags/v2.15.1-1.tar.gz)
     set(NCCL_MD5 37b787ff8934cd9374b4612f663c17fa)
