@@ -60,7 +60,6 @@ int32_t main(int32_t argc, char** argv) {
 #endif  // WITH_MLIR_CUDA_CODEGEN
   mlir::registerWrapOpsToKernelLaunchPassPass();
   mlir::registerLowerToOKLPassPass();
-  mlir::registerConvertOFKLCalleeToLLVMPassPass();
   mlir::registerOutlineJitFunctionPassPass();
   mlir::DialectRegistry registry;
   registry.insert<mlir::okl::OKLDialect>();

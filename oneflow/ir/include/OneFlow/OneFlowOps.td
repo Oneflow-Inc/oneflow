@@ -279,11 +279,6 @@ def LowerToOKLPass : Pass<"lower-oneflow-to-okl", "ModuleOp"> {
   let constructor = "mlir::oneflow::createLowerToOKLPass()";
 }
 
-def ConvertOFKLCalleeToLLVMPass : Pass<"convert-ofkl-callee-to-llvm", "ModuleOp"> {
-  let summary = "convert oneflow kernel launch callee to llvm ir";
-  let constructor = "mlir::oneflow::createConvertOFKLCalleeToLLVMPass()";
-}
-
 def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";

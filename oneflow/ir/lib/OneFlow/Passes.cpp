@@ -241,39 +241,6 @@ LogicalResult LowerToOKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
   return success();
 }
 
-LLVM::LLVMFuncOp GetOrInsertKernelLLVMFuncOp(::mlir::PatternRewriter& rewriter, func::FuncOp op) {
-  auto loc = op->getLoc();
-  auto llvm_ptr_type = LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8));
-  auto parent_module_op = op->getParentOfType<ModuleOp>();
-  if (!parent_module_op) {
-    emitError(loc) << "null ModuleOp " << *op;
-    return nullptr;
-  }
-  StringRef c_api_callee = "kernel_launch";
-  LLVM::LLVMFuncOp c_api_func =
-      DeclareKernelLaunchCInterface(rewriter, loc, &parent_module_op, c_api_callee, llvm_ptr_type);
-
-  auto func_name = std::string("_mlir_ciface_") + op.getSymName().str();
-  auto void_type = LLVM::LLVMVoidType::get(rewriter.getContext());
-  auto func_type = LLVM::LLVMFunctionType::get(void_type, {llvm_ptr_type, llvm_ptr_type}, false);
-  OpBuilder::InsertionGuard guard_module(rewriter);
-  rewriter.setInsertionPointToEnd(parent_module_op.getBody());
-
-  auto func = rewriter.create<LLVM::LLVMFuncOp>(loc, func_name, func_type);
-  func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
-  func.getBody().emplaceBlock();
-  func.getBody().addArgument(llvm_ptr_type, loc);
-  func.getBody().addArgument(llvm_ptr_type, loc);
-  OpBuilder::InsertionGuard guard_func(rewriter);
-  rewriter.setInsertionPointToStart(&func.getBody().front());
-
-  auto ctx_ptr = func.getBody().getArgument(0);
-  auto kernel_ptr = func.getBody().getArgument(1);
-  rewriter.create<LLVM::CallOp>(loc, c_api_func, ValueRange{ctx_ptr, kernel_ptr});
-  rewriter.create<LLVM::ReturnOp>(loc, ValueRange());
-
-  return func;
-}
 // TODO: cfg/multi block support
 func::FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc,
                                StringRef func_name, ValueRange operands, ValueRange results,
@@ -943,16 +910,6 @@ void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLI
   results.insert<BroadcastMulToScalarMulPattern>(context);
 }
 
-struct ConvertOFKLCalleeToLLVMPattern : public mlir::OpRewritePattern<func::FuncOp> {
-  explicit ConvertOFKLCalleeToLLVMPattern(mlir::MLIRContext* context)
-      : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
-  mlir::LogicalResult matchAndRewrite(func::FuncOp op,
-                                      mlir::PatternRewriter& rewriter) const override {
-    GetOrInsertKernelLLVMFuncOp(rewriter, op);
-    op->remove();
-    return success();
-  }
-};
 
 struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
   explicit LowerToOKLPattern(mlir::MLIRContext* context)
@@ -1162,10 +1119,6 @@ void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
 
 void populateLowerToOKLPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<LowerToOKLPattern>(patterns.getContext());
-}
-
-void populateConvertOFKLCalleeToLLVMPasses(::mlir::RewritePatternSet& patterns) {
-  patterns.add<ConvertOFKLCalleeToLLVMPattern>(patterns.getContext());
 }
 
 void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns) {
