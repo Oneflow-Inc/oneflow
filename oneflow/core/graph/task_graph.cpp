@@ -414,9 +414,12 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const OpEdge* op_edge) {
   return &TaskGraph::BldSubTskGphByBoxing;
 }
 
+template<std::function<bool(const OpNode* src, const OpNode* dst)> (
+             OpGraph::*MakeOrGetPredicatorIsReachable)()
+             const = &OpGraph::CreatePredicatorIsReachable>
 void ForEachOpGraphNecessaryCtrlEdge(
     const OpGraph* op_graph, const std::function<void(const OpNode*, const OpNode*)>& Handler) {
-  auto IsOpGraphDataReachable = op_graph->MakePredicatorIsReachable();
+  auto IsOpGraphDataReachable = (op_graph->*MakeOrGetPredicatorIsReachable)();
   op_graph->ForEachNode([&](OpNode* dst) {
     for (const auto& ctrl_in_op_name : dst->op().op_conf().ctrl_in_op_name()) {
       const OpNode* src = op_graph->OpNode4OpName(ctrl_in_op_name);
@@ -1221,11 +1224,12 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names,
                            [&](int64_t rank) { return ConnectDataEdges(op_edge, rank); });
   }));
   // LOG(ERROR) << "rank task graph node " << this->node_num() << " edge " << this->edge_num();
-  ForEachOpGraphNecessaryCtrlEdge(op_graph, [&](const OpNode* src, const OpNode* dst) {
-    CHECK(src->parallel_desc_sym() == dst->parallel_desc_sym());
-    CHECK_JUST(ForEachDutyRank(src->parallel_desc(),
-                               [&](int64_t rank) { return ConnectCtrlEdges(src, dst, rank); }));
-  });
+  ForEachOpGraphNecessaryCtrlEdge<&OpGraph::cached_predicator_is_reachable>(
+      op_graph, [&](const OpNode* src, const OpNode* dst) {
+        CHECK(src->parallel_desc_sym() == dst->parallel_desc_sym());
+        CHECK_JUST(ForEachDutyRank(src->parallel_desc(),
+                                   [&](int64_t rank) { return ConnectCtrlEdges(src, dst, rank); }));
+      });
   // LOG(ERROR) << "rank task graph node " << this->node_num() << " edge " << this->edge_num();
   // LogStat();
 
