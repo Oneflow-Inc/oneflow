@@ -247,9 +247,7 @@ class OKLRegContext final {
 
  public:
   explicit OKLRegContext(const char* mlir_asm) : mlir_ctx_(GetRegistry()) {
-    // the llvm has a different str end format
-    std::string source_str = std::string(mlir_asm).substr(0, strlen(mlir_asm) - 1);
-    auto module = mlir::parseSourceString<mlir::ModuleOp>(source_str, &mlir_ctx_);
+    auto module = mlir::parseSourceString<mlir::ModuleOp>(mlir_asm, &mlir_ctx_);
     if (!module) {
       LOG(ERROR) << "Fail to load mlir assembly";
       exit(1);

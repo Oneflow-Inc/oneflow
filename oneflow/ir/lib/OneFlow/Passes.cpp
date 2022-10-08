@@ -210,8 +210,7 @@ LogicalResult LowerToOKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
   auto llvm_ptr_type = LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8));
 
   auto compute_ctx = okl_func.getArgument(0);
-  SmallString<16> buffer;
-  auto tmp_func_name = SanitizeIdentifier(op_type_name, buffer);
+  auto tmp_func_name = op_type_name;
   auto module = okl_func->getParentOfType<ModuleOp>();
 
   auto loc = op->getLoc();
@@ -219,7 +218,7 @@ LogicalResult LowerToOKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
   std::string mlir;
   Operation* found = nullptr;
   if (!(found = SymbolTable(module).lookup(tmp_func_name))) {
-    InsertKernelOFFuncOp(rewriter, op, buffer.c_str());
+    InsertKernelOFFuncOp(rewriter, op, tmp_func_name.str());
     found = SymbolTable(module).lookup(tmp_func_name);
   }
   llvm::raw_string_ostream os_mlir(mlir);
