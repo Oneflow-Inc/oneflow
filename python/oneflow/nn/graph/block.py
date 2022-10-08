@@ -253,23 +253,23 @@ class ModuleBlock(Block):
         else:
             outputs = result
 
-        args_tree = ArgsTree(
-            (outputs, {}), True, "_" + self.name_prefix + self.name + "_output", None
-        )
+        # args_tree = ArgsTree(
+        #     (outputs, {}), True, "_" + self.name_prefix + self.name + "_output", None
+        # )
 
-        for (name, arg) in args_tree.iter_named_nodes():
-            if arg.is_leaf():
-                arg_value = arg.value()
-                meta_repr_str = (
-                    arg_value._meta_repr()
-                    if isinstance(arg_value, Tensor)
-                    else str(type(arg_value))
-                )
-                out_str = "(OUTPUT:" + name + ":" + meta_repr_str + ")"
-                if not isinstance(arg_value, Tensor):
-                    out_str = "[WARNING]" + out_str
-                self._outs_repr.append(out_str)
-                self.__print(0, 1, out_str)
+        # for (name, arg) in args_tree.iter_named_nodes():
+        #     if arg.is_leaf():
+        #         arg_value = arg.value()
+        #         meta_repr_str = (
+        #             arg_value._meta_repr()
+        #             if isinstance(arg_value, Tensor)
+        #             else str(type(arg_value))
+        #         )
+        #         out_str = "(OUTPUT:" + name + ":" + meta_repr_str + ")"
+        #         if not isinstance(arg_value, Tensor):
+        #             out_str = "[WARNING]" + out_str
+        #         self._outs_repr.append(out_str)
+        #         self.__print(0, 1, out_str)
 
         return result
 
