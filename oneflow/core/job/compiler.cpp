@@ -58,18 +58,18 @@ void Compiler::Compile(Job* job, Plan* plan) const {
 
   // Step2: build task_gph.
   // TODO(levi): we can rewrite this part of code in visitor pattern.
-  auto task_gph =
-      std::make_unique<TaskGraph>(job->job_conf().enable_straighten_algorithm_in_task_graph());
+  auto task_gph = std::make_unique<TaskGraph>();
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
   task_gph->TopoForEachNode(&TaskNode::Build);
   task_gph->RemoveEmptyRegsts();
+  task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
+  task_gph->DecideExecutionOrder();
   task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
   auto IsReachable = Singleton<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
   if (job_desc.enable_inplace()) { task_gph->EnableInplaceMemSharing(IsReachable); }
-  task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
 
   // Step3: put infomation from task_gph into plan.

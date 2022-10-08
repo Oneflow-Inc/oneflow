@@ -316,6 +316,17 @@ class FloorDivFunctor : public BinaryFunctor {
   }
 };
 
+class TruncDivFunctor : public BinaryFunctor {
+ public:
+  TruncDivFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("truncdiv").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    return BinaryFunctor::operator()(x, y);
+  }
+};
+
 class BroadcastFModFunctor : public BinaryFunctor {
  public:
   BroadcastFModFunctor() {
@@ -453,6 +464,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ScalarDivByTensorFunctor>("ScalarDivByTensor");
   m.add_functor<impl::BroadcastFModFunctor>("BroadcastFMod");
   m.add_functor<impl::FloorDivFunctor>("FloorDiv");
+  m.add_functor<impl::TruncDivFunctor>("TruncDiv");
 };
 
 }  // namespace functional
