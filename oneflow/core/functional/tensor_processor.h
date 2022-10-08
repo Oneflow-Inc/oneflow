@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/framework/autocast.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/common/optional.h"
 
 namespace oneflow {
 namespace one {
@@ -41,7 +42,8 @@ class TensorProcessor final {
 
   Maybe<void> Apply();
   TensorProcessor& PromoteInputsToCommonDtype(bool is_promote);
-  TensorProcessor& PromoteInputsToCommonDtype(bool is_promote, bool is_inplace);
+  TensorProcessor& PromoteInputsToCommonDtype(bool is_promote,
+                                              Optional<Symbol<DType>>& promote_dtype);
   TensorProcessor& PromoteIntegerInputsToFloatDtype(bool is_promote);
   Maybe<TensorTuple&> GetInputs() { return tensor_tuple_; };
 
@@ -52,7 +54,6 @@ class TensorProcessor final {
 
   bool promote_inputs_to_common_dtype_;
   bool promote_integer_inputs_to_float_;
-  bool is_inplace_;
 };
 
 class TensorLayoutProcessor final {
