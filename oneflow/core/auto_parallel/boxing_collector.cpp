@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
