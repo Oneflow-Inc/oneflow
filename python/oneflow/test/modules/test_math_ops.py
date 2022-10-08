@@ -28,6 +28,9 @@ from oneflow.test_utils.test_util import (
     type_name_to_np_type,
 )
 
+import torch as torch_original
+from packaging import version
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestSinh(flow.unittest.TestCase):
@@ -456,7 +459,12 @@ class TestFloorDiv(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestFmod(flow.unittest.TestCase):
-    @autotest(auto_backward=False)
+    # other.grad in torch.fmod(input, other) was not implemented before pytorch 1.11.0
+    grad_implemented = version.parse(torch_original.__version__) >= version.parse(
+        "1.11.0"
+    )
+
+    @autotest(auto_backward=grad_implemented)
     def test_elementwise_fmod_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
@@ -464,7 +472,7 @@ class TestFmod(flow.unittest.TestCase):
 
         return torch.fmod(x, y)
 
-    @autotest(n=5, auto_backward=False)
+    @autotest(n=5, auto_backward=grad_implemented)
     def test_flow_broadcast_fmod_with_random_data(test_case):
         device = random_device()
         k1 = random(2, 6)
@@ -474,7 +482,7 @@ class TestFmod(flow.unittest.TestCase):
         y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3).to(device)
         return torch.fmod(x, y)
 
-    @autotest(auto_backward=False)
+    @autotest(auto_backward=grad_implemented)
     def test_tensor_fmod_scalar_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
@@ -545,6 +553,15 @@ class TestLog2Module(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         return torch.log2(x)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestLog10Module(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_log10_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return torch.log10(x)
 
 
 if __name__ == "__main__":

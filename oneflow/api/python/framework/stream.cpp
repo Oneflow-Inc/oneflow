@@ -32,6 +32,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 
   py::class_<StreamGuard, std::shared_ptr<StreamGuard>>(m, "StreamGuard")
       .def(py::init([](const std::shared_ptr<StreamSet>& stream_set) {
-        return std::make_shared<StreamGuard>(StreamConverter(stream_set));
+        auto stream_converter = std::make_shared<StreamConverter>(stream_set);
+        return std::make_shared<StreamGuard>(stream_converter);
       }));
 }

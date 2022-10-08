@@ -132,7 +132,32 @@ struct numeric_limits<half> {
     return *reinterpret_cast<const __half*>(&HALF_UPPER_BOUND);
   }
 };
-#endif
+
+#if CUDA_VERSION >= 11000
+
+static __device__ unsigned short int NV_BFLOAT16_LOWEST = 0xff7f;
+static __device__ unsigned short int NV_BFLOAT16_MAX = 0x7f7f;
+static __device__ unsigned short int NV_BFLOAT16_LOWER_BOUND = 0xff80;
+static __device__ unsigned short int NV_BFLOAT16_UPPER_BOUND = 0x7f80;
+template<>
+struct numeric_limits<nv_bfloat16> {
+  static inline __device__ nv_bfloat16 lowest() {
+    return *reinterpret_cast<const __nv_bfloat16*>(&NV_BFLOAT16_LOWEST);
+  }
+  static inline __device__ nv_bfloat16 max() {
+    return *reinterpret_cast<const __nv_bfloat16*>(&NV_BFLOAT16_MAX);
+  }
+  static inline __device__ nv_bfloat16 lower_bound() {
+    return *reinterpret_cast<const __nv_bfloat16*>(&NV_BFLOAT16_LOWER_BOUND);
+  }
+  static inline __device__ nv_bfloat16 upper_bound() {
+    return *reinterpret_cast<const __nv_bfloat16*>(&NV_BFLOAT16_UPPER_BOUND);
+  }
+};
+
+#endif  // CUDA_VERSION >= 11000
+
+#endif  // defined(__CUDACC__)
 
 template<>
 struct numeric_limits<double> {

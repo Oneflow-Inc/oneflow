@@ -54,10 +54,6 @@ std::function<Maybe<void>(const std::string&)> MakeSetOutDataTypeFn(user_op::Inf
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> BatchNormElemtOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> BatchNormElemtOp::GetSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }

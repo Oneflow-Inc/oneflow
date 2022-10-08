@@ -62,8 +62,10 @@ void ExecNode::UnbindBnWithEmptyRegst() {
       });
 }
 
-void ExecNode::ToProto(const ParallelContext* parallel_ctx, const bool need_op_attr, ExecNodeProto* ret) const {
-  op_->GenKernelConf(GetRegstBlobDesc4BnInOpFunc(), parallel_ctx, need_op_attr, ret->mutable_kernel_conf());
+void ExecNode::ToProto(const ParallelContext* parallel_ctx, const bool need_op_attr,
+                       ExecNodeProto* ret) const {
+  op_->GenKernelConf(GetRegstBlobDesc4BnInOpFunc(), parallel_ctx, need_op_attr,
+                     ret->mutable_kernel_conf());
   for (const auto& bn_regst : bn_in_op2regst_) {
     const std::string& bn_in_op = bn_regst.first;
     auto regst = bn_regst.second;
@@ -111,8 +113,8 @@ void ExecNode::InferBlobDescs(const OpNode* op_node, const ParallelContext* para
   auto GetBlobDesc4BnInOp = GetRegstBlobDesc4BnInOpFunc();
   CHECK_JUST_MSG(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, &GlobalJobDesc()),
                  std::stringstream() << " infer blob descs if failed, op name " << op_->op_loc());
-  // NOTE(strint): Inplace infer doesn't need the real blob desc value, pass GetBlobDesc4BnInOp is just becase some
-  // infer context's constructor need it. 
+  // NOTE(strint): Inplace infer doesn't need the real blob desc value, pass GetBlobDesc4BnInOp is
+  // just becase some infer context's constructor need it.
   CHECK_JUST_MSG(op_->InferInplaceObn2IbnIf(&mut_inplace_obn2ibn_, &con_inplace_obn2ibn_,
                                             GetBlobDesc4BnInOp, parallel_ctx),
                  std::stringstream()
@@ -129,8 +131,10 @@ std::function<BlobDesc*(const std::string&)> ExecNode::GetRegstBlobDesc4BnInOpFu
   };
 }
 
-void ExecGraph::ToExecSequence(const ParallelContext* parallel_ctx, const bool need_op_attr, ExecSequence* ret) const {
-  TopoForEachNode([&](ExecNode* node) { node->ToProto(parallel_ctx, need_op_attr, ret->add_exec_node()); });
+void ExecGraph::ToExecSequence(const ParallelContext* parallel_ctx, const bool need_op_attr,
+                               ExecSequence* ret) const {
+  TopoForEachNode(
+      [&](ExecNode* node) { node->ToProto(parallel_ctx, need_op_attr, ret->add_exec_node()); });
 }
 
 }  // namespace oneflow

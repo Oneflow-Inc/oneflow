@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/decorator.h"
-#include "oneflow/core/common/thread_local_guard.h"
 #include "oneflow/core/common/env_var/stream.h"
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/stream_set.h"
@@ -33,29 +32,32 @@ class StreamConverter final {
       : stream_set_(stream_set) {}
 
   Maybe<Symbol<Stream>> TryConvertStream(Symbol<Stream> stream) {
-    auto key = std::make_pair(stream->device(), stream->stream_type());
-    auto* map = stream_set_->mut_device_stream_type2stream();
-    const auto& iter = map->find(key);
-    if (iter != map->end()) { return iter->second; }
     size_t thread_uid = stream_set_->worker_thread_id();
-    Symbol<Stream> ret = JUST(Stream::New(stream->device(), stream->stream_type(), thread_uid));
-    CHECK_OR_RETURN(map->emplace(key, ret).second) << "illegal memory access";
-    return ret;
+    return Stream::New(stream->device(), stream->stream_type(), thread_uid);
   }
 
  private:
   const std::shared_ptr<StreamSet> stream_set_;
 };
 
-class StreamGuard final : public ThreadLocalGuard<StreamConverter> {
+class StreamGuard final {
  public:
-  using ThreadLocalGuard<StreamConverter>::ThreadLocalGuard;
-  ~StreamGuard() = default;
+  explicit StreamGuard(const std::shared_ptr<StreamConverter>& stream_converter) {
+    old_value_ = Current();
+    *MutCurrent() = stream_converter;
+  }
+  ~StreamGuard() { *MutCurrent() = old_value_; }
 
   static Maybe<Symbol<Stream>> TryConvertStream(Symbol<Stream> stream) {
     if (!Current().has_value()) { return stream; }
     return JUST(Current())->TryConvertStream(stream);
   }
+
+ private:
+  static const Optional<StreamConverter>& Current() { return *MutCurrent(); }
+  static Optional<StreamConverter>* MutCurrent();
+
+  Optional<StreamConverter> old_value_;
 };
 
 }  // namespace oneflow

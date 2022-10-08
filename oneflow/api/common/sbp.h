@@ -26,7 +26,9 @@ namespace oneflow {
 
 namespace api {
 
-inline Maybe<std::string> SbpToString(Symbol<SbpParallel> sbp_sym) {
+// NOTE: The api inferface will print the whole name of sbp.
+
+inline Maybe<std::string> ApiSbpToString(Symbol<SbpParallel> sbp_sym) {
   std::string sbp_str = "oneflow.sbp.";
   if (sbp_sym->has_broadcast_parallel()) {
     sbp_str += "broadcast";
@@ -40,11 +42,11 @@ inline Maybe<std::string> SbpToString(Symbol<SbpParallel> sbp_sym) {
   return sbp_str;
 }
 
-inline Maybe<std::string> NdSbpToString(Symbol<NdSbp> nd_sbp) {
+inline Maybe<std::string> ApiNdSbpToString(Symbol<NdSbp> nd_sbp) {
   std::string str = "(";
   for (int i = 0; i < nd_sbp->sbp_parallel_size(); ++i) {
     if (i > 0) { str += ", "; }
-    str += *JUST(SbpToString(SymbolOf(nd_sbp->sbp_parallel(i))));
+    str += *JUST(ApiSbpToString(SymbolOf(nd_sbp->sbp_parallel(i))));
   }
   if (nd_sbp->sbp_parallel_size() == 1) { str += ","; }
   str += ")";

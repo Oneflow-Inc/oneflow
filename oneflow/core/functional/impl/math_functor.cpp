@@ -16,22 +16,16 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/error.h"
 #include "oneflow/core/common/scalar.h"
-#include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
-#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
-#include "oneflow/core/functional/impl/common.h"
-#include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
-#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/functional/tensor_processor.h"
 
 #include <sstream>
@@ -186,7 +180,7 @@ class ScalarSub2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& input,
                            const Scalar& alpha) const {
-    return ScalarAdd(scalar, JUST(ScalarMul(input, Scalar(-1), false)), alpha);
+    return ScalarAdd(scalar, input, Scalar(-1) * alpha);
   }
 };
 
@@ -221,7 +215,7 @@ class ScalarDivFunctor : public ScalarMathBaseFunctor {
 class ScalarDiv2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
-    return functional::ScalarMul(JUST(functional::ReciprocalNoNan(x)), scalar, /*inplace=*/false);
+    return functional::ScalarMul(JUST(functional::Reciprocal(x)), scalar, /*inplace=*/false);
   }
 };
 
@@ -296,6 +290,11 @@ class ScalarReversePowGradFunctor {
 class ScalarFloorDivFunctor : public ScalarMathBaseFunctor {
  public:
   ScalarFloorDivFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_floordiv") {}
+};
+
+class ScalarTruncDivFunctor : public ScalarMathBaseFunctor {
+ public:
+  ScalarTruncDivFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_truncdiv") {}
 };
 
 class ScalarFModFunctor : public ScalarMathBaseFunctor {
@@ -458,6 +457,64 @@ class ReduceSumFunctor {
     attrs.SetAllAttrs(reduce_axis, keepdims);
     TensorProcessor tensor_processor;
     JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ReduceNanSumFunctor {
+ public:
+  ReduceNanSumFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("reduce_nansum").Input("input_tensor").Output("output_tensor").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
+                           const bool& keepdims, const Optional<Symbol<DType>>& dtype) const {
+    std::shared_ptr<one::Tensor> tensor = x;
+    if (dtype.has_value() && (dtype != x->dtype())) {
+      tensor = JUST(Cast(x, JUST(dtype), /*pin_memory=*/false));
+    }
+
+    std::vector<int32_t> reduce_axis = *JUST(CheckAxis(axis, tensor->ndim()));
+    if (reduce_axis.size() == 0) { return tensor; }
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis", "keepdims");
+    attrs.SetAllAttrs(reduce_axis, keepdims);
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({tensor}, /*lowest_dtype=*/DType::Int64()).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ReduceNanSumWholeFunctor {
+ public:
+  ReduceNanSumWholeFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("reduce_nansum").Input("input_tensor").Output("output_tensor").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<Symbol<DType>>& dtype) const {
+    std::shared_ptr<one::Tensor> tensor = x;
+    if (dtype.has_value() && (dtype != x->dtype())) {
+      tensor = JUST(Cast(x, JUST(dtype), /*pin_memory=*/false));
+    }
+
+    const int32_t ndim = tensor->ndim();
+    if (ndim == 0) { return tensor; }  // for 0-dim Tensor
+    std::vector<int32_t> axis(ndim);
+    std::iota(axis.begin(), axis.end(), 0);
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis", "keepdims");
+    attrs.SetAllAttrs(axis, false);
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({tensor}, /*lowest_dtype=*/DType::Int64()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
   }
@@ -3080,6 +3137,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<AmaxFunctor>("Amax");
   m.add_functor<ReduceSumFunctor>("ReduceSum");
   m.add_functor<ReduceSumWholeFunctor>("ReduceSumWhole");
+  m.add_functor<ReduceNanSumFunctor>("ReduceNanSum");
+  m.add_functor<ReduceNanSumWholeFunctor>("ReduceNanSumWhole");
   m.add_functor<ReduceAllFunctor>("ReduceAll");
   m.add_functor<ReduceAllWholeFunctor>("ReduceAllWhole");
   m.add_functor<ReduceAnyFunctor>("ReduceAny");
@@ -3128,6 +3187,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<MaximumFunctor>("Max");
   m.add_functor<ScalarFModFunctor>("ScalarFMod");
   m.add_functor<ScalarFloorDivFunctor>("ScalarFloorDiv");
+  m.add_functor<ScalarTruncDivFunctor>("ScalarTruncDiv");
   m.add_functor<ScalarLogicalEqualFunctor, ScalarLogicalEqual2Functor>("ScalarLogicalEqual");
   m.add_functor<ScalarLogicalNotEqualFunctor, ScalarLogicalNotEqual2Functor>(
       "ScalarLogicalNotEqual");
