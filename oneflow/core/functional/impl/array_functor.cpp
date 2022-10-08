@@ -1569,10 +1569,10 @@ class FlipFunctor {
 };
 
 class FlipIntDimFunctor {
-  public:
-    Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, int32_t dim) const {
-      return functional::Flip(x, {dim});
-    }
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, int32_t dim) const {
+    return functional::Flip(x, {dim});
+  }
 };
 
 class UnfoldTensorFunctor {
