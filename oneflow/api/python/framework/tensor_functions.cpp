@@ -304,7 +304,6 @@ DIRECT_PASS_FUNC(PyTensorObject_fill_, functional::fill_)
 DIRECT_PASS_FUNC(PyTensorObject_mm, functional::mm)
 DIRECT_PASS_FUNC(PyTensorObject_exponential, functional::exponential_)
 
-
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_eq(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
@@ -917,8 +916,7 @@ static PyObject* PyTensorObject_to_global(PyObject* self, PyObject* args, PyObje
   PyObject* result = NULL;
   if (tensor->is_global()) {
     result = PyTensorObject_global_to_global(self, args, kwargs);
-  }
-  else {
+  } else {
     result = PyTensorObject_local_to_global(self, args, kwargs);
   }
   if (PyErr_Occurred()) { throw py::error_already_set(); }
