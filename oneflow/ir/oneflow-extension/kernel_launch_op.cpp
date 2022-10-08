@@ -20,6 +20,7 @@ limitations under the License.
 #include "OneFlow/UserOpReflection.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/Extension.h"
+#include "llvm/ADT/StringRef.h"
 #include "mlir/IR/MLIRContext.h"
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/str_util.h"
@@ -45,6 +46,7 @@ limitations under the License.
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TargetSelect.h"
 
+#include <cmath>
 #include <memory>
 #include <tuple>
 #include <utility>
@@ -237,16 +239,17 @@ class KernelLaunchComputeContext final : public user_op::KernelComputeContext {
 class OKLRegContext final {
   static mlir::DialectRegistry GetRegistry() {
     mlir::DialectRegistry registry;
-    registry
-        .insert<mlir::LLVM::LLVMDialect, mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect>();
+    registry.insert<mlir::LLVM::LLVMDialect, mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect,
+                    mlir::okl::OKLDialect>();
     mlir::registerLLVMDialectTranslation(registry);
     return registry;
   }
 
  public:
   explicit OKLRegContext(const char* mlir_asm) : mlir_ctx_(GetRegistry()) {
-    LOG(ERROR) << mlir_asm;
-    auto module = mlir::parseSourceString<mlir::ModuleOp>(mlir_asm, &mlir_ctx_);
+    // the llvm has a different str end format
+    std::string source_str = std::string(mlir_asm).substr(0, strlen(mlir_asm) - 1);
+    auto module = mlir::parseSourceString<mlir::ModuleOp>(source_str, &mlir_ctx_);
     if (!module) {
       LOG(ERROR) << "Fail to load mlir assembly";
       exit(1);
@@ -263,9 +266,13 @@ class OKLRegContext final {
   }
 
   const oneflow::user_op::OpKernel* BuildKernel(const char* op_name) {
-    return CHECK_JUST(oneflow::user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-                          reg_ctx_->GetOp()->getName().stripDialect().str(), *reg_ctx_))
-        ->create_fn();
+    LOG(ERROR) << op_name;
+    auto* res = CHECK_JUST(oneflow::user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
+                               op_name, *reg_ctx_))
+                    ->create_fn();
+
+    LOG(ERROR) << "end";
+    return res;
   }
 
   void Launch(oneflow::KernelLaunchComputeContext* run_ctx, oneflow::user_op::OpKernel* kernel) {
