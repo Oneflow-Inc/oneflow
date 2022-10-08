@@ -34,16 +34,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-<<<<<<< HEAD
-/* static */ Maybe<void> EmbeddingLookupPlaceholderOp::GetSbp(user_op::SbpContext* ctx) {
-=======
-/*static*/ Maybe<void> OneEmbeddingFusedLookupOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> OneEmbeddingFusedLookupOp::GetSbp(user_op::SbpContext* ctx) {
->>>>>>> feat/reduce_compile_time
   auto builder = ctx->NewBuilder()
                      .Broadcast(user_op::OpArg("shadow", 0))
                      .Split(user_op::OpArg("ids", 0), 0)
@@ -81,16 +72,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-<<<<<<< HEAD
-/* static */ Maybe<void> EmbeddingUpdatePlaceholderOp::GetSbp(user_op::SbpContext* ctx) {
-=======
-/*static*/ Maybe<void> OneEmbeddingFusedLookupGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> OneEmbeddingFusedLookupGradOp::GetSbp(user_op::SbpContext* ctx) {
->>>>>>> feat/reduce_compile_time
   ctx->NewBuilder()
       .Split(user_op::OpArg("ids", 0), 0)
       .Split(user_op::OpArg("embedding_grad", 0), 0)
@@ -277,16 +259,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-<<<<<<< HEAD
-/* static */ Maybe<void> FusedSgdEmbeddingUpdatePutOp::GetSbp(user_op::SbpContext* ctx) {
-=======
-/*static*/ Maybe<void> OneEmbeddingFusedSgdUpdatePutOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> OneEmbeddingFusedSgdUpdatePutOp::GetSbp(user_op::SbpContext* ctx) {
->>>>>>> feat/reduce_compile_time
   auto builder = ctx->NewBuilder()
                      .Broadcast(user_op::OpArg("learning_rate", 0))
                      .Broadcast(user_op::OpArg("num_unique_ids", 0))
@@ -321,16 +294,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-<<<<<<< HEAD
-/* static */ Maybe<void> SgdEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
-=======
-/*static*/ Maybe<void> OneEmbeddingSgdUpdateOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> OneEmbeddingSgdUpdateOp::GetSbp(user_op::SbpContext* ctx) {
->>>>>>> feat/reduce_compile_time
   JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
 }
@@ -358,16 +322,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-<<<<<<< HEAD
-/* static */ Maybe<void> MomentumEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
-=======
-/*static*/ Maybe<void> OneEmbeddingMomentumUpdateOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> OneEmbeddingMomentumUpdateOp::GetSbp(user_op::SbpContext* ctx) {
->>>>>>> feat/reduce_compile_time
   JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
 }
@@ -395,16 +350,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-<<<<<<< HEAD
-/* static */ Maybe<void> AdamEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
-=======
-/*static*/ Maybe<void> OneEmbeddingAdamUpdateOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> OneEmbeddingAdamUpdateOp::GetSbp(user_op::SbpContext* ctx) {
->>>>>>> feat/reduce_compile_time
   JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
 }
@@ -432,16 +378,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-<<<<<<< HEAD
-/* static */ Maybe<void> AdagradEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
-=======
-/*static*/ Maybe<void> OneEmbeddingAdagradUpdateOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> OneEmbeddingAdagradUpdateOp::GetSbp(user_op::SbpContext* ctx) {
->>>>>>> feat/reduce_compile_time
   JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
 }
@@ -469,16 +406,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-<<<<<<< HEAD
-/* static */ Maybe<void> FtrlEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
-=======
-/*static*/ Maybe<void> OneEmbeddingFtrlUpdateOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
 /* static */ Maybe<void> OneEmbeddingFtrlUpdateOp::GetSbp(user_op::SbpContext* ctx) {
->>>>>>> feat/reduce_compile_time
   JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
 }
