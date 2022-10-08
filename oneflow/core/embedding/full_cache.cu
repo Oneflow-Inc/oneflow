@@ -463,7 +463,6 @@ class CacheImpl : public Cache {
       UNIMPLEMENTED();
     }
     num_elem_per_value_ = options_.value_size / sizeof(Elem);
-    // if_dump_dirty_ = ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DUMP_DIRTY_ONLY", false);
   }
   ~CacheImpl() {
     CudaCurrentDeviceGuard guard(device_index_);
