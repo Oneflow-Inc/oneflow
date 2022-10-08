@@ -2321,3 +2321,10 @@ add_docstr(
                 [2.]], dtype=oneflow.float32)
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.trunc,
+    """
+    See :func:`oneflow.trunc`
+    """
+)

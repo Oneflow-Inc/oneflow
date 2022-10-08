@@ -16,9 +16,7 @@ limitations under the License.
 #include "oneflow/api/python/framework/tensor.h"
 
 #include <pybind11/pybind11.h>
-#include <Python.h>
 #include "oneflow/api/python/exception/exception.h"
-#include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/framework/tensortype.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/python_arg.h"
@@ -26,15 +24,7 @@ limitations under the License.
 #include "oneflow/api/python/functional/tensor_api.yaml.pybind.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/utils/tensor_utils.h"
-#include "oneflow/core/autograd/autograd_engine.h"
-#include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/tensor_rpc_util.h"
-#include "oneflow/core/framework/device.h"
-#include "oneflow/core/common/stride.h"
-#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/placement_utils.h"
-#include "oneflow/core/functional/functional.h"
-#include "oneflow/core/functional/tensor_index.h"
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace py = pybind11;
@@ -454,6 +444,10 @@ static PyObject* PyTensorObject_ndim(PyObject* self, void* unused) {
   return functional::CastToPyObject(PyTensor_Unpack(self)->ndim());
 }
 
+static PyObject* PyTensorObject_T(PyObject* self, void* unused) {
+  return functional::CastToPyObject(functional::TransposeAllDimProperty(PyTensor_Unpack(self)));
+}
+
 static PyObject* PyTensorObject_shape(PyObject* self, void* unused) {
   return functional::CastToPyObject(PyTensor_Unpack(self)->shape());
 }
@@ -580,6 +574,7 @@ static PyObject* PyTensorObject_sbp(PyObject* self, void* unused) {
 // NOLINTNEXTLINE
 static PyGetSetDef PyTensorObject_properties[] = {
     {PYGETSET_NAME("ndim"), (getter)PyTensorObject_ndim, NULL, NULL, NULL},
+    {PYGETSET_NAME("T"), (getter)PyTensorObject_T, NULL, NULL, NULL},
     {PYGETSET_NAME("shape"), (getter)PyTensorObject_shape, NULL, NULL, NULL},
     {PYGETSET_NAME("dtype"), (getter)PyTensorObject_dtype, NULL, NULL, NULL},
     {PYGETSET_NAME("is_cuda"), (getter)PyTensorObject_is_cuda, NULL, NULL, NULL},

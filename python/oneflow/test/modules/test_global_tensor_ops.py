@@ -26,10 +26,10 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-def _test_type_as(test_case, shape, src_dtype, tgt_dtype, placement, sbp):
+def _test_type_as(test_case, shape, src_dtype, dst_dtype, placement, sbp):
     np_input = np.random.rand(*shape)
     input = flow.tensor(np_input, dtype=src_dtype).to_global(placement, sbp)
-    target = flow.tensor(np_input, dtype=tgt_dtype).to_global(placement, sbp)
+    target = flow.tensor(np_input, dtype=dst_dtype).to_global(placement, sbp)
     input = input.type_as(target)
     test_case.assertEqual(input.dtype, target.dtype)
 
@@ -166,7 +166,7 @@ class TestGlobalTensorOps(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(8, 16), (8, 16, 24), (8, 16, 24, 32)]
         arg_dict["src_dtype"] = [flow.int64, flow.int32, flow.float32, flow.float64]
-        arg_dict["tgt_dtype"] = [flow.int64, flow.int32, flow.float32, flow.float64]
+        arg_dict["dst_dtype"] = [flow.int64, flow.int32, flow.float32, flow.float64]
         for arg in GenArgList(arg_dict):
             for placement in all_placement():
                 for sbp in all_sbp(placement, max_dim=len(arg[0])):
