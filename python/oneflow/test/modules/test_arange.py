@@ -56,11 +56,12 @@ def _test_arange_input_tensor_type(test_case, device):
     x = flow.tensor([[1, 2], [3, 4]], dtype=flow.int64).to(device)
     y = flow.arange(start=flow.min(x), end=flow.max(x), device=device)
     test_case.assertTrue(np.allclose(y.numpy(), np.arange(1, 4)))
-    x = flow.tensor([[1, 2], [3, 4]], dtype=flow.int64).to("cuda")
-    y = flow.arange(
-        start=flow.min(x), end=flow.max(x), device="cuda", dtype=flow.float16
-    )
-    test_case.assertTrue(np.allclose(y.numpy(), np.arange(1, 4)))
+    if device == "cuda":
+        x = flow.tensor([[1, 2], [3, 4]], dtype=flow.int64).to(device)
+        y = flow.arange(
+            start=flow.min(x), end=flow.max(x), device=device, dtype=flow.float16
+        )
+        test_case.assertTrue(np.allclose(y.numpy(), np.arange(1, 4)))
 
 
 @flow.unittest.skip_unless_1n1d()
