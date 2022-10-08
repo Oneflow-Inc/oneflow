@@ -82,7 +82,7 @@ TensorProcessor& TensorProcessor::PromoteInputsToCommonDtype(bool is_promote) {
 }
 
 TensorProcessor& TensorProcessor::PromoteInputsToCommonDtype(
-    bool is_promote, Optional<Symbol<DType>>& promote_dtype) {
+    bool is_promote, const Optional<Symbol<DType>>& promote_dtype) {
   promote_inputs_to_common_dtype_ = is_promote;
   if (promote_dtype.has_value()) {
     Symbol<DType> dtype = CHECK_JUST(promote_dtype);
