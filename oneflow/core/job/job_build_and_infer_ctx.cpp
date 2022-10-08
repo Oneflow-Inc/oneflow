@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/user/summary/summary_converter.h"
 
 #include <google/protobuf/text_format.h>
@@ -943,6 +944,9 @@ Maybe<void> ExpandGraph(Job* job) {
 Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   CHECK_GT_OR_RETURN(job().net().op_size(), 0)
       << " Sorry, nn.Graph need at least 1 op in net, but get 0 now.";
+  const int64_t world_size =
+      GlobalProcessCtx::WorldSize(ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false));
+  mut_job()->mutable_job_conf()->set_world_size(world_size);
   if (ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false)) { JUST(ExpandGraph(mut_job())); }
   CHECK_NOTNULL(Singleton<JobDesc>::Get());
   Singleton<JobDesc>::Delete();

@@ -17,6 +17,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_AUTO_PARALLEL_BOXING_COLLECTOR_H_
 #define ONEFLOW_CORE_AUTO_PARALLEL_BOXING_COLLECTOR_H_
 
+#include <cstdint>
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.h"
@@ -26,12 +27,11 @@ namespace oneflow {
 
 class BoxingCollector final {
  public:
-  BoxingCollector() = default;
+  BoxingCollector(const int64_t world_size) : world_size_(world_size) {}
+  // A constructor with init, designed for uncustomized boxing collector
+  BoxingCollector(int32_t max_axis, const int64_t world_size);
 
   ~BoxingCollector() = default;
-
-  // A constructor with init, designed for uncustomized boxing collector
-  BoxingCollector(int32_t max_axis);
 
   // Set default Sbp list
   void CollectUniverse(int32_t max_axis);
@@ -138,6 +138,7 @@ class BoxingCollector final {
   Maybe<void> AskCloseAllSplitSbp(const NdSbp& nd_sbp, const ParallelDesc& parallel_desc,
                                   const BlobDesc& logical_blob_desc,
                                   std::vector<NdSbp>& middle_sbps);
+  int64_t world_size_{0};
   // Stores all the possible SbpParallel.
   HashMap<SbpParallel, int32_t> sbp_parallel_universe_;
   // Relationship between id and Sbp Parallel

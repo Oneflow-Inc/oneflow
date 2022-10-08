@@ -28,7 +28,6 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/register/blob_desc.h"
-#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/lazy_mode.h"
@@ -130,7 +129,10 @@ Maybe<void> AskSbpCombinationFor1DSbp(const NdSbp& sbp_producer, const NdSbp& sb
 }  // namespace
 
 // A constructor with init, designed for pre-stored boxing collector
-BoxingCollector::BoxingCollector(int32_t max_axis) { CHECK_JUST(Init(max_axis)); }
+BoxingCollector::BoxingCollector(int32_t max_axis, const int64_t world_size)
+    : world_size_(world_size) {
+  CHECK_JUST(Init(max_axis));
+}
 
 // Construct a boxing collector with given maximum number of axis
 Maybe<void> BoxingCollector::Init(int32_t max_axis) {
@@ -249,9 +251,7 @@ void BoxingCollector::GenerateMap1d2nd() {
 Maybe<void> BoxingCollector::GenerateCombination4SamePlacement(int32_t max_middle_node_num) {
   // other parameters
   // NOTE: The performance of this function are all the same with different hierarchy
-  int32_t world_size =
-      GlobalProcessCtx::WorldSize(ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false));
-  Shape hierarchy44({4 * world_size, 4 * world_size});
+  Shape hierarchy44({4 * world_size_, 4 * world_size_});
   int32_t virtual_range_size = hierarchy44.elem_cnt();
   std::shared_ptr<Shape> virtual_hierarchy = std::make_shared<Shape>(hierarchy44);
   auto parallel_desc = JUST(ParallelDesc::New(
@@ -708,7 +708,7 @@ Maybe<void> BoxingCollector::AskSbpCombination4Same2DPlacement(
   }
 
   // Customized boxing collector and try the algorithm again
-  BoxingCollector customized_boxing_collector;
+  BoxingCollector customized_boxing_collector{world_size_};
   JUST(customized_boxing_collector.Init(logical_blob_desc, producer_parallel_desc));
   JUST(customized_boxing_collector.AskSbpCombination4Same2DPlacement(
       sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc, consumer_parallel_desc,
@@ -771,10 +771,10 @@ Maybe<void> BoxingCollector::AskSbpCombination4DiffPlacement(
     return Maybe<void>::Ok();
   }
   // Customize boxing collector for producer
-  BoxingCollector customized_boxing_collector_producer;
+  BoxingCollector customized_boxing_collector_producer{world_size_};
   JUST(customized_boxing_collector_producer.Init(logical_blob_desc, producer_parallel_desc));
   // Customize boxing collector for consumer
-  BoxingCollector customized_boxing_collector_consumer;
+  BoxingCollector customized_boxing_collector_consumer{world_size_};
   JUST(customized_boxing_collector_consumer.Init(logical_blob_desc, consumer_parallel_desc));
 
   std::vector<std::vector<int32_t>> diag_nodes;
