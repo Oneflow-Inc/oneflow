@@ -76,7 +76,7 @@ __device__ bool GetOrInsertOne(const size_t capacity, Key* table_keys, Index* ta
     const size_t idx = (start_idx + count) % capacity;
     Key* entry_key = table_keys + idx;
     Index* entry_index = table_indices + idx;
-    bool* entry_dirty_flag = table_dirty_flags + idx;
+    bool* entry_dirty_flag = dump_dirty_only ? table_dirty_flags + idx : nullptr;
     if (TryGetOrInsert<Key, Index, dump_dirty_only>(entry_key, entry_index, entry_dirty_flag,
                                                     table_size, key, out)) {
       return true;
@@ -141,7 +141,7 @@ __global__ void OrdinalEncodeDumpKernel(const Key* table_keys, const Index* tabl
     bool dump_flag = (entry_index != 0);
     if (dump_dirty_only) {
       bool entry_dirty_flag = table_dirty_flags[i + start_key_index];
-      dump_flag &= entry_dirty_flag;
+      dump_flag = (dump_flag && entry_dirty_flag);
     }
     if (dump_flag) {
       uint32_t index = cuda::atomic::Add(n_dumped, static_cast<uint32_t>(1));
