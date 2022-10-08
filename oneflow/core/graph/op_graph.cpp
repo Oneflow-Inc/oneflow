@@ -592,4 +592,20 @@ Maybe<void> OpGraph::ForEachOpNode(const std::function<Maybe<void>(const OpNode&
   return Maybe<void>::Ok();
 }
 
+std::function<bool(const OpNode* src, const OpNode* dst)> OpGraph::CreatePredicatorIsReachable()
+    const {
+  return MakePredicatorIsReachable();
+}
+
+void OpGraph::UpdateCachedPredicatorIsReachable() {
+  cached_predicator_is_reachable_ = MakePredicatorIsReachable();
+}
+
+std::function<bool(const OpNode* src, const OpNode* dst)> OpGraph::cached_predicator_is_reachable()
+    const {
+  CHECK(static_cast<bool>(cached_predicator_is_reachable_))
+      << "cached_predicator_is_reachable_ is not initialized";
+  return cached_predicator_is_reachable_;
+}
+
 }  // namespace oneflow

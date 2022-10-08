@@ -31,10 +31,12 @@ class TaskIdGenerator final {
   TaskId Generate(const StreamId& stream_id);
 
  private:
+  std::mutex mutex_;
   HashMap<StreamId, task_index_t> stream_id2task_index_counter_;
 };
 
 inline TaskId TaskIdGenerator::Generate(const StreamId& stream_id) {
+  std::unique_lock<std::mutex> lock(mutex_);
   task_index_t task_index = stream_id2task_index_counter_[stream_id]++;
   return TaskId{stream_id, task_index};
 }

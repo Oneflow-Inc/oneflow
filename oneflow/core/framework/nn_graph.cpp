@@ -301,6 +301,7 @@ Maybe<void> NNGraph::MasterRankCompile() {
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     std::vector<Plan> plans(GlobalProcessCtx::WorldSize());
     JUST(OpGraph::WithSingleton(&job_, [&]() -> Maybe<void> {
+      Singleton<OpGraph>::Get()->UpdateCachedPredicatorIsReachable();
       auto boxing_task_graph = JUST(BoxingTaskGraph::New());
       // reachable collective boxing task pairs,
       std::vector<HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>>
