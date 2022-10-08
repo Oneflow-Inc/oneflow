@@ -22,7 +22,7 @@ namespace oneflow {
 
 /*
   uint32_t, uint64_t fast divide algorithem is from NVIDIA/DALI
-  https://github.com/NVIDIA/DALI/blob/main/include/dali/core/fast_div.h
+  https://github.com/NVIDIA/DALI/blob/main/include/dali/core/fast_divide.h
 
   int32_t, int64_t fast divide algorithem is from libdivide
   https://github.com/ridiculousfish/libdivide
