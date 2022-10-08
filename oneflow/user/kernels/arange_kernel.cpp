@@ -80,9 +80,9 @@ class ArangeKernel final : public OpKernel {
     T delta = static_cast<T>(0.0);
     T limit = static_cast<T>(0.0);
     if (IsIntegralDataType(dtype)) {
-      start = static_cast<T>(ctx->Attr<int64_t>("integer_start") * 1.0);
-      delta = static_cast<T>(ctx->Attr<int64_t>("integer_delta") * 1.0);
-      limit = static_cast<T>(ctx->Attr<int64_t>("integer_limit") * 1.0);
+      start = static_cast<T>(static_cast<double>(ctx->Attr<int64_t>("integer_start")));
+      delta = static_cast<T>(static_cast<double>(ctx->Attr<int64_t>("integer_delta")));
+      limit = static_cast<T>(static_cast<double>(ctx->Attr<int64_t>("integer_limit")));
       arange_elem_cnt = std::ceil(static_cast<double>(limit - start) / delta);
     } else {
       // If we use static_cast<T>(start, delta, limit) and std::ceil to calculate arange_elem_cnt,
