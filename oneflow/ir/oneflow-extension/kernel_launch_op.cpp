@@ -269,15 +269,12 @@ class OKLRegContext final {
     auto* res = CHECK_JUST(oneflow::user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
                                op_name, *reg_ctx_))
                     ->create_fn();
-
-    LOG(ERROR) << "end";
     return res;
   }
 
   void Launch(oneflow::KernelLaunchComputeContext* run_ctx, oneflow::user_op::OpKernel* kernel) {
     auto* okl_ctx = dynamic_cast<oneflow::user_op::KernelComputeContext*>(run_ctx);
     kernel->Compute(okl_ctx);
-    // TODO: better lifetime management
   }
 
  private:
