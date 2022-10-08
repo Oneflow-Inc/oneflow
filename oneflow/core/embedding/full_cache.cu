@@ -444,8 +444,7 @@ class CacheImpl : public Cache {
   OF_DISALLOW_COPY_AND_MOVE(CacheImpl);
   explicit CacheImpl(const CacheOptions& options)
       : if_dump_dirty_(ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DUMP_DIRTY_ONLY", false)),
-        encoder_(options.capacity, options.load_factor,
-                 ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DUMP_DIRTY_ONLY", false)),
+        encoder_(options.capacity, options.load_factor, if_dump_dirty_),
         device_index_(-1),
         options_(options),
         max_query_length_(0) {
@@ -520,6 +519,7 @@ class CacheImpl : public Cache {
   void Clear() override;
 
  private:
+  bool if_dump_dirty_;
   OrdinalEncoder<Key, Index> encoder_;
   int device_index_;
   uint32_t num_elem_per_value_{};
@@ -527,7 +527,6 @@ class CacheImpl : public Cache {
   Index* encoding_buffer_{};
   CacheOptions options_;
   uint32_t max_query_length_;
-  bool if_dump_dirty_;
 };
 
 template<typename Key, typename Elem, typename Index, size_t pack_size>
