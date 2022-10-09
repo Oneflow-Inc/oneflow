@@ -312,6 +312,7 @@ DIRECT_PASS_FUNC(PyTensorObject_softplus, functional::softplus)
 DIRECT_PASS_FUNC(PyTensorObject_cast, functional::cast)
 DIRECT_PASS_FUNC(PyTensorObject_gather, functional::dim_gather)
 DIRECT_PASS_FUNC(PyTensorObject_type_as, functional::type_as)
+DIRECT_PASS_FUNC(PyTensorObject_split, functional::split)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_eq(PyObject* self, PyObject* args, PyObject* kwargs) {
@@ -601,31 +602,6 @@ static PyObject* PyTensorObject_tile(PyObject* self, PyObject* args, PyObject* k
   std::vector<int64_t> shape = functional::PyUnpackLongSequence<int64_t>(args);
   dim_vec = DimVector(shape.begin(), shape.end());
   return PyTensor_New(ASSERT_PTR(functional::Tile(PyTensor_Unpack(self), Shape(dim_vec))));
-  END_HANDLE_ERRORS
-}
-
-static PyObject* PyTensorObject_split(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  PyObject* split_size_or_sections = NULL;
-  int64_t dim = 0;
-  static const char* keywords[3] = {"split_size_or_sections", "dim", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|i:split", const_cast<char**>(keywords),
-                                   &split_size_or_sections, &dim)) {
-    return NULL;
-  }
-  CHECK_OR_THROW(PyLong_Check(split_size_or_sections)
-                 || functional::PyLongSequenceCheck(split_size_or_sections))
-      << Error::TypeError()
-      << "split(): argument 'split_size_or_sections' must be int or list of int, not "
-      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(split_size_or_sections)));
-  if (PyLong_Check(split_size_or_sections)) {
-    return functional::CastToPyObject(
-        functional::Split(PyTensor_Unpack(self), PyLong_AsLong(split_size_or_sections), dim));
-  }
-  std::vector<int64_t> split_sections =
-      functional::PyUnpackLongSequence<int64_t>(split_size_or_sections);
-  return functional::CastToPyObject(
-      functional::SplitWithSize(PyTensor_Unpack(self), split_sections, dim));
   END_HANDLE_ERRORS
 }
 

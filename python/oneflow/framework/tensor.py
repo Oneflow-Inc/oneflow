@@ -536,7 +536,6 @@ def _scatter_inplace(self, dim, index, src, reduce=""):
 
 
 def RegisterMethods():
-    # Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
     Tensor.add = _add
     Tensor.add_ = _add_inplace
@@ -554,7 +553,6 @@ def RegisterMethods():
     Tensor.__int__ = _scalar_int
     Tensor.__array__ = _numpy
     Tensor.uniform_ = _uniform
-    # Tensor.exponential_ = _exponential
     Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform
     Tensor.kaiming_normal_ = _kaiming_normal
@@ -562,7 +560,6 @@ def RegisterMethods():
     Tensor.xavier_uniform_ = _xavier_uniform
     Tensor.orthogonal_ = _orthogonal
     Tensor.normal_ = _normal
-    # Tensor.fill_ = _fill
     Tensor.copy_ = _copy
     Tensor._meta_repr = _meta_repr
     Tensor.argsort = _argsort
@@ -574,11 +571,9 @@ def RegisterMethods():
     Tensor.new_zeros = _new_zeros
     Tensor.new_full = _new_full
     Tensor.where = _where
-    # Tensor.mm = _mm
     Tensor.norm = _norm
     Tensor.split = _split
     Tensor.to = _to
-    # Tensor.T = property(_T)
     Tensor.masked_select = _masked_select
     Tensor.item = _item
     Tensor.sort = _sort
@@ -589,12 +584,6 @@ def RegisterMethods():
     Tensor.is_consistent = _is_consistent
     Tensor.to_consistent = _to_consistent
     Tensor.new_tensor = _new_tensor
-    # Tensor.cumsum = _cumsum
-    # Tensor.cumprod = _cumprod
-    # Tensor.mv = _mv
-    # Tensor.inverse = _inv
-    # Tensor.trunc = _trunc
-    # Tensor.cross = _cross
     Tensor.scatter = _scatter
     Tensor.scatter_ = _scatter_inplace
 
