@@ -7749,7 +7749,6 @@ def OneFlow_SoftmaxOp : OneFlow_BaseOp<"softmax", [NoSideEffect, DeclareOpInterf
   let has_compute_complexity_fn = 1;
 }
 
-// TODO(hujiakui): Gumbel Softmax Forward
 def OneFlow_GumbelSoftmaxOp : OneFlow_BaseOp<"gumbel_softmax", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in

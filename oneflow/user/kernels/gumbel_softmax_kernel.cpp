@@ -14,35 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/kernel_util.cuh"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/user/kernels/random_seed_util.h"
 #include "oneflow/user/kernels/distributions/common.h"
 #include "oneflow/user/kernels/distributions/uniform_distribution.h"
-#include "oneflow/core/ep/include/primitive/softmax.h"
-#include "oneflow/core/ep/include/primitive/softmax_backward.h"
+#include "oneflow/user/kernels/gumbel_softmax_kernel_util.h"
 
 namespace oneflow {
 
 namespace {
 
-template<typename Context>
-std::unique_ptr<ep::primitive::Softmax> NewSoftmaxPrimitive(Context* ctx) {
-  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("in", 0)->data_type();
-  return ep::primitive::NewPrimitive<ep::primitive::SoftmaxFactory>(ctx->device_type(), data_type);
-}
-
 auto SoftmaxPrimitiveExists() {
   return hob::make_custom("SoftmaxPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
     return NewSoftmaxPrimitive(&ctx).operator bool();
   });
-}
-
-template<typename Context>
-std::unique_ptr<ep::primitive::SoftmaxBackward> NewSoftmaxBackwardPrimitive(Context* ctx) {
-  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->data_type();
-  return ep::primitive::NewPrimitive<ep::primitive::SoftmaxBackwardFactory>(ctx->device_type(),
-                                                                            data_type);
 }
 
 auto SoftmaxBackwardPrimitiveExists() {
@@ -55,10 +40,10 @@ auto SoftmaxBackwardPrimitiveExists() {
 }  //  namespace
 
 template<DeviceType device_type, typename T>
-class CpuGumbelSoftmaxKernel final : public user_op::OpKernel {
+class GumbelSoftmaxKernel final : public user_op::OpKernel {
  public:
-  CpuGumbelSoftmaxKernel() = default;
-  ~CpuGumbelSoftmaxKernel() override = default;
+  GumbelSoftmaxKernel() = default;
+  ~GumbelSoftmaxKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
@@ -98,16 +83,9 @@ class CpuGumbelSoftmaxKernel final : public user_op::OpKernel {
     CHECK_NOTNULL(generator);
     UniformDistribution<device_type, T> distribution(static_cast<T>(0.0), static_cast<T>(1.0));
     distribution(ctx->stream(), elem_cnt, gumbel_noise_ptr, generator);
-    FOR_RANGE(int64_t, i, 0, elem_cnt) {
-      gumbel_noise_ptr[i] =
-          static_cast<T>(-1.0) * SafeLog(static_cast<T>(-1.0) * SafeLog(
-            static_cast<T>(1.0) - gumbel_noise_ptr[i]
-          ));
-    }
 
-    FOR_RANGE(int64_t, i, 0, elem_cnt) {
-      out_ptr[i] = (in_ptr[i] + gumbel_noise_ptr[i]) / tau;
-    }
+    GumbelSoftmaxAddNoiseImpl<device_type, T>::Forward(ctx->stream(), tau, elem_cnt, in_ptr,
+                                                       gumbel_noise_ptr, out_ptr);
 
     std::unique_ptr<ep::primitive::Softmax> primitive = NewSoftmaxPrimitive(ctx);
     CHECK(primitive);
@@ -116,9 +94,9 @@ class CpuGumbelSoftmaxKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_GUMBEL_SOFTMAX_KERNEL(device, dtype)                 \
+#define REGISTER_GUMBEL_SOFTMAX_KERNEL(device, dtype)                 \
   REGISTER_USER_KERNEL("gumbel_softmax")                              \
-      .SetCreateFn<CpuGumbelSoftmaxKernel<device, dtype>>()           \
+      .SetCreateFn<GumbelSoftmaxKernel<device, dtype>>()              \
       .SetIsMatchedHob((user_op::HobDataType("out", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobDeviceType() == device)        \
                        && (SoftmaxPrimitiveExists() == true))         \
@@ -127,8 +105,10 @@ class CpuGumbelSoftmaxKernel final : public user_op::OpKernel {
         return in_shape.elem_cnt();                                   \
       });
 
-REGISTER_CPU_GUMBEL_SOFTMAX_KERNEL(DeviceType::kCPU, float)
-REGISTER_CPU_GUMBEL_SOFTMAX_KERNEL(DeviceType::kCPU, double)
+REGISTER_GUMBEL_SOFTMAX_KERNEL(DeviceType::kCPU, float)
+REGISTER_GUMBEL_SOFTMAX_KERNEL(DeviceType::kCPU, double)
+REGISTER_GUMBEL_SOFTMAX_KERNEL(DeviceType::kCUDA, float)
+REGISTER_GUMBEL_SOFTMAX_KERNEL(DeviceType::kCUDA, double)
 
 class GumbelSoftmaxGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
@@ -157,4 +137,4 @@ REGISTER_USER_KERNEL("gumbel_softmax_grad")
     .SetCreateFn<GumbelSoftmaxGradKernel>()
     .SetIsMatchedHob(SoftmaxBackwardPrimitiveExists() == true);
 
-}  // namespace
+}  // oneflow
