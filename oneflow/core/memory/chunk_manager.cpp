@@ -49,6 +49,7 @@ void ChunkMgr::AddChunkProto(const ChunkProto& chunk) {
 }
 
 char* ChunkMgr::FindOrCreateChunk(const ChunkProto& chunk) {
+  std::unique_lock<std::mutex> guard(mutex_);
   CHECK_EQ(GlobalProcessCtx::Rank(), chunk.machine_id());
   auto it = chunk_id2chunk_.find(chunk.chunk_id());
   if (it == chunk_id2chunk_.end()) {
