@@ -1176,24 +1176,23 @@ class CastFunctor {
 };
 
 class TypeAsFunctor {
-  public:
-    Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& src, const std::shared_ptr<Tensor>& dst) const {
-      if (dst->is_global()) {
-        std::vector<Symbol<SbpParallel>> sbp(JUST(dst->nd_sbp())->sbp_parallel_size());
-        for(size_t i = 0; i < sbp.size(); i++) {
-          sbp[i] = JUST(dst->nd_sbp())->sbp_parallel(i);
-        }
-        std::vector<Symbol<SbpParallel>> grad_sbp;
-        const std::shared_ptr<Tensor>& global_src = JUST(ToGlobal(src, JUST(dst->parallel_desc()), sbp, grad_sbp, /*check_meta=*/false, /*copy=*/false));
-        return To(global_src, dst->dtype(), false);
-      }
-      else if (src->is_global()) {
-        const std::shared_ptr<Tensor>& local_src = JUST(GlobalToLocal(src, false));
-        return To(local_src, dst->dtype(), false);
-      } else {
-        return To(src, dst, false);
-      }
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& src,
+                           const std::shared_ptr<Tensor>& dst) const {
+    if (dst->is_global()) {
+      std::vector<Symbol<SbpParallel>> sbp(JUST(dst->nd_sbp())->sbp_parallel_size());
+      for (size_t i = 0; i < sbp.size(); i++) { sbp[i] = JUST(dst->nd_sbp())->sbp_parallel(i); }
+      std::vector<Symbol<SbpParallel>> grad_sbp;
+      const std::shared_ptr<Tensor>& global_src = JUST(ToGlobal(
+          src, JUST(dst->parallel_desc()), sbp, grad_sbp, /*check_meta=*/false, /*copy=*/false));
+      return To(global_src, dst->dtype(), false);
+    } else if (src->is_global()) {
+      const std::shared_ptr<Tensor>& local_src = JUST(GlobalToLocal(src, false));
+      return To(local_src, dst->dtype(), false);
+    } else {
+      return To(src, dst, false);
     }
+  }
 };
 
 class ClampBaseFunctor {
