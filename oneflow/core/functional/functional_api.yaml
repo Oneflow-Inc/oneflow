@@ -560,11 +560,11 @@
   bind_python: True
 
 - name: "std"
-  signature: "Tensor (Tensor x, Int32List dim=None, Bool unbiased=True, Bool keepdim=False) => StandardDeviation"
+  signature: "Tensor (Tensor x, Int32List[1] dim=None, Bool unbiased=True, Bool keepdim=False) => StandardDeviation"
   bind_python: True
 
 - name: "var"
-  signature: "Tensor (Tensor x, Int32List dim=None, Bool unbiased=True, Bool keepdim=False) => Variance"
+  signature: "Tensor (Tensor x, Int32List[1] dim=None, Bool unbiased=True, Bool keepdim=False) => Variance"
   bind_python: True
 
 - name: "rms_layer_norm"
