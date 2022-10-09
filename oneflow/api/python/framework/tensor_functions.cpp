@@ -310,7 +310,7 @@ DIRECT_PASS_FUNC(PyTensorObject_std, functional::std)
 DIRECT_PASS_FUNC(PyTensorObject_var, functional::var)
 DIRECT_PASS_FUNC(PyTensorObject_softplus, functional::softplus)
 DIRECT_PASS_FUNC(PyTensorObject_cast, functional::cast)
-DIRECT_PASS_FUNC(PyTensorObject_gather, functional::gather)
+DIRECT_PASS_FUNC(PyTensorObject_gather, functional::dim_gather)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_eq(PyObject* self, PyObject* args, PyObject* kwargs) {
