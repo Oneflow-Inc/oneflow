@@ -16,11 +16,14 @@ limitations under the License.
 #include "OneFlow/OKL/OKLDialect.h"
 #include "OneFlow/OKL/OKLTypes.h"
 #include "OneFlow/OKL/OKLOps.h"
+#include "OneFlow/OKL/OKLAttributes.h"
 #include "OneFlow/OneFlowOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/TypeRange.h"
 #include "mlir/IR/Dialect.h"
+
+#include "OneFlow/OKLEnums.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "OneFlow/OKLOps.cpp.inc"

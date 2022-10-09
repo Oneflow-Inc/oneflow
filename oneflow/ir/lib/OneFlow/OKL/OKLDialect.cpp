@@ -36,6 +36,10 @@ void OKLDialect::initialize() {
 #define GET_TYPEDEF_LIST
 #include "OneFlow/OKLTypes.cpp.inc"
       >();
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "OneFlow/OKLAttributes.cpp.inc"
+      >();
 }
 
 }  // namespace okl

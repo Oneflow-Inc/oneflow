@@ -27,6 +27,7 @@ limitations under the License.
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "OneFlow/OKL/OKLTypes.h"
+#include "OneFlow/OKL/OKLAttributes.h"
 
 namespace mlir {
 namespace func {

@@ -21,6 +21,34 @@ include "OneFlow/OKL/OKLBase.td"
 include "OneFlow/OKL/OKLTypes.td"
 include "mlir/Pass/PassBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/IR/OpBase.td"
+include "mlir/IR/EnumAttr.td"
+
+def OKL_ArgumentTensor : I32EnumAttrCase<"TT_Argument", 0>;
+def OKL_BufferTensor: I32EnumAttrCase<"TT_Buffer", 1>;
+def OKL_ReturnTensor: I32EnumAttrCase<"TT_Return", 2>;
+
+def OKL_TensorAttr: I32EnumAttr<"TensorType", "OKL Tensor Type enum",
+  [
+    OKL_ArgumentTensor,
+    OKL_BufferTensor,
+    OKL_ReturnTensor
+  ]
+> {
+  let cppNamespace = "::mlir::okl";
+  let stringToSymbolFnName = "ConvertToEnum";
+  let symbolToStringFnName = "ConvertToString";
+}
+
+def GetTensorFromCtxOp : OKL_Op<"get_tensor_from_ctx"> {
+  let summary = "get tensor from context";
+  let description = [{
+    get tensor value from launcher context.
+  }];
+
+  let arguments = (ins OKL_TensorAttr:$tensor_type);
+  let results = (outs AnyTensor);
+}
 
 def BuildRegContextOp : OKL_Op<"build_reg_ctx"> {
   let summary = "build reg context operation";
