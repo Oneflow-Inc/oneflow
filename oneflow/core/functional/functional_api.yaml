@@ -1781,6 +1781,10 @@
 
 - name: "unsorted_segment_sum_like"
   signature: "Tensor (Tensor x, Tensor segment_ids, Tensor like, Int64 axis) => UnsortedSegmentSumLike"
+  bind_python: False
+
+- name: "unsorted_segment_sum"
+  signature: "Tensor (Tensor x, Tensor segment_ids, Int64 axis, Int64 num_segments) => UnsortedSegmentSum"
   bind_python: True
 
 - name: "tril"
@@ -1961,8 +1965,8 @@
 - name: "scatter"
   signature:
     [
-      "Tensor (Tensor input, Int32 dim, Tensor index, Tensor src, String reduce=None, *, Bool inplace=False) => DimScatter",
-      "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src, String reduce=None, *, Bool inplace=False) => DimScatterScalar",
+      "Tensor (Tensor input, Int32 dim, Tensor index, Tensor src, *, String reduce=None, Bool inplace=False) => DimScatter",
+      "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src, *, String reduce=None, Bool inplace=False) => DimScatterScalar",
     ]
   bind_python: True
 
