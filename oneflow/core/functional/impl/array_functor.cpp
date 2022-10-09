@@ -3341,30 +3341,33 @@ class BinCountFunctor {
     TensorProcessor tensor_processor;
     JUST(tensor_processor.AddInputs({input}, DType::Int64()).Apply());
     const auto x = JUST(tensor_processor.GetInputs()).at(0);
+    std::shared_ptr<Tensor> local_tensor = x;
+    int64_t max = 0;
 
     // check min value
     {
-      auto tensor_min = JUST(functional::Min(x));
+    if (x->is_global()) {
+      local_tensor = JUST(GlobalToLocal(x, false));
+    }
+      auto tensor_min = JUST(functional::Min(local_tensor));
       int64_t min = 0;
-      const auto& callback = [&](ep::Stream* stream,
+      const auto& callback_min = [&](ep::Stream* stream,
                                  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
         SyncAutoMemcpy(stream, &min, eager_blob_object->dptr(), sizeof(min),
                        memory::MakeHostMemCase(), eager_blob_object->mem_case());
       };
-      JUST(SyncAccessTensorWithTimeOut(tensor_min, callback, "const"));
+      JUST(SyncAccessTensorWithTimeOut(tensor_min, callback_min, "const"));
       CHECK_GE_OR_RETURN(min, 0) << "bincount only supports 1-d non-negative integral inputs.";
-    }
 
-    auto tensor_max = JUST(functional::Max(x));
-    int64_t max = 0;
-    const auto& callback = [&](ep::Stream* stream,
+    auto tensor_max = JUST(functional::Max(local_tensor));
+    const auto& callback_max = [&](ep::Stream* stream,
                                const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
       SyncAutoMemcpy(stream, &max, eager_blob_object->dptr(), sizeof(max),
                      memory::MakeHostMemCase(), eager_blob_object->mem_case());
     };
-    JUST(SyncAccessTensorWithTimeOut(tensor_max, callback, "const"));
+    JUST(SyncAccessTensorWithTimeOut(tensor_max, callback_max, "const"));
     max += 1;
-
+    }
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("size");
     if (minlength) {
       CHECK_GE_OR_RETURN(JUST(minlength), 0) << "minlength should be >= 0";
