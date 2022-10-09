@@ -146,7 +146,7 @@ CollectiveMgrPlanToken* CollectiveMgr::AddPlan(const Plan& plan) {
 void CollectiveMgr::DeletePlan(CollectiveMgrPlanToken* plan_token) {
   const std::vector<int64_t>& job_ids = plan_token->job_ids();
   for (const auto& job_id : job_ids) {
-    // impl_->collective_builder->DeinitJob(job_id);
+    impl_->collective_builder->DeinitJob(job_id);
     impl_->request_store->DeinitJob(job_id);
   }
   delete plan_token;

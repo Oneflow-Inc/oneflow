@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <glog/logging.h>
 #include <nccl.h>
 #include <memory>
 #include "oneflow/core/common/singleton.h"
@@ -112,6 +113,7 @@ void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) con
     auto cb_lambda = [](int collIdFromCqe, void *args) {
       int64_t actor_id = (static_cast<CallBackArgs *>(args))->actor_id; // void不是类名，不能用dynamic
       Singleton<ActorMsgBus>::Get()->SendMsg(ActorMsg::BuildCollectiveMsg(actor_id, actor_id, CollectiveNegoCmd::kCollectiveDone));
+      VLOG(1) << "actor " << actor_id << " callback get cqe for coll_id " << collIdFromCqe << " waiting for " << (static_cast<CallBackArgs *>(args))->coll_id;
       delete static_cast<CallBackArgs *>(args);
       return 0;
     };

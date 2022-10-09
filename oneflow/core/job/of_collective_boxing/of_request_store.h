@@ -60,7 +60,7 @@ class OfRequestEntry final {
 
   std::map<int64_t, RuntimeNegoTreeInfo> nego_tree_topo() const { return nego_tree_topo_; }
 
-  const int coll_id() { return coll_id_; }
+  int coll_id() const { return coll_id_; }
 
  private:
   RequestDesc desc_;

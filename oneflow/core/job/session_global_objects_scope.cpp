@@ -84,6 +84,7 @@ Maybe<void> SessionGlobalObjectsScope::EagerInit(const ConfigProto& config_proto
 }
 
 SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
+  // VLOG(1) << "Try to delete SessionGlobalObjects context." << std::endl;
   {
     // NOTE(chengcheng): Delete Global(singleton) Runtime objects.
     Singleton<boxing::collective::Scheduler>::Delete();

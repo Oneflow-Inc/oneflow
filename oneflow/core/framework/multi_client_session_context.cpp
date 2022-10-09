@@ -146,6 +146,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
     VLOG(1) << "Try to delete multi client session context." << std::endl;
     {
       // NOTE(chengcheng): delete runtime global objects
+      Singleton<boxing::of_collective::CollectiveMgr>::Delete();
       Singleton<boxing::collective::Scheduler>::Delete();
       Singleton<summary::EventsWriter>::Delete();
       Singleton<RuntimeJobDescs>::Delete();

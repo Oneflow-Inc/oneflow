@@ -232,6 +232,7 @@ struct CollectiveBackendOfccl::Impl {
 
   void Destroy() {
     for (auto &device_id7ofcll_rank_ctx : device_id2ofccl_rank_ctx) {
+      VLOG(1) << "before ofcclDestroy in rank " << device_id7ofcll_rank_ctx.first;
       ofcclDestroy(device_id7ofcll_rank_ctx.second);
     }
   }
@@ -254,6 +255,7 @@ CollectiveBackendOfccl::~CollectiveBackendOfccl() = default;
 
 void CollectiveBackendOfccl::Init(std::shared_ptr<OfRequestStore> request_store) {
   // 我们复用了原来oneflow里的collective_boxing_conf
+  // VLOG(1) << "CollectiveBackendOfccl Init";
   impl_ = std::make_unique<Impl>(Singleton<ResourceDesc, ForSession>::Get()->collective_boxing_conf(),
                                  request_store);
 }
@@ -267,6 +269,7 @@ void CollectiveBackendOfccl::InitJob(int64_t job_id) {
 
 void CollectiveBackendOfccl::DeinitJob(int64_t job_id) {
   // 这个应该是最后退出执行要跑的，进行内存回收等等操作。
+  VLOG(1) << "before CollectiveBackendOfccl impl_->Destroy()";
   impl_->Destroy();
 }
 
