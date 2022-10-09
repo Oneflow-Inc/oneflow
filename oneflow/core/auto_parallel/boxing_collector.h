@@ -17,7 +17,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_AUTO_PARALLEL_BOXING_COLLECTOR_H_
 #define ONEFLOW_CORE_AUTO_PARALLEL_BOXING_COLLECTOR_H_
 
-#include <cstdint>
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.h"
