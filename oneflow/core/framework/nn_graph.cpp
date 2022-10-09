@@ -295,9 +295,9 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
       PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
     }
     PlanUtil::GenRegisterHint(&plan_);
-    if (ParseBooleanFromEnv("ONEFLOW_ENABLE_OFCCL", false)){
-      PlanUtil::GenOfCollectiveBoxingPlan(&job_, &plan_);
-    }
+    // if (ParseBooleanFromEnv("ONEFLOW_ENABLE_OFCCL", false)){
+    PlanUtil::GenOfCollectiveBoxingPlan(&job_, &plan_);
+    // }
     // TODO(chengcheng): test collective boxing for multi-job.
     PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
