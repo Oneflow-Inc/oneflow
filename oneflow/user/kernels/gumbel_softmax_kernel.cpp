@@ -65,7 +65,6 @@ class GumbelSoftmaxKernel final : public user_op::OpKernel {
     CHECK_EQ(in->data_type(), out->data_type());
  
     user_op::Tensor* gumbel_noise = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    CHECK_EQ(in->shape_view().elem_cnt(), gumbel_noise->shape_view().elem_cnt());
 
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
@@ -102,7 +101,7 @@ class GumbelSoftmaxKernel final : public user_op::OpKernel {
                        && (SoftmaxPrimitiveExists() == true))         \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {             \
         const Shape& in_shape = ctx->InputShape("in", 0);             \
-        return in_shape.elem_cnt();                                   \
+        return in_shape.elem_cnt() * sizeof(dtype);                   \
       });
 
 REGISTER_GUMBEL_SOFTMAX_KERNEL(DeviceType::kCPU, float)
