@@ -102,6 +102,17 @@ bool SharedPtrShapeEqual(const std::shared_ptr<const Shape>& lhs,
 void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>* ret,
                                              const OpGraph& op_graph,
                                              const std::vector<const OpNode*>& order) {
+  // NOTE(chengcheng): acc subgraph may greater than fw/bw subgraph. we need use max time shape.
+  std::shared_ptr<const Shape> seed_time_shape = std::make_shared<const Shape>(Shape({1, 1}));
+  op_graph.ForEachNode([&](const OpNode* node) {
+    std::shared_ptr<const Shape> this_time_shape = GetOpNodeTimeShape(node);
+    if (this_time_shape->elem_cnt() > seed_time_shape->elem_cnt()) {
+      seed_time_shape = this_time_shape;
+    }
+  });
+
+  VLOG(2) << " seed time shape = " << seed_time_shape->ToString();
+
   HashSet<const OpNode*> visited;
 
   for (const OpNode* seed_node : order) {
@@ -111,6 +122,7 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
     // NOTE(chengcheng): ONLY consider GPU op and parallel num > 1.
     if (seed_parallel_desc.device_type() != DeviceType::kCUDA) { continue; }
     if (seed_parallel_desc.parallel_num() <= 1) { continue; }
+    if (!SharedPtrShapeEqual(GetOpNodeTimeShape(seed_node), seed_time_shape)) { continue; }
     if (IsBreakpointOpNode(seed_node)) { continue; }
 
     HashSet<const OpNode*> this_subgraph;
@@ -745,6 +757,8 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
     }
   }
 
+  if (nccl_op_infos.empty()) { return; }
+
   for (const auto* node : after_acc_subgraph_nodes) { ordered_after_acc_subgraph.push_back(node); }
 
   CHECK_EQ(after_acc_subgraph_nodes.size(), ordered_after_acc_subgraph.size());
@@ -946,7 +960,9 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
           << ", we will try insert special identity and ctrl for "
           << " UNSAFE handle ALL nccl ops between different time shape: "
           << time_shape_before_acc->DebugStr() << "->acc->" << time_shape_after_acc->DebugStr()
-          << "\n\n";
+          << "\n\n"
+          << " Debug: before acc op: " << bw_sink_op->op().op_conf().DebugString()
+          << " -> after acc op: " << first_acc_op->op().op_conf().DebugString();
   CHECK_GT(time_shape_before_acc->elem_cnt(), time_shape_after_acc->elem_cnt());
   CHECK_EQ(time_shape_before_acc->elem_cnt() % time_shape_after_acc->elem_cnt(), 0);
 
