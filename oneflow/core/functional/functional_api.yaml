@@ -245,6 +245,22 @@
   signature: "Tensor (Tensor dz, Tensor x, Tensor y) => FloorDivYGrad"
   bind_python: False
 
+- name: "trunc_divide"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => TruncDiv",
+      "Tensor (Tensor input, Scalar other, *, Bool inplace=False) => ScalarTruncDiv",
+    ]
+  bind_python: True
+
+- name: "truncdiv_x_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => TruncDivXGrad"
+  bind_python: False
+
+- name: "truncdiv_y_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => TruncDivYGrad"
+  bind_python: False
+
 - name: "xdivy_x_grad"
   signature: "Tensor (Tensor dz, Tensor x, Tensor y) => XdivyXGrad"
   bind_python: False
@@ -1761,6 +1777,10 @@
 
 - name: "unsorted_segment_sum_like"
   signature: "Tensor (Tensor x, Tensor segment_ids, Tensor like, Int64 axis) => UnsortedSegmentSumLike"
+  bind_python: False
+
+- name: "unsorted_segment_sum"
+  signature: "Tensor (Tensor x, Tensor segment_ids, Int64 axis, Int64 num_segments) => UnsortedSegmentSum"
   bind_python: True
 
 - name: "tril"
@@ -1941,8 +1961,8 @@
 - name: "scatter"
   signature:
     [
-      "Tensor (Tensor input, Int32 dim, Tensor index, Tensor src, String reduce=None, *, Bool inplace=False) => DimScatter",
-      "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src, String reduce=None, *, Bool inplace=False) => DimScatterScalar",
+      "Tensor (Tensor input, Int32 dim, Tensor index, Tensor src, *, String reduce=None, Bool inplace=False) => DimScatter",
+      "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src, *, String reduce=None, Bool inplace=False) => DimScatterScalar",
     ]
   bind_python: True
 
@@ -2521,8 +2541,8 @@
 - name: "fill_"
   signature:
     [
-      "Tensor (Tensor in, Scalar value) => Fill",
       "Tensor (Tensor in, Tensor value) => FillTensor",
+      "Tensor (Tensor in, Scalar value) => Fill",
     ]
   bind_python: True
 
