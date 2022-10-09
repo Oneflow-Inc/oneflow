@@ -16,16 +16,12 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/scalar.h"
-#include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
-#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/functional/tensor_processor.h"
 
 #include <sstream>
@@ -1177,6 +1173,27 @@ class CastFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class TypeAsFunctor {
+  public:
+    Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& src, const std::shared_ptr<Tensor>& dst) const {
+      if (dst->is_global()) {
+        std::vector<Symbol<SbpParallel>> sbp(JUST(dst->nd_sbp())->sbp_parallel_size());
+        for(size_t i = 0; i < sbp.size(); i++) {
+          sbp[i] = JUST(dst->nd_sbp())->sbp_parallel(i);
+        }
+        std::vector<Symbol<SbpParallel>> grad_sbp;
+        const std::shared_ptr<Tensor>& global_src = JUST(ToGlobal(src, JUST(dst->parallel_desc()), sbp, grad_sbp, /*check_meta=*/false, /*copy=*/false));
+        return To(global_src, dst->dtype(), false);
+      }
+      else if (src->is_global()) {
+        const std::shared_ptr<Tensor>& local_src = JUST(GlobalToLocal(src, false));
+        return To(local_src, dst->dtype(), false);
+      } else {
+        return To(src, dst, false);
+      }
+    }
 };
 
 class ClampBaseFunctor {
@@ -3161,6 +3178,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<HannWindowFunctor>("HannWindow");
   m.add_functor<GlobalHannWindowFunctor>("GlobalHannWindow");
   m.add_functor<CastFunctor>("Cast");
+  m.add_functor<TypeAsFunctor>("TypeAs");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<ClampMinFunctor>("ClampMin");
   m.add_functor<ClampMaxFunctor>("ClampMax");

@@ -311,6 +311,7 @@ DIRECT_PASS_FUNC(PyTensorObject_var, functional::var)
 DIRECT_PASS_FUNC(PyTensorObject_softplus, functional::softplus)
 DIRECT_PASS_FUNC(PyTensorObject_cast, functional::cast)
 DIRECT_PASS_FUNC(PyTensorObject_gather, functional::dim_gather)
+DIRECT_PASS_FUNC(PyTensorObject_type_as, functional::type_as)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_eq(PyObject* self, PyObject* args, PyObject* kwargs) {
@@ -634,41 +635,41 @@ static PyObject* PyTensorObject_is_floating_point(PyObject* self, PyObject* unus
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_type_as(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  PyObject* target = NULL;
-  static const char* keywords[2] = {"target", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!:type_as", const_cast<char**>(keywords),
-                                   PyTensorObject_Type, &target)) {
-    return NULL;
-  }
-  auto tensor = PyTensor_Unpack(self);
-  auto target_tensor = PyTensor_Unpack(target);
-  Optional<Symbol<DType>> dtype = target_tensor->dtype();
+// static PyObject* PyTensorObject_type_as(PyObject* self, PyObject* args, PyObject* kwargs) {
+//   HANDLE_ERRORS
+//   PyObject* target = NULL;
+//   static const char* keywords[2] = {"target", NULL};
+//   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!:type_as", const_cast<char**>(keywords),
+//                                    PyTensorObject_Type, &target)) {
+//     return NULL;
+//   }
+//   auto tensor = PyTensor_Unpack(self);
+//   auto target_tensor = PyTensor_Unpack(target);
+//   Optional<Symbol<DType>> dtype = target_tensor->dtype();
 
-  // local / global to global
-  if (target_tensor->is_global()) {
-    Symbol<ParallelDesc> placement = ASSERT(target_tensor->parallel_desc());
-    std::vector<Symbol<SbpParallel>> sbp(ASSERT(target_tensor->nd_sbp())->sbp_parallel_size());
-    for (int32_t i = 0; i < sbp.size(); i++) {
-      sbp[i] = ASSERT(target_tensor->nd_sbp())->sbp_parallel(i);
-    }
-    std::vector<Symbol<SbpParallel>> grad_sbp;
-    std::shared_ptr<Tensor> global_tensor =
-        ASSERT_PTR(functional::ToGlobal(tensor, placement, sbp, grad_sbp, false, false));
-    return PyTensor_New(ASSERT_PTR(functional::To(global_tensor, dtype, false)));
-  }
+//   // local / global to global
+//   if (target_tensor->is_global()) {
+//     Symbol<ParallelDesc> placement = ASSERT(target_tensor->parallel_desc());
+//     std::vector<Symbol<SbpParallel>> sbp(ASSERT(target_tensor->nd_sbp())->sbp_parallel_size());
+//     for (int32_t i = 0; i < sbp.size(); i++) {
+//       sbp[i] = ASSERT(target_tensor->nd_sbp())->sbp_parallel(i);
+//     }
+//     std::vector<Symbol<SbpParallel>> grad_sbp;
+//     std::shared_ptr<Tensor> global_tensor =
+//         ASSERT_PTR(functional::ToGlobal(tensor, placement, sbp, grad_sbp, false, false));
+//     return PyTensor_New(ASSERT_PTR(functional::To(global_tensor, dtype, false)));
+//   }
 
-  // global to local
-  if (tensor->is_global()) {
-    std::shared_ptr<Tensor> local_tensor = ASSERT_PTR(functional::GlobalToLocal(tensor, false));
-    return PyTensor_New(ASSERT_PTR(functional::To(local_tensor, dtype, false)));
-  }
+//   // global to local
+//   if (tensor->is_global()) {
+//     std::shared_ptr<Tensor> local_tensor = ASSERT_PTR(functional::GlobalToLocal(tensor, false));
+//     return PyTensor_New(ASSERT_PTR(functional::To(local_tensor, dtype, false)));
+//   }
 
-  // local to local
-  return PyTensor_New(ASSERT_PTR(functional::To(tensor, target_tensor, false)));
-  END_HANDLE_ERRORS
-}
+//   // local to local
+//   return PyTensor_New(ASSERT_PTR(functional::To(tensor, target_tensor, false)));
+//   END_HANDLE_ERRORS
+// }
 
 static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS

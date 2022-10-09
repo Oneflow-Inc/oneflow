@@ -815,6 +815,10 @@
   signature: "Tensor (Tensor x, DataType dtype, Bool pin_memory=False) => Cast"
   bind_python: True
 
+- name: "type_as"
+  signature: "Tensor (Tensor input, Tensor other) => TypeAs"
+  bind_python: True
+
 - name: "constant"
   signature:
     [
