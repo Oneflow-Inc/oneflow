@@ -227,6 +227,17 @@ struct LocalCallOpKernelUtil final {
         description["shape"] = {ss.str(), hash};
       }
       {
+        std::stringstream ss;
+        std::size_t hash = 0;
+        for (size_t i = 0; i < operand->outputs()->size(); i++) {
+          const auto& shape = operand->outputs()->at(i)->shape();
+          ss << shape;
+          if (i != operand->outputs()->size() - 1) { ss << ", "; }
+          AddHash(&hash, shape);
+        }
+        description["output shape"] = {ss.str(), hash};
+      }
+      {
         const std::string attr_str = operand->composed_attrs().ToString();
         description["attr"] = {attr_str, std::hash<std::string>{}(attr_str)};
       }
@@ -434,6 +445,7 @@ static Maybe<double> GetDatasetComputeTime(vm::LocalCallOpKernelPhyInstrOperand*
       || operand->opkernel().op_type_name() == "reduce_sum"
       || operand->opkernel().op_type_name() == "reshape"
       || operand->opkernel().op_type_name() == "reshape_like"
+      || operand->opkernel().op_type_name() == "squeeze"
       || operand->opkernel().op_type_name() == "transpose"
       || operand->opkernel().op_type_name() == "nll"
       || operand->opkernel().op_type_name() == "nll_grad") {
@@ -463,7 +475,9 @@ static Maybe<double> GetDatasetComputeTime(vm::LocalCallOpKernelPhyInstrOperand*
 }
 
 static Maybe<double> GetEstimatedComputeTime(vm::LocalCallOpKernelPhyInstrOperand* operand) {
-  return GetDatasetComputeTime(operand);
+  if (EnvBool<ONEFLOW_DTR_USE_DATASET_TIME>()) {
+    return GetDatasetComputeTime(operand);
+  }
   const auto& inputs = *operand->inputs();
   const auto& outputs = *operand->outputs();
   size_t estimated_compute_time = 0;
@@ -559,7 +573,9 @@ Maybe<void> _RecursivelyCompute(
 
   // update timestamp
   Global<dtr::TensorPool>::Get()->time_flies(compute_time);
-  Global<dtr::TensorPool>::Get()->dataset_time_flies(JUST(GetDatasetComputeTime(operand.get())));
+  if (EnvBool<ONEFLOW_DTR_USE_DATASET_TIME>()) {
+    Global<dtr::TensorPool>::Get()->dataset_time_flies(JUST(GetDatasetComputeTime(operand.get())));
+  }
   return Maybe<void>::Ok();
 }
 

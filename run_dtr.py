@@ -229,6 +229,7 @@ def update_dataset(prof):
         if isinstance(e, flow.profiler.events.KernelEvent):
             new_time_dict[
                 f"{e.name} {e.description['shape']} {e.description['attr']}"
+                # f"{e.name}|{e.description['shape']}|{e.description['output shape']}|{e.description['attr']}"
             ] = (e.cuda_time_total, e.count)
 
     time_dict.update(new_time_dict)
@@ -245,12 +246,14 @@ class Nothing:
         pass
 
 
-PROFILE = False
+PROFILE = True
 
 if PROFILE:
     profile_guard = lambda: flow.profiler.profile(record_shapes=True)
+    os.environ['ONEFLOW_DTR_USE_DATASET_TIME'] = '0'
 else:
     profile_guard = Nothing
+    os.environ['ONEFLOW_DTR_USE_DATASET_TIME'] = '1'
 
 model, criterion, get_fixed_input, get_fixed_label, get_imagefolder = eval(
     f"{args.model_name}_info()"
