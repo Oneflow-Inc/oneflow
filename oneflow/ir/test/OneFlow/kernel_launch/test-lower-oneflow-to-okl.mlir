@@ -1,5 +1,5 @@
 // RUN: oneflow-opt %s \
-// RUN: -lower-oneflow-to-okl -lower-okl-to-llvm --convert-func-to-llvm
+// RUN: -lower-oneflow-to-okl
 
 module {
   func.func @wrap0(%arg0: tensor<1xf32>) -> (tensor<1xf32>, tensor<1xf32>) attributes {llvm.emit_c_interface} {
