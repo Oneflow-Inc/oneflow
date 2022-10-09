@@ -26,7 +26,7 @@ class FuseModelUpdateCastOpsPass final : public JobPass {
   ~FuseModelUpdateCastOpsPass() override = default;
 
   bool IsEnabled(const JobPassCtx& ctx) const {
-    return ParseBooleanFromEnv("ONEFLOW_FUSE_MODEL_UPDATE_CAST", false)
+    return ctx.job_desc().enable_fused_model_update_cast()
            && ctx.job_desc().enable_auto_mixed_precision();
   }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
