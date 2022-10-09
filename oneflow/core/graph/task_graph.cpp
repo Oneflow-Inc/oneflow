@@ -1176,6 +1176,30 @@ Maybe<void> RankTaskGraph::InitRegstDescsConsumers() {
   return Maybe<void>::Ok();
 }
 
+namespace {
+
+struct UpdateTaskIndex final : public CompileModeVisitor<UpdateTaskIndex> {
+  static Maybe<void> VisitNaive(TaskGraph*) {
+    UNIMPLEMENTED_THEN_RETURN() << "'naive' compile mode doesn't support update task index";
+  }
+  static Maybe<void> VisitRankPerIter(TaskGraph*) {
+    UNIMPLEMENTED_THEN_RETURN() << "'rank_per_iter' compile mode doesn't support update task index";
+  }
+  static Maybe<void> VisitRankPerThread(TaskGraph*) {
+    UNIMPLEMENTED_THEN_RETURN()
+        << "'rank_per_thread' compile mode doesn't support update task index";
+  }
+  static Maybe<void> VisitRankPerProcess(TaskGraph* task_graph) {
+    auto* task_id_generator = Singleton<IDMgr>::Get()->GetTaskIdGenerator();
+    task_graph->ForEachNode([&](TaskNode* task_node) {
+      task_id_generator->UpdateCounterBiggerThan(task_node->new_task_id());
+    });
+    return Maybe<void>::Ok();
+  }
+};
+
+}  // namespace
+
 Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names,
                                 bool enable_straighten_algorithm) {
   JUST(AddBoxingReletedCompTaskNodesFromProto());
@@ -1183,6 +1207,7 @@ Maybe<void> RankTaskGraph::Init(const HashSet<std::string>& var_op_names,
   JUST(AddTransportTaskEdgesFromProto());
   JUST(InitTransportTaskNodesFromProto());
   JUST(InitRegstDescsConsumers());
+  JUST(UpdateTaskIndex::Visit(JUST(CurrentCompileMode()), this));
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   JUST(op_graph->MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
     JUST(ForEachDutyRank(op_node->parallel_desc(), [&](int64_t rank) -> Maybe<void> {

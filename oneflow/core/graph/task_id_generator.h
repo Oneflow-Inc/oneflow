@@ -29,6 +29,7 @@ class TaskIdGenerator final {
   ~TaskIdGenerator() = default;
 
   TaskId Generate(const StreamId& stream_id);
+  void UpdateCounterBiggerThan(const TaskId& task_id);
 
  private:
   std::mutex mutex_;
@@ -39,6 +40,12 @@ inline TaskId TaskIdGenerator::Generate(const StreamId& stream_id) {
   std::unique_lock<std::mutex> lock(mutex_);
   task_index_t task_index = stream_id2task_index_counter_[stream_id]++;
   return TaskId{stream_id, task_index};
+}
+
+inline void TaskIdGenerator::UpdateCounterBiggerThan(const TaskId& task_id) {
+  std::unique_lock<std::mutex> lock(mutex_);
+  auto* ptr = &stream_id2task_index_counter_[task_id.stream_id()];
+  *ptr = std::max<task_index_t>(task_id.task_index() + 1, *ptr);
 }
 
 }  // namespace oneflow

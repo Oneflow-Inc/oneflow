@@ -153,6 +153,9 @@ class BoxingTaskGraph final : public TaskGraph {
   }
 
   void ToProto(const std::function<bool(TaskNode*)>& Pick, BoxingTaskGraphProto* proto) const;
+  void ToProto(BoxingTaskGraphProto* proto, const std::function<bool(TaskNode*)>& Pick) const {
+    return ToProto(Pick, proto);
+  }
   static bool SelectTaskNodeByRank(TaskNode*, int64_t rank);
 
  private:
