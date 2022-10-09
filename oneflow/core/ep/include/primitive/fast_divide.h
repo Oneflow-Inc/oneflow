@@ -568,17 +568,6 @@ class FastDivide<int64_t> {
   uint8_t more_;
 };
 
-template<typename T, int N>
-void InitStrides(const int64_t* dims, T* strides, int n) {
-  for (int i = n - 1; i < N; ++i) { strides[i] = 1; }
-  for (int i = n - 2; i >= 0; --i) { strides[i] = dims[i + 1] * strides[i + 1]; }
-}
-
-template<typename T>
-void InitFastDividers(T* strides, FastDivide<T>* fast_dividers, int n) {
-  for (int i = n - 1; i >= 0; --i) { fast_dividers[i] = FastDivide<T>(strides[i]); }
-}
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EP_PRIMITIVE_FAST_INTEGER_MATH_H_

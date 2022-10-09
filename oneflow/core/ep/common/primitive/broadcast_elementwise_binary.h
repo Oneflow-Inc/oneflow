@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/binary_op.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/ep/common/primitive/util.h"
+#include "oneflow/core/ep/include/primitive/fast_divide.h"
 
 namespace oneflow {
 
@@ -37,6 +38,17 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
     if (src0_dims[i] != src1_dims[i]) { return false; }
   }
   return true;
+}
+
+template<typename T, int N>
+inline void InitStrides(const int64_t* dims, T* strides, int n) {
+  for (int i = n - 1; i < N; ++i) { strides[i] = 1; }
+  for (int i = n - 2; i >= 0; --i) { strides[i] = dims[i + 1] * strides[i + 1]; }
+}
+
+template<typename T>
+inline void InitFastDividers(T* strides, FastDivide<T>* fast_dividers, int n) {
+  for (int i = n - 1; i >= 0; --i) { fast_dividers[i] = FastDivide<T>(strides[i]); }
 }
 
 #define BINARY_MATH_OP_SEQ                             \
