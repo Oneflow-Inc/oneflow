@@ -2,11 +2,16 @@ R"OP_SCHEMA_INC(
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/framework/op_definition.h"
 
 #include <string>
 #include <vector>
 #include <functional>
+
+class OperatorConf;
+class NdSbpSignature;
 
 namespace oneflow {
 
@@ -24,6 +29,8 @@ class InferSbpSignatureFnContext;
 class InferOutputBlobTimeShapeFnContext;
 class InferNdSbpFnContext;
 class DeviceAndStreamInferContext;
+class ComputeComplexityFnContext;
+class GetNdSbpSignatureListContext;
 }  // namespace user_op
 
 using GetInputArgModifier =
@@ -41,6 +48,12 @@ class {{opname}} : public OpDefinition<{{opname}}> {
   {% if op.has_get_sbp_fn -%}
   static Maybe<void> GetSbp(user_op::SbpContext* ctx);
   {% endif -%}
+  {% if op.has_get_nd_sbp_fn -%}
+  static Maybe<void> GetNdSbpSignatureList(user_op::GetNdSbpSignatureListContext* ctx);
+  {% endif -%}
+  {% if op.has_dump_nd_sbp_signature_for_op_conf_fn -%}
+  static Maybe<void> DumpNdSbpSignatureForOpConfFn(const NdSbpSignature& nd_sbp_sig, OperatorConf* op_conf);
+  {% endif -%}
   {% if op.has_logical_tensor_desc_infer_fn -%}
   static Maybe<void> InferLogicalTensorDesc(user_op::InferContext* ctx);
   {% endif -%}
@@ -55,6 +68,9 @@ class {{opname}} : public OpDefinition<{{opname}}> {
   {% endif -%}
   {% if op.has_sbp_signature_infer_fn -%}
   static Maybe<void> InferSbpSignature(user_op::InferSbpSignatureFnContext* ctx);
+  {% endif -%}
+  {% if op.has_compute_complexity_fn -%}
+  static Maybe<double> GetComputeComplexity(user_op::ComputeComplexityFnContext* ctx);
   {% endif -%}
   {% if op.has_input_arg_modify_fn -%}
   static Maybe<void> ModifyInputArg(const GetInputArgModifier&, const user_op::UserOpConfWrapper&);

@@ -15,9 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/cuda/atomic.cuh"
-#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
@@ -177,22 +175,33 @@ class GpuAsStridedGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPUASSTRIDED_KERNEL(in_type)                                                 \
-  REGISTER_USER_KERNEL("as_strided")                                                          \
-      .SetCreateFn<GpuAsStridedKernel<in_type>>()                                             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                        \
-                       && (user_op::HobDataType("input", 0) == GetDataType<in_type>::value)); \
-  REGISTER_USER_KERNEL("as_strided_grad")                                                     \
-      .SetCreateFn<GpuAsStridedGradKernel<in_type>>()                                         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                        \
+#define REGISTER_GPU_ASSTRIDED_KERNEL(in_type)                         \
+  REGISTER_USER_KERNEL("as_strided")                                   \
+      .SetCreateFn<GpuAsStridedKernel<in_type>>()                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("input", 0) == GetDataType<in_type>::value));
 
-REGISTER_GPUASSTRIDED_KERNEL(half);
-REGISTER_GPUASSTRIDED_KERNEL(float);
-REGISTER_GPUASSTRIDED_KERNEL(double);
-REGISTER_GPUASSTRIDED_KERNEL(int64_t);
+REGISTER_GPU_ASSTRIDED_KERNEL(half);
+REGISTER_GPU_ASSTRIDED_KERNEL(float);
+REGISTER_GPU_ASSTRIDED_KERNEL(double);
+REGISTER_GPU_ASSTRIDED_KERNEL(int8_t);
+REGISTER_GPU_ASSTRIDED_KERNEL(uint8_t);
+REGISTER_GPU_ASSTRIDED_KERNEL(int32_t);
+REGISTER_GPU_ASSTRIDED_KERNEL(int64_t);
 
-#undef REGISTER_GPUASSTRIDED_KERNEL
+#undef REGISTER_GPU_ASSTRIDED_KERNEL
+
+#define REGISTER_GPU_ASSTRIDED_GRAD_KERNEL(in_type)                    \
+  REGISTER_USER_KERNEL("as_strided_grad")                              \
+      .SetCreateFn<GpuAsStridedGradKernel<in_type>>()                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+                       && (user_op::HobDataType("input", 0) == GetDataType<in_type>::value));
+
+REGISTER_GPU_ASSTRIDED_GRAD_KERNEL(half);
+REGISTER_GPU_ASSTRIDED_GRAD_KERNEL(float);
+REGISTER_GPU_ASSTRIDED_GRAD_KERNEL(double);
+
+#undef REGISTER_GPU_ASSTRIDED_GRAD_KERNEL
 
 REGISTER_USER_KERNEL("as_strided")
     .SetCreateFn<GpuAsStridedKernel<bool>>()

@@ -249,13 +249,13 @@ Maybe<void> EagerGlobalInterpreter::ApplyImpl(const GlobalToGlobalOpExpr& op_exp
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EagerGlobalInterpreter::ApplyImpl(const CastToGlobalOpExpr& op_expr,
+Maybe<void> EagerGlobalInterpreter::ApplyImpl(const LocalToGlobalOpExpr& op_expr,
                                               const TensorTuple& inputs, TensorTuple* outputs,
                                               const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 
-Maybe<void> EagerGlobalInterpreter::ApplyImpl(const CastFromGlobalOpExpr& op_expr,
+Maybe<void> EagerGlobalInterpreter::ApplyImpl(const GlobalToLocalOpExpr& op_expr,
                                               const TensorTuple& inputs, TensorTuple* outputs,
                                               const OpExprInterpContext& ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
