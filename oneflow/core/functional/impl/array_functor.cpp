@@ -1960,6 +1960,27 @@ class UnsortedSegmentSumLikeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class UnsortedSegmentSumFunctor {
+ public:
+  UnsortedSegmentSumFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("unsorted_segment_sum")
+                         .Input("data")
+                         .Input("segment_ids")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& segment_ids, const int64_t& axis,
+                           const int64_t& num_segments) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis", "num_segments");
+    attrs.SetAllAttrs(axis, num_segments);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, segment_ids}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class TrilFunctor {
  public:
   TrilFunctor() { op_ = CHECK_JUST(one::OpBuilder("tril").Input("in").Output("out").Build()); }
@@ -3412,6 +3433,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UpsampleTrilinear3DFunctor>("UpsampleTrilinear3D");
   m.add_functor<impl::UpsampleTrilinear3DGradFunctor>("UpsampleTrilinear3DGrad");
   m.add_functor<impl::UnsortedSegmentSumLikeFunctor>("UnsortedSegmentSumLike");
+  m.add_functor<impl::UnsortedSegmentSumFunctor>("UnsortedSegmentSum");
   m.add_functor<impl::TrilFunctor>("Tril");
   m.add_functor<impl::TriuFunctor>("Triu");
   m.add_functor<impl::InplaceTriuFunctor>("InplaceTriu");

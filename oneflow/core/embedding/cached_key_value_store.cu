@@ -277,6 +277,7 @@ void CacheKeyValueStoreImpl<Key, Elem>::SyncCacheToStore() {
     store_->Put(stream, *host_num_buffer_, keys_buffer_, values_buffer_);
     CHECK_JUST(stream->Sync());
   }
+  cache_->ClearDirtyFlags();
   device->DestroyStream(stream);
   synced_ = true;
 }
