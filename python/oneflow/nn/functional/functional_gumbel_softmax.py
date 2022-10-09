@@ -40,9 +40,6 @@ def gumbel_softmax(
       be probability distributions that sum to 1 across `dim`.
 
     .. note::
-      This function is here for legacy reasons, may be removed from nn.Functional in the future.
-
-    .. note::
       The main trick for `hard` is to do  `y_hard - y_soft.detach() + y_soft`
 
       It achieves two things:
