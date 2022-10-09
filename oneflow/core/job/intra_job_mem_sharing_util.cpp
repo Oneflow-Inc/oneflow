@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job/intra_job_mem_sharing_util.h"
 #include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/job/id_manager.h"
@@ -311,7 +312,7 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
     std::vector<HashSet<RegstDescProto*>>* alloc_regsts_timeline,
     std::vector<HashSet<RegstDescProto*>>* free_regsts_timeline,
-    HashMap<RegstDescProto*, std::vector<RegstDescProto*>>* regst2mutual_exclusion_regsts,
+    HashMap<RegstDescProto*, HashSet<RegstDescProto*>>* regst2mutual_exclusion_regsts,
     HashMap<RegstDescProto*, RegstDescProto*>* consumer2inplaced_regst, size_t* peak_memory) {
   CHECK(alloc_regsts_timeline->empty() && free_regsts_timeline->empty());
   CHECK(regst2mutual_exclusion_regsts->empty());
@@ -389,11 +390,10 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
   *peak_memory = 0;
   for (int64_t i = 0; i < sorted_tasks.size(); ++i) {
     for (RegstDescProto* alloc_regst : alloc_regsts_timeline->at(i)) {
-      CHECK(regst2mutual_exclusion_regsts->emplace(alloc_regst, std::vector<RegstDescProto*>())
-                .second);
+      CHECK(regst2mutual_exclusion_regsts->emplace(alloc_regst, HashSet<RegstDescProto*>()).second);
       for (RegstDescProto* remain_regst : remain_regsts) {
-        regst2mutual_exclusion_regsts->at(alloc_regst).emplace_back(remain_regst);
-        regst2mutual_exclusion_regsts->at(remain_regst).emplace_back(alloc_regst);
+        regst2mutual_exclusion_regsts->at(alloc_regst).insert(remain_regst);
+        regst2mutual_exclusion_regsts->at(remain_regst).insert(alloc_regst);
       }
       CHECK(remain_regsts.insert(alloc_regst).second);
       remain_memory += mem_reused_regst2size.at(alloc_regst);
@@ -518,7 +518,7 @@ void MemBlockBuffer::FindFreeOffsetAndNewBufferSize(int64_t size, int64_t* offse
 void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
     const std::vector<RegstDescProto*>& order,
     const HashMap<RegstDescProto*, int64_t>& regst_desc2size,
-    const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts,
+    const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
     MemBlockResultInfo* result) {
   HashMap<RegstDescProto*, int64_t>* regst_desc2offset = &(result->regst_desc2offset);
   size_t buffer_size = 1;
@@ -540,7 +540,7 @@ void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
 }
 
 void MemReusedAlgorithm_MemSizeFirstAlgo(
-    const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts,
+    const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
     const HashMap<RegstDescProto*, int64_t>& regst2alloc_order,
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo* result) {
   std::vector<RegstDescProto*> order;
@@ -561,7 +561,7 @@ void MemReusedAlgorithm_MemSizeFirstAlgo(
 }
 
 void MemReusedAlgorithm_MutualExclusionFirstAlgo(
-    const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts,
+    const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
     const HashMap<RegstDescProto*, int64_t>& regst2alloc_order,
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo* result) {
   std::vector<RegstDescProto*> order;
@@ -717,7 +717,7 @@ void MemReusedAlgorithm_TimeLineAlgo(
 void SelectAlgorithmGenMemBlockOffset4Regsts(
     MemAllocAlgoType algo_id, const std::vector<HashSet<RegstDescProto*>>& alloc_regsts_timeline,
     const std::vector<HashSet<RegstDescProto*>>& free_regsts_timeline,
-    const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts,
+    const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo* result) {
   CHECK_EQ(result->mem_block_size, 0);
   CHECK(result->regst_desc2offset.empty());
@@ -762,9 +762,11 @@ void InitAlgo2Result(HashMap<MemAllocAlgoType, MemBlockResultInfo>* algo2result)
   CHECK(algo2result->empty());
   const MemoryAllocationAlgorithmConf& mem_alloc_algo_conf =
       GlobalJobDesc().job_conf().memory_allocation_algorithm_conf();
+  // Experiments show that memory first might be good enough for some cases.
   if (mem_alloc_algo_conf.use_mem_size_first_algo()) {
     CHECK(algo2result->emplace(kMemSizeFirstAlgo, MemBlockResultInfo()).second);
   }
+  // These two algorithms might be unnecessary.
   if (mem_alloc_algo_conf.use_mutual_exclusion_first_algo()) {
     CHECK(algo2result->emplace(kMutualExclusionFirstAlgo, MemBlockResultInfo()).second);
   }
@@ -792,7 +794,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
   // info for algorithm
   HashMap<int64_t, std::vector<HashSet<RegstDescProto*>>> mem_chain2task2alloc_regsts;
   HashMap<int64_t, std::vector<HashSet<RegstDescProto*>>> mem_chain2task2free_regsts;
-  HashMap<int64_t, HashMap<RegstDescProto*, std::vector<RegstDescProto*>>>
+  HashMap<int64_t, HashMap<RegstDescProto*, HashSet<RegstDescProto*>>>
       mem_chain2regst2mutual_exclusion_regsts;
   // info for inplace
   HashMap<int64_t, HashMap<RegstDescProto*, RegstDescProto*>> mem_chain2consumer2inplaced_regst;

@@ -28,7 +28,7 @@ class MemoryShareStrategy {
   // Adaptively update the offset of registers to minimize the total memory
   void AdaptivelyUpdateOffset(
       const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
-      const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts,
+      const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
       size_t lower_bound, size_t* mem_block_size,
       HashMap<RegstDescProto*, int64_t>* regst_desc2offset);
 
@@ -37,7 +37,7 @@ class MemoryShareStrategy {
   // Therefore, this function is not recommended with an initial offset provided.
   void GenerateOffset(
       const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
-      const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts,
+      const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
       size_t* mem_block_size, HashMap<RegstDescProto*, int64_t>* regst_desc2offset);
 
  private:
@@ -74,11 +74,11 @@ class MemoryShareStrategy {
   void StealCompactPosition(
       const HashMap<RegstDescProto*, int64_t>& regst_desc2offset,
       const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
-      const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
+      const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts);
   // Generate a compact position with the order of occurrence
   void GenerateCompactPosition(
       const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
-      const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
+      const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts);
   // Update the offset with the adjusted strategy
   void UpdateOffset(size_t* mem_block_size, HashMap<RegstDescProto*, int64_t>* regst_desc2offset);
   // Update the maximum iteration step with the current size and lower bound
@@ -86,7 +86,7 @@ class MemoryShareStrategy {
 
   // Initialization
   void InitRegister(
-      const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts);
+      const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts);
   void InitRegisterInformation(const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size);
   // Adjust the original strategy, return the updated optimal cost
   size_t ComputeOptimalAdjustedCost();

@@ -30,7 +30,7 @@ constexpr int32_t kMaxIterStep = 100;
 
 // Initialization
 void MemoryShareStrategy::InitRegister(
-    const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts) {
+    const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts) {
   total_register_num_ = regst2mutual_exclusion_regsts.size();
   index2register_.resize(total_register_num_);
   int32_t register_id = 0;
@@ -58,7 +58,7 @@ void MemoryShareStrategy::InitRegisterInformation(
 void MemoryShareStrategy::StealCompactPosition(
     const HashMap<RegstDescProto*, int64_t>& regst_desc2offset,
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
-    const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts) {
+    const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts) {
   // Initialization
   InitRegister(regst2mutual_exclusion_regsts);
 
@@ -101,7 +101,7 @@ void MemoryShareStrategy::StealCompactPosition(
 // Not recommended
 void MemoryShareStrategy::GenerateCompactPosition(
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
-    const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts) {
+    const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts) {
   HashMap<RegstDescProto*, int64_t> regst_desc2offset;
   int64_t offset = 0;
   for (const auto& pair : regst2mutual_exclusion_regsts) {
@@ -412,7 +412,7 @@ void MemoryShareStrategy::UpdateMaxIteration(size_t mem_block_size, size_t lower
 // Adaptively update the offset of registers to minimize the total memory
 void MemoryShareStrategy::AdaptivelyUpdateOffset(
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
-    const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts,
+    const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
     size_t lower_bound, size_t* mem_block_size,
     HashMap<RegstDescProto*, int64_t>* regst_desc2offset) {
   if (*mem_block_size > lower_bound) {
@@ -432,7 +432,7 @@ void MemoryShareStrategy::AdaptivelyUpdateOffset(
 // Therefore, this function is not recommended with an initial offset provided.
 void MemoryShareStrategy::GenerateOffset(
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
-    const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts,
+    const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
     size_t* mem_block_size, HashMap<RegstDescProto*, int64_t>* regst_desc2offset) {
   max_iteration_step_ = kMaxIterStep;
   VLOG(3) << "max iteration step: " << max_iteration_step_;
