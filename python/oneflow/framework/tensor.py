@@ -528,16 +528,20 @@ def _cross(self, other, dim=None):
     return flow._C.cross(self, other, dim)
 
 
-def _scatter(self, dim, index, src, reduce=""):
-    if reduce == "":
-        reduce = None
-    return flow._C.scatter(self, dim, index, src, reduce, inplace=False)
+def _scatter(self, dim, index, src, *, reduce=""):
+    return flow._C.scatter(self, dim, index, src, reduce=reduce, inplace=False)
 
 
-def _scatter_inplace(self, dim, index, src, reduce=""):
-    if reduce == "":
-        reduce = None
-    return flow._C.scatter(self, dim, index, src, reduce, inplace=True)
+def _scatter_inplace(self, dim, index, src, *, reduce=None):
+    return flow._C.scatter(self, dim, index, src, reduce=reduce, inplace=True)
+
+
+def _scatter_add(self, dim, index, src):
+    return flow._C.scatter_add(self, dim, index, src, inplace=False)
+
+
+def _scatter_add_inplace(self, dim, index, src):
+    return flow._C.scatter_add(self, dim, index, src, inplace=True)
 
 
 def _contains(self, element):
@@ -629,6 +633,8 @@ def RegisterMethods():
     Tensor.cross = _cross
     Tensor.scatter = _scatter
     Tensor.scatter_ = _scatter_inplace
+    Tensor.scatter_add = _scatter_add
+    Tensor.scatter_add_ = _scatter_add_inplace
 
 
 def register_tensor_op(op_name):
