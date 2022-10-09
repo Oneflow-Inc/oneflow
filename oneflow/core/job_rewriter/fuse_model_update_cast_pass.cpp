@@ -107,7 +107,9 @@ Maybe<void> FuseModelUpdateCastOpsPass::Apply(const OpGraph& op_graph,
               .Attr<double>("scale", model_update_user_conf.attr<double>("scale"))
               .Attr<float>("l1", model_update_user_conf.attr<float>("l1"))
               .Attr<float>("l2", model_update_user_conf.attr<float>("l2"))
-              .Attr<float>("weight_decay", model_update_user_conf.attr<float>("weight_decay"));
+              .Attr<float>("weight_decay", model_update_user_conf.attr<float>("weight_decay"))
+              .Attr<float>("learning_rate_scale",
+                           model_update_user_conf.attr<float>("learning_rate_scale"));
         } else if (IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(),
                                         "adam_update")) {
           fused_model_update_op_builder.OpTypeName("adam_update")
@@ -125,7 +127,10 @@ Maybe<void> FuseModelUpdateCastOpsPass::Apply(const OpGraph& op_graph,
               .Attr<float>("epsilon", model_update_user_conf.attr<float>("epsilon"))
               .Attr<bool>("amsgrad", model_update_user_conf.attr<bool>("amsgrad"))
               .Attr<bool>("do_bias_correction",
-                          model_update_user_conf.attr<bool>("do_bias_correction"));
+                          model_update_user_conf.attr<bool>("do_bias_correction"))
+              .Attr<float>("learning_rate_scale",
+                           model_update_user_conf.attr<float>("learning_rate_scale"));
+          ;
           if (model_update_user_conf.attr<bool>("do_bias_correction")) {
             fused_model_update_op_builder.Input(
                 "bias_correction1", model_update_user_conf.input("bias_correction1", 0));

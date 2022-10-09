@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/autocast.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -51,6 +52,8 @@ class OpExpr {
   virtual Maybe<bool> SupportNonContiguous() const = 0;
 
   virtual Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const = 0;
+
+  virtual Maybe<autocast::AutoCastMeta> GetOrCreateAutoCastMeta() const;
 
  protected:
   OpExpr() = default;
@@ -113,6 +116,8 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
 
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
+  Maybe<autocast::AutoCastMeta> GetOrCreateAutoCastMeta() const override;
+
   Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrMap& attrs) const override;
 
  protected:
@@ -123,6 +128,7 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
 
   ProtoType op_proto_;
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
+  mutable std::shared_ptr<autocast::AutoCastMeta> autocast_meta_;
 };
 
 class StatefulOpKernel;
@@ -221,30 +227,30 @@ class CastGlobalOpExpr : public OpExpr {
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
-class CastToGlobalOpExpr final : public CastGlobalOpExpr {
+class LocalToGlobalOpExpr final : public CastGlobalOpExpr {
  public:
-  ~CastToGlobalOpExpr() = default;
+  ~LocalToGlobalOpExpr() = default;
 
-  static Maybe<CastToGlobalOpExpr> New(const std::string& op_name);
+  static Maybe<LocalToGlobalOpExpr> New(const std::string& op_name);
 
   const std::string& op_type_name() const override;
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
-  CastToGlobalOpExpr(const std::string& op_name);
+  LocalToGlobalOpExpr(const std::string& op_name);
 };
 
-class CastFromGlobalOpExpr final : public CastGlobalOpExpr {
+class GlobalToLocalOpExpr final : public CastGlobalOpExpr {
  public:
-  ~CastFromGlobalOpExpr() = default;
+  ~GlobalToLocalOpExpr() = default;
 
-  static Maybe<CastFromGlobalOpExpr> New(const std::string& op_name);
+  static Maybe<GlobalToLocalOpExpr> New(const std::string& op_name);
 
   const std::string& op_type_name() const override;
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
-  CastFromGlobalOpExpr(const std::string& op_name);
+  GlobalToLocalOpExpr(const std::string& op_name);
 };
 
 // NOTE(chengcheng): For Lazy nn.Graph Feed/Fetch EagerTensor to/from LazyTensor.
