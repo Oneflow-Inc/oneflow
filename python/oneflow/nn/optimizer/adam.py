@@ -116,6 +116,7 @@ class Adam(Optimizer):
         weight_decay: float = 0,
         amsgrad: bool = False,
         do_bias_correction: bool = True,
+        foreach: bool = False,
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
@@ -135,6 +136,8 @@ class Adam(Optimizer):
         options["bias_correction1"] = 1.0
         options["bias_correction2"] = 1.0
         options["do_bias_correction"] = do_bias_correction
+        self.foreach = foreach
+        self.is_cuda = True
         super().__init__(params, options)
 
         for param_group in self.param_groups:
@@ -161,6 +164,106 @@ class Adam(Optimizer):
             .Build()
         )
 
+    def _single_tensor_update(self):
+        for param_group in self.param_groups:
+            if param_group["do_bias_correction"]:
+                param_group["bias_correction1"] = 1.0 - math.pow(
+                    param_group["betas"][0], self._state["step"] + 1
+                )
+                param_group["bias_correction2"] = 1.0 - math.pow(
+                    param_group["betas"][1], self._state["step"] + 1
+                )
+
+            kwargs = {
+                "learning_rate": param_group["lr"],
+                "bias_correction1": param_group["bias_correction1"],
+                "bias_correction2": param_group["bias_correction2"],
+                "l2": param_group["weight_decay"],
+                "beta1": param_group["betas"][0],
+                "beta2": param_group["betas"][1],
+                "epsilon": param_group["eps"],
+                "do_bias_correction": param_group["do_bias_correction"],
+                "amsgrad": param_group["amsgrad"],
+            }
+            for param in param_group.parameters:
+                if param.grad is None:
+                    continue
+                if "exp_avg" not in self._state[param]:
+                    self._state[param]["exp_avg"] = flow.zeros_like(param)
+                if "exp_avg_sq" not in self._state[param]:
+                    self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
+                if param_group["amsgrad"]:
+                    if "max_exp_avg_sq" not in self._state[param]:
+                        self._state[param]["max_exp_avg_sq"] = flow.zeros_like(
+                            param
+                        )
+
+                m_tensor = self._state[param]["exp_avg"]
+                v_tensor = self._state[param]["exp_avg_sq"]
+
+                if param_group["amsgrad"]:
+                    max_v_tensor = self._state[param]["max_exp_avg_sq"]
+                    flow._C.dispatch_adam_update(
+                        self._op_with_amsgrad,
+                        (param, param.grad, m_tensor, v_tensor, max_v_tensor),
+                        **kwargs,
+                    )
+                else:
+                    flow._C.dispatch_adam_update(
+                        self._op_without_amsgrad,
+                        (param, param.grad, m_tensor, v_tensor),
+                        **kwargs,
+                    )
+
+    def _multi_tensor_update(self):
+        for param_group in self.param_groups:
+            if param_group["do_bias_correction"]:
+                param_group["bias_correction1"] = 1.0 - math.pow(
+                    param_group["betas"][0], self._state["step"] + 1
+                )
+                param_group["bias_correction2"] = 1.0 - math.pow(
+                    param_group["betas"][1], self._state["step"] + 1
+                )
+            
+            param_list = []
+            param_grad_list = []
+            m_tensor_list = []
+            v_tensor_list = []
+            lr_tensor = flow.Tensor(param_group['lr'], device=param_group.parameters[0].device)
+            for param in param_group.parameters:
+                if param.grad is None:
+                    continue
+
+                if "exp_avg" not in self._state[param]:
+                    self._state[param]["exp_avg"] = flow.zeros_like(param)
+                if "exp_avg_sq" not in self._state[param]:
+                    self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
+                if param_group["amsgrad"]:
+                    if "max_exp_avg_sq" not in self._state[param]:
+                        self._state[param]["max_exp_avg_sq"] = flow.zeros_like(
+                            param
+                        )
+            
+                param_list.append(param)
+                param_grad_list.append(param.grad)
+                m_tensor_list.append(self._state[param]["exp_avg"])
+                v_tensor_list.append(self._state[param]["exp_avg_sq"])
+
+            flow._C.multi_tensor_adam_update(
+                param_list,
+                param_grad_list,
+                m_tensor_list,
+                v_tensor_list,
+                lr_tensor,
+                param_group["betas"][0],
+                param_group["betas"][1],
+                param_group["bias_correction1"],
+                param_group["bias_correction2"],
+                param_group["do_bias_correction"],
+                1.0,
+                param_group["weight_decay"],
+            )
+
     def step(self, closure: Callable = None):
         """Performs a single optimization step.
 
@@ -173,58 +276,12 @@ class Adam(Optimizer):
             if closure is not None:
                 loss = closure()
 
-            for param_group in self.param_groups:
-                if param_group["do_bias_correction"]:
-                    param_group["bias_correction1"] = 1.0 - math.pow(
-                        param_group["betas"][0], self._state["step"] + 1
-                    )
-                    param_group["bias_correction2"] = 1.0 - math.pow(
-                        param_group["betas"][1], self._state["step"] + 1
-                    )
-
-                kwargs = {
-                    "learning_rate": param_group["lr"],
-                    "bias_correction1": param_group["bias_correction1"],
-                    "bias_correction2": param_group["bias_correction2"],
-                    "l2": param_group["weight_decay"],
-                    "beta1": param_group["betas"][0],
-                    "beta2": param_group["betas"][1],
-                    "epsilon": param_group["eps"],
-                    "do_bias_correction": param_group["do_bias_correction"],
-                    "amsgrad": param_group["amsgrad"],
-                }
-                for param in param_group.parameters:
-                    if param.grad is None:
-                        continue
-                    if "exp_avg" not in self._state[param]:
-                        self._state[param]["exp_avg"] = flow.zeros_like(param)
-                    if "exp_avg_sq" not in self._state[param]:
-                        self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
-                    if param_group["amsgrad"]:
-                        if "max_exp_avg_sq" not in self._state[param]:
-                            self._state[param]["max_exp_avg_sq"] = flow.zeros_like(
-                                param
-                            )
-
-                    m_tensor = self._state[param]["exp_avg"]
-                    v_tensor = self._state[param]["exp_avg_sq"]
-
-                    if param_group["amsgrad"]:
-                        max_v_tensor = self._state[param]["max_exp_avg_sq"]
-                        flow._C.dispatch_adam_update(
-                            self._op_with_amsgrad,
-                            (param, param.grad, m_tensor, v_tensor, max_v_tensor),
-                            **kwargs,
-                        )
-                    else:
-                        flow._C.dispatch_adam_update(
-                            self._op_without_amsgrad,
-                            (param, param.grad, m_tensor, v_tensor),
-                            **kwargs,
-                        )
+            if self.foreach and self.is_cuda:
+                self._multi_tensor_update()
+            else:
+                self._single_tensor_update()
 
             self._state["step"] += 1
-
             return loss
 
     def _generate_conf_for_graph(self, train_conf, vars_conf):
