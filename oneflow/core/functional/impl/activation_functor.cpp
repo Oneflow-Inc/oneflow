@@ -401,11 +401,9 @@ class GumbelSoftmaxFunctor {
   GumbelSoftmaxFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("gumbel_softmax").Input("in").Output("out").Build());
   }
-  Maybe<Tensor> operator()(
-      const std::shared_ptr<one::Tensor>& in, 
-      const double& tau, 
-      const Optional<one::Generator>& generator, 
-      const Optional<int64_t>& dim) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, const double& tau,
+                           const Optional<int64_t>& dim,
+                           const Optional<one::Generator>& generator) const {
     const auto in_shape = in->shape();
     const int64_t num_axes = in_shape->NumAxes();
 
@@ -423,11 +421,10 @@ class GumbelSoftmaxFunctor {
     attrs.SetAllAttrs(tau, static_cast<int64_t>(gen->current_seed()));
 
     int64_t dim_ = dim ? JUST(dim) : get_dim();
-    if (dim_ < 0) { dim_ += num_axes; }
     dim_ = JUST(maybe_wrap_dim(dim_, num_axes));
     if (dim_ != num_axes - 1) {
       std::vector<int> input_perm(in_shape->dim_vec().size(), 0);
-      for (size_t i = 1; i < input_perm.size(); ++i) { input_perm[i] = i; }
+      std::iota(input_perm.begin(), input_perm.end(), 0);
       input_perm[dim_] = input_perm[input_perm.size() - 1];
       input_perm[input_perm.size() - 1] = dim_;
 
@@ -450,12 +447,12 @@ class GumbelSoftmaxGradFunctor {
  public:
   GumbelSoftmaxGradFunctor() {
     op_ = CHECK_JUST(
-        one::OpBuilder("gumbel_softmax_grad").Input("y").Input("dy").Output("dx").Build());
+        one::OpBuilder("gumbel_softmax_grad").Input("dy").Input("y").Output("dx").Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& y) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, y});
   }
 
  private:

@@ -7703,8 +7703,8 @@ def OneFlow_ScalarSubByTensorOp : OneFlow_BaseOp<"scalar_sub_by_tensor", [NoSide
 #endif // GET_ONEFLOW_SCALAR_OP_DEFINITIONS
 
 // Group: SOFTMAX
-// log_softmax, log_softmax_grad, softmax, gumbel_softmax, softmax_cross_entropy, softmax_cross_entropy_grad, softmax_grad, sparse_softmax_cross_entropy, sparse_softmax_cross_entropy_grad, sparse_softmax_cross_entropy_ms, sparse_softmax_cross_entropy_ms_grad
-// Total: 10
+// log_softmax, log_softmax_grad, softmax, gumbel_softmax, gumbel_softmax_grad, softmax_cross_entropy, softmax_cross_entropy_grad, softmax_grad, sparse_softmax_cross_entropy, sparse_softmax_cross_entropy_grad, sparse_softmax_cross_entropy_ms, sparse_softmax_cross_entropy_ms_grad
+// Total: 12
 
 #ifdef GET_ONEFLOW_SOFTMAX_OP_DEFINITIONS
 

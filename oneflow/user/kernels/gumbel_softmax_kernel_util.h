@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #endif  // WITH_CUDA
 #include "oneflow/core/kernel/kernel_util.cuh"
-#include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/ep/include/primitive/softmax.h"
 #include "oneflow/core/ep/include/primitive/softmax_backward.h"
 

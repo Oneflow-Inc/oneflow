@@ -51,7 +51,7 @@ struct CPUGeneratorState {
 constexpr int64_t CPUGeneratorState::state_size;
 
 void CPUGeneratorImpl::set_current_seed(uint64_t seed) {
-  // CHECK_JUST(CPUSynchronize());
+  CHECK_JUST(CPUSynchronize());
   seed_ = seed;
   engine_.seed(seed_);
 }
@@ -171,7 +171,7 @@ CUDAGeneratorImpl::~CUDAGeneratorImpl() {
 
 void CUDAGeneratorImpl::set_current_seed(uint64_t seed) {
   CudaCurrentDeviceGuard dev_guard(this->device_index());
-  // CHECK_JUST(CUDASynchronize());
+  CHECK_JUST(CUDASynchronize());
   seed_ = seed;
   detail::InitCurandStates(seed_, max_block_num_, max_thread_num_, curand_states_, cuda_gen_state_);
 }

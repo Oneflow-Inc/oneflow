@@ -29,9 +29,6 @@ void GumbelSoftmaxAddNoiseImpl<DeviceType::kCPU, T>::Forward(ep::Stream* stream,
                                                              T* gumbel_noise_ptr, T* out_ptr) {
   FOR_RANGE(int64_t, i, 0, elem_cnt) {
     gumbel_noise_ptr[i] = static_cast<T>(-1.0) * SafeLog(static_cast<T>(-1.0) * SafeLog(static_cast<T>(1.0) - gumbel_noise_ptr[i]));
-  }
-
-  FOR_RANGE(int64_t, i, 0, elem_cnt) {
     out_ptr[i] = (in_ptr[i] + gumbel_noise_ptr[i]) / static_cast<T>(tau);
   }
 }

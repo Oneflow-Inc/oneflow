@@ -18,13 +18,13 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-__global__ void GumbelSoftmaxAddNoiseForwardGpu(const int n, const float tau, const T* in,
+__global__ void GumbelSoftmaxAddNoiseForwardGpu(const int64_t n, const double tau, const T* in,
                                                 const T* gumbel_noise, T* out) {
   CUDA_1D_KERNEL_LOOP(i, n) { out[i] = (in[i] + gumbel_noise[i]) / static_cast<T>(tau); }
 }
 
 template<typename T>
-__global__ void GumbelSoftmaxNoiseFromUniformGpu(const int n, const T* gumbel_noise, T* out) {
+__global__ void GumbelSoftmaxNoiseFromUniformGpu(const int64_t n, const T* gumbel_noise, T* out) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     out[i] = static_cast<T>(-1.0) * SafeLog(static_cast<T>(-1.0) * SafeLog(static_cast<T>(1.0) - gumbel_noise[i]));
   }

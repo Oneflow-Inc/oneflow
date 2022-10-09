@@ -48,9 +48,9 @@ class GumbelSoftmaxKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     const auto& generator = CHECK_JUST(one::MakeGenerator(device_type));
-    const auto seed =
-        CHECK_JUST(GetOpKernelRandomSeedInCurrentRank(ctx, ctx->Attr<int64_t>("seed")));
-    generator->set_current_seed(seed);
+    // const auto seed =
+        // CHECK_JUST(GetOpKernelRandomSeedInCurrentRank(ctx, ctx->Attr<int64_t>("seed")));
+    // generator->set_current_seed(seed);
     return std::make_shared<DistributionKernelState>(generator);
   }
 
@@ -71,7 +71,7 @@ class GumbelSoftmaxKernel final : public user_op::OpKernel {
     T* gumbel_noise_ptr = gumbel_noise->mut_dptr<T>();
 
     const ShapeView& in_shape = in->shape_view();
-    const int32_t elem_cnt = in_shape.elem_cnt();
+    const int64_t elem_cnt = in_shape.elem_cnt();
     const int64_t cols = in_shape.At(in_shape.NumAxes() - 1);
     const int64_t rows = in_shape.Count(0, in_shape.NumAxes() - 1);
 

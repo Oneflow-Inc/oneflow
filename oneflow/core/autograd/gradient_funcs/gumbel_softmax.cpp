@@ -21,7 +21,7 @@ namespace oneflow {
 namespace one {
 
 struct GumbelSoftmaxCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
+  bool requires_grad = false;
 };
 
 class GumbelSoftmax : public OpExprGradFunction<GumbelSoftmaxCaptureState> {
