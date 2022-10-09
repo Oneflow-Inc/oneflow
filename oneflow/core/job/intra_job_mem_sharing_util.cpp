@@ -522,20 +522,59 @@ void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
     MemBlockResultInfo* result) {
   HashMap<RegstDescProto*, int64_t>* regst_desc2offset = &(result->regst_desc2offset);
   size_t buffer_size = 1;
-  for (RegstDescProto* regst_desc : order) {
-    MemBlockBuffer buffer(buffer_size);
-    for (RegstDescProto* mutual_regst : regst2mutual_exclusion_regsts.at(regst_desc)) {
-      if (regst_desc2offset->find(mutual_regst) != regst_desc2offset->end()) {
-        int64_t begin = regst_desc2offset->at(mutual_regst);
-        int64_t end = begin + regst_desc2size.at(mutual_regst);
-        buffer.Occupy(begin, end);
+  // Sort by offset
+  auto comp = [&regst_desc2offset](const auto& a, const auto& b) {
+    if ((*regst_desc2offset)[a] != (*regst_desc2offset)[b]) {
+      return (*regst_desc2offset)[a] < (*regst_desc2offset)[b];
+    }
+    // Make sure we have a stable order even if we have the same offset for different registers
+    return a < b;
+  };
+  std::set<RegstDescProto*, decltype(comp)> sorted_registers(comp);
+  // Decide offset following the given order
+  for (RegstDescProto* inserting_register : order) {
+    const auto& excluded_registers = regst2mutual_exclusion_regsts.at(inserting_register);
+    int64_t inserting_offset = 0;
+    int64_t inserting_end = inserting_offset + regst_desc2size.at(inserting_register);
+    for (const auto& curr_register : sorted_registers) {
+      // If x_i + l_i <= x_j, then the inserting register would be placed at x_i
+      if (regst_desc2offset->at(curr_register) >= inserting_end) { break; }
+      // If i and j are excluded, and x_i + l_i > x_j,
+      // then we try to place i at x_j + l_j and check the following registers
+      if (excluded_registers.find(curr_register) != excluded_registers.end()) {
+        int64_t curr_end = regst_desc2offset->at(curr_register) + regst_desc2size.at(curr_register);
+        // Can not set inserting offset = current end directly.
+        // We might have two excluded registers like this:
+        // register a: [100, 10000]
+        // register b: [500, 600]
+        if (inserting_offset < curr_end) {
+          inserting_offset = curr_end;
+          inserting_end = inserting_offset + regst_desc2size.at(inserting_register);
+        }
       }
     }
-    int64_t offset = -1;
-    buffer.FindFreeOffsetAndNewBufferSize(regst_desc2size.at(regst_desc), &offset, &buffer_size);
-    CHECK(offset >= 0 && offset <= buffer_size);
-    CHECK(regst_desc2offset->emplace(regst_desc, offset).second);
+    // Either we break the loop or the loop terminated naturally, we can place i at inserting_offset
+    (*regst_desc2offset)[inserting_register] = inserting_offset;
+    sorted_registers.insert(inserting_register);
+    // std::cout << "from " << inserting_offset << " to " << inserting_end << std::endl;
+    // Update total size
+    if (inserting_end > buffer_size) { buffer_size = inserting_end; }
   }
+
+  // for (RegstDescProto* regst_desc : order) {
+  //   MemBlockBuffer buffer(buffer_size);
+  //   for (RegstDescProto* mutual_regst : regst2mutual_exclusion_regsts.at(regst_desc)) {
+  //     if (regst_desc2offset->find(mutual_regst) != regst_desc2offset->end()) {
+  //       int64_t begin = regst_desc2offset->at(mutual_regst);
+  //       int64_t end = begin + regst_desc2size.at(mutual_regst);
+  //       buffer.Occupy(begin, end);
+  //     }
+  //   }
+  //   int64_t offset = -1;
+  //   buffer.FindFreeOffsetAndNewBufferSize(regst_desc2size.at(regst_desc), &offset, &buffer_size);
+  //   CHECK(offset >= 0 && offset <= buffer_size);
+  //   CHECK(regst_desc2offset->emplace(regst_desc, offset).second);
+  // }
   result->mem_block_size = buffer_size;
 }
 
