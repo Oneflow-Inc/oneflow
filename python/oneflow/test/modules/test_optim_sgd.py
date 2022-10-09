@@ -234,7 +234,7 @@ def compare_with_numpy_sgd_clip_grad(
 class TestOptimizers(flow.unittest.TestCase):
     def test_sgd(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["device"] = ["cuda"]
         arg_dict["x_shape"] = [(10,)]
         arg_dict["momentum"] = [0.0, 0.9]
         arg_dict["dampening"] = [0.0, 0.9]

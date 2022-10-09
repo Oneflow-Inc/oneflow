@@ -157,8 +157,8 @@ class TestOptimizers(flow.unittest.TestCase):
     def test_multi_tensor_adam_update(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cuda"]
-        arg_dict["x_shape"] = [(4,)]
-        arg_dict["tensor_num"] = [4]
+        arg_dict["x_shape"] = [(10,)]
+        arg_dict["tensor_num"] = [10]
         arg_dict["betas"] = [(0.9, 0.999)]
         arg_dict["do_bias_correction"] = [True, False]
         arg_dict["learning_rate"] = [1.0, 1e-3]
