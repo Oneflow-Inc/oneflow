@@ -799,19 +799,19 @@ int64_t CountMemAllocAlgoNum() {
 
 void InitAlgo2Result(HashMap<MemAllocAlgoType, MemBlockResultInfo>* algo2result) {
   CHECK(algo2result->empty());
-  const MemoryAllocationAlgorithmConf& mem_alloc_algo_conf =
-      GlobalJobDesc().job_conf().memory_allocation_algorithm_conf();
+  // const MemoryAllocationAlgorithmConf& mem_alloc_algo_conf =
+  //     GlobalJobDesc().job_conf().memory_allocation_algorithm_conf();
   // Experiments show that memory first might be good enough for some cases.
-  if (mem_alloc_algo_conf.use_mem_size_first_algo()) {
-    CHECK(algo2result->emplace(kMemSizeFirstAlgo, MemBlockResultInfo()).second);
-  }
+  // if (mem_alloc_algo_conf.use_mem_size_first_algo()) {
+  CHECK(algo2result->emplace(kMemSizeFirstAlgo, MemBlockResultInfo()).second);
+  // }
   // These two algorithms might be unnecessary.
-  if (mem_alloc_algo_conf.use_mutual_exclusion_first_algo()) {
-    CHECK(algo2result->emplace(kMutualExclusionFirstAlgo, MemBlockResultInfo()).second);
-  }
-  if (mem_alloc_algo_conf.use_time_line_algo()) {
-    CHECK(algo2result->emplace(kTimeLineAlgo, MemBlockResultInfo()).second);
-  }
+  // if (mem_alloc_algo_conf.use_mutual_exclusion_first_algo()) {
+  //   CHECK(algo2result->emplace(kMutualExclusionFirstAlgo, MemBlockResultInfo()).second);
+  // }
+  // if (mem_alloc_algo_conf.use_time_line_algo()) {
+  //   CHECK(algo2result->emplace(kTimeLineAlgo, MemBlockResultInfo()).second);
+  // }
 }
 
 }  // namespace
@@ -853,7 +853,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
   // step 2: multi-thread run several algorithm for each mem chain
   HashMap<int64_t, HashMap<MemAllocAlgoType, MemBlockResultInfo>> mem_chain2algo2result;
   {
-    int64_t work_size = mem_chain2mem_reused_regsts.size() * CountMemAllocAlgoNum();
+    int64_t work_size = mem_chain2mem_reused_regsts.size();
     int64_t thread_pool_size = std::min<int64_t>(work_size, std::thread::hardware_concurrency());
     BlockingCounter counter(work_size);
     ThreadPool thread_pool(thread_pool_size);
