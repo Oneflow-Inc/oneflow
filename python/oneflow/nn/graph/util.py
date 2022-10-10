@@ -298,6 +298,7 @@ def seq_to_func_return(seq, need_unpack=False):
 def _is_raw_type(value, raw_type):
     return type(value) is raw_type
 
+
 class NamedArg(object):
     r"""
     The class for wrapping over the input/output argument and associating each input/output argument with a prefix and name.
@@ -428,7 +429,9 @@ class ArgsTree(object):
 
             if _is_raw_type(curr_value, list) or _is_raw_type(curr_value, tuple):
                 children = curr_value
-            elif _is_raw_type(curr_value, dict) or _is_raw_type(curr_value, OrderedDict):
+            elif _is_raw_type(curr_value, dict) or _is_raw_type(
+                curr_value, OrderedDict
+            ):
                 children = list(curr_value.values())
             else:
                 children = None
