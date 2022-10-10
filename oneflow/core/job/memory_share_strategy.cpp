@@ -28,13 +28,20 @@ namespace {
 constexpr int32_t kMaxIterStep = 100;
 }  // anonymous namespace
 
+bool IsRegistersExcluded(
+    const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& register2life_time,
+    RegstDescProto* a, RegstDescProto* b) {
+  return register2life_time.at(a).first < register2life_time.at(b).second
+         && register2life_time.at(b).first < register2life_time.at(a).second;
+}
+
 // Initialization
 void MemoryShareStrategy::InitRegister(
-    const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts) {
-  total_register_num_ = regst2mutual_exclusion_regsts.size();
+    const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& register2life_time) {
+  total_register_num_ = register2life_time.size();
   index2register_.resize(total_register_num_);
   int32_t register_id = 0;
-  for (const auto& pair : regst2mutual_exclusion_regsts) {
+  for (const auto& pair : register2life_time) {
     index2register_[register_id] = pair.first;
     register_id++;
   }
@@ -58,9 +65,9 @@ void MemoryShareStrategy::InitRegisterInformation(
 void MemoryShareStrategy::StealCompactPosition(
     const HashMap<RegstDescProto*, int64_t>& regst_desc2offset,
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
-    const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts) {
+    const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& register2life_time) {
   // Initialization
-  InitRegister(regst2mutual_exclusion_regsts);
+  InitRegister(register2life_time);
 
   // Sort index2register_
   std::sort(index2register_.begin(), index2register_.end(),
@@ -85,12 +92,16 @@ void MemoryShareStrategy::StealCompactPosition(
   // For example we have 3 relationship: x1 < x2, x2 < x3, x1 < x3
   // We would delete the redundant relationship (x1 < x3)
   for (int32_t j = 0; j < total_register_num_; j++) {
-    register_offset_[j] = regst_desc2offset.at(index2register_[j]);
+    const auto& register_j = index2register_[j];
+    register_offset_[j] = regst_desc2offset.at(register_j);
     auto& excluded_register_j = excluded_registers_[j];
     // Init should visit with all orders of the excluded register
-    for (const auto& register_i : regst2mutual_exclusion_regsts.at(index2register_[j])) {
-      // Copy the data to excluded registers
-      excluded_register_j.insert(register2index_[register_i]);
+    for (int32_t i = j + 1; i < total_register_num_; i++) {
+      if (IsRegistersExcluded(register2life_time, register_j, index2register_[i])) {
+        // Copy the data to excluded registers
+        excluded_register_j.insert(i);
+        excluded_registers_[i].insert(j);
+      }
     }
   }
 
@@ -101,14 +112,14 @@ void MemoryShareStrategy::StealCompactPosition(
 // Not recommended
 void MemoryShareStrategy::GenerateCompactPosition(
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
-    const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts) {
+    const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& register2life_time) {
   HashMap<RegstDescProto*, int64_t> regst_desc2offset;
   int64_t offset = 0;
-  for (const auto& pair : regst2mutual_exclusion_regsts) {
+  for (const auto& pair : register2life_time) {
     regst_desc2offset[pair.first] = offset;
     offset++;
   }
-  StealCompactPosition(regst_desc2offset, mem_reused_regst2size, regst2mutual_exclusion_regsts);
+  StealCompactPosition(regst_desc2offset, mem_reused_regst2size, register2life_time);
 }
 
 // Compute optimal cost with compact relationship
@@ -397,7 +408,7 @@ void MemoryShareStrategy::ResetCompactPosition(int32_t j) {
 // Update the maximum iteration step with the current size and lower bound
 void MemoryShareStrategy::UpdateMaxIteration(size_t mem_block_size, size_t lower_bound) {
   if (lower_bound > 0) {
-    max_iteration_step_ = ((mem_block_size - lower_bound) * 100) / lower_bound;
+    max_iteration_step_ = ((mem_block_size - lower_bound) * 10000) / lower_bound;
   } else {
     // A graph only containing several 0 size tensors might have lower bound = 0.
     // Check test_div.py::TestDiv::test_0_size_div for example.
@@ -412,16 +423,16 @@ void MemoryShareStrategy::UpdateMaxIteration(size_t mem_block_size, size_t lower
 // Adaptively update the offset of registers to minimize the total memory
 void MemoryShareStrategy::AdaptivelyUpdateOffset(
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
-    const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
+    const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& register2life_time,
     size_t lower_bound, size_t* mem_block_size,
     HashMap<RegstDescProto*, int64_t>* regst_desc2offset) {
   if (*mem_block_size > lower_bound) {
-    VLOG(3) << "Current memory size: " << *mem_block_size << ", lower bound : " << lower_bound;
+    std::cout << "Current memory size: " << *mem_block_size << ", lower bound : " << lower_bound
+              << std::endl;
     UpdateMaxIteration(*mem_block_size, lower_bound);
     VLOG(3) << "max iteration step: " << max_iteration_step_;
     if (max_iteration_step_ > 0) {
-      StealCompactPosition(*regst_desc2offset, mem_reused_regst2size,
-                           regst2mutual_exclusion_regsts);
+      StealCompactPosition(*regst_desc2offset, mem_reused_regst2size, register2life_time);
       UpdateOffset(mem_block_size, regst_desc2offset);
     }
   }
@@ -432,11 +443,11 @@ void MemoryShareStrategy::AdaptivelyUpdateOffset(
 // Therefore, this function is not recommended with an initial offset provided.
 void MemoryShareStrategy::GenerateOffset(
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
-    const HashMap<RegstDescProto*, HashSet<RegstDescProto*>>& regst2mutual_exclusion_regsts,
+    const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& register2life_time,
     size_t* mem_block_size, HashMap<RegstDescProto*, int64_t>* regst_desc2offset) {
   max_iteration_step_ = kMaxIterStep;
   VLOG(3) << "max iteration step: " << max_iteration_step_;
-  GenerateCompactPosition(mem_reused_regst2size, regst2mutual_exclusion_regsts);
+  GenerateCompactPosition(mem_reused_regst2size, register2life_time);
   UpdateOffset(mem_block_size, regst_desc2offset);
 }
 
