@@ -427,8 +427,7 @@ void MemoryShareStrategy::AdaptivelyUpdateOffset(
     size_t lower_bound, size_t* mem_block_size,
     HashMap<RegstDescProto*, int64_t>* regst_desc2offset) {
   if (*mem_block_size > lower_bound) {
-    std::cout << "Current memory size: " << *mem_block_size << ", lower bound : " << lower_bound
-              << std::endl;
+    VLOG(3) << "Current memory size: " << *mem_block_size << ", lower bound : " << lower_bound;
     UpdateMaxIteration(*mem_block_size, lower_bound);
     VLOG(3) << "max iteration step: " << max_iteration_step_;
     if (max_iteration_step_ > 0) {
