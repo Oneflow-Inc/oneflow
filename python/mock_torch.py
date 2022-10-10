@@ -4,7 +4,8 @@ import oneflow
 import os
 
 parser = argparse.ArgumentParser()
-parser.add_argument('mock', choices=['enable', 'disable'], help='enable/disable mocking \'import torch\'') 
+parser.add_argument('mock', choices=[
+                    'enable', 'disable'], help="enable/disable mocking 'import torch', default is enable", nargs='?', default='enable')
 args = parser.parse_args()
 
 torch_env = Path(oneflow.__path__[0], 'mock_torch')
