@@ -2,10 +2,10 @@
 
 oneflow_py_dir="$PWD/python"
 simple_torch_file=$oneflow_py_dir/oneflow/test/misc/test_mock_torch.py
-# python3 -m pip install torch
+python3 -m pip install torch
 
 cd $oneflow_py_dir
-# python3 setup.py install --user
+python3 setup.py install --user
 eval $(oneflow-mock-torch enable)
 if [[ "$(python3 $simple_torch_file)" != *"True"* ]]; then
 exit 1
