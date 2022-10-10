@@ -509,10 +509,12 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
       Merge(ForEachPulledFromWorkersToMaster(std::string(__FUNCTION__) + "_reachable_cb_pairs",
                                              id_pairs, MergePairs));
     }
-    // TODO(chengcheng): test collective boxing for multi-job.
-    PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_, [&] {
-      return std::make_unique<RankPlanTaskGraph>(plan_, reachable_cb_pairs);
-    });
+    if (GlobalProcessCtx::IsThisProcessMaster()) {
+      // TODO(chengcheng): test collective boxing for multi-job.
+      PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_, [&] {
+        return std::make_unique<RankPlanTaskGraph>(plan_, reachable_cb_pairs);
+      });
+    }
     Merge(BroadcastFromMasterToWorkers(std::string(__FUNCTION__) + "_collective_boxing_plan",
                                        plan_.collective_boxing_plan(),
                                        plan_.mutable_collective_boxing_plan()));

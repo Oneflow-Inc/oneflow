@@ -964,11 +964,12 @@ void BoxingTaskGraph::ToProto(const std::function<bool(TaskNode*)>& Pick,
     ForEachNode([&](TaskNode* task_node) {
       if (Pick(task_node)) { sources.insert(task_node); }
     });
+    HashSet<TaskNode*> ret_sources{sources.begin(), sources.end()};
     for (auto* source : sources) {
       // The consumed task_ids must be generated from out_nodes.
-      source->ForEachNodeOnOutEdge([&](TaskNode* out_node) { sources.insert(out_node); });
+      source->ForEachNodeOnOutEdge([&](TaskNode* out_node) { ret_sources.insert(out_node); });
     }
-    return std::list<TaskNode*>{sources.begin(), sources.end()};
+    return std::list<TaskNode*>{ret_sources.begin(), ret_sources.end()};
   }();
   const auto& TransportTaskNodeToProto = [&](TransportTaskNode* task_node) {
     task_node->ToTransportTaskProtoIf(proto->mutable_transport_task()->Add());
@@ -1183,11 +1184,12 @@ struct UpdateTaskIndex final : public CompileModeVisitor<UpdateTaskIndex> {
     UNIMPLEMENTED_THEN_RETURN() << "'naive' compile mode doesn't support update task index";
   }
   static Maybe<void> VisitRankPerIter(TaskGraph*) {
-    UNIMPLEMENTED_THEN_RETURN() << "'rank_per_iter' compile mode doesn't support update task index";
+    // Do nothing.
+    return Maybe<void>::Ok();
   }
   static Maybe<void> VisitRankPerThread(TaskGraph*) {
-    UNIMPLEMENTED_THEN_RETURN()
-        << "'rank_per_thread' compile mode doesn't support update task index";
+    // Do nothing.
+    return Maybe<void>::Ok();
   }
   static Maybe<void> VisitRankPerProcess(TaskGraph* task_graph) {
     auto* task_id_generator = Singleton<IDMgr>::Get()->GetTaskIdGenerator();
