@@ -168,7 +168,7 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         ret = fn(ordered_d)
         print(ret)
 
-    def _test_non_tensor_types_of_module(test_case):
+    def test_non_tensor_types_of_module(test_case):
         class CustomModuleIOCheck(flow.nn.Module):
             def __init__(self):
                 super().__init__()
