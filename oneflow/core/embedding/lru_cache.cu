@@ -582,6 +582,11 @@ class LruCache : public Cache {
         static_cast<Elem*>(values));
   }
 
+  void ClearDirtyFlags() override {
+    // do nothing.
+    return;
+  }
+
   void Clear() override { ClearLruCacheContext<Key, Elem>(&ctx_); }
 
  private:
