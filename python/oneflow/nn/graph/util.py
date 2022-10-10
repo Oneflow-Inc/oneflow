@@ -333,6 +333,7 @@ class NamedArg(object):
         assert self._is_value_set, "self._value is not set yet"
         return not (
             _is_raw_type(self._value, dict)
+            or _is_raw_type(self._value, OrderedDict)
             or _is_raw_type(self._value, tuple)
             or _is_raw_type(self._value, list)
         )
@@ -351,7 +352,7 @@ class NamedArg(object):
             repr_str += "TUPLE"
         elif _is_raw_type(self._value, list):
             repr_str += "LIST"
-        elif _is_raw_type(self._value, dict):
+        elif _is_raw_type(self._value, dict) or _is_raw_type(self._value, OrderedDict):
             repr_str += "DICT"
         elif isinstance(self._value, Tensor):
             repr_str += "TENSOR"
@@ -363,6 +364,7 @@ class NamedArg(object):
             repr_str += ", value: " + self._value._meta_repr()
         elif (
             _is_raw_type(self._value, dict)
+            or _is_raw_type(self._value, OrderedDict)
             or _is_raw_type(self._value, list)
             or _is_raw_type(self._value, tuple)
         ):
@@ -383,9 +385,10 @@ class ArgsTree(object):
     ) -> None:
         assert (
             _is_raw_type(io_args, dict)
+            or _is_raw_type(io_args, OrderedDict)
             or _is_raw_type(io_args, tuple)
             or _is_raw_type(io_args, list)
-        ), "input/output arguments must be one of those types"
+        ), "input/output arguments must be one of those types(typle/list/dict/OrderedDict)"
 
         self._io_args = io_args
         self._gen_name = gen_name
@@ -425,7 +428,7 @@ class ArgsTree(object):
 
             if _is_raw_type(curr_value, list) or _is_raw_type(curr_value, tuple):
                 children = curr_value
-            elif _is_raw_type(curr_value, dict):
+            elif _is_raw_type(curr_value, dict) or _is_raw_type(curr_value, OrderedDict):
                 children = list(curr_value.values())
             else:
                 children = None
@@ -455,7 +458,7 @@ class ArgsTree(object):
 
             arg.set_value(value.__class__(map(construct_func, enumerate(value))))
 
-        elif _is_raw_type(value, dict):
+        elif _is_raw_type(value, dict) or _is_raw_type(value, OrderedDict):
 
             def construct_func(enum):
                 i, (key, v) = enum
@@ -489,7 +492,7 @@ class ArgsTree(object):
             mapped_value = value.__class__(
                 map(lambda x: self._execute_mapping(x, map_function), value)
             )
-        elif _is_raw_type(value, dict):
+        elif _is_raw_type(value, dict) or _is_raw_type(value, OrderedDict):
             mapped_value = value.__class__(
                 map(
                     lambda x: (x[0], self._execute_mapping(x[1], map_function)),
