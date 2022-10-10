@@ -70,6 +70,20 @@ class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsTo
   }
 };
 
+class ExtractKernelLaunchTensorPass : public ExtractKernelLaunchTensorPassBase<ExtractKernelLaunchTensorPass> {
+  void getDependentDialects(DialectRegistry& registry) const override {
+    registry.insert<oneflow::OneFlowDialect>();
+    registry.insert<okl::OKLDialect>();
+  }
+
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    populateExtractKernelLaunchTensorPasses(patterns);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
 class FuseIntoExistingOpPass : public FuseIntoExistingOpPassBase<FuseIntoExistingOpPass> {
   void runOnOperation() override {
     Operation* op = getOperation();
@@ -87,6 +101,10 @@ std::unique_ptr<Pass> createOutlineJitFunctionPass() {
 
 std::unique_ptr<Pass> createWrapOpsToKernelLaunchPass() {
   return std::make_unique<WrapOpsToKernelLaunchPass>();
+}
+
+std::unique_ptr<Pass> createExtractKernelLaunchTensorPass() {
+  return std::make_unique<ExtractKernelLaunchTensorPass>();
 }
 
 std::unique_ptr<mlir::Pass> createLowerToOKLPass() { return std::make_unique<LowerToOKLPass>(); }

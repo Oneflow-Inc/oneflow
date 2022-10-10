@@ -50,6 +50,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 void populateFuserPasses(::mlir::RewritePatternSet& patterns);
 void populateLowerToOKLPasses(::mlir::RewritePatternSet& patterns);
 void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns);
+void populateExtractKernelLaunchTensorPasses(::mlir::RewritePatternSet& patterns);
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns);
 void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns);
 void populateAutoNhwcPatterns(::mlir::RewritePatternSet& patterns);

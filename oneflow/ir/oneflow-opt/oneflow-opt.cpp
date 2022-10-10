@@ -60,6 +60,7 @@ int32_t main(int32_t argc, char** argv) {
   mlir::oneflow::registerGpuSerializeToCubinPass();
 #endif  // WITH_MLIR_CUDA_CODEGEN
   mlir::registerWrapOpsToKernelLaunchPassPass();
+  mlir::registerExtractKernelLaunchTensorPassPass();
   mlir::registerLowerToOKLPassPass();
   mlir::registerOutlineJitFunctionPassPass();
   mlir::DialectRegistry registry;

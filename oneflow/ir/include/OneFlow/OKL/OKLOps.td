@@ -46,7 +46,10 @@ def GetTensorFromCtxOp : OKL_Op<"get_tensor_from_ctx"> {
     get tensor value from launcher context.
   }];
 
-  let arguments = (ins OKL_TensorAttr:$tensor_type);
+  let arguments = (ins
+    LauncherContextType:$launcher_ctx,
+    OKL_TensorAttr:$tensor_type
+  );
   let results = (outs AnyTensor);
 }
 

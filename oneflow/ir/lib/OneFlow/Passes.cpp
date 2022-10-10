@@ -230,8 +230,9 @@ LogicalResult LowerToOKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
   auto run_ctx = rewriter.create<okl::BuildRunContextOp>(
       loc, okl::RunContextType::get(rewriter.getContext()), reg_ctx, launcher_ctx);
   // create okl.create_kernel(*reg_ctx, StringAttr: op_type_name)
-  auto kernel = rewriter.create<okl::BuildKernelOp>(loc, okl::KernelType::get(rewriter.getContext()),
-                                               reg_ctx, op->getName().stripDialect().str());
+  auto kernel =
+      rewriter.create<okl::BuildKernelOp>(loc, okl::KernelType::get(rewriter.getContext()), reg_ctx,
+                                          op->getName().stripDialect().str());
   // create okl.launch(*reg_ctx, *run_ctx, *kernel)
   rewriter.create<okl::LaunchOp>(loc, reg_ctx, run_ctx, kernel);
   // create okl.destroy(reg_ctx);
@@ -1016,6 +1017,25 @@ KernelLaunchOp CreateKernelLaunchFunc(mlir::Location loc, std::vector<Operation*
   wrap_ops.clear();
   return func;
 }
+struct ExtractKernelLaunchTensorPattern : public mlir::OpRewritePattern<func::FuncOp> {
+  explicit ExtractKernelLaunchTensorPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<func::FuncOp>(context, /*benefit=*/0) {}
+  mlir::LogicalResult matchAndRewrite(func::FuncOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    if (op.getBody().getArgument(0).getType().isa<okl::LauncherContextType>()) { return success(); }
+
+    auto launcher_ctx_type = okl::LauncherContextType::get(rewriter.getContext());
+    auto func_type = rewriter.getFunctionType({launcher_ctx_type}, op->getResultTypes());
+    auto func = rewriter.create<mlir::func::FuncOp>(op.getLoc(), op.getName(), func_type);
+    BlockAndValueMapping bvm;
+    op.getRegion().cloneInto(&func.getRegion(), bvm);
+    rewriter.eraseOp(op);
+    RewritePatternSet patterns(func->getContext());
+
+    return success();
+  }
+};
+
 struct KernelLaunchPattern : public mlir::OpRewritePattern<oneflow::Job> {
   explicit KernelLaunchPattern(mlir::MLIRContext* context)
       : OpRewritePattern<oneflow::Job>(context, /*benefit=*/0) {}
@@ -1120,6 +1140,10 @@ void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
 
 void populateLowerToOKLPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<LowerToOKLPattern>(patterns.getContext());
+}
+
+void populateExtractKernelLaunchTensorPasses(::mlir::RewritePatternSet& patterns) {
+  patterns.add<ExtractKernelLaunchTensorPattern>(patterns.getContext());
 }
 
 void populateWrapOpsToKernelLaunchPasses(::mlir::RewritePatternSet& patterns) {

@@ -29,7 +29,6 @@ def OKL_Dialect : Dialect {
         "func::FuncDialect"
     ];
     let useDefaultTypePrinterParser = 1;
-    let useDefaultAttributePrinterParser = 1;
 }
 
 #endif // ONEFLOW_IR_INCLUDE_OKL_OKLDIALECT_H_

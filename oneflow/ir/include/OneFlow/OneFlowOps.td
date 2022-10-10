@@ -274,6 +274,11 @@ def WrapOpsToKernelLaunchPass : Pass<"wrap-ops-to-kernel-launch", "ModuleOp"> {
   let constructor = "mlir::oneflow::createWrapOpsToKernelLaunchPass()";
 }
 
+def ExtractKernelLaunchTensorPass : Pass<"extract-kernel-launch-tensor", "ModuleOp"> {
+  let summary = "extract kernel launch tensor from !okl.launcher_ctx";
+  let constructor = "mlir::oneflow::createExtractKernelLaunchTensorPass()";
+}
+
 def LowerToOKLPass : Pass<"lower-oneflow-to-okl", "ModuleOp"> {
   let summary = "convert oneflow.kernel_launch to okl dialect";
   let constructor = "mlir::oneflow::createLowerToOKLPass()";
