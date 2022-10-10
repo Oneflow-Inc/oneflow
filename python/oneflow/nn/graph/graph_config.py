@@ -365,6 +365,18 @@ class GraphConfig(object):
         """
         self.proto.enable_auto_parallel_sbp_collector = mode
 
+    def enable_multi_tensor_update(self, mode: bool = True):
+        """
+        Enable Multi Tensor Update Pass, it will merge small optimizer kernels to reduce kernel launch overhead. 
+        """
+        self.proto.enable_multi_tensor_update = mode
+
+    def enable_fused_model_update_cast(self, mode: bool = True):
+        """
+        This option only works in AMP Mode, it will fuse optimizer update and model weights cast to half precision operation. 
+        """
+        self.proto.enable_fused_model_update_cast = mode
+
     def _generate_optimizer_and_variable_configs(
         self, opt_dict: OptDict = None, variables_conf: OrderedDict = None,
     ):
