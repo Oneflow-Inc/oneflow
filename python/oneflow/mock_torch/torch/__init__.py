@@ -13,4 +13,54 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow import *
+import oneflow
+from typing import Any
+from importlib.abc import MetaPathFinder, Loader
+from importlib.machinery import ModuleSpec
+from importlib.util import find_spec, module_from_spec
+
+import sys
+
+error_msg = """ is not implemented, please submit issues in 
+'https://github.com/Oneflow-Inc/oneflow/issues' include the log information of the error, the 
+minimum reproduction code, and the system information."""
+
+
+def __getattr__(name: str) -> Any:
+    if not hasattr(oneflow, name):
+        raise NotImplementedError("oneflow." + name + error_msg)
+    return getattr(oneflow, name)
+
+
+class OneflowImporter(MetaPathFinder, Loader):
+    def find_spec(self, fullname, path, target=None):
+        if fullname.startswith("torch."):  # don't touch modules other than torch
+            return ModuleSpec(fullname, self)
+        return None
+
+    def find_module(self, fullname, path=None):
+        spec = self.find_spec(fullname, path)
+        return spec
+
+    def create_module(self, spec):
+        oneflow_mod_fullname = "oneflow." + spec.name[len("torch.") :]
+        # get actual oneflow module
+        real_spec = find_spec(oneflow_mod_fullname)
+        real_module = module_from_spec(real_spec)
+        real_spec.loader.exec_module(real_module)
+        return real_module
+
+    def exec_module(self, module):
+        class jjj:
+            def __getattr__(self, name: str) -> Any:
+                if not hasattr(module, name):
+                    raise NotImplementedError(module.__name__ + name + error_msg)
+                return getattr(oneflow, name)
+
+        fullname = "torch." + module.__name__[len("oneflow.") :]
+        sys.modules[fullname] = jjj()
+        globals()[fullname] = jjj()
+
+
+# register importer in meta path
+sys.meta_path.insert(0, OneflowImporter())
