@@ -18,3 +18,6 @@ if [[ "$(python3 $MOCK_TORCH)" != *"True"* ]]; then
     exit 1
 fi
 eval $(oneflow-mock-torch disable) # recover
+if [[ "$(python3 $MOCK_TORCH)" != *"False"* ]]; then
+    exit 1
+fi
