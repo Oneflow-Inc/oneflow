@@ -32,7 +32,7 @@ class ChunkMgr final {
 
   // Compiler
   void GetChunkProtosByMemZoneUniqueId(int64_t mem_zone_uid,
-                                       std::vector<const ChunkProto*>* chunks) const;
+                                       std::vector<const ChunkProto*>* chunks);
   void AddChunkProto(const ChunkProto& chunk);
 
   // Runtime

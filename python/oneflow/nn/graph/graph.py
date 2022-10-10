@@ -777,7 +777,6 @@ class Graph(object):
     def _compile(self, *args, **kwargs):
         self.__ensure_input_tensors_contiguous(*args, **kwargs)
         _, eager_outputs = self.build_graph(*args, **kwargs)
-        self.__print(0, 1, self.__repr__())
         self.finish_complie_and_init_runtime()
         return eager_outputs
 
