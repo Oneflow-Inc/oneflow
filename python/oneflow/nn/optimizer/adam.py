@@ -137,7 +137,6 @@ class Adam(Optimizer):
         options["bias_correction2"] = 1.0
         options["do_bias_correction"] = do_bias_correction
         self.foreach = foreach
-        self.is_cuda = True
         super().__init__(params, options)
 
         for param_group in self.param_groups:
@@ -276,7 +275,7 @@ class Adam(Optimizer):
             if closure is not None:
                 loss = closure()
 
-            if self.foreach and self.is_cuda:
+            if self.foreach:
                 self._multi_tensor_update()
             else:
                 self._single_tensor_update()
