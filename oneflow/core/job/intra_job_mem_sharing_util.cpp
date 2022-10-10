@@ -525,42 +525,49 @@ void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2life_time,
     MemBlockResultInfo* result) {
   HashMap<RegstDescProto*, int64_t>* regst_desc2offset = &(result->regst_desc2offset);
+  // Switch HashMap to vector
+  int32_t total_register_num = order.size();
+  std::vector<int64_t> order2size(total_register_num);
+  std::vector<std::pair<int32_t, int32_t>> order2life_time(total_register_num);
+  std::vector<int64_t> order2offset(total_register_num);
+  for (int32_t i = 0; i < total_register_num; i++) {
+    order2size[i] = regst_desc2size.at(order[i]);
+    order2life_time[i] = regst2life_time.at(order[i]);
+  }
   size_t buffer_size = 1;
   // Sort by offset
-  auto comp = [&regst_desc2offset](const auto& a, const auto& b) {
-    if ((*regst_desc2offset)[a] != (*regst_desc2offset)[b]) {
-      return (*regst_desc2offset)[a] < (*regst_desc2offset)[b];
-    }
+  auto comp = [&order2offset](const auto& a, const auto& b) {
+    if (order2offset[a] != order2offset[b]) { return order2offset[a] < order2offset[b]; }
     // Make sure we have a stable order even if we have the same offset for different registers
     return a < b;
   };
-  std::set<RegstDescProto*, decltype(comp)> sorted_registers(comp);
+  std::set<int32_t, decltype(comp)> sorted_registers(comp);
   // Decide offset following the given order
-  for (RegstDescProto* inserting_register : order) {
+  for (int32_t inserting_id = 0; inserting_id < total_register_num; inserting_id++) {
     // const auto& excluded_registers = regst2mutual_exclusion_regsts.at(inserting_register);
     int64_t inserting_offset = 0;
-    int64_t inserting_end = inserting_offset + regst_desc2size.at(inserting_register);
-    const auto& inserting_life_time = regst2life_time.at(inserting_register);
+    int64_t inserting_end = inserting_offset + order2size[inserting_id];
+    const auto& inserting_life_time = order2life_time[inserting_id];
     for (const auto& curr_register : sorted_registers) {
       // If x_i + l_i <= x_j, then the inserting register would be placed at x_i
-      if (regst_desc2offset->at(curr_register) >= inserting_end) { break; }
+      if (order2offset[curr_register] >= inserting_end) { break; }
       // If i and j are excluded, and x_i + l_i > x_j,
       // then we try to place i at x_j + l_j and check the following registers
-      if (IsLifeTimeExcluded(inserting_life_time, regst2life_time.at(curr_register))) {
-        int64_t curr_end = regst_desc2offset->at(curr_register) + regst_desc2size.at(curr_register);
+      if (IsLifeTimeExcluded(inserting_life_time, order2life_time[curr_register])) {
+        int64_t curr_end = order2offset[curr_register] + order2size[curr_register];
         // Can not set inserting offset = current end directly.
         // We might have two excluded registers like this:
         // register a: [100, 10000]
         // register b: [500, 600]
         if (inserting_offset < curr_end) {
           inserting_offset = curr_end;
-          inserting_end = inserting_offset + regst_desc2size.at(inserting_register);
+          inserting_end = inserting_offset + order2size[inserting_id];
         }
       }
     }
     // Either we break the loop or the loop terminated naturally, we can place i at inserting_offset
-    (*regst_desc2offset)[inserting_register] = inserting_offset;
-    sorted_registers.insert(inserting_register);
+    order2offset[inserting_id] = inserting_offset;
+    sorted_registers.insert(inserting_id);
     // std::cout << "from " << inserting_offset << " to " << inserting_end << std::endl;
     // Update total size
     if (inserting_end > buffer_size) { buffer_size = inserting_end; }
@@ -581,6 +588,10 @@ void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
   //   CHECK(regst_desc2offset->emplace(regst_desc, offset).second);
   // }
   result->mem_block_size = buffer_size;
+  // Switch vector to HashMap
+  for (int32_t i = 0; i < total_register_num; i++) {
+    (*regst_desc2offset)[order[i]] = order2offset[i];
+  }
 }
 
 void MemReusedAlgorithm_MemSizeFirstAlgo(
