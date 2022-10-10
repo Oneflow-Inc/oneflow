@@ -86,7 +86,7 @@ class AddFunctor {
     }
 
     const OpExpr* op = nullptr;
-    Optional<Symbol<DType>> promote_dtype(DType::InvalidDataType());
+    Optional<Symbol<DType>> promote_dtype;
     if (inplace) { promote_dtype = input_tensor->dtype(); }
 
     TensorProcessor tensor_processor;

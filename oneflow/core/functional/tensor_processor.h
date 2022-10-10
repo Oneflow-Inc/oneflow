@@ -35,6 +35,7 @@ class TensorProcessor final {
  public:
   TensorProcessor()
       : common_dtype_(DType::InvalidDataType()),
+        promote_dtype_(NullOpt),
         promote_inputs_to_common_dtype_(false),
         promote_integer_inputs_to_float_(false){};
   TensorProcessor& AddInputs(const TensorTuple& init_list);
@@ -50,6 +51,7 @@ class TensorProcessor final {
  private:
   TensorTuple tensor_tuple_;
   Symbol<DType> common_dtype_;
+  Optional<Symbol<DType>> promote_dtype_;
   std::vector<Symbol<DType>> inputs_lowest_dtype_vec_;
 
   bool promote_inputs_to_common_dtype_;

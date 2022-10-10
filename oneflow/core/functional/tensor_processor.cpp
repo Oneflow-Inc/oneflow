@@ -84,10 +84,7 @@ TensorProcessor& TensorProcessor::PromoteInputsToCommonDtype(bool is_promote) {
 TensorProcessor& TensorProcessor::PromoteInputsToCommonDtype(
     bool is_promote, const Optional<Symbol<DType>>& promote_dtype) {
   promote_inputs_to_common_dtype_ = is_promote;
-  if (promote_dtype.has_value()) {
-    Symbol<DType> dtype = CHECK_JUST(promote_dtype);
-    if (dtype != DType::InvalidDataType()) { common_dtype_ = dtype; }
-  }
+  promote_dtype_ = promote_dtype;
   return *this;
 }
 
@@ -103,7 +100,9 @@ Maybe<void> TensorProcessor::Apply() {
   if (promote_inputs_to_common_dtype_) {
     bool has_different_input_dtype = CheckHasDifferentInputDType(tensor_tuple_);
     if (has_different_input_dtype) {
-      if (common_dtype_ == DType::InvalidDataType()) {
+      if (promote_dtype_.has_value()) {
+        common_dtype_ = CHECK_JUST(promote_dtype_);
+      } else {
         common_dtype_ = ComputeCommonDType(tensor_tuple_);
       }
       if (promote_integer_inputs_to_float_ && common_dtype_->is_integer()) {
