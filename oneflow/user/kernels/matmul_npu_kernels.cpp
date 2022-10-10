@@ -33,6 +33,7 @@ class MatmulNpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    // std::cout<<"MatMul Npu"<<std::endl;
     bool trans_a = ctx->Attr<bool>("transpose_a");
     bool trans_b = ctx->Attr<bool>("transpose_b");
     user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
@@ -57,9 +58,9 @@ class MatmulNpuKernel final : public user_op::OpKernel {
                .Check();
     npu_command.Run()
                .Realease();
-    //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
-    //PrintResult(out);
-    //std::cout<<"Matmul Execute Over"<<std::endl; 
+    // OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
+    // PrintResult(out);
+    // std::cout<<"Matmul Execute Over"<<std::endl; 
   }
 };
 

@@ -33,6 +33,7 @@ namespace oneflow {
       out_shape.NumAxes() - 1,
       std::min(ctx->Attr<int32_t>("k"), static_cast<int32_t>(out_shape.dim_vec().back())));
   ctx->SetOutputShape("out", 0, out_shape);
+  ctx->SetOutputShape("indice", 0, out_shape);
   return Maybe<void>::Ok();
   // const Shape& in_shape = ctx->InputShape("in", 0);
   // Shape out_shape = ctx->OutputShape("out", 0);
@@ -49,7 +50,8 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> TopKNpuOp::InferDataType(user_op::InferContext* ctx) {
-  ctx->SetOutputDType("out", 0, DataType::kInt64);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
+  ctx->SetOutputDType("indice", 0, DataType::kInt32);
   return Maybe<void>::Ok();
 }
 

@@ -44,6 +44,7 @@ class MemcpyImpl : public Memcpy {
     } 
     else if(kind == MemcpyKind::kDtoD)
     {
+      OF_NPU_CHECK(aclrtSynchronizeStream(npu_stream));
       aclRule = ACL_MEMCPY_DEVICE_TO_DEVICE;
     }
     OF_NPU_CHECK(aclrtMemcpy(dst, 
