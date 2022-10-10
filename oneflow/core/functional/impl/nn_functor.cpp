@@ -14,10 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <cmath>
+#include <functional>
+#include <limits>
+#include <memory>
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -4465,58 +4472,208 @@ class ScaledDotProductAttentionFunctor {
 
 class MultiHeadAttentionFunctor {
  public:
-  Maybe<Tensor> qkv_projection(
-      const std::shared_ptr<Tensor>& query,
-      const std::shared_ptr<Tensor>& key,
-      const std::shared_ptr<Tensor>& value,
-      const int64_t& embed_dim, 
-      const std::shared_ptr<Tensor>& qkv_weight
-  ) const {
+  Maybe<Tensor> qkv_projection(const std::shared_ptr<Tensor>& query,
+                               const std::shared_ptr<Tensor>& key,
+                               const std::shared_ptr<Tensor>& value, const int64_t& embed_dim,
+                               const std::shared_ptr<Tensor>& qkv_weight) const {
     std::shared_ptr<Tensor> qkv = nullptr;
-    auto matmul = [](const std::shared_ptr<Tensor>& a, const std::shared_ptr<Tensor>& b) {
-      return MatMul(a, b, false, false, 1.0);
+    auto matmul_b_t = [](const std::shared_ptr<Tensor>& a, const std::shared_ptr<Tensor>& b) {
+      return MatMul(a, b, false, true, 1.0);
     };
     if (query == key) {
       if (key == value) {
-        qkv = JUST(MatMul(query, qkv_weight, false, false, 1.0));
+        qkv = JUST(matmul_b_t(query, qkv_weight));
       } else {
-        const auto& q_kv_weight_split = JUST(SplitWithSize(qkv_weight, {embed_dim, embed_dim * 2}, 0));
-        const auto& q = JUST(matmul(query, q_kv_weight_split->at(0)));
-        const auto& kv = JUST(matmul(key, q_kv_weight_split->at(1)));
+        const auto& q_kv_weight_split =
+            JUST(SplitWithSize(qkv_weight, {embed_dim, embed_dim * 2}, 0));
+        const auto& q = JUST(matmul_b_t(query, q_kv_weight_split->at(0)));
+        const auto& kv = JUST(matmul_b_t(key, q_kv_weight_split->at(1)));
         qkv = JUST(Concat({q, kv}, 2));
       }
     } else {
       const auto& q_k_v_weight_split = JUST(Chunk(qkv_weight, 3, 0));
-      const auto& q = JUST(matmul(query, q_k_v_weight_split->at(0)));
-      const auto& k = JUST(matmul(key, q_k_v_weight_split->at(1)));
-      const auto& v = JUST(matmul(value, q_k_v_weight_split->at(2)));
+      const auto& q = JUST(matmul_b_t(query, q_k_v_weight_split->at(0)));
+      const auto& k = JUST(matmul_b_t(key, q_k_v_weight_split->at(1)));
+      const auto& v = JUST(matmul_b_t(value, q_k_v_weight_split->at(2)));
       qkv = JUST(Concat({q, k, v}, 2));
     }
     return qkv;
   };
-  // Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& q, const std::shared_ptr<Tensor>& k,
-  //                          const std::shared_ptr<Tensor>& v, const int64_t& embed_dim,
-  //                          const int64_t& num_head, const std::shared_ptr<Tensor>& qkv_weight,
-  //                          const std::shared_ptr<Tensor>& qkv_bias,
-  //                          const std::shared_ptr<Tensor>& proj_weight,
-  //                          const std::shared_ptr<Tensor>& proj_bias, const Optional<Tensor>& mask,
-  //                          const bool& need_weights, const bool& average_attn_weights,
-  //                          const Optional<int64_t>& mask_type) const {
-    // CHECK_EQ_OR_RETURN(q->ndim(), 3) << "expected 3-D `query`, got " << q->ndim() << "-D tensor";
-    // CHECK_EQ_OR_RETURN(k->ndim(), 3) << "expected 3-D `key`, got " << k->ndim() << "-D tensor";
-    // CHECK_EQ_OR_RETURN(v->ndim(), 3) << "expected 3-D `value`, got " << v->ndim() << "-D tensor";
-    // CHECK_EQ_OR_RETURN(qkv_weight->ndim(), 2)
-    //     << "expected 2-D `qkv_weight`, got " << qkv_weight->ndim() << "-D tensor";
-    // CHECK_EQ_OR_RETURN(qkv_weight->shape()->At(0), embed_dim * 3) << "expected `qkv_weight` first dim to be 3x embed_dim";
-    // CHECK_EQ_OR_RETURN(qkv_weight->shape()->At(1), embed_dim) << "expected `qkv_weight` second dim to be embed_dim";
-    // CHECK_EQ_OR_RETURN(qkv_bias->ndim(), 1) << "expected 2-D `qkv_bias`, got " << qkv_bias->ndim() << "-D tensor";
-    // CHECK_EQ_OR_RETURN(qkv_bias->shape()->At(0), embed_dim * 3) << "expected `qkv_bias` first dim and first dim of query to be equal";
-    // CHECK_EQ_OR_RETURN(embed_dim % num_head, 0) << "`embed_dim` must divide evenly by `num_heads`";
-  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& y) const {
-    if (x == y) {
-      std::cout << "is same" << std::endl;
+
+  Maybe<TensorTuple> transform_bias_rescale_qkv(const std::shared_ptr<Tensor>& qkv,
+                                                const std::shared_ptr<Tensor>& qkv_bias,
+                                                const int64_t& num_head) const {
+    // qkv shape: batch_size, seq_length, 3 * embed_dim
+    const auto& qkv_shape = qkv->shape();
+    const auto B = qkv_shape->At(0);
+    const auto T = qkv_shape->At(1);
+    const auto _3D = qkv_shape->At(2);
+    const auto D = _3D / 3;
+    CHECK_EQ_OR_RETURN(D % num_head, 0);
+    CHECK_EQ_OR_RETURN(_3D % 3, 0);
+    auto dim_per_head = D / num_head;
+
+    std::cout << "run -- 11" << std::endl;
+    const double inv_sqrt_dim_per_head = 1.0 / std::sqrt(static_cast<double>(dim_per_head));
+    std::cout << "run -- 12" << std::endl;
+    auto qkv_add_bias = JUST(Add(qkv, JUST(Reshape(qkv_bias, {1, 1, -1})), 1.0, false));
+    std::cout << "qkv_add_bias shape: " << qkv_add_bias->shape()->DebugStr() << std::endl;
+    std::cout << "run -- 13" << std::endl;
+    auto q_k_v = JUST(Split(qkv_add_bias, D, 2));
+    std::cout << "run -- 14" << std::endl;
+    auto q = q_k_v->at(0);
+    std::cout << "run -- 15" << std::endl;
+    q = JUST(ScalarMul(q, inv_sqrt_dim_per_head, false));
+    std::cout << "run -- 16" << std::endl;
+    auto reshape_transpose = [&](const std::shared_ptr<Tensor>& x) -> Maybe<Tensor> {
+      auto reshaped_x = JUST(Reshape(x, {B, T, num_head, dim_per_head}));
+      // B, num_head, T, dim_per_head
+      auto transposed_x = Permute(reshaped_x, {0, 2, 1, 3});
+      return transposed_x;
+    };
+    auto result = std::make_shared<TensorTuple>(3);
+    std::cout << "q shape: " << q->shape()->DebugStr() << std::endl;
+    std::cout << "run -- 17" << std::endl;
+    result->at(0) = JUST(reshape_transpose(q));
+    std::cout << "run -- 18" << std::endl;
+    result->at(1) = JUST(reshape_transpose(q_k_v->at(1)));
+    std::cout << "run -- 19" << std::endl;
+    result->at(2) = JUST(reshape_transpose(q_k_v->at(2)));
+    return result;
+  }
+
+  Maybe<Tensor> masked_softmax(const std::shared_ptr<Tensor>& attn_scores,
+                               const Optional<Tensor>& mask) const {
+    // Shape: attn_scores: [B, num_heads, T, T]
+    std::shared_ptr<Tensor> attn_scores_masked = attn_scores;
+    if (mask) {
+      auto mask_value = JUST(mask);
+      auto mask_shape = mask_value->shape();
+      auto batch_size = mask_shape->At(0);
+      auto seq_len = mask_shape->At(1);
+      CHECK_EQ_OR_RETURN(mask_value->dtype()->data_type(), kBool);
+      auto mask_expand = JUST(Expand(JUST(Reshape(mask_value, {batch_size, 1, 1, seq_len})),
+                                     *attn_scores_masked->shape()));
+      attn_scores_masked = JUST(
+          MaskedFill(attn_scores, mask_expand, Scalar(std::numeric_limits<float>::infinity())));
     }
-    return TensorTuple({x, y});
+    return Softmax(attn_scores_masked, {3});
+  }
+
+  Maybe<TensorTuple> operator()(
+      const std::shared_ptr<Tensor>& query, const std::shared_ptr<Tensor>& key,
+      const std::shared_ptr<Tensor>& value, const int64_t& embed_dim, const int64_t& num_head,
+      const std::shared_ptr<Tensor>& qkv_weight, const std::shared_ptr<Tensor>& qkv_bias,
+      const std::shared_ptr<Tensor>& proj_weight, const std::shared_ptr<Tensor>& proj_bias,
+      const Optional<Tensor>& mask, const bool& need_weights, const bool& average_attn_weights,
+      const Optional<int64_t>& mask_type) const {
+    CHECK_EQ_OR_RETURN(query->ndim(), 3)
+        << "expected 3-D `query`, got " << query->ndim() << "-D tensor";
+    CHECK_EQ_OR_RETURN(key->ndim(), 3) << "expected 3-D `key`, got " << key->ndim() << "-D tensor";
+    CHECK_EQ_OR_RETURN(value->ndim(), 3)
+        << "expected 3-D `value`, got " << value->ndim() << "-D tensor";
+    CHECK_EQ_OR_RETURN(qkv_weight->ndim(), 2)
+        << "expected 2-D `qkv_weight`, got " << qkv_weight->ndim() << "-D tensor";
+    CHECK_EQ_OR_RETURN(qkv_weight->shape()->At(0), embed_dim * 3)
+        << "expected `qkv_weight` first dim to be 3x embed_dim";
+    CHECK_EQ_OR_RETURN(qkv_weight->shape()->At(1), embed_dim)
+        << "expected `qkv_weight` second dim to be embed_dim";
+    CHECK_EQ_OR_RETURN(qkv_bias->ndim(), 1)
+        << "expected 2-D `qkv_bias`, got " << qkv_bias->ndim() << "-D tensor";
+    CHECK_EQ_OR_RETURN(qkv_bias->shape()->At(0), embed_dim * 3)
+        << "expected `qkv_bias` first dim and first dim of query to be equal";
+    CHECK_EQ_OR_RETURN(embed_dim % num_head, 0) << "`embed_dim` must divide evenly by `num_heads`";
+
+    std::cout << "run--1" << std::endl;
+    auto qkv = JUST(qkv_projection(query, key, value, embed_dim, qkv_weight));
+    auto q_k_v = JUST(transform_bias_rescale_qkv(qkv, qkv_bias, num_head));
+    auto q = q_k_v->at(0);
+    auto k = q_k_v->at(1);
+    auto v = q_k_v->at(2);
+
+    auto bmm_q_k = [](const std::shared_ptr<Tensor>& x,
+                      const std::shared_ptr<Tensor>& y) -> Maybe<Tensor> {
+      auto x_shape = x->shape();
+      auto batch_size = x_shape->At(0);
+      auto num_head = x_shape->At(1);
+      auto seq_len = x_shape->At(2);
+      auto dim_per_head = x_shape->At(3);
+      auto y_shape = y->shape();
+      std::cout << "run--20" << std::endl;
+      auto x_3d = JUST(Reshape(x, {batch_size * num_head, seq_len, dim_per_head}));
+      std::cout << "run--21" << std::endl;
+      auto y_3d = JUST(Reshape(y, {batch_size * num_head, seq_len, dim_per_head}));
+      std::cout << "run--22" << std::endl;
+      std::cout << x_3d->shape()->DebugStr() << std::endl;
+      std::cout << y_3d->shape()->DebugStr() << std::endl;
+      auto result = JUST(BatchMatMul(x_3d, y_3d, false, true, 1.0));
+      return Reshape(result, {batch_size, num_head, seq_len, seq_len});
+    };
+    // shape:
+    // q: [batch_size, num_head, seq_len, dim_per_head]
+    // k: [batch_size, num_head, seq_len, dim_per_head]
+    auto qkt = JUST(bmm_q_k(q, k));
+    std::cout << "run2" << std::endl;
+    auto attn_scores = JUST(masked_softmax(qkt, mask));
+
+    std::cout << "run3" << std::endl;
+    auto bmm_attn_scores_v = [](const std::shared_ptr<Tensor>& attn_scores,
+                                const std::shared_ptr<Tensor>& v) -> Maybe<Tensor> {
+      auto v_shape = v->shape();
+      auto batch_size = v_shape->At(0);
+      auto num_heads = v_shape->At(1);
+      auto seq_len = v_shape->At(2);
+      auto dim_per_head = v_shape->At(3);
+      // shape: [B * num_heads, T, T] for bmm
+      auto attn_scores_reshaped =
+          JUST(Reshape(attn_scores, {batch_size * num_heads, seq_len, seq_len}));
+      auto v_reshaped = JUST(Reshape(v, {batch_size * num_heads, seq_len, dim_per_head}));
+      auto result = JUST(BatchMatMul(attn_scores_reshaped, v_reshaped, false, false, 1.0));
+      return Reshape(result, {batch_size, num_heads, seq_len, dim_per_head});
+    };
+    auto attn_ctx = JUST(bmm_attn_scores_v(attn_scores, v));
+
+    std::cout << "run4" << std::endl;
+    // convert shape [batch_size, num_heads, seq_len, dim_per_head] to
+    // [batch_size, seq_len, num_heads * dim_per_head]
+    auto transform_0213 = [](const std::shared_ptr<Tensor>& x) -> Maybe<Tensor> {
+      auto shape = x->shape();
+      auto batch_size = shape->At(0);
+      auto num_heads = shape->At(1);
+      auto seq_len = shape->At(2);
+      auto dim_per_head = shape->At(3);
+      return sequence_function(Transpose2dim)
+          .then([&](const std::shared_ptr<Tensor>& x) -> Maybe<Tensor> {
+            return Reshape(x, {batch_size, seq_len, num_heads * dim_per_head});
+          })
+          .call(x, 1, 2);
+    };
+
+    auto mm_attn_ctx_proj = [&transform_0213](
+                                const std::shared_ptr<Tensor>& attn_ctx,
+                                const std::shared_ptr<Tensor>& proj_weight,
+                                const std::shared_ptr<Tensor>& proj_bias) -> Maybe<Tensor> {
+      auto attn_ctx_3d = JUST(transform_0213(attn_ctx));
+      auto batch_size = attn_ctx_3d->shape()->At(0);
+      auto seq_len = attn_ctx_3d->shape()->At(1);
+      auto emb_dim = attn_ctx_3d->shape()->At(2);
+      auto attn_ctx_2d = JUST(Reshape(attn_ctx_3d, {-1, emb_dim}));
+      auto result =
+          JUST(Add(JUST(MatMulNoBroadCast(attn_ctx_2d, proj_weight)), proj_bias, 1.0, false));
+      return Reshape(result, {batch_size, seq_len, proj_weight->shape()->At(1)});
+    };
+    auto proj = JUST(mm_attn_ctx_proj(attn_ctx, proj_weight, proj_bias));
+    // TensorTuple result({proj, nullptr});
+    std::shared_ptr<TensorTuple> result = std::make_shared<TensorTuple>(2);
+    std::cout << "run6" << std::endl;
+    result->at(0) = proj;
+    result->at(1) = nullptr;
+    if (need_weights && average_attn_weights) {
+      qkt = JUST(ReduceSum(qkt, {1}, false));
+      qkt = JUST(ScalarDiv(qkt, num_head));
+      result->at(1) = qkt;
+    }
+    return result;
   }
 };
 
