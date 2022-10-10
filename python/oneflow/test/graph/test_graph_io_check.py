@@ -94,7 +94,7 @@ class BaseOutput(OrderedDict):
         return tuple(self[k] for k in self.keys())
 
 @dataclass
-class UNet2DOutput(BaseOutput):
+class CustomDataClass(BaseOutput):
     sample: flow.Tensor 
 
 
@@ -142,13 +142,10 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         test_case.assertEqual(ret[0][2], "mapped_str")
         test_case.assertEqual(id(ret[1]["kw"]), id(t4))
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-@flow.unittest.skip_unless_1n1d()
-class TestGraphIOCheck(flow.unittest.TestCase):
-    def test_ordered_dict(test_case):
+    def test_custom_class(test_case):
         x = np.ones((2, 2))
         x = flow.tensor(x, dtype=flow.float32)
-        ordered_d = UNet2DOutput(sample=x)
+        ordered_d = CustomDataClass(sample=x)
 
         def fn(*args, **kwargs):
             inp = (args, kwargs)
@@ -160,8 +157,8 @@ class TestGraphIOCheck(flow.unittest.TestCase):
                 print(name, repr(arg))
 
             def leaf_fn(arg):
-                if isinstance(arg.value(), str):
-                    return "mapped_str"
+                if isinstance(arg.value(), dict):
+                    return "replaced"
                 return arg.value()
 
             m_v = args_tree.map_leaf(leaf_fn)
@@ -171,7 +168,7 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         ret = fn(ordered_d)
         print(ret)
 
-    def test_non_tensor_types_of_module(test_case):
+    def _test_non_tensor_types_of_module(test_case):
         class CustomModuleIOCheck(flow.nn.Module):
             def __init__(self):
                 super().__init__()
