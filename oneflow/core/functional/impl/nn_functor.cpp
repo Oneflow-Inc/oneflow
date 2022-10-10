@@ -332,7 +332,7 @@ class BatchMatMulFunctor {
     CHECK_EQ_OR_RETURN(a_shape->At(0), b_shape->At(0))
         << Error::RuntimeError() << "Batch dim not match, please check input!";
     const int64_t matmul_dim_a = transpose_a ? a_shape->At(1) : a_shape->At(2);
-    const int64_t matmul_dim_b = transpose_b ? b_shape->At(2) : a_shape->At(1);
+    const int64_t matmul_dim_b = transpose_b ? b_shape->At(2) : b_shape->At(1);
     CHECK_EQ_OR_RETURN(matmul_dim_a, matmul_dim_b)
         << Error::RuntimeError() << "Matmul dim not match, got " << matmul_dim_a << " of mat1 and "
         << matmul_dim_b << " of mat2, please check input!";
