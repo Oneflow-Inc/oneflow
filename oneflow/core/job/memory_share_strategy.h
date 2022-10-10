@@ -24,9 +24,7 @@ limitations under the License.
 
 namespace oneflow {
 
-bool IsRegistersExcluded(
-    const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& register2life_time,
-    RegstDescProto* a, RegstDescProto* b);
+bool IsLifeTimeExcluded(const std::pair<int32_t, int32_t>& a, const std::pair<int32_t, int32_t>& b);
 
 class MemoryShareStrategy {
  public:

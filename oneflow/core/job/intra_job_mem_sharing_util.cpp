@@ -540,12 +540,13 @@ void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
     // const auto& excluded_registers = regst2mutual_exclusion_regsts.at(inserting_register);
     int64_t inserting_offset = 0;
     int64_t inserting_end = inserting_offset + regst_desc2size.at(inserting_register);
+    const auto& inserting_life_time = regst2life_time.at(inserting_register);
     for (const auto& curr_register : sorted_registers) {
       // If x_i + l_i <= x_j, then the inserting register would be placed at x_i
       if (regst_desc2offset->at(curr_register) >= inserting_end) { break; }
       // If i and j are excluded, and x_i + l_i > x_j,
       // then we try to place i at x_j + l_j and check the following registers
-      if (IsRegistersExcluded(regst2life_time, inserting_register, curr_register)) {
+      if (IsLifeTimeExcluded(inserting_life_time, regst2life_time.at(curr_register))) {
         int64_t curr_end = regst_desc2offset->at(curr_register) + regst_desc2size.at(curr_register);
         // Can not set inserting offset = current end directly.
         // We might have two excluded registers like this:

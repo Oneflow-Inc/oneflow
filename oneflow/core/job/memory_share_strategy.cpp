@@ -28,11 +28,9 @@ namespace {
 constexpr int32_t kMaxIterStep = 100;
 }  // anonymous namespace
 
-bool IsRegistersExcluded(
-    const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& register2life_time,
-    RegstDescProto* a, RegstDescProto* b) {
-  return register2life_time.at(a).first < register2life_time.at(b).second
-         && register2life_time.at(b).first < register2life_time.at(a).second;
+bool IsLifeTimeExcluded(const std::pair<int32_t, int32_t>& a,
+                        const std::pair<int32_t, int32_t>& b) {
+  return a.first < b.second && b.first < a.second;
 }
 
 // Initialization
@@ -95,9 +93,10 @@ void MemoryShareStrategy::StealCompactPosition(
     const auto& register_j = index2register_[j];
     register_offset_[j] = regst_desc2offset.at(register_j);
     auto& excluded_register_j = excluded_registers_[j];
+    const auto& life_time_j = register2life_time.at(register_j);
     // Init should visit with all orders of the excluded register
     for (int32_t i = j + 1; i < total_register_num_; i++) {
-      if (IsRegistersExcluded(register2life_time, register_j, index2register_[i])) {
+      if (IsLifeTimeExcluded(life_time_j, register2life_time.at(index2register_[i]))) {
         // Copy the data to excluded registers
         excluded_register_j.insert(i);
         excluded_registers_[i].insert(j);
