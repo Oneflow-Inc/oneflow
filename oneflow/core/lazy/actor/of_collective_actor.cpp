@@ -642,13 +642,13 @@ void OfCollectiveActor::AsyncLaunchKernel(std::function<Regst*(int64_t)> Regst4R
 }
 
 void OfCollectiveActor::Act() {
-  VLOG(2) << "Actor " << actor_id_ << " Enter OfCollectiveActor::Act()";
+  VLOG(1) << "Actor " << actor_id_ << " Enter OfCollectiveActor::Act()";
   
   CHECK(IsReadReady() && IsWriteReady() && CanAct()) << "Actor " << actor_id_;
   
   AsyncLaunchKernel([&](int64_t regst_desc_id) -> Regst* { return nullptr; });
 
-  VLOG(2) << "Actor " << actor_id_ << " OfCollectiveActor::Act() Done";
+  VLOG(1) << "Actor " << actor_id_ << " OfCollectiveActor::Act() Done";
   return;
 }
 

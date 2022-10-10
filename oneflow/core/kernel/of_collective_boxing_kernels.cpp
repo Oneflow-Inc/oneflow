@@ -122,7 +122,7 @@ void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) con
 
     OF_NCCL_CHECK(ofcclRunAllReduce(send_buff, recv_buff, coll_id, cb_func, args, ofccl_rank_ctx));
 
-    VLOG(1) << "OfCollectiveBoxingGenericKernel::ForwardDataContent Done" << send_buff << recv_buff;
+    VLOG(1) << "OfCollectiveBoxingGenericKernel::ForwardDataContent invoke ofcclRunAllReduce with send_buff = " << send_buff << " recv_buff = " << recv_buff;
   }
 }
 

@@ -224,11 +224,11 @@ struct CollectiveBackendOfccl::Impl {
     return;
   }
 
-  void PrepareDone() {
-    for (auto &device_id7ofcll_rank_ctx : device_id2ofccl_rank_ctx) {
-      ofcclPrepareDone(device_id7ofcll_rank_ctx.second);
-    }
-  }
+  // void PrepareDone() {
+  //   for (auto &device_id7ofcll_rank_ctx : device_id2ofccl_rank_ctx) {
+  //     ofcclPrepareDone(device_id7ofcll_rank_ctx.second);
+  //   }
+  // }
 
   void Destroy() {
     for (auto &device_id7ofcll_rank_ctx : device_id2ofccl_rank_ctx) {
@@ -264,7 +264,7 @@ void CollectiveBackendOfccl::InitJob(int64_t job_id) {
   CudaCurrentDeviceGuard guard;
   impl_->InitCommGroup(job_id); // 针对每个local rank创建了rank_ctx，并且对所有相关的集合通信执行了prepareColl（包括创建comm）
   // 接下来对每个local rank执行prepareDone
-  impl_->PrepareDone();
+  // impl_->PrepareDone(); // 不能再这里调用，不然在runtime一开始启动一个一直跑的kernel，会导致后面actor开始执行一些同步操作的时候卡住。
 }
 
 void CollectiveBackendOfccl::DeinitJob(int64_t job_id) {
