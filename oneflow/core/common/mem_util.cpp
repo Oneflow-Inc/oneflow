@@ -40,11 +40,13 @@ void ProcessMemUsage(double* vm_usage, double* resident_set) {
   // 'file' stat seems to give the most reliable results
   std::ifstream stat_stream("/proc/self/stat", std::ios_base::in);
   ProcStat proc_stat;
-  stat_stream >> proc_stat.pid >> proc_stat.comm >> proc_stat.state >> proc_stat.ppid >> proc_stat.pgrp
-      >> proc_stat.session >> proc_stat.tty_nr >> proc_stat.tpgid >> proc_stat.flags >> proc_stat.minflt
-      >> proc_stat.cminflt >> proc_stat.majflt >> proc_stat.cmajflt >> proc_stat.utime >> proc_stat.stime
-      >> proc_stat.cutime >> proc_stat.cstime >> proc_stat.priority >> proc_stat.nice >> proc_stat.num_threads
-      >> proc_stat.itrealvalue >> proc_stat.starttime >> proc_stat.vsize >> proc_stat.rss;  // don't care about the rest
+  stat_stream >> proc_stat.pid >> proc_stat.comm >> proc_stat.state >> proc_stat.ppid
+      >> proc_stat.pgrp >> proc_stat.session >> proc_stat.tty_nr >> proc_stat.tpgid
+      >> proc_stat.flags >> proc_stat.minflt >> proc_stat.cminflt >> proc_stat.majflt
+      >> proc_stat.cmajflt >> proc_stat.utime >> proc_stat.stime >> proc_stat.cutime
+      >> proc_stat.cstime >> proc_stat.priority >> proc_stat.nice >> proc_stat.num_threads
+      >> proc_stat.itrealvalue >> proc_stat.starttime >> proc_stat.vsize
+      >> proc_stat.rss;  // don't care about the rest
 
   stat_stream.close();
 
