@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/time_util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/global_for.h"
@@ -455,11 +456,13 @@ Maybe<void> AddGlobalInputOutputCriticalSection(
 
 Maybe<void> MultiClientAddWaitAndSendIds(JobBuilder* job_builder, int64_t machine_id,
                                          const std::string& src_op_name) {
+  auto tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
   ParallelConf parallel_conf;
   {
     parallel_conf.set_device_tag("cpu");
     parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":0");
   }
+  tc->Count("MultiClientAddWaitAndSendIds", 1);
 
   // add wait_and_send_ids op conf
   OperatorConf wait_and_send_ids_op_conf;
@@ -473,6 +476,7 @@ Maybe<void> MultiClientAddWaitAndSendIds(JobBuilder* job_builder, int64_t machin
     // wait_and_send_ids_conf->id_list() is unused in multi-client mode.
   }
   JUST(job_builder->AddOp(parallel_conf, wait_and_send_ids_op_conf));
+  tc->Count("MultiClientAddWaitAndSendIds1", 1);
 
   // connect wait_and_send_ids to tick op which was connected to the src tick op
   OperatorConf tick_op_conf;
@@ -490,6 +494,7 @@ Maybe<void> MultiClientAddWaitAndSendIds(JobBuilder* job_builder, int64_t machin
     }
     return Maybe<void>::Ok();
   }));
+  tc->Count("MultiClientAddWaitAndSendIds2", 1);
   CHECK_OR_RETURN(find_src_tick_consumer_tick);
   CHECK_OR_RETURN(tick_op_conf.has_tick_conf());
   CHECK_EQ_OR_RETURN(tick_op_conf.tick_conf().tick_size(), 1);
@@ -497,9 +502,11 @@ Maybe<void> MultiClientAddWaitAndSendIds(JobBuilder* job_builder, int64_t machin
   tick_op_conf.mutable_tick_conf()->add_tick(
       GenLogicalBlobName(wait_and_send_ids_op_conf.name(), "out"));
   JUST(job_builder->MutOpOnlyOnce(tick_op_conf));
+  tc->Count("MultiClientAddWaitAndSendIds3", 1);
 
   // erase the src tick op
   job_builder->DelOps({src_op_name});
+  tc->Count("MultiClientAddWaitAndSendIds4", 1);
   return Maybe<void>::Ok();
 }
 
@@ -551,12 +558,14 @@ Maybe<void> AutoSourceAndSinkTick(
     const OpGraph& op_graph, JobBuilder* job_builder,
     const std::function<Maybe<void>(int64_t machine_id, const std::string& op_name)>& DoEachSrc,
     const std::function<Maybe<void>(int64_t machine_id, const std::string& op_name)>& DoEachSink) {
+  auto tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
   JUST(op_graph.MaybeForEachNode([&](OpNode* node) -> Maybe<void> {
     CHECK_OR_RETURN(!node->op().op_conf().has_sink_tick_conf());
     return Maybe<void>::Ok();
   }));
   const auto* op_node = JUST(GetSrcSubsetTickOpNode(op_graph));
   const auto& src_time_shape = JUST(op_node->op().GetOpTimeShape());
+  tc->Count("AutoSourceAndSinkTick1", 1);
   HashSet<LogicalBlobId> tick_lbis;
   JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
     size_t out_cnt = 0;
@@ -567,15 +576,20 @@ Maybe<void> AutoSourceAndSinkTick(
     CHECK_OR_RETURN(tick_lbis.emplace(op_node->op().BnInOp2Lbi(op_node->op().SoleObn())).second);
     return Maybe<void>::Ok();
   }));
+  tc->Count("AutoSourceAndSinkTick2", 1);
   OperatorConf src_subset_tick = JUST(FindJobSoleSrcSubsetTickOpConf(job_builder->job()));
+  tc->Count("AutoSourceAndSinkTick3", 1);
   JUST(CreateSourceTicksAndSrcSubsetTick(&src_subset_tick, job_builder, DoEachSrc));
+  tc->Count("AutoSourceAndSinkTick4", 1);
   JUST(CreateDstSubsetTickAndSinkTicks(src_subset_tick, tick_lbis, job_builder, DoEachSink));
+  tc->Count("AutoSourceAndSinkTick5", 1);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> MultiClientAutoSourceAndSinkTick(const OpGraph& op_graph, Job* job) {
   HashMap<int64_t, std::string> machine_id2src_op_name;
   HashMap<int64_t, std::string> machine_id2sink_op_name;
+  auto tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
   {
     JobBuilder job_builder(job);
     const auto& DoEachSrc = [&](int64_t machine_id, const std::string& op_name) -> Maybe<void> {
@@ -588,14 +602,17 @@ Maybe<void> MultiClientAutoSourceAndSinkTick(const OpGraph& op_graph, Job* job) 
     };
     JUST(AutoSourceAndSinkTick(op_graph, &job_builder, DoEachSrc, DoEachSink));
   }
+  tc->Count("AutoSourceAndSinkTick", 1);
   {
     JobBuilder job_builder(job);
     for (const auto& pair : machine_id2src_op_name) {
       JUST(MultiClientAddWaitAndSendIds(&job_builder, pair.first, pair.second));
     }
+    tc->Count("MultiClientAddWaitAndSendIds", 1);
     for (const auto& pair : machine_id2sink_op_name) {
       JUST(MultiClientAddCallbackNotifier(&job_builder, pair.first, pair.second));
     }
+    tc->Count("MultiClientAddCallbackNotifier", 1);
   }
   return Maybe<void>::Ok();
 }

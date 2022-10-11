@@ -366,11 +366,11 @@ Maybe<void> NNGraph::MasterRankCompile() {
         Plan rank_plan;
         auto* plan = (i >= kWorkerStartRank) ? &rank_plan : &plan_;
         // TODO(chengcheng): new memory reused by chunk
-        auto rank_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true);
+        auto rank_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
         CHECK_JUST(
             RankCompiler(boxing_task_graph_proto, i).Compile(variable_op_names_, &job_, plan));
         PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
-        rank_tc->Count("RankPlan Compie of rank " + std::to_string(i), 1);
+        rank_tc->Count("RankPlan Compile of rank " + std::to_string(i), 1);
 
         if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
           TeePersistentLogStream::Create("job_" + name_ + "_plan" + std::to_string(i))
@@ -386,6 +386,7 @@ Maybe<void> NNGraph::MasterRankCompile() {
           PlanUtil::GenReachableTaskPairs(*plan, &PlanUtil::IsCollectiveBoxingTaskProto,
                                           &reachable_cb_pairs[i]);
           std::string plan_name = "plan:" + job_name() + ":" + std::to_string(i);
+          VLOG(1) << "sub plan " << plan_name << " size " << plan->ByteSizeLong();
           Singleton<CtrlClient>::Get()->PushKV(plan_name, *plan);
         }
         rank_tc->Count("RankPlan Complete of rank " + std::to_string(i), 1);
@@ -401,6 +402,7 @@ Maybe<void> NNGraph::MasterRankCompile() {
       plan_.collective_boxing_plan().SerializeToString(&collective_boxing_info);
       for (int i = kWorkerStartRank /*skip master*/; i < world_size; ++i) {
         std::string name = "collective_boxing_info:" + job_name() + ":" + std::to_string(i);
+        VLOG(1) << "sub boxing plan " << name << " size " << collective_boxing_info.length();
         Singleton<CtrlClient>::Get()->PushKV(name, collective_boxing_info);
       }
       return Maybe<void>::Ok();
@@ -473,6 +475,7 @@ Maybe<void> NNGraph::NaiveCompile() {
     std::string plan_name = "plan:" + job_name();
     if (GlobalProcessCtx::IsThisProcessMaster()) {
       // TODO(chengcheng): split plan for each rank.
+      VLOG(1) << "plan " << plan_name << " size " << plan_.ByteSizeLong();
       Singleton<CtrlClient>::Get()->PushKV(plan_name, plan_);
       sync_time_counter->Count("Graph name: " + name_ + " push kv", 1);
     } else {
