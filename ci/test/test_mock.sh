@@ -1,7 +1,9 @@
 #!/bin/bash
 
 MOCK_TORCH=$PWD/python/oneflow/test/misc/test_mock_torch.py
-
+python3 -m oneflow --doctor
+python3 -c 'import oneflow; print(oneflow.__path__)'
+python3 -m oneflow.mock_torch
 eval $(python3 -m oneflow.mock_torch) # default argument is enable
 # for debugging
 echo $PYTHONPATH | tr ': ' ' ' | xargs ls
