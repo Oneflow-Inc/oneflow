@@ -87,10 +87,10 @@ void AccCtrlTickActor::VirtualActorInit(const TaskProto& proto) {
   // input
   const auto& consumed_ids = proto.consumed_regst_desc_id();
   CHECK_EQ(consumed_ids.size(), 1);
-  CHECK(consumed_ids.find("in") != consumed_ids.end());
-  const auto& in_ids = consumed_ids.at("in");
-  CHECK_EQ(in_ids.regst_desc_id_size(), 1);
-  consumed_tick_regst_desc_id_ = in_ids.regst_desc_id(0);
+  auto in_it = consumed_ids.find("in");
+  CHECK(in_it != consumed_ids.end());
+  CHECK_EQ(in_it->second.regst_desc_id_size(), 1);
+  consumed_tick_regst_desc_id_ = in_it->second.regst_desc_id(0);
   consumed_tick_rs_.InsertRegstDescId(consumed_tick_regst_desc_id_);
   consumed_tick_rs_.InitedDone();
 
@@ -99,8 +99,9 @@ void AccCtrlTickActor::VirtualActorInit(const TaskProto& proto) {
 
   const auto& produced_ids = proto.produced_regst_desc();
   CHECK_EQ(produced_ids.size(), 1);
-  CHECK(produced_ids.find("out") != produced_ids.end());
-  const RegstDescProto& out_regst_desc = produced_ids.at("out");
+  auto out_it = produced_ids.find("out");
+  CHECK(out_it != produced_ids.end());
+  const RegstDescProto& out_regst_desc = out_it->second;
   produced_tick_regst_desc_id_ = out_regst_desc.regst_desc_id();
   produced_tick_rs_.InsertRegstDescId(produced_tick_regst_desc_id_);
   produced_tick_rs_.InitedDone();

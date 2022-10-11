@@ -80,8 +80,9 @@ void SetVariableOpNamesForVariableAndRepeatRegst(Plan* plan) {
       RegstDescProto* regst = PlanUtil::GetSoleProducedDataRegst(task);
       CHECK(regst->has_force_inplace_consumed_regst_desc_id());
       int64_t force_inplace_regst_id = regst->force_inplace_consumed_regst_desc_id();
-      if (regst_id2var_name.find(force_inplace_regst_id) != regst_id2var_name.end()) {
-        regst->set_variable_op_name(regst_id2var_name.at(force_inplace_regst_id));
+      auto var_name_it = regst_id2var_name.find(force_inplace_regst_id);
+      if (var_name_it != regst_id2var_name.end()) {
+        regst->set_variable_op_name(var_name_it->second);
         VLOG(3) << " set var op name to repeat regst : " << regst->DebugString();
       }
     }

@@ -69,6 +69,7 @@ namespace oneflow {
     time_shape_dim_vec.back() /= max_acc_num;
   } else {
     const int64_t elem_cnt = in_time_shape.elem_cnt();
+    CHECK_EQ_OR_RETURN(elem_cnt % max_acc_num, 0);
     time_shape_dim_vec.resize(1);
     time_shape_dim_vec.back() = elem_cnt / max_acc_num;
   }

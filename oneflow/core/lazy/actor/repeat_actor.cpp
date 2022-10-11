@@ -96,17 +96,18 @@ void RepeatActor::VirtualActorInit(const TaskProto& proto) {
 
   // input
   const auto& consumed_ids = proto.consumed_regst_desc_id();
-  CHECK(consumed_ids.find("in") != consumed_ids.end());
-  const auto& in_ids = consumed_ids.at("in");
-  CHECK_EQ(in_ids.regst_desc_id_size(), 1);
-  consumed_var_regst_desc_id_ = in_ids.regst_desc_id(0);
+  auto in_it = consumed_ids.find("in");
+  CHECK(in_it != consumed_ids.end());
+  CHECK_EQ(in_it->second.regst_desc_id_size(), 1);
+  consumed_var_regst_desc_id_ = in_it->second.regst_desc_id(0);
   consumed_var_rs_.InsertRegstDescId(consumed_var_regst_desc_id_);
   consumed_var_rs_.InitedDone();
 
   // output
   const auto& produced_ids = proto.produced_regst_desc();
-  CHECK(produced_ids.find("out") != produced_ids.end());
-  const RegstDescProto& out_regst_desc = produced_ids.at("out");
+  auto out_it = produced_ids.find("out");
+  CHECK(out_it != produced_ids.end());
+  const RegstDescProto& out_regst_desc = out_it->second;
   CHECK(!out_regst_desc.enable_reuse_mem());
   CHECK_EQ(out_regst_desc.register_num(), 1);
   // check inplace
