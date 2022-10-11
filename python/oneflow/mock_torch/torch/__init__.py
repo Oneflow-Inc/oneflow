@@ -22,9 +22,8 @@ from importlib.machinery import ModuleSpec
 from importlib.util import find_spec, module_from_spec
 import sys
 
-__path__ = oneflow.__path__
-error_msg = """ is not implemented, please submit issues in 
-'https://github.com/Oneflow-Inc/oneflow/issues' include the log information of the error, the 
+error_msg = """ is not implemented, please submit an issue at  
+'https://github.com/Oneflow-Inc/oneflow/issues' including the log information of the error, the 
 minimum reproduction code, and the system information."""
 
 # module wrapper with checks for existence of methods
