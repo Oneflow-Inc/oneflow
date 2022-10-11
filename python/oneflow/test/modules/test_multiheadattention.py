@@ -43,8 +43,9 @@ def _test_multiheadattention(test_case):
     qkv_bias = flow.randn(emb_dim * 3)
     proj_weight = flow.randn(out_proj_dim, in_proj_dim)
     proj_bias = flow.randn(out_proj_dim, )
-    # mask = flow.randn(batch_size, seq_len) > 0
-    mask = flow.zeros(batch_size, seq_len).bool()
+    mask = flow.randn(batch_size, seq_len) > 0
+    print(mask)
+    # mask = flow.zeros(batch_size, seq_len).bool()
     
 
     flow_result = flow.nn.functional.multi_head_attention_forward(
@@ -60,8 +61,8 @@ def _test_multiheadattention(test_case):
         query, key, value, emb_dim, num_heads, qkv_weight, qkv_bias, proj_weight, proj_bias,
         mask=None, need_weights=True, average_attn_weights=True, mask_type=1
     )
-    print("flow_result: ", flow_result[1].mean())
-    print("torch_result: ", torch_result[1].mean())
+    print("flow_result: ", flow_result[0].mean())
+    print("torch_result: ", torch_result[0].mean())
 
 @flow.unittest.skip_unless_1n1d()
 class TestMultiHeadAttentionModule(flow.unittest.TestCase):

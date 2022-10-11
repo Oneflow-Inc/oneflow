@@ -4436,9 +4436,9 @@ class BatchAddBatchMatMulFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const std::shared_ptr<Tensor>& batch1,
-                           const std::shared_ptr<Tensor>& batch2, const double& beta,
+                           const std::shared_ptr<Tensor>& batch2, const bool& transpose_a, const bool& transpose_b, const double& beta,
                            const double& alpha) const {
-    const auto& bmm_result = JUST(BatchMatMul(batch1, batch2, false, false, alpha));
+    const auto& bmm_result = JUST(BatchMatMul(batch1, batch2, transpose_a, transpose_b, alpha));
     if (beta == 0) { return bmm_result; }
     CHECK_EQ_OR_RETURN(input->ndim(), 3)
         << Error::RuntimeError() << "Expected 3-dimensional tensor, but got " << input->ndim();
@@ -4589,8 +4589,6 @@ class MultiHeadAttentionFunctor {
       auto y_shape = y->shape();
       auto x_3d = JUST(Reshape(x, {batch_size * num_head, seq_len, dim_per_head}));
       auto y_3d = JUST(Reshape(y, {batch_size * num_head, seq_len, dim_per_head}));
-      // TODO(wangyi) : use transpose_b param after https://github.com/Oneflow-Inc/oneflow/pull/9215 merged
-      // auto result = JUST(BatchMatMul(x_3d, JUST(Transpose2dim(y_3d, 1, 2)), false, false, 1.0));
       auto result = JUST(BatchMatMul(x_3d, y_3d, false, true, 1.0));
       return Reshape(result, {batch_size, num_head, seq_len, seq_len});
     };
