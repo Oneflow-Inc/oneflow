@@ -55,10 +55,9 @@ add_docstr(
 
 add_docstr(
     oneflow.set_default_dtype,
-    """oneflow.get_default_dtype() -> oneflow._oneflow_internal.dtype
+    """oneflow.set_default_dtype() -> None
 
-    Sets the default floating point type for those source operators which create Tensor
-    (e.g. oneflow.ones, oneflow.zeros, oneflow.rand, oneflow.randn, oneflow.Tensor, etc.)
+    Sets the default floating point type for those source operators which create Tensor.
 
     The default floating point type is ``oneflow.float32``.
 

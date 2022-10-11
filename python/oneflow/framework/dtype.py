@@ -80,8 +80,7 @@ del np
 
 
 def set_default_tensor_type(tensor_type):
-    """Sets the default floating point type for those source operators which create Tensor
-    (e.g. oneflow.ones, oneflow.zeros, oneflow.rand, oneflow.randn, oneflow.Tensor, etc.)
+    """Sets the default floating point type for those source operators which create Tensor.
 
     The default floating point type is ``oneflow.FloatTensor``.
 
