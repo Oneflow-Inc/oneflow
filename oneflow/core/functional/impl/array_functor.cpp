@@ -504,7 +504,7 @@ class ConcatFunctor {
           CHECK_OR_RETURN(input->shape()->At(i) == shape->At(i))
               << Error::RuntimeError() << "Sizes of tensors must match except in dimension " << axis
               << ". Got " << input->shape()->At(i) << " and " << shape->At(i)
-              << " is expected in dimension 1.";
+              << " is expected in dimension " << i << ".";
         }
       }
     }
