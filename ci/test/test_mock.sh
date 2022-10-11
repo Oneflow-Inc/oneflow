@@ -3,6 +3,9 @@
 MOCK_TORCH=$PWD/python/oneflow/test/misc/test_mock_torch.py
 
 eval $(python3 -m oneflow.mock_torch) # default argument is enable
+# for debugging
+echo $PYTHONPATH | tr ': ' ' ' | xargs ls
+python3 -c 'import sys; print(sys.path); import torch; print(torch.__file__)'
 if [[ "$(python3 $MOCK_TORCH)" != *"True"* ]]; then
     exit 1
 fi
