@@ -1089,7 +1089,7 @@
 
 - name: "baddbmm"
   signature:
-    "Tensor (Tensor input, Tensor batch1, Tensor batch2, *, Bool transpose_a=False, Bool transpose_b = False, Double beta=1.0, Double alpha=1.0) => BatchAddBatchMatMul"
+    "Tensor (Tensor input, Tensor batch1, Tensor batch2, *, Bool transpose_a=False, Bool transpose_b=False, Double beta=1.0, Double alpha=1.0) => BatchAddBatchMatMul"
   bind_python: True
 
 - name: "scaled_dot_product_attention"

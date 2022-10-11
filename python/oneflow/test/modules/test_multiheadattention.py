@@ -36,40 +36,69 @@ def _test_multiheadattention(test_case):
     in_proj_dim = emb_dim
     out_proj_dim = 32
 
+    query = flow.randn(batch_size, seq_len, emb_dim).cuda()
+    key = flow.randn(batch_size, seq_len, emb_dim).cuda()
+    value = flow.randn(batch_size, seq_len, emb_dim).cuda()
+    qkv_weight = flow.randn(emb_dim * 3, in_proj_dim).cuda()
+    qkv_bias = flow.randn(emb_dim * 3).cuda()
+    proj_weight = flow.randn(out_proj_dim, in_proj_dim).cuda()
+    proj_bias = flow.randn(out_proj_dim,).cuda()
+    mask = (flow.randn(batch_size, seq_len) > 0).cuda()
+
     query = flow.randn(batch_size, seq_len, emb_dim)
     key = flow.randn(batch_size, seq_len, emb_dim)
     value = flow.randn(batch_size, seq_len, emb_dim)
     qkv_weight = flow.randn(emb_dim * 3, in_proj_dim)
     qkv_bias = flow.randn(emb_dim * 3)
     proj_weight = flow.randn(out_proj_dim, in_proj_dim)
-    proj_bias = flow.randn(out_proj_dim, )
-    mask = flow.randn(batch_size, seq_len) > 0
+    proj_bias = flow.randn(out_proj_dim,)
+    mask = (flow.randn(batch_size, seq_len) > 0)
+    # mask = flow.zeros(batch_size, seq_len).bool().cuda()
     print(mask)
-    # mask = flow.zeros(batch_size, seq_len).bool()
-    
 
     flow_result = flow.nn.functional.multi_head_attention_forward(
-        query, key, value, emb_dim, num_heads, qkv_weight, qkv_bias, proj_weight, proj_bias,
-        mask=None, need_weights=True, average_attn_weights=True, mask_type=1
+        query,
+        key,
+        value,
+        emb_dim,
+        num_heads,
+        qkv_weight,
+        qkv_bias,
+        proj_weight,
+        proj_bias,
+        mask=mask,
+        need_weights=True,
+        average_attn_weights=True,
+        mask_type=1
         # mask=N, False, False, 1
     )
     query, key, value, qkv_weight, qkv_bias, proj_weight, proj_bias, mask = map(
-        lambda x: torch_original.tensor(x.numpy()), 
-        [query, key, value, qkv_weight, qkv_bias, proj_weight, proj_bias, mask]
+        lambda x: torch_original.tensor(x.numpy()),
+        [query, key, value, qkv_weight, qkv_bias, proj_weight, proj_bias, mask],
     )
     torch_result = torch_original._native_multi_head_attention(
-        query, key, value, emb_dim, num_heads, qkv_weight, qkv_bias, proj_weight, proj_bias,
-        mask=None, need_weights=True, average_attn_weights=True, mask_type=1
+        query,
+        key,
+        value,
+        emb_dim,
+        num_heads,
+        qkv_weight,
+        qkv_bias,
+        proj_weight,
+        proj_bias,
+        mask=mask,
+        need_weights=True,
+        average_attn_weights=True,
+        mask_type=1,
     )
     print("flow_result: ", flow_result[0].mean())
     print("torch_result: ", torch_result[0].mean())
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestMultiHeadAttentionModule(flow.unittest.TestCase):
     def test_multiheadattention(test_case):
         _test_multiheadattention(test_case)
-
-
 
 
 if __name__ == "__main__":
