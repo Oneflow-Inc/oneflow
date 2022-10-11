@@ -70,6 +70,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.attr("complex64") = &CHECK_JUST(DType::Get(DataType::kComplex64));
   m.attr("complex128") = &CHECK_JUST(DType::Get(DataType::kComplex128));
 
+  py::options options;
+  options.disable_function_signatures();
   m.def("get_default_dtype", []() { return GetDefaultDType(); });
   m.def("set_default_dtype",
         [](const Symbol<DType>& dtype) { CHECK_JUST(SetDefaultDType(dtype)); });
