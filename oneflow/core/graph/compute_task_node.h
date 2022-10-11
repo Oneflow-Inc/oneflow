@@ -36,7 +36,7 @@ class CompTaskNode : public TaskNode {
   ParallelContext* mut_parallel_ctx() { return &parallel_ctx_; }
 
   // op_node_
-  const OpNode* op_node() const { return op_node_; }
+  const OpNode* op_node() const override { return op_node_; }
   void set_op_node(const OpNode* val) { op_node_ = val; }
   std::string VisualStr() const override;
 
@@ -53,7 +53,7 @@ class CompTaskNode : public TaskNode {
 
  private:
   ParallelContext parallel_ctx_;
-  const OpNode* op_node_;
+  const OpNode* op_node_{};
 };
 
 class OpCompTaskNodeCreator {

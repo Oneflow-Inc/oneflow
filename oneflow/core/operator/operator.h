@@ -163,7 +163,7 @@ class Operator {
       bool is_local_parallel_view_conf, const ParallelDesc& parallel_desc);
 
   void GenKernelConf(const std::function<const BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
-                     const ParallelContext*, KernelConf*) const;
+                     const ParallelContext*, const bool, KernelConf*) const;
   const InputBlobModifier& InputBlobModifier4Ibn(const std::string& ibn) const;
   const OutputBlobModifier& OutputBlobModifier4Obn(const std::string& obn) const;
   Maybe<const SbpParallel*> SbpParallel4BnInOp(const std::string& bn_in_op) const;

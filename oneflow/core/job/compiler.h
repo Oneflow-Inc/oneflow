@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_COMPILER_H_
 #define ONEFLOW_CORE_JOB_COMPILER_H_
 
+#include <memory>
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/job/plan.pb.h"
@@ -23,13 +24,13 @@ limitations under the License.
 
 namespace oneflow {
 
-class Compiler final {
+class PlanCompiler final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Compiler);
-  Compiler() = default;
-  ~Compiler() = default;
+  OF_DISALLOW_COPY_AND_MOVE(PlanCompiler);
+  PlanCompiler() = default;
+  ~PlanCompiler() = default;
 
-  void Compile(Job*, Plan*) const;
+  static void Compile(Job*, Plan*, std::shared_ptr<TaskGraph>& task_gph);
 };
 
 }  // namespace oneflow

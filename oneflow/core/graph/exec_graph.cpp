@@ -60,8 +60,10 @@ void ExecNode::UnbindBnWithEmptyRegst() {
       });
 }
 
-void ExecNode::ToProto(const ParallelContext* parallel_ctx, ExecNodeProto* ret) const {
-  op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), parallel_ctx, ret->mutable_kernel_conf());
+void ExecNode::ToProto(const ParallelContext* parallel_ctx, const bool need_op_attr,
+                       ExecNodeProto* ret) const {
+  op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), parallel_ctx, need_op_attr,
+                     ret->mutable_kernel_conf());
   for (const auto& bn_regst : bn_in_op2regst_) {
     const std::string& bn_in_op = bn_regst.first;
     auto regst = bn_regst.second;
@@ -105,9 +107,8 @@ Maybe<void> CheckPhysicalBlobDesc(
 
 }  // namespace
 
-void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
+void ExecNode::InferBlobDescs(const OpNode* op_node, const ParallelContext* parallel_ctx) {
   auto GetBlobDesc4BnInOp = GetBlobDesc4BnInOpFunc();
-  const OpNode* op_node = Singleton<OpGraph>::Get()->OpNode4OpName(op()->op_name());
   const NdSbpSignature* nd_sbp_signature = nullptr;
   if (op_node != nullptr) { nd_sbp_signature = &op_node->nd_sbp_signature(); }
 
@@ -141,8 +142,10 @@ std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc() 
   };
 }
 
-void ExecGraph::ToExecSequence(const ParallelContext* parallel_ctx, ExecSequence* ret) const {
-  TopoForEachNode([&](ExecNode* node) { node->ToProto(parallel_ctx, ret->add_exec_node()); });
+void ExecGraph::ToExecSequence(const ParallelContext* parallel_ctx, const bool need_op_attr,
+                               ExecSequence* ret) const {
+  TopoForEachNode(
+      [&](ExecNode* node) { node->ToProto(parallel_ctx, need_op_attr, ret->add_exec_node()); });
 }
 
 }  // namespace oneflow

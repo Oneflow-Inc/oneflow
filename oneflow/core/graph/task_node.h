@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_GRAPH_TASK_NODE_H_
 
 #include "oneflow/core/graph/exec_graph.h"
+#include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/auto_registration_factory.h"
@@ -56,6 +57,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t chain_id() const { return chain_id_; }
   int64_t order_in_graph() const { return order_in_graph_; }
   const ExecGraph& exec_gph() const { return exec_gph_; }
+  virtual const OpNode* op_node() const { return nullptr; }
   std::shared_ptr<RegstDesc> GetProducedRegst(const std::string& name);
   const std::list<std::shared_ptr<RegstDesc>>& GetConsumedRegst(const std::string& name);
   std::shared_ptr<RegstDesc> GetSoleConsumedRegst(const std::string& name);
