@@ -80,7 +80,7 @@ bool IsBreakpointOpNode(const OpNode* node) {
 
   if (op_conf.has_user_conf()) {
     const std::string& user_type_name = op_conf.user_conf().op_type_name();
-    if (user_type_name == "repeat" || user_type_name == "pack" || user_type_name == "unpack"
+    if (user_type_name == "repeat" || user_type_name == "unpack"
         || user_type_name == "identity_buffer" || user_type_name == "copy_h2d"
         || user_type_name == "copy_d2h") {
       return true;
@@ -566,6 +566,30 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
     }
   };
 
+  auto FixLogicalChainOpStreamHint = [&](const std::vector<const OpNode*>& ordered_op_nodes) {
+    std::string stream_index_name = "";
+    for (const OpNode* op_node : ordered_op_nodes) {
+      const OperatorConf& op_conf = op_node->op().op_conf();
+      if (op_conf.has_stream_name_hint() && !op_conf.stream_name_hint().empty()) {
+        if (stream_index_name.empty()) {
+          stream_index_name = op_conf.stream_name_hint();
+        } else {
+          CHECK_EQ(stream_index_name, op_conf.stream_name_hint());
+        }
+      }
+    }
+
+    if (!stream_index_name.empty()) {
+      for (const OpNode* op_node : ordered_op_nodes) {
+        OperatorConf& op_conf = CHECK_JUST(MapAt(mut_op_name2conf, op_node->op().op_name()));
+        if (!op_conf.has_stream_name_hint()) {
+          op_conf.set_stream_name_hint(stream_index_name);
+          VLOG(3) << " Op: " << op_conf.name() << " fix stream name hint : " << stream_index_name;
+        }
+      }
+    }
+  };
+
   for (auto& pair : placement2logical_chains) {
     const auto& placement = pair.first;
     auto& info = pair.second;
@@ -576,6 +600,8 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
     for (auto& logical_chain : info.ordered_logical_chains) {
       logical_chain->logical_chain_id = NewLogicalChainId();
       InsertLogicalChainId(logical_chain->ordered_op_nodes, logical_chain->logical_chain_id);
+      // TODO(chengcheng): rm fix hint and use thrd id in logical op node.
+      FixLogicalChainOpStreamHint(logical_chain->ordered_op_nodes);
       InsertCtrlEdgeInChain(logical_chain->ordered_op_nodes);
     }
 

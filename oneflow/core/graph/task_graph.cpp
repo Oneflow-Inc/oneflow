@@ -421,9 +421,10 @@ void ForEachOpGraphNecessaryCtrlEdge(
           dst_time_shape = CHECK_JUST(dst->op().GetOpTimeShape()).get();
         }
         if (src_time_shape->elem_cnt() != dst_time_shape->elem_cnt()) {
-          // NOTE(chengcheng): acc op node can be merged and add ctrl edge.
-          CHECK(src->op().op_conf().has_user_conf()
-                && src->op().op_conf().user_conf().op_type_name() == "acc");
+          // NOTE(chengcheng): acc / pack op node can be merged and add ctrl edge.
+          CHECK(src->op().op_conf().has_user_conf());
+          const std::string& op_type_name = src->op().op_conf().user_conf().op_type_name();
+          CHECK(op_type_name == "acc" || op_type_name == "pack");
           const Shape* src_input_time_shape =
               CHECK_JUST(src->op().GetInputBlobFastestTimeShape()).get();
           CHECK_EQ(src_input_time_shape->elem_cnt(), dst_time_shape->elem_cnt());
