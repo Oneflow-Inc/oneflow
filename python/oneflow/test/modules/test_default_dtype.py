@@ -30,6 +30,7 @@ _source_op_list = [
     flow.empty,
 ]
 
+
 class TestDefaultDTypeInferface(oneflow.unittest.TestCase):
     def test_set_default_dtype(test_case):
         flow.set_default_dtype(flow.float32)
@@ -41,6 +42,13 @@ class TestDefaultDTypeInferface(oneflow.unittest.TestCase):
         for op in _source_op_list:
             x = op((2, 3))
             test_case.assertEqual(x.dtype, flow.float64)
+
+        with test_case.assertRaises(Exception) as ctx:
+            flow.set_default_dtype(flow.int32)
+        test_case.assertTrue(
+            "only floating-point types are supported as the default type"
+            in str(ctx.exception)
+        )
 
     def test_set_default_tensor_type(test_case):
         flow.set_default_dtype(flow.float32)
