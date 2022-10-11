@@ -13,27 +13,38 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from inspect import ismodule
+from types import ModuleType
 import oneflow
 from typing import Any
 from importlib.abc import MetaPathFinder, Loader
 from importlib.machinery import ModuleSpec
 from importlib.util import find_spec, module_from_spec
-
 import sys
 
+__path__ = oneflow.__path__
 error_msg = """ is not implemented, please submit issues in 
 'https://github.com/Oneflow-Inc/oneflow/issues' include the log information of the error, the 
 minimum reproduction code, and the system information."""
 
 # module wrapper with checks for existence of methods
-class ModuleWrapper:
+class ModuleWrapper(ModuleType):
     def __init__(self, module):
         self.module = module
 
     def __getattr__(self, name: str) -> Any:
         if not hasattr(self.module, name):
+            if name == "__path__":  # fix: from somemod import attr
+                return None
+            if name == "__all__":
+                setattr(self.module, name, dir(self.module))
+                return getattr(self.module, name)
             raise NotImplementedError(self.module.__name__ + "." + name + error_msg)
-        return getattr(self.module, name)
+        attr = getattr(self.module, name)
+        if ismodule(attr):
+            return ModuleWrapper(attr)
+        else:
+            return attr
 
 
 def __getattr__(name: str):
