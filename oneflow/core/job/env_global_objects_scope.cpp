@@ -273,20 +273,20 @@ Maybe<void> InitRDMA() {
           Singleton<IBVerbsCommNet>::New();
           Singleton<CommNet>::SetAllocated(Singleton<IBVerbsCommNet>::Get());
         } else {
-          LOG(WARNING) << "Skip init RDMA because RDMA is already initialized!";
+          LOG(INFO) << "Skip init RDMA because RDMA is already initialized!";
         }
       } else {
-        LOG(WARNING) << "Skip init RDMA because RDMA is unavailable!";
+        LOG(INFO) << "Skip init RDMA because RDMA is unavailable!";
       }
 #else
-      LOG(WARNING) << "Skip init RDMA because RDMA is not compiled!";
+      LOG(INFO) << "Skip init RDMA because RDMA is not compiled!";
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX
     } else {
-      LOG(WARNING) << "Skip init RDMA because only one process in this group!";
+      LOG(INFO) << "Skip init RDMA because only one process in this group!";
     }
 #endif  // __linux__
   } else {
-    LOG(WARNING) << "Skip init RDMA in dry run mode!";
+    LOG(INFO) << "Skip init RDMA in dry run mode!";
   }
   return Maybe<void>::Ok();
 }
