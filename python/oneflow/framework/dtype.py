@@ -100,6 +100,10 @@ def set_default_tensor_type(tensor_type):
         >>> x = oneflow.ones(2, 3)
         >>> x.dtype
         oneflow.float32
+        >>> oneflow.set_default_tensor_type(oneflow.DoubleTensor)
+        >>> x = oneflow.tensor([1.0, 2])
+        >>> x.dtype
+        oneflow.float64
     """
 
     def _import_dotted_name(name):
