@@ -32,6 +32,17 @@ bool IsFusedBnAddReluSupported() {
 #endif
 }
 
+bool NeedDoPass(const Job* job) {
+  for (const auto& op : job->net().op()) {
+    if (!op.has_user_conf()) { continue; }
+    if (op.user_conf().op_type_name() == "normalization_add_relu"
+        || op.user_conf().op_type_name() == "normalization_add_relu_grad") {
+      return true;
+    }
+  }
+  return false;
+}
+
 }  // namespace
 
 class CudnnFusedNormalizationAddReluPass final : public JobPass {
@@ -55,6 +66,7 @@ class CudnnFusedNormalizationAddReluPass final : public JobPass {
 
 Maybe<void> CudnnFusedNormalizationAddReluPass::Apply(Job* job, JobPassCtx* ctx) const {
   if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+  if (!NeedDoPass(job)) { return Maybe<void>::Ok(); }
   const OpGraph op_graph(*job);
   JobBuilder job_builder(job);
   const DataType mixed_precision_data_type = ctx->job_desc().mixed_precision_data_type();
