@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import collections
+from logging import warning
 import warnings
 from typing import Callable, Dict, Iterator, List, Union
 
@@ -105,6 +105,7 @@ class SGD(Optimizer):
         weight_decay: float = 0.0,
         nesterov: bool = False,
         maximize: bool = False,
+        multi_tensor: bool = False,
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert momentum >= 0.0, f"Invalid momentum: {momentum}"
@@ -122,10 +123,24 @@ class SGD(Optimizer):
         options["maximize"] = maximize
         super().__init__(params, options)
 
+        self.multi_tensor = multi_tensor
+        if multi_tensor and (momentum > 0.0 or dampening > 0.0 \
+                or nesterov or maximize):
+            warnings.warn(
+                "Only lr and weight_decay can be used in multi_tensor, trying default sgd. "
+            ) 
+            self.multi_tensor = False
+
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
+
+                if self.multi_tensor and not param.is_cuda:
+                    warnings.warn(
+                        "Only cuda param can be used in multi_tensor, tring default sgd. "
+                    )
+                    self.multi_tensor = False
 
         self._momentum_sgd = (
             flow.stateful_op("momentum_update")
@@ -136,6 +151,52 @@ class SGD(Optimizer):
         )
         self._sgd = (
             flow.stateful_op("sgd_update").Input("model").Input("model_diff").Build()
+        )
+
+    def _single_tensor_update(self, param_group):
+        lr = param_group['lr']
+        l2 = param_group['weight_decay']
+        for param in param_group.parameters:
+            if param.grad is None:
+                continue
+            if param_group["momentum"] == 0.0:
+                # TODO: Support param `maximize` in Naive SGD Optimizer. (zhengzekang)
+                flow._C.dispatch_sgd_update(
+                    self._sgd, (param, param.grad), learning_rate=lr, l2=l2
+                )
+            else:
+                if "momentum_buf" not in self._state[param]:
+                    self._state[param]["momentum_buf"] = flow.zeros_like(param)
+                momentum_buf = self._state[param]["momentum_buf"]
+                beta = param_group["momentum"]
+                dampening = param_group["dampening"]
+                nesterov = param_group["nesterov"]
+                maximize = param_group["maximize"]
+                flow._C.dispatch_momentum_update(
+                    self._momentum_sgd,
+                    (param, param.grad, momentum_buf),
+                    learning_rate=lr,
+                    l2=l2,
+                    beta=beta,
+                    dampening=dampening,
+                    nesterov=nesterov,
+                    maximize=maximize,
+                )
+
+    def _multi_tensor_update(self, param_group):
+        assert len(param_group.parameters) != 0
+        lr = flow.tensor(param_group['lr'], dtype=flow.float32, device=flow.device('cuda'))
+        wd = param_group['weight_decay']
+        param_list = []
+        param_grad_list = []
+        for param in param_group.parameters:
+            if param.grad is None:
+                continue
+            param_list.append(param)
+            param_grad_list.append(param.grad)
+
+        flow._C.multi_tensor_sgd_update(
+            param_list, param_grad_list, lr, 1.0, wd
         )
 
     def step(self, closure: Callable = None):
@@ -150,36 +211,13 @@ class SGD(Optimizer):
             if closure is not None:
                 loss = closure()
             for param_group in self.param_groups:
-                lr = param_group["lr"]
-                l2 = param_group["weight_decay"]
-                for param in param_group.parameters:
-                    if param.grad is None:
-                        continue
-                    if param_group["momentum"] == 0.0:
-                        # TODO: Support param `maximize` in Naive SGD Optimizer. (zhengzekang)
-                        flow._C.dispatch_sgd_update(
-                            self._sgd, (param, param.grad), learning_rate=lr, l2=l2
-                        )
-                    else:
-                        if "momentum_buf" not in self._state[param]:
-                            self._state[param]["momentum_buf"] = flow.zeros_like(param)
-                        momentum_buf = self._state[param]["momentum_buf"]
-                        beta = param_group["momentum"]
-                        dampening = param_group["dampening"]
-                        nesterov = param_group["nesterov"]
-                        maximize = param_group["maximize"]
-                        flow._C.dispatch_momentum_update(
-                            self._momentum_sgd,
-                            (param, param.grad, momentum_buf),
-                            learning_rate=lr,
-                            l2=l2,
-                            beta=beta,
-                            dampening=dampening,
-                            nesterov=nesterov,
-                            maximize=maximize,
-                        )
-            self._state["step"] = self._state["step"] + 1
-            return loss
+                if self.multi_tensor:
+                    self._multi_tensor_update(param_group)
+                else:
+                    self._single_tensor_update(param_group)
+
+        self._state["step"] = self._state["step"] + 1
+        return loss
 
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
@@ -197,8 +235,6 @@ class SGD(Optimizer):
             maximize = param_group["maximize"]
 
             optimizer_conf.base_learning_rate = lr
-            self._generate_lr_scale_for_optim_conf(param_group, optimizer_conf)
-
             if beta == 0:
                 optimizer_conf.naive_conf.SetInParent()
             else:
