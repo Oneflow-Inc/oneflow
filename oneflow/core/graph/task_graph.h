@@ -43,11 +43,12 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
   ~TaskGraph() override;
 
-  explicit TaskGraph(bool enable_straighten_algorithm);
+  explicit TaskGraph();
 
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
   void MergeChainAndAddOrderingCtrlEdgeInSameChain();
+  void DecideExecutionOrder();
 
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
                                    IsOpNameDataOrCtrlReachable);

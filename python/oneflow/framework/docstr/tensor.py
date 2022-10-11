@@ -2287,11 +2287,31 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow.Tensor.scatter,
+    """
+    See :func:`oneflow.scatter`
+    """,
+)
 
 add_docstr(
     oneflow.Tensor.scatter_,
     """
-    Inplace version of :func:`oneflow.scatter`
+    Inplace version of :func:`oneflow.Tensor.scatter`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.scatter_add,
+    """
+    See :func:`oneflow.scatter_add`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.scatter_add_,
+    """
+    Inplace version of :func:`oneflow.Tensor.scatter_add`
     """,
 )
 
@@ -2299,5 +2319,25 @@ add_docstr(
     oneflow.Tensor.cross,
     """
     See :func:`oneflow.cross`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.nansum,
+    """
+    See :func:`oneflow.nansum`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1., 2., float("nan")])
+        >>> x.nansum()
+        tensor(3., dtype=oneflow.float32)
+        >>> x = flow.tensor([[1., float("nan")], [float("nan"), 2]])
+        >>> x.nansum(dim=1, keepdim=True)
+        tensor([[1.],
+                [2.]], dtype=oneflow.float32)
     """,
 )
