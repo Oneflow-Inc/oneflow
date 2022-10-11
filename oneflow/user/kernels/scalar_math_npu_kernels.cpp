@@ -36,8 +36,10 @@ class ScalarMulNpuKernel final : public user_op::OpKernel {
     }
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     CHECK_EQ(tmp_buffer->shape_view().elem_cnt(),sizeof(T));
+    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));
     AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(), DataTypeTraits<T>::type, 0, nullptr,
                              ACL_FORMAT_ND, sizeof(T), &scalar_operand);//dck_caution_here typetraits
+    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));
     NpuCommand npu_command;
     npu_command.OpName("Mul")
                 .Input(in)
@@ -83,8 +85,10 @@ class ScalarAddNpuKernel final : public user_op::OpKernel {
     }
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     CHECK_EQ(tmp_buffer->shape_view().elem_cnt(),std::min(sizeof(T),sizeof(float)));
+    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));
     AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(), DataTypeTraits<T>::type, 0, nullptr,
                              ACL_FORMAT_ND, sizeof(T), &scalar_operand);//dck_caution_here typetraits
+    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));
     NpuCommand npu_command;
     npu_command.OpName("Add")
                 .Input(in)

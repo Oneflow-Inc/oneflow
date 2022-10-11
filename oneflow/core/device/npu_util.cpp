@@ -110,7 +110,7 @@ void InitNpuOtherOnce(int device_id_)
   if (ge_ret != ge::SUCCESS) {
       std::cout<<("GE init failed!")<<std::endl;
   }
-  //MakeCompileCacheDirAndSetOption();
+  MakeCompileCacheDirAndSetOption();
 }
 
 } // namespace
@@ -123,7 +123,7 @@ void InitNpuContextOnce(int device_id ) {
     static std::string json_path = "/data/acl_test/acl.json";
     OF_NPU_CHECK(aclInit(json_path.c_str()));
     OF_NPU_CHECK(aclrtCreateContext(&context_, device_id));
-    //InitNpuOtherOnce(device_id);
+    // InitNpuOtherOnce(device_id);
   });
   static int device_count = GetNpuDeviceCount();
   static std::vector<std::once_flag> init_flags = std::vector<std::once_flag>(device_count);

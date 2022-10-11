@@ -131,7 +131,6 @@ class TORCH_SGD(Optimizer):
                             buf.mul_(momentum).add_(d_p)
                         d_p = buf
                     alpha=-group['lr']
-                    p.add_(-group['lr']*d_p)
-                    # p.add_npu(d_p, alpha=-group['lr'], inplace=True)
+                    p.add_(alpha*d_p)
             self._state["step"] = self._state["step"] + 1
             return loss

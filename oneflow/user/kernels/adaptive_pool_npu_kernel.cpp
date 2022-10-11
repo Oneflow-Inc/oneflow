@@ -44,7 +44,7 @@ class AdaptivePool2DNpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("adaptive_avg_pool2d")                                           \
+REGISTER_USER_KERNEL("adaptive_avg_pool2d")                            \
     .SetCreateFn<AdaptivePool2DNpuKernel>()                            \
     .SetIsMatchedHob((user_op::HobDeviceType() == kNPU)); 
 

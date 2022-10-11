@@ -108,6 +108,7 @@ class AvgPool2dGradNpuKernel final : public user_op::OpKernel {
     std::string key = "AvgPool2dNpu" + ShapeToString(dx_shape);
     if(!const_tensor_map.count(key)) const_tensor_map[key] = dx_shape;
     if(!shape_map.count(key)) shape_map[key] = shape_desc;
+    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));
     AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(),
                       ACL_INT32,
                       shape_desc.size(),
@@ -116,6 +117,7 @@ class AvgPool2dGradNpuKernel final : public user_op::OpKernel {
                       mulVector(shape_desc)*sizeof(int32_t),
                       dx_shape.data(),
                       key);   
+    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));
     bool exclusive = (count_include_pad == false) ? true : false; 
     NpuCommand npu_command;
     npu_command.OpName("AvgPoolV2Grad")

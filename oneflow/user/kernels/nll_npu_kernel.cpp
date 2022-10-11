@@ -50,8 +50,10 @@ class NllKernel final : public user_op::OpKernel {
         std::vector<int64_t> weight_shape;
         weight_shape.push_back(input_blob->shape_view().At(1));
         CHECK_EQ(input_blob->shape_view().At(1)*sizeof(float), tmp_buffer->shape_view().elem_cnt() );
+        OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));
         AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(), ACL_FLOAT, weight_shape.size(), weight_shape.data(), ACL_FORMAT_ND,
                                 input_blob->shape_view().At(1)*sizeof(float), weight_v.data());
+        OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));                                
         NpuCommand npu_command;
         npu_command.OpName("NLLLoss")
                   .Input(input_blob)
@@ -103,8 +105,10 @@ class NllGradKernel final : public user_op::OpKernel {
         weight_shape.push_back(input_blob->shape_view().At(1));
         CHECK_EQ(tmp_buffer->shape_view().elem_cnt(), input_blob->shape_view().At(1)*sizeof(float));
         // dck_caution_here : use Fill to replace aclrtMemcpy
+        OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));
         AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(), ACL_FLOAT, weight_shape.size(), weight_shape.data(), ACL_FORMAT_ND,
                                 input_blob->shape_view().At(1)*sizeof(float), weight_v.data());
+        OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));
         NpuCommand npu_command;
         npu_command.OpName("NLLLossGrad")
                 .Input(input_blob)

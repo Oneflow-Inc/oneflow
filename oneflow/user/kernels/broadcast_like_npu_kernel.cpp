@@ -44,6 +44,7 @@ class BroadcastLikeNpuKernel final : public user_op::OpKernel {
     CHECK_EQ(tmp_buffer->shape_view().elem_cnt(), mulVector(shape_desc)*sizeof(int32_t));
     std::string key = "BroadcastLikeNpu" + ShapeToString(like_shape);
     if(!const_tensor_map.count(key))  const_tensor_map[key] = like_shape;
+    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));
     AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(),
                           ACL_INT32,
                           shape_desc.size(),
@@ -52,6 +53,7 @@ class BroadcastLikeNpuKernel final : public user_op::OpKernel {
                           mulVector(shape_desc)*sizeof(int32_t),
                           like_shape.data(),
                           key); // dck_caution_here const_wrap
+    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));
     NpuCommand npu_command;
     npu_command.OpName("BroadcastTo")
                .Input(in_tensor,"channels_nd")
