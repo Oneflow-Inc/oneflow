@@ -53,8 +53,13 @@ class LogicalChainPass final : public JobPass {
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 };
 
-bool IsTickOpConf(const OperatorConf& conf) {
-  return IsClassRegistered<int32_t, IsTickTockOpTypeCase>(conf.op_type_case());
+bool IsTickOpConf(const OperatorConf& op_conf) {
+  if (IsClassRegistered<int32_t, IsTickTockOpTypeCase>(op_conf.op_type_case())) { return true; }
+  if (op_conf.has_user_conf()) {
+    const std::string& user_type_name = op_conf.user_conf().op_type_name();
+    if (user_type_name == "cast_to_tick" || user_type_name == "acc_ctrl_tick") { return true; }
+  }
+  return false;
 }
 
 bool IsBreakpointOpNode(const OpNode* node) {
@@ -77,7 +82,7 @@ bool IsBreakpointOpNode(const OpNode* node) {
     const std::string& user_type_name = op_conf.user_conf().op_type_name();
     if (user_type_name == "repeat" || user_type_name == "pack" || user_type_name == "unpack"
         || user_type_name == "identity_buffer" || user_type_name == "copy_h2d"
-        || user_type_name == "copy_d2h" || user_type_name == "acc_ctrl_tick") {
+        || user_type_name == "copy_d2h") {
       return true;
     }
   }
@@ -367,7 +372,6 @@ void TryMergeAfterAccLogicalChainToLastLogicalChain(
       GenLogicalBlobName(last_chain_sink_op->op().BnInOp2Lbi(fc_sink_obns.Get(0)));
   VLOG(3) << " last_chain_sink_lbn : " << last_chain_sink_lbn;
 
-  /*
   user_op::UserOpConfWrapper cast_to_tick_op =
       user_op::UserOpConfWrapperBuilder("Sys-LogicalChainSink-CastToTick-" + NewUniqueId())
           .OpTypeName("cast_to_tick")
@@ -380,8 +384,6 @@ void TryMergeAfterAccLogicalChainToLastLogicalChain(
                                 cast_to_tick_op.op_conf()));
 
   std::string acc_tick_output_lbn = cast_to_tick_op.output("out", 0);
-  */
-  std::string acc_tick_output_lbn = last_chain_sink_lbn;
   if (!IsAccOrPackOpNode(last_chain_sink_op)) {
     // NOTE(chengcheng): Acc Op can be merged in fw/bw chain, if the last op is acc op,
     //  there is no need and CANNOT insert acc tick op.
@@ -420,8 +422,22 @@ void TryMergeAfterAccLogicalChainToLastLogicalChain(
     CHECK(!IsReachable(acc_chain_src_op->op().op_name(), sink_consumer->op().op_name()));
     const auto& sink_consumer_obns = sink_consumer->op().output_bns();
     CHECK(!sink_consumer_obns.empty());
-    std::string sink_consumer_acc_tick_lbn =
+
+    std::string sink_consumer_output_lbn =
         GenLogicalBlobName(sink_consumer->op().BnInOp2Lbi(sink_consumer_obns.Get(0)));
+    user_op::UserOpConfWrapper sink_consumer_cast_to_tick_op =
+        user_op::UserOpConfWrapperBuilder("Sys-LogicalChainSinkConsumer-CastToTick-"
+                                          + NewUniqueId())
+            .OpTypeName("cast_to_tick")
+            .Input("in", sink_consumer_output_lbn)
+            .Output("out")
+            .ScopeSymbolId(sink_consumer->op().op_conf().scope_symbol_id())
+            .Build();
+
+    CHECK_JUST(job_builder->AddOp(sink_consumer->parallel_desc().parallel_conf(),
+                                  sink_consumer_cast_to_tick_op.op_conf()));
+
+    std::string sink_consumer_acc_tick_lbn = sink_consumer_cast_to_tick_op.output("out", 0);
     if (!IsAccOrPackOpNode(sink_consumer)) {
       OperatorConf sink_consumer_acc_tick_conf;
       sink_consumer_acc_tick_conf.set_name(std::string("Sys-LogicalChainSinkConsumer-AccTick_")
@@ -437,7 +453,7 @@ void TryMergeAfterAccLogicalChainToLastLogicalChain(
       VLOG(3) << " insert acc tick op : " << sink_consumer_acc_tick_conf.name()
               << " of nontrivial_sink_consumer in fw/bw chain.";
 
-      CHECK_JUST(job_builder->AddOp(last_chain_sink_op->parallel_desc().parallel_conf(),
+      CHECK_JUST(job_builder->AddOp(sink_consumer->parallel_desc().parallel_conf(),
                                     sink_consumer_acc_tick_conf));
     }
     tick_conf->add_tick(sink_consumer_acc_tick_lbn);
