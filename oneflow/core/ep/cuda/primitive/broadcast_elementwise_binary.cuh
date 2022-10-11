@@ -81,13 +81,13 @@ __global__ void BroadcastElementwiseBinaryGpu(
 
   size_t num_dims = params.num_dims;
   CUDA_1D_KERNEL_LOOP_T(IndexType, offset, params.count) {
-    DivType src0_offset = 0;
-    DivType src1_offset = 0;
+    IndexType src0_offset = 0;
+    IndexType src1_offset = 0;
     DivType remaining = offset;
 #pragma unroll
     for (int i = 0; i < max_dims; ++i) {
       if (i < num_dims) {
-        const DivType idx = params.fast_dividers[i].divides(remaining);
+        const IndexType idx = params.fast_dividers[i].divides(remaining);
         remaining = remaining - idx * params.dst_strides[i];
         src0_offset += params.src0_index_mask[i] * idx * params.src0_strides[i];
         src1_offset += params.src1_index_mask[i] * idx * params.src1_strides[i];
