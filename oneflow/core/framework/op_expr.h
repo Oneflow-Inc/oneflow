@@ -227,30 +227,30 @@ class CastGlobalOpExpr : public OpExpr {
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
-class CastToGlobalOpExpr final : public CastGlobalOpExpr {
+class LocalToGlobalOpExpr final : public CastGlobalOpExpr {
  public:
-  ~CastToGlobalOpExpr() = default;
+  ~LocalToGlobalOpExpr() = default;
 
-  static Maybe<CastToGlobalOpExpr> New(const std::string& op_name);
+  static Maybe<LocalToGlobalOpExpr> New(const std::string& op_name);
 
   const std::string& op_type_name() const override;
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
-  CastToGlobalOpExpr(const std::string& op_name);
+  LocalToGlobalOpExpr(const std::string& op_name);
 };
 
-class CastFromGlobalOpExpr final : public CastGlobalOpExpr {
+class GlobalToLocalOpExpr final : public CastGlobalOpExpr {
  public:
-  ~CastFromGlobalOpExpr() = default;
+  ~GlobalToLocalOpExpr() = default;
 
-  static Maybe<CastFromGlobalOpExpr> New(const std::string& op_name);
+  static Maybe<GlobalToLocalOpExpr> New(const std::string& op_name);
 
   const std::string& op_type_name() const override;
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
-  CastFromGlobalOpExpr(const std::string& op_name);
+  GlobalToLocalOpExpr(const std::string& op_name);
 };
 
 // NOTE(chengcheng): For Lazy nn.Graph Feed/Fetch EagerTensor to/from LazyTensor.

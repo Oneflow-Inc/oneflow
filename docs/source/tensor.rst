@@ -284,6 +284,7 @@ Tensor class reference
     Tensor.mish
     Tensor.mul
     Tensor.mul_
+    Tensor.nansum
     Tensor.narrow
     Tensor.ndimension
     Tensor.ne
@@ -368,4 +369,7 @@ Tensor class reference
     Tensor.pin_memory
     Tensor.is_pinned
     Tensor.cross
-
+    Tensor.scatter
+    Tensor.scatter_
+    Tensor.scatter_add
+    Tensor.scatter_add_
