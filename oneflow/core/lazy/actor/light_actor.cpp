@@ -551,6 +551,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   }
 
   void DidForward(KernelContext* kernel_ctx, const Kernel* kernel) override {
+    CHECK_JUST(kernel_ctx->stream()->GetAsyncError());
     Singleton<KernelObserver>::Get()->DidForward(kernel_ctx, kernel);
     if (stream_kernel_observer_ != nullptr) {
       stream_kernel_observer_->DidForward(kernel_ctx, kernel);
