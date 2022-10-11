@@ -88,9 +88,9 @@ void TimeCounter<Resolution>::Count(const std::string& log_prefix, int v_log_lev
 #endif  // __linux__
     }
     if (v_log_level == 0) {
-      LOG(INFO) << json_log.dump(2);
+      LOG(INFO) << "[count log]" << json_log.dump();
     } else {
-      VLOG(v_log_level) << json_log.dump(2);
+      VLOG(v_log_level) << "[count log]" << json_log.dump();
     }
   }
   start_ = end;
