@@ -4513,18 +4513,11 @@ class MultiHeadAttentionFunctor {
     CHECK_EQ_OR_RETURN(_3D % 3, 0);
     auto dim_per_head = D / num_head;
 
-    std::cout << "run -- 11" << std::endl;
     const double inv_sqrt_dim_per_head = 1.0 / std::sqrt(static_cast<double>(dim_per_head));
-    std::cout << "run -- 12" << std::endl;
     auto qkv_add_bias = JUST(Add(qkv, JUST(Reshape(qkv_bias, {1, 1, -1})), 1.0, false));
-    std::cout << "qkv_add_bias shape: " << qkv_add_bias->shape()->DebugStr() << std::endl;
-    std::cout << "run -- 13" << std::endl;
     auto q_k_v = JUST(Split(qkv_add_bias, D, 2));
-    std::cout << "run -- 14" << std::endl;
     auto q = q_k_v->at(0);
-    std::cout << "run -- 15" << std::endl;
     q = JUST(ScalarMul(q, inv_sqrt_dim_per_head, false));
-    std::cout << "run -- 16" << std::endl;
     auto reshape_transpose = [&](const std::shared_ptr<Tensor>& x) -> Maybe<Tensor> {
       auto reshaped_x = JUST(Reshape(x, {B, T, num_head, dim_per_head}));
       // B, num_head, T, dim_per_head
@@ -4532,12 +4525,8 @@ class MultiHeadAttentionFunctor {
       return transposed_x;
     };
     auto result = std::make_shared<TensorTuple>(3);
-    std::cout << "q shape: " << q->shape()->DebugStr() << std::endl;
-    std::cout << "run -- 17" << std::endl;
     result->at(0) = JUST(reshape_transpose(q));
-    std::cout << "run -- 18" << std::endl;
     result->at(1) = JUST(reshape_transpose(q_k_v->at(1)));
-    std::cout << "run -- 19" << std::endl;
     result->at(2) = JUST(reshape_transpose(q_k_v->at(2)));
     return result;
   }
@@ -4555,9 +4544,9 @@ class MultiHeadAttentionFunctor {
       auto mask_expand = JUST(Expand(JUST(Reshape(mask_value, {batch_size, 1, 1, seq_len})),
                                      *attn_scores_masked->shape()));
       attn_scores_masked = JUST(
-          MaskedFill(attn_scores, mask_expand, Scalar(std::numeric_limits<float>::infinity())));
-    }
-    return Softmax(attn_scores_masked, {3});
+          MaskedFill(attn_scores, mask_expand, Scalar(-std::numeric_limits<float>::infinity())));
+    }  
+       return Softmax(attn_scores_masked, 3);
   }
 
   Maybe<TensorTuple> operator()(
@@ -4584,7 +4573,6 @@ class MultiHeadAttentionFunctor {
         << "expected `qkv_bias` first dim and first dim of query to be equal";
     CHECK_EQ_OR_RETURN(embed_dim % num_head, 0) << "`embed_dim` must divide evenly by `num_heads`";
 
-    std::cout << "run--1" << std::endl;
     auto qkv = JUST(qkv_projection(query, key, value, embed_dim, qkv_weight));
     auto q_k_v = JUST(transform_bias_rescale_qkv(qkv, qkv_bias, num_head));
     auto q = q_k_v->at(0);
@@ -4599,13 +4587,10 @@ class MultiHeadAttentionFunctor {
       auto seq_len = x_shape->At(2);
       auto dim_per_head = x_shape->At(3);
       auto y_shape = y->shape();
-      std::cout << "run--20" << std::endl;
       auto x_3d = JUST(Reshape(x, {batch_size * num_head, seq_len, dim_per_head}));
-      std::cout << "run--21" << std::endl;
       auto y_3d = JUST(Reshape(y, {batch_size * num_head, seq_len, dim_per_head}));
-      std::cout << "run--22" << std::endl;
-      std::cout << x_3d->shape()->DebugStr() << std::endl;
-      std::cout << y_3d->shape()->DebugStr() << std::endl;
+      // TODO(wangyi) : use transpose_b param after https://github.com/Oneflow-Inc/oneflow/pull/9215 merged
+      // auto result = JUST(BatchMatMul(x_3d, JUST(Transpose2dim(y_3d, 1, 2)), false, false, 1.0));
       auto result = JUST(BatchMatMul(x_3d, y_3d, false, true, 1.0));
       return Reshape(result, {batch_size, num_head, seq_len, seq_len});
     };
@@ -4613,10 +4598,8 @@ class MultiHeadAttentionFunctor {
     // q: [batch_size, num_head, seq_len, dim_per_head]
     // k: [batch_size, num_head, seq_len, dim_per_head]
     auto qkt = JUST(bmm_q_k(q, k));
-    std::cout << "run2" << std::endl;
     auto attn_scores = JUST(masked_softmax(qkt, mask));
 
-    std::cout << "run3" << std::endl;
     auto bmm_attn_scores_v = [](const std::shared_ptr<Tensor>& attn_scores,
                                 const std::shared_ptr<Tensor>& v) -> Maybe<Tensor> {
       auto v_shape = v->shape();
@@ -4633,7 +4616,6 @@ class MultiHeadAttentionFunctor {
     };
     auto attn_ctx = JUST(bmm_attn_scores_v(attn_scores, v));
 
-    std::cout << "run4" << std::endl;
     // convert shape [batch_size, num_heads, seq_len, dim_per_head] to
     // [batch_size, seq_len, num_heads * dim_per_head]
     auto transform_0213 = [](const std::shared_ptr<Tensor>& x) -> Maybe<Tensor> {
@@ -4659,19 +4641,17 @@ class MultiHeadAttentionFunctor {
       auto emb_dim = attn_ctx_3d->shape()->At(2);
       auto attn_ctx_2d = JUST(Reshape(attn_ctx_3d, {-1, emb_dim}));
       auto result =
-          JUST(Add(JUST(MatMulNoBroadCast(attn_ctx_2d, proj_weight)), proj_bias, 1.0, false));
-      return Reshape(result, {batch_size, seq_len, proj_weight->shape()->At(1)});
+          JUST(Add(JUST(MatMul(attn_ctx_2d, proj_weight, false, true, 1.0)), proj_bias, 1.0, false));
+      return Reshape(result, {batch_size, seq_len, proj_weight->shape()->At(0)});
     };
     auto proj = JUST(mm_attn_ctx_proj(attn_ctx, proj_weight, proj_bias));
-    // TensorTuple result({proj, nullptr});
     std::shared_ptr<TensorTuple> result = std::make_shared<TensorTuple>(2);
-    std::cout << "run6" << std::endl;
     result->at(0) = proj;
     result->at(1) = nullptr;
     if (need_weights && average_attn_weights) {
-      qkt = JUST(ReduceSum(qkt, {1}, false));
-      qkt = JUST(ScalarDiv(qkt, num_head));
-      result->at(1) = qkt;
+      attn_scores = JUST(ReduceSum(attn_scores, {1}, false));
+      attn_scores = JUST(ScalarDiv(attn_scores, num_head));
+      result->at(1) = attn_scores;
     }
     return result;
   }
