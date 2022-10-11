@@ -37,6 +37,7 @@ void ProcessMemUsage(double* vm_usage, double* resident_set) {
   *vm_usage = 0.0;
   *resident_set = 0.0;
 
+#ifdef __linux__
   // 'file' stat seems to give the most reliable results
   std::ifstream stat_stream("/proc/self/stat", std::ios_base::in);
   ProcStat proc_stat;
@@ -53,6 +54,7 @@ void ProcessMemUsage(double* vm_usage, double* resident_set) {
   *vm_usage = proc_stat.vsize >> 20;
   // return with MB
   *resident_set = (proc_stat.rss * page_size_kb) >> 20;
+#endif  // __linux__
 }
 
 }  // namespace oneflow

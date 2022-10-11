@@ -20,6 +20,8 @@ limitations under the License.
 #include <sstream>
 #include <string>
 
+#include "nlohmann/json.hpp"
+
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/mem_util.h"
 
@@ -74,18 +76,21 @@ void TimeCounter<Resolution>::Count(const std::string& log_prefix, int v_log_lev
   const auto end = Clock::now();
   auto dur = std::chrono::duration_cast<Resolution>(end - start_).count();
   if (with_log_ && v_log_level >= 0) {
-    std::ostringstream oss;
-    oss << log_prefix << " time elapsed: " << std::to_string(dur) << " "
-        << Duration<Resolution>::Repr();
+    nlohmann::json json_log;
+    json_log["loc"] = log_prefix;
+    json_log["time_cost"] = std::to_string(dur) + " " + Duration<Resolution>::Repr();
     if (with_mem_) {
+#ifdef __linux__
       double vm = 0, rss = 0;
       ProcessMemUsage(&vm, &rss);
-      oss << ", Mem size RSS " << rss << " MB, VM " << vm << " MB";
+      json_log["mem_rss"] = std::to_string(rss) + " MB";
+      json_log["mem_vm"] = std::to_string(vm) + " MB";
+#endif  // __linux__
     }
     if (v_log_level == 0) {
-      LOG(INFO) << oss.str() << ".";
+      LOG(INFO) << json_log.dump(2);
     } else {
-      VLOG(v_log_level) << oss.str() << ".";
+      VLOG(v_log_level) << json_log.dump(2);
     }
   }
   start_ = end;
