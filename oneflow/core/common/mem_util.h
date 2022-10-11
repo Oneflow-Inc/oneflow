@@ -23,12 +23,12 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
-void ProcessMemUsage(double& vm_usage, double& resident_set);
+void ProcessMemUsage(double* vm_usage, double* resident_set);
 }  // namespace oneflow
 
 #define LOG_MEM(...)                                                                \
   double vm_ = 0, rss_ = 0;                                                         \
-  ProcessMemUsage(vm_, rss_);                                                       \
+  ProcessMemUsage(&vm_, &rss_);                                                       \
   VLOG(1) << "File " __FILE__ << ", Line " << __LINE__ << ", Func " << __FUNCTION__ \
           << ", Mem size RSS " << rss_ << "MB, VM " << vm_ << " MB."
 

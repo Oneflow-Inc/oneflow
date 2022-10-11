@@ -79,7 +79,7 @@ void TimeCounter<Resolution>::Count(const std::string& log_prefix, int v_log_lev
         << Duration<Resolution>::Repr();
     if (with_mem_) {
       double vm = 0, rss = 0;
-      ProcessMemUsage(vm, rss);
+      ProcessMemUsage(&vm, &rss);
       oss << ", Mem size RSS " << rss << " MB, VM " << vm << " MB";
     }
     if (v_log_level == 0) {
