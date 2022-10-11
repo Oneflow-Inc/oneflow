@@ -4451,29 +4451,6 @@ class BatchAddBatchMatMulFunctor {
   }
 };
 
-class ScaledDotProductAttentionFunctor {
- public:
-  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& q, const std::shared_ptr<Tensor>& k,
-                                const std::shared_ptr<Tensor>& v, const Optional<Tensor>& attn_mask,
-                                const float& dropout) const {
-    auto emb_dim = q->shape()->At(2);
-    const auto& scaled_q = JUST(ScalarDiv(q, Scalar(sqrt(emb_dim))));
-    std::shared_ptr<Tensor> attn = nullptr;
-    const auto& transposed_k = JUST(Transpose(k, {-2, -1}));
-    if (attn_mask) {
-      attn = JUST(BatchAddBatchMatMul(JUST(attn_mask), scaled_q, transposed_k, false, false, 1, 1));
-    } else {
-      attn = JUST(BatchMatMul(scaled_q, transposed_k, false, false, 1));
-    }
-    if (dropout > 0) {
-      attn = JUST(Dropout(attn, dropout, /*training=*/false, /*inplace=*/false,
-                          /*generator=*/NullOpt, /*addend=*/NullOpt));
-    }
-    const auto& result = JUST(BatchMatMul(attn, v, false, false, 1.0));
-    return TensorTuple({result, attn});
-  }
-};
-
 class MultiHeadAttentionFunctor {
  public:
   Maybe<Tensor> qkv_projection(const std::shared_ptr<Tensor>& query,
@@ -4786,7 +4763,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BatchNormElemtFunctor>("BatchNormElemt");
   m.add_functor<impl::BatchNormBackwardReduceFunctor>("BatchNormBackwardReduce");
   m.add_functor<impl::BatchNormBackwardElemtFunctor>("BatchNormBackwardElemt");
-  m.add_functor<impl::ScaledDotProductAttentionFunctor>("ScaledDotProductAttention");
   m.add_functor<impl::MultiHeadAttentionFunctor>("MultiHeadAttention");
 }
 
