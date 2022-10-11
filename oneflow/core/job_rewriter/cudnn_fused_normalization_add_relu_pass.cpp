@@ -32,15 +32,14 @@ bool IsFusedBnAddReluSupported() {
 #endif
 }
 
+bool IsNormalizationAddReluOp(const OperatorConf& op) {
+  return op.has_user_conf()
+         && (op.user_conf().op_type_name() == "normalization_add_relu"
+             || op.user_conf().op_type_name() == "normalization_add_relu_grad");
+}
+
 bool NeedDoPass(const Job* job) {
-  for (const auto& op : job->net().op()) {
-    if (!op.has_user_conf()) { continue; }
-    if (op.user_conf().op_type_name() == "normalization_add_relu"
-        || op.user_conf().op_type_name() == "normalization_add_relu_grad") {
-      return true;
-    }
-  }
-  return false;
+  return std::any_of(job->net().op().cbegin(), job->net().op().cend(), IsNormalizationAddReluOp);
 }
 
 }  // namespace
@@ -72,11 +71,8 @@ Maybe<void> CudnnFusedNormalizationAddReluPass::Apply(Job* job, JobPassCtx* ctx)
   const DataType mixed_precision_data_type = ctx->job_desc().mixed_precision_data_type();
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
-    if (!op_conf.has_user_conf()) { return; }
+    if (!IsNormalizationAddReluOp(op_conf)) { return; }
     const std::string& op_type_name = op_conf.user_conf().op_type_name();
-    if (op_type_name != "normalization_add_relu" && op_type_name != "normalization_add_relu_grad") {
-      return;
-    }
     const user_op::UserOpConfWrapper user_op_conf(op_conf);
     const BlobDesc& x_desc =
         op_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(user_op_conf.input("x", 0)));

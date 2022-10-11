@@ -21,11 +21,9 @@ namespace oneflow {
 namespace {
 
 bool NeedDoPass(const Job* job) {
-  for (const auto& op : job->net().op()) {
-    if (!op.has_user_conf()) { continue; }
-    if (op.user_conf().op_type_name() == "sparse_softmax_cross_entropy_ms") { return true; }
-  }
-  return false;
+  return std::any_of(job->net().op().cbegin(), job->net().op().cend(), [&](const OperatorConf& op) {
+    return op.has_user_conf() && op.user_conf().op_type_name() == "sparse_softmax_cross_entropy_ms";
+  });
 }
 
 void UpdateProbConsumerOpConf(const std::string& new_prob_lbn, const OpNode* op_node,

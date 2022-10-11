@@ -28,10 +28,7 @@ bool IsParallelCastOp(const OperatorConf& op_conf) {
 }
 
 bool NeedDoPass(const Job* job) {
-  for (const auto& op : job->net().op()) {
-    if (IsParallelCastOp(op)) { return true; }
-  }
-  return false;
+  return std::any_of(job->net().op().cbegin(), job->net().op().cend(), IsParallelCastOp);
 }
 
 class PruneParallelCastOpsPass final : public JobPass {
