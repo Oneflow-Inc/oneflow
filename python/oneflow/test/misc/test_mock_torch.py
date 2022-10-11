@@ -15,4 +15,4 @@ limitations under the License.
 """
 import torch
 
-print(torch.__file__.endswith("oneflow/mock_torch/torch/__init__.py"))
+print(torch.__file__.find("mock_torch") != -1)
