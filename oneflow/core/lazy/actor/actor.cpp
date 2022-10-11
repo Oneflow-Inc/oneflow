@@ -76,6 +76,7 @@ void KernelContextImpl::WillForward(KernelContext* kernel_ctx, const Kernel* ker
 }
 
 void KernelContextImpl::DidForward(KernelContext* kernel_ctx, const Kernel* kernel) {
+  CHECK_JUST(kernel_ctx->stream()->GetAsyncError());
   Singleton<KernelObserver>::Get()->DidForward(kernel_ctx, kernel);
   if (stream_kernel_observer_ != nullptr) {
     stream_kernel_observer_->DidForward(kernel_ctx, kernel);
