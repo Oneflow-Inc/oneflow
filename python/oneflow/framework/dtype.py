@@ -18,6 +18,10 @@ import numpy as np
 import oneflow
 import oneflow._oneflow_internal
 import oneflow.core.common.data_type_pb2 as data_type_pb2
+from oneflow._oneflow_internal import (
+    set_default_dtype,
+    get_default_dtype,
+)
 
 _dtypes = [
     oneflow.bool,
@@ -73,3 +77,42 @@ def convert_numpy_dtype_to_oneflow_dtype(numpy_dtype: np.dtype):
 
 del data_type_pb2
 del np
+
+
+def set_default_tensor_type(tensor_type):
+    """Sets the default floating point type for those source operators which create Tensor
+    (e.g. oneflow.ones, oneflow.zeros, oneflow.rand, oneflow.randn, oneflow.Tensor, etc.)
+
+    The default floating point type is ``oneflow.FloatTensor``.
+
+    Args:
+        tensor_type (type or string): The floating point tensor type or its name.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow
+        >>> oneflow.set_default_tensor_type(oneflow.DoubleTensor)
+        >>> x = oneflow.ones(2, 3)
+        >>> x.dtype
+        oneflow.float64
+        >>> oneflow.set_default_tensor_type("oneflow.FloatTensor")
+        >>> x = oneflow.ones(2, 3)
+        >>> x.dtype
+        oneflow.float32
+    """
+
+    def _import_dotted_name(name):
+        """
+        This function quotes from: https://github.com/pytorch/pytorch/blob/master/torch/_utils.py
+        """
+        components = name.split(".")
+        obj = __import__(components[0])
+        for component in components[1:]:
+            obj = getattr(obj, component)
+        return obj
+
+    if isinstance(tensor_type, str):
+        tensor_type = _import_dotted_name(tensor_type)
+    oneflow._oneflow_internal.set_default_tensor_type(tensor_type)

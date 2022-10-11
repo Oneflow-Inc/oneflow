@@ -16,7 +16,10 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/api/python/framework/tensortype.h"
+#include "oneflow/api/python/functional/common.h"
 #include "oneflow/core/framework/dtype.h"
+
 namespace py = pybind11;
 
 namespace oneflow {
@@ -66,6 +69,17 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.attr("complex32") = &CHECK_JUST(DType::Get(DataType::kComplex32));
   m.attr("complex64") = &CHECK_JUST(DType::Get(DataType::kComplex64));
   m.attr("complex128") = &CHECK_JUST(DType::Get(DataType::kComplex128));
+
+  m.def("get_default_dtype", []() { return GetDefaultDType(); });
+  m.def("set_default_dtype",
+        [](const Symbol<DType>& dtype) { CHECK_JUST(SetDefaultDType(dtype)); });
+  m.def("set_default_tensor_type", [](const py::object& tensor_type) {
+    if (one::PyTensorType_Check(tensor_type.ptr())) {
+      CHECK_JUST(SetDefaultDType(one::PyTensorType_UnpackDType(tensor_type.ptr())));
+    } else {
+      throw py::type_error("invalid type object");
+    }
+  });
 }
 
 }  // namespace oneflow

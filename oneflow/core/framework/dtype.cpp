@@ -249,4 +249,20 @@ Symbol<DType> promoteTypes(const Symbol<DType> a, const Symbol<DType> b) {
   return _promoteTypesLookup[static_cast<int>(a->data_type())][static_cast<int>(b->data_type())];
 }
 
+namespace {
+Symbol<DType>* GetDefaultDTypeSymbol() {
+  static thread_local Symbol<DType> default_dtype = CHECK_JUST(DType::Get(DataType::kFloat));
+  return &default_dtype;
+}
+}  // namespace
+
+Maybe<void> SetDefaultDType(const Symbol<DType>& dtype) {
+  CHECK_OR_RETURN(dtype->is_floating_point())
+      << "only floating-point types are supported as the default type";
+  *GetDefaultDTypeSymbol() = dtype;
+  return Maybe<void>::Ok();
+}
+
+Symbol<DType> GetDefaultDType() { return *GetDefaultDTypeSymbol(); }
+
 }  // namespace oneflow

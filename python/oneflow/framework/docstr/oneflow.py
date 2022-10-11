@@ -27,3 +27,50 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.get_default_dtype,
+    """
+    Returns the default floating point dtype.
+
+    Returns:
+        oneflow.dtype: The default floating point dtype.
+
+    For example:
+        
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> flow.get_default_dtype()
+        oneflow.float32
+        >>> flow.set_default_dtype(flow.float64)
+        >>> flow.get_default_dtype()
+        oneflow.float64
+        >>> flow.set_default_tensor_type(flow.FloatTensor)
+        >>> flow.get_default_dtype()
+        oneflow.float32
+    """,
+)
+
+add_docstr(
+    oneflow.set_default_dtype,
+    """
+    Sets the default floating point type for those source operators which create Tensor
+    (e.g. oneflow.ones, oneflow.zeros, oneflow.rand, oneflow.randn, oneflow.Tensor, etc.)
+
+    The default floating point type is ``oneflow.float32``.
+
+    Args:
+        dtype (oneflow.dtype): The floating point dtype.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow
+        >>> oneflow.set_default_dtype(oneflow.float64)
+        >>> x = oneflow.randn(2, 3)
+        >>> x.dtype
+        oneflow.float64
+    """,
+)
