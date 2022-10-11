@@ -15,7 +15,6 @@ limitations under the License.
 """
 import argparse
 from pathlib import Path
-import oneflow
 import os
 
 parser = argparse.ArgumentParser()
@@ -28,8 +27,7 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-torch_env = Path(oneflow.__path__[0], "mock_torch")
-
+torch_env = Path(__file__).parent / 'mock_torch'
 
 def main():
     if args.mock == "enable":
