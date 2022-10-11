@@ -90,8 +90,12 @@ Maybe<void> InferReduceDeviceStagePhysicalTensorDescFn(user_op::InferContext* ct
 }
 
 Maybe<void> InferReduceDeviceStageGradDtypeFn(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kBool);
-  CHECK_EQ_OR_RETURN(ctx->InputDType("count", 0), DataType::kInt32);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kBool)
+      << "InferDataType Failed. Expected " << DataType_Name(DataType::kBool) << ", but got "
+      << DataType_Name(ctx->InputDType("mask", 0));
+  CHECK_EQ_OR_RETURN(ctx->InputDType("count", 0), DataType::kInt32)
+      << "InferDataType Failed. Expected " << DataType_Name(DataType::kInt32) << ", but got "
+      << DataType_Name(ctx->InputDType("count", 0));
   ctx->SetOutputDType("in_diff", 0, ctx->InputDType("out_diff", 0));
   return Maybe<void>::Ok();
 }
@@ -103,7 +107,9 @@ Maybe<void> InferReduceDeviceStageGradTensorDescFn(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferReduceGlobalStageDtypeFn(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->InputDType("device_count", 0), DataType::kInt32);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("device_count", 0), DataType::kInt32)
+      << "InferDataType Failed. Expected " << DataType_Name(DataType::kInt32) << ", but got "
+      << DataType_Name(ctx->InputDType("device_count", 0));
   ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   ctx->SetOutputDType("mask", 0, DataType::kBool);
 
@@ -140,8 +146,12 @@ Maybe<void> InferReduceGlobalStageTensorDescFn(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferReduceGlobalStageGradDtypeFn(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kBool);
-  CHECK_EQ_OR_RETURN(ctx->InputDType("device_count", 0), DataType::kInt32);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kBool)
+      << "InferDataType Failed. Expected " << DataType_Name(DataType::kBool) << ", but got "
+      << DataType_Name(ctx->InputDType("mask", 0));
+  CHECK_EQ_OR_RETURN(ctx->InputDType("device_count", 0), DataType::kInt32)
+      << "InferDataType Failed. Expected " << DataType_Name(DataType::kInt32) << ", but got "
+      << DataType_Name(ctx->InputDType("device_count", 0));
 
   ctx->SetOutputDType("in_diff", 0, ctx->InputDType("out_diff", 0));
 
