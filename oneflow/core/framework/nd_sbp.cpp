@@ -80,7 +80,8 @@ Maybe<std::vector<std::string>> GetDualNdSbpStrList(Symbol<NdSbp> nd_sbp) {
 namespace private_details {
 
 Maybe<Symbol<NdSbp>> RawGetNdSbp(const std::vector<Symbol<SbpParallel>>& sbp_list) {
-  CHECK_OR_RETURN(!sbp_list.empty());
+  CHECK_OR_RETURN(!sbp_list.empty())
+      << Error::InvalidValueError() << "sbp_list should be non-empty";
   NdSbp nd_sbp;
   for (const auto& sbp : sbp_list) { *(nd_sbp.mutable_sbp_parallel()->Add()) = *sbp; }
   return SymbolOf(nd_sbp);
@@ -88,7 +89,8 @@ Maybe<Symbol<NdSbp>> RawGetNdSbp(const std::vector<Symbol<SbpParallel>>& sbp_lis
 
 Maybe<std::vector<Symbol<SbpParallel>>> RawGetSbpList(Symbol<NdSbp> nd_sbp) {
   const auto& vec = std::make_shared<std::vector<Symbol<SbpParallel>>>();
-  CHECK_OR_RETURN(!nd_sbp->sbp_parallel().empty());
+  CHECK_OR_RETURN(!nd_sbp->sbp_parallel().empty())
+      << Error::InvalidValueError() << "sbp_parallel should be non-empty";
   for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
     vec->emplace_back(SymbolOf(sbp_parallel));
   }

@@ -583,7 +583,7 @@ double GetValidMaxCopyCost() {
 double GetTransferCost() {
   // Each transfer would have cost.
   // Except for same parallel description and sbp
-  static const double kTransferCost = ParseFloatFromEnv("AUTO_PARALLEL_TRANSFER_COST", 1.65e8);
+  static const double kTransferCost = ParseFloatFromEnv("AUTO_PARALLEL_TRANSFER_COST", 1.65e4);
   return kTransferCost;
 }
 
@@ -685,7 +685,11 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
   // We need to speed it up and give an approximation of the cost
   if (reduced_in_parallel_desc == reduced_out_parallel_desc
       && reduced_in_nd_sbp == reduced_out_nd_sbp) {
-    return 0.0;
+    if (producer_sbp_parallel == consumer_sbp_parallel) {
+      return 0.0;
+    } else {
+      return 1.0;
+    }
   }
   if (requires_same_sbp) { return kUnsupportedBoxing; }
 #ifdef WITH_CUDA

@@ -53,6 +53,8 @@ class JobDesc final {
   bool enable_reuse_mem() const { return job_conf_.enable_reuse_mem(); }
   bool enable_inplace() const { return job_conf_.enable_inplace(); }
   bool enable_auto_mixed_precision() const { return job_conf_.enable_auto_mixed_precision(); }
+  bool enable_multi_tensor_update() const { return job_conf_.enable_multi_tensor_update(); }
+  bool enable_fused_model_update_cast() const { return job_conf_.enable_fused_model_update_cast(); }
   DataType mixed_precision_data_type() const { return job_conf_.mixed_precision_data_type(); }
   bool do_parallel_cast_before_widening_type_cast() const {
     return job_conf_.do_parallel_cast_before_widening_type_cast();
@@ -60,6 +62,7 @@ class JobDesc final {
   bool prune_parallel_cast_ops() const { return job_conf_.prune_parallel_cast_ops(); }
   bool prune_cast_to_static_shape_ops() const { return job_conf_.prune_cast_to_static_shape_ops(); }
   bool prune_amp_white_identity_ops() const { return job_conf_.prune_amp_white_identity_ops(); }
+  bool enable_auto_parallel() const { return job_conf_.enable_auto_parallel(); }
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
 
 #define DEFINE_FUNCTION_CONFIG_GETTER(T, func_name, field_name) \

@@ -459,7 +459,7 @@ Maybe<Tensor> LocalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDes
 class LocalToGlobalFunctor {
  public:
   LocalToGlobalFunctor() {
-    op_ = CHECK_JUST(one::CastToGlobalOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_global"))));
+    op_ = CHECK_JUST(one::LocalToGlobalOpExpr::New(*CHECK_JUST(UniqueStr("local_to_global"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -509,7 +509,7 @@ class ToGlobalFunctor {
  public:
   ToGlobalFunctor() {
     local_to_global_op_ =
-        CHECK_JUST(one::CastToGlobalOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_global"))));
+        CHECK_JUST(one::LocalToGlobalOpExpr::New(*CHECK_JUST(UniqueStr("local_to_global"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -553,7 +553,7 @@ class ToGlobalFunctor {
 class GlobalToLocalFunctor {
  public:
   GlobalToLocalFunctor() {
-    op_ = CHECK_JUST(one::CastFromGlobalOpExpr::New(*CHECK_JUST(UniqueStr("global_to_local"))));
+    op_ = CHECK_JUST(one::GlobalToLocalOpExpr::New(*CHECK_JUST(UniqueStr("global_to_local"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool copy) const {
