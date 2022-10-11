@@ -215,6 +215,8 @@ class Actor : public ActorBase {
   std::deque<ActorMsg> async_msg_queue_;
   bool is_kernel_launch_synchronized_;
   std::vector<int64_t> tmp_regst_desc_id_vec_;
+
+  std::string op_name_;
 };
 
 }  // namespace oneflow

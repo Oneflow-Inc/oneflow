@@ -132,17 +132,28 @@ void Actor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
   actor_id_ = task_proto.task_id();
   thrd_id_ = ThrdId4ActorId(actor_id_);
   job_id_ = task_proto.job_id();
+  op_name_ = "NULL_OP";
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
     ek.kernel_ctx.reset(new KernelContextImpl(actor_ctx));
     ek.kernel = ConstructKernel(node.kernel_conf(), ek.kernel_ctx.get());
     exec_kernel_vec_.emplace_back(std::move(ek));
+    op_name_ = node.kernel_conf().op_attribute().op_conf().name();
   }
 
   is_kernel_launch_synchronized_ =
       std::all_of(exec_kernel_vec_.cbegin(), exec_kernel_vec_.cend(),
                   [](const ExecKernel& ek) { return ek.kernel->IsKernelLaunchSynchronized(); });
   if (!is_kernel_launch_synchronized_) { CHECK_EQ(exec_kernel_vec_.size(), 1); }
+
+  /*
+  if (is_kernel_launch_synchronized_ == 0) {
+    LOG(WARNING) << "ccdebuglog: actor_id: " << actor_id_
+                 << " IsKernelLaunchSynchronized: " << is_kernel_launch_synchronized_;
+  }
+  LOG(INFO) << "ccdebuglog: actor_id: " << actor_id_
+            << " IsKernelLaunchSynchronized: " << is_kernel_launch_synchronized_;
+  */
 
   remaining_eord_cnt_ = 0;
   msg_handler_ = nullptr;
@@ -662,6 +673,13 @@ void Actor::EnqueueAsyncMsg(const ActorMsg& msg) {
     Singleton<ActorMsgBus>::Get()->SendMsg(msg);
   } else {
     async_msg_queue_.emplace_back(msg);
+    /*
+    LOG(INFO) << "actor async post msg by: " << op_name_ << " actor_id: " << actor_id_
+              << " dst_actor_id: " << msg.dst_actor_id()
+              << " is_kernel_launch_synchronized: " << is_kernel_launch_synchronized_
+              << " thrd_id_ = " << thrd_id_
+              << " dst_thrd_id = " << ThrdId4ActorId(msg.dst_actor_id());
+              */
   }
 }
 

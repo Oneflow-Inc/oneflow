@@ -225,9 +225,11 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   void Init(const JobDesc* job_desc, ActorContext* actor_ctx) override {
     const TaskProto& task_proto = actor_ctx->task_proto();
     CHECK_EQ(task_proto.exec_sequence().exec_node_size(), 1);
+    op_name_ = "NULL_OP";
     if (exec_kernel) {
       kernel_info_[0].reset(new KernelInfo());
       const KernelConf& kernel_conf = task_proto.exec_sequence().exec_node(0).kernel_conf();
+      op_name_ = kernel_conf.op_attribute().op_conf().name();
       kernel_info_[0]->kernel = ConstructKernel(kernel_conf, this);
 #ifdef WITH_CUDA_GRAPHS
       auto* cuda_stream = dynamic_cast<ep::CudaStream*>(actor_ctx->stream_ctx()->stream());
@@ -347,6 +349,14 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
     const bool is_kernel_launch_synchronized =
         (!exec_kernel) || kernel_info_[0]->kernel->IsKernelLaunchSynchronized();
     const int64_t actor_id = actor_ctx_->task_proto().task_id();
+    /*
+    if (is_kernel_launch_synchronized == 0) {
+      LOG(WARNING) << "ccdebuglog: actor_id: " << actor_id
+                   << " IsKernelLaunchSynchronized: " << is_kernel_launch_synchronized;
+    }
+    LOG(INFO) << "ccdebuglog: actor_id: " << actor_id << " op_name: " << op_name_;
+              << " IsKernelLaunchSynchronized: " << is_kernel_launch_synchronized;
+    */
     const int64_t thrd_id = ThrdId4ActorId(actor_id);
     auto IsSyncMsg = [&](const ActorMsg& msg) {
       return is_kernel_launch_synchronized && thrd_id == ThrdId4ActorId(msg.dst_actor_id());
@@ -356,6 +366,13 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
         sync_post_act_msgs_.emplace_back(msg);
       } else {
         async_post_act_msgs_.emplace_back(msg);
+        /*
+        LOG(INFO) << "actor async post msg by: " << op_name_ << " actor_id: " << actor_id
+                  << " dst_actor_id: " << msg.dst_actor_id()
+                  << " is_kernel_launch_synchronized: " << is_kernel_launch_synchronized
+                  << " thrd_id_ = " << thrd_id
+                  << " dst_thrd_id = " << ThrdId4ActorId(msg.dst_actor_id());
+                  */
       }
     };
     std::vector<int64_t> index2regst_desc_id;
@@ -605,6 +622,8 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   std::vector<ActorMsg> sync_post_act_msgs_;
   std::vector<ActorMsg> async_post_act_msgs_;
   KernelObserver* stream_kernel_observer_;
+
+  std::string op_name_;
 };
 
 template<int kernel_exec, int inplace, typename IndexType, typename RegstIndex,
