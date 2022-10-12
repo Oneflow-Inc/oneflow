@@ -42,7 +42,7 @@ int64_t CountSpecifiedDims(const TensorIndex& index) {
       specified_ndims++;
     } else if (index_item.IsTensor()) {
       const auto& tensor = index_item.tensor();
-      if (tensor->dtype() == DType::Int8() || tensor->dtype() == DType::UInt8()) {
+      if (IsMaskTensor(tensor)) {
         specified_ndims += tensor->ndim();
       } else {
         specified_ndims++;
@@ -242,6 +242,11 @@ Maybe<Tensor> PermuteBackForGlobalTensor(const std::shared_ptr<Tensor>& result,
 
 }  // namespace
 
+bool IsMaskTensor(const std::shared_ptr<Tensor>& tensor) {
+  return tensor->dtype() == DType::Int8() || tensor->dtype() == DType::UInt8()
+         || tensor->dtype() == DType::Bool();
+}
+
 Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
                                 std::vector<detail::Slice>* slice_indices,
                                 TensorTuple* tensor_indices, std::vector<int64_t>* expand_dims,
@@ -312,8 +317,7 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
     } else if (index_item.IsTensor()) {
       const auto& tensor = index_item.tensor();
       auto indices = std::make_shared<TensorTuple>();
-      if (tensor->dtype() == DType::Int8() || tensor->dtype() == DType::UInt8()
-          || tensor->dtype() == DType::Bool()) {
+      if (IsMaskTensor(tensor)) {
         for (int j = 0; j < tensor->ndim(); ++j) {
           if (tensor->shape()->At(j) != shape.At(dim + j)) {
             return Error::IndexError()
