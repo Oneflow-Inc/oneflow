@@ -349,9 +349,13 @@ def multi_head_attention(
         k = flow.cat([k, bias_k.repeat(1, bsz, 1)])
         v = flow.cat([v, bias_v.repeat(1, bsz, 1)])
         if attn_mask is not None:
-            attn_mask = pad(attn_mask, (0, 1))
+            # TODO(WangYi): remove cast after https://github.com/Oneflow-Inc/oneflow/pull/9234 merged
+            attn_mask = pad(attn_mask.int(), (0, 1)).to(attn_mask.dtype)
         if key_padding_mask is not None:
-            key_padding_mask = pad(key_padding_mask, (0, 1))
+            # TODO(WangYi): remove cast after https://github.com/Oneflow-Inc/oneflow/pull/9234 merged
+            key_padding_mask = pad(key_padding_mask.int(), (0, 1)).to(
+                key_padding_mask.dtype
+            )
     else:
         assert bias_k is None
         assert bias_v is None
@@ -393,9 +397,13 @@ def multi_head_attention(
             [v, flow.zeros(zero_attn_shape, dtype=v.dtype, device=v.device)], dim=1
         )
         if attn_mask is not None:
-            attn_mask = pad(attn_mask, (0, 1))
+            # TODO(WangYi): remove cast after https://github.com/Oneflow-Inc/oneflow/pull/9234 merged
+            attn_mask = pad(attn_mask.int(), (0, 1)).to(attn_mask.dtype)
         if key_padding_mask is not None:
-            key_padding_mask = pad(key_padding_mask, (0, 1))
+            # TODO(WangYi): remove cast after https://github.com/Oneflow-Inc/oneflow/pull/9234 merged
+            key_padding_mask = pad(key_padding_mask.int(), (0, 1)).to(
+                key_padding_mask.dtype
+            )
 
     # update source sequence length after adjustments
     src_len = k.size(1)
