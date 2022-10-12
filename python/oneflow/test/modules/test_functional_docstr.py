@@ -46,7 +46,7 @@ def _run_functional_doctest(
             try:
                 runner.run(test)
             except doctest.DocTestFailure as e:
-                print(f"\nGot error result in docstring of {name}")
+                print(f"\nGot error result in the docstring of {name}")
                 print(f"got output: {e.got}")
                 raise e
             except doctest.UnexpectedException as e:
