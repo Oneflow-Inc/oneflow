@@ -28,6 +28,7 @@ _source_op_list = [
     flow.rand,
     flow.randn,
     flow.empty,
+    flow.Tensor,
 ]
 
 
@@ -41,6 +42,8 @@ class TestDefaultDTypeInferface(oneflow.unittest.TestCase):
 
         for op in _source_op_list:
             x = op((2, 3))
+            test_case.assertEqual(x.dtype, flow.float64)
+            x = op(2, 3)
             test_case.assertEqual(x.dtype, flow.float64)
 
         with test_case.assertRaises(Exception) as ctx:
@@ -59,6 +62,8 @@ class TestDefaultDTypeInferface(oneflow.unittest.TestCase):
         test_case.assertEqual(flow.get_default_dtype(), flow.float64)
         for op in _source_op_list:
             x = op((2, 3))
+            test_case.assertEqual(x.dtype, flow.float64)
+            x = op(2, 3)
             test_case.assertEqual(x.dtype, flow.float64)
 
         # set default tensor type by TensorType string
