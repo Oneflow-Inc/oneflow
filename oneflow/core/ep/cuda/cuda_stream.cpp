@@ -153,6 +153,15 @@ void CudaStream::RecordEvent(Event* event) {
   OF_CUDA_CHECK(cudaEventRecord(cuda_event->cuda_event(), cuda_stream_));
 }
 
+Maybe<void> CudaStream::GetAsyncError() {
+  cudaError_t err = cudaGetLastError();
+  if (err == cudaSuccess) {
+    return Maybe<void>::Ok();
+  } else {
+    return Error::RuntimeError() << cudaGetErrorString(err) << " (" << err << ") ";
+  }
+}
+
 cudaStream_t CudaStream::cuda_stream() const { return cuda_stream_; }
 
 cublasHandle_t CudaStream::cublas_handle() const { return cublas_handle_; }
