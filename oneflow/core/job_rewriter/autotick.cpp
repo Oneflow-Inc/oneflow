@@ -13,8 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <chrono>
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/just.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job_rewriter/autotick.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/critical_section_desc.h"
@@ -22,6 +25,8 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -449,8 +454,9 @@ Maybe<void> AddGlobalInputOutputCriticalSection(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MultiClientAddWaitAndSendIds(JobBuilder* job_builder, int64_t machine_id,
-                                         const std::string& src_op_name) {
+Maybe<void> MultiClientAddWaitAndSendIds(
+    JobBuilder* job_builder, int64_t machine_id, const std::string& src_op_name,
+    const HashMap<std::string, OperatorConf>& src_op_name2tick_op) {
   ParallelConf parallel_conf;
   {
     parallel_conf.set_device_tag("cpu");
@@ -473,19 +479,12 @@ Maybe<void> MultiClientAddWaitAndSendIds(JobBuilder* job_builder, int64_t machin
   // connect wait_and_send_ids to tick op which was connected to the src tick op
   OperatorConf tick_op_conf;
   bool find_src_tick_consumer_tick = false;
-  JUST(job_builder->ForEachOperator([&](const Operator& op) -> Maybe<void> {
-    // skip if the op is not a tick op
-    if (!op.op_conf().has_tick_conf()) { return Maybe<void>::Ok(); }
-    for (const auto& ibn : op.input_bns()) {
-      const auto& input_lbi = op.BnInOp2Lbi(ibn);
-      if (input_lbi.op_name() == src_op_name) {
-        CHECK_OR_RETURN(!find_src_tick_consumer_tick);
-        tick_op_conf.CopyFrom(op.op_conf());
-        find_src_tick_consumer_tick = true;
-      }
-    }
-    return Maybe<void>::Ok();
-  }));
+  auto tick_op_iter = src_op_name2tick_op.find(src_op_name);
+  if (tick_op_iter != src_op_name2tick_op.end()) {
+    find_src_tick_consumer_tick = true;
+    tick_op_conf.CopyFrom(tick_op_iter->second);
+  }
+
   CHECK_OR_RETURN(find_src_tick_consumer_tick);
   CHECK_OR_RETURN(tick_op_conf.has_tick_conf());
   CHECK_EQ_OR_RETURN(tick_op_conf.tick_conf().tick_size(), 1);
@@ -494,8 +493,6 @@ Maybe<void> MultiClientAddWaitAndSendIds(JobBuilder* job_builder, int64_t machin
       GenLogicalBlobName(wait_and_send_ids_op_conf.name(), "out"));
   JUST(job_builder->MutOpOnlyOnce(tick_op_conf));
 
-  // erase the src tick op
-  job_builder->DelOps({src_op_name});
   return Maybe<void>::Ok();
 }
 
@@ -586,9 +583,34 @@ Maybe<void> MultiClientAutoSourceAndSinkTick(const OpGraph& op_graph, Job* job) 
   }
   {
     JobBuilder job_builder(job);
+    HashMap<std::string, OperatorConf> src_op_name2tick_op;
+    HashSet<std::string> src_op_name_set;
+    std::vector<std::string> src_op_name_vec;
     for (const auto& pair : machine_id2src_op_name) {
-      JUST(MultiClientAddWaitAndSendIds(&job_builder, pair.first, pair.second));
+      CHECK_OR_RETURN(src_op_name_set.insert(pair.second).second)
+          << " duplicated src op name " << pair.second;
+      src_op_name_vec.push_back(pair.second);
     }
+    JUST(job_builder.ForEachOperator([&](const Operator& op) -> Maybe<void> {
+      // skip if the op is not a tick op
+      if (!op.op_conf().has_tick_conf()) { return Maybe<void>::Ok(); }
+      for (const auto& ibn : op.input_bns()) {
+        const auto& input_lbi = op.BnInOp2Lbi(ibn);
+        auto src_op_name_iter = src_op_name_set.find(input_lbi.op_name());
+        if (src_op_name_iter == src_op_name_set.end()) { continue; }
+        auto insert_pair = src_op_name2tick_op.emplace(input_lbi.op_name(), op.op_conf());
+        CHECK_OR_RETURN(insert_pair.second)
+            << " duplicated src op name " << input_lbi.op_name() << " old op "
+            << insert_pair.first->second.DebugString() << " new op " << op.op_conf().DebugString();
+      }
+      return Maybe<void>::Ok();
+    }));
+    for (const auto& pair : machine_id2src_op_name) {
+      JUST(
+          MultiClientAddWaitAndSendIds(&job_builder, pair.first, pair.second, src_op_name2tick_op));
+    }
+    // erase the src tick op
+    job_builder.DelOps(src_op_name_vec);
     for (const auto& pair : machine_id2sink_op_name) {
       JUST(MultiClientAddCallbackNotifier(&job_builder, pair.first, pair.second));
     }
