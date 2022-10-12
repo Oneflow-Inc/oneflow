@@ -45,17 +45,18 @@ class TestConstantPad1d(flow.unittest.TestCase):
     def test_constantpad1d_with_random_int_data(test_case):
         dtype = choice([int, bool])
         value = random(0, 2).to(bool) if dtype is bool else random().to(int)
-        m = torch.nn.ConstantPad1d(
-            padding=random(1, 6).to(_size_2_t), value=value
-        )
+        m = torch.nn.ConstantPad1d(padding=random(1, 6).to(_size_2_t), value=value)
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_tensor(ndim=3, dim1=random(1, 6), dim2=random(1, 6), dtype=int).to(device)
+        x = random_tensor(ndim=3, dim1=random(1, 6), dim2=random(1, 6), dtype=int).to(
+            device
+        )
         if dtype is bool:
             x = x.bool()
         y = m(x)
         return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestConstantPad2d(flow.unittest.TestCase):
@@ -77,9 +78,7 @@ class TestConstantPad2d(flow.unittest.TestCase):
     def test_constantpad2d_with_random_int_data(test_case):
         dtype = choice([int, bool])
         value = random(0, 2).to(bool) if dtype is bool else random().to(int)
-        m = torch.nn.ConstantPad2d(
-            padding=random(1, 6).to(_size_4_t), value=value,
-        )
+        m = torch.nn.ConstantPad2d(padding=random(1, 6).to(_size_4_t), value=value,)
         m.train(random())
         device = random_device()
         m.to(device)
@@ -90,6 +89,7 @@ class TestConstantPad2d(flow.unittest.TestCase):
             x = x.bool()
         y = m(x)
         return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestConstantPad3d(flow.unittest.TestCase):
@@ -110,14 +110,12 @@ class TestConstantPad3d(flow.unittest.TestCase):
         ).to(device)
         y = m(x)
         return y
-    
+
     @autotest(n=10, rtol=0.001, atol=0.001, auto_backward=False)
     def test_constantpad3d_with_random_data(test_case):
         dtype = choice([bool, int])
         value = random(0, 2).to(bool) if dtype is bool else random().to(int)
-        m = torch.nn.ConstantPad3d(
-            padding=random(1, 6).to(_size_6_t), value=value,
-        )
+        m = torch.nn.ConstantPad3d(padding=random(1, 6).to(_size_6_t), value=value,)
         m.train(random())
         device = random_device()
         m.to(device)
