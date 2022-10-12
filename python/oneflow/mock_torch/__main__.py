@@ -27,7 +27,7 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-torch_env = Path(__file__).parent / "mock_torch"
+torch_env = Path(__file__).parent
 
 
 def main():
