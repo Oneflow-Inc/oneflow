@@ -24,14 +24,14 @@ limitations under the License.
 
 namespace oneflow {
 
-bool IsLifeTimeExcluded(const std::pair<int32_t, int32_t>& a, const std::pair<int32_t, int32_t>& b);
+bool IsLifetimeExcluded(const std::pair<int32_t, int32_t>& a, const std::pair<int32_t, int32_t>& b);
 
 class MemoryShareStrategy {
  public:
   // Adaptively update the offset of registers to minimize the total memory
   void AdaptivelyUpdateOffset(
       const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
-      const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& register2life_time,
+      const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& register2lifetime,
       size_t lower_bound, size_t* mem_block_size,
       HashMap<RegstDescProto*, int64_t>* regst_desc2offset);
 
@@ -40,7 +40,7 @@ class MemoryShareStrategy {
   // Therefore, this function is not recommended with an initial offset provided.
   void GenerateOffset(
       const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
-      const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& register2life_time,
+      const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& register2lifetime,
       size_t* mem_block_size, HashMap<RegstDescProto*, int64_t>* regst_desc2offset);
 
  private:
@@ -77,19 +77,18 @@ class MemoryShareStrategy {
   void StealCompactPosition(
       const HashMap<RegstDescProto*, int64_t>& regst_desc2offset,
       const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
-      const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& register2life_time);
+      const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& register2lifetime);
   // Generate a compact position with the order of occurrence
   void GenerateCompactPosition(
       const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
-      const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& register2life_time);
+      const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& register2lifetime);
   // Update the offset with the adjusted strategy
   void UpdateOffset(size_t* mem_block_size, HashMap<RegstDescProto*, int64_t>* regst_desc2offset);
   // Update the maximum iteration step with the current size and lower bound
   void UpdateMaxIteration(size_t mem_block_size, size_t lower_bound);
 
   // Initialization
-  void InitRegister(
-      const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& register2life_time);
+  void InitRegister(const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& register2lifetime);
   void InitRegisterInformation(const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size);
   // Adjust the original strategy, return the updated optimal cost
   size_t ComputeOptimalAdjustedCost();

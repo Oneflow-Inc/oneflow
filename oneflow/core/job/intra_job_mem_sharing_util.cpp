@@ -312,7 +312,7 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
     std::vector<HashSet<RegstDescProto*>>* alloc_regsts_timeline,
     std::vector<HashSet<RegstDescProto*>>* free_regsts_timeline,
-    HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>* regst2life_time,
+    HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>* regst2lifetime,
     HashMap<RegstDescProto*, RegstDescProto*>* consumer2inplaced_regst, size_t* peak_memory) {
   CHECK(alloc_regsts_timeline->empty() && free_regsts_timeline->empty());
   CHECK(consumer2inplaced_regst->empty());
@@ -390,7 +390,7 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
   for (int64_t i = 0; i < sorted_tasks.size(); ++i) {
     for (RegstDescProto* alloc_regst : alloc_regsts_timeline->at(i)) {
       // Record the born time
-      (*regst2life_time)[alloc_regst] = {i, -1};
+      (*regst2lifetime)[alloc_regst] = {i, -1};
       CHECK(remain_regsts.insert(alloc_regst).second);
       remain_memory += mem_reused_regst2size.at(alloc_regst);
       // NOTE(chengcheng): insert time line to regst proto
@@ -404,7 +404,7 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
       free_regst->set_free_after_actor(i);
       remain_memory -= mem_reused_regst2size.at(free_regst);
       // Record the die time
-      (*regst2life_time)[free_regst].second = i + 1;
+      (*regst2lifetime)[free_regst].second = i + 1;
     }
   }
   CHECK(remain_regsts.empty());
@@ -516,17 +516,17 @@ void MemBlockBuffer::FindFreeOffsetAndNewBufferSize(int64_t size, int64_t* offse
 void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
     const std::vector<RegstDescProto*>& order,
     const HashMap<RegstDescProto*, int64_t>& regst_desc2size,
-    const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2life_time,
+    const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
     MemBlockResultInfo* result) {
   HashMap<RegstDescProto*, int64_t>* regst_desc2offset = &(result->regst_desc2offset);
   // Switch HashMap to vector
   int32_t total_register_num = order.size();
   std::vector<int64_t> order2size(total_register_num);
-  std::vector<std::pair<int32_t, int32_t>> order2life_time(total_register_num);
+  std::vector<std::pair<int32_t, int32_t>> order2lifetime(total_register_num);
   std::vector<int64_t> order2offset(total_register_num);
   for (int32_t i = 0; i < total_register_num; i++) {
     order2size[i] = regst_desc2size.at(order[i]);
-    order2life_time[i] = regst2life_time.at(order[i]);
+    order2lifetime[i] = regst2lifetime.at(order[i]);
   }
   size_t buffer_size = 1;
   // Sort by offset
@@ -540,13 +540,13 @@ void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
   for (int32_t inserting_id = 0; inserting_id < total_register_num; inserting_id++) {
     int64_t inserting_offset = 0;
     int64_t inserting_end = inserting_offset + order2size[inserting_id];
-    const auto& inserting_life_time = order2life_time[inserting_id];
+    const auto& inserting_lifetime = order2lifetime[inserting_id];
     for (const auto& curr_register : sorted_registers) {
       // If x_i + l_i <= x_j, then the inserting register would be placed at x_i
       if (order2offset[curr_register] >= inserting_end) { break; }
       // If i and j are excluded, and x_i + l_i > x_j,
       // then we try to place i at x_j + l_j and check the following registers
-      if (IsLifeTimeExcluded(inserting_life_time, order2life_time[curr_register])) {
+      if (IsLifetimeExcluded(inserting_lifetime, order2lifetime[curr_register])) {
         int64_t curr_end = order2offset[curr_register] + order2size[curr_register];
         // Can not set inserting offset = current end directly.
         // We might have two excluded registers like this:
@@ -573,42 +573,42 @@ void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
 }
 
 void MemReusedAlgorithm_MemSizeFirstAlgo(
-    const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2life_time,
+    const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo* result) {
   std::vector<RegstDescProto*> order;
-  order.reserve(regst2life_time.size());
+  order.reserve(regst2lifetime.size());
   HashMap<RegstDescProto*, int64_t> regst_desc2size;
-  for (const auto& pair : regst2life_time) {
+  for (const auto& pair : regst2lifetime) {
     order.emplace_back(pair.first);
     CHECK(regst_desc2size.emplace(pair.first, mem_reused_regst2size.at(pair.first)).second);
   }
   std::sort(order.begin(), order.end(), [&](RegstDescProto* lhs, RegstDescProto* rhs) {
     int64_t l_size = regst_desc2size.at(lhs);
     int64_t r_size = regst_desc2size.at(rhs);
-    if (l_size == r_size) { return regst2life_time.at(lhs).first < regst2life_time.at(rhs).first; }
+    if (l_size == r_size) { return regst2lifetime.at(lhs).first < regst2lifetime.at(rhs).first; }
     return l_size > r_size;
   });
-  MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(order, regst_desc2size, regst2life_time,
+  MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(order, regst_desc2size, regst2lifetime,
                                                        result);
 }
 
 void MemReusedAlgorithm_MutualExclusionFirstAlgo(
-    const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2life_time,
+    const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo* result) {
   std::vector<RegstDescProto*> order;
-  order.reserve(regst2life_time.size());
+  order.reserve(regst2lifetime.size());
   HashMap<RegstDescProto*, int64_t> regst_desc2size;
-  for (const auto& pair : regst2life_time) {
+  for (const auto& pair : regst2lifetime) {
     order.emplace_back(pair.first);
     CHECK(regst_desc2size.emplace(pair.first, mem_reused_regst2size.at(pair.first)).second);
   }
   std::sort(order.begin(), order.end(), [&](RegstDescProto* lhs, RegstDescProto* rhs) {
-    int64_t l_size = regst2life_time.at(lhs).second - regst2life_time.at(lhs).first;
-    int64_t r_size = regst2life_time.at(rhs).second - regst2life_time.at(rhs).first;
-    if (l_size == r_size) { return regst2life_time.at(lhs).first < regst2life_time.at(rhs).first; }
+    int64_t l_size = regst2lifetime.at(lhs).second - regst2lifetime.at(lhs).first;
+    int64_t r_size = regst2lifetime.at(rhs).second - regst2lifetime.at(rhs).first;
+    if (l_size == r_size) { return regst2lifetime.at(lhs).first < regst2lifetime.at(rhs).first; }
     return l_size > r_size;
   });
-  MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(order, regst_desc2size, regst2life_time,
+  MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(order, regst_desc2size, regst2lifetime,
                                                        result);
 }
 
@@ -748,17 +748,17 @@ void MemReusedAlgorithm_TimeLineAlgo(
 void SelectAlgorithmGenMemBlockOffset4Regsts(
     MemAllocAlgoType algo_id, const std::vector<HashSet<RegstDescProto*>>& alloc_regsts_timeline,
     const std::vector<HashSet<RegstDescProto*>>& free_regsts_timeline,
-    const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2life_time,
+    const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo* result) {
   CHECK_EQ(result->mem_block_size, 0);
   CHECK(result->regst_desc2offset.empty());
 
   switch (algo_id) {
     case kMemSizeFirstAlgo:
-      MemReusedAlgorithm_MemSizeFirstAlgo(regst2life_time, mem_reused_regst2size, result);
+      MemReusedAlgorithm_MemSizeFirstAlgo(regst2lifetime, mem_reused_regst2size, result);
       break;
     case kMutualExclusionFirstAlgo:
-      MemReusedAlgorithm_MutualExclusionFirstAlgo(regst2life_time, mem_reused_regst2size, result);
+      MemReusedAlgorithm_MutualExclusionFirstAlgo(regst2lifetime, mem_reused_regst2size, result);
       break;
     case kTimeLineAlgo:
       MemReusedAlgorithm_TimeLineAlgo(alloc_regsts_timeline, free_regsts_timeline,
@@ -806,7 +806,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
   // info for algorithm
   HashMap<int64_t, std::vector<HashSet<RegstDescProto*>>> mem_chain2task2alloc_regsts;
   HashMap<int64_t, std::vector<HashSet<RegstDescProto*>>> mem_chain2task2free_regsts;
-  HashMap<int64_t, HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>> mem_chain2regst2life_time;
+  HashMap<int64_t, HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>> mem_chain2regst2lifetime;
   // info for inplace
   HashMap<int64_t, HashMap<RegstDescProto*, RegstDescProto*>> mem_chain2consumer2inplaced_regst;
   // info for straighten
@@ -817,7 +817,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
     GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
         mem_chain2sorted_tasks.at(pair.first), pair.second, regst_desc_id2regst_desc,
         mem_reused_regst2size, &mem_chain2task2alloc_regsts[pair.first],
-        &mem_chain2task2free_regsts[pair.first], &mem_chain2regst2life_time[pair.first],
+        &mem_chain2task2free_regsts[pair.first], &mem_chain2regst2lifetime[pair.first],
         &mem_chain2consumer2inplaced_regst[pair.first], &mem_chain2peak_memory[pair.first]);
   }
 
@@ -834,12 +834,12 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
         MemAllocAlgoType algo_id = pair.first;
         MemBlockResultInfo* result = &pair.second;
         thread_pool.AddWork([algo_id, mem_chain_id, &mem_chain2task2alloc_regsts,
-                             &mem_chain2task2free_regsts, &mem_chain2regst2life_time,
+                             &mem_chain2task2free_regsts, &mem_chain2regst2lifetime,
                              &mem_reused_regst2size, result, &counter]() {
           SelectAlgorithmGenMemBlockOffset4Regsts(
               algo_id, mem_chain2task2alloc_regsts.at(mem_chain_id),
               mem_chain2task2free_regsts.at(mem_chain_id),
-              mem_chain2regst2life_time.at(mem_chain_id), mem_reused_regst2size, result);
+              mem_chain2regst2lifetime.at(mem_chain_id), mem_reused_regst2size, result);
           counter.Decrease();
         });
       }
@@ -861,7 +861,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
     // lower bound
     {
       MemoryShareStrategy mss;
-      mss.AdaptivelyUpdateOffset(mem_reused_regst2size, mem_chain2regst2life_time.at(pair.first),
+      mss.AdaptivelyUpdateOffset(mem_reused_regst2size, mem_chain2regst2lifetime.at(pair.first),
                                  mem_chain2peak_memory[pair.first], &best_result->mem_block_size,
                                  &best_result->regst_desc2offset);
     }
