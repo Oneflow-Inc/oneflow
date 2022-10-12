@@ -2381,7 +2381,7 @@ class ConstantPadFunctor {
     if (IsFloatingDataType(input->dtype()->data_type())
         || input->dtype()->data_type() == DataType::kFloat16) {
       attrs.SetAllAttrs(pad, value.As<double>(), static_cast<int64_t>(0), pad_before, pad_after);
-    } else if (IsIntegralDataType(input->dtype()->data_type())) {
+    } else if (IsIntegralDataType(input->dtype()->data_type()) || input->dtype()->data_type() == DataType::kBool) {
       attrs.SetAllAttrs(pad, static_cast<double>(0), value.As<int64_t>(), pad_before, pad_after);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";

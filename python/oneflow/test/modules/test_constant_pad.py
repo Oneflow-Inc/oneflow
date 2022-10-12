@@ -20,6 +20,7 @@ from collections import OrderedDict
 import numpy as np
 
 
+from random import choice
 from oneflow.test_utils.automated_test_util import *
 from oneflow.nn.common_types import _size_2_t, _size_4_t, _size_6_t
 import oneflow as flow
@@ -40,6 +41,20 @@ class TestConstantPad1d(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @autotest(n=10, rtol=0.001, atol=0.001, auto_backward=False)
+    def test_constantpad1d_with_random_int_data(test_case):
+        dtype = choice([int, bool])
+        m = torch.nn.ConstantPad1d(
+            padding=random(1, 6).to(_size_2_t), value=random().to(dtype)
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=3, dim1=random(1, 6), dim2=random(1, 6), dtype=int).to(device)
+        if dtype is bool:
+            x = x.bool()
+        y = m(x)
+        return y
 
 @flow.unittest.skip_unless_1n1d()
 class TestConstantPad2d(flow.unittest.TestCase):
@@ -57,6 +72,22 @@ class TestConstantPad2d(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @autotest(n=10, rtol=0.001, atol=0.001, auto_backward=False)
+    def test_constantpad2d_with_random_int_data(test_case):
+        dtype = choice([int, bool])
+        m = torch.nn.ConstantPad2d(
+            padding=random(1, 6).to(_size_4_t), value=random().to(dtype)
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(
+            ndim=4, dim1=random(1, 6), dim2=random(1, 6), dim3=random(1, 6)
+        ).to(device)
+        if dtype is bool:
+            x = x.bool()
+        y = m(x)
+        return y
 
 @flow.unittest.skip_unless_1n1d()
 class TestConstantPad3d(flow.unittest.TestCase):
@@ -77,6 +108,27 @@ class TestConstantPad3d(flow.unittest.TestCase):
         ).to(device)
         y = m(x)
         return y
+    
+    @autotest(n=10, rtol=0.001, atol=0.001, auto_backward=False)
+    def test_constantpad3d_with_random_data(test_case):
+        dtype = choice([bool, int])
+        m = torch.nn.ConstantPad3d(
+            padding=random(1, 6).to(_size_6_t), value=random().to(dtype)
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(
+            ndim=5,
+            dim1=random(1, 6),
+            dim2=random(1, 6),
+            dim3=random(1, 6),
+            dim4=random(1, 6),
+        ).to(device)
+        if dtype is bool:
+            x = x.bool()
+        y = m(x)
+        return y
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -93,6 +145,24 @@ class TestFunctionalConstantPad2d(flow.unittest.TestCase):
             dim2=random(2, 6),
             dim3=random(2, 6),
         ).to(device)
+        y = torch.nn.functional.pad(x, pad=padding, mode="constant", value=value)
+        return y
+
+    @autotest(n=10, rtol=0.001, atol=0.001, check_graph=True, auto_backward=False)
+    def test_functional_constantpad2d_int_data(test_case):
+        dtype = choice([bool, int])
+        device = random_device()
+        padding = random(-1, 6).to(_size_4_t)
+        value = random().to(dtype)
+        x = random_tensor(
+            ndim=4,
+            dim0=random(1, 6),
+            dim1=random(1, 6),
+            dim2=random(2, 6),
+            dim3=random(2, 6),
+        ).to(device)
+        if dtype is bool:
+            x = x.bool()
         y = torch.nn.functional.pad(x, pad=padding, mode="constant", value=value)
         return y
 
