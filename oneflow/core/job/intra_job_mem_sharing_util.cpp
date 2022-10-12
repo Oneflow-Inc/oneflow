@@ -315,7 +315,6 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
     HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>* regst2life_time,
     HashMap<RegstDescProto*, RegstDescProto*>* consumer2inplaced_regst, size_t* peak_memory) {
   CHECK(alloc_regsts_timeline->empty() && free_regsts_timeline->empty());
-  // CHECK(regst2mutual_exclusion_regsts->empty());
   CHECK(consumer2inplaced_regst->empty());
   alloc_regsts_timeline->resize(sorted_tasks.size());
   free_regsts_timeline->resize(sorted_tasks.size());
@@ -390,11 +389,6 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
   *peak_memory = 0;
   for (int64_t i = 0; i < sorted_tasks.size(); ++i) {
     for (RegstDescProto* alloc_regst : alloc_regsts_timeline->at(i)) {
-      // CHECK(regst2mutual_exclusion_regsts->emplace(alloc_regst,
-      // HashSet<RegstDescProto*>()).second); for (RegstDescProto* remain_regst : remain_regsts) {
-      //   regst2mutual_exclusion_regsts->at(alloc_regst).insert(remain_regst);
-      //   regst2mutual_exclusion_regsts->at(remain_regst).insert(alloc_regst);
-      // }
       // Record the born time
       (*regst2life_time)[alloc_regst] = {i, -1};
       CHECK(remain_regsts.insert(alloc_regst).second);
@@ -544,7 +538,6 @@ void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
   std::set<int32_t, decltype(comp)> sorted_registers(comp);
   // Decide offset following the given order
   for (int32_t inserting_id = 0; inserting_id < total_register_num; inserting_id++) {
-    // const auto& excluded_registers = regst2mutual_exclusion_regsts.at(inserting_register);
     int64_t inserting_offset = 0;
     int64_t inserting_end = inserting_offset + order2size[inserting_id];
     const auto& inserting_life_time = order2life_time[inserting_id];
@@ -568,25 +561,10 @@ void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
     // Either we break the loop or the loop terminated naturally, we can place i at inserting_offset
     order2offset[inserting_id] = inserting_offset;
     sorted_registers.insert(inserting_id);
-    // std::cout << "from " << inserting_offset << " to " << inserting_end << std::endl;
     // Update total size
     if (inserting_end > buffer_size) { buffer_size = inserting_end; }
   }
 
-  // for (RegstDescProto* regst_desc : order) {
-  //   MemBlockBuffer buffer(buffer_size);
-  //   for (RegstDescProto* mutual_regst : regst2mutual_exclusion_regsts.at(regst_desc)) {
-  //     if (regst_desc2offset->find(mutual_regst) != regst_desc2offset->end()) {
-  //       int64_t begin = regst_desc2offset->at(mutual_regst);
-  //       int64_t end = begin + regst_desc2size.at(mutual_regst);
-  //       buffer.Occupy(begin, end);
-  //     }
-  //   }
-  //   int64_t offset = -1;
-  //   buffer.FindFreeOffsetAndNewBufferSize(regst_desc2size.at(regst_desc), &offset, &buffer_size);
-  //   CHECK(offset >= 0 && offset <= buffer_size);
-  //   CHECK(regst_desc2offset->emplace(regst_desc, offset).second);
-  // }
   result->mem_block_size = buffer_size;
   // Switch vector to HashMap
   for (int32_t i = 0; i < total_register_num; i++) {
@@ -775,7 +753,6 @@ void SelectAlgorithmGenMemBlockOffset4Regsts(
   CHECK_EQ(result->mem_block_size, 0);
   CHECK(result->regst_desc2offset.empty());
 
-  // NOTE(chengcheng): When mem size or exclusion num equal, there need second order by allocate.
   switch (algo_id) {
     case kMemSizeFirstAlgo:
       MemReusedAlgorithm_MemSizeFirstAlgo(regst2life_time, mem_reused_regst2size, result);
@@ -806,19 +783,8 @@ int64_t CountMemAllocAlgoNum() {
 
 void InitAlgo2Result(HashMap<MemAllocAlgoType, MemBlockResultInfo>* algo2result) {
   CHECK(algo2result->empty());
-  // const MemoryAllocationAlgorithmConf& mem_alloc_algo_conf =
-  //     GlobalJobDesc().job_conf().memory_allocation_algorithm_conf();
   // Experiments show that memory first might be good enough for some cases.
-  // if (mem_alloc_algo_conf.use_mem_size_first_algo()) {
   CHECK(algo2result->emplace(kMemSizeFirstAlgo, MemBlockResultInfo()).second);
-  // }
-  // These two algorithms might be unnecessary.
-  // if (mem_alloc_algo_conf.use_mutual_exclusion_first_algo()) {
-  //   CHECK(algo2result->emplace(kMutualExclusionFirstAlgo, MemBlockResultInfo()).second);
-  // }
-  // if (mem_alloc_algo_conf.use_time_line_algo()) {
-  //   CHECK(algo2result->emplace(kTimeLineAlgo, MemBlockResultInfo()).second);
-  // }
 }
 
 }  // namespace
@@ -840,8 +806,6 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
   // info for algorithm
   HashMap<int64_t, std::vector<HashSet<RegstDescProto*>>> mem_chain2task2alloc_regsts;
   HashMap<int64_t, std::vector<HashSet<RegstDescProto*>>> mem_chain2task2free_regsts;
-  // HashMap<int64_t, HashMap<RegstDescProto*, HashSet<RegstDescProto*>>>
-  //     mem_chain2regst2mutual_exclusion_regsts;
   HashMap<int64_t, HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>> mem_chain2regst2life_time;
   // info for inplace
   HashMap<int64_t, HashMap<RegstDescProto*, RegstDescProto*>> mem_chain2consumer2inplaced_regst;
