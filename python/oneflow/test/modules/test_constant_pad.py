@@ -44,8 +44,9 @@ class TestConstantPad1d(flow.unittest.TestCase):
     @autotest(n=10, rtol=0.001, atol=0.001, auto_backward=False)
     def test_constantpad1d_with_random_int_data(test_case):
         dtype = choice([int, bool])
+        value = random(0, 2).to(bool) if dtype is bool else random().to(int)
         m = torch.nn.ConstantPad1d(
-            padding=random(1, 6).to(_size_2_t), value=random().to(dtype)
+            padding=random(1, 6).to(_size_2_t), value=value
         )
         m.train(random())
         device = random_device()
@@ -75,8 +76,9 @@ class TestConstantPad2d(flow.unittest.TestCase):
     @autotest(n=10, rtol=0.001, atol=0.001, auto_backward=False)
     def test_constantpad2d_with_random_int_data(test_case):
         dtype = choice([int, bool])
+        value = random(0, 2).to(bool) if dtype is bool else random().to(int)
         m = torch.nn.ConstantPad2d(
-            padding=random(1, 6).to(_size_4_t), value=random().to(dtype)
+            padding=random(1, 6).to(_size_4_t), value=value,
         )
         m.train(random())
         device = random_device()
@@ -112,8 +114,9 @@ class TestConstantPad3d(flow.unittest.TestCase):
     @autotest(n=10, rtol=0.001, atol=0.001, auto_backward=False)
     def test_constantpad3d_with_random_data(test_case):
         dtype = choice([bool, int])
+        value = random(0, 2).to(bool) if dtype is bool else random().to(int)
         m = torch.nn.ConstantPad3d(
-            padding=random(1, 6).to(_size_6_t), value=random().to(dtype)
+            padding=random(1, 6).to(_size_6_t), value=value,
         )
         m.train(random())
         device = random_device()
@@ -153,7 +156,7 @@ class TestFunctionalConstantPad2d(flow.unittest.TestCase):
         dtype = choice([bool, int])
         device = random_device()
         padding = random(-1, 6).to(_size_4_t)
-        value = random().to(dtype)
+        value = random(0, 2).to(bool) if dtype is bool else random().to(int)
         x = random_tensor(
             ndim=4,
             dim0=random(1, 6),
