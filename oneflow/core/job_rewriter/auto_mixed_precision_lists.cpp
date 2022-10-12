@@ -52,7 +52,11 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
 
 const AMPList& AutoMixedPrecisionLists::BlackList() {
   // TODO(niuchong): reduce_mean?
-  static AMPList black_list = {"amp_black_identity"};
+  static AMPList black_list = {
+      "amp_black_identity",
+      "reduce_sum",
+      "reduce_sum_like",
+  };
   return black_list;
 }
 
@@ -65,8 +69,6 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "tf_avg_pool_3d",
                               "tf_avg_pool_3d_grad",
                               "bias_add",
-                              "reduce_sum",
-                              "reduce_sum_like",
                               "sigmoid_grad",
                               "tanh",
                               "tanh_grad",
