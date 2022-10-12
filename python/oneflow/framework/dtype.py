@@ -92,18 +92,18 @@ def set_default_tensor_type(tensor_type):
     .. code-block:: python
 
         >>> import oneflow
-        >>> oneflow.set_default_tensor_type(oneflow.DoubleTensor)
-        >>> x = oneflow.ones(2, 3)
-        >>> x.dtype
-        oneflow.float64
-        >>> oneflow.set_default_tensor_type("oneflow.FloatTensor")
+        >>> oneflow.set_default_tensor_type(oneflow.FloatTensor)
         >>> x = oneflow.ones(2, 3)
         >>> x.dtype
         oneflow.float32
-        >>> oneflow.set_default_tensor_type(oneflow.DoubleTensor)
-        >>> x = oneflow.tensor([1.0, 2])
+        >>> oneflow.set_default_tensor_type("oneflow.DoubleTensor")
+        >>> x = oneflow.ones(2, 3)
         >>> x.dtype
         oneflow.float64
+        >>> oneflow.set_default_tensor_type(oneflow.FloatTensor)
+        >>> x = oneflow.tensor([1.0, 2])
+        >>> x.dtype
+        oneflow.float32
     """
 
     def _import_dotted_name(name):

@@ -42,6 +42,7 @@ add_docstr(
     .. code-block:: python
 
         >>> import oneflow as flow
+        >>> flow.set_default_dtype(flow.float32)
         >>> flow.get_default_dtype()
         oneflow.float32
         >>> flow.set_default_dtype(flow.float64)
@@ -73,5 +74,9 @@ add_docstr(
         >>> x = oneflow.randn(2, 3)
         >>> x.dtype
         oneflow.float64
+        >>> oneflow.set_default_dtype(oneflow.float32)
+        >>> x = oneflow.randn(2, 3)
+        >>> x.dtype
+        oneflow.float32
     """,
 )
