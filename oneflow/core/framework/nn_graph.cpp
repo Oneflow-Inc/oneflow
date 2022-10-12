@@ -40,6 +40,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
@@ -302,7 +303,8 @@ Maybe<void> NNGraph::MasterRankCompile() {
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     JUST(OpGraph::WithSingleton(&job_, [&]() -> Maybe<void> {
       Singleton<OpGraph>::Get()->UpdateCachedPredicatorIsReachable();
-      auto boxing_task_graph = JUST(BoxingTaskGraph::New());
+      auto boxing_task_graph =
+          JUST(BoxingTaskGraph::New(&MultiThreadLoop<std::function<void(size_t)>>));
       // reachable collective boxing task pairs,
       std::vector<HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>>
           reachable_cb_pairs{GlobalProcessCtx::WorldSize()};
@@ -451,6 +453,16 @@ std::set<std::string> ForEachPushedFromMasterToWorkers(const std::string& prefix
   return keys;
 }
 
+void DumpCalculationPassName(Job* job) {
+  for (int i = 0; i < job->net().op_size(); ++i) {
+    auto* op_conf = job->mutable_net()->mutable_op(i);
+    if (op_conf->has_scope_symbol_id()) {
+      const auto& scope = Singleton<symbol::Storage<Scope>>::Get()->Get(op_conf->scope_symbol_id());
+      op_conf->set_calculation_pass_name(scope.scope_proto().calculation_pass_name());
+    }
+  }
+}
+
 }  // namespace
 
 Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
@@ -458,6 +470,7 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
   const auto& Merge = [&](std::set<std::string>&& keys) {
     push_pull_keys.insert(keys.begin(), keys.end());
   };
+  if (GlobalProcessCtx::IsThisProcessMaster()) { DumpCalculationPassName(&job_); }
   Merge(BroadcastFromMasterToWorkers(std::string(__FUNCTION__) + "_job", job_, &job_));
   JUST(OpGraph::WithSingleton(&job_, [&]() -> Maybe<void> {
     Singleton<OpGraph>::Get()->UpdateCachedPredicatorIsReachable();
@@ -465,7 +478,7 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
     auto boxing_task_graph_proto = std::make_shared<BoxingTaskGraphProto>();
     std::shared_ptr<BoxingTaskGraph> boxing_task_graph;
     if (GlobalProcessCtx::IsThisProcessMaster()) {
-      boxing_task_graph = JUST(BoxingTaskGraph::New());
+      boxing_task_graph = JUST(BoxingTaskGraph::New(&MultiThreadLoop<std::function<void(size_t)>>));
       boxing_task_graph->ToProto(boxing_task_graph_proto.get(), [](TaskNode*) { return true; });
     }
     const auto& PrepareWorkerBoxingTaskGraphProto = [&](BoxingTaskGraphProto* proto, int64_t i) {

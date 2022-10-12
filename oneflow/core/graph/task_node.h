@@ -124,6 +124,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
     CHECK(has_new_task_id());
     return *new_task_id_;
   }
+  void update_new_task_id(const TaskId& task_id);
 
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_reuse_mem);
