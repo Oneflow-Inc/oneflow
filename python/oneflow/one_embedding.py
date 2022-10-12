@@ -476,7 +476,6 @@ class Embedding(Module):
         l2 = param_group["weight_decay"]
         epsilon = param_group["eps"]
         lr_decay = param_group["lr_decay"]
-        train_step_val = step
         initial_accumulator_value = param_group["initial_accumulator_value"]
         state_initializer = [make_constant_initializer(initial_accumulator_value)]
         (
@@ -489,7 +488,7 @@ class Embedding(Module):
             cur_rank_num_unique,
             unique_values,
             cur_rank_unique_embedding_grad,
-            train_step_val=step,
+            train_step_val=step + 1,
             learning_rate_val=lr,
             scale=1.0,
             weight_decay=l2,
