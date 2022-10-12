@@ -60,7 +60,7 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
       JUST(RankTaskGraph::New(boxing_task_graph_proto_, var_op_names, rank_,
                               job->job_conf().enable_straighten_algorithm_in_task_graph()));
   LOG(ERROR) << "rank task graph node " << task_gph->node_num() << " edge " << task_gph->edge_num();
-  // rank_tc->Count("init tast graph", 1);
+  rank_tc->Count("init tast graph", 1);
   using std::placeholders::_1;
   const auto& IsNotMyDuty = [&](const CompTaskNode* comp_task_node) {
     if (comp_task_node == nullptr) { return false; }
@@ -108,7 +108,7 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
   // rank_tc->Count("InferTimeShapeIfMeaningful", 1);
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
-  // rank_tc->Count("CheckRegstLbiValid", 1);
+  rank_tc->Count("CheckRegstLbiValid", 1);
 
   // put infomation from task_gph into plan.
   task_gph->ForEachNode([&](TaskNode* task_node) {
@@ -130,7 +130,7 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
     }
     plan->mutable_task()->Add(std::move(task_proto));
   });
-  // rank_tc->Count("CreateOpAttributeRef", 1);
+  rank_tc->Count("CreateOpAttributeRef", 1);
   // NOTE(levi): release task_gph here to decrise memory peak.
   task_gph.reset();
   // rank_tc->Count("RelaseTaskGraph", 1);

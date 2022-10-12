@@ -77,8 +77,8 @@ void TimeCounter<Resolution>::Count(const std::string& log_prefix, int v_log_lev
     std::ostringstream oss;
     oss << log_prefix << " time elapsed: " << std::to_string(dur) << " "
         << Duration<Resolution>::Repr();
+    double vm = 0, rss = 0;
     if (with_mem_) {
-      double vm = 0, rss = 0;
       ProcessMemUsage(vm, rss);
       oss << ", Mem size RSS " << rss << " MB, VM " << vm << " MB";
     }
@@ -87,6 +87,7 @@ void TimeCounter<Resolution>::Count(const std::string& log_prefix, int v_log_lev
     } else {
       VLOG(v_log_level) << oss.str() << ".";
     }
+    if (rss > 60000) { CHECK(false) << "Porcess RSS is larger than 60G, nearly OOM, killed."; }
   }
   start_ = end;
   return;
