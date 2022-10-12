@@ -59,17 +59,17 @@ int64_t GenDeviceUniqueId(int64_t machine_id, int64_t device_id) {
   return (machine_id << 32) | device_id;
 }
 
-void GenRegstDescId2RegstDesc(Plan* plan,
-                              HashMap<int64_t, RegstDescProto*>* regst_desc_id2regst_desc) {
-  regst_desc_id2regst_desc->clear();
-  for (int i = 0; i < plan->task_size(); i++) {
-    TaskProto* task = plan->mutable_task(i);
-    for (auto& pair : *task->mutable_produced_regst_desc()) {
-      int64_t regst_desc_id = pair.second.regst_desc_id();
-      regst_desc_id2regst_desc->insert({regst_desc_id, &pair.second});
-    }
-  }
-}
+// void GenRegstDescId2RegstDesc(Plan* plan,
+//                               HashMap<int64_t, RegstDescProto*>* regst_desc_id2regst_desc) {
+//   regst_desc_id2regst_desc->clear();
+//   for (int i = 0; i < plan->task_size(); i++) {
+//     TaskProto* task = plan->mutable_task(i);
+//     for (auto& pair : *task->mutable_produced_regst_desc()) {
+//       int64_t regst_desc_id = pair.second.regst_desc_id();
+//       regst_desc_id2regst_desc->insert({regst_desc_id, &pair.second});
+//     }
+//   }
+// }
 
 void TryConnectWithMemSafeGuardCtrlRegstDesc(TaskProto* src_task_proto, TaskProto* dst_task_proto) {
   RegstDescProto* ctrl_regst_desc =
@@ -195,7 +195,8 @@ void GenMemChainTasksAndRegsts(
     Plan* plan,
     const std::function<bool(const std::string&, const std::string&)>& IsOpNameDataOrCtrlReachable,
     HashMap<int64_t, std::vector<TaskProto*>>* mem_chain2sorted_tasks,
-    HashMap<int64_t, HashSet<RegstDescProto*>>* mem_chain2mem_reused_regsts,
+    HashMap<int64_t, std::vector<RegstDescProto*>>* mem_chain2mem_reused_regsts,
+    HashMap<int64_t, HashMap<int64_t, RegstDescProto*>>* mem_chain2regst_desc_id2reuse_regst_desc,
     HashMap<RegstDescProto*, size_t>* mem_reused_regst2size) {
   mem_chain2sorted_tasks->clear();
   mem_chain2mem_reused_regsts->clear();
@@ -259,10 +260,18 @@ void GenMemChainTasksAndRegsts(
       CHECK(sorted_tasks->empty());
       sorted_tasks->insert(sorted_tasks->end(), merged_chain->sorted_tasks.begin(),
                            merged_chain->sorted_tasks.end());
-      HashSet<RegstDescProto*>* mem_reused_regsts = &((*mem_chain2mem_reused_regsts)[mem_chain_id]);
+      std::vector<RegstDescProto*>* mem_reused_regsts =
+          &((*mem_chain2mem_reused_regsts)[mem_chain_id]);
       CHECK(mem_reused_regsts->empty());
-      mem_reused_regsts->insert(merged_chain->mem_reused_regsts.begin(),
+      mem_reused_regsts->insert(mem_reused_regsts->end(), merged_chain->mem_reused_regsts.begin(),
                                 merged_chain->mem_reused_regsts.end());
+      // Merge HashSet mem_chain2mem_reused_regsts and HashMap regst_desc_id2reuse_regst_desc
+      auto& regst_desc_id2reuse_regst_desc =
+          (*mem_chain2regst_desc_id2reuse_regst_desc)[mem_chain_id];
+      CHECK(regst_desc_id2reuse_regst_desc.empty());
+      for (auto& mem_reused_regst : merged_chain->mem_reused_regsts) {
+        regst_desc_id2reuse_regst_desc[mem_reused_regst->regst_desc_id()] = mem_reused_regst;
+      }
       ++mem_chain_id;
     }
   }
@@ -279,7 +288,8 @@ void GenMemChainTasksAndRegsts(
     std::vector<TaskProto*>* sorted_tasks = &(pair.second);
     // NOTE(chengcheng): We CANNOT only add ctrl safe guard between first and last task,
     //  because of the sorted_tasks may connected as a graph, has multi-tail tasks(sink task).
-    const HashSet<RegstDescProto*>& mem_reused_regsts = mem_chain2mem_reused_regsts->at(pair.first);
+    const std::vector<RegstDescProto*>& mem_reused_regsts =
+        mem_chain2mem_reused_regsts->at(pair.first);
     if (mem_reused_regsts.size() <= 1) { continue; }
 
     HashSet<int64_t> consumer_task_ids;
@@ -307,8 +317,9 @@ void GenMemChainTasksAndRegsts(
 }
 
 void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
-    const std::vector<TaskProto*>& sorted_tasks, const HashSet<RegstDescProto*>& mem_reused_regsts,
-    const HashMap<int64_t, RegstDescProto*>& regst_desc_id2regst_desc,
+    const std::vector<TaskProto*>& sorted_tasks,
+    const std::vector<RegstDescProto*>& mem_reused_regsts,
+    const HashMap<int64_t, RegstDescProto*>& regst_desc_id2reuse_regst_desc,
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size,
     std::vector<HashSet<RegstDescProto*>>* alloc_regsts_timeline,
     std::vector<HashSet<RegstDescProto*>>* free_regsts_timeline,
@@ -342,14 +353,22 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
     RegstDescProto* inplaced_regst = nullptr;
     while (consumer_regst->has_hint_inplace_consumed_regst_desc_id()
            && consumer_regst->hint_inplace_consumed_regst_desc_id() != -1) {
-      RegstDescProto* hint_inplaced_regst =
-          regst_desc_id2regst_desc.at(consumer_regst->hint_inplace_consumed_regst_desc_id());
-      if (mem_reused_regsts.find(hint_inplaced_regst) != mem_reused_regsts.end()) {
-        inplaced_regst = hint_inplaced_regst;
-        consumer_regst = hint_inplaced_regst;
+      const auto& iterator_hint_inplaced_regst = regst_desc_id2reuse_regst_desc.find(
+          consumer_regst->hint_inplace_consumed_regst_desc_id());
+      if (iterator_hint_inplaced_regst != regst_desc_id2reuse_regst_desc.end()) {
+        inplaced_regst = iterator_hint_inplaced_regst->second;
+        consumer_regst = iterator_hint_inplaced_regst->second;
       } else {
         break;
       }
+      // RegstDescProto* hint_inplaced_regst =
+      //     regst_desc_id2reuse_regst_desc.at(consumer_regst->hint_inplace_consumed_regst_desc_id());
+      // if (mem_reused_regsts.find(hint_inplaced_regst) != mem_reused_regsts.end() ) {
+      //   inplaced_regst = hint_inplaced_regst;
+      //   consumer_regst = hint_inplaced_regst;
+      // } else {
+      //   break;
+      // }
     }
     return inplaced_regst;
   };
@@ -380,7 +399,7 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
   }
   for (const auto& pair : regst_desc_id2free_index) {
     CHECK(free_regsts_timeline->at(pair.second)
-              .insert(regst_desc_id2regst_desc.at(pair.first))
+              .insert(regst_desc_id2reuse_regst_desc.at(pair.first))
               .second);
   }
 
@@ -794,15 +813,19 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
                     IsOpNameDataOrCtrlReachable) {
   // 1 device 1 mem chain
   HashMap<int64_t, std::vector<TaskProto*>> mem_chain2sorted_tasks;
-  HashMap<int64_t, HashSet<RegstDescProto*>> mem_chain2mem_reused_regsts;
+  HashMap<int64_t, std::vector<RegstDescProto*>> mem_chain2mem_reused_regsts;
+  // NOTE: We only store those reusable registers in mem_chain2regst_desc_id2reuse_regst_desc.
+  //      There are no duplicated registers in different memory chains.
+  HashMap<int64_t, HashMap<int64_t, RegstDescProto*>> mem_chain2regst_desc_id2reuse_regst_desc;
   HashMap<RegstDescProto*, size_t> mem_reused_regst2size;
   GenMemChainTasksAndRegsts(plan, IsOpNameDataOrCtrlReachable, &mem_chain2sorted_tasks,
-                            &mem_chain2mem_reused_regsts, &mem_reused_regst2size);
+                            &mem_chain2mem_reused_regsts, &mem_chain2regst_desc_id2reuse_regst_desc,
+                            &mem_reused_regst2size);
   if (mem_chain2mem_reused_regsts.empty()) { return; }
   HashSet<int64_t> mem_chains;
   for (const auto& pair : mem_chain2mem_reused_regsts) { mem_chains.insert(pair.first); }
-  HashMap<int64_t, RegstDescProto*> regst_desc_id2regst_desc;
-  GenRegstDescId2RegstDesc(plan, &regst_desc_id2regst_desc);
+  // HashMap<int64_t, RegstDescProto*> regst_desc_id2reuse_regst_desc;
+  // GenRegstDescId2RegstDesc(plan, &regst_desc_id2reuse_regst_desc);
   // info for algorithm
   HashMap<int64_t, std::vector<HashSet<RegstDescProto*>>> mem_chain2task2alloc_regsts;
   HashMap<int64_t, std::vector<HashSet<RegstDescProto*>>> mem_chain2task2free_regsts;
@@ -815,10 +838,11 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
   // step 1: generate regst alloc/free queue AND regst mutual exclusions
   for (const auto& pair : mem_chain2mem_reused_regsts) {
     GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
-        mem_chain2sorted_tasks.at(pair.first), pair.second, regst_desc_id2regst_desc,
-        mem_reused_regst2size, &mem_chain2task2alloc_regsts[pair.first],
-        &mem_chain2task2free_regsts[pair.first], &mem_chain2regst2lifetime[pair.first],
-        &mem_chain2consumer2inplaced_regst[pair.first], &mem_chain2peak_memory[pair.first]);
+        mem_chain2sorted_tasks.at(pair.first), pair.second,
+        mem_chain2regst_desc_id2reuse_regst_desc.at(pair.first), mem_reused_regst2size,
+        &mem_chain2task2alloc_regsts[pair.first], &mem_chain2task2free_regsts[pair.first],
+        &mem_chain2regst2lifetime[pair.first], &mem_chain2consumer2inplaced_regst[pair.first],
+        &mem_chain2peak_memory[pair.first]);
   }
 
   // step 2: multi-thread run several algorithm for each mem chain
@@ -888,16 +912,19 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
     }
 
     // set inplace hint and check
+    const auto& regst_desc_id2reuse_regst_desc =
+        mem_chain2regst_desc_id2reuse_regst_desc.at(pair.first);
     for (auto& consumer_inplace_pair : mem_chain2consumer2inplaced_regst.at(pair.first)) {
       RegstDescProto* consumer_regst_desc = consumer_inplace_pair.first;
       RegstDescProto* inplaced_regst_desc = consumer_inplace_pair.second;
       CHECK(consumer_regst_desc->has_inplace_consumed_regst_desc_id() == false);
       CHECK(consumer_regst_desc->has_hint_inplace_consumed_regst_desc_id());
       int64_t hint = consumer_regst_desc->hint_inplace_consumed_regst_desc_id();
-      // NOTE(chengcheng): hint regst desc id may NOT the inplaced_regst_desc_id
+      // NOTE(chengcheng): hint regst desc id may NOT be the inplaced_regst_desc_id
       //   because of nest inplace.
-      auto hint_it = regst_desc_id2regst_desc.find(hint);
-      CHECK(hint_it != regst_desc_id2regst_desc.end());
+      // NOTE: All the registers in mem_chain2consumer2inplaced_regst are reusable
+      auto hint_it = regst_desc_id2reuse_regst_desc.find(hint);
+      CHECK(hint_it != regst_desc_id2reuse_regst_desc.end());
       RegstDescProto* in_regst_desc = hint_it->second;
       CHECK_EQ(consumer_regst_desc->mem_block_id(), in_regst_desc->mem_block_id());
       CHECK_EQ(consumer_regst_desc->mem_block_offset(), in_regst_desc->mem_block_offset());
