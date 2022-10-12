@@ -94,7 +94,7 @@ class RandFunctor {
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
-    DataType dtype_val = DataType::kFloat;
+    DataType dtype_val = GetDefaultDType()->data_type();
     if (dtype.has_value()) {
       dtype_val = JUST(dtype)->data_type();
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble
@@ -130,7 +130,7 @@ class GlobalRandFunctor {
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    DataType dtype_val = DataType::kFloat;
+    DataType dtype_val = GetDefaultDType()->data_type();
     if (dtype.has_value()) {
       dtype_val = JUST(dtype)->data_type();
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
@@ -168,7 +168,7 @@ class RandNFunctor {
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
-    DataType dtype_val = DataType::kFloat;
+    DataType dtype_val = GetDefaultDType()->data_type();
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
     if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble
         && dtype_val != DataType::kFloat16) {
@@ -202,7 +202,7 @@ class GlobalRandNFunctor {
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    DataType dtype_val = DataType::kFloat;
+    DataType dtype_val = GetDefaultDType()->data_type();
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
     if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble
         && dtype_val != DataType::kFloat16) {
