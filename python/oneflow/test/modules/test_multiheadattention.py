@@ -18,6 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+import random as random_utils
 
 from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgList
@@ -26,6 +27,80 @@ import oneflow as flow
 import oneflow.unittest
 
 import torch as torch_original
+
+
+def _generate_inputs_for_native_mha():
+    batch_size = random(1, 20)
+    seq_len = 13
+    embed_dim = 36
+    num_heads = 6
+    in_proj_dim = embed_dim
+    out_proj_dim = 32
+
+    device = random_device()
+    query = random_tensor(3, batch_size, seq_len, embed_dim).to(device)
+    key = random_tensor(3, batch_size, seq_len, embed_dim).to(device)
+    value = random_tensor(3, batch_size, seq_len, embed_dim).to(device)
+    qkv_weight = random_tensor(2, embed_dim * 3, in_proj_dim).to(device)
+    qkv_bias = random_tensor(1, embed_dim * 3).to(device)
+    proj_weight = random_tensor(2, out_proj_dim, in_proj_dim).to(device)
+    proj_bias = random_tensor(1, out_proj_dim).to(device)
+    mask = random_tensor(2, batch_size, seq_len, low=0, high=1).to(device) > 0.5
+
+    return (
+        query,
+        key,
+        value,
+        embed_dim,
+        num_heads,
+        qkv_weight,
+        qkv_bias,
+        proj_weight,
+        proj_bias,
+        mask,
+    )
+
+def _generate_inputs_for_nn_module(embed_dim, 
+                kdim=None, vdim=None, batch_first=False, device=None, dtype=None):
+    batch_size = random(1, 20)
+    tgt_len = random(1, 20)
+    src_len = random(1, 20)
+    is_batched = random_bool()
+    kdim = embed_dim if kdim is None else kdim
+    vdim = embed_dim if vdim is None else vdim
+
+    if is_batched and batch_first:
+        query_shape = ( batch_size,tgt_len, embed_dim)
+        key_shape = ( batch_size, src_len,kdim)
+        value_shape = ( batch_size,src_len, vdim)
+        key_padding_mask_shape = (batch_size, src_len)
+    elif is_batched:
+        query_shape = (tgt_len, batch_size, embed_dim)
+        key_shape = (src_len, batch_size, kdim)
+        value_shape = (src_len, batch_size, vdim)
+        key_padding_mask_shape = (batch_size, src_len)
+    else:
+        query_shape = (tgt_len,  embed_dim)
+        key_shape = (src_len,  kdim)
+        value_shape = (src_len, vdim)
+        key_padding_mask_shape = (src_len, )
+
+    query = random_tensor(len(query_shape), *query_shape).to(device)
+    key = random_tensor(len(key_shape), *key_shape).to(device)
+    value = random_tensor(len(value_shape), *value_shape).to(device)
+    key_padding_mask = random_tensor(len(key_padding_mask_shape), *key_padding_mask_shape).to(device)
+    attn_mask = random_tensor(2, tgt_len, src_len).to(device) > 0.5
+
+    return query, key, value, key_padding_mask, attn_mask
+    
+
+
+
+    # query = random_tensor(3)
+    
+    # def forward(self, query: Tensor, key: Tensor, value: Tensor, key_padding_mask: Optional[Tensor] = None,
+    #             need_weights: bool = True, attn_mask: Optional[Tensor] = None,
+    #             average_attn_weights: bool = True) -> Tuple[Tensor, Optional[Tensor]]:
 
 
 def _test_multiheadattention(test_case):
@@ -52,11 +127,11 @@ def _test_multiheadattention(test_case):
     qkv_bias = flow.randn(emb_dim * 3)
     proj_weight = flow.randn(out_proj_dim, in_proj_dim)
     proj_bias = flow.randn(out_proj_dim,)
-    mask = (flow.randn(batch_size, seq_len) > 0)
+    mask = flow.randn(batch_size, seq_len) > 0
     # mask = flow.zeros(batch_size, seq_len).bool().cuda()
     print(mask)
 
-    flow_result = flow.nn.functional.multi_head_attention_forward(
+    flow_result = flow._native_multi_head_attention(
         query,
         key,
         value,
@@ -97,8 +172,60 @@ def _test_multiheadattention(test_case):
 
 @flow.unittest.skip_unless_1n1d()
 class TestMultiHeadAttentionModule(flow.unittest.TestCase):
-    def test_multiheadattention(test_case):
-        _test_multiheadattention(test_case)
+    def test_native_multi_head_attention(test_case):
+        (
+            query,
+            key,
+            value,
+            embed_dim,
+            num_heads,
+            qkv_weight,
+            qkv_bias,
+            proj_weight,
+            proj_bias,
+            mask,
+        ) = _generate_inputs_for_native_mha()
+        return torch._native_multi_head_attention(
+            query,
+            key,
+            value,
+            embed_dim,
+            num_heads,
+            qkv_weight,
+            qkv_bias,
+            proj_weight,
+            proj_bias,
+            mask=mask,
+            need_weights=True,
+            average_attn_weights=True,
+            mask_type=1,
+        )
+    
+    def test_nn_module(test_case):
+        dim_per_head = random_utils.randint(10, 20)
+        num_heads = random_utils.randint(1, 10)
+        embed_dim = dim_per_head * num_heads
+        vdim = random_utils.choice([embed_dim, random_utils.randint(10, 200)])
+        kdim = random_utils.choice([embed_dim, random_utils.randint(10, 200)])
+        # dropout = random_utils.choice([0.0, random_utils.random()])
+        dropout = random_utils.choice([0,0, random_utils.random()])
+        # batch_first = random_bool().value()
+        batch_first = True
+
+        device = random_device()
+        
+        query, key, value, key_padding_mask, attn_mask = _generate_inputs_for_nn_module(
+            embed_dim,  kdim=kdim, vdim=vdim, device=device, batch_first=batch_first
+        )
+
+
+        mha = torch.nn.MultiheadAttention(
+            embed_dim, num_heads, dropout=dropout, bias=random_bool(), add_bias_kv=random_bool(), add_zero_attn=random_bool(),
+            batch_first=batch_first, kdim=kdim, vdim=vdim, device=device )
+        return mha(query, key, value, key_padding_mask, need_weights=True, attn_mask=attn_mask)
+
+    # def test_multiheadattention(test_case):
+    #     _test_multiheadattention(test_case)
 
 
 if __name__ == "__main__":

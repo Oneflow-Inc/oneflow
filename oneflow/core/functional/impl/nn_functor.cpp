@@ -4482,8 +4482,8 @@ class MultiHeadAttentionFunctor {
   };
 
   Maybe<TensorTuple> transform_bias_qkv(const std::shared_ptr<Tensor>& qkv,
-                                                const std::shared_ptr<Tensor>& qkv_bias,
-                                                const int64_t& num_head) const {
+                                        const std::shared_ptr<Tensor>& qkv_bias,
+                                        const int64_t& num_head) const {
     // qkv shape: batch_size, seq_length, 3 * embed_dim
     const auto& qkv_shape = qkv->shape();
     const auto B = qkv_shape->At(0);
@@ -4560,6 +4560,7 @@ class MultiHeadAttentionFunctor {
 
     const int64_t dim_per_head = embed_dim / num_head;
     const float inv_sqrt_dim_per_head = 1.0 / std::sqrt(static_cast<float>(dim_per_head));
+
     auto qkv = JUST(qkv_projection(query, key, value, embed_dim, qkv_weight));
     auto q_k_v = JUST(transform_bias_qkv(qkv, qkv_bias, num_head));
     auto q = q_k_v->at(0);
