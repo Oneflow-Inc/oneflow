@@ -45,6 +45,16 @@ __global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, T* dptr,
   state[id] = localState;
 }
 
+// specialization for half
+template<>
+__global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, half* dptr, const half mean,
+                            const half std) {
+  const int id = blockIdx.x * blockDim.x + threadIdx.x;
+  curandState localState = state[id];
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) { dptr[i] = (half)(GenNormal<float>(&localState, mean, std)); }
+  state[id] = localState;
+}
+
 }  // namespace
 
 template<typename T>
@@ -67,5 +77,6 @@ void NormalDistribution<DeviceType::kCUDA, T>::operator()(
       const std::shared_ptr<one::Generator>& generator) const;
 
 OF_PP_FOR_EACH_TUPLE(INITIATE_CUDA_NORMAL_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
+INITIATE_CUDA_NORMAL_DISTRIBUTION(half, DataType::kFloat16)
 
 }  // namespace oneflow

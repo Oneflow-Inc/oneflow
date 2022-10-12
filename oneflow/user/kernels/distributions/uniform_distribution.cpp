@@ -50,4 +50,15 @@ void UniformDistribution<DeviceType::kCPU, T>::operator()(
 
 OF_PP_FOR_EACH_TUPLE(INITIATE_CPU_UNIFORM_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
 
+// specialization for half
+template<>
+void UniformDistribution<DeviceType::kCPU, float16>::operator()(
+    ep::Stream* stream, const int64_t elem_cnt, float16* dptr,
+    const std::shared_ptr<one::Generator>& generator) const {
+  CHECK_GE(elem_cnt, 0);
+  auto gen = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
+  CPUUniformDistributionImpl<float> impl(low_, high_);
+  for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = static_cast<float16>(impl(gen->engine())); }
+}
+
 }  // namespace oneflow
