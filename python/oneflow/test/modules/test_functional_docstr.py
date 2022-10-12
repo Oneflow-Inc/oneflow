@@ -50,7 +50,7 @@ def _run_functional_doctest(
                 print(f"got output: {e.got}")
                 raise e
             except doctest.UnexpectedException as e:
-                print(f"\nGot UnexpectedException in docstring of {name}")
+                print(f"\nGot UnexpectedException in the docstring of {name}")
                 raise e.exc_info[1]
 
     if not raise_on_error:
