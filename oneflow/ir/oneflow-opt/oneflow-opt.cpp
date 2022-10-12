@@ -61,6 +61,7 @@ int32_t main(int32_t argc, char** argv) {
 #endif  // WITH_MLIR_CUDA_CODEGEN
   mlir::registerWrapOpsToKernelLaunchPassPass();
   mlir::registerExtractKernelLaunchTensorPassPass();
+  mlir::registerTrimReturnAsVoidPassPass();
   mlir::registerLowerToOKLPassPass();
   mlir::registerOutlineJitFunctionPassPass();
   mlir::DialectRegistry registry;

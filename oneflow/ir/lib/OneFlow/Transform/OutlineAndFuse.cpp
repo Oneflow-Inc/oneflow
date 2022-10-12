@@ -84,6 +84,20 @@ class ExtractKernelLaunchTensorPass : public ExtractKernelLaunchTensorPassBase<E
   }
 };
 
+class TrimReturnAsVoidPass : public TrimReturnAsVoidPassBase<TrimReturnAsVoidPass> {
+  void getDependentDialects(DialectRegistry& registry) const override {
+    registry.insert<oneflow::OneFlowDialect>();
+    registry.insert<okl::OKLDialect>();
+  }
+
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    populateTrimReturnAsVoidPasses(patterns);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
 class FuseIntoExistingOpPass : public FuseIntoExistingOpPassBase<FuseIntoExistingOpPass> {
   void runOnOperation() override {
     Operation* op = getOperation();
@@ -105,6 +119,10 @@ std::unique_ptr<Pass> createWrapOpsToKernelLaunchPass() {
 
 std::unique_ptr<Pass> createExtractKernelLaunchTensorPass() {
   return std::make_unique<ExtractKernelLaunchTensorPass>();
+}
+
+std::unique_ptr<Pass> createTrimReturnAsVoidPass() {
+  return std::make_unique<TrimReturnAsVoidPass>();
 }
 
 std::unique_ptr<mlir::Pass> createLowerToOKLPass() { return std::make_unique<LowerToOKLPass>(); }

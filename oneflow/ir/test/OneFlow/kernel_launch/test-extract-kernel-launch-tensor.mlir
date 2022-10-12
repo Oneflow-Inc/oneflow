@@ -1,5 +1,5 @@
 // RUN: oneflow-opt %s \
-// RUN: -lower-okl-to-llvm  -canonicalize | FileCheck %s
+// RUN: -extract-kernel-launch-tensor  -canonicalize | FileCheck %s
 
 module {
   func.func @wrap0(%arg0: tensor<1xf32>) -> (tensor<1xf32>, tensor<1xf32>) attributes {compiled = "true", llvm.emit_c_interface} {

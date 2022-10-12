@@ -40,10 +40,10 @@ def OKL_TensorAttr: I32EnumAttr<"TensorType", "OKL Tensor Type enum",
   let symbolToStringFnName = "ConvertToString";
 }
 
-def GetTensorFromCtxOp : OKL_Op<"get_tensor_from_ctx"> {
-  let summary = "get tensor from context";
+def GetTensorFromArgOp : OKL_Op<"get_tensor_from_arg"> {
+  let summary = "get tensor from context as arguments";
   let description = [{
-    get tensor value from launcher context.
+    get tensor value from launcher context as arguments.
   }];
 
   let arguments = (ins
@@ -52,6 +52,21 @@ def GetTensorFromCtxOp : OKL_Op<"get_tensor_from_ctx"> {
   );
   let results = (outs AnyTensor);
 }
+
+def GetTensorAsRetOp : OKL_Op<"get_tensor_as_ret"> {
+  let summary = "get tensor from context as outcomes";
+  let description = [{
+    get tensor value from launcher context as outcomes.
+  }];
+
+  let arguments = (ins
+    LauncherContextType:$launcher_ctx,
+    AnyTensor:$tensor,
+    OKL_TensorAttr:$tensor_type
+  );
+  let results = (outs AnyTensor);
+}
+
 
 def BuildRegContextOp : OKL_Op<"build_reg_ctx"> {
   let summary = "build reg context operation";
