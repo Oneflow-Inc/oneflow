@@ -44,7 +44,7 @@ class _ConstantBase(Module):
         self.requires_grad = requires_grad
         size = _single(size)
         if dtype is None:
-            dtype = flow.float32
+            dtype = flow.get_default_dtype()
         if placement is None:
             if device is None:
                 self.device = flow.device("cpu")
