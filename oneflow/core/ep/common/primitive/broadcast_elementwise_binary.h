@@ -46,9 +46,11 @@ inline void InitStrides(const int64_t* dims, T* strides, int n) {
   for (int i = n - 2; i >= 0; --i) { strides[i] = dims[i + 1] * strides[i + 1]; }
 }
 
-template<typename T>
-inline void InitFastDividers(T* strides, FastDivide<T>* fast_dividers, int n) {
-  for (int i = n - 1; i >= 0; --i) { fast_dividers[i] = FastDivide<T>(strides[i]); }
+template<typename IndexType, typename DivType>
+inline void InitFastDividers(IndexType* strides, FastDivide<DivType>* fast_dividers, int n) {
+  for (int i = n - 1; i >= 0; --i) {
+    fast_dividers[i] = FastDivide<DivType>(static_cast<DivType>(strides[i]));
+  }
 }
 
 #define BINARY_MATH_OP_SEQ                             \

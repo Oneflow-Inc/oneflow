@@ -46,17 +46,17 @@ union Pack {
   T elem[N];
 };
 
-template<size_t max_dims, typename T>
+template<size_t max_dims, typename IndexType, typename DivType>
 struct BroadcastElementwiseBinaryParams {
-  T src0_strides[max_dims];
-  T src1_strides[max_dims];
-  T dst_strides[max_dims];
-  FastDivide<T> fast_dividers[max_dims];
+  IndexType src0_strides[max_dims];
+  IndexType src1_strides[max_dims];
+  IndexType dst_strides[max_dims];
+  FastDivide<DivType> fast_dividers[max_dims];
 
   size_t num_dims;
-  T src0_index_mask[max_dims];
-  T src1_index_mask[max_dims];
-  T count{};
+  IndexType src0_index_mask[max_dims];
+  IndexType src1_index_mask[max_dims];
+  IndexType count{};
   const void* src0{};
   const void* src1{};
   void* dst{};
@@ -67,7 +67,7 @@ struct BroadcastElementwiseBinaryParams {
 template<BinaryOp binary_op, typename Src, typename Dst, size_t max_dims, size_t src0_pack_size,
          size_t src1_pack_size, typename IndexType, typename DivType>
 __global__ void BroadcastElementwiseBinaryGpu(
-    BroadcastElementwiseBinaryParams<max_dims, DivType> params) {
+    BroadcastElementwiseBinaryParams<max_dims, IndexType, DivType> params) {
   constexpr size_t dst_pack_size =
       src0_pack_size > src1_pack_size ? src0_pack_size : src1_pack_size;
   static_assert(src0_pack_size == dst_pack_size || src0_pack_size == 1, "");
@@ -116,19 +116,19 @@ template<BinaryOp op, typename T, typename R, size_t max_dims, size_t src0_pack_
 void LaunchKernel(Stream* stream, int num_dims, const int64_t* src0_dims, const void* src0,
                   const int64_t* src1_dims, const void* src1, const int64_t* dst_dims, void* dst,
                   size_t count, Scalar attr0, Scalar attr1) {
-  BroadcastElementwiseBinaryParams<max_dims, DivType> params;
+  BroadcastElementwiseBinaryParams<max_dims, IndexType, DivType> params;
   for (size_t i = 0; i < num_dims; ++i) {
     params.src0_index_mask[i] = (src0_dims[i] == 1) ? 0 : 1;
     params.src1_index_mask[i] = (src1_dims[i] == 1) ? 0 : 1;
   }
-  DivType src0_strides[max_dims];
-  DivType src1_strides[max_dims];
-  DivType dst_strides[max_dims];
+  IndexType src0_strides[max_dims];
+  IndexType src1_strides[max_dims];
+  IndexType dst_strides[max_dims];
   FastDivide<DivType> fast_dividers[max_dims];
-  InitStrides<DivType, max_dims>(src0_dims, src0_strides, num_dims);
-  InitStrides<DivType, max_dims>(src1_dims, src1_strides, num_dims);
-  InitStrides<DivType, max_dims>(dst_dims, dst_strides, num_dims);
-  InitFastDividers<DivType>(dst_strides, fast_dividers, num_dims);
+  InitStrides<IndexType, max_dims>(src0_dims, src0_strides, num_dims);
+  InitStrides<IndexType, max_dims>(src1_dims, src1_strides, num_dims);
+  InitStrides<IndexType, max_dims>(dst_dims, dst_strides, num_dims);
+  InitFastDividers<IndexType, DivType>(dst_strides, fast_dividers, num_dims);
   for (int i = 0; i < max_dims; i++) {
     params.src0_strides[i] = src0_strides[i];
     params.src1_strides[i] = src1_strides[i];
