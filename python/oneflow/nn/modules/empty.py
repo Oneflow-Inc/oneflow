@@ -37,7 +37,7 @@ def empty_op(
     shape = _single(_handle_size_arg(size))
 
     if dtype is None:
-        dtype = flow.float32
+        dtype = flow.get_default_dtype()
     if placement is None:
         if device is None:
             device = flow.device("cpu")

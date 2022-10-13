@@ -149,16 +149,6 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   if (!array) {
     return Error::RuntimeError() << "Can not convert input data to a new numpy array.";
   }
-  // flow.tensor([1., 2.]).dtype should be flow.float32 rather than flow.float64
-  if (!PyArray_Check(data)) {
-    int np_array_type = PyArray_TYPE(reinterpret_cast<PyArrayObject*>(array));
-    // Cast to float if data is double sequence, rather than numpy array.
-    if (np_array_type == NPY_DOUBLE && np_dtype == nullptr) {
-      PyObject* fp32_array = PyArray_Cast(reinterpret_cast<PyArrayObject*>(array), NPY_FLOAT);
-      Py_DECREF(array);
-      array = fp32_array;
-    }
-  }
   auto* np_arr = reinterpret_cast<PyArrayObject*>(array);
   const npy_intp* dims_ptr = PyArray_SHAPE(np_arr);
   const Shape shape(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));
@@ -177,6 +167,10 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   Py_DECREF(array);
   if (dtype && JUST(dtype)->data_type() != np_data_type) {
     tensor = JUST(functional::To(tensor, JUST(dtype), false));
+  } else if (!dtype && !PyArray_Check(data) && tensor->dtype()->is_floating_point()
+             && GetDefaultDType() != tensor->dtype()) {
+    // If it not assign dtype and created from PySequence, cast tensor to default floating dtype
+    tensor = JUST(functional::To(tensor, JUST(DType::Get(DataType::kFloat)), false));
   }
   JUST(tensor->set_requires_grad(requires_grad));
   return tensor;
