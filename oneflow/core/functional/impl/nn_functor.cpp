@@ -4301,6 +4301,39 @@ class SpmmCooFunctor {
   std::shared_ptr<OpExpr> spmm_coo_op_;
 };
 
+class SpmmCsrFunctor {
+ public:
+  SpmmCsrFunctor() {
+    spmm_csr_op_ = CHECK_JUST(one::OpBuilder("spmm_csr")
+                                  .Input("a_csr_row")
+                                  .Input("a_csr_col")
+                                  .Input("a_csr_val")
+                                  .Input("b")
+                                  .Output("out")
+                                  .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a_csr_row,
+                           const std::shared_ptr<one::Tensor>& a_csr_col,
+                           const std::shared_ptr<one::Tensor>& a_csr_val, const int64_t& a_num_rows,
+                           const int64_t& a_num_cols, const std::shared_ptr<one::Tensor>& b) const {
+    const auto& b_shape = b->shape();
+    CHECK_GE_OR_RETURN(b_shape->NumAxes(), 1)
+        << Error::RuntimeError() << "Tensor b's dim should >= 1";
+
+    CHECK_EQ_OR_RETURN(a_num_cols, b_shape->at(0))
+        << Error::RuntimeError() << "size mismatch, got " << a_num_rows << ", " << a_num_cols
+        << " x " << std::to_string(b_shape->at(0)) << ", " << std::to_string(b_shape->at(1));
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("a_num_rows", "a_num_cols");
+    attrs.SetAllAttrs(a_num_rows, a_num_cols);
+    return OpInterpUtil::Dispatch<Tensor>(*spmm_csr_op_, {a_csr_row, a_csr_col, a_csr_val, b},
+                                          attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> spmm_csr_op_;
+};
+
 class BatchNormStatsFunctor {
  public:
   BatchNormStatsFunctor() {
@@ -4465,6 +4498,7 @@ class BatchNormBackwardElemtFunctor {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SpmmCooFunctor>("SpmmCoo");
+  m.add_functor<impl::SpmmCsrFunctor>("SpmmCsr");
   m.add_functor<impl::BiasAddFunctor>("BiasAdd");
   m.add_functor<impl::Conv1dFunctor>("Conv1d");
   m.add_functor<impl::Conv2dFunctor>("Conv2d");
