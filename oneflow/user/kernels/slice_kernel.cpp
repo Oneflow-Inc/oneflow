@@ -437,6 +437,7 @@ class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGrap
 
 #define REGISTER_SLICE_KERNEL_WITH_DEVICE(device) \
   REGISTER_SLICE_KERNEL(device, bool)             \
+  REGISTER_SLICE_KERNEL(device, float16)          \
   REGISTER_SLICE_KERNEL(device, float)            \
   REGISTER_SLICE_KERNEL(device, double)           \
   REGISTER_SLICE_KERNEL(device, int32_t)          \
@@ -447,7 +448,6 @@ class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGrap
 REGISTER_SLICE_KERNEL_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_SLICE_KERNEL_WITH_DEVICE(DeviceType::kCUDA)
-REGISTER_SLICE_KERNEL(DeviceType::kCUDA, float16)
 #if CUDA_VERSION >= 11000
 REGISTER_SLICE_KERNEL(DeviceType::kCUDA, nv_bfloat16)
 #endif

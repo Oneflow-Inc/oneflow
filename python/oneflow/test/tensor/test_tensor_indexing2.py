@@ -41,8 +41,8 @@ def consec(size, start=1):
     return sequence.view(*size)
 
 
-def _test_basic_slice(test_case, device):
-    reference = consec((3, 3, 3)).to(device)
+def _test_basic_slice(test_case, device, dtype):
+    reference = consec((3, 3, 3)).to(device=device, dtype=dtype)
 
     # empty tensor indexing
     _assert_tensor_equal(
@@ -108,7 +108,7 @@ def _test_basic_slice(test_case, device):
     _assert_tensor_equal(test_case, reference_5d[...], reference_5d, atol=0, rtol=0)
 
     # LongTensor indexing
-    reference = consec((5, 5, 5)).to(device)
+    reference = consec((5, 5, 5)).to(device=device, dtype=dtype)
     idx = flow.LongTensor([2, 4]).to(device)
     _assert_tensor_equal(
         test_case, reference[idx], flow.stack([reference[2], reference[4]])
@@ -138,7 +138,7 @@ def _test_basic_slice(test_case, device):
     _assert_tensor_equal(test_case, flow.tensor([]), reference[2, 1:1, 2])
 
     # indexing with step
-    reference = consec((10, 10, 10)).to(device)
+    reference = consec((10, 10, 10)).to(device=device, dtype=dtype)
     _assert_tensor_equal(
         test_case, reference[1:5:2], flow.stack([reference[1], reference[3]], 0)
     )
@@ -172,7 +172,7 @@ def _test_basic_slice(test_case, device):
     )
 
     lst = [list(range(i, i + 10)) for i in range(0, 100, 10)]
-    tensor = flow.DoubleTensor(lst).to(device)
+    tensor = flow.DoubleTensor(lst).to(device=device, dtype=dtype)
     for _ in range(10):
         idx1_start = randrange(10)
         idx1_end = idx1_start + randrange(1, 10 - idx1_start + 1)
@@ -188,7 +188,9 @@ def _test_basic_slice(test_case, device):
         else:
             lst_indexed = lst[idx1]
             tensor_indexed = tensor[idx1]
-        _assert_tensor_equal(test_case, flow.DoubleTensor(lst_indexed), tensor_indexed)
+        _assert_tensor_equal(
+            test_case, flow.DoubleTensor(lst_indexed).to(dtype), tensor_indexed
+        )
 
     test_case.assertRaises(RuntimeError, lambda: reference[1:9:0])
     test_case.assertRaises(RuntimeError, lambda: reference[1:9:-1])
@@ -255,14 +257,14 @@ def _test_advanced_indexing(test_case, device, dtype):
         )
 
     # 1d tensor and integer index setitem and getitem
-    reference = consec((10,))
+    reference = consec((10,)).to(device=device, dtype=dtype)
     validate_indexing(reference)
     validate_setting(reference)
 
     # reference is 1 2
     #              3 4
     #              5 6
-    reference = consec((3, 2))
+    reference = consec((3, 2)).to(device=device, dtype=dtype)
     _assert_tensor_equal(
         test_case,
         reference[ri([0, 1, 2]), ri([0])],
@@ -430,7 +432,7 @@ def _test_advanced_indexing(test_case, device, dtype):
     # reference is 1 2
     #              3 4
     #              5 6
-    reference = consec((3, 2))
+    reference = consec((3, 2)).to(dtype=dtype, device=device)
     _assert_tensor_equal(
         test_case,
         reference[ri([0, 2]),],
@@ -519,7 +521,7 @@ def _test_combined_indexing(test_case, device, dtype):
     #            5  6  7  8  9
     #           10 11 12 13 14
     #           15 16 17 18 19
-    reference = flow.arange(0.0, 20, dtype=dtype, device=device).view(4, 5)
+    reference = flow.arange(0.0, 20, device=device).to(dtype).view(4, 5)
 
     indices_to_test = [
         # grab the second, fourth columns
@@ -554,7 +556,7 @@ def _test_combined_indexing(test_case, device, dtype):
     #########################
     # test more dims tensor #
     #########################
-    reference = flow.arange(0.0, 160, dtype=dtype, device=device).view(4, 8, 5)
+    reference = flow.arange(0.0, 160, device=device).to(dtype).view(4, 8, 5)
 
     indices_to_test = [
         [slice(None), slice(None), [0, 3, 4]],
@@ -605,7 +607,7 @@ def _test_combined_indexing(test_case, device, dtype):
         if device != "cpu":
             assert_backward_eq(reference, indexer)
 
-    reference = flow.arange(0.0, 1296, dtype=dtype, device=device).view(3, 9, 8, 6)
+    reference = flow.arange(0.0, 1296, device=device).to(dtype).view(3, 9, 8, 6)
 
     indices_to_test = [
         [slice(None), slice(None), slice(None), [0, 3, 4]],
@@ -915,9 +917,10 @@ class TestIndexing(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgDict(arg_dict):
-            _test_basic_slice(test_case, **arg)
-            _test_advanced_indexing(test_case, **arg, dtype=flow.float32)
-            _test_combined_indexing(test_case, **arg, dtype=flow.float32)
+            for dtype in [flow.float32, flow.float16]:
+                _test_basic_slice(test_case, **arg, dtype=dtype)
+                _test_advanced_indexing(test_case, **arg, dtype=dtype)
+                _test_combined_indexing(test_case, **arg, dtype=dtype)
             _test_single_int(test_case, **arg)
             _test_multiple_int(test_case, **arg)
             _test_none(test_case, **arg)
