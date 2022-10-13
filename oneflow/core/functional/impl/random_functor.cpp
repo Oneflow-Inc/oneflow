@@ -97,8 +97,9 @@ class RandFunctor {
     DataType dtype_val = GetDefaultDType()->data_type();
     if (dtype.has_value()) {
       dtype_val = JUST(dtype)->data_type();
-      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
-        OF_UNIMPLEMENTED() << "Only support float and double in rand().";
+      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble
+          && dtype_val != DataType::kFloat16) {
+        OF_UNIMPLEMENTED() << "Only support floating dtype in rand().";
       }
     }
 
@@ -133,7 +134,7 @@ class GlobalRandFunctor {
     if (dtype.has_value()) {
       dtype_val = JUST(dtype)->data_type();
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
-        OF_UNIMPLEMENTED() << "Only support float and double in rand().";
+        OF_UNIMPLEMENTED() << "Only support floating dtype in rand().";
       }
     }
 
@@ -169,8 +170,9 @@ class RandNFunctor {
                            const bool& requires_grad) const {
     DataType dtype_val = GetDefaultDType()->data_type();
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
-    if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
-      OF_UNIMPLEMENTED() << "Only support float and double in randn().";
+    if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble
+        && dtype_val != DataType::kFloat16) {
+      OF_UNIMPLEMENTED() << "Only support floating dtype in randn().";
     }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
@@ -202,8 +204,9 @@ class GlobalRandNFunctor {
     JUST(CheckDeviceIdsIsValid(placement));
     DataType dtype_val = GetDefaultDType()->data_type();
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
-    if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
-      OF_UNIMPLEMENTED() << "Only support float and double in randn().";
+    if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble
+        && dtype_val != DataType::kFloat16) {
+      OF_UNIMPLEMENTED() << "Only support floating dtype in randn().";
     }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
