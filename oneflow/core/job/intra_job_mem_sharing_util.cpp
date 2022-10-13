@@ -403,7 +403,6 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
   CHECK(remain_regsts.empty());
 }
 
-
 void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
     const std::vector<RegstDescProto*>& order,
     const HashMap<RegstDescProto*, size_t>& regst_desc2size,
