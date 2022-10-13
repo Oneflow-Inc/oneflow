@@ -86,6 +86,7 @@ def rdma_is_initialized():
     """
     return oneflow._oneflow_internal.RDMAIsInitialized()
 
+
 def destory_rdma():
     """Destory RDMA in the current envirment. 
     """
