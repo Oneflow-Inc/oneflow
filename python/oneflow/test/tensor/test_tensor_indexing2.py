@@ -917,7 +917,7 @@ class TestIndexing(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgDict(arg_dict):
-            for dtype in [flow.float32, flow.float16]:
+            for dtype in [flow.float32, flow.float16, flow.bfloat16]:
                 _test_basic_slice(test_case, **arg, dtype=dtype)
                 _test_advanced_indexing(test_case, **arg, dtype=dtype)
                 _test_combined_indexing(test_case, **arg, dtype=dtype)

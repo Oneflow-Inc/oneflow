@@ -95,16 +95,18 @@ void GatherKernelUtilImpl<DeviceType::kCPU, T, K>::Forward(ep::Stream* stream, c
   template struct GatherKernelUtilImpl<DeviceType::kCPU, OF_PP_PAIR_FIRST(in_type_pair), \
                                        OF_PP_PAIR_FIRST(index_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_CPU_IMPL,
-                                 GATHER_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, GATHER_INDEX_TYPE_SEQ);
+                                 GATHER_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ,
+                                 GATHER_INDEX_TYPE_SEQ);
 #undef INITIATE_GATHER_KERNEL_UTIL_CPU_IMPL
 
 #define INITIATE_GATHER_KERNEL_UTIL(device_type, in_type_pair) \
   template struct GatherKernelUtil<device_type, OF_PP_PAIR_FIRST(in_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL, DEVICE_TYPE_SEQ,
                                  GATHER_DATA_TYPE_SEQ);
-// For cpu float16
+// For cpu float16/bfloat16
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), FLOAT16_DATA_TYPE_SEQ);
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU),
+                                 FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ);
 #undef INITIATE_GATHER_KERNEL_UTIL
 
 }  // namespace oneflow
