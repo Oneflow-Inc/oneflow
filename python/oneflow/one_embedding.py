@@ -396,8 +396,11 @@ class Embedding(Module):
                 state_initializer,
                 seed=self.seed,
             )
-            cur_rank_unique_embedding_grad = flow._C.unsorted_segment_sum_like(
-                embedding_grad, inverse_indices, unique_values, axis=0,
+            cur_rank_unique_embedding_grad = flow._C.unsorted_segment_sum(
+                embedding_grad,
+                inverse_indices,
+                axis=0,
+                num_segments=unique_values.shape[0],
             )
         self.embedding = None
         return (
@@ -488,7 +491,6 @@ class Embedding(Module):
         l2 = param_group["weight_decay"]
         epsilon = param_group["eps"]
         lr_decay = param_group["lr_decay"]
-        train_step_val = step
         initial_accumulator_value = param_group["initial_accumulator_value"]
         state_initializer = [make_constant_initializer(initial_accumulator_value)]
         (
@@ -501,7 +503,7 @@ class Embedding(Module):
             cur_rank_num_unique,
             unique_values,
             cur_rank_unique_embedding_grad,
-            train_step_val=step,
+            train_step_val=step + 1,
             learning_rate_val=lr,
             scale=1.0,
             weight_decay=l2,

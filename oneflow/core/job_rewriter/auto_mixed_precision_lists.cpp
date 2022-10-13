@@ -120,7 +120,9 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "reciprocal_no_nan",
                               "group_norm",
                               "group_norm_param_grad",
-                              "group_norm_grad"};
+                              "group_norm_grad",
+                              "silu",
+                              "silu_grad"};
   return gray_list;
 }
 
@@ -179,7 +181,8 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "narrow_grad",
                                "ones_like",
                                "pinned_identity",
-                               "to_contiguous"};
+                               "to_contiguous",
+                               "copy"};
 
   return clear_list;
 }
