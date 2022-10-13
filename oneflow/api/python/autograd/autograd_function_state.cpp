@@ -26,7 +26,8 @@ namespace one {
 namespace {
 inline FunctionAutoGradCaptureState* CheckAndGetStateData(PyAutogradFunctionState* state) {
   if (!state->data.lock()) {
-    PyErr_Format(PyExc_RuntimeError, "can't assign Tensor as its own grad");
+    PyErr_Format(PyExc_RuntimeError, "Data is deallocated. Please don't hold context outside "
+                                     "autograd.Function.forward or autograd.Function.backward");
     return nullptr;
   }
   return state->data.lock().get();
