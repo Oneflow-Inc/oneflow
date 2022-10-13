@@ -26,7 +26,9 @@ namespace one {
 
 typedef struct {
   PyObject_HEAD;
-  std::shared_ptr<FunctionAutoGradCaptureState> data;
+  // PyAutogradFunctionState should not hold reference count for AutogradFunctionState
+  // in C++, it will be released by AutogradFunctionState object
+  FunctionAutoGradCaptureState* data;
   PyObject* dynamic_attr_dict;
 } PyAutogradFunctionState;
 

@@ -165,7 +165,7 @@ PyObject* PyAutogradFunctionState_NewFromPtr(
       (PyObject*)&PyAutogradFunctionState_Type, NULL));
   if (self) {
     PY_XINCREF(self);
-    self->data = data;
+    self->data = data.get();
     self->data->set_pyobject_ptr(
         std::unique_ptr<void, void (*)(void*)>(self, [](void* ptr) { Py_DECREF((PyObject*)ptr); }));
   }
