@@ -453,8 +453,8 @@ Maybe<void> AddGlobalInputOutputCriticalSection(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MultiClientAddOneWaitAndSendIdsOp(
-    JobBuilder* job_builder, int64_t machine_id, const OperatorConf& src_op_consumer) {
+Maybe<void> MultiClientAddOneWaitAndSendIdsOp(JobBuilder* job_builder, int64_t machine_id,
+                                              const OperatorConf& src_op_consumer) {
   ParallelConf parallel_conf;
   {
     parallel_conf.set_device_tag("cpu");
@@ -487,8 +487,8 @@ Maybe<void> MultiClientAddOneWaitAndSendIdsOp(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MultiClientAddWaitAndSendIds(JobBuilder* job_builder,
-    const HashMap<int64_t, std::string>& machine_id2src_op_name) {
+Maybe<void> MultiClientAddWaitAndSendIds(
+    JobBuilder* job_builder, const HashMap<int64_t, std::string>& machine_id2src_op_name) {
   // Prepare the consumer tick op for each Source op
   HashMap<std::string, OperatorConf> src_op_name2solo_consumer_tick_op;
   HashSet<std::string> src_op_names;
@@ -502,7 +502,8 @@ Maybe<void> MultiClientAddWaitAndSendIds(JobBuilder* job_builder,
     for (const auto& ibn : op.input_bns()) {
       const auto& input_lbi = op.BnInOp2Lbi(ibn);
       if (src_op_names.count(input_lbi.op_name()) == 0) { continue; }
-      auto insert_pair = src_op_name2solo_consumer_tick_op.emplace(input_lbi.op_name(), op.op_conf());
+      auto insert_pair =
+          src_op_name2solo_consumer_tick_op.emplace(input_lbi.op_name(), op.op_conf());
       CHECK_OR_RETURN(insert_pair.second)
           << " Duplicated src op name " << input_lbi.op_name() << " old op "
           << insert_pair.first->second.DebugString() << " new op " << op.op_conf().DebugString();
@@ -514,7 +515,8 @@ Maybe<void> MultiClientAddWaitAndSendIds(JobBuilder* job_builder,
   for (const auto& pair : machine_id2src_op_name) {
     auto tick_op_iter = src_op_name2solo_consumer_tick_op.find(pair.second);
     CHECK_OR_RETURN(tick_op_iter != src_op_name2solo_consumer_tick_op.end())
-        << "Can't find consumer tick op of source op name " << pair.second << " machine id " << pair.first;
+        << "Can't find consumer tick op of source op name " << pair.second << " machine id "
+        << pair.first;
     JUST(MultiClientAddOneWaitAndSendIdsOp(job_builder, pair.first, tick_op_iter->second));
   }
 
