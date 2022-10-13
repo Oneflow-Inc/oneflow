@@ -48,6 +48,16 @@ int64_t GetDtypeMatchedValue(double floating, int64_t integral) {
   return integral;
 }
 
+template<>
+half GetDtypeMatchedValue(double floating, int64_t integral) {
+  return __double2half(floating);
+}
+
+template<>
+float16 GetDtypeMatchedValue(double floating, int64_t integral) {
+  return static_cast<float16>(floating);
+}
+
 }  // namespace
 
 template<typename T>
@@ -223,5 +233,7 @@ class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
                             OF_PP_PAIR_FIRST(dtype_pair))
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CLIP_KERNELS, DEVICE_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ)
+REGISTER_CLIP_KERNELS(DeviceType::kCPU, (float16, DataType::kFloat16))
+REGISTER_CLIP_KERNELS(DeviceType::kCUDA, (half, DataType::kFloat16))
 
 }  // namespace oneflow

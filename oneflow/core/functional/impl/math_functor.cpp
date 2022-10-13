@@ -1192,7 +1192,7 @@ class ClampBaseFunctor {
         << "Requires one of argument `min` and `max` at least in clip.";
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("floating_min", "integral_min", "floating_max",
                                                  "integral_max");
-    if (IsFloatingDataType(x->dtype()->data_type())) {
+    if (IsFloatingDataType(x->dtype()->data_type()) || x->dtype()->data_type() == DataType::kFloat16) {
       if (min.has_value()) {
         const auto& min_val = JUST(min);
         attrs.SetAttr<0>(min_val->As<double>());
