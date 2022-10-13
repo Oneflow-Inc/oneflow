@@ -257,7 +257,7 @@ class TestAutogradFunction(flow.unittest.TestCase):
                 x, = ctx.saved_tensors
                 return x
 
-        x = flow.randn(5, 256, 1024).requires_grad_()  # 5MB
+        x = flow.randn(5, 5).requires_grad_()
         res = MyModule.apply(x)
         res.sum().backward()
 
