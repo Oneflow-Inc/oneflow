@@ -95,9 +95,18 @@ static PyObject* PyAutogradFunctionState_saved_tensors(PyObject* self, void*) {
   return functional::CastToPyObject<Maybe<TensorTuple>>(_self->CheckAndGetData()->SavedTensors());
 }
 
+static PyObject* PyAutogradFunctionState_get_dict(PyObject* self, PyObject* args) {
+  HANDLE_ERRORS
+  auto* _self = (PyAutogradFunctionState*)self;
+  return _self->dynamic_attr_dict;
+  Py_RETURN_NONE;
+  END_HANDLE_ERRORS
+}
+
 static PyGetSetDef PyAutogradFunctionState_properties[] = {
     {PYGETSET_NAME("saved_tensors"), (getter)PyAutogradFunctionState_saved_tensors, NULL, NULL,
      NULL},
+    {PYGETSET_NAME("__dict__"), (getter)PyAutogradFunctionState_get_dict, NULL, NULL, NULL},
     {NULL} /* Sentinel */
 };
 // PyAutogradFunctionState_getset end

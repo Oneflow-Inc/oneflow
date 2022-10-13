@@ -254,7 +254,7 @@ class TestAutogradFunction(flow.unittest.TestCase):
 
             @staticmethod
             def backward(ctx, out_grad):
-                x, = ctx.saved_tensors
+                (x,) = ctx.saved_tensors
                 return x
 
         x = flow.randn(5, 5).requires_grad_()
