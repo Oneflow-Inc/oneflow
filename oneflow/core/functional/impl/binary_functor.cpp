@@ -86,16 +86,18 @@ class AddFunctor {
     }
 
     const OpExpr* op = nullptr;
+    Optional<Symbol<DType>> promote_dtype;
+    if (inplace) { promote_dtype = input_tensor->dtype(); }
 
     TensorProcessor tensor_processor;
     if ((alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
         || (alpha.IsFloatingPoint()
             && std::fabs(alpha.Value<double>() - 1.0) < std::numeric_limits<double>::epsilon())) {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true, promote_dtype)
                .AddInputs({input_tensor, other})
                .Apply());
     } else {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true, promote_dtype)
                .AddInputs({input_tensor, JUST(functional::ScalarMul(alpha, other))})
                .Apply());
     }
