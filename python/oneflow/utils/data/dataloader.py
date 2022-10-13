@@ -885,7 +885,8 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
     def __init__(self, loader):
         super(_MultiProcessingDataLoaderIter, self).__init__(loader)
-        # NOTE: If RDMA is initialized! Could not create _MultiProcessingDataLoaderIter any more.
+        # NOTE: If RDMA is initialized! Could not create multiprocessing_context any more,
+        # so need to destory rdma first, and after worker processes been created, we will init_rdma again.
         self._env_use_rdma = False
         if flow.env.rdma_is_initialized():
             self._env_use_rdma = True
