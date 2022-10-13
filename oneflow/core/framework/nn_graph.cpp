@@ -328,25 +328,25 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     Compiler().Compile(&job_, &plan_);
     auto sub_compile_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
-    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenMemBlockAndChunk", 0);
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenMemBlockAndChunk", 1);
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
       PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
     }
-    sub_compile_tc->Count("[GraphCompile]" + name_ + " LogPlan", 0);
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " LogPlan", 1);
     PlanUtil::GenRegisterHint(&plan_);
-    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenRegisterHint", 0);
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenRegisterHint", 1);
     // TODO(chengcheng): test collective boxing for multi-job.
     PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);
-    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenCollectiveBoxingPlan", 0);
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenCollectiveBoxingPlan", 1);
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
-    sub_compile_tc->Count("[GraphCompile]" + name_ + " DumpCtrlRegstInfoToPlan", 0);
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " DumpCtrlRegstInfoToPlan", 1);
     PlanUtil::PlanMemoryLog(&plan_, name_);
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       PlanUtil::GenLightPlan(&plan_, name_);
     }
-    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenMemAndLightPlanLog", 0);
+    sub_compile_tc->Count("[GraphCompile]" + name_ + " GenMemAndLightPlanLog", 1);
   }
   compile_tc->Count("[GraphCompile]" + name_ + " CompilePlan", 0);
   if (GlobalProcessCtx::WorldSize() > 1) {

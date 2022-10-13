@@ -1031,7 +1031,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   }
   JUST(DoPass("DumpBlobParallelConfPass"));
   JUST(CheckJob());
-  compile_tc->Count("[GraphCompile]" + job_name + " LogicalGraphOptimization", 0);
+  compile_tc->Count("[GraphCompile]" + job_name + " OptimizationLogicalGraph", 0);
   return Maybe<void>::Ok();
 }
 

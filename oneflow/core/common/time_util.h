@@ -74,11 +74,14 @@ class TimeCounter final {
 template<class Resolution>
 void TimeCounter<Resolution>::Count(const std::string& log_prefix, int v_log_level) {
   const auto end = Clock::now();
-  auto dur = std::chrono::duration_cast<Resolution>(end - start_).count();
-  if (with_log_ && v_log_level >= 0) {
+  if (FLAGS_minloglevel <=0 && VLOG_IS_ON(v_log_level) && with_log_ && v_log_level >= 0) {
+    // only do time/mem count and log when glog level is INFO and VLOG level is matched.
+    auto dur = std::chrono::duration_cast<Resolution>(end - start_).count();
+
     nlohmann::json json_log;
     json_log["loc"] = log_prefix;
     json_log["time_cost"] = std::to_string(dur) + " " + Duration<Resolution>::Repr();
+
     if (with_mem_) {
 #ifdef __linux__
       double vm = 0, rss = 0;
@@ -87,6 +90,7 @@ void TimeCounter<Resolution>::Count(const std::string& log_prefix, int v_log_lev
       json_log["mem_vm"] = std::to_string(vm) + " MB";
 #endif  // __linux__
     }
+
     if (v_log_level == 0) {
       LOG(INFO) << "[count log]" << json_log.dump();
     } else {
