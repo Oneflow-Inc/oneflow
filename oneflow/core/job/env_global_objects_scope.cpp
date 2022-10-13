@@ -54,7 +54,6 @@ limitations under the License.
 #endif  // WITH_RDMA
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/ep/cpu/cpu_device_manager.h"
-#include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 
 namespace oneflow {
 
