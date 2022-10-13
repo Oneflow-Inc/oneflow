@@ -188,6 +188,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 #ifdef WITH_CUDA
   Singleton<EagerNcclCommMgr>::New();
   Singleton<CudnnConvAlgoCache>::New();
+  Singleton<CudnnHandleQueue>::New();
   Singleton<embedding::EmbeddingManager>::New();
 #endif
   Singleton<vm::VirtualMachineScope>::New(Singleton<ResourceDesc, ForSession>::Get()->resource());
@@ -240,6 +241,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
 #ifdef WITH_CUDA
   Singleton<embedding::EmbeddingManager>::Delete();
   Singleton<CudnnConvAlgoCache>::Delete();
+  Singleton<CudnnHandleQueue>::Delete();
   Singleton<EagerNcclCommMgr>::Delete();
 #endif
   Singleton<ThreadPool>::Delete();

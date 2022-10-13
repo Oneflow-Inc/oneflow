@@ -341,7 +341,10 @@ ManagedCudnnConvResource::ManagedCudnnConvResource(const CudnnConvArgs& args)
 }
 
 ManagedCudnnConvResource::~ManagedCudnnConvResource() {
-  if (handle_ != nullptr) { OF_CUDNN_CHECK(cudnnDestroy(handle_)); }
+  if (handle_ != nullptr) {
+    Singleton<CudnnHandleQueue>::Get()->Push(handle_);
+    handle_ = nullptr;
+  }
   if (x_dptr_ != nullptr) { OF_CUDA_CHECK(cudaFree(x_dptr_)); }
   if (w_dptr_ != nullptr) { OF_CUDA_CHECK(cudaFree(w_dptr_)); }
   if (y_dptr_ != nullptr) { OF_CUDA_CHECK(cudaFree(y_dptr_)); }
@@ -349,7 +352,7 @@ ManagedCudnnConvResource::~ManagedCudnnConvResource() {
 }
 
 cudnnHandle_t ManagedCudnnConvResource::cudnn_handle() {
-  if (handle_ == nullptr) { OF_CUDNN_CHECK(cudnnCreate(&handle_)); }
+  if (handle_ == nullptr) { handle_ = Singleton<CudnnHandleQueue>::Get()->Get(); }
   return handle_;
 }
 
