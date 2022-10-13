@@ -240,7 +240,7 @@ CudnnHandlePool::~CudnnHandlePool() {
     int64_t device_id = pair.first;
     auto& handle_list = pair.second;
     CudaCurrentDeviceGuard guard(device_id);
-    for (int64_t i = 0; i < handle_list.size(); ++i) {
+    while(!handle_list.empty()) {
       cudnnHandle_t handle = handle_list.back();
       handle_list.pop_back();
       OF_CUDNN_CHECK(cudnnDestroy(handle));
