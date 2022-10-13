@@ -453,9 +453,8 @@ Maybe<void> AddGlobalInputOutputCriticalSection(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MultiClientAddWaitAndSendIds(
-    JobBuilder* job_builder, int64_t machine_id, const std::string& src_op_name,
-    const HashMap<std::string, OperatorConf>& src_op_name2tick_op) {
+Maybe<void> MultiClientAddOneWaitAndSendIdsOp(
+    JobBuilder* job_builder, int64_t machine_id, const OperatorConf& src_op_consumer) {
   ParallelConf parallel_conf;
   {
     parallel_conf.set_device_tag("cpu");
@@ -477,20 +476,51 @@ Maybe<void> MultiClientAddWaitAndSendIds(
 
   // connect wait_and_send_ids to tick op which was connected to the src tick op
   OperatorConf tick_op_conf;
-  bool find_src_tick_consumer_tick = false;
-  auto tick_op_iter = src_op_name2tick_op.find(src_op_name);
-  if (tick_op_iter != src_op_name2tick_op.end()) {
-    find_src_tick_consumer_tick = true;
-    tick_op_conf.CopyFrom(tick_op_iter->second);
-  }
-
-  CHECK_OR_RETURN(find_src_tick_consumer_tick);
+  tick_op_conf.CopyFrom(src_op_consumer);
   CHECK_OR_RETURN(tick_op_conf.has_tick_conf());
   CHECK_EQ_OR_RETURN(tick_op_conf.tick_conf().tick_size(), 1);
   tick_op_conf.mutable_tick_conf()->clear_tick();
   tick_op_conf.mutable_tick_conf()->add_tick(
       GenLogicalBlobName(wait_and_send_ids_op_conf.name(), "out"));
   JUST(job_builder->MutOpOnlyOnce(tick_op_conf));
+
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> MultiClientAddWaitAndSendIds(JobBuilder* job_builder,
+    const HashMap<int64_t, std::string>& machine_id2src_op_name) {
+  // Prepare the consumer tick op for each Source op
+  HashMap<std::string, OperatorConf> src_op_name2solo_consumer_tick_op;
+  HashSet<std::string> src_op_names;
+  for (const auto& pair : machine_id2src_op_name) {
+    CHECK_OR_RETURN(src_op_names.insert(pair.second).second)
+        << " duplicated src op name " << pair.second;
+  }
+  JUST(job_builder->ForEachOperator([&](const Operator& op) -> Maybe<void> {
+    // skip if the op is not a tick op
+    if (!op.op_conf().has_tick_conf()) { return Maybe<void>::Ok(); }
+    for (const auto& ibn : op.input_bns()) {
+      const auto& input_lbi = op.BnInOp2Lbi(ibn);
+      if (src_op_names.count(input_lbi.op_name()) == 0) { continue; }
+      auto insert_pair = src_op_name2solo_consumer_tick_op.emplace(input_lbi.op_name(), op.op_conf());
+      CHECK_OR_RETURN(insert_pair.second)
+          << " Duplicated src op name " << input_lbi.op_name() << " old op "
+          << insert_pair.first->second.DebugString() << " new op " << op.op_conf().DebugString();
+    }
+    return Maybe<void>::Ok();
+  }));
+
+  // Replace Source op with WaitAndSendIds op
+  for (const auto& pair : machine_id2src_op_name) {
+    auto tick_op_iter = src_op_name2solo_consumer_tick_op.find(pair.second);
+    CHECK_OR_RETURN(tick_op_iter != src_op_name2solo_consumer_tick_op.end())
+        << "Can't find consumer tick op of source op name " << pair.second << " machine id " << pair.first;
+    JUST(MultiClientAddOneWaitAndSendIdsOp(job_builder, pair.first, tick_op_iter->second));
+  }
+
+  // Delete Source op
+  std::vector<std::string> src_op_name_vec{src_op_names.begin(), src_op_names.end()};
+  job_builder->DelOps(src_op_name_vec);
 
   return Maybe<void>::Ok();
 }
@@ -582,34 +612,8 @@ Maybe<void> MultiClientAutoSourceAndSinkTick(const OpGraph& op_graph, Job* job) 
   }
   {
     JobBuilder job_builder(job);
-    HashMap<std::string, OperatorConf> src_op_name2tick_op;
-    HashSet<std::string> src_op_name_set;
-    std::vector<std::string> src_op_name_vec;
-    for (const auto& pair : machine_id2src_op_name) {
-      CHECK_OR_RETURN(src_op_name_set.insert(pair.second).second)
-          << " duplicated src op name " << pair.second;
-      src_op_name_vec.push_back(pair.second);
-    }
-    JUST(job_builder.ForEachOperator([&](const Operator& op) -> Maybe<void> {
-      // skip if the op is not a tick op
-      if (!op.op_conf().has_tick_conf()) { return Maybe<void>::Ok(); }
-      for (const auto& ibn : op.input_bns()) {
-        const auto& input_lbi = op.BnInOp2Lbi(ibn);
-        auto src_op_name_iter = src_op_name_set.find(input_lbi.op_name());
-        if (src_op_name_iter == src_op_name_set.end()) { continue; }
-        auto insert_pair = src_op_name2tick_op.emplace(input_lbi.op_name(), op.op_conf());
-        CHECK_OR_RETURN(insert_pair.second)
-            << " duplicated src op name " << input_lbi.op_name() << " old op "
-            << insert_pair.first->second.DebugString() << " new op " << op.op_conf().DebugString();
-      }
-      return Maybe<void>::Ok();
-    }));
-    for (const auto& pair : machine_id2src_op_name) {
-      JUST(
-          MultiClientAddWaitAndSendIds(&job_builder, pair.first, pair.second, src_op_name2tick_op));
-    }
-    // erase the src tick op
-    job_builder.DelOps(src_op_name_vec);
+    JUST(MultiClientAddWaitAndSendIds(&job_builder, machine_id2src_op_name));
+
     for (const auto& pair : machine_id2sink_op_name) {
       JUST(MultiClientAddCallbackNotifier(&job_builder, pair.first, pair.second));
     }
