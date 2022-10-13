@@ -27,19 +27,6 @@ namespace one {
 typedef struct {
   PyObject_HEAD;
   PyObject* dynamic_attr_dict;
-
-  inline FunctionAutoGradCaptureState* CheckAndGetData() {
-    if (!data.lock()) {
-      PyErr_Format(PyExc_RuntimeError, "can't assign Tensor as its own grad");
-      return nullptr;
-    }
-    return data.lock().get();
-  }
-  void SetData(const std::shared_ptr<FunctionAutoGradCaptureState>& data) { this->data = data; }
-
- private:
-  // PyAutogradFunctionState should not hold reference count for AutogradFunctionState
-  // in C++, it will be released by AutogradFunctionState object
   std::weak_ptr<FunctionAutoGradCaptureState> data;
 } PyAutogradFunctionState;
 

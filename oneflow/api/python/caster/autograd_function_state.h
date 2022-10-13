@@ -35,7 +35,7 @@ struct autograd_function_state_type_caster {
     if (!src) { return false; }
     if (src.is_none()) { return true; }
     if (!PyAutogradFunctionState_Check(src.ptr())) { return false; }
-    value_ = ((PyAutogradFunctionState*)src.ptr())->CheckAndGetData();
+    value_ = ((PyAutogradFunctionState*)src.ptr())->data;
     return true;
   }
 
