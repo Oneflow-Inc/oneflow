@@ -249,6 +249,7 @@ class TestAutogradFunction(flow.unittest.TestCase):
             def forward(ctx, x):
                 z = x.clone()
                 ctx.save_for_backward(z)
+                nonlocal global_ctx
                 global_ctx = ctx
                 return z
 
@@ -259,10 +260,11 @@ class TestAutogradFunction(flow.unittest.TestCase):
 
         x = flow.randn(5, 5).requires_grad_()
         res = MyModule.apply(x)
+        test_case.assertTrue(global_ctx._is_data_valid())
         res.sum().backward()
 
         # ensure that global_ctx is released
-        test_case.assertIsNone(global_ctx)
+        test_case.assertFalse(global_ctx._is_data_valid())
 
 
 if __name__ == "__main__":

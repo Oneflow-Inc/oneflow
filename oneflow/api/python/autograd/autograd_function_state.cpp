@@ -89,11 +89,17 @@ static PyObject* PyAutogradFunctionState_mark_non_differentiable(PyObject* self,
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyAutogradFunctionState_is_data_valid(PyObject* self) {
+  auto* _self = (PyAutogradFunctionState*)self;
+  return functional::CastToPyObject(_self->data.lock() != nullptr);
+}
+
 static PyMethodDef PyAutogradFunctionState_methods[] = {
     {"save_for_backward", (PyCFunction)PyAutogradFunctionState_save_for_backward, METH_VARARGS,
      NULL},
     {"mark_non_differentiable", (PyCFunction)PyAutogradFunctionState_mark_non_differentiable,
      METH_VARARGS, NULL},
+    {"_is_data_valid", (PyCFunction)PyAutogradFunctionState_is_data_valid, METH_NOARGS, NULL},
     {NULL} /* Sentinel */
 };
 // PyMethodDef end
