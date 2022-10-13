@@ -58,7 +58,9 @@ static PyObject* PyAutogradFunctionState_save_for_backward(PyObject* self, PyObj
   }
   const std::vector<std::shared_ptr<Tensor>>& tensor_list =
       functional::PyUnpackTensorSequence(args);
-  for (const auto& tensor : tensor_list) { _self->data->SaveTensorForBackward(tensor); }
+  for (const auto& tensor : tensor_list) {
+    _self->CheckAndGetData()->SaveTensorForBackward(tensor);
+  }
   Py_RETURN_NONE;
   END_HANDLE_ERRORS
 }
@@ -71,7 +73,9 @@ static PyObject* PyAutogradFunctionState_mark_non_differentiable(PyObject* self,
   }
   const std::vector<std::shared_ptr<Tensor>>& tensor_list =
       functional::PyUnpackTensorSequence(args);
-  for (const auto& tensor : tensor_list) { _self->data->MarkNonDifferentiable(tensor); }
+  for (const auto& tensor : tensor_list) {
+    _self->CheckAndGetData()->MarkNonDifferentiable(tensor);
+  }
   Py_RETURN_NONE;
   END_HANDLE_ERRORS
 }
@@ -88,7 +92,7 @@ static PyMethodDef PyAutogradFunctionState_methods[] = {
 // PyAutogradFunctionState_getset start
 static PyObject* PyAutogradFunctionState_saved_tensors(PyObject* self, void*) {
   auto* _self = (PyAutogradFunctionState*)self;
-  return functional::CastToPyObject<Maybe<TensorTuple>>(_self->data->SavedTensors());
+  return functional::CastToPyObject<Maybe<TensorTuple>>(_self->CheckAndGetData()->SavedTensors());
 }
 
 static PyGetSetDef PyAutogradFunctionState_properties[] = {
@@ -121,40 +125,40 @@ PyTypeObject PyAutogradFunctionState_Type = {
     sizeof(PyAutogradFunctionState),                                        /* tp_basicsize */
     0,                                                                      /* tp_itemsize */
     (destructor)PyAutogradFunctionState_dealloc,                            /* tp_dealloc */
-    0,                                                    /* tp_vectorcall_offset */
-    NULL,                                                 /* tp_getattr */
-    NULL,                                                 /* tp_setattr */
-    NULL,                                                 /* tp_reserved */
-    NULL,                                                 /* tp_repr */
-    NULL,                                                 /* tp_as_number */
-    NULL,                                                 /* tp_as_sequence */
-    NULL,                                                 /* tp_as_mapping */
-    NULL,                                                 /* tp_hash  */
-    NULL,                                                 /* tp_call */
-    NULL,                                                 /* tp_str */
-    PyAutogradFunctionState_getattro,                     /* tp_getattro */
-    PyAutogradFunctionState_setattro,                     /* tp_setattro */
-    NULL,                                                 /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,             /* tp_flags */
-    NULL,                                                 /* tp_doc */
-    NULL,                                                 /* tp_traverse */
-    NULL,                                                 /* tp_clear */
-    NULL,                                                 /* tp_richcompare */
-    0,                                                    /* tp_weaklistoffset */
-    NULL,                                                 /* tp_iter */
-    NULL,                                                 /* tp_iternext */
-    PyAutogradFunctionState_methods,                      /* tp_methods */
-    NULL,                                                 /* tp_members */
-    PyAutogradFunctionState_properties,                   /* tp_getset */
-    0,                                                    /* tp_base */
-    NULL,                                                 /* tp_dict */
-    NULL,                                                 /* tp_descr_get */
-    NULL,                                                 /* tp_descr_set */
-    offsetof(PyAutogradFunctionState, dynamic_attr_dict), /* tp_dictoffset */
-    NULL,                                                 /* tp_init */
-    NULL,                                                 /* tp_alloc */
-    PyAutogradFunctionState_new,                          /* tp_new */
-    NULL,                                                 /* tp_free */
+    0,                                        /* tp_vectorcall_offset */
+    NULL,                                     /* tp_getattr */
+    NULL,                                     /* tp_setattr */
+    NULL,                                     /* tp_reserved */
+    NULL,                                     /* tp_repr */
+    NULL,                                     /* tp_as_number */
+    NULL,                                     /* tp_as_sequence */
+    NULL,                                     /* tp_as_mapping */
+    NULL,                                     /* tp_hash  */
+    NULL,                                     /* tp_call */
+    NULL,                                     /* tp_str */
+    PyAutogradFunctionState_getattro,         /* tp_getattro */
+    PyAutogradFunctionState_setattro,         /* tp_setattro */
+    NULL,                                     /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
+    NULL,                                     /* tp_doc */
+    NULL,                                     /* tp_traverse */
+    NULL,                                     /* tp_clear */
+    NULL,                                     /* tp_richcompare */
+    0,                                        /* tp_weaklistoffset */
+    NULL,                                     /* tp_iter */
+    NULL,                                     /* tp_iternext */
+    PyAutogradFunctionState_methods,          /* tp_methods */
+    NULL,                                     /* tp_members */
+    PyAutogradFunctionState_properties,       /* tp_getset */
+    0,                                        /* tp_base */
+    NULL,                                     /* tp_dict */
+    NULL,                                     /* tp_descr_get */
+    NULL,                                     /* tp_descr_set */
+    NULL,                                     /* tp_dictoffset */
+    NULL,                                     /* tp_init */
+    NULL,                                     /* tp_alloc */
+    PyAutogradFunctionState_new,              /* tp_new */
+    NULL,                                     /* tp_free */
 };
 
 PyObject* PyAutogradFunctionState_NewFromPtr(
@@ -165,8 +169,8 @@ PyObject* PyAutogradFunctionState_NewFromPtr(
       (PyObject*)&PyAutogradFunctionState_Type, NULL));
   if (self) {
     PY_XINCREF(self);
-    self->data = data.get();
-    self->data->set_pyobject_ptr(
+    self->SetData(data);
+    self->CheckAndGetData()->set_pyobject_ptr(
         std::unique_ptr<void, void (*)(void*)>(self, [](void* ptr) { Py_DECREF((PyObject*)ptr); }));
   }
   return (PyObject*)self;
