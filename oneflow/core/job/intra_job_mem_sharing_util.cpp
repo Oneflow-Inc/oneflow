@@ -404,7 +404,7 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
   CHECK(remain_regsts.empty());
 }
 
-void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
+void MemReusedAlgorithmAllocateByOrder(
     const std::vector<RegstDescProto*>& order,
     const HashMap<RegstDescProto*, size_t>& regst_desc2size,
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
@@ -467,7 +467,7 @@ void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
   }
 }
 
-void MemReusedAlgorithm_MemSizeFirstAlgo(
+void MemReusedMemSizeFirstAlgo(
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo* result) {
   std::vector<RegstDescProto*> order;
@@ -479,11 +479,10 @@ void MemReusedAlgorithm_MemSizeFirstAlgo(
     if (l_value == r_value) { return regst2lifetime.at(lhs).first < regst2lifetime.at(rhs).first; }
     return l_value > r_value;
   });
-  MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(order, mem_reused_regst2size, regst2lifetime,
-                                                       result);
+  MemReusedAlgorithmAllocateByOrder(order, mem_reused_regst2size, regst2lifetime, result);
 }
 
-void MemReusedAlgorithm_MutualExclusionFirstAlgo(
+void MemReusedMutualExclusionFirstAlgo(
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo* result) {
   std::vector<RegstDescProto*> order;
@@ -495,11 +494,10 @@ void MemReusedAlgorithm_MutualExclusionFirstAlgo(
     if (l_value == r_value) { return regst2lifetime.at(lhs).first < regst2lifetime.at(rhs).first; }
     return l_value > r_value;
   });
-  MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(order, mem_reused_regst2size, regst2lifetime,
-                                                       result);
+  MemReusedAlgorithmAllocateByOrder(order, mem_reused_regst2size, regst2lifetime, result);
 }
 
-void MemReusedAlgorithm_TimeLineAlgo(
+void MemReusedTimeLineAlgo(
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
     const HashMap<RegstDescProto*, size_t>& mem_reused_regst2size, MemBlockResultInfo* result) {
   std::vector<RegstDescProto*> order;
@@ -513,8 +511,7 @@ void MemReusedAlgorithm_TimeLineAlgo(
     }
     return l_value > r_value;
   });
-  MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(order, mem_reused_regst2size, regst2lifetime,
-                                                       result);
+  MemReusedAlgorithmAllocateByOrder(order, mem_reused_regst2size, regst2lifetime, result);
 }
 
 void SelectAlgorithmGenMemBlockOffset4Regsts(
@@ -526,14 +523,12 @@ void SelectAlgorithmGenMemBlockOffset4Regsts(
 
   switch (algo_id) {
     case kMemSizeFirstAlgo:
-      MemReusedAlgorithm_MemSizeFirstAlgo(regst2lifetime, mem_reused_regst2size, result);
+      MemReusedMemSizeFirstAlgo(regst2lifetime, mem_reused_regst2size, result);
       break;
     case kMutualExclusionFirstAlgo:
-      MemReusedAlgorithm_MutualExclusionFirstAlgo(regst2lifetime, mem_reused_regst2size, result);
+      MemReusedMutualExclusionFirstAlgo(regst2lifetime, mem_reused_regst2size, result);
       break;
-    case kTimeLineAlgo:
-      MemReusedAlgorithm_TimeLineAlgo(regst2lifetime, mem_reused_regst2size, result);
-      break;
+    case kTimeLineAlgo: MemReusedTimeLineAlgo(regst2lifetime, mem_reused_regst2size, result); break;
     default: UNIMPLEMENTED();
   }
   CHECK_GT(result->mem_block_size, 0);
@@ -553,8 +548,18 @@ int64_t CountMemAllocAlgoNum() {
 
 void InitAlgo2Result(HashMap<MemAllocAlgoType, MemBlockResultInfo>* algo2result) {
   CHECK(algo2result->empty());
-  // Experiments show that memory first might be good enough for some cases.
-  CHECK(algo2result->emplace(kMemSizeFirstAlgo, MemBlockResultInfo()).second);
+  const MemoryAllocationAlgorithmConf& mem_alloc_algo_conf =
+      GlobalJobDesc().job_conf().memory_allocation_algorithm_conf();
+  // NOTE: Experiments show that memory first might be good enough for some cases.
+  if (mem_alloc_algo_conf.use_mem_size_first_algo()) {
+    CHECK(algo2result->emplace(kMemSizeFirstAlgo, MemBlockResultInfo()).second);
+  }
+  if (mem_alloc_algo_conf.use_mutual_exclusion_first_algo()) {
+    CHECK(algo2result->emplace(kMutualExclusionFirstAlgo, MemBlockResultInfo()).second);
+  }
+  if (mem_alloc_algo_conf.use_time_line_algo()) {
+    CHECK(algo2result->emplace(kTimeLineAlgo, MemBlockResultInfo()).second);
+  }
 }
 
 }  // namespace
