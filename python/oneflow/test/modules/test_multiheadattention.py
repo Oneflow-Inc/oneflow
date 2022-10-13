@@ -86,12 +86,17 @@ def _generate_inputs_for_nn_module(
     query = random_tensor(len(query_shape), *query_shape).to(device)
     key = random_tensor(len(key_shape), *key_shape).to(device)
     value = random_tensor(len(value_shape), *value_shape).to(device)
-    key_padding_mask = random_tensor(
-        len(key_padding_mask_shape), *key_padding_mask_shape
-    ).to(device)
-    attn_mask = random_tensor(2, tgt_len, src_len).to(device) > 0.5
+    key_padding_mask = random_tensor(len(key_padding_mask_shape), *key_padding_mask_shape).to(device) > 0
+    attn_mask = random_tensor(2, tgt_len, src_len).to(device) > 0
 
     return query, key, value, key_padding_mask, attn_mask
+
+def _align_params(flow_module: flow.nn.Module, torch_module):
+    state_dict = flow_module.state_dict()
+    for k, v in state_dict.items():
+        with torch_original.no_grad():
+            torch_module.get_parameter(k).copy_(torch_original.Tensor(v.numpy()).to(torch_module.get_parameter(k).device))
+    return flow_module, torch_module
 
 def _test_nn_module(test_case):
     dim_per_head = random_utils.randint(10, 20)
@@ -99,9 +104,14 @@ def _test_nn_module(test_case):
     embed_dim = dim_per_head * num_heads
     vdim = random_utils.choice([embed_dim, random_utils.randint(10, 200)])
     kdim = random_utils.choice([embed_dim, random_utils.randint(10, 200)])
-    dropout = random_utils.choice([0, 0, random_utils.random()])
+    # dropout = random_utils.choice([0, 0, random_utils.random()])
+    dropout = 0
     batch_first = random_bool().value()
     device = random_device().value()
+    bias = random_bool()
+    add_bias_kv = random_bool()
+    add_zero_attn = random_bool()
+
 
     query, key, value, key_padding_mask, attn_mask = _generate_inputs_for_nn_module(
         embed_dim, kdim=kdim, vdim=vdim, device=device, batch_first=batch_first
@@ -111,9 +121,9 @@ def _test_nn_module(test_case):
         embed_dim,
         num_heads,
         dropout=dropout,
-        bias=random_bool(),
-        add_bias_kv=random_bool(),
-        add_zero_attn=random_bool(),
+        bias=bias,
+        add_bias_kv=add_bias_kv,
+        add_zero_attn=add_zero_attn,
         batch_first=batch_first,
         kdim=kdim,
         vdim=vdim,
@@ -124,14 +134,16 @@ def _test_nn_module(test_case):
         embed_dim,
         num_heads,
         dropout=dropout,
-        bias=random_bool(),
-        add_bias_kv=random_bool(),
-        add_zero_attn=random_bool(),
+        bias=bias,
+        add_bias_kv=add_bias_kv,
+        add_zero_attn=add_zero_attn,
         batch_first=batch_first,
         kdim=kdim,
         vdim=vdim,
         device=device,
     )
+
+    flow_mha, torch_mha = _align_params(flow_mha, torch_mha)
 
     torch_results = torch_mha(
         query.pytorch, key.pytorch, value.pytorch, key_padding_mask.pytorch, need_weights=True, attn_mask=attn_mask.pytorch
@@ -141,13 +153,19 @@ def _test_nn_module(test_case):
         query.oneflow, key.oneflow, value.oneflow, key_padding_mask.oneflow, need_weights=True, attn_mask=attn_mask.oneflow
     )
     
-    import ipdb; ipdb.set_trace()
     test_case.assertTrue(np.allclose(torch_results[0].detach().cpu().numpy(), flow_results[0].detach().numpy(), 1e-4, 1e-4))
     if torch_results[1] is not None and flow_results[1] is not None:
         test_case.assertTrue(np.allclose(torch_results[1].detach().cpu().numpy(), flow_results[1].detach().numpy(), 1e-4, 1e-4))
 
     torch_results[0].sum().backward()
     flow_results[0].sum().backward()
+
+    for name, param in flow_mha.named_parameters():
+        print(name)
+        torch_grad = torch_mha.get_parameter(name).grad.detach().cpu().numpy()
+        flow_grad = param.grad.detach().numpy()
+        test_case.assertTrue(np.allclose(torch_grad, flow_grad, 1e-4, 1e-4))
+
 
 
 
