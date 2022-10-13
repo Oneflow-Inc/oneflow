@@ -123,8 +123,6 @@ Maybe<void> JobBuildAndInferCtx::AddLbiParallelConf2BlobPlacement(
       iter = parallel_desc2blob_placement_group_.emplace(parallel_desc, blob_pg).first;
     }
     const auto& lbi = op->BnInOp2Lbi(obn);
-    CHECK_OR_RETURN(std::find(iter->second->lbi().begin(), iter->second->lbi().end(), lbi)
-                    == iter->second->lbi().end());
     *iter->second->add_lbi() = lbi;
   }
   return Maybe<void>::Ok();
