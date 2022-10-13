@@ -18,6 +18,8 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #endif  // WITH_CUDA
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
 #include "oneflow/core/ep/include/primitive/softmax.h"
 #include "oneflow/core/ep/include/primitive/softmax_backward.h"
@@ -39,14 +41,14 @@ std::unique_ptr<ep::primitive::SoftmaxBackward> NewSoftmaxBackwardPrimitive(Cont
 
 template<DeviceType device_type, typename T>
 struct GumbelSoftmaxAddNoiseImpl final {
-  static void Forward(ep::Stream* stream, double tau, int64_t elem_cnt, const T* in_ptr,
+  static void Forward(ep::Stream* stream, const double tau, int64_t elem_cnt, const T* in_ptr,
                       T* gumbel_noise_ptr, T* out_ptr);
 };
 
-#define INITIATE_GUMBEL_SOFTMAX_KERNEL_UTIL_IMPL(device_type_v, dtype_pair) \
-  template struct GumbelSoftmaxAddNoiseImpl<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;
-
-#define GUMBEL_SOFTMAX_KERNEL_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ
+#define GUMBEL_SOFTMAX_KERNEL_DATA_TYPE_SEQ_CPU ARITHMETIC_DATA_TYPE_SEQ
+#define GUMBEL_SOFTMAX_KERNEL_DATA_TYPE_SEQ_CUDA \
+  ARITHMETIC_DATA_TYPE_SEQ                  \
+  FLOAT16_DATA_TYPE_SEQ
 
 }  //  namespace oneflow
 

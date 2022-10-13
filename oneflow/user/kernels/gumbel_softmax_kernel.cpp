@@ -108,6 +108,7 @@ REGISTER_GUMBEL_SOFTMAX_KERNEL(DeviceType::kCPU, float)
 REGISTER_GUMBEL_SOFTMAX_KERNEL(DeviceType::kCPU, double)
 REGISTER_GUMBEL_SOFTMAX_KERNEL(DeviceType::kCUDA, float)
 REGISTER_GUMBEL_SOFTMAX_KERNEL(DeviceType::kCUDA, double)
+REGISTER_GUMBEL_SOFTMAX_KERNEL(DeviceType::kCUDA, half)
 
 class GumbelSoftmaxGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:

@@ -19,21 +19,21 @@ namespace oneflow {
 
 template<typename T>
 struct GumbelSoftmaxAddNoiseImpl<DeviceType::kCPU, T> final {
-  static void Forward(ep::Stream* stream, double tau, int64_t elem_cnt, const T* in_ptr,
-                      T* gumbel_noise_ptr , T* out_ptr);
+  static void Forward(ep::Stream* stream, const double tau, int64_t elem_cnt, const T* in_ptr,
+                      T* gumbel_noise_ptr , T* out_ptr) {
+    FOR_RANGE(int64_t, i, 0, elem_cnt) {
+      gumbel_noise_ptr[i] =
+          static_cast<T>(-1.0)
+          * SafeLog(static_cast<T>(-1.0) * SafeLog(static_cast<T>(1.0) - gumbel_noise_ptr[i]));
+      out_ptr[i] = (in_ptr[i] + gumbel_noise_ptr[i]) / static_cast<T>(tau);
+    }
+  }
 };
 
-template<typename T>
-void GumbelSoftmaxAddNoiseImpl<DeviceType::kCPU, T>::Forward(ep::Stream* stream, double tau,
-                                                             int64_t elem_cnt, const T* in_ptr,
-                                                             T* gumbel_noise_ptr, T* out_ptr) {
-  FOR_RANGE(int64_t, i, 0, elem_cnt) {
-    gumbel_noise_ptr[i] = static_cast<T>(-1.0) * SafeLog(static_cast<T>(-1.0) * SafeLog(static_cast<T>(1.0) - gumbel_noise_ptr[i]));
-    out_ptr[i] = (in_ptr[i] + gumbel_noise_ptr[i]) / static_cast<T>(tau);
-  }
-}
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GUMBEL_SOFTMAX_KERNEL_UTIL_IMPL, (DeviceType::kCPU),
-                                 GUMBEL_SOFTMAX_KERNEL_DATA_TYPE_SEQ);
+#define INITIATE_GUMBEL_SOFTMAX_KERNEL_UTIL_IMPL_CPU(dtype_pair)                            \
+  template struct GumbelSoftmaxAddNoiseImpl<DeviceType::kCPU, OF_PP_PAIR_FIRST(dtype_pair)>;
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GUMBEL_SOFTMAX_KERNEL_UTIL_IMPL_CPU,
+                                 GUMBEL_SOFTMAX_KERNEL_DATA_TYPE_SEQ_CPU);
+#undef INITIATE_GUMBEL_SOFTMAX_KERNEL_UTIL_IMPL_CPU
 
 }  //  namespace
