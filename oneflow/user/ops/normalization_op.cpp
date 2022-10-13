@@ -315,7 +315,7 @@ void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int
   OF_CUDNN_CHECK(cudnnGetBatchNormalizationTrainingExReserveSpaceSize(
       cudnn_handle, CUDNN_BATCHNORM_SPATIAL_PERSISTENT, ops, activation_desc.Get(), xy_desc.Get(),
       reserve_space_size));
-  Singleton<CudnnHandlePool>::Get()->Put(handle);
+  Singleton<CudnnHandlePool>::Get()->Put(cudnn_handle);
 }
 
 }  // namespace
