@@ -37,11 +37,9 @@ unsigned int ComputeGridSize(ep::Stream* stream, const int32_t block_size, const
 template<typename T, typename G, int N>
 __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float l1, const float l2,
                                         const float weight_decay, float learning_rate_val,
-                                        float lr_scale, const float* learning_rate,
-                                        const T* scale_by_ptr, const int64_t* skip_if,
+                                        float lr_scale, const T* scale_by_ptr, const int64_t* skip_if,
                                         TensorTupleParams<N> tensor_tuple_params) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
-  if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   learning_rate_val *= lr_scale;
   int64_t v_block_id = blockIdx.x;
@@ -95,14 +93,14 @@ template<typename T, typename G>
 struct MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, T, G> {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
                      float l1, float l2, float weight_decay, float learning_rate_val,
-                     float lr_scale, const float* learning_rate, const T* scale_by_ptr,
+                     float lr_scale, const T* scale_by_ptr,
                      const int64_t* skip_if, TensorTupleParams<2> tensor_tuple_params);
 };
 
 template<typename T, typename G>
 void MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
-    float weight_decay, float learning_rate_val, float lr_scale, const float* learning_rate,
+    float weight_decay, float learning_rate_val, float lr_scale,
     const T* scale_by_ptr, const int64_t* skip_if, TensorTupleParams<2> tensor_tuple_params) {
   const unsigned int grid_size =
       ComputeGridSize(stream->As<ep::CudaStream>(), kBlockSize, elem_cnt);
@@ -114,25 +112,25 @@ void MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
   MultiTensorSGDUpdateGpu<T, G, 2>
       <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
           n_tensor, static_cast<T>(scale), l1, l2, weight_decay, learning_rate_val, lr_scale,
-          learning_rate, scale_by_ptr, skip_if, tensor_tuple_params);
+          scale_by_ptr, skip_if, tensor_tuple_params);
 }
 
 template<typename T>
 struct MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
                      float l1, float l2, float weight_decay, float learning_rate_val,
-                     float lr_scale, const float* learning_rate, const T* scale_by_ptr,
+                     float lr_scale, const T* scale_by_ptr,
                      const int64_t* skip_if, TensorTupleParams<2> tensor_tuple_params);
 };
 
 template<typename T>
 void MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
-    float weight_decay, float learning_rate_val, float lr_scale, const float* learning_rate,
+    float weight_decay, float learning_rate_val, float lr_scale,
     const T* scale_by_ptr, const int64_t* skip_if, TensorTupleParams<2> tensor_tuple_params) {
   MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, T, half>::Update(
       stream, elem_cnt, n_tensor, scale, l1, l2, weight_decay, learning_rate_val, lr_scale,
-      learning_rate, scale_by_ptr, skip_if, tensor_tuple_params);
+      scale_by_ptr, skip_if, tensor_tuple_params);
 }
 
 template struct MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, double, double>;
@@ -145,12 +143,11 @@ __global__ void MultiTensorAdamUpdateGpu(int64_t num_tensor, T scale, float l1, 
                                          float weight_decay, bool amsgrad, bool do_bias_correction,
                                          float learning_rate_val, float bias_correction1_val,
                                          float bias_correction2_val, float lr_scale,
-                                         const float* learning_rate, const T* scale_by_ptr,
+                                         const T* scale_by_ptr,
                                          const int64_t* skip_if, const float* bias_correction1_ptr,
                                          const float* bias_correction2_ptr,
                                          TensorTupleParams<N> tensor_tuple_params) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
-  if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   if (bias_correction1_ptr != nullptr) { bias_correction1_val = *bias_correction1_ptr; }
   if (bias_correction2_ptr != nullptr) { bias_correction2_val = *bias_correction2_ptr; }
@@ -223,7 +220,7 @@ struct MultiTensorAdamUpdateKernelUtil<DeviceType::kCUDA, T, G> {
                      float l1, float l2, float beta1, float beta2, float epsilon,
                      float weight_decay, bool amsgrad, bool do_bias_correction,
                      float learning_rate_val, float bias_correction1_val,
-                     float bias_correction2_val, float lr_scale, const float* learning_rate,
+                     float bias_correction2_val, float lr_scale,
                      const T* scale_by_ptr, const int64_t* skip_if, const float* bias_correction1,
                      const float* bias_correction2, TensorTupleParams<4> tensor_tuple_params);
 };
@@ -233,7 +230,7 @@ void MultiTensorAdamUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
     float beta1, float beta2, float epsilon, float weight_decay, bool amsgrad,
     bool do_bias_correction, float learning_rate_val, float bias_correction1_val,
-    float bias_correction2_val, float lr_scale, const float* learning_rate, const T* scale_by_ptr,
+    float bias_correction2_val, float lr_scale, const T* scale_by_ptr,
     const int64_t* skip_if, const float* bias_correction1, const float* bias_correction2,
     TensorTupleParams<4> tensor_tuple_params) {
   const unsigned int grid_size =
@@ -246,7 +243,7 @@ void MultiTensorAdamUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
   MultiTensorAdamUpdateGpu<T, G>
       <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
           n_tensor, scale, l1, l2, beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
-          learning_rate_val, bias_correction1_val, bias_correction2_val, lr_scale, learning_rate,
+          learning_rate_val, bias_correction1_val, bias_correction2_val, lr_scale,
           scale_by_ptr, skip_if, bias_correction1, bias_correction2, tensor_tuple_params);
 }
 
@@ -256,7 +253,7 @@ struct MultiTensorAdamUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
                      float l1, float l2, float beta1, float beta2, float epsilon,
                      float weight_decay, bool amsgrad, bool do_bias_correction,
                      float learning_rate_val, float bias_correction1_val,
-                     float bias_correction2_val, float lr_scale, const float* learning_rate,
+                     float bias_correction2_val, float lr_scale,
                      const T* scale_by_ptr, const int64_t* skip_if, const float* bias_correction1,
                      const float* bias_correction2, TensorTupleParams<4> tensor_tuple_params);
 };
@@ -266,13 +263,13 @@ void MultiTensorAdamUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
     float beta1, float beta2, float epsilon, float weight_decay, bool amsgrad,
     bool do_bias_correction, float learning_rate_val, float bias_correction1_val,
-    float bias_correction2_val, float lr_scale, const float* learning_rate, const T* scale_by_ptr,
+    float bias_correction2_val, float lr_scale, const T* scale_by_ptr,
     const int64_t* skip_if, const float* bias_correction1, const float* bias_correction2,
     TensorTupleParams<4> tensor_tuple_params) {
   MultiTensorAdamUpdateKernelUtil<DeviceType::kCUDA, T, half>::Update(
       stream, elem_cnt, n_tensor, scale, l1, l2, beta1, beta2, epsilon, weight_decay, amsgrad,
       do_bias_correction, learning_rate_val, bias_correction1_val, bias_correction2_val, lr_scale,
-      learning_rate, scale_by_ptr, skip_if, bias_correction1, bias_correction2,
+      scale_by_ptr, skip_if, bias_correction1, bias_correction2,
       tensor_tuple_params);
 }
 
@@ -284,14 +281,14 @@ template<typename T, typename G>
 struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G> {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
                      float l1, float l2, float weight_decay, float learning_rate_val,
-                     float lr_scale, const float* learning_rate, const T* scale_by_ptr,
+                     float lr_scale, const T* scale_by_ptr,
                      const int64_t* skip_if, TensorTupleParams<3> tensor_tuple_params);
 };
 
 template<typename T, typename G>
 void MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
-    float weight_decay, float learning_rate_val, float lr_scale, const float* learning_rate,
+    float weight_decay, float learning_rate_val, float lr_scale,
     const T* scale_by_ptr, const int64_t* skip_if, TensorTupleParams<3> tensor_tuple_params) {
   const unsigned int grid_size =
       ComputeGridSize(stream->As<ep::CudaStream>(), kBlockSize, elem_cnt);
@@ -303,25 +300,25 @@ void MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G>::Update(
   MultiTensorSGDUpdateGpu<T, G, 3>
       <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
           n_tensor, static_cast<T>(scale), l1, l2, weight_decay, learning_rate_val, lr_scale,
-          learning_rate, scale_by_ptr, skip_if, tensor_tuple_params);
+          scale_by_ptr, skip_if, tensor_tuple_params);
 }
 
 template<typename T>
 struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16> {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
                      float l1, float l2, float weight_decay, float learning_rate_val,
-                     float lr_scale, const float* learning_rate, const T* scale_by_ptr,
+                     float lr_scale, const T* scale_by_ptr,
                      const int64_t* skip_if, TensorTupleParams<3> tensor_tuple_params);
 };
 
 template<typename T>
 void MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
-    float weight_decay, float learning_rate_val, float lr_scale, const float* learning_rate,
+    float weight_decay, float learning_rate_val, float lr_scale,
     const T* scale_by_ptr, const int64_t* skip_if, TensorTupleParams<3> tensor_tuple_params) {
   MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, half>::Update(
       stream, elem_cnt, n_tensor, scale, l1, l2, weight_decay, learning_rate_val, lr_scale,
-      learning_rate, scale_by_ptr, skip_if, tensor_tuple_params);
+      scale_by_ptr, skip_if, tensor_tuple_params);
 }
 
 template struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, float, float>;
@@ -333,7 +330,7 @@ struct MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G> {
                      float l1, float l2, float beta1, float beta2, float epsilon,
                      float weight_decay, bool amsgrad, bool do_bias_correction,
                      float learning_rate_val, float bias_correction1_val,
-                     float bias_correction2_val, float lr_scale, const float* learning_rate,
+                     float bias_correction2_val, float lr_scale,
                      const T* scale_by_ptr, const int64_t* skip_if, const float* bias_correction1,
                      const float* bias_correction2, TensorTupleParams<5> tensor_tuple_params);
 };
@@ -343,7 +340,7 @@ void MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
     float beta1, float beta2, float epsilon, float weight_decay, bool amsgrad,
     bool do_bias_correction, float learning_rate_val, float bias_correction1_val,
-    float bias_correction2_val, float lr_scale, const float* learning_rate, const T* scale_by_ptr,
+    float bias_correction2_val, float lr_scale, const T* scale_by_ptr,
     const int64_t* skip_if, const float* bias_correction1, const float* bias_correction2,
     TensorTupleParams<5> tensor_tuple_params) {
   const unsigned int grid_size =
@@ -356,7 +353,7 @@ void MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G>::Update(
   MultiTensorAdamUpdateGpu<T, G, 5>
       <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
           n_tensor, scale, l1, l2, beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
-          learning_rate_val, bias_correction1_val, bias_correction2_val, lr_scale, learning_rate,
+          learning_rate_val, bias_correction1_val, bias_correction2_val, lr_scale,
           scale_by_ptr, skip_if, bias_correction1, bias_correction2, tensor_tuple_params);
 }
 
@@ -366,7 +363,7 @@ struct MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16> {
                      float l1, float l2, float beta1, float beta2, float epsilon,
                      float weight_decay, bool amsgrad, bool do_bias_correction,
                      float learning_rate_val, float bias_correction1_val,
-                     float bias_correction2_val, float lr_scale, const float* learning_rate,
+                     float bias_correction2_val, float lr_scale,
                      const T* scale_by_ptr, const int64_t* skip_if, const float* bias_correction1,
                      const float* bias_correction2, TensorTupleParams<5> tensor_tuple_params);
 };
@@ -376,13 +373,13 @@ void MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16>::Upd
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
     float beta1, float beta2, float epsilon, float weight_decay, bool amsgrad,
     bool do_bias_correction, float learning_rate_val, float bias_correction1_val,
-    float bias_correction2_val, float lr_scale, const float* learning_rate, const T* scale_by_ptr,
+    float bias_correction2_val, float lr_scale, const T* scale_by_ptr,
     const int64_t* skip_if, const float* bias_correction1, const float* bias_correction2,
     TensorTupleParams<5> tensor_tuple_params) {
   MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, half>::Update(
       stream, elem_cnt, n_tensor, scale, l1, l2, beta1, beta2, epsilon, weight_decay, amsgrad,
       do_bias_correction, learning_rate_val, bias_correction1_val, bias_correction2_val, lr_scale,
-      learning_rate, scale_by_ptr, skip_if, bias_correction1, bias_correction2,
+      scale_by_ptr, skip_if, bias_correction1, bias_correction2,
       tensor_tuple_params);
 }
 

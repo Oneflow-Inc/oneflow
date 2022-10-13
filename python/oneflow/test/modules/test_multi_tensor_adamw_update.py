@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from audioop import bias
 import unittest
 from collections import OrderedDict
 import os
@@ -95,14 +96,14 @@ def compare_with_numpy_adam(
                 m_tensor_list,
                 v_tensor_list,
                 learning_rate,
-                weight_decay,
+                0.0,
                 beta1,
                 beta2,
                 bias_correction1,
                 bias_correction2,
                 do_bias_correction,
                 1.0,
-                0.0,
+                weight_decay,
             )
 
         for i in range(1, train_iters + 1):
@@ -117,8 +118,6 @@ def compare_with_numpy_adam(
 
         def train_one_iter(step, grad):
             for i in range(tensor_num):
-                grad[i] = grad[i] + weight_decay * x[i]
-
                 bias_correction1 = 1.0
                 bias_correction2 = 1.0
 
@@ -130,7 +129,9 @@ def compare_with_numpy_adam(
                 v[i] = beta2 * v[i] + (1 - beta2) * grad[i] * grad[i]
                 denom = np.sqrt(v[i]) / np.sqrt(bias_correction2) + 1e-5
 
-                x[i] = x[i] - ((learning_rate / bias_correction1) * m[i] / denom)
+                lr = learning_rate / bias_correction1 / denom
+                g = lr * m[i] + learning_rate * weight_decay * x[i]
+                x[i] = x[i] - g
 
             return x
 
@@ -165,7 +166,7 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["betas"] = [(0.9, 0.999)]
         arg_dict["do_bias_correction"] = [True, False]
         arg_dict["learning_rate"] = [1.0, 1e-3]
-        arg_dict["weight_decay"] = [0.9, 0.0]
+        arg_dict["weight_decay"] = [0.001, 0.01]
         arg_dict["train_iters"] = [10]
 
         for arg in GenArgDict(arg_dict):
