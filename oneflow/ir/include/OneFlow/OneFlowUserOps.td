@@ -10303,7 +10303,7 @@ def OneFlow_OneEmbeddingAdamUpdateOp : OneFlow_BaseOp<"one_embedding_adam_update
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_OneEmbeddingSparseAdamUpdateOp : OneFlow_BaseOp<"one_embedding_sparse_adam_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_OneEmbeddingSmartDecaySparseAdamUpdateOp : OneFlow_BaseOp<"one_embedding_smart_decay_sparse_adam_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$num_unique_ids,
     OneFlow_Tensor:$unique_embeddings,

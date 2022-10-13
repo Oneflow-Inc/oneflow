@@ -640,13 +640,13 @@ void BuildEmbeddingUpdate(
     const int64_t model_and_states_bytes = embedding_size * 3 * value_dtype_size;
     const int64_t align_to_step_size_bytes =
         (model_and_states_bytes + step_dtype_size - 1) / step_dtype_size * step_dtype_size;
-    const int64_t sparse_adam_line_size =
+    const int64_t smart_decay_sparse_adam_line_size =
         (align_to_step_size_bytes + step_dtype_size) / value_dtype_size;
-    if (line_size == sparse_adam_line_size) {
+    if (line_size == smart_decay_sparse_adam_line_size) {
       CHECK(adam_conf.do_bias_correction())
           << "when use sparse adam, do_bias_correction should be true. but got "
           << adam_conf.do_bias_correction();
-      embedding_update_op_builder.OpTypeName("one_embedding_sparse_adam_update")
+      embedding_update_op_builder.OpTypeName("one_embedding_smart_decay_sparse_adam_update")
           .Input("train_step", train_conf.train_step_lbn())
           .Attr<float>("beta1", adam_conf.beta1())
           .Attr<float>("beta2", adam_conf.beta2())

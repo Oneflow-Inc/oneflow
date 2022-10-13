@@ -402,7 +402,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> OneEmbeddingSparseAdamUpdateOp::InferLogicalTensorDesc(
+/* static */ Maybe<void> OneEmbeddingSmartDecaySparseAdamUpdateOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
   const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
@@ -414,30 +414,33 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   const int64_t model_and_states_bytes = embedding_size * 3 * value_dtype_size;
   const int64_t align_to_step_size_bytes =
       (model_and_states_bytes + step_dtype_size - 1) / step_dtype_size * step_dtype_size;
-  const int64_t sparse_adam_line_size =
+  const int64_t smart_decay_sparse_adam_line_size =
       (align_to_step_size_bytes + step_dtype_size) / value_dtype_size;
-  CHECK_EQ_OR_RETURN(line_size, sparse_adam_line_size)
+  CHECK_EQ_OR_RETURN(line_size, smart_decay_sparse_adam_line_size)
       << "when using sparse Adam optimizer with embedding_size " << embedding_size
-      << ", storage_dim should equals to " << sparse_adam_line_size
+      << ", storage_dim should equals to " << smart_decay_sparse_adam_line_size
       << ", but got "
          "storage_dim: "
-      << line_size << ", please set storage_dim of store_options to " << sparse_adam_line_size;
+      << line_size << ", please set storage_dim of store_options to "
+      << smart_decay_sparse_adam_line_size;
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
   ctx->SetOutputShape("updated_unique_embeddings", 0, unique_embeddings_shape);
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> OneEmbeddingSparseAdamUpdateOp::InferPhysicalTensorDesc(
+/*static*/ Maybe<void> OneEmbeddingSmartDecaySparseAdamUpdateOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> OneEmbeddingSparseAdamUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingSmartDecaySparseAdamUpdateOp::GetSbp(
+    user_op::SbpContext* ctx) {
   JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> OneEmbeddingSparseAdamUpdateOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> OneEmbeddingSmartDecaySparseAdamUpdateOp::InferDataType(
+    user_op::InferContext* ctx) {
   JUST(CheckDataType(ctx));
   ctx->SetOutputDType("updated_unique_embeddings", 0, ctx->InputDType("unique_embeddings", 0));
   return Maybe<void>::Ok();

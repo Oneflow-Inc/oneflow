@@ -134,16 +134,15 @@ __global__ void AdamUpdateKernel(const int32_t line_size, const int32_t embeddin
   }
 }
 
-// Note(guoran): The SparseAdam is from https://github.com/tensorflow/tensorflow/pull/24788/files
+// Note(guoran): The SmartDecaySparseAdam is from
+// https://github.com/pytorch/pytorch/blob/master/caffe2/sgd/adam_op.h#L57
 template<typename T, typename G, typename IDX>
-__global__ void SparseAdamUpdateKernel(const int32_t line_size, const int32_t embedding_size,
-                                       T scale, float l1, float l2, float weight_decay, float beta1,
-                                       float beta2, float epsilon, float learning_rate_val,
-                                       int64_t step_col_offset, const IDX* num_unique_ids,
-                                       const float* learning_rate, const int64_t* train_step_ptr,
-                                       const T* scale_by_ptr, const T* down_scale_by_ptr,
-                                       const int64_t* skip_if, const G* model_diff,
-                                       const T* unique_values, T* updated_unique_values) {
+__global__ void SmartDecaySparseAdamUpdateKernel(
+    const int32_t line_size, const int32_t embedding_size, T scale, float l1, float l2,
+    float weight_decay, float beta1, float beta2, float epsilon, float learning_rate_val,
+    int64_t step_col_offset, const IDX* num_unique_ids, const float* learning_rate,
+    const int64_t* train_step_ptr, const T* scale_by_ptr, const T* down_scale_by_ptr,
+    const int64_t* skip_if, const G* model_diff, const T* unique_values, T* updated_unique_values) {
   if (skip_if != nullptr && *skip_if != 0) {
     const int64_t n = *num_unique_ids * line_size;
     CUDA_1D_KERNEL_LOOP(i, n) {
@@ -171,15 +170,16 @@ __global__ void SparseAdamUpdateKernel(const int32_t line_size, const int32_t em
       int64_t prev_step = *reinterpret_cast<const int64_t*>(unique_values + step_offset);
       int64_t cur_step = *train_step_ptr + 1;
       int64_t skip_step = cur_step - prev_step;
-      float beta1_pow_skipped = pow(beta1, skip_step);
-      if (prev_step == 0) { prev_step = 1; }
-      float alpha_t = learning_rate_val / (1.0f - beta1) * sqrt(1.0f - pow(beta2, prev_step))
-                      / (1.0f - pow(beta1, prev_step)) * (1.0f - beta1_pow_skipped);
+      float catchup = 0.0;
+      if (skip_step > 1) {
+        catchup = m_val * beta1 * (1 - pow(beta1, skip_step - 1)) / (1 - beta1);
+      }
+      const T next_m = pow(beta1, skip_step) * m_val + (1 - beta1) * model_diff_t;
+      const T next_v = pow(beta2, skip_step) * v_val + (1 - beta2) * model_diff_t * model_diff_t;
+      updated_unique_values[m_offset] = next_m;
+      updated_unique_values[v_offset] = next_v;
       updated_unique_values[model_offset] =
-          model_val + (-alpha_t * m_val / (sqrtf(v_val) + epsilon));
-      updated_unique_values[m_offset] = beta1_pow_skipped * m_val + (1 - beta1) * model_diff_t;
-      updated_unique_values[v_offset] =
-          pow(beta2, skip_step) * v_val + (1 - beta2) * model_diff_t * model_diff_t;
+          model_val - (learning_rate_val * (next_m + catchup)) / (sqrt(next_v) + epsilon);
       if (col == 0) { *reinterpret_cast<int64_t*>(updated_unique_values + step_offset) = cur_step; }
     }
   }
@@ -578,10 +578,10 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_ONE_EMBEDDING_ADAM_UPDATE_KERNEL,
                                  IDX_DATA_TYPE_SEQ)
 
 template<typename T, typename G, typename IDX>
-class SparseAdamEmbeddingUpdateKernel final : public user_op::OpKernel {
+class SmartDecaySparseAdamEmbeddingUpdateKernel final : public user_op::OpKernel {
  public:
-  SparseAdamEmbeddingUpdateKernel() : current_iter_(0){};
-  ~SparseAdamEmbeddingUpdateKernel() override = default;
+  SmartDecaySparseAdamEmbeddingUpdateKernel() : current_iter_(0){};
+  ~SmartDecaySparseAdamEmbeddingUpdateKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
@@ -658,7 +658,7 @@ class SparseAdamEmbeddingUpdateKernel final : public user_op::OpKernel {
     const int64_t align_to_step_size_bytes =
         (model_and_states_bytes + step_dtype_size - 1) / step_dtype_size * step_dtype_size;
     const int64_t step_col_offset = align_to_step_size_bytes / value_dtype_size;
-    SparseAdamUpdateKernel<T, G, IDX>
+    SmartDecaySparseAdamUpdateKernel<T, G, IDX>
         <<<BlocksNum4ThreadsNum(embedding_grad_elem_cnt), kCudaThreadsNumPerBlock, 0,
            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             line_size, embedding_size, static_cast<T>(scale), l1, l2, weight_decay, beta1, beta2,
@@ -673,19 +673,19 @@ class SparseAdamEmbeddingUpdateKernel final : public user_op::OpKernel {
   mutable int64_t current_iter_;
 };
 
-#define REGISTER_CUDA_ONE_EMBEDDING_SPARSE_ADAM_UPDATE_KERNEL(t_dtype_pair, g_type_pair,      \
-                                                              idx_dtype_pair)                 \
-  REGISTER_USER_KERNEL("one_embedding_sparse_adam_update")                                    \
-      .SetCreateFn<SparseAdamEmbeddingUpdateKernel<OF_PP_PAIR_FIRST(t_dtype_pair),            \
-                                                   OF_PP_PAIR_FIRST(g_type_pair),             \
-                                                   OF_PP_PAIR_FIRST(idx_dtype_pair)>>()       \
-      .SetIsMatchedHob(                                                                       \
-          (user_op::HobDeviceType() == DeviceType::kCUDA)                                     \
-          && (user_op::HobDataType("num_unique_ids", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair)) \
-          && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(g_type_pair))    \
+#define REGISTER_CUDA_ONE_EMBEDDING_SMART_DECAY_SPARSE_ADAM_UPDATE_KERNEL(                        \
+    t_dtype_pair, g_type_pair, idx_dtype_pair)                                                    \
+  REGISTER_USER_KERNEL("one_embedding_smart_decay_sparse_adam_update")                            \
+      .SetCreateFn<SmartDecaySparseAdamEmbeddingUpdateKernel<OF_PP_PAIR_FIRST(t_dtype_pair),      \
+                                                             OF_PP_PAIR_FIRST(g_type_pair),       \
+                                                             OF_PP_PAIR_FIRST(idx_dtype_pair)>>() \
+      .SetIsMatchedHob(                                                                           \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                         \
+          && (user_op::HobDataType("num_unique_ids", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair))     \
+          && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(g_type_pair))        \
           && (user_op::HobDataType("unique_embeddings", 0) == OF_PP_PAIR_SECOND(t_dtype_pair)));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_ONE_EMBEDDING_SPARSE_ADAM_UPDATE_KERNEL,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_ONE_EMBEDDING_SMART_DECAY_SPARSE_ADAM_UPDATE_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
                                  IDX_DATA_TYPE_SEQ)
 
