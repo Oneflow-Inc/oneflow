@@ -407,7 +407,7 @@ void MemoryShareStrategy::ResetCompactPosition(int32_t j) {
 // Update the maximum iteration step with the current size and lower bound
 void MemoryShareStrategy::UpdateMaxIteration(size_t mem_block_size, size_t lower_bound) {
   if (lower_bound > 0) {
-    max_iteration_step_ = ((mem_block_size - lower_bound) * 10000) / lower_bound;
+    max_iteration_step_ = ((mem_block_size - lower_bound) * 100) / lower_bound;
   } else {
     // A graph only containing several 0 size tensors might have lower bound = 0.
     // Check test_div.py::TestDiv::test_0_size_div for example.

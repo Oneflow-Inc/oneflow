@@ -24,6 +24,8 @@ limitations under the License.
 
 namespace oneflow {
 
+// NOTE: Another trick to save times.
+// Comparing two numbers is faster than asking the existence in a HashSet.
 bool IsLifetimeExcluded(const std::pair<int32_t, int32_t>& a, const std::pair<int32_t, int32_t>& b);
 
 class MemoryShareStrategy {
