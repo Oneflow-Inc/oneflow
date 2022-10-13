@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "env_global_objects_scope.h"
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif  // WITH_CUDA
@@ -297,6 +298,16 @@ Maybe<bool> RDMAIsInitialized() {
 #else
   return false;
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX
+}
+
+Maybe<void> DestoryRDMA() {
+  bool is_init = JUST(RDMAIsInitialized());
+  if (is_init) {
+    CHECK_NOTNULL(Singleton<IBVerbsCommNet>::Get());
+    CHECK_NOTNULL(Singleton<CommNet>::Get());
+    Singleton<IBVerbsCommNet>::Delete();
+  }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow
