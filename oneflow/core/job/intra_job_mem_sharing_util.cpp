@@ -532,7 +532,9 @@ void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
     const HashMap<RegstDescProto*, std::pair<int32_t, int32_t>>& regst2lifetime,
     MemBlockResultInfo* result) {
   HashMap<RegstDescProto*, int64_t>* regst_desc2offset = &(result->regst_desc2offset);
-  // Switch HashMap to vector
+  // NOTE: It is important to make the variables local.
+  // It took me several days to find out that using passed-in vector for size, order, and lifetime
+  // would double the running time. Switch HashMap to vector
   int32_t total_register_num = order.size();
   std::vector<int64_t> order2size(total_register_num);
   std::vector<std::pair<int32_t, int32_t>> order2lifetime(total_register_num);
