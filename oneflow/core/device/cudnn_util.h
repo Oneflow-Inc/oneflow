@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape_view.h"
-#include <mutex>
 
 #ifdef WITH_CUDA
 
@@ -101,16 +100,16 @@ const void* CudnnSPOnePtr(const DataType dtype);
 
 const void* CudnnSPZeroPtr(const DataType dtype);
 
-class CudnnHandleQueue {
+class CudnnHandlePool {
  public:
-  CudnnHandleQueue() = default;
-  ~CudnnHandleQueue();
-  cudnnHandle_t Get();
+  CudnnHandlePool() = default;
+  ~CudnnHandlePool();
+  cudnnHandle_t GetOrCreate();
   void Push(cudnnHandle_t handle);
 
  private:
   std::mutex mutex_;
-  HashMap<int64_t, std::queue<cudnnHandle_t>> handle_queue_map_;
+  HashMap<int64_t, std::vector<cudnnHandle_t>> handle_list_map_;
 };
 
 }  // namespace oneflow

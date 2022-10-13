@@ -124,7 +124,7 @@ size_t InferTrainWorkspaceSize(const ShapeView& x_shape, const DataType data_typ
   cudnnBatchNormMode_t mode = getCudnnBatchNormMode(x_shape.NumAxes());
   const CudnnTensorDescHelper desc_helper(x_shape, data_type, axis, mode);
   size_t size_in_bytes;
-  cudnnHandle_t handle = Singleton<CudnnHandleQueue>::Get()->Get();
+  cudnnHandle_t handle = Singleton<CudnnHandlePool>::Get()->GetOrCreate();
   OF_CUDNN_CHECK(cudnnGetBatchNormalizationForwardTrainingExWorkspaceSize(
       handle, mode, CUDNN_BATCHNORM_OPS_BN, desc_helper.xy_desc(), nullptr, desc_helper.xy_desc(),
       desc_helper.param_desc(), nullptr, &size_in_bytes));
@@ -146,7 +146,7 @@ size_t InferGradWorkspaceSize(const ShapeView& x_shape, const DataType data_type
   cudnnBatchNormMode_t mode = getCudnnBatchNormMode(x_shape.NumAxes());
   const CudnnTensorDescHelper desc_helper(x_shape, data_type, axis, mode);
   size_t size_in_bytes;
-  cudnnHandle_t handle = Singleton<CudnnHandleQueue>::Get()->Get();
+  cudnnHandle_t handle = Singleton<CudnnHandlePool>::Get()->GetOrCreate();
   OF_CUDNN_CHECK(cudnnGetBatchNormalizationBackwardExWorkspaceSize(
       handle, mode, CUDNN_BATCHNORM_OPS_BN, desc_helper.xy_desc(), nullptr, desc_helper.xy_desc(),
       nullptr, desc_helper.xy_desc(), desc_helper.param_desc(), nullptr, &size_in_bytes));
@@ -633,7 +633,7 @@ size_t InferFusedNormalizationAddReluTmpSize(user_op::InferContext* ctx) {
   const CudnnTensorDescHelper desc_helper(x.shape(), x.data_type(), axis,
                                           CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
   size_t size_in_bytes;
-  cudnnHandle_t handle = Singleton<CudnnHandleQueue>::Get()->Get();
+  cudnnHandle_t handle = Singleton<CudnnHandlePool>::Get()->GetOrCreate();
   CudnnActivationDesc activation_desc(CUDNN_ACTIVATION_RELU, CUDNN_PROPAGATE_NAN, 0);
   cudnnBatchNormOps_t ops;
   cudnnTensorDescriptor_t z_desc;
@@ -656,7 +656,7 @@ size_t InferFusedNormalizationAddReluGradTmpSize(user_op::InferContext* ctx) {
   const CudnnTensorDescHelper desc_helper(x.shape(), x.data_type(), axis,
                                           CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
   size_t size_in_bytes;
-  cudnnHandle_t handle = Singleton<CudnnHandleQueue>::Get()->Get();
+  cudnnHandle_t handle = Singleton<CudnnHandlePool>::Get()->GetOrCreate();
   CudnnActivationDesc activation_desc(CUDNN_ACTIVATION_RELU, CUDNN_PROPAGATE_NAN, 0);
   cudnnBatchNormOps_t ops;
   cudnnTensorDescriptor_t z_desc;
