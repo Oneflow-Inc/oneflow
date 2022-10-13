@@ -104,8 +104,8 @@ class CudnnHandlePool {
  public:
   CudnnHandlePool() = default;
   ~CudnnHandlePool();
-  cudnnHandle_t GetOrCreate();
-  void Push(cudnnHandle_t handle);
+  cudnnHandle_t Get();
+  void Put(cudnnHandle_t handle);
 
  private:
   std::mutex mutex_;

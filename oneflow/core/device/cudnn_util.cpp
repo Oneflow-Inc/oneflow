@@ -249,7 +249,7 @@ CudnnHandlePool::~CudnnHandlePool() {
   handle_list_map_.clear();
 }
 
-cudnnHandle_t CudnnHandlePool::GetOrCreate() {
+cudnnHandle_t CudnnHandlePool::Get() {
   int device_id;
   OF_CUDA_CHECK(cudaGetDevice(&device_id));
   {
@@ -261,13 +261,12 @@ cudnnHandle_t CudnnHandlePool::GetOrCreate() {
       return handle;
     }
   }
-  CudaCurrentDeviceGuard guard(device_id);
   cudnnHandle_t handle;
   OF_CUDNN_CHECK(cudnnCreate(&handle));
   return handle;
 }
 
-void CudnnHandlePool::Push(cudnnHandle_t handle) {
+void CudnnHandlePool::Put(cudnnHandle_t handle) {
   int device_id;
   OF_CUDA_CHECK(cudaGetDevice(&device_id));
   std::unique_lock<std::mutex> lock(mutex_);
