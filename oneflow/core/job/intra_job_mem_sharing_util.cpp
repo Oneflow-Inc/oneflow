@@ -383,7 +383,7 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
   for (int64_t i = 0; i < sorted_tasks.size(); ++i) {
     for (RegstDescProto* alloc_regst : alloc_regsts_timeline.at(i)) {
       // Record the born time
-      (*regst2lifetime)[alloc_regst] = {i, -1};
+      (*regst2lifetime)[alloc_regst].first = i;
       CHECK(remain_regsts.insert(alloc_regst).second);
       remain_memory += mem_reused_regst2size.at(alloc_regst);
       // NOTE(chengcheng): insert time line to regst proto
@@ -400,6 +400,7 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
       (*regst2lifetime)[free_regst].second = i + 1;
     }
   }
+  // Make sure that every register has a die time
   CHECK(remain_regsts.empty());
 }
 
