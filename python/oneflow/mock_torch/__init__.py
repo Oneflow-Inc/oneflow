@@ -61,6 +61,9 @@ class OneflowImporter(MetaPathFinder, Loader):
         globals()[fullname] = ModuleWrapper(module)
 
 
-# dynamically monkeypatching torch and its submodules
-def monkeypatch_torch():
-    sys.meta_path.insert(0, OneflowImporter())
+# dynamically mock torch and its submodules
+def mock():
+    if sys.modules.get('torch') is not None:
+        print('Warning: Detected imported torch modules, quitting `mock`')
+    else:
+        sys.meta_path.insert(0, OneflowImporter())
