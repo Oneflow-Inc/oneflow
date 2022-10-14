@@ -66,7 +66,7 @@ void CheckCudaRuntimeVersion() {
 }
 
 void CheckCublasVersion(cublasHandle_t handle) {
-#if CUDA_VERSION >= 11000
+#if CUDA_VERSION >= 10020
 #if (!defined(CUBLAS_VER_MAJOR)) || (!defined(CUBLAS_VER_MINOR))
 #error
 #endif  // (!defined(CUBLAS_VER_MAJOR)) || (!defined(CUBLAS_VER_MINOR))
@@ -83,7 +83,7 @@ void CheckCublasVersion(cublasHandle_t handle) {
   }
   CheckVersionCompatibility(CUBLAS_VER_MAJOR, CUBLAS_VER_MINOR, runtime_major, runtime_minor,
                             "cuBLAS");
-#endif  // CUDA_VERSION >= 11000
+#endif  // CUDA_VERSION >= 10020
 }
 
 void CheckCudnnVersion() {
