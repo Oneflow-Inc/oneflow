@@ -1,50 +1,46 @@
 #!/bin/bash
-
+set -e
 MOCK_TORCH=$PWD/python/oneflow/test/misc/test_mock_torch.py
+MONKEYPATCH=$PWD/python/oneflow/test/misc/test_monkeypatch.py
 
+same_or_exit() {
+    if [[ "$(python3 $MOCK_TORCH)" != *"$1"* ]]; then
+        exit 1
+    fi
+}
 eval $(python3 -m oneflow.mock_torch) # default argument is enable
-if [[ "$(python3 $MOCK_TORCH)" != *"True"* ]]; then
-    exit 1
-fi
+same_or_exit "True"
+
 # testing import
-if
-    python3 -c 'import torch; torch.randn(2,3)' &&\
-    python3 -c 'import torch.nn; torch.nn.Graph' &&\
-    python3 -c 'import torch.version; torch.version.__version__' &&\
-    python3 -c 'from torch import *; randn(2,3)' &&\
-    python3 -c 'from torch.nn import *; Graph' &&\
-    python3 -c 'from torch.version import *; __version__' &&\
-    python3 -c 'from torch import nn; nn.Graph' &&\
-    python3 -c 'from torch.version import __version__' &&\
-    ! (python3 -c 'import torch; torch.no_exist' 2>&1 >/dev/null | grep -q 'NotImplementedError')
-then
-    exit 1
-fi
+python3 -c 'import torch; torch.randn(2,3)'
+python3 -c 'import torch.nn; torch.nn.Graph' 
+python3 -c 'import torch.version; torch.version.__version__' 
+python3 -c 'from torch import *; randn(2,3)' 
+python3 -c 'from torch.nn import *; Graph' 
+python3 -c 'from torch.version import *; __version__' 
+python3 -c 'from torch import nn; nn.Graph' 
+python3 -c 'from torch.version import __version__' 
+! (python3 -c 'import torch; torch.no_exist' 2>&1 >/dev/null | grep -q 'NotImplementedError')
+
 eval $(python3 -m oneflow.mock_torch disable)
-if [[ "$(python3 $MOCK_TORCH)" != *"False"* ]]; then
-    exit 1
-fi
+same_or_exit "False"
 eval $(python3 -m oneflow.mock_torch enable)
-if [[ "$(python3 $MOCK_TORCH)" != *"True"* ]]; then
-    exit 1
-fi
+same_or_exit "True"
 eval $(python3 -m oneflow.mock_torch disable) # recover
-if [[ "$(python3 $MOCK_TORCH)" != *"False"* ]]; then
-    exit 1
-fi
+same_or_exit "False"
 eval $(oneflow-mock-torch) 
-if [[ "$(python3 $MOCK_TORCH)" != *"True"* ]]; then
-    exit 1
-fi
+same_or_exit "True"
 eval $(oneflow-mock-torch disable)
-if [[ "$(python3 $MOCK_TORCH)" != *"False"* ]]; then
-    exit 1
-fi
+same_or_exit "False"
 eval $(oneflow-mock-torch enable)
-if [[ "$(python3 $MOCK_TORCH)" != *"True"* ]]; then
-    exit 1
-fi
+same_or_exit "True"
 eval $(oneflow-mock-torch disable)
-if [[ "$(python3 $MOCK_TORCH)" != *"False"* ]]; then
-    exit 1
-fi
+same_or_exit "False"
+python3 $MONKEYPATCH
+
+python3 -c "
+import oneflow
+from oneflow.mock_torch import monkeypatch_torch; monkeypatch_torch();
+from torch import *;
+from torch.nn import *;
+from torch.version import *"

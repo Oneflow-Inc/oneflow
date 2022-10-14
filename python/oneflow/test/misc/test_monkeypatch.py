@@ -15,11 +15,6 @@ class TestMonkeyPatch(flow.unittest.TestCase):
     def test_file(test_case):
         import torch.version
         test_case.assertTrue(torch.version.__version__ == flow.__version__)
-    def test_all(test_case):
-        # from torch import *
-        # from torch.nn import *
-        # from torch.version import *
-        pass
     def test_from(test_case):
         from torch import nn
         from torch.version import __version__
