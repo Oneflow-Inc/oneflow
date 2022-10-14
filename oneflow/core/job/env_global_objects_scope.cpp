@@ -308,6 +308,9 @@ Maybe<void> DestoryRDMA() {
     CHECK_NOTNULL(Singleton<IBVerbsCommNet>::Get());
     CHECK_NOTNULL(Singleton<CommNet>::Get());
     Singleton<IBVerbsCommNet>::Delete();
+    if (Singleton<EpollCommNet>::Get()) {
+      Singleton<CommNet>::SetAllocated(Singleton<EpollCommNet>::Get());
+    }
   }
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX
   return Maybe<void>::Ok();
