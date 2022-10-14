@@ -603,8 +603,6 @@ class SmartDecaySparseAdamEmbeddingUpdateKernel final : public user_op::OpKernel
     CHECK_EQ(embedding_grad->shape_view().NumAxes(), 2);
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
-    // CHECK_EQ(line_size, embedding_size * 3);
-
     const float l1 = ctx->Attr<float>("l1");
     const float l2 = ctx->Attr<float>("l2");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
@@ -658,6 +656,10 @@ class SmartDecaySparseAdamEmbeddingUpdateKernel final : public user_op::OpKernel
     const int64_t align_to_step_size_bytes =
         (model_and_states_bytes + step_dtype_size - 1) / step_dtype_size * step_dtype_size;
     const int64_t step_col_offset = align_to_step_size_bytes / value_dtype_size;
+    const int64_t smart_decay_sparse_adam_line_size =
+        (align_to_step_size_bytes + step_dtype_size) / value_dtype_size;
+    CHECK_EQ(line_size, smart_decay_sparse_adam_line_size);
+
     SmartDecaySparseAdamUpdateKernel<T, G, IDX>
         <<<BlocksNum4ThreadsNum(embedding_grad_elem_cnt), kCudaThreadsNumPerBlock, 0,
            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(

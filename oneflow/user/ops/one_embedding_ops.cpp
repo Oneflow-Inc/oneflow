@@ -417,7 +417,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   const int64_t smart_decay_sparse_adam_line_size =
       (align_to_step_size_bytes + step_dtype_size) / value_dtype_size;
   CHECK_EQ_OR_RETURN(line_size, smart_decay_sparse_adam_line_size)
-      << "when using sparse Adam optimizer with embedding_size " << embedding_size
+      << "when using SmartDecayAdam optimizer with embedding_size " << embedding_size
       << ", storage_dim should equals to " << smart_decay_sparse_adam_line_size
       << ", but got "
          "storage_dim: "

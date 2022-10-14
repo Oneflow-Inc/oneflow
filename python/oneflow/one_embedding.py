@@ -95,17 +95,6 @@ def _init(
     scale_factor = store_options["size_factor"]
     storage_dim = store_options["storage_dim"]
     if storage_dim != -1:
-        if storage_dim % embedding_dim != 0:
-            step_type_size = 8  # int64
-            models_dim = storage_dim // embedding_dim * embedding_dim
-            storage_bytes = models_dim * value_type_size + step_type_size
-            storage_bytes = (
-                (storage_bytes + step_type_size - 1) // step_type_size * step_type_size
-            )
-            check_storage_dim = storage_bytes // value_type_size
-            assert (
-                check_storage_dim == storage_dim
-            ), f"Invalid storage_dim {storage_dim}, embedding_dim is {embedding_dim}, you can set storage_dim to embedding_dim or set size_factor=1 when using Sgd optimizer, set storage_dim to embedding_dim*2 or set size_factor=2 when using Momentum/Adagrad optimizer, set storage_dim to embedding_dim*3 or set size_factor=3 when using Adam/Ftrl optimizer, or if you want use sparse Adam, please set storage_dim to {check_storage_dim}"
         key_value_store_options["storage_dim"] = storage_dim
     else:
         key_value_store_options["storage_dim"] = scale_factor * embedding_dim
