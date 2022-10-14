@@ -13,14 +13,14 @@ same_or_exit "True"
 
 # testing import
 python3 -c 'import torch; torch.randn(2,3)'
-python3 -c 'import torch.nn; torch.nn.Graph' 
-python3 -c 'import torch.version; torch.version.__version__' 
-python3 -c 'from torch import *; randn(2,3)' 
-python3 -c 'from torch.nn import *; Graph' 
-python3 -c 'from torch.version import *; __version__' 
-python3 -c 'from torch import nn; nn.Graph' 
-python3 -c 'from torch.version import __version__' 
-! (python3 -c 'import torch; torch.no_exist' 2>&1 >/dev/null | grep -q 'NotImplementedError')
+python3 -c 'import torch.nn; torch.nn.Graph'
+python3 -c 'import torch.version; torch.version.__version__'
+python3 -c 'from torch import *; randn(2,3)'
+python3 -c 'from torch.nn import *; Graph'
+python3 -c 'from torch.sbp import *; sbp'
+python3 -c 'from torch import nn; nn.Graph'
+python3 -c 'from torch.version import __version__'
+python3 -c 'import torch; torch.no_exist' 2>&1 >/dev/null | grep -q 'NotImplementedError'
 
 eval $(python3 -m oneflow.mock_torch disable)
 same_or_exit "False"
@@ -28,7 +28,7 @@ eval $(python3 -m oneflow.mock_torch enable)
 same_or_exit "True"
 eval $(python3 -m oneflow.mock_torch disable) # recover
 same_or_exit "False"
-eval $(oneflow-mock-torch) 
+eval $(oneflow-mock-torch)
 same_or_exit "True"
 eval $(oneflow-mock-torch disable)
 same_or_exit "False"
@@ -38,12 +38,13 @@ eval $(oneflow-mock-torch disable)
 same_or_exit "False"
 python3 $MOCK_UNITTEST --failfast --verbose
 # mocking won't work because torch is already imported
-python3 -c "import torch; from oneflow.mock_torch import mock; 
+python3 -c "import torch; from oneflow.mock_torch import mock;
 mock(); assert(torch.__package__ == 'torch')"
 # testing import *
 python3 -c "
 import oneflow
+import oneflow.nn
 from oneflow.mock_torch import mock; mock();
-from torch import *;
-from torch.nn import *;
-from torch.version import *"
+from torch.sbp import *; assert(sbp == oneflow.sbp.sbp);
+from torch import *; assert(randn == oneflow.randn);
+from torch.nn import *; assert(Graph == oneflow.nn.Graph)"
