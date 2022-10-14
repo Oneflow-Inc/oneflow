@@ -11,10 +11,10 @@ if
     python3 -c 'import torch; torch.randn(2,3)' &&\
     python3 -c 'import torch.nn; torch.nn.Graph' &&\
     python3 -c 'import torch.version; torch.version.__version__' &&\
-    python3 -c 'from torch import *' &&\
-    python3 -c 'from torch.nn import *' &&\
-    python3 -c 'from torch.version import *' &&\
-    python3 -c 'from torch import nn' &&\
+    python3 -c 'from torch import *; randn(2,3)' &&\
+    python3 -c 'from torch.nn import *; Graph' &&\
+    python3 -c 'from torch.version import *; __version__' &&\
+    python3 -c 'from torch import nn; nn.Graph' &&\
     python3 -c 'from torch.version import __version__' &&\
     ! (python3 -c 'import torch; torch.no_exist' 2>&1 >/dev/null | grep -q 'NotImplementedError')
 then
