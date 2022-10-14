@@ -35,6 +35,16 @@ std::string GetOutRegstNameByObn(const std::string& obn) { return "__" + obn; }
 
 }  // namespace
 
+void NormalForwardCompTaskNode::ProduceOutRegstByNameAndBlockNum(const std::string& name,
+                                                                 size_t mem_block_num) {
+  if (mem_block_num != -1) {
+    CHECK_GT(mem_block_num, 0);
+    ProduceRegst(name, false, mem_block_num, mem_block_num);
+  } else {
+    ProduceRegst(name, true);
+  }
+}
+
 size_t RegstNum4Op(const Operator& sole_op) {
   size_t mem_block_num = RegstNum4OpSameOutputBlob(sole_op.op_conf().op_type_case());
   if (sole_op.op_conf().has_user_conf()) {
@@ -54,16 +64,6 @@ size_t RegstNum4Op(const Operator& sole_op) {
     }
   }
   return mem_block_num;
-}
-
-void NormalForwardCompTaskNode::ProduceOutRegstByNameAndBlockNum(const std::string& name,
-                                                                 size_t mem_block_num) {
-  if (mem_block_num != -1) {
-    CHECK_GT(mem_block_num, 0);
-    ProduceRegst(name, false, mem_block_num, mem_block_num);
-  } else {
-    ProduceRegst(name, true);
-  }
 }
 
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
