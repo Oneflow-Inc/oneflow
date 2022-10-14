@@ -3309,7 +3309,8 @@ class FillFunctor {
     JUST(CheckInplaceValid(in));
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("floating_value", "is_floating_value", "integral_value");
-    if (IsFloatingDataType(in->dtype()->data_type())) {
+    if (IsFloatingDataType(in->dtype()->data_type())
+        || in->dtype()->data_type() == DataType::kFloat16) {
       attrs.SetAllAttrs(value.As<double>(), true, NullOpt);
     } else if (IsIntegralDataType(in->dtype()->data_type())) {
       attrs.SetAllAttrs(NullOpt, false, value.As<int64_t>());
