@@ -35,7 +35,7 @@ template<DeviceType device_type, typename T, typename G>
 struct MultiTensorSGDUpdateKernelUtil {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
                      float l1, float l2, float weight_decay, float learning_rate_val,
-                     float lr_scale, const T* scale_by_ptr,
+                     float lr_scale, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, TensorTupleParams<2> tensor_tuple_params);
 };
 
@@ -45,7 +45,7 @@ struct MultiTensorAdamUpdateKernelUtil {
                      float l1, float l2, float beta1, float beta2, float epsilon,
                      float weight_decay, bool amsgrad, bool do_bias_correction,
                      float learning_rate_val, float bias_correction1_val,
-                     float bias_correction2_val, float lr_scale,
+                     float bias_correction2_val, float lr_scale, const float* learning_rate,
                      const T* scale_by_ptr, const int64_t* skip_if, const float* bias_correction1,
                      const float* bias_correction2, TensorTupleParams<4> tensor_tuple_params);
 };
@@ -54,7 +54,7 @@ template<DeviceType device_type, typename T, typename G>
 struct MultiTensorSGDUpdateWithCastKernelUtil {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
                      float l1, float l2, float weight_decay, float learning_rate_val,
-                     float lr_scale, const T* scale_by_ptr,
+                     float lr_scale, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, TensorTupleParams<3> tensor_tuple_params);
 };
 
@@ -64,7 +64,7 @@ struct MultiTensorAdamUpdateWithCastKernelUtil {
                      float l1, float l2, float beta1, float beta2, float epsilon,
                      float weight_decay, bool amsgrad, bool do_bias_correction,
                      float learning_rate_val, float bias_correction1_val,
-                     float bias_correction2_val, float lr_scale,
+                     float bias_correction2_val, float lr_scale, const float* learning_rate,
                      const T* scale_by_ptr, const int64_t* skip_if, const float* bias_correction1,
                      const float* bias_correction2, TensorTupleParams<5> tensor_tuple_params);
 };
