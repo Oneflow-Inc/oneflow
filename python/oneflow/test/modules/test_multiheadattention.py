@@ -85,17 +85,26 @@ def _generate_inputs_for_nn_module(
     query = random_tensor(len(query_shape), *query_shape).to(device)
     key = random_tensor(len(key_shape), *key_shape).to(device)
     value = random_tensor(len(value_shape), *value_shape).to(device)
-    key_padding_mask = random_tensor(len(key_padding_mask_shape), *key_padding_mask_shape).to(device) > 0
+    key_padding_mask = (
+        random_tensor(len(key_padding_mask_shape), *key_padding_mask_shape).to(device)
+        > 0
+    )
     attn_mask = random_tensor(2, tgt_len, src_len).to(device) > 0
 
     return query, key, value, key_padding_mask, attn_mask
+
 
 def _align_params(flow_module: flow.nn.Module, torch_module):
     state_dict = flow_module.state_dict()
     for k, v in state_dict.items():
         with torch_original.no_grad():
-            torch_module.get_parameter(k).copy_(torch_original.Tensor(v.numpy()).to(torch_module.get_parameter(k).device))
+            torch_module.get_parameter(k).copy_(
+                torch_original.Tensor(v.numpy()).to(
+                    torch_module.get_parameter(k).device
+                )
+            )
     return flow_module, torch_module
+
 
 def _test_mha_nn_module(test_case):
     dim_per_head = random_utils.randint(10, 20)
@@ -109,7 +118,6 @@ def _test_mha_nn_module(test_case):
     bias = random_bool()
     add_bias_kv = random_bool()
     add_zero_attn = random_bool()
-
 
     query, key, value, key_padding_mask, attn_mask = _generate_inputs_for_nn_module(
         embed_dim, kdim=kdim, vdim=vdim, device=device, batch_first=batch_first
@@ -144,16 +152,40 @@ def _test_mha_nn_module(test_case):
     flow_mha, torch_mha = _align_params(flow_mha, torch_mha)
 
     torch_results = torch_mha(
-        query.pytorch, key.pytorch, value.pytorch, key_padding_mask.pytorch, need_weights=True, attn_mask=attn_mask.pytorch
+        query.pytorch,
+        key.pytorch,
+        value.pytorch,
+        key_padding_mask.pytorch,
+        need_weights=True,
+        attn_mask=attn_mask.pytorch,
     )
 
     flow_results = flow_mha(
-        query.oneflow, key.oneflow, value.oneflow, key_padding_mask.oneflow, need_weights=True, attn_mask=attn_mask.oneflow
+        query.oneflow,
+        key.oneflow,
+        value.oneflow,
+        key_padding_mask.oneflow,
+        need_weights=True,
+        attn_mask=attn_mask.oneflow,
     )
-    
-    test_case.assertTrue(np.allclose(torch_results[0].detach().cpu().numpy(), flow_results[0].detach().numpy(), 1e-4, 1e-4))
+
+    test_case.assertTrue(
+        np.allclose(
+            torch_results[0].detach().cpu().numpy(),
+            flow_results[0].detach().numpy(),
+            1e-4,
+            1e-4,
+        )
+    )
     if torch_results[1] is not None and flow_results[1] is not None:
-        test_case.assertTrue(np.allclose(torch_results[1].detach().cpu().numpy(), flow_results[1].detach().numpy(), 1e-4, 1e-4))
+        test_case.assertTrue(
+            np.allclose(
+                torch_results[1].detach().cpu().numpy(),
+                flow_results[1].detach().numpy(),
+                1e-4,
+                1e-4,
+            )
+        )
 
     torch_results[0].sum().backward()
     flow_results[0].sum().backward()
@@ -230,7 +262,7 @@ class TestMultiHeadAttentionModule(flow.unittest.TestCase):
             # key_shape = (batch_size, src_len, kdim)
             # value_shape = (batch_size, src_len, vdim)
             query_shape = (tgt_len, batch_size, embed_dim)
-            key_shape = (src_len, batch_size,kdim)
+            key_shape = (src_len, batch_size, kdim)
             value_shape = (src_len, batch_size, vdim)
             key_padding_mask_shape = (batch_size, src_len)
         else:
@@ -242,7 +274,12 @@ class TestMultiHeadAttentionModule(flow.unittest.TestCase):
         query = random_tensor(len(query_shape), *query_shape).to(device)
         key = random_tensor(len(key_shape), *key_shape).to(device)
         value = random_tensor(len(value_shape), *value_shape).to(device)
-        key_padding_mask = random_tensor(len(key_padding_mask_shape), *key_padding_mask_shape).to(device) > 0
+        key_padding_mask = (
+            random_tensor(len(key_padding_mask_shape), *key_padding_mask_shape).to(
+                device
+            )
+            > 0
+        )
         attn_mask = random_tensor(2, tgt_len, src_len).to(device) > 0
         out_proj_weight = random_tensor(2, embed_dim, embed_dim).to(device)
         out_proj_bias = random_tensor(1, embed_dim).to(device)
@@ -252,14 +289,17 @@ class TestMultiHeadAttentionModule(flow.unittest.TestCase):
             bias_v = random_tensor(3, 1, 1, vdim).to(device)
             static_k, static_v = None, None
         elif is_batched:
-            static_k = random_tensor(3, batch_size * num_heads, src_len, dims_per_head).to(device)
-            static_v = random_tensor(3, batch_size * num_heads, src_len, dims_per_head).to(device)
-            bias_k , bias_v = None, None
+            static_k = random_tensor(
+                3, batch_size * num_heads, src_len, dims_per_head
+            ).to(device)
+            static_v = random_tensor(
+                3, batch_size * num_heads, src_len, dims_per_head
+            ).to(device)
+            bias_k, bias_v = None, None
         else:
             static_k = random_tensor(3, num_heads, src_len, dims_per_head).to(device)
             static_v = random_tensor(3, num_heads, src_len, dims_per_head).to(device)
-            bias_k , bias_v = None, None
-
+            bias_k, bias_v = None, None
 
         if use_separate_proj_weight:
             q_proj_weight = random_tensor(2, embed_dim, embed_dim).to(device)
@@ -303,13 +343,6 @@ class TestMultiHeadAttentionModule(flow.unittest.TestCase):
             return result
         else:
             return result[0]
-
-
-
-
-        pass
-    # def test_multiheadattention(test_case):
-    #     _test_multiheadattention(test_case)
 
 
 if __name__ == "__main__":

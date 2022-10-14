@@ -82,4 +82,6 @@ from oneflow._C import unfold
 from oneflow._C import fold
 from .functional_deform_conv import deform_conv2d
 from oneflow._C import kl_div_loss as kl_div
-from .functional_multi_head_attention import multi_head_attention as multi_head_attention_forward
+from .functional_multi_head_attention import (
+    multi_head_attention as multi_head_attention_forward,
+)
