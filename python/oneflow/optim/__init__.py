@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.nn.optimizer.adam import Adam
+from oneflow.nn.optimizer.smart_decay_adam import SmartDecayAdam
 from oneflow.nn.optimizer.adamw import AdamW
 from oneflow.nn.optimizer.optimizer import Optimizer
 from oneflow.nn.optimizer.rmsprop import RMSprop
