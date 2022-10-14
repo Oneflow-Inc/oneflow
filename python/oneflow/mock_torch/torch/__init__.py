@@ -13,14 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import sys
 import oneflow
 from oneflow.mock_torch import (
     ModuleWrapper,
-    monkeypatch_torch,
+    OneflowImporter,
 )
 
 def __getattr__(name: str):
     return ModuleWrapper(oneflow).__getattr__(name)
 
 # register importer in meta path
-monkeypatch_torch()
+sys.meta_path.insert(0, OneflowImporter())

@@ -1,10 +1,10 @@
 import unittest
 import oneflow as flow
 import oneflow.unittest
-from oneflow.mock_torch import monkeypatch_torch
+from oneflow.mock_torch import mock
 import sys
 
-class TestMonkeyPatch(flow.unittest.TestCase):
+class TestMock(flow.unittest.TestCase):
     def test_simple_mock(test_case):
         import torch
         test_case.assertTrue(torch.__package__ == 'oneflow')
@@ -28,5 +28,5 @@ class TestMonkeyPatch(flow.unittest.TestCase):
             in str(context.exception)
         )
 if __name__ == "__main__":
-    monkeypatch_torch()
+    mock()
     unittest.main()
