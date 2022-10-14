@@ -104,6 +104,40 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorDiv, bfloat16, bfloat16> 
 };
 
 template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTruncDiv, float, float> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC float operator()(float src0, float src1) const { return std::trunc(src0 / src1); }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTruncDiv, double, double> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC double operator()(double src0, double src1) const {
+    return std::trunc(src0 / src1);
+  }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTruncDiv, float16, float16> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC float16 operator()(float16 src0, float16 src1) const {
+    return static_cast<float16>(std::trunc(static_cast<float>(src0) / static_cast<float>(src1)));
+  }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTruncDiv, bfloat16, bfloat16> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bfloat16 operator()(bfloat16 src0, bfloat16 src1) const {
+    return std::trunc(src0 / src1);
+  }
+};
+
+template<>
 struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorMod, float, float> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
@@ -300,12 +334,14 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kErfcBackwardWithDyX, Src, Dst>
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kPow, bool);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFmod, bool);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFloorDiv, bool);
+SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kTruncDiv, bool);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFloorMod, bool);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kScalarBasePowerGrad, bool);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kScalarExpPowerGrad, bool);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kPow, char);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFmod, char);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFloorDiv, char);
+SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kTruncDiv, char);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFloorMod, char);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kScalarBasePowerGrad, char);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kScalarExpPowerGrad, char);

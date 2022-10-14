@@ -64,33 +64,10 @@ void CopyFromNumpyArray(ep::Stream* stream,
 }
 }  // namespace
 
-template<typename T>
 Maybe<void> CopyLocalTensorFromUntypedArray(const std::shared_ptr<Tensor>& tensor,
                                             PyObject* array) {
-  return CopyBetweenLocalTensorAndNumpy<T>(tensor, array, CopyFromNumpyArray, "mut",
-                                           /*block_host_until_done=*/false);
-}
-
-Maybe<std::string> GetCopyLocalTensorToNumpyFuncName(DataType dtype) {
-  using namespace oneflow;
-  static const HashMap<int64_t, std::shared_ptr<std::string>> data_type2func_name{
-#define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
-  {type_proto, std::make_shared<std::string>("_copy_to_numpy_" #type_cpp)},
-      OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ)
-#undef DATA_TYPE_FUNC_NAME_PAIR
-  };
-  return JUST(MapAt(data_type2func_name, static_cast<int64_t>(dtype)));
-}
-
-Maybe<std::string> GetCopyLocalTensorFromNumpyFuncName(DataType dtype) {
-  using namespace oneflow;
-  static const HashMap<int64_t, std::shared_ptr<std::string>> data_type2func_name{
-#define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
-  {type_proto, std::make_shared<std::string>("_copy_from_numpy_" #type_cpp)},
-      OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ)
-#undef DATA_TYPE_FUNC_NAME_PAIR
-  };
-  return JUST(MapAt(data_type2func_name, static_cast<int64_t>(dtype)));
+  return CopyBetweenLocalTensorAndNumpy(tensor, array, CopyFromNumpyArray, "mut",
+                                        /*block_host_until_done=*/false);
 }
 
 Maybe<std::tuple<std::vector<Shape>, std::vector<Symbol<DType>>>>
@@ -147,11 +124,6 @@ Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor) {
   return tuple;
 }
 
-#define MAKE_SWITCH_ENTRY(func_name, dtype) func_name<dtype>
-DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, CopyLocalTensorFromUntypedArray,  // NOLINT
-                          MAKE_SWITCH_ENTRY,                             // NOLINT
-                          MAKE_DATA_TYPE_CTRV_SEQ(POD_AND_HALF_DATA_TYPE_SEQ));
-
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                       const Optional<Symbol<Device>>& device,
                                       const bool requires_grad, const bool pin_memory) {
@@ -177,16 +149,6 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   if (!array) {
     return Error::RuntimeError() << "Can not convert input data to a new numpy array.";
   }
-  // flow.tensor([1., 2.]).dtype should be flow.float32 rather than flow.float64
-  if (!PyArray_Check(data)) {
-    int np_array_type = PyArray_TYPE(reinterpret_cast<PyArrayObject*>(array));
-    // Cast to float if data is double sequence, rather than numpy array.
-    if (np_array_type == NPY_DOUBLE && np_dtype == nullptr) {
-      PyObject* fp32_array = PyArray_Cast(reinterpret_cast<PyArrayObject*>(array), NPY_FLOAT);
-      Py_DECREF(array);
-      array = fp32_array;
-    }
-  }
   auto* np_arr = reinterpret_cast<PyArrayObject*>(array);
   const npy_intp* dims_ptr = PyArray_SHAPE(np_arr);
   const Shape shape(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));
@@ -200,11 +162,15 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   }
   std::shared_ptr<Tensor> tensor = JUST(
       functional::Empty(shape, JUST(DType::Get(np_data_type)), device_, /*pin_memory=*/pin_memory));
-  JUST(SwitchCopyLocalTensorFromUntypedArray(SwitchCase(np_data_type), tensor, array));
+  JUST(CopyLocalTensorFromUntypedArray(tensor, array));
 
   Py_DECREF(array);
   if (dtype && JUST(dtype)->data_type() != np_data_type) {
     tensor = JUST(functional::To(tensor, JUST(dtype), false));
+  } else if (!dtype && !PyArray_Check(data) && tensor->dtype()->is_floating_point()
+             && GetDefaultDType() != tensor->dtype()) {
+    // If it not assign dtype and created from PySequence, cast tensor to default floating dtype
+    tensor = JUST(functional::To(tensor, JUST(DType::Get(DataType::kFloat)), false));
   }
   JUST(tensor->set_requires_grad(requires_grad));
   return tensor;
@@ -254,7 +220,7 @@ Maybe<Tensor> MakeGlobalTensorFromData(PyObject* data, const Optional<Symbol<DTy
   Symbol<Device> device = JUST(Device::New(placement->device_tag()));
   std::shared_ptr<Tensor> local_tensor =
       JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device, /*pin_memory=*/false));
-  JUST(SwitchCopyLocalTensorFromUntypedArray(SwitchCase(data_type), local_tensor, array));
+  JUST(CopyLocalTensorFromUntypedArray(local_tensor, array));
 
   Py_DECREF(array);
   // Cast to float if data is double sequence, rather than numpy array.

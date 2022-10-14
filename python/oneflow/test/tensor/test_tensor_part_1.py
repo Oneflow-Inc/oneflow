@@ -157,34 +157,40 @@ class TestTensor(flow.unittest.TestCase):
         return input.gather(dim, index)
 
     def _test_tensor_init_methods(test_case, tensor_creator, get_numpy):
-        shape = (2, 3, 4, 5)
-        x = tensor_creator(*shape)
-        np_ones = np.ones(x.shape)
-        np_zeros = np.zeros(x.shape)
-        random_fill_val = 923.53
-        x.fill_(random_fill_val)
-        test_case.assertTrue(np.allclose(get_numpy(x), random_fill_val * np_ones))
-        flow.nn.init.ones_(x)
-        test_case.assertTrue(np.allclose(get_numpy(x), np_ones))
-        flow.nn.init.zeros_(x)
-        test_case.assertTrue(np.allclose(get_numpy(x), np_zeros))
-        flow.nn.init.constant_(x, random_fill_val)
-        test_case.assertTrue(np.allclose(get_numpy(x), random_fill_val * np_ones))
-        z = tensor_creator(5, 4, 3, 2)
-        flow.nn.init.kaiming_normal_(z, a=0.1, mode="fan_out", nonlinearity="relu")
-        flow.nn.init.kaiming_uniform_(z)
-        z.requires_grad_()
-        flow.nn.init.xavier_normal_(z, flow.nn.init.calculate_gain("relu"))
-        flow.nn.init.xavier_uniform_(z, flow.nn.init.calculate_gain("relu"))
-        flow.nn.init.xavier_normal_(z, flow.nn.init.calculate_gain("leaky_relu", 0.2))
-        flow.nn.init.xavier_uniform_(z, flow.nn.init.calculate_gain("leaky_relu", 0.2))
-        flow.nn.init.trunc_normal_(z, mean=0.0, std=1.0, a=-2.0, b=2.0)
-        flow.nn.init.normal_(z, mean=0.0, std=1.0)
-        flow.nn.init.orthogonal_(z)
+        for dtype in [flow.float32, flow.float16]:
+            shape = (2, 3, 4, 5)
+            x = tensor_creator(*shape).to(dtype)
+            np_ones = np.ones(x.shape)
+            np_zeros = np.zeros(x.shape)
+            random_fill_val = 2.0
+            x.fill_(random_fill_val)
+            test_case.assertTrue(np.allclose(get_numpy(x), random_fill_val * np_ones))
+            flow.nn.init.ones_(x)
+            test_case.assertTrue(np.allclose(get_numpy(x), np_ones))
+            flow.nn.init.zeros_(x)
+            test_case.assertTrue(np.allclose(get_numpy(x), np_zeros))
+            flow.nn.init.constant_(x, random_fill_val)
+            test_case.assertTrue(np.allclose(get_numpy(x), random_fill_val * np_ones))
+            z = tensor_creator(5, 4, 3, 2)
+            flow.nn.init.kaiming_normal_(z, a=0.1, mode="fan_out", nonlinearity="relu")
+            flow.nn.init.kaiming_uniform_(z)
+            z.requires_grad_()
+            flow.nn.init.xavier_normal_(z, flow.nn.init.calculate_gain("relu"))
+            flow.nn.init.xavier_uniform_(z, flow.nn.init.calculate_gain("relu"))
+            flow.nn.init.xavier_normal_(
+                z, flow.nn.init.calculate_gain("leaky_relu", 0.2)
+            )
+            flow.nn.init.xavier_uniform_(
+                z, flow.nn.init.calculate_gain("leaky_relu", 0.2)
+            )
+            flow.nn.init.trunc_normal_(z, mean=0.0, std=1.0, a=-2.0, b=2.0)
+            flow.nn.init.normal_(z, mean=0.0, std=1.0)
+            flow.nn.init.orthogonal_(z)
+
         x = tensor_creator(*shape).to(dtype=flow.int32)
         np_ones = np.ones(x.shape, dtype=np.int32)
         np_zeros = np.zeros(x.shape, dtype=np.int32)
-        random_fill_val = -51
+        random_fill_val = -2
         x.fill_(random_fill_val)
         test_case.assertTrue(np.allclose(get_numpy(x), random_fill_val * np_ones))
         flow.nn.init.ones_(x)
@@ -1267,6 +1273,11 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.tensor(np_arr, dtype=flow.int8)
         test_case.assertTrue(np.array_equal(x.numpy(), [1.0, 2.0, 3.0]))
         test_case.assertEqual(x.dtype, flow.int8)
+
+    def test_tensor_contains_magic_method(test_case):
+        x = flow.tensor([[1, 2, 3], [4, 5, 6]])
+        y = 1 in x
+        test_case.assertEqual(y, True)
 
     @profile(torch.Tensor.fill_)
     def profile_fill_(test_case):
