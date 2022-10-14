@@ -21,8 +21,7 @@ class ModuleWrapper(ModuleType):
             if name == "__path__":
                 return None
             if name == "__all__":
-                setattr(self.module, name, dir(self.module))
-                return getattr(self.module, name)
+                return [attr for attr in dir(self.module) if not attr.startswith('_')]
             raise NotImplementedError(self.module.__name__ + "." + name + error_msg)
         attr = getattr(self.module, name)
         if ismodule(attr):
