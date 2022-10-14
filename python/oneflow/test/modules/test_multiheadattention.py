@@ -29,7 +29,6 @@ def _generate_inputs_for_native_mha():
     dim_per_head = random(1, 10)
     num_heads = random(3, 10)
     embed_dim = dim_per_head * num_heads
-    # num_heads = 6
     in_proj_dim = embed_dim
     out_proj_dim = random(20, 40)
 
@@ -41,7 +40,7 @@ def _generate_inputs_for_native_mha():
     qkv_bias = random_tensor(1, embed_dim * 3).to(device)
     proj_weight = random_tensor(2, out_proj_dim, in_proj_dim).to(device)
     proj_bias = random_tensor(1, out_proj_dim).to(device)
-    mask = random_tensor(2, batch_size, seq_len, low=0, high=1).to(device) > 0.5
+    mask = random_tensor(2, batch_size, seq_len, low=0, high=1).to(device) > 0
 
     return (
         query,
@@ -98,13 +97,12 @@ def _align_params(flow_module: flow.nn.Module, torch_module):
             torch_module.get_parameter(k).copy_(torch_original.Tensor(v.numpy()).to(torch_module.get_parameter(k).device))
     return flow_module, torch_module
 
-def _test_nn_module(test_case):
+def _test_mha_nn_module(test_case):
     dim_per_head = random_utils.randint(10, 20)
     num_heads = random_utils.randint(1, 10)
     embed_dim = dim_per_head * num_heads
     vdim = random_utils.choice([embed_dim, random_utils.randint(10, 200)])
     kdim = random_utils.choice([embed_dim, random_utils.randint(10, 200)])
-    # dropout = random_utils.choice([0, 0, random_utils.random()])
     dropout = 0
     batch_first = random_bool().value()
     device = random_device().value()
@@ -167,76 +165,6 @@ def _test_nn_module(test_case):
         test_case.assertTrue(np.allclose(torch_grad, flow_grad, 1e-4, 1e-4))
 
 
-
-
-
-def _test_multiheadattention(test_case):
-    batch_size = 4
-    seq_len = 13
-    emb_dim = 35
-    num_heads = 5
-    in_proj_dim = emb_dim
-    out_proj_dim = 32
-
-    query = flow.randn(batch_size, seq_len, emb_dim).cuda()
-    key = flow.randn(batch_size, seq_len, emb_dim).cuda()
-    value = flow.randn(batch_size, seq_len, emb_dim).cuda()
-    qkv_weight = flow.randn(emb_dim * 3, in_proj_dim).cuda()
-    qkv_bias = flow.randn(emb_dim * 3).cuda()
-    proj_weight = flow.randn(out_proj_dim, in_proj_dim).cuda()
-    proj_bias = flow.randn(out_proj_dim,).cuda()
-    mask = (flow.randn(batch_size, seq_len) > 0).cuda()
-
-    query = flow.randn(batch_size, seq_len, emb_dim)
-    key = flow.randn(batch_size, seq_len, emb_dim)
-    value = flow.randn(batch_size, seq_len, emb_dim)
-    qkv_weight = flow.randn(emb_dim * 3, in_proj_dim)
-    qkv_bias = flow.randn(emb_dim * 3)
-    proj_weight = flow.randn(out_proj_dim, in_proj_dim)
-    proj_bias = flow.randn(out_proj_dim,)
-    mask = flow.randn(batch_size, seq_len) > 0
-    # mask = flow.zeros(batch_size, seq_len).bool().cuda()
-    print(mask)
-
-    flow_result = flow._native_multi_head_attention(
-        query,
-        key,
-        value,
-        emb_dim,
-        num_heads,
-        qkv_weight,
-        qkv_bias,
-        proj_weight,
-        proj_bias,
-        mask=mask,
-        need_weights=True,
-        average_attn_weights=True,
-        mask_type=1
-        # mask=N, False, False, 1
-    )
-    query, key, value, qkv_weight, qkv_bias, proj_weight, proj_bias, mask = map(
-        lambda x: torch_original.tensor(x.numpy()),
-        [query, key, value, qkv_weight, qkv_bias, proj_weight, proj_bias, mask],
-    )
-    torch_result = torch_original._native_multi_head_attention(
-        query,
-        key,
-        value,
-        emb_dim,
-        num_heads,
-        qkv_weight,
-        qkv_bias,
-        proj_weight,
-        proj_bias,
-        mask=mask,
-        need_weights=True,
-        average_attn_weights=True,
-        mask_type=1,
-    )
-    print("flow_result: ", flow_result[0].mean())
-    print("torch_result: ", torch_result[0].mean())
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestMultiHeadAttentionModule(flow.unittest.TestCase):
     @autotest(n=10)
@@ -270,37 +198,116 @@ class TestMultiHeadAttentionModule(flow.unittest.TestCase):
         )
 
     @autotest(n=10)
-    def test_nn_module(test_case):
-        _test_nn_module(test_case)
-        # dim_per_head = random_utils.randint(10, 20)
-        # num_heads = random_utils.randint(1, 10)
-        # embed_dim = dim_per_head * num_heads
-        # vdim = random_utils.choice([embed_dim, random_utils.randint(10, 200)])
-        # kdim = random_utils.choice([embed_dim, random_utils.randint(10, 200)])
-        # dropout = random_utils.choice([0, 0, random_utils.random()])
-        # batch_first = random_bool().value()
-        # device = random_device()
+    def test_mha_nn_module(test_case):
+        _test_mha_nn_module(test_case)
 
-        # query, key, value, key_padding_mask, attn_mask = _generate_inputs_for_nn_module(
-        #     embed_dim, kdim=kdim, vdim=vdim, device=device, batch_first=batch_first
-        # )
+    @autotest(n=10)
+    def test_mha_functional(test_case):
+        device = random_device()
 
-        # mha = torch.nn.MultiheadAttention(
-        #     embed_dim,
-        #     num_heads,
-        #     dropout=dropout,
-        #     bias=random_bool(),
-        #     add_bias_kv=random_bool(),
-        #     add_zero_attn=random_bool(),
-        #     batch_first=batch_first,
-        #     kdim=kdim,
-        #     vdim=vdim,
-        #     device=device,
-        # )
-        # return mha(
-        #     query, key, value, key_padding_mask, need_weights=True, attn_mask=attn_mask
-        # )
+        is_batched = random_bool().value()
+        use_separate_proj_weight = random_bool().value()
+        bias_k_v = random_bool().value()
+        # need_weights = random_bool().value()
+        need_weights = True
 
+        batch_size = random(1, 20)
+        tgt_len = random(1, 20)
+        src_len = random(1, 20)
+        num_heads = random(3, 10)
+        dims_per_head = random(10, 20)
+        embed_dim = num_heads * dims_per_head
+
+        if use_separate_proj_weight:
+            kdim = random(30, 200)
+            vdim = random(30, 200)
+        else:
+            kdim = embed_dim
+            vdim = embed_dim
+
+        if is_batched:
+            # query_shape = (batch_size, tgt_len, embed_dim)
+            # key_shape = (batch_size, src_len, kdim)
+            # value_shape = (batch_size, src_len, vdim)
+            query_shape = (tgt_len, batch_size, embed_dim)
+            key_shape = (src_len, batch_size,kdim)
+            value_shape = (src_len, batch_size, vdim)
+            key_padding_mask_shape = (batch_size, src_len)
+        else:
+            query_shape = (tgt_len, embed_dim)
+            key_shape = (src_len, kdim)
+            value_shape = (src_len, vdim)
+            key_padding_mask_shape = (src_len,)
+
+        query = random_tensor(len(query_shape), *query_shape).to(device)
+        key = random_tensor(len(key_shape), *key_shape).to(device)
+        value = random_tensor(len(value_shape), *value_shape).to(device)
+        key_padding_mask = random_tensor(len(key_padding_mask_shape), *key_padding_mask_shape).to(device) > 0
+        attn_mask = random_tensor(2, tgt_len, src_len).to(device) > 0
+        out_proj_weight = random_tensor(2, embed_dim, embed_dim).to(device)
+        out_proj_bias = random_tensor(1, embed_dim).to(device)
+
+        if bias_k_v:
+            bias_k = random_tensor(3, 1, 1, kdim).to(device)
+            bias_v = random_tensor(3, 1, 1, vdim).to(device)
+            static_k, static_v = None, None
+        elif is_batched:
+            static_k = random_tensor(3, batch_size * num_heads, src_len, dims_per_head).to(device)
+            static_v = random_tensor(3, batch_size * num_heads, src_len, dims_per_head).to(device)
+            bias_k , bias_v = None, None
+        else:
+            static_k = random_tensor(3, num_heads, src_len, dims_per_head).to(device)
+            static_v = random_tensor(3, num_heads, src_len, dims_per_head).to(device)
+            bias_k , bias_v = None, None
+
+
+        if use_separate_proj_weight:
+            q_proj_weight = random_tensor(2, embed_dim, embed_dim).to(device)
+            k_proj_weight = random_tensor(2, embed_dim, kdim).to(device)
+            v_proj_weight = random_tensor(2, embed_dim, vdim).to(device)
+            in_proj_weight = None
+            in_proj_bias = None
+        else:
+            q_proj_weight, k_proj_weight, v_proj_weight = None, None, None
+            in_proj_weight = random_tensor(2, embed_dim * 3, embed_dim).to(device)
+            in_proj_bias = random_tensor(1, embed_dim * 3,).to(device)
+
+        result = torch.nn.functional.multi_head_attention_forward(
+            query=query,
+            key=key,
+            value=value,
+            embed_dim_to_check=embed_dim,
+            num_heads=num_heads,
+            in_proj_weight=in_proj_weight,
+            in_proj_bias=in_proj_bias,
+            bias_k=bias_k,
+            bias_v=bias_v,
+            add_zero_attn=random_bool(),
+            dropout_p=0,
+            out_proj_weight=out_proj_weight,
+            out_proj_bias=out_proj_bias,
+            training=False,
+            key_padding_mask=key_padding_mask,
+            need_weights=need_weights,
+            attn_mask=attn_mask,
+            use_separate_proj_weight=use_separate_proj_weight,
+            q_proj_weight=q_proj_weight,
+            k_proj_weight=k_proj_weight,
+            v_proj_weight=v_proj_weight,
+            static_k=static_k,
+            static_v=static_v,
+            average_attn_weights=random_bool(),
+        )
+
+        if need_weights:
+            return result
+        else:
+            return result[0]
+
+
+
+
+        pass
     # def test_multiheadattention(test_case):
     #     _test_multiheadattention(test_case)
 

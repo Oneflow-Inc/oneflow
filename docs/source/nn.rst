@@ -162,6 +162,7 @@ Non-linear Activations (weighted sum, nonlinearity)
     nn.Tanh 
     nn.Threshold 
     nn.GLU
+    nn.MultiheadAttention
 
 Non-linear Activations (other)
 ----------------------------------
