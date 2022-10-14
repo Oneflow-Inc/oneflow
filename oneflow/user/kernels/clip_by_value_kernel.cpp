@@ -54,7 +54,11 @@ int64_t GetDtypeMatchedValue(double floating, int64_t integral) {
 #ifdef WITH_CUDA
 template<>
 half GetDtypeMatchedValue(double floating, int64_t integral) {
+#if CUDA_VERSION >= 11000
   return __double2half(floating);
+#else
+  return __float2half(static_cast<float>(floating));
+#endif
 }
 #endif
 
