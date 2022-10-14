@@ -41,21 +41,24 @@ int64_t IDMgr::NewRegstDescId() {
   Int64 x;
   x.first = GlobalProcessCtx::Rank();
   x.second = regst_desc_id_count_++;
-  return *reinterpret_cast<int64_t*>(&x);
+  const auto* __attribute__((__may_alias__)) ptr = reinterpret_cast<int64_t*>(&x);
+  return *ptr;
 }
 
 int64_t IDMgr::NewMemBlockId() {
   Int64 x;
   x.first = GlobalProcessCtx::Rank();
   x.second = mem_block_id_count_++;
-  return *reinterpret_cast<int64_t*>(&x);
+  const auto* __attribute__((__may_alias__)) ptr = reinterpret_cast<int64_t*>(&x);
+  return *ptr;
 }
 
 int64_t IDMgr::NewChunkId() {
   Int64 x;
   x.first = GlobalProcessCtx::Rank();
   x.second = chunk_id_count_++;
-  return *reinterpret_cast<int64_t*>(&x);
+  const auto* __attribute__((__may_alias__)) ptr = reinterpret_cast<int64_t*>(&x);
+  return *ptr;
 }
 
 }  // namespace oneflow
