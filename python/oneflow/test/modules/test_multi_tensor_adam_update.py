@@ -21,7 +21,6 @@ import numpy as np
 from oneflow.test_utils.test_util import GenArgDict
 
 import oneflow as flow
-from oneflow.nn.parameter import Parameter
 
 
 def compare_with_numpy_adam(
@@ -34,6 +33,7 @@ def compare_with_numpy_adam(
     learning_rate,
     weight_decay,
     train_iters,
+    epsilon,
 ):
     random_grad_seq = []
     init_value_seq = []
@@ -103,6 +103,7 @@ def compare_with_numpy_adam(
                 do_bias_correction,
                 1.0,
                 0.0,
+                epsilon,
             )
 
         for i in range(1, train_iters + 1):
@@ -128,7 +129,7 @@ def compare_with_numpy_adam(
 
                 m[i] = beta1 * m[i] + (1 - beta1) * grad[i]
                 v[i] = beta2 * v[i] + (1 - beta2) * grad[i] * grad[i]
-                denom = np.sqrt(v[i]) / np.sqrt(bias_correction2) + 1e-5
+                denom = np.sqrt(v[i]) / np.sqrt(bias_correction2) + epsilon
 
                 x[i] = x[i] - ((learning_rate / bias_correction1) * m[i] / denom)
 
@@ -167,6 +168,7 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["learning_rate"] = [1.0, 1e-3]
         arg_dict["weight_decay"] = [0.9, 0.0]
         arg_dict["train_iters"] = [10]
+        arg_dict["epsilon"] = [1e-5, 0.1]
 
         for arg in GenArgDict(arg_dict):
             compare_with_numpy_adam(test_case, **arg)
