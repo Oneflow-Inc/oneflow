@@ -83,6 +83,20 @@ std::shared_ptr<const CudaDeviceDescriptor> CudaDeviceDescriptor::Query(int32_t 
   cudaDeviceProp prop{};
   const cudaError_t err = cudaGetDeviceProperties(&prop, ordinal);
   CHECK(err == cudaSuccess);
+  static const std::set<int> compiled_archs{CUDA_REAL_ARCHS};
+  if (compiled_archs.find(prop.major * 10 + prop.minor) == compiled_archs.cend()
+      && compiled_archs.find(prop.major * 10) == compiled_archs.cend()) {
+    static std::atomic<bool> once_flag(false);
+    if (!once_flag.exchange(true)) {
+      LOG(WARNING)
+          << "The CUDA device '" << prop.name << "' with capability "
+          << prop.major * 10 + prop.minor
+          << " is not compatible with the current OneFlow installation. The current program "
+             "may throw a 'no kernel image is available for execution "
+             "on the device' error or hang for a long time. Please reinstall OneFlow "
+             "compiled with a newer version of CUDA.";
+    }
+  }
   auto* desc = new CudaDeviceDescriptor();
   desc->impl_->ordinal = ordinal;
   desc->impl_->name = prop.name;
