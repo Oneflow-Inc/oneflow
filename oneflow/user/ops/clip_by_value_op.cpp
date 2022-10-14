@@ -21,7 +21,7 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferClipTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("y", 0) = ctx->InputShape("x", 0);
+  ctx->SetOutputShape("y", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -34,7 +34,7 @@ Maybe<void> GetClipSbpSignature(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> InferClipGradTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("dx", 0) = ctx->InputShape("x", 0);
+  ctx->SetOutputShape("dx", 0, ctx->InputShape("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -56,12 +56,12 @@ Maybe<void> GetClipGradSbpSignature(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> InferClipTensorDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferClipGradDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 

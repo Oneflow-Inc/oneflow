@@ -43,6 +43,9 @@ Pooling functions
     adaptive_avg_pool1d
     adaptive_avg_pool2d
     adaptive_avg_pool3d
+    adaptive_max_pool1d
+    adaptive_max_pool2d
+    adaptive_max_pool3d
 
 Non-linear activation functions
 -------------------------------
@@ -143,6 +146,7 @@ Vision functions
     :toctree: generated
     :nosignatures:
 
+    deform_conv2d
     pad
     interpolate
     upsample

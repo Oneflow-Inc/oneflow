@@ -24,10 +24,10 @@ namespace oneflow {
   user_op::TensorDesc* theta = ctx->MutOutputTensorDesc("theta", 0);
   CHECK_EQ_OR_RETURN(label.shape().At(0), x.shape().At(0));
   CHECK_GE_OR_RETURN(x.shape().NumAxes(), 2);
-  *ctx->MutOutputShape("y", 0) = ctx->InputShape("x", 0);
-  *ctx->MutIsDynamic4ArgNameAndIndex("y", 0) = ctx->InputIsDynamic("x", 0);
-  *theta->mut_is_dynamic() = x.is_dynamic();
-  *theta->mut_shape() = label.shape();
+  ctx->SetOutputShape("y", 0, ctx->InputShape("x", 0));
+  ctx->SetIsDynamic4ArgNameAndIndex("y", 0, ctx->InputIsDynamic("x", 0));
+  theta->set_is_dynamic(x.is_dynamic());
+  theta->set_shape(label.shape());
   return Maybe<void>::Ok();
 }
 
@@ -59,8 +59,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CombinedMarginLossOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
-  *ctx->MutOutputDType("theta", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
+  ctx->SetOutputDType("theta", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -72,8 +72,8 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(label.shape().At(0), dy.shape().At(0));
   CHECK_EQ_OR_RETURN(label.shape().At(0), theta.shape().At(0));
   CHECK_GE_OR_RETURN(dy.shape().NumAxes(), 2);
-  *ctx->MutOutputShape("dx", 0) = ctx->InputShape("dy", 0);
-  *ctx->MutIsDynamic4ArgNameAndIndex("dx", 0) = ctx->InputIsDynamic("dy", 0);
+  ctx->SetOutputShape("dx", 0, ctx->InputShape("dy", 0));
+  ctx->SetIsDynamic4ArgNameAndIndex("dx", 0, ctx->InputIsDynamic("dy", 0));
   return Maybe<void>::Ok();
 }
 
@@ -99,7 +99,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CombinedMarginLossGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
   return Maybe<void>::Ok();
 }
 

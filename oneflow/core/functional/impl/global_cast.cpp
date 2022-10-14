@@ -448,9 +448,7 @@ Maybe<Tensor> LocalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDes
   JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp,
                                   sync_and_check_meta));
   auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "sync_data");
-  attrs.SetAttr<Shape>("shape", *shape);
-  attrs.SetAttr<DataType>("dtype", dtype);
-  attrs.SetAttr<bool>("sync_data", true);
+  attrs.SetAllAttrs(*shape, dtype, true);
   const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
       *op, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
   return output;
@@ -461,7 +459,7 @@ Maybe<Tensor> LocalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDes
 class LocalToGlobalFunctor {
  public:
   LocalToGlobalFunctor() {
-    op_ = CHECK_JUST(one::CastToGlobalOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_global"))));
+    op_ = CHECK_JUST(one::LocalToGlobalOpExpr::New(*CHECK_JUST(UniqueStr("local_to_global"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -496,9 +494,7 @@ class LocalToGlobalFunctor {
     }
     Symbol<NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape", "dtype", "sync_data");
-    attrs.SetAttr<Shape>("shape", shape);
-    attrs.SetAttr<DataType>("dtype", dtype->data_type());
-    attrs.SetAttr<bool>("sync_data", sync_data);
+    attrs.SetAllAttrs(shape, dtype->data_type(), sync_data);
     DisableCheckGlobalTensorMetaScope scope{};
     const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
         *op_, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
@@ -513,7 +509,7 @@ class ToGlobalFunctor {
  public:
   ToGlobalFunctor() {
     local_to_global_op_ =
-        CHECK_JUST(one::CastToGlobalOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_global"))));
+        CHECK_JUST(one::LocalToGlobalOpExpr::New(*CHECK_JUST(UniqueStr("local_to_global"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -557,7 +553,7 @@ class ToGlobalFunctor {
 class GlobalToLocalFunctor {
  public:
   GlobalToLocalFunctor() {
-    op_ = CHECK_JUST(one::CastFromGlobalOpExpr::New(*CHECK_JUST(UniqueStr("global_to_local"))));
+    op_ = CHECK_JUST(one::GlobalToLocalOpExpr::New(*CHECK_JUST(UniqueStr("global_to_local"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool copy) const {

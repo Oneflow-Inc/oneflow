@@ -20,10 +20,10 @@ namespace oneflow {
 /*static*/ auto FusedTrilScaleSoftmaxMaskScaleOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
-  *ctx->MutOutputShape("y", 0) = x_desc.shape();
-  *ctx->MutOutputIsDynamic("y", 0) = x_desc.is_dynamic();
-  *ctx->MutOutputShape("softmax_y", 0) = x_desc.shape();
-  *ctx->MutOutputIsDynamic("softmax_y", 0) = x_desc.is_dynamic();
+  ctx->SetOutputShape("y", 0, x_desc.shape());
+  ctx->SetOutputIsDynamic("y", 0, x_desc.is_dynamic());
+  ctx->SetOutputShape("softmax_y", 0, x_desc.shape());
+  ctx->SetOutputIsDynamic("softmax_y", 0, x_desc.is_dynamic());
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedTrilScaleSoftmaxMaskScaleOp::InferPhysicalTensorDesc(
@@ -33,8 +33,8 @@ namespace oneflow {
 /*static*/ auto FusedTrilScaleSoftmaxMaskScaleOp::InferDataType(user_op::InferContext* ctx)
     -> Maybe<void> {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
-  *ctx->MutOutputDType("y", 0) = x_desc.data_type();
-  *ctx->MutOutputDType("softmax_y", 0) = x_desc.data_type();
+  ctx->SetOutputDType("y", 0, x_desc.data_type());
+  ctx->SetOutputDType("softmax_y", 0, x_desc.data_type());
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedTrilScaleSoftmaxMaskScaleOp::ModifyInputArg(
@@ -65,8 +65,8 @@ namespace oneflow {
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
   CHECK_OR_RETURN(dy_desc.shape() == softmax_y_desc.shape());
-  *dx_desc->mut_shape() = dy_desc.shape();
-  *dx_desc->mut_is_dynamic() = dy_desc.is_dynamic();
+  dx_desc->set_shape(dy_desc.shape());
+  dx_desc->set_is_dynamic(dy_desc.is_dynamic());
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedTrilScaleSoftmaxMaskScaleGradOp::InferPhysicalTensorDesc(
@@ -79,7 +79,7 @@ namespace oneflow {
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
   CHECK_OR_RETURN(dy_desc.data_type() == softmax_y_desc.data_type());
-  *dx_desc->mut_data_type() = dy_desc.data_type();
+  dx_desc->set_data_type(dy_desc.data_type());
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedTrilScaleSoftmaxMaskScaleGradOp::GetSbp(user_op::SbpContext* ctx)

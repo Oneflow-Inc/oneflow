@@ -974,6 +974,12 @@ class TestTensor(flow.unittest.TestCase):
         return x.log2()
 
     @autotest(n=5)
+    def test_log10_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return x.log10()
+
+    @autotest(n=5)
     def test_neg_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
@@ -1261,6 +1267,11 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.tensor(np_arr, dtype=flow.int8)
         test_case.assertTrue(np.array_equal(x.numpy(), [1.0, 2.0, 3.0]))
         test_case.assertEqual(x.dtype, flow.int8)
+
+    def test_tensor_contains_magic_method(test_case):
+        x = flow.tensor([[1, 2, 3], [4, 5, 6]])
+        y = 1 in x
+        test_case.assertEqual(y, True)
 
     @profile(torch.Tensor.fill_)
     def profile_fill_(test_case):

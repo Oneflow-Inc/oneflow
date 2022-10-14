@@ -52,8 +52,8 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   const bool scale = ctx->Attr<bool>("scale");
   const int64_t begin_params_axis =
       ShiftNegativeAxisIfNeed(x.shape(), ctx->Attr<int64_t>("begin_params_axis"));
-  *y->mut_shape() = x.shape();
-  *y->mut_is_dynamic() = x.is_dynamic();
+  y->set_shape(x.shape());
+  y->set_is_dynamic(x.is_dynamic());
   DimVector param_shape_dim_vec;
   param_shape_dim_vec.insert(param_shape_dim_vec.end(),
                              x.shape().dim_vec().cbegin() + begin_params_axis,
@@ -73,7 +73,7 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
     return Error::RuntimeError() << "begin_norm_axis must equal to begin_params_axis, but got "
                                  << begin_norm_axis << " vs " << begin_params_axis;
   }
-  *mean->mut_shape() = InferBnParamShape(x.shape(), begin_norm_axis);
+  mean->set_shape(InferBnParamShape(x.shape(), begin_norm_axis));
   *inv_variance = *mean;
   return Maybe<void>::Ok();
 }
@@ -102,20 +102,24 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   const bool center = ctx->Attr<bool>("center");
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
-  *y->mut_data_type() = x.data_type();
+  y->set_data_type(x.data_type());
   if (center) {
     const user_op::TensorDesc& beta = ctx->InputTensorDesc("beta", 0);
-    CHECK_EQ_OR_RETURN(beta.data_type(), x.data_type());
+    CHECK_EQ_OR_RETURN(beta.data_type(), x.data_type())
+        << "InferDataType Failed. Expected " << DataType_Name(x.data_type()) << ", but got "
+        << DataType_Name(beta.data_type());
   }
   const bool scale = ctx->Attr<bool>("scale");
   if (scale) {
     const user_op::TensorDesc& gamma = ctx->InputTensorDesc("gamma", 0);
-    CHECK_EQ_OR_RETURN(gamma.data_type(), x.data_type());
+    CHECK_EQ_OR_RETURN(gamma.data_type(), x.data_type())
+        << "InferDataType Failed. Expected " << DataType_Name(x.data_type()) << ", but got "
+        << DataType_Name(gamma.data_type());
   }
   user_op::TensorDesc* mean = ctx->MutOutputTensorDesc("mean", 0);
   user_op::TensorDesc* inv_variance = ctx->MutOutputTensorDesc("inv_variance", 0);
-  *mean->mut_data_type() = InferBnParamDataType(x.data_type());
-  *inv_variance->mut_data_type() = mean->data_type();
+  mean->set_data_type(InferBnParamDataType(x.data_type()));
+  inv_variance->set_data_type(mean->data_type());
   return Maybe<void>::Ok();
 }
 
@@ -131,8 +135,8 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   const Shape& bn_param_shape = InferBnParamShape(x.shape(), begin_norm_axis);
   CHECK_EQ_OR_RETURN(mean.shape(), bn_param_shape);
   CHECK_EQ_OR_RETURN(inv_variance.shape(), bn_param_shape);
-  *dx->mut_shape() = dy.shape();
-  *dx->mut_is_dynamic() = dy.is_dynamic();
+  dx->set_shape(dy.shape());
+  dx->set_is_dynamic(dy.is_dynamic());
   if (ctx->has_input("_add_to_output", 0)) {
     const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
     CHECK_EQ_OR_RETURN(add_to_output.shape(), dx->shape());
@@ -163,17 +167,25 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
 /* static */ Maybe<void> LayerNormGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-  CHECK_EQ_OR_RETURN(dy.data_type(), x.data_type());
+  CHECK_EQ_OR_RETURN(dy.data_type(), x.data_type())
+      << "InferDataType Failed. Expected " << DataType_Name(x.data_type()) << ", but got "
+      << DataType_Name(dy.data_type());
   const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);
   const user_op::TensorDesc& inv_variance = ctx->InputTensorDesc("inv_variance", 0);
   DataType bn_param_data_type = InferBnParamDataType(x.data_type());
-  CHECK_EQ_OR_RETURN(mean.data_type(), bn_param_data_type);
-  CHECK_EQ_OR_RETURN(inv_variance.data_type(), bn_param_data_type);
+  CHECK_EQ_OR_RETURN(mean.data_type(), bn_param_data_type)
+      << "InferDataType Failed. Expected " << DataType_Name(bn_param_data_type) << ", but got "
+      << DataType_Name(mean.data_type());
+  CHECK_EQ_OR_RETURN(inv_variance.data_type(), bn_param_data_type)
+      << "InferDataType Failed. Expected " << DataType_Name(bn_param_data_type) << ", but got "
+      << DataType_Name(inv_variance.data_type());
   user_op::TensorDesc* dx = ctx->MutOutputTensorDesc("dx", 0);
-  *dx->mut_data_type() = dy.data_type();
+  dx->set_data_type(dy.data_type());
   if (ctx->has_input("_add_to_output", 0)) {
     const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
-    CHECK_EQ_OR_RETURN(add_to_output.data_type(), dx->data_type());
+    CHECK_EQ_OR_RETURN(add_to_output.data_type(), dx->data_type())
+        << "InferDataType Failed. Expected " << DataType_Name(dx->data_type()) << ", but got "
+        << DataType_Name(add_to_output.data_type());
   }
   return Maybe<void>::Ok();
 }
@@ -203,11 +215,11 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   const Shape param_shape(param_shape_dim_vec);
   if (has_beta_diff) {
     user_op::TensorDesc* beta_diff = ctx->MutOutputTensorDesc("beta_diff", 0);
-    *beta_diff->mut_shape() = param_shape;
+    beta_diff->set_shape(param_shape);
   }
   if (has_gamma_diff) {
     user_op::TensorDesc* gamma_diff = ctx->MutOutputTensorDesc("gamma_diff", 0);
-    *gamma_diff->mut_shape() = param_shape;
+    gamma_diff->set_shape(param_shape);
   }
   return Maybe<void>::Ok();
 }
@@ -240,11 +252,11 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
   if (has_beta_diff) {
     user_op::TensorDesc* beta_diff = ctx->MutOutputTensorDesc("beta_diff", 0);
-    *beta_diff->mut_data_type() = dy.data_type();
+    beta_diff->set_data_type(dy.data_type());
   }
   if (has_gamma_diff) {
     user_op::TensorDesc* gamma_diff = ctx->MutOutputTensorDesc("gamma_diff", 0);
-    *gamma_diff->mut_data_type() = dy.data_type();
+    gamma_diff->set_data_type(dy.data_type());
   }
   return Maybe<void>::Ok();
 }

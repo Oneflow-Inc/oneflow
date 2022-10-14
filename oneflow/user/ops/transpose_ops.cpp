@@ -46,21 +46,21 @@ void CheckIsPerm(const std::vector<int32_t>& perm) {
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("input", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->MutOutputTensorDesc("output", 0);
   const Shape& in_shape = in_tensor_desc.shape();
-  Shape* out_shape = out_tensor_desc->mut_shape();
+  Shape out_shape = in_tensor_desc.shape();
   const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
   CHECK_EQ_OR_RETURN(perm.size(), in_shape.NumAxes());
   CheckIsPerm(perm);
   // if (perm.at(0) != 0) { CHECK_OR_RETURN(!in_tensor_desc->is_dynamic()); }
-  *out_tensor_desc->mut_shape() = in_tensor_desc.shape();
-  *out_tensor_desc->mut_is_dynamic() = in_tensor_desc.is_dynamic();
-  FOR_RANGE(size_t, i, 0, perm.size()) { out_shape->Set(i, in_shape.At(perm[i])); }
+  out_tensor_desc->set_is_dynamic(in_tensor_desc.is_dynamic());
+  FOR_RANGE(size_t, i, 0, perm.size()) { out_shape.Set(i, in_shape.At(perm[i])); }
+  out_tensor_desc->set_shape(out_shape);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> TransposeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> TransposeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("output", 0) = ctx->InputDType("input", 0);
+  ctx->SetOutputDType("output", 0, ctx->InputDType("input", 0));
   return Maybe<void>::Ok();
 }
 

@@ -60,8 +60,8 @@ Maybe<void> InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf
                                               const ParallelDesc& parallel_desc) {
   NdSbp nd_sbp;
   JUST(ParseNdSbpFromBlobConf(blob_conf, parallel_desc, &nd_sbp));
-  out_blob_desc->mut_shape() =
-      *JUST(GetPhysicalShape(Shape(blob_conf.shape()), nd_sbp, parallel_desc, *parallel_ctx));
+  out_blob_desc->set_shape(
+      *JUST(GetPhysicalShape(Shape(blob_conf.shape()), nd_sbp, parallel_desc, *parallel_ctx)));
   out_blob_desc->set_data_type(blob_conf.data_type());
   out_blob_desc->set_is_dynamic(blob_conf.is_dynamic());
   return Maybe<void>::Ok();
@@ -71,9 +71,9 @@ Maybe<void> InterfaceOpUtil::InferLogicalOutBlobDesc(const InterfaceBlobConf& bl
                                                      BlobDesc* out_blob_desc,
                                                      const ParallelDesc& parallel_desc) {
   CHECK_OR_RETURN(blob_conf.has_shape());
-  out_blob_desc->mut_shape() = Shape(blob_conf.shape());
+  out_blob_desc->set_shape(Shape(blob_conf.shape()));
   CheckShape(out_blob_desc->shape());
-  if (out_blob_desc->mut_shape().NumAxes() > 0) { CHECK_GT(out_blob_desc->mut_shape().At(0), 0); }
+  if (out_blob_desc->shape().NumAxes() > 0) { CHECK_GT(out_blob_desc->shape().At(0), 0); }
   CHECK_OR_RETURN(blob_conf.has_data_type());
   out_blob_desc->set_data_type(blob_conf.data_type());
   CHECK_OR_RETURN(blob_conf.has_is_dynamic());

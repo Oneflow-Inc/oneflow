@@ -169,8 +169,9 @@ void OpCallInstructionPolicy::InitStreamSequentialDependence() {
 
 template<typename DoEachT>
 void OpCallInstructionPolicy::ForEachMutDependence(const DoEachT& DoEach) const {
-  const auto& opt_transport_dep_object = vm_stream_->transport_local_dep_object();
-  if (opt_transport_dep_object.has_value()) { DoEach(CHECK_JUST(opt_transport_dep_object)->get()); }
+  for (const auto& transport_dependence : vm_stream_->transport_dependences()) {
+    DoEach(transport_dependence.get());
+  }
 
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4mut_ibns()) {

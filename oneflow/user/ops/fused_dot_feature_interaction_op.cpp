@@ -36,7 +36,7 @@ namespace oneflow {
   }
   const std::string& pooling = ctx->Attr<std::string>("pooling");
   if (pooling == "sum") {
-    *ctx->MutOutputShape("out", 0) = Shape({batch_size, vector_size});
+    ctx->SetOutputShape("out", 0, Shape({batch_size, vector_size}));
     return Maybe<void>::Ok();
   }
   if (ctx->has_input("sparse_feature", 0)) {
@@ -66,7 +66,7 @@ namespace oneflow {
     CHECK_EQ_OR_RETURN(output_concat_shape.At(0), batch_size);
     out_dim += output_concat_shape.At(1);
   }
-  *ctx->MutOutputShape("out", 0) = Shape({batch_size, out_dim});
+  ctx->SetOutputShape("out", 0, Shape({batch_size, out_dim}));
   return Maybe<void>::Ok();
 }
 
@@ -89,16 +89,21 @@ namespace oneflow {
   CHECK_GE_OR_RETURN(feature_input_size, 1);
   DataType first_feature_dtype = ctx->InputDType("features", 0);
   for (int64_t i = 1; i < feature_input_size; ++i) {
-    CHECK_EQ_OR_RETURN(first_feature_dtype, ctx->InputDType("features", i));
+    CHECK_EQ_OR_RETURN(first_feature_dtype, ctx->InputDType("features", i))
+        << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("features", i))
+        << ", but got " << DataType_Name(first_feature_dtype);
   }
   if (ctx->has_input("output_concat", 0)) {
-    CHECK_EQ_OR_RETURN(first_feature_dtype, ctx->InputDType("output_concat", 0));
+    CHECK_EQ_OR_RETURN(first_feature_dtype, ctx->InputDType("output_concat", 0))
+        << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("output_concat", 0))
+        << ", but got " << DataType_Name(first_feature_dtype);
   }
   if (ctx->has_input("sparse_feature", 0)) {
     CHECK_EQ_OR_RETURN(first_feature_dtype, ctx->InputDType("sparse_feature", 0))
-        << "get " << first_feature_dtype << " and " << ctx->InputDType("sparse_feature", 0);
+        << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("sparse_feature", 0))
+        << ", but got " << DataType_Name(first_feature_dtype);
   }
-  *ctx->MutOutputDType("out", 0) = first_feature_dtype;
+  ctx->SetOutputDType("out", 0, first_feature_dtype);
   return Maybe<void>::Ok();
 }
 
@@ -109,14 +114,14 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(ctx->output_size("features_grad"), ctx->input_size("features"))
       << "features_grad and features must have same size";
   for (int64_t i = 0; i < ctx->output_size("features_grad"); ++i) {
-    *ctx->MutOutputShape("features_grad", i) = ctx->InputShape("features", i);
+    ctx->SetOutputShape("features_grad", i, ctx->InputShape("features", i));
   }
   if (ctx->has_output("output_concat_grad", 0)) {
     const int32_t output_concat_grad_dim = ctx->Attr<int32_t>("output_concat_grad_dim");
-    *ctx->MutOutputShape("output_concat_grad", 0) = Shape({batch_size, output_concat_grad_dim});
+    ctx->SetOutputShape("output_concat_grad", 0, Shape({batch_size, output_concat_grad_dim}));
   }
   if (ctx->has_output("sparse_feature_grad", 0)) {
-    *ctx->MutOutputShape("sparse_feature_grad", 0) = ctx->InputShape("sparse_feature", 0);
+    ctx->SetOutputShape("sparse_feature_grad", 0, ctx->InputShape("sparse_feature", 0));
   }
   return Maybe<void>::Ok();
 }
@@ -139,13 +144,13 @@ namespace oneflow {
     user_op::InferContext* ctx) {
   DataType dy_dtype = ctx->InputDType("dy", 0);
   for (int64_t i = 0; i < ctx->output_size("features_grad"); ++i) {
-    *ctx->MutOutputDType("features_grad", i) = dy_dtype;
+    ctx->SetOutputDType("features_grad", i, dy_dtype);
   }
   if (ctx->has_output("output_concat_grad", 0)) {
-    *ctx->MutOutputDType("output_concat_grad", 0) = dy_dtype;
+    ctx->SetOutputDType("output_concat_grad", 0, dy_dtype);
   }
   if (ctx->has_output("sparse_feature_grad", 0)) {
-    *ctx->MutOutputDType("sparse_feature_grad", 0) = dy_dtype;
+    ctx->SetOutputDType("sparse_feature_grad", 0, dy_dtype);
   }
   return Maybe<void>::Ok();
 }

@@ -75,6 +75,10 @@ class TestFloor(flow.unittest.TestCase):
         y = torch.floor(x)
         return y
 
+    @profile(torch.floor)
+    def profile_floor(test_case):
+        torch.floor(torch.ones(100, 100, 100))
+
 
 if __name__ == "__main__":
     unittest.main()

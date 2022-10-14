@@ -57,14 +57,14 @@ namespace oneflow {
       out_shape.at(d) = in_size_at_d;
     }
   }
-  *ctx->MutOutputShape("y", 0) = Shape(out_shape);
+  ctx->SetOutputShape("y", 0, Shape(out_shape));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnfoldTensorOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> UnfoldTensorOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -87,14 +87,14 @@ namespace oneflow {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("x", 0);
   const Shape& in_shape = in.shape();
   user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
-  *dx_desc->mut_shape() = Shape(in_shape.dim_vec());
+  dx_desc->set_shape(Shape(in_shape.dim_vec()));
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnfoldTensorGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> UnfoldTensorGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
   return Maybe<void>::Ok();
 }
 

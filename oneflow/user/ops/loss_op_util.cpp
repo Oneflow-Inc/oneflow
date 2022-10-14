@@ -27,7 +27,7 @@ user_op::GetSbpFn GenLossForwardDefaultGetSbpFn(
                        .Split(user_op::OpArg("target", 0), 0)
                        .Split(user_op::OpArg("out", 0), 0);
     if (ctx->user_op_conf().has_input("weight", 0)) {
-      builder.Broadcast(user_op::OpArg("weight", 0));
+      builder.Split(user_op::OpArg("weight", 0), 0);
     }
     f(builder, ctx);
     builder.Build();
@@ -45,7 +45,7 @@ user_op::GetSbpFn GenLossBackwardDefaultGetSbpFn(
                        .Split(user_op::OpArg("dx", 0), 0)
                        .Split(user_op::OpArg("dy", 0), 0);
     if (ctx->user_op_conf().has_input("weight", 0)) {
-      builder.Broadcast(user_op::OpArg("weight", 0));
+      builder.Split(user_op::OpArg("weight", 0), 0);
     }
     f(builder, ctx);
     builder.Build();

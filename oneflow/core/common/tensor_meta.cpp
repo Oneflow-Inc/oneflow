@@ -22,15 +22,30 @@ namespace oneflow {
 namespace one {
 
 MutTensorMeta::MutTensorMeta()
-    : TensorMeta(std::make_shared<const Shape>(), std::make_shared<const Stride>(),
-                 kInvalidDataType) {}
+    : TensorMeta(kInvalidDataType),
+      shape_(std::make_shared<const Shape>()),
+      stride_(std::make_shared<const Stride>()) {}
 
 MutTensorMeta::MutTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype)
-    : TensorMeta(shape, std::make_shared<const Stride>(*shape), dtype) {}
+    : TensorMeta(dtype),
+      shape_(std::make_shared<const Shape>(*shape)),
+      stride_(std::make_shared<const Stride>(*shape)) {}
 
 MutTensorMeta::MutTensorMeta(const std::shared_ptr<const Shape>& shape,
                              const std::shared_ptr<const Stride>& stride, DataType dtype)
-    : TensorMeta(shape, stride, dtype) {}
+    : TensorMeta(dtype),
+      shape_(std::make_shared<const Shape>(*shape)),
+      stride_(std::make_shared<const Stride>(*stride)) {}
+
+MutTensorMeta::MutTensorMeta(const Shape& shape, DataType dtype)
+    : TensorMeta(dtype),
+      shape_(std::make_shared<const Shape>(shape)),
+      stride_(std::make_shared<const Stride>(shape)) {}
+
+MutTensorMeta::MutTensorMeta(const Shape& shape, const Stride& stride, DataType dtype)
+    : TensorMeta(dtype),
+      shape_(std::make_shared<const Shape>(shape)),
+      stride_(std::make_shared<const Stride>(stride)) {}
 
 bool MutTensorMeta::operator==(const MutTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
@@ -43,19 +58,36 @@ size_t MutTensorMeta::CalcHashValue() const {
   return Hash(*shape_ptr(), dtype(), stride());
 }
 
+ConstTensorMeta::ConstTensorMeta()
+    : TensorMeta(kInvalidDataType), shape_(SymbolOf(Shape())), stride_(SymbolOf(Stride())) {}
+
+ConstTensorMeta::ConstTensorMeta(Symbol<Shape> shape, DataType dtype)
+    : TensorMeta(dtype), shape_(shape), stride_(SymbolOf(Stride(*shape))) {}
+
+ConstTensorMeta::ConstTensorMeta(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype)
+    : TensorMeta(dtype), shape_(shape), stride_(stride) {}
+
+bool ConstTensorMeta::operator==(const ConstTensorMeta& other) const {
+  // It's correct to ignore is_dynamic_ field.
+  return *this->shape_ptr() == *other.shape_ptr() && this->dtype() == other.dtype()
+         && this->stride() == other.stride();
+}
+
+size_t ConstTensorMeta::CalcHashValue() const {
+  // It's correct to ignore is_dynamic_ field.
+  return Hash(*shape_ptr(), dtype(), stride());
+}
+
 LocalTensorMeta::LocalTensorMeta()
-    : TensorMeta(std::make_shared<const Shape>(), std::make_shared<const Stride>(),
-                 DataType::kInvalidDataType),
+    : ConstTensorMeta(SymbolOf(Shape()), SymbolOf(Stride()), DataType::kInvalidDataType),
       device_(Symbol<Device>()) {}
 
-LocalTensorMeta::LocalTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                                 Symbol<Device> device)
-    : TensorMeta(shape, std::make_shared<const Stride>(*shape), dtype), device_(device) {}
+LocalTensorMeta::LocalTensorMeta(Symbol<Shape> shape, DataType dtype, Symbol<Device> device)
+    : ConstTensorMeta(shape, SymbolOf(Stride(*shape)), dtype), device_(device) {}
 
-LocalTensorMeta::LocalTensorMeta(const std::shared_ptr<const Shape>& shape,
-                                 const std::shared_ptr<const Stride>& stride, DataType dtype,
+LocalTensorMeta::LocalTensorMeta(Symbol<Shape> shape, Symbol<Stride> stride, DataType dtype,
                                  Symbol<Device> device)
-    : TensorMeta(shape, stride, dtype), device_(device) {}
+    : ConstTensorMeta(shape, stride, dtype), device_(device) {}
 
 bool LocalTensorMeta::operator==(const LocalTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
@@ -79,6 +111,13 @@ MutLocalTensorMeta::MutLocalTensorMeta(const std::shared_ptr<const Shape>& shape
 
 MutLocalTensorMeta::MutLocalTensorMeta(const std::shared_ptr<const Shape>& shape,
                                        const std::shared_ptr<const Stride>& stride, DataType dtype,
+                                       Symbol<Device> device)
+    : MutTensorMeta(shape, stride, dtype), device_(device) {}
+
+MutLocalTensorMeta::MutLocalTensorMeta(const Shape& shape, DataType dtype, Symbol<Device> device)
+    : MutTensorMeta(shape, Stride(shape), dtype), device_(device) {}
+
+MutLocalTensorMeta::MutLocalTensorMeta(const Shape& shape, const Stride& stride, DataType dtype,
                                        Symbol<Device> device)
     : MutTensorMeta(shape, stride, dtype), device_(device) {}
 

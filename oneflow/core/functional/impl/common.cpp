@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "fmt/core.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/wrap_dim_utils.h"
@@ -83,7 +84,8 @@ Maybe<void> CheckInplaceShapeCanExpandTo(const Shape& shape, const Shape& expand
           << Error::RuntimeError() << "Tensor with shape " << expand_shape.ToString()
           << " doesn't match the broadcast shape in an inplace operation";
     } else {
-      CHECK_OR_RETURN(expand_shape.At(i) > 0);  // NOLINT(maybe-need-error-msg)
+      // For 0-size tensor, expand_shape.At(i) can equal to 0.
+      CHECK_OR_RETURN(expand_shape.At(i) >= 0);  // NOLINT(maybe-need-error-msg)
     }
   }
 
@@ -166,6 +168,56 @@ Maybe<Shape> InferShapeUnspecifiedDim(const int64_t& elem_count, const Shape& sh
         << "' is invalid for input of size " << elem_count;
   }
   return infered_shape;
+}
+
+Maybe<std::tuple<Shape, bool, bool>> InferUnifiedShapeForBroadcasting(const Shape& input_shape,
+                                                                      const Shape& other_shape) {
+  if (input_shape == other_shape) { return std::make_tuple(input_shape, false, false); }
+
+  const auto num_axes = std::make_pair(input_shape.NumAxes(), other_shape.NumAxes());
+
+  if (num_axes.first < num_axes.second) {
+    auto new_input_shape = Shape::Ones(num_axes.second);
+    std::copy(input_shape.begin(), input_shape.end(),
+              new_input_shape.begin() + (num_axes.second - num_axes.first));
+    return InferUnifiedShapeForBroadcasting(new_input_shape, other_shape);
+  }
+
+  if (num_axes.first > num_axes.second) {
+    auto new_other_shape = Shape::Ones(num_axes.first);
+    std::copy(other_shape.begin(), other_shape.end(),
+              new_other_shape.begin() + (num_axes.first - num_axes.second));
+    return InferUnifiedShapeForBroadcasting(input_shape, new_other_shape);
+  }
+
+  // num_axes.first == num_axes.second
+  Shape target;
+  auto need_to_broadcast = std::make_pair(false, false);
+
+  for (size_t i = 0; i < num_axes.first; ++i) {
+    const auto num_in_curr_dim = std::make_pair(input_shape.At(i), other_shape.At(i));
+
+    if (num_in_curr_dim.first == num_in_curr_dim.second) {
+      target.push_back(num_in_curr_dim.first);
+      continue;
+    }
+
+    if (num_in_curr_dim.first != 1 && num_in_curr_dim.second != 1) {
+      return Error::RuntimeError()
+             << fmt::format("input and other can't be broadcasted to a single shape. [input's "
+                            "shape: {}, other's shape: {}].",
+                            input_shape.ToString(), other_shape.ToString());
+    }
+
+    need_to_broadcast.first = num_in_curr_dim.first == 1 ? true : need_to_broadcast.first;
+    need_to_broadcast.second = num_in_curr_dim.second == 1 ? true : need_to_broadcast.second;
+    target.push_back(
+        num_in_curr_dim.first == 1
+            ? num_in_curr_dim.second
+            : num_in_curr_dim.first);  // num_in_curr_dim.first and num_in_curr_dim.second can't
+                                       // be 1 at the same time
+  }
+  return std::make_tuple(target, need_to_broadcast.first, need_to_broadcast.second);
 }
 
 }  // namespace functional
