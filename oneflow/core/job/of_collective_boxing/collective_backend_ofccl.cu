@@ -174,7 +174,7 @@ struct CollectiveBackendOfccl::Impl {
         // 我们应该考虑coll_id了。
         // 给集合通信排coll_id应该发生在编译阶段。这时候multiclient的模式下，一个进程管一个rank，没法以全局视角分配coll_id
         // plan_util里，给集合通信指定的order应该可以充当coll_id。dependency_depth一次++，可以对应order的好几次++。
-        // 创建了comm之后，要顺势完成prepare以及prepareDone，启动守护者kernel。
+        // 创建了comm之后，要顺势完成prepare以及FinalizeRankCtx7StartHostThrds。
         // prepare需要comm参数。
 
         // 在每个rank上，每个集合通信都应该只被处理一次
@@ -224,11 +224,11 @@ struct CollectiveBackendOfccl::Impl {
     return;
   }
 
-  // void PrepareDone() {
-  //   for (auto &device_id7ofcll_rank_ctx : device_id2ofccl_rank_ctx) {
-  //     ofcclPrepareDone(device_id7ofcll_rank_ctx.second);
-  //   }
-  // }
+  void FinalizeRankCtx7StartHostThrds() {
+    for (auto &device_id7ofcll_rank_ctx : device_id2ofccl_rank_ctx) {
+      ofcclFinalizeRankCtx7StartHostThrds(device_id7ofcll_rank_ctx.second);
+    }
+  }
 
   void Destroy() {
     for (auto &device_id7ofcll_rank_ctx : device_id2ofccl_rank_ctx) {
@@ -263,8 +263,8 @@ void CollectiveBackendOfccl::Init(std::shared_ptr<OfRequestStore> request_store)
 void CollectiveBackendOfccl::InitJob(int64_t job_id) {
   CudaCurrentDeviceGuard guard;
   impl_->InitCommGroup(job_id); // 针对每个local rank创建了rank_ctx，并且对所有相关的集合通信执行了prepareColl（包括创建comm）
-  // 接下来对每个local rank执行prepareDone
-  // impl_->PrepareDone(); // 不能再这里调用，不然在runtime一开始启动一个一直跑的kernel，会导致后面actor开始执行一些同步操作的时候卡住。
+  // 接下来对每个local rank执行ofcclFinalizeRankCtx7StartHostThrds
+  impl_->FinalizeRankCtx7StartHostThrds();
 }
 
 void CollectiveBackendOfccl::DeinitJob(int64_t job_id) {

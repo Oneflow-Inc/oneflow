@@ -76,7 +76,7 @@ void OfCollectiveBoxingGenericKernel::VirtualKernelInit(KernelContext* ctx) {
 }
 
 void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) const {
-  VLOG(1) << "Enter OfCollectiveBoxingGenericKernel::ForwardDataContent";
+  VLOG(3) << "Enter OfCollectiveBoxingGenericKernel::ForwardDataContent";
   // Blob* in = ctx->BnInOp2Blob("in");
   // Blob* out = ctx->BnInOp2Blob("out");
   // AutoMemcpy(ctx->stream(), out, in);
@@ -113,7 +113,7 @@ void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) con
     auto cb_lambda = [](int collIdFromCqe, void *args) {
       int64_t actor_id = (static_cast<CallBackArgs *>(args))->actor_id; // void不是类名，不能用dynamic
       Singleton<ActorMsgBus>::Get()->SendMsg(ActorMsg::BuildCollectiveMsg(actor_id, actor_id, CollectiveNegoCmd::kCollectiveDone));
-      VLOG(1) << "actor " << actor_id << " callback get cqe for coll_id " << collIdFromCqe << " waiting for " << (static_cast<CallBackArgs *>(args))->coll_id;
+      VLOG(1) << "actor " << actor_id << " callback get cqe for coll_id = " << collIdFromCqe << " waiting for " << (static_cast<CallBackArgs *>(args))->coll_id;
       delete static_cast<CallBackArgs *>(args);
       return 0;
     };
@@ -122,7 +122,13 @@ void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) con
 
     OF_NCCL_CHECK(ofcclRunAllReduce(send_buff, recv_buff, coll_id, cb_func, args, ofccl_rank_ctx));
 
-    VLOG(1) << "OfCollectiveBoxingGenericKernel::ForwardDataContent invoke ofcclRunAllReduce with send_buff = " << send_buff << " recv_buff = " << recv_buff;
+    // TODO: 打印一下buffer大小。是我太紧张了吗？
+    // !!!!!!!!!!!!!!!! 为了log打印一下count !!!!!!!!!!!!!!!!
+    size_t count = 1;
+    const Shape shape = Shape(rank_desc.op_desc().shape());
+    FOR_RANGE(int, shape_ax, 0, shape.NumAxes()) { count *= shape.At(shape_ax); }
+    CHECK_GT(count, 0);
+    VLOG(1) << "ForwardDataContent invoke ofcclRunAllReduce with collId = " << coll_id  << "count = " << count; // << " send_buff = " << send_buff << " recv_buff = " << recv_buff;
   }
 }
 
