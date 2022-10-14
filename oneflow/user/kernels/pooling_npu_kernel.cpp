@@ -135,7 +135,7 @@ class MaxPool2dGradNpuKernel final : public user_op::OpKernel {
 
 };
 #define REGISTER_POOLING_NPU_KERNELS(dtype)                                             \
-  REGISTER_USER_KERNEL("max_pool_2d")                                                    \
+  REGISTER_USER_KERNEL("max_pool_2d_npu")                                                    \
       .SetCreateFn<MaxPool2dNpuKernel<dtype>>()                                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)                   \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \

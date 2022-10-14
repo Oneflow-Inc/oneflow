@@ -301,7 +301,7 @@ NpuCommand& NpuCommand::Input(HostTensorWrapper& wrap)
 {
     aclTensorDesc* desc = getTensorDesc(wrap);
     command_param.in_descs.push_back(desc);
-    aclSetTensorPlaceMent(desc, ACL_MEMTYPE_HOST);
+    aclSetTensorPlaceMent(desc, wrap.mem_type);
     command_param.in_buffers.push_back(getDataBuffer(wrap));
     return *this;     
 }

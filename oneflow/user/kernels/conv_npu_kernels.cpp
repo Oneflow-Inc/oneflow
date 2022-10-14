@@ -24,9 +24,38 @@ limitations under the License.
 #include "acl/ops/acl_cblas.h"
 #include "oneflow/user/ops/npu_command.h"
 
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#define GetCurrentDirPath getcwd
+#define Mkdir(path, mode) mkdir(path, mode)
+
 using namespace std;
 namespace oneflow {
 namespace {
+
+const size_t kMaxPathLen = 4096U;
+std::string GetCurDirPath() {
+  char buff[kMaxPathLen] = {'\0'};
+  GetCurrentDirPath(buff, kMaxPathLen);
+  return std::string(buff);
+}
+void MakeCompileCacheDirAndSetOption() {
+  auto compile_cache_dir = GetCurDirPath() + "/cache";
+  // mode : 750
+  auto ret = Mkdir(compile_cache_dir.c_str(), S_IRWXU | S_IRGRP | S_IXGRP);
+  if (ret == -1) {
+    if (errno != EEXIST) {
+      std::cout<<"make compile cache directory error: "<<strerror(errno)<<std::endl;
+      return;
+    }
+  }
+  std::string val = "enable";
+  std::cout<<val<<" "<<compile_cache_dir<<std::endl;
+  OF_NPU_CHECK(aclSetCompileopt(aclCompileOpt::ACL_OP_COMPILER_CACHE_MODE, val.c_str()));
+  OF_NPU_CHECK(aclSetCompileopt(aclCompileOpt::ACL_OP_COMPILER_CACHE_DIR, compile_cache_dir.c_str()));
+  std::cout<<"MakeCompileCacheDirAndSetOption Over"<<std::endl;
+}
 
 template<typename T, size_t NDims>
 class ConvNpuKernel final : public user_op::OpKernel {
@@ -38,6 +67,7 @@ class ConvNpuKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
+    // MakeCompileCacheDirAndSetOption();
     // user_op::Tensor : /home/HDD/dck/oneflow/oneflow/core/framework/user_op_tensor.h
     user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);

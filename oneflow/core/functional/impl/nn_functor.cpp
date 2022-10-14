@@ -874,11 +874,16 @@ class MaxPoolNDFunctor {
     // If stride is None, we set it as kernel_size to align Pytorch.
     attrs.SetAllAttrs(kernel_size, padding, stride ? *JUST(stride) : kernel_size, dilation,
                       data_format, return_indices, ceil_mode);
+    bool isNpu = (x->device().GetOrThrow()->type()=="npu");
+    if(isNpu){
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_npu, {x}, attrs);
+    }
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
   }
 
  protected:
   std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_npu;
   std::shared_ptr<OpExpr> tf_maxpool_op_;
 };
 
@@ -899,6 +904,7 @@ class MaxPool1DFunctor : public MaxPoolNDFunctor {
 class MaxPool2DFunctor : public MaxPoolNDFunctor {
  public:
   MaxPool2DFunctor() {
+    op_npu = CHECK_JUST(one::OpBuilder("max_pool_2d_npu").Input("x").Output("y").Output("indice").Build());
     op_ = CHECK_JUST(one::OpBuilder("max_pool_2d").Input("x").Output("y").Output("indice").Build());
     tf_maxpool_op_ = CHECK_JUST(one::OpBuilder("tf_max_pool_2d").Input("x").Output("y").Build());
   }
@@ -2688,6 +2694,8 @@ class PadFunctor {
 class DropoutFunctor {
  public:
   DropoutFunctor() {
+    dropout_op_npu =
+        CHECK_JUST(one::OpBuilder("dropout_npu").Input("in").Output("out").Output("mask").Build());
     dropout_op_ =
         CHECK_JUST(one::OpBuilder("dropout").Input("in").Output("out").Output("mask").Build());
     dropout_addend_op_ = CHECK_JUST(one::OpBuilder("dropout")
@@ -2724,14 +2732,22 @@ class DropoutFunctor {
         return x;
       } else {
         outputs->resize(2);
-        JUST(OpInterpUtil::Dispatch(*dropout_op_, {x}, outputs.get(),
-                                    OpExprInterpContext(dropout_attrs, dropout_state)));
+        bool isNpu = (x->device().GetOrThrow()->type()=="npu");
+        if(isNpu){
+          JUST(OpInterpUtil::Dispatch(*dropout_op_npu, {x}, outputs.get(),
+                                      OpExprInterpContext(dropout_attrs, dropout_state)));          
+        }
+        else{
+          JUST(OpInterpUtil::Dispatch(*dropout_op_, {x}, outputs.get(),
+                                      OpExprInterpContext(dropout_attrs, dropout_state)));
+        }
       }
     }
     return (*outputs)[0];
   }
 
  private:
+  std::shared_ptr<OpExpr> dropout_op_npu;
   std::shared_ptr<OpExpr> dropout_op_;
   std::shared_ptr<OpExpr> dropout_addend_op_;
   std::shared_ptr<OpExpr> add_op_;

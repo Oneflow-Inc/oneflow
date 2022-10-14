@@ -13,6 +13,7 @@ namespace oneflow
 {
 void testblock();
 static std::map<DataType, aclDataType> datatype_map ={
+                {kChar, ACL_INT8}, // kChar is ACL_INT8 in pytorch
                 {kFloat, ACL_FLOAT},
                 {kFloat16, ACL_FLOAT16},
                 {kInt8, ACL_INT8},
@@ -29,6 +30,7 @@ static std::map<DataType, aclDataType> datatype_map ={
                 {kComplex128, ACL_COMPLEX128},
             };   
 static std::map<std::string, aclDataType> datatype_string_map ={
+                {"kChar", ACL_UINT8}, // kChar is ACL_INT8 in pytorch
                 {"kFloat", ACL_FLOAT},
                 {"kFloat16", ACL_FLOAT16},
                 {"kInt8", ACL_INT8},
@@ -169,14 +171,22 @@ struct MaxPoolTensorWrapper
 struct HostTensorWrapper
 {
     HostTensorWrapper(aclDataType type, aclFormat format, int64_t num_dims, const int64_t* dims, uint32_t tensor_size,
+                        void* data_ptr, aclMemType mem_type)
+                    : type(type), format(format), num_dims(num_dims), dims(dims), tensor_size(tensor_size), 
+                    data_ptr(data_ptr),  mem_type(mem_type)
+                    {}
+    HostTensorWrapper(aclDataType type, aclFormat format, int64_t num_dims, const int64_t* dims, uint32_t tensor_size,
                         void* data_ptr)
-                    : type(type), format(format), num_dims(num_dims), dims(dims), tensor_size(tensor_size), data_ptr(data_ptr){}
+                    : HostTensorWrapper(type, format, num_dims, dims, tensor_size, data_ptr, ACL_MEMTYPE_HOST)
+                    {}
+            
     aclDataType type;
     aclFormat format;
     int64_t num_dims;
     const int64_t* dims;
     uint32_t tensor_size;
     void* data_ptr;
+    aclMemType mem_type;
 };
 // struct BatchNormTensorWrapper
 // {
@@ -219,7 +229,6 @@ public:
     NpuCommand& Input(std::string key, int64_t len, aclDataType type);
     NpuCommand& Input(MaxPoolTensorWrapper& wrap);
     NpuCommand& Input(HostTensorWrapper& wrap);
-
     NpuCommand& Output( user_op::Tensor* output, std::string format = "channels_nd", std::string desc_name = "",
                         std::string real_type = "");
     NpuCommand& Output(AclTensorWrapper& wrap);

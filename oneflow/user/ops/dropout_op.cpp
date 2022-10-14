@@ -55,7 +55,6 @@ namespace oneflow {
   const Shape& dy_shape = ctx->InputShape("dy", 0);
   ctx->SetOutputShape("dx", 0, dy_shape);
   ctx->SetOutputIsDynamic("dx", 0, ctx->InputIsDynamic("dy", 0));
-  CHECK_EQ_OR_RETURN(ctx->InputShape("mask", 0), dy_shape);
   return Maybe<void>::Ok();
 }
 
@@ -84,9 +83,6 @@ namespace oneflow {
 
 /* static */ Maybe<void> DropoutGradOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("dx", 0, ctx->InputDType("dy", 0));
-  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kBool)
-      << "InferDataType Failed. Expected " << DataType_Name(DataType::kBool) << ", but got "
-      << DataType_Name(ctx->InputDType("mask", 0));
   return Maybe<void>::Ok();
 }
 

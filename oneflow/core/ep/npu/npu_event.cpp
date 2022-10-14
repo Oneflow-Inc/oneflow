@@ -39,6 +39,7 @@ Maybe<bool> NpuEvent::QueryDone() {
 }
 
 Maybe<void> NpuEvent::Sync() {
+
   std::cout<<"NpuEvent::Sync()"<<std::endl;
   aclError err = aclrtSynchronizeEvent(npu_event_);
   if (err == ACL_SUCCESS) {

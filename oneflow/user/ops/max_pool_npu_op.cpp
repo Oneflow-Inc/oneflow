@@ -68,6 +68,16 @@ TensorDescInferFn MaxPoolMakeForwardTensorDescInferFn(const int32_t dim) {
     *indice_desc = *ctx->MutOutputTensorDesc("y", 0);
     indice_desc->set_shape(y_desc->shape());
     indice_desc->set_data_type(kInt64);
+    // for npu
+    
+    auto indice_shape = indice_desc->shape();
+    const int64_t BLOCKSIZE = 16;
+    int64_t maskH = kernel_size[0] * kernel_size[1];
+    int64_t maskW = (CeilDiv(indice_shape.At(2) * indice_shape.At(3), BLOCKSIZE) + 1);
+    DimVector indice_dim = {indice_shape.At(0), indice_shape.At(1), maskH, maskW, BLOCKSIZE};
+    Shape new_shape(indice_dim);
+    indice_desc->set_shape(new_shape);
+    
     return Maybe<void>::Ok();
   };
 }
@@ -150,9 +160,8 @@ Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
     return GetComputationCost(ctx, "y");                                                 \
   }
 
-IMPLEMENT_MAXPOOL_FUNCS(MaxPool1D, 1)
-IMPLEMENT_MAXPOOL_FUNCS(MaxPool2D, 2)
-IMPLEMENT_MAXPOOL_FUNCS(MaxPool3D, 3)
+IMPLEMENT_MAXPOOL_FUNCS(MaxPool2DNpu, 2)
+
 #undef IMPLEMENT_MAXPOOL_FUNCS
 
 #define IMPLEMENT_MAXPOOL_BACKWARD_FUNCS(name)                                               \
@@ -173,9 +182,6 @@ IMPLEMENT_MAXPOOL_FUNCS(MaxPool3D, 3)
     return GetComputationCost(ctx, "dy");                                                    \
   }
 
-IMPLEMENT_MAXPOOL_BACKWARD_FUNCS(MaxPool1D)
-IMPLEMENT_MAXPOOL_BACKWARD_FUNCS(MaxPool2D)
-IMPLEMENT_MAXPOOL_BACKWARD_FUNCS(MaxPool3D)
 #undef IMPLEMENT_MAXPOOL_BACKWARD_FUNCS
 
 }  // namespace oneflow
