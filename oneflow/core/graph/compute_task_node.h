@@ -73,6 +73,9 @@ class CompTaskNode : public TaskNode, public FakeConsumedRegstProvider {
     static ExecNode::InferBlobDescsMethod VisitRankPerThread() {
       return &ExecNode::InferBlobDescsByNdSbp;
     }
+    static ExecNode::InferBlobDescsMethod VisitRankPerProcess() {
+      return &ExecNode::InferBlobDescsByNdSbp;
+    }
   };
 
   ParallelContext parallel_ctx_;

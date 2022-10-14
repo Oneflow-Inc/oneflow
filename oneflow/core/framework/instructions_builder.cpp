@@ -203,7 +203,7 @@ Maybe<void> InstructionsBuilder::SoftSyncNNGraphBuffers(
 namespace {
 
 int64_t NewSymbolId() {
-  static std::atomic<int64_t> cnt(0);
+  static std::atomic<int64_t> cnt(1);
   return cnt.fetch_add(1, std::memory_order_relaxed);
 }
 
@@ -219,10 +219,6 @@ Maybe<ParallelDesc> InstructionsBuilder::GetParallelDescSymbol(const ParallelCon
 
 Maybe<Scope> InstructionsBuilder::GetScopeSymbol(const ScopeProto& scope_proto) {
   return Singleton<symbol::Storage<Scope>>::Get()->FindOrCreate(scope_proto, &NewSymbolId);
-}
-
-Maybe<OperatorConfSymbol> InstructionsBuilder::GetOpConfSymbol(const OperatorConf& op_conf) {
-  return Singleton<symbol::Storage<OperatorConfSymbol>>::Get()->FindOrCreate(op_conf, &NewSymbolId);
 }
 
 Maybe<Scope> InstructionsBuilder::BuildInitialScope(

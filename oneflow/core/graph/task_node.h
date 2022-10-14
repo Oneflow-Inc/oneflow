@@ -120,6 +120,11 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   TaskEdge* SoleOutDataEdge() const;
   size_t in_data_edges_size() const;
   size_t out_data_edges_size() const;
+  const TaskId& new_task_id() const {
+    CHECK(has_new_task_id());
+    return *new_task_id_;
+  }
+  void update_new_task_id(const TaskId& task_id);
 
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_reuse_mem);

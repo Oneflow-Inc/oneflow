@@ -148,20 +148,28 @@ class BoxingTaskGraph final : public TaskGraph {
   OF_DISALLOW_COPY_AND_MOVE(BoxingTaskGraph);
   ~BoxingTaskGraph() = default;
 
-  static Maybe<BoxingTaskGraph> New() {
+  static Maybe<BoxingTaskGraph> New(
+      const std::function<void(size_t, const std::function<void(size_t i)>&)>& Loop) {
     std::shared_ptr<BoxingTaskGraph> graph(new BoxingTaskGraph());
-    JUST(graph->Init());
+    JUST(graph->Init(Loop));
     return graph;
   }
 
   void ToProto(const std::function<bool(TaskNode*)>& Pick, BoxingTaskGraphProto* proto) const;
+  void ToProto(BoxingTaskGraphProto* proto, const std::function<bool(TaskNode*)>& Pick) const {
+    return ToProto(Pick, proto);
+  }
   static bool SelectTaskNodeByRank(TaskNode*, int64_t rank);
 
  private:
   BoxingTaskGraph() = default;
-  Maybe<void> Init();
+  Maybe<void> Init(const std::function<void(size_t, const std::function<void(size_t i)>&)>& Loop);
 
-  HashMap<const OpNode*, std::vector<CompTaskNode*>> op_node2sorted_comp_tasks_;
+  void CreateOpNode2TaskIds(
+      const std::function<void(size_t, const std::function<void(size_t i)>&)>& Loop);
+
+  HashMap<const OpNode*, std::vector<CompTaskNode*>> boxing_related_op_node2sorted_comp_tasks_;
+  HashMap<const OpNode*, std::vector<TaskId>> boxing_unrelated_op_node2sorted_task_ids_;
 };
 
 class TaskGraphRebuildCtx;

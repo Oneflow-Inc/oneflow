@@ -267,7 +267,10 @@ void GenMemChainTasksAndRegsts(
   HashMap<int64_t, TaskProto*> task_id2proto;
   for (int64_t i = 0; i < plan->task_size(); ++i) {
     TaskProto* task = plan->mutable_task(i);
-    CHECK(task_id2proto.emplace(task->task_id(), task).second);
+    CHECK(task_id2proto.emplace(task->task_id(), task).second)
+        << "\n-------------old-------------\n"
+        << task_id2proto.at(task->task_id())->DebugString() << "\n-------------new-------------\n"
+        << task->DebugString();
   }
   for (auto& pair : *mem_chain2sorted_tasks) {
     std::vector<TaskProto*>* sorted_tasks = &(pair.second);

@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 void ChunkMgr::GetChunkProtosByMemZoneUniqueId(int64_t mem_zone_uid,
-                                               std::vector<const ChunkProto*>* chunks) {
+                                               std::vector<const ChunkProto*>* chunks) const {
   std::unique_lock<std::mutex> guard(mutex_);
   chunks->clear();
   auto chunk_ids_it = mzuid2chunk_ids_.find(mem_zone_uid);

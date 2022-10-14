@@ -32,7 +32,7 @@ class ChunkMgr final {
 
   // Compiler
   void GetChunkProtosByMemZoneUniqueId(int64_t mem_zone_uid,
-                                       std::vector<const ChunkProto*>* chunks);
+                                       std::vector<const ChunkProto*>* chunks) const;
   void AddChunkProto(const ChunkProto& chunk);
 
   // Runtime
@@ -51,7 +51,7 @@ class ChunkMgr final {
 
   // for runtime
   HashMap<int64_t, ChunkWithPtr> chunk_id2chunk_;
-  std::mutex mutex_;
+  mutable std::mutex mutex_;
 };
 
 }  // namespace oneflow

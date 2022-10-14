@@ -28,7 +28,6 @@ message OpAttribute {
   optional SbpSignature sbp_signature = 104;
   optional LocalSignature local_signature = 105;
   optional BlobDescSignature logical_blob_desc_signature = 106;
-  optional ParallelSignature parallel_signature = 108;
   optional ParallelConfSignature parallel_conf_signature = 109;
   optional NdSbpSignature nd_sbp_signature = 110;
 }
