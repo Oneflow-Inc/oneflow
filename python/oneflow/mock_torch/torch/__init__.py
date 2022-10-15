@@ -20,8 +20,10 @@ from oneflow.mock_torch import (
     OneflowImporter,
 )
 
+
 def __getattr__(name: str):
     return ModuleWrapper(oneflow).__getattr__(name)
+
 
 # register importer in meta path
 sys.meta_path.insert(0, OneflowImporter())

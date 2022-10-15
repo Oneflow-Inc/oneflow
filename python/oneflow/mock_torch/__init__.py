@@ -36,7 +36,7 @@ class ModuleWrapper(ModuleType):
             if name == "__path__":
                 return None
             if name == "__all__":
-                return [attr for attr in dir(self.module) if not attr.startswith('_')]
+                return [attr for attr in dir(self.module) if not attr.startswith("_")]
             raise NotImplementedError(self.module.__name__ + "." + name + error_msg)
         attr = getattr(self.module, name)
         if ismodule(attr):
@@ -77,7 +77,7 @@ class OneflowImporter(MetaPathFinder, Loader):
 
 # dynamically mock torch and its submodules
 def mock():
-    if sys.modules.get('torch') is not None:
-        print('Warning: Detected imported torch modules, quitting `mock`')
+    if sys.modules.get("torch") is not None:
+        print("Warning: Detected imported torch modules, quitting `mock`")
     else:
         sys.meta_path.insert(0, OneflowImporter())
