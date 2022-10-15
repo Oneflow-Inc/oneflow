@@ -2,7 +2,6 @@ import unittest
 import oneflow as flow
 import oneflow.unittest
 from oneflow.mock_torch import mock
-import sys
 
 class TestMock(flow.unittest.TestCase):
     def test_simple_mock(test_case):

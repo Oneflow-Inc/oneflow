@@ -1,14 +1,13 @@
 #!/bin/bash
 set -e
 MOCK_TORCH=$PWD/python/oneflow/test/misc/test_mock_simple.py
-MOCK_UNITTEST=$PWD/python/oneflow/test/misc/test_mock.py
 
 same_or_exit() {
     if [[ "$(python3 $MOCK_TORCH)" != *"$1"* ]]; then
         exit 1
     fi
 }
-eval $(python3 -m oneflow.mock_torch) # default argument is enable
+eval $(python3 -m oneflow.mock_torch) # test call to python module, default argument is enable
 same_or_exit "True"
 
 # testing import
@@ -28,7 +27,7 @@ eval $(python3 -m oneflow.mock_torch enable)
 same_or_exit "True"
 eval $(python3 -m oneflow.mock_torch disable) # recover
 same_or_exit "False"
-eval $(oneflow-mock-torch)
+eval $(oneflow-mock-torch) # test scripts
 same_or_exit "True"
 eval $(oneflow-mock-torch disable)
 same_or_exit "False"
@@ -36,15 +35,3 @@ eval $(oneflow-mock-torch enable)
 same_or_exit "True"
 eval $(oneflow-mock-torch disable)
 same_or_exit "False"
-python3 $MOCK_UNITTEST --failfast --verbose
-# mocking won't work because torch is already imported
-python3 -c "import torch; from oneflow.mock_torch import mock;
-mock(); assert(torch.__package__ == 'torch')"
-# testing import *
-python3 -c "
-import oneflow
-import oneflow.nn
-from oneflow.mock_torch import mock; mock();
-from torch.sbp import *; assert(sbp == oneflow.sbp.sbp);
-from torch import *; assert(randn == oneflow.randn);
-from torch.nn import *; assert(Graph == oneflow.nn.Graph)"
