@@ -200,7 +200,10 @@ def _test_mha_nn_module(test_case):
 
 @flow.unittest.skip_unless_1n1d()
 class TestMultiHeadAttentionModule(flow.unittest.TestCase):
-    @unittest.skipIf(version.parse(torch_original.__version__) < version.parse("1.14.0"), "torch below 1.14.0 has not torch._native_multi_head_attention")
+    @unittest.skipIf(
+        version.parse(torch_original.__version__) < version.parse("1.14.0"),
+        "torch below 1.14.0 has not torch._native_multi_head_attention",
+    )
     @autotest(n=10)
     def test_native_multi_head_attention(test_case):
         (
