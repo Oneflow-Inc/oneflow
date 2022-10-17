@@ -406,13 +406,14 @@ std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
                                                               const std::string& prefix,
                                                               const X& master_data,
                                                               Y* worker_data) {
-  size_t split_num = std::sqrt(world_size);
+  const size_t thread_num = ThreadLocalEnvInteger<ONEFLOW_LAZY_COMPILE_RPC_THREAD_NUM>();
+  const size_t split_num = std::sqrt(world_size);
   BalancedSplitter bs(world_size, split_num);
   std::set<std::string> keys;
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     std::string data;
     master_data.SerializeToString(&data);
-    MultiThreadLoop(split_num, [&](int i) {
+    FixedMultiThreadLoop(thread_num, split_num, [&](int i) {
       Range range = bs.At(i);
       std::string key = prefix + std::to_string(i);
       Singleton<CtrlClient>::Get()->PushKV(key, data);
@@ -432,10 +433,11 @@ std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
 template<typename T, typename DoEachT>
 std::set<std::string> MultiThreadPullFromWorkersToMaster(const std::string& prefix, const T& data,
                                                          const DoEachT& DoEach) {
+  const size_t thread_num = ThreadLocalEnvInteger<ONEFLOW_LAZY_COMPILE_RPC_THREAD_NUM>();
   constexpr int kWorkerStartRank = 1;
   std::set<std::string> keys{};
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    MultiThreadLoop(GlobalProcessCtx::WorldSize(), [&](int i) {
+    FixedMultiThreadLoop(thread_num, GlobalProcessCtx::WorldSize(), [&](int i) {
       if (i < kWorkerStartRank) { return; }
       T data;
       std::string key = prefix + std::to_string(i);
@@ -453,10 +455,11 @@ std::set<std::string> MultiThreadPullFromWorkersToMaster(const std::string& pref
 template<typename T, typename PrepareEachT>
 std::set<std::string> MultiThreadPushFromMasterToWorkers(const std::string& prefix, T* data,
                                                          const PrepareEachT& PrepareEach) {
+  const size_t thread_num = ThreadLocalEnvInteger<ONEFLOW_LAZY_COMPILE_RPC_THREAD_NUM>();
   constexpr int kWorkerStartRank = 1;
   std::set<std::string> keys{};
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    MultiThreadLoop(GlobalProcessCtx::WorldSize(), [&](int i) {
+    FixedMultiThreadLoop(thread_num, GlobalProcessCtx::WorldSize(), [&](int i) {
       if (i < kWorkerStartRank) { return; }
       T data;
       std::string key = prefix + std::to_string(i);

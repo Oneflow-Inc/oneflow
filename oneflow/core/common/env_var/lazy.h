@@ -22,6 +22,7 @@ limitations under the License.
 namespace oneflow {
 
 DEFINE_THREAD_LOCAL_ENV_STRING(ONEFLOW_LAZY_COMPILE_MODE, "naive");
+DEFINE_THREAD_LOCAL_ENV_INTEGER(ONEFLOW_LAZY_COMPILE_RPC_THREAD_NUM, 16);
 
 }  // namespace oneflow
 

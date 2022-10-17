@@ -73,6 +73,17 @@ void MultiThreadLoop(size_t num, const DoEachT& DoEach) {
   bc.WaitForeverUntilCntEqualZero();
 }
 
+template<typename DoEachT>
+void FixedMultiThreadLoop(size_t fixed_thread_num, size_t total_num, const DoEachT& DoEach) {
+  CHECK_GT(fixed_thread_num, 0);
+  fixed_thread_num = std::min(fixed_thread_num, total_num);
+  BalancedSplitter bs(total_num, fixed_thread_num);
+  MultiThreadLoop(fixed_thread_num, [&](size_t i) {
+    Range range = bs.At(i);
+    for (int j = range.begin(); j < range.end(); ++j) { DoEach(j); }
+  });
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_
