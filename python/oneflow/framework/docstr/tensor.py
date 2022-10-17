@@ -2343,6 +2343,24 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.bincount,
+    """
+    See :func:`oneflow.bincount`
+    For example:
+    .. code-block:: python
+        >>> import oneflow as flow
+        >>> x = flow.Tensor([0, 2, 3]).int()
+        >>> x.bincount()
+        tensor([1, 0, 1, 1], dtype=oneflow.int64)
+        >>> weight = flow.Tensor([0.1, 0.2, 0.3])
+        >>> x.bincount(weight)
+        tensor([0.1000, 0.0000, 0.2000, 0.3000], dtype=oneflow.float32)
+        >>> x.bincount(weight, minlength=5)
+        tensor([0.1000, 0.0000, 0.2000, 0.3000, 0.0000], dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.bernoulli,
     """
     See :func:`oneflow.bernoulli`
