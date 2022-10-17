@@ -152,6 +152,12 @@ class Adam(Optimizer):
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
 
+                if self.multi_tensor and not param.is_cuda:
+                    warnings.warn(
+                        "Only cuda param can be used for multi_tensor, trying default Adam kernel. "
+                    )
+                    self.multi_tensor = False
+
         self._op_with_amsgrad = (
             flow.stateful_op("adam_update")
             .Input("model")
