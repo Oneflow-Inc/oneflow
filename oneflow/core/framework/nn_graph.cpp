@@ -415,18 +415,19 @@ std::set<std::string> BroadcastFromMasterToWorkers(const std::string& key, const
 
 // return push/pull keys only in master process.
 template<typename T, typename DoEachT>
-std::set<std::string> ForEachPulledFromWorkersToMaster(const std::string& prefix, const T& data,
-                                                       const DoEachT& DoEach) {
+std::set<std::string> MultiThreadPullFromWorkersToMaster(const std::string& prefix, const T& data,
+                                                         const DoEachT& DoEach) {
   constexpr int kWorkerStartRank = 1;
   std::set<std::string> keys{};
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    for (int i = kWorkerStartRank; i < GlobalProcessCtx::WorldSize(); ++i) {
+    MultiThreadLoop(GlobalProcessCtx::WorldSize(), [&](int i) {
+      if (i < kWorkerStartRank) { return; }
       T data;
       std::string key = prefix + std::to_string(i);
       Singleton<CtrlClient>::Get()->PullKV(key, &data);
       DoEach(data);
       CHECK(keys.emplace(key).second) << "redundant pull key: " << key;
-    }
+    });
   } else {
     Singleton<CtrlClient>::Get()->PushKV(prefix + std::to_string(GlobalProcessCtx::Rank()), data);
   }
@@ -435,18 +436,19 @@ std::set<std::string> ForEachPulledFromWorkersToMaster(const std::string& prefix
 
 // return push/pull keys only in master process.
 template<typename T, typename PrepareEachT>
-std::set<std::string> ForEachPushedFromMasterToWorkers(const std::string& prefix, T* data,
-                                                       const PrepareEachT& PrepareEach) {
+std::set<std::string> MultiThreadPushFromMasterToWorkers(const std::string& prefix, T* data,
+                                                         const PrepareEachT& PrepareEach) {
   constexpr int kWorkerStartRank = 1;
   std::set<std::string> keys{};
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    for (int i = kWorkerStartRank; i < GlobalProcessCtx::WorldSize(); ++i) {
+    MultiThreadLoop(GlobalProcessCtx::WorldSize(), [&](int i) {
+      if (i < kWorkerStartRank) { return; }
       T data;
       std::string key = prefix + std::to_string(i);
       PrepareEach(&data, i);
       Singleton<CtrlClient>::Get()->PushKV(key, data);
       CHECK(keys.emplace(key).second) << "redundant pull key: " << key;
-    }
+    });
   } else {
     Singleton<CtrlClient>::Get()->PullKV(prefix + std::to_string(GlobalProcessCtx::Rank()), data);
   }
@@ -486,9 +488,9 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
         return BoxingTaskGraph::SelectTaskNodeByRank(task_node, i);
       });
     };
-    Merge(ForEachPushedFromMasterToWorkers(std::string(__FUNCTION__) + "_boxing_task_graph",
-                                           boxing_task_graph_proto.get(),
-                                           PrepareWorkerBoxingTaskGraphProto));
+    Merge(MultiThreadPushFromMasterToWorkers(std::string(__FUNCTION__) + "_boxing_task_graph",
+                                             boxing_task_graph_proto.get(),
+                                             PrepareWorkerBoxingTaskGraphProto));
     auto* plan = &plan_;
     double start = GetCurTime();
     // TODO(chengcheng): new memory reused by chunk
@@ -517,10 +519,12 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
       if (!GlobalProcessCtx::IsThisProcessMaster()) { InitIdPairs(reachable_cb_pairs, &id_pairs); }
       const auto& MergePairs = [&](const IdPairs& pairs) {
         CHECK(GlobalProcessCtx::IsThisProcessMaster());
+        static std::mutex mutex;
+        std::unique_lock<std::mutex> lock(mutex);
         MergeIdPairs(pairs, &reachable_cb_pairs);
       };
-      Merge(ForEachPulledFromWorkersToMaster(std::string(__FUNCTION__) + "_reachable_cb_pairs",
-                                             id_pairs, MergePairs));
+      Merge(MultiThreadPullFromWorkersToMaster(std::string(__FUNCTION__) + "_reachable_cb_pairs",
+                                               id_pairs, MergePairs));
     }
     if (GlobalProcessCtx::IsThisProcessMaster()) {
       // TODO(chengcheng): test collective boxing for multi-job.
