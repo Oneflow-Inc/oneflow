@@ -2383,8 +2383,13 @@ class ConstantPadFunctor {
       attrs.SetAllAttrs(pad, value.As<double>(), static_cast<int64_t>(0), pad_before, pad_after);
     } else if (IsIntegralDataType(input->dtype()->data_type())) {
       attrs.SetAllAttrs(pad, static_cast<double>(0), value.As<int64_t>(), pad_before, pad_after);
+    } else if (input->dtype() == DType::Bool()) {
+      int64_t bool_value = value.As<int64_t>();
+      CHECK_OR_RETURN(bool_value == 1 || bool_value == 0)
+          << "value must be 1/0 or True/False for bool Tensor";
+      attrs.SetAllAttrs(pad, static_cast<double>(0), value.As<int64_t>(), pad_before, pad_after);
     } else {
-      UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
+      UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating, bool or integral type.";
     }
     return OpInterpUtil::Dispatch<Tensor>(*constant_pad_, {input}, attrs);
   }

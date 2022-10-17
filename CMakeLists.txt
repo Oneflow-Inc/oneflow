@@ -320,14 +320,6 @@ if(BUILD_CUDA)
       # NVIDIA H100
       list(APPEND CMAKE_CUDA_ARCHITECTURES 90-real)
     endif()
-
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 80-virtual)
-    elseif(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 75-virtual)
-    else()
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 70-virtual)
-    endif()
   endif()
 
   enable_language(CUDA)
