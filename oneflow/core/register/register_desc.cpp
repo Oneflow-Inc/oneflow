@@ -143,7 +143,11 @@ void RegstDesc::InitFromProtoExceptConsumers(const RegstDescProto& proto) {
   mem_block_id_ = proto.mem_block_id();
   mem_block_offset_ = proto.mem_block_offset();
   hint_inplace_consumed_regst_desc_id_ = proto.hint_inplace_consumed_regst_desc_id();
+  CHECK(hint_inplace_consumed_regst_desc_id_ > -2) << hint_inplace_consumed_regst_desc_id_;
+  VLOG(1) << "got hit reg id " << hint_inplace_consumed_regst_desc_id_;
   force_inplace_consumed_regst_desc_id_ = proto.force_inplace_consumed_regst_desc_id();
+  CHECK(force_inplace_consumed_regst_desc_id_ > -2) << force_inplace_consumed_regst_desc_id_;
+  VLOG(1) << "got for reg id " << force_inplace_consumed_regst_desc_id_;
 }
 
 void RegstDesc::ToProto(RegstDescProto* ret, bool check) const {

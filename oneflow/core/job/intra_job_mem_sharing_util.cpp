@@ -65,6 +65,7 @@ void GenRegstDescId2RegstDesc(Plan* plan,
     for (auto& pair : *task->mutable_produced_regst_desc()) {
       int64_t regst_desc_id = pair.second.regst_desc_id();
       regst_desc_id2regst_desc->insert({regst_desc_id, &pair.second});
+      CHECK(regst_desc_id >= 0) << regst_desc_id;
     }
   }
 }
@@ -339,8 +340,12 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
     RegstDescProto* inplaced_regst = nullptr;
     while (consumer_regst->has_hint_inplace_consumed_regst_desc_id()
            && consumer_regst->hint_inplace_consumed_regst_desc_id() != -1) {
-      RegstDescProto* hint_inplaced_regst =
-          regst_desc_id2regst_desc.at(consumer_regst->hint_inplace_consumed_regst_desc_id());
+      auto it =
+          regst_desc_id2regst_desc.find(consumer_regst->hint_inplace_consumed_regst_desc_id());
+      CHECK(it != regst_desc_id2regst_desc.end())
+          << "Can't find regst desc id " << consumer_regst->hint_inplace_consumed_regst_desc_id()
+          << " in regst_desc_id2regst_desc.";
+      RegstDescProto* hint_inplaced_regst = it->second;
       if (mem_reused_regsts.find(hint_inplaced_regst) != mem_reused_regsts.end()) {
         inplaced_regst = hint_inplaced_regst;
         consumer_regst = hint_inplaced_regst;

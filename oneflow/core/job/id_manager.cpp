@@ -42,7 +42,9 @@ int64_t IDMgr::NewRegstDescId() {
   x.first = GlobalProcessCtx::Rank();
   x.second = regst_desc_id_count_++;
   const auto* __attribute__((__may_alias__)) ptr = reinterpret_cast<int64_t*>(&x);
-  return *ptr;
+  int64_t id = *ptr;
+  CHECK(id >= 0) << "new neg reg id " << id;
+  return id;
 }
 
 int64_t IDMgr::NewMemBlockId() {
