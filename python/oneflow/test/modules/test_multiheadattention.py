@@ -21,6 +21,7 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
 import torch as torch_original
+from packaging import version
 
 
 def _generate_inputs_for_native_mha():
@@ -199,6 +200,7 @@ def _test_mha_nn_module(test_case):
 
 @flow.unittest.skip_unless_1n1d()
 class TestMultiHeadAttentionModule(flow.unittest.TestCase):
+    @unittest.skipIf(version.parse(torch_original.__version__) < version.parse("1.14.0"), "torch below 1.14.0 has not torch._native_multi_head_attention")
     @autotest(n=10)
     def test_native_multi_head_attention(test_case):
         (
@@ -240,8 +242,7 @@ class TestMultiHeadAttentionModule(flow.unittest.TestCase):
         is_batched = random_bool().value()
         use_separate_proj_weight = random_bool().value()
         bias_k_v = random_bool().value()
-        # need_weights = random_bool().value()
-        need_weights = True
+        need_weights = random_bool().value()
 
         batch_size = random(1, 20)
         tgt_len = random(1, 20)
@@ -258,9 +259,6 @@ class TestMultiHeadAttentionModule(flow.unittest.TestCase):
             vdim = embed_dim
 
         if is_batched:
-            # query_shape = (batch_size, tgt_len, embed_dim)
-            # key_shape = (batch_size, src_len, kdim)
-            # value_shape = (batch_size, src_len, vdim)
             query_shape = (tgt_len, batch_size, embed_dim)
             key_shape = (src_len, batch_size, kdim)
             value_shape = (src_len, batch_size, vdim)
@@ -285,8 +283,8 @@ class TestMultiHeadAttentionModule(flow.unittest.TestCase):
         out_proj_bias = random_tensor(1, embed_dim).to(device)
 
         if bias_k_v:
-            bias_k = random_tensor(3, 1, 1, kdim).to(device)
-            bias_v = random_tensor(3, 1, 1, vdim).to(device)
+            bias_k = random_tensor(3, 1, 1, embed_dim).to(device)
+            bias_v = random_tensor(3, 1, 1, embed_dim).to(device)
             static_k, static_v = None, None
         elif is_batched:
             static_k = random_tensor(
