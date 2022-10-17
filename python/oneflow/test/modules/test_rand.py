@@ -114,6 +114,13 @@ class TestRandModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_half_rand(test_case):
+        for device in ["cuda", "cpu"]:
+            x = flow.rand(2, 3, dtype=flow.float16, device=flow.device(device))
+            test_case.assertTrue(x.dtype == flow.float16)
+            test_case.assertTrue(x.shape == flow.Size((2, 3)))
+
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
