@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cmath>
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/maybe.h"
@@ -401,13 +402,27 @@ namespace {
 
 // return push/pull keys only in master process.
 template<typename X, typename Y>
-std::set<std::string> BroadcastFromMasterToWorkers(const std::string& key, const X& master_data,
-                                                   Y* worker_data) {
+std::set<std::string> MultiThreadBroadcastFromMasterToWorkers(size_t world_size,
+                                                              const std::string& prefix,
+                                                              const X& master_data,
+                                                              Y* worker_data) {
+  size_t split_num = std::sqrt(world_size);
+  BalancedSplitter bs(world_size, split_num);
   std::set<std::string> keys;
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    Singleton<CtrlClient>::Get()->PushKV(key, master_data);
-    keys.insert(key);
+    std::string data;
+    master_data.SerializeToString(&data);
+    MultiThreadLoop(split_num, [&](int i) {
+      Range range = bs.At(i);
+      std::string key = prefix + std::to_string(i);
+      Singleton<CtrlClient>::Get()->PushKV(key, data);
+      static std::mutex mutex;
+      std::unique_lock<std::mutex> lock(mutex);
+      CHECK(keys.insert(key).second);
+    });
   } else {
+    const int64_t bs_index = bs.RecursiveBinarySearchIndex(GlobalProcessCtx::Rank());
+    std::string key = prefix + std::to_string(bs_index);
     Singleton<CtrlClient>::Get()->PullKV(key, worker_data);
   }
   return keys;
@@ -473,7 +488,9 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
     push_pull_keys.insert(keys.begin(), keys.end());
   };
   if (GlobalProcessCtx::IsThisProcessMaster()) { DumpCalculationPassName(&job_); }
-  Merge(BroadcastFromMasterToWorkers(std::string(__FUNCTION__) + "_job", job_, &job_));
+  const size_t world_size = GlobalProcessCtx::WorldSize();
+  Merge(MultiThreadBroadcastFromMasterToWorkers(world_size, std::string(__FUNCTION__) + "_job",
+                                                job_, &job_));
   JUST(OpGraph::WithSingleton(&job_, [&]() -> Maybe<void> {
     Singleton<OpGraph>::Get()->UpdateCachedPredicatorIsReachable();
     size_t rank = GlobalProcessCtx::Rank();
@@ -532,9 +549,9 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
         return std::make_unique<RankPlanTaskGraph>(plan_, reachable_cb_pairs);
       });
     }
-    Merge(BroadcastFromMasterToWorkers(std::string(__FUNCTION__) + "_collective_boxing_plan",
-                                       plan_.collective_boxing_plan(),
-                                       plan_.mutable_collective_boxing_plan()));
+    Merge(MultiThreadBroadcastFromMasterToWorkers(
+        world_size, std::string(__FUNCTION__) + "_collective_boxing_plan",
+        plan_.collective_boxing_plan(), plan_.mutable_collective_boxing_plan()));
     return Maybe<void>::Ok();
   }));
   PlanUtil::PlanMemoryLog(&plan_, name_);
