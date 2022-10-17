@@ -484,6 +484,18 @@ class TestTensorOps(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_type_noargs(test_case, *arg)
 
+    @autotest(n=3, auto_backward=False)
+    def test_bincount(test_case):
+        device = random_device()
+        len = random(1, 100)
+        input = random_tensor(1, len, dtype=int).to(device)
+        weight = random_tensor(1, len, dtype=float).to(device)
+        min_length = random(1, 100) | nothing()
+        return (
+            input.bincount(min_length=min_length),
+            input.bincount(weight, min_length=min_length),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

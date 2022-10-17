@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/user_op_hob.h"
+#include "oneflow/core/ep/include/primitive/memset.h"
 
 namespace oneflow {
 namespace user_op {
@@ -55,7 +56,10 @@ class CUDABinCountKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const IDX* in_ptr = in->dptr<IDX>();
     T* out_ptr = out->mut_dptr<T>();
-    Memset<DeviceType::kCUDA>(ctx->stream(), out_ptr, 0, out_size);
+    std::unique_ptr<ep::primitive::Memset> memset_primitive =
+        ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
+    CHECK(memset_primitive);
+    memset_primitive->Launch(ctx->stream(), out_ptr, 0, out_size);
     int64_t in_size = in->shape_view().elem_cnt();
     if (in_size == 0) { return; }
     if (ctx->has_input("weight", 0)) {
@@ -82,6 +86,7 @@ class CUDABinCountKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_CUDA_BINCOUNT_KERNEL(int64_t, int64_t)
+REGISTER_CUDA_BINCOUNT_KERNEL(int64_t, half)
 REGISTER_CUDA_BINCOUNT_KERNEL(int64_t, float)
 REGISTER_CUDA_BINCOUNT_KERNEL(int64_t, double)
 
