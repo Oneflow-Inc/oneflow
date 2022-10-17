@@ -2350,6 +2350,7 @@ add_docstr(
     For example:
 
     .. code-block:: python
+
         >>> import oneflow as flow
         >>> x = flow.Tensor([0, 2, 3]).int()
         >>> x.bincount()
