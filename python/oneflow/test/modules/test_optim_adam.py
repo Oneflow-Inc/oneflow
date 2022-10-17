@@ -39,6 +39,7 @@ def compare_with_numpy_adam(
     amsgrad,
     reload_state_step,
     save_load_by_pickle,
+    multi_tensor,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -59,6 +60,7 @@ def compare_with_numpy_adam(
             ],
             do_bias_correction=do_bias_correction,
             amsgrad=amsgrad,
+            multi_tensor=multi_tensor
         )
 
         def train_one_iter(grad):
@@ -142,6 +144,7 @@ def compare_with_numpy_adam_clip_grad(
     clip_grad_norm_type,
     reload_state_step,
     save_load_by_pickle,
+    multi_tensor,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -164,6 +167,7 @@ def compare_with_numpy_adam_clip_grad(
             ],
             do_bias_correction=do_bias_correction,
             amsgrad=amsgrad,
+            multi_tensor=multi_tensor
         )
 
         def train_one_iter(grad):
@@ -251,6 +255,7 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict["amsgrad"] = [True, False]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
+        arg_dict["multi_tensor"] = [False, True]
 
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adam(test_case, *arg)
@@ -270,6 +275,7 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
+        arg_dict["multi_tensor"] = [False, True]
 
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adam_clip_grad(test_case, *arg)

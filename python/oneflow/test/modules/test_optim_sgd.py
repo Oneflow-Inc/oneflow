@@ -40,6 +40,7 @@ def compare_with_numpy_sgd(
     train_iters,
     reload_state_step,
     save_load_by_pickle,
+    multi_tensor,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -54,6 +55,7 @@ def compare_with_numpy_sgd(
             dampening=dampening,
             nesterov=nesterov,
             maximize=maximize,
+            multi_tensor=multi_tensor
         )
 
         def train_one_iter(grad):
@@ -134,6 +136,7 @@ def compare_with_numpy_sgd_clip_grad(
     train_iters,
     reload_state_step,
     save_load_by_pickle,
+    multi_tensor,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -159,6 +162,7 @@ def compare_with_numpy_sgd_clip_grad(
             dampening=dampening,
             nesterov=nesterov,
             maximize=maximize,
+            multi_tensor=multi_tensor
         )
 
         def train_one_iter(grad):
@@ -244,6 +248,7 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["train_iters"] = [10]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
+        arg_dict["multi_tensor"] = [False, True]
         for arg in GenArgDict(arg_dict):
             compare_with_numpy_sgd(test_case, **arg)
 
@@ -262,6 +267,7 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["train_iters"] = [10]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
+        arg_dict["multi_tensor"] = [False, True]
         for arg in GenArgDict(arg_dict):
             compare_with_numpy_sgd_clip_grad(test_case, **arg)
 
