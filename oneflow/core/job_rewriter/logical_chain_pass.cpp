@@ -392,7 +392,7 @@ void TryMergeAfterAccLogicalChainToLastLogicalChain(
     sink_acc_tick_conf.set_name(std::string("Sys-LogicalChainSink-AccTick_") + NewUniqueId());
     sink_acc_tick_conf.set_scope_symbol_id(last_chain_sink_op->op().op_conf().scope_symbol_id());
     auto* acc_conf = sink_acc_tick_conf.mutable_acc_tick_conf();
-    acc_conf->set_one(last_chain_sink_lbn);
+    acc_conf->set_one(cast_to_tick_op.output("out", 0));
     acc_conf->set_acc("acc");
     acc_conf->set_max_acc_num(acc_num);
     acc_tick_output_lbn = GenLogicalBlobName(sink_acc_tick_conf.name(), "acc");
