@@ -35,7 +35,7 @@ Maybe<void> InferPhysical(user_op::InferContext* ctx) {
 Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) { return Maybe<void>::Ok(); }
 
 Maybe<void> InferFWDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 

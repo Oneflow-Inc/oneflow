@@ -218,4 +218,6 @@ def DistributedDataParallel(
 
         module.register_forward_pre_hook(pre_forward_hook)
 
+    module._is_ddp_module = True
+
     return module

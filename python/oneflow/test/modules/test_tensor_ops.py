@@ -221,6 +221,30 @@ class TestTensorOps(flow.unittest.TestCase):
         y = x.double()
         return y
 
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    def test_bool(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        y = x.bool()
+        return y
+
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    def test_bool_0dim(test_case):
+        device = random_device()
+        x = random_tensor(ndim=0).to(device)
+        y = x.bool()
+        return y
+
+    @autotest(n=5, auto_backward=False)
+    def test_bool_with_non_contiguous_input(test_case):
+        device = random_device()
+        permute_list = list(range(4))
+        shuffle(permute_list)
+        input = random_tensor(ndim=4).to(device)
+        x = input.permute(permute_list)
+        y = x.bool()
+        return y
+
     # Not check graph because of 2 reason.
     # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
     # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.
@@ -459,6 +483,18 @@ class TestTensorOps(flow.unittest.TestCase):
         ]
         for arg in GenArgList(arg_dict):
             _test_type_noargs(test_case, *arg)
+
+    @autotest(n=3, auto_backward=False)
+    def test_bincount(test_case):
+        device = random_device()
+        len = random(1, 100)
+        input = random_tensor(1, len, dtype=int).to(device)
+        weight = random_tensor(1, len, dtype=float).to(device)
+        min_length = random(1, 100) | nothing()
+        return (
+            input.bincount(minlength=min_length),
+            input.bincount(weight, minlength=min_length),
+        )
 
 
 if __name__ == "__main__":

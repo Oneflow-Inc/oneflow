@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/api/python/caster/optional.h"
 #include "oneflow/api/python/caster/size.h"
 #include "oneflow/api/python/caster/tensor.h"
+#include "oneflow/api/python/caster/autograd_function_state.h"
 #include "oneflow/core/common/preprocessor.h"
 
 namespace oneflow {

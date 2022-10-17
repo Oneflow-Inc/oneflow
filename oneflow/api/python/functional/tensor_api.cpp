@@ -141,7 +141,7 @@ class TensorWithDataCtorFunctor {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
 
-    const auto& dtype = DType::Float();
+    const auto& dtype = GetDefaultDType();
     if (PyTensor_Check(data)) {
       const auto& other = PyTensor_Unpack(data);
       const bool pin_memory =
@@ -173,7 +173,7 @@ class GlobalTensorWithDataCtorFunctor {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
 
-    const auto& dtype = DType::Float();
+    const auto& dtype = GetDefaultDType();
     if (PyTensor_Check(data)) {
       const auto& other = PyTensor_Unpack(data);
       return MakeTensorFromOtherTensor(other, dtype, placement, sbp_tuple,
@@ -195,7 +195,7 @@ class TensorWithShapeCtorFunctor {
     } else {
       device_ = JUST(Device::New("cpu"));
     }
-    return functional::Empty(shape, DType::Float(), device_, /*pin_memory=*/false);
+    return functional::Empty(shape, GetDefaultDType(), device_, /*pin_memory=*/false);
   }
 };
 
@@ -206,7 +206,7 @@ class GlobalTensorWithShapeCtorFunctor {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     JUST(CheckDeviceIdsIsValid(placement));
-    return functional::GlobalEmpty(shape, DType::Float(), placement, sbp_tuple);
+    return functional::GlobalEmpty(shape, GetDefaultDType(), placement, sbp_tuple);
   }
 };
 
@@ -275,12 +275,12 @@ class LocalTensorSharedNumpyDataFunctor {
     Py_INCREF(obj);
 
     // Build TensorMeta
-    const auto shape = std::make_shared<Shape>(DimVector(sizes.begin(), sizes.end()));
-    const auto stride = std::make_shared<Stride>(strides.begin(), strides.end());
+    const auto shape = Shape(DimVector(sizes.begin(), sizes.end()));
+    const auto stride = Stride(strides.begin(), strides.end());
     DataType data_type = JUST(numpy::GetOFDataTypeFromNpArray(array));
     Symbol<Device> device = JUST(Device::New("cpu"));
 
-    auto tensor_meta = SymbolOf(LocalTensorMeta(shape, stride, data_type, device, 0));
+    auto tensor_meta = SymbolOf(LocalTensorMeta(shape, stride, data_type, device));
 
     // Build TensorBuffer
     const auto& Free = [array](char* dptr) {

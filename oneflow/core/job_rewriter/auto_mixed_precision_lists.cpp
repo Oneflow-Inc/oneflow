@@ -40,8 +40,8 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "fused_relu_dropout_grad",
                                "fused_dot_feature_interaction",
                                "fused_dot_feature_interaction_grad",
-                               "embedding_lookup_placeholder",
-                               "embedding_update_placeholder",
+                               "one_embedding_fused_lookup",
+                               "one_embedding_fused_lookup_grad",
                                "binary_cross_entropy_with_logits_reduce_mean",
                                "binary_cross_entropy_with_logits_reduce_mean_grad",
                                "fused_cross_feature_interaction",
@@ -52,7 +52,7 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
 
 const AMPList& AutoMixedPrecisionLists::BlackList() {
   // TODO(niuchong): reduce_mean?
-  static AMPList black_list = {};
+  static AMPList black_list = {"amp_black_identity"};
   return black_list;
 }
 
@@ -64,10 +64,16 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "tf_avg_pool_2d_grad",
                               "tf_avg_pool_3d",
                               "tf_avg_pool_3d_grad",
+                              "avg_pool_1d",
+                              "avg_pool_1d_grad",
+                              "avg_pool_2d",
+                              "avg_pool_2d_grad",
+                              "avg_pool_3d",
+                              "avg_pool_3d_grad",
                               "bias_add",
                               "reduce_sum",
                               "reduce_sum_like",
-                              "sigmoid_v2_grad",
+                              "sigmoid_grad",
                               "tanh",
                               "tanh_grad",
                               "sqrt",
@@ -111,7 +117,12 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "fused_bias_add_mask_scale",
                               "acc",
                               "reciprocal",
-                              "reciprocal_no_nan"};
+                              "reciprocal_no_nan",
+                              "group_norm",
+                              "group_norm_param_grad",
+                              "group_norm_grad",
+                              "silu",
+                              "silu_grad"};
   return gray_list;
 }
 
@@ -129,6 +140,12 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "tf_max_pool_2d_grad",
                                "tf_max_pool_3d",
                                "tf_max_pool_3d_grad",
+                               "max_pool_1d",
+                               "max_pool_1d_grad",
+                               "max_pool_2d",
+                               "max_pool_2d_grad",
+                               "max_pool_3d",
+                               "max_pool_3d_grad",
                                "reshape",
                                "reshape_like",
                                "relu",
@@ -150,7 +167,6 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "embedding",
                                "embedding_grad",
                                "expand",
-                               "expand_grad",
                                "expand_dims",
                                "cast_to_static_shape",
                                "parallel_cast",
@@ -164,7 +180,9 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "narrow",
                                "narrow_grad",
                                "ones_like",
-                               "pinned_identity"};
+                               "pinned_identity",
+                               "to_contiguous",
+                               "copy"};
 
   return clear_list;
 }

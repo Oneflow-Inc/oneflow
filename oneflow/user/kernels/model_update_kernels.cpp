@@ -125,6 +125,7 @@ class SGDUpdateKernel final : public user_op::OpKernel, public user_op::CudaGrap
     const auto l2 = ctx->Attr<float>("l2");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
+    const float lr_scale = ctx->Attr<float>("learning_rate_scale");
     const float* learning_rate_ptr = nullptr;
     C* model_copy_ptr = nullptr;
     if (ctx->has_input("model_copy", 0)) {
@@ -150,8 +151,8 @@ class SGDUpdateKernel final : public user_op::OpKernel, public user_op::CudaGrap
     }
     SGDUpdateKernelUtil<device_type, T, G, C>::Update(
         ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, weight_decay,
-        learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(),
-        model->mut_dptr<T>(), model_copy_ptr);
+        learning_rate_val, lr_scale, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
+        model_diff->dptr<G>(), model->mut_dptr<T>(), model_copy_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -205,6 +206,7 @@ class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
     const user_op::Tensor* model_diff_values = ctx->Tensor4ArgNameAndIndex("model_diff_values", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     const auto weight_decay = ctx->Attr<float>("weight_decay");
+    const auto lr_scale = ctx->Attr<float>("learning_rate_scale");
     const int64_t num_indices = model_diff_indices->shape_view().elem_cnt();
     const int64_t num_values = model_diff_values->shape_view().elem_cnt();
     if (num_indices == 0) {
@@ -226,7 +228,7 @@ class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
         model_diff_values->dptr<T>(), buffer_manager.NumUniqueDiffIndicesPtr(),
         buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
         buffer_manager.UniqueWorkspacePtr(), buffer_manager.UniqueWorkspaceBytes());
-    MdUpdateUtilT::Update(ctx->stream(), weight_decay, num_indices, feature_size,
+    MdUpdateUtilT::Update(ctx->stream(), weight_decay, lr_scale, num_indices, feature_size,
                           kernel_cache->lower(), kernel_cache->upper(),
                           buffer_manager.NumUniqueDiffIndicesPtr(), learning_rate->dptr<float>(),
                           buffer_manager.UniqueDiffIndicesPtr(),
@@ -269,6 +271,7 @@ class MomentumUpdateKernel final : public user_op::OpKernel, public user_op::Cud
     const bool nesterov = ctx->Attr<bool>("nesterov");
     const bool maximize = ctx->Attr<bool>("maximize");
     float weight_decay = ctx->Attr<float>("weight_decay");
+    const auto lr_scale = ctx->Attr<float>("learning_rate_scale");
 
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
@@ -293,7 +296,7 @@ class MomentumUpdateKernel final : public user_op::OpKernel, public user_op::Cud
     }
     MomentumUpdateKernelUtil<device_type, T, G>::Update(
         ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, beta,
-        dampening, nesterov, maximize, weight_decay, learning_rate_val, learning_rate_ptr,
+        dampening, nesterov, maximize, weight_decay, learning_rate_val, lr_scale, learning_rate_ptr,
         scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(),
         momentum->mut_dptr<T>());
   }
@@ -342,6 +345,7 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
     const bool nesterov = ctx->Attr<bool>("nesterov");
     const bool maximize = ctx->Attr<bool>("maximize");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
+    const float lr_scale = ctx->Attr<float>("learning_rate_scale");
     const int64_t num_indices = model_diff_indices->shape_view().elem_cnt();
     const int64_t num_values = model_diff_values->shape_view().elem_cnt();
     if (num_indices == 0) {
@@ -365,11 +369,12 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
         model_diff_values->dptr<T>(), buffer_manager.NumUniqueDiffIndicesPtr(),
         buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
         buffer_manager.UniqueWorkspacePtr(), buffer_manager.UniqueWorkspaceBytes());
-    MdUpdateUtilT::Update(
-        ctx->stream(), beta, dampening, nesterov, maximize, weight_decay, num_indices, feature_size,
-        kernel_cache->lower(), kernel_cache->upper(), buffer_manager.NumUniqueDiffIndicesPtr(),
-        learning_rate->dptr<float>(), buffer_manager.UniqueDiffIndicesPtr(),
-        buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>(), momentum->mut_dptr<T>());
+    MdUpdateUtilT::Update(ctx->stream(), beta, dampening, nesterov, maximize, weight_decay,
+                          lr_scale, num_indices, feature_size, kernel_cache->lower(),
+                          kernel_cache->upper(), buffer_manager.NumUniqueDiffIndicesPtr(),
+                          learning_rate->dptr<float>(), buffer_manager.UniqueDiffIndicesPtr(),
+                          buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>(),
+                          momentum->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -413,6 +418,7 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const bool amsgrad = ctx->Attr<bool>("amsgrad");
     const bool do_bias_correction = ctx->Attr<bool>("do_bias_correction");
+    const float lr_scale = ctx->Attr<float>("learning_rate_scale");
 
     T* max_v_ptr = nullptr;
     if (amsgrad) {
@@ -469,10 +475,10 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
 
     AdamUpdateKernelUtil<device_type, T, G, C>::Update(
         ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
-        epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val, bias_correction1_val,
-        bias_correction2_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, bias_correction1_ptr,
-        bias_correction2_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), model_copy_ptr,
-        m->mut_dptr<T>(), v->mut_dptr<T>(), max_v_ptr);
+        epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val, lr_scale,
+        bias_correction1_val, bias_correction2_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
+        bias_correction1_ptr, bias_correction2_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(),
+        model_copy_ptr, m->mut_dptr<T>(), v->mut_dptr<T>(), max_v_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -513,6 +519,7 @@ class AdagradUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
     const float* learning_rate_ptr = nullptr;
     const int64_t train_step_val = ctx->Attr<int32_t>("train_step_val");
     const int64_t* train_step_ptr = nullptr;
+    const float lr_scale = ctx->Attr<float>("learning_rate_scale");
 
     if (ctx->has_input("learning_rate", 0)) {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
@@ -538,8 +545,9 @@ class AdagradUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
     }
     AdagradUpdateKernelUtil<device_type, T, G>::Update(
         ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, lr_decay,
-        epsilon, weight_decay, learning_rate_val, train_step_val, learning_rate_ptr, train_step_ptr,
-        scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), sum->mut_dptr<T>());
+        epsilon, weight_decay, learning_rate_val, lr_scale, train_step_val, learning_rate_ptr,
+        train_step_ptr, scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(),
+        sum->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -607,6 +615,7 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const bool amsgrad = ctx->Attr<bool>("amsgrad");
     const bool do_bias_correction = ctx->Attr<bool>("do_bias_correction");
+    const float lr_scale = ctx->Attr<float>("learning_rate_scale");
 
     T* max_v_ptr = nullptr;
     if (amsgrad) {
@@ -641,9 +650,9 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
 
     MdUpdateUtilT::Update(
         ctx->stream(), beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
-        learning_rate_val, num_indices, feature_size, kernel_cache->lower(), kernel_cache->upper(),
-        buffer_manager.NumUniqueDiffIndicesPtr(), learning_rate_ptr, bias_correction1_ptr,
-        bias_correction2_ptr, buffer_manager.UniqueDiffIndicesPtr(),
+        learning_rate_val, lr_scale, num_indices, feature_size, kernel_cache->lower(),
+        kernel_cache->upper(), buffer_manager.NumUniqueDiffIndicesPtr(), learning_rate_ptr,
+        bias_correction1_ptr, bias_correction2_ptr, buffer_manager.UniqueDiffIndicesPtr(),
         buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>(), m->mut_dptr<T>(),
         v->mut_dptr<T>(), max_v_ptr);
   }
@@ -724,6 +733,7 @@ class LambUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     const auto beta2 = ctx->Attr<float>("beta2");
     const auto epsilon = ctx->Attr<float>("epsilon");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
+    const auto lr_scale = ctx->Attr<float>("learning_rate_scale");
 
     const bool do_bias_correction = ctx->Attr<bool>("do_bias_correction");
     const float bias_correction1_val = ctx->Attr<float>("bias_correction1_val");
@@ -766,7 +776,7 @@ class LambUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
 
     LambUpdateKernelUtil<device_type, T, G>::Update(
         ctx->stream(), m->shape_view().elem_cnt(), scale, l1, l2, beta1, beta2, epsilon,
-        weight_decay, learning_rate_val, do_bias_correction, bias_correction1_val,
+        weight_decay, learning_rate_val, lr_scale, do_bias_correction, bias_correction1_val,
         bias_correction2_val, learning_rate_ptr, bias_correction1_ptr, bias_correction2_ptr,
         scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(), tbm.AdamDiffPtr(), model->mut_dptr<T>(),
         m->mut_dptr<T>(), v->mut_dptr<T>(), tbm.NormBufferPtr());
@@ -845,6 +855,7 @@ class RmsPropUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
     const auto centered = ctx->Attr<bool>("centered");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
+    const float lr_scale = ctx->Attr<float>("learning_rate_scale");
     const float* learning_rate_ptr = nullptr;
     if (ctx->has_input("learning_rate", 0)) {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
@@ -870,9 +881,9 @@ class RmsPropUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
     }
     RmsPropUpdateKernelUtil<device_type, T, G>::Update(
         ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, centered,
-        epsilon, weight_decay, decay_rate, learning_rate_val, learning_rate_ptr, scale_by_ptr,
-        skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), mean_square->mut_dptr<T>(),
-        mean_gradient_ptr);
+        epsilon, weight_decay, decay_rate, learning_rate_val, lr_scale, learning_rate_ptr,
+        scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(),
+        mean_square->mut_dptr<T>(), mean_gradient_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -949,6 +960,7 @@ class LarsUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     const auto epsilon = ctx->Attr<float>("epsilon");
     const auto lars_coefficient = ctx->Attr<float>("lars_coefficient");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
+    const auto lr_scale = ctx->Attr<float>("learning_rate_scale");
     const T* scale_by_ptr = nullptr;
     if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
@@ -964,9 +976,9 @@ class LarsUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     }
     LarsUpdateKernelUtil<device_type, T, G>::Update(
         ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, momentum_beta,
-        epsilon, lars_coefficient, weight_decay, learning_rate->dptr<float>(), scale_by_ptr,
-        skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), momentum->mut_dptr<T>(),
-        tlm.DataTmpPtr(), tlm.ModelDiffPtr());
+        epsilon, lars_coefficient, weight_decay, lr_scale, learning_rate->dptr<float>(),
+        scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(),
+        momentum->mut_dptr<T>(), tlm.DataTmpPtr(), tlm.ModelDiffPtr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -1021,6 +1033,7 @@ class FtrlUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     CHECK_EQ(weight_decay, static_cast<float>(0.0))
         << "Currently not support for setting weight decay. ";
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
+    const float lr_scale = ctx->Attr<float>("learning_rate_scale");
     const float* learning_rate_ptr = nullptr;
 
     if (ctx->has_input("learning_rate", 0)) {
@@ -1043,9 +1056,9 @@ class FtrlUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     }
     FtrlUpdateKernelUtil<device_type, T, G>::Update(
         ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, lr_power,
-        lambda1, lambda2, beta, weight_decay, learning_rate_val, learning_rate_ptr, scale_by_ptr,
-        skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), accumulate->mut_dptr<T>(),
-        z->mut_dptr<T>());
+        lambda1, lambda2, beta, weight_decay, learning_rate_val, lr_scale, learning_rate_ptr,
+        scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(),
+        accumulate->mut_dptr<T>(), z->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -1085,6 +1098,7 @@ class AdadeltaUpdateKernel final : public user_op::OpKernel, public user_op::Cud
     const bool maximize = ctx->Attr<bool>("maximize");
     const float weight_decay = ctx->Attr<float>("weight_decay");
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
+    const float lr_scale = ctx->Attr<float>("learning_rate_scale");
     const float* learning_rate_ptr = nullptr;
     if (ctx->has_input("learning_rate", 0)) {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
@@ -1106,8 +1120,8 @@ class AdadeltaUpdateKernel final : public user_op::OpKernel, public user_op::Cud
     }
     AdadeltaUpdateKernelUtil<device_type, T, G>::Update(
         ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, rho, epsilon,
-        maximize, weight_decay, learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
-        model_diff->dptr<G>(), model->mut_dptr<T>(), square_avgs->mut_dptr<T>(),
+        maximize, weight_decay, learning_rate_val, lr_scale, learning_rate_ptr, scale_by_ptr,
+        skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), square_avgs->mut_dptr<T>(),
         acc_deltas->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }

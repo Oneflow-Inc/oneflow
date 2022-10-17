@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/stream_is_comm_net_stream.h"
+#include "oneflow/core/thread/thread_global_id.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/static_global.h"
 #include "oneflow/core/common/singleton.h"
@@ -23,16 +24,17 @@ limitations under the License.
 
 namespace oneflow {
 
-Stream::Stream(Symbol<Device> device, StreamType stream_type)
-    : device_(device), stream_type_(stream_type), unique_stream_id_(-1) {}
+Stream::Stream(Symbol<Device> device, StreamType stream_type, size_t thread_uid)
+    : device_(device), stream_type_(stream_type), thread_uid_(thread_uid), unique_stream_id_(-1) {}
 
 Maybe<void> Stream::Init(size_t unique_stream_id) {
   unique_stream_id_ = unique_stream_id;
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<Symbol<Stream>> Stream::RawNew(Symbol<Device> device, StreamType stream_type) {
-  std::shared_ptr<Stream> stream(new Stream(device, stream_type));
+/*static*/ Maybe<Symbol<Stream>> Stream::RawNew(Symbol<Device> device, StreamType stream_type,
+                                                size_t thread_uid) {
+  std::shared_ptr<Stream> stream(new Stream(device, stream_type, thread_uid));
   return JUST(SingletonMaybe<StreamMgr>())
       ->AddStreamSymbol(*stream, [&](size_t unique_stream_id) -> Maybe<Symbol<Stream>> {
         JUST(stream->Init(unique_stream_id));
@@ -40,9 +42,10 @@ Maybe<void> Stream::Init(size_t unique_stream_id) {
       });
 }
 
-/*static*/ Maybe<Symbol<Stream>> Stream::New(Symbol<Device> device, StreamType stream_type) {
-  constexpr auto* Make = DECORATE(&Stream::RawNew, ThreadLocal);
-  return Make(device, stream_type);
+/*static*/ Maybe<Symbol<Stream>> Stream::New(Symbol<Device> device, StreamType stream_type,
+                                             size_t thread_uid) {
+  constexpr auto* Make = DECORATE(&Stream::RawNew, ThreadLocalCopiable);
+  return Make(device, stream_type, thread_uid);
 }
 
 namespace {
@@ -56,6 +59,8 @@ Maybe<Symbol<Stream>> RawGetDefaultStreamByPlacement(Symbol<ParallelDesc> parall
 }
 
 }  // namespace
+
+int64_t Stream::kDefaultStreamThreadUid = 0;
 
 decltype(GetDefaultStreamByDevice) GetDefaultStreamByDevice =
     DECORATE(&RawGetDefaultStreamByDevice, ThreadLocal);

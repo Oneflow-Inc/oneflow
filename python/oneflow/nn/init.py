@@ -27,7 +27,7 @@ import oneflow.ops.initializer_register as initializer_register
 def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
     # NOTE: initializing weight should not enable autograd mode
     if random_seed is None:
-        random_seed = flow.default_generator.initial_seed()
+        random_seed = flow.default_generator.seed()
     shape = tuple(tensor.shape)
     initializer = initializer_register.get_initializer(
         initializer_conf, random_seed, shape

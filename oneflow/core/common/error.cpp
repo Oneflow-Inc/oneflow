@@ -331,9 +331,8 @@ void ThrowError(const std::shared_ptr<StackedError>& error) {
 
 const std::shared_ptr<StackedError>& ThreadLocalError() { return *MutThreadLocalError(); }
 
-const char* kOfBugIssueUploadPrompt =
-    "This is a oneflow bug, please submit issues in "
-    "'https://github.com/Oneflow-Inc/oneflow/issues' include the log information of the error, the "
-    "minimum reproduction code, and the system information.";
-
+const char* kOfBugIssueUploadPrompt = "This is a oneflow bug, please submit an issue at "
+                                      "'https://github.com/Oneflow-Inc/oneflow/issues' including "
+                                      "the log information of the error, the "
+                                      "minimum reproduction code, and the system information.";
 }  // namespace oneflow

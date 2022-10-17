@@ -20,6 +20,16 @@ namespace oneflow {
 
 namespace {
 
+bool IsAmpIdentityOp(const OperatorConf& op) {
+  return op.has_user_conf()
+         && (op.user_conf().op_type_name() == "amp_white_identity"
+             || op.user_conf().op_type_name() == "amp_black_identity");
+}
+
+bool NeedDoPass(const Job* job) {
+  return std::any_of(job->net().op().cbegin(), job->net().op().cend(), IsAmpIdentityOp);
+}
+
 class PruneAmpWhiteIdentityOpPass final : public JobPass {
  public:
   PruneAmpWhiteIdentityOpPass() = default;
@@ -30,6 +40,7 @@ class PruneAmpWhiteIdentityOpPass final : public JobPass {
 
 Maybe<void> PruneAmpWhiteIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const {
   if (!ctx->job_desc().prune_amp_white_identity_ops()) { return Maybe<void>::Ok(); }
+  if (!NeedDoPass(job)) { return Maybe<void>::Ok(); }
   const OpGraph op_graph(*job);
   JobBuilder job_builder(job);
   HashMap<std::string, OperatorConf> op_name2op_conf;
@@ -42,9 +53,7 @@ Maybe<void> PruneAmpWhiteIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const 
   std::vector<std::string> del_op_names;
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
-    if (!op_conf.has_user_conf()) { return; }
-    const std::string& op_type_name = op_conf.user_conf().op_type_name();
-    if (op_type_name != "amp_white_identity") { return; }
+    if (!IsAmpIdentityOp(op_conf)) { return; }
     if (!op_conf.ctrl_in_op_name().empty()) { return; }
     if (ctrl_in_op_names.find(op_conf.name()) != ctrl_in_op_names.end()) { return; }
     if (op_node->in_edges().size() != 1) { return; }

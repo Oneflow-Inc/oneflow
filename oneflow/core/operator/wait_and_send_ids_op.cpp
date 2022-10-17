@@ -28,7 +28,7 @@ namespace {
 
 Maybe<void> InferBlobDescs(const OperatorConf& op_conf,
                            const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
-  BlobDesc4BnInOp("out")->mut_shape() = Shape({1});
+  BlobDesc4BnInOp("out")->set_shape(Shape({1}));
   BlobDesc4BnInOp("out")->set_data_type(op_conf.wait_and_send_ids_conf().data_type());
   return Maybe<void>::Ok();
 }

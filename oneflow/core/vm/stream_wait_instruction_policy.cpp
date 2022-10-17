@@ -42,7 +42,7 @@ bool StreamWaitInstructionPolicy::Prescheduleable(const Stream* src, const Strea
 }
 
 void StreamWaitInstructionPolicy::InitInstructionStatus(Instruction* instruction) {
-  auto* stream = mut_from_vm_stream();
+  auto* stream = instruction->mut_stream();
   auto* ep_stream_policy_base =
       CHECK_NOTNULL(dynamic_cast<EpStreamPolicyBase*>(instruction->mut_stream_policy()));
   ep_stream_policy_base->InitInstructionStatus(*stream, instruction->mut_status_buffer());
@@ -52,7 +52,7 @@ void StreamWaitInstructionPolicy::InitInstructionStatus(Instruction* instruction
 }
 
 void StreamWaitInstructionPolicy::DeleteInstructionStatus(Instruction* instruction) {
-  auto* stream = mut_from_vm_stream();
+  auto* stream = instruction->mut_stream();
   instruction->stream_policy().DeleteInstructionStatus(*stream, instruction->mut_status_buffer());
   mut_ep_event().reset();
 }

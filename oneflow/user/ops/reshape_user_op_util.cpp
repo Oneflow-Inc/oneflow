@@ -106,28 +106,42 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
       << Error::RuntimeError()
       << "The element number of input tensor must be equal to output tensor, "
       << "but got " << in_shape.elem_cnt() << " and " << out_shape.elem_cnt();
-  int in_axis = in_shape.NumAxes() - 1;
-  int out_axis = out_shape.NumAxes() - 1;
-  while (in_axis >= 0 && out_axis >= 0) {
-    if (in_shape.Count(in_axis) < out_shape.Count(out_axis)) {
-      --in_axis;
-    } else if (in_shape.Count(in_axis) > out_shape.Count(out_axis)) {
-      --out_axis;
-    } else {
+  // Initialization
+  // shape_count is the product of the axis length in [start_axis, end)
+  int64_t in_shape_count = 1;
+  int64_t out_shape_count = 1;
+  int64_t in_axis = in_shape.NumAxes();
+  int64_t out_axis = out_shape.NumAxes();
+  // Move forward functions
+  auto Move2NextAxis = [](const Shape& shape, int64_t* axis, int64_t* shape_count) {
+    (*axis)--;
+    if (*axis >= 0) { *shape_count *= shape.At(*axis); }
+  };
+  auto MoveInAxis = [&] { Move2NextAxis(in_shape, &in_axis, &in_shape_count); };
+  auto MoveOutAxis = [&] { Move2NextAxis(out_shape, &out_axis, &out_shape_count); };
+  // Move the first step
+  MoveInAxis();
+  MoveOutAxis();
+  // At the last step, both in_axis == out_axis == 0
+  // Then they would move to -1 simultaneously.
+  while (in_axis >= 0) {
+    if (in_shape_count == out_shape_count) {
+      // Record split axises
       if (in_shape.At(in_axis) == out_shape.At(out_axis)
-          || (in_shape.Count(in_axis) % parallel_num == 0
-              && out_shape.Count(out_axis) % parallel_num == 0)) {
+          || (in_shape.At(in_axis) % parallel_num == 0
+              && out_shape.At(out_axis) % parallel_num == 0)) {
         (*group_start_in_axis2out_axis)[in_axis] = out_axis;
       }
-      --in_axis;
-      --out_axis;
+      // Move forward
+      MoveInAxis();
+      MoveOutAxis();
+    } else if (in_shape_count < out_shape_count) {
+      MoveInAxis();
+    } else {
+      // in_shape_count > out_shape_count
+      MoveOutAxis();
     }
   }
-  CHECK_GE_OR_RETURN(in_axis, -1);                           // NOLINT(maybe-need-error-msg)
-  CHECK_GE_OR_RETURN(out_axis, -1);                          // NOLINT(maybe-need-error-msg)
-  CHECK_LE_OR_RETURN(in_axis, 0);                            // NOLINT(maybe-need-error-msg)
-  CHECK_LE_OR_RETURN(out_axis, 0);                           // NOLINT(maybe-need-error-msg)
-  CHECK_EQ_OR_RETURN(in_axis == 0 && out_axis == 0, false);  // NOLINT(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
 

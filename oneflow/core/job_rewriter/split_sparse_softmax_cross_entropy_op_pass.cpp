@@ -20,6 +20,12 @@ namespace oneflow {
 
 namespace {
 
+bool NeedDoPass(const Job* job) {
+  return std::any_of(job->net().op().cbegin(), job->net().op().cend(), [&](const OperatorConf& op) {
+    return op.has_user_conf() && op.user_conf().op_type_name() == "sparse_softmax_cross_entropy_ms";
+  });
+}
+
 void UpdateProbConsumerOpConf(const std::string& new_prob_lbn, const OpNode* op_node,
                               JobBuilder* job_builder) {
   for (const OpEdge* edge : op_node->out_edges()) {
@@ -42,6 +48,7 @@ class SplitSparseSoftmaxCrossEntropyOpPass final : public JobPass {
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    if (!NeedDoPass(job)) { return Maybe<void>::Ok(); }
     const OpGraph op_graph(*job);
     JobBuilder job_builder(job);
     return Apply(op_graph, &job_builder);

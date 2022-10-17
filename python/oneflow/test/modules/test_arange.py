@@ -56,6 +56,12 @@ def _test_arange_input_tensor_type(test_case, device):
     x = flow.tensor([[1, 2], [3, 4]], dtype=flow.int64).to(device)
     y = flow.arange(start=flow.min(x), end=flow.max(x), device=device)
     test_case.assertTrue(np.allclose(y.numpy(), np.arange(1, 4)))
+    if device == "cuda":
+        x = flow.tensor([[1, 2], [3, 4]], dtype=flow.int64).to(device)
+        y = flow.arange(
+            start=flow.min(x), end=flow.max(x), device=device, dtype=flow.float16
+        )
+        test_case.assertTrue(np.allclose(y.numpy(), np.arange(1, 4)))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -77,7 +83,7 @@ class TestArange(flow.unittest.TestCase):
     def test_arange_with_random_data(test_case):
         start = random().to(int)
         end = start + random().to(int)
-        step = random(0, end - start).to(int)
+        step = random(1, end - start + 1).to(int)
         x = torch.arange(start=start, end=end, step=step)
         device = random_device()
         x.to(device)
@@ -87,7 +93,7 @@ class TestArange(flow.unittest.TestCase):
     def test_arange_with_float_delta(test_case):
         start = random().to(int)
         end = start + random().to(int)
-        step = random(0, end - start).to(float)
+        step = random(1, end - start + 1).to(float)
         x = torch.arange(start=start, end=end, step=step)
         device = random_device()
         x.to(device)
@@ -108,6 +114,13 @@ class TestArange(flow.unittest.TestCase):
         x = flow.arange(start=0, end=10, step=1, placement=placement, sbp=sbp)
         test_case.assertEqual(x.sbp, sbp)
         test_case.assertEqual(x.placement, placement)
+
+    @profile(torch.arange)
+    def profile_arange(test_case):
+        torch.arange(5)
+        torch.arange(100000)
+        torch.arange(1, 4)
+        torch.arange(1, 2.5, 0.5)
 
 
 if __name__ == "__main__":

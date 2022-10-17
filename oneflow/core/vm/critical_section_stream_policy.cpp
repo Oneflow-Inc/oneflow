@@ -35,6 +35,11 @@ void CriticalSectionStreamPolicy::DeleteInstructionStatus(
   ptr->~CriticalSectionStatusQuerier();
 }
 
+bool CriticalSectionStreamPolicy::QueryInstructionStatusLaunched(
+    const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
+  return CriticalSectionStatusQuerier::Cast(status_buffer.buffer())->QueryLaunched();
+}
+
 bool CriticalSectionStreamPolicy::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
   return CriticalSectionStatusQuerier::Cast(status_buffer.buffer())->QueryDone();

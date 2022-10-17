@@ -54,6 +54,10 @@ void Instruction::DeleteStatusAndCheckEdges() {
   }
 }
 
+bool Instruction::Launched() const {
+  return stream_policy().QueryInstructionStatusLaunched(stream(), status_buffer());
+}
+
 bool Instruction::Done() const {
   return stream_policy().QueryInstructionStatusDone(stream(), status_buffer());
 }

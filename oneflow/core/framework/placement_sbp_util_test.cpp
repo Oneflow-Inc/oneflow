@@ -153,7 +153,7 @@ Symbol<NdSbp> GetNdSbp(Args... sbps) {
 
 Symbol<one::GlobalTensorMeta> MakeGlobalTensorMeta(Symbol<ParallelDesc> parallel_desc,
                                                    Symbol<NdSbp> nd_sbp) {
-  const auto& shape = std::make_shared<const Shape>(DimVector{256, 256});
+  auto shape = Shape(DimVector{256, 256});
   one::GlobalTensorMeta tensor_meta(shape, DataType::kInt32, nd_sbp, parallel_desc);
   return SymbolOf(tensor_meta);
 }

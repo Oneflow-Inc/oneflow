@@ -35,22 +35,22 @@ Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
 
   size_t output_num_axes = std::max(tensor_x.shape().NumAxes(), tensor_y.shape().NumAxes());
   if (IsZeroDimTensor(&tensor_x)) {
-    *ctx->MutOutputShape("z", 0) = ctx->InputShape("y", 0);
-    *ctx->MutOutputIsDynamic("z", 0) = ctx->InputIsDynamic("y", 0);
+    ctx->SetOutputShape("z", 0, ctx->InputShape("y", 0));
+    ctx->SetOutputIsDynamic("z", 0, ctx->InputIsDynamic("y", 0));
   } else if (IsZeroDimTensor(&tensor_y)) {
-    *ctx->MutOutputShape("z", 0) = ctx->InputShape("x", 0);
-    *ctx->MutOutputIsDynamic("z", 0) = ctx->InputIsDynamic("x", 0);
+    ctx->SetOutputShape("z", 0, ctx->InputShape("x", 0));
+    ctx->SetOutputIsDynamic("z", 0, ctx->InputIsDynamic("x", 0));
   } else if (IsScalarTensor(&tensor_x)) {
-    *ctx->MutOutputShape("z", 0) = ctx->InputShape("y", 0);
-    *ctx->MutOutputIsDynamic("z", 0) = ctx->InputIsDynamic("y", 0);
+    ctx->SetOutputShape("z", 0, ctx->InputShape("y", 0));
+    ctx->SetOutputIsDynamic("z", 0, ctx->InputIsDynamic("y", 0));
   } else if (IsScalarTensor(&tensor_y)) {
-    *ctx->MutOutputShape("z", 0) = ctx->InputShape("x", 0);
-    *ctx->MutOutputIsDynamic("z", 0) = ctx->InputIsDynamic("x", 0);
+    ctx->SetOutputShape("z", 0, ctx->InputShape("x", 0));
+    ctx->SetOutputIsDynamic("z", 0, ctx->InputIsDynamic("x", 0));
   } else {
     const auto& x_shape = CreateLeftExtendedShape(ShapeView(tensor_x.shape()), output_num_axes);
     const auto& y_shape = CreateLeftExtendedShape(ShapeView(tensor_y.shape()), output_num_axes);
-    *ctx->MutOutputShape("z", 0) = ctx->InputShape("x", 0);
-    *ctx->MutOutputIsDynamic("z", 0) = ctx->InputIsDynamic("x", 0);
+    ctx->SetOutputShape("z", 0, ctx->InputShape("x", 0));
+    ctx->SetOutputIsDynamic("z", 0, ctx->InputIsDynamic("x", 0));
     Shape out_shape(x_shape);
     FOR_RANGE(int64_t, i, 0, x_shape.NumAxes()) {
       if (x_shape.At(i) != 1 && y_shape.At(i) != 1 && x_shape.At(i) != y_shape.At(i)) {
@@ -62,7 +62,7 @@ Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
                            ? 0
                            : std::max(x_shape.At(i), y_shape.At(i)));
     }
-    *tensor_z->mut_shape() = out_shape;
+    tensor_z->set_shape(out_shape);
   }
   tensor_z->set_is_dynamic(tensor_x.is_dynamic() || tensor_y.is_dynamic());
   return Maybe<void>::Ok();
@@ -75,16 +75,20 @@ Maybe<void> InferTensorDescBinaryBroadcastLogical(user_op::InferContext* ctx) {
 Maybe<void> InferDataTypeBinaryBroadcastNormal(user_op::InferContext* ctx) {
   const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
-  CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type());  // NOLINT(maybe-need-error-msg)
-  *ctx->MutOutputDType("z", 0) = ctx->InputDType("x", 0);
+  CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type())
+      << "InferDataType Failed. Expected " << DataType_Name(tensor_x.data_type()) << ", but got "
+      << DataType_Name(tensor_y.data_type());
+  ctx->SetOutputDType("z", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferDataTypeBinaryBroadcastLogical(user_op::InferContext* ctx) {
   const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
-  CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type());  // NOLINT(maybe-need-error-msg)
-  *ctx->MutOutputDType("z", 0) = DataType::kBool;
+  CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type())
+      << "InferDataType Failed. Expected " << DataType_Name(tensor_x.data_type()) << ", but got "
+      << DataType_Name(tensor_y.data_type());
+  ctx->SetOutputDType("z", 0, DataType::kBool);
   return Maybe<void>::Ok();
 }
 
@@ -93,6 +97,15 @@ void GenPartialSbpSign(user_op::SbpContext* ctx) {}
 
 template<>
 void GenPartialSbpSign<BinaryFuncAdd>(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("x", 0))
+      .PartialSum(user_op::OpArg("y", 0))
+      .PartialSum(user_op::OpArg("z", 0))
+      .Build();
+}
+
+template<>
+void GenPartialSbpSign<BinaryFuncNanSum>(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .PartialSum(user_op::OpArg("x", 0))
       .PartialSum(user_op::OpArg("y", 0))

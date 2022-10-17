@@ -295,13 +295,17 @@ def seq_to_func_return(seq, need_unpack=False):
     return seq
 
 
+def _is_raw_type(value, raw_type):
+    return type(value) is raw_type
+
+
 class NamedArg(object):
     r"""
     The class for wrapping over the input/output argument and associating each input/output argument with a prefix and name.
     The input/output argument can be viewed as a tree. NamedArg basically wraps over each tree node on this tree.
     The recursive structure of the input/output arguments are kept, for example:
 
-    iuput = [1, {key: "value" }] will be constructed into: 
+    input = [1, {key: "value" }] will be constructed into: 
         
     named_input = NamedArg([NamedArg(1), NamedArg({key: NamedArg("value")})])
     """
@@ -329,13 +333,14 @@ class NamedArg(object):
     def is_leaf(self):
         assert self._is_value_set, "self._value is not set yet"
         return not (
-            isinstance(self._value, dict)
-            or isinstance(self._value, tuple)
-            or isinstance(self._value, list)
+            _is_raw_type(self._value, dict)
+            or _is_raw_type(self._value, OrderedDict)
+            or _is_raw_type(self._value, tuple)
+            or _is_raw_type(self._value, list)
         )
 
     def set_value(self, value):
-        assert not isinstance(value, NamedArg), "cannot accept value of type NamedArg"
+        assert not _is_raw_type(value, NamedArg), "cannot accept value of type NamedArg"
         self._value = value
         self._is_value_set = True
 
@@ -344,11 +349,11 @@ class NamedArg(object):
         repr_str += "(name: " + self._name
         repr_str += ", idx: " + str(self._global_index)
         repr_str += ", type: "
-        if isinstance(self._value, tuple):
+        if _is_raw_type(self._value, tuple):
             repr_str += "TUPLE"
-        elif isinstance(self._value, list):
+        elif _is_raw_type(self._value, list):
             repr_str += "LIST"
-        elif isinstance(self._value, dict):
+        elif _is_raw_type(self._value, dict) or _is_raw_type(self._value, OrderedDict):
             repr_str += "DICT"
         elif isinstance(self._value, Tensor):
             repr_str += "TENSOR"
@@ -359,9 +364,10 @@ class NamedArg(object):
         if isinstance(self._value, Tensor):
             repr_str += ", value: " + self._value._meta_repr()
         elif (
-            isinstance(self._value, dict)
-            or isinstance(self._value, list)
-            or isinstance(self._value, tuple)
+            _is_raw_type(self._value, dict)
+            or _is_raw_type(self._value, OrderedDict)
+            or _is_raw_type(self._value, list)
+            or _is_raw_type(self._value, tuple)
         ):
             pass
         else:
@@ -379,10 +385,11 @@ class ArgsTree(object):
         root_name: str = None,
     ) -> None:
         assert (
-            isinstance(io_args, dict)
-            or isinstance(io_args, tuple)
-            or isinstance(io_args, list)
-        ), "input/output arguments must be one of those types"
+            _is_raw_type(io_args, dict)
+            or _is_raw_type(io_args, OrderedDict)
+            or _is_raw_type(io_args, tuple)
+            or _is_raw_type(io_args, list)
+        ), "input/output arguments must be one of those types(typle/list/dict/OrderedDict)"
 
         self._io_args = io_args
         self._gen_name = gen_name
@@ -415,14 +422,16 @@ class ArgsTree(object):
         stack.append(args_to_iter)
         while len(stack) > 0:
             curr = stack.pop()
-            if isinstance(curr, NamedArg):
+            if _is_raw_type(curr, NamedArg):
                 curr_value = curr.value()
             else:
                 curr_value = curr
 
-            if isinstance(curr_value, list) or isinstance(curr_value, tuple):
+            if _is_raw_type(curr_value, list) or _is_raw_type(curr_value, tuple):
                 children = curr_value
-            elif isinstance(curr_value, dict):
+            elif _is_raw_type(curr_value, dict) or _is_raw_type(
+                curr_value, OrderedDict
+            ):
                 children = list(curr_value.values())
             else:
                 children = None
@@ -442,7 +451,7 @@ class ArgsTree(object):
         arg = NamedArg(prefix, name, self._next_global_index)
         self._next_global_index += 1
 
-        if isinstance(value, list) or isinstance(value, tuple):
+        if _is_raw_type(value, list) or _is_raw_type(value, tuple):
 
             def construct_func(enum):
                 (i, v) = enum
@@ -452,7 +461,7 @@ class ArgsTree(object):
 
             arg.set_value(value.__class__(map(construct_func, enumerate(value))))
 
-        elif isinstance(value, dict):
+        elif _is_raw_type(value, dict) or _is_raw_type(value, OrderedDict):
 
             def construct_func(enum):
                 i, (key, v) = enum
@@ -482,18 +491,18 @@ class ArgsTree(object):
         return self._execute_mapping(args_to_map, map_function)
 
     def _execute_mapping(self, value, map_function):
-        if isinstance(value, tuple) or isinstance(value, list):
+        if _is_raw_type(value, tuple) or _is_raw_type(value, list):
             mapped_value = value.__class__(
                 map(lambda x: self._execute_mapping(x, map_function), value)
             )
-        elif isinstance(value, dict):
+        elif _is_raw_type(value, dict) or _is_raw_type(value, OrderedDict):
             mapped_value = value.__class__(
                 map(
                     lambda x: (x[0], self._execute_mapping(x[1], map_function)),
                     value.items(),
                 )
             )
-        elif isinstance(value, NamedArg):
+        elif _is_raw_type(value, NamedArg):
             if value.is_leaf():  # only map the leaf: TENSOR/NONE/OPAQUE
                 mapped_value = map_function(value)
             else:
