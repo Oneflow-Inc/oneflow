@@ -27,17 +27,19 @@ namespace vm {
 struct OpCallInstructionUtil final {
   static inline Maybe<void> Prepare(OpCallInstructionPolicy* op_call_instruction_policy,
                                     Instruction* instruction) {
-    Allocator* allocator = instruction->mut_stream()->mut_stream_policy()->mut_allocator();
-    JUST(AllocateOutputBlobsMemory(op_call_instruction_policy, allocator));
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
       InferTempStorageSize(op_call_instruction_policy);
-      JUST(TryAllocateTempStorageThenDeallocate(op_call_instruction_policy, allocator));
     }
     return Maybe<void>::Ok();
   }
 
   static inline void Compute(OpCallInstructionPolicy* op_call_instruction_policy,
                              Instruction* instruction) {
+    Allocator* allocator = instruction->mut_stream()->mut_stream_policy()->mut_allocator();
+    CHECK_JUST(AllocateOutputBlobsMemory(op_call_instruction_policy, allocator));
+    if (unlikely(op_call_instruction_policy->need_temp_storage())) {
+      TryAllocateTempStorage(op_call_instruction_policy, allocator);
+    }
     ep::Stream* stream = instruction->mut_stream()->mut_stream_policy()->stream();
     if (!op_call_instruction_policy->is_all_outputs_pod()) {
       for (const auto& blob_object : op_call_instruction_policy->outputs()) {
@@ -50,6 +52,9 @@ struct OpCallInstructionUtil final {
       TryInitOpKernelStateAndCache(op_call_instruction_policy, stream, &state, &cache);
     }
     OpKernelCompute(op_call_instruction_policy, stream, state, cache);
+    if (unlikely(op_call_instruction_policy->need_temp_storage())) {
+      DeallocateTempStorage(op_call_instruction_policy, allocator);
+    }
   }
 
  private:
@@ -84,22 +89,23 @@ struct OpCallInstructionUtil final {
     return Maybe<void>::Ok();
   }
 
-  // Since memory block is cached in allocator, it's safe to deallocate tmp buffer before
-  // kernel executed.
-  static inline Maybe<void> TryAllocateTempStorageThenDeallocate(
-      OpCallInstructionPolicy* op_call_instruction_policy, Allocator* allocator) {
-    OF_PROFILER_RANGE_GUARD("TryAllocateTempStorageThenDeallocate");
+  static inline void TryAllocateTempStorage(OpCallInstructionPolicy* op_call_instruction_policy,
+                                            Allocator* allocator) {
+    OF_PROFILER_RANGE_GUARD("TryAllocateTempStorage");
     auto* tmp_tensor = op_call_instruction_policy->mut_call_ctx()->mut_tmp_tensor();
     size_t byte_size = tmp_tensor->tmp_buffer_size();
     if (byte_size > 0) {
       char* mem_ptr = nullptr;
-      JUST(allocator->Allocate(&mem_ptr, byte_size));
-      // tmp_buffer_ptr may be set twice, but it's safe, beacuse the memory of tmp_buffer_ptr set at
-      // the first time is deallocated soon in this function.
+      CHECK_JUST(allocator->Allocate(&mem_ptr, byte_size));
       tmp_tensor->set_tmp_buffer_ptr(mem_ptr);
     }
     allocator->Deallocate(tmp_tensor->mut_tmp_buffer_ptr(), tmp_tensor->tmp_buffer_size());
-    return Maybe<void>::Ok();
+  }
+
+  static inline void DeallocateTempStorage(OpCallInstructionPolicy* op_call_instruction_policy,
+                                           Allocator* allocator) {
+    auto* tmp_tensor = op_call_instruction_policy->mut_call_ctx()->mut_tmp_tensor();
+    allocator->Deallocate(tmp_tensor->mut_tmp_buffer_ptr(), tmp_tensor->tmp_buffer_size());
   }
 
   static inline void OpKernelCompute(OpCallInstructionPolicy* op_call_instruction_policy,

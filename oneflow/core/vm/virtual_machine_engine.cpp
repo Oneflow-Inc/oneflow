@@ -283,8 +283,7 @@ void VirtualMachineEngine::DispatchAndPrescheduleInstructions(const ScheduleCtx&
     // `instruction.dispatched_instruction_hook_` are used in DispatchInstruction.
     tmp_ready_instruction_list.Erase(instruction.Mutable());
     OF_PROFILER_RANGE_GUARD("D:" + instruction->DebugName());
-    DispatchInstruction<&VirtualMachineEngine::BusyWaitInstructionsDoneThenShrink>(
-        instruction.Mutable(), schedule_ctx);
+    DispatchInstruction(instruction.Mutable(), schedule_ctx);
     // preschedule instructions
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_out_edges()) {
       auto* out_instruction = edge->mut_dst_instruction();
@@ -353,30 +352,6 @@ void VirtualMachineEngine::ForEachStreamOnDevice(Symbol<Device> device,
   }
 }
 
-void VirtualMachineEngine::BusyWaitInstructionsDoneThenShrink(vm::Stream* stream,
-                                                              const ScheduleCtx& schedule_ctx) {
-  {
-    // Dispatch ReleaseTensor instructions as mush as possiable.
-    ReadyInstructionList ready_release_tensor_instruction_list;
-    ForEachStreamOnDevice(stream->device(), [&](vm::Stream* current_stream) {
-      CollectReadyDownstreamReleaseTensors(current_stream, &ready_release_tensor_instruction_list);
-    });
-    INTRUSIVE_FOR_EACH(instruction, &ready_release_tensor_instruction_list) {
-      ready_release_tensor_instruction_list.Erase(instruction.Mutable());
-      DispatchInstruction<&VirtualMachineEngine::AbortOnOOM>(instruction.Mutable(), schedule_ctx);
-    }
-  }
-  // Buzy loop to make sure running instructions all done.
-  ForEachStreamOnDevice(stream->device(), &BusyWaitAllInstructionsDone);
-  // Shrink memory.
-  ForEachStreamOnDevice(stream->device(), &ShrinkMemory);
-}
-
-void VirtualMachineEngine::AbortOnOOM(vm::Stream* stream, const ScheduleCtx& schedule_ctx) {
-  LOG(FATAL) << "Out of Memory.";
-}
-
-template<void (VirtualMachineEngine::*OOMHandler)(vm::Stream*, const ScheduleCtx&)>
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
                                                const ScheduleCtx& schedule_ctx) {
   auto* stream = instruction->mut_stream();
@@ -385,9 +360,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
     const auto& ret = TRY(instruction->Prepare());
     if (unlikely(!ret.IsOk())) {
       if (ret.error()->has_out_of_memory_error()) {
-        (this->*OOMHandler)(stream, schedule_ctx);
-        // Infers the instruction again.
-        CHECK_JUST_MSG(instruction->Prepare(), std::stringstream() << DebugDeviceReset(stream));
+        CHECK_JUST_MSG(ret, std::stringstream() << DebugDeviceReset(stream));
       } else {
         CHECK_JUST(ret);
       }
