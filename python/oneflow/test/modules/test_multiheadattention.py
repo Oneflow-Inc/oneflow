@@ -242,7 +242,10 @@ class TestMultiHeadAttentionModule(flow.unittest.TestCase):
     def test_mha_functional(test_case):
         device = random_device()
 
-        is_batched = random_bool().value()
+        if version.parse(torch_original.__version__) <= version.parse("1.10.0"):
+            is_batched = False
+        else:
+            is_batched = random_bool().value()
         use_separate_proj_weight = random_bool().value()
         bias_k_v = random_bool().value()
         need_weights = random_bool().value()
@@ -337,7 +340,8 @@ class TestMultiHeadAttentionModule(flow.unittest.TestCase):
             v_proj_weight=v_proj_weight,
             static_k=static_k,
             static_v=static_v,
-            average_attn_weights=random_bool(),
+            # TODO(WangYi): uncomment when ci uses torch > 1.10
+            # average_attn_weights=random_bool(),
         )
 
         if need_weights:
