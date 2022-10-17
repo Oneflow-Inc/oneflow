@@ -373,3 +373,4 @@ Tensor class reference
     Tensor.scatter_
     Tensor.scatter_add
     Tensor.scatter_add_
+    Tensor.bincount
