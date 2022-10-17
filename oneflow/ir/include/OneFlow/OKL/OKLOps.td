@@ -78,17 +78,16 @@ def BuildRegContextOp : OKL_Op<"build_reg_ctx"> {
   let regions = (region AnyRegion:$body);
 
   let arguments = (ins
-    SymbolNameAttr:$sym_name,
     TypeAttrOf<FunctionType>:$function_type
   );
 
   let results = (outs RegContextType:$out);
 }
 
-def SourceRegContextOp : OKL_Op<"source_reg_ctx", [HasParent<"BuildRegContextOp">, Terminator]> {
-  let summary = "source operation";
+def ReturnOp : OKL_Op<"return", [HasParent<"BuildRegContextOp">, Terminator]> {
+  let summary = "return operation";
   let description = [{
-    source oneflow ops in reg context
+    return oneflow ops in reg context
     ```
   }];
 

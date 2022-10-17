@@ -895,8 +895,7 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     auto func_type = rewriter.getFunctionType(op->getOperandTypes(), op->getResultTypes());
 
     auto reg_ctx = rewriter.create<okl::BuildRegContextOp>(
-        loc, okl::RegContextType::get(rewriter.getContext()), op_type_name,
-        TypeAttr::get(func_type));
+        loc, okl::RegContextType::get(rewriter.getContext()), TypeAttr::get(func_type));
     reg_ctx.body().emplaceBlock();
     rewriter.setInsertionPointToEnd(&reg_ctx.body().back());
 
@@ -907,7 +906,7 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     }
     ImplicitLocOpBuilder new_block(loc, rewriter);
     auto new_op_res = new_block.clone(*op, mapping)->getResults();
-    rewriter.create<okl::SourceRegContextOp>(loc, ValueRange{new_op_res});
+    rewriter.create<okl::ReturnOp>(loc, ValueRange{new_op_res});
 
     rewriter.setInsertionPointToEnd(&okl_func.getBody().back());
     // reg_ctx.dump();
