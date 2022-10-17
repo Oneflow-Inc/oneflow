@@ -4180,8 +4180,9 @@ class MultiTensorSgdUpdateFunctor {
     }
   }
 
-  Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff, const double& scale,
-                         const float& weight_decay, const float& learning_rate_val) const {
+  Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff,
+                         const double& scale, const float& weight_decay,
+                         const float& learning_rate_val) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "learning_rate_val");
     attrs.SetAllAttrs(scale, weight_decay, learning_rate_val);
     const int64_t weight_size = model.size();
@@ -4215,14 +4216,14 @@ class MultiTensorAdamUpdateFunctor {
   }
 
   Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff,
-                         const TensorTuple& m, const TensorTuple& v,
-                         const float& learning_rate_val, const float& l2, const float& beta1,
-                         const float& beta2, const float& bias_correction1_val,
-                         const float& bias_correction2_val, const bool& do_bias_correction,
-                         const double& scale, const float& weight_decay, const float& epsilon) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "beta1", "beta2",
-                                                 "bias_correction1_val", "bias_correction2_val",
-                                                 "do_bias_correction", "learning_rate_val", "l2", "epsilon");
+                         const TensorTuple& m, const TensorTuple& v, const float& learning_rate_val,
+                         const float& l2, const float& beta1, const float& beta2,
+                         const float& bias_correction1_val, const float& bias_correction2_val,
+                         const bool& do_bias_correction, const double& scale,
+                         const float& weight_decay, const float& epsilon) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
+        "scale", "weight_decay", "beta1", "beta2", "bias_correction1_val", "bias_correction2_val",
+        "do_bias_correction", "learning_rate_val", "l2", "epsilon");
     attrs.SetAllAttrs(scale, weight_decay, beta1, beta2, bias_correction1_val, bias_correction2_val,
                       do_bias_correction, learning_rate_val, l2, epsilon);
 
