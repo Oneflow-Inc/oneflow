@@ -316,33 +316,38 @@ class TestMultiHeadAttentionModule(flow.unittest.TestCase):
             in_proj_weight = random_tensor(2, embed_dim * 3, embed_dim).to(device)
             in_proj_bias = random_tensor(1, embed_dim * 3,).to(device)
 
-        result = torch.nn.functional.multi_head_attention_forward(
-            query=query,
-            key=key,
-            value=value,
-            embed_dim_to_check=embed_dim,
-            num_heads=num_heads,
-            in_proj_weight=in_proj_weight,
-            in_proj_bias=in_proj_bias,
-            bias_k=bias_k,
-            bias_v=bias_v,
-            add_zero_attn=random_bool(),
-            dropout_p=0,
-            out_proj_weight=out_proj_weight,
-            out_proj_bias=out_proj_bias,
-            training=False,
-            key_padding_mask=key_padding_mask,
-            need_weights=need_weights,
-            attn_mask=attn_mask,
-            use_separate_proj_weight=use_separate_proj_weight,
-            q_proj_weight=q_proj_weight,
-            k_proj_weight=k_proj_weight,
-            v_proj_weight=v_proj_weight,
-            static_k=static_k,
-            static_v=static_v,
-            # TODO(WangYi): uncomment when ci uses torch > 1.10
-            # average_attn_weights=random_bool(),
-        )
+        param_dict = {
+            "query": query,
+            "key": key,
+            "value": value,
+            "embed_dim_to_check": embed_dim,
+            "num_heads": num_heads,
+            "in_proj_weight": in_proj_weight,
+            "in_proj_bias": in_proj_bias,
+            "bias_k": bias_k,
+            "bias_v": bias_v,
+            "add_zero_attn": random_bool(),
+            "dropout_p": 0,
+            "out_proj_weight": out_proj_weight,
+            "out_proj_bias": out_proj_bias,
+            "training": False,
+            "key_padding_mask": key_padding_mask,
+            "need_weights": need_weights,
+            "attn_mask": attn_mask,
+            "use_separate_proj_weight": use_separate_proj_weight,
+            "q_proj_weight": q_proj_weight,
+            "k_proj_weight": k_proj_weight,
+            "v_proj_weight": v_proj_weight,
+            "static_k": static_k,
+            "static_v": static_v,
+        }
+
+        if version.parse(torch_original.__version__) <= version.parse("1.10.0"):
+            param_dict.update(
+                {"average_attn_weights": random_bool(),}
+            )
+
+        result = torch.nn.functional.multi_head_attention_forward(**param_dict)
 
         if need_weights:
             return result
