@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/job_rewriter/boxing_with_middle_nodes.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -105,14 +106,15 @@ Maybe<void> SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_
 
 Maybe<void> JobCompleter::Complete(Job* job) const {
   JobPassCtx job_pass_ctx(GlobalJobDesc());
-  JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
   // NOTE(chengcheng): disable this pass for reduce boxing memory life cycle to memory cost.
   if (!Singleton<ResourceDesc, ForSession>::Get()
            ->resource()
            .disable_group_boxing_by_dst_parallel()) {
     JUST(WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel));
   }
-  JUST(WithOpGraphAndMutJobBuilder(job, &BoxingWithMiddleNodes));
+  if (GlobalProcessCtx::WorldSize() > 1) {
+    JUST(WithOpGraphAndMutJobBuilder(job, &BoxingWithMiddleNodes));
+  }
   JUST(WithOpGraphAndMutJobBuilder(job, &SetCtrlInOpName4VariableOp));
   // complete tick ops
   JUST(WithOpGraphAndMutJobBuilder(job, &AutoPrependTick));
