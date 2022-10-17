@@ -224,6 +224,7 @@ from oneflow._C import iinfo, finfo
 from oneflow._C import multinomial
 from oneflow._C import linalg_cross as cross
 from oneflow._C import native_multi_head_attention as _native_multi_head_attention
+from oneflow._C import bincount
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
