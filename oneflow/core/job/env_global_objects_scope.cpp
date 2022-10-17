@@ -50,6 +50,7 @@ limitations under the License.
 #include "oneflow/core/embedding/embedding_manager.h"
 #ifdef WITH_RDMA
 #include "oneflow/core/platform/include/ibv.h"
+#include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #endif  // WITH_RDMA
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/ep/cpu/cpu_device_manager.h"
@@ -299,6 +300,20 @@ Maybe<bool> RDMAIsInitialized() {
 #else
   return false;
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX
+}
+
+Maybe<void> DestoryRDMA() {
+#if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
+  if (JUST(RDMAIsInitialized())) {
+    CHECK_NOTNULL(Singleton<IBVerbsCommNet>::Get());
+    CHECK_NOTNULL(Singleton<CommNet>::Get());
+    Singleton<IBVerbsCommNet>::Delete();
+    if (Singleton<EpollCommNet>::Get()) {
+      Singleton<CommNet>::SetAllocated(Singleton<EpollCommNet>::Get());
+    }
+  }
+#endif  // WITH_RDMA && OF_PLATFORM_POSIX
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow
