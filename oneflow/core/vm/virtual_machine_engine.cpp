@@ -302,55 +302,7 @@ std::string DebugDeviceReset(vm::Stream* stream) {
   return "reset device";
 }
 
-void CollectReadyDownstreamReleaseTensors(Stream* stream,
-                                          ReadyInstructionList* ready_instruction_list) {
-  const auto& IsDispatchableReleaseTensorInstructionOnSameDevice = [&](auto* instruction) {
-    if (unlikely(!instruction->dispatched_instruction_hook().empty())) { return false; }
-    INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_in_edges()) {
-      if (!edge->src_instruction().Done()) { return false; }
-    }
-    if (instruction->stream().device() != stream->device()) { return false; }
-    const auto* instruction_policy = &instruction->instruction_policy();
-    return dynamic_cast<const ReleaseTensorInstructionPolicy*>(instruction_policy) != nullptr;
-  };
-  INTRUSIVE_FOR_EACH_PTR(instruction, stream->mut_running_instruction_list()) {
-    while (!instruction->Done()) {}  // busy wait done.
-    auto* out_edges = instruction->mut_out_edges();
-    INTRUSIVE_FOR_EACH_PTR(out_edge, out_edges) {
-      Instruction* out_instruction = out_edge->mut_dst_instruction();
-      if (IsDispatchableReleaseTensorInstructionOnSameDevice(out_instruction)) {
-        out_edges->Erase(out_edge);
-        out_instruction->mut_in_edges()->Erase(out_edge);
-        ready_instruction_list->PushBack(out_instruction);
-      }
-    }
-  }
-}
-
-void BusyWaitAllInstructionsDone(Stream* stream) {
-  INTRUSIVE_FOR_EACH_PTR(instruction, stream->mut_running_instruction_list()) {
-    while (!instruction->Done()) {}  // busy wait done.
-  }
-}
-
-void ShrinkMemory(Stream* stream) {
-  auto* allocator = stream->mut_stream_policy()->mut_allocator();
-  if (allocator == nullptr) { return; }
-  auto* shrinkable_cache = dynamic_cast<CachingAllocator*>(allocator);
-  CHECK_NOTNULL(shrinkable_cache)->Shrink();
-}
-
 }  // namespace
-
-template<typename DoEachStreamT>
-void VirtualMachineEngine::ForEachStreamOnDevice(Symbol<Device> device,
-                                                 const DoEachStreamT& DoEachStream) {
-  INTRUSIVE_FOR_EACH_PTR(thread_ctx, mut_thread_ctx_list()) {
-    INTRUSIVE_FOR_EACH_PTR(current_stream, thread_ctx->mut_stream_list()) {
-      if (current_stream->device() == device) { DoEachStream(current_stream); }
-    }
-  }
-}
 
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
                                                const ScheduleCtx& schedule_ctx) {

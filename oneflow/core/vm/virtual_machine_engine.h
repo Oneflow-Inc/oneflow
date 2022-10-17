@@ -93,9 +93,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   void MoveToGarbageListAndNotifyGC(const ScheduleCtx& schedule_ctx);
 
  private:
-  template<typename DoEachStreamT>
-  void ForEachStreamOnDevice(Symbol<Device> device, const DoEachStreamT& DoEachStream);
-
   ReadyInstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
 
   void ReleaseFinishedInstructions(const ScheduleCtx& schedule_ctx);
