@@ -114,14 +114,15 @@ def random_uniform_initializer(
     """
     assert minval <= maxval
     initializer = initializer_conf_util.InitializerConf()
-    if dtype in [flow.float, flow.double]:
+    # TODO: support bfloat16 initializer
+    if dtype in [flow.float, flow.double, flow.float16]:
         setattr(initializer.random_uniform_conf, "min", float(minval))
         setattr(initializer.random_uniform_conf, "max", float(maxval))
     elif dtype in [flow.int8, flow.int32, flow.int64]:
         setattr(initializer.random_uniform_int_conf, "min", int(minval))
         setattr(initializer.random_uniform_int_conf, "max", int(maxval))
     else:
-        raise NotImplementedError("Do not support such data type")
+        raise NotImplementedError("Do not support such data type: {}".format(dtype))
     return initializer
 
 
