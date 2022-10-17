@@ -48,7 +48,7 @@ class SGD(Optimizer):
         lr (float, optional): learning rate (default: 1e-3)
         momentum (float, optional): Momentum factor (default: 0.0)
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0.0)
-        multi_tensor (bool, optional): whether to use multi_tensor_update kernel (default: False)
+        multi_tensor (bool, optional): whether use multi_tensor_update kernel (default: False)
 
     For example: 
 
