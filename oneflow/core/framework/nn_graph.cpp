@@ -20,6 +20,7 @@ limitations under the License.
 #include <string>
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/mem_util.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/time_util.h"
 #include "oneflow/core/common/util.h"
@@ -463,6 +464,18 @@ std::set<std::string> BroadcastFromMasterToWorkers(const std::string& key, const
     keys.insert(key);
   } else {
     Singleton<CtrlClient>::Get()->PullKV(key, worker_data);
+    int64_t comm_world_size = ParseIntegerFromEnv("ONEFLOW_DRY_RUN_COMPILE_COMM_WORLD_SIZE", 2);
+    int64_t thread_pool_parallel_limit =
+        ParseIntegerFromEnv("ONEFLOW_THREAD_POOL_PARALLEL_LIMIT", 2);
+    if (comm_world_size > 2 && ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false)) {
+      MultiThreadLoopWithLimit<std::function<void(size_t)>>(
+          comm_world_size - 2, thread_pool_parallel_limit, [&](size_t rank_id) {
+            Y tmp_data;
+            Singleton<CtrlClient>::Get()->PullKV(key, &tmp_data);
+            VLOG(1) << " rank " << rank_id << " pull key" << key;
+            LOG_MEM();
+          });
+    }
   }
   return keys;
 }
@@ -481,9 +494,22 @@ std::set<std::string> ForEachPulledFromWorkersToMaster(const std::string& prefix
       Singleton<CtrlClient>::Get()->PullKV(key, &data);
       DoEach(data);
       CHECK(keys.emplace(key).second) << "redundant pull key: " << key;
+      LOG_MEM();
     }
   } else {
     Singleton<CtrlClient>::Get()->PushKV(prefix + std::to_string(GlobalProcessCtx::Rank()), data);
+    if (ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false) && world_size > 2) {
+      int64_t thread_pool_parallel_limit =
+          ParseIntegerFromEnv("ONEFLOW_THREAD_POOL_PARALLEL_LIMIT", 2);
+      MultiThreadLoopWithLimit<std::function<void(size_t)>>(
+          world_size - 2, thread_pool_parallel_limit, [&](size_t rank_id) {
+            int64_t real_rank_id = rank_id + 2;
+            std::string key = prefix + std::to_string(real_rank_id);
+            VLOG(1) << " rank " << real_rank_id << " push key " << key;
+            LOG_MEM();
+            Singleton<CtrlClient>::Get()->PushKV(key, data);
+          });
+    }
   }
   return keys;
 }
@@ -505,6 +531,19 @@ std::set<std::string> ForEachPushedFromMasterToWorkers(const std::string& prefix
     }
   } else {
     Singleton<CtrlClient>::Get()->PullKV(prefix + std::to_string(GlobalProcessCtx::Rank()), data);
+    if (ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false) && world_size > 2) {
+      int64_t thread_pool_parallel_limit =
+          ParseIntegerFromEnv("ONEFLOW_THREAD_POOL_PARALLEL_LIMIT", 2);
+      MultiThreadLoopWithLimit<std::function<void(size_t)>>(
+          world_size - 2, thread_pool_parallel_limit, [&](size_t rank_id) {
+            int64_t real_rank_id = rank_id + 2;
+            std::string key = prefix + std::to_string(real_rank_id);
+            T tmp_data;
+            Singleton<CtrlClient>::Get()->PullKV(key, &tmp_data);
+            VLOG(1) << " rank " << real_rank_id << " pull key " << key;
+            LOG_MEM();
+          });
+    }
   }
   return keys;
 }
@@ -522,8 +561,6 @@ void DumpCalculationPassName(Job* job) {
 }  // namespace
 
 Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
-  int64_t world_size =
-      GlobalProcessCtx::WorldSize(ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false));
   std::set<std::string> push_pull_keys{};
   const auto& Merge = [&](std::set<std::string>&& keys) {
     push_pull_keys.insert(keys.begin(), keys.end());
@@ -548,9 +585,10 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
       });
     };
     // communication
+    int64_t comm_world_size = ParseIntegerFromEnv("ONEFLOW_DRY_RUN_COMPILE_COMM_WORLD_SIZE", 2);
     Merge(ForEachPushedFromMasterToWorkers(std::string(__FUNCTION__) + "_boxing_task_graph",
                                            boxing_task_graph_proto.get(),
-                                           PrepareWorkerBoxingTaskGraphProto, world_size));
+                                           PrepareWorkerBoxingTaskGraphProto, comm_world_size));
     auto* plan = &plan_;
     plan_tc->Count("BroadcastBoxingTaskGraph", 1);
     // TODO(chengcheng): new memory reused by chunk
@@ -581,10 +619,10 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
         MergeIdPairs(pairs, &reachable_cb_pairs);
       };
       // special world size
-      int64_t temp_world_size4dry_run = GlobalProcessCtx::WorldSize();
+      int64_t comm_world_size = ParseIntegerFromEnv("ONEFLOW_DRY_RUN_COMPILE_COMM_WORLD_SIZE", 2);
       // communication
       Merge(ForEachPulledFromWorkersToMaster(std::string(__FUNCTION__) + "_reachable_cb_pairs",
-                                             id_pairs, MergePairs, temp_world_size4dry_run));
+                                             id_pairs, MergePairs, comm_world_size));
     }
     plan_tc->Count("MergeCollBoxPairs", 1);
     if (GlobalProcessCtx::IsThisProcessMaster()) {
@@ -651,7 +689,20 @@ Maybe<void> NNGraph::NaiveCompile() {
       Singleton<CtrlClient>::Get()->PushKV(plan_name, plan_);
       sync_time_counter->Count("Graph name: " + name_ + " push kv", 1);
     } else {
-      Singleton<CtrlClient>::Get()->PullKV(plan_name, &plan_);
+      if (!ParseBooleanFromEnv("ONEFLOW_DRY_RUN_GRAPH_COMPILE", false)) {
+        Singleton<CtrlClient>::Get()->PullKV(plan_name, &plan_);
+      } else {
+        int64_t comm_world_size = ParseIntegerFromEnv("ONEFLOW_DRY_RUN_COMPILE_COMM_WORLD_SIZE", 2);
+        int64_t thread_pool_parallel_limit =
+            ParseIntegerFromEnv("ONEFLOW_THREAD_POOL_PARALLEL_LIMIT", 2);
+        MultiThreadLoopWithLimit<std::function<void(size_t)>>(
+            comm_world_size - 1, thread_pool_parallel_limit, [&](size_t rank_id) {
+              Plan tmp_plan;
+              Singleton<CtrlClient>::Get()->PullKV(plan_name, &tmp_plan);
+              VLOG(1) << " rank " << rank_id << " pull plan";
+              LOG_MEM();
+            });
+      }
       sync_time_counter->Count("Graph name: " + name_ + " pull kv", 1);
     }
     OF_SESSION_BARRIER();

@@ -73,6 +73,30 @@ void MultiThreadLoop(size_t num, const DoEachT& DoEach) {
   bc.WaitForeverUntilCntEqualZero();
 }
 
+template<typename DoEachT>
+void MultiThreadLoopWithLimit(size_t num, size_t max_parallel_size, const DoEachT& DoEach) {
+  if (num == 0) { return; }
+  if (unlikely(pthread_fork::IsForkedSubProcess()) || Singleton<ThreadPool>::Get() == nullptr) {
+    SingleThreadLoop(num, DoEach);
+    return;
+  }
+  size_t thread_num = Singleton<ThreadPool>::Get()->thread_num();
+  size_t parallel_num = std::min(num, thread_num);
+  parallel_num = std::min(parallel_num, max_parallel_size);
+
+  BalancedSplitter bs(num, parallel_num);
+  BlockingCounter bc(parallel_num);
+  FOR_RANGE(size_t, range_id, 0, parallel_num) {
+    Singleton<ThreadPool>::Get()->AddWork([&bc, &bs, range_id, DoEach] {
+      size_t start = bs.At(range_id).begin();
+      size_t end = bs.At(range_id).end();
+      FOR_RANGE(size_t, i, start, end) { DoEach(i); }
+      bc.Decrease();
+    });
+  }
+  // buzy loop wait.
+  bc.WaitForeverUntilCntEqualZero();
+}
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_

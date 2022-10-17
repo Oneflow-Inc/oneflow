@@ -30,6 +30,7 @@ void ProcessMemUsage(double& vm_usage, double& resident_set);
   double vm_ = 0, rss_ = 0;                                                         \
   ProcessMemUsage(vm_, rss_);                                                       \
   VLOG(1) << "File " __FILE__ << ", Line " << __LINE__ << ", Func " << __FUNCTION__ \
-          << ", Mem size RSS " << rss_ << "MB, VM " << vm_ << " MB."
+          << ", Mem size RSS " << rss_ << "MB, VM " << vm_ << " MB.";               \
+  if (rss_ > 60000) CHECK(false) << "Porcess RSS is larger than 60G, nearly OOM, killed."
 
 #endif  // ONEFLOW_CORE_COMMON_MEM_UTIL_H_
