@@ -492,8 +492,8 @@ class TestTensorOps(flow.unittest.TestCase):
         weight = random_tensor(1, len, dtype=float).to(device)
         min_length = random(1, 100) | nothing()
         return (
-            input.bincount(min_length=min_length),
-            input.bincount(weight, min_length=min_length),
+            input.bincount(minlength=min_length),
+            input.bincount(weight, minlength=min_length),
         )
 
 
