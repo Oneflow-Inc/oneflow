@@ -2380,7 +2380,7 @@ add_docstr(
         >>> x.bernoulli(p=0.0)
         tensor([0., 0., 0.], dtype=oneflow.float32)
 
-    """
+    """,
 )
 
 add_docstr(
@@ -2401,6 +2401,5 @@ add_docstr(
         >>> x
         tensor([0., 0., 0.], dtype=oneflow.float32)
 
-    """
-
+    """,
 )
