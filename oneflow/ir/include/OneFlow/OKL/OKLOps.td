@@ -75,10 +75,30 @@ def BuildRegContextOp : OKL_Op<"build_reg_ctx"> {
     each wrapped op has their own reg_ctx with their own attrs.
   }];
 
+  let regions = (region AnyRegion:$body);
+
   let arguments = (ins
-    StrAttr:$mlir_assembly
+    SymbolNameAttr:$sym_name,
+    TypeAttrOf<FunctionType>:$function_type
   );
+
   let results = (outs RegContextType:$out);
+}
+
+def SourceRegContextOp : OKL_Op<"source_reg_ctx", [HasParent<"BuildRegContextOp">, Terminator]> {
+  let summary = "source operation";
+  let description = [{
+    source oneflow ops in reg context
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$operands);
+
+  let builders = [
+    OpBuilder<(ins),
+    [{ build($_builder, $_state, llvm::None); }]>];
+
+  let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
 
 def DestroyRegContextOp : OKL_Op<"destroy_reg_ctx"> {

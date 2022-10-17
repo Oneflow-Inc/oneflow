@@ -114,7 +114,9 @@ struct BuildRegContextOpLowering final : public OpConversionPattern<BuildRegCont
   using OpConversionPattern<BuildRegContextOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(BuildRegContextOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto mlir_asm = op.mlir_assembly();
+    // TODO: refine
+    // auto mlir_asm = op.mlir_assembly();
+    auto mlir_asm = "";
 
     op->getParentOfType<func::FuncOp>();
     auto module = GetModuleOpFromJobBodyOp<func::FuncOp>(op);
