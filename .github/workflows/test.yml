@@ -978,6 +978,12 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/tensor ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
+      - name: Test mocking torch by script
+        run: |
+          docker exec ${{ env.TEST_CONTAINER_NAME }} bash -x ci/test/test_mock_script.sh
+      - name: Test mocking torch by function
+        run: |
+          docker exec ${{ env.TEST_CONTAINER_NAME }} bash -x ci/test/test_mock_function.sh
       - name: Benchmark Test
         timeout-minutes: 100
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'benchmark' && matrix.device == 'cuda' }}

@@ -290,6 +290,13 @@ del ExitHook
 del atexit
 del oneflow
 
+# default dtype
+from oneflow.framework.dtype import (
+    set_default_dtype,
+    set_default_tensor_type,
+    get_default_dtype,
+)
+
 import oneflow._C
 from oneflow._C import tensor, batch_gather
 from oneflow._C import from_numpy

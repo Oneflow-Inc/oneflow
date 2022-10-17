@@ -37,6 +37,9 @@ Tensor
     is_nonzero
     numel
     set_printoptions
+    get_default_dtype
+    set_default_dtype
+    set_default_tensor_type
 
 .. _tensor-creation-ops:
 
