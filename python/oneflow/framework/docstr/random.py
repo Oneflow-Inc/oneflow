@@ -180,7 +180,7 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> generator = flow.Generator()
-        >>> generator.manual_seed(0)
+        >>> generator = generator.manual_seed(0)
         >>> y = flow.normal(0, 1, 5, generator=generator)
         >>> y
         tensor([2.2122, 1.1631, 0.7740, 0.4838, 1.0434], dtype=oneflow.float32)
@@ -222,7 +222,7 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> generator = flow.Generator()
-        >>> generator.manual_seed(0)
+        >>> generator = generator.manual_seed(0)
         >>> y = flow.randint(0, 5, (3,3), generator=generator) # construct local tensor
         >>> y
         tensor([[2, 2, 3],
@@ -271,7 +271,7 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> generator = flow.Generator()
-        >>> generator.manual_seed(0)
+        >>> generator = generator.manual_seed(0)
         >>> x = flow.randn(2, 2, generator=generator)
         >>> y = flow.randint_like(x, 0, 5, generator=generator) # construct local tensor
         >>> y
@@ -314,7 +314,7 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> generator = flow.Generator()
-        >>> generator.manual_seed(0)
+        >>> generator = generator.manual_seed(0)
         >>> y = flow.randperm(5, generator=generator) # construct local tensor
         >>> y
         tensor([2, 4, 3, 0, 1], dtype=oneflow.int64)

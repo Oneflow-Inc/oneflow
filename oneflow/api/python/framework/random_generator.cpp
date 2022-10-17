@@ -38,7 +38,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("manual_seed",
            [](const std::shared_ptr<one::Generator>& generator,
               const py::object& seed) -> std::shared_ptr<one::Generator> {
-             int64_t seed_val = JUST(one::functional::PyUnpackLong(seed.ptr()));
+             int64_t seed_val = (one::functional::PyUnpackLong(seed.ptr())).GetOrThrow();
              generator->set_current_seed(seed_val);
              return generator;
            })
