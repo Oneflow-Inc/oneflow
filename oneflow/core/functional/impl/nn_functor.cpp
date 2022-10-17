@@ -3315,6 +3315,69 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
   std::shared_ptr<OpExpr> fused_scale_mask_softmax_dropout_op_;
 };
 
+class FlashAttentionFunctor {
+ public:
+  FlashAttentionFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("flash_attention")
+                         .Input("query")
+                         .Input("key")
+                         .Input("value")
+                         .Input("valid_seqlens_q")
+                         .Input("valid_seqlens_k")
+                         .Output("out")
+                         .Output("softmax_lse")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& query,
+                                const std::shared_ptr<one::Tensor>& key,
+                                const std::shared_ptr<one::Tensor>& value,
+                                const std::shared_ptr<one::Tensor>& valid_seqlens_q,
+                                const std::shared_ptr<one::Tensor>& valid_seqlens_k,
+                                const bool causal) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("causal");
+    attrs.SetAllAttrs(causal);
+    return OpInterpUtil::Dispatch<TensorTuple>(
+        *op_, {query, key, value, valid_seqlens_q, valid_seqlens_k}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FlashAttentionGradFunctor {
+ public:
+  FlashAttentionGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("flash_attention_grad")
+                         .Input("out_grad")
+                         .Input("out")
+                         .Input("softmax_lse")
+                         .Input("query")
+                         .Input("key")
+                         .Input("value")
+                         .Input("valid_seqlens_q")
+                         .Input("valid_seqlens_k")
+                         .Output("query_grad")
+                         .Output("key_grad")
+                         .Output("value_grad")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(
+      const std::shared_ptr<one::Tensor>& out_grad, const std::shared_ptr<one::Tensor>& out,
+      const std::shared_ptr<one::Tensor>& softmax_lse, const std::shared_ptr<one::Tensor>& query,
+      const std::shared_ptr<one::Tensor>& key, const std::shared_ptr<one::Tensor>& value,
+      const std::shared_ptr<one::Tensor>& valid_seqlens_q,
+      const std::shared_ptr<one::Tensor>& valid_seqlens_k, const bool causal) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("causal");
+    attrs.SetAllAttrs(causal);
+    return OpInterpUtil::Dispatch<TensorTuple>(
+        *op_, {out_grad, out, softmax_lse, query, key, value, valid_seqlens_q, valid_seqlens_k},
+        attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class CtcGreedyDecoderFunctor {
  public:
   CtcGreedyDecoderFunctor() {
@@ -4520,6 +4583,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedScaleMaskSoftmaxDropoutFunctor>("FusedScaleMaskSoftmaxDropout");
   m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleFunctor>("FusedScaleTrilSoftmaxMaskScale");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
+  m.add_functor<impl::FlashAttentionFunctor>("FlashAttention");
+  m.add_functor<impl::FlashAttentionGradFunctor>("FlashAttentionGrad");
   m.add_functor<impl::CtcGreedyDecoderFunctor>("CtcGreedyDecoder");
   m.add_functor<impl::PariticalFCSampleDisableBoxing>("DistributedPariticalFCSampleDisableBoxing");
   m.add_functor<impl::NmsFunctor>("Nms");
