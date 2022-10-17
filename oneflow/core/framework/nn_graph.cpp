@@ -614,7 +614,7 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
   plan_tc->Count("ClearKV", 1);
   // NOTE(zwx): After barrier plan is synchronized between all ranks,
   // NOTE(chengcheng): recovery op_attr
-  PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
+  // PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
   plan_tc->Count("PopulateOpAttr", 1);
   return Maybe<void>::Ok();
 }
