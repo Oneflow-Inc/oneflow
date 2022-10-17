@@ -22,6 +22,7 @@ oneflow_add_mlir_dialect_library(
   OKL/OKLTypes.cpp
   OKL/OKLAttributes.cpp
   OKL/Conversion/OKLToLLVM.cpp
+  OKL/Conversion/SplitIntoFuncs.cpp
   SBP/SBPDialect.cpp
   SBP/SBPAttributes.cpp
   SBP/SBPImporter.cpp

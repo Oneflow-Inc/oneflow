@@ -159,6 +159,11 @@ def LaunchOp : OKL_Op<"launch"> {
   );
 }
 
+def SplitIntoFuncsPass : Pass<"split-into-funcs", "ModuleOp"> {
+  let summary = "split okl dialect op into different func with respective lifetime";
+  let constructor = "mlir::okl::createSplitIntoFuncsPass()";
+}
+
 def LowerOKLToLLVMPass : Pass<"lower-okl-to-llvm", "ModuleOp"> {
   let summary = "convert okl dialect to llvm dialect";
   let constructor = "mlir::okl::createLowerOKLToLLVMPass()";

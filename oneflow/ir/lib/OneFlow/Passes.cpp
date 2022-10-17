@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
-#include "OneFlow/OKL/Conversion/OKLToLLVM.h"
+#include "OneFlow/OKL/passes.h"
 #include "OneFlow/OKL/OKLAttributes.h"
 #include "OneFlow/Transform/OutlineAndFuse.h"
 #include "llvm/ADT/SetOperations.h"
@@ -1173,6 +1173,7 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
 LogicalResult LowerKernelLaunchModuleToLLVM(ModuleOp module) {
   mlir::PassManager pm(module->getContext());
   pm.addPass(createLowerToOKLPass());                // lower-oneflow-to-okl
+  // TODO:
   pm.addPass(okl::createLowerOKLToLLVMPass());       // lower-okl-to-llvm
   pm.addPass(createConvertFuncToLLVMPass());         // convert-func-to-llvm
   pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
