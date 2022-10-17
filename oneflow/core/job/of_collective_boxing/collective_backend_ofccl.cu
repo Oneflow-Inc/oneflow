@@ -213,6 +213,7 @@ struct CollectiveBackendOfccl::Impl {
           
           // TODO: 目前只实现了AllReduce
           if (request.op_desc().op_type() == kOpTypeAllReduce) {
+            VLOG(1) << "Prepare coll_id = " << coll_id << " count = " << count << " nccl_data_type = " << nccl_data_type;
             OF_NCCL_CHECK(ofcclPrepareAllReduce(count, nccl_data_type, nccl_reduce_op, comm, coll_id, device_id2ofccl_rank_ctx[curr_device_id]));
           } else {
             UNIMPLEMENTED();

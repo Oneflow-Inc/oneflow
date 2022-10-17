@@ -128,7 +128,7 @@ void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) con
     const Shape shape = Shape(rank_desc.op_desc().shape());
     FOR_RANGE(int, shape_ax, 0, shape.NumAxes()) { count *= shape.At(shape_ax); }
     CHECK_GT(count, 0);
-    VLOG(1) << "ForwardDataContent invoke ofcclRunAllReduce with collId = " << coll_id  << "count = " << count; // << " send_buff = " << send_buff << " recv_buff = " << recv_buff;
+    VLOG(1) << "ForwardDataContent invoke ofcclRunAllReduce with coll_id = " << coll_id  << " count = " << count; // << " send_buff = " << send_buff << " recv_buff = " << recv_buff;
   }
 }
 
