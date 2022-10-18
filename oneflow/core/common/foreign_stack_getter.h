@@ -23,21 +23,16 @@ limitations under the License.
 
 namespace oneflow {
 
-using StackId = int64_t;
-
-// Only intended for use in main thread, because only main thread
-// has meaningful stack. So this function is not designed to be thread-safe.
-inline StackId GetNextStackId() {
-  static StackId next_stack_id = 0;
-  return next_stack_id++;
-}
+class Frame {
+  public:
+  virtual ~Frame() = default;
+};
 
 class ForeignStackGetter {
  public:
   virtual ~ForeignStackGetter() = default;
-  virtual std::string GetCurrentStack(size_t max_size) const = 0;
-  virtual void RecordCurrentStack(StackId id) = 0;
-  virtual std::string GetFormatted(StackId id) const = 0;
+  virtual std::shared_ptr<Frame> GetCurrentFrame() const = 0;
+  virtual std::string GetFormattedStack(std::shared_ptr<const Frame> frame) const = 0;
 };
 }  // namespace oneflow
 

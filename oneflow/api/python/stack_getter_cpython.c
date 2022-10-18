@@ -26,17 +26,19 @@ limitations under the License.
 
 static PyObject *_custom_eval_frame_shim(PyThreadState *tstate,
                                          PyFrameObject *frame, int throw_flag) {
+  if (frame->f_back != NULL) {
+    push_frame(frame->f_back);
+  }
 #if PY_VERSION_HEX >= 0x03090000
   if (tstate == NULL) {
     tstate = PyThreadState_GET();
   }
-  return _PyEval_EvalFrameDefault(tstate, frame, throw_flag);
+  PyObject* ret = _PyEval_EvalFrameDefault(tstate, frame, throw_flag);
 #else
-  const char* filename =
-    PyBytes_AsString(PyUnicode_AsEncodedString(frame->f_code->co_filename, "utf-8", "~E~"));
-  printf("file: %s, line %d\n", filename, frame->f_lineno);
-  return _PyEval_EvalFrameDefault(frame, throw_flag);
+  PyObject* ret = _PyEval_EvalFrameDefault(frame, throw_flag);
 #endif
+  pop_frame();
+  return ret;
 }
 
 #if PY_VERSION_HEX >= 0x03090000
