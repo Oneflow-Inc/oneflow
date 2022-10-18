@@ -39,18 +39,32 @@ def compare_with_numpy_adam(
     amsgrad,
     reload_state_step,
     save_load_by_pickle,
+    multi_tensor,
+    tensor_num,
 ):
     random_grad_seq = []
+    init_value_seq = []
+
+    for i in range(tensor_num):
+        init_value_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
+
     for _ in range(train_iters):
-        random_grad_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
-    init_value = np.random.uniform(size=x_shape).astype(np.float32)
+        random_grad_seq_per_iter = []
+        for i in range(tensor_num):
+            random_grad_seq_per_iter.append(
+                np.random.uniform(size=x_shape).astype(np.float32)
+            )
+        random_grad_seq.append(random_grad_seq_per_iter)
 
     def train_by_oneflow():
-        x = Parameter(flow.Tensor(init_value, device=flow.device(device)))
+        x = []
+        for i in range(tensor_num):
+            x.append(Parameter(flow.Tensor(init_value_seq[i], device=flow.device(device))))
+
         adam = flow.optim.Adam(
             [
                 {
-                    "params": [x],
+                    "params": x,
                     "lr": learning_rate,
                     "betas": betas,
                     "eps": eps,
@@ -59,16 +73,19 @@ def compare_with_numpy_adam(
             ],
             do_bias_correction=do_bias_correction,
             amsgrad=amsgrad,
+            multi_tensor=multi_tensor,
         )
 
         def train_one_iter(grad):
-            grad_tensor = flow.tensor(
-                grad,
-                dtype=flow.float32,
-                requires_grad=False,
-                device=flow.device(device),
-            )
-            loss = flow.sum(x * grad_tensor)
+            loss = 0.0
+            for i in range(tensor_num):
+                grad_tensor = flow.tensor(
+                    grad[i],
+                    dtype=flow.float32,
+                    requires_grad=False,
+                    device=flow.device(device),
+                )
+                loss += flow.sum(x[i] * grad_tensor)
             loss.backward()
             adam.step()
             adam.zero_grad()
@@ -77,7 +94,7 @@ def compare_with_numpy_adam(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = adam.state_dict()
-                adam = flow.optim.Adam([{"params": [x],}],)
+                adam = flow.optim.Adam([{"params": x,}],)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
@@ -85,8 +102,8 @@ def compare_with_numpy_adam(
                 adam.load_state_dict(state_dict)
         return x
 
-    def train_by_numpy():
-        x = init_value
+    def train_by_numpy(tensor_idx):
+        x = init_value_seq[tensor_idx]
         vt = np.zeros_like(x)
         st = np.zeros_like(x)
         max_st = np.zeros_like(x)
@@ -117,14 +134,23 @@ def compare_with_numpy_adam(
             return (param, v, s, max_s)
 
         for i in range(1, train_iters + 1):
-            (x, vt, st, max_st) = np_train_one_iter(i, random_grad_seq[i - 1])
+            (x, vt, st, max_st) = np_train_one_iter(i, random_grad_seq[i - 1][tensor_idx])
         return x
 
-    oneflow_res = train_by_oneflow().numpy()
-    numpy_res = train_by_numpy()
-    test_case.assertTrue(
-        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3)
-    )
+    oneflow_res = train_by_oneflow()
+    numpy_res = []
+    for i in range(tensor_num):
+        numpy_res.append(train_by_numpy(i))
+
+    for i in range(tensor_num):
+        test_case.assertTrue(
+            np.allclose(
+                oneflow_res[i].numpy().flatten(),
+                numpy_res[i].flatten(),
+                rtol=0.0001,
+                atol=0.0001,
+            )
+        )
 
 
 def compare_with_numpy_adam_clip_grad(
@@ -142,18 +168,32 @@ def compare_with_numpy_adam_clip_grad(
     clip_grad_norm_type,
     reload_state_step,
     save_load_by_pickle,
+    multi_tensor,
+    tensor_num,
 ):
     random_grad_seq = []
+    init_value_seq = []
+
+    for i in range(tensor_num):
+        init_value_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
+
     for _ in range(train_iters):
-        random_grad_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
-    init_value = np.random.uniform(size=x_shape).astype(np.float32)
+        random_grad_seq_per_iter = []
+        for i in range(tensor_num):
+            random_grad_seq_per_iter.append(
+                np.random.uniform(size=x_shape).astype(np.float32)
+            )
+        random_grad_seq.append(random_grad_seq_per_iter)
 
     def train_by_oneflow():
-        x = Parameter(flow.Tensor(init_value, device=flow.device(device)))
+        x = []
+        for i in range(tensor_num):
+            x.append(Parameter(flow.Tensor(init_value_seq[i], device=flow.device(device))))
+
         adam = flow.optim.Adam(
             [
                 {
-                    "params": [x],
+                    "params": x,
                     "lr": learning_rate,
                     "betas": betas,
                     "eps": eps,
@@ -164,16 +204,19 @@ def compare_with_numpy_adam_clip_grad(
             ],
             do_bias_correction=do_bias_correction,
             amsgrad=amsgrad,
+            multi_tensor=multi_tensor,
         )
 
         def train_one_iter(grad):
-            grad_tensor = flow.tensor(
-                grad,
-                dtype=flow.float32,
-                requires_grad=False,
-                device=flow.device(device),
-            )
-            loss = flow.sum(x * grad_tensor)
+            loss = 0.0
+            for i in range(tensor_num):
+                grad_tensor = flow.tensor(
+                    grad[i],
+                    dtype=flow.float32,
+                    requires_grad=False,
+                    device=flow.device(device),
+                )
+                loss += flow.sum(x[i] * grad_tensor)
             loss.backward()
             adam.clip_grad()
             adam.step()
@@ -183,7 +226,7 @@ def compare_with_numpy_adam_clip_grad(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = adam.state_dict()
-                adam = flow.optim.Adam([{"params": [x],}])
+                adam = flow.optim.Adam([{"params": x,}])
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
@@ -192,7 +235,7 @@ def compare_with_numpy_adam_clip_grad(
         return x
 
     def train_by_numpy():
-        x = init_value
+        x = init_value_seq
         vt = np.zeros_like(x)
         st = np.zeros_like(x)
         max_st = np.zeros_like(x)
@@ -203,37 +246,44 @@ def compare_with_numpy_adam_clip_grad(
             total_norm, grad = clip_grad_norm_np(
                 grad, clip_grad_max_norm, clip_grad_norm_type
             )
-            grad = grad + weight_decay * x
 
-            bias_correction1 = 1.0
-            bias_correction2 = 1.0
+            for i in range(tensor_num):
+                grad[i] = grad[i] + weight_decay * x[i]
 
-            if do_bias_correction:
-                bias_correction1 = 1.0 - np.power(beta1, step)
-                bias_correction2 = 1.0 - np.power(beta2, step)
+                bias_correction1 = 1.0
+                bias_correction2 = 1.0
 
-            v = beta1 * vt + (1 - beta1) * grad
-            s = beta2 * st + (1 - beta2) * grad * grad
-            max_s = np.zeros_like(x)
+                if do_bias_correction:
+                    bias_correction1 = 1.0 - np.power(beta1, step)
+                    bias_correction2 = 1.0 - np.power(beta2, step)
 
-            if amsgrad:
-                max_s = np.maximum(s, max_st)
-                denom = np.sqrt(max_s) / np.sqrt(bias_correction2) + eps
-            else:
-                denom = np.sqrt(s) / np.sqrt(bias_correction2) + eps
+                vt[i] = beta1 * vt[i] + (1 - beta1) * grad[i]
+                st[i] = beta2 * st[i] + (1 - beta2) * grad[i] * grad[i]
 
-            param = x - ((learning_rate / bias_correction1) * v / denom)
-            return (param, v, s, max_s)
+                if amsgrad:
+                    max_st[i] = np.maximum(st[i], max_st[i])
+                    denom = np.sqrt(max_st[i]) / np.sqrt(bias_correction2) + eps
+                else:
+                    denom = np.sqrt(st[i]) / np.sqrt(bias_correction2) + eps
+
+                x[i] = x[i] - ((learning_rate / bias_correction1) * vt[i] / denom)
 
         for i in range(1, train_iters + 1):
-            (x, vt, st, max_st) = train_one_iter(i, random_grad_seq[i - 1])
+            train_one_iter(i, random_grad_seq[i - 1])
         return x
 
-    oneflow_res = train_by_oneflow().numpy()
+    oneflow_res = train_by_oneflow()
     numpy_res = train_by_numpy()
-    test_case.assertTrue(
-        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3)
-    )
+
+    for i in range(tensor_num):
+        test_case.assertTrue(
+            np.allclose(
+                oneflow_res[i].numpy().flatten(),
+                numpy_res[i].flatten(),
+                rtol=0.0001,
+                atol=0.0001,
+            )
+        )
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -251,6 +301,8 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict["amsgrad"] = [True, False]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
+        arg_dict["multi_tensor"] = [False, True]
+        arg_dict["tensor_num"] = [1, 4]
 
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adam(test_case, *arg)
@@ -270,6 +322,8 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
+        arg_dict["multi_tensor"] = [False, True]
+        arg_dict["tensor_num"] = [1, 4]
 
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adam_clip_grad(test_case, *arg)
