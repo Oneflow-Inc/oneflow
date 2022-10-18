@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/slice_util.h"
-#include <glog/logging.h>
-#include <cstdint>
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/thread/thread_manager.h"
 
