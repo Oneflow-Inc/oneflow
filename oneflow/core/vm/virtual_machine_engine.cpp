@@ -380,7 +380,7 @@ void VirtualMachineEngine::AbortOnOOM(vm::Stream* stream, const ScheduleCtx& sch
 template<void (VirtualMachineEngine::*OOMHandler)(vm::Stream*, const ScheduleCtx&)>
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
                                                const ScheduleCtx& schedule_ctx) {
-  StackIdThreadLocalGuard guard(instruction->id());
+  FrameThreadLocalGuard guard(instruction->frame());
   auto* stream = instruction->mut_stream();
   // Prepare
   {

@@ -37,9 +37,8 @@ void Instruction::__Init__(Stream* stream,
   stream_ = stream;
   instruction_policy_ = std::move(instruction_policy);
   if (IsMainThread()) {
-    id_ = GetNextStackId();
     if (auto* stack_getter = Singleton<ForeignStackGetter>::Get()) {
-      stack_getter->RecordCurrentStack(id_);
+      frame_ = stack_getter->GetCurrentFrame();
     }
   }
 }
@@ -47,11 +46,11 @@ void Instruction::__Init__(Stream* stream,
 void Instruction::InitStatus() { instruction_policy_->InitInstructionStatusIf(this); }
 
 Maybe<void> Instruction::Prepare() { 
-  StackIdThreadLocalGuard guard(id_);
+  FrameThreadLocalGuard guard(frame_);
   return instruction_policy_->PrepareIf(this);
 }
 void Instruction::Compute() { 
-  StackIdThreadLocalGuard guard(id_);
+  FrameThreadLocalGuard guard(frame_);
   instruction_policy_->ComputeIf(this);
 }
 

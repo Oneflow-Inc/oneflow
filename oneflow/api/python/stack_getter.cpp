@@ -13,8 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <Python.h>
+extern "C" {
+#include "oneflow/api/python/stack_getter.h"
+}
+
 #include <pybind11/pybind11.h>
+
+#include <utility>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/common/singleton.h"
@@ -29,84 +34,55 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-const int kDefaultStackSize = 15;
-using Stack = small_vector<std::pair<PyCodeObject*, int>, kDefaultStackSize>;
+namespace python {
+
+class Frame : public oneflow::Frame {
+ public:
+  Frame(PyCodeObject* code, int lineno, std::shared_ptr<Frame> back)
+      : code(code), lineno(lineno), back(std::move(back)) {
+    Py_INCREF(code);
+  }
+  OF_DISALLOW_COPY_AND_MOVE(Frame);
+  ~Frame() { Py_DECREF(code); }
+
+  PyCodeObject* const code;
+  const int lineno;
+  std::shared_ptr<Frame> back;
+
+ private:
+};
+
+}  // namespace python
 
 class PyStackGetter final : public ForeignStackGetter {
  public:
   // indended to be called in main thread.
-  std::string GetCurrentStack(size_t max_size) const override {
-    if (IsShuttingDown()) { return ""; }
-
-    Stack stack;
+  std::shared_ptr<Frame> GetCurrentFrame() const override {
+    if (IsShuttingDown()) { return nullptr; }
     PyFrameObject* frame = PyEval_GetFrame();
-    CHECK_NOTNULL(frame);
-    for (int i = 0; frame != nullptr && i < max_size; frame = frame->f_back, ++i) {
-      int lineno = PyFrame_GetLineNumber(frame);
-      // hold the PyCodeObject instead of the PyFrameObject because the latter holds
-      // references to the local objects in the frame.
-      stack.emplace_back(frame->f_code, lineno);
-    }
-    return GetFormattedStack(stack);
+    auto top_frame =
+        std::make_shared<python::Frame>(frame->f_code, PyFrame_GetLineNumber(frame), cur_frame);
+    return top_frame;
   }
 
-  // "happy path", performance is important.
-  // indended to be called in main thread.
-  void RecordCurrentStack(StackId id) override {
-    if (IsShuttingDown()) { return; }
-
-    std::lock_guard<std::mutex> lock(mutex_);
-    auto& id2stack = id2stack_arr_[index_];
-    id2stack.first = id;
-    for (auto& f_code_and_line_no : id2stack.second) { Py_DECREF(f_code_and_line_no.first); }
-    id2stack.second.clear();
-    for (PyFrameObject* frame = CHECK_NOTNULL(PyEval_GetFrame());
-         frame != nullptr && (id2stack.second.size() < kDefaultStackSize || IsInDebugMode());
-         frame = frame->f_back) {
-      int lineno = PyFrame_GetLineNumber(frame);
-      // hold the PyCodeObject instead of the PyFrameObject because the latter holds
-      // references to the local objects in the frame.
-      id2stack.second.emplace_back(frame->f_code, lineno);
-      Py_INCREF(frame->f_code);
+  std::string GetFormattedStack(std::shared_ptr<const Frame> frame) const override {
+    if (frame == nullptr) {
+      return "  <unknown>\n";
     }
-    index_ = (index_ + 1) % id2stack_arr_.max_size();
-  }
-
-  // "bad path", performance is not important.
-  std::string GetFormatted(StackId id) const override {
-    std::lock_guard<std::mutex> lock(mutex_);
-    std::string result = "  <unknown>\n";
-    for (const auto& pair : id2stack_arr_) {
-      if (pair.first == id) {
-        const auto& stack = pair.second;
-        result = GetFormattedStack(stack);
-        if (stack.size() == kDefaultStackSize && !IsInDebugMode()) {
-          fmt::format_to(
-              std::back_inserter(result),
-              "The Python stack may be truncated, you might want to enable the debug mode (by "
-              "setting the environment variable `{}` to 1) and get the full stack.",
-              fmt::styled("ONEFLOW_DEBUG", fmt::emphasis::bold | fmt::fg(fmt::color::dark_gray)));
-        }
-        break;
-      }
-    }
-    return result;
-  }
-
- private:
-  std::string GetFormattedStack(const Stack& stack) const {
     std::string buffer;
+    std::shared_ptr<const python::Frame> py_frame =
+        std::dynamic_pointer_cast<const python::Frame>(frame);
     // NOTE: intentionally not using CHECK_JUST here, because CHECK_JUST may also
     // call current function (StackGetter::Print) and cause infinite loop.
     // NOLINTNEXTLINE
     Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
-      for (const auto& pair : stack) {
-        PyCodeObject* f_code = pair.first;
-        int lineno = pair.second;
-        const std::string filename =
-            PyBytes_AS_STRING(PyUnicode_AsEncodedString(f_code->co_filename, "utf-8", "~E~"));
-        const std::string funcname =
-            PyBytes_AS_STRING(PyUnicode_AsEncodedString(f_code->co_name, "utf-8", "~E~"));
+      while (py_frame != nullptr) {
+        const auto* code_object = py_frame->code;
+        const auto& lineno = py_frame->lineno;
+        const char* filename =
+            PyBytes_AsString(PyUnicode_AsEncodedString(code_object->co_filename, "utf-8", "~E~"));
+        const char* funcname =
+            PyBytes_AsString(PyUnicode_AsEncodedString(code_object->co_name, "utf-8", "~E~"));
         const std::string line_text = [&]() -> std::string {
           std::string line_text;
           std::ifstream ifs(filename);
@@ -119,24 +95,46 @@ class PyStackGetter final : public ForeignStackGetter {
         // immitate python's stack trace format
         fmt::format_to(std::back_inserter(buffer), "  File \"{}\", line {}, in {}\n    {}\n",
                        filename, lineno, funcname, line_text);
+        py_frame = py_frame->back;
       }
       return Maybe<void>::Ok();
     });
     return buffer;
   };
-  std::array<std::pair<StackId, Stack>, 20000> id2stack_arr_;
-  int64_t index_ = 0;
-  mutable std::mutex mutex_;
+  void PushFrame(PyFrameObject* frame) {
+    cur_frame =
+        std::make_shared<python::Frame>(frame->f_code, PyFrame_GetLineNumber(frame), cur_frame);
+  }
+  void PopFrame() {
+    if (cur_frame != nullptr) { cur_frame = cur_frame->back; }
+  }
+
+ private:
+  std::shared_ptr<oneflow::python::Frame> cur_frame;
 };
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("RegisterStackGetter", []() {
     Singleton<ForeignStackGetter>::Delete();
     Singleton<ForeignStackGetter>::SetAllocated(new PyStackGetter());
+    enable_eval_frame_shim_for_current_thread();
   });
-  m.def("GetCurrentStack", [](size_t max_size) {
-    return Singleton<ForeignStackGetter>::Get()->GetCurrentStack(max_size);
+  m.def("GetCurrentStack", []() {
+    auto* tmp = Singleton<ForeignStackGetter>::Get();
+    return tmp->GetFormattedStack(tmp->GetCurrentFrame());
   });
 }
 
 }  // namespace oneflow
+
+void push_frame(PyFrameObject* frame) {
+  auto* stack_getter =
+      dynamic_cast<oneflow::PyStackGetter*>(oneflow::Singleton<oneflow::ForeignStackGetter>::Get());
+  stack_getter->PushFrame(frame);
+}
+
+void pop_frame() {
+  auto* stack_getter =
+      dynamic_cast<oneflow::PyStackGetter*>(oneflow::Singleton<oneflow::ForeignStackGetter>::Get());
+  stack_getter->PopFrame();
+}

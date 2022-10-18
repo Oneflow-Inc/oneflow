@@ -23,7 +23,6 @@ def f():
 @flow.unittest.skip_unless_1n1d()
 def test_error_reported_in_thread():
     stack = h()
-    print(stack)
     assert "flow._oneflow_internal.GetCurrentStack" in stack
     assert "g()" in stack
     assert "f()" in stack
