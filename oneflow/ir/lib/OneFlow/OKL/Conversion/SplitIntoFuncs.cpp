@@ -75,14 +75,32 @@ struct SplitIntoFuncsPattern : public mlir::OpRewritePattern<func::FuncOp> {
       }
       compute_ops.push_back(&op);
     }
+
+    SmallVector<Type> new_res_type;
+    for (auto& op_vec : new_ops) {
+      if (op_vec.size() == 0) {
+        func->emitError("there are null element in new_ops.");
+        exit(1);
+      }
+      // new_op only return single value as its outcome.
+      auto elem_type = op_vec[0]->getResult(0).getType();
+      auto vec_type = VectorType::get({static_cast<long>(op_vec.size())}, elem_type);
+      new_res_type.push_back(vec_type);
+    }
+
     auto new_ops_type = rewriter.getFunctionType(
-        TypeRange{LauncherContextType::get(rewriter.getContext())}, TypeRange{});
+        TypeRange{LauncherContextType::get(rewriter.getContext())}, TypeRange{new_res_type});
     auto launcher_to_void_func = rewriter.getFunctionType(
         TypeRange{LauncherContextType::get(rewriter.getContext())}, TypeRange{});
+
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPointAfter(func);
+
     rewriter.create<func::FuncOp>(func.getLoc(), new_ops_func, new_ops_type);
     rewriter.create<func::FuncOp>(func.getLoc(), del_ops_func, launcher_to_void_func);
     rewriter.create<func::FuncOp>(func.getLoc(), compute_ops_func, launcher_to_void_func);
 
+    rewriter.eraseOp(func);
     // mlir::VectorType::get({})
     return success();
   }
