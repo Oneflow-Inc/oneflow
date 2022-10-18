@@ -61,7 +61,9 @@ def compare_with_numpy_sgd(
     def train_by_oneflow():
         x = []
         for i in range(tensor_num):
-            x.append(Parameter(flow.Tensor(init_value_seq[i], device=flow.device(device))))
+            x.append(
+                Parameter(flow.Tensor(init_value_seq[i], device=flow.device(device)))
+            )
 
         sgd = flow.optim.SGD(
             [{"params": x, "lr": learning_rate, "weight_decay": weight_decay,}],
@@ -179,7 +181,9 @@ def compare_with_numpy_sgd_clip_grad(
     def train_by_oneflow():
         x = []
         for i in range(tensor_num):
-            x.append(Parameter(flow.Tensor(init_value_seq[i], device=flow.device(device))))
+            x.append(
+                Parameter(flow.Tensor(init_value_seq[i], device=flow.device(device)))
+            )
 
         sgd = flow.optim.SGD(
             [
@@ -237,7 +241,7 @@ def compare_with_numpy_sgd_clip_grad(
             total_norm, grad = clip_grad_norm_np(
                 grad, clip_grad_max_norm, clip_grad_norm_type
             )
-            
+
             for i in range(tensor_num):
                 grad[i] = grad[i] + weight_decay * x[i]
                 if momentum > 0.0:

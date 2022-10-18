@@ -209,7 +209,7 @@ class SGD(Optimizer):
             loss = None
             if closure is not None:
                 loss = closure()
-                
+
             if self.multi_tensor:
                 for param_group in self.param_groups:
                     self._multi_tensor_update(param_group)

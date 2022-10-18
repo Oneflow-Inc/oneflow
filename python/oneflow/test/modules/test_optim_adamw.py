@@ -59,7 +59,9 @@ def compare_with_numpy_adamw(
     def train_by_oneflow():
         x = []
         for i in range(tensor_num):
-            x.append(Parameter(flow.Tensor(init_value_seq[i], device=flow.device(device))))
+            x.append(
+                Parameter(flow.Tensor(init_value_seq[i], device=flow.device(device)))
+            )
 
         adam = flow.optim.AdamW(
             [
@@ -188,7 +190,9 @@ def compare_with_numpy_adamw_clip_grad(
     def train_by_oneflow():
         x = []
         for i in range(tensor_num):
-            x.append(Parameter(flow.Tensor(init_value_seq[i], device=flow.device(device))))
+            x.append(
+                Parameter(flow.Tensor(init_value_seq[i], device=flow.device(device)))
+            )
 
         adam = flow.optim.AdamW(
             [
