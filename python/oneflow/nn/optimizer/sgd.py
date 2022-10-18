@@ -124,11 +124,10 @@ class SGD(Optimizer):
         super().__init__(params, options)
 
         self.multi_tensor = multi_tensor
-        if multi_tensor and (momentum > 0.0 or dampening > 0.0 \
-                or nesterov or maximize):
+        if multi_tensor and (momentum > 0.0 or dampening > 0.0 or nesterov or maximize):
             warnings.warn(
                 "Only lr and weight_decay can be used for multi_tensor, trying default SGD kernel. "
-            ) 
+            )
             self.multi_tensor = False
 
         for param_group in self.param_groups:
@@ -154,8 +153,8 @@ class SGD(Optimizer):
         )
 
     def _single_tensor_update(self, param_group):
-        lr = param_group['lr']
-        l2 = param_group['weight_decay']
+        lr = param_group["lr"]
+        l2 = param_group["weight_decay"]
         for param in param_group.parameters:
             if param.grad is None:
                 continue
@@ -193,11 +192,11 @@ class SGD(Optimizer):
             param_grad_list.append(param.grad)
 
         flow._C.multi_tensor_sgd_update(
-            model=param_list, 
-            model_diff=param_grad_list, 
-            scale=1.0, 
-            weight_decay=param_group['weight_decay'], 
-            learning_rate_val=param_group['lr'],
+            model=param_list,
+            model_diff=param_grad_list,
+            scale=1.0,
+            weight_decay=param_group["weight_decay"],
+            learning_rate_val=param_group["lr"],
         )
 
     def step(self, closure: Callable = None):

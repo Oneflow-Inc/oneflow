@@ -60,7 +60,7 @@ def compare_with_numpy_adam(
             ],
             do_bias_correction=do_bias_correction,
             amsgrad=amsgrad,
-            multi_tensor=multi_tensor
+            multi_tensor=multi_tensor,
         )
 
         def train_one_iter(grad):
@@ -167,7 +167,7 @@ def compare_with_numpy_adam_clip_grad(
             ],
             do_bias_correction=do_bias_correction,
             amsgrad=amsgrad,
-            multi_tensor=multi_tensor
+            multi_tensor=multi_tensor,
         )
 
         def train_one_iter(grad):

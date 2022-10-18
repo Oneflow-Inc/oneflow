@@ -55,7 +55,7 @@ def compare_with_numpy_sgd(
             dampening=dampening,
             nesterov=nesterov,
             maximize=maximize,
-            multi_tensor=multi_tensor
+            multi_tensor=multi_tensor,
         )
 
         def train_one_iter(grad):
@@ -162,7 +162,7 @@ def compare_with_numpy_sgd_clip_grad(
             dampening=dampening,
             nesterov=nesterov,
             maximize=maximize,
-            multi_tensor=multi_tensor
+            multi_tensor=multi_tensor,
         )
 
         def train_one_iter(grad):

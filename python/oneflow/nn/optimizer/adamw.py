@@ -210,9 +210,7 @@ class AdamW(Optimizer):
                     self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
                 if param_group["amsgrad"]:
                     if "max_exp_avg_sq" not in self._state[param]:
-                        self._state[param]["max_exp_avg_sq"] = flow.zeros_like(
-                            param
-                        )
+                        self._state[param]["max_exp_avg_sq"] = flow.zeros_like(param)
                 m_tensor = self._state[param]["exp_avg"]
                 v_tensor = self._state[param]["exp_avg_sq"]
 
@@ -239,7 +237,7 @@ class AdamW(Optimizer):
                 param_group["bias_correction2"] = 1.0 - math.pow(
                     param_group["betas"][1], self._state["step"] + 1
                 )
-            
+
             param_list = []
             param_grad_list = []
             m_tensor_list = []
@@ -255,7 +253,7 @@ class AdamW(Optimizer):
                 if param_group["amsgrad"]:
                     if "max_exp_avg_sq" not in self._state[param]:
                         self._state[param]["max_exp_avg_sq"] = flow.zeros_like(param)
-            
+
                 param_list.append(param)
                 param_grad_list.append(param.grad)
                 m_tensor_list.append(self._state[param]["exp_avg"])
@@ -266,7 +264,7 @@ class AdamW(Optimizer):
                 model_diff=param_grad_list,
                 m=m_tensor_list,
                 v=v_tensor_list,
-                learning_rate_val=param_group['lr'],
+                learning_rate_val=param_group["lr"],
                 l2=0.0,
                 beta1=param_group["betas"][0],
                 beta2=param_group["betas"][1],
@@ -274,10 +272,9 @@ class AdamW(Optimizer):
                 bias_correction2_val=param_group["bias_correction2"],
                 do_bias_correction=param_group["do_bias_correction"],
                 scale=1.0,
-                weight_decay=param_group["weight_decay"], 
+                weight_decay=param_group["weight_decay"],
                 epsilon=param_group["eps"],
             )
-
 
     def step(self, closure: Callable = None):
         """Performs a single optimization step.
