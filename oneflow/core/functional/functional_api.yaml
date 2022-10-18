@@ -2323,11 +2323,11 @@
   bind_python: True
 
 - name: "flash_attention"
-  signature: "TensorTuple (Tensor query, Tensor key, Tensor value, Tensor valid_seqlens_q, Tensor valid_seqlens_k, Bool causal) => FlashAttention"
+  signature: "TensorTuple (Tensor query, Tensor key, Tensor value, Tensor cu_seqlens_q, Tensor cu_seqlens_k, Float softmax_scale, Bool causal, Float dropout_rate) => FlashAttention"
   bind_python: True
 
 - name: "flash_attention_grad"
-  signature: "TensorTuple (Tensor out_grad, Tensor out, Tensor softmax_lse, Tensor query, Tensor key, Tensor value, Tensor valid_seqlens_q, Tensor valid_seqlens_k, Bool causal) => FlashAttentionGrad"
+  signature: "TensorTuple (Tensor out_grad, Tensor out, Tensor softmax_lse, Tensor query, Tensor key, Tensor value, Tensor cu_seqlens_q, Tensor cu_seqlens_k, Float softmax_scale, Bool causal, Float dropout_rate) => FlashAttentionGrad"
   bind_python: True
 
 - name: "fused_bias_add_gelu"

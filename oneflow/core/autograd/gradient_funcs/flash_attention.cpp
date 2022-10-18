@@ -29,11 +29,13 @@ struct FlashAttentionCaptureState : public AutoGradCaptureState {
   int query_index = 0;
   int key_index = 1;
   int value_index = 2;
-  int valid_seqlens_q_index = 3;
-  int valid_seqlens_k_index = 4;
+  int cu_seqlens_q_index = 3;
+  int cu_seqlens_k_index = 4;
   int out_index = 5;
   int softmax_lse_index = 6;
+  float softmax_scale = 0.0;
   bool causal = false;
+  float dropout_rate = 0.0;
 };
 
 class FlashAttention : public OpExprGradFunction<FlashAttentionCaptureState> {
@@ -49,11 +51,13 @@ class FlashAttention : public OpExprGradFunction<FlashAttentionCaptureState> {
     ctx->query_index = ctx->SaveTensorForBackward(inputs.at(0));  // query
     ctx->key_index = ctx->SaveTensorForBackward(inputs.at(1));    // key
     ctx->value_index = ctx->SaveTensorForBackward(inputs.at(2));  // value
-    ctx->valid_seqlens_q_index = ctx->SaveTensorForBackward(inputs.at(3));  // valid_seqlens_q_index
-    ctx->valid_seqlens_k_index = ctx->SaveTensorForBackward(inputs.at(4));  // valid_seqlens_k_index
-    ctx->out_index = ctx->SaveTensorForBackward(outputs.at(0));             // out
-    ctx->softmax_lse_index = ctx->SaveTensorForBackward(outputs.at(1));     // softmax_lse
+    ctx->cu_seqlens_q_index = ctx->SaveTensorForBackward(inputs.at(3));  // cu_seqlens_q_index
+    ctx->cu_seqlens_k_index = ctx->SaveTensorForBackward(inputs.at(4));  // cu_seqlens_k_index
+    ctx->out_index = ctx->SaveTensorForBackward(outputs.at(0));          // out
+    ctx->softmax_lse_index = ctx->SaveTensorForBackward(outputs.at(1));  // softmax_lse
+    ctx->softmax_scale = JUST(attrs.GetAttr<float>("softmax_scale"));
     ctx->causal = JUST(attrs.GetAttr<bool>("causal"));
+    ctx->dropout_rate = JUST(attrs.GetAttr<float>("dropout_rate"));
     return Maybe<void>::Ok();
   }
 
@@ -68,8 +72,9 @@ class FlashAttention : public OpExprGradFunction<FlashAttentionCaptureState> {
     const auto& results = JUST(functional::FlashAttentionGrad(
         out_grads.at(0), saved_tensors.at(ctx->out_index), saved_tensors.at(ctx->softmax_lse_index),
         saved_tensors.at(ctx->query_index), saved_tensors.at(ctx->key_index),
-        saved_tensors.at(ctx->value_index), saved_tensors.at(ctx->valid_seqlens_q_index),
-        saved_tensors.at(ctx->valid_seqlens_k_index), ctx->causal));
+        saved_tensors.at(ctx->value_index), saved_tensors.at(ctx->cu_seqlens_q_index),
+        saved_tensors.at(ctx->cu_seqlens_k_index), ctx->softmax_scale, ctx->causal,
+        ctx->dropout_rate));
 
     if (ctx->query_requires_grad) { (*in_grads)[0] = results->at(0); }
     if (ctx->key_requires_grad) { (*in_grads)[1] = results->at(1); }

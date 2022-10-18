@@ -14,5 +14,8 @@ list(APPEND EXTERNAL_TARGETS fmt)
 add_subdirectory(kineto)
 list(APPEND EXTERNAL_TARGETS kineto)
 
+add_subdirectory(flash-attention)
+list(APPEND EXTERNAL_TARGETS of_flash_attention)
+
 mark_targets_as_system(${EXTERNAL_TARGETS})
 set_property(GLOBAL PROPERTY EXTERNAL_TARGETS ${EXTERNAL_TARGETS})

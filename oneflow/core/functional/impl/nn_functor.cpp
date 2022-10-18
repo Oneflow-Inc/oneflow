@@ -3322,8 +3322,8 @@ class FlashAttentionFunctor {
                          .Input("query")
                          .Input("key")
                          .Input("value")
-                         .Input("valid_seqlens_q")
-                         .Input("valid_seqlens_k")
+                         .Input("cu_seqlens_q")
+                         .Input("cu_seqlens_k")
                          .Output("out")
                          .Output("softmax_lse")
                          .Build());
@@ -3331,13 +3331,14 @@ class FlashAttentionFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& query,
                                 const std::shared_ptr<one::Tensor>& key,
                                 const std::shared_ptr<one::Tensor>& value,
-                                const std::shared_ptr<one::Tensor>& valid_seqlens_q,
-                                const std::shared_ptr<one::Tensor>& valid_seqlens_k,
-                                const bool causal) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("causal");
-    attrs.SetAllAttrs(causal);
+                                const std::shared_ptr<one::Tensor>& cu_seqlens_q,
+                                const std::shared_ptr<one::Tensor>& cu_seqlens_k,
+                                const float softmax_scale, const bool causal,
+                                const float dropout_rate) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("softmax_scale", "causal", "dropout_rate");
+    attrs.SetAllAttrs(softmax_scale, causal, dropout_rate);
     return OpInterpUtil::Dispatch<TensorTuple>(
-        *op_, {query, key, value, valid_seqlens_q, valid_seqlens_k}, attrs);
+        *op_, {query, key, value, cu_seqlens_q, cu_seqlens_k}, attrs);
   }
 
  private:
@@ -3354,8 +3355,8 @@ class FlashAttentionGradFunctor {
                          .Input("query")
                          .Input("key")
                          .Input("value")
-                         .Input("valid_seqlens_q")
-                         .Input("valid_seqlens_k")
+                         .Input("cu_seqlens_q")
+                         .Input("cu_seqlens_k")
                          .Output("query_grad")
                          .Output("key_grad")
                          .Output("value_grad")
@@ -3365,13 +3366,13 @@ class FlashAttentionGradFunctor {
       const std::shared_ptr<one::Tensor>& out_grad, const std::shared_ptr<one::Tensor>& out,
       const std::shared_ptr<one::Tensor>& softmax_lse, const std::shared_ptr<one::Tensor>& query,
       const std::shared_ptr<one::Tensor>& key, const std::shared_ptr<one::Tensor>& value,
-      const std::shared_ptr<one::Tensor>& valid_seqlens_q,
-      const std::shared_ptr<one::Tensor>& valid_seqlens_k, const bool causal) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("causal");
-    attrs.SetAllAttrs(causal);
+      const std::shared_ptr<one::Tensor>& cu_seqlens_q,
+      const std::shared_ptr<one::Tensor>& cu_seqlens_k, const float softmax_scale,
+      const bool causal, const float dropout_rate) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("softmax_scale", "causal", "dropout_rate");
+    attrs.SetAllAttrs(softmax_scale, causal, dropout_rate);
     return OpInterpUtil::Dispatch<TensorTuple>(
-        *op_, {out_grad, out, softmax_lse, query, key, value, valid_seqlens_q, valid_seqlens_k},
-        attrs);
+        *op_, {out_grad, out, softmax_lse, query, key, value, cu_seqlens_q, cu_seqlens_k}, attrs);
   }
 
  private:

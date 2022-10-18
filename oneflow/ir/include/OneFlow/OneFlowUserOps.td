@@ -2620,8 +2620,8 @@ def OneFlow_FlashAttentionOp : OneFlow_BaseOp<"flash_attention", [NoSideEffect, 
     OneFlow_Tensor:$query,
     OneFlow_Tensor:$key,
     OneFlow_Tensor:$value,
-    OneFlow_Tensor:$valid_seqlens_q,
-    OneFlow_Tensor:$valid_seqlens_k
+    OneFlow_Tensor:$cu_seqlens_q,
+    OneFlow_Tensor:$cu_seqlens_k
   );
   let output = (outs
     OneFlow_Tensor:$out,
@@ -2630,8 +2630,7 @@ def OneFlow_FlashAttentionOp : OneFlow_BaseOp<"flash_attention", [NoSideEffect, 
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$softmax_scale,
     DefaultValuedAttr<BoolAttr, "false">:$causal,
-    DefaultValuedAttr<F32Attr, "0.">:$dropout_rate,
-    DefaultValuedAttr<F32Attr, "0.">:$dropout_scale_value
+    DefaultValuedAttr<F32Attr, "0.">:$dropout_rate
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -2648,8 +2647,8 @@ def OneFlow_FlashAttentionGradOp : OneFlow_BaseOp<"flash_attention_grad", [NoSid
     OneFlow_Tensor:$query,
     OneFlow_Tensor:$key,
     OneFlow_Tensor:$value,
-    OneFlow_Tensor:$valid_seqlens_q,
-    OneFlow_Tensor:$valid_seqlens_k
+    OneFlow_Tensor:$cu_seqlens_q,
+    OneFlow_Tensor:$cu_seqlens_k
   );
   let output = (outs
     OneFlow_Tensor:$query_grad,
@@ -2659,8 +2658,7 @@ def OneFlow_FlashAttentionGradOp : OneFlow_BaseOp<"flash_attention_grad", [NoSid
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$softmax_scale,
     DefaultValuedAttr<BoolAttr, "false">:$causal,
-    DefaultValuedAttr<F32Attr, "0.">:$dropout_rate,
-    DefaultValuedAttr<F32Attr, "0.">:$dropout_scale_value
+    DefaultValuedAttr<F32Attr, "0.">:$dropout_rate
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
