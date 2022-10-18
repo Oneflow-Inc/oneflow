@@ -14,7 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/slice_util.h"
+#include <glog/logging.h>
+#include <cstdint>
 #include "oneflow/core/common/switch_func.h"
+#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
 
@@ -65,10 +68,10 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
     int64_t elem_cnt = params.elem_cnt();
     SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
     SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
-    FOR_RANGE(int, i, 0, elem_cnt) {
+    MultiThreadLoop(elem_cnt, [&](int64_t i) {
       int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
       sliced[i] = entire[offset];
-    }
+    });
   }
 
   template<int NDIM>
@@ -100,13 +103,15 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
       }
       if (!entire_params.IsFullSlice(i) || !sliced_params.IsFullSlice(i)) { break; }
     }
-    for (int i = 0; i < elem_cnt; i += cnt) {
+    CHECK_EQ(elem_cnt % cnt, 0);
+    MultiThreadLoop(elem_cnt / cnt, [&](int64_t j) {
+      int64_t i = j * cnt;
       const int64_t entire_offset = SliceOffsetToEntireOffset<NDIM>(
           i, entire_params, entire_splitted_large_idx_cvtr, sliced_splitted_large_idx_cvtr);
       const int64_t sliced_offset = SliceOffsetToEntireOffset<NDIM>(
           i, sliced_params, entire_full_small_idx_cvtr, sliced_full_small_idx_cvtr);
       std::copy(entire + entire_offset, entire + entire_offset + cnt, sliced + sliced_offset);
-    }
+    });
   }
 
   template<int NDIM>
@@ -116,10 +121,10 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
     int64_t elem_cnt = params.elem_cnt();
     SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
     SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
-    FOR_RANGE(int, i, 0, elem_cnt) {
+    MultiThreadLoop(elem_cnt, [&](int64_t i) {
       int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
       entire[offset] = sliced[i];
-    }
+    });
   }
 
 #define MAKE_SLICE_KERNEL_UTIL_SWITCH_ENTRY(func_name, N) \
