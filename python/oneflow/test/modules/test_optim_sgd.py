@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import numbers
 import unittest
 from collections import OrderedDict
 import tempfile
@@ -228,42 +229,40 @@ def compare_with_numpy_sgd_clip_grad(
                 sgd.load_state_dict(state_dict)
         return x
 
-    def train_by_numpy(tensor_idx):
-        x = init_value_seq[tensor_idx]
+    def train_by_numpy():
+        x = init_value_seq
         vt = np.zeros_like(x)
 
         def train_one_iter(grad):
             total_norm, grad = clip_grad_norm_np(
                 grad, clip_grad_max_norm, clip_grad_norm_type
             )
-            grad = grad + weight_decay * x
-            if momentum > 0.0:
-                next_momentum = momentum * vt + (1 - dampening) * grad
-                v = next_momentum
+            
+            for i in range(tensor_num):
+                grad[i] = grad[i] + weight_decay * x[i]
+                if momentum > 0.0:
+                    next_momentum = momentum * vt[i] + (1 - dampening) * grad[i]
+                    vt[i] = next_momentum
 
-                if nesterov:
-                    grad += momentum * next_momentum
+                    if nesterov:
+                        grad[i] += momentum * next_momentum
+                    else:
+                        grad[i] = next_momentum
+
+                    alpha = -learning_rate
+                    if maximize:
+                        alpha = learning_rate
+                    x[i] = x[i] + alpha * grad[i]
                 else:
-                    grad = next_momentum
-
-                alpha = -learning_rate
-                if maximize:
-                    alpha = learning_rate
-                next_model = x + alpha * grad
-                param = next_model
-            else:
-                v = learning_rate * grad
-                param = x - v
-            return (param, v)
+                    vt[i] = learning_rate * grad[i]
+                    x[i] = x[i] - vt[i]
 
         for i in range(train_iters):
-            (x, vt) = train_one_iter(random_grad_seq[i][tensor_idx])
+            train_one_iter(random_grad_seq[i])
         return x
 
     oneflow_res = train_by_oneflow()
-    numpy_res = []
-    for i in range(tensor_num):
-        numpy_res.append(train_by_numpy(i))
+    numpy_res = train_by_numpy()
 
     for i in range(tensor_num):
         test_case.assertTrue(
@@ -312,9 +311,8 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
         arg_dict["multi_tensor"] = [False, True]
-        arg_dict["tensor_num"] = [4]
+        arg_dict["tensor_num"] = [1, 4]
         for arg in GenArgDict(arg_dict):
-            print(arg)
             compare_with_numpy_sgd_clip_grad(test_case, **arg)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
