@@ -74,7 +74,7 @@ void GatherNdKernel<device_type, T, I>::Compute(user_op::KernelComputeContext* c
   const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
   const user_op::Tensor* params = ctx->Tensor4ArgNameAndIndex("params", 0);
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-  if (indices->shape_view().elem_cnt() == 0) { return; }
+  if (params->shape_view().elem_cnt() == 0 || indices->shape_view().elem_cnt() == 0) { return; }
   auto args = ConstructNdIndexSliceArgs(*params, *out, *indices);
   GatherNdFunctor<device_type, T, I>()(ctx->stream(), args, indices->dptr<I>(), params->dptr<T>(),
                                        out->mut_dptr<T>());

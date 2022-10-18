@@ -64,9 +64,9 @@ Maybe<std::string> PrunePinnedIdentityOp(JobBuilder* job_builder, const OpGraph&
 }
 
 Maybe<void> PrunePinnedIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const {
+  if (!job->job_conf().has_train_conf()) { return Maybe<void>::Ok(); }
   const OpGraph op_graph(*job);
   JobBuilder job_builder(job);
-
   HashMap<std::string, std::string> pruned_lbns;
   TrainConf* train_conf = job->mutable_job_conf()->mutable_train_conf();
   // prune loss pinned identity

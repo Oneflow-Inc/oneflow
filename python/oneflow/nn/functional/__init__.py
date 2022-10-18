@@ -29,6 +29,9 @@ from oneflow._C import avg_pool3d
 from .functional_maxpool import max_pool1d
 from .functional_maxpool import max_pool2d
 from .functional_maxpool import max_pool3d
+from .functional_maxpool import adaptive_max_pool1d
+from .functional_maxpool import adaptive_max_pool2d
+from .functional_maxpool import adaptive_max_pool3d
 from oneflow._C import adaptive_avg_pool1d
 from oneflow._C import adaptive_avg_pool2d
 from oneflow._C import adaptive_avg_pool3d
@@ -57,7 +60,7 @@ from oneflow._C import threshold
 from oneflow._C import silu
 from oneflow._C import mish
 from oneflow.nn.modules.normalization import layer_norm
-from oneflow._C import dropout
+from oneflow._C import dropout, dropout1d, dropout2d, dropout3d
 from oneflow._C import smooth_l1_loss
 from .functional_pad import pad
 from oneflow._C import triplet_margin_loss
@@ -77,3 +80,5 @@ from oneflow.nn.modules.activation import relu6
 from oneflow.nn.modules.upsampling import Upsample as upsample
 from oneflow._C import unfold
 from oneflow._C import fold
+from .functional_deform_conv import deform_conv2d
+from oneflow._C import kl_div_loss as kl_div

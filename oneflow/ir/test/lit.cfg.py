@@ -100,6 +100,7 @@ tool_dirs = [config.oneflow_tools_dir, config.llvm_tools_dir]
 tools = ["oneflow-opt", "oneflow-translate", "oneflow-runner"]
 tools.extend(
     [
+        ToolSubst("%with_cuda", config.BUILD_CUDA, unresolved="ignore"),
         ToolSubst("%linalg_test_lib_dir", config.llvm_lib_dir, unresolved="ignore"),
         ToolSubst("%test_exec_root", config.test_exec_root, unresolved="ignore"),
     ]

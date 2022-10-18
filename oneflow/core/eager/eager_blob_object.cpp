@@ -53,10 +53,6 @@ const Shape& EagerBlobObject::shape() const {
     return static_local_tensor_meta_->shape();
   }
 }
-Shape* EagerBlobObject::mut_shape() {
-  CHECK(dynamic_local_tensor_meta_);
-  return std::const_pointer_cast<one::MutLocalTensorMeta>(dynamic_local_tensor_meta_)->mut_shape();
-}
 const Stride& EagerBlobObject::stride() const {
   if (dynamic_local_tensor_meta_) {
     return dynamic_local_tensor_meta_->stride();
@@ -64,9 +60,19 @@ const Stride& EagerBlobObject::stride() const {
     return static_local_tensor_meta_->stride();
   }
 }
-Stride* EagerBlobObject::mut_stride() {
+
+void EagerBlobObject::set_shape(const Shape& shape) {
   CHECK(dynamic_local_tensor_meta_);
-  return std::const_pointer_cast<one::MutLocalTensorMeta>(dynamic_local_tensor_meta_)->mut_stride();
+  std::const_pointer_cast<one::MutLocalTensorMeta>(dynamic_local_tensor_meta_)->set_shape(shape);
+}
+void EagerBlobObject::set_stride(const Stride& stride) {
+  CHECK(dynamic_local_tensor_meta_);
+  std::const_pointer_cast<one::MutLocalTensorMeta>(dynamic_local_tensor_meta_)->set_stride(stride);
+}
+
+MutShapeView EagerBlobObject::mut_shape_view() {
+  CHECK(dynamic_local_tensor_meta_);
+  return *const_cast<Shape*>(dynamic_local_tensor_meta_->shape_ptr().get());
 }
 
 std::shared_ptr<const Shape> EagerBlobObject::shape_ptr() const {

@@ -25,6 +25,7 @@ class small_vector : public llvm::SmallVector<T, N> {
   using Base = llvm::SmallVector<T, N>;
 
  public:
+  constexpr static size_t kInitialSize = N;
   // https://stackoverflow.com/questions/27954940/a-using-statement-compiles-with-g-fails-compilation-with-clang
   using Base::Base;
 
@@ -35,6 +36,10 @@ class small_vector : public llvm::SmallVector<T, N> {
   typename Base::const_reference at(typename Base::size_type idx) const {
     CHECK_LT(idx, Base::size());
     return (*this)[idx];
+  }
+  typename Base::reference operator[](typename Base::size_type idx) { return this->data()[idx]; }
+  typename Base::const_reference operator[](typename Base::size_type idx) const {
+    return this->data()[idx];
   }
   typename Base::const_iterator cbegin() const {
     return (typename Base::const_iterator)this->BeginX;

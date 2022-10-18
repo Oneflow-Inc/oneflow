@@ -50,7 +50,7 @@ class DynamicReshapeOp final : public Operator {
       CHECK_EQ_OR_RETURN(in->shape().elem_cnt() % product, 0);
       out_dim_vec.at(inferred_axis) = in->shape().elem_cnt() / product;
     }
-    out->mut_shape() = Shape(out_dim_vec);
+    out->set_shape(Shape(out_dim_vec));
     CHECK_EQ_OR_RETURN(in->shape().elem_cnt(), out->shape().elem_cnt());
     return Maybe<void>::Ok();
   }
@@ -96,7 +96,7 @@ class DynamicReshapeOp final : public Operator {
       CHECK_EQ_OR_RETURN(in->shape().elem_cnt() % product, 0);
       out_dim_vec.at(inferred_axis) = in->shape().elem_cnt() / product;
     }
-    out->mut_shape() = Shape(out_dim_vec);
+    out->set_shape(Shape(out_dim_vec));
     CHECK_EQ_OR_RETURN(in->shape().elem_cnt(), out->shape().elem_cnt());
     return Maybe<void>::Ok();
   }

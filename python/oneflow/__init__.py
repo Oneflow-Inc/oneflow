@@ -29,6 +29,7 @@ oneflow._oneflow_internal.CheckAndClearRegistryFlag()
 Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
+
 locals()["dtype"] = oneflow._oneflow_internal.dtype
 locals()["bool"] = oneflow._oneflow_internal.bool
 locals()["float16"] = oneflow._oneflow_internal.float16
@@ -88,6 +89,7 @@ from oneflow._C import greater_equal
 from oneflow._C import greater_equal as ge
 from oneflow._C import log
 from oneflow._C import log2
+from oneflow._C import log10
 from oneflow._C import logical_and
 from oneflow._C import logical_or
 from oneflow._C import logical_xor
@@ -138,8 +140,7 @@ from oneflow._C import expm1
 from oneflow._C import fmod
 from oneflow._C import flatten
 from oneflow._C import in_top_k
-from oneflow._C import log
-from oneflow._C import log2
+from oneflow._C import lgamma
 from oneflow._C import minimum
 from oneflow._C import maximum
 from oneflow._C import max
@@ -151,6 +152,7 @@ from oneflow._C import reduce_sum as sum
 from oneflow._C import reduce_mean as mean
 from oneflow._C import reduce_all as all
 from oneflow._C import reduce_any as any
+from oneflow._C import reduce_nansum as nansum
 from oneflow._C import rsqrt
 from oneflow._C import sqrt
 from oneflow._C import square
@@ -163,6 +165,7 @@ from oneflow._C import softplus
 from oneflow._C import threshold
 from oneflow._C import tril
 from oneflow._C import triu
+from oneflow._C import trunc
 from oneflow._C import pad
 from oneflow._C import transpose
 from oneflow._C import relu
@@ -173,7 +176,8 @@ from oneflow._C import argmax
 from oneflow._C import argmin
 from oneflow._C import std
 from oneflow._C import var
-from oneflow._C import stack
+from oneflow._C import stack, hstack, vstack, dstack, column_stack, row_stack
+from oneflow._C import atleast_1d, atleast_2d, atleast_3d
 from oneflow._C import squeeze
 from oneflow._C import narrow
 from oneflow._C import unsqueeze
@@ -187,6 +191,7 @@ from oneflow._C import vsplit
 from oneflow._C import concat
 from oneflow._C import concat as cat
 from oneflow._C import dim_gather as gather
+from oneflow._C import deform_conv2d
 from oneflow._C import gather_nd
 from oneflow._C import roi_align
 from oneflow._C import decode_onerec
@@ -201,6 +206,7 @@ from oneflow._C import amax
 from oneflow._C import swapdims
 from oneflow._C import t
 from oneflow._C import masked_fill
+from oneflow._C import masked_fill_
 from oneflow._C import equal
 from oneflow._C import equal as eq
 from oneflow._C import not_equal
@@ -213,6 +219,10 @@ from oneflow._C import isnan
 from oneflow._C import isinf
 from oneflow._C import isfinite
 from oneflow._C import inv as inverse
+from oneflow._C import iinfo, finfo
+from oneflow._C import multinomial
+from oneflow._C import linalg_cross as cross
+from oneflow._C import bincount
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
@@ -235,6 +245,7 @@ __oneflow_global_unique_env = env_util.GetEnv()
 session_ctx.NewDefaultSession(__oneflow_global_unique_env)
 
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
+oneflow._oneflow_internal.autograd.graph.register_saved_tensors_hook_manager()
 oneflow._oneflow_internal.RegisterStackGetter()
 oneflow._oneflow_internal.InitDefaultGlobalTransportTokenScope()
 
@@ -280,6 +291,13 @@ del ExitHook
 del atexit
 del oneflow
 
+# default dtype
+from oneflow.framework.dtype import (
+    set_default_dtype,
+    set_default_tensor_type,
+    get_default_dtype,
+)
+
 import oneflow._C
 from oneflow._C import tensor, batch_gather
 from oneflow._C import from_numpy
@@ -310,7 +328,8 @@ from oneflow.framework.generator import (
 
 # NOTE(chengcheng) oneflow.Model is unavailable now.
 # from oneflow.framework.model import Model
-import oneflow.utils.torch
+import oneflow.utils.tensor
+import oneflow.utils.global_view
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
 from oneflow.framework.type_tensor import *
@@ -337,6 +356,7 @@ from oneflow.nn.modules.constant import full_op as full
 from oneflow.nn.modules.constant import full_like_op as full_like
 from oneflow.nn.modules.constant import new_ones_op as new_ones
 from oneflow.nn.modules.constant import new_zeros_op as new_zeros
+from oneflow.nn.modules.constant import new_full_op as new_full
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.empty import new_empty_op as new_empty
 from oneflow.nn.modules.empty import empty_like_op as empty_like
@@ -383,25 +403,44 @@ from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
 from oneflow.ops.stateful_ops import StatefulOp as stateful_op
 
+# autocast
+from oneflow._oneflow_internal import (
+    is_autocast_enabled,
+    set_autocast_enabled,
+    get_autocast_gpu_dtype,
+    get_autocast_cpu_dtype,
+    set_autocast_gpu_dtype,
+    set_autocast_cpu_dtype,
+    is_autocast_cache_enabled,
+    set_autocast_cache_enabled,
+    clear_autocast_cache,
+)
+from oneflow.amp.autocast_mode import *
+
 from . import (
     autograd,
     distributed,
+    distributions,
     linalg,
     optim,
     comm,
     boxing,
     backends,
     amp,
+    hub,
 )
 import oneflow.utils.data
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing
+import oneflow.asyncs
 import oneflow.one_embedding
 import oneflow.profiler
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__
-    if os.getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"):
+    if os.getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS") or os.getenv(
+        "ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"
+    ):
         print("MLIR JIT engine will load:", oneflow_internal_path, file=sys.stderr)
         oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)

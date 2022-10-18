@@ -66,20 +66,21 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
     is_2d_grid = true;
   } else if (theta.shape().At(1) == 3) {
     CHECK_EQ_OR_RETURN(theta.shape().At(2), 4) << "Theta shape  MUST be (N, 2, 3) or (N, 3, 4)";
-    CHECK_EQ_OR_RETURN(size.NumAxes(), 5) "Dimension of size MUST be 4, when 3d affine grid";
+    CHECK_EQ_OR_RETURN(size.NumAxes(), 5) << "Dimension of size MUST be 4, when 3d affine grid";
     CHECK_EQ_OR_RETURN(theta.shape().At(0), size.At(0))
         << "Theta and size MUST have same batch dimension";
     is_2d_grid = false;
   } else {
     CHECK_OR_RETURN(false) << "Theta MUST be 2D or 3D grid";
   }
-  *grid->mut_is_dynamic() = theta.is_dynamic();
-  Shape& grid_shape = *grid->mut_shape();
+  grid->set_is_dynamic(theta.is_dynamic());
+  Shape grid_shape;
   if (is_2d_grid) {
     grid_shape = {size.At(0), size.At(2), size.At(3), 2};
   } else {
     grid_shape = {size.At(0), size.At(2), size.At(3), size.At(4), 3};
   }
+  grid->set_shape(grid_shape);
   return Maybe<void>::Ok();
 }
 
@@ -102,7 +103,7 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
     is_2d_grid = true;
   } else if (theta_shape.At(1) == 3) {
     CHECK_EQ_OR_RETURN(theta_shape.At(2), 4) << "Theta shape  MUST be (N, 2, 3) or (N, 3, 4)";
-    CHECK_EQ_OR_RETURN(size.NumAxes(), 5) "Dimension of size MUST be 4, when 3d affine grid";
+    CHECK_EQ_OR_RETURN(size.NumAxes(), 5) << "Dimension of size MUST be 4, when 3d affine grid";
     is_2d_grid = false;
   } else {
     CHECK_OR_RETURN(false) << "Theta MUST be 2D or 3D grid";
@@ -121,13 +122,14 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
   CHECK_EQ_OR_RETURN(theta_shape.At(0), size.At(0))
       << "The dimension 0 size of theta shape should be " << N << ", but got " << theta_shape.At(0);
 
-  *grid->mut_is_dynamic() = theta.is_dynamic();
-  Shape& grid_shape = *grid->mut_shape();
+  grid->set_is_dynamic(theta.is_dynamic());
+  Shape grid_shape;
   if (is_2d_grid) {
     grid_shape = {N, size.At(2), size.At(3), 2};
   } else {
     grid_shape = {N, size.At(2), size.At(3), size.At(4), 3};
   }
+  grid->set_shape(grid_shape);
   return Maybe<void>::Ok();
 }
 
@@ -145,7 +147,7 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
 }
 
 /* static */ Maybe<void> AffineGridOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("grid", 0) = ctx->InputDType("theta", 0);
+  ctx->SetOutputDType("grid", 0, ctx->InputDType("theta", 0));
   return Maybe<void>::Ok();
 }
 
@@ -153,9 +155,9 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
   const user_op::TensorDesc& dgrid = ctx->InputTensorDesc("dgrid", 0);
   const Shape& size = ctx->Attr<Shape>("size");
   if (size.NumAxes() == 4) {
-    *(ctx->MutOutputTensorDesc("dtheta", 0)->mut_shape()) = {dgrid.shape().At(0), 2, 3};
+    ctx->MutOutputTensorDesc("dtheta", 0)->set_shape(Shape({dgrid.shape().At(0), 2, 3}));
   } else if (size.NumAxes() == 5) {
-    *(ctx->MutOutputTensorDesc("dtheta", 0)->mut_shape()) = {dgrid.shape().At(0), 3, 4};
+    ctx->MutOutputTensorDesc("dtheta", 0)->set_shape(Shape({dgrid.shape().At(0), 3, 4}));
   } else {
     CHECK_OR_RETURN(false) << "size MUST be 4D or 5D";
   }
@@ -180,26 +182,8 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
 }
 
 /* static */ Maybe<void> AffineGridGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dtheta", 0) = ctx->InputDType("dgrid", 0);
+  ctx->SetOutputDType("dtheta", 0, ctx->InputDType("dgrid", 0));
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP_GRAD("affine_grid")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("theta", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("affine_grid_grad")
-                .Input("dgrid", op.GetGradTensorWithOpOutput("grid", 0))
-                .Output("dtheta")
-                .Attr("size", op.attr<Shape>("size"))
-                .Attr("align_corners", op.attr<bool>("align_corners"))
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dtheta", 0), "theta", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow

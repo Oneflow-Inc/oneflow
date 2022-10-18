@@ -25,8 +25,12 @@ namespace oneflow {
 template<typename T, typename Kind=void>
 class ThreadLocalGuard {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ThreadLocalGuard);
-  explicit ThreadLocalGuard(const T& value) : old_value_(*MutThreadLocalValue()) {
+  ThreadLocalGuard() {
+    old_value_ = *MutThreadLocalValue();
+    *MutThreadLocalValue() = Optional<T>();
+  }
+  explicit ThreadLocalGuard(const T& value) {
+    old_value_ = *MutThreadLocalValue();
     *MutThreadLocalValue() = Optional<T>(value);
   }
   ~ThreadLocalGuard() { *MutThreadLocalValue() = old_value_; }

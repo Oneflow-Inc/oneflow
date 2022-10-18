@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/intrusive/mutexed_list.h"
 #include "oneflow/core/common/notifier.h"
 #include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/vm_object.h"
 
 namespace oneflow {
 namespace vm {
@@ -47,23 +48,23 @@ class ThreadCtx final : public intrusive::Base {
 
   Notifier* mut_notifier() { return &notifier_; }
 
+  const intrusive::shared_ptr<vm::Dependence>& transport_dependence() const {
+    return transport_dependence_;
+  };
+
  private:
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  ThreadCtx()
-      : intrusive_ref_(),
-        stream_list_(),
-        worker_pending_instruction_mutex_(),
-        worker_pending_instruction_list_(&worker_pending_instruction_mutex_),
-        notifier_(),
-        thread_ctx_hook_() {}
+  ThreadCtx();
+
   intrusive::Ref intrusive_ref_;
   // lists
   StreamList stream_list_;
   std::mutex worker_pending_instruction_mutex_;
   WorkerPendingInstructionMutexedList worker_pending_instruction_list_;
   Notifier notifier_;
+  intrusive::shared_ptr<vm::Dependence> transport_dependence_;
 
  public:
   // list hooks

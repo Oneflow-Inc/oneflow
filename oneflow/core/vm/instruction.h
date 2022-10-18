@@ -140,6 +140,7 @@ class Instruction final : public intrusive::Base {
   // methods
   void InitStatus();
   void DeleteStatusAndCheckEdges();
+  bool Launched() const;
   bool Done() const;
   StreamPolicy* mut_stream_policy();
   const StreamPolicy& stream_policy() const;

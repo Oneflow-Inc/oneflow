@@ -38,7 +38,7 @@ namespace oneflow {
     int64_t parallel_id = opt_parallel_id->value_or(0);
     dim_vec[out_split_axis] = bs.At(parallel_id).size();
   }
-  *ctx->MutOutputShape("out", 0) = Shape(dim_vec);
+  ctx->SetOutputShape("out", 0, Shape(dim_vec));
   return Maybe<void>::Ok();
 }
 
@@ -55,13 +55,13 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EagerNaiveSToSOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<Symbol<Stream>> EagerNaiveSToSOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
-  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+  return DeviceAndStreamInferFn(ctx);
 }
 
 }  // namespace oneflow

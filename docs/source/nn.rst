@@ -108,6 +108,9 @@ Pooling Layers
     nn.AdaptiveAvgPool1d 
     nn.AdaptiveAvgPool2d 
     nn.AdaptiveAvgPool3d
+    nn.AdaptiveMaxPool1d 
+    nn.AdaptiveMaxPool2d 
+    nn.AdaptiveMaxPool3d
     nn.AvgPool1d 
     nn.AvgPool2d 
     nn.AvgPool3d
@@ -181,7 +184,8 @@ Normalization Layers
 
     nn.BatchNorm1d 
     nn.BatchNorm2d 
-    nn.BatchNorm3d 
+    nn.BatchNorm3d
+    nn.SyncBatchNorm
     nn.FusedBatchNorm1d 
     nn.FusedBatchNorm2d
     nn.FusedBatchNorm3d 
@@ -227,6 +231,9 @@ Dropout Layers
     :template: classtemplate.rst
 
     nn.Dropout
+    nn.Dropout1d
+    nn.Dropout2d
+    nn.Dropout3d
 
 Sparse Layers
 ----------------------------------
@@ -318,7 +325,6 @@ Quantization Aware Training
     :toctree: generated
     :nosignatures:
 
-    
     nn.MinMaxObserver
     nn.MovingAverageMinMaxObserver
     nn.FakeQuantization
