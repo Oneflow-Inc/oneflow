@@ -317,6 +317,19 @@ elseif(WIN32)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:oneflow")
 endif()
 
+if(BUILD_CUDA)
+  foreach(CUDA_ARCH ${CMAKE_CUDA_ARCHITECTURES})
+    if(CUDA_ARCH MATCHES "^([0-9]+)\\-real$")
+      list(APPEND CUDA_REAL_ARCHS_LIST ${CMAKE_MATCH_1})
+    elseif(CUDA_ARCH MATCHES "^([0-9]+)$")
+      list(APPEND CUDA_REAL_ARCHS_LIST ${CMAKE_MATCH_1})
+    endif()
+  endforeach()
+  string(JOIN "," CUDA_REAL_ARCHS ${CUDA_REAL_ARCHS_LIST})
+  set_source_files_properties(${PROJECT_SOURCE_DIR}/oneflow/core/hardware/cuda_device_descriptor.cpp
+                              PROPERTIES COMPILE_FLAGS "-DCUDA_REAL_ARCHS=\"${CUDA_REAL_ARCHS}\"")
+endif()
+
 # oneflow api common
 if(BUILD_PYTHON OR BUILD_CPP_API)
   file(GLOB_RECURSE of_api_common_files ${PROJECT_SOURCE_DIR}/oneflow/api/common/*.h
