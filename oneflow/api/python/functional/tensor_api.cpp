@@ -143,7 +143,6 @@ class TensorWithDataCtorFunctor {
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
 
     const auto& dtype_ = dtype ? JUST(dtype) : GetDefaultDType();
-    // const auto& dtype = GetDefaultDType();
     if (PyTensor_Check(data)) {
       const auto& other = PyTensor_Unpack(data);
       const bool pin_memory =

@@ -65,7 +65,7 @@ static PyObject* PyTensorTypeMetaCls_call(PyObject* self, PyObject* args, PyObje
   PyObjectPtr dict(PyDict_New());
   PyObject* dtype_value = functional::CastToPyObject(PyTensorType_UnpackDType(self));
   CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "dtype", dtype_value) > -1);
-  if (kwargs) { PyDict_Merge(dict.get(), kwargs, 0); }
+  if (kwargs) { PyDict_Merge(dict.get(), kwargs, /*override=*/false); }
 
   auto* tensor = functional::_legacy_tensor_ctor(NULL, args, dict.get());
   if (PyErr_Occurred()) { throw py::error_already_set(); }
