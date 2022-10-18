@@ -209,10 +209,12 @@ class SGD(Optimizer):
             loss = None
             if closure is not None:
                 loss = closure()
-            for param_group in self.param_groups:
-                if self.multi_tensor:
+                
+            if self.multi_tensor:
+                for param_group in self.param_groups:
                     self._multi_tensor_update(param_group)
-                else:
+            else:
+                for param_group in self.param_groups:
                     self._single_tensor_update(param_group)
 
         self._state["step"] = self._state["step"] + 1
