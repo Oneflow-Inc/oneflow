@@ -21,9 +21,12 @@ limitations under the License.
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
 #include "llvm/ADT/SmallVector.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -50,9 +53,9 @@ namespace okl {
 
 struct SplitIntoFuncsPattern : public mlir::OpRewritePattern<func::FuncOp> {
   static mlir::LogicalResult SplitIntoFuncs(func::FuncOp func, mlir::PatternRewriter& rewriter) {
-    SmallVector<StringLiteral> new_op_list{BuildKernelOp::getOperationName(),
-                                           BuildRegContextOp::getOperationName(),
-                                           BuildRunContextOp::getOperationName()};
+    SmallVector<StringLiteral> new_op_list{BuildRegContextOp::getOperationName(),
+                                           BuildRunContextOp::getOperationName(),
+                                           BuildKernelOp::getOperationName()};
     SmallVector<StringLiteral> del_op_list{DestroyRegContextOp::getOperationName(),
                                            DestroyRunContextOp::getOperationName()};
     SmallVector<SmallVector<Operation*>> new_ops(new_op_list.size()), del_ops(del_op_list.size());
@@ -84,8 +87,8 @@ struct SplitIntoFuncsPattern : public mlir::OpRewritePattern<func::FuncOp> {
       }
       // new_op only return single value as its outcome.
       auto elem_type = op_vec[0]->getResult(0).getType();
-      auto vec_type = VectorType::get({static_cast<long>(op_vec.size())}, elem_type);
-      new_res_type.push_back(vec_type);
+      auto tensor_type = RankedTensorType::get({static_cast<long>(op_vec.size())}, elem_type);
+      new_res_type.push_back(tensor_type);
     }
 
     auto new_ops_type = rewriter.getFunctionType(
@@ -96,12 +99,85 @@ struct SplitIntoFuncsPattern : public mlir::OpRewritePattern<func::FuncOp> {
     mlir::OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointAfter(func);
 
-    rewriter.create<func::FuncOp>(func.getLoc(), new_ops_func, new_ops_type);
-    rewriter.create<func::FuncOp>(func.getLoc(), del_ops_func, launcher_to_void_func);
-    rewriter.create<func::FuncOp>(func.getLoc(), compute_ops_func, launcher_to_void_func);
+    auto new_func = rewriter.create<func::FuncOp>(func.getLoc(), new_ops_func, new_ops_type);
+    new_func.getBody().emplaceBlock();
+    new_func.getBody().addArgument(LauncherContextType::get(rewriter.getContext()), func->getLoc());
+    rewriter.setInsertionPointToStart(&new_func.getBody().front());
+
+    BlockAndValueMapping new_mapping;
+    new_mapping.map(func.getBody().getArgument(0), new_func.getBody().getArgument(0));
+    ImplicitLocOpBuilder new_block(func->getLoc(), rewriter);
+
+    SmallVector<Value> res_vec;
+    for (const auto& op_vec : new_ops) {
+      SmallVector<Value> new_vec;
+      for (auto op : op_vec) {
+        new_vec.emplace_back(new_block.clone(*op, new_mapping)->getResult(0));
+      }
+      res_vec.emplace_back(
+          rewriter.create<tensor::FromElementsOp>(func->getLoc(), ValueRange(new_vec))
+              ->getResult(0));
+    }
+    rewriter.create<func::ReturnOp>(func.getLoc(), res_vec);
+
+    rewriter.setInsertionPointAfter(func);
+    auto compute_func =
+        rewriter.create<func::FuncOp>(func.getLoc(), compute_ops_func, launcher_to_void_func);
+    compute_func.getBody().emplaceBlock();
+    compute_func.getBody().addArgument(LauncherContextType::get(rewriter.getContext()),
+                                       func->getLoc());
+    rewriter.setInsertionPointToStart(&compute_func.getBody().front());
+    auto results =
+        rewriter
+            .create<func::CallOp>(func->getLoc(), new_func, compute_func.getBody().getArgument(0))
+            ->getResults();
+
+    for (int type_index = 0; type_index < new_ops.size(); ++type_index) {
+      auto new_ops_vec = new_ops[type_index];
+      auto new_ops_tensor = results[type_index];
+      for (int elem_index = 0; elem_index < new_ops_vec.size(); ++elem_index) {
+        auto index = rewriter.create<arith::ConstantIndexOp>(func->getLoc(), elem_index);
+        auto elem =
+            rewriter.create<tensor::ExtractOp>(func->getLoc(), new_ops_tensor, ValueRange{index})
+                ->getResult(0);
+        new_mapping.map(new_ops_vec[elem_index]->getResult(0), elem);
+      }
+    }
+
+    ImplicitLocOpBuilder compute_block(func->getLoc(), rewriter);
+    for (const auto& op : compute_ops) { compute_block.clone(*op, new_mapping); }
+
+    rewriter.setInsertionPointAfter(func);
+    auto del_func =
+        rewriter.create<func::FuncOp>(func.getLoc(), del_ops_func, launcher_to_void_func);
+    del_func.getBody().emplaceBlock();
+    del_func.getBody().addArgument(LauncherContextType::get(rewriter.getContext()), func->getLoc());
+    rewriter.setInsertionPointToStart(&del_func.getBody().front());
+
+    results =
+        rewriter
+            .create<func::CallOp>(func->getLoc(), new_func, del_func.getBody().getArgument(0))
+            ->getResults();
+
+    for (int type_index = 0; type_index < new_ops.size(); ++type_index) {
+      auto new_ops_vec = new_ops[type_index];
+      auto new_ops_tensor = results[type_index];
+      for (int elem_index = 0; elem_index < new_ops_vec.size(); ++elem_index) {
+        auto index = rewriter.create<arith::ConstantIndexOp>(func->getLoc(), elem_index);
+        auto elem =
+            rewriter.create<tensor::ExtractOp>(func->getLoc(), new_ops_tensor, ValueRange{index})
+                ->getResult(0);
+        new_mapping.map(new_ops_vec[elem_index]->getResult(0), elem);
+      }
+    }
+
+    ImplicitLocOpBuilder del_block(func->getLoc(), rewriter);
+    for (const auto& op_vec : del_ops) {
+      for (auto op : op_vec) { del_block.clone(*op, new_mapping); }
+    }
+    rewriter.create<func::ReturnOp>(func->getLoc());
 
     rewriter.eraseOp(func);
-    // mlir::VectorType::get({})
     return success();
   }
 
@@ -156,6 +232,8 @@ struct SplitIntoFuncsPass : public SplitIntoFuncsPassBase<SplitIntoFuncsPass> {
   void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<LLVM::LLVMDialect>();
     registry.insert<okl::OKLDialect>();
+    registry.insert<tensor::TensorDialect>();
+    registry.insert<arith::ArithmeticDialect>();
   }
 };
 }  // namespace
