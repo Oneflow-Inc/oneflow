@@ -167,7 +167,7 @@ message PredictConf {
 
 message MemoryAllocationAlgorithmConf {
   optional bool use_mem_size_first_algo = 1 [default = true];
-  optional bool use_mutual_exclusion_first_algo = 2 [default = true];
+  optional bool use_mutual_exclusion_first_algo = 2 [default = false];
   optional bool use_time_line_algo = 3 [default = false];
 }
 
@@ -260,6 +260,8 @@ message JobConfigProto {
   optional bool enable_auto_mixed_precision = 602 [default = false];
   optional bool enable_quantization_aware_training = 603 [default = false];
   optional DataType mixed_precision_data_type = 604 [default = kFloat16]; // kFloat16 or kBFloat16
+  optional bool enable_multi_tensor_update = 605 [default = false];
+  optional bool enable_fused_model_update_cast = 606 [default = false];
 
   optional bool enable_auto_parallel = 700 [default = false];
   optional double auto_parallel_computation_cost_ratio = 701 [default = 0.05];

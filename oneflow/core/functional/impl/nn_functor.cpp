@@ -331,8 +331,11 @@ class BatchMatMulFunctor {
         << "-dimensional tensor for argument #2";
     CHECK_EQ_OR_RETURN(a_shape->At(0), b_shape->At(0))
         << Error::RuntimeError() << "Batch dim not match, please check input!";
-    CHECK_EQ_OR_RETURN(a_shape->At(2), b_shape->At(1))
-        << Error::RuntimeError() << "Matmul dim not match, please check input!";
+    const int64_t matmul_dim_a = transpose_a ? a_shape->At(1) : a_shape->At(2);
+    const int64_t matmul_dim_b = transpose_b ? b_shape->At(2) : b_shape->At(1);
+    CHECK_EQ_OR_RETURN(matmul_dim_a, matmul_dim_b)
+        << Error::RuntimeError() << "Matmul dim not match, got " << matmul_dim_a << " of mat1 and "
+        << matmul_dim_b << " of mat2, please check input!";
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("transpose_a", "transpose_b", "alpha");
     attrs.SetAllAttrs(transpose_a, transpose_b, alpha);
     return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, attrs);
@@ -2380,8 +2383,13 @@ class ConstantPadFunctor {
       attrs.SetAllAttrs(pad, value.As<double>(), static_cast<int64_t>(0), pad_before, pad_after);
     } else if (IsIntegralDataType(input->dtype()->data_type())) {
       attrs.SetAllAttrs(pad, static_cast<double>(0), value.As<int64_t>(), pad_before, pad_after);
+    } else if (input->dtype() == DType::Bool()) {
+      int64_t bool_value = value.As<int64_t>();
+      CHECK_OR_RETURN(bool_value == 1 || bool_value == 0)
+          << "value must be 1/0 or True/False for bool Tensor";
+      attrs.SetAllAttrs(pad, static_cast<double>(0), value.As<int64_t>(), pad_before, pad_after);
     } else {
-      UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
+      UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating, bool or integral type.";
     }
     return OpInterpUtil::Dispatch<Tensor>(*constant_pad_, {input}, attrs);
   }
@@ -2672,7 +2680,8 @@ Maybe<Tensor> DropoutImpl(const std::shared_ptr<one::Tensor>& input, const float
     return InplaceMul(input, other);
   }
   std::shared_ptr<Tensor> noise = JUST(MakeFeatureNoise(input));
-  noise = JUST(BernoulliProb(noise, 1.0 - p, noise->dtype(), JUST(one::DefaultAutoGenerator())));
+  noise =
+      JUST(BernoulliProb(noise, 1.0 - p, noise->dtype(), JUST(one::DefaultAutoGenerator()), false));
   noise = JUST(InplaceScalarDiv(noise, Scalar(1.0 - p)));
   noise = JUST(InplaceMul(input, noise));
   return noise;

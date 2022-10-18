@@ -851,8 +851,16 @@
 - name: "bernoulli"
   signature:
     [
-      "Tensor (Tensor input, *, DataType dtype=kFloat, Generator generator=None) => Bernoulli",
-      "Tensor (Tensor input, Double p, *, DataType dtype=kFloat, Generator generator=None) => BernoulliProb",
+      "Tensor (Tensor input, *, DataType dtype=kFloat, Generator generator=None, Bool inplace=False) => Bernoulli",
+      "Tensor (Tensor input, Double p, *, DataType dtype=kFloat, Generator generator=None, Bool inplace=False) => BernoulliProb",
+    ]
+  bind_python: True
+
+- name: "bernoulli_"
+  signature:
+    [
+      "Tensor (Tensor input, *, DataType dtype=kFloat, Generator generator=None) => BernoulliInplace",
+      "Tensor (Tensor input, Double p, *, DataType dtype=kFloat, Generator generator=None) => BernoulliProbInplace",
     ]
   bind_python: True
 
@@ -1777,6 +1785,10 @@
 
 - name: "unsorted_segment_sum_like"
   signature: "Tensor (Tensor x, Tensor segment_ids, Tensor like, Int64 axis) => UnsortedSegmentSumLike"
+  bind_python: False
+
+- name: "unsorted_segment_sum"
+  signature: "Tensor (Tensor x, Tensor segment_ids, Int64 axis, Int64 num_segments) => UnsortedSegmentSum"
   bind_python: True
 
 - name: "tril"
@@ -1957,8 +1969,8 @@
 - name: "scatter"
   signature:
     [
-      "Tensor (Tensor input, Int32 dim, Tensor index, Tensor src, String reduce=None, *, Bool inplace=False) => DimScatter",
-      "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src, String reduce=None, *, Bool inplace=False) => DimScatterScalar",
+      "Tensor (Tensor input, Int32 dim, Tensor index, Tensor src, *, String reduce=None, Bool inplace=False) => DimScatter",
+      "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src, *, String reduce=None, Bool inplace=False) => DimScatterScalar",
     ]
   bind_python: True
 
@@ -2847,3 +2859,7 @@
     "Tensor (Tensor output_grad,Tensor input,Tensor weight,Tensor offset,Tensor mask, Int32 stride_h,Int32 stride_w,Int32 pad_h,
     Int32 pad_w,Int32 dilation_h,Int32 dilation_w,Int32 groups,Int32 offset_groups,Bool use_mask) => DeformConv2dParamGrad"
   bind_python: False
+
+- name: "bincount"
+  signature: "Tensor (Tensor input, Tensor weights=None, Int64 minlength=None) => BinCount"
+  bind_python: True
