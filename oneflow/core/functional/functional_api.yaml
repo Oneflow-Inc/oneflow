@@ -851,8 +851,16 @@
 - name: "bernoulli"
   signature:
     [
-      "Tensor (Tensor input, *, DataType dtype=kFloat, Generator generator=None) => Bernoulli",
-      "Tensor (Tensor input, Double p, *, DataType dtype=kFloat, Generator generator=None) => BernoulliProb",
+      "Tensor (Tensor input, *, DataType dtype=kFloat, Generator generator=None, Bool inplace=False) => Bernoulli",
+      "Tensor (Tensor input, Double p, *, DataType dtype=kFloat, Generator generator=None, Bool inplace=False) => BernoulliProb",
+    ]
+  bind_python: True
+
+- name: "bernoulli_"
+  signature:
+    [
+      "Tensor (Tensor input, *, DataType dtype=kFloat, Generator generator=None) => BernoulliInplace",
+      "Tensor (Tensor input, Double p, *, DataType dtype=kFloat, Generator generator=None) => BernoulliProbInplace",
     ]
   bind_python: True
 
