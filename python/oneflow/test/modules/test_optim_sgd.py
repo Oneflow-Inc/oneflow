@@ -41,16 +41,29 @@ def compare_with_numpy_sgd(
     reload_state_step,
     save_load_by_pickle,
     multi_tensor,
+    tensor_num,
 ):
     random_grad_seq = []
+    init_value_seq = []
+
+    for i in range(tensor_num):
+        init_value_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
+
     for _ in range(train_iters):
-        random_grad_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
-    init_value = np.random.uniform(size=x_shape).astype(np.float32)
+        random_grad_seq_per_iter = []
+        for i in range(tensor_num):
+            random_grad_seq_per_iter.append(
+                np.random.uniform(size=x_shape).astype(np.float32)
+            )
+        random_grad_seq.append(random_grad_seq_per_iter)
 
     def train_by_oneflow():
-        x = Parameter(flow.Tensor(init_value, device=flow.device(device)))
+        x = []
+        for i in range(tensor_num):
+            x.append(Parameter(flow.Tensor(init_value_seq[i], device=flow.device(device))))
+
         sgd = flow.optim.SGD(
-            [{"params": [x], "lr": learning_rate, "weight_decay": weight_decay,}],
+            [{"params": x, "lr": learning_rate, "weight_decay": weight_decay,}],
             momentum=momentum,
             dampening=dampening,
             nesterov=nesterov,
@@ -59,13 +72,15 @@ def compare_with_numpy_sgd(
         )
 
         def train_one_iter(grad):
-            grad_tensor = flow.tensor(
-                grad,
-                dtype=flow.float32,
-                requires_grad=False,
-                device=flow.device(device),
-            )
-            loss = flow.sum(x * grad_tensor)
+            loss = 0.0
+            for i in range(tensor_num):
+                grad_tensor = flow.tensor(
+                    grad[i],
+                    dtype=flow.float32,
+                    requires_grad=False,
+                    device=flow.device(device),
+                )
+                loss += flow.sum(x[i] * grad_tensor)
             loss.backward()
             sgd.step()
             sgd.zero_grad()
@@ -75,7 +90,7 @@ def compare_with_numpy_sgd(
             # test state_dict/load_state_dict
             if i == reload_state_step:
                 state_dict = sgd.state_dict()
-                sgd = flow.optim.SGD([x])
+                sgd = flow.optim.SGD(x)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
@@ -83,8 +98,8 @@ def compare_with_numpy_sgd(
                 sgd.load_state_dict(state_dict)
         return x
 
-    def train_by_numpy():
-        x = init_value
+    def train_by_numpy(tensor_idx):
+        x = init_value_seq[tensor_idx]
         vt = np.zeros_like(x)
 
         def train_one_iter(grad):
@@ -109,16 +124,23 @@ def compare_with_numpy_sgd(
             return (param, v)
 
         for i in range(train_iters):
-            (x, vt) = train_one_iter(random_grad_seq[i])
+            (x, vt) = train_one_iter(random_grad_seq[i][tensor_idx])
         return x
 
-    oneflow_res = train_by_oneflow().numpy()
-    numpy_res = train_by_numpy()
-    test_case.assertTrue(
-        np.allclose(
-            oneflow_res.flatten(), numpy_res.flatten(), rtol=0.0001, atol=0.0001
+    oneflow_res = train_by_oneflow()
+    numpy_res = []
+    for i in range(tensor_num):
+        numpy_res.append(train_by_numpy(i))
+
+    for i in range(tensor_num):
+        test_case.assertTrue(
+            np.allclose(
+                oneflow_res[i].numpy().flatten(),
+                numpy_res[i].flatten(),
+                rtol=0.0001,
+                atol=0.0001,
+            )
         )
-    )
 
 
 def compare_with_numpy_sgd_clip_grad(
@@ -137,18 +159,31 @@ def compare_with_numpy_sgd_clip_grad(
     reload_state_step,
     save_load_by_pickle,
     multi_tensor,
+    tensor_num,
 ):
     random_grad_seq = []
+    init_value_seq = []
+
+    for i in range(tensor_num):
+        init_value_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
+
     for _ in range(train_iters):
-        random_grad_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
-    init_value = np.random.uniform(size=x_shape).astype(np.float32)
+        random_grad_seq_per_iter = []
+        for i in range(tensor_num):
+            random_grad_seq_per_iter.append(
+                np.random.uniform(size=x_shape).astype(np.float32)
+            )
+        random_grad_seq.append(random_grad_seq_per_iter)
 
     def train_by_oneflow():
-        x = Parameter(flow.Tensor(init_value, device=flow.device(device)))
+        x = []
+        for i in range(tensor_num):
+            x.append(Parameter(flow.Tensor(init_value_seq[i], device=flow.device(device))))
+
         sgd = flow.optim.SGD(
             [
                 {
-                    "params": [x],
+                    "params": x,
                     "lr": learning_rate,
                     "dampening": dampening,
                     "nesterov": nesterov,
@@ -166,13 +201,15 @@ def compare_with_numpy_sgd_clip_grad(
         )
 
         def train_one_iter(grad):
-            grad_tensor = flow.tensor(
-                grad,
-                dtype=flow.float32,
-                requires_grad=False,
-                device=flow.device(device),
-            )
-            loss = flow.sum(x * grad_tensor)
+            loss = 0.0
+            for i in range(tensor_num):
+                grad_tensor = flow.tensor(
+                    grad[i],
+                    dtype=flow.float32,
+                    requires_grad=False,
+                    device=flow.device(device),
+                )
+                loss += flow.sum(x[i] * grad_tensor)
             loss.backward()
             sgd.clip_grad()
             sgd.step()
@@ -183,7 +220,7 @@ def compare_with_numpy_sgd_clip_grad(
             # test state_dict/load_state_dict
             if i == reload_state_step:
                 state_dict = sgd.state_dict()
-                sgd = flow.optim.SGD([x])
+                sgd = flow.optim.SGD(x)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
@@ -191,8 +228,8 @@ def compare_with_numpy_sgd_clip_grad(
                 sgd.load_state_dict(state_dict)
         return x
 
-    def train_by_numpy():
-        x = init_value
+    def train_by_numpy(tensor_idx):
+        x = init_value_seq[tensor_idx]
         vt = np.zeros_like(x)
 
         def train_one_iter(grad):
@@ -220,17 +257,23 @@ def compare_with_numpy_sgd_clip_grad(
             return (param, v)
 
         for i in range(train_iters):
-            (x, vt) = train_one_iter(random_grad_seq[i])
+            (x, vt) = train_one_iter(random_grad_seq[i][tensor_idx])
         return x
 
-    oneflow_res = train_by_oneflow().numpy()
-    numpy_res = train_by_numpy()
+    oneflow_res = train_by_oneflow()
+    numpy_res = []
+    for i in range(tensor_num):
+        numpy_res.append(train_by_numpy(i))
 
-    test_case.assertTrue(
-        np.allclose(
-            oneflow_res.flatten(), numpy_res.flatten(), rtol=0.0001, atol=0.0001
+    for i in range(tensor_num):
+        test_case.assertTrue(
+            np.allclose(
+                oneflow_res[i].numpy().flatten(),
+                numpy_res[i].flatten(),
+                rtol=0.0001,
+                atol=0.0001,
+            )
         )
-    )
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -249,6 +292,7 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
         arg_dict["multi_tensor"] = [False, True]
+        arg_dict["tensor_num"] = [1, 4]
         for arg in GenArgDict(arg_dict):
             compare_with_numpy_sgd(test_case, **arg)
 
@@ -268,7 +312,9 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
         arg_dict["multi_tensor"] = [False, True]
+        arg_dict["tensor_num"] = [4]
         for arg in GenArgDict(arg_dict):
+            print(arg)
             compare_with_numpy_sgd_clip_grad(test_case, **arg)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")

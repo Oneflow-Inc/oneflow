@@ -40,19 +40,31 @@ def compare_with_numpy_adamw(
     reload_state_step,
     save_load_by_pickle,
     multi_tensor,
+    tensor_num,
 ):
     random_grad_seq = []
+    init_value_seq = []
+
+    for i in range(tensor_num):
+        init_value_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
+
     for _ in range(train_iters):
-        random_grad_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
-    init_value = np.random.uniform(size=x_shape).astype(np.float32)
+        random_grad_seq_per_iter = []
+        for i in range(tensor_num):
+            random_grad_seq_per_iter.append(
+                np.random.uniform(size=x_shape).astype(np.float32)
+            )
+        random_grad_seq.append(random_grad_seq_per_iter)
 
     def train_by_oneflow():
-        x = Parameter(flow.Tensor(init_value, device=flow.device(device)))
+        x = []
+        for i in range(tensor_num):
+            x.append(Parameter(flow.Tensor(init_value_seq[i], device=flow.device(device))))
 
         adam = flow.optim.AdamW(
             [
                 {
-                    "params": [x],
+                    "params": x,
                     "lr": learning_rate,
                     "betas": betas,
                     "eps": eps,
@@ -65,13 +77,15 @@ def compare_with_numpy_adamw(
         )
 
         def train_one_iter(grad):
-            grad_tensor = flow.tensor(
-                grad,
-                dtype=flow.float32,
-                requires_grad=False,
-                device=flow.device(device),
-            )
-            loss = flow.sum(x * grad_tensor)
+            loss = 0.0
+            for i in range(tensor_num):
+                grad_tensor = flow.tensor(
+                    grad[i],
+                    dtype=flow.float32,
+                    requires_grad=False,
+                    device=flow.device(device),
+                )
+                loss += flow.sum(x[i] * grad_tensor)
             loss.backward()
             adam.step()
             adam.zero_grad()
@@ -80,7 +94,7 @@ def compare_with_numpy_adamw(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = adam.state_dict()
-                adam = flow.optim.AdamW([x])
+                adam = flow.optim.AdamW(x)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
@@ -88,8 +102,8 @@ def compare_with_numpy_adamw(
                 adam.load_state_dict(state_dict)
         return x
 
-    def train_by_numpy():
-        x = init_value
+    def train_by_numpy(tensor_idx):
+        x = init_value_seq[tensor_idx]
         vt = np.zeros_like(x)
         st = np.zeros_like(x)
         max_st = np.zeros_like(x)
@@ -120,15 +134,23 @@ def compare_with_numpy_adamw(
             return (param, v, s, max_s)
 
         for i in range(1, train_iters + 1):
-            (x, vt, st, max_st) = train_one_iter(i, random_grad_seq[i - 1])
+            (x, vt, st, max_st) = train_one_iter(i, random_grad_seq[i - 1][tensor_idx])
         return x
 
-    oneflow_res = train_by_oneflow().numpy()
-    numpy_res = train_by_numpy()
+    oneflow_res = train_by_oneflow()
+    numpy_res = []
+    for i in range(tensor_num):
+        numpy_res.append(train_by_numpy(i))
 
-    test_case.assertTrue(
-        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3)
-    )
+    for i in range(tensor_num):
+        test_case.assertTrue(
+            np.allclose(
+                oneflow_res[i].numpy().flatten(),
+                numpy_res[i].flatten(),
+                rtol=0.0001,
+                atol=0.0001,
+            )
+        )
 
 
 def compare_with_numpy_adamw_clip_grad(
@@ -259,6 +281,7 @@ class TestAdamW(flow.unittest.TestCase):
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
         arg_dict["multi_tensor"] = [False, True]
+        arg_dict["tensor_num"] = [1, 4]
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adamw(test_case, *arg)
 
