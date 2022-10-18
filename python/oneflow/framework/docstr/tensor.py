@@ -2363,3 +2363,43 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.bernoulli,
+    """
+    See :func:`oneflow.bernoulli`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.Tensor([1, 1, 1])
+        >>> x.bernoulli()
+        tensor([1., 1., 1.], dtype=oneflow.float32)
+        >>> x.bernoulli(p=0.0)
+        tensor([0., 0., 0.], dtype=oneflow.float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.bernoulli_,
+    """
+    The inplace version of :func:`oneflow.Tensor.bernoulli_`.
+
+    See :func:`oneflow.Tensor.bernoulli`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.Tensor([1, 1, 1])
+        >>> x.bernoulli_(p=0.0)
+        tensor([0., 0., 0.], dtype=oneflow.float32)
+        >>> x
+        tensor([0., 0., 0.], dtype=oneflow.float32)
+
+    """,
+)
