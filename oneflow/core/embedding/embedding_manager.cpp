@@ -310,8 +310,8 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
         lookup_embeddings_(nullptr),
         has_lookup_embeddings_(false),
         embedding_shuffle_cur_rank_embeddings_(nullptr),
-        embeding_update_unique_embeddings_(nullptr),
-        embeding_update_updated_unique_embeddings_(nullptr),
+        embedding_update_unique_embeddings_(nullptr),
+        embedding_update_updated_unique_embeddings_(nullptr),
         embedding_put_unique_embeddings_(nullptr),
         embedding_fused_update_put_unique_embeddings_(nullptr) {
     id_statistics_vec_.resize(kRingBufferSize);
@@ -377,21 +377,21 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
     const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
     user_op::Tensor* updated_unique_embeddings =
         ctx->Tensor4ArgNameAndIndex("updated_unique_embeddings", 0);
-    embeding_update_unique_embeddings_ = unique_embeddings->dptr();
-    embeding_update_updated_unique_embeddings_ = updated_unique_embeddings->mut_dptr();
+    embedding_update_unique_embeddings_ = unique_embeddings->dptr();
+    embedding_update_updated_unique_embeddings_ = updated_unique_embeddings->mut_dptr();
   }
 
   const void* EmbeddingUpdateUniqueEmbeddings(int64_t iter) override {
-    return embeding_update_unique_embeddings_;
+    return embedding_update_unique_embeddings_;
   }
 
   void* EmbeddingUpdateUpdatedUniqueEmbeddings(int64_t iter) override {
-    return embeding_update_updated_unique_embeddings_;
+    return embedding_update_updated_unique_embeddings_;
   }
 
   void OnEmbeddingUpdateEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    embeding_update_unique_embeddings_ = nullptr;
-    embeding_update_updated_unique_embeddings_ = nullptr;
+    embedding_update_unique_embeddings_ = nullptr;
+    embedding_update_updated_unique_embeddings_ = nullptr;
   }
 
   void OnEmbeddingPutStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
@@ -457,8 +457,8 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
   bool has_lookup_embeddings_;
   const void* embedding_gather_in_;
   const void* embedding_shuffle_cur_rank_embeddings_;
-  const void* embeding_update_unique_embeddings_;
-  void* embeding_update_updated_unique_embeddings_;
+  const void* embedding_update_unique_embeddings_;
+  void* embedding_update_updated_unique_embeddings_;
   const void* embedding_put_unique_embeddings_;
   const void* embedding_fused_update_put_unique_embeddings_;
   std::vector<IdStatistics> id_statistics_vec_;
@@ -472,7 +472,7 @@ EmbeddingState* EmbeddingManager::GetEmbeddingState(const std::string& embedding
   auto it = embedding_state_map_.find(map_key);
   // for id shuffle test, not need to create table
   if (it == embedding_state_map_.end()) {
-    LOG(WARNING) << "create embedding state: " << embedding_name << "-" << rank_id;
+    LOG(INFO) << "create embedding state: " << embedding_name << "-" << rank_id;
     if (UseDynamicMemoryAllocation()) {
 #if CUDA_VERSION >= 11020
       it =

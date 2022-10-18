@@ -851,8 +851,16 @@
 - name: "bernoulli"
   signature:
     [
-      "Tensor (Tensor input, *, DataType dtype=kFloat, Generator generator=None) => Bernoulli",
-      "Tensor (Tensor input, Double p, *, DataType dtype=kFloat, Generator generator=None) => BernoulliProb",
+      "Tensor (Tensor input, *, DataType dtype=kFloat, Generator generator=None, Bool inplace=False) => Bernoulli",
+      "Tensor (Tensor input, Double p, *, DataType dtype=kFloat, Generator generator=None, Bool inplace=False) => BernoulliProb",
+    ]
+  bind_python: True
+
+- name: "bernoulli_"
+  signature:
+    [
+      "Tensor (Tensor input, *, DataType dtype=kFloat, Generator generator=None) => BernoulliInplace",
+      "Tensor (Tensor input, Double p, *, DataType dtype=kFloat, Generator generator=None) => BernoulliProbInplace",
     ]
   bind_python: True
 
@@ -2851,3 +2859,7 @@
     "Tensor (Tensor output_grad,Tensor input,Tensor weight,Tensor offset,Tensor mask, Int32 stride_h,Int32 stride_w,Int32 pad_h,
     Int32 pad_w,Int32 dilation_h,Int32 dilation_w,Int32 groups,Int32 offset_groups,Bool use_mask) => DeformConv2dParamGrad"
   bind_python: False
+
+- name: "bincount"
+  signature: "Tensor (Tensor input, Tensor weights=None, Int64 minlength=None) => BinCount"
+  bind_python: True
