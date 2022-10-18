@@ -32,6 +32,8 @@ namespace one {
 #define ASSERT(x) (x).GetOrThrow()
 #define ASSERT_PTR(x) (x).GetPtrOrThrow()
 
+using functional::PyObjectPtr;
+
 static PyTypeObject PyTensorTypeMetaClass{
     PyVarObject_HEAD_INIT(NULL, 0) "oneflow.tensortype",  // tp_name
     sizeof(PyTypeObject),                                 // tp_basicsize
@@ -59,7 +61,13 @@ static std::vector<std::pair<DeviceType, std::string>> all_device_types = {
 
 static PyObject* PyTensorTypeMetaCls_call(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  auto* tensor = functional::_legacy_tensor_ctor(NULL, args, kwargs);
+
+  PyObjectPtr dict(PyDict_New());
+  PyObject* dtype_value = functional::CastToPyObject(PyTensorType_UnpackDType(self));
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "dtype", dtype_value) > -1);
+  if (kwargs) { PyDict_Merge(dict.get(), kwargs, 0); }
+
+  auto* tensor = functional::_legacy_tensor_ctor(NULL, args, dict.get());
   if (PyErr_Occurred()) { throw py::error_already_set(); }
 
   if (!TRY(DeviceTag4DeviceType(PyTensorType_UnpackDevice(self))).IsOk())

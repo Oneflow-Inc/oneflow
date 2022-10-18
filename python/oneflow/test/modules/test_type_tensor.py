@@ -18,6 +18,7 @@ import unittest
 import os
 
 import numpy as np
+import random
 
 import oneflow as flow
 import oneflow.unittest
@@ -85,6 +86,17 @@ class TestTypeTensor(flow.unittest.TestCase):
             test_case.assertEqual(y.shape, (2, 3, 4, 5))
             test_case.assertFalse(y.requires_grad)
             test_case.assertTrue(y.is_leaf)
+
+    def test_doubletensor_corner_cases(test_case):
+        corner_cases = [random.randint(1 << 24, 1 << 25) for _ in range(20)]
+        test_case.assertTrue(
+            np.allclose(
+                flow.DoubleTensor(corner_cases).numpy(),
+                np.array(corner_cases, dtype=np.float64),
+                1e-6,
+                1e-6,
+            )
+        )
 
 
 if __name__ == "__main__":
