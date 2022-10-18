@@ -105,9 +105,9 @@ void set_params_dgrad(FMHA_dgrad_params& params, bool is_bf16,
                       void* dv_ptr, void* cu_seqlens_q_d, void* cu_seqlens_k_d, void* o_packed_d,
                       void* dq_tmp_d, void* do_packed_d, void* softmax_lse_d, void* dsoftmax_sum_d,
                       float p_dropout, float softmax_scale, bool is_causal) {
-  set_params_fprop(params, is_bf16, b, seqlen_q, seqlen_k, num_head, head_size, q_row_stride, k_row_stride,
-                   v_row_stride, q_head_stride, k_head_stride, v_head_stride, q_ptr, k_ptr, v_ptr,
-                   cu_seqlens_q_d, cu_seqlens_k_d, o_packed_d,
+  set_params_fprop(params, is_bf16, b, seqlen_q, seqlen_k, num_head, head_size, q_row_stride,
+                   k_row_stride, v_row_stride, q_head_stride, k_head_stride, v_head_stride, q_ptr,
+                   k_ptr, v_ptr, cu_seqlens_q_d, cu_seqlens_k_d, o_packed_d,
                    dq_tmp_d,  // Reusing the o_tmp_ptr variable to store dq_tmp
                    nullptr, softmax_lse_d, p_dropout, softmax_scale, is_causal);
 
@@ -196,10 +196,11 @@ class FlashAttentionKernel final : public user_op::OpKernel {
     bool loop = max_seqlen_k > blocksize_c;
 
     const bool is_bf16 = (query->data_type() == DataType::kBFloat16);
-    set_params_fprop(launch_params.params, is_bf16, batch_size, max_seqlen_q, max_seqlen_k, num_head,
-                     head_size, row_stride, row_stride, row_stride, head_stride, head_stride,
-                     head_stride, const_cast<void*>(query->dptr()), const_cast<void*>(key->dptr()),
-                     const_cast<void*>(value->dptr()), const_cast<void*>(cu_seqlens_q->dptr()),
+    set_params_fprop(launch_params.params, is_bf16, batch_size, max_seqlen_q, max_seqlen_k,
+                     num_head, head_size, row_stride, row_stride, row_stride, head_stride,
+                     head_stride, head_stride, const_cast<void*>(query->dptr()),
+                     const_cast<void*>(key->dptr()), const_cast<void*>(value->dptr()),
+                     const_cast<void*>(cu_seqlens_q->dptr()),
                      const_cast<void*>(cu_seqlens_k->dptr()), out->mut_dptr(),
                      loop ? tmp_buffer->mut_dptr() : nullptr,
                      /*not return softmax*/ nullptr, softmax_lse->mut_dptr(), dropout_rate,
@@ -299,11 +300,12 @@ class FlashAttentionGradKernel final : public user_op::OpKernel {
     void* dsoftmax_sum_ptr =
         reinterpret_cast<void*>(tmp_buffer->mut_dptr<char>() + query_grad_tmp_bytes);
     const bool is_bf16 = (query->data_type() == DataType::kBFloat16);
-    set_params_dgrad(launch_params.params, is_bf16, batch_size, max_seqlen_q, max_seqlen_k, num_head,
-                     head_size, row_stride, row_stride, row_stride, head_stride, head_stride,
-                     head_stride, const_cast<void*>(query->dptr()), const_cast<void*>(key->dptr()),
-                     const_cast<void*>(value->dptr()), query_grad->mut_dptr(), key_grad->mut_dptr(),
-                     value_grad->mut_dptr(), const_cast<void*>(cu_seqlens_q->dptr()),
+    set_params_dgrad(launch_params.params, is_bf16, batch_size, max_seqlen_q, max_seqlen_k,
+                     num_head, head_size, row_stride, row_stride, row_stride, head_stride,
+                     head_stride, head_stride, const_cast<void*>(query->dptr()),
+                     const_cast<void*>(key->dptr()), const_cast<void*>(value->dptr()),
+                     query_grad->mut_dptr(), key_grad->mut_dptr(), value_grad->mut_dptr(),
+                     const_cast<void*>(cu_seqlens_q->dptr()),
                      const_cast<void*>(cu_seqlens_k->dptr()), const_cast<void*>(out->dptr()),
                      loop ? query_grad_tmp_ptr : nullptr, const_cast<void*>(out_grad->dptr()),
                      const_cast<void*>(softmax_lse->dptr()), dsoftmax_sum_ptr, dropout_rate,

@@ -286,13 +286,11 @@ set(KINETO_URL
 use_mirror(VARIABLE KINETO_URL URL ${KINETO_URL})
 set(KINETO_MD5 f9b550591b3899fb267270c19484933f)
 
-set(CUTLASS_URL
-    https://github.com/NVIDIA/cutlass/archive/refs/tags/v2.10.0.tar.gz)
+set(CUTLASS_URL https://github.com/NVIDIA/cutlass/archive/refs/tags/v2.10.0.tar.gz)
 use_mirror(VARIABLE CUTLASS_URL URL ${CUTLASS_URL})
 set(CUTLASS_MD5 a303f5272a3792decdcfa161b37c4929)
 
-set(FLASH_ATTENTION_URL
-    https://github.com/Oneflow-Inc/flash-attention/archive/refs/heads/main.zip)
+set(FLASH_ATTENTION_URL https://github.com/Oneflow-Inc/flash-attention/archive/refs/heads/main.zip)
 use_mirror(VARIABLE FLASH_ATTENTION_URL URL ${FLASH_ATTENTION_URL})
 set(FLASH_ATTENTION_MD5 ba1b3d9646665e2badc1371c0c877836)
 
