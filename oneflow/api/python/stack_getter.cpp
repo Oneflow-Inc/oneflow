@@ -33,7 +33,7 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-class PyFrame : public Frame {
+class PyFrame final : public Frame {
  public:
   PyFrame(PyCodeObject* code, int lineno, std::shared_ptr<PyFrame> back)
       : code(code), lineno(lineno), back(std::move(back)) {
@@ -124,7 +124,7 @@ class PyStackGetter final : public ForeignStackGetter {
   std::shared_ptr<PyFrame> current_parent_frame;
 
   void PushParentFrame(PyFrameObject* frame) {
-    // filter out functions like Python _bootstrap, _shutdown which doesn't have f_back
+    // filter out Python functions like _bootstrap, _shutdown which don't have f_back
     if (PyFrameObject* f = frame->f_back) {
       current_parent_frame =
           std::make_shared<PyFrame>(f->f_code, PyFrame_GetLineNumber(f), current_parent_frame);
@@ -165,4 +165,4 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   });
 }
 
-}  // namespace oneflow
+}
