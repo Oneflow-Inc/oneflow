@@ -37,6 +37,9 @@ Tensor
     is_nonzero
     numel
     set_printoptions
+    get_default_dtype
+    set_default_dtype
+    set_default_tensor_type
 
 .. _tensor-creation-ops:
 
@@ -150,6 +153,7 @@ Random sampling
     randint
     randn
     randperm
+    multinomial
     
 In-place random sampling
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -311,6 +315,7 @@ Reduction Ops
     mean  
     median
     prod
+    nansum
     std  
     sum  
     var
@@ -382,6 +387,8 @@ Other Ops
     tril
     repeat_interleave
     triu
+    cross
+    bincount
 
 BLAS and LAPACK Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

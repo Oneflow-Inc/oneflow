@@ -31,9 +31,15 @@ from oneflow.nn.parameter import Parameter
 
 
 def compare_with_numpy_sgd(
-    test_case, momentum, weight_decay, scale, learning_rate, train_iters,
+    test_case,
+    momentum,
+    weight_decay,
+    scale,
+    learning_rate,
+    train_iters,
+    use_optional_tensor,
 ):
-
+    # if use_optional_tensor, pass lr as tensor to sgd_update, else pass as attr.
     num_rows = 500
     embedding_size = 128
     model_shape = (num_rows, embedding_size)
@@ -48,7 +54,17 @@ def compare_with_numpy_sgd(
 
     init_value = np.random.uniform(size=(num_rows, line_size)).astype(np.float32)
 
+    """
+    In OneFlow's optimizer, learning_rate is passed by attr in eager mode, and passed by tensor in lazy mode.
+    in this test, if use_optional_tensor is True, we also pass lr_tensor/down_scale_by_tensor/skip_if tensor for unittest.
+    if use_optional_tensor is False, we only pass lr by attr, and not have down_scale_by_tensor/skip_if, so mul down_scale_by to scale and skip skip_if's test.
+    """
     down_scale_by = 10
+    if use_optional_tensor:
+        scale_val = scale
+    else:
+        # if pass as attr instead of tensor, mul down_scale_by to scale_value
+        scale_val = scale / down_scale_by
 
     class TestGraph(flow.nn.Graph):
         def __init__(self):
@@ -74,11 +90,13 @@ def compare_with_numpy_sgd(
                 lr_tensor,
                 down_scale_by_tensor,
                 skip_if,
-                scale,
+                learning_rate,
+                scale_val,
                 weight_decay,
                 momentum,
                 line_size,
                 embedding_size,
+                embedding_name="",
             )
 
     graph = TestGraph()
@@ -87,12 +105,17 @@ def compare_with_numpy_sgd(
         unique_embeddings_tensor = flow.tensor(init_value, requires_grad=False).to(
             "cuda"
         )
-        lr_tensor = flow.tensor(
-            np.array(learning_rate).reshape(1,).astype(np.float32)
-        ).to("cuda")
-        down_scale_by_tensor = flow.tensor(
-            np.array(down_scale_by).astype(np.float32)
-        ).to("cuda")
+        if use_optional_tensor:
+            lr_tensor = flow.tensor(
+                np.array(learning_rate).reshape(1,).astype(np.float32)
+            ).to("cuda")
+            down_scale_by_tensor = flow.tensor(
+                np.array((down_scale_by,)).astype(np.float32)
+            ).to("cuda")
+        else:
+            # pass by attr
+            lr_tensor = None
+            down_scale_by_tensor = None
 
         def train_one_iter(
             ids,
@@ -117,9 +140,12 @@ def compare_with_numpy_sgd(
             # add ids of num_valid unique to use id_shuffle out_put num_unique as grad input
             ids = flow.tensor(np_ids.astype(np.int32)).to("cuda")
             grad_tensor = flow.tensor(random_grad_seq[i]).to("cuda")
-            skip_if_tensor = flow.tensor(
-                np.array(skip_if_seq[i]).reshape(1,).astype(np.int64)
-            ).to("cuda")
+            if use_optional_tensor:
+                skip_if_tensor = flow.tensor(
+                    np.array(skip_if_seq[i]).reshape(1,).astype(np.int64)
+                ).to("cuda")
+            else:
+                skip_if_tensor = None
             updated_tensor = train_one_iter(
                 ids,
                 unique_embeddings_tensor,
@@ -161,7 +187,7 @@ def compare_with_numpy_sgd(
             return (model, state)
 
         for i in range(train_iters):
-            if skip_if_seq[i] > 0:
+            if skip_if_seq[i] > 0 and use_optional_tensor:
                 pass
             else:
                 (x, vt) = train_one_iter(
@@ -194,6 +220,7 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["scale"] = [1, 0.1]
         arg_dict["learning_rate"] = [1, 0.9]
         arg_dict["train_iters"] = [10]
+        arg_dict["use_optional_tensor"] = [True, False]
         for arg in GenArgDict(arg_dict):
             compare_with_numpy_sgd(test_case, **arg)
 
