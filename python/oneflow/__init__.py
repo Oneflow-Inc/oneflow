@@ -223,6 +223,7 @@ from oneflow._C import inv as inverse
 from oneflow._C import iinfo, finfo
 from oneflow._C import multinomial
 from oneflow._C import linalg_cross as cross
+from oneflow._C import bincount
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
@@ -289,6 +290,13 @@ del hook
 del ExitHook
 del atexit
 del oneflow
+
+# default dtype
+from oneflow.framework.dtype import (
+    set_default_dtype,
+    set_default_tensor_type,
+    get_default_dtype,
+)
 
 import oneflow._C
 from oneflow._C import tensor, batch_gather

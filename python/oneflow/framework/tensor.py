@@ -447,6 +447,9 @@ def _numpy(self):
         shapes, dtypes = self._tensor_buffer_shapes_and_dtypes
         tensors = flow.tensor_buffer_to_list_of_tensors(self, shapes, dtypes)
         return [t.numpy() for t in tensors]
+    # TODO: support bfloat16 to numpy in C++
+    if self.dtype == flow.bfloat16:
+        self = self.to(flow.float32)
     if self.is_global:
         self_cpu_placement = flow.placement("cpu", self.placement.ranks)
         self = (

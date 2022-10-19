@@ -313,6 +313,9 @@ DIRECT_PASS_FUNC(PyTensorObject_cast, functional::cast)
 DIRECT_PASS_FUNC(PyTensorObject_gather, functional::dim_gather)
 DIRECT_PASS_FUNC(PyTensorObject_type_as, functional::type_as)
 DIRECT_PASS_FUNC(PyTensorObject_split, functional::split)
+DIRECT_PASS_FUNC(PyTensorObject_bernoulli, functional::bernoulli)
+DIRECT_PASS_FUNC(PyTensorObject_bernoulli_, functional::bernoulli_)
+DIRECT_PASS_FUNC(PyTensorObject_bincount, functional::bincount)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_eq(PyObject* self, PyObject* args, PyObject* kwargs) {
@@ -938,6 +941,10 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"softplus", (PyCFunction)PyTensorObject_softplus, METH_VARARGS | METH_KEYWORDS, NULL},
     {"cast", (PyCFunction)PyTensorObject_cast, METH_VARARGS | METH_KEYWORDS, NULL},
     {"gather", (PyCFunction)PyTensorObject_gather, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bernoulli", (PyCFunction)PyTensorObject_bernoulli, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bernoulli_", (PyCFunction)PyTensorObject_bernoulli_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bincount", (PyCFunction)PyTensorObject_bincount, METH_VARARGS | METH_KEYWORDS, NULL},
+
 
     {"reshape", (PyCFunction)PyTensorObject_reshape, METH_VARARGS | METH_KEYWORDS, NULL},
     {"reshape_as", (PyCFunction)PyTensorObject_reshape_as, METH_VARARGS | METH_KEYWORDS, NULL},

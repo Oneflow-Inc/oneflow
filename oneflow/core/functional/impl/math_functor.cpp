@@ -739,7 +739,8 @@ class ReduceMeanWholeFunctor {
   ReduceMeanWholeFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     // ReduceMean only calculate floating values.
-    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type()))
+    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type())
+                    || x->dtype()->data_type() == DataType::kFloat16)
         << "RuntimeError: Can only calculate the mean of floating types.";
     size_t reduce_count = 1;
     reduce_count = x->shape()->Count(0);
@@ -755,8 +756,12 @@ class ReduceMeanFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
     // ReduceMean only calculate floating values.
-    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type()))
+    // NOTE: Should use original reduce_mean op/kernel rather than current way(ReduceSum /
+    // reduce_count) because it could encounter precision problem(like overflow) in float16 case.
+    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type())
+                    || x->dtype()->data_type() == DataType::kFloat16)
         << "RuntimeError: Can only calculate the mean of floating types.";
+
     const auto& sum = JUST(functional::ReduceSum(x, axis, keepdims));
     size_t reduce_count = 1;
     if (axis.empty()) {
@@ -1208,7 +1213,8 @@ class ClampBaseFunctor {
         << "Requires one of argument `min` and `max` at least in clip.";
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("floating_min", "integral_min", "floating_max",
                                                  "integral_max");
-    if (IsFloatingDataType(x->dtype()->data_type())) {
+    if (IsFloatingDataType(x->dtype()->data_type())
+        || x->dtype()->data_type() == DataType::kFloat16) {
       if (min.has_value()) {
         const auto& min_val = JUST(min);
         attrs.SetAttr<0>(min_val->As<double>());
