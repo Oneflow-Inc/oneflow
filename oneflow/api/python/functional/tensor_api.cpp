@@ -142,16 +142,16 @@ class TensorWithDataCtorFunctor {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
 
-    const auto& dtype_ = dtype ? JUST(dtype) : GetDefaultDType();
+    const auto& target_dtype = dtype ? JUST(dtype) : GetDefaultDType();
     if (PyTensor_Check(data)) {
       const auto& other = PyTensor_Unpack(data);
       const bool pin_memory =
           other->is_local() ? JUST(JUST(other->AsLocalTensor())->is_pinned()) : false;
-      return MakeTensorFromOtherTensor(other, dtype_, device,
+      return MakeTensorFromOtherTensor(other, target_dtype, device,
                                        /*requires_grad=*/false, /*pin_memory=*/pin_memory);
     }
     // Make tensor from python sequence or numpy array.
-    return MakeLocalTensorFromData(data, dtype_, device, /*requires_grad=*/false,
+    return MakeLocalTensorFromData(data, target_dtype, device, /*requires_grad=*/false,
                                    /*pin_memory=*/false);
   }
 };
@@ -175,14 +175,14 @@ class GlobalTensorWithDataCtorFunctor {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
 
-    const auto& dtype_ = dtype ? JUST(dtype) : GetDefaultDType();
+    const auto& target_dtype = dtype ? JUST(dtype) : GetDefaultDType();
     if (PyTensor_Check(data)) {
       const auto& other = PyTensor_Unpack(data);
-      return MakeTensorFromOtherTensor(other, dtype_, placement, sbp_tuple,
+      return MakeTensorFromOtherTensor(other, target_dtype, placement, sbp_tuple,
                                        /*requires_grad=*/false);
     }
     // Make global tensor from python sequence or numpy array.
-    return MakeGlobalTensorFromData(data, dtype_, placement, sbp_tuple, /*requires_grad=*/false);
+    return MakeGlobalTensorFromData(data, target_dtype, placement, sbp_tuple, /*requires_grad=*/false);
   }
 };
 
