@@ -38,6 +38,21 @@ def _test_concat_origin(test_case, device):
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
+def _test_concat_with_0_input_first(test_case, device):
+    input1 = flow.LongTensor().to(flow.float32).to(flow.device(device))
+    input2 = flow.tensor(
+        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
+    )
+    of_out = flow.cat([input1, input2], dim=0)
+
+    torch_input1 = torch.LongTensor().to(torch.float32).to(torch.device(device))
+    torch_output2 = torch.tensor(
+        np.random.randn(2, 6, 5, 3), dtype=torch.float32, device=torch.device(device)
+    )
+    torch_out = torch.cat((torch_input1, torch_output2), 0)
+    test_case.assertTrue(np.array_equal(of_out.numpy(), torch_out.detach().cpu().numpy()))
+
+
 def _test_concat_with_axis_one(test_case, device):
     input1 = flow.tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
@@ -125,6 +140,7 @@ class TestModule(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_concat_origin,
+            _test_concat_with_0_input_first,
             _test_concat_with_axis_one,
             _test_concat_with_three_tensor,
             _test_concat_with_three_tensor_backward,
