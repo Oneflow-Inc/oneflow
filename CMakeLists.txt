@@ -286,8 +286,7 @@ set(KINETO_URL
 use_mirror(VARIABLE KINETO_URL URL ${KINETO_URL})
 set(KINETO_MD5 f9b550591b3899fb267270c19484933f)
 
-set(CUTLASS_URL
-    https://github.com/NVIDIA/cutlass/archive/refs/tags/v2.10.0.tar.gz)
+set(CUTLASS_URL https://github.com/NVIDIA/cutlass/archive/refs/tags/v2.10.0.tar.gz)
 use_mirror(VARIABLE CUTLASS_URL URL ${CUTLASS_URL})
 set(CUTLASS_MD5 a303f5272a3792decdcfa161b37c4929)
 

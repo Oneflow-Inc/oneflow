@@ -47,7 +47,6 @@ def compare_with_numpy_sgd(
             x_tensor_list.append(
                 flow.Tensor(init_value_seq[i], device=flow.device(device))
             )
-        lr_tensor = flow.Tensor(learning_rate, device=flow.device(device))
 
         def train_one_iter(grad):
             grad_tensor_list = []
@@ -62,7 +61,7 @@ def compare_with_numpy_sgd(
                 )
 
             flow._C.multi_tensor_sgd_update(
-                x_tensor_list, grad_tensor_list, lr_tensor, 1.0, weight_decay
+                x_tensor_list, grad_tensor_list, 1.0, weight_decay, learning_rate
             )
 
         for i in range(train_iters):
