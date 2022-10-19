@@ -1256,6 +1256,19 @@ def make_persistent_table_writer(
     )
 
 
+class SmartDecayAdam(flow.nn.optimizer.adam.Adam):
+    """Implements SmartDecayAdam algorithm.
+       The original Adam algorithm was proposed in `Adam: A Method for Stochastic Optimization`_.
+       For Sparse Embedding Table in OneEmbedding, implement the SmartDecayAdam algorithm.
+       For other models, it is same as Adam.
+    """
+
+    def _generate_conf_for_graph(self, train_conf, vars_conf):
+        new_opt_confs = super()._generate_conf_for_graph(train_conf, vars_conf)
+        for opt_conf in new_opt_confs:
+            opt_conf.adam_conf.smart_decay = True
+
+
 class Optimizer(Optimizer):
     def __init__(
         self, optimizer: Optimizer, embeddings: List[Embedding],
