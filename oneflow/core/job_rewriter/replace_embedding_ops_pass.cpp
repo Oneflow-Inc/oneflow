@@ -635,18 +635,30 @@ void BuildEmbeddingUpdate(
         .Attr<float>("beta", optimizer_conf.momentum_conf().beta());
   } else if (optimizer_conf.has_adam_conf()) {
     const AdamModelUpdateConf& adam_conf = optimizer_conf.adam_conf();
-    embedding_update_op_builder.OpTypeName("one_embedding_adam_update")
-        .Attr<float>("beta1", adam_conf.beta1())
-        .Attr<float>("beta2", adam_conf.beta2())
-        .Attr<float>("epsilon", adam_conf.epsilon())
-        .Attr<bool>("do_bias_correction", adam_conf.do_bias_correction());
-    if (adam_conf.do_bias_correction()) {
-      const std::string bias_correction1_lbn =
-          AddAdamBiasCorrectionFactorOp(adam_conf.beta1(), "adam_bias_correction_factor1");
-      const std::string bias_correction2_lbn =
-          AddAdamBiasCorrectionFactorOp(adam_conf.beta2(), "adam_bias_correction_factor2");
-      embedding_update_op_builder.Input("bias_correction1", bias_correction1_lbn)
-          .Input("bias_correction2", bias_correction2_lbn);
+    if (adam_conf.smart_decay()) {
+      CHECK(adam_conf.do_bias_correction())
+          << "when use smart decay adam, do_bias_correction should be true. but got "
+          << adam_conf.do_bias_correction();
+      embedding_update_op_builder.OpTypeName("one_embedding_smart_decay_sparse_adam_update")
+          .Input("train_step", train_conf.train_step_lbn())
+          .Attr<float>("beta1", adam_conf.beta1())
+          .Attr<float>("beta2", adam_conf.beta2())
+          .Attr<float>("epsilon", adam_conf.epsilon())
+          .Attr<bool>("do_bias_correction", adam_conf.do_bias_correction());
+    } else {
+      embedding_update_op_builder.OpTypeName("one_embedding_adam_update")
+          .Attr<float>("beta1", adam_conf.beta1())
+          .Attr<float>("beta2", adam_conf.beta2())
+          .Attr<float>("epsilon", adam_conf.epsilon())
+          .Attr<bool>("do_bias_correction", adam_conf.do_bias_correction());
+      if (adam_conf.do_bias_correction()) {
+        const std::string bias_correction1_lbn =
+            AddAdamBiasCorrectionFactorOp(adam_conf.beta1(), "adam_bias_correction_factor1");
+        const std::string bias_correction2_lbn =
+            AddAdamBiasCorrectionFactorOp(adam_conf.beta2(), "adam_bias_correction_factor2");
+        embedding_update_op_builder.Input("bias_correction1", bias_correction1_lbn)
+            .Input("bias_correction2", bias_correction2_lbn);
+      }
     }
   } else if (optimizer_conf.has_adagrad_conf()) {
     const AdagradModelUpdateConf& adagrad_conf = optimizer_conf.adagrad_conf();

@@ -10435,6 +10435,42 @@ def OneFlow_OneEmbeddingAdamUpdateOp : OneFlow_BaseOp<"one_embedding_adam_update
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_OneEmbeddingSmartDecaySparseAdamUpdateOp : OneFlow_BaseOp<"one_embedding_smart_decay_sparse_adam_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$num_unique_ids,
+    OneFlow_Tensor:$unique_embeddings,
+    OneFlow_Tensor:$embedding_grad,
+    Optional<OneFlow_Tensor>:$train_step,
+    Optional<OneFlow_Tensor>:$learning_rate,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
+    Optional<OneFlow_Tensor>:$down_scale_by_tensor,
+    Optional<OneFlow_Tensor>:$skip_if
+  );
+  let output = (outs
+    OneFlow_Tensor:$updated_unique_embeddings
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$train_step_val,
+    DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
+    DefaultValuedAttr<F64Attr, "1.">:$scale,
+    DefaultValuedAttr<F32Attr, "0.">:$l1,
+    DefaultValuedAttr<F32Attr, "0.">:$l2,
+    DefaultValuedAttr<F32Attr, "0.">:$weight_decay,
+    DefaultValuedAttr<F32Attr, "0.9">:$beta1,
+    DefaultValuedAttr<F32Attr, "0.999">:$beta2,
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon,
+    DefaultValuedAttr<BoolAttr, "true">:$do_bias_correction,
+    DefaultValuedAttr<SI64Attr, "0">:$line_size,
+    DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
+    StrAttr:$embedding_name
+  );
+  let same_output_regst_num = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_OneEmbeddingAdagradUpdateOp : OneFlow_BaseOp<"one_embedding_adagrad_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$num_unique_ids,
