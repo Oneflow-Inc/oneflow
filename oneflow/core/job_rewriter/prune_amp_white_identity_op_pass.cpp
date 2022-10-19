@@ -44,41 +44,58 @@ Maybe<void> PruneAmpWhiteIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const 
   const OpGraph op_graph(*job);
   JobBuilder job_builder(job);
   HashMap<std::string, OperatorConf> op_name2op_conf;
+  std::vector<std::string> del_op_names;
+
   HashSet<std::string> ctrl_in_op_names;
   op_graph.ForEachNode([&](const OpNode* op_node) {
     for (const std::string& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
       ctrl_in_op_names.insert(ctrl_in_op_name);
     }
   });
-  std::vector<std::string> del_op_names;
+
   op_graph.ForEachNode([&](const OpNode* op_node) {
+    const std::string op_name = op_node->op().op_name();
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!IsAmpIdentityOp(op_conf)) { return; }
     if (!op_conf.ctrl_in_op_name().empty()) { return; }
-    if (ctrl_in_op_names.find(op_conf.name()) != ctrl_in_op_names.end()) { return; }
+    if (ctrl_in_op_names.find(op_name) != ctrl_in_op_names.end()) { return; }
     if (op_node->in_edges().size() != 1) { return; }
-    const user_op::UserOpConfWrapper user_op_conf(op_conf);
-    const LogicalBlobId& in_lbi = GenLogicalBlobId(user_op_conf.input("in", 0));
-    const LogicalBlobId& out_lbi = GenLogicalBlobId(user_op_conf.output("out", 0));
-    for (const OpEdge* out_edge : op_node->out_edges()) {
-      const OpNode* consumer = out_edge->dst_node();
-      const std::string& consumer_op_name = consumer->op().op_name();
-      if (op_name2op_conf.find(consumer_op_name) == op_name2op_conf.end()) {
-        op_name2op_conf[consumer_op_name] = consumer->op().op_conf();
-      }
-      OperatorConf& consumer_op_conf = op_name2op_conf.at(consumer_op_name);
-      for (const std::string& ibn : consumer->op().input_bns()) {
-        if (consumer->op().BnInOp2Lbi(ibn) == out_lbi) {
-          const auto& old_val =
-              ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn, GenLogicalBlobName(in_lbi));
-          CHECK_EQ(GenLogicalBlobName(out_lbi), old_val);
-        }
-      }
+    if (std::find(del_op_names.begin(), del_op_names.end(), op_name) != del_op_names.end()) {
+      return;
     }
     del_op_names.emplace_back(op_conf.name());
+
+    CHECK_EQ(op_node->SoleInEdge()->lbis().size(), 1);
+    const auto& in_lbi = op_node->SoleInEdge()->lbis().front();
+    const OpNode* cur_node = op_node;
+    const OpNode* consumer = cur_node->SoleOutEdge()->dst_node();
+    while (IsAmpIdentityOp(consumer->op().op_conf())) {
+      del_op_names.emplace_back(cur_node->op().op_name());
+      cur_node = consumer;
+      consumer = cur_node->SoleOutEdge()->dst_node();
+    }
+    CHECK_EQ(cur_node->SoleOutEdge()->lbis().size(), 1);
+    const auto& out_lbi = cur_node->SoleOutEdge()->lbis().front();
+
+    const auto& consumer_op_name = consumer->op().op_name();
+    auto iter = op_name2op_conf.find(consumer_op_name);
+    if (iter == op_name2op_conf.end()) {
+      iter = op_name2op_conf.emplace(consumer->op().op_name(), consumer->op().op_conf()).first;
+    }
+    OperatorConf& consumer_op_conf = iter->second;
+    for (const std::string& ibn : consumer->op().input_bns()) {
+      if (consumer->op().BnInOp2Lbi(ibn) == out_lbi) {
+        const auto& old_val =
+            ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn, GenLogicalBlobName(in_lbi));
+        CHECK_EQ(GenLogicalBlobName(out_lbi), old_val);
+      }
+    }
   });
+
   for (const auto& pair : op_name2op_conf) { job_builder.MutOpsOnlyOnce({pair.second}); }
+
   job_builder.DelOps(del_op_names);
+
   return Maybe<void>::Ok();
 }
 
