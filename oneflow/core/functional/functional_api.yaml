@@ -1321,8 +1321,7 @@
   bind_python: False
 
 - name: "group_norm"
-  signature:
-    "Tensor (Tensor x, Tensor gamma=None, Tensor beta=None, Bool affine, Int32 num_groups, Double epsilon) => GroupNorm"
+  signature: "Tensor (Tensor x, Tensor gamma=None, Tensor beta=None, Bool affine, Int32 num_groups, Double epsilon) => GroupNorm"
   bind_python: True
 
 - name: "group_norm_grad"
@@ -2772,3 +2771,8 @@
     "Tensor (Tensor output_grad,Tensor input,Tensor weight,Tensor offset,Tensor mask, Int32 stride_h,Int32 stride_w,Int32 pad_h,
     Int32 pad_w,Int32 dilation_h,Int32 dilation_w,Int32 groups,Int32 offset_groups,Bool use_mask) => DeformConv2dParamGrad"
   bind_python: False
+
+- name: "stft"
+  signature: 
+    'Tensor (Tensor input, Int64 n_fft,Int64 hop_length=None, Int64 win_length=None, Tensor window=None,Bool center=True,String pad_mode="reflect",Bool normalized=False,Bool onesided=True,Bool return_complex=False) =>Stft'
+  bind_python: True

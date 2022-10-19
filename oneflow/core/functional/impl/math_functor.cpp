@@ -3050,6 +3050,78 @@ class InplaceAddCDivFunctor {
   }
 };
 
+class StftFunctor {
+ public:
+  StftFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("stft").Input("input").Output("output").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t n_fft,
+                           const Optional<int64_t> hop_length, const Optional<int64_t> win_length,
+                           const Optional<one::Tensor>& window, const bool center,
+                           const std::string& mode, const bool normalized, const bool onesided,
+                           const bool return_complex) const {
+    int64_t new_hop_length = hop_length.has_value() == true ? JUST(hop_length) : n_fft / 4;
+    int64_t new_win_length = win_length.has_value() == true ? JUST(win_length) : n_fft;
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("normalized", "onesided", "return_complex");
+    attrs.SetAllAttrs(normalized, onesided, return_complex);
+
+    auto input_tensor = input;
+    if (center) {
+      const auto& input_shape = input_tensor->shape();
+      const auto input_dim = input_tensor->shape()->NumAxes();
+      const auto extra_dims = std::max(size_t{3}, (size_t)input_dim) - input_dim;
+      const auto pad_amount = n_fft / 2;
+
+      DimVector extended_shape(extra_dims, 1);
+      extended_shape.append(input_shape->begin(), input_shape->end());
+      input_tensor =
+          JUST(functional::Pad(JUST(functional::View(input_tensor, Shape(extended_shape))),
+                               {pad_amount, pad_amount}, mode, Scalar(0)));
+      input_tensor = JUST(functional::View(input_tensor, Shape{input_tensor->shape()->back()}));
+    }
+    if (input->shape()->NumAxes() == 1) {
+      input_tensor = JUST(functional::Unsqueeze(input_tensor, 0));
+    }
+    int32_t batch = input_tensor->shape()->At(0);
+    int32_t len = input_tensor->shape()->At(1);
+    int32_t n_frames = 1 + (len - n_fft) / new_hop_length;
+    const auto& stride = *JUST(input_tensor->stride());
+    std::vector<int32_t> strides(stride.begin(), stride.end());
+    input_tensor =
+        JUST(view::AsStrided(input_tensor, {batch, n_frames, n_fft},
+                             {strides.at(0), new_hop_length * strides.at(1), strides.at(1)}, 0));
+
+    auto temp_tensor = JUST(functional::Empty(Shape{n_fft}, input->dtype(), JUST(input->device()),
+                                              /*pin_memory=*/false));
+    if (window.has_value()) { temp_tensor = JUST(window); }
+    if (new_win_length < n_fft) {
+      temp_tensor = JUST(functional::Fill(temp_tensor, 0));
+      auto left = (n_fft - new_win_length) / 2;
+
+      if (window.has_value()) {
+        // TODO(yzm):Copy the window matrix to the defined range,such as
+        //'''
+        //      functional::AssignLocalTensor(JUST(functional::Narrow(temp_tensor, 0,
+        //      left,new_win_length)), window);
+        //'''
+      } else {
+        JUST(functional::Fill(JUST(functional::Narrow(temp_tensor, 0, left, new_win_length)), 1.0));
+      }
+    }
+
+    if (new_win_length < n_fft || window.has_value()) {
+      input_tensor = JUST(functional::Mul(input_tensor, temp_tensor));
+    }
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input_tensor}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -3161,6 +3233,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<InvFunctor>("Inv");
   m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
   m.add_functor<impl::TruncFunctor>("Trunc");
+  m.add_functor<StftFunctor>("Stft");
 };
 
 }  // namespace functional
