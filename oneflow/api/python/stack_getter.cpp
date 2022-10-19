@@ -13,46 +13,40 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-extern "C" {
 #include "oneflow/api/python/stack_getter.h"
-}
-
-#include <pybind11/pybind11.h>
 
 #include <utility>
+
+#include "fmt/core.h"
+#include "fmt/color.h"
+#include "fmt/ostream.h"
+#include "pybind11/pybind11.h"
+
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
 #include "oneflow/core/common/foreign_stack_getter.h"
-#include "fmt/core.h"
-#include "fmt/color.h"
-#include "fmt/ostream.h"
+#include "oneflow/api/python/custom_eval_frame.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
 
-namespace python {
-
-class Frame : public oneflow::Frame {
+class PyFrame : public Frame {
  public:
-  Frame(PyCodeObject* code, int lineno, std::shared_ptr<Frame> back)
+  PyFrame(PyCodeObject* code, int lineno, std::shared_ptr<PyFrame> back)
       : code(code), lineno(lineno), back(std::move(back)) {
     Py_INCREF(code);
   }
-  OF_DISALLOW_COPY_AND_MOVE(Frame);
-  ~Frame() { Py_DECREF(code); }
+  OF_DISALLOW_COPY_AND_MOVE(PyFrame);
+  ~PyFrame() { Py_DECREF(code); }
 
   PyCodeObject* const code;
   const int lineno;
-  std::shared_ptr<Frame> back;
-
- private:
+  const std::shared_ptr<PyFrame> back;
 };
-
-}  // namespace python
 
 class PyStackGetter final : public ForeignStackGetter {
  public:
@@ -61,17 +55,14 @@ class PyStackGetter final : public ForeignStackGetter {
     if (IsShuttingDown()) { return nullptr; }
     PyFrameObject* frame = PyEval_GetFrame();
     auto top_frame =
-        std::make_shared<python::Frame>(frame->f_code, PyFrame_GetLineNumber(frame), cur_frame);
+        std::make_shared<PyFrame>(frame->f_code, PyFrame_GetLineNumber(frame), cur_frame);
     return top_frame;
   }
 
   std::string GetFormattedStack(std::shared_ptr<const Frame> frame) const override {
-    if (frame == nullptr) {
-      return "  <unknown>\n";
-    }
+    if (frame == nullptr) { return "  <unknown>\n"; }
     std::string buffer;
-    std::shared_ptr<const python::Frame> py_frame =
-        std::dynamic_pointer_cast<const python::Frame>(frame);
+    auto py_frame = std::dynamic_pointer_cast<const PyFrame>(frame);
     // NOTE: intentionally not using CHECK_JUST here, because CHECK_JUST may also
     // call current function (StackGetter::Print) and cause infinite loop.
     // NOLINTNEXTLINE
@@ -102,22 +93,21 @@ class PyStackGetter final : public ForeignStackGetter {
     return buffer;
   };
   void PushFrame(PyFrameObject* frame) {
-    cur_frame =
-        std::make_shared<python::Frame>(frame->f_code, PyFrame_GetLineNumber(frame), cur_frame);
+    cur_frame = std::make_shared<PyFrame>(frame->f_code, PyFrame_GetLineNumber(frame), cur_frame);
   }
   void PopFrame() {
     if (cur_frame != nullptr) { cur_frame = cur_frame->back; }
   }
 
  private:
-  std::shared_ptr<oneflow::python::Frame> cur_frame;
+  std::shared_ptr<PyFrame> cur_frame;
 };
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("RegisterStackGetter", []() {
     Singleton<ForeignStackGetter>::Delete();
     Singleton<ForeignStackGetter>::SetAllocated(new PyStackGetter());
-    enable_eval_frame_shim_for_current_thread();
+    enable_custom_eval_frame_for_current_thread();
   });
   m.def("GetCurrentStack", []() {
     auto* tmp = Singleton<ForeignStackGetter>::Get();
@@ -128,13 +118,13 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 }  // namespace oneflow
 
 void push_frame(PyFrameObject* frame) {
-  auto* stack_getter =
-      dynamic_cast<oneflow::PyStackGetter*>(oneflow::Singleton<oneflow::ForeignStackGetter>::Get());
+  using namespace oneflow;
+  auto* stack_getter = dynamic_cast<PyStackGetter*>(Singleton<ForeignStackGetter>::Get());
   stack_getter->PushFrame(frame);
 }
 
 void pop_frame() {
-  auto* stack_getter =
-      dynamic_cast<oneflow::PyStackGetter*>(oneflow::Singleton<oneflow::ForeignStackGetter>::Get());
+  using namespace oneflow;
+  auto* stack_getter = dynamic_cast<PyStackGetter*>(Singleton<ForeignStackGetter>::Get());
   stack_getter->PopFrame();
 }

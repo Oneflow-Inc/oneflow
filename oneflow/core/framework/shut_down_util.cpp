@@ -28,13 +28,13 @@ std::atomic<bool>* GetShuttingDown() {
 
 bool IsShuttingDown() {
   auto* shutting_down = GetShuttingDown();
-  bool is_interpreter_shutdown = shutting_down->load(std::memory_order_acquire);
+  bool is_interpreter_shutdown = *shutting_down;
   return is_interpreter_shutdown;
 }
 
 void SetShuttingDown(bool arg_shutting_down) {
   auto* shutting_down = GetShuttingDown();
-  shutting_down->store(arg_shutting_down, std::memory_order_release);
+  *shutting_down = arg_shutting_down;
 }
 
 }  // namespace oneflow
