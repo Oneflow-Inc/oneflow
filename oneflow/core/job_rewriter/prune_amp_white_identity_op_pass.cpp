@@ -44,7 +44,7 @@ Maybe<void> PruneAmpWhiteIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const 
   const OpGraph op_graph(*job);
   JobBuilder job_builder(job);
   HashMap<std::string, OperatorConf> op_name2op_conf;
-  std::vector<std::string> del_op_names;
+  HashSet<std::string> del_op_names;
 
   HashSet<std::string> ctrl_in_op_names;
   op_graph.ForEachNode([&](const OpNode* op_node) {
@@ -60,22 +60,17 @@ Maybe<void> PruneAmpWhiteIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const 
     if (!op_conf.ctrl_in_op_name().empty()) { return; }
     if (ctrl_in_op_names.find(op_name) != ctrl_in_op_names.end()) { return; }
     if (op_node->in_edges().size() != 1) { return; }
-    if (std::find(del_op_names.begin(), del_op_names.end(), op_name) != del_op_names.end()) {
-      return;
-    }
-    del_op_names.emplace_back(op_conf.name());
+    if (del_op_names.find(op_name) != del_op_names.end()) { return; }
+    del_op_names.insert(op_conf.name());
 
-    CHECK_EQ(op_node->SoleInEdge()->lbis().size(), 1);
-    const auto& in_lbi = op_node->SoleInEdge()->lbis().front();
-    const OpNode* cur_node = op_node;
-    const OpNode* consumer = cur_node->SoleOutEdge()->dst_node();
+    const OpNode* last_amp_id_op = op_node;
+    const OpNode* consumer = last_amp_id_op->SoleOutEdge()->dst_node();
     while (IsAmpIdentityOp(consumer->op().op_conf())) {
-      del_op_names.emplace_back(cur_node->op().op_name());
-      cur_node = consumer;
-      consumer = cur_node->SoleOutEdge()->dst_node();
+      if (del_op_names.insert(consumer->op().op_name()).second) { last_amp_id_op = consumer; }
+      consumer = consumer->SoleOutEdge()->dst_node();
     }
-    CHECK_EQ(cur_node->SoleOutEdge()->lbis().size(), 1);
-    const auto& out_lbi = cur_node->SoleOutEdge()->lbis().front();
+    const auto& new_in_lbi = op_node->op().BnInOp2Lbi(op_node->op().SoleIbn());
+    const auto& old_in_lbi = last_amp_id_op->op().BnInOp2Lbi(last_amp_id_op->op().SoleObn());
 
     const auto& consumer_op_name = consumer->op().op_name();
     auto iter = op_name2op_conf.find(consumer_op_name);
@@ -84,17 +79,17 @@ Maybe<void> PruneAmpWhiteIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const 
     }
     OperatorConf& consumer_op_conf = iter->second;
     for (const std::string& ibn : consumer->op().input_bns()) {
-      if (consumer->op().BnInOp2Lbi(ibn) == out_lbi) {
-        const auto& old_val =
-            ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn, GenLogicalBlobName(in_lbi));
-        CHECK_EQ(GenLogicalBlobName(out_lbi), old_val);
+      if (consumer->op().BnInOp2Lbi(ibn) == old_in_lbi) {
+        const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn,
+                                                                GenLogicalBlobName(new_in_lbi));
+        CHECK_EQ(GenLogicalBlobName(old_in_lbi), old_val);
       }
     }
   });
 
   for (const auto& pair : op_name2op_conf) { job_builder.MutOpsOnlyOnce({pair.second}); }
 
-  job_builder.DelOps(del_op_names);
+  job_builder.DelOps(std::vector<std::string>{del_op_names.begin(), del_op_names.end()});
 
   return Maybe<void>::Ok();
 }
