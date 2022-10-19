@@ -153,7 +153,6 @@ struct LaunchOpLowering final : public OpConversionPattern<LaunchOp> {
 
     // rewriter.create<LLVM::CallOp>(op->getLoc(), build_launch, ValueRange{run_ctx, kernel});
     rewriter.eraseOp(op);
-    module.dump();
     return success();
   }
 };
