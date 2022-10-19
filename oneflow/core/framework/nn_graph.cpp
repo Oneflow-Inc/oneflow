@@ -472,7 +472,8 @@ std::set<std::string> BroadcastFromMasterToWorkers(const std::string& key, const
           comm_world_size - 2, thread_pool_parallel_limit, [&](size_t rank_id) {
             Y tmp_data;
             Singleton<CtrlClient>::Get()->PullKV(key, &tmp_data);
-            VLOG(1) << " rank " << rank_id << " pull key" << key;
+            VLOG(1) << " rank " << rank_id << " pull key" << key << " size "
+                    << tmp_data.ByteSizeLong();
             LOG_MEM();
           });
     }
@@ -505,7 +506,8 @@ std::set<std::string> ForEachPulledFromWorkersToMaster(const std::string& prefix
           world_size - 2, thread_pool_parallel_limit, [&](size_t rank_id) {
             int64_t real_rank_id = rank_id + 2;
             std::string key = prefix + std::to_string(real_rank_id);
-            VLOG(1) << " rank " << real_rank_id << " push key " << key;
+            VLOG(1) << " rank " << real_rank_id << " push key " << key << " size "
+                    << data.ByteSizeLong();
             LOG_MEM();
             Singleton<CtrlClient>::Get()->PushKV(key, data);
           });
@@ -540,7 +542,8 @@ std::set<std::string> ForEachPushedFromMasterToWorkers(const std::string& prefix
             std::string key = prefix + std::to_string(real_rank_id);
             T tmp_data;
             Singleton<CtrlClient>::Get()->PullKV(key, &tmp_data);
-            VLOG(1) << " rank " << real_rank_id << " pull key " << key;
+            VLOG(1) << " rank " << real_rank_id << " pull key " << key << " size "
+                    << tmp_data.ByteSizeLong();
             LOG_MEM();
           });
     }
@@ -566,10 +569,13 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
     push_pull_keys.insert(keys.begin(), keys.end());
   };
   if (GlobalProcessCtx::IsThisProcessMaster()) { DumpCalculationPassName(&job_); }
+  OF_SESSION_BARRIER();
   auto plan_tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true, true);
   // communication
   Merge(BroadcastFromMasterToWorkers(std::string(__FUNCTION__) + "_job", job_, &job_));
+  OF_SESSION_BARRIER();
   plan_tc->Count("BroadcastJob", 1);
+  VLOG(1) << "Job size " << job_.ByteSizeLong();
   JUST(OpGraph::WithSingleton(&job_, [&]() -> Maybe<void> {
     Singleton<OpGraph>::Get()->UpdateCachedPredicatorIsReachable();
     size_t rank = GlobalProcessCtx::Rank();
@@ -590,6 +596,8 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
                                            boxing_task_graph_proto.get(),
                                            PrepareWorkerBoxingTaskGraphProto, comm_world_size));
     auto* plan = &plan_;
+    VLOG(1) << "boxing_task_graph_proto size " << boxing_task_graph_proto->ByteSizeLong();
+    OF_SESSION_BARRIER();
     plan_tc->Count("BroadcastBoxingTaskGraph", 1);
     // TODO(chengcheng): new memory reused by chunk
     CHECK_JUST(
@@ -624,6 +632,7 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
       Merge(ForEachPulledFromWorkersToMaster(std::string(__FUNCTION__) + "_reachable_cb_pairs",
                                              id_pairs, MergePairs, comm_world_size));
     }
+    OF_SESSION_BARRIER();
     plan_tc->Count("MergeCollBoxPairs", 1);
     if (GlobalProcessCtx::IsThisProcessMaster()) {
       // TODO(chengcheng): test collective boxing for multi-job.
@@ -636,6 +645,7 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
     Merge(BroadcastFromMasterToWorkers(std::string(__FUNCTION__) + "_collective_boxing_plan",
                                        plan_.collective_boxing_plan(),
                                        plan_.mutable_collective_boxing_plan()));
+    OF_SESSION_BARRIER();
     plan_tc->Count("BroadcastCollBoxPlan", 1);
     return Maybe<void>::Ok();
   }));
@@ -699,7 +709,7 @@ Maybe<void> NNGraph::NaiveCompile() {
             comm_world_size - 1, thread_pool_parallel_limit, [&](size_t rank_id) {
               Plan tmp_plan;
               Singleton<CtrlClient>::Get()->PullKV(plan_name, &tmp_plan);
-              VLOG(1) << " rank " << rank_id << " pull plan";
+              VLOG(1) << " rank " << rank_id << " pull plan, size" << tmp_plan.ByteSizeLong();
               LOG_MEM();
             });
       }
