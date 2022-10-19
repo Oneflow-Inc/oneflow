@@ -56,7 +56,7 @@ struct FetchFromLauncherPattern : public mlir::OpRewritePattern<func::CallOp> {
       : mlir::OpRewritePattern<func::CallOp>(context, 0) {}
   mlir::LogicalResult matchAndRewrite(func::CallOp op,
                                       mlir::PatternRewriter& rewriter) const override {
-    auto prefix = "get_resources_";
+    auto prefix = "get_resources_type_";
     if (op.getCallee().find(prefix) == std::string::npos) { return success(); }
     if (op->getNumResults() == 0) {
       rewriter.eraseOp(op);

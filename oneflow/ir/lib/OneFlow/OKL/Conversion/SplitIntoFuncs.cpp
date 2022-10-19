@@ -92,6 +92,7 @@ struct SplitIntoFuncsPattern : public mlir::OpRewritePattern<func::FuncOp> {
         auto func_type = rewriter.getFunctionType(
             TypeRange{LauncherContextType::get(rewriter.getContext())},
             TypeRange{std::vector<Type>(resources.size(), resources[0]->getResult(0).getType())});
+        // this function is not an external function, it only plays a role of placeholder to abstraction.
         res.emplace_back(rewriter.create<func::FuncOp>(func->getLoc(), func_name, func_type, rewriter.getStringAttr("private")));
       }
       return res;
@@ -209,7 +210,7 @@ struct SplitIntoFuncsPattern : public mlir::OpRewritePattern<func::FuncOp> {
 const StringLiteral SplitIntoFuncsPattern::new_ops_func_ = "okl_init_context",
                     SplitIntoFuncsPattern::del_ops_func_ = "okl_recycle",
                     SplitIntoFuncsPattern::compute_ops_func_ = "okl_compute",
-                    SplitIntoFuncsPattern::prefix_get_resources_ = "get_resources_";
+                    SplitIntoFuncsPattern::prefix_get_resources_ = "get_resources_type_";
 
 namespace {
 struct SplitIntoFuncsPass : public SplitIntoFuncsPassBase<SplitIntoFuncsPass> {

@@ -140,8 +140,7 @@ def BuildKernelOp : OKL_Op<"build_op_kernel"> {
   }];
 
   let arguments = (ins
-    RegContextType:$reg_ctx,
-    StrAttr:$op_type_name
+    RegContextType:$reg_ctx
   );
   let results = (outs KernelType:$out);
 }

@@ -916,9 +916,8 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     auto run_ctx = rewriter.create<okl::BuildRunContextOp>(
         loc, okl::RunContextType::get(rewriter.getContext()), reg_ctx, launcher_ctx);
     // create okl.create_kernel(*reg_ctx, StringAttr: op_type_name)
-    auto kernel =
-        rewriter.create<okl::BuildKernelOp>(loc, okl::KernelType::get(rewriter.getContext()),
-                                            reg_ctx, op->getName().stripDialect().str());
+    auto kernel = rewriter.create<okl::BuildKernelOp>(
+        loc, okl::KernelType::get(rewriter.getContext()), reg_ctx);
     // create okl.launch(*run_ctx, *kernel)
     rewriter.create<okl::LaunchOp>(loc, run_ctx, kernel);
     // create okl.destroy(reg_ctx);
@@ -1172,9 +1171,9 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
 
 LogicalResult LowerKernelLaunchModuleToLLVM(ModuleOp module) {
   mlir::PassManager pm(module->getContext());
-  pm.addPass(createLowerToOKLPass());                // lower-oneflow-to-okl
+  pm.addPass(createLowerToOKLPass());  // lower-oneflow-to-okl
   // TODO:
-  pm.addPass(okl::createLowerOKLToLLVMFuncPass());       // lower-okl-to-llvm-func
+  pm.addPass(okl::createLowerOKLToLLVMFuncPass());   // lower-okl-to-llvm-func
   pm.addPass(createConvertFuncToLLVMPass());         // convert-func-to-llvm
   pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
   CheckEnableIRPrinting(pm);
