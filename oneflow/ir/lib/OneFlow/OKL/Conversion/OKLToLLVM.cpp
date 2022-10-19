@@ -93,8 +93,6 @@ LLVM::LLVMFuncOp DeclareFetchPtr(::mlir::PatternRewriter& rewriter, ModuleOp* mo
   return func;
 }
 
-static BlockAndValueMapping mapping;
-
 template<typename T>
 struct FetchOpLowering final : public OpConversionPattern<T> {
   using OpConversionPattern<T>::OpConversionPattern;
@@ -113,8 +111,7 @@ struct FetchOpLowering final : public OpConversionPattern<T> {
                                                    rewriter.getIndexAttr(op.index()));
     auto new_op =
         rewriter.create<LLVM::CallOp>(op->getLoc(), fetch_ctx, ValueRange{launcher_ctx, index});
-    mapping.map(op->getResult(0), new_op.getResult(0));
-    rewriter.eraseOp(op);
+    rewriter.replaceOp(op, new_op.getResults());
     return success();
   }
 };
@@ -251,6 +248,9 @@ void LowerOKLToLLVMCallPass::runOnOperation() {
   auto llvm_ptr_type = LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
   TypeConverter typeConverter;
   typeConverter.addConversion([&](mlir::okl::LauncherContextType type) { return llvm_ptr_type; });
+  typeConverter.addConversion([&](mlir::okl::RegContextType type) { return llvm_ptr_type; });
+  typeConverter.addConversion([&](mlir::okl::RunContextType type) { return llvm_ptr_type; });
+  typeConverter.addConversion([&](mlir::okl::KernelType type) { return llvm_ptr_type; });
 
   RewritePatternSet patterns(context);
 
