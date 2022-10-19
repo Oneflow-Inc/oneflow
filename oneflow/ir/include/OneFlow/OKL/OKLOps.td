@@ -153,10 +153,51 @@ def LaunchOp : OKL_Op<"launch"> {
   }];
 
   let arguments = (ins
-    RegContextType:$reg_ctx,
     RunContextType:$run_ctx,
     KernelType:$kernel
   );
+}
+
+def FetchRegContextOp: OKL_Op<"fetch_reg_ctx", [NoSideEffect]> {
+  let summary = "fetch reg_ctx from launcher_ctx with index";
+  let description = [{
+    fetch reg_ctx from launcher_ctx with index
+  }];
+
+  let arguments = (ins
+    LauncherContextType:$launcher_ctx,
+    SI64Attr: $index
+  );
+
+  let results = (outs RegContextType:$out);
+}
+
+def FetchRunContextOp: OKL_Op<"fetch_run_ctx", [NoSideEffect]> {
+  let summary = "fetch run_ctx from launcher_ctx with index";
+  let description = [{
+    fetch run_ctx from launcher_ctx with index
+  }];
+
+  let arguments = (ins
+    LauncherContextType:$launcher_ctx,
+    SI64Attr: $index
+  );
+
+  let results = (outs RunContextType:$out);
+}
+
+def FetchKernelOp: OKL_Op<"fetch_kernel", [NoSideEffect]> {
+  let summary = "fetch kernel from launcher_ctx with index";
+  let description = [{
+    fetch kernel from launcher_ctx with index
+  }];
+
+  let arguments = (ins
+    LauncherContextType:$launcher_ctx,
+    SI64Attr: $index
+  );
+
+  let results = (outs KernelType:$out);
 }
 
 def SplitIntoFuncsPass : Pass<"split-into-funcs", "ModuleOp"> {
@@ -164,9 +205,24 @@ def SplitIntoFuncsPass : Pass<"split-into-funcs", "ModuleOp"> {
   let constructor = "mlir::okl::createSplitIntoFuncsPass()";
 }
 
-def LowerOKLToLLVMPass : Pass<"lower-okl-to-llvm", "ModuleOp"> {
-  let summary = "convert okl dialect to llvm dialect";
-  let constructor = "mlir::okl::createLowerOKLToLLVMPass()";
+def FetchFromLauncherPass : Pass<"fetch-from-launcher", "ModuleOp"> {
+  let summary = "fetch okl resources from okl.launcher_ctx";
+  let constructor = "mlir::okl::createFetchFromLauncherPass()";
+}
+
+def OnlyKeepComputeOpsPass : Pass<"only-keep-compute-ops", "ModuleOp"> {
+  let summary = "only keep compute ops perpared for llvm lowering";
+  let constructor = "mlir::okl::createOnlyKeepComputeOpsPass()";
+}
+
+def LowerOKLToLLVMFuncPass : Pass<"lower-okl-to-llvm-func", "ModuleOp"> {
+  let summary = "convert okl dialect func to llvm dialect";
+  let constructor = "mlir::okl::createLowerOKLToLLVMFuncPass()";
+}
+
+def LowerOKLToLLVMCallPass : Pass<"lower-okl-to-llvm-call", "ModuleOp"> {
+  let summary = "convert okl dialect ops to llvm dialect llvm.call";
+  let constructor = "mlir::okl::createLowerOKLToLLVMCallPass()";
 }
 
 #endif // ONEFLOW_IR_INCLUDE_OKL_OKLOPS_H_

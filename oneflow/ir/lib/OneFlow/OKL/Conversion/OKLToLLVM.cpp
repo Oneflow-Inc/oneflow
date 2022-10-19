@@ -23,8 +23,10 @@ limitations under the License.
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/Pass/Pass.h"
@@ -53,165 +55,74 @@ LLVM::LLVMPointerType GetPtrType(::mlir::PatternRewriter& rewriter) {
   return LLVM::LLVMPointerType::get(IntegerType::get(rewriter.getContext(), 8));
 }
 
-// get gep op as a ptr value from global field.
-LLVM::GEPOp GetGepOpFromGlobal(::mlir::PatternRewriter& rewriter, ModuleOp* module,
-                               LLVM::GlobalOp* global) {
-  auto loc = rewriter.getUnknownLoc();
-  Value addr = rewriter.create<LLVM::AddressOfOp>(loc, *global);
-  Value cst0 =
-      rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), rewriter.getIndexAttr(0));
-  return rewriter.create<LLVM::GEPOp>(loc, GetPtrType(rewriter), addr,
-                                      ArrayRef<Value>({cst0, cst0}));
+template<typename T>
+std::string FetchName() {
+  LOG(ERROR) << "Faile to get type name";
+  exit(1);
 }
 
-// declare key:string = vale in llvm ir global scope.
-LLVM::GlobalOp DeclareOrGetGlobalString(::mlir::PatternRewriter& rewriter, ModuleOp* module,
-                                        StringRef key, StringRef val, bool increase = false) {
-  auto create = [&]() -> LLVM::GlobalOp {
-    OpBuilder::InsertionGuard insertGuard(rewriter);
+template<>
+std::string FetchName<FetchKernelOp>() {
+  return "fetch_kernel";
+}
+
+template<>
+std::string FetchName<FetchRegContextOp>() {
+  return "fetch_reg_ctx";
+}
+
+template<>
+std::string FetchName<FetchRunContextOp>() {
+  return "fetch_run_ctx";
+}
+
+template<typename T>
+LLVM::LLVMFuncOp DeclareFetchPtr(::mlir::PatternRewriter& rewriter, ModuleOp* module) {
+  LLVM::LLVMFuncOp func;
+  auto func_name = FetchName<T>();
+  if (!(func = module->lookupSymbol<LLVM::LLVMFuncOp>(func_name))) {
+    OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(module->getBody());
-    auto type = LLVM::LLVMArrayType::get(IntegerType::get(rewriter.getContext(), 8), val.size());
-    return rewriter.create<LLVM::GlobalOp>(rewriter.getUnknownLoc(), type, /*isConstant=*/true,
-                                           LLVM::Linkage::Internal, key,
-                                           rewriter.getStringAttr(val),
-                                           /*alignment=*/0);
-  };
 
-  LLVM::GlobalOp global;
-  if ((global = module->lookupSymbol<LLVM::GlobalOp>(key))) {
-    if (increase) {
-      int idx = 1;
-      do key = StringRef(key.str() + std::to_string(idx++));
-      while ((global = module->lookupSymbol<LLVM::GlobalOp>(key)));
-      return create();
-    }
-    return global;
+    auto func_type = LLVM::LLVMFunctionType::get(
+        {GetPtrType(rewriter)}, {GetPtrType(rewriter), rewriter.getI64Type()}, false);
+    func = rewriter.create<LLVM::LLVMFuncOp>(rewriter.getUnknownLoc(), func_name, func_type,
+                                             LLVM::Linkage::External);
+    func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
   }
-  return create();
+  return func;
 }
 
-// create okl.reg_ctx(StringAttr: assembly)
-struct BuildRegContextOpLowering final : public OpConversionPattern<BuildRegContextOp> {
-  // raw: create okl.reg_ctx(StringAttr: assembly) -> llvm_ptr<i8>
-  // dst: llvm.call build_reg_ctx(gep_global_str: llvm_ptr<i8>) -> llvm_ptr<i8>
-  static StringRef DeclareBuildRegContext(::mlir::PatternRewriter& rewriter, ModuleOp* module) {
-    auto func_name = "build_reg_ctx";
-    LLVM::LLVMFuncOp func;
-    if (!(func = module->lookupSymbol<LLVM::LLVMFuncOp>(func_name))) {
-      OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPointToStart(module->getBody());
+static BlockAndValueMapping mapping;
 
-      auto func_type =
-          LLVM::LLVMFunctionType::get(GetPtrType(rewriter), {GetPtrType(rewriter)}, false);
-      func = rewriter.create<LLVM::LLVMFuncOp>(rewriter.getUnknownLoc(), func_name, func_type,
-                                               LLVM::Linkage::External);
-      func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
-    }
-    return func_name;
-  }
-
- public:
-  using OpConversionPattern<BuildRegContextOp>::OpConversionPattern;
-  LogicalResult matchAndRewrite(BuildRegContextOp op, OpAdaptor adaptor,
+template<typename T>
+struct FetchOpLowering final : public OpConversionPattern<T> {
+  using OpConversionPattern<T>::OpConversionPattern;
+  using OpAdaptor = typename T::Adaptor;
+  LogicalResult matchAndRewrite(T op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    // TODO: refine
-    // auto mlir_asm = op.mlir_assembly();
-    auto mlir_asm = "";
+    auto module = GetModuleOpFromJobBodyOp<LLVM::LLVMFuncOp>(op);
+    if (!module) {
+      op->emitError("Failed to lowering llvm call because of op is not in a module");
+      exit(1);
+    };
 
-    op->getParentOfType<func::FuncOp>();
-    auto module = GetModuleOpFromJobBodyOp<func::FuncOp>(op);
-
-    auto global_str = DeclareOrGetGlobalString(rewriter, &module, "mlir_asm", mlir_asm, true);
-    auto gep = GetGepOpFromGlobal(rewriter, &module, &global_str);
-
-    auto build_reg_ctx = DeclareBuildRegContext(rewriter, &module);
-
-    rewriter
-        .replaceOpWithNewOp<LLVM::CallOp>(op, op->getResultTypes(), build_reg_ctx, ValueRange{gep})
-        ->getResult(0);
+    auto fetch_ctx = DeclareFetchPtr<T>(rewriter, &module);
+    auto launcher_ctx = op->template getParentOfType<LLVM::LLVMFuncOp>().getBody().getArgument(0);
+    auto index = rewriter.create<LLVM::ConstantOp>(op->getLoc(), rewriter.getI64Type(),
+                                                   rewriter.getIndexAttr(op.index()));
+    auto new_op =
+        rewriter.create<LLVM::CallOp>(op->getLoc(), fetch_ctx, ValueRange{launcher_ctx, index});
+    mapping.map(op->getResult(0), new_op.getResult(0));
+    rewriter.eraseOp(op);
     return success();
   }
 };
 
-// create okl.run_ctx(*reg_ctx, *compute_ctx)
-struct BuildRunContextOpLowering final : public OpConversionPattern<BuildRunContextOp> {
-  // raw: create okl.run_ctx(*reg_ctx, *compute_ctx) -> llvm_ptr<i8>
-  // dst: llvm.call build_run_ctx(reg_ctx: llvm_ptr<i8>, compute_ctx: llvm_ptr<i8>) -> llvm_ptr<i8>
-  static LLVM::LLVMFuncOp DeclareBuildRunContext(::mlir::PatternRewriter& rewriter,
-                                                 ModuleOp* module) {
-    auto func_name = "build_run_ctx";
-    LLVM::LLVMFuncOp func;
-    if (!(func = module->lookupSymbol<LLVM::LLVMFuncOp>(func_name))) {
-      OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPointToStart(module->getBody());
-
-      auto func_type = LLVM::LLVMFunctionType::get(
-          GetPtrType(rewriter), {GetPtrType(rewriter), GetPtrType(rewriter)}, false);
-      func = rewriter.create<LLVM::LLVMFuncOp>(rewriter.getUnknownLoc(), func_name, func_type,
-                                               LLVM::Linkage::External);
-      func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
-    }
-    return func;
-  }
-
- public:
-  using OpConversionPattern<BuildRunContextOp>::OpConversionPattern;
-  LogicalResult matchAndRewrite(BuildRunContextOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter& rewriter) const override {
-    auto func = op->getParentOfType<func::FuncOp>();
-
-    auto module = GetModuleOpFromJobBodyOp<func::FuncOp>(op);
-    auto reg_ctx = op.reg_ctx();
-    auto compute_ctx = func.getArgument(0);
-
-    auto build_run_ctx = DeclareBuildRunContext(rewriter, &module);
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, build_run_ctx, ValueRange{reg_ctx, compute_ctx});
-    return success();
-  }
-};
-
-// create okl.kernel(*reg_ctx, StringAttr: op_type_name)
-struct BuildKernelOpLowering final : public OpConversionPattern<BuildKernelOp> {
-  // raw: create okl.kernel(*reg_ctx, StringAttr: op_type_name) -> llvm_ptr<i8>
-  // dst: llvm.call build_kernel(reg_ctx: llvm_ptr<i8>, op_type_name: llvm_ptr<i8>) -> llvm_ptr<i8>
-  static LLVM::LLVMFuncOp DeclareBuildKernel(::mlir::PatternRewriter& rewriter, ModuleOp* module) {
-    auto func_name = "build_kernel";
-    LLVM::LLVMFuncOp func;
-    if (!(func = module->lookupSymbol<LLVM::LLVMFuncOp>(func_name))) {
-      OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPointToStart(module->getBody());
-
-      auto func_type = LLVM::LLVMFunctionType::get(
-          GetPtrType(rewriter), {GetPtrType(rewriter), GetPtrType(rewriter)}, false);
-      func = rewriter.create<LLVM::LLVMFuncOp>(rewriter.getUnknownLoc(), func_name, func_type,
-                                               LLVM::Linkage::External);
-      func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
-    }
-    return func;
-  }
-
- public:
-  using OpConversionPattern<BuildKernelOp>::OpConversionPattern;
-  LogicalResult matchAndRewrite(BuildKernelOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter& rewriter) const override {
-    auto module = GetModuleOpFromJobBodyOp<func::FuncOp>(op);
-    auto build_launch = DeclareBuildKernel(rewriter, &module);
-
-    auto op_type_name = op.op_type_name();
-    auto global_str = DeclareOrGetGlobalString(rewriter, &module, op_type_name, op_type_name);
-    auto gep = GetGepOpFromGlobal(rewriter, &module, &global_str);
-    auto reg_ctx = op.reg_ctx();
-
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, build_launch, ValueRange{reg_ctx, gep})
-        ->getResult(0);
-    return success();
-  }
-};
-
-// create okl.launch(*reg_ctx, *run_ctx, *kernel)
+// create okl.launch(*run_ctx, *kernel)
 struct LaunchOpLowering final : public OpConversionPattern<LaunchOp> {
-  // raw: create okl.launch(*reg_ctx, *run_ctx, *kernel) -> llvm_ptr<i8>
-  // dst: llvm.call launch(reg_ctx: llvm_ptr<i8>, run_ctx: llvm_ptr<i8>, kernel: llvm_ptr<i8>)
+  // raw: create okl.launch(*run_ctx, *kernel) -> llvm_ptr<i8>
+  // dst: llvm.call launch(run_ctx: llvm_ptr<i8>, kernel: llvm_ptr<i8>)
   static LLVM::LLVMFuncOp DeclareBuildLaunch(::mlir::PatternRewriter& rewriter, ModuleOp* module) {
     auto func_name = "launch";
     LLVM::LLVMFuncOp func;
@@ -221,7 +132,7 @@ struct LaunchOpLowering final : public OpConversionPattern<LaunchOp> {
 
       auto void_type = LLVM::LLVMVoidType::get(rewriter.getContext());
       auto func_type = LLVM::LLVMFunctionType::get(
-          void_type, {GetPtrType(rewriter), GetPtrType(rewriter), GetPtrType(rewriter)}, false);
+          void_type, {GetPtrType(rewriter), GetPtrType(rewriter)}, false);
       func = rewriter.create<LLVM::LLVMFuncOp>(rewriter.getUnknownLoc(), func_name, func_type,
                                                LLVM::Linkage::External);
       func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
@@ -233,79 +144,19 @@ struct LaunchOpLowering final : public OpConversionPattern<LaunchOp> {
   using OpConversionPattern<LaunchOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(LaunchOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto module = GetModuleOpFromJobBodyOp<func::FuncOp>(op);
+    auto module = GetModuleOpFromJobBodyOp<LLVM::LLVMFuncOp>(op);
+    if (!module) {
+      op->emitError("Failed to lowering llvm call because of op is not in a module");
+      exit(1);
+    };
 
-    auto build_launch = DeclareBuildLaunch(rewriter, &module);
-    auto reg_ctx = op.reg_ctx();
-    auto run_ctx = op.run_ctx();
-    auto kernel = op.kernel();
+    // auto build_launch = DeclareBuildLaunch(rewriter, &module);
+    // auto run_ctx = mapping.lookup(op.run_ctx());
+    // auto kernel = mapping.lookup(op.kernel());
 
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, build_launch,
-                                              ValueRange{reg_ctx, run_ctx, kernel});
-    return success();
-  }
-};
-
-struct DestroyRegContextOpLowering final : public OpConversionPattern<DestroyRegContextOp> {
-  static LLVM::LLVMFuncOp DeclareDestroyRegContext(::mlir::PatternRewriter& rewriter,
-                                                   ModuleOp* module) {
-    auto func_name = "destroy_reg_ctx";
-    LLVM::LLVMFuncOp func;
-    if (!(func = module->lookupSymbol<LLVM::LLVMFuncOp>(func_name))) {
-      OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPointToStart(module->getBody());
-
-      auto void_type = LLVM::LLVMVoidType::get(rewriter.getContext());
-      auto func_type = LLVM::LLVMFunctionType::get(void_type, {GetPtrType(rewriter)}, false);
-      func = rewriter.create<LLVM::LLVMFuncOp>(rewriter.getUnknownLoc(), func_name, func_type,
-                                               LLVM::Linkage::External);
-      func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
-    }
-    return func;
-  }
-
- public:
-  using OpConversionPattern<DestroyRegContextOp>::OpConversionPattern;
-  LogicalResult matchAndRewrite(DestroyRegContextOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter& rewriter) const override {
-    auto module = GetModuleOpFromJobBodyOp<func::FuncOp>(op);
-
-    auto build_launch = DeclareDestroyRegContext(rewriter, &module);
-    auto reg_ctx = op.ptr();
-
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, build_launch, ValueRange{reg_ctx});
-    return success();
-  }
-};
-
-struct DestroyRunContextOpLowering final : public OpConversionPattern<DestroyRunContextOp> {
-  static LLVM::LLVMFuncOp DeclareDestroyRunContext(::mlir::PatternRewriter& rewriter,
-                                                   ModuleOp* module) {
-    auto func_name = "destroy_reg_ctx";
-    LLVM::LLVMFuncOp func;
-    if (!(func = module->lookupSymbol<LLVM::LLVMFuncOp>(func_name))) {
-      OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPointToStart(module->getBody());
-
-      auto void_type = LLVM::LLVMVoidType::get(rewriter.getContext());
-      auto func_type = LLVM::LLVMFunctionType::get(void_type, {GetPtrType(rewriter)}, false);
-      func = rewriter.create<LLVM::LLVMFuncOp>(rewriter.getUnknownLoc(), func_name, func_type,
-                                               LLVM::Linkage::External);
-      func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
-    }
-    return func;
-  }
-
- public:
-  using OpConversionPattern<DestroyRunContextOp>::OpConversionPattern;
-  LogicalResult matchAndRewrite(DestroyRunContextOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter& rewriter) const override {
-    auto module = GetModuleOpFromJobBodyOp<func::FuncOp>(op);
-
-    auto build_launch = DeclareDestroyRunContext(rewriter, &module);
-    auto reg_ctx = op.ptr();
-
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, build_launch, ValueRange{reg_ctx});
+    // rewriter.create<LLVM::CallOp>(op->getLoc(), build_launch, ValueRange{run_ctx, kernel});
+    rewriter.eraseOp(op);
+    module.dump();
     return success();
   }
 };
@@ -328,7 +179,6 @@ struct FunctionOpLowering final : public OpConversionPattern<func::FuncOp> {
     launcher_ctx.replaceAllUsesExcept(cast_op->getResult(0), {cast_op});
     rewriter.setInsertionPointToEnd(&block);
     rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(&block.back(), ValueRange());
-    func->dump();
     rewriter.eraseOp(op);
     return success();
   }
@@ -337,7 +187,7 @@ struct FunctionOpLowering final : public OpConversionPattern<func::FuncOp> {
   using OpConversionPattern<func::FuncOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(func::FuncOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto name = "_mlir__mlir_ciface_okl_func";
+    auto name = "okl_compute";
     if (op.getSymName() == name) { return ConvertOKLFuncToLLVM(op, rewriter); }
     rewriter.eraseOp(op);
     return success();
@@ -345,7 +195,16 @@ struct FunctionOpLowering final : public OpConversionPattern<func::FuncOp> {
 };
 
 namespace {
-struct LowerOKLToLLVMPass : public LowerOKLToLLVMPassBase<LowerOKLToLLVMPass> {
+struct LowerOKLToLLVMFuncPass : public LowerOKLToLLVMFuncPassBase<LowerOKLToLLVMFuncPass> {
+  void runOnOperation() override;
+
+  void getDependentDialects(DialectRegistry& registry) const override {
+    registry.insert<LLVM::LLVMDialect>();
+    registry.insert<okl::OKLDialect>();
+  }
+};
+
+struct LowerOKLToLLVMCallPass : public LowerOKLToLLVMCallPassBase<LowerOKLToLLVMCallPass> {
   void runOnOperation() override;
 
   void getDependentDialects(DialectRegistry& registry) const override {
@@ -355,9 +214,14 @@ struct LowerOKLToLLVMPass : public LowerOKLToLLVMPassBase<LowerOKLToLLVMPass> {
 };
 }  // namespace
 
-std::unique_ptr<Pass> createLowerOKLToLLVMPass() { return std::make_unique<LowerOKLToLLVMPass>(); }
+std::unique_ptr<Pass> createLowerOKLToLLVMCallPass() {
+  return std::make_unique<LowerOKLToLLVMCallPass>();
+}
+std::unique_ptr<Pass> createLowerOKLToLLVMFuncPass() {
+  return std::make_unique<LowerOKLToLLVMFuncPass>();
+}
 
-void LowerOKLToLLVMPass::runOnOperation() {
+void LowerOKLToLLVMFuncPass::runOnOperation() {
   MLIRContext* context = &getContext();
   ConversionTarget target(*context);
   target.addLegalDialect<oneflow::OneFlowDialect, LLVM::LLVMDialect>();
@@ -368,19 +232,34 @@ void LowerOKLToLLVMPass::runOnOperation() {
   TypeConverter typeConverter;
 
   typeConverter.addConversion([&](mlir::okl::LauncherContextType type) { return llvm_ptr_type; });
-  typeConverter.addConversion([&](mlir::okl::RegContextType type) { return llvm_ptr_type; });
-  typeConverter.addConversion([&](mlir::okl::RunContextType type) { return llvm_ptr_type; });
-  typeConverter.addConversion([&](mlir::okl::KernelType type) { return llvm_ptr_type; });
   RewritePatternSet patterns(context);
 
-  patterns
-      .add<FunctionOpLowering, BuildKernelOpLowering, LaunchOpLowering, BuildRegContextOpLowering,
-           BuildRunContextOpLowering, DestroyRegContextOpLowering, DestroyRunContextOpLowering>(
-          typeConverter, context);
+  patterns.add<FunctionOpLowering>(typeConverter, context);
 
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     signalPassFailure();
     getOperation()->emitError("Failed to lower OKL to LLVM");
+  }
+}
+
+void LowerOKLToLLVMCallPass::runOnOperation() {
+  MLIRContext* context = &getContext();
+  ConversionTarget target(*context);
+  target.addLegalDialect<LLVM::LLVMDialect>();
+  target.addIllegalDialect<okl::OKLDialect>();
+
+  auto llvm_ptr_type = LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
+  TypeConverter typeConverter;
+  typeConverter.addConversion([&](mlir::okl::LauncherContextType type) { return llvm_ptr_type; });
+
+  RewritePatternSet patterns(context);
+
+  patterns.add<FetchOpLowering<FetchRegContextOp>, FetchOpLowering<FetchRunContextOp>,
+               FetchOpLowering<FetchKernelOp>, LaunchOpLowering>(typeConverter, context);
+
+  if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
+    signalPassFailure();
+    getOperation()->emitError("Failed to lower OKL to LLVM Call");
   }
 }
 
