@@ -181,8 +181,8 @@ class FlashAttentionKernel final : public user_op::OpKernel {
     Launch_params<FMHA_fprop_params> launch_params(&device_props, stream, is_dropout,
                                                    /*return_softmax*/ false);
     const int64_t batch_size = query->shape_view().At(0);
-    const int64_t max_seqlen_q = query->shape_view().At(1);
-    const int64_t max_seqlen_k = key->shape_view().At(1);
+    const int64_t origin_max_seqlen_q = query->shape_view().At(1);
+    const int64_t origin_max_seqlen_k = key->shape_view().At(1);
     const int64_t num_head = query->shape_view().At(2);
     const int64_t head_size = query->shape_view().At(3);
     const size_t row_stride =
@@ -197,6 +197,14 @@ class FlashAttentionKernel final : public user_op::OpKernel {
                        || (is_sm75 && head_size == 64 && is_dropout))
                           ? 128
                           : 256;
+    // Need to round max_seqlen_k to multiples of blocksize_c
+    int max_seqlen_k = ((origin_max_seqlen_k + blocksize_c - 1) / blocksize_c) * blocksize_c;
+    if (origin_max_seqlen_k <= 128) {
+      max_seqlen_k = 128;
+    } else if (origin_max_seqlen_k <= 256) {
+      max_seqlen_k = 256;
+    }
+    int max_seqlen_q = ((origin_max_seqlen_q + 16 - 1) / 16) * 16;
     bool loop = max_seqlen_k > blocksize_c;
 
     const bool is_bf16 = (query->data_type() == DataType::kBFloat16);
@@ -281,8 +289,8 @@ class FlashAttentionGradKernel final : public user_op::OpKernel {
     Launch_params<FMHA_dgrad_params> launch_params(&device_props, stream, is_dropout,
                                                    /*return_softmax*/ false);
     const int64_t batch_size = query->shape_view().At(0);
-    const int64_t max_seqlen_q = query->shape_view().At(1);
-    const int64_t max_seqlen_k = key->shape_view().At(1);
+    const int64_t origin_max_seqlen_q = query->shape_view().At(1);
+    const int64_t origin_max_seqlen_k = key->shape_view().At(1);
     const int64_t num_head = query->shape_view().At(2);
     const int64_t head_size = query->shape_view().At(3);
     const size_t row_stride = num_head * head_size;
@@ -295,6 +303,14 @@ class FlashAttentionGradKernel final : public user_op::OpKernel {
                        || (is_sm75 && head_size == 64 && is_dropout))
                           ? 128
                           : 256;
+    // Need to round max_seqlen_k to multiples of blocksize_c
+    int max_seqlen_k = ((origin_max_seqlen_k + blocksize_c - 1) / blocksize_c) * blocksize_c;
+    if (origin_max_seqlen_k <= 128) {
+      max_seqlen_k = 128;
+    } else if (origin_max_seqlen_k <= 256) {
+      max_seqlen_k = 256;
+    }
+    int max_seqlen_q = ((origin_max_seqlen_q + 16 - 1) / 16) * 16;
     bool loop = max_seqlen_k > blocksize_c;
     void* query_grad_tmp_ptr = tmp_buffer->mut_dptr();
     DataType tmp_buf_type = softmax_lse->data_type();
