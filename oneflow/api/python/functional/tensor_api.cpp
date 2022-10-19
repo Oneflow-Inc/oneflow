@@ -129,7 +129,7 @@ class TensorWithOtherCtorFunctor {
 
 class TensorWithDataCtorFunctor {
  public:
-  Maybe<Tensor> operator()(PyObject* data, const Optional<Symbol<DType>>& dtype,
+  Maybe<Tensor> operator()(PyObject* data, const Optional<Symbol<DType>>& optional_dtype,
                            const Optional<Symbol<Device>>& device) const {
     // Treat the single long as shape.
     if (PyLong_Check(data)) {
@@ -142,23 +142,23 @@ class TensorWithDataCtorFunctor {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
 
-    const auto& target_dtype = dtype ? JUST(dtype) : GetDefaultDType();
+    const auto& dtype = optional_dtype ? JUST(optional_dtype) : GetDefaultDType();
     if (PyTensor_Check(data)) {
       const auto& other = PyTensor_Unpack(data);
       const bool pin_memory =
           other->is_local() ? JUST(JUST(other->AsLocalTensor())->is_pinned()) : false;
-      return MakeTensorFromOtherTensor(other, target_dtype, device,
+      return MakeTensorFromOtherTensor(other, dtype, device,
                                        /*requires_grad=*/false, /*pin_memory=*/pin_memory);
     }
     // Make tensor from python sequence or numpy array.
-    return MakeLocalTensorFromData(data, target_dtype, device, /*requires_grad=*/false,
+    return MakeLocalTensorFromData(data, dtype, device, /*requires_grad=*/false,
                                    /*pin_memory=*/false);
   }
 };
 
 class GlobalTensorWithDataCtorFunctor {
  public:
-  Maybe<Tensor> operator()(PyObject* data, const Optional<Symbol<DType>>& dtype,
+  Maybe<Tensor> operator()(PyObject* data, const Optional<Symbol<DType>>& optional_dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
@@ -175,14 +175,14 @@ class GlobalTensorWithDataCtorFunctor {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
 
-    const auto& target_dtype = dtype ? JUST(dtype) : GetDefaultDType();
+    const auto& dtype = optional_dtype ? JUST(optional_dtype) : GetDefaultDType();
     if (PyTensor_Check(data)) {
       const auto& other = PyTensor_Unpack(data);
-      return MakeTensorFromOtherTensor(other, target_dtype, placement, sbp_tuple,
+      return MakeTensorFromOtherTensor(other, dtype, placement, sbp_tuple,
                                        /*requires_grad=*/false);
     }
     // Make global tensor from python sequence or numpy array.
-    return MakeGlobalTensorFromData(data, target_dtype, placement, sbp_tuple, /*requires_grad=*/false);
+    return MakeGlobalTensorFromData(data, dtype, placement, sbp_tuple, /*requires_grad=*/false);
   }
 };
 
