@@ -25,13 +25,13 @@ class ThrowErrorKernel final : public user_op::OpKernel {
   ~ThrowErrorKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    THROW(RuntimeError);
-  }
+  void Compute(user_op::KernelComputeContext* ctx) const override { THROW(RuntimeError); }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("throw_error").SetCreateFn<ThrowErrorKernel>().SetIsMatchedHob(user_op::HobTrue());
+REGISTER_USER_KERNEL("throw_error")
+    .SetCreateFn<ThrowErrorKernel>()
+    .SetIsMatchedHob(user_op::HobTrue());
 
 }  // namespace
 

@@ -45,11 +45,11 @@ void Instruction::__Init__(Stream* stream,
 
 void Instruction::InitStatus() { instruction_policy_->InitInstructionStatusIf(this); }
 
-Maybe<void> Instruction::Prepare() { 
+Maybe<void> Instruction::Prepare() {
   FrameThreadLocalGuard guard(frame_);
   return instruction_policy_->PrepareIf(this);
 }
-void Instruction::Compute() { 
+void Instruction::Compute() {
   FrameThreadLocalGuard guard(frame_);
   instruction_policy_->ComputeIf(this);
 }

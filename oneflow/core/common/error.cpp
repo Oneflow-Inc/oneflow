@@ -341,8 +341,7 @@ void ThrowError(const std::shared_ptr<StackedError>& error) {
         fmt::format_to(std::back_inserter(error_str),
                        fmt::emphasis::bold | fmt::fg(fmt::color::dark_orange),
                        "Related Python stack trace:\n");
-        fmt::format_to(std::back_inserter(error_str), "{}",
-                       stack_getter->GetFormattedStack(frame));
+        fmt::format_to(std::back_inserter(error_str), "{}", stack_getter->GetFormattedStack(frame));
       }
     }
   }
