@@ -31,6 +31,8 @@ Maybe<void> CheckInShape(user_op::InferContext* ctx) {
   const int64_t batch_size = q_shape.At(0);
   const int64_t num_head = q_shape.At(2);
   const int64_t head_size = q_shape.At(3);
+  CHECK_OR_RETURN(head_size == 16 || head_size == 32 || head_size == 64 || head_size == 128)
+      << "flash-attention only support head_size in (16, 32, 64, 128).";
   CHECK_EQ_OR_RETURN(k_shape.NumAxes(), 4)
       << "key shape num_axes should be 4, but got " << k_shape.NumAxes();
   CHECK_EQ_OR_RETURN(v_shape.NumAxes(), 4)
