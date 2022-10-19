@@ -206,7 +206,7 @@ struct SplitIntoFuncsPattern : public mlir::OpRewritePattern<func::FuncOp> {
   static const StringLiteral new_ops_func_, del_ops_func_, compute_ops_func_, prefix_get_resources_;
 };
 
-const StringLiteral SplitIntoFuncsPattern::new_ops_func_ = "okl_get_resources",
+const StringLiteral SplitIntoFuncsPattern::new_ops_func_ = "okl_init_context",
                     SplitIntoFuncsPattern::del_ops_func_ = "okl_recycle",
                     SplitIntoFuncsPattern::compute_ops_func_ = "okl_compute",
                     SplitIntoFuncsPattern::prefix_get_resources_ = "get_resources_";

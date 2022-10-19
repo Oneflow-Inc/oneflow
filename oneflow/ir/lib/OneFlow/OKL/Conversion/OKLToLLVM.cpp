@@ -93,6 +93,7 @@ LLVM::LLVMFuncOp DeclareFetchPtr(::mlir::PatternRewriter& rewriter, ModuleOp* mo
   return func;
 }
 
+static BlockAndValueMapping mapping;
 template<typename T>
 struct FetchOpLowering final : public OpConversionPattern<T> {
   using OpConversionPattern<T>::OpConversionPattern;
@@ -112,6 +113,7 @@ struct FetchOpLowering final : public OpConversionPattern<T> {
     auto new_op =
         rewriter.create<LLVM::CallOp>(op->getLoc(), fetch_ctx, ValueRange{launcher_ctx, index});
     rewriter.replaceOp(op, new_op.getResults());
+    mapping.map(op->getResult(0), new_op.getResult(0));
     return success();
   }
 };
@@ -147,11 +149,11 @@ struct LaunchOpLowering final : public OpConversionPattern<LaunchOp> {
       exit(1);
     };
 
-    // auto build_launch = DeclareBuildLaunch(rewriter, &module);
-    // auto run_ctx = mapping.lookup(op.run_ctx());
-    // auto kernel = mapping.lookup(op.kernel());
+    auto build_launch = DeclareBuildLaunch(rewriter, &module);
+    auto run_ctx = mapping.lookup(op.run_ctx());
+    auto kernel = mapping.lookup(op.kernel());
 
-    // rewriter.create<LLVM::CallOp>(op->getLoc(), build_launch, ValueRange{run_ctx, kernel});
+    rewriter.create<LLVM::CallOp>(op->getLoc(), build_launch, ValueRange{run_ctx, kernel});
     rewriter.eraseOp(op);
     return success();
   }
