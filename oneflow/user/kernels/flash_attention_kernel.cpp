@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "fmha.h"
+#include <fmha.h>
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/framework/random_generator_impl.h"
@@ -192,7 +192,6 @@ class FlashAttentionKernel final : public user_op::OpKernel {
         << "flash-attention only support head_size in (16, 32, 64, 128).";
     bool is_sm75 = device_props.major == 7 && device_props.minor == 5;
     bool is_sm80 = device_props.major == 8 && device_props.minor == 0;
-    bool is_sm8x = device_props.major == 8 && device_props.minor >= 0;
     int blocksize_c = ((head_size == 128 && (is_dropout || !is_sm80))
                        || (is_sm75 && head_size == 64 && is_dropout))
                           ? 128
@@ -298,7 +297,6 @@ class FlashAttentionGradKernel final : public user_op::OpKernel {
 
     bool is_sm75 = device_props.major == 7 && device_props.minor == 5;
     bool is_sm80 = device_props.major == 8 && device_props.minor == 0;
-    bool is_sm8x = device_props.major == 8 && device_props.minor >= 0;
     int blocksize_c = ((head_size == 128 && (is_dropout || !is_sm80))
                        || (is_sm75 && head_size == 64 && is_dropout))
                           ? 128
