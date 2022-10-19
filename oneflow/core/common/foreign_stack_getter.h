@@ -18,13 +18,12 @@ limitations under the License.
 
 #include <cstdint>
 #include <utility>
-#include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/thread_local_guard.h"
 
 namespace oneflow {
 
 class Frame {
-  public:
+ public:
   virtual ~Frame() = default;
 };
 

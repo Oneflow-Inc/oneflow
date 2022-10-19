@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/thread_ctx.h"
-#include "oneflow/core/common/foreign_stack_getter.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
