@@ -26,3 +26,4 @@ target_compile_options(of_flash_attention PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
 set_target_properties(of_flash_attention PROPERTIES CUDA_ARCHITECTURES "75;80;86")
 target_include_directories(of_flash_attention PUBLIC $<BUILD_INTERFACE:${flash-attention_SOURCE_DIR}/csrc/flash_attn/src/>)
 target_include_directories(of_flash_attention PRIVATE ${cutlass_SOURCE_DIR}/include)
+install(TARGETS of_flash_attention DESTINATION lib)
