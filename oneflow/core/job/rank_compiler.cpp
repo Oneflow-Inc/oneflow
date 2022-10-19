@@ -50,8 +50,8 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
 
 }  // namespace
 
-Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job* job,
-                                  Plan* plan) const {
+Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job* job, Plan* plan,
+                                  DeallocateContext* deallocate_ctx) const {
   // build task_gph.
   // TODO(levi): we can rewrite this part of code in visitor pattern.
   auto task_gph =
@@ -117,8 +117,7 @@ Maybe<void> RankCompiler::Compile(const HashSet<std::string>& var_op_names, Job*
     }
     plan->mutable_task()->Add(std::move(task_proto));
   });
-  // NOTE(levi): release task_gph here to decrise memory peak.
-  task_gph.reset();
+  deallocate_ctx->Deallocate(std::move(task_gph));
 
   // post-process for plan and delete Singleton<OpGraph>.
   auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();

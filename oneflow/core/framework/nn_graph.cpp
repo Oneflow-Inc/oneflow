@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/async_deallocate_context.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/eager/eager_blob_object.h"
@@ -486,6 +487,8 @@ void DumpCalculationPassName(Job* job) {
 }  // namespace
 
 Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
+  // for async deallocating big objects.
+  AsyncDeallocateContext deallocate_ctx{};
   std::set<std::string> push_pull_keys{};
   const auto& Merge = [&](std::set<std::string>&& keys) {
     push_pull_keys.insert(keys.begin(), keys.end());
@@ -511,11 +514,15 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
     Merge(MultiThreadPushFromMasterToWorkers(std::string(__FUNCTION__) + "_boxing_task_graph",
                                              boxing_task_graph_proto.get(),
                                              PrepareWorkerBoxingTaskGraphProto));
+    // async deallocate `boxing_task_graph`.
+    deallocate_ctx.Deallocate(std::move(boxing_task_graph));
     auto* plan = &plan_;
     double start = GetCurTime();
     // TODO(chengcheng): new memory reused by chunk
-    CHECK_JUST(
-        RankCompiler(boxing_task_graph_proto, rank).Compile(variable_op_names_, &job_, plan));
+    CHECK_JUST(RankCompiler(boxing_task_graph_proto, rank)
+                   .Compile(variable_op_names_, &job_, plan, &deallocate_ctx));
+    // async deallocate `boxing_task_graph_proto`.
+    deallocate_ctx.Deallocate(std::move(boxing_task_graph_proto));
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names_);
 
     VLOG(1) << "Graph name: " << name_ << " rank: " << rank
@@ -529,29 +536,32 @@ Maybe<void> NNGraph::MasterAndWorkerRanksCompile() {
     // PlanUtil::SetForceInplaceMemBlock(plan); NOTE(chengcheng): only for ssp.
     PlanUtil::DumpCtrlRegstInfoToPlan(plan);
     // reachable collective boxing task pairs,
-    HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>> reachable_cb_pairs;
+    auto reachable_cb_pairs =
+        std::make_shared<HashSet<std::pair<int64_t /*src task_id*/, int64_t /*dst task_id*/>>>();
     // generate reachable collective boxing task pairs
     PlanUtil::GenReachableTaskPairs(*plan, &PlanUtil::IsCollectiveBoxingTaskProto,
-                                    &reachable_cb_pairs);
+                                    reachable_cb_pairs.get());
     {
       // merge collective boxing task id pairs from workers.
       IdPairs id_pairs{};
-      if (!GlobalProcessCtx::IsThisProcessMaster()) { InitIdPairs(reachable_cb_pairs, &id_pairs); }
+      if (!GlobalProcessCtx::IsThisProcessMaster()) { InitIdPairs(*reachable_cb_pairs, &id_pairs); }
       const auto& MergePairs = [&](const IdPairs& pairs) {
         CHECK(GlobalProcessCtx::IsThisProcessMaster());
         static std::mutex mutex;
         std::unique_lock<std::mutex> lock(mutex);
-        MergeIdPairs(pairs, &reachable_cb_pairs);
+        MergeIdPairs(pairs, reachable_cb_pairs.get());
       };
       Merge(MultiThreadPullFromWorkersToMaster(std::string(__FUNCTION__) + "_reachable_cb_pairs",
                                                id_pairs, MergePairs));
     }
     if (GlobalProcessCtx::IsThisProcessMaster()) {
       // TODO(chengcheng): test collective boxing for multi-job.
-      PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_, [&] {
-        return std::make_unique<RankPlanTaskGraph>(plan_, reachable_cb_pairs);
+      PlanUtil::GenCollectiveBoxingPlan(&deallocate_ctx, &job_, &plan_, [&] {
+        return std::make_unique<RankPlanTaskGraph>(plan_, *reachable_cb_pairs);
       });
     }
+    // async deallocate `boxing_task_graph_proto`.
+    deallocate_ctx.Deallocate(std::move(reachable_cb_pairs));
     Merge(MultiThreadBroadcastFromMasterToWorkers(
         world_size, std::string(__FUNCTION__) + "_collective_boxing_plan",
         plan_.collective_boxing_plan(), plan_.mutable_collective_boxing_plan()));

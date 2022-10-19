@@ -19,6 +19,7 @@ limitations under the License.
 #include <functional>
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/deallocate_context.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/graph/stream_id.h"
@@ -39,8 +40,14 @@ struct PlanUtil {
   static void SetForceInplaceMemBlock(Plan* plan);
   static void DumpCtrlRegstInfoToPlan(Plan* plan);
   static void GenCollectiveBoxingPlan(
-      Job* job, Plan* plan,
+      DeallocateContext* deallocate_ctx, Job* job, Plan* plan,
       const std::function<std::unique_ptr<PlanTaskGraph>()>& GetPlanTaskGraph);
+  static void GenCollectiveBoxingPlan(
+      Job* job, Plan* plan,
+      const std::function<std::unique_ptr<PlanTaskGraph>()>& GetPlanTaskGraph) {
+    NaiveDeallocateContext deallocate_ctx;
+    return GenCollectiveBoxingPlan(&deallocate_ctx, job, plan, GetPlanTaskGraph);
+  }
   static void GenRegisterHint(Plan* plan);
   static void GenLightPlan(Plan* plan, const std::string& plan_name);
   static void PlanMemoryLog(Plan* plan, const std::string& plan_name);
