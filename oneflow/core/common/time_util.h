@@ -74,7 +74,7 @@ class TimeCounter final {
 template<class Resolution>
 void TimeCounter<Resolution>::Count(const std::string& log_prefix, int v_log_level) {
   const auto end = Clock::now();
-  if (FLAGS_minloglevel <=0 && VLOG_IS_ON(v_log_level) && with_log_ && v_log_level >= 0) {
+  if (FLAGS_minloglevel <= 0 && VLOG_IS_ON(v_log_level) && with_log_ && v_log_level >= 0) {
     // only do time/mem count and log when glog level is INFO and VLOG level is matched.
     auto dur = std::chrono::duration_cast<Resolution>(end - start_).count();
 

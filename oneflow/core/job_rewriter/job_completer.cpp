@@ -130,7 +130,8 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
   JUST(WithOpGraphAndMutJob(job, &MultiClientAutoSourceAndSinkTick));
   compile_tc->Count("[GraphCompile]" + job_name + " MultiClientAutoSourceAndSinkTick", 1);
   JUST(WithOpGraphAndMutJob(job, &MultiClientAutoInterfaceCriticalSectionTick));
-  compile_tc->Count("[GraphCompile]" + job_name + " MultiClientAutoInterfaceCriticalSectionTick", 1);
+  compile_tc->Count("[GraphCompile]" + job_name + " MultiClientAutoInterfaceCriticalSectionTick",
+                    1);
   JUST(JobPass4Name("SystemOpFillJobNamePass")(job, &job_pass_ctx));
   compile_tc->Count("[GraphCompile]" + job_name + " SystemOpFillJobNamePass", 1);
   JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
