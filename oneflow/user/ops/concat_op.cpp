@@ -31,15 +31,18 @@ namespace oneflow {
   for (const auto& in_arg_pair : ctx->inputs()) {
     const user_op::TensorDesc& in_desc =
         ctx->InputTensorDesc(in_arg_pair.first, in_arg_pair.second);
-    if (first_elemcnt != 0 or first_axes != 1) {
+    if (first_elemcnt == 0 and first_axes == 1) {
+      if (in_desc.shape().elem_cnt() != 0 or in_desc.shape().NumAxes() != 1) {
+        out_dim_vec = in_desc.shape().dim_vec();
+        out_dim_vec.at(axis) = 0;
+        first_axes = in_desc.shape().NumAxes();
+        first_elemcnt = in_desc.shape().elem_cnt();
+      } else { continue; }
+    } else if (in_desc.shape().elem_cnt() != 0 or in_desc.shape().NumAxes() != 1) {
       CHECK_EQ_OR_RETURN(in_desc.shape().NumAxes(), first_axes);
-    } else {
-      out_dim_vec = in_desc.shape().dim_vec();
-      out_dim_vec.at(axis) = 0;
-      first_axes = in_desc.shape().NumAxes();
-      first_elemcnt = in_desc.shape().elem_cnt();
     }
     FOR_RANGE(int64_t, i, 0, in_desc.shape().NumAxes()) {
+      if (in_desc.shape().elem_cnt() == 0 and in_desc.shape().NumAxes() == 1) { continue; }
       if (i == axis) {
         if (in_desc.is_dynamic()) {
           dynamic_dim_size += in_desc.shape().At(i);

@@ -495,24 +495,25 @@ class ConcatFunctor {
 
     const std::shared_ptr<const Shape>& shape = inputs[0]->shape();
     for (const auto& input : inputs) {
-      if (nelement != 0) {
+      if (nelement == 0 and ndim == 1) {
+        if (input->nelement() != 0 or input->ndim() != 1) {
+          ndim = input->ndim();
+          nelement = input->nelement();
+        } else { continue; }
+      } else if (input->nelement() != 0 or input->ndim() != 1) {
         CHECK_OR_RETURN(input->ndim() == ndim)
             << Error::RuntimeError() << "Tensors must have same number of dimensions: got " << ndim
             << " and " << input->ndim() << " is expected.";
-      } else {
-        ndim = input->ndim();
-        nelement = input->nelement();
       }
       for (int i = 0; i < ndim; ++i) {
+        if (input->nelement() == 0 and input->ndim() == 1) { continue; }
         if (axis == i) {
           max_dim_size += input->shape()->At(i);
-        } else {
-          if (inputs[0]->nelement() != 0) {
+        } else if (inputs[0]->nelement() != 0) {
             CHECK_OR_RETURN(input->shape()->At(i) == shape->At(i))
                 << Error::RuntimeError() << "Sizes of tensors must match except in dimension "
                 << axis << ". Got " << input->shape()->At(i) << " and " << shape->At(i)
                 << " is expected in dimension " << i << ".";
-          }
         }
       }
     }
