@@ -17,10 +17,8 @@ limitations under the License.
 #include "oneflow/core/common/env_var/vm.h"
 #include "oneflow/core/vm/caching_allocator.h"
 #include "oneflow/core/vm/fuse_instruction_policy.h"
-#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/release_tensor_instruction_policy.h"
 #include "oneflow/core/vm/allocator.h"
-#include "oneflow/core/vm/naive_stream_policy.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/cpp_attribute.h"
@@ -142,7 +140,14 @@ std::string VirtualMachineEngine::GetLivelyInstructionListDebugString(int64_t de
   std::stringstream ss;
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, mut_lively_instruction_list()) {
     if (--debug_cnt <= 0) { break; }
-    ss << instruction->DebugName() << "\n";
+    ss << instruction->DebugName() << " ptr: " << instruction
+       << " dispatched:" << (instruction->dispatched_instruction_hook().empty() ? "0" : "1")
+       << " launched:" << (instruction->Launched() ? "1" : "0")
+       << " done:" << (instruction->Done() ? "1" : "0");
+    INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_in_edges()) {
+      ss << " dep-ptr:" << &edge->src_instruction();
+    }
+    ss << "\n";
   }
   return ss.str();
 }
@@ -179,13 +184,14 @@ void VirtualMachineEngine::ReleaseFinishedInstructions(const ScheduleCtx& schedu
   INTRUSIVE_FOR_EACH_PTR(stream, mut_active_stream_list()) {
     while (true) {
       auto* instruction_ptr = stream->mut_running_instruction_list()->Begin();
-      if (instruction_ptr == nullptr || !instruction_ptr->Done()) { break; }
+      if (instruction_ptr == nullptr) { break; }
+      if (!(instruction_ptr->in_edges().empty() && instruction_ptr->Done())) { break; }
       ReleaseInstruction(instruction_ptr);
       // Prevent destructing instruction_ptr.
       intrusive::shared_ptr<Instruction> instruction =
           stream->mut_running_instruction_list()->Erase(instruction_ptr);
       LivelyInstructionListErase(instruction_ptr);
-      instruction_ptr->DeleteStatusAndClearEdges();
+      instruction_ptr->DeleteStatusAndCheckEdges();
     }
     if (stream->running_instruction_list().empty()) { mut_active_stream_list()->Erase(stream); }
   }
@@ -254,7 +260,7 @@ void VirtualMachineEngine::ConsumeDependences(Instruction* instruction) {
 }
 
 bool VirtualMachineEngine::EdgeDispatchable(const Instruction* src, const Instruction* dst) const {
-  return (&src->stream() == &dst->stream()) /* same stream*/
+  return dst->instruction_policy().Prescheduleable(&src->stream(), &dst->stream())
          && !src->dispatched_instruction_hook().empty() /* dispatched */;
 }
 
@@ -329,10 +335,8 @@ void BusyWaitAllInstructionsDone(Stream* stream) {
 }
 
 void ShrinkMemory(Stream* stream) {
-  auto* stream_policy = stream->mut_stream_policy();
-  auto* naive_stream_policy = CHECK_NOTNULL(dynamic_cast<NaiveStreamPolicy*>(stream_policy));
-  if (naive_stream_policy->device_ctx() == nullptr) { return; }
-  auto* allocator = naive_stream_policy->mut_allocator();
+  auto* allocator = stream->mut_stream_policy()->mut_allocator();
+  if (allocator == nullptr) { return; }
   auto* shrinkable_cache = dynamic_cast<CachingAllocator*>(allocator);
   CHECK_NOTNULL(shrinkable_cache)->Shrink();
 }
@@ -393,7 +397,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
   if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
   // Compute
   if (OnSchedulerThread(*stream)) {
-    stream->stream_policy().Run(instruction);
+    stream->stream_policy().RunIf(instruction);
   } else {
     stream->mut_thread_ctx()->mut_worker_pending_instruction_list()->PushBack(instruction);
     schedule_ctx.OnWorkerLoadPending(stream->mut_thread_ctx());
@@ -488,7 +492,7 @@ void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_
   CHECK(instruction_policy.IsBarrier());
   CHECK(OnSchedulerThread(sequnential_instruction->stream()));
   const StreamPolicy& stream_policy = sequnential_instruction->stream().stream_policy();
-  stream_policy.Run(sequnential_instruction);
+  stream_policy.RunIf(sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
   LivelyInstructionListErase(sequnential_instruction);
 }

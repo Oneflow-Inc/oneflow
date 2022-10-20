@@ -26,7 +26,9 @@ limitations under the License.
 #include "OneFlow/OneFlowOpTraits.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/MLIROneFlowTranslation.h"
+#include "OneFlow/OneFlowUtils.h"
 
+#include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -579,13 +581,6 @@ LogicalResult JobImporter::ProcessJob() {
     }
   });
   if (is_succeeded == false) { return failure(); }
-  SmallVector<mlir::Value, 4> loss_tensors;
-  for (auto& loss_lbn : job_wrapper_.job()->job_conf().train_conf().loss_lbn()) {
-    loss_tensors.push_back(lbn2result_.at(loss_lbn));
-  }
-  if (job_wrapper_.job()->job_conf().train_conf().loss_lbn_size() > 0) {
-    GetBuilder().create<mlir::oneflow::LossMarkerOp>(GetRootLocation(), loss_tensors);
-  }
   mlir::oneflow::ReturnOp return_op;
   if (!entryBlock->empty()) { return_op = dyn_cast<mlir::oneflow::ReturnOp>(entryBlock->back()); }
   if (!return_op) { GetBuilder().create<mlir::oneflow::ReturnOp>(GetRootLocation(), results); }
@@ -786,6 +781,7 @@ void DumpMLIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, ModuleOp module,
 LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wrapper,
                                      MLIRContext* context, OwningOpRef<ModuleOp>& module) {
   mlir::PassManager pm(context);
+  mlir::oneflow::CheckEnableIRPrinting(pm);
   // this canonicalizer should create concrete ops and create fuse opportunities
   pm.addPass(createCanonicalizerPass());
   std::string graphviz;
@@ -800,6 +796,9 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     pm.addPass(oneflow::createPreConvertInferenceOpPass());
     pm.addPass(oneflow::createConvertInferenceOpPass());
     pm.addPass(oneflow::createPostConvertInferenceOpPass());
+  }
+  if (job_wrapper.IsLastIRPass() && std::getenv("ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH") != nullptr) {
+    pm.addPass(createKernelLaunchFunctionPass());
   }
   pm.addPass(createCanonicalizerPass());
   llvm::raw_string_ostream os_graphviz(graphviz);
@@ -866,7 +865,9 @@ std::string ConvertJobToTosaIR(RoundTripOneFlowJobWrapperInterface& job_wrapper)
   if (succeeded(imp.ProcessJob())) {
     mlir::PassManager pm(&context);
     pm.addPass(createCanonicalizerPass());
+    pm.addPass(createConvertToSignlessForTosaPass());
     pm.addPass(createLowerOneFlowToTosaPass());
+    pm.addNestedPass<func::FuncOp>(tosa::createTosaMakeBroadcastablePass());
     if (mlir::failed(pm.run(*module))) {
       module->emitError("Failed to run oneflow-to-tosa pass");
       exit(EXIT_FAILURE);

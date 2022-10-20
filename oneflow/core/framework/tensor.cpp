@@ -64,8 +64,7 @@ std::shared_ptr<Tensor> Parameter::pin_memory() const {
                                                         DataType dtype,
                                                         const Symbol<Device>& device, bool is_lazy,
                                                         bool requires_grad, bool is_leaf) {
-  const auto& tensor_meta =
-      SymbolOf(LocalTensorMeta(std::make_shared<Shape>(*shape), dtype, device));
+  const auto& tensor_meta = SymbolOf(LocalTensorMeta(*shape, dtype, device));
   if (is_lazy) {
     const auto& impl = std::make_shared<LazyLocalTensorImpl>(tensor_meta, requires_grad, is_leaf);
     return std::make_shared<LocalTensor>(impl);
@@ -141,7 +140,7 @@ Maybe<GlobalTensor> GlobalTensor::MakeTensor(const std::shared_ptr<const Shape>&
                                              bool requires_grad, bool is_leaf) {
   std::shared_ptr<GlobalTensorImpl> impl;
   Symbol<GlobalTensorMeta> global_tensor_meta(
-      GlobalTensorMeta(shape, dtype, nd_sbp, parallel_desc));
+      GlobalTensorMeta(*shape, dtype, nd_sbp, parallel_desc));
   if (is_lazy) {
     impl = std::make_shared<LazyGlobalTensorImpl>(global_tensor_meta, requires_grad, is_leaf);
   } else {

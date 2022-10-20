@@ -51,6 +51,10 @@ class ControlStreamPolicy final : public StreamPolicy {
     auto* ptr = NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer());
     ptr->~NaiveInstrStatusQuerier();
   }
+  bool QueryInstructionStatusLaunched(const Stream& stream,
+                                      const InstructionStatusBuffer& status_buffer) const override {
+    return NaiveInstrStatusQuerier::Cast(status_buffer.buffer())->launched();
+  }
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override {
     return NaiveInstrStatusQuerier::Cast(status_buffer.buffer())->done();
@@ -61,7 +65,7 @@ class ControlStreamPolicy final : public StreamPolicy {
     NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer())->set_done();
   }
 
-  bool OnSchedulerThread(StreamRole) const override { return true; }
+  bool OnSchedulerThread(StreamType) const override { return true; }
   bool SupportingTransportInstructions() const override { return false; }
 };
 

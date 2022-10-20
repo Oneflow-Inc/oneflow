@@ -38,6 +38,7 @@ limitations under the License.
 #include "oneflow/core/hardware/node_device_descriptor_manager.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
+#include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
@@ -49,6 +50,7 @@ limitations under the License.
 #include "oneflow/core/embedding/embedding_manager.h"
 #ifdef WITH_RDMA
 #include "oneflow/core/platform/include/ibv.h"
+#include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #endif  // WITH_RDMA
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/ep/cpu/cpu_device_manager.h"
@@ -106,7 +108,19 @@ void ClearAllSymbol() {
 
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
-bool CommNetIBEnabled() { return ibv::IsAvailable(); }
+bool CommNetIBEnabled() {
+  if (!ibv::IsAvailable()) { return false; }
+  const auto* node_manager = Singleton<hardware::NodeDeviceDescriptorManager>::Get();
+  if (node_manager == nullptr) { return false; }
+  for (int64_t rank = 0; rank < GlobalProcessCtx::WorldSize(); ++rank) {
+    const auto& node = node_manager->GetNodeDeviceDescriptor(rank);
+    if (!node) { return false; }
+    const auto& list = node->GetDeviceDescriptorList("net_ib");
+    if (!list) { return false; }
+    if (list->DeviceCount() == 0) { return false; }
+  }
+  return true;
+}
 
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX
 
@@ -169,10 +183,10 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 #ifdef WITH_CUDA
   Singleton<EagerNcclCommMgr>::New();
   Singleton<CudnnConvAlgoCache>::New();
+  Singleton<CudnnHandlePool>::New();
   Singleton<embedding::EmbeddingManager>::New();
 #endif
   Singleton<vm::VirtualMachineScope>::New(Singleton<ResourceDesc, ForSession>::Get()->resource());
-  Singleton<EagerJobBuildAndInferCtxMgr>::New();
 #ifdef __linux__
   Singleton<EpollCommNet>::New();
   Singleton<Transport>::New();
@@ -213,11 +227,11 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Singleton<Transport>::Delete();
   Singleton<EpollCommNet>::Delete();
 #endif  // __linux__
-  Singleton<EagerJobBuildAndInferCtxMgr>::Delete();
   Singleton<vm::VirtualMachineScope>::Delete();
 #ifdef WITH_CUDA
   Singleton<embedding::EmbeddingManager>::Delete();
   Singleton<CudnnConvAlgoCache>::Delete();
+  Singleton<CudnnHandlePool>::Delete();
   Singleton<EagerNcclCommMgr>::Delete();
 #endif
   Singleton<ThreadPool>::Delete();
@@ -233,6 +247,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Singleton<ProcessCtx>::Delete();
   Singleton<EnvDesc>::Delete();
   ClearAllSymbol();
+  ClearAllBackwardPassScope();
   if (Singleton<EnvGlobalObjectsScope>::Get() != nullptr) {
     Singleton<EnvGlobalObjectsScope>::SetAllocated(nullptr);
   }
@@ -270,6 +285,20 @@ Maybe<bool> RDMAIsInitialized() {
 #else
   return false;
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX
+}
+
+Maybe<void> DestoryRDMA() {
+#if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
+  if (JUST(RDMAIsInitialized())) {
+    CHECK_NOTNULL(Singleton<IBVerbsCommNet>::Get());
+    CHECK_NOTNULL(Singleton<CommNet>::Get());
+    Singleton<IBVerbsCommNet>::Delete();
+    if (Singleton<EpollCommNet>::Get()) {
+      Singleton<CommNet>::SetAllocated(Singleton<EpollCommNet>::Get());
+    }
+  }
+#endif  // WITH_RDMA && OF_PLATFORM_POSIX
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow

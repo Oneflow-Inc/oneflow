@@ -134,6 +134,30 @@ class TestDiv(flow.unittest.TestCase):
         z = x / y
         return z
 
+    @autotest(n=3)
+    def test_non_contiguous_inplace_div(test_case):
+        device = random_device()
+        x = random_tensor(2, 2, 4).to(device)
+        y = x + 1
+        y = y[:, 1:3]
+        y /= random_tensor(2, 2, 2).to(device)
+        return y
+
+    @autotest(n=5)
+    def test_scalar_div_with_random_devices(test_case):
+        x1_device = random_device()
+        x2_device = random_device()
+        x1 = random_tensor(2, 2, 3).to(x1_device).mean()
+        x2 = random_tensor(2, 2, 3).to(x2_device)
+        y = x1 / x2
+        return y
+
+    @profile(torch.div)
+    def profile_div(test_case):
+        input1 = torch.ones(16, 10, 128, 128)
+        input2 = torch.ones(16, 10, 128, 128)
+        torch.div(input1, input2)
+
 
 if __name__ == "__main__":
     unittest.main()

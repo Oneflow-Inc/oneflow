@@ -40,6 +40,7 @@ limitations under the License.
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
@@ -50,8 +51,56 @@ namespace mlir {
 
 namespace oneflow {
 
-Value CreateTranspose(Location& loc, ConversionPatternRewriter& rewriter, Value input,
-                      ArrayRef<int32_t> perms) {
+Type convertToSignless(MLIRContext* context, Type type) {
+  if (auto ranked_tensor = type.dyn_cast<RankedTensorType>()) {
+    if (auto intTy = ranked_tensor.getElementType().dyn_cast<IntegerType>()) {
+      if (!intTy.isSignless()) {
+        return RankedTensorType::get(
+            ranked_tensor.getShape(),
+            IntegerType::get(context, intTy.getWidth(),
+                             mlir::IntegerType::SignednessSemantics::Signless));
+      }
+    }
+  }
+  return type;
+}
+
+FunctionType convertToSignlessFuncType(MLIRContext* context, FunctionType funcType) {
+  llvm::SmallVector<Type, 4> inputs;
+  llvm::SmallVector<Type, 4> results;
+  for (auto arg : funcType.getInputs()) { inputs.push_back(convertToSignless(context, arg)); }
+  for (auto res : funcType.getResults()) { results.push_back(convertToSignless(context, res)); }
+  return FunctionType::get(context, inputs, results);
+}
+
+bool isSignLessTensorOrOther(Type type) {
+  if (auto ranked_tensor = type.dyn_cast<RankedTensorType>()) {
+    if (auto intTy = ranked_tensor.getElementType().dyn_cast<IntegerType>()) {
+      if (intTy.isUnsigned()) { return false; }
+      if (intTy.isSigned()) { return false; }
+    }
+  }
+  return true;
+}
+bool allSignless(mlir::TypeRange types) {
+  for (auto type : types) {
+    if (!isSignLessTensorOrOther(type)) { return false; }
+  }
+  return true;
+}
+
+bool allSignless(FunctionType funcType) {
+  for (auto arg : funcType.getInputs()) {
+    if (!isSignLessTensorOrOther(arg)) { return false; }
+  }
+  for (auto res : funcType.getResults()) {
+    if (!isSignLessTensorOrOther(res)) { return false; }
+  }
+  return true;
+}
+
+Value CreateTransposeValue(Location& loc, ConversionPatternRewriter& rewriter, Value input,
+                           ArrayRef<int32_t> perms) {
   int perms_size = perms.size();
   auto transpose_perms = rewriter.create<tosa::ConstOp>(
       loc, RankedTensorType::get({perms_size}, rewriter.getI32Type()),
@@ -61,6 +110,12 @@ Value CreateTranspose(Location& loc, ConversionPatternRewriter& rewriter, Value 
   for (const auto& index : perms) ranked_type.push_back(shape_type.getDimSize(index));
   return rewriter.create<tosa::TransposeOp>(
       loc, RankedTensorType::get(ranked_type, shape_type.getElementType()), input, transpose_perms);
+};
+
+RankedTensorType CreateTransposeType(ShapedType output, ArrayRef<int32_t> perms) {
+  std::vector<int64_t> ranked_type;
+  for (auto index : perms) ranked_type.push_back(output.getDimSize(index));
+  return RankedTensorType::get(ranked_type, output.getElementType());
 };
 
 Value CreateBNOp(Location loc, ConversionPatternRewriter& rewriter, Value output, Value x,
@@ -88,20 +143,6 @@ struct ScalarMulByTensorOpLowering final : public OpConversionPattern<ScalarMulB
   LogicalResult matchAndRewrite(ScalarMulByTensorOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
     Value scalar = op.scalar();
-    if (auto scalar_type = scalar.getType().dyn_cast<RankedTensorType>()) {
-      auto rank = op.x().getType().dyn_cast<RankedTensorType>().getRank();
-      if (scalar_type.getRank() != rank) {
-        std::vector<int64_t> perm(rank);
-        std::fill(perm.begin(), perm.end(), 1);
-        scalar = rewriter
-                     .create<tosa::ReshapeOp>(
-                         op->getLoc(),
-                         RankedTensorType::get(
-                             perm, scalar.getType().cast<TensorType>().getElementType()),
-                         scalar, rewriter.getI64ArrayAttr(perm))
-                     .output();
-      }
-    }
     rewriter.replaceOpWithNewOp<tosa::MulOp>(
         op,
         /* output */ op->getResultTypes().front().cast<TensorType>(),
@@ -117,8 +158,8 @@ struct JobLowering final : public OpConversionPattern<Job> {
   using OpConversionPattern<Job>::OpConversionPattern;
   LogicalResult matchAndRewrite(Job op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto func =
-        rewriter.create<mlir::func::FuncOp>(op.getLoc(), op.getName(), op.getFunctionType());
+    auto func_type = convertToSignlessFuncType(op->getContext(), op.function_type());
+    auto func = rewriter.create<mlir::func::FuncOp>(op.getLoc(), op.getName(), func_type);
     rewriter.inlineRegionBefore(op.getRegion(), func.getBody(), func.end());
     rewriter.eraseOp(op);
     return success();
@@ -283,12 +324,6 @@ struct AvgPool2DOpLowering final : public OpConversionPattern<AvgPool2DOp> {
               arr.getValue()[1].cast<IntegerAttr>().getSInt()};
     };
 
-    auto reshape_type = [](ShapedType shape_type, ArrayRef<int32_t> perms) -> RankedTensorType {
-      std::vector<int64_t> ranked_type;
-      for (auto index : perms) ranked_type.push_back(shape_type.getDimSize(index));
-      return RankedTensorType::get(ranked_type, shape_type.getElementType());
-    };
-
     auto stride_pairs = get_pair_int64_from_array(op.stride());
     auto pad_pairs = get_pair_int64_from_array(op.padding());
     auto kernel_pairs = get_pair_int64_from_array(op.kernel_size());
@@ -301,12 +336,12 @@ struct AvgPool2DOpLowering final : public OpConversionPattern<AvgPool2DOp> {
     const auto pad = rewriter.getI64ArrayAttr(
         {pad_pairs.first, pad_pairs.second, pad_pairs.first, pad_pairs.second});
 
-    auto input = CreateTranspose(loc, rewriter, op.x(), perms);
-    auto output = reshape_type(op.y().getType().cast<ShapedType>(), perms);
+    auto input = CreateTransposeValue(loc, rewriter, op.x(), perms);
+    auto output = CreateTransposeType(op.y().getType().cast<ShapedType>(), perms);
 
     auto avg_pool2d = rewriter.create<tosa::AvgPool2dOp>(loc, output, input, kernel, stride, pad);
 
-    auto out = CreateTranspose(loc, rewriter, avg_pool2d, {0, 3, 1, 2});
+    auto out = CreateTransposeValue(loc, rewriter, avg_pool2d, {0, 3, 1, 2});
     rewriter.replaceOp(op, {out});
     return success();
   }
@@ -320,11 +355,6 @@ struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
     auto get_pair_int64_from_array = [](ArrayAttr arr) -> std::pair<int64_t, int64_t> {
       return {arr.getValue()[0].cast<IntegerAttr>().getSInt(),
               arr.getValue()[1].cast<IntegerAttr>().getSInt()};
-    };
-    auto reshape_type = [](ShapedType shape_type, ArrayRef<int32_t> perms) -> RankedTensorType {
-      std::vector<int64_t> ranked_type;
-      for (auto index : perms) ranked_type.push_back(shape_type.getDimSize(index));
-      return RankedTensorType::get(ranked_type, shape_type.getElementType());
     };
     // TODO: support return indice
     if (op.return_indices()) { return op->emitError("not support return indices now"); }
@@ -340,17 +370,15 @@ struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
     const auto pad = rewriter.getI64ArrayAttr(
         {pad_pairs.first, pad_pairs.second, pad_pairs.first, pad_pairs.second});
 
-    auto input = CreateTranspose(loc, rewriter, op.x(), perms);
-    auto output = reshape_type(op.y().getType().cast<ShapedType>(), perms);
+    auto input = CreateTransposeValue(loc, rewriter, op.x(), perms);
+    auto output = CreateTransposeType(op.y().getType().cast<ShapedType>(), perms);
 
     auto max_pool2d = rewriter.create<tosa::MaxPool2dOp>(loc, output, input, kernel, stride, pad);
+    auto y = CreateTransposeValue(loc, rewriter, max_pool2d, {0, 3, 1, 2});
 
-    auto y = CreateTranspose(loc, rewriter, max_pool2d, {0, 3, 1, 2});
-
-    auto indice_output = op.indice().getType();
+    auto indice_output = convertToSignless(op->getContext(), op.indice().getType());
     auto value = DenseElementsAttr::get(indice_output, rewriter.getZeroAttr(rewriter.getI64Type()));
-
-    auto indice = rewriter.create<tosa::ConstOp>(loc, indice_output, value);
+    tosa::ConstOp indice = rewriter.create<tosa::ConstOp>(loc, indice_output, value);
     rewriter.replaceOp(op, {y, indice});
     return success();
   }
@@ -368,22 +396,24 @@ struct FlattenOpLowering final : public OpConversionPattern<FlattenOp> {
     const auto in_shape = in_type.cast<ShapedType>();
     const auto rank = in_type.dyn_cast<RankedTensorType>().getRank();
 
-    // calculate reshape_vec
-    std::vector<int64_t> reshape_vec;
-    for (auto dim = 0; dim < start_dim; ++dim) { reshape_vec.push_back(in_shape.getDimSize(dim)); }
+    // calculate flatten shape
+    std::vector<int64_t> flatten_shape_vec;
+    for (auto dim = 0; dim < start_dim; ++dim) {
+      flatten_shape_vec.push_back(in_shape.getDimSize(dim));
+    }
     auto last_dim = end_dim < 0 ? rank : end_dim + 1;
     int flatten_size = 1;
     for (auto dim = start_dim; dim < last_dim; ++dim) { flatten_size *= in_shape.getDimSize(dim); }
-    reshape_vec.push_back(flatten_size);
+    flatten_shape_vec.push_back(flatten_size);
     if (end_dim > 0) {
       for (auto dim = end_dim + 1; dim < rank; ++dim) {
-        reshape_vec.push_back(in_shape.getDimSize(dim));
+        flatten_shape_vec.push_back(in_shape.getDimSize(dim));
       }
     }
-    // generate reshape op
-    const auto output = RankedTensorType::get(reshape_vec, in_shape.getElementType());
+    // lowering oneflow flatten op to tosa reshape op
+    const auto output = RankedTensorType::get(flatten_shape_vec, in_shape.getElementType());
     auto input1 = op.in();
-    auto new_shape = rewriter.getI64ArrayAttr(reshape_vec);
+    auto new_shape = rewriter.getI64ArrayAttr(flatten_shape_vec);
 
     rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(op, output, input1, new_shape);
     return success();
@@ -400,7 +430,7 @@ struct MatmulOpLowering final : public OpConversionPattern<MatmulOp> {
 
     auto preprocess = [&](Value matrix, bool transpose) -> Value {
       auto shape_type = matrix.getType().cast<ShapedType>();
-      if (transpose) { matrix = CreateTranspose(loc, rewriter, matrix, {1, 0}); }
+      if (transpose) { matrix = CreateTransposeValue(loc, rewriter, matrix, {1, 0}); }
 
       shape_type = matrix.getType().cast<ShapedType>();
       auto reshape_type = RankedTensorType::get(
@@ -448,16 +478,11 @@ struct NormalizationInferenceOpLowering final
     const auto out_type = op.y().getType();
 
     const auto epsilon_type = RankedTensorType::get({}, rewriter.getF32Type());
-    // epsilon   = reshape(epsilon, shape_1)
     auto epsilon = rewriter.create<tosa::ConstOp>(
         loc, epsilon_type, DenseElementsAttr::get(epsilon_type, op.epsilon()));
-    //  mean = reshape(mean, shape_0)
     auto mean = reshape_dim(out_type, adaptor.moving_mean());
-    //  variance= reshape(variance, shape_0)
     auto variance = reshape_dim(out_type, adaptor.moving_variance());
-    // scale = reshape(scale, shape_0)
     auto gamma = reshape_dim(out_type, adaptor.gamma());
-    // beta = reshape(beta, shape_0)
     auto beta = reshape_dim(out_type, adaptor.beta());
     auto output = op.y();
     auto x = op.x();
@@ -521,11 +546,6 @@ struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
       return {arr.getValue()[0].cast<IntegerAttr>().getSInt(),
               arr.getValue()[1].cast<IntegerAttr>().getSInt()};
     };
-    auto reshape_type = [](ShapedType shape_type, ArrayRef<int32_t> perms) -> RankedTensorType {
-      std::vector<int64_t> ranked_type;
-      for (auto index : perms) ranked_type.push_back(shape_type.getDimSize(index));
-      return RankedTensorType::get(ranked_type, shape_type.getElementType());
-    };
 
     auto stride_pairs = get_pair_int64_from_array(op.strides());
     auto pad_pairs = get_pair_int64_from_array(op.padding_beforeAttr());
@@ -548,28 +568,38 @@ struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
     }
 
     auto perms = {0, 2, 3, 1};
-    auto in = CreateTranspose(loc, rewriter, op.in(), perms);
-    auto weight = CreateTranspose(loc, rewriter, op.weight(), perms);
-    const auto output = reshape_type(op.out().getType().cast<ShapedType>(), perms);
+    auto in = CreateTransposeValue(loc, rewriter, op.in(), perms);
+    auto weight = CreateTransposeValue(loc, rewriter, op.weight(), perms);
+    const auto output = CreateTransposeType(op.out().getType().cast<ShapedType>(), perms);
 
     auto conv2d =
         rewriter.create<tosa::Conv2DOp>(loc, output, in, weight, bias, pad, stride, dilation);
 
-    auto res = CreateTranspose(loc, rewriter, conv2d, {0, 3, 1, 2});
+    auto res = CreateTransposeValue(loc, rewriter, conv2d, {0, 3, 1, 2});
     rewriter.replaceOp(op, {res});
     return success();
-    getTypeConverter();
   }
 };
 
 namespace {
+
 struct OneFlowLoweringToTosaPass : public LowerOneFlowToTosaPassBase<OneFlowLoweringToTosaPass> {
   void runOnOperation() override;
 };
+
+struct ConvertToSignlessForTosaPass
+    : public ConvertToSignlessForTosaPassBase<ConvertToSignlessForTosaPass> {
+  void runOnOperation() override;
+};
+
 }  // namespace
 
 std::unique_ptr<Pass> createLowerOneFlowToTosaPass() {
   return std::make_unique<OneFlowLoweringToTosaPass>();
+}
+
+std::unique_ptr<Pass> createConvertToSignlessForTosaPass() {
+  return std::make_unique<ConvertToSignlessForTosaPass>();
 }
 
 void OneFlowLoweringToTosaPass::runOnOperation() {
@@ -580,11 +610,21 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   target.addIllegalDialect<OneFlowDialect>();
 
   TypeConverter typeConverter;
-  typeConverter.addConversion([](Type type) { return type; });
+  typeConverter.addConversion([context](Type type) { return convertToSignless(context, type); });
+  typeConverter.addSourceMaterialization(
+      [&](OpBuilder& builder, Type resultType, ValueRange inputs, Location loc) -> Optional<Value> {
+        CHECK_EQ(inputs.size(), 1) << "expect to materialize a single value";
+        return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs).getResult(0);
+      });
+  typeConverter.addTargetMaterialization(
+      [&](OpBuilder& builder, Type resultType, ValueRange inputs, Location loc) -> Optional<Value> {
+        CHECK_EQ(inputs.size(), 1) << "expect to materialize a single value";
+        return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs).getResult(0);
+      });
   RewritePatternSet patterns(context);
 
   const auto mgr = ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get();
-  // judge whether the pass is trigger by python through the existence of variable tensor manger
+  // check if the pass is triggered by python based on the presence of variable tensor manger
   if (mgr) {
     patterns.add<VariableOpLowering>(typeConverter, context);
   } else {
@@ -597,9 +637,58 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
            OutputOpLowering, NormalizationOpLowering, NormalizationInferenceOpLowering>(
           typeConverter, context);
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
-    getOperation()->dump();
     signalPassFailure();
+    LOG(ERROR) << "Failed to lower OneFlow to Tosa";
+    getOperation()->dump();
   }
+}
+
+struct ConvertReturnToSignlessPattern : public OpRewritePattern<func::ReturnOp> {
+  explicit ConvertReturnToSignlessPattern(::mlir::MLIRContext* context)
+      : OpRewritePattern<func::ReturnOp>(context, /*benefit=*/1) {}
+  ::mlir::LogicalResult matchAndRewrite(func::ReturnOp op,
+                                        ::mlir::PatternRewriter& rewriter) const override {
+    // make sure result not converted
+    if (allSignless(op.getOperandTypes())) { return failure(); }
+    llvm::SmallVector<Type, 1> results;
+    for (auto res : op->getOperandTypes()) {
+      results.push_back(convertToSignless(op->getContext(), res));
+    }
+    auto uc = rewriter.create<UnrealizedConversionCastOp>(op->getLoc(), results, op.operands());
+    rewriter.replaceOpWithNewOp<func::ReturnOp>(op, op->getResultTypes(), uc->getResults(),
+                                                op->getAttrs());
+    return success();
+  }
+};
+
+struct ConvertFuncToSignlessPattern : public OpRewritePattern<func::FuncOp> {
+  explicit ConvertFuncToSignlessPattern(::mlir::MLIRContext* context)
+      : OpRewritePattern<func::FuncOp>(context, /*benefit=*/1) {}
+  ::mlir::LogicalResult matchAndRewrite(func::FuncOp op,
+                                        ::mlir::PatternRewriter& rewriter) const override {
+    if (allSignless(op.getFunctionType())) { return failure(); }
+    auto ft = convertToSignlessFuncType(op->getContext(), op.getFunctionType());
+    auto func = rewriter.create<mlir::func::FuncOp>(op.getLoc(), op.getName(), ft);
+    BlockAndValueMapping bvm;
+    op.getRegion().cloneInto(&func.getRegion(), bvm);
+    for (auto& block : func.getBody().getBlocks()) {
+      for (auto arg : block.getArguments()) {
+        arg.setType(convertToSignless(op.getContext(), arg.getType()));
+      }
+    }
+    rewriter.eraseOp(op);
+    RewritePatternSet patterns(func->getContext());
+    patterns.add<ConvertReturnToSignlessPattern>(func->getContext());
+    (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
+    return success();
+  }
+};
+
+void ConvertToSignlessForTosaPass::runOnOperation() {
+  Operation* op = getOperation();
+  RewritePatternSet patterns(op->getContext());
+  patterns.add<ConvertFuncToSignlessPattern>(op->getContext());
+  (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
 }
 
 }  // namespace oneflow

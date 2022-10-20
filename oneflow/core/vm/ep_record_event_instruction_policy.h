@@ -93,7 +93,7 @@ class EpRecordEventInstructionPolicy final : public InstructionPolicy {
 
 }  // namespace vm
 
-struct GetRecordEventInstructionPolicy : public StreamRoleVisitor<GetRecordEventInstructionPolicy> {
+struct GetRecordEventInstructionPolicy : public StreamTypeVisitor<GetRecordEventInstructionPolicy> {
   template<typename... Args>
   static Maybe<vm::InstructionPolicy> VisitCompute(DeviceType device_type, Args&&... args) {
     return std::shared_ptr<vm::InstructionPolicy>(
@@ -110,14 +110,7 @@ struct GetRecordEventInstructionPolicy : public StreamRoleVisitor<GetRecordEvent
         new vm::EpRecordEventInstructionPolicy(std::forward<Args>(args)...));
   }
   template<typename... Args>
-  static Maybe<vm::InstructionPolicy> VisitSyncedLaunchedCommNet(DeviceType device_type,
-                                                                 Args&&... args) {
-    return std::shared_ptr<vm::InstructionPolicy>(
-        new vm::EpRecordEventInstructionPolicy(std::forward<Args>(args)...));
-  }
-  template<typename... Args>
-  static Maybe<vm::InstructionPolicy> VisitAsyncedLaunchedCommNet(DeviceType device_type,
-                                                                  Args&&... args) {
+  static Maybe<vm::InstructionPolicy> VisitCcl(DeviceType device_type, Args&&... args) {
     return std::shared_ptr<vm::InstructionPolicy>(
         new vm::EpRecordEventInstructionPolicy(std::forward<Args>(args)...));
   }

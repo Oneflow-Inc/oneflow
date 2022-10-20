@@ -25,7 +25,6 @@ limitations under the License.
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
 #include "oneflow/api/python/functional/tensor_api.yaml.pybind.h"
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/api/python/utils/tensor_utils.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/framework/tensor.h"
@@ -36,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/tensor_index.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace py = pybind11;
 
@@ -207,7 +207,7 @@ static PyObject* PyTensorObject_retain_grad(PyObject* self, PyObject* unused) {
     return PyErr_Format(PyExc_RuntimeError,
                         "can't retain_grad on Tensor that has requires_grad=False");
   }
-  ASSERT(t->set_retain_grad(true));
+  if (!t->is_leaf()) { ASSERT(t->set_retain_grad(true)); }
   Py_RETURN_NONE;
   END_HANDLE_ERRORS
 }
@@ -227,6 +227,47 @@ static PyObject* PyTensorObject_clone(PyObject* self, PyObject* unused) {
 static PyObject* PyTensorObject_zero_(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   ASSERT(EagerLocalTensorZeros(PyTensor_Unpack(self)));
+  Py_XINCREF(self);
+  return self;
+  END_HANDLE_ERRORS
+}
+
+std::vector<Symbol<SbpParallel>> RawSbpBToP(Symbol<NdSbp> nd_sbp) {
+  std::vector<Symbol<SbpParallel>> new_nd_sbp;
+  for (const auto& old_sbp : nd_sbp->sbp_parallel()) {
+    SbpParallel new_sbp = old_sbp;
+    if (new_sbp.has_broadcast_parallel()) { new_sbp.mutable_partial_sum_parallel(); }
+    new_nd_sbp.push_back(SymbolOf(new_sbp));
+  }
+  return new_nd_sbp;
+}
+
+static constexpr auto* SbpBToP = DECORATE(&RawSbpBToP, ThreadLocalCached);
+
+static PyObject* PyTensorObject_zero_grad(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  int set_to_none = 0;
+  static const char* keywords[2] = {"set_to_none", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|p:_zero_grad_", const_cast<char**>(keywords),
+                                   &set_to_none)) {
+    return NULL;
+  }
+  const auto& t = PyTensor_Unpack(self);
+  const auto acc_grad = ASSERT_PTR(t->acc_grad());
+  if (acc_grad) {
+    if (set_to_none) {
+      ASSERT(t->set_acc_grad(NULL));
+    } else {
+      ASSERT(EagerLocalTensorZeros(acc_grad));
+      if (acc_grad->is_global() && acc_grad->is_eager()) {
+        const auto local_tensor = ASSERT_PTR(functional::GlobalToLocal(acc_grad, false));
+        const auto p = ASSERT_PTR(functional::LocalToGlobal(
+            local_tensor, ASSERT(acc_grad->parallel_desc()), SbpBToP(ASSERT(acc_grad->nd_sbp())),
+            *acc_grad->shape(), acc_grad->dtype(), false, false));
+        ASSERT(acc_grad->set_data(p));
+      }
+    }
+  }
   Py_XINCREF(self);
   return self;
   END_HANDLE_ERRORS
@@ -273,7 +314,8 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
     OF_PP_FOR_EACH_TUPLE(SWITCH_EAGER_TENSOR_TO_NUMPY, POD_DATA_TYPE_SEQ)
     case DataType::kFloat16: return ASSERT(EagerLocalTensorToNumpy<float16>(self));
     default: {
-      return PyErr_Format(PyExc_RuntimeError, "Invalid datatype");
+      return PyErr_Format(PyExc_RuntimeError,
+                          ("Invalid datatype " + DataType_Name(data_type)).data());
     }
   }
 #undef SWITCH_EAGER_TENSOR_TO_NUMPY
@@ -323,41 +365,38 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
   END_HANDLE_ERRORS
 }
 
-#define DEFINE_TENSOR_METHOD(T, type_proto)                                               \
-  static PyObject* PyTensorObject__copy_to_numpy_##T(PyObject* self, PyObject* array) {   \
-    HANDLE_ERRORS                                                                         \
-    ASSERT(CopyBetweenLocalTensorAndNumpy<T>(PyTensor_Unpack(self), array,                \
-                                             BlobNumpyCopyUtil<T>::To, "const",           \
-                                             /*block_host_until_done=*/true));            \
-    Py_RETURN_NONE;                                                                       \
-    END_HANDLE_ERRORS                                                                     \
-  }                                                                                       \
-  static PyObject* PyTensorObject__copy_from_numpy_##T(PyObject* self, PyObject* array) { \
-    HANDLE_ERRORS                                                                         \
-    auto* copied = PyArray_NewCopy((PyArrayObject*)array, NPY_CORDER);                    \
-    ASSERT(CopyBetweenLocalTensorAndNumpy<T>(PyTensor_Unpack(self), copied,               \
-                                             BlobNumpyCopyUtil<T>::From, "mut",           \
-                                             /*block_host_until_done=*/false));           \
-    Py_DECREF(copied);                                                                    \
-    Py_RETURN_NONE;                                                                       \
-    END_HANDLE_ERRORS                                                                     \
-  }
-OF_PP_FOR_EACH_TUPLE(DEFINE_TENSOR_METHOD, POD_DATA_TYPE_SEQ)
-#undef DEFINE_TENSOR_METHOD
-
-static PyObject* PyTensorObject__get_copy_local_tensor_to_numpy_func_name(PyObject* self,
-                                                                          PyObject* unused) {
-  HANDLE_ERRORS
-  return functional::CastToPyObject(
-      GetCopyLocalTensorToNumpyFuncName(PyTensor_Unpack(self)->dtype()->data_type()));
-  END_HANDLE_ERRORS
+namespace {
+void CopyFromNumpyArray(ep::Stream* stream,
+                        const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+                        const NumPyArrayPtr& array_ptr) {
+  SyncAutoMemcpy(stream, eager_blob_object->mut_dptr(), array_ptr.data(),
+                 eager_blob_object->ByteSizeOfBlobBody(), eager_blob_object->mem_case(),
+                 memory::MakeHostMemCase());
 }
 
-static PyObject* PyTensorObject__get_copy_local_tensor_from_numpy_func_name(PyObject* self,
-                                                                            PyObject* unused) {
+void CopyToNumpyArray(ep::Stream* stream,
+                      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+                      const NumPyArrayPtr& array_ptr) {
+  SyncAutoMemcpy(stream, array_ptr.data(), eager_blob_object->dptr(),
+                 eager_blob_object->ByteSizeOfBlobBody(), memory::MakeHostMemCase(),
+                 eager_blob_object->mem_case());
+}
+}  // namespace
+   //
+static PyObject* PyTensorObject__copy_to_numpy(PyObject* self, PyObject* array) {
   HANDLE_ERRORS
-  return functional::CastToPyObject(
-      GetCopyLocalTensorFromNumpyFuncName(PyTensor_Unpack(self)->dtype()->data_type()));
+  ASSERT(CopyBetweenLocalTensorAndNumpy(PyTensor_Unpack(self), array, CopyToNumpyArray, "const",
+                                        /*block_host_until_done=*/true));
+  Py_RETURN_NONE;
+  END_HANDLE_ERRORS
+}
+static PyObject* PyTensorObject__copy_from_numpy(PyObject* self, PyObject* array) {
+  HANDLE_ERRORS
+  auto* copied = PyArray_NewCopy((PyArrayObject*)array, NPY_CORDER);
+  ASSERT(CopyBetweenLocalTensorAndNumpy(PyTensor_Unpack(self), copied, CopyFromNumpyArray, "mut",
+                                        /*block_host_until_done=*/false));
+  Py_DECREF(copied);
+  Py_RETURN_NONE;
   END_HANDLE_ERRORS
 }
 
@@ -398,6 +437,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"detach", PyTensorObject_detach, METH_NOARGS, NULL},
     {"clone", PyTensorObject_clone, METH_NOARGS, NULL},
     {"zero_", PyTensorObject_zero_, METH_NOARGS, NULL},
+    {"_zero_grad_", (PyCFunction)PyTensorObject_zero_grad, METH_VARARGS | METH_KEYWORDS, NULL},
     {"register_hook", PyTensorObject_register_hook, METH_O, NULL},
     {"_register_post_grad_accumulation_hook", PyTensorObject__register_post_grad_accumulation_hook,
      METH_O, NULL},
@@ -405,15 +445,8 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"check_meta_consistency", PyTensorObject_check_meta_consistency, METH_NOARGS, NULL},
     {"to_numpy", PyTensorObject_to_numpy, METH_NOARGS, NULL},
     {"type", (PyCFunction)PyTensorObject_type, METH_VARARGS | METH_KEYWORDS, NULL},
-#define DEFINE_TENSOR_METHOD(T, type_proto)                                \
-  {"_copy_to_numpy_" #T, PyTensorObject__copy_to_numpy_##T, METH_O, NULL}, \
-      {"_copy_from_numpy_" #T, PyTensorObject__copy_from_numpy_##T, METH_O, NULL},
-    OF_PP_FOR_EACH_TUPLE(DEFINE_TENSOR_METHOD, POD_DATA_TYPE_SEQ)
-#undef DEFINE_TENSOR_METHOD
-        {"_get_copy_local_tensor_to_numpy_func_name",
-         PyTensorObject__get_copy_local_tensor_to_numpy_func_name, METH_NOARGS, NULL},
-    {"_get_copy_local_tensor_from_numpy_func_name",
-     PyTensorObject__get_copy_local_tensor_from_numpy_func_name, METH_NOARGS, NULL},
+    {"_copy_to_numpy", PyTensorObject__copy_to_numpy, METH_O, NULL},
+    {"_copy_from_numpy", PyTensorObject__copy_from_numpy, METH_O, NULL},
     {"_register_storage_delete_hook", PyTensorObject__register_storage_delete_hook, METH_O, NULL},
     {NULL}};
 

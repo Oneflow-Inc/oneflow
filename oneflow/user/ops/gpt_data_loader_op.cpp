@@ -23,12 +23,12 @@ namespace oneflow {
   int64_t batch_size = ctx->Attr<int64_t>("batch_size");
   int64_t sample_len = ctx->Attr<int64_t>("seq_length") + ctx->Attr<int64_t>("label_length");
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
-  *out_desc->mut_shape() = Shape({batch_size, sample_len});
+  out_desc->set_shape(Shape({batch_size, sample_len}));
   return Maybe<void>::Ok();
 }
 /*static*/ auto MegatronGptMmapDataLoaderOp::InferDataType(user_op::InferContext* ctx)
     -> Maybe<void> {
-  *ctx->MutOutputTensorDesc("out", 0)->mut_data_type() = ctx->Attr<DataType>("dtype");
+  ctx->MutOutputTensorDesc("out", 0)->set_data_type(ctx->Attr<DataType>("dtype"));
   return Maybe<void>::Ok();
 }
 /*static*/ auto MegatronGptMmapDataLoaderOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {

@@ -47,6 +47,7 @@ void registerTestOneFlowTraitsPass() { PassRegistration<TestOneFlowTraitFolder>(
 int32_t main(int32_t argc, char** argv) {
   mlir::registerAllPasses();
   mlir::registerTestOneFlowTraitsPass();
+  mlir::registerConvertToSignlessForTosaPassPass();
   mlir::registerLowerOneFlowToTosaPassPass();
   mlir::registerGpuMapParallelLoopsPassPass();
   mlir::registerBufferHostRegisterPassPass();
@@ -54,6 +55,8 @@ int32_t main(int32_t argc, char** argv) {
 #ifdef WITH_MLIR_CUDA_CODEGEN
   mlir::oneflow::registerGpuSerializeToCubinPass();
 #endif  // WITH_MLIR_CUDA_CODEGEN
+  mlir::registerKernelLaunchFunctionPassPass();
+  mlir::registerConvertOFKLCalleeToLLVMPassPass();
   mlir::registerOutlineJitFunctionPassPass();
   mlir::DialectRegistry registry;
   registry.insert<mlir::sbp::SBPDialect>();

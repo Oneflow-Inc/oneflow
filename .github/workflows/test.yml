@@ -435,7 +435,6 @@ jobs:
             module
             misc
             speed-test
-            benchmark
 
   test-distributed:
     name: Distributed test suite
@@ -866,12 +865,12 @@ jobs:
             sleep 7200
       - name: Exe test
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
-        timeout-minutes: 10
+        timeout-minutes: 20
         run: |
           docker exec ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} ./liboneflow-ci-linux/bin/oneflow_testexe
       - name: Exe test (C++ API)
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
-        timeout-minutes: 10
+        timeout-minutes: 20
         run: |
           docker exec -e ONEFLOW_SERVING_DEBUG=1 ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} ./liboneflow-ci-linux/bin/oneflow_cpp_api_testexe
       - name: Exe test (C++ API with sanitizers)
@@ -1022,7 +1021,7 @@ jobs:
             ${{ env.TEST_CONTAINER_NAME }} bash ci/test/expensive_generic_test_multi_client.sh
       - name: Exception API test
         timeout-minutes: 45
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && false }}
         run: docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/multi_client_exception_test.sh
       - name: Dataloader API test
         timeout-minutes: 45
@@ -1034,6 +1033,12 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/tensor ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
+      - name: Test mocking torch by script
+        run: |
+          docker exec ${{ env.TEST_CONTAINER_NAME }} bash -x ci/test/test_mock_script.sh
+      - name: Test mocking torch by function
+        run: |
+          docker exec ${{ env.TEST_CONTAINER_NAME }} bash -x ci/test/test_mock_function.sh
       - name: Benchmark Test
         timeout-minutes: 100
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'benchmark' && matrix.device == 'cuda' }}

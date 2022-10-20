@@ -19,12 +19,13 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.bernoulli,
     """
-    bernoulli(x, *, generator=None, out=None)
+    bernoulli(input, p, *, generator=None, out=None)
     
     This operator returns a Tensor with binaray random numbers (0 / 1) from a Bernoulli distribution.
 
     Args:
-        x (Tensor): the input tensor of probability values for the Bernoulli distribution
+        input (Tensor): the input tensor of probability values for the Bernoulli distribution
+        p (float, optional): the probability for the Bernoulli distribution. If specified, Bernoulli distribution will use p for sampling, not input
         generator (Generator, optional): a pseudorandom number generator for sampling
         out (Tensor, optional): the output tensor.
 
@@ -52,6 +53,16 @@ add_docstr(
         tensor([[1., 1., 1.],
                 [1., 1., 1.],
                 [1., 1., 1.]], dtype=oneflow.float32)
+        >>> y = flow.bernoulli(x, 1)
+        >>> y
+        tensor([[1., 1., 1.],
+                [1., 1., 1.],
+                [1., 1., 1.]], dtype=oneflow.float32)
+        >>> y = flow.bernoulli(x, p=0)
+        >>> y
+        tensor([[0., 0., 0.],
+                [0., 0., 0.],
+                [0., 0., 0.]], dtype=oneflow.float32)
 
     """,
 )
@@ -313,6 +324,58 @@ add_docstr(
         >>> y = flow.randperm(5, generator=generator, placement=placement, sbp=flow.sbp.broadcast) # construct global tensor
         >>> y.is_global
         True
+
+    """,
+)
+
+add_docstr(
+    oneflow.multinomial,
+    """
+    multinomial(input, num_samples, replacement=False, generator=None) -> LongTensor
+    
+    Returns a tensor where each row contains :attr:`num_samples` indices sampled
+    from the multinomial probability distribution located in the corresponding row
+    of tensor :attr:`input`.
+
+    .. note::
+      The rows of :attr:`input` do not need to sum to one (in which case we use
+      the values as weights), but must be non-negative, finite and have
+      a non-zero sum.
+
+    Indices are ordered from left to right according to when each was sampled
+    (first samples are placed in first column).
+
+    If :attr:`input` is a vector, :attr:`out` is a vector of size :attr:`num_samples`.
+
+    If :attr:`input` is a matrix with `m` rows, :attr:`out` is an matrix of shape
+    :math:`(m x num\_samples)`.
+
+    If replacement is ``True``, samples are drawn with replacement.
+
+    If not, they are drawn without replacement, which means that when a
+    sample index is drawn for a row, it cannot be drawn again for that row.
+
+    .. note::
+        When drawn without replacement, :attr:`num_samples` must be lower than
+        number of non-zero elements in :attr:`input` (or the min number of non-zero
+        elements in each row of :attr:`input` if it is a matrix).
+
+    Args:
+        input (Tensor): the input tensor containing probabilities
+        num_samples (int): number of samples to draw
+        replacement (bool, optional): whether to draw with replacement or not
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> gen = flow.manual_seed(0)
+        >>> weights = flow.tensor([0, 10, 3, 0], dtype=flow.float) # create a tensor of weights
+        >>> flow.multinomial(weights, 2)
+        tensor([1, 2], dtype=oneflow.int64)
+        >>> flow.multinomial(weights, 4, replacement=True)
+        tensor([1, 2, 1, 1], dtype=oneflow.int64)
 
     """,
 )

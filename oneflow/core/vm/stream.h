@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/optional.h"
-#include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/stream_type.h"
 #include "oneflow/core/vm/stream_policy.h"
 
 namespace oneflow {
@@ -56,20 +56,20 @@ class Stream final : public intrusive::Base {
   DispatchedInstructionList* mut_running_instruction_list() { return &running_instruction_list_; }
 
   // methods
-  void __Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamRole stream_role,
+  void __Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamType stream_type,
                 const intrusive::shared_ptr<Dependence>& schedule_local_dep_object,
-                const Optional<intrusive::shared_ptr<Dependence>>& transport_local_dep_object);
+                const std::vector<intrusive::shared_ptr<Dependence>>& transport_dependences);
   int64_t device_id() const;
   Symbol<Device> device() const { return device_; }
-  StreamRole stream_role() const { return stream_role_; }
+  StreamType stream_type() const { return stream_type_; }
   bool on_scheduler_thread() const { return on_scheduler_thread_; }
 
   const intrusive::shared_ptr<Dependence>& schedule_local_dep_object() const {
     return schedule_local_dep_object_;
   }
 
-  const Optional<intrusive::shared_ptr<Dependence>>& transport_local_dep_object() const {
-    return transport_local_dep_object_;
+  const std::vector<intrusive::shared_ptr<Dependence>>& transport_dependences() const {
+    return transport_dependences_;
   }
 
  private:
@@ -83,7 +83,7 @@ class Stream final : public intrusive::Base {
       : intrusive_ref_(),
         thread_ctx_(),
         device_(),
-        stream_role_(StreamRole::kInvalid),
+        stream_type_(StreamType::kInvalid),
         stream_policy_(),
         on_scheduler_thread_(false),
         running_instruction_list_(),
@@ -93,14 +93,14 @@ class Stream final : public intrusive::Base {
   // fields
   ThreadCtx* thread_ctx_;
   Symbol<Device> device_;
-  StreamRole stream_role_;
+  StreamType stream_type_;
   std::shared_ptr<StreamPolicy> stream_policy_;
   bool on_scheduler_thread_;
   // lists
   DispatchedInstructionList running_instruction_list_;
 
   intrusive::shared_ptr<Dependence> schedule_local_dep_object_;
-  Optional<intrusive::shared_ptr<Dependence>> transport_local_dep_object_;
+  std::vector<intrusive::shared_ptr<Dependence>> transport_dependences_;
 
  public:
   // list hooks

@@ -19,7 +19,6 @@ limitations under the License.
 #include <functional>
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_policy_util.h"
-#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/vm_object.h"
 
 namespace oneflow {

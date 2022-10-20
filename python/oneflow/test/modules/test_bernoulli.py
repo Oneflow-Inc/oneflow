@@ -25,11 +25,18 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_bernoulli(test_case, shape):
+def _test_bernoulli(test_case, shape, p, dtype):
     input_arr = np.ones(shape)
     x = flow.tensor(input_arr, dtype=flow.float32, device=flow.device("cpu"))
-    y = flow.bernoulli(x)
-    test_case.assertTrue(np.allclose(y.numpy(), x.numpy()))
+    if p is None:
+        y = flow.bernoulli(x, dtype=dtype)
+    else:
+        y = flow.bernoulli(x, p=p, dtype=dtype)
+    test_case.assertTrue(y.dtype == dtype)
+    if p == 1 or p is None:
+        test_case.assertTrue(np.allclose(y.numpy(), x.numpy()))
+    elif p == 0:
+        test_case.assertTrue(np.allclose(y.numpy(), np.zeros(shape)))
 
 
 def _test_bernoulli_with_generator(test_case, shape):
@@ -50,6 +57,8 @@ class TestBernoulli(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_functions"] = [_test_bernoulli]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
+        arg_dict["p"] = [None, 0, 1]
+        arg_dict["dtype"] = [flow.float32, flow.int64]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
@@ -58,6 +67,13 @@ class TestBernoulli(flow.unittest.TestCase):
     def test_flow_bernoulli_with_random_data(test_case):
         input = random_tensor(ndim=1).to("cpu")
         return torch.bernoulli(input)
+
+    """
+    @profile(torch.bernoulli) 
+    def profile_bernoulli(test_case):
+        torch.bernoulli(torch.ones(3, 3))
+        torch.bernoulli(torch.zeros(3, 3))
+    """
 
 
 if __name__ == "__main__":

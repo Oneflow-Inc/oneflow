@@ -129,7 +129,7 @@ class SlowReleaseTensorInstructionPolicy final : public ReleaseTensorInstruction
 };
 
 struct MakeReleaseTensorInstructionPolicy
-    : public StreamRoleVisitor<MakeReleaseTensorInstructionPolicy> {
+    : public StreamTypeVisitor<MakeReleaseTensorInstructionPolicy> {
   static Maybe<vm::InstructionPolicy> VisitCompute(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
@@ -145,12 +145,7 @@ struct MakeReleaseTensorInstructionPolicy
       const Optional<vm::Stream*>& stream) {
     return Make(data_type, eager_blob_object, stream);
   }
-  static Maybe<vm::InstructionPolicy> VisitSyncedLaunchedCommNet(
-      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-      const Optional<vm::Stream*>& stream) {
-    return Make(data_type, eager_blob_object, stream);
-  }
-  static Maybe<vm::InstructionPolicy> VisitAsyncedLaunchedCommNet(
+  static Maybe<vm::InstructionPolicy> VisitCcl(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     return Make(data_type, eager_blob_object, stream);

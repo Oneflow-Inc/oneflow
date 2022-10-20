@@ -24,6 +24,9 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/matmul.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/cuda/layer_norm.cuh"
+#if CUDA_VERSION >= 11000
+#include <cuda_bf16.h>
+#endif  // CUDA_VERSION >= 11000
 
 namespace oneflow {
 
@@ -45,14 +48,14 @@ struct AffineStore {
           *(reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(gamma) + gamma_offset);
     } else {
 #pragma unroll
-      for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = 1; }
+      for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = static_cast<DST>(1.f); }
     }
     if (do_center) {
       beta_pack.storage =
           *(reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(beta) + gamma_offset);
     } else {
 #pragma unroll
-      for (int i = 0; i < N; ++i) { beta_pack.elem[i] = 0; }
+      for (int i = 0; i < N; ++i) { beta_pack.elem[i] = static_cast<DST>(0.f); }
     }
 #pragma unroll
     for (int i = 0; i < N; ++i) {
@@ -87,7 +90,7 @@ struct ScaleLoad {
           *(reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(gamma) + gamma_offset);
     } else {
 #pragma unroll
-      for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = static_cast<SRC>(1); }
+      for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = static_cast<SRC>(1.f); }
     }
 #pragma unroll
     for (int i = 0; i < N; ++i) {
@@ -331,6 +334,9 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
 REGISTER_LAYER_NORM_CUDA_KERNEL(float)
 REGISTER_LAYER_NORM_CUDA_KERNEL(double)
 REGISTER_LAYER_NORM_CUDA_KERNEL(half)
+#if CUDA_VERSION >= 11000
+REGISTER_LAYER_NORM_CUDA_KERNEL(nv_bfloat16)
+#endif
 
 template<typename T>
 class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -382,6 +388,9 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
 REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(float)
 REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(double)
 REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(half)
+#if CUDA_VERSION >= 11000
+REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(nv_bfloat16)
+#endif
 
 template<typename T>
 class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
@@ -460,5 +469,8 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
 REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(float)
 REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(double)
 REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(half)
+#if CUDA_VERSION >= 11000
+REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(nv_bfloat16)
+#endif
 
 }  // namespace oneflow
