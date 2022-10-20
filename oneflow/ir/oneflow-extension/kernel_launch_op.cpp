@@ -20,6 +20,7 @@ limitations under the License.
 #include "OneFlow/UserOpReflection.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/Extension.h"
+#include "OneFlow/OKL/Conversion/Conversion.h"
 #include "llvm/ADT/StringRef.h"
 #include "mlir/IR/MLIRContext.h"
 #include "oneflow/core/common/singleton.h"
@@ -297,10 +298,10 @@ void DoCompute(user_op::KernelComputeContext* ctx) {
     exit(1);
   }
   // lower oneflow.kernel_launch to llvm dialect
-  if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(*module))) {
-    LOG(ERROR) << "Failed to lower oneflow.kernel_launch to llvm.";
-    exit(1);
-  }
+  // if (failed(mlir::oneflow::LowerKernelLaunchModuleToLLVM(*module))) {
+  //   LOG(ERROR) << "Failed to lower oneflow.kernel_launch to llvm.";
+  //   exit(1);
+  // }
   // create and run jit engine with llvm ir
   auto engine = std::make_shared<JIT_Engine>(*module);
   engine->Run(kernel_func_name, (void*)ctx);

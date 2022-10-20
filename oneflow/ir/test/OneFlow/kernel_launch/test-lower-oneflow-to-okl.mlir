@@ -1,5 +1,5 @@
 // RUN: oneflow-opt %s \
-// RUN: -lower-oneflow-to-okl  -canonicalize | FileCheck %s
+// RUN: -lower-to-okl  -canonicalize | FileCheck %s
 
 module {
   func.func @wrap0(%arg0: !okl.launcher_ctx) {

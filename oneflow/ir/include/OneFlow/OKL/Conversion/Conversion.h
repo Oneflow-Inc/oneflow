@@ -13,20 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_CONVERSION_OKLTOLLVM_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_CONVERSION_OKLTOLLVM_H_
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_CONVERSION_CONVERSION_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_CONVERSION_CONVERSION_H_
 
-#include "mlir/Pass/Pass.h"
+#include "OneFlow/OKL/Conversion/FetchFromLauncher.h"
+#include "OneFlow/OKL/Conversion/OKLToLLVM.h"
+#include "OneFlow/OKL/Conversion/OnlyKeepComputeOps.h"
+#include "OneFlow/OKL/Conversion/SplitIntoFuncs.h"
+#include "mlir/IR/BuiltinOps.h"
 
 namespace mlir {
 
 namespace okl {
 
-std::unique_ptr<mlir::Pass> createLowerOKLToLLVMFuncPass();
-std::unique_ptr<mlir::Pass> createLowerOKLToLLVMCallPass();
+LogicalResult LowerWrapOpsToOKL(ModuleOp module);
+
+LogicalResult LowerOKLComputeToLLVM(ModuleOp module);
 
 }  // namespace okl
 
 }  // namespace mlir
 
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_CONVERSION_OKLTOLLVM_H_
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_CONVERSION_CONVERSION_H_

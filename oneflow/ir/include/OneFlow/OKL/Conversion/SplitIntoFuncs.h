@@ -17,7 +17,6 @@ limitations under the License.
 #ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_CONVERSION_SPLITINTOFUNCS_H_
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_CONVERSION_SPLITINTOFUNCS_H_
 
-#include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {

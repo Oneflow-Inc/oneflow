@@ -934,8 +934,7 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     if (op->hasAttr("compiled")) { return success(); }
     op->setAttr("compiled", rewriter.getStringAttr("true"));
 
-    const std::string& prefix_name = "_mlir__mlir_ciface_";
-    auto func_name = prefix_name + "okl_func";
+    auto func_name = "okl_func";
 
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointAfter(op);
@@ -1169,16 +1168,6 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
       mlir::bufferization::createFinalizingBufferizePass());  // finalizing-bufferize
 }
 
-LogicalResult LowerKernelLaunchModuleToLLVM(ModuleOp module) {
-  mlir::PassManager pm(module->getContext());
-  pm.addPass(createLowerToOKLPass());  // lower-oneflow-to-okl
-  // TODO:
-  pm.addPass(okl::createLowerOKLToLLVMFuncPass());   // lower-okl-to-llvm-func
-  pm.addPass(createConvertFuncToLLVMPass());         // convert-func-to-llvm
-  pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
-  CheckEnableIRPrinting(pm);
-  return pm.run(module);
-}
 
 LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   mlir::PassManager pm(context);

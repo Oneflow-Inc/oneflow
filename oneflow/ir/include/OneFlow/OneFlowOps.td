@@ -284,7 +284,7 @@ def TrimReturnAsVoidPass : Pass<"trim-return-as-void", "ModuleOp"> {
   let constructor = "mlir::oneflow::createTrimReturnAsVoidPass()";
 }
 
-def LowerToOKLPass : Pass<"lower-oneflow-to-okl", "ModuleOp"> {
+def LowerToOKLPass : Pass<"lower-to-okl", "ModuleOp"> {
   let summary = "convert oneflow.kernel_launch to okl dialect";
   let constructor = "mlir::oneflow::createLowerToOKLPass()";
 }

@@ -161,9 +161,11 @@ struct LaunchOpLowering final : public OpConversionPattern<LaunchOp> {
 
 struct FunctionOpLowering final : public OpConversionPattern<func::FuncOp> {
   static LogicalResult ConvertOKLFuncToLLVM(func::FuncOp op, ConversionPatternRewriter& rewriter) {
+    auto func_name = "_mlir__mlir_ciface_okl_compute";
     auto void_type = LLVM::LLVMVoidType::get(rewriter.getContext());
     auto func_type = LLVM::LLVMFunctionType::get(void_type, {GetPtrType(rewriter)}, false);
-    auto func = rewriter.create<mlir::LLVM::LLVMFuncOp>(op.getLoc(), op.getName(), func_type);
+    auto func = rewriter.create<mlir::LLVM::LLVMFuncOp>(op.getLoc(), func_name, func_type);
+    func->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
     BlockAndValueMapping bvm;
     op.getRegion().cloneInto(&func.getRegion(), bvm);
     auto& block = func.getBody().getBlocks().front();
