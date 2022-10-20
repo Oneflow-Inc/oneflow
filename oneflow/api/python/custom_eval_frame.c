@@ -21,9 +21,12 @@ limitations under the License.
 #include <Python.h>
 #include <frameobject.h>
 #include <pystate.h>
+// see https://bugs.python.org/issue35886
+#if PY_VERSION_HEX >= 0x03080000
 #define Py_BUILD_CORE
 #include "internal/pycore_pystate.h"
 #undef Py_BUILD_CORE
+#endif
 
 inline static void EnableCustomEvalFrame(PyThreadState* tstate, _PyFrameEvalFunction eval_func) {
 #if PY_VERSION_HEX >= 0x03090000
