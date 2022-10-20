@@ -318,6 +318,28 @@ if np.allclose(x.grad.numpy(), test_conv2d_data_grad, rtol=1e-4, atol=1e-8):
 if np.allclose(conv.weight.grad.numpy(), test_conv2d_weight_grad, rtol=1e-4, atol=1e-8):
     print("con2d_back_weight_grad Passed")
 
+conv = flow.nn.Conv2d(1, 3, (3, 3), bias=True).to(to_device)
+x = flow.tensor(test_conv2d_with_bias_data, dtype=flow.float32, device=to_device)
+conv.weight = flow.nn.Parameter(flow.Tensor(test_conv2d_with_bias_weight))
+conv.bias = flow.nn.Parameter(flow.Tensor(test_conv2d_with_bias_bias))
+conv.to(to_device)
+of_out = conv(x)
+if np.allclose(of_out.numpy(), test_conv2d_with_bias_output, rtol=1e-4, atol=1e-8):
+    print("conv2d_bias Passed")
+
+conv = flow.nn.Conv2d(1, 3, (3, 3), bias=False).to(flow.device("cuda"))
+x = flow.tensor(test_conv2d_data, dtype=flow.float32, device=to_device, requires_grad=True)
+conv.weight = flow.nn.Parameter(flow.Tensor(test_conv2d_weight), requires_grad=True)
+conv.to(to_device)
+of_out = conv(x)
+of_out.sum().backward()
+if np.allclose(x.grad.numpy(), test_conv2d_data_grad, rtol=1e-4, atol=1e-8):
+    print("con2d_back_data_grad Passed")
+
+if np.allclose(conv.weight.grad.numpy(), test_conv2d_weight_grad, rtol=1e-4, atol=1e-8):
+    print("con2d_back_weight_grad Passed")
+
+
 
 
 

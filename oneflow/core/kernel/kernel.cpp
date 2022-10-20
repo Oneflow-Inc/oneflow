@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
 #include "oneflow/core/kernel/kernel_observer.h"
+#include "oneflow/core/vm/sync_vm_mode_guard.h"
 
 namespace oneflow {
 
@@ -48,6 +49,7 @@ void Kernel::Init(const KernelConf& kernel_conf, KernelContext* ctx) {
 }
 
 void Kernel::Launch(KernelContext* ctx) const {
+  SyncVmModeGuard guard(SyncVmMode::kEnable);
   ctx->WillForward(ctx, this);
   Forward(ctx);
   ctx->DidForward(ctx, this);

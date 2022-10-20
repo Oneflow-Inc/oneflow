@@ -1050,17 +1050,23 @@ struct CudnnConvAlgorithmSearch<hipdnnConvolutionFwdAlgoPerf_t> {
   //   perf_vec->resize(found_algo_cnt);
   // }
 
-  static void ExhaustiveSearch(const CudnnConvArgs& args, CudnnConvResource* res,
-                               std::vector<perf_t>* perf_vec) {
+  static void ExhaustiveSearch(CudnnConvArgs& args, CudnnConvResource* res,
+                               perf_t* perf) {
     int found_algo_cnt = 0;
-    perf_vec->resize(GetAlgoMaxCount(res));
+    size_t ws = 0;
+    hipdnnConvolutionFwdAlgo_t algo;
+    hipdnnGetConvolutionForwardWorkspaceSize(res->cudnn_handle(), args.xdesc.Get(),
+                                                 args.wdesc.Get(), args.cdesc.Get(),
+                                                 args.ydesc.Get(), algo, &ws);
+    res->ws_byte_size_ = ws;
+    res->set_ws();
+    args.params.max_ws_size = ws;
+    
     OF_CUDNN_CHECK(hipdnnFindConvolutionForwardAlgorithmEx(
         res->cudnn_handle(), args.xdesc.Get(), res->x_const_dptr(), args.wdesc.Get(),
         res->w_const_dptr(), args.cdesc.Get(), args.ydesc.Get(), res->y_mut_dptr(),
-        perf_vec->size(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
+        1, &found_algo_cnt, perf, res->ws_dptr(),
         args.params.max_ws_size));
-    // vector::resize does not affect the first found_algo_cnt elements.
-    perf_vec->resize(found_algo_cnt);
   }
 };
 
@@ -1086,17 +1092,24 @@ struct CudnnConvAlgorithmSearch<hipdnnConvolutionBwdDataAlgoPerf_t> {
   //   perf_vec->resize(found_algo_cnt);
   // }
 
-  static void ExhaustiveSearch(const CudnnConvArgs& args, CudnnConvResource* res,
-                               std::vector<perf_t>* perf_vec) {
+  static void ExhaustiveSearch(CudnnConvArgs& args, CudnnConvResource* res,
+                               perf_t* perf) {
     int found_algo_cnt = 0;
-    perf_vec->resize(GetAlgoMaxCount(res));
+    size_t ws = 0;
+    hipdnnConvolutionBwdDataAlgo_t algo;
+    hipdnnGetConvolutionBackwardDataWorkspaceSize(res->cudnn_handle(), args.wdesc.Get(),
+                                                      args.ydesc.Get(), args.cdesc.Get(),
+                                                      args.xdesc.Get(), algo, &ws);
+
+    res->ws_byte_size_ = ws;
+    res->set_ws();
+    args.params.max_ws_size = ws;
+
     OF_CUDNN_CHECK(hipdnnFindConvolutionBackwardDataAlgorithmEx(
         res->cudnn_handle(), args.wdesc.Get(), res->w_const_dptr(), args.ydesc.Get(),
         res->y_const_dptr(), args.cdesc.Get(), args.xdesc.Get(), res->x_mut_dptr(),
-        perf_vec->size(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
+        1, &found_algo_cnt, perf, res->ws_dptr(),
         args.params.max_ws_size));
-    // vector::resize does not affect the first found_algo_cnt elements.
-    perf_vec->resize(found_algo_cnt);
   }
 };
 
@@ -1122,17 +1135,24 @@ struct CudnnConvAlgorithmSearch<hipdnnConvolutionBwdFilterAlgoPerf_t> {
   //   perf_vec->resize(found_algo_cnt);
   // }
 
-  static void ExhaustiveSearch(const CudnnConvArgs& args, CudnnConvResource* res,
-                               std::vector<perf_t>* perf_vec) {
+  static void ExhaustiveSearch(CudnnConvArgs& args, CudnnConvResource* res,
+                               perf_t* perf) {
     int found_algo_cnt = 0;
-    perf_vec->resize(GetAlgoMaxCount(res));
+    size_t ws = 0;
+    hipdnnConvolutionBwdFilterAlgo_t algo;
+    hipdnnGetConvolutionBackwardFilterWorkspaceSize(res->cudnn_handle(), args.xdesc.Get(),
+                                                        args.ydesc.Get(), args.cdesc.Get(),
+                                                        args.wdesc.Get(), algo, &ws);
+
+    res->ws_byte_size_ = ws;
+    res->set_ws();
+    args.params.max_ws_size = ws;
+
     OF_CUDNN_CHECK(hipdnnFindConvolutionBackwardFilterAlgorithmEx(
         res->cudnn_handle(), args.xdesc.Get(), res->x_const_dptr(), args.ydesc.Get(),
         res->y_const_dptr(), args.cdesc.Get(), args.wdesc.Get(), res->w_mut_dptr(),
-        perf_vec->size(), &found_algo_cnt, perf_vec->data(), res->ws_dptr(),
+        1, &found_algo_cnt, perf, res->ws_dptr(),
         args.params.max_ws_size));
-    // vector::resize does not affect the first found_algo_cnt elements.
-    perf_vec->resize(found_algo_cnt);
   }
 };
 
@@ -1145,15 +1165,9 @@ perf_t FindCudnnConvAlgorithm(CudnnConvArgs* args) {
 template<typename perf_t>
 perf_t FindCudnnConvAlgorithmWithResource(CudnnConvArgs* args, CudnnConvResource* res) {
   // auto Infer = [args, res](const CudnnConvParams& params) {
-    std::vector<perf_t> perf_vec;
-    if (args->heuristic) {
-      // std::cout << "miopen not surpport HeuristicSearch, use ExhaustiveSearch instead" << std::endl;
-      CudnnConvAlgorithmSearch<perf_t>::ExhaustiveSearch(*args, res, &perf_vec);
-    } else {
-      CudnnConvAlgorithmSearch<perf_t>::ExhaustiveSearch(*args, res, &perf_vec);
-    }
-    return perf_vec[0];
-    // return GetBestAlgorithm<perf_t>(*args, res, perf_vec);
+    perf_t perf;
+    CudnnConvAlgorithmSearch<perf_t>::ExhaustiveSearch(*args, res, &perf);  
+    return perf;
   // };
   // return Singleton<CudnnConvAlgoCache>::Get()->Remember<perf_t>(args->params, Infer);
 }

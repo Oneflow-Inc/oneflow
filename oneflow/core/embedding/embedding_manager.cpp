@@ -99,7 +99,7 @@ void EmbeddingManager::LoadSnapshot(const std::string& embedding_name, int64_t l
 
 #ifdef WITH_ROCM
 
-constexpr size_t kDefaultMaxQueryLength = 65536;
+constexpr size_t kDefaultMaxQueryLength = 131072;
 
 KeyValueStore* EmbeddingManager::GetKeyValueStore(const std::string& embedding_name,
                                                   int64_t rank_id) {

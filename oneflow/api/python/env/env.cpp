@@ -65,6 +65,12 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CudaSynchronize", &CudaSynchronize);
   m.def("GetCUDAMemoryUsed", &GetCUDAMemoryUsed);
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+  m.def("GetCudaDeviceIndex", &GetCudaDeviceIndex);
+  m.def("SetCudaDeviceIndex", &SetCudaDeviceIndex);
+  m.def("CudaSynchronize", &CudaSynchronize);
+  m.def("GetCUDAMemoryUsed", &GetCUDAMemoryUsed);
+#endif  // WITH_ROCM
   m.def("SetFLAGS_alsologtostderr", &SetFLAGS_alsologtostderr);
   m.def("GetFLAGS_alsologtostderr", &GetFLAGS_alsologtostderr);
   m.def("SetFLAGS_v", &SetFLAGS_v);

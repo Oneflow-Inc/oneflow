@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
@@ -30,9 +29,9 @@ namespace embedding {
 namespace {
 
 constexpr int kWarpSize = 64;
-constexpr int kNumWarpPerBlock = 4;
+constexpr int kNumWarpPerBlock = 2;
 constexpr int kBlockSize = kNumWarpPerBlock * kWarpSize;
-constexpr uint32_t kFullMask = 0xFFFFFFFFU;
+constexpr unsigned long long int kFullMask = 0xFFFFFFFFFFFFFFFFU;
 
 ep::CudaLaunchConfig GetLaunchConfig(uint32_t n_keys) {
   return ep::CudaLaunchConfig((n_keys + kNumWarpPerBlock - 1) / kNumWarpPerBlock,
@@ -200,7 +199,7 @@ struct SetContext {
     const unsigned long long int hit_mask = __ballot(lane_key == key && lane_age != 0);
     if (hit_mask != 0) {
       insert_way = __ffs(static_cast<int>(hit_mask)) - 1;
-      const int insert_way_age = __shfl(kFullMask, lane_age, insert_way);
+      const int insert_way_age = __shfl(lane_age, insert_way);
       if (lane_age > insert_way_age) {
         lane_age -= 1;
       } else if (thread_ctx.lane_id == insert_way) {
@@ -230,7 +229,7 @@ struct SetContext {
     const Key lane_key = keys[thread_ctx.lane_id];
     int lane_age = ages[thread_ctx.lane_id];
     const int insert_way = __ffs(static_cast<int>(__ballot(lane_age == 1))) - 1;
-    *evicted_key = __shfl(kFullMask, lane_key, insert_way);
+    *evicted_key = __shfl(lane_key, insert_way);
     if (thread_ctx.lane_id == insert_way) {
       keys[insert_way] = key;
       lane_age = kWarpSize;
@@ -302,7 +301,7 @@ __global__ void GetKernel(LruCacheContext<Key, Elem> cache_ctx, uint32_t num_key
       uint32_t base_missing_idx = 0;
       if (thread_ctx.lane_id == 0) { base_missing_idx = atomicAdd(n_missing_keys, n_warp_missing); }
      __syncthreads();
-      base_missing_idx = __shfl(kFullMask, base_missing_idx, 0);
+      base_missing_idx = __shfl(base_missing_idx, 0);
       if (thread_ctx.lane_id < n_warp_missing) {
         missing_keys[base_missing_idx + thread_ctx.lane_id] = warp_missing_key;
         missing_indices[base_missing_idx + thread_ctx.lane_id] = warp_missing_index;
@@ -358,7 +357,7 @@ __global__ void PutWithoutEvictingKernel(LruCacheContext<Key, Elem> cache_ctx, u
       uint32_t base_missing_idx = 0;
       if (thread_ctx.lane_id == 0) { base_missing_idx = atomicAdd(n_missing, n_warp_missing); }
      __syncthreads();
-      base_missing_idx = __shfl(kFullMask, base_missing_idx, 0);
+      base_missing_idx = __shfl(base_missing_idx, 0);
       if (thread_ctx.lane_id < n_warp_missing) {
         missing_keys[base_missing_idx + thread_ctx.lane_id] = warp_missing_key;
         missing_indices[base_missing_idx + thread_ctx.lane_id] = warp_missing_index;
@@ -425,11 +424,11 @@ __global__ void DumpKernel(LruCacheContext<Key, Elem> cache_ctx, size_t start_ke
    __syncthreads();
     warp_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = lane_key;
     warp_ages[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = lane_age;
-    const int key_count = __popc(__ballot(lane_age != 0));
+    const int key_count = __popc(static_cast<int>(__ballot(lane_age != 0)));
     if (key_count == 0) { continue; }
     uint32_t offset = 0;
     if (thread_ctx.lane_id == 0) { offset = atomicAdd(n_dumped, key_count); }
-    offset = __shfl(kFullMask, offset, 0);
+    offset = __shfl(offset, 0);
    __syncthreads();
     for (uint32_t i = 0; i < kWarpSize; ++i) {
       const Key key = warp_keys[thread_ctx.warp_id_in_block][i];

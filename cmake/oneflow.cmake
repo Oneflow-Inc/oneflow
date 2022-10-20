@@ -366,7 +366,7 @@ if(BUILD_PYTHON)
   endif()
 
   if(BUILD_ROCM)
-    list(APPEND gen_pip_args --rocm="DCU Toolkits")
+    list(APPEND gen_pip_args --rocm="DCU_Toolkits")
   endif()
 
   add_custom_target(

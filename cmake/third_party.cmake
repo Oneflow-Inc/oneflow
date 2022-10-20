@@ -181,13 +181,13 @@ if (BUILD_ROCM)
   list(APPEND oneflow_third_party_libs roc::rocrand)
   list(APPEND oneflow_third_party_libs hip::hiprand)
   list(APPEND oneflow_third_party_libs MIOpen)
-  link_directories(/opt/rocm/rccl/lib)
+  link_directories(${ROCM_PATH}/rccl/lib)
   list(APPEND oneflow_third_party_libs rccl)
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${HIP_INCLUDE_DIRS} 
                                                ${HIPBLAS_INCLUDE_DIRS}
                                                ${HIPCUB_INCLUDE_DIRS}
-                                               "/opt/rocm/hiprand/include"
-                                               "/opt/rocm/rocrand/include"
+                                               "${ROCM_PATH}/hiprand/include"
+                                               "${ROCM_PATH}/rocrand/include"
                                                ${MIOPEN_INCLUDE_DIRS}
                                                ${RCCL_INCLUDE_DIRS})
   message(STATUS "ONEFLOW_THIRD_PARTY_INCLUDE_DIRS: ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS}")

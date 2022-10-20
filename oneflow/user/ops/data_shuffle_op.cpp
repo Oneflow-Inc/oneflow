@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/embedding/embedding_manager.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -190,5 +192,13 @@ namespace oneflow {
   *ctx->OutputDType("cur_rank_unique_embedding_grad", 0) = ctx->InputDType("embedding_grad", 0);
   return Maybe<void>::Ok();
 }
+
+REGISTER_USER_OP_SAME_OUTPUT_BLOB_REGST_NUM_WITH_FUNC("id_shuffle", []() {
+  if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_PIPELINED_EXECUTION", false)) {
+    return 2;
+  } else {
+    return 1;
+  }
+});
 
 }  // namespace oneflow

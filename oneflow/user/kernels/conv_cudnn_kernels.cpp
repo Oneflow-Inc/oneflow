@@ -483,10 +483,12 @@ struct CudnnConvArgsAndAlgo final {
   PerfT algo_perf;
 
   CudnnConvArgsAndAlgo(const user_op::Tensor* x, const user_op::Tensor* w, const user_op::Tensor* y,
-                       user_op::Tensor* buf, const user_op::KernelComputeContext* ctx,
+                      //  user_op::Tensor* buf, const user_op::KernelComputeContext* ctx,
+                       AllocatedCudnnConvResource& res, const user_op::KernelComputeContext* ctx, 
                        ep::Stream* stream, bool has_forced_algo, int32_t forced_algo)
       : args(*ctx, x->data_type(), x->shape_view(), w->data_type(), w->shape_view(), y->data_type(),
-             y->shape_view(), ctx->Attr<std::string>("data_format"), buf->shape_view().elem_cnt(),
+            //  y->shape_view(), ctx->Attr<std::string>("data_format"), buf->shape_view().elem_cnt(),
+            y->shape_view(), ctx->Attr<std::string>("data_format"), 0,
              Singleton<ResourceDesc, ForSession>::Get()
                  ->resource()
                  .cudnn_conf()
@@ -502,14 +504,14 @@ struct CudnnConvArgsAndAlgo final {
                  || (ctx->Attr<std::string>("data_format") == "channels_last"
                      && std::is_same<PerfT, hipdnnConvolutionBwdFilterAlgoPerf_t>::value)) {
     
-    size_t workspace_size;
-    AllocatedCudnnConvResource res(stream->As<ep::CudaStream>()->cudnn_handle(),
-                                   const_cast<void*>(x->dptr()), const_cast<void*>(w->dptr()),
-                                   const_cast<void*>(y->dptr()), buf->mut_dptr());
+    // size_t workspace_size;
+    // AllocatedCudnnConvResource res(stream->As<ep::CudaStream>()->cudnn_handle(),
+    //                                const_cast<void*>(x->dptr()), const_cast<void*>(w->dptr()),
+    //                                const_cast<void*>(y->dptr()), nullptr, 0);
     
-    OF_CUDNN_CHECK(GetCudnnConvWorkspaceSize(args, &res, algo_perf.algo, &workspace_size));
-    size_t byte_size_of_buf = workspace_size;
-    args.params.max_ws_size = workspace_size;
+    // OF_CUDNN_CHECK(GetCudnnConvWorkspaceSize(args, &res, algo_perf.algo, &workspace_size));
+    // size_t byte_size_of_buf = workspace_size;
+    // args.params.max_ws_size = workspace_size;
 
     if (has_forced_algo) {
       algo_perf = GetCudnnConvAlgorithmPerferenceWithResource<PerfT>(
@@ -517,12 +519,13 @@ struct CudnnConvArgsAndAlgo final {
     } else {
       algo_perf = FindCudnnConvAlgorithmWithResource<PerfT>(&args, &res);
     }
+
     CHECK_EQ(algo_perf.status, HIPDNN_STATUS_SUCCESS)
         << "op (" << ctx->op_name()
         << ") find algorithm perference failed. algo: " << algo_perf.algo;
-    CHECK_LE(algo_perf.memory, byte_size_of_buf)
-        << "op (" << ctx->op_name() << ") find algorithm " << algo_perf.algo << ", need memory "
-        << algo_perf.memory << ", but cudnn_buf_limit_byte is " << byte_size_of_buf;
+    // CHECK_LE(algo_perf.memory, byte_size_of_buf)
+    //     << "op (" << ctx->op_name() << ") find algorithm " << algo_perf.algo << ", need memory "
+    //     << algo_perf.memory << ", but cudnn_buf_limit_byte is " << byte_size_of_buf;
     OF_CUDNN_CHECK(hipdnnSetConvolutionMathType(args.cdesc.Get(), algo_perf.mathType));
   }
   CudnnConvArgsAndAlgo() = delete;
@@ -634,11 +637,17 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     if (in->shape_view().elem_cnt() == 0) return;
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
-    user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    // user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const auto& cudnn_conf = Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
+
+    AllocatedCudnnConvResource res(ctx->stream()->As<ep::CudaStream>()->cudnn_handle(),
+                                   const_cast<void*>(in->dptr()), const_cast<void*>(weight->dptr()),
+                                   const_cast<void*>(out->dptr()), nullptr, 0);
+
     CudnnConvArgsAndAlgo<hipdnnConvolutionFwdAlgoPerf_t> args_and_algo(
-        in, weight, out, buf, ctx, ctx->stream(), 0,
+        // in, weight, out, buf, ctx, ctx->stream(), 0,
+        in, weight, out, res, ctx, ctx->stream(), 0,
         cudnn_conf.cudnn_conv_force_fwd_algo());
     const CudnnConvArgs& args = args_and_algo.args;
     const hipdnnConvolutionFwdAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
@@ -646,7 +655,8 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     OF_CUDNN_CHECK(hipdnnConvolutionForward(ctx->stream()->As<ep::CudaStream>()->cudnn_handle(),
                                            CudnnSPOnePtr<T>(), args.xdesc.Get(), in->dptr(),
                                            args.wdesc.Get(), weight->dptr(), args.cdesc.Get(),
-                                           algo_perf.algo, buf->mut_dptr(), args.params.max_ws_size,
+                                          //  algo_perf.algo, buf->mut_dptr(), args.params.max_ws_size,
+                                           algo_perf.algo, res.ws_dptr(), args.params.max_ws_size,
                                            CudnnSPZeroPtr<T>(), args.ydesc.Get(), out->mut_dptr()));
 
     const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
@@ -674,17 +684,17 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
       .SetCreateFn<ConvGpuKernel<dtype, ndims>>()                                       \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                     \
-        const auto& in = ctx->InputTensorDesc("in", 0);                                 \
-        if (in.shape().elem_cnt() == 0) return 0;                                       \
-        const auto& weight = ctx->InputTensorDesc("weight", 0);                         \
-        const auto* out = ctx->OutputTensorDesc("out", 0);                              \
-        const auto& cudnn_conf =                                                        \
-            Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();        \
-        return InferTmpSizeWithCudnn<hipdnnConvolutionFwdAlgoPerf_t>(                    \
-            &in, &weight, out, *ctx, 0,        \
-            cudnn_conf.cudnn_conv_force_fwd_algo());                                    \
-      })
+      // .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                     \
+      //   const auto& in = ctx->InputTensorDesc("in", 0);                                 \
+      //   if (in.shape().elem_cnt() == 0) return 0;                                       \
+      //   const auto& weight = ctx->InputTensorDesc("weight", 0);                         \
+      //   const auto* out = ctx->OutputTensorDesc("out", 0);                              \
+      //   const auto& cudnn_conf =                                                        \
+      //       Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();        \
+      //   return InferTmpSizeWithCudnn<hipdnnConvolutionFwdAlgoPerf_t>(                    \
+      //       &in, &weight, out, *ctx, 0,        \
+      //       cudnn_conf.cudnn_conv_force_fwd_algo());                                    \
+      // })
 
 REGISTER_CONV_KERNEL(conv1d, float, 1);
 REGISTER_CONV_KERNEL(conv2d, float, 2);
@@ -711,11 +721,16 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
     const user_op::Tensor* filter = ctx->Tensor4ArgNameAndIndex("filter", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     if (dx->shape_view().elem_cnt() == 0) return;
-    user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    // user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& cudnn_conf = Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
+   
+    AllocatedCudnnConvResource res(ctx->stream()->As<ep::CudaStream>()->cudnn_handle(),
+                                   const_cast<void*>(dx->dptr()), const_cast<void*>(filter->dptr()),
+                                   const_cast<void*>(dy->dptr()), nullptr, 0);
 
     CudnnConvArgsAndAlgo<hipdnnConvolutionBwdDataAlgoPerf_t> args_and_algo(
-        dx, filter, dy, buf, ctx, ctx->stream(), 0,
+        // dx, filter, dy, buf, ctx, ctx->stream(), 0,
+        dx, filter, dy, res, ctx, ctx->stream(), 0,
         cudnn_conf.cudnn_conv_force_bwd_data_algo());
     const CudnnConvArgs& args = args_and_algo.args;
     const hipdnnConvolutionBwdDataAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
@@ -737,7 +752,8 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
     OF_CUDNN_CHECK(hipdnnConvolutionBackwardData(
         ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), alpha, args.wdesc.Get(),
         filter->dptr(), args.ydesc.Get(), dy->dptr(), args.cdesc.Get(), algo_perf.algo,
-        buf->mut_dptr(), args.params.max_ws_size, beta, args.xdesc.Get(), dx->mut_dptr()));
+        // buf->mut_dptr(), args.params.max_ws_size, beta, args.xdesc.Get(), dx->mut_dptr()));
+        res.ws_dptr(), args.params.max_ws_size, beta, args.xdesc.Get(), dx->mut_dptr()));
   }
 
   bool IsCudaGraphSupported(user_op::KernelInitContext* ctx,
@@ -754,14 +770,21 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
       .SetCreateFn<ConvDataGradGpuKernel<dtype>>()                                              \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))         \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                             \
-        const auto& dy = ctx->InputTensorDesc("dy", 0);                                         \
-        const auto& filter = ctx->InputTensorDesc("filter", 0);                                 \
-        const auto* dx = ctx->OutputTensorDesc("dx", 0);                                        \
-        if (dx->shape().elem_cnt() == 0) return 0;                                              \
-        const auto& cudnn_conf =                                                                \
-            Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();                \
-        return InferTmpSizeWithCudnn<hipdnnConvolutionBwdDataAlgoPerf_t>(                        \
+      .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        if (ctx.has_input("_add_to_output", 0)) {                                               \
+          OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "_add_to_output", 0, true));          \
+        }                                                                                       \
+        return Maybe<void>::Ok();                                                               \
+      })
+      // .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                             \
+      //   const auto& dy = ctx->InputTensorDesc("dy", 0);                                         \
+      //   const auto& filter = ctx->InputTensorDesc("filter", 0);                                 \
+      //   const auto* dx = ctx->OutputTensorDesc("dx", 0);                                        \
+      //   if (dx->shape().elem_cnt() == 0) return 0;                                              \
+      //   const auto& cudnn_conf =                                                                \
+      //       Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();                \
+      //   return InferTmpSizeWithCudnn<hipdnnConvolutionBwdDataAlgoPerf_t>(                        \
             dx, &filter, &dy, *ctx, 0,            \
             cudnn_conf.cudnn_conv_force_bwd_data_algo());                                       \
       })                                                                                        \
@@ -796,11 +819,16 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel, public user_op::
                                 filter_diff->shape_view().elem_cnt() * sizeof(T));
       return;
     }
-    user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    // user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& cudnn_conf = Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
 
+    AllocatedCudnnConvResource res(ctx->stream()->As<ep::CudaStream>()->cudnn_handle(),
+                                   const_cast<void*>(x->dptr()), const_cast<void*>(filter_diff->dptr()),
+                                   const_cast<void*>(dy->dptr()), nullptr, 0);
+
     CudnnConvArgsAndAlgo<hipdnnConvolutionBwdFilterAlgoPerf_t> args_and_algo(
-        x, filter_diff, dy, buf, ctx, ctx->stream(),
+        // x, filter_diff, dy, buf, ctx, ctx->stream(),
+        x, filter_diff, dy, res, ctx, ctx->stream(),
         0,
         cudnn_conf.cudnn_conv_force_bwd_filter_algo());
     const CudnnConvArgs& args = args_and_algo.args;
@@ -808,7 +836,8 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel, public user_op::
 
     OF_CUDNN_CHECK(hipdnnConvolutionBackwardFilter(
         ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CudnnSPOnePtr<T>(), args.xdesc.Get(),
-        x->dptr(), args.ydesc.Get(), dy->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),
+        // x->dptr(), args.ydesc.Get(), dy->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),
+        x->dptr(), args.ydesc.Get(), dy->dptr(), args.cdesc.Get(), algo_perf.algo, res.ws_dptr(),
         args.params.max_ws_size, CudnnSPZeroPtr<T>(), args.wdesc.Get(), filter_diff->mut_dptr()));
   }
 
@@ -826,9 +855,9 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel, public user_op::
       .SetCreateFn<ConvFilterGradGpuKernel<dtype>>()                                       \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                     \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))    \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                        \
-        const auto& dy = ctx->InputTensorDesc("dy", 0);                                    \
-        const auto& x = ctx->InputTensorDesc("x", 0);                                      \
+      // .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                        \
+      //   const auto& dy = ctx->InputTensorDesc("dy", 0);                                    \
+      //   const auto& x = ctx->InputTensorDesc("x", 0);                                      \
         if (x.shape().elem_cnt() == 0) return 0;                                           \
         const auto* filter_diff = ctx->OutputTensorDesc("filter_diff", 0);                 \
         const auto& cudnn_conf =                                                           \

@@ -240,6 +240,7 @@ class CudnnConvAlgoCache final {
 
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
@@ -332,14 +333,17 @@ class CudnnConvResource {
   virtual const void* x_const_dptr() const = 0;
   virtual const void* y_const_dptr() const = 0;
   virtual void* ws_dptr() = 0;
+  virtual void set_ws() = 0;
+  size_t ws_byte_size_;
 };
 
 class AllocatedCudnnConvResource final : public CudnnConvResource {
  public:
   AllocatedCudnnConvResource(hipdnnHandle_t handle, void* x_dptr, void* w_dptr, void* y_dptr,
-                             void* ws_dptr)
-      : handle_(handle), x_dptr_(x_dptr), w_dptr_(w_dptr), y_dptr_(y_dptr), ws_dptr_(ws_dptr) {}
-  ~AllocatedCudnnConvResource() = default;
+                             void* ws_dptr, size_t ws_byte_size)
+      : handle_(handle), x_dptr_(x_dptr), w_dptr_(w_dptr), y_dptr_(y_dptr), ws_dptr_(ws_dptr), ws_byte_size_(ws_byte_size) {}
+  // ~AllocatedCudnnConvResource() = default;
+  ~AllocatedCudnnConvResource(){if (ws_dptr_ != nullptr) { OF_CUDA_CHECK(hipFree(ws_dptr_)); }}
   hipdnnHandle_t cudnn_handle() override { return handle_; }
   const void* x_const_dptr() const override { return x_dptr_; }
   const void* w_const_dptr() const override { return w_dptr_; }
@@ -347,7 +351,13 @@ class AllocatedCudnnConvResource final : public CudnnConvResource {
   void* x_mut_dptr() override { return x_dptr_; }
   void* w_mut_dptr() override { return w_dptr_; }
   void* y_mut_dptr() override { return y_dptr_; }
-  void* ws_dptr() override { return ws_dptr_; }
+  void* ws_dptr() override { 
+    // return ws_dptr_;
+    if (ws_dptr_ == nullptr) { OF_CUDA_CHECK(hipMalloc(&ws_dptr_, ws_byte_size_)); }
+    return ws_dptr_;
+  }
+  void set_ws() { ws_byte_size_ = CudnnConvResource::ws_byte_size_; }
+  size_t ws_byte_size_;
 
  private:
   hipdnnHandle_t handle_;
@@ -369,6 +379,8 @@ class ManagedCudnnConvResource final : public CudnnConvResource {
   const void* w_const_dptr() const override;
   const void* y_const_dptr() const override;
   void* ws_dptr() override;
+  void set_ws(){ ws_byte_size_ = CudnnConvResource::ws_byte_size_; }
+  size_t ws_byte_size_;
 
  private:
   hipdnnHandle_t handle_;
@@ -379,7 +391,7 @@ class ManagedCudnnConvResource final : public CudnnConvResource {
   size_t x_byte_size_;
   size_t w_byte_size_;
   size_t y_byte_size_;
-  size_t ws_byte_size_;
+  // size_t ws_byte_size_;
 };
 
 bool operator==(const CudnnConvParams& a, const CudnnConvParams& b);
