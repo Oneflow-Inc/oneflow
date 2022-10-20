@@ -99,17 +99,20 @@ Maybe<void> PruneAmpWhiteIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const 
   });
 
   JobBuilder job_builder(job);
-  std::vector<OperatorConf> to_update_op_confs;
+  HashMap<std::string, OperatorConf> op_name2op_conf;
   for (const auto& arg_lbn : to_update_args) {
     const Operator& op = arg_lbn.first.first->op();
-    OperatorConf op_conf = op.op_conf();
+    auto iter = op_name2op_conf.find(op.op_name());
+    if (iter == op_name2op_conf.end()) {
+      iter = op_name2op_conf.emplace(op.op_name(), op.op_conf()).first;
+    }
+    OperatorConf& op_conf = iter->second;
     const auto& ibn = arg_lbn.first.second;
     auto old_lbn = GenLogicalBlobName(op.BnInOp2Lbi(ibn));
     const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&op_conf, ibn, arg_lbn.second);
     CHECK_EQ(old_lbn, old_val);
-    to_update_op_confs.emplace_back(std::move(op_conf));
   }
-  job_builder.MutOpsOnlyOnce(to_update_op_confs);
+  for (const auto& pair : op_name2op_conf) { job_builder.MutOpsOnlyOnce({pair.second}); }
   job_builder.DelOps(std::vector<std::string>{del_op_names.begin(), del_op_names.end()});
 
   return Maybe<void>::Ok();
