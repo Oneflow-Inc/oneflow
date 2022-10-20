@@ -134,6 +134,57 @@ __global__ void AdamUpdateKernel(const int32_t line_size, const int32_t embeddin
   }
 }
 
+// Note(guoran): The SmartDecaySparseAdam is from
+// https://github.com/pytorch/pytorch/blob/master/caffe2/sgd/adam_op.h#L57
+template<typename T, typename G, typename IDX>
+__global__ void SmartDecaySparseAdamUpdateKernel(
+    const int32_t line_size, const int32_t embedding_size, T scale, float l1, float l2,
+    float weight_decay, float beta1, float beta2, float epsilon, float learning_rate_val,
+    int64_t step_col_offset, const IDX* num_unique_ids, const float* learning_rate,
+    const int64_t* train_step_ptr, const T* scale_by_ptr, const T* down_scale_by_ptr,
+    const int64_t* skip_if, const G* model_diff, const T* unique_values, T* updated_unique_values) {
+  if (skip_if != nullptr && *skip_if != 0) {
+    const int64_t n = *num_unique_ids * line_size;
+    CUDA_1D_KERNEL_LOOP(i, n) {
+      // The n is the unique_values elem_cnt, so not need to use GetAdamOffset.
+      updated_unique_values[i] = unique_values[i];
+    }
+  } else {
+    if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
+    if (down_scale_by_ptr != nullptr) { scale /= *down_scale_by_ptr; }
+    if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
+    const int64_t n = *num_unique_ids * embedding_size;
+    // The n is model_diff elem_cnt.
+    CUDA_1D_KERNEL_LOOP(i, n) {
+      const int32_t row = i / embedding_size;
+      const int32_t col = i - row * embedding_size;
+      int64_t model_offset = row * line_size + col;
+      int64_t m_offset = model_offset + embedding_size;
+      int64_t v_offset = model_offset + 2 * embedding_size;
+      int64_t step_offset = row * line_size + step_col_offset;
+      const T model_val = *(unique_values + model_offset);
+      const T m_val = *(unique_values + m_offset);
+      const T v_val = *(unique_values + v_offset);
+      T model_diff_t =
+          CastScaleRegularizeGradientFunctor<T, G>()(*(model_diff + i), model_val, scale, l1, l2);
+      int64_t prev_step = *reinterpret_cast<const int64_t*>(unique_values + step_offset);
+      int64_t cur_step = *train_step_ptr + 1;
+      int64_t skip_step = cur_step - prev_step;
+      float catchup = 0.0;
+      if (skip_step > 1) {
+        catchup = m_val * beta1 * (1 - pow(beta1, skip_step - 1)) / (1 - beta1);
+      }
+      const T next_m = pow(beta1, skip_step) * m_val + (1 - beta1) * model_diff_t;
+      const T next_v = pow(beta2, skip_step) * v_val + (1 - beta2) * model_diff_t * model_diff_t;
+      updated_unique_values[m_offset] = next_m;
+      updated_unique_values[v_offset] = next_v;
+      updated_unique_values[model_offset] =
+          model_val - (learning_rate_val * (next_m + catchup)) / (sqrt(next_v) + epsilon);
+      if (col == 0) { *reinterpret_cast<int64_t*>(updated_unique_values + step_offset) = cur_step; }
+    }
+  }
+}
+
 template<typename T, typename G, typename IDX>
 __global__ void AdagradUpdateKernel(const int64_t line_size, const int64_t embedding_size, T scale,
                                     float l1, float l2, float weight_decay, float lr_decay,
@@ -523,6 +574,120 @@ class AdamEmbeddingUpdateKernel final : public user_op::OpKernel {
           && (user_op::HobDataType("unique_embeddings", 0) == OF_PP_PAIR_SECOND(t_dtype_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_ONE_EMBEDDING_ADAM_UPDATE_KERNEL,
+                                 FLOATING_DATA_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
+                                 IDX_DATA_TYPE_SEQ)
+
+template<typename T, typename G, typename IDX>
+class SmartDecaySparseAdamEmbeddingUpdateKernel final : public user_op::OpKernel {
+ public:
+  SmartDecaySparseAdamEmbeddingUpdateKernel() : current_iter_(0){};
+  ~SmartDecaySparseAdamEmbeddingUpdateKernel() override = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<EmbeddingUpdateKernelState>(ctx);
+  }
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
+    auto* kernel_state = dynamic_cast<EmbeddingUpdateKernelState*>(state);
+    CHECK(kernel_state != nullptr);
+    embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
+    embedding_state->OnEmbeddingUpdateStart(ctx, current_iter_);
+    const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
+    const user_op::Tensor* embedding_grad = ctx->Tensor4ArgNameAndIndex("embedding_grad", 0);
+    user_op::Tensor* updated_unique_embeddings =
+        ctx->Tensor4ArgNameAndIndex("updated_unique_embeddings", 0);
+    CHECK_EQ(embedding_grad->shape_view().NumAxes(), 2);
+    const int64_t line_size = ctx->Attr<int64_t>("line_size");
+    const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+    const float l1 = ctx->Attr<float>("l1");
+    const float l2 = ctx->Attr<float>("l2");
+    const auto weight_decay = ctx->Attr<float>("weight_decay");
+    const auto beta1 = ctx->Attr<float>("beta1");
+    const auto beta2 = ctx->Attr<float>("beta2");
+    const auto epsilon = ctx->Attr<float>("epsilon");
+    const bool do_bias_correction = ctx->Attr<bool>("do_bias_correction");
+    const auto scale = ctx->Attr<double>("scale");
+    const T* scale_by_ptr = nullptr;
+    if (ctx->has_input("scale_by_tensor", 0)) {
+      const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
+      CHECK_EQ(scale_by_tensor->shape_view().elem_cnt(), 1);
+      scale_by_ptr = scale_by_tensor->dptr<T>();
+    }
+    const T* down_scale_by_ptr = nullptr;
+    if (ctx->has_input("down_scale_by_tensor", 0)) {
+      const user_op::Tensor* down_scale_by_tensor =
+          ctx->Tensor4ArgNameAndIndex("down_scale_by_tensor", 0);
+      CHECK_EQ(down_scale_by_tensor->shape_view().elem_cnt(), 1);
+      down_scale_by_ptr = down_scale_by_tensor->dptr<T>();
+    }
+    const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
+    const float* learning_rate_ptr = nullptr;
+    if (ctx->has_input("learning_rate", 0)) {
+      const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+      learning_rate_ptr = learning_rate->dptr<float>();
+    }
+    const int64_t train_step_val = ctx->Attr<int64_t>("train_step_val");
+    const int64_t* train_step_ptr = nullptr;
+    if (ctx->has_input("train_step", 0)) {
+      const user_op::Tensor* train_step = ctx->Tensor4ArgNameAndIndex("train_step", 0);
+      train_step_ptr = train_step->dptr<int64_t>();
+    }
+    const int64_t* skip_if_ptr = nullptr;
+    if (ctx->has_input("skip_if", 0)) {
+      const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
+      CHECK_EQ(skip_if->shape_view().elem_cnt(), 1);
+      skip_if_ptr = skip_if->dptr<int64_t>();
+    }
+    // update kernel
+    const T* unique_embeddings_ptr =
+        reinterpret_cast<const T*>(embedding_state->EmbeddingUpdateUniqueEmbeddings(current_iter_));
+    T* updated_unique_embeddings_ptr = reinterpret_cast<T*>(
+        embedding_state->EmbeddingUpdateUpdatedUniqueEmbeddings(current_iter_));
+    const uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
+    const int64_t embedding_grad_elem_cnt = num_unique * embedding_size;
+
+    const int64_t value_dtype_size = GetSizeOfDataType(updated_unique_embeddings->data_type());
+    const int64_t step_dtype_size = sizeof(int64_t);
+    const int64_t model_and_states_bytes = embedding_size * 3 * value_dtype_size;
+    const int64_t align_to_step_size_bytes =
+        (model_and_states_bytes + step_dtype_size - 1) / step_dtype_size * step_dtype_size;
+    const int64_t step_col_offset = align_to_step_size_bytes / value_dtype_size;
+    const int64_t smart_decay_sparse_adam_line_size =
+        (align_to_step_size_bytes + step_dtype_size) / value_dtype_size;
+    CHECK_EQ(line_size, smart_decay_sparse_adam_line_size);
+
+    SmartDecaySparseAdamUpdateKernel<T, G, IDX>
+        <<<BlocksNum4ThreadsNum(embedding_grad_elem_cnt), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+            line_size, embedding_size, static_cast<T>(scale), l1, l2, weight_decay, beta1, beta2,
+            epsilon, learning_rate_val, step_col_offset,
+            reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, train_step_ptr,
+            scale_by_ptr, down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(),
+            unique_embeddings_ptr, updated_unique_embeddings_ptr);
+    embedding_state->OnEmbeddingUpdateEnd(ctx, current_iter_);
+    current_iter_++;
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  mutable int64_t current_iter_;
+};
+
+#define REGISTER_CUDA_ONE_EMBEDDING_SMART_DECAY_SPARSE_ADAM_UPDATE_KERNEL(                        \
+    t_dtype_pair, g_type_pair, idx_dtype_pair)                                                    \
+  REGISTER_USER_KERNEL("one_embedding_smart_decay_sparse_adam_update")                            \
+      .SetCreateFn<SmartDecaySparseAdamEmbeddingUpdateKernel<OF_PP_PAIR_FIRST(t_dtype_pair),      \
+                                                             OF_PP_PAIR_FIRST(g_type_pair),       \
+                                                             OF_PP_PAIR_FIRST(idx_dtype_pair)>>() \
+      .SetIsMatchedHob(                                                                           \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                         \
+          && (user_op::HobDataType("num_unique_ids", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair))     \
+          && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(g_type_pair))        \
+          && (user_op::HobDataType("unique_embeddings", 0) == OF_PP_PAIR_SECOND(t_dtype_pair)));
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_ONE_EMBEDDING_SMART_DECAY_SPARSE_ADAM_UPDATE_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
                                  IDX_DATA_TYPE_SEQ)
 
