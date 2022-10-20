@@ -45,6 +45,7 @@ class TopoStruct {
   int32_t min_distance2transfer = -1;
   int64_t memory_increment = -1;
   TopoStruct* next_same_node = nullptr;
+  int32_t activation_time = -1;
   // We can have some other nodes in it for example
   // SbpNode<NdSbpSignature>* node;
   // SbpEdge<NdSbpSignature>* node;
@@ -63,6 +64,9 @@ class TopoStruct {
   // Memory increment = (memory of out registers) - (memory of in registers)
   void ComputeMeomoryIncrement();
 
+  // Activation time = time of cpu - time of gpu
+  void ComputeActivationTime();
+
   // TODO: We might design more deciding parameter and choose a right combination of them in the
   // future.
 
@@ -71,10 +75,13 @@ class TopoStruct {
   // i = 1: those with small minimum distance to transfer go first
   // i = 2: first in first out
   // i = 3: those with small memory increment go first
-  // i = 4: those with large tributary layers go first
-  // i = 5: those with long distance to transfer go first
-  // i = 6: last in first out
-  // i = 7: those with large memory increment go first
+  // i = 4: those with small activation time go first
+
+  // i = 5: those with large tributary layers go first
+  // i = 6: those with long distance to transfer go first
+  // i = 7: last in first out
+  // i = 8: those with large memory increment go first
+  // i = 9: those with large activation time go first
   int64_t GetDecidingParameter(int32_t i) const;
 };
 
@@ -90,13 +97,14 @@ static std::vector<int64_t> decide_parameters;
 // America.
 void InitDecideParameters(StraightenAlgorithmTag sat) {
   decide_parameters.clear();
+  decide_parameters.push_back(4);
   if (sat == StraightenAlgorithmTag::kCompressMemory) {
     decide_parameters.push_back(3);
     decide_parameters.push_back(0);
   } else {
     // sat==StraightenAlgorithmTag::kOverlap4ModelParallelism
-    decide_parameters.push_back(6);
-    decide_parameters.push_back(4);
+    decide_parameters.push_back(7);
+    decide_parameters.push_back(5);
   }
 }
 
@@ -257,6 +265,16 @@ void TopoStruct::ComputeMeomoryIncrement() {
   }
 }
 
+// Activation time = time of cpu - time of gpu
+  void TopoStruct::ComputeActivationTime(){
+    const auto& node_name = node->VisualStr();
+    if(node_name.find("-cast-")!=std::string::npos || node_name.find("-expand")!=std::string::npos){
+      activation_time = 1;
+    }else{
+      activation_time = 0;
+    }
+  }
+
 // deciding parameter
 // i = 0: those with small tributary layers go first
 // i = 1: those with small minimum distance to transfer go first
@@ -268,8 +286,8 @@ void TopoStruct::ComputeMeomoryIncrement() {
 // i = 7: those with large memory increment go first
 int64_t TopoStruct::GetDecidingParameter(int32_t i) const {
   int64_t sign = 1;
-  if (i >= 4) {
-    i -= 4;
+  if (i >= 5) {
+    i -= 5;
     sign = -1;
   }
   switch (i) {
@@ -277,6 +295,7 @@ int64_t TopoStruct::GetDecidingParameter(int32_t i) const {
     case 1: return sign * min_distance2transfer;
     case 2: return sign * min_layer;
     case 3: return sign * memory_increment;
+    case 4: return sign * activation_time;
   }
   return 0;
 }
@@ -327,6 +346,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
     auto& topo_struct = task_node2topo_struct[node];
     topo_struct.node = node;
     topo_struct.ComputeMeomoryIncrement();
+    topo_struct.ComputeActivationTime();
     if (node->in_edges().empty()) {
       topo_struct.min_layer = 0;
     } else {
