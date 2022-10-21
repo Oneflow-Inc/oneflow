@@ -11444,6 +11444,62 @@ def OneFlow_CopyD2HOp : OneFlow_BaseOp<"copy_d2h", [NoSideEffect, NoGrad, Declar
 
 #endif // GET_ONEFLOW_SYSTEM_OP_DEFINITIONS
 
+// Group: MOE
+// moe_dispatch, moe_combine
+// Total: 2
+
+def OneFlow_MOEDispatchOp : OneFlow_BaseOp<"moe_dispatch", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$indices,
+    OneFlow_Tensor:$locations,
+    Optional<OneFlow_Tensor>:$gates
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    SI32Attr:$num_experts,
+    SI32Attr:$capacity
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+}
+
+def OneFlow_MOECombineOp : OneFlow_BaseOp<"moe_combine", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$indices,
+    OneFlow_Tensor:$locations,
+    Optional<OneFlow_Tensor>:$gates
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+}
+
+def OneFlow_MOEGateGradOp : OneFlow_BaseOp<"moe_gate_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$dispatched,
+    OneFlow_Tensor:$indices,
+    OneFlow_Tensor:$locations
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+}
+
 include "mlir/Interfaces/CallInterfaces.td"
 
 class OneFlow_JITLikeOp <string mnemonic> : OneFlow_BaseOp<mnemonic, [CallOpInterface, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -11494,3 +11550,4 @@ def OneFlow_MlirJitOp : OneFlow_JITLikeOp<"mlir_jit"> {}
 def OneFlow_KernelLaunchOp : OneFlow_JITLikeOp<"kernel_launch"> {}
 
 #endif // GET_ONEFLOW_MLIR_JIT_OP_DEFINITIONS
+
