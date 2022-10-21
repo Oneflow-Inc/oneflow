@@ -13,14 +13,33 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "llvm/ADT/StringRef.h"
+#include "OneFlow/Extension.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/Parser/Parser.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/JITEngine.h"
-#include "oneflow/ir/include/OneFlow/Extension.h"
-#include <glog/logging.h>
+#include "mlir/IR/Operation.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/JITEngine.h"
+
+extern "C" {
+void* fetch_run_ctx(void* launcher, int64_t index) {
+  LOG(ERROR) << launcher;
+  LOG(ERROR) << index;
+  return ((typename std::tuple_element_t<0, oneflow::okl::FetchArgs>)launcher)
+      ->FetchRunCtx((typename std::tuple_element_t<1, oneflow::okl::FetchArgs>)index);
+}
+
+void* fetch_kernel(void* launcher, int64_t index) {
+  LOG(ERROR) << launcher;
+  LOG(ERROR) << index;
+  return ((typename std::tuple_element_t<0, oneflow::okl::FetchArgs>)launcher)
+      ->FetchKernel((typename std::tuple_element_t<1, oneflow::okl::FetchArgs>)index);
+}
+
+void launch(void* ctx, void* kernel) {
+  ((typename std::tuple_element_t<1, oneflow::okl::LaunchArgs>)kernel)
+      ->Compute((typename std::tuple_element_t<0, oneflow::okl::LaunchArgs>)ctx);
+}
+}  // extern "C"
 
 namespace oneflow {
 SharedLibs* MutSharedLibPaths() {
@@ -30,7 +49,7 @@ SharedLibs* MutSharedLibPaths() {
 const SharedLibs* SharedLibPaths() { return MutSharedLibPaths(); }
 }  // namespace oneflow
 
-JIT_Engine::JIT_Engine(mlir::ModuleOp module) {
+oneflow::okl::JIT_Engine::JIT_Engine(mlir::ModuleOp module) {
   llvm::SmallVector<llvm::StringRef, 4> ext_libs(
       {oneflow::SharedLibPaths()->begin(), oneflow::SharedLibPaths()->end()});
   mlir::ExecutionEngineOptions jitOptions;
