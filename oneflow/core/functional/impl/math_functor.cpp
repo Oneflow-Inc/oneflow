@@ -3131,8 +3131,12 @@ class StftFunctor {
     attrs.SetAllAttrs(normalized, onesided, return_complex);
 
     auto input_tensor = input;
+    if (input->shape()->NumAxes() == 1) {
+      input_tensor = JUST(functional::Unsqueeze(input_tensor, 0));
+    }
     if (center) {
       const auto& input_shape = input_tensor->shape();
+
       const auto input_dim = input_tensor->shape()->NumAxes();
       const auto extra_dims = std::max(size_t{3}, (size_t)input_dim) - input_dim;
       const auto pad_amount = n_fft / 2;
@@ -3142,11 +3146,16 @@ class StftFunctor {
       input_tensor =
           JUST(functional::Pad(JUST(functional::View(input_tensor, Shape(extended_shape))),
                                {pad_amount, pad_amount}, mode, Scalar(0)));
-      input_tensor = JUST(functional::View(input_tensor, Shape{input_tensor->shape()->back()}));
+
+      DimVector view_shape;
+      if (input_dim == 1) {
+        view_shape = {input_tensor->shape()->back()};
+      } else {
+        view_shape = {input_shape->at(0), input_tensor->shape()->back()};
+      }
+      input_tensor = JUST(functional::View(input_tensor, Shape(view_shape)));
     }
-    if (input->shape()->NumAxes() == 1) {
-      input_tensor = JUST(functional::Unsqueeze(input_tensor, 0));
-    }
+
     int32_t batch = input_tensor->shape()->At(0);
     int32_t len = input_tensor->shape()->At(1);
     int32_t n_frames = 1 + (len - n_fft) / new_hop_length;
@@ -3178,7 +3187,8 @@ class StftFunctor {
       input_tensor = JUST(functional::Mul(input_tensor, temp_tensor));
     }
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input_tensor}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {JUST(functional::ToContiguous(input_tensor))},
+                                          attrs);
   }
 
  private:

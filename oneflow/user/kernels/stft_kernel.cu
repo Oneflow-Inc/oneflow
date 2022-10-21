@@ -32,6 +32,24 @@ __global__ void convert_complex_to_real(T* dst, const FFTTYPE* src, size_t n) {
   };
 }
 
+const double _fft_normalization_scale(const int32_t frame_length) {
+  return 1.0 / std::sqrt(frame_length);
+}
+
+template<typename FFTTYPE>
+__global__ void fft_apply_normalization(FFTTYPE* dst, const double normalization_scale, size_t n,
+                                        bool IsNormalized) {
+  if (!IsNormalized) { return; }
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    dst[i].x *= normalization_scale;
+    dst[i].y *= normalization_scale;
+  };
+}
+
+// TODO(yzm):support doublesided
+template<typename FFTTYPE>
+__global__ void convert_doublesided(FFTTYPE* dst, int32_t dims, const int n) {}
+
 template<typename T, typename COMPLEXTYPE>
 class StftGpuKernel final : public user_op::OpKernel {
  public:
@@ -49,6 +67,8 @@ class StftGpuKernel final : public user_op::OpKernel {
     const bool return_complex = ctx->Attr<bool>("return_complex");
 
     const ShapeView& input_shape = input->shape_view();
+    const ShapeView& output_shape = output->shape_view();
+
     const Stride& input_stride = input->stride();
     const int out_elem_cnt = output->shape_view().elem_cnt() / 2;
 
@@ -70,11 +90,23 @@ class StftGpuKernel final : public user_op::OpKernel {
 
     int32_t in_offset = input->stride().at(0);
     int32_t out_offset = batch * (input_shape.At(2) / 2 + 1);
+
     for (int32_t i = 0; i < input_shape.At(0); i++) {
       config.excute_plan(data_in + i * in_offset, out_tmp_buffer + i * out_offset);
     }
-    // TODO(yzm):support normalized and onesided(normalized is now false by default,and onesided is
-    // true)
+
+    // TODO(yzm):support doublesided
+    if (!onesided) {
+      convert_doublesided<<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0,
+                            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+          out_tmp_buffer, output_shape.At(0), out_elem_cnt);
+    }
+
+    const double normalization_scale = _fft_normalization_scale(input_shape.back());
+    fft_apply_normalization<<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0,
+                              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+        out_tmp_buffer, normalization_scale, out_elem_cnt, normalized);
+
     if (!return_complex) {
       convert_complex_to_real<<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0,
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
@@ -85,16 +117,18 @@ class StftGpuKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-#define REGISTER_STFT_GPU_KERNEL(dtype, complextype)                                       \
-  REGISTER_USER_KERNEL("stft")                                                             \
-      .SetCreateFn<StftGpuKernel<dtype, complextype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                     \
-                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                  \
-        const Shape& output_shape = ctx->InputShape("output", 0);                          \
-        const int64_t output_bytes =                                                       \
-            GetCudaAlignedSize((output_shape.elem_cnt() / 2) * sizeof(complextype));       \
-        return output_bytes;                                                               \
+#define REGISTER_STFT_GPU_KERNEL(dtype, complextype)                                            \
+  REGISTER_USER_KERNEL("stft")                                                                  \
+      .SetCreateFn<StftGpuKernel<dtype, complextype>>()                                         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value))      \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
+        const Shape& output_shape = ctx->InputShape("output", 0);                               \
+        const bool return_complex = ctx->Attr<bool>("return_complex");                          \
+        int32_t output_elem_cnt =                                                               \
+            return_complex ? output_shape.elem_cnt() : output_shape.elem_cnt() / 2;             \
+        const int64_t output_bytes = GetCudaAlignedSize(output_elem_cnt * sizeof(complextype)); \
+        return output_bytes;                                                                    \
       });
 REGISTER_STFT_GPU_KERNEL(float, cufftComplex)
 REGISTER_STFT_GPU_KERNEL(double, cufftDoubleComplex)

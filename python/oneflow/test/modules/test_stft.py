@@ -26,8 +26,8 @@ from numpy import random
 
 @flow.unittest.skip_unless_1n1d()
 class Test(flow.unittest.TestCase):
-    def test_stft(test_case):
-        rand_size = random.randint(513, 5000)
+    def test_stft_1D(test_case):
+        rand_size = random.randint(10, 100000)
         np_tensor = random.rand(rand_size)
         rand_fft = random.randint(5, rand_size - 1)
         win_tensor = random.rand(rand_fft)
@@ -41,7 +41,7 @@ class Test(flow.unittest.TestCase):
             win_length=rand_fft,
             center=True,
             onesided=True,
-            normalized=False,
+            normalized=True,
             return_complex=False,
         )
 
@@ -55,10 +55,48 @@ class Test(flow.unittest.TestCase):
             win_length=rand_fft,
             center=True,
             onesided=True,
-            normalized=False,
+            normalized=True,
             return_complex=False,
         )
 
+        test_case.assertTrue(
+            np.allclose(y_flow.numpy(), y_torch.cpu().numpy(), rtol=1e-5, atol=1e-5)
+        )
+
+    def test_stft_2D(test_case):
+        rand_length = random.randint(20, 150)
+        rand_winth = random.randint(513, 90000)
+        np_tensor = random.rand(rand_length, rand_winth)
+        # BUG(yzm):n_fft is not aligned with pytorch when it is odd
+        rand_fft = 2 * random.randint(5, rand_winth / 2 - 1)
+        win_tensor = random.rand(rand_fft)
+
+        x = torch.tensor(np_tensor).to("cuda")
+        win = torch.tensor(win_tensor).to("cuda")
+        y_torch = torch.stft(
+            x,
+            n_fft=rand_fft,
+            window=win,
+            win_length=rand_fft,
+            center=False,
+            onesided=True,
+            normalized=True,
+            return_complex=False,
+        )
+
+        x_flow = flow.tensor(np_tensor).to("cuda")
+        win_flow = flow.tensor(win_tensor).to("cuda")
+
+        y_flow = flow.stft(
+            x_flow,
+            n_fft=rand_fft,
+            window=win_flow,
+            win_length=rand_fft,
+            center=False,
+            onesided=True,
+            normalized=True,
+            return_complex=False,
+        )
         test_case.assertTrue(
             np.allclose(y_flow.numpy(), y_torch.cpu().numpy(), rtol=1e-5, atol=1e-5)
         )
