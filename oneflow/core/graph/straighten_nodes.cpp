@@ -98,6 +98,7 @@ static std::vector<int64_t> decide_parameters;
 void InitDecideParameters(StraightenAlgorithmTag sat) {
   decide_parameters.clear();
   decide_parameters.push_back(4);
+  decide_parameters.push_back(1);
   if (sat == StraightenAlgorithmTag::kCompressMemory) {
     decide_parameters.push_back(3);
     decide_parameters.push_back(0);
@@ -169,7 +170,18 @@ TaskClassifier GetTaskClassifier(const TaskNode* node) {
   // They are sorted according to frequency of judgement
   // frequency of judgement = the number of occurrences / the times of judgement
   TaskType task_type = node->GetTaskType();
-  if (task_type == TaskType::kNormalForward) { return TaskClassifier::kWaitingComputation; }
+  if (task_type == TaskType::kNormalForward) {
+    const auto& node_name = node->VisualStr();
+    if (node_name.find("-cast-") != std::string::npos
+        || node_name.find("-expand") != std::string::npos) {
+      return TaskClassifier::kWaitingTransfer;
+    } else if (node_name.find(".weight") != std::string::npos
+               || node_name.find(".bias") != std::string::npos) {
+      return TaskClassifier::kRunASAP;
+    } else {
+      return TaskClassifier::kWaitingComputation;
+    }
+  }
   if (IsTransferNode(task_type)) { return TaskClassifier::kWaitingTransfer; }
   if (task_type == TaskType::kCallbackNotify) { return TaskClassifier::kRunALAP; }
   if (ShouldRunASAP(task_type)) { return TaskClassifier::kRunASAP; }
@@ -266,14 +278,15 @@ void TopoStruct::ComputeMeomoryIncrement() {
 }
 
 // Activation time = time of cpu - time of gpu
-  void TopoStruct::ComputeActivationTime(){
-    const auto& node_name = node->VisualStr();
-    if(node_name.find("-cast-")!=std::string::npos || node_name.find("-expand")!=std::string::npos){
-      activation_time = 1;
-    }else{
-      activation_time = 0;
-    }
+void TopoStruct::ComputeActivationTime() {
+  const auto& node_name = node->VisualStr();
+  if (node_name.find("-cast-") != std::string::npos
+      || node_name.find("-expand") != std::string::npos) {
+    activation_time = 1;
+  } else {
+    activation_time = 0;
   }
+}
 
 // deciding parameter
 // i = 0: those with small tributary layers go first
@@ -549,7 +562,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
         remain_task_nums[TaskClassifier::kWaitingTransfer] -= transfer_execution_list.size();
         for (auto* transfer_node : transfer_execution_list) { SetOrderInGraph(transfer_node); }
         // Overlap transfer with computation
-        execute(TaskClassifier::kWaitingComputation, computation_num);
+        execute(TaskClassifier::kWaitingComputation, 10);
 
         // Release the transfer
         for (auto* transfer_node : transfer_execution_list) { finish_execution(transfer_node); }
