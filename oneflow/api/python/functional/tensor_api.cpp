@@ -119,12 +119,12 @@ class GlobalTensorEmptyGenericCtorFunctor {
 
 class TensorWithOtherGenericCtorFunctor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& other, const Symbol<DType>& dtype) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& other, const Optional<Symbol<DType>>& dtype) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     bool is_pinned = false;
     if (other->is_local()) { is_pinned = JUST(CHECK_JUST(other->AsLocalTensor())->is_pinned()); }
-    return functional::To(JUST(MakeTensorFromOtherTensor(other, is_pinned)), dtype, /*copy=*/false);
+    return To(JUST(MakeTensorFromOtherTensor(other, is_pinned)), dtype, false);
   }
 };
 
@@ -345,7 +345,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   return GlobalTensorEmptyGenericCtor(GetDefaultDType(), placement, sbp_tuple);
                 });
   m.add_functor("TensorWithOtherCtor", [](const std::shared_ptr<Tensor>& other) -> Maybe<Tensor> {
-    return TensorWithOtherGenericCtor(other, GetDefaultDType());
+    return TensorWithOtherGenericCtor(other, NullOpt);
   });
   m.add_functor("TensorWithDataCtor",
                 [](PyObject* data, const Optional<Symbol<Device>>& device) -> Maybe<Tensor> {

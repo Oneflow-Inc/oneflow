@@ -59,7 +59,8 @@ static std::vector<std::pair<DeviceType, std::string>> all_device_types = {
 
 static PyObject* PyTensorTypeMetaCls_call(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  PyObject* dtype_value = functional::CastToPyObject(PyTensorType_UnpackDType(self));
+  const auto& dtype = PyTensorType_UnpackDType(self);
+  PyObject* dtype_value = functional::CastToPyObject(dtype);
   if (!kwargs) { kwargs = PyDict_New(); }
   CHECK_OR_THROW(PyDict_SetItemString(kwargs, "dtype", dtype_value) > -1);
   auto* tensor = functional::_legacy_tensor_generic_ctor(NULL, args, kwargs);
@@ -69,7 +70,7 @@ static PyObject* PyTensorTypeMetaCls_call(PyObject* self, PyObject* args, PyObje
     return PyErr_Format(PyExc_ValueError, "invalid device");
   Optional<std::string> device = ASSERT(DeviceTag4DeviceType(PyTensorType_UnpackDevice(self)));
   return PyTensor_New(ASSERT_PTR(
-      functional::To(PyTensor_Unpack(tensor), device, /*dtype=*/NullOpt, /*copy=*/false)));
+      functional::To(PyTensor_Unpack(tensor), device, dtype, /*copy=*/false)));
   END_HANDLE_ERRORS
 };
 
