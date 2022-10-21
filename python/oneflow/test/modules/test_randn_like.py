@@ -41,6 +41,7 @@ def _test_different_dtype(test_case, device, shape):
         flow.float16,
         flow.float32,
         flow.float64,
+        flow.double,
     ]:
         x = flow.randn(shape, dtype=dtype)
         y = flow.randn_like(x, dtype=dtype, device=flow.device(device))
@@ -72,16 +73,15 @@ def _test_0rank(test_case, device, shape):
 class TestRandIntLike(flow.unittest.TestCase):
     def test_global_different_types(test_case):
         for dtype in [
-            flow.int8,
-            flow.int32,
-            flow.int64,
+            flow.float16,
             flow.float32,
             flow.float64,
+            flow.double,
         ]:
             placement = flow.placement("cpu", ranks=[0])
             sbp = (flow.sbp.broadcast,)
-            x_ = flow.randn((10, 1))
-            x = flow.randint_like(x_, 0, 16, placement=placement, sbp=sbp, dtype=dtype)
+            x_ = flow.randn((10, 1), dtype=dtype)
+            x = flow.randn_like(x_, placement=placement, sbp=sbp, dtype=dtype)
             test_case.assertEqual(x.dtype, dtype)
             test_case.assertEqual(x.sbp, sbp)
             test_case.assertEqual(x.placement, placement)
