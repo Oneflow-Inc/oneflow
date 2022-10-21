@@ -588,17 +588,10 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
   }
 };
 
-#if defined(__clang__) || defined(__GNUC__)
-#define ATTRIBUTE_NO_SANITIZE_ADDRESS __attribute__((no_sanitize_address))
-#else
-#define ATTRIBUTE_NO_SANITIZE_ADDRESS
-#endif
-
 struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
   explicit ReplaceVariableIrPattern(::mlir::MLIRContext* context)
       : ::mlir::RewritePattern("oneflow.variable_ir", 1, context, {"oneflow.variable"}) {}
-  // ignore false positive of asan of centos gcc7
-  ATTRIBUTE_NO_SANITIZE_ADDRESS ::mlir::LogicalResult matchAndRewrite(
+  ::mlir::LogicalResult matchAndRewrite(
       ::mlir::Operation* op0, ::mlir::PatternRewriter& rewriter) const override {
     auto op = ::llvm::dyn_cast<oneflow::FrozenVariableOp>(op0);
     if (!op) return failure();
