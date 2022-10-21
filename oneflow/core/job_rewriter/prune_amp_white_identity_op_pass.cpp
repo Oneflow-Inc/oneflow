@@ -80,7 +80,7 @@ Maybe<void> PruneAmpWhiteIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const 
     }
 
     const auto& old_lbi = op_node->op().BnInOp2Lbi(op_node->op().SoleObn());
-    const auto& new_lbi = producer->op().BnInOp2Lbi(op_node->op().SoleObn());
+    const auto& new_lbi = producer->op().BnInOp2Lbi(producer->op().SoleObn());
 
     for (const OpEdge* out_edge : op_node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
