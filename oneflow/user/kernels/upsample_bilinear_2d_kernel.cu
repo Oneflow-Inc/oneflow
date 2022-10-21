@@ -30,10 +30,9 @@ __device__ __forceinline__ void GetBilinearParamHalf(const bool align_corners, c
                                                      BilinearParam<half>* params) {
   half h1r;
   if (align_corners) {
-    h1r = static_cast<half>(scale_h) * static_cast<half>(h * 1.0);
+    h1r = static_cast<half>(scale_h * static_cast<double>(h));
   } else {
-    h1r = (static_cast<half>(h * 1.0) + static_cast<half>(0.5f)) * static_cast<half>(scale_h)
-          - static_cast<half>(0.5f);
+    h1r = h1r = static_cast<half>((static_cast<double>(h) + 0.5f) * scale_h - 0.5f);
     h1r = h1r < static_cast<half>(0.0) ? static_cast<half>(0.0) : h1r;
   }
   const int64_t h1 = int(h1r);
@@ -41,10 +40,9 @@ __device__ __forceinline__ void GetBilinearParamHalf(const bool align_corners, c
 
   half w1r;
   if (align_corners) {
-    w1r = static_cast<half>(scale_w) * static_cast<half>(w * 1.0);
+    w1r = static_cast<half>(scale_w * static_cast<double>(w));
   } else {
-    w1r = (static_cast<half>(w * 1.0) + static_cast<half>(0.5f)) * static_cast<half>(scale_w)
-          - static_cast<half>(0.5f);
+    w1r = static_cast<half>((static_cast<double>(w) + 0.5f) * scale_w - 0.5f);
     w1r = w1r < static_cast<half>(0.0) ? static_cast<half>(0.0) : w1r;
   }
   const int64_t w1 = int(w1r);
