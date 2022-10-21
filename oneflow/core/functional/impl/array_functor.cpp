@@ -3387,44 +3387,6 @@ class BinCountFunctor {
   std::shared_ptr<OpExpr> weight_op_;
 };
 
-// Note [closeness]
-// A number A is close to B when either:
-//
-// (1) A is equal to B, with NaNs comparing equal when equal_nan is true.
-// (2) The error abs(A - B) is finite and less than the max error
-//      (atol + abs(rtol * B)).
-class IsCloseFunctor {
- public:
-  IsCloseFunctor() {}
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
-                           const std::shared_ptr<Tensor>& other, float atol, float rtol,
-                           bool equal_nan) const {
-    auto close = JUST(BroadcastEqual(input, other));
-    if (equal_nan)
-      close = JUST(BroadcastLogicalOr(
-          close, JUST(BroadcastLogicalAnd(JUST(IsNan(input)), JUST(IsNan(other))))));
-
-    if (atol == 0 and rtol == 0) return close;
-    auto diff = JUST(Abs(JUST(Sub(input, other, 1, false))));
-    auto finite = JUST(IsFinite(diff));
-    auto allowed_error = JUST(ScalarAdd(atol, JUST(Abs(JUST(ScalarMul(rtol, other)))), 1));
-    auto in_bound = JUST(BroadcastLess(diff, allowed_error));
-    return in_bound;
-  }
-};
-
-class AllCloseFunctor {
- public:
-  AllCloseFunctor() {}
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
-                           const std::shared_ptr<Tensor>& other, float atol, float rtol,
-                           bool equal_nan) const {
-    return SequenceFunction<Maybe<Tensor>()>(
-               [&]() { return IsClose(input, other, atol, rtol, equal_nan); })
-        .then([&](const std::shared_ptr<one::Tensor>& x) { return ReduceAllWhole(x); })
-        .call();
-  }
-};
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -3567,8 +3529,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
   m.add_functor<impl::PinMemoryFunctor>("PinMemory");
   m.add_functor<impl::BinCountFunctor>("BinCount");
-  m.add_functor<impl::IsCloseFunctor>("IsClose");
-  m.add_functor<impl::AllCloseFunctor>("AllClose");
 };
 
 }  // namespace functional

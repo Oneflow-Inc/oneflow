@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/binary_op.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/scalar.h"
+#include <cmath>
 
 namespace oneflow {
 
@@ -122,6 +123,113 @@ struct BinaryFunctor<device, BinaryOp::kGreaterEqual, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const { return static_cast<Dst>(src0 >= src1); }
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kIsCloseEqNan, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
+      : atol(attr0.Value<float>()), rtol(attr0.Value<float>()) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const {
+    bool close = src0 == src1;
+    close |= (std::isnan(src0) and std::isnan(src1));
+    if (atol == 0 and rtol == 0) return close;
+    Src allowed_error = static_cast<Src>(atol) + abs(static_cast<Src>(rtol) * src1);
+    Src actual_error = abs(src0 - src1);
+    close |= (std::isfinite(actual_error) and (actual_error <= allowed_error));
+    return close;
+  }
+  float atol, rtol;
+};
+
+template<DeviceType device, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kIsCloseEqNan, nv_bfloat16, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
+      : atol(attr0.Value<float>()), rtol(attr0.Value<float>()) {}
+
+  OF_DEVICE_FUNC Dst operator()(nv_bfloat16 src0, nv_bfloat16 src1) const {
+    float fp32_src0 = static_cast<float>(src0);
+    float fp32_src1 = static_cast<float>(src1);
+    bool close = fp32_src0 == fp32_src1;
+    close |= (std::isnan(fp32_src0) and std::isnan(fp32_src1));
+    if (atol == 0 and rtol == 0) return close;
+    float allowed_error = atol + abs((rtol)*fp32_src1);
+    float actual_error = abs(fp32_src0 - fp32_src1);
+    close |= (std::isfinite(actual_error) and (actual_error <= allowed_error));
+    return close;
+  }
+  float atol, rtol;
+};
+
+template<DeviceType device, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kIsCloseEqNan, half, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
+      : atol(attr0.Value<float>()), rtol(attr0.Value<float>()) {}
+
+  OF_DEVICE_FUNC Dst operator()(half src0, half src1) const {
+    float fp32_src0 = static_cast<float>(src0);
+    float fp32_src1 = static_cast<float>(src1);
+    bool close = fp32_src0 == fp32_src1;
+    close |= (std::isnan(fp32_src0) and std::isnan(fp32_src1));
+    if (atol == 0 and rtol == 0) return close;
+    float allowed_error = atol + abs((rtol)*fp32_src1);
+    float actual_error = abs(fp32_src0 - fp32_src1);
+    close |= (std::isfinite(actual_error) and (actual_error <= allowed_error));
+    return close;
+  }
+  float atol, rtol;
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kIsCloseNeqNan, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
+      : atol(attr0.Value<float>()), rtol(attr0.Value<float>()) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const {
+    bool close = src0 == src1;
+    if (atol == 0 and rtol == 0) return close;
+    Src allowed_error = static_cast<Src>(atol) + abs(static_cast<Src>(rtol) * src1);
+    Src actual_error = abs(src0 - src1);
+    close |= (std::isfinite(actual_error) and (actual_error <= allowed_error));
+    return close;
+  }
+  float atol, rtol;
+};
+
+template<DeviceType device, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kIsCloseNeqNan, nv_bfloat16, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
+      : atol(attr0.Value<float>()), rtol(attr0.Value<float>()) {}
+
+  OF_DEVICE_FUNC Dst operator()(nv_bfloat16 src0, nv_bfloat16 src1) const {
+    float fp32_src0 = static_cast<float>(src0);
+    float fp32_src1 = static_cast<float>(src1);
+    bool close = fp32_src0 == fp32_src1;
+    if (atol == 0 and rtol == 0) return close;
+    float allowed_error = atol + abs(rtol * fp32_src1);
+    float actual_error = abs(fp32_src0 - fp32_src1);
+    close |= (std::isfinite(actual_error) and (actual_error <= allowed_error));
+    return close;
+  }
+  float atol, rtol;
+};
+
+template<DeviceType device, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kIsCloseNeqNan, half, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
+      : atol(attr0.Value<float>()), rtol(attr0.Value<float>()) {}
+
+  OF_DEVICE_FUNC Dst operator()(half src0, half src1) const {
+    float fp32_src0 = static_cast<float>(src0);
+    float fp32_src1 = static_cast<float>(src1);
+    bool close = fp32_src0 == fp32_src1;
+    if (atol == 0 and rtol == 0) return close;
+    float allowed_error = atol + abs(rtol * fp32_src1);
+    float actual_error = abs(fp32_src0 - fp32_src1);
+    close |= (std::isfinite(actual_error) and (actual_error <= allowed_error));
+    return close;
+  }
+  float atol, rtol;
 };
 
 template<DeviceType device, typename Src, typename Dst>

@@ -45,6 +45,8 @@ enum class BinaryOp {
   kLessEqual,
   kGreaterThan,
   kGreaterEqual,
+  kIsCloseEqNan,
+  kIsCloseNeqNan,
   // Logical
   kLogicalAnd,
   kLogicalOr,

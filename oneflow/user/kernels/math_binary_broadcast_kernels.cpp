@@ -24,8 +24,23 @@ limitations under the License.
 namespace oneflow {
 
 template<typename Context, ep::primitive::BinaryOp binary_op>
-std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> NewBroadcastElementwiseBinaryPrimitive(
-    Context* ctx) {
+std::enable_if_t<binary_op == ep::primitive::BinaryOp::kIsCloseEqNan
+                     or binary_op == ep::primitive::BinaryOp::kIsCloseNeqNan,
+                 std::unique_ptr<ep::primitive::BroadcastElementwiseBinary>>
+NewBroadcastElementwiseBinaryPrimitive(Context* ctx) {
+  const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const user_op::TensorDesc* z = ctx->TensorDesc4ArgNameAndIndex("z", 0);
+  size_t num_axes = z->shape().NumAxes();
+  return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
+      ctx->device_type(), binary_op, x->data_type(), z->data_type(), num_axes,
+      ctx->template Attr<float>("atol"), ctx->template Attr<float>("rtol"));
+}
+
+template<typename Context, ep::primitive::BinaryOp binary_op>
+std::enable_if_t<binary_op != ep::primitive::BinaryOp::kIsCloseEqNan
+                     and binary_op != ep::primitive::BinaryOp::kIsCloseNeqNan,
+                 std::unique_ptr<ep::primitive::BroadcastElementwiseBinary>>
+NewBroadcastElementwiseBinaryPrimitive(Context* ctx) {
   const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   const user_op::TensorDesc* z = ctx->TensorDesc4ArgNameAndIndex("z", 0);
   size_t num_axes = z->shape().NumAxes();
@@ -107,6 +122,10 @@ REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_greater_equal",
                                     ep::primitive::BinaryOp::kGreaterEqual)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_less", ep::primitive::BinaryOp::kLessThan)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_less_equal", ep::primitive::BinaryOp::kLessEqual)
+REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_isclose_eq_nan",
+                                    ep::primitive::BinaryOp::kIsCloseEqNan)
+REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_isclose_neq_nan",
+                                    ep::primitive::BinaryOp::kIsCloseNeqNan)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_logical_and", ep::primitive::BinaryOp::kLogicalAnd)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_logical_or", ep::primitive::BinaryOp::kLogicalOr)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_logical_xor", ep::primitive::BinaryOp::kLogicalXor)
