@@ -3126,18 +3126,20 @@ class StftFunctor {
                            const bool return_complex) const {
     int64_t new_hop_length = hop_length.has_value() == true ? JUST(hop_length) : n_fft / 4;
     int64_t new_win_length = win_length.has_value() == true ? JUST(win_length) : n_fft;
+    auto input_tensor = input;
+
+    const auto& NumAxex = input_tensor->shape()->NumAxes();
+    CHECK_OR_RETURN(NumAxex == 2 || NumAxex == 1)
+        << Error::RuntimeError() << "Expected a 1D or 2D tensor,but got " << NumAxex << "D";
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("normalized", "onesided", "return_complex");
     attrs.SetAllAttrs(normalized, onesided, return_complex);
 
-    auto input_tensor = input;
-    if (input->shape()->NumAxes() == 1) {
-      input_tensor = JUST(functional::Unsqueeze(input_tensor, 0));
-    }
+    if (NumAxex == 1) { input_tensor = JUST(functional::Unsqueeze(input_tensor, 0)); }
     if (center) {
       const auto& input_shape = input_tensor->shape();
-
       const auto input_dim = input_tensor->shape()->NumAxes();
+
       const auto extra_dims = std::max(size_t{3}, (size_t)input_dim) - input_dim;
       const auto pad_amount = n_fft / 2;
 
@@ -3159,6 +3161,12 @@ class StftFunctor {
     int32_t batch = input_tensor->shape()->At(0);
     int32_t len = input_tensor->shape()->At(1);
     int32_t n_frames = 1 + (len - n_fft) / new_hop_length;
+    CHECK_OR_RETURN(n_fft > 0 && n_fft <= len)
+        << Error::RuntimeError() << "Expected 0 < n_fft < " << len << " ,but got " << n_fft;
+    CHECK_GT_OR_RETURN(new_hop_length, 0)
+        << Error::RuntimeError() << "Expected hop_length > 0, but got " << new_hop_length;
+    CHECK_OR_RETURN(new_win_length > 0 && new_win_length <= n_fft)
+        << Error::RuntimeError() << "Expected 0 < win_length <=n_fft ,but got " << new_win_length;
     const auto& stride = *JUST(input_tensor->stride());
     std::vector<int32_t> strides(stride.begin(), stride.end());
     input_tensor =
@@ -3167,7 +3175,14 @@ class StftFunctor {
 
     auto temp_tensor = JUST(functional::Empty(Shape{n_fft}, input->dtype(), JUST(input->device()),
                                               /*pin_memory=*/false));
-    if (window.has_value()) { temp_tensor = JUST(window); }
+    if (window.has_value()) {
+      temp_tensor = JUST(window);
+      CHECK_OR_RETURN(temp_tensor->shape()->NumAxes() == 1
+                      && temp_tensor->shape()->at(0) == new_win_length)
+          << Error::RuntimeError()
+          << "Expected a 1D window tensor of size equal to win_length=" << new_win_length
+          << ", but got window with size " << temp_tensor->shape()->ToString();
+    }
     if (new_win_length < n_fft) {
       temp_tensor = JUST(functional::Fill(temp_tensor, 0));
       auto left = (n_fft - new_win_length) / 2;
