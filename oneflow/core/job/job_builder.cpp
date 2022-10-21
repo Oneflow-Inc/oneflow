@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/time_util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
@@ -98,7 +97,6 @@ std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4Op
 }
 
 JobBuilder::JobBuilder(Job* job) : job_(job) {
-  auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true, true);
   FOR_RANGE(int32_t, i, 0, job->net().op_size()) {
     CHECK(op_name2op_conf_.emplace(job->net().op(i).name(), job->mutable_net()->mutable_op(i))
               .second);
@@ -152,7 +150,6 @@ JobBuilder::JobBuilder(Job* job) : job_(job) {
       placement_group.mutable_op_set()->mutable_op_name()->Clear();
     }
   }
-  tc->Count("init job builder", 1);
 }
 
 Maybe<OperatorConf*> JobBuilder::MutableOpConf4OpName(const std::string& op_name) {
