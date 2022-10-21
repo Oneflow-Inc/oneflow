@@ -89,7 +89,6 @@ Maybe<void> PruneAmpWhiteIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const 
               iter = to_update_op_confs.emplace(op.op_name(), op.op_conf()).first;
             }
             OperatorConf& op_conf = iter->second;
-            auto old_lbn = GenLogicalBlobName(op.BnInOp2Lbi(ibn));
             const auto& old_val =
                 ReplaceInputLbnInOpCustomizedConf(&op_conf, ibn, GenLogicalBlobName(new_lbi));
             CHECK_EQ(GenLogicalBlobName(old_lbi), old_val);
