@@ -71,19 +71,23 @@ Maybe<void> PruneAmpWhiteIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const 
   std::vector<std::string> del_op_names;
   del_op_names.reserve(del_nodes.size());
   for (const OpNode* op_node : del_nodes) {
+    del_op_names.emplace_back(op_node->op().op_name());
+
     // find first node not deleted
     const OpNode* producer = op_node->SoleInEdge()->src_node();
-    while (del_nodes.count(producer)) { producer = op_node->SoleInEdge()->src_node(); }
+    while (del_nodes.find(producer) != del_nodes.end()) {
+      producer = op_node->SoleInEdge()->src_node();
+    }
 
     const auto& old_lbi = op_node->op().BnInOp2Lbi(op_node->op().SoleObn());
     const auto& new_lbi = producer->op().BnInOp2Lbi(op_node->op().SoleObn());
 
     for (const OpEdge* out_edge : op_node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
-      if (!del_nodes.count(consumer)) {
-        for (const std::string& ibn : consumer->op().input_bns()) {
-          if (consumer->op().BnInOp2Lbi(ibn) == old_lbi) {
-            const Operator& op = consumer->op();
+      if (del_nodes.find(consumer) == del_nodes.end()) {
+        const Operator& op = consumer->op();
+        for (const std::string& ibn : op.input_bns()) {
+          if (op.BnInOp2Lbi(ibn) == old_lbi) {
             auto iter = to_update_op_confs.find(op.op_name());
             if (iter == to_update_op_confs.end()) {
               iter = to_update_op_confs.emplace(op.op_name(), op.op_conf()).first;
@@ -96,7 +100,6 @@ Maybe<void> PruneAmpWhiteIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const 
         }
       }
     }
-    del_op_names.emplace_back(op_node->op().op_name());
   }
 
   JobBuilder job_builder(job);
