@@ -23,7 +23,7 @@ namespace vm {
 
 class EventRecordedEpStreamPolicy final : public EpStreamPolicyBase {
  public:
-  EventRecordedEpStreamPolicy(Symbol<Device> device);
+  EventRecordedEpStreamPolicy(Symbol<Device> device, std::unique_ptr<vm::Allocator>&& allocator);
   ~EventRecordedEpStreamPolicy() override = default;
 
   void InitInstructionStatus(const Stream& stream,

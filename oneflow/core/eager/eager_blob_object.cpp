@@ -35,7 +35,6 @@ EagerBlobObject::EagerBlobObject(
       data_type_(data_type),
       storage_offset_(0),
       tensor_storage_(tensor_storage),
-      is_non_pod_object_placement_newed_(false),
       pin_memory_(false),
       compute_local_dep_object_(dep_object),
       static_local_tensor_meta_(static_local_tensor_meta),
@@ -106,7 +105,7 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(vm::Allocator* allocator)
       allocator->Deallocate(dptr, required_body_bytes);
     };
     tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
-                                   required_body_bytes, /*is_allocated_in_vm*/ true);
+                                   required_body_bytes);
     InitNonPODTypeEagerBlobObjectIfNeed(tensor_storage_->non_pod_allocator(), this);
   }
   return Maybe<void>::Ok();

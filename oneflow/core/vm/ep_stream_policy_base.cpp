@@ -52,7 +52,6 @@ void EpStreamPolicyBase::Run(Instruction* instruction) const {
   auto* ep_device = ep_stream_policy_base->GetOrCreateEpDevice();
   ep_device->SetAsActiveDevice();
   instruction->Compute();
-  ep_stream_policy_base->stream()->Sync();
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer();
   EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(
       stream->mut_stream_policy()->stream());

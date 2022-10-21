@@ -174,8 +174,6 @@ struct MakeReleaseTensorInstructionPolicy
   static Maybe<vm::InstructionPolicy> Make(
       const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
-    return std::shared_ptr<vm::InstructionPolicy>(
-        new vm::SlowReleaseTensorInstructionPolicy(eager_blob_object, stream));
     DataType data_type = eager_blob_object->data_type();
     if (!IsPODDataType(data_type)) {
       return std::shared_ptr<vm::InstructionPolicy>(

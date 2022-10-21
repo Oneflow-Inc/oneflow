@@ -383,10 +383,10 @@ Maybe<void> InstructionsBuilder::Call(
     const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
     const one::OpExprInterpContext& ctx, Symbol<Stream> stream) {
   stream = JUST(StreamGuard::TryConvertStream(stream));
-  //  Symbol<Stream> allocator_stream = JUST(GetAllocatorStream(stream));
-  //  if (stream != allocator_stream) {
-  //    JUST(AllocateTensors(output_eager_blob_objects, allocator_stream));
-  //  }
+  Symbol<Stream> allocator_stream = JUST(GetAllocatorStream(stream));
+  if (stream != allocator_stream) {
+    JUST(AllocateTensors(output_eager_blob_objects, allocator_stream));
+  }
   JUST(SoftSyncStream(output_eager_blob_objects, stream));
   JUST(SoftSyncStream(input_eager_blob_objects, stream));
   for (const auto& output : output_eager_blob_objects) {

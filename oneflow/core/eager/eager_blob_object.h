@@ -46,25 +46,23 @@ class TensorStorage {
       : blob_bytes_(0),
         non_pod_allocator_(std::make_unique<MemoryAllocator>()),
         producer_stream_(NullOpt),
-        last_used_stream_(NullOpt),
-        is_allocated_in_vm_(false) {}
+        last_used_stream_(NullOpt) {}
 
-  ~TensorStorage() {
+  virtual ~TensorStorage() {
     for (const auto& hook : storage_delete_hooks_) { hook(); }
   }
+
+  virtual bool is_allocated_in_vm() const = 0;
 
   size_t blob_bytes() const { return blob_bytes_; }
 
   char* blob_dptr() { return blob_dptr_.get(); }
-  bool is_allocated_in_vm() { return is_allocated_in_vm_; }
 
   MemoryAllocator* non_pod_allocator() { return non_pod_allocator_.get(); }
 
-  void set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>&& blob_dptr, size_t bytes,
-                     bool is_allocated_in_vm) {
+  void set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>&& blob_dptr, size_t bytes) {
     blob_dptr_ = std::move(blob_dptr);
     blob_bytes_ = bytes;
-    is_allocated_in_vm_ = is_allocated_in_vm;
   }
 
   const Optional<Symbol<::oneflow::Stream>>& producer_stream() const { return producer_stream_; }
@@ -95,7 +93,22 @@ class TensorStorage {
   Optional<Symbol<::oneflow::Stream>> producer_stream_;
   Optional<Symbol<::oneflow::Stream>> last_used_stream_;
   std::vector<std::function<void()>> storage_delete_hooks_;
-  bool is_allocated_in_vm_;
+};
+
+class InsideVmTensorStorage : public TensorStorage {
+ public:
+  InsideVmTensorStorage() = default;
+  ~InsideVmTensorStorage() = default;
+
+  bool is_allocated_in_vm() const override { return true; }
+};
+
+class OutsideVmTensorStorage : public TensorStorage {
+ public:
+  OutsideVmTensorStorage() = default;
+  ~OutsideVmTensorStorage() = default;
+
+  bool is_allocated_in_vm() const override { return false; }
 };
 
 class EagerBlobObject final : public user_op::Tensor,
@@ -151,7 +164,7 @@ class EagerBlobObject final : public user_op::Tensor,
   Maybe<void> TryAllocateBlobBodyMemory(vm::Allocator* allocator);
   Maybe<void> DeallocateBlobDataPtr() {
     tensor_storage_->Release();
-    tensor_storage_.reset(new TensorStorage);
+    tensor_storage_.reset(new InsideVmTensorStorage());
     return Maybe<void>::Ok();
   }
   void RegisterStorageDeleteHook(const std::function<void()>& hook) {
@@ -202,7 +215,6 @@ class EagerBlobObject final : public user_op::Tensor,
   DataType data_type_;
   int64_t storage_offset_;
   std::shared_ptr<TensorStorage> tensor_storage_;
-  bool is_non_pod_object_placement_newed_;
   bool pin_memory_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
 
