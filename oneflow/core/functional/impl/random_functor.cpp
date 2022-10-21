@@ -264,9 +264,9 @@ class RandnLikeFunctor {
 class GlobalRandnLikeFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
-                           const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp,
+                           const Optional<Symbol<DType>>& dtype,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
     return GlobalRandN(*input->shape(), placement, sbp, dtype.value_or(input->dtype()), generator,
