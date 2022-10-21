@@ -28,12 +28,12 @@ __device__ T GenNormal(curandState* state, const T mean, const T std);
 
 template<>
 __device__ float GenNormal<float>(curandState* state, const float mean, const float std) {
-  return (curand_normal(state) + mean) / std;
+  return curand_normal(state) * std + mean;
 }
 
 template<>
 __device__ double GenNormal<double>(curandState* state, const double mean, const double std) {
-  return (curand_normal_double(state) + mean) / std;
+  return curand_normal_double(state) * std + mean;
 }
 
 template<typename T>
