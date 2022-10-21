@@ -43,7 +43,8 @@ namespace vm {
 class TensorStorage {
  public:
   TensorStorage()
-      : non_pod_allocator_(std::make_unique<MemoryAllocator>()),
+      : blob_bytes_(0),
+        non_pod_allocator_(std::make_unique<MemoryAllocator>()),
         producer_stream_(NullOpt),
         last_used_stream_(NullOpt),
         is_allocated_in_vm_(false) {}
@@ -139,11 +140,9 @@ class EagerBlobObject final : public user_op::Tensor,
   MutShapeView mut_shape_view() override;
   const MemoryCase& mem_case() const override { return *mem_case_; }
   const void* raw_dptr() const override {
-    CHECK(inited_mem_ptr_for_allocation_compuation_pipelining_)
-        << "mem_ptr_for_allocation_compuation_pipelining_ not initialized. Please check if there "
-           "are any EagerBlobObjects created outside vm";
-    return mem_ptr_for_allocation_compuation_pipelining_
-           + storage_offset_ * GetSizeOfDataType(data_type_);
+    char* ptr = tensor_storage_->blob_dptr();
+    if (tensor_storage_->blob_bytes() > 0) { CHECK_NOTNULL(ptr); }
+    return ptr + storage_offset_ * GetSizeOfDataType(data_type_);
   }
   void* mut_raw_dptr() override { return const_cast<void*>(raw_dptr()); }
 
@@ -197,36 +196,12 @@ class EagerBlobObject final : public user_op::Tensor,
     return reinterpret_cast<char*>(const_cast<int64_t*>(shape().dim_vec().data()));
   }
 
-  void InitOrCheckMemPtrForAllocationComputationPipelining() {
-    auto* ptr = tensor_storage_->blob_dptr();
-    if (inited_mem_ptr_for_allocation_compuation_pipelining_) {
-      CHECK_EQ(mem_ptr_for_allocation_compuation_pipelining_, ptr);
-    } else {
-      mem_ptr_for_allocation_compuation_pipelining_ = ptr;
-      inited_mem_ptr_for_allocation_compuation_pipelining_ = true;
-    }
-  }
-
-  void TryInitNonPODTypeEagerBlobObjectIfNeed();
-
  private:
-  void InitMemPtrForAllocationComputationPipelining() {
-    auto* ptr = tensor_storage_->blob_dptr();
-    CHECK(!inited_mem_ptr_for_allocation_compuation_pipelining_)
-        << "mem_ptr_for_allocation_compuation_pipelining_ has been initialized.";
-    mem_ptr_for_allocation_compuation_pipelining_ = ptr;
-    inited_mem_ptr_for_allocation_compuation_pipelining_ = true;
-  }
-
   bool is_dynamic_;
   std::shared_ptr<MemoryCase> mem_case_;
   DataType data_type_;
   int64_t storage_offset_;
   std::shared_ptr<TensorStorage> tensor_storage_;
-  // For allocation-computation pipeline, the value of mem_ptr_for_allocation_compuation_pipelining_
-  // are kept even after tensor_storage_.reset().
-  char* mem_ptr_for_allocation_compuation_pipelining_;
-  bool inited_mem_ptr_for_allocation_compuation_pipelining_;
   bool is_non_pod_object_placement_newed_;
   bool pin_memory_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;

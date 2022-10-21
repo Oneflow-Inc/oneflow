@@ -41,11 +41,6 @@ struct OpCallInstructionUtil final {
       TryAllocateTempStorage(op_call_instruction_policy, allocator);
     }
     ep::Stream* stream = instruction->mut_stream()->mut_stream_policy()->stream();
-    if (!op_call_instruction_policy->is_all_outputs_pod()) {
-      for (const auto& blob_object : op_call_instruction_policy->outputs()) {
-        blob_object->TryInitNonPODTypeEagerBlobObjectIfNeed();
-      }
-    }
     user_op::OpKernelState* state = nullptr;
     user_op::OpKernelCache* cache = nullptr;
     if (op_call_instruction_policy->user_opkernel()->has_state_or_cache()) {
@@ -99,7 +94,6 @@ struct OpCallInstructionUtil final {
       CHECK_JUST(allocator->Allocate(&mem_ptr, byte_size));
       tmp_tensor->set_tmp_buffer_ptr(mem_ptr);
     }
-    allocator->Deallocate(tmp_tensor->mut_tmp_buffer_ptr(), tmp_tensor->tmp_buffer_size());
   }
 
   static inline void DeallocateTempStorage(OpCallInstructionPolicy* op_call_instruction_policy,
@@ -133,15 +127,11 @@ OpCallInstructionPolicy::OpCallInstructionPolicy(
       need_temp_storage_(false),
       dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode),
       input_dependences_(),
-      output_dependences_(),
-      is_all_outputs_pod_(false) {
+      output_dependences_() {
   ForEachConstDependence([&](auto* dep) { input_dependences_.emplace_back(dep); });
   ForEachMutDependence([&](auto* dep) { output_dependences_.emplace_back(dep); });
   ForEachMut2Dependence([&](auto* dep) { output_dependences_.emplace_back(dep); });
   InitStreamSequentialDependence();
-  for (const auto& blob_object : outputs) {
-    is_all_outputs_pod_ = is_all_outputs_pod_ && IsPODDataType(blob_object->data_type());
-  }
 }
 
 Maybe<void> OpCallInstructionPolicy::Init() {

@@ -57,6 +57,7 @@ limitations under the License.
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
+#include "oneflow/core/vm/allocate_tensor_instruction_policy.h"
 
 namespace oneflow {
 
@@ -357,6 +358,24 @@ Maybe<void> InstructionsBuilder::Call(const std::shared_ptr<one::StatefulOpKerne
               nullptr, ctx, stream);
 }
 
+Maybe<void> InstructionsBuilder::AllocateTensors(const vm::EagerBlobObjectList& eager_blob_objects,
+                                                 Symbol<Stream> stream) {
+  // try soft sync eager blob objects which have memory allocated.
+  JUST(SoftSyncStream(eager_blob_objects, stream));
+  auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
+  const auto& instruction_policy =
+      std::make_shared<vm::AllocateTensorInstructionPolicy>(eager_blob_objects, vm_stream);
+  auto instruction = intrusive::make_shared<vm::Instruction>(vm_stream, instruction_policy);
+  instruction_list_->EmplaceBack(std::move(instruction));
+  for (const auto& eager_blob_object : eager_blob_objects) {
+    if (!eager_blob_object->producer_stream().has_value()) {
+      JUST(eager_blob_object->init_producer_stream(stream));
+    }
+    eager_blob_object->set_last_used_stream(stream);
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InstructionsBuilder::Call(
     const std::shared_ptr<one::StatefulOpKernel>& opkernel,
     vm::EagerBlobObjectList&& input_eager_blob_objects,
@@ -364,6 +383,10 @@ Maybe<void> InstructionsBuilder::Call(
     const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
     const one::OpExprInterpContext& ctx, Symbol<Stream> stream) {
   stream = JUST(StreamGuard::TryConvertStream(stream));
+  //  Symbol<Stream> allocator_stream = JUST(GetAllocatorStream(stream));
+  //  if (stream != allocator_stream) {
+  //    JUST(AllocateTensors(output_eager_blob_objects, allocator_stream));
+  //  }
   JUST(SoftSyncStream(output_eager_blob_objects, stream));
   JUST(SoftSyncStream(input_eager_blob_objects, stream));
   for (const auto& output : output_eager_blob_objects) {
@@ -431,10 +454,9 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
     return CHECK_JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
   });
   StreamType stream_type = producer_stream->stream_type();
-  DataType data_type = eager_blob_object->data_type();
   auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(producer_stream)),
-      JUST(vm::MakeReleaseTensorInstructionPolicy::Visit(stream_type, data_type, eager_blob_object,
+      JUST(vm::MakeReleaseTensorInstructionPolicy::Visit(stream_type, eager_blob_object,
                                                          vm_stream)));
   instruction_list_->EmplaceBack(std::move(instruction));
 

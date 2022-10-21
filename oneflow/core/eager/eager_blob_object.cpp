@@ -35,8 +35,6 @@ EagerBlobObject::EagerBlobObject(
       data_type_(data_type),
       storage_offset_(0),
       tensor_storage_(tensor_storage),
-      mem_ptr_for_allocation_compuation_pipelining_(nullptr),
-      inited_mem_ptr_for_allocation_compuation_pipelining_(false),
       is_non_pod_object_placement_newed_(false),
       pin_memory_(false),
       compute_local_dep_object_(dep_object),
@@ -92,15 +90,6 @@ std::shared_ptr<const Stride> EagerBlobObject::stride_ptr() const {
 
 void EagerBlobObject::set_storage_offset(const int64_t offset) { storage_offset_ = offset; }
 
-void EagerBlobObject::TryInitNonPODTypeEagerBlobObjectIfNeed() {
-  if (!IsPODDataType(data_type())) {
-    if (!is_non_pod_object_placement_newed_) {
-      InitNonPODTypeEagerBlobObjectIfNeed(tensor_storage_->non_pod_allocator(), this);
-      is_non_pod_object_placement_newed_ = true;
-    }
-  }
-}
-
 Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(vm::Allocator* allocator) {
   size_t required_body_bytes = AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
@@ -118,9 +107,8 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(vm::Allocator* allocator)
     };
     tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
                                    required_body_bytes, /*is_allocated_in_vm*/ true);
-    InitMemPtrForAllocationComputationPipelining();
+    InitNonPODTypeEagerBlobObjectIfNeed(tensor_storage_->non_pod_allocator(), this);
   }
-  InitOrCheckMemPtrForAllocationComputationPipelining();
   return Maybe<void>::Ok();
 }
 
