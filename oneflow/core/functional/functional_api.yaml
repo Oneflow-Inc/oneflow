@@ -2863,3 +2863,7 @@
 - name: "bincount"
   signature: "Tensor (Tensor input, Tensor weights=None, Int64 minlength=None) => BinCount"
   bind_python: True
+
+- name: "moe_dispatch"
+  signature: "Tensor (Tensor in, Tensor indices, Tensor locations, Int32 num_experts, Int32 capacity) => MOEDispatch"
+  bind_python: True

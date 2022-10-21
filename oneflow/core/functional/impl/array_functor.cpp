@@ -3387,6 +3387,27 @@ class BinCountFunctor {
   std::shared_ptr<OpExpr> weight_op_;
 };
 
+class MOEDispatchFunctor {
+ public:
+  MOEDispatchFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("moe_dispatch").
+                     Input("in").Input("indices").Input("locations").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
+                           const std::shared_ptr<one::Tensor>& indices,
+                           const std::shared_ptr<one::Tensor>& locations,
+                           const int num_experts,
+                           const int capacity) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("num_experts", num_experts));
+    JUST(attrs.SetAttr<int32_t>("capacity", capacity));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {in, indices, locations}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExper> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -3529,6 +3550,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
   m.add_functor<impl::PinMemoryFunctor>("PinMemory");
   m.add_functor<impl::BinCountFunctor>("BinCount");
+  m.add_functor<impl::MOEDispatchFunctor>("MOEDispatch");
 };
 
 }  // namespace functional
