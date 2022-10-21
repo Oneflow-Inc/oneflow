@@ -76,7 +76,7 @@ Maybe<void> PruneAmpWhiteIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const 
     // find first node not deleted
     const OpNode* producer = op_node->SoleInEdge()->src_node();
     while (del_nodes.find(producer) != del_nodes.end()) {
-      producer = op_node->SoleInEdge()->src_node();
+      producer = producer->SoleInEdge()->src_node();
     }
 
     const auto& old_lbi = op_node->op().BnInOp2Lbi(op_node->op().SoleObn());
