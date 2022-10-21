@@ -16,12 +16,15 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_OP_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_OP_GRAPH_H_
 
+#include <chrono>
+#include <memory>
 #include "oneflow/core/graph/graph.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/local_parallel.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/common/time_util.h"
 
 namespace oneflow {
 namespace auto_parallel {
@@ -99,7 +102,11 @@ class OpEdge final : public Edge<OpNode, OpEdge> {
 class OpGraph final : public Graph<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpGraph);
-  explicit OpGraph(const Job& job) { CHECK_JUST(Init(job)); }
+  explicit OpGraph(const Job& job) { 
+    auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true, true);
+    CHECK_JUST(Init(job));
+    tc->Count("init op graph", 1);
+  }
   explicit OpGraph() = default;
   ~OpGraph() override = default;
 

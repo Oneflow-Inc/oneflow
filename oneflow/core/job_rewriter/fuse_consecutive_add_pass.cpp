@@ -13,8 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <memory>
+#include <string>
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/common/time_util.h"
 
 namespace oneflow {
 
@@ -28,11 +31,19 @@ class FuseConsecutiveAddPass final : public JobPass {
   Maybe<bool> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    auto cost_ct = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true, true);
     bool changed = false;
+    int64_t apply_cnt = 0;
     do {
+      cost_ct->Count("start", 1);
       const OpGraph op_graph(*job);
+      cost_ct->Count("create op graph", 1);
       JobBuilder job_builder(job);
+      cost_ct->Count("create job builder", 1);
       changed = JUST(Apply(op_graph, &job_builder));
+      cost_ct->Count("fuse_add_apply", 1);
+      VLOG(1) << "apply cnt " << apply_cnt;
+      ++apply_cnt;
     } while (changed);
     return Maybe<void>::Ok();
   }
@@ -40,9 +51,9 @@ class FuseConsecutiveAddPass final : public JobPass {
 
 Maybe<bool> FuseConsecutiveAddPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   const auto IsSafeToDelete = MakePredicatorIsSafeToDelete(op_graph);
-  std::vector<OperatorConf> delete_ops;
+  std::vector<std::string> delete_ops;
   HashSet<const OpNode*> replaced_ops;
-  op_graph.ForEachNode([&](const OpNode* op_node) {
+  op_graph.TopoForEachNode([&](const OpNode* op_node) {
     if (!IsUserOpWithTypeName(op_node->op().op_conf(), "add_n") || !IsSafeToDelete(op_node)
         || op_node->out_edges().size() != 1 || replaced_ops.count(op_node)) {
       return;
@@ -54,7 +65,7 @@ Maybe<bool> FuseConsecutiveAddPass::Apply(const OpGraph& op_graph, JobBuilder* j
     }
 
     replaced_ops.insert(sole_dst_node);
-    delete_ops.emplace_back(op_node->op().op_conf());
+    delete_ops.emplace_back(op_node->op().op_conf().name());
 
     user_op::UserOpConfWrapperBuilder fused_op_builder(sole_dst_node->op().op_name());
     fused_op_builder.OpTypeName("add_n").Output("out");
