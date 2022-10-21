@@ -35,8 +35,13 @@ struct CreateStreamPolicy final : public StreamTypeVisitor<CreateStreamPolicy> {
     return std::shared_ptr<vm::StreamPolicy>(new vm::EpStreamPolicy(device));
   }
   static Maybe<vm::StreamPolicy> VisitHost2Device(Symbol<Device> device) {
-    auto allocator =
-        std::make_unique<vm::UnimplementedAllocator>("allocator is not supported on h2d stream.");
+    std::unique_ptr<vm::Allocator> allocator{};
+    if (device->enum_type() == DeviceType::kCPU) {
+      allocator = vm::EventRecordedEpStreamPolicy::CreateEpBackendDeviceAllocator(device);
+    } else {
+      allocator =
+          std::make_unique<vm::UnimplementedAllocator>("allocator is not supported on h2d stream.");
+    }
     return std::shared_ptr<vm::StreamPolicy>(
         new vm::EventRecordedEpStreamPolicy(device, std::move(allocator)));
   }
@@ -44,8 +49,13 @@ struct CreateStreamPolicy final : public StreamTypeVisitor<CreateStreamPolicy> {
     return std::shared_ptr<vm::StreamPolicy>(new vm::EpD2HStreamPolicy(device));
   }
   static Maybe<vm::StreamPolicy> VisitCcl(Symbol<Device> device) {
-    auto allocator =
-        std::make_unique<vm::UnimplementedAllocator>("allocator is not supported on ccl stream.");
+    std::unique_ptr<vm::Allocator> allocator{};
+    if (device->enum_type() == DeviceType::kCPU) {
+      allocator = vm::EventRecordedEpStreamPolicy::CreateEpBackendDeviceAllocator(device);
+    } else {
+      allocator =
+          std::make_unique<vm::UnimplementedAllocator>("allocator is not supported on ccl stream.");
+    }
     return std::shared_ptr<vm::StreamPolicy>(
         new vm::EventRecordedEpStreamPolicy(device, std::move(allocator)));
   }

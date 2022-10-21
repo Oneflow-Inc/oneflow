@@ -28,6 +28,9 @@ class EventRecordedEpStreamPolicy final : public EpStreamPolicyBase {
 
   void InitInstructionStatus(const Stream& stream,
                              InstructionStatusBuffer* status_buffer) const override;
+
+  static std::unique_ptr<BinAllocator<ThreadSafeLock>> CreateEpBackendDeviceAllocator(
+      Symbol<Device> device);
 };
 
 }  // namespace vm
