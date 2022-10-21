@@ -591,8 +591,8 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
 struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
   explicit ReplaceVariableIrPattern(::mlir::MLIRContext* context)
       : ::mlir::RewritePattern("oneflow.variable_ir", 1, context, {"oneflow.variable"}) {}
-  ::mlir::LogicalResult matchAndRewrite(
-      ::mlir::Operation* op0, ::mlir::PatternRewriter& rewriter) const override {
+  ::mlir::LogicalResult matchAndRewrite(::mlir::Operation* op0,
+                                        ::mlir::PatternRewriter& rewriter) const override {
     auto op = ::llvm::dyn_cast<oneflow::FrozenVariableOp>(op0);
     if (!op) return failure();
     NamedAttrList attrs;
