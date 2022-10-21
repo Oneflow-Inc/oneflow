@@ -69,8 +69,8 @@ static PyObject* PyTensorTypeMetaCls_call(PyObject* self, PyObject* args, PyObje
   if (!TRY(DeviceTag4DeviceType(PyTensorType_UnpackDevice(self))).IsOk())
     return PyErr_Format(PyExc_ValueError, "invalid device");
   Optional<std::string> device = ASSERT(DeviceTag4DeviceType(PyTensorType_UnpackDevice(self)));
-  return PyTensor_New(ASSERT_PTR(
-      functional::To(PyTensor_Unpack(tensor), device, dtype, /*copy=*/false)));
+  return PyTensor_New(
+      ASSERT_PTR(functional::To(PyTensor_Unpack(tensor), device, dtype, /*copy=*/false)));
   END_HANDLE_ERRORS
 };
 
