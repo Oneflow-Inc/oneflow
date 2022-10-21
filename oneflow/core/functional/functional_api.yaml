@@ -2224,6 +2224,15 @@
     ]
   bind_python: True
 
+- name: "randn_like"
+  signature: [
+      "Tensor (Tensor input, *, DataType dtype=None, Device device=None,
+      Generator generator=None, Bool requires_grad=False) => RandnLike",
+      "Tensor (Tensor input, *, Placement placement, SbpList sbp, DataType dtype=None,
+      Generator generator=None, Bool requires_grad=False) => GlobalRandnLike",
+    ]
+  bind_python: True
+
 - name: "randint"
   signature: [
       "Tensor (Int64 low, Int64 high, Shape size, *, DataType dtype=None,
