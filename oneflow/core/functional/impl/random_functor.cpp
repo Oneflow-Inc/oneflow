@@ -249,6 +249,31 @@ class GlobalRandNFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class RandnLikeFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Optional<Symbol<Device>>& device,
+                           const Optional<one::Generator>& generator,
+                           const bool& requires_grad) const {
+    return RandN(*input->shape(), dtype.value_or(input->dtype()),
+                 device.value_or(JUST(input->device())), generator, requires_grad);
+  }
+};
+
+class GlobalRandnLikeFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<SbpParallel>>& sbp,
+                           const Optional<one::Generator>& generator,
+                           const bool& requires_grad) const {
+    return GlobalRandN(*input->shape(), placement, sbp, dtype.value_or(input->dtype()), generator,
+                       requires_grad);
+  }
+};
+
 class RandIntFunctor {
  public:
   RandIntFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform_int").Output("out").Build()); }
@@ -586,6 +611,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<GlobalRandFunctor>("GlobalRand");
   m.add_functor<RandNFunctor>("RandN");
   m.add_functor<GlobalRandNFunctor>("GlobalRandN");
+  m.add_functor<RandnLikeFunctor>("RandnLike");
+  m.add_functor<GlobalRandnLikeFunctor>("GlobalRandnLike");
   m.add_functor<RandIntFunctor, RandInt2Functor>("RandInt");
   m.add_functor<GlobalRandIntFunctor, GlobalRandInt2Functor>("GlobalRandInt");
   m.add_functor<RandIntLikeFunctor, RandIntLike2Functor>("RandIntLike");
