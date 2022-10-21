@@ -627,7 +627,6 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
     attrs.set(name, SBPTranslation::ConvertNdSbpToPsig(rewriter, nd_sbp_str, nd_size));
     auto op_new = rewriter.create<oneflow::VariableOp>(op->getLoc(), op.output().getType(),
                                                        ValueRange(), attrs);
-    rewriter.replaceOp(op0, op_new->getResults());
     const std::string tensor_name = op.op_nameAttr().str();
     ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Set(
         tensor_name,  // tensor_name can't be replaced by op.op_nameAttr().str() directly when
@@ -635,6 +634,8 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
                       // But it works when compiling with clang.
                       // Maybe temporary objects would be released earlier when using gcc.
         support::DenseElementsAttrToTensor(tensor_attr, op.device_tagAttr(), op.device_nameAttr()));
+    // replaceOp may deallocate `op0` (and also `op`), so we should not use `op` after this call.
+    rewriter.replaceOp(op0, op_new->getResults());
     return ::mlir::success();
   }
 };
