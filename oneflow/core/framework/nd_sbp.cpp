@@ -147,7 +147,7 @@ std::string NdSbpToString(const NdSbp& nd_sbp) {
   std::ostringstream ss;
   ss << "(";
   for (size_t i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
-    if (i > 0) { ss << " "; }
+    if (i > 0) { ss << ", "; }
     ss << SbpToString(nd_sbp.sbp_parallel(i));
   }
   ss << ")";
