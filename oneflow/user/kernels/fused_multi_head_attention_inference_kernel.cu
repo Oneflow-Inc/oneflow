@@ -121,9 +121,9 @@ void DispatchKeysPerBlock(const Params& params, ep::CudaStream* stream) {
 template<typename T, typename ArchTag>
 void DispatchIsAligned(const Params& params, ep::CudaStream* stream) {
   if (reinterpret_cast<uintptr_t>(params.query_ptr) % 16 == 0
-      && reinterpret_cast<uintptr_t>(params.key_ptr) == 0
+      && reinterpret_cast<uintptr_t>(params.key_ptr) % 16 == 0
       && params.query_hidden_stride % (16 / sizeof(T)) == 0
-      && params.key_hidden_stride % (16 / sizeof(T))) {
+      && params.key_hidden_stride % (16 / sizeof(T)) == 0) {
     DispatchKeysPerBlock<T, ArchTag, true>(params, stream);
   } else {
     DispatchKeysPerBlock<T, ArchTag, false>(params, stream);
