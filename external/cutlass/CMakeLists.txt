@@ -7,7 +7,13 @@ FetchContent_Declare(
 FetchContent_Populate(cutlass)
 
 add_library(cutlass_headers INTERFACE)
-set_target_properties(cutlass_headers PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${cutlass_SOURCE_DIR}/include)
+set_property(TARGET cutlass_headers PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+  $<BUILD_INTERFACE:${cutlass_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
 add_library(cutlass_fmha_headers INTERFACE)
-set_target_properties(cutlass_fmha_headers PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-	${cutlass_SOURCE_DIR}/examples/42_fused_multi_head_attention)
+set_property(TARGET cutlass_fmha_headers PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+  $<BUILD_INTERFACE:${cutlass_SOURCE_DIR}/examples/42_fused_multi_head_attention>
+  $<INSTALL_INTERFACE:include>
+)
+install(TARGETS cutlass_headers;cutlass_fmha_headers EXPORT oneflow DESTINATION include)
