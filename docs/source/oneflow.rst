@@ -66,6 +66,7 @@ Creation Ops
     zeros_like
     ones
     ones_like
+    randn_like
     randint_like
     masked_fill
     new_ones
