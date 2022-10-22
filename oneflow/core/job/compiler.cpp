@@ -52,8 +52,7 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   // Step1: new Singleton<OpGraph> and set log configs.
   Singleton<OpGraph>::New(*job);
   const JobDesc& job_desc = GlobalJobDesc();
-  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()
-      || Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
     Singleton<OpGraph>::Get()->ToDotWithFilePath(
         "optimized_dlnet_" + std::to_string(job_desc.job_id()) + "_op_graph.dot");

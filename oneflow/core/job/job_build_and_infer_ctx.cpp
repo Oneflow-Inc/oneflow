@@ -962,8 +962,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     return Maybe<void>::Ok();
   };
 
-  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()
-      || Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create(StrCat("forward_graph", job_id()))->Write(job());
     Singleton<OpGraph>::New(job());
     Singleton<OpGraph>::Get()->ToDotWithFilePath("forward_dlnet_" + std::to_string(job_id())
