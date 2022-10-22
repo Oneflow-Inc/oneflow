@@ -32,7 +32,7 @@ namespace oneflow {
 /*static*/ auto FusedMultiHeadAttentionInferenceOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) -> Maybe<void> {
   const int64_t num_heads = ctx->Attr<int64_t>("num_heads");
-  CHECK_GT_OR_RETURN(num_heads, 1);
+  CHECK_GE_OR_RETURN(num_heads, 1);
   const Shape& query_shape = ctx->InputShape("query", 0);
   CHECK_EQ_OR_RETURN(query_shape.NumAxes(), 3);
   const int64_t batch_size = query_shape.At(0);
@@ -92,7 +92,7 @@ namespace oneflow {
 }
 /*static*/ auto FusedMultiHeadAttentionInferenceOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) -> Maybe<void> {
-  return FusedSelfAttentionQueryMulKeyAndValueOp::InferLogicalTensorDesc(ctx);
+  return FusedMultiHeadAttentionInferenceOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ auto FusedMultiHeadAttentionInferenceOp::GetSbp(user_op::SbpContext* ctx)
     -> Maybe<void> {
