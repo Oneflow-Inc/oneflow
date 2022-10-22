@@ -41,7 +41,8 @@ set(MLIR_INCLUDE_DIRS "${MLIR_INCLUDE_DIR};${MLIR_GENERATED_INCLUDE_DIR}")
 
 set(llvm_monorepo_BINARY_DIR ${llvm_monorepo_BINARY_DIR})
 if(BUILD_CUDA)
-  install(TARGETS oneflow of_protoobj of_functional_obj cutlass_headers EXPORT oneflow DESTINATION lib)
+  install(TARGETS oneflow of_protoobj of_functional_obj cutlass_headers EXPORT oneflow
+          DESTINATION lib)
 else()
   install(TARGETS oneflow of_protoobj of_functional_obj EXPORT oneflow DESTINATION lib)
 endif()
