@@ -521,7 +521,8 @@ class OptimizerPlacementOptimizationPass final : public JobPass {
           && ctx->job_desc().job_conf().optimizer_placement_optimization_mode() != "none")) {
       return Maybe<void>::Ok();
     }
-    if (job->job_conf().enable_auto_parallel()) {
+    if (job->job_conf().enable_auto_parallel()
+        && job->job_conf().enable_auto_parallel_ignore_user_sbp_config()) {
       LOG(WARNING) << "ZeRO optimization will be ignored when enabling AutoParallel";
       return Maybe<void>::Ok();
     }
