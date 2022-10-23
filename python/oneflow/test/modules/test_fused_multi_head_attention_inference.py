@@ -22,7 +22,7 @@ import math
 import oneflow as flow
 
 
-def _ref(query, key, value, num_heads):
+def _ref(query, key, value, num_heads, causal=False):
     query = query.view(query.shape[0], query.shape[1], num_heads, -1).permute(
         0, 2, 1, 3
     )
@@ -31,6 +31,14 @@ def _ref(query, key, value, num_heads):
         0, 2, 1, 3
     )
     scores = flow.matmul(query, key) / math.sqrt(query.shape[-1])
+    if causal:
+        causal_mask = flow.triu(
+            flow.ones(
+                scores.shape[-2], scores.shape[-1], dtype=flow.bool, device="cuda"
+            ),
+            1,
+        )
+        scores = flow.masked_fill(scores, causal_mask, float("-inf"))
     attn = flow.softmax(scores, dim=-1)
     out = flow.matmul(attn, value)
     out = out.permute(0, 2, 1, 3)
@@ -38,8 +46,10 @@ def _ref(query, key, value, num_heads):
     return out
 
 
-def _fused_mha(query, key, value, num_heads):
-    return flow._C.fused_multi_head_attention_inference(query, key, value, num_heads)
+def _fused_mha(query, key, value, num_heads, causal=False):
+    return flow._C.fused_multi_head_attention_inference(
+        query, key, value, num_heads, causal=causal
+    )
 
 
 def _test_fused_multi_head_attention_inference(
@@ -51,6 +61,7 @@ def _test_fused_multi_head_attention_inference(
     query_head_size,
     value_head_size,
     dtype,
+    causal=False,
 ):
 
     query = flow.randn(
@@ -69,8 +80,8 @@ def _test_fused_multi_head_attention_inference(
         dtype=flow.float,
     ).to(dtype)
 
-    ref_out = _ref(query, key, value, num_heads).numpy()
-    fused_out = _fused_mha(query, key, value, num_heads).numpy()
+    ref_out = _ref(query, key, value, num_heads, causal).numpy()
+    fused_out = _fused_mha(query, key, value, num_heads, causal).numpy()
 
     test_case.assertTrue(np.allclose(ref_out, fused_out, atol=1e-2, rtol=1e-2))
 
