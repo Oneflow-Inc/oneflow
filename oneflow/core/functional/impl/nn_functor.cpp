@@ -4442,14 +4442,15 @@ class FusedMultiHeadAttentionInferenceFunctor {
   }
   Maybe<Tensor> operator()(
       const std::shared_ptr<one::Tensor>& query, const std::shared_ptr<one::Tensor>& key,
-      const std::shared_ptr<one::Tensor>& value, const int64_t& num_heads,
+      const std::shared_ptr<one::Tensor>& value, const int64_t& num_heads, const bool& causal,
       const int64_t& query_hidden_slice_start, const int64_t& query_hidden_slice_end,
       const int64_t& key_hidden_slice_start, const int64_t& key_hidden_slice_end,
       const int64_t& value_hidden_slice_start, const int64_t& value_hidden_slice_end) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-        "num_heads", "query_hidden_slice_start", "query_hidden_slice_end", "key_hidden_slice_start",
-        "key_hidden_slice_end", "value_hidden_slice_start", "value_hidden_slice_end");
-    attrs.SetAllAttrs(num_heads, query_hidden_slice_start, query_hidden_slice_end,
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_heads", "causal", "query_hidden_slice_start",
+                                                 "query_hidden_slice_end", "key_hidden_slice_start",
+                                                 "key_hidden_slice_end", "value_hidden_slice_start",
+                                                 "value_hidden_slice_end");
+    attrs.SetAllAttrs(num_heads, causal, query_hidden_slice_start, query_hidden_slice_end,
                       key_hidden_slice_start, key_hidden_slice_end, value_hidden_slice_start,
                       value_hidden_slice_end);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {query, key, value}, attrs);

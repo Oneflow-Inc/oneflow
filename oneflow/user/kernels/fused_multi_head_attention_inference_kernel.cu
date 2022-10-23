@@ -35,6 +35,7 @@ struct Params {
   int64_t query_hidden_stride;
   int64_t key_hidden_stride;
   int64_t value_hidden_stride;
+  bool causal;
   const void* query_ptr;
   const void* key_ptr;
   const void* value_ptr;
@@ -82,6 +83,8 @@ void LaunchCutlassFmha(const Params& params, ep::CudaStream* stream) {
   p.k_strideB = params.kv_seq_len * p.k_strideM;
   p.v_strideB = params.kv_seq_len * p.v_strideM;
   p.o_strideB = p.o_strideH * p.num_heads;
+
+  p.causal = params.causal;
 
   constexpr auto kernel_fn = attention_kernel_batched_impl<Attention>;
   int smem_bytes = sizeof(typename Attention::SharedStorage);
@@ -235,6 +238,7 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel {
     CHECK_GE(tmp_buffer_size, out_buffer_size);
     params.workspace = tmp->mut_dptr<char>() + out_buffer_size;
     params.workspace_size = tmp_buffer_size - out_buffer_size;
+    params.causal = ctx->Attr<bool>("causal");
 
     DispatchCutlassFmha(params, ctx->stream()->As<ep::CudaStream>());
 

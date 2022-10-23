@@ -2763,6 +2763,7 @@ def OneFlow_FusedMultiHeadAttentionInferenceOp : OneFlow_BaseOp<"fused_multi_hea
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$num_heads,
+    DefaultValuedAttr<BoolAttr, "false">:$causal,
     DefaultValuedAttr<SI64Attr, "0">:$query_hidden_slice_start,
     DefaultValuedAttr<SI64Attr, "-1">:$query_hidden_slice_end,
     DefaultValuedAttr<SI64Attr, "0">:$key_hidden_slice_start,
