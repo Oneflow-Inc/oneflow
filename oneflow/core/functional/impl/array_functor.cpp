@@ -2637,7 +2637,8 @@ class MaskedFillFunctor {
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("float_operand", "has_float_operand", "int_operand",
                                        "has_int_operand", "bool_operand", "has_bool_operand");
-    if (IsFloatingDataType(x->dtype()->data_type())) {
+    if (IsFloatingDataType(x->dtype()->data_type())
+        || x->dtype()->data_type() == DataType::kFloat16) {
       attrs.SetAllAttrs(value.As<double>(), true, NullOpt, false, NullOpt, false);
     } else if (IsIntegralDataType(x->dtype()->data_type())) {
       attrs.SetAllAttrs(NullOpt, false, value.As<int64_t>(), true, NullOpt, false);
