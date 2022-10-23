@@ -338,6 +338,8 @@ if(BUILD_CUDA)
     endif()
 
     if(CUDA_VERSION VERSION_GREATER_EQUAL "11.8")
+      # GeForce RTX 40xx
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 89-real)
       # NVIDIA H100
       list(APPEND CMAKE_CUDA_ARCHITECTURES 90-real)
     endif()
