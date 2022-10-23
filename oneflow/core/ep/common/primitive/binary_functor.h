@@ -128,7 +128,7 @@ struct BinaryFunctor<device, BinaryOp::kGreaterEqual, Src, Dst> {
 template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kIsCloseEqNan, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
-      : atol(attr0.Value<float>()), rtol(attr0.Value<float>()) {}
+      : atol(attr0.Value<float>()), rtol(attr1.Value<float>()) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const {
     bool close = src0 == src1;
@@ -145,7 +145,7 @@ struct BinaryFunctor<device, BinaryOp::kIsCloseEqNan, Src, Dst> {
 template<DeviceType device, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kIsCloseEqNan, nv_bfloat16, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
-      : atol(attr0.Value<float>()), rtol(attr0.Value<float>()) {}
+      : atol(attr0.Value<float>()), rtol(attr1.Value<float>()) {}
 
   OF_DEVICE_FUNC Dst operator()(nv_bfloat16 src0, nv_bfloat16 src1) const {
     float fp32_src0 = static_cast<float>(src0);
@@ -164,7 +164,7 @@ struct BinaryFunctor<device, BinaryOp::kIsCloseEqNan, nv_bfloat16, Dst> {
 template<DeviceType device, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kIsCloseEqNan, half, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
-      : atol(attr0.Value<float>()), rtol(attr0.Value<float>()) {}
+      : atol(attr0.Value<float>()), rtol(attr1.Value<float>()) {}
 
   OF_DEVICE_FUNC Dst operator()(half src0, half src1) const {
     float fp32_src0 = static_cast<float>(src0);
@@ -183,7 +183,7 @@ struct BinaryFunctor<device, BinaryOp::kIsCloseEqNan, half, Dst> {
 template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kIsCloseNeqNan, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
-      : atol(attr0.Value<float>()), rtol(attr0.Value<float>()) {}
+      : atol(attr0.Value<float>()), rtol(attr1.Value<float>()) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const {
     bool close = src0 == src1;
@@ -199,7 +199,7 @@ struct BinaryFunctor<device, BinaryOp::kIsCloseNeqNan, Src, Dst> {
 template<DeviceType device, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kIsCloseNeqNan, nv_bfloat16, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
-      : atol(attr0.Value<float>()), rtol(attr0.Value<float>()) {}
+      : atol(attr0.Value<float>()), rtol(attr1.Value<float>()) {}
 
   OF_DEVICE_FUNC Dst operator()(nv_bfloat16 src0, nv_bfloat16 src1) const {
     float fp32_src0 = static_cast<float>(src0);
@@ -217,7 +217,7 @@ struct BinaryFunctor<device, BinaryOp::kIsCloseNeqNan, nv_bfloat16, Dst> {
 template<DeviceType device, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kIsCloseNeqNan, half, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
-      : atol(attr0.Value<float>()), rtol(attr0.Value<float>()) {}
+      : atol(attr0.Value<float>()), rtol(attr1.Value<float>()) {}
 
   OF_DEVICE_FUNC Dst operator()(half src0, half src1) const {
     float fp32_src0 = static_cast<float>(src0);
