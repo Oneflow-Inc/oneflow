@@ -146,9 +146,9 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
 }
 
 Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
-    const Shape& in_shape, const Shape& out_shape, std::vector<user_op::OpArg> in_args,
-    std::vector<user_op::OpArg> out_args, const int64_t parallel_num,
-    user_op::UserOpSbpSignatureBuilder* builder) {
+    const Shape& in_shape, const Shape& out_shape, const std::vector<user_op::OpArg>& in_args,
+    const std::vector<user_op::OpArg>& out_args, const int64_t parallel_num,
+    user_op::UserOpSbpSignatureBuilder* builder, const std::string& debug_str) {
   if (in_shape.NumAxes() == 0 || in_shape.elem_cnt() == 0) {
     return Maybe<void>::Ok();
   }  // 0D/0Size tensor only support b2b
@@ -165,6 +165,20 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
                                                         parallel_num,
                                                         &squeezed_group_start_in_axis2out_axis));
   }
+
+  if (!debug_str.empty()) {
+    std::ostringstream ss;
+    ss << "[GetReshapeUserOpSbpSignatures] " << debug_str << ": " << in_shape.ToString() << " -> "
+       << out_shape.ToString() << ", parallel_num=" << parallel_num;
+    for (const auto& pair : squeezed_group_start_in_axis2out_axis) {
+      ss << "\n";
+      ss << pair.first << " (origin=" << in_squeezed_axis2original_axis.at(pair.first) << ")";
+      ss << " -> ";
+      ss << pair.second << " (origin=" << out_squeezed_axis2original_axis.at(pair.second) << ")";
+    }
+    LOG(ERROR) << ss.str();
+  }
+
   for (const auto& pair : squeezed_group_start_in_axis2out_axis) {
     int64_t start_in_axis = in_squeezed_axis2original_axis.at(pair.first);
     int64_t start_out_axis = out_squeezed_axis2original_axis.at(pair.second);

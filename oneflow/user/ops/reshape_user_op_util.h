@@ -29,10 +29,11 @@ struct ReshapeUserOpUtil {
                                                  const int64_t parallel_num,
                                                  HashMap<int, int>* group_start_in_axis2out_axis);
   static Maybe<void> GetReshapeUserOpSbpSignatures(const Shape& in_shape, const Shape& out_shape,
-                                                   std::vector<user_op::OpArg> in_args,
-                                                   std::vector<user_op::OpArg> out_args,
+                                                   const std::vector<user_op::OpArg>& in_args,
+                                                   const std::vector<user_op::OpArg>& out_args,
                                                    const int64_t parallel_num,
-                                                   user_op::UserOpSbpSignatureBuilder* builder);
+                                                   user_op::UserOpSbpSignatureBuilder* builder,
+                                                   const std::string& debug_str = "");
   static Maybe<void> InferNdSbp(user_op::InferNdSbpFnContext* ctx, const Shape& logical_in_shape,
                                 const Shape& logical_out_shape);
 };
