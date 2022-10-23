@@ -347,6 +347,8 @@ Comparison Ops
     maximum
     minimum
     not_equal
+    isclose
+    allclose
 
 Spectral Ops
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

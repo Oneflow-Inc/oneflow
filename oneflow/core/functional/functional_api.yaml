@@ -2867,7 +2867,3 @@
 - name: "isclose"
   signature: "Tensor (Tensor input, Tensor other, Float atol=1e-08, Float rtol=1e-05, Bool equal_nan=False) => IsClose"
   bind_python: True
-
-- name: "allclose"
-  signature: "Tensor (Tensor input, Tensor other, Float atol=1e-08, Float rtol=1e-05, Bool equal_nan=False) => AllClose"
-  bind_python: True

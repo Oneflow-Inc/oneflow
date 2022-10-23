@@ -430,19 +430,6 @@ class BroadcastIsCloseFunctor {
   std::shared_ptr<OpExpr> neq_nan_op_;
 };
 
-class AllCloseFunctor {
- public:
-  AllCloseFunctor() {}
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
-                           const std::shared_ptr<Tensor>& other, const float atol, const float rtol,
-                           const bool equal_nan) const {
-    return SequenceFunction<Maybe<Tensor>()>(
-               [&]() { return IsClose(input, other, atol, rtol, equal_nan); })
-        .then([&](const std::shared_ptr<one::Tensor>& x) { return ReduceAllWhole(x); })
-        .call();
-  }
-};
-
 class ScalarAddByTensorFunctor : public InplaceableBinaryFunctor {
  public:
   ScalarAddByTensorFunctor() {
@@ -506,7 +493,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FloorDivFunctor>("FloorDiv");
   m.add_functor<impl::TruncDivFunctor>("TruncDiv");
   m.add_functor<impl::BroadcastIsCloseFunctor>("IsClose");
-  m.add_functor<impl::AllCloseFunctor>("AllClose");
 };
 
 }  // namespace functional
