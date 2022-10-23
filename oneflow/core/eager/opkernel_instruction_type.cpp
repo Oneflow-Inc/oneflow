@@ -452,9 +452,15 @@ static Maybe<double> GetDatasetComputeTime(vm::LocalCallOpKernelPhyInstrOperand*
     return 0;
   }
   using json = nlohmann::json;
+  std::string op_time_datatset_path;
+  if (const char* c = std::getenv("ONEFLOW_DTR_OP_TIME_DATASET")) {
+    op_time_datatset_path = c;
+  } else {
+    op_time_datatset_path = "/home/dev/op_time_dataset.json";
+  }
   static const json j = [&]() {
     json j;
-    std::ifstream i("/home/dev/op_time_dataset.json");
+    std::ifstream i(op_time_datatset_path);
     i >> j;
     return j;
   }();
