@@ -49,14 +49,11 @@ void LaunchCutlassFmha(const Params& params, ep::CudaStream* stream) {
   using Attention = AttentionKernel<T, ArchTag, is_aligned, queries_per_block, keys_per_block,
                                     single_value_iteration>;
   typename Attention::Params p;
-  p.query_ptr =
-      const_cast<cutlass::half_t*>(reinterpret_cast<const cutlass::half_t*>(params.query_ptr));
-  p.key_ptr =
-      const_cast<cutlass::half_t*>(reinterpret_cast<const cutlass::half_t*>(params.key_ptr));
-  p.value_ptr =
-      const_cast<cutlass::half_t*>(reinterpret_cast<const cutlass::half_t*>(params.value_ptr));
+  p.query_ptr = const_cast<T*>(reinterpret_cast<const T*>(params.query_ptr));
+  p.key_ptr = const_cast<T*>(reinterpret_cast<const T*>(params.key_ptr));
+  p.value_ptr = const_cast<T*>(reinterpret_cast<const T*>(params.value_ptr));
   p.logsumexp_ptr = nullptr;
-  p.output_ptr = reinterpret_cast<cutlass::half_t*>(params.out_ptr);
+  p.output_ptr = reinterpret_cast<T*>(params.out_ptr);
   if (Attention::kNeedsOutputAccumulatorBuffer) {
     using Acc = typename Attention::accum_t;
     CHECK_GE(params.workspace_size, params.num_batches * params.query_seq_len * params.num_heads
@@ -151,6 +148,8 @@ void DispatchArchTag(const Params& params, ep::CudaStream* stream) {
 void DispatchCutlassFmha(const Params& params, ep::CudaStream* stream) {
   if (params.data_type == DataType::kFloat16) {
     DispatchArchTag<cutlass::half_t>(params, stream);
+  } else if (params.data_type == DataType::kFloat) {
+    DispatchArchTag<cutlass::tfloat32_t>(params, stream);
   } else {
     UNIMPLEMENTED();
   }
@@ -256,25 +255,22 @@ size_t InferTmpBufferSize(InferContext* ctx) {
   size_t buffer_size = 0;
   buffer_size +=
       GetCudaAlignedSize(out_desc.shape().elem_cnt() * GetSizeOfDataType(out_desc.data_type()));
-  if (out_desc.data_type() == DataType::kFloat16) {
-    buffer_size +=
-        GetCudaAlignedSize(out_desc.shape().elem_cnt() * GetSizeOfDataType(DataType::kFloat));
-  } else {
-    UNIMPLEMENTED();
-  }
+  buffer_size +=
+      GetCudaAlignedSize(out_desc.shape().elem_cnt() * GetSizeOfDataType(DataType::kFloat));
   return buffer_size;
 }
 
 }  // namespace
 
-#define REGISTER_FUSED_MULTI_HEAD_ATTENTION_INFERENCE_KERNEL(dtype)                      \
-  REGISTER_USER_KERNEL("fused_multi_head_attention_inference")                           \
-      .SetCreateFn<FusedMultiHeadAttentionInferenceKernel>()                             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_FUSED_MULTI_HEAD_ATTENTION_INFERENCE_KERNEL(dtype)    \
+  REGISTER_USER_KERNEL("fused_multi_head_attention_inference")         \
+      .SetCreateFn<FusedMultiHeadAttentionInferenceKernel>()           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+                       && (user_op::HobDataType("out", 0) == dtype))   \
       .SetInferTmpSizeFn(InferTmpBufferSize);
 
-REGISTER_FUSED_MULTI_HEAD_ATTENTION_INFERENCE_KERNEL(float16)
+REGISTER_FUSED_MULTI_HEAD_ATTENTION_INFERENCE_KERNEL(DataType::kFloat16)
+REGISTER_FUSED_MULTI_HEAD_ATTENTION_INFERENCE_KERNEL(DataType::kFloat)
 
 }  // namespace user_op
 

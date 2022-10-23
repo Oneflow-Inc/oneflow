@@ -56,18 +56,18 @@ def _test_fused_multi_head_attention_inference(
     query = flow.randn(
         (batch_size, query_seq_len, num_heads * query_head_size),
         device="cuda",
-        dtype=dtype,
-    )
+        dtype=flow.float,
+    ).to(dtype)
     key = flow.randn(
         (batch_size, kv_seq_len, num_heads * query_head_size),
         device="cuda",
-        dtype=dtype,
-    )
+        dtype=flow.float,
+    ).to(dtype)
     value = flow.randn(
         (batch_size, kv_seq_len, num_heads * value_head_size),
         device="cuda",
-        dtype=dtype,
-    )
+        dtype=flow.float,
+    ).to(dtype)
 
     ref_out = _ref(query, key, value, num_heads).numpy()
     fused_out = _fused_mha(query, key, value, num_heads).numpy()
@@ -97,6 +97,25 @@ class TestFusedMultiHeadAttentionInference(flow.unittest.TestCase):
         )
         _test_fused_multi_head_attention_inference(
             test_case, 2, 8, 256, 77, 160, 160, flow.float16
+        )
+
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 4096, 4096, 40, 40, flow.float
+        )
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 4096, 77, 40, 40, flow.float
+        )
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 1024, 1024, 80, 80, flow.float
+        )
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 1024, 77, 80, 80, flow.float
+        )
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 256, 256, 160, 160, flow.float
+        )
+        _test_fused_multi_head_attention_inference(
+            test_case, 2, 8, 256, 77, 160, 160, flow.float
         )
 
 
