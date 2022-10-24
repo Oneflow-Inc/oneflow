@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/to_string.h"
@@ -36,6 +37,12 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
+
+std::string ParallelDesc2String(const ParallelDesc& parallel_desc) {
+  std::ostringstream out;
+  out << "hierarchy: " << *parallel_desc.hierarchy() << ", device: " << parallel_desc.device_tag();
+  return out.str();
+}
 
 DataType GetDataTypeFromBnInOpVec(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -787,6 +794,23 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
               producer_infer_hint4ibn->parallel_desc(), *JUST(GetParallelDesc4BnInOp(ibn)),
               requires_same_sbp[ibn_id]);
           sum_priority_ratio += priority_ratio;
+
+          if (GlobalProcessCtx::Rank() == 0
+              && op_name().find("model.t5_model.encoder.layers.0.self_attention-reshape-29")
+                     != std::string::npos) {
+            if (i == 0) {
+              std::cout << "Producer " << NdSbpToString(producer_infer_hint4ibn->nd_sbp())
+                        << ", placement: "
+                        << ParallelDesc2String(producer_infer_hint4ibn->parallel_desc())
+                        << std::endl;
+              std::cout << "Shape: " << producer_infer_hint4ibn->logical_blob_desc().shape()
+                        << std::endl;
+            }
+            std::cout << "idx: " << i << ", sbp: "
+                      << NdSbpToString(JUST(VectorAt(nd_sbp_sig_list, i)).bn_in_op2nd_sbp().at(ibn))
+                      << ", placement: " << ParallelDesc2String(*JUST(GetParallelDesc4BnInOp(ibn)))
+                      << std::endl;
+          }
           // We do not accept any blob which has a priority ratio greater than 1
           if (priority_ratio > 1.5) {
             total_copy_cost = GetMaxVal<float>();
@@ -820,21 +844,26 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
       }
     }
     // Can't find any available sbp
-    if (select_sbp_idx == -1) {
-      std::ostringstream err;
-      err << "op: `" << op_name() << "` can't find available sbp signature." << std::endl;
-      err << "candidate nd sbp signature are: "
-          << *JUST(NdSbpSignatureListAsString(nd_sbp_sig_list, input_bns(), output_bns()));
-      err << ", but inputs sbp are:";
-      for (int32_t ibn_id = 0; ibn_id < input_bns().size(); ibn_id++) {
-        const auto& ibn = input_bns().at(ibn_id);
-        const NdSbp& nd_sbp = JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp();
-        err << " " << ibn << ": " << NdSbpToString(nd_sbp);
-        if (requires_same_sbp[ibn_id]) { err << " [ transfer disabled ]"; }
-        err << ";";
+    std::ostringstream err;
+    err << "op: `" << op_name() << "` can't find available sbp signature." << std::endl;
+    err << "candidate nd sbp signature are: "
+        << *JUST(NdSbpSignatureListAsString(nd_sbp_sig_list, input_bns(), output_bns()));
+    err << ", but inputs sbp are:";
+    for (int32_t ibn_id = 0; ibn_id < input_bns().size(); ibn_id++) {
+      const auto& ibn = input_bns().at(ibn_id);
+      const NdSbp& nd_sbp = JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp();
+      err << " " << ibn << ": " << NdSbpToString(nd_sbp);
+      if (requires_same_sbp[ibn_id]) { err << " [ transfer disabled ]"; }
+      err << ";";
+
+      if (GlobalProcessCtx::Rank() == 0
+          && op_name().find("model.t5_model.encoder.layers.0.self_attention-reshape-29")
+                 != std::string::npos) {
+        std::cout << err.str() << std::endl;
+        std::cout << "select idx: " << select_sbp_idx << std::endl;
       }
 
-      return Error::RuntimeError() << err.str();
+      if (select_sbp_idx == -1) { return Error::RuntimeError() << err.str(); }
     }
   }
   nd_sbp_signature->CopyFrom(nd_sbp_sig_list.at(select_sbp_idx));
