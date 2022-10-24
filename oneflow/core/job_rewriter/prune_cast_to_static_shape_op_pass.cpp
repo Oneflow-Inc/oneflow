@@ -21,8 +21,7 @@ namespace oneflow {
 namespace {
 
 bool IsRelatedOp(const OperatorConf& op) {
-  return op.has_user_conf()
-         && (op.user_conf().op_type_name() == "cast_to_static_shape");
+  return op.has_user_conf() && (op.user_conf().op_type_name() == "cast_to_static_shape");
 }
 
 bool NeedDoPass(const Job* job) {

@@ -42,9 +42,9 @@ class FixPipelineStageIdPass final : public JobPass {
   }
 
   bool IsEnabled(const JobPassCtx& ctx) const {
-    return ctx.job_desc().IsTrain() &&
-        ctx.job_desc().job_conf().num_gradient_accumulation_steps() > 1;
-   }
+    return ctx.job_desc().IsTrain()
+           && ctx.job_desc().job_conf().num_gradient_accumulation_steps() > 1;
+  }
 
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 };
