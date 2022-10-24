@@ -77,7 +77,7 @@ class TestMaskedFill(flow.unittest.TestCase):
     @autotest(auto_backward=False, n=3)
     def test_flow_masked_fill_inplace_with_random_data(test_case):
         device = random_device()
-        input = random_tensor(ndim=2, dim0=10, dim1=20).to(device)
+        input = random_tensor(ndim=2, dim0=10, dim1=20).to(device).clone()
         mask = random_tensor(ndim=2, dim0=10, dim1=20).to(device)
         value = random().to(float)
         input.masked_fill_(mask > 0.5, value)
