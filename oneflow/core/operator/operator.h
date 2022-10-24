@@ -173,6 +173,9 @@ class Operator {
   Maybe<void> GetSbpSignaturesIf(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const;
+  Maybe<void> GetSbpSignaturesIf(
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+      int32_t parallel_num, SbpSignatureList* sbp_sig_list) const;
   virtual Maybe<void> GetNdSbpSignatureList(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const;
@@ -212,9 +215,15 @@ class Operator {
   virtual Maybe<void> InferInternalBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx, const JobDesc* job_desc) const;
+  // TODO: Delete this function. We never use parallel_desc in GetSbpSignature
   virtual Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
+    return GetSbpSignatures(LogicalBlobDesc4Ibn, sbp_sig_list);
+  }
+  virtual Maybe<void> GetSbpSignatures(
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+      int32_t parallel_num, SbpSignatureList* sbp_sig_list) const {
     return GetSbpSignatures(LogicalBlobDesc4Ibn, sbp_sig_list);
   }
   virtual Maybe<void> GetSbpSignatures(
