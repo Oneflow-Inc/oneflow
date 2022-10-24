@@ -74,13 +74,15 @@ Maybe<void> PruneAmpWhiteIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const 
     del_op_names.emplace_back(op_node->op().op_name());
 
     // find first node not deleted
+    const OpNode* first = op_node;
     const OpNode* producer = op_node->SoleInEdge()->src_node();
     while (del_nodes.find(producer) != del_nodes.end()) {
+      first = producer;
       producer = producer->SoleInEdge()->src_node();
     }
 
     const auto& old_lbi = op_node->op().BnInOp2Lbi(op_node->op().SoleObn());
-    const auto& new_lbi = producer->op().BnInOp2Lbi(producer->op().SoleObn());
+    const auto& new_lbi = first->op().BnInOp2Lbi(first->op().SoleIbn());
 
     for (const OpEdge* out_edge : op_node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
@@ -95,7 +97,7 @@ Maybe<void> PruneAmpWhiteIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const 
             OperatorConf& op_conf = iter->second;
             const auto& old_val =
                 ReplaceInputLbnInOpCustomizedConf(&op_conf, ibn, GenLogicalBlobName(new_lbi));
-            CHECK_EQ(GenLogicalBlobName(old_lbi), old_val);
+            CHECK_EQ_OR_RETURN(GenLogicalBlobName(old_lbi), old_val);
           }
         }
       }
