@@ -419,10 +419,11 @@ class BroadcastIsCloseFunctor {
                            const float rtol, const bool equal_nan) const {
     auto& attr = THREAD_CACHED_MUTABLE_ATTR_MAP("atol", "rtol", "equal_nan");
     attr.SetAllAttrs(atol, rtol, equal_nan);
-    if (equal_nan)
+    if (equal_nan) {
       return OpInterpUtil::Dispatch<Tensor>(*eq_nan_op_, {x, y}, attr);
-    else
+    } else {
       return OpInterpUtil::Dispatch<Tensor>(*neq_nan_op_, {x, y}, attr);
+    }
   }
 
  private:
