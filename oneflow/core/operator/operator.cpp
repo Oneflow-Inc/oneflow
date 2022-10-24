@@ -516,9 +516,9 @@ Maybe<void> Operator::GetNdSbpSignatureList(
       << op_name() << " gets no sbp signature from GetSbpSignaturesIf function!";
 
   if (op_name() == "model.t5_model.encoder.layers.0.self_attention-reshape-29") {
-    LOG(ERROR) << "[GetNdSbpSignatureList] " << op_name()
-               << ", sbp_sig size=" << sbp_sig_list.sbp_signature_size() << ", sbp_sig_list="
-               << *JUST(SbpSignatureListToString(sbp_sig_list, input_bns(), output_bns()));
+    VLOG(3) << "[GetNdSbpSignatureList] " << op_name()
+            << ", sbp_sig size=" << sbp_sig_list.sbp_signature_size() << ", sbp_sig_list="
+            << *JUST(SbpSignatureListToString(sbp_sig_list, input_bns(), output_bns()));
   }
 
   int32_t sbp_dimension = parallel_desc.hierarchy()->NumAxes();
@@ -536,10 +536,10 @@ Maybe<void> Operator::GetValidNdSbpSignatureList(
     const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list,
     bool check_output) const {
   JUST(GetNdSbpSignatureList(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list));
-  if (op_name() == "model.t5_model.encoder.layers.0.self_attention-reshape-29") {
-    LOG(ERROR) << "[GetValidNdSbpSignatureList] " << op_name() << ", valid NdSbpSignatureList="
-               << *JUST(NdSbpSignatureListAsString(*nd_sbp_sig_list, input_bns(), output_bns()));
-  }
+  // if (op_name() == "model.t5_model.encoder.layers.0.self_attention-reshape-29") {
+  //   LOG(ERROR) << "[GetValidNdSbpSignatureList] " << op_name() << ", valid NdSbpSignatureList="
+  //              << *JUST(NdSbpSignatureListAsString(*nd_sbp_sig_list, input_bns(), output_bns()));
+  // }
   // Leave those valid Nd SBPs
   JUST(FilterNdSbpSignatureListByLogicalShape(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list,
                                               check_output));
@@ -807,16 +807,18 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
         select_sbp_idx = i;
         min_copy_cost = total_copy_cost;
       }
-      if (op_name() == "model.t5_model.encoder.layers.0.self_attention-reshape-29") {
-        LOG(ERROR) << "[GreedilyFindMinCopyCostNdSbp] " << op_name() << ", " << i
-                   << " th sbp signature="
-                   << *JUST(NdSbpSignatureToString(JUST(VectorAt(nd_sbp_sig_list, i)), input_bns(),
-                                                   output_bns()))
-                   << ", total_copy_cost=" << total_copy_cost << ", min_copy_cost=" << min_copy_cost
-                   << ", sum_priority_ratio=" << sum_priority_ratio
-                   << ", same_sbp_before_reduce=" << same_sbp_before_reduce
-                   << ", infer_rule=" << infer_rule;
-      }
+      // if (op_name() == "model.t5_model.encoder.layers.0.self_attention-reshape-29") {
+      //   LOG(ERROR) << "[GreedilyFindMinCopyCostNdSbp] " << op_name() << ", " << i
+      //              << " th sbp signature="
+      //              << *JUST(NdSbpSignatureToString(JUST(VectorAt(nd_sbp_sig_list, i)),
+      //              input_bns(),
+      //                                              output_bns()))
+      //              << ", total_copy_cost=" << total_copy_cost << ", min_copy_cost=" <<
+      //              min_copy_cost
+      //              << ", sum_priority_ratio=" << sum_priority_ratio
+      //              << ", same_sbp_before_reduce=" << same_sbp_before_reduce
+      //              << ", infer_rule=" << infer_rule;
+      // }
     }
     // Can't find any available sbp
     if (select_sbp_idx == -1) {
@@ -919,10 +921,10 @@ Maybe<void> Operator::InferNdSbpSignature(
     std::vector<NdSbpSignature> nd_sbp_sig_list;
     JUST(GetValidNdSbpSignatureList(LogicalBlobDesc4Ibn, parallel_desc, &nd_sbp_sig_list,
                                     /*check_output=*/false));
-    if (op_name() == "model.t5_model.encoder.layers.0.self_attention-reshape-29") {
-      LOG(ERROR) << "[InferNdSbpSignature] " << op_name() << ", valid NdSbpSignatureList="
-                 << *JUST(NdSbpSignatureListAsString(nd_sbp_sig_list, input_bns(), output_bns()));
-    }
+    // if (op_name() == "model.t5_model.encoder.layers.0.self_attention-reshape-29") {
+    //   VLOG(3) << "[InferNdSbpSignature] " << op_name() << ", valid NdSbpSignatureList="
+    //           << *JUST(NdSbpSignatureListAsString(nd_sbp_sig_list, input_bns(), output_bns()));
+    // }
     // Filter nd_sbp according to `nd_sbp_constraints`
     for (int32_t i = nd_sbp_sig_list.size() - 1; i >= 0; --i) {
       // If any blob do not match nd_sbp_constraints, the candidate nd_sbp will be deleted.

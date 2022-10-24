@@ -170,18 +170,19 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
                                                         &squeezed_group_start_in_axis2out_axis));
   }
 
-  if (!debug_str.empty()) {
-    std::ostringstream ss;
-    ss << "[GetReshapeUserOpSbpSignatures] " << debug_str << ": " << in_shape.ToString() << " -> "
-       << out_shape.ToString() << ", parallel_desc=" << *JUST(PlacementToString(parallel_desc));
-    for (const auto& pair : squeezed_group_start_in_axis2out_axis) {
-      ss << "\n";
-      ss << pair.first << " (origin=" << in_squeezed_axis2original_axis.at(pair.first) << ")";
-      ss << " -> ";
-      ss << pair.second << " (origin=" << out_squeezed_axis2original_axis.at(pair.second) << ")";
-    }
-    LOG(ERROR) << ss.str();
-  }
+  // if (!debug_str.empty()) {
+  //   std::ostringstream ss;
+  //   ss << "[GetReshapeUserOpSbpSignatures] " << debug_str << ": " << in_shape.ToString() << " ->
+  //   "
+  //      << out_shape.ToString() << ", parallel_desc=" << *JUST(PlacementToString(parallel_desc));
+  //   for (const auto& pair : squeezed_group_start_in_axis2out_axis) {
+  //     ss << "\n";
+  //     ss << pair.first << " (origin=" << in_squeezed_axis2original_axis.at(pair.first) << ")";
+  //     ss << " -> ";
+  //     ss << pair.second << " (origin=" << out_squeezed_axis2original_axis.at(pair.second) << ")";
+  //   }
+  //   VLOG(3) << ss.str();
+  // }
 
   for (const auto& pair : squeezed_group_start_in_axis2out_axis) {
     int64_t start_in_axis = in_squeezed_axis2original_axis.at(pair.first);
