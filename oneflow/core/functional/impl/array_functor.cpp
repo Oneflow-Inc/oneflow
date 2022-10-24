@@ -499,7 +499,9 @@ class ConcatFunctor {
         if (input->nelement() != 0 or input->ndim() != 1) {
           ndim = input->ndim();
           nelement = input->nelement();
-        } else { continue; }
+        } else {
+          continue;
+        }
       } else if (input->nelement() != 0 or input->ndim() != 1) {
         CHECK_OR_RETURN(input->ndim() == ndim)
             << Error::RuntimeError() << "Tensors must have same number of dimensions: got " << ndim
@@ -510,10 +512,10 @@ class ConcatFunctor {
         if (axis == i) {
           max_dim_size += input->shape()->At(i);
         } else if (inputs[0]->nelement() != 0) {
-            CHECK_OR_RETURN(input->shape()->At(i) == shape->At(i))
-                << Error::RuntimeError() << "Sizes of tensors must match except in dimension "
-                << axis << ". Got " << input->shape()->At(i) << " and " << shape->At(i)
-                << " is expected in dimension " << i << ".";
+          CHECK_OR_RETURN(input->shape()->At(i) == shape->At(i))
+              << Error::RuntimeError() << "Sizes of tensors must match except in dimension " << axis
+              << ". Got " << input->shape()->At(i) << " and " << shape->At(i)
+              << " is expected in dimension " << i << ".";
         }
       }
     }

@@ -37,7 +37,9 @@ namespace oneflow {
         out_dim_vec.at(axis) = 0;
         first_axes = in_desc.shape().NumAxes();
         first_elemcnt = in_desc.shape().elem_cnt();
-      } else { continue; }
+      } else {
+        continue;
+      }
     } else if (in_desc.shape().elem_cnt() != 0 or in_desc.shape().NumAxes() != 1) {
       CHECK_EQ_OR_RETURN(in_desc.shape().NumAxes(), first_axes);
     }
