@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/slice_util.h"
+#include <glog/logging.h>
+#include <cstddef>
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/thread/thread_manager.h"
 
@@ -72,6 +75,14 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
     });
   }
 
+  template<typename DoEachT>
+  static void SteppedMultiThreadLoop(size_t elem_cnt, size_t step, const DoEachT& DoEach){
+    if (elem_cnt == 0) {return; }
+    CHECK_GT(step, 0);
+    CHECK_EQ(elem_cnt % step, 0);
+    MultiThreadLoop(elem_cnt / step, [&](size_t i){ DoEach(i * step); });
+  }
+
   template<int NDIM>
   static void DoForward(ep::Stream* stream, const SliceParams& entire_params,
                         const SliceParams& sliced_params, const T* entire, T* sliced) {
@@ -101,9 +112,7 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
       }
       if (!entire_params.IsFullSlice(i) || !sliced_params.IsFullSlice(i)) { break; }
     }
-    CHECK_EQ(elem_cnt % cnt, 0);
-    MultiThreadLoop(elem_cnt / cnt, [&](int64_t j) {
-      int64_t i = j * cnt;
+    SteppedMultiThreadLoop(elem_cnt, cnt, [&](int64_t i) {
       const int64_t entire_offset = SliceOffsetToEntireOffset<NDIM>(
           i, entire_params, entire_splitted_large_idx_cvtr, sliced_splitted_large_idx_cvtr);
       const int64_t sliced_offset = SliceOffsetToEntireOffset<NDIM>(
