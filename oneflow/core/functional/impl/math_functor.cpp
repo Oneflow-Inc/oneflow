@@ -212,10 +212,52 @@ class ScalarDivFunctor : public ScalarMathBaseFunctor {
   }
 };
 
+class ScalarDivModeFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
+                           const Optional<std::string>& rounding_mode) const {
+    std::string rmode = rounding_mode.value_or("");
+    CHECK_OR_RETURN(rmode == "" || rmode == "floor" || rmode == "trunc")
+        << "div expected rounding_mode to be one of None,"
+           " 'trunc', or 'floor' but found "
+        << rmode;
+    std::shared_ptr<one::Tensor> ret = JUST(functional::ScalarDiv(x, scalar));
+    if (rmode == "floor") {
+      return JUST(functional::Floor(ret));
+
+    } else if (rmode == "trunc") {
+      return JUST(functional::Trunc(ret));
+    }
+
+    return ret;
+  }
+};
+
 class ScalarDiv2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
     return functional::ScalarMul(JUST(functional::Reciprocal(x)), scalar, /*inplace=*/false);
+  }
+};
+
+class ScalarDivMode2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x,
+                           const Optional<std::string>& rounding_mode) const {
+    std::string rmode = rounding_mode.value_or("");
+    CHECK_OR_RETURN(rmode == "" || rmode == "floor" || rmode == "trunc")
+        << "div expected rounding_mode to be one of None,"
+           " 'trunc', or 'floor' but found "
+        << rmode;
+    std::shared_ptr<one::Tensor> ret = JUST(functional::ScalarDiv(scalar, x));
+    if (rmode == "floor") {
+      return JUST(functional::Floor(ret));
+
+    } else if (rmode == "trunc") {
+      return JUST(functional::Trunc(ret));
+    }
+
+    return ret;
   }
 };
 
@@ -3126,6 +3168,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<AddCDivFunctor>("AddCDiv");
   m.add_functor<InplaceAddCDivFunctor>("InplaceAddCDiv");
   m.add_functor<ScalarDivFunctor, ScalarDiv2Functor>("ScalarDiv");
+  m.add_functor<ScalarDivModeFunctor, ScalarDivMode2Functor>("ScalarDivMode");
   m.add_functor<InplaceScalarDivFunctor>("InplaceScalarDiv");
   m.add_functor<ScalarPowFunctor>("ScalarPow");
   m.add_functor<ScalarReversePowFunctor>("ScalarReversePow");
