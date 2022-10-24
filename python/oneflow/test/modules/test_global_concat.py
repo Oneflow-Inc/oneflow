@@ -79,7 +79,7 @@ class TestModule(flow.unittest.TestCase):
 
     @globaltest
     def test_concat_with_output_0_size_data(test_case):
-       for placement in all_placement():
+        for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 _test_concat_with_output_0_size_data(test_case, placement, sbp)
 

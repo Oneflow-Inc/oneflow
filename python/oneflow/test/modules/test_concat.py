@@ -55,11 +55,21 @@ def _test_concat_with_empty_input(test_case, device):
     torch_out2 = torch.cat((torch_input2, torch_input1), 0)
     torch_out3 = torch.cat((torch_input1, torch_input2, torch_input1, torch_input1), 0)
 
-    test_case.assertTrue(np.array_equal(of_out1.numpy(), torch_out1.detach().cpu().numpy()))
-    test_case.assertTrue(np.array_equal(of_out2.numpy(), torch_out2.detach().cpu().numpy()))
-    test_case.assertTrue(np.array_equal(of_out3.numpy(), torch_out3.detach().cpu().numpy()))
-    test_case.assertTrue(np.array_equal(of_out1.numpy(), torch_out2.detach().cpu().numpy()))
-    test_case.assertTrue(np.array_equal(of_out1.numpy(), torch_out3.detach().cpu().numpy()))
+    test_case.assertTrue(
+        np.array_equal(of_out1.numpy(), torch_out1.detach().cpu().numpy())
+    )
+    test_case.assertTrue(
+        np.array_equal(of_out2.numpy(), torch_out2.detach().cpu().numpy())
+    )
+    test_case.assertTrue(
+        np.array_equal(of_out3.numpy(), torch_out3.detach().cpu().numpy())
+    )
+    test_case.assertTrue(
+        np.array_equal(of_out1.numpy(), torch_out2.detach().cpu().numpy())
+    )
+    test_case.assertTrue(
+        np.array_equal(of_out1.numpy(), torch_out3.detach().cpu().numpy())
+    )
 
 
 def _test_concat_with_axis_one(test_case, device):
