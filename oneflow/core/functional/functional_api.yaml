@@ -248,6 +248,22 @@
   signature: "Tensor (Tensor dz, Tensor x, Tensor y) => FloorDivYGrad"
   bind_python: False
 
+- name: "trunc_divide"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => TruncDiv",
+      "Tensor (Tensor input, Scalar other, *, Bool inplace=False) => ScalarTruncDiv",
+    ]
+  bind_python: True
+
+- name: "truncdiv_x_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => TruncDivXGrad"
+  bind_python: False
+
+- name: "truncdiv_y_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => TruncDivYGrad"
+  bind_python: False
+
 - name: "xdivy_x_grad"
   signature: "Tensor (Tensor dz, Tensor x, Tensor y) => XdivyXGrad"
   bind_python: False
@@ -838,8 +854,16 @@
 - name: "bernoulli"
   signature:
     [
-      "Tensor (Tensor input, *, DataType dtype=kFloat, Generator generator=None) => Bernoulli",
-      "Tensor (Tensor input, Double p, *, DataType dtype=kFloat, Generator generator=None) => BernoulliProb",
+      "Tensor (Tensor input, *, DataType dtype=kFloat, Generator generator=None, Bool inplace=False) => Bernoulli",
+      "Tensor (Tensor input, Double p, *, DataType dtype=kFloat, Generator generator=None, Bool inplace=False) => BernoulliProb",
+    ]
+  bind_python: True
+
+- name: "bernoulli_"
+  signature:
+    [
+      "Tensor (Tensor input, *, DataType dtype=kFloat, Generator generator=None) => BernoulliInplace",
+      "Tensor (Tensor input, Double p, *, DataType dtype=kFloat, Generator generator=None) => BernoulliProbInplace",
     ]
   bind_python: True
 
@@ -1764,6 +1788,10 @@
 
 - name: "unsorted_segment_sum_like"
   signature: "Tensor (Tensor x, Tensor segment_ids, Tensor like, Int64 axis) => UnsortedSegmentSumLike"
+  bind_python: False
+
+- name: "unsorted_segment_sum"
+  signature: "Tensor (Tensor x, Tensor segment_ids, Int64 axis, Int64 num_segments) => UnsortedSegmentSum"
   bind_python: True
 
 - name: "tril"
@@ -1944,8 +1972,8 @@
 - name: "scatter"
   signature:
     [
-      "Tensor (Tensor input, Int32 dim, Tensor index, Tensor src, String reduce=None, *, Bool inplace=False) => DimScatter",
-      "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src, String reduce=None, *, Bool inplace=False) => DimScatterScalar",
+      "Tensor (Tensor input, Int32 dim, Tensor index, Tensor src, *, String reduce=None, Bool inplace=False) => DimScatter",
+      "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src, *, String reduce=None, Bool inplace=False) => DimScatterScalar",
     ]
   bind_python: True
 
@@ -2196,6 +2224,15 @@
       Generator generator=None, Bool requires_grad=False) => RandN",
       "Tensor (Shape size, *, Placement placement, SbpList sbp, DataType dtype=None,
       Generator generator=None, Bool requires_grad=False) => GlobalRandN",
+    ]
+  bind_python: True
+
+- name: "randn_like"
+  signature: [
+      "Tensor (Tensor input, *, DataType dtype=None, Device device=None,
+      Generator generator=None, Bool requires_grad=False) => RandnLike",
+      "Tensor (Tensor input, *, Placement placement, SbpList sbp, DataType dtype=None,
+      Generator generator=None, Bool requires_grad=False) => GlobalRandnLike",
     ]
   bind_python: True
 
@@ -2524,8 +2561,8 @@
 - name: "fill_"
   signature:
     [
-      "Tensor (Tensor in, Scalar value) => Fill",
       "Tensor (Tensor in, Tensor value) => FillTensor",
+      "Tensor (Tensor in, Scalar value) => Fill",
     ]
   bind_python: True
 
@@ -2598,11 +2635,11 @@
   bind_python: True
 
 - name: "multi_tensor_sgd_update"
-  signature: "Void (TensorTuple model, TensorTuple model_diff, Tensor learning_rate, Double scale, Float weight_decay) => MultiTensorSgdUpdate"
+  signature: "Void (TensorTuple model, TensorTuple model_diff, Double scale, Float weight_decay, Float learning_rate_val) => MultiTensorSgdUpdate"
   bind_python: True
 
 - name: "multi_tensor_adam_update"
-  signature: "Void (TensorTuple model, TensorTuple model_diff, TensorTuple m, TensorTuple v, Tensor learning_rate, Float beta1, Float beta2, Float bias_correction1_val, Float bias_correction2_val, Bool do_bias_correction, Double scale, Float weight_decay) => MultiTensorAdamUpdate"
+  signature: "Void (TensorTuple model, TensorTuple model_diff, TensorTuple m, TensorTuple v, Float learning_rate_val, Float l2, Float beta1, Float beta2, Float bias_correction1_val, Float bias_correction2_val, Bool do_bias_correction, Double scale, Float weight_decay, Float epsilon) => MultiTensorAdamUpdate"
   bind_python: True
 
 - name: "grad_acc_repeat"
@@ -2834,3 +2871,7 @@
     "Tensor (Tensor output_grad,Tensor input,Tensor weight,Tensor offset,Tensor mask, Int32 stride_h,Int32 stride_w,Int32 pad_h,
     Int32 pad_w,Int32 dilation_h,Int32 dilation_w,Int32 groups,Int32 offset_groups,Bool use_mask) => DeformConv2dParamGrad"
   bind_python: False
+
+- name: "bincount"
+  signature: "Tensor (Tensor input, Tensor weights=None, Int64 minlength=None) => BinCount"
+  bind_python: True

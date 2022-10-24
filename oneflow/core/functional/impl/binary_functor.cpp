@@ -86,16 +86,18 @@ class AddFunctor {
     }
 
     const OpExpr* op = nullptr;
+    Optional<Symbol<DType>> promote_dtype;
+    if (inplace) { promote_dtype = input_tensor->dtype(); }
 
     TensorProcessor tensor_processor;
     if ((alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
         || (alpha.IsFloatingPoint()
             && std::fabs(alpha.Value<double>() - 1.0) < std::numeric_limits<double>::epsilon())) {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true, promote_dtype)
                .AddInputs({input_tensor, other})
                .Apply());
     } else {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true, promote_dtype)
                .AddInputs({input_tensor, JUST(functional::ScalarMul(alpha, other))})
                .Apply());
     }
@@ -341,6 +343,17 @@ class FloorDivFunctor : public BinaryFunctor {
   }
 };
 
+class TruncDivFunctor : public BinaryFunctor {
+ public:
+  TruncDivFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("truncdiv").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    return BinaryFunctor::operator()(x, y);
+  }
+};
+
 class BroadcastFModFunctor : public BinaryFunctor {
  public:
   BroadcastFModFunctor() {
@@ -479,6 +492,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ScalarDivByTensorFunctor>("ScalarDivByTensor");
   m.add_functor<impl::BroadcastFModFunctor>("BroadcastFMod");
   m.add_functor<impl::FloorDivFunctor>("FloorDiv");
+  m.add_functor<impl::TruncDivFunctor>("TruncDiv");
 };
 
 }  // namespace functional
