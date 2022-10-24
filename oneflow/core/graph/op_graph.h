@@ -99,9 +99,7 @@ class OpEdge final : public Edge<OpNode, OpEdge> {
 class OpGraph final : public Graph<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpGraph);
-  explicit OpGraph(const Job& job) { 
-    CHECK_JUST(Init(job));
-  }
+  explicit OpGraph(const Job& job) { CHECK_JUST(Init(job)); }
   explicit OpGraph() = default;
   ~OpGraph() override = default;
 

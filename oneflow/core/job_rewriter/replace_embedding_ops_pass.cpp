@@ -1031,8 +1031,7 @@ void FilterEmbeddingGradients(JobPassCtx* ctx, const OpGraph& op_graph, JobBuild
 }
 
 bool IsRelatedOp(const OperatorConf& op) {
-  return op.has_user_conf()
-         && (op.user_conf().op_type_name() == "one_embedding_fused_lookup");
+  return op.has_user_conf() && (op.user_conf().op_type_name() == "one_embedding_fused_lookup");
 }
 
 bool NeedDoPass(const Job* job) {
