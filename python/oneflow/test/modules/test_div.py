@@ -159,5 +159,46 @@ class TestDiv(flow.unittest.TestCase):
         torch.div(input1, input2)
 
 
+@flow.unittest.skip_unless_1n1d()
+class TestDivRoundmode(flow.unittest.TestCase):
+    @autotest(n=3)
+    def test_random_dim_div_floor(test_case):
+        device = random_device()
+        dim0 = random(low=1, high=4).to(int)
+        dim1 = random(low=1, high=4).to(int)
+        x = random_tensor(ndim=2, dim0=dim0, dim1=dim1).to(device)
+        y = random_tensor(ndim=2, dim0=dim0, dim1=dim1).to(device)
+        z = torch.div(x, y, rounding_mode="floor")
+        return z
+
+    @autotest(n=3)
+    def test_random_dim_div_trunc(test_case):
+        device = random_device()
+        dim0 = random(low=1, high=4).to(int)
+        dim1 = random(low=1, high=4).to(int)
+        x = random_tensor(ndim=2, dim0=dim0, dim1=dim1).to(device)
+        y = random_tensor(ndim=2, dim0=dim0, dim1=dim1).to(device)
+        z = torch.div(x, y, rounding_mode="trunc")
+        return z
+
+    @autotest(n=3)
+    def test_scalar_div_mode_one(test_case):
+        device = random_device()
+        x1 = random(low=1, high=5).to(int)
+        x2 = random_tensor(2, 2, 3).to(device)
+        y1 = torch.div(x1, x2, rounding_mode="floor")
+        y2 = torch.div(x1, x2, rounding_mode="trunc")
+        return y1 + y2
+
+    @autotest(n=2)
+    def test_scalar_div_mode_two(test_case):
+        device = random_device()
+        x1 = random(low=1, high=5).to(int)
+        x2 = random_tensor(2, 2, 3).to(device)
+        y1 = torch.div(x2, x1, rounding_mode="floor")
+        y2 = torch.div(x2, x1, rounding_mode="trunc")
+        return y1 + y2
+
+
 if __name__ == "__main__":
     unittest.main()
