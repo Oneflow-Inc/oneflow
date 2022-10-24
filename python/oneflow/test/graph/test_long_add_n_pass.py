@@ -72,6 +72,7 @@ def _test_long_add_n_graph(test_case, device):
     print(add_n_g)
     test_case.assertTrue(np.allclose(input_arr * 14, of_lazy_out.numpy(), 1e-05, 1e-05))
 
+
 def _test_add_n_consume_multi_add_n_graph(test_case, device):
     input_arr = np.array(
         [
@@ -103,13 +104,14 @@ def _test_add_n_consume_multi_add_n_graph(test_case, device):
     print(add_n_g)
     test_case.assertTrue(np.allclose(input_arr * 4, of_lazy_out.numpy(), 1e-05, 1e-05))
 
+
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestLongAddNGraph(oneflow.unittest.TestCase):
     def test_add_n(test_case):
         device = "cuda"
         _test_long_add_n_graph(test_case, device)
-    
+
     def test_consume_multi_add_n(test_case):
         device = "cuda"
         _test_add_n_consume_multi_add_n_graph(test_case, device)
