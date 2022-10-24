@@ -82,6 +82,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       throw py::type_error("invalid type object");
     }
   });
+  m.def("is_floating_point", []() { return GetDefaultDType(); });
 }
 
 }  // namespace oneflow

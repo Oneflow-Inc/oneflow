@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/utils/tensor_utils.h"
 #include "oneflow/core/autograd/autograd_engine.h"
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/device.h"
@@ -183,6 +184,12 @@ static PyObject* PyTensorObject_pin_memory(PyObject* self, PyObject* unused) {
 static PyObject* PyTensorObject_is_pinned(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   return functional::CastToPyObject(CHECK_JUST(PyTensor_Unpack(self)->is_pinned()));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_is_floating_point(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  return functional::CastToPyObject(PyTensor_Unpack(self)->dtype()->is_floating_point());
   END_HANDLE_ERRORS
 }
 
@@ -431,6 +438,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"contiguous_", PyTensorObject_contiguous_, METH_NOARGS, NULL},
     {"pin_memory", PyTensorObject_pin_memory, METH_NOARGS, NULL},
     {"is_pinned", PyTensorObject_is_pinned, METH_NOARGS, NULL},
+    {"is_floating_point", PyTensorObject_is_floating_point, METH_NOARGS, NULL},
     {"requires_grad_", (PyCFunction)PyTensorObject_requires_grad_, METH_VARARGS | METH_KEYWORDS,
      NULL},
     {"retain_grad", PyTensorObject_retain_grad, METH_NOARGS, NULL},

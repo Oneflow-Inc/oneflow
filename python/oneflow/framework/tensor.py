@@ -439,10 +439,6 @@ def _where(self, x=None, y=None):
     return flow.where(self, x, y)
 
 
-def _is_floating_point(self):
-    return flow.is_floating_point(self)
-
-
 def _numpy(self):
     assert (
         not self.is_lazy
@@ -620,7 +616,6 @@ def RegisterMethods():
     Tensor.sort = _sort
     Tensor.type_as = _type_as
     Tensor.tolist = _tolist
-    Tensor.is_floating_point = _is_floating_point
     Tensor.topk = _topk
     Tensor.nms = _nms
     Tensor.nonzero = _nonzero
