@@ -14,10 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/slice_util.h"
-#include <glog/logging.h>
-#include <cstddef>
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
@@ -76,11 +73,11 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
   }
 
   template<typename DoEachT>
-  static void SteppedMultiThreadLoop(size_t elem_cnt, size_t step, const DoEachT& DoEach){
-    if (elem_cnt == 0) {return; }
+  static void SteppedMultiThreadLoop(size_t elem_cnt, size_t step, const DoEachT& DoEach) {
+    if (elem_cnt == 0) { return; }
     CHECK_GT(step, 0);
     CHECK_EQ(elem_cnt % step, 0);
-    MultiThreadLoop(elem_cnt / step, [&](size_t i){ DoEach(i * step); });
+    MultiThreadLoop(elem_cnt / step, [&](size_t i) { DoEach(i * step); });
   }
 
   template<int NDIM>
