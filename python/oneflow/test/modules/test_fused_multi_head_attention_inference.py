@@ -86,6 +86,7 @@ def _test_fused_multi_head_attention_inference(
     test_case.assertTrue(np.allclose(ref_out, fused_out, atol=1e-2, rtol=1e-2))
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "skip cpu test")
 @flow.unittest.skip_unless_1n1d()
 class TestFusedMultiHeadAttentionInference(flow.unittest.TestCase):
     def test_multi_head_attention_inference(test_case):
