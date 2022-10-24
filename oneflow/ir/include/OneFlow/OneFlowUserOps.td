@@ -10624,6 +10624,25 @@ def OneFlow_CopyD2HOp : OneFlow_BaseOp<"copy_d2h", [NoSideEffect, NoGrad, Declar
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_MOEDispatchOp : OneFlow_BaseOp<"moe_dispatch", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$indices,
+    OneFlow_Tensor:$locations
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    SI32Attr:$num_experts,
+    SI32Attr:$capacity
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+}
+
 #endif // GET_ONEFLOW_SYSTEM_OP_DEFINITIONS
 
 include "mlir/Interfaces/CallInterfaces.td"
@@ -10677,28 +10696,3 @@ def OneFlow_KernelLaunchOp : OneFlow_JITLikeOp<"kernel_launch"> {}
 
 #endif // GET_ONEFLOW_MLIR_JIT_OP_DEFINITIONS
 
-// Group: MoE
-// moe_dispatch
-// Total: 1
-
-#ifdef GET_ONEFLOW_MOE_DISPATCH_OP_DEFINITIONS
-
-def OneFlow_MOEDispatchOp : OneFlow_BaseOp<"moe_dispatch", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    OneFlow_Tensor:$in,
-    OneFlow_Tensor:$indices,
-    OneFlow_Tensor:$locations
-  );
-  let output = (outs
-    OneFlow_Tensor:$out
-  );
-  let attrs = (ins
-    I32Attr:$num_experts,
-    I32Attr:$capacity
-  );
-  let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
-  let has_data_type_infer_fn = 1;
-}
-
-#endif // GET_ONEFLOW_MOE_DISPATCH_OP_DEFINITIONS

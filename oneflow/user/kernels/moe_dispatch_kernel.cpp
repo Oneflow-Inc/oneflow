@@ -17,13 +17,13 @@ class CpuMOEDispatchKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     const T* in_ptr = in->dptr<T>();
-    const int64_t* locations_ptr = locations->dptr<T>();
-    const int64_t indices_ptr = indices->dptr<T>();
+    const int32_t* locations_ptr = locations->dptr<int32_t>();
+    const int32_t* indices_ptr = indices->dptr<int32_t>();
 
-    T* out_ptr = y->mut_dptr<T>();
+    T* out_ptr = out->mut_dptr<T>();
 
-    const int32_t samples = in->shape().at(0);
-    const int32_t hidden_size = in->shape().at(1);
+    const int32_t samples = in->shape_view().At(0);
+    const int32_t hidden_size = in->shape_view().At(1);
     const int32_t capacity = ctx->Attr<int32_t>("capacity");
 
     for (int i = 0; i < samples; ++i) {

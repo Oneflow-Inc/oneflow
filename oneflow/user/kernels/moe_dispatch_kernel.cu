@@ -16,7 +16,7 @@ __global__ __launch_bounds__(1024) void MOEDispatch(T* out, const T* in,
   for (int i = blockIdx.x; i < samples; i += gridDim.x) {
     if (locations[i] < capacity && indices[i] >= 0) {
 #pragma unroll
-      for (int j = threadIdx.x; j < hidden; j += 1024) {
+      for (int j = threadIdx.x; j < hidden_size; j += 1024) {
         out[(indices[i] * capacity + locations[i]) * hidden_size + j] = in[i * hidden_size + j];
       }
     }
@@ -41,13 +41,13 @@ class GpuMOEDispatchKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     const T* in_ptr = in->dptr<T>();
-    const int32_t* locations_ptr = locations->dptr<T>();
-    const int32_t indices_ptr = indices->dptr<T>();
+    const int32_t* locations_ptr = locations->dptr<int32_t>();
+    const int32_t* indices_ptr = indices->dptr<int32_t>();
 
-    T* out_ptr = y->mut_dptr<T>();
+    T* out_ptr = out->mut_dptr<T>();
 
-    const int32_t samples = in->shape().at(0);
-    const int32_t hidden_size = in->shape().at(1);
+    const int32_t samples = in->shape_view().At(0);
+    const int32_t hidden_size = in->shape_view().At(1);
     const int32_t capacity = ctx->Attr<int32_t>("capacity");
 
     int grid_size = 512;

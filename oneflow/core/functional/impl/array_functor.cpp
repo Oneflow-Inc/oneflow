@@ -3398,14 +3398,13 @@ class MOEDispatchFunctor {
                            const std::shared_ptr<one::Tensor>& locations,
                            const int num_experts,
                            const int capacity) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("num_experts", num_experts));
-    JUST(attrs.SetAttr<int32_t>("capacity", capacity));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_experts", "capacity");
+    attrs.SetAllAttrs(num_experts, capacity);
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {in, indices, locations}, attrs);
   }
 
  private:
-  std::shared_ptr<OpExper> op_;
+  std::shared_ptr<OpExpr> op_;
 };
 
 }  // namespace impl

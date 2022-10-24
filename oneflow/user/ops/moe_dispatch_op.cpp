@@ -13,7 +13,7 @@ namespace oneflow {
   CHECK_GT_OR_RETURN(num_experts, 0);
   CHECK_GT_OR_RETURN(capacity, 0);
 
-  ctx->SetOutputShape("out", 0, Shape({num_expert, capacity, hidden_size}));
+  ctx->SetOutputShape("out", 0, Shape({num_experts, capacity, hidden_size}));
   return Maybe<void>::Ok();
 }
 
@@ -22,8 +22,10 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> MOEDispatchOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
   return Maybe<void>::Ok();
 }
+
+/* static */ Maybe<void> MOEDispatchOp::GetSbp(user_op::SbpContext* ctx) { return Maybe<void>::Ok(); }
 
 }  // namespace oneflow
