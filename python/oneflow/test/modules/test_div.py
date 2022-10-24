@@ -190,7 +190,7 @@ class TestDivRoundmode(flow.unittest.TestCase):
         y2 = torch.div(x1, x2, rounding_mode="trunc")
         return y1 + y2
 
-    @autotest(n=2)
+    @autotest(n=3)
     def test_scalar_div_mode_two(test_case):
         device = random_device()
         x1 = random(low=1, high=5).to(int)
