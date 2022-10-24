@@ -19,5 +19,4 @@ if(BUILD_CUDA)
   list(APPEND EXTERNAL_TARGETS cutlass_headers)
 endif()
 
-mark_targets_as_system(${EXTERNAL_TARGETS})
 set_property(GLOBAL PROPERTY EXTERNAL_TARGETS ${EXTERNAL_TARGETS})
