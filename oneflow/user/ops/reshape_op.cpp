@@ -31,7 +31,7 @@ namespace oneflow {
           ? ctx->user_op_conf().op_name()
           : "";
   return ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
-      in_shape, *outshape, {{"in", 0}}, {{"out", 0}}, ctx->parallel_num(), &builder, op_name);
+      in_shape, *outshape, {{"in", 0}}, {{"out", 0}}, ctx->parallel_desc(), &builder, op_name);
 }
 
 /*static*/ Maybe<void> ReshapeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
