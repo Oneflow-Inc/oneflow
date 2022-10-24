@@ -341,10 +341,6 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
         _copy_from_numpy_to_eager_local_tensor(self, other)
 
 
-def _flip(self, dims):
-    return flow.flip(self, dims)
-
-
 def _format(self, format_spec):
     if self.dim() == 0:
         return self.numpy().tolist().__format__(format_spec)
@@ -591,7 +587,6 @@ def RegisterMethods():
     Tensor.argwhere = _argwhere
     Tensor.expand = _expand
     Tensor.expand_as = _expand_as
-    Tensor.flip = _flip
     Tensor.new_empty = _new_empty
     Tensor.new_ones = _new_ones
     Tensor.new_zeros = _new_zeros

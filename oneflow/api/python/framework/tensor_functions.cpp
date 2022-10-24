@@ -649,6 +649,22 @@ static PyObject* PyTensorObject_transpose(PyObject* self, PyObject* args, PyObje
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_flip(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* dims = args;
+  if (PyTuple_Size(args) == 1) {
+    PyObject* item = PyTuple_GetItem(args, 0);
+    if (!PyLong_Check(item)) { dims = item; }
+  }
+
+  PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, dims));
+  PyObject* result = functional::flip(NULL, _args.get(), kwargs);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
+
+  END_HANDLE_ERRORS
+}
+
 static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   auto tensor = PyTensor_Unpack(self);
@@ -985,6 +1001,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"view_as", (PyCFunction)PyTensorObject_view_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {"permute", (PyCFunction)PyTensorObject_permute, METH_VARARGS | METH_KEYWORDS, NULL},
     {"transpose", (PyCFunction)PyTensorObject_transpose, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"flip", (PyCFunction)PyTensorObject_flip, METH_VARARGS | METH_KEYWORDS, NULL},
     {NULL},
 };
 
