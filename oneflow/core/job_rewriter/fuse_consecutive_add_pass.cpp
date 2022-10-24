@@ -73,6 +73,7 @@ Maybe<void> FuseConsecutiveAddPass::Apply(const OpGraph& op_graph, JobBuilder* j
       }
     };
 
+    int64_t fused_cnt = 0;
     auto fused_op_conf = GetCurOpConf(*sole_dst_node);
     auto in_it = fused_op_conf.mutable_user_conf()->mutable_input()->find("in");
     CHECK(in_it != fused_op_conf.mutable_user_conf()->mutable_input()->end());
@@ -82,7 +83,7 @@ Maybe<void> FuseConsecutiveAddPass::Apply(const OpGraph& op_graph, JobBuilder* j
       const auto lbi = GenLogicalBlobId(*in_lbn_it);
       if (lbi.op_name() == this_op_name) {
         in_lbn_it = in_lbns->erase(in_lbn_it);
-        break;
+        ++fused_cnt;
       } else {
         ++in_lbn_it;
       }
@@ -91,8 +92,10 @@ Maybe<void> FuseConsecutiveAddPass::Apply(const OpGraph& op_graph, JobBuilder* j
     auto this_op_conf = GetCurOpConf(*op_node);
     auto this_in_it = this_op_conf.user_conf().input().find("in");
     CHECK(this_in_it != this_op_conf.user_conf().input().end());
-    for (const auto& this_in_lbn : this_in_it->second.s()) {
-      *(in_lbns->Add()) = this_in_lbn;
+    for (int64_t fuse_i = 0; fuse_i < fused_cnt; ++fuse_i) {
+      for (const auto& this_in_lbn : this_in_it->second.s()) {
+        *(in_lbns->Add()) = this_in_lbn;
+      }
     }
 
     CHECK_JUST(job_builder->MutOpTransactionMut(fused_op_conf));
