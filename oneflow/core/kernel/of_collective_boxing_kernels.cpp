@@ -121,9 +121,7 @@ void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) con
     CallbackFunc cb_func = cb_lambda;
 
     OF_NCCL_CHECK(ofcclRunAllReduce(send_buff, recv_buff, coll_id, cb_func, args, ofccl_rank_ctx));
-
-    // TODO: 打印一下buffer大小。是我太紧张了吗？
-    // !!!!!!!!!!!!!!!! 为了log打印一下count !!!!!!!!!!!!!!!!
+    
     size_t count = 1;
     const Shape shape = Shape(rank_desc.op_desc().shape());
     FOR_RANGE(int, shape_ax, 0, shape.NumAxes()) { count *= shape.At(shape_ax); }
