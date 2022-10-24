@@ -221,10 +221,6 @@ def _argsort(self, dim=-1, descending=None):
     return flow.argsort(self, dim=dim, descending=descending)
 
 
-def _split(self, split_size_or_sections=None, dim=0):
-    return flow._C.split(self, split_size_or_sections, dim)
-
-
 def _uniform(self, a=0, b=1):
     return flow.nn.init.uniform_(self, a, b)
 
@@ -606,7 +602,6 @@ def RegisterMethods():
     Tensor.repeat = _repeat
     Tensor.repeat_interleave = _repeat_interleave
     Tensor.tile = _tile
-    Tensor.split = _split
     Tensor.to = _to
     Tensor.gather = _gather
     Tensor.T = property(_T)
