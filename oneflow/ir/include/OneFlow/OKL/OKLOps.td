@@ -214,9 +214,9 @@ def OnlyKeepComputeOpsPass : Pass<"only-keep-compute-ops", "ModuleOp"> {
   let constructor = "mlir::okl::createOnlyKeepComputeOpsPass()";
 }
 
-def LowerOKLToLLVMFuncPass : Pass<"lower-okl-to-llvm-func", "ModuleOp"> {
+def LowerLauncherToLLVMPtrPass : Pass<"lower-launcher-to-llvm-ptr", "ModuleOp"> {
   let summary = "convert okl dialect func to llvm dialect";
-  let constructor = "mlir::okl::createLowerOKLToLLVMFuncPass()";
+  let constructor = "mlir::okl::createLowerLauncherToLLVMPtrPass()";
 }
 
 def LowerOKLToLLVMCallPass : Pass<"lower-okl-to-llvm-call", "ModuleOp"> {

@@ -40,7 +40,7 @@ LogicalResult LowerWrapOpsToOKL(ModuleOp module) {
 LogicalResult LowerOKLComputeToLLVM(ModuleOp module) {
   PassManager pm(module->getContext());
   pm.addPass(createOnlyKeepComputeOpsPass());        // only-keep-compute-ops
-  pm.addPass(createLowerOKLToLLVMFuncPass());        // lower-okl-to-llvm-func
+  pm.addPass(createLowerLauncherToLLVMPtrPass());        // lower-launcher-to-llvm-ptr
   pm.addPass(createLowerOKLToLLVMCallPass());        // lower-okl-to-llvm-call
   pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
   oneflow::CheckEnableIRPrinting(pm);

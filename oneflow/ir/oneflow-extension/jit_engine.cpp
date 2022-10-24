@@ -64,7 +64,6 @@ oneflow::okl::JIT_Engine::JIT_Engine(mlir::ModuleOp module) {
   jitOptions.jitCodeGenOptLevel = llvm::None;
   jitOptions.sharedLibPaths = ext_libs;
 
-  module.getBody()->walk([&](mlir::func::FuncOp func_op) { func_op->erase(); });
   module->dump();
   auto jit_or_error = mlir::ExecutionEngine::create(module, jitOptions);
   CHECK(!!jit_or_error) << "failed to create JIT exe engine, "

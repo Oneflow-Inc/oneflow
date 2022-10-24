@@ -22,7 +22,7 @@ namespace mlir {
 
 namespace okl {
 
-std::unique_ptr<mlir::Pass> createLowerOKLToLLVMFuncPass();
+std::unique_ptr<mlir::Pass> createLowerLauncherToLLVMPtrPass();
 std::unique_ptr<mlir::Pass> createLowerOKLToLLVMCallPass();
 
 }  // namespace okl

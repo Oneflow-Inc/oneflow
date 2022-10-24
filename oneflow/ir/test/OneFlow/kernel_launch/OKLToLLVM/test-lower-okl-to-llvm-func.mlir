@@ -1,5 +1,5 @@
 // RUN: oneflow-opt %s \
-// RUN: -lower-okl-to-llvm-func \
+// RUN: -lower-launcher-to-llvm-ptr \
 // RUN: | FileCheck %s
 
 // CHECK: module {

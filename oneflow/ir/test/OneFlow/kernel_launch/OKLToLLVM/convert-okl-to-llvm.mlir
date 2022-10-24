@@ -1,5 +1,5 @@
 // RUN: oneflow-opt %s \
-// RUN: -lower-okl-to-llvm-func \
+// RUN: -lower-launcher-to-llvm-ptr \
 // RUN: -lower-okl-to-llvm-call \
 // RUN: -reconcile-unrealized-casts \
 // RUN: -mlir-print-ir-after-all \
