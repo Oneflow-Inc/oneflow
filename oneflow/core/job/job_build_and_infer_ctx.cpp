@@ -28,7 +28,6 @@ limitations under the License.
 #include "oneflow/user/summary/summary_converter.h"
 
 #include <google/protobuf/text_format.h>
-#include <chrono>
 #include "nlohmann/json.hpp"
 
 namespace oneflow {

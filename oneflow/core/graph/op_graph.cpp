@@ -178,9 +178,7 @@ Maybe<void> OpGraph::Init(const Job& job) {
   InferTimeShape();
   {
     LazyMode::Guard enable_lazy_mode_guard(true);
-    auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true, true);
     JUST(InferLogicalBlobDesc(job));
-    tc->Count("LogicalBlobDesc", 1);
   }
   return Maybe<void>::Ok();
 }
@@ -356,10 +354,8 @@ const OpNode* OpGraph::OpNode4OpName(const std::string& op_name) const {
 }
 
 Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
-  VLOG(1) << "op graph node num " << node_num() << " edge num " << edge_num();
   JobParallelViewConf job_parallel_view_conf(job.job_parallel_view_conf());
   JUST(TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
-    auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true, true);
     auto LogicalBlobDesc4InputIndex = [&](int32_t index) -> Maybe<const BlobDesc> {
       CHECK_LT_OR_RETURN(index, op_node->input_index2producer_and_output_index_.size());
       const auto& producer_info = op_node->input_index2producer_and_output_index_.at(index);
@@ -396,7 +392,6 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     }
     InferOpNodeNdSbpSignature(op_node, nd_sbp_sig_conf);
     JUST(op_node->mut_op()->InferLogicalOutBlobDescsIf());
-    tc->Count("one op infer cost", 2);
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();

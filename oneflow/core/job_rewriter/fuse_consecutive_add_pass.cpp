@@ -13,9 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <glog/logging.h>
-#include <memory>
-#include <string>
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/framework/framework.h"
@@ -34,16 +31,9 @@ class FuseConsecutiveAddPass final : public JobPass {
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
-    auto cost_ct = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true, true);
-    {
-      cost_ct->Count("start", 1);
-      const OpGraph op_graph(*job);
-      cost_ct->Count("create op graph", 1);
-      JobBuilder job_builder(job);
-      cost_ct->Count("create job builder", 1);
-      JUST(Apply(op_graph, &job_builder));
-      cost_ct->Count("fuse_add_apply", 1);
-    };
+    const OpGraph op_graph(*job);
+    JobBuilder job_builder(job);
+    JUST(Apply(op_graph, &job_builder));
     return Maybe<void>::Ok();
   }
 };
