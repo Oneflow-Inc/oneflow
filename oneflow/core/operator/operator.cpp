@@ -502,18 +502,6 @@ Maybe<const Shape> Operator::GetInputOutputFastestTimeShape() const {
   return input_output_fastest_time_shape_;
 }
 
-// TODO: Delete this function. We never use parallel_desc in GetSbpSignature
-Maybe<void> Operator::GetSbpSignaturesIf(
-    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
-  JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, parallel_desc.parallel_num(), sbp_sig_list));
-  SbpSignatureBuilder()
-      .Broadcast(input_bns())
-      .Broadcast(output_bns())
-      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> Operator::GetSbpSignaturesIf(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     int32_t parallel_num, SbpSignatureList* sbp_sig_list) const {
