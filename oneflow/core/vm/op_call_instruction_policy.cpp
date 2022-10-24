@@ -19,6 +19,8 @@ limitations under the License.
 #include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/framework/stream_is_comm_net_stream.h"
+#include "oneflow/core/framework/stream_get_stream_type_name.h"
+#include "oneflow/core/vm/stream_get_allocator_stream_type.h"
 #include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
@@ -33,14 +35,12 @@ struct OpCallInstructionUtil final {
     return Maybe<void>::Ok();
   }
 
-  static inline void Compute(OpCallInstructionPolicy* op_call_instruction_policy,
-                             Instruction* instruction) {
+  static inline Maybe<void> Compute(OpCallInstructionPolicy* op_call_instruction_policy,
+                                    Instruction* instruction) {
     Allocator* allocator = instruction->mut_stream()->mut_stream_policy()->mut_allocator();
-    CHECK_JUST_MSG(AllocateOutputBlobsMemory(op_call_instruction_policy, allocator),
-                   std::stringstream() << instruction->DebugName());
+    JUST(AllocateOutputBlobsMemory(op_call_instruction_policy, allocator, instruction));
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
-      CHECK_JUST_MSG(TryAllocateTempStorage(op_call_instruction_policy, allocator),
-                     std::stringstream() << instruction->DebugName());
+      JUST(TryAllocateTempStorage(op_call_instruction_policy, allocator));
     }
     ep::Stream* stream = instruction->mut_stream()->mut_stream_policy()->stream();
     user_op::OpKernelState* state = nullptr;
@@ -52,6 +52,7 @@ struct OpCallInstructionUtil final {
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
       DeallocateTempStorage(op_call_instruction_policy, allocator);
     }
+    return Maybe<void>::Ok();
   }
 
  private:
@@ -77,11 +78,18 @@ struct OpCallInstructionUtil final {
         op_call_instruction_policy->user_opkernel(), state, cache);
   }
 
+  // Returns true if allocation happened.
   static inline Maybe<void> AllocateOutputBlobsMemory(
-      OpCallInstructionPolicy* op_call_instruction_policy, Allocator* allocator) {
+      OpCallInstructionPolicy* op_call_instruction_policy, Allocator* allocator,
+      Instruction* instruction) {
     OF_PROFILER_RANGE_GUARD("AllocateOutputBlobsMemory");
+    StreamType stream_type = instruction->stream().stream_type();
+    StreamType allocator_stream_type = JUST(GetAllocatorStreamType::Visit(stream_type));
     for (const auto& blob_object : op_call_instruction_policy->outputs()) {
-      JUST(blob_object->TryAllocateBlobBodyMemory(allocator));
+      if (JUST(blob_object->TryAllocateBlobBodyMemory(allocator))) {
+        CHECK_OR_RETURN(stream_type == allocator_stream_type)
+            << "no allocator supported on stream type " << GetStreamTypeName::Visit(stream_type);
+      }
     }
     return Maybe<void>::Ok();
   }
@@ -198,7 +206,7 @@ Maybe<void> OpCallInstructionPolicy::Prepare(vm::Instruction* instruction) {
 }
 
 void OpCallInstructionPolicy::Compute(vm::Instruction* instruction) {
-  OpCallInstructionUtil::Compute(this, instruction);
+  CHECK_JUST_MSG(OpCallInstructionUtil::Compute(this, instruction), instruction->DebugName());
 }
 
 std::string OpCallInstructionPolicy::DebugName(const vm::Instruction& instruction) const {

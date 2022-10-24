@@ -60,7 +60,6 @@ Maybe<Symbol<Stream>> RawGetDefaultStreamByPlacement(Symbol<ParallelDesc> parall
 }
 
 Maybe<Symbol<Stream>> RawGetAllocatorStream(Symbol<Stream> stream) {
-  if (stream->device()->enum_type() == DeviceType::kCPU) { return stream; }
   StreamType allocator_stream_type = JUST(GetAllocatorStreamType::Visit(stream->stream_type()));
   if (allocator_stream_type == stream->stream_type()) { return stream; }
   return Stream::New(stream->device(), allocator_stream_type, stream->thread_uid());

@@ -161,7 +161,8 @@ class EagerBlobObject final : public user_op::Tensor,
 
   void set_storage_offset(const int64_t offset);
 
-  Maybe<void> TryAllocateBlobBodyMemory(vm::Allocator* allocator);
+  // Returns true if allocate successfully.
+  Maybe<bool> TryAllocateBlobBodyMemory(vm::Allocator* allocator);
   Maybe<void> DeallocateBlobDataPtr() {
     tensor_storage_->Release();
     tensor_storage_.reset(new InsideVmTensorStorage());

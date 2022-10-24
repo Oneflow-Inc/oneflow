@@ -89,7 +89,7 @@ std::shared_ptr<const Stride> EagerBlobObject::stride_ptr() const {
 
 void EagerBlobObject::set_storage_offset(const int64_t offset) { storage_offset_ = offset; }
 
-Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(vm::Allocator* allocator) {
+Maybe<bool> EagerBlobObject::TryAllocateBlobBodyMemory(vm::Allocator* allocator) {
   size_t required_body_bytes = AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
     CHECK_ISNULL_OR_RETURN(tensor_storage_->blob_dptr());
@@ -107,8 +107,9 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(vm::Allocator* allocator)
     tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
                                    required_body_bytes);
     InitNonPODTypeEagerBlobObjectIfNeed(tensor_storage_->non_pod_allocator(), this);
+    return true;
   }
-  return Maybe<void>::Ok();
+  return false;
 }
 
 }  // namespace vm

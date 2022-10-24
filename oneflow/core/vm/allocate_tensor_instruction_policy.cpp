@@ -22,6 +22,9 @@ AllocateTensorInstructionPolicy::AllocateTensorInstructionPolicy(
     const EagerBlobObjectList& eager_blob_objects, vm::Stream* vm_stream)
     : eager_blob_objects_(eager_blob_objects) {
   stream_sequential_dependence_ = vm_stream->schedule_local_dep_object().get();
+  for (const auto& eager_blob_object : eager_blob_objects) {
+    output_dependences_.push_back(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
+  }
 }
 
 std::string AllocateTensorInstructionPolicy::DebugName(const vm::Instruction& instruction) const {
