@@ -36,9 +36,11 @@ struct OpCallInstructionUtil final {
   static inline void Compute(OpCallInstructionPolicy* op_call_instruction_policy,
                              Instruction* instruction) {
     Allocator* allocator = instruction->mut_stream()->mut_stream_policy()->mut_allocator();
-    CHECK_JUST(AllocateOutputBlobsMemory(op_call_instruction_policy, allocator));
+    CHECK_JUST_MSG(AllocateOutputBlobsMemory(op_call_instruction_policy, allocator),
+                   std::stringstream() << instruction->DebugName());
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
-      TryAllocateTempStorage(op_call_instruction_policy, allocator);
+      CHECK_JUST_MSG(TryAllocateTempStorage(op_call_instruction_policy, allocator),
+                     std::stringstream() << instruction->DebugName());
     }
     ep::Stream* stream = instruction->mut_stream()->mut_stream_policy()->stream();
     user_op::OpKernelState* state = nullptr;
@@ -84,16 +86,17 @@ struct OpCallInstructionUtil final {
     return Maybe<void>::Ok();
   }
 
-  static inline void TryAllocateTempStorage(OpCallInstructionPolicy* op_call_instruction_policy,
-                                            Allocator* allocator) {
+  static inline Maybe<void> TryAllocateTempStorage(
+      OpCallInstructionPolicy* op_call_instruction_policy, Allocator* allocator) {
     OF_PROFILER_RANGE_GUARD("TryAllocateTempStorage");
     auto* tmp_tensor = op_call_instruction_policy->mut_call_ctx()->mut_tmp_tensor();
     size_t byte_size = tmp_tensor->tmp_buffer_size();
     if (byte_size > 0) {
       char* mem_ptr = nullptr;
-      CHECK_JUST(allocator->Allocate(&mem_ptr, byte_size));
+      JUST(allocator->Allocate(&mem_ptr, byte_size));
       tmp_tensor->set_tmp_buffer_ptr(mem_ptr);
     }
+    return Maybe<void>::Ok();
   }
 
   static inline void DeallocateTempStorage(OpCallInstructionPolicy* op_call_instruction_policy,
