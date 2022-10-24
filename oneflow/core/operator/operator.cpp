@@ -521,7 +521,7 @@ Maybe<void> Operator::GetNdSbpSignatureList(
   for (int32_t hierarchy_num : *parallel_desc.hierarchy()) {
     if (hierarchy_num2sbp_sig_list.find(hierarchy_num) == hierarchy_num2sbp_sig_list.end()) {
       auto* sbp_sig_list = &hierarchy_num2sbp_sig_list[hierarchy_num];
-      JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc.parallel_num(), sbp_sig_list));
+      JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, hierarchy_num, sbp_sig_list));
       CHECK_GT_OR_RETURN(sbp_sig_list->sbp_signature_size(), 0)
           << op_name()
           << " gets no sbp signature from GetSbpSignaturesIf function for hierarchy num: "
