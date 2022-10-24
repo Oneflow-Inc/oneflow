@@ -16,4 +16,5 @@ set_property(TARGET cutlass_fmha_headers PROPERTY INTERFACE_INCLUDE_DIRECTORIES
   $<BUILD_INTERFACE:${cutlass_SOURCE_DIR}/examples/42_fused_multi_head_attention>
   $<INSTALL_INTERFACE:include>
 )
+set_property(GLOBAL PROPERTY CUTLASS_FMHA_HEADERS_DIR ${cutlass_SOURCE_DIR}/examples/42_fused_multi_head_attention)
 install(TARGETS cutlass_headers;cutlass_fmha_headers EXPORT oneflow DESTINATION include)

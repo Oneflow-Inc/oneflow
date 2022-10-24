@@ -20,4 +20,5 @@ if(BUILD_CUDA)
 endif()
 
 mark_targets_as_system(${EXTERNAL_TARGETS})
+mark_targets_as_system(cutlass_fmha_headers)
 set_property(GLOBAL PROPERTY EXTERNAL_TARGETS ${EXTERNAL_TARGETS})
