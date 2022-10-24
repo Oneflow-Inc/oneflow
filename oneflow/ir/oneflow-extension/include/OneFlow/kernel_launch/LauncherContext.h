@@ -30,8 +30,6 @@ namespace oneflow {
 namespace okl {
 
 class LauncherContext final {
-  using Kernel = const oneflow::user_op::OpKernel*;
-  using KernelResource = std::shared_ptr<Kernel>;
   using RegContextResource = std::shared_ptr<RegContext>;
   using RunContextResource = std::shared_ptr<RunContext>;
 
@@ -56,10 +54,13 @@ class LauncherContext final {
         index = kernel_vec_.size();
 
         auto reg_ctx = reg_ctx_vec_[GetOpIndex(&op, 0)];
-        kernel_vec_.emplace_back(std::make_shared<Kernel>(
-            CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-                           reg_ctx->GetOp()->getName().stripDialect().str(), *reg_ctx))
-                ->create_fn()));
+        auto kernel = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
+                                     reg_ctx->GetOp()->getName().stripDialect().str(), *reg_ctx))
+                          ->create_fn();
+        kernel_vec_.push_back(kernel);
+
+        kernel->IsKernelLaunchSynchronized();
+        kernel_vec_[index]->IsKernelLaunchSynchronized();
       } else if (op_name == mlir::okl::BuildRegContextOp::getOperationName()) {
         index = reg_ctx_vec_.size();
 
@@ -79,12 +80,16 @@ class LauncherContext final {
       op.setAttr("index", mlir::IntegerAttr::get(mlir::IntegerType::get(context, 32), index));
     }
   }
-  void* FetchKernel(int index) { return kernel_vec_[index].get(); }
+  void* FetchKernel(int index) {
+    kernel_vec_[index]->IsKernelLaunchSynchronized();
+    LOG(ERROR) << kernel_vec_[index];
+    return (void*)kernel_vec_[index];
+  }
 
   void* FetchRunCtx(int index) { return run_ctx_vec_[index].get(); }
 
  private:
-  std::vector<KernelResource> kernel_vec_;
+  std::vector<const oneflow::user_op::OpKernel*> kernel_vec_;
   std::vector<RegContextResource> reg_ctx_vec_;
   std::vector<RunContextResource> run_ctx_vec_;
 };

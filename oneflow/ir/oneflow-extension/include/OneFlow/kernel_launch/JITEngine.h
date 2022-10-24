@@ -24,8 +24,6 @@ limitations under the License.
 namespace oneflow {
 namespace okl {
 
-using LauncherContextArgs = std::tuple<LauncherContext*>;
-
 using FetchArgs = std::tuple<LauncherContext*, int>;
 using LaunchArgs =
     std::tuple<oneflow::user_op::KernelComputeContext*, const oneflow::user_op::OpKernel*>;
@@ -33,11 +31,9 @@ using LaunchArgs =
 class JIT_Engine {
  public:
   explicit JIT_Engine(mlir::ModuleOp module);
-  template<typename ArgsT, class... Args>
-  void Run(const std::string& name, Args... args) const {
-    using Tuple = std::tuple<Args...>;
-    static_assert(std::is_same<ArgsT, Tuple>::value, "args of jit function don't match");
-    auto error = engine_->invoke(name, args...);
+  void Run(const std::string& name, LauncherContext* launcher) const {
+    LOG(ERROR) << launcher;
+    auto error = engine_->invoke(name, launcher);
     CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
   }
 

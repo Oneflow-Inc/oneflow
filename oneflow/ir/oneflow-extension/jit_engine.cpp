@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "OneFlow/Extension.h"
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -23,21 +24,27 @@ limitations under the License.
 extern "C" {
 void* fetch_run_ctx(void* launcher, int64_t index) {
   LOG(ERROR) << launcher;
-  LOG(ERROR) << index;
-  return ((typename std::tuple_element_t<0, oneflow::okl::FetchArgs>)launcher)
-      ->FetchRunCtx((typename std::tuple_element_t<1, oneflow::okl::FetchArgs>)index);
+  auto res = ((typename std::tuple_element_t<0, oneflow::okl::FetchArgs>)launcher)
+                 ->FetchRunCtx((typename std::tuple_element_t<1, oneflow::okl::FetchArgs>)index);
+  LOG(ERROR) << res;
+  return res;
 }
 
 void* fetch_kernel(void* launcher, int64_t index) {
-  LOG(ERROR) << launcher;
-  LOG(ERROR) << index;
-  return ((typename std::tuple_element_t<0, oneflow::okl::FetchArgs>)launcher)
-      ->FetchKernel((typename std::tuple_element_t<1, oneflow::okl::FetchArgs>)index);
+  auto res = ((typename std::tuple_element_t<0, oneflow::okl::FetchArgs>)launcher)
+                 ->FetchKernel((typename std::tuple_element_t<1, oneflow::okl::FetchArgs>)index);
+
+  LOG(ERROR) << res;
+  return res;
 }
 
 void launch(void* ctx, void* kernel) {
-  ((typename std::tuple_element_t<1, oneflow::okl::LaunchArgs>)kernel)
-      ->Compute((typename std::tuple_element_t<0, oneflow::okl::LaunchArgs>)ctx);
+  const oneflow::user_op::OpKernel* engine =
+      ((typename std::tuple_element_t<1, oneflow::okl::LaunchArgs>)kernel);
+
+  LOG(ERROR) << engine->IsKernelLaunchSynchronized();
+  LOG(ERROR) << kernel;
+  engine->Compute((typename std::tuple_element_t<0, oneflow::okl::LaunchArgs>)ctx);
 }
 }  // extern "C"
 
@@ -58,7 +65,7 @@ oneflow::okl::JIT_Engine::JIT_Engine(mlir::ModuleOp module) {
   jitOptions.sharedLibPaths = ext_libs;
 
   module.getBody()->walk([&](mlir::func::FuncOp func_op) { func_op->erase(); });
-  module.dump();
+  module->dump();
   auto jit_or_error = mlir::ExecutionEngine::create(module, jitOptions);
   CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
                         << llvm::toString((jit_or_error).takeError());

@@ -60,7 +60,7 @@ class KernelLaunchState final : public user_op::OpKernelState {
 
   void DoCompute(user_op::KernelComputeContext* ctx) {
     if (!launcher_context_) { LazyInitLauncher(ctx); }
-    JITCompute(launcher_context_.get());
+    engine_->Run("okl_compute", launcher_context_.get());
   }
 
  private:
@@ -68,10 +68,6 @@ class KernelLaunchState final : public user_op::OpKernelState {
   mlir::OwningOpRef<mlir::ModuleOp> module_;
   std::shared_ptr<LauncherContext> launcher_context_{};
   std::shared_ptr<JIT_Engine> engine_{};
-
-  void JITCompute(LauncherContext* kernel) const {
-    engine_->Run<LauncherContextArgs>("okl_compute", kernel);
-  }
 
   void LazyInitLauncher(user_op::KernelComputeContext* ctx) {
     auto init_context = module_->lookupSymbol("okl_init_context");
