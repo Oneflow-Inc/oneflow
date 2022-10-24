@@ -20,6 +20,7 @@ limitations under the License.
 #include "OneFlow/OKL/Conversion/SplitIntoFuncs.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/Transform/OutlineAndFuse.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Pass/PassManager.h"
 #include "oneflow/ir/include/OneFlow/OneFlowUtils.h"
@@ -40,8 +41,9 @@ LogicalResult LowerWrapOpsToOKL(ModuleOp module) {
 LogicalResult LowerOKLComputeToLLVM(ModuleOp module) {
   PassManager pm(module->getContext());
   pm.addPass(createOnlyKeepComputeOpsPass());        // only-keep-compute-ops
-  pm.addPass(createLowerLauncherToLLVMPtrPass());        // lower-launcher-to-llvm-ptr
+  pm.addPass(createLowerLauncherToLLVMPtrPass());    // lower-launcher-to-llvm-ptr
   pm.addPass(createLowerOKLToLLVMCallPass());        // lower-okl-to-llvm-call
+  pm.addPass(createConvertFuncToLLVMPass());         // convert-func-to-llvm
   pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
   oneflow::CheckEnableIRPrinting(pm);
   return pm.run(module);

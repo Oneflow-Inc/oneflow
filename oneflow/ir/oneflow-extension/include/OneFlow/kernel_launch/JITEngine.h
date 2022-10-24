@@ -28,11 +28,10 @@ using FetchArgs = std::tuple<LauncherContext*, int>;
 using LaunchArgs =
     std::tuple<oneflow::user_op::KernelComputeContext*, const oneflow::user_op::OpKernel*>;
 
-class JIT_Engine {
+class JITEngine {
  public:
-  explicit JIT_Engine(mlir::ModuleOp module);
+  explicit JITEngine(mlir::ModuleOp module);
   void Run(const std::string& name, LauncherContext* launcher) const {
-    LOG(ERROR) << launcher;
     auto error = engine_->invoke(name, launcher);
     CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
   }

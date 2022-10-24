@@ -82,7 +82,6 @@ class LauncherContext final {
   }
   void* FetchKernel(int index) {
     kernel_vec_[index]->IsKernelLaunchSynchronized();
-    LOG(ERROR) << kernel_vec_[index];
     return (void*)kernel_vec_[index];
   }
 

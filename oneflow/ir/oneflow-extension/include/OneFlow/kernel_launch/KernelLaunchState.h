@@ -67,7 +67,7 @@ class KernelLaunchState final : public user_op::OpKernelState {
   mlir::MLIRContext mlir_ctx_;
   mlir::OwningOpRef<mlir::ModuleOp> module_;
   std::shared_ptr<LauncherContext> launcher_context_{};
-  std::shared_ptr<JIT_Engine> engine_{};
+  std::shared_ptr<JITEngine> engine_{};
 
   void LazyInitLauncher(user_op::KernelComputeContext* ctx) {
     auto init_context = module_->lookupSymbol("okl_init_context");
@@ -78,7 +78,7 @@ class KernelLaunchState final : public user_op::OpKernelState {
       exit(1);
     }
 
-    engine_ = std::make_shared<JIT_Engine>(*module_);
+    engine_ = std::make_shared<JITEngine>(*module_);
   }
 };
 }  // namespace okl

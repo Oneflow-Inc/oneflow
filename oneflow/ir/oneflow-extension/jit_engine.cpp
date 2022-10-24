@@ -23,27 +23,19 @@ limitations under the License.
 
 extern "C" {
 void* fetch_run_ctx(void* launcher, int64_t index) {
-  LOG(ERROR) << launcher;
-  auto res = ((typename std::tuple_element_t<0, oneflow::okl::FetchArgs>)launcher)
-                 ->FetchRunCtx((typename std::tuple_element_t<1, oneflow::okl::FetchArgs>)index);
-  LOG(ERROR) << res;
-  return res;
+  return ((typename std::tuple_element_t<0, oneflow::okl::FetchArgs>)launcher)
+      ->FetchRunCtx((typename std::tuple_element_t<1, oneflow::okl::FetchArgs>)index);
 }
 
 void* fetch_kernel(void* launcher, int64_t index) {
-  auto res = ((typename std::tuple_element_t<0, oneflow::okl::FetchArgs>)launcher)
-                 ->FetchKernel((typename std::tuple_element_t<1, oneflow::okl::FetchArgs>)index);
-
-  LOG(ERROR) << res;
-  return res;
+  return ((typename std::tuple_element_t<0, oneflow::okl::FetchArgs>)launcher)
+      ->FetchKernel((typename std::tuple_element_t<1, oneflow::okl::FetchArgs>)index);
 }
 
 void launch(void* ctx, void* kernel) {
   const oneflow::user_op::OpKernel* engine =
       ((typename std::tuple_element_t<1, oneflow::okl::LaunchArgs>)kernel);
 
-  LOG(ERROR) << engine->IsKernelLaunchSynchronized();
-  LOG(ERROR) << kernel;
   engine->Compute((typename std::tuple_element_t<0, oneflow::okl::LaunchArgs>)ctx);
 }
 }  // extern "C"
@@ -56,7 +48,7 @@ SharedLibs* MutSharedLibPaths() {
 const SharedLibs* SharedLibPaths() { return MutSharedLibPaths(); }
 }  // namespace oneflow
 
-oneflow::okl::JIT_Engine::JIT_Engine(mlir::ModuleOp module) {
+oneflow::okl::JITEngine::JITEngine(mlir::ModuleOp module) {
   llvm::SmallVector<llvm::StringRef, 4> ext_libs(
       {oneflow::SharedLibPaths()->begin(), oneflow::SharedLibPaths()->end()});
   mlir::ExecutionEngineOptions jitOptions;
