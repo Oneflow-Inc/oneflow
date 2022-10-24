@@ -564,8 +564,8 @@ def _contains(self, element):
     )
 
 
-def _allclose(self, other):
-    return flow._C.allclose(self, other)
+def _allclose(self, other, atol=1e-08, rtol=1e-05, equal_nan=False):
+    return flow._C.allclose(self, other, atol, rtol, equal_nan)
 
 
 def RegisterMethods():

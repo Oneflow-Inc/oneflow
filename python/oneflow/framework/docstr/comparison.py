@@ -200,7 +200,7 @@ add_docstr(
 
 add_docstr(
     oneflow.isclose,
-    """isclose(input, other) -> Tensor
+    """isclose(input, other, atol=1e-08, rtol=1e-05, equal_nan=False) -> Tensor
     
     Returns a new tensor with boolean elements representing if each element of input is "close" to the corresponding element of other. Closeness is defined as:
     |input-other| <= atol+rtol*|other|
@@ -233,7 +233,7 @@ add_docstr(
 
 add_docstr(
     oneflow.allclose,
-    """allclose(input, other) -> Bool
+    """allclose(input, other, atol=1e-08, rtol=1e-05, equal_nan=False) -> Bool
     
     This function checks if all input and other satisfy the condition:
     |input-other| <= atol+rtol*|other|
