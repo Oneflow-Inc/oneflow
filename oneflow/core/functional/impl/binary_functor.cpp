@@ -264,17 +264,16 @@ class DivFunctorMode {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y,
                            const Optional<std::string>& rounding_mode) const {
-    std::shared_ptr<one::Tensor> ret;
-
     std::string rmode = rounding_mode.value_or("");
     if (rmode == "floor") {
       return JUST(functional::FloorDiv(x, y));
-      
-    } else if(rmode == "trunc"){
-      CHECK_OR_RETURN(false) << "trunc mode not implemented yet";
+
+    } else if (rmode == "trunc") {
+      return JUST(functional::TruncDiv(x, y));
     }
     CHECK_OR_RETURN(rmode == "") << "div expected rounding_mode to be one of None,"
-                                    " 'trunc', or 'floor' but found " << rmode;
+                                    " 'trunc', or 'floor' but found "
+                                 << rmode;
     return JUST(functional::Div(x, y));
   }
 
