@@ -54,7 +54,7 @@ Maybe<void> FuseConsecutiveAddPass::Apply(const OpGraph& op_graph, JobBuilder* j
 
     const std::string this_op_name = op_node->op().op_name();
 
-    auto GetCurOpConf = [&](const OpNode& cur_op) -> OperatorConf {
+    const auto& GetCurOpConf = [&](const OpNode& cur_op) -> OperatorConf {
       const std::string& cur_op_name = cur_op.op().op_name();
       if (!CHECK_JUST(job_builder->IsInMutOpTransaction(cur_op_name))) {
         return cur_op.op().op_conf();
@@ -67,7 +67,7 @@ Maybe<void> FuseConsecutiveAddPass::Apply(const OpGraph& op_graph, JobBuilder* j
     auto fused_op_conf = GetCurOpConf(*sole_dst_node);
     auto in_it = fused_op_conf.mutable_user_conf()->mutable_input()->find("in");
     CHECK(in_it != fused_op_conf.mutable_user_conf()->mutable_input()->end());
-    auto in_lbns = in_it->second.mutable_s();
+    auto* in_lbns = in_it->second.mutable_s();
     auto in_lbn_it = in_lbns->begin();
     while (in_lbn_it != in_lbns->end()) {
       const auto lbi = GenLogicalBlobId(*in_lbn_it);
@@ -79,7 +79,7 @@ Maybe<void> FuseConsecutiveAddPass::Apply(const OpGraph& op_graph, JobBuilder* j
       }
     }
 
-    auto this_op_conf = GetCurOpConf(*op_node);
+    const auto& this_op_conf = GetCurOpConf(*op_node);
     auto this_in_it = this_op_conf.user_conf().input().find("in");
     CHECK(this_in_it != this_op_conf.user_conf().input().end());
     for (int64_t fuse_i = 0; fuse_i < fused_cnt; ++fuse_i) {
