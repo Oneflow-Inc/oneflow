@@ -281,7 +281,7 @@ void LaunchFill(CudaStream* stream, Dst* dst, const Src* src, size_t count, Scal
   auto uintptr = reinterpret_cast<std::uintptr_t>(dst);
   if (uintptr % 16 == 0 && count * sizeof(Dst) >= 16) {
     LaunchPackFill<op, Src, Dst, 16 / sizeof(Dst)>(stream, dst, src, count, attr0, attr1);
-  } else if (uintptr % 8 == 0 && count * sizeof(Dst) >= (8 / sizeof(Dst))) {
+  } else if (uintptr % 8 == 0 && count * sizeof(Dst) >= 8) {
     LaunchPackFill<op, Src, Dst, 8 / sizeof(Dst)>(stream, dst, src, count, attr0, attr1);
   } else if (uintptr % 4 == 0 && count * sizeof(Dst) >= 4) {
     LaunchPackFill<op, Src, Dst, 4 / sizeof(Dst)>(stream, dst, src, count, attr0, attr1);
