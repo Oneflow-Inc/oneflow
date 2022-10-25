@@ -3128,6 +3128,14 @@ class StftFunctor {
     int64_t new_win_length = win_length.has_value() == true ? JUST(win_length) : n_fft;
     auto input_tensor = input;
 
+    // TODO(yzm):Remove this line of code when onesided is supported
+    CHECK_OR_RETURN(onesided == false)
+        << Error::RuntimeError() << "onesided parameter is not supported at this time";
+
+    // TODO(yzm):Remove this line when complex numbers are supported
+    CHECK_OR_RETURN(return_complex == true)
+        << Error::RuntimeError() << "return_complex parameter is not supported at this time";
+
     const auto& NumAxes = input_tensor->shape()->NumAxes();
     CHECK_OR_RETURN(NumAxes == 2 || NumAxes == 1)
         << Error::RuntimeError() << "Expected a 1D or 2D tensor,but got " << NumAxes << "D";

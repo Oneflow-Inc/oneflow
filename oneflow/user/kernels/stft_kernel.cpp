@@ -83,10 +83,6 @@ class StftCpuKernel final : public user_op::OpKernel {
     OUT* out_tmp_buffer = reinterpret_cast<OUT*>(tmp_buffer->mut_dptr<char>());
     config.excute(data_in, out_tmp_buffer, dims, batch, len);
 
-    // for (int i = 0; i < input_elem_cnt; i++) {
-    //   std::cout << "data_out:" << out_tmp_buffer[i].real() << "," << out_tmp_buffer[i].imag()
-    //             << std::endl;
-    // }
     if (!return_complex) { comvert_to_real<IN>(out_tmp_buffer, data_out, output_elem_cnt); }
   }
 
