@@ -66,7 +66,7 @@ class OfCollectiveBoxingGenericKernel final : public Kernel {
     int64_t actor_id;
   };
   void VirtualKernelInit(KernelContext* ctx) override;
-  //   bool IsKernelLaunchSynchronized() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override { return false; }
   void ForwardDataContent(KernelContext* ctx) const override;
 };
 
@@ -80,6 +80,7 @@ void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) con
   // Blob* in = ctx->BnInOp2Blob("in");
   // Blob* out = ctx->BnInOp2Blob("out");
   // AutoMemcpy(ctx->stream(), out, in);
+  
   const RankDesc& rank_desc = this->op_conf().of_collective_boxing_generic_conf().rank_desc();
   // TODO: 目前只实现了AllReduce  
   if (rank_desc.op_desc().op_type() == kOpTypeAllReduce) {
@@ -126,7 +127,7 @@ void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) con
     const Shape shape = Shape(rank_desc.op_desc().shape());
     FOR_RANGE(int, shape_ax, 0, shape.NumAxes()) { count *= shape.At(shape_ax); }
     CHECK_GT(count, 0);
-    VLOG(1) << "ForwardDataContent invoke ofcclRunAllReduce with coll_id = " << coll_id  << " count = " << count; // << " send_buff = " << send_buff << " recv_buff = " << recv_buff;
+    VLOG(2) << "ForwardDataContent invoke ofcclRunAllReduce with coll_id = " << coll_id  << " count = " << count; // << " send_buff = " << send_buff << " recv_buff = " << recv_buff;
   }
 }
 

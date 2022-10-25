@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/lazy/actor/of_collective_actor.h"
+#include <glog/logging.h>
 #include <cstdint>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -340,6 +341,37 @@ void OfCollectiveActor::IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t v
   produced_regst2reading_cnt_.at(regst) += val;
 }
 
+void OfCollectiveActor::NoNegoAct() {
+  int round = 0; // TODO(Panlichen): for debug
+
+  while (IsReadReady() && IsWriteReady()) {
+
+    // 只要进得来，就设置成CanAct，不掣肘。
+    collective_status_ = CollectiveStatus::kCanAct;
+    VLOG(2) << "Actor " << actor_id_ << " UpdateCollectiveStatus to " << print_status_[collective_status_];
+
+    VLOG(2) << "Actor " << actor_id_ << " " << round++ << "th AsyncLaunchKernel";
+    AsyncLaunchKernel([&](int64_t regst_desc_id) -> Regst* { return nullptr; });
+          
+    // kernel里的callback会发送kCollectiveDone信息，然后在处理kCollectiveDone信息的地方调用这些善后的代码。否则似乎找不到更方便的实现异步调用callback的方法了。
+    // 没办法和nego低成本地完全切割
+
+    // 这些归还regst的操作应该在这里做，来打破上边while的条件。
+    AsyncSendNaiveProducedRegstMsgToConsumer();
+    // no inplace ctrl regst
+    HandleProducedInplaceDataRegstToConsumer();
+
+    AsyncSendNaiveConsumedRegstMsgToProducer();
+    // inplace regst with further consumer is handled in HandlerNormal
+    AsyncRetInplaceConsumedRegstIfNoConsumer();
+
+    // 但是不能真的发消息，还是要等收到了cqe，callback被调用之后才可以发。
+    // AsyncSendQueuedMsg();
+
+    // ResetCollectiveStatus();
+  }
+}
+
 int OfCollectiveActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     remaining_eord_cnt_ -= 1;
@@ -352,54 +384,54 @@ int OfCollectiveActor::HandlerNormal(const ActorMsg& msg) {
       UNIMPLEMENTED();
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (is_nego_root_) {
-      VLOG(2) << "NEGOROOT GET Actor " << actor_id_ << " status: " << print_status_[collective_status_] << " get kRegstMsg from " << msg.src_actor_id();
-    }
+    // if (is_nego_root_) {
+    //   VLOG(2) << "NEGOROOT GET Actor " << actor_id_ << " status: " << print_status_[collective_status_] << " get kRegstMsg from " << msg.src_actor_id();
+    // }
     if (msg.SrcMachineId() == GlobalProcessCtx::Rank()) {
-      if (is_nego_root_) {
-        VLOG(2) << "NEGOROOT Actor " << actor_id_ << " msg.SrcMachineId() == GlobalProcessCtx::Rank()";
-      }
+      // if (is_nego_root_) {
+      //   VLOG(2) << "NEGOROOT Actor " << actor_id_ << " msg.SrcMachineId() == GlobalProcessCtx::Rank()";
+      // }
       Regst* regst = msg.regst();
       if (naive_consumed_rs_.HasRegstDescId(regst->regst_desc_id())) {
-        if (is_nego_root_) {
-          VLOG(2) << "NEGOROOT Actor " << actor_id_ << " naive_consumed_rs_.HasRegstDescId(regst->regst_desc_id())";
-        }
+        // if (is_nego_root_) {
+        //   VLOG(2) << "NEGOROOT Actor " << actor_id_ << " naive_consumed_rs_.HasRegstDescId(regst->regst_desc_id())";
+        // }
         CHECK_EQ(0, naive_consumed_rs_.TryPushBackRegst(regst));
         const auto& rdeq = naive_consumed_rs_.RegstDeq4RegstDescId(regst->regst_desc_id());
         CHECK(rdeq.empty() == false);
 
         if (rdeq.front()->regst_desc()->regst_desc_type().has_data_regst_desc()) {
-          // TODO: (Panlichen) currently do nothing, maybe useless for us.
+          // TODO(Panlichen):  currently do nothing, maybe useless for us.
           NormalProcessNaiveReadableDataRegstMsg(rdeq);
         }
 
       } else if (inplace_consumed_rs_.HasRegstDescId(regst->regst_desc_id())) {
-        if (is_nego_root_) {
-          VLOG(2) << "NEGOROOT Actor " << actor_id_ << " inplace_consumed_rs_.HasRegstDescId(regst->regst_desc_id()))";
-        }
+        // if (is_nego_root_) {
+        //   VLOG(2) << "NEGOROOT Actor " << actor_id_ << " inplace_consumed_rs_.HasRegstDescId(regst->regst_desc_id()))";
+        // }
         CHECK_EQ(0, inplace_consumed_rs_.TryPushBackRegst(regst));
         int64_t out_regst_desc_id = inplace_regst_desc_id_in2out_.at(regst->regst_desc_id());
         CHECK(regst->GetSoleBlob()->dptr()
               == inplace_produced_rs_.Front(out_regst_desc_id)->GetSoleBlob()->dptr());
       } else if (TryUpdtStateAsProducedRegst(regst) == 0) {
-        if (is_nego_root_) {
-          VLOG(2) << "NEGOROOT Actor " << actor_id_ << " TryUpdtStateAsProducedRegst(regst) == 0";
-        }
+        // if (is_nego_root_) {
+        //   VLOG(2) << "NEGOROOT Actor " << actor_id_ << " TryUpdtStateAsProducedRegst(regst) == 0";
+        // }
         // do nothing
       } else {
         UNIMPLEMENTED();
       }
     } else {
-      if (is_nego_root_) {
-        VLOG(2) << "NEGOROOT Actor " << actor_id_ << " from other GlobalProcessCtx::Rank()";
-      }
+      // if (is_nego_root_) {
+      //   VLOG(2) << "NEGOROOT Actor " << actor_id_ << " from other GlobalProcessCtx::Rank()";
+      // }
       // can only process ctrl msg from other processes
       if (NormalTryProcessReadableMsgFromOtherMachine(msg) == false) {
         // process ctrl msg from other rank
         if (IsConsumedCtrlRegstDescId(msg.regst_desc_id())) {
-          if (is_nego_root_) {
-            VLOG(2) << "NEGOROOT Actor " << actor_id_ << " IsConsumedCtrlRegstDescId(msg.regst_desc_id())";
-          }
+          // if (is_nego_root_) {
+          //   VLOG(2) << "NEGOROOT Actor " << actor_id_ << " IsConsumedCtrlRegstDescId(msg.regst_desc_id())";
+          // }
           Regst* regst = msg.regst();
           CHECK(naive_consumed_rs_.HasRegstDescId(msg.regst_desc_id()));
           CHECK(Singleton<RegstMgr>::Get()->HasProducerTaskId4RegstDescId(msg.regst_desc_id()));
@@ -407,22 +439,22 @@ int OfCollectiveActor::HandlerNormal(const ActorMsg& msg) {
           const auto& rdeq = naive_consumed_rs_.RegstDeq4RegstDescId(msg.regst_desc_id());
           CHECK(rdeq.empty() == false);
         } else {
-          if (is_nego_root_) {
-            VLOG(2) << "NEGOROOT Actor " << actor_id_ << " NOT IsConsumedCtrlRegstDescId(msg.regst_desc_id())";
-          }
+          // if (is_nego_root_) {
+          //   VLOG(2) << "NEGOROOT Actor " << actor_id_ << " NOT IsConsumedCtrlRegstDescId(msg.regst_desc_id())";
+          // }
           CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
         }
       }
     }
-    // TODO: (Panlichen) invoke Act() when ONEFLOW_OFCCL_SKIP_NEGO=1
+    // TODO(Panlichen):  invoke Act() when ONEFLOW_OFCCL_SKIP_NEGO=1
+    // 在oneflow/oneflow/core/lazy/actor/actor.cpp的HandlerNormal里，到这里就进入了ActUntilFail的逻辑了。
     if (ParseBooleanFromEnv("ONEFLOW_OFCCL_SKIP_NEGO", false)) {
-      collective_status_ = CollectiveStatus::kCanAct;
-      VLOG(2) << "Actor " << actor_id_ << " UpdateCollectiveStatus to " << print_status_[collective_status_];
+      NoNegoAct();
     } else {
       if (IsReadReady() && IsWriteReady()) {
-        if (is_nego_root_) {
-          VLOG(2) << "NEGOROOT Actor " << actor_id_ << " Checking IsReadReady() && IsWriteReady()";
-        }
+        // if (is_nego_root_) {
+        //   VLOG(2) << "NEGOROOT Actor " << actor_id_ << " Checking IsReadReady() && IsWriteReady()";
+        // }
         // every actor gets here.
         collective_status_ = CollectiveStatus::kLocalReady;
         VLOG(2) << "Actor " << actor_id_ << " UpdateCollectiveStatus to " << print_status_[collective_status_];
@@ -560,18 +592,9 @@ void OfCollectiveActor::ReactToNegoCmd(const ActorMsg& msg) {
     break;
 
     case CollectiveNegoCmd::kCollectiveDone:
-      CHECK(collective_status_ == CollectiveStatus::kCanAct) << "Actor " << actor_id_ << " In status " << print_status_[collective_status_] << " should not get " << "kCollectiveStart";
+      CHECK(collective_status_ == CollectiveStatus::kCanAct) << "Actor " << actor_id_ << " In status " << print_status_[collective_status_] << " should not get " << "kCollectiveDone";
 
-      VLOG(1) << "Actor " << actor_id_ << " receive kCollectiveDone and will return regsts and ResetCollectiveStatus";
-      
-      AsyncSendNaiveProducedRegstMsgToConsumer();
-      // no inplace ctrl regst
-      HandleProducedInplaceDataRegstToConsumer();
-
-      AsyncSendNaiveConsumedRegstMsgToProducer();
-      // inplace regst with further consumer is handled in HandlerNormal
-      AsyncRetInplaceConsumedRegstIfNoConsumer();
-
+      // 这里应该只处理异步消息的发送。相当于原来的stream监控到了kernel执行结束。
       AsyncSendQueuedMsg();
 
       ResetCollectiveStatus();
@@ -593,13 +616,13 @@ void OfCollectiveActor::ReactToNegoCmd(const ActorMsg& msg) {
         SyncSendMsg(std::move(start_msg));
       }
     }
-    if (is_nego_root_) {
-      VLOG(2) << "NEGOROOT Actor " << actor_id_  << " goes to Act() in ReactToNegoCmd";
-    }
+    // if (is_nego_root_) {
+    //   VLOG(2) << "NEGOROOT Actor " << actor_id_  << " goes to Act() in ReactToNegoCmd";
+    // }
     Act();
-    if (is_nego_root_) {
-      VLOG(2) << "NEGOROOT Actor " << actor_id_  << " return from Act() in ReactToNegoCmd";
-    }
+    // if (is_nego_root_) {
+    //   VLOG(2) << "NEGOROOT Actor " << actor_id_  << " return from Act() in ReactToNegoCmd";
+    // }
   }
 }
 
@@ -643,10 +666,19 @@ void OfCollectiveActor::AsyncLaunchKernel(std::function<Regst*(int64_t)> Regst4R
 
 void OfCollectiveActor::Act() {
   VLOG(2) << "Actor " << actor_id_ << " Enter OfCollectiveActor::Act()";
-  
+  // TODO(Panlichen): 考虑是否搞成while循环。
   CHECK(IsReadReady() && IsWriteReady() && CanAct()) << "Actor " << actor_id_;
   
   AsyncLaunchKernel([&](int64_t regst_desc_id) -> Regst* { return nullptr; });
+  
+  // 应该在调用完kernel之后，就准备好消息，等收到了cqe，callback被调用之后真正发出去。
+  AsyncSendNaiveProducedRegstMsgToConsumer();
+  // no inplace ctrl regst
+  HandleProducedInplaceDataRegstToConsumer();
+
+  AsyncSendNaiveConsumedRegstMsgToProducer();
+  // inplace regst with further consumer is handled in HandlerNormal
+  AsyncRetInplaceConsumedRegstIfNoConsumer();
 
   VLOG(2) << "Actor " << actor_id_ << " OfCollectiveActor::Act() Done";
   return;
@@ -766,6 +798,7 @@ void OfCollectiveActor::AsyncRetInplaceConsumedRegstIfNoConsumer() {
 }
 
 void OfCollectiveActor::EnqueueAsyncMsg(const ActorMsg& msg) {
+  VLOG(2) << "Actor " << actor_id_ << " in EnqueueAsyncMsg is_kernel_launch_synchronized_ is " << is_kernel_launch_synchronized_;
   if (is_kernel_launch_synchronized_ && thrd_id_ == ThrdId4ActorId(msg.dst_actor_id())) {
     Singleton<ActorMsgBus>::Get()->SendMsg(msg);
   } else {
@@ -820,12 +853,14 @@ int OfCollectiveActor::TryUpdtStateAsProducedRegst(Regst* regst) {
 }
 
 void OfCollectiveActor::AsyncSendQueuedMsg() {
+  VLOG(1) << "Actor " << actor_id_ << " AsyncSendQueuedMsg after kCollectiveDone";
   if (!async_msg_queue_.empty()) {
     std::deque<ActorMsg> msgs;
     msgs.swap(async_msg_queue_);
-    AddCallback([msgs]() {
-      for (const ActorMsg& msg : msgs) { Singleton<ActorMsgBus>::Get()->SendMsg(msg); }
-    });
+    for (const ActorMsg& msg : msgs) {
+      Singleton<ActorMsgBus>::Get()->SendMsg(msg);
+      VLOG(1) << "Actor " << actor_id_ << " msg.src: " << msg.src_actor_id() << " msg.dst: " << msg.dst_actor_id() << " msg.type: " << print_actor_msg_type_[msg.msg_type()];
+    }
   }
 }
 

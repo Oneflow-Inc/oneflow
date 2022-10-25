@@ -85,6 +85,7 @@ class OfCollectiveActor final: public ActorBase {
   // Act
   void Act();
   void AsyncLaunchKernel(std::function<Regst*(int64_t)> Regst4RegstDescId);
+  void NoNegoAct();
 
   // Send Msg
   void EnqueueAsyncMsg(const ActorMsg&);

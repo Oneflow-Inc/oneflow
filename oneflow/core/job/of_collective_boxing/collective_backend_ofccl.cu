@@ -213,7 +213,7 @@ struct CollectiveBackendOfccl::Impl {
           
           // TODO: 目前只实现了AllReduce
           if (request.op_desc().op_type() == kOpTypeAllReduce) {
-            VLOG(1) << "Prepare coll_id = " << coll_id << " count = " << count << " nccl_data_type = " << nccl_data_type;
+            VLOG(2) << "Prepare coll_id = " << coll_id << " count = " << count << " nccl_data_type = " << nccl_data_type;
             OF_NCCL_CHECK(ofcclPrepareAllReduce(count, nccl_data_type, nccl_reduce_op, comm, coll_id, device_id2ofccl_rank_ctx[curr_device_id]));
           } else {
             UNIMPLEMENTED();
@@ -256,7 +256,7 @@ CollectiveBackendOfccl::~CollectiveBackendOfccl() = default;
 
 void CollectiveBackendOfccl::Init(std::shared_ptr<OfRequestStore> request_store) {
   // 我们复用了原来oneflow里的collective_boxing_conf
-  // VLOG(1) << "CollectiveBackendOfccl Init";
+  VLOG(2) << "CollectiveBackendOfccl Init";
   impl_ = std::make_unique<Impl>(Singleton<ResourceDesc, ForSession>::Get()->collective_boxing_conf(),
                                  request_store);
 }

@@ -795,7 +795,7 @@ class StarNegoTreeBuilder : public NegoTreeBuilder {
       task_ids_str += std::to_string(task_ids[i]);
       task_ids_str += ", ";
     }
-    VLOG(1) << "Star Nego Tree root: " << root << " leaves: " << task_ids_str;
+    VLOG(4) << "Star Nego Tree root: " << root << " leaves: " << task_ids_str;
   }
 };
 
@@ -840,7 +840,7 @@ class ChainNegoTreeBuilder : public NegoTreeBuilder {
       task_ids_str += std::to_string(task_ids[i]);
       task_ids_str += " -> ";
     }
-    VLOG(1) << "Chain Nego Tree: (root) " << task_ids_str;
+    VLOG(4) << "Chain Nego Tree: (root) " << task_ids_str;
     
   }
 };
@@ -1057,10 +1057,10 @@ void PlanUtil::GenOfCollectiveBoxingPlan(Job* job, Plan* plan) {
         NegoTreeBuilder* nego_tree_builder;
         if (ParseBooleanFromEnv("ONEFLOW_OFCCL_CHAIN", false)) {
           nego_tree_builder = new ChainNegoTreeBuilder();
-          VLOG(1) << "Use ChainNegoTreeBuilder";
+          VLOG(4) << "Use ChainNegoTreeBuilder";
         } else {
           nego_tree_builder = new StarNegoTreeBuilder();
-          VLOG(1) << "Use StarNegoTreeBuilder";
+          VLOG(4) << "Use StarNegoTreeBuilder";
         }
         nego_tree_builder->CalcNegoTree(request_desc, info);
         delete nego_tree_builder;
