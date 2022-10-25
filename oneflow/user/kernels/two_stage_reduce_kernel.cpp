@@ -53,8 +53,8 @@ class ReduceDeviceStageKernel final : public OpKernel {
         in->shape_view().NumAxes());
     CHECK(bcast_eq);
     bcast_eq->Launch(ctx->stream(), in->shape_view().NumAxes(), in->shape_view().ptr(), in->dptr(),
-                     out->shape_view().NumAxes(), out->shape_view().ptr(), out->dptr<T>(),
-                     mask->mut_dptr<T>());
+                     out->shape_view().NumAxes(), out->shape_view().ptr(), out->dptr(),
+                     mask->mut_dptr());
 
     auto cast = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
         ctx->device_type(), DataType::kInt8, DataType::kInt32);
