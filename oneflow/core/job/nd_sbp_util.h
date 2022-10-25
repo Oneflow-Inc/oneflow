@@ -21,8 +21,6 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
-                              const Shape& parallel_hierarchy, int64_t parallel_id);
 std::vector<TensorSliceView> GetTensorSliceView(int64_t parallel_num,
                                                 const SbpParallel& sbp_parallel,
                                                 const BlobDesc& blob_desc);

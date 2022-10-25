@@ -17,84 +17,8 @@ limitations under the License.
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
-#include "oneflow/core/framework/nd_sbp.h"
-#include "oneflow/core/framework/placement_sbp_util.h"
-#include "oneflow/core/job/lazy_mode.h"
-#include "oneflow/core/register/tensor_slice_view.h"
 
 namespace oneflow {
-
-namespace {
-
-template<typename SbpParallelT>
-Maybe<Shape> Get1dHierarchyPhysicalShape(const Shape& logical_shape,
-                                         const SbpParallelT& sbp_parallel,
-                                         const int64_t parallel_num, const int64_t parallel_id) {
-  std::shared_ptr<Shape> physical = std::make_shared<Shape>(logical_shape);
-
-  if (sbp_parallel.has_split_parallel()) {
-    const int64_t axis = sbp_parallel.split_parallel().axis();
-    if (logical_shape.At(axis) > 0) {
-      CHECK_GE_OR_RETURN(logical_shape.At(axis), parallel_num);
-      const BalancedSplitter bs(logical_shape.At(axis), parallel_num);
-      physical->Set(axis, bs.At(parallel_id).size());
-    }
-  } else if (sbp_parallel.has_broadcast_parallel() || sbp_parallel.has_partial_sum_parallel()) {
-    // do nothing
-  } else {
-    UNIMPLEMENTED();
-  }
-  return physical;
-}
-
-Maybe<Shape> GetNdHierarchyPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
-                                         const Shape& parallel_hierarchy,
-                                         const int64_t parallel_id) {
-  std::shared_ptr<Shape> physical = std::make_shared<Shape>(logical_shape);
-  Stride hierarch_stride(parallel_hierarchy);
-  FOR_RANGE(int64_t, i, 0, parallel_hierarchy.NumAxes()) {
-    const auto& sbp_parallel = nd_sbp.sbp_parallel(i);
-    if (sbp_parallel.has_split_parallel()) {
-      const int64_t split_axis = sbp_parallel.split_parallel().axis();
-      // if (LazyMode::is_enabled()) {
-      //   CHECK_EQ_OR_RETURN(physical->At(split_axis) % parallel_hierarchy.At(i), 0)
-      //       << Error::RuntimeError() << "In nn.Graph, expected size at split axis (" <<
-      //       split_axis
-      //       << ") of logical shape must be divisible by parallel num, but got logical_shape: "
-      //       << logical_shape.ToString() << ", placement: " << parallel_hierarchy
-      //       << ", nd_sbp: " << NdSbpToString(nd_sbp);
-      //   physical->Set(split_axis, physical->At(split_axis) / parallel_hierarchy.At(i));
-      // } else {
-      if (physical->At(split_axis) > 0) {
-        CHECK_GE_OR_RETURN(physical->At(split_axis), parallel_hierarchy.At(i))
-            << Error::RuntimeError() << "Expected size at split axis (" << split_axis
-            << ") of logical shape must be be greater than or equal to parallel num, but got "
-               "logical_shape: "
-            << logical_shape.ToString() << ", placement: " << parallel_hierarchy
-            << ", nd_sbp: " << NdSbpToString(nd_sbp);
-        const BalancedSplitter bs(physical->At(split_axis), parallel_hierarchy.At(i));
-        physical->Set(split_axis, bs.At(CalcIndex4Axis(parallel_id, hierarch_stride, i)).size());
-      }
-      // }
-    }
-  }
-  return physical;
-}
-
-}  // namespace
-
-Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
-                              const Shape& parallel_hierarchy, int64_t parallel_id) {
-  CHECK_GE_OR_RETURN(parallel_id, 0);
-  CHECK_LT_OR_RETURN(parallel_id, parallel_hierarchy.elem_cnt());
-  CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), nd_sbp.sbp_parallel_size());
-  if (parallel_hierarchy.NumAxes() == 1) {
-    return Get1dHierarchyPhysicalShape(logical_shape, nd_sbp.sbp_parallel(0),
-                                       parallel_hierarchy.elem_cnt(), parallel_id);
-  } else {
-    return GetNdHierarchyPhysicalShape(logical_shape, nd_sbp, parallel_hierarchy, parallel_id);
-  }
-}
 
 std::vector<TensorSliceView> GetTensorSliceView(const int64_t parallel_num,
                                                 const SbpParallel& sbp_parallel,
@@ -173,14 +97,11 @@ TensorSliceView GetTensorSliceView4ParallelRank(const Shape& parallel_hierarchy,
 
 TensorSliceView GetTensorSliceView4ParallelId(const Shape& parallel_hierarchy, const NdSbp& nd_sbp,
                                               const Shape& logical_shape, int64_t parallel_id) {
-  // NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE> hierarchy_index_helper(
-  //     parallel_hierarchy.dim_vec().data(), parallel_hierarchy.NumAxes());
-  // std::vector<int64_t> parallel_rank(SHAPE_MAX_AXIS_SIZE);
-  // hierarchy_index_helper.OffsetToNdIndex(parallel_id, parallel_rank.data());
-  // return GetTensorSliceView4ParallelRank(parallel_hierarchy, nd_sbp, logical_shape,
-  // parallel_rank);
-  return TensorSliceView(
-      *CHECK_JUST(GetPhysicalShape(logical_shape, nd_sbp, parallel_hierarchy, parallel_id)));
+  NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE> hierarchy_index_helper(
+      parallel_hierarchy.dim_vec().data(), parallel_hierarchy.NumAxes());
+  std::vector<int64_t> parallel_rank(SHAPE_MAX_AXIS_SIZE);
+  hierarchy_index_helper.OffsetToNdIndex(parallel_id, parallel_rank.data());
+  return GetTensorSliceView4ParallelRank(parallel_hierarchy, nd_sbp, logical_shape, parallel_rank);
 }
 
 std::vector<TensorSliceView> GetTensorSliceView(const Shape& parallel_hierarchy,
