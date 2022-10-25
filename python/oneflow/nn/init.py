@@ -14,11 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
+import math
 
 import numpy as np
 
 import oneflow as flow
-from oneflow.ops.util.initializer_util import calc_gain as calculate_gain
+from oneflow.ops.util.initializer_util import (
+    calc_gain as calculate_gain,
+    calc_fan,
+    get_data_format,
+)
 from oneflow.framework.tensor import Tensor
 import oneflow.framework.dtype as dtype_util
 import oneflow.ops.initializer_register as initializer_register
@@ -98,8 +103,18 @@ def normal_(tensor, mean=0.0, std=1.0):
         >>> w = flow.empty(3, 5)
         >>> nn.init.normal_(w)
     """
-    initializer_conf = initializer_register.random_normal_initializer(mean, std)
-    return _init_by_initializer_conf(tensor, initializer_conf)
+    with flow.no_grad():
+        if tensor.is_local:
+            return flow.normal(mean=mean, std=std, size=tensor.shape, out=tensor)
+        else:
+            return flow.normal(
+                mean=mean,
+                std=std,
+                size=tensor.shape,
+                out=tensor,
+                placement=tensor.placement,
+                sbp=tensor.sbp,
+            )
 
 
 def xavier_uniform_(tensor, gain=1.0, *, data_format="NCHW"):
@@ -156,10 +171,11 @@ def xavier_normal_(tensor, gain=1.0, *, data_format="NCHW"):
         >>> w = flow.empty(3, 5)
         >>> nn.init.xavier_normal_(w)
     """
-    initializer_conf = initializer_register.xavier_initializer(
-        tensor.shape, gain=gain, data_format=data_format, distribution="random_normal"
-    )
-    return _init_by_initializer_conf(tensor, initializer_conf)
+    if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+        data_format = "NHWC"
+    fan = calc_fan(tensor.shape, "fan_sum", get_data_format(data_format))
+    std = gain * math.sqrt(2.0 / fan)
+    return normal_(tensor, 0.0, std)
 
 
 def orthogonal_(tensor, gain=1.0):
@@ -251,8 +267,7 @@ def kaiming_normal_(
 
     Args:
         tensor: an n-dimensional `oneflow.Tensor`
-        a: the negative slope of the rectifier used after this layer (only
-            used with ``'leaky_relu'``)
+        a: the negative slope of the rectifier used after this layer.
         mode: either ``'fan_in'`` (default) or ``'fan_out'``. Choosing ``'fan_in'``
             preserves the magnitude of the variance of the weights in the
             forward pass. Choosing ``'fan_out'`` preserves the magnitudes in the
@@ -266,22 +281,16 @@ def kaiming_normal_(
     """
     if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
         data_format = "NHWC"
-    initializer_conf = initializer_register.kaiming_initializer(
-        tensor.shape,
-        a=a,
-        mode=mode,
-        nonlinearity=nonlinearity,
-        data_format=data_format,
-        distribution="random_normal",
-    )
-    return _init_by_initializer_conf(tensor, initializer_conf)
+    assert mode in ["fan_in", "fan_out"]
+    fan = calc_fan(tensor.shape, mode, get_data_format(data_format))
+    gain = calculate_gain(nonlinearity, a)
+    std = gain / math.sqrt(fan)
+    return normal_(tensor, 0.0, std)
 
 
 def trunc_normal_(tensor, mean=0.0, std=1.0, a=-2.0, b=2.0):
-    initializer_conf = initializer_register.truncated_normal_initializer(
-        mean=mean, std=std, a=a, b=b,
-    )
-    return _init_by_initializer_conf(tensor, initializer_conf)
+    with flow.no_grad():
+        return tensor.normal_(mean, std).clamp_(a, b)
 
 
 def constant_(tensor, val):
