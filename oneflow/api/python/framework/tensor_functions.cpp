@@ -259,6 +259,7 @@ DIRECT_PASS_FUNC(PyTensorObject_addcmul, functional::addcmul)
 DIRECT_PASS_FUNC(PyTensorObject_addcmul_, functional::addcmul_)
 DIRECT_PASS_FUNC(PyTensorObject_addcdiv, functional::addcdiv)
 DIRECT_PASS_FUNC(PyTensorObject_addcdiv_, functional::addcdiv_)
+DIRECT_PASS_FUNC(PyTensorObject_flip, functional::flip)
 DIRECT_PASS_FUNC(PyTensorObject_clip, functional::clip)
 DIRECT_PASS_FUNC(PyTensorObject_clip_, functional::clip_)
 DIRECT_PASS_FUNC(PyTensorObject_clamp, functional::clamp)
@@ -649,22 +650,6 @@ static PyObject* PyTensorObject_transpose(PyObject* self, PyObject* args, PyObje
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_flip(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  PyObject* dims = args;
-  if (PyTuple_Size(args) == 1) {
-    PyObject* item = PyTuple_GetItem(args, 0);
-    if (!PyLong_Check(item)) { dims = item; }
-  }
-
-  PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, dims));
-  PyObject* result = functional::flip(NULL, _args.get(), kwargs);
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
-
-  END_HANDLE_ERRORS
-}
-
 static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   auto tensor = PyTensor_Unpack(self);
@@ -769,9 +754,7 @@ static PyObject* PyTensorObject_to_global(PyObject* self, PyObject* args, PyObje
   PyObject* result = NULL;
   if (tensor->is_global())
     result = PyTensorObject_global_to_global(self, args, kwargs);
-  else {
-    result = PyTensorObject_local_to_global(self, args, kwargs);
-  }
+  else { result = PyTensorObject_local_to_global(self, args, kwargs); }
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
 
@@ -902,6 +885,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"ne", (PyCFunction)PyTensorObject_ne, METH_VARARGS | METH_KEYWORDS, NULL},
     {"lt", (PyCFunction)PyTensorObject_lt, METH_VARARGS | METH_KEYWORDS, NULL},
     {"le", (PyCFunction)PyTensorObject_le, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"flip", (PyCFunction)PyTensorObject_flip, METH_VARARGS | METH_KEYWORDS, NULL},
     {"clip", (PyCFunction)PyTensorObject_clip, METH_VARARGS | METH_KEYWORDS, NULL},
     {"clip_", (PyCFunction)PyTensorObject_clip_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"clamp", (PyCFunction)PyTensorObject_clamp, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -1003,7 +987,6 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"view_as", (PyCFunction)PyTensorObject_view_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {"permute", (PyCFunction)PyTensorObject_permute, METH_VARARGS | METH_KEYWORDS, NULL},
     {"transpose", (PyCFunction)PyTensorObject_transpose, METH_VARARGS | METH_KEYWORDS, NULL},
-    {"flip", (PyCFunction)PyTensorObject_flip, METH_VARARGS | METH_KEYWORDS, NULL},
     {NULL},
 };
 
