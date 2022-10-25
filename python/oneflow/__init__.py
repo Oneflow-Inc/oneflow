@@ -214,6 +214,7 @@ from oneflow._C import not_equal as ne
 from oneflow._C import less as lt
 from oneflow._C import less_equal as le
 from oneflow._C import searchsorted
+from oneflow._C import flip
 from oneflow._C import index_select
 from oneflow._C import isnan
 from oneflow._C import isinf
@@ -367,7 +368,6 @@ from oneflow.nn.modules.distributed_partial_fc_sample import (
     distributed_partial_fc_sample_op as distributed_partial_fc_sample,
 )
 from oneflow.nn.modules.roll import roll_op as roll
-from oneflow.nn.modules.flip import flip_op as flip
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
 from oneflow.nn.modules.math_ops import topk_op as topk
