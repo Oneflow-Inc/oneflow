@@ -1042,6 +1042,7 @@ class LayerNormNpuGradFunctor {
                          .Input("x")
                          .Input("mean")
                          .Input("inv_variance")
+                         .Input("gamma")
                          .Output("dx")
                          .Output("gamma_diff")
                          .Output("beta_diff")
@@ -1051,12 +1052,13 @@ class LayerNormNpuGradFunctor {
                                 const std::shared_ptr<one::Tensor>& x,
                                 const std::shared_ptr<one::Tensor>& mean,
                                 const std::shared_ptr<one::Tensor>& inv_variance,
+                                const std::shared_ptr<one::Tensor>& gamma,
                                 const int64_t& begin_params_axis, const double& epsilon) const {
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("begin_params_axis", "epsilon");
     attrs.SetAttr<int64_t>("begin_params_axis", begin_params_axis);
     attrs.SetAttr<double>("epsilon", epsilon);
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, x, mean, inv_variance}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, x, mean, inv_variance, gamma}, attrs);
   }
 
  private:
@@ -1613,6 +1615,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::NormalizationGradFunctor>("NormalizationGrad");
   m.add_functor<impl::NormalizationAddReluGradFunctor>("NormalizationAddReluGrad");
   m.add_functor<impl::LayerNormGradFunctor>("LayerNormGrad");
+  m.add_functor<impl::LayerNormNpuGradFunctor>("LayerNormNpuGrad");
   m.add_functor<impl::LayerNormAffineGradFunctor>("LayerNormAffineGrad");
   m.add_functor<impl::LayerNormParamGradFunctor>("LayerNormParamGrad");
   m.add_functor<impl::GroupNormGradFunctor>("GroupNormGrad");

@@ -75,5 +75,53 @@ REGISTER_USER_KERNEL("matmul")
     //   }
     //   return Maybe<void>::Ok();
     // });    
+
+class BatchMatmulNpuKernel final : public user_op::OpKernel {
+ public:
+  BatchMatmulNpuKernel() = default;
+  ~BatchMatmulNpuKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    bool trans_a = ctx->Attr<bool>("transpose_a");
+    bool trans_b = ctx->Attr<bool>("transpose_b");
+    user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
+    const DataType data_type = a->data_type();
+    user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
+    CHECK_EQ(b->data_type(), data_type);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK_EQ(out->data_type(), data_type);
+    int64_t offset_x = 0;
+    if (ctx->has_input("_add_to_output", 0)) {
+      UNIMPLEMENTED();
+    }
+    NpuCommand npu_command;
+    npu_command.OpName("BatchMatMul")
+               .Input(a, "channels_nd")
+               .Input(b, "channels_nd")
+               .Output(out, "channels_nd")
+               .Attr("adj_x1", trans_a)
+               .Attr("adj_x2", trans_b)
+               .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
+               .Check();
+    npu_command.Run()
+               .Realease();
+  }
+};
+
+REGISTER_USER_KERNEL("batch_matmul")
+    .SetCreateFn<BatchMatmulNpuKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kNPU)
+    .SetInplaceProposalFn([](const user_op::InferContext& ctx,
+                             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
+      if (ctx.has_input("_add_to_output", 0)) {
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));
+      }
+      return Maybe<void>::Ok();
+    });
+
+
 } // namespace {anonymous}
 } // namespace oneflow

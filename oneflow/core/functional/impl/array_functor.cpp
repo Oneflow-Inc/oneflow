@@ -1514,6 +1514,7 @@ class SliceGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+
 class UpsampleGradFunctor {
  public:
   UpsampleGradFunctor() {
@@ -1553,6 +1554,30 @@ class CopyFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class ViewCopyNpuFunctor {
+ public:
+  ViewCopyNpuFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("view_copy_npu").Input("in").Output("out").Build());
+    op_id = CHECK_JUST(one::OpBuilder("identity").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& out_grad, const std::shared_ptr<one::Tensor>& view_grad) const {
+    // out_grad --view_copy-> view_grad
+
+    // 1. in -> ToContiguous
+    // 2. view_copy
+    // 3.
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = view_grad;
+
+    JUST(OpInterpUtil::Dispatch(*op_, {out_grad}, outputs.get()));
+    return outputs->at(0);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_id;
 };
 
 class FlipFunctor {
@@ -3431,6 +3456,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SliceGradFunctor>("SliceGrad");
   m.add_functor<impl::SliceView1dContiguousFunctor>("SliceView1dContiguous");
   m.add_functor<impl::CopyFunctor>("Copy");
+  m.add_functor<impl::ViewCopyNpuFunctor>("ViewCopyNpu");
   m.add_functor<impl::FlipFunctor>("Flip");
   m.add_functor<impl::UnfoldTensorFunctor>("UnfoldTensor");
   m.add_functor<impl::UnfoldTensorGradFunctor>("UnfoldTensorGrad");

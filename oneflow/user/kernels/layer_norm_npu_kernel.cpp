@@ -92,13 +92,23 @@ class LayerNormGradNpuKernel final : public user_op::OpKernel {
 
     CHECK_EQ(ctx->has_input("gamma", 0), 1); 
     user_op::Tensor* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
+    // Why do this ? CANN needs mean and var has same shape with x.
+    DimVector mean_shape_dim_v;
+    mean->shape_view().ToDimVector(&mean_shape_dim_v);
+    std::vector<int64_t> mean_shape_vector = {mean_shape_dim_v.begin(), mean_shape_dim_v.end()};
+    mean_shape_vector.push_back(1);
+
+    DimVector var_shape_dim_v;
+    inv_variance->shape_view().ToDimVector(&var_shape_dim_v);
+    std::vector<int64_t> var_shape_vector = {var_shape_dim_v.begin(), var_shape_dim_v.end()};
+    var_shape_vector.push_back(1);
 
     NpuCommand npu_command;
     npu_command.OpName("LayerNormGrad")
             .Input(dy)
             .Input(x)
-            .Input(inv_variance)
-            .Input(mean)
+            .InputWithShape(inv_variance, mean_shape_vector)
+            .InputWithShape(mean, var_shape_vector)
             .Input(gamma)
             .Output(dx)
             .Output(gamma_diff)
@@ -110,9 +120,9 @@ class LayerNormGradNpuKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(dtype)                                        \
+#define REGISTER_LAYER_NORM_NPU_GRAD_KERNEL(dtype)                                        \
   REGISTER_USER_KERNEL("layer_norm_npu_grad")                                              \
-      .SetCreateFn<LayerNormGradGpuKernel<dtype>>()                                        \
+      .SetCreateFn<LayerNormGradNpuKernel<dtype>>()                                        \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)                     \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))    \
       .SetInplaceProposalFn(                                                               \
@@ -124,5 +134,7 @@ class LayerNormGradNpuKernel final : public user_op::OpKernel {
             return Maybe<void>::Ok();                                                      \
           });
 
+REGISTER_LAYER_NORM_NPU_GRAD_KERNEL(float);
+REGISTER_LAYER_NORM_NPU_GRAD_KERNEL(float16);
 
 }// namespace oneflow

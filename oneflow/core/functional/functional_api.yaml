@@ -1357,7 +1357,7 @@
   bind_python: False
 
 - name: "layer_norm_npu_grad"
-  signature: "TensorTuple (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Int64 begin_params_axis, Double epsilon) => LayerNormNpuGrad"
+  signature: "TensorTuple (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Tensor gamma, Int64 begin_params_axis, Double epsilon) => LayerNormNpuGrad"
   bind_python: False
 
 - name: "avg_pool2d_nhwc"
@@ -1471,6 +1471,10 @@
 
 - name: "slice_grad"
   signature: "Tensor (Tensor dy, Shape like_shape, Int64List start, Int64List stop, Int64List step) => SliceGrad"
+  bind_python: False
+
+- name: "view_copy_npu"
+  signature: "Tensor (Tensor in, Tensor out) => ViewCopyNpu"
   bind_python: False
 
 - name: "copy"

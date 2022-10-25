@@ -37,8 +37,8 @@ class DropoutKernelNPU final : public user_op::OpKernel {
     user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    float rate = 1.0f - ctx->Attr<float>("rate");
-
+    float rate_fp32 = 1.0f - ctx->Attr<float>("rate");
+    T rate(rate_fp32);
     DimVector shape_dim_v;
     out->shape_view().ToDimVector(&shape_dim_v);
     std::vector<int> shape_vector;
@@ -51,8 +51,8 @@ class DropoutKernelNPU final : public user_op::OpKernel {
                             shape_vector.size()*sizeof(int), shape_vector.data());
     
     // use 0 and nullptr for scalar
-    HostTensorWrapper rate_wrap(ACL_FLOAT, ACL_FORMAT_ND, 0, nullptr,
-                            sizeof(float), &rate, ACL_MEMTYPE_HOST);    
+    HostTensorWrapper rate_wrap(DataTypeTraits<T>::type, ACL_FORMAT_ND, 0, nullptr,
+                            sizeof(T), &rate, ACL_MEMTYPE_HOST);    
     NpuCommand npu_command;
     npu_command.OpName("DropOutGenMask")
                .Input(shape_wrap)
@@ -94,8 +94,8 @@ class DropoutKernelNPU final : public user_op::OpKernel {
         return Maybe<void>::Ok();                                                               \
       });
 
+REGISTER_DROPOUT_KERNEL_NPU(float16)
 REGISTER_DROPOUT_KERNEL_NPU(float)
-REGISTER_DROPOUT_KERNEL_NPU(double)
 
 template<typename T>
 class DropoutGradKernelNPU final : public user_op::OpKernel {
@@ -109,10 +109,10 @@ class DropoutGradKernelNPU final : public user_op::OpKernel {
     user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     float scale = ctx->Attr<float>("scale");
-    float rate = 1.0f/scale;
-    std::cout<<"DropoutGrad "<<scale<<std::endl;
-    HostTensorWrapper rate_wrap(ACL_FLOAT, ACL_FORMAT_ND, 0, nullptr,
-                            sizeof(float), &rate);    
+    float rate_fp32 = 1.0f/scale;
+    T rate(rate_fp32);
+    HostTensorWrapper rate_wrap(DataTypeTraits<T>::type, ACL_FORMAT_ND, 0, nullptr,
+                            sizeof(T), &rate);    
 
     NpuCommand npu_command;
     npu_command.OpName("DropOutDoMask")
@@ -139,8 +139,8 @@ class DropoutGradKernelNPU final : public user_op::OpKernel {
         return Maybe<void>::Ok();                                                               \
       });
 
+REGISTER_DROPOUT_GRAD_KERNEL_NPU(float16)
 REGISTER_DROPOUT_GRAD_KERNEL_NPU(float)
-REGISTER_DROPOUT_GRAD_KERNEL_NPU(double)
 
 }  // namespace
 }  // namespace oneflow

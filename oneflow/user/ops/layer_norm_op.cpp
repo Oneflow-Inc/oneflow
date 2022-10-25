@@ -261,58 +261,6 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   return Maybe<void>::Ok();
 }
 
-// REGISTER_USER_OP_GRAD("layer_norm")
-//     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-//                                user_op::AddOpFn AddOp) -> Maybe<void> {
-//       const bool center = op.attr<bool>("center");
-//       const bool scale = op.attr<bool>("scale");
-//       const bool has_beta = center;
-//       const bool has_gamma = scale;
-//       const bool has_beta_diff = has_beta && op.NeedGenGradTensor4OpInput("beta", 0);
-//       const bool has_gamma_diff = has_gamma && op.NeedGenGradTensor4OpInput("gamma", 0);
-//       const Shape& x_shape = op.TensorDesc4ArgNameAndIndex("x", 0).shape();
-//       const int64_t begin_norm_axis =
-//           ShiftNegativeAxisIfNeed(x_shape, op.attr<int64_t>("begin_norm_axis"));
-//       const int64_t begin_params_axis =
-//           ShiftNegativeAxisIfNeed(x_shape, op.attr<int64_t>("begin_params_axis"));
-//       if (has_beta_diff || has_gamma_diff) {
-//         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_param_grad");
-//         auto grad_op_builder = builder.Op("layer_norm_param_grad")
-//                                    .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-//                                    .Input("x", op.input("x", 0))
-//                                    .Input("mean", op.output("mean", 0))
-//                                    .Input("inv_variance", op.output("inv_variance", 0))
-//                                    .Attr("begin_params_axis", begin_params_axis);
-//         if (has_beta_diff) { grad_op_builder.Output("beta_diff"); }
-//         if (has_gamma_diff) { grad_op_builder.Output("gamma_diff"); }
-//         auto grad_op = grad_op_builder.Build();
-//         if (has_beta_diff) {
-//           op.BindGradTensorWithOpInput(grad_op.output("beta_diff", 0), "beta", 0);
-//         }
-//         if (has_gamma_diff) {
-//           op.BindGradTensorWithOpInput(grad_op.output("gamma_diff", 0), "gamma", 0);
-//         }
-//         AddOp(grad_op);
-//       }
-//       if (op.NeedGenGradTensor4OpInput("x", 0)) {
-//         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-//         builder.Op("layer_norm_grad")
-//             .Input("x", op.input("x", 0))
-//             .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-//             .Input("mean", op.output("mean", 0))
-//             .Input("inv_variance", op.output("inv_variance", 0))
-//             .Output("dx")
-//             .Attr("begin_norm_axis", begin_norm_axis)
-//             .Attr("epsilon", op.attr<double>("epsilon"));
-//         if (op.user_op_conf().has_input("gamma", 0)) {
-//           builder.Input("gamma", op.input("gamma", 0));
-//         }
-//         user_op::UserOpConfWrapper grad_op = builder.Build();
-//         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-//         AddOp(grad_op);
-//       }
-//       return Maybe<void>::Ok();
-//     });
 
 /* static */ Maybe<void> LayerNormNpuGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
@@ -327,6 +275,37 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
 }
 
 /* static */ Maybe<void> LayerNormNpuGradOp::InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
+  const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+  CHECK_EQ_OR_RETURN(dy.data_type(), x.data_type())
+      << "InferDataType Failed. Expected " << DataType_Name(x.data_type()) << ", but got "
+      << DataType_Name(dy.data_type());
+  const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);
+  const user_op::TensorDesc& inv_variance = ctx->InputTensorDesc("inv_variance", 0);
+  DataType bn_param_data_type = InferBnParamDataType(x.data_type());
+  CHECK_EQ_OR_RETURN(mean.data_type(), bn_param_data_type)
+      << "InferDataType Failed. Expected " << DataType_Name(bn_param_data_type) << ", but got "
+      << DataType_Name(mean.data_type());
+  CHECK_EQ_OR_RETURN(inv_variance.data_type(), bn_param_data_type)
+      << "InferDataType Failed. Expected " << DataType_Name(bn_param_data_type) << ", but got "
+      << DataType_Name(inv_variance.data_type());
+
+  DimVector param_shape_dim_vec;
+  const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
+  param_shape_dim_vec.insert(param_shape_dim_vec.end(),
+                             dy.shape().dim_vec().cbegin() + begin_params_axis,
+                             dy.shape().dim_vec().cend());
+  const Shape param_shape(param_shape_dim_vec);
+  user_op::TensorDesc* dx = ctx->MutOutputTensorDesc("dx", 0);
+  dx->set_data_type(dy.data_type());
+  dx->set_shape(dy.shape());
+  user_op::TensorDesc* gamma_diff = ctx->MutOutputTensorDesc("gamma_diff", 0);
+  gamma_diff->set_shape(param_shape);
+  gamma_diff->set_data_type(dy.data_type());
+  user_op::TensorDesc* beta_diff = ctx->MutOutputTensorDesc("beta_diff", 0);
+  beta_diff->set_data_type(dy.data_type());
+  beta_diff->set_shape(param_shape);
+
   return Maybe<void>::Ok();
 }
 

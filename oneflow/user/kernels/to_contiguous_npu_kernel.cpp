@@ -35,7 +35,6 @@ class ToContiguousNpuKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-
     const ShapeView& in_shape = in->shape_view();
     const ShapeView& out_shape = out->shape_view();
     CHECK_EQ(out->shape_view(), in_shape);
@@ -46,7 +45,6 @@ class ToContiguousNpuKernel final : public user_op::OpKernel {
     std::vector<int64_t> stride_desc = {static_cast<int>(in_stride.size())};
     HostTensorWrapper stride_wrap(ACL_INT32, ACL_FORMAT_ND, stride_desc.size(), stride_desc.data(),
                             in_stride.size()*sizeof(int), in_stride.data());
-
     DimVector shape_dim_v;
     out_shape.ToDimVector(&shape_dim_v);
     std::vector<int> shape_vector;
@@ -62,9 +60,16 @@ class ToContiguousNpuKernel final : public user_op::OpKernel {
     std::vector<int64_t> offset_desc = {static_cast<int>(storage_offset_v.size())};
     HostTensorWrapper offset_wrap(ACL_INT32, ACL_FORMAT_ND, offset_desc.size(), offset_desc.data(),
                             storage_offset_v.size()*sizeof(int), storage_offset_v.data());  
+    
+    std::vector<int64_t> RealShape(shape_vector.begin(), shape_vector.end());
+    for(int i=1;i<shape_vector.size();++i)
+    {
+      RealShape[i] = std::max(RealShape[i], static_cast<int64_t>(in_stride[i-1]));
+    }
+    // std::cout<<"ToContiguous "<<ShapeToString(RealShape)<<std::endl;
     NpuCommand npu_command;
     npu_command.OpName("AsStrided")
-               .Input(in)
+               .InputWithShape(in, RealShape)
                .Input(shape_wrap)
                .Input(stride_wrap)
                .Input(offset_wrap)

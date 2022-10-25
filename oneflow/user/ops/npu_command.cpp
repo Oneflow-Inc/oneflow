@@ -14,6 +14,7 @@ void testblock()
   int a = 1;
   return;
 }
+
 std::string ShapeToString(std::vector<int64_t> & v)
 {
     std::string r = "";
@@ -211,7 +212,7 @@ aclDataBuffer* getDataBuffer(user_op::Tensor* tensor)
     else
     {
         aclDataBuffer* data_buffer = aclCreateDataBuffer(tensor->mut_dptr<void>(), 
-                                                    tensor->shape_view().elem_cnt() * GetSizeOfDataType(tensor->data_type())); 
+                    tensor->shape_view().elem_cnt() * GetSizeOfDataType(tensor->data_type())); 
         NOT_NULLPTR_CHECK(data_buffer);
         return data_buffer;
     }
@@ -259,7 +260,8 @@ NpuCommand& NpuCommand::OpName(const char* op_name)
     return *this;
 }
 
-NpuCommand& NpuCommand::Input(user_op::Tensor* input, std::string format , std::string desc_name, std::string real_type)
+NpuCommand& NpuCommand::Input(user_op::Tensor* input, std::string format , 
+                                std::string desc_name, std::string real_type)
 {
     // generate DataBuffer
     command_param.in_buffers.push_back(getDataBuffer(input));
@@ -270,6 +272,25 @@ NpuCommand& NpuCommand::Input(user_op::Tensor* input, std::string format , std::
 
     return *this;
 }
+
+NpuCommand& NpuCommand::InputWithShape(user_op::Tensor* input, std::vector<int64_t> real_shape){
+    // generate DataBuffer
+    aclDataBuffer* data_buffer = aclCreateDataBuffer(input->mut_dptr<void>(), 
+                                                mulVector(real_shape) * GetSizeOfDataType(input->data_type())); 
+    NOT_NULLPTR_CHECK(data_buffer);
+    command_param.in_buffers.push_back(data_buffer);
+    // generate TensorDesc
+
+    aclDataType datatype = dataTypeMap(input->data_type());
+    aclTensorDesc* descCast = aclCreateTensorDesc(datatype, 
+                                    real_shape.size(), 
+                                    real_shape.data(), 
+                                    format_map["channels_nd"]);
+    NOT_NULLPTR_CHECK(descCast);  
+    command_param.in_descs.push_back(descCast);
+    return *this;
+}
+
 NpuCommand& NpuCommand::Input(AclTensorWrapper& wrap)
 {
     // fix : use NpuAllocator to malloc

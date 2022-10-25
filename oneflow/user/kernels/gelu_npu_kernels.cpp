@@ -19,24 +19,24 @@ limitations under the License.
 
 namespace oneflow {
 
-class ReluNpuKernel final : public user_op::OpKernel {
+class GeluNpuKernel final : public user_op::OpKernel {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ReluNpuKernel);
-  ReluNpuKernel() = default;
-  ~ReluNpuKernel() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(GeluNpuKernel);
+  GeluNpuKernel() = default;
+  ~GeluNpuKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
 
-    user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-    const user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);    
+    user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+    const user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);    
     const int64_t elem_cnt = x->shape_view().elem_cnt();
 
     if (elem_cnt != 0) {
       NpuCommand npu_command;
-      npu_command.OpName("Relu")
+      npu_command.OpName("Gelu")
                  .Input(x, "channels_nd")
                  .Output(y, "channels_nd")
                  .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
@@ -45,7 +45,7 @@ class ReluNpuKernel final : public user_op::OpKernel {
                .Realease();
     //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
     //PrintResult(y);
-    //std::cout<<"Relu Execute Over"<<std::endl;       
+    //std::cout<<"Gelu Execute Over"<<std::endl;       
     } else {
       // For 0-d Tensor
       return;
@@ -54,27 +54,29 @@ class ReluNpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("relu").SetCreateFn<ReluNpuKernel>().SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kNPU);
+REGISTER_USER_KERNEL("gelu").SetCreateFn<GeluNpuKernel>().SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kNPU);
 
 
-class ReluGradNpuKernel final : public user_op::OpKernel {
+class GeluGradNpuKernel final : public user_op::OpKernel {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ReluGradNpuKernel);
-  ReluGradNpuKernel() = default;
-  ~ReluGradNpuKernel() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(GeluGradNpuKernel);
+  GeluGradNpuKernel() = default;
+  ~GeluGradNpuKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
 
     user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* unused = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const int64_t elem_cnt = y->shape_view().elem_cnt();
+    const int64_t elem_cnt = x->shape_view().elem_cnt();
     if (elem_cnt != 0) {
       NpuCommand npu_command;
-      npu_command.OpName("ReluGrad")
+      npu_command.OpName("GeluGrad")
                  .Input(dy, "channel_nd")
-                 .Input(y, "channel_nd")
+                 .Input(x, "channel_nd")
+                 .Input(unused, "channel_nd")
                  .Output(dx, "channel_nd")
                  .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                  .Check();
@@ -85,12 +87,13 @@ class ReluGradNpuKernel final : public user_op::OpKernel {
       //std::cout<<"Execute Over"<<std::endl;       
     } else {
       // For 0-d Tensor
+      UNIMPLEMENTED();
       return;
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("relu_grad").SetCreateFn<ReluGradNpuKernel>().SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kNPU);
+REGISTER_USER_KERNEL("gelu_grad").SetCreateFn<GeluGradNpuKernel>().SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kNPU);
 
 }  // namespace oneflow

@@ -33,9 +33,9 @@ class IdentityNpuKernel final : public user_op::OpKernel {
     CHECK_EQ(out->shape_view(), in_shape);
     const DataType in_data_type = in->data_type();
     CHECK_EQ(out->data_type(), in_data_type);
-    std::cout<<"BN Identity"<<std::endl;
+    std::cout<<"Identity"<<std::endl;
     OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream())); 
-    PrintResult(in);
+    // PrintResult(in);
     // Memcpy<DeviceType::kNPU>(ctx->stream(), out->mut_dptr<void>(), in->dptr<void>(),
     //                     in_shape.elem_cnt() * GetSizeOfDataType(in_data_type));
   }

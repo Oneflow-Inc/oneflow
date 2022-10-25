@@ -3425,6 +3425,19 @@ def OneFlow_SliceGradOp : OneFlow_BaseOp<"slice_grad", [NoSideEffect, DeclareOpI
   let has_input_arg_modify_fn = 1;
 }
 
+def OneFlow_ViewCopyNpuOp : OneFlow_BaseOp<"view_copy_npu", [NoSideEffect, SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+}
+
 def OneFlow_ScatterNdOp : OneFlow_BaseOp<"scatter_nd", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$indices,
@@ -6119,7 +6132,8 @@ def OneFlow_LayerNormNpuGradOp : OneFlow_BaseOp<"layer_norm_npu_grad", [NoSideEf
     OneFlow_Tensor:$dy,
     OneFlow_Tensor:$x,
     OneFlow_Tensor:$mean,
-    OneFlow_Tensor:$inv_variance
+    OneFlow_Tensor:$inv_variance,
+    OneFlow_Tensor:$gamma
   );
   let output = (outs
     Optional<OneFlow_Tensor>:$dx,

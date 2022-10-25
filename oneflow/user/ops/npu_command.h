@@ -179,7 +179,7 @@ struct HostTensorWrapper
                         void* data_ptr)
                     : HostTensorWrapper(type, format, num_dims, dims, tensor_size, data_ptr, ACL_MEMTYPE_HOST)
                     {}
-            
+    HostTensorWrapper() = default;
     aclDataType type;
     aclFormat format;
     int64_t num_dims;
@@ -188,6 +188,7 @@ struct HostTensorWrapper
     void* data_ptr;
     aclMemType mem_type;
 };
+void HostTensorWrapperCreateTool(DimVector& shape_dim, std::vector<int64_t> shape_desc);
 // struct BatchNormTensorWrapper
 // {
 //     BatchNormTensorWrapper(void* tensor_ptr, aclDataType dataType,aclFormat origin_format, aclFormat npu_format,
@@ -225,6 +226,7 @@ public:
     NpuCommand& OpName(const char* op_name);
     NpuCommand& Input(user_op::Tensor* input, std::string origin_format = "channels_nd", std::string desc_name = "",
                         std::string real_type = "");
+    NpuCommand& InputWithShape(user_op::Tensor* input, std::vector<int64_t> real_shape);
     NpuCommand& Input(AclTensorWrapper& wrap);
     NpuCommand& Input(std::string key, int64_t len, aclDataType type);
     NpuCommand& Input(MaxPoolTensorWrapper& wrap);
@@ -248,8 +250,6 @@ public:
 private:
     struct CommandParam
     {
-        // std::vector<user_op::Tensor*> inputs;
-        // std::vector<user_op::Tensor*> outputs;
         std::vector<aclTensorDesc*> in_descs;
         std::vector<aclTensorDesc*> out_descs;
         std::vector<aclDataBuffer*> in_buffers;

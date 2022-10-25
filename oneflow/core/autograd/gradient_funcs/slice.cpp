@@ -54,8 +54,8 @@ class Slice : public OpExprGradFunction<SliceCaptureState> {
   Maybe<void> Apply(const SliceCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->resize(1);
-    (*in_grads)[0] = JUST(
-        functional::SliceGrad(out_grads[0], ctx->like_shape, ctx->start, ctx->stop, ctx->step));
+      (*in_grads)[0] = JUST(
+          functional::SliceGrad(out_grads[0], ctx->like_shape, ctx->start, ctx->stop, ctx->step));
     return Maybe<void>::Ok();
   }
 
