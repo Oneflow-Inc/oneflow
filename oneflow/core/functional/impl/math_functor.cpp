@@ -3128,14 +3128,14 @@ class StftFunctor {
     int64_t new_win_length = win_length.has_value() == true ? JUST(win_length) : n_fft;
     auto input_tensor = input;
 
-    const auto& NumAxex = input_tensor->shape()->NumAxes();
-    CHECK_OR_RETURN(NumAxex == 2 || NumAxex == 1)
-        << Error::RuntimeError() << "Expected a 1D or 2D tensor,but got " << NumAxex << "D";
+    const auto& NumAxes = input_tensor->shape()->NumAxes();
+    CHECK_OR_RETURN(NumAxes == 2 || NumAxes == 1)
+        << Error::RuntimeError() << "Expected a 1D or 2D tensor,but got " << NumAxes << "D";
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("normalized", "onesided", "return_complex");
     attrs.SetAllAttrs(normalized, onesided, return_complex);
 
-    if (NumAxex == 1) { input_tensor = JUST(functional::Unsqueeze(input_tensor, 0)); }
+    if (NumAxes == 1) { input_tensor = JUST(functional::Unsqueeze(input_tensor, 0)); }
     if (center) {
       const auto& input_shape = input_tensor->shape();
       const auto input_dim = input_tensor->shape()->NumAxes();
@@ -3202,8 +3202,12 @@ class StftFunctor {
       input_tensor = JUST(functional::Mul(input_tensor, temp_tensor));
     }
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {JUST(functional::ToContiguous(input_tensor))},
-                                          attrs);
+    auto output = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *op_, {JUST(functional::ToContiguous(input_tensor))}, attrs));
+    if (NumAxes == 2 && input->shape()->At(0) == 1) {
+      output = JUST(functional::Unsqueeze(output, 0));
+    }
+    return output;
   }
 
  private:

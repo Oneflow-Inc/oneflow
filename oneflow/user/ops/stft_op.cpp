@@ -39,8 +39,7 @@ const Shape InferOutputShape(const Shape& in_shape, bool onesided = true,
   Shape out_shape;
   int last_dim_size = in_shape.At(2);
   if (onesided) { last_dim_size = last_dim_size / 2 + 1; }
-
-  if (in_shape.At(0) == 1 && in_shape.NumAxes() == 2) {
+  if (in_shape.At(0) == 1) {
     out_shape = {last_dim_size, in_shape.At(1), 2};
   } else {
     out_shape = {in_shape.At(0), last_dim_size, in_shape.At(1), 2};
@@ -51,6 +50,7 @@ const Shape InferOutputShape(const Shape& in_shape, bool onesided = true,
 /* static */ Maybe<void> StftOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("input", 0);
   const bool onesided = ctx->Attr<bool>("onesided");
+
   const Stride& out_stride = InferOutputStride(in_shape, onesided);
   const Shape& out_shape = InferOutputShape(in_shape, onesided);
 
