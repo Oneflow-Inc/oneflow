@@ -85,10 +85,11 @@ TensorSliceView GetTensorSliceView4ParallelRank(const Shape& parallel_hierarchy,
         CHECK_GE(split_axis, 0);
         CHECK_LT(split_axis, ranges.size());
         CHECK_EQ(ranges[split_axis].size() % parallel_hierarchy.At(i), 0);
-        const int64_t range_size = ranges[split_axis].size() / parallel_hierarchy.At(i);
-        const int64_t dim_start = ranges[split_axis].begin() + parallel_rank.at(i) * range_size;
+        const BalancedSplitter bs(logical_shape.At(split_axis), parallel_hierarchy.At(i));
+        const auto& range = bs.At(parallel_rank.at(i));
+        const int64_t dim_start = ranges[split_axis].begin() + range.begin();
         ranges[split_axis].mut_begin() = dim_start;
-        ranges[split_axis].mut_end() = dim_start + range_size;
+        ranges[split_axis].mut_end() = dim_start + range.size();
       }
     }
   }
