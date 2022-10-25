@@ -61,8 +61,8 @@ Maybe<void> MaxUnpoolForwardGetSbpFn(user_op::SbpContext* ctx) {
   FOR_RANGE(int64_t, i, 0, std::min(2, (int)tensor.shape().NumAxes() - 2)) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("x", 0), i)
+        .Split(user_op::OpArg("indices", 0), i)
         .Split(user_op::OpArg("y", 0), i)
-        .Split(user_op::OpArg("indice", 0), i)
         .Build();
   }
   return Maybe<void>::Ok();
@@ -73,7 +73,7 @@ Maybe<void> MaxUnpoolBackwardGetSbpFn(user_op::SbpContext* ctx) {
   FOR_RANGE(int64_t, i, 0, std::min(2, (int)tensor.shape().NumAxes())) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("x", 0), i)
-        .Split(user_op::OpArg("indice", 0), i)
+        .Split(user_op::OpArg("indices", 0), i)
         .Split(user_op::OpArg("dy", 0), i)
         .Split(user_op::OpArg("dx", 0), i)
         .Build();
@@ -84,21 +84,6 @@ Maybe<void> MaxUnpoolBackwardGetSbpFn(user_op::SbpContext* ctx) {
 // Logically computation cost of pool op is the product of output data amount and pool kernal data
 // amount. After adding sbp, we just divide it by parallel number if output data is splitted because
 // splitting input and using partial sum for output is not a valid sbp for this op for now.
-Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx,
-                                 const std::string& blob_name) {
-  const std::vector<int32_t>& pool_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
-  double logical_computation_cost = std::accumulate(
-      pool_size.begin(), pool_size.end(), ctx->Shape4ArgNameAndIndex(blob_name, 0).elem_cnt(),
-      std::multiplies<double>());
-  const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
-  const auto& nd_sbp_y = ctx->NdSbp4ArgNameAndIndex(blob_name, 0);
-  for (int32_t dim_sbp = 0; dim_sbp < nd_sbp_y.sbp_parallel_size(); dim_sbp++) {
-    if (nd_sbp_y.sbp_parallel(dim_sbp).has_split_parallel()) {
-      logical_computation_cost /= parallel_hierarchy->At(dim_sbp);
-    }
-  }
-  return logical_computation_cost;
-}
 
 Maybe<void> BackwardTensorDescInferFn(user_op::InferContext* ctx) {
   *ctx->MutOutputTensorDesc("dx", 0) = ctx->InputTensorDesc("x", 0);

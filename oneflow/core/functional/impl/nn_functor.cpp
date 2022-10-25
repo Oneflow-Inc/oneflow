@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/tensor_util.h"
@@ -911,6 +912,55 @@ class MaxPool3DFunctor : public MaxPoolNDFunctor {
  public:
   MaxPool3DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("max_pool_3d").Input("x").Output("y").Output("indice").Build());
+  }
+};
+
+class MaxUnpoolNDFunctor {
+ public:
+  MaxUnpoolNDFunctor() = default;
+  virtual ~MaxUnpoolNDFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& indices,
+                                const std::vector<int32_t>& kernel_size,
+                                const Optional<std::vector<int32_t>>& stride,
+                                const std::vector<int32_t>& padding,
+                                const Optional<Shape>& output_size,
+                                const std::string& data_format) const {
+    // if (x->ndim() == 4 && data_format == "channels_last") {
+    //   if (!return_indices && dilation.at(0) == 1 && dilation.at(1) == 1) {
+    //     // legacy tf style maxpool2d , use cudnn implementation
+    //     // with high performance but do not support dilation/return_indices
+    //     std::vector<int32_t> padding_before{padding.at(0), padding.at(1)};
+    //     std::vector<int32_t> padding_after{padding.at(0), padding.at(1)};
+
+    //     auto& attrs =
+    //         THREAD_CACHED_MUTABLE_ATTR_MAP("pool_size", "strides", "padding", "padding_before",
+    //                                        "padding_after", "data_format", "ceil_mode");
+    //     attrs.SetAllAttrs(kernel_size, stride ? *JUST(stride) : kernel_size,
+    //                       std::string("customized"), padding_before, padding_after, data_format,
+    //                       ceil_mode);
+    //     TensorTuple output;
+    //     output.emplace_back(JUST(OpInterpUtil::Dispatch<Tensor>(*tf_maxpool_op_, {x}, attrs)));
+    //     return output;
+    //   }
+    // }
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("kernel_size", "padding", "stride", "data_format", "has_output_size", "output_size");
+    // If stride is None, we set it as kernel_size to align Pytorch.
+    attrs.SetAllAttrs(kernel_size, padding, stride ? *JUST(stride) : kernel_size, data_format, output_size.has_value(),
+      output_size.has_value() ? *JUST(output_size) : Shape());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, indices}, attrs);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
+  // std::shared_ptr<OpExpr> tf_maxpool_op_;
+};
+
+class MaxUnpool1DFunctor: public MaxUnpoolNDFunctor {
+ public: 
+  MaxUnpool1DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("max_unpool_1d").Input("x").Input("indices").Output("y").Build());
   }
 };
 
@@ -4458,6 +4508,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MaxPool1DFunctor>("MaxPool1D");
   m.add_functor<impl::MaxPool2DFunctor>("MaxPool2D");
   m.add_functor<impl::MaxPool3DFunctor>("MaxPool3D");
+  m.add_functor<impl::MaxUnpool1DFunctor>("MaxUnpool1D");
   m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");

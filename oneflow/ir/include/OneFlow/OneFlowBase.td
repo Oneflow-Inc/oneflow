@@ -249,6 +249,7 @@ class OneFlow_MaxUnpoolBaseOp<string mnemonic, list<Trait> traits = []> :
     SI64ArrayAttr:$kernel_size,
     SI64ArrayAttr:$stride,
     SI64ArrayAttr:$padding,
+    StrAttr:$data_format,
     DefaultValuedAttr<BoolAttr, "false">:$has_output_size,
     ShapeAttr:$output_size
   );

@@ -28,17 +28,17 @@ limitations under the License.
 
 namespace oneflow {
 
-// #define POOL_DATA_TYPE_SEQ                        \
-//   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
-//   OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)   \
-//   OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
+#define UNPOOL_DATA_TYPE_SEQ                        \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
+  OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)   \
+  OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
 
-// #define POOL_IDX_DATA_TYPE_SEQ                    \
-//   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
-//   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
+#define UNPOOL_IDX_DATA_TYPE_SEQ                    \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
-// #define POOL_DATA_TYPE_CPU_SEQ POOL_DATA_TYPE_SEQ
-// #define POOL_DATA_TYPE_CUDA_SEQ POOL_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)
+#define UNPOOL_DATA_TYPE_CPU_SEQ UNPOOL_DATA_TYPE_SEQ
+// #define UNPOOL_DATA_TYPE_CUDA_SEQ UNPOOL_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)
 
 typedef small_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
 
@@ -68,9 +68,11 @@ class MaxUnpoolParams3D {
   const int32_t& num_channel() const { return channel_num_; }
 
   void Reset(const ShapeView& x_shape);
+
   Shape GetYShape() const;
   Shape GetXShape5D() const;
   Shape GetYShape5D() const;
+  int64_t GetYStride() const;
 
  private:
   int32_t dim_;
@@ -84,48 +86,32 @@ class MaxUnpoolParams3D {
   int32_t channel_num_;
 };
 
+template<DeviceType device_type, typename T, typename IDX>
+struct UnpoolKernelUtil {
+  static void MaxUnpool1dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
+                               const IDX elem_num, const T* src, T* dest, const int64_t* indice_ptr,
+                               const MaxUnpoolParams3D& params_3d);
+
+};
+
 template<typename T, typename IDX>
 OF_DEVICE_FUNC void MaxUnpool1dForwardCompute(const NdIndexOffsetHelper<IDX, 2> index_helper,
                                             IDX elem_num, const T* src, T* dest,
-                                            const int64_t* indice_ptr, const int32_t padding_l,
-                                            const int32_t n_batch, const int32_t n_channel,
-                                            const int32_t x_length, const int32_t kernel_size_l,
-                                            const int32_t stride_l) {
+                                            const int64_t* indice_ptr, 
+                                            const int64_t dst_c_length) {
   XPU_1D_KERNEL_LOOP(num, elem_num) {
     IDX n_c, l;
     index_helper.OffsetToNdIndex(num, n_c, l);
-
-    IDX lstart = l * stride_l - padding_l;
-    const IDX lend = (lstart + (kernel_size_l - 1) * dilation_l + 1) <= x_length
-                         ? (lstart + (kernel_size_l - 1) * dilation_l + 1)
-                         : x_length;
-
-    while (lstart < 0) { lstart += dilation_l; }
-
-    /* compute max value(src[src_idx]) in kernel box region, and save the value to dest[num] */
-    IDX max_index = lstart;
-
-    /* equal to -std::numeric_limits<T>::infinity(); */
-    T max_value = detail::numeric_limits<T>::lower_bound();
-    const T* data = src + n_c * x_length;
-    for (IDX idx = lstart; idx < lend; idx += dilation_l) {
-      const IDX window_idx = idx;
-      T val = data[window_idx];
-      if (val > max_value || detail::numerics<T>::isnan(val)) {
-        max_value = val;
-        max_index = idx;
-      }
-    }
-    dest[num] = max_value;
-    indice_ptr[num] = max_index;
+    IDX dest_idx = n_c * dst_c_length + indice_ptr[num];
+    dest[dest_idx] = src[num];
   }
 }
 
 
-// #define INSTANTIATE_POOL_KERNEL_UTIL(device_type_v, dtype_pair, index_dtype_pair) \
-//   template struct PoolKernelUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),     \
-//                                  OF_PP_PAIR_FIRST(index_dtype_pair)>;
+#define INSTANTIATE_UNPOOL_KERNEL_UTIL(device_type_v, dtype_pair, index_dtype_pair) \
+  template struct UnpoolKernelUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),     \
+                                 OF_PP_PAIR_FIRST(index_dtype_pair)>;
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_USER_KERNELS_POOL_KERNEL_UTIL_H_
+#endif  // ONEFLOW_USER_KERNELS_UNPOOL_KERNEL_UTIL_H_

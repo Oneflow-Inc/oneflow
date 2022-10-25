@@ -92,6 +92,10 @@ void MaxUnpoolParams3D::Reset(const ShapeView& x_shape) {
   Get3DOutputShape(x_3d_, pool_size_3d_, stride_3d_, padding_, &y_3d_);
 }
 
+int64_t MaxUnpoolParams3D::GetYStride() const {
+  return y_3d_.at(0) * y_3d_.at(1) * y_3d_.at(2);
+}
+
 Shape MaxUnpoolParams3D::GetYShape() const {
   DimVector y_dim_vec;
   if (dim_ == 1) {
@@ -103,7 +107,7 @@ Shape MaxUnpoolParams3D::GetYShape() const {
   } else {
     UNIMPLEMENTED();
   }
-  if (data_format_ == "channels_firGst") {
+  if (data_format_ == "channels_first") {
     y_dim_vec.insert(y_dim_vec.begin(), channel_num_);
   } else {
     CHECK_EQ(data_format_, "channels_last")

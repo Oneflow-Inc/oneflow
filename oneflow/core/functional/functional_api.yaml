@@ -1432,6 +1432,12 @@
     Int32List stride, Int32List dilation, Bool return_indices, Bool ceil_mode) => MaxPoolNdGrad"
   bind_python: False
 
+- name: "max_unpool1d"
+  signature:
+    'Tensor (Tensor input, Tensor indices, Int32List[1] kernel_size, Int32List[1] stride=None,
+    Int32List[1] padding=0, Shape output_size=None, String data_format="channels_first") => MaxUnpool1D'
+  bind_python: True
+
 - name: "prelu"
   signature: "Tensor (Tensor x, Tensor alpha) => PRelu"
   bind_python: True
