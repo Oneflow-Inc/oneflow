@@ -188,7 +188,7 @@ static PyObject* PyTensorObject_is_pinned(PyObject* self, PyObject* unused) {
 
 static PyObject* PyTensorObject_is_floating_point(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
-  return functional::CastToPyObject(PyTensor_Unpack(self)->dtype()->is_floating_point());
+  return PyTensor_Unpack(self)->dtype()->is_floating_point() ? Py_True : Py_False;
   END_HANDLE_ERRORS
 }
 
