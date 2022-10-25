@@ -1,4 +1,3 @@
-include(CMakeDependentOption)
 if(BUILD_CUDA)
   if(DEFINED CUDA_TOOLKIT_ROOT_DIR)
     message(WARNING "CUDA_TOOLKIT_ROOT_DIR is deprecated, use CUDAToolkit_ROOT instead")
