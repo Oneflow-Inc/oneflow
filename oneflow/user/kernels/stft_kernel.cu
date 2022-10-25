@@ -125,7 +125,7 @@ class StftGpuKernel final : public user_op::OpKernel {
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
         const Shape& output_shape = ctx->InputShape("output", 0);                               \
         const bool return_complex = ctx->Attr<bool>("return_complex");                          \
-        int32_t output_elem_cnt =                                                               \
+        int64_t output_elem_cnt =                                                               \
             return_complex ? output_shape.elem_cnt() : output_shape.elem_cnt() / 2;             \
         const int64_t output_bytes = GetCudaAlignedSize(output_elem_cnt * sizeof(complextype)); \
         return output_bytes;                                                                    \
