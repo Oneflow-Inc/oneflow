@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/to_string.h"
@@ -1608,84 +1609,16 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
   return op;
 }
 
-namespace {
-
-template<typename SbpParallelT>
-Maybe<Shape> Get1dHierarchyPhysicalShape(const Shape& logical_shape,
-                                         const SbpParallelT& sbp_parallel,
-                                         const int64_t parallel_num, const int64_t parallel_id) {
-  std::shared_ptr<Shape> physical = std::make_shared<Shape>(logical_shape);
-
-  if (sbp_parallel.has_split_parallel()) {
-    const int64_t axis = sbp_parallel.split_parallel().axis();
-    if (logical_shape.At(axis) > 0) {
-      CHECK_GE_OR_RETURN(logical_shape.At(axis), parallel_num);
-      const BalancedSplitter bs(logical_shape.At(axis), parallel_num);
-      physical->Set(axis, bs.At(parallel_id).size());
-    }
-  } else if (sbp_parallel.has_broadcast_parallel() || sbp_parallel.has_partial_sum_parallel()) {
-    // do nothing
-  } else {
-    UNIMPLEMENTED();
-  }
-  return physical;
-}
-
-Maybe<Shape> GetNdHierarchyPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
-                                         const ParallelDesc& parallel_desc,
-                                         const int64_t parallel_id) {
-  const auto& parallel_hierarchy = *parallel_desc.hierarchy();
-  std::shared_ptr<Shape> physical = std::make_shared<Shape>(logical_shape);
-  Stride hierarch_stride(parallel_hierarchy);
-  FOR_RANGE(int64_t, i, 0, parallel_hierarchy.NumAxes()) {
-    const auto& sbp_parallel = nd_sbp.sbp_parallel(i);
-    if (sbp_parallel.has_split_parallel()) {
-      const int64_t split_axis = sbp_parallel.split_parallel().axis();
-      if (LazyMode::is_enabled()) {
-        CHECK_EQ_OR_RETURN(physical->At(split_axis) % parallel_hierarchy.At(i), 0)
-            << Error::RuntimeError() << "In nn.Graph, expected size at split axis (" << split_axis
-            << ") of logical shape must be divisible by parallel num, but got logical_shape: "
-            << logical_shape.ToString()
-            << ", placement: " << *JUST(PlacementToString(SymbolOf(parallel_desc)))
-            << ", nd_sbp: " << NdSbpToString(SymbolOf(nd_sbp));
-        physical->Set(split_axis, physical->At(split_axis) / parallel_hierarchy.At(i));
-      } else {
-        if (physical->At(split_axis) > 0) {
-          CHECK_GE_OR_RETURN(physical->At(split_axis), parallel_hierarchy.At(i))
-              << Error::RuntimeError() << "Expected size at split axis (" << split_axis
-              << ") of logical shape must be be greater than or equal to parallel num, but got "
-                 "logical_shape: "
-              << logical_shape.ToString()
-              << ", placement: " << *JUST(PlacementToString(SymbolOf(parallel_desc)))
-              << ", nd_sbp: " << NdSbpToString(SymbolOf(nd_sbp));
-          const BalancedSplitter bs(physical->At(split_axis), parallel_hierarchy.At(i));
-          physical->Set(split_axis, bs.At(CalcIndex4Axis(parallel_id, hierarch_stride, i)).size());
-        }
-      }
-    }
-  }
-  return physical;
-}
-
-}  // namespace
-
 Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
                               const ParallelDesc& parallel_desc, int64_t parallel_id) {
-  CHECK_GE_OR_RETURN(parallel_id, 0);
-  CHECK_LT_OR_RETURN(parallel_id, parallel_desc.hierarchy()->elem_cnt());
-  CHECK_EQ_OR_RETURN(parallel_desc.hierarchy()->NumAxes(), nd_sbp.sbp_parallel_size());
-  if (parallel_desc.hierarchy()->NumAxes() == 1) {
-    return Get1dHierarchyPhysicalShape(logical_shape, nd_sbp.sbp_parallel(0),
-                                       parallel_desc.hierarchy()->elem_cnt(), parallel_id);
-  } else {
-    return GetNdHierarchyPhysicalShape(logical_shape, nd_sbp, parallel_desc, parallel_id);
-  }
+  return GetPhysicalShape(logical_shape, nd_sbp, *parallel_desc.hierarchy(), parallel_id);
 }
 
 Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
                               const ParallelDesc& parallel_desc,
                               const ParallelContext& parallel_ctx) {
-  return GetPhysicalShape(logical_shape, nd_sbp, parallel_desc, parallel_ctx.parallel_id());
+  return GetPhysicalShape(logical_shape, nd_sbp, *parallel_desc.hierarchy(),
+                          parallel_ctx.parallel_id());
 }
 
 Maybe<Shape> GetLogicalShape(const Shape& physical_shape, const NdSbp& nd_sbp,
