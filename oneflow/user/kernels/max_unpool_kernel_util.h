@@ -28,17 +28,18 @@ limitations under the License.
 
 namespace oneflow {
 
-#define UNPOOL_DATA_TYPE_SEQ                        \
+#define UNPOOL_DATA_TYPE_SEQ                      \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
   OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)   \
   OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
 
-#define UNPOOL_IDX_DATA_TYPE_SEQ                    \
+#define UNPOOL_IDX_DATA_TYPE_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
 #define UNPOOL_DATA_TYPE_CPU_SEQ UNPOOL_DATA_TYPE_SEQ
-// #define UNPOOL_DATA_TYPE_CUDA_SEQ UNPOOL_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)
+// #define UNPOOL_DATA_TYPE_CUDA_SEQ UNPOOL_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(half,
+// DataType::kFloat16)
 
 typedef small_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
 
@@ -88,29 +89,46 @@ class MaxUnpoolParams3D {
 
 template<DeviceType device_type, typename T, typename IDX>
 struct UnpoolKernelUtil {
-  static void MaxUnpool1dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
-                               const IDX elem_num, const T* src, T* dest, const int64_t* indice_ptr,
-                               const MaxUnpoolParams3D& params_3d);
-
+  static void MaxUnpoolNdForward(ep::Stream* stream,
+                                 const NdIndexOffsetHelper<IDX, 2>& index_helper,
+                                 const IDX elem_num, const T* src, T* dest,
+                                 const int64_t* indice_ptr, const int64_t y_hwd_size);
+  static void MaxUnpoolNdBackward(ep::Stream* stream,
+                                  const NdIndexOffsetHelper<IDX, 2>& index_helper,
+                                  const IDX elem_num, const T* src, T* dest,
+                                  const int64_t* indice_ptr, const int64_t dx_hwd_size);
 };
 
-template<typename T, typename IDX>
-OF_DEVICE_FUNC void MaxUnpool1dForwardCompute(const NdIndexOffsetHelper<IDX, 2> index_helper,
-                                            IDX elem_num, const T* src, T* dest,
-                                            const int64_t* indice_ptr, 
-                                            const int64_t dst_c_length) {
-  XPU_1D_KERNEL_LOOP(num, elem_num) {
-    IDX n_c, l;
-    index_helper.OffsetToNdIndex(num, n_c, l);
-    IDX dest_idx = n_c * dst_c_length + indice_ptr[num];
-    dest[dest_idx] = src[num];
-  }
-}
+// template<typename T, typename IDX>
+// OF_DEVICE_FUNC void MaxUnpool1dForwardCompute(const NdIndexOffsetHelper<IDX, 2> index_helper,
+//                                               IDX elem_num, const T* src, T* dest,
+//                                               const int64_t* indice_ptr,
+//                                               const int64_t dst_c_length) {
+//   XPU_1D_KERNEL_LOOP(num, elem_num) {
+//     IDX n_c, l;
+//     index_helper.OffsetToNdIndex(num, n_c, l);
+//     IDX dest_idx = n_c * dst_c_length + indice_ptr[num];
+//     dest[dest_idx] = src[num];
+//   }
+// }
 
+// template<typename T, typename IDX>
+// OF_DEVICE_FUNC void MaxUnpool1dBackwardCompute(const NdIndexOffsetHelper<IDX, 2> index_helper,
+//                                                IDX elem_num, const T* src, T* dest,
+//                                                const int64_t* indice_ptr,
+//                                                const int64_t src_length) {
+//   // src is dy, dst is dx
+//   XPU_1D_KERNEL_LOOP(num, elem_num) {
+//     IDX n_c, l;
+//     index_helper.OffsetToNdIndex(num, n_c, l);
+//     IDX src_idx = n_c * src_length + indice_ptr[num];
+//     dest[num] = src[src_idx];
+//   }
+// }
 
 #define INSTANTIATE_UNPOOL_KERNEL_UTIL(device_type_v, dtype_pair, index_dtype_pair) \
   template struct UnpoolKernelUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),     \
-                                 OF_PP_PAIR_FIRST(index_dtype_pair)>;
+                                   OF_PP_PAIR_FIRST(index_dtype_pair)>;
 
 }  // namespace oneflow
 

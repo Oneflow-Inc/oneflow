@@ -920,12 +920,11 @@ class MaxUnpoolNDFunctor {
   MaxUnpoolNDFunctor() = default;
   virtual ~MaxUnpoolNDFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                                const std::shared_ptr<one::Tensor>& indices,
-                                const std::vector<int32_t>& kernel_size,
-                                const Optional<std::vector<int32_t>>& stride,
-                                const std::vector<int32_t>& padding,
-                                const Optional<Shape>& output_size,
-                                const std::string& data_format) const {
+                           const std::shared_ptr<one::Tensor>& indices,
+                           const std::vector<int32_t>& kernel_size,
+                           const Optional<std::vector<int32_t>>& stride,
+                           const std::vector<int32_t>& padding, const Optional<Shape>& output_size,
+                           const std::string& data_format) const {
     // if (x->ndim() == 4 && data_format == "channels_last") {
     //   if (!return_indices && dilation.at(0) == 1 && dilation.at(1) == 1) {
     //     // legacy tf style maxpool2d , use cudnn implementation
@@ -945,10 +944,12 @@ class MaxUnpoolNDFunctor {
     //   }
     // }
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("kernel_size", "padding", "stride", "data_format", "has_output_size", "output_size");
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("kernel_size", "padding", "stride", "data_format",
+                                                 "has_output_size", "output_size");
     // If stride is None, we set it as kernel_size to align Pytorch.
-    attrs.SetAllAttrs(kernel_size, padding, stride ? *JUST(stride) : kernel_size, data_format, output_size.has_value(),
-      output_size.has_value() ? *JUST(output_size) : Shape());
+    attrs.SetAllAttrs(kernel_size, padding, stride ? *JUST(stride) : kernel_size, data_format,
+                      output_size.has_value(),
+                      output_size.has_value() ? *JUST(output_size) : Shape());
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, indices}, attrs);
   }
 
@@ -957,10 +958,11 @@ class MaxUnpoolNDFunctor {
   // std::shared_ptr<OpExpr> tf_maxpool_op_;
 };
 
-class MaxUnpool1DFunctor: public MaxUnpoolNDFunctor {
- public: 
+class MaxUnpool1DFunctor : public MaxUnpoolNDFunctor {
+ public:
   MaxUnpool1DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("max_unpool_1d").Input("x").Input("indices").Output("y").Build());
+    op_ =
+        CHECK_JUST(one::OpBuilder("max_unpool_1d").Input("x").Input("indices").Output("y").Build());
   }
 };
 
