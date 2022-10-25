@@ -2867,3 +2867,7 @@
 - name: "moe_dispatch"
   signature: "Tensor (Tensor in, Tensor indices, Tensor locations, Int32 num_experts, Int32 capacity) => MOEDispatch"
   bind_python: True
+
+- name: "moe_combine"
+  signature: "Tensor (Tensor in, Tensor gates, Tensor indices, Tensor locations) => MOECombine"
+  bind_python: True

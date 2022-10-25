@@ -3407,6 +3407,24 @@ class MOEDispatchFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class MOECombineFunctor {
+ public:
+  MOECombineFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("moe_combine").
+                     Input("in").Input("gates").Input("indices").Input("locations").
+                     Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
+                           const std::shared_ptr<one::Tensor>& gates,
+                           const std::shared_ptr<one::Tensor>& indices,
+                           const std::shared_ptr<one::Tensor>& locations) const {
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {in, gates, indices, locations});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -3550,6 +3568,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PinMemoryFunctor>("PinMemory");
   m.add_functor<impl::BinCountFunctor>("BinCount");
   m.add_functor<impl::MOEDispatchFunctor>("MOEDispatch");
+  m.add_functor<impl::MOECombineFunctor>("MOECombine");
 };
 
 }  // namespace functional

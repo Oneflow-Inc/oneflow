@@ -10624,6 +10624,12 @@ def OneFlow_CopyD2HOp : OneFlow_BaseOp<"copy_d2h", [NoSideEffect, NoGrad, Declar
   let has_data_type_infer_fn = 1;
 }
 
+#endif // GET_ONEFLOW_SYSTEM_OP_DEFINITIONS
+
+// Group: MOE
+// moe_dispatch, moe_combine
+// Total: 2
+
 def OneFlow_MOEDispatchOp : OneFlow_BaseOp<"moe_dispatch", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in,
@@ -10643,7 +10649,21 @@ def OneFlow_MOEDispatchOp : OneFlow_BaseOp<"moe_dispatch", [NoSideEffect, Declar
   let has_get_sbp_fn = 1;
 }
 
-#endif // GET_ONEFLOW_SYSTEM_OP_DEFINITIONS
+def OneFlow_MOECombineOp : OneFlow_BaseOp<"moe_combine", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$gates,
+    OneFlow_Tensor:$indices,
+    OneFlow_Tensor:$locations
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+}
 
 include "mlir/Interfaces/CallInterfaces.td"
 
