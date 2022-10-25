@@ -639,10 +639,7 @@ double Storage4NdSbp(const NdSbp& nd_sbp, Shape& logical_shape, const Shape& par
         const int64_t axis = sbp_parallel.split_parallel().axis();
         if (axis >= logical_shape.NumAxes()) { return kUnsupportedBoxing; }
         // Use completely average split to count the storage
-        if (logical_shape.At(axis) <= 0
-            || (logical_shape.At(axis) % parallel_hierarchy.At(dim_sbp) > 0)) {
-          return kUnsupportedBoxing;
-        }
+        if (logical_shape.At(axis) < parallel_hierarchy.At(dim_sbp)) { return kUnsupportedBoxing; }
         logical_shape.Set(axis, logical_shape.At(axis) / parallel_hierarchy.At(dim_sbp));
       }
     }
