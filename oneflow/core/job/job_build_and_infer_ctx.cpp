@@ -583,7 +583,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   }
   JUST(AddLbiParallelConf2BlobPlacement(op, ParallelDesc4Obn));
   // Check splitability
-  JUST(CheckOpBlobSplitability(op, parallel_desc.parallel_num()));
+  // JUST(CheckOpBlobSplitability(op, parallel_desc.parallel_num()));
 
   return op->GetOpAttributeWithoutOpNameAndLbn();
 }
