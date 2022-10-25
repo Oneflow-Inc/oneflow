@@ -24,8 +24,8 @@ limitations under the License.
 namespace oneflow {
 namespace {}  // namespace
 
-template<typename T, typename FFTTYPE>
-__global__ void convert_complex_to_real(T* dst, const FFTTYPE* src, size_t n) {
+template<typename IN, typename OUT>
+__global__ void convert_complex_to_real(IN* dst, const OUT* src, size_t n) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     dst[2 * i] = src[i].x;
     dst[2 * i + 1] = src[i].y;
@@ -50,7 +50,7 @@ __global__ void fft_apply_normalization(FFTTYPE* dst, const double normalization
 template<typename FFTTYPE>
 __global__ void convert_doublesided(FFTTYPE* dst, int32_t dims, const int n) {}
 
-template<typename T, typename COMPLEXTYPE>
+template<typename IN, typename OUT>
 class StftGpuKernel final : public user_op::OpKernel {
  public:
   StftGpuKernel() = default;
@@ -70,12 +70,13 @@ class StftGpuKernel final : public user_op::OpKernel {
     const ShapeView& output_shape = output->shape_view();
 
     const Stride& input_stride = input->stride();
-    const int out_elem_cnt = output->shape_view().elem_cnt() / 2;
+    const int out_elem_cnt =
+        return_complex ? output->shape_view().elem_cnt() : output->shape_view().elem_cnt() / 2;
 
-    const T* data_in = input->dptr<T>();
-    T* data_out = output->mut_dptr<T>();
+    const IN* data_in = input->dptr<IN>();
+    IN* data_out = output->mut_dptr<IN>();
 
-    COMPLEXTYPE* out_tmp_buffer = reinterpret_cast<COMPLEXTYPE*>(tmp_buffer->mut_dptr<char>());
+    OUT* out_tmp_buffer = reinterpret_cast<OUT*>(tmp_buffer->mut_dptr<char>());
 
     int ndim = 1;
     const Stride& in_stride = {input_stride.at(2), input_stride.at(1)};
@@ -86,7 +87,7 @@ class StftGpuKernel final : public user_op::OpKernel {
     int dims = 1;
     int32_t rank[dims] = {input_shape.At(2)};
     CuFFtParams params(ndim, rank, in_stride, out_stride, in_shape, out_shape, batch);
-    CuFFtConfig<T, COMPLEXTYPE> config(params);
+    CuFFtConfig<IN, OUT> config(params);
 
     int32_t in_offset = input->stride().at(0);
     int32_t out_offset = batch * (input_shape.At(2) / 2 + 1);
@@ -117,18 +118,18 @@ class StftGpuKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-#define REGISTER_STFT_GPU_KERNEL(dtype, complextype)                                            \
-  REGISTER_USER_KERNEL("stft")                                                                  \
-      .SetCreateFn<StftGpuKernel<dtype, complextype>>()                                         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
-                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value))      \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
-        const Shape& output_shape = ctx->InputShape("output", 0);                               \
-        const bool return_complex = ctx->Attr<bool>("return_complex");                          \
-        int64_t output_elem_cnt =                                                               \
-            return_complex ? output_shape.elem_cnt() : output_shape.elem_cnt() / 2;             \
-        const int64_t output_bytes = GetCudaAlignedSize(output_elem_cnt * sizeof(complextype)); \
-        return output_bytes;                                                                    \
+#define REGISTER_STFT_GPU_KERNEL(intype, outtype)                                           \
+  REGISTER_USER_KERNEL("stft")                                                              \
+      .SetCreateFn<StftGpuKernel<intype, outtype>>()                                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                      \
+                       && (user_op::HobDataType("input", 0) == GetDataType<intype>::value)) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   \
+        const Shape& output_shape = ctx->InputShape("output", 0);                           \
+        const bool return_complex = ctx->Attr<bool>("return_complex");                      \
+        int64_t output_elem_cnt =                                                           \
+            return_complex ? output_shape.elem_cnt() : output_shape.elem_cnt() / 2;         \
+        const int64_t output_bytes = GetCudaAlignedSize(output_elem_cnt * sizeof(outtype)); \
+        return output_bytes;                                                                \
       });
 REGISTER_STFT_GPU_KERNEL(float, cufftComplex)
 REGISTER_STFT_GPU_KERNEL(double, cufftDoubleComplex)

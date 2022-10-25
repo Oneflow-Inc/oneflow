@@ -3129,11 +3129,11 @@ class StftFunctor {
     auto input_tensor = input;
 
     // TODO(yzm):Remove this line of code when onesided is supported
-    CHECK_OR_RETURN(onesided == false)
+    CHECK_OR_RETURN(onesided == true)
         << Error::RuntimeError() << "onesided parameter is not supported at this time";
 
     // TODO(yzm):Remove this line when complex numbers are supported
-    CHECK_OR_RETURN(return_complex == true)
+    CHECK_OR_RETURN(return_complex == false)
         << Error::RuntimeError() << "return_complex parameter is not supported at this time";
 
     const auto& NumAxes = input_tensor->shape()->NumAxes();

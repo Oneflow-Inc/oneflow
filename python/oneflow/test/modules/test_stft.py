@@ -37,14 +37,12 @@ from oneflow.test_utils.automated_test_util import *
 
 class TestStft(flow.unittest.TestCase):
     @autotest(
-        check_graph=False,
-        check_grad_use_random_data=False,
-        auto_backward=False,
+        check_graph=False, check_grad_use_random_data=False, auto_backward=False,
     )
     def test_stft_with_1D_random_data(test_case):
         device = random_device()
-        rand_size =  np.random.randint(10, 100000)
-        rand_fft =  2 * np.random.randint(4, rand_size / 2)
+        rand_size = np.random.randint(10, 100000)
+        rand_fft = 2 * np.random.randint(4, rand_size / 2)
         input_dims = [rand_size]
         win_dims = [rand_fft]
         x = random_tensor(1, *input_dims).to(device)
@@ -56,10 +54,9 @@ class TestStft(flow.unittest.TestCase):
             return_complex=False,
             onesided=True,
             center=True,
-            normalized=True
+            normalized=True,
         )
         return y
-
 
     def test_stft_with_2D_random_data(test_case):
         device = random_device()
@@ -67,19 +64,21 @@ class TestStft(flow.unittest.TestCase):
         col_rand_size = np.random.randint(10, 2000)
         rand_fft = 2 * np.random.randint(5, col_rand_size / 2)
         input_dims = [row_rand_size, col_rand_size]
-        win_dims=[rand_fft]
+        win_dims = [rand_fft]
         x = random_tensor(2, *input_dims).to(device)
         win = random_tensor(1, *win_dims).to(device)
 
-        y = torch.stft(       
+        y = torch.stft(
             x,
             n_fft=rand_fft,
             window=win,
             return_complex=False,
             onesided=True,
             center=True,
-            normalized=True)
+            normalized=True,
+        )
         return y
-    
+
+
 if __name__ == "__main__":
     unittest.main()
