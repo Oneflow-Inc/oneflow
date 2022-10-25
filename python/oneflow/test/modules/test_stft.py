@@ -15,13 +15,24 @@ limitations under the License.
 """
 
 
-import oneflow as flow
-import torch
-import numpy as np
+# import oneflow as flow
+# import torch
+
+# import unittest
+# import oneflow.unittest
+
+
+from numpy import random
 
 import unittest
-import oneflow.unittest
-from numpy import random
+from collections import OrderedDict
+
+import numpy as np
+
+import oneflow as flow
+from oneflow.test_utils.test_util import GenArgList
+
+from oneflow.test_utils.automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -32,8 +43,10 @@ class Test(flow.unittest.TestCase):
         rand_fft = random.randint(5, rand_size - 1)
         win_tensor = random.rand(rand_fft)
 
-        x = torch.tensor(np_tensor).to("cuda")
-        win = torch.tensor(win_tensor).to("cuda")
+        x = torch.tensor(np_tensor).to("cpu")
+        win = torch.tensor(win_tensor).to("cpu")
+        print(x.shape)
+        print(rand_fft)
         y_torch = torch.stft(
             x,
             n_fft=rand_fft,
@@ -45,8 +58,8 @@ class Test(flow.unittest.TestCase):
             return_complex=False,
         )
 
-        x_flow = flow.tensor(np_tensor).to("cuda")
-        win_flow = flow.tensor(win_tensor).to("cuda")
+        x_flow = flow.tensor(np_tensor).to("cpu")
+        win_flow = flow.tensor(win_tensor).to("cpu")
 
         y_flow = flow.stft(
             x_flow,
@@ -64,12 +77,12 @@ class Test(flow.unittest.TestCase):
         )
 
     def test_stft_2D(test_case):
-        rand_length = random.randint(20, 150)
-        rand_winth = random.randint(513, 90000)
-        np_tensor = random.rand(rand_length, rand_winth)
+        rand_length = np.random.randint(20, 150)
+        rand_winth = np.random.randint(513, 2000)
+        np_tensor = np.random.rand(rand_length, rand_winth)
         # BUG(yzm):n_fft is not aligned with pytorch when it is odd
-        rand_fft = 2 * random.randint(5, rand_winth / 2 - 1)
-        win_tensor = random.rand(rand_fft)
+        rand_fft = 2 * np.random.randint(5, rand_winth / 2 - 1)
+        win_tensor = np.random.rand(rand_fft)
 
         x = torch.tensor(np_tensor).to("cuda")
         win = torch.tensor(win_tensor).to("cuda")
@@ -101,7 +114,8 @@ class Test(flow.unittest.TestCase):
             np.allclose(y_flow.numpy(), y_torch.cpu().numpy(), rtol=1e-5, atol=1e-5)
         )
 
-    # TODO(yzm):add test after support onesided,normalized,return_complex
+
+# TODO(yzm):add test after support onesided,normalized,return_complex
 
 
 if __name__ == "__main__":
