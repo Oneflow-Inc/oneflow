@@ -235,6 +235,29 @@ class OneFlow_MaxPoolBaseOp<string mnemonic, list<Trait> traits = []> :
   let has_compute_complexity_fn = 1;
 }
 
+class OneFlow_MaxUnpoolBaseOp<string mnemonic, list<Trait> traits = []> :
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
+  let summary = "OneFlow Max Unpooling operation";
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$indices
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let attrs = (ins
+    SI64ArrayAttr:$kernel_size,
+    SI64ArrayAttr:$stride,
+    SI64ArrayAttr:$padding,
+    DefaultValuedAttr<BoolAttr, "false">:$has_output_size,
+    ShapeAttr:$output_size
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 class OneFlow_AvgPoolBaseOp<string mnemonic, list<Trait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
   let summary = "OneFlow Average Pooling operation";
