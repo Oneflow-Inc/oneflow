@@ -857,9 +857,16 @@ void OfCollectiveActor::AsyncSendQueuedMsg() {
   if (!async_msg_queue_.empty()) {
     std::deque<ActorMsg> msgs;
     msgs.swap(async_msg_queue_);
-    for (const ActorMsg& msg : msgs) {
-      Singleton<ActorMsgBus>::Get()->SendMsg(msg);
-      VLOG(1) << "Actor " << actor_id_ << " msg.src: " << msg.src_actor_id() << " msg.dst: " << msg.dst_actor_id() << " msg.type: " << print_actor_msg_type_[msg.msg_type()];
+
+    if (ParseBooleanFromEnv("ONEFLOW_OFCCL_DUMMY_KERNEL", false)) {
+      AddCallback([msgs]() {
+        for (const ActorMsg& msg : msgs) { Singleton<ActorMsgBus>::Get()->SendMsg(msg); }
+      });
+    } else {
+      // for (const ActorMsg& msg : msgs) {
+      //   Singleton<ActorMsgBus>::Get()->SendMsg(msg);
+      //   VLOG(1) << "Actor " << actor_id_ << " msg.src: " << msg.src_actor_id() << " msg.dst: " << msg.dst_actor_id() << " msg.type: " << print_actor_msg_type_[msg.msg_type()];
+      // }
     }
   }
 }

@@ -77,57 +77,60 @@ void OfCollectiveBoxingGenericKernel::VirtualKernelInit(KernelContext* ctx) {
 
 void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) const {
   VLOG(3) << "Enter OfCollectiveBoxingGenericKernel::ForwardDataContent";
-  // Blob* in = ctx->BnInOp2Blob("in");
-  // Blob* out = ctx->BnInOp2Blob("out");
-  // AutoMemcpy(ctx->stream(), out, in);
-  
-  const RankDesc& rank_desc = this->op_conf().of_collective_boxing_generic_conf().rank_desc();
-  // TODO: 目前只实现了AllReduce  
-  if (rank_desc.op_desc().op_type() == kOpTypeAllReduce) {
-    const void* send_buff = nullptr;
-    void* recv_buff = nullptr;
-    const DataType data_type = rank_desc.op_desc().data_type();
-    if (GenericOpHasInput(rank_desc)) {
-      const Blob* in = ctx->BnInOp2Blob("in");
-      CHECK_EQ(in->data_type(), data_type);
-      CHECK(in->shape() == ShapeView(GenericOpGetInputShape(rank_desc)));
-      send_buff = in->dptr();
+
+  if (ParseBooleanFromEnv("ONEFLOW_OFCCL_DUMMY_KERNEL", false)) {
+    Blob* in = ctx->BnInOp2Blob("in");
+    Blob* out = ctx->BnInOp2Blob("out");
+    AutoMemcpy(ctx->stream(), out, in);
+  } else {
+    const RankDesc& rank_desc = this->op_conf().of_collective_boxing_generic_conf().rank_desc();
+    // TODO: 目前只实现了AllReduce  
+    if (rank_desc.op_desc().op_type() == kOpTypeAllReduce) {
+      const void* send_buff = nullptr;
+      void* recv_buff = nullptr;
+      const DataType data_type = rank_desc.op_desc().data_type();
+      if (GenericOpHasInput(rank_desc)) {
+        const Blob* in = ctx->BnInOp2Blob("in");
+        CHECK_EQ(in->data_type(), data_type);
+        CHECK(in->shape() == ShapeView(GenericOpGetInputShape(rank_desc)));
+        send_buff = in->dptr();
+      }
+      if (GenericOpHasOutput(rank_desc)) {
+        Blob* out = ctx->BnInOp2Blob("out");
+        CHECK_EQ(out->data_type(), data_type);
+        CHECK(out->shape() == ShapeView(GenericOpGetOutputShape(rank_desc)));
+        recv_buff = out->mut_dptr();
+      }
+
+      int coll_id = dynamic_cast<OfCollectiveBoxingKernelState *>(ctx->state().get())->coll_id();
+
+      ofcclRankCtx_t ofccl_rank_ctx = dynamic_cast<OfCollectiveBoxingKernelState *>(ctx->state().get())->ofccl_rank_ctx();
+
+      int64_t actor_id = GetOfCollectiveBoxingActorContext(ctx)->actor_id();
+
+      CallBackArgs *args = new CallBackArgs();
+      // static成员可以在const函数中修改。
+      args->actor_id = actor_id;
+      args->coll_id = coll_id;
+
+      auto cb_lambda = [](int collIdFromCqe, void *args) {
+        int64_t actor_id = (static_cast<CallBackArgs *>(args))->actor_id; // void不是类名，不能用dynamic
+        Singleton<ActorMsgBus>::Get()->SendMsg(ActorMsg::BuildCollectiveMsg(actor_id, actor_id, CollectiveNegoCmd::kCollectiveDone));
+        VLOG(1) << "actor " << actor_id << " callback get cqe for coll_id = " << collIdFromCqe << " waiting for " << (static_cast<CallBackArgs *>(args))->coll_id;
+        delete static_cast<CallBackArgs *>(args);
+        return 0;
+      };
+
+      CallbackFunc cb_func = cb_lambda;
+
+      OF_NCCL_CHECK(ofcclRunAllReduce(send_buff, recv_buff, coll_id, cb_func, args, ofccl_rank_ctx));
+      
+      size_t count = 1;
+      const Shape shape = Shape(rank_desc.op_desc().shape());
+      FOR_RANGE(int, shape_ax, 0, shape.NumAxes()) { count *= shape.At(shape_ax); }
+      CHECK_GT(count, 0);
+      VLOG(2) << "ForwardDataContent invoke ofcclRunAllReduce with coll_id = " << coll_id  << " count = " << count; // << " send_buff = " << send_buff << " recv_buff = " << recv_buff;
     }
-    if (GenericOpHasOutput(rank_desc)) {
-      Blob* out = ctx->BnInOp2Blob("out");
-      CHECK_EQ(out->data_type(), data_type);
-      CHECK(out->shape() == ShapeView(GenericOpGetOutputShape(rank_desc)));
-      recv_buff = out->mut_dptr();
-    }
-
-    int coll_id = dynamic_cast<OfCollectiveBoxingKernelState *>(ctx->state().get())->coll_id();
-
-    ofcclRankCtx_t ofccl_rank_ctx = dynamic_cast<OfCollectiveBoxingKernelState *>(ctx->state().get())->ofccl_rank_ctx();
-
-    int64_t actor_id = GetOfCollectiveBoxingActorContext(ctx)->actor_id();
-
-    CallBackArgs *args = new CallBackArgs();
-    // static成员可以在const函数中修改。
-    args->actor_id = actor_id;
-    args->coll_id = coll_id;
-
-    auto cb_lambda = [](int collIdFromCqe, void *args) {
-      int64_t actor_id = (static_cast<CallBackArgs *>(args))->actor_id; // void不是类名，不能用dynamic
-      Singleton<ActorMsgBus>::Get()->SendMsg(ActorMsg::BuildCollectiveMsg(actor_id, actor_id, CollectiveNegoCmd::kCollectiveDone));
-      VLOG(1) << "actor " << actor_id << " callback get cqe for coll_id = " << collIdFromCqe << " waiting for " << (static_cast<CallBackArgs *>(args))->coll_id;
-      delete static_cast<CallBackArgs *>(args);
-      return 0;
-    };
-
-    CallbackFunc cb_func = cb_lambda;
-
-    OF_NCCL_CHECK(ofcclRunAllReduce(send_buff, recv_buff, coll_id, cb_func, args, ofccl_rank_ctx));
-    
-    size_t count = 1;
-    const Shape shape = Shape(rank_desc.op_desc().shape());
-    FOR_RANGE(int, shape_ax, 0, shape.NumAxes()) { count *= shape.At(shape_ax); }
-    CHECK_GT(count, 0);
-    VLOG(2) << "ForwardDataContent invoke ofcclRunAllReduce with coll_id = " << coll_id  << " count = " << count; // << " send_buff = " << send_buff << " recv_buff = " << recv_buff;
   }
 }
 
