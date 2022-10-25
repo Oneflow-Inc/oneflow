@@ -513,6 +513,36 @@ llvm::SmallVector<Value, 4> NormalizationOp::NchwToNhwc(llvm::SmallVector<Value,
   return results;
 }
 
+bool GroupNormOp::IsNCHW() { return false; }
+
+llvm::DenseSet<Value> GroupNormOp::OperandsToTranspose() { return {this->x()}; }
+
+llvm::DenseSet<Value> GroupNormOp::ResultsToTranspose() { return {this->y()}; }
+
+llvm::SmallVector<Value, 4> GroupNormOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                                    PatternRewriter& rewriter) {
+  auto normalization_op = *this;
+  SmallVector<Value, 4> operands;
+  operands.push_back(value[0]);
+  if (normalization_op.gamma()) {
+    operands.push_back(normalization_op.gamma());
+  } else {
+    LOG(FATAL) << "unreachable";
+  }
+  if (normalization_op.beta()) {
+    operands.push_back(normalization_op.beta());
+  } else {
+    LOG(FATAL) << "unreachable";
+  }
+  NamedAttrList attributes = normalization_op->getAttrs();
+  attributes.set("axis", rewriter.getSI32IntegerAttr(3));
+  auto created = rewriter.create<oneflow::NormalizationOp>(
+      normalization_op.getLoc(), normalization_op->getResultTypes(), operands, attributes);
+  llvm::SmallVector<Value, 4> results;
+  results.push_back(created.y());
+  return results;
+}
+
 bool MaxPool2DOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
 
 llvm::DenseSet<Value> MaxPool2DOp::OperandsToTranspose() { return {this->x()}; }
