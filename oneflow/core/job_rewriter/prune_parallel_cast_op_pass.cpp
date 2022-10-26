@@ -27,8 +27,8 @@ bool IsParallelCastOp(const OperatorConf& op_conf) {
              || op_conf.user_conf().op_type_name() == "hierarchical_parallel_cast_like");
 }
 
-bool NeedDoPass(const Job* job) {
-  return std::any_of(job->net().op().cbegin(), job->net().op().cend(), IsParallelCastOp);
+bool NeedDoPass(const Job& job) {
+  return std::any_of(job.net().op().cbegin(), job.net().op().cend(), IsParallelCastOp);
 }
 
 class PruneParallelCastOpsPass final : public JobPass {
@@ -41,7 +41,7 @@ class PruneParallelCastOpsPass final : public JobPass {
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
-    if (!NeedDoPass(job)) { return Maybe<void>::Ok(); }
+    if (!NeedDoPass(*job)) { return Maybe<void>::Ok(); }
     const OpGraph op_graph(*job);
     JobBuilder job_builder(job);
     return Apply(op_graph, &job_builder);
