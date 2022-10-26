@@ -162,7 +162,6 @@ def _test_concat_single_input_type(test_case, device):
     flow_cat_list = flow.cat(flow_list)
     test_case.assertTrue(flow_cat_list.dtype is oneflow.int64)
 
-
 @flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
     def test_concat(test_case):
