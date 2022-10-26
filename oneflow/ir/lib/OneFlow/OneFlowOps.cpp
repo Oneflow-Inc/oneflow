@@ -543,6 +543,16 @@ llvm::DenseSet<Value> MaxPool2DOp::OperandsToTranspose() { return {this->x()}; }
 
 llvm::DenseSet<Value> MaxPool2DOp::ResultsToTranspose() { return {this->y(), this->indice()}; }
 
+RankedTensorType getNHWCType(RankedTensorType t) {
+  return RankedTensorType::get({t.getShape()[0], t.getShape()[2], t.getShape()[3], t.getShape()[1]},
+                               t.getElementType());
+}
+
+RankedTensorType getNCHWType(RankedTensorType t) {
+  return RankedTensorType::get({t.getShape()[0], t.getShape()[3], t.getShape()[1], t.getShape()[2]},
+                               t.getElementType());
+}
+
 llvm::SmallVector<Value, 4> MaxPool2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                     PatternRewriter& rewriter) {
   auto max_pool_2d_op = *this;
@@ -550,10 +560,12 @@ llvm::SmallVector<Value, 4> MaxPool2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> 
   operands.push_back(value[0]);
   NamedAttrList attributes = max_pool_2d_op->getAttrs();
   attributes.set(max_pool_2d_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
+  llvm::SmallVector<Type, 4> result_types;
+  result_types.push_back(getNHWCType(max_pool_2d_op.y().getType().cast<RankedTensorType>()));
+  result_types.push_back(max_pool_2d_op.indice().getType());
   auto res =
       rewriter
-          .create<oneflow::MaxPool2DOp>(max_pool_2d_op.getLoc(), max_pool_2d_op->getResultTypes(),
-                                        operands, attributes)
+          .create<oneflow::MaxPool2DOp>(max_pool_2d_op.getLoc(), result_types, operands, attributes)
           ->getResults();
   llvm::SmallVector<Value, 4> results;
   results.push_back(res[0]);
