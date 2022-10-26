@@ -578,6 +578,23 @@ llvm::SmallVector<Value, 4> ReluOp::NchwToNhwc(llvm::SmallVector<Value, 4> value
   return {res[0]};
 }
 
+bool SiluOp::IsNCHW() { return false; }
+
+llvm::DenseSet<Value> SiluOp::OperandsToTranspose() { return {this->in()}; }
+
+llvm::DenseSet<Value> SiluOp::ResultsToTranspose() { return {this->out()}; }
+
+llvm::SmallVector<Value, 4> SiluOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                               PatternRewriter& rewriter) {
+  auto elementwise_op = *this;
+  SmallVector<Value, 4> operands{value[0]};
+  auto res = rewriter
+                 .create<oneflow::SiluOp>(elementwise_op.getLoc(), elementwise_op->getResultTypes(),
+                                          operands, elementwise_op->getAttrs())
+                 ->getResults();
+  return {res[0]};
+}
+
 bool Add2Op::IsNCHW() { return false; }
 
 llvm::DenseSet<Value> Add2Op::OperandsToTranspose() { return {this->in0(), this->in1()}; }
