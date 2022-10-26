@@ -1450,6 +1450,10 @@
     Int32List[3] padding=0, Shape output_size=None) => MaxUnpool3D'
   bind_python: True
 
+- name: "max_unpool_grad"
+  signature: "Tensor (Tensor x, Tensor indice, Tensor dy, Int32 ndims) => MaxUnpoolNdGrad"
+  bind_python: False
+
 - name: "prelu"
   signature: "Tensor (Tensor x, Tensor alpha) => PRelu"
   bind_python: True

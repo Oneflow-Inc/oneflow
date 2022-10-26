@@ -73,14 +73,14 @@ MaxUnpoolParams3D::MaxUnpoolParams3D(const int32_t dim, const ShapeView& x_shape
       stride_3d_(Get3DVec(stride, dim)),
       batch_num_(x_shape.At(0)),
       channel_num_(x_shape.At(1)) {
-  std::string data_format = "channel_first";
+  std::string data_format = "channels_first";
   x_3d_ = {GetInDim(x_shape, data_format, 0, dim), GetInDim(x_shape, data_format, 1, dim),
            GetInDim(x_shape, data_format, 2, dim)};
   Get3DOutputShape(x_3d_, pool_size_3d_, stride_3d_, padding_, &y_3d_);
 }
 
 void MaxUnpoolParams3D::Reset(const ShapeView& x_shape) {
-  std::string data_format = "channel_first";
+  std::string data_format = "channels_first";
   x_3d_ = {GetInDim(x_shape, data_format, 0, dim_), GetInDim(x_shape, data_format, 1, dim_),
            GetInDim(x_shape, data_format, 2, dim_)};
   Get3DOutputShape(x_3d_, pool_size_3d_, stride_3d_, padding_, &y_3d_);

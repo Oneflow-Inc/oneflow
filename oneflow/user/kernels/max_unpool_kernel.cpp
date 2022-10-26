@@ -38,8 +38,8 @@ struct UnpoolKernelUtil<DeviceType::kCPU, T, IDX> {
     XPU_1D_KERNEL_LOOP(num, elem_num) {
       IDX bc_idx, hwd_idx;
       index_helper.OffsetToNdIndex(num, bc_idx, hwd_idx);
-      IDX dest_idx = bc_idx * dx_hwd_size + indice_ptr[num];
-      dest[dest_idx] = src[num];
+      IDX src_idx = bc_idx * dx_hwd_size + indice_ptr[num];
+      dest[num] = src[src_idx];
     }
   }
 };
@@ -109,7 +109,7 @@ class MaxUnpoolNdGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
-    const int64_t elem_num = dy->shape_view().elem_cnt();
+    const int64_t elem_num = dx->shape_view().elem_cnt();
     const T* src = dy->dptr<T>();
     const int64_t* indice_ptr = indice->dptr<int64_t>();
     T* dest = dx->mut_dptr<T>();
