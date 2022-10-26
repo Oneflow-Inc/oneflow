@@ -8,7 +8,9 @@ namespace mlir {
 namespace oneflow {
 
 RankedTensorType getNHWCType(RankedTensorType t);
+RankedTensorType getNHWCType(Type t);
 RankedTensorType getNCHWType(RankedTensorType t);
+RankedTensorType getNCHWType(Type t);
 
 }  // namespace oneflow
 
