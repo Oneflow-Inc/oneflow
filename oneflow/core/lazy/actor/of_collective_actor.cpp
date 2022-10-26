@@ -344,7 +344,7 @@ void OfCollectiveActor::IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t v
 void OfCollectiveActor::NoNegoAct() {
   int round = 0; // TODO(Panlichen): for debug
 
-  while (IsReadReady() && IsWriteReady()) {
+  if (IsReadReady() && IsWriteReady()) {
 
     // 只要进得来，就设置成CanAct，不掣肘。
     collective_status_ = CollectiveStatus::kCanAct;
@@ -352,23 +352,15 @@ void OfCollectiveActor::NoNegoAct() {
 
     VLOG(2) << "Actor " << actor_id_ << " " << round++ << "th AsyncLaunchKernel";
     AsyncLaunchKernel([&](int64_t regst_desc_id) -> Regst* { return nullptr; });
+    int64_t actor_id = actor_id_;
+    AddCallback([actor_id](){
+      Singleton<ActorMsgBus>::Get()->SendMsg(
+        ActorMsg::BuildCollectiveMsg(actor_id, actor_id, CollectiveNegoCmd::kCollectiveDone)
+      );
+    });
           
     // kernel里的callback会发送kCollectiveDone信息，然后在处理kCollectiveDone信息的地方调用这些善后的代码。否则似乎找不到更方便的实现异步调用callback的方法了。
-    // 没办法和nego低成本地完全切割
-
-    // 这些归还regst的操作应该在这里做，来打破上边while的条件。
-    AsyncSendNaiveProducedRegstMsgToConsumer();
-    // no inplace ctrl regst
-    HandleProducedInplaceDataRegstToConsumer();
-
-    AsyncSendNaiveConsumedRegstMsgToProducer();
-    // inplace regst with further consumer is handled in HandlerNormal
-    AsyncRetInplaceConsumedRegstIfNoConsumer();
-
-    // 但是不能真的发消息，还是要等收到了cqe，callback被调用之后才可以发。
-    // AsyncSendQueuedMsg();
-
-    // ResetCollectiveStatus();
+    // 没办法和nego低成本地完全切割。在july_nego分支里比较轻松地依托kCollectiveDone完成了no nego
   }
 }
 
@@ -593,8 +585,15 @@ void OfCollectiveActor::ReactToNegoCmd(const ActorMsg& msg) {
 
     case CollectiveNegoCmd::kCollectiveDone:
       CHECK(collective_status_ == CollectiveStatus::kCanAct) << "Actor " << actor_id_ << " In status " << print_status_[collective_status_] << " should not get " << "kCollectiveDone";
+      
+      AsyncSendNaiveProducedRegstMsgToConsumer();
+      // no inplace ctrl regst
+      HandleProducedInplaceDataRegstToConsumer();
 
-      // 这里应该只处理异步消息的发送。相当于原来的stream监控到了kernel执行结束。
+      AsyncSendNaiveConsumedRegstMsgToProducer();
+      // inplace regst with further consumer is handled in HandlerNormal
+      AsyncRetInplaceConsumedRegstIfNoConsumer();
+
       AsyncSendQueuedMsg();
 
       ResetCollectiveStatus();
@@ -666,7 +665,6 @@ void OfCollectiveActor::AsyncLaunchKernel(std::function<Regst*(int64_t)> Regst4R
 
 void OfCollectiveActor::Act() {
   VLOG(2) << "Actor " << actor_id_ << " Enter OfCollectiveActor::Act()";
-  // TODO(Panlichen): 考虑是否搞成while循环。
   CHECK(IsReadReady() && IsWriteReady() && CanAct()) << "Actor " << actor_id_;
   
   AsyncLaunchKernel([&](int64_t regst_desc_id) -> Regst* { return nullptr; });
@@ -853,7 +851,7 @@ int OfCollectiveActor::TryUpdtStateAsProducedRegst(Regst* regst) {
 }
 
 void OfCollectiveActor::AsyncSendQueuedMsg() {
-  VLOG(1) << "Actor " << actor_id_ << " AsyncSendQueuedMsg after kCollectiveDone";
+  VLOG(2) << "Actor " << actor_id_ << " AsyncSendQueuedMsg after kCollectiveDone";
   if (!async_msg_queue_.empty()) {
     std::deque<ActorMsg> msgs;
     msgs.swap(async_msg_queue_);
@@ -863,10 +861,10 @@ void OfCollectiveActor::AsyncSendQueuedMsg() {
         for (const ActorMsg& msg : msgs) { Singleton<ActorMsgBus>::Get()->SendMsg(msg); }
       });
     } else {
-      // for (const ActorMsg& msg : msgs) {
-      //   Singleton<ActorMsgBus>::Get()->SendMsg(msg);
-      //   VLOG(1) << "Actor " << actor_id_ << " msg.src: " << msg.src_actor_id() << " msg.dst: " << msg.dst_actor_id() << " msg.type: " << print_actor_msg_type_[msg.msg_type()];
-      // }
+      for (const ActorMsg& msg : msgs) {
+        Singleton<ActorMsgBus>::Get()->SendMsg(msg);
+        VLOG(2) << "Actor " << actor_id_ << " msg.src: " << msg.src_actor_id() << " msg.dst: " << msg.dst_actor_id() << " msg.type: " << print_actor_msg_type_[msg.msg_type()];
+      }
     }
   }
 }
