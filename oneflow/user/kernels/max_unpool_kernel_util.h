@@ -38,30 +38,18 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
 #define UNPOOL_DATA_TYPE_CPU_SEQ UNPOOL_DATA_TYPE_SEQ
-// #define UNPOOL_DATA_TYPE_CUDA_SEQ UNPOOL_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(half,
-// DataType::kFloat16)
+#define UNPOOL_DATA_TYPE_CUDA_SEQ \
+  UNPOOL_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)
 
 typedef small_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
 
-template<typename T>
-struct DeviceAdd {
-  OF_DEVICE_FUNC static void Invoke(const T* x, T* y) {
-#if defined(__CUDA_ARCH__)
-    cuda::atomic::Add(y, *x);
-#else
-    *y += *x;
-#endif
-  };
-};
-
 class MaxUnpoolParams3D {
  public:
-  MaxUnpoolParams3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
+  MaxUnpoolParams3D(const int32_t dim, const ShapeView& x_shape,
                     const std::vector<int32_t>& padding, const std::vector<int32_t>& kernel_size,
                     const std::vector<int32_t>& stride);
   ~MaxUnpoolParams3D() = default;
 
-  const std::string& data_format() const { return data_format_; }
   const std::vector<int32_t>& padding() const { return padding_; }
   const std::vector<int32_t>& pool_size_3d() const { return pool_size_3d_; }
   const std::vector<int32_t>& stride_3d() const { return stride_3d_; }
@@ -79,7 +67,6 @@ class MaxUnpoolParams3D {
   int32_t dim_;
   FixedDimVector x_3d_;
   FixedDimVector y_3d_;
-  std::string data_format_;
   std::vector<int32_t> padding_;
   std::vector<int32_t> pool_size_3d_;
   std::vector<int32_t> stride_3d_;
@@ -98,33 +85,6 @@ struct UnpoolKernelUtil {
                                   const IDX elem_num, const T* src, T* dest,
                                   const int64_t* indice_ptr, const int64_t dx_hwd_size);
 };
-
-// template<typename T, typename IDX>
-// OF_DEVICE_FUNC void MaxUnpool1dForwardCompute(const NdIndexOffsetHelper<IDX, 2> index_helper,
-//                                               IDX elem_num, const T* src, T* dest,
-//                                               const int64_t* indice_ptr,
-//                                               const int64_t dst_c_length) {
-//   XPU_1D_KERNEL_LOOP(num, elem_num) {
-//     IDX n_c, l;
-//     index_helper.OffsetToNdIndex(num, n_c, l);
-//     IDX dest_idx = n_c * dst_c_length + indice_ptr[num];
-//     dest[dest_idx] = src[num];
-//   }
-// }
-
-// template<typename T, typename IDX>
-// OF_DEVICE_FUNC void MaxUnpool1dBackwardCompute(const NdIndexOffsetHelper<IDX, 2> index_helper,
-//                                                IDX elem_num, const T* src, T* dest,
-//                                                const int64_t* indice_ptr,
-//                                                const int64_t src_length) {
-//   // src is dy, dst is dx
-//   XPU_1D_KERNEL_LOOP(num, elem_num) {
-//     IDX n_c, l;
-//     index_helper.OffsetToNdIndex(num, n_c, l);
-//     IDX src_idx = n_c * src_length + indice_ptr[num];
-//     dest[num] = src[src_idx];
-//   }
-// }
 
 #define INSTANTIATE_UNPOOL_KERNEL_UTIL(device_type_v, dtype_pair, index_dtype_pair) \
   template struct UnpoolKernelUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),     \

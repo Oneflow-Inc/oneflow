@@ -7004,6 +7004,9 @@ def OneFlow_MaxPool3DGradOp : OneFlow_MaxPoolGradBaseOp<"max_pool_3d_grad", [NoS
 def OneFlow_MaxUnpool1DOp : OneFlow_MaxUnpoolBaseOp<"max_unpool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 def OneFlow_MaxUnpool2DOp : OneFlow_MaxUnpoolBaseOp<"max_unpool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 def OneFlow_MaxUnpool3DOp : OneFlow_MaxUnpoolBaseOp<"max_unpool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_MaxUnpool1DGradOp : OneFlow_MaxUnpoolBaseOp<"max_unpool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_MaxUnpool2DGradOp : OneFlow_MaxUnpoolBaseOp<"max_unpool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_MaxUnpool3DGradOp : OneFlow_MaxUnpoolBaseOp<"max_unpool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
 def OneFlow_TfAvgPool1DOp : OneFlow_TFPoolBaseOp<"tf_avg_pool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 

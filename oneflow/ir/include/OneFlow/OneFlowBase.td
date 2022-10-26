@@ -249,7 +249,6 @@ class OneFlow_MaxUnpoolBaseOp<string mnemonic, list<Trait> traits = []> :
     SI64ArrayAttr:$kernel_size,
     SI64ArrayAttr:$stride,
     SI64ArrayAttr:$padding,
-    StrAttr:$data_format,
     DefaultValuedAttr<BoolAttr, "false">:$has_output_size,
     ShapeAttr:$output_size
   );
@@ -335,6 +334,23 @@ class OneFlow_AvgPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
   let has_compute_complexity_fn = 1;
+}
+
+class OneFlow_MaxUnpoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
+        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
+  let summary = "OneFlow Max Unpooling Grad operation";
+  let input = (ins
+    AnyType:$x,
+    AnyType:$indice,
+    AnyType:$dy
+  );
+  let output = (outs
+    AnyType:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
 }
 
 class OneFlow_AdaptivePoolBaseOp<string mnemonic, list<Trait> traits = []> :

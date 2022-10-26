@@ -27,7 +27,6 @@ typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn
 TensorDescInferFn MaxUnpoolMakeForwardTensorDescInferFn(const int32_t dim) {
   return [dim](user_op::InferContext* ctx) -> Maybe<void> {
     const Shape& x_shape = ctx->InputShape("x", 0);
-    const std::string& data_format = ctx->Attr<std::string>("data_format");
     const std::vector<int32_t>& padding = ctx->Attr<std::vector<int32_t>>("padding");
     const std::vector<int32_t>& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
     const std::vector<int32_t>& stride = ctx->Attr<std::vector<int32_t>>("stride");
@@ -35,7 +34,7 @@ TensorDescInferFn MaxUnpoolMakeForwardTensorDescInferFn(const int32_t dim) {
     if (ctx->Attr<bool>("has_output_size")) {
       output_shape = ctx->Attr<Shape>("output_size");
     } else {
-      const MaxUnpoolParams3D params_3d(dim, x_shape, data_format, padding, kernel_size, stride);
+      const MaxUnpoolParams3D params_3d(dim, x_shape, padding, kernel_size, stride);
       output_shape = params_3d.GetYShape();
     }
 
@@ -120,27 +119,23 @@ IMPLEMENT_MAXUNPOOL_FUNCS(MaxUnpool2D, 2)
 IMPLEMENT_MAXUNPOOL_FUNCS(MaxUnpool3D, 3)
 #undef IMPLEMENT_MAXUNPOOL_FUNCS
 
-// #define IMPLEMENT_MAXPOOL_BACKWARD_FUNCS(name)                                               \
-//   /*static*/ Maybe<void> name##GradOp::GetSbp(user_op::SbpContext* ctx) {                    \
-//     return MaxPoolBackwardGetSbpFn(ctx);                                                     \
-//   }                                                                                          \
-//   /*static*/ Maybe<void> name##GradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
-//     return BackwardTensorDescInferFn(ctx);                                                   \
-//   }                                                                                          \
-//   /*static*/ Maybe<void> name##GradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
-//     return InferLogicalTensorDesc(ctx);                                                      \
-//   }                                                                                          \
-//   /*static*/ Maybe<void> name##GradOp::InferDataType(user_op::InferContext* ctx) {           \
-//     return BwInferDataType(ctx);                                                             \
-//   }                                                                                          \
-//   /*static*/ Maybe<double> name##GradOp::GetComputeComplexity(                               \
-//       user_op::ComputeComplexityFnContext* ctx) {                                            \
-//     return GetComputationCost(ctx, "dy");                                                    \
-//   }
+#define IMPLEMENT_MAXUNPOOL_BACKWARD_FUNCS(name)                                             \
+  /*static*/ Maybe<void> name##GradOp::GetSbp(user_op::SbpContext* ctx) {                    \
+    return MaxUnpoolBackwardGetSbpFn(ctx);                                                   \
+  }                                                                                          \
+  /*static*/ Maybe<void> name##GradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
+    return BackwardTensorDescInferFn(ctx);                                                   \
+  }                                                                                          \
+  /*static*/ Maybe<void> name##GradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
+    return InferLogicalTensorDesc(ctx);                                                      \
+  }                                                                                          \
+  /*static*/ Maybe<void> name##GradOp::InferDataType(user_op::InferContext* ctx) {           \
+    return BwInferDataType(ctx);                                                             \
+  }
 
-// IMPLEMENT_MAXUNPOOL_BACKWARD_FUNCS(MaxPool1D)
-// IMPLEMENT_MAXPOOL_BACKWARD_FUNCS(MaxPool2D)
-// IMPLEMENT_MAXPOOL_BACKWARD_FUNCS(MaxPool3D)
-// #undef IMPLEMENT_MAXPOOL_BACKWARD_FUNCS
+IMPLEMENT_MAXUNPOOL_BACKWARD_FUNCS(MaxUnpool1D)
+IMPLEMENT_MAXUNPOOL_BACKWARD_FUNCS(MaxUnpool2D)
+IMPLEMENT_MAXUNPOOL_BACKWARD_FUNCS(MaxUnpool3D)
+#undef IMPLEMENT_MAXUNPOOL_BACKWARD_FUNCS
 
 }  // namespace oneflow
