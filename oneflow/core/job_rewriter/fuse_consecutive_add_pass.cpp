@@ -79,7 +79,7 @@ Maybe<void> FuseConsecutiveAddPass::Apply(const OpGraph& op_graph, JobBuilder* j
       }
     }
 
-    auto this_op_conf = GetCurOpConf(*op_node);
+    const auto& this_op_conf = GetCurOpConf(*op_node);
     auto this_in_it = this_op_conf.user_conf().input().find("in");
     CHECK(this_in_it != this_op_conf.user_conf().input().end());
     for (int64_t fuse_i = 0; fuse_i < fused_cnt; ++fuse_i) {
