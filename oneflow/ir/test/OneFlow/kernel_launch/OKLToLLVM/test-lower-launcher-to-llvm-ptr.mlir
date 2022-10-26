@@ -3,7 +3,7 @@
 // RUN: | FileCheck %s
 
 // CHECK: module {
-// CHECK:   llvm.func @_mlir__mlir_ciface_okl_compute(%arg0: !llvm.ptr<i8>) attributes {llvm.emit_c_interface} {
+// CHECK:   func.func @okl_compute(%arg0: !llvm.ptr<i8>) attributes {llvm.emit_c_interface} {
 // CHECK:     %0 = builtin.unrealized_conversion_cast %arg0 : !llvm.ptr<i8> to !okl.launcher_ctx
 // CHECK:     %1 = "okl.fetch_run_ctx"(%0) {index = 0 : si64} : (!okl.launcher_ctx) -> !okl.run_ctx
 // CHECK:     %2 = "okl.fetch_run_ctx"(%0) {index = 1 : si64} : (!okl.launcher_ctx) -> !okl.run_ctx
@@ -11,7 +11,7 @@
 // CHECK:     %4 = "okl.fetch_kernel"(%0) {index = 1 : si64} : (!okl.launcher_ctx) -> !okl.kernel
 // CHECK:     "okl.launch"(%1, %3) : (!okl.run_ctx, !okl.kernel) -> ()
 // CHECK:     "okl.launch"(%2, %4) : (!okl.run_ctx, !okl.kernel) -> ()
-// CHECK:     llvm.return
+// CHECK:     return
 // CHECK:   }
 // CHECK: }
 

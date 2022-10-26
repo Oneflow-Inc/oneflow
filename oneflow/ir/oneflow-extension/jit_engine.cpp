@@ -32,11 +32,11 @@ void* fetch_kernel(void* launcher, int64_t index) {
       ->FetchKernel((typename std::tuple_element_t<1, oneflow::okl::FetchArgs>)index);
 }
 
-void launch(void* ctx, void* kernel) {
+void launch(void* run_ctx, void* kernel) {
   const oneflow::user_op::OpKernel* engine =
       ((typename std::tuple_element_t<1, oneflow::okl::LaunchArgs>)kernel);
 
-  engine->Compute((typename std::tuple_element_t<0, oneflow::okl::LaunchArgs>)ctx);
+  engine->Compute((typename std::tuple_element_t<0, oneflow::okl::LaunchArgs>)run_ctx);
 }
 }  // extern "C"
 
@@ -56,7 +56,6 @@ oneflow::okl::JITEngine::JITEngine(mlir::ModuleOp module) {
   jitOptions.jitCodeGenOptLevel = llvm::None;
   jitOptions.sharedLibPaths = ext_libs;
 
-  module->dump();
   auto jit_or_error = mlir::ExecutionEngine::create(module, jitOptions);
   CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
                         << llvm::toString((jit_or_error).takeError());

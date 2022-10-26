@@ -42,7 +42,9 @@ class LauncherContext final {
   };
 
  public:
-  explicit LauncherContext(user_op::KernelComputeContext* compute_context, mlir::Operation* func) {
+  explicit LauncherContext(user_op::KernelComputeContext* compute_context, mlir::ModuleOp module)
+      : module_(module) {
+    auto func = module.lookupSymbol("okl_init_context");
     auto context = func->getContext();
 
     auto& ops = func->getRegion(0).front();
@@ -80,10 +82,7 @@ class LauncherContext final {
       op.setAttr("index", mlir::IntegerAttr::get(mlir::IntegerType::get(context, 32), index));
     }
   }
-  void* FetchKernel(int index) {
-    kernel_vec_[index]->IsKernelLaunchSynchronized();
-    return (void*)kernel_vec_[index];
-  }
+  void* FetchKernel(int index) { return (void*)kernel_vec_[index]; }
 
   void* FetchRunCtx(int index) { return run_ctx_vec_[index].get(); }
 
@@ -91,6 +90,7 @@ class LauncherContext final {
   std::vector<const oneflow::user_op::OpKernel*> kernel_vec_;
   std::vector<RegContextResource> reg_ctx_vec_;
   std::vector<RunContextResource> run_ctx_vec_;
+  ::mlir::ModuleOp module_;
 };
 
 }  // namespace okl

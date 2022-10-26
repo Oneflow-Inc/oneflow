@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_RUNCONTEXT_H_
 
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
+#include "OneFlow/OKL/OKLOps.h"
 
 namespace oneflow {
 namespace okl {
@@ -48,7 +49,7 @@ class RunContext final : public user_op::KernelComputeContext {
         auto value = op->getResult(result_id.index());
         if (value.hasOneUse()) {
           mlir::Operation* first_user = value.use_begin()->getOwner();
-          if (auto ret = llvm::dyn_cast_or_null<mlir::func::ReturnOp>(first_user)) {
+          if (auto ret = llvm::dyn_cast_or_null<mlir::okl::ReturnOp>(first_user)) {
             return comp_ctx_->Tensor4ArgNameAndIndex("out",
                                                      value.getUses().begin()->getOperandNumber());
           }

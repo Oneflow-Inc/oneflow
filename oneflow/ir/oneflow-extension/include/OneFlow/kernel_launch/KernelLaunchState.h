@@ -70,8 +70,8 @@ class KernelLaunchState final : public user_op::OpKernelState {
   std::shared_ptr<JITEngine> engine_{};
 
   void LazyInitLauncher(user_op::KernelComputeContext* ctx) {
-    auto init_context = module_->lookupSymbol("okl_init_context");
-    launcher_context_ = std::make_shared<LauncherContext>(ctx, init_context);
+    launcher_context_ = std::make_shared<LauncherContext>(ctx, module_->clone());
+
 
     if (failed(mlir::okl::LowerOKLComputeToLLVM(*module_))) {
       LOG(ERROR) << "Fail lowering okl compute Module to llvm ir";
