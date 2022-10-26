@@ -18,6 +18,7 @@ limitations under the License.
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/SBP/SBPAttributes.h"
+#include "OneFlow/Transform/TransposeHelpers.h"
 #include "llvm/ADT/StringRef.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -542,16 +543,6 @@ bool MaxPool2DOp::IsNCHW() { return this->data_format().str() == "channels_first
 llvm::DenseSet<Value> MaxPool2DOp::OperandsToTranspose() { return {this->x()}; }
 
 llvm::DenseSet<Value> MaxPool2DOp::ResultsToTranspose() { return {this->y(), this->indice()}; }
-
-RankedTensorType getNHWCType(RankedTensorType t) {
-  return RankedTensorType::get({t.getShape()[0], t.getShape()[2], t.getShape()[3], t.getShape()[1]},
-                               t.getElementType());
-}
-
-RankedTensorType getNCHWType(RankedTensorType t) {
-  return RankedTensorType::get({t.getShape()[0], t.getShape()[3], t.getShape()[1], t.getShape()[2]},
-                               t.getElementType());
-}
 
 llvm::SmallVector<Value, 4> MaxPool2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                     PatternRewriter& rewriter) {
