@@ -102,6 +102,7 @@ class _TestGraph(nn.Graph):
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
+    // temp rm this case
     def _test_lazy_boxing_2d_all_combination(test_case):
 
         x = flow.ones(
