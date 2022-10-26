@@ -25,6 +25,7 @@ from oneflow.test_utils.test_util import GenArgList
 import time
 import os
 
+
 def _test_nccl_logical_send_recv_2d(test_case, src_nd_sbp, dst_nd_sbp):
     # can not process p in dst
     if flow.sbp.partial_sum() in dst_nd_sbp:
