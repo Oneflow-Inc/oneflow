@@ -183,6 +183,10 @@ Maybe<double> GetCUDAMemoryUsed() {
 
   int deviceCount = 0;
   cudaError_t error_id = cudaGetDeviceCount(&deviceCount);
+  if (error_id != cudaSuccess) {
+    return Error::RuntimeError() << "Error: GetCUDAMemoryUsed fails :"
+                                 << cudaGetErrorString(error_id);
+  }
 
   CHECK_OR_RETURN(deviceCount > 0) << "GPU device does not exist";
 
