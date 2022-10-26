@@ -352,12 +352,15 @@ void OfCollectiveActor::NoNegoAct() {
 
     VLOG(2) << "Actor " << actor_id_ << " " << round++ << "th AsyncLaunchKernel";
     AsyncLaunchKernel([&](int64_t regst_desc_id) -> Regst* { return nullptr; });
-    int64_t actor_id = actor_id_;
-    AddCallback([actor_id](){
-      Singleton<ActorMsgBus>::Get()->SendMsg(
-        ActorMsg::BuildCollectiveMsg(actor_id, actor_id, CollectiveNegoCmd::kCollectiveDone)
-      );
-    });
+
+    if (ParseBooleanFromEnv("ONEFLOW_OFCCL_DUMMY_KERNEL", false)) {
+      int64_t actor_id = actor_id_;
+      AddCallback([actor_id](){
+        Singleton<ActorMsgBus>::Get()->SendMsg(
+          ActorMsg::BuildCollectiveMsg(actor_id, actor_id, CollectiveNegoCmd::kCollectiveDone)
+        );
+      });
+    }
           
     // kernel里的callback会发送kCollectiveDone信息，然后在处理kCollectiveDone信息的地方调用这些善后的代码。否则似乎找不到更方便的实现异步调用callback的方法了。
     // 没办法和nego低成本地完全切割。在july_nego分支里比较轻松地依托kCollectiveDone完成了no nego
@@ -665,20 +668,16 @@ void OfCollectiveActor::AsyncLaunchKernel(std::function<Regst*(int64_t)> Regst4R
 
 void OfCollectiveActor::Act() {
   VLOG(2) << "Actor " << actor_id_ << " Enter OfCollectiveActor::Act()";
+  
   CHECK(IsReadReady() && IsWriteReady() && CanAct()) << "Actor " << actor_id_;
   
   AsyncLaunchKernel([&](int64_t regst_desc_id) -> Regst* { return nullptr; });
-  
-  // 应该在调用完kernel之后，就准备好消息，等收到了cqe，callback被调用之后真正发出去。
-  AsyncSendNaiveProducedRegstMsgToConsumer();
-  // no inplace ctrl regst
-  HandleProducedInplaceDataRegstToConsumer();
-
-  AsyncSendNaiveConsumedRegstMsgToProducer();
-  // inplace regst with further consumer is handled in HandlerNormal
-  AsyncRetInplaceConsumedRegstIfNoConsumer();
-
-  VLOG(2) << "Actor " << actor_id_ << " OfCollectiveActor::Act() Done";
+  int64_t actor_id = actor_id_;
+  AddCallback([actor_id](){
+    Singleton<ActorMsgBus>::Get()->SendMsg(
+      ActorMsg::BuildCollectiveMsg(actor_id, actor_id, CollectiveNegoCmd::kCollectiveDone)
+    );
+  });
   return;
 }
 
