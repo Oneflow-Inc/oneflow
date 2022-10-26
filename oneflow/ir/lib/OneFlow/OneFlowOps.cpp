@@ -612,6 +612,30 @@ llvm::SmallVector<Value, 4> Add2Op::NchwToNhwc(llvm::SmallVector<Value, 4> value
   return {res[0]};
 }
 
+bool ConcatOp::IsNCHW() { return this->axisAttr().getValue().getSExtValue() == 1; }
+
+llvm::DenseSet<Value> ConcatOp::OperandsToTranspose() {
+  llvm::DenseSet<Value> operands;
+  for (auto operand : this->in()) { operands.insert(operand); }
+  return operands;
+}
+
+llvm::DenseSet<Value> ConcatOp::ResultsToTranspose() { return {this->out()}; }
+
+llvm::SmallVector<Value, 4> ConcatOp::NchwToNhwc(llvm::SmallVector<Value, 4> values,
+                                                 PatternRewriter& rewriter) {
+  auto elementwise_op = *this;
+  NamedAttrList attributes = elementwise_op->getAttrs();
+  attributes.set(elementwise_op.axisAttrName(),
+                 IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
+                                  APInt(64, 3, /*isSigned=*/true)));
+  auto out = rewriter
+                 .create<oneflow::ConcatOp>(elementwise_op.getLoc(),
+                                            elementwise_op->getResultTypes(), values, attributes)
+                 .out();
+  return {out};
+}
+
 }  // namespace oneflow
 
 }  // namespace mlir
