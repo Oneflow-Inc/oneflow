@@ -10666,6 +10666,22 @@ def OneFlow_MOECombineOp : OneFlow_BaseOp<"moe_combine", [NoSideEffect, DeclareO
   let has_get_sbp_fn = 1;
 }
 
+def OneFlow_MOEGateGradOp : OneFlow_BaseOp<"moe_gate_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$dispatched,
+    OneFlow_Tensor:$indices,
+    OneFlow_Tensor:$locations,
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+}
+
 include "mlir/Interfaces/CallInterfaces.td"
 
 class OneFlow_JITLikeOp <string mnemonic> : OneFlow_BaseOp<mnemonic, [CallOpInterface, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {

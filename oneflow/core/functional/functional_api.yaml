@@ -2871,3 +2871,7 @@
 - name: "moe_combine"
   signature: "Tensor (Tensor in, Tensor indices, Tensor locations, Tensor gates=None) => MOECombine"
   bind_python: True
+
+- name: "moe_gate_grad"
+  signature: "Tensor (Tensor in, Tensor dispatched, Tensor indices, Tensor locations) => MOEGateGrad"
+  bind_python: False

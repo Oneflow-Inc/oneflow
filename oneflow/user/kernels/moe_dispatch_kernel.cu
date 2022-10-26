@@ -50,7 +50,7 @@ __global__ __launch_bounds__(1024) void MOECombine(T* out, const T* in,
 }
 
 template <typename T>
-__global__ __launch_bounds__(32) void MOEGateBackward(
+__global__ __launch_bounds__(32) void MOEGateGrad(
     T* grad_gates,
     const T* reshaped_input,
     const T* dispatched_input,
@@ -90,6 +90,7 @@ __global__ __launch_bounds__(32) void MOEGateBackward(
 
 }  // namespace
 
+/********** GpuMOEDispatch Kernel ***********/
 template <typename T>
 class GpuMOEDispatchKernel final : public user_op::OpKernel {
  public:
@@ -136,6 +137,7 @@ class GpuMOEDispatchKernel final : public user_op::OpKernel {
 
 REGISTER_GPU_MOE_DISPATCH_KERNEL(float)
 
+/********** GpuMOECombine Kernel ***********/
 template <typename T>
 class GpuMOECombineKernel final : public user_op::OpKernel {
  public:
@@ -181,5 +183,48 @@ class GpuMOECombineKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_MOE_COMBINE_KERNEL(float)
+
+/********** GpuMOEGateGrad Kernel ***********/
+template <typename T>
+class GpuMOEGateGradKernel final : public user_op::OpKernel {
+ public:
+  GpuMOEGateGradKernel() = default;
+  ~GpuMOEGateGradKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    const user_op::Tensor* dispatched = ctx->Tensor4ArgNameAndIndex("dispatched", 0);
+    const user_op::Tensor* locations = ctx->Tensor4ArgNameAndIndex("locations", 0);
+    const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
+    const T* in_ptr = in->dptr<T>();
+    const T* dispatched_ptr = dispatched->dptr<T>();
+    const int32_t* locations_ptr = locations->dptr<int32_t>();
+    const int32_t* indices_ptr = indices->dptr<int32_t>();
+
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    T* out_ptr = out->mut_dptr<T>();
+
+    const int32_t capacity = dispatched->shape_view().At(1);
+    const int32_t hidden_size = in->shape_view().At(1);
+    const int32_t samples = in->shape_view().At(0);
+
+    int grid_size = 512;
+    int block_size = 32;
+
+    MOEGateGrad<<<grid_size, block_size, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+        out_ptr, in_ptr, dispatched_ptr, indices_ptr, locations_ptr, samples, hidden_size, capacity);
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_GPU_MOE_GATE_GRAD_KERNEL(dtype)                        \
+  REGISTER_USER_KERNEL("moe_gate_grad")                                 \
+      .SetCreateFn<GPUMOEGateGradKernel<dtype>>()                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)  \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+
+REGISTER_GPU_MOE_GATE_GRAD_KERNEL(float)
 
 }  // namespace oneflow
