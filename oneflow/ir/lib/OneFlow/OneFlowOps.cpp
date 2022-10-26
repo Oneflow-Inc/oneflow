@@ -524,20 +524,14 @@ llvm::SmallVector<Value, 4> GroupNormOp::NchwToNhwc(llvm::SmallVector<Value, 4> 
   auto normalization_op = *this;
   SmallVector<Value, 4> operands;
   operands.push_back(value[0]);
-  if (normalization_op.gamma()) {
-    operands.push_back(normalization_op.gamma());
-  } else {
-    LOG(FATAL) << "unreachable";
-  }
-  if (normalization_op.beta()) {
-    operands.push_back(normalization_op.beta());
-  } else {
-    LOG(FATAL) << "unreachable";
-  }
   NamedAttrList attributes = normalization_op->getAttrs();
-  attributes.set("axis", rewriter.getSI32IntegerAttr(3));
-  auto created = rewriter.create<oneflow::NormalizationOp>(
-      normalization_op.getLoc(), normalization_op->getResultTypes(), operands, attributes);
+  attributes.erase("affine");
+  attributes.erase("num_groups");
+  attributes.erase("epsilon");
+  SmallVector<Type, 4> types;
+  types.push_back(normalization_op.y().getType());
+  auto created =
+      rewriter.create<oneflow::ReluOp>(normalization_op.getLoc(), types, operands, attributes);
   llvm::SmallVector<Value, 4> results;
   results.push_back(created.y());
   return results;
