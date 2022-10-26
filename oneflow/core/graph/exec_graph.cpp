@@ -76,8 +76,11 @@ namespace {
 Maybe<void> CheckPhysicalBlobDesc(const BlobDesc& logical, const NdSbp& nd_sbp,
                                   const ParallelDesc& parallel_desc,
                                   const ParallelContext* parallel_ctx, const BlobDesc& physical) {
-  CHECK_EQ_OR_RETURN(physical.shape(), *JUST(GetPhysicalShape(logical.shape(), nd_sbp,
-                                                              parallel_desc, *parallel_ctx)));
+  auto& rhs = *JUST(GetPhysicalShape(logical.shape(), nd_sbp, parallel_desc, *parallel_ctx));
+  CHECK_EQ_OR_RETURN(physical.shape(),
+                     *JUST(GetPhysicalShape(logical.shape(), nd_sbp, parallel_desc, *parallel_ctx)))
+      << ", parallel num: " << parallel_ctx->parallel_id() << ", logical shape: " << logical.shape()
+      << ", lhs: " << physical.shape() << ", rhs: " << rhs;
   return Maybe<void>::Ok();
 }
 
