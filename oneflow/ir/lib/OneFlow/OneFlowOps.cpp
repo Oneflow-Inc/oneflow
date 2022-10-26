@@ -578,6 +578,24 @@ llvm::SmallVector<Value, 4> ReluOp::NchwToNhwc(llvm::SmallVector<Value, 4> value
   return {res[0]};
 }
 
+bool ScalarDivOp::IsNCHW() { return false; }
+
+llvm::DenseSet<Value> ScalarDivOp::OperandsToTranspose() { return {this->in()}; }
+
+llvm::DenseSet<Value> ScalarDivOp::ResultsToTranspose() { return {this->out()}; }
+
+llvm::SmallVector<Value, 4> ScalarDivOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                                    PatternRewriter& rewriter) {
+  auto elementwise_op = *this;
+  SmallVector<Value, 4> operands{value[0]};
+  auto res =
+      rewriter
+          .create<oneflow::ScalarDivOp>(elementwise_op.getLoc(), elementwise_op->getResultTypes(),
+                                        operands, elementwise_op->getAttrs())
+          ->getResults();
+  return {res[0]};
+}
+
 bool SiluOp::IsNCHW() { return false; }
 
 llvm::DenseSet<Value> SiluOp::OperandsToTranspose() { return {this->in()}; }
