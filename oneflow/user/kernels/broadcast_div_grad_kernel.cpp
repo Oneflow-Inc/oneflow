@@ -62,9 +62,13 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
         ctx->stream(),
         XpuVarNdarray<T>(dy_tensor->shape_view(), dy_tensor->mut_dptr<T>(), num_axes), const_tmp,
         tmp);
-    NdarrayUtil<device, T>::InplaceNegative(
-        ctx->stream(),
-        XpuVarNdarray<T>(dy_tensor->shape_view(), dy_tensor->mut_dptr<T>(), num_axes));
+
+    auto negative = ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
+        ctx->device_type(), ep::primitive::UnaryOp::kNegative, dy_tensor->data_type(),
+        dy_tensor->data_type());
+    CHECK(negative);
+    negative->Launch(ctx->stream(), dy_tensor->dptr(), dy_tensor->mut_dptr(),
+                     dy_tensor->shape_view().elem_cnt());
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
