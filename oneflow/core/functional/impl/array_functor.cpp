@@ -531,7 +531,6 @@ class ConcatFunctor {
       JUST(tensor_processor.PromoteInputsToCommonDtype(true)
                .AddInputs(partial_inputs, inputs.at(i)->dtype())
                .Apply());
-
       TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
       outputs.emplace_back(
           JUST(OpInterpUtil::Dispatch<Tensor>(*ops_[size - 1], input_tuple, attrs)));
