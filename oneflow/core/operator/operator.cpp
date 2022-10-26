@@ -497,8 +497,8 @@ Maybe<const Shape> Operator::GetInputOutputFastestTimeShape() const {
 
 Maybe<void> Operator::GetSbpSignaturesIf(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    int32_t parallel_num, SbpSignatureList* sbp_sig_list) const {
-  JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, parallel_num, sbp_sig_list));
+    int32_t hierarchy_value, SbpSignatureList* sbp_sig_list) const {
+  JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, hierarchy_value, sbp_sig_list));
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Broadcast(output_bns())
@@ -847,6 +847,7 @@ Maybe<void> Operator::InferSbpSignature(
   SbpSignatureList valid_sbp_sig_list;
   {
     SbpSignatureList sbp_sig_candidates;
+    // For 1d sbp, hierarchy value = parallel num
     JUST(
         GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc.parallel_num(), &sbp_sig_candidates));
     // filter sbp signatures by logical shape
