@@ -380,7 +380,7 @@ class UserOpSbpContext : public user_op::SbpContext {
     return CHECK_JUST(op_->GetOpParallelDesc())->parallel_num();
   }
 
-  int64_t hierarchy_value() const { return hierarchy_value_; }
+  int64_t hierarchy_value() const override { return hierarchy_value_; }
 
  private:
   const UserOp* op_;
