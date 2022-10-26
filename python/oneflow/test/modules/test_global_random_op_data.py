@@ -52,7 +52,9 @@ def _test_data_consistent(test_case, shape, placement, sbp, fn):
     flow.manual_seed(233)
     eager_x = _call_fn(fn, shape, placement, sbp)
 
-    test_case.assertTrue(np.array_equal(lazy_x.to_local().numpy(), eager_x.to_local().numpy()))
+    test_case.assertTrue(
+        np.array_equal(lazy_x.to_local().numpy(), eager_x.to_local().numpy())
+    )
 
 
 class TestGlobalRandomOpData(flow.unittest.TestCase):
@@ -74,7 +76,7 @@ class TestGlobalRandomOpData(flow.unittest.TestCase):
 
         for device in ["cpu", "cuda"]:
             placement = flow.placement(device, [[0, 1], [2, 3]])
-            
+
             for fn in _fn_param.keys():
                 flow.manual_seed(233)
                 np_x_local = _call_fn(fn, shape, placement, sbp).to_local().numpy()
@@ -83,7 +85,9 @@ class TestGlobalRandomOpData(flow.unittest.TestCase):
 
                 # compare result in rank0
                 if flow.env.get_rank() == 0:
-                    np_local = [np.load(f"/tmp/{fn}_{int(i)}_local.npy") for i in range(4)]
+                    np_local = [
+                        np.load(f"/tmp/{fn}_{int(i)}_local.npy") for i in range(4)
+                    ]
                     # rank0 == rank1
                     test_case.assertTrue(np.array_equal(np_local[0], np_local[1]))
                     # rank2 == rank3

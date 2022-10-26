@@ -55,6 +55,7 @@ Maybe<uint64_t> GetRandomSeedForRank(const ParallelDesc& placement, const NdSbp&
 
 Maybe<uint64_t> GetOpKernelRandomSeedInCurrentRank(const user_op::KernelInitContext* ctx,
                                                    uint64_t init_seed) {
+  if (ctx->parallel_ctx().parallel_num() == 1) { return init_seed; }
   const auto& outputs = ctx->outputs();
   CHECK_EQ(outputs.size(), 1);
   return GetRandomSeedForRank(ctx->parallel_desc(), ctx->NdSbp4ArgNameAndIndex("out", 0), init_seed,
