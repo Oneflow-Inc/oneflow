@@ -23,10 +23,6 @@ import numpy as np
 
 import oneflow.unittest
 
-
-os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
-os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "0"
-
 flow.boxing.nccl.enable_use_compute_stream(False)
 
 
@@ -69,7 +65,10 @@ class _TestGraph(nn.Graph):
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
-    def _test_lazy_boxing_2d_all_combination(test_case):
+    def test_lazy_boxing_2d_all_combination(test_case):
+        os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
+        os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "0"
+
         model = _TestModule()
         graph = _TestGraph(model)
 
