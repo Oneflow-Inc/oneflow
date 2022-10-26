@@ -146,8 +146,8 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
 }
 
 Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
-    const Shape& in_shape, const Shape& out_shape, std::vector<user_op::OpArg> in_args,
-    std::vector<user_op::OpArg> out_args, const int64_t hierarchy_value,
+    const Shape& in_shape, const Shape& out_shape, const std::vector<user_op::OpArg>& in_args,
+    const std::vector<user_op::OpArg>& out_args, const int64_t hierarchy_value,
     user_op::UserOpSbpSignatureBuilder* builder) {
   if (in_shape.NumAxes() == 0 || in_shape.elem_cnt() == 0) {
     return Maybe<void>::Ok();
