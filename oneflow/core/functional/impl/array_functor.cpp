@@ -3392,37 +3392,55 @@ class MOEDispatchFunctor {
   MOEDispatchFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("moe_dispatch").
                      Input("in").Input("indices").Input("locations").Output("out").Build());
+    gate_op_ = CHECK_JUST(one::OpBuilder("moe_dispatch").
+                          Input("in").Input("indices").Input("locations").Input("gates").
+                          Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
-                           const std::shared_ptr<one::Tensor>& indices,
-                           const std::shared_ptr<one::Tensor>& locations,
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& in,
+                           const std::shared_ptr<Tensor>& indices,
+                           const std::shared_ptr<Tensor>& locations,
+                           const Optional<Tensor>& gates,
                            const int num_experts,
                            const int capacity) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_experts", "capacity");
     attrs.SetAllAttrs(num_experts, capacity);
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {in, indices, locations}, attrs);
+    if (gates) {
+      return OpInterpUtil::Dispatch<Tensor>(*gate_op_, {in, indices, locations, JUST(gates)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {in, indices, locations}, attrs);
+    }
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> gate_op_;
 };
 
 class MOECombineFunctor {
  public:
   MOECombineFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("moe_combine").
-                     Input("in").Input("gates").Input("indices").Input("locations").
+                     Input("in").Input("indices").Input("locations").
+                     Output("out").Build());
+    gate_op_ = CHECK_JUST(one::OpBuilder("moe_combine").
+                     Input("in").Input("indices").Input("locations").Input("gates").
                      Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
                            const std::shared_ptr<one::Tensor>& gates,
                            const std::shared_ptr<one::Tensor>& indices,
-                           const std::shared_ptr<one::Tensor>& locations) const {
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {in, gates, indices, locations});
+                           const std::shared_ptr<one::Tensor>& locations,
+                           const Optional<Tensor>& gates) const {
+    if (gates) {
+      return OpInterpUtil::Dispatch<Tensor>(*gate_op_, {in, indices, locations, JUST(gates)});
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {in, indices, locations});
+    }
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExper> gate_op_;
 };
 
 }  // namespace impl

@@ -13,13 +13,16 @@ class CpuMOEDispatchKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* locations = ctx->Tensor4ArgNameAndIndex("locations", 0);
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
-
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-
     const T* in_ptr = in->dptr<T>();
     const int32_t* locations_ptr = locations->dptr<int32_t>();
     const int32_t* indices_ptr = indices->dptr<int32_t>();
 
+    const T* gates_ptr = nullptr;
+    if (ctx->has_input("gates", 0)) {
+      gates_ptr = ctx->Tensor4ArgNameAndIndex("gates", 0)->dptr<T>();
+    }
+
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     T* out_ptr = out->mut_dptr<T>();
 
     const int32_t samples = in->shape_view().At(0);
@@ -28,9 +31,10 @@ class CpuMOEDispatchKernel final : public user_op::OpKernel {
 
     for (int i = 0; i < samples; ++i) {
       if (locations_ptr[i] < capacity && indices_ptr[i] >= 0) {
+        T gate = (gates_ptr == nullptr? static_cast<T>(1.0) : gates_ptr[i]);
         for (int j = 0; j < hidden_size; ++j) {
           out_ptr[(indices_ptr[i] * capacity + locations_ptr[i]) * hidden_size + j] = \
-              in_ptr[i * hidden_size + j];
+              gate * in_ptr[i * hidden_size + j];
         }
       }
     }  // end for
@@ -56,28 +60,30 @@ class CpuMOECombineKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    const user_op::Tensor* gates = ctx->Tensor4ArgNameAndIndex("gates", 0);
     const user_op::Tensor* locations = ctx->Tensor4ArgNameAndIndex("locations", 0);
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
-
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-
     const T* in_ptr = in->dptr<T>();
-    const T* gates = gates->dptr<T>();
     const int32_t* locations_ptr = locations->dptr<int32_t>();
     const int32_t* indices_ptr = indices->dptr<int32_t>();
 
+    const T* gates_ptr = nullptr;
+    if (ctx->has_input("gates", 0)) {
+      gates_ptr = ctx->Tensor4ArgNameAndIndex("gates", 0)->dptr<T>();
+    }
+
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     T* out_ptr = out->mut_dptr<T>();
 
     const int32_t capacity = in->shape_view().At(1);
     const int32_t hidden_size = in->shape_view().At(2);
-    const int32_t samples = gates->shape_view().At(0);
+    const int32_t samples = indices->shape_view().At(0);
 
     for (int i = 0; i < samples; ++i) {
       if (locations_ptr[i] < capacity && indices_ptr[i] >= 0) {
+        T gate = (gates_ptr == nullptr? static_cast<T>(1.0) : gates_ptr[i]);
         for (int j = 0; j < hidden_size; ++j) {
           out_ptr[i * hidden_size + j] = \
-              gates[i] * in_ptr[(indices_ptr[i] * capacity + locations_ptr[i]) * hidden_size + j];
+              gate * in_ptr[(indices_ptr[i] * capacity + locations_ptr[i]) * hidden_size + j];
         }
       } else {
         for (int j = 0; j < hidden_size; ++j) {

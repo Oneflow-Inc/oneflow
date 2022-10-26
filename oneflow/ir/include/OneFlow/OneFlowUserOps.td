@@ -10634,7 +10634,8 @@ def OneFlow_MOEDispatchOp : OneFlow_BaseOp<"moe_dispatch", [NoSideEffect, Declar
   let input = (ins
     OneFlow_Tensor:$in,
     OneFlow_Tensor:$indices,
-    OneFlow_Tensor:$locations
+    OneFlow_Tensor:$locations,
+    Optional<OneFlow_Tensor>:$gates
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -10652,9 +10653,9 @@ def OneFlow_MOEDispatchOp : OneFlow_BaseOp<"moe_dispatch", [NoSideEffect, Declar
 def OneFlow_MOECombineOp : OneFlow_BaseOp<"moe_combine", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in,
-    OneFlow_Tensor:$gates,
     OneFlow_Tensor:$indices,
-    OneFlow_Tensor:$locations
+    OneFlow_Tensor:$locations,
+    Optional<OneFlow_Tensor>:$gates
   );
   let output = (outs
     OneFlow_Tensor:$out

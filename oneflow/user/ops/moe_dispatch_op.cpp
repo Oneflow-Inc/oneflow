@@ -30,11 +30,9 @@ namespace oneflow {
 
 /* static */ Maybe<void> MOECombineOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
-  const int32_t capacity = in_shape.at(1);
   const int32_t hidden_size = in_shape.at(2);
 
-  const Shape& gate_shape = ctx->InputShape("gates", 0);
-  const int32_t samples = gate_shape.at(0);
+  const int32_t samples = ctx->InputShape("indices", 0).at(0);
 
   ctx->SetOutputShape("out", 0, Shape({samples, hidden_size}));
   return Maybe<void>::Ok();
