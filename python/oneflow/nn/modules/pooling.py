@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Optional
+from typing import Optional, Union, List
 import os
 
 import oneflow as flow
@@ -1018,6 +1018,60 @@ class AdaptiveMaxPool3d(_AdaptiveMaxPoolNd):
         new_output_size = _generate_output_size(input.shape, self.output_size)
         return flow.nn.functional.adaptive_max_pool3d(
             input, self.output_size, self.return_indices
+        )
+
+
+class MaxUnpool1d(Module):
+    def __init__(
+        self,
+        kernel_size: _size_1_t,
+        stride: Optional[_size_1_t] = None,
+        padding: Optional[_size_1_t] = 0,
+    ):
+        super().__init__()
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+
+    def forward(self, x, indices, output_size=None):
+        return flow.nn.functional.max_unpool1d(
+            x, indices, self.kernel_size, self.stride, self.padding, output_size
+        )
+
+
+class MaxUnpool2d(Module):
+    def __init__(
+        self,
+        kernel_size: _size_2_t,
+        stride: Optional[_size_2_t] = None,
+        padding: Optional[_size_2_t] = 0,
+    ):
+        super().__init__()
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+
+    def forward(self, x, indices, output_size=None):
+        return flow.nn.functional.max_unpool2d(
+            x, indices, self.kernel_size, self.stride, self.padding, output_size
+        )
+
+
+class MaxUnpool3d(Module):
+    def __init__(
+        self,
+        kernel_size: _size_3_t,
+        stride: Optional[_size_3_t] = None,
+        padding: Optional[_size_3_t] = 0,
+    ):
+        super().__init__()
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+
+    def forward(self, x, indices, output_size=None):
+        return flow.nn.functional.max_unpool3d(
+            x, indices, self.kernel_size, self.stride, self.padding, output_size
         )
 
 

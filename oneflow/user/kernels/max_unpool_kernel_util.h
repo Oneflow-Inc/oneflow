@@ -79,11 +79,13 @@ struct UnpoolKernelUtil {
   static void MaxUnpoolNdForward(ep::Stream* stream,
                                  const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                  const IDX elem_num, const T* src, T* dest,
-                                 const int64_t* indice_ptr, const int64_t y_hwd_size);
+                                 const int64_t* indice_ptr, const int64_t y_hwd_size,
+                                 const int64_t y_elem_num);
   static void MaxUnpoolNdBackward(ep::Stream* stream,
                                   const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                   const IDX elem_num, const T* src, T* dest,
-                                  const int64_t* indice_ptr, const int64_t dx_hwd_size);
+                                  const int64_t* indice_ptr, const int64_t dy_hwd_size,
+                                  const int64_t dy_elem_num);
 };
 
 #define INSTANTIATE_UNPOOL_KERNEL_UTIL(device_type_v, dtype_pair, index_dtype_pair) \

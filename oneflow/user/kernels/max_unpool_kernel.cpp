@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/user/kernels/max_unpool_kernel_util.h"
 
 namespace oneflow {
@@ -22,11 +25,20 @@ struct UnpoolKernelUtil<DeviceType::kCPU, T, IDX> {
   static void MaxUnpoolNdForward(ep::Stream* stream,
                                  const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                  const IDX elem_num, const T* src, T* dest,
-                                 const int64_t* indice_ptr, const int64_t y_hwd_size) {
+                                 const int64_t* indice_ptr, const int64_t y_hwd_size,
+                                 const int64_t y_elem_num) {
     XPU_1D_KERNEL_LOOP(num, elem_num) {
+      // std::cout << "num: " << num << std::endl;
       IDX bc_idx, hwd_idx;
       index_helper.OffsetToNdIndex(num, bc_idx, hwd_idx);
+      // std::cout << "bc_idx: " << bc_idx << " hwd_idx: " << hwd_idx << std::endl;
+      // IDX indice_value = indice_ptr[num];
+      // std::cout << "indice_value: " << indice_value << std::endl;
       IDX dest_idx = bc_idx * y_hwd_size + indice_ptr[num];
+      // std::cout << "dest_idx: " << dest_idx << std::endl << std::endl;
+      CHECK_OR_THROW(dest_idx >= 0 && dest_idx < y_elem_num)
+          << "Found an invalid max index: " << dest_idx << ", output volumes are of size "
+          << y_elem_num;
       dest[dest_idx] = src[num];
     }
   }
@@ -34,12 +46,21 @@ struct UnpoolKernelUtil<DeviceType::kCPU, T, IDX> {
   static void MaxUnpoolNdBackward(ep::Stream* stream,
                                   const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                   const IDX elem_num, const T* src, T* dest,
-                                  const int64_t* indice_ptr, const int64_t dx_hwd_size) {
+                                  const int64_t* indice_ptr, const int64_t dy_hwd_size,
+                                  const int64_t dy_elem_num) {
     XPU_1D_KERNEL_LOOP(num, elem_num) {
       IDX bc_idx, hwd_idx;
       index_helper.OffsetToNdIndex(num, bc_idx, hwd_idx);
-      IDX src_idx = bc_idx * dx_hwd_size + indice_ptr[num];
+      IDX src_idx = bc_idx * dy_hwd_size + indice_ptr[num];
+      CHECK_OR_THROW(src_idx >= 0 && src_idx < dy_elem_num)
+          << "Found an invalid max index: " << src_idx << ", output volumes are of size "
+          << dy_elem_num;
       dest[num] = src[src_idx];
+      // if (src_idx < dy_elem_num) {
+      //   dest[num] = src[src_idx];
+      // } else {
+      //   dest[num] = 0;
+      // }
     }
   }
 };
@@ -63,6 +84,9 @@ class MaxUnpoolNdKernel final : public user_op::OpKernel {
     const int64_t* indice_ptr = indice->dptr<int64_t>();
     T* dest = y->mut_dptr<T>();
 
+    // std::cout << "y shape: " << y->shape_view().DebugStr() << std::endl;
+    // std::cout << "x shape: " << x->shape_view().DebugStr() << std::endl;
+
     DimVector x_vector(2);
     x_vector.at(0) = x->shape_view().At(0) * x->shape_view().At(1);
 
@@ -81,16 +105,23 @@ class MaxUnpoolNdKernel final : public user_op::OpKernel {
     std::unique_ptr<ep::primitive::Memset> memset_primitive =
         ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
     CHECK(memset_primitive);
-    memset_primitive->Launch(ctx->stream(), dest, 0, y->shape_view().elem_cnt());
+    memset_primitive->Launch(ctx->stream(), dest, 0,
+                             y->shape_view().elem_cnt() * GetSizeOfDataType(y->data_type()));
+
+    // std::cout << "mem data: " << std::endl;
+    // for (int i = 0; i < y->shape_view().elem_cnt(); i++) {
+    //   std::cout << dest[i] << std::endl;
+    // }
+    const int64_t y_elem_num = y->shape_view().elem_cnt();
 
     if (elem_num < GetMaxVal<int32_t>()) {
       NdIndexOffsetHelper<int32_t, 2> index_helper(x_vector.data());
       UnpoolKernelUtil<device_type, T, int32_t>::MaxUnpoolNdForward(
-          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, y_hwd_size);
+          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, y_hwd_size, y_elem_num);
     } else {
       NdIndexOffsetHelper<int64_t, 2> index_helper(x_vector.data());
       UnpoolKernelUtil<device_type, T, int64_t>::MaxUnpoolNdForward(
-          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, y_hwd_size);
+          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, y_hwd_size, y_elem_num);
     }
   }
 };
@@ -113,34 +144,32 @@ class MaxUnpoolNdGradKernel final : public user_op::OpKernel {
     const T* src = dy->dptr<T>();
     const int64_t* indice_ptr = indice->dptr<int64_t>();
     T* dest = dx->mut_dptr<T>();
-    DimVector dy_vector(2);
-    dy_vector.at(0) = dy->shape_view().At(0) * dy->shape_view().At(1);
 
-    int64_t dx_hwd_size = 1;
+    DimVector dx_vector(2);
+    dx_vector.at(0) = dx->shape_view().At(0) * dx->shape_view().At(1);
+    int64_t dy_hwd_size = 1;
+
     if (NDIMS == 1) {
-      dy_vector.at(1) = dy->shape_view().At(2);
-      dx_hwd_size = dx->shape_view().At(2);
+      dx_vector.at(1) = dx->shape_view().At(2);
+      dy_hwd_size = dy->shape_view().At(2);
     } else if (NDIMS == 2) {
-      dy_vector.at(1) = dy->shape_view().At(2) * dy->shape_view().At(3);
-      dx_hwd_size = dx->shape_view().At(2) * dx->shape_view().At(3);
+      dx_vector.at(1) = dx->shape_view().At(2) * dx->shape_view().At(3);
+      dy_hwd_size = dy->shape_view().At(2) * dy->shape_view().At(3);
     } else if (NDIMS == 3) {
-      dy_vector.at(1) = dy->shape_view().At(2) * dy->shape_view().At(3) * dy->shape_view().At(4);
-      dx_hwd_size = dx->shape_view().At(2) * dx->shape_view().At(3) * dx->shape_view().At(4);
+      dx_vector.at(1) = dx->shape_view().At(2) * dx->shape_view().At(3) * dx->shape_view().At(4);
+      dy_hwd_size = dy->shape_view().At(2) * dy->shape_view().At(3) * dy->shape_view().At(4);
     }
 
-    std::unique_ptr<ep::primitive::Memset> memset_primitive =
-        ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
-    CHECK(memset_primitive);
-    memset_primitive->Launch(ctx->stream(), dest, 0, dx->shape_view().elem_cnt());
+    const int64_t dy_elem_num = dy->shape_view().elem_cnt();
 
     if (elem_num < GetMaxVal<int32_t>()) {
-      NdIndexOffsetHelper<int32_t, 2> index_helper(dy_vector.data());
+      NdIndexOffsetHelper<int32_t, 2> index_helper(dx_vector.data());
       UnpoolKernelUtil<device_type, T, int32_t>::MaxUnpoolNdBackward(
-          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, dx_hwd_size);
+          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, dy_hwd_size, dy_elem_num);
     } else {
-      NdIndexOffsetHelper<int64_t, 2> index_helper(dy_vector.data());
+      NdIndexOffsetHelper<int64_t, 2> index_helper(dx_vector.data());
       UnpoolKernelUtil<device_type, T, int64_t>::MaxUnpoolNdBackward(
-          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, dx_hwd_size);
+          ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, dy_hwd_size, dy_elem_num);
     }
   };
 };
