@@ -26,6 +26,8 @@ limitations under the License.
 #include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/user/kernels/distributions/common.h"
+#include "oneflow/user/kernels/random_seed_util.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 namespace one {
@@ -2105,20 +2107,31 @@ class GlobalNormalFunctor {
       dtype = output_tensor_dtype;
     }
 
-    const auto gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("mean", "std", "shape", "dtype", "seed", "nd_sbp");
 
-    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
+
+    std::shared_ptr<Generator> gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
+    uint64_t init_seed = JUST(gen->Get<CPUGeneratorImpl>(0))->engine()();
 
     if (LazyMode::is_enabled()) {
       attrs.SetAllAttrs(static_cast<double>(mean), static_cast<double>(std), shape,
-                        dtype->data_type(), static_cast<int64_t>(gen->current_seed()),
+                        dtype->data_type(), static_cast<int64_t>(init_seed),
                         *JUST(GetNdSbpStrList(nd_sbp)));
     } else {
+      uint64_t rank_seed = 0;
+      {
+        JUST(BroadcastSeedToAllRanks(&init_seed, /*root=*/0));
+        rank_seed =
+            JUST(GetRandomSeedForRank(*placement, *nd_sbp, init_seed, GlobalProcessCtx::Rank()));
+      }
       attrs.SetAllAttrs(static_cast<double>(mean), static_cast<double>(std), shape,
-                        dtype->data_type(), static_cast<int64_t>(gen->current_seed()), NullOpt);
+                        dtype->data_type(), static_cast<int64_t>(rank_seed), NullOpt);
+      gen = JUST(MakeGenerator(placement->device_type()));
+      gen->set_current_seed(rank_seed);
     }
+    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+
     if (out.has_value()) {
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       (*outputs)[0] = JUST(out);
