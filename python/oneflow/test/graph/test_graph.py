@@ -71,15 +71,15 @@ class TestGraph(flow.unittest.TestCase):
                 return self.m(x)
 
         g = CustomGraphNestedModule()
-        test_case.assertTrue(isinstance(g.m, flow.nn.graph.Block))
+        test_case.assertTrue(isinstance(g.m, flow.nn.graph.GraphBlock))
         test_case.assertEqual(g.m.type, "MODULE")
         test_case.assertEqual(g.m.name, "m")
-        test_case.assertTrue(isinstance(g.m.dummy_buff, flow.nn.graph.Block))
+        test_case.assertTrue(isinstance(g.m.dummy_buff, flow.nn.graph.GraphBlock))
         test_case.assertEqual(g.m.dummy_buff.type, "BUFFER")
-        test_case.assertTrue(isinstance(g.m.layer.conv1, flow.nn.graph.Block))
+        test_case.assertTrue(isinstance(g.m.layer.conv1, flow.nn.graph.GraphBlock))
         test_case.assertEqual(g.m.layer.conv1.name, "conv1")
         test_case.assertEqual(g.m.layer.conv1.name_prefix, "m.layer.")
-        test_case.assertTrue(isinstance(g.m.layer.conv1.weight, flow.nn.graph.Block))
+        test_case.assertTrue(isinstance(g.m.layer.conv1.weight, flow.nn.graph.GraphBlock))
         test_case.assertEqual(g.m.layer.conv1.weight.type, "PARAMETER")
         g.m.layer.conv1._is_executing_forward = True
         test_case.assertTrue(isinstance(g.m.layer.conv1.weight, flow.Tensor))
@@ -261,7 +261,7 @@ class TestGraph(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.linear = linear
-                # creat optimizer in nn.Graph and add parameter from ModuleBlock
+                # creat optimizer in nn.Graph and add parameter from GraphModule
                 self.add_optimizer(
                     flow.optim.SGD(self.linear.parameters(), lr=0.001, momentum=0.9)
                 )

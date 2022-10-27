@@ -14,4 +14,4 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from .graph import Graph
-from .block import Block
+from .block import GraphBlock

@@ -35,7 +35,7 @@ from oneflow.env import get_rank
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
-from oneflow.nn.graph.block import Block, BlockType, get_block_cls
+from oneflow.nn.graph.block import GraphBlock, BlockType, get_block_cls
 from oneflow.nn.graph.graph_config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import (
@@ -1326,7 +1326,7 @@ class Graph(object):
             module (Module): child module to be added to the graph.
 
         Just assign nn.Module in nn.Graph, _add_block will be called to add the
-        module as a Block:
+        module as a GraphBlock:
 
         For example:
 

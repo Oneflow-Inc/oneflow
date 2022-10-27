@@ -192,7 +192,7 @@ def make_new_block_scope(prev_scope, block):
         scope_proto.ClearField("scope_op_name_prefixes")
         scope_proto.scope_op_name_prefixes.append(block.name_prefix + block.name)
         # set module name
-        if isinstance(block, oneflow.nn.graph.block.ModuleBlock):
+        if isinstance(block, oneflow.nn.graph.block.GraphModule):
             scope_proto.module_name = block.name_prefix + block.name
         return str(text_format.MessageToString(scope_proto))
 

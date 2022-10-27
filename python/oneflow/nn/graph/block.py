@@ -27,7 +27,7 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.container import *
 from oneflow.nn.utils.container import *
 from oneflow.nn.parameter import Parameter
-from oneflow.nn.graph.block_config import BlockConfig
+from oneflow.nn.graph.block_config import GraphBlockConfig
 from oneflow.nn.graph.util import (
     add_indent,
     ArgsTree,
@@ -38,19 +38,19 @@ from oneflow.nn.graph.util import (
 
 def get_block_cls(item):
     if isinstance(item, Sequential):
-        return SequentialBlock
+        return GraphSequential
     elif isinstance(item, ModuleList):
-        return ModuleListBlock
+        return GraphModuleList
     elif isinstance(item, ModuleDict):
-        return ModuleDictBlock
+        return GraphModuleDict
     elif isinstance(item, ParameterList):
-        return ParameterListBlock
+        return GraphParameterList
     elif isinstance(item, ParameterDict):
-        return ParameterDictBlock
+        return GraphParameterDict
     elif isinstance(item, Module):
-        return ModuleBlock
+        return GraphModule
     elif isinstance(item, Tensor):
-        return TensorBlock
+        return GraphTensor
     else:
         raise NotImplementedError()
 
@@ -62,7 +62,7 @@ class BlockType:
     BUFFER = "BUFFER"
 
 
-class Block(object):
+class GraphBlock(object):
     def __init__(
         self,
         prefix: str = "",
@@ -77,7 +77,7 @@ class Block(object):
         self._prev_scope = None
         assert belonged_graph is None or isinstance(belonged_graph, weakref.ProxyTypes)
         self._belonged_graph = belonged_graph
-        self.config = BlockConfig()
+        self.config = GraphBlockConfig()
 
     @property
     def name(self):
@@ -107,7 +107,7 @@ class Block(object):
         return graph_build_util.BlockScopeContext(self.prev_scope, self.scope)
 
 
-class ModuleBlock(Block):
+class GraphModule(GraphBlock):
     def __init__(
         self,
         prefix: str = "",
@@ -115,7 +115,7 @@ class ModuleBlock(Block):
         origin: Module = None,
         belonged_graph: weakref.ProxyTypes = None,
     ):
-        assert not isinstance(origin, Block)
+        assert not isinstance(origin, GraphBlock)
         super().__init__(prefix, name, belonged_graph)
         self._debug = False
         self._debug_min_s_level = 2
@@ -359,7 +359,7 @@ class ModuleBlock(Block):
             get_block_cls(param)(self._name_prefix + self._name + ".", name, param),
         )
 
-    def modules(self, memo: Optional[Set["Block"]] = None) -> Iterator["Block"]:
+    def modules(self, memo: Optional[Set["GraphBlock"]] = None) -> Iterator["GraphBlock"]:
         assert self._type == BlockType.MODULE
         if memo is None:
             memo = set()
@@ -431,7 +431,7 @@ class ModuleBlock(Block):
             )
             return False, repr_str
 
-    def __members(self, get_members_fn, recurse=True) -> Iterator["Block"]:
+    def __members(self, get_members_fn, recurse=True) -> Iterator["GraphBlock"]:
         assert self._type == BlockType.MODULE
         memo = set()
         modules = self.modules() if recurse else [self]
@@ -443,20 +443,20 @@ class ModuleBlock(Block):
                 memo.add(v)
                 yield v
 
-    def parameters(self, recurse: bool = True) -> Iterator["Block"]:
+    def parameters(self, recurse: bool = True) -> Iterator["GraphBlock"]:
         assert self._type == BlockType.MODULE
         gen = self.__members(lambda module: module._parameters.items(), recurse=recurse)
         for elem in gen:
             yield elem
 
-    def buffers(self, recurse: bool = True) -> Iterator["Block"]:
+    def buffers(self, recurse: bool = True) -> Iterator["GraphBlock"]:
         assert self._type == BlockType.MODULE
         gen = self.__members(lambda module: module._buffers.items(), recurse=recurse)
         for elem in gen:
             yield elem
 
     def __setattr__(self, name: str, value=None) -> None:
-        if value is None or not isinstance(value, Block):
+        if value is None or not isinstance(value, GraphBlock):
             self.__dict__[name] = value
         else:
             dicts_or_sets = (
@@ -597,7 +597,7 @@ class ModuleBlock(Block):
         r"""Generate operators' string representation of this module
         """
         assert self._belonged_graph, (
-            "ModuleBlock: "
+            "GraphModule: "
             + self._name_prefix
             + self.name
             + "'s belonged graph is not set."
@@ -644,7 +644,7 @@ class LazyBuilder(object):
             self.finished = True
 
 
-class TensorBlock(Block):
+class GraphTensor(GraphBlock):
     def __init__(
         self,
         prefix: str = "",
@@ -652,7 +652,7 @@ class TensorBlock(Block):
         origin: Union[Parameter, Tensor] = None,
         belonged_graph: weakref.ProxyTypes = None,
     ):
-        assert not isinstance(origin, Block)
+        assert not isinstance(origin, GraphBlock)
         super().__init__(prefix, name, belonged_graph)
         if isinstance(origin, Parameter):
             self._type = BlockType.PARAMETER
@@ -675,19 +675,19 @@ class TensorBlock(Block):
     def lazy_origin(self):
         assert (
             self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
-        ), "Only Parameter or Buffer Block has lazy_origin"
+        ), "Only Parameter or Buffer GraphBlock has lazy_origin"
         return self._lazy_origin_builder.result
 
     def lazy_origin_builder(self):
         assert (
             self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
-        ), "Only Parameter or Buffer Block has lazy_origin_builder"
+        ), "Only Parameter or Buffer GraphBlock has lazy_origin_builder"
         return self._lazy_origin_builder
 
     def set_lazy_origin_builder(self, builder=None):
         assert (
             self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
-        ), "Only Parameter or Buffer Block has lazy_origin_builder"
+        ), "Only Parameter or Buffer GraphBlock has lazy_origin_builder"
         self._lazy_origin_builder = builder
 
     def try_build(self):
@@ -717,7 +717,7 @@ class TensorBlock(Block):
         return shallow_repr
 
 
-class SequentialBlock(get_seq(ModuleBlock)):
+class GraphSequential(get_seq(GraphModule)):
     def __init__(
         self,
         prefix: str = "",
@@ -732,7 +732,7 @@ class SequentialBlock(get_seq(ModuleBlock)):
         self.set_origin(origin)
 
 
-class ModuleListBlock(get_list(ModuleBlock)):
+class GraphModuleList(get_list(GraphModule)):
     def __init__(
         self,
         prefix: str = "",
@@ -750,7 +750,7 @@ class ModuleListBlock(get_list(ModuleBlock)):
         self.config = None
 
 
-class ModuleDictBlock(get_dict(ModuleBlock)):
+class GraphModuleDict(get_dict(GraphModule)):
     def __init__(
         self,
         prefix: str = "",
@@ -765,7 +765,7 @@ class ModuleDictBlock(get_dict(ModuleBlock)):
         self.set_origin(origin)
 
 
-class ParameterListBlock(get_para_list(ModuleBlock)):
+class GraphParameterList(get_para_list(GraphModule)):
     def __init__(
         self,
         prefix: str = "",
@@ -791,7 +791,7 @@ class ParameterListBlock(get_para_list(ModuleBlock)):
             raise AttributeError("ParameterList dosen't contain ", key)
 
 
-class ParameterDictBlock(get_para_dict(ModuleBlock)):
+class GraphParameterDict(get_para_dict(GraphModule)):
     def __init__(
         self,
         prefix: str = "",

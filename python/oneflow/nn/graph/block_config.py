@@ -15,10 +15,10 @@ limitations under the License.
 """
 
 
-class BlockConfig(object):
-    r"""Configurations on Module Block in nn.Graph.
+class GraphBlockConfig(object):
+    r"""Configurations on GraphModule in nn.Graph.
 
-    When an nn.Module is added into an nn.Graph, it is wrapped into a ModuleBlock. You can set or get optimization configs on an nn.Module with it's `ModuleBlock.config`.
+    When an nn.Module is added into an nn.Graph, it is wrapped into a GraphModule. You can set or get optimization configs on an nn.Module with it's `GraphModule.config`.
     """
 
     def __init__(self):
@@ -30,7 +30,7 @@ class BlockConfig(object):
     # NOTE(lixiang): For the normal display of docstr, the API Doc of the get and set methods are written together in the stage_id function.
     @property
     def stage_id(self):
-        r"""Set/Get stage id of nn.Module/ModuleBlock in pipeline parallelism.
+        r"""Set/Get stage id of nn.Module/GraphModule in pipeline parallelism.
 
         When calling stage_id(value: int = None), set different module's stage id to hint the graph
         preparing right num of buffers in pipeline. (Not Recommended, for easy and efficient pipeline
@@ -52,7 +52,7 @@ class BlockConfig(object):
         self._stage_id = value
 
     def set_stage(self, stage_id: int = None, placement=None):
-        r"""Set stage id and placement of nn.Module/ModuleBlock in pipeline parallelism.
+        r"""Set stage id and placement of nn.Module/GraphModule in pipeline parallelism.
 
         Args:
             stage_id (int): stage id of this module.
