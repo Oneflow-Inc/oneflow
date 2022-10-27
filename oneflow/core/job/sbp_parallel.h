@@ -119,11 +119,6 @@ Maybe<std::string> NdSbpSignatureListToString(const std::vector<NdSbpSignature>&
                                               const PbRpf<std::string>& inputs,
                                               const PbRpf<std::string>& outputs);
 
-// back compatible
-Maybe<std::string> NdSbpSignatureListAsString(const std::vector<NdSbpSignature>& nd_sbp_sig_list,
-                                              const PbRpf<std::string>& inputs,
-                                              const PbRpf<std::string>& outputs);
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_SBP_PARALLEL_H_

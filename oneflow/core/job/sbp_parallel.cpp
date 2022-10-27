@@ -467,10 +467,4 @@ Maybe<std::string> NdSbpSignatureListToString(const std::vector<NdSbpSignature>&
                                     std::vector<std::string>{outputs.begin(), outputs.end()});
 }
 
-Maybe<std::string> NdSbpSignatureListAsString(const std::vector<NdSbpSignature>& nd_sbp_sig_list,
-                                              const PbRpf<std::string>& inputs,
-                                              const PbRpf<std::string>& outputs) {
-  return NdSbpSignatureListToString(nd_sbp_sig_list, inputs, outputs);
-}
-
 }  // namespace oneflow
