@@ -92,7 +92,7 @@ Maybe<void> ReshapeUserOpUtil::Squeeze(const Shape& origin, Shape* shape,
 }
 
 Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
-    const Shape& in_shape, const Shape& out_shape, const int64_t parallel_num,
+    const Shape& in_shape, const Shape& out_shape, const int64_t hierarchy_value,
     HashMap<int, int>* group_start_in_axis2out_axis) {
   CHECK_GE_OR_RETURN(in_shape.NumAxes(), 0)
       << Error::RuntimeError()
@@ -128,8 +128,8 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
     if (in_shape_count == out_shape_count) {
       // Record split axises
       if (in_shape.At(in_axis) == out_shape.At(out_axis)
-          || (in_shape.At(in_axis) % parallel_num == 0
-              && out_shape.At(out_axis) % parallel_num == 0)) {
+          || (in_shape.At(in_axis) % hierarchy_value == 0
+              && out_shape.At(out_axis) % hierarchy_value == 0)) {
         (*group_start_in_axis2out_axis)[in_axis] = out_axis;
       }
       // Move forward
@@ -146,8 +146,8 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
 }
 
 Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
-    const Shape& in_shape, const Shape& out_shape, std::vector<user_op::OpArg> in_args,
-    std::vector<user_op::OpArg> out_args, const int64_t parallel_num,
+    const Shape& in_shape, const Shape& out_shape, const std::vector<user_op::OpArg>& in_args,
+    const std::vector<user_op::OpArg>& out_args, const int64_t hierarchy_value,
     user_op::UserOpSbpSignatureBuilder* builder) {
   if (in_shape.NumAxes() == 0 || in_shape.elem_cnt() == 0) {
     return Maybe<void>::Ok();
@@ -162,7 +162,7 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
     JUST(ReshapeUserOpUtil::Squeeze(out_shape, &squeezed_out_shape,
                                     &out_squeezed_axis2original_axis));
     JUST(ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(squeezed_in_shape, squeezed_out_shape,
-                                                        parallel_num,
+                                                        hierarchy_value,
                                                         &squeezed_group_start_in_axis2out_axis));
   }
   for (const auto& pair : squeezed_group_start_in_axis2out_axis) {

@@ -63,7 +63,7 @@ void SetNdSbpSignature(NdSbpSignature* nd_sbp_signature, const SbpSignature& sbp
 
 void DfsGetNdSbpSignature(NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t dims,
                           const Shape& hierarchy,
-                          const HashMap<int32_t, SbpSignatureList>& hierarchy_num2sbp_sig_list,
+                          const HashMap<int32_t, SbpSignatureList>& hierarchy_value2sbp_sig_list,
                           std::vector<NdSbpSignature>* nd_sbp_sig_list);
 
 // Compute storage for given NdSbp

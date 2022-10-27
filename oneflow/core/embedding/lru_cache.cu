@@ -542,6 +542,7 @@ class LruCache : public Cache {
                               static_cast<Key*>(missing_keys), missing_indices);
   }
 
+  using Cache::Get;
   void Get(ep::Stream* stream, uint32_t n_keys, const void* keys, void* values, uint32_t* n_missing,
            void* missing_keys, uint32_t* missing_indices) override {
     CHECK_LE(n_keys, max_query_length_);
