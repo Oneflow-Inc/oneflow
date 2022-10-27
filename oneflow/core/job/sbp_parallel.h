@@ -87,22 +87,6 @@ bool NdSbpAllSameSplitParallel(const NdSbp& nd_sbp);
 
 // Print functions
 
-Maybe<std::string> SbpSignatureToString(const SbpSignature& sbp_sig,
-                                        const std::vector<std::string>& inputs,
-                                        const std::vector<std::string>& outputs);
-
-Maybe<std::string> SbpSignatureToString(const SbpSignature& sbp_sig,
-                                        const PbRpf<std::string>& inputs,
-                                        const PbRpf<std::string>& outputs);
-
-Maybe<std::string> SbpSignatureListToString(const SbpSignatureList& sbp_sig_list,
-                                            const std::vector<std::string>& inputs,
-                                            const std::vector<std::string>& outputs);
-
-Maybe<std::string> SbpSignatureListToString(const SbpSignatureList& sbp_sig_list,
-                                            const PbRpf<std::string>& inputs,
-                                            const PbRpf<std::string>& outputs);
-
 Maybe<std::string> NdSbpSignatureToString(const NdSbpSignature& nd_sbp_signature,
                                           const std::vector<std::string>& inputs,
                                           const std::vector<std::string>& outputs);
