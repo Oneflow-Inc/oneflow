@@ -23,34 +23,5 @@ include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 
-def OKL_TensorFromArgsAttr : OKL_Attr<"TensorFromArgs", "arg"> {
-  let summary = "Tensor From Args";
-  let description = [{
-    represent this tensor come from args:index
-  }];
-  let parameters = (ins "int":$index);
-  let assemblyFormat = "`<` $index `>`";
-}
-
-def OKL_TensorFromRetsAttr : OKL_Attr<"TensorFromRets", "ret"> {
-  let summary = "Tensor From Rets";
-  let description = [{
-    represent this tensor come from rets:index
-  }];
-  let parameters = (ins "int":$index);
-  let assemblyFormat = "`<` $index `>`";
-}
-
-def OKL_TensorSignatureAttr : OKL_Attr<"TensorSignature", "tensor_signature"> {
-  let summary = "Tensor signature of OKL Op";
-  let description = [{
-    To represent a signature, with a arrow in beween, pass two listes corepondent to the data input and data output tensors. For example:
-    ```
-    #okl.tensor_signature<[#okl.arg<0>] -> [#okl.ret<0>]>
-    ```
-  }];
-  let parameters = (ins "ArrayAttr":$inputs, "ArrayAttr":$outputs);
-  let assemblyFormat = "`<` $inputs ` ` `->` ` ` $outputs `>`";
-}
 
 #endif // ONEFLOW_IR_INCLUDE_OKL_OKLATTRIBUTES

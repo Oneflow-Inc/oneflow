@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_RUNCONTEXT_H_
 #define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_RUNCONTEXT_H_
 
+#include "mlir/IR/BuiltinAttributes.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
 #include "OneFlow/OKL/OKLOps.h"
 
@@ -34,29 +35,32 @@ class RunContext final : public user_op::KernelComputeContext {
 
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     auto op = reg_ctx_->GetOp();
-    auto id = std::make_pair(arg_name, index);
-    for (const auto& operand_id : ::llvm::enumerate(
-             ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedOperandSegments>(op))) {
-      if (operand_id.value() == id) {
-        if (auto arg = op->getOperand(operand_id.index()).dyn_cast<mlir::BlockArgument>()) {
-          return comp_ctx_->Tensor4ArgNameAndIndex("in", arg.getArgNumber());
+    if (arg_name == "x") {
+      auto val = op->getOperand(index);
+      auto define_op = val.getDefiningOp();
+      auto index = define_op->getAttr("index").cast<mlir::IntegerAttr>().getInt();
+      if (define_op->getName().getStringRef()
+          == mlir::okl::GetTensorFromArgOp::getOperationName()) {
+        return comp_ctx_->Tensor4ArgNameAndIndex("in", index);
+      } else if (define_op->getName().getStringRef()
+                 == mlir::okl::GetTensorFromRetOp::getOperationName()) {
+        return comp_ctx_->Tensor4ArgNameAndIndex("out", index);
+      } else {
+        LOG(FATAL) << "Signature Not supported";
+        exit(1);
+      }
+    } else if (arg_name == "y") {
+      auto val = op->getResult(index);
+      for (auto use : val.getUsers()) {
+        if (use->getName().getStringRef() == mlir::okl::GetTensorAsRetOp::getOperationName()) {
+          auto index = use->getAttr("index").cast<mlir::IntegerAttr>().getInt();
+          return comp_ctx_->Tensor4ArgNameAndIndex("out", index);
         }
       }
+    } else {
+      LOG(FATAL) << "Signature Not supported";
+      exit(1);
     }
-    for (const auto& result_id : ::llvm::enumerate(
-             ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedResultSegments>(op))) {
-      if (result_id.value() == id) {
-        auto value = op->getResult(result_id.index());
-        if (value.hasOneUse()) {
-          mlir::Operation* first_user = value.use_begin()->getOwner();
-          if (auto ret = llvm::dyn_cast_or_null<mlir::okl::ReturnOp>(first_user)) {
-            return comp_ctx_->Tensor4ArgNameAndIndex("out",
-                                                     value.getUses().begin()->getOperandNumber());
-          }
-        }
-      }
-    }
-    LOG(FATAL) << "Not supported";
   }
 
   ep::Stream* stream() override { return comp_ctx_->stream(); }

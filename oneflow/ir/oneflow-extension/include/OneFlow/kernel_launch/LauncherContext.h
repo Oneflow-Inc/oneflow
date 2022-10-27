@@ -63,8 +63,8 @@ class LauncherContext final {
       } else if (op_name == mlir::okl::BuildRegContextOp::getOperationName()) {
         index = reg_ctx_vec_.size();
 
-        auto& reg_op = op.getRegion(0).front().front();
-        reg_ctx_vec_.emplace_back(std::make_shared<RegContext>(&reg_op));
+        auto* reg_op = op.getRegion(0).front().front().getNextNode();
+        reg_ctx_vec_.emplace_back(std::make_shared<RegContext>(reg_op));
       } else if (op_name == mlir::okl::BuildRunContextOp::getOperationName()) {
         index = run_ctx_vec_.size();
 

@@ -19,7 +19,7 @@ import os
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 os.environ["ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH"] = "1"
-os.environ["ONEFLOW_MLIR_ENABLE_IR_PRINTING"] = "1"
+# os.environ["ONEFLOW_MLIR_ENABLE_IR_PRINTING"] = "1"
 
 import oneflow as flow
 import oneflow.unittest
@@ -37,8 +37,9 @@ def _test_okl_relu_with_cpu(test_case: flow.unittest.TestCase):
     x = flow.Tensor([1, -1])
     graph_to_run = GraphToRun()
     lazy_relu = graph_to_run(x)
-    print(lazy_relu)
-    test_case.assertTrue(flow.all(flow.equal(flow.Tensor([0, 0]), lazy_relu)))
+
+    cmp = flow.tanh(flow.relu(x))
+    test_case.assertTrue(flow.all(flow.equal(cmp, lazy_relu)))
 
 
 def _test_okl_relu_with_cuda(test_case: flow.unittest.TestCase):
@@ -53,7 +54,9 @@ def _test_okl_relu_with_cuda(test_case: flow.unittest.TestCase):
     x = flow.Tensor([1, -1]).cuda()
     graph_to_run = GraphToRun()
     lazy_relu = graph_to_run(x)
-    test_case.assertTrue(flow.all(flow.equal(flow.Tensor([0, 0]).cuda(), lazy_relu)))
+
+    cmp = flow.tanh(flow.relu(x))
+    test_case.assertTrue(flow.all(flow.equal(cmp, lazy_relu)))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -61,9 +64,9 @@ class TestOKLRelu(flow.unittest.TestCase):
     def test_okl_relu_with_cpu(test_case):
         _test_okl_relu_with_cpu(test_case)
 
-    # @unittest.skipUnless(flow.sysconfig.with_cuda(), "only test cpu cases")
-    # def test_okl_relu_with_cuda(test_case):
-    #     _test_okl_relu_with_cuda(test_case)
+    @unittest.skipUnless(flow.sysconfig.with_cuda(), "only test cpu cases")
+    def test_okl_relu_with_cuda(test_case):
+        _test_okl_relu_with_cuda(test_case)
 
 
 if __name__ == "__main__":

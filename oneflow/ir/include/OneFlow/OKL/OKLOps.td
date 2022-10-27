@@ -19,7 +19,6 @@ limitations under the License.
 include "OneFlow/OKL/OKLDialect.td"
 include "OneFlow/OKL/OKLBase.td"
 include "OneFlow/OKL/OKLTypes.td"
-include "OneFlow/OKL/OKLAttributes.td"
 include "mlir/Pass/PassBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/IR/OpBase.td"
@@ -42,7 +41,21 @@ def OKL_TensorAttr: I32EnumAttr<"TensorType", "OKL Tensor Type enum",
 }
 
 def GetTensorFromArgOp : OKL_Op<"get_tensor_from_arg"> {
-  let summary = "get tensor from context as arguments";
+  let summary = "get tensor:operands from context as arguments";
+  let description = [{
+    get tensor value from launcher context as arguments.
+  }];
+
+  let arguments = (ins
+    LauncherContextType:$launcher_ctx,
+    OKL_TensorAttr:$tensor_type,
+    I32Attr:$index
+  );
+  let results = (outs AnyTensor);
+}
+
+def GetTensorFromRetOp : OKL_Op<"get_tensor_from_ret"> {
+  let summary = "get tensor:results from context as arguments";
   let description = [{
     get tensor value from launcher context as arguments.
   }];

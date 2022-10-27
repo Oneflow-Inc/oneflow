@@ -876,51 +876,58 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
   static LogicalResult LowerToOKLOp(::mlir::PatternRewriter& rewriter, Operation* op,
                                     func::FuncOp okl_func) {
     auto op_type_name = op->getAttr("op_name").dyn_cast<StringAttr>();
+    auto raw_func = op->getParentOfType<func::FuncOp>();
     if (!op_type_name) { return failure(); }
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToEnd(&okl_func.getBody().back());
 
     auto loc = op->getLoc();
 
-    auto fetchAttr = [&](Value val) -> Attribute {
-      auto define_op = val.getDefiningOp();
-      if (define_op->getName().getStringRef() == okl::GetTensorFromArgOp::getOperationName()) {
-        define_op->dump();
-        auto index = define_op->getAttr("index").cast<IntegerAttr>().getInt();
-        return okl::TensorFromArgsAttr::get(rewriter.getContext(), index);
-      }
-      for (auto use : val.getUsers()) {
-        define_op = use;
-        if (define_op->getName().getStringRef() == okl::GetTensorAsRetOp::getOperationName()) {
-          auto index = define_op->getAttr("index").cast<IntegerAttr>().getInt();
-          return okl::TensorFromRetsAttr::get(rewriter.getContext(), index);
-        }
-      }
-      op->emitError("Fail to parse this op tensor signature");
-    };
-    SmallVector<Attribute> ins_tensor, outs_tensor;
-    for (auto arg : op->getOperands()) { ins_tensor.push_back(fetchAttr(arg)); }
-    for (auto ret : op->getResults()) { outs_tensor.push_back(fetchAttr(ret)); }
+    auto func_type = rewriter.getFunctionType({}, {});
 
-    auto tensor_signature =
-        okl::TensorSignatureAttr::get(rewriter.getContext(), rewriter.getArrayAttr(ins_tensor),
-                                      rewriter.getArrayAttr(outs_tensor));
-    op->setAttr("tensor_signature", tensor_signature);
-
-    auto func_type = rewriter.getFunctionType(op->getOperandTypes(), op->getResultTypes());
     auto reg_ctx = rewriter.create<okl::BuildRegContextOp>(
         loc, okl::RegContextType::get(rewriter.getContext()), TypeAttr::get(func_type));
     reg_ctx.body().emplaceBlock();
     rewriter.setInsertionPointToEnd(&reg_ctx.body().back());
 
     BlockAndValueMapping mapping;
-    for (auto arg : op->getOperandTypes()) { reg_ctx.body().addArguments(arg, loc); }
-    for (auto argument_pair : llvm::zip(op->getOperands(), reg_ctx.body().getArguments())) {
-      mapping.map(std::get<0>(argument_pair), std::get<1>(argument_pair));
-    }
+
+    // map launcher_ctx from wrap func to block
+    mapping.map(raw_func.getArgument(0), okl_func.getArgument(0));
+
     ImplicitLocOpBuilder new_block(loc, rewriter);
-    auto new_op_res = new_block.clone(*op, mapping)->getResults();
-    rewriter.create<okl::ReturnOp>(loc, ValueRange{new_op_res});
+    for (auto arg : op->getOperands()) {
+      auto define_op = arg.getDefiningOp();
+      if (define_op->getName().getStringRef() == okl::GetTensorFromArgOp::getOperationName()) {
+        new_block.clone(*define_op, mapping);
+      } else {
+        auto find = false;
+        for (auto use : arg.getUsers()) {
+          if (use->getName().getStringRef() == okl::GetTensorAsRetOp::getOperationName()) {
+            find = true;
+            auto index = use->getAttr("index").cast<IntegerAttr>().getInt();
+            auto source = rewriter.create<okl::GetTensorFromRetOp>(
+                op->getLoc(), arg.getType(), okl_func.getArgument(0),
+                okl::TensorType::TT_Argument, index);
+            mapping.map(arg, source->getResult(0));
+            break;
+          }
+        }
+        if (!find) { op->emitError("Fail to find operand source"); }
+      }
+    }
+    new_block.clone(*op, mapping);
+    for (auto ret : op->getResults()) {
+      for (auto use : ret.getUsers()) {
+        bool find = false;
+        if (use->getName().getStringRef() == okl::GetTensorAsRetOp::getOperationName()) {
+          new_block.clone(*use, mapping);
+          break;
+        }
+        if (!find) { op->emitError("Fail to find result source"); }
+      }
+    }
+    rewriter.create<okl::ReturnOp>(loc);
 
     rewriter.setInsertionPointToEnd(&okl_func.getBody().back());
     auto run_ctx = rewriter.create<okl::BuildRunContextOp>(
