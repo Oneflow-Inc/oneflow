@@ -142,6 +142,7 @@ struct BinaryFunctor<device, BinaryOp::kIsCloseEqNan, Src, Dst> {
   float atol, rtol;
 };
 
+#if defined(WITH_CUDA)
 template<DeviceType device, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kIsCloseEqNan, nv_bfloat16, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
@@ -179,6 +180,7 @@ struct BinaryFunctor<device, BinaryOp::kIsCloseEqNan, half, Dst> {
   }
   float atol, rtol;
 };
+#endif  // defined(WITH_CUDA)
 
 template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kIsCloseNeqNan, Src, Dst> {
@@ -196,6 +198,7 @@ struct BinaryFunctor<device, BinaryOp::kIsCloseNeqNan, Src, Dst> {
   float atol, rtol;
 };
 
+#if defined(WITH_CUDA)
 template<DeviceType device, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kIsCloseNeqNan, nv_bfloat16, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
@@ -231,6 +234,7 @@ struct BinaryFunctor<device, BinaryOp::kIsCloseNeqNan, half, Dst> {
   }
   float atol, rtol;
 };
+#endif  // defined(WITH_CUDA)
 
 template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kLogicalAnd, Src, Dst> {
