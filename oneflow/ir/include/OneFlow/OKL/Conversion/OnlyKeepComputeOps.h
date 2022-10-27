@@ -19,13 +19,11 @@ limitations under the License.
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-
 namespace okl {
 
 std::unique_ptr<mlir::Pass> createOnlyKeepComputeOpsPass();
 
 }  // namespace okl
-
 }  // namespace mlir
 
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_CONVERSION_ONLYKEEPCOMPUTEOPS_H_

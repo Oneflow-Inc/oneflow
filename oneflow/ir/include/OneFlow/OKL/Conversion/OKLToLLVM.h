@@ -19,14 +19,15 @@ limitations under the License.
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-
 namespace okl {
 
+// lower !okl.launcher_ctx to !llvm.ptr<i8>
 std::unique_ptr<mlir::Pass> createLowerLauncherToLLVMPtrPass();
+
+// lower okl ops to llvm.call @{callee in liboneflow.so}
 std::unique_ptr<mlir::Pass> createLowerOKLToLLVMCallPass();
 
 }  // namespace okl
-
 }  // namespace mlir
 
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_CONVERSION_OKLTOLLVM_H_

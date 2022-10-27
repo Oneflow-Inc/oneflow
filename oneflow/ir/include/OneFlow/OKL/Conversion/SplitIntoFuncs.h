@@ -20,13 +20,12 @@ limitations under the License.
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-
 namespace okl {
 
+// split okl dialect with single function into different functions according lifetime.
 std::unique_ptr<mlir::Pass> createSplitIntoFuncsPass();
 
 }  // namespace okl
-
 }  // namespace mlir
 
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_CONVERSION_SPLITINTOFUNCS_H_
