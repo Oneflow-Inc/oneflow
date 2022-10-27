@@ -319,6 +319,7 @@ Reduction Ops
     nansum
     std  
     sum  
+    logsumexp
     var
     norm
     all
