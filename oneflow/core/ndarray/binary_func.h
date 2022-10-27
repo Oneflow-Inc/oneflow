@@ -275,12 +275,12 @@ SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncLE);
 
 template<typename T>
 struct BinaryFuncIEN final {
-  // static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return x <= y; }
+  // placeholder, no definition required, the type is only used to generate Op
 };
 
 template<typename T>
 struct BinaryFuncINN final {
-  // static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return x <= y; }
+  // placeholder, no definition required, the type is only used to generate Op
 };
 
 template<typename T>
