@@ -85,7 +85,7 @@ Maybe<void> MOEDispatch::Apply(const MOECaptureState* ctx, const TensorTuple& ou
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(ctx->SavedTensors().size(),
                      ctx->has_gate ? 4 : 2);  // NOLINT(maybe-need-error-msg)
-  in_grads->resize(1 + ctx->gate_requires_grad);
+  in_grads->resize(3 + ctx->has_gate);
 
   const auto& dout = out_grads[0];
   const auto& indices = ctx->SavedTensors()[0];
@@ -95,7 +95,7 @@ Maybe<void> MOEDispatch::Apply(const MOECaptureState* ctx, const TensorTuple& ou
   (*in_grads)[0] = JUST(functional::MOECombine(dout, indices, locations, gates));
   if (ctx->gate_requires_grad) {
     const auto& in = ctx->SavedTensors()[2];
-    (*in_grads)[1] = JUST(functional::MOEGateGrad(in, dout, indices, locations));
+    (*in_grads)[3] = JUST(functional::MOEGateGrad(in, dout, indices, locations));
   }
   return Maybe<void>::Ok();
 }
@@ -135,7 +135,7 @@ Maybe<void> MOECombine::Apply(const MOECaptureState* ctx, const TensorTuple& out
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(ctx->SavedTensors().size(),
                      ctx->has_gate ? 4 : 2);  // NOLINT(maybe-need-error-msg)
-  in_grads->resize(1 + ctx->gate_requires_grad);
+  in_grads->resize(3 + ctx->has_gate);
 
   const auto& dout = out_grads[0];
   const auto& indices = ctx->SavedTensors()[0];
@@ -146,7 +146,7 @@ Maybe<void> MOECombine::Apply(const MOECaptureState* ctx, const TensorTuple& out
       functional::MOEDispatch(dout,indices, locations, gates, ctx->num_experts, ctx->capacity));
   if (ctx->gate_requires_grad) {
     const auto& in = ctx->SavedTensors()[2];
-    (*in_grads)[1] = JUST(functional::MOEGateGrad(dout, in, indices, locations));
+    (*in_grads)[3] = JUST(functional::MOEGateGrad(dout, in, indices, locations));
   }
   return Maybe<void>::Ok();
 }
