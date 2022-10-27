@@ -23,15 +23,15 @@ limitations under the License.
 #include "mlir/IR/BuiltinOps.h"
 
 namespace mlir {
-
 namespace okl {
 
+// convert oneflow.kernel_launch wrap function to okl dialect
 LogicalResult LowerWrapOpsToOKL(ModuleOp module);
 
+// convert okl dialect to llvm dialect
 LogicalResult LowerOKLComputeToLLVM(ModuleOp module);
 
 }  // namespace okl
-
 }  // namespace mlir
 
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_CONVERSION_CONVERSION_H_
