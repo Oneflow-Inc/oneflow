@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/wrap_dim_utils.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 
 namespace oneflow {
 namespace one {
@@ -752,9 +753,7 @@ static PyObject* PyTensorObject_to_global(PyObject* self, PyObject* args, PyObje
   PyObject* result = NULL;
   if (tensor->is_global())
     result = PyTensorObject_global_to_global(self, args, kwargs);
-  else {
-    result = PyTensorObject_local_to_global(self, args, kwargs);
-  }
+  else { result = PyTensorObject_local_to_global(self, args, kwargs); }
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
 
@@ -807,6 +806,13 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
   } else {
     if (functional::PyScalarCheck(value)) {
       Scalar value_scalar = functional::PyUnpackScalar(value);
+      const auto& index_item = functional::PyUnpackTensorIndex(item);
+      if (index_item.size() == 1 && index_item[0].IsTensor()
+          && index_item[0].tensor()->shape() == tensor->shape()) {
+        // masked_fill
+        ASSERT_PTR(functional::MaskedFillInplace(tensor, index_item[0].tensor(), value_scalar));
+        return 0;
+      }
       value_tensor = ASSERT_PTR(
           functional::Constant(Shape({}), value_scalar, tensor->dtype(), ASSERT(tensor->device())));
     } else {
