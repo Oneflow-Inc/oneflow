@@ -76,13 +76,16 @@ __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float
           T model_diff_t = CastScaleRegularizeGradientFunctor<T, G>()(
               model_diff[ilp], model_val[ilp], scale, l1, l2);
 
+          if (weight_decay != 0.f) {
+            model_diff_t += weight_decay * model_val[ilp];
+          }
+
           if (momentum != 0.f) {
             momentum_buf[ilp] = momentum * momentum_buf[ilp] + model_diff_t;
             model_diff_t = momentum_buf[ilp];
           }
 
-          model_val[ilp] =
-              model_val[ilp] - learning_rate_val * (model_diff_t + weight_decay * model_val[ilp]);
+          model_val[ilp] += (- learning_rate_val * model_diff_t);
         }
       }
 
