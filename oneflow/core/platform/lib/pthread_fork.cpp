@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_util.h"
-#include "oneflow/core/vm/sync_vm_mode_guard.h"
+#include "oneflow/core/vm/vm_need_sync.h"
 
 namespace oneflow {
 

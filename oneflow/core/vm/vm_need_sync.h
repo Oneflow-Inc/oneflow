@@ -13,30 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_SYNC_VM_MODE_GUARD_H_
-#define ONEFLOW_CORE_VM_SYNC_VM_MODE_GUARD_H_
-
-#include "oneflow/core/common/thread_local_guard.h"
+#ifndef ONEFLOW_CORE_VM_NEED_SYNC_H_
+#define ONEFLOW_CORE_VM_NEED_SYNC_H_
 
 namespace oneflow {
 
-enum class SyncVmMode {
-  kInvalid = 0,
-  kEnable = 1,
-  kDisable = 2,
-};
-
-class SyncVmModeGuard final : public ThreadLocalGuard<SyncVmMode> {
- public:
-  using ThreadLocalGuard<SyncVmMode>::ThreadLocalGuard;
-  ~SyncVmModeGuard() = default;
-
-  static bool IsCurrentSyncVmMode() {
-    const auto& opt_sync_mode = Current();
-    return opt_sync_mode.has_value() && CHECK_JUST(opt_sync_mode) == SyncVmMode::kEnable;
-  }
-};
+void SetThreadLocalVmNeedSync(bool vm_need_sync);
+bool GetThreadLocalVmNeedSync();
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_SYNC_VM_MODE_GUARD_H_
+#endif  // ONEFLOW_CORE_VM_NEED_SYNC_H_

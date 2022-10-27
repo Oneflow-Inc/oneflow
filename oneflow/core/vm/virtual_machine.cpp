@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <typeinfo>
 #include "oneflow/core/vm/sync_vm_mode_guard.h"
+#include "oneflow/core/vm/vm_need_sync.h"
 #include "oneflow/core/vm/barrier_instruction_policy.h"
 #include "oneflow/core/vm/caching_allocator.h"
 #include "oneflow/core/vm/global_sync_instruction_policy.h"

@@ -10701,3 +10701,24 @@ def OneFlow_MlirJitOp : OneFlow_JITLikeOp<"mlir_jit"> {}
 def OneFlow_KernelLaunchOp : OneFlow_JITLikeOp<"kernel_launch"> {}
 
 #endif // GET_ONEFLOW_MLIR_JIT_OP_DEFINITIONS
+
+// Group: TEST
+// test_fork_on_worker_thread
+// Total: 1
+
+#ifdef GET_ONEFLOW_TEST_OP_DEFINITIONS
+
+def OneFlow_TestForkOnWorkerThreadOp : OneFlow_BaseOp<"test_fork_on_worker_thread", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+#endif // GET_ONEFLOW_TEST_OP_DEFINITIONS

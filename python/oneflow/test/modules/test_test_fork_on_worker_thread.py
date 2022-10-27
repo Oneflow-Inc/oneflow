@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,18 +12,17 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#include "oneflow/core/vm/sync_vm_mode_guard.h"
+"""
+import oneflow as flow
+import oneflow.unittest
+import unittest
 
-namespace oneflow {
 
-bool* MutThreadLocalVmNeedSync() {
-  static thread_local bool value = false;
-  return &value;
-}
+@flow.unittest.skip_unless_1n1d()
+class TestTestForkOnWorkerThread(flow.unittest.TestCase):
+    def test_test_fork_on_worker_thread(test_case):
+        flow._oneflow_internal._C.test_fork_on_worker_thread(flow.ones(32))
 
-void SetThreadLocalVmNeedSync(bool vm_need_sync) { *MutThreadLocalVmNeedSync() = vm_need_sync; }
 
-bool GetThreadLocalVmNeedSync() { return *MutThreadLocalVmNeedSync(); }
-
-}  // namespace oneflow
+if __name__ == "__main__":
+    unittest.main()

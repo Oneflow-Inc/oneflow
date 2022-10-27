@@ -2877,3 +2877,7 @@
   signature: "Tensor (Tensor input, Tensor weights=None, Int64 minlength=None) => BinCount"
   bind_python: True
 
+- name: "test_fork_on_worker_thread"
+  signature: "Tensor (Tensor input) => TestForkOnWorkerThread"
+  bind_python: True
+
