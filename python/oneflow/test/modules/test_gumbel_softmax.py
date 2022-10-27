@@ -33,7 +33,7 @@ def _test_gumbel_softmax(test_case, tau, dim, device, dtype):
         dtype=dtype,
         device=flow.device(device),
     )
-    y_soft = F.gumbel_softmax(x, tau=tau, dim=dim)
+    y_soft = F.gumbel_softmax(x, tau=tau, dim=dim, hard=False)
     y_hard = F.gumbel_softmax(x, tau=tau, dim=dim, hard=True)
     test_case.assertEqual((20, 32), y_soft.shape)
     test_case.assertEqual((20, 32), y_hard.shape)

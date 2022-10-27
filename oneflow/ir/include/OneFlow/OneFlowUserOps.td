@@ -7758,7 +7758,8 @@ def OneFlow_GumbelSoftmaxOp : OneFlow_BaseOp<"gumbel_softmax", [NoSideEffect, De
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "1.">:$tau,
-    DefaultValuedAttr<SI64Attr, "0">:$seed
+    DefaultValuedAttr<SI64Attr, "0">:$seed,
+    DefaultValuedAttr<BoolAttr, "false">:$hard
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

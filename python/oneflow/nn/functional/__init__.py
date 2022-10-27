@@ -82,5 +82,5 @@ from oneflow._C import unfold
 from oneflow._C import fold
 from .functional_deform_conv import deform_conv2d
 from oneflow._C import kl_div_loss as kl_div
-from .functional_gumbel_softmax import gumbel_softmax
+from oneflow._C import gumbel_softmax as gumbel_softmax
 

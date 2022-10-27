@@ -26,10 +26,12 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/functional/sequence_function.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 namespace one {
@@ -402,48 +404,65 @@ class GumbelSoftmaxFunctor {
     op_ = CHECK_JUST(one::OpBuilder("gumbel_softmax").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, const double& tau,
-                           const Optional<int64_t>& dim,
+                           const Optional<int64_t>& dim, bool hard,
                            const Optional<one::Generator>& generator) const {
-    const auto in_shape = in->shape();
+    std::shared_ptr<one::Tensor> in_tensor = in;
+    auto in_shape = in->shape();
+    auto device = JUST(in->device());
+    auto dtype = in->dtype();
     const int64_t num_axes = in_shape->NumAxes();
-
-    const auto get_dim = [num_axes]() -> int64_t {
-      const int64_t ndim = num_axes;
-      if (ndim == 0 || ndim == 1 || ndim == 3) {
-        return 0;
-      } else {
-        return 1;
-      }
-    };
+    // const int64_t num_classes = in_shape->At(in_shape->NumAxes() - 1);
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("tau", "seed");
-    attrs.SetAllAttrs(tau, static_cast<int64_t>(gen->current_seed()));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("tau", "seed", "hard");
+    attrs.SetAllAttrs(tau, static_cast<int64_t>(gen->current_seed()), hard);
 
-    int64_t dim_ = dim ? JUST(dim) : get_dim();
-    dim_ = JUST(maybe_wrap_dim(dim_, num_axes));
-    if (dim_ != num_axes - 1) {
-      std::vector<int> input_perm(in_shape->dim_vec().size(), 0);
-      std::iota(input_perm.begin(), input_perm.end(), 0);
-      input_perm[dim_] = input_perm[input_perm.size() - 1];
-      input_perm[input_perm.size() - 1] = dim_;
+    // TODO(hujiakui): Rand 这里不能支持 half
+    auto random_tensor = JUST(functional::Rand(*in_shape.get(), dtype, device, gen, /*requires_grad=*/true));
+    // auto gumbel_noise_tensor = functional::ScalarSub(Scalar(0.0), functional::Log(
+    //     functional::ScalarSub(Scalar(0.0), random_tensor, /*alpha=*/1.0)
+    // ), /*alpha=*/1.0);
+    // TODO(hujiakui): 为啥这样写会 error...
+    auto gumbel_noise_tensor1 = JUST(functional::ScalarSub(Scalar(0.0), random_tensor, /*alpha=*/1.0));
+    auto gumbel_noise_tensor2 = JUST(functional::ScalarSub(Scalar(0.0), gumbel_noise_tensor1, /*alpha=*/1.0));
+    auto gumbel_in_tensor = JUST(functional::Add(gumbel_noise_tensor2, in_tensor, /*alpha=*/1.0,
+                                                 /*inplace=*/false));
 
-      return sequence_function(functional::Transpose)
-          .then([&](const std::shared_ptr<one::Tensor>& in) {
-            return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
-          })
-          .then(std::bind(functional::Transpose, std::placeholders::_1, input_perm))
-          .call(in, input_perm);
-    }
+    auto out_soft = JUST(functional::Softmax(gumbel_in_tensor, dim));
+    if (hard) {
+      const auto get_dim = [num_axes]() -> int64_t {
+        const int64_t ndim = num_axes;
+        if (ndim == 0 || ndim == 1 || ndim == 3) {
+          return 0;
+        } else {
+          return 1;
+        }
+      };
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
+      int64_t dim_ = dim ? JUST(dim) : get_dim();
+      if (dim_ < 0) { dim_ += num_axes; }
+
+      dim_ = JUST(maybe_wrap_dim(dim_, num_axes));
+      std::vector<int32_t> axis(in->ndim());
+      std::iota(axis.begin(), axis.end(), 0);
+      auto out_max = JUST(functional::ArgMax(out_soft, dim_, /*keepdim=*/true, dtype));
+      auto index = JUST(functional::To(out_max, JUST(DType::Get(DataType::kInt64)), /*copy=*/false));
+      // auto out_hard = functional::OneHot(index, num_classes, 1.0, 0.0);
+      auto zero = JUST(functional::ZerosLike(out_soft));
+      auto out_hard = JUST(functional::DimScatterUpdateScalar(zero, dim_, index, 1.0, /*inplace=*/false));
+
+      // For Grad TODO(hujiakui): ugly
+      auto out_hard_grad1 = JUST(functional::Sub(out_hard, JUST(out_soft->detach()), /*alpha=*/1.0, /*inplace=*/false));
+      auto out_hard_grad2 = functional::Add(out_hard_grad1, out_soft, /*alpha=*/1.0, /*inplace=*/false);
+      return out_hard_grad2;
+    } else { return out_soft; }
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
 };
 
-class GumbelSoftmaxGradFunctor {
+class GumbelSoftmaxGradFunctor : public SoftmaxGradFunctor {
  public:
   GumbelSoftmaxGradFunctor() {
     op_ = CHECK_JUST(
@@ -452,7 +471,7 @@ class GumbelSoftmaxGradFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& y) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, y});
+    return SoftmaxGradFunctor::operator()(dy, y);
   }
 
  private:
