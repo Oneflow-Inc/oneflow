@@ -471,7 +471,20 @@ Maybe<Tensor> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
       expand_shape.emplace_back(input->shape()->At(i));
     }
   }
-  std::shared_ptr<Tensor> expand_value = JUST(Expand(value, expand_shape));
+
+  int unsqueeze_dim = 0;
+  auto HasSingletonDim = [&unsqueeze_dim, expand_shape]() {
+    for (int32_t i = 1; i < expand_shape.size(); i++) {
+      if (expand_shape.At(i) == 1) {
+        unsqueeze_dim = i;
+        return true;
+      }
+    }
+    return false;
+  };
+  std::shared_ptr<Tensor> expand_value =
+      HasSingletonDim() ? JUST(Unsqueeze(value, unsqueeze_dim)) : JUST(Expand(value, expand_shape));
+
   // reverse adjust value if index subspace is continuous but transposed since the start
   // dimension cannot be specified for `scatter_nd`
   if (is_continuous_subspace) {
