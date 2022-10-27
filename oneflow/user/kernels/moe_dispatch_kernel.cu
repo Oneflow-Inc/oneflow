@@ -221,7 +221,7 @@ class GpuMOEGateGradKernel final : public user_op::OpKernel {
 
 #define REGISTER_GPU_MOE_GATE_GRAD_KERNEL(dtype)                        \
   REGISTER_USER_KERNEL("moe_gate_grad")                                 \
-      .SetCreateFn<GPUMOEGateGradKernel<dtype>>()                       \
+      .SetCreateFn<GpuMOEGateGradKernel<dtype>>()                       \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)  \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 

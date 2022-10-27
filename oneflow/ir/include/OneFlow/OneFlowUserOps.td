@@ -10671,7 +10671,7 @@ def OneFlow_MOEGateGradOp : OneFlow_BaseOp<"moe_gate_grad", [NoSideEffect, Decla
     OneFlow_Tensor:$in,
     OneFlow_Tensor:$dispatched,
     OneFlow_Tensor:$indices,
-    OneFlow_Tensor:$locations,
+    OneFlow_Tensor:$locations
   );
   let output = (outs
     OneFlow_Tensor:$out
