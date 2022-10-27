@@ -376,7 +376,9 @@ class UserOpSbpContext : public user_op::SbpContext {
 
   DeviceType device_type() const override { return op_->device_type(); }
 
-  int64_t parallel_num() const override { return parallel_num_; }
+  int64_t parallel_num() const override {
+    return CHECK_JUST(op_->GetOpParallelDesc())->parallel_num();
+  }
 
   int64_t hierarchy_value() const override { return hierarchy_value_; }
 
