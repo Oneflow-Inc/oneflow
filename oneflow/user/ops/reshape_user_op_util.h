@@ -26,14 +26,13 @@ struct ReshapeUserOpUtil {
   static Maybe<void> Squeeze(const Shape& origin, Shape* shape,
                              HashMap<int, int>* squeezed_axis2origin_axis);
   static Maybe<void> GetGroupStartInAxis2OutAxis(const Shape& in_shape, const Shape& out_shape,
-                                                 const ParallelDesc& parallel_desc,
+                                                 const int64_t hierarchy_value,
                                                  HashMap<int, int>* group_start_in_axis2out_axis);
   static Maybe<void> GetReshapeUserOpSbpSignatures(const Shape& in_shape, const Shape& out_shape,
                                                    const std::vector<user_op::OpArg>& in_args,
                                                    const std::vector<user_op::OpArg>& out_args,
-                                                   const ParallelDesc& parallel_desc,
-                                                   user_op::UserOpSbpSignatureBuilder* builder,
-                                                   const std::string& debug_str = "");
+                                                   const int64_t hierarchy_value,
+                                                   user_op::UserOpSbpSignatureBuilder* builder);
 };
 
 }  // namespace oneflow

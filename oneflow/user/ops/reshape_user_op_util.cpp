@@ -92,7 +92,7 @@ Maybe<void> ReshapeUserOpUtil::Squeeze(const Shape& origin, Shape* shape,
 }
 
 Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
-    const Shape& in_shape, const Shape& out_shape, const ParallelDesc& parallel_desc,
+    const Shape& in_shape, const Shape& out_shape, const int64_t hierarchy_value,
     HashMap<int, int>* group_start_in_axis2out_axis) {
   CHECK_GE_OR_RETURN(in_shape.NumAxes(), 0)
       << Error::RuntimeError()
@@ -127,13 +127,10 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
   while (in_axis >= 0) {
     if (in_shape_count == out_shape_count) {
       // Record split axises
-      bool can_split = false;
-      const int64_t& in_dim = in_shape.At(in_axis);
-      const int64_t& out_dim = out_shape.At(out_axis);
-      if (in_dim == out_dim) { can_split = true; }
-      for (int i = 0; i < parallel_desc.hierarchy()->size(); ++i) {
-        const int64_t& parallel_num = (*parallel_desc.hierarchy())[i];
-        if (in_dim % parallel_num == 0 && out_dim % parallel_num == 0) { can_split = true; }
+      if (in_shape.At(in_axis) == out_shape.At(out_axis)
+          || (in_shape.At(in_axis) % hierarchy_value == 0
+              && out_shape.At(out_axis) % hierarchy_value == 0)) {
+        (*group_start_in_axis2out_axis)[in_axis] = out_axis;
       }
       if (can_split) { (*group_start_in_axis2out_axis)[in_axis] = out_axis; }
       // Move forward
@@ -151,8 +148,8 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
 
 Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
     const Shape& in_shape, const Shape& out_shape, const std::vector<user_op::OpArg>& in_args,
-    const std::vector<user_op::OpArg>& out_args, const ParallelDesc& parallel_desc,
-    user_op::UserOpSbpSignatureBuilder* builder, const std::string& debug_str) {
+    const std::vector<user_op::OpArg>& out_args, const int64_t hierarchy_value,
+    user_op::UserOpSbpSignatureBuilder* builder) {
   if (in_shape.NumAxes() == 0 || in_shape.elem_cnt() == 0) {
     return Maybe<void>::Ok();
   }  // 0D/0Size tensor only support b2b
@@ -166,7 +163,7 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
     JUST(ReshapeUserOpUtil::Squeeze(out_shape, &squeezed_out_shape,
                                     &out_squeezed_axis2original_axis));
     JUST(ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(squeezed_in_shape, squeezed_out_shape,
-                                                        parallel_desc,
+                                                        hierarchy_value,
                                                         &squeezed_group_start_in_axis2out_axis));
   }
 
@@ -192,33 +189,5 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
   builder->PartialSum(in_args).PartialSum(out_args).Build();
   return Maybe<void>::Ok();
 }
-
-namespace {
-
-Maybe<void> GetInputNdSbp(user_op::InferNdSbpFnContext* ctx, const user_op::OpArg& in_arg,
-                          NdSbp* distribution) {
-  *distribution = ctx->NdSbpHint4InputArgNameAndIndex(in_arg.name(), in_arg.index());
-  const auto& constraints = ctx->nd_sbp_constraints();
-  if (constraints.bn_in_op2nd_sbp_size() != 0) {
-    const auto it =
-        constraints.bn_in_op2nd_sbp().find(GenRepeatedBn(in_arg.name(), in_arg.index()));
-    if (it != constraints.bn_in_op2nd_sbp().end()) { *distribution = it->second; }
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> ApplySbpParallel(const SbpParallel& sbp, const int64_t parallel_num, Shape* shape) {
-  if (sbp.has_split_parallel()) {
-    const int64_t axis = sbp.split_parallel().axis();
-    CHECK_EQ_OR_RETURN(shape->At(axis) % parallel_num, 0)
-        << Error::RuntimeError() << "The size of tensor in the " << axis
-        << " must be an integer multiple of parallel_num, "
-        << "but got " << shape->At(axis) << " and " << parallel_num;
-    shape->Set(axis, shape->At(axis) / parallel_num);
-  }
-  return Maybe<void>::Ok();
-}
-
-}  // namespace
 
 }  // namespace oneflow
