@@ -373,7 +373,8 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     int64_t regst_main_size = rt_regst_desc.TotalMainByteSize4AllRegst();
     int64_t regst_separated_size = rt_regst_desc.TotalSeparatedHeaderByteSize4AllRegst();
 
-    if (mem_block_id2mem_block.find(mem_block_id) == mem_block_id2mem_block.end()) {
+    auto mem_block_it = mem_block_id2mem_block.find(mem_block_id);
+    if (mem_block_it == mem_block_id2mem_block.end()) {
       MemBlockProto mem_block;
       mem_block.set_mem_block_id(mem_block_id);
       mem_block.add_job_id(job_id);
@@ -390,7 +391,7 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
                 .emplace(mem_block.mem_block_id(), std::make_unique<MemBlockProto>(mem_block))
                 .second);
     } else {
-      MemBlockProto* mem_block = mem_block_id2mem_block.at(mem_block_id).get();
+      MemBlockProto* mem_block = mem_block_it->second.get();
       CHECK_EQ(mem_block->job_id(0), job_id);
       CHECK_EQ(mem_block->machine_id(), machine_id);
       CHECK(mem_block->mem_case() == regst_desc->mem_case());
