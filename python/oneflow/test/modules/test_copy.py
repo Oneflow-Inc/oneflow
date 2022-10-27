@@ -62,6 +62,16 @@ class Test_Copy_module(flow.unittest.TestCase):
         x.copy_(a)
         test_case.assertTrue(np.array_equal(x.numpy(), a))
 
+    @flow.unittest.skip_unless_1n1d()
+    def test_tensor_inplace_copy_with_diff_dtype(test_case):
+        np_arr = np.random.randn(4, 12)
+        x = flow.tensor(np_arr)
+        y = flow.tensor(np_arr, dtype=flow.int)
+        y.copy_(x)
+        a = ori_torch.tensor(np_arr)
+        b = ori_torch.tensor(np_arr, dtype=ori_torch.int)
+        test_case.assertTrue(np.array_equal(y.numpy(), b.cpu().numpy()))
+
 
 if __name__ == "__main__":
     unittest.main()

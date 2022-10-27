@@ -449,7 +449,7 @@ PersistentTableImpl<Key, Engine>::PersistentTableImpl(const PersistentTableOptio
     if (value_files_.size() <= chunk.first) { value_files_.resize(chunk.first + 1); }
     CHECK_EQ(value_files_.at(chunk.first).fd(), -1);
     const int flags = read_only_ ? (O_RDONLY | O_DIRECT) : (O_RDWR | O_DIRECT);
-    PosixFile value_file(chunk.second, O_RDWR | O_DIRECT, 0644);
+    PosixFile value_file(chunk.second, flags, 0644);
     value_files_.at(chunk.first) = std::move(value_file);
   }
   if (!value_files_.empty()) {
