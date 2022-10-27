@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_INFER_ND_SBP_FN_CONTEXT_H_
 
 #include "oneflow/core/framework/user_op_conf.h"
-#include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
 
@@ -37,7 +36,6 @@ class InferNdSbpFnContext {
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
   virtual int64_t parallel_num() const = 0;
   virtual const Shape& parallel_hierarchy() = 0;
-  virtual const ParallelDesc& parallel_desc() = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
 };

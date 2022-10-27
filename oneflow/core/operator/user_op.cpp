@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/framework/sbp_context.h"
 #include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/framework/to_string.h"
-#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/framework/infer_output_blob_time_shape_fn_context.h"
 #include "oneflow/core/framework/infer_nd_sbp_fn_context.h"
@@ -381,9 +380,6 @@ class UserOpSbpContext : public user_op::SbpContext {
     return CHECK_JUST(op_->GetOpParallelDesc())->parallel_num();
   }
 
-  const ParallelDesc& parallel_desc() const override {
-    return *CHECK_JUST(op_->GetOpParallelDesc());
-  }
   int64_t hierarchy_value() const override { return hierarchy_value_; }
 
  private:
@@ -443,10 +439,6 @@ class UserOpInferSbpSignatureFnContext : public user_op::InferSbpSignatureFnCont
 
   int64_t parallel_num() const override {
     return CHECK_JUST(op_->GetOpParallelDesc())->parallel_num();
-  }
-
-  const ParallelDesc& parallel_desc() const override {
-    return *CHECK_JUST(op_->GetOpParallelDesc());
   }
 
  private:
@@ -542,8 +534,6 @@ class UserOpInferNdSbpFnContext : public user_op::InferNdSbpFnContext {
   const Shape& parallel_hierarchy() override {
     return *(CHECK_JUST(op_->GetOpParallelDesc())->hierarchy());
   }
-
-  const ParallelDesc& parallel_desc() override { return *(CHECK_JUST(op_->GetOpParallelDesc())); }
 
   const ArgVec& inputs() const override { return op_->inputs(); }
   const ArgVec& outputs() const override { return op_->outputs(); }

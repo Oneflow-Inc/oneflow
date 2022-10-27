@@ -34,7 +34,6 @@ struct ReshapeUserOpUtil {
                                                    const int64_t hierarchy_value,
                                                    user_op::UserOpSbpSignatureBuilder* builder);
 };
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_OPS_RESHAPE_USER_OP_UTIL

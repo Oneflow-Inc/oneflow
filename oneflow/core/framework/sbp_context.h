@@ -63,7 +63,6 @@ class SbpContextBase {
 
   virtual DeviceType device_type() const = 0;
   virtual int64_t parallel_num() const = 0;
-  virtual const ParallelDesc& parallel_desc() const = 0;
 
   template<typename T>
   T Attr(const std::string& attr_name) const {

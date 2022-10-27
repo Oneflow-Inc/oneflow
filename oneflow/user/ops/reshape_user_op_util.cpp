@@ -132,7 +132,6 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
               && out_shape.At(out_axis) % hierarchy_value == 0)) {
         (*group_start_in_axis2out_axis)[in_axis] = out_axis;
       }
-      if (can_split) { (*group_start_in_axis2out_axis)[in_axis] = out_axis; }
       // Move forward
       MoveInAxis();
       MoveOutAxis();
@@ -166,21 +165,6 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
                                                         hierarchy_value,
                                                         &squeezed_group_start_in_axis2out_axis));
   }
-
-  // if (!debug_str.empty()) {
-  //   std::ostringstream ss;
-  //   ss << "[GetReshapeUserOpSbpSignatures] " << debug_str << ": " << in_shape.ToString() << " ->
-  //   "
-  //      << out_shape.ToString() << ", parallel_desc=" << *JUST(PlacementToString(parallel_desc));
-  //   for (const auto& pair : squeezed_group_start_in_axis2out_axis) {
-  //     ss << "\n";
-  //     ss << pair.first << " (origin=" << in_squeezed_axis2original_axis.at(pair.first) << ")";
-  //     ss << " -> ";
-  //     ss << pair.second << " (origin=" << out_squeezed_axis2original_axis.at(pair.second) << ")";
-  //   }
-  //   VLOG(3) << ss.str();
-  // }
-
   for (const auto& pair : squeezed_group_start_in_axis2out_axis) {
     int64_t start_in_axis = in_squeezed_axis2original_axis.at(pair.first);
     int64_t start_out_axis = out_squeezed_axis2original_axis.at(pair.second);

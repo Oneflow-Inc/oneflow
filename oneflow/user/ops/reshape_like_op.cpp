@@ -34,7 +34,7 @@ namespace oneflow {
       .Build();
   user_op::UserOpSbpSignatureBuilder builder = ctx->NewBuilder();
   return ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
-      in_shape, like_shape, {{"in", 0}}, {{"like", 0}, {"out", 0}}, ctx->parallel_desc(), &builder);
+      in_shape, like_shape, {{"in", 0}}, {{"like", 0}, {"out", 0}}, ctx->hierarchy_value(), &builder);
 }
 /*static*/ Maybe<void> ReshapeLikeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);

@@ -26,10 +26,6 @@ namespace oneflow {
   const Shape& shape = ctx->Attr<Shape>("shape");
   const auto& outshape = JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape));
   user_op::UserOpSbpSignatureBuilder builder = ctx->NewBuilder();
-  std::string op_name =
-      ctx->user_op_conf().op_name() == "model.t5_model.encoder.layers.0.self_attention-reshape-29"
-          ? ctx->user_op_conf().op_name()
-          : "";
   return ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
       in_shape, *outshape, {{"in", 0}}, {{"out", 0}}, ctx->hierarchy_value(), &builder);
 }
