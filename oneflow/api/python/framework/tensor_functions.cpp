@@ -809,7 +809,7 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
       const auto& index_item = functional::PyUnpackTensorIndex(item);
       if (index_item.size() == 1 && index_item[0].IsTensor()
           && index_item[0].tensor()->shape() == tensor->shape()) {
-        // masked_fill
+        // NOTE: use masked_fill to avoid D2H in TensorSetItem
         ASSERT_PTR(functional::MaskedFillInplace(tensor, index_item[0].tensor(), value_scalar));
         return 0;
       }
