@@ -26,6 +26,13 @@ from oneflow.nn.utils.clip_grad import clip_grad_norm_
 import oneflow as flow
 
 
+class ContiguousParamsUnit(object):
+    def __init__(self, bufsize, dtype, device):
+        self.bufsize = bufsize
+        self.param_buf = flow.zeros(bufsize, dtype=dtype, device=device)
+        self.grad_buf = flow.zeros(bufsize, dtype=dtype, device=device)
+        self.index = 0
+
 class ParamGroup(object):
     def __init__(
         self, parameters: Dict[str, Any], default_options: Dict, contiguous_params: False,
@@ -47,32 +54,8 @@ class ParamGroup(object):
                         "parameters in ParamGroup must be Tensor or TensorBlock."
                     )
         else: 
-            params = parameters['params']
-            dtype = params[0].dtype
-            device = params[0].device
-            bufsize = 0
-
-            for p in params:
-                if p.dtype != dtype:
-                    raise ValueError("All params in this group must be of the same dtype.")
-                if p.device != device:
-                    raise ValueError("All params in this group must be on the same device.")
-                bufsize += p.numel()
-
-            self._param_buf = flow.zeros(bufsize, dtype=dtype, device=device)
-            self._grad_buf = flow.zeros(bufsize, dtype=dtype, device=device)
-
-            index = 0
-            for p in params:
-                size = p.numel()
-                self._param_buf[index:index + size] = p.data.view(-1)
-                p.data = self._param_buf[index:index + size].view(p.data.shape)
-                p.grad = self._grad_buf[index:index + size].view(p.data.shape)
-                p._is_grad_acc_inplace = True
-                index += size
-
-            self._param_buf.grad = self._grad_buf
-            self._parameters.append(self._param_buf)
+            self.params_dict = dict()
+            self._make_contiguous_params(parameters)
 
         self._options = deepcopy(default_options)
         # rewrite options in default_options
@@ -89,6 +72,35 @@ class ParamGroup(object):
             self._enable_clip_grad = True
             self._options["clip_grad_max_norm"] = parameters["clip_grad_max_norm"]
             self._options["clip_grad_norm_type"] = parameters["clip_grad_norm_type"]
+
+    def _make_contiguous_params(self, parameters):            
+        for p in parameters['params']:
+            buf_type = (p.dtype, p.device)
+            if buf_type in self.params_dict:
+                self.params_dict[buf_type] += p.numel()
+            else: 
+                self.params_dict[buf_type] = p.numel()
+
+        for (dtype, device), bufsize in self.params_dict.items():
+            self.params_dict[(dtype, device)] = ContiguousParamsUnit(
+                bufsize, dtype, device,
+            )
+
+        for p in parameters['params']:
+            buf_type = (p.dtype, p.device)
+            size, shape = p.numel(), p.data.shape
+            index = self.params_dict[buf_type].index
+            assert index + size <= self.params_dict[buf_type].bufsize
+
+            self.params_dict[buf_type].param_buf[index:index + size] = p.data.view(-1)
+            p.data = self.params_dict[buf_type].param_buf[index:index + size].view(shape)
+            p.grad = self.params_dict[buf_type].grad_buf[index:index + size].view(shape)
+            p._is_grad_acc_inplace = True
+            self.params_dict[buf_type].index += size 
+
+        for buf_type in self.params_dict.keys():
+            self.params_dict[buf_type].param_buf.grad = self.params_dict[buf_type].grad_buf
+            self.parameters.append(self.params_dict[buf_type].param_buf)
 
     def __getitem__(self, key):
         return self._options[key]
