@@ -28,7 +28,6 @@ Maybe<uint64_t> GetRandomSeedForRank(const ParallelDesc& placement, const NdSbp&
                                      uint64_t init_seed, int64_t rank_id) {
   uint64_t seed = init_seed;
   const Shape& hierarchy = *placement.hierarchy();
-  std::vector<int64_t> coordinate(hierarchy.NumAxes());
   int64_t seed_idx = 0;
   int64_t stride = 1;
   for (int i = nd_sbp.sbp_parallel_size() - 1; i >= 0; --i) {
