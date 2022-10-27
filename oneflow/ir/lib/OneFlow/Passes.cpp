@@ -880,21 +880,34 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToEnd(&okl_func.getBody().back());
 
-    auto launcher_ctx = okl_func.getArgument(0);
-    // auto module_op = okl_func->getParentOfType<ModuleOp>();
-
     auto loc = op->getLoc();
-    // create okl.create_reg_ctx(StringAttr: assembly)
-    // std::string mlir;
-    // Operation* found = nullptr;
-    // if (!(found = SymbolTable(module_op).lookup(op_type_name))) {
-    //   InsertKernelOFFuncOp(rewriter, op, op_type_name.str());
-    //   found = SymbolTable(module_op).lookup(op_type_name);
-    // }
-    // llvm::raw_string_ostream os_mlir(mlir);
-    // found->print(os_mlir);
-    auto func_type = rewriter.getFunctionType(op->getOperandTypes(), op->getResultTypes());
 
+    auto fetchAttr = [&](Value val) -> Attribute {
+      auto define_op = val.getDefiningOp();
+      if (define_op->getName().getStringRef() == okl::GetTensorFromArgOp::getOperationName()) {
+        define_op->dump();
+        auto index = define_op->getAttr("index").cast<IntegerAttr>().getInt();
+        return okl::TensorFromArgsAttr::get(rewriter.getContext(), index);
+      }
+      for (auto use : val.getUsers()) {
+        define_op = use;
+        if (define_op->getName().getStringRef() == okl::GetTensorAsRetOp::getOperationName()) {
+          auto index = define_op->getAttr("index").cast<IntegerAttr>().getInt();
+          return okl::TensorFromRetsAttr::get(rewriter.getContext(), index);
+        }
+      }
+      op->emitError("Fail to parse this op tensor signature");
+    };
+    SmallVector<Attribute> ins_tensor, outs_tensor;
+    for (auto arg : op->getOperands()) { ins_tensor.push_back(fetchAttr(arg)); }
+    for (auto ret : op->getResults()) { outs_tensor.push_back(fetchAttr(ret)); }
+
+    auto tensor_signature =
+        okl::TensorSignatureAttr::get(rewriter.getContext(), rewriter.getArrayAttr(ins_tensor),
+                                      rewriter.getArrayAttr(outs_tensor));
+    op->setAttr("tensor_signature", tensor_signature);
+
+    auto func_type = rewriter.getFunctionType(op->getOperandTypes(), op->getResultTypes());
     auto reg_ctx = rewriter.create<okl::BuildRegContextOp>(
         loc, okl::RegContextType::get(rewriter.getContext()), TypeAttr::get(func_type));
     reg_ctx.body().emplaceBlock();
@@ -910,20 +923,12 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     rewriter.create<okl::ReturnOp>(loc, ValueRange{new_op_res});
 
     rewriter.setInsertionPointToEnd(&okl_func.getBody().back());
-    // reg_ctx.dump();
-    // reg_ctx->setAttrs(op->getAttrs());
-    // auto reg_ctx = compute_ctx;
-    // create okl.create_run_ctx(*reg_ctx, *compute_ctx)
     auto run_ctx = rewriter.create<okl::BuildRunContextOp>(
         loc, okl::RunContextType::get(rewriter.getContext()), reg_ctx);
-    // create okl.create_kernel(*reg_ctx, StringAttr: op_type_name)
     auto kernel = rewriter.create<okl::BuildKernelOp>(
         loc, okl::KernelType::get(rewriter.getContext()), reg_ctx);
-    // create okl.launch(*run_ctx, *kernel)
     rewriter.create<okl::LaunchOp>(loc, run_ctx, kernel);
-    // create okl.destroy(reg_ctx);
     rewriter.create<okl::DestroyRegContextOp>(loc, reg_ctx);
-    // create okl.destroy(run_ctx);
     rewriter.create<okl::DestroyRunContextOp>(loc, run_ctx);
     return success();
   }
