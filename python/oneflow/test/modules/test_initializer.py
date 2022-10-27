@@ -39,14 +39,20 @@ class DataChecker:
                 self.checkers[key] = kwargs[key]
 
     def __call__(self, test_case, tensor):
-        for func in ["mean", "std", "min", "max"]:
+        for func in ["mean", "std"]:
             if func in self.checkers:
                 of_res = eval(f"tensor.{func}")().numpy()
                 checker_res = self.checkers[func]
                 test_case.assertTrue(
-                    np.allclose(of_res, checker_res, rtol=1e-2, atol=1e-2),
+                    np.allclose(of_res, checker_res, rtol=1e-1, atol=1e-1),
                     f"{func} not equal, {of_res} vs {checker_res}",
                 )
+
+        if "min" in self.checkers:
+            test_case.assertTrue(np.all(tensor.numpy() >= self.checkers["min"]))
+
+        if "max" in self.checkers:
+            test_case.assertTrue(np.all(tensor.numpy() <= self.checkers["max"]))
 
         if "value" in self.checkers:
             test_case.assertTrue(np.all(tensor.numpy() == self.checkers["value"]))
@@ -96,6 +102,12 @@ check_func_list = [
         "func": flow.nn.init.kaiming_normal_,
         "params": {"mode": "fan_in", "a": 2.0, "nonlinearity": "linear"},
         "checker": DataChecker(mean=0.0, std=0.0625),
+    },
+    # oneflow.nn.init.trunc_normal_
+    {
+        "func": flow.nn.init.trunc_normal_,
+        "params": {"mean": 0.0, "std": 1.0, "a": -5.0, "b": 5.0},
+        "checker": DataChecker(min=-5.0, max=5.0),
     },
     # TODO: test more initializer
 ]
