@@ -1,6 +1,6 @@
 // RUN: oneflow-opt %s \
 // RUN: -extract-kernel-launch-tensor \
-// RUN: -trim-return-as-void \
+// RUN: -trim-return-to-void \
 // RUN: -lower-to-okl \
 // RUN: -split-into-funcs \
 // RUN: -fetch-from-launcher \

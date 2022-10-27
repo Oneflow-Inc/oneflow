@@ -279,13 +279,13 @@ def ExtractKernelLaunchTensorPass : Pass<"extract-kernel-launch-tensor", "Module
   let constructor = "mlir::oneflow::createExtractKernelLaunchTensorPass()";
 }
 
-def TrimReturnAsVoidPass : Pass<"trim-return-as-void", "ModuleOp"> {
-  let summary = "trim return types as void types in the flow";
+def TrimReturnAsVoidPass : Pass<"trim-return-to-void", "ModuleOp"> {
+  let summary = "trim return types to void type";
   let constructor = "mlir::oneflow::createTrimReturnAsVoidPass()";
 }
 
 def LowerToOKLPass : Pass<"lower-to-okl", "ModuleOp"> {
-  let summary = "convert oneflow.kernel_launch to okl dialect";
+  let summary = "lower oneflow dialect ops to okl dialect";
   let constructor = "mlir::oneflow::createLowerToOKLPass()";
 }
 

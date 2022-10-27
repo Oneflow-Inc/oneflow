@@ -1,5 +1,5 @@
 // RUN: oneflow-opt %s \
-// RUN: -trim-return-as-void \
+// RUN: -trim-return-to-void \
 // RUN: | FileCheck %s
 
 // CHECK: module {

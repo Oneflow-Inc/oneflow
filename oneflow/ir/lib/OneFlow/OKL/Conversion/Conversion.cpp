@@ -30,7 +30,7 @@ namespace okl {
 LogicalResult LowerWrapOpsToOKL(ModuleOp module) {
   PassManager pm(module->getContext());
   pm.addPass(oneflow::createExtractKernelLaunchTensorPass());  // extract-kernel-launch-tensor
-  pm.addPass(oneflow::createTrimReturnAsVoidPass());           // trim-return-as-void
+  pm.addPass(oneflow::createTrimReturnAsVoidPass());           // trim-return-to-void
   pm.addPass(oneflow::createLowerToOKLPass());                 // lower-to-okl
   pm.addPass(createSplitIntoFuncsPass());                      // split-into-funcs
   pm.addPass(createFetchFromLauncherPass());                   // fetch-from-launcher
