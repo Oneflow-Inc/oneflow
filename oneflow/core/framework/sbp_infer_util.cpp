@@ -604,15 +604,15 @@ void SetNdSbpSignature(NdSbpSignature* nd_sbp_signature, const SbpSignature& sbp
 
 void DfsGetNdSbpSignature(NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t dims,
                           const Shape& hierarchy,
-                          const HashMap<int32_t, SbpSignatureList>& hierarchy_num2sbp_sig_list,
+                          const HashMap<int32_t, SbpSignatureList>& hierarchy_value2sbp_sig_list,
                           std::vector<NdSbpSignature>* nd_sbp_sig_list) {
   if (depth == dims) {
     nd_sbp_sig_list->push_back(nd_sbp_sig);
   } else {
     for (const auto& sbp_signature :
-         hierarchy_num2sbp_sig_list.at(hierarchy.At(depth)).sbp_signature()) {
+         hierarchy_value2sbp_sig_list.at(hierarchy.At(depth)).sbp_signature()) {
       SetNdSbpSignature(&nd_sbp_sig, sbp_signature, depth);
-      DfsGetNdSbpSignature(nd_sbp_sig, depth + 1, dims, hierarchy, hierarchy_num2sbp_sig_list,
+      DfsGetNdSbpSignature(nd_sbp_sig, depth + 1, dims, hierarchy, hierarchy_value2sbp_sig_list,
                            nd_sbp_sig_list);
     }
   }

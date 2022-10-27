@@ -346,8 +346,8 @@ class UserOpSbpContext : public user_op::SbpContext {
 
   UserOpSbpContext(const UserOp* op, SbpSignatureList* sbp_sig_list,
                    std::function<Maybe<const BlobDesc&>(const std::string&)> LogicalBlobDesc4Ibn,
-                   int32_t parallel_num)
-      : op_(op), sbp_sig_list_(sbp_sig_list), parallel_num_(parallel_num) {
+                   int32_t hierarchy_value)
+      : op_(op), sbp_sig_list_(sbp_sig_list), hierarchy_value_(hierarchy_value) {
     const auto& user_op_conf = op->op_conf().user_conf();
     for (auto it = user_op_conf.input().begin(); it != user_op_conf.input().end(); ++it) {
       const std::string& arg_name = it->first;
@@ -378,11 +378,13 @@ class UserOpSbpContext : public user_op::SbpContext {
 
   int64_t parallel_num() const override { return parallel_num_; }
 
+  int64_t hierarchy_value() const override { return hierarchy_value_; }
+
  private:
   const UserOp* op_;
   SbpSignatureList* sbp_sig_list_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
-  int32_t parallel_num_;
+  int32_t hierarchy_value_;
 };
 
 class UserOpInferSbpSignatureFnContext : public user_op::InferSbpSignatureFnContext {
@@ -876,10 +878,10 @@ Maybe<void> UserOp::InferSbpSignature(
 
 Maybe<void> UserOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    int32_t parallel_num, SbpSignatureList* sbp_sig_list) const {
+    int32_t hierarchy_value, SbpSignatureList* sbp_sig_list) const {
   CHECK_OR_RETURN(val_ != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
-  UserOpSbpContext sbp_ctx(this, sbp_sig_list, LogicalBlobDesc4Ibn, parallel_num);
+  UserOpSbpContext sbp_ctx(this, sbp_sig_list, LogicalBlobDesc4Ibn, hierarchy_value);
   JUST(val_->get_sbp_fn(&sbp_ctx));
   // Add Broadcast for source user op tick input
   if (val_->op_def.input_size() == 1 && input_bns().size() == 1

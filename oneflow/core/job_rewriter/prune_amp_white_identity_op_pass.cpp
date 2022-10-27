@@ -26,8 +26,8 @@ bool IsAmpIdentityOp(const OperatorConf& op) {
              || op.user_conf().op_type_name() == "amp_black_identity");
 }
 
-bool NeedDoPass(const Job* job) {
-  return std::any_of(job->net().op().cbegin(), job->net().op().cend(), IsAmpIdentityOp);
+bool NeedDoPass(const Job& job) {
+  return std::any_of(job.net().op().cbegin(), job.net().op().cend(), IsAmpIdentityOp);
 }
 
 class PruneAmpWhiteIdentityOpPass final : public JobPass {
@@ -40,8 +40,7 @@ class PruneAmpWhiteIdentityOpPass final : public JobPass {
 
 Maybe<void> PruneAmpWhiteIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const {
   if (!ctx->job_desc().prune_amp_white_identity_ops()) { return Maybe<void>::Ok(); }
-  if (!NeedDoPass(job)) { return Maybe<void>::Ok(); }
-
+  if (!NeedDoPass(*job)) { return Maybe<void>::Ok(); }
   const OpGraph op_graph(*job);
 
   HashSet<std::string> ctrl_in_op_names;
