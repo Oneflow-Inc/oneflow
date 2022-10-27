@@ -67,9 +67,18 @@ namespace oneflow {
   CHECK_LT_OR_RETURN(true_end_dim, in_shape.NumAxes());
   CHECK_LE_OR_RETURN(start_dim, true_end_dim);
 
-  for (int i = 0; i <= start_dim; ++i) {
+  // i < start_dim
+  for (int i = 0; i < start_dim; ++i) {
     ctx->NewBuilder().Split(user_op::OpArg("in", 0), i).Split(user_op::OpArg("out", 0), i).Build();
   }
+  // i == start_dim
+  if (in_shape.At(start_dim) % ctx->hierarchy_value() == 0) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("in", 0), start_dim)
+        .Split(user_op::OpArg("out", 0), start_dim)
+        .Build();
+  }
+  // i > true_end_dim
   const int32_t diff = true_end_dim - start_dim;
   for (int i = true_end_dim + 1; i < in_shape.NumAxes(); ++i) {
     ctx->NewBuilder()
