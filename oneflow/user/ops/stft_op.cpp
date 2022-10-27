@@ -64,7 +64,10 @@ const Shape InferOutputShape(const Shape& in_shape, bool onesided = true,
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> StftOp::GetSbp(user_op::SbpContext* ctx) { return Maybe<void>::Ok(); }
+/* static */ Maybe<void> StftOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  return Maybe<void>::Ok();
+}
 
 /* static */ Maybe<void> StftOp::InferDataType(user_op::InferContext* ctx) {
   ctx->SetOutputDType("output", 0, ctx->InputDType("input", 0));
