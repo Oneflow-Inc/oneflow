@@ -120,8 +120,7 @@ def BuildRunContextOp : OKL_Op<"build_run_ctx"> {
   }];
 
   let arguments = (ins
-    RegContextType:$reg_ctx,
-    LauncherContextType:$launcher_ctx
+    RegContextType:$reg_ctx
   );
   let results = (outs RunContextType:$out);
 }

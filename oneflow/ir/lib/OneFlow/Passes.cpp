@@ -915,7 +915,7 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
     // auto reg_ctx = compute_ctx;
     // create okl.create_run_ctx(*reg_ctx, *compute_ctx)
     auto run_ctx = rewriter.create<okl::BuildRunContextOp>(
-        loc, okl::RunContextType::get(rewriter.getContext()), reg_ctx, launcher_ctx);
+        loc, okl::RunContextType::get(rewriter.getContext()), reg_ctx);
     // create okl.create_kernel(*reg_ctx, StringAttr: op_type_name)
     auto kernel = rewriter.create<okl::BuildKernelOp>(
         loc, okl::KernelType::get(rewriter.getContext()), reg_ctx);
