@@ -239,12 +239,12 @@ class OnesLikeFunctor : public UnaryFunctor {
 
 class FlattenFunctor {
  public:
-  FlattenFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("flatten").Input("in").Output("out").Build());
-  }
+  FlattenFunctor() = default;
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& start_dim,
                            const int32_t& end_dim) const {
-    int32_t ndim = x->shape()->size();
+    const Shape& in_shape = *x->shape();
+    int32_t ndim = in_shape.size();
 
     auto CheckAndWrapDim = [&](int32_t dim) -> Maybe<int32_t> {
       if (dim < -ndim || dim >= ndim) {
@@ -254,17 +254,16 @@ class FlattenFunctor {
       return dim >= 0 ? dim : dim + ndim;
     };
 
+    // -n dim (negative dim) indicate ndim-n
+    // for example, when ndim == 3, (-3) == (0), (-2) == (1), (-1) == (2)
     int32_t true_start_dim = JUST(CheckAndWrapDim(start_dim));
     int32_t true_end_dim = JUST(CheckAndWrapDim(end_dim));
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("start_dim", "end_dim");
-    attrs.SetAllAttrs(true_start_dim, true_end_dim);
-
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    DimVector dim_vec{in_shape.begin(), in_shape.begin() + true_start_dim};
+    for (int i = true_start_dim + 1; i <= true_end_dim; ++i) { dim_vec.back() *= in_shape[i]; }
+    dim_vec.insert(dim_vec.end(), in_shape.begin() + true_end_dim + 1, in_shape.end());
+    return JUST(Reshape(x, Shape{dim_vec}));
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
 class WhereFunctor {

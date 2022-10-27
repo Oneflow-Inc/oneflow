@@ -384,42 +384,6 @@ struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
   }
 };
 
-struct FlattenOpLowering final : public OpConversionPattern<FlattenOp> {
- public:
-  using OpConversionPattern<FlattenOp>::OpConversionPattern;
-  LogicalResult matchAndRewrite(FlattenOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter& rewriter) const override {
-    const auto start_dim = op.start_dim();
-    const auto end_dim = op.end_dim();
-    const auto in_type = op.in().getType();
-
-    const auto in_shape = in_type.cast<ShapedType>();
-    const auto rank = in_type.dyn_cast<RankedTensorType>().getRank();
-
-    // calculate flatten shape
-    std::vector<int64_t> flatten_shape_vec;
-    for (auto dim = 0; dim < start_dim; ++dim) {
-      flatten_shape_vec.push_back(in_shape.getDimSize(dim));
-    }
-    auto last_dim = end_dim < 0 ? rank : end_dim + 1;
-    int flatten_size = 1;
-    for (auto dim = start_dim; dim < last_dim; ++dim) { flatten_size *= in_shape.getDimSize(dim); }
-    flatten_shape_vec.push_back(flatten_size);
-    if (end_dim > 0) {
-      for (auto dim = end_dim + 1; dim < rank; ++dim) {
-        flatten_shape_vec.push_back(in_shape.getDimSize(dim));
-      }
-    }
-    // lowering oneflow flatten op to tosa reshape op
-    const auto output = RankedTensorType::get(flatten_shape_vec, in_shape.getElementType());
-    auto input1 = op.in();
-    auto new_shape = rewriter.getI64ArrayAttr(flatten_shape_vec);
-
-    rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(op, output, input1, new_shape);
-    return success();
-  }
-};
-
 struct MatmulOpLowering final : public OpConversionPattern<MatmulOp> {
  public:
   using OpConversionPattern<MatmulOp>::OpConversionPattern;
@@ -630,12 +594,11 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   } else {
     patterns.add<VariableOpToConstLowering>(typeConverter, context, this->variableAsConstant);
   }
-  patterns
-      .add<CastOpLowering, ScalarMulByTensorOpLowering, ReluOpLowering, Conv2DOpLowering,
-           AvgPool2DOpLowering, FlattenOpLowering, Add2OpLowering, MaxPool2DOpLowering,
-           MatmulOpLowering, BroadcastAddOpLowering, JobLowering, ReturnOpLowering, InputOpLowering,
-           OutputOpLowering, NormalizationOpLowering, NormalizationInferenceOpLowering>(
-          typeConverter, context);
+  patterns.add<CastOpLowering, ScalarMulByTensorOpLowering, ReluOpLowering, Conv2DOpLowering,
+               AvgPool2DOpLowering, Add2OpLowering, MaxPool2DOpLowering, MatmulOpLowering,
+               BroadcastAddOpLowering, JobLowering, ReturnOpLowering, InputOpLowering,
+               OutputOpLowering, NormalizationOpLowering, NormalizationInferenceOpLowering>(
+      typeConverter, context);
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     signalPassFailure();
     LOG(ERROR) << "Failed to lower OneFlow to Tosa";
