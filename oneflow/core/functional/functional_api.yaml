@@ -2224,6 +2224,15 @@
     ]
   bind_python: True
 
+- name: "randn_like"
+  signature: [
+      "Tensor (Tensor input, *, DataType dtype=None, Device device=None,
+      Generator generator=None, Bool requires_grad=False) => RandnLike",
+      "Tensor (Tensor input, *, Placement placement, SbpList sbp, DataType dtype=None,
+      Generator generator=None, Bool requires_grad=False) => GlobalRandnLike",
+    ]
+  bind_python: True
+
 - name: "randint"
   signature: [
       "Tensor (Int64 low, Int64 high, Shape size, *, DataType dtype=None,
@@ -2365,6 +2374,10 @@
 - name: "fused_scale_tril_softmax_mask_scale_grad"
   signature: "Tensor (Tensor softmax_y, Tensor dy, Tensor mask, Int64 diagonal, Float tril_scale_value, Float mask_scale_value) => FusedScaleTrilSoftmaxMaskScaleGrad"
   bind_python: False
+
+- name: "fused_multi_head_attention_inference"
+  signature: "Tensor (Tensor query,  Tensor key, Tensor value, Int64 num_heads, Bool causal=False, Int64 query_hidden_slice_start=0, Int64 query_hidden_slice_end=-1, Int64 key_hidden_slice_start=0, Int64 key_hidden_slice_end=-1, Int64 value_hidden_slice_start=0, Int64 value_hidden_slice_end=-1) => FusedMultiHeadAttentionInference"
+  bind_python: True
 
 - name: "send"
   signature: "Void (Tensor input, Int64 dst, Bool send_meta=True) => Send"
@@ -2623,11 +2636,11 @@
   bind_python: True
 
 - name: "multi_tensor_sgd_update"
-  signature: "Void (TensorTuple model, TensorTuple model_diff, Tensor learning_rate, Double scale, Float weight_decay) => MultiTensorSgdUpdate"
+  signature: "Void (TensorTuple model, TensorTuple model_diff, Double scale, Float weight_decay, Float learning_rate_val) => MultiTensorSgdUpdate"
   bind_python: True
 
 - name: "multi_tensor_adam_update"
-  signature: "Void (TensorTuple model, TensorTuple model_diff, TensorTuple m, TensorTuple v, Tensor learning_rate, Float beta1, Float beta2, Float bias_correction1_val, Float bias_correction2_val, Bool do_bias_correction, Double scale, Float weight_decay) => MultiTensorAdamUpdate"
+  signature: "Void (TensorTuple model, TensorTuple model_diff, TensorTuple m, TensorTuple v, Float learning_rate_val, Float l2, Float beta1, Float beta2, Float bias_correction1_val, Float bias_correction2_val, Bool do_bias_correction, Double scale, Float weight_decay, Float epsilon) => MultiTensorAdamUpdate"
   bind_python: True
 
 - name: "grad_acc_repeat"
