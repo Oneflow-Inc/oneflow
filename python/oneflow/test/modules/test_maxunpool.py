@@ -57,7 +57,7 @@ def _get_valid_output_size(
 
 @flow.unittest.skip_unless_1n1d()
 class TestMaxUnpooling(flow.unittest.TestCase):
-    @autotest(n=3, auto_backward=True, check_graph=False)
+    @autotest(n=3, check_graph=False)
     def test_max_unpool1d_with_random_data(test_case):
         kernel_size = random(4, 6).to(_size_1_t)
         stride = random(1, 3).to(_size_1_t) | nothing()
@@ -85,7 +85,7 @@ class TestMaxUnpooling(flow.unittest.TestCase):
         result = unpool_module(pooling_results, indices, output_size=output_size)
         return result
 
-    @autotest(n=3, auto_backward=True, check_graph=False)
+    @autotest(n=3, check_graph=False)
     def test_functional_max_unpool1d_with_random_data(test_case):
         kernel_size = random(4, 6).to(_size_1_t)
         stride = random(1, 3).to(_size_1_t) | nothing()
@@ -116,7 +116,7 @@ class TestMaxUnpooling(flow.unittest.TestCase):
             output_size=output_size,
         )
 
-    @autotest(n=3, auto_backward=True, check_graph=False)
+    @autotest(n=3, check_graph=False)
     def test_max_unpool2d_with_random_data(test_case):
         kernel_size = random(4, 6).to(_size_2_t)
         stride = random(1, 3).to(_size_2_t) | nothing()
@@ -146,7 +146,7 @@ class TestMaxUnpooling(flow.unittest.TestCase):
         result = unpool_module(pooling_results, indices, output_size)
         return result
 
-    @autotest(n=3, auto_backward=True, check_graph=False)
+    @autotest(n=3, check_graph=False)
     def test_functional_max_unpool2d_with_random_data(test_case):
         kernel_size = random(4, 6).to(_size_2_t)
         stride = random(1, 3).to(_size_2_t) | nothing()
@@ -179,7 +179,7 @@ class TestMaxUnpooling(flow.unittest.TestCase):
             output_size=output_size,
         )
 
-    @autotest(n=3, auto_backward=True, check_graph=False)
+    @autotest(n=3, check_graph=False)
     def test_max_unpool3d_with_random_data(test_case):
         kernel_size = random(4, 6).to(_size_3_t)
         stride = random(1, 3).to(_size_3_t) | nothing()
@@ -213,7 +213,7 @@ class TestMaxUnpooling(flow.unittest.TestCase):
         result = unpool_module(pooling_results, indices, output_size)
         return result
 
-    @autotest(n=3, auto_backward=True, check_graph=False)
+    @autotest(n=3, check_graph=False)
     def test_functional_max_unpool3d_with_random_data(test_case):
         kernel_size = random(4, 6).to(_size_3_t)
         stride = random(1, 3).to(_size_3_t) | nothing()

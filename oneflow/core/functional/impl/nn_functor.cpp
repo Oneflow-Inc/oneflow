@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/common/just.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/tensor_util.h"
@@ -927,7 +926,6 @@ class MaxUnpoolNDFunctor {
                            const Optional<Shape>& output_size) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("kernel_size", "padding", "stride",
                                                  "has_output_size", "output_size");
-    // If stride is None, we set it as kernel_size to align Pytorch.
     attrs.SetAllAttrs(kernel_size, padding, stride ? *JUST(stride) : kernel_size,
                       output_size.has_value(),
                       output_size.has_value() ? *JUST(output_size) : Shape());
@@ -936,7 +934,6 @@ class MaxUnpoolNDFunctor {
 
  protected:
   std::shared_ptr<OpExpr> op_;
-  // std::shared_ptr<OpExpr> tf_maxpool_op_;
 };
 
 class MaxUnpool1DFunctor : public MaxUnpoolNDFunctor {

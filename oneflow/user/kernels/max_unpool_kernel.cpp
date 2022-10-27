@@ -13,8 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/throw.h"
 #include "oneflow/user/kernels/max_unpool_kernel_util.h"
 
@@ -28,14 +26,9 @@ struct UnpoolKernelUtil<DeviceType::kCPU, T, IDX> {
                                  const int64_t* indice_ptr, const int64_t y_hwd_size,
                                  const int64_t y_elem_num) {
     XPU_1D_KERNEL_LOOP(num, elem_num) {
-      // std::cout << "num: " << num << std::endl;
       IDX bc_idx, hwd_idx;
       index_helper.OffsetToNdIndex(num, bc_idx, hwd_idx);
-      // std::cout << "bc_idx: " << bc_idx << " hwd_idx: " << hwd_idx << std::endl;
-      // IDX indice_value = indice_ptr[num];
-      // std::cout << "indice_value: " << indice_value << std::endl;
       IDX dest_idx = bc_idx * y_hwd_size + indice_ptr[num];
-      // std::cout << "dest_idx: " << dest_idx << std::endl << std::endl;
       CHECK_OR_THROW(dest_idx >= 0 && dest_idx < y_elem_num)
           << "Found an invalid max index: " << dest_idx << ", output volumes are of size "
           << y_elem_num;
@@ -56,11 +49,6 @@ struct UnpoolKernelUtil<DeviceType::kCPU, T, IDX> {
           << "Found an invalid max index: " << src_idx << ", output volumes are of size "
           << dy_elem_num;
       dest[num] = src[src_idx];
-      // if (src_idx < dy_elem_num) {
-      //   dest[num] = src[src_idx];
-      // } else {
-      //   dest[num] = 0;
-      // }
     }
   }
 };
@@ -84,9 +72,6 @@ class MaxUnpoolNdKernel final : public user_op::OpKernel {
     const int64_t* indice_ptr = indice->dptr<int64_t>();
     T* dest = y->mut_dptr<T>();
 
-    // std::cout << "y shape: " << y->shape_view().DebugStr() << std::endl;
-    // std::cout << "x shape: " << x->shape_view().DebugStr() << std::endl;
-
     DimVector x_vector(2);
     x_vector.at(0) = x->shape_view().At(0) * x->shape_view().At(1);
 
@@ -108,10 +93,6 @@ class MaxUnpoolNdKernel final : public user_op::OpKernel {
     memset_primitive->Launch(ctx->stream(), dest, 0,
                              y->shape_view().elem_cnt() * GetSizeOfDataType(y->data_type()));
 
-    // std::cout << "mem data: " << std::endl;
-    // for (int i = 0; i < y->shape_view().elem_cnt(); i++) {
-    //   std::cout << dest[i] << std::endl;
-    // }
     const int64_t y_elem_num = y->shape_view().elem_cnt();
 
     if (elem_num < GetMaxVal<int32_t>()) {

@@ -1034,7 +1034,7 @@ class MaxUnpool1d(Module):
         self.padding = padding
 
     def forward(self, x, indices, output_size=None):
-        return flow.nn.functional.max_unpool1d(
+        return flow._C.max_unpool1d(
             x, indices, self.kernel_size, self.stride, self.padding, output_size
         )
 
@@ -1052,7 +1052,7 @@ class MaxUnpool2d(Module):
         self.padding = padding
 
     def forward(self, x, indices, output_size=None):
-        return flow.nn.functional.max_unpool2d(
+        return flow._C.max_unpool2d(
             x, indices, self.kernel_size, self.stride, self.padding, output_size
         )
 
@@ -1070,7 +1070,7 @@ class MaxUnpool3d(Module):
         self.padding = padding
 
     def forward(self, x, indices, output_size=None):
-        return flow.nn.functional.max_unpool3d(
+        return flow._C.max_unpool3d(
             x, indices, self.kernel_size, self.stride, self.padding, output_size
         )
 

@@ -13,12 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-// #include "oneflow/core/ep/include/stream.h"
-#include "oneflow/core/common/maybe.h"
 #ifdef WITH_CUDA
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/user/kernels/max_unpool_kernel_util.h"
-#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include <cuda_fp16.h>
 
 namespace oneflow {

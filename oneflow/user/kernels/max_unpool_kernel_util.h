@@ -15,16 +15,9 @@ limitations under the License.
 */
 #ifndef ONEFLOW_USER_KERNELS_UNPOOL_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_UNPOOL_KERNEL_UTIL_H_
-#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
-#include "oneflow/core/operator/operator_util.h"
-#include "oneflow/core/kernel/util/numerics.cuh"
-#include "oneflow/core/kernel/util/numeric_limits.cuh"
-#ifdef WITH_CUDA
-#include "oneflow/core/cuda/atomic.cuh"
-#endif  // WITH_CUDA
 
 namespace oneflow {
 
