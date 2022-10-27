@@ -48,7 +48,7 @@ class SGD(Optimizer):
         lr (float, optional): learning rate (default: 1e-3)
         momentum (float, optional): Momentum factor (default: 0.0)
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0.0)
-        multi_tensor (bool, optional): whether use multi_tensor_update kernel (default: False)
+        fused (bool, optional): whether use fused kernel (default: False)
 
     For example: 
 
@@ -105,7 +105,7 @@ class SGD(Optimizer):
         weight_decay: float = 0.0,
         nesterov: bool = False,
         maximize: bool = False,
-        multi_tensor: bool = False,
+        fused: bool = False,
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert momentum >= 0.0, f"Invalid momentum: {momentum}"
@@ -123,23 +123,23 @@ class SGD(Optimizer):
         options["maximize"] = maximize
         super().__init__(params, options)
 
-        self.multi_tensor = multi_tensor
-        if multi_tensor and (momentum > 0.0 or dampening > 0.0 or nesterov or maximize):
+        self.fused = fused
+        if fused and (dampening > 0.0 or nesterov or maximize):
             warnings.warn(
-                "Only lr and weight_decay can be used for multi_tensor, trying default SGD kernel. "
+                "Only lr, weight_decay and momentum can be used for fused kernel, trying default SGD kernel. "
             )
-            self.multi_tensor = False
+            self.fused = False
 
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
 
-                if self.multi_tensor and not param.is_cuda:
+                if self.fused and not param.is_cuda:
                     warnings.warn(
-                        "Only cuda param can be used for multi_tensor, trying default SGD kernel. "
+                        "Only cuda param can be used for fused, trying default SGD kernel. "
                     )
-                    self.multi_tensor = False
+                    self.fused = False
 
         self._momentum_sgd = (
             flow.stateful_op("momentum_update")
@@ -185,18 +185,25 @@ class SGD(Optimizer):
     def _multi_tensor_update(self, param_group):
         param_list = []
         param_grad_list = []
+        momentum_buf_list = []
         for param in param_group.parameters:
             if param.grad is None:
                 continue
             param_list.append(param)
             param_grad_list.append(param.grad)
 
+            if "momentum_buf" not in self._state[param]:
+                self._state[param]["momentum_buf"] = flow.zeros_like(param)
+            momentum_buf_list.append(self._state[param]["momentum_buf"])
+
         flow._C.multi_tensor_sgd_update(
             model=param_list,
             model_diff=param_grad_list,
+            momentum_buf=momentum_buf_list,
             scale=1.0,
             weight_decay=param_group["weight_decay"],
             learning_rate_val=param_group["lr"],
+            momentum=param_group["momentum"],
         )
 
     def step(self, closure: Callable = None):
@@ -210,7 +217,7 @@ class SGD(Optimizer):
             if closure is not None:
                 loss = closure()
 
-            if self.multi_tensor:
+            if self.fused:
                 for param_group in self.param_groups:
                     self._multi_tensor_update(param_group)
             else:

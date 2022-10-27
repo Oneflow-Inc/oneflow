@@ -57,7 +57,7 @@ class AdamW(Optimizer):
         weight_decay (float, optional): weight decay (L2 penalty) (In the equation is λ, default: 0)
         amsgrad (bool, optional): whether to use the AMSGrad variant of this algorithm. (default: False) 
         do_bias_correction (bool, optional): Whether do bias correction (default: True)
-        multi_tensor (bool, optional): whether use multi_tensor_update kernel (default: False)
+        fused (bool, optional): whether use fused kernel (default: False)
 
     .. _Adam\\: A Method for Stochastic Optimization:
         https://arxiv.org/abs/1412.6980
@@ -120,7 +120,7 @@ class AdamW(Optimizer):
         weight_decay: float = 0,
         amsgrad: bool = False,
         do_bias_correction: bool = True,
-        multi_tensor: bool = False,
+        fused: bool = False,
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
@@ -140,25 +140,25 @@ class AdamW(Optimizer):
         options["bias_correction2"] = 1.0
         options["do_bias_correction"] = do_bias_correction
         options["amsgrad"] = amsgrad
-        self.multi_tensor = multi_tensor
+        self.fused = fused
         super().__init__(params, options)
 
-        if self.multi_tensor and amsgrad:
+        if self.fused and amsgrad:
             warnings.warn(
-                "Do not support amsgrad=True for multi_tensor kernel, trying default Adamw kernel."
+                "Do not support amsgrad=True for fused kernel, trying default Adamw kernel."
             )
-            self.multi_tensor = False
+            self.fused = False
 
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
 
-                if self.multi_tensor and not param.is_cuda:
+                if self.fused and not param.is_cuda:
                     warnings.warn(
-                        "Only cuda param can be used for multi_tensor, trying default Adamw kernel. "
+                        "Only cuda param can be used for fused, trying default Adamw kernel. "
                     )
-                    self.multi_tensor = False
+                    self.fused = False
 
         self._op_with_amsgrad = (
             flow.stateful_op("adam_update")
@@ -288,7 +288,7 @@ class AdamW(Optimizer):
             if closure is not None:
                 loss = closure()
 
-            if self.multi_tensor:
+            if self.fused:
                 self._multi_tensor_update()
             else:
                 self._single_tensor_update()

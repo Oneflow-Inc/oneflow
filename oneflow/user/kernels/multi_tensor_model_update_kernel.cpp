@@ -39,6 +39,7 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
     const float* learning_rate_ptr = nullptr;
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
     const float lr_scale = ctx->Attr<float>("learning_rate_scale");
+    const float momentum = ctx->Attr<float>("momentum");
 
     if (ctx->has_input("learning_rate", 0)) {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
@@ -58,7 +59,7 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
 
-    TensorTupleParams<2> tensor_tuple_params{};
+    TensorTupleParams<3> tensor_tuple_params{};
     int32_t count = 0;
     int32_t total_elem_cnt = 0;
     for (int tensor_idx = 0; tensor_idx < n_tensor; tensor_idx++) {
@@ -66,6 +67,8 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
           (ctx->Tensor4ArgNameAndIndex("model", tensor_idx))->mut_dptr();
       tensor_tuple_params.ptr[1][count] =
           (ctx->Tensor4ArgNameAndIndex("model_diff", tensor_idx))->mut_dptr();
+      tensor_tuple_params.ptr[2][count] =
+          (ctx->Tensor4ArgNameAndIndex("momentum_buf", tensor_idx))->mut_dptr();
 
       const int64_t tensor_elem_cnt =
           ctx->Tensor4ArgNameAndIndex("model", tensor_idx)->shape_view().elem_cnt();
@@ -76,7 +79,7 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
       if (count == kMaxTuples || tensor_idx == n_tensor - 1) {
         MultiTensorSGDUpdateKernelUtil<device_type, T, G>::Update(
             ctx->stream(), total_elem_cnt, count, static_cast<T>(scale), l1, l2, weight_decay,
-            learning_rate_val, lr_scale, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
+            learning_rate_val, lr_scale, learning_rate_ptr, scale_by_ptr, skip_if_ptr, momentum, 
             tensor_tuple_params);
         count = 0;
         total_elem_cnt = 0;
@@ -91,7 +94,8 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
       .SetCreateFn<MultiTensorSGDUpdateKernel<device, dtype, gtype>>()                    \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
                        && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
-                       && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value) \
+                       && (user_op::HobDataType("momentum_buf", 0) == GetDataType<gtype>::value));
 
 #ifdef WITH_CUDA
 REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
@@ -227,6 +231,7 @@ class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
     const float* learning_rate_ptr = nullptr;
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
     const float lr_scale = ctx->Attr<float>("learning_rate_scale");
+    const float momentum = ctx->Attr<float>("momentum");
 
     if (ctx->has_input("learning_rate", 0)) {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
@@ -246,7 +251,7 @@ class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
 
-    TensorTupleParams<3> tensor_tuple_params{};
+    TensorTupleParams<4> tensor_tuple_params{};
     int32_t count = 0;
     int32_t total_elem_cnt = 0;
     for (int tensor_idx = 0; tensor_idx < n_tensor; tensor_idx++) {
@@ -255,6 +260,8 @@ class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
       tensor_tuple_params.ptr[1][count] =
           (ctx->Tensor4ArgNameAndIndex("model_diff", tensor_idx))->mut_dptr();
       tensor_tuple_params.ptr[2][count] =
+          (ctx->Tensor4ArgNameAndIndex("momentum_buf", tensor_idx))->mut_dptr();
+      tensor_tuple_params.ptr[3][count] =
           (ctx->Tensor4ArgNameAndIndex("model_copy", tensor_idx))->mut_dptr();
 
       const int64_t tensor_elem_cnt =
@@ -266,7 +273,7 @@ class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
       if (count == kMaxTuples || tensor_idx == n_tensor - 1) {
         MultiTensorSGDUpdateWithCastKernelUtil<device_type, T, G>::Update(
             ctx->stream(), total_elem_cnt, count, static_cast<T>(scale), l1, l2, weight_decay,
-            learning_rate_val, lr_scale, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
+            learning_rate_val, lr_scale, learning_rate_ptr, scale_by_ptr, skip_if_ptr, momentum,
             tensor_tuple_params);
         count = 0;
         total_elem_cnt = 0;
@@ -282,6 +289,7 @@ class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                    \
                        && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)      \
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value) \
+                       && (user_op::HobDataType("momentum_buf", 0) == GetDataType<gtype>::value) \
                        && (user_op::HobDataType("model_copy", 0) == GetDataType<float16>::value));
 
 #ifdef WITH_CUDA

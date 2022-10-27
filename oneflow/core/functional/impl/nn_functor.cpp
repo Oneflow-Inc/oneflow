@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/sequence_function.h"
@@ -4177,21 +4178,23 @@ class MultiTensorSgdUpdateFunctor {
       op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_sgd_update")
                               .Input("model", n + 1)
                               .Input("model_diff", n + 1)
+                              .Input("momentum_buf", n + 1)
                               .Build());
     }
   }
 
-  Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff,
+  Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff, const TensorTuple& momentum_buf,
                          const double& scale, const float& weight_decay,
-                         const float& learning_rate_val) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "learning_rate_val");
-    attrs.SetAllAttrs(scale, weight_decay, learning_rate_val);
+                         const float& learning_rate_val, const float& momentum) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "learning_rate_val", "momentum");
+    attrs.SetAllAttrs(scale, weight_decay, learning_rate_val, momentum);
     const int64_t weight_size = model.size();
     for (int i = 0; i < weight_size; i += kMaxInputCount) {
       size_t size = (i + kMaxInputCount) < weight_size ? kMaxInputCount : weight_size - i;
-      TensorTuple input(2 * size);
+      TensorTuple input(3 * size);
       std::copy(model.begin() + i, model.begin() + i + size, input.begin());
       std::copy(model_diff.begin() + i, model_diff.begin() + i + size, input.begin() + size);
+      std::copy(momentum_buf.begin() + i, momentum_buf.begin() + i + size, input.begin() + 2 * size);
       JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[size - 1], input, attrs));
     }
     return Maybe<void>::Ok();

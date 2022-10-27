@@ -37,8 +37,8 @@ unsigned int ComputeGridSize(ep::Stream* stream, const int32_t block_size, const
 template<typename T, typename G, int N>
 __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float l1, const float l2,
                                         const float weight_decay, float learning_rate_val,
-                                        float lr_scale, const float* learning_rate,
-                                        const T* scale_by_ptr, const int64_t* skip_if,
+                                        float lr_scale, const float* learning_rate, const T* scale_by_ptr, 
+                                        const int64_t* skip_if, const float momentum, 
                                         TensorTupleParams<N> tensor_tuple_params) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
@@ -49,13 +49,15 @@ __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float
     const int64_t tensor_elem_cnt = tensor_tuple_params.sizes[tensor_idx];
     T* model_ptr = (T*)tensor_tuple_params.ptr[0][tensor_idx];
     G* model_diff_ptr = (G*)tensor_tuple_params.ptr[1][tensor_idx];
+    T* momentum_buf_ptr = (T*)tensor_tuple_params.ptr[2][tensor_idx];
     half* model_copy_ptr = nullptr;
-    if (N == 3) { model_copy_ptr = (half*)tensor_tuple_params.ptr[2][tensor_idx]; }
+    if (N == 4) { model_copy_ptr = (half*)tensor_tuple_params.ptr[3][tensor_idx]; }
 
     for (int64_t i = v_block_id * blockDim.x * kUnrollSize + threadIdx.x; i < tensor_elem_cnt;
          i += blockDim.x * gridDim.x * kUnrollSize) {
       T model_val[kUnrollSize] = {0};
       G model_diff[kUnrollSize] = {0};
+      T momentum_buf[kUnrollSize] = {0};
 
 #pragma unroll
       for (int32_t ilp = 0; ilp < kUnrollSize; ilp++) {
@@ -63,6 +65,7 @@ __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float
         if (actual_idx < tensor_elem_cnt) {
           model_val[ilp] = *(model_ptr + actual_idx);
           model_diff[ilp] = *(model_diff_ptr + actual_idx);
+          momentum_buf[ilp] = *(momentum_buf_ptr + actual_idx);
         }
       }
 
@@ -72,6 +75,12 @@ __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float
         if (actual_idx < tensor_elem_cnt) {
           T model_diff_t = CastScaleRegularizeGradientFunctor<T, G>()(
               model_diff[ilp], model_val[ilp], scale, l1, l2);
+
+          if (momentum != 0.f) {
+            momentum_buf[ilp] = momentum * momentum_buf[ilp] + model_diff_t;
+            model_diff_t = momentum_buf[ilp];
+          }
+
           model_val[ilp] =
               model_val[ilp] - learning_rate_val * (model_diff_t + weight_decay * model_val[ilp]);
         }
@@ -82,7 +91,8 @@ __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float
         int64_t actual_idx = i + ilp * blockDim.x;
         if (actual_idx < tensor_elem_cnt) {
           *(model_ptr + actual_idx) = model_val[ilp];
-          if (N == 3) { *(model_copy_ptr + actual_idx) = static_cast<half>(model_val[ilp]); }
+          *(momentum_buf_ptr + actual_idx) = momentum_buf[ilp];
+          if (N == 4) { *(model_copy_ptr + actual_idx) = static_cast<half>(model_val[ilp]); }
         }
       }
     }
@@ -96,14 +106,14 @@ struct MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, T, G> {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
                      float l1, float l2, float weight_decay, float learning_rate_val,
                      float lr_scale, const float* learning_rate, const T* scale_by_ptr,
-                     const int64_t* skip_if, TensorTupleParams<2> tensor_tuple_params);
+                     const int64_t* skip_if, float momentum, TensorTupleParams<3> tensor_tuple_params);
 };
 
 template<typename T, typename G>
 void MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
     float weight_decay, float learning_rate_val, float lr_scale, const float* learning_rate,
-    const T* scale_by_ptr, const int64_t* skip_if, TensorTupleParams<2> tensor_tuple_params) {
+    const T* scale_by_ptr, const int64_t* skip_if, float momentum, TensorTupleParams<3> tensor_tuple_params) {
   const unsigned int grid_size =
       ComputeGridSize(stream->As<ep::CudaStream>(), kBlockSize, elem_cnt);
   for (int i = 0; i < n_tensor; i++) {
@@ -111,10 +121,10 @@ void MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
         ((tensor_tuple_params.sizes[i] + kBlockSize * kUnrollSize - 1) / (kBlockSize * kUnrollSize))
         % grid_size;
   }
-  MultiTensorSGDUpdateGpu<T, G, 2>
+  MultiTensorSGDUpdateGpu<T, G, 3>
       <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
           n_tensor, static_cast<T>(scale), l1, l2, weight_decay, learning_rate_val, lr_scale,
-          learning_rate, scale_by_ptr, skip_if, tensor_tuple_params);
+          learning_rate, scale_by_ptr, skip_if, momentum, tensor_tuple_params);
 }
 
 template<typename T>
@@ -122,17 +132,17 @@ struct MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
                      float l1, float l2, float weight_decay, float learning_rate_val,
                      float lr_scale, const float* learning_rate, const T* scale_by_ptr,
-                     const int64_t* skip_if, TensorTupleParams<2> tensor_tuple_params);
+                     const int64_t* skip_if, float momentum, TensorTupleParams<3> tensor_tuple_params);
 };
 
 template<typename T>
 void MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
     float weight_decay, float learning_rate_val, float lr_scale, const float* learning_rate,
-    const T* scale_by_ptr, const int64_t* skip_if, TensorTupleParams<2> tensor_tuple_params) {
+    const T* scale_by_ptr, const int64_t* skip_if, float momentum, TensorTupleParams<3> tensor_tuple_params) {
   MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, T, half>::Update(
       stream, elem_cnt, n_tensor, scale, l1, l2, weight_decay, learning_rate_val, lr_scale,
-      learning_rate, scale_by_ptr, skip_if, tensor_tuple_params);
+      learning_rate, scale_by_ptr, skip_if, momentum, tensor_tuple_params);
 }
 
 template struct MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, double, double>;
@@ -285,14 +295,14 @@ struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G> {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
                      float l1, float l2, float weight_decay, float learning_rate_val,
                      float lr_scale, const float* learning_rate, const T* scale_by_ptr,
-                     const int64_t* skip_if, TensorTupleParams<3> tensor_tuple_params);
+                     const int64_t* skip_if, float momentum, TensorTupleParams<4> tensor_tuple_params);
 };
 
 template<typename T, typename G>
 void MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
     float weight_decay, float learning_rate_val, float lr_scale, const float* learning_rate,
-    const T* scale_by_ptr, const int64_t* skip_if, TensorTupleParams<3> tensor_tuple_params) {
+    const T* scale_by_ptr, const int64_t* skip_if, float momentum, TensorTupleParams<4> tensor_tuple_params) {
   const unsigned int grid_size =
       ComputeGridSize(stream->As<ep::CudaStream>(), kBlockSize, elem_cnt);
   for (int i = 0; i < n_tensor; i++) {
@@ -300,10 +310,10 @@ void MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G>::Update(
         ((tensor_tuple_params.sizes[i] + kBlockSize * kUnrollSize - 1) / (kBlockSize * kUnrollSize))
         % grid_size;
   }
-  MultiTensorSGDUpdateGpu<T, G, 3>
+  MultiTensorSGDUpdateGpu<T, G, 4>
       <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
           n_tensor, static_cast<T>(scale), l1, l2, weight_decay, learning_rate_val, lr_scale,
-          learning_rate, scale_by_ptr, skip_if, tensor_tuple_params);
+          learning_rate, scale_by_ptr, skip_if, momentum, tensor_tuple_params);
 }
 
 template<typename T>
@@ -311,17 +321,17 @@ struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16> {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
                      float l1, float l2, float weight_decay, float learning_rate_val,
                      float lr_scale, const float* learning_rate, const T* scale_by_ptr,
-                     const int64_t* skip_if, TensorTupleParams<3> tensor_tuple_params);
+                     const int64_t* skip_if, float momentum, TensorTupleParams<4> tensor_tuple_params);
 };
 
 template<typename T>
 void MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
     float weight_decay, float learning_rate_val, float lr_scale, const float* learning_rate,
-    const T* scale_by_ptr, const int64_t* skip_if, TensorTupleParams<3> tensor_tuple_params) {
+    const T* scale_by_ptr, const int64_t* skip_if, float momentum, TensorTupleParams<4> tensor_tuple_params) {
   MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, half>::Update(
       stream, elem_cnt, n_tensor, scale, l1, l2, weight_decay, learning_rate_val, lr_scale,
-      learning_rate, scale_by_ptr, skip_if, tensor_tuple_params);
+      learning_rate, scale_by_ptr, skip_if, momentum, tensor_tuple_params);
 }
 
 template struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, float, float>;
