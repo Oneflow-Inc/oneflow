@@ -32,6 +32,7 @@ from oneflow.nn.graph.util import (
     add_indent,
     ArgsTree,
     operators_repr,
+    GraphIR,
     seq_to_func_return,
 )
 
@@ -608,9 +609,11 @@ class ModuleBlock(Block):
                 module_conf = self._belonged_graph._compiled_graph_proto.module_name2module_conf[
                     self.name_prefix + self.name
                 ]
+                if self._belonged_graph._ggraph_ir is None:
+                    self._belonged_graph._ggraph_ir = GraphIR(self._belonged_graph._compiled_graph_proto)
                 return operators_repr(
                     module_conf.ops,
-                    self._belonged_graph._compiled_graph_proto,
+                    self._belonged_graph._ggraph_ir,
                     self._debug_op_repr_with_py_stack,
                 )
 

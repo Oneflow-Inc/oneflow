@@ -16,7 +16,7 @@ limitations under the License.
 import sys
 from string import Template
 from collections import OrderedDict
-from typing import Callable, Dict, Union, List, Tuple
+from typing import Callable, Dict, Union, List, Tuple, Optional
 
 import google.protobuf as protobuf
 from google.protobuf import text_format
@@ -182,28 +182,43 @@ def _get_output_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc):
     )
     return input_sig_str, output_sig_str
 
+class GraphIR(object):
+    def __init__(self, g_proto: job_pb.Job):
+        assert g_proto is not None and isinstance(g_proto, job_pb.Job)
+        self._graph_proto = g_proto
+        self._op2conf = None
+        self._op2placement = None
+    
+    def get_op_conf(self, op_name: str) -> Optional[op_conf_util.OperatorConf]:
+        if self._op2conf is None:
+            self._op2conf = dict()
+            for op_conf in self._graph_proto.net.op:
+                self._op2conf[op_conf.name] = op_conf
+        if op_name not in self._op2conf:
+            return None
+        return self._op2conf[op_name]
+    
+    def get_op_placement(self, op_name: str) -> Optional[oneflow.placement]:
+        if self._op2placement is None:
+            self._op2placement = dict()
+            for group in self._graph_proto.placement.placement_group:
+                parallel_conf = group.parallel_conf
+                for op_name in group.op_set.op_name:
+                    self._op2placement[op_name] = oneflow.placement(
+                            proto_str=text_format.MessageToString(parallel_conf)
+                        )
+        if op_name not in self._op2placement:
+            return None
+        return self._op2placement[op_name]
 
 def operators_repr(
     ops: protobuf.pyext._message.RepeatedCompositeContainer,
-    graph_proto: job_pb.Job,
+    graph_ir: GraphIR,
     show_op_loc: bool,
 ) -> List[str]:
     r"""Generate operators' string representation of this module
     """
-    if len(ops) > 0:
-        op_confs = dict()
-        for op_conf in graph_proto.net.op:
-            op_confs[op_conf.name] = op_conf
-
-        op2placement = dict()
-        for group in graph_proto.placement.placement_group:
-            parallel_conf = group.parallel_conf
-            for op_name in group.op_set.op_name:
-                op2placement[op_name] = str(
-                    oneflow.placement(
-                        proto_str=text_format.MessageToString(parallel_conf)
-                    )
-                )
+    graph_proto = graph_ir._graph_proto
 
     def _op_signature(op: op_conf_util.OperatorConf) -> Tuple[bool, str]:
         bn2nd_sbp = graph_proto.job_parallel_view_conf.op_name2nd_sbp_signature_conf[
@@ -214,7 +229,7 @@ def operators_repr(
             op.name
             + "($input) -> ($output)"
             + ", placement=("
-            + op2placement[op.name]
+            + str(graph_ir.get_op_placement(op.name))
             + ")"
         )
         input_sig_str = "..."
@@ -258,9 +273,9 @@ def operators_repr(
 
     ops_strs = []
     for op in ops:
-        if op not in op_confs:
+        op_conf = graph_ir.get_op_conf(op)
+        if op_conf is None:
             continue
-        op_conf = op_confs[op]
         assert isinstance(op_conf, op_conf_util.OperatorConf)
         got_repr, op_str = _op_signature(op_conf)
         if got_repr:
