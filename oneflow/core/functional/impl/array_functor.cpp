@@ -244,17 +244,21 @@ class FlattenFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& start_dim,
                            const int32_t& end_dim) const {
-    const auto& x_shape = x->shape();
-    const int32_t x_dim = x_shape->dim_vec().size();
+    int32_t ndim = x->shape()->size();
 
-    int new_start_dim = start_dim;
-    int new_end_dim = end_dim;
-    if (start_dim < 0) { new_start_dim += x_dim; }
-    if (end_dim < 0) { new_end_dim += x_dim; }
-    if (new_start_dim == new_end_dim) { return x; }
+    auto CheckAndWrapDim = [&](int32_t dim) -> Maybe<int32_t> {
+      if (dim < -ndim || dim >= ndim) {
+        return Error::IndexError() << "Dimension out of range (expected to be in range of ["
+                                   << -ndim << ", " << ndim - 1 << "], but got " << dim << ")";
+      }
+      return dim >= 0 ? dim : dim + ndim;
+    };
+
+    int32_t true_start_dim = JUST(CheckAndWrapDim(start_dim));
+    int32_t true_end_dim = JUST(CheckAndWrapDim(end_dim));
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("start_dim", "end_dim");
-    attrs.SetAllAttrs(start_dim, end_dim);
+    attrs.SetAllAttrs(true_start_dim, true_end_dim);
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }

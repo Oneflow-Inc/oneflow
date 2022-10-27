@@ -24,24 +24,18 @@ namespace oneflow {
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->MutOutputTensorDesc("out", 0);
   const Shape& in_shape = ExpandDimIf0D(in_tensor_desc.shape());
-  CHECK_GE_OR_RETURN(start_dim, 0);
-  CHECK_LT_OR_RETURN(start_dim, in_shape.NumAxes());
-  const int32_t true_end_dim = end_dim < 0 ? end_dim + in_shape.NumAxes() : end_dim;
-  CHECK_GE_OR_RETURN(true_end_dim, 0);
-  CHECK_LT_OR_RETURN(true_end_dim, in_shape.NumAxes());
-  CHECK_LE_OR_RETURN(start_dim, true_end_dim);
-
+  // 0 <= start_dim < end_dim < ndim
+  CHECK_GE_OR_RETURN(start_dim, 0);                 // NOLINT(maybe-need-error-msg)
+  CHECK_LT_OR_RETURN(start_dim, end_dim);           // NOLINT(maybe-need-error-msg)
+  CHECK_LT_OR_RETURN(end_dim, in_shape.NumAxes());  // NOLINT(maybe-need-error-msg)
   out_tensor_desc->set_is_dynamic(in_tensor_desc.is_dynamic());
 
   DimVector dim_vec;
-
   for (int i = 0; i < start_dim; ++i) { dim_vec.emplace_back(in_shape.At(i)); }
   int64_t flatten_dim = 1;
-  for (int i = start_dim; i <= true_end_dim; ++i) { flatten_dim *= in_shape.At(i); }
+  for (int i = start_dim; i <= end_dim; ++i) { flatten_dim *= in_shape.At(i); }
   dim_vec.emplace_back(flatten_dim);
-  for (int i = true_end_dim + 1; i < in_shape.NumAxes(); ++i) {
-    dim_vec.emplace_back(in_shape.At(i));
-  }
+  for (int i = end_dim + 1; i < in_shape.NumAxes(); ++i) { dim_vec.emplace_back(in_shape.At(i)); }
 
   out_tensor_desc->set_shape(Shape(dim_vec));
   CHECK_EQ_OR_RETURN(out_tensor_desc->shape().elem_cnt(), in_shape.elem_cnt());
@@ -59,25 +53,20 @@ namespace oneflow {
 
   const int32_t start_dim = ctx->Attr<int32_t>("start_dim");
   const int32_t end_dim = ctx->Attr<int32_t>("end_dim");
+  // 0 <= start_dim < end_dim < ndim
+  CHECK_GE_OR_RETURN(start_dim, 0);                 // NOLINT(maybe-need-error-msg)
+  CHECK_LT_OR_RETURN(start_dim, end_dim);           // NOLINT(maybe-need-error-msg)
+  CHECK_LT_OR_RETURN(end_dim, in_shape.NumAxes());  // NOLINT(maybe-need-error-msg)
 
-  CHECK_GE_OR_RETURN(start_dim, 0);
-  CHECK_LT_OR_RETURN(start_dim, in_shape.NumAxes());
-  const int32_t true_end_dim = end_dim < 0 ? end_dim + in_shape.NumAxes() : end_dim;
-  CHECK_GE_OR_RETURN(true_end_dim, 0);
-  CHECK_LT_OR_RETURN(true_end_dim, in_shape.NumAxes());
-  CHECK_LE_OR_RETURN(start_dim, true_end_dim);
-
-  for (int i = 0; i <= start_dim; ++i) {
-    ctx->NewBuilder().Split(user_op::OpArg("in", 0), i).Split(user_op::OpArg("out", 0), i).Build();
-  }
-  const int32_t diff = true_end_dim - start_dim;
-  for (int i = true_end_dim + 1; i < in_shape.NumAxes(); ++i) {
+  int32_t diff_dim = end_dim - start_dim;
+  for (int i = 0; i < in_shape.NumAxes(); ++i) {
+    int in_axis = i;
+    int out_axis = i > start_dim ? i - diff_dim : i;
     ctx->NewBuilder()
-        .Split(user_op::OpArg("in", 0), i)
-        .Split(user_op::OpArg("out", 0), i - diff)
+        .Split(user_op::OpArg("in", 0), in_axis)
+        .Split(user_op::OpArg("out", 0), out_axis)
         .Build();
   }
-
   return Maybe<void>::Ok();
 }
 
