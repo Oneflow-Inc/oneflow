@@ -105,6 +105,7 @@ class SGD(Optimizer):
         weight_decay: float = 0.0,
         nesterov: bool = False,
         maximize: bool = False,
+        contiguous_params: bool = False,
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert momentum >= 0.0, f"Invalid momentum: {momentum}"
@@ -120,7 +121,7 @@ class SGD(Optimizer):
         options["weight_decay"] = weight_decay
         options["nesterov"] = nesterov
         options["maximize"] = maximize
-        super().__init__(params, options)
+        super().__init__(params, options, contiguous_params)
 
         for param_group in self.param_groups:
             for param in param_group.parameters:

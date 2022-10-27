@@ -28,22 +28,51 @@ import oneflow as flow
 
 class ParamGroup(object):
     def __init__(
-        self, parameters: Dict[str, Any], default_options: Dict,
+        self, parameters: Dict[str, Any], default_options: Dict, contiguous_params: False,
     ):
         # ParamGroup must be constructed by Dict["params": parameters: List[Parameter, Tensor or TensorBlock], "...": ...]
         assert isinstance(parameters, dict) and "params" in parameters
         assert not isinstance(parameters["params"], (Parameter, Tensor))
         self._parameters = list()
-        for p in parameters["params"]:
-            if isinstance(p, (Parameter, Tensor)):
-                self._parameters.append(p)
-            elif isinstance(p, TensorBlock):
-                # Add parameter from nn.Graph
-                self._parameters.append(p.origin)
-            else:
-                raise ValueError(
-                    "parameters in ParamGroup must be Tensor or TensorBlock."
-                )
+
+        if not contiguous_params:
+            for p in parameters["params"]:
+                if isinstance(p, (Parameter, Tensor)):
+                    self._parameters.append(p)
+                elif isinstance(p, TensorBlock):
+                    # Add parameter from nn.Graph
+                    self._parameters.append(p.origin)
+                else:
+                    raise ValueError(
+                        "parameters in ParamGroup must be Tensor or TensorBlock."
+                    )
+        else: 
+            params = parameters['params']
+            dtype = params[0].dtype
+            device = params[0].device
+            bufsize = 0
+
+            for p in params:
+                if p.dtype != dtype:
+                    raise ValueError("All params in this group must be of the same dtype.")
+                if p.device != device:
+                    raise ValueError("All params in this group must be on the same device.")
+                bufsize += p.numel()
+
+            self._param_buf = flow.zeros(bufsize, dtype=dtype, device=device)
+            self._grad_buf = flow.zeros(bufsize, dtype=dtype, device=device)
+
+            index = 0
+            for p in params:
+                size = p.numel()
+                self._param_buf[index:index + size] = p.data.view(-1)
+                p.data = self._param_buf[index:index + size].view(p.data.shape)
+                p.grad = self._grad_buf[index:index + size].view(p.data.shape)
+                p._is_grad_acc_inplace = True
+                index += size
+
+            self._param_buf.grad = self._grad_buf
+            self._parameters.append(self._param_buf)
 
         self._options = deepcopy(default_options)
         # rewrite options in default_options
@@ -123,17 +152,17 @@ required = _RequiredParameter()
 
 
 class Optimizer(object):
-    def __init__(self, parameters, options):
+    def __init__(self, parameters, options, contiguous_params=False):
         self.param_groups = list()
         self._default_options = options
         self._state = dict()
         self._state["step"] = 0
 
-        self._parse_input_parameters(parameters)
+        self._parse_input_parameters(parameters, contiguous_params)
 
         self.step = _decorate_step(self.step)
 
-    def add_param_group(self, param_group) -> None:
+    def add_param_group(self, param_group, contiguous_params) -> None:
         r"""
         
         Add a param group to the :class:`Optimizer` s `param_groups`.
@@ -209,7 +238,7 @@ class Optimizer(object):
         if not param_set.isdisjoint(set(param_group["params"])):
             raise ValueError("some parameters appear in more than one parameter group")
 
-        self.param_groups.append(ParamGroup(param_group, self._default_options))
+        self.param_groups.append(ParamGroup(param_group, self._default_options, contiguous_params))
 
         for param in param_group["params"]:
             assert param.is_leaf, "parameters must be leaf tensor"
@@ -394,7 +423,7 @@ class Optimizer(object):
             for param in param_group.parameters:
                 param._zero_grad_(set_to_none)
 
-    def _parse_input_parameters(self, parameters):
+    def _parse_input_parameters(self, parameters, contiguous_params):
         """
         Supports such parameters:
             1. Iterator: flow.optim.SGD(module.parameters(), lr=0.1)
@@ -404,18 +433,18 @@ class Optimizer(object):
         if isinstance(parameters, collections.abc.Iterator):
             # Iterator
             self.param_groups.append(
-                ParamGroup({"params": list(parameters)}, self._default_options)
+                ParamGroup({"params": list(parameters)}, self._default_options, contiguous_params)
             )
         elif isinstance(parameters, collections.abc.Iterable):
             # List[Dict]
             if isinstance(parameters[0], dict):
                 for param in parameters:
                     assert isinstance(param, dict)
-                    self.param_groups.append(ParamGroup(param, self._default_options))
+                    self.param_groups.append(ParamGroup(param, self._default_options, contiguous_params))
             # List[Parameter or Tensor]
             else:
                 self.param_groups.append(
-                    ParamGroup({"params": parameters}, self._default_options)
+                    ParamGroup({"params": parameters}, self._default_options, contiguous_params)
                 )
         else:
             raise TypeError(

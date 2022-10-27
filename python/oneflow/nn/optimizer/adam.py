@@ -116,6 +116,7 @@ class Adam(Optimizer):
         weight_decay: float = 0,
         amsgrad: bool = False,
         do_bias_correction: bool = True,
+        contiguous_params: bool = True,
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
@@ -135,7 +136,7 @@ class Adam(Optimizer):
         options["bias_correction1"] = 1.0
         options["bias_correction2"] = 1.0
         options["do_bias_correction"] = do_bias_correction
-        super().__init__(params, options)
+        super().__init__(params, options, contiguous_params)
 
         for param_group in self.param_groups:
             for param in param_group.parameters:
