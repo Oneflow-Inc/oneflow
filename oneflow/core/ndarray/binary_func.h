@@ -54,8 +54,8 @@ namespace oneflow {
   return __float2half(0.0)
 template<template<typename> class BinaryFunc, typename T>
 struct BinaryFuncTrait final {
-  typedef typename std::remove_const<decltype(BinaryFunc<T>::Invoke(
-      std::declval<const T>(), std::declval<const T>()))>::type return_type;
+  typedef typename std::remove_const<decltype(
+      BinaryFunc<T>::Invoke(std::declval<const T>(), std::declval<const T>()))>::type return_type;
 };
 
 #define SPECIALIZE_CONST_TYPE_BINARY_FUNC(func_struct)                                        \
