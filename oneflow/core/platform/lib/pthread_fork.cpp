@@ -30,7 +30,7 @@ static void SetIsForkedSubProcess() { is_fork = true; }
 
 namespace {
 void CurrentRankVmSync() {
-  if (SyncVmModeGuard::IsCurrentSyncVmMode()) { return; }
+  if (!GetThreadLocalVmNeedSync()) { return; }
   // Instructions in forked subprocesses are not dispatched to vm,
   // so no need to sync vm in these processes.
   if (!is_fork && Singleton<VirtualMachine>::Get() != nullptr) {

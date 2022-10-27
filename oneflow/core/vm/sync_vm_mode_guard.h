@@ -37,6 +37,9 @@ class SyncVmModeGuard final : public ThreadLocalGuard<SyncVmMode> {
   }
 };
 
+void SetThreadLocalVmNeedSync();
+bool GetThreadLocalVmNeedSync();
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_SYNC_VM_MODE_GUARD_H_
