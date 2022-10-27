@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_OKLTYPES_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_OKLTYPES_H_
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_OKLTYPES
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_OKLTYPES
 
 include "OneFlow/OKL/OKLBase.td"
 include "mlir/IR/AttrTypeBase.td"
@@ -31,4 +31,4 @@ def RunContextType : OKL_Type<"RunContext", "run_ctx"> {
 def KernelType : OKL_Type<"Kernel", "kernel"> {
 }
 
-#endif // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_OKLTYPES_H_
+#endif // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_OKLTYPES

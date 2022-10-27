@@ -20,7 +20,6 @@ oneflow_add_mlir_dialect_library(
   OKL/OKLDialect.cpp
   OKL/OKLOps.cpp
   OKL/OKLTypes.cpp
-  OKL/OKLAttributes.cpp
   OKL/Conversion/OKLToLLVM.cpp
   OKL/Conversion/SplitIntoFuncs.cpp
   OKL/Conversion/FetchFromLauncher.cpp

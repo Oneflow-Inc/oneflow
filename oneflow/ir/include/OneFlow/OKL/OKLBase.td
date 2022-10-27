@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The sbp Authors. All rights reserved.
+Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_OKL_OKLBASE_H_
-#define ONEFLOW_IR_INCLUDE_OKL_OKLBASE_H_
+#ifndef ONEFLOW_IR_INCLUDE_OKL_OKLBASE
+#define ONEFLOW_IR_INCLUDE_OKL_OKLBASE
 
 include "OneFlow/OKL/OKLDialect.td"
 include "mlir/IR/AttrTypeBase.td"
@@ -30,4 +30,9 @@ class OKL_Type<string name, string typeMnemonic, list<Trait> traits = []>
   let mnemonic = typeMnemonic;
 }
 
-#endif // ONEFLOW_IR_INCLUDE_OKL_OKLBASE_H_
+class OKL_Attr<string name, string attrMnemonic, list<Trait> traits = []>
+    : AttrDef<OKL_Dialect, name, traits> {
+  let mnemonic = attrMnemonic;
+}
+
+#endif // ONEFLOW_IR_INCLUDE_OKL_OKLBASE

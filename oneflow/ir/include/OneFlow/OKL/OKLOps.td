@@ -13,12 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_OKL_OKLOPS_H_
-#define ONEFLOW_IR_INCLUDE_OKL_OKLOPS_H_
+#ifndef ONEFLOW_IR_INCLUDE_OKL_OKLOPS
+#define ONEFLOW_IR_INCLUDE_OKL_OKLOPS
 
 include "OneFlow/OKL/OKLDialect.td"
 include "OneFlow/OKL/OKLBase.td"
 include "OneFlow/OKL/OKLTypes.td"
+include "OneFlow/OKL/OKLAttributes.td"
 include "mlir/Pass/PassBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/IR/OpBase.td"
@@ -225,4 +226,4 @@ def LowerOKLToLLVMCallPass : Pass<"lower-okl-to-llvm-call", "ModuleOp"> {
   let constructor = "mlir::okl::createLowerOKLToLLVMCallPass()";
 }
 
-#endif // ONEFLOW_IR_INCLUDE_OKL_OKLOPS_H_
+#endif // ONEFLOW_IR_INCLUDE_OKL_OKLOPS
