@@ -251,9 +251,9 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
     }
     if (JUST(engine_->Receive(instruction_list))) {
       // old scheduler_pending_instruction_list is empty.
-      SetThreadLocalVmNeedSync(true);
       pending_notifier_.Notify();
     }
+    SetThreadLocalVmNeedSync(true);
   }
   return Maybe<void>::Ok();
 }
