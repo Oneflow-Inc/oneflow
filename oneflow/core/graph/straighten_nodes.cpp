@@ -126,6 +126,7 @@ bool ShouldRunASAP(TaskType task_type) {
     case TaskType::kAcc:                         // 0
     case TaskType::kSourceTick:                  // 0
     case TaskType::kAccTick:                     // 0
+    case TaskType::kAccCtrlTick:                 // ?
     case TaskType::kCase:                        // 0
     case TaskType::kEsac:                        // 0
     case TaskType::kReentrantLock: return true;  // 0
