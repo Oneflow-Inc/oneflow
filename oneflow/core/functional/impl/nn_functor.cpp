@@ -4183,10 +4183,12 @@ class MultiTensorSgdUpdateFunctor {
     }
   }
 
-  Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff, const TensorTuple& momentum_buf,
-                         const double& scale, const float& weight_decay,
-                         const float& learning_rate_val, const float& momentum) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "learning_rate_val", "momentum");
+  Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff,
+                         const TensorTuple& momentum_buf, const double& scale,
+                         const float& weight_decay, const float& learning_rate_val,
+                         const float& momentum) const {
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "learning_rate_val", "momentum");
     attrs.SetAllAttrs(scale, weight_decay, learning_rate_val, momentum);
     const int64_t weight_size = model.size();
     for (int i = 0; i < weight_size; i += kMaxInputCount) {
@@ -4194,7 +4196,8 @@ class MultiTensorSgdUpdateFunctor {
       TensorTuple input(3 * size);
       std::copy(model.begin() + i, model.begin() + i + size, input.begin());
       std::copy(model_diff.begin() + i, model_diff.begin() + i + size, input.begin() + size);
-      std::copy(momentum_buf.begin() + i, momentum_buf.begin() + i + size, input.begin() + 2 * size);
+      std::copy(momentum_buf.begin() + i, momentum_buf.begin() + i + size,
+                input.begin() + 2 * size);
       JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[size - 1], input, attrs));
     }
     return Maybe<void>::Ok();
