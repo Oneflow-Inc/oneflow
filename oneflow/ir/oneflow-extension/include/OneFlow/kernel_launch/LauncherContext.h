@@ -60,9 +60,6 @@ class LauncherContext final {
                                      reg_ctx->GetOp()->getName().stripDialect().str(), *reg_ctx))
                           ->create_fn();
         kernel_vec_.push_back(kernel);
-
-        kernel->IsKernelLaunchSynchronized();
-        kernel_vec_[index]->IsKernelLaunchSynchronized();
       } else if (op_name == mlir::okl::BuildRegContextOp::getOperationName()) {
         index = reg_ctx_vec_.size();
 

@@ -1056,10 +1056,11 @@ struct ExtractKernelLaunchTensorPattern : public mlir::OpRewritePattern<func::Fu
     rewriter.setInsertionPointToStart(&body.front());
 
     BlockAndValueMapping mapping;
-    for (auto arg : op.getBody().getArguments()) {
+    for (const auto& arg : llvm::enumerate(op.getBody().getArguments())) {
       auto tensor = rewriter.create<okl::GetTensorFromArgOp>(
-          func->getLoc(), arg.getType(), launcher_ctx, okl::TensorType::TT_Argument);
-      mapping.map(arg, tensor);
+          func->getLoc(), arg.value().getType(), launcher_ctx, okl::TensorType::TT_Argument,
+          arg.index());
+      mapping.map(arg.value(), tensor);
     }
 
     ImplicitLocOpBuilder new_block(func->getLoc(), rewriter);
@@ -1077,9 +1078,10 @@ struct ExtractKernelLaunchTensorPattern : public mlir::OpRewritePattern<func::Fu
     rewriter.setInsertionPoint(&return_op);
 
     std::vector<Value> returns;
-    for (auto ret_val : return_op.getOperands()) {
+    for (const auto& ret_val : llvm::enumerate(return_op.getOperands())) {
       auto new_ret = rewriter.create<okl::GetTensorAsRetOp>(
-          op->getLoc(), ret_val.getType(), launcher_ctx, ret_val, okl::TensorType::TT_Return);
+          op->getLoc(), ret_val.value().getType(), launcher_ctx, ret_val.value(),
+          okl::TensorType::TT_Return, ret_val.index());
       returns.push_back(new_ret);
     }
 
@@ -1168,7 +1170,6 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addNestedPass<func::FuncOp>(
       mlir::bufferization::createFinalizingBufferizePass());  // finalizing-bufferize
 }
-
 
 LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   mlir::PassManager pm(context);

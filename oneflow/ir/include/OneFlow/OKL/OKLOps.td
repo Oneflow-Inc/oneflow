@@ -48,7 +48,8 @@ def GetTensorFromArgOp : OKL_Op<"get_tensor_from_arg"> {
 
   let arguments = (ins
     LauncherContextType:$launcher_ctx,
-    OKL_TensorAttr:$tensor_type
+    OKL_TensorAttr:$tensor_type,
+    I32Attr:$index
   );
   let results = (outs AnyTensor);
 }
@@ -62,7 +63,8 @@ def GetTensorAsRetOp : OKL_Op<"get_tensor_as_ret"> {
   let arguments = (ins
     LauncherContextType:$launcher_ctx,
     AnyTensor:$tensor,
-    OKL_TensorAttr:$tensor_type
+    OKL_TensorAttr:$tensor_type,
+    I32Attr:$index
   );
   let results = (outs AnyTensor);
 }
