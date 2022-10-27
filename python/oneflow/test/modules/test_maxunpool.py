@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import random as random_util
 import unittest
-from collections import OrderedDict
 
 import oneflow as flow
 import oneflow.unittest
@@ -73,8 +73,10 @@ class TestMaxUnpooling(flow.unittest.TestCase):
         m.to(device)
         x = random_tensor(ndim=3, dim2=random(20, 31), requires_grad=False).to(device)
         y = m(x)
-        pooling_results = y[0]
-        indices = y[1]
+        pooling_results_dtype = random_util.choice([torch.int, torch.float, torch.double])
+        indices_dtype = random_util.choice([torch.int, torch.long])
+        pooling_results = y[0].to(pooling_results_dtype)
+        indices = y[1].to(indices_dtype)
         pooling_results.requires_grad_()
         output_size = _get_valid_output_size(
             x.shape, pooling_results.shape, kernel_size, stride, padding
@@ -101,8 +103,10 @@ class TestMaxUnpooling(flow.unittest.TestCase):
         m.to(device)
         x = random_tensor(ndim=3, dim2=random(20, 31), requires_grad=False).to(device)
         y = m(x)
-        pooling_results = y[0]
-        indices = y[1]
+        pooling_results_dtype = random_util.choice([torch.int, torch.float, torch.double])
+        indices_dtype = random_util.choice([torch.int, torch.long])
+        pooling_results = y[0].to(pooling_results_dtype)
+        indices = y[1].to(indices_dtype)
         pooling_results.requires_grad_()
         output_size = _get_valid_output_size(
             x.shape, pooling_results.shape, kernel_size, stride, padding
@@ -134,8 +138,10 @@ class TestMaxUnpooling(flow.unittest.TestCase):
             ndim=4, dim2=random(20, 31), dim3=random(20, 31), requires_grad=False
         ).to(device)
         y = m(x)
-        pooling_results = y[0]
-        indices = y[1]
+        pooling_results_dtype = random_util.choice([torch.int, torch.float, torch.double])
+        indices_dtype = random_util.choice([torch.int, torch.long])
+        pooling_results = y[0].to(pooling_results_dtype)
+        indices = y[1].to(indices_dtype)
         pooling_results.requires_grad_()
         output_size = _get_valid_output_size(
             x.shape, pooling_results.shape, kernel_size, stride, padding
@@ -164,8 +170,10 @@ class TestMaxUnpooling(flow.unittest.TestCase):
             ndim=4, dim2=random(20, 31), dim3=random(20, 31), requires_grad=False
         ).to(device)
         y = m(x)
-        pooling_results = y[0]
-        indices = y[1]
+        pooling_results_dtype = random_util.choice([torch.int, torch.float, torch.double])
+        indices_dtype = random_util.choice([torch.int, torch.long])
+        pooling_results = y[0].to(pooling_results_dtype)
+        indices = y[1].to(indices_dtype)
         pooling_results.requires_grad_()
         output_size = _get_valid_output_size(
             x.shape, pooling_results.shape, kernel_size, stride, padding
@@ -201,8 +209,10 @@ class TestMaxUnpooling(flow.unittest.TestCase):
             requires_grad=False,
         ).to(device)
         y = m(x)
-        pooling_results = y[0]
-        indices = y[1]
+        pooling_results_dtype = random_util.choice([torch.int, torch.float, torch.double])
+        indices_dtype = random_util.choice([torch.int, torch.long])
+        pooling_results = y[0].to(pooling_results_dtype)
+        indices = y[1].to(indices_dtype)
         pooling_results.requires_grad_()
         output_size = _get_valid_output_size(
             x.shape, pooling_results.shape, kernel_size, stride, padding
@@ -235,8 +245,10 @@ class TestMaxUnpooling(flow.unittest.TestCase):
             requires_grad=False,
         ).to(device)
         y = m(x)
-        pooling_results = y[0]
-        indices = y[1]
+        pooling_results_dtype = random_util.choice([torch.int, torch.float, torch.double])
+        indices_dtype = random_util.choice([torch.int, torch.long])
+        pooling_results = y[0].to(pooling_results_dtype)
+        indices = y[1].to(indices_dtype)
         pooling_results.requires_grad_()
         output_size = _get_valid_output_size(
             x.shape, pooling_results.shape, kernel_size, stride, padding

@@ -80,10 +80,6 @@ Maybe<void> MaxUnpoolBackwardGetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-// Logically computation cost of pool op is the product of output data amount and pool kernal data
-// amount. After adding sbp, we just divide it by parallel number if output data is splitted because
-// splitting input and using partial sum for output is not a valid sbp for this op for now.
-
 Maybe<void> BackwardTensorDescInferFn(user_op::InferContext* ctx) {
   *ctx->MutOutputTensorDesc("dx", 0) = ctx->InputTensorDesc("x", 0);
   return Maybe<void>::Ok();
