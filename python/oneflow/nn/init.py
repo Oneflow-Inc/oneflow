@@ -267,7 +267,8 @@ def kaiming_normal_(
 
     Args:
         tensor: an n-dimensional `oneflow.Tensor`
-        a: the negative slope of the rectifier used after this layer.
+        a: the negative slope of the rectifier used after this layer (only
+            used with ``'leaky_relu'``)
         mode: either ``'fan_in'`` (default) or ``'fan_out'``. Choosing ``'fan_in'``
             preserves the magnitude of the variance of the weights in the
             forward pass. Choosing ``'fan_out'`` preserves the magnitudes in the
