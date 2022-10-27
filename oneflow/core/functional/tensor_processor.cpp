@@ -37,13 +37,10 @@ Symbol<DType> ComputeCommonDType(const TensorTuple& tensor_tuple) {
 }
 
 bool CheckHasDifferentInputDType(const TensorTuple& tensor_tuple) {
-  Symbol<DType> common_dtype = DType::InvalidDataType();
+  if (tensor_tuple.size() == 0) { return false; }
+  Symbol<DType> common_dtype = tensor_tuple.at(0)->dtype();
   for (auto& tensor_ptr : tensor_tuple) {
-    if (common_dtype == DType::InvalidDataType()) {
-      common_dtype = tensor_ptr->dtype();  // Initialize the common_dtype_
-    } else {
-      return true;
-    }
+    if (common_dtype != tensor_ptr->dtype()) { return true; }
   }
   return false;
 }
