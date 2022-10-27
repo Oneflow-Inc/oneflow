@@ -253,10 +253,12 @@ class TestTensor(flow.unittest.TestCase):
     def test_local_tensor_init_methods(test_case):
         for device in ["cpu", "cuda"]:
             test_case._test_tensor_init_methods(
-                lambda *args, **kwargs: flow.Tensor(*args, **kwargs, device=device), lambda x: x.numpy()
+                lambda *args, **kwargs: flow.Tensor(*args, **kwargs, device=device),
+                lambda x: x.numpy(),
             )
             test_case._test_non_contiguous_tensor_init_methods(
-                lambda *args, **kwargs: flow.Tensor(*args, **kwargs, device=device), lambda x: x.numpy()
+                lambda *args, **kwargs: flow.Tensor(*args, **kwargs, device=device),
+                lambda x: x.numpy(),
             )
 
     @flow.unittest.skip_unless_1n2d()

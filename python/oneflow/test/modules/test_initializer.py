@@ -24,8 +24,14 @@ import oneflow.unittest
 
 class DataChecker:
     check_list = [
-        "mean", "std", "min", "max", "value", "lambda",
+        "mean",
+        "std",
+        "min",
+        "max",
+        "value",
+        "lambda",
     ]
+
     def __init__(self, **kwargs):
         self.checkers = {}
         for key in self.check_list:
@@ -37,26 +43,60 @@ class DataChecker:
             if func in self.checkers:
                 of_res = eval(f"tensor.{func}")().numpy()
                 checker_res = self.checkers[func]
-                test_case.assertTrue(np.allclose(of_res, checker_res, rtol=1e-2, atol=1e-2), f"{func} not equal, {of_res} vs {checker_res}")
+                test_case.assertTrue(
+                    np.allclose(of_res, checker_res, rtol=1e-2, atol=1e-2),
+                    f"{func} not equal, {of_res} vs {checker_res}",
+                )
 
         if "value" in self.checkers:
             test_case.assertTrue(np.all(tensor.numpy() == self.checkers["value"]))
 
         if "lambda" in self.checkers:
-            test_case.assertTrue(np.allclose(tensor.numpy(), self.checkers["lambda"](tensor.shape), rtol=1e-4, atol=1e-4))
+            test_case.assertTrue(
+                np.allclose(
+                    tensor.numpy(),
+                    self.checkers["lambda"](tensor.shape),
+                    rtol=1e-4,
+                    atol=1e-4,
+                )
+            )
 
 
 # NOTE(wyg): register initializers to this list
 check_func_list = [
     # oneflow.nn.init.normal_
-    {"func": flow.nn.init.normal_, "params": {"mean": 0.0, "std": 1.0}, "checker": DataChecker(mean=0.0, std=1.0)},
+    {
+        "func": flow.nn.init.normal_,
+        "params": {"mean": 0.0, "std": 1.0},
+        "checker": DataChecker(mean=0.0, std=1.0),
+    },
     # oneflow.nn.init.xavier_normal_
-    {"func": flow.nn.init.xavier_normal_, "params": {"gain": 1.0}, "checker": DataChecker(mean=0.0, std=0.0625)},
+    {
+        "func": flow.nn.init.xavier_normal_,
+        "params": {"gain": 1.0},
+        "checker": DataChecker(mean=0.0, std=0.0625),
+    },
     # oneflow.nn.init.kaiming_normal_
-    {"func": flow.nn.init.kaiming_normal_, "params": {"mode": "fan_in"}, "checker": DataChecker(mean=0.0, std=0.0883883476)},
-    {"func": flow.nn.init.kaiming_normal_, "params": {"mode": "fan_out"}, "checker": DataChecker(mean=0.0, std=0.0883883476)},
-    {"func": flow.nn.init.kaiming_normal_, "params": {"mode": "fan_in", "a": 2.0, "nonlinearity": "leaky_relu"}, "checker": DataChecker(mean=0.0, std=0.0395284708)},
-    {"func": flow.nn.init.kaiming_normal_, "params": {"mode": "fan_in", "a": 2.0, "nonlinearity": "linear"}, "checker": DataChecker(mean=0.0, std=0.0625)},
+    {
+        "func": flow.nn.init.kaiming_normal_,
+        "params": {"mode": "fan_in"},
+        "checker": DataChecker(mean=0.0, std=0.0883883476),
+    },
+    {
+        "func": flow.nn.init.kaiming_normal_,
+        "params": {"mode": "fan_out"},
+        "checker": DataChecker(mean=0.0, std=0.0883883476),
+    },
+    {
+        "func": flow.nn.init.kaiming_normal_,
+        "params": {"mode": "fan_in", "a": 2.0, "nonlinearity": "leaky_relu"},
+        "checker": DataChecker(mean=0.0, std=0.0395284708),
+    },
+    {
+        "func": flow.nn.init.kaiming_normal_,
+        "params": {"mode": "fan_in", "a": 2.0, "nonlinearity": "linear"},
+        "checker": DataChecker(mean=0.0, std=0.0625),
+    },
     # TODO: test more initializer
 ]
 
@@ -73,7 +113,9 @@ class TestInitializer(flow.unittest.TestCase):
                 try:
                     check_func["checker"](test_case, tensor)
                 except AssertionError as e:
-                    print(f"Failed: {check_func['func'].__name__} {check_func['params']}")
+                    print(
+                        f"Failed: {check_func['func'].__name__} {check_func['params']}"
+                    )
                     raise e
 
 
