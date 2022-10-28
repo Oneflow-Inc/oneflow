@@ -71,7 +71,8 @@ struct FetchFromLauncherPattern : public mlir::OpRewritePattern<func::CallOp> {
     auto elem_type = op->getResult(0).getType();
     auto launcher_ctx = op->getParentOfType<func::FuncOp>().getBody().getArgument(0);
     llvm::SmallVector<Value> new_ops;
-    // convert single function: get_resources_type_{X} to multiple functions: fetch_{resources}_from_launcher_ctx
+    // convert single function: get_resources_type_{X} to multiple functions:
+    // fetch_{resources}_from_launcher_ctx
     for (int index = 0; index < op->getNumResults(); ++index) {
       Value val;
       llvm::TypeSwitch<Type>(elem_type)

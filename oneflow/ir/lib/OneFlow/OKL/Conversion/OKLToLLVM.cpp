@@ -160,8 +160,8 @@ struct FetchOpLowering final : public OpConversionPattern<T> {
   }
 };
 
-
-// change func.func(!okl.launcher_ctx) -> func.func(!llvm.ptr<i8>) { unrealized_conversion_cast(): !llvm.ptr<i8> -> !okl.launcher_ctx }
+// change func.func(!okl.launcher_ctx) -> func.func(!llvm.ptr<i8>) { unrealized_conversion_cast():
+// !llvm.ptr<i8> -> !okl.launcher_ctx }
 struct RewriteFunctionArgsPattern final : public mlir::OpRewritePattern<func::FuncOp> {
   static LogicalResult ConvertLauncherToLLVMPtr(func::FuncOp op, mlir::PatternRewriter& rewriter) {
     auto func_type = rewriter.getFunctionType({GetPtrType(rewriter)}, {});

@@ -37,8 +37,7 @@ static mlir::DialectRegistry GetRegistry() {
   return registry;
 }
 
-KernelLaunchState::KernelLaunchState(user_op::KernelInitContext* ctx)
-    : mlir_ctx_(GetRegistry()) {
+KernelLaunchState::KernelLaunchState(user_op::KernelInitContext* ctx) : mlir_ctx_(GetRegistry()) {
   // get raw module from ctx attr
   module_ =
       mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx_);

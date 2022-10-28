@@ -26,4 +26,4 @@ std::unique_ptr<mlir::Pass> createFetchFromLauncherPass();
 }  // namespace okl
 }  // namespace mlir
 
-#endif // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_CONVERSION_FETCHFROMLAUNCHER_H_
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_OKL_CONVERSION_FETCHFROMLAUNCHER_H_

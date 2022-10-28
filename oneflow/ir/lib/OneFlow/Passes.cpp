@@ -907,8 +907,8 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
             find = true;
             auto index = use->getAttr("index").cast<IntegerAttr>().getInt();
             auto source = rewriter.create<okl::GetTensorFromRetOp>(
-                op->getLoc(), arg.getType(), okl_func.getArgument(0),
-                okl::TensorType::TT_Argument, index);
+                op->getLoc(), arg.getType(), okl_func.getArgument(0), okl::TensorType::TT_Argument,
+                index);
             mapping.map(arg, source->getResult(0));
             break;
           }

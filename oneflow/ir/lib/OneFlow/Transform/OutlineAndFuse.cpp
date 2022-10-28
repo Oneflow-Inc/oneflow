@@ -70,7 +70,8 @@ class WrapOpsToKernelLaunchPass : public WrapOpsToKernelLaunchPassBase<WrapOpsTo
   }
 };
 
-class ExtractKernelLaunchTensorPass : public ExtractKernelLaunchTensorPassBase<ExtractKernelLaunchTensorPass> {
+class ExtractKernelLaunchTensorPass
+    : public ExtractKernelLaunchTensorPassBase<ExtractKernelLaunchTensorPass> {
   void getDependentDialects(DialectRegistry& registry) const override {
     registry.insert<oneflow::OneFlowDialect>();
     registry.insert<okl::OKLDialect>();

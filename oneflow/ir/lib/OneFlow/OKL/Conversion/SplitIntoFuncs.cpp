@@ -87,12 +87,15 @@ struct SplitIntoFuncsPattern : public mlir::OpRewritePattern<func::FuncOp> {
       SmallVector<func::FuncOp> res;
       auto index = 0;
       for (auto resources : new_ops) {
-        auto func_name = SplitIntoFuncsPattern::prefix_get_resources_.str() + std::to_string(index++);
+        auto func_name =
+            SplitIntoFuncsPattern::prefix_get_resources_.str() + std::to_string(index++);
         auto func_type = rewriter.getFunctionType(
             TypeRange{LauncherContextType::get(rewriter.getContext())},
             TypeRange{std::vector<Type>(resources.size(), resources[0]->getResult(0).getType())});
-        // this function is not an external function, it only plays a role of placeholder to abstraction.
-        res.emplace_back(rewriter.create<func::FuncOp>(func->getLoc(), func_name, func_type, rewriter.getStringAttr("private")));
+        // this function is not an external function, it only plays a role of placeholder to
+        // abstraction.
+        res.emplace_back(rewriter.create<func::FuncOp>(func->getLoc(), func_name, func_type,
+                                                       rewriter.getStringAttr("private")));
       }
       return res;
     };
