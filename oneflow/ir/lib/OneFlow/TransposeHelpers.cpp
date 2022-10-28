@@ -19,6 +19,20 @@ RankedTensorType getNCHWType(RankedTensorType t) {
 RankedTensorType getNCHWType(Type t) { return getNCHWType(t.cast<RankedTensorType>()); }
 RankedTensorType getNCHWType(Value v) { return getNCHWType(v.getType()); }
 
+llvm::SmallVector<Type, 4> getNHWCResultTypes(NCHWCompatible op) {
+  llvm::SmallVector<Type, 4> result_types;
+  llvm::DenseSet<Value> transpose_result = op.ResultsToTranspose();
+  for (Value result : op->getOpResults()) {
+    Type t = result.getType();
+    if (transpose_result.find(result) != transpose_result.end()) {
+      result_types.push_back(getNHWCType(t));
+    } else {
+      result_types.push_back(t);
+    }
+  }
+  return result_types;
+}
+
 }  // namespace oneflow
 
 }  // namespace mlir

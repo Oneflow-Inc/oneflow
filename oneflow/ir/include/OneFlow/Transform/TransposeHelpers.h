@@ -3,6 +3,7 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Value.h"
+#include "OneFlow/OneFlowOps.h"
 
 namespace mlir {
 
@@ -14,6 +15,7 @@ RankedTensorType getNHWCType(Value v);
 RankedTensorType getNCHWType(RankedTensorType t);
 RankedTensorType getNCHWType(Type t);
 RankedTensorType getNCHWType(Value v);
+llvm::SmallVector<Type, 4> getNHWCResultTypes(NCHWCompatible op);
 
 }  // namespace oneflow
 
