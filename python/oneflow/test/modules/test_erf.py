@@ -43,6 +43,10 @@ class TestErfModule(flow.unittest.TestCase):
         y = torch.erf(x)
         return y
 
+    @profile(torch.erf)
+    def profile_erf(test_case):
+        torch.erf(torch.ones(100000))
+
 
 if __name__ == "__main__":
     unittest.main()

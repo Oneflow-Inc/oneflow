@@ -35,6 +35,10 @@ def _check_sbp(sbp):
 
 
 def local_to_global_op(input, placement=None, sbp=None, *, check_meta=True, copy=False):
+    # Convert None to a tensor with shape 0, in order to input it into flow._C.to_global.
+    if input is None:
+        input = flow.tensor(())
+
     assert isinstance(input, Tensor)
     assert input.is_local, "input must be a local tensor"
     if placement is None or sbp is None:

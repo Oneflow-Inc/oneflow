@@ -154,6 +154,20 @@ class Embedding(Module):
             with flow.no_grad():
                 self.weight[self.padding_idx] = 0
 
+    def extra_repr(self) -> str:
+        s = "{num_embeddings}, {embedding_dim}"
+        if self.padding_idx is not None:
+            s += ", padding_idx={padding_idx}"
+        if self.max_norm is not None:
+            s += ", max_norm={max_norm}"
+        if self.norm_type != 2:
+            s += ", norm_type={norm_type}"
+        if self.scale_grad_by_freq is not False:
+            s += ", scale_grad_by_freq={scale_grad_by_freq}"
+        if self.sparse is not False:
+            s += ", sparse=True"
+        return s.format(**self.__dict__)
+
     def forward(self, indices):
         if self.max_norm is not None:
             with flow.no_grad():

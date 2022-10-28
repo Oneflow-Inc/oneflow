@@ -96,7 +96,6 @@ inline static Maybe<PyObject*> EagerLocalTensorToNumpy(PyObject* py_tensor) {
   }
 }
 
-template<typename T>
 inline Maybe<void> CopyBetweenLocalTensorAndNumpy(
     const std::shared_ptr<Tensor>& t, PyObject* array,
     void (*Copy)(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&, const NumPyArrayPtr&),
@@ -134,10 +133,6 @@ inline Maybe<void> CopyBetweenLocalTensorAndNumpy(
   }
   return Maybe<void>::Ok();
 }
-
-Maybe<std::string> GetCopyLocalTensorToNumpyFuncName(DataType dtype);
-
-Maybe<std::string> GetCopyLocalTensorFromNumpyFuncName(DataType dtype);
 
 Maybe<std::tuple<std::vector<Shape>, std::vector<Symbol<DType>>>>
 MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t);

@@ -50,8 +50,8 @@ static inline Maybe<std::bitset<dim_bitset_size>> dim_list_to_bitset(
   std::bitset<dim_bitset_size> seen;
   for (int32_t i = 0; i < dims.size(); i++) {
     size_t dim = JUST(maybe_wrap_dim(dims[i], ndims));
-    CHECK_OR_RETURN(!seen[dim]) << Error::RuntimeError() << "The dim " << dim
-                                << " appears multiple times in the list of dims";
+    CHECK_OR_RETURN_ERROR(!seen[dim]) << Error::RuntimeError() << "The dim " << dim
+                                      << " appears multiple times in the list of dims";
     seen[dim] = true;
   }
   return seen;

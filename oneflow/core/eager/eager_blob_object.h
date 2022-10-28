@@ -125,18 +125,18 @@ class EagerBlobObject final : public user_op::Tensor,
 
   // user_op::TensorDesc overrides
   const Shape& shape() const override;
-  Shape* mut_shape() override;
   const Stride& stride() const override;
-  Stride* mut_stride() override;
   DataType data_type() const override { return data_type_; }
-  DataType* mut_data_type() override { return &data_type_; }
   bool is_dynamic() const override { return is_dynamic_; }
-  bool* mut_is_dynamic() override { return &is_dynamic_; }
+
+  void set_shape(const Shape& shape) override;
+  void set_stride(const Stride& stride) override;
+  void set_data_type(DataType data_type) override { data_type_ = data_type; }
   void set_is_dynamic(bool is_dynamic) override { is_dynamic_ = is_dynamic; }
 
   // user_op::Tensor overrides
   ShapeView shape_view() const override { return shape(); }
-  MutShapeView mut_shape_view() override { return *mut_shape(); }
+  MutShapeView mut_shape_view() override;
   const MemoryCase& mem_case() const override { return *mem_case_; }
   const void* raw_dptr() const override {
     CHECK(inited_mem_ptr_for_allocation_compuation_pipelining_)

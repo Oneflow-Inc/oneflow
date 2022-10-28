@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/time_util.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/to_string.h"
@@ -123,8 +124,6 @@ Maybe<void> JobBuildAndInferCtx::AddLbiParallelConf2BlobPlacement(
       iter = parallel_desc2blob_placement_group_.emplace(parallel_desc, blob_pg).first;
     }
     const auto& lbi = op->BnInOp2Lbi(obn);
-    CHECK_OR_RETURN(std::find(iter->second->lbi().begin(), iter->second->lbi().end(), lbi)
-                    == iter->second->lbi().end());
     *iter->second->add_lbi() = lbi;
   }
   return Maybe<void>::Ok();
@@ -549,7 +548,12 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   JUST(InferLocalSignature(op, is_local_parallel_view, parallel_desc));
 
   // infer nd_sbp signature
-  NdSbpSignature nd_sbp_sig_conf = *JUST(InitConstraitNdSbpSignature(*op, ibn2disable_boxing));
+  NdSbpSignature nd_sbp_sig_conf;
+  // Only infer nd_sbp signature if auto parallel is not enable,
+  // since the semi-auto parallellism rule might have inconsistency with the auto-parallel strategy.
+  if (!job_desc->enable_auto_parallel()) {
+    nd_sbp_sig_conf = *JUST(InitConstraitNdSbpSignature(*op, ibn2disable_boxing));
+  }
   // Override constrait nd_sbp if sbp hint is given
   if (!sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
     SbpSignatureToNdSbpSignature(sbp_sig_conf, &nd_sbp_sig_conf);
@@ -908,6 +912,7 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatible
 Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   CHECK_GT_OR_RETURN(job().net().op_size(), 0)
       << " Sorry, nn.Graph need at least 1 op in net, but get 0 now.";
+  auto compile_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
   CHECK_NOTNULL(Singleton<JobDesc>::Get());
   Singleton<JobDesc>::Delete();
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
@@ -934,6 +939,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   int32_t pass_cnt = 0;
   const int64_t prev_v = FLAGS_v;
   auto DoPass = [&](const std::string& pass_name, int32_t cnt = 0) -> Maybe<void> {
+    auto pass_tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true, true);
     VLOG(1) << job_name << " start compiling with pass"
             << " pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name
             << (cnt > 0 ? std::to_string(cnt) : "");
@@ -951,12 +957,12 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     VLOG(1) << job_name << " finish compiling with pass"
             << " pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name
             << (cnt > 0 ? std::to_string(cnt) : "");
+    pass_tc->Count("[GraphCompile]" + job_name + " " + pass_name, 1);
     ++pass_cnt;
     return Maybe<void>::Ok();
   };
 
-  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()
-      || Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create(StrCat("forward_graph", job_id()))->Write(job());
     Singleton<OpGraph>::New(job());
     Singleton<OpGraph>::Get()->ToDotWithFilePath("forward_dlnet_" + std::to_string(job_id())
@@ -995,6 +1001,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     // already construct a complete computational graph
     JUST(DoPass("PrunePinnedIdentityOpPass"));
     JUST(DoPass("ReplaceEmbeddingOps"));
+    JUST(DoPass("SequentialOneEmbeddingOpsPass"));
     JUST(DoPass("FuseEmbeddingShuffleInteractionPass"));
     JUST(DoPass("FuseBCEReduceMeanFwBwPass"));
     JUST(DoPass("AddSspVariableProxy"));
@@ -1018,10 +1025,12 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("MultiTensorModelUpdatePass"));
     JUST(DoPass("FixPipelineStageIdPass"));
     JUST(DoPass("PipelineBufferPass"));
+    JUST(DoPass("AutoParallelPass"));
     JUST(DoPass("DumpVariableInfoPass"));
   }
   JUST(DoPass("DumpBlobParallelConfPass"));
   JUST(CheckJob());
+  compile_tc->Count("[GraphCompile]" + job_name + " OptimizationLogicalGraph", 0);
   return Maybe<void>::Ok();
 }
 

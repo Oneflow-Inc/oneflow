@@ -34,15 +34,14 @@ class TensorDesc {
   bool operator==(const TensorDesc&) const;
 
   virtual const Shape& shape() const = 0;
-  virtual Shape* mut_shape() = 0;
+  virtual void set_shape(const Shape& shape) = 0;
   virtual const Stride& stride() const = 0;
-  virtual Stride* mut_stride() = 0;
+  virtual void set_stride(const Stride& stride) = 0;
   virtual DataType data_type() const = 0;
-  virtual DataType* mut_data_type() = 0;
+  virtual void set_data_type(DataType data_type) = 0;
 
   virtual bool is_dynamic() const = 0;
-  virtual bool* mut_is_dynamic() = 0;
-  virtual void set_is_dynamic(bool val) = 0;
+  virtual void set_is_dynamic(bool is_dynamic) = 0;
 
  protected:
   TensorDesc() = default;
@@ -58,15 +57,14 @@ class NaiveTensorDesc final : public TensorDesc {
   NaiveTensorDesc& operator=(const BlobDescProto&);
 
   const Shape& shape() const override { return shape_; }
-  Shape* mut_shape() override { return &shape_; }
+  void set_shape(const Shape& shape) override { shape_ = shape; }
   const Stride& stride() const override { return stride_; }
-  Stride* mut_stride() override { return &stride_; }
+  void set_stride(const Stride& stride) override { stride_ = stride; }
   DataType data_type() const override { return data_type_; }
-  DataType* mut_data_type() override { return &data_type_; }
+  void set_data_type(DataType data_type) override { data_type_ = data_type; }
 
   bool is_dynamic() const override { return is_dynamic_; }
-  bool* mut_is_dynamic() override { return &is_dynamic_; }
-  void set_is_dynamic(bool val) override { is_dynamic_ = val; }
+  void set_is_dynamic(bool is_dynamic) override { is_dynamic_ = is_dynamic; }
 
  private:
   Shape shape_;

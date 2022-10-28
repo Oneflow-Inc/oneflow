@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/core/boxing/eager_boxing_logger.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
+#include "oneflow/user/kernels/communicate_util.h"
 
 namespace oneflow {
 
@@ -26,10 +27,7 @@ namespace private_details {
 Maybe<one::Tensor> PreprocessInputTensor4SliceBoxing(const std::shared_ptr<one::Tensor>& tensor,
                                                      const std::string& log_prefix) {
   const auto& tensor_placement = JUST(tensor->parallel_desc());
-  if (tensor_placement->device_type() == DeviceType::kCPU
-      || tensor_placement->device_type() == DeviceType::kCUDA) {
-    return tensor;
-  }
+  if (IsSendAndRecvRegistered(tensor_placement->device_type())) { return tensor; }
 
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
   Symbol<ParallelDesc> new_placement = JUST(ReplaceDeviceType(tensor_placement, DeviceType::kCPU));

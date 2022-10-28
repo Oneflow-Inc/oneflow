@@ -15,7 +15,18 @@ limitations under the License.
 """
 import itertools
 from collections import OrderedDict, namedtuple
-from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple, TypeVar, Union
+from typing import (
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    TypeVar,
+    Union,
+    overload,
+)
 import traceback
 import warnings
 
@@ -100,6 +111,38 @@ class Module(object):
         self._state_dict_hooks = OrderedDict()
         self._load_state_dict_pre_hooks = OrderedDict()
         self._modules = OrderedDict()
+        self._is_ddp_module = False
+        self._oneflow_internal_module_tensor_applied_dict__ = None
+
+    def __getstate__(self):
+        if not self._is_ddp_module:
+            if (
+                len(self._backward_hooks) > 0
+                or len(self._forward_hooks) > 0
+                or len(self._forward_pre_hooks) > 0
+                or len(self._state_dict_hooks) > 0
+                or len(self._load_state_dict_pre_hooks) > 0
+            ):
+                warnings.warn("The module hooks will not be remained after serializing")
+
+        state = self.__dict__.copy()
+        del state["_backward_hooks"]
+        del state["_forward_hooks"]
+        del state["_forward_pre_hooks"]
+        del state["_state_dict_hooks"]
+        del state["_load_state_dict_pre_hooks"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._backward_hooks = OrderedDict()
+        self._forward_hooks = OrderedDict()
+        self._forward_pre_hooks = OrderedDict()
+        self._state_dict_hooks = OrderedDict()
+        self._load_state_dict_pre_hooks = OrderedDict()
+        if hasattr(self, "_is_ddp_module") and self._is_ddp_module:
+            # flow.nn.parallel.DistributedDataParallel updates the module inplace
+            flow.nn.parallel.DistributedDataParallel(self)
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError()
@@ -323,6 +366,17 @@ class Module(object):
                     buffers[name] = value
                 else:
                     object.__setattr__(self, name, value)
+
+    def __delattr__(self, name):
+        if name in self._parameters:
+            del self._parameters[name]
+        elif name in self._buffers:
+            del self._buffers[name]
+            self._non_persistent_buffers_set.discard(name)
+        elif name in self._modules:
+            del self._modules[name]
+        else:
+            super().__delattr__(name)
 
     def _named_members(self, get_members_fn, prefix="", recurse=True):
         memo = set()
@@ -926,14 +980,18 @@ class Module(object):
         """
         self._forward_hooks[len(self._forward_hooks)] = hook
 
-    def _apply(self, fn, applied_dict=None):
+    def _apply(self, fn):
         # A dict to store tensors that has already been applied.
         # There is no need to apply multiple times on a same tensor.
-        if applied_dict is None:
-            applied_dict = dict()
+        if self._oneflow_internal_module_tensor_applied_dict__ is None:
+            self._oneflow_internal_module_tensor_applied_dict__ = dict()
 
         for module in self.children():
-            module._apply(fn, applied_dict)
+            module._oneflow_internal_module_tensor_applied_dict__ = (
+                self._oneflow_internal_module_tensor_applied_dict__
+            )
+            module._apply(fn)
+            module._oneflow_internal_module_tensor_applied_dict__ = None
 
         def can_use_assign_copy(tensor, tensor_applied):
             return tensor.is_local == tensor_applied.is_local
@@ -943,7 +1001,7 @@ class Module(object):
                 continue
 
             need_apply = False
-            if param not in applied_dict:
+            if param not in self._oneflow_internal_module_tensor_applied_dict__:
                 need_apply = True
                 assert isinstance(param, Parameter)
                 assert param.is_leaf
@@ -958,12 +1016,16 @@ class Module(object):
                     grad_applied.requires_grad = param.grad.requires_grad
                     param_applied.grad = grad_applied
             else:
-                param_applied = applied_dict[param]
+                param_applied = self._oneflow_internal_module_tensor_applied_dict__[
+                    param
+                ]
 
             if can_use_assign_copy(param_applied, param):
                 if need_apply:
                     self._parameters[key].data = param_applied
-                    applied_dict[param] = param_applied
+                    self._oneflow_internal_module_tensor_applied_dict__[
+                        param
+                    ] = param_applied
                 else:
                     # The parameter's data has already been set when it can use assign copy.
                     pass
@@ -971,18 +1033,28 @@ class Module(object):
                 if need_apply:
                     new_param = Parameter(param_applied, param.requires_grad)
                     self._parameters[key] = new_param
-                    applied_dict[param] = new_param
+                    self._oneflow_internal_module_tensor_applied_dict__[
+                        param
+                    ] = new_param
                 else:
-                    self._parameters[key] = applied_dict[param]
+                    self._parameters[
+                        key
+                    ] = self._oneflow_internal_module_tensor_applied_dict__[param]
 
         for (key, buf) in self._buffers.items():
             if buf is not None:
-                if buf not in applied_dict:
+                if buf not in self._oneflow_internal_module_tensor_applied_dict__:
                     buf_applied = fn(buf)
                     self._buffers[key] = buf_applied
-                    applied_dict[buf] = buf_applied
+                    self._oneflow_internal_module_tensor_applied_dict__[
+                        buf
+                    ] = buf_applied
                 else:
-                    self._buffers[key] = applied_dict[buf]
+                    self._buffers[
+                        key
+                    ] = self._oneflow_internal_module_tensor_applied_dict__[buf]
+
+        self._oneflow_internal_module_tensor_applied_dict__ = None
         return self
 
     def apply(self: T, fn: Callable[["Module"], None]) -> T:
@@ -1030,14 +1102,41 @@ class Module(object):
         fn(self)
         return self
 
-    def to(self, device: Optional[Union[str, flow.device]] = None):
-        r"""
-        to(device=None)
-        
-        Moves the parameters and buffers.
+    @overload
+    def to(
+        self: T,
+        device: Optional[Union[int, str, flow.device]] = ...,
+        dtype: Optional[flow.dtype] = ...,
+    ) -> T:
+        ...
 
-        Its signature is similar to :meth:`oneflow.Tensor.to`.
-        The parameters and buffers will be moved :attr:`device`, if that is given.
+    @overload
+    def to(self: T, dtype: flow.dtype) -> T:
+        ...
+
+    @overload
+    def to(self: T, tensor: Tensor) -> T:
+        ...
+
+    def to(self, *args, **kwargs):
+        r"""Moves and/or casts the parameters and buffers.
+
+        This can be called as
+
+        .. function:: to(device=None, dtype=None)
+           :noindex:
+
+        .. function:: to(dtype)
+           :noindex:
+
+        .. function:: to(tensor)
+           :noindex:
+
+        Its signature is similar to :meth:`oneflow.Tensor.to`, but only accepts
+        floating point :attr:`dtype`\ s. In addition, this method will
+        only cast the floating point parameters and buffers to :attr:`dtype`
+        (if given). The integral parameters and buffers will be moved
+        :attr:`device`, if that is given, but with dtypes unchanged.
 
         See below for examples.
 
@@ -1047,6 +1146,10 @@ class Module(object):
         Args:
             device (:class:`oneflow.device`): the desired device of the parameters
                 and buffers in this module
+            dtype (:class:`oneflow.dtype`): the desired floating point dtype of
+                the parameters and buffers in this module
+            tensor (oneflow.Tensor): Tensor whose dtype and device are the desired
+                dtype and device for all parameters and buffers in this module
 
         Returns:
             Module: self
@@ -1058,11 +1161,19 @@ class Module(object):
             >>> linear = nn.Linear(2, 2)
             >>> linear.weight.device
             device(type='cpu', index=0)
+            >>> linear.weight.dtype
+            oneflow.float32
+            >>> linear.to(flow.double)
+            Linear(in_features=2, out_features=2, bias=True)
+            >>> linear.weight.dtype
+            oneflow.float64
             >>> gpu1 = flow.device("cuda:1")
-            >>> linear.to(gpu1)
+            >>> linear.to(gpu1, dtype=flow.half)
             Linear(in_features=2, out_features=2, bias=True)
             >>> linear.weight.device
             device(type='cuda', index=1)
+            >>> linear.weight.dtype
+            oneflow.float16
             >>> cpu = flow.device("cpu")
             >>> linear.to(cpu)
             Linear(in_features=2, out_features=2, bias=True)
@@ -1071,8 +1182,46 @@ class Module(object):
 
         """
 
+        device = None
+        dtype = None
+        if len(args) + len(kwargs) == 2:
+            device = kwargs.pop("device", None) or args[0]
+            dtype = kwargs.pop("dtype", None) or args[1]
+        elif len(args) + len(kwargs) == 1:
+            if len(args) == 1:
+                arg = args[0]
+                if isinstance(arg, Tensor):
+                    device = arg.device
+                    dtype = arg.dtype
+                elif isinstance(arg, flow.dtype):
+                    dtype = arg
+                    device = None
+                elif isinstance(arg, (flow.device, str, int)):
+                    dtype = None
+                    device = arg
+                else:
+                    raise ValueError(f"Unsupported parameters in module.to: {arg}")
+            else:
+                device = kwargs.pop("device", None)
+                dtype = kwargs.pop("dtype", None)
+                tensor = kwargs.pop("tensor", None)
+                if tensor is not None:
+                    device = tensor.device
+                    dtype = tensor.dtype
+        else:
+            raise ValueError(
+                f"Unsupported parameters in module.to: {args} and {kwargs}"
+            )
+
+        if dtype is not None:
+            if not dtype.is_floating_point:
+                raise TypeError(
+                    "nn.Module.to only accepts floating point "
+                    "dtypes, but got desired dtype={}".format(dtype)
+                )
+
         def convert(t):
-            return t.to(device)
+            return t.to(device, dtype if t.is_floating_point() else None)
 
         return self._apply(convert)
 

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -33,8 +34,8 @@ class GradAccRepeatFunctor {
     op_ = CHECK_JUST(one::OpBuilder("repeat").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& in, int32_t repeat_num) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("repeat_num", repeat_num));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("repeat_num");
+    attrs.SetAllAttrs(repeat_num);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
   }
 
@@ -48,8 +49,8 @@ class GradAccCollectFunctor {
     op_ = CHECK_JUST(one::OpBuilder("acc").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& in, int32_t collect_num) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("max_acc_num", collect_num));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("max_acc_num");
+    attrs.SetAllAttrs(collect_num);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
   }
 
@@ -63,8 +64,8 @@ class GradAccPackFunctor {
     op_ = CHECK_JUST(one::OpBuilder("pack").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& in, int32_t pack_num) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("pack_num", pack_num));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("pack_num");
+    attrs.SetAllAttrs(pack_num);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
   }
 
@@ -78,8 +79,8 @@ class GradAccUnpackFunctor {
     op_ = CHECK_JUST(one::OpBuilder("unpack").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& in, int32_t unpack_num) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("unpack_num", unpack_num));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("unpack_num");
+    attrs.SetAllAttrs(unpack_num);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
   }
 
