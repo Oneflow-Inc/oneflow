@@ -74,7 +74,6 @@ LauncherContext::LauncherContext(user_op::KernelComputeContext* compute_context,
         })
         .Case([&](mlir::func::ReturnOp elem) {})
         .Default([&](mlir::Operation* elem) {
-          op.dump();
           op.emitError("Fail to parse this op in okl init context");
           exit(1);
         });

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "llvm/ADT/TypeSwitch.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RunContext.h"
@@ -35,15 +36,16 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
     auto val = op->getOperand(index);
     auto define_op = val.getDefiningOp();
     auto index = define_op->getAttr("index").cast<mlir::IntegerAttr>().getInt();
-    if (define_op->getName().getStringRef() == mlir::okl::GetTensorFromArgOp::getOperationName()) {
-      return comp_ctx_->Tensor4ArgNameAndIndex("in", index);
-    } else if (define_op->getName().getStringRef()
-               == mlir::okl::GetTensorFromRetOp::getOperationName()) {
-      return comp_ctx_->Tensor4ArgNameAndIndex("out", index);
-    } else {
-      LOG(FATAL) << "Signature Not supported";
-      exit(1);
-    }
+    return llvm::TypeSwitch<::mlir::Operation*, user_op::Tensor*>(op)
+        .Case([&](mlir::okl::GetTensorFromArgOp elem) {
+          return comp_ctx_->Tensor4ArgNameAndIndex("in", index);
+        })
+        .Case([&](mlir::okl::GetTensorFromRetOp elem) {
+          return comp_ctx_->Tensor4ArgNameAndIndex("out", index);
+        })
+        .Default([](::mlir::Operation* op) {
+          LOG(FATAL) << "Signature Not supported";
+        });
   } else if (arg_name == "y") {
     auto val = op->getResult(index);
     for (auto use : val.getUsers()) {
@@ -54,7 +56,6 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
     }
   } else {
     LOG(FATAL) << "Signature Not supported";
-    exit(1);
   }
 }
 
