@@ -24,6 +24,12 @@ Maybe<uint64_t> GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx) {
   return GetOpKernelRandomSeedInCurrentRank(ctx, seed);
 }
 
+// NOTE: Get random seed in current rank, and ensure that it will have same seed between
+// broadcast sbp and it will be different between split sbp.
+//
+// It will scan nd_sbp from last axis to first axis(It likes the algorithm in NdIndexOffsetHelper).
+// If sbp is broadcast, this axis will skip.
+// If sbp is split, it will use rand_id to accumulate the offset.
 Maybe<uint64_t> GetRandomSeedForRank(const ParallelDesc& placement, const NdSbp& nd_sbp,
                                      uint64_t init_seed, int64_t rank_id) {
   uint64_t seed = init_seed;
