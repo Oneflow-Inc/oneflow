@@ -93,10 +93,6 @@ def BuildRegContextOp : OKL_Op<"build_reg_ctx"> {
 
   let regions = (region AnyRegion:$body);
 
-  let arguments = (ins
-    TypeAttrOf<FunctionType>:$function_type
-  );
-
   let results = (outs RegContextType:$out);
 }
 

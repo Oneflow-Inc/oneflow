@@ -883,10 +883,8 @@ struct LowerToOKLPattern : public mlir::OpRewritePattern<func::FuncOp> {
 
     auto loc = op->getLoc();
 
-    auto func_type = rewriter.getFunctionType({}, {});
-
     auto reg_ctx = rewriter.create<okl::BuildRegContextOp>(
-        loc, okl::RegContextType::get(rewriter.getContext()), TypeAttr::get(func_type));
+        loc, okl::RegContextType::get(rewriter.getContext()));
     reg_ctx.body().emplaceBlock();
     rewriter.setInsertionPointToEnd(&reg_ctx.body().back());
 
