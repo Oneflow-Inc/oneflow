@@ -28,6 +28,8 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 
+#include "oneflow/core/vm/virtual_machine.h"
+
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -215,6 +217,11 @@ Maybe<bool> HasFalseIndex(const TensorIndex& index) {
     return item.IsBoolean() && !item.boolean();
   });
 }
+bool IsScalarTensor(const detail::IndexItem& item) {
+  if (!item.IsTensor()) { return false; }
+  const auto& x = item.tensor();
+  return x->shape()->NumAxes() == 0 && x->shape()->elem_cnt() == 1;
+}
 
 // Permute back for global tensor which transpose dims to front
 Maybe<Tensor> PermuteBackForGlobalTensor(const std::shared_ptr<Tensor>& result,
@@ -241,7 +248,23 @@ Maybe<Tensor> PermuteBackForGlobalTensor(const std::shared_ptr<Tensor>& result,
 }
 
 }  // namespace
-
+template<typename T>
+Maybe<T> GetItemInScalarTensor(const std::shared_ptr<one::Tensor>& tensor) {
+  T scalar = 0;
+  {
+    const auto& Callback = [&](ep::Stream* stream,
+                               const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+      SyncAutoMemcpy(stream, &scalar, eager_blob_object->mut_dptr(), sizeof(T),
+                     memory::MakeHostMemCase(), eager_blob_object->mem_case());
+    };
+    auto btb = std::make_shared<BlockingThenBusy>(1);
+    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(tensor, btb, Callback, "const");
+    }));
+    JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+  }
+  return scalar;
+}
 Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
                                 std::vector<detail::Slice>* slice_indices,
                                 TensorTuple* tensor_indices, std::vector<int64_t>* expand_dims,
@@ -254,7 +277,11 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
   bool has_expand_boolean_dim = false;
   int dim = 0;
   for (int i = 0; i < index.size(); ++i) {
-    const auto& index_item = index.at(i);
+    const auto& index_item =
+        IsScalarTensor(index.at(i))
+            ? detail::IndexItem(JUST(GetItemInScalarTensor<int64_t>(index.at(i).tensor())))
+            : index.at(i);
+    // const auto& index_item = index.at(i);
     if (index_item.IsNone()) {
       expand_dims->emplace_back(dim);
       slice_indices->emplace_back(0, 1, 1);
@@ -472,18 +499,7 @@ Maybe<Tensor> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
     }
   }
 
-  int unsqueeze_dim = 0;
-  auto HasSingletonDim = [&unsqueeze_dim, expand_shape]() {
-    for (int32_t i = 1; i < expand_shape.size(); i++) {
-      if (expand_shape.At(i) == 1) {
-        unsqueeze_dim = i;
-        return true;
-      }
-    }
-    return false;
-  };
-  std::shared_ptr<Tensor> expand_value =
-      HasSingletonDim() ? JUST(Unsqueeze(value, unsqueeze_dim)) : JUST(Expand(value, expand_shape));
+  std::shared_ptr<Tensor> expand_value = JUST(Expand(value, expand_shape));
 
   // reverse adjust value if index subspace is continuous but transposed since the start
   // dimension cannot be specified for `scatter_nd`

@@ -168,10 +168,10 @@ class TestSliceUpdate(flow.unittest.TestCase):
         np_arr[-1] = 1
         input[-1] = 1
         test_case.assertTrue(np.array_equal(input.numpy(), np_arr))
-    
+
     def test_slice_update_scalar_tensor_index(test_case):
-        np_arr_a=np.random.rand(133,1,15)
-        np_arr_b=np.random.rand(133,2,1)
+        np_arr_a = np.random.rand(133, 1, 15)
+        np_arr_b = np.random.rand(133, 2, 1)
 
         a_torch = torch.Tensor(np_arr_a)
         b_torch = torch.Tensor(np_arr_b)
@@ -183,12 +183,9 @@ class TestSliceUpdate(flow.unittest.TestCase):
         pos_flow = flow.tensor(0)
         a_flow[:, 0, pos_flow] = b_flow[:, 1, 0]
 
-        test_case.assertTrue(np.allclose(
-            a_flow.numpy(),
-            a_torch.cpu().numpy(),
-            rtol=1e-5,
-            atol=1e-5,
-        ))
+        test_case.assertTrue(
+            np.allclose(a_flow.numpy(), a_torch.cpu().numpy(), rtol=1e-5, atol=1e-5,)
+        )
 
     def test_slice_update_negative_index_graph(test_case):
         np_arr = np.zeros(shape=(2, 3, 4))
@@ -340,8 +337,6 @@ class TestSliceUpdate(flow.unittest.TestCase):
         ref_of[:, :, 1] = update_ref
         ref_np[:, :, 1] = update_np
         test_case.assertTrue(np.array_equal(ref_of.numpy(), ref_np))
-    
-
 
 
 if __name__ == "__main__":
