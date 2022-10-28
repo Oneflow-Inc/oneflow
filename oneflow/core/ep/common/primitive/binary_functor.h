@@ -143,6 +143,7 @@ struct BinaryFunctor<device, BinaryOp::kIsCloseEqNan, Src, Dst> {
 };
 
 #if defined(WITH_CUDA)
+#if CUDA_VERSION >= 11000
 template<DeviceType device, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kIsCloseEqNan, nv_bfloat16, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
@@ -161,6 +162,7 @@ struct BinaryFunctor<device, BinaryOp::kIsCloseEqNan, nv_bfloat16, Dst> {
   }
   float atol, rtol;
 };
+#endif  // CUDA_VERSION >= 11000
 
 template<DeviceType device, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kIsCloseEqNan, half, Dst> {
@@ -199,6 +201,7 @@ struct BinaryFunctor<device, BinaryOp::kIsCloseNeqNan, Src, Dst> {
 };
 
 #if defined(WITH_CUDA)
+#if CUDA_VERSION >= 11000
 template<DeviceType device, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kIsCloseNeqNan, nv_bfloat16, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
@@ -216,6 +219,7 @@ struct BinaryFunctor<device, BinaryOp::kIsCloseNeqNan, nv_bfloat16, Dst> {
   }
   float atol, rtol;
 };
+#endif  // CUDA_VERSION >= 11000
 
 template<DeviceType device, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kIsCloseNeqNan, half, Dst> {
