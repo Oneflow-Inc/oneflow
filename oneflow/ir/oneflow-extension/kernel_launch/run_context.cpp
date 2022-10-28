@@ -50,7 +50,7 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
   } else if (arg_name == "y") {
     auto val = op->getResult(index);
     for (auto use : val.getUsers()) {
-      if (use->getName().getStringRef() == mlir::okl::GetTensorAsRetOp::getOperationName()) {
+      if (llvm::isa<mlir::okl::BuildKernelOp>(op)) {
         auto index = use->getAttr("index").cast<mlir::IntegerAttr>().getInt();
         return comp_ctx_->Tensor4ArgNameAndIndex("out", index);
       }
