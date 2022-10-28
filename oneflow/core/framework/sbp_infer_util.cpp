@@ -271,7 +271,8 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const NdSbp& producer_sbp_paralle
   NdSbp reduced_out_nd_sbp;
   InOutParallelDimReduce(producer_parallel_desc, consumer_parallel_desc, producer_sbp_parallel,
                          consumer_sbp_parallel, &reduced_in_parallel_desc,
-                         &reduced_out_parallel_desc, &reduced_in_nd_sbp, &reduced_out_nd_sbp);
+                         &reduced_out_parallel_desc, &reduced_in_nd_sbp, &reduced_out_nd_sbp,
+                         logical_blob_desc.shape());
 
   const auto& in_hierarchy = reduced_in_parallel_desc.hierarchy();
   const auto& out_hierarchy = reduced_out_parallel_desc.hierarchy();
@@ -422,6 +423,24 @@ void CollaborativeParallelDimReduce(const ParallelDesc& in_parallel_desc,
   *reduced_out_parallel_desc = ParallelDesc(reduced_out_parallel_conf);
 }
 
+// We can not just simply merging two same split
+// For example, shape = [6], we are trying to merge [2, 2]: (S0, S0) -> [4]: S0
+// For each rank, [4]: S0 has number of data: 2, 2, 1, 1
+// For each rank, [2]: S0 has number of data: 3, 3
+// For each rank, [2, 2]: (S0, S0) has number of data: 2, 1, 2, 1
+// Thus {[2, 2]: (S0, S0)} != {[4]: S0} for shape [6]
+// However {[2, 2]: (S0, S0)} == {[4]: S0} for shape [4], [5], [7], [8]
+// More specifically, {[a, b]: (Si, Si)} == {[a*b]: Si} if and only if
+// shape value % (a * b) == 0, 1, a*b - 1
+bool CanMergeSplit(int32_t shape_value, int32_t merged_split_hierarchy_value) {
+  int32_t remainder = shape_value % merged_split_hierarchy_value;
+  if (remainder <= 1 || remainder == merged_split_hierarchy_value - 1) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 }  // namespace
 
 int32_t PartialRatio4Producer(const NdSbp& sbp_producer,
@@ -434,29 +453,98 @@ int32_t BroadcastRatio4Consumer(const NdSbp& sbp_consumer,
   return Ratio4Sbp(sbp_consumer, consumer_parallel_desc, &SbpParallel::has_broadcast_parallel);
 }
 
-void NdSbpDimReduce(const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
-                    ParallelDesc* reduced_parallel_desc, NdSbp* reduced_nd_sbp) {
-  const auto& hierarchy = parallel_desc.hierarchy();
-  DimVector reduced_hierarchy;
-  FOR_RANGE(int64_t, i, 0, hierarchy->NumAxes()) {
-    if (hierarchy->At(i) != 1) {
-      if (reduced_nd_sbp->sbp_parallel().empty()
-          || (nd_sbp.sbp_parallel(i)
-              != reduced_nd_sbp->sbp_parallel(reduced_nd_sbp->sbp_parallel_size() - 1))) {
-        reduced_hierarchy.emplace_back(hierarchy->At(i));
-        *reduced_nd_sbp->add_sbp_parallel() = nd_sbp.sbp_parallel(i);
-      } else {
-        reduced_hierarchy.back() *= hierarchy->At(i);
+void NdSbpDimReduce(const Shape& hierarchy, const NdSbp& nd_sbp, Shape* reduced_hierarchy,
+                    NdSbp* reduced_nd_sbp, const Shape& logical_shape) {
+  reduced_hierarchy->clear();
+  reduced_nd_sbp->clear_sbp_parallel();
+  // At this moment, if we have [2, 4, 3, 7]: (S0, S1, S0, S0) for logical shape [601, 301, 999]
+  // We hold the split when accessing the current dimension
+  // Do the true splitting until we reach the next step
+  // dim = 0, split_axis2holding_reduced_shapes: {(0: 601)}
+  // dim = 1, split_axis2holding_reduced_shapes: {(0: 300, 301), (1: 601)}
+  // dim = 2, split_axis2holding_reduced_shapes: {(0: 300, 301), (1: 150, 151)}
+  // dim = 3, split_axis2holding_reduced_shapes: {(0: 100, 101), (1: 150, 151)}
+  HashMap<int32_t, HashSet<int32_t>> split_axis2holding_reduced_shapes;
+  std::vector<int32_t> last_holding_reduced_shapes;
+  int32_t last_split_axis = -1;
+  auto add_to_reduced_sbp_hierarchy = [&](int32_t hierarchy_dim) {
+    // Clear the last holding split axis
+    if (last_split_axis >= 0) {
+      auto& holding_reduced_shapes = split_axis2holding_reduced_shapes[last_split_axis];
+      holding_reduced_shapes.clear();
+      for (int32_t last_holding_reduced_shape : last_holding_reduced_shapes) {
+        int32_t quotient = last_holding_reduced_shape / reduced_hierarchy->back();
+        if (last_holding_reduced_shape % reduced_hierarchy->back() != 0) {
+          holding_reduced_shapes.insert(quotient + 1);
+        }
+        holding_reduced_shapes.insert(quotient);
       }
     }
+    // Add a new sbp_parallel and a new hierarchy dimension
+    const auto& curr_sbp_parallel = nd_sbp.sbp_parallel(hierarchy_dim);
+    reduced_hierarchy->emplace_back(hierarchy.At(hierarchy_dim));
+    *reduced_nd_sbp->add_sbp_parallel() = curr_sbp_parallel;
+    // Hold the current split shape
+    if (curr_sbp_parallel.has_split_parallel()) {
+      last_holding_reduced_shapes.clear();
+      last_split_axis = curr_sbp_parallel.split_parallel().axis();
+      auto it = split_axis2holding_reduced_shapes.find(last_split_axis);
+      if (it == split_axis2holding_reduced_shapes.end()) {
+        // Looking at a dimension which is never splitted before
+        // Shape: [601, ...], sbp: (S0, ...)
+        last_holding_reduced_shapes.push_back(logical_shape.At(last_split_axis));
+      } else {
+        // This dimension is splitted before
+        // Shape: [601, 301, ...], sbp: (S0, S1, B, S0, ...), hierarchy: [2, 3, 100, 7, ...]
+        // Looking at i = 3, we hold the second S0, but 601 is already splitted by the first S0.
+        // split_axis2holding_reduced_shapes: {(0: 300, 301), (1: 100, 101)}
+        last_holding_reduced_shapes.assign(it->second.begin(), it->second.end());
+      }
+    } else {
+      last_split_axis = -1;
+    }
+  };
+  for (int32_t hierarchy_dim = 0; hierarchy_dim < hierarchy.NumAxes(); hierarchy_dim++) {
+    // Shrink those dimension with hierarchy value = 1
+    if (hierarchy.At(hierarchy_dim) == 1) { continue; }
+    if (reduced_hierarchy->empty()) {
+      // Empty hierarchy, add to the back
+      add_to_reduced_sbp_hierarchy(hierarchy_dim);
+      continue;
+    }
+    const auto& current_sbp_parallel = nd_sbp.sbp_parallel(hierarchy_dim);
+    if (current_sbp_parallel
+        == reduced_nd_sbp->sbp_parallel(reduced_nd_sbp->sbp_parallel_size() - 1)) {
+      int32_t merged_hierarchy_value = reduced_hierarchy->back() * hierarchy.At(hierarchy_dim);
+      // You can merge two sbp with B or P.
+      // If sbp = S, then you need to make sure that all the shape value can be splitted
+      if (!current_sbp_parallel.has_split_parallel()
+          || std::all_of(last_holding_reduced_shapes.begin(), last_holding_reduced_shapes.end(),
+                         [&](int32_t i) { return CanMergeSplit(i, merged_hierarchy_value); })) {
+        // Merge sbp and hierarchy
+        reduced_hierarchy->back() = merged_hierarchy_value;
+        continue;
+      }
+    }
+    // Can not merge, add to the back
+    add_to_reduced_sbp_hierarchy(hierarchy_dim);
   }
   // [1, 1, ..., 1]: Any --> [1]: (B)
-  if (reduced_hierarchy.empty()) {
-    reduced_hierarchy.emplace_back(hierarchy->At(0));
+  if (reduced_hierarchy->empty()) {
+    reduced_hierarchy->emplace_back(hierarchy.At(0));
     reduced_nd_sbp->add_sbp_parallel()->mutable_broadcast_parallel();
   }
+}
+
+void NdSbpDimReduce(const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
+                    ParallelDesc* reduced_parallel_desc, NdSbp* reduced_nd_sbp,
+                    const Shape& logical_shape) {
+  Shape reduced_hierarchy;
+  NdSbpDimReduce(*parallel_desc.hierarchy(), nd_sbp, &reduced_hierarchy, reduced_nd_sbp,
+                 logical_shape);
+
   ParallelConf reduced_parallel_conf = parallel_desc.parallel_conf();
-  Shape(reduced_hierarchy).ToProto(reduced_parallel_conf.mutable_hierarchy());
+  reduced_hierarchy.ToProto(reduced_parallel_conf.mutable_hierarchy());
   *reduced_parallel_desc = ParallelDesc(reduced_parallel_conf);
 }
 
@@ -464,7 +552,7 @@ void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
                             const ParallelDesc& out_parallel_desc, const NdSbp& in_nd_sbp,
                             const NdSbp& out_nd_sbp, ParallelDesc* reduced_in_parallel_desc,
                             ParallelDesc* reduced_out_parallel_desc, NdSbp* reduced_in_nd_sbp,
-                            NdSbp* reduced_out_nd_sbp) {
+                            NdSbp* reduced_out_nd_sbp, const Shape& logical_shape) {
   const int64_t in_hierarchy_axes = in_parallel_desc.hierarchy()->NumAxes();
   const int64_t out_hierarchy_axes = out_parallel_desc.hierarchy()->NumAxes();
   if (in_hierarchy_axes == 1 && out_hierarchy_axes == 1) {
@@ -473,8 +561,10 @@ void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
     *reduced_in_nd_sbp = in_nd_sbp;
     *reduced_out_nd_sbp = out_nd_sbp;
   } else if (in_hierarchy_axes != out_hierarchy_axes) {
-    NdSbpDimReduce(in_parallel_desc, in_nd_sbp, reduced_in_parallel_desc, reduced_in_nd_sbp);
-    NdSbpDimReduce(out_parallel_desc, out_nd_sbp, reduced_out_parallel_desc, reduced_out_nd_sbp);
+    NdSbpDimReduce(in_parallel_desc, in_nd_sbp, reduced_in_parallel_desc, reduced_in_nd_sbp,
+                   logical_shape);
+    NdSbpDimReduce(out_parallel_desc, out_nd_sbp, reduced_out_parallel_desc, reduced_out_nd_sbp,
+                   logical_shape);
   } else {
     CollaborativeParallelDimReduce(in_parallel_desc, out_parallel_desc, in_nd_sbp, out_nd_sbp,
                                    reduced_in_parallel_desc, reduced_out_parallel_desc,
@@ -497,7 +587,8 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
   NdSbp reduced_out_nd_sbp;
   InOutParallelDimReduce(producer_parallel_desc, consumer_parallel_desc, producer_sbp_parallel,
                          consumer_sbp_parallel, &reduced_in_parallel_desc,
-                         &reduced_out_parallel_desc, &reduced_in_nd_sbp, &reduced_out_nd_sbp);
+                         &reduced_out_parallel_desc, &reduced_in_nd_sbp, &reduced_out_nd_sbp,
+                         logical_blob_desc.shape());
 
   const auto& in_hierarchy = reduced_in_parallel_desc.hierarchy();
   const auto& out_hierarchy = reduced_out_parallel_desc.hierarchy();
@@ -675,12 +766,12 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
   ParallelDesc reduced_in_parallel_desc = producer_parallel_desc;
   NdSbp reduced_in_nd_sbp;
   NdSbpDimReduce(producer_parallel_desc, producer_sbp_parallel, &reduced_in_parallel_desc,
-                 &reduced_in_nd_sbp);
+                 &reduced_in_nd_sbp, logical_blob_desc.shape());
 
   ParallelDesc reduced_out_parallel_desc = consumer_parallel_desc;
   NdSbp reduced_out_nd_sbp;
   NdSbpDimReduce(consumer_parallel_desc, consumer_sbp_parallel, &reduced_out_parallel_desc,
-                 &reduced_out_nd_sbp);
+                 &reduced_out_nd_sbp, logical_blob_desc.shape());
   // In 90% of the transfer, we would have the same parallel description for producer and consumer
   // We need to speed it up and give an approximation of the cost
   if (reduced_in_parallel_desc == reduced_out_parallel_desc
@@ -754,7 +845,8 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
 // Decide the priority to infer sbp
 double ComputeSbpInferPriority(const NdSbp& producer_nd_sbp, const NdSbp& consumer_nd_sbp,
                                const ParallelDesc& producer_parallel_desc,
-                               const ParallelDesc& consumer_parallel_desc, bool requires_same_sbp) {
+                               const ParallelDesc& consumer_parallel_desc, bool requires_same_sbp,
+                               const Shape& logical_shape) {
   if (producer_nd_sbp == consumer_nd_sbp && producer_parallel_desc == consumer_parallel_desc) {
     // Highest priority: this blob have the same placement and sbp on both the producer and
     // consumer
@@ -764,13 +856,13 @@ double ComputeSbpInferPriority(const NdSbp& producer_nd_sbp, const NdSbp& consum
   ParallelDesc reduced_in_parallel_desc = producer_parallel_desc;
   NdSbp reduced_in_nd_sbp;
   NdSbpDimReduce(producer_parallel_desc, producer_nd_sbp, &reduced_in_parallel_desc,
-                 &reduced_in_nd_sbp);
+                 &reduced_in_nd_sbp, logical_shape);
 
   // Dim reduction for consumer
   ParallelDesc reduced_out_parallel_desc = consumer_parallel_desc;
   NdSbp reduced_out_nd_sbp;
   NdSbpDimReduce(consumer_parallel_desc, consumer_nd_sbp, &reduced_out_parallel_desc,
-                 &reduced_out_nd_sbp);
+                 &reduced_out_nd_sbp, logical_shape);
 
   if (requires_same_sbp) {
     // This blob does not support boxing

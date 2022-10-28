@@ -785,7 +785,7 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
               producer_infer_hint4ibn->nd_sbp(),
               JUST(VectorAt(nd_sbp_sig_list, i)).bn_in_op2nd_sbp().at(ibn),
               producer_infer_hint4ibn->parallel_desc(), *JUST(GetParallelDesc4BnInOp(ibn)),
-              requires_same_sbp[ibn_id]);
+              requires_same_sbp[ibn_id], producer_infer_hint4ibn->logical_blob_desc().shape());
           sum_priority_ratio += priority_ratio;
 
           if (GlobalProcessCtx::Rank() == 0

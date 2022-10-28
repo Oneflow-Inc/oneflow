@@ -43,14 +43,17 @@ int32_t PartialRatio4Producer(const NdSbp& sbp_producer,
 int32_t BroadcastRatio4Consumer(const NdSbp& sbp_consumer,
                                 const ParallelDesc& consumer_parallel_desc);
 
+void NdSbpDimReduce(const Shape& hierarchy, const NdSbp& nd_sbp, Shape* reduced_hierarchy,
+                    NdSbp* reduced_nd_sbp, const Shape& logical_shape);
 void NdSbpDimReduce(const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
-                    ParallelDesc* reduced_parallel_desc, NdSbp* reduced_nd_sbp);
+                    ParallelDesc* reduced_parallel_desc, NdSbp* reduced_nd_sbp,
+                    const Shape& logical_shape);
 
 void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
                             const ParallelDesc& out_parallel_desc, const NdSbp& in_nd_sbp,
                             const NdSbp& out_nd_sbp, ParallelDesc* reduced_in_parallel_desc,
                             ParallelDesc* reduced_out_parallel_desc, NdSbp* reduced_in_nd_sbp,
-                            NdSbp* reduced_out_nd_sbp);
+                            NdSbp* reduced_out_nd_sbp, const Shape& logical_shape);
 
 double GetValidMaxCopyCost();
 
@@ -105,7 +108,8 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
 double ComputeSbpInferPriority(const NdSbp& producer_sbp_parallel,
                                const NdSbp& consumer_sbp_parallel,
                                const ParallelDesc& producer_parallel_desc,
-                               const ParallelDesc& consumer_parallel_desc, bool requires_same_sbp);
+                               const ParallelDesc& consumer_parallel_desc, bool requires_same_sbp,
+                               const Shape& logical_shape);
 
 // The transfer ratio for general basic communication
 // Cost = ratio * data amount
