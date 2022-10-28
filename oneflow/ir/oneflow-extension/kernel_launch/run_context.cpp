@@ -36,7 +36,7 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
     auto val = op->getOperand(index);
     auto define_op = val.getDefiningOp();
     auto index = define_op->getAttr("index").cast<mlir::IntegerAttr>().getInt();
-    return llvm::TypeSwitch<::mlir::Operation*, user_op::Tensor*>(op)
+    return llvm::TypeSwitch<::mlir::Operation*, user_op::Tensor*>(define_op)
         .Case([&](mlir::okl::GetTensorFromArgOp elem) {
           return comp_ctx_->Tensor4ArgNameAndIndex("in", index);
         })
@@ -45,6 +45,7 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
         })
         .Default([](::mlir::Operation* op) {
           LOG(FATAL) << "Signature Not supported";
+          return nullptr;
         });
   } else if (arg_name == "y") {
     auto val = op->getResult(index);
