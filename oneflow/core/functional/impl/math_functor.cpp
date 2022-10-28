@@ -3169,6 +3169,7 @@ class StftFunctor {
     int32_t batch = input_tensor->shape()->At(0);
     int32_t len = input_tensor->shape()->At(1);
     int32_t n_frames = 1 + (len - n_fft) / new_hop_length;
+    int32_t fft_size = static_cast<int32_t>(n_fft);
     CHECK_OR_RETURN(n_fft > 0 && n_fft <= len)
         << Error::RuntimeError() << "Expected 0 < n_fft < " << len << " ,but got " << n_fft;
     CHECK_GT_OR_RETURN(new_hop_length, 0)
@@ -3177,9 +3178,9 @@ class StftFunctor {
         << Error::RuntimeError() << "Expected 0 < win_length <=n_fft ,but got " << new_win_length;
     const auto& stride = *JUST(input_tensor->stride());
     std::vector<int32_t> strides(stride.begin(), stride.end());
-    input_tensor =
-        JUST(view::AsStrided(input_tensor, {batch, n_frames, n_fft},
-                             {strides.at(0), new_hop_length * strides.at(1), strides.at(1)}, 0));
+    input_tensor = JUST(view::AsStrided(
+        input_tensor, {batch, n_frames, fft_size},
+        {strides.at(0), static_cast<int32_t>(new_hop_length) * strides.at(1), strides.at(1)}, 0));
 
     auto temp_tensor = JUST(functional::Empty(Shape{n_fft}, input->dtype(), JUST(input->device()),
                                               /*pin_memory=*/false));
