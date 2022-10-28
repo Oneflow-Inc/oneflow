@@ -48,6 +48,27 @@ class TestLogSumExpModule(flow.unittest.TestCase):
         x = random_tensor(ndim=0).to(device)
         y = torch.logsumexp(x, dim=0)
         return y
+    
+    @autotest(n=3, check_graph=True)
+    def test_tensor_log_sum_exp_against_pytorch(test_case):
+        device = random_device()
+        x = random_tensor(4, random(0, 5), 2).to(device)
+        y = x.logsumexp(dim=np.random.randint(0, 3))
+        return y
+
+    @autotest(n=3, auto_backward=False, check_graph=True)
+    def test_tensor_log_sum_exp_with_0_size_tensor(test_case):
+        device = random_device()
+        x = random_tensor(4, 4, 3, 0, 2).to(device)
+        y = x.logsumexp(dim=np.random.randint(0, 3))
+        return y
+
+    @autotest(n=3, auto_backward=False, check_graph=True)
+    def test_tensor_log_sum_exp_with_0dim_tensor(test_case):
+        device = random_device()
+        x = random_tensor(ndim=0).to(device)
+        y = x.logsumexp(dim=0)
+        return y
 
 
 if __name__ == "__main__":
