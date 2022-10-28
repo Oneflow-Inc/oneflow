@@ -247,6 +247,8 @@ class FlattenFunctor {
     int32_t ndim = in_shape.size();
 
     auto CheckAndWrapDim = [&](int32_t dim) -> Maybe<int32_t> {
+      // handle scalar
+      if (ndim == 0 && (dim == 0 || dim == -1)) { return 0; }
       if (dim < -ndim || dim >= ndim) {
         return Error::IndexError() << "Dimension out of range (expected to be in range of ["
                                    << -ndim << ", " << ndim - 1 << "], but got " << dim << ")";
@@ -258,6 +260,14 @@ class FlattenFunctor {
     // for example, when ndim == 3, (-3) == (0), (-2) == (1), (-1) == (2)
     int32_t true_start_dim = JUST(CheckAndWrapDim(start_dim));
     int32_t true_end_dim = JUST(CheckAndWrapDim(end_dim));
+
+    if (true_start_dim > true_end_dim) {
+      return Error::RuntimeError() << "flatten() has invalid args: start_dim (" << start_dim
+                                   << ") cannot come after end_dim (" << end_dim << ")";
+    }
+
+    // identity when start_dim == end_dim
+    if (true_start_dim == true_end_dim) { return x; }
 
     DimVector dim_vec{in_shape.begin(), in_shape.begin() + true_start_dim + 1};
     for (int i = true_start_dim + 1; i <= true_end_dim; ++i) { dim_vec.back() *= in_shape[i]; }
