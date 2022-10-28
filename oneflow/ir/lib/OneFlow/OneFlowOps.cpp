@@ -580,8 +580,8 @@ llvm::SmallVector<Value, 4> ReluOp::NchwToNhwc(llvm::SmallVector<Value, 4> value
   auto relu_op = *this;
   SmallVector<Value, 4> operands{value[0]};
   auto res = rewriter
-                 .create<oneflow::ReluOp>(relu_op.getLoc(), relu_op->getResultTypes(), operands,
-                                          relu_op->getAttrs())
+                 .create<oneflow::ReluOp>(relu_op.getLoc(), getNHWCType(relu_op.y().getType()),
+                                          operands, relu_op->getAttrs())
                  ->getResults();
   return {res[0]};
 }
