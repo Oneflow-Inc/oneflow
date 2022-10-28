@@ -73,7 +73,9 @@ class TestMaxUnpooling(flow.unittest.TestCase):
         m.to(device)
         x = random_tensor(ndim=3, dim2=random(20, 31), requires_grad=False).to(device)
         y = m(x)
-        pooling_results_dtype = random_util.choice([torch.int, torch.float, torch.double])
+        pooling_results_dtype = random_util.choice(
+            [torch.int, torch.float, torch.double]
+        )
         indices_dtype = random_util.choice([torch.int, torch.long])
         pooling_results = y[0].to(pooling_results_dtype)
         indices = y[1].to(indices_dtype)
@@ -103,7 +105,9 @@ class TestMaxUnpooling(flow.unittest.TestCase):
         m.to(device)
         x = random_tensor(ndim=3, dim2=random(20, 31), requires_grad=False).to(device)
         y = m(x)
-        pooling_results_dtype = random_util.choice([torch.int, torch.float, torch.double])
+        pooling_results_dtype = random_util.choice(
+            [torch.int, torch.float, torch.double]
+        )
         indices_dtype = random_util.choice([torch.int, torch.long])
         pooling_results = y[0].to(pooling_results_dtype)
         indices = y[1].to(indices_dtype)
@@ -138,7 +142,9 @@ class TestMaxUnpooling(flow.unittest.TestCase):
             ndim=4, dim2=random(20, 31), dim3=random(20, 31), requires_grad=False
         ).to(device)
         y = m(x)
-        pooling_results_dtype = random_util.choice([torch.int, torch.float, torch.double])
+        pooling_results_dtype = random_util.choice(
+            [torch.int, torch.float, torch.double]
+        )
         indices_dtype = random_util.choice([torch.int, torch.long])
         pooling_results = y[0].to(pooling_results_dtype)
         indices = y[1].to(indices_dtype)
@@ -170,7 +176,9 @@ class TestMaxUnpooling(flow.unittest.TestCase):
             ndim=4, dim2=random(20, 31), dim3=random(20, 31), requires_grad=False
         ).to(device)
         y = m(x)
-        pooling_results_dtype = random_util.choice([torch.int, torch.float, torch.double])
+        pooling_results_dtype = random_util.choice(
+            [torch.int, torch.float, torch.double]
+        )
         indices_dtype = random_util.choice([torch.int, torch.long])
         pooling_results = y[0].to(pooling_results_dtype)
         indices = y[1].to(indices_dtype)
@@ -209,7 +217,9 @@ class TestMaxUnpooling(flow.unittest.TestCase):
             requires_grad=False,
         ).to(device)
         y = m(x)
-        pooling_results_dtype = random_util.choice([torch.int, torch.float, torch.double])
+        pooling_results_dtype = random_util.choice(
+            [torch.int, torch.float, torch.double]
+        )
         indices_dtype = random_util.choice([torch.int, torch.long])
         pooling_results = y[0].to(pooling_results_dtype)
         indices = y[1].to(indices_dtype)
@@ -245,7 +255,9 @@ class TestMaxUnpooling(flow.unittest.TestCase):
             requires_grad=False,
         ).to(device)
         y = m(x)
-        pooling_results_dtype = random_util.choice([torch.int, torch.float, torch.double])
+        pooling_results_dtype = random_util.choice(
+            [torch.int, torch.float, torch.double]
+        )
         indices_dtype = random_util.choice([torch.int, torch.long])
         pooling_results = y[0].to(pooling_results_dtype)
         indices = y[1].to(indices_dtype)
