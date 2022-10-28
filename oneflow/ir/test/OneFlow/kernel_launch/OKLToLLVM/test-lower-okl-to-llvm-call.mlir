@@ -6,18 +6,18 @@
 // CHECK:   llvm.func @launch(!llvm.ptr<i8>, !llvm.ptr<i8>) attributes {llvm.emit_c_interface}
 // CHECK:   llvm.func @fetch_kernel(!llvm.ptr<i8>, i64) -> !llvm.ptr<i8> attributes {llvm.emit_c_interface}
 // CHECK:   llvm.func @fetch_run_ctx(!llvm.ptr<i8>, i64) -> !llvm.ptr<i8> attributes {llvm.emit_c_interface}
-// CHECK:   func.func @okl_compute(%arg0: !llvm.ptr<i8>) attributes {llvm.emit_c_interface} {
-// CHECK:     %0 = builtin.unrealized_conversion_cast %arg0 : !llvm.ptr<i8> to !okl.launcher_ctx
-// CHECK:     %1 = llvm.mlir.constant(0 : index) : i64
-// CHECK:     %2 = llvm.call @fetch_run_ctx(%arg0, %1) : (!llvm.ptr<i8>, i64) -> !llvm.ptr<i8>
-// CHECK:     %3 = llvm.mlir.constant(1 : index) : i64
-// CHECK:     %4 = llvm.call @fetch_run_ctx(%arg0, %3) : (!llvm.ptr<i8>, i64) -> !llvm.ptr<i8>
-// CHECK:     %5 = llvm.mlir.constant(0 : index) : i64
-// CHECK:     %6 = llvm.call @fetch_kernel(%arg0, %5) : (!llvm.ptr<i8>, i64) -> !llvm.ptr<i8>
-// CHECK:     %7 = llvm.mlir.constant(1 : index) : i64
-// CHECK:     %8 = llvm.call @fetch_kernel(%arg0, %7) : (!llvm.ptr<i8>, i64) -> !llvm.ptr<i8>
-// CHECK:     llvm.call @launch(%2, %6) : (!llvm.ptr<i8>, !llvm.ptr<i8>) -> ()
-// CHECK:     llvm.call @launch(%4, %8) : (!llvm.ptr<i8>, !llvm.ptr<i8>) -> ()
+// CHECK:   func.func @okl_compute(%[[ARG:[a-zA-Z0-9_]+]]: !llvm.ptr<i8>) attributes {llvm.emit_c_interface} {
+// CHECK:     %[[ARG0:[a-zA-Z0-9_]+]] = builtin.unrealized_conversion_cast %[[ARG]] : !llvm.ptr<i8> to !okl.launcher_ctx
+// CHECK:     %[[ARG1:[a-zA-Z0-9_]+]] = llvm.mlir.constant(0 : index) : i64
+// CHECK:     %[[ARG2:[a-zA-Z0-9_]+]] = llvm.call @fetch_run_ctx(%[[ARG]], %[[ARG1]]) : (!llvm.ptr<i8>, i64) -> !llvm.ptr<i8>
+// CHECK:     %[[ARG3:[a-zA-Z0-9_]+]] = llvm.mlir.constant(1 : index) : i64
+// CHECK:     %[[ARG4:[a-zA-Z0-9_]+]] = llvm.call @fetch_run_ctx(%[[ARG]], %[[ARG3]]) : (!llvm.ptr<i8>, i64) -> !llvm.ptr<i8>
+// CHECK:     %[[ARG5:[a-zA-Z0-9_]+]] = llvm.mlir.constant(0 : index) : i64
+// CHECK:     %[[ARG6:[a-zA-Z0-9_]+]] = llvm.call @fetch_kernel(%[[ARG]], %[[ARG5]]) : (!llvm.ptr<i8>, i64) -> !llvm.ptr<i8>
+// CHECK:     %[[ARG7:[a-zA-Z0-9_]+]] = llvm.mlir.constant(1 : index) : i64
+// CHECK:     %[[ARG8:[a-zA-Z0-9_]+]] = llvm.call @fetch_kernel(%[[ARG]], %[[ARG7]]) : (!llvm.ptr<i8>, i64) -> !llvm.ptr<i8>
+// CHECK:     llvm.call @launch(%[[ARG2]], %[[ARG6]]) : (!llvm.ptr<i8>, !llvm.ptr<i8>) -> ()
+// CHECK:     llvm.call @launch(%[[ARG4]], %[[ARG8]]) : (!llvm.ptr<i8>, !llvm.ptr<i8>) -> ()
 // CHECK:     return
 // CHECK:   }
 // CHECK: }

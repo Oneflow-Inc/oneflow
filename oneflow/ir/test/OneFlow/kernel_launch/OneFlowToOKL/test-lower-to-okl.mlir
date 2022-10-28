@@ -10,7 +10,7 @@
 // CHECK:       %7 = "oneflow.relu"(%6) {device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], op_name = "relu-0", scope_symbol_id = 12 : i64} : (tensor<2xf32>) -> tensor<2xf32>
 // CHECK:       %8 = "okl.get_tensor_as_ret"(%arg0, %7) {index = 0 : i32, tensor_type = 2 : i32} : (!okl.launcher_ctx, tensor<2xf32>) -> tensor<2xf32>
 // CHECK:       okl.return
-// CHECK:     }) {function_type = () -> ()} : () -> !okl.reg_ctx
+// CHECK:     }) : () -> !okl.reg_ctx
 // CHECK:     %1 = "okl.build_run_ctx"(%0) : (!okl.reg_ctx) -> !okl.run_ctx
 // CHECK:     %2 = "okl.build_op_kernel"(%0) : (!okl.reg_ctx) -> !okl.kernel
 // CHECK:     "okl.launch"(%1, %2) : (!okl.run_ctx, !okl.kernel) -> ()
@@ -21,7 +21,7 @@
 // CHECK:       %7 = "oneflow.tanh"(%6) {device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], op_name = "tanh-1", scope_symbol_id = 12 : i64} : (tensor<2xf32>) -> tensor<2xf32>
 // CHECK:       %8 = "okl.get_tensor_as_ret"(%arg0, %7) {index = 1 : i32, tensor_type = 2 : i32} : (!okl.launcher_ctx, tensor<2xf32>) -> tensor<2xf32>
 // CHECK:       okl.return
-// CHECK:     }) {function_type = () -> ()} : () -> !okl.reg_ctx
+// CHECK:     }) : () -> !okl.reg_ctx
 // CHECK:     %4 = "okl.build_run_ctx"(%3) : (!okl.reg_ctx) -> !okl.run_ctx
 // CHECK:     %5 = "okl.build_op_kernel"(%3) : (!okl.reg_ctx) -> !okl.kernel
 // CHECK:     "okl.launch"(%4, %5) : (!okl.run_ctx, !okl.kernel) -> ()
