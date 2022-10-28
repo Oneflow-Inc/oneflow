@@ -259,10 +259,14 @@ class FlattenFunctor {
     int32_t true_start_dim = JUST(CheckAndWrapDim(start_dim));
     int32_t true_end_dim = JUST(CheckAndWrapDim(end_dim));
 
-    DimVector dim_vec{in_shape.begin(), in_shape.begin() + true_start_dim};
+    DimVector dim_vec{in_shape.begin(), in_shape.begin() + true_start_dim + 1};
     for (int i = true_start_dim + 1; i <= true_end_dim; ++i) { dim_vec.back() *= in_shape[i]; }
     dim_vec.insert(dim_vec.end(), in_shape.begin() + true_end_dim + 1, in_shape.end());
-    return JUST(Reshape(x, Shape{dim_vec}));
+    Shape reshape_shape{dim_vec};
+    CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), reshape_shape.elem_cnt())
+        << Error::RuntimeError() << "invalid reshape from " << in_shape.ToString() << " to "
+        << reshape_shape.ToString();
+    return JUST(Reshape(x, reshape_shape));
   }
 };
 
