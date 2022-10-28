@@ -103,7 +103,7 @@ Maybe<one::Tensor> SymmetricAcyclicNdSbpBoxing(const std::shared_ptr<one::Tensor
     }
     output = JUST(ReinterpterGlobalTensor(tensor, *input->shape(), out_parallel_desc, out_nd_sbp));
   } else {
-    one::GlobalTensorMeta tensor_meta(input->shape(), input->dtype()->data_type(), out_nd_sbp,
+    one::GlobalTensorMeta tensor_meta(*input->shape(), input->dtype()->data_type(), out_nd_sbp,
                                       out_parallel_desc);
     const auto& tensor_impl =
         JUST(one::EagerGlobalTensorImpl::New(SymbolOf(tensor_meta), input->requires_grad(), false));

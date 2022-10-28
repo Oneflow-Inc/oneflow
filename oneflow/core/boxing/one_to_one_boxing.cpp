@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/user/kernels/communicate_util.h"
 
 namespace oneflow {
 
@@ -31,8 +32,7 @@ Maybe<void> RawCheckNaiveOneToOne(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> ou
   CHECK_EQ_OR_RETURN(out->placement()->parallel_num(), 1);
   CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());
   CHECK_OR_RETURN(in->placement() != out->placement());
-  CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kCPU
-                  || in->placement()->device_type() == DeviceType::kCUDA);
+  CHECK_OR_RETURN(IsSendAndRecvRegistered(in->placement()->device_type()));  // NOLINT
   return Maybe<void>::Ok();
 }
 // NOLINTEND(maybe-need-error-msg)

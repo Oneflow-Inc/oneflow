@@ -21,13 +21,14 @@ import re
 
 def get_api(rst_dir):
     """
-    Extract operator names from rst files. 
-    
-    `currentmodule` is not regarded as operators. 
+    Extract operator names from rst files.
+
+    `currentmodule` is not regarded as operators.
     `autoclass` and `automodule` are regarded as operators in the absence of `members`.
     """
     op_files = glob.glob(rst_dir + "/*.rst")
     op_files.remove(rst_dir + "/graph.rst")
+    op_files.remove(rst_dir + "/index.rst")
     api_list = []
     api_str = ""
     for op_file in op_files:
@@ -42,10 +43,25 @@ def get_api(rst_dir):
                     if "oneflow" not in line:
                         api_str += pre
                     api_str += line.replace(".. autofunction::", "")
-                elif ".. automodule::" in line or ".. autoclass:: " in line:
-                    pre_a = line.replace(".. automodule:: ", "").replace(
-                        ".. autoclass:: ", ""
-                    )
+                elif (
+                    ".. autosummary::" in line
+                    or ".. autoclass::" in line
+                    or ":toctree:" in line
+                    or ":nosignatures:" in line
+                    or ":template:" in line
+                ):
+                    if ":nosignatures:" in line:
+                        line = f.readline()
+                        if ":template:" in line:
+                            line = f.readline()
+                        line = f.readline()
+                        while line and len(line.replace(" ", "")) > 1:
+                            if "oneflow" not in line:
+                                api_str += pre
+                            api_str += line
+                            line = f.readline()
+                elif ".. automodule::" in line:
+                    pre_a = line.replace(".. automodule:: ", "")
                     line = f.readline()
                     skip = True
                     if ":members:" in line and len(line) > 14:
@@ -57,8 +73,6 @@ def get_api(rst_dir):
                         ):
                             api_str += pre_a + line
                             line = f.readline()
-                    else:
-                        api_str += pre_a
                 if not skip:
                     line = f.readline()
 
@@ -66,18 +80,44 @@ def get_api(rst_dir):
     return api_list
 
 
+def get_profile_func(path):
+    """
+    Iterate through files under `path` to find out all operator names,
+    and update code links to file_func_map_list by file_func_map.
+    """
+    files = os.listdir(path)
+    commit_bytes = subprocess.check_output(["git", "rev-parse", "HEAD"])
+    commit_str = commit_bytes.decode("utf-8").replace("\n", "")
+    result_profile_func_list = []
+    for file in files:
+        if file != "log" and not os.path.isdir(file) and file.find("__pycache__") == -1:
+            f = open(os.path.join(path, file))
+            last_line = ""
+            iter_f = iter(f)
+            line_num = 1
+            for line in iter_f:
+                line = line.strip()
+                match = re.fullmatch(r"^@profile\((.+)\)$", line)
+                if match:
+                    tem_profile = match.group(1)
+                    tem_profile_name = tem_profile.split(".")[-1]
+                    result_profile_func_list.append(tem_profile_name)
+
+    return result_profile_func_list
+
+
 def get_test_func(path):
     """
-    Iterate through files under `path` to find out all operator names, 
-    and update code links to file_func_map_list by file_func_map. 
+    Iterate through files under `path` to find out all operator names,
+    and update code links to file_func_map_list by file_func_map.
     """
     files = os.listdir(path)
     commit_bytes = subprocess.check_output(["git", "rev-parse", "HEAD"])
     commit_str = commit_bytes.decode("utf-8").replace("\n", "")
     result_func_list = []
     for file in files:
-        if not os.path.isdir(file) and file.find("__pycache__") == -1:
-            f = open(path + "/" + file)
+        if file != "log" and not os.path.isdir(file) and file.find("__pycache__") == -1:
+            f = open(os.path.join(path, file))
             last_line = ""
             iter_f = iter(f)
             line_num = 1
@@ -117,11 +157,11 @@ def get_test_func(path):
 def pure_match(x, y):
     """
     Check whether x contains y.
-    
-    The purpose of identifying "." is to accurately match operator documents. 
+
+    The purpose of identifying "." is to accurately match operator documents.
     For example, if we make pos = x.find(y) while y = clip_, either oneflow.Tensor.clip or oneflow.Tensor.clip_ is right.
 
-    Besides, identifying "_" is important. 
+    Besides, identifying "_" is important.
     For example, if we make pos = x.find(y) while y = squeeze, either test of squeeze or unsqueeze is right.
     """
     x = x.lower()
@@ -149,7 +189,7 @@ def match_test_func(func, func_list):
     func: operator name
     func_list: names of all operators
 
-    Check whether func_list contains func. If yes, return matching content, or else return "". 
+    Check whether func_list contains func. If yes, return matching content, or else return "".
     """
     match_res = ""
     for i in range(len(func_list)):
@@ -168,30 +208,35 @@ if __name__ == "__main__":
     ]
     num_cols = 4
     test_func_list = list()
+    test_profile_list = list()
     file_func_map = dict()
     file_func_map_list = []
 
     for i in range(0, len(dir_list)):
         tmp_func_list = list()
+        tmp_profile_list = list()
         file_func_map = dict()
         for path in dir_list[i]:
             tmp_func_list.extend(get_test_func(path))
+            tmp_profile_list.extend(get_profile_func(path))
         test_func_list.append(tmp_func_list)
+        test_profile_list.extend(tmp_profile_list)
         file_func_map_list.append(file_func_map)
 
     result_list = []
     result_list.append(f"## Ops Version : Alpha")
     result_list.append(f"")
     result_list.append(f"")
-    table_head = f"| Op Name | Doc Test | Compatiable/Completeness Test | Exception |"
+    table_head = f"| Op Name | Doc Test | Compatiable/Completeness Test | Exception | Performance Test |"
     result_list.append(table_head)
     result_list.append(
-        f"| ------------------------- | ------------- | ----------------------------- | --------- |"
+        f"| ------------------------- | ------------- | ----------------------------- | --------- | ---------------- |"
     )
 
     cnt0 = 0  # the number of doc_test
     cnt1 = 0  # the number of compatiable_completeness_test
     cnt2 = 0  # the number of exception_test
+    cnt3 = 0  # the number of profile_test
 
     for name in api_list:
         table_line = f"| {name} |"
@@ -207,11 +252,17 @@ if __name__ == "__main__":
                     cnt2 += 1
                 table_line += file_func_map_list[i][match_name]
             table_line += "  |"
+        if name in test_profile_list:
+            table_line += " done "
+            cnt3 += 1
+        table_line += "  |"
+
         result_list.append(table_line)
 
-    doc_test_ratio = cnt0 * 1.0 / len(api_list)
-    compatiable_completeness_test_ratio = cnt1 * 1.0 / len(api_list)
-    exception_test_ratio = cnt2 * 1.0 / len(api_list)
+    doc_test_ratio = cnt0 / len(api_list)
+    compatiable_completeness_test_ratio = cnt1 / len(api_list)
+    exception_test_ratio = cnt2 / len(api_list)
+    performance_test_ratio = cnt3 / len(api_list)
 
     result_list.append(f"## Test Data Summary")
     result_list.append(f"- OneFlow Total API Number: {len(api_list)}")
@@ -224,7 +275,9 @@ if __name__ == "__main__":
     result_list.append(
         f"- Exception Test Ratio: {100*exception_test_ratio:.2f}% ({cnt2} / {len(api_list)})"
     )
-
+    result_list.append(
+        f"- Performance Test Ratio: {100*performance_test_ratio:.2f}% ({cnt3} / {len(api_list)})"
+    )
     f = open("./README.md", "w")
     for line in result_list:
         f.write(line + "\n")

@@ -21,6 +21,24 @@ namespace oneflow {
 
 namespace {
 
+// Logically computation cost of pool op is the product of output data amount and pool kernal data
+// amount. After adding sbp, we just divide it by parallel number if output data is splitted because
+// splitting input and using partial sum for output is not a valid sbp for this op for now.
+Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
+  const std::vector<int32_t> pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
+  double logical_computation_cost =
+      std::accumulate(pool_size.begin(), pool_size.end(),
+                      ctx->Shape4ArgNameAndIndex("y", 0).elem_cnt(), std::multiplies<double>());
+  const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
+  const auto& nd_sbp_y = ctx->NdSbp4ArgNameAndIndex("y", 0);
+  for (int32_t dim_sbp = 0; dim_sbp < nd_sbp_y.sbp_parallel_size(); dim_sbp++) {
+    if (nd_sbp_y.sbp_parallel(dim_sbp).has_split_parallel()) {
+      logical_computation_cost /= parallel_hierarchy->At(dim_sbp);
+    }
+  }
+  return logical_computation_cost;
+}
+
 typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn;
 
 TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
@@ -42,25 +60,25 @@ TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
     const Params3D params_3d(dim, x_shape, data_format, padding, padding_before, padding_after,
                              pool_size, strides, ceil_mode);
     user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
-    *y_desc->mut_shape() = params_3d.GetYShape();
-    *y_desc->mut_is_dynamic() = ctx->InputIsDynamic("x", 0);
+    y_desc->set_shape(params_3d.GetYShape());
+    y_desc->set_is_dynamic(ctx->InputIsDynamic("x", 0));
     return Maybe<void>::Ok();
   };
 }
 
 Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("dx", 0) = ctx->InputShape("x", 0);
-  *ctx->MutOutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x", 0);
+  ctx->SetOutputShape("dx", 0, ctx->InputShape("x", 0));
+  ctx->SetOutputIsDynamic("dx", 0, ctx->InputIsDynamic("x", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> FwInferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -97,6 +115,10 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
   }                                                                                             \
   /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {                  \
     return FwInferDataType(ctx);                                                                \
+  }                                                                                             \
+  /*static*/ Maybe<double> name##Op::GetComputeComplexity(                                      \
+      user_op::ComputeComplexityFnContext* ctx) {                                               \
+    return GetComputationCost(ctx);                                                             \
   }
 
 IMPLEMENT_TF_POOL_FUNCS(TfAvgPool1D, 1)
@@ -119,6 +141,10 @@ IMPLEMENT_TF_POOL_FUNCS(TfMaxPool3D, 3)
   }                                                                                          \
   /*static*/ Maybe<void> name##GradOp::InferDataType(user_op::InferContext* ctx) {           \
     return BwInferDataType(ctx);                                                             \
+  }                                                                                          \
+  /*static*/ Maybe<double> name##GradOp::GetComputeComplexity(                               \
+      user_op::ComputeComplexityFnContext* ctx) {                                            \
+    return GetComputationCost(ctx);                                                          \
   }
 
 IMPLEMENT_TF_POOL_BACKWARD_FUNCS(TfAvgPool1D)

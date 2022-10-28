@@ -20,6 +20,17 @@ namespace oneflow {
 
 namespace {
 
+bool IsParallelCastOp(const OperatorConf& op_conf) {
+  return op_conf.has_user_conf()
+         && (op_conf.user_conf().op_type_name() == "parallel_cast"
+             || op_conf.user_conf().op_type_name() == "hierarchical_parallel_cast"
+             || op_conf.user_conf().op_type_name() == "hierarchical_parallel_cast_like");
+}
+
+bool NeedDoPass(const Job& job) {
+  return std::any_of(job.net().op().cbegin(), job.net().op().cend(), IsParallelCastOp);
+}
+
 class PruneParallelCastOpsPass final : public JobPass {
  public:
   PruneParallelCastOpsPass() = default;
@@ -30,6 +41,7 @@ class PruneParallelCastOpsPass final : public JobPass {
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    if (!NeedDoPass(*job)) { return Maybe<void>::Ok(); }
     const OpGraph op_graph(*job);
     JobBuilder job_builder(job);
     return Apply(op_graph, &job_builder);
@@ -46,12 +58,6 @@ Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
       ctrl_in_op_names.insert(ctrl_in_op_name);
     }
   });
-  const auto IsParallelCastOp = [](const OperatorConf& op_conf) -> bool {
-    return op_conf.has_user_conf()
-           && (op_conf.user_conf().op_type_name() == "parallel_cast"
-               || op_conf.user_conf().op_type_name() == "hierarchical_parallel_cast"
-               || op_conf.user_conf().op_type_name() == "hierarchical_parallel_cast_like");
-  };
   std::vector<std::string> del_op_names;
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();

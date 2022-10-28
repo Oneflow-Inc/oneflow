@@ -153,7 +153,6 @@ size_t InferEagerBToSKernelTmpBufferSize(user_op::InferContext* ctx) {
 
 }  // namespace
 
-template<DeviceType device_type>
 class EagerBToSKernel final : public user_op::OpKernel {
  public:
   EagerBToSKernel() = default;
@@ -185,6 +184,8 @@ class EagerBToSKernel final : public user_op::OpKernel {
     CHECK_EQ(sorted_elem_cnt2in_tensor_slice_copier_pair.size(), sorted_p2p_pair.size());
     CHECK_EQ(sorted_elem_cnt2out_tensor_slice_copier_pair.size(), sorted_p2p_pair.size());
 
+    DeviceType device_type = ctx->device_type();
+
     for (int64_t i = 0; i < sorted_p2p_pair.size(); ++i) {
       const auto& p2p_pair = sorted_p2p_pair.at(i);
       int64_t src = p2p_pair.first;
@@ -202,8 +203,8 @@ class EagerBToSKernel final : public user_op::OpKernel {
         const auto& elem_cnt = elem_cnt2tensor_slice_copier_pair.first;
         const auto& tensor_slice_copier = elem_cnt2tensor_slice_copier_pair.second;
         tensor_slice_copier->Copy(ctx->stream(), tmp_buffer_ptr, in_ptr);
-        CHECK_JUST(Send<device_type>(reinterpret_cast<const void*>(tmp_buffer_ptr), elem_cnt,
-                                     in->data_type(), dst, ctx->stream()));
+        CHECK_JUST(Send(reinterpret_cast<const void*>(tmp_buffer_ptr), elem_cnt, in->data_type(),
+                        dst, device_type, ctx->stream()));
       }
       if (GlobalProcessCtx::Rank() == dst) {
         const auto& elem_cnt2tensor_slice_copier_pair =
@@ -211,7 +212,7 @@ class EagerBToSKernel final : public user_op::OpKernel {
         const auto& elem_cnt = elem_cnt2tensor_slice_copier_pair.first;
         const auto& tensor_slice_copier = elem_cnt2tensor_slice_copier_pair.second;
         CHECK_JUST(
-            Recv<device_type>(tmp_buffer_ptr, elem_cnt, out->data_type(), src, ctx->stream()));
+            Recv(tmp_buffer_ptr, elem_cnt, out->data_type(), src, device_type, ctx->stream()));
         tensor_slice_copier->Copy(ctx->stream(), out_ptr,
                                   reinterpret_cast<const void*>(tmp_buffer_ptr));
       }
@@ -220,15 +221,9 @@ class EagerBToSKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EAGER_B_TO_S_KERNEL(device)               \
-  REGISTER_USER_KERNEL("eager_b_to_s")                     \
-      .SetCreateFn<EagerBToSKernel<device>>()              \
-      .SetIsMatchedHob(user_op::HobDeviceType() == device) \
-      .SetInferTmpSizeFn(InferEagerBToSKernelTmpBufferSize);
-
-REGISTER_EAGER_B_TO_S_KERNEL(DeviceType::kCPU)
-#if defined(WITH_CUDA) && HAS_NCCL_SEND_RECV
-REGISTER_EAGER_B_TO_S_KERNEL(DeviceType::kCUDA)
-#endif
+REGISTER_USER_KERNEL("eager_b_to_s")
+    .SetCreateFn<EagerBToSKernel>()
+    .SetIsMatchedHob(HobIsSendAndRecvRegistered())
+    .SetInferTmpSizeFn(InferEagerBToSKernelTmpBufferSize);
 
 }  // namespace oneflow

@@ -37,6 +37,9 @@ Tensor
     is_nonzero
     numel
     set_printoptions
+    get_default_dtype
+    set_default_dtype
+    set_default_tensor_type
 
 .. _tensor-creation-ops:
 
@@ -63,6 +66,7 @@ Creation Ops
     zeros_like
     ones
     ones_like
+    randn_like
     randint_like
     masked_fill
     new_ones
@@ -86,15 +90,22 @@ Indexing, Slicing, Joining, Mutating Ops
     :nosignatures:
 
     argwhere
+    atleast_1d
+    atleast_2d
+    atleast_3d
     cat
+    column_stack
     concat
     chunk
+    dstack
     expand
     gather
     gather_nd
     batch_gather
     hsplit
+    hstack
     vsplit
+    vstack
     index_select
     masked_select
     movedim
@@ -103,6 +114,7 @@ Indexing, Slicing, Joining, Mutating Ops
     permute
     repeat
     reshape
+    row_stack
     select
     scatter
     scatter_add
@@ -142,6 +154,7 @@ Random sampling
     randint
     randn
     randperm
+    multinomial
     
 In-place random sampling
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -255,6 +268,7 @@ Pointwise Ops
     log 
     log1p 
     log2 
+    log10
     logical_and 
     logical_not 
     logical_or 
@@ -282,6 +296,7 @@ Pointwise Ops
     sub 
     tan 
     tanh
+    trunc
     floor_divide
 
 Reduction Ops
@@ -301,6 +316,7 @@ Reduction Ops
     mean  
     median
     prod
+    nansum
     std  
     sum  
     var
@@ -340,7 +356,6 @@ Spectral Ops
     :toctree: generated
     :nosignatures:
 
-    
     hann_window
     
 Other Ops
@@ -373,6 +388,8 @@ Other Ops
     tril
     repeat_interleave
     triu
+    cross
+    bincount
 
 BLAS and LAPACK Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

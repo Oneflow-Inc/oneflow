@@ -40,7 +40,9 @@ std::function<Maybe<void>(const std::string&)> MakeCheckParamDataTypeFn(user_op:
   return [=](const std::string& bn) -> Maybe<void> {
     if (ctx->has_input(bn, 0)) {
       const auto& tensor_desc = ctx->InputTensorDesc(bn, 0);
-      CHECK_EQ_OR_RETURN(tensor_desc.data_type(), data_type);
+      CHECK_EQ_OR_RETURN(tensor_desc.data_type(), data_type)
+          << "InferDataType Failed. Expected " << DataType_Name(tensor_desc.data_type())
+          << ", but got " << DataType_Name(data_type);
     }
     return Maybe<void>::Ok();
   };
@@ -52,7 +54,7 @@ std::function<Maybe<void>(const std::string&)> MakeSetParamTensorDescFn(user_op:
     if (ctx->has_output(bn, 0)) {
       auto* tensor_desc = ctx->MutOutputTensorDesc(bn, 0);
       CHECK_OR_RETURN(tensor_desc != nullptr);
-      *tensor_desc->mut_shape() = shape;
+      tensor_desc->set_shape(shape);
     }
     return Maybe<void>::Ok();
   };
@@ -64,7 +66,7 @@ std::function<Maybe<void>(const std::string&)> MakeSetParamDataTypeFn(user_op::I
     if (ctx->has_output(bn, 0)) {
       auto* tensor_desc = ctx->MutOutputTensorDesc(bn, 0);
       CHECK_OR_RETURN(tensor_desc != nullptr);
-      *tensor_desc->mut_data_type() = data_type;
+      tensor_desc->set_data_type(data_type);
     }
     return Maybe<void>::Ok();
   };
@@ -133,12 +135,16 @@ user_op::TensorDescInferFn MakeFwTensorDescInferFn(
     const Shape& x_shape = x.shape();
     if (ctx->has_input("addend", 0)) {
       const auto& addend = ctx->InputTensorDesc("addend", 0);
-      CHECK_EQ_OR_RETURN(addend.data_type(), data_type);
+      CHECK_EQ_OR_RETURN(addend.data_type(), data_type)
+          << "InferDataType Failed. Expected " << DataType_Name(addend.data_type()) << ", but got "
+          << DataType_Name(data_type);
       CHECK_EQ_OR_RETURN(addend.shape(), x_shape);
     }
     if (ctx->has_input("_add_to_output", 0)) {
       const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
-      CHECK_EQ_OR_RETURN(add_to_output.data_type(), data_type);
+      CHECK_EQ_OR_RETURN(add_to_output.data_type(), data_type)
+          << "InferDataType Failed. Expected " << DataType_Name(add_to_output.data_type())
+          << ", but got " << DataType_Name(data_type);
       CHECK_EQ_OR_RETURN(add_to_output.shape(), x_shape);
     }
     *ctx->MutOutputTensorDesc("y", 0) = x;
@@ -173,11 +179,15 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn(
     const auto data_type = x.data_type();
     if (ctx->has_input("addend", 0)) {
       const auto& addend = ctx->InputTensorDesc("addend", 0);
-      CHECK_EQ_OR_RETURN(addend.data_type(), data_type);
+      CHECK_EQ_OR_RETURN(addend.data_type(), data_type)
+          << "InferDataType Failed. Expected " << DataType_Name(data_type) << ", but got "
+          << DataType_Name(addend.data_type());
     }
     if (ctx->has_input("_add_to_output", 0)) {
       const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
-      CHECK_EQ_OR_RETURN(add_to_output.data_type(), data_type);
+      CHECK_EQ_OR_RETURN(add_to_output.data_type(), data_type)
+          << "InferDataType Failed. Expected " << DataType_Name(data_type) << ", but got "
+          << DataType_Name(add_to_output.data_type());
     }
     *ctx->MutOutputTensorDesc("y", 0) = x;
     const DataType param_data_type =
@@ -260,8 +270,7 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn() {
       CHECK_EQ_OR_RETURN(reserve_space_bits % split_num, 0);
       reserve_space_bits = reserve_space_bits / split_num;
     }
-    *reserve_space->mut_shape() =
-        Shape({static_cast<int64_t>(RoundUp(reserve_space_bits, 32) / 32)});
+    reserve_space->set_shape(Shape({static_cast<int64_t>(RoundUp(reserve_space_bits, 32) / 32)}));
     return Maybe<void>::Ok();
   })(ctx);
 }
@@ -271,8 +280,8 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn() {
   return MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
                                     user_op::TensorDesc* reserve_space) -> Maybe<void> {
     const auto& x_desc = ctx->InputTensorDesc("x", 0);
-    *reserve_space->mut_shape() =
-        Shape({static_cast<int64_t>(RoundUp(x_desc.shape().elem_cnt(), 32) / 32)});
+    reserve_space->set_shape(
+        Shape({static_cast<int64_t>(RoundUp(x_desc.shape().elem_cnt(), 32) / 32)}));
     return Maybe<void>::Ok();
   })(ctx);
 }
@@ -289,7 +298,7 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn() {
 /* static */ Maybe<void> NormalizationAddReluOp::InferDataType(user_op::InferContext* ctx) {
   return MakeFwDataTypeInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
                                   user_op::TensorDesc* reserve_space) -> Maybe<void> {
-    *reserve_space->mut_data_type() = DataType::kInt32;
+    reserve_space->set_data_type(DataType::kInt32);
     return Maybe<void>::Ok();
   })(ctx);
 }
@@ -300,14 +309,13 @@ namespace {
 
 void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int64_t n, int64_t c,
                                 int64_t h, int64_t w, size_t* reserve_space_size) {
-  cudnnHandle_t cudnn_handle;
-  OF_CUDNN_CHECK(cudnnCreate(&cudnn_handle));
+  cudnnHandle_t cudnn_handle = Singleton<CudnnHandlePool>::Get()->Get();
   CudnnTensorDesc xy_desc(CUDNN_TENSOR_NHWC, data_type, n, c, h, w);
   CudnnActivationDesc activation_desc(CUDNN_ACTIVATION_RELU, CUDNN_PROPAGATE_NAN, 0);
   OF_CUDNN_CHECK(cudnnGetBatchNormalizationTrainingExReserveSpaceSize(
       cudnn_handle, CUDNN_BATCHNORM_SPATIAL_PERSISTENT, ops, activation_desc.Get(), xy_desc.Get(),
       reserve_space_size));
-  OF_CUDNN_CHECK(cudnnDestroy(cudnn_handle));
+  Singleton<CudnnHandlePool>::Get()->Put(cudnn_handle);
 }
 
 }  // namespace
@@ -346,7 +354,7 @@ void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int
     size_t reserve_space_size;
     InferCudnnReserveSpaceSize(x->data_type(), ops, n, c, h, w, &reserve_space_size);
     reserve_space_size = std::max(reserve_space_size, GetOneVal<size_t>());
-    *reserve_space->mut_shape() = Shape({static_cast<int64_t>(reserve_space_size)});
+    reserve_space->set_shape(Shape({static_cast<int64_t>(reserve_space_size)}));
     return Maybe<void>::Ok();
   })(ctx);
 }
@@ -371,7 +379,7 @@ void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int
     size_t reserve_space_size;
     InferCudnnReserveSpaceSize(x->data_type(), ops, n, c, h, w, &reserve_space_size);
     reserve_space_size = std::max(reserve_space_size, GetOneVal<size_t>());
-    *reserve_space->mut_shape() = Shape({static_cast<int64_t>(reserve_space_size)});
+    reserve_space->set_shape(Shape({static_cast<int64_t>(reserve_space_size)}));
     return Maybe<void>::Ok();
   })(ctx);
 }
@@ -389,7 +397,7 @@ void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int
     user_op::InferContext* ctx) {
   return MakeFwDataTypeInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
                                   user_op::TensorDesc* reserve_space) -> Maybe<void> {
-    *reserve_space->mut_data_type() = DataType::kChar;
+    reserve_space->set_data_type(DataType::kChar);
     return Maybe<void>::Ok();
   })(ctx);
 }
@@ -455,10 +463,14 @@ Maybe<void> BwDataTypeInferFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const DataType x_type = x.data_type();
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
-  CHECK_EQ_OR_RETURN(dy.data_type(), x_type);
+  CHECK_EQ_OR_RETURN(dy.data_type(), x_type)
+      << "InferDataType Failed. Expected " << DataType_Name(x_type) << ", but got "
+      << DataType_Name(dy.data_type());
   if (ctx->has_input("y", 0)) {
     const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
-    CHECK_EQ_OR_RETURN(y.data_type(), x_type);
+    CHECK_EQ_OR_RETURN(y.data_type(), x_type)
+        << "InferDataType Failed. Expected " << DataType_Name(x_type) << ", but got "
+        << DataType_Name(y.data_type());
   }
   *ctx->MutOutputTensorDesc("dx", 0) = x;
   if (ctx->has_output("addend_diff", 0)) { *ctx->MutOutputTensorDesc("addend_diff", 0) = x; }

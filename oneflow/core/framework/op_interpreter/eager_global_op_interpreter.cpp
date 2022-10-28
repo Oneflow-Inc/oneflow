@@ -83,7 +83,7 @@ Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<NdSb
   const auto& logical_shape = input->shape();
   // If the input is a tensor of size 0, construct the output directly.
   if (unlikely(logical_shape->elem_cnt() == 0)) {
-    GlobalTensorMeta tensor_meta(logical_shape, input->dtype()->data_type(), out_nd_sbp,
+    GlobalTensorMeta tensor_meta(*logical_shape, input->dtype()->data_type(), out_nd_sbp,
                                  out_parallel_desc);
     const auto& tensor_impl =
         JUST(EagerGlobalTensorImpl::New(SymbolOf(tensor_meta), input->requires_grad(), false));
@@ -228,7 +228,7 @@ Maybe<void> RawGlobalToGlobal(const GlobalToGlobalOpExpr& op_expr, const TensorT
     CHECK_OR_RETURN(parallel_desc == out_parallel_desc);
     outputs->at(0) = tensor;
   } else {
-    GlobalTensorMeta tensor_meta(tensor->shape(), tensor->dtype()->data_type(), out_nd_sbp,
+    GlobalTensorMeta tensor_meta(*tensor->shape(), tensor->dtype()->data_type(), out_nd_sbp,
                                  out_parallel_desc);
     const auto& tensor_impl =
         JUST(EagerGlobalTensorImpl::New(SymbolOf(tensor_meta), tensor->requires_grad(), false));
@@ -249,13 +249,13 @@ Maybe<void> EagerGlobalInterpreter::ApplyImpl(const GlobalToGlobalOpExpr& op_exp
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EagerGlobalInterpreter::ApplyImpl(const CastToGlobalOpExpr& op_expr,
+Maybe<void> EagerGlobalInterpreter::ApplyImpl(const LocalToGlobalOpExpr& op_expr,
                                               const TensorTuple& inputs, TensorTuple* outputs,
                                               const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 
-Maybe<void> EagerGlobalInterpreter::ApplyImpl(const CastFromGlobalOpExpr& op_expr,
+Maybe<void> EagerGlobalInterpreter::ApplyImpl(const GlobalToLocalOpExpr& op_expr,
                                               const TensorTuple& inputs, TensorTuple* outputs,
                                               const OpExprInterpContext& ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 1);

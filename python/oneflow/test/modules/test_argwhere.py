@@ -22,8 +22,9 @@ from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-
+from packaging import version
 from oneflow.test_utils.automated_test_util import *
+import torch as torch_original
 
 
 def _test_argwhere(test_case, shape, device):
@@ -52,6 +53,17 @@ class TestArgwhere(flow.unittest.TestCase):
         x = random_tensor(ndim=random(2, 5).to(int)).to(device)
         y = torch.argwhere(x)
         return y
+
+    has_pytorch_1_11 = version.parse(torch_original.__version__) >= version.parse(
+        "1.11.0"
+    )
+
+    @unittest.skipIf(
+        not has_pytorch_1_11, "torch.argwhere only exists in PyTorch >= 1.11.0"
+    )
+    @profile(torch.argwhere if has_pytorch_1_11 else None)
+    def profile_argwhere(test_case):
+        torch.argwhere(torch.ones(3, 3, 100, 100))
 
 
 if __name__ == "__main__":

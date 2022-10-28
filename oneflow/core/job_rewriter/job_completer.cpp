@@ -22,6 +22,8 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/job_rewriter/boxing_with_middle_nodes.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/common/time_util.h"
 
 namespace oneflow {
 
@@ -104,32 +106,48 @@ Maybe<void> SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_
 }  // namespace
 
 Maybe<void> JobCompleter::Complete(Job* job) const {
+  const auto& job_name = job->job_conf().job_name();
   JobPassCtx job_pass_ctx(GlobalJobDesc());
-  JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
   // NOTE(chengcheng): disable this pass for reduce boxing memory life cycle to memory cost.
+  auto compile_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
   if (!Singleton<ResourceDesc, ForSession>::Get()
            ->resource()
            .disable_group_boxing_by_dst_parallel()) {
     JUST(WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel));
   }
-  JUST(WithOpGraphAndMutJobBuilder(job, &BoxingWithMiddleNodes));
+  compile_tc->Count("[GraphCompile]" + job_name + " GroupBoxingByDstParallel", 1);
+  if (GlobalProcessCtx::WorldSize() > 1) {
+    JUST(WithOpGraphAndMutJobBuilder(job, &BoxingWithMiddleNodes));
+  }
+  compile_tc->Count("[GraphCompile]" + job_name + " BoxingWithMiddleNodes", 1);
   JUST(WithOpGraphAndMutJobBuilder(job, &SetCtrlInOpName4VariableOp));
+  compile_tc->Count("[GraphCompile]" + job_name + " SetCtrlInOpName4VariableOp", 1);
   // complete tick ops
   JUST(WithOpGraphAndMutJobBuilder(job, &AutoPrependTick));
+  compile_tc->Count("[GraphCompile]" + job_name + " AutoPrependTick", 1);
   JUST(WithOpGraphAndMutJobBuilder(job, &AddTickForTimeShape));
+  compile_tc->Count("[GraphCompile]" + job_name + " AddTickForTimeShape", 1);
   JUST(WithOpGraphAndMutJob(job, &MultiClientAutoSourceAndSinkTick));
+  compile_tc->Count("[GraphCompile]" + job_name + " MultiClientAutoSourceAndSinkTick", 1);
   JUST(WithOpGraphAndMutJob(job, &MultiClientAutoInterfaceCriticalSectionTick));
+  compile_tc->Count("[GraphCompile]" + job_name + " MultiClientAutoInterfaceCriticalSectionTick",
+                    1);
   JUST(JobPass4Name("SystemOpFillJobNamePass")(job, &job_pass_ctx));
+  compile_tc->Count("[GraphCompile]" + job_name + " SystemOpFillJobNamePass", 1);
   JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
+  compile_tc->Count("[GraphCompile]" + job_name + " DumpBlobParallelConfPass", 1);
 #ifdef WITH_CUDA
   if (Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
     // NOTE(chengcheng): this pass need as last pass for insert correct op with nccl boxing.
     JUST(JobPass4Name("InsertNcclLogicalOpPass")(job, &job_pass_ctx));
-    // NOTE(chengcheng): Becasue insert new logical nccl op, MUST dump time shape, sbp again.
+    compile_tc->Count("[GraphCompile]" + job_name + " InsertNcclLogicalOpPass", 1);
+    // NOTE(chengcheng): Because insert new logical nccl op, MUST dump time shape, sbp again.
     JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
+    compile_tc->Count("[GraphCompile]" + job_name + " DumpBlobParallelConfPass", 1);
   }
 #endif  // WITH_CUDA
   JUST(CheckOpGraph(OpGraph(*job)));
+  compile_tc->Count("[GraphCompile]" + job_name + " CheckOpGraph", 1);
   return Maybe<void>::Ok();
 }
 

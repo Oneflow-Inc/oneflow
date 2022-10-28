@@ -24,16 +24,16 @@ namespace oneflow {
 
 namespace ccl {
 
-// Use CpuBroadcastImpl to avoid name confilict
+// Use CpuBroadcastImpl to avoid name conflict
 class CpuBroadcastImpl final : public Broadcast {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuBroadcastImpl);
-  CpuBroadcastImpl() : size_of_datatype_(0) {}
+  CpuBroadcastImpl() : size_of_dtype_(0) {}
   ~CpuBroadcastImpl() = default;
 
   void Init(DataType datatype) override {
     CHECK(IsPODDataType(datatype));
-    this->size_of_datatype_ = GetSizeOfDataType(datatype);
+    this->size_of_dtype_ = GetSizeOfDataType(datatype);
   }
 
   void Launch(ep::Stream* stream, const void* in, void* out, size_t elem_cnt, int64_t root,
@@ -41,7 +41,7 @@ class CpuBroadcastImpl final : public Broadcast {
     const auto& cpu_communication_ctx =
         std::dynamic_pointer_cast<CpuCommunicationContext>(communication_ctx);
     CHECK(cpu_communication_ctx);
-    size_t buffer_size = elem_cnt * size_of_datatype_;
+    size_t buffer_size = elem_cnt * size_of_dtype_;
     const auto& transport_token =
         CHECK_JUST(TransportToken::NewTransportToken(kTransportTokenTypeData));
     CHECK_JUST(CpuBroadcast(in, out, buffer_size, root, cpu_communication_ctx->parallel_desc(),
@@ -49,7 +49,7 @@ class CpuBroadcastImpl final : public Broadcast {
   }
 
  private:
-  size_t size_of_datatype_;
+  size_t size_of_dtype_;
 };
 
 REGISTER_COLLECTIVE_COMMUNICATION(DeviceType::kCPU, Broadcast, CpuBroadcastImpl);

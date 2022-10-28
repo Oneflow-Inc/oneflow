@@ -105,6 +105,12 @@ class TestModule(flow.unittest.TestCase):
         y = torch.bmm(mat1, mat2,)
         return y
 
+    @profile(torch.bmm)
+    def profile_bmm(test_case):
+        mat1 = torch.ones(10, 100, 100)
+        mat2 = torch.ones(10, 100, 100)
+        torch.bmm(mat1, mat2)
+
 
 if __name__ == "__main__":
     unittest.main()

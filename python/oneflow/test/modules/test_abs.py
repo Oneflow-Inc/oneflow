@@ -37,6 +37,11 @@ class TestAbsModule(flow.unittest.TestCase):
         y = torch.abs(x)
         return y
 
+    @profile(torch.abs)
+    def profile_abs(test_case):
+        torch.abs(torch.ones(1, 128, 28, 28))
+        torch.abs(torch.ones(16, 128, 28, 28))
+
 
 if __name__ == "__main__":
     unittest.main()

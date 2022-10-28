@@ -81,6 +81,13 @@ class TestTensor(flow.unittest.TestCase):
         np_out = np.equal(arr1, arr2)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
+    def test_tensor_equal_bool_dtype(test_case):
+        np_bool = np.random.randint(0, 2, size=()).astype(np.bool).item()
+        input = flow.tensor(np_bool, dtype=flow.bool)
+        input2 = flow.tensor([np_bool], dtype=flow.bool)
+        test_case.assertTrue(input == np_bool)
+        test_case.assertTrue(input2 == np_bool)
+
     def test_tensor_detach(test_case):
         shape = (2, 3, 4, 5)
         x = flow.tensor(np.random.randn(*shape), dtype=flow.float32, requires_grad=True)
@@ -1047,6 +1054,26 @@ class TestTensorNumpy(flow.unittest.TestCase):
         y = random_tensor(ndim=1, dim0=2, dtype=int, low=1, high=4)
         z = x.repeat_interleave(y, 1, output_size=2)
         return z
+
+    @flow.unittest.skip_unless_1n2d()
+    @globaltest
+    def test_global_tensor_detach(test_case):
+        device = random_device().value()
+        placement = flow.placement(device, [0, 1])
+        a = flow.ones(4, 8).to_global(placement, flow.sbp.broadcast)
+        test_case.assertTrue(a.is_leaf)
+        b = a.float().clone().detach()
+        test_case.assertTrue(b.is_leaf)
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(n=5)
+    def test_tensor_nansum(test_case):
+        device = random_device()
+        x = random_tensor(4, random(0, 5), 2).to(device)
+        mask = x < 0
+        x = x.masked_fill(mask, float("nan"))
+        y = x.nansum()
+        return y
 
 
 if __name__ == "__main__":
