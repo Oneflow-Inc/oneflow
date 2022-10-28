@@ -477,11 +477,10 @@ llvm::SmallVector<Value, 4> BiasAddOp::NchwToNhwc(llvm::SmallVector<Value, 4> va
   operands.push_back(bias_add_op.b());
   NamedAttrList attributes = bias_add_op->getAttrs();
   attributes.set(bias_add_op.axisAttrName(), rewriter.getSI32IntegerAttr(3));
-  auto res =
-      rewriter
-          .create<oneflow::BiasAddOp>(
-              bias_add_op.getLoc(), getNHWCType(bias_add_op.out().getType()), operands, attributes)
-          ->getResults();
+  auto res = rewriter
+                 .create<oneflow::BiasAddOp>(bias_add_op.getLoc(), getNHWCResultTypes(bias_add_op),
+                                             operands, attributes)
+                 ->getResults();
   llvm::SmallVector<Value, 4> results;
   results.push_back(res[0]);
   return results;
@@ -505,15 +504,11 @@ llvm::SmallVector<Value, 4> NormalizationOp::NchwToNhwc(llvm::SmallVector<Value,
   if (normalization_op._add_to_output()) operands.push_back(normalization_op._add_to_output());
   NamedAttrList attributes = normalization_op->getAttrs();
   attributes.set(normalization_op.axisAttrName(), rewriter.getSI32IntegerAttr(3));
-  llvm::SmallVector<Type, 4> result_types;
-  result_types.push_back(getNHWCType(normalization_op.y().getType()));
-  if (normalization_op.mean()) result_types.push_back(normalization_op.mean().getType());
-  if (normalization_op.inv_variance())
-    result_types.push_back(normalization_op.inv_variance().getType());
-  auto res = rewriter
-                 .create<oneflow::NormalizationOp>(normalization_op.getLoc(), result_types,
-                                                   operands, attributes)
-                 ->getResults();
+  auto res =
+      rewriter
+          .create<oneflow::NormalizationOp>(
+              normalization_op.getLoc(), getNHWCResultTypes(normalization_op), operands, attributes)
+          ->getResults();
   llvm::SmallVector<Value, 4> results;
   results.push_back(res[0]);
   return results;
@@ -556,12 +551,10 @@ llvm::SmallVector<Value, 4> MaxPool2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> 
   operands.push_back(value[0]);
   NamedAttrList attributes = max_pool_2d_op->getAttrs();
   attributes.set(max_pool_2d_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
-  llvm::SmallVector<Type, 4> result_types;
-  result_types.push_back(getNHWCType(max_pool_2d_op.y().getType().cast<RankedTensorType>()));
-  result_types.push_back(max_pool_2d_op.indice().getType());
   auto res =
       rewriter
-          .create<oneflow::MaxPool2DOp>(max_pool_2d_op.getLoc(), result_types, operands, attributes)
+          .create<oneflow::MaxPool2DOp>(max_pool_2d_op.getLoc(), getNHWCResultTypes(max_pool_2d_op),
+                                        operands, attributes)
           ->getResults();
   llvm::SmallVector<Value, 4> results;
   results.push_back(res[0]);
@@ -580,8 +573,8 @@ llvm::SmallVector<Value, 4> ReluOp::NchwToNhwc(llvm::SmallVector<Value, 4> value
   auto relu_op = *this;
   SmallVector<Value, 4> operands{value[0]};
   auto res = rewriter
-                 .create<oneflow::ReluOp>(relu_op.getLoc(), getNHWCType(relu_op.y().getType()),
-                                          operands, relu_op->getAttrs())
+                 .create<oneflow::ReluOp>(relu_op.getLoc(), getNHWCResultTypes(relu_op), operands,
+                                          relu_op->getAttrs())
                  ->getResults();
   return {res[0]};
 }
@@ -632,7 +625,7 @@ llvm::SmallVector<Value, 4> Add2Op::NchwToNhwc(llvm::SmallVector<Value, 4> value
   auto add2_op = *this;
   SmallVector<Value, 4> operands{value[0], value[1]};
   auto res = rewriter
-                 .create<oneflow::Add2Op>(add2_op.getLoc(), getNHWCType(add2_op.out()), operands,
+                 .create<oneflow::Add2Op>(add2_op.getLoc(), getNHWCResultTypes(add2_op), operands,
                                           add2_op->getAttrs())
                  ->getResults();
   return {res[0]};
@@ -657,7 +650,7 @@ llvm::SmallVector<Value, 4> ConcatOp::NchwToNhwc(llvm::SmallVector<Value, 4> val
                                   APInt(64, 3, /*isSigned=*/true)));
   auto out = rewriter
                  .create<oneflow::ConcatOp>(elementwise_op.getLoc(),
-                                            getNHWCType(elementwise_op.out()), values, attributes)
+                                            getNHWCResultTypes(elementwise_op), values, attributes)
                  .out();
   return {out};
 }
