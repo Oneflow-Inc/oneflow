@@ -591,7 +591,7 @@ llvm::SmallVector<Value, 4> ScalarDivOp::NchwToNhwc(llvm::SmallVector<Value, 4> 
   SmallVector<Value, 4> operands{value[0]};
   auto res =
       rewriter
-          .create<oneflow::ScalarDivOp>(elementwise_op.getLoc(), elementwise_op->getResultTypes(),
+          .create<oneflow::ScalarDivOp>(elementwise_op.getLoc(), getNHWCResultTypes(elementwise_op),
                                         operands, elementwise_op->getAttrs())
           ->getResults();
   return {res[0]};
@@ -607,10 +607,11 @@ llvm::SmallVector<Value, 4> SiluOp::NchwToNhwc(llvm::SmallVector<Value, 4> value
                                                PatternRewriter& rewriter) {
   auto elementwise_op = *this;
   SmallVector<Value, 4> operands{value[0]};
-  auto res = rewriter
-                 .create<oneflow::SiluOp>(elementwise_op.getLoc(), elementwise_op->getResultTypes(),
-                                          operands, elementwise_op->getAttrs())
-                 ->getResults();
+  auto res =
+      rewriter
+          .create<oneflow::SiluOp>(elementwise_op.getLoc(), getNHWCResultTypes(elementwise_op),
+                                   operands, elementwise_op->getAttrs())
+          ->getResults();
   return {res[0]};
 }
 
