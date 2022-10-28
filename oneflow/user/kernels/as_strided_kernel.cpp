@@ -14,10 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <cstdint>
-#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
@@ -79,10 +76,10 @@ class CpuAsStridedKernel final : public user_op::OpKernel {
     const auto stride = ctx->Attr<std::vector<int32_t>>("stride");
     const int32_t storage_offset = ctx->Attr<int32_t>("storage_offset");
 
-    size_t dest_num_dims = output->shape().NumAxes();
-    const int64_t* dest_dims = output->shape().ptr();
-    const size_t input_num = input->shape().Count(0);
-    const size_t output_num = output->shape().Count(0);
+    size_t dest_num_dims = output->shape_view().NumAxes();
+    const int64_t* dest_dims = output->shape_view().ptr();
+    const size_t input_num = input->shape_view().Count(0);
+    const size_t output_num = output->shape_view().Count(0);
 
     AsStridedFunctor<T>()(ctx->stream(), input->dptr<T>(), output->mut_dptr<T>(), dest_dims,
                           stride.data(), dest_num_dims, storage_offset, input_num, output_num);
@@ -105,12 +102,13 @@ class CpuAsStridedGradKernel final : public user_op::OpKernel {
     const auto stride = ctx->Attr<std::vector<int32_t>>("stride");
     const int32_t storage_offset = ctx->Attr<int32_t>("storage_offset");
 
-    size_t dy_num_dims = dy->shape().NumAxes();
-    const int64_t* dy_dims = dy->shape().ptr();
-    const size_t dx_num = dx->shape().Count(0);
-    const size_t dy_num = dy->shape().Count(0);
+    size_t dy_num_dims = dy->shape_view().NumAxes();
+    const int64_t* dy_dims = dy->shape_view().ptr();
+    const size_t dx_num = dx->shape_view().Count(0);
+    const size_t dy_num = dy->shape_view().Count(0);
 
-    Memset<DeviceType::kCPU>(ctx->stream(), dx->mut_dptr(), 0, dx->shape().Count(0) * sizeof(T));
+    Memset<DeviceType::kCPU>(ctx->stream(), dx->mut_dptr(), 0,
+                             dx->shape_view().Count(0) * sizeof(T));
 
     AsStridedGradFunctor<T>()(ctx->stream(), dy->dptr<T>(), dx->mut_dptr<T>(), dy_dims,
                               stride.data(), dy_num_dims, storage_offset, dx_num, dy_num);
@@ -118,23 +116,35 @@ class CpuAsStridedGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPUASSTRIDED_KERNEL(in_type)                                                 \
-  REGISTER_USER_KERNEL("as_strided")                                                          \
-      .SetCreateFn<CpuAsStridedKernel<in_type>>()                                             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                         \
-                       && (user_op::HobDataType("input", 0) == GetDataType<in_type>::value)); \
-  REGISTER_USER_KERNEL("as_strided_grad")                                                     \
-      .SetCreateFn<CpuAsStridedGradKernel<in_type>>()                                         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                         \
+#define REGISTER_CPU_ASSTRIDED_KERNEL(in_type)                        \
+  REGISTER_USER_KERNEL("as_strided")                                  \
+      .SetCreateFn<CpuAsStridedKernel<in_type>>()                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        && (user_op::HobDataType("input", 0) == GetDataType<in_type>::value));
 
-REGISTER_CPUASSTRIDED_KERNEL(float);
-REGISTER_CPUASSTRIDED_KERNEL(double);
-REGISTER_CPUASSTRIDED_KERNEL(bool);
-REGISTER_CPUASSTRIDED_KERNEL(int8_t);
-REGISTER_CPUASSTRIDED_KERNEL(int32_t);
-REGISTER_CPUASSTRIDED_KERNEL(int64_t);
+REGISTER_CPU_ASSTRIDED_KERNEL(float);
+REGISTER_CPU_ASSTRIDED_KERNEL(double);
+REGISTER_CPU_ASSTRIDED_KERNEL(int8_t);
+REGISTER_CPU_ASSTRIDED_KERNEL(uint8_t);
+REGISTER_CPU_ASSTRIDED_KERNEL(int32_t);
+REGISTER_CPU_ASSTRIDED_KERNEL(int64_t);
 
-#undef REGISTER_CPUASSTRIDED_KERNEL
+#undef REGISTER_CPU_ASSTRIDED_KERNEL
+
+#define REGISTER_CPU_ASSTRIDED_GRAD_KERNEL(in_type)                   \
+  REGISTER_USER_KERNEL("as_strided_grad")                             \
+      .SetCreateFn<CpuAsStridedGradKernel<in_type>>()                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
+                       && (user_op::HobDataType("input", 0) == GetDataType<in_type>::value));
+
+REGISTER_CPU_ASSTRIDED_GRAD_KERNEL(float);
+REGISTER_CPU_ASSTRIDED_GRAD_KERNEL(double);
+
+#undef REGISTER_CPU_ASSTRIDED_GRAD_KERNEL
+
+REGISTER_USER_KERNEL("as_strided")
+    .SetCreateFn<CpuAsStridedKernel<bool>>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     && (user_op::HobDataType("input", 0) == GetDataType<bool>::value));
 
 }  // namespace oneflow

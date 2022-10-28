@@ -20,6 +20,12 @@ namespace oneflow {
 
 namespace {
 
+bool NeedDoPass(const Job& job) {
+  return std::any_of(job.net().op().cbegin(), job.net().op().cend(), [&](const OperatorConf& op) {
+    return op.has_user_conf() && op.user_conf().op_type_name() == "sparse_softmax_cross_entropy_ms";
+  });
+}
+
 void UpdateProbConsumerOpConf(const std::string& new_prob_lbn, const OpNode* op_node,
                               JobBuilder* job_builder) {
   for (const OpEdge* edge : op_node->out_edges()) {
@@ -42,6 +48,7 @@ class SplitSparseSoftmaxCrossEntropyOpPass final : public JobPass {
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
+    if (!NeedDoPass(*job)) { return Maybe<void>::Ok(); }
     const OpGraph op_graph(*job);
     JobBuilder job_builder(job);
     return Apply(op_graph, &job_builder);
@@ -213,8 +220,8 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
                       .Op("nll")
                       .Input("input", broadcast_sub_op.output("z", 0))
                       .Input("target", op_label_blob_name)
-                      .Output("out")
-                      .Output("total_weight")
+                      .Output("output")
+                      .Output("out_weight")
                       .Attr<int64_t>("ignore_index", -100)
                       .ScopeSymbolId(scope_symbol_id)
                       .Build();
@@ -223,7 +230,7 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
     const std::string& prob_lbn = cur_op.output("prob", 0);
     const std::string& out_lbn = cur_op.output("out", 0);
     const std::string& new_prob_lbn = broadcast_div_op.output("z", 0);
-    const std::string& new_out_lbn = nll_op.output("out", 0);
+    const std::string& new_out_lbn = nll_op.output("output", 0);
 
     for (const OpEdge* out_edge : node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();

@@ -17,6 +17,7 @@ limitations under the License.
 #include <pybind11/stl.h>
 #include <pybind11/operators.h>
 
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/of_api_registry.h"
@@ -37,7 +38,7 @@ namespace oneflow {
 namespace {
 
 int64_t GetDeviceCount(const std::string& device_name) {
-  return Global<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(device_name);
+  return Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(device_name);
 }
 
 struct PlacementSymbolExportUtil {
@@ -57,6 +58,19 @@ struct PlacementSymbolExportUtil {
     std::shared_ptr<ParallelDesc> parallel_desc;
     JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
       parallel_desc = JUST(builder->GetParallelDescSymbol(*parallel_conf));
+      return Maybe<void>::Ok();
+    }));
+
+    return parallel_desc;
+  }
+
+  static Maybe<ParallelDesc> CreateParallelDesc(const std::string& proto_str) {
+    ParallelConf parallel_conf;
+    CHECK_OR_RETURN(TxtString2PbMessage(proto_str, &parallel_conf))
+        << " Get ParallelConf Pb from string failed.";
+    std::shared_ptr<ParallelDesc> parallel_desc;
+    JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
+      parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
       return Maybe<void>::Ok();
     }));
 
@@ -137,9 +151,13 @@ struct PlacementSymbolExportUtil {
     return SymbolOf(*JUST(CreateParallelDesc(type, *formated_machine_device_ids, shape)));
   }
 
+  static Maybe<Symbol<ParallelDesc>> CreateParallelDescSymbol(const std::string& proto_str) {
+    return SymbolOf(*JUST(CreateParallelDesc(proto_str)));
+  }
+
   static Maybe<Symbol<ParallelDesc>> AllDevicePlacement(const std::string& type) {
     static thread_local HashMap<std::string, Symbol<ParallelDesc>> device_tag2placement;
-    CHECK_NOTNULL((Global<ResourceDesc, ForEnv>::Get()));
+    CHECK_NOTNULL((Singleton<ResourceDesc, ForEnv>::Get()));
     JUST(CheckDeviceTag(type));
     auto it = device_tag2placement.find(type);
     if (it == device_tag2placement.end()) {
@@ -213,6 +231,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
              return PlacementSymbolExportUtil::CreateParallelDescSymbol(type, ranks).GetOrThrow();
            }),
            py::arg("type"), py::arg("ranks"))
+      .def(py::init([](const std::string& proto_str) {
+             return PlacementSymbolExportUtil::CreateParallelDescSymbol(proto_str).GetOrThrow();
+           }),
+           py::arg("proto_str"))
       .def_property_readonly(
           "device_type",
           [](Symbol<ParallelDesc> p) {

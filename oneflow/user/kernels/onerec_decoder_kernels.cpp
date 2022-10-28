@@ -51,7 +51,7 @@ void GetTensorDimsWithoutReshape(const std::vector<const onerec::example::Tensor
   tensor_dims->resize(num_axes);
   for (int32_t d = 0; d < num_axes; ++d) { (*tensor_dims)[d].resize(tensors.size()); }
   for (int32_t j = 0; j < tensors.size(); ++j) {
-    const flatbuffers::Vector<int32_t>* shape_vec = tensors.at(j)->shape();
+    const flatbuffers::Vector<int32_t>* shape_vec = tensors.at(j)->shape_view();
     CHECK_NOTNULL(shape_vec);
     CHECK_EQ(shape_vec->size(), num_axes);
     for (int32_t d = 0; d < num_axes; ++d) { (*tensor_dims)[d][j] = shape_vec->Get(d); }
@@ -79,7 +79,7 @@ void GetTensorDimsWithReshape(const std::vector<const onerec::example::Tensor*>&
     }
   }
   for (int32_t j = 0; j < tensors.size(); ++j) {
-    const flatbuffers::Vector<int32_t>* shape_vec = tensors.at(j)->shape();
+    const flatbuffers::Vector<int32_t>* shape_vec = tensors.at(j)->shape_view();
     CHECK_NOTNULL(shape_vec);
     int32_t elem_cnt = 1;
     for (int32_t d = 0; d < shape_vec->size(); ++d) { elem_cnt *= shape_vec->Get(d); }
@@ -165,7 +165,7 @@ void DecodeField(const TensorBuffer* records, const int64_t record_num, const st
                  const Shape& batch_padding, user_op::Tensor* out_blob) {
   const int32_t batch_size = record_num;
   char* out_ptr = out_blob->mut_dptr<char>();
-  const int64_t out_bytes = out_blob->shape().elem_cnt() * GetSizeOfDataType(data_type);
+  const int64_t out_bytes = out_blob->shape_view().elem_cnt() * GetSizeOfDataType(data_type);
   std::vector<const onerec::example::Tensor*> tensors;
   GetTensorsFromRecords(records, record_num, key, &tensors);
   std::vector<std::vector<int32_t>> tensor_dims;
@@ -212,15 +212,15 @@ void DecodeField(const TensorBuffer* records, const int64_t record_num, const st
   const Shape instance_shape = Shape(instance_dim_vec);
   if (is_dynamic) {
     CHECK_LE(instance_shape.elem_cnt(), static_shape.elem_cnt());
-    out_blob->mut_shape().Set(0, record_num);
+    out_blob->mut_shape_view().Set(0, record_num);
     for (int64_t d = 0; d < instance_shape.NumAxes(); ++d) {
-      out_blob->mut_shape().Set(d + 1, instance_shape.At(d));
+      out_blob->mut_shape_view().Set(d + 1, instance_shape.At(d));
     }
   } else {
     CHECK(instance_shape == static_shape);
-    CHECK_EQ(out_blob->shape().At(0), record_num);
+    CHECK_EQ(out_blob->shape_view().At(0), record_num);
     for (int64_t d = 0; d < instance_shape.NumAxes(); ++d) {
-      CHECK_EQ(out_blob->shape().At(d + 1), instance_shape.At(d));
+      CHECK_EQ(out_blob->shape_view().At(d + 1), instance_shape.At(d));
     }
   }
   const int64_t buffer_size = GetBatchSizeInBytes(batch_size, instance_shape, data_type);
@@ -244,7 +244,7 @@ class OneRecDecoderKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t record_num = in_blob->shape().At(0);
+    int64_t record_num = in_blob->shape_view().At(0);
     CHECK(record_num > 0);
     const TensorBuffer* records = in_blob->dptr<TensorBuffer>();
 

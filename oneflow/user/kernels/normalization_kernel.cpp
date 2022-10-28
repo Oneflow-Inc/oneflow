@@ -289,10 +289,10 @@ class NormalizationInferenceCpuKernel final : public user_op::OpKernel {
     const auto epsilon = ctx->Attr<float>("epsilon");
 
     const DataType data_type = x->data_type();
-    CHECK_EQ(x->shape(), y->shape());
+    CHECK_EQ(x->shape_view(), y->shape_view());
     CHECK_EQ(y->data_type(), data_type);
     CHECK_GE(axis, 0);
-    CHECK_LT(axis, x->shape().NumAxes());
+    CHECK_LT(axis, x->shape_view().NumAxes());
 
     if (axis == 1) {  // NOTE(Liang Depeng): NCHW format
       const T* input_ptr = x->dptr<T>();
@@ -303,9 +303,9 @@ class NormalizationInferenceCpuKernel final : public user_op::OpKernel {
       T* moving_mean_ptr = moving_mean->mut_dptr<T>();
       T* moving_variance_ptr = moving_variance->mut_dptr<T>();
 
-      const int64_t batch_size = x->shape().At(0);
-      const int64_t channel_size = x->shape().At(axis);
-      const int64_t spatial_size = x->shape().Count(axis + 1);
+      const int64_t batch_size = x->shape_view().At(0);
+      const int64_t channel_size = x->shape_view().At(axis);
+      const int64_t spatial_size = x->shape_view().Count(axis + 1);
 
       // NOTE(Liang Depeng):
       // compute the normalization result
@@ -315,8 +315,8 @@ class NormalizationInferenceCpuKernel final : public user_op::OpKernel {
       if (ctx->has_input("_add_to_output", 0)) {
         const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
         CHECK_EQ(add_to_output->data_type(), y->data_type());
-        CHECK_EQ(add_to_output->shape(), y->shape());
-        AddToOutput(add_to_output->dptr<T>(), output_ptr, x->shape().elem_cnt());
+        CHECK_EQ(add_to_output->shape_view(), y->shape_view());
+        AddToOutput(add_to_output->dptr<T>(), output_ptr, x->shape_view().elem_cnt());
       }
 
     } else {  // TODO(Liang Depeng): NHWC format
@@ -365,10 +365,10 @@ class NormalizationTrainCpuKernel final : public user_op::OpKernel {
     const auto momentum = ctx->Attr<float>("momentum");
 
     const DataType data_type = x->data_type();
-    CHECK_EQ(x->shape(), y->shape());
+    CHECK_EQ(x->shape_view(), y->shape_view());
     CHECK_EQ(y->data_type(), data_type);
     CHECK_GE(axis, 0);
-    CHECK_LT(axis, x->shape().NumAxes());
+    CHECK_LT(axis, x->shape_view().NumAxes());
 
     const auto* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
     const auto* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
@@ -399,9 +399,9 @@ class NormalizationTrainCpuKernel final : public user_op::OpKernel {
         moving_variance_ptr = moving_variance->mut_dptr<T>();
       }
 
-      const int64_t batch_size = x->shape().At(0);
-      const int64_t channel_size = x->shape().At(axis);
-      const int64_t spatial_size = x->shape().Count(axis + 1);
+      const int64_t batch_size = x->shape_view().At(0);
+      const int64_t channel_size = x->shape_view().At(axis);
+      const int64_t spatial_size = x->shape_view().Count(axis + 1);
 
       // NOTE(Liang Depeng):
       // Compute mean & inv_variance and update moving_mean & moving_variance for each channel.
@@ -416,8 +416,8 @@ class NormalizationTrainCpuKernel final : public user_op::OpKernel {
       if (ctx->has_input("_add_to_output", 0)) {
         const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
         CHECK_EQ(add_to_output->data_type(), y->data_type());
-        CHECK_EQ(add_to_output->shape(), y->shape());
-        AddToOutput(add_to_output->dptr<T>(), output_ptr, x->shape().elem_cnt());
+        CHECK_EQ(add_to_output->shape_view(), y->shape_view());
+        AddToOutput(add_to_output->dptr<T>(), output_ptr, x->shape_view().elem_cnt());
       }
 
       if (ctx->op_type_name() == "normalization_add_relu") {
@@ -426,9 +426,10 @@ class NormalizationTrainCpuKernel final : public user_op::OpKernel {
 
         if (ctx->has_input("addend", 0)) {
           const auto* addend = ctx->Tensor4ArgNameAndIndex("addend", 0);
-          AddRelu(addend->dptr<T>(), mask->mut_dptr<int32_t>(), output_ptr, x->shape().elem_cnt());
+          AddRelu(addend->dptr<T>(), mask->mut_dptr<int32_t>(), output_ptr,
+                  x->shape_view().elem_cnt());
         } else {
-          Relu(mask->mut_dptr<int32_t>(), output_ptr, x->shape().elem_cnt());
+          Relu(mask->mut_dptr<int32_t>(), output_ptr, x->shape_view().elem_cnt());
         }
       }
     } else {  // TODO(Liang Depeng): NHWC format
@@ -490,12 +491,12 @@ class NormalizationGradCpuKernel final : public user_op::OpKernel {
     const auto axis = ctx->Attr<int32_t>("axis");
 
     const DataType data_type = x->data_type();
-    CHECK_EQ(dy->shape(), x->shape());
+    CHECK_EQ(dy->shape_view(), x->shape_view());
     CHECK_EQ(dy->data_type(), data_type);
-    CHECK_EQ(dx->shape(), x->shape());
+    CHECK_EQ(dx->shape_view(), x->shape_view());
     CHECK_EQ(dx->data_type(), data_type);
     CHECK_GE(axis, 0);
-    CHECK_LT(axis, x->shape().NumAxes());
+    CHECK_LT(axis, x->shape_view().NumAxes());
 
     const T* dy_ptr = nullptr;
     if (ctx->op_type_name() == "normalization_grad") {
@@ -505,11 +506,11 @@ class NormalizationGradCpuKernel final : public user_op::OpKernel {
       if (ctx->has_output("addend_diff", 0)) {
         user_op::Tensor* addend_diff = ctx->Tensor4ArgNameAndIndex("addend_diff", 0);
         AddReluGrad(dy->dptr<T>(), mask->dptr<int32_t>(), addend_diff->mut_dptr<T>(),
-                    dy->shape().elem_cnt());
+                    dy->shape_view().elem_cnt());
         dy_ptr = addend_diff->dptr<T>();
       } else {
         ReluGrad(dy->dptr<T>(), mask->dptr<int32_t>(), tmp_buffer->mut_dptr<T>(),
-                 dy->shape().elem_cnt());
+                 dy->shape_view().elem_cnt());
         dy_ptr = tmp_buffer->dptr<T>();
       }
 
@@ -527,9 +528,9 @@ class NormalizationGradCpuKernel final : public user_op::OpKernel {
       T* gamma_diff_ptr = gamma_diff->mut_dptr<T>();
       T* beta_diff_ptr = beta_diff->mut_dptr<T>();
 
-      const int64_t batch_size = x->shape().At(0);
-      const int64_t channel_size = x->shape().At(axis);
-      const int64_t spatial_size = x->shape().Count(axis + 1);
+      const int64_t batch_size = x->shape_view().At(0);
+      const int64_t channel_size = x->shape_view().At(axis);
+      const int64_t spatial_size = x->shape_view().Count(axis + 1);
       const int64_t jump_step = spatial_size * channel_size;
       const int64_t reduce_count = batch_size * spatial_size;
 

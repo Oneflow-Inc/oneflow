@@ -36,8 +36,8 @@ class GenerateRandomBatchPermutationIndicesCPUKernel final : public user_op::OpK
                const user_op::OpKernelCache*) const override {
     auto* random_generator = dynamic_cast<OpKernelStateWrapper<std::mt19937>*>(state);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    std::iota(y->mut_dptr<int32_t>(), y->mut_dptr<int32_t>() + y->shape().elem_cnt(), 0);
-    std::shuffle(y->mut_dptr<int32_t>(), y->mut_dptr<int32_t>() + y->shape().elem_cnt(),
+    std::iota(y->mut_dptr<int32_t>(), y->mut_dptr<int32_t>() + y->shape_view().elem_cnt(), 0);
+    std::shuffle(y->mut_dptr<int32_t>(), y->mut_dptr<int32_t>() + y->shape_view().elem_cnt(),
                  *random_generator->Mutable());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

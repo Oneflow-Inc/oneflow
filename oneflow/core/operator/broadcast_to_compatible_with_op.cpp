@@ -46,7 +46,7 @@ Maybe<void> InferBlobDescs(const OperatorConf& op_conf,
   }
   BlobDesc* y_desc = BlobDesc4BnInOp("y");
   y_desc->CopyFrom(*x_desc);
-  y_desc->mut_shape() = broadcasted_shape;
+  y_desc->set_shape(broadcasted_shape);
   return Maybe<void>::Ok();
 }
 

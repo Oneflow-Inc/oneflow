@@ -152,7 +152,6 @@ size_t InferEagerSToPKernelTmpBufferSize(user_op::InferContext* ctx) {
 
 }  // namespace
 
-template<DeviceType device_type>
 class EagerSToPKernel final : public user_op::OpKernel {
  public:
   EagerSToPKernel() = default;
@@ -177,8 +176,14 @@ class EagerSToPKernel final : public user_op::OpKernel {
     void* tmp_buffer_ptr = tmp_buffer->mut_dptr();
 
     const int64_t total_elem_cnt = ctx->Attr<Shape>("shape").elem_cnt();
-    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0,
-                        total_elem_cnt * GetSizeOfDataType(out->data_type()));
+
+    DeviceType device_type = ctx->device_type();
+
+    std::unique_ptr<ep::primitive::Memset> memset_primitive =
+        ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(device_type);
+    CHECK(memset_primitive) << "Can not create Memset primitive for device type " << device_type;
+    memset_primitive->Launch(ctx->stream(), out->mut_dptr(), 0,
+                             total_elem_cnt * GetSizeOfDataType(out->data_type()));
 
     const auto& sorted_elem_cnt2in_tensor_slice_copier_pair =
         kernel_cache->sorted_elem_cnt2in_tensor_slice_copier_pair();
@@ -205,8 +210,8 @@ class EagerSToPKernel final : public user_op::OpKernel {
         const auto& elem_cnt = elem_cnt2tensor_slice_copier_pair.first;
         const auto& tensor_slice_copier = elem_cnt2tensor_slice_copier_pair.second;
         tensor_slice_copier->Copy(ctx->stream(), tmp_buffer_ptr, in_ptr);
-        CHECK_JUST(Send<device_type>(reinterpret_cast<const void*>(tmp_buffer_ptr), elem_cnt,
-                                     in->data_type(), dst, ctx->stream()));
+        CHECK_JUST(Send(reinterpret_cast<const void*>(tmp_buffer_ptr), elem_cnt, in->data_type(),
+                        dst, device_type, ctx->stream()));
       }
       if (GlobalProcessCtx::Rank() == dst) {
         const auto& elem_cnt2tensor_slice_copier_pair =
@@ -214,7 +219,7 @@ class EagerSToPKernel final : public user_op::OpKernel {
         const auto& elem_cnt = elem_cnt2tensor_slice_copier_pair.first;
         const auto& tensor_slice_copier = elem_cnt2tensor_slice_copier_pair.second;
         CHECK_JUST(
-            Recv<device_type>(tmp_buffer_ptr, elem_cnt, out->data_type(), src, ctx->stream()));
+            Recv(tmp_buffer_ptr, elem_cnt, out->data_type(), src, device_type, ctx->stream()));
         tensor_slice_copier->Copy(ctx->stream(), out_ptr,
                                   reinterpret_cast<const void*>(tmp_buffer_ptr));
       }
@@ -223,15 +228,9 @@ class EagerSToPKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EAGER_S_TO_B_KERNEL(device)               \
-  REGISTER_USER_KERNEL("eager_s_to_p")                     \
-      .SetCreateFn<EagerSToPKernel<device>>()              \
-      .SetIsMatchedHob(user_op::HobDeviceType() == device) \
-      .SetInferTmpSizeFn(InferEagerSToPKernelTmpBufferSize);
-
-REGISTER_EAGER_S_TO_B_KERNEL(DeviceType::kCPU)
-#if defined(WITH_CUDA) && HAS_NCCL_SEND_RECV
-REGISTER_EAGER_S_TO_B_KERNEL(DeviceType::kCUDA)
-#endif
+REGISTER_USER_KERNEL("eager_s_to_p")
+    .SetCreateFn<EagerSToPKernel>()
+    .SetIsMatchedHob(HobIsSendAndRecvRegistered())
+    .SetInferTmpSizeFn(InferEagerSToPKernelTmpBufferSize);
 
 }  // namespace oneflow

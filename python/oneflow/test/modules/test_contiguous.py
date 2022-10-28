@@ -28,13 +28,37 @@ import oneflow as flow
 
 @flow.unittest.skip_unless_1n1d()
 class TestContiguous(flow.unittest.TestCase):
-    @autotest(n=10, check_graph=True)
+    @autotest(n=5)
     def test_transpose_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device)
         y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
         z = y.contiguous()
-        return y
+        return z
+
+    @autotest(n=5, auto_backward=False)
+    def test_transpose_with_bool_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, requires_grad=False).to(device).to(torch.bool)
+        y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
+        z = y.contiguous()
+        return z
+
+    @autotest(n=5, auto_backward=False)
+    def test_transpose_with_int_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, requires_grad=False).to(device).to(torch.int)
+        y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
+        z = y.contiguous()
+        return z
+
+    @autotest(n=5, auto_backward=False)
+    def test_contiguous_with_half_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, requires_grad=False).to(device).to(torch.float16)
+        y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
+        z = y.contiguous()
+        return z
 
     @autotest(n=10, check_graph=True)
     def test_permute2d_tensor_with_random_data(test_case):
@@ -82,8 +106,13 @@ class TestContiguous(flow.unittest.TestCase):
         z = y.contiguous()
         return z
 
+    @profile(torch.Tensor.contiguous)
+    def profile_contiguous(test_case):
+        x = torch.ones(32, 3, 128, 128)
+        x.contiguous()
 
-def _tets_inplace_contiguous(test_case, device):
+
+def _test_inplace_contiguous(test_case, device):
     arr = np.random.randn(4, 5, 6, 7).astype(np.float32)
     input = flow.tensor(arr, device=device)
     x = input.permute(0, 3, 2, 1)  # x is non-contiguous tensor
@@ -105,7 +134,7 @@ class TestInplaceContiguous(flow.unittest.TestCase):
     def test_inplace_contiguous(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _tets_inplace_contiguous,
+            _test_inplace_contiguous,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

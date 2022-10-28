@@ -21,7 +21,7 @@ namespace oneflow {
 /* static */ Maybe<void> ArgmaxOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   auto dim_vec = ctx->InputShape("in", 0).dim_vec();
   dim_vec.pop_back();
-  *ctx->OutputShape("out", 0) = Shape(std::move(dim_vec));
+  ctx->SetOutputShape("out", 0, Shape(std::move(dim_vec)));
   return Maybe<void>::Ok();
 }
 
@@ -38,7 +38,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> ArgmaxOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kInt64;
+  ctx->SetOutputDType("out", 0, DataType::kInt64);
   return Maybe<void>::Ok();
 }
 

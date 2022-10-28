@@ -38,7 +38,7 @@ class ConstantKernel final : public OpKernel {
     bool is_floating_value = ctx->Attr<bool>("is_floating_value");
     const Scalar value = is_floating_value ? Scalar(ctx->Attr<double>("floating_value"))
                                            : Scalar(ctx->Attr<int64_t>("integer_value"));
-    const int64_t elem_cnt = out_tensor->shape().elem_cnt();
+    const int64_t elem_cnt = out_tensor->shape_view().elem_cnt();
     CHECK_GE(elem_cnt, 0);
     if (elem_cnt == 0) { return; }
     std::unique_ptr<ep::primitive::Fill> fill = NewFillPrimitive(ctx);

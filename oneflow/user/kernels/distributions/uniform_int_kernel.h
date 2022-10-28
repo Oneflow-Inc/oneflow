@@ -97,7 +97,7 @@ class UniformIntKernel final : public user_op::OpKernel {
                             " casted to dtype";
     }
     check_from_to_in_range<T>(from, to - 1);
-    int64_t elem_cnt = out->shape().elem_cnt();
+    int64_t elem_cnt = out->shape_view().elem_cnt();
     T* out_dptr = out->mut_dptr<T>();
     auto* distribution_state = dynamic_cast<DistributionKernelState*>(state);
     CHECK_NOTNULL(distribution_state);

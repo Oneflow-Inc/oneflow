@@ -53,7 +53,7 @@ class AvgPoolNdGrad : public OpExprGradFunction<AvgPoolCaptureState> {
 
 Maybe<void> AvgPoolNdGrad::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -80,7 +80,7 @@ Maybe<void> AvgPoolNdGrad::Capture(AvgPoolCaptureState* ctx, const TensorTuple& 
 Maybe<void> AvgPoolNdGrad::Apply(const AvgPoolCaptureState* ctx, const TensorTuple& out_grads,
                                  TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
 
   int32_t ndims = ctx->kernel_size.size();
   const auto& input = ctx->SavedTensors().at(ctx->input_index);

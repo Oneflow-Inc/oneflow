@@ -24,10 +24,7 @@ _shape_t = Union[int, Tuple[int], flow._oneflow_internal.Size]
 
 
 class GroupNorm(Module):
-    """The interface is consistent with PyTorch.
-    The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.nn.GroupNorm.html.
-
+    """
     Applies Group Normalization over a mini-batch of inputs as described in
     the paper `Group Normalization <https://arxiv.org/abs/1803.08494>`__
 
@@ -45,6 +42,10 @@ class GroupNorm(Module):
 
     This layer uses statistics computed from input data in both training and
     evaluation modes.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.GroupNorm.html.
 
     Args:
         num_groups (int): number of groups to separate the channels into
@@ -110,22 +111,28 @@ class GroupNorm(Module):
         assert (
             input.shape[1] == self.num_channels
         ), "The channels of input tensor must equal num_channels"
-        origin_shape = input.shape
-        reshape_to_1d = flow.reshape(
-            input, shape=[origin_shape[0], self.num_groups, -1]
-        )
-        mean = flow.mean(reshape_to_1d, dim=2, keepdim=True)
-        variance = flow.var(reshape_to_1d, dim=2, unbiased=False, keepdim=True)
-        normalized = (reshape_to_1d - mean) / flow.sqrt(variance + self.eps)
-        normalized = flow.reshape(
-            normalized, shape=[origin_shape[0], self.num_channels, -1]
-        )
-        if self.weight is not None:
-            normalized = normalized * self.weight.reshape(1, self.num_channels, 1)
-        if self.bias is not None:
-            normalized = normalized + self.bias.reshape(1, self.num_channels, 1)
-        res = flow.reshape(normalized, shape=tuple(input.shape))
-        return res
+
+        if input.is_cuda:
+            return flow._C.group_norm(
+                input, self.weight, self.bias, self.affine, self.num_groups, self.eps
+            )
+        else:
+            origin_shape = input.shape
+            reshape_to_1d = flow.reshape(
+                input, shape=[origin_shape[0], self.num_groups, -1]
+            )
+            mean = flow.mean(reshape_to_1d, dim=2, keepdim=True)
+            variance = flow.var(reshape_to_1d, dim=2, unbiased=False, keepdim=True)
+            normalized = (reshape_to_1d - mean) / flow.sqrt(variance + self.eps)
+            normalized = flow.reshape(
+                normalized, shape=[origin_shape[0], self.num_channels, -1]
+            )
+            if self.weight is not None:
+                normalized = normalized * self.weight.reshape(1, self.num_channels, 1)
+            if self.bias is not None:
+                normalized = normalized + self.bias.reshape(1, self.num_channels, 1)
+            res = flow.reshape(normalized, shape=tuple(input.shape))
+            return res
 
     def extra_repr(self) -> str:
         return "{num_groups}, {num_channels}, eps={eps}, affine={affine}".format(
@@ -315,6 +322,49 @@ class LayerNorm(Module):
         return "{normalized_shape}, eps={eps}, elementwise_affine={elementwise_affine}".format(
             **self.__dict__
         )
+
+
+class RMSLayerNorm(Module):
+    """
+    Construct a layernorm module in the T5 style. No bias and no subtraction of mean.
+    
+    T5 uses a layer_norm which only scales and doesn't shift, which is also known as Root Mean
+    
+    Square Layer Normalization https://arxiv.org/abs/1910.07467 thus varience is calculated
+    
+    w/o mean and there is no bias. Additionally we want to make sure that the accumulation for
+    
+    half-precision inputs is done in fp32.
+
+    Args:
+        hidden_size (int): number of features in the hidden state
+        eps: a value added to the denominator for numerical stability. Default: 1e-6
+
+    Shape:
+        - Input: :math:`(N, *)`
+        - Output: :math:`(N, *)` (same shape as input)
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> x = flow.randn(2, 4, 3)
+        >>> m = flow.nn.RMSLayerNorm(3)
+        >>> y = m(x)
+        >>> y.size()
+        oneflow.Size([2, 4, 3])
+
+    """
+
+    def __init__(self, hidden_size, eps=1e-6):
+        super().__init__()
+        self.weight = flow.nn.Parameter(flow.ones(hidden_size))
+        self.variance_epsilon = eps
+
+    def forward(self, hidden_states):
+        return flow._C.rms_layer_norm(hidden_states, self.weight, self.variance_epsilon)
 
 
 if __name__ == "__main__":

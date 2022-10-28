@@ -42,7 +42,7 @@ class Scheduler final {
   void DeletePlan(SchedulerPlanToken* plan_token);
 
  private:
-  friend class Global<Scheduler>;
+  friend class Singleton<Scheduler>;
   Scheduler();
 
   struct Impl;

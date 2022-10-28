@@ -25,10 +25,10 @@ namespace {
 template<typename T, typename F>
 void CopyFromTensorBuffer(T* image_ptr, const TensorBuffer& image_buffer, const int batch_height,
                           const int batch_width, const int channels) {
-  CHECK_EQ(image_buffer.shape().NumAxes(), 3);
-  const int h = image_buffer.shape().At(0);
-  const int w = image_buffer.shape().At(1);
-  const int c = image_buffer.shape().At(2);
+  CHECK_EQ(image_buffer.shape_view().NumAxes(), 3);
+  const int h = image_buffer.shape_view().At(0);
+  const int w = image_buffer.shape_view().At(1);
+  const int c = image_buffer.shape_view().At(2);
   CHECK_LE(h, batch_height);
   CHECK_LE(w, batch_width);
   CHECK_EQ(c, channels);
@@ -59,33 +59,33 @@ class ImageBatchAlignKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(in_tensor->shape().NumAxes(), 1);
-    CHECK_EQ(out_tensor->shape().NumAxes(), 4);
-    const int64_t num_images = in_tensor->shape().elem_cnt();
+    CHECK_EQ(in_tensor->shape_view().NumAxes(), 1);
+    CHECK_EQ(out_tensor->shape_view().NumAxes(), 4);
+    const int64_t num_images = in_tensor->shape_view().elem_cnt();
     const bool dynamic_out = ctx->Attr<bool>("dynamic_out");
     CHECK_GT(num_images, 0);
     int64_t max_height = 0;
     int64_t max_width = 0;
-    const int64_t channels = out_tensor->shape().At(3);
+    const int64_t channels = out_tensor->shape_view().At(3);
     FOR_RANGE(int, i, 0, num_images) {
       const TensorBuffer& image_buffer = in_tensor->dptr<TensorBuffer>()[i];
-      max_height = std::max(max_height, image_buffer.shape().At(0));
-      max_width = std::max(max_width, image_buffer.shape().At(1));
-      CHECK_EQ(image_buffer.shape().At(2), channels);
+      max_height = std::max(max_height, image_buffer.shape_view().At(0));
+      max_width = std::max(max_width, image_buffer.shape_view().At(1));
+      CHECK_EQ(image_buffer.shape_view().At(2), channels);
     }
     int32_t alignment = ctx->Attr<int32_t>("alignment");
     max_height = RoundUp(max_height, alignment);
     max_width = RoundUp(max_width, alignment);
 
     if (dynamic_out) {
-      auto mut_shape_view = out_tensor->mut_shape();
+      auto mut_shape_view = out_tensor->mut_shape_view();
       mut_shape_view.Set(0, num_images);
       mut_shape_view.Set(1, max_height);
       mut_shape_view.Set(2, max_width);
     }
 
     memset(out_tensor->mut_dptr(), 0,
-           out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type()));
+           out_tensor->shape_view().elem_cnt() * GetSizeOfDataType(out_tensor->data_type()));
     MultiThreadLoop(num_images, [&](size_t i) {
       const TensorBuffer& image_buffer = in_tensor->dptr<TensorBuffer>()[i];
       T* out_ptr = out_tensor->mut_dptr<T>() + i * max_height * max_width * channels;

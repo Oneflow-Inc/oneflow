@@ -38,12 +38,12 @@ class OFRecordImageClassificationParser final : public Parser<ImageClassificatio
   void Parse(BatchType& batch_data, user_op::KernelComputeContext* ctx) override {
     const int64_t batch_size = batch_data.size();
     user_op::Tensor* image_tensor = ctx->Tensor4ArgNameAndIndex("image", 0);
-    CHECK_EQ(image_tensor->shape().NumAxes(), 1);
-    CHECK_EQ(image_tensor->shape().At(0), batch_size);
+    CHECK_EQ(image_tensor->shape_view().NumAxes(), 1);
+    CHECK_EQ(image_tensor->shape_view().At(0), batch_size);
     auto* image_buffers = image_tensor->mut_dptr<TensorBuffer>();
     user_op::Tensor* label_tensor = ctx->Tensor4ArgNameAndIndex("label", 0);
-    CHECK_EQ(label_tensor->shape().NumAxes(), 1);
-    CHECK_EQ(label_tensor->shape().At(0), batch_size);
+    CHECK_EQ(label_tensor->shape_view().NumAxes(), 1);
+    CHECK_EQ(label_tensor->shape_view().At(0), batch_size);
     auto* label_buffers = label_tensor->mut_dptr<TensorBuffer>();
     for (size_t i = 0; i < batch_data.size(); ++i) {
       auto& instance = batch_data[i];

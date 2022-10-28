@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/ep/common/primitive/elementwise_unary.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/ep/cpu/primitive/unary_functor.h"
-#include "oneflow/core/ep/cpu/primitive/type_seq.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
 
@@ -89,9 +88,19 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY,
                                              UNARY_MATH_OP_SEQ, CPU_PRIMITIVE_NATIVE_TYPE_SEQ)
             // For Float Type OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY, UNARY_FLOATING_MATH_OP_SEQ,
+                CPU_PRIMITIVE_FLOATING_TYPE_SEQ CPU_PRIMITIVE_BFLOAT16_TYPE_SEQ)
+
+            // For Int Type OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY,
-                                             UNARY_FLOATING_MATH_OP_SEQ,
-                                             CPU_PRIMITIVE_FLOATING_TYPE_SEQ)
+                                             UNARY_INT_MATH_OP_SEQ, CPU_PRIMITIVE_INT_TYPE_SEQ)
+
+            // For Utils OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY,
+                                             UNARY_UTILS_OP_SEQ, UTIL_OPS_DATA_TYPE_SEQ,
+                                             CPU_PRIMITIVE_BOOL_TYPE_SEQ)
+
             // For Logical OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY,
                                              UNARY_LOGICAL_OP_SEQ, CPU_PRIMITIVE_NATIVE_TYPE_SEQ,

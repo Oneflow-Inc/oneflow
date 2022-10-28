@@ -108,6 +108,12 @@ def main():
     current_env["MASTER_PORT"] = str(args.master_port)
     current_env["WORLD_SIZE"] = str(dist_world_size)
 
+    if args.master_port is None or args.master_port >= 2 ** 16:
+        raise ValueError(
+            f"The port number of the master endpoint '{args.master_addr}:{args.master_port}' must be an integer "
+            "between 0 and 65536."
+        )
+
     if "OMP_NUM_THREADS" not in os.environ and args.nproc_per_node > 1:
         current_env["OMP_NUM_THREADS"] = str(1)
         print(

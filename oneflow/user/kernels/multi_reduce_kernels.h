@@ -38,7 +38,7 @@ class MultiReduceSumPowAbsKernel final : public user_op::OpKernel,
     params.resize(ctx->input_size("x"));
     for (size_t i = 0; i < params.size(); ++i) {
       const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", i);
-      params[i].size = x->shape().elem_cnt();
+      params[i].size = x->shape_view().elem_cnt();
       params[i].data = x->dptr<T>();
     }
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -88,7 +88,7 @@ class MultiReduceXimumAbsKernel final : public user_op::OpKernel, public user_op
     params.resize(ctx->input_size("x"));
     for (size_t i = 0; i < params.size(); ++i) {
       const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", i);
-      params[i].size = x->shape().elem_cnt();
+      params[i].size = x->shape_view().elem_cnt();
       params[i].data = x->dptr<T>();
     }
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);

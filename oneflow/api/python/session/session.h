@@ -35,7 +35,9 @@ limitations under the License.
 
 namespace oneflow {
 
-inline Maybe<bool> IsSessionInited() { return Global<SessionGlobalObjectsScope>::Get() != nullptr; }
+inline Maybe<bool> IsSessionInited() {
+  return Singleton<SessionGlobalObjectsScope>::Get() != nullptr;
+}
 
 inline void FixCpuDeviceNum(ConfigProto* config_proto) {
   if (config_proto->resource().cpu_device_num() > 0) { return; }
@@ -43,24 +45,24 @@ inline void FixCpuDeviceNum(ConfigProto* config_proto) {
 }
 
 inline Maybe<void> InitEagerGlobalSession(const std::string& config_proto_str) {
-  CHECK_NOTNULL_OR_RETURN(Global<EnvDesc>::Get()) << "env not found";
+  CHECK_NOTNULL_OR_RETURN(Singleton<EnvDesc>::Get()) << "env not found";
   ConfigProto config_proto;
   CHECK_OR_RETURN(TxtString2PbMessage(config_proto_str, &config_proto))
       << "failed to parse config_proto: " << config_proto_str;
   FixCpuDeviceNum(&config_proto);
-  Global<CtrlClient>::Get()->PushKV("config_proto", config_proto);
+  Singleton<CtrlClient>::Get()->PushKV("config_proto", config_proto);
 
-  CHECK_ISNULL_OR_RETURN(Global<SessionGlobalObjectsScope>::Get());
-  Global<SessionGlobalObjectsScope>::SetAllocated(new SessionGlobalObjectsScope());
+  CHECK_ISNULL_OR_RETURN(Singleton<SessionGlobalObjectsScope>::Get());
+  Singleton<SessionGlobalObjectsScope>::SetAllocated(new SessionGlobalObjectsScope());
 
-  JUST(Global<SessionGlobalObjectsScope>::Get()->EagerInit(config_proto));
+  JUST(Singleton<SessionGlobalObjectsScope>::Get()->EagerInit(config_proto));
   VLOG(3) << "NewGlobal " << typeid(SessionGlobalObjectsScope).name();
 
   return Maybe<void>::Ok();
 }
 
 inline Maybe<void> InitLazyGlobalSession(const std::string& config_proto_str) {
-  CHECK_NOTNULL_OR_RETURN(Global<EnvDesc>::Get()) << "env not found";
+  CHECK_NOTNULL_OR_RETURN(Singleton<EnvDesc>::Get()) << "env not found";
   CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
 
   ClusterInstruction::MasterSendSessionStart();
@@ -69,44 +71,44 @@ inline Maybe<void> InitLazyGlobalSession(const std::string& config_proto_str) {
   CHECK_OR_RETURN(TxtString2PbMessage(config_proto_str, &config_proto))
       << "failed to parse config_proto: " << config_proto_str;
   FixCpuDeviceNum(&config_proto);
-  Global<CtrlClient>::Get()->PushKV("config_proto", config_proto);
+  Singleton<CtrlClient>::Get()->PushKV("config_proto", config_proto);
 
-  CHECK_ISNULL_OR_RETURN(Global<SessionGlobalObjectsScope>::Get());
-  Global<SessionGlobalObjectsScope>::SetAllocated(new SessionGlobalObjectsScope());
-  JUST(Global<SessionGlobalObjectsScope>::Get()->Init(config_proto));
+  CHECK_ISNULL_OR_RETURN(Singleton<SessionGlobalObjectsScope>::Get());
+  Singleton<SessionGlobalObjectsScope>::SetAllocated(new SessionGlobalObjectsScope());
+  JUST(Singleton<SessionGlobalObjectsScope>::Get()->Init(config_proto));
   VLOG(3) << "NewGlobal " << typeid(SessionGlobalObjectsScope).name();
   return Maybe<void>::Ok();
 }
 
 inline Maybe<void> DestroyLazyGlobalSession() {
-  if (Global<SessionGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
+  if (Singleton<SessionGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
   CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
-  Global<SessionGlobalObjectsScope>::Delete();
+  Singleton<SessionGlobalObjectsScope>::Delete();
   return Maybe<void>::Ok();
 }
 
 inline Maybe<void> StartLazyGlobalSession() {
-  CHECK_NOTNULL_OR_RETURN(Global<SessionGlobalObjectsScope>::Get()) << "session not found";
+  CHECK_NOTNULL_OR_RETURN(Singleton<SessionGlobalObjectsScope>::Get()) << "session not found";
   CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
-  const JobSet& job_set = Global<LazyJobBuildAndInferCtxMgr>::Get()->job_set();
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+  const JobSet& job_set = Singleton<LazyJobBuildAndInferCtxMgr>::Get()->job_set();
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create("job_set.prototxt")->Write(job_set);
   }
   if (job_set.job().empty()) { return Error::JobSetEmptyError() << "no function defined"; }
-  CHECK_ISNULL_OR_RETURN(Global<Oneflow>::Get());
-  Global<CtrlClient>::Get()->PushKV("session_job_set", job_set);
-  Global<const InterJobReuseMemStrategy>::New(job_set.inter_job_reuse_mem_strategy());
-  Global<Oneflow>::New();
-  JUST(Global<Oneflow>::Get()->Init(job_set));
+  CHECK_ISNULL_OR_RETURN(Singleton<Oneflow>::Get());
+  Singleton<CtrlClient>::Get()->PushKV("session_job_set", job_set);
+  Singleton<const InterJobReuseMemStrategy>::New(job_set.inter_job_reuse_mem_strategy());
+  Singleton<Oneflow>::New();
+  JUST(Singleton<Oneflow>::Get()->Init(job_set));
   return Maybe<void>::Ok();
 }
 
 inline Maybe<void> StopLazyGlobalSession() {
-  if (Global<Oneflow>::Get() == nullptr) { return Maybe<void>::Ok(); }
+  if (Singleton<Oneflow>::Get() == nullptr) { return Maybe<void>::Ok(); }
   CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
-  CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
-  Global<Oneflow>::Delete();
-  Global<const InterJobReuseMemStrategy>::Delete();
+  CHECK_NOTNULL_OR_RETURN(Singleton<Oneflow>::Get());
+  Singleton<Oneflow>::Delete();
+  Singleton<const InterJobReuseMemStrategy>::Delete();
   return Maybe<void>::Ok();
 }
 

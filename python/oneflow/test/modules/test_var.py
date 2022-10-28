@@ -54,6 +54,13 @@ class TestVar(flow.unittest.TestCase):
         )
         return y
 
+    @autotest(n=5)
+    def test_flow_var_all_dim_with_random_data_n5(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, dim0=5, dim1=1, dim2=16, dim3=16).to(device)
+        y = torch.var(x, dim=[0, 2, 3])
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()

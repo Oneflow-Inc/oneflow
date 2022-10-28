@@ -22,12 +22,15 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/tensor_processor.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
 namespace functional {
 
 namespace impl {
+
+std::string TensorDeviceToString(const std::shared_ptr<Tensor>& tensor);
 
 class BinaryFunctor {
  public:
@@ -50,8 +53,15 @@ class BinaryFloatFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
+    auto tensor_x = x;
+    if (IsScalarTensor(x)) {
+      // NOTE:If tensor x is scalar and it's device not equal to tensor y,
+      // then need move it to the target device first.(This behavior aligns to PyTorch)
+      std::string device_str = TensorDeviceToString(y);
+      tensor_x = JUST(functional::To(x, device_str));
+    }
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.AddInputs({x, y}, DType::Float()).Apply());
+    JUST(tensor_processor.AddInputs({tensor_x, y}, DType::Float()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple);
   }
@@ -85,14 +95,21 @@ class InplaceableBinaryFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y, bool inplace) const {
+    auto tensor_x = x;
+    if (IsScalarTensor(x)) {
+      // NOTE:If tensor x is scalar and it's device not equal to tensor y,
+      // then need move it to the target device first.(This behavior aligns to PyTorch)
+      std::string device_str = TensorDeviceToString(y);
+      tensor_x = JUST(functional::To(x, device_str));
+    }
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({tensor_x, y}).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (inplace) {
       std::shared_ptr<one::Tensor>& x_cast = input_tuple.at(0);
       std::shared_ptr<one::Tensor>& y_cast = input_tuple.at(1);
       JUST(CheckInplaceCastValid(x, x_cast));
-      JUST(CheckShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
+      JUST(CheckInplaceShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x_cast;
       JUST(OpInterpUtil::Dispatch(*op_, input_tuple, outputs.get()));

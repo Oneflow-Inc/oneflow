@@ -39,9 +39,9 @@ class GridSampleKernel final : public user_op::OpKernel {
     GridSamplerPadding padding = StringToGridGridSamplerPadding(padding_mode);
     const bool align_corners = ctx->Attr<bool>("align_corners");
 
-    const ShapeView& input_shape = input->shape();
-    const ShapeView& grid_shape = grid->shape();
-    const ShapeView& output_shape = output->shape();
+    const ShapeView& input_shape = input->shape_view();
+    const ShapeView& grid_shape = grid->shape_view();
+    const ShapeView& output_shape = output->shape_view();
     int64_t count = output_shape.elem_cnt() / input_shape.At(1);
 
     if (input_shape.NumAxes() == 4) {
@@ -101,9 +101,9 @@ class GridSampleGradKernel final : public user_op::OpKernel {
     GridSamplerPadding padding = StringToGridGridSamplerPadding(padding_mode);
     const bool align_corners = ctx->Attr<bool>("align_corners");
 
-    const ShapeView& input_shape = input->shape();
-    const ShapeView& grid_shape = grid->shape();
-    const ShapeView& output_shape = doutput->shape();
+    const ShapeView& input_shape = input->shape_view();
+    const ShapeView& grid_shape = grid->shape_view();
+    const ShapeView& output_shape = doutput->shape_view();
     int64_t count = output_shape.elem_cnt() / input_shape.At(1);
 
     Memset<device_type>(ctx->stream(), dinput->mut_dptr<data_type>(), 0,

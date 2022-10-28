@@ -37,13 +37,13 @@ class UpsampleBicubic2dCPUKernel final : public user_op::OpKernel {
     const T* in_ptr = x_tensor->dptr<T>();
     T* out_ptr = y_tensor->mut_dptr<T>();
     const bool align_corners = ctx->Attr<bool>("align_corners");
-    const int nbatch = x_tensor->shape().At(0);
-    const int channels = x_tensor->shape().At(1);
+    const int nbatch = x_tensor->shape_view().At(0);
+    const int channels = x_tensor->shape_view().At(1);
 
-    const int64_t in_height = x_tensor->shape().At(2);
-    const int64_t in_width = x_tensor->shape().At(3);
-    const int64_t out_height = y_tensor->shape().At(2);
-    const int64_t out_width = y_tensor->shape().At(3);
+    const int64_t in_height = x_tensor->shape_view().At(2);
+    const int64_t in_width = x_tensor->shape_view().At(3);
+    const int64_t out_height = y_tensor->shape_view().At(2);
+    const int64_t out_width = y_tensor->shape_view().At(3);
     if (!output_size.empty()) {
       height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
       width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
@@ -110,19 +110,19 @@ class UpsampleBicubic2dGradCPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
     Memset<DeviceType::kCPU>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
-                             dx_tensor->shape().elem_cnt() * sizeof(T));
+                             dx_tensor->shape_view().elem_cnt() * sizeof(T));
     user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     T* in_ptr = dx_tensor->mut_dptr<T>();
     const T* out_ptr = dy_tensor->dptr<T>();
     const bool align_corners = ctx->Attr<bool>("align_corners");
-    const int nbatch = dx_tensor->shape().At(0);
-    int channels = dx_tensor->shape().At(1);
+    const int nbatch = dx_tensor->shape_view().At(0);
+    int channels = dx_tensor->shape_view().At(1);
     channels = channels * nbatch;
 
-    const int64_t in_height = dx_tensor->shape().At(2);
-    const int64_t in_width = dx_tensor->shape().At(3);
-    const int64_t out_height = dy_tensor->shape().At(2);
-    const int64_t out_width = dy_tensor->shape().At(3);
+    const int64_t in_height = dx_tensor->shape_view().At(2);
+    const int64_t in_width = dx_tensor->shape_view().At(3);
+    const int64_t out_height = dy_tensor->shape_view().At(2);
+    const int64_t out_width = dy_tensor->shape_view().At(3);
 
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
     double height_scale = ctx->Attr<double>("height_scale");

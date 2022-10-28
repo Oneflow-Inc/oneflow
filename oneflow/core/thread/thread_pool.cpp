@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/thread/thread_pool.h"
+#include "oneflow/core/vm/sync_vm_mode_guard.h"
 
 namespace oneflow {
 
@@ -22,6 +23,7 @@ ThreadPool::ThreadPool(int32_t thread_num)
   FOR_RANGE(int32_t, i, 0, thread_num) {
     Channel<std::function<void()>>* chan = &(work_chans_.at(i));
     threads_[i] = std::thread([chan]() {
+      SyncVmModeGuard guard(SyncVmMode::kEnable);
       std::function<void()> work;
       while (chan->Receive(&work) == kChannelStatusSuccess) { work(); }
     });

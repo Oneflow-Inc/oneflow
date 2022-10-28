@@ -55,10 +55,10 @@ class ConcatKernel final : public user_op::OpKernel {
 
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    if (out_tensor->shape().elem_cnt() == 0) { return; }
+    if (out_tensor->shape_view().elem_cnt() == 0) { return; }
     const int64_t axis = ctx->Attr<int64_t>("axis");
-    const int64_t out_cols = out_tensor->shape().Count(axis);
-    const int64_t rows = out_tensor->shape().elem_cnt() / out_cols;
+    const int64_t out_cols = out_tensor->shape_view().Count(axis);
+    const int64_t rows = out_tensor->shape_view().elem_cnt() / out_cols;
     CHECK_GT(rows, 0);
 
     auto primitive = NewCopyNdPrimitive(ctx);
@@ -67,9 +67,9 @@ class ConcatKernel final : public user_op::OpKernel {
     for (const auto& in_arg_pair : ctx->inputs()) {
       const user_op::Tensor* in_tensor =
           ctx->Tensor4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
-      if (in_tensor->shape().elem_cnt() == 0) { continue; }
-      const int64_t in_cols = in_tensor->shape().Count(axis);
-      CHECK_EQ(in_tensor->shape().elem_cnt(), rows * in_cols);
+      if (in_tensor->shape_view().elem_cnt() == 0) { continue; }
+      const int64_t in_cols = in_tensor->shape_view().Count(axis);
+      CHECK_EQ(in_tensor->shape_view().elem_cnt(), rows * in_cols);
       if (in_cols > 0) {
         DimVector dst_shape = {rows, out_cols};
         DimVector dst_pos_vec = {0, out_col_offset};

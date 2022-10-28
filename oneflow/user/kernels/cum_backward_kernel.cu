@@ -95,7 +95,7 @@ class GpuCumProdGradKernel final : public user_op::OpKernel {
     const auto* input = ctx->Tensor4ArgNameAndIndex("input", 0);
     const auto* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     auto* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const auto elem_cnt = dy->shape().elem_cnt();
+    const auto elem_cnt = dy->shape_view().elem_cnt();
     if (!elem_cnt) { return; }
 
     const auto* output_ptr = output->dptr<T>();
@@ -105,9 +105,9 @@ class GpuCumProdGradKernel final : public user_op::OpKernel {
 
     // Data partition: up_space|space|down_space
     auto dim = ctx->Attr<int64_t>("dim");
-    const auto up_space = elem_cnt / dx->shape().Count(dim);
-    const auto space = dx->shape().At(dim);
-    const auto down_space = dx->shape().Count(dim + 1);
+    const auto up_space = elem_cnt / dx->shape_view().Count(dim);
+    const auto space = dx->shape_view().At(dim);
+    const auto down_space = dx->shape_view().Count(dim + 1);
     const size_t thread_num = up_space * down_space;
 
     if (space == 1) {

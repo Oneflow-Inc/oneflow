@@ -44,10 +44,8 @@ def slice_op(input, slice_tup_list: Sequence[Tuple[int, int, int]]):
     return flow._C.slice(input, start, stop, step)
 
 
-def logical_slice_assign_op(
-    input, update, slice_tup_list: Sequence[Tuple[int, int, int]]
-):
-    """Update a slice of tensor `x`(in-place). Like `x[start:stop:step] = update`.
+def slice_update_op(input, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
+    """Update a slice of tensor `x`. Like `x[start:stop:step] = update`.
 
     Args:
         x: A `Tensor`, whose slice will be updated.
@@ -63,8 +61,7 @@ def logical_slice_assign_op(
 
         >>> input = flow.Tensor(np.array([1, 1, 1, 1, 1]).astype(np.float32))
         >>> update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
-        >>> y = flow.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
-        >>> input
+        >>> flow.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
         tensor([1., 2., 3., 4., 1.], dtype=oneflow.float32)
 
     """
@@ -72,34 +69,7 @@ def logical_slice_assign_op(
     (start, stop, step) = parse_slice_tuple_list(slice_tup_list, input.shape)
     if update.dtype != input.dtype:
         update = update.to(dtype=input.dtype)
-    return flow._C.logical_slice_assign(input, update, start, stop, step)
-
-
-def logical_slice_op(input, slice_tup_list: Sequence[Tuple[int, int, int]]):
-    """Extracts a slice from a global tensor.
-    The `slice_tup_list` assigns the slice indices in each dimension, the format is (start, stop, step).
-    The operator will slice the tensor according to the `slice_tup_list`.
-
-    Args:
-        input: A `Tensor`.
-        slice_tup_list: A list of slice tuple, indicate each dimension slice (start, stop, step).
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-
-        >>> placement = flow.placement("cpu", ranks=[0])
-        >>> x = flow.Tensor([[1, 2], [3, 4]], placement=placement, sbp=flow.sbp.broadcast)
-        >>> y = flow.logical_slice(x, slice_tup_list=[[0, 1, 1]])
-        >>> y.numpy()
-        array([[1., 2.]], dtype=float32)
-
-    """
-
-    (start, stop, step) = parse_slice_tuple_list(slice_tup_list, input.shape)
-    return flow._C.logical_slice(input, start, stop, step)
+    return flow._C.slice_update(input, update, start, stop, step, inplace=True)
 
 
 if __name__ == "__main__":

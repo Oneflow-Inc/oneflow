@@ -41,7 +41,7 @@ class BroadCastLike : public OpExprGradFunction<BroadCastLikeCaptureState> {
 
 Maybe<void> BroadCastLike::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -60,7 +60,7 @@ Maybe<void> BroadCastLike::Capture(BroadCastLikeCaptureState* ctx, const TensorT
 Maybe<void> BroadCastLike::Apply(const BroadCastLikeCaptureState* ctx, const TensorTuple& out_grads,
                                  TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
 
   const auto& x = ctx->SavedTensors().at(ctx->input_index);
   in_grads->resize(2);

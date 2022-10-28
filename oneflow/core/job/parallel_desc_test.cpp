@@ -30,13 +30,13 @@ namespace {
 
 struct GlobaProcessCtxScope final {
   GlobaProcessCtxScope(int64_t node_size, int64_t world_size) {
-    Global<ProcessCtx>::New();
-    auto* ctx = Global<ProcessCtx>::Get();
+    Singleton<ProcessCtx>::New();
+    auto* ctx = Singleton<ProcessCtx>::Get();
     for (int i = 0; i < world_size; ++i) { ctx->mutable_ctrl_addr()->Add(); }
     ctx->set_rank(0);
     ctx->set_node_size(node_size);
   }
-  ~GlobaProcessCtxScope() { Global<ProcessCtx>::Delete(); }
+  ~GlobaProcessCtxScope() { Singleton<ProcessCtx>::Delete(); }
 };
 
 }  // namespace

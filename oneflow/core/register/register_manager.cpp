@@ -50,7 +50,7 @@ void RegstMgr::AddPlan(
   for (const ChunkProto& chunk : plan.block_chunk_list().chunk()) {
     if (chunk.machine_id() != this_machine_id) { continue; }
     if (chunk.mem_size() == 0) { continue; }
-    char* chunk_ptr = Global<ChunkMgr>::Get()->FindOrCreateChunk(chunk);
+    char* chunk_ptr = Singleton<ChunkMgr>::Get()->FindOrCreateChunk(chunk);
     CHECK(chunk_id2ptr.emplace(chunk.chunk_id(), chunk_ptr).second);
   }
 
@@ -84,7 +84,7 @@ void RegstMgr::AddPlan(
         CHECK_GE(var_blob->AlignedByteSizeOfBlobHeader(), mem_block.mem_size());
         CHECK_GE(mem_block.mem_size(), var_blob->ByteSizeOfBlobHeader());
         CHECK(mem_block_id2ptr_.emplace(mem_block_id, var_blob->mut_header_ptr()).second);
-        CHECK(mem_block.mem_case().has_host_mem());
+        CHECK(memory::IsHostMem(mem_block.mem_case()));
       } else {
         CHECK_GE(var_blob->AlignedByteSizeOfBlobBody(), mem_block.mem_size());
         CHECK_GE(mem_block.mem_size(), var_blob->ByteSizeOfBlobBody());
@@ -95,15 +95,14 @@ void RegstMgr::AddPlan(
         //   blob has GPU op consume. We can JUST ignore this diff because it ONLY has little
         //   perf loss but correct.
         //   And this problem is NOT tensor.to("cuda") or tensor.to_global().
-        CHECK((mem_block.mem_case().has_host_mem() && var_blob->mem_case().has_host_mem())
-              || (mem_block.mem_case() == var_blob->mem_case()))
+        CHECK(memory::EqualsIgnorePinnedDevice(mem_block.mem_case(), var_blob->mem_case()))
             << " variable op name: " << var_name << " in rank: " << this_machine_id
             << " bind eager tensor failed. The eager var tensor mem_case is : "
             << var_blob->mem_case().DebugString()
             << " but graph expected_mem block mem_case is : " << mem_block.mem_case().DebugString();
       }
     } else {
-      int64_t zone_id = MemoryCaseUtil::GenMemZoneId(mem_block.mem_case());
+      int64_t zone_id = memory::GetMemCaseId(mem_block.mem_case());
       if (zone_id2packed_chunk.find(zone_id) == zone_id2packed_chunk.end()) {
         zone_id2packed_chunk.emplace(zone_id, PackedChunkInfo(mem_block.mem_case()));
       }
@@ -117,7 +116,7 @@ void RegstMgr::AddPlan(
   for (auto& pair : zone_id2packed_chunk) {
     PackedChunkInfo* packed_chunk = &pair.second;
     char* ptr =
-        Global<MemoryAllocator>::Get()->Allocate(packed_chunk->mem_case, packed_chunk->size);
+        Singleton<MemoryAllocator>::Get()->Allocate(packed_chunk->mem_case, packed_chunk->size);
     // sort blocks as thrd id
     std::vector<const MemBlockProto*>* blocks = &(packed_chunk->blocks);
     std::sort(blocks->begin(), blocks->end(),
@@ -209,11 +208,10 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
   char* cur_body_pointer = nullptr;
   char* cur_header_pointer = nullptr;
   if (separated_header_mem_size > 0) {
-    MemoryCase host_mem_case;
-    host_mem_case.mutable_host_mem();
+    MemoryCase host_mem_case = memory::MakeHostMemCase();
     if (separated_header_mem_ptr == nullptr) {
       separated_header_mem_ptr =
-          Global<MemoryAllocator>::Get()->Allocate(host_mem_case, separated_header_mem_size);
+          Singleton<MemoryAllocator>::Get()->Allocate(host_mem_case, separated_header_mem_size);
     }
     cur_header_pointer = separated_header_mem_ptr;
     cur_body_pointer = main_mem_ptr;
@@ -239,7 +237,7 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
     } else {
       blob_ptr.reset(new Blob(regst->regst_desc()->mem_case(), blob_desc,
                               cur_header_pointer + header_offset, cur_body_pointer + body_offset));
-      InitNonPODTypeBlobIfNeed(Global<MemoryAllocator>::Get(), blob_ptr.get());
+      InitNonPODTypeBlobIfNeed(Singleton<MemoryAllocator>::Get(), blob_ptr.get());
     }
     regst->SetBlobByOrdinal(ordinal, std::move(blob_ptr));
     const int64_t regst_desc_id = rt_regst_desc->regst_desc_id();

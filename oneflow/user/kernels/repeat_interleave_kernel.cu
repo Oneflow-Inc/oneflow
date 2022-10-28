@@ -43,6 +43,7 @@ class GpuRepeatInterLeaveKernel final : public user_op::OpKernel {
   ~GpuRepeatInterLeaveKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* cumsum = ctx->Tensor4ArgNameAndIndex("cumsum", 0);
@@ -52,9 +53,9 @@ class GpuRepeatInterLeaveKernel final : public user_op::OpKernel {
     const T* cumsum_ptr = cumsum->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
 
-    repeat_interleave<T><<<BlocksNum4ThreadsNum(in->shape().At(0)), kCudaThreadsNumPerBlock, 0,
+    repeat_interleave<T><<<BlocksNum4ThreadsNum(in->shape_view().At(0)), kCudaThreadsNumPerBlock, 0,
                            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-        in_ptr, cumsum_ptr, out_ptr, in->shape().At(0));
+        in_ptr, cumsum_ptr, out_ptr, in->shape_view().At(0));
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

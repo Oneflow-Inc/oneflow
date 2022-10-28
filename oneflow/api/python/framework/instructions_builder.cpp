@@ -44,29 +44,29 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
           [](const std::shared_ptr<InstructionsBuilder>& builder, int64_t session_id,
              const std::string& job_conf_str, const std::string& device_tag,
              const std::vector<std::string>& machine_device_ids,
-             const std::shared_ptr<Shape>& hierarchy, bool is_mirrored) -> Maybe<Scope> {
+             const std::shared_ptr<Shape>& hierarchy, bool is_local) -> Maybe<Scope> {
             JobConfigProto job_conf;
             CHECK_OR_RETURN(TxtString2PbMessage(job_conf_str, &job_conf))
                 << Error::RuntimeError() << "job conf parse failed";
             return builder->BuildInitialScope(session_id, job_conf, device_tag, machine_device_ids,
-                                              hierarchy, is_mirrored);
+                                              hierarchy, is_local);
           },
           py::arg("session_id").none(false), py::arg("job_conf_str").none(false),
           py::arg("device_tag").none(false), py::arg("machine_device_ids").none(false),
-          py::arg("hierarchy").none(true), py::arg("is_mirrored").none(false))
+          py::arg("hierarchy").none(true), py::arg("is_local").none(false))
       .def(
           "BuildInitialScopeWithPlacement",
           [](const std::shared_ptr<InstructionsBuilder>& builder, int64_t session_id,
              const std::string& job_conf_str, Symbol<ParallelDesc> placement,
-             bool is_mirrored) -> Maybe<Scope> {
+             bool is_local) -> Maybe<Scope> {
             JobConfigProto job_conf;
             CHECK_OR_RETURN(TxtString2PbMessage(job_conf_str, &job_conf))
                 << Error::RuntimeError() << "job conf parse failed";
             return builder->BuildInitialScopeWithPlacement(session_id, job_conf, placement,
-                                                           is_mirrored);
+                                                           is_local);
           },
           py::arg("session_id").none(false), py::arg("job_conf_str").none(false),
-          py::arg("placement").none(false), py::arg("is_mirrored").none(false))
+          py::arg("placement").none(false), py::arg("is_local").none(false))
       .def("BuildScopeWithNewParallelDesc", &InstructionsBuilder::BuildScopeWithNewParallelDesc,
            py::arg("scope").none(false), py::arg("device_tag").none(false),
            py::arg("machine_device_ids").none(false), py::arg("hierarchy").none(true))
@@ -79,7 +79,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
                  << Error::RuntimeError() << "parallel conf parse failed";
              return builder->BuildScopeWithNewParallelConf(scope, parallel_conf);
            })
-      .def("BuildScopeWithNewIsMirrored", &InstructionsBuilder::BuildScopeWithNewIsMirrored)
+      .def("BuildScopeWithNewIsLocal", &InstructionsBuilder::BuildScopeWithNewIsLocal)
       .def("BuildScopeWithNewScopeName", &InstructionsBuilder::BuildScopeWithNewScopeName)
       .def("BuildScopeByProtoStrSetter", &InstructionsBuilder::BuildScopeByProtoStrSetter);
 

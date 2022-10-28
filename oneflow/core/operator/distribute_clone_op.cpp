@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job/scope.h"
 

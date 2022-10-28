@@ -32,6 +32,7 @@ limitations under the License.
 #include "OneFlow/OneFlowEnums.h.inc"
 #include "OneFlow/OneFlowOpTraits.h"
 
+#include "OneFlow/SBP/SBPAttributes.h"
 namespace mlir {
 
 namespace func {

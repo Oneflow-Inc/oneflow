@@ -17,129 +17,66 @@ import atexit
 import csv
 import unittest
 import os
-from typing import Iterable, Union, TypeVar
+import sys
+import subprocess
+import tempfile
 
-import prettytable
-from prettytable import PrettyTable
-
+import oneflow as flow
 import oneflow.test_utils.automated_test_util.profiler as auto_profiler
+from oneflow.autoprof.util import *
 
-
-T = TypeVar("T")
-
-
-def get_sole_value(x: Iterable[T]) -> T:
-    s = set(x)
-    assert len(s) == 1
-    return list(s)[0]
-
-
-def get_pytorch_cpu_kernel_time(prof) -> Union[str, float]:
-    assert prof.num > 1
-    cpu_kernel_items = list(filter(lambda x: x.count >= prof.num, prof.key_averages()))
-    if len(cpu_kernel_items) == 0:
-        return "-"
-    kernel_cpu_time = (
-        sum(map(lambda x: x.self_cpu_time_total, cpu_kernel_items)) / prof.num
-    )
-    return round(kernel_cpu_time, 1)
-
-
-def get_oneflow_cpu_kernel_time(prof) -> Union[str, float]:
-    assert prof.num > 1
-    cpu_kernel_items = list(filter(lambda x: x.count >= prof.num, prof.key_averages()))
-    if len(cpu_kernel_items) == 0:
-        return "-"
-    kernel_cpu_time = sum(map(lambda x: x.cpu_time_total, cpu_kernel_items)) / prof.num
-    return round(kernel_cpu_time, 1)
-
-
-def get_pytorch_gpu_kernel_time(prof) -> Union[str, float]:
-    gpu_kernel_items = list(filter(lambda x: x.count >= prof.num, prof.key_averages()))
-    if len(gpu_kernel_items) == 0:
-        return "-"
-    kernel_gpu_time = (
-        sum(map(lambda x: x.self_cuda_time_total, gpu_kernel_items)) / prof.num
-    )
-    return round(kernel_gpu_time, 1)
-
-
-def get_oneflow_gpu_kernel_time(prof) -> Union[str, float]:
-    gpu_kernel_items = list(
-        filter(lambda x: x.event_type == 1 and x.on_gpu, prof.key_averages())
-    )
-    if len(gpu_kernel_items) == 0:
-        return "-"
-    kernel_gpu_time = sum(map(lambda x: x.gpu_time_total, gpu_kernel_items)) / prof.num
-    return round(kernel_gpu_time, 1)
-
-
-def get_oneflow_gpu_kernel_bandwidth(prof) -> str:
-    gpu_kernel_items = list(
-        filter(
-            lambda x: x.event_type == 1 and x.bandwidth_is_recorded, prof.key_averages()
-        )
-    )
-    if len(gpu_kernel_items) == 0:
-        return "-"
-    if len(gpu_kernel_items) == 1:
-        return f"{round(gpu_kernel_items[0].bandwidth, 1)}"
-    return ", ".join([f"{x.name}: {round(x.bandwidth, 1)}" for x in gpu_kernel_items])
-
-
-def get_pytorch_cpu_end_to_end_time(prof) -> float:
-    total = get_sole_value(
-        filter(lambda x: x.key == auto_profiler.END_TO_END, prof.key_averages())
-    )
-    assert total.count == 1
-    return round(total.cpu_time / prof.num, 1)
-
-
-def get_oneflow_cpu_end_to_end_time(prof) -> float:
-    total = list(
-        filter(lambda x: x.name == auto_profiler.END_TO_END, prof.key_averages())
-    )[0]
-    assert total.count == 1
-    return round(total.cpu_time / prof.num, 1)
-
-
-def print_summary_from_csv() -> None:
-    print("----------------------------------------------------------------------")
-    print(
-        'Summary ("KT" means "Kernel Time", "ET" means "End-to-end Time", in microseconds; "BW" means "Bandwidth" in GB/s):'
-    )
-    with open(csv_filename, "r") as f:
-        table: PrettyTable = prettytable.from_csv(f)
-        table.field_names = [
-            "OP",
-            "Args",
-            "Lib",
-            "KT(GPU)",
-            "BW(GPU)",
-            "KT(1 CPU)",
-            "ET(1 CPU)",
-            "KT(32 CPU)",
-            "ET(32 CPU)",
-            "Desc",
-        ]
-        table.del_column("Desc")
-        for row in table.rows:
-            row[2] = {"PyTorch": "PT", "OneFlow": "OF"}[row[2]]
-
-        print(table)
-
-
-# all functions registered are called in last in, first out order
-atexit.register(print_summary_from_csv)
 
 csv_filename = os.getenv("ONEFLOW_PROFILE_CSV", "op_prof")
 
-if csv_filename[:-4] != ".csv":
+if csv_filename[-4:] != ".csv":
     csv_filename += ".csv"
 
 f = open(csv_filename, "w")
+# all functions registered are called in last in, first out order
+if flow.support.env_var_util.parse_boolean_from_env(
+    "ONEFLOW_PROFILE_PRINT_SUMMARY", True
+):
+    atexit.register(print_summary_from_csv, csv_filename)
 atexit.register(lambda f: f.close(), f)
+
 writer = csv.writer(f)
+
+ONLY_ONEFLOW = flow.support.env_var_util.parse_boolean_from_env(
+    "ONEFLOW_PROFILE_ONLY_ONEFLOW", False
+)
+ONLY_PYTORCH = flow.support.env_var_util.parse_boolean_from_env(
+    "ONEFLOW_PROFILE_ONLY_PYTORCH", False
+)
+assert not (ONLY_ONEFLOW and ONLY_PYTORCH)
+
+if not ONLY_ONEFLOW and not ONLY_PYTORCH:
+    env = os.environ.copy()
+    env.update({"ONEFLOW_PROFILE_ONLY_ONEFLOW": "1"})
+    temp_f = tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False)
+    env.update({"ONEFLOW_PROFILE_CSV": temp_f.name})
+    env.update({"ONEFLOW_PROFILE_PRINT_SUMMARY": "0"})
+    subprocess.run([sys.executable, "-m", "oneflow.autoprof", *sys.argv[1:]], env=env)
+    temp_f.close()
+    temp_f = open(temp_f.name, "r")
+    rows = list(csv.reader(temp_f))
+    temp_f.close()
+    os.remove(temp_f.name)
+
+    env = os.environ.copy()
+    env.update({"ONEFLOW_PROFILE_ONLY_PYTORCH": "1"})
+    temp_f = tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False)
+    env.update({"ONEFLOW_PROFILE_CSV": temp_f.name})
+    env.update({"ONEFLOW_PROFILE_PRINT_SUMMARY": "0"})
+    subprocess.run([sys.executable, "-m", "oneflow.autoprof", *sys.argv[1:]], env=env)
+    temp_f.close()
+    temp_f = open(temp_f.name, "r")
+    rows.extend(list(csv.reader(temp_f))[1:])
+    temp_f.close()
+    os.remove(temp_f.name)
+
+    writer.writerows(rows)
+    exit(0)
+
 writer.writerow(
     [
         "OP",
@@ -155,48 +92,14 @@ writer.writerow(
     ]
 )
 
-
 auto_profiler.set_hardware_info_list([("cuda", None), ("cpu", 1), ("cpu", 32)])
 
+if ONLY_ONEFLOW:
+    auto_profiler.profiled_framework = ["oneflow"]
+if ONLY_PYTORCH:
+    auto_profiler.profiled_framework = ["pytorch"]
 
-def add_row(profs):
-    op_name = get_sole_value([prof.op_name for prof in profs])
-    args_description = get_sole_value([prof.args_description for prof in profs])
-    additional_description = get_sole_value(
-        [prof.additional_description for prof in profs]
-    )
-    writer.writerow(
-        [
-            op_name,
-            args_description,
-            "OneFlow",
-            get_oneflow_gpu_kernel_time(profs[0]),
-            get_oneflow_gpu_kernel_bandwidth(profs[0]),
-            get_oneflow_cpu_kernel_time(profs[1]),
-            get_oneflow_cpu_end_to_end_time(profs[1]),
-            get_oneflow_cpu_kernel_time(profs[2]),
-            get_oneflow_cpu_end_to_end_time(profs[2]),
-            additional_description,
-        ]
-    )
-    writer.writerow(
-        [
-            op_name,
-            args_description,
-            "PyTorch",
-            get_pytorch_gpu_kernel_time(profs[3]),
-            "-",
-            get_pytorch_cpu_kernel_time(profs[4]),
-            get_pytorch_cpu_end_to_end_time(profs[4]),
-            get_pytorch_cpu_kernel_time(profs[5]),
-            get_pytorch_cpu_end_to_end_time(profs[5]),
-            additional_description,
-        ]
-    )
-    f.flush()
-
-
-auto_profiler.set_profiler_hook(add_row)
+auto_profiler.set_profiler_hook(lambda profs: add_row(profs, writer, f))
 
 # Align with https://github.com/python/cpython/blob/3.10/Lib/unittest/__main__.py
 __unittest = True

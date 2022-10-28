@@ -46,7 +46,7 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
@@ -112,7 +112,7 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
         ctx->SaveTensorForBackward(inputs.at(1));  // moving_mean 3
         ctx->SaveTensorForBackward(inputs.at(2));  // moving_variance 4
       } else {
-        CHECK_EQ_OR_RETURN(inputs.size(), 6);
+        CHECK_EQ_OR_RETURN(inputs.size(), 6);  // NOLINT(maybe-need-error-msg)
         // with add_end
         ctx->SaveTensorForBackward(inputs.at(2));  // moving_mean 3
         ctx->SaveTensorForBackward(inputs.at(3));  // moving_variance 4
@@ -149,10 +149,10 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
     const auto& results = JUST(functional::NormalizationAddReluGrad(
         x, y_grad, mean, inv_variance, gamma, beta, reserve_space, y, ctx->axis, ctx->epsilon,
         ctx->has_addend));
-    CHECK_EQ_OR_RETURN(results->size(),
-                       ctx->has_addend ? 4 : 3)
-        << "The result size is incorrect";  // here output includes "gamma_diff" "beta_diff" "dx"
-                                            // "addend_diff"
+    CHECK_EQ_OR_RETURN(results->size(), (ctx->has_addend ? 4 : 3))
+        << Error::RuntimeError() << "The number of results is expected to be "
+        << (ctx->has_addend ? 4 : 3) << ", but got "
+        << results->size();  // here output includes "gamma_diff" "beta_diff" "dx" "addend_diff"
 
     if (ctx->track_running_stats) {
       // The normalization op has 5 inputs which are x, moving_mean, moving_variance, gamma and

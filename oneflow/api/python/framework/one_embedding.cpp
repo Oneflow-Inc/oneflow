@@ -39,8 +39,8 @@ class OneEmbeddingHandler final {
 
   void LoadSnapshot(const std::string& snapshot_name) {
 #ifdef WITH_CUDA
-    Global<embedding::EmbeddingManager>::Get()->LoadSnapshot(embedding_name_, local_rank_id_,
-                                                             rank_id_, snapshot_name);
+    Singleton<embedding::EmbeddingManager>::Get()->LoadSnapshot(embedding_name_, local_rank_id_,
+                                                                rank_id_, snapshot_name);
 #else
     UNIMPLEMENTED() << "Only Support with CUDA";
 #endif
@@ -48,8 +48,8 @@ class OneEmbeddingHandler final {
 
   void SaveSnapshot(const std::string& snapshot_name) {
 #ifdef WITH_CUDA
-    Global<embedding::EmbeddingManager>::Get()->SaveSnapshot(embedding_name_, local_rank_id_,
-                                                             rank_id_, snapshot_name);
+    Singleton<embedding::EmbeddingManager>::Get()->SaveSnapshot(embedding_name_, local_rank_id_,
+                                                                rank_id_, snapshot_name);
 #else
     UNIMPLEMENTED() << "Only Support with CUDA";
 #endif
@@ -58,7 +58,7 @@ class OneEmbeddingHandler final {
  private:
   void CreateKeyValueStore(const embedding::KeyValueStoreOptions& key_value_store_options) {
 #ifdef WITH_CUDA
-    Global<embedding::EmbeddingManager>::Get()->CreateKeyValueStore(
+    Singleton<embedding::EmbeddingManager>::Get()->CreateKeyValueStore(
         key_value_store_options, local_rank_id_, rank_id_, world_size_);
 #else
     UNIMPLEMENTED() << "Only Support with CUDA";
@@ -222,6 +222,7 @@ class PersistentTableReaderImpl : public PersistentTableReader {
       options.value_size = storage_dim * sizeof(Value);
       options.target_chunk_size_mb = target_chunk_size_mb;
       options.physical_block_size = physical_block_size;
+      options.read_only = true;
       tables_[i] = NewPersistentTable(options);
       iterators_[i] =
           std::unique_ptr<PersistentTable::Iterator>(tables_[i]->ReadSnapshot(snapshot_name));

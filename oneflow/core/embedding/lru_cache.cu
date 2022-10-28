@@ -211,7 +211,7 @@ struct SetContext {
       : keys(ctx.keys + set_id * kWarpSize),
         mutex(reinterpret_cast<WarpMutex*>(ctx.mutex) + set_id),
         ages(ctx.ages + set_id * kWarpSize),
-        lines(ctx.lines + set_id * kWarpSize * ctx.line_size) {}
+        lines(ctx.lines + static_cast<size_t>(set_id) * kWarpSize * ctx.line_size) {}
 
   __device__ int Lookup(const ThreadContext& thread_ctx, Key key) {
     const Key lane_key = keys[thread_ctx.lane_id];
@@ -480,7 +480,8 @@ __global__ void DumpKernel(LruCacheContext<Key, Elem> cache_ctx, size_t start_ke
       __syncwarp();
       for (uint32_t j = thread_ctx.lane_id; j < cache_ctx.line_size; j += kWarpSize) {
         values[offset * cache_ctx.line_size + j] =
-            cache_ctx.lines[(warp_start_key_index + i) * cache_ctx.line_size + j];
+            cache_ctx
+                .lines[static_cast<size_t>(warp_start_key_index + i) * cache_ctx.line_size + j];
       }
       __syncwarp();
       offset += 1;
@@ -496,7 +497,8 @@ class LruCache : public Cache {
       : device_index_{},
         max_query_length_(0),
         query_indices_buffer_(nullptr),
-        query_keys_buffer_(nullptr) {
+        query_keys_buffer_(nullptr),
+        value_type_(options.value_type) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     InitLruCacheContext(options, &ctx_);
   }
@@ -511,6 +513,7 @@ class LruCache : public Cache {
 
   uint32_t KeySize() const override { return sizeof(Key); }
   uint32_t ValueSize() const override { return sizeof(Elem) * ctx_.line_size; }
+  DataType ValueType() const override { return value_type_; }
   uint64_t Capacity() const override { return ctx_.n_set * kWarpSize; }
   uint32_t MaxQueryLength() const override { return max_query_length_; }
 
@@ -539,6 +542,7 @@ class LruCache : public Cache {
                               static_cast<Key*>(missing_keys), missing_indices);
   }
 
+  using Cache::Get;
   void Get(ep::Stream* stream, uint32_t n_keys, const void* keys, void* values, uint32_t* n_missing,
            void* missing_keys, uint32_t* missing_indices) override {
     CHECK_LE(n_keys, max_query_length_);
@@ -579,6 +583,11 @@ class LruCache : public Cache {
         static_cast<Elem*>(values));
   }
 
+  void ClearDirtyFlags() override {
+    // do nothing.
+    return;
+  }
+
   void Clear() override { ClearLruCacheContext<Key, Elem>(&ctx_); }
 
  private:
@@ -587,6 +596,7 @@ class LruCache : public Cache {
   LruCacheContext<Key, Elem> ctx_;
   uint32_t* query_indices_buffer_;
   Key* query_keys_buffer_;
+  DataType value_type_;
 };
 
 template<typename Key>

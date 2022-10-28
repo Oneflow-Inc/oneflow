@@ -1831,7 +1831,7 @@ class TestConv2d(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest()
+    @autotest(n=5)
     def test_conv2d_with_random_data(test_case):
         channels = random(1, 6)
         m = torch.nn.Conv2d(
@@ -1851,7 +1851,7 @@ class TestConv2d(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(check_graph=False)
+    @autotest(n=5, check_graph=False)
     def test_conv2d_0size_with_random_data(test_case):
         channels = random(1, 6)
         m = torch.nn.Conv2d(
@@ -1872,7 +1872,7 @@ class TestConv2d(flow.unittest.TestCase):
         return y
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    @autotest(n=30, check_allclose=False)
+    @autotest(n=5, check_allclose=False)
     def test_conv2d_group_with_random_data(test_case):
         channels = 720  # lcm(1, 2, 3, 4, 5, 6)
         m = torch.nn.Conv2d(
@@ -1999,12 +1999,26 @@ class TestConv2d(flow.unittest.TestCase):
     @profile(torch.nn.functional.conv2d)
     def profile_conv2d(test_case):
         input = torch.ones(8, 128, 28, 28)
-        weight = torch.ones(128, 128, 3, 3)
+        weight_128c = torch.ones(128, 128, 3, 3)
+        weight_128c_2g = torch.ones(128, 64, 3, 3)
+        weight_1x1_128c = torch.ones(128, 128, 1, 1)
+        weight_5x5_128c = torch.ones(128, 128, 5, 5)
         bias = torch.ones(128)
-        torch.nn.functional.conv2d(input, weight, padding=1)
-        torch.nn.functional.conv2d(input, weight, padding=1, stride=2)
-        torch.nn.functional.conv2d(input, weight, bias=bias, padding=1)
-        torch.nn.functional.conv2d(input, weight, bias=bias, padding=1, stride=2)
+        torch.nn.functional.conv2d(input, weight_128c, padding=1)
+        torch.nn.functional.conv2d(input, weight_128c_2g, groups=2, padding=1)
+        torch.nn.functional.conv2d(input, weight_128c, padding=1, stride=2)
+        torch.nn.functional.conv2d(input, weight_128c, bias=bias, padding=1)
+        torch.nn.functional.conv2d(input, weight_128c, bias=bias, padding=1, stride=2)
+        torch.nn.functional.conv2d(input, weight_1x1_128c)
+        torch.nn.functional.conv2d(input, weight_1x1_128c, stride=2)
+        torch.nn.functional.conv2d(input, weight_1x1_128c, bias=bias)
+        torch.nn.functional.conv2d(input, weight_1x1_128c, bias=bias, stride=2)
+        torch.nn.functional.conv2d(input, weight_5x5_128c, padding=2)
+        torch.nn.functional.conv2d(input, weight_5x5_128c, padding=2, stride=2)
+        torch.nn.functional.conv2d(input, weight_5x5_128c, bias=bias, padding=2)
+        torch.nn.functional.conv2d(
+            input, weight_5x5_128c, bias=bias, padding=2, stride=2
+        )
 
 
 if __name__ == "__main__":

@@ -30,9 +30,9 @@ std::pair<T, T> GetTargetResizedSize4ImageBuffer(const TensorBuffer& image_buffe
   CHECK_GT(target_size, 0);
   if (min_size > 0) { CHECK_GE(target_size, min_size); }
   if (max_size > 0) { CHECK_LE(target_size, max_size); }
-  CHECK_EQ(image_buffer.shape().NumAxes(), 3);
-  const T origin_height = image_buffer.shape().At(0);
-  const T origin_width = image_buffer.shape().At(1);
+  CHECK_EQ(image_buffer.shape_view().NumAxes(), 3);
+  const T origin_height = image_buffer.shape_view().At(0);
+  const T origin_width = image_buffer.shape_view().At(1);
 
   // set round to banker's rounding
   int origin_round_way = std::fegetround();
@@ -122,28 +122,28 @@ class ImageResizeToFixedSizeKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     CHECK_NOTNULL(in_tensor);
-    const int64_t batch_size = in_tensor->shape().elem_cnt();
+    const int64_t batch_size = in_tensor->shape_view().elem_cnt();
     CHECK_GT(batch_size, 0);
 
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(out_tensor->shape().NumAxes(), 4);
-    CHECK_EQ(out_tensor->shape().At(0), batch_size);
-    int64_t res_h = out_tensor->shape().At(1);
-    int64_t res_w = out_tensor->shape().At(2);
-    int64_t channels = out_tensor->shape().At(3);
+    CHECK_EQ(out_tensor->shape_view().NumAxes(), 4);
+    CHECK_EQ(out_tensor->shape_view().At(0), batch_size);
+    int64_t res_h = out_tensor->shape_view().At(1);
+    int64_t res_w = out_tensor->shape_view().At(2);
+    int64_t channels = out_tensor->shape_view().At(3);
     int64_t elem_cnt_per_img = res_h * res_w * channels;
 
     user_op::Tensor* scale_tensor = ctx->Tensor4ArgNameAndIndex("scale", 0);
-    CHECK_EQ(scale_tensor->shape().NumAxes(), 2);
-    CHECK_EQ(scale_tensor->shape().At(0), batch_size);
-    CHECK_EQ(scale_tensor->shape().At(1), 2);
+    CHECK_EQ(scale_tensor->shape_view().NumAxes(), 2);
+    CHECK_EQ(scale_tensor->shape_view().At(0), batch_size);
+    CHECK_EQ(scale_tensor->shape_view().At(1), 2);
 
     MultiThreadLoop(batch_size, [&](size_t i) {
       const TensorBuffer& in_buffer = in_tensor->dptr<TensorBuffer>()[i];
-      CHECK_EQ(in_buffer.shape().NumAxes(), 3);
-      const int64_t origin_height = in_buffer.shape().At(0);
-      const int64_t origin_width = in_buffer.shape().At(1);
-      CHECK_EQ(in_buffer.shape().At(2), channels);
+      CHECK_EQ(in_buffer.shape_view().NumAxes(), 3);
+      const int64_t origin_height = in_buffer.shape_view().At(0);
+      const int64_t origin_width = in_buffer.shape_view().At(1);
+      CHECK_EQ(in_buffer.shape_view().At(2), channels);
       DataType dtype = ctx->Attr<DataType>("data_type");
       int interp_flag = GetCvInterpolationFlag(ctx->Attr<std::string>("interpolation_type"),
                                                origin_width, origin_height, res_w, res_h);
@@ -195,7 +195,7 @@ class ImageResizeKeepAspectRatioKernel final : public user_op::OpKernel {
     TensorBuffer* scale_buf = scale_tensor->mut_dptr<TensorBuffer>();
     TensorBuffer* size_buf = size_tensor->mut_dptr<TensorBuffer>();
 
-    const int64_t num_images = in_tensor->shape().elem_cnt();
+    const int64_t num_images = in_tensor->shape_view().elem_cnt();
     const bool resize_longer = ctx->Attr<bool>("resize_longer");
     const int32_t target_size = ctx->Attr<int32_t>("target_size");
     const int32_t min_size = ctx->Attr<int32_t>("min_size");
@@ -205,10 +205,10 @@ class ImageResizeKeepAspectRatioKernel final : public user_op::OpKernel {
     MultiThreadLoop(num_images, [&](size_t i) {
       ImageTargetResize(in_img_buf[i], out_img_buf + i, resize_longer, target_size, min_size,
                         max_size, interp_type);
-      const int64_t org_h = in_img_buf[i].shape().At(0);
-      const int64_t org_w = in_img_buf[i].shape().At(1);
-      const int64_t res_h = out_img_buf[i].shape().At(0);
-      const int64_t res_w = out_img_buf[i].shape().At(1);
+      const int64_t org_h = in_img_buf[i].shape_view().At(0);
+      const int64_t org_w = in_img_buf[i].shape_view().At(1);
+      const int64_t res_h = out_img_buf[i].shape_view().At(0);
+      const int64_t res_w = out_img_buf[i].shape_view().At(1);
 
       scale_buf[i].Resize(Shape({2}), DataType::kFloat);
       scale_buf[i].mut_data<float>()[0] = static_cast<float>(res_w) / static_cast<float>(org_w);

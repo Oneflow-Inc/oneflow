@@ -16,6 +16,10 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#if CUDA_VERSION >= 11000
+#include <cuda_bf16.h>
+#endif  // CUDA_VERSION >= 11000
+#include "oneflow/core/device/cuda_pseudo_bfloat16.h"
 
 namespace oneflow {
 
@@ -42,10 +46,20 @@ struct GeluFunctor<half> {
   }
 };
 
+#if CUDA_VERSION >= 11000
+template<>
+struct GeluFunctor<nv_bfloat16> {
+  GeluFunctor<float> float_functor;
+  __device__ nv_bfloat16 Compute(nv_bfloat16 x, int64_t i) const {
+    return static_cast<nv_bfloat16>(float_functor.Compute(static_cast<float>(x), i));
+  }
+};
+#endif
+
 template<typename T>
 struct MaskAndScaleFunctor {
   MaskAndScaleFunctor(const bool* mask, float scale) : mask(mask), scale(scale) {}
-  __device__ T Compute(T x, int64_t i) const { return x * static_cast<T>(mask[i]) * scale; }
+  __device__ T Compute(T x, int64_t i) const { return x * static_cast<T>(mask[i] * scale); }
   const bool* mask;
   float scale;
 };
@@ -74,7 +88,7 @@ struct MaskAndScaleAddFunctor {
   MaskAndScaleAddFunctor(const bool* mask, const T* addend, float scale)
       : mask(mask), addend(addend), scale(scale) {}
   __device__ T Compute(T x, int64_t i) const {
-    return x * static_cast<T>(mask[i]) * scale + addend[i];
+    return x * static_cast<T>(mask[i] * scale) + addend[i];
   }
   const bool* mask;
   const T* addend;
@@ -121,6 +135,17 @@ struct GeluGradFunctor<half> {
     return __float2half(float_functor.Compute(__half2float(x), __half2float(dy), i));
   }
 };
+
+#if CUDA_VERSION >= 11000
+template<>
+struct GeluGradFunctor<nv_bfloat16> {
+  GeluGradFunctor<float> float_functor;
+  __device__ nv_bfloat16 Compute(nv_bfloat16 x, nv_bfloat16 dy, int64_t i) const {
+    return static_cast<nv_bfloat16>(
+        float_functor.Compute(static_cast<float>(x), static_cast<float>(dy), i));
+  }
+};
+#endif
 
 template<typename FUNCTOR, typename T, typename Index>
 __global__ void FusedBiasAddGpu(FUNCTOR functor, const Index elem_cnt, const Index bias_size,
@@ -339,10 +364,10 @@ class FusedFusedBiasAddKernel final : public user_op::OpKernel {
     const auto* b_tensor = ctx->Tensor4ArgNameAndIndex("b", 0);
     auto* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int32_t bias_add_axis = ctx->Attr<int32_t>("axis");
-    const int64_t outer_size = a_tensor->shape().Count(0, bias_add_axis);
-    const int64_t bias_size = a_tensor->shape().At(bias_add_axis);
-    const int64_t inner_size = a_tensor->shape().Count(bias_add_axis + 1);
-    const auto n = a_tensor->shape().elem_cnt();
+    const int64_t outer_size = a_tensor->shape_view().Count(0, bias_add_axis);
+    const int64_t bias_size = a_tensor->shape_view().At(bias_add_axis);
+    const int64_t inner_size = a_tensor->shape_view().Count(bias_add_axis + 1);
+    const auto n = a_tensor->shape_view().elem_cnt();
     GeluFunctor<T> gelu_functor{};
     DispatchFusedBiasAddForwardImpl<decltype(gelu_functor), T>(
         ctx->stream(), gelu_functor, n, outer_size, bias_size, inner_size, a_tensor->dptr<T>(),
@@ -361,6 +386,9 @@ class FusedFusedBiasAddKernel final : public user_op::OpKernel {
 REGISTER_FUSED_BIAS_ADD_GELU_KERNEL(float)
 REGISTER_FUSED_BIAS_ADD_GELU_KERNEL(double)
 REGISTER_FUSED_BIAS_ADD_GELU_KERNEL(half)
+#if CUDA_VERSION >= 11000
+REGISTER_FUSED_BIAS_ADD_GELU_KERNEL(nv_bfloat16)
+#endif
 
 template<typename T>
 class FusedBiasAddMaskScaleKernel final : public user_op::OpKernel {
@@ -377,10 +405,10 @@ class FusedBiasAddMaskScaleKernel final : public user_op::OpKernel {
     auto* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int32_t bias_add_axis = ctx->Attr<int32_t>("axis");
     const float scale = ctx->Attr<float>("scale");
-    const int64_t outer_size = a_tensor->shape().Count(0, bias_add_axis);
-    const int64_t bias_size = a_tensor->shape().At(bias_add_axis);
-    const int64_t inner_size = a_tensor->shape().Count(bias_add_axis + 1);
-    const auto n = a_tensor->shape().elem_cnt();
+    const int64_t outer_size = a_tensor->shape_view().Count(0, bias_add_axis);
+    const int64_t bias_size = a_tensor->shape_view().At(bias_add_axis);
+    const int64_t inner_size = a_tensor->shape_view().Count(bias_add_axis + 1);
+    const auto n = a_tensor->shape_view().elem_cnt();
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       MaskAndScaleAddFunctor<T> mask_and_scale_add_functor(mask_tensor->dptr<bool>(),
@@ -408,6 +436,9 @@ class FusedBiasAddMaskScaleKernel final : public user_op::OpKernel {
 REGISTER_FUSED_BIAS_ADD_MASK_SCALE_KERNEL(float)
 REGISTER_FUSED_BIAS_ADD_MASK_SCALE_KERNEL(double)
 REGISTER_FUSED_BIAS_ADD_MASK_SCALE_KERNEL(half)
+#if CUDA_VERSION >= 11000
+REGISTER_FUSED_BIAS_ADD_MASK_SCALE_KERNEL(nv_bfloat16)
+#endif
 
 template<typename T>
 class FusedFusedBiasAddGradKernel final : public user_op::OpKernel {
@@ -423,10 +454,10 @@ class FusedFusedBiasAddGradKernel final : public user_op::OpKernel {
     const auto* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     auto* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const int32_t bias_add_axis = ctx->Attr<int32_t>("axis");
-    const int64_t outer_size = a_tensor->shape().Count(0, bias_add_axis);
-    const int64_t bias_size = a_tensor->shape().At(bias_add_axis);
-    const int64_t inner_size = a_tensor->shape().Count(bias_add_axis + 1);
-    const auto n = a_tensor->shape().elem_cnt();
+    const int64_t outer_size = a_tensor->shape_view().Count(0, bias_add_axis);
+    const int64_t bias_size = a_tensor->shape_view().At(bias_add_axis);
+    const int64_t inner_size = a_tensor->shape_view().Count(bias_add_axis + 1);
+    const auto n = a_tensor->shape_view().elem_cnt();
     GeluGradFunctor<T> gelu_grad_functor;
     if (IsKernelSafeInt32(n)) {
       FusedBiasAddGradImpl<decltype(gelu_grad_functor), T, int32_t>(
@@ -451,5 +482,8 @@ class FusedFusedBiasAddGradKernel final : public user_op::OpKernel {
 REGISTER_FUSED_BIAS_ADD_GELU_GRAD_KERNEL(float)
 REGISTER_FUSED_BIAS_ADD_GELU_GRAD_KERNEL(double)
 REGISTER_FUSED_BIAS_ADD_GELU_GRAD_KERNEL(half)
+#if CUDA_VERSION >= 11000
+REGISTER_FUSED_BIAS_ADD_GELU_GRAD_KERNEL(nv_bfloat16)
+#endif
 
 }  // namespace oneflow

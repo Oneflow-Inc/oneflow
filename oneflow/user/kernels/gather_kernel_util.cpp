@@ -29,9 +29,9 @@ Shape GetFlatShape(const ShapeView& shape, int64_t axis) {
 template<DeviceType device_type, typename T, typename K>
 void GatherForward(ep::Stream* stream, const Blob* indices, const Blob* in, int64_t axis, Blob* out,
                    const int64_t offset) {
-  const Shape& flat_in_shape = GetFlatShape(in->shape(), axis);
+  const Shape& flat_in_shape = GetFlatShape(in->shape_view(), axis);
   GatherKernelUtilImpl<device_type, T, K>::Forward(stream, indices->dptr<K>(),
-                                                   indices->shape().elem_cnt(), in->dptr<T>(),
+                                                   indices->shape_view().elem_cnt(), in->dptr<T>(),
                                                    flat_in_shape, out->mut_dptr<T>(), offset);
 }
 
@@ -85,7 +85,7 @@ void GatherKernelUtilImpl<DeviceType::kCPU, T, K>::Forward(ep::Stream* stream, c
         const T* from = in + outer_idx * gather_dim_size * inner_dim_size + idx * inner_dim_size;
         std::copy(from, from + inner_dim_size, to);
       } else {
-        std::memset(reinterpret_cast<void*>(to), 0, inner_dim_size * sizeof(K));
+        std::memset(reinterpret_cast<void*>(to), 0, inner_dim_size * sizeof(T));
       }
     }
   }
@@ -94,7 +94,8 @@ void GatherKernelUtilImpl<DeviceType::kCPU, T, K>::Forward(ep::Stream* stream, c
 #define INITIATE_GATHER_KERNEL_UTIL_CPU_IMPL(in_type_pair, index_type_pair)              \
   template struct GatherKernelUtilImpl<DeviceType::kCPU, OF_PP_PAIR_FIRST(in_type_pair), \
                                        OF_PP_PAIR_FIRST(index_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_CPU_IMPL, GATHER_DATA_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_CPU_IMPL,
+                                 GATHER_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ,
                                  GATHER_INDEX_TYPE_SEQ);
 #undef INITIATE_GATHER_KERNEL_UTIL_CPU_IMPL
 
@@ -102,6 +103,10 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_CPU_IMPL, GATHER_DA
   template struct GatherKernelUtil<device_type, OF_PP_PAIR_FIRST(in_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL, DEVICE_TYPE_SEQ,
                                  GATHER_DATA_TYPE_SEQ);
+// For cpu float16/bfloat16
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL,
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU),
+                                 FLOAT16_DATA_TYPE_SEQ BFLOAT16_DATA_TYPE_SEQ);
 #undef INITIATE_GATHER_KERNEL_UTIL
 
 }  // namespace oneflow

@@ -76,13 +76,13 @@ class ArangeKernel final : public OpKernel {
     T* output = out->mut_dptr<T>();
     const DataType dtype = ctx->Attr<DataType>("dtype");
     int64_t arange_elem_cnt = 0;
-    T start = 0;
-    T delta = 0;
-    T limit = 0;
+    T start = static_cast<T>(0.0);
+    T delta = static_cast<T>(0.0);
+    T limit = static_cast<T>(0.0);
     if (IsIntegralDataType(dtype)) {
-      start = ctx->Attr<int64_t>("integer_start");
-      delta = ctx->Attr<int64_t>("integer_delta");
-      limit = ctx->Attr<int64_t>("integer_limit");
+      start = static_cast<T>(static_cast<double>(ctx->Attr<int64_t>("integer_start")));
+      delta = static_cast<T>(static_cast<double>(ctx->Attr<int64_t>("integer_delta")));
+      limit = static_cast<T>(static_cast<double>(ctx->Attr<int64_t>("integer_limit")));
       arange_elem_cnt = std::ceil(static_cast<double>(limit - start) / delta);
     } else {
       // If we use static_cast<T>(start, delta, limit) and std::ceil to calculate arange_elem_cnt,
@@ -121,12 +121,15 @@ class ArangeKernel final : public OpKernel {
   REGISTER_ARANGE_KERNEL(device, float)             \
   REGISTER_ARANGE_KERNEL(device, double)
 
+#define REGISTER_ARANGE_KERNELS_WITH_CUDA_HALF(device) REGISTER_ARANGE_KERNEL(device, half)
+
 // Register CPU version
 REGISTER_ARANGE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 
 // Register GPU version
 #ifdef WITH_CUDA
 REGISTER_ARANGE_KERNELS_WITH_DEVICE(DeviceType::kCUDA);
+REGISTER_ARANGE_KERNELS_WITH_CUDA_HALF(DeviceType::kCUDA);
 #endif
 }  // namespace user_op
 }  // namespace oneflow

@@ -20,27 +20,6 @@ namespace oneflow {
 
 namespace {
 
-std::function<bool(const OpNode* op_node)> MakePredicatorIsSafeToDelete(const OpGraph& op_graph) {
-  HashSet<std::string> ctrl_in_op_names;
-  op_graph.ForEachNode([&](const OpNode* op_node) {
-    for (const std::string& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
-      ctrl_in_op_names.insert(ctrl_in_op_name);
-    }
-  });
-  return [=](const OpNode* op_node) {
-    if (op_node->out_edges().size() > 1) { return false; }
-    if (!op_node->op().op_conf().ctrl_in_op_name().empty()) { return false; }
-    if (ctrl_in_op_names.find(op_node->op().op_conf().name()) != ctrl_in_op_names.end()) {
-      return false;
-    }
-    return true;
-  };
-}
-
-bool IsUserOpWithTypeName(const OperatorConf& op_conf, const std::string& op_type_name) {
-  return op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == op_type_name;
-};
-
 class FuseCastScalePass final : public JobPass {
  public:
   FuseCastScalePass() = default;
@@ -78,7 +57,9 @@ Maybe<void> FuseCastScalePass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     }
     const user_op::UserOpConfWrapper cast_user_conf(op_node->op().op_conf());
     if (op_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(cast_user_conf.input("in", 0))).data_type()
-        != DataType::kFloat16) {
+            != DataType::kFloat16
+        && op_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(cast_user_conf.input("in", 0))).data_type()
+               != DataType::kBFloat16) {
       return;
     }
     if (op_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(cast_user_conf.output("out", 0))).data_type()

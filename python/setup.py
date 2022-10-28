@@ -45,7 +45,7 @@ REQUIRED_PACKAGES = [
     "tqdm",
     "requests",
     "pillow",
-    "prettytable",
+    "rich",
 ]
 # if python version < 3.7.x, than need pip install dataclasses
 if sys.version_info.minor < 7:
@@ -98,4 +98,7 @@ setup(
     zip_safe=False,
     distclass=BinaryDistribution,
     cmdclass={"install": InstallPlatlib},
+    entry_points={
+        "console_scripts": ["oneflow-mock-torch=oneflow.mock_torch.__main__:main"]
+    },
 )

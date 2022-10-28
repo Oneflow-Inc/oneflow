@@ -45,15 +45,15 @@ class Variance : public OpExprGradFunction<VarianceState> {
 
 Maybe<void> Variance::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Variance::Capture(VarianceState* ctx, const TensorTuple& inputs,
                               const TensorTuple& outputs, const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), 1);
-  CHECK_EQ_OR_RETURN(outputs.size(), 1);
+  CHECK_EQ_OR_RETURN(inputs.size(), 1);   // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -70,7 +70,9 @@ Maybe<void> Variance::Apply(const VarianceState* ctx, const TensorTuple& out_gra
   const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
   size_t correction = ctx->unbiased ? 1 : 0;
   size_t elem_cnt = 1;
-  CHECK_OR_RETURN(ctx->axis.size() > 0);
+  CHECK_OR_RETURN(ctx->axis.size() > 0)
+      << Error::RuntimeError() << "The size of the axis must greater than 0, but got "
+      << ctx->axis.size();
   for (const auto& item : ctx->axis) { elem_cnt *= x->shape()->At(item); }
 
   std::shared_ptr<Tensor> out_grad = out_grads.at(0);
@@ -82,7 +84,11 @@ Maybe<void> Variance::Apply(const VarianceState* ctx, const TensorTuple& out_gra
       unsqueeze_vector.insert(unsqueeze_vector.begin() + ctx->axis.at(i), 1);
     }
     Shape unsqueeze_shape(unsqueeze_vector);
-    CHECK_EQ_OR_RETURN(unsqueeze_shape.elem_cnt(), out_grad_shape->elem_cnt());
+    CHECK_EQ_OR_RETURN(unsqueeze_shape.elem_cnt(), out_grad_shape->elem_cnt())
+        << Error::RuntimeError()
+        << "tensor size mismatch, expected tensor to have the same number of elements, but got "
+        << unsqueeze_shape.elem_cnt() << " and " << out_grad_shape->elem_cnt()
+        << " elements respectively";
     out_grad = JUST(functional::Reshape(out_grad, unsqueeze_shape));
   }
 

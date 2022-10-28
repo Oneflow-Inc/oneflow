@@ -30,14 +30,14 @@ class ScalarPow : public OpExprGradFunction<ScalarPowCaptureState> {
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Capture(ScalarPowCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -55,7 +55,6 @@ class ScalarPow : public OpExprGradFunction<ScalarPowCaptureState> {
   Maybe<void> Apply(const ScalarPowCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& x = ctx->SavedTensors().at(0);
-    MutableAttrMap attrs;
     in_grads->resize(1);
     if (ctx->requires_grad) {
       in_grads->at(0) = JUST(functional::ScalarPowGrad(x, out_grads.at(0), ctx->operand));
@@ -64,7 +63,6 @@ class ScalarPow : public OpExprGradFunction<ScalarPowCaptureState> {
   }
 
  private:
-  std::shared_ptr<OpExpr> grad_op_;
   AttrMap base_attrs_;
 };
 
@@ -75,14 +73,14 @@ class ScalarReversePow : public OpExprGradFunction<ScalarPowCaptureState> {
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Capture(ScalarPowCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs[0]->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -100,7 +98,6 @@ class ScalarReversePow : public OpExprGradFunction<ScalarPowCaptureState> {
   Maybe<void> Apply(const ScalarPowCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& x = ctx->SavedTensors()[0];
-    MutableAttrMap attrs;
     in_grads->resize(1);
     if (ctx->requires_grad) {
       (*in_grads)[0] = JUST(functional::ScalarReversePowGrad(x, out_grads[0], ctx->operand));
@@ -109,7 +106,6 @@ class ScalarReversePow : public OpExprGradFunction<ScalarPowCaptureState> {
   }
 
  private:
-  std::shared_ptr<OpExpr> grad_op_;
   AttrMap base_attrs_;
 };
 

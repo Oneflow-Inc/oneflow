@@ -39,10 +39,7 @@ class TestDevice(flow.unittest.TestCase):
         #         device = flow.device("cuda:1000")
         #         flow.Tensor(2, 3).to(device=device)
         #     test_case.assertTrue("CUDA error: invalid device ordinal" in str(exp.exception))
-
-        with test_case.assertRaises(RuntimeError) as exp:
-            device = flow.device("cpu:1000")
-            flow.Tensor(2, 3).to(device=device)
+        pass
 
 
 if __name__ == "__main__":

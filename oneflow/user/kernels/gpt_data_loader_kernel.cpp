@@ -76,9 +76,9 @@ class GPTDataLoader final : public OpKernelState {
   template<typename T>
   void GetBatch(size_t iter, user_op::Tensor* tokens) const {
     const size_t sample_len = seq_len_ + label_len_;
-    CHECK_EQ(tokens->shape().NumAxes(), 2);
-    CHECK_EQ(tokens->shape().At(0), batch_size_);
-    CHECK_EQ(tokens->shape().At(1), sample_len);
+    CHECK_EQ(tokens->shape_view().NumAxes(), 2);
+    CHECK_EQ(tokens->shape_view().At(0), batch_size_);
+    CHECK_EQ(tokens->shape_view().At(1), sample_len);
     T* dptr = tokens->mut_dptr<T>();
     for (size_t i = 0; i < batch_size_; ++i) {
       size_t sample_iter = iter * batch_size_ * num_shards_ + shard_index_ * batch_size_ + i;
@@ -120,7 +120,7 @@ class GPTDataLoaderKernel final : public OpKernel {
     user_op::Tensor* iteration_tensor = ctx->Tensor4ArgNameAndIndex("iteration", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     if (iteration_tensor) {
-      CHECK_EQ(iteration_tensor->shape().elem_cnt(), 1);
+      CHECK_EQ(iteration_tensor->shape_view().elem_cnt(), 1);
       CHECK_EQ(iteration_tensor->data_type(), DataType::kInt64);
       int64_t* iter_ptr = iteration_tensor->mut_dptr<int64_t>();
       loader->GetBatch<T>(*iter_ptr, out_tensor);

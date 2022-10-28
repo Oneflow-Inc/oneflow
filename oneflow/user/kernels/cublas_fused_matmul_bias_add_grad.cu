@@ -18,9 +18,13 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/memcpy.h"
 #include "oneflow/core/ep/cuda/cuda_device.h"
 // CUBLASLT_EPILOGUE_BGRADB only support in cuda11.4.2 or higher version.
+// TODO(zhengzekang): In cuda11.6 version, CUBLASLT_EPILOGUE_BGRADB may occur illegal memory access
+// error in some shapes.
 #if CUDA_VERSION >= 11060
 
 namespace oneflow {
+
+namespace {
 
 cudaDataType_t GetGemmComputeType(cudaDataType_t data_type) {
   switch (data_type) {
@@ -54,7 +58,6 @@ class CublasMatmulBiasAddGradKernel final : public user_op::OpKernel,
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* w_grad = ctx->Tensor4ArgNameAndIndex("w_grad", 0);
     user_op::Tensor* b_grad = ctx->Tensor4ArgNameAndIndex("b_grad", 0);
-
     const auto* matmul_grad_cache =
         CHECK_NOTNULL(dynamic_cast<const CublasFusedMLPKernelCache*>(cache));
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
@@ -64,7 +67,6 @@ class CublasMatmulBiasAddGradKernel final : public user_op::OpKernel,
     const cudaDataType_t cuda_data_type = GetCudaDataType(data_type);
     size_t cublas_m = 0, cublas_n = 0, cublas_k = 0;
     int64_t cublas_lda = 0, cublas_ldb = 0, cublas_ldc = 0;
-
     const double alpha = 1.0;
     const auto sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
     const double beta = 0.0;
@@ -72,9 +74,9 @@ class CublasMatmulBiasAddGradKernel final : public user_op::OpKernel,
 
     // currently only support 2D matmul.
     DimVector dy_shape(2);
-    dy->shape().ToDimVector(&dy_shape);
+    dy->shape_view().ToDimVector(&dy_shape);
     DimVector x_shape(2);
-    x->shape().ToDimVector(&x_shape);
+    x->shape_view().ToDimVector(&x_shape);
     cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_BGRADB;
 
     InferMatmulCublasMNK(dy_shape, x_shape,
@@ -113,7 +115,6 @@ class CublasMatmulBiasAddGradKernel final : public user_op::OpKernel,
               ctx->stream()->device_type(), ep::primitive::MemcpyKind::kDtoD);
       CHECK(memcpy_primitive);
       memcpy_primitive->Launch(ctx->stream(), b_grad->mut_dptr(), dy->dptr(), cublas_n * sizeof(T));
-
       OF_CUBLAS_CHECK(cublasGemmEx(
           cuda_stream->cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_T, cublas_m, cublas_n, cublas_k,
           &sp_alpha, x->dptr(), cuda_data_type, cublas_lda, dy->dptr(), cuda_data_type, cublas_ldb,
@@ -133,6 +134,8 @@ class CublasMatmulBiasAddGradKernel final : public user_op::OpKernel,
 REGISTER_CUBLAS_MATMUL_BIAS_ADD_GRAD_KERNEL(float)
 REGISTER_CUBLAS_MATMUL_BIAS_ADD_GRAD_KERNEL(double)
 REGISTER_CUBLAS_MATMUL_BIAS_ADD_GRAD_KERNEL(half)
+
+}  // namespace
 
 }  // namespace oneflow
 

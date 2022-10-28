@@ -34,13 +34,13 @@ class CpuEmbeddingRenormKernel final : public user_op::OpKernel {
     const double max_norm = ctx->Attr<double>("max_norm");
     const double norm_type = ctx->Attr<double>("norm_type");
 
-    const ShapeView& in_shape = in->shape();
+    const ShapeView& in_shape = in->shape_view();
     const int64_t emb_size = in_shape.At(0);
     const int64_t emb_dim = in_shape.At(1);
     const T* in_buf = in->dptr<T>();
     const IndexType* indices_buf = indices->dptr<IndexType>();
     T* out_buf = out->mut_dptr<T>();
-    const int64_t num_indices = indices->shape().elem_cnt();
+    const int64_t num_indices = indices->shape_view().elem_cnt();
     EmbeddingReNormFunctor<DeviceType::kCPU, T, IndexType>()(
         ctx->stream(), in_buf, indices_buf, out_buf, max_norm, norm_type, num_indices, emb_size,
         emb_dim, nullptr);
@@ -62,9 +62,9 @@ class CpuEmbeddingKernel final : public user_op::OpKernel {
     const int64_t padding_idx = ctx->Attr<int64_t>("padding_idx");
     const bool scale_grad_by_freq = ctx->Attr<bool>("scale_grad_by_freq");
 
-    const ShapeView& out_shape = out->shape();
+    const ShapeView& out_shape = out->shape_view();
     const int64_t num_indices = out_shape.Count(0, out_shape.NumAxes() - 1);
-    const int64_t emb_size = weight->shape().At(0);
+    const int64_t emb_size = weight->shape_view().At(0);
     const int64_t emb_dim = out_shape.At(out_shape.NumAxes() - 1);
     const T* weight_buf = weight->dptr<T>();
     const IndexType* indices_buf = indices->dptr<IndexType>();
@@ -92,9 +92,9 @@ class CpuEmbeddingGradKernel final : public user_op::OpKernel {
     const int64_t padding_idx = ctx->Attr<int64_t>("padding_idx");
     const bool scale_grad_by_freq = ctx->Attr<bool>("scale_grad_by_freq");
 
-    const ShapeView& dy_shape = dy->shape();
+    const ShapeView& dy_shape = dy->shape_view();
     const int64_t num_indices = dy_shape.Count(0, dy_shape.NumAxes() - 1);
-    const int64_t emb_size = weight->shape().At(0);
+    const int64_t emb_size = weight->shape_view().At(0);
     const int64_t emb_dim = dy_shape.At(dy_shape.NumAxes() - 1);
 
     const T* dy_buf = dy->dptr<T>();
@@ -104,7 +104,7 @@ class CpuEmbeddingGradKernel final : public user_op::OpKernel {
     std::unique_ptr<ep::primitive::Memset> memset_primitive =
         ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
     CHECK(memset_primitive);
-    memset_primitive->Launch(ctx->stream(), dx_buf, 0, dx->shape().Count(0) * sizeof(T));
+    memset_primitive->Launch(ctx->stream(), dx_buf, 0, dx->shape_view().Count(0) * sizeof(T));
     EmbeddingGradFunctor<DeviceType::kCPU, T, IndexType>()(ctx->stream(), dy_buf, indices_buf,
                                                            dx_buf, padding_idx, scale_grad_by_freq,
                                                            num_indices, emb_size, emb_dim, nullptr);

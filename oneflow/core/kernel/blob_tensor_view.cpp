@@ -22,9 +22,9 @@ namespace user_op {
 
 BlobTensorView::BlobTensorView(Blob* blob) : blob_(blob) {}
 
-ShapeView BlobTensorView::shape() const { return blob_->shape(); }
+ShapeView BlobTensorView::shape_view() const { return blob_->shape(); }
 
-MutShapeView BlobTensorView::mut_shape() { return *blob_->mut_shape_view(); }
+MutShapeView BlobTensorView::mut_shape_view() { return *blob_->mut_shape_view(); }
 
 const Stride& BlobTensorView::stride() const { return blob_->stride(); }
 

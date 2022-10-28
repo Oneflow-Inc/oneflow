@@ -28,7 +28,6 @@ message InterJobReuseMemStrategy {
 
 message ConfigProto {
   required Resource resource = 1;
-  repeated string load_lib_path = 4;
   required int64 session_id = 5;
 }
 

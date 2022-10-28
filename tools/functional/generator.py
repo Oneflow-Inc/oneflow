@@ -535,6 +535,7 @@ class Generator:
                     name
                 )
                 schema_fmt += "  HANDLE_ERRORS\n"
+                schema_fmt += '  OF_PROFILER_RANGE_GUARD("{0}");\n'.format(name)
                 schema_fmt += "  PythonFrameGuard pf;\n"
                 schema_fmt += '  static PythonArgParser<{0}> parser("{1}");\n'.format(
                     ", ".join(schema_types), name

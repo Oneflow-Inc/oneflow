@@ -42,7 +42,7 @@ namespace functional {
 
 struct PyObjectPtrDeleter {
   inline void operator()(PyObject* obj) {
-    CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+    CHECK_JUST(Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
       if (obj) { Py_DECREF(obj); }
       obj = NULL;
       return Maybe<void>::Ok();
@@ -52,11 +52,11 @@ struct PyObjectPtrDeleter {
 
 using PyObjectPtr = std::unique_ptr<PyObject, PyObjectPtrDeleter>;
 
-#define INTEGER_TYPE_SEQ         \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t)  \
-  OF_PP_MAKE_TUPLE_SEQ(uint32_t) \
-  OF_PP_MAKE_TUPLE_SEQ(int64_t)  \
-  OF_PP_MAKE_TUPLE_SEQ(uint64_t) \
+#define INTEGER_AND_BOOL_TYPE_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t)   \
+  OF_PP_MAKE_TUPLE_SEQ(uint32_t)  \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t)   \
+  OF_PP_MAKE_TUPLE_SEQ(uint64_t)  \
   OF_PP_MAKE_TUPLE_SEQ(bool)
 
 #define FLOATING_TYPE_SEQ     \
@@ -80,20 +80,47 @@ inline std::vector<T> PyUnpackSequence(PyObject* obj, UnpackItemFunc unpack_item
   return values;
 }
 
+// Scalar Tensor
+bool PyScalarTensorCheck(PyObject* obj);
+Scalar PyUnpackScalarTensor(PyObject* obj);
+
+#define DefinePyTypeScalarTensorCheck(type, type_check_func)               \
+  inline bool Py##type##ScalarTensorCheck(PyObject* obj) {                 \
+    return PyScalarTensorCheck(obj)                                        \
+           && type_check_func(PyTensor_Unpack(obj)->dtype()->data_type()); \
+  }
+
+DefinePyTypeScalarTensorCheck(Bool, IsBoolDataType);         // PyBoolScalarTensorCheck
+DefinePyTypeScalarTensorCheck(Integer, IsIntegralDataType);  // PyIntegerScalarTensorCheck
+DefinePyTypeScalarTensorCheck(Float, IsFloatingDataType);    // PyFloatScalarTensorCheck
+#undef DefinePyTypeScalarTensorCheck
+
+bool PyUnpackBoolScalarTensor(PyObject* obj);
+long long PyUnpackIntegerScalarTensor_AsLongLong(PyObject* obj);
+double PyUnpackFloatScalarTensor_AsDouble(PyObject* obj);
+
 // Integer/Float list
 bool PyLongSequenceCheck(PyObject* obj);
-bool PyFloatSquenceCheck(PyObject* obj);
+bool PyFloatSequenceCheck(PyObject* obj);
 
 template<typename T>
 inline std::vector<T> PyUnpackLongSequence(PyObject* obj) {
-  return PyUnpackSequence<T>(
-      obj, [](PyObject* item) -> T { return static_cast<T>(PyLong_AsLongLong(item)); });
+  return PyUnpackSequence<T>(obj, [](PyObject* item) -> T {
+    if (PyIntegerScalarTensorCheck(item)) {
+      return static_cast<T>(PyUnpackIntegerScalarTensor_AsLongLong(item));
+    }
+    return static_cast<T>(PyLong_AsLongLong(item));
+  });
 }
 
 template<typename T>
 inline std::vector<T> PyUnpackFloatSequence(PyObject* obj) {
-  return PyUnpackSequence<T>(
-      obj, [](PyObject* item) -> T { return static_cast<T>(PyFloat_AsDouble(item)); });
+  return PyUnpackSequence<T>(obj, [](PyObject* item) -> T {
+    if (PyFloatScalarTensorCheck(item)) {
+      return static_cast<T>(PyUnpackFloatScalarTensor_AsDouble(item));
+    }
+    return static_cast<T>(PyFloat_AsDouble(item));
+  });
 }
 
 // String
@@ -123,6 +150,10 @@ Symbol<DType> PyUnpackDType(PyObject* obj);
 // DType list
 bool PyDTypeSequenceCheck(PyObject* obj);
 std::vector<Symbol<DType>> PyUnpackDTypeSequence(PyObject* obj);
+
+// Shape
+bool PyShapeCheck(PyObject* obj);
+Shape PyUnpackShape(PyObject* obj);
 
 // Shape list
 bool PyShapeSequenceCheck(PyObject* obj);

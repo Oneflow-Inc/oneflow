@@ -45,11 +45,16 @@ void CumProdBackward(const T* dy_ptr, T* dx_ptr, const T* output_ptr, const T* i
     }
 
     for (size_t j = 0; j < down_space; j++) {
-      auto* cumsum_zeros_number_ptr = j + dx_ptr_base;
+      const auto* cur_output_ptr = output_ptr_base + j;
+      const auto* cur_input_ptr = input_ptr_base + j;
+      const auto* cur_dy_ptr = dy_ptr_base + j;
+      auto* cur_dx_ptr = dx_ptr_base + j;
+      const auto* cumsum_zeros_number_ptr = dx_ptr_base + j;
+
       size_t first_zero_index = space;
       // Find index of first zero in input.
       for (size_t k = 0; k < space; k++) {
-        if (cumsum_zeros_number_ptr[j + k * down_space] == 1) {
+        if (cumsum_zeros_number_ptr[k * down_space] == 1) {
           first_zero_index = k;
           break;
         }
@@ -58,24 +63,24 @@ void CumProdBackward(const T* dy_ptr, T* dx_ptr, const T* output_ptr, const T* i
       // for element which index is less than z grad is computed as below:
       T reverse_cumsum = 0;
       for (size_t k = 0; k < first_zero_index; k++) {
-        const size_t data_offset = j + (first_zero_index - k - 1) * down_space;
-        reverse_cumsum += output_ptr_base[data_offset] * dy_ptr_base[data_offset];
-        dx_ptr_base[data_offset] = reverse_cumsum / input_ptr_base[data_offset];
+        const size_t data_offset = (first_zero_index - k - 1) * down_space;
+        reverse_cumsum += cur_output_ptr[data_offset] * cur_dy_ptr[data_offset];
+        cur_dx_ptr[data_offset] = reverse_cumsum / cur_input_ptr[data_offset];
       }
       // For where index is z, its grad is computed as below:
       if (first_zero_index == space) { continue; }
       T cumprod = 1;
       T cumsum = 0;
       T cumprod_before_first_zero =
-          first_zero_index == 0 ? 1 : output_ptr_base[(first_zero_index - 1) * down_space];
+          first_zero_index == 0 ? 1 : cur_output_ptr[(first_zero_index - 1) * down_space];
       for (size_t k = first_zero_index; k < space; k++) {
-        const size_t data_offset = j + k * down_space;
+        const size_t data_offset = k * down_space;
         // Recover dx_ptr default value
-        if (dx_ptr_base[data_offset] >= 1) { dx_ptr_base[data_offset] = 0; }
-        if (k != first_zero_index) { cumprod *= input_ptr_base[data_offset]; }
-        cumsum += cumprod_before_first_zero * dy_ptr_base[data_offset] * cumprod;
+        if (cur_dx_ptr[data_offset] >= 1) { cur_dx_ptr[data_offset] = 0; }
+        if (k != first_zero_index) { cumprod *= cur_input_ptr[data_offset]; }
+        cumsum += cumprod_before_first_zero * cumprod * cur_dy_ptr[data_offset];
       }
-      dx_ptr_base[j + first_zero_index * down_space] = cumsum;
+      cur_dx_ptr[first_zero_index * down_space] = cumsum;
     }
   }
 }
@@ -93,7 +98,7 @@ class CpuCumProdGradKernel final : public user_op::OpKernel {
     const auto* input = ctx->Tensor4ArgNameAndIndex("input", 0);
     const auto* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     auto* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const int64_t elem_cnt = dy->shape().elem_cnt();
+    const int64_t elem_cnt = dy->shape_view().elem_cnt();
     if (elem_cnt == 0) { return; }
 
     const auto* output_ptr = output->dptr<T>();
@@ -103,9 +108,9 @@ class CpuCumProdGradKernel final : public user_op::OpKernel {
 
     // data partition: up_space|space|down_space
     auto dim = ctx->Attr<int64_t>("dim");
-    auto up_space = elem_cnt / dx->shape().Count(dim);
-    auto space = dx->shape().At(dim);
-    auto down_space = dx->shape().Count(dim + 1);
+    auto up_space = elem_cnt / dx->shape_view().Count(dim);
+    auto space = dx->shape_view().At(dim);
+    auto down_space = dx->shape_view().Count(dim + 1);
     if (space == 1) {
       Memcpy<DeviceType::kCPU>(ctx->stream(), dx_ptr, dy_ptr, elem_cnt * sizeof(T));
       return;

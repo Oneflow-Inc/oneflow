@@ -1,0 +1,13 @@
+syntax = "proto2";
+package oneflow;
+
+message LocalParallel {
+}
+
+message OptLocalParallel {
+  optional LocalParallel local_parallel = 1;
+}
+
+message LocalSignature {
+  map<string, OptLocalParallel> bn_in_op2opt_local_parallel = 1;
+}

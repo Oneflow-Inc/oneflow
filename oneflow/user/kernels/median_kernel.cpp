@@ -27,7 +27,7 @@ class CpuMedianKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("input", 0);
-    const int64_t size = in->shape().elem_cnt();
+    const int64_t size = in->shape_view().elem_cnt();
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("output", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     T* out_ptr = out->mut_dptr<T>();

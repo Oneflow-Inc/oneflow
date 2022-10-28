@@ -39,11 +39,11 @@ Maybe<Scope> Scope::New(int64_t symbol_id, const ScopeProto& scope_proto) {
 
 Maybe<void> Scope::Init() {
   {
-    const auto& storage = *Global<symbol::Storage<JobDesc>>::Get();
+    const auto& storage = *Singleton<symbol::Storage<JobDesc>>::Get();
     job_desc_ = JUST(storage.MaybeGetPtr(scope_proto_.job_desc_symbol_id()));
   }
   {
-    const auto& storage = *Global<symbol::Storage<ParallelDesc>>::Get();
+    const auto& storage = *Singleton<symbol::Storage<ParallelDesc>>::Get();
     const auto& device_parallel_desc =
         SymbolOf(*JUST(storage.MaybeGetPtr(scope_proto_.device_parallel_desc_symbol_id())));
     const auto& host_parallel_desc =
@@ -51,7 +51,7 @@ Maybe<void> Scope::Init() {
     placement_scope_ = SymbolOf(PlacementScope(device_parallel_desc, host_parallel_desc));
   }
   {
-    const auto& storage = *Global<symbol::Storage<Scope>>::Get();
+    const auto& storage = *Singleton<symbol::Storage<Scope>>::Get();
     if (scope_proto_.has_parent_scope_symbol_id()) {
       parent_scope_symbol_ = JUST(storage.MaybeGetPtr(scope_proto_.parent_scope_symbol_id()));
     }
@@ -94,8 +94,8 @@ Maybe<ScopeProto> Scope::MakeChildScopeProto() const {
 Maybe<int64_t> NewScopeSymbolId(
     int64_t old_scope_symbol_id,
     const std::function<void(std::shared_ptr<ScopeProto> new_scope)>& InitNewScopeProto) {
-  CHECK_OR_RETURN(Global<symbol::Storage<Scope>>::Get()->Has(old_scope_symbol_id));
-  const Scope& old_scope = Global<symbol::Storage<Scope>>::Get()->Get(old_scope_symbol_id);
+  CHECK_OR_RETURN(Singleton<symbol::Storage<Scope>>::Get()->Has(old_scope_symbol_id));  // NOLINT
+  const Scope& old_scope = Singleton<symbol::Storage<Scope>>::Get()->Get(old_scope_symbol_id);
   std::shared_ptr<ScopeProto> new_scope = JUST(old_scope.MakeChildScopeProto());
   InitNewScopeProto(new_scope);
   std::shared_ptr<Scope> new_scope_symbol;

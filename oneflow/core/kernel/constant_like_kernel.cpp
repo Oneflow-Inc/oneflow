@@ -41,7 +41,7 @@ class ConstantLikeKernel final : public Kernel {
       UNIMPLEMENTED();
     }
     std::unique_ptr<ep::primitive::Fill> primitive =
-        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(this->op_conf().device_tag(),
+        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream()->device_type(),
                                                                 out_blob->data_type());
     CHECK(primitive);
     primitive->Launch(ctx->stream(), out_blob->mut_dptr(), value,

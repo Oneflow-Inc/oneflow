@@ -206,6 +206,7 @@ void SimplifyCopyNd(size_t num_dims, const int64_t* dst_dims, const int64_t* dst
 void SimplifyThenLaunch(Stream* stream, DataType data_type, size_t num_dims, void* dst,
                         const int64_t* dst_dims, const int64_t* dst_pos, const void* src,
                         const int64_t* src_dims, const int64_t* src_pos, const int64_t* extent) {
+  CHECK_GT(num_dims, 0) << "num_dims must greater than 0";
   CHECK_LE(num_dims, kMaxNumDims);
   size_t simplified_num_dims = 0;
   int64_t simplified_dst_dims[kMaxNumDims];

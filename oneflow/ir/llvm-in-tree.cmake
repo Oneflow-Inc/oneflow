@@ -13,6 +13,8 @@ endif()
 set(CMAKE_INSTALL_PREFIX ${LLVM_INSTALL_DIR} CACHE STRING "" FORCE)
 set(LLVM_ENABLE_RTTI ON CACHE BOOL "turn this on to make it compatible with protobuf")
 set(LLVM_ENABLE_EH ON CACHE BOOL "turn this on to make it compatible with half (the library)")
+set(LLVM_ENABLE_TERMINFO OFF
+    CACHE BOOL "disable terminfo in llvm so that oneflow doesn't need to link against it")
 set(LLVM_BUILD_EXAMPLES OFF CACHE BOOL "")
 set(LLVM_BUILD_TOOLS OFF CACHE BOOL "")
 set(LLVM_INCLUDE_EXAMPLES OFF CACHE BOOL "")

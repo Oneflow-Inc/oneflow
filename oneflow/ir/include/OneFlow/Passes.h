@@ -18,14 +18,13 @@ limitations under the License.
 
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/GPU/GPUDialect.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "OneFlow/Conversion/OneFlowToTosa.h"
-#include "OneFlow/Conversion/SCFToGPU.h"
 #include "OneFlow/Transform/BufferHostRegister.h"
 #include "OneFlow/Transform/ConvertInferenceOp.h"
 #include "OneFlow/Transform/OutlineAndFuse.h"
@@ -43,11 +42,14 @@ namespace mlir {
 
 namespace oneflow {
 
+LogicalResult LowerKernelLaunchModuleToLLVM(ModuleOp module);
 LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module);
 #ifdef WITH_MLIR_CUDA_CODEGEN
 LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module);
 #endif  // WITH_MLIR_CUDA_CODEGEN
 void populateFuserPasses(::mlir::RewritePatternSet& patterns);
+void populateConvertOFKLCalleeToLLVMPasses(::mlir::RewritePatternSet& patterns);
+void populateKernelWrapperPasses(::mlir::RewritePatternSet& patterns);
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns);
 void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns);
 void populateAutoNhwcPatterns(::mlir::RewritePatternSet& patterns);

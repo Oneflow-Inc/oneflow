@@ -14,7 +14,7 @@ oneflow_add_mlir_library(
   MLIRIR
   MLIRParser
   MLIRPass
-  MLIRSPIRV
+  MLIRSPIRVDialect
   MLIRTranslateLib
   MLIRSupport
   MLIROneFlow

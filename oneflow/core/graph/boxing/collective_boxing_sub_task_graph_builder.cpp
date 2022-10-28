@@ -538,7 +538,7 @@ class NcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuilde
 
 CollectiveBoxingSubTskGphBuilder::CollectiveBoxingSubTskGphBuilder() {
   const CollectiveBoxingConf collective_boxing_conf =
-      Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf();
+      Singleton<ResourceDesc, ForSession>::Get()->collective_boxing_conf();
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
   builders.emplace_back(new NcclCollectiveBoxingAllReduceSubTskGphBuilder());
   builders.emplace_back(new NcclCollectiveBoxingReduceScatterSubTskGphBuilder());

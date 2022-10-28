@@ -50,6 +50,12 @@ class List {
     if (list_head_.empty()) { return nullptr; }
     return list_head_.Begin();
   }
+  value_type* Prev(value_type* ptr) {
+    if (ptr == nullptr) { return nullptr; }
+    value_type* prev = list_head_.Prev(ptr);
+    if (prev == list_head_.End()) { return nullptr; }
+    return prev;
+  }
   value_type* Next(value_type* ptr) {
     if (ptr == nullptr) { return nullptr; }
     value_type* next = list_head_.Next(ptr);

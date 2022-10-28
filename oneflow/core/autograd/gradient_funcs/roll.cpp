@@ -40,7 +40,7 @@ class Roll : public OpExprGradFunction<RollCaptureState> {
 
 Maybe<void> Roll::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -59,7 +59,7 @@ Maybe<void> Roll::Capture(RollCaptureState* ctx, const TensorTuple& inputs,
 Maybe<void> Roll::Apply(const RollCaptureState* ctx, const TensorTuple& out_grads,
                         TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
 
   std::vector<int32_t> new_shifts;
   new_shifts.resize(ctx->shifts.size());

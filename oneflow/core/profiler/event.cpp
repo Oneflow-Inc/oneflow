@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+#include "fmt/core.h"
+#include "fmt/format.h"
 #include "oneflow/core/profiler/event.h"
 #include "oneflow/core/profiler/util.h"
 
@@ -22,87 +25,68 @@ namespace oneflow {
 
 namespace profiler {
 nlohmann::json IEvent::ToJson() {
-  return json{{"name", name_},
-              {"cpu_time", static_cast<double>(GetDuration())
-                               / 1000},  // convert to us,the unit of GetDuration is ns
-              {"input_shapes", "-"}};
+  return json{{"name", name_}, {"time", GetDuration<double>()}, {"input_shapes", "-"}};
 }
 
-void IEvent::Start() { started_at_ = GetTimeNow(); }
+void IEvent::SetStartedAt(double t) { started_at_ = t; }
 
-void IEvent::Finish() { finished_at_ = GetTimeNow(); }
+void IEvent::SetFinishedAt(double t) { finished_at_ = t; }
+
+void IEvent::Start() { SetStartedAt(GetTimeNow()); }
+
+void IEvent::Finish() { SetFinishedAt(GetTimeNow()); }
+
+bool IEvent::IsChildOf(const IEvent* e) {
+  if (!e) { return false; }
+  if (this == e) { return false; }
+  return GetStartedAt<double>() >= e->GetStartedAt<double>()
+         && GetFinishedAt<double>() <= e->GetFinishedAt<double>();
+}
 
 const std::string& IEvent::GetName() const { return name_; }
 
-time_t IEvent::GetDuration() { return finished_at_ - started_at_; }
-
-nlohmann::json KernelEvent::ToJson() {
-  auto j = IEvent::ToJson();
-  j["type"] = EventType::kKernel;
-  j["input_shapes"] = FormatShapes();
-#if defined(WITH_CUDA)
-  if (cuda_event_pair_) {
-    double time_in_us = cuda_event_pair_->ElapsedTime();
-    j["gpu_time"] = time_in_us;
-    if (memory_size_ != -1) {
-      j["bandwidth"] =
-          memory_size_ / (1024.0 * 1024.0 * 1024.0) / (time_in_us / (1000 * 1000));  // GB/s
-    }
-  }
-#endif
-  return j;
-}
-
-std::string KernelEvent::Key() { return name_ + "." + FormatShapes(); }
-
-std::string KernelEvent::FormatShapes(size_t max_num_to_format) {
-  if (input_shapes_.size() == 0) { return "-"; }
-  std::string result("[");
-  for (size_t i = 0; i < std::min(input_shapes_.size(), max_num_to_format); ++i) {
-    if (i != 0) { result += ", "; }
-    const std::string current_shape = input_shapes_[i].ToString();
-    if (current_shape == "()") {
-      result += "scalar";
-    } else {
-      result += current_shape;
-    }
-  }
-  if (input_shapes_.size() > max_num_to_format) { result += ", ..."; }
-  result += "]";
-  return result;
-}
-
-void KernelEvent::RecordShape(const Shape& shape) { input_shapes_.emplace_back(shape); }
-
-void KernelEvent::Start() {
-#if defined(WITH_CUDA)
-  if (cuda_event_pair_) { cuda_event_pair_->Start(); }
-#endif
-  IEvent::Start();
-}
-
-void KernelEvent::Finish() {
-#if defined(WITH_CUDA)
-  if (cuda_event_pair_) { cuda_event_pair_->Finish(); }
-#endif
-  IEvent::Finish();
-}
-
-std::shared_ptr<KernelEvent> KernelEvent::Create(
-    const std::string& name, const std::function<std::vector<Shape>(void)>& shape_getter) {
-  return std::shared_ptr<KernelEvent>(new KernelEvent(name, shape_getter));
-}
+std::string CustomEvent::Key() { return name_; }
 
 nlohmann::json CustomEvent::ToJson() {
   auto j = IEvent::ToJson();
   j["type"] = EventType::kCustom;
+  j["custom_type"] = type_;
   return j;
 }
 
-std::string CustomEvent::Key() { return name_; }
+std::shared_ptr<CustomEvent> CustomEvent::Create(const std::string& name, CustomEventType type) {
+  return std::shared_ptr<CustomEvent>(new CustomEvent(name, type));
+}
 
-std::shared_ptr<CustomEvent> CustomEvent::Create(const std::string& name) {
-  return std::shared_ptr<CustomEvent>(new CustomEvent(name));
+std::string KernelEvent::Key() { return fmt::format("{}.{}", name_, GetFormatedInputShapes()); }
+
+nlohmann::json KernelEvent::ToJson() {
+  auto j = IEvent::ToJson();
+  j["type"] = EventType::kOneflowKernel;
+  j["input_shapes"] = GetFormatedInputShapes();
+#if defined(WITH_CUDA)
+  j["memory_size"] = memory_size_;
+  if (!children_.empty()) { j["children"] = children_; }
+#endif  // WITH_CUDA
+  return j;
+}
+
+std::shared_ptr<KernelEvent> KernelEvent::Create(
+    const std::string& name, const std::function<std::vector<ShapeView>(void)>& shape_getter) {
+  return std::shared_ptr<KernelEvent>(new KernelEvent(name, shape_getter));
+}
+
+void KernelEvent::RecordShape(const ShapeView& shape) { input_shapes_.emplace_back(shape); }
+
+std::string KernelEvent::GetFormatedInputShapes(size_t max_num_to_format) {
+  if (input_shapes_.size() == 0) { return "-"; }
+  std::vector<std::string> shapes_formated(std::min(input_shapes_.size(), max_num_to_format));
+  for (auto i = 0; i < shapes_formated.size(); ++i) {
+    const std::string current_shape = input_shapes_[i].ToString();
+    shapes_formated[i] = current_shape == "()" ? "scalar" : current_shape;
+  }
+  if (input_shapes_.size() > max_num_to_format) { shapes_formated.emplace_back("..."); }
+  return fmt::format("[{}]", fmt::join(shapes_formated, ", "));
 }
 
 }  // namespace profiler

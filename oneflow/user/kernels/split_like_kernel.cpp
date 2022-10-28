@@ -65,8 +65,8 @@ class SplitLikeKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     const auto axis = ctx->Attr<int64_t>("axis");
-    const int64_t in_cols = in_tensor->shape().Count(axis);
-    const int64_t rows = in_tensor->shape().elem_cnt() / in_cols;
+    const int64_t in_cols = in_tensor->shape_view().Count(axis);
+    const int64_t rows = in_tensor->shape_view().elem_cnt() / in_cols;
     CHECK_GT(rows, 0);
 
     auto primitive = NewCopyNdPrimitive(ctx);
@@ -75,8 +75,8 @@ class SplitLikeKernel final : public user_op::OpKernel {
     for (const auto& out_arg_pair : ctx->outputs()) {
       user_op::Tensor* out_tensor =
           ctx->Tensor4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second);
-      const int64_t out_cols = out_tensor->shape().Count(axis);
-      CHECK_EQ(out_tensor->shape().elem_cnt(), rows * out_cols);
+      const int64_t out_cols = out_tensor->shape_view().Count(axis);
+      CHECK_EQ(out_tensor->shape_view().elem_cnt(), rows * out_cols);
       if (out_cols > 0) {
         DimVector dst_shape = {rows, out_cols};
         DimVector dst_pos_vec = {0, 0};

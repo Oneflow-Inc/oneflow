@@ -23,6 +23,39 @@ namespace oneflow {
 
 namespace {
 
+__device__ __forceinline__ void GetBilinearParamHalf(const bool align_corners, const int64_t h,
+                                                     const int64_t w, const int64_t in_height,
+                                                     const int64_t in_width, const double scale_h,
+                                                     const double scale_w,
+                                                     BilinearParam<half>* params) {
+  half h1r;
+  if (align_corners) {
+    h1r = static_cast<half>(scale_h * static_cast<double>(h));
+  } else {
+    h1r = h1r = static_cast<half>((static_cast<double>(h) + 0.5f) * scale_h - 0.5f);
+    h1r = h1r < static_cast<half>(0.0) ? static_cast<half>(0.0) : h1r;
+  }
+  const int64_t h1 = int(h1r);
+  const int64_t h1p = (h1 < in_height - 1) ? 1 : 0;
+
+  half w1r;
+  if (align_corners) {
+    w1r = static_cast<half>(scale_w * static_cast<double>(w));
+  } else {
+    w1r = static_cast<half>((static_cast<double>(w) + 0.5f) * scale_w - 0.5f);
+    w1r = w1r < static_cast<half>(0.0) ? static_cast<half>(0.0) : w1r;
+  }
+  const int64_t w1 = int(w1r);
+  const int64_t w1p = (w1 < in_width - 1) ? 1 : 0;
+
+  params->top_h_index = h1;
+  params->bottom_h_index = h1 + h1p;
+  params->h_lerp = h1r - static_cast<half>(h1 * 1.0);
+  params->left_w_index = w1;
+  params->right_w_index = w1 + w1p;
+  params->w_lerp = w1r - static_cast<half>(w1 * 1.0);
+}
+
 template<typename T>
 __global__ void UpsampleBilinear2DForward(const int64_t elem_cnt, const T* in_dptr,
                                           NdIndexOffsetHelper<int64_t, 4> in_helper,
@@ -44,6 +77,33 @@ __global__ void UpsampleBilinear2DForward(const int64_t elem_cnt, const T* in_dp
     out_dptr[index] =
         (1 - params.h_lerp) * ((1 - params.w_lerp) * top_left + params.w_lerp * top_right)
         + params.h_lerp * ((1 - params.w_lerp) * bottom_left + params.w_lerp * bottom_right);
+  }
+}
+
+template<>
+__global__ void UpsampleBilinear2DForward(const int64_t elem_cnt, const half* in_dptr,
+                                          NdIndexOffsetHelper<int64_t, 4> in_helper,
+                                          NdIndexOffsetHelper<int64_t, 4> out_helper,
+                                          const int64_t in_height, const int64_t in_width,
+                                          const half scale_h, const half scale_w,
+                                          const bool align_corners, half* out_dptr) {
+  CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
+    int64_t n, c, h, w;
+    out_helper.OffsetToNdIndex(index, n, c, h, w);
+    BilinearParam<half> params;
+    GetBilinearParamHalf(align_corners, h, w, in_height, in_width, scale_h, scale_w, &params);
+    const int64_t top_offset = in_helper.NdIndexToOffset(n, c, params.top_h_index, 0);
+    const int64_t bottom_offset = in_helper.NdIndexToOffset(n, c, params.bottom_h_index, 0);
+    const half top_left = in_dptr[top_offset + params.left_w_index];
+    const half top_right = in_dptr[top_offset + params.right_w_index];
+    const half bottom_left = in_dptr[bottom_offset + params.left_w_index];
+    const half bottom_right = in_dptr[bottom_offset + params.right_w_index];
+    out_dptr[index] =
+        (static_cast<half>(1.0) - params.h_lerp)
+            * ((static_cast<half>(1.0) - params.w_lerp) * top_left + params.w_lerp * top_right)
+        + params.h_lerp
+              * ((static_cast<half>(1.0) - params.w_lerp) * bottom_left
+                 + params.w_lerp * bottom_right);
   }
 }
 
@@ -77,6 +137,36 @@ __global__ void UpsampleBilinearBackward(const int64_t elem_cnt, const T* dy_dpt
   }
 }
 
+template<>
+__global__ void UpsampleBilinearBackward(const int64_t elem_cnt, const half* dy_dptr,
+                                         NdIndexOffsetHelper<int64_t, 4> dy_helper,
+                                         NdIndexOffsetHelper<int64_t, 4> dx_helper,
+                                         const int64_t dx_height, const int64_t dx_width,
+                                         const half scale_h, const half scale_w,
+                                         const bool align_corners, half* dx_dptr) {
+  CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
+    int64_t n, c, h, w;
+    dy_helper.OffsetToNdIndex(index, n, c, h, w);
+    BilinearParam<half> params;
+    GetBilinearParamHalf(align_corners, h, w, dx_height, dx_width, scale_h, scale_w, &params);
+    const int64_t top_offset = dx_helper.NdIndexToOffset(n, c, params.top_h_index, 0);
+    const int64_t bottom_offset = dx_helper.NdIndexToOffset(n, c, params.bottom_h_index, 0);
+    const half dy = dy_dptr[index];
+    const half dbottom = params.h_lerp * dy;
+    half* dx_dptr_bottom_offset = dx_dptr + bottom_offset;
+    cuda::atomic::Add(dx_dptr_bottom_offset + params.left_w_index,
+                      static_cast<half>((static_cast<half>(1.0) - params.w_lerp) * dbottom));
+    cuda::atomic::Add(dx_dptr_bottom_offset + params.right_w_index,
+                      static_cast<half>(params.w_lerp * dbottom));
+    const half dtop = dy - dbottom;
+    half* dx_dptr_top_offset = dx_dptr + top_offset;
+    cuda::atomic::Add(dx_dptr_top_offset + params.left_w_index,
+                      static_cast<half>((static_cast<half>(1.0) - params.w_lerp) * dtop));
+    cuda::atomic::Add(dx_dptr_top_offset + params.right_w_index,
+                      static_cast<half>(params.w_lerp * dtop));
+  }
+}
+
 }  // namespace
 
 template<typename T>
@@ -94,16 +184,18 @@ class UpsampleBilinear2DGPUKernel final : public user_op::OpKernel {
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
     double height_scale = ctx->Attr<double>("height_scale");
     double width_scale = ctx->Attr<double>("width_scale");
-    const int64_t elem_cnt = y_tensor->shape().elem_cnt();
-    NdIndexOffsetHelper<int64_t, 4> in_helper(x_tensor->shape().At(0), x_tensor->shape().At(1),
-                                              x_tensor->shape().At(2), x_tensor->shape().At(3));
-    NdIndexOffsetHelper<int64_t, 4> out_helper(y_tensor->shape().At(0), y_tensor->shape().At(1),
-                                               y_tensor->shape().At(2), y_tensor->shape().At(3));
+    const int64_t elem_cnt = y_tensor->shape_view().elem_cnt();
+    NdIndexOffsetHelper<int64_t, 4> in_helper(
+        x_tensor->shape_view().At(0), x_tensor->shape_view().At(1), x_tensor->shape_view().At(2),
+        x_tensor->shape_view().At(3));
+    NdIndexOffsetHelper<int64_t, 4> out_helper(
+        y_tensor->shape_view().At(0), y_tensor->shape_view().At(1), y_tensor->shape_view().At(2),
+        y_tensor->shape_view().At(3));
 
-    const int64_t in_height = x_tensor->shape().At(2);
-    const int64_t in_width = x_tensor->shape().At(3);
-    const int64_t out_height = y_tensor->shape().At(2);
-    const int64_t out_width = y_tensor->shape().At(3);
+    const int64_t in_height = x_tensor->shape_view().At(2);
+    const int64_t in_width = x_tensor->shape_view().At(3);
+    const int64_t out_height = y_tensor->shape_view().At(2);
+    const int64_t out_width = y_tensor->shape_view().At(3);
     if (!output_size.empty()) {
       height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
       width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
@@ -111,7 +203,7 @@ class UpsampleBilinear2DGPUKernel final : public user_op::OpKernel {
     if (in_height == out_height && in_width == out_width) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
-          x_tensor->shape().elem_cnt() * GetSizeOfDataType(x_tensor->data_type()));
+          x_tensor->shape_view().elem_cnt() * GetSizeOfDataType(x_tensor->data_type()));
     } else {
       const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
       const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
@@ -134,22 +226,24 @@ class UpsampleBilinear2DGradGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
     Memset<DeviceType::kCUDA>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
-                              dx_tensor->shape().elem_cnt() * sizeof(T));
+                              dx_tensor->shape_view().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const bool align_corners = ctx->Attr<bool>("align_corners");
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
     double height_scale = ctx->Attr<double>("height_scale");
     double width_scale = ctx->Attr<double>("width_scale");
-    const int64_t elem_cnt = dy_tensor->shape().elem_cnt();
-    NdIndexOffsetHelper<int64_t, 4> dy_helper(dy_tensor->shape().At(0), dy_tensor->shape().At(1),
-                                              dy_tensor->shape().At(2), dy_tensor->shape().At(3));
-    NdIndexOffsetHelper<int64_t, 4> dx_helper(dx_tensor->shape().At(0), dx_tensor->shape().At(1),
-                                              dx_tensor->shape().At(2), dx_tensor->shape().At(3));
+    const int64_t elem_cnt = dy_tensor->shape_view().elem_cnt();
+    NdIndexOffsetHelper<int64_t, 4> dy_helper(
+        dy_tensor->shape_view().At(0), dy_tensor->shape_view().At(1), dy_tensor->shape_view().At(2),
+        dy_tensor->shape_view().At(3));
+    NdIndexOffsetHelper<int64_t, 4> dx_helper(
+        dx_tensor->shape_view().At(0), dx_tensor->shape_view().At(1), dx_tensor->shape_view().At(2),
+        dx_tensor->shape_view().At(3));
 
-    const int64_t in_height = dx_tensor->shape().At(2);
-    const int64_t in_width = dx_tensor->shape().At(3);
-    const int64_t out_height = dy_tensor->shape().At(2);
-    const int64_t out_width = dy_tensor->shape().At(3);
+    const int64_t in_height = dx_tensor->shape_view().At(2);
+    const int64_t in_width = dx_tensor->shape_view().At(3);
+    const int64_t out_height = dy_tensor->shape_view().At(2);
+    const int64_t out_width = dy_tensor->shape_view().At(3);
     if (!output_size.empty()) {
       height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
       width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
@@ -157,7 +251,7 @@ class UpsampleBilinear2DGradGPUKernel final : public user_op::OpKernel {
     if (in_height == out_height && in_width == out_width) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
-          dy_tensor->shape().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
+          dy_tensor->shape_view().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
     } else {
       const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
       const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
@@ -179,6 +273,7 @@ class UpsampleBilinear2DGradGPUKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
+REGISTER_UPSAMPLE_BILINEAR_2D_CUDA_KERNEL(half)
 REGISTER_UPSAMPLE_BILINEAR_2D_CUDA_KERNEL(float)
 REGISTER_UPSAMPLE_BILINEAR_2D_CUDA_KERNEL(double)
 

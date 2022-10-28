@@ -34,7 +34,7 @@ class CpuRepeatInterLeaveKernel final : public user_op::OpKernel {
     const T* in_ptr = in->dptr<T>();
     const T* cumsum_ptr = cumsum->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
-    for (T i = 0; i < in->shape().At(0); i++) {
+    for (T i = 0; i < in->shape_view().At(0); i++) {
       T end = cumsum_ptr[i];
       T size = in_ptr[i];
       T start = end - size;

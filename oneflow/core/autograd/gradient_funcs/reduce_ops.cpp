@@ -41,7 +41,7 @@ class ReduceSum : public OpExprGradFunction<ReduceSumCaptureState> {
 
 Maybe<void> ReduceSum::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -64,6 +64,7 @@ Maybe<void> ReduceSum::Apply(const ReduceSumCaptureState* ctx, const TensorTuple
 }
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_sum", ReduceSum);
+REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_nansum", ReduceSum);
 
 struct ReduceProdOpInterpState : public AutoGradCaptureState {
   std::vector<int32_t> axis;
@@ -84,7 +85,7 @@ class ReduceProdOp : public OpExprGradFunction<ReduceProdOpInterpState> {
 
 Maybe<void> ReduceProdOp::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -137,7 +138,7 @@ class ReduceMaxOrMin : public OpExprGradFunction<ReduceMaxOrMinCaptureState> {
 
 Maybe<void> ReduceMaxOrMin::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }

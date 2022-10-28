@@ -26,6 +26,7 @@ namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("FillVariableTensorMgr", &FillVariableTensorMgr);
   m.def("DumpVariableTensorMgr", &DumpVariableTensorMgr);
+  m.def("ClearVariableTensorMgr", &ClearVariableTensorMgr);
 }
 
 }  // namespace oneflow

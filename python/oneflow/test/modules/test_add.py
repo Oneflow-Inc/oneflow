@@ -156,6 +156,17 @@ def _test_inplace_add(test_case, shape, device):
     test_case.assertTrue(np.allclose(of_x.grad.numpy(), np.ones(shape), 1e-05, 1e-05))
 
 
+def _test_inplace_add_with_type_promotion(test_case, shape, device):
+    x = flow.tensor(
+        np.random.randn(*shape), device=flow.device(device), dtype=flow.float16
+    )
+    y = flow.tensor(
+        np.random.randn(*shape), device=flow.device(device), dtype=flow.float32
+    )
+    x += y
+    test_case.assertTrue(x.dtype == flow.float16)
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestAddModule(flow.unittest.TestCase):
     def test_add(test_case):
@@ -164,13 +175,14 @@ class TestAddModule(flow.unittest.TestCase):
             _test_add_forward,
             _test_add_backward,
             _test_inplace_add,
+            _test_inplace_add_with_type_promotion,
         ]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_0_size_add(test_case):
         device = random_device()
         x = random_tensor(2, 0, 3).to(device)
@@ -178,7 +190,7 @@ class TestAddModule(flow.unittest.TestCase):
         out = x + y
         return out
 
-    @autotest(n=3, auto_backward=False, check_graph=True)
+    @autotest(n=3, auto_backward=False)
     def test_0dim_inplace_add(test_case):
         device = random_device()
         x = random_tensor(2, 2, 3, requires_grad=False).to(device)
@@ -186,7 +198,7 @@ class TestAddModule(flow.unittest.TestCase):
         x += y.mean()
         return x
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_0dim_two_inplace_add(test_case):
         device = random_device()
         x = random_tensor(2, 2, 3).to(device).mean()
@@ -194,7 +206,7 @@ class TestAddModule(flow.unittest.TestCase):
         x += y.mean()
         return x
 
-    @autotest(n=3, check_graph=True)
+    @autotest(n=3)
     def test_add_with_alpha(test_case):
         device = random_device()
         x1 = random_tensor(2, 2, 3).to(device).mean()
@@ -208,7 +220,7 @@ class TestAddModule(flow.unittest.TestCase):
         z3 = torch.add(s, x3, alpha=alpha)
         return z1, z2, z3
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(auto_backward=False)
     def test_bool_add(test_case):
         device = random_device()
         x = random_tensor(2, 1, 3).to(device, torch.bool)
@@ -216,7 +228,7 @@ class TestAddModule(flow.unittest.TestCase):
         out = x + y
         return out
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(auto_backward=False)
     def test_0shape_bool_add(test_case):
         device = random_device()
         x = random_tensor(2, 0, 3).to(device, torch.bool)
@@ -224,7 +236,7 @@ class TestAddModule(flow.unittest.TestCase):
         out = x + y
         return out
 
-    @autotest(n=3, auto_backward=False, check_graph=True)
+    @autotest(n=3, auto_backward=False)
     def test_0dim_bool_inplace_add(test_case):
         device = random_device()
         x = random_tensor(2, 2, 3, requires_grad=False).to(device, torch.bool)
@@ -232,7 +244,7 @@ class TestAddModule(flow.unittest.TestCase):
         x += y.mean().to(torch.bool)
         return x
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(auto_backward=False)
     def test_0dim_two_inplace_add(test_case):
         device = random_device()
         x = random_tensor(2, 2, 3).to(device).mean().to(torch.bool)
@@ -240,7 +252,7 @@ class TestAddModule(flow.unittest.TestCase):
         return x
         x += y.mean().to(torch.bool)
 
-    @autotest(n=3, check_graph=True)
+    @autotest(n=3)
     def test_add_with_alpha_0dim(test_case):
         device = random_device()
         x1 = random_tensor(ndim=0).to(device).mean()
@@ -253,6 +265,29 @@ class TestAddModule(flow.unittest.TestCase):
         z2 = torch.add(x2, s, alpha=alpha)
         z3 = torch.add(s, x3, alpha=alpha)
         return z1, z2, z3
+
+    @profile(torch.add)
+    def profile_add(test_case):
+        torch.add(torch.ones(100), 20)
+        torch.add(torch.ones(100), torch.ones(100, 1), alpha=10)
+
+    @autotest(n=3)
+    def test_non_contiguous_inplace_add(test_case):
+        device = random_device()
+        x = random_tensor(2, 2, 4).to(device)
+        y = x + 1
+        y = y[:, 1:3]
+        y += random_tensor(2, 2, 2).to(device)
+        return y
+
+    @autotest(n=5)
+    def test_scalar_add_with_random_devices(test_case):
+        x1_device = random_device()
+        x2_device = random_device()
+        x1 = random_tensor(2, 2, 3).to(x1_device).mean()
+        x2 = random_tensor(2, 2, 3).to(x2_device)
+        y = x1 + x2
+        return y
 
 
 if __name__ == "__main__":

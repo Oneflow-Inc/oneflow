@@ -36,7 +36,7 @@ class PackActor final : public Actor {
 };
 
 void PackActor::VirtualActorInit(const TaskProto& proto) {
-  const Shape& in_time_shape = Global<RegstMgr>::Get()
+  const Shape& in_time_shape = Singleton<RegstMgr>::Get()
                                    ->RegstDesc4RegstDescId(Name2SoleRegstDescId("in"))
                                    .data_regst_time_shape();
   total_pack_num_ = in_time_shape.At(in_time_shape.NumAxes() - 1);

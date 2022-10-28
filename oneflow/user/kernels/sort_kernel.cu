@@ -34,17 +34,17 @@ class GpuSortKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
     Memcpy<DeviceType::kCUDA>(ctx->stream(), out->mut_dptr<T>(), in->dptr<T>(),
-                              in->shape().elem_cnt() * sizeof(T));
-    const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
-    const int32_t instance_num = in->shape().elem_cnt() / instance_size;
+                              in->shape_view().elem_cnt() * sizeof(T));
+    const int32_t instance_size = in->shape_view().At(in->shape_view().NumAxes() - 1);
+    const int32_t instance_num = in->shape_view().elem_cnt() / instance_size;
     const std::string& direction = ctx->Attr<std::string>("direction");
     if (direction == "ASCENDING") {
       SortKeysAscending(in->dptr<T>(), instance_num, instance_size, tmp_buffer->mut_dptr<void>(),
-                        tmp_buffer->shape().elem_cnt(), out->mut_dptr<T>(),
+                        tmp_buffer->shape_view().elem_cnt(), out->mut_dptr<T>(),
                         ctx->stream()->As<ep::CudaStream>()->cuda_stream());
     } else if (direction == "DESCENDING") {
       SortKeysDescending(in->dptr<T>(), instance_num, instance_size, tmp_buffer->mut_dptr<void>(),
-                         tmp_buffer->shape().elem_cnt(), out->mut_dptr<T>(),
+                         tmp_buffer->shape_view().elem_cnt(), out->mut_dptr<T>(),
                          ctx->stream()->As<ep::CudaStream>()->cuda_stream());
     } else {
       UNIMPLEMENTED();

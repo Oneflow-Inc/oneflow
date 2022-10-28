@@ -26,10 +26,9 @@ struct DimScatterCaptureState : public AutoGradCaptureState {
   bool input_requires_grad;
   bool src_requires_grad;
 };
+enum class ScatterType { kUpdate, kAdd, kMultiply };
 
-enum SCATTER_TYPE { SCATTER_UPDATE, SCATTER_ADD };
-
-template<SCATTER_TYPE T>
+template<ScatterType T>
 class DimScatter : public OpExprGradFunction<DimScatterCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
@@ -37,78 +36,67 @@ class DimScatter : public OpExprGradFunction<DimScatterCaptureState> {
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
   Maybe<void> Apply(const DimScatterCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
-  Maybe<void> ApplyCommon(const DimScatterCaptureState* ctx, const TensorTuple& out_grads,
-                          TensorTuple* in_grads) const;
 
  private:
   AttrMap base_attrs_;
 };
 
-template<SCATTER_TYPE T>
+template<ScatterType T>
 Maybe<void> DimScatter<T>::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
 
-template<SCATTER_TYPE T>
+template<ScatterType T>
 Maybe<void> DimScatter<T>::Capture(DimScatterCaptureState* ctx, const TensorTuple& inputs,
                                    const TensorTuple& outputs, const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), 3);
-  CHECK_EQ_OR_RETURN(outputs.size(), 1);
+  CHECK_EQ_OR_RETURN(inputs.size(), 3);   // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
 
   ctx->input_requires_grad = inputs.at(0)->requires_grad();
   ctx->src_requires_grad = inputs.at(2)->requires_grad();
   if ((!ctx->input_requires_grad) && (!ctx->src_requires_grad)) { return Maybe<void>::Ok(); }
 
   ctx->SaveTensorForBackward(inputs.at(1));  // index saved
+  if (T == ScatterType::kMultiply) {
+    ctx->SaveTensorForBackward(inputs.at(2));  // src saved
+  }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->dim = JUST(composed_attrs.GetAttr<int32_t>("dim"));
   return Maybe<void>::Ok();
 }
 
-template<SCATTER_TYPE T>
-Maybe<void> DimScatter<T>::ApplyCommon(const DimScatterCaptureState* ctx,
-                                       const TensorTuple& out_grads, TensorTuple* in_grads) const {
-  const std::shared_ptr<oneflow::one::Tensor>& index = ctx->SavedTensors().at(0);
+template<ScatterType T>
+Maybe<void> DimScatter<T>::Apply(const DimScatterCaptureState* ctx, const TensorTuple& out_grads,
+                                 TensorTuple* in_grads) const {
+  if ((!ctx->input_requires_grad) && (!ctx->src_requires_grad)) { return Maybe<void>::Ok(); }
 
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   in_grads->resize(3);
+
+  const std::shared_ptr<oneflow::one::Tensor>& index = ctx->SavedTensors().at(0);
 
   if (ctx->src_requires_grad) {
     in_grads->at(2) = JUST(functional::DimGather(out_grads.at(0), ctx->dim, index, false));
   }
-  return Maybe<void>::Ok();
-}
-
-template<>
-Maybe<void> DimScatter<SCATTER_TYPE::SCATTER_UPDATE>::Apply(const DimScatterCaptureState* ctx,
-                                                            const TensorTuple& out_grads,
-                                                            TensorTuple* in_grads) const {
-  if ((!ctx->input_requires_grad) && (!ctx->src_requires_grad)) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-  JUST(ApplyCommon(ctx, out_grads, in_grads));
 
   if (ctx->input_requires_grad) {
-    const std::shared_ptr<oneflow::one::Tensor>& index = ctx->SavedTensors().at(0);
-    in_grads->at(0) =
-        JUST(functional::DimScatterUpdateScalar(out_grads.at(0), ctx->dim, index, 0.0f));
+    if (T == ScatterType::kAdd) { in_grads->at(0) = out_grads.at(0); }
+
+    if (T == ScatterType::kUpdate) {
+      in_grads->at(0) = JUST(functional::DimScatterUpdateScalar(out_grads.at(0), ctx->dim, index,
+                                                                0.0f, /*inplace*/ false));
+    }
+
+    if (T == ScatterType::kMultiply) {
+      const std::shared_ptr<oneflow::one::Tensor>& src = ctx->SavedTensors().at(1);
+      in_grads->at(0) =
+          JUST(functional::DimScatterMul(out_grads.at(0), ctx->dim, index, src, /*inplace*/ false));
+    }
   }
-  return Maybe<void>::Ok();
-}
-
-template<>
-Maybe<void> DimScatter<SCATTER_TYPE::SCATTER_ADD>::Apply(const DimScatterCaptureState* ctx,
-                                                         const TensorTuple& out_grads,
-                                                         TensorTuple* in_grads) const {
-  if ((!ctx->input_requires_grad) && (!ctx->src_requires_grad)) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-
-  JUST(ApplyCommon(ctx, out_grads, in_grads));
-
-  if (ctx->input_requires_grad) { in_grads->at(0) = out_grads.at(0); }
-
   return Maybe<void>::Ok();
 }
 
@@ -126,7 +114,7 @@ class DimScatterUpdateScalar : public OpExprGradFunction<DimScatterCaptureState>
 
 Maybe<void> DimScatterUpdateScalar::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
 
   return Maybe<void>::Ok();
@@ -135,8 +123,8 @@ Maybe<void> DimScatterUpdateScalar::Init(const OpExpr& op) {
 Maybe<void> DimScatterUpdateScalar::Capture(DimScatterCaptureState* ctx, const TensorTuple& inputs,
                                             const TensorTuple& outputs,
                                             const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), 2);
-  CHECK_EQ_OR_RETURN(outputs.size(), 1);
+  CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
 
   ctx->input_requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
@@ -152,22 +140,19 @@ Maybe<void> DimScatterUpdateScalar::Apply(const DimScatterCaptureState* ctx,
                                           const TensorTuple& out_grads,
                                           TensorTuple* in_grads) const {
   if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   const std::shared_ptr<oneflow::one::Tensor>& index = ctx->SavedTensors().at(0);
 
   in_grads->resize(2);
-
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<int32_t>("dim", ctx->dim));
-  JUST(attrs.SetAttr<float>("src_scalar", 0.0f));
-  in_grads->at(0) =
-      JUST(functional::DimScatterUpdateScalar(out_grads.at(0), ctx->dim, index, 0.0f));
+  in_grads->at(0) = JUST(functional::DimScatterUpdateScalar(out_grads.at(0), ctx->dim, index, 0.0f,
+                                                            /*inplace*/ false));
 
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("dim_scatter_update", DimScatter<SCATTER_TYPE::SCATTER_UPDATE>);
-REGISTER_OP_EXPR_GRAD_FUNCTION("dim_scatter_add", DimScatter<SCATTER_TYPE::SCATTER_ADD>);
+REGISTER_OP_EXPR_GRAD_FUNCTION("dim_scatter_update", DimScatter<ScatterType::kUpdate>);
+REGISTER_OP_EXPR_GRAD_FUNCTION("dim_scatter_add", DimScatter<ScatterType::kAdd>);
+REGISTER_OP_EXPR_GRAD_FUNCTION("dim_scatter_mul", DimScatter<ScatterType::kMultiply>);
 REGISTER_OP_EXPR_GRAD_FUNCTION("dim_scatter_update_scalar", DimScatterUpdateScalar);
 
 }  // namespace one

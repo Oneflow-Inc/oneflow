@@ -183,7 +183,7 @@ class TestGraphLRs(flow.unittest.TestCase):
             of_sgd = flow.optim.SGD(parameters, lr=0.001)
 
             lr = flow.optim.lr_scheduler.PolynomialLR(
-                of_sgd, steps=10, end_learning_rate=0.00001, power=2, cycle=True
+                of_sgd, decay_batch=10, end_learning_rate=0.00001, power=2, cycle=True
             )
             return of_sgd, lr
 

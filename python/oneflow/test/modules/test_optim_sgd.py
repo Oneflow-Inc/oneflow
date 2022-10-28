@@ -17,6 +17,7 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 import tempfile
+import os
 
 import numpy as np
 from oneflow.test_utils.test_util import GenArgDict
@@ -31,6 +32,9 @@ def compare_with_numpy_sgd(
     device,
     x_shape,
     momentum,
+    dampening,
+    nesterov,
+    maximize,
     weight_decay,
     learning_rate,
     train_iters,
@@ -45,14 +49,11 @@ def compare_with_numpy_sgd(
     def train_by_oneflow():
         x = Parameter(flow.Tensor(init_value, device=flow.device(device)))
         sgd = flow.optim.SGD(
-            [
-                {
-                    "params": [x],
-                    "lr": learning_rate,
-                    "momentum": momentum,
-                    "weight_decay": weight_decay,
-                }
-            ]
+            [{"params": [x], "lr": learning_rate, "weight_decay": weight_decay,}],
+            momentum=momentum,
+            dampening=dampening,
+            nesterov=nesterov,
+            maximize=maximize,
         )
 
         def train_one_iter(grad):
@@ -86,8 +87,23 @@ def compare_with_numpy_sgd(
 
         def train_one_iter(grad):
             grad = grad + weight_decay * x
-            v = momentum * vt - learning_rate * grad
-            param = x + v
+            if momentum > 0.0:
+                next_momentum = momentum * vt + (1 - dampening) * grad
+                v = next_momentum
+
+                if nesterov:
+                    grad += momentum * next_momentum
+                else:
+                    grad = next_momentum
+
+                alpha = -learning_rate
+                if maximize:
+                    alpha = learning_rate
+                next_model = x + alpha * grad
+                param = next_model
+            else:
+                v = learning_rate * grad
+                param = x - v
             return (param, v)
 
         for i in range(train_iters):
@@ -108,6 +124,9 @@ def compare_with_numpy_sgd_clip_grad(
     device,
     x_shape,
     momentum,
+    dampening,
+    nesterov,
+    maximize,
     weight_decay,
     learning_rate,
     clip_grad_max_norm,
@@ -128,12 +147,18 @@ def compare_with_numpy_sgd_clip_grad(
                 {
                     "params": [x],
                     "lr": learning_rate,
-                    "momentum": momentum,
+                    "dampening": dampening,
+                    "nesterov": nesterov,
+                    "maximize": maximize,
                     "weight_decay": weight_decay,
                     "clip_grad_max_norm": clip_grad_max_norm,
                     "clip_grad_norm_type": clip_grad_norm_type,
                 }
-            ]
+            ],
+            momentum=momentum,
+            dampening=dampening,
+            nesterov=nesterov,
+            maximize=maximize,
         )
 
         def train_one_iter(grad):
@@ -171,8 +196,23 @@ def compare_with_numpy_sgd_clip_grad(
                 grad, clip_grad_max_norm, clip_grad_norm_type
             )
             grad = grad + weight_decay * x
-            v = momentum * vt - learning_rate * grad
-            param = x + v
+            if momentum > 0.0:
+                next_momentum = momentum * vt + (1 - dampening) * grad
+                v = next_momentum
+
+                if nesterov:
+                    grad += momentum * next_momentum
+                else:
+                    grad = next_momentum
+
+                alpha = -learning_rate
+                if maximize:
+                    alpha = learning_rate
+                next_model = x + alpha * grad
+                param = next_model
+            else:
+                v = learning_rate * grad
+                param = x - v
             return (param, v)
 
         for i in range(train_iters):
@@ -196,6 +236,9 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["x_shape"] = [(10,)]
         arg_dict["momentum"] = [0.0, 0.9]
+        arg_dict["dampening"] = [0.0, 0.9]
+        arg_dict["nesterov"] = [True, False]
+        arg_dict["maximize"] = [True, False]
         arg_dict["weight_decay"] = [0.0, 0.9]
         arg_dict["learning_rate"] = [1, 0.1]
         arg_dict["train_iters"] = [10]
@@ -209,6 +252,9 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["x_shape"] = [(10,)]
         arg_dict["momentum"] = [0.0, 0.9]
+        arg_dict["dampening"] = [0.0, 0.9]
+        arg_dict["nesterov"] = [True, False]
+        arg_dict["maximize"] = [True, False]
         arg_dict["weight_decay"] = [0.0, 0.9]
         arg_dict["learning_rate"] = [1, 0.1]
         arg_dict["clip_grad_max_norm"] = [0, 0.5, 1.0]
@@ -218,6 +264,23 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["save_load_by_pickle"] = [False, True]
         for arg in GenArgDict(arg_dict):
             compare_with_numpy_sgd_clip_grad(test_case, **arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_eager_global_zero_grad_sbp(test_case):
+        x = flow.nn.Parameter(
+            flow.zeros((10,)).to_global(
+                sbp=flow.sbp.broadcast, placement=flow.placement("cuda", [0])
+            )
+        )
+        x.grad = flow.ones_like(x)
+        t = x.grad
+        test_case.assertEqual(len(t.sbp), 1)
+        test_case.assertEqual(t.sbp[0], flow.sbp.broadcast)
+        optimizer = flow.optim.SGD([x])
+        optimizer.zero_grad()
+        test_case.assertTrue(np.allclose(t.numpy(), 0.0))
+        test_case.assertEqual(len(t.sbp), 1)
+        test_case.assertEqual(t.sbp[0], flow.sbp.partial_sum)
 
 
 if __name__ == "__main__":

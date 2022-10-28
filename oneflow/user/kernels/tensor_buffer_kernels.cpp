@@ -31,9 +31,9 @@ class TensorBufferToTensorKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const ShapeView& in_shape = in->shape();
+    const ShapeView& in_shape = in->shape_view();
     CHECK_EQ(in->data_type(), DataType::kTensorBuffer);
-    const ShapeView& out_shape = out->shape();
+    const ShapeView& out_shape = out->shape_view();
     const auto& instance_shape = ctx->Attr<Shape>("instance_shape");
     CHECK_EQ(out_shape.NumAxes(), in_shape.NumAxes() + instance_shape.NumAxes());
     FOR_RANGE(int64_t, i, 0, in_shape.NumAxes()) { CHECK_EQ(out_shape.At(i), in_shape.At(i)); }
@@ -49,7 +49,7 @@ class TensorBufferToTensorKernel final : public user_op::OpKernel {
       const TensorBuffer* tensor_buffer = in_ptr + i;
       CHECK_EQ(tensor_buffer->nbytes(), instance_size);
       CHECK_EQ(tensor_buffer->data_type(), data_type);
-      CHECK(tensor_buffer->shape() == instance_shape);
+      CHECK(tensor_buffer->shape_view() == instance_shape);
       Memcpy<DeviceType::kCPU>(ctx->stream(), out_ptr + i * instance_size, tensor_buffer->data(),
                                instance_size);
     });
@@ -71,8 +71,8 @@ class TensorToTensorBufferKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const ShapeView& in_shape = in->shape();
-    const ShapeView& out_shape = out->shape();
+    const ShapeView& in_shape = in->shape_view();
+    const ShapeView& out_shape = out->shape_view();
     const auto instance_dims = ctx->Attr<int32_t>("instance_dims");
     CHECK_LT(instance_dims, in_shape.NumAxes());
     FOR_RANGE(int64_t, i, 0, in_shape.NumAxes() - instance_dims) {
@@ -150,21 +150,21 @@ class TensorBufferToListOfTensors final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    CHECK_GT(in->shape().elem_cnt(), 0);
+    CHECK_GT(in->shape_view().elem_cnt(), 0);
     CHECK_EQ(in->data_type(), DataType::kTensorBuffer);
     const DataType out_dtype = ctx->Attr<DataType>("out_dtype");
     CHECK(IsPODDataType(out_dtype));
     const bool dynamic_out = ctx->Attr<bool>("dynamic_out");
     const auto* in_ptr = in->dptr<TensorBuffer>();
-    MultiThreadLoop(in->shape().elem_cnt(), [&](size_t i) {
+    MultiThreadLoop(in->shape_view().elem_cnt(), [&](size_t i) {
       const TensorBuffer* tensor_buffer = in_ptr + i;
       user_op::Tensor* out_i = ctx->Tensor4ArgNameAndIndex("out", i);
       CHECK_EQ(out_dtype, tensor_buffer->data_type());
       if (dynamic_out) {
-        CHECK_LE(tensor_buffer->shape().elem_cnt(), out_i->shape().elem_cnt());
-        out_i->mut_shape().set_shape(tensor_buffer->shape());
+        CHECK_LE(tensor_buffer->shape_view().elem_cnt(), out_i->shape_view().elem_cnt());
+        out_i->mut_shape_view().set_shape(tensor_buffer->shape_view());
       } else {
-        CHECK_EQ(tensor_buffer->shape().elem_cnt(), out_i->shape().elem_cnt());
+        CHECK_EQ(tensor_buffer->shape_view().elem_cnt(), out_i->shape_view().elem_cnt());
       }
       Memcpy<DeviceType::kCPU>(ctx->stream(), out_i->mut_dptr<void>(), tensor_buffer->data(),
                                tensor_buffer->nbytes());
@@ -186,21 +186,21 @@ class TensorBufferToListOfTensorsV2 final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    CHECK_GT(in->shape().elem_cnt(), 0);
+    CHECK_GT(in->shape_view().elem_cnt(), 0);
     CHECK_EQ(in->data_type(), DataType::kTensorBuffer);
     const std::vector<DataType>& out_dtypes = ctx->Attr<std::vector<DataType>>("out_dtypes");
     const bool dynamic_out = ctx->Attr<bool>("dynamic_out");
     const auto* in_ptr = in->dptr<TensorBuffer>();
-    MultiThreadLoop(in->shape().elem_cnt(), [&](size_t i) {
+    MultiThreadLoop(in->shape_view().elem_cnt(), [&](size_t i) {
       CHECK(IsPODDataType(out_dtypes[i]));
       const TensorBuffer* tensor_buffer = in_ptr + i;
       user_op::Tensor* out_i = ctx->Tensor4ArgNameAndIndex("out", i);
       CHECK_EQ(out_dtypes[i], tensor_buffer->data_type());
       if (dynamic_out) {
-        CHECK_LE(tensor_buffer->shape().elem_cnt(), out_i->shape().elem_cnt());
-        out_i->mut_shape().set_shape(tensor_buffer->shape());
+        CHECK_LE(tensor_buffer->shape_view().elem_cnt(), out_i->shape_view().elem_cnt());
+        out_i->mut_shape_view().set_shape(tensor_buffer->shape_view());
       } else {
-        CHECK_EQ(tensor_buffer->shape().elem_cnt(), out_i->shape().elem_cnt());
+        CHECK_EQ(tensor_buffer->shape_view().elem_cnt(), out_i->shape_view().elem_cnt());
       }
       Memcpy<DeviceType::kCPU>(ctx->stream(), out_i->mut_dptr<void>(), tensor_buffer->data(),
                                tensor_buffer->nbytes());

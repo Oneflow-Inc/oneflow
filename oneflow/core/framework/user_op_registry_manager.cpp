@@ -17,7 +17,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/infer_util.h"
-#include "oneflow/core/framework/tensor_desc.h"
+#include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/kernel/kernel.pb.h"
 #include "oneflow/core/operator/operator.h"
 
@@ -46,25 +46,6 @@ Maybe<void> UserOpRegistryMgr::Register(OpRegistryResult result) {
 const OpRegistryResult* UserOpRegistryMgr::GetOpRegistryResult(const std::string& op_type_name) {
   auto it = op_reg_result_.find(op_type_name);
   if (it != op_reg_result_.end()) { return &(it->second); }
-  return nullptr;
-}
-
-OpGradRegistry UserOpRegistryMgr::CheckAndGetOpGradRegistry(const std::string& op_type_name) {
-  CHECK(!op_type_name.empty());
-  auto it = op_grad_reg_result_.find(op_type_name);
-  CHECK(it == op_grad_reg_result_.end());
-  return OpGradRegistry().Name(op_type_name);
-}
-
-Maybe<void> UserOpRegistryMgr::Register(OpGradRegistryResult result) {
-  CHECK_OR_RETURN(op_grad_reg_result_.emplace(result.op_type_name, result).second);
-  return Maybe<void>::Ok();
-}
-
-const OpGradRegistryResult* UserOpRegistryMgr::GetOpGradRegistryResult(
-    const std::string& op_type_name) {
-  auto it = op_grad_reg_result_.find(op_type_name);
-  if (it != op_grad_reg_result_.end()) { return &(it->second); }
   return nullptr;
 }
 
@@ -103,8 +84,8 @@ Maybe<const OpKernelRegistryResult*> UserOpRegistryMgr::GetOpKernelRegistryResul
     const std::string& op_type_name, const KernelRegContext& ctx) {
   auto it = op_kernel_reg_result_.find(op_type_name);
   if (it == op_kernel_reg_result_.end()) {
-    return Error::OpKernelNotFoundError("There is no kernel registered for Current OperatorConf. ",
-                                        {})
+    return Error::OpKernelNotFoundError({})
+           << "There is no kernel registered for Current OperatorConf. "
            << GetErrorMsgOfSearchedOp(ctx);
   }
 
@@ -118,8 +99,8 @@ Maybe<const OpKernelRegistryResult*> UserOpRegistryMgr::GetOpKernelRegistryResul
             debug_msgs.emplace_back(local_reg_val.is_matched_hob->DebugStr(ctx));
           }
         }
-        return Error::MultipleOpKernelsMatchedError(
-                   "There are more than one kernels matching Current OperatorConf. ", debug_msgs)
+        return Error::MultipleOpKernelsMatchedError(debug_msgs)
+               << "There are more than one kernels matching Current OperatorConf. "
                << GetErrorMsgOfSearchedOp(ctx);
       }
       ret = &reg_val;
@@ -130,12 +111,36 @@ Maybe<const OpKernelRegistryResult*> UserOpRegistryMgr::GetOpKernelRegistryResul
     for (const auto& reg_val : it->second) {
       debug_msgs.emplace_back(reg_val.is_matched_hob->DebugStr(ctx));
     }
-    return Error::OpKernelNotFoundError("Cannot find the kernel matching Current OperatorConf. ",
-                                        debug_msgs)
+    return Error::OpKernelNotFoundError(debug_msgs)
+           << "Cannot find the kernel matching Current OperatorConf. "
            << GetErrorMsgOfSearchedOp(ctx);
   }
 
   return ret;
+}
+
+Maybe<bool> UserOpRegistryMgr::IsOpKernelRegistered(const std::string& op_type_name,
+                                                    const KernelRegContext& ctx) {
+  auto it = op_kernel_reg_result_.find(op_type_name);
+  if (it == op_kernel_reg_result_.end()) { return false; }
+  const OpKernelRegistryResult* ret = nullptr;
+  for (const auto& reg_val : it->second) {
+    if (reg_val.is_matched_hob->get(ctx)) {
+      if (ret != nullptr) {
+        std::vector<std::string> debug_msgs;
+        for (const auto& local_reg_val : it->second) {
+          if (local_reg_val.is_matched_hob->get(ctx)) {
+            debug_msgs.emplace_back(local_reg_val.is_matched_hob->DebugStr(ctx));
+          }
+        }
+        return Error::MultipleOpKernelsMatchedError(debug_msgs)
+               << "There are more than one kernels matching Current OperatorConf: " << op_type_name;
+      }
+      ret = &reg_val;
+    }
+  }
+  if (ret == nullptr) { return false; }
+  return true;
 }
 
 }  // namespace user_op

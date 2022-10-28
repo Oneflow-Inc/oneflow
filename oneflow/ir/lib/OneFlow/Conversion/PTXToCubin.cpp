@@ -17,7 +17,7 @@ limitations under the License.
 This file is ported from mlir/lib/Dialect/GPU/Transforms/SerializeToCubin.cpp
 */
 
-#include "mlir/Dialect/GPU/Passes.h"
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
 #ifdef WITH_MLIR_CUDA_CODEGEN
 
 #include "mlir/Pass/Pass.h"

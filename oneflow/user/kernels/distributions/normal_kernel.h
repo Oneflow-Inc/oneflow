@@ -47,7 +47,7 @@ class NormalKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const double mean = ctx->Attr<double>("mean");
     const double std = ctx->Attr<double>("std");
-    int64_t elem_cnt = out->shape().elem_cnt();
+    int64_t elem_cnt = out->shape_view().elem_cnt();
     T* out_dptr = out->mut_dptr<T>();
     auto* distribution_state = dynamic_cast<DistributionKernelState*>(state);
     CHECK_NOTNULL(distribution_state);

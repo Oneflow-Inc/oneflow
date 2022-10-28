@@ -21,9 +21,25 @@ namespace oneflow {
 
 namespace {
 
+// Logically computation cost of pool op is the product of output data amount and pool kernal data
+// amount. After adding sbp, we just divide it by parallel number if output data is splitted because
+// splitting input and using partial sum for output is not a valid sbp for this op for now.
+Maybe<double> GetComputationCost(user_op::ComputeComplexityFnContext* ctx) {
+  const std::vector<int32_t> pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
+  double logical_computation_cost =
+      std::accumulate(pool_size.begin(), pool_size.end(),
+                      ctx->Shape4ArgNameAndIndex("y", 0).elem_cnt(), std::multiplies<double>());
+  const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
+  const auto& nd_sbp_y = ctx->NdSbp4ArgNameAndIndex("y", 0);
+  for (int32_t dim_sbp = 0; dim_sbp < nd_sbp_y.sbp_parallel_size(); dim_sbp++) {
+    if (nd_sbp_y.sbp_parallel(dim_sbp).has_split_parallel()) {
+      logical_computation_cost /= parallel_hierarchy->At(dim_sbp);
+    }
+  }
+  return logical_computation_cost;
+}
+
 typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn;
-typedef std::function<Maybe<void>(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
-    GenBackwardOpConfFn;
 
 TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
   return [dim](user_op::InferContext* ctx) -> Maybe<void> {
@@ -43,26 +59,26 @@ TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
 
     const Params3D params_3d(dim, x_shape, data_format, padding, padding_before, padding_after,
                              pool_size, strides, ceil_mode);
-    user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
-    *y_desc->mut_shape() = params_3d.GetYShape();
-    *y_desc->mut_is_dynamic() = ctx->InputIsDynamic("x", 0);
+    user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
+    y_desc->set_shape(params_3d.GetYShape());
+    y_desc->set_is_dynamic(ctx->InputIsDynamic("x", 0));
     return Maybe<void>::Ok();
   };
 }
 
 Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
-  *ctx->OutputShape("dx", 0) = ctx->InputShape("x", 0);
-  *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x", 0);
+  ctx->SetOutputShape("dx", 0, ctx->InputShape("x", 0));
+  ctx->SetOutputIsDynamic("dx", 0, ctx->InputIsDynamic("x", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> FwInferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("y", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
 
@@ -87,31 +103,6 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-GenBackwardOpConfFn MakeGenBackwardOpConfFn(const std::string& mode, const int32_t dim) {
-  return [mode, dim](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) -> Maybe<void> {
-    if (op.NeedGenGradTensor4OpInput("x", 0)) {
-      user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-      user_op::UserOpConfWrapper grad_op =
-          builder.Op(mode + "_pool_" + std::to_string(dim) + "d_grad")
-              .Input("x", op.input("x", 0))
-              .Input("y", op.output("y", 0))
-              .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-              .Output("dx")
-              .Attr("data_format", op.attr<std::string>("data_format"))
-              .Attr("padding", op.attr<std::string>("padding"))
-              .Attr("padding_before", op.attr<std::vector<int32_t>>("padding_before"))
-              .Attr("padding_after", op.attr<std::vector<int32_t>>("padding_after"))
-              .Attr("pool_size", op.attr<std::vector<int32_t>>("pool_size"))
-              .Attr("strides", op.attr<std::vector<int32_t>>("strides"))
-              .Attr("ceil_mode", op.attr<bool>("ceil_mode"))
-              .Build();
-      op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-      AddOp(grad_op);
-    }
-    return Maybe<void>::Ok();
-  };
-}
-
 }  // namespace
 
 #define IMPLEMENT_TF_POOL_FUNCS(name, dim)                                                      \
@@ -124,6 +115,10 @@ GenBackwardOpConfFn MakeGenBackwardOpConfFn(const std::string& mode, const int32
   }                                                                                             \
   /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {                  \
     return FwInferDataType(ctx);                                                                \
+  }                                                                                             \
+  /*static*/ Maybe<double> name##Op::GetComputeComplexity(                                      \
+      user_op::ComputeComplexityFnContext* ctx) {                                               \
+    return GetComputationCost(ctx);                                                             \
   }
 
 IMPLEMENT_TF_POOL_FUNCS(TfAvgPool1D, 1)
@@ -146,6 +141,10 @@ IMPLEMENT_TF_POOL_FUNCS(TfMaxPool3D, 3)
   }                                                                                          \
   /*static*/ Maybe<void> name##GradOp::InferDataType(user_op::InferContext* ctx) {           \
     return BwInferDataType(ctx);                                                             \
+  }                                                                                          \
+  /*static*/ Maybe<double> name##GradOp::GetComputeComplexity(                               \
+      user_op::ComputeComplexityFnContext* ctx) {                                            \
+    return GetComputationCost(ctx);                                                          \
   }
 
 IMPLEMENT_TF_POOL_BACKWARD_FUNCS(TfAvgPool1D)
@@ -155,19 +154,5 @@ IMPLEMENT_TF_POOL_BACKWARD_FUNCS(TfMaxPool1D)
 IMPLEMENT_TF_POOL_BACKWARD_FUNCS(TfMaxPool2D)
 IMPLEMENT_TF_POOL_BACKWARD_FUNCS(TfMaxPool3D)
 #undef IMPLEMENT_TF_POOL_BACKWARD_FUNCS
-
-REGISTER_USER_OP_GRAD("tf_avg_pool_1d")
-    .SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("tf_avg", 1));
-REGISTER_USER_OP_GRAD("tf_avg_pool_2d")
-    .SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("tf_avg", 2));
-REGISTER_USER_OP_GRAD("tf_avg_pool_3d")
-    .SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("tf_avg", 3));
-
-REGISTER_USER_OP_GRAD("tf_max_pool_1d")
-    .SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("tf_max", 1));
-REGISTER_USER_OP_GRAD("tf_max_pool_2d")
-    .SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("tf_max", 2));
-REGISTER_USER_OP_GRAD("tf_max_pool_3d")
-    .SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("tf_max", 3));
 
 }  // namespace oneflow
