@@ -331,8 +331,11 @@ class BatchMatMulFunctor {
         << "-dimensional tensor for argument #2";
     CHECK_EQ_OR_RETURN(a_shape->At(0), b_shape->At(0))
         << Error::RuntimeError() << "Batch dim not match, please check input!";
-    CHECK_EQ_OR_RETURN(a_shape->At(2), b_shape->At(1))
-        << Error::RuntimeError() << "Matmul dim not match, please check input!";
+    const int64_t matmul_dim_a = transpose_a ? a_shape->At(1) : a_shape->At(2);
+    const int64_t matmul_dim_b = transpose_b ? b_shape->At(2) : b_shape->At(1);
+    CHECK_EQ_OR_RETURN(matmul_dim_a, matmul_dim_b)
+        << Error::RuntimeError() << "Matmul dim not match, got " << matmul_dim_a << " of mat1 and "
+        << matmul_dim_b << " of mat2, please check input!";
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("transpose_a", "transpose_b", "alpha");
     attrs.SetAllAttrs(transpose_a, transpose_b, alpha);
     return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, attrs);
@@ -2380,8 +2383,13 @@ class ConstantPadFunctor {
       attrs.SetAllAttrs(pad, value.As<double>(), static_cast<int64_t>(0), pad_before, pad_after);
     } else if (IsIntegralDataType(input->dtype()->data_type())) {
       attrs.SetAllAttrs(pad, static_cast<double>(0), value.As<int64_t>(), pad_before, pad_after);
+    } else if (input->dtype() == DType::Bool()) {
+      int64_t bool_value = value.As<int64_t>();
+      CHECK_OR_RETURN(bool_value == 1 || bool_value == 0)
+          << "value must be 1/0 or True/False for bool Tensor";
+      attrs.SetAllAttrs(pad, static_cast<double>(0), value.As<int64_t>(), pad_before, pad_after);
     } else {
-      UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
+      UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating, bool or integral type.";
     }
     return OpInterpUtil::Dispatch<Tensor>(*constant_pad_, {input}, attrs);
   }
@@ -2672,7 +2680,8 @@ Maybe<Tensor> DropoutImpl(const std::shared_ptr<one::Tensor>& input, const float
     return InplaceMul(input, other);
   }
   std::shared_ptr<Tensor> noise = JUST(MakeFeatureNoise(input));
-  noise = JUST(BernoulliProb(noise, 1.0 - p, noise->dtype(), JUST(one::DefaultAutoGenerator())));
+  noise =
+      JUST(BernoulliProb(noise, 1.0 - p, noise->dtype(), JUST(one::DefaultAutoGenerator()), false));
   noise = JUST(InplaceScalarDiv(noise, Scalar(1.0 - p)));
   noise = JUST(InplaceMul(input, noise));
   return noise;
@@ -4168,23 +4177,21 @@ class MultiTensorSgdUpdateFunctor {
       op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_sgd_update")
                               .Input("model", n + 1)
                               .Input("model_diff", n + 1)
-                              .Input("learning_rate")
                               .Build());
     }
   }
 
   Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff,
-                         const std::shared_ptr<one::Tensor>& learning_rate, const double& scale,
-                         const float& weight_decay) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay");
-    attrs.SetAllAttrs(scale, weight_decay);
+                         const double& scale, const float& weight_decay,
+                         const float& learning_rate_val) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "learning_rate_val");
+    attrs.SetAllAttrs(scale, weight_decay, learning_rate_val);
     const int64_t weight_size = model.size();
     for (int i = 0; i < weight_size; i += kMaxInputCount) {
       size_t size = (i + kMaxInputCount) < weight_size ? kMaxInputCount : weight_size - i;
-      TensorTuple input(2 * size + 1);
+      TensorTuple input(2 * size);
       std::copy(model.begin() + i, model.begin() + i + size, input.begin());
-      std::copy(model_diff.begin() + i, model_diff.begin() + size, input.begin() + size);
-      input[2 * size] = learning_rate;
+      std::copy(model_diff.begin() + i, model_diff.begin() + i + size, input.begin() + size);
       JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[size - 1], input, attrs));
     }
     return Maybe<void>::Ok();
@@ -4205,32 +4212,30 @@ class MultiTensorAdamUpdateFunctor {
                               .Input("model_diff", n + 1)
                               .Input("m", n + 1)
                               .Input("v", n + 1)
-                              .Input("learning_rate")
                               .Build());
     }
   }
 
   Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff,
-                         const TensorTuple& m, const TensorTuple& v,
-                         const std::shared_ptr<one::Tensor>& learning_rate, const float& beta1,
-                         const float& beta2, const float& bias_correction1_val,
-                         const float& bias_correction2_val, const bool& do_bias_correction,
-                         const double& scale, const float& weight_decay) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "beta1", "beta2",
-                                                 "bias_correction1_val", "bias_correction2_val",
-                                                 "do_bias_correction");
+                         const TensorTuple& m, const TensorTuple& v, const float& learning_rate_val,
+                         const float& l2, const float& beta1, const float& beta2,
+                         const float& bias_correction1_val, const float& bias_correction2_val,
+                         const bool& do_bias_correction, const double& scale,
+                         const float& weight_decay, const float& epsilon) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
+        "scale", "weight_decay", "beta1", "beta2", "bias_correction1_val", "bias_correction2_val",
+        "do_bias_correction", "learning_rate_val", "l2", "epsilon");
     attrs.SetAllAttrs(scale, weight_decay, beta1, beta2, bias_correction1_val, bias_correction2_val,
-                      do_bias_correction);
+                      do_bias_correction, learning_rate_val, l2, epsilon);
 
     const int64_t weight_size = model.size();
     for (int i = 0; i < weight_size; i += kMaxInputCount) {
       size_t size = (i + kMaxInputCount) < weight_size ? kMaxInputCount : weight_size - i;
-      TensorTuple input(4 * size + 1);
+      TensorTuple input(4 * size);
       std::copy(model.begin() + i, model.begin() + i + size, input.begin());
       std::copy(model_diff.begin() + i, model_diff.begin() + i + size, input.begin() + size);
       std::copy(m.begin() + i, m.begin() + i + size, input.begin() + 2 * size);
       std::copy(v.begin() + i, v.begin() + i + size, input.begin() + 3 * size);
-      input[4 * size] = learning_rate;
       JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[size - 1], input, attrs));
     }
     return Maybe<void>::Ok();
@@ -4425,6 +4430,36 @@ class BatchNormBackwardElemtFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedMultiHeadAttentionInferenceFunctor {
+ public:
+  FusedMultiHeadAttentionInferenceFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_multi_head_attention_inference")
+                         .Input("query")
+                         .Input("key")
+                         .Input("value")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(
+      const std::shared_ptr<one::Tensor>& query, const std::shared_ptr<one::Tensor>& key,
+      const std::shared_ptr<one::Tensor>& value, const int64_t& num_heads, const bool& causal,
+      const int64_t& query_hidden_slice_start, const int64_t& query_hidden_slice_end,
+      const int64_t& key_hidden_slice_start, const int64_t& key_hidden_slice_end,
+      const int64_t& value_hidden_slice_start, const int64_t& value_hidden_slice_end) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_heads", "causal", "query_hidden_slice_start",
+                                                 "query_hidden_slice_end", "key_hidden_slice_start",
+                                                 "key_hidden_slice_end", "value_hidden_slice_start",
+                                                 "value_hidden_slice_end");
+    attrs.SetAllAttrs(num_heads, causal, query_hidden_slice_start, query_hidden_slice_end,
+                      key_hidden_slice_start, key_hidden_slice_end, value_hidden_slice_start,
+                      value_hidden_slice_end);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {query, key, value}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -4545,6 +4580,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BatchNormElemtFunctor>("BatchNormElemt");
   m.add_functor<impl::BatchNormBackwardReduceFunctor>("BatchNormBackwardReduce");
   m.add_functor<impl::BatchNormBackwardElemtFunctor>("BatchNormBackwardElemt");
+  m.add_functor<impl::FusedMultiHeadAttentionInferenceFunctor>("FusedMultiHeadAttentionInference");
 }
 
 }  // namespace functional

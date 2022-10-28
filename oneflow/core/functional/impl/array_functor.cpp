@@ -13,42 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/autograd/autograd_mode.h"
-#include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/scalar.h"
-#include "oneflow/core/common/singleton.h"
-#include "oneflow/core/common/optional.h"
-#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/symbol.h"
-#include "oneflow/core/control/global_process_ctx.h"
-#include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
-#include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/placement_utils.h"
-#include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/framework/random_generator_impl.h"
-#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
-#include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
-#include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/sbp_parallel.h"
-#include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
-#include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 
@@ -514,23 +488,34 @@ class ConcatFunctor {
     const int64_t ninput = inputs.size();
     int64_t axis = dim;
     int64_t ndim = inputs[0]->ndim();
+    int64_t nelement = inputs[0]->nelement();
     int64_t max_dim_size = 0;
     CHECK_GE_OR_RETURN(ninput, 1) << Error::RuntimeError() << "inputs size must greater than 0";
     axis = JUST(maybe_wrap_dim(axis, ndim));
 
     const std::shared_ptr<const Shape>& shape = inputs[0]->shape();
     for (const auto& input : inputs) {
-      CHECK_OR_RETURN(input->ndim() == ndim)
-          << Error::RuntimeError() << "Tensors must have same number of dimensions: got "
-          << input->ndim() << " and " << ndim << " is expected.";
+      if (nelement == 0 and ndim == 1) {
+        if (input->nelement() != 0 or input->ndim() != 1) {
+          ndim = input->ndim();
+          nelement = input->nelement();
+        } else {
+          continue;
+        }
+      } else if (input->nelement() != 0 or input->ndim() != 1) {
+        CHECK_OR_RETURN(input->ndim() == ndim)
+            << Error::RuntimeError() << "Tensors must have same number of dimensions: got " << ndim
+            << " and " << input->ndim() << " is expected.";
+      }
       for (int i = 0; i < ndim; ++i) {
+        if (input->nelement() == 0 and input->ndim() == 1) { continue; }
         if (axis == i) {
           max_dim_size += input->shape()->At(i);
-        } else {
+        } else if (inputs[0]->nelement() != 0) {
           CHECK_OR_RETURN(input->shape()->At(i) == shape->At(i))
               << Error::RuntimeError() << "Sizes of tensors must match except in dimension " << axis
               << ". Got " << input->shape()->At(i) << " and " << shape->At(i)
-              << " is expected in dimension 1.";
+              << " is expected in dimension " << i << ".";
         }
       }
     }
@@ -543,7 +528,9 @@ class ConcatFunctor {
       TensorTuple partial_inputs(size);
       TensorProcessor tensor_processor;
       for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs(partial_inputs).Apply());
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+               .AddInputs(partial_inputs, inputs.at(i)->dtype())
+               .Apply());
       TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
       outputs.emplace_back(
           JUST(OpInterpUtil::Dispatch<Tensor>(*ops_[size - 1], input_tuple, attrs)));
@@ -1960,6 +1947,27 @@ class UnsortedSegmentSumLikeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class UnsortedSegmentSumFunctor {
+ public:
+  UnsortedSegmentSumFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("unsorted_segment_sum")
+                         .Input("data")
+                         .Input("segment_ids")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& segment_ids, const int64_t& axis,
+                           const int64_t& num_segments) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("axis", "num_segments");
+    attrs.SetAllAttrs(axis, num_segments);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, segment_ids}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class TrilFunctor {
  public:
   TrilFunctor() { op_ = CHECK_JUST(one::OpBuilder("tril").Input("in").Output("out").Build()); }
@@ -1981,6 +1989,25 @@ class TriuFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("diagonal");
     attrs.SetAllAttrs(diagonal);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class InplaceTriuFunctor {
+ public:
+  InplaceTriuFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("triu").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal) const {
+    JUST(CheckInplaceValid(x));
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("diagonal");
+    attrs.SetAllAttrs(diagonal);
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+    return outputs->at(0);
   }
 
  private:
@@ -2623,7 +2650,8 @@ class MaskedFillFunctor {
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("float_operand", "has_float_operand", "int_operand",
                                        "has_int_operand", "bool_operand", "has_bool_operand");
-    if (IsFloatingDataType(x->dtype()->data_type())) {
+    if (IsFloatingDataType(x->dtype()->data_type())
+        || x->dtype()->data_type() == DataType::kFloat16) {
       attrs.SetAllAttrs(value.As<double>(), true, NullOpt, false, NullOpt, false);
     } else if (IsIntegralDataType(x->dtype()->data_type())) {
       attrs.SetAllAttrs(NullOpt, false, value.As<int64_t>(), true, NullOpt, false);
@@ -3269,7 +3297,8 @@ class FillFunctor {
     JUST(CheckInplaceValid(in));
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("floating_value", "is_floating_value", "integral_value");
-    if (IsFloatingDataType(in->dtype()->data_type())) {
+    if (IsFloatingDataType(in->dtype()->data_type())
+        || in->dtype()->data_type() == DataType::kFloat16) {
       attrs.SetAllAttrs(value.As<double>(), true, NullOpt);
     } else if (IsIntegralDataType(in->dtype()->data_type())) {
       attrs.SetAllAttrs(NullOpt, false, value.As<int64_t>());
@@ -3311,6 +3340,65 @@ class FillTensorFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class BinCountFunctor {
+ public:
+  BinCountFunctor() {
+    op_ = CHECK_JUST(OpBuilder("bincount").Input("in").Output("out").Build());
+    weight_op_ =
+        CHECK_JUST(OpBuilder("bincount").Input("in").Input("weight").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const Optional<Tensor>& weight,
+                           const Optional<int64_t>& minlength) const {
+    CHECK_OR_RETURN(!input->dtype()->is_floating_point()) << "bincount can only support int tensor";
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({input}, DType::Int64()).Apply());
+    const auto x = JUST(tensor_processor.GetInputs()).at(0);
+    std::shared_ptr<Tensor> local_tensor = x;
+    int64_t max = 0;
+
+    // check min value
+    {
+      if (x->is_global()) { local_tensor = JUST(GlobalToLocal(x, false)); }
+      auto tensor_min = JUST(functional::Min(local_tensor));
+      int64_t min = 0;
+      const auto& callback_min =
+          [&](ep::Stream* stream, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+            SyncAutoMemcpy(stream, &min, eager_blob_object->dptr(), sizeof(min),
+                           memory::MakeHostMemCase(), eager_blob_object->mem_case());
+          };
+      JUST(SyncAccessTensorWithTimeOut(tensor_min, callback_min, "const"));
+      CHECK_GE_OR_RETURN(min, 0) << "bincount only supports 1-d non-negative integral inputs.";
+
+      auto tensor_max = JUST(functional::Max(local_tensor));
+      const auto& callback_max =
+          [&](ep::Stream* stream, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+            SyncAutoMemcpy(stream, &max, eager_blob_object->dptr(), sizeof(max),
+                           memory::MakeHostMemCase(), eager_blob_object->mem_case());
+          };
+      JUST(SyncAccessTensorWithTimeOut(tensor_max, callback_max, "const"));
+      max += 1;
+    }
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("size");
+    if (minlength) {
+      CHECK_GE_OR_RETURN(JUST(minlength), 0) << "minlength should be >= 0";
+      max = std::max(JUST(minlength), max);
+    }
+    attrs.SetAllAttrs(max);
+    if (weight) {
+      CHECK_EQ_OR_RETURN(JUST(weight)->nelement(), x->nelement())
+          << "input and weights should have the same length";
+      return OpInterpUtil::Dispatch<Tensor>(*weight_op_, {x, JUST(weight)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> weight_op_;
 };
 
 }  // namespace impl
@@ -3393,8 +3481,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UpsampleTrilinear3DFunctor>("UpsampleTrilinear3D");
   m.add_functor<impl::UpsampleTrilinear3DGradFunctor>("UpsampleTrilinear3DGrad");
   m.add_functor<impl::UnsortedSegmentSumLikeFunctor>("UnsortedSegmentSumLike");
+  m.add_functor<impl::UnsortedSegmentSumFunctor>("UnsortedSegmentSum");
   m.add_functor<impl::TrilFunctor>("Tril");
   m.add_functor<impl::TriuFunctor>("Triu");
+  m.add_functor<impl::InplaceTriuFunctor>("InplaceTriu");
   m.add_functor<impl::DiagFunctor>("Diag");
   m.add_functor<impl::DiagGradFunctor>("DiagGrad");
   m.add_functor<impl::DiagonalFunctor>("Diagonal");
@@ -3452,6 +3542,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TransposeAllDimFunctionFunctor>("TransposeAllDimFunction");
   m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
   m.add_functor<impl::PinMemoryFunctor>("PinMemory");
+  m.add_functor<impl::BinCountFunctor>("BinCount");
 };
 
 }  // namespace functional

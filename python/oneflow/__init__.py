@@ -220,7 +220,9 @@ from oneflow._C import isinf
 from oneflow._C import isfinite
 from oneflow._C import inv as inverse
 from oneflow._C import iinfo, finfo
+from oneflow._C import multinomial
 from oneflow._C import linalg_cross as cross
+from oneflow._C import bincount
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
@@ -287,6 +289,13 @@ del hook
 del ExitHook
 del atexit
 del oneflow
+
+# default dtype
+from oneflow.framework.dtype import (
+    set_default_dtype,
+    set_default_tensor_type,
+    get_default_dtype,
+)
 
 import oneflow._C
 from oneflow._C import tensor, batch_gather
@@ -369,6 +378,7 @@ from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
 from oneflow._C import normal
 from oneflow._C import rand
 from oneflow._C import randn
+from oneflow._C import randn_like
 from oneflow._C import randint
 from oneflow._C import randint_like
 from oneflow._C import randperm
@@ -410,6 +420,7 @@ from oneflow.amp.autocast_mode import *
 from . import (
     autograd,
     distributed,
+    distributions,
     linalg,
     optim,
     comm,

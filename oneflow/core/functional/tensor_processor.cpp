@@ -37,13 +37,10 @@ Symbol<DType> ComputeCommonDType(const TensorTuple& tensor_tuple) {
 }
 
 bool CheckHasDifferentInputDType(const TensorTuple& tensor_tuple) {
-  Symbol<DType> common_dtype = DType::InvalidDataType();
+  if (tensor_tuple.size() <= 1) { return false; }
+  Symbol<DType> common_dtype = tensor_tuple[0]->dtype();
   for (auto& tensor_ptr : tensor_tuple) {
-    if (common_dtype == DType::InvalidDataType()) {
-      common_dtype = tensor_ptr->dtype();  // Initialize the common_dtype_
-    } else {
-      return true;
-    }
+    if (common_dtype != tensor_ptr->dtype()) { return true; }
   }
   return false;
 }
@@ -81,6 +78,13 @@ TensorProcessor& TensorProcessor::PromoteInputsToCommonDtype(bool is_promote) {
   return *this;
 }
 
+TensorProcessor& TensorProcessor::PromoteInputsToCommonDtype(
+    bool is_promote, const Optional<Symbol<DType>>& promote_dtype) {
+  promote_inputs_to_common_dtype_ = is_promote;
+  promote_dtype_ = promote_dtype;
+  return *this;
+}
+
 TensorProcessor& TensorProcessor::PromoteIntegerInputsToFloatDtype(bool is_promote) {
   promote_integer_inputs_to_float_ = is_promote;
   CHECK_OR_THROW(!promote_integer_inputs_to_float_ || promote_inputs_to_common_dtype_)
@@ -93,7 +97,11 @@ Maybe<void> TensorProcessor::Apply() {
   if (promote_inputs_to_common_dtype_) {
     bool has_different_input_dtype = CheckHasDifferentInputDType(tensor_tuple_);
     if (has_different_input_dtype) {
-      common_dtype_ = ComputeCommonDType(tensor_tuple_);
+      if (promote_dtype_.has_value()) {
+        common_dtype_ = CHECK_JUST(promote_dtype_);
+      } else {
+        common_dtype_ = ComputeCommonDType(tensor_tuple_);
+      }
       if (promote_integer_inputs_to_float_ && common_dtype_->is_integer()) {
         // Promotes common dtype to the default float scalar type, if needed.
         // same to pytorch's computeTypes() in torch/csrc/jit/codegen/cuda/type_promotion.cpp
@@ -102,7 +110,7 @@ Maybe<void> TensorProcessor::Apply() {
       JUST(CastToSameType(tensor_tuple_, common_dtype_));
     } else {
       if (tensor_tuple_.size() == 1 && !tensor_tuple_[0]->dtype()->is_floating_point()) {
-        Symbol<DType> cast_dtype = inputs_lowest_dtype_vec_[0]->InvalidDataType()
+        Symbol<DType> cast_dtype = (inputs_lowest_dtype_vec_[0] == DType::InvalidDataType())
                                        ? DType::Float()
                                        : inputs_lowest_dtype_vec_[0];
         JUST(CastToSameType(tensor_tuple_, cast_dtype));
@@ -168,7 +176,7 @@ TensorLayoutProcessor::~TensorLayoutProcessor() {
 
 Maybe<void> TensorAutoCastProcessor::Apply() {
   if (!autocast::is_enabled()) { return Maybe<void>::Ok(); }
-
+  if (autocast_meta_.autocast_color() == autocast::kNoColor) { return Maybe<void>::Ok(); }
   auto autocast_device_type = autocast::get_autocast_device_type();
   auto autocast_dtype = autocast::get_autocast_dtype();
   auto IsDeviceType = [](const std::shared_ptr<Tensor>& tensor,

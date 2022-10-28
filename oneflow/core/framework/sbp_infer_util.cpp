@@ -603,14 +603,17 @@ void SetNdSbpSignature(NdSbpSignature* nd_sbp_signature, const SbpSignature& sbp
 }
 
 void DfsGetNdSbpSignature(NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t dims,
-                          const SbpSignatureList& sbp_sig_list,
+                          const Shape& hierarchy,
+                          const HashMap<int32_t, SbpSignatureList>& hierarchy_value2sbp_sig_list,
                           std::vector<NdSbpSignature>* nd_sbp_sig_list) {
   if (depth == dims) {
     nd_sbp_sig_list->push_back(nd_sbp_sig);
   } else {
-    for (const auto& sbp_signature : sbp_sig_list.sbp_signature()) {
+    for (const auto& sbp_signature :
+         hierarchy_value2sbp_sig_list.at(hierarchy.At(depth)).sbp_signature()) {
       SetNdSbpSignature(&nd_sbp_sig, sbp_signature, depth);
-      DfsGetNdSbpSignature(nd_sbp_sig, depth + 1, dims, sbp_sig_list, nd_sbp_sig_list);
+      DfsGetNdSbpSignature(nd_sbp_sig, depth + 1, dims, hierarchy, hierarchy_value2sbp_sig_list,
+                           nd_sbp_sig_list);
     }
   }
 }
@@ -685,7 +688,11 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
   // We need to speed it up and give an approximation of the cost
   if (reduced_in_parallel_desc == reduced_out_parallel_desc
       && reduced_in_nd_sbp == reduced_out_nd_sbp) {
-    return 0.0;
+    if (producer_sbp_parallel == consumer_sbp_parallel) {
+      return 0.0;
+    } else {
+      return 1.0;
+    }
   }
   if (requires_same_sbp) { return kUnsupportedBoxing; }
 #ifdef WITH_CUDA

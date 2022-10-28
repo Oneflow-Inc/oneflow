@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from numbers import Number
 import oneflow as flow
 import oneflow.framework.tensor_str as tensor_str
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
@@ -182,13 +183,7 @@ def _new_empty(
 
 
 def _new_ones(
-    self,
-    size=None,
-    dtype=None,
-    device=None,
-    placement=None,
-    sbp=None,
-    requires_grad=False,
+    self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
 ):
     return flow.new_ones(self, size, dtype, device, placement, sbp, requires_grad)
 
@@ -232,6 +227,10 @@ def _split(self, split_size_or_sections=None, dim=0):
 
 def _uniform(self, a=0, b=1):
     return flow.nn.init.uniform_(self, a, b)
+
+
+def _exponential(self, lambd=1.0, generator=None):
+    return flow._C.exponential_(self, lambd, generator)
 
 
 def _trunc_normal_(
@@ -292,13 +291,11 @@ def _fill(self, value):
 
 
 def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
-    method_name = eager_local_tensor._get_copy_local_tensor_from_numpy_func_name()
-    copy_from_numpy = getattr(eager_local_tensor, method_name)
     assert np_arr.dtype == flow.convert_oneflow_dtype_to_numpy_dtype(
         eager_local_tensor.dtype
     )
     assert np_arr.shape == tuple(eager_local_tensor.shape)
-    copy_from_numpy(np_arr)
+    eager_local_tensor._copy_from_numpy(np_arr)
 
 
 def _copy(self, other: Union[Tensor, np.ndarray]):
@@ -317,7 +314,12 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
             ), "Only local tensor can be assigned to local tensor."
             if self.device == other.device:
                 other = flow._C.broadcast_like(other, self)
-                flow._C.assign_local_tensor(self, other)
+                if not self.is_contiguous():
+                    # NOTE: slice_update support non-contiguous input tensor
+                    with flow.no_grad():
+                        self[...] = other
+                else:
+                    flow._C.assign_local_tensor(self, other)
                 return
 
     # Possibility 2: `other` is a numpy array, or `self` and `other` are tensors on different devices/placements.
@@ -449,6 +451,9 @@ def _numpy(self):
         shapes, dtypes = self._tensor_buffer_shapes_and_dtypes
         tensors = flow.tensor_buffer_to_list_of_tensors(self, shapes, dtypes)
         return [t.numpy() for t in tensors]
+    # TODO: support bfloat16 to numpy in C++
+    if self.dtype == flow.bfloat16:
+        self = self.to(flow.float32)
     if self.is_global:
         self_cpu_placement = flow.placement("cpu", self.placement.ranks)
         self = (
@@ -526,16 +531,37 @@ def _cross(self, other, dim=None):
     return flow._C.cross(self, other, dim)
 
 
-def _scatter(self, dim, index, src, reduce=""):
-    if reduce == "":
-        reduce = None
-    return flow._C.scatter(self, dim, index, src, reduce, inplace=False)
+def _scatter(self, dim, index, src, *, reduce=""):
+    return flow._C.scatter(self, dim, index, src, reduce=reduce, inplace=False)
 
 
-def _scatter_inplace(self, dim, index, src, reduce=""):
-    if reduce == "":
-        reduce = None
-    return flow._C.scatter(self, dim, index, src, reduce, inplace=True)
+def _scatter_inplace(self, dim, index, src, *, reduce=None):
+    return flow._C.scatter(self, dim, index, src, reduce=reduce, inplace=True)
+
+
+def _scatter_add(self, dim, index, src):
+    return flow._C.scatter_add(self, dim, index, src, inplace=False)
+
+
+def _scatter_add_inplace(self, dim, index, src):
+    return flow._C.scatter_add(self, dim, index, src, inplace=True)
+
+
+def _contains(self, element):
+    r"""Check if `element` is present in tensor
+
+        Args:
+            element (Tensor or scalar): element to be checked
+                for presence in current tensor"
+        """
+    if isinstance(element, (flow.Tensor, Number)):
+        # type hint doesn't understand the __contains__ result array
+        return (element == self).any().item()  # type: ignore[union-attr]
+
+    raise RuntimeError(
+        "Tensor.__contains__ only supports Tensor or scalar, but you passed in a %s."
+        % type(element)
+    )
 
 
 def RegisterMethods():
@@ -548,6 +574,7 @@ def RegisterMethods():
     Tensor.backward = _backward
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
+    Tensor.__contains__ = _contains
     Tensor.__bool__ = is_nonzero
     Tensor.__iadd__ = _iadd
     Tensor.addmm = _addmm
@@ -557,6 +584,7 @@ def RegisterMethods():
     Tensor.__int__ = _scalar_int
     Tensor.__array__ = _numpy
     Tensor.uniform_ = _uniform
+    Tensor.exponential_ = _exponential
     Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform
     Tensor.kaiming_normal_ = _kaiming_normal
@@ -608,6 +636,8 @@ def RegisterMethods():
     Tensor.cross = _cross
     Tensor.scatter = _scatter
     Tensor.scatter_ = _scatter_inplace
+    Tensor.scatter_add = _scatter_add
+    Tensor.scatter_add_ = _scatter_add_inplace
 
 
 def register_tensor_op(op_name):
