@@ -220,7 +220,9 @@ class AssignLocalTensorFunctor {
     // JUST(CheckInplaceValid(ref)); // align check to torch
     CHECK_OR_RETURN(ref->is_local() && value->is_local())
         << "Both ref and value must be local tensor.";
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, value}));
+    std::shared_ptr<one::Tensor> src = value;
+    if (ref->dtype() != src->dtype()) { src = JUST(To(src, ref->dtype(), false)); }
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, src}));
     return Maybe<void>::Ok();
   }
 

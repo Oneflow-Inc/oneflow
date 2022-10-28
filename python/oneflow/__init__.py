@@ -222,6 +222,7 @@ from oneflow._C import inv as inverse
 from oneflow._C import iinfo, finfo
 from oneflow._C import multinomial
 from oneflow._C import linalg_cross as cross
+from oneflow._C import bincount
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
@@ -377,6 +378,7 @@ from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
 from oneflow._C import normal
 from oneflow._C import rand
 from oneflow._C import randn
+from oneflow._C import randn_like
 from oneflow._C import randint
 from oneflow._C import randint_like
 from oneflow._C import randperm
