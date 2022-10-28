@@ -41,9 +41,7 @@ KernelLaunchState::KernelLaunchState(user_op::KernelInitContext* ctx) : mlir_ctx
   // get raw module from ctx attr
   module_ =
       mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx_);
-  if (!module_) {
-    LOG(FATAL) << "Fail to load mlir assembly";
-  }
+  if (!module_) { LOG(FATAL) << "Fail to load mlir assembly"; }
   // lower oneflow wrap ops into okl dialect
   if (failed(mlir::okl::LowerWrapOpsToOKL(*module_))) {
     LOG(ERROR) << "Fail lowering kernel launch Module to okl ir";
