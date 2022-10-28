@@ -217,10 +217,63 @@ Maybe<bool> HasFalseIndex(const TensorIndex& index) {
     return item.IsBoolean() && !item.boolean();
   });
 }
-bool IsScalarTensor(const detail::IndexItem& item) {
+
+template<typename T>
+Maybe<T> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor) {
+  std::shared_ptr<LocalTensor> local_tensor;
+  {
+    auto tensor = scalar_tensor;
+    if (tensor->is_global()) {
+      Symbol<ParallelDesc> parallel_desc;
+      {
+        const ParallelConf parallel_conf = GenParallelConfOfCpuOnAllRanks();
+        JUST(PhysicalRun(
+            [&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
+              parallel_desc = SymbolOf(*JUST(builder->GetParallelDescSymbol(parallel_conf)));
+              return Maybe<void>::Ok();
+            }));
+      }
+      const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
+      tensor = JUST(functional::ToGlobal(tensor, parallel_desc, {broadcast_sbp}, /*grad_sbp=*/{},
+                                         /*check_meta=*/false, /*copy=*/false));
+      tensor = JUST(functional::GlobalToLocal(tensor, /*copy=*/false));
+    }
+    local_tensor = JUST(tensor->AsLocalTensor());
+  }
+
+  T scalar = 0;
+  {
+    const auto& Callback = [&](ep::Stream* stream,
+                               const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+      SyncAutoMemcpy(stream, &scalar, eager_blob_object->mut_dptr(), sizeof(T),
+                     memory::MakeHostMemCase(), eager_blob_object->mem_case());
+    };
+    auto btb = std::make_shared<BlockingThenBusy>(1);
+    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, "const");
+    }));
+    JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+  }
+  return scalar;
+}
+
+bool IsValidScalarTensor(const detail::IndexItem& item) {
   if (!item.IsTensor()) { return false; }
-  const auto& x = item.tensor();
-  return x->shape()->NumAxes() == 0 && x->shape()->elem_cnt() == 1;
+  const auto& tensor = item.tensor();
+  if (!(tensor->dtype()->is_integer() || tensor->dtype() == DType::Bool())) { return false; }
+  return tensor->shape()->NumAxes() == 0 && tensor->shape()->elem_cnt() == 1;
+}
+
+Maybe<detail::IndexItem> GetPracticalItemIndex(const detail::IndexItem& item) {
+  if (!IsValidScalarTensor(item)) { return item; }
+  const auto& tensor = item.tensor();
+  if (tensor->dtype()->is_integer()) {
+    return detail::IndexItem(JUST(GetItemInScalarTensor<int64_t>(tensor)));
+  } else if (tensor->dtype() == DType::Bool()) {
+    return detail::IndexItem(JUST(GetItemInScalarTensor<bool>(tensor)));
+  } else {
+    return detail::IndexItem();
+  }
 }
 
 // Permute back for global tensor which transpose dims to front
@@ -248,23 +301,7 @@ Maybe<Tensor> PermuteBackForGlobalTensor(const std::shared_ptr<Tensor>& result,
 }
 
 }  // namespace
-template<typename T>
-Maybe<T> GetItemInScalarTensor(const std::shared_ptr<one::Tensor>& tensor) {
-  T scalar = 0;
-  {
-    const auto& Callback = [&](ep::Stream* stream,
-                               const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
-      SyncAutoMemcpy(stream, &scalar, eager_blob_object->mut_dptr(), sizeof(T),
-                     memory::MakeHostMemCase(), eager_blob_object->mem_case());
-    };
-    auto btb = std::make_shared<BlockingThenBusy>(1);
-    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(tensor, btb, Callback, "const");
-    }));
-    JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
-  }
-  return scalar;
-}
+
 Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
                                 std::vector<detail::Slice>* slice_indices,
                                 TensorTuple* tensor_indices, std::vector<int64_t>* expand_dims,
@@ -277,11 +314,7 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
   bool has_expand_boolean_dim = false;
   int dim = 0;
   for (int i = 0; i < index.size(); ++i) {
-    const auto& index_item =
-        IsScalarTensor(index.at(i))
-            ? detail::IndexItem(JUST(GetItemInScalarTensor<int64_t>(index.at(i).tensor())))
-            : index.at(i);
-    // const auto& index_item = index.at(i);
+    const auto& index_item = *JUST(GetPracticalItemIndex(index.at(i)));
     if (index_item.IsNone()) {
       expand_dims->emplace_back(dim);
       slice_indices->emplace_back(0, 1, 1);
