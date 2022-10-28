@@ -455,7 +455,7 @@ llvm::SmallVector<Value, 4> Conv2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> val
   NamedAttrList attributes = conv_op->getAttrs();
   attributes.set(conv_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
   auto res = rewriter
-                 .create<oneflow::Conv2DOp>(conv_op.getLoc(), conv_op->getResultTypes(), operands,
+                 .create<oneflow::Conv2DOp>(conv_op.getLoc(), getNHWCType(conv_op.out()), operands,
                                             attributes)
                  ->getResults();
   llvm::SmallVector<Value, 4> results;
