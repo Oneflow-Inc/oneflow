@@ -753,9 +753,7 @@ static PyObject* PyTensorObject_to_global(PyObject* self, PyObject* args, PyObje
   PyObject* result = NULL;
   if (tensor->is_global())
     result = PyTensorObject_global_to_global(self, args, kwargs);
-  else {
-    result = PyTensorObject_local_to_global(self, args, kwargs);
-  }
+  else { result = PyTensorObject_local_to_global(self, args, kwargs); }
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
 
@@ -809,11 +807,15 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
     if (functional::PyScalarCheck(value)) {
       Scalar value_scalar = functional::PyUnpackScalar(value);
       const auto& index_item = functional::PyUnpackTensorIndex(item);
-      if (index_item.size() == 1 && index_item[0].IsTensor()
-          && index_item[0].tensor()->shape() == tensor->shape()) {
-        // NOTE: use masked_fill to avoid D2H in TensorSetItem
-        ASSERT_PTR(functional::MaskedFillInplace(tensor, index_item[0].tensor(), value_scalar));
-        return 0;
+      if (index_item.size() == 1 && index_item[0].IsTensor()) {
+        const auto& index_tensor = index_item[0].tensor();
+        // NOTE: use masked_fill to avoid D2H in TensorSetItem if index is bool tensor
+        if (index_tensor->shape() == tensor->shape()
+            && (index_tensor->dtype() == DType::Bool()
+                || index_tensor->dtype() == DType::UInt8())) {
+          ASSERT_PTR(functional::MaskedFillInplace(tensor, index_item[0].tensor(), value_scalar));
+          return 0;
+        }
       }
       value_tensor = ASSERT_PTR(
           functional::Constant(Shape({}), value_scalar, tensor->dtype(), ASSERT(tensor->device())));
