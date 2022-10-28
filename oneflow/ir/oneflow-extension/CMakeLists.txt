@@ -3,7 +3,11 @@ oneflow_add_mlir_library(
   mlir_jit_op.cpp
   mlir_jit_op_infer.cpp
   mlir_jit_op_kernel.cpp
-  kernel_launch_op.cpp
+  kernel_launch/kernel_launch_op.cpp
+  kernel_launch/kernel_launch_state.cpp
+  kernel_launch/launcher_context.cpp
+  kernel_launch/reg_context.cpp
+  kernel_launch/run_context.cpp
   ir_pass.cpp
   lr_jit.cpp
   mlir_gen.cpp

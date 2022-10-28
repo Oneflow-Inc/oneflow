@@ -33,55 +33,11 @@ class LauncherContext final {
   using RegContextResource = std::shared_ptr<RegContext>;
   using RunContextResource = std::shared_ptr<RunContext>;
 
-  static int GetOpIndex(mlir::Operation* op, int index) {
-    return op->getOperand(index)
-        .getDefiningOp()
-        ->getAttr("index")
-        .dyn_cast<mlir::IntegerAttr>()
-        .getInt();
-  };
-
  public:
-  explicit LauncherContext(user_op::KernelComputeContext* compute_context, mlir::ModuleOp module)
-      : module_(module) {
-    auto func = module.lookupSymbol("okl_init_context");
-    auto context = func->getContext();
+  explicit LauncherContext(user_op::KernelComputeContext* compute_context, mlir::ModuleOp module);
 
-    auto& ops = func->getRegion(0).front();
-
-    for (auto& op : ops) {
-      auto index = 0;
-      auto op_name = op.getName().getStringRef();
-      if (op_name == ::mlir::okl::BuildKernelOp::getOperationName()) {
-        index = kernel_vec_.size();
-
-        auto reg_ctx = reg_ctx_vec_[GetOpIndex(&op, 0)];
-        auto kernel = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-                                     reg_ctx->GetOp()->getName().stripDialect().str(), *reg_ctx))
-                          ->create_fn();
-        kernel_vec_.push_back(kernel);
-      } else if (op_name == mlir::okl::BuildRegContextOp::getOperationName()) {
-        index = reg_ctx_vec_.size();
-
-        auto* reg_op = op.getRegion(0).front().front().getNextNode();
-        reg_ctx_vec_.emplace_back(std::make_shared<RegContext>(reg_op));
-      } else if (op_name == mlir::okl::BuildRunContextOp::getOperationName()) {
-        index = run_ctx_vec_.size();
-
-        auto reg_ctx = reg_ctx_vec_[GetOpIndex(&op, 0)];
-        run_ctx_vec_.emplace_back(
-            std::make_shared<RunContext>(std::move(reg_ctx), compute_context));
-      } else if (op_name == mlir::func::ReturnOp::getOperationName()) {
-        return;
-      } else {
-        op.emitError("Fail to parse this op in okl init context");
-      }
-      op.setAttr("index", mlir::IntegerAttr::get(mlir::IntegerType::get(context, 32), index));
-    }
-  }
-  void* FetchKernel(int index) { return (void*)kernel_vec_[index]; }
-
-  void* FetchRunCtx(int index) { return run_ctx_vec_[index].get(); }
+  void* FetchKernel(int index);
+  void* FetchRunCtx(int index);
 
  private:
   std::vector<const oneflow::user_op::OpKernel*> kernel_vec_;

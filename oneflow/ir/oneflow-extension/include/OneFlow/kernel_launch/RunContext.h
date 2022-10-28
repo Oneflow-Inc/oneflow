@@ -24,62 +24,26 @@ namespace oneflow {
 namespace okl {
 class RunContext final : public user_op::KernelComputeContext {
  public:
-  explicit RunContext(std::shared_ptr<RegContext> reg, user_op::KernelComputeContext* comp)
-      : reg_ctx_(std::move(reg)), comp_ctx_(comp) {}
+  explicit RunContext(std::shared_ptr<RegContext> reg, user_op::KernelComputeContext* comp);
   ~RunContext() = default;
 
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                        int32_t index) const override {
-    return reg_ctx_->TensorDesc4ArgNameAndIndex(arg_name, index);
-  }
+                                                        int32_t index) const override;
+  user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override;
 
-  user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    auto op = reg_ctx_->GetOp();
-    if (arg_name == "x") {
-      auto val = op->getOperand(index);
-      auto define_op = val.getDefiningOp();
-      auto index = define_op->getAttr("index").cast<mlir::IntegerAttr>().getInt();
-      if (define_op->getName().getStringRef()
-          == mlir::okl::GetTensorFromArgOp::getOperationName()) {
-        return comp_ctx_->Tensor4ArgNameAndIndex("in", index);
-      } else if (define_op->getName().getStringRef()
-                 == mlir::okl::GetTensorFromRetOp::getOperationName()) {
-        return comp_ctx_->Tensor4ArgNameAndIndex("out", index);
-      } else {
-        LOG(FATAL) << "Signature Not supported";
-        exit(1);
-      }
-    } else if (arg_name == "y") {
-      auto val = op->getResult(index);
-      for (auto use : val.getUsers()) {
-        if (use->getName().getStringRef() == mlir::okl::GetTensorAsRetOp::getOperationName()) {
-          auto index = use->getAttr("index").cast<mlir::IntegerAttr>().getInt();
-          return comp_ctx_->Tensor4ArgNameAndIndex("out", index);
-        }
-      }
-    } else {
-      LOG(FATAL) << "Signature Not supported";
-      exit(1);
-    }
-  }
+  ep::Stream* stream() override;
 
-  ep::Stream* stream() override { return comp_ctx_->stream(); }
+  DeviceType device_type() const override;
+  const ParallelContext& parallel_ctx() const override;
 
-  DeviceType device_type() const override { return reg_ctx_->device_type(); }
-  const ParallelContext& parallel_ctx() const override { return comp_ctx_->parallel_ctx(); }
+  const ArgVec& inputs() const override;
+  const ArgVec& outputs() const override;
 
-  const ArgVec& inputs() const override { return reg_ctx_->inputs(); }
-  const ArgVec& outputs() const override { return reg_ctx_->outputs(); }
-
-  const user_op::UserOpConfWrapper& user_op_conf() const override {
-    return reg_ctx_->user_op_conf();
-  }
+  const user_op::UserOpConfWrapper& user_op_conf() const override;
 
  private:
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    return user_op_conf().Attr4Name(attr_name);
-  }
+      const std::string& attr_name) const override;
   std::shared_ptr<RegContext> reg_ctx_;
   KernelComputeContext* comp_ctx_ = nullptr;
   std::unordered_map<mlir::oneflow::user_op::ArgID, user_op::Tensor*> tensor_desc_{};

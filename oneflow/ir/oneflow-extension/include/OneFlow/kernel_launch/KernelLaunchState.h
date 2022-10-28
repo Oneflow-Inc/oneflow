@@ -33,54 +33,20 @@ namespace oneflow {
 namespace okl {
 
 class KernelLaunchState final : public user_op::OpKernelState {
-  static mlir::DialectRegistry GetRegistry() {
-    mlir::DialectRegistry registry;
-    registry.insert<mlir::oneflow::OneFlowDialect, mlir::okl::OKLDialect, mlir::func::FuncDialect,
-                    mlir::arith::ArithmeticDialect, mlir::LLVM::LLVMDialect>();
-    mlir::registerLLVMDialectTranslation(registry);
-    return registry;
-  }
-
  public:
-  explicit KernelLaunchState(user_op::KernelInitContext* ctx) : mlir_ctx_(GetRegistry()) {
-    // get raw module from ctx attr
-    module_ = mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
-                                                      &mlir_ctx_);
-    if (!module_) {
-      LOG(ERROR) << "Fail to load mlir assembly";
-      exit(1);
-    }
-    // lower oneflow wrap ops into okl dialect
-    if (failed(mlir::okl::LowerWrapOpsToOKL(*module_))) {
-      LOG(ERROR) << "Fail lowering kernel launch Module to okl ir";
-      exit(1);
-    }
-  };
+  explicit KernelLaunchState(user_op::KernelInitContext* ctx);
   ~KernelLaunchState() = default;
 
-  void DoCompute(user_op::KernelComputeContext* ctx) {
-    if (!launcher_context_) { LazyInitLauncher(ctx); }
-    engine_->Run("okl_compute", launcher_context_.get());
-  }
+  void DoCompute(user_op::KernelComputeContext* ctx);
 
  private:
   mlir::MLIRContext mlir_ctx_;
   mlir::OwningOpRef<mlir::ModuleOp> module_;
   std::shared_ptr<LauncherContext> launcher_context_{};
   std::shared_ptr<JITEngine> engine_{};
-
-  void LazyInitLauncher(user_op::KernelComputeContext* ctx) {
-    launcher_context_ = std::make_shared<LauncherContext>(ctx, module_->clone());
-
-
-    if (failed(mlir::okl::LowerOKLComputeToLLVM(*module_))) {
-      LOG(ERROR) << "Fail lowering okl compute Module to llvm ir";
-      exit(1);
-    }
-
-    engine_ = std::make_shared<JITEngine>(*module_);
-  }
+  void LazyInitLauncher(user_op::KernelComputeContext* ctx);
 };
+
 }  // namespace okl
 }  // namespace oneflow
 
