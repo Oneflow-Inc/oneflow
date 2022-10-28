@@ -184,11 +184,12 @@ class TestSliceUpdate(flow.unittest.TestCase):
 
     def test_slice_update_different_dtype(test_case):
         x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
-        input = flow.tensor(x)
-        update = flow.tensor(np.array([2, 3, 4]).astype(np.int32))
-        output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
-        flow.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
-        test_case.assertTrue(np.array_equal(input.numpy(), output))
+        for value_type in [np.int32, np.float64]:
+            input = flow.tensor(x)
+            update = flow.tensor(np.array([2, 3, 4]).astype(value_type))
+            output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
+            flow.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
+            test_case.assertTrue(np.array_equal(input.numpy(), output))
 
     def test_slice_update_ellipsis_type(test_case):
         np_arr = np.zeros(shape=(2, 3, 4, 5, 6))
