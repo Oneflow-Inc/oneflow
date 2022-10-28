@@ -519,29 +519,29 @@ llvm::SmallVector<Value, 4> NormalizationOp::NchwToNhwc(llvm::SmallVector<Value,
   return results;
 }
 
-bool GroupNormOp::IsNCHW() { return false; }
+// bool GroupNormOp::IsNCHW() { return false; }
 
-llvm::DenseSet<Value> GroupNormOp::OperandsToTranspose() { return {this->x()}; }
+// llvm::DenseSet<Value> GroupNormOp::OperandsToTranspose() { return {this->x()}; }
 
-llvm::DenseSet<Value> GroupNormOp::ResultsToTranspose() { return {this->y()}; }
+// llvm::DenseSet<Value> GroupNormOp::ResultsToTranspose() { return {this->y()}; }
 
-llvm::SmallVector<Value, 4> GroupNormOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
-                                                    PatternRewriter& rewriter) {
-  auto normalization_op = *this;
-  SmallVector<Value, 4> operands;
-  operands.push_back(value[0]);
-  NamedAttrList attributes = normalization_op->getAttrs();
-  attributes.erase("affine");
-  attributes.erase("num_groups");
-  attributes.erase("epsilon");
-  SmallVector<Type, 4> types;
-  types.push_back(normalization_op.y().getType());
-  auto created =
-      rewriter.create<oneflow::ReluOp>(normalization_op.getLoc(), types, operands, attributes);
-  llvm::SmallVector<Value, 4> results;
-  results.push_back(created.y());
-  return results;
-}
+// llvm::SmallVector<Value, 4> GroupNormOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+//                                                     PatternRewriter& rewriter) {
+//   auto normalization_op = *this;
+//   SmallVector<Value, 4> operands;
+//   operands.push_back(value[0]);
+//   NamedAttrList attributes = normalization_op->getAttrs();
+//   attributes.erase("affine");
+//   attributes.erase("num_groups");
+//   attributes.erase("epsilon");
+//   SmallVector<Type, 4> types;
+//   types.push_back(normalization_op.y().getType());
+//   auto created =
+//       rewriter.create<oneflow::ReluOp>(normalization_op.getLoc(), types, operands, attributes);
+//   llvm::SmallVector<Value, 4> results;
+//   results.push_back(created.y());
+//   return results;
+// }
 
 bool MaxPool2DOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
 
@@ -632,7 +632,7 @@ llvm::SmallVector<Value, 4> Add2Op::NchwToNhwc(llvm::SmallVector<Value, 4> value
   auto add2_op = *this;
   SmallVector<Value, 4> operands{value[0], value[1]};
   auto res = rewriter
-                 .create<oneflow::Add2Op>(add2_op.getLoc(), add2_op->getResultTypes(), operands,
+                 .create<oneflow::Add2Op>(add2_op.getLoc(), getNHWCType(add2_op.out()), operands,
                                           add2_op->getAttrs())
                  ->getResults();
   return {res[0]};
@@ -657,7 +657,7 @@ llvm::SmallVector<Value, 4> ConcatOp::NchwToNhwc(llvm::SmallVector<Value, 4> val
                                   APInt(64, 3, /*isSigned=*/true)));
   auto out = rewriter
                  .create<oneflow::ConcatOp>(elementwise_op.getLoc(),
-                                            elementwise_op->getResultTypes(), values, attributes)
+                                            getNHWCType(elementwise_op.out()), values, attributes)
                  .out();
   return {out};
 }
