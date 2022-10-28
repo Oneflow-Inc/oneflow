@@ -477,10 +477,11 @@ llvm::SmallVector<Value, 4> BiasAddOp::NchwToNhwc(llvm::SmallVector<Value, 4> va
   operands.push_back(bias_add_op.b());
   NamedAttrList attributes = bias_add_op->getAttrs();
   attributes.set(bias_add_op.axisAttrName(), rewriter.getSI32IntegerAttr(3));
-  auto res = rewriter
-                 .create<oneflow::BiasAddOp>(bias_add_op.getLoc(), bias_add_op->getResultTypes(),
-                                             operands, attributes)
-                 ->getResults();
+  auto res =
+      rewriter
+          .create<oneflow::BiasAddOp>(
+              bias_add_op.getLoc(), getNHWCType(bias_add_op.out().getType()), operands, attributes)
+          ->getResults();
   llvm::SmallVector<Value, 4> results;
   results.push_back(res[0]);
   return results;
@@ -504,11 +505,15 @@ llvm::SmallVector<Value, 4> NormalizationOp::NchwToNhwc(llvm::SmallVector<Value,
   if (normalization_op._add_to_output()) operands.push_back(normalization_op._add_to_output());
   NamedAttrList attributes = normalization_op->getAttrs();
   attributes.set(normalization_op.axisAttrName(), rewriter.getSI32IntegerAttr(3));
-  auto res =
-      rewriter
-          .create<oneflow::NormalizationOp>(
-              normalization_op.getLoc(), normalization_op->getResultTypes(), operands, attributes)
-          ->getResults();
+  llvm::SmallVector<Type, 4> result_types;
+  result_types.push_back(getNHWCType(normalization_op.y().getType()));
+  if (normalization_op.mean()) result_types.push_back(normalization_op.mean().getType());
+  if (normalization_op.inv_variance())
+    result_types.push_back(normalization_op.inv_variance().getType());
+  auto res = rewriter
+                 .create<oneflow::NormalizationOp>(normalization_op.getLoc(), result_types,
+                                                   operands, attributes)
+                 ->getResults();
   llvm::SmallVector<Value, 4> results;
   results.push_back(res[0]);
   return results;
