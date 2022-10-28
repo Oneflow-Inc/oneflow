@@ -6134,7 +6134,7 @@ def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", [NoSideEf
   let has_data_type_infer_fn = 1;
 }
 
-class OneFlow_GroupNormBaseOp<string mnemonic, list<Trait> traits = []> : OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
+def OneFlow_GroupNormOp : OneFlow_BaseOp<"group_norm", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
     Optional<OneFlow_Tensor>:$beta,
@@ -6158,8 +6158,6 @@ class OneFlow_GroupNormBaseOp<string mnemonic, list<Trait> traits = []> : OneFlo
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
-
-def OneFlow_GroupNormOp : OneFlow_GroupNormBaseOp<"group_norm", [DeclareOpInterfaceMethods<NCHWCompatibleInterface>]>;
 
 def OneFlow_GroupNormGradOp : OneFlow_BaseOp<"group_norm_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
