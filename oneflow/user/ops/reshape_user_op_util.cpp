@@ -92,7 +92,7 @@ Maybe<void> ReshapeUserOpUtil::Squeeze(const Shape& origin, Shape* shape,
 }
 
 Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
-    const Shape& in_shape, const Shape& out_shape, const int64_t parallel_num,
+    const Shape& in_shape, const Shape& out_shape, const int64_t hierarchy_value,
     HashMap<int, int>* group_start_in_axis2out_axis) {
   CHECK_GE_OR_RETURN(in_shape.NumAxes(), 0)
       << Error::RuntimeError()
@@ -128,8 +128,8 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
     if (in_shape_count == out_shape_count) {
       // Record split axises
       if (in_shape.At(in_axis) == out_shape.At(out_axis)
-          || (in_shape.At(in_axis) % parallel_num == 0
-              && out_shape.At(out_axis) % parallel_num == 0)) {
+          || (in_shape.At(in_axis) % hierarchy_value == 0
+              && out_shape.At(out_axis) % hierarchy_value == 0)) {
         (*group_start_in_axis2out_axis)[in_axis] = out_axis;
       }
       // Move forward
@@ -146,8 +146,8 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
 }
 
 Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
-    const Shape& in_shape, const Shape& out_shape, std::vector<user_op::OpArg> in_args,
-    std::vector<user_op::OpArg> out_args, const int64_t parallel_num,
+    const Shape& in_shape, const Shape& out_shape, const std::vector<user_op::OpArg>& in_args,
+    const std::vector<user_op::OpArg>& out_args, const int64_t hierarchy_value,
     user_op::UserOpSbpSignatureBuilder* builder) {
   if (in_shape.NumAxes() == 0 || in_shape.elem_cnt() == 0) {
     return Maybe<void>::Ok();
@@ -162,7 +162,7 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
     JUST(ReshapeUserOpUtil::Squeeze(out_shape, &squeezed_out_shape,
                                     &out_squeezed_axis2original_axis));
     JUST(ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(squeezed_in_shape, squeezed_out_shape,
-                                                        parallel_num,
+                                                        hierarchy_value,
                                                         &squeezed_group_start_in_axis2out_axis));
   }
   for (const auto& pair : squeezed_group_start_in_axis2out_axis) {
@@ -171,105 +171,6 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
     builder->Split(in_args, start_in_axis).Split(out_args, start_out_axis).Build();
   }
   builder->PartialSum(in_args).PartialSum(out_args).Build();
-  return Maybe<void>::Ok();
-}
-
-namespace {
-
-Maybe<void> GetInputNdSbp(user_op::InferNdSbpFnContext* ctx, const user_op::OpArg& in_arg,
-                          NdSbp* distribution) {
-  *distribution = ctx->NdSbpHint4InputArgNameAndIndex(in_arg.name(), in_arg.index());
-  const auto& constraints = ctx->nd_sbp_constraints();
-  if (constraints.bn_in_op2nd_sbp_size() != 0) {
-    const auto it =
-        constraints.bn_in_op2nd_sbp().find(GenRepeatedBn(in_arg.name(), in_arg.index()));
-    if (it != constraints.bn_in_op2nd_sbp().end()) { *distribution = it->second; }
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> ApplySbpParallel(const SbpParallel& sbp, const int64_t parallel_num, Shape* shape) {
-  if (sbp.has_split_parallel()) {
-    const int64_t axis = sbp.split_parallel().axis();
-    CHECK_EQ_OR_RETURN(shape->At(axis) % parallel_num, 0)
-        << Error::RuntimeError() << "The size of tensor in the " << axis
-        << " must be an integer multiple of parallel_num, "
-        << "but got " << shape->At(axis) << " and " << parallel_num;
-    shape->Set(axis, shape->At(axis) / parallel_num);
-  }
-  return Maybe<void>::Ok();
-}
-
-}  // namespace
-
-Maybe<void> ReshapeUserOpUtil::InferNdSbp(user_op::InferNdSbpFnContext* ctx,
-                                          const Shape& logical_in_shape,
-                                          const Shape& logical_out_shape) {
-  const std::string& op_type_name = ctx->user_op_conf().op_type_name();
-  CHECK_OR_RETURN(op_type_name == "reshape" || op_type_name == "reshape_like")
-      << Error::RuntimeError() << "The op_type_name must be \"reshape\" or \"reshape_like\", "
-      << "but got " << op_type_name;
-  const bool is_reshape_like = (op_type_name == "reshape_like");
-  std::vector<user_op::OpArg> in_args({{"in", 0}});
-  if (is_reshape_like) { in_args.emplace_back(user_op::OpArg("like", 0)); }
-  HashMap<std::string, NdSbp> ibn2nd_sbp;
-  ibn2nd_sbp.reserve(in_args.size());
-  for (const auto& arg : in_args) {
-    NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex(arg.name(), arg.index());
-    JUST(GetInputNdSbp(ctx, arg, in_distribution));
-    CHECK_OR_RETURN(
-        ibn2nd_sbp.emplace(GenRepeatedBn(arg.name(), arg.index()), *in_distribution).second)
-        << "emplace error";  // NOLINT(maybe-need-error-msg)
-  }
-  NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
-
-  Shape in_shape = logical_in_shape;
-  Shape out_shape = logical_out_shape;
-  const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
-  for (int64_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
-    SbpSignatureList sbp_sig_list;
-    user_op::UserOpSbpSignatureBuilder builder(&sbp_sig_list);
-    builder.Broadcast(in_args).Broadcast(user_op::OpArg("out", 0)).Build();
-    if (is_reshape_like) {
-      builder.PartialSum(user_op::OpArg("like", 0))
-          .Broadcast(user_op::OpArg("in", 0))
-          .Broadcast(user_op::OpArg("out", 0))
-          .Build();
-      builder.Broadcast(user_op::OpArg("like", 0))
-          .PartialSum(user_op::OpArg("in", 0))
-          .PartialSum(user_op::OpArg("out", 0))
-          .Build();
-      JUST(GetReshapeUserOpSbpSignatures(in_shape, out_shape, {{"in", 0}},
-                                         {{"like", 0}, {"out", 0}}, parallel_hierarchy.At(i),
-                                         &builder));
-    } else {
-      JUST(GetReshapeUserOpSbpSignatures(in_shape, out_shape, {{"in", 0}}, {{"out", 0}},
-                                         parallel_hierarchy.At(i), &builder));
-    }
-
-    const SbpSignature* matched_sbp_signature = nullptr;
-    for (const auto& sbp_signature : sbp_sig_list.sbp_signature()) {
-      bool all_match = true;
-      for (const auto& in_arg : in_args) {
-        std::string ibn = GenRepeatedBn(in_arg.name(), in_arg.index());
-        if (sbp_signature.bn_in_op2sbp_parallel().at(ibn) != ibn2nd_sbp.at(ibn).sbp_parallel(i)) {
-          all_match = false;
-          break;
-        }
-      }
-      if (all_match) {
-        matched_sbp_signature = &sbp_signature;
-        break;
-      }
-    }
-    CHECK_OR_RETURN(matched_sbp_signature != nullptr)
-        << "FusedLstmCellGrad::Pointer to the matched sbp signature is nullptr";
-    SbpParallel out_sbp = matched_sbp_signature->bn_in_op2sbp_parallel().at("out_0");
-    JUST(ApplySbpParallel(matched_sbp_signature->bn_in_op2sbp_parallel().at("in_0"),
-                          parallel_hierarchy.At(i), &in_shape));
-    JUST(ApplySbpParallel(out_sbp, parallel_hierarchy.At(i), &out_shape));
-    *(out_distribution->add_sbp_parallel()) = out_sbp;
-  }
   return Maybe<void>::Ok();
 }
 
