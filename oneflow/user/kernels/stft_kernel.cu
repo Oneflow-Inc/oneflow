@@ -32,8 +32,8 @@ __global__ void convert_complex_to_real(IN* dst, const OUT* src, size_t n) {
   };
 }
 
-const double _fft_normalization_scale(const int32_t frame_length) {
-  return 1.0 / std::sqrt(frame_length);
+double _fft_normalization_scale(const int32_t frame_length) {
+  return static_cast<double>(1.0 / std::sqrt(frame_length));
 }
 
 template<typename FFTTYPE>
@@ -75,24 +75,24 @@ class StftGpuKernel final : public user_op::OpKernel {
 
     const IN* data_in = input->dptr<IN>();
     IN* data_out = output->mut_dptr<IN>();
-
     OUT* out_tmp_buffer = reinterpret_cast<OUT*>(tmp_buffer->mut_dptr<char>());
 
-    int ndim = 1;
+    int32_t ndim = 1;
+    int32_t n_frames = static_cast<int32_t>(input_shape.At(1));
+    int32_t fft_size = static_cast<int32_t>(input_shape.At(2));
     const Stride& in_stride = {input_stride.at(2), input_stride.at(1)};
-    const Stride& out_stride = {1, input_shape.At(2) / 2 + 1};
-    const Shape& in_shape = {input_shape.At(2), input_shape.At(1)};
-    const Shape& out_shape = {input_shape.At(2), input_shape.At(1)};
-    int32_t batch = input_shape.At(1);
-    int dims = 1;
-    int32_t rank[dims] = {input_shape.At(2)};
+    const Stride& out_stride = {1, fft_size / 2 + 1};
+    const Shape& in_shape = {fft_size, n_frames};
+    const Shape& out_shape = in_shape;
+    int32_t batch = n_frames;
+    int32_t rank[1] = {fft_size};
     CuFFtParams params(ndim, rank, in_stride, out_stride, in_shape, out_shape, batch);
     CuFFtConfig<IN, OUT> config(params);
 
-    int32_t in_offset = input->stride().at(0);
-    int32_t out_offset = batch * (input_shape.At(2) / 2 + 1);
-
-    for (int32_t i = 0; i < input_shape.At(0); i++) {
+    int32_t in_offset = input_stride.at(0);
+    int32_t out_offset = n_frames * (fft_size / 2 + 1);
+    int32_t signal_groups_count = static_cast<int32_t>(input_shape.At(0));
+    for (int32_t i = 0; i < signal_groups_count; i++) {
       config.excute_plan(data_in + i * in_offset, out_tmp_buffer + i * out_offset);
     }
 

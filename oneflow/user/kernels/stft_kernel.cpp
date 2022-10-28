@@ -66,7 +66,6 @@ class StftCpuKernel final : public user_op::OpKernel {
 
     const ShapeView& input_shape = input->shape_view();
     const ShapeView& output_shape = output->shape_view();
-    const auto input_elem_cnt = input_shape.elem_cnt();
     const auto output_elem_cnt = output_shape.elem_cnt() / 2;
 
     int64_t dims = input_shape.At(0);

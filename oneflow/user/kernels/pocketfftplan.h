@@ -39,7 +39,7 @@ struct PocketFFtParams {
   PocketFFtParams() = default;
   PocketFFtParams(const Shape& in_shape, const Shape& out_shape, const bool is_froward, const IN f,
                   FFT_EXCUTETYPE type)
-      : IsForward(is_froward), fct(f), excute_type(type) {
+      : IsForward(is_froward), excute_type(type), fct(f) {
     input_shape.resize(in_shape.size());
     output_shape.resize(out_shape.size());
     in_stridef.resize(input_shape.size());
