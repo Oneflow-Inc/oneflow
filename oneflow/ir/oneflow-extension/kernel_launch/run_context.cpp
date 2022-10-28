@@ -43,9 +43,7 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
         .Case([&](mlir::okl::GetTensorFromRetOp elem) {
           return comp_ctx_->Tensor4ArgNameAndIndex("out", index);
         })
-        .Default([](::mlir::Operation* op) {
-          LOG(FATAL) << "Signature Not supported";
-        });
+        .Default([](::mlir::Operation* op) { LOG(FATAL) << "Signature Not supported"; });
   } else if (arg_name == "y") {
     auto val = op->getResult(index);
     for (auto use : val.getUsers()) {
