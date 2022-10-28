@@ -45,6 +45,9 @@ int32_t BroadcastRatio4Consumer(const NdSbp& sbp_consumer,
 
 void NdSbpDimReduce(const Shape& hierarchy, const NdSbp& nd_sbp, Shape* reduced_hierarchy,
                     NdSbp* reduced_nd_sbp, const Shape& logical_shape);
+void NdSbpsDimReduce(const Shape& hierarchy, const std::vector<const NdSbp*>& nd_sbps,
+                     Shape* reduced_hierarchy, const std::vector<NdSbp*>& reduced_nd_sbps,
+                     const Shape& logical_shape);
 void NdSbpDimReduce(const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
                     ParallelDesc* reduced_parallel_desc, NdSbp* reduced_nd_sbp,
                     const Shape& logical_shape);

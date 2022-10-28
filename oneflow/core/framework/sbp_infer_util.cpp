@@ -376,6 +376,7 @@ Maybe<CopyCostFunc*> GetComputeCopyCostFunc() {
   }
 }
 
+// TODO: Remove this
 void CollaborativeParallelDimReduce(const ParallelDesc& in_parallel_desc,
                                     const ParallelDesc& out_parallel_desc, const NdSbp& in_nd_sbp,
                                     const NdSbp& out_nd_sbp, ParallelDesc* reduced_in_parallel_desc,
@@ -455,8 +456,14 @@ int32_t BroadcastRatio4Consumer(const NdSbp& sbp_consumer,
 
 void NdSbpDimReduce(const Shape& hierarchy, const NdSbp& nd_sbp, Shape* reduced_hierarchy,
                     NdSbp* reduced_nd_sbp, const Shape& logical_shape) {
+  NdSbpsDimReduce(hierarchy, {&nd_sbp}, reduced_hierarchy, {reduced_nd_sbp}, logical_shape);
+}
+
+void NdSbpsDimReduce(const Shape& hierarchy, const std::vector<const NdSbp*>& nd_sbps,
+                     Shape* reduced_hierarchy, const std::vector<NdSbp*>& reduced_nd_sbps,
+                     const Shape& logical_shape) {
   reduced_hierarchy->clear();
-  reduced_nd_sbp->clear_sbp_parallel();
+  for (auto& reduced_nd_sbp : reduced_nd_sbps) { reduced_nd_sbp->clear_sbp_parallel(); }
   // At this moment, if we have [2, 4, 3, 7]: (S0, S1, S0, S0) for logical shape [601, 301, 999]
   // We hold the split when accessing the current dimension
   // Do the true splitting until we reach the next step
@@ -464,45 +471,56 @@ void NdSbpDimReduce(const Shape& hierarchy, const NdSbp& nd_sbp, Shape* reduced_
   // dim = 1, split_axis2holding_reduced_shapes: {(0: 300, 301), (1: 601)}
   // dim = 2, split_axis2holding_reduced_shapes: {(0: 300, 301), (1: 150, 151)}
   // dim = 3, split_axis2holding_reduced_shapes: {(0: 100, 101), (1: 150, 151)}
-  HashMap<int32_t, HashSet<int32_t>> split_axis2holding_reduced_shapes;
-  std::vector<int32_t> last_holding_reduced_shapes;
-  int32_t last_split_axis = -1;
+  int32_t sbp_num = nd_sbps.size();
+  std::vector<HashMap<int32_t, HashSet<int32_t>>> index2split_axis2holding_reduced_shapes(sbp_num);
+  std::vector<std::vector<int32_t>> index2last_holding_reduced_shapes(sbp_num);
+  std::vector<int32_t> last_split_axises(sbp_num, -1);
+  std::vector<int32_t> indexes(sbp_num);
+  for (int32_t index = 0; index < sbp_num; index++) { indexes[index] = index; }
   auto add_to_reduced_sbp_hierarchy = [&](int32_t hierarchy_dim) {
     // Clear the last holding split axis
-    if (last_split_axis >= 0) {
-      auto& holding_reduced_shapes = split_axis2holding_reduced_shapes[last_split_axis];
-      holding_reduced_shapes.clear();
-      for (int32_t last_holding_reduced_shape : last_holding_reduced_shapes) {
-        int32_t quotient = last_holding_reduced_shape / reduced_hierarchy->back();
-        if (last_holding_reduced_shape % reduced_hierarchy->back() != 0) {
-          holding_reduced_shapes.insert(quotient + 1);
+    for (int32_t index = 0; index < sbp_num; index++) {
+      auto& split_axis2holding_reduced_shapes = index2split_axis2holding_reduced_shapes[index];
+      auto& last_holding_reduced_shapes = index2last_holding_reduced_shapes[index];
+      auto& last_split_axis = last_split_axises[index];
+      auto& nd_sbp = nd_sbps[index];
+      auto& reduced_nd_sbp = reduced_nd_sbps[index];
+      if (last_split_axis >= 0) {
+        auto& holding_reduced_shapes = split_axis2holding_reduced_shapes[last_split_axis];
+        holding_reduced_shapes.clear();
+        for (int32_t last_holding_reduced_shape : last_holding_reduced_shapes) {
+          int32_t quotient = last_holding_reduced_shape / reduced_hierarchy->back();
+          if (last_holding_reduced_shape % reduced_hierarchy->back() != 0) {
+            holding_reduced_shapes.insert(quotient + 1);
+          }
+          holding_reduced_shapes.insert(quotient);
         }
-        holding_reduced_shapes.insert(quotient);
       }
-    }
-    // Add a new sbp_parallel and a new hierarchy dimension
-    const auto& curr_sbp_parallel = nd_sbp.sbp_parallel(hierarchy_dim);
-    reduced_hierarchy->emplace_back(hierarchy.At(hierarchy_dim));
-    *reduced_nd_sbp->add_sbp_parallel() = curr_sbp_parallel;
-    // Hold the current split shape
-    if (curr_sbp_parallel.has_split_parallel()) {
-      last_holding_reduced_shapes.clear();
-      last_split_axis = curr_sbp_parallel.split_parallel().axis();
-      auto it = split_axis2holding_reduced_shapes.find(last_split_axis);
-      if (it == split_axis2holding_reduced_shapes.end()) {
-        // Looking at a dimension which is never splitted before
-        // Shape: [601, ...], sbp: (S0, ...)
-        last_holding_reduced_shapes.push_back(logical_shape.At(last_split_axis));
+      // Add a new sbp_parallel and a new hierarchy dimension
+      const auto& curr_sbp_parallel = nd_sbp->sbp_parallel(hierarchy_dim);
+      *reduced_nd_sbp->add_sbp_parallel() = curr_sbp_parallel;
+      // Hold the current split shape
+      if (curr_sbp_parallel.has_split_parallel()) {
+        last_holding_reduced_shapes.clear();
+        last_split_axis = curr_sbp_parallel.split_parallel().axis();
+        auto it = split_axis2holding_reduced_shapes.find(last_split_axis);
+        if (it == split_axis2holding_reduced_shapes.end()) {
+          // Looking at a dimension which is never splitted before
+          // Shape: [601, ...], sbp: (S0, ...)
+          last_holding_reduced_shapes.push_back(logical_shape.At(last_split_axis));
+        } else {
+          // This dimension is splitted before
+          // Shape: [601, 301, ...], sbp: (S0, S1, B, S0, ...), hierarchy: [2, 3, 100, 7, ...]
+          // Looking at i = 3, we hold the second S0, but 601 is already splitted by the first S0.
+          // split_axis2holding_reduced_shapes: {(0: 300, 301), (1: 100, 101)}
+          last_holding_reduced_shapes.assign(it->second.begin(), it->second.end());
+        }
       } else {
-        // This dimension is splitted before
-        // Shape: [601, 301, ...], sbp: (S0, S1, B, S0, ...), hierarchy: [2, 3, 100, 7, ...]
-        // Looking at i = 3, we hold the second S0, but 601 is already splitted by the first S0.
-        // split_axis2holding_reduced_shapes: {(0: 300, 301), (1: 100, 101)}
-        last_holding_reduced_shapes.assign(it->second.begin(), it->second.end());
+        last_split_axis = -1;
       }
-    } else {
-      last_split_axis = -1;
     }
+    // Add a new hierarchy dimension
+    reduced_hierarchy->emplace_back(hierarchy.At(hierarchy_dim));
   };
   for (int32_t hierarchy_dim = 0; hierarchy_dim < hierarchy.NumAxes(); hierarchy_dim++) {
     // Shrink those dimension with hierarchy value = 1
@@ -512,15 +530,22 @@ void NdSbpDimReduce(const Shape& hierarchy, const NdSbp& nd_sbp, Shape* reduced_
       add_to_reduced_sbp_hierarchy(hierarchy_dim);
       continue;
     }
-    const auto& current_sbp_parallel = nd_sbp.sbp_parallel(hierarchy_dim);
-    if (current_sbp_parallel
-        == reduced_nd_sbp->sbp_parallel(reduced_nd_sbp->sbp_parallel_size() - 1)) {
+    if (std::all_of(indexes.begin(), indexes.end(), [&](int32_t index) {
+          // reduced_hierarchy->size() == reduced_nd_sbps[index]->sbp_parallel_size()
+          // Basically, current nd sbp == reduced nd sbp.back()
+          return nd_sbps[index]->sbp_parallel(hierarchy_dim)
+                 == reduced_nd_sbps[index]->sbp_parallel(reduced_hierarchy->size() - 1);
+        })) {
       int32_t merged_hierarchy_value = reduced_hierarchy->back() * hierarchy.At(hierarchy_dim);
       // You can merge two sbp with B or P.
       // If sbp = S, then you need to make sure that all the shape value can be splitted
-      if (!current_sbp_parallel.has_split_parallel()
-          || std::all_of(last_holding_reduced_shapes.begin(), last_holding_reduced_shapes.end(),
-                         [&](int32_t i) { return CanMergeSplit(i, merged_hierarchy_value); })) {
+      if (std::all_of(indexes.begin(), indexes.end(), [&](int32_t index) {
+            return !nd_sbps[index]->sbp_parallel(hierarchy_dim).has_split_parallel()
+                   || std::all_of(index2last_holding_reduced_shapes[index].begin(),
+                                  index2last_holding_reduced_shapes[index].end(), [&](int32_t i) {
+                                    return CanMergeSplit(i, merged_hierarchy_value);
+                                  });
+          })) {
         // Merge sbp and hierarchy
         reduced_hierarchy->back() = merged_hierarchy_value;
         continue;
@@ -532,7 +557,9 @@ void NdSbpDimReduce(const Shape& hierarchy, const NdSbp& nd_sbp, Shape* reduced_
   // [1, 1, ..., 1]: Any --> [1]: (B)
   if (reduced_hierarchy->empty()) {
     reduced_hierarchy->emplace_back(hierarchy.At(0));
-    reduced_nd_sbp->add_sbp_parallel()->mutable_broadcast_parallel();
+    for (auto& reduced_nd_sbp : reduced_nd_sbps) {
+      reduced_nd_sbp->add_sbp_parallel()->mutable_broadcast_parallel();
+    }
   }
 }
 
