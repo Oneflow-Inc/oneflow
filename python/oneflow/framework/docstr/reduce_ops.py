@@ -305,6 +305,9 @@ add_docstr(
     .. math::
         \text{logsumexp}(x)_{{i}} = \log \sum_j \exp(x_{{ij}})
 
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.12/generated/torch.logsumexp.html.
+
     Args:
         input (oneflow.Tensor): the Input Tensor
         dim (int or tuple of ints): the dimension or dimensions to reduce.
