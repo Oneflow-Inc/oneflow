@@ -35,10 +35,10 @@ def _test_gumbel_softmax(test_case, tau, dim, device, dtype):
     )
     y_soft = F.gumbel_softmax(x, tau=tau, dim=dim, hard=False)
     y_hard = F.gumbel_softmax(x, tau=tau, dim=dim, hard=True)
-    test_case.assertEqual((20, 32), y_soft.shape)
-    test_case.assertEqual((20, 32), y_hard.shape)
-    test_case.assertEqual(dtype, y_soft.dtype)
-    test_case.assertEqual(dtype, y_hard.dtype)
+    test_case.assertEqual(x.shape, y_soft.shape)
+    test_case.assertEqual(x.shape, y_hard.shape)
+    test_case.assertEqual(x.dtype, y_soft.dtype)
+    test_case.assertEqual(x.dtype, y_hard.dtype)
 
 
 def _test_gumbel_softmax_hard(test_case, tau, dim, device, dtype):
@@ -56,7 +56,7 @@ def _test_gumbel_softmax_hard(test_case, tau, dim, device, dtype):
         test_case.assertEqual(y_hard.sum().item(), 23)
 
 
-def _test_backward(test_case, tau, dim, device, dtype):
+def _test_gumbel_softmax_backward(test_case, tau, dim, device, dtype):
     dtype = type_name_to_flow_type[dtype]
     x_np = np.random.randn(10, 10)
     x_soft = flow.tensor(
@@ -87,16 +87,47 @@ def _test_backward(test_case, tau, dim, device, dtype):
     )
 
 
+def _test_gumbel_softmax_half(test_case, tau, dim, device):
+    x = flow.tensor(
+        np.random.randn(20, 32),
+        device=flow.device(device),
+    ).half()
+    y_soft = F.gumbel_softmax(x, tau=tau, dim=dim, hard=False)
+    y_hard = F.gumbel_softmax(x, tau=tau, dim=dim, hard=True)
+    test_case.assertEqual(x.shape, y_soft.shape)
+    test_case.assertEqual(x.shape, y_hard.shape)
+    test_case.assertEqual(dtype, y_soft.dtype)
+    test_case.assertEqual(dtype, y_hard.dtype)
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestGumbelSoftmaxModule(flow.unittest.TestCase):
-    @autotest(n=5)
+    @autotest()
     def test_gumbel_softmax(test_case):
         arg_dict = OrderedDict()
-        arg_dict["fun"] = [_test_gumbel_softmax, _test_gumbel_softmax_hard, _test_backward]
+        arg_dict["fun"] = [
+            _test_gumbel_softmax, 
+            _test_gumbel_softmax_hard, 
+            _test_gumbel_softmax_backward,
+        ]
         arg_dict["tau"] = [1, 2, 0.5]
         arg_dict["dim"] = [0, -1]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["dtype"] = ["float32", "double"]
+
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+    
+    @autotest()
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_leakyrelu_module_with_half_random_data(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["fun"] = [
+            _test_gumbel_softmax_half, 
+        ]
+        arg_dict["tau"] = [1, 2, 0.5]
+        arg_dict["dim"] = [0, -1]
+        arg_dict["device"] = ["cpu", "cuda"]
 
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])

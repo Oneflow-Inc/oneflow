@@ -685,7 +685,7 @@
   bind_python: False
 
 - name: "gumbel_softmax"
-  signature: "Tensor (Tensor x, Double tau=1., Int64 dim=None, Bool hard, Generator generator=None) => GumbelSoftmax"
+  signature: "Tensor (Tensor x, Double tau=1., Int64 dim=None, Bool hard=False, Generator generator=None) => GumbelSoftmax"
   bind_python: True
 
 - name: "gumbel_softmax_grad"

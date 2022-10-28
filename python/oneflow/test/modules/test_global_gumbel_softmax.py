@@ -28,21 +28,20 @@ import oneflow.unittest
 
 @autotest(n=1, check_graph=False)
 def _test_global_gumbel_softmax(test_case, placement, sbp, tau, dim):
-    x = random_tensor(20, 32).to_global(placement=placement, sbp=sbp)
+    x = flow.tensor(np.random.randn(20, 32),).to_global(placement=placement, sbp=sbp)
     y_soft = F.gumbel_softmax(x, tau=tau)
     y_hard = F.gumbel_softmax(x, tau=tau, hard=True)
-    test_case.assertEqual((20, 32), y_soft.shape)
-    test_case.assertEqual((20, 32), y_hard.shape)
-    test_case.assertEqual(dtype, y_soft.dtype)
-    test_case.assertEqual(dtype, y_hard.dtype)
+    test_case.assertEqual(x.shape, y_soft.shape)
+    test_case.assertEqual(x.shape, y_hard.shape)
     test_case.assertEqual(y_soft.sbp, sbp)
     test_case.assertEqual(y_hard.sbp, sbp)
     test_case.assertEqual(y_soft.placement, placement)
     test_case.assertEqual(y_hard.placement, placement)
 
 
+@autotest(n=1, check_graph=False)
 def _test_global_gumbel_softmax_hard(test_case, placement, sbp, tau, dim):
-    x = random_tensor(45, 23).to_global(placement=placement, sbp=sbp)
+    x = flow.tensor(np.random.randn(45, 23)).to_global(placement=placement, sbp=sbp)
     y_hard = F.gumbel_softmax(x, tau=tau, dim=dim, hard=True)
     test_case.assertEqual(y_hard.min(), 0)
     if dim == -1:
@@ -57,7 +56,6 @@ class TestGumbelSoftmaxModule(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["tau"] = [1, 2, 0.5]
         arg_dict["dim"] = [0, -1]
-        arg_dict["dtype"] = ["float32", "double", "float16"]
         for arg in GenArgList(arg_dict):
             for placement in all_placement():
                 for sbp in all_sbp(
@@ -69,4 +67,3 @@ class TestGumbelSoftmaxModule(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-  

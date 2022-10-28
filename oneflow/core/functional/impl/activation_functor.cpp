@@ -417,15 +417,11 @@ class GumbelSoftmaxFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("tau", "seed", "hard");
     attrs.SetAllAttrs(tau, static_cast<int64_t>(gen->current_seed()), hard);
 
-    // TODO(hujiakui): Rand 这里不能支持 half
-    auto random_tensor = JUST(functional::Rand(*in_shape.get(), dtype, device, gen, /*requires_grad=*/true));
-    // auto gumbel_noise_tensor = functional::ScalarSub(Scalar(0.0), functional::Log(
-    //     functional::ScalarSub(Scalar(0.0), random_tensor, /*alpha=*/1.0)
-    // ), /*alpha=*/1.0);
-    // TODO(hujiakui): 为啥这样写会 error...
-    auto gumbel_noise_tensor1 = JUST(functional::ScalarSub(Scalar(0.0), random_tensor, /*alpha=*/1.0));
-    auto gumbel_noise_tensor2 = JUST(functional::ScalarSub(Scalar(0.0), gumbel_noise_tensor1, /*alpha=*/1.0));
-    auto gumbel_in_tensor = JUST(functional::Add(gumbel_noise_tensor2, in_tensor, /*alpha=*/1.0,
+    auto random_tensor = JUST(functional::Rand(*in_shape.get(), dtype, device, gen, /*requires_grad=*/false));
+    auto gumbel_noise_tensor = JUST(functional::ScalarSub(Scalar(0.0), JUST(functional::Log(
+      JUST(functional::ScalarSub(Scalar(0.0), JUST(functional::Log(random_tensor)), /*alpha=*/1.0))
+    )), /*alpha=*/1.0));
+    auto gumbel_in_tensor = JUST(functional::Add(gumbel_noise_tensor, in_tensor, /*alpha=*/1.0,
                                                  /*inplace=*/false));
 
     auto out_soft = JUST(functional::Softmax(gumbel_in_tensor, dim));
@@ -451,10 +447,10 @@ class GumbelSoftmaxFunctor {
       auto zero = JUST(functional::ZerosLike(out_soft));
       auto out_hard = JUST(functional::DimScatterUpdateScalar(zero, dim_, index, 1.0, /*inplace=*/false));
 
-      // For Grad TODO(hujiakui): ugly
-      auto out_hard_grad1 = JUST(functional::Sub(out_hard, JUST(out_soft->detach()), /*alpha=*/1.0, /*inplace=*/false));
-      auto out_hard_grad2 = functional::Add(out_hard_grad1, out_soft, /*alpha=*/1.0, /*inplace=*/false);
-      return out_hard_grad2;
+      auto out_hard_grad = functional::Add(JUST(functional::Sub(
+        out_hard, JUST(out_soft->detach()), /*alpha=*/1.0, /*inplace=*/false
+      )), out_soft, /*alpha=*/1.0, /*inplace=*/false);
+      return out_hard_grad;
     } else { return out_soft; }
   }
 
