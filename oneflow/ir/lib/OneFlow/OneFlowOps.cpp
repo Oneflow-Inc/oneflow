@@ -529,8 +529,8 @@ llvm::SmallVector<Value, 4> GroupNormOp::NchwToNhwc(llvm::SmallVector<Value, 4> 
   attributes.erase("affine");
   attributes.erase("num_groups");
   attributes.erase("epsilon");
-  auto created = rewriter.create<oneflow::ReluOp>(
-      normalization_op.getLoc(), getNHWCResultTypes(normalization_op), operands, attributes);
+  auto created = rewriter.create<oneflow::ReluOp>(normalization_op.getLoc(), getNHWCType(this->y()),
+                                                  operands, attributes);
   llvm::SmallVector<Value, 4> results;
   results.push_back(created.y());
   return results;
