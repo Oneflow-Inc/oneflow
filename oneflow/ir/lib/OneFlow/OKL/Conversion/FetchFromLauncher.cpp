@@ -41,6 +41,7 @@ limitations under the License.
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 #include <algorithm>
 #include <string>
@@ -56,8 +57,12 @@ struct FetchFromLauncherPattern : public mlir::OpRewritePattern<func::CallOp> {
       : mlir::OpRewritePattern<func::CallOp>(context, 0) {}
   mlir::LogicalResult matchAndRewrite(func::CallOp op,
                                       mlir::PatternRewriter& rewriter) const override {
+    // this pattern only replace func.call @get_resources_type_{X}
     auto prefix = "get_resources_type_";
     if (op.getCallee().find(prefix) == std::string::npos) { return success(); }
+
+    // if the result number equals to zero, it means this kind of resources is not needed in this
+    // function scope.
     if (op->getNumResults() == 0) {
       rewriter.eraseOp(op);
       return success();
@@ -66,20 +71,26 @@ struct FetchFromLauncherPattern : public mlir::OpRewritePattern<func::CallOp> {
     auto elem_type = op->getResult(0).getType();
     auto launcher_ctx = op->getParentOfType<func::FuncOp>().getBody().getArgument(0);
     llvm::SmallVector<Value> new_ops;
+    // convert single function: get_resources_type_{X} to multiple functions: fetch_{resources}_from_launcher_ctx
     for (int index = 0; index < op->getNumResults(); ++index) {
-      if (elem_type.isa<KernelType>()) {
-        auto new_op = rewriter.create<FetchKernelOp>(op->getLoc(), launcher_ctx, index);
-        new_ops.emplace_back(new_op->getResult(0));
-      } else if (elem_type.isa<RegContextType>()) {
-        auto new_op = rewriter.create<FetchRegContextOp>(op->getLoc(), launcher_ctx, index);
-        new_ops.emplace_back(new_op->getResult(0));
-      } else if (elem_type.isa<RunContextType>()) {
-        auto new_op = rewriter.create<FetchRunContextOp>(op->getLoc(), launcher_ctx, index);
-        new_ops.emplace_back(new_op->getResult(0));
-      } else {
-        op->emitError("Failed to fetch from launcher with illegal tensor.extract op");
-        exit(1);
-      }
+      Value val;
+      llvm::TypeSwitch<Type>(elem_type)
+          .Case<KernelType>([&](auto elem) {
+            val = rewriter.create<FetchKernelOp>(op->getLoc(), launcher_ctx, index)->getResult(0);
+          })
+          .Case<RegContextType>([&](auto elem) {
+            val =
+                rewriter.create<FetchRegContextOp>(op->getLoc(), launcher_ctx, index)->getResult(0);
+          })
+          .Case<RunContextType>([&](auto elem) {
+            val =
+                rewriter.create<FetchRunContextOp>(op->getLoc(), launcher_ctx, index)->getResult(0);
+          })
+          .Default([&](auto elem) {
+            op->emitError("Failed to fetch from launcher with illegal tensor.extract op");
+            exit(1);
+          });
+      new_ops.push_back(val);
     }
     op->replaceAllUsesWith(new_ops);
     rewriter.eraseOp(op);

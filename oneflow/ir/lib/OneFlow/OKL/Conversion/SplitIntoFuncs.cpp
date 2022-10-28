@@ -48,7 +48,6 @@ limitations under the License.
 #include <glog/logging.h>
 
 namespace mlir {
-
 namespace okl {
 
 struct SplitIntoFuncsPattern : public mlir::OpRewritePattern<func::FuncOp> {
@@ -207,6 +206,7 @@ struct SplitIntoFuncsPattern : public mlir::OpRewritePattern<func::FuncOp> {
   static const StringLiteral new_ops_func_, del_ops_func_, compute_ops_func_, prefix_get_resources_;
 };
 
+// define the name of split functions
 const StringLiteral SplitIntoFuncsPattern::new_ops_func_ = "okl_init_context",
                     SplitIntoFuncsPattern::del_ops_func_ = "okl_recycle",
                     SplitIntoFuncsPattern::compute_ops_func_ = "okl_compute",
@@ -235,5 +235,4 @@ void SplitIntoFuncsPass::runOnOperation() {
 }
 
 }  // namespace okl
-
 }  // namespace mlir

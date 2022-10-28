@@ -40,7 +40,6 @@ limitations under the License.
 #include <glog/logging.h>
 
 namespace mlir {
-
 namespace okl {
 
 template<typename Wrap, typename T>
@@ -93,32 +92,7 @@ LLVM::LLVMFuncOp DeclareFetchPtr(::mlir::PatternRewriter& rewriter, ModuleOp* mo
   return func;
 }
 
-static BlockAndValueMapping mapping;
-template<typename T>
-struct FetchOpLowering final : public OpConversionPattern<T> {
-  using OpConversionPattern<T>::OpConversionPattern;
-  using OpAdaptor = typename T::Adaptor;
-  LogicalResult matchAndRewrite(T op, OpAdaptor adaptor,
-                                ConversionPatternRewriter& rewriter) const override {
-    auto module = GetModuleOpFromJobBodyOp<func::FuncOp>(op);
-    if (!module) {
-      op->emitError("Failed to lowering llvm call because of op is not in a module");
-      exit(1);
-    };
-
-    auto fetch_ctx = DeclareFetchPtr<T>(rewriter, &module);
-    auto launcher_ctx = op->template getParentOfType<func::FuncOp>().getBody().getArgument(0);
-    auto index = rewriter.create<LLVM::ConstantOp>(op->getLoc(), rewriter.getI64Type(),
-                                                   rewriter.getIndexAttr(op.index()));
-    auto new_op =
-        rewriter.create<LLVM::CallOp>(op->getLoc(), fetch_ctx, ValueRange{launcher_ctx, index});
-    rewriter.replaceOp(op, new_op.getResults());
-    mapping.map(op->getResult(0), new_op.getResult(0));
-    return success();
-  }
-};
-
-// create okl.launch(*run_ctx, *kernel)
+// lower !okl.launch to !llvm.call
 struct LaunchOpLowering final : public OpConversionPattern<LaunchOp> {
   // raw: create okl.launch(*run_ctx, *kernel) -> llvm_ptr<i8>
   // dst: llvm.call launch(run_ctx: llvm_ptr<i8>, kernel: llvm_ptr<i8>)
@@ -140,6 +114,7 @@ struct LaunchOpLowering final : public OpConversionPattern<LaunchOp> {
   }
 
  public:
+  static BlockAndValueMapping mapping;
   using OpConversionPattern<LaunchOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(LaunchOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
@@ -158,7 +133,35 @@ struct LaunchOpLowering final : public OpConversionPattern<LaunchOp> {
     return success();
   }
 };
+BlockAndValueMapping LaunchOpLowering::mapping;
 
+// lower !okl.fetch_from_{T} to !llvm.call
+template<typename T>
+struct FetchOpLowering final : public OpConversionPattern<T> {
+  using OpConversionPattern<T>::OpConversionPattern;
+  using OpAdaptor = typename T::Adaptor;
+  LogicalResult matchAndRewrite(T op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto module = GetModuleOpFromJobBodyOp<func::FuncOp>(op);
+    if (!module) {
+      op->emitError("Failed to lowering llvm call because of op is not in a module");
+      exit(1);
+    };
+
+    auto fetch_ctx = DeclareFetchPtr<T>(rewriter, &module);
+    auto launcher_ctx = op->template getParentOfType<func::FuncOp>().getBody().getArgument(0);
+    auto index = rewriter.create<LLVM::ConstantOp>(op->getLoc(), rewriter.getI64Type(),
+                                                   rewriter.getIndexAttr(op.index()));
+    auto new_op =
+        rewriter.create<LLVM::CallOp>(op->getLoc(), fetch_ctx, ValueRange{launcher_ctx, index});
+    rewriter.replaceOp(op, new_op.getResults());
+    LaunchOpLowering::mapping.map(op->getResult(0), new_op.getResult(0));
+    return success();
+  }
+};
+
+
+// change func.func(!okl.launcher_ctx) -> func.func(!llvm.ptr<i8>) { unrealized_conversion_cast(): !llvm.ptr<i8> -> !okl.launcher_ctx }
 struct RewriteFunctionArgsPattern final : public mlir::OpRewritePattern<func::FuncOp> {
   static LogicalResult ConvertLauncherToLLVMPtr(func::FuncOp op, mlir::PatternRewriter& rewriter) {
     auto func_type = rewriter.getFunctionType({GetPtrType(rewriter)}, {});
@@ -256,5 +259,4 @@ void LowerOKLToLLVMCallPass::runOnOperation() {
 }
 
 }  // namespace okl
-
 }  // namespace mlir
