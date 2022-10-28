@@ -400,9 +400,6 @@ class LogSoftmaxGradFunctor {
 
 class GumbelSoftmaxFunctor {
  public:
-  GumbelSoftmaxFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("gumbel_softmax").Input("in").Output("out").Build());
-  }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, const double& tau,
                            const Optional<int64_t>& dim, bool hard,
                            const Optional<one::Generator>& generator) const {
@@ -411,7 +408,6 @@ class GumbelSoftmaxFunctor {
     auto device = JUST(in->device());
     auto dtype = in->dtype();
     const int64_t num_axes = in_shape->NumAxes();
-    // const int64_t num_classes = in_shape->At(in_shape->NumAxes() - 1);
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("tau", "seed", "hard");
@@ -443,7 +439,6 @@ class GumbelSoftmaxFunctor {
       std::iota(axis.begin(), axis.end(), 0);
       auto out_max = JUST(functional::ArgMax(out_soft, dim_, /*keepdim=*/true, dtype));
       auto index = JUST(functional::To(out_max, JUST(DType::Get(DataType::kInt64)), /*copy=*/false));
-      // auto out_hard = functional::OneHot(index, num_classes, 1.0, 0.0);
       auto zero = JUST(functional::ZerosLike(out_soft));
       auto out_hard = JUST(functional::DimScatterUpdateScalar(zero, dim_, index, 1.0, /*inplace=*/false));
 
@@ -453,25 +448,14 @@ class GumbelSoftmaxFunctor {
       return out_hard_grad;
     } else { return out_soft; }
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
 class GumbelSoftmaxGradFunctor : public SoftmaxGradFunctor {
  public:
-  GumbelSoftmaxGradFunctor() {
-    op_ = CHECK_JUST(
-        one::OpBuilder("gumbel_softmax_grad").Input("dy").Input("y").Output("dx").Build());
-  }
-
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& y) const {
     return SoftmaxGradFunctor::operator()(dy, y);
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
 class HardSwishFunctor : public UnaryFunctor {

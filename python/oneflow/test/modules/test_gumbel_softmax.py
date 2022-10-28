@@ -33,7 +33,7 @@ def _test_gumbel_softmax(test_case, tau, dim, device, dtype):
         dtype=dtype,
         device=flow.device(device),
     )
-    y_soft = F.gumbel_softmax(x, tau=tau, dim=dim, hard=False)
+    y_soft = F.gumbel_softmax(x, tau=tau, dim=dim)
     y_hard = F.gumbel_softmax(x, tau=tau, dim=dim, hard=True)
     test_case.assertEqual(x.shape, y_soft.shape)
     test_case.assertEqual(x.shape, y_hard.shape)
@@ -71,7 +71,7 @@ def _test_gumbel_softmax_backward(test_case, tau, dim, device, dtype):
         device=flow.device(device),
         requires_grad=True,
     )
-    y_soft = F.gumbel_softmax(x_soft, tau, dim=dim, hard=False)
+    y_soft = F.gumbel_softmax(x_soft, tau, dim=dim)
     y_hard = F.gumbel_softmax(x_hard, tau, dim=dim, hard=True)
 
     y_soft.sum().backward()
@@ -91,8 +91,8 @@ def _test_gumbel_softmax_half(test_case, tau, dim, device):
     x = flow.tensor(
         np.random.randn(20, 32),
         device=flow.device(device),
-    ).half()
-    y_soft = F.gumbel_softmax(x, tau=tau, dim=dim, hard=False)
+    ).to(flow.float16)
+    y_soft = F.gumbel_softmax(x, tau=tau, dim=dim)
     y_hard = F.gumbel_softmax(x, tau=tau, dim=dim, hard=True)
     test_case.assertEqual(x.shape, y_soft.shape)
     test_case.assertEqual(x.shape, y_hard.shape)
