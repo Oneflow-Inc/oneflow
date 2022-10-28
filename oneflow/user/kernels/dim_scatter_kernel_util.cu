@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef WITH_CUDA
+// #ifdef WITH_CUDA
 #include "oneflow/user/kernels/dim_scatter_kernel_util.h"
 
 namespace oneflow {
@@ -57,11 +57,11 @@ struct DimScatterFunctor<DeviceType::kCUDA, float16, IDX_T, Opt> final {
   }
 };
 
-INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kCUDA, BinOpAddFunctor);
-INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kCUDA, BinOpMulFunctor);
-INSTANTIATE_DIM_SCATTER_FUNCTORS(DeviceType::kCUDA, BinOpUpdateFunctor);
+INSTANTIATE_DIM_SCATTER_CUDA_FUNCTORS(DeviceType::kCUDA, BinOpAddFunctor);
+INSTANTIATE_DIM_SCATTER_CUDA_FUNCTORS(DeviceType::kCUDA, BinOpMulFunctor);
+INSTANTIATE_DIM_SCATTER_CUDA_FUNCTORS(DeviceType::kCUDA, BinOpUpdateFunctor);
 
 }  // namespace user_op
 }  // namespace oneflow
 
-#endif  // WITH_CUDA
+// #endif  // WITH_CUDA

@@ -96,8 +96,8 @@ def _test_gumbel_softmax_half(test_case, tau, dim, device):
     y_hard = F.gumbel_softmax(x, tau=tau, dim=dim, hard=True)
     test_case.assertEqual(x.shape, y_soft.shape)
     test_case.assertEqual(x.shape, y_hard.shape)
-    test_case.assertEqual(dtype, y_soft.dtype)
-    test_case.assertEqual(dtype, y_hard.dtype)
+    test_case.assertEqual(x.dtype, y_soft.dtype)
+    test_case.assertEqual(x.dtype, y_hard.dtype)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -119,7 +119,6 @@ class TestGumbelSoftmaxModule(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
     
     @autotest()
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_leakyrelu_module_with_half_random_data(test_case):
         arg_dict = OrderedDict()
         arg_dict["fun"] = [
@@ -127,7 +126,7 @@ class TestGumbelSoftmaxModule(flow.unittest.TestCase):
         ]
         arg_dict["tau"] = [1, 2, 0.5]
         arg_dict["dim"] = [0, -1]
-        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["device"] = ["cuda"]
 
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])

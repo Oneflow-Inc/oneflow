@@ -96,12 +96,12 @@ class DimScatterScalarKernel final : public user_op::OpKernel {
                                 AddScalarFunctor);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCATTER_SCALAR_CPU_KERNELS,
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
 
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCATTER_SCALAR_CUDA_KERNELS,
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
 #endif  // WITH_CUDA
 
