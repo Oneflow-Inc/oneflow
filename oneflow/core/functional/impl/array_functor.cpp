@@ -1484,14 +1484,19 @@ class SliceUpdateFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("start", "stop", "step");
     attrs.SetAllAttrs(start, stop, step);
 
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({ref, value})
+             .PromoteInputsToCommonDtype(true, ref->dtype())
+             .Apply());
+
     if (inplace) {
       auto outputs = std::make_shared<TensorTuple>(1);
       JUST(CheckInplaceValid(ref));
       JUST(VectorAt(*outputs, 0)) = ref;
-      JUST(OpInterpUtil::Dispatch(*op_, {ref, value}, outputs.get(), attrs));
+      JUST(OpInterpUtil::Dispatch(*op_, JUST(tensor_processor.GetInputs()), outputs.get(), attrs));
       return JUST(VectorAt(*outputs, 0));
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {ref, value}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, JUST(tensor_processor.GetInputs()), attrs);
     }
   }
 
