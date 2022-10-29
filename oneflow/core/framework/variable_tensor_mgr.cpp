@@ -60,7 +60,6 @@ Maybe<void> VariableTensorMgr::Fill(
       << "The number of variable op names is not equal with the number of variable tensors.";
 
   for (size_t i = 0; i < variable_op_names.size(); ++i) {
-    std::cout << JUST(oneflow::VectorAt(variable_op_names, i)) << std::endl;
     JUST(Set(JUST(oneflow::VectorAt(variable_op_names, i)),
              JUST(oneflow::VectorAt(variable_tensors, i))));
   }
