@@ -384,6 +384,23 @@ struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
   }
 };
 
+struct ReshapeOpLowering final : public OpConversionPattern<ReshapeOp> {
+ public:
+  using OpConversionPattern<ReshapeOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(ReshapeOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto output = op.out().getType();
+    auto input = op.in();
+    llvm::SmallVector<int64_t> new_shape;
+    for (const auto& dim_attr : op.shape()) {
+      new_shape.push_back(dim_attr.cast<IntegerAttr>().getSInt());
+    }
+    rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(op, output, input,
+                                                 rewriter.getI64ArrayAttr(new_shape));
+    return success();
+  }
+};
+
 struct MatmulOpLowering final : public OpConversionPattern<MatmulOp> {
  public:
   using OpConversionPattern<MatmulOp>::OpConversionPattern;
@@ -594,11 +611,12 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   } else {
     patterns.add<VariableOpToConstLowering>(typeConverter, context, this->variableAsConstant);
   }
-  patterns.add<CastOpLowering, ScalarMulByTensorOpLowering, ReluOpLowering, Conv2DOpLowering,
-               AvgPool2DOpLowering, Add2OpLowering, MaxPool2DOpLowering, MatmulOpLowering,
-               BroadcastAddOpLowering, JobLowering, ReturnOpLowering, InputOpLowering,
-               OutputOpLowering, NormalizationOpLowering, NormalizationInferenceOpLowering>(
-      typeConverter, context);
+  patterns
+      .add<CastOpLowering, ScalarMulByTensorOpLowering, ReluOpLowering, Conv2DOpLowering,
+           AvgPool2DOpLowering, ReshapeOpLowering, Add2OpLowering, MaxPool2DOpLowering,
+           MatmulOpLowering, BroadcastAddOpLowering, JobLowering, ReturnOpLowering, InputOpLowering,
+           OutputOpLowering, NormalizationOpLowering, NormalizationInferenceOpLowering>(
+          typeConverter, context);
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     signalPassFailure();
     LOG(ERROR) << "Failed to lower OneFlow to Tosa";
