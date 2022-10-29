@@ -789,8 +789,10 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
  public:
   LogicalResult matchAndRewrite(NCHWCompatible op, PatternRewriter& rewriter) const override {
     if (op->hasTrait<OpTrait::IsOpConfCompatible>()) {
-      if (op->getOperands()[0].getType().cast<mlir::RankedTensorType>().getShape().size() != 4) {
-        return failure();
+      for (mlir::Value operand : op.OperandsToTranspose()) {
+        if (operand.getType().cast<mlir::RankedTensorType>().getShape().size() != 4) {
+          return failure();
+        }
       }
       const auto device_name = OpTrait::IsOpConfCompatible<void>::getDeviceTag(op)
                                    .cast<mlir::StringAttr>()
