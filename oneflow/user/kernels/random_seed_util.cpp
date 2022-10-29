@@ -62,6 +62,12 @@ Maybe<uint64_t> GetOpKernelRandomSeedInCurrentRank(const user_op::KernelInitCont
                                                    uint64_t init_seed) {
   const auto& outputs = ctx->outputs();
   CHECK_EQ(outputs.size(), 1);
+  if (ctx->parallel_ctx().parallel_num() == 1) {
+    std::seed_seq seq{init_seed};
+    std::vector<uint64_t> seeds(1);
+    seq.generate(seeds.begin(), seeds.end());
+    return seeds[0];
+  }
   return GetRandomSeedForRank(ctx->parallel_desc(), ctx->NdSbp4ArgNameAndIndex("out", 0), init_seed,
                               ctx->parallel_ctx().parallel_id());
 }
