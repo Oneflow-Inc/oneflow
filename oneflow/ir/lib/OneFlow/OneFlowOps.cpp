@@ -486,6 +486,25 @@ llvm::SmallVector<Value, 4> BiasAddOp::NchwToNhwc(llvm::SmallVector<Value, 4> va
   return results;
 }
 
+bool BroadcastAddOp::IsNCHW() { return false; }
+
+llvm::DenseSet<Value> BroadcastAddOp::OperandsToTranspose() { return {this->x(), this->y()}; }
+
+llvm::DenseSet<Value> BroadcastAddOp::ResultsToTranspose() { return {this->z()}; }
+
+llvm::SmallVector<Value, 4> BroadcastAddOp::NchwToNhwc(llvm::SmallVector<Value, 4> values,
+                                                       PatternRewriter& rewriter) {
+  auto broadcast_op = *this;
+  NamedAttrList attributes = broadcast_op->getAttrs();
+  auto res = rewriter
+                 .create<oneflow::BroadcastAddOp>(
+                     broadcast_op.getLoc(), getNHWCResultTypes(broadcast_op), values, attributes)
+                 .z();
+  llvm::SmallVector<Value, 4> results;
+  results.push_back(res);
+  return results;
+}
+
 bool NormalizationOp::IsNCHW() { return this->axisAttr().getValue().getSExtValue() == 1; }
 
 llvm::DenseSet<Value> NormalizationOp::OperandsToTranspose() { return {this->x()}; }
