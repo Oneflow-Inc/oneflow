@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-// #ifdef WITH_CUDA
+#ifdef WITH_CUDA
 #include "oneflow/user/kernels/dim_scatter_scalar_kernel_util.h"
 
 namespace oneflow {
@@ -50,8 +50,7 @@ struct DimScatterScalarFunctor<DeviceType::kCUDA, float16, IDX_T, Opt> final {
                   const IDX_T* index, const float16 src, float16* output) {
     RUN_CUDA_KERNEL((DoCUDADimScatterScalar<half, IDX_T, Opt>), stream,
                     BlocksNum4ThreadsNum(elem_cnt), idx_nd_helper, output_nd_helper, ndim, elem_cnt,
-                    dim, upper_bound, index, src,
-                    reinterpret_cast<half*>(output));
+                    dim, upper_bound, index, src, reinterpret_cast<half*>(output));
   }
 };
 
@@ -60,4 +59,4 @@ INSTANTIATE_DIM_SCATTER_SCARLAR_CUDA_FUNCTORS(DeviceType::kCUDA, AddScalarFuncto
 
 }  // namespace user_op
 }  // namespace oneflow
-// #endif
+#endif

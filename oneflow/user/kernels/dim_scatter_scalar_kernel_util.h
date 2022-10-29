@@ -15,10 +15,10 @@ limitations under the License.
 */
 #ifndef ONEFLOW_USER_KERNELS_DIM_SCATTER_SCALAR_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_DIM_SCATTER_SCALAR_KERNEL_UTIL_H_
-// #ifdef WITH_CUDA
+#ifdef WITH_CUDA
 #include "oneflow/core/cuda/atomic.cuh"
 #include <cuda_fp16.h>
-// #endif  // WITH_CUDA
+#endif  // WITH_CUDA
 #include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
@@ -45,8 +45,8 @@ struct AddScalarFunctor {
 template<>
 struct AddScalarFunctor<half> {
   OF_DEVICE_FUNC static void apply(const half x, half* y) {
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
-    *y = __hadd(*y, x);
+#if defined(__CUDA_ARCH__)
+    *y = __float2half(__half2float(*y) + __half2float(x));
 #endif
   }
 };
