@@ -56,4 +56,4 @@ std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
 
 }  // namespace mlir
 
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWSUPPORT_H_
+#endif // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWSUPPORT_H_
