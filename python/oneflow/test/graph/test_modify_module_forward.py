@@ -22,7 +22,7 @@ from types import MethodType
 
 import oneflow as flow
 import oneflow.unittest
-from oneflow import nn 
+from oneflow import nn
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -37,7 +37,7 @@ class TestModifyForwardOfModule(oneflow.unittest.TestCase):
                 super().__init__()
 
             def forward(self, x):
-                return x 
+                return x
 
         class ForwardModifiedGraph(nn.Graph):
             def __init__(self, model):
