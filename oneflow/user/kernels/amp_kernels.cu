@@ -21,6 +21,12 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
+
+template<typename T>
+__device__ bool IsFinite(T x) {
+  return isfinite(x);
+}
+
 template<typename T>
 __global__ void AmpUpdateScaleImpl(T* current_scale, int* growth_tracker, const T* found_inf,
                                    double growth_factor, double backoff_factor,
@@ -40,6 +46,16 @@ __global__ void AmpUpdateScaleImpl(T* current_scale, int* growth_tracker, const 
     }
   }
 }
+
+template<typename T>
+__global__ void AmpForEachNonFiniteCheckAndUnscaleImpl(const int n, T* scaled_grad,
+                                                       float* found_inf, const float* inv_scale) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    if (IsFinite(scaled_grad[i])) { found_inf[0] = 1.f; }
+    scaled_grad[i] = inv_scale[0] == 1.f ? scaled_grad[i] : scaled_grad[i] * inv_scale[0];
+  }
+}
+
 };  // namespace
 
 template<typename T>
@@ -74,21 +90,36 @@ class AMPForEachNonFiniteCheckAndUnscaleGpuKernel final : public user_op::OpKern
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {}
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    user_op::Tensor* found_inf = ctx->Tensor4ArgNameAndIndex("found_inf", 0);
+    const user_op::Tensor* inv_scale = ctx->Tensor4ArgNameAndIndex("inv_scale", 0);
+    size_t in_num = ctx->inputs().size();
+    for (size_t i = 0; i < in_num; ++i) {
+      user_op::Tensor* scaled_grad = ctx->Tensor4ArgNameAndIndex("scaled_grads", i);
+      const int32_t elem_cnt = scaled_grad->shape_view().elem_cnt();
+      RUN_CUDA_KERNEL((AmpForEachNonFiniteCheckAndUnscaleImpl<T>), ctx->stream(), elem_cnt,
+                      elem_cnt, scaled_grad->mut_dptr<T>(), found_inf->mut_dptr<float>(),
+                      inv_scale->dptr<float>());
+    }
+  }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_AMP_CUDA_KERNELS(dtype)                                                         \
-  REGISTER_USER_KERNEL("amp_update_scale")                                                       \
-      .SetCreateFn<AMPUpdateScaleGpuKernel<dtype>>()                                             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                           \
-                       && (user_op::HobDataType("next_scale", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("amp_non_finite_check_and_unscale")                                       \
-      .SetCreateFn<AMPForEachNonFiniteCheckAndUnscaleGpuKernel<dtype>>()                         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                           \
+#define REGISTER_AMP_UPDATE_SCALE_CUDA_KERNEL(dtype)                   \
+  REGISTER_USER_KERNEL("amp_update_scale")                             \
+      .SetCreateFn<AMPUpdateScaleGpuKernel<dtype>>()                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+                       && (user_op::HobDataType("next_scale", 0) == GetDataType<dtype>::value));
+
+#define REGISTER_AMP_FOR_EACH_NONFINITE_CHECK_AND_UNSCALE_CUDA_KERNEL(dtype) \
+  REGISTER_USER_KERNEL("amp_non_finite_check_and_unscale")                   \
+      .SetCreateFn<AMPForEachNonFiniteCheckAndUnscaleGpuKernel<dtype>>()     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)       \
                        && (user_op::HobDataType("scaled_grads", 0) == GetDataType<dtype>::value));
 
-REGISTER_AMP_CUDA_KERNELS(float)
-REGISTER_AMP_CUDA_KERNELS(double)
+REGISTER_AMP_UPDATE_SCALE_CUDA_KERNEL(float)
+REGISTER_AMP_UPDATE_SCALE_CUDA_KERNEL(double)
+REGISTER_AMP_FOR_EACH_NONFINITE_CHECK_AND_UNSCALE_CUDA_KERNEL(float)
+REGISTER_AMP_FOR_EACH_NONFINITE_CHECK_AND_UNSCALE_CUDA_KERNEL(double)
 
 }  // namespace oneflow
