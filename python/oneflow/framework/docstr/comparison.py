@@ -204,15 +204,18 @@ add_docstr(
     
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.isclose.html
 
-    Returns a new tensor with boolean elements representing if each element of input is "close" to the corresponding element of other. Closeness is defined as:
-    |input-other| <= atol+rtol*|other|
+    Returns a new tensor with boolean elements representing if each element of
+    :attr:`input` is "close" to the corresponding element of :attr:`other`.
+    Closeness is defined as:
+    .. math::
+        \lvert \text{input} - \text{other} \rvert \leq \texttt{atol} + \texttt{rtol} \times \lvert \text{other} \rvert
 
     Args:
         input (Tensor): first tensor to compare
         other (Tensor): second tensor to compare
         atol (float, optional): absolute tolerance. Default: 1e-08
         rtol (float, optional): relative tolerance. Default: 1e-05
-        equal_nan (bool, optional): if True, then two NaN s will be considered equal. Default: False
+        equal_nan (bool, optional): if ``True``, then two ``NaN`` s will be considered equal. Default: ``False``
 
     Returns:
         oneflow.Tensor: A Tensor with bool type.
@@ -221,7 +224,6 @@ add_docstr(
 
     .. code-block:: python
 
-        >>> import numpy as np
         >>> import oneflow as flow
         
         >>> flow.isclose(flow.tensor((1., 2, 3)), flow.tensor((1 + 1e-10, 3, 4)))
@@ -235,20 +237,21 @@ add_docstr(
 
 add_docstr(
     oneflow.allclose,
-    """allclose(input, other, atol=1e-08, rtol=1e-05, equal_nan=False) -> Bool
+    """allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False) -> bool
     
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.allclose.html
 
-    This function checks if all input and other satisfy the condition:
-    |input-other| <= atol+rtol*|other|
-    elementwise, for all elements of input and other. The behaviour of this function is analogous to numpy.allclose
+    This function checks if :attr:`input` and :attr:`other` satisfy the condition:
+    .. math::
+        \lvert \text{input} - \text{other} \rvert \leq \texttt{atol} + \texttt{rtol} \times \lvert \text{other} \rvert
+    elementwise, for all elements of :attr:`input` and :attr:`other`. The behaviour of this function is analogous to
 
     Args:
         input (Tensor): first tensor to compare
         other (Tensor): second tensor to compare
         atol (float, optional): absolute tolerance. Default: 1e-08
         rtol (float, optional): relative tolerance. Default: 1e-05
-        equal_nan (bool, optional): if True, then two NaN s will be considered equal. Default: False
+        equal_nan (bool, optional): if ``True``, then two ``NaN`` s will be considered equal. Default: ``False``
 
     Returns:
         oneflow.Tensor: A Tensor with bool type.
@@ -257,7 +260,6 @@ add_docstr(
 
     .. code-block:: python
 
-        >>> import numpy as np
         >>> import oneflow as flow
 
         >>> flow.allclose(flow.tensor([10000., 1e-07]), flow.tensor([10000.1, 1e-08]))
