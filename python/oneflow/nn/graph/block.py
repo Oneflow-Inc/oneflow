@@ -77,10 +77,10 @@ class GraphBlock(object):
         self._gprev_scope = None
         assert belonged_graph is None or isinstance(belonged_graph, weakref.ProxyTypes)
         self._gbelonged_graph = belonged_graph
-        self.gconfig = GraphBlockConfig()
+        self.nngraph_config = GraphBlockConfig()
 
     @property
-    def gname(self):
+    def nngraph_name(self):
         return self._gname
 
     @property
@@ -133,7 +133,7 @@ class GraphModule(GraphBlock):
         self.gset_origin(origin)
 
     @property
-    def gorigin(self):
+    def nngraph_origin(self):
         return self._gorigin
 
     def gset_origin(self, origin):
