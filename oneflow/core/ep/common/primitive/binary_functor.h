@@ -126,7 +126,7 @@ struct BinaryFunctor<device, BinaryOp::kGreaterEqual, Src, Dst> {
 };
 
 template<DeviceType device, typename Src, typename Dst>
-struct BinaryFunctor<device, BinaryOp::kIsCloseEqNan, Src, Dst> {
+struct BinaryFunctor<device, BinaryOp::kIsCloseEqualNan, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
       : atol(attr0.Value<float>()), rtol(attr1.Value<float>()) {}
 

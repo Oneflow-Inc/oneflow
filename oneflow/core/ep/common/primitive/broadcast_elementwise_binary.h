@@ -54,14 +54,14 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kScalarBasePowerGrad) \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kScalarExpPowerGrad)
 
-#define BINARY_COMPARISION_OP_SEQ               \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kEqual)        \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kNotEqual)     \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLessThan)     \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLessEqual)    \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kGreaterThan)  \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kGreaterEqual) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kIsCloseEqNan) \
+#define BINARY_COMPARISION_OP_SEQ                  \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kEqual)           \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kNotEqual)        \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLessThan)        \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLessEqual)       \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kGreaterThan)     \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kGreaterEqual)    \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kIsCloseEqualNan) \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kIsClose)
 
 #define BINARY_LOGICAL_OP_SEQ                 \

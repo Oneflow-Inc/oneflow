@@ -175,7 +175,7 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kAtanhBackwardWithDyX, Src, Ds
 };
 
 template<typename Src, typename Dst>
-struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kIsCloseEqNan, Src, Dst> {
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kIsCloseEqualNan, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
       : atol(attr0.Value<float>()), rtol(attr1.Value<float>()) {}
 
@@ -277,7 +277,7 @@ SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kAtanhBackwardWithDyX);
       return float_functor(__bfloat162float(src0), __bfloat162float(src1));                   \
     }                                                                                         \
   };
-SPECIALIZATION_BFLOAT16_COMPARISON_BINARY_FUNCTOR(BinaryOp::kIsCloseEqNan)
+SPECIALIZATION_BFLOAT16_COMPARISON_BINARY_FUNCTOR(BinaryOp::kIsCloseEqualNan)
 SPECIALIZATION_BFLOAT16_COMPARISON_BINARY_FUNCTOR(BinaryOp::kIsClose)
 
 #endif  // CUDA_VERSION >= 11000
@@ -346,7 +346,7 @@ SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kAtanhBackwardWithDyX);
     }                                                                                         \
   };
 
-SPECIALIZATION_HALF_COMPARISON_BINARY_FUNCTOR(BinaryOp::kIsCloseEqNan)
+SPECIALIZATION_HALF_COMPARISON_BINARY_FUNCTOR(BinaryOp::kIsCloseEqualNan)
 SPECIALIZATION_HALF_COMPARISON_BINARY_FUNCTOR(BinaryOp::kIsClose)
 
 #define SPECIALIZATION_GPU_BINARY_FUNCTOR(op, type)                                          \

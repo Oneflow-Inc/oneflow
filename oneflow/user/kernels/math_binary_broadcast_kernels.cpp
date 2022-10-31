@@ -24,7 +24,7 @@ limitations under the License.
 namespace oneflow {
 
 template<typename Context, ep::primitive::BinaryOp binary_op>
-std::enable_if_t<binary_op == ep::primitive::BinaryOp::kIsCloseEqNan
+std::enable_if_t<binary_op == ep::primitive::BinaryOp::kIsCloseEqualNan
                      or binary_op == ep::primitive::BinaryOp::kIsClose,
                  std::unique_ptr<ep::primitive::BroadcastElementwiseBinary>>
 NewBroadcastElementwiseBinaryPrimitive(Context* ctx) {
@@ -37,7 +37,7 @@ NewBroadcastElementwiseBinaryPrimitive(Context* ctx) {
 }
 
 template<typename Context, ep::primitive::BinaryOp binary_op>
-std::enable_if_t<binary_op != ep::primitive::BinaryOp::kIsCloseEqNan
+std::enable_if_t<binary_op != ep::primitive::BinaryOp::kIsCloseEqualNan
                      and binary_op != ep::primitive::BinaryOp::kIsClose,
                  std::unique_ptr<ep::primitive::BroadcastElementwiseBinary>>
 NewBroadcastElementwiseBinaryPrimitive(Context* ctx) {
@@ -123,7 +123,7 @@ REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_greater_equal",
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_less", ep::primitive::BinaryOp::kLessThan)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_less_equal", ep::primitive::BinaryOp::kLessEqual)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_isclose_eq_nan",
-                                    ep::primitive::BinaryOp::kIsCloseEqNan)
+                                    ep::primitive::BinaryOp::kIsCloseEqualNan)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_isclose_neq_nan", ep::primitive::BinaryOp::kIsClose)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_logical_and", ep::primitive::BinaryOp::kLogicalAnd)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_logical_or", ep::primitive::BinaryOp::kLogicalOr)
