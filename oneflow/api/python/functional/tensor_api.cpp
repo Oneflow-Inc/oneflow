@@ -363,12 +363,12 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                 [](const Shape& shape, const Optional<Symbol<Device>>& device) -> Maybe<Tensor> {
                   return TensorWithShapeGenericCtor(shape, GetDefaultDType(), device);
                 });
-  m.add_functor(
-      "GlobalTensorWithShapeCtor",
-      [](const Shape& shape, const Symbol<ParallelDesc>& placement,
-         const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
-        return GlobalTensorWithShapeGenericCtor(shape, GetDefaultDType(), placement, sbp_tuple);
-      });
+  m.add_functor("GlobalTensorWithShapeCtor",
+                [](const Shape& shape, const Symbol<ParallelDesc>& placement,
+                   const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
+                  return GlobalTensorWithShapeGenericCtor(shape, GetDefaultDType(), placement,
+                                                          sbp_tuple);
+                });
 }
 
 }  // namespace functional
