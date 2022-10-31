@@ -207,6 +207,7 @@ add_docstr(
     Returns a new tensor with boolean elements representing if each element of
     :attr:`input` is "close" to the corresponding element of :attr:`other`.
     Closeness is defined as:
+
     .. math::
         \lvert \text{input} - \text{other} \rvert \leq \texttt{atol} + \texttt{rtol} \times \lvert \text{other} \rvert
 
@@ -242,8 +243,10 @@ add_docstr(
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.allclose.html
 
     This function checks if :attr:`input` and :attr:`other` satisfy the condition:
+
     .. math::
         \lvert \text{input} - \text{other} \rvert \leq \texttt{atol} + \texttt{rtol} \times \lvert \text{other} \rvert
+
     elementwise, for all elements of :attr:`input` and :attr:`other`. The behaviour of this function is analogous to
     `numpy.allclose <https://docs.scipy.org/doc/numpy/reference/generated/numpy.allclose.html>`_
 
