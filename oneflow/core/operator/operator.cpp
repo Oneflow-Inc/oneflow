@@ -497,8 +497,8 @@ Maybe<const Shape> Operator::GetInputOutputFastestTimeShape() const {
 
 Maybe<void> Operator::GetSbpSignaturesIf(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
-  JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, parallel_desc, sbp_sig_list));
+    int32_t hierarchy_value, SbpSignatureList* sbp_sig_list) const {
+  JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, hierarchy_value, sbp_sig_list));
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Broadcast(output_bns())
@@ -510,18 +510,32 @@ Maybe<void> Operator::GetNdSbpSignatureList(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const {
   // Get 1D sbp signature list
-  SbpSignatureList sbp_sig_list;
-  JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &sbp_sig_list));
-  CHECK_GT_OR_RETURN(sbp_sig_list.sbp_signature_size(), 0)
-      << op_name() << " gets no sbp signature from GetSbpSignaturesIf function!";
+  HashMap<int32_t, SbpSignatureList> hierarchy_value2sbp_sig_list;
+  // hierarchy value is the value at the dimension corresponding to the current SBP
+  // For example, 2 machines, 4 gpus per machine, hierarchy = [2, 4]
+  // Suppose we have nd_sbp = (S0, B)
+  // The hierarchy value corresponding to S0 is 2
+  // The hierarchy value corresponding to B is 4.
+  for (int32_t hierarchy_value : *parallel_desc.hierarchy()) {
+    if (hierarchy_value2sbp_sig_list.find(hierarchy_value) == hierarchy_value2sbp_sig_list.end()) {
+      auto* sbp_sig_list = &hierarchy_value2sbp_sig_list[hierarchy_value];
+      JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, hierarchy_value, sbp_sig_list));
+      CHECK_GT_OR_RETURN(sbp_sig_list->sbp_signature_size(), 0)
+          << op_name()
+          << " gets no sbp signature from GetSbpSignaturesIf function for hierarchy value: "
+          << hierarchy_value;
+    }
+  }
 
   int32_t sbp_dimension = parallel_desc.hierarchy()->NumAxes();
   NdSbpSignature nd_sbp_sig;
-  SbpSignatureToNdSbpSignature(sbp_sig_list.sbp_signature(0), &nd_sbp_sig);
+  SbpSignatureToNdSbpSignature(hierarchy_value2sbp_sig_list.begin()->second.sbp_signature(0),
+                               &nd_sbp_sig);
   ResizeNdSbpSignature(nd_sbp_sig, sbp_dimension);
   // ND sbp signature list would be direct product of 1D sbp signatures
   CHECK_OR_RETURN(nd_sbp_sig_list->empty());
-  DfsGetNdSbpSignature(nd_sbp_sig, 0, sbp_dimension, sbp_sig_list, nd_sbp_sig_list);
+  DfsGetNdSbpSignature(nd_sbp_sig, 0, sbp_dimension, *parallel_desc.hierarchy(),
+                       hierarchy_value2sbp_sig_list, nd_sbp_sig_list);
   return Maybe<void>::Ok();
 }
 
@@ -803,7 +817,7 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
       std::ostringstream err;
       err << "op: `" << op_name() << "` can't find available sbp signature." << std::endl;
       err << "candidate nd sbp signature are: "
-          << *JUST(NdSbpSignatureListAsString(nd_sbp_sig_list, input_bns(), output_bns()));
+          << *JUST(NdSbpSignatureListToString(nd_sbp_sig_list, input_bns(), output_bns()));
       err << ", but inputs sbp are:";
       for (int32_t ibn_id = 0; ibn_id < input_bns().size(); ibn_id++) {
         const auto& ibn = input_bns().at(ibn_id);
@@ -833,7 +847,9 @@ Maybe<void> Operator::InferSbpSignature(
   SbpSignatureList valid_sbp_sig_list;
   {
     SbpSignatureList sbp_sig_candidates;
-    JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc, &sbp_sig_candidates));
+    // For 1d sbp, hierarchy value = parallel num
+    JUST(
+        GetSbpSignaturesIf(LogicalBlobDesc4Ibn, parallel_desc.parallel_num(), &sbp_sig_candidates));
     // filter sbp signatures by logical shape
     JUST(FilterAndCheckValidSbpSignatureListByLogicalShape(sbp_sig_candidates, LogicalBlobDesc4Ibn,
                                                            parallel_desc, &valid_sbp_sig_list));
