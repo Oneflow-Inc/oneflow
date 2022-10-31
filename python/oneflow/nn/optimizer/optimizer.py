@@ -100,7 +100,7 @@ class ParamGroup(object):
 
         for buf_type in self.params_dict.keys():
             self.params_dict[buf_type].param_buf.grad = self.params_dict[buf_type].grad_buf
-            self.parameters.append(self.params_dict[buf_type].param_buf)
+            self._parameters.append(self.params_dict[buf_type].param_buf)
 
     def __getitem__(self, key):
         return self._options[key]
@@ -349,7 +349,7 @@ class Optimizer(object):
 
         def pack_group(group):
             nonlocal start_index
-            packed = {k: v for k, v in group.items() if k != "_parameters"}
+            packed = {k: v for k, v in group.items() if k not in ["_parameters", 'params_dict']}
             param_mappings.update(
                 {
                     id(p): i
