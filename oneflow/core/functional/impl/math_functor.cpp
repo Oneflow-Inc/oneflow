@@ -14,14 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <glog/logging.h>
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
@@ -3113,6 +3116,73 @@ class InplaceAddCDivFunctor {
   }
 };
 
+class AmpUpdateScaleFunctor {
+ public:
+  AmpUpdateScaleFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("amp_update_scale")
+                         .Input("current_scale")
+                         .Input("growth_tracker")
+                         .Input("found_inf")
+                         .Build());
+  }
+  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& current_scale,
+                         const std::shared_ptr<one::Tensor>& growth_tracker,
+                         const std::shared_ptr<one::Tensor>& found_inf, double growth_factor,
+                         double backoff_factor, int growth_interval) const {
+    CHECK_EQ_OR_RETURN(JUST(current_scale->device())->type(), "cuda")
+        << "current_scale must be a CUDA tensor.";
+    CHECK_EQ_OR_RETURN(JUST(growth_tracker->device())->type(), "cuda")
+        << "growth_tracker must be a CUDA tensor.";
+    CHECK_EQ_OR_RETURN(JUST(found_inf->device())->type(), "cuda")
+        << "found_inf must be a CUDA tensor.";
+    CHECK_EQ_OR_RETURN(current_scale->nelement(), 1) << "current_scale must be a 1-element tensor.";
+    CHECK_EQ_OR_RETURN(growth_tracker->nelement(), 1)
+        << "growth_tracker must be a 1-element tensor.";
+    CHECK_EQ_OR_RETURN(found_inf->nelement(), 1) << "found_inf must be a 1-element tensor.";
+    CHECK_EQ_OR_RETURN(current_scale->dtype()->is_floating_point(), true)
+        << "current_scale must be a float tensor.";
+    CHECK_EQ_OR_RETURN(growth_tracker->dtype()->is_integer(), true)
+        << "growth_tracker must be a float tensor.";
+    CHECK_EQ_OR_RETURN(found_inf->dtype()->is_floating_point(), true)
+        << "found_inf must be a float tensor.";
+
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("growth_factor", "backoff_factor", "growth_interval");
+    attrs.SetAllAttrs(growth_factor, backoff_factor, growth_interval);
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {current_scale, growth_tracker, found_inf},
+                                             attrs));
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class AmpForEachNonFiniteCheckAndUnscaleFunctor {
+ public:
+  AmpForEachNonFiniteCheckAndUnscaleFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("amp_non_finite_check_and_unscale")
+                         .Input("scaled_grads_found_inf_inv_scale")
+                         .Build());
+  }
+  Maybe<void> operator()(const TensorTuple& scaled_grads,
+                         const std::shared_ptr<one::Tensor>& found_inf,
+                         const std::shared_ptr<one::Tensor>& inv_scale) const {
+    TensorTuple scaled_grads_found_inf_inv_scale;
+    const int64_t nscaled_grads = scaled_grads.size();
+    for (size_t i = 0; i < nscaled_grads; i++) {
+      scaled_grads_found_inf_inv_scale.emplace_back(scaled_grads[i]);
+    }
+    scaled_grads_found_inf_inv_scale.emplace_back(found_inf);
+    scaled_grads_found_inf_inv_scale.emplace_back(inv_scale);
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {scaled_grads_found_inf_inv_scale}, AttrMap{}));
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -3227,6 +3297,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<InvFunctor>("Inv");
   m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
   m.add_functor<impl::TruncFunctor>("Trunc");
+  m.add_functor<AmpUpdateScaleFunctor>("AmpUpdateScale");
+  m.add_functor<AmpForEachNonFiniteCheckAndUnscaleFunctor>("AmpForEachNonFiniteCheckAndUnscale");
 };
 
 }  // namespace functional

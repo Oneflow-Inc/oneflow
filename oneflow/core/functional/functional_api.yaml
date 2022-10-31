@@ -398,6 +398,14 @@
     ]
   bind_python: True
 
+- name: "amp_update_"
+  signature: "Void (Tensor current_scale, Tensor growth_tracker, Tensor found_inf, Double growth_factor, Double backoff_factor, Int32 growth_interval) => AmpUpdateScale"
+  bind_python: True
+
+- name: "_amp_foreach_non_finite_check_and_unscale_"
+  signature: "Void (TensorTuple scaled_grads, Tensor found_inf, Tensor inv_scale) => AmpForEachNonFiniteCheckAndUnscale"
+  bind_python: True
+
 - name: "as_strided"
   signature: "Tensor (Tensor input, Int32List size, Int32List stride, Int32 storage_offset=0) => AsStrided"
   bind_python: True

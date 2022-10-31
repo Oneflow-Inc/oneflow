@@ -70,10 +70,9 @@ Maybe<void> SetInputArgModifierMutable(const user_op::GetInputArgModifier& GetIn
 
 /* static */ Maybe<void> AMPForEachNonFiniteCheckAndUnscaleOp::ModifyInputArg(
     const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
-  for (int64_t i = 0; i < conf.input_size("scaled_grads"); i++) {
-    JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "scaled_grads", i));
+  for (int64_t i = 0; i < conf.input_size("scaled_grads_found_inf_inv_scale"); i++) {
+    JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "scaled_grads_found_inf_inv_scale", i));
   }
-  JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "found_inf", 0));
   return Maybe<void>::Ok();
 }
 

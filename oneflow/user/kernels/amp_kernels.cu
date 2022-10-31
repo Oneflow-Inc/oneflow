@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstdint>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
@@ -91,11 +90,14 @@ class AMPForEachNonFiniteCheckAndUnscaleGpuKernel final : public user_op::OpKern
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    user_op::Tensor* found_inf = ctx->Tensor4ArgNameAndIndex("found_inf", 0);
-    const user_op::Tensor* inv_scale = ctx->Tensor4ArgNameAndIndex("inv_scale", 0);
     size_t in_num = ctx->inputs().size();
-    for (size_t i = 0; i < in_num; ++i) {
-      user_op::Tensor* scaled_grad = ctx->Tensor4ArgNameAndIndex("scaled_grads", i);
+    user_op::Tensor* found_inf =
+        ctx->Tensor4ArgNameAndIndex("scaled_grads_found_inf_inv_scale", in_num - 2);
+    const user_op::Tensor* inv_scale =
+        ctx->Tensor4ArgNameAndIndex("scaled_grads_found_inf_inv_scale", in_num - 1);
+    for (size_t i = 0; i < in_num - 2; ++i) {
+      user_op::Tensor* scaled_grad =
+          ctx->Tensor4ArgNameAndIndex("scaled_grads_found_inf_inv_scale", i);
       const int32_t elem_cnt = scaled_grad->shape_view().elem_cnt();
       RUN_CUDA_KERNEL((AmpForEachNonFiniteCheckAndUnscaleImpl<T>), ctx->stream(), elem_cnt,
                       elem_cnt, scaled_grad->mut_dptr<T>(), found_inf->mut_dptr<float>(),

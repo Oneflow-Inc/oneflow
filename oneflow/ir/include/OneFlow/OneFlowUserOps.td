@@ -10716,7 +10716,7 @@ def OneFlow_AMPUpdateScaleOp : OneFlow_BaseOp<"amp_update_scale", [NoSideEffect,
     OneFlow_Tensor:$found_inf
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "0.">:$growth_functor,
+    DefaultValuedAttr<F64Attr, "0.">:$growth_factor,
     DefaultValuedAttr<F64Attr, "0.">:$backoff_factor,
     DefaultValuedAttr<SI64Attr, "0">:$growth_interval
   );
@@ -10729,9 +10729,7 @@ def OneFlow_AMPUpdateScaleOp : OneFlow_BaseOp<"amp_update_scale", [NoSideEffect,
 
 def OneFlow_AMPForEachNonFiniteCheckAndUnscaleOp : OneFlow_BaseOp<"amp_non_finite_check_and_unscale", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    Variadic<OneFlow_Tensor>:$scaled_grads,
-    OneFlow_Tensor:$found_inf,
-    OneFlow_Tensor:$inv_scale
+    Variadic<OneFlow_Tensor>:$scaled_grads_found_inf_inv_scale
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
