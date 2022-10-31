@@ -101,7 +101,7 @@ class EagerHcclBroadcastKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("eager_nccl_broadcast")
+REGISTER_USER_KERNEL("eager_ccl_broadcast")
     .SetCreateFn<EagerHcclBroadcastKernel>()
     .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kNPU);
 
@@ -136,9 +136,24 @@ class EagerHcclAllReduceKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("eager_nccl_all_reduce")
+REGISTER_USER_KERNEL("eager_ccl_all_reduce")
     .SetCreateFn<EagerHcclAllReduceKernel>()
     .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kNPU);
 
+class EagerHcclTouchKernel final : public user_op::OpKernel {
+ public:
+  EagerHcclTouchKernel() = default;
+  ~EagerHcclTouchKernel() override = default;
 
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override{
+      // Do nothing.
+  };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+};
+
+REGISTER_USER_KERNEL("eager_nccl_touch")
+    .SetCreateFn<EagerHcclTouchKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kNPU);
 } // namespace oneflow

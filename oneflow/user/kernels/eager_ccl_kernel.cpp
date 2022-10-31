@@ -246,7 +246,8 @@ class EagerCclReduceKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_ccl_reduce")
     .SetCreateFn<EagerCclReduceKernel>()
-    .SetIsMatchedHob(ReduceCollectiveCommunicationExists());
+    .SetIsMatchedHob(!(user_op::HobDeviceType() == DeviceType::kNPU)
+                      && ReduceCollectiveCommunicationExists());
 
 class EagerCclBroadcastKernel final : public user_op::OpKernel {
  public:
@@ -289,6 +290,7 @@ class EagerCclBroadcastKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_ccl_broadcast")
     .SetCreateFn<EagerCclBroadcastKernel>()
-    .SetIsMatchedHob(BroadcastCollectiveCommunicationExists());
+    .SetIsMatchedHob(!(user_op::HobDeviceType() == DeviceType::kNPU)
+                      && BroadcastCollectiveCommunicationExists());
 
 }  // namespace oneflow

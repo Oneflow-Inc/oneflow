@@ -25,6 +25,7 @@ limitations under the License.
 namespace oneflow {
 
 extern Maybe<Symbol<Stream>> (*GetNcclDevice)();
+extern Maybe<Symbol<Stream>> (*GetHcclDevice)();
 extern Maybe<Symbol<Stream>> (*GetCpuTransportDevice)();
 
 Maybe<Symbol<Device>> DefaultGetOutputDeivce(user_op::DeviceAndStreamInferContext* ctx);
@@ -42,7 +43,7 @@ Maybe<Symbol<Stream>> DeviceAndStreamInferFn(user_op::DeviceAndStreamInferContex
   } else if (output_device->type() == "cpu") {
     return JUST(GetCpuTransportDevice());
   } else if(output_device->type() == "npu"){
-    const auto& npu_device = JUST(GetNcclDevice());
+    const auto& npu_device = JUST(GetHcclDevice());
     return npu_device;    
   }else {
     UNIMPLEMENTED_THEN_RETURN();

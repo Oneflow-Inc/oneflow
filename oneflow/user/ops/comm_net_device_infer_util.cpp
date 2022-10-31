@@ -23,7 +23,7 @@ Maybe<Symbol<Stream>> RawGetNcclDevice() {
   return Stream::New(JUST(Device::New("cuda")), StreamType::kCcl);
 }
 
-Maybe<Symbol<Stream>> RawGetHcclDevice(bool is_async_launced) {
+Maybe<Symbol<Stream>> RawGetHcclDevice() {
   return Stream::New(JUST(Device::New("npu")), StreamType::kCcl);
 }
 
@@ -34,7 +34,7 @@ Maybe<Symbol<Stream>> RawGetCpuTransportDevice() {
 }  // namespace
 
 decltype(GetNcclDevice) GetNcclDevice = DECORATE(&RawGetNcclDevice, ThreadLocal);
-// decltype(GetHcclDevice) GetHcclDevice = DECORATE(&RawGetHcclDevice, ThreadLocal);
+decltype(GetHcclDevice) GetHcclDevice = DECORATE(&RawGetHcclDevice, ThreadLocal);
 decltype(GetCpuTransportDevice) GetCpuTransportDevice =
     DECORATE(&RawGetCpuTransportDevice, ThreadLocal);
 
