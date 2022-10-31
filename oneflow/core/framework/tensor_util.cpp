@@ -110,9 +110,11 @@ Maybe<T> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor) {
   return scalar;
 }
 
-template Maybe<double> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor);
-template Maybe<int64_t> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor);
-template Maybe<bool> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor);
+#define DEFINE_GET_ITEM_IN_SCALAR_TENSOR(T) \
+  template Maybe<T> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor);
+
+DEFINE_GET_ITEM_IN_SCALAR_TENSOR(bool)
+DEFINE_GET_ITEM_IN_SCALAR_TENSOR(int64_t)
 
 }  // namespace one
 }  // namespace oneflow
