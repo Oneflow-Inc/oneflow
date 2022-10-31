@@ -25,7 +25,7 @@ namespace oneflow {
 
 template<typename Context, ep::primitive::BinaryOp binary_op>
 std::enable_if_t<binary_op == ep::primitive::BinaryOp::kIsCloseEqNan
-                     or binary_op == ep::primitive::BinaryOp::kIsCloseNeqNan,
+                     or binary_op == ep::primitive::BinaryOp::kIsClose,
                  std::unique_ptr<ep::primitive::BroadcastElementwiseBinary>>
 NewBroadcastElementwiseBinaryPrimitive(Context* ctx) {
   const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
@@ -38,7 +38,7 @@ NewBroadcastElementwiseBinaryPrimitive(Context* ctx) {
 
 template<typename Context, ep::primitive::BinaryOp binary_op>
 std::enable_if_t<binary_op != ep::primitive::BinaryOp::kIsCloseEqNan
-                     and binary_op != ep::primitive::BinaryOp::kIsCloseNeqNan,
+                     and binary_op != ep::primitive::BinaryOp::kIsClose,
                  std::unique_ptr<ep::primitive::BroadcastElementwiseBinary>>
 NewBroadcastElementwiseBinaryPrimitive(Context* ctx) {
   const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
@@ -124,8 +124,7 @@ REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_less", ep::primitive::BinaryOp::k
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_less_equal", ep::primitive::BinaryOp::kLessEqual)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_isclose_eq_nan",
                                     ep::primitive::BinaryOp::kIsCloseEqNan)
-REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_isclose_neq_nan",
-                                    ep::primitive::BinaryOp::kIsCloseNeqNan)
+REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_isclose_neq_nan", ep::primitive::BinaryOp::kIsClose)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_logical_and", ep::primitive::BinaryOp::kLogicalAnd)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_logical_or", ep::primitive::BinaryOp::kLogicalOr)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_logical_xor", ep::primitive::BinaryOp::kLogicalXor)
