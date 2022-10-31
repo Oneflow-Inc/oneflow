@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/user/kernels/loss_kernel_util.h"
+#include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 
 namespace oneflow {
 namespace user_op {
@@ -111,10 +112,14 @@ class BinaryCrossEntropyWithLogitsKernel final : public user_op::OpKernel {
       Shape pos_weight_shape = Shape::Ones(target_blob->shape_view().NumAxes());
       pos_weight_shape.Set(pos_weight_shape.NumAxes() - 1,
                            ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->shape_view().elem_cnt());
-      NdarrayUtil<DeviceType::kCPU, T>::BroadcastMul(
-          ctx->stream(), XpuVarNdarray<T>(target_blob->shape_view(), pos_weight_processed),
-          XpuVarNdarray<const T>(pos_weight_shape, pos_weight),
-          XpuVarNdarray<const T>(target_blob->shape_view(), target));
+      auto bcast_mul =
+          ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
+              ctx->device_type(), ep::primitive::BinaryOp::kMul, target_blob->data_type(),
+              target_blob->data_type(), target_blob->shape_view().NumAxes());
+      CHECK(bcast_mul);
+      bcast_mul->Launch(ctx->stream(), target_blob->shape_view().NumAxes(),
+                        target_blob->shape_view().ptr(), target, pos_weight_shape.NumAxes(),
+                        pos_weight_shape.dim_vec().data(), pos_weight, pos_weight_processed);
     }
     ComputeBinaryCrossEntropyWithLogitsOut(elem_cnt, input, target, out, weight,
                                            pos_weight_processed);
@@ -155,10 +160,14 @@ class BinaryCrossEntropyWithLogitsGradKernel final : public user_op::OpKernel {
       Shape pos_weight_shape = Shape::Ones(target_blob->shape_view().NumAxes());
       pos_weight_shape.Set(pos_weight_shape.NumAxes() - 1,
                            ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->shape_view().elem_cnt());
-      NdarrayUtil<DeviceType::kCPU, T>::BroadcastMul(
-          ctx->stream(), XpuVarNdarray<T>(target_blob->shape_view(), pos_weight_processed),
-          XpuVarNdarray<const T>(pos_weight_shape, pos_weight),
-          XpuVarNdarray<const T>(target_blob->shape_view(), target));
+      auto bcast_mul =
+          ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
+              ctx->device_type(), ep::primitive::BinaryOp::kMul, target_blob->data_type(),
+              target_blob->data_type(), target_blob->shape_view().NumAxes());
+      CHECK(bcast_mul);
+      bcast_mul->Launch(ctx->stream(), target_blob->shape_view().NumAxes(),
+                        target_blob->shape_view().ptr(), target, pos_weight_shape.NumAxes(),
+                        pos_weight_shape.dim_vec().data(), pos_weight, pos_weight_processed);
     }
     ComputeBinaryCrossEntropyWithLogitsGradOut(elem_cnt, input, target, dy, dx, weight,
                                                pos_weight_processed);
