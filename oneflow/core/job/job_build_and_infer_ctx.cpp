@@ -318,10 +318,12 @@ Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, int64_t p
         if (sbp_parallel.has_split_parallel()) {
           const int64_t axis = sbp_parallel.split_parallel().axis();
           CHECK_GT_OR_RETURN(current_shape.At(axis), 0);
-          CHECK_EQ_OR_RETURN(current_shape.At(axis) % parallel_hierarchy->At(i), 0)
+          // Support unbalanced splitting
+          CHECK_GE_OR_RETURN(current_shape.At(axis), parallel_hierarchy->At(i))
               << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
               << " cannot split blob by parallel_hierarchy: "
               << std::to_string(parallel_hierarchy->At(i));
+          // Split and take the minimum one
           current_shape.Set(axis, current_shape.At(axis) / parallel_hierarchy->At(i));
         }
       }
@@ -583,7 +585,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   }
   JUST(AddLbiParallelConf2BlobPlacement(op, ParallelDesc4Obn));
   // Check splitability
-  // JUST(CheckOpBlobSplitability(op, parallel_desc.parallel_num()));
+  JUST(CheckOpBlobSplitability(op, parallel_desc.parallel_num()));
 
   return op->GetOpAttributeWithoutOpNameAndLbn();
 }

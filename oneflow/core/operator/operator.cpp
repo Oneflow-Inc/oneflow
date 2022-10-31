@@ -1647,16 +1647,7 @@ Maybe<Shape> GetNdHierarchyPhysicalShape(const Shape& logical_shape, const NdSbp
     const auto& sbp_parallel = nd_sbp.sbp_parallel(i);
     if (sbp_parallel.has_split_parallel()) {
       const int64_t split_axis = sbp_parallel.split_parallel().axis();
-      // if (LazyMode::is_enabled()) {
-      //   CHECK_EQ_OR_RETURN(physical->At(split_axis) % parallel_hierarchy.At(i), 0)
-      //       << Error::RuntimeError() << "In nn.Graph, expected size at split axis (" <<
-      //       split_axis
-      //       << ") of logical shape must be divisible by parallel num, but got logical_shape: "
-      //       << logical_shape.ToString()
-      //       << ", placement: " << *JUST(PlacementToString(SymbolOf(parallel_desc)))
-      //       << ", nd_sbp: " << NdSbpToString(SymbolOf(nd_sbp));
-      //   physical->Set(split_axis, physical->At(split_axis) / parallel_hierarchy.At(i));
-      // } else {
+      // Both the lazy and eager mode support unbalanced splitting now
       if (physical->At(split_axis) > 0) {
         CHECK_GE_OR_RETURN(physical->At(split_axis), parallel_hierarchy.At(i))
             << Error::RuntimeError() << "Expected size at split axis (" << split_axis
@@ -1668,7 +1659,6 @@ Maybe<Shape> GetNdHierarchyPhysicalShape(const Shape& logical_shape, const NdSbp
         const BalancedSplitter bs(physical->At(split_axis), parallel_hierarchy.At(i));
         physical->Set(split_axis, bs.At(CalcIndex4Axis(parallel_id, hierarch_stride, i)).size());
       }
-      // }
     }
   }
   return physical;
