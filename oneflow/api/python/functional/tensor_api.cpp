@@ -212,7 +212,6 @@ class GlobalTensorWithShapeGenericCtorFunctor {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     JUST(CheckDeviceIdsIsValid(placement));
-    // const auto& dtype = optional_dtype ? JUST(optional_dtype) : GetDefaultDType();
     return functional::GlobalEmpty(shape, dtype, placement, sbp_tuple);
   }
 };
@@ -365,7 +364,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                 });
   m.add_functor(
       "GlobalTensorWithShapeCtor",
-      [](const Shape& shape, const Symbol<DType>& dtype, const Symbol<ParallelDesc>& placement,
+      [](const Shape& shape, const Symbol<ParallelDesc>& placement,
          const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
         return GlobalTensorWithShapeGenericCtor(shape, GetDefaultDType(), placement, sbp_tuple);
       });
