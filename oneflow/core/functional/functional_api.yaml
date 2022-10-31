@@ -390,6 +390,10 @@
   signature: "Tensor (Tensor out_diff, Tensor mask, Tensor device_count, Int32List axis, Bool keepdims=False) => ReduceMaxGlobalStageGrad"
   bind_python: False
 
+- name: "logsumexp"
+  signature: "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => LogSumExp"
+  bind_python: True
+
 - name: "transpose"
   signature:
     [
