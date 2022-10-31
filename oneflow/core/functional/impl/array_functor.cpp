@@ -488,19 +488,30 @@ class ConcatFunctor {
     const int64_t ninput = inputs.size();
     int64_t axis = dim;
     int64_t ndim = inputs[0]->ndim();
+    int64_t nelement = inputs[0]->nelement();
     int64_t max_dim_size = 0;
     CHECK_GE_OR_RETURN(ninput, 1) << Error::RuntimeError() << "inputs size must greater than 0";
     axis = JUST(maybe_wrap_dim(axis, ndim));
 
     const std::shared_ptr<const Shape>& shape = inputs[0]->shape();
     for (const auto& input : inputs) {
-      CHECK_OR_RETURN(input->ndim() == ndim)
-          << Error::RuntimeError() << "Tensors must have same number of dimensions: got "
-          << input->ndim() << " and " << ndim << " is expected.";
+      if (nelement == 0 and ndim == 1) {
+        if (input->nelement() != 0 or input->ndim() != 1) {
+          ndim = input->ndim();
+          nelement = input->nelement();
+        } else {
+          continue;
+        }
+      } else if (input->nelement() != 0 or input->ndim() != 1) {
+        CHECK_OR_RETURN(input->ndim() == ndim)
+            << Error::RuntimeError() << "Tensors must have same number of dimensions: got " << ndim
+            << " and " << input->ndim() << " is expected.";
+      }
       for (int i = 0; i < ndim; ++i) {
+        if (input->nelement() == 0 and input->ndim() == 1) { continue; }
         if (axis == i) {
           max_dim_size += input->shape()->At(i);
-        } else {
+        } else if (inputs[0]->nelement() != 0) {
           CHECK_OR_RETURN(input->shape()->At(i) == shape->At(i))
               << Error::RuntimeError() << "Sizes of tensors must match except in dimension " << axis
               << ". Got " << input->shape()->At(i) << " and " << shape->At(i)
@@ -2642,7 +2653,8 @@ class MaskedFillFunctor {
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("float_operand", "has_float_operand", "int_operand",
                                        "has_int_operand", "bool_operand", "has_bool_operand");
-    if (IsFloatingDataType(x->dtype()->data_type())) {
+    if (IsFloatingDataType(x->dtype()->data_type())
+        || x->dtype()->data_type() == DataType::kFloat16) {
       attrs.SetAllAttrs(value.As<double>(), true, NullOpt, false, NullOpt, false);
     } else if (IsIntegralDataType(x->dtype()->data_type())) {
       attrs.SetAllAttrs(NullOpt, false, value.As<int64_t>(), true, NullOpt, false);
