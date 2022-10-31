@@ -29,7 +29,6 @@ limitations under the License.
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/OneFlowInterfaces.h.inc"
 #include "OneFlow/OneFlowOpTraits.h"
-#include "OneFlow/OneFlowEnums.h.inc"
 #include "OneFlow/OneFlowOpTraits.h"
 
 #include "OneFlow/SBP/SBPAttributes.h"

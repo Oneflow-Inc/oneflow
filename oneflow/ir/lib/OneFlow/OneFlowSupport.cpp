@@ -17,8 +17,8 @@ limitations under the License.
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-
 #include "mlir/IR/MLIRContext.h"
+#include "oneflow/ir/include/OneFlow/OneFlowSupport.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/eager/eager_blob_object.h"
@@ -176,6 +176,37 @@ std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
   llvm::errs() << "unsupported data type: " << dt << "\n";
   exit(1);
 }
+
+FailureOr<::oneflow::DataType> DataTypeFromMLIRToOF(::mlir::oneflow::DataType data_type) {
+  switch (data_type) {
+    case ::mlir::oneflow::DataType::DT_InvalidDataType:
+      return ::oneflow::DataType::kInvalidDataType;
+#define DEFINE_ONE_CASE(datatype) \
+  case ::mlir::oneflow::DataType::DT_##datatype: return ::oneflow::DataType::k##datatype;
+      DEFINE_ONE_CASE(Char)
+      DEFINE_ONE_CASE(Float)
+      DEFINE_ONE_CASE(Double)
+      DEFINE_ONE_CASE(Int8)
+      DEFINE_ONE_CASE(Int32)
+      DEFINE_ONE_CASE(Int64)
+      DEFINE_ONE_CASE(UInt8)
+      DEFINE_ONE_CASE(OFRecord)
+      DEFINE_ONE_CASE(Float16)
+      DEFINE_ONE_CASE(TensorBuffer)
+      DEFINE_ONE_CASE(Bool)
+#undef DEFINE_ONE_CASE
+    default: {
+      return failure();
+    }
+  }
+  return failure();
+}
+
+FailureOr<::oneflow::DataType> DataTypeFromMLIRAttrToOF(Attribute attr) {
+  const auto data_type_attr = attr.dyn_cast<mlir::oneflow::DataTypeAttr>();
+  return DataTypeFromMLIRToOF(data_type_attr.getValue());
+}
+
 }  // namespace support
 
 }  // namespace oneflow
