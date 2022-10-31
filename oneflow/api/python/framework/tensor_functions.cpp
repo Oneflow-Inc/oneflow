@@ -815,7 +815,7 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
         if (index_tensor->shape() == tensor->shape()
             && (index_tensor->dtype() == DType::Bool()
                 || index_tensor->dtype() == DType::UInt8())) {
-          ASSERT_PTR(functional::MaskedFillInplace(tensor, index_item[0].tensor(), value_scalar));
+          ASSERT_PTR(functional::MaskedFillInplace(tensor, index_tensor, value_scalar));
           return 0;
         }
       }
