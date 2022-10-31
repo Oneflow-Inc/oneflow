@@ -16,7 +16,6 @@ limitations under the License.
 #ifdef WITH_CUDA
 
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/ops/nn_util.h"
 #include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/job/resource_desc.h"
@@ -93,7 +92,7 @@ size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::Tensor
                        cudnn_conf.cudnn_conv_enable_pseudo_half()
                            || (ctx.Attr<std::string>("data_format") == "channels_last"
                                && std::is_same<PerfT, cudnnConvolutionBwdFilterAlgoPerf_t>::value));
-    PerfT algo_perf;
+    PerfT algo_perf{};
     if (has_forced_algo) {
       algo_perf = GetCudnnConvAlgorithmPerference<PerfT>(&args, static_cast<AlgoT>(forced_algo));
     } else {
@@ -185,6 +184,27 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
         cudnn_conf.cudnn_conv_force_fwd_algo());
     const CudnnConvArgs& args = args_and_algo.args;
     const cudnnConvolutionFwdAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
+    const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
+
+#if CUDNN_MAJOR >= 8
+    if (bias != nullptr && algo_perf.algo == CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM
+        && ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDNN_FUSED_CONV_BIAS", false)) {
+      const auto* conv_cache = dynamic_cast<const ConvCudnnOpKernelCache*>(cache);
+      CHECK_NOTNULL(conv_cache);
+      cudnnActivationDescriptor_t activation_desc{};
+      OF_CUDNN_CHECK(cudnnCreateActivationDescriptor(&activation_desc));
+      OF_CUDNN_CHECK(cudnnSetActivationDescriptor(activation_desc, CUDNN_ACTIVATION_IDENTITY,
+                                                  CUDNN_PROPAGATE_NAN, 0));
+      OF_CUDNN_CHECK(cudnnConvolutionBiasActivationForward(
+          ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CudnnSPOnePtr(in->data_type()),
+          args.xdesc.Get(), in->dptr(), args.wdesc.Get(), weight->dptr(), args.cdesc.Get(),
+          algo_perf.algo, buf->mut_dptr(), args.params.max_ws_size, CudnnSPZeroPtr(in->data_type()),
+          args.ydesc.Get(), out->mut_dptr(), conv_cache->bias_desc->Get(), bias->dptr(),
+          activation_desc, args.ydesc.Get(), out->mut_dptr()));
+      OF_CUDNN_CHECK(cudnnDestroyActivationDescriptor(activation_desc));
+      return;
+    }
+#endif  // CUDNN_MAJOR >= 8
 
     OF_CUDNN_CHECK(cudnnConvolutionForward(
         ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CudnnSPOnePtr(in->data_type()),
@@ -192,7 +212,6 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
         algo_perf.algo, buf->mut_dptr(), args.params.max_ws_size, CudnnSPZeroPtr(in->data_type()),
         args.ydesc.Get(), out->mut_dptr()));
 
-    const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
     if (bias != nullptr) {
       const auto* conv_cache = dynamic_cast<const ConvCudnnOpKernelCache*>(cache);
       CHECK_NOTNULL(conv_cache);
@@ -256,7 +275,7 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
     const cudnnConvolutionBwdDataAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
 
     const void* alpha = CudnnSPOnePtr(dy->data_type());
-    const void* beta;
+    const void* beta = nullptr;
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), dx->data_type());
@@ -298,7 +317,7 @@ REGISTER_USER_KERNEL("conv_data_grad")
           cudnn_conf.cudnn_conv_force_bwd_data_algo());
     })
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
-                             user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
+                             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.has_input("_add_to_output", 0)) {
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "_add_to_output", 0, true));
       }
