@@ -424,6 +424,14 @@ void CollaborativeParallelDimReduce(const ParallelDesc& in_parallel_desc,
   *reduced_out_parallel_desc = ParallelDesc(reduced_out_parallel_conf);
 }
 
+// Replace the hierarchy and then create a new parallel description
+void ReplaceHierarchy4ParallelDesc(const ParallelDesc& old_parallel_desc,
+                                   const Shape& new_hierarchy, ParallelDesc* new_parallel_desc) {
+  ParallelConf new_parallel_conf = old_parallel_desc.parallel_conf();
+  new_hierarchy.ToProto(new_parallel_conf.mutable_hierarchy());
+  *new_parallel_desc = ParallelDesc(new_parallel_conf);
+}
+
 // We can not just simply merging two same split
 // For example, shape = [6], we are trying to merge [2, 2]: (S0, S0) -> [4]: S0
 // For each rank, [4]: S0 has number of data: 2, 2, 1, 1
@@ -462,6 +470,13 @@ void NdSbpDimReduce(const Shape& hierarchy, const NdSbp& nd_sbp, Shape* reduced_
 void NdSbpsDimReduce(const Shape& hierarchy, const std::vector<const NdSbp*>& nd_sbps,
                      Shape* reduced_hierarchy, const std::vector<NdSbp*>& reduced_nd_sbps,
                      const Shape& logical_shape) {
+  int32_t sbp_num = nd_sbps.size();
+  // Speed up for 1d sbp
+  if (hierarchy.NumAxes() == 1) {
+    *reduced_hierarchy = hierarchy;
+    for (int32_t index = 0; index < sbp_num; index++) { *reduced_nd_sbps[index] = *nd_sbps[index]; }
+    return;
+  }
   reduced_hierarchy->clear();
   for (auto& reduced_nd_sbp : reduced_nd_sbps) { reduced_nd_sbp->clear_sbp_parallel(); }
   // At this moment, if we have [2, 4, 3, 7]: (S0, S1, S0, S0) for logical shape [601, 301, 999]
@@ -471,7 +486,6 @@ void NdSbpsDimReduce(const Shape& hierarchy, const std::vector<const NdSbp*>& nd
   // dim = 1, split_axis2holding_reduced_shapes: {(0: 300, 301), (1: 601)}
   // dim = 2, split_axis2holding_reduced_shapes: {(0: 300, 301), (1: 150, 151)}
   // dim = 3, split_axis2holding_reduced_shapes: {(0: 100, 101), (1: 150, 151)}
-  int32_t sbp_num = nd_sbps.size();
   std::vector<HashMap<int32_t, HashSet<int32_t>>> index2split_axis2holding_reduced_shapes(sbp_num);
   std::vector<std::vector<int32_t>> index2last_holding_reduced_shapes(sbp_num);
   std::vector<int32_t> last_split_axises(sbp_num, -1);
@@ -566,13 +580,17 @@ void NdSbpsDimReduce(const Shape& hierarchy, const std::vector<const NdSbp*>& nd
 void NdSbpDimReduce(const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
                     ParallelDesc* reduced_parallel_desc, NdSbp* reduced_nd_sbp,
                     const Shape& logical_shape) {
+  // Speed up for 1d sbp
+  if (parallel_desc.hierarchy()->NumAxes() == 1) {
+    *reduced_parallel_desc = parallel_desc;
+    *reduced_nd_sbp = nd_sbp;
+    return;
+  }
   Shape reduced_hierarchy;
   NdSbpDimReduce(*parallel_desc.hierarchy(), nd_sbp, &reduced_hierarchy, reduced_nd_sbp,
                  logical_shape);
 
-  ParallelConf reduced_parallel_conf = parallel_desc.parallel_conf();
-  reduced_hierarchy.ToProto(reduced_parallel_conf.mutable_hierarchy());
-  *reduced_parallel_desc = ParallelDesc(reduced_parallel_conf);
+  ReplaceHierarchy4ParallelDesc(parallel_desc, reduced_hierarchy, reduced_parallel_desc);
 }
 
 void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
