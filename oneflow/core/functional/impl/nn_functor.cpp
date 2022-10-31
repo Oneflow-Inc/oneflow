@@ -4183,10 +4183,12 @@ class MultiTensorSgdUpdateFunctor {
     }
   }
 
-  Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff, const TensorTuple& momentum_buf,
-                         const double& scale, const float& weight_decay,
-                         const float& learning_rate_val, const float& momentum) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "learning_rate_val", "momentum");
+  Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff,
+                         const TensorTuple& momentum_buf, const double& scale,
+                         const float& weight_decay, const float& learning_rate_val,
+                         const float& momentum) const {
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "learning_rate_val", "momentum");
     attrs.SetAllAttrs(scale, weight_decay, learning_rate_val, momentum);
     const int64_t weight_size = model.size();
     for (int i = 0; i < weight_size; i += kMaxInputCount) {
@@ -4194,7 +4196,8 @@ class MultiTensorSgdUpdateFunctor {
       TensorTuple input(3 * size);
       std::copy(model.begin() + i, model.begin() + i + size, input.begin());
       std::copy(model_diff.begin() + i, model_diff.begin() + i + size, input.begin() + size);
-      std::copy(momentum_buf.begin() + i, momentum_buf.begin() + i + size, input.begin() + 2 * size);
+      std::copy(momentum_buf.begin() + i, momentum_buf.begin() + i + size,
+                input.begin() + 2 * size);
       JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[size - 1], input, attrs));
     }
     return Maybe<void>::Ok();
@@ -4433,6 +4436,36 @@ class BatchNormBackwardElemtFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedMultiHeadAttentionInferenceFunctor {
+ public:
+  FusedMultiHeadAttentionInferenceFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_multi_head_attention_inference")
+                         .Input("query")
+                         .Input("key")
+                         .Input("value")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(
+      const std::shared_ptr<one::Tensor>& query, const std::shared_ptr<one::Tensor>& key,
+      const std::shared_ptr<one::Tensor>& value, const int64_t& num_heads, const bool& causal,
+      const int64_t& query_hidden_slice_start, const int64_t& query_hidden_slice_end,
+      const int64_t& key_hidden_slice_start, const int64_t& key_hidden_slice_end,
+      const int64_t& value_hidden_slice_start, const int64_t& value_hidden_slice_end) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_heads", "causal", "query_hidden_slice_start",
+                                                 "query_hidden_slice_end", "key_hidden_slice_start",
+                                                 "key_hidden_slice_end", "value_hidden_slice_start",
+                                                 "value_hidden_slice_end");
+    attrs.SetAllAttrs(num_heads, causal, query_hidden_slice_start, query_hidden_slice_end,
+                      key_hidden_slice_start, key_hidden_slice_end, value_hidden_slice_start,
+                      value_hidden_slice_end);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {query, key, value}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -4553,6 +4586,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BatchNormElemtFunctor>("BatchNormElemt");
   m.add_functor<impl::BatchNormBackwardReduceFunctor>("BatchNormBackwardReduce");
   m.add_functor<impl::BatchNormBackwardElemtFunctor>("BatchNormBackwardElemt");
+  m.add_functor<impl::FusedMultiHeadAttentionInferenceFunctor>("FusedMultiHeadAttentionInference");
 }
 
 }  // namespace functional

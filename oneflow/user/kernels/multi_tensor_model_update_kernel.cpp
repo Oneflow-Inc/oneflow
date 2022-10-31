@@ -79,7 +79,7 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
       if (count == kMaxTuples || tensor_idx == n_tensor - 1) {
         MultiTensorSGDUpdateKernelUtil<device_type, T, G>::Update(
             ctx->stream(), total_elem_cnt, count, static_cast<T>(scale), l1, l2, weight_decay,
-            learning_rate_val, lr_scale, learning_rate_ptr, scale_by_ptr, skip_if_ptr, momentum, 
+            learning_rate_val, lr_scale, learning_rate_ptr, scale_by_ptr, skip_if_ptr, momentum,
             tensor_tuple_params);
         count = 0;
         total_elem_cnt = 0;
@@ -89,11 +89,11 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_KERNEL(device, dtype, gtype)              \
-  REGISTER_USER_KERNEL("multi_tensor_sgd_update")                                         \
-      .SetCreateFn<MultiTensorSGDUpdateKernel<device, dtype, gtype>>()                    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
-                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
+#define REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_KERNEL(device, dtype, gtype)                   \
+  REGISTER_USER_KERNEL("multi_tensor_sgd_update")                                              \
+      .SetCreateFn<MultiTensorSGDUpdateKernel<device, dtype, gtype>>()                         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                    \
+                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)      \
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value) \
                        && (user_op::HobDataType("momentum_buf", 0) == GetDataType<gtype>::value));
 
@@ -283,12 +283,12 @@ class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_WITH_CAST_KERNEL(device, dtype, gtype)         \
-  REGISTER_USER_KERNEL("multi_tensor_sgd_update_with_cast")                                    \
-      .SetCreateFn<MultiTensorSGDUpdateWithCastKernel<device, dtype, gtype>>()                 \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                    \
-                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)      \
-                       && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value) \
+#define REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_WITH_CAST_KERNEL(device, dtype, gtype)           \
+  REGISTER_USER_KERNEL("multi_tensor_sgd_update_with_cast")                                      \
+      .SetCreateFn<MultiTensorSGDUpdateWithCastKernel<device, dtype, gtype>>()                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
+                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)        \
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value)   \
                        && (user_op::HobDataType("momentum_buf", 0) == GetDataType<gtype>::value) \
                        && (user_op::HobDataType("model_copy", 0) == GetDataType<float16>::value));
 
