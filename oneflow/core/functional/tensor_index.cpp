@@ -216,7 +216,7 @@ Maybe<bool> HasFalseIndex(const TensorIndex& index) {
   });
 }
 
-bool IsValidScalarTensor(const std::shared_ptr<one::Tensor> tensor) {
+bool IsValidScalarTensorIndex(const std::shared_ptr<one::Tensor> tensor) {
   if (!(tensor->dtype()->is_integer() || tensor->dtype() == DType::Bool())) { return false; }
   return tensor->shape()->NumAxes() == 0 && tensor->shape()->elem_cnt() == 1;
 }
@@ -316,7 +316,7 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
       dim++;
     } else if (index_item.IsTensor()) {
       const auto& tensor = index_item.tensor();
-      if (IsValidScalarTensor(tensor)) {
+      if (IsValidScalarTensorIndex(tensor)) {
         if (tensor->dtype()->is_integer()) {
           int64_t integer = JUST(GetItemInScalarTensor<int64_t>(tensor));
           if (integer < 0) { integer += shape.At(dim); }
@@ -498,7 +498,6 @@ Maybe<Tensor> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
       expand_shape.emplace_back(input->shape()->At(i));
     }
   }
-
   std::shared_ptr<Tensor> expand_value = JUST(Expand(value, expand_shape));
 
   // reverse adjust value if index subspace is continuous but transposed since the start
