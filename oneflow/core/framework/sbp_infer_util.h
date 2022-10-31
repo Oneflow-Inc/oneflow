@@ -52,6 +52,11 @@ void NdSbpDimReduce(const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
                     ParallelDesc* reduced_parallel_desc, NdSbp* reduced_nd_sbp,
                     const Shape& logical_shape);
 
+void InOutParallelDimReduce(const Shape& in_hierarchy, const Shape& out_hierarchy,
+                            const NdSbp& in_nd_sbp, const NdSbp& out_nd_sbp,
+                            Shape* reduced_in_hierarchy, Shape* reduced_out_hierarchy,
+                            NdSbp* reduced_in_nd_sbp, NdSbp* reduced_out_nd_sbp,
+                            const Shape& logical_shape);
 void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
                             const ParallelDesc& out_parallel_desc, const NdSbp& in_nd_sbp,
                             const NdSbp& out_nd_sbp, ParallelDesc* reduced_in_parallel_desc,

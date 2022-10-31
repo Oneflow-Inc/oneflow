@@ -376,60 +376,16 @@ Maybe<CopyCostFunc*> GetComputeCopyCostFunc() {
   }
 }
 
-// TODO: Remove this
-void CollaborativeParallelDimReduce(const ParallelDesc& in_parallel_desc,
-                                    const ParallelDesc& out_parallel_desc, const NdSbp& in_nd_sbp,
-                                    const NdSbp& out_nd_sbp, ParallelDesc* reduced_in_parallel_desc,
-                                    ParallelDesc* reduced_out_parallel_desc,
-                                    NdSbp* reduced_in_nd_sbp, NdSbp* reduced_out_nd_sbp) {
-  const auto& in_hierarchy = in_parallel_desc.hierarchy();
-  const auto& out_hierarchy = out_parallel_desc.hierarchy();
-  CHECK_EQ(in_hierarchy->NumAxes(), out_hierarchy->NumAxes());
-
-  DimVector reduced_in_hierarchy;
-  DimVector reduced_out_hierarchy;
-  FOR_RANGE(int64_t, i, 0, in_hierarchy->NumAxes()) {
-    if (in_hierarchy->At(i) != 1 || out_hierarchy->At(i) != 1) {
-      if (reduced_in_nd_sbp->sbp_parallel().empty()
-          || (in_nd_sbp.sbp_parallel(i)
-                  != reduced_in_nd_sbp->sbp_parallel(reduced_in_nd_sbp->sbp_parallel_size() - 1)
-              || out_nd_sbp.sbp_parallel(i)
-                     != reduced_out_nd_sbp->sbp_parallel(reduced_out_nd_sbp->sbp_parallel_size()
-                                                         - 1))) {
-        reduced_in_hierarchy.emplace_back(in_hierarchy->At(i));
-        *reduced_in_nd_sbp->add_sbp_parallel() = in_nd_sbp.sbp_parallel(i);
-
-        reduced_out_hierarchy.emplace_back(out_hierarchy->At(i));
-        *reduced_out_nd_sbp->add_sbp_parallel() = out_nd_sbp.sbp_parallel(i);
-      } else {
-        reduced_in_hierarchy.back() *= in_hierarchy->At(i);
-        reduced_out_hierarchy.back() *= out_hierarchy->At(i);
-      }
-    }
-  }
-  if (reduced_in_hierarchy.empty()) {
-    reduced_in_hierarchy.emplace_back(in_hierarchy->At(0));
-    *reduced_in_nd_sbp->add_sbp_parallel() = in_nd_sbp.sbp_parallel(0);
-
-    reduced_out_hierarchy.emplace_back(out_hierarchy->At(0));
-    *reduced_out_nd_sbp->add_sbp_parallel() = out_nd_sbp.sbp_parallel(0);
-  }
-
-  ParallelConf reduced_in_parallel_conf = in_parallel_desc.parallel_conf();
-  Shape(reduced_in_hierarchy).ToProto(reduced_in_parallel_conf.mutable_hierarchy());
-  *reduced_in_parallel_desc = ParallelDesc(reduced_in_parallel_conf);
-
-  ParallelConf reduced_out_parallel_conf = out_parallel_desc.parallel_conf();
-  Shape(reduced_out_hierarchy).ToProto(reduced_out_parallel_conf.mutable_hierarchy());
-  *reduced_out_parallel_desc = ParallelDesc(reduced_out_parallel_conf);
-}
-
 // Replace the hierarchy and then create a new parallel description
 void ReplaceHierarchy4ParallelDesc(const ParallelDesc& old_parallel_desc,
                                    const Shape& new_hierarchy, ParallelDesc* new_parallel_desc) {
-  ParallelConf new_parallel_conf = old_parallel_desc.parallel_conf();
-  new_hierarchy.ToProto(new_parallel_conf.mutable_hierarchy());
-  *new_parallel_desc = ParallelDesc(new_parallel_conf);
+  if (*old_parallel_desc.hierarchy() == new_hierarchy) {
+    *new_parallel_desc = old_parallel_desc;
+  } else {
+    ParallelConf new_parallel_conf = old_parallel_desc.parallel_conf();
+    new_hierarchy.ToProto(new_parallel_conf.mutable_hierarchy());
+    *new_parallel_desc = ParallelDesc(new_parallel_conf);
+  }
 }
 
 // We can not just simply merging two same split
@@ -593,27 +549,77 @@ void NdSbpDimReduce(const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
   ReplaceHierarchy4ParallelDesc(parallel_desc, reduced_hierarchy, reduced_parallel_desc);
 }
 
+void InOutParallelDimReduce(const Shape& in_hierarchy, const Shape& out_hierarchy,
+                            const NdSbp& in_nd_sbp, const NdSbp& out_nd_sbp,
+                            Shape* reduced_in_hierarchy, Shape* reduced_out_hierarchy,
+                            NdSbp* reduced_in_nd_sbp, NdSbp* reduced_out_nd_sbp,
+                            const Shape& logical_shape) {
+  if (in_hierarchy == out_hierarchy) {
+    // [2, 4]: (S0, S0) -> [2, 4]: (S0, S1)
+    NdSbpsDimReduce(in_hierarchy, {&in_nd_sbp, &out_nd_sbp}, reduced_in_hierarchy,
+                    {reduced_in_nd_sbp, reduced_out_nd_sbp}, logical_shape);
+    *reduced_out_hierarchy = *reduced_in_hierarchy;
+  } else {
+    // [2, 4]: (S0, S0) -> [4, 2]: (S0, S1)
+    // [2, 4]: (S0, S0) -> [3, 3]: (S0, S1)
+    NdSbpDimReduce(in_hierarchy, in_nd_sbp, reduced_in_hierarchy, reduced_in_nd_sbp, logical_shape);
+    NdSbpDimReduce(out_hierarchy, out_nd_sbp, reduced_out_hierarchy, reduced_out_nd_sbp,
+                   logical_shape);
+
+    // Sbp of 3d or higher dimension would use general basic communication
+    // Only looks at 1d to 2d or 2d to 1d
+    if (reduced_in_hierarchy->NumAxes() + reduced_out_hierarchy->NumAxes() == 3
+        && reduced_in_hierarchy->elem_cnt() == reduced_out_hierarchy->elem_cnt()) {
+      if (reduced_in_hierarchy->NumAxes() == 1) {
+        // [8]: S0 -> [4, 2]: (S0, S1)
+        // [8]: B -> [2, 4]: (S0, S1)
+        const auto& in_sbp_parallel = reduced_in_nd_sbp->sbp_parallel(0);
+        if (!in_sbp_parallel.has_split_parallel()
+            || CanMergeSplit(logical_shape.At(in_sbp_parallel.split_parallel().axis()),
+                             reduced_in_hierarchy->elem_cnt())) {
+          // Change [8]: S0 -> [4, 2]: (S0, S1) to [4, 2]: (S0, S0) -> [4, 2]: (S0, S1)
+          // Change [8]: B -> [2, 4]: (S0, S1) to [2, 4]: (B, B) -> [2, 4]: (S0, S1)
+          *reduced_in_nd_sbp->add_sbp_parallel() = in_sbp_parallel;
+          *reduced_in_hierarchy = *reduced_out_hierarchy;
+        }
+      } else {
+        // [2, 3]: (S0, P) -> [6]: S0
+        // [3, 4]: (B, S1) -> [12]: B
+        const auto& out_sbp_parallel = reduced_out_nd_sbp->sbp_parallel(0);
+        if (!out_sbp_parallel.has_split_parallel()
+            || CanMergeSplit(logical_shape.At(out_sbp_parallel.split_parallel().axis()),
+                             reduced_out_hierarchy->elem_cnt())) {
+          // Change [2, 3]: (S0, P) -> [6]: S0 to [2, 3]: (S0, P) -> [2, 3]: (S0, S0)
+          // Change [3, 4]: (B, S1) -> [12]: B to [3, 4]: (B, S1) -> [3, 4]: (B, B)
+          *reduced_out_nd_sbp->add_sbp_parallel() = out_sbp_parallel;
+          *reduced_out_hierarchy = *reduced_in_hierarchy;
+        }
+      }
+    }
+  }
+}
+
 void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
                             const ParallelDesc& out_parallel_desc, const NdSbp& in_nd_sbp,
                             const NdSbp& out_nd_sbp, ParallelDesc* reduced_in_parallel_desc,
                             ParallelDesc* reduced_out_parallel_desc, NdSbp* reduced_in_nd_sbp,
                             NdSbp* reduced_out_nd_sbp, const Shape& logical_shape) {
-  const int64_t in_hierarchy_axes = in_parallel_desc.hierarchy()->NumAxes();
-  const int64_t out_hierarchy_axes = out_parallel_desc.hierarchy()->NumAxes();
-  if (in_hierarchy_axes == 1 && out_hierarchy_axes == 1) {
+  // Speed up for 1d sbp
+  if (in_parallel_desc.hierarchy()->NumAxes() == 1
+      && out_parallel_desc.hierarchy()->NumAxes() == 1) {
     *reduced_in_parallel_desc = in_parallel_desc;
     *reduced_out_parallel_desc = out_parallel_desc;
     *reduced_in_nd_sbp = in_nd_sbp;
     *reduced_out_nd_sbp = out_nd_sbp;
-  } else if (in_hierarchy_axes != out_hierarchy_axes) {
-    NdSbpDimReduce(in_parallel_desc, in_nd_sbp, reduced_in_parallel_desc, reduced_in_nd_sbp,
-                   logical_shape);
-    NdSbpDimReduce(out_parallel_desc, out_nd_sbp, reduced_out_parallel_desc, reduced_out_nd_sbp,
-                   logical_shape);
   } else {
-    CollaborativeParallelDimReduce(in_parallel_desc, out_parallel_desc, in_nd_sbp, out_nd_sbp,
-                                   reduced_in_parallel_desc, reduced_out_parallel_desc,
-                                   reduced_in_nd_sbp, reduced_out_nd_sbp);
+    Shape reduced_in_hierarchy;
+    Shape reduced_out_hierarchy;
+    InOutParallelDimReduce(*in_parallel_desc.hierarchy(), *out_parallel_desc.hierarchy(), in_nd_sbp,
+                           out_nd_sbp, &reduced_in_hierarchy, &reduced_out_hierarchy,
+                           reduced_in_nd_sbp, reduced_out_nd_sbp, logical_shape);
+    ReplaceHierarchy4ParallelDesc(in_parallel_desc, reduced_in_hierarchy, reduced_in_parallel_desc);
+    ReplaceHierarchy4ParallelDesc(out_parallel_desc, reduced_out_hierarchy,
+                                  reduced_out_parallel_desc);
   }
 }
 
