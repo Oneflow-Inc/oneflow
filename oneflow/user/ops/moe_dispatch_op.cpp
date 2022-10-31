@@ -34,7 +34,8 @@ namespace oneflow {
   const Shape& in_shape = ctx->InputShape("in", 0);
   const int32_t hidden_size = in_shape.at(2);
 
-  const int32_t samples = ctx->InputShape("indices", 0).at(0);
+  const Shape& indices_shape = ctx->InputShape("indices", 0);
+  const int32_t samples = indices_shape.at(indices_shape.NumAxes() - 1);
 
   ctx->SetOutputShape("out", 0, Shape({samples, hidden_size}));
   return Maybe<void>::Ok();

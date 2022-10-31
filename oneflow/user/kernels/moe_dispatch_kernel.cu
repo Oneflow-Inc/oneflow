@@ -45,7 +45,7 @@ __global__ __launch_bounds__(1024) void MOECombine(T* out, const T* in,
       int index = indices[k * samples + i];
 
       if (location < capacity && index >= 0) {
-        T gate = (gate == nullptr ? static_cast<T>(1.0) : gates[k * samples + i]);
+        T gate = (gates == nullptr ? static_cast<T>(1.0) : gates[k * samples + i]);
         if (k == 0) {
           #pragma unroll
           for (int j = threadIdx.x; j < hidden_size; j += 1024) {
@@ -199,7 +199,7 @@ class GpuMOECombineKernel final : public user_op::OpKernel {
 
     const int32_t capacity = in->shape_view().At(1);
     const int32_t hidden_size = in->shape_view().At(2);
-    const int32_t samples = indices->shape_view().At(0);
+    const int32_t samples = indices->shape_view().At(indices->shape_view().NumAxes() - 1);
 
     int32_t top_k = 1;
     if (indices->shape_view().NumAxes() == 2) {

@@ -43,7 +43,7 @@ class CpuMOEDispatchKernel final : public user_op::OpKernel {
     for (int i = 0; i < samples; ++i) {
       for (int k = 0; k < top_k; ++k) {
         int location = locations_ptr[k * samples + i];
-        int index = indices[k * samples + i];
+        int index = indices_ptr[k * samples + i];
         if (location < capacity && index >= 0) {
           T gate = (gates_ptr == nullptr ? static_cast<T>(1.0) : gates_ptr[k * samples + i]);
           for (int j = 0; j < hidden_size; ++j) {
@@ -92,7 +92,7 @@ class CpuMOECombineKernel final : public user_op::OpKernel {
 
     const int32_t capacity = in->shape_view().At(1);
     const int32_t hidden_size = in->shape_view().At(2);
-    const int32_t samples = indices->shape_view().At(0);
+    const int32_t samples = indices->shape_view().At(indices->shape_view().NumAxes() - 1);
 
     int32_t top_k = 1;
     if (indices->shape_view().NumAxes() == 2) {
@@ -102,7 +102,7 @@ class CpuMOECombineKernel final : public user_op::OpKernel {
     for (int i = 0; i < samples; ++i) {
       for (int k = 0; k < top_k; ++k) {
         int location = locations_ptr[k * samples + i];
-        int index = indices[k * samples + i];
+        int index = indices_ptr[k * samples + i];
         if (location < capacity && index >= 0) {
           T gate = (gates_ptr == nullptr ? static_cast<T>(1.0) : gates_ptr[k * samples + i]);
           if (k == 0) {
@@ -170,8 +170,8 @@ class CpuMOEGateGradKernel final : public user_op::OpKernel {
 
     for (int i = 0; i < samples; ++i) {
       for (int k = 0; k < top_k; ++k) {
-        int location = locations[k * samples + i];
-        int index = indices[k * samples + i];
+        int location = locations_ptr[k * samples + i];
+        int index = indices_ptr[k * samples + i];
 
         if (location < capacity && index >= 0) {
           int indice = index * capacity + location;
