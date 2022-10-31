@@ -28,8 +28,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 
-#include "oneflow/core/vm/virtual_machine.h"
-
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -218,62 +216,9 @@ Maybe<bool> HasFalseIndex(const TensorIndex& index) {
   });
 }
 
-template<typename T>
-Maybe<T> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor) {
-  std::shared_ptr<LocalTensor> local_tensor;
-  {
-    auto tensor = scalar_tensor;
-    if (tensor->is_global()) {
-      Symbol<ParallelDesc> parallel_desc;
-      {
-        const ParallelConf parallel_conf = GenParallelConfOfCpuOnAllRanks();
-        JUST(PhysicalRun(
-            [&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-              parallel_desc = SymbolOf(*JUST(builder->GetParallelDescSymbol(parallel_conf)));
-              return Maybe<void>::Ok();
-            }));
-      }
-      const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
-      tensor = JUST(functional::ToGlobal(tensor, parallel_desc, {broadcast_sbp}, /*grad_sbp=*/{},
-                                         /*check_meta=*/false, /*copy=*/false));
-      tensor = JUST(functional::GlobalToLocal(tensor, /*copy=*/false));
-    }
-    local_tensor = JUST(tensor->AsLocalTensor());
-  }
-
-  T scalar = 0;
-  {
-    const auto& Callback = [&](ep::Stream* stream,
-                               const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
-      SyncAutoMemcpy(stream, &scalar, eager_blob_object->mut_dptr(), sizeof(T),
-                     memory::MakeHostMemCase(), eager_blob_object->mem_case());
-    };
-    auto btb = std::make_shared<BlockingThenBusy>(1);
-    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, "const");
-    }));
-    JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
-  }
-  return scalar;
-}
-
-bool IsValidScalarTensor(const detail::IndexItem& item) {
-  if (!item.IsTensor()) { return false; }
-  const auto& tensor = item.tensor();
+bool IsValidScalarTensor(const std::shared_ptr<one::Tensor> tensor) {
   if (!(tensor->dtype()->is_integer() || tensor->dtype() == DType::Bool())) { return false; }
   return tensor->shape()->NumAxes() == 0 && tensor->shape()->elem_cnt() == 1;
-}
-
-Maybe<detail::IndexItem> GetPracticalItemIndex(const detail::IndexItem& item) {
-  if (!IsValidScalarTensor(item)) { return item; }
-  const auto& tensor = item.tensor();
-  if (tensor->dtype()->is_integer()) {
-    return detail::IndexItem(JUST(GetItemInScalarTensor<int64_t>(tensor)));
-  } else if (tensor->dtype() == DType::Bool()) {
-    return detail::IndexItem(JUST(GetItemInScalarTensor<bool>(tensor)));
-  } else {
-    return detail::IndexItem();
-  }
 }
 
 // Permute back for global tensor which transpose dims to front
@@ -314,7 +259,7 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
   bool has_expand_boolean_dim = false;
   int dim = 0;
   for (int i = 0; i < index.size(); ++i) {
-    const auto& index_item = *JUST(GetPracticalItemIndex(index.at(i)));
+    const auto& index_item = index.at(i);
     if (index_item.IsNone()) {
       expand_dims->emplace_back(dim);
       slice_indices->emplace_back(0, 1, 1);
@@ -371,27 +316,49 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
       dim++;
     } else if (index_item.IsTensor()) {
       const auto& tensor = index_item.tensor();
-      auto indices = std::make_shared<TensorTuple>();
-      if (tensor->dtype() == DType::Int8() || tensor->dtype() == DType::UInt8()
-          || tensor->dtype() == DType::Bool()) {
-        for (int j = 0; j < tensor->ndim(); ++j) {
-          if (tensor->shape()->At(j) != shape.At(dim + j)) {
+      if (IsValidScalarTensor(tensor)) {
+        if (tensor->dtype()->is_integer()) {
+          int64_t integer = JUST(GetItemInScalarTensor<int64_t>(tensor));
+          if (integer < 0) { integer += shape.At(dim); }
+          if (integer < 0 || integer >= shape.At(dim)) {
             return Error::IndexError()
-                   << "The shape of the mask " << tensor->shape()->ToString() << " at index " << j
-                   << " does not match the shape of the indexed tensor " << shape.ToString()
-                   << " at index " << dim + j;
+                   << "Index " << index_item.integer() << " is out of bounds for dimension " << dim
+                   << " with size " << shape.At(dim);
+          }
+          slice_indices->emplace_back(integer, integer + 1, 1);
+          dim++;
+        } else {
+          bool boolean_index = JUST(GetItemInScalarTensor<bool>(tensor));
+          if (!has_expand_boolean_dim) {
+            expand_dims->emplace_back(dim);
+            slice_indices->emplace_back(0, boolean_index, 1);
+            target_dims->emplace_back(boolean_index);
+            has_expand_boolean_dim = true;
           }
         }
-        indices = JUST(ExpandMaskIndex(tensor));
       } else {
-        indices->emplace_back(tensor);
-      }
-      for (int j = 0; j < indices->size(); ++j) {
-        slice_indices->emplace_back(0, shape.At(dim), 1);
-        tensor_indices->resize(target_dims->size());
-        tensor_indices->emplace_back(indices->at(j));
-        target_dims->emplace_back(shape.At(dim));
-        dim++;
+        auto indices = std::make_shared<TensorTuple>();
+        if (tensor->dtype() == DType::Int8() || tensor->dtype() == DType::UInt8()
+            || tensor->dtype() == DType::Bool()) {
+          for (int j = 0; j < tensor->ndim(); ++j) {
+            if (tensor->shape()->At(j) != shape.At(dim + j)) {
+              return Error::IndexError()
+                     << "The shape of the mask " << tensor->shape()->ToString() << " at index " << j
+                     << " does not match the shape of the indexed tensor " << shape.ToString()
+                     << " at index " << dim + j;
+            }
+          }
+          indices = JUST(ExpandMaskIndex(tensor));
+        } else {
+          indices->emplace_back(tensor);
+        }
+        for (int j = 0; j < indices->size(); ++j) {
+          slice_indices->emplace_back(0, shape.At(dim), 1);
+          tensor_indices->resize(target_dims->size());
+          tensor_indices->emplace_back(indices->at(j));
+          target_dims->emplace_back(shape.At(dim));
+          dim++;
+        }
       }
     }
   }

@@ -15,14 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/tensor_util.h"
 
-#include "oneflow/core/common/blocking_then_busy.h"
-#include "oneflow/core/framework/instructions_builder.h"
-#include "oneflow/core/framework/tensor_name_scope.h"
-#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
-#include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/vm/virtual_machine.h"
-#include "oneflow/core/vm/symbol_storage.h"
-
 namespace oneflow {
 namespace one {
 
