@@ -16,9 +16,18 @@ limitations under the License.
 #ifndef ONEFLOW_IR_INCLUDE_OKL_OKLDIALECT_H_
 #define ONEFLOW_IR_INCLUDE_OKL_OKLDIALECT_H_
 
+#include "OneFlow/Passes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
 #include "OneFlow/OKLDialect.h.inc"
+#include "OneFlow/OKL/OKLOps.h"
+
+namespace mlir {
+namespace okl {
+
+void registerOneFlowPasses();
+}  // namespace okl
+}  // namespace mlir
 
 #endif  // ONEFLOW_IR_INCLUDE_OKL_OKLDIALECT_H_
