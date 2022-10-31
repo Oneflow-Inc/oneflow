@@ -34,6 +34,7 @@ oneflow_add_mlir_dialect_library(
   Transform/OutlineAndFuse.cpp
   Transform/AutoNhwc.cpp
   Transform/ConvertInferenceOp.cpp
+  TransposeHelpers.cpp
   Passes.cpp
   ${GROUPED_OP_CPP_FILES}
   ADDITIONAL_HEADER_DIRS
