@@ -31,12 +31,12 @@ class _MultiDeviceReplicator(object):
     Lazily serves copies of a tensor to requested devices.  Copies are cached per-device.
     """
 
-    def __init__(self, master_tensor: flow.Tensor) -> None:
+    def __init__(self, master_tensor: flow._oneflow_internal.Tensor) -> None:
         assert master_tensor.is_cuda
         self.master = master_tensor
-        self._per_device_tensors: Dict[flow.device, flow.Tensor] = {}
+        self._per_device_tensors: Dict[flow.device, flow._oneflow_internal.Tensor] = {}
 
-    def get(self, device) -> flow.Tensor:
+    def get(self, device) -> flow._oneflow_internal.Tensor:
         retval = self._per_device_tensors.get(device, None)
         if retval is None:
             retval = self.master.to(device=device, non_blocking=True, copy=True)
@@ -60,8 +60,8 @@ def _refresh_per_optimizer_state():
 
 
 class GradScaler(object):
-    _scale: Optional[flow.Tensor]
-    _grows_tracker: Optional[flow.Tensor]
+    _scale: Optional[flow._oneflow_internal.Tensor]
+    _grows_tracker: Optional[flow._oneflow_internal.Tensor]
     _per_optimizer_states: Dict[int, Dict[str, Any]]
     """
     An instance ``scaler`` of :class:`GradScaler` helps perform the steps of gradient scaling
@@ -146,7 +146,9 @@ class GradScaler(object):
             self._growth_tracker = None
             self._per_optimizer_states = defaultdict(_refresh_per_optimizer_state)
 
-    def _check_scale_growth_tracker(self, funcname) -> Tuple[flow.Tensor, flow.Tensor]:
+    def _check_scale_growth_tracker(
+        self, funcname
+    ) -> Tuple[flow._oneflow_internal.Tensor, flow._oneflow_internal.Tensor]:
         fix = "This may indicate your script did not use scaler.scale(loss or outputs) earlier in the iteration."
         assert self._scale is not None, (
             "Attempted {} but _scale is None.  ".format(funcname) + fix
@@ -175,7 +177,7 @@ class GradScaler(object):
             return outputs
 
         # Short-circuit for the common case.
-        if isinstance(outputs, flow.Tensor):
+        if isinstance(outputs, flow._oneflow_internal.Tensor):
             assert outputs.is_cuda
             if self._scale is None:
                 self._lazy_init_scale_growth_tracker(outputs.device)
@@ -188,7 +190,7 @@ class GradScaler(object):
         ] = []  # holds a reference that can be overwritten by apply_scale
 
         def apply_scale(val):
-            if isinstance(val, flow.Tensor):
+            if isinstance(val, flow._oneflow_internal.Tensor):
                 assert val.is_cuda
                 if len(stash) == 0:
                     if self._scale is None:
