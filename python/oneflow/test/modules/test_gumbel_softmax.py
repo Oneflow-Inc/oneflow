@@ -58,7 +58,7 @@ def _test_gumbel_softmax_hard(test_case, tau, dim, device, dtype):
 
 def _test_gumbel_softmax_backward(test_case, tau, dim, device, dtype):
     dtype = type_name_to_flow_type[dtype]
-    x_np = np.random.randn(10, 10)
+    x_np = np.random.rand(10, 10)
     x_soft = flow.tensor(
         x_np,
         dtype=dtype,
@@ -72,17 +72,16 @@ def _test_gumbel_softmax_backward(test_case, tau, dim, device, dtype):
         requires_grad=True,
     )
     y_soft = F.gumbel_softmax(x_soft, tau, dim=dim)
-    y_hard = F.gumbel_softmax(x_hard, tau, dim=dim, hard=True)
+    y_hard = F.gumbel_softmax(x_hard, tau, dim=dim, hard=False)
 
-    y_soft.sum().backward()
-    y_hard.sum().backward()
+    y_soft.mean().backward()
+    y_hard.mean().backward()
 
-    tol = 3 * flow.finfo(dtype).eps
     np.testing.assert_allclose(
         x_hard.grad.numpy(),
         x_soft.grad.numpy(),
         rtol=1e-5,
-        atol=tol,
+        atol=1e-5,
         verbose=True
     )
 

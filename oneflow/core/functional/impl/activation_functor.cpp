@@ -417,8 +417,9 @@ class GumbelSoftmaxFunctor {
     auto gumbel_noise_tensor = JUST(functional::ScalarSub(Scalar(0.0), JUST(functional::Log(
       JUST(functional::ScalarSub(Scalar(0.0), JUST(functional::Log(random_tensor)), /*alpha=*/1.0))
     )), /*alpha=*/1.0));
-    auto gumbel_in_tensor = JUST(functional::Add(gumbel_noise_tensor, in_tensor, /*alpha=*/1.0,
-                                                 /*inplace=*/false));
+    auto gumbel_in_tensor = JUST(functional::ScalarDiv(
+        Scalar(tau), JUST(functional::Add(in_tensor, gumbel_noise_tensor, /*alpha=*/1.0,
+                                          /*inplace=*/false))));
 
     auto out_soft = JUST(functional::Softmax(gumbel_in_tensor, dim));
     if (hard) {
