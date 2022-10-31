@@ -119,7 +119,8 @@ class GlobalTensorEmptyGenericCtorFunctor {
 
 class TensorWithOtherGenericCtorFunctor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& other, const Optional<Symbol<DType>>& dtype) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& other,
+                           const Optional<Symbol<DType>>& dtype) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     bool is_pinned = false;
