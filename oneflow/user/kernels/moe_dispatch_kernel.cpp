@@ -31,19 +31,28 @@ class CpuMOEDispatchKernel final : public user_op::OpKernel {
     const int32_t hidden_size = in->shape_view().At(1);
     const int32_t capacity = ctx->Attr<int32_t>("capacity");
 
+    int32_t top_k = 1;
+    if (indices->shape_view().NumAxes() == 2) {
+      top_k = indices->shape_view().At(0);  // shape(top_k, samples)
+    }
+
     AutoMemset(ctx->stream(), out->mut_dptr(), 0,
                out->shape_view().elem_cnt() * sizeof(T),
                out->mem_case());
 
     for (int i = 0; i < samples; ++i) {
-      if (locations_ptr[i] < capacity && indices_ptr[i] >= 0) {
-        T gate = (gates_ptr == nullptr? static_cast<T>(1.0) : gates_ptr[i]);
-        for (int j = 0; j < hidden_size; ++j) {
-          out_ptr[(indices_ptr[i] * capacity + locations_ptr[i]) * hidden_size + j] = \
-              gate * in_ptr[i * hidden_size + j];
+      for (int k = 0; k < top_k; ++k) {
+        int location = locations_ptr[k * samples + i];
+        int index = indices[k * samples + i];
+        if (location < capacity && index >= 0) {
+          T gate = (gates_ptr == nullptr ? static_cast<T>(1.0) : gates_ptr[k * samples + i]);
+          for (int j = 0; j < hidden_size; ++j) {
+            out_ptr[(index * capacity + location) * hidden_size + j] =
+                gate * in_ptr[i * hidden_size + j];
+          }
         }
-      }
-    }  // end for
+      }  // end top_k
+    }  // end samples
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -85,19 +94,37 @@ class CpuMOECombineKernel final : public user_op::OpKernel {
     const int32_t hidden_size = in->shape_view().At(2);
     const int32_t samples = indices->shape_view().At(0);
 
+    int32_t top_k = 1;
+    if (indices->shape_view().NumAxes() == 2) {
+      top_k = indices->shape_view().At(0);  // shape(top_k, samples)
+    }
+
     for (int i = 0; i < samples; ++i) {
-      if (locations_ptr[i] < capacity && indices_ptr[i] >= 0) {
-        T gate = (gates_ptr == nullptr? static_cast<T>(1.0) : gates_ptr[i]);
-        for (int j = 0; j < hidden_size; ++j) {
-          out_ptr[i * hidden_size + j] = \
-              gate * in_ptr[(indices_ptr[i] * capacity + locations_ptr[i]) * hidden_size + j];
+      for (int k = 0; k < top_k; ++k) {
+        int location = locations_ptr[k * samples + i];
+        int index = indices[k * samples + i];
+        if (location < capacity && index >= 0) {
+          T gate = (gates_ptr == nullptr ? static_cast<T>(1.0) : gates_ptr[k * samples + i]);
+          if (k == 0) {
+            for (int j = 0; j < hidden_size; ++j) {
+              out_ptr[i * hidden_size + j] =
+                  gate * in_ptr[(indices_ptr[i] * capacity + locations_ptr[i]) * hidden_size + j];
+            }
+          } else {
+            for (int j = 0; j < hidden_size; ++j) {
+              out_ptr[i * hidden_size + j] +=
+                  gate * in_ptr[(indices_ptr[i] * capacity + locations_ptr[i]) * hidden_size + j];
+            }
+          }
+        } else {
+          if (k == 0) {
+            for (int j = 0; j < hidden_size; ++j) {
+              out_ptr[i * hidden_size + j] = static_cast<T>(0);
+            }
+          }
         }
-      } else {
-        for (int j = 0; j < hidden_size; ++j) {
-          out_ptr[i * hidden_size + j] = static_cast<T>(0);
-        }
-      }
-    } // end for
+      }  // end top_k
+    }  // end samples
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -136,18 +163,28 @@ class CpuMOEGateGradKernel final : public user_op::OpKernel {
     const int32_t hidden_size = in->shape_view().At(1);
     const int32_t samples = in->shape_view().At(0);
 
+    int32_t top_k = 1;
+    if (indices->shape_view().NumAxes() == 2) {
+      top_k = indices->shape_view().At(0);  // shape(top_k, samples)
+    }
+
     for (int i = 0; i < samples; ++i) {
-      if (locations_ptr[i] < capacity && indices_ptr[i] >= 0) {
-        int indice = indices_ptr[i] * capacity + locations_ptr[i];
-        T grad_gates_rf = static_cast<T>(0);
-        for (int j = 0; j < hidden_size; ++j) {
-          grad_gates_rf += dispatched_ptr[indice * hidden_size + j] * in_ptr[i * hidden_size + j];
+      for (int k = 0; k < top_k; ++k) {
+        int location = locations[k * samples + i];
+        int index = indices[k * samples + i];
+
+        if (location < capacity && index >= 0) {
+          int indice = index * capacity + location;
+          T grad_gates_rf = static_cast<T>(0);
+          for (int j = 0; j < hidden_size; ++j) {
+            grad_gates_rf += dispatched_ptr[indice * hidden_size + j] * in_ptr[i * hidden_size + j];
+          }
+          out_ptr[k * samples + i] = grad_gates_rf;
+        } else {
+          out_ptr[k * samples + i] = static_cast<T>(0);
         }
-        out_ptr[i] = grad_gates_rf;
-      } else {
-        out_ptr[i] = static_cast<T>(0);
-      }
-    } // end for
+      }  // end top_k
+    }  // end samples
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

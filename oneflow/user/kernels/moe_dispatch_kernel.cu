@@ -12,18 +12,23 @@ __global__ __launch_bounds__(1024) void MOEDispatch(T* out, const T* in,
                                                     const T* __restrict__ gates,
                                                     const int* __restrict__ indices,
                                                     const int* __restrict__ locations, int samples,
-                                                    int hidden_size, int capacity) {
+                                                    int hidden_size, int capacity, int top_k) {
   // grid_size, blockIdx.x = 512
   // block_size, threadIdx.x = 1024
   for (int i = blockIdx.x; i < samples; i += gridDim.x) {
-    if (locations[i] < capacity && indices[i] >= 0) {
-      T gate = (gates == nullptr ? static_cast<T>(1.0) : gates[i]);
+    for (int k = 0; k < top_k; ++k) {
+      int location = locations[k * samples + i];
+      int index = indices[k * samples + i];
+      if (location < capacity && index >= 0) {
+        T gate = (gates == nullptr ? static_cast<T>(1.0) : gates[k * samples + i]);
 #pragma unroll
-      for (int j = threadIdx.x; j < hidden_size; j += 1024) {
-        out[(indices[i] * capacity + locations[i]) * hidden_size + j] = gate * in[i * hidden_size + j];
+        for (int j = threadIdx.x; j < hidden_size; j += 1024) {
+          out[(index * capacity + location) * hidden_size + j] =
+              gate * in[i * hidden_size + j];
+        }
       }
-    }
-  }
+    }  // end top_k
+  }  // end samples
 }
 
 template<typename T>
@@ -31,23 +36,37 @@ __global__ __launch_bounds__(1024) void MOECombine(T* out, const T* in,
                                                    const T* __restrict__ gates,
                                                    const int* __restrict__ indices,
                                                    const int* __restrict__ locations, int samples,
-                                                   int hidden_size, int capacity) {
+                                                   int hidden_size, int capacity, int top_k) {
   // grid_size, blockIdx.x = 512
   // block_size, threadIdx.x = 1024
   for (int i = blockIdx.x; i < samples; i += gridDim.x) {
-    if (locations[i] < capacity && indices[i] >= 0) {
-      T gate = (gates == nullptr ? static_cast<T>(1.0) : gates[i]);
-#pragma unroll
-      for (int j = threadIdx.x; j < hidden_size; j += 1024) {
-        out[i * hidden_size + j] =
-            gate * in[(indices[i] * capacity + locations[i]) * hidden_size + j];
+    for (int k = 0; k < top_k; ++k) {
+      int location = locations[k * samples + i];
+      int index = indices[k * samples + i];
+
+      if (location < capacity && index >= 0) {
+        T gate = (gate == nullptr ? static_cast<T>(1.0) : gates[k * samples + i]);
+        if (k == 0) {
+          #pragma unroll
+          for (int j = threadIdx.x; j < hidden_size; j += 1024) {
+            out[i * hidden_size + j] =
+                gate * in[(index * capacity + location) * hidden_size + j];
+          }
+        } else {
+          for (int j = threadIdx.x; j < hidden_size; j += 1024) {
+            out[i * hidden_size + j] +=
+                gate * in[(index * capacity + location) * hidden_size + j];
+          }
+        }
+      } else {
+        if (k == 0) {
+          for (int j = threadIdx.x; j < hidden_size; j += 1024) {
+            out[i * hidden_size + j] = static_cast<T>(0);
+          }
+        }
       }
-    } else {
-      for (int j = threadIdx.x; j < hidden_size; j += 1024) {
-        out[i * hidden_size + j] = static_cast<T>(0);
-      }
-    }
-  }
+    }  // end top_k
+  }  // end samples
 }
 
 template <typename T>
@@ -57,35 +76,40 @@ __global__ __launch_bounds__(32) void MOEGateGrad(
     const T* dispatched_input,
     const int* __restrict__ indices,
     const int* __restrict__ locations,
-    int samples, int hidden_size, int capacity) {
+    int samples, int hidden_size, int capacity, int top_k) {
   // grid_size, blockIdx.x = 512
   // block_size, threadIdx.x = 32
-  for (int index = blockIdx.x; index < samples; index += gridDim.x) {
-    if (locations[index] >= capacity || indices[index] < 0) {
-      if (threadIdx.x == 0) grad_gates[index] = static_cast<T>(0);
-      continue;
+  for (int i = blockIdx.x; i < samples; i += gridDim.x) {
+    for (int k = 0; k < top_k; ++k) {
+      int location = locations[k * samples + i];
+      int index = indices[k * samples + i];
+      if (location >= capacity || index < 0) {
+        if (threadIdx.x == 0) grad_gates[k * samples + i] = static_cast<T>(0);
+        continue;
+      }
+
+      int indice = index * capacity + location;
+      T grad_gates_rf = static_cast<T>(0);
+
+      for (int j = threadIdx.x; j < hidden_size; j += 32) {
+        grad_gates_rf +=
+            dispatched_input[indice * hidden_size + j] * reshaped_input[i * hidden_size + j];
+      }
+
+      T red_buf;
+      unsigned int mask;
+      T t;
+      red_buf = grad_gates_rf;
+      mask = __activemask();
+      red_buf += __shfl_down_sync(mask, red_buf, 16, 32);
+      red_buf += __shfl_down_sync(mask, red_buf, 8, 32);
+      red_buf += __shfl_down_sync(mask, red_buf, 4, 32);
+      red_buf += __shfl_down_sync(mask, red_buf, 2, 32);
+      red_buf += __shfl_down_sync(mask, red_buf, 1, 32);
+      red_buf = __shfl_sync(mask, red_buf, 0, 32);
+
+      if (threadIdx.x == 0) grad_gates[k * samples + i] = red_buf;
     }
-
-    int indice = indices[index] * capacity + locations[index];
-    T grad_gates_rf = static_cast<T>(0);
-
-    for (int i = threadIdx.x; i < hidden_size; i += 32) {
-      grad_gates_rf += dispatched_input[indice * hidden_size + i] * reshaped_input[index * hidden_size + i];
-    }
-
-    T red_buf;
-    unsigned int mask;
-    T t;
-    red_buf = grad_gates_rf;
-    mask = __activemask();
-    red_buf += __shfl_down_sync(mask, red_buf, 16, 32);
-    red_buf += __shfl_down_sync(mask, red_buf, 8, 32);
-    red_buf += __shfl_down_sync(mask, red_buf, 4, 32);
-    red_buf += __shfl_down_sync(mask, red_buf, 2, 32);
-    red_buf += __shfl_down_sync(mask, red_buf, 1, 32);
-    red_buf = __shfl_sync(mask, red_buf, 0, 32);
-
-    if (threadIdx.x == 0) grad_gates[index] = red_buf;
   }
 }
 
@@ -120,6 +144,11 @@ class GpuMOEDispatchKernel final : public user_op::OpKernel {
     const int32_t hidden_size = in->shape_view().At(1);
     const int32_t capacity = ctx->Attr<int32_t>("capacity");
 
+    int32_t top_k = 1;
+    if (indices->shape_view().NumAxes() == 2) {
+      top_k = indices->shape_view().At(0);  // shape(top_k, samples)
+    }
+
     AutoMemset(ctx->stream(), out->mut_dptr(), 0,
                out->shape_view().elem_cnt() * sizeof(T),
                out->mem_case());
@@ -128,7 +157,8 @@ class GpuMOEDispatchKernel final : public user_op::OpKernel {
     int block_size = 1024;
 
     MOEDispatch<<<grid_size, block_size, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-        out_ptr, in_ptr, gates_ptr, indices_ptr, locations_ptr, samples, hidden_size, capacity);
+        out_ptr, in_ptr, gates_ptr, indices_ptr, locations_ptr, samples, hidden_size, capacity,
+        top_k);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -171,11 +201,17 @@ class GpuMOECombineKernel final : public user_op::OpKernel {
     const int32_t hidden_size = in->shape_view().At(2);
     const int32_t samples = indices->shape_view().At(0);
 
+    int32_t top_k = 1;
+    if (indices->shape_view().NumAxes() == 2) {
+      top_k = indices->shape_view().At(0);  // shape(top_k, samples)
+    }
+
     int grid_size = 512;
     int block_size = 1024;
 
     MOECombine<<<grid_size, block_size, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-        out_ptr, in_ptr, gates_ptr, indices_ptr, locations_ptr, samples, hidden_size, capacity);
+        out_ptr, in_ptr, gates_ptr, indices_ptr, locations_ptr, samples, hidden_size, capacity,
+        top_k);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -214,11 +250,17 @@ class GpuMOEGateGradKernel final : public user_op::OpKernel {
     const int32_t hidden_size = in->shape_view().At(1);
     const int32_t samples = in->shape_view().At(0);
 
+    int32_t top_k = 1;
+    if (indices->shape_view().NumAxes() == 2) {
+      top_k = indices->shape_view().At(0);  // shape(top_k, samples)
+    }
+
     int grid_size = 512;
     int block_size = 32;
 
     MOEGateGrad<<<grid_size, block_size, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-        out_ptr, in_ptr, dispatched_ptr, indices_ptr, locations_ptr, samples, hidden_size, capacity);
+        out_ptr, in_ptr, dispatched_ptr, indices_ptr, locations_ptr, samples, hidden_size, capacity,
+        top_k);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
