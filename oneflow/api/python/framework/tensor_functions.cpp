@@ -557,11 +557,11 @@ static PyObject* PyTensorObject_transpose(PyObject* self, PyObject* args, PyObje
   END_HANDLE_ERRORS
 }
 
-#define ARGS_ONLY_METHODS(func_name, bind_func, param_name, convert, data_type)                                      \
+#define ARGS_ONLY_METHODS(func_name, bind_func, param_name, convert, data_type)                   \
   static PyObject* PyTensorObject_##func_name(PyObject* self, PyObject* args, PyObject* kwargs) { \
     HANDLE_ERRORS                                                                                 \
     PyObject* shape_obj = NULL;                                                                   \
-    std::vector<data_type> shape_vec;                                                                          \
+    std::vector<data_type> shape_vec;                                                             \
     int args_size = PyTuple_Size(args);                                                           \
     if (args_size == 0) {                                                                         \
       static const char* keywords[2] = {"" #param_name, NULL};                                    \
@@ -583,14 +583,16 @@ static PyObject* PyTensorObject_transpose(PyObject* self, PyObject* args, PyObje
     if (PyLong_Check(shape_obj)) {                                                                \
       shape_vec.emplace_back(PyLong_AsLongLong(shape_obj));                                       \
     } else {                                                                                      \
-       shape_vec = functional::PyUnpackLongSequence<data_type>(shape_obj);          \
+      shape_vec = functional::PyUnpackLongSequence<data_type>(shape_obj);                         \
     }                                                                                             \
-    return PyTensor_New(ASSERT_PTR(bind_func(PyTensor_Unpack(self), convert(shape_vec))));          \
+    return PyTensor_New(ASSERT_PTR(bind_func(PyTensor_Unpack(self), convert(shape_vec))));        \
     END_HANDLE_ERRORS                                                                             \
   }
 
-#define SHAPE_ONLY_METHODS(func_name, bind_func, param_name) ARGS_ONLY_METHODS(func_name, bind_func, param_name, Shape, int64_t)
-#define DIMS_ONLY_METHODS(func_name, bind_func, param_name) ARGS_ONLY_METHODS(func_name, bind_func, param_name, , int32_t)
+#define SHAPE_ONLY_METHODS(func_name, bind_func, param_name) \
+  ARGS_ONLY_METHODS(func_name, bind_func, param_name, Shape, int64_t)
+#define DIMS_ONLY_METHODS(func_name, bind_func, param_name) \
+  ARGS_ONLY_METHODS(func_name, bind_func, param_name, , int32_t)
 
 SHAPE_ONLY_METHODS(repeat, functional::Repeat, "repeat_shape");
 SHAPE_ONLY_METHODS(tile, functional::Tile, "shape");
@@ -598,7 +600,6 @@ SHAPE_ONLY_METHODS(reshape, functional::Reshape, "shape");
 SHAPE_ONLY_METHODS(view, functional::View, "shape")
 DIMS_ONLY_METHODS(flip, functional::Flip, "dims")
 DIMS_ONLY_METHODS(permute, functional::Permute, "dims")
-
 
 static PyObject* PyTensorObject_is_floating_point(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
