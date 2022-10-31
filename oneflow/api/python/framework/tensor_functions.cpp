@@ -610,7 +610,11 @@ static PyObject* PyTensorObject_tile(PyObject* self, PyObject* args, PyObject* k
 
 static PyObject* PyTensorObject_is_floating_point(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
-  return PyTensor_Unpack(self)->dtype()->is_floating_point() ? Py_True : Py_False;
+  if (PyTensor_Unpack(self)->dtype()->is_floating_point()) {
+    Py_RETURN_TRUE;
+  } else {
+    Py_RETURN_FALSE;
+  }
   END_HANDLE_ERRORS
 }
 
