@@ -269,6 +269,11 @@ def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
   let constructor = "mlir::oneflow::createOutlineJitFunctionPass()";
 }
 
+def AggregateComputeOpsPass : Pass<"aggregate-compute-ops", "ModuleOp"> {
+  let summary = "aggregate compute ops together";
+  let constructor = "mlir::oneflow::createAggregateComputeOpsPass()";
+}
+
 def WrapOpsToKernelLaunchPass : Pass<"wrap-ops-to-kernel-launch", "ModuleOp"> {
   let summary = "wrap user ops with a single kernel launch op in OneFlow Job";
   let constructor = "mlir::oneflow::createWrapOpsToKernelLaunchPass()";

@@ -29,6 +29,7 @@ limitations under the License.
 #include "OneFlow/Transform/ConvertInferenceOp.h"
 #include "OneFlow/Transform/OutlineAndFuse.h"
 #include "OneFlow/Transform/AutoNhwc.h"
+#include "OneFlow/Transform/AggregateComputeOps.h"
 
 #ifdef WITH_MLIR_CUDA_CODEGEN
 #include "OneFlow/Conversion/PTXToCubin.h"
