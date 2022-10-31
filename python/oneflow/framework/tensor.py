@@ -172,8 +172,11 @@ def _scalar_int(self):
 
 
 def _item(self):
+    flow._oneflow_internal.profiler.RangePush("_item")
     assert self.numel() == 1, "Only a Tensor with 1 element can be converted to Scalar"
-    return self.numpy().item()
+    ret = self.numpy().item()
+    flow._oneflow_internal.profiler.RangePop()
+    return ret
 
 
 def _new_empty(
@@ -444,6 +447,7 @@ def _is_floating_point(self):
 
 
 def _numpy(self):
+    flow._oneflow_internal.profiler.RangePush("_numpy")
     assert (
         not self.is_lazy
     ), "tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor."
@@ -464,9 +468,9 @@ def _numpy(self):
             .to_local()
         )
     assert self.is_local
-    if self.device != flow.device("cpu"):
-        self = self.cpu()
-    return self.to_numpy()
+    ret = self.to_numpy()
+    flow._oneflow_internal.profiler.RangePop()
+    return ret
 
 
 def zero_(self):

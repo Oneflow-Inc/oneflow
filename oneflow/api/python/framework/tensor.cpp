@@ -36,6 +36,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/tensor_index.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace py = pybind11;
 
@@ -305,6 +306,7 @@ static PyObject* PyTensorObject_check_meta_consistency(PyObject* self, PyObject*
 }
 
 static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
+  OF_PROFILER_RANGE_GUARD("PyTensorObject_to_numpy");
   HANDLE_ERRORS
   const auto& t = PyTensor_Unpack(self);
   DataType data_type = t->dtype()->data_type();
