@@ -968,7 +968,10 @@
   bind_python: True
 
 - name: "repeat"
-  signature: "Tensor (Tensor input, Shape repeat_shape) => Repeat"
+  signature: [
+    "Tensor (Tensor input, Shape repeat_shape) => Repeat"
+    # "Tensor (Tensor input, Int32 repeat_shape) => RepeatIntShape"
+  ]
   bind_python: True
 
 - name: "repeat_interleave_index"
@@ -1500,7 +1503,7 @@
   bind_python: True
 
 - name: "flip"
-  signature: "Tensor (Tensor x, Int32List[1] dims) => Flip"
+  signature: "Tensor (Tensor x, Int32List dims) => Flip"
   bind_python: True
 
 - name: "upsample"

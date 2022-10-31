@@ -295,7 +295,7 @@ DIRECT_PASS_FUNC(PyTensorObject_prod, functional::reduce_prod);
 DIRECT_PASS_FUNC(PyTensorObject_masked_fill_, functional::masked_fill_)
 DIRECT_PASS_FUNC(PyTensorObject_dot, functional::dot)
 DIRECT_PASS_FUNC(PyTensorObject_nansum, functional::reduce_nansum)
-DIRECT_PASS_FUNC(PyTensorObject_flip, functional::flip)
+// DIRECT_PASS_FUNC(PyTensorObject_flip, functional::flip)
 DIRECT_PASS_FUNC(PyTensorObject_cross, functional::linalg_cross)
 DIRECT_PASS_FUNC(PyTensorObject_cumsum, functional::cumsum)
 DIRECT_PASS_FUNC(PyTensorObject_cumprod, functional::cumprod)
@@ -316,6 +316,7 @@ DIRECT_PASS_FUNC(PyTensorObject_split, functional::split)
 DIRECT_PASS_FUNC(PyTensorObject_bernoulli, functional::bernoulli)
 DIRECT_PASS_FUNC(PyTensorObject_bernoulli_, functional::bernoulli_)
 DIRECT_PASS_FUNC(PyTensorObject_bincount, functional::bincount)
+// DIRECT_PASS_FUNC(PyTensorObject_repeat, functional::repeat)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_eq(PyObject* self, PyObject* args, PyObject* kwargs) {
@@ -389,20 +390,20 @@ static PyObject* PyTensorObject_size(PyObject* self, PyObject* args, PyObject* k
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  PyObject* shape = args;
-  if (PyTuple_Size(args) == 1) {
-    PyObject* item = PyTuple_GetItem(args, 0);
-    if (!PyLong_Check(item)) { shape = item; }
-  }
+// static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args, PyObject* kwargs) {
+//   HANDLE_ERRORS
+//   PyObject* shape = args;
+//   if (PyTuple_Size(args) == 1) {
+//     PyObject* item = PyTuple_GetItem(args, 0);
+//     if (!PyLong_Check(item)) { shape = item; }
+//   }
 
-  PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, shape));
-  PyObject* result = functional::reshape(NULL, _args.get(), kwargs);
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
-  END_HANDLE_ERRORS
-}
+//   PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, shape));
+//   PyObject* result = functional::reshape(NULL, _args.get(), kwargs);
+//   if (PyErr_Occurred()) { throw py::error_already_set(); }
+//   return result;
+//   END_HANDLE_ERRORS
+// }
 
 static PyObject* PyTensorObject_reshape_as(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
@@ -498,20 +499,20 @@ DATATYPE_FUNC(PyTensorObject_float, DType::Float());
 DATATYPE_FUNC(PyTensorObject_double, DType::Double());
 DATATYPE_FUNC(PyTensorObject_bfloat16, DType::BFloat16());
 
-static PyObject* PyTensorObject_view(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  PyObject* shape = args;
-  if (PyTuple_Size(args) == 1) {
-    PyObject* item = PyTuple_GetItem(args, 0);
-    if (!PyLong_Check(item)) { shape = item; }
-  }
+// static PyObject* PyTensorObject_view(PyObject* self, PyObject* args, PyObject* kwargs) {
+//   HANDLE_ERRORS
+//   PyObject* shape = args;
+//   if (PyTuple_Size(args) == 1) {
+//     PyObject* item = PyTuple_GetItem(args, 0);
+//     if (!PyLong_Check(item)) { shape = item; }
+//   }
 
-  PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, shape));
-  PyObject* result = functional::view(NULL, _args.get(), kwargs);
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
-  END_HANDLE_ERRORS
-}
+//   PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, shape));
+//   PyObject* result = functional::view(NULL, _args.get(), kwargs);
+//   if (PyErr_Occurred()) { throw py::error_already_set(); }
+//   return result;
+//   END_HANDLE_ERRORS
+// }
 
 static PyObject* PyTensorObject_view_as(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
@@ -526,21 +527,21 @@ static PyObject* PyTensorObject_view_as(PyObject* self, PyObject* args, PyObject
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_permute(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  PyObject* dims = args;
-  if (PyTuple_Size(args) == 1) {
-    PyObject* item = PyTuple_GetItem(args, 0);
-    if (!PyLong_Check(item)) { dims = item; }
-  }
+// static PyObject* PyTensorObject_permute(PyObject* self, PyObject* args, PyObject* kwargs) {
+//   HANDLE_ERRORS
+//   PyObject* dims = args;
+//   if (PyTuple_Size(args) == 1) {
+//     PyObject* item = PyTuple_GetItem(args, 0);
+//     if (!PyLong_Check(item)) { dims = item; }
+//   }
 
-  PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, dims));
-  PyObject* result = functional::permute(NULL, _args.get(), kwargs);
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
+//   PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, dims));
+//   PyObject* result = functional::permute(NULL, _args.get(), kwargs);
+//   if (PyErr_Occurred()) { throw py::error_already_set(); }
+//   return result;
 
-  END_HANDLE_ERRORS
-}
+//   END_HANDLE_ERRORS
+// }
 
 static PyObject* PyTensorObject_transpose(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
@@ -556,57 +557,48 @@ static PyObject* PyTensorObject_transpose(PyObject* self, PyObject* args, PyObje
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_repeat(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  PyObject* shape_obj = NULL;
-  DimVector shape_vec;
-  if (PyTuple_Size(args) == 1) {
-    shape_obj = PyTuple_GetItem(args, 0);
-    CHECK_OR_THROW(PyLong_Check(shape_obj) || functional::PyLongSequenceCheck(shape_obj))
-        << Error::TypeError() << "repeat(): argument 'repeat_shape' must be shape, not "
-        << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(shape_obj)));
-    if (PyLong_Check(shape_obj)) {
-      shape_vec.emplace_back(PyLong_AsLongLong(shape_obj));
-    } else {
-      std::vector<int64_t> shape = functional::PyUnpackLongSequence<int64_t>(shape_obj);
-      shape_vec = DimVector(shape.begin(), shape.end());
-    }
-    return PyTensor_New(ASSERT_PTR(functional::Repeat(PyTensor_Unpack(self), Shape(shape_vec))));
+#define ARGS_ONLY_METHODS(func_name, bind_func, param_name, convert, data_type)                                      \
+  static PyObject* PyTensorObject_##func_name(PyObject* self, PyObject* args, PyObject* kwargs) { \
+    HANDLE_ERRORS                                                                                 \
+    PyObject* shape_obj = NULL;                                                                   \
+    std::vector<data_type> shape_vec;                                                                          \
+    int args_size = PyTuple_Size(args);                                                           \
+    if (args_size == 0) {                                                                         \
+      static const char* keywords[2] = {"" #param_name, NULL};                                    \
+      if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:" #func_name,                             \
+                                       const_cast<char**>(keywords), &shape_obj)) {               \
+        return NULL;                                                                              \
+      }                                                                                           \
+    } else {                                                                                      \
+      CHECK_OR_THROW(kwargs == NULL);                                                             \
+    }                                                                                             \
+    if (PyTuple_Size(args) == 1) {                                                                \
+      shape_obj = PyTuple_GetItem(args, 0);                                                       \
+    } else if (shape_obj == NULL) {                                                               \
+      shape_obj = args;                                                                           \
+    }                                                                                             \
+    CHECK_OR_THROW(PyLong_Check(shape_obj) || functional::PyLongSequenceCheck(shape_obj))         \
+        << Error::TypeError() << #func_name "(): argument '" #param_name "' must be shape, not "  \
+        << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(shape_obj)));             \
+    if (PyLong_Check(shape_obj)) {                                                                \
+      shape_vec.emplace_back(PyLong_AsLongLong(shape_obj));                                       \
+    } else {                                                                                      \
+       shape_vec = functional::PyUnpackLongSequence<data_type>(shape_obj);          \
+    }                                                                                             \
+    return PyTensor_New(ASSERT_PTR(bind_func(PyTensor_Unpack(self), convert(shape_vec))));          \
+    END_HANDLE_ERRORS                                                                             \
   }
-  CHECK_OR_THROW(functional::PyLongSequenceCheck(args))
-      << Error::TypeError() << "repeat(): argument 'repeat_shape' must be shape, not list of "
-      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(PyTuple_GetItem(args, 0))));
-  std::vector<int64_t> shape = functional::PyUnpackLongSequence<int64_t>(args);
-  shape_vec = DimVector(shape.begin(), shape.end());
-  return PyTensor_New(ASSERT_PTR(functional::Repeat(PyTensor_Unpack(self), Shape(shape_vec))));
-  END_HANDLE_ERRORS
-}
 
-static PyObject* PyTensorObject_tile(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  PyObject* dim_obj = NULL;
-  DimVector dim_vec;
-  if (PyTuple_Size(args) == 1) {
-    dim_obj = PyTuple_GetItem(args, 0);
-    CHECK_OR_THROW(PyLong_Check(dim_obj) || functional::PyLongSequenceCheck(dim_obj))
-        << Error::TypeError() << "tile(): argument 'dims' must be shape, not "
-        << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dim_obj)));
-    if (PyLong_Check(dim_obj)) {
-      dim_vec.emplace_back(PyLong_AsLongLong(dim_obj));
-    } else {
-      std::vector<int64_t> shape = functional::PyUnpackLongSequence<int64_t>(dim_obj);
-      dim_vec = DimVector(shape.begin(), shape.end());
-    }
-    return PyTensor_New(ASSERT_PTR(functional::Tile(PyTensor_Unpack(self), Shape(dim_vec))));
-  }
-  CHECK_OR_THROW(functional::PyLongSequenceCheck(args))
-      << Error::TypeError() << "tile(): argument 'dims' must be shape, not list of "
-      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(PyTuple_GetItem(args, 0))));
-  std::vector<int64_t> shape = functional::PyUnpackLongSequence<int64_t>(args);
-  dim_vec = DimVector(shape.begin(), shape.end());
-  return PyTensor_New(ASSERT_PTR(functional::Tile(PyTensor_Unpack(self), Shape(dim_vec))));
-  END_HANDLE_ERRORS
-}
+#define SHAPE_ONLY_METHODS(func_name, bind_func, param_name) ARGS_ONLY_METHODS(func_name, bind_func, param_name, Shape, int64_t)
+#define DIMS_ONLY_METHODS(func_name, bind_func, param_name) ARGS_ONLY_METHODS(func_name, bind_func, param_name, , int32_t)
+
+SHAPE_ONLY_METHODS(repeat, functional::Repeat, "repeat_shape");
+SHAPE_ONLY_METHODS(tile, functional::Tile, "shape");
+SHAPE_ONLY_METHODS(reshape, functional::Reshape, "shape");
+SHAPE_ONLY_METHODS(view, functional::View, "shape")
+DIMS_ONLY_METHODS(flip, functional::Flip, "dims")
+DIMS_ONLY_METHODS(permute, functional::Permute, "dims")
+
 
 static PyObject* PyTensorObject_is_floating_point(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
@@ -617,42 +609,6 @@ static PyObject* PyTensorObject_is_floating_point(PyObject* self, PyObject* unus
   }
   END_HANDLE_ERRORS
 }
-
-// static PyObject* PyTensorObject_type_as(PyObject* self, PyObject* args, PyObject* kwargs) {
-//   HANDLE_ERRORS
-//   PyObject* target = NULL;
-//   static const char* keywords[2] = {"target", NULL};
-//   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!:type_as", const_cast<char**>(keywords),
-//                                    PyTensorObject_Type, &target)) {
-//     return NULL;
-//   }
-//   auto tensor = PyTensor_Unpack(self);
-//   auto target_tensor = PyTensor_Unpack(target);
-//   Optional<Symbol<DType>> dtype = target_tensor->dtype();
-
-//   // local / global to global
-//   if (target_tensor->is_global()) {
-//     Symbol<ParallelDesc> placement = ASSERT(target_tensor->parallel_desc());
-//     std::vector<Symbol<SbpParallel>> sbp(ASSERT(target_tensor->nd_sbp())->sbp_parallel_size());
-//     for (int32_t i = 0; i < sbp.size(); i++) {
-//       sbp[i] = ASSERT(target_tensor->nd_sbp())->sbp_parallel(i);
-//     }
-//     std::vector<Symbol<SbpParallel>> grad_sbp;
-//     std::shared_ptr<Tensor> global_tensor =
-//         ASSERT_PTR(functional::ToGlobal(tensor, placement, sbp, grad_sbp, false, false));
-//     return PyTensor_New(ASSERT_PTR(functional::To(global_tensor, dtype, false)));
-//   }
-
-//   // global to local
-//   if (tensor->is_global()) {
-//     std::shared_ptr<Tensor> local_tensor = ASSERT_PTR(functional::GlobalToLocal(tensor, false));
-//     return PyTensor_New(ASSERT_PTR(functional::To(local_tensor, dtype, false)));
-//   }
-
-//   // local to local
-//   return PyTensor_New(ASSERT_PTR(functional::To(tensor, target_tensor, false)));
-//   END_HANDLE_ERRORS
-// }
 
 static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
@@ -867,7 +823,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"any", (PyCFunction)PyTensorObject_any, METH_VARARGS | METH_KEYWORDS, NULL},
     {"sum", (PyCFunction)PyTensorObject_sum, METH_VARARGS | METH_KEYWORDS, NULL},
     {"mean", (PyCFunction)PyTensorObject_mean, METH_VARARGS | METH_KEYWORDS, NULL},
-    {"repeat", (PyCFunction)PyTensorObject_repeat, METH_VARARGS, NULL},
+    {"repeat", (PyCFunction)PyTensorObject_repeat, METH_VARARGS | METH_KEYWORDS, NULL},
     {"tile", (PyCFunction)PyTensorObject_tile, METH_VARARGS, NULL},
     {"is_floating_point", (PyCFunction)PyTensorObject_is_floating_point, METH_NOARGS, NULL},
     {"split", (PyCFunction)PyTensorObject_split, METH_VARARGS | METH_KEYWORDS, NULL},

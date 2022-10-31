@@ -399,10 +399,6 @@ def _tile(self, *dims):
     return flow._C.tile(self, new_dims)
 
 
-def _T(self):
-    return flow._C.T(self)
-
-
 def _topk(self, k, dim: int = None, largest: bool = True, sorted: bool = True):
     return flow.topk(self, k, dim, largest, sorted)
 
@@ -415,10 +411,6 @@ def _nonzero(self, as_tuple=False):
     return flow.nonzero(self, as_tuple)
 
 
-def _prod(self, dim=[], keepdim=False):
-    return flow.prod(self, dim, keepdim)
-
-
 def _masked_select(self, mask):
     return flow.masked_select(self, mask)
 
@@ -427,16 +419,8 @@ def _sort(self, dim: int = -1, descending: bool = False):
     return flow.sort(self, dim, descending)
 
 
-# def _type_as(self, target):
-#     return self.to(dtype=target.dtype)
-
-
 def _where(self, x=None, y=None):
     return flow.where(self, x, y)
-
-
-# def _is_floating_point(self):
-#     return flow.is_floating_point(self)
 
 
 def _numpy(self):
@@ -501,30 +485,6 @@ def _new_tensor(
         return flow.tensor(
             data, dtype=dtype, placement=placement, sbp=sbp, requires_grad=requires_grad
         )
-
-
-# def _cumsum(self, dim, dtype=None):
-#     return flow._C.cumsum(self, dim, dtype=dtype)
-
-
-# def _cumprod(self, dim, dtype=None):
-#     return flow._C.cumprod(self, dim, dtype=dtype)
-
-
-# def _inv(self):
-#     return flow._C.inv(self)
-
-
-# def _trunc(self):
-#     """trunc() -> Tensor
-
-#     See :func:`oneflow.trunc`
-#     """
-#     return flow._C.trunc(self)
-
-
-# def _cross(self, other, dim=None):
-#     return flow._C.cross(self, other, dim)
 
 
 def _scatter(self, dim, index, src, *, reduce=""):
