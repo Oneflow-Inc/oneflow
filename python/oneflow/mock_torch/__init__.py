@@ -106,7 +106,10 @@ class OneflowImporter(MetaPathFinder, Loader):
 # work with 'clean' sys.modules (i.e. no torch imported)
 def mock():
     if sys.modules.get("torch") is not None:
-        print("Warning: Detected imported torch modules, quitting `mock`")
+        print(
+            """Warning: Detected imported torch modules, quitting `mock`.
+For fine-grained control of importing torch and oneflow, use Mock with enable and disable"""
+        )
     else:
         sys.meta_path.insert(0, OneflowImporter())
 
