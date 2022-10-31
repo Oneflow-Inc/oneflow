@@ -34,6 +34,7 @@ limitations under the License.
 #include "OneFlow/OneFlowUtils.h"
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/SBP/SBPAttributes.h"
+#include "OneFlow/Transform/TransposeHelpers.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/OperationSupport.h"
@@ -627,7 +628,6 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
     attrs.set(name, SBPTranslation::ConvertNdSbpToPsig(rewriter, nd_sbp_str, nd_size));
     auto op_new = rewriter.create<oneflow::VariableOp>(op->getLoc(), op.output().getType(),
                                                        ValueRange(), attrs);
-    rewriter.replaceOp(op0, op_new->getResults());
     const std::string tensor_name = op.op_nameAttr().str();
     ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Set(
         tensor_name,  // tensor_name can't be replaced by op.op_nameAttr().str() directly when
@@ -635,6 +635,8 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
                       // But it works when compiling with clang.
                       // Maybe temporary objects would be released earlier when using gcc.
         support::DenseElementsAttrToTensor(tensor_attr, op.device_tagAttr(), op.device_nameAttr()));
+    // replaceOp may deallocate `op0` (and also `op`), so we should not use `op` after this call.
+    rewriter.replaceOp(op0, op_new->getResults());
     return ::mlir::success();
   }
 };
@@ -671,8 +673,8 @@ llvm::SmallVector<mlir::Value, 4> getInputOperandTransposeOp(NCHWCompatible op, 
   SmallVector<Value, 4> input_operands;
   input_operands.push_back(val);
   auto res = rewriter
-                 .create<oneflow::TransposeOp>(op.getLoc(), val.getType(), input_operands,
-                                               transpose_attributes)
+                 .create<oneflow::TransposeOp>(op.getLoc(), getNHWCType(val.getType()),
+                                               input_operands, transpose_attributes)
                  ->getResults();
   return res;
 }
@@ -685,8 +687,8 @@ TransposeOp getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList tra
                            rewriter.getStringAttr(transpose_name));
   SmallVector<Value, 4> operands;
   operands.push_back(val);
-  TransposeOp transpose_op = rewriter.create<oneflow::TransposeOp>(op.getLoc(), val.getType(),
-                                                                   operands, transpose_attributes);
+  TransposeOp transpose_op = rewriter.create<oneflow::TransposeOp>(
+      op.getLoc(), getNCHWType(val.getType()), operands, transpose_attributes);
   return transpose_op;
 }
 
@@ -787,8 +789,10 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
  public:
   LogicalResult matchAndRewrite(NCHWCompatible op, PatternRewriter& rewriter) const override {
     if (op->hasTrait<OpTrait::IsOpConfCompatible>()) {
-      if (op->getOperands()[0].getType().cast<mlir::RankedTensorType>().getShape().size() != 4) {
-        return failure();
+      for (mlir::Value operand : op.OperandsToTranspose()) {
+        if (operand.getType().cast<mlir::RankedTensorType>().getShape().size() != 4) {
+          return failure();
+        }
       }
       const auto device_name = OpTrait::IsOpConfCompatible<void>::getDeviceTag(op)
                                    .cast<mlir::StringAttr>()
