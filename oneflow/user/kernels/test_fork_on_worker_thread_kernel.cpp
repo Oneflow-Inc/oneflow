@@ -39,7 +39,7 @@ class TestForkOnWorkerThreadKernel final : public user_op::OpKernel {
         _exit(0);
       } else if (pid > 0) {
         // We're the parent process
-        int status;
+        int status = 0;
         waitpid(pid, &status, 0);
       } else {
         // Do nothing.
