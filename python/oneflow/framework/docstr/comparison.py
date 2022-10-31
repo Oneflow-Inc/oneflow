@@ -200,7 +200,7 @@ add_docstr(
 
 add_docstr(
     oneflow.isclose,
-    """isclose(input, other, atol=1e-08, rtol=1e-05, equal_nan=False) -> Tensor
+    r"""isclose(input, other, atol=1e-08, rtol=1e-05, equal_nan=False) -> Tensor
     
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.isclose.html
 
@@ -211,8 +211,8 @@ add_docstr(
         \lvert \text{input} - \text{other} \rvert \leq \texttt{atol} + \texttt{rtol} \times \lvert \text{other} \rvert
 
     Args:
-        input (Tensor): first tensor to compare
-        other (Tensor): second tensor to compare
+        input (oneflow.Tensor): first tensor to compare
+        other (oneflow.Tensor): second tensor to compare
         atol (float, optional): absolute tolerance. Default: 1e-08
         rtol (float, optional): relative tolerance. Default: 1e-05
         equal_nan (bool, optional): if ``True``, then two ``NaN`` s will be considered equal. Default: ``False``
@@ -237,7 +237,7 @@ add_docstr(
 
 add_docstr(
     oneflow.allclose,
-    """allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False) -> bool
+    r"""allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False) -> bool
     
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.allclose.html
 
@@ -245,10 +245,11 @@ add_docstr(
     .. math::
         \lvert \text{input} - \text{other} \rvert \leq \texttt{atol} + \texttt{rtol} \times \lvert \text{other} \rvert
     elementwise, for all elements of :attr:`input` and :attr:`other`. The behaviour of this function is analogous to
+    `numpy.allclose <https://docs.scipy.org/doc/numpy/reference/generated/numpy.allclose.html>`_
 
     Args:
-        input (Tensor): first tensor to compare
-        other (Tensor): second tensor to compare
+        input (oneflow.Tensor): first tensor to compare
+        other (oneflow.Tensor): second tensor to compare
         atol (float, optional): absolute tolerance. Default: 1e-08
         rtol (float, optional): relative tolerance. Default: 1e-05
         equal_nan (bool, optional): if ``True``, then two ``NaN`` s will be considered equal. Default: ``False``
