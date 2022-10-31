@@ -163,7 +163,6 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "slice_grad",
                                "fused_scale_tril",
                                "identity",
-                               "flatten",
                                "squeeze",
                                "embedding",
                                "embedding_grad",
