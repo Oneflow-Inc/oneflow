@@ -127,6 +127,7 @@ class KeyValueStoreImpl : public KeyValueStore {
     max_query_length_ = query_length;
   }
 
+  using KeyValueStore::Get;
   void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
            uint32_t* n_missing, uint32_t* missing_indices) override;
   void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values) override;
