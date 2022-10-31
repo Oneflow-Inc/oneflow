@@ -14,6 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/tensor_util.h"
+#include "oneflow/core/common/blocking_then_busy.h"
+#include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/framework/tensor_name_scope.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/symbol_storage.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -62,6 +70,49 @@ Maybe<Scope> GetTensorScope(const std::shared_ptr<Tensor>& tensor) {
   const auto* op = JUST(infer_ctx->Op4OpName(lbi.op_name()));
   return Singleton<symbol::Storage<Scope>>::Get()->MaybeGetPtr(op->op_conf().scope_symbol_id());
 }
+
+template<typename T>
+Maybe<T> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor) {
+  std::shared_ptr<LocalTensor> local_tensor;
+  {
+    auto tensor = scalar_tensor;
+    if (tensor->is_global()) {
+      Symbol<ParallelDesc> parallel_desc;
+      {
+        const ParallelConf parallel_conf = GenParallelConfOfCpuOnAllRanks();
+        JUST(PhysicalRun(
+            [&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
+              parallel_desc = SymbolOf(*JUST(builder->GetParallelDescSymbol(parallel_conf)));
+              return Maybe<void>::Ok();
+            }));
+      }
+      const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
+      tensor = JUST(functional::ToGlobal(tensor, parallel_desc, {broadcast_sbp}, /*grad_sbp=*/{},
+                                         /*check_meta=*/false, /*copy=*/false));
+      tensor = JUST(functional::GlobalToLocal(tensor, /*copy=*/false));
+    }
+    local_tensor = JUST(tensor->AsLocalTensor());
+  }
+
+  T scalar = 0;
+  {
+    const auto& Callback = [&](ep::Stream* stream,
+                               const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+      SyncAutoMemcpy(stream, &scalar, eager_blob_object->mut_dptr(), sizeof(T),
+                     memory::MakeHostMemCase(), eager_blob_object->mem_case());
+    };
+    auto btb = std::make_shared<BlockingThenBusy>(1);
+    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, "const");
+    }));
+    JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+  }
+  return scalar;
+}
+
+template Maybe<double> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor);
+template Maybe<int64_t> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor);
+template Maybe<bool> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor);
 
 }  // namespace one
 }  // namespace oneflow
