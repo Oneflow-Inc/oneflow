@@ -90,6 +90,9 @@ class ConvBaseFunctor {
                                        "dilation_rate", "groups", "data_format");
     conv_attrs.SetAllAttrs(static_cast<int32_t>(weight->shape()->At(0)), kernel_size_vec, padding,
                            stride, dilation, groups, channel_pos);
+    if (bias && ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDNN_FUSED_CONV_BIAS", false)) {
+      return OpInterpUtil::Dispatch<Tensor>(*conv_bias_op_, {x, weight, JUST(bias)}, conv_attrs);
+    }
     const std::shared_ptr<one::Tensor>& conv_out =
         JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {x, weight}, conv_attrs));
     if (bias) {
@@ -102,6 +105,7 @@ class ConvBaseFunctor {
  protected:
   std::shared_ptr<OpExpr> conv_op_;
   std::shared_ptr<OpExpr> bias_op_;
+  std::shared_ptr<OpExpr> conv_bias_op_;
   int32_t num_spatial_dims_;
 };
 
@@ -110,6 +114,8 @@ class Conv1dFunctor : public ConvBaseFunctor {
   Conv1dFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/1) {
     conv_op_ =
         CHECK_JUST(one::OpBuilder("conv1d").Input("in").Input("weight").Output("out").Build());
+    conv_bias_op_ = CHECK_JUST(
+        one::OpBuilder("conv1d").Input("in").Input("weight").Input("bias").Output("out").Build());
   }
 };
 
@@ -118,6 +124,8 @@ class Conv2dFunctor : public ConvBaseFunctor {
   Conv2dFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/2) {
     conv_op_ =
         CHECK_JUST(one::OpBuilder("conv2d").Input("in").Input("weight").Output("out").Build());
+    conv_bias_op_ = CHECK_JUST(
+        one::OpBuilder("conv2d").Input("in").Input("weight").Input("bias").Output("out").Build());
   }
 };
 
@@ -126,6 +134,8 @@ class Conv3dFunctor : public ConvBaseFunctor {
   Conv3dFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/3) {
     conv_op_ =
         CHECK_JUST(one::OpBuilder("conv3d").Input("in").Input("weight").Output("out").Build());
+    conv_bias_op_ = CHECK_JUST(
+        one::OpBuilder("conv3d").Input("in").Input("weight").Input("bias").Output("out").Build());
   }
 };
 
