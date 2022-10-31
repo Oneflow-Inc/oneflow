@@ -32,6 +32,22 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGelu, Dst, Src> {
   }
 };
 
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGeluTanh, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    // ref to: https://mlfromscratch.com/activation-functions-explained/#gelu
+    return static_cast<Src>(0.5) * src
+           * (static_cast<Src>(1)
+              + tanh(constant1 * src + constant2 * pow(src, static_cast<Src>(3))));
+  }
+
+ private:
+  const Src constant1 = static_cast<Src>(0.797885);
+  const Src constant2 = static_cast<Src>(0.035677);
+};
+
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTanh, float, float> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
@@ -179,6 +195,7 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAbs, nv_bfloat16, nv_bfloat16> 
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kElu);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kCelu);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kGelu);
+SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kGeluTanh);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kMish);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kSelu);
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kSilu);
@@ -235,6 +252,7 @@ SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kNanAssign);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kElu);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kCelu);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kGelu);
+SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kGeluTanh);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kHardSwish);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kHardSigmoid);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kHardShrink);

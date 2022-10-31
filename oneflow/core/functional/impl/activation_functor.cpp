@@ -215,6 +215,20 @@ class GeluGradFunctor : public BinaryFunctor {
   }
 };
 
+class GeluTanhFunctor : public UnaryFunctor {
+ public:
+  GeluTanhFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("gelu_tanh").Input("in").Output("out").Build());
+  }
+};
+
+class GeluTanhGradFunctor : public BinaryFunctor {
+ public:
+  GeluTanhGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("gelu_tanh_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+};
+
 class GluFunctor {
  public:
   GluFunctor() {}
@@ -626,6 +640,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::CeluGradFunctor>("CeluGrad");
   m.add_functor<impl::GeluFunctor>("Gelu");
   m.add_functor<impl::GeluGradFunctor>("GeluGrad");
+  m.add_functor<impl::GeluTanhFunctor>("GeluTanh");
+  m.add_functor<impl::GeluTanhGradFunctor>("GeluTanhGrad");
   m.add_functor<impl::GluFunctor>("Glu");
   m.add_functor<impl::HardSigmoidFunctor>("HardSigmoid");
   m.add_functor<impl::HardSigmoidGradFunctor>("HardSigmoidGrad");

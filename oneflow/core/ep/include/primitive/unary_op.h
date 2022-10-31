@@ -28,6 +28,7 @@ enum class UnaryOp {
   kCelu,
   kRelu,
   kGelu,
+  kGeluTanh,
   kHardSwish,
   kHardSigmoid,
   kHardShrink,

@@ -31,6 +31,22 @@ struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kGelu, Dst, Src> {
 };
 
 template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kGeluTanh, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    // ref to: https://mlfromscratch.com/activation-functions-explained/#gelu
+    return static_cast<Src>(0.5) * src
+           * (static_cast<Src>(1)
+              + std::tanh(constant1 * src + constant2 * std::pow(src, static_cast<Src>(3))));
+  }
+
+ private:
+  static constexpr Src constant1 = static_cast<Src>(0.797885);
+  static constexpr Src constant2 = static_cast<Src>(0.035677);
+};
+
+template<typename Dst, typename Src>
 struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kTanh, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
@@ -108,6 +124,7 @@ struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kAbs, bfloat16, bfloat16> {
 SPECIALIZATION_CPU_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kElu);
 SPECIALIZATION_CPU_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kCelu);
 SPECIALIZATION_CPU_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kGelu);
+SPECIALIZATION_CPU_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kGeluTanh);
 SPECIALIZATION_CPU_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kHardSwish);
 SPECIALIZATION_CPU_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kHardSigmoid);
 SPECIALIZATION_CPU_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kHardShrink);

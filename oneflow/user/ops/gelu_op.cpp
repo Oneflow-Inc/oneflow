@@ -18,36 +18,67 @@ limitations under the License.
 
 namespace oneflow {
 
-/*static*/ auto GeluOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
+Maybe<void> InferGeluTensorDesc(user_op::InferContext* ctx) {
   ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
 }
-/*static*/ auto GeluOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
-  return GeluOp::InferLogicalTensorDesc(ctx);
+
+Maybe<void> InferGeluDataType(user_op::InferContext* ctx) {
+  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
+  return Maybe<void>::Ok();
 }
-/*static*/ auto GeluOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+
+Maybe<void> GetGeluSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
     ctx->NewBuilder().Split(user_op::OpArg("in", 0), i).Split(user_op::OpArg("out", 0), i).Build();
   }
   return Maybe<void>::Ok();
 }
+
+/*static*/ auto GeluOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
+  return InferGeluTensorDesc(ctx);
+}
+/*static*/ auto GeluOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
+  return InferGeluTensorDesc(ctx);
+}
 /*static*/ auto GeluOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
-  ctx->SetOutputDType("out", 0, ctx->InputDType("in", 0));
-  return Maybe<void>::Ok();
+  return InferGeluDataType(ctx);
+}
+/*static*/ auto GeluOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> { return GetGeluSbp(ctx); }
+
+/*static*/ auto GeluTanhOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
+  return InferGeluTensorDesc(ctx);
+}
+/*static*/ auto GeluTanhOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
+  return InferGeluTensorDesc(ctx);
+}
+/*static*/ auto GeluTanhOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
+  return InferGeluDataType(ctx);
+}
+/*static*/ auto GeluTanhOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+  return GetGeluSbp(ctx);
 }
 
-/*static*/ auto GeluGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
+Maybe<void> InferGeluGradTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  CHECK_OR_RETURN(dy_shape == x_shape);
+  CHECK_OR_RETURN(dy_shape == x_shape)
+      << "InferTensorDesc failed (" << ctx->op_name() << "). Expected x shape "
+      << x_shape.ToString() << " to be equal to dy shape " << dy_shape.ToString();
   ctx->SetOutputShape("dx", 0, dy_shape);
   return Maybe<void>::Ok();
 }
-/*static*/ auto GeluGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
-  return GeluGradOp::InferLogicalTensorDesc(ctx);
+
+Maybe<void> InferGeluGradDataType(user_op::InferContext* ctx) {
+  CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0))
+      << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("dy", 0))
+      << ", but got " << DataType_Name(ctx->InputDType("x", 0));
+  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
+  return Maybe<void>::Ok();
 }
-/*static*/ auto GeluGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+
+Maybe<void> GetGeluGradSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
     ctx->NewBuilder()
@@ -63,12 +94,31 @@ namespace oneflow {
       .Build();
   return Maybe<void>::Ok();
 }
+
+/*static*/ auto GeluGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
+  return InferGeluGradTensorDesc(ctx);
+}
+/*static*/ auto GeluGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
+  return InferGeluGradTensorDesc(ctx);
+}
 /*static*/ auto GeluGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
-  CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0))
-      << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("dy", 0))
-      << ", but got " << DataType_Name(ctx->InputDType("x", 0));
-  ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
-  return Maybe<void>::Ok();
+  return InferGeluGradDataType(ctx);
+}
+/*static*/ auto GeluGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+  return GetGeluGradSbp(ctx);
+}
+
+/*static*/ auto GeluTanhGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
+  return InferGeluGradTensorDesc(ctx);
+}
+/*static*/ auto GeluTanhGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
+  return InferGeluGradTensorDesc(ctx);
+}
+/*static*/ auto GeluTanhGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
+  return InferGeluGradDataType(ctx);
+}
+/*static*/ auto GeluTanhGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+  return GetGeluGradSbp(ctx);
 }
 
 }  // namespace oneflow

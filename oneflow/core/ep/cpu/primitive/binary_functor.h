@@ -261,6 +261,27 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kGeluBackwardWithDyX, Src, Dst>
 };
 
 template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kGeluTanhGrad, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    // ref to: https://mlfromscratch.com/activation-functions-explained/#gelu
+    Src pow3 = std::pow(x, 3.0);
+    Src tanh_out = std::tanh(constant1 * x + constant2 * pow3);
+    Src one = static_cast<Src>(1);
+    Src half = static_cast<Src>(0.5);
+    Src dtanh = constant3 * x + constant4 * pow3;
+    return dy * (half * (1 + tanh_out) + dtanh * (one - std::pow(tanh_out, 2.0)));
+  }
+
+ private:
+  static constexpr Src constant1 = static_cast<Src>(0.797885);
+  static constexpr Src constant2 = static_cast<Src>(0.035677);
+  static constexpr Src constant3 = constant1 * static_cast<Src>(0.5);
+  static constexpr Src constant4 = constant2 * static_cast<Src>(1.5);
+};
+
+template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTanhBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 

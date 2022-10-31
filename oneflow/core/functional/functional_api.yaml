@@ -644,6 +644,14 @@
   signature: "Tensor (Tensor dy, Tensor x) => GeluGrad"
   bind_python: False
 
+- name: "gelu_tanh"
+  signature: "Tensor (Tensor x) => GeluTanh"
+  bind_python: True
+
+- name: "gelu_tanh_grad"
+  signature: "Tensor (Tensor dy, Tensor x) => GeluTanhGrad"
+  bind_python: False
+
 - name: "gelu_with_approximate"
   signature: 'Tensor (Tensor x, String approximate="none") => GeluWithApproximate'
   bind_python: True
@@ -2876,4 +2884,3 @@
 - name: "bincount"
   signature: "Tensor (Tensor input, Tensor weights=None, Int64 minlength=None) => BinCount"
   bind_python: True
-

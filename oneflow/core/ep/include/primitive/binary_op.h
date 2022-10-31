@@ -53,6 +53,7 @@ enum class BinaryOp {
   kEluBackwardWithDyX,
   kCeluBackwardWithDyX,
   kGeluBackwardWithDyX,
+  kGeluTanhGrad,
   kHardswishBackwardWithDyX,
   kHardsigmoidBackwardWithDyX,
   kHardshrinkBackwardWithDyY,
