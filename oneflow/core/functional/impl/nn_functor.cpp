@@ -4645,6 +4645,36 @@ class MultiHeadAttentionFunctor {
   }
 };
 
+class FusedMultiHeadAttentionInferenceFunctor {
+ public:
+  FusedMultiHeadAttentionInferenceFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_multi_head_attention_inference")
+                         .Input("query")
+                         .Input("key")
+                         .Input("value")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(
+      const std::shared_ptr<one::Tensor>& query, const std::shared_ptr<one::Tensor>& key,
+      const std::shared_ptr<one::Tensor>& value, const int64_t& num_heads, const bool& causal,
+      const int64_t& query_hidden_slice_start, const int64_t& query_hidden_slice_end,
+      const int64_t& key_hidden_slice_start, const int64_t& key_hidden_slice_end,
+      const int64_t& value_hidden_slice_start, const int64_t& value_hidden_slice_end) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_heads", "causal", "query_hidden_slice_start",
+                                                 "query_hidden_slice_end", "key_hidden_slice_start",
+                                                 "key_hidden_slice_end", "value_hidden_slice_start",
+                                                 "value_hidden_slice_end");
+    attrs.SetAllAttrs(num_heads, causal, query_hidden_slice_start, query_hidden_slice_end,
+                      key_hidden_slice_start, key_hidden_slice_end, value_hidden_slice_start,
+                      value_hidden_slice_end);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {query, key, value}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -4767,6 +4797,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BatchNormBackwardReduceFunctor>("BatchNormBackwardReduce");
   m.add_functor<impl::BatchNormBackwardElemtFunctor>("BatchNormBackwardElemt");
   m.add_functor<impl::MultiHeadAttentionFunctor>("MultiHeadAttention");
+  m.add_functor<impl::FusedMultiHeadAttentionInferenceFunctor>("FusedMultiHeadAttentionInference");
 }
 
 }  // namespace functional

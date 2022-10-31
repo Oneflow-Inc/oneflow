@@ -43,6 +43,7 @@ def graph_build_context(config_proto, session):
 
     graph_scope = _make_new_graph_scope(new_scope, config_proto.job_name)
 
+    oneflow._oneflow_internal.eager.Sync()
     with lazy_mode.guard(True):
         with JobBuildAndInferCtx(config_proto):
             with BlockScopeContext(prev_scope, graph_scope):
