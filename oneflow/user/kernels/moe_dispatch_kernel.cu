@@ -1,6 +1,7 @@
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
@@ -118,6 +119,10 @@ class GpuMOEDispatchKernel final : public user_op::OpKernel {
     const int32_t samples = in->shape_view().At(0);
     const int32_t hidden_size = in->shape_view().At(1);
     const int32_t capacity = ctx->Attr<int32_t>("capacity");
+
+    AutoMemset(ctx->stream(), out->mut_dptr(), 0,
+               out->shape_view().elem_cnt() * sizeof(T),
+               out->mem_case());
 
     int grid_size = 512;
     int block_size = 1024;

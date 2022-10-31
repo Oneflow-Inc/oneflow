@@ -1,4 +1,5 @@
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
@@ -29,6 +30,10 @@ class CpuMOEDispatchKernel final : public user_op::OpKernel {
     const int32_t samples = in->shape_view().At(0);
     const int32_t hidden_size = in->shape_view().At(1);
     const int32_t capacity = ctx->Attr<int32_t>("capacity");
+
+    AutoMemset(ctx->stream(), out->mut_dptr(), 0,
+               out->shape_view().elem_cnt() * sizeof(T),
+               out->mem_case());
 
     for (int i = 0; i < samples; ++i) {
       if (locations_ptr[i] < capacity && indices_ptr[i] >= 0) {
