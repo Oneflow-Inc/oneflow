@@ -239,28 +239,45 @@ class OnesLikeFunctor : public UnaryFunctor {
 
 class FlattenFunctor {
  public:
-  FlattenFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("flatten").Input("in").Output("out").Build());
-  }
+  FlattenFunctor() = default;
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& start_dim,
                            const int32_t& end_dim) const {
-    const auto& x_shape = x->shape();
-    const int32_t x_dim = x_shape->dim_vec().size();
+    const Shape& in_shape = *x->shape();
+    int32_t ndim = in_shape.size();
 
-    int new_start_dim = start_dim;
-    int new_end_dim = end_dim;
-    if (start_dim < 0) { new_start_dim += x_dim; }
-    if (end_dim < 0) { new_end_dim += x_dim; }
-    if (new_start_dim == new_end_dim) { return x; }
+    auto CheckAndWrapDim = [&](int32_t dim) -> Maybe<int32_t> {
+      // handle scalar
+      if (ndim == 0 && (dim == 0 || dim == -1)) { return 0; }
+      if (dim < -ndim || dim >= ndim) {
+        return Error::IndexError() << "Dimension out of range (expected to be in range of ["
+                                   << -ndim << ", " << ndim - 1 << "], but got " << dim << ")";
+      }
+      return dim >= 0 ? dim : dim + ndim;
+    };
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("start_dim", "end_dim");
-    attrs.SetAllAttrs(start_dim, end_dim);
+    // -n dim (negative dim) indicate ndim-n
+    // for example, when ndim == 3, (-3) == (0), (-2) == (1), (-1) == (2)
+    int32_t true_start_dim = JUST(CheckAndWrapDim(start_dim));
+    int32_t true_end_dim = JUST(CheckAndWrapDim(end_dim));
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    if (true_start_dim > true_end_dim) {
+      return Error::RuntimeError() << "flatten() has invalid args: start_dim (" << start_dim
+                                   << ") cannot come after end_dim (" << end_dim << ")";
+    }
+
+    // identity when start_dim == end_dim
+    if (true_start_dim == true_end_dim) { return x; }
+
+    DimVector dim_vec{in_shape.begin(), in_shape.begin() + true_start_dim + 1};
+    for (int i = true_start_dim + 1; i <= true_end_dim; ++i) { dim_vec.back() *= in_shape[i]; }
+    dim_vec.insert(dim_vec.end(), in_shape.begin() + true_end_dim + 1, in_shape.end());
+    Shape reshape_shape{dim_vec};
+    CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), reshape_shape.elem_cnt())
+        << Error::RuntimeError() << "invalid reshape from " << in_shape.ToString() << " to "
+        << reshape_shape.ToString();
+    return JUST(Reshape(x, reshape_shape));
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
 class WhereFunctor {
@@ -528,7 +545,9 @@ class ConcatFunctor {
       TensorTuple partial_inputs(size);
       TensorProcessor tensor_processor;
       for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs(partial_inputs).Apply());
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+               .AddInputs(partial_inputs, inputs.at(i)->dtype())
+               .Apply());
       TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
       outputs.emplace_back(
           JUST(OpInterpUtil::Dispatch<Tensor>(*ops_[size - 1], input_tuple, attrs)));
@@ -1465,14 +1484,19 @@ class SliceUpdateFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("start", "stop", "step");
     attrs.SetAllAttrs(start, stop, step);
 
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({ref, value})
+             .PromoteInputsToCommonDtype(true, ref->dtype())
+             .Apply());
+
     if (inplace) {
       auto outputs = std::make_shared<TensorTuple>(1);
       JUST(CheckInplaceValid(ref));
       JUST(VectorAt(*outputs, 0)) = ref;
-      JUST(OpInterpUtil::Dispatch(*op_, {ref, value}, outputs.get(), attrs));
+      JUST(OpInterpUtil::Dispatch(*op_, JUST(tensor_processor.GetInputs()), outputs.get(), attrs));
       return JUST(VectorAt(*outputs, 0));
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {ref, value}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, JUST(tensor_processor.GetInputs()), attrs);
     }
   }
 
