@@ -282,14 +282,28 @@ class MatMulFunctor {
     CHECK_GE_OR_RETURN(b_shape->NumAxes(), 1)
         << Error::RuntimeError() << "Tensor b's dim should >= 1";
 
+    // TODO(hujiakui): a in CPU & a is Int ==> a.to(float)
+    DeviceType device_type{};
+    if (a->is_global()) {
+      device_type = JUST(a->parallel_desc())->device_type();
+    } else {
+      device_type = JUST(a->device())->enum_type();
+    }
+    std::shared_ptr<one::Tensor> a_tensor = a;
+    std::shared_ptr<one::Tensor> b_tensor = b;
+    if((! a->dtype()->is_floating_point()) && (device_type == DeviceType::kCPU)) {
+      a_tensor = JUST(functional::To(a, JUST(DType::Get(DataType::kFloat)), /*copy=*/false));
+      b_tensor = JUST(functional::To(b, JUST(DType::Get(DataType::kFloat)), /*copy=*/false));
+    }
+
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("transpose_a", "transpose_b", "alpha");
     attrs.SetAllAttrs(transpose_a, transpose_b, alpha);
     const int64_t a_num_axes = a_shape->NumAxes();
     const int64_t b_num_axes = b_shape->NumAxes();
-    if (a_num_axes == 1 && b_num_axes == 2) { return VectorMatrixProduct(a, b); }
-    if (a_num_axes == 2 && b_num_axes == 1) { return MatrixVectorProduct(a, b); }
+    if (a_num_axes == 1 && b_num_axes == 2) { auto result = JUST(VectorMatrixProduct(a_tensor, b_tensor)); }
+    if (a_num_axes == 2 && b_num_axes == 1) { auto result = JUST(MatrixVectorProduct(a_tensor, b_tensor)); }
     if (a_num_axes == 2 && b_num_axes == 2) {
-      return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, attrs);
+      auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a_tensor, b_tensor}, attrs));
     }
     if (a_num_axes == b_num_axes) {
       bool if_batch_matmul = true;
@@ -300,10 +314,15 @@ class MatMulFunctor {
         }
       }
       if (if_batch_matmul) {
-        return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, attrs);
+        auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a_tensor, b_tensor}, attrs));
       }
     }
-    return OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {a, b}, attrs);
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {a_tensor, b_tensor}, attrs));
+
+    if((! a->dtype()->is_floating_point()) && (device_type == DeviceType::kCPU)) {
+      return functional::To(result, a->dtype(), /*copy=*/false);
+    } else { return result; }
+    // return result;
   }
 
  private:
@@ -338,7 +357,24 @@ class BatchMatMulFunctor {
         << matmul_dim_b << " of mat2, please check input!";
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("transpose_a", "transpose_b", "alpha");
     attrs.SetAllAttrs(transpose_a, transpose_b, alpha);
-    return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, attrs);
+
+    DeviceType device_type{};
+    if (a->is_global()) {
+      device_type = JUST(a->parallel_desc())->device_type();
+    } else {
+      device_type = JUST(a->device())->enum_type();
+    }
+    std::shared_ptr<one::Tensor> a_tensor = a;
+    std::shared_ptr<one::Tensor> b_tensor = b;
+    if ((!a->dtype()->is_floating_point()) && (device_type == DeviceType::kCPU)) {
+      a_tensor = JUST(functional::To(a, JUST(DType::Get(DataType::kFloat)), /*copy=*/false));
+      b_tensor = JUST(functional::To(b, JUST(DType::Get(DataType::kFloat)), /*copy=*/false));
+    }
+
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a_tensor, b_tensor}, attrs));
+    if((! a->dtype()->is_floating_point()) && (device_type == DeviceType::kCPU)) {
+      return functional::To(result, a->dtype(), /*copy=*/false);
+    } else { return result; }
   }
 
  private:
