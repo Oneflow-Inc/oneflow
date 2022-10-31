@@ -379,6 +379,7 @@ from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
 from oneflow._C import normal
 from oneflow._C import rand
 from oneflow._C import randn
+from oneflow._C import randn_like
 from oneflow._C import randint
 from oneflow._C import randint_like
 from oneflow._C import randperm
