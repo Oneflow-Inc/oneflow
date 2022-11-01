@@ -287,12 +287,12 @@ class MatMulFunctor {
     } else {
       device_type = JUST(a->device())->enum_type();
     }
-    std::shared_ptr<one::Tensor> a_tensor = a;
-    std::shared_ptr<one::Tensor> b_tensor = b;
+    std::shared_ptr<one::Tensor> cast_a = a;
+    std::shared_ptr<one::Tensor> cast_b = b;
     std::shared_ptr<one::Tensor> result;
-    if((! a_tensor->dtype()->is_floating_point()) && (device_type == DeviceType::kCPU)) {
-      a_tensor = JUST(functional::Cast(a, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
-      b_tensor = JUST(functional::Cast(b, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
+    if((! cast_a->dtype()->is_floating_point()) && (device_type == DeviceType::kCPU)) {
+      cast_a = JUST(functional::Cast(a, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
+      cast_b = JUST(functional::Cast(b, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
     }
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("transpose_a", "transpose_b", "alpha");
@@ -300,11 +300,11 @@ class MatMulFunctor {
     const int64_t a_num_axes = a_shape->NumAxes();
     const int64_t b_num_axes = b_shape->NumAxes();
     if (a_num_axes == 1 && b_num_axes == 2) { 
-      result = JUST(VectorMatrixProduct(a_tensor, b_tensor)); 
+      result = JUST(VectorMatrixProduct(cast_a, cast_b)); 
     } else if (a_num_axes == 2 && b_num_axes == 1) { 
-      result = JUST(MatrixVectorProduct(a_tensor, b_tensor)); 
+      result = JUST(MatrixVectorProduct(cast_a, cast_b)); 
     } else if (a_num_axes == 2 && b_num_axes == 2) {
-      result = JUST(OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a_tensor, b_tensor}, attrs));
+      result = JUST(OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {cast_a, cast_b}, attrs));
     } else if (a_num_axes == b_num_axes) {
       bool if_batch_matmul = true;
       for (int i = 0; i < a_num_axes - 2; ++i) {
@@ -314,12 +314,12 @@ class MatMulFunctor {
         }
       }
       if (if_batch_matmul) {
-        result = JUST(OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a_tensor, b_tensor}, attrs));
+        result = JUST(OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {cast_a, cast_b}, attrs));
       } else {
-        result = JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {a_tensor, b_tensor}, attrs));
+        result = JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {cast_a, cast_b}, attrs));
       }
     } else {
-      result = JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {a_tensor, b_tensor}, attrs));
+      result = JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {cast_a, cast_b}, attrs));
     }
 
     if((! a->dtype()->is_floating_point()) && (device_type == DeviceType::kCPU)) {
@@ -366,14 +366,14 @@ class BatchMatMulFunctor {
     } else {
       device_type = JUST(a->device())->enum_type();
     }
-    std::shared_ptr<one::Tensor> a_tensor = a;
-    std::shared_ptr<one::Tensor> b_tensor = b;
+    std::shared_ptr<one::Tensor> cast_a = a;
+    std::shared_ptr<one::Tensor> cast_b = b;
     if ((!a->dtype()->is_floating_point()) && (device_type == DeviceType::kCPU)) {
-      a_tensor = JUST(functional::Cast(a, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
-      b_tensor = JUST(functional::Cast(b, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
+      cast_a = JUST(functional::Cast(a, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
+      cast_b = JUST(functional::Cast(b, JUST(DType::Get(DataType::kFloat)), /*pin_memory=*/false));
     }
 
-    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a_tensor, b_tensor}, attrs));
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {cast_a, cast_b}, attrs));
     if((! a->dtype()->is_floating_point()) && (device_type == DeviceType::kCPU)) {
       return JUST(functional::Cast(result, a->dtype(), /*pin_memory=*/false));
     } else { return result; }
