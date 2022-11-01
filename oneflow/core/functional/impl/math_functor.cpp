@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/functional/tensor_processor.h"
 
+#include <cstdint>
 #include <sstream>
 #include <bitset>
 
@@ -3128,7 +3129,7 @@ class AmpUpdateScaleFunctor {
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& current_scale,
                          const std::shared_ptr<one::Tensor>& growth_tracker,
                          const std::shared_ptr<one::Tensor>& found_inf, double growth_factor,
-                         double backoff_factor, int growth_interval) const {
+                         double backoff_factor, int64_t growth_interval) const {
     CHECK_EQ_OR_RETURN(JUST(current_scale->device())->type(), "cuda")
         << "current_scale must be a CUDA tensor.";
     CHECK_EQ_OR_RETURN(JUST(growth_tracker->device())->type(), "cuda")
@@ -3161,9 +3162,12 @@ class AmpUpdateScaleFunctor {
 class AmpForEachNonFiniteCheckAndUnscaleFunctor {
  public:
   AmpForEachNonFiniteCheckAndUnscaleFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("amp_non_finite_check_and_unscale")
-                         .Input("scaled_grads_found_inf_inv_scale")
-                         .Build());
+    ops_.resize(kMaxInputCount);
+    for (int n = 0; n < ops_.size(); ++n) {
+      ops_[n] = CHECK_JUST(one::OpBuilder("amp_non_finite_check_and_unscale")
+                               .Input("scaled_grads_found_inf_inv_scale", n + 1)
+                               .Build());
+    }
   }
   Maybe<void> operator()(const TensorTuple& scaled_grads,
                          const std::shared_ptr<one::Tensor>& found_inf,
@@ -3175,12 +3179,23 @@ class AmpForEachNonFiniteCheckAndUnscaleFunctor {
     }
     scaled_grads_found_inf_inv_scale.emplace_back(found_inf);
     scaled_grads_found_inf_inv_scale.emplace_back(inv_scale);
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {scaled_grads_found_inf_inv_scale}, AttrMap{}));
+
+    const int64_t ninput = scaled_grads_found_inf_inv_scale.size();
+    for (int i = 0; i < ninput; i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < ninput ? kMaxInputCount : ninput - i;
+      TensorTuple partial_inputs(size);
+      for (int j = 0; j < size; ++j) {
+        partial_inputs[j] = scaled_grads_found_inf_inv_scale[i + j];
+      }
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*ops_[size - 1], {scaled_grads_found_inf_inv_scale},
+                                               AttrMap{}));
+    }
+
     return Maybe<void>::Ok();
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
+  std::vector<std::shared_ptr<OpExpr>> ops_;
 };
 
 }  // namespace impl

@@ -90,7 +90,7 @@ class AMPForEachNonFiniteCheckAndUnscaleGpuKernel final : public user_op::OpKern
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    size_t in_num = ctx->inputs().size();
+    size_t in_num = ctx->input_size("scaled_grads_found_inf_inv_scale");
     user_op::Tensor* found_inf =
         ctx->Tensor4ArgNameAndIndex("scaled_grads_found_inf_inv_scale", in_num - 2);
     const user_op::Tensor* inv_scale =
@@ -107,11 +107,12 @@ class AMPForEachNonFiniteCheckAndUnscaleGpuKernel final : public user_op::OpKern
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_AMP_UPDATE_SCALE_CUDA_KERNEL(dtype)                   \
-  REGISTER_USER_KERNEL("amp_update_scale")                             \
-      .SetCreateFn<AMPUpdateScaleGpuKernel<dtype>>()                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("next_scale", 0) == GetDataType<dtype>::value));
+#define REGISTER_AMP_UPDATE_SCALE_CUDA_KERNEL(dtype)      \
+  REGISTER_USER_KERNEL("amp_update_scale")                \
+      .SetCreateFn<AMPUpdateScaleGpuKernel<dtype>>()      \
+      .SetIsMatchedHob(                                   \
+          (user_op::HobDeviceType() == DeviceType::kCUDA) \
+          && (user_op::HobDataType("current_scale", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_AMP_FOR_EACH_NONFINITE_CHECK_AND_UNSCALE_CUDA_KERNEL(dtype)           \
   REGISTER_USER_KERNEL("amp_non_finite_check_and_unscale")                             \

@@ -406,7 +406,7 @@ class GradScaler(object):
                 for i in range(1, len(found_infs)):
                     found_inf_combined += found_infs[i]
 
-            flow._C._amp_update_scale_(
+            flow._C.amp_update_scale_(
                 _scale,
                 _growth_tracker,
                 found_inf_combined,

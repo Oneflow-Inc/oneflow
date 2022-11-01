@@ -170,6 +170,7 @@ class GpuArgMaxKernel final : public user_op::OpKernel {
       });
 
 REGISTER_CUDA_ARGMAX_KERNEL(bool)
+REGISTER_CUDA_ARGMAX_KERNEL(half)
 REGISTER_CUDA_ARGMAX_KERNEL(float)
 REGISTER_CUDA_ARGMAX_KERNEL(double)
 REGISTER_CUDA_ARGMAX_KERNEL(uint8_t)

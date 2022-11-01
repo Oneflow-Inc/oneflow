@@ -224,7 +224,7 @@ from oneflow._C import multinomial
 from oneflow._C import linalg_cross as cross
 from oneflow._C import bincount
 from oneflow._C import amp_foreach_non_finite_check_and_unscale_
-from oneflow._C import amp_update_
+from oneflow._C import amp_update_scale_
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
