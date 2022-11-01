@@ -113,11 +113,12 @@ class AMPForEachNonFiniteCheckAndUnscaleGpuKernel final : public user_op::OpKern
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("next_scale", 0) == GetDataType<dtype>::value));
 
-#define REGISTER_AMP_FOR_EACH_NONFINITE_CHECK_AND_UNSCALE_CUDA_KERNEL(dtype) \
-  REGISTER_USER_KERNEL("amp_non_finite_check_and_unscale")                   \
-      .SetCreateFn<AMPForEachNonFiniteCheckAndUnscaleGpuKernel<dtype>>()     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)       \
-                       && (user_op::HobDataType("scaled_grads", 0) == GetDataType<dtype>::value));
+#define REGISTER_AMP_FOR_EACH_NONFINITE_CHECK_AND_UNSCALE_CUDA_KERNEL(dtype)           \
+  REGISTER_USER_KERNEL("amp_non_finite_check_and_unscale")                             \
+      .SetCreateFn<AMPForEachNonFiniteCheckAndUnscaleGpuKernel<dtype>>()               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
+                       && (user_op::HobDataType("scaled_grads_found_inf_inv_scale", 0) \
+                           == GetDataType<dtype>::value));
 
 REGISTER_AMP_UPDATE_SCALE_CUDA_KERNEL(float)
 REGISTER_AMP_UPDATE_SCALE_CUDA_KERNEL(double)

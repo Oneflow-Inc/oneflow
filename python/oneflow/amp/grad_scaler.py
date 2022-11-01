@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
 
+
 def amp_definitely_not_available():
     return not flow.cuda.is_available()
 
@@ -39,7 +40,7 @@ class _MultiDeviceReplicator(object):
     def get(self, device) -> Tensor:
         retval = self._per_device_tensors.get(device, None)
         if retval is None:
-            retval = self.master.to(device=device, non_blocking=True, copy=True)
+            retval = self.master.to(device=device, copy=True)
             self._per_device_tensors[device] = retval
         return retval
 
@@ -146,9 +147,7 @@ class GradScaler(object):
             self._growth_tracker = None
             self._per_optimizer_states = defaultdict(_refresh_per_optimizer_state)
 
-    def _check_scale_growth_tracker(
-        self, funcname
-    ) -> Tuple[Tensor, Tensor]:
+    def _check_scale_growth_tracker(self, funcname) -> Tuple[Tensor, Tensor]:
         fix = "This may indicate your script did not use scaler.scale(loss or outputs) earlier in the iteration."
         assert self._scale is not None, (
             "Attempted {} but _scale is None.  ".format(funcname) + fix
@@ -182,7 +181,7 @@ class GradScaler(object):
             if self._scale is None:
                 self._lazy_init_scale_growth_tracker(outputs.device)
             assert self._scale is not None
-            return outputs * self._scale.to(device=outputs.device, non_blocking=True)
+            return outputs * self._scale.to(device=outputs.device)
 
         # Invoke the more complex machinery only if we're treating multiple outputs.
         stash: List[
@@ -222,21 +221,13 @@ class GradScaler(object):
         per_device_and_dtype_grads = defaultdict(lambda: defaultdict(list))  # type: ignore[var-annotated]
         with flow.no_grad():
             for group in optimizer.param_groups:
-                for param in group["params"]:
+                for param in group.parameters:
                     if param.grad is None:
                         continue
                     if (not allow_fp16) and param.grad.dtype == flow.float16:
                         raise ValueError("Attempting to unscale FP16 gradients.")
-                    if param.grad.is_sparse:
-                        # is_coalesced() == False means the sparse grad has values with duplicate indices.
-                        # coalesce() deduplicates indices and adds all values that have the same index.
-                        # For scaled fp16 values, there's a good chance coalescing will cause overflow,
-                        # so we should check the coalesced _values().
-                        if param.grad.dtype is flow.float16:
-                            param.grad = param.grad.coalesce()
-                        to_unscale = param.grad._values()
-                    else:
-                        to_unscale = param.grad
+
+                    to_unscale = param.grad
 
                     # TODO: is there a way to split by device and dtype without appending in the inner loop?
                     per_device_and_dtype_grads[to_unscale.device][
@@ -245,7 +236,7 @@ class GradScaler(object):
 
             for device, per_dtype_grads in per_device_and_dtype_grads.items():
                 for grads in per_dtype_grads.values():
-                    flow._C._amp_foreach_non_finite_check_and_unscale_(
+                    flow._C.amp_foreach_non_finite_check_and_unscale_(
                         grads,
                         per_device_found_inf.get(device),
                         per_device_inv_scale.get(device),
@@ -403,7 +394,7 @@ class GradScaler(object):
             # Consume shared inf/nan data collected from optimizers to update the scale.
             # If all found_inf tensors are on the same device as self._scale, this operation is asynchronous.
             found_infs = [
-                found_inf.to(device=_scale.device, non_blocking=True)
+                found_inf.to(device=_scale.device)
                 for state in self._per_optimizer_states.values()
                 for found_inf in state["found_inf_per_device"].values()
             ]
