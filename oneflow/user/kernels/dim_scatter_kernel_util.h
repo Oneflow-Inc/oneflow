@@ -29,6 +29,10 @@ limitations under the License.
 
 namespace oneflow {
 
+#define NO_HALF_UTIL_FOUND         \
+  printf("cuda arch must >= 530"); \
+  assert(false)
+
 namespace user_op {
 
 constexpr int kDimGatherMaxDimCount = 8;
@@ -88,6 +92,8 @@ struct BinOpAddFunctor<half> {
   OF_DEVICE_FUNC static void apply(const half* x, half* y) {
 #ifdef __CUDA_ARCH__
     *y = __float2half(__half2float(*x) + __half2float(*y));
+#else
+    NO_HALF_UTIL_FOUND;
 #endif
   }
 };
@@ -119,6 +125,8 @@ struct BinOpMulFunctor<half> {
   OF_DEVICE_FUNC static void apply(const half* x, half* y) {
 #ifdef __CUDA_ARCH__
     *y = __float2half(__half2float(*x) * __half2float(*y));
+#else
+    NO_HALF_UTIL_FOUND;
 #endif
   }
 };
