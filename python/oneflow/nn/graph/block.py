@@ -69,42 +69,42 @@ class GraphBlock(object):
         name: str = "",
         belonged_graph: weakref.ProxyTypes = None,
     ):
-        self._gname = name
-        self._gname_prefix = prefix
-        self._gtype = BlockType.NONE
-        self._gorigin = None
-        self._gscope = None
-        self._gprev_scope = None
+        self._name = name
+        self._name_prefix = prefix
+        self._type = BlockType.NONE
+        self._origin = None
+        self._scope = None
+        self._prev_scope = None
         assert belonged_graph is None or isinstance(belonged_graph, weakref.ProxyTypes)
-        self._gbelonged_graph = belonged_graph
-        self.nngraph_config = GraphBlockConfig()
+        self.belonged_graph = belonged_graph
+        self.config = GraphBlockConfig()
 
     @property
-    def nngraph_name(self):
-        return self._gname
+    def name(self):
+        return self._name
 
     @property
-    def gname_prefix(self):
-        return self._gname_prefix
+    def name_prefix(self):
+        return self._name_prefix
 
     @property
-    def gtype(self):
-        return self._gtype
+    def type(self):
+        return self._type
 
     @property
-    def gprev_scope(self):
-        if self._gprev_scope is None:
-            self._gprev_scope = oneflow._oneflow_internal.GetCurrentScope()
-        return self._gprev_scope
+    def prev_scope(self):
+        if self._prev_scope is None:
+            self._prev_scope = oneflow._oneflow_internal.GetCurrentScope()
+        return self._prev_scope
 
     @property
-    def gscope(self):
-        if self._gscope is None:
-            self._gscope = graph_build_util.make_new_block_scope(self.gprev_scope, self)
-        return self._gscope
+    def scope(self):
+        if self._scope is None:
+            self._scope = graph_build_util.make_new_block_scope(self.prev_scope, self)
+        return self._scope
 
-    def gscope_context(self):
-        return graph_build_util.BlockScopeContext(self.gprev_scope, self.gscope)
+    def scope_context(self):
+        return graph_build_util.BlockScopeContext(self.prev_scope, self.scope)
 
 
 class GraphModule(GraphBlock):
@@ -117,27 +117,27 @@ class GraphModule(GraphBlock):
     ):
         assert not isinstance(origin, GraphBlock)
         super().__init__(prefix, name, belonged_graph)
-        self._gdebug = False
-        self._gdebug_min_s_level = 2
-        self._gdebug_max_v_level = 0
-        self._gdebug_max_py_stack_depth = 2
-        self._gdebug_only_user_py_stack = True
-        self._gdebug_op_repr_with_py_stack = False
-        self._gtype = BlockType.MODULE
-        self._gis_executing_forward = False
-        self._gmodules = OrderedDict()
-        self._gparameters = OrderedDict()
-        self._gbuffers = OrderedDict()
-        self._gargs_repr = []
-        self._gouts_repr = []
-        self.gset_origin(origin)
+        self._debug = False
+        self._debug_min_s_level = 2
+        self._debug_max_v_level = 0
+        self._debug_max_py_stack_depth = 2
+        self._debug_only_user_py_stack = True
+        self._debug_op_repr_with_py_stack = False
+        self._type = BlockType.MODULE
+        self._is_executing_forward = False
+        self._modules = OrderedDict()
+        self._parameters = OrderedDict()
+        self._buffers = OrderedDict()
+        self._args_repr = []
+        self._outs_repr = []
+        self.set_origin(origin)
 
     @property
-    def nngraph_origin(self):
-        return self._gorigin
+    def origin(self):
+        return self._origin
 
-    def gset_origin(self, origin):
-        self._gorigin = origin
+    def set_origin(self, origin):
+        self._origin = origin
         if origin is None:
             return
         assert isinstance(origin, Module)
@@ -145,19 +145,19 @@ class GraphModule(GraphBlock):
             self.__setattr__(
                 n,
                 get_block_cls(m)(
-                    self._gname_prefix + self._gname + ".", n, m, self._gbelonged_graph
+                    self._name_prefix + self._name + ".", n, m, self._belonged_graph
                 ),
             )
         for (n, p) in list(origin.named_parameters("", False)):
             self.__setattr__(
-                n, get_block_cls(p)(self._gname_prefix + self._gname + ".", n, p)
+                n, get_block_cls(p)(self._name_prefix + self._name + ".", n, p)
             )
         for (n, b) in list(origin.named_buffers("", False)):
             self.__setattr__(
-                n, get_block_cls(b)(self._gname_prefix + self._gname + ".", n, b)
+                n, get_block_cls(b)(self._name_prefix + self._name + ".", n, b)
             )
 
-    def gdebug(
+    def debug(
         self,
         v_level: int = 0,
         *,
@@ -321,14 +321,14 @@ class GraphModule(GraphBlock):
         key = str(id(input_tensor)) + str(placement)
 
         # input_tensor + placement -> unique_global_tensor
-        if key not in self._gbelonged_graph._unique_global_op_dict:
+        if key not in self._belonged_graph._unique_global_op_dict:
             # store input tensor to avoid tensor id recycle
-            self._gbelonged_graph._unique_global_op_dict[key] = (
+            self._belonged_graph._unique_global_op_dict[key] = (
                 input_tensor.to_global(placement=placement),
                 input_tensor,
             )
 
-        return self._gbelonged_graph._unique_global_op_dict[key][0]
+        return self._belonged_graph._unique_global_op_dict[key][0]
 
     def __get_or_create_identity(self, input_tensor: Tensor = None):
         assert input_tensor is not None
@@ -337,31 +337,31 @@ class GraphModule(GraphBlock):
         # input_tensor(with placement) -> unique_identity_tensor
         # When placement is different, the input tensor(output tensor of __get_or_create_global) is different, so the
         # key can use only input tensor.
-        if key not in self._gbelonged_graph._unique_identity_op_dict:
+        if key not in self._belonged_graph._unique_identity_op_dict:
             # Reuse current module name for indentity op
             ident_name_scope = graph_build_util.make_new_name_scope(
-                self.gprev_scope, self.name_prefix + self.name
+                self.prev_scope, self.name_prefix + self.name
             )
-            with graph_build_util.BlockScopeContext(self.gprev_scope, ident_name_scope):
+            with graph_build_util.BlockScopeContext(self.prev_scope, ident_name_scope):
                 # store input tensor to avoid tensor id recycle
-                self._gbelonged_graph._unique_identity_op_dict[
+                self._belonged_graph._unique_identity_op_dict[
                     key
                 ] = oneflow._C.identity(input_tensor)
 
-        return self._gbelonged_graph._unique_identity_op_dict[key]
+        return self._belonged_graph._unique_identity_op_dict[key]
 
     def add_module(self, name: str, module: Optional[Module]) -> None:
         self.__setattr__(
             name,
             get_block_cls(module)(
-                self._gname_prefix + self._gname + ".", name, module, self._gbelonged_graph
+                self._name_prefix + self._name + ".", name, module, self._belonged_graph
             ),
         )
 
     def register_parameter(self, name: str, param: Optional[Parameter]) -> None:
         self.__setattr__(
             name,
-            get_block_cls(param)(self._gname_prefix + self._gname + ".", name, param),
+            get_block_cls(param)(self._name_prefix + self._name + ".", name, param),
         )
 
     def modules(self, memo: Optional[Set["GraphBlock"]] = None) -> Iterator["GraphBlock"]:
@@ -474,7 +474,7 @@ class GraphModule(GraphBlock):
                 if name in d:
                     raise AttributeError(
                         "'{}' object has duplicated attribute named '{}'".format(
-                            self._gname, name
+                            self._name, name
                         )
                     )
             if value.type == BlockType.MODULE:
@@ -523,7 +523,7 @@ class GraphModule(GraphBlock):
             return partial(getattr(self._origin.__class__, name), self)
         raise AttributeError(
             "'{}' '{}' object '{}' in nn.Graph has no attribute '{}'".format(
-                self._type, type(self).__name__, self._gname_prefix + self.name, name
+                self._type, type(self).__name__, self._name_prefix + self.name, name
             )
         )
 
@@ -590,8 +590,8 @@ class GraphModule(GraphBlock):
             "("
             + self._type
             + ":"
-            + self._gname_prefix
-            + self._gname
+            + self._name_prefix
+            + self._name
             + ":"
             + self._origin._shallow_repr()
             + ")"
@@ -601,21 +601,21 @@ class GraphModule(GraphBlock):
     def _ops_repr(self):
         r"""Generate operators' string representation of this module
         """
-        assert self._gbelonged_graph, (
+        assert self._belonged_graph, (
             "GraphModule: "
-            + self._gname_prefix
+            + self._name_prefix
             + self.name
             + "'s belonged graph is not set."
         )
 
-        if self._gbelonged_graph.is_compiled:
-            if self._gbelonged_graph._compiled_graph_proto is not None:
-                module_conf = self._gbelonged_graph._compiled_graph_proto.module_name2module_conf[
+        if self._belonged_graph.is_compiled:
+            if self._belonged_graph._compiled_graph_proto is not None:
+                module_conf = self._belonged_graph._compiled_graph_proto.module_name2module_conf[
                     self.name_prefix + self.name
                 ]
                 return operators_repr(
                     module_conf.ops,
-                    self._gbelonged_graph._compiled_graph_proto,
+                    self._belonged_graph._compiled_graph_proto,
                     self._debug_op_repr_with_py_stack,
                 )
 
@@ -644,7 +644,7 @@ class LazyBuilder(object):
             assert self.name is not None
             assert self.method is not None
             assert self.result is None
-            with block.gscope_context():
+            with block.scope_context():
                 self.result = self.method()
             self.finished = True
 
@@ -670,32 +670,32 @@ class GraphTensor(GraphBlock):
         self.set_origin(origin)
 
     @property
-    def gorigin(self):
+    def origin(self):
         return self._origin
 
-    def gset_origin(self, origin):
+    def set_origin(self, origin):
         self._origin = origin
 
     @property
-    def glazy_origin(self):
+    def lazy_origin(self):
         assert (
             self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
         ), "Only Parameter or Buffer GraphBlock has lazy_origin"
         return self._lazy_origin_builder.result
 
-    def glazy_origin_builder(self):
+    def lazy_origin_builder(self):
         assert (
             self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
         ), "Only Parameter or Buffer GraphBlock has lazy_origin_builder"
         return self._lazy_origin_builder
 
-    def gset_lazy_origin_builder(self, builder=None):
+    def set_lazy_origin_builder(self, builder=None):
         assert (
             self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
         ), "Only Parameter or Buffer GraphBlock has lazy_origin_builder"
         self._lazy_origin_builder = builder
 
-    def gtry_build(self):
+    def try_build(self):
         if not self.build_finished:
             self._lazy_origin_builder.try_build(self)
             self.build_finished = True
@@ -713,8 +713,8 @@ class GraphTensor(GraphBlock):
             "("
             + self._type
             + ":"
-            + self._gname_prefix
-            + self._gname
+            + self._name_prefix
+            + self._name
             + ":"
             + self._origin._meta_repr()
             + ")"
@@ -731,9 +731,9 @@ class GraphSequential(get_seq(GraphModule)):
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
-        self._gname_prefix = prefix
-        self._gname = name
-        self._gbelonged_graph = belonged_graph
+        self._name_prefix = prefix
+        self._name = name
+        self._belonged_graph = belonged_graph
         self.set_origin(origin)
 
 
@@ -746,9 +746,9 @@ class GraphModuleList(get_list(GraphModule)):
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
-        self._gname_prefix = prefix
-        self._gname = name
-        self._gbelonged_graph = belonged_graph
+        self._name_prefix = prefix
+        self._name = name
+        self._belonged_graph = belonged_graph
         self.set_origin(origin)
         # MoudleList is a container without forward() method,
         # so it will not be executed or has an execution config.
@@ -764,9 +764,9 @@ class GraphModuleDict(get_dict(GraphModule)):
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
-        self._gname_prefix = prefix
-        self._gname = name
-        self._gbelonged_graph = belonged_graph
+        self._name_prefix = prefix
+        self._name = name
+        self._belonged_graph = belonged_graph
         self.set_origin(origin)
 
 
@@ -779,9 +779,9 @@ class GraphParameterList(get_para_list(GraphModule)):
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
-        self._gname_prefix = prefix
-        self._gname = name
-        self._gbelonged_graph = belonged_graph
+        self._name_prefix = prefix
+        self._name = name
+        self._belonged_graph = belonged_graph
         self.set_origin(origin)
         self._is_executing_forward = True
 
@@ -805,9 +805,9 @@ class GraphParameterDict(get_para_dict(GraphModule)):
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
-        self._gname_prefix = prefix
-        self._gname = name
-        self._gbelonged_graph = belonged_graph
+        self._name_prefix = prefix
+        self._name = name
+        self._belonged_graph = belonged_graph
         self.set_origin(origin)
         self._is_executing_forward = True
 
