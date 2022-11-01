@@ -276,8 +276,13 @@ class GraphModule(GraphBlock):
     def __block_forward(self, *args, **kwargs):
         self._is_executing_forward = True
         args, kwargs = self.__pre_forward_map(*args, **kwargs)
-        with self.gscope_context():
-            result = self._origin.__class__.forward(self, *args, **kwargs)
+        with self.scope_context():
+            # "Instance method __func__ is the function object", "when an instance method object is called,
+            # the underlying function __func__ is called, inserting the class instance __self__ in front of
+            # the argument list."
+            # Reference: https://docs.python.org/3/reference/datamodel.html
+            unbound_forward_of_module_instance = self._origin.forward.__func__
+            result = unbound_forward_of_module_instance(self, *args, **kwargs)
         self._is_executing_forward = False
         return result
 
