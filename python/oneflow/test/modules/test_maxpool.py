@@ -15,6 +15,7 @@ limitations under the License.
 """
 import unittest
 from collections import OrderedDict
+from pkg_resources import packaging
 
 import numpy as np
 import torch as pytorch
@@ -161,7 +162,8 @@ class TestMaxPooling(flow.unittest.TestCase):
             return y[0]
         else:
             return y
-
+    
+    @unittest.skipIf(packaging.version.parse(pytorch.__version__) > packaging.version.parse("1.10.0"), "only test when pytorch version <= 1.10.0")
     def test_maxpool2d_channel_last(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_maxpool2d_channel_last]
