@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/wrap_dim_utils.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 
 namespace oneflow {
 namespace one {
@@ -790,6 +791,18 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
   CHECK_OR_THROW(functional::PyScalarCheck(value) || PyTensor_Check(value))
       << Error::TypeError() << "tensor_setitem(): argument 'value' must be tensor or scalar, not "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(value)));
+  const auto& index_item = functional::PyUnpackTensorIndex(item);
+
+  // NOTE: use masked_fill_(local,global) to avoid D2H in TensorSetItem if index is bool tensor
+  if (functional::PyScalarCheck(value) && index_item.size() == 1 && index_item[0].IsTensor()) {
+    const auto& index_tensor = index_item[0].tensor();
+    if (index_tensor->shape() == tensor->shape()
+        && (index_tensor->dtype() == DType::Bool() || index_tensor->dtype() == DType::UInt8())) {
+      ASSERT_PTR(
+          functional::MaskedFillInplace(tensor, index_tensor, functional::PyUnpackScalar(value)));
+      return 0;
+    }
+  }
 
   if (tensor->is_global()) {
     Symbol<ParallelDesc> placement = ASSERT(tensor->parallel_desc());
@@ -822,7 +835,7 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
       value_tensor = ASSERT_PTR(functional::To(value_tensor, device, value_tensor->dtype(), false));
     }
   }
-  ASSERT(functional::TensorSetItem(tensor, functional::PyUnpackTensorIndex(item), value_tensor));
+  ASSERT(functional::TensorSetItem(tensor, index_item, value_tensor));
   return 0;
   END_HANDLE_ERRORS_RET(-1)
 }
