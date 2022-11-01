@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+# The file mostly copyed from https://github.com/pytorch/pytorch/blob/master/torch/cuda/amp/grad_scaler.py
 from collections import defaultdict, abc
 import warnings
 from enum import Enum
