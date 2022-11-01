@@ -36,9 +36,9 @@ struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kFastGelu, Dst, Src> {
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     // ref to: https://mlfromscratch.com/activation-functions-explained/#gelu
-    Src half = static_cast<Src>(0.5);
-    Src one = static_cast<Src>(1);
-    Src tanh_in = alpha * (src + beta * src * src * src);
+    const Src half = static_cast<Src>(0.5);
+    const Src one = static_cast<Src>(1);
+    const Src tanh_in = alpha * (src + beta * src * src * src);
     return half * src * (one + std::tanh(tanh_in));
   }
 
