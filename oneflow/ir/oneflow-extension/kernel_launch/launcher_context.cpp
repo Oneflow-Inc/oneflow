@@ -60,7 +60,13 @@ LauncherContext::LauncherContext(user_op::KernelComputeContext* compute_context,
         .Case([&](mlir::okl::BuildRegContextOp elem) {
           index = reg_ctx_vec_.size();
 
-          auto* reg_op = op.getRegion(0).front().front().getNextNode();
+          mlir::Operation* reg_op = nullptr;
+          for (auto& op_it : op.getRegion(0).front().getOperations()) {
+            if (op_it.getDialect()->getNamespace() == "oneflow") { reg_op = &op_it; }
+          }
+
+          if (!reg_op) { LOG(FATAL) << "Failed to find reg_op in okl.build_reg_context_op"; }
+
           reg_ctx_vec_.emplace_back(std::make_shared<RegContext>(reg_op));
           op.setAttr("index", mlir::IntegerAttr::get(mlir::IntegerType::get(context, 32), index));
         })
