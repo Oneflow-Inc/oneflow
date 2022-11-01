@@ -266,12 +266,12 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFastGeluBackwardWithDyX, Src, 
 
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
     // ref to: https://mlfromscratch.com/activation-functions-explained/#gelu
-    Src one = static_cast<Src>(1);
-    Src half = static_cast<Src>(0.5);
-    Src pow3 = x * x * x;
-    Src tanh_out = std::tanh(alpha * (x + beta * pow3));
-    Src dtanh = alpha * (static_cast<Src>(0.5) * x + beta * static_cast<Src>(1.5) * pow3);
-    return dy * (half * (1 + tanh_out) + dtanh * (one - tanh_out * tanh_out));
+    const Src one = static_cast<Src>(1);
+    const Src half = static_cast<Src>(0.5);
+    const Src pow3 = x * x * x;
+    const Src tanh_out = std::tanh(alpha * (x + beta * pow3));
+    const Src dtanh = alpha * (half * x + beta * static_cast<Src>(1.5) * pow3);
+    return dy * (half + half * tanh_out + dtanh * (one - tanh_out * tanh_out));
   }
 
  private:

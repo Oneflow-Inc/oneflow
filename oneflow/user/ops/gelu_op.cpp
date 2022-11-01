@@ -18,6 +18,8 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
 Maybe<void> InferGeluTensorDesc(user_op::InferContext* ctx) {
   ctx->SetOutputShape("out", 0, ctx->InputShape("in", 0));
   return Maybe<void>::Ok();
@@ -35,6 +37,8 @@ Maybe<void> GetGeluSbp(user_op::SbpContext* ctx) {
   }
   return Maybe<void>::Ok();
 }
+
+}  // namespace
 
 /*static*/ auto GeluOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
   return InferGeluTensorDesc(ctx);
@@ -59,6 +63,8 @@ Maybe<void> GetGeluSbp(user_op::SbpContext* ctx) {
 /*static*/ auto FastGeluOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   return GetGeluSbp(ctx);
 }
+
+namespace {
 
 Maybe<void> InferGeluGradTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
@@ -94,6 +100,8 @@ Maybe<void> GetGeluGradSbp(user_op::SbpContext* ctx) {
       .Build();
   return Maybe<void>::Ok();
 }
+
+}  // namespace
 
 /*static*/ auto GeluGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
   return InferGeluGradTensorDesc(ctx);
