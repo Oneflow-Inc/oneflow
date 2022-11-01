@@ -173,13 +173,13 @@ class TestSliceUpdate(flow.unittest.TestCase):
         np_arr_a = np.random.rand(133, 1, 15)
         np_arr_b = np.random.rand(133, 2, 1)
 
-        a_torch = torch.Tensor(np_arr_a)
-        b_torch = torch.Tensor(np_arr_b)
+        a_torch = torch.tensor(np_arr_a)
+        b_torch = torch.tensor(np_arr_b)
         pos_torch = torch.tensor(0)
         a_torch[:, 0, pos_torch] = b_torch[:, 1, 0]
 
-        a_flow = flow.Tensor(np_arr_a)
-        b_flow = flow.Tensor(np_arr_b)
+        a_flow = flow.tensor(np_arr_a)
+        b_flow = flow.tensor(np_arr_b)
         pos_flow = flow.tensor(0)
         a_flow[:, 0, pos_flow] = b_flow[:, 1, 0]
 
