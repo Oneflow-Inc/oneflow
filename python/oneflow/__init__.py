@@ -153,6 +153,7 @@ from oneflow._C import reduce_mean as mean
 from oneflow._C import reduce_all as all
 from oneflow._C import reduce_any as any
 from oneflow._C import reduce_nansum as nansum
+from oneflow._C import logsumexp
 from oneflow._C import rsqrt
 from oneflow._C import sqrt
 from oneflow._C import square
@@ -223,6 +224,9 @@ from oneflow._C import iinfo, finfo
 from oneflow._C import multinomial
 from oneflow._C import linalg_cross as cross
 from oneflow._C import bincount
+from oneflow._C import isclose
+from oneflow._C import allclose
+
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
@@ -379,6 +383,7 @@ from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
 from oneflow._C import normal
 from oneflow._C import rand
 from oneflow._C import randn
+from oneflow._C import randn_like
 from oneflow._C import randint
 from oneflow._C import randint_like
 from oneflow._C import randperm
