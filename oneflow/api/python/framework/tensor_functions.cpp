@@ -270,6 +270,7 @@ DIRECT_PASS_FUNC(PyTensorObject_clamp_max_, functional::clamp_max_)
 DIRECT_PASS_FUNC(PyTensorObject_flatten, functional::flatten)
 DIRECT_PASS_FUNC(PyTensorObject_in_top_k, functional::in_top_k)
 DIRECT_PASS_FUNC(PyTensorObject_index_select, functional::index_select)
+DIRECT_PASS_FUNC(PyTensorObject_logsumexp, functional::logsumexp)
 DIRECT_PASS_FUNC(PyTensorObject_maximum, functional::maximum)
 DIRECT_PASS_FUNC(PyTensorObject_minimum, functional::minimum)
 DIRECT_PASS_FUNC(PyTensorObject_tril, functional::tril)
@@ -297,6 +298,7 @@ DIRECT_PASS_FUNC(PyTensorObject_nansum, functional::reduce_nansum)
 DIRECT_PASS_FUNC(PyTensorObject_bernoulli, functional::bernoulli)
 DIRECT_PASS_FUNC(PyTensorObject_bernoulli_, functional::bernoulli_)
 DIRECT_PASS_FUNC(PyTensorObject_bincount, functional::bincount)
+DIRECT_PASS_FUNC(PyTensorObject_isclose, functional::isclose)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -924,6 +926,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"bernoulli", (PyCFunction)PyTensorObject_bernoulli, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bernoulli_", (PyCFunction)PyTensorObject_bernoulli_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bincount", (PyCFunction)PyTensorObject_bincount, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"isclose", (PyCFunction)PyTensorObject_isclose, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
@@ -985,6 +988,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"view_as", (PyCFunction)PyTensorObject_view_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {"permute", (PyCFunction)PyTensorObject_permute, METH_VARARGS | METH_KEYWORDS, NULL},
     {"transpose", (PyCFunction)PyTensorObject_transpose, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"logsumexp", (PyCFunction)PyTensorObject_logsumexp, METH_VARARGS | METH_KEYWORDS, NULL},
     {NULL},
 };
 
