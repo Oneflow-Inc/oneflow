@@ -30,7 +30,7 @@ def _test_maxpool2d_channel_last(
     test_case, device, shape, kernel_size, stride, padding, dilation, ceil_mode
 ):
     os.environ["ONEFLOW_ENABLE_NHWC"] = "1"
-    # NOTE:(zhaoluyang) 
+    # NOTE:(zhaoluyang)
     # this case will be True if pytorch version <=1.10.0 and maybe False if version >= 1.12.0,
     # not sure if the new version of pytorch fixes bugs or introduces bugs.
     # related issue: https://github.com/Oneflow-Inc/OneTeam/issues/1749
