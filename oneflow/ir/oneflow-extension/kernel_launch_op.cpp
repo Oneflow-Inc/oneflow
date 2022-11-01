@@ -87,7 +87,7 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
     auto& op = block.front();
     op_ = &op;
 
-    const auto handle_operands_or_outputs = [&op, this](const auto& arg_ids,
+    const auto handle_operands_or_results = [&op, this](const auto& arg_ids,
                                                         const auto& get_operand_or_result,
                                                         ArgVec& arg_vec) {
       for (const auto& obj_id : ::llvm::enumerate(arg_ids)) {
@@ -109,10 +109,10 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
         arg_vec.push_back(obj_id.value());
       }
     };
-    handle_operands_or_outputs(
+    handle_operands_or_results(
         ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedOperandSegments>(&op),
         [](auto& x, size_t index) { return x.getOperand(index); }, inputs_);
-    handle_operands_or_outputs(
+    handle_operands_or_results(
         ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedResultSegments>(&op),
         [](auto& x, size_t index) { return x.getResult(index); }, outputs_);
 
