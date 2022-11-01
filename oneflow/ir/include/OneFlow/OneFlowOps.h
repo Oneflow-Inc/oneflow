@@ -24,14 +24,12 @@ limitations under the License.
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
-
 #include "OneFlow/Passes.h"
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/OneFlowInterfaces.h.inc"
 #include "OneFlow/OneFlowOpTraits.h"
-#include "OneFlow/OneFlowOpTraits.h"
-
 #include "OneFlow/SBP/SBPAttributes.h"
+
 namespace mlir {
 
 namespace func {
