@@ -195,6 +195,39 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kAtanhBackwardWithDyX, Src, Ds
   }
 };
 
+template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kIsCloseEqualNan, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
+      : atol(attr0.Value<float>()), rtol(attr1.Value<float>()) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const {
+    bool close = src0 == src1;
+    close |= (std::isnan(src0) and std::isnan(src1));
+    if (atol == 0 and rtol == 0) return close;
+    Src allowed_error = static_cast<Src>(atol) + abs(static_cast<Src>(rtol) * src1);
+    Src actual_error = abs(src0 - src1);
+    close |= (std::isfinite(actual_error) and (actual_error <= allowed_error));
+    return close;
+  }
+  float atol, rtol;
+};
+
+template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kIsClose, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1)
+      : atol(attr0.Value<float>()), rtol(attr1.Value<float>()) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const {
+    bool close = src0 == src1;
+    if (atol == 0 and rtol == 0) return close;
+    Src allowed_error = static_cast<Src>(atol) + abs(static_cast<Src>(rtol) * src1);
+    Src actual_error = abs(src0 - src1);
+    close |= (std::isfinite(actual_error) and (actual_error <= allowed_error));
+    return close;
+  }
+  float atol, rtol;
+};
+
 /*********nv_bfloat16_kernel*******/
 
 #if CUDA_VERSION >= 11000
@@ -257,6 +290,18 @@ SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kTanBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kSigmoidBackwardWithDyY);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kAtanhBackwardWithDyX);
 
+#define SPECIALIZATION_BFLOAT16_COMPARISON_BINARY_FUNCTOR(op)                                 \
+  template<typename Dst>                                                                      \
+  struct BinaryFunctor<DeviceType::kCUDA, op, nv_bfloat16, Dst> {                             \
+    OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {} \
+    BinaryFunctor<DeviceType::kCUDA, op, float, Dst> float_functor;                           \
+    OF_DEVICE_FUNC Dst operator()(nv_bfloat16 src0, nv_bfloat16 src1) const {                 \
+      return float_functor(__bfloat162float(src0), __bfloat162float(src1));                   \
+    }                                                                                         \
+  };
+SPECIALIZATION_BFLOAT16_COMPARISON_BINARY_FUNCTOR(BinaryOp::kIsCloseEqualNan)
+SPECIALIZATION_BFLOAT16_COMPARISON_BINARY_FUNCTOR(BinaryOp::kIsClose)
+
 #endif  // CUDA_VERSION >= 11000
 
 #define SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(op)                                         \
@@ -313,6 +358,19 @@ SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSqrtBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kTanBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSigmoidBackwardWithDyY);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kAtanhBackwardWithDyX);
+
+#define SPECIALIZATION_HALF_COMPARISON_BINARY_FUNCTOR(op)                                     \
+  template<typename Dst>                                                                      \
+  struct BinaryFunctor<DeviceType::kCUDA, op, half, Dst> {                                    \
+    OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {} \
+    BinaryFunctor<DeviceType::kCUDA, op, float, Dst> float_functor;                           \
+    OF_DEVICE_FUNC Dst operator()(half src0, half src1) const {                               \
+      return float_functor(__half2float(src0), __half2float(src1));                           \
+    }                                                                                         \
+  };
+
+SPECIALIZATION_HALF_COMPARISON_BINARY_FUNCTOR(BinaryOp::kIsCloseEqualNan)
+SPECIALIZATION_HALF_COMPARISON_BINARY_FUNCTOR(BinaryOp::kIsClose)
 
 #define SPECIALIZATION_GPU_BINARY_FUNCTOR(op, type)                                          \
   template<>                                                                                 \
