@@ -446,7 +446,7 @@ def _is_floating_point(self):
 def _numpy(self):
     assert (
         not self.is_lazy
-    ), "tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor."
+    ), "tensor.numpy() is not allowed to be called in nn.Graph.build(*args) or be called by lazy tensor."
     if self.dtype == flow.tensor_buffer:
         shapes, dtypes = self._tensor_buffer_shapes_and_dtypes
         tensors = flow.tensor_buffer_to_list_of_tensors(self, shapes, dtypes)
@@ -564,6 +564,10 @@ def _contains(self, element):
     )
 
 
+def _allclose(self, other, atol=1e-08, rtol=1e-05, equal_nan=False):
+    return flow._C.allclose(self, other, atol, rtol, equal_nan)
+
+
 def RegisterMethods():
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
@@ -638,6 +642,7 @@ def RegisterMethods():
     Tensor.scatter_ = _scatter_inplace
     Tensor.scatter_add = _scatter_add
     Tensor.scatter_add_ = _scatter_add_inplace
+    Tensor.allclose = _allclose
 
 
 def register_tensor_op(op_name):
