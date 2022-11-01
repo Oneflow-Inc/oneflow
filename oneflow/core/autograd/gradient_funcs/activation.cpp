@@ -572,6 +572,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("prelu", PReLU);
 REGISTER_OP_EXPR_GRAD_FUNCTION("threshold", Threshold);
 REGISTER_OP_EXPR_GRAD_FUNCTION("softplus", Softplus);
 REGISTER_OP_EXPR_GRAD_FUNCTION("softshrink", SoftShrink);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fast_gelu", FastGeLU);
 
 }  // namespace one
 }  // namespace oneflow
