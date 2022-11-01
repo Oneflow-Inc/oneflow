@@ -16,149 +16,19 @@ limitations under the License.
 
 #include <utility>
 
-#include "fmt/core.h"
-#include "fmt/color.h"
-#include "fmt/ostream.h"
 #include "pybind11/pybind11.h"
 
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/common/singleton.h"
-#include "oneflow/core/framework/shut_down_util.h"
-#include "oneflow/core/common/foreign_lock_helper.h"
-#include "oneflow/core/common/foreign_stack_getter.h"
-#include "oneflow/api/python/custom_eval_frame.h"
+#include "oneflow/extension/stack/foreign_stack_getter.h"
+#include "oneflow/extension/stack/python/stack_getter.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
 
-class PyFrame final : public Frame {
- public:
-  PyFrame(PyCodeObject* code, int lineno, std::shared_ptr<PyFrame> back)
-      : code(code), lineno(lineno), back(std::move(back)) {
-    py::gil_scoped_acquire acquire;
-    Py_INCREF(code);
-  }
-  OF_DISALLOW_COPY_AND_MOVE(PyFrame);
-  ~PyFrame() {
-    py::gil_scoped_acquire acquire;
-    Py_DECREF(code);
-  }
-
-  PyCodeObject* const code;
-  const int lineno;
-  const std::shared_ptr<PyFrame> back;
-};
-
-class PyStackGetter final : public ForeignStackGetter {
- public:
-  // indended to be called in main thread.
-  std::shared_ptr<Frame> GetCurrentFrame() const override {
-    if (IsShuttingDown()) { return nullptr; }
-    py::gil_scoped_acquire acquire;
-    // See `EvalFrameAndRecordParentFrame` for documentation.
-    PyFrameObject* frame = PyEval_GetFrame();
-    auto top_frame = std::make_shared<PyFrame>(frame->f_code, PyFrame_GetLineNumber(frame),
-                                               current_parent_frame_);
-    return top_frame;
-  }
-
-  std::string GetFormattedStack(std::shared_ptr<const Frame> frame) const override {
-    if (frame == nullptr) { return "  <unknown>\n"; }
-    std::string buffer;
-    auto py_frame = std::dynamic_pointer_cast<const PyFrame>(frame);
-    py::gil_scoped_acquire acquire;
-    while (py_frame != nullptr) {
-      const auto* code_object = py_frame->code;
-      const auto& lineno = py_frame->lineno;
-      const char* filename =
-          PyBytes_AsString(PyUnicode_AsEncodedString(code_object->co_filename, "utf-8", "~E~"));
-      const char* funcname =
-          PyBytes_AsString(PyUnicode_AsEncodedString(code_object->co_name, "utf-8", "~E~"));
-      const std::string line_text = [&]() -> std::string {
-        std::string line_text;
-        std::ifstream ifs(filename);
-        if (!ifs.is_open()) { return "<unknown>"; }
-        for (int j = 0; j < lineno; ++j) { std::getline(ifs, line_text); }
-        line_text.erase(line_text.find_last_not_of(' ') + 1);  // suffixing spaces
-        line_text.erase(0, line_text.find_first_not_of(' '));  // prefixing spaces
-        return line_text;
-      }();
-      // immitate python's stack trace format
-      fmt::format_to(std::back_inserter(buffer), "  File \"{}\", line {}, in {}\n    {}\n",
-                     filename, lineno, funcname, line_text);
-      py_frame = py_frame->back;
-    }
-    return buffer;
-  };
-
-#if PY_VERSION_HEX >= 0x03090000
-  PyObject* EvalFrameAndRecordParentFrame(PyThreadState* tstate, PyFrameObject* frame,
-#else
-  PyObject* EvalFrameAndRecordParentFrame(PyFrameObject* frame,
-#endif
-                                          int throw_flag) {
-    // Example:
-    // >> def f(): # Line 1
-    // >>   pass   # Line 2
-    // >> f()      # Line 3
-    //
-    // When we call f(), `EvalFrameAndRecordParentFrame` is triggered and the `frame`
-    // argument is the frame of function `f`, which is Line 1 at that time. It is not
-    // useful to us.
-    // The parent frame of `frame` is Line 3, which is useful to us, so we push the
-    // parent frame of `frame` here, and get the frame of `f` in `GetCurrentFrame`.
-    PushParentFrame(frame);
-#if PY_VERSION_HEX >= 0x03090000
-    if (tstate == NULL) { tstate = PyThreadState_GET(); }
-    PyObject* ret = _PyEval_EvalFrameDefault(tstate, frame, throw_flag);
-#else
-    PyObject* ret = _PyEval_EvalFrameDefault(frame, throw_flag);
-#endif
-    PopFrame();
-    return ret;
-  }
-
- private:
-  std::shared_ptr<PyFrame> current_parent_frame_;
-
-  void PushParentFrame(PyFrameObject* frame) {
-    // filter out Python functions like _bootstrap, _shutdown which don't have f_back
-    if (PyFrameObject* f = frame->f_back) {
-      current_parent_frame_ =
-          std::make_shared<PyFrame>(f->f_code, PyFrame_GetLineNumber(f), current_parent_frame_);
-    }
-  }
-  void PopFrame() {
-    if (current_parent_frame_ != nullptr) { current_parent_frame_ = current_parent_frame_->back; }
-  }
-};
-
-}  // namespace oneflow
-
-#if PY_VERSION_HEX >= 0x03090000
-PyObject* EvalFrameAndRecordParentFrame(PyThreadState* tstate, PyFrameObject* frame,
-#else
-PyObject* EvalFrameAndRecordParentFrame(PyFrameObject* frame,
-#endif
-                                        int throw_flag) {
-  using namespace oneflow;
-  return dynamic_cast<PyStackGetter*>(Singleton<ForeignStackGetter>::Get())
-#if PY_VERSION_HEX >= 0x03090000
-      ->EvalFrameAndRecordParentFrame(tstate, frame, throw_flag);
-#else
-      ->EvalFrameAndRecordParentFrame(frame, throw_flag);
-#endif
-}
-
-namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("RegisterStackGetter", []() {
-    Singleton<ForeignStackGetter>::Delete();
-    Singleton<ForeignStackGetter>::SetAllocated(new PyStackGetter());
-    EnableCustomEvalFrameForCurrentThread(&EvalFrameAndRecordParentFrame);
-  });
+  m.def("RegisterStackGetter", &RegisterPyStackGetter);
   m.def("GetCurrentStack", []() {
     auto* stack_getter = Singleton<ForeignStackGetter>::Get();
     return stack_getter->GetFormattedStack(stack_getter->GetCurrentFrame());

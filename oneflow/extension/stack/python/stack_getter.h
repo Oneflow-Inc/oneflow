@@ -1,0 +1,3 @@
+namespace oneflow {
+void RegisterPyStackGetter();
+}

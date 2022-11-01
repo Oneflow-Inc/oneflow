@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/error_util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
-#include "oneflow/core/common/foreign_stack_getter.h"
+#include "oneflow/extension/stack/foreign_stack_getter.h"
 #include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
@@ -334,8 +334,8 @@ void ThrowError(const std::shared_ptr<StackedError>& error) {
   // The ideal way is to `map` Optional<StackId> to Optional<std::string>
   // and concat it to error_str. But Optional<std::string> holds a
   // std::shared_ptr<std::string> which we don't like.
-  if (FrameThreadLocalGuard::Current().has_value()) {
-    auto frame = *CHECK_JUST(FrameThreadLocalGuard::Current());
+  if (ForeignFrameThreadLocalGuard::Current().has_value()) {
+    auto frame = *CHECK_JUST(ForeignFrameThreadLocalGuard::Current());
     if (!IsMainThread()) {
       if (auto* stack_getter = Singleton<ForeignStackGetter>::Get()) {
         fmt::format_to(std::back_inserter(error_str),

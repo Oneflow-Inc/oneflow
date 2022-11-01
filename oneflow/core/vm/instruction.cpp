@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/stream_get_stream_type_name.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/cpp_attribute.h"
-#include "oneflow/core/common/foreign_stack_getter.h"
+#include "oneflow/extension/stack/foreign_stack_getter.h"
 #include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
@@ -38,7 +38,7 @@ void Instruction::__Init__(Stream* stream,
   instruction_policy_ = std::move(instruction_policy);
   if (IsMainThread()) {
     if (auto* stack_getter = Singleton<ForeignStackGetter>::Get()) {
-      frame_ = stack_getter->GetCurrentFrame();
+      foreign_frame_ = stack_getter->GetCurrentFrame();
     }
   }
 }
@@ -46,11 +46,11 @@ void Instruction::__Init__(Stream* stream,
 void Instruction::InitStatus() { instruction_policy_->InitInstructionStatusIf(this); }
 
 Maybe<void> Instruction::Prepare() {
-  FrameThreadLocalGuard guard(frame_);
+  ForeignFrameThreadLocalGuard guard(foreign_frame_);
   return instruction_policy_->PrepareIf(this);
 }
 void Instruction::Compute() {
-  FrameThreadLocalGuard guard(frame_);
+  ForeignFrameThreadLocalGuard guard(foreign_frame_);
   instruction_policy_->ComputeIf(this);
 }
 

@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/common/env_var/vm.h"
-#include "oneflow/core/common/foreign_stack_getter.h"
 #include "oneflow/core/vm/caching_allocator.h"
 #include "oneflow/core/vm/fuse_instruction_policy.h"
 #include "oneflow/core/vm/release_tensor_instruction_policy.h"
@@ -30,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
+#include "oneflow/extension/stack/foreign_stack_getter.h"
 
 namespace oneflow {
 
@@ -380,7 +380,7 @@ void VirtualMachineEngine::AbortOnOOM(vm::Stream* stream, const ScheduleCtx& sch
 template<void (VirtualMachineEngine::*OOMHandler)(vm::Stream*, const ScheduleCtx&)>
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
                                                const ScheduleCtx& schedule_ctx) {
-  FrameThreadLocalGuard guard(instruction->frame());
+  ForeignFrameThreadLocalGuard guard(instruction->foreign_frame());
   auto* stream = instruction->mut_stream();
   // Prepare
   {

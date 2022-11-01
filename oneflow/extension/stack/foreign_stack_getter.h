@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_FOREIGN_STACK_GETTER_H
-#define ONEFLOW_CORE_COMMON_FOREIGN_STACK_GETTER_H
+#ifndef ONEFLOW_EXTENSION_STACK_STACK_GETTER_H_
+#define ONEFLOW_EXTENSION_STACK_STACK_GETTER_H_
 
 #include <cstdint>
 #include <utility>
@@ -27,7 +27,7 @@ class Frame {
   virtual ~Frame() = default;
 };
 
-using FrameThreadLocalGuard = ThreadLocalGuard<std::shared_ptr<Frame>>;
+using ForeignFrameThreadLocalGuard = ThreadLocalGuard<std::shared_ptr<Frame>>;
 
 class ForeignStackGetter {
  public:
@@ -37,4 +37,5 @@ class ForeignStackGetter {
 };
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_FOREIGN_STACK_GETTER_H
+#endif  // ONEFLOW_EXTENSION_STACK_STACK_GETTER_H_
+
