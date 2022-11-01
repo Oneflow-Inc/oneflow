@@ -727,21 +727,21 @@ class Graph(object):
         oneflow._oneflow_internal.nn.graph.MarkVariableGradients(variable, gradients)
 
     @staticmethod
-    def to_graph(func):
-        """Make a function to do static graph run with nn.Graph.
+    def trace(func):
+        """Trace a function to do static graph and run with nn.Graph.
 
-        After decorating a function with ``to_graph``, the function is turned into a naive `nn.Graph`.
+        After decorating a function with ``trace``, the function is turned into a naive `nn.Graph`.
 
         Note:
             This is just a quick way to run a simple function with nn.Graph.
-            If you want to do training or model save/load, customize a nn.Graph class instead, donot use ``to_graph``.
+            If you want to do training or model save/load, customize a nn.Graph class instead, donot use ``trace``.
 
         For example:
 
         .. code-block:: python
 
             >>> import oneflow as flow
-            >>> @flow.nn.Graph.to_graph
+            >>> @flow.nn.Graph.trace
             ... def test_func(x):
             ...     return x * 2
             >>> input = flow.tensor((1, 2), dtype=flow.float32)
@@ -750,14 +750,14 @@ class Graph(object):
             tensor([2., 4.], dtype=oneflow.float32)
 
         ..
-            Feature Stage of Feature [to_graph].
+            Feature Stage of Feature [trace].
             - Maintainer List [@strint]
             - Current Stage [Pre-alpha, note that this is an experimental feature and maybe removed without notice.]
 
         """
         assert inspect.isfunction(
             func
-        ), f"nn.Graph.to_graph only support function currently, so {func} must be a function."
+        ), f"nn.Graph.trace only support function currently, so {func} must be a function."
         graph_cls_name = func.__name__ + "_graph"
 
         def init(self):

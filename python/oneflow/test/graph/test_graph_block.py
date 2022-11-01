@@ -353,7 +353,7 @@ class TestGraphBlock(flow.unittest.TestCase):
         np_in = np.ones((8, 3)).astype(np.float32)
         x = flow.tensor(np_in, device="cuda")
 
-        @flow.nn.Graph.to_graph
+        @flow.nn.Graph.trace
         def block_get_dtype(x):
             return m(x)
         
