@@ -786,6 +786,7 @@ def _test_int_indices_broadcast(test_case, placement):
 
 def _test_empty_index(test_case, placement):
     broadcast_for_placement = [flow.sbp.broadcast,] * len(placement.ranks.shape)
+    # TODO:(wangyinggang): masked_fill support sbp:partial_sum
     sbp = random_sbp(placement, max_dim=2, except_partial_sum=True).value()
     x = global_broadcast_consec((8, 8)).to_global(placement, sbp)
     idx = _cpu_global_tensor(flow.tensor([], dtype=flow.long)).to_global(
