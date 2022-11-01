@@ -33,8 +33,8 @@ std::string AllocateTensorInstructionPolicy::DebugName(const vm::Instruction& in
 
 void AllocateTensorInstructionPolicy::Compute(Instruction* instruction) {
   Allocator* allocator = instruction->mut_stream()->mut_stream_policy()->mut_allocator();
-  for (const auto& eagerblob_object : eager_blob_objects_) {
-    CHECK_JUST(eagerblob_object->TryAllocateBlobBodyMemory(allocator));
+  for (const auto& eager_blob_object : eager_blob_objects_) {
+    CHECK_JUST(eager_blob_object->TryAllocateBlobBodyMemory(allocator));
   }
 }
 
