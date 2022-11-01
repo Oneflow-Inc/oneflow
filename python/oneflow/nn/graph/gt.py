@@ -14,8 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+class GraphTransformerBase(object):
+    def __init__(self):
+        pass
 
-class GraphModuleConfig(object):
+class PipelineStage(GraphTransformerBase):
+    def __init__(self, id: int = None, placement=None):
+        super().__init__()
+        self._stage_id = id
+        self._stage_placement = placement
+    
+class ActivationCheckpointStage(GraphTransformerBase):
+    def __init__(self, mode: bool = True):
+        super().__init__()
+        self._activation_checkpointing = mode
+
+class SubGraphConfig(object):
     r"""Configurations on GraphModule in nn.Graph.
 
     When an nn.Module is added into an nn.Graph, it is wrapped into a GraphModule. You can set or get optimization configs on an nn.Module with it's `GraphModule.config`.
@@ -117,6 +131,14 @@ class GraphModuleConfig(object):
         """
         self._is_null = False
         self._activation_checkpointing = value
+    
+    def set_from_transform_conf(self, trans_conf):
+        if isinstance(trans_conf, PipelineStage):
+            self.set_stage(trans_conf._stage_id, trans_conf._stage_placement)
+        elif isinstance(trans_conf, ActivationCheckpointStage):
+            self.activation_checkpointing = trans_conf._activation_checkpointing 
+        else:
+            raise ValueError("Unsupported GraphTransformer type " + str(type(trans_conf)))
 
     def __repr__(self):
         main_str = (

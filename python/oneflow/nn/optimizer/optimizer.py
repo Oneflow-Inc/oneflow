@@ -39,7 +39,7 @@ class ParamGroup(object):
                 self._parameters.append(p)
             elif isinstance(p, GraphTensor):
                 # Add parameter from nn.Graph
-                self._parameters.append(p.origin)
+                self._parameters.append(p.to(Tensor))
             else:
                 raise ValueError(
                     "parameters in ParamGroup must be Tensor or GraphTensor."

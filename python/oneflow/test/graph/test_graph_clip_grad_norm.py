@@ -258,15 +258,15 @@ def _compare_with_eager(
 
     if parallel_mode is None:
         loss_b = graph_loss.numpy()
-        grad1_b = graph.m1.origin.param.numpy()
-        grad2_b = graph.m2.origin.param.numpy()
+        grad1_b = graph.m1.to(flow.nn.Module).param.numpy()
+        grad2_b = graph.m2.to(flow.nn.Module).param.numpy()
     else:
         ranks = np.array(range(flow.env.get_world_size()))
         placement = flow.placement(device, ranks)
         loss_b = graph_loss.to_global(placement, flow.sbp.broadcast).to_local().numpy()
-        grad1_b = graph.m1.origin.param.to_global(placement, flow.sbp.broadcast)
+        grad1_b = graph.m1.to(flow.nn.Module).param.to_global(placement, flow.sbp.broadcast)
         grad1_b = grad1_b.to_local().numpy()
-        grad2_b = graph.m2.origin.param.to_global(placement, flow.sbp.broadcast)
+        grad2_b = graph.m2.to(flow.nn.Module).param.to_global(placement, flow.sbp.broadcast)
         grad2_b = grad2_b.to_local().numpy()
 
     # compare

@@ -35,7 +35,7 @@ from oneflow.env import get_rank
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
-from oneflow.nn.graph.block import GraphBlock, BlockType, get_block_cls
+from oneflow.nn.graph.block import GraphBlock, SubGraphType, get_block_cls, SubGraph
 from oneflow.nn.graph.graph_config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import (
@@ -346,10 +346,10 @@ class Graph(object):
             destination._metadata = OrderedDict()
         # Get states from sub module block
         for name, block in self._blocks.items():
-            assert block.type == BlockType.MODULE
+            assert block.type == SubGraphType.MODULE
             sub_destination = OrderedDict()
             sub_destination._metadata = OrderedDict()
-            module = block.origin
+            module = block.to(Module)
             if module is not None:
                 module.state_dict(
                     sub_destination, "", keep_vars=False,
@@ -399,7 +399,7 @@ class Graph(object):
         for name, item in state_dict.items():
             if name in self._blocks:
                 # 1 load parameter/buffer to Modules
-                self._blocks[name].origin.load_state_dict(item, strict)
+                self._blocks[name].to(Module).load_state_dict(item, strict)
             else:
                 # 2 store other state to CNNGraph, CNNGraph load them after job pass
                 assert isinstance(item, Tensor)
@@ -492,8 +492,8 @@ class Graph(object):
                 self._debug_min_s_level = 0
                 self._debug_max_v_level = max(0, v_level)
             for name, block in self._blocks.items():
-                assert block.type == BlockType.MODULE
-                block.debug(
+                assert block.type == SubGraphType.MODULE
+                block._oneflow_internal_subgraph__debug(
                     v_level,
                     ranks=ranks,
                     max_py_stack_depth=max_py_stack_depth,
@@ -647,7 +647,8 @@ class Graph(object):
 
     def __ensure_state_tensors_contiguous(self):
         for state_block in self._state():
-            state_tensor = state_block.origin
+            print(state_block)
+            state_tensor = state_block.to(Tensor)
             if not state_tensor.is_contiguous():
                 state_tensor.contiguous_()
 
@@ -657,18 +658,18 @@ class Graph(object):
         state_op_names = []
 
         for state_block in self._state():
-            state_tensor = state_block.origin
+            state_tensor = state_block.to(Tensor)
             # If any state tensor is global tensor, graph is in global view.
             if state_tensor.is_global:
                 self._is_global_view = True
             if state_tensor in state_tensor_set:
                 continue
-            op_name = state_block.name_prefix + state_block.name
+            op_name = state_block.to(SubGraph).name_prefix + state_block.to(SubGraph).name
             state_tensor_set.add(state_tensor)
             state_tensors.append(state_tensor)
             state_op_names.append(op_name)
 
-            if state_block.type == BlockType.PARAMETER:
+            if state_block.to(SubGraph).type == SubGraphType.PARAMETER:
                 self._variables_conf[state_tensor] = VariableConfig(op_name)
 
         self._state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
@@ -690,14 +691,14 @@ class Graph(object):
     def _create_states_builder(self):
         state2lazy_builder = dict()
         for state_block in self._state():
-            state_tensor = state_block.origin
-            op_name = state_block.name_prefix + state_block.name
+            state_tensor = state_block.to(Tensor)
+            op_name = state_block.to(SubGraph).name_prefix + state_block.to(SubGraph).name
             if state_tensor in state2lazy_builder:
                 # Differe tensor block shares the same tensor, so they need to share the same
                 # builder.
                 state_block.set_lazy_origin_builder(state2lazy_builder[state_tensor])
             else:
-                if state_block.type == BlockType.PARAMETER:
+                if state_block.to(SubGraph).type == SubGraphType.PARAMETER:
                     assert state_tensor in self._variables_conf
                     state_config = self._variables_conf[state_tensor]
                     op_name = state_config.name
@@ -718,12 +719,12 @@ class Graph(object):
         gradients = []
         for state_block in self._state():
             if (
-                state_block.type == BlockType.PARAMETER
-                and state_block.origin.grad is not None
-                and state_block.origin.grad.is_lazy
+                state_block.type == SubGraphType.PARAMETER
+                and state_block.to(Tensor).grad is not None
+                and state_block.to(Tensor).grad.is_lazy
             ):
-                variable.append(state_block.origin)
-                gradients.append(state_block.origin.grad)
+                variable.append(state_block.to(Tensor))
+                gradients.append(state_block.to(Tensor).grad)
         oneflow._oneflow_internal.nn.graph.MarkVariableGradients(variable, gradients)
 
     @staticmethod
@@ -938,7 +939,7 @@ class Graph(object):
             )
             modules_has_training = False
             for item in self._blocks.values():
-                if item._origin.training:
+                if item.to(Module).training:
                     modules_has_training = True
                     break
             if (
