@@ -27,7 +27,7 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.container import *
 from oneflow.nn.utils.container import *
 from oneflow.nn.parameter import Parameter
-from oneflow.nn.graph.block_config import GraphBlockConfig
+from oneflow.nn.graph.block_config import GraphModuleConfig
 from oneflow.nn.graph.util import (
     add_indent,
     ArgsTree,
@@ -77,7 +77,6 @@ class GraphBlock(object):
         self._prev_scope = None
         assert belonged_graph is None or isinstance(belonged_graph, weakref.ProxyTypes)
         self._belonged_graph = belonged_graph
-        self.config = GraphBlockConfig()
 
     @property
     def name(self):
@@ -117,6 +116,7 @@ class GraphModule(GraphBlock):
     ):
         assert not isinstance(origin, GraphBlock)
         super().__init__(prefix, name, belonged_graph)
+        self.config = GraphModuleConfig()
         self._debug = False
         self._debug_min_s_level = 2
         self._debug_max_v_level = 0

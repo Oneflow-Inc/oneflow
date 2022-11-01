@@ -169,10 +169,11 @@ def make_new_block_scope(prev_scope, block):
     assert prev_scope is not None
     assert block is not None
     attr_dict = dict()
-    if block.config.stage_id is not None:
-        attr_dict["pipeline_stage_id_hint"] = block.config.stage_id
-    if block.config.activation_checkpointing is not None:
-        attr_dict["checkpointing"] = block.config.activation_checkpointing
+    if isinstance(block, oneflow.nn.graph.block.GraphModule):
+        if block.config.stage_id is not None:
+            attr_dict["pipeline_stage_id_hint"] = block.config.stage_id
+        if block.config.activation_checkpointing is not None:
+            attr_dict["checkpointing"] = block.config.activation_checkpointing
 
     name2default = session_context.GetDefaultSession().scope_attr_name2default_val
 

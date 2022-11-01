@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 
-class GraphBlockConfig(object):
+class GraphModuleConfig(object):
     r"""Configurations on GraphModule in nn.Graph.
 
     When an nn.Module is added into an nn.Graph, it is wrapped into a GraphModule. You can set or get optimization configs on an nn.Module with it's `GraphModule.config`.
