@@ -522,7 +522,7 @@ static PyObject* PyTensorObject_transpose(PyObject* self, PyObject* args, PyObje
         return NULL;                                                                              \
       }                                                                                           \
     } else {                                                                                      \
-      CHECK_OR_THROW(kwargs == NULL);                                                             \
+      CHECK_OR_THROW(kwargs == NULL) << #func_name"() got multiple values for argument '"#param_name"'";                                                             \
     }                                                                                             \
     if (PyTuple_Size(args) == 1) {                                                                \
       shape_obj = PyTuple_GetItem(args, 0);                                                       \
