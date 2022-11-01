@@ -85,32 +85,49 @@ def _test_fold_multiply(test_case, module, with_cuda, *args, dtype=oneflow.float
 class TestFoldMultiply(oneflow.unittest.TestCase):
     def test_fold_multiply(test_case):
         _test_fold_multiply(test_case, MultiplyModel, with_cuda=False)
+        _test_fold_multiply(
+            test_case, MultiplyModel, with_cuda=False, dtype=flow.float16
+        )
 
     @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "only test cpu cases")
     def test_fold_multiply_cuda(test_case):
         _test_fold_multiply(test_case, MultiplyModel, with_cuda=True)
+        _test_fold_multiply(
+            test_case, MultiplyModel, with_cuda=True, dtype=flow.float16
+        )
 
     def test_fold_multiply_complex(test_case):
         _test_fold_multiply(test_case, MultiplyModelComplex, with_cuda=False)
+        _test_fold_multiply(
+            test_case, MultiplyModelComplex, with_cuda=False, dtype=flow.float16
+        )
 
     @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "only test cpu cases")
     def test_fold_multiply_complex_cuda(test_case):
         _test_fold_multiply(test_case, MultiplyModelComplex, with_cuda=True)
+        _test_fold_multiply(
+            test_case, MultiplyModelComplex, with_cuda=True, dtype=flow.float16
+        )
 
     def test_fold_multiply_with_input(test_case):
         a = flow.tensor([3, 7], dtype=flow.float32)
         b = flow.tensor([9, -1], dtype=flow.float32)
+        a_fp16 = flow.tensor([3, 7], dtype=flow.float16)
+        b_fp16 = flow.tensor([9, -1], dtype=flow.float16)
         _test_fold_multiply(test_case, MultiplyModelWithInput, False, a, b)
+        _test_fold_multiply(
+            test_case, MultiplyModelWithInput, False, a_fp16, b_fp16, dtype=flow.float16
+        )
 
     @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "only test cpu cases")
     def test_fold_multiply_with_input_cuda(test_case):
         a = flow.tensor([3, 7], dtype=flow.float32, device="cuda")
         b = flow.tensor([9, -1], dtype=flow.float32, device="cuda")
+        a_fp16 = flow.tensor([3, 7], dtype=flow.float16, device="cuda")
+        b_fp16 = flow.tensor([9, -1], dtype=flow.float16, device="cuda")
         _test_fold_multiply(test_case, MultiplyModelWithInput, True, a, b)
-
-    def test_fold_multiply_fp16(test_case):
         _test_fold_multiply(
-            test_case, MultiplyModel, with_cuda=False, dtype=oneflow.float16
+            test_case, MultiplyModelWithInput, True, a_fp16, b_fp16, dtype=flow.float16
         )
 
 
