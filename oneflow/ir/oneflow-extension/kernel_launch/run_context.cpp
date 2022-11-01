@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <algorithm>
 #include "llvm/ADT/TypeSwitch.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
@@ -32,7 +33,9 @@ const user_op::TensorDesc* RunContext::TensorDesc4ArgNameAndIndex(const std::str
 
 user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) {
   auto op = reg_ctx_->GetOp();
-  if (arg_name == "x") {
+  auto operand_name = {"x", "in"};
+  auto result_name = {"y", "out"};
+  if (std::find(operand_name.begin(), operand_name.end(), arg_name) != operand_name.end()) {
     auto val = op->getOperand(index);
     auto define_op = val.getDefiningOp();
     auto index = define_op->getAttr("index").cast<mlir::IntegerAttr>().getInt();
@@ -47,7 +50,7 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
           LOG(FATAL) << "Signature Not supported";
           return nullptr;
         });
-  } else if (arg_name == "y") {
+  } else if (std::find(result_name.begin(), result_name.end(), arg_name) != result_name.end()) {
     auto val = op->getResult(index);
     for (auto use : val.getUsers()) {
       if (llvm::isa<mlir::okl::GetTensorAsRetOp>(use)) {
@@ -56,7 +59,7 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
       }
     }
   } else {
-    LOG(FATAL) << "Signature Not supported";
+    LOG(FATAL) << "Signature: " << arg_name << " Not supported";
   }
 }
 
