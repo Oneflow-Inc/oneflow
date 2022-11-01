@@ -3110,14 +3110,6 @@ class RepeatFunctor {
   }
 };
 
-class RepeatIntShapeFunctor : public RepeatFunctor {
- public:
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
-                           const int32_t& repeat_shape) const {
-    return RepeatFunctor()(input, Shape({repeat_shape}));
-  }
-};
-
 class RepeatInterLeaveIndexFunctor {
  public:
   RepeatInterLeaveIndexFunctor() {
@@ -3569,7 +3561,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorBufferToTensorFunctor>("TensorBufferToTensor");
   m.add_functor<impl::GenTensorBufferFunctor>("GenTensorBuffer");
   m.add_functor<impl::RepeatFunctor>("Repeat");
-  m.add_functor<impl::RepeatIntShapeFunctor>("RepeatIntShape");
   m.add_functor<impl::RepeatInterLeaveIndexFunctor>("RepeatInterLeaveIndex");
   m.add_functor<impl::RepeatInterLeaveIntFunctor>("RepeatInterLeaveInt");
   m.add_functor<impl::RepeatInterLeaveTensorFunctor>("RepeatInterLeaveTensor");

@@ -324,7 +324,7 @@ static PyObject* PyTensorObject_eq(PyObject* self, PyObject* args, PyObject* kwa
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:eq", const_cast<char**>(keywords), &other)) {
     return NULL;
   }
-  if (other == Py_None) { Py_RETURN_FALSE }
+  if (other == Py_None) { Py_RETURN_FALSE; }
   CHECK_OR_THROW(functional::PyScalarCheck(other) || PyTensor_Check(other))
       << Error::TypeError() << "eq(): argument 'other' must be tensor or scalar, but found "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(other)));
@@ -932,7 +932,7 @@ PyObject* PyTensorObject_richcompare(PyObject* self, PyObject* other, int op) {
     case Py_LE: return functional::less_equal(NULL, tuple.get(), NULL);
     case Py_EQ: {
       if (self == Py_None || other == Py_None) {
-        Py_RETURN_FALSE
+        Py_RETURN_FALSE;
       } else {
         return functional::equal(NULL, tuple.get(), NULL);
       }

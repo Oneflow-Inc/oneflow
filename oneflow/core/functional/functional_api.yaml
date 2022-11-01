@@ -968,10 +968,7 @@
   bind_python: True
 
 - name: "repeat"
-  signature: [
-    "Tensor (Tensor input, Shape repeat_shape) => Repeat"
-    # "Tensor (Tensor input, Int32 repeat_shape) => RepeatIntShape"
-  ]
+  signature: "Tensor (Tensor input, Shape repeat_shape) => Repeat"
   bind_python: True
 
 - name: "repeat_interleave_index"

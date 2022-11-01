@@ -25,10 +25,6 @@ Tensor = flow._oneflow_internal.Tensor
 TensorTuple = flow._oneflow_internal.TensorTuple
 
 
-# def _ndim(self):
-#     return len(self.shape)
-
-
 def _backward(self, gradient=None, retain_graph=False, create_graph=False):
     if lazy_mode.is_enabled():
         assert (
@@ -54,23 +50,6 @@ def _repr(self):
 
 def _meta_repr(self):
     return tensor_str._gen_tensor_meta_str(self)
-
-
-def _eq(self, other):
-    if self is None and other is None:
-        return True
-    elif self is None or other is None:
-        return False
-    else:
-        return flow._C.equal(self, other)
-
-
-def _cuda(self, device: Union[int, str, flow.device] = None):
-    if device is None:
-        device = "cuda"
-    elif isinstance(device, int):
-        device = "cuda:" + str(device)
-    return self.to(device=device)
 
 
 def _norm(self, p=None, dim=None, keepdim=False, dtype=None):
@@ -209,14 +188,6 @@ def _new_full(
     )
 
 
-# def _mm(self, mat2):
-#     return flow._C.mm(self, mat2)
-
-
-# def _mv(self, vec):
-#     return flow._C.matrix_vector_product(self, vec)
-
-
 def _argsort(self, dim=-1, descending=None):
     return flow.argsort(self, dim=dim, descending=descending)
 
@@ -227,10 +198,6 @@ def _split(self, split_size_or_sections=None, dim=0):
 
 def _uniform(self, a=0, b=1):
     return flow.nn.init.uniform_(self, a, b)
-
-
-# def _exponential(self, lambd=1.0, generator=None):
-# return flow._C.exponential_(self, lambd, generator)
 
 
 def _trunc_normal_(
@@ -284,10 +251,6 @@ def _orthogonal(self, gain=1.0):
 
 def _normal(self, mean=0, std=1):
     return flow.nn.init.normal_(self, mean=mean, std=std)
-
-
-# def _fill(self, value):
-#     return flow._C.fill_(self, value)
 
 
 def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
@@ -369,34 +332,6 @@ def _tolist(self):
     if self.numel() == 1 and self.ndim == 0:
         return self.item()
     return self.numpy().tolist()
-
-
-def _gather(self, dim, index):
-    return flow._C.dim_gather(self, dim, index, False)
-
-
-def _repeat(self, *sizes):
-    if len(sizes) == 1:
-        new_sizes = sizes[0]
-        if isinstance(new_sizes, int):
-            new_sizes = (new_sizes,)
-    else:
-        new_sizes = sizes
-    return flow._C.repeat(self, new_sizes)
-
-
-def _repeat_interleave(self, *args, **kwargs):
-    return flow._C.repeat_interleave(self, *args, **kwargs)
-
-
-def _tile(self, *dims):
-    if len(dims) == 1:
-        new_dims = dims[0]
-        if isinstance(new_dims, int):
-            new_dims = (new_dims,)
-    else:
-        new_dims = dims
-    return flow._C.tile(self, new_dims)
 
 
 def _topk(self, k, dim: int = None, largest: bool = True, sorted: bool = True):
