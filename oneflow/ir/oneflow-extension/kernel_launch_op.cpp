@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
+#include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/UserOpReflection.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/Extension.h"
@@ -85,40 +86,36 @@ class KernelLaunchOpKernelRegContext final : public user_op::KernelRegContext {
     CHECK(!block.empty());
     auto& op = block.front();
     op_ = &op;
-    for (const auto& operand_id : ::llvm::enumerate(
-             ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedOperandSegments>(&op))) {
-      user_op::NaiveTensorDesc tensor_desc{};
-      auto operand = op.getOperand(operand_id.index());
-      if (auto rankedTensorType = operand.getType().dyn_cast<mlir::RankedTensorType>()) {
-        tensor_desc.set_shape(
-            Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()});
-        tensor_desc.set_data_type(
-            mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType()));
-        // TODO: set stride
-        // TODO: set is_dynamic
-      } else {
-        LOG(FATAL) << "Unranked tensor type not supported";
+
+    const auto handle_operands_or_outputs = [&op, this](const auto& arg_ids,
+                                                        const auto& get_operand_or_result,
+                                                        ArgVec& arg_vec) {
+      for (const auto& obj_id : ::llvm::enumerate(arg_ids)) {
+        user_op::NaiveTensorDesc tensor_desc{};
+        auto obj = get_operand_or_result(op, obj_id.index());
+        if (auto rankedTensorType = obj.getType().template dyn_cast<mlir::RankedTensorType>()) {
+          tensor_desc.set_shape(
+              Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()});
+          const auto data_type =
+              mlir::oneflow::support::FromMLIRTypeToOFDataType(rankedTensorType.getElementType());
+          if (mlir::failed(data_type)) { exit(1); }
+          tensor_desc.set_data_type(data_type.getValue());
+          // TODO: set stride
+          // TODO: set is_dynamic
+        } else {
+          LOG(FATAL) << "Unranked tensor type not supported";
+        }
+        CHECK(arg2tensor_desc_.emplace(obj_id.value(), tensor_desc).second) << "duplicate key";
+        arg_vec.push_back(obj_id.value());
       }
-      CHECK(arg2tensor_desc_.emplace(operand_id.value(), tensor_desc).second) << "duplicate key";
-      inputs_.push_back(operand_id.value());
-    }
-    for (const auto& result_id : ::llvm::enumerate(
-             ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedResultSegments>(&op))) {
-      user_op::NaiveTensorDesc tensor_desc{};
-      auto result = op.getResult(result_id.index());
-      if (auto rankedTensorType = result.getType().dyn_cast<mlir::RankedTensorType>()) {
-        tensor_desc.set_shape(
-            Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()});
-        tensor_desc.set_data_type(
-            mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType()));
-        // TODO: set stride
-        // TODO: set is_dynamic
-      } else {
-        LOG(FATAL) << "Unranked tensor type not supported";
-      }
-      CHECK(arg2tensor_desc_.emplace(result_id.value(), tensor_desc).second) << "duplicate key";
-      outputs_.push_back(result_id.value());
-    }
+    };
+    handle_operands_or_outputs(
+        ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedOperandSegments>(&op),
+        [](auto& x, size_t index) { return x.getOperand(index); }, inputs_);
+    handle_operands_or_outputs(
+        ::mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedResultSegments>(&op),
+        [](auto& x, size_t index) { return x.getResult(index); }, outputs_);
+
     auto dev_tag = mlir::OpTrait::IsOpConfCompatible<void>::getDeviceTag(&op);
     if (dev_tag == "cpu") {
       device_type_ = DeviceType::kCPU;

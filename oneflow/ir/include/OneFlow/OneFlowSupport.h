@@ -50,10 +50,9 @@ std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
     const mlir::Attribute& attr, const mlir::Attribute& device_tag,
     const mlir::Attribute& device_name);
 
-::oneflow::DataType GetDataTypeFromMLIRType(Type dt);
-
-FailureOr<::oneflow::DataType> DataTypeFromMLIRToOF(::mlir::oneflow::DataType data_type);
-FailureOr<::oneflow::DataType> DataTypeFromMLIRAttrToOF(Attribute attr);
+FailureOr<::oneflow::DataType> FromMLIRTypeToOFDataType(Type mlir_type);
+FailureOr<::oneflow::DataType> FromMLIRDataTypeToOFDataType(::mlir::oneflow::DataType data_type);
+FailureOr<::oneflow::DataType> FromMLIRAttrToOFDataType(Attribute attr);
 
 }  // namespace support
 

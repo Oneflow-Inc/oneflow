@@ -648,7 +648,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::Operat
       } else if (attr_type == ::oneflow::kAtStride) {
         WriteAttrToStride(attr, user_attr.mutable_at_stride());
       } else if (attr_type == ::oneflow::kAtDataType) {
-        const auto dt = support::DataTypeFromMLIRAttrToOF(attr);
+        const auto dt = support::FromMLIRAttrToOFDataType(attr);
         if (succeeded(dt)) {
           user_attr.set_at_data_type(dt.getValue());
         } else {
@@ -676,7 +676,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::Operat
         }
       } else if (attr_type == ::oneflow::kAtListDataType) {
         for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
-          const auto dt = support::DataTypeFromMLIRAttrToOF(attr);
+          const auto dt = support::FromMLIRAttrToOFDataType(attr);
           if (succeeded(dt)) {
             user_attr.mutable_at_list_data_type()->add_val(dt.getValue());
           } else {
@@ -754,7 +754,7 @@ LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_c
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
     if (auto dt_mlir = op.data_type()) {
-      const auto dt = support::DataTypeFromMLIRToOF(dt_mlir.getValue());
+      const auto dt = support::FromMLIRDataTypeToOFDataType(dt_mlir.getValue());
       if (failed(dt)) { return failure(); }
       var_op_conf->set_data_type(dt.getValue());
     }
@@ -824,7 +824,7 @@ LogicalResult ConvertInputOpConf(InputOp op, ::oneflow::OperatorConf* op_conf) {
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
     if (auto dt_mlir = op.data_type()) {
-      const auto dt = support::DataTypeFromMLIRToOF(dt_mlir.getValue());
+      const auto dt = support::FromMLIRDataTypeToOFDataType(dt_mlir.getValue());
       if (failed(dt)) { return failure(); }
       input_op_conf->mutable_blob_conf()->set_data_type(dt.getValue());
     }
@@ -870,7 +870,7 @@ LogicalResult ConvertOutputOpConf(OutputOp op, ::oneflow::OperatorConf* op_conf)
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
     if (auto dt_mlir = op.data_type()) {
-      const auto dt = support::DataTypeFromMLIRToOF(dt_mlir.getValue());
+      const auto dt = support::FromMLIRDataTypeToOFDataType(dt_mlir.getValue());
       if (failed(dt)) { return failure(); }
       output_op_conf->mutable_blob_conf()->set_data_type(dt.getValue());
     }

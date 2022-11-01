@@ -634,7 +634,7 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
     auto op_new = rewriter.create<oneflow::VariableOp>(op->getLoc(), op.output().getType(),
                                                        ValueRange(), attrs);
     const std::string tensor_name = op.op_nameAttr().str();
-    const auto data_type = support::DataTypeFromMLIRAttrToOF(op.data_typeAttr());
+    const auto data_type = support::FromMLIRAttrToOFDataType(op.data_typeAttr());
     if (failed(data_type)) {
       op0->emitError(::llvm::formatv("unsupported data type: {0}",
                                      ConvertToString(op.data_typeAttr().getValue())));

@@ -153,31 +153,31 @@ std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
   exit(EXIT_FAILURE);
 }
 
-::oneflow::DataType GetDataTypeFromMLIRType(Type dt) {
-  if (dt.dyn_cast<InvalidElementType>()) { return ::oneflow::DataType::kInvalidDataType; }
-  if (dt.dyn_cast<CharElementType>()) { return ::oneflow::DataType::kChar; }
-  if (dt.dyn_cast<OFRecordElementType>()) { return ::oneflow::DataType::kOFRecord; }
-  if (dt.dyn_cast<TensorBufferElementType>()) { return ::oneflow::DataType::kTensorBuffer; }
-  if (dt.isF16()) { return ::oneflow::DataType::kFloat16; }
-  if (dt.isF32()) { return ::oneflow::DataType::kFloat; }
-  if (dt.isF64()) { return ::oneflow::DataType::kDouble; }
+FailureOr<::oneflow::DataType> FromMLIRTypeToOFDataType(Type mlir_type) {
+  if (mlir_type.dyn_cast<InvalidElementType>()) { return ::oneflow::DataType::kInvalidDataType; }
+  if (mlir_type.dyn_cast<CharElementType>()) { return ::oneflow::DataType::kChar; }
+  if (mlir_type.dyn_cast<OFRecordElementType>()) { return ::oneflow::DataType::kOFRecord; }
+  if (mlir_type.dyn_cast<TensorBufferElementType>()) { return ::oneflow::DataType::kTensorBuffer; }
+  if (mlir_type.isF16()) { return ::oneflow::DataType::kFloat16; }
+  if (mlir_type.isF32()) { return ::oneflow::DataType::kFloat; }
+  if (mlir_type.isF64()) { return ::oneflow::DataType::kDouble; }
 
-  if (dt.isSignlessInteger(8)) { return ::oneflow::DataType::kBool; }
-  if (dt.isSignlessInteger(16)) { return ::oneflow::DataType::kUInt16; }
-  if (dt.isSignlessInteger(32)) { return ::oneflow::DataType::kUInt32; }
-  if (dt.isSignlessInteger(64)) { return ::oneflow::DataType::kUInt64; }
-  if (dt.isSignlessInteger(128)) { return ::oneflow::DataType::kUInt128; }
+  if (mlir_type.isSignlessInteger(8)) { return ::oneflow::DataType::kBool; }
+  if (mlir_type.isSignlessInteger(16)) { return ::oneflow::DataType::kUInt16; }
+  if (mlir_type.isSignlessInteger(32)) { return ::oneflow::DataType::kUInt32; }
+  if (mlir_type.isSignlessInteger(64)) { return ::oneflow::DataType::kUInt64; }
+  if (mlir_type.isSignlessInteger(128)) { return ::oneflow::DataType::kUInt128; }
 
-  if (dt.isSignedInteger(8)) { return ::oneflow::DataType::kInt8; }
-  if (dt.isSignedInteger(16)) { return ::oneflow::DataType::kInt16; }
-  if (dt.isSignedInteger(32)) { return ::oneflow::DataType::kInt32; }
-  if (dt.isSignedInteger(64)) { return ::oneflow::DataType::kInt64; }
-  if (dt.isSignedInteger(128)) { return ::oneflow::DataType::kInt128; }
-  llvm::errs() << "unsupported data type: " << dt << "\n";
-  exit(1);
+  if (mlir_type.isSignedInteger(8)) { return ::oneflow::DataType::kInt8; }
+  if (mlir_type.isSignedInteger(16)) { return ::oneflow::DataType::kInt16; }
+  if (mlir_type.isSignedInteger(32)) { return ::oneflow::DataType::kInt32; }
+  if (mlir_type.isSignedInteger(64)) { return ::oneflow::DataType::kInt64; }
+  if (mlir_type.isSignedInteger(128)) { return ::oneflow::DataType::kInt128; }
+  llvm::errs() << "Unsupported data type: " << mlir_type << "\n";
+  return failure();
 }
 
-FailureOr<::oneflow::DataType> DataTypeFromMLIRToOF(::mlir::oneflow::DataType data_type) {
+FailureOr<::oneflow::DataType> FromMLIRDataTypeToOFDataType(::mlir::oneflow::DataType data_type) {
   switch (data_type) {
     case ::mlir::oneflow::DataType::DT_InvalidDataType:
       return ::oneflow::DataType::kInvalidDataType;
@@ -202,9 +202,9 @@ FailureOr<::oneflow::DataType> DataTypeFromMLIRToOF(::mlir::oneflow::DataType da
   return failure();
 }
 
-FailureOr<::oneflow::DataType> DataTypeFromMLIRAttrToOF(Attribute attr) {
+FailureOr<::oneflow::DataType> FromMLIRAttrToOFDataType(Attribute attr) {
   const auto data_type_attr = attr.dyn_cast<mlir::oneflow::DataTypeAttr>();
-  return DataTypeFromMLIRToOF(data_type_attr.getValue());
+  return FromMLIRDataTypeToOFDataType(data_type_attr.getValue());
 }
 
 }  // namespace support
