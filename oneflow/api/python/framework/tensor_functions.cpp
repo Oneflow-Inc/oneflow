@@ -868,7 +868,6 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"logsumexp", (PyCFunction)PyTensorObject_logsumexp, METH_VARARGS | METH_KEYWORDS, NULL},
     {"isclose", (PyCFunction)PyTensorObject_isclose, METH_VARARGS | METH_KEYWORDS, NULL},
 
-
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
     {"exp", PyTensorObject_exp, METH_NOARGS, NULL},
