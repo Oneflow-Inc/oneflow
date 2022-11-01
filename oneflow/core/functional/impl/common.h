@@ -43,6 +43,8 @@ Maybe<Shape> InferShapeUnspecifiedDim(const int64_t& elem_count, const Shape& sh
 Maybe<std::tuple<Shape, bool, bool>> InferUnifiedShapeForBroadcasting(const Shape& input_shape,
                                                                       const Shape& other_shape);
 
+Maybe<void> BroadcastSeedToAllRanks(uint64_t* seed, int64_t root = 0);
+
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow

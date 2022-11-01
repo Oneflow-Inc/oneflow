@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/wrap_dim_utils.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 
 namespace oneflow {
 namespace one {
@@ -258,6 +259,7 @@ DIRECT_PASS_FUNC(PyTensorObject_addcmul, functional::addcmul)
 DIRECT_PASS_FUNC(PyTensorObject_addcmul_, functional::addcmul_)
 DIRECT_PASS_FUNC(PyTensorObject_addcdiv, functional::addcdiv)
 DIRECT_PASS_FUNC(PyTensorObject_addcdiv_, functional::addcdiv_)
+DIRECT_PASS_FUNC(PyTensorObject_flip, functional::flip)
 DIRECT_PASS_FUNC(PyTensorObject_clip, functional::clip)
 DIRECT_PASS_FUNC(PyTensorObject_clip_, functional::clip_)
 DIRECT_PASS_FUNC(PyTensorObject_clamp, functional::clamp)
@@ -289,6 +291,7 @@ DIRECT_PASS_FUNC(PyTensorObject_min, functional::min)
 DIRECT_PASS_FUNC(PyTensorObject_median, functional::median)
 DIRECT_PASS_FUNC(PyTensorObject_pow, functional::pow)
 DIRECT_PASS_FUNC(PyTensorObject_chunk, functional::chunk)
+DIRECT_PASS_FUNC(PyTensorObject_split, functional::split)
 DIRECT_PASS_FUNC(PyTensorObject_narrow, functional::narrow)
 DIRECT_PASS_FUNC(PyTensorObject_masked_fill, functional::masked_fill)
 DIRECT_PASS_FUNC(PyTensorObject_repeat_interleave, functional::repeat_interleave);
@@ -705,6 +708,18 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
   CHECK_OR_THROW(functional::PyScalarCheck(value) || PyTensor_Check(value))
       << Error::TypeError() << "tensor_setitem(): argument 'value' must be tensor or scalar, not "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(value)));
+  const auto& index_item = functional::PyUnpackTensorIndex(item);
+
+  // NOTE: use masked_fill_(local,global) to avoid D2H in TensorSetItem if index is bool tensor
+  if (functional::PyScalarCheck(value) && index_item.size() == 1 && index_item[0].IsTensor()) {
+    const auto& index_tensor = index_item[0].tensor();
+    if (index_tensor->shape() == tensor->shape()
+        && (index_tensor->dtype() == DType::Bool() || index_tensor->dtype() == DType::UInt8())) {
+      ASSERT_PTR(
+          functional::MaskedFillInplace(tensor, index_tensor, functional::PyUnpackScalar(value)));
+      return 0;
+    }
+  }
 
   if (tensor->is_global()) {
     Symbol<ParallelDesc> placement = ASSERT(tensor->parallel_desc());
@@ -737,7 +752,7 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
       value_tensor = ASSERT_PTR(functional::To(value_tensor, device, value_tensor->dtype(), false));
     }
   }
-  ASSERT(functional::TensorSetItem(tensor, functional::PyUnpackTensorIndex(item), value_tensor));
+  ASSERT(functional::TensorSetItem(tensor, index_item, value_tensor));
   return 0;
   END_HANDLE_ERRORS_RET(-1)
 }
@@ -803,6 +818,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"ne", (PyCFunction)PyTensorObject_ne, METH_VARARGS | METH_KEYWORDS, NULL},
     {"lt", (PyCFunction)PyTensorObject_lt, METH_VARARGS | METH_KEYWORDS, NULL},
     {"le", (PyCFunction)PyTensorObject_le, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"flip", (PyCFunction)PyTensorObject_flip, METH_VARARGS | METH_KEYWORDS, NULL},
     {"clip", (PyCFunction)PyTensorObject_clip, METH_VARARGS | METH_KEYWORDS, NULL},
     {"clip_", (PyCFunction)PyTensorObject_clip_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"clamp", (PyCFunction)PyTensorObject_clamp, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -834,6 +850,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"median", (PyCFunction)PyTensorObject_median, METH_VARARGS | METH_KEYWORDS, NULL},
     {"pow", (PyCFunction)PyTensorObject_pow, METH_VARARGS | METH_KEYWORDS, NULL},
     {"chunk", (PyCFunction)PyTensorObject_chunk, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"split", (PyCFunction)PyTensorObject_split, METH_VARARGS | METH_KEYWORDS, NULL},
     {"narrow", (PyCFunction)PyTensorObject_narrow, METH_VARARGS | METH_KEYWORDS, NULL},
     {"masked_fill", (PyCFunction)PyTensorObject_masked_fill, METH_VARARGS | METH_KEYWORDS, NULL},
     {"masked_fill_", (PyCFunction)PyTensorObject_masked_fill_, METH_VARARGS | METH_KEYWORDS, NULL},

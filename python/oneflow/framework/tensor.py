@@ -192,10 +192,6 @@ def _argsort(self, dim=-1, descending=None):
     return flow.argsort(self, dim=dim, descending=descending)
 
 
-def _split(self, split_size_or_sections=None, dim=0):
-    return flow._C.split(self, split_size_or_sections, dim)
-
-
 def _uniform(self, a=0, b=1):
     return flow.nn.init.uniform_(self, a, b)
 
@@ -497,7 +493,6 @@ def RegisterMethods():
     Tensor.new_full = _new_full
     Tensor.where = _where
     Tensor.norm = _norm
-    Tensor.split = _split
     Tensor.to = _to
     Tensor.masked_select = _masked_select
     Tensor.item = _item

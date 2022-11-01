@@ -300,6 +300,7 @@ from oneflow.framework.dtype import (
     set_default_dtype,
     set_default_tensor_type,
     get_default_dtype,
+    is_floating_point,
 )
 
 import oneflow._C
@@ -371,7 +372,6 @@ from oneflow.nn.modules.distributed_partial_fc_sample import (
     distributed_partial_fc_sample_op as distributed_partial_fc_sample,
 )
 from oneflow.nn.modules.roll import roll_op as roll
-from oneflow.nn.modules.tensor_ops import is_floating_point
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
 from oneflow.nn.modules.math_ops import topk_op as topk
