@@ -445,14 +445,6 @@ class GumbelSoftmaxFunctor {
   }
 };
 
-class GumbelSoftmaxGradFunctor : public SoftmaxGradFunctor {
- public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
-                           const std::shared_ptr<one::Tensor>& y) const {
-    return SoftmaxGradFunctor::operator()(dy, y);
-  }
-};
-
 class HardSwishFunctor : public UnaryFunctor {
  public:
   HardSwishFunctor() {
@@ -693,7 +685,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::LogSoftmaxFunctor>("LogSoftmax");
   m.add_functor<impl::LogSoftmaxGradFunctor>("LogSoftmaxGrad");
   m.add_functor<impl::GumbelSoftmaxFunctor>("GumbelSoftmax");
-  m.add_functor<impl::GumbelSoftmaxGradFunctor>("GumbelSoftmaxGrad");
   m.add_functor<impl::HardSwishFunctor>("HardSwish");
   m.add_functor<impl::HardSwishGradFunctor>("HardSwishGrad");
   m.add_functor<impl::LeakyReluFunctor>("LeakyRelu");
