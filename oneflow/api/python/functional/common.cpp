@@ -32,7 +32,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/kernel/kernel_util.h"
-
+#include "oneflow/core/framework/tensor_util.h"
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -43,41 +43,7 @@ namespace {
 
 template<typename T>
 Maybe<T> GetItemInScalarTensor(PyObject* obj) {
-  std::shared_ptr<LocalTensor> local_tensor;
-  {
-    auto tensor = PyTensor_Unpack(obj);
-    if (tensor->is_global()) {
-      Symbol<ParallelDesc> parallel_desc;
-      {
-        const ParallelConf parallel_conf = GenParallelConfOfCpuOnAllRanks();
-        JUST(PhysicalRun(
-            [&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-              parallel_desc = SymbolOf(*JUST(builder->GetParallelDescSymbol(parallel_conf)));
-              return Maybe<void>::Ok();
-            }));
-      }
-      const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
-      tensor = JUST(functional::ToGlobal(tensor, parallel_desc, {broadcast_sbp}, /*grad_sbp=*/{},
-                                         /*check_meta=*/false, /*copy=*/false));
-      tensor = JUST(functional::GlobalToLocal(tensor, /*copy=*/false));
-    }
-    local_tensor = JUST(tensor->AsLocalTensor());
-  }
-
-  T scalar = 0;
-  {
-    const auto& Callback = [&](ep::Stream* stream,
-                               const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
-      SyncAutoMemcpy(stream, &scalar, eager_blob_object->mut_dptr(), sizeof(T),
-                     memory::MakeHostMemCase(), eager_blob_object->mem_case());
-    };
-    auto btb = std::make_shared<BlockingThenBusy>(1);
-    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, "const");
-    }));
-    JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
-  }
-  return scalar;
+  return GetItemInScalarTensor<T>(PyTensor_Unpack(obj));
 }
 
 }  // namespace
