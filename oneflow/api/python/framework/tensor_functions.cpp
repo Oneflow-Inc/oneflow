@@ -271,6 +271,7 @@ DIRECT_PASS_FUNC(PyTensorObject_clamp_max_, functional::clamp_max_)
 DIRECT_PASS_FUNC(PyTensorObject_flatten, functional::flatten)
 DIRECT_PASS_FUNC(PyTensorObject_in_top_k, functional::in_top_k)
 DIRECT_PASS_FUNC(PyTensorObject_index_select, functional::index_select)
+DIRECT_PASS_FUNC(PyTensorObject_logsumexp, functional::logsumexp)
 DIRECT_PASS_FUNC(PyTensorObject_maximum, functional::maximum)
 DIRECT_PASS_FUNC(PyTensorObject_minimum, functional::minimum)
 DIRECT_PASS_FUNC(PyTensorObject_tril, functional::tril)
@@ -989,6 +990,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"view_as", (PyCFunction)PyTensorObject_view_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {"permute", (PyCFunction)PyTensorObject_permute, METH_VARARGS | METH_KEYWORDS, NULL},
     {"transpose", (PyCFunction)PyTensorObject_transpose, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"logsumexp", (PyCFunction)PyTensorObject_logsumexp, METH_VARARGS | METH_KEYWORDS, NULL},
     {NULL},
 };
 
