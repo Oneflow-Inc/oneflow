@@ -163,7 +163,9 @@ class TestMaxPooling(flow.unittest.TestCase):
         else:
             return y
     
-    @unittest.skipIf(packaging.version.parse(pytorch.__version__) > packaging.version.parse("1.10.0"), "only test when pytorch version <= 1.10.0")
+    @unittest.skipIf(packaging.version.parse(pytorch.__version__) == packaging.version.parse("1.10.0"), "skip when pytorch version == 1.10.0")
+    # NOTE:pytorch maxpool2d nhwc has bug in version of 1.10.0, so skip it in CI.
+    # detail:https://github.com/pytorch/pytorch/pull/76597
     def test_maxpool2d_channel_last(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_maxpool2d_channel_last]
