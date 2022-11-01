@@ -204,17 +204,23 @@ def _test_basic_slice(test_case, placement):
     _assert_tensor_equal(
         test_case,
         get_graph_output(reference, func=lambda x: x[2:4, 1:5:2]),
-        get_graph_output(reference, func=lambda x: flow.stack([x[2:4, 1], x[2:4, 3]], 1)),
+        get_graph_output(
+            reference, func=lambda x: flow.stack([x[2:4, 1], x[2:4, 3]], 1)
+        ),
     )
     _assert_tensor_equal(
         test_case,
         get_graph_output(reference, func=lambda x: x[3, 1:6:2]),
-        get_graph_output(reference, func=lambda x: flow.stack([x[3, 1], x[3, 3], x[3, 5]], 0)),
+        get_graph_output(
+            reference, func=lambda x: flow.stack([x[3, 1], x[3, 3], x[3, 5]], 0)
+        ),
     )
     _assert_tensor_equal(
         test_case,
         get_graph_output(reference, func=lambda x: x[None, 2, 1:9:4]),
-        get_graph_output(reference, func=lambda x: flow.stack([x[2, 1], x[2, 5]], 0).unsqueeze(0)),
+        get_graph_output(
+            reference, func=lambda x: flow.stack([x[2, 1], x[2, 5]], 0).unsqueeze(0)
+        ),
     )
 
 
@@ -234,8 +240,16 @@ def _test_advanced_indexing(test_case, placement, dtype):
             return tuple(indices)
 
     def validate_indexing(x):
-        _assert_tensor_equal(test_case, get_graph_output(x, func=lambda x: x[ri([3]),]), global_broadcast_consec((1,), 4))
-        _assert_tensor_equal(test_case, get_graph_output(x, func=lambda x: x[ri([2, 3, 4]),]), global_broadcast_consec((3,), 3))
+        _assert_tensor_equal(
+            test_case,
+            get_graph_output(x, func=lambda x: x[ri([3]),]),
+            global_broadcast_consec((1,), 4),
+        )
+        _assert_tensor_equal(
+            test_case,
+            get_graph_output(x, func=lambda x: x[ri([2, 3, 4]),]),
+            global_broadcast_consec((3,), 3),
+        )
 
     def validate_setting(x):
         x[[0]] = -2
