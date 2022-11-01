@@ -50,7 +50,7 @@ template<typename T>
 __global__ void AmpForEachNonFiniteCheckAndUnscaleImpl(const int n, T* scaled_grad,
                                                        float* found_inf, const float* inv_scale) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    if (IsFinite(scaled_grad[i])) { found_inf[0] = 1.f; }
+    if (!IsFinite(scaled_grad[i])) { found_inf[0] = 1.f; }
     scaled_grad[i] = inv_scale[0] == 1.f ? scaled_grad[i] : scaled_grad[i] * inv_scale[0];
   }
 }

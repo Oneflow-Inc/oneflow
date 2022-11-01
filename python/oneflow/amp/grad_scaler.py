@@ -415,7 +415,6 @@ class GradScaler(object):
                 self._backoff_factor,
                 self._growth_interval,
             )
-
         # To prepare for next iteration, clear the data collected from optimizers this iteration.
         self._per_optimizer_states = defaultdict(_refresh_per_optimizer_state)
 
