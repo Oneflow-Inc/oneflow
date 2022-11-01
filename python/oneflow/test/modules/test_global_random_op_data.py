@@ -82,16 +82,27 @@ class TestGlobalRandomOpData(flow.unittest.TestCase):
         for device in ["cpu", "cuda"]:
             placement = flow.placement(device, [[0, 1], [2, 3]])
 
+<<<<<<< HEAD
             for _, fn in _fn_param.items():
                 flow.manual_seed(233)
                 np_x_local = fn(shape, placement, sbp).to_local().numpy()
                 np.save(f"/tmp/{fn}_{flow.env.get_rank()}_local.npy", np_x_local)
+=======
+            for fn_name, fn in _fn_param.items():
+                flow.manual_seed(233)
+                np_x_local = fn(shape, placement, sbp).to_local().numpy()
+                np.save(f"/tmp/{fn_name}_{flow.env.get_rank()}_local.npy", np_x_local)
+>>>>>>> origin/master
                 flow.comm.barrier()
 
                 # compare result in rank0
                 if flow.env.get_rank() == 0:
                     np_local = [
+<<<<<<< HEAD
                         np.load(f"/tmp/{fn}_{int(i)}_local.npy") for i in range(4)
+=======
+                        np.load(f"/tmp/{fn_name}_{int(i)}_local.npy") for i in range(4)
+>>>>>>> origin/master
                     ]
                     # rank0 == rank1
                     test_case.assertTrue(np.array_equal(np_local[0], np_local[1]))
@@ -104,7 +115,11 @@ class TestGlobalRandomOpData(flow.unittest.TestCase):
 
                     # clean data in rank0
                     for i in range(4):
+<<<<<<< HEAD
                         os.remove(f"/tmp/{fn}_{int(i)}_local.npy")
+=======
+                        os.remove(f"/tmp/{fn_name}_{int(i)}_local.npy")
+>>>>>>> origin/master
 
 
 if __name__ == "__main__":

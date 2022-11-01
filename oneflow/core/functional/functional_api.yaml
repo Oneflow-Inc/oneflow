@@ -390,6 +390,10 @@
   signature: "Tensor (Tensor out_diff, Tensor mask, Tensor device_count, Int32List axis, Bool keepdims=False) => ReduceMaxGlobalStageGrad"
   bind_python: False
 
+- name: "logsumexp"
+  signature: "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => LogSumExp"
+  bind_python: True
+
 - name: "transpose"
   signature:
     [
@@ -2877,3 +2881,6 @@
   signature: "Tensor (Tensor input, Tensor weights=None, Int64 minlength=None) => BinCount"
   bind_python: True
 
+- name: "isclose"
+  signature: "Tensor (Tensor input, Tensor other, Float atol=1e-08, Float rtol=1e-05, Bool equal_nan=False) => IsClose"
+  bind_python: True
