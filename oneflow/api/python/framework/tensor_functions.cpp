@@ -295,7 +295,6 @@ DIRECT_PASS_FUNC(PyTensorObject_prod, functional::reduce_prod);
 DIRECT_PASS_FUNC(PyTensorObject_masked_fill_, functional::masked_fill_)
 DIRECT_PASS_FUNC(PyTensorObject_dot, functional::dot)
 DIRECT_PASS_FUNC(PyTensorObject_nansum, functional::reduce_nansum)
-// DIRECT_PASS_FUNC(PyTensorObject_flip, functional::flip)
 DIRECT_PASS_FUNC(PyTensorObject_cross, functional::linalg_cross)
 DIRECT_PASS_FUNC(PyTensorObject_cumsum, functional::cumsum)
 DIRECT_PASS_FUNC(PyTensorObject_cumprod, functional::cumprod)
@@ -316,7 +315,6 @@ DIRECT_PASS_FUNC(PyTensorObject_split, functional::split)
 DIRECT_PASS_FUNC(PyTensorObject_bernoulli, functional::bernoulli)
 DIRECT_PASS_FUNC(PyTensorObject_bernoulli_, functional::bernoulli_)
 DIRECT_PASS_FUNC(PyTensorObject_bincount, functional::bincount)
-// DIRECT_PASS_FUNC(PyTensorObject_repeat, functional::repeat)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_eq(PyObject* self, PyObject* args, PyObject* kwargs) {
@@ -326,7 +324,7 @@ static PyObject* PyTensorObject_eq(PyObject* self, PyObject* args, PyObject* kwa
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:eq", const_cast<char**>(keywords), &other)) {
     return NULL;
   }
-  if (other == Py_None) { return Py_False; }
+  if (other == Py_None) { Py_RETURN_FALSE }
   CHECK_OR_THROW(functional::PyScalarCheck(other) || PyTensor_Check(other))
       << Error::TypeError() << "eq(): argument 'other' must be tensor or scalar, but found "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(other)));
@@ -389,21 +387,6 @@ static PyObject* PyTensorObject_size(PyObject* self, PyObject* args, PyObject* k
   return PyLong_FromLongLong(shape->At(idx));
   END_HANDLE_ERRORS
 }
-
-// static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args, PyObject* kwargs) {
-//   HANDLE_ERRORS
-//   PyObject* shape = args;
-//   if (PyTuple_Size(args) == 1) {
-//     PyObject* item = PyTuple_GetItem(args, 0);
-//     if (!PyLong_Check(item)) { shape = item; }
-//   }
-
-//   PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, shape));
-//   PyObject* result = functional::reshape(NULL, _args.get(), kwargs);
-//   if (PyErr_Occurred()) { throw py::error_already_set(); }
-//   return result;
-//   END_HANDLE_ERRORS
-// }
 
 static PyObject* PyTensorObject_reshape_as(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
@@ -499,21 +482,6 @@ DATATYPE_FUNC(PyTensorObject_float, DType::Float());
 DATATYPE_FUNC(PyTensorObject_double, DType::Double());
 DATATYPE_FUNC(PyTensorObject_bfloat16, DType::BFloat16());
 
-// static PyObject* PyTensorObject_view(PyObject* self, PyObject* args, PyObject* kwargs) {
-//   HANDLE_ERRORS
-//   PyObject* shape = args;
-//   if (PyTuple_Size(args) == 1) {
-//     PyObject* item = PyTuple_GetItem(args, 0);
-//     if (!PyLong_Check(item)) { shape = item; }
-//   }
-
-//   PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, shape));
-//   PyObject* result = functional::view(NULL, _args.get(), kwargs);
-//   if (PyErr_Occurred()) { throw py::error_already_set(); }
-//   return result;
-//   END_HANDLE_ERRORS
-// }
-
 static PyObject* PyTensorObject_view_as(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   auto tensor = PyTensor_Unpack(self);
@@ -526,22 +494,6 @@ static PyObject* PyTensorObject_view_as(PyObject* self, PyObject* args, PyObject
   return PyTensor_New(ASSERT_PTR(functional::View(tensor, *PyTensor_Unpack(other)->shape())));
   END_HANDLE_ERRORS
 }
-
-// static PyObject* PyTensorObject_permute(PyObject* self, PyObject* args, PyObject* kwargs) {
-//   HANDLE_ERRORS
-//   PyObject* dims = args;
-//   if (PyTuple_Size(args) == 1) {
-//     PyObject* item = PyTuple_GetItem(args, 0);
-//     if (!PyLong_Check(item)) { dims = item; }
-//   }
-
-//   PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, dims));
-//   PyObject* result = functional::permute(NULL, _args.get(), kwargs);
-//   if (PyErr_Occurred()) { throw py::error_already_set(); }
-//   return result;
-
-//   END_HANDLE_ERRORS
-// }
 
 static PyObject* PyTensorObject_transpose(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
@@ -557,11 +509,11 @@ static PyObject* PyTensorObject_transpose(PyObject* self, PyObject* args, PyObje
   END_HANDLE_ERRORS
 }
 
-#define ARGS_ONLY_METHODS(func_name, bind_func, param_name, convert, data_type)                                      \
+#define ARGS_ONLY_METHODS(func_name, bind_func, param_name, convert, data_type)                   \
   static PyObject* PyTensorObject_##func_name(PyObject* self, PyObject* args, PyObject* kwargs) { \
     HANDLE_ERRORS                                                                                 \
     PyObject* shape_obj = NULL;                                                                   \
-    std::vector<data_type> shape_vec;                                                                          \
+    std::vector<data_type> shape_vec;                                                             \
     int args_size = PyTuple_Size(args);                                                           \
     if (args_size == 0) {                                                                         \
       static const char* keywords[2] = {"" #param_name, NULL};                                    \
@@ -583,14 +535,16 @@ static PyObject* PyTensorObject_transpose(PyObject* self, PyObject* args, PyObje
     if (PyLong_Check(shape_obj)) {                                                                \
       shape_vec.emplace_back(PyLong_AsLongLong(shape_obj));                                       \
     } else {                                                                                      \
-       shape_vec = functional::PyUnpackLongSequence<data_type>(shape_obj);          \
+      shape_vec = functional::PyUnpackLongSequence<data_type>(shape_obj);                         \
     }                                                                                             \
-    return PyTensor_New(ASSERT_PTR(bind_func(PyTensor_Unpack(self), convert(shape_vec))));          \
+    return PyTensor_New(ASSERT_PTR(bind_func(PyTensor_Unpack(self), convert(shape_vec))));        \
     END_HANDLE_ERRORS                                                                             \
   }
 
-#define SHAPE_ONLY_METHODS(func_name, bind_func, param_name) ARGS_ONLY_METHODS(func_name, bind_func, param_name, Shape, int64_t)
-#define DIMS_ONLY_METHODS(func_name, bind_func, param_name) ARGS_ONLY_METHODS(func_name, bind_func, param_name, , int32_t)
+#define SHAPE_ONLY_METHODS(func_name, bind_func, param_name) \
+  ARGS_ONLY_METHODS(func_name, bind_func, param_name, Shape, int64_t)
+#define DIMS_ONLY_METHODS(func_name, bind_func, param_name) \
+  ARGS_ONLY_METHODS(func_name, bind_func, param_name, , int32_t)
 
 SHAPE_ONLY_METHODS(repeat, functional::Repeat, "repeat_shape");
 SHAPE_ONLY_METHODS(tile, functional::Tile, "shape");
@@ -598,7 +552,6 @@ SHAPE_ONLY_METHODS(reshape, functional::Reshape, "shape");
 SHAPE_ONLY_METHODS(view, functional::View, "shape")
 DIMS_ONLY_METHODS(flip, functional::Flip, "dims")
 DIMS_ONLY_METHODS(permute, functional::Permute, "dims")
-
 
 static PyObject* PyTensorObject_is_floating_point(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
@@ -904,7 +857,6 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"bernoulli", (PyCFunction)PyTensorObject_bernoulli, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bernoulli_", (PyCFunction)PyTensorObject_bernoulli_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"bincount", (PyCFunction)PyTensorObject_bincount, METH_VARARGS | METH_KEYWORDS, NULL},
-
     {"reshape", (PyCFunction)PyTensorObject_reshape, METH_VARARGS | METH_KEYWORDS, NULL},
     {"reshape_as", (PyCFunction)PyTensorObject_reshape_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {"view", (PyCFunction)PyTensorObject_view, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -979,8 +931,11 @@ PyObject* PyTensorObject_richcompare(PyObject* self, PyObject* other, int op) {
     case Py_LT: return functional::less(NULL, tuple.get(), NULL);
     case Py_LE: return functional::less_equal(NULL, tuple.get(), NULL);
     case Py_EQ: {
-      if (self == Py_None || other == Py_None) return Py_False;
-      return functional::equal(NULL, tuple.get(), NULL);
+      if (self == Py_None || other == Py_None) {
+        Py_RETURN_FALSE
+      } else {
+        return functional::equal(NULL, tuple.get(), NULL);
+      }
     }
     case Py_NE: return functional::not_equal(NULL, tuple.get(), NULL);
     case Py_GT: return functional::greater(NULL, tuple.get(), NULL);
