@@ -108,6 +108,20 @@ class GeLU : public BaseActivation {
   }
 };
 
+class FastGeLU : public BaseActivation {
+ public:
+  Maybe<void> Apply(const BaseActivationCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
+    in_grads->resize(1);
+    if (ctx->requires_grad) {
+      const auto& x = ctx->SavedTensors().at(0);
+      in_grads->at(0) = JUST(functional::FastGeluGrad(out_grads.at(0), x));
+    }
+    return Maybe<void>::Ok();
+  }
+};
+
 class HardSigmoid : public BaseActivation {
  public:
   Maybe<void> Apply(const BaseActivationCaptureState* ctx, const TensorTuple& out_grads,

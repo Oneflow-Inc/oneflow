@@ -28,7 +28,6 @@ enum class UnaryOp {
   kCelu,
   kRelu,
   kGelu,
-  kFastGelu,
   kHardSwish,
   kHardSigmoid,
   kHardShrink,
@@ -42,6 +41,7 @@ enum class UnaryOp {
   kSoftPlus,
   kTanh,
   kThreshold,
+  kFastGelu,
   // math op
   kAbs,
   kAcos,

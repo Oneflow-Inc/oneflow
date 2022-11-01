@@ -261,7 +261,7 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kGeluBackwardWithDyX, Src, Dst>
 };
 
 template<typename Src, typename Dst>
-struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFastGeluGrad, Src, Dst> {
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFastGeluBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
