@@ -60,7 +60,7 @@ class PyStackGetter final : public ForeignStackGetter {
     // See `EvalFrameAndRecordParentFrame` for documentation.
     PyFrameObject* frame = PyEval_GetFrame();
     auto top_frame = std::make_shared<PyFrame>(frame->f_code, PyFrame_GetLineNumber(frame),
-                                               current_parent_frame);
+                                               current_parent_frame_);
     return top_frame;
   }
 
@@ -121,17 +121,17 @@ class PyStackGetter final : public ForeignStackGetter {
   }
 
  private:
-  std::shared_ptr<PyFrame> current_parent_frame;
+  std::shared_ptr<PyFrame> current_parent_frame_;
 
   void PushParentFrame(PyFrameObject* frame) {
     // filter out Python functions like _bootstrap, _shutdown which don't have f_back
     if (PyFrameObject* f = frame->f_back) {
-      current_parent_frame =
-          std::make_shared<PyFrame>(f->f_code, PyFrame_GetLineNumber(f), current_parent_frame);
+      current_parent_frame_ =
+          std::make_shared<PyFrame>(f->f_code, PyFrame_GetLineNumber(f), current_parent_frame_);
     }
   }
   void PopFrame() {
-    if (current_parent_frame != nullptr) { current_parent_frame = current_parent_frame->back; }
+    if (current_parent_frame_ != nullptr) { current_parent_frame_ = current_parent_frame_->back; }
   }
 };
 
