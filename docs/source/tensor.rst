@@ -377,3 +377,5 @@ Tensor class reference
     Tensor.bernoulli
     Tensor.bernoulli_
     Tensor.bincount
+    Tensor.isclose
+    Tensor.allclose
