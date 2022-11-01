@@ -54,7 +54,7 @@ class Adam(Optimizer):
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
         amsgrad (bool, optional): whether to use the AMSGrad variant of this algorithm. (default: False) 
         do_bias_correction (bool, optional): Whether do bias correction (default: True)
-        fused (bool, optional): whether use fused kernel (default: False)
+        fused (bool, optional): whether use fused implementation (default: False)
 
     .. _Adam\\: A Method for Stochastic Optimization:
         https://arxiv.org/abs/1412.6980
@@ -226,7 +226,7 @@ class Adam(Optimizer):
                         **kwargs,
                     )
 
-    def _multi_tensor_update(self):
+    def _fused_update(self):
         for param_group in self.param_groups:
             if param_group["do_bias_correction"]:
                 param_group["bias_correction1"] = 1.0 - math.pow(
@@ -287,7 +287,7 @@ class Adam(Optimizer):
                 loss = closure()
 
             if self.fused:
-                self._multi_tensor_update()
+                self._fused_update()
             else:
                 self._single_tensor_update()
 

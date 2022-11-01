@@ -48,7 +48,7 @@ class SGD(Optimizer):
         lr (float, optional): learning rate (default: 1e-3)
         momentum (float, optional): Momentum factor (default: 0.0)
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0.0)
-        fused (bool, optional): whether use fused kernel (default: False)
+        fused (bool, optional): whether use fused implementation (default: False)
 
     For example: 
 
@@ -182,7 +182,7 @@ class SGD(Optimizer):
                     maximize=maximize,
                 )
 
-    def _multi_tensor_update(self, param_group):
+    def _fused_update(self, param_group):
         param_list = []
         param_grad_list = []
         momentum_buf_list = []
@@ -219,7 +219,7 @@ class SGD(Optimizer):
 
             if self.fused:
                 for param_group in self.param_groups:
-                    self._multi_tensor_update(param_group)
+                    self._fused_update(param_group)
             else:
                 for param_group in self.param_groups:
                     self._single_tensor_update(param_group)
