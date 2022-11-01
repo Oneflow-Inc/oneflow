@@ -52,7 +52,7 @@ class TestStft(flow.unittest.TestCase):
             n_fft=rand_fft,
             window=win,
             return_complex=False,
-            onesided=True,
+            onesided=False,
             center=True,
             normalized=True,
         )
@@ -67,13 +67,12 @@ class TestStft(flow.unittest.TestCase):
         win_dims = [rand_fft]
         x = random_tensor(2, *input_dims).to(device)
         win = random_tensor(1, *win_dims).to(device)
-
         y = torch.stft(
             x,
             n_fft=rand_fft,
             window=win,
             return_complex=False,
-            onesided=True,
+            onesided=False,
             center=True,
             normalized=True,
         )

@@ -48,7 +48,24 @@ __global__ void fft_apply_normalization(FFTTYPE* dst, const double normalization
 
 // TODO(yzm):support doublesided
 template<typename FFTTYPE>
-__global__ void convert_doublesided(FFTTYPE* dst, int32_t dims, const int n) {}
+__global__ void convert_doublesided(const FFTTYPE* src, FFTTYPE* dst, size_t len, size_t n) {
+  size_t fact_len = 2 * len - 2;
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    int index_x = i / fact_len;
+    int index_y = i % fact_len;
+    if (index_y == 0) {
+      dst[i] = src[index_x * len];
+    } else if (index_y == len - 1) {
+      dst[i] = src[(index_x + 1) * len - 1];
+    } else if (index_y < len - 1 && index_y > 0) {
+      dst[i] = src[index_x * len + index_y];
+    } else {
+      auto index = (index_x + 2) * len - index_y - 2;
+      dst[i].x = src[index].x;
+      dst[i].y = -src[index].y;
+    }
+  }
+}
 
 template<typename IN, typename OUT>
 class StftGpuKernel final : public user_op::OpKernel {
@@ -96,11 +113,14 @@ class StftGpuKernel final : public user_op::OpKernel {
       config.excute_plan(data_in + i * in_offset, out_tmp_buffer + i * out_offset);
     }
 
-    // TODO(yzm):support doublesided
     if (!onesided) {
+      size_t last_dim_length = fft_size / 2 + 1;
+      OUT* doublesided_tmp_buffer =
+          reinterpret_cast<OUT*>(tmp_buffer->mut_dptr<char>()) + out_elem_cnt;
       convert_doublesided<<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0,
                             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-          out_tmp_buffer, output_shape.At(0), out_elem_cnt);
+          out_tmp_buffer, doublesided_tmp_buffer, last_dim_length, out_elem_cnt);
+      out_tmp_buffer = doublesided_tmp_buffer;
     }
 
     const double normalization_scale = _fft_normalization_scale(input_shape.back());
@@ -126,10 +146,11 @@ class StftGpuKernel final : public user_op::OpKernel {
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   \
         const Shape& output_shape = ctx->InputShape("output", 0);                           \
         const bool return_complex = ctx->Attr<bool>("return_complex");                      \
+        const bool onesided = ctx->Attr<bool>("onesided");                                  \
         int64_t output_elem_cnt =                                                           \
             return_complex ? output_shape.elem_cnt() : output_shape.elem_cnt() / 2;         \
         const int64_t output_bytes = GetCudaAlignedSize(output_elem_cnt * sizeof(outtype)); \
-        return output_bytes;                                                                \
+        return onesided ? output_bytes : 2 * output_bytes;                                  \
       });
 REGISTER_STFT_GPU_KERNEL(float, cufftComplex)
 REGISTER_STFT_GPU_KERNEL(double, cufftDoubleComplex)
