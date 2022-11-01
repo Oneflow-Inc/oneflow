@@ -37,10 +37,14 @@ class PyFrame final : public Frame {
  public:
   PyFrame(PyCodeObject* code, int lineno, std::shared_ptr<PyFrame> back)
       : code(code), lineno(lineno), back(std::move(back)) {
+    py::gil_scoped_acquire acquire;
     Py_INCREF(code);
   }
   OF_DISALLOW_COPY_AND_MOVE(PyFrame);
-  ~PyFrame() { Py_DECREF(code); }
+  ~PyFrame() {
+    py::gil_scoped_acquire acquire;
+    Py_DECREF(code);
+  }
 
   PyCodeObject* const code;
   const int lineno;
@@ -52,6 +56,7 @@ class PyStackGetter final : public ForeignStackGetter {
   // indended to be called in main thread.
   std::shared_ptr<Frame> GetCurrentFrame() const override {
     if (IsShuttingDown()) { return nullptr; }
+    py::gil_scoped_acquire acquire;
     // See `EvalFrameAndRecordParentFrame` for documentation.
     PyFrameObject* frame = PyEval_GetFrame();
     auto top_frame = std::make_shared<PyFrame>(frame->f_code, PyFrame_GetLineNumber(frame),
@@ -63,33 +68,28 @@ class PyStackGetter final : public ForeignStackGetter {
     if (frame == nullptr) { return "  <unknown>\n"; }
     std::string buffer;
     auto py_frame = std::dynamic_pointer_cast<const PyFrame>(frame);
-    // NOTE: intentionally not using CHECK_JUST here, because CHECK_JUST may also
-    // call current function (StackGetter::Print) and cause infinite loop.
-    // NOLINTNEXTLINE
-    Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
-      while (py_frame != nullptr) {
-        const auto* code_object = py_frame->code;
-        const auto& lineno = py_frame->lineno;
-        const char* filename =
-            PyBytes_AsString(PyUnicode_AsEncodedString(code_object->co_filename, "utf-8", "~E~"));
-        const char* funcname =
-            PyBytes_AsString(PyUnicode_AsEncodedString(code_object->co_name, "utf-8", "~E~"));
-        const std::string line_text = [&]() -> std::string {
-          std::string line_text;
-          std::ifstream ifs(filename);
-          if (!ifs.is_open()) { return "<unknown>"; }
-          for (int j = 0; j < lineno; ++j) { std::getline(ifs, line_text); }
-          line_text.erase(line_text.find_last_not_of(' ') + 1);  // suffixing spaces
-          line_text.erase(0, line_text.find_first_not_of(' '));  // prefixing spaces
-          return line_text;
-        }();
-        // immitate python's stack trace format
-        fmt::format_to(std::back_inserter(buffer), "  File \"{}\", line {}, in {}\n    {}\n",
-                       filename, lineno, funcname, line_text);
-        py_frame = py_frame->back;
-      }
-      return Maybe<void>::Ok();
-    });
+    py::gil_scoped_acquire acquire;
+    while (py_frame != nullptr) {
+      const auto* code_object = py_frame->code;
+      const auto& lineno = py_frame->lineno;
+      const char* filename =
+          PyBytes_AsString(PyUnicode_AsEncodedString(code_object->co_filename, "utf-8", "~E~"));
+      const char* funcname =
+          PyBytes_AsString(PyUnicode_AsEncodedString(code_object->co_name, "utf-8", "~E~"));
+      const std::string line_text = [&]() -> std::string {
+        std::string line_text;
+        std::ifstream ifs(filename);
+        if (!ifs.is_open()) { return "<unknown>"; }
+        for (int j = 0; j < lineno; ++j) { std::getline(ifs, line_text); }
+        line_text.erase(line_text.find_last_not_of(' ') + 1);  // suffixing spaces
+        line_text.erase(0, line_text.find_first_not_of(' '));  // prefixing spaces
+        return line_text;
+      }();
+      // immitate python's stack trace format
+      fmt::format_to(std::back_inserter(buffer), "  File \"{}\", line {}, in {}\n    {}\n",
+                     filename, lineno, funcname, line_text);
+      py_frame = py_frame->back;
+    }
     return buffer;
   };
 
@@ -165,4 +165,4 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   });
 }
 
-}
+}  // namespace oneflow
