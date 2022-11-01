@@ -42,7 +42,7 @@ namespace detail {
 namespace {
 
 template<typename T>
-Maybe<T> GetItemInScalarTensor(PyObject* obj) {
+Maybe<T> GetItemInPyScalarTensor(PyObject* obj) {
   return GetItemInScalarTensor<T>(PyTensor_Unpack(obj));
 }
 
@@ -180,7 +180,7 @@ Scalar PyUnpackScalarTensor(PyObject* obj) {
 
 #define SWITCH_SCALAR_TENSOR_TO_SCALAR(cpp_type, of_type) \
   case of_type:                                           \
-    return detail::GetItemInScalarTensor<cpp_type>(obj).GetOrThrow();
+    return detail::GetItemInPyScalarTensor<cpp_type>(obj).GetOrThrow();
 
 #define SCALAR_TENSOR_UNPACK_FUNC_IMPL(func_name, return_type, type_seq)                  \
   return_type func_name(PyObject* obj) {                                                  \

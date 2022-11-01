@@ -110,18 +110,15 @@ Maybe<T> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor) {
   return scalar;
 }
 
-#define DEFINE_GET_ITEM_IN_SCALAR_TENSOR(T) \
-  template Maybe<T> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor);
+#define SPECILIZE_SCALAR_TENSOR_TO_SCALAR_FUNC(cpp_type, of_type) \
+  template Maybe<cpp_type> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor);
 
-DEFINE_GET_ITEM_IN_SCALAR_TENSOR(bool)
-DEFINE_GET_ITEM_IN_SCALAR_TENSOR(long long)
-DEFINE_GET_ITEM_IN_SCALAR_TENSOR(double)
-DEFINE_GET_ITEM_IN_SCALAR_TENSOR(float)
-DEFINE_GET_ITEM_IN_SCALAR_TENSOR(int8_t)
-DEFINE_GET_ITEM_IN_SCALAR_TENSOR(int32_t)
-DEFINE_GET_ITEM_IN_SCALAR_TENSOR(int64_t)
-DEFINE_GET_ITEM_IN_SCALAR_TENSOR(char)
-DEFINE_GET_ITEM_IN_SCALAR_TENSOR(uint8_t)
+#define REGISTER_SCALAR_TENSOR_TO_SCALAR_FUNC(type_seq) \
+  OF_PP_FOR_EACH_TUPLE(SPECILIZE_SCALAR_TENSOR_TO_SCALAR_FUNC, type_seq)
 
+REGISTER_SCALAR_TENSOR_TO_SCALAR_FUNC(POD_DATA_TYPE_SEQ);
+
+#undef REGISTER_SCALAR_TENSOR_TO_SCALAR_FUNC
+#undef SPECILIZE_SCALAR_TENSOR_TO_SCALAR_FUNC
 }  // namespace one
 }  // namespace oneflow
