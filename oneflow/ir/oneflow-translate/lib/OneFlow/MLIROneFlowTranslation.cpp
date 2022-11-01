@@ -800,8 +800,8 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   if (job_wrapper.IsLastIRPass() && std::getenv("ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH") != nullptr) {
     pm.addPass(createKernelLaunchFunctionPass());
   }
-  if (std::getenv("ONEFLOW_MLIR_PRINT_STATS") != nullptr) { pm.addPass(createPrintOpStatsPass()); }
   pm.addPass(createCanonicalizerPass());
+  if (std::getenv("ONEFLOW_MLIR_PRINT_STATS") != nullptr) { pm.addPass(createPrintOpStatsPass()); }
   llvm::raw_string_ostream os_graphviz(graphviz);
   pm.addPass(createPrintOpGraphPass(os_graphviz));
   if (mlir::failed(pm.run(*module))) {
