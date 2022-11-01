@@ -62,7 +62,10 @@ LauncherContext::LauncherContext(user_op::KernelComputeContext* compute_context,
 
           mlir::Operation* reg_op = nullptr;
           for (auto& op_it : op.getRegion(0).front().getOperations()) {
-            if (op_it.getDialect()->getNamespace() == "oneflow") { reg_op = &op_it; }
+            if (op_it.getDialect()->getNamespace() == "oneflow") {
+              reg_op = &op_it;
+              break;
+            }
           }
 
           if (!reg_op) { LOG(FATAL) << "Failed to find reg_op in okl.build_reg_context_op"; }
