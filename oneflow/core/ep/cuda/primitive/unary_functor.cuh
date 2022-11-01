@@ -38,14 +38,17 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kFastGelu, Dst, Src> {
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     // ref to: https://mlfromscratch.com/activation-functions-explained/#gelu
-    return static_cast<Src>(0.5) * src
-           * (static_cast<Src>(1)
-              + tanh(constant1 * src + constant2 * pow(src, static_cast<Src>(3))));
+    Src half = static_cast<Src>(0.5);
+    Src one = static_cast<Src>(1);
+    Src tanh_in = alpha * (src + beta * src * src * src);
+    return half * src * (one + tanh(tanh_in));
   }
 
  private:
-  const Src constant1 = static_cast<Src>(0.797885);
-  const Src constant2 = static_cast<Src>(0.035677);
+  // constant ref to:
+  // https://github.com/microsoft/onnxruntime/blob/main/onnxruntime/test/testdata/transform/fusion/fast_gelu.py
+  static constexpr Src alpha = static_cast<Src>(0.7978845608028654);
+  static constexpr Src beta = static_cast<Src>(0.044714998453855515);
 };
 
 template<>
