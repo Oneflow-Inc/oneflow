@@ -47,16 +47,16 @@ Maybe<void> GetGeluSbp(user_op::SbpContext* ctx) {
 }
 /*static*/ auto GeluOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> { return GetGeluSbp(ctx); }
 
-/*static*/ auto GeluTanhOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
+/*static*/ auto FastGeluOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
   return InferGeluTensorDesc(ctx);
 }
-/*static*/ auto GeluTanhOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
+/*static*/ auto FastGeluOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
   return InferGeluTensorDesc(ctx);
 }
-/*static*/ auto GeluTanhOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
+/*static*/ auto FastGeluOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
   return InferGeluDataType(ctx);
 }
-/*static*/ auto GeluTanhOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+/*static*/ auto FastGeluOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   return GetGeluSbp(ctx);
 }
 
@@ -108,16 +108,16 @@ Maybe<void> GetGeluGradSbp(user_op::SbpContext* ctx) {
   return GetGeluGradSbp(ctx);
 }
 
-/*static*/ auto GeluTanhGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
+/*static*/ auto FastGeluGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
   return InferGeluGradTensorDesc(ctx);
 }
-/*static*/ auto GeluTanhGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
+/*static*/ auto FastGeluGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
   return InferGeluGradTensorDesc(ctx);
 }
-/*static*/ auto GeluTanhGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
+/*static*/ auto FastGeluGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
   return InferGeluGradDataType(ctx);
 }
-/*static*/ auto GeluTanhGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+/*static*/ auto FastGeluGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   return GetGeluGradSbp(ctx);
 }
 

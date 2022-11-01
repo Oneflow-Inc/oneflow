@@ -229,31 +229,31 @@ REGISTER_USER_KERNEL("gelu_grad")
     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kGeluBackwardWithDyX, "dx",
                                            "dy"));
 
-REGISTER_USER_KERNEL("gelu_tanh")
+REGISTER_USER_KERNEL("fast_gelu")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<UnaryPrimitiveKernel>(
           "out", "in", [](user_op::KernelComputeContext* ctx) {
             const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0);
             return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
-                ctx->device_type(), ep::primitive::UnaryOp::kGeluTanh, src->data_type(),
+                ctx->device_type(), ep::primitive::UnaryOp::kFastGelu, src->data_type(),
                 dst->data_type());
           });
     })
-    .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kGeluTanh, "out", "in"));
+    .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kFastGelu, "out", "in"));
 
-REGISTER_USER_KERNEL("gelu_tanh_grad")
+REGISTER_USER_KERNEL("fast_gelu_grad")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
           "dx", "dy", "x", [](user_op::KernelComputeContext* ctx) {
             const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
-                ctx->device_type(), ep::primitive::BinaryOp::kGeluTanhGrad, src->data_type(),
+                ctx->device_type(), ep::primitive::BinaryOp::kFastGeluGrad, src->data_type(),
                 dst->data_type(), 1 /*max_num_dims*/);
           });
     })
-    .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kGeluTanhGrad, "dx", "dy"));
+    .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kFastGeluGrad, "dx", "dy"));
 
 REGISTER_USER_KERNEL("leaky_relu")
     .SetCreateFn([]() {

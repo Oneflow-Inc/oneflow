@@ -2446,7 +2446,7 @@ class GeluWithApproximateFunctor {
     if (approximate != "none" && approximate != "tanh") {
       return Error::RuntimeError() << "the approximate argument should be 'none' or 'tanh'";
     }
-    if (approximate == "tanh") { return GeluTanh(x); }
+    if (approximate == "tanh") { return FastGelu(x); }
     return Gelu(x);
   }
 };

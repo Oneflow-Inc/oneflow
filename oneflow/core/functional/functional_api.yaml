@@ -648,12 +648,12 @@
   signature: "Tensor (Tensor dy, Tensor x) => GeluGrad"
   bind_python: False
 
-- name: "gelu_tanh"
-  signature: "Tensor (Tensor x) => GeluTanh"
+- name: "fast_gelu"
+  signature: "Tensor (Tensor x) => FastGelu"
   bind_python: True
 
-- name: "gelu_tanh_grad"
-  signature: "Tensor (Tensor dy, Tensor x) => GeluTanhGrad"
+- name: "fast_gelu_grad"
+  signature: "Tensor (Tensor dy, Tensor x) => FastGeluGrad"
   bind_python: False
 
 - name: "gelu_with_approximate"
