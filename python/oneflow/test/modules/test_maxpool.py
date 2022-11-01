@@ -30,6 +30,10 @@ def _test_maxpool2d_channel_last(
     test_case, device, shape, kernel_size, stride, padding, dilation, ceil_mode
 ):
     os.environ["ONEFLOW_ENABLE_NHWC"] = "1"
+    # NOTE:(zhaoluyang) 
+    # this case will be True if pytorch version <=1.10.0 and maybe False if version >= 1.12.0,
+    # not sure if the new version of pytorch fixes bugs or introduces bugs.
+    # related issue: https://github.com/Oneflow-Inc/OneTeam/issues/1749
     arr = np.random.randn(*shape)
     x1 = flow.tensor(arr, dtype=flow.float64, device=device)
     m1 = flow.nn.MaxPool2d(
@@ -50,10 +54,10 @@ def _test_maxpool2d_channel_last(
         ceil_mode=ceil_mode,
     )
     y2 = m2(x2).permute(0, 2, 3, 1)
+    os.environ["ONEFLOW_ENABLE_NHWC"] = "0"
     test_case.assertTrue(
         np.allclose(y1.detach().cpu().numpy(), y2.detach().cpu().numpy(), 1e-4, 1e-4)
     )
-    os.environ["ONEFLOW_ENABLE_NHWC"] = "0"
 
 
 @flow.unittest.skip_unless_1n1d()
