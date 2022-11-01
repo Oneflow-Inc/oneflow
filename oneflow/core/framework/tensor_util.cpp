@@ -114,6 +114,8 @@ Maybe<T> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor) {
   template Maybe<T> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor);
 
 DEFINE_GET_ITEM_IN_SCALAR_TENSOR(bool)
+DEFINE_GET_ITEM_IN_SCALAR_TENSOR(long long)
+DEFINE_GET_ITEM_IN_SCALAR_TENSOR(double)
 DEFINE_GET_ITEM_IN_SCALAR_TENSOR(int64_t)
 
 }  // namespace one
