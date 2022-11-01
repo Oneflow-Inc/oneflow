@@ -1150,17 +1150,17 @@ class MaxUnpool2d(Module):
         >>> pool = flow.nn.MaxPool2d(2, stride=2, return_indices=True)
         >>> unpool = flow.nn.MaxUnpool2d(2, stride=2)
         >>> input = flow.tensor([[[[ 1.,  2,  3,  4],
-                                    [ 5,  6,  7,  8],
-                                    [ 9, 10, 11, 12],
-                                    [13, 14, 15, 16]]]])
+        ...                         [ 5,  6,  7,  8],
+        ...                         [ 9, 10, 11, 12],
+        ...                         [13, 14, 15, 16]]]])
         >>> output, indices = pool(input)
-        >>> unpool(output, indices)
+        >>> unpool(output, indices) # doctest: +SKIP 
         tensor([[[[ 0.,  0.,  0.,  0.],
                 [ 0.,  6.,  0.,  8.],
                 [ 0.,  0.,  0.,  0.],
                 [ 0., 14.,  0., 16.]]]], dtype=oneflow.float32)
         >>> # specify a different output size than input size
-        >>> unpool(output, indices, output_size=flow.Size([1, 1, 5, 5]))
+        >>> unpool(output, indices, output_size=flow.Size([1, 1, 5, 5])) # doctest: +SKIP
         tensor([[[[ 0.,  0.,  0.,  0.,  0.],
                 [ 6.,  0.,  8.,  0.,  0.],
                 [ 0.,  0.,  0., 14.,  0.],
