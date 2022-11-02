@@ -430,7 +430,13 @@ void NdSbpsDimReduce(const Shape& hierarchy, const std::vector<const NdSbp*>& nd
   // Speed up for 1d sbp
   if (hierarchy.NumAxes() == 1) {
     *reduced_hierarchy = hierarchy;
-    for (int32_t index = 0; index < sbp_num; index++) { *reduced_nd_sbps[index] = *nd_sbps[index]; }
+    for (int32_t index = 0; index < sbp_num; index++) {
+      if (hierarchy.elem_cnt() == 1) {
+        reduced_nd_sbps[index]->add_sbp_parallel()->mutable_broadcast_parallel();
+      } else {
+        *reduced_nd_sbps[index] = *nd_sbps[index];
+      }
+    }
     return;
   }
   reduced_hierarchy->clear();
@@ -813,23 +819,26 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
                                              const ParallelDesc& producer_parallel_desc,
                                              const ParallelDesc& consumer_parallel_desc,
                                              bool requires_same_sbp) {
-  // Reduce before cost computation
-  ParallelDesc reduced_in_parallel_desc = producer_parallel_desc;
-  NdSbp reduced_in_nd_sbp;
-  NdSbpDimReduce(producer_parallel_desc, producer_sbp_parallel, &reduced_in_parallel_desc,
-                 &reduced_in_nd_sbp, logical_blob_desc.shape());
-
-  ParallelDesc reduced_out_parallel_desc = consumer_parallel_desc;
-  NdSbp reduced_out_nd_sbp;
-  NdSbpDimReduce(consumer_parallel_desc, consumer_sbp_parallel, &reduced_out_parallel_desc,
-                 &reduced_out_nd_sbp, logical_blob_desc.shape());
   // In 90% of the transfer, we would have the same parallel description for producer and consumer
   // We need to speed it up and give an approximation of the cost
-  if (reduced_in_parallel_desc == reduced_out_parallel_desc
-      && reduced_in_nd_sbp == reduced_out_nd_sbp) {
-    if (producer_sbp_parallel == consumer_sbp_parallel) {
+  if (producer_parallel_desc.EqualsIgnoringHierarchy(consumer_parallel_desc)) {
+    // [2, 2]: (S0, S1) -> [2, 2]: (S0, S1)
+    if (*producer_parallel_desc.hierarchy() == *consumer_parallel_desc.hierarchy()
+        && producer_sbp_parallel == consumer_sbp_parallel) {
       return 0.0;
-    } else {
+    }
+    // Reduce before cost computation
+    Shape reduced_in_hierarchy;
+    NdSbp reduced_in_nd_sbp;
+    Shape reduced_out_hierarchy;
+    NdSbp reduced_out_nd_sbp;
+    InOutParallelDimReduce(*producer_parallel_desc.hierarchy(), *consumer_parallel_desc.hierarchy(),
+                           producer_sbp_parallel, consumer_sbp_parallel, &reduced_in_hierarchy,
+                           &reduced_out_hierarchy, &reduced_in_nd_sbp, &reduced_out_nd_sbp,
+                           logical_blob_desc.shape());
+
+    // [2, 2]: (B, B) -> [4]: B
+    if (reduced_in_hierarchy == reduced_out_hierarchy && reduced_in_nd_sbp == reduced_out_nd_sbp) {
       return 1.0;
     }
   }
@@ -903,22 +912,20 @@ double ComputeSbpInferPriority(const NdSbp& producer_nd_sbp, const NdSbp& consum
     // consumer
     return 0.0;
   }
-  // Dim reduction for producer
-  ParallelDesc reduced_in_parallel_desc = producer_parallel_desc;
+  // Reduce before cost computation
+  Shape reduced_in_hierarchy;
   NdSbp reduced_in_nd_sbp;
-  NdSbpDimReduce(producer_parallel_desc, producer_nd_sbp, &reduced_in_parallel_desc,
-                 &reduced_in_nd_sbp, logical_shape);
-
-  // Dim reduction for consumer
-  ParallelDesc reduced_out_parallel_desc = consumer_parallel_desc;
+  Shape reduced_out_hierarchy;
   NdSbp reduced_out_nd_sbp;
-  NdSbpDimReduce(consumer_parallel_desc, consumer_nd_sbp, &reduced_out_parallel_desc,
-                 &reduced_out_nd_sbp, logical_shape);
+  InOutParallelDimReduce(*producer_parallel_desc.hierarchy(), *consumer_parallel_desc.hierarchy(),
+                         producer_nd_sbp, consumer_nd_sbp, &reduced_in_hierarchy,
+                         &reduced_out_hierarchy, &reduced_in_nd_sbp, &reduced_out_nd_sbp,
+                         logical_shape);
 
   if (requires_same_sbp) {
     // This blob does not support boxing
-    if (reduced_in_nd_sbp == reduced_out_nd_sbp
-        && reduced_in_parallel_desc == reduced_out_parallel_desc) {
+    if (reduced_in_nd_sbp == reduced_out_nd_sbp && reduced_in_hierarchy == reduced_out_hierarchy
+        && producer_parallel_desc.EqualsIgnoringHierarchy(consumer_parallel_desc)) {
       // Normal priority: No transfer occurs but we have different sbp
       // For example: [1]:S0 -> [1]:B
       // [1, 2]:(P, S0) -> [1, 2]:(S0, S0)
