@@ -1564,7 +1564,12 @@ class FlipFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int32_t>& dims) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims");
-    attrs.SetAllAttrs(dims);
+    if (dims.empty()) {
+      attrs.SetAllAttrs(dims);
+    } else {
+      std::vector<int32_t> flip_dims = *JUST(CheckAxis(dims, x->ndim()));
+      attrs.SetAllAttrs(flip_dims);
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
