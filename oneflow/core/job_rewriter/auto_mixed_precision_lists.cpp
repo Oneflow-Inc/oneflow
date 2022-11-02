@@ -46,7 +46,8 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "binary_cross_entropy_with_logits_reduce_mean_grad",
                                "fused_cross_feature_interaction",
                                "fused_cross_feature_interaction_v1_grad",
-                               "fused_cross_feature_interaction_v2_grad"};
+                               "fused_cross_feature_interaction_v2_grad",
+                               "fused_multi_head_attention_inference"};
   return white_list;
 }
 
@@ -120,7 +121,9 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "reciprocal_no_nan",
                               "group_norm",
                               "group_norm_param_grad",
-                              "group_norm_grad"};
+                              "group_norm_grad",
+                              "silu",
+                              "silu_grad"};
   return gray_list;
 }
 

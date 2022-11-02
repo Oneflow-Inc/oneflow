@@ -39,6 +39,7 @@ message AdamModelUpdateConf {
   optional float epsilon = 3 [default = 1e-8];
   optional bool do_bias_correction = 4 [default = true];
   optional bool amsgrad = 5 [default = false];
+  optional bool smart_decay = 6 [default = false];
 }
 
 message LazyAdamModelUpdateConf {
@@ -167,7 +168,7 @@ message PredictConf {
 
 message MemoryAllocationAlgorithmConf {
   optional bool use_mem_size_first_algo = 1 [default = true];
-  optional bool use_mutual_exclusion_first_algo = 2 [default = true];
+  optional bool use_mutual_exclusion_first_algo = 2 [default = false];
   optional bool use_time_line_algo = 3 [default = false];
 }
 

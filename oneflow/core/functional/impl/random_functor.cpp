@@ -13,28 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <memory>
-#include "oneflow/core/common/singleton.h"
-#include "oneflow/core/common/optional.h"
-#include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/framework/op_interpreter.h"
-#include "oneflow/core/framework/random_generator.h"
-#include "oneflow/core/framework/nd_sbp.h"
-#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
-#include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
-#include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/sbp_parallel.h"
-#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/user/kernels/distributions/common.h"
 
 namespace oneflow {
@@ -49,7 +31,7 @@ class BernoulliFunctor {
     bernoulli_op_ = CHECK_JUST(one::OpBuilder("bernoulli").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Symbol<DType>& dtype,
-                           const Optional<one::Generator>& generator) const {
+                           const Optional<one::Generator>& generator, const bool& inplace) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     auto& bernoulli_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "seed", "p");
 
@@ -57,12 +39,29 @@ class BernoulliFunctor {
     bernoulli_attrs.SetAllAttrs(dtype->data_type(), static_cast<int64_t>(gen->current_seed()),
                                 static_cast<double>(-1));
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-    return OpInterpUtil::Dispatch<Tensor>(*bernoulli_op_, {x},
-                                          OpExprInterpContext(bernoulli_attrs, distribution_state));
+    if (inplace) {
+      auto outputs = std::make_shared<TensorTuple>(1);
+      JUST(CheckInplaceValid(x));
+      (*outputs)[0] = x;
+      JUST(OpInterpUtil::Dispatch(*bernoulli_op_, {x}, outputs.get(),
+                                  OpExprInterpContext(bernoulli_attrs, distribution_state)));
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(
+          *bernoulli_op_, {x}, OpExprInterpContext(bernoulli_attrs, distribution_state));
+    }
   }
 
  private:
   std::shared_ptr<OpExpr> bernoulli_op_;
+};
+
+class BernoulliInplaceFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Symbol<DType>& dtype,
+                           const Optional<one::Generator>& generator) const {
+    return Bernoulli(x, dtype, generator, true);
+  }
 };
 
 class BernoulliProbFunctor {
@@ -71,20 +70,38 @@ class BernoulliProbFunctor {
     bernoulli_op_ = CHECK_JUST(one::OpBuilder("bernoulli").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& p,
-                           const Symbol<DType>& dtype,
-                           const Optional<one::Generator>& generator) const {
+                           const Symbol<DType>& dtype, const Optional<one::Generator>& generator,
+                           const bool& inplace) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     CHECK_OR_THROW(p >= 0.0 && p <= 1.0) << "bernoulli expects p to be in [0, 1], but got p=" << p;
 
     auto& bernoulli_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "seed", "p");
     bernoulli_attrs.SetAllAttrs(dtype->data_type(), static_cast<int64_t>(gen->current_seed()), p);
-    return OpInterpUtil::Dispatch<Tensor>(*bernoulli_op_, {x},
-                                          OpExprInterpContext(bernoulli_attrs, distribution_state));
+    if (inplace) {
+      auto outputs = std::make_shared<TensorTuple>(1);
+      JUST(CheckInplaceValid(x));
+      (*outputs)[0] = x;
+      JUST(OpInterpUtil::Dispatch(*bernoulli_op_, {x}, outputs.get(),
+                                  OpExprInterpContext(bernoulli_attrs, distribution_state)));
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(
+          *bernoulli_op_, {x}, OpExprInterpContext(bernoulli_attrs, distribution_state));
+    }
   }
 
  private:
   std::shared_ptr<OpExpr> bernoulli_op_;
+};
+
+class BernoulliProbInplaceFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& p,
+                           const Symbol<DType>& dtype,
+                           const Optional<one::Generator>& generator) const {
+    return BernoulliProb(x, p, dtype, generator, true);
+  }
 };
 
 class RandFunctor {
@@ -94,11 +111,12 @@ class RandFunctor {
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
-    DataType dtype_val = DataType::kFloat;
+    DataType dtype_val = GetDefaultDType()->data_type();
     if (dtype.has_value()) {
       dtype_val = JUST(dtype)->data_type();
-      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
-        OF_UNIMPLEMENTED() << "Only support float and double in rand().";
+      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble
+          && dtype_val != DataType::kFloat16) {
+        OF_UNIMPLEMENTED() << "Only support floating dtype in rand().";
       }
     }
 
@@ -129,11 +147,11 @@ class GlobalRandFunctor {
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    DataType dtype_val = DataType::kFloat;
+    DataType dtype_val = GetDefaultDType()->data_type();
     if (dtype.has_value()) {
       dtype_val = JUST(dtype)->data_type();
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
-        OF_UNIMPLEMENTED() << "Only support float and double in rand().";
+        OF_UNIMPLEMENTED() << "Only support floating dtype in rand().";
       }
     }
 
@@ -167,10 +185,11 @@ class RandNFunctor {
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
-    DataType dtype_val = DataType::kFloat;
+    DataType dtype_val = GetDefaultDType()->data_type();
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
-    if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
-      OF_UNIMPLEMENTED() << "Only support float and double in randn().";
+    if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble
+        && dtype_val != DataType::kFloat16) {
+      OF_UNIMPLEMENTED() << "Only support floating dtype in randn().";
     }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
@@ -200,10 +219,11 @@ class GlobalRandNFunctor {
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    DataType dtype_val = DataType::kFloat;
+    DataType dtype_val = GetDefaultDType()->data_type();
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
-    if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
-      OF_UNIMPLEMENTED() << "Only support float and double in randn().";
+    if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble
+        && dtype_val != DataType::kFloat16) {
+      OF_UNIMPLEMENTED() << "Only support floating dtype in randn().";
     }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
@@ -227,6 +247,31 @@ class GlobalRandNFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class RandnLikeFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Optional<Symbol<Device>>& device,
+                           const Optional<one::Generator>& generator,
+                           const bool& requires_grad) const {
+    return RandN(*input->shape(), dtype.value_or(input->dtype()),
+                 device.value_or(JUST(input->device())), generator, requires_grad);
+  }
+};
+
+class GlobalRandnLikeFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<SbpParallel>>& sbp,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Optional<one::Generator>& generator,
+                           const bool& requires_grad) const {
+    return GlobalRandN(*input->shape(), placement, sbp, dtype.value_or(input->dtype()), generator,
+                       requires_grad);
+  }
 };
 
 class RandIntFunctor {
@@ -557,13 +602,17 @@ using namespace impl;
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<BernoulliFunctor>("Bernoulli");
+  m.add_functor<BernoulliInplaceFunctor>("BernoulliInplace");
   m.add_functor<BernoulliProbFunctor>("BernoulliProb");
+  m.add_functor<BernoulliProbInplaceFunctor>("BernoulliProbInplace");
   m.add_functor<RandPermFunctor>("RandPerm");
   m.add_functor<GlobalRandPermFunctor>("GlobalRandPerm");
   m.add_functor<RandFunctor>("Rand");
   m.add_functor<GlobalRandFunctor>("GlobalRand");
   m.add_functor<RandNFunctor>("RandN");
   m.add_functor<GlobalRandNFunctor>("GlobalRandN");
+  m.add_functor<RandnLikeFunctor>("RandnLike");
+  m.add_functor<GlobalRandnLikeFunctor>("GlobalRandnLike");
   m.add_functor<RandIntFunctor, RandInt2Functor>("RandInt");
   m.add_functor<GlobalRandIntFunctor, GlobalRandInt2Functor>("GlobalRandInt");
   m.add_functor<RandIntLikeFunctor, RandIntLike2Functor>("RandIntLike");

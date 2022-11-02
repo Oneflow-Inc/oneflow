@@ -261,6 +261,22 @@ else()
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${EXTRA_CXX_FLAGS}")
 endif()
 
+if((ENABLE_ASAN OR ENABLE_UBSAN) AND ENABLE_TSAN)
+  message(FATAL_ERROR "Only ASAN and UBSAN can be enabled at the same time.")
+endif()
+if(ENABLE_ASAN)
+  add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+  add_link_options(-fsanitize=address -fno-omit-frame-pointer)
+endif()
+if(ENABLE_UBSAN)
+  add_compile_options(-fsanitize=undefined)
+  add_link_options(-fsanitize=undefined)
+endif()
+if(ENABLE_TSAN)
+  add_compile_options(-fsanitize=thread)
+  add_link_options(-fsanitize=thread)
+endif()
+
 if(BUILD_PYTHON)
   set(ONEFLOW_INCLUDE_DIR "${ONEFLOW_PYTHON_DIR}/oneflow/include")
 endif(BUILD_PYTHON)
@@ -286,6 +302,11 @@ set(KINETO_URL
 use_mirror(VARIABLE KINETO_URL URL ${KINETO_URL})
 set(KINETO_MD5 f9b550591b3899fb267270c19484933f)
 
+set(CUTLASS_URL
+    https://github.com/NVIDIA/cutlass/archive/4db6a6140e45c4ffe6339c55b43b159602fa1f35.zip)
+use_mirror(VARIABLE CUTLASS_URL URL ${CUTLASS_URL})
+set(CUTLASS_MD5 132bc2d7b635e33666dd6fab1a9ab340)
+
 include(cuda)
 add_subdirectory(external)
 include(third_party)
@@ -293,33 +314,33 @@ include(third_party)
 if(BUILD_CUDA)
   # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags
   if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-    list(APPEND CMAKE_CUDA_ARCHITECTURES 60-real)
+   # list(APPEND CMAKE_CUDA_ARCHITECTURES 60-real)
 
     # Tesla P40/P4, Quadro Pxxx/Pxxxx, GeForce GTX 10xx, TITAN X/Xp
-    list(APPEND CMAKE_CUDA_ARCHITECTURES 61-real)
+   # list(APPEND CMAKE_CUDA_ARCHITECTURES 61-real)
 
     # V100, TITAN V
-    list(APPEND CMAKE_CUDA_ARCHITECTURES 70-real)
+  #  list(APPEND CMAKE_CUDA_ARCHITECTURES 70-real)
 
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
+   # if(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
       # T4, Quadro RTX xxxx, Txxxx, Geforce RTX 20xx, TITAN RTX
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 75-real)
-    endif()
+   #   list(APPEND CMAKE_CUDA_ARCHITECTURES 75-real)
+   # endif()
 
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
+   # if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
       # A100
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 80-real)
-    endif()
+   #   list(APPEND CMAKE_CUDA_ARCHITECTURES 80-real)
+   # endif()
 
     if(CUDA_VERSION VERSION_GREATER_EQUAL "11.1")
       # GeForce RTX 30xx
       list(APPEND CMAKE_CUDA_ARCHITECTURES 86-real)
     endif()
 
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.8")
+   # if(CUDA_VERSION VERSION_GREATER_EQUAL "11.8")
       # NVIDIA H100
-      list(APPEND CMAKE_CUDA_ARCHITECTURES 90-real)
-    endif()
+    #  list(APPEND CMAKE_CUDA_ARCHITECTURES 90-real)
+   # endif()
 
     if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
       list(APPEND CMAKE_CUDA_ARCHITECTURES 80-virtual)

@@ -77,6 +77,9 @@ class DType final {
 
 Symbol<DType> promoteTypes(const Symbol<DType> a, const Symbol<DType> b);
 
+Maybe<void> SetDefaultDType(const Symbol<DType>& dtype);
+Symbol<DType> GetDefaultDType();
+
 }  // namespace oneflow
 
 namespace std {

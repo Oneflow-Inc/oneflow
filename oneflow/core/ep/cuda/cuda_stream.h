@@ -79,6 +79,7 @@ class CudaStream : public Stream {
   CudaDevice* device() const override;
   Maybe<void> Sync() override;
   void RecordEvent(Event* event) override;
+  Maybe<void> GetAsyncError() override;
 
   Maybe<void> OnExecutionContextSetup() override;
   Maybe<void> OnExecutionContextTeardown() override;
