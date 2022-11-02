@@ -52,21 +52,35 @@ class TestGradScaling(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     def test_grad_scaling_scale(test_case):
-        scaler = flow.cuda.amp.GradScaler(init_scale=2.)
+        scaler = flow.cuda.amp.GradScaler(init_scale=2.0)
         t0 = flow.full((1,), 4.0, dtype=flow.float32, device="cuda:0")
         t1 = flow.full((1,), 4.0, dtype=flow.float32, device="cuda:1")
         # Create some nested iterables of tensors on different devices.
-        outputs = (t1.clone(), (t0.clone(), t1.clone()), [t0.clone(), (t1.clone(), t0.clone())])
+        outputs = (
+            t1.clone(),
+            (t0.clone(), t1.clone()),
+            [t0.clone(), (t1.clone(), t0.clone())],
+        )
         outputs = scaler.scale(outputs)
-        test_case.assertTrue(outputs[0] == 8.0 and outputs[1][0] == 8.0 and outputs[1][1] == 8.0 and
-                        outputs[2][0] == 8.0 and outputs[2][1][0] == 8.0 and outputs[2][1][1] == 8.0)
+        test_case.assertTrue(
+            outputs[0] == 8.0
+            and outputs[1][0] == 8.0
+            and outputs[1][1] == 8.0
+            and outputs[2][0] == 8.0
+            and outputs[2][1][0] == 8.0
+            and outputs[2][1][1] == 8.0
+        )
         test_case.assertTrue(scaler._scale.device == t1.device)
 
     @flow.unittest.skip_unless_1n1d()
     def test_grad_scaling_state_dict(test_case):
         for lazy_init_scale in True, False:
-            s0 = flow.cuda.amp.GradScaler(init_scale=3., growth_factor=4., backoff_factor=.5, growth_interval=2)
-            s1 = flow.cuda.amp.GradScaler(init_scale=6., growth_factor=7., backoff_factor=.8, growth_interval=1)
+            s0 = flow.cuda.amp.GradScaler(
+                init_scale=3.0, growth_factor=4.0, backoff_factor=0.5, growth_interval=2
+            )
+            s1 = flow.cuda.amp.GradScaler(
+                init_scale=6.0, growth_factor=7.0, backoff_factor=0.8, growth_interval=1
+            )
 
             # sets a random value for load_state_dict to overwrite
             s1._init_growth_tracker = 7
@@ -78,9 +92,9 @@ class TestGradScaling(flow.unittest.TestCase):
 
             s1.load_state_dict(s0.state_dict())
 
-            test_case.assertEqual(s1.get_scale(), 3.)
-            test_case.assertEqual(s1.get_growth_factor(), 4.)
-            test_case.assertEqual(s1.get_backoff_factor(), .5)
+            test_case.assertEqual(s1.get_scale(), 3.0)
+            test_case.assertEqual(s1.get_growth_factor(), 4.0)
+            test_case.assertEqual(s1.get_backoff_factor(), 0.5)
             test_case.assertEqual(s1.get_growth_interval(), 2)
             test_case.assertEqual(s1._init_growth_tracker, 0)
 
