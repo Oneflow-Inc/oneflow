@@ -251,24 +251,28 @@ class TestTensor(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     def test_local_tensor_init_methods(test_case):
-        test_case._test_tensor_init_methods(
-            lambda *args, **kwargs: flow.Tensor(*args, **kwargs), lambda x: x.numpy()
-        )
-        test_case._test_non_contiguous_tensor_init_methods(
-            lambda *args, **kwargs: flow.Tensor(*args, **kwargs), lambda x: x.numpy()
-        )
+        for device in ["cpu", "cuda"]:
+            test_case._test_tensor_init_methods(
+                lambda *args, **kwargs: flow.Tensor(*args, **kwargs, device=device),
+                lambda x: x.numpy(),
+            )
+            test_case._test_non_contiguous_tensor_init_methods(
+                lambda *args, **kwargs: flow.Tensor(*args, **kwargs, device=device),
+                lambda x: x.numpy(),
+            )
 
     @flow.unittest.skip_unless_1n2d()
     def test_global_tensor_init_methods(test_case):
-        test_case._test_tensor_init_methods(
-            lambda *args, **kwargs: flow.Tensor(
-                *args,
-                **kwargs,
-                sbp=flow.sbp.broadcast,
-                placement=flow.placement("cuda", range(2))
-            ),
-            lambda x: x.to_global(sbp=flow.sbp.broadcast).to_local().numpy(),
-        )
+        for device in ["cpu", "cuda"]:
+            test_case._test_tensor_init_methods(
+                lambda *args, **kwargs: flow.Tensor(
+                    *args,
+                    **kwargs,
+                    sbp=flow.sbp.broadcast,
+                    placement=flow.placement(device, range(2))
+                ),
+                lambda x: x.to_global(sbp=flow.sbp.broadcast).to_local().numpy(),
+            )
 
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_with_single_int(test_case):
