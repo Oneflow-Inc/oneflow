@@ -208,7 +208,7 @@ class TestGraph(flow.unittest.TestCase):
                 test_case.assertEqual(name, name_in_scope)
                 b = self.dummy_buff
                 dummy_buff_scope_proto = graph_build_util.scope_to_proto(
-                    self.to(flow.nn.graph.BlockGraph)._buffers["dummy_buff"].to(flow.nn.graph.BlockGraph).scope
+                    self._buffers["dummy_buff"].to(flow.nn.graph.BlockGraph).scope
                 )
                 test_case.assertEqual(
                     dummy_buff_scope_proto.parent_scope_symbol_id, scope.symbol_id

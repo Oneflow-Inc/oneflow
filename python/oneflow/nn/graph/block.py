@@ -86,6 +86,10 @@ class ModuleBlock(Block):
         assert not isinstance(origin, Block)
         super().__init__()
         self._oneflow_internal_blockgraph__ = ModuleGraph(prefix, name, belonged_graph)
+        self._modules = OrderedDict()
+        self._parameters = OrderedDict()
+        self._buffers = OrderedDict()
+
         self._oneflow_internal_blockgraph__set_origin(origin)
 
     def _oneflow_internal_blockgraph__set_origin(self, origin):
@@ -155,7 +159,7 @@ class ModuleBlock(Block):
                             op_repr_with_py_stack=op_repr_with_py_stack,
                         )
 
-                _set_child(self.to(BlockGraph)._modules)
+                _set_child(self._modules)
 
     def __call__(self, *args, **kwargs):
         assert self.to(BlockGraph)._type == BlockGraphType.MODULE
@@ -183,8 +187,8 @@ class ModuleBlock(Block):
             for (_, n) in d.items():
                 self.__print(0, 1, n._shallow_repr())
 
-        _print_state(self.to(BlockGraph)._parameters)
-        _print_state(self.to(BlockGraph)._buffers)
+        _print_state(self._parameters)
+        _print_state(self._buffers)
 
         # NOTE: The original nn.Moudle's __call__ method is ignored, which means
         # that hooks of nn.Modules are ignored. It is not recommended
@@ -322,7 +326,7 @@ class ModuleBlock(Block):
         if self not in memo:
             memo.add(self)
             yield self
-            for (name, module) in self.to(BlockGraph)._modules.items():
+            for (name, module) in self._modules.items():
                 if module is None:
                     continue
                 for m in module.modules(memo):
@@ -401,13 +405,13 @@ class ModuleBlock(Block):
 
     def parameters(self, recurse: bool = True) -> Iterator["Block"]:
         assert self.to(BlockGraph)._type == BlockGraphType.MODULE
-        gen = self.__members(lambda module: module.to(BlockGraph)._parameters.items(), recurse=recurse)
+        gen = self.__members(lambda module: module._parameters.items(), recurse=recurse)
         for elem in gen:
             yield elem
 
     def buffers(self, recurse: bool = True) -> Iterator["Block"]:
         assert self.to(BlockGraph)._type == BlockGraphType.MODULE
-        gen = self.__members(lambda module: module.to(BlockGraph)._buffers.items(), recurse=recurse)
+        gen = self.__members(lambda module: module._buffers.items(), recurse=recurse)
         for elem in gen:
             yield elem
 
@@ -417,9 +421,9 @@ class ModuleBlock(Block):
         else:
             dicts_or_sets = (
                 self.__dict__,
-                self.to(BlockGraph)._modules,
-                self.to(BlockGraph)._parameters,
-                self.to(BlockGraph)._buffers,
+                self._modules,
+                self._parameters,
+                self._buffers,
             )
             for d in dicts_or_sets:
                 if name in d:
@@ -429,11 +433,11 @@ class ModuleBlock(Block):
                         )
                     )
             if value.to(BlockGraph).type == BlockGraphType.MODULE:
-                self.to(BlockGraph)._modules[name] = value
+                self._modules[name] = value
             elif value.to(BlockGraph).type == BlockGraphType.PARAMETER:
-                self.to(BlockGraph)._parameters[name] = value
+                self._parameters[name] = value
             elif value.to(BlockGraph).type == BlockGraphType.BUFFER:
-                self.to(BlockGraph)._buffers[name] = value
+                self._buffers[name] = value
             else:
                 raise AttributeError(
                     "'{}' object are not allowed to set attribute named '{}'".format(
@@ -445,8 +449,8 @@ class ModuleBlock(Block):
         if name in self.__dict__:
             return self.__dict__[name]
         # support get module
-        if "_modules" in self.to(BlockGraph).__dict__:
-            modules = self.to(BlockGraph).__dict__["_modules"]
+        if "_modules" in self.__dict__:
+            modules = self.__dict__["_modules"]
             if name in modules:
                 return modules[name]
         # support get parameter
@@ -479,10 +483,10 @@ class ModuleBlock(Block):
         )
 
     def _get_from_states(self, name, states_name):
-        if states_name not in self.to(BlockGraph).__dict__:
+        if states_name not in self.__dict__:
             return None
 
-        _states = self.to(BlockGraph).__dict__[states_name]
+        _states = self.__dict__[states_name]
         if name not in _states:
             return None
 
@@ -516,9 +520,9 @@ class ModuleBlock(Block):
                 n_str = add_indent(n_str, 2)
                 child_lines.append(n_str)
 
-        _append_child(self.to(BlockGraph)._parameters)
-        _append_child(self.to(BlockGraph)._buffers)
-        _append_child(self.to(BlockGraph)._modules)
+        _append_child(self._parameters)
+        _append_child(self._buffers)
+        _append_child(self._modules)
 
         for op_str in self._ops_repr():
             child_lines.append(add_indent(op_str, 2))

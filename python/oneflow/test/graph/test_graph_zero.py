@@ -164,9 +164,9 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
             def __init__(self):
                 super().__init__()
                 self.mixed_linear0 = mixed_linear0
-                self.mixed_linear0.config.activation_checkpointing = True
+                self.mixed_linear0.to(ModuleGraph).activation_checkpointing = True
                 self.mixed_linear1 = mixed_linear1
-                self.mixed_linear1.config.activation_checkpointing = True
+                self.mixed_linear1.to(ModuleGraph).activation_checkpointing = True
                 self.add_optimizer(of_sgd)
 
                 self.config.enable_amp(True)

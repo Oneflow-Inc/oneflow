@@ -346,7 +346,7 @@ class Graph(object):
             destination._metadata = OrderedDict()
         # Get states from sub module block
         for name, block in self._blocks.items():
-            assert block.type == BlockGraphType.MODULE
+            assert block.to(BlockGraph).type == BlockGraphType.MODULE
             sub_destination = OrderedDict()
             sub_destination._metadata = OrderedDict()
             module = block.to(Module)
@@ -492,7 +492,7 @@ class Graph(object):
                 self._debug_min_s_level = 0
                 self._debug_max_v_level = max(0, v_level)
             for name, block in self._blocks.items():
-                assert block.type == BlockGraphType.MODULE
+                assert block.to(BlockGraph).type == BlockGraphType.MODULE
                 block._oneflow_internal_blockgraph__debug(
                     v_level,
                     ranks=ranks,
@@ -647,7 +647,6 @@ class Graph(object):
 
     def __ensure_state_tensors_contiguous(self):
         for state_block in self._state():
-            print(state_block)
             state_tensor = state_block.to(Tensor)
             if not state_tensor.is_contiguous():
                 state_tensor.contiguous_()
@@ -719,7 +718,7 @@ class Graph(object):
         gradients = []
         for state_block in self._state():
             if (
-                state_block.type == BlockGraphType.PARAMETER
+                state_block.to(BlockGraph).type == BlockGraphType.PARAMETER
                 and state_block.to(Tensor).grad is not None
                 and state_block.to(Tensor).grad.is_lazy
             ):

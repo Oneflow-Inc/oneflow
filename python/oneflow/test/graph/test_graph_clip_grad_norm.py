@@ -18,6 +18,7 @@ import unittest
 import numpy as np
 
 import oneflow as flow
+from oneflow.nn.graph import ModuleGraph
 import oneflow.unittest
 
 
@@ -69,8 +70,8 @@ class MyGraph(flow.nn.Graph):
             and module2.param.is_global
             and module1.param.placement != module2.param.placement
         ):
-            self.m1.config.stage_id = 0
-            self.m2.config.stage_id = 1
+            self.m1.to(ModuleGraph).set_stage(0)
+            self.m2.to(ModuleGraph).set_stage(1)
 
         if optimizer is not None:
             self.add_optimizer(optimizer)

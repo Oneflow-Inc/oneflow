@@ -94,9 +94,6 @@ class ModuleGraph(BlockGraph):
         self._debug_only_user_py_stack = True
         self._debug_op_repr_with_py_stack = False
         self._is_executing_forward = False
-        self._modules = OrderedDict()
-        self._parameters = OrderedDict()
-        self._buffers = OrderedDict()
         self._args_repr = []
         self._outs_repr = []
 
@@ -133,9 +130,28 @@ class ModuleGraph(BlockGraph):
         self._stage_id = stage_id
         self._stage_placement = placement
     
+    # NOTE(lixiang): For the normal display of docstr, the API Doc of the get and set methods are written together in the stage_id function.
     @property
     def stage_id(self):
+        r"""Set/Get stage id of nn.Module/ModuleBlock in pipeline parallelism.
+        When calling stage_id(value: int = None), set different module's stage id to hint the graph
+        preparing right num of buffers in pipeline. (Not Recommended, for easy and efficient pipeline
+        parallelism experience, please use config.set_stage(stage_id, placement))
+        """
         return self._stage_id
+
+    @stage_id.setter
+    def stage_id(self, value: int = None):
+        r"""Set stage id of Block in pipeline parallelism.
+        Set different module's stage id to hint the graph preparing right num of buffers in pipeline.
+        """
+        print(
+            "Warning: `config.stage_id = i` is deprecated, please use \n",
+            " config.set_stage(i, placement) for easy and efficient Pipeline parallel experience.",
+        )
+
+        self._is_null = False
+        self._stage_id = value
 
     @property
     def stage_placement(self):
