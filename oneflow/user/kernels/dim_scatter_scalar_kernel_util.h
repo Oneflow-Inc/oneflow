@@ -46,16 +46,18 @@ struct AddScalarFunctor {
   }
 };
 
+#ifdef WITH_CUDA
 template<>
 struct AddScalarFunctor<half> {
   OF_DEVICE_FUNC static void apply(const half x, half* y) {
-#if defined(__CUDA_ARCH__)
+#if __CUDA_ARCH__
     *y = __float2half(__half2float(*y) + __half2float(x));
 #else
     NO_HALF_UTIL_FOUND;
 #endif
   }
 };
+#endif
 
 template<>
 struct AddScalarFunctor<int8_t> {

@@ -87,6 +87,7 @@ struct BinOpAddFunctor {
   }
 };
 
+#ifdef WITH_CUDA
 template<>
 struct BinOpAddFunctor<half> {
   OF_DEVICE_FUNC static void apply(const half* x, half* y) {
@@ -97,6 +98,7 @@ struct BinOpAddFunctor<half> {
 #endif
   }
 };
+#endif
 
 #define SPECIALIZE_BIN_OP_ADD_FUNCTOR(name, dtype)                           \
   template<>                                                                 \
@@ -120,6 +122,7 @@ struct BinOpMulFunctor {
   }
 };
 
+#ifdef WITH_CUDA
 template<>
 struct BinOpMulFunctor<half> {
   OF_DEVICE_FUNC static void apply(const half* x, half* y) {
@@ -130,6 +133,7 @@ struct BinOpMulFunctor<half> {
 #endif
   }
 };
+#endif
 
 #define SPECIALIZE_BIN_OP_MUL_FUNCTOR(name, dtype)                           \
   template<>                                                                 \
