@@ -14,5 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from .graph import Graph
-from .block import SubGraph
-from .block import GraphBlock
+from .block import Block
+from .block_graph import BlockGraph
+from .block_graph import ModuleGraph
+from .block_graph import TensorGraph
