@@ -379,6 +379,7 @@ def FuseConv2DBatchNormPattern : Pat<
             OneFlow_FrozenVariableOp : $variable_conv_2d_weight
               $value,
               $v_op_name,
+              $v_data_type,
               $v_device_tag,
               $v_device_name,
               $v_scope_symbol_id,
