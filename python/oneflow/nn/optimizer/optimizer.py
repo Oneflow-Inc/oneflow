@@ -29,9 +29,17 @@ import oneflow as flow
 class ContiguousParamsUnit(object):
     def __init__(self, bufsize, dtype, device):
         self.bufsize = bufsize
+        self.index = 0 # record the next buf position will be used in copying parameters
         self.param_buf = flow.zeros(bufsize, dtype=dtype, device=device)
         self.grad_buf = flow.zeros(bufsize, dtype=dtype, device=device)
-        self.index = 0
+
+    def __repr__(self) -> str:
+        return str({
+            'bufsize' : self.bufsize,
+            'index' : self.index,
+            'param_buf' : self.param_buf,
+            'grad_buf' : self.grad_buf,
+        })
 
 class ParamGroup(object):
     def __init__(
@@ -92,7 +100,7 @@ class ParamGroup(object):
             index = self.params_dict[buf_type].index
             assert index + size <= self.params_dict[buf_type].bufsize
 
-            self.params_dict[buf_type].param_buf[index:index + size] = p.data.view(-1)
+            self.params_dict[buf_type].param_buf[index:index + size] = p.data.detach().clone().view(-1)
             p.data = self.params_dict[buf_type].param_buf[index:index + size].view(shape)
             p.grad = self.params_dict[buf_type].grad_buf[index:index + size].view(shape)
             p._is_grad_acc_inplace = True
@@ -164,13 +172,13 @@ required = _RequiredParameter()
 
 
 class Optimizer(object):
-    def __init__(self, parameters, options, contiguous_params=False):
+    def __init__(self, parameters, options):
         self.param_groups = list()
         self._default_options = options
         self._state = dict()
         self._state["step"] = 0
 
-        self._parse_input_parameters(parameters, contiguous_params)
+        self._parse_input_parameters(parameters, options['contiguous_params'])
 
         self.step = _decorate_step(self.step)
 

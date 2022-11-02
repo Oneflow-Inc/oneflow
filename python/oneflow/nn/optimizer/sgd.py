@@ -121,7 +121,8 @@ class SGD(Optimizer):
         options["weight_decay"] = weight_decay
         options["nesterov"] = nesterov
         options["maximize"] = maximize
-        super().__init__(params, options, contiguous_params)
+        options["contiguous_params"] = contiguous_params
+        super().__init__(params, options)
 
         for param_group in self.param_groups:
             for param in param_group.parameters:

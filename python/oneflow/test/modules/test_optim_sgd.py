@@ -91,14 +91,14 @@ def compare_with_numpy_sgd(
         for i in range(train_iters):
             train_one_iter(random_grad_seq[i])
             # test state_dict/load_state_dict
-            # if i == reload_state_step:
-            #     state_dict = sgd.state_dict()
-            #     sgd = flow.optim.SGD(x, contiguous_params=contiguous_params)
-            #     if save_load_by_pickle:
-            #         with tempfile.TemporaryDirectory() as save_dir:
-            #             flow.save(state_dict, save_dir)
-            #             state_dict = flow.load(save_dir)
-            #     sgd.load_state_dict(state_dict)
+            if i == reload_state_step:
+                state_dict = sgd.state_dict()
+                sgd = flow.optim.SGD(x, contiguous_params=contiguous_params)
+                if save_load_by_pickle:
+                    with tempfile.TemporaryDirectory() as save_dir:
+                        flow.save(state_dict, save_dir)
+                        state_dict = flow.load(save_dir)
+                sgd.load_state_dict(state_dict)
         return x
 
     def train_by_numpy(tensor_idx):
@@ -223,14 +223,14 @@ def compare_with_numpy_sgd_clip_grad(
         for i in range(train_iters):
             train_one_iter(random_grad_seq[i])
             # test state_dict/load_state_dict
-            # if i == reload_state_step:
-            #     state_dict = sgd.state_dict()
-            #     sgd = flow.optim.SGD(x, contiguous_params=contiguous_params)
-            #     if save_load_by_pickle:
-            #         with tempfile.TemporaryDirectory() as save_dir:
-            #             flow.save(state_dict, save_dir)
-            #             state_dict = flow.load(save_dir)
-            #     sgd.load_state_dict(state_dict)
+            if i == reload_state_step:
+                state_dict = sgd.state_dict()
+                sgd = flow.optim.SGD(x, contiguous_params=contiguous_params)
+                if save_load_by_pickle:
+                    with tempfile.TemporaryDirectory() as save_dir:
+                        flow.save(state_dict, save_dir)
+                        state_dict = flow.load(save_dir)
+                sgd.load_state_dict(state_dict)
         return x
 
     def train_by_numpy():
@@ -266,7 +266,9 @@ def compare_with_numpy_sgd_clip_grad(
         return x
 
     oneflow_res = train_by_oneflow()
+    print(oneflow_res)
     numpy_res = train_by_numpy()
+    print(numpy_res)
 
     for i in range(tensor_num):
         test_case.assertTrue(
@@ -317,7 +319,9 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["contiguous_params"] = [False, True]
         arg_dict["tensor_num"] = [1, 4]
         for arg in GenArgDict(arg_dict):
+            print(arg)
             compare_with_numpy_sgd_clip_grad(test_case, **arg)
+            print()
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_eager_global_zero_grad_sbp(test_case):
