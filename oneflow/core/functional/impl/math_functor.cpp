@@ -906,6 +906,16 @@ class ReduceProdFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class LogSumExpFunctor {
+ public:
+  LogSumExpFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
+                           const bool& keepdims) const {
+    std::shared_ptr<one::Tensor> exp_out = JUST(Exp(x));
+    return Log(JUST(ReduceSum(exp_out, axis, keepdims)));
+  }
+};
+
 class TransposeFunctor {
  public:
   TransposeFunctor() {
@@ -2435,17 +2445,10 @@ class GeluWithApproximateFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::string& approximate) const {
-    if (approximate == "tanh") {
-      return JUST(
-          Mul(JUST(ScalarAdd(JUST(Tanh(JUST(ScalarMul(
-                                 JUST(Add(x,
-                                          JUST(ScalarMul(JUST(ScalarPow(x, Scalar(3.0), false)),
-                                                         Scalar(0.044715), false)),
-                                          1.0, false)),
-                                 Scalar(sqrt(2.0 / M_PI)), false)))),
-                             Scalar(1.0), 1.0, false)),
-              JUST(ScalarMul(x, 0.5, false))));
+    if (approximate != "none" && approximate != "tanh") {
+      return Error::RuntimeError() << "the approximate argument should be 'none' or 'tanh'";
     }
+    if (approximate == "tanh") { return FastGelu(x); }
     return Gelu(x);
   }
 };
@@ -3161,6 +3164,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceMaxDeviceStageGradFunctor>("ReduceMaxDeviceStageGrad");
   m.add_functor<ReduceMinGlobalStageGradFunctor>("ReduceMinGlobalStageGrad");
   m.add_functor<ReduceMaxGlobalStageGradFunctor>("ReduceMaxGlobalStageGrad");
+  m.add_functor<LogSumExpFunctor>("LogSumExp");
   m.add_functor<TransposeFunctor>("Transpose");
   m.add_functor<Transpose2dimFunctor>("Transpose2dim");
   m.add_functor<TransposeFunctor>("Permute");
