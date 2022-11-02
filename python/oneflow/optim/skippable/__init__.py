@@ -13,15 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.nn.optimizer.adam import Adam
-from oneflow.nn.optimizer.adamw import AdamW
-from oneflow.nn.optimizer.optimizer import Optimizer
-from oneflow.nn.optimizer.rmsprop import RMSprop
-from oneflow.nn.optimizer.sgd import SGD
-from oneflow.nn.optimizer.adagrad import Adagrad
-from oneflow.nn.optimizer.lamb import LAMB
-from oneflow.nn.optimizer.adadelta import Adadelta
-
-from . import lr_scheduler
-
-from . import skippable
+from oneflow.nn.optimizer.skippable.adam import Adam
+from oneflow.nn.optimizer.skippable.adamw import AdamW
+from oneflow.nn.optimizer.skippable.rmsprop import RMSprop
+from oneflow.nn.optimizer.skippable.sgd import SGD
+from oneflow.nn.optimizer.skippable.adagrad import Adagrad
+from oneflow.nn.optimizer.skippable.lamb import LAMB
+from oneflow.nn.optimizer.skippable.adadelta import Adadelta
