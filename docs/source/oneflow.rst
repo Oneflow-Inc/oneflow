@@ -66,6 +66,7 @@ Creation Ops
     zeros_like
     ones
     ones_like
+    randn_like
     randint_like
     masked_fill
     new_ones
@@ -388,6 +389,7 @@ Other Ops
     repeat_interleave
     triu
     cross
+    bincount
 
 BLAS and LAPACK Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
