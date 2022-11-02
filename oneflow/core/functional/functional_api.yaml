@@ -648,6 +648,14 @@
   signature: "Tensor (Tensor dy, Tensor x) => GeluGrad"
   bind_python: False
 
+- name: "fast_gelu"
+  signature: "Tensor (Tensor x) => FastGelu"
+  bind_python: True
+
+- name: "fast_gelu_grad"
+  signature: "Tensor (Tensor dy, Tensor x) => FastGeluGrad"
+  bind_python: False
+
 - name: "gelu_with_approximate"
   signature: 'Tensor (Tensor x, String approximate="none") => GeluWithApproximate'
   bind_python: True
@@ -1500,7 +1508,7 @@
   bind_python: True
 
 - name: "flip"
-  signature: "Tensor (Tensor x, Int32List dims) => Flip"
+  signature: "Tensor (Tensor x, Int32List[1] dims) => Flip"
   bind_python: True
 
 - name: "upsample"
