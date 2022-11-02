@@ -118,8 +118,6 @@ CudnnTensorDesc* GetBiasCudnnTensorDesc(const std::string& data_format, int32_t 
     return new CudnnTensorDesc(CUDNN_TENSOR_NCHW, data_type, 1, filters, 1, 1);
   } else {
     CHECK_EQ("channels_last", data_format);
-    CHECK_EQ(DataType::kFloat, data_type)
-        << "CUDNN 1d & 2d support channels last only if data type is float";
     return new CudnnTensorDesc(CUDNN_TENSOR_NHWC, data_type, 1, filters, 1, 1);
   }
 }
