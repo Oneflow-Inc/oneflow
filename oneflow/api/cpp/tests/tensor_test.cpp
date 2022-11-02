@@ -34,6 +34,15 @@ TEST(Api, device) {
   ASSERT_EQ(device.type(), "cuda");
   ASSERT_EQ(device.device_id(), 1);
 #endif
+#ifdef WITH_ROCM
+  device = Device("cuda:0");
+  ASSERT_EQ(device.type(), "cuda");
+  ASSERT_EQ(device.device_id(), 0);
+
+  device = Device("cuda", 1);
+  ASSERT_EQ(device.type(), "cuda");
+  ASSERT_EQ(device.device_id(), 1);
+#endif
 }
 
 TEST(Api, tensor) {

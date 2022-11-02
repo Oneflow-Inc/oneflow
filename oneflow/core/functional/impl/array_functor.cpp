@@ -1390,6 +1390,9 @@ class CopyFunctor {
 #ifdef WITH_CUDA
     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
 #endif
+#ifdef WITH_ROCM
+    if (device_type == "cuda") { InitCudaContextOnce(device_id); }
+#endif
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 

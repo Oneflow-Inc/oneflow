@@ -73,6 +73,9 @@ Runtime::Runtime(
 #ifdef WITH_CUDA
     Singleton<EagerNcclCommMgr>::Get()->CreateCommFromPlan(plan);
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+    Singleton<EagerNcclCommMgr>::Get()->CreateCommFromPlan(plan);
+#endif  // WITH_ROCM
   }
   std::vector<const TaskProto*> source_tasks;
   source_tasks.reserve(plan.task().size());

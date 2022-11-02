@@ -62,6 +62,12 @@ REGISTER_NAMED_TASK_STREAM_INDEX_GETTER(DeviceType::kCUDA, TaskType::kDecodeH2D,
 
 #endif
 
+#ifdef WITH_ROCM
+
+REGISTER_NAMED_TASK_STREAM_INDEX_GETTER(DeviceType::kCUDA, TaskType::kDecodeH2D, "DECODE_H2D")
+
+#endif
+
 namespace {
 
 CompTaskNode* CreateCompTaskNodeByOpDeviceType(const OperatorConf& op_conf) {

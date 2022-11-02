@@ -39,5 +39,8 @@ REGISTER_ACTOR(TaskType::kCriticalSectionWaitTick, NaiveActor);
 #ifdef WITH_CUDA
 REGISTER_ACTOR(TaskType::kCopyHd, NaiveActor);
 #endif
+#ifdef WITH_ROCM
+REGISTER_ACTOR(TaskType::kCopyHd, NaiveActor);
+#endif
 REGISTER_ACTOR(TaskType::kCollectiveBoxingGeneric, NaiveActor);
 }  // namespace oneflow

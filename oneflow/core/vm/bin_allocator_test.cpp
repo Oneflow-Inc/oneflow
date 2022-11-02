@@ -129,3 +129,122 @@ TEST(CudaBinAllocator, cuda_allocator) {
 }  // namespace oneflow
 
 #endif  // WITH_CUDA
+
+#ifdef WITH_ROCM
+
+#include "gtest/gtest.h"
+#include "oneflow/core/vm/bin_allocator.h"
+#include "oneflow/core/vm/thread_safe_allocator.h"
+#include "oneflow/core/device/cuda_util.h"
+
+namespace oneflow {
+namespace vm {
+
+class CudaBackendAllocator final : public Allocator {
+ public:
+  explicit CudaBackendAllocator(int64_t device_id) : device_id_(device_id) {}
+  ~CudaBackendAllocator() override = default;
+
+  Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
+  void Deallocate(char* mem_ptr, std::size_t size) override;
+  void DeviceReset() override;
+
+ private:
+  int64_t device_id_;
+};
+
+Maybe<void> CudaBackendAllocator::Allocate(char** mem_ptr, std::size_t size) {
+  hipSetDevice(device_id_);
+  if (hipMalloc(mem_ptr, size) != hipSuccess) { *mem_ptr = nullptr; }
+  return Maybe<void>::Ok();
+}
+
+void CudaBackendAllocator::Deallocate(char* mem_ptr, std::size_t size) {
+  hipSetDevice(device_id_);
+  OF_CUDA_CHECK(hipFree(mem_ptr));
+}
+
+void CudaBackendAllocator::DeviceReset() {
+  hipSetDevice(device_id_);
+  // NOTE(chengcheng): In some corner case on ubuntu, cuda memory not released even if OOM.
+  //   So there need release all cuda memory allocated by this process before core dump.
+  LOG(WARNING) << "OOM error is detected, process will exit. And it will start to reset CUDA "
+               << "device for releasing device memory.";
+  OF_CUDA_CHECK(hipDeviceReset());
+}
+
+TEST(CudaBinAllocator, cuda_allocator) {
+  int gpu_num = -1;
+  hipGetDeviceCount(&gpu_num);
+  if (gpu_num <= 0) {
+    LOG(INFO) << "CudaBinAllocator Test: Skip because of non GPU device.";
+    return;
+  }
+  ASSERT_TRUE(hipSuccess == hipSetDevice(0));
+  size_t free_bytes = -1;
+  size_t total_bytes = -1;
+  const size_t remain_bytes = 50 * 1048576;
+  ASSERT_TRUE(hipSuccess == hipMemGetInfo(&free_bytes, &total_bytes));
+  if (free_bytes <= remain_bytes || free_bytes - remain_bytes < remain_bytes) {
+    LOG(INFO)
+        << "CudaBinAllocator Test: Skip because of allocator mem bytes less than 50MiB in GPU 0";
+    return;
+  }
+  std::unique_ptr<Allocator> allo(
+      new BinAllocator(kCudaMemAllocAlignSize, std::make_unique<CudaBackendAllocator>(0)));
+  allo.reset(new SingleThreadOnlyAllocator(std::move(allo)));
+  Allocator* a = allo.get();
+  std::vector<char*> ptrs;
+  for (int i = 0; i < 512; ++i) {
+    char* ptr = nullptr;
+    CHECK_JUST(a->Allocate(&ptr, 1));
+    ASSERT_TRUE(ptr != nullptr);
+    ptrs.emplace_back(ptr);
+  }
+  std::sort(ptrs.begin(), ptrs.end());
+  for (int i = 0; i < 512; ++i) {
+    if (i > 0) {
+      ASSERT_TRUE(ptrs.at(i) != ptrs.at(i - 1));
+      ASSERT_TRUE(std::abs(ptrs.at(i) - ptrs.at(i - 1)) >= kCudaMemAllocAlignSize);
+    }
+    a->Deallocate(ptrs.at(i), 1);
+  }
+
+  ptrs.clear();
+  for (int i = 0; i < 2048; ++i) {
+    char* ptr = nullptr;
+    CHECK_JUST(a->Allocate(&ptr, 10000));
+    ASSERT_TRUE(ptr != nullptr);
+    ptrs.emplace_back(ptr);
+  }
+  std::sort(ptrs.begin(), ptrs.end());
+  for (int i = 0; i < 2048; ++i) {
+    if (i > 0) {
+      ASSERT_TRUE(ptrs.at(i) != ptrs.at(i - 1));
+      ASSERT_TRUE(std::abs(ptrs.at(i) - ptrs.at(i - 1)) >= kCudaMemAllocAlignSize);
+    }
+    a->Deallocate(ptrs.at(i), 10000);
+  }
+
+  char* data_ptr_1 = nullptr;
+  CHECK_JUST(a->Allocate(&data_ptr_1, 2048 * sizeof(float)));
+
+  char* data_ptr_2 = nullptr;
+  CHECK_JUST(a->Allocate(&data_ptr_2, 4096 * sizeof(double)));
+
+  ASSERT_TRUE(data_ptr_1 != data_ptr_2);
+  if (data_ptr_1 < data_ptr_2) {
+    ASSERT_TRUE(data_ptr_1 + 2048 * sizeof(float) <= data_ptr_2);
+  } else {
+    ASSERT_TRUE(data_ptr_2 + 4096 * sizeof(double) <= data_ptr_1);
+  }
+
+  a->Deallocate(data_ptr_2, 4096 * sizeof(double));
+  a->Deallocate(data_ptr_1, 2048 * sizeof(float));
+}
+
+}  // namespace vm
+}  // namespace oneflow
+
+
+#endif  // WITH_ROCM

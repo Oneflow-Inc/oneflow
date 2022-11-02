@@ -114,6 +114,92 @@ REGISTER_SYNC_DYNAMIC_RESIZE_GPU_KERNEL(int64_t);
 
 #endif  // WITH_CUDA
 
+#ifdef WITH_ROCM
+
+namespace {
+
+class CudaHostMem {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudaHostMem);
+  CudaHostMem(const size_t size) { OF_CUDA_CHECK(hipMallocHost(reinterpret_cast<void **>(&ptr_), size)); }
+  ~CudaHostMem() { OF_CUDA_CHECK(hipHostFree(ptr_)); }
+  void* Ptr() const { return ptr_; }
+
+ private:
+  void* ptr_;
+};
+
+}  // namespace
+
+template<typename SizeType>
+class SyncDynamicResizeGPUKernel final : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SyncDynamicResizeGPUKernel);
+  SyncDynamicResizeGPUKernel() = default;
+  ~SyncDynamicResizeGPUKernel() override = default;
+
+ private:
+  bool IsKernelLaunchSynchronized() const override { return false; }
+
+  void ForwardDataContent(KernelContext* ctx) const override {
+    const SyncDynamicResizeOpConf& conf = this->op_conf().sync_dynamic_resize_conf();
+    CHECK_EQ(conf.axis(), 0);
+    std::shared_ptr<CudaHostMem> cuda_host_mem_ptr;
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (queue_.empty()) {
+        cuda_host_mem_ptr.reset(new CudaHostMem(sizeof(SizeType)));
+      } else {
+        cuda_host_mem_ptr = queue_.front();
+        queue_.pop();
+      }
+    }
+    const Blob* in = ctx->BnInOp2Blob("in");
+    const Blob* size = ctx->BnInOp2Blob("size");
+    Blob* out = ctx->BnInOp2Blob("out");
+    AutoMemcpy(ctx->stream(), out->mut_dptr(), in->dptr(), in->ByteSizeOfBlobBody(),
+               out->mem_case(), in->mem_case());
+    AutoMemcpy(ctx->stream(), cuda_host_mem_ptr->Ptr(), size->dptr(), sizeof(SizeType),
+               MakeHostMemCase(), size->mem_case());
+    const auto& UpdateShape = [out, cuda_host_mem_ptr, conf, this]() {
+      const int64_t new_size = *reinterpret_cast<SizeType*>(cuda_host_mem_ptr->Ptr());
+      CHECK_GE(new_size, 0);
+      CHECK_LE(new_size, out->shape_view().At(conf.axis()));
+      // NOTE(Liang Depeng): `mut_shape_view` should be used here to get the blob's `MutShapeView`
+      //                     pointer. But this callback is called after `Kernel::Forward` function's
+      //                     execution and the header check is already been set to false at that
+      //                     moment. So we have to choose the `ForceMutShapeView` function with
+      //                     header checker disabled.
+      out->ForceMutShapeView()->Set(conf.axis(), new_size);
+      std::lock_guard<std::mutex> lock(mutex_);
+      queue_.push(cuda_host_mem_ptr);
+    };
+    if (conf.eager()) {
+      CHECK_JUST(ctx->stream()->Sync());
+      UpdateShape();
+    } else {
+      auto* actor_context_provider = CHECK_NOTNULL(dynamic_cast<ActorContextProvider*>(ctx));
+      actor_context_provider->GetActorContext()->AddCallback(UpdateShape);
+    }
+  }
+
+  mutable std::queue<std::shared_ptr<CudaHostMem>> queue_;
+  mutable std::mutex mutex_;
+};
+
+#define REGISTER_SYNC_DYNAMIC_RESIZE_GPU_KERNEL(stype)                                         \
+  NEW_REGISTER_KERNEL(OperatorConf::kSyncDynamicResizeConf, SyncDynamicResizeGPUKernel<stype>) \
+      .SetIsMatchedPred([](const KernelConf& kernel_conf) {                                    \
+        return (kernel_conf.op_attribute().op_conf().device_tag() == "cuda"                    \
+                && GetDataType<stype>::value                                                   \
+                       == kernel_conf.sync_dynamic_resize_conf().size_data_type());            \
+      })
+REGISTER_SYNC_DYNAMIC_RESIZE_GPU_KERNEL(int8_t);
+REGISTER_SYNC_DYNAMIC_RESIZE_GPU_KERNEL(int32_t);
+REGISTER_SYNC_DYNAMIC_RESIZE_GPU_KERNEL(int64_t);
+
+#endif  // WITH_ROCM
+
 template<typename SizeType>
 class SyncDynamicResizeCPUKernel final : public Kernel {
  public:

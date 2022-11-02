@@ -84,6 +84,26 @@ TEST(Api, graph_multi_gpu_test) {
 }
 #endif
 
+#ifdef WITH_ROCM
+TEST(Api, graph_gpu_test) {
+  EnvScope scope;
+  Device device("cuda", 0);
+  Graph graph = LoadGraph(device);
+  Forward(graph, device);
+}
+
+TEST(Api, graph_multi_gpu_test) {
+  EnvScope scope;
+  Device device("cuda", 0);
+  Graph graph = LoadGraph(device);
+  Forward(graph, device);
+
+  Device device1("cuda", 1);
+  Graph graph1 = LoadGraph(device1);
+  Forward(graph1, device1);
+}
+#endif
+
 TEST(Api, graph_cpu_batching_test) {
   EnvScope scope;
   Device device("cpu");

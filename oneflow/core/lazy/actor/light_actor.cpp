@@ -35,6 +35,12 @@ limitations under the License.
 
 #endif  // WITH_CUDA
 
+#ifdef WITH_ROCM
+
+#include "oneflow/core/ep/rocm/cuda_stream.h"
+
+#endif  // WITH_ROCM
+
 namespace oneflow {
 
 namespace {

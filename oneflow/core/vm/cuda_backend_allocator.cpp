@@ -50,3 +50,41 @@ void CudaBackendAllocator::DeviceReset() {
 }  // namespace oneflow
 
 #endif
+
+#ifdef WITH_ROCM
+
+#include "oneflow/core/vm/cuda_backend_allocator.h"
+#include "oneflow/core/device/cuda_util.h"
+#include <iostream>
+
+namespace oneflow {
+namespace vm {
+
+Maybe<void> CudaBackendAllocator::Allocate(char** mem_ptr, std::size_t size) {
+  hipSetDevice(device_id_);
+  if (hipMalloc(mem_ptr, size) != hipSuccess) {
+    *mem_ptr = nullptr;
+    return Error::OutOfMemoryError() << "cuda allocator out of memory";
+  }
+  return Maybe<void>::Ok();
+}
+
+void CudaBackendAllocator::Deallocate(char* mem_ptr, std::size_t size) {
+  hipSetDevice(device_id_);
+  OF_CUDA_CHECK(hipFree(mem_ptr));
+}
+
+void CudaBackendAllocator::DeviceReset() {
+  hipSetDevice(device_id_);
+  // NOTE(chengcheng): In some corner case on ubuntu, cuda memory not released even if OOM.
+  //   So there need release all cuda memory allocated by this process before core dump.
+  LOG(WARNING) << "OOM error is detected, process will exit. And it will start to reset CUDA "
+               << "device for releasing device memory.";
+  OF_CUDA_CHECK(hipDeviceReset());
+}
+
+}  // namespace vm
+}  // namespace oneflow
+
+#endif
+
