@@ -415,7 +415,6 @@ class GumbelSoftmaxFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, const double& tau,
                            const Optional<int64_t>& dim, bool hard,
                            const Optional<one::Generator>& generator) const {
-    std::shared_ptr<one::Tensor> in_tensor = in;
     auto in_shape = in->shape();
     auto device = JUST(in->device());
     auto dtype = in->dtype();
@@ -433,7 +432,7 @@ class GumbelSoftmaxFunctor {
             Scalar(0.0), JUST(functional::Log(random_tensor)), /*alpha=*/1.0)))),
         /*alpha=*/1.0));
     auto gumbel_in_tensor = JUST(functional::ScalarDiv(
-        JUST(functional::Add(in_tensor, gumbel_noise_tensor, /*alpha=*/1.0, /*inplace=*/false)),
+        JUST(functional::Add(in, gumbel_noise_tensor, /*alpha=*/1.0, /*inplace=*/false)),
         Scalar(tau)));
 
     auto out_soft = JUST(functional::Softmax(gumbel_in_tensor, dim));
