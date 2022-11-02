@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
+# The file mostly copyed from https://github.com/pytorch/pytorch/blob/master/torch/cuda/amp/autocast_mode.py
 import oneflow as flow
 import functools
 import collections
