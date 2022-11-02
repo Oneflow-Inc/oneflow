@@ -30,7 +30,6 @@ from oneflow.nn.graph.block_graph import BlockGraphType, BlockGraph, ModuleGraph
 from oneflow.nn.graph.util import (
     add_indent,
     ArgsTree,
-    operators_repr,
     seq_to_func_return,
 )
 
@@ -507,8 +506,6 @@ class ModuleBlock(Block):
     def __repr__(self):
         lines = None
         child_lines = []
-        if (self.to(BlockGraph) is not None) and (not self.to(BlockGraph)._is_null):
-            child_lines.append(add_indent(repr(self.to(BlockGraph)), 2))
         if len(self.to(BlockGraph)._args_repr) > 0:
             for in_str in self.to(BlockGraph)._args_repr:
                 input_str = add_indent(in_str, 2)
@@ -524,13 +521,12 @@ class ModuleBlock(Block):
         _append_child(self._buffers)
         _append_child(self._modules)
 
-        for op_str in self._ops_repr():
-            child_lines.append(add_indent(op_str, 2))
-
         if len(self.to(BlockGraph)._outs_repr) > 0:
             for out_str in self.to(BlockGraph)._outs_repr:
                 output_str = add_indent(out_str, 2)
                 child_lines.append(output_str)
+
+        child_lines.append(add_indent(repr(self.to(BlockGraph)), 2))
 
         if len(child_lines) > 0:
             lines = child_lines
@@ -553,29 +549,6 @@ class ModuleBlock(Block):
             + ")"
         )
         return shallow_repr
-
-    def _ops_repr(self):
-        r"""Generate operators' string representation of this module
-        """
-        assert self.to(BlockGraph)._belonged_graph, (
-            "ModuleBlock: "
-            + self.to(BlockGraph)._name_prefix
-            + self.to(BlockGraph).name
-            + "'s belonged graph is not set."
-        )
-
-        if self.to(BlockGraph)._belonged_graph.is_compiled:
-            if self.to(BlockGraph)._belonged_graph._compiled_graph_proto is not None:
-                module_conf = self.to(BlockGraph)._belonged_graph._compiled_graph_proto.module_name2module_conf[
-                    self.to(BlockGraph).name_prefix + self.to(BlockGraph).name
-                ]
-                return operators_repr(
-                    module_conf.ops,
-                    self.to(BlockGraph)._belonged_graph._compiled_graph_proto,
-                    self.to(BlockGraph)._debug_op_repr_with_py_stack,
-                )
-
-        return []
 
     def __print(self, s_level=2, v_level=0, msg: str = ""):
         r"""Do print according to info level.

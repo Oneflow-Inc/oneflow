@@ -18,6 +18,10 @@ from collections import OrderedDict
 
 import oneflow._oneflow_internal
 from oneflow.framework import graph_build_util
+from oneflow.nn.graph.util import (
+    add_indent,
+    operators_repr,
+)
 
 class BlockGraphType:
     NONE = "NONE"
@@ -194,7 +198,7 @@ class ModuleGraph(BlockGraph):
         self._is_null = False
         self._activation_checkpointing = mode
     
-    def __repr__(self):
+    def _config_repr(self):
         main_str = (
             "("
             + self.__class__.__name__
@@ -216,6 +220,76 @@ class ModuleGraph(BlockGraph):
             + "))"
         )
         return main_str
+
+    def _ops_repr(self):
+        r"""Generate operators' string representation of this ModuleGraph
+        """
+        assert self._belonged_graph, (
+            "ModuleBlock: "
+            + self._name_prefix
+            + self.name
+            + "'s belonged graph is not set."
+        )
+
+        if self._belonged_graph.is_compiled:
+            if self._belonged_graph._compiled_graph_proto is not None:
+                module_conf = self._belonged_graph._compiled_graph_proto.module_name2module_conf[
+                    self.name_prefix + self.name
+                ]
+                return operators_repr(
+                    module_conf.ops,
+                    self._belonged_graph._compiled_graph_proto,
+                    self._debug_op_repr_with_py_stack,
+                )
+
+        return []
+
+    def _shallow_repr(self):
+        main_str = (
+            "("
+            + self.__class__.__name__
+            + ":"
+            + self._name_prefix
+            + self._name
+            + "("
+            + (
+                ("stage_id=" + str(self.stage_id) + ", ")
+                if self.stage_id is not None
+                else ""
+            )
+            + (
+                (
+                    "activation_checkpointing="
+                    + str(self.activation_checkpointing)
+                    + ", "
+                )
+                if self.activation_checkpointing is not None
+                else ""
+            )
+            + "))"
+        )
+        return main_str
+
+    def _repr_lines(self):
+        child_lines = []
+        for op_str in self._ops_repr():
+            child_lines.append(add_indent(op_str, 2))
+        return child_lines
+
+    def __repr__(self):
+        lines = None
+        child_lines = self._repr_lines()
+        if len(child_lines) > 0:
+            lines = child_lines
+
+        main_str = self._shallow_repr() + ": ("
+        if lines is not None:
+            main_str += "\n  " + "\n  ".join(lines) + "\n"
+        main_str += ")"
+        return main_str
+
+
+
 
 class TensorGraph(BlockGraph):
     r"""TensorGraph is the graph representation of a Tensor in a nn.Graph.
