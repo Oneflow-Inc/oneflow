@@ -1367,6 +1367,14 @@
   signature: "TensorTuple (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Int64 begin_params_axis) => LayerNormParamGrad"
   bind_python: False
 
+- name: "rms_norm"
+  signature: "Tensor (Tensor x, Tensor weight=None, Shape normalized_shape, Float epsilon) => RMSNorm"
+  bind_python: True
+
+- name: "rms_norm_grad"
+  signature: "Tensor (Tensor dy, Tensor x, Tensor inv_rms, Tensor weight=None, Bool param_grad) => RMSNormGrad"
+  bind_python: False
+
 - name: "group_norm"
   signature:
     "Tensor (Tensor x, Tensor gamma=None, Tensor beta=None, Bool affine, Int32 num_groups, Double epsilon) => GroupNorm"

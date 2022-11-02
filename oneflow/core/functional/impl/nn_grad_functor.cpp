@@ -1055,6 +1055,49 @@ class GroupNormParamGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class RMSNormGradFunctor {
+ public:
+  RMSNormGradFunctor() {
+    grad_op_ = CHECK_JUST(one::OpBuilder("rms_norm_grad")
+                              .Input("dy")
+                              .Input("x")
+                              .Input("inv_rms")
+                              .Output("dx")
+                              .Build());
+    affine_grad_op_ = CHECK_JUST(one::OpBuilder("rms_norm_grad")
+                                     .Input("dy")
+                                     .Input("x")
+                                     .Input("inv_rms")
+                                     .Input("weight")
+                                     .Output("dx")
+                                     .Build());
+    param_grad_op_ = CHECK_JUST(one::OpBuilder("rms_norm_param_grad")
+                                    .Input("dy")
+                                    .Input("x")
+                                    .Input("inv_rms")
+                                    .Output("weight_grad")
+                                    .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& inv_rms,
+                           const Optional<one::Tensor>& weight, const bool param_grad) const {
+    if (param_grad) {
+      return OpInterpUtil::Dispatch<Tensor>(*param_grad_op_, {dy, x, inv_rms});
+    } else if (weight) {
+      return OpInterpUtil::Dispatch<Tensor>(*affine_grad_op_, {dy, x, inv_rms, JUST(weight)});
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*grad_op_, {dy, x, inv_rms});
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> grad_op_;
+  std::shared_ptr<OpExpr> affine_grad_op_;
+  std::shared_ptr<OpExpr> param_grad_op_;
+};
+
 class BroadcastMatmulGradBFunctor {
  public:
   BroadcastMatmulGradBFunctor() {
@@ -1568,6 +1611,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::VectorMatrixProductGradBFunctor>("VectorMatrixProductGradB");
   m.add_functor<impl::DeformConv2dInputGradFunctor>("DeformConv2dInputGrad");
   m.add_functor<impl::DeformConv2dParamGradFunctor>("DeformConv2dParamGrad");
+  m.add_functor<impl::RMSNormGradFunctor>("RMSNormGrad");
 };
 
 }  // namespace functional

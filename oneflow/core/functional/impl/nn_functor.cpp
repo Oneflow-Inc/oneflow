@@ -787,6 +787,58 @@ class GroupNormFunctor {
   std::shared_ptr<OpExpr> affine_op_;
 };
 
+bool CheckNormShape(const Shape& x_shape, const Shape& normalized_shape) {
+  if (x_shape.size() < normalized_shape.size()) { return false; }
+  size_t b_ndim = x_shape.size() - normalized_shape.size();
+  for (int i = 0; i < x_shape.size(); ++i) {
+    if (i >= b_ndim) {
+      if (x_shape[i] != normalized_shape[i - b_ndim]) { return false; }
+    }
+  }
+  return true;
+}
+
+class RMSNormFunctor {
+ public:
+  RMSNormFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("rms_norm").Input("x").Output("y").Output("inv_rms").Build());
+    op_affine_ = CHECK_JUST(one::OpBuilder("rms_norm")
+                                .Input("x")
+                                .Input("weight")
+                                .Output("y")
+                                .Output("inv_rms")
+                                .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const Optional<one::Tensor>& weight,
+                           const Shape& normalized_shape, const float epsilon) const {
+    const Shape& x_shape = *x->shape();
+    if (weight) {
+      const Shape& w_shape = *JUST(weight)->shape();
+      CHECK_EQ_OR_RETURN(w_shape, normalized_shape)
+          << "Expected weight be the same shape with normalized_shape "
+          << normalized_shape.ToString() << ", but got " << w_shape.ToString();
+    }
+    if (!CheckNormShape(x_shape, normalized_shape)) {
+      auto shape_str_without_parentheses =
+          x_shape.ToString().substr(1, x_shape.ToString().size() - 2);
+      return Error::RuntimeError()
+             << "Given normalized_shape=" << normalized_shape.ToString()
+             << ", expected input with shape (*, " << shape_str_without_parentheses
+             << "), but got input of " << x_shape.ToString();
+    }
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("normalized_shape", "epsilon");
+    attrs.SetAllAttrs(normalized_shape, epsilon);
+    if (weight) { return OpInterpUtil::Dispatch<Tensor>(*op_affine_, {x, JUST(weight)}, attrs); }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_affine_;
+};
+
 class PixelShuffleFunctor {
  public:
   PixelShuffleFunctor() {}
@@ -4426,6 +4478,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BatchNormBackwardReduceFunctor>("BatchNormBackwardReduce");
   m.add_functor<impl::BatchNormBackwardElemtFunctor>("BatchNormBackwardElemt");
   m.add_functor<impl::FusedMultiHeadAttentionInferenceFunctor>("FusedMultiHeadAttentionInference");
+  m.add_functor<impl::RMSNormFunctor>("RMSNorm");
 }
 
 }  // namespace functional
