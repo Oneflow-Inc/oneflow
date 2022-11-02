@@ -22,67 +22,67 @@ import oneflow.unittest
 
 
 class TestGradScaling(flow.unittest.TestCase):
-    # @flow.unittest.skip_unless_1n1d()
-    # def test_grad_scaling_device_as_key(test_case):
-    #     # Ensure that different instances of "device" objects that point to the same device
-    #     # are treated as identical keys by dicts.  GradScaler relies on this behavior, and may
-    #     # error otherwise in a way that's difficult to detect (a silent performance hit).
-    #     d = {}
-    #     t = flow.empty((1,), device="cuda:0")
-    #     dev0a = flow.device("cuda:0")
-    #     dev0b = flow.device("cuda:0")
-    #     dev1a = flow.device("cuda:1")
-    #     dev1b = flow.device("cuda:1")
+    @flow.unittest.skip_unless_1n1d()
+    def test_grad_scaling_device_as_key(test_case):
+        # Ensure that different instances of "device" objects that point to the same device
+        # are treated as identical keys by dicts.  GradScaler relies on this behavior, and may
+        # error otherwise in a way that's difficult to detect (a silent performance hit).
+        d = {}
+        t = flow.empty((1,), device="cuda:0")
+        dev0a = flow.device("cuda:0")
+        dev0b = flow.device("cuda:0")
+        dev1a = flow.device("cuda:1")
+        dev1b = flow.device("cuda:1")
 
-    #     test_case.assertTrue(hash(dev0a) == hash(dev0b))
-    #     test_case.assertTrue(hash(dev1a) == hash(dev1b))
+        test_case.assertTrue(hash(dev0a) == hash(dev0b))
+        test_case.assertTrue(hash(dev1a) == hash(dev1b))
 
-    #     d[dev0a] = "0a"
-    #     d[dev0b] = "0b"
-    #     test_case.assertTrue(len(d) == 1)
-    #     test_case.assertTrue(d[dev0a] == "0b")
-    #     d[t.device] = "t"
-    #     test_case.assertTrue(len(d) == 1)
-    #     test_case.assertTrue(d[dev0a] == "t")
+        d[dev0a] = "0a"
+        d[dev0b] = "0b"
+        test_case.assertTrue(len(d) == 1)
+        test_case.assertTrue(d[dev0a] == "0b")
+        d[t.device] = "t"
+        test_case.assertTrue(len(d) == 1)
+        test_case.assertTrue(d[dev0a] == "t")
 
-    #     d[dev1a] = "1a"
-    #     d[dev1b] = "1b"
-    #     test_case.assertTrue(len(d) == 2)
-    #     test_case.assertTrue(d[dev1a] == "1b")
+        d[dev1a] = "1a"
+        d[dev1b] = "1b"
+        test_case.assertTrue(len(d) == 2)
+        test_case.assertTrue(d[dev1a] == "1b")
 
-    # @flow.unittest.skip_unless_1n1d()
-    # def test_grad_scaling_scale(test_case):
-    #     scaler = flow.amp.GradScaler(init_scale=2.)
-    #     t0 = flow.full((1,), 4.0, dtype=flow.float32, device="cuda:0")
-    #     t1 = flow.full((1,), 4.0, dtype=flow.float32, device="cuda:1")
-    #     # Create some nested iterables of tensors on different devices.
-    #     outputs = (t1.clone(), (t0.clone(), t1.clone()), [t0.clone(), (t1.clone(), t0.clone())])
-    #     outputs = scaler.scale(outputs)
-    #     test_case.assertTrue(outputs[0] == 8.0 and outputs[1][0] == 8.0 and outputs[1][1] == 8.0 and
-    #                     outputs[2][0] == 8.0 and outputs[2][1][0] == 8.0 and outputs[2][1][1] == 8.0)
-    #     test_case.assertTrue(scaler._scale.device == t1.device)
+    @flow.unittest.skip_unless_1n1d()
+    def test_grad_scaling_scale(test_case):
+        scaler = flow.cuda.amp.GradScaler(init_scale=2.)
+        t0 = flow.full((1,), 4.0, dtype=flow.float32, device="cuda:0")
+        t1 = flow.full((1,), 4.0, dtype=flow.float32, device="cuda:1")
+        # Create some nested iterables of tensors on different devices.
+        outputs = (t1.clone(), (t0.clone(), t1.clone()), [t0.clone(), (t1.clone(), t0.clone())])
+        outputs = scaler.scale(outputs)
+        test_case.assertTrue(outputs[0] == 8.0 and outputs[1][0] == 8.0 and outputs[1][1] == 8.0 and
+                        outputs[2][0] == 8.0 and outputs[2][1][0] == 8.0 and outputs[2][1][1] == 8.0)
+        test_case.assertTrue(scaler._scale.device == t1.device)
 
-    # @flow.unittest.skip_unless_1n1d()
-    # def test_grad_scaling_state_dict(test_case):
-    #     for lazy_init_scale in True, False:
-    #         s0 = flow.amp.GradScaler(init_scale=3., growth_factor=4., backoff_factor=.5, growth_interval=2)
-    #         s1 = flow.amp.GradScaler(init_scale=6., growth_factor=7., backoff_factor=.8, growth_interval=1)
+    @flow.unittest.skip_unless_1n1d()
+    def test_grad_scaling_state_dict(test_case):
+        for lazy_init_scale in True, False:
+            s0 = flow.cuda.amp.GradScaler(init_scale=3., growth_factor=4., backoff_factor=.5, growth_interval=2)
+            s1 = flow.cuda.amp.GradScaler(init_scale=6., growth_factor=7., backoff_factor=.8, growth_interval=1)
 
-    #         # sets a random value for load_state_dict to overwrite
-    #         s1._init_growth_tracker = 7
+            # sets a random value for load_state_dict to overwrite
+            s1._init_growth_tracker = 7
 
-    #         if lazy_init_scale:
-    #             # Dummy scale() call to ensure the scale tensor is lazily initialized.
-    #             s1.scale(flow.full((1,), 4.0, dtype=flow.float32, device="cuda:0"))
-    #             test_case.assertTrue(isinstance(s1._scale, flow.Tensor))
+            if lazy_init_scale:
+                # Dummy scale() call to ensure the scale tensor is lazily initialized.
+                s1.scale(flow.full((1,), 4.0, dtype=flow.float32, device="cuda:0"))
+                test_case.assertTrue(isinstance(s1._scale, flow.Tensor))
 
-    #         s1.load_state_dict(s0.state_dict())
+            s1.load_state_dict(s0.state_dict())
 
-    #         test_case.assertEqual(s1.get_scale(), 3.)
-    #         test_case.assertEqual(s1.get_growth_factor(), 4.)
-    #         test_case.assertEqual(s1.get_backoff_factor(), .5)
-    #         test_case.assertEqual(s1.get_growth_interval(), 2)
-    #         test_case.assertEqual(s1._init_growth_tracker, 0)
+            test_case.assertEqual(s1.get_scale(), 3.)
+            test_case.assertEqual(s1.get_growth_factor(), 4.)
+            test_case.assertEqual(s1.get_backoff_factor(), .5)
+            test_case.assertEqual(s1.get_growth_interval(), 2)
+            test_case.assertEqual(s1._init_growth_tracker, 0)
 
     def _create_scaling_models_optimizers(self, device="cuda"):
         # Create a module+optimizer that will use scaling, and a control module+optimizer
@@ -147,7 +147,7 @@ class TestGradScaling(flow.unittest.TestCase):
 
             # For functionality, test with a modest initial scale, and an unrealistically-large growth factor
             # so any potential errors with the growth factor handling will be magnified.
-            scaler = flow.amp.GradScaler(
+            scaler = flow.cuda.amp.GradScaler(
                 init_scale=128.0, growth_factor=2.0, enabled=enabled, growth_interval=1
             )
 
@@ -173,7 +173,9 @@ class TestGradScaling(flow.unittest.TestCase):
                 test_case.assertTrue(scaler.get_scale() == 1.0)
 
             for c, s in zip(mod_control.parameters(), mod_scaling.parameters()):
-                test_case.assertEqual(np.allclose(c.numpy(), s.numpy(), atol=atol, rtol=1e-05), True)
+                test_case.assertEqual(
+                    np.allclose(c.numpy(), s.numpy(), atol=atol, rtol=1e-05), True
+                )
 
     # Compares no scaling + no autocasting against scaling + autocasting.
     @flow.unittest.skip_unless_1n1d()
@@ -192,7 +194,7 @@ class TestGradScaling(flow.unittest.TestCase):
                 if try_scaling_api:
                     scaler.scale(loss).backward()
                     if i == skip_iter and scaler.is_enabled():
-                        model[1].weight.grad.data.fill_(float('inf'))
+                        model[1].weight.grad.data.fill_(float("inf"))
                     scaler.step(optimizer)
                     scaler.update()
                     if try_pickle:
@@ -206,8 +208,8 @@ class TestGradScaling(flow.unittest.TestCase):
         # sets atol=1e-3 because we're comparing pure fp32 arithmetic vs a mixture of fp16 and fp32
         test_case._run_scaling_case(run, unskipped=3, skipped=1, atol=1e-3)
         # this will be picked up by try_pickle within run():
-        # try_pickle = True
-        # test_case._run_scaling_case(run, unskipped=3, skipped=1, atol=1e-3)
+        try_pickle = True
+        test_case._run_scaling_case(run, unskipped=3, skipped=1, atol=1e-3)
 
 
 if __name__ == "__main__":
