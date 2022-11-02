@@ -14,10 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "OneFlow/UserOpReflection.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "oneflow/core/framework/user_op_attr.pb.h"
+#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
+#include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 
 #include <string>
 #include <vector>
@@ -87,10 +92,14 @@ const user_op::TensorDesc* RegContext::TensorDesc4ArgNameAndIndex(const std::str
 const ArgVec& RegContext::inputs() const { return inputs_; }
 const ArgVec& RegContext::outputs() const { return outputs_; }
 
+// TODO: more information is needed
 const user_op::UserOpConfWrapper& RegContext::user_op_conf() const {
-  TODO() << "get user op conf from op in mlir";
-  OperatorConf user_op_conf;
-  return user_op::UserOpConfWrapper(std::make_shared<OperatorConf>(user_op_conf));
+  OperatorConf op_conf;
+  if (!succeeded(mlir::oneflow::ConvertUserOpAttributes(op_, op_conf))) {
+    op_->emitError("fail to convert user op attributes");
+    exit(1);
+  }
+  return user_op::UserOpConfWrapper(std::make_shared<OperatorConf>(op_conf));
 }
 
 const std::shared_ptr<const user_op::AttrVal>& RegContext::Attr4Name(

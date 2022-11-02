@@ -32,13 +32,14 @@ def _test_okl_relu_with_cpu(test_case: flow.unittest.TestCase):
 
         def build(self, x):
             y = flow.relu(x)
-            return flow.tanh(y)
+            z = flow.tanh(y)
+            return flow.sort(z)
 
     x = flow.Tensor([1, -1])
     graph_to_run = GraphToRun()
     lazy_relu = graph_to_run(x)
 
-    cmp = flow.tanh(flow.relu(x))
+    cmp = flow.sort(flow.tanh(flow.relu(x)))
     test_case.assertTrue(flow.all(flow.equal(cmp, lazy_relu)))
 
 
@@ -65,9 +66,9 @@ class TestOKLRelu(flow.unittest.TestCase):
     def test_okl_relu_with_cpu(test_case):
         _test_okl_relu_with_cpu(test_case)
 
-    @unittest.skipUnless(flow.sysconfig.with_cuda(), "only test cpu cases")
-    def test_okl_relu_with_cuda(test_case):
-        _test_okl_relu_with_cuda(test_case)
+    # @unittest.skipUnless(flow.sysconfig.with_cuda(), "only test cpu cases")
+    # def test_okl_relu_with_cuda(test_case):
+    #     _test_okl_relu_with_cuda(test_case)
 
 
 if __name__ == "__main__":
