@@ -216,7 +216,7 @@ Maybe<bool> HasFalseIndex(const TensorIndex& index) {
   });
 }
 
-bool IsValidScalarTensorIndex(const std::shared_ptr<one::Tensor> tensor) {
+bool IsValidScalarTensorIndex(const std::shared_ptr<one::Tensor>& tensor) {
   if (!(tensor->dtype()->is_integer() || tensor->dtype() == DType::Bool())) { return false; }
   return tensor->shape()->NumAxes() == 0 && tensor->shape()->elem_cnt() == 1;
 }
