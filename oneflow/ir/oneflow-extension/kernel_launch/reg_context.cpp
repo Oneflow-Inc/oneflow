@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "OneFlow/UserOpReflection.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/Support/LogicalResult.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/operator/op_conf.pb.h"
@@ -24,13 +25,25 @@ limitations under the License.
 #include "mlir/IR/Operation.h"
 #include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 
+#include <memory>
 #include <string>
 #include <vector>
 
 namespace oneflow {
 namespace okl {
 
-RegContext::RegContext(mlir::Operation* op) : op_(op) {
+static user_op::UserOpConfWrapper GetConfWrapper(mlir::Operation* op) {
+  OperatorConf op_conf;
+  if (mlir::failed(mlir::oneflow::ConvertUserOpAttributes(op, op_conf))) {
+    op->emitError("fail to convert user op attributes");
+    exit(1);
+  }
+  auto conf_wrapper_ = user_op::UserOpConfWrapper(std::make_shared<OperatorConf>(op_conf));
+  op->dump();
+  return conf_wrapper_;
+}
+
+RegContext::RegContext(mlir::Operation* op) : op_(op), conf_wrapper_(GetConfWrapper(op)) {
   for (const auto& operand_id : ::llvm::enumerate(
            mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedOperandSegments>(op))) {
     user_op::NaiveTensorDesc tensor_desc{};
@@ -93,14 +106,7 @@ const ArgVec& RegContext::inputs() const { return inputs_; }
 const ArgVec& RegContext::outputs() const { return outputs_; }
 
 // TODO: more information is needed
-const user_op::UserOpConfWrapper& RegContext::user_op_conf() const {
-  OperatorConf op_conf;
-  if (!succeeded(mlir::oneflow::ConvertUserOpAttributes(op_, op_conf))) {
-    op_->emitError("fail to convert user op attributes");
-    exit(1);
-  }
-  return user_op::UserOpConfWrapper(std::make_shared<OperatorConf>(op_conf));
-}
+const user_op::UserOpConfWrapper& RegContext::user_op_conf() const { return conf_wrapper_; }
 
 const std::shared_ptr<const user_op::AttrVal>& RegContext::Attr4Name(
     const std::string& attr_name) const {

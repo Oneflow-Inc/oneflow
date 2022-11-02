@@ -33,8 +33,8 @@ const user_op::TensorDesc* RunContext::TensorDesc4ArgNameAndIndex(const std::str
 
 user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) {
   auto op = reg_ctx_->GetOp();
-  auto operand_name = {"x", "in"};
-  auto result_name = {"y", "out"};
+  auto operand_name = {"x", "in", "input", "index"};
+  auto result_name = {"y", "out", "output"};
   if (std::find(operand_name.begin(), operand_name.end(), arg_name) != operand_name.end()) {
     auto val = op->getOperand(index);
     auto define_op = val.getDefiningOp();
