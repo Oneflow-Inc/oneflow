@@ -16,8 +16,7 @@ class TestMock(flow.unittest.TestCase):
         import torch.version
 
         test_case.assertTrue(torch.version.__version__ == flow.__version__)
-        mock.clean_torch(globals())
-        mock.disable()
+        mock.disable(globals())
         import torch
 
         test_case.assertTrue(torch.__package__ == "torch")
@@ -28,29 +27,25 @@ class TestMock(flow.unittest.TestCase):
 
         test_case.assertTrue(torch.version.__version__ == torch.__version__)
 
-        mock.clean_torch(globals())
-        mock.enable()
+        mock.enable(globals())
         from torch import nn
         from torch.version import __version__
 
         test_case.assertTrue(nn.__package__ == "oneflow.nn")
         test_case.assertTrue(__version__ == flow.__version__)
-        mock.clean_torch(globals())
-        mock.disable()
+        mock.disable(globals())
         from torch import nn
         from torch.version import __version__
 
         test_case.assertTrue(nn.__package__ == "torch.nn")
         test_case.assertTrue(__version__ == torch.__version__)
-        mock.clean_torch(globals())
-        mock.enable()
+        mock.enable(globals())
         with test_case.assertRaises(Exception) as context:
             from torch import noexist
         test_case.assertTrue(
             "oneflow.noexist is not implemented" in str(context.exception)
         )
-        mock.clean_torch(globals())
-        mock.disable()
+        mock.disable(globals())
         with test_case.assertRaises(Exception) as context:
             from torch import noexist
         test_case.assertTrue(

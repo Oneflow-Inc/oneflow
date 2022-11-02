@@ -119,21 +119,33 @@ class Mock:
         self.importer = OneflowImporter()
         sys.meta_path.insert(0, self.importer)
 
-    def enable(self):
-        if sys.modules.get("torch") is not None:
-            print(
-                "Warning: Detected imported torch modules, please run `clean_torch` before calling `enable`"
-            )
-        else:
-            self.importer.enable = True
+    def enable(self, globals):
+        for k, v in sys.modules.copy().items():
+            if k.startswith("torch"):
+                self.importer.disable_mod_cache.update({k: v})
+                del sys.modules[k]
+                try:
+                    del globals[k]
+                except KeyError:
+                    pass
+        for k, v in self.importer.enable_mod_cache.items():
+            sys.modules.update({k: v})
+            globals.update({k: v})
+        self.importer.enable = True
 
-    def disable(self):
-        if sys.modules.get("torch") is not None:
-            print(
-                "Warning: Detected imported torch modules, please run `clean_torch` before calling `disable`"
-            )
-        else:
-            self.importer.enable = False
+    def disable(self, globals):
+        for k, v in sys.modules.copy().items():
+            if k.startswith("torch"):
+                self.importer.enable_mod_cache.update({k: v})
+                del sys.modules[k]
+                try:
+                    del globals[k]
+                except KeyError:
+                    pass
+        for k, v in self.importer.disable_mod_cache.items():
+            sys.modules.update({k: v})
+            globals.update({k: v})
+        self.importer.enable = False
 
     def clean_torch(self, globals):
         """
