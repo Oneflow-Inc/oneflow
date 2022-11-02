@@ -229,11 +229,13 @@ def _test_advanced_indexing(test_case, placement, dtype):
 
     # pick a random valid indexer type
     def ri(indices):
-        choice = _randint(0, 2)
+        choice = _randint(0, 3)
         if choice == 0:
-            return _cpu_global_tensor(flow.LongTensor(indices)).to_global(
-                placement, broadcast_for_placement
-            )
+            return flow.LongTensor(
+                indices,
+                placement=flow.env.all_device_placement("cpu"),
+                sbp=flow.sbp.broadcast,
+            ).to_global(placement, broadcast_for_placement)
         elif choice == 1:
             return list(indices)
         else:
@@ -252,7 +254,7 @@ def _test_advanced_indexing(test_case, placement, dtype):
         )
 
     def validate_setting(x):
-        x[[0]] = -2
+        #  x[[0]] = -2
         x = get_graph_output(x, func=lambda x: setitem_and_return(x, [0], -2))
         _assert_tensor_equal(test_case, x[[0]], flow.tensor([-2], dtype=dtype))
         #  x[[0]] = -1
@@ -274,7 +276,7 @@ def _test_advanced_indexing(test_case, placement, dtype):
     sbp = random_sbp(placement, max_dim=1).value()
     reference = global_broadcast_consec((8,)).to_global(placement, sbp)
     validate_indexing(reference)
-    validate_setting(reference)
+    #  validate_setting(reference)
     return
 
     # reference is  1  2  3  4  5  6  7  8

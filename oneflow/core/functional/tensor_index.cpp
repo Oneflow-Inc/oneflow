@@ -511,6 +511,8 @@ Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
 
 Maybe<void> UnifyInputAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
                                          TensorTuple& tensor_indices) {
+  // NOTE: process indices in eager mode
+  LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
   if (x->is_local()) {
     const auto x_device = JUST(x->device());
     for (int64_t i = 0; i < tensor_indices.size(); ++i) {
