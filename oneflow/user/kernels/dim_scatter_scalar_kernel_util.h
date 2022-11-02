@@ -93,7 +93,7 @@ struct UpdateScalarFunctor {
   template struct DimScatterScalarFunctor<device_type, double, int64_t, opt>;  \
   template struct DimScatterScalarFunctor<device_type, float16, int64_t, opt>;
 
-#define INSTANTIATE_DIM_SCATTER_SCARLAR_CUDA_FUNCTORS(device_type, opt)         \
+#define INSTANTIATE_DIM_SCATTER_SCARLAR_CUDA_FUNCTORS(device_type, opt)        \
   template struct DimScatterScalarFunctor<device_type, uint8_t, int32_t, opt>; \
   template struct DimScatterScalarFunctor<device_type, int8_t, int32_t, opt>;  \
   template struct DimScatterScalarFunctor<device_type, int32_t, int32_t, opt>; \

@@ -425,13 +425,16 @@ class GumbelSoftmaxFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("tau", "seed", "hard");
     attrs.SetAllAttrs(tau, static_cast<int64_t>(gen->current_seed()), hard);
 
-    auto random_tensor = JUST(functional::Rand(*in_shape.get(), dtype, device, gen, /*requires_grad=*/false));
-    auto gumbel_noise_tensor = JUST(functional::ScalarSub(Scalar(0.0), JUST(functional::Log(
-      JUST(functional::ScalarSub(Scalar(0.0), JUST(functional::Log(random_tensor)), /*alpha=*/1.0))
-    )), /*alpha=*/1.0));
+    auto random_tensor =
+        JUST(functional::Rand(*in_shape.get(), dtype, device, gen, /*requires_grad=*/false));
+    auto gumbel_noise_tensor = JUST(functional::ScalarSub(
+        Scalar(0.0),
+        JUST(functional::Log(JUST(functional::ScalarSub(
+            Scalar(0.0), JUST(functional::Log(random_tensor)), /*alpha=*/1.0)))),
+        /*alpha=*/1.0));
     auto gumbel_in_tensor = JUST(functional::ScalarDiv(
-        JUST(functional::Add(in_tensor, gumbel_noise_tensor, /*alpha=*/1.0, /*inplace=*/false)), Scalar(tau)
-    ));
+        JUST(functional::Add(in_tensor, gumbel_noise_tensor, /*alpha=*/1.0, /*inplace=*/false)),
+        Scalar(tau)));
 
     auto out_soft = JUST(functional::Softmax(gumbel_in_tensor, dim));
     if (hard) {
@@ -447,15 +450,20 @@ class GumbelSoftmaxFunctor {
       int64_t dim_ = dim ? JUST(dim) : get_dim();
       dim_ = JUST(maybe_wrap_dim(dim_, num_axes));
       auto out_max = JUST(functional::ArgMax(out_soft, dim_, /*keepdim=*/true, dtype));
-      auto index = JUST(functional::To(out_max, JUST(DType::Get(DataType::kInt64)), /*copy=*/false));
+      auto index =
+          JUST(functional::To(out_max, JUST(DType::Get(DataType::kInt64)), /*copy=*/false));
       auto zero = JUST(functional::ZerosLike(out_soft));
-      auto out_hard = JUST(functional::DimScatterUpdateScalar(zero, dim_, index, 1.0, /*inplace=*/false));
+      auto out_hard =
+          JUST(functional::DimScatterUpdateScalar(zero, dim_, index, 1.0, /*inplace=*/false));
 
-      auto out_hard_has_grad = functional::Add(JUST(functional::Sub(
-        out_hard, JUST(out_soft->detach()), /*alpha=*/1.0, /*inplace=*/false
-      )), out_soft, /*alpha=*/1.0, /*inplace=*/false);
+      auto out_hard_has_grad =
+          functional::Add(JUST(functional::Sub(out_hard, JUST(out_soft->detach()), /*alpha=*/1.0,
+                                               /*inplace=*/false)),
+                          out_soft, /*alpha=*/1.0, /*inplace=*/false);
       return out_hard_has_grad;
-    } else { return out_soft; }
+    } else {
+      return out_soft;
+    }
   }
 };
 
