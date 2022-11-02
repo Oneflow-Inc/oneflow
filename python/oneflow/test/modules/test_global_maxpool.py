@@ -15,6 +15,7 @@ limitations under the License.
 """
 import unittest
 import numpy as np
+from pkg_resources import packaging
 import oneflow as flow
 import torch as ori_torch
 import oneflow.unittest
@@ -207,11 +208,11 @@ def _test_maxpool2d_channel_last(
         ceil_mode=ceil_mode,
     )
     y2 = m2(x2).permute(0, 2, 3, 1)
+    os.environ["ONEFLOW_ENABLE_NHWC"] = "1"
 
     test_case.assertTrue(
         np.allclose(y1.detach().cpu().numpy(), y2.detach().cpu().numpy(), 1e-4, 1e-4)
     )
-    os.environ["ONEFLOW_ENABLE_NHWC"] = "0"
 
 
 class TestMaxPool(flow.unittest.TestCase):
@@ -227,6 +228,13 @@ class TestMaxPool(flow.unittest.TestCase):
                 _test_maxpool3d(test_case, placement, sbp)
 
     @globaltest
+    @unittest.skipIf(
+        packaging.version.parse(ori_torch.__version__)
+        == packaging.version.parse("1.10.0"),
+        "skip when pytorch version == 1.10.0",
+    )
+    # NOTE:pytorch maxpool2d nhwc has bug in version of 1.10.0, so skip it in CI.
+    # detail:https://github.com/pytorch/pytorch/pull/76597
     def test_maxpool2d_channel_last(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_maxpool2d_channel_last]
