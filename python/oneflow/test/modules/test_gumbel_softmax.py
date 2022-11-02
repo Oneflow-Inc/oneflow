@@ -28,11 +28,7 @@ import oneflow.unittest
 
 def _test_gumbel_softmax(test_case, tau, dim, device, dtype):
     dtype = type_name_to_flow_type[dtype]
-    x = flow.tensor(
-        np.random.randn(20, 32),
-        dtype=dtype,
-        device=flow.device(device),
-    )
+    x = flow.tensor(np.random.randn(20, 32), dtype=dtype, device=flow.device(device),)
     y_soft = F.gumbel_softmax(x, tau=tau, dim=dim)
     y_hard = F.gumbel_softmax(x, tau=tau, dim=dim, hard=True)
     test_case.assertEqual(x.shape, y_soft.shape)
@@ -43,11 +39,7 @@ def _test_gumbel_softmax(test_case, tau, dim, device, dtype):
 
 def _test_gumbel_softmax_hard(test_case, tau, dim, device, dtype):
     dtype = type_name_to_flow_type[dtype]
-    x = flow.tensor(
-        np.random.randn(45, 23),
-        dtype=dtype,
-        device=flow.device(device),
-    )
+    x = flow.tensor(np.random.randn(45, 23), dtype=dtype, device=flow.device(device),)
     y_hard = F.gumbel_softmax(x, tau=tau, dim=dim, hard=True)
     test_case.assertEqual(y_hard.min(), 0)
     if dim == -1:
@@ -60,16 +52,10 @@ def _test_gumbel_softmax_backward(test_case, tau, dim, device, dtype):
     dtype = type_name_to_flow_type[dtype]
     x_np = np.random.rand(10, 10)
     x_soft = flow.tensor(
-        x_np,
-        dtype=dtype,
-        device=flow.device(device),
-        requires_grad=True,
+        x_np, dtype=dtype, device=flow.device(device), requires_grad=True,
     )
     x_hard = flow.tensor(
-        x_np,
-        dtype=dtype,
-        device=flow.device(device),
-        requires_grad=True,
+        x_np, dtype=dtype, device=flow.device(device), requires_grad=True,
     )
     y_soft = F.gumbel_softmax(x_soft, tau, dim=dim)
     y_hard = F.gumbel_softmax(x_hard, tau, dim=dim, hard=False)
@@ -78,19 +64,14 @@ def _test_gumbel_softmax_backward(test_case, tau, dim, device, dtype):
     y_hard.mean().backward()
 
     np.testing.assert_allclose(
-        x_hard.grad.numpy(),
-        x_soft.grad.numpy(),
-        rtol=1e-5,
-        atol=1e-5,
-        verbose=True
+        x_hard.grad.numpy(), x_soft.grad.numpy(), rtol=1e-5, atol=1e-5, verbose=True
     )
 
 
 def _test_gumbel_softmax_half(test_case, tau, dim, device):
-    x = flow.tensor(
-        np.random.randn(20, 32),
-        device=flow.device(device),
-    ).to(flow.float16)
+    x = flow.tensor(np.random.randn(20, 32), device=flow.device(device),).to(
+        flow.float16
+    )
     y_soft = F.gumbel_softmax(x, tau=tau, dim=dim)
     y_hard = F.gumbel_softmax(x, tau=tau, dim=dim, hard=True)
     test_case.assertEqual(x.shape, y_soft.shape)
@@ -105,8 +86,8 @@ class TestGumbelSoftmaxModule(flow.unittest.TestCase):
     def test_gumbel_softmax(test_case):
         arg_dict = OrderedDict()
         arg_dict["fun"] = [
-            _test_gumbel_softmax, 
-            _test_gumbel_softmax_hard, 
+            _test_gumbel_softmax,
+            _test_gumbel_softmax_hard,
             _test_gumbel_softmax_backward,
         ]
         arg_dict["tau"] = [1, 2, 0.5]
@@ -116,12 +97,12 @@ class TestGumbelSoftmaxModule(flow.unittest.TestCase):
 
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-    
+
     @autotest()
     def test_leakyrelu_module_with_half_random_data(test_case):
         arg_dict = OrderedDict()
         arg_dict["fun"] = [
-            _test_gumbel_softmax_half, 
+            _test_gumbel_softmax_half,
         ]
         arg_dict["tau"] = [1, 2, 0.5]
         arg_dict["dim"] = [0, -1]
