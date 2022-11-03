@@ -267,7 +267,7 @@ message JobConfigProto {
   optional bool enable_auto_parallel = 700 [default = false];
   optional double auto_parallel_computation_cost_ratio = 701 [default = 0.05];
   optional double auto_parallel_wait_time = 702 [default = 1.65e4];
-  optional bool enable_auto_parallel_mainstem_algo = 703 [default = true];
+  optional bool enable_auto_parallel_trunk_algo = 703 [default = true];
   optional bool enable_auto_parallel_sbp_collector = 704 [default = false];
   optional bool enable_auto_parallel_ignore_user_sbp_config = 705 [default = false];
   

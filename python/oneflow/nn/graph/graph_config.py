@@ -342,11 +342,11 @@ class GraphConfig(object):
         """
         self.proto.auto_parallel_wait_time = cost
 
-    def enable_auto_parallel_mainstem_algo(self, mode: bool = True):
+    def enable_auto_parallel_trunk_algo(self, mode: bool = True):
         """
-        Find the mainstem of the SBP graph, then reduce the wait time for tributaries.
+        Find the trunk of the SBP graph, then reduce the wait time for tributaries.
         """
-        self.proto.enable_auto_parallel_mainstem_algo = mode
+        self.proto.enable_auto_parallel_trunk_algo = mode
 
     def enable_auto_parallel_sbp_collector(self, mode: bool = True):
         """

@@ -38,7 +38,7 @@ class SbpConstructor final {
   SbpConstructor() = delete;
   SbpConstructor(const OpGraph& op_graph, Job* job)
       : cost_ratio_(job->job_conf().auto_parallel_computation_cost_ratio()),
-        enable_trunk_algo_(job->job_conf().enable_auto_parallel_mainstem_algo()),
+        enable_trunk_algo_(job->job_conf().enable_auto_parallel_trunk_algo()),
         use_sbp_collector_(!Singleton<ResourceDesc, ForSession>::Get()
                                 ->resource()
                                 .disable_group_boxing_by_dst_parallel()
