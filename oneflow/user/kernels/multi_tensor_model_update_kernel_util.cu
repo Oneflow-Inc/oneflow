@@ -140,14 +140,11 @@ template struct MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, float, float>;
 template struct MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, float, float16>;
 
 template<typename T, typename G, int N>
-__global__ void MultiTensorMomentumUpdateGpu(int64_t num_tensor, T scale, const float l1,
-                                             const float l2, const float weight_decay,
-                                             float learning_rate_val, float lr_scale,
-                                             const float* learning_rate, const T* scale_by_ptr,
-                                             const int64_t* skip_if, const float momentum,
-                                             const float dampening, const bool nesterov,
-                                             const bool maximize,
-                                             TensorTupleParams<N> tensor_tuple_params) {
+__global__ void MultiTensorMomentumUpdateGpu(
+    int64_t num_tensor, T scale, const float l1, const float l2, const float weight_decay,
+    float learning_rate_val, float lr_scale, const float* learning_rate, const T* scale_by_ptr,
+    const int64_t* skip_if, const float momentum, const float dampening, const bool nesterov,
+    const bool maximize, TensorTupleParams<N> tensor_tuple_params) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
@@ -194,8 +191,7 @@ __global__ void MultiTensorMomentumUpdateGpu(int64_t num_tensor, T scale, const 
             model_diff_t = momentum_buf[ilp];
 
           T alpha = -learning_rate_val;
-          if (maximize)
-            alpha = learning_rate_val;
+          if (maximize) alpha = learning_rate_val;
           model_val[ilp] += alpha * model_diff_t;
         }
       }
@@ -221,7 +217,8 @@ struct MultiTensorMomentumUpdateKernelUtil<DeviceType::kCUDA, T, G> {
                      float l1, float l2, float weight_decay, float learning_rate_val,
                      float lr_scale, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, const float momentum, const float dampening,
-                     const bool nesterov, const bool maximize, TensorTupleParams<3> tensor_tuple_params);
+                     const bool nesterov, const bool maximize,
+                     TensorTupleParams<3> tensor_tuple_params);
 };
 
 template<typename T, typename G>
@@ -240,8 +237,8 @@ void MultiTensorMomentumUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
   MultiTensorMomentumUpdateGpu<T, G, 3>
       <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
           n_tensor, static_cast<T>(scale), l1, l2, weight_decay, learning_rate_val, lr_scale,
-          learning_rate, scale_by_ptr, skip_if, momentum, dampening, nesterov, 
-          maximize, tensor_tuple_params);
+          learning_rate, scale_by_ptr, skip_if, momentum, dampening, nesterov, maximize,
+          tensor_tuple_params);
 }
 
 template<typename T>
@@ -250,7 +247,8 @@ struct MultiTensorMomentumUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
                      float l1, float l2, float weight_decay, float learning_rate_val,
                      float lr_scale, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, const float momentum, const float dampening,
-                     const bool nesterov, const bool maximize, TensorTupleParams<3> tensor_tuple_params);
+                     const bool nesterov, const bool maximize,
+                     TensorTupleParams<3> tensor_tuple_params);
 };
 
 template<typename T>
@@ -261,8 +259,8 @@ void MultiTensorMomentumUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
     const bool nesterov, const bool maximize, TensorTupleParams<3> tensor_tuple_params) {
   MultiTensorMomentumUpdateKernelUtil<DeviceType::kCUDA, T, half>::Update(
       stream, elem_cnt, n_tensor, scale, l1, l2, weight_decay, learning_rate_val, lr_scale,
-      learning_rate, scale_by_ptr, skip_if, momentum, dampening, nesterov,
-      maximize, tensor_tuple_params);
+      learning_rate, scale_by_ptr, skip_if, momentum, dampening, nesterov, maximize,
+      tensor_tuple_params);
 }
 
 template struct MultiTensorMomentumUpdateKernelUtil<DeviceType::kCUDA, double, double>;
@@ -463,7 +461,8 @@ struct MultiTensorMomentumUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G> {
                      float l1, float l2, float weight_decay, float learning_rate_val,
                      float lr_scale, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, const float momentum, const float dampening,
-                     const bool nesterov, const bool maximize, TensorTupleParams<4> tensor_tuple_params);
+                     const bool nesterov, const bool maximize,
+                     TensorTupleParams<4> tensor_tuple_params);
 };
 
 template<typename T, typename G>
@@ -482,7 +481,8 @@ void MultiTensorMomentumUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G>::Updat
   MultiTensorMomentumUpdateGpu<T, G, 4>
       <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
           n_tensor, static_cast<T>(scale), l1, l2, weight_decay, learning_rate_val, lr_scale,
-          learning_rate, scale_by_ptr, skip_if, momentum, dampening, nesterov, maximize, tensor_tuple_params);
+          learning_rate, scale_by_ptr, skip_if, momentum, dampening, nesterov, maximize,
+          tensor_tuple_params);
 }
 
 template<typename T>
@@ -491,7 +491,8 @@ struct MultiTensorMomentumUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16
                      float l1, float l2, float weight_decay, float learning_rate_val,
                      float lr_scale, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, const float momentum, const float dampening,
-                     const bool nesterov, const bool maximize, TensorTupleParams<4> tensor_tuple_params);
+                     const bool nesterov, const bool maximize,
+                     TensorTupleParams<4> tensor_tuple_params);
 };
 
 template<typename T>
@@ -502,7 +503,8 @@ void MultiTensorMomentumUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16>:
     const bool nesterov, const bool maximize, TensorTupleParams<4> tensor_tuple_params) {
   MultiTensorMomentumUpdateWithCastKernelUtil<DeviceType::kCUDA, T, half>::Update(
       stream, elem_cnt, n_tensor, scale, l1, l2, weight_decay, learning_rate_val, lr_scale,
-      learning_rate, scale_by_ptr, skip_if, momentum, dampening, nesterov, maximize, tensor_tuple_params);
+      learning_rate, scale_by_ptr, skip_if, momentum, dampening, nesterov, maximize,
+      tensor_tuple_params);
 }
 
 template struct MultiTensorMomentumUpdateWithCastKernelUtil<DeviceType::kCUDA, float, float>;
