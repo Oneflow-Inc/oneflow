@@ -14,17 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow.nn.modules.utils import _single, _handle_size_arg
+from oneflow.nn.modules.utils import _single
 
 
-def broadcast_shapes_op(*shapes):
+def broadcast_shapes(*shapes):
     shapes = _single(shapes)
     return flow._C.broadcast_shapes(shapes)
 
 
-def broadcast_tensors_op(*tensors):
+def broadcast_tensors(*tensors):
     tensors = _single(tensors)
     return flow._C.broadcast_tensors(tensors)
+
+
+def broadcast_to(input, shape):
+    return flow._C.broadcast_to(input, shape)
 
 
 if __name__ == "__main__":

@@ -119,8 +119,7 @@ class TestCast(flow.unittest.TestCase):
     def test_broadcast_shapes(test_case):
         shapes = (2,), (3, 1), (1, 1, 1)
         test_case.assertTrue(
-            flow.broadcast_shapes(*shapes),
-            ori_torch.broadcast_shapes(*shapes),
+            flow.broadcast_shapes(*shapes), ori_torch.broadcast_shapes(*shapes),
         )
 
     @autotest(n=3)
@@ -129,7 +128,6 @@ class TestCast(flow.unittest.TestCase):
         x = random_tensor(ndim=2, dim0=1, dim1=4).to(device=device)
         y = random_tensor(ndim=2, dim0=3, dim1=1).to(device=device)
         return torch.broadcast_tensors(x, y)
-
 
     def test_broadcast_to(test_case):
         # see flow.expand, because broadcast_to is an alias of flow.expand

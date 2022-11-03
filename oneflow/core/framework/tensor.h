@@ -682,4 +682,4 @@ class GlobalTensor final : public TensorIf<GlobalTensor> {
 }  // namespace one
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_FRAMEWORK_TENSOR_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_H_

@@ -546,8 +546,10 @@ def _scatter_inplace(self, dim, index, src, reduce=""):
         reduce = None
     return flow._C.scatter(self, dim, index, src, reduce, inplace=True)
 
+
 def _broadcast_to(self, shape):
     return flow._C.broadcast_to(self, shape)
+
 
 def RegisterMethods():
     Tensor.ndim = property(_ndim)
