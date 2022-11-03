@@ -537,7 +537,7 @@ void SbpNode::RaiseConsumerNum(const HashMap<std::string, SbpNode*>& op_name2sbp
 void SbpNode::SpreadAvailWaitTime(const std::vector<double>& trunk_cost,
                                   const std::vector<double>& acc_trunk_cost,
                                   const HashMap<std::string, SbpNode*>& op_name2sbp_node,
-                                  double wait_time, double transfer_cost) {
+                                  double wait_time) {
   // skip the proxy nodes and the sources
   if (min_layer_ <= 0) { return; }
   // Have not finished spreading for consumers or downstream nodes or already visited.
@@ -577,15 +577,13 @@ void SbpNode::SpreadAvailWaitTime(const std::vector<double>& trunk_cost,
     // (1) P->S0->S0->S0->B
     // (2) p->B->B->B->B
     // We would use (2) when the tensor is relatively tiny.
-    this_edge->wait_time_ += transfer_cost;
     // Do not inherit trunk cost for nodes on the trunk
     if (!producer->on_trunk_) {
       // Inherit the minimal of the trunk cost from consumers
       producer->DropAvailWaitTime(curr_trunk_cost);
     }
     producer->counter_--;
-    producer->SpreadAvailWaitTime(trunk_cost, acc_trunk_cost, op_name2sbp_node, wait_time,
-                                  transfer_cost);
+    producer->SpreadAvailWaitTime(trunk_cost, acc_trunk_cost, op_name2sbp_node, wait_time);
   }
   // Put the rest the trunk cost in the upstream nodes.
   for (const auto& ctrl_in_op_name : op_node_->op().op_conf().ctrl_in_op_name()) {
@@ -601,8 +599,7 @@ void SbpNode::SpreadAvailWaitTime(const std::vector<double>& trunk_cost,
         producer->DropAvailWaitTime(curr_trunk_cost);
       }
       producer->counter_--;
-      producer->SpreadAvailWaitTime(trunk_cost, acc_trunk_cost, op_name2sbp_node, wait_time,
-                                    transfer_cost);
+      producer->SpreadAvailWaitTime(trunk_cost, acc_trunk_cost, op_name2sbp_node, wait_time);
     }
   }
   // Set counter_ to be -1, do not visit it again.

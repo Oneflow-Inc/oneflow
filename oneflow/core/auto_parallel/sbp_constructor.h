@@ -45,7 +45,6 @@ class SbpConstructor final {
                            && job->job_conf().enable_auto_parallel_sbp_collector()),
         op_graph_(&op_graph) {
     sbp_graph_.SetWaitTime(job->job_conf().auto_parallel_wait_time());
-    sbp_graph_.SetTransferCost(job->job_conf().auto_parallel_transfer_cost());
     CHECK_JUST(Init(op_graph, job));
   }
   ~SbpConstructor() = default;
