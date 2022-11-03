@@ -60,6 +60,8 @@ Maybe<void> GroupNorm::Capture(GroupNormCaptureState* ctx, const TensorTuple& in
   ctx->affine = JUST(composed_attrs.GetAttr<bool>("affine"));
   ctx->epsilon = JUST(composed_attrs.GetAttr<double>("epsilon"));
   ctx->num_groups = JUST(composed_attrs.GetAttr<int32_t>("num_groups"));
+  const std::string& data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
+  CHECK_EQ_OR_RETURN(data_format, "channels_first");
   if (ctx->affine) {
     CHECK_EQ_OR_RETURN(inputs.size(), 3);  // NOLINT(maybe-need-error-msg)
   } else {

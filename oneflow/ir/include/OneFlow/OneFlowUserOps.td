@@ -6198,7 +6198,8 @@ def OneFlow_GroupNormOp : OneFlow_BaseOp<"group_norm", [NoSideEffect, AttrSizedO
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$affine,
     DefaultValuedAttr<SI32Attr, "0">:$num_groups,
-    DefaultValuedAttr<F64Attr, "0.">:$epsilon
+    DefaultValuedAttr<F64Attr, "0.">:$epsilon,
+    DefaultValuedAttr<StrAttr, "\"channels_first\"">:$data_format
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes

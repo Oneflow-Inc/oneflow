@@ -86,9 +86,11 @@ def _test_groupnorm(test_case, device):
     )
     x = flow.tensor(input_arr, dtype=flow.float32, device=flow.device(device))
     m = flow.nn.GroupNorm(num_groups=1, num_channels=2).to(device=flow.device(device))
-    y = m(x)
-    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-03, 1e-03))
-
+    y1 = m(x)
+    test_case.assertTrue(np.allclose(y1.numpy(), output, 1e-03, 1e-03))
+    x_nhwc = x.permute(0, 2, 3, 1).contiguous()
+    (y_nhwc,_,_) = flow._C.group_norm(x_nhwc, m.weight, m.bias, m.affine, m.num_groups, m.eps, "channels_last")
+    test_case.assertTrue(np.allclose(y_nhwc.permute(0, 3, 1, 2).numpy(), output, 1e-03, 1e-03))
 
 def _test_groupnorm_3d(test_case, device):
     input_arr = np.array(
