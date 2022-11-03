@@ -15,6 +15,7 @@ limitations under the License.
 """
 import os
 import unittest
+import types
 
 import numpy as np
 
@@ -50,6 +51,33 @@ class TestGraphBlock(flow.unittest.TestCase):
                 return self.m(x)
 
         g = CustomGraphHasFunc()
+        x = np.ones((10, 10))
+        x = flow.tensor(x, dtype=flow.float32)
+        out = g(x)
+        test_case.assertTrue(np.array_equal(x.numpy(), out.numpy()))
+
+    def test_module_has_special_attr(test_case):
+        class CustomModuleHasSpecialAttr(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.config = 1
+                self.name = "test_name"
+
+            def forward(self, x):
+                test_case.assertEqual(self.config, 1)
+                test_case.assertEqual(self.name, "test_name")
+                test_case.assertEqual(self.to(ModuleGraph).name, "m")
+                return x
+
+        class CustomGraphHasSpecialAttr(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.m = CustomModuleHasSpecialAttr()
+
+            def build(self, x):
+                return self.m(x)
+
+        g = CustomGraphHasSpecialAttr()
         x = np.ones((10, 10))
         x = flow.tensor(x, dtype=flow.float32)
         out = g(x)
@@ -331,34 +359,54 @@ class TestGraphBlock(flow.unittest.TestCase):
         # print(para_dict_g)
         test_case.assertTrue(np.array_equal(output_m.numpy(), output_g.numpy()))
 
-    def test_block_get_dtype_property(test_case):
-        class ModuleDtype(flow.nn.Module):
+    def test_mixin_module(test_case):
+        class ModuleMixin(flow.nn.Module):
             def __init__(self):
                 super().__init__()
-                self.linear = flow.nn.Linear(3, 8, False).to("cuda")
-                print(self.linear.weight.dtype)
-            
+                self._dtype = flow.float32
+
             @property
             def dtype(self):
-                return flow.float64
-            
+                return self._dtype
+        
+        class ConfigMixin:
+            def hello_from_cfg(self):
+                return "hello_from_cfg"
+        
+        class MixedModule(ModuleMixin, ConfigMixin):
+            def __init__(self):
+                super().__init__()
+
             def forward(self, x):
-                dt = self.dtype
-                print(dt)
-                self.linear
-                print(self.linear.weight.dtype)
-                return self.linear(x)
-        
-        m = ModuleDtype()
+                test_case.assertEqual(self.dtype, flow.float32)
+                test_case.assertEqual(self.hello_from_cfg(), "hello_from_cfg")
+                return x
 
-        np_in = np.ones((8, 3)).astype(np.float32)
-        x = flow.tensor(np_in, device="cuda")
+        mixedm = MixedModule()
 
-        @flow.nn.Graph.trace
-        def block_get_dtype(x):
-            return m(x)
-        
-        out = block_get_dtype(x)
+        class GraphConfigMixin(object):
+            @property
+            def hello_from_graph(self):
+                return "hello_from_gcfg"
+            
+            def mixin_get_name(self):
+                return self.name
+
+        class MixinGraph(flow.nn.Graph, GraphConfigMixin):
+            def __init__(self):
+                super().__init__()
+                self.m = mixedm
+
+            def build(self, x):
+                test_case.assertEqual(self.hello_from_graph, "hello_from_gcfg")
+                test_case.assertEqual(self.mixin_get_name(), self.name)
+                return self.m(x)
+
+        g = MixinGraph()
+        x = np.ones((10, 10))
+        x = flow.tensor(x, dtype=flow.float32)
+        out = g(x)
+        test_case.assertTrue(np.array_equal(x.numpy(), out.numpy()))
 
 
 if __name__ == "__main__":

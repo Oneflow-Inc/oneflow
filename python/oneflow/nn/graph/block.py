@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from functools import partial
 from typing import Iterator, Optional, Set, Union, List
 import weakref
+import types
 
 import oneflow._C
 import oneflow._oneflow_internal
@@ -469,12 +469,13 @@ class ModuleBlock(Block):
             b_none = self.to(Module)._buffers[name]
             assert b_none is None
             return None
-        # support get normal attr
-        if name in self.to(Module).__dict__:
-            return self.to(Module).__dict__[name]
-        # support get function
         if hasattr(self.to(Module), name):
-            return partial(getattr(self.to(Module).__class__, name), self)
+            # support getting normal attr from the nn.Module
+            attr = getattr(self.to(Module), name)
+            if isinstance(attr, types.MethodType):
+                # If the attr is MethodType, rebind the method to self
+                attr = types.MethodType(attr.__func__, self)
+            return attr
         raise AttributeError(
             "'{}' '{}' object '{}' in nn.Graph has no attribute '{}'".format(
                 self.to(BlockGraph)._type, type(self).__name__, self.to(BlockGraph)._name_prefix + self.to(BlockGraph).name, name
