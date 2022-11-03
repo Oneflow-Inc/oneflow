@@ -368,11 +368,11 @@ class TestGraphBlock(flow.unittest.TestCase):
             @property
             def dtype(self):
                 return self._dtype
-        
+
         class ConfigMixin:
             def hello_from_cfg(self):
                 return "hello_from_cfg"
-        
+
         class MixedModule(ModuleMixin, ConfigMixin):
             def __init__(self):
                 super().__init__()
@@ -388,7 +388,7 @@ class TestGraphBlock(flow.unittest.TestCase):
             @property
             def hello_from_graph(self):
                 return "hello_from_gcfg"
-            
+
             def mixin_get_name(self):
                 return self.name
 
