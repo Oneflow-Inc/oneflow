@@ -28,39 +28,36 @@ os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
 
 
 class MultiplyModel(nn.Module):
-    def __init__(self):
+    def __init__(self, dtype=flow.float32):
         super().__init__()
-        self.x = nn.Parameter(flow.tensor([2, 2], dtype=flow.float32), False)
-        self.y = nn.Parameter(flow.tensor([3, 3], dtype=flow.float32), False)
+        self.dtype = dtype
+        self.x = nn.Parameter(flow.tensor([2, 2], dtype=self.dtype), False)
+        self.y = nn.Parameter(flow.tensor([3, 3], dtype=self.dtype), False)
 
     def forward(self):
         return self.x * self.y
 
 
-class MultiplyModelComplex(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.x = nn.Parameter(flow.tensor([2, 2], dtype=flow.float32), False)
-        self.y = nn.Parameter(flow.tensor([3, 3], dtype=flow.float32), False)
-        self.z = nn.Parameter(flow.tensor([4, 5], dtype=flow.float32), False)
+class MultiplyModelComplex(MultiplyModel):
+    def __init__(self, dtype=flow.float32):
+        super().__init__(dtype)
+        self.z = nn.Parameter(flow.tensor([4, 5], dtype=self.dtype), False)
 
     def forward(self):
         return self.x * self.y * self.z
 
 
-class MultiplyModelWithInput(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.x = nn.Parameter(flow.tensor([2, 2], dtype=flow.float32), False)
-        self.y = nn.Parameter(flow.tensor([3, 3], dtype=flow.float32), False)
+class MultiplyModelWithInput(MultiplyModel):
+    def __init__(self, dtype=flow.float32):
+        super().__init__(dtype)
 
     def forward(self, a: flow.Tensor, b: flow.Tensor):
         z = self.x * self.y
         return a + b + z
 
 
-def _test_fold_multiply(test_case, module, with_cuda, *args):
-    model = module()
+def _test_fold_multiply(test_case, module, with_cuda, *args, dtype=oneflow.float32):
+    model = module(dtype)
 
     if with_cuda:
         model.to("cuda")
@@ -81,34 +78,57 @@ def _test_fold_multiply(test_case, module, with_cuda, *args):
     test_case.assertTrue(
         np.allclose(eager_res.numpy(), lazy_res.numpy(), rtol=1e-5, atol=1e-5)
     )
+    test_case.assertTrue(eager_res.dtype == dtype and lazy_res.dtype == dtype)
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestFoldMultiply(oneflow.unittest.TestCase):
     def test_fold_multiply(test_case):
         _test_fold_multiply(test_case, MultiplyModel, with_cuda=False)
+        _test_fold_multiply(
+            test_case, MultiplyModel, with_cuda=False, dtype=flow.float16
+        )
 
     @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "only test cpu cases")
     def test_fold_multiply_cuda(test_case):
         _test_fold_multiply(test_case, MultiplyModel, with_cuda=True)
+        _test_fold_multiply(
+            test_case, MultiplyModel, with_cuda=True, dtype=flow.float16
+        )
 
     def test_fold_multiply_complex(test_case):
         _test_fold_multiply(test_case, MultiplyModelComplex, with_cuda=False)
+        _test_fold_multiply(
+            test_case, MultiplyModelComplex, with_cuda=False, dtype=flow.float16
+        )
 
     @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "only test cpu cases")
     def test_fold_multiply_complex_cuda(test_case):
         _test_fold_multiply(test_case, MultiplyModelComplex, with_cuda=True)
+        _test_fold_multiply(
+            test_case, MultiplyModelComplex, with_cuda=True, dtype=flow.float16
+        )
 
     def test_fold_multiply_with_input(test_case):
         a = flow.tensor([3, 7], dtype=flow.float32)
         b = flow.tensor([9, -1], dtype=flow.float32)
+        a_fp16 = flow.tensor([3, 7], dtype=flow.float16)
+        b_fp16 = flow.tensor([9, -1], dtype=flow.float16)
         _test_fold_multiply(test_case, MultiplyModelWithInput, False, a, b)
+        _test_fold_multiply(
+            test_case, MultiplyModelWithInput, False, a_fp16, b_fp16, dtype=flow.float16
+        )
 
     @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "only test cpu cases")
     def test_fold_multiply_with_input_cuda(test_case):
         a = flow.tensor([3, 7], dtype=flow.float32, device="cuda")
         b = flow.tensor([9, -1], dtype=flow.float32, device="cuda")
+        a_fp16 = flow.tensor([3, 7], dtype=flow.float16, device="cuda")
+        b_fp16 = flow.tensor([9, -1], dtype=flow.float16, device="cuda")
         _test_fold_multiply(test_case, MultiplyModelWithInput, True, a, b)
+        _test_fold_multiply(
+            test_case, MultiplyModelWithInput, True, a_fp16, b_fp16, dtype=flow.float16
+        )
 
 
 if __name__ == "__main__":
