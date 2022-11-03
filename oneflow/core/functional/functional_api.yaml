@@ -696,6 +696,10 @@
   signature: "Tensor (Tensor dy, Tensor y) => SoftmaxGrad"
   bind_python: False
 
+- name: "gumbel_softmax"
+  signature: "Tensor (Tensor x, Double tau=1., Int64 dim=None, Bool hard=False, Generator generator=None) => GumbelSoftmax"
+  bind_python: True
+
 - name: "log_softmax"
   signature: "Tensor (Tensor x, Int64 dim=None) => LogSoftmax"
   bind_python: True
