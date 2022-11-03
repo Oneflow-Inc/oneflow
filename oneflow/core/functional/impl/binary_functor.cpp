@@ -308,7 +308,7 @@ class Atan2Functor : public BinaryFloatFunctor {
     CHECK_GT_OR_RETURN(y_element, 0)
         << Error::RuntimeError() << "the size of input should be > 0, but got " << y_element;
 
-    if (x_element != 1 && y_element != 1) {
+    if ((x_element != 1 && y_element != 1) && (x->shape()->NumAxes() == y->shape()->NumAxes())) {
       return BinaryFloatFunctor::operator()(x, y);
     }
 
@@ -318,8 +318,11 @@ class Atan2Functor : public BinaryFloatFunctor {
       broad_x_ = JUST(functional::Mul(JUST(functional::OnesLike(y)), x));
     } else if (y_element == 1) {
       broad_y_ = JUST(functional::Mul(JUST(functional::OnesLike(x)), y));
+    } else if (x->shape()->NumAxes() != y->shape()->NumAxes()) {
+      return Error::RuntimeError() << "The size of tensor a (" << x->shape()->NumAxes() << ") must match the size of tensor b "
+                                      "(" << y->shape()->NumAxes() << ") at non-singleton dimension 1";
     } else {
-      return Error::RuntimeError() << "the size of inputs should be > 0";
+      return Error::RuntimeError() << "";
     }
 
     return BinaryFloatFunctor::operator()(broad_x_, broad_y_);
