@@ -192,7 +192,9 @@ def make_new_blockgraph_scope(prev_scope, block_graph):
             )
         # append name prefix
         scope_proto.ClearField("scope_op_name_prefixes")
-        scope_proto.scope_op_name_prefixes.append(block_graph.name_prefix + block_graph.name)
+        scope_proto.scope_op_name_prefixes.append(
+            block_graph.name_prefix + block_graph.name
+        )
         # set module name
         if block_graph.type == BlockGraphType.MODULE:
             scope_proto.module_name = block_graph.name_prefix + block_graph.name

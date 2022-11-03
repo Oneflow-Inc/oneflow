@@ -23,11 +23,13 @@ from oneflow.nn.graph.util import (
     operators_repr,
 )
 
+
 class BlockGraphType:
     NONE = "NONE"
     MODULE = "MODULE"
     PARAMETER = "PARAMETER"
     BUFFER = "BUFFER"
+
 
 class BlockGraph(object):
     def __init__(
@@ -66,11 +68,14 @@ class BlockGraph(object):
     @property
     def scope(self):
         if self._scope is None:
-            self._scope = graph_build_util.make_new_blockgraph_scope(self.prev_scope, self)
+            self._scope = graph_build_util.make_new_blockgraph_scope(
+                self.prev_scope, self
+            )
         return self._scope
 
     def scope_context(self):
         return graph_build_util.BlockScopeContext(self.prev_scope, self.scope)
+
 
 class ModuleGraph(BlockGraph):
     r"""ModuleGraph is the graph representation of a nn.Module in a nn.Graph.
@@ -133,7 +138,7 @@ class ModuleGraph(BlockGraph):
         self._is_null = False
         self._stage_id = stage_id
         self._stage_placement = placement
-    
+
     # NOTE(lixiang): For the normal display of docstr, the API Doc of the get and set methods are written together in the stage_id function.
     @property
     def stage_id(self):
@@ -197,7 +202,7 @@ class ModuleGraph(BlockGraph):
         """
         self._is_null = False
         self._activation_checkpointing = mode
-    
+
     def _config_repr(self):
         main_str = (
             "("
@@ -289,8 +294,6 @@ class ModuleGraph(BlockGraph):
         return main_str
 
 
-
-
 class TensorGraph(BlockGraph):
     r"""TensorGraph is the graph representation of a Tensor in a nn.Graph.
     """
@@ -300,8 +303,6 @@ class TensorGraph(BlockGraph):
         prefix: str = "",
         name: str = "",
         belonged_graph: weakref.ProxyTypes = None,
-        tensor_graph_type: BlockGraphType = BlockGraphType.NONE
+        tensor_graph_type: BlockGraphType = BlockGraphType.NONE,
     ):
         super().__init__(prefix, name, belonged_graph, tensor_graph_type)
-
-

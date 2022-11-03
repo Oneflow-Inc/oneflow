@@ -337,18 +337,18 @@ class TestGraphBlock(flow.unittest.TestCase):
                 super().__init__()
                 self.linear = flow.nn.Linear(3, 8, False).to("cuda")
                 print(self.linear.weight.dtype)
-            
+
             @property
             def dtype(self):
                 return flow.float64
-            
+
             def forward(self, x):
                 dt = self.dtype
                 print(dt)
                 self.linear
                 print(self.linear.weight.dtype)
                 return self.linear(x)
-        
+
         m = ModuleDtype()
 
         np_in = np.ones((8, 3)).astype(np.float32)
@@ -357,7 +357,7 @@ class TestGraphBlock(flow.unittest.TestCase):
         @flow.nn.Graph.trace
         def block_get_dtype(x):
             return m(x)
-        
+
         out = block_get_dtype(x)
 
 
