@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import warnings
 from typing import Tuple, Union
 
 import oneflow as flow
@@ -359,12 +360,136 @@ class RMSLayerNorm(Module):
     """
 
     def __init__(self, hidden_size, eps=1e-6):
+        warnings.warn(
+            f"nn.RMSLayerNorm has been deprecated. Please use nn.RMSNorm instead."
+        )
+
         super().__init__()
         self.weight = flow.nn.Parameter(flow.ones(hidden_size))
         self.variance_epsilon = eps
 
     def forward(self, hidden_states):
         return flow._C.rms_layer_norm(hidden_states, self.weight, self.variance_epsilon)
+
+
+class RMSNorm(Module):
+    """Applies Root Mean Square Layer Normalization over a mini-batch of inputs as described in
+    the paper `Root Mean Square Layer Normalization <https://arxiv.org/abs/1910.07467>`__
+
+    .. math::
+        y = \\frac{x}{\\mathrm{RMS}[x]} \\mathrm{weight},\\text{ where }\\mathrm{RMS}[x] = \\sqrt{\\frac{1}{n} \\sum_{i=1}^{n} x^{2}}
+
+    There is no bias and no subtraction of mean with RMS Layer Normalization, 
+    and it only scales and doesn't shift.
+
+    The root mean squre are calculated separately over the last
+    certain number dimensions which have to be of the shape specified by
+    :attr:`normalized_shape`.
+    :math:`\\weight` is learnable affine transform parameters of
+    :attr:`normalized_shape` if :attr:`elementwise_affine` is ``True``.
+
+    .. note::
+        Like Layer Normalization, Root Mean Square Layer Normalization applies per-element scale
+        with :attr:`elementwise_affine`.
+
+    This layer uses statistics computed from input data in both training and
+    evaluation modes.
+
+    Args:
+        normalized_shape (int or list or oneflow.Size): input shape from an expected input of size
+
+            .. math::
+                [* \\times \\text{normalized_shape}[0] \\times \\text{normalized_shape}[1] \\times \\ldots \\times \\text{normalized_shape}[-1]]
+
+            If a single integer is used, it is treated as a singleton list, and this module will
+
+            normalize over the last dimension which is expected to be of that specific size.
+
+        eps: a value added to the denominator for numerical stability. Default: 1e-5
+        elementwise_affine: a boolean value that when set to ``True``, this module
+            has learnable per-element affine parameters initialized to ones (for weights).
+            Default: ``True``.
+
+    Shape:
+        - Input: :math:`(N, *)`
+        - Output: :math:`(N, *)` (same shape as input)
+
+    For example:
+
+    .. code-block:: python
+
+        TO CHANGE:
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        
+        >>> input_arr = np.array(
+        ...     [
+        ...         [
+        ...             [[-0.16046895, -1.03667831], [-0.34974465, 0.26505867]],
+        ...             [[-1.24111986, -0.53806001], [1.72426331, 0.43572459]],
+        ...         ],
+        ...         [
+        ...             [[-0.77390957, -0.42610624], [0.16398858, -1.35760343]],
+        ...             [[1.07541728, 0.11008703], [0.26361224, -0.48663723]],
+        ...         ],
+        ...     ],
+        ...     dtype=np.float32,
+        ... )
+
+        >>> x = flow.Tensor(input_arr)
+        >>> m = flow.nn.LayerNorm(2)
+        >>> y = m(x).numpy()
+        >>> y
+        array([[[[ 0.99997395, -0.99997395],
+                 [-0.999947  ,  0.999947  ]],
+        <BLANKLINE>
+                [[-0.99995965,  0.9999595 ],
+                 [ 0.99998784, -0.99998784]]],
+        <BLANKLINE>
+        <BLANKLINE>
+               [[[-0.9998348 ,  0.99983466],
+                 [ 0.9999914 , -0.9999914 ]],
+        <BLANKLINE>
+                [[ 0.9999785 , -0.9999785 ],
+                 [ 0.9999646 , -0.9999646 ]]]], dtype=float32)
+
+    """
+
+    _constants__ = ["normalized_shape", "eps", "elementwise_affine"]
+    normalized_shape: Tuple[int, ...]
+    eps: float
+    elementwise_affine: bool
+
+    def __init__(
+        self,
+        normalized_shape: _shape_t,
+        eps: float = 1e-05,
+        elementwise_affine: bool = True,
+        device=None,
+        dtype=None,
+    ):
+        factory_kwargs = {"device": device, "dtype": dtype}
+        super().__init__()
+        if isinstance(normalized_shape, int):
+            normalized_shape = (normalized_shape,)
+        self.normalized_shape = tuple(normalized_shape)
+        self.eps = eps
+        self.elementwise_affine = elementwise_affine
+        if self.elementwise_affine:
+            self.weight = flow.nn.Parameter(
+                flow.ones(*self.normalized_shape, **factory_kwargs)
+            )
+        else:
+            self.register_parameter("weight", None)
+
+    def forward(self, x):
+        return flow._C.rms_norm(x, self.weight, self.normalized_shape, self.eps)
+
+    def extra_repr(self) -> str:
+        return "{normalized_shape}, eps={eps}, elementwise_affine={elementwise_affine}".format(
+            **self.__dict__
+        )
 
 
 if __name__ == "__main__":
