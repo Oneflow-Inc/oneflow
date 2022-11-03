@@ -43,6 +43,11 @@ class VirtualMachine final {
 
   Maybe<void> Receive(vm::InstructionList* instr_list);
 
+  Maybe<void> SyncAccessBlobByCallback(
+      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object, Symbol<Device> device,
+      const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>&
+          Callback);
+
   Maybe<void> CloseVMThreads();
 
   // Never called in vm work threads.
@@ -55,7 +60,12 @@ class VirtualMachine final {
 
   void ScheduleLoop(const std::function<void()>& Initializer);
 
+  // Make sure schedule_mutex_ is hold;
+  // Return true: there are instructions inserted or erased.
+  bool Schedule(const vm::ScheduleCtx& schedule_ctx);
+
   intrusive::shared_ptr<vm::Dependence> FindOrCreateScheduleDependence(Symbol<Stream> stream);
+
   bool NoMoreErasedInstructions(size_t* last_total_erased_instruction_cnt) const;
 
   const vm::VirtualMachineEngine& engine() const { return *engine_; }
@@ -82,6 +92,7 @@ class VirtualMachine final {
 
   // for asynchronized execution
   std::mutex worker_threads_mutex_;
+  std::mutex scheduler_mutex_;
   std::list<std::unique_ptr<std::thread>> worker_threads_;
 
   // for vm::Stream and vm::ThreadCtx
