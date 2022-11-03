@@ -41,8 +41,8 @@ def rebuild_empty_tensor(shape, dtype, requires_grad):
 
 
 def rebuild_shm_tensor(shm, shape, dtype, requires_grad):
-    shm.close()
     def delete_shm():
+        shm.close()
         try:
             shm.unlink()
         except:
