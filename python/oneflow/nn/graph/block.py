@@ -26,7 +26,12 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.container import *
 from oneflow.nn.utils.container import *
 from oneflow.nn.parameter import Parameter
-from oneflow.nn.graph.block_graph import BlockGraphType, BlockGraph, ModuleGraph, TensorGraph
+from oneflow.nn.graph.block_graph import (
+    BlockGraphType,
+    BlockGraph,
+    ModuleGraph,
+    TensorGraph,
+)
 from oneflow.nn.graph.util import (
     add_indent,
     ArgsTree,
@@ -63,16 +68,17 @@ class Block(object):
         self._oneflow_internal_origin__ = None
         # The graph representation of the original data
         self._oneflow_internal_blockgraph__ = None
-    
+
     def to(self, *args, **kwargs):
         """
         """
-        if len(args) ==  1 and issubclass(args[0], BlockGraph):
+        if len(args) == 1 and issubclass(args[0], BlockGraph):
             return self._oneflow_internal_blockgraph__
-        elif len(args) ==  1 and (args[0] is Module or args[0] is Tensor):
+        elif len(args) == 1 and (args[0] is Module or args[0] is Tensor):
             return self._oneflow_internal_origin__
         else:
             self._oneflow_internal_origin__.to(*args, **kwargs)
+
 
 class ModuleBlock(Block):
     def __init__(
@@ -100,16 +106,29 @@ class ModuleBlock(Block):
             self.__setattr__(
                 n,
                 get_block_cls(m)(
-                    self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".", n, m, self.to(BlockGraph)._belonged_graph
+                    self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".",
+                    n,
+                    m,
+                    self.to(BlockGraph)._belonged_graph,
                 ),
             )
         for (n, p) in list(origin.named_parameters("", False)):
             self.__setattr__(
-                n, get_block_cls(p)(self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".", n, p)
+                n,
+                get_block_cls(p)(
+                    self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".",
+                    n,
+                    p,
+                ),
             )
         for (n, b) in list(origin.named_buffers("", False)):
             self.__setattr__(
-                n, get_block_cls(b)(self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".", n, b)
+                n,
+                get_block_cls(b)(
+                    self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".",
+                    n,
+                    b,
+                ),
             )
 
     def _oneflow_internal_blockgraph__debug(
@@ -165,7 +184,10 @@ class ModuleBlock(Block):
         self.__print(0, 1, self._shallow_repr())
 
         args_tree = ArgsTree(
-            (args, kwargs), True, "_" + self.to(BlockGraph).name_prefix + self.to(BlockGraph).name + "_input", None
+            (args, kwargs),
+            True,
+            "_" + self.to(BlockGraph).name_prefix + self.to(BlockGraph).name + "_input",
+            None,
         )
 
         for (name, arg) in args_tree.iter_named_nodes():
@@ -208,7 +230,13 @@ class ModuleBlock(Block):
             outputs = result
 
         args_tree = ArgsTree(
-            (outputs, {}), True, "_" + self.to(BlockGraph).name_prefix + self.to(BlockGraph).name + "_output", None
+            (outputs, {}),
+            True,
+            "_"
+            + self.to(BlockGraph).name_prefix
+            + self.to(BlockGraph).name
+            + "_output",
+            None,
         )
 
         for (name, arg) in args_tree.iter_named_nodes():
@@ -249,14 +277,17 @@ class ModuleBlock(Block):
 
             def insert_to_global(t):
                 assert isinstance(t, Tensor)
-                return self.__get_or_create_global(t, self.to(BlockGraph)._stage_placement)
+                return self.__get_or_create_global(
+                    t, self.to(BlockGraph)._stage_placement
+                )
 
             args, kwargs = self.__map_io(
                 "input", insert_to_global, "insert_to_global", *args, **kwargs
             )
 
         if self.to(BlockGraph).activation_checkpointing or (
-            self.to(BlockGraph).stage_id is not None and self.to(BlockGraph).stage_id >= 0
+            self.to(BlockGraph).stage_id is not None
+            and self.to(BlockGraph).stage_id >= 0
         ):
 
             def insert_identity(t):
@@ -294,9 +325,12 @@ class ModuleBlock(Block):
         if key not in self.to(BlockGraph)._belonged_graph._unique_identity_op_dict:
             # Reuse current module name for indentity op
             ident_name_scope = graph_build_util.make_new_name_scope(
-                self.to(BlockGraph).prev_scope, self.to(BlockGraph).name_prefix + self.to(BlockGraph).name
+                self.to(BlockGraph).prev_scope,
+                self.to(BlockGraph).name_prefix + self.to(BlockGraph).name,
             )
-            with graph_build_util.BlockScopeContext(self.to(BlockGraph).prev_scope, ident_name_scope):
+            with graph_build_util.BlockScopeContext(
+                self.to(BlockGraph).prev_scope, ident_name_scope
+            ):
                 # store input tensor to avoid tensor id recycle
                 self.to(BlockGraph)._belonged_graph._unique_identity_op_dict[
                     key
@@ -308,14 +342,21 @@ class ModuleBlock(Block):
         self.__setattr__(
             name,
             get_block_cls(module)(
-                self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".", name, module, self.to(BlockGraph)._belonged_graph
+                self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".",
+                name,
+                module,
+                self.to(BlockGraph)._belonged_graph,
             ),
         )
 
     def register_parameter(self, name: str, param: Optional[Parameter]) -> None:
         self.__setattr__(
             name,
-            get_block_cls(param)(self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".", name, param),
+            get_block_cls(param)(
+                self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".",
+                name,
+                param,
+            ),
         )
 
     def modules(self, memo: Optional[Set["Block"]] = None) -> Iterator["Block"]:
@@ -343,7 +384,11 @@ class ModuleBlock(Block):
         args_tree = ArgsTree(
             (args, kwargs),
             True,
-            "_" + self.to(BlockGraph).name_prefix + self.to(BlockGraph).name + "_" + io_type,
+            "_"
+            + self.to(BlockGraph).name_prefix
+            + self.to(BlockGraph).name
+            + "_"
+            + io_type,
             None,
         )
 
@@ -478,7 +523,10 @@ class ModuleBlock(Block):
             return attr
         raise AttributeError(
             "'{}' '{}' object '{}' in nn.Graph has no attribute '{}'".format(
-                self.to(BlockGraph)._type, type(self).__name__, self.to(BlockGraph)._name_prefix + self.to(BlockGraph).name, name
+                self.to(BlockGraph)._type,
+                type(self).__name__,
+                self.to(BlockGraph)._name_prefix + self.to(BlockGraph).name,
+                name,
             )
         )
 
@@ -494,9 +542,9 @@ class ModuleBlock(Block):
         if graph_build_util.lazy_mode.is_enabled():
             _s_block.try_build()
             return _s_block.lazy_origin
-        elif (
-            not graph_build_util.lazy_mode.is_enabled()
-        ) and self.to(BlockGraph)._is_executing_forward:
+        elif (not graph_build_util.lazy_mode.is_enabled()) and self.to(
+            BlockGraph
+        )._is_executing_forward:
             # eager and inside nn.Graph.build()
             return _s_block.to(Tensor)
         else:
@@ -558,7 +606,9 @@ class ModuleBlock(Block):
         assert isinstance(v_level, int)
         assert isinstance(msg, str)
         if s_level >= self.to(BlockGraph)._debug_min_s_level:
-            if (s_level > 0) or (s_level == 0 and v_level <= self.to(BlockGraph)._debug_max_v_level):
+            if (s_level > 0) or (
+                s_level == 0 and v_level <= self.to(BlockGraph)._debug_max_v_level
+            ):
                 print(msg, flush=True)
 
 
@@ -589,9 +639,13 @@ class TensorBlock(Block):
     ):
         assert not isinstance(origin, Block)
         if isinstance(origin, Parameter):
-            self._oneflow_internal_blockgraph__ = TensorGraph(prefix, name, belonged_graph, BlockGraphType.PARAMETER)
+            self._oneflow_internal_blockgraph__ = TensorGraph(
+                prefix, name, belonged_graph, BlockGraphType.PARAMETER
+            )
         elif isinstance(origin, Tensor):
-            self._oneflow_internal_blockgraph__ = TensorGraph(prefix, name, belonged_graph, BlockGraphType.BUFFER)
+            self._oneflow_internal_blockgraph__ = TensorGraph(
+                prefix, name, belonged_graph, BlockGraphType.BUFFER
+            )
         else:
             raise NotImplementedError()
         self._lazy_origin_builder = LazyBuilder()
@@ -604,19 +658,22 @@ class TensorBlock(Block):
     @property
     def lazy_origin(self):
         assert (
-            self.to(BlockGraph)._type == BlockGraphType.PARAMETER or self.to(BlockGraph)._type == BlockGraphType.BUFFER
+            self.to(BlockGraph)._type == BlockGraphType.PARAMETER
+            or self.to(BlockGraph)._type == BlockGraphType.BUFFER
         ), "Only Parameter or Buffer Block has lazy_origin"
         return self._lazy_origin_builder.result
 
     def lazy_origin_builder(self):
         assert (
-            self.to(BlockGraph)._type == BlockGraphType.PARAMETER or self.to(BlockGraph)._type == BlockGraphType.BUFFER
+            self.to(BlockGraph)._type == BlockGraphType.PARAMETER
+            or self.to(BlockGraph)._type == BlockGraphType.BUFFER
         ), "Only Parameter or Buffer Block has lazy_origin_builder"
         return self._lazy_origin_builder
 
     def set_lazy_origin_builder(self, builder=None):
         assert (
-            self.to(BlockGraph)._type == BlockGraphType.PARAMETER or self.to(BlockGraph)._type == BlockGraphType.BUFFER
+            self.to(BlockGraph)._type == BlockGraphType.PARAMETER
+            or self.to(BlockGraph)._type == BlockGraphType.BUFFER
         ), "Only Parameter or Buffer Block has lazy_origin_builder"
         self._lazy_origin_builder = builder
 

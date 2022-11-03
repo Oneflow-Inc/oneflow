@@ -663,7 +663,9 @@ class Graph(object):
                 self._is_global_view = True
             if state_tensor in state_tensor_set:
                 continue
-            op_name = state_block.to(BlockGraph).name_prefix + state_block.to(BlockGraph).name
+            op_name = (
+                state_block.to(BlockGraph).name_prefix + state_block.to(BlockGraph).name
+            )
             state_tensor_set.add(state_tensor)
             state_tensors.append(state_tensor)
             state_op_names.append(op_name)
@@ -691,7 +693,9 @@ class Graph(object):
         state2lazy_builder = dict()
         for state_block in self._state():
             state_tensor = state_block.to(Tensor)
-            op_name = state_block.to(BlockGraph).name_prefix + state_block.to(BlockGraph).name
+            op_name = (
+                state_block.to(BlockGraph).name_prefix + state_block.to(BlockGraph).name
+            )
             if state_tensor in state2lazy_builder:
                 # Differe tensor block shares the same tensor, so they need to share the same
                 # builder.

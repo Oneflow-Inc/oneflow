@@ -192,7 +192,8 @@ class TestGraph(flow.unittest.TestCase):
                 scope = scope_util.current_scope()
                 scope_proto = graph_build_util.scope_to_proto(scope)
                 test_case.assertEqual(
-                    scope_proto.parent_scope_symbol_id, self.to(flow.nn.graph.BlockGraph).prev_scope.symbol_id
+                    scope_proto.parent_scope_symbol_id,
+                    self.to(flow.nn.graph.BlockGraph).prev_scope.symbol_id,
                 )
                 ck_bool = scope_proto.attr_name2attr_value["checkpointing"]
                 test_case.assertEqual(ck_bool.WhichOneof("value"), None)
@@ -200,7 +201,10 @@ class TestGraph(flow.unittest.TestCase):
                     "pipeline_stage_id_hint"
                 ].at_int64
                 test_case.assertEqual(stage_int, 1)
-                name = self.to(flow.nn.graph.BlockGraph).name_prefix + self.to(flow.nn.graph.BlockGraph).name
+                name = (
+                    self.to(flow.nn.graph.BlockGraph).name_prefix
+                    + self.to(flow.nn.graph.BlockGraph).name
+                )
                 prefixes = []
                 for prefix in scope_proto.scope_op_name_prefixes:
                     prefixes.append(prefix)

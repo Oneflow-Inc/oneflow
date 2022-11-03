@@ -211,7 +211,8 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
 
         for state in linear_t_g._state():
             test_case.assertEqual(
-                state.to(flow.Tensor).sbp, (oneflow.sbp.split(dim=0), oneflow.sbp.split(dim=0))
+                state.to(flow.Tensor).sbp,
+                (oneflow.sbp.split(dim=0), oneflow.sbp.split(dim=0)),
             )
 
         # In evaluation graph, paramters's sbp are flow.sbp.split(0).
