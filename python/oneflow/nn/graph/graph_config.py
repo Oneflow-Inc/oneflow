@@ -353,11 +353,11 @@ class GraphConfig(object):
         """
         self.proto.auto_parallel_transfer_cost = cost
 
-    def enable_auto_parallel_mainstream_algo(self, mode: bool = True):
+    def enable_auto_parallel_mainstem_algo(self, mode: bool = True):
         """
         Find the mainstream of the SBP graph, then reduce the wait time for tributaries.
         """
-        self.proto.enable_auto_parallel_mainstream_algo = mode
+        self.proto.enable_auto_parallel_mainstem_algo = mode
 
     def enable_auto_parallel_sbp_collector(self, mode: bool = True):
         """
