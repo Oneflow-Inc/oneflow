@@ -26,12 +26,10 @@ from oneflow.test_utils.test_util import GenArgDict
 
 
 _fn_param = {
-    "normal": {"mean": 0.0, "std": 1.0},
+    "normal": lambda shape, placement, sbp: flow.normal(
+        size=shape, mean=0.0, std=1.0, placement=placement, sbp=sbp
+    ),
 }
-
-
-def _call_fn(fn, shape, placement, sbp):
-    return eval(f"flow.{fn}")(size=shape, **_fn_param[fn], placement=placement, sbp=sbp)
 
 
 def _test_data_consistent(test_case, shape, placement, sbp, fn):
@@ -42,7 +40,7 @@ def _test_data_consistent(test_case, shape, placement, sbp, fn):
 
         def build(self):
             flow.manual_seed(233)
-            x = _call_fn(fn, shape, placement, sbp)
+            x = fn(shape, placement, sbp)
             return x
 
     model = GlobalRandnGraph()
@@ -50,10 +48,17 @@ def _test_data_consistent(test_case, shape, placement, sbp, fn):
 
     # eager result
     flow.manual_seed(233)
-    eager_x = _call_fn(fn, shape, placement, sbp)
+    eager_x = fn(shape, placement, sbp)
 
     test_case.assertTrue(
         np.array_equal(lazy_x.to_local().numpy(), eager_x.to_local().numpy())
+    )
+
+    # different data
+    eager_x2 = fn(shape, placement, sbp)
+
+    test_case.assertFalse(
+        np.array_equal(eager_x.to_local().numpy(), eager_x2.to_local().numpy())
     )
 
 
@@ -64,7 +69,7 @@ class TestGlobalRandomOpData(flow.unittest.TestCase):
 
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2, except_partial_sum=True):
-                for fn in _fn_param.keys():
+                for _, fn in _fn_param.items():
                     _test_data_consistent(test_case, shape, placement, sbp, fn=fn)
 
     @globaltest
@@ -77,29 +82,29 @@ class TestGlobalRandomOpData(flow.unittest.TestCase):
         for device in ["cpu", "cuda"]:
             placement = flow.placement(device, [[0, 1], [2, 3]])
 
-            for fn in _fn_param.keys():
+            for _, fn in _fn_param.items():
                 flow.manual_seed(233)
-                np_x_local = _call_fn(fn, shape, placement, sbp).to_local().numpy()
-                np.save(f"/tmp/{fn}_{flow.env.get_rank()}_local.npy", np_x_local)
-                flow.comm.barrier()
+                local_tensor = fn(shape, placement, sbp).to_local().cpu()
 
-                # compare result in rank0
-                if flow.env.get_rank() == 0:
-                    np_local = [
-                        np.load(f"/tmp/{fn}_{int(i)}_local.npy") for i in range(4)
-                    ]
-                    # rank0 == rank1
-                    test_case.assertTrue(np.array_equal(np_local[0], np_local[1]))
-                    # rank2 == rank3
-                    test_case.assertTrue(np.array_equal(np_local[2], np_local[3]))
-                    # rank0 != rank2
-                    test_case.assertFalse(np.array_equal(np_local[0], np_local[2]))
-                    # rank1 != rank3
-                    test_case.assertFalse(np.array_equal(np_local[1], np_local[3]))
+                # broadcast local data for each rank
+                rank_to_tensor = [
+                    local_tensor
+                    if rank_id == flow.env.get_rank()
+                    else flow.empty(local_tensor.shape, dtype=local_tensor.dtype)
+                    for rank_id in range(4)
+                ]
+                for rank_id in range(4):
+                    flow.comm.broadcast(rank_to_tensor[rank_id], rank_id)
 
-                    # clean data in rank0
-                    for i in range(4):
-                        os.remove(f"/tmp/{fn}_{int(i)}_local.npy")
+                np_local = [x.numpy() for x in rank_to_tensor]
+                # rank0 == rank1
+                test_case.assertTrue(np.array_equal(np_local[0], np_local[1]))
+                # rank2 == rank3
+                test_case.assertTrue(np.array_equal(np_local[2], np_local[3]))
+                # rank0 != rank2
+                test_case.assertFalse(np.array_equal(np_local[0], np_local[2]))
+                # rank1 != rank3
+                test_case.assertFalse(np.array_equal(np_local[1], np_local[3]))
 
 
 if __name__ == "__main__":

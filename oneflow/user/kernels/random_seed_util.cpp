@@ -24,11 +24,16 @@ Maybe<uint64_t> GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx) {
   return GetOpKernelRandomSeedInCurrentRank(ctx, seed);
 }
 
+// NOTE: Get random seed in current rank, and ensure that it will have same seed between
+// broadcast sbp and it will be different between split sbp.
+//
+// It will scan nd_sbp from last axis to first axis(It likes the algorithm in NdIndexOffsetHelper).
+// If sbp is broadcast, this axis will skip.
+// If sbp is split, it will use rand_id to accumulate the offset.
 Maybe<uint64_t> GetRandomSeedForRank(const ParallelDesc& placement, const NdSbp& nd_sbp,
                                      uint64_t init_seed, int64_t rank_id) {
   uint64_t seed = init_seed;
   const Shape& hierarchy = *placement.hierarchy();
-  std::vector<int64_t> coordinate(hierarchy.NumAxes());
   int64_t seed_idx = 0;
   int64_t stride = 1;
   for (int i = nd_sbp.sbp_parallel_size() - 1; i >= 0; --i) {
@@ -55,9 +60,14 @@ Maybe<uint64_t> GetRandomSeedForRank(const ParallelDesc& placement, const NdSbp&
 
 Maybe<uint64_t> GetOpKernelRandomSeedInCurrentRank(const user_op::KernelInitContext* ctx,
                                                    uint64_t init_seed) {
-  if (ctx->parallel_ctx().parallel_num() == 1) { return init_seed; }
   const auto& outputs = ctx->outputs();
   CHECK_EQ(outputs.size(), 1);
+  if (ctx->parallel_ctx().parallel_num() == 1) {
+    std::seed_seq seq{init_seed};
+    std::vector<uint64_t> seeds(1);
+    seq.generate(seeds.begin(), seeds.end());
+    return seeds[0];
+  }
   return GetRandomSeedForRank(ctx->parallel_desc(), ctx->NdSbp4ArgNameAndIndex("out", 0), init_seed,
                               ctx->parallel_ctx().parallel_id());
 }

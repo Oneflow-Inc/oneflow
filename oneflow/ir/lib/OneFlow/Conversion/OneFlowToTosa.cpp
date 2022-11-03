@@ -211,7 +211,7 @@ struct VariableOpLowering final : public OpConversionPattern<VariableOp> {
     const auto mgr = ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get();
     if (!mgr) { return op->emitError("global variable tensor manager miss"); }
 
-    const auto tensor = mgr->Get(op.op_name().str());
+    const auto tensor = CHECK_JUST(mgr->Get(op.op_name().str()));
     if (!tensor) { return op->emitError("tensor is null"); }
     const auto value = support::TensorToDenseElementsAttr(tensor, rewriter.getContext());
     const auto output = op.output().getType();
@@ -384,38 +384,19 @@ struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
   }
 };
 
-struct FlattenOpLowering final : public OpConversionPattern<FlattenOp> {
+struct ReshapeOpLowering final : public OpConversionPattern<ReshapeOp> {
  public:
-  using OpConversionPattern<FlattenOp>::OpConversionPattern;
-  LogicalResult matchAndRewrite(FlattenOp op, OpAdaptor adaptor,
+  using OpConversionPattern<ReshapeOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(ReshapeOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    const auto start_dim = op.start_dim();
-    const auto end_dim = op.end_dim();
-    const auto in_type = op.in().getType();
-
-    const auto in_shape = in_type.cast<ShapedType>();
-    const auto rank = in_type.dyn_cast<RankedTensorType>().getRank();
-
-    // calculate flatten shape
-    std::vector<int64_t> flatten_shape_vec;
-    for (auto dim = 0; dim < start_dim; ++dim) {
-      flatten_shape_vec.push_back(in_shape.getDimSize(dim));
+    auto output = op.out().getType();
+    auto input = op.in();
+    llvm::SmallVector<int64_t> new_shape;
+    for (const auto& dim_attr : op.shape()) {
+      new_shape.push_back(dim_attr.cast<IntegerAttr>().getSInt());
     }
-    auto last_dim = end_dim < 0 ? rank : end_dim + 1;
-    int flatten_size = 1;
-    for (auto dim = start_dim; dim < last_dim; ++dim) { flatten_size *= in_shape.getDimSize(dim); }
-    flatten_shape_vec.push_back(flatten_size);
-    if (end_dim > 0) {
-      for (auto dim = end_dim + 1; dim < rank; ++dim) {
-        flatten_shape_vec.push_back(in_shape.getDimSize(dim));
-      }
-    }
-    // lowering oneflow flatten op to tosa reshape op
-    const auto output = RankedTensorType::get(flatten_shape_vec, in_shape.getElementType());
-    auto input1 = op.in();
-    auto new_shape = rewriter.getI64ArrayAttr(flatten_shape_vec);
-
-    rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(op, output, input1, new_shape);
+    rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(op, output, input,
+                                                 rewriter.getI64ArrayAttr(new_shape));
     return success();
   }
 };
@@ -632,7 +613,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   }
   patterns
       .add<CastOpLowering, ScalarMulByTensorOpLowering, ReluOpLowering, Conv2DOpLowering,
-           AvgPool2DOpLowering, FlattenOpLowering, Add2OpLowering, MaxPool2DOpLowering,
+           AvgPool2DOpLowering, ReshapeOpLowering, Add2OpLowering, MaxPool2DOpLowering,
            MatmulOpLowering, BroadcastAddOpLowering, JobLowering, ReturnOpLowering, InputOpLowering,
            OutputOpLowering, NormalizationOpLowering, NormalizationInferenceOpLowering>(
           typeConverter, context);
