@@ -101,7 +101,7 @@ REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_KERNEL(DeviceType::kCUDA, double, double
 
 template<DeviceType device_type, typename T, typename G>
 class MultiTensorMomentumUpdateKernel final : public user_op::OpKernel,
-                                         public user_op::CudaGraphSupport {
+                                              public user_op::CudaGraphSupport {
  public:
   MultiTensorMomentumUpdateKernel() = default;
   ~MultiTensorMomentumUpdateKernel() override = default;
@@ -167,9 +167,9 @@ class MultiTensorMomentumUpdateKernel final : public user_op::OpKernel,
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_MULTI_TENSOR_UPDATE_MOMENTUM_UPDATE_KERNEL(device, dtype, gtype)                   \
-  REGISTER_USER_KERNEL("multi_tensor_momentum_update")                                              \
-      .SetCreateFn<MultiTensorMomentumUpdateKernel<device, dtype, gtype>>()                         \
+#define REGISTER_MULTI_TENSOR_UPDATE_MOMENTUM_UPDATE_KERNEL(device, dtype, gtype)              \
+  REGISTER_USER_KERNEL("multi_tensor_momentum_update")                                         \
+      .SetCreateFn<MultiTensorMomentumUpdateKernel<device, dtype, gtype>>()                    \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                    \
                        && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)      \
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value) \
@@ -373,7 +373,7 @@ REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, floa
 
 template<DeviceType device_type, typename T, typename G>
 class MultiTensorMomentumUpdateWithCastKernel final : public user_op::OpKernel,
-                                                 public user_op::CudaGraphSupport {
+                                                      public user_op::CudaGraphSupport {
  public:
   MultiTensorMomentumUpdateWithCastKernel() = default;
   ~MultiTensorMomentumUpdateWithCastKernel() override = default;
@@ -441,9 +441,9 @@ class MultiTensorMomentumUpdateWithCastKernel final : public user_op::OpKernel,
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_MULTI_TENSOR_UPDATE_MOMENTUM_UPDATE_WITH_CAST_KERNEL(device, dtype, gtype)           \
-  REGISTER_USER_KERNEL("multi_tensor_momentum_update_with_cast")                                      \
-      .SetCreateFn<MultiTensorMomentumUpdateWithCastKernel<device, dtype, gtype>>()                   \
+#define REGISTER_MULTI_TENSOR_UPDATE_MOMENTUM_UPDATE_WITH_CAST_KERNEL(device, dtype, gtype)      \
+  REGISTER_USER_KERNEL("multi_tensor_momentum_update_with_cast")                                 \
+      .SetCreateFn<MultiTensorMomentumUpdateWithCastKernel<device, dtype, gtype>>()              \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
                        && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)        \
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value)   \

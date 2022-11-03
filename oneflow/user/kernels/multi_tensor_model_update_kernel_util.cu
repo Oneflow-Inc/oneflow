@@ -139,14 +139,13 @@ template struct MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, double, double
 template struct MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, float, float>;
 template struct MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, float, float16>;
 
-
 template<typename T, typename G, int N>
-__global__ void MultiTensorMomentumUpdateGpu(int64_t num_tensor, T scale, const float l1, const float l2,
-                                        const float weight_decay, float learning_rate_val,
-                                        float lr_scale, const float* learning_rate,
-                                        const T* scale_by_ptr, const int64_t* skip_if,
-                                        const float momentum,
-                                        TensorTupleParams<N> tensor_tuple_params) {
+__global__ void MultiTensorMomentumUpdateGpu(int64_t num_tensor, T scale, const float l1,
+                                             const float l2, const float weight_decay,
+                                             float learning_rate_val, float lr_scale,
+                                             const float* learning_rate, const T* scale_by_ptr,
+                                             const int64_t* skip_if, const float momentum,
+                                             TensorTupleParams<N> tensor_tuple_params) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
@@ -448,7 +447,6 @@ void MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16>::Upda
 
 template struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, float, float>;
 template struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, float, float16>;
-
 
 template<typename T, typename G>
 struct MultiTensorMomentumUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G> {

@@ -260,35 +260,6 @@ def kaiming_initializer(
         raise NotImplementedError("Only support normal and uniform distribution")
 
 
-def truncated_normal_initializer(
-    mean: float = 0.0, std: float = 1.0, a: float = -2.0, b: float = 2.0,
-):
-    r"""Fills the input Tensor with values drawn from a truncated
-    normal distribution. The values are effectively drawn from the
-    normal distribution :math:`\mathcal{N}(\text{mean}, \text{std}^2)`
-    with values outside :math:`[a, b]` redrawn until they are within
-    the bounds. The method used for generating the random values works
-    best when :math:`a \leq \text{mean} \leq b`.
-
-    Args:
-        tensor: an n-dimensional `torch.Tensor`
-        mean (float, optional): the mean of the normal distribution
-        std (float, optional): the standard deviation of the normal distribution
-        a (float, optional): the minimum cutoff value
-        b (float, optional): the maximum cutoff value
-    """
-    initializer = initializer_conf_util.InitializerConf()
-    trunc_normal_conf = getattr(initializer, "trunc_normal_conf")
-    # set norm_conf
-    norm_conf = getattr(trunc_normal_conf, "norm_conf")
-    setattr(norm_conf, "mean", float(mean))
-    setattr(norm_conf, "std", float(std))
-    # set max/min
-    setattr(trunc_normal_conf, "min", float(a))
-    setattr(trunc_normal_conf, "max", float(b))
-    return initializer
-
-
 @register_initializer("constant_conf")
 @register_initializer("constant_int_conf")
 def ConstantInitializerImpl(
@@ -337,23 +308,6 @@ def RandomUniformIntInitializerImpl(
     rng = np.random.default_rng(random_seed)
     return lambda length: rng.integers(
         low=initializer_conf.min, high=initializer_conf.max, size=length
-    )
-
-
-@register_initializer("trunc_normal_conf")
-def TruncNormalInitializerImpl(
-    initializer_conf: initializer_conf_util.TruncNormalInitializerConf,
-    random_seed: int,
-    var_blob_shape: Sequence[int],
-):
-    rng = np.random.default_rng(random_seed)
-    norm_conf = getattr(initializer_conf, "norm_conf")
-    mean = getattr(norm_conf, "mean")
-    std = getattr(norm_conf, "std")
-    min = getattr(initializer_conf, "min")
-    max = getattr(initializer_conf, "max")
-    return lambda length: np.clip(
-        rng.normal(loc=mean, scale=std, size=length), a_min=min, a_max=max
     )
 
 

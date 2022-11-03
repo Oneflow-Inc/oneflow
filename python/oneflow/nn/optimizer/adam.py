@@ -142,9 +142,7 @@ class Adam(Optimizer):
         super().__init__(params, options)
 
         if self.fused and amsgrad:
-            warnings.warn(
-                "Do not support amsgrad=True for fused Adam, trying default."
-            )
+            warnings.warn("Do not support amsgrad=True for fused Adam, trying default.")
             self.fused = False
 
         for param_group in self.param_groups:

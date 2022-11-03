@@ -183,7 +183,7 @@ class SGD(Optimizer):
                 )
 
     def _fused_update(self, param_group):
-        use_momentum = (param_group["momentum"] != 0)
+        use_momentum = param_group["momentum"] != 0
         param_list = []
         param_grad_list = []
         if use_momentum:
