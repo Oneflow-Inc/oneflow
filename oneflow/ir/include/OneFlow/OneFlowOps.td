@@ -76,6 +76,7 @@ def OneFlow_FrozenVariableOp : OneFlow_IROp<"variable_ir", [ConstantLike, NoSide
   let arguments = (ins
     F32ElementsAttr:$value,
     StrAttr:$op_name,
+    OptionalAttr<OneFlow_DataType>:$data_type,
     StrAttr:$device_tag,
     StrArrayAttr:$device_name, // TODO: change device_name to dict and parse the literal fmt like "0:0-0"
     OptionalAttr<I64Attr>:$scope_symbol_id,
