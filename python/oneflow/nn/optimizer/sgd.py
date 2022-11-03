@@ -145,7 +145,10 @@ class SGD(Optimizer):
                 .Build()
             )
             self._sgd = (
-                flow.stateful_op("sgd_update").Input("model").Input("model_diff").Build()
+                flow.stateful_op("sgd_update")
+                .Input("model")
+                .Input("model_diff")
+                .Build()
             )
 
     def _single_tensor_update(self, param_group):
