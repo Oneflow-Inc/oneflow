@@ -36,17 +36,23 @@ namespace oneflow {
 class PyFrame final : public Frame {
  public:
   PyFrame(PyCodeObject* code, int lineno, std::shared_ptr<PyFrame> back)
-      : code(code), lineno(lineno), back(std::move(back)) {
+      : filename(code->co_filename),
+        funcname(code->co_name),
+        lineno(lineno),
+        back(std::move(back)) {
     py::gil_scoped_acquire acquire;
-    Py_INCREF(code);
+    Py_INCREF(filename);
+    Py_INCREF(funcname);
   }
   OF_DISALLOW_COPY_AND_MOVE(PyFrame);
   ~PyFrame() {
     py::gil_scoped_acquire acquire;
-    Py_DECREF(code);
+    Py_DECREF(filename);
+    Py_DECREF(funcname);
   }
 
-  PyCodeObject* const code;
+  PyObject* const filename;
+  PyObject* const funcname;
   const int lineno;
   const std::shared_ptr<PyFrame> back;
 };
@@ -70,12 +76,11 @@ class PyStackGetter final : public ForeignStackGetter {
     auto py_frame = std::dynamic_pointer_cast<const PyFrame>(frame);
     py::gil_scoped_acquire acquire;
     while (py_frame != nullptr) {
-      const auto* code_object = py_frame->code;
       const auto& lineno = py_frame->lineno;
       const char* filename =
-          PyBytes_AsString(PyUnicode_AsEncodedString(code_object->co_filename, "utf-8", "~E~"));
+          PyBytes_AsString(PyUnicode_AsEncodedString(py_frame->filename, "utf-8", "~E~"));
       const char* funcname =
-          PyBytes_AsString(PyUnicode_AsEncodedString(code_object->co_name, "utf-8", "~E~"));
+          PyBytes_AsString(PyUnicode_AsEncodedString(py_frame->funcname, "utf-8", "~E~"));
       const std::string line_text = [&]() -> std::string {
         std::string line_text;
         std::ifstream ifs(filename);
