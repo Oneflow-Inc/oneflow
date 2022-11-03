@@ -116,6 +116,7 @@ void MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
           n_tensor, static_cast<T>(scale), l1, l2, weight_decay, learning_rate_val, lr_scale,
           learning_rate, scale_by_ptr, skip_if, tensor_tuple_params);
 }
+
 template<typename T>
 struct MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
@@ -123,6 +124,7 @@ struct MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
                      float lr_scale, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, TensorTupleParams<2> tensor_tuple_params);
 };
+
 template<typename T>
 void MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
@@ -132,6 +134,7 @@ void MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
       stream, elem_cnt, n_tensor, scale, l1, l2, weight_decay, learning_rate_val, lr_scale,
       learning_rate, scale_by_ptr, skip_if, tensor_tuple_params);
 }
+
 template struct MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, double, double>;
 template struct MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, float, float>;
 template struct MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, float, float16>;
@@ -406,6 +409,7 @@ struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G> {
                      float lr_scale, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, TensorTupleParams<3> tensor_tuple_params);
 };
+
 template<typename T, typename G>
 void MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
@@ -423,6 +427,7 @@ void MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G>::Update(
           n_tensor, static_cast<T>(scale), l1, l2, weight_decay, learning_rate_val, lr_scale,
           learning_rate, scale_by_ptr, skip_if, tensor_tuple_params);
 }
+
 template<typename T>
 struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16> {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
@@ -430,6 +435,7 @@ struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16> {
                      float lr_scale, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, TensorTupleParams<3> tensor_tuple_params);
 };
+
 template<typename T>
 void MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
@@ -439,6 +445,7 @@ void MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16>::Upda
       stream, elem_cnt, n_tensor, scale, l1, l2, weight_decay, learning_rate_val, lr_scale,
       learning_rate, scale_by_ptr, skip_if, tensor_tuple_params);
 }
+
 template struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, float, float>;
 template struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, float, float16>;
 
