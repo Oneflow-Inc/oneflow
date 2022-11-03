@@ -2443,17 +2443,10 @@ class GeluWithApproximateFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::string& approximate) const {
-    if (approximate == "tanh") {
-      return JUST(
-          Mul(JUST(ScalarAdd(JUST(Tanh(JUST(ScalarMul(
-                                 JUST(Add(x,
-                                          JUST(ScalarMul(JUST(ScalarPow(x, Scalar(3.0), false)),
-                                                         Scalar(0.044715), false)),
-                                          1.0, false)),
-                                 Scalar(sqrt(2.0 / M_PI)), false)))),
-                             Scalar(1.0), 1.0, false)),
-              JUST(ScalarMul(x, 0.5, false))));
+    if (approximate != "none" && approximate != "tanh") {
+      return Error::RuntimeError() << "the approximate argument should be 'none' or 'tanh'";
     }
+    if (approximate == "tanh") { return FastGelu(x); }
     return Gelu(x);
   }
 };
