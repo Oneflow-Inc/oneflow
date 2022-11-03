@@ -236,7 +236,7 @@ def _test_advanced_indexing(test_case, placement, dtype):
         elif choice == 1:
             return list(indices)
         else:
-            return tuple(indices)
+            return tuple([indices, ])
 
     def validate_indexing(x):
         _assert_tensor_equal(
@@ -258,18 +258,21 @@ def _test_advanced_indexing(test_case, placement, dtype):
         x = get_graph_output(x, func=lambda x: setitem_and_return(x, ri([0]), -1))
         _assert_tensor_equal(test_case, x[0], flow.tensor([-1], dtype=dtype))
         #  x[[2, 3, 4]] = 4
-        #  x = get_graph_output(x, func=lambda x: setitem_and_return(x, ri([2, 3, 4]), 4))
-        #  _assert_tensor_equal(
-        #      test_case, x[[2, 3, 4]], flow.tensor([4, 4, 4], dtype=dtype)
-        #  )
+        x = get_graph_output(x, func=lambda x: setitem_and_return(x, ri([2, 3, 4]), 4))
+        _assert_tensor_equal(
+            test_case, x[[2, 3, 4]], flow.tensor([4, 4, 4], dtype=dtype)
+        )
         #  x[ri([2, 3, 4]),] = 3
-        #  _assert_tensor_equal(
-        #      test_case, x[ri([2, 3, 4]),], flow.tensor([3, 3, 3], dtype=dtype),
-        #  )
+        x = get_graph_output(x, func=lambda x: setitem_and_return(x, ri([2, 3, 4]), 3))
+        _assert_tensor_equal(
+            test_case, x[[2, 3, 4]], flow.tensor([3, 3, 3], dtype=dtype),
+        )
         #  x[ri([0, 2, 4]),] = _cpu_global_tensor(flow.tensor([5, 4, 3], dtype=dtype))
-        #  _assert_tensor_equal(
-        #      test_case, x[ri([0, 2, 4]),], flow.tensor([5, 4, 3], dtype=dtype),
-        #  )
+        value_tensor = _cpu_global_tensor(flow.tensor([5, 4, 3], dtype=dtype))
+        x = get_graph_output(x, func=lambda x: setitem_and_return(x, ri([0, 2, 4]), value_tensor))
+        _assert_tensor_equal(
+            test_case, x[[0, 2, 4]], flow.tensor([5, 4, 3], dtype=dtype),
+        )
 
     # 1d tensor and integer index setitem and getitem
     sbp = random_sbp(placement, max_dim=1).value()
