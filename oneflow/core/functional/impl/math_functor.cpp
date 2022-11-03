@@ -3159,33 +3159,24 @@ class AmpUpdateScaleFunctor {
 class AmpForEachNonFiniteCheckAndUnscaleFunctor {
  public:
   AmpForEachNonFiniteCheckAndUnscaleFunctor() {
-    ops_.resize(kMaxInputCount);
+    ops_.resize(kMaxInputCount + 2);
     for (int n = 0; n < ops_.size(); ++n) {
       ops_[n] = CHECK_JUST(one::OpBuilder("amp_non_finite_check_and_unscale")
-                               .Input("scaled_grads_found_inf_inv_scale", n + 1)
+                               .Input("scaled_grads_found_inf_inv_scale", n + 2)
                                .Build());
     }
   }
   Maybe<void> operator()(const TensorTuple& scaled_grads,
                          const std::shared_ptr<one::Tensor>& found_inf,
                          const std::shared_ptr<one::Tensor>& inv_scale) const {
-    TensorTuple scaled_grads_found_inf_inv_scale;
-    const int64_t nscaled_grads = scaled_grads.size();
-    for (size_t i = 0; i < nscaled_grads; i++) {
-      scaled_grads_found_inf_inv_scale.emplace_back(scaled_grads[i]);
-    }
-    scaled_grads_found_inf_inv_scale.emplace_back(found_inf);
-    scaled_grads_found_inf_inv_scale.emplace_back(inv_scale);
-
-    const int64_t ninput = scaled_grads_found_inf_inv_scale.size();
+    const int64_t ninput = scaled_grads.size();
     for (int i = 0; i < ninput; i += kMaxInputCount) {
       size_t size = (i + kMaxInputCount) < ninput ? kMaxInputCount : ninput - i;
-      TensorTuple partial_inputs(size);
-      for (int j = 0; j < size; ++j) {
-        partial_inputs[j] = scaled_grads_found_inf_inv_scale[i + j];
-      }
-      JUST(OpInterpUtil::Dispatch<TensorTuple>(*ops_[size - 1], {scaled_grads_found_inf_inv_scale},
-                                               AttrMap{}));
+      TensorTuple partial_inputs(size + 2);
+      for (int j = 0; j < size; ++j) { partial_inputs[j] = scaled_grads[i + j]; }
+      partial_inputs[size] = found_inf;
+      partial_inputs[size + 1] = inv_scale;
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*ops_[size], {partial_inputs}, AttrMap{}));
     }
 
     return Maybe<void>::Ok();

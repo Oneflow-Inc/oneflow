@@ -49,9 +49,10 @@ __global__ void AmpUpdateScaleImpl(T* current_scale, int* growth_tracker, const 
 template<typename T>
 __global__ void AmpForEachNonFiniteCheckAndUnscaleImpl(const int n, T* scaled_grad,
                                                        float* found_inf, const float* inv_scale) {
+  const auto inv_scale_value = *inv_scale;
   CUDA_1D_KERNEL_LOOP(i, n) {
-    if (!IsFinite(scaled_grad[i])) { found_inf[0] = 1.f; }
-    scaled_grad[i] = inv_scale[0] == 1.f ? scaled_grad[i] : scaled_grad[i] * inv_scale[0];
+    if (!IsFinite(scaled_grad[i])) { *found_inf = 1.f; }
+    scaled_grad[i] = inv_scale_value == 1.f ? scaled_grad[i] : scaled_grad[i] * inv_scale_value;
   }
 }
 

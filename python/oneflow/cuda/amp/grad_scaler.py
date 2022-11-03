@@ -183,7 +183,6 @@ class GradScaler(object):
                 self._lazy_init_scale_growth_tracker(outputs.device)
             assert self._scale is not None
             return outputs * self._scale.to(device=outputs.device)
-
         # Invoke the more complex machinery only if we're treating multiple outputs.
         stash: List[
             _MultiDeviceReplicator
@@ -288,7 +287,6 @@ class GradScaler(object):
         assert self._scale is not None
         inv_scale = self._scale.double().reciprocal().float()
         found_inf = flow.full((1,), 0.0, dtype=flow.float32, device=self._scale.device)
-
         optimizer_state["found_inf_per_device"] = self._unscale_grads_(
             optimizer, inv_scale, found_inf, False
         )
@@ -406,7 +404,6 @@ class GradScaler(object):
             if len(found_infs) > 1:
                 for i in range(1, len(found_infs)):
                     found_inf_combined += found_infs[i]
-
             flow._C.amp_update_scale_(
                 _scale,
                 _growth_tracker,
