@@ -3,10 +3,11 @@ import oneflow as flow
 import oneflow.unittest
 from oneflow.mock_torch import Mock
 
+mock = Mock({})  # default enable mocking
+
 
 class TestMock(flow.unittest.TestCase):
     def test_complex(test_case):
-        mock = Mock()  # default enable mocking
         import torch
 
         test_case.assertTrue(torch.__package__ == "oneflow")
@@ -51,6 +52,24 @@ class TestMock(flow.unittest.TestCase):
         test_case.assertTrue(
             "cannot import name 'noexist' from 'torch'" in str(context.exception)
         )
+
+    def test_with(test_case):
+        with mock.enable_with(globals()):
+            import torch
+            import torch.nn
+            import torch.version
+
+            test_case.assertTrue(torch.__package__ == "oneflow")
+            test_case.assertTrue(torch.nn.__package__ == "oneflow.nn")
+            test_case.assertTrue(torch.version.__version__ == flow.__version__)
+        with mock.disable_with(globals()):
+            import torch
+            import torch.nn
+            import torch.version
+
+            test_case.assertTrue(torch.__package__ == "torch")
+            test_case.assertTrue(torch.nn.__package__ == "torch.nn")
+            test_case.assertTrue(torch.version.__version__ == torch.__version__)
 
 
 if __name__ == "__main__":

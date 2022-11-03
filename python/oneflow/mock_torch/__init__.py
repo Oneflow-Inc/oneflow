@@ -20,7 +20,7 @@ from importlib.abc import MetaPathFinder, Loader
 from importlib.machinery import ModuleSpec
 from importlib.util import find_spec, module_from_spec
 import sys
-
+from contextlib import contextmanager
 
 error_msg = """ is not implemented, please submit an issue at  
 'https://github.com/Oneflow-Inc/oneflow/issues' including the log information of the error, the 
@@ -115,11 +115,15 @@ For fine-grained control of importing torch and oneflow, use Mock with enable an
 
 
 class Mock:
-    def __init__(self):
+    def __init__(self, globals):
         self.importer = OneflowImporter()
+        self.importer.enable = False  # deal with previously imported torch
         sys.meta_path.insert(0, self.importer)
+        self.enable(globals)
 
     def enable(self, globals):
+        if self.importer.enable:  # already enabled
+            return
         for k, v in sys.modules.copy().items():
             if k.startswith("torch"):
                 self.importer.disable_mod_cache.update({k: v})
@@ -134,6 +138,8 @@ class Mock:
         self.importer.enable = True
 
     def disable(self, globals):
+        if not self.importer.enable:  # already disabled
+            return
         for k, v in sys.modules.copy().items():
             if k.startswith("torch"):
                 self.importer.enable_mod_cache.update({k: v})
@@ -147,21 +153,18 @@ class Mock:
             globals.update({k: v})
         self.importer.enable = False
 
-    def clean_torch(self, globals):
-        """
-        clean imported torch modules in sys.modules and the current global scope
+    @contextmanager
+    def enable_with(self, globals):
+        try:
+            self.enable(globals)
+            yield None
+        finally:
+            self.disable(globals)
 
-        Usage: mock.clean_torch(globals())
-        """
-        for k, v in sys.modules.copy().items():
-            if k.startswith("torch"):
-                if self.importer.enable:
-                    self.importer.enable_mod_cache.update({k: v})
-                else:
-                    self.importer.disable_mod_cache.update({k: v})
-                del sys.modules[k]
-                try:
-                    del globals[k]
-                except KeyError:
-                    pass
-
+    @contextmanager
+    def disable_with(self, globals):
+        try:
+            self.disable(globals)
+            yield None
+        finally:
+            self.enable(globals)
