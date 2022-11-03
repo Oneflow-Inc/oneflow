@@ -124,11 +124,6 @@ class SGD(Optimizer):
         super().__init__(params, options)
 
         self.fused = fused
-        if fused and (dampening > 0.0 or nesterov or maximize):
-            warnings.warn(
-                "Only lr, weight_decay and momentum can be used for fused SGD, trying default. "
-            )
-            self.fused = False
 
         for param_group in self.param_groups:
             for param in param_group.parameters:
@@ -141,16 +136,17 @@ class SGD(Optimizer):
                     )
                     self.fused = False
 
-        self._momentum_sgd = (
-            flow.stateful_op("momentum_update")
-            .Input("model")
-            .Input("model_diff")
-            .Input("momentum")
-            .Build()
-        )
-        self._sgd = (
-            flow.stateful_op("sgd_update").Input("model").Input("model_diff").Build()
-        )
+        if not self.fused:
+            self._momentum_sgd = (
+                flow.stateful_op("momentum_update")
+                .Input("model")
+                .Input("model_diff")
+                .Input("momentum")
+                .Build()
+            )
+            self._sgd = (
+                flow.stateful_op("sgd_update").Input("model").Input("model_diff").Build()
+            )
 
     def _single_tensor_update(self, param_group):
         lr = param_group["lr"]
@@ -217,6 +213,9 @@ class SGD(Optimizer):
                 weight_decay=param_group["weight_decay"],
                 learning_rate_val=param_group["lr"],
                 momentum=param_group["momentum"],
+                dampening=param_group["dampening"],
+                nesterov=param_group["nesterov"],
+                maximize=param_group["maximize"],
             )
 
     def step(self, closure: Callable = None):

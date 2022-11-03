@@ -6674,7 +6674,10 @@ def OneFlow_MultiTensorMomentumUpdateOp : OneFlow_BaseOp<"multi_tensor_momentum_
     DefaultValuedAttr<F32Attr, "0.">:$l1,
     DefaultValuedAttr<F32Attr, "0.">:$l2,
     DefaultValuedAttr<F32Attr, "0.">:$weight_decay,
-    DefaultValuedAttr<F32Attr, "0.">:$momentum
+    DefaultValuedAttr<F32Attr, "0.">:$momentum,
+    DefaultValuedAttr<F32Attr, "0.">:$dampening,
+    DefaultValuedAttr<BoolAttr, "false">:$nesterov,
+    DefaultValuedAttr<BoolAttr, "false">:$maximize
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
@@ -6767,7 +6770,10 @@ def OneFlow_MultiTensorMomentumUpdateWithCastOp : OneFlow_BaseOp<"multi_tensor_m
     DefaultValuedAttr<F32Attr, "0.">:$l1,
     DefaultValuedAttr<F32Attr, "0.">:$l2,
     DefaultValuedAttr<F32Attr, "0.">:$weight_decay,
-    DefaultValuedAttr<F32Attr, "0.">:$momentum
+    DefaultValuedAttr<F32Attr, "0.">:$momentum,
+    DefaultValuedAttr<F32Attr, "0.">:$dampening,
+    DefaultValuedAttr<BoolAttr, "false">:$nesterov,
+    DefaultValuedAttr<BoolAttr, "false">:$maximize
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes

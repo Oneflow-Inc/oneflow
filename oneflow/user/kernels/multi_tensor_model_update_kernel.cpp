@@ -118,6 +118,9 @@ class MultiTensorMomentumUpdateKernel final : public user_op::OpKernel,
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
     const float lr_scale = ctx->Attr<float>("learning_rate_scale");
     const float momentum = ctx->Attr<float>("momentum");
+    const float dampening = ctx->Attr<float>("dampening");
+    const bool nesterov = ctx->Attr<bool>("nesterov");
+    const bool maximize = ctx->Attr<bool>("maximize");
 
     if (ctx->has_input("learning_rate", 0)) {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
@@ -158,7 +161,7 @@ class MultiTensorMomentumUpdateKernel final : public user_op::OpKernel,
         MultiTensorMomentumUpdateKernelUtil<device_type, T, G>::Update(
             ctx->stream(), total_elem_cnt, count, static_cast<T>(scale), l1, l2, weight_decay,
             learning_rate_val, lr_scale, learning_rate_ptr, scale_by_ptr, skip_if_ptr, momentum,
-            tensor_tuple_params);
+            dampening, nesterov, maximize, tensor_tuple_params);
         count = 0;
         total_elem_cnt = 0;
       }
@@ -390,6 +393,9 @@ class MultiTensorMomentumUpdateWithCastKernel final : public user_op::OpKernel,
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
     const float lr_scale = ctx->Attr<float>("learning_rate_scale");
     const float momentum = ctx->Attr<float>("momentum");
+    const float dampening = ctx->Attr<float>("dampening");
+    const bool nesterov = ctx->Attr<float>("nesterov");
+    const bool maximize = ctx->Attr<float>("maximize");
 
     if (ctx->has_input("learning_rate", 0)) {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
@@ -432,7 +438,7 @@ class MultiTensorMomentumUpdateWithCastKernel final : public user_op::OpKernel,
         MultiTensorMomentumUpdateWithCastKernelUtil<device_type, T, G>::Update(
             ctx->stream(), total_elem_cnt, count, static_cast<T>(scale), l1, l2, weight_decay,
             learning_rate_val, lr_scale, learning_rate_ptr, scale_by_ptr, skip_if_ptr, momentum,
-            tensor_tuple_params);
+            dampening, nesterov, maximize, tensor_tuple_params);
         count = 0;
         total_elem_cnt = 0;
       }

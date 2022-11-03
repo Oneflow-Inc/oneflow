@@ -4067,10 +4067,12 @@ class MultiTensorMomentumUpdateFunctor {
   Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff,
                          const TensorTuple& momentum_buf, const double& scale,
                          const float& weight_decay, const float& learning_rate_val,
-                         const float& momentum) const {
+                         const float& momentum, const float& dampening,
+                         const bool& nesterov, const bool& maximize) const {
     auto& attrs =
-        THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "learning_rate_val", "momentum");
-    attrs.SetAllAttrs(scale, weight_decay, learning_rate_val, momentum);
+        THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "weight_decay", "learning_rate_val", "momentum",
+                                       "dampening", "nesterov", "maximize");
+    attrs.SetAllAttrs(scale, weight_decay, learning_rate_val, momentum, dampening, nesterov, maximize);
     const int64_t weight_size = model.size();
     for (int i = 0; i < weight_size; i += kMaxInputCount) {
       size_t size = (i + kMaxInputCount) < weight_size ? kMaxInputCount : weight_size - i;

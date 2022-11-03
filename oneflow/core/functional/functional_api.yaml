@@ -2652,7 +2652,7 @@
   bind_python: True
 
 - name: "multi_tensor_momentum_update"
-  signature: "Void (TensorTuple model, TensorTuple model_diff, TensorTuple momentum_buf, Double scale, Float weight_decay, Float learning_rate_val, Float momentum) => MultiTensorMomentumUpdate"
+  signature: "Void (TensorTuple model, TensorTuple model_diff, TensorTuple momentum_buf, Double scale, Float weight_decay, Float learning_rate_val, Float momentum, Float dampening, Bool nesterov, Bool maximize) => MultiTensorMomentumUpdate"
   bind_python: True
 
 - name: "multi_tensor_adam_update"

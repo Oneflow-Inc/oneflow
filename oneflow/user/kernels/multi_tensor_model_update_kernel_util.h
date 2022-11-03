@@ -44,8 +44,8 @@ struct MultiTensorMomentumUpdateKernelUtil {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
                      float l1, float l2, float weight_decay, float learning_rate_val,
                      float lr_scale, const float* learning_rate, const T* scale_by_ptr,
-                     const int64_t* skip_if, float momentum,
-                     TensorTupleParams<3> tensor_tuple_params);
+                     const int64_t* skip_if, const float momentum, const float dampening,
+                     const bool nesterov, const bool maximize, TensorTupleParams<3> tensor_tuple_params);
 };
 
 template<DeviceType device_type, typename T, typename G>
@@ -72,8 +72,8 @@ struct MultiTensorMomentumUpdateWithCastKernelUtil {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
                      float l1, float l2, float weight_decay, float learning_rate_val,
                      float lr_scale, const float* learning_rate, const T* scale_by_ptr,
-                     const int64_t* skip_if, float momentum,
-                     TensorTupleParams<4> tensor_tuple_params);
+                     const int64_t* skip_if, const float momentum, const float dampening,
+                     const bool nesterov, const bool maximize, TensorTupleParams<4> tensor_tuple_params);
 };
 
 template<DeviceType device_type, typename T, typename G>
