@@ -2636,7 +2636,11 @@
   bind_python: True
 
 - name: "multi_tensor_sgd_update"
-  signature: "Void (TensorTuple model, TensorTuple model_diff, TensorTuple momentum_buf, Double scale, Float weight_decay, Float learning_rate_val, Float momentum) => MultiTensorSgdUpdate"
+  signature: "Void (TensorTuple model, TensorTuple model_diff, Double scale, Float weight_decay, Float learning_rate_val) => MultiTensorSgdUpdate"
+  bind_python: True
+
+- name: "multi_tensor_momentum_update"
+  signature: "Void (TensorTuple model, TensorTuple model_diff, TensorTuple momentum_buf, Double scale, Float weight_decay, Float learning_rate_val, Float momentum) => MultiTensorMomentumUpdate"
   bind_python: True
 
 - name: "multi_tensor_adam_update"

@@ -145,7 +145,7 @@ class AdamW(Optimizer):
 
         if self.fused and amsgrad:
             warnings.warn(
-                "Do not support amsgrad=True for fused kernel, trying default Adamw kernel."
+                "Do not support amsgrad=True for fused Adamw, trying default."
             )
             self.fused = False
 
@@ -156,7 +156,7 @@ class AdamW(Optimizer):
 
                 if self.fused and not param.is_cuda:
                     warnings.warn(
-                        "Only cuda param can be used for fused, trying default Adamw kernel. "
+                        "Only cuda param can be used for fused Adamw, trying default. "
                     )
                     self.fused = False
 

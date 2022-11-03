@@ -126,7 +126,7 @@ class SGD(Optimizer):
         self.fused = fused
         if fused and (dampening > 0.0 or nesterov or maximize):
             warnings.warn(
-                "Only lr, weight_decay and momentum can be used for fused kernel, trying default SGD kernel. "
+                "Only lr, weight_decay and momentum can be used for fused SGD, trying default. "
             )
             self.fused = False
 
@@ -137,7 +137,7 @@ class SGD(Optimizer):
 
                 if self.fused and not param.is_cuda:
                     warnings.warn(
-                        "Only cuda param can be used for fused, trying default SGD kernel. "
+                        "Only cuda param can be used for fused SGD, trying default. "
                     )
                     self.fused = False
 
@@ -183,28 +183,41 @@ class SGD(Optimizer):
                 )
 
     def _fused_update(self, param_group):
+        use_momentum = (param_group["momentum"] != 0)
         param_list = []
         param_grad_list = []
-        momentum_buf_list = []
+        if use_momentum:
+            momentum_buf_list = []
+
         for param in param_group.parameters:
             if param.grad is None:
                 continue
             param_list.append(param)
             param_grad_list.append(param.grad)
 
-            if "momentum_buf" not in self._state[param]:
-                self._state[param]["momentum_buf"] = flow.zeros_like(param)
-            momentum_buf_list.append(self._state[param]["momentum_buf"])
+            if use_momentum:
+                if "momentum_buf" not in self._state[param]:
+                    self._state[param]["momentum_buf"] = flow.zeros_like(param)
+                momentum_buf_list.append(self._state[param]["momentum_buf"])
 
-        flow._C.multi_tensor_sgd_update(
-            model=param_list,
-            model_diff=param_grad_list,
-            momentum_buf=momentum_buf_list,
-            scale=1.0,
-            weight_decay=param_group["weight_decay"],
-            learning_rate_val=param_group["lr"],
-            momentum=param_group["momentum"],
-        )
+        if not use_momentum:
+            flow._C.multi_tensor_sgd_update(
+                model=param_list,
+                model_diff=param_grad_list,
+                scale=1.0,
+                weight_decay=param_group["weight_decay"],
+                learning_rate_val=param_group["lr"],
+            )
+        else:
+            flow._C.multi_tensor_momentum_update(
+                model=param_list,
+                model_diff=param_grad_list,
+                momentum_buf=momentum_buf_list,
+                scale=1.0,
+                weight_decay=param_group["weight_decay"],
+                learning_rate_val=param_group["lr"],
+                momentum=param_group["momentum"],
+            )
 
     def step(self, closure: Callable = None):
         """Performs a single optimization step.
