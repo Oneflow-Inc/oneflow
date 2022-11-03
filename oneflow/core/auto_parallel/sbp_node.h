@@ -125,7 +125,7 @@ class SbpNode final {
   void SetTrunkWaitTime(double trunk_wait_time);
 
   // Assemble copy cost for all the incoming edges
-  void InitializeCopyCost(bool compute_cost, bool use_sbp_collector);
+  void InitializeCopyCost(bool use_sbp_collector);
 
  private:
   friend class SbpEdge;

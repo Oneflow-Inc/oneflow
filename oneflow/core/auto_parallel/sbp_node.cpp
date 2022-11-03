@@ -619,7 +619,7 @@ void SbpNode::DropAvailWaitTime(double curr_trunk_cost) {
 
 // Assemble copy cost for all the incoming edges
 
-void SbpNode::InitializeCopyCost(bool compute_cost, bool use_sbp_collector) {
+void SbpNode::InitializeCopyCost(bool use_sbp_collector) {
   for (SbpEdge* this_edge : edges_in_) {
     const auto* sbp_node_producer = this_edge->start_node_;
     OpNode* producer = sbp_node_producer->op_node_;
@@ -630,7 +630,7 @@ void SbpNode::InitializeCopyCost(bool compute_cost, bool use_sbp_collector) {
     // look through input blobs
     for (const std::string& ibn : op_node_->op().input_bns()) {
       if (producer->op().op_name() == op_node_->SrcNode4Ibn(ibn).op().op_name()) {
-        this_edge->InitializeCopyCost(ibn, compute_cost, use_sbp_collector);
+        this_edge->InitializeCopyCost(ibn, use_sbp_collector);
       }
     }
   }
