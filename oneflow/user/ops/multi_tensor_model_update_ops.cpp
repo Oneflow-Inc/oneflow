@@ -139,7 +139,8 @@ Maybe<void> InferMomentumUpdateDataType(user_op::InferContext* ctx) {
     const user_op::TensorDesc& model = ctx->InputTensorDesc("model", i);
     const user_op::TensorDesc& momentum_buf = ctx->InputTensorDesc("momentum_buf", i);
     CHECK_EQ(model.data_type(), first_model_desc.data_type()) << "Model DataType should be equal. ";
-    CHECK_EQ(momentum_buf.data_type(), first_model_desc.data_type()) << "Momentum buf DataType should be equal. ";
+    CHECK_EQ(momentum_buf.data_type(), first_model_desc.data_type())
+        << "Momentum buf DataType should be equal. ";
   }
   if (ctx->has_input("scale_by_tensor", 0)) {
     const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
@@ -149,7 +150,7 @@ Maybe<void> InferMomentumUpdateDataType(user_op::InferContext* ctx) {
 }
 
 Maybe<void> MomentumInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                                const user_op::UserOpConfWrapper& conf) {
+                                     const user_op::UserOpConfWrapper& conf) {
   for (int64_t i = 0; i < conf.input_size("model"); i++) {
     JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", i));
     JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "momentum_buf", i));
@@ -257,8 +258,9 @@ Maybe<void> InferMomentumUpdateWithCastTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MomentumWithCastInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                                        const user_op::UserOpConfWrapper& conf) {
+Maybe<void> MomentumWithCastInputArgModifyFn(
+    const user_op::GetInputArgModifier& GetInputArgModifierFn,
+    const user_op::UserOpConfWrapper& conf) {
   for (int64_t i = 0; i < conf.input_size("model"); i++) {
     JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", i));
     JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "momentum_buf", i));
@@ -332,7 +334,8 @@ Maybe<void> AdamWithCastInputArgModifyFn(const user_op::GetInputArgModifier& Get
   return InferMomentumUpdateTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> MultiTensorMomentumUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> MultiTensorMomentumUpdateOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
@@ -418,7 +421,8 @@ Maybe<void> AdamWithCastInputArgModifyFn(const user_op::GetInputArgModifier& Get
   return MomentumWithCastInputArgModifyFn(GetInputArgModifierFn, conf);
 }
 
-/* static */ Maybe<void> MultiTensorMomentumUpdateWithCastOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> MultiTensorMomentumUpdateWithCastOp::InferDataType(
+    user_op::InferContext* ctx) {
   return InferMomentumUpdateDataType(ctx);
 }
 
