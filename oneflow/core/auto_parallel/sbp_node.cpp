@@ -626,11 +626,17 @@ void SbpNode::InitializeCopyCost(bool use_sbp_collector) {
 
     // skip it if proxy
     if (use_sbp_collector && !producer) { continue; }
-
     // look through input blobs
     for (const std::string& ibn : op_node_->op().input_bns()) {
       if (producer->op().op_name() == op_node_->SrcNode4Ibn(ibn).op().op_name()) {
         this_edge->InitializeCopyCost(ibn, use_sbp_collector);
+      }
+    }
+    // Add Wait time
+    for (auto& cost_row : this_edge->cost_) {
+      for (auto& cost_value : cost_row) {
+        // If transferring between devices, we need to add wait time.
+        if (cost_value > 0.0) { cost_value += this_edge->wait_time_; }
       }
     }
   }

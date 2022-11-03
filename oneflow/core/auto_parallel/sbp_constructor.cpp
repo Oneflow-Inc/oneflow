@@ -265,17 +265,6 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
     // Find all those cases with wait time
     // Do not skip edges carrying no lbi
     sbp_node_consumer->InitializeCopyCost(use_sbp_collector_);
-    for (auto* sbp_edge : sbp_node_consumer->edges_in_) {
-      // skip it if proxy
-      if (!sbp_edge->start_node_->op_node_) { continue; }
-      // Reset Wait time
-      for (int32_t i = 0; i < sbp_edge->cost_.size(); ++i) {
-        for (int32_t j = 0; j < sbp_edge->cost_[i].size(); ++j) {
-          // If transferring between devices, we need to add wait time.
-          if (sbp_edge->cost_[i][j] > 0.0) { sbp_edge->cost_[i][j] += sbp_edge->wait_time_; }
-        }
-      }
-    }
   });
   return Maybe<void>::Ok();
 }
