@@ -45,6 +45,8 @@ Maybe<Shape> InferUnifiedShapeForBroadcasting(const std::vector<Shape>& shapes);
 Maybe<std::tuple<Shape, std::deque<bool>>> InferUnifiedShapeForBroadcastingWithInfo(
     const std::vector<Shape>& shapes);
 
+Maybe<void> BroadcastSeedToAllRanks(uint64_t* seed, int64_t root = 0);
+
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow

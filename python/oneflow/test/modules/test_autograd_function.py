@@ -240,6 +240,32 @@ class TestAutogradFunction(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(b_grad.numpy(), 3 * np_arr0))
         test_case.assertTrue(np.allclose(w_grad.numpy(), 2 * np.ones_like(np_arr2)))
 
+    @flow.unittest.skip_unless_1n1d()
+    def test_autograd_function_memory(test_case):
+        global_ctx = None
+
+        class MyModule(autograd.Function):
+            @staticmethod
+            def forward(ctx, x):
+                z = x.clone()
+                ctx.save_for_backward(z)
+                nonlocal global_ctx
+                global_ctx = ctx
+                return z
+
+            @staticmethod
+            def backward(ctx, out_grad):
+                (x,) = ctx.saved_tensors
+                return x
+
+        x = flow.randn(5, 5).requires_grad_()
+        res = MyModule.apply(x)
+        test_case.assertTrue(global_ctx._is_data_valid())
+        res.sum().backward()
+
+        # ensure that global_ctx is released
+        test_case.assertFalse(global_ctx._is_data_valid())
+
 
 if __name__ == "__main__":
     unittest.main()

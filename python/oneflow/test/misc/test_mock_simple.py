@@ -13,19 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Union
+import torch
 
-import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
-
-
-def is_floating_point(input):
-    if input.dtype in (flow.float, flow.float16, flow.float32, flow.float64):
-        return True
-    return False
-
-
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod(raise_on_error=True)
+print(torch.__file__.find("mock_torch") != -1)

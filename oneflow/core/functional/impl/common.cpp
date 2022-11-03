@@ -18,6 +18,8 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/wrap_dim_utils.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/ccl/ccl.h"
+#include "oneflow/core/job/rank_group.h"
 
 namespace oneflow {
 namespace one {
@@ -239,6 +241,16 @@ Maybe<std::tuple<Shape, std::deque<bool>>> InferUnifiedShapeForBroadcastingWithI
   std::deque<bool> need_to_broadcast;
   for (const auto& x : shapes) { need_to_broadcast.push_back(x != unified_shape); }
   return std::make_tuple(unified_shape, need_to_broadcast);
+}
+
+Maybe<void> BroadcastSeedToAllRanks(uint64_t* seed, int64_t root) {
+  CHECK_NOTNULL_OR_RETURN(seed) << "seed is not allowed to be nullptr";
+  const auto& rank_group = JUST(RankGroup::DefaultRankGroup());
+  const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(DeviceType::kCPU, rank_group));
+  const auto& meta_transport_token =
+      JUST(TransportToken::NewTransportToken(kTransportTokenTypeMeta));
+  JUST(ccl::CpuBroadcast(seed, seed, sizeof(*seed), root, parallel_desc, meta_transport_token));
+  return Maybe<void>::Ok();
 }
 
 }  // namespace functional

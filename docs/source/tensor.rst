@@ -284,6 +284,7 @@ Tensor class reference
     Tensor.mish
     Tensor.mul
     Tensor.mul_
+    Tensor.nansum
     Tensor.narrow
     Tensor.ndimension
     Tensor.ne
@@ -331,6 +332,7 @@ Tensor class reference
     Tensor.std
     Tensor.storage_offset
     Tensor.stride
+    Tensor.logsumexp
     Tensor.sum
     Tensor.swapaxes
     Tensor.swapdims
@@ -368,4 +370,12 @@ Tensor class reference
     Tensor.pin_memory
     Tensor.is_pinned
     Tensor.cross
-
+    Tensor.scatter
+    Tensor.scatter_
+    Tensor.scatter_add
+    Tensor.scatter_add_
+    Tensor.bernoulli
+    Tensor.bernoulli_
+    Tensor.bincount
+    Tensor.isclose
+    Tensor.allclose

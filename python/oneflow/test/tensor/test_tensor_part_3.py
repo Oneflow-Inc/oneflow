@@ -57,7 +57,7 @@ class TestTensor(flow.unittest.TestCase):
 
     @autotest(
         n=10, auto_backward=False
-    )  # peihong: pytorch 1.10 dose not support backward when reduce is add or multiply
+    )  # peihong: pytorch dose not support backward when reduce is add or multiply
     def test_scatter_add_or_multiply_random_data(test_case):
         device = random_device()
         input = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
@@ -71,7 +71,7 @@ class TestTensor(flow.unittest.TestCase):
                 dim, oneof(*_get_indexes(device)), src, reduce=reduce,
             )
             return y
-        return input.scatter(dim, oneof(*_get_indexes(device)), src, reduce=reduce,)
+        return input.scatter(dim, oneof(*_get_indexes(device)), src, reduce=reduce)
 
 
 if __name__ == "__main__":
