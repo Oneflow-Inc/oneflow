@@ -88,9 +88,7 @@ def _test_groupnorm(test_case, device):
     m = flow.nn.GroupNorm(num_groups=1, num_channels=2).to(device=flow.device(device))
     y1 = m(x)
     test_case.assertTrue(np.allclose(y1.numpy(), output, 1e-03, 1e-03))
-    x_nhwc = x.permute(0, 2, 3, 1).contiguous()
-    (y_nhwc,_,_) = flow._C.group_norm(x_nhwc, m.weight, m.bias, m.affine, m.num_groups, m.eps, "channels_last")
-    test_case.assertTrue(np.allclose(y_nhwc.permute(0, 3, 1, 2).numpy(), output, 1e-03, 1e-03))
+
 
 def _test_groupnorm_3d(test_case, device):
     input_arr = np.array(
@@ -329,6 +327,27 @@ def _test_groupnorm_backward_3d(test_case, device):
     )
 
 
+def _test_groupnorm_nhwc(test_case, shape, num_groups):
+    (n, c, h, w) = shape
+    x = flow.tensor(
+        np.random.uniform(low=0.0, high=1.0, size=shape).astype(np.float32)
+    ).to("cuda")
+    gamma = flow.tensor(
+        np.random.uniform(low=0.0, high=1.0, size=(c)).astype(np.float32)
+    ).to("cuda")
+    beta = flow.tensor(
+        np.random.uniform(low=0.0, high=1.0, size=(c)).astype(np.float32)
+    ).to("cuda")
+    y = flow._C.group_norm(x, gamma, beta, True, num_groups, 1e-5)
+    x_nhwc = x.permute(0, 2, 3, 1).contiguous()
+    y_nhwc = flow._C.group_norm(
+        x_nhwc, gamma, beta, True, num_groups, 1e-5, "channels_last"
+    )
+    test_case.assertTrue(
+        np.allclose(y_nhwc.permute(0, 3, 1, 2).numpy(), y, 1e-03, 1e-03)
+    )
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestGroupNorm(flow.unittest.TestCase):
     def test_groupnorm(test_case):
@@ -339,7 +358,7 @@ class TestGroupNorm(flow.unittest.TestCase):
             _test_groupnorm_backward,
             _test_groupnorm_backward_3d,
         ]
-        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["device"] = ["cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
@@ -358,6 +377,9 @@ class TestGroupNorm(flow.unittest.TestCase):
         x = random_tensor(ndim=4, dim1=channels).to(device)
         y = m(x)
         return y
+
+    def test_groupnorm_nhwc(test_case):
+        _test_groupnorm_nhwc(test_case, (16, 64, 128, 128), 32)
 
 
 if __name__ == "__main__":
