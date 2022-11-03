@@ -75,9 +75,6 @@ def _test_basic_slice(test_case, placement):
 
     ref_sbp = random_sbp(placement, max_dim=3).value()
     reference = global_broadcast_consec((8, 8, 8)).to_global(placement, ref_sbp)
-    if flow.env.get_rank() == 0:
-        print(f"{placement=}")
-        print(f"{ref_sbp=}")
 
     # empty tensor indexing
     empty_index = _cpu_global_tensor(flow.LongTensor()).to_global(
@@ -255,11 +252,13 @@ def _test_advanced_indexing(test_case, placement, dtype):
 
     def validate_setting(x):
         #  x[[0]] = -2
-        x = get_graph_output(x, func=lambda x: setitem_and_return(x, [0], -2))
-        _assert_tensor_equal(test_case, x[[0]], flow.tensor([-2], dtype=dtype))
+        x = get_graph_output(x, func=lambda x: setitem_and_return(x, ri([0]), -2))
+        _assert_tensor_equal(test_case, x[0], flow.tensor([-2], dtype=dtype))
         #  x[[0]] = -1
-        #  _assert_tensor_equal(test_case, x[ri([0]),], flow.tensor([-1], dtype=dtype))
+        x = get_graph_output(x, func=lambda x: setitem_and_return(x, ri([0]), -1))
+        _assert_tensor_equal(test_case, x[0], flow.tensor([-1], dtype=dtype))
         #  x[[2, 3, 4]] = 4
+        #  x = get_graph_output(x, func=lambda x: setitem_and_return(x, ri([2, 3, 4]), 4))
         #  _assert_tensor_equal(
         #      test_case, x[[2, 3, 4]], flow.tensor([4, 4, 4], dtype=dtype)
         #  )
@@ -276,7 +275,7 @@ def _test_advanced_indexing(test_case, placement, dtype):
     sbp = random_sbp(placement, max_dim=1).value()
     reference = global_broadcast_consec((8,)).to_global(placement, sbp)
     validate_indexing(reference)
-    #  validate_setting(reference)
+    validate_setting(reference)
     return
 
     # reference is  1  2  3  4  5  6  7  8
