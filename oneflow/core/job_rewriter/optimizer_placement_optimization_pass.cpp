@@ -523,7 +523,8 @@ class OptimizerPlacementOptimizationPass final : public JobPass {
     }
     if (job->job_conf().enable_auto_parallel()
         && job->job_conf().enable_auto_parallel_ignore_user_sbp_config()) {
-      LOG(WARNING) << "ZeRO optimization will be ignored when enabling AutoParallel";
+      LOG(WARNING) << "ZeRO optimization will be ignored when enabling AutoParallel to ignore user "
+                      "sbp configuration";
       return Maybe<void>::Ok();
     }
     const std::string& mode = ctx->job_desc().job_conf().optimizer_placement_optimization_mode();
