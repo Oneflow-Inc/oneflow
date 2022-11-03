@@ -297,7 +297,8 @@ bool IsS0SignatureSupported(const OpNode* node) {
   auto LogicalBlobDesc4Ibn = [&](const std::string& bn) -> Maybe<const BlobDesc&> {
     return Maybe<const BlobDesc&>(node->LogicalBlobDesc4Lbi(node->op().BnInOp2Lbi(bn)));
   };
-  CHECK_JUST(node->op().GetSbpSignaturesIf(LogicalBlobDesc4Ibn, node->parallel_desc(), &list));
+  CHECK_JUST(node->op().GetSbpSignaturesIf(LogicalBlobDesc4Ibn,
+                                           node->parallel_desc().parallel_num(), &list));
   const auto IsInOutS0Parallel = [&](const SbpSignature& signature) {
     return IsS0Parallel(signature, node->op().SoleIbn())
            && IsS0Parallel(signature, node->op().SoleObn());
