@@ -17,16 +17,14 @@ import oneflow as flow
 from oneflow.nn.modules.utils import _single, _handle_size_arg
 
 
-def broadcast_shapes_op(input, *shapes):
-    shapes = _handle_size_arg(shapes)
+def broadcast_shapes_op(*shapes):
     shapes = _single(shapes)
-    return flow._C.broadcast_shapes(input, shapes)
+    return flow._C.broadcast_shapes(shapes)
 
 
-def broadcast_tensors_op(input, *tensors):
-    tensors = _handle_size_arg(tensors)
+def broadcast_tensors_op(*tensors):
     tensors = _single(tensors)
-    return flow._C.broadcast_tensors(input, tensors)
+    return flow._C.broadcast_tensors(tensors)
 
 
 if __name__ == "__main__":

@@ -2090,12 +2090,12 @@
   signature: "Void (TensorTuple x) => StreamTouch"
   bind_python: True
 
-- name: "broadcast"
-  signature: "Tensor (Tensor x, *, Int64 src_rank=0, Bool inplace=True) => Broadcast"
-  bind_python: True
-
-- name: "broadcast"
-  signature: "TensorTuple (TensorTuple inputs, *, Int64 src_rank=0, Bool inplace=True) => BroadcastTensors"
+- name: "comm_broadcast"
+  signature:
+    [
+      "Tensor (Tensor x, *, Int64 src_rank=0, Bool inplace=True) => CommBroadcast",
+      "TensorTuple (TensorTuple inputs, *, Int64 src_rank=0, Bool inplace=True) => CommBroadcastTensors",
+    ]
   bind_python: True
 
 - name: "local_all_reduce"
@@ -2837,9 +2837,9 @@
   bind_python: True
 
 - name: "broadcast_tensors"
-  signature: "Tensor (TensorTuple tensors) => BroadcastTensors"
+  signature: "TensorTuple (TensorTuple tensors) => BroadcastTensors"
   bind_python: True
 
 - name: "broadcast_to"
-  signature: "Tensor (Tensor x, Shape shape) => Expand"
+  signature: "Tensor (Tensor x, Shape shape) => BroadcastTo"
   bind_python: True

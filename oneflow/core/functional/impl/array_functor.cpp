@@ -3346,7 +3346,7 @@ class BroadcastTensorsFunctor {
     std::deque<bool> need_to_broadcast;
 
     std::tie(shape_to_broadcast, need_to_broadcast) =
-        *JUST(InferUnifiedShapeForBroadcastingWithInfo([tensors] {
+        *JUST(InferUnifiedShapeForBroadcastingWithInfo([&tensors]() {
           std::vector<Shape> shapes;
           for (auto& x : tensors) { shapes.push_back(*x->shape()); }
           return shapes;
@@ -3504,6 +3504,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PinMemoryFunctor>("PinMemory");
   m.add_functor<impl::BroadcastShapesFunctor>("BroadcastShapes");
   m.add_functor<impl::BroadcastTensorsFunctor>("BroadcastTensors");
+  m.add_functor<impl::ExpandFunctor>("BroadcastTo");
 };
 
 }  // namespace functional
