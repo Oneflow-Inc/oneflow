@@ -15,7 +15,10 @@ limitations under the License.
 */
 
 #include "oneflow/core/functional/impl/binary_functor.h"
+#include <cstdint>
 
+#include "oneflow/core/common/error.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
@@ -26,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 
 namespace oneflow {
@@ -289,10 +293,36 @@ class InplaceDivFunctor {
  private:
   std::shared_ptr<OpExpr> broadcast_div_op_;
 };
+
 class Atan2Functor : public BinaryFloatFunctor {
  public:
   Atan2Functor() {
     op_ = CHECK_JUST(one::OpBuilder("atan2").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    const int64_t x_element = x->nelement();
+    const int64_t y_element = y->nelement();
+    CHECK_GT_OR_RETURN(x_element, 0)
+        << Error::RuntimeError() << "the size of input should be > 0, but got " << x_element;
+    CHECK_GT_OR_RETURN(y_element, 0)
+        << Error::RuntimeError() << "the size of input should be > 0, but got " << y_element;
+
+    if (x_element != 1 && y_element != 1) {
+      return BinaryFloatFunctor::operator()(x, y);
+    }
+
+    auto broad_x_ = x;
+    auto broad_y_ = y;
+    if (x_element == 1) {
+      broad_x_ = JUST(functional::Mul(JUST(functional::OnesLike(y)), x));
+    } else if (y_element == 1) {
+      broad_y_ = JUST(functional::Mul(JUST(functional::OnesLike(x)), y));
+    } else {
+      return Error::RuntimeError() << "the size of inputs should be > 0";
+    }
+
+    return BinaryFloatFunctor::operator()(broad_x_, broad_y_);
   }
 };
 
