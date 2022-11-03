@@ -51,9 +51,13 @@ LauncherContext::LauncherContext(user_op::KernelComputeContext* compute_context,
           index = kernel_vec_.size();
 
           auto reg_ctx = reg_ctx_vec_[GetOpIndex(&op, 0)];
-          auto kernel = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-                                       reg_ctx->GetOp()->getName().stripDialect().str(), *reg_ctx))
-                            ->create_fn();
+          auto template_kernel =
+              CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
+                  reg_ctx->GetOp()->getName().stripDialect().str(), *reg_ctx));
+          if(template_kernel->infer_tmp_size_fn){
+
+          }
+          auto kernel = template_kernel->create_fn();
           kernel_vec_.push_back(kernel);
           op.setAttr("index", mlir::IntegerAttr::get(mlir::IntegerType::get(context, 32), index));
         })

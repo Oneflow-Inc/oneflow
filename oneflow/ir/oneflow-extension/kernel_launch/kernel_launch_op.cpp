@@ -65,7 +65,7 @@ Maybe<void> KernelLaunchOp::GetSbp(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> KernelLaunchOp::InferDataType(user_op::InferContext* ctx) {
-  return ir::jit::SetTensorDateType(ctx);
+  return ir::jit::SetTensorDataType(ctx);
 }
 
 namespace {
