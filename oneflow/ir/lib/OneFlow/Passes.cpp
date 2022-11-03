@@ -73,6 +73,7 @@ limitations under the License.
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -661,14 +662,19 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
     auto op_new = rewriter.create<oneflow::VariableOp>(op->getLoc(), op.output().getType(),
                                                        ValueRange(), attrs);
     const std::string tensor_name = op.op_nameAttr().str();
-    const auto data_type = GetDataTypeFromMLIRDataType(op.data_typeAttr().getValue());
+    const auto data_type = support::FromMLIRAttrToOFDataType(op.data_typeAttr());
+    if (failed(data_type)) {
+      op0->emitError(::llvm::formatv("unsupported data type: {0}",
+                                     ConvertToString(op.data_typeAttr().getValue())));
+      return ::mlir::failure();
+    }
     CHECK_JUST(::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Set(
         tensor_name,  // tensor_name can't be replaced by op.op_nameAttr().str() directly when
                       // compiling with gcc and I has no idea why.
                       // But it works when compiling with clang.
                       // Maybe temporary objects would be released earlier when using gcc.
         support::DenseElementsAttrToTensor(tensor_attr, op.device_tagAttr(), op.device_nameAttr()),
-        CHECK_JUST(::oneflow::DType::Get(data_type))));
+        CHECK_JUST(::oneflow::DType::Get(data_type.getValue()))));
     // replaceOp may deallocate `op0` (and also `op`), so we should not use `op` after this call.
     rewriter.replaceOp(op0, op_new->getResults());
     return ::mlir::success();

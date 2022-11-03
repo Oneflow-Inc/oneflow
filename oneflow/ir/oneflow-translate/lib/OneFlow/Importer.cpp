@@ -29,6 +29,7 @@ limitations under the License.
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/MLIROneFlowTranslation.h"
+#include "OneFlow/OneFlowSupport.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Attributes.h"
@@ -589,35 +590,6 @@ LogicalResult ConvertUserOpOutputs(Operation* op, StringRef op_name,
   return success();
 }
 
-LogicalResult ConvertDT(::mlir::oneflow::DataType data_type_mlir, ::oneflow::DataType& data_type) {
-  switch (data_type_mlir) {
-    case oneflow::DataType::DT_InvalidDataType:
-      data_type = ::oneflow::DataType::kInvalidDataType;
-      break;
-#define DEFINE_ONE_CASE(datatype) \
-  case oneflow::DataType::DT_##datatype: data_type = ::oneflow::DataType::k##datatype; break;
-      DEFINE_ONE_CASE(Char)
-      DEFINE_ONE_CASE(Float)
-      DEFINE_ONE_CASE(Double)
-      DEFINE_ONE_CASE(Int8)
-      DEFINE_ONE_CASE(Int32)
-      DEFINE_ONE_CASE(Int64)
-      DEFINE_ONE_CASE(UInt8)
-      DEFINE_ONE_CASE(OFRecord)
-      DEFINE_ONE_CASE(Float16)
-      DEFINE_ONE_CASE(TensorBuffer)
-      DEFINE_ONE_CASE(Bool)
-#undef DEFINE_ONE_CASE
-    default: return failure();
-  }
-  return success();
-}
-
-LogicalResult ConvertDTFromAttr(Attribute attr, ::oneflow::DataType& data_type) {
-  auto dt_attr = attr.dyn_cast<mlir::oneflow::DataTypeAttr>();
-  return ConvertDT(dt_attr.getValue(), data_type);
-}
-
 LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf) {
   auto user_conf = op_conf.mutable_user_conf();
   std::string op_type_name = GetOpTypeName(op);
@@ -676,9 +648,9 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::Operat
       } else if (attr_type == ::oneflow::kAtStride) {
         WriteAttrToStride(attr, user_attr.mutable_at_stride());
       } else if (attr_type == ::oneflow::kAtDataType) {
-        ::oneflow::DataType dt = ::oneflow::kInvalidDataType;
-        if (succeeded(ConvertDTFromAttr(attr, dt))) {
-          user_attr.set_at_data_type(dt);
+        const auto dt = support::FromMLIRAttrToOFDataType(attr);
+        if (succeeded(dt)) {
+          user_attr.set_at_data_type(dt.getValue());
         } else {
           op->emitError() << "fail to convert op attr to data type, key: " + id.str();
           return failure();
@@ -704,9 +676,9 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::Operat
         }
       } else if (attr_type == ::oneflow::kAtListDataType) {
         for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
-          ::oneflow::DataType dt = ::oneflow::kInvalidDataType;
-          if (succeeded(ConvertDTFromAttr(v, dt))) {
-            user_attr.mutable_at_list_data_type()->add_val(dt);
+          const auto dt = support::FromMLIRAttrToOFDataType(attr);
+          if (succeeded(dt)) {
+            user_attr.mutable_at_list_data_type()->add_val(dt.getValue());
           } else {
             op->emitError() << "fail to convert op attr to data type, key: " + id.str();
             return failure();
@@ -781,11 +753,11 @@ LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_c
   }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
-    ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
     if (auto dt_mlir = op.data_type()) {
-      if (failed(ConvertDT(dt_mlir.getValue(), dt))) { return failure(); }
+      const auto dt = support::FromMLIRDataTypeToOFDataType(dt_mlir.getValue());
+      if (failed(dt)) { return failure(); }
+      var_op_conf->set_data_type(dt.getValue());
     }
-    var_op_conf->set_data_type(dt);
   }
 
   if (op->hasAttr("model_name")) { var_op_conf->set_model_name(op.model_name().str()); }
@@ -851,11 +823,11 @@ LogicalResult ConvertInputOpConf(InputOp op, ::oneflow::OperatorConf* op_conf) {
   }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
-    ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
     if (auto dt_mlir = op.data_type()) {
-      if (failed(ConvertDT(dt_mlir.getValue(), dt))) { return failure(); }
+      const auto dt = support::FromMLIRDataTypeToOFDataType(dt_mlir.getValue());
+      if (failed(dt)) { return failure(); }
+      input_op_conf->mutable_blob_conf()->set_data_type(dt.getValue());
     }
-    input_op_conf->mutable_blob_conf()->set_data_type(dt);
   }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getIsDynamicAttrName())) {
@@ -897,11 +869,11 @@ LogicalResult ConvertOutputOpConf(OutputOp op, ::oneflow::OperatorConf* op_conf)
   }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getDataTypeAttrName())) {
-    ::oneflow::DataType dt = ::oneflow::DataType::kInvalidDataType;
     if (auto dt_mlir = op.data_type()) {
-      if (failed(ConvertDT(dt_mlir.getValue(), dt))) { return failure(); }
+      const auto dt = support::FromMLIRDataTypeToOFDataType(dt_mlir.getValue());
+      if (failed(dt)) { return failure(); }
+      output_op_conf->mutable_blob_conf()->set_data_type(dt.getValue());
     }
-    output_op_conf->mutable_blob_conf()->set_data_type(dt);
   }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getIsDynamicAttrName())) {
