@@ -680,18 +680,21 @@ llvm::SmallVector<Value, 4> GroupNormOp::NchwToNhwc(llvm::SmallVector<Value, 4> 
   auto group_norm_op = *this;
   SmallVector<Value, 4> operands;
   operands.push_back(value[0]);
-  if (this->affine().bool()) {
-    operands.push_back(this->gamma());
+  if (this->affine()) {
     operands.push_back(this->beta());
+    operands.push_back(this->gamma());
   }
   NamedAttrList attributes = group_norm_op->getAttrs();
   attributes.set(group_norm_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
-  auto res = rewriter
-                 .create<oneflow::GroupNormOp>(group_norm_op.getLoc(),
-                                               getNHWCResultTypes(group_norm_op), value, attributes)
-                 ->getResults();
+  auto res =
+      rewriter
+          .create<oneflow::GroupNormOp>(group_norm_op.getLoc(), getNHWCResultTypes(group_norm_op),
+                                        operands, attributes)
+          ->getResults();
   llvm::SmallVector<Value, 4> results;
   results.push_back(res[0]);
+  results.push_back(res[1]);
+  results.push_back(res[2]);
   return results;
 }
 
