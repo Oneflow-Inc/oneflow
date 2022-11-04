@@ -327,7 +327,7 @@ std::string GetErrorString(const std::shared_ptr<StackedError>& error) {
 
 void ThrowError(const std::shared_ptr<StackedError>& error) {
   std::string error_str;
-  fmt::format_to(std::back_inserter(error_str), "{} {}\n",
+  fmt::format_to(std::back_inserter(error_str), "{} \"{}\"\n",
                  fmt::styled("Error:", fmt::emphasis::bold | fmt::fg(fmt::color::red)),
                  GetErrorString(error));
   // Append foreign stack trace (e.g. Python stack trace) when it is available.

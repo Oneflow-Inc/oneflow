@@ -33,57 +33,59 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-class PyFrame final : public Frame {
+namespace {
+std::string RawPyUnicodeToStdString(const PyObject* py_str) {
+  return PyBytes_AsString(PyUnicode_AsEncodedString(const_cast<PyObject*>(py_str), "utf-8", "~E~"));
+}
+static constexpr auto* PyUnicodeToStdString =
+    DECORATE(&RawPyUnicodeToStdString, ThreadLocalCachedCopiable);
+}  // namespace
+
+class PyFrame final
+    : public Frame,
+      public intrusive::EnableObjectPool<PyFrame, intrusive::kThreadUnsafeAndDisableDestruct> {
  public:
-  PyFrame(PyCodeObject* code, int lineno, std::shared_ptr<PyFrame> back)
-      : filename(code->co_filename),
-        funcname(code->co_name),
-        lineno(lineno),
-        back(std::move(back)) {
-    py::gil_scoped_acquire acquire;
-    Py_INCREF(filename);
-    Py_INCREF(funcname);
+  PyFrame() : EnableObjectPool(), lineno(0) {}
+  void __Init__(PyCodeObject* code, int lineno, intrusive::shared_ptr<PyFrame> back) {
+    this->filename = PyUnicodeToStdString(code->co_filename);
+    this->funcname = PyUnicodeToStdString(code->co_name);
+    this->lineno = lineno;
+    this->back = std::move(back);
   }
   OF_DISALLOW_COPY_AND_MOVE(PyFrame);
-  ~PyFrame() {
-    py::gil_scoped_acquire acquire;
-    Py_DECREF(filename);
-    Py_DECREF(funcname);
-  }
+  ~PyFrame() = default;
 
-  PyObject* const filename;
-  PyObject* const funcname;
-  const int lineno;
-  const std::shared_ptr<PyFrame> back;
+  std::string filename;
+  std::string funcname;
+  int lineno;
+  intrusive::shared_ptr<PyFrame> back;
 };
 
 class PyStackGetter final : public ForeignStackGetter {
  public:
+  PyStackGetter() {
+    auto* frame = PyEval_GetFrame();
+    while (frame->f_back != nullptr) { frame = frame->f_back; }
+    current_frame_ = object_pool_.make_shared(frame->f_code, 0, nullptr);
+  }
   // indended to be called in main thread.
-  std::shared_ptr<Frame> GetCurrentFrame() const override {
-    if (IsShuttingDown()) { return nullptr; }
-    py::gil_scoped_acquire acquire;
-    // See `EvalFrameAndRecordParentFrame` for documentation.
-    PyFrameObject* frame = PyEval_GetFrame();
-    auto top_frame = std::make_shared<PyFrame>(frame->f_code, PyFrame_GetLineNumber(frame),
-                                               current_parent_frame_);
-    return top_frame;
+  intrusive::shared_ptr<Frame> GetCurrentFrame() const override {
+    if (IsShuttingDown() || !current_frame_) { return nullptr; }
+    // See `RecordAndEvalFrame` for documentation.
+    current_frame_->lineno = PyFrame_GetLineNumber(PyEval_GetFrame());
+    return intrusive::shared_ptr<Frame>(current_frame_.get());
   }
 
-  std::string GetFormattedStack(std::shared_ptr<const Frame> frame) const override {
+  std::string GetFormattedStack(intrusive::shared_ptr<Frame> frame) const override {
     if (frame == nullptr) { return "  <unknown>\n"; }
     std::string buffer;
-    auto py_frame = std::dynamic_pointer_cast<const PyFrame>(frame);
+    const auto* py_frame = dynamic_cast<const PyFrame*>(frame.get());
     py::gil_scoped_acquire acquire;
     while (py_frame != nullptr) {
       const auto& lineno = py_frame->lineno;
-      const char* filename =
-          PyBytes_AsString(PyUnicode_AsEncodedString(py_frame->filename, "utf-8", "~E~"));
-      const char* funcname =
-          PyBytes_AsString(PyUnicode_AsEncodedString(py_frame->funcname, "utf-8", "~E~"));
       const std::string line_text = [&]() -> std::string {
         std::string line_text;
-        std::ifstream ifs(filename);
+        std::ifstream ifs(py_frame->filename);
         if (!ifs.is_open()) { return "<unknown>"; }
         for (int j = 0; j < lineno; ++j) { std::getline(ifs, line_text); }
         line_text.erase(line_text.find_last_not_of(' ') + 1);  // suffixing spaces
@@ -92,29 +94,28 @@ class PyStackGetter final : public ForeignStackGetter {
       }();
       // immitate python's stack trace format
       fmt::format_to(std::back_inserter(buffer), "  File \"{}\", line {}, in {}\n    {}\n",
-                     filename, lineno, funcname, line_text);
-      py_frame = py_frame->back;
+                     py_frame->filename, lineno, py_frame->funcname, line_text);
+      py_frame = py_frame->back.get();
     }
     return buffer;
   };
 
 #if PY_VERSION_HEX >= 0x03090000
-  PyObject* EvalFrameAndRecordParentFrame(PyThreadState* tstate, PyFrameObject* frame,
+  PyObject* RecordAndEvalFrame(PyThreadState* tstate, PyFrameObject* frame,
 #else
-  PyObject* EvalFrameAndRecordParentFrame(PyFrameObject* frame,
+  PyObject* RecordAndEvalFrame(PyFrameObject* frame,
 #endif
-                                          int throw_flag) {
+                               int throw_flag) {
     // Example:
     // >> def f(): # Line 1
     // >>   pass   # Line 2
     // >> f()      # Line 3
     //
-    // When we call f(), `EvalFrameAndRecordParentFrame` is triggered and the `frame`
+    // When we call f(), `RecordAndEvalFrame` is triggered and the `frame`
     // argument is the frame of function `f`, which is Line 1 at that time. It is not
-    // useful to us.
-    // The parent frame of `frame` is Line 3, which is useful to us, so we push the
-    // parent frame of `frame` here, and get the frame of `f` in `GetCurrentFrame`.
-    PushParentFrame(frame);
+    // useful to us, but we can adjust it in `GetCurrentFrame` method.
+    //
+    PushFrame(frame);
 #if PY_VERSION_HEX >= 0x03090000
     if (tstate == NULL) { tstate = PyThreadState_GET(); }
     PyObject* ret = _PyEval_EvalFrameDefault(tstate, frame, throw_flag);
@@ -126,39 +127,39 @@ class PyStackGetter final : public ForeignStackGetter {
   }
 
  private:
-  std::shared_ptr<PyFrame> current_parent_frame_;
+  intrusive::shared_ptr<PyFrame> current_frame_;
 
-  void PushParentFrame(PyFrameObject* frame) {
-    // filter out Python functions like _bootstrap, _shutdown which don't have f_back
-    if (PyFrameObject* f = frame->f_back) {
-      current_parent_frame_ =
-          std::make_shared<PyFrame>(f->f_code, PyFrame_GetLineNumber(f), current_parent_frame_);
-    }
+  intrusive::ObjectPool<PyFrame, intrusive::kThreadUnsafeAndDisableDestruct> object_pool_;
+
+  void PushFrame(PyFrameObject* frame) {
+    if (auto* f = frame->f_back) { current_frame_->lineno = PyFrame_GetLineNumber(f); }
+    current_frame_ = object_pool_.make_shared(frame->f_code, 0, current_frame_);
   }
   void PopFrame() {
-    if (current_parent_frame_ != nullptr) { current_parent_frame_ = current_parent_frame_->back; }
+    CHECK_NOTNULL(current_frame_);
+    current_frame_ = current_frame_->back;
   }
 };
 
 #if PY_VERSION_HEX >= 0x03090000
-PyObject* EvalFrameAndRecordParentFrame(PyThreadState* tstate, PyFrameObject* frame,
+PyObject* RecordAndEvalFrame(PyThreadState* tstate, PyFrameObject* frame,
 #else
-PyObject* EvalFrameAndRecordParentFrame(PyFrameObject* frame,
+PyObject* RecordAndEvalFrame(PyFrameObject* frame,
 #endif
-                                        int throw_flag) {
+                             int throw_flag) {
   using namespace oneflow;
   return dynamic_cast<PyStackGetter*>(Singleton<ForeignStackGetter>::Get())
 #if PY_VERSION_HEX >= 0x03090000
-      ->EvalFrameAndRecordParentFrame(tstate, frame, throw_flag);
+      ->RecordAndEvalFrame(tstate, frame, throw_flag);
 #else
-      ->EvalFrameAndRecordParentFrame(frame, throw_flag);
+      ->RecordAndEvalFrame(frame, throw_flag);
 #endif
 }
 
 void RegisterPyStackGetter() {
   Singleton<ForeignStackGetter>::Delete();
   Singleton<ForeignStackGetter>::SetAllocated(new PyStackGetter());
-  EnableCustomEvalFrameForCurrentThread(&EvalFrameAndRecordParentFrame);
+  EnableCustomEvalFrameForCurrentThread(&RecordAndEvalFrame);
 }
 
 }  // namespace oneflow
