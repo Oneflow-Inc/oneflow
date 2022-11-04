@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import unittest
 import numpy as np
 from collections import OrderedDict
@@ -24,48 +23,57 @@ import oneflow.unittest
 from oneflow.test_utils.test_util import GenArgList
 from oneflow.test_utils.automated_test_util import *
 
+
 class Geglu(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, x:flow.Tensor, w:flow.Tensor, b:flow.Tensor) -> flow.Tensor:
+    def forward(self, x: flow.Tensor, w: flow.Tensor, b: flow.Tensor) -> flow.Tensor:
         # matmul
-        temp_matmul = flow._C.matmul(input=x, other=w, transpose_a=False, transpose_b=True)
-        
+        temp_matmul = flow._C.matmul(
+            input=x, other=w, transpose_a=False, transpose_b=True
+        )
+
         # add bias
         temp_add_bias = flow._C.add(input=temp_matmul, other=b)
-        
+
         # chunk
         hidden_state, gate = temp_add_bias.chunk(2, dim=-1)
 
         # gelu and element-wise product
-        return hidden_state*flow.gelu(gate)
+        return hidden_state * flow.gelu(gate)
 
-def _test_fused_geglu(test_case, params:dict):
+
+def _test_fused_geglu(test_case, params: dict):
     # config test data
-    m = params['m']
-    n = params['n']
-    k = params['k']
+    m = params["m"]
+    n = params["n"]
+    k = params["k"]
     input = np.random.randn(m, k)
-    weight = np.random.randn(k, n*2)
+    weight = np.random.randn(k, n * 2)
     weight_t = np.transpose(weight)
-    bias = np.random.randn(n*2)
+    bias = np.random.randn(n * 2)
 
     # test: fused op
     flow_input_tensor = flow.Tensor(input).to("cuda")
     flow_weight_t_tensor = flow.Tensor(weight_t).to("cuda")
     flow_bias_tensor = flow.Tensor(bias).to("cuda")
-    fused_out = flow._C.fused_geglu(flow_input_tensor, flow_weight_t_tensor, flow_bias_tensor)
-    
+    fused_out = flow._C.fused_geglu(
+        flow_input_tensor, flow_weight_t_tensor, flow_bias_tensor
+    )
+
     # test: naive result
     stack_bias = np.stack((bias,) * m, axis=0)
     flow_stack_bias_tensor = flow.Tensor(stack_bias).to("cuda")
     flow_module = Geglu()
-    origin_out = flow_module.forward(x=flow_input_tensor, w=flow_weight_t_tensor, b=flow_stack_bias_tensor)
+    origin_out = flow_module.forward(
+        x=flow_input_tensor, w=flow_weight_t_tensor, b=flow_stack_bias_tensor
+    )
 
     test_case.assertTrue(
         np.allclose(fused_out.numpy(), origin_out.numpy(), atol=1e-4, rtol=1e-4)
     )
+
 
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
@@ -74,12 +82,13 @@ class TestFusedGeglu(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_fused_geglu]
         arg_dict["params"] = [
-            {'m':16, 'k':10, 'n':20},
-            {'m':40, 'k':20, 'n':60},
+            {"m": 16, "k": 10, "n": 20},
+            {"m": 40, "k": 20, "n": 60},
         ]
 
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()
