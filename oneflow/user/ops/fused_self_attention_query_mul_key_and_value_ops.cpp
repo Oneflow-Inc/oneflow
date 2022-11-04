@@ -65,8 +65,13 @@ namespace oneflow {
 }
 /*static*/ auto FusedSelfAttentionQueryMulKeyAndValueOp::GetSbp(user_op::SbpContext* ctx)
     -> Maybe<void> {
-  ctx->NewBuilder().Split(user_op::OpArg("hidden_states", 0), 1).Split(ctx->outputs(), 0).Build();
-  ctx->NewBuilder().Split(user_op::OpArg("hidden_states", 0), 2).Split(ctx->outputs(), 1).Build();
+  std::vector<user_op::OpArg> output_args = {user_op::OpArg("query_mul_key", 0),
+                                             user_op::OpArg("value", 0)};
+  if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    output_args.emplace_back("_add_to_output", 0);
+  }
+  ctx->NewBuilder().Split(user_op::OpArg("hidden_states", 0), 1).Split(output_args, 0).Build();
+  ctx->NewBuilder().Split(user_op::OpArg("hidden_states", 0), 2).Split(output_args, 1).Build();
   return Maybe<void>::Ok();
 }
 
