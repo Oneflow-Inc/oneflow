@@ -664,6 +664,10 @@
   signature: "Tensor (Tensor input, Int64 dim=-1) => Glu"
   bind_python: True
 
+- name: "fused_geglu"
+  signature: "Tensor (Tensor in, Tensor w, Tensor b) => FusedGeglu"
+  bind_python: True
+
 - name: "sigmoid"
   signature: "Tensor (Tensor x) => Sigmoid"
   bind_python: True
@@ -695,6 +699,10 @@
 - name: "softmax_grad"
   signature: "Tensor (Tensor dy, Tensor y) => SoftmaxGrad"
   bind_python: False
+
+- name: "gumbel_softmax"
+  signature: "Tensor (Tensor x, Double tau=1., Int64 dim=None, Bool hard=False, Generator generator=None) => GumbelSoftmax"
+  bind_python: True
 
 - name: "log_softmax"
   signature: "Tensor (Tensor x, Int64 dim=None) => LogSoftmax"
