@@ -183,7 +183,8 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "ones_like",
                                "pinned_identity",
                                "to_contiguous",
-                               "copy"};
+                               "copy",
+                               "upsample_nearest_2d"};
 
   return clear_list;
 }

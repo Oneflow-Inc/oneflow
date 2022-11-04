@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/cuda/layer_norm.cuh"
 #include <cub/cub.cuh>
+#include <cutlass/fast_math.h>
 
 namespace oneflow {
 
@@ -119,14 +120,17 @@ struct ChannelsLastStore {
     cuda::layer_norm::Pack<DST, PackSize> y_pack;
     cuda::layer_norm::Pack<DST, PackSize> gamma_pack;
     cuda::layer_norm::Pack<DST, PackSize> beta_pack;
-    const int32_t spatial_idx = col / c1;
-    const int32_t c1_idx = col - spatial_idx * c1;
-    const int32_t batch_idx = row / c0;
-    const int32_t c0_idx = row - batch_idx * c0;
+    int32_t spatial_idx;
+    int32_t c1_idx;
+    c1(spatial_idx, c1_idx, col);
+    int32_t batch_idx;
+    int32_t c0_idx;
+    c0(batch_idx, c0_idx, row);
     const int32_t y_offset =
-        (batch_idx * c0 * c1 * spatial_size + spatial_idx * c0 * c1 + c0_idx * c1 + c1_idx)
+        (batch_idx * c0.divisor * c1.divisor * spatial_size + spatial_idx * c0.divisor * c1.divisor
+         + c0_idx * c1.divisor + c1_idx)
         / PackSize;
-    const int32_t gamma_beta_offset = (c0_idx * c1 + c1_idx) / PackSize;
+    const int32_t gamma_beta_offset = (c0_idx * c1.divisor + c1_idx) / PackSize;
 
     if (affine) {
       gamma_pack.storage =
@@ -148,13 +152,13 @@ struct ChannelsLastStore {
     }
     *(reinterpret_cast<cuda::layer_norm::PackType<DST, PackSize>*>(y) + y_offset) = y_pack.storage;
   }
-  bool CanPackAs(size_t pack_size) { return (c1 % pack_size) == 0; }
+  bool CanPackAs(size_t pack_size) { return (c1.divisor % pack_size) == 0; }
   DST* y;
   const DST* gamma;
   const DST* beta;
   int32_t spatial_size;
-  int32_t c0;
-  int32_t c1;
+  cutlass::FastDivmod c0;
+  cutlass::FastDivmod c1;
 };
 
 template<typename SRC, typename DST>
@@ -163,22 +167,26 @@ struct ChannelsLastLoad {
       : src(src), spatial_size(spatial_size), c0(num_groups), c1(channel_size / num_groups) {}
   template<int N>
   __device__ void load(DST* dst, int32_t row, int32_t col) const {
-    const int32_t spatial_idx = col / c1;
-    const int32_t c1_idx = col - spatial_idx * c1;
-    const int32_t batch_idx = row / c0;
-    const int32_t c0_idx = row - batch_idx * c0;
+    int32_t spatial_idx;
+    int32_t c1_idx;
+    c1(spatial_idx, c1_idx, col);
+    int32_t batch_idx;
+    int32_t c0_idx;
+    c0(batch_idx, c0_idx, row);
     cuda::layer_norm::Pack<SRC, N> pack;
-    const int32_t offset =
-        (batch_idx * c0 * c1 * spatial_size + spatial_idx * c0 * c1 + c0_idx * c1 + c1_idx) / N;
+    const int32_t offset = (batch_idx * c0.divisor * c1.divisor * spatial_size
+                            + spatial_idx * c0.divisor * c1.divisor + c0_idx * c1.divisor + c1_idx)
+                           / N;
 
     pack.storage = *(reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(src) + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) { dst[i] = static_cast<DST>(pack.elem[i]); }
   }
+  bool CanPackAs(size_t pack_size) { return (c1.divisor % pack_size) == 0; }
   const SRC* src;
   int32_t spatial_size;
-  int32_t c0;
-  int32_t c1;
+  cutlass::FastDivmod c0;
+  cutlass::FastDivmod c1;
 };
 
 template<typename T, bool affine>
