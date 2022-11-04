@@ -33,15 +33,15 @@ namespace rms_norm {
 
 template<typename SRC, typename DST, bool affine>
 struct AffineStore {
-  AffineStore(DST* y, int64_t row_size, const DST* weight)
-      : y(y), weight(weight), row_size(row_size) {}
+  AffineStore(DST* dst, const DST* weight, int32_t row_size)
+      : dst(dst), weight(weight), row_size(row_size) {}
 
   template<int N>
-  __device__ void store(const SRC* src, int64_t row, int64_t col) {
-    layer_norm::Pack<DST, N> y_pack;
+  __device__ void store(const SRC* src, int32_t row, int32_t col) {
+    layer_norm::Pack<DST, N> dst_pack;
     layer_norm::Pack<DST, N> weight_pack;
-    const int64_t offset = (row * row_size + col) / N;
-    const int64_t weight_offset = col / N;
+    const int32_t offset = (row * row_size + col) / N;
+    const int32_t weight_offset = col / N;
     if (affine) {
       weight_pack.storage =
           *(reinterpret_cast<const layer_norm::PackType<DST, N>*>(weight) + weight_offset);
@@ -49,76 +49,48 @@ struct AffineStore {
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       if (affine) {
-        y_pack.elem[i] = static_cast<DST>(src[i]) * weight_pack.elem[i];
+        dst_pack.elem[i] = static_cast<DST>(src[i]) * weight_pack.elem[i];
       } else {
-        y_pack.elem[i] = static_cast<DST>(src[i]);
+        dst_pack.elem[i] = static_cast<DST>(src[i]);
       }
     }
-    *(reinterpret_cast<layer_norm::PackType<DST, N>*>(y) + offset) = y_pack.storage;
+    *(reinterpret_cast<layer_norm::PackType<DST, N>*>(dst) + offset) = dst_pack.storage;
   }
 
-  DST* y;
+  DST* dst;
   const DST* weight;
-  int64_t row_size;
+  int32_t row_size;
 };
 
 template<typename SRC, typename DST, bool affine>
-struct DyAffineLoad {
-  DyAffineLoad(const SRC* dy, const SRC* weight, int64_t row_size)
-      : dy(dy), weight(weight), row_size(row_size) {}
+struct AffineLoad {
+  AffineLoad(const SRC* src, const SRC* weight, int32_t row_size)
+      : src(src), weight(weight), row_size(row_size) {}
 
   template<int N>
-  __device__ void load(DST* dst, int64_t row, int64_t col) const {
-    layer_norm::Pack<SRC, N> dy_pack;
+  __device__ void load(DST* dst, int32_t row, int32_t col) const {
+    layer_norm::Pack<SRC, N> src_pack;
     layer_norm::Pack<SRC, N> weight_pack;
-    const int64_t offset = (row * row_size + col) / N;
-    dy_pack.storage = *(reinterpret_cast<const layer_norm::PackType<SRC, N>*>(dy) + offset);
+    const int32_t offset = (row * row_size + col) / N;
+    src_pack.storage = *(reinterpret_cast<const layer_norm::PackType<SRC, N>*>(src) + offset);
     if (affine) {
-      const int64_t weight_offset = col / N;
+      const int32_t weight_offset = col / N;
       weight_pack.storage =
           *(reinterpret_cast<const layer_norm::PackType<SRC, N>*>(weight) + weight_offset);
     }
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       if (affine) {
-        dst[i] = static_cast<DST>(dy_pack.elem[i] * weight_pack.elem[i]);
+        dst[i] = static_cast<DST>(src_pack.elem[i] * weight_pack.elem[i]);
       } else {
-        dst[i] = static_cast<DST>(dy_pack.elem[i]);
+        dst[i] = static_cast<DST>(src_pack.elem[i]);
       }
     }
   }
-  const SRC* dy;
+  const SRC* src;
   const SRC* weight;
-  int64_t row_size;
+  int32_t row_size;
 };
-
-// template<typename SRC, typename DST, bool do_add>
-// struct AddStore {
-//   AddStore(const DST* add_to_output, DST* dst, int64_t row_size)
-//       : add_to_output(add_to_output), dst(dst), row_size(row_size) {}
-//   template<int N>
-//   __device__ void store(const SRC* src, int64_t row, int64_t col) {
-//     cuda::layer_norm::Pack<DST, N> add_to_output_pack;
-//     cuda::layer_norm::Pack<DST, N> dst_pack;
-//     const int64_t offset = (row * row_size + col) / N;
-//     if (do_add) {
-//       add_to_output_pack.storage =
-//           *(reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(add_to_output) + offset);
-//     }
-// #pragma unroll
-//     for (int i = 0; i < N; ++i) {
-//       if (do_add) {
-//         dst_pack.elem[i] = static_cast<DST>(src[i]) + add_to_output_pack.elem[i];
-//       } else {
-//         dst_pack.elem[i] = static_cast<DST>(src[i]);
-//       }
-//     }
-//     *(reinterpret_cast<cuda::layer_norm::PackType<DST, N>*>(dst) + offset) = dst_pack.storage;
-//   }
-//   const DST* add_to_output;
-//   DST* dst;
-//   int64_t row_size;
-// };
 
 template<typename T, bool affine>
 void RmsNormForwardGpu(ep::Stream* stream, const int64_t nrows, const int64_t ncols,
@@ -126,7 +98,7 @@ void RmsNormForwardGpu(ep::Stream* stream, const int64_t nrows, const int64_t nc
                        user_op::Tensor* inv_rms) {
   using ComputeType = typename layer_norm::DefaultComputeType<T>::type;
   layer_norm::DirectLoad<T, ComputeType> load(x_dptr, ncols);
-  AffineStore<ComputeType, T, affine> store(y_dptr, ncols, w_dptr);
+  AffineStore<ComputeType, T, affine> store(y_dptr, w_dptr, ncols);
   DispatchRmsNorm<decltype(load), decltype(store), ComputeType>(
       stream->As<ep::CudaStream>()->cuda_stream(), load, store, nrows, ncols, eps,
       inv_rms->mut_dptr<ComputeType>());
@@ -215,12 +187,12 @@ void RmsNormBackwardGpu(ep::Stream* stream, const int64_t nrows, const int64_t n
                         const T* dy_dptr, const T* x_dptr, const user_op::Tensor* inv_rms,
                         const T* weight_dptr, T* dx_ptr) {
   using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
-  layer_norm::DirectLoad<T, ComputeType> x_load(x_dptr, ncols);
-  DyAffineLoad<T, ComputeType, affine> dy_load(dy_dptr, weight_dptr, ncols);
+  layer_norm::DirectLoad<T, ComputeType> load_x(x_dptr, ncols);
+  AffineLoad<T, ComputeType, affine> load_dy(dy_dptr, weight_dptr, ncols);
   layer_norm::DirectStore<ComputeType, T> store(dx_ptr, ncols);
-  OF_CUDA_CHECK((rms_norm::DispatchRmsNormGrad<decltype(x_load), decltype(dy_load), decltype(store),
+  OF_CUDA_CHECK((rms_norm::DispatchRmsNormGrad<decltype(load_x), decltype(load_dy), decltype(store),
                                                ComputeType>(
-      stream->As<ep::CudaStream>()->cuda_stream(), nrows, ncols, x_load, dy_load,
+      stream->As<ep::CudaStream>()->cuda_stream(), nrows, ncols, load_x, load_dy,
       inv_rms->dptr<ComputeType>(), store)));
 }
 
