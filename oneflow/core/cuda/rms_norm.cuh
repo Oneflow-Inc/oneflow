@@ -30,6 +30,12 @@ inline __device__ void RootSum(const T val, T* root_sum) {
   *root_sum += val * val;
 }
 
+template<typename T>
+__inline__ __device__ T WarpReduceSum(T val) {
+  for (int mask = 16; mask > 0; mask /= 2) { val += __shfl_down_sync(0xffffffff, val, mask); }
+  return val;
+}
+
 // template<typename T>
 // __inline__ __device__ void WelfordBlockAllReduce(T thread_mean, T thread_m2, T thread_count,
 //                                                  T* result_mean, T* result_m2, T* result_count) {
