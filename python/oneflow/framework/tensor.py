@@ -221,10 +221,6 @@ def _argsort(self, dim=-1, descending=None):
     return flow.argsort(self, dim=dim, descending=descending)
 
 
-def _split(self, split_size_or_sections=None, dim=0):
-    return flow._C.split(self, split_size_or_sections, dim)
-
-
 def _uniform(self, a=0, b=1):
     return flow.nn.init.uniform_(self, a, b)
 
@@ -345,10 +341,6 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
         _copy_from_numpy_to_eager_local_tensor(self, other)
 
 
-def _flip(self, dims):
-    return flow.flip(self, dims)
-
-
 def _format(self, format_spec):
     if self.dim() == 0:
         return self.numpy().tolist().__format__(format_spec)
@@ -439,14 +431,10 @@ def _where(self, x=None, y=None):
     return flow.where(self, x, y)
 
 
-def _is_floating_point(self):
-    return flow.is_floating_point(self)
-
-
 def _numpy(self):
     assert (
         not self.is_lazy
-    ), "tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor."
+    ), "tensor.numpy() is not allowed to be called in nn.Graph.build(*args) or be called by lazy tensor."
     if self.dtype == flow.tensor_buffer:
         shapes, dtypes = self._tensor_buffer_shapes_and_dtypes
         tensors = flow.tensor_buffer_to_list_of_tensors(self, shapes, dtypes)
@@ -564,6 +552,10 @@ def _contains(self, element):
     )
 
 
+def _allclose(self, other, atol=1e-08, rtol=1e-05, equal_nan=False):
+    return flow._C.allclose(self, other, atol, rtol, equal_nan)
+
+
 def RegisterMethods():
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
@@ -599,7 +591,6 @@ def RegisterMethods():
     Tensor.argwhere = _argwhere
     Tensor.expand = _expand
     Tensor.expand_as = _expand_as
-    Tensor.flip = _flip
     Tensor.new_empty = _new_empty
     Tensor.new_ones = _new_ones
     Tensor.new_zeros = _new_zeros
@@ -610,7 +601,6 @@ def RegisterMethods():
     Tensor.repeat = _repeat
     Tensor.repeat_interleave = _repeat_interleave
     Tensor.tile = _tile
-    Tensor.split = _split
     Tensor.to = _to
     Tensor.gather = _gather
     Tensor.T = property(_T)
@@ -620,7 +610,6 @@ def RegisterMethods():
     Tensor.sort = _sort
     Tensor.type_as = _type_as
     Tensor.tolist = _tolist
-    Tensor.is_floating_point = _is_floating_point
     Tensor.topk = _topk
     Tensor.nms = _nms
     Tensor.nonzero = _nonzero
@@ -638,6 +627,7 @@ def RegisterMethods():
     Tensor.scatter_ = _scatter_inplace
     Tensor.scatter_add = _scatter_add
     Tensor.scatter_add_ = _scatter_add_inplace
+    Tensor.allclose = _allclose
 
 
 def register_tensor_op(op_name):
