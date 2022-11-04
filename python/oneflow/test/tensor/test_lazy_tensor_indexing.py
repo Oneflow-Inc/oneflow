@@ -263,14 +263,16 @@ def _test_advanced_indexing(test_case, placement, dtype):
             test_case, x[[2, 3, 4]], flow.tensor([4, 4, 4], dtype=dtype)
         )
         #  x[ri([2, 3, 4]),] = 3
-        x = get_graph_output(x, func=lambda x: setitem_and_return(x, [ri([2, 3, 4]), ], 3))
+        x = get_graph_output(
+            x, func=lambda x: setitem_and_return(x, [ri([2, 3, 4]),], 3)
+        )
         _assert_tensor_equal(
             test_case, x[[2, 3, 4]], flow.tensor([3, 3, 3], dtype=dtype),
         )
         #  x[ri([0, 2, 4]),] = _cpu_global_tensor(flow.tensor([5, 4, 3], dtype=dtype))
         value_tensor = _cpu_global_tensor(flow.tensor([5, 4, 3], dtype=dtype))
         x = get_graph_output(
-            x, func=lambda x: setitem_and_return(x, [ri([0, 2, 4]), ], value_tensor)
+            x, func=lambda x: setitem_and_return(x, [ri([0, 2, 4]),], value_tensor)
         )
         _assert_tensor_equal(
             test_case, x[[0, 2, 4]], flow.tensor([5, 4, 3], dtype=dtype),
@@ -305,12 +307,12 @@ def _test_advanced_indexing(test_case, placement, dtype):
     _assert_tensor_equal(
         test_case,
         get_graph_output(reference, func=lambda x: x[ri([0]), ri([0])]),
-        global_broadcast_consec((1,))
+        global_broadcast_consec((1,)),
     )
     _assert_tensor_equal(
         test_case,
         get_graph_output(reference, func=lambda x: x[ri([2]), ri([1])]),
-        global_broadcast_consec((1,), 18)
+        global_broadcast_consec((1,), 18),
     )
     _assert_tensor_equal(
         test_case,
@@ -324,7 +326,9 @@ def _test_advanced_indexing(test_case, placement, dtype):
     )
     _assert_tensor_equal(
         test_case,
-        get_graph_output(reference, func=lambda x: x[ri([0, 0, 1, 1]), ri([0, 1, 0, 0])]),
+        get_graph_output(
+            reference, func=lambda x: x[ri([0, 0, 1, 1]), ri([0, 1, 0, 0])]
+        ),
         flow.tensor([1, 2, 9, 9], dtype=dtype),
     )
 
@@ -353,15 +357,20 @@ def _test_advanced_indexing(test_case, placement, dtype):
 
     # setting values
     #  reference[ri([0]), ri([1])] = -1
-    reference = get_graph_output(reference, func=lambda x: setitem_and_return(x, [ri([0]), ri([1])], -1))
+    reference = get_graph_output(
+        reference, func=lambda x: setitem_and_return(x, [ri([0]), ri([1])], -1)
+    )
     _assert_tensor_equal(
         test_case, reference[ri([0]), ri([1])], flow.tensor([-1], dtype=dtype),
     )
 
-    value_tensor = _cpu_global_tensor(
-        flow.tensor([-1, 2, -4], dtype=dtype)
-    ).to_global(placement, broadcast_for_placement)
-    reference = get_graph_output(reference, func=lambda x: setitem_and_return(x, [ri([0, 1, 2]), ri([0])], value_tensor))
+    value_tensor = _cpu_global_tensor(flow.tensor([-1, 2, -4], dtype=dtype)).to_global(
+        placement, broadcast_for_placement
+    )
+    reference = get_graph_output(
+        reference,
+        func=lambda x: setitem_and_return(x, [ri([0, 1, 2]), ri([0])], value_tensor),
+    )
     _assert_tensor_equal(
         test_case,
         reference[ri([0, 1, 2]), ri([0])],
@@ -371,7 +380,9 @@ def _test_advanced_indexing(test_case, placement, dtype):
     value_tensor = _cpu_global_tensor(
         flow.tensor([[4, 6], [2, 3]], dtype=dtype)
     ).to_global(placement, broadcast_for_placement)
-    reference = get_graph_output(reference, func=lambda x: setitem_and_return(x, [rows, columns], value_tensor))
+    reference = get_graph_output(
+        reference, func=lambda x: setitem_and_return(x, [rows, columns], value_tensor)
+    )
     _assert_tensor_equal(
         test_case, reference[rows, columns], flow.tensor([[4, 6], [2, 3]], dtype=dtype),
     )
@@ -435,36 +446,18 @@ def _test_combined_indexing(test_case, placement, dtype):
         return npt
 
     def assert_get_eq(tensor, indexer):
-        _assert_tensor_equal(test_case, tensor[indexer], get_numpy(tensor, indexer))
+        _assert_tensor_equal(
+            test_case,
+            get_graph_output(tensor, func=lambda x: x[indexer]),
+            get_numpy(tensor, indexer),
+        )
 
     def assert_set_eq(tensor, indexer, val):
         pyt = tensor.clone()
         np_ref = tensor.clone()
-        pyt[indexer] = val
+        pyt = get_graph_output(pyt, func=lambda x: setitem_and_return(x, indexer, val))
         np_ref = flow.tensor(set_numpy(np_ref, indexer, val), dtype=dtype)
         _assert_tensor_equal(test_case, pyt, np_ref)
-
-    def assert_backward_eq(tensor, indexer):
-        # compare gradient between cpu and cuda
-        cpu = (
-            tensor.float()
-            .clone()
-            .detach()
-            .to_global(placement, broadcast_for_placement)
-            .requires_grad_()
-        )
-        outcpu = cpu.clone()[indexer]
-        outcpu.sum().backward()
-        dev = (
-            cpu.detach()
-            .to_global(
-                placement, random_sbp(placement, max_dim=len(tensor.shape)).value()
-            )
-            .requires_grad_(True)
-        )
-        outdev = dev[indexer]
-        outdev.sum().backward()
-        _assert_tensor_equal(test_case, cpu.grad, dev.grad)
 
     def get_set_tensor(indexed, indexer):
         set_size = indexed[indexer].size()
@@ -507,8 +500,6 @@ def _test_combined_indexing(test_case, placement, dtype):
     ]  # TODO: test setitem
     for indexer in get_indices_to_test:
         assert_get_eq(reference, indexer)
-        if placement.type != "cpu":
-            assert_backward_eq(reference, indexer)
 
     # test setitem
     for indexer in indices_to_test:
@@ -567,8 +558,6 @@ def _test_combined_indexing(test_case, placement, dtype):
         assert_get_eq(reference, indexer)
         assert_set_eq(reference, indexer, 212)
         assert_set_eq(reference, indexer, get_set_tensor(reference, indexer))
-        if placement.type != "cpu":
-            assert_backward_eq(reference, indexer)
 
     sbp = random_sbp(placement, max_dim=4).value()
     reference = (
@@ -648,8 +637,6 @@ def _test_combined_indexing(test_case, placement, dtype):
     for indexer in indices_to_test:
         assert_get_eq(reference, indexer)
         assert_set_eq(reference, indexer, 1333)
-        if placement.type != "cpu":
-            assert_backward_eq(reference, indexer)
 
 
 def _test_single_int(test_case, placement):
@@ -941,8 +928,8 @@ class TestGlobalIndexing(flow.unittest.TestCase):
         for placement in all_placement():
             for _ in range(5):
                 #  _test_basic_slice(test_case, placement)
-                _test_advanced_indexing(test_case, placement, dtype=flow.float32)
-                #  _test_combined_indexing(test_case, placement, dtype=flow.float32)
+                #  _test_advanced_indexing(test_case, placement, dtype=flow.float32)
+                _test_combined_indexing(test_case, placement, dtype=flow.float32)
                 #  _test_single_int(test_case, placement)
                 #  _test_multiple_int(test_case, placement)
                 #  _test_none(test_case, placement)
