@@ -62,33 +62,35 @@ struct AffineStore {
   int64_t row_size;
 };
 
-// template<typename SRC, typename DST, bool do_scale>
-// struct ScaleLoad {
-//   ScaleLoad(const SRC* src, const SRC* gamma, int64_t row_size)
-//       : src(src), gamma(gamma), row_size(row_size) {}
-//   template<int N>
-//   __device__ void load(DST* dst, int64_t row, int64_t col) const {
-//     cuda::layer_norm::Pack<SRC, N> src_pack;
-//     cuda::layer_norm::Pack<SRC, N> gamma_pack;
-//     const int64_t offset = (row * row_size + col) / N;
-//     const int64_t gamma_offset = col / N;
-//     src_pack.storage = *(reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(src) +
-//     offset); if (do_scale) {
-//       gamma_pack.storage =
-//           *(reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(gamma) + gamma_offset);
-//     } else {
-// #pragma unroll
-//       for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = static_cast<SRC>(1.f); }
-//     }
-// #pragma unroll
-//     for (int i = 0; i < N; ++i) {
-//       dst[i] = static_cast<DST>(src_pack.elem[i] * gamma_pack.elem[i]);
-//     }
-//   }
-//   const SRC* src;
-//   const SRC* gamma;
-//   int64_t row_size;
-// };
+template<typename SRC, typename DST, bool affine>
+struct DyAffineLoad {
+  DyAffineLoad(const SRC* dy, const SRC* weight, int64_t row_size)
+      : dy(dy), weight(weight), row_size(row_size) {}
+
+  template<int N>
+  __device__ void load(DST* dst, int64_t row, int64_t col) const {
+    layer_norm::Pack<SRC, N> dy_pack;
+    layer_norm::Pack<SRC, N> weight_pack;
+    const int64_t offset = (row * row_size + col) / N;
+    dy_pack.storage = *(reinterpret_cast<const layer_norm::PackType<SRC, N>*>(dy) + offset);
+    if (affine) {
+      const int64_t weight_offset = col / N;
+      weight_pack.storage =
+          *(reinterpret_cast<const layer_norm::PackType<SRC, N>*>(weight) + weight_offset);
+    }
+#pragma unroll
+    for (int i = 0; i < N; ++i) {
+      if (affine) {
+        dst[i] = static_cast<DST>(dy_pack.elem[i] * weight_pack.elem[i]);
+      } else {
+        dst[i] = static_cast<DST>(dy_pack.elem[i]);
+      }
+    }
+  }
+  const SRC* dy;
+  const SRC* weight;
+  int64_t row_size;
+};
 
 // template<typename SRC, typename DST, bool do_add>
 // struct AddStore {
@@ -117,12 +119,6 @@ struct AffineStore {
 //   DST* dst;
 //   int64_t row_size;
 // };
-
-// template<typename T>
-// __inline__ __device__ T WarpReduce(T val) {
-//   for (int mask = 16; mask > 0; mask /= 2) { val += __shfl_down_sync(0xffffffff, val, mask); }
-//   return val;
-// }
 
 template<typename T, bool affine>
 void RmsNormForwardGpu(ep::Stream* stream, const int64_t nrows, const int64_t ncols,
@@ -214,55 +210,32 @@ int GetGirdDimY(const int64_t num_instances, const int64_t norm_size) {
   return std::max(grid_dim_y, 1);
 }
 
-// template<typename T, bool do_scale, bool do_add>
-// void LayerNormBackwardGpu(ep::Stream* stream, const int64_t num_instances, const int64_t
-// norm_size,
-//                           const T* dy_ptr, const T* x_ptr, const user_op::Tensor* mean,
-//                           const user_op::Tensor* inv_variance, const T* gamma_ptr,
-//                           const T* add_to_output_ptr, T* dx_ptr) {
-//   using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
-//   cuda::layer_norm::DirectLoad<T, ComputeType> load_x(x_ptr, norm_size);
-//   ScaleLoad<T, ComputeType, do_scale> load_scaled_dy(dy_ptr, gamma_ptr, norm_size);
-//   AddStore<ComputeType, T, do_add> store(add_to_output_ptr, dx_ptr, norm_size);
-//   OF_CUDA_CHECK((cuda::layer_norm::DispatchLayerNormGrad<decltype(load_x),
-//   decltype(load_scaled_dy),
-//                                                          decltype(store), ComputeType>(
-//       stream->As<ep::CudaStream>()->cuda_stream(), load_x, load_scaled_dy, store,
-//       mean->dptr<ComputeType>(), inv_variance->dptr<ComputeType>(), num_instances, norm_size)));
-// }
+template<typename T, bool affine>
+void RmsNormBackwardGpu(ep::Stream* stream, const int64_t nrows, const int64_t ncols,
+                        const T* dy_dptr, const T* x_dptr, const user_op::Tensor* inv_rms,
+                        const T* weight_dptr, T* dx_ptr) {
+  using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
+  layer_norm::DirectLoad<T, ComputeType> x_load(x_dptr, ncols);
+  DyAffineLoad<T, ComputeType, affine> dy_load(dy_dptr, weight_dptr, ncols);
+  layer_norm::DirectStore<ComputeType, T> store(dx_ptr, ncols);
+  OF_CUDA_CHECK((rms_norm::DispatchRmsNormGrad<decltype(x_load), decltype(dy_load), decltype(store),
+                                               ComputeType>(
+      stream->As<ep::CudaStream>()->cuda_stream(), nrows, ncols, x_load, dy_load,
+      inv_rms->dptr<ComputeType>(), store)));
+}
 
-// template<typename T, bool do_scale>
-// void DispatchLayerNormBackwardDoAdd(ep::Stream* stream, const int64_t num_instances,
-//                                     const int64_t norm_size, const T* dy_ptr, const T* x_ptr,
-//                                     const user_op::Tensor* mean,
-//                                     const user_op::Tensor* inv_variance, const T* gamma_ptr,
-//                                     const T* add_to_output_ptr, T* dx_ptr) {
-//   if (add_to_output_ptr != nullptr) {
-//     LayerNormBackwardGpu<T, do_scale, true>(stream, num_instances, norm_size, dy_ptr, x_ptr,
-//     mean,
-//                                             inv_variance, gamma_ptr, add_to_output_ptr, dx_ptr);
-//   } else {
-//     LayerNormBackwardGpu<T, do_scale, false>(stream, num_instances, norm_size, dy_ptr, x_ptr,
-//     mean,
-//                                              inv_variance, gamma_ptr, add_to_output_ptr, dx_ptr);
-//   }
-// }
-
-// template<typename T>
-// void LaunchLayerNormBackward(ep::Stream* stream, const int64_t num_instances,
-//                              const int64_t norm_size, const T* dy_ptr, const T* x_ptr,
-//                              const user_op::Tensor* mean, const user_op::Tensor* inv_variance,
-//                              const T* gamma_ptr, const T* add_to_output_ptr, T* dx_ptr) {
-//   if (gamma_ptr != nullptr) {
-//     DispatchLayerNormBackwardDoAdd<T, true>(stream, num_instances, norm_size, dy_ptr, x_ptr,
-//     mean,
-//                                             inv_variance, gamma_ptr, add_to_output_ptr, dx_ptr);
-//   } else {
-//     DispatchLayerNormBackwardDoAdd<T, false>(stream, num_instances, norm_size, dy_ptr, x_ptr,
-//     mean,
-//                                              inv_variance, gamma_ptr, add_to_output_ptr, dx_ptr);
-//   }
-// }
+template<typename T>
+void DispatchRmsNormBackwardGpu(ep::Stream* stream, const int64_t nrows, const int64_t ncols,
+                                const T* dy_dptr, const T* x_dptr, const user_op::Tensor* inv_rms,
+                                const T* weight_dptr, T* dx_dptr) {
+  if (weight_dptr) {
+    RmsNormBackwardGpu<T, true>(stream, nrows, ncols, dy_dptr, x_dptr, inv_rms, weight_dptr,
+                                dx_dptr);
+  } else {
+    RmsNormBackwardGpu<T, false>(stream, nrows, ncols, dy_dptr, x_dptr, inv_rms, weight_dptr,
+                                 dx_dptr);
+  }
+}
 
 }  // namespace rms_norm
 
@@ -331,10 +304,8 @@ class RmsNormGradGpuKernel final : public user_op::OpKernel, public user_op::Cud
       CHECK_EQ(ncols, weight->shape_view().elem_cnt());
       weight_dptr = weight->dptr<T>();
     }
-    // LaunchLayerNormBackward<T>(ctx->stream(), num_instances, norm_size, dy->dptr<T>(),
-    // x->dptr<T>(),
-    //                            mean, inv_variance, gamma_ptr, add_to_output_ptr,
-    //                            dx->mut_dptr<T>());
+    rms_norm::DispatchRmsNormBackwardGpu<T>(ctx->stream(), nrows, ncols, dy->dptr<T>(),
+                                            x->dptr<T>(), inv_rms, weight_dptr, dx->mut_dptr<T>());
   };
 };
 

@@ -1200,40 +1200,41 @@ DispatchRmsNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t nrows
 //       stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
 // }
 
-// template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
-// inline typename std::enable_if<!std::is_same<ComputeType, double>::value, cudaError_t>::type
-// DispatchLayerNormGrad(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
-//                       STORE store, const ComputeType* mean, const ComputeType* inv_variance,
-//                       const int64_t rows, const int64_t cols) {
-//   if (cols <= 1024) {
-//     return DispatchLayerNormGradWarpImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType>(
-//         stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
-//   } else {
-//     bool dispatch_smem_impl_success;
-//     {
-//       cudaError_t err =
-//           TryDispatchLayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType>(
-//               stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols,
-//               &dispatch_smem_impl_success);
-//       if (err != cudaSuccess) { return err; }
-//     }
-//     if (!dispatch_smem_impl_success) {
-//       return DispatchLayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE,
-//       ComputeType>(
-//           stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
-//     }
-//     return cudaSuccess;
-//   }
-// }
+template<typename LOAD_X, typename LOAD_DY, typename STORE, typename ComputeType>
+inline typename std::enable_if<!std::is_same<ComputeType, double>::value, cudaError_t>::type
+DispatchRmsNormGrad(cudaStream_t stream, const int64_t nrows, const int64_t ncols, LOAD_X x_load,
+                    LOAD_DY dy_load, const ComputeType* inv_rms, STORE store) {
+  if (ncols <= 1024) {
+    // return DispatchLayerNormGradWarpImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType>(
+    //     stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
+    return cudaErrorInvalidValue;
+  } else {
+    // bool dispatch_smem_impl_success;
+    // {
+    //   cudaError_t err =
+    //       TryDispatchLayerNormGradBlockSMemImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType>(
+    //           stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols,
+    //           &dispatch_smem_impl_success);
+    //   if (err != cudaSuccess) { return err; }
+    // }
+    // if (!dispatch_smem_impl_success) {
+    //   return DispatchLayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE,
+    //   ComputeType>(
+    //       stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
+    // }
+    // return cudaSuccess;
+    return cudaErrorInvalidValue;
+  }
+}
 
-// template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
-// inline typename std::enable_if<std::is_same<ComputeType, double>::value, cudaError_t>::type
-// DispatchLayerNormGrad(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
-//                       STORE store, const ComputeType* mean, const ComputeType* inv_variance,
-//                       const int64_t rows, const int64_t cols) {
-//   return DispatchLayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType>(
-//       stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
-// }
+template<typename LOAD_X, typename LOAD_DY, typename STORE, typename ComputeType>
+inline typename std::enable_if<std::is_same<ComputeType, double>::value, cudaError_t>::type
+DispatchRmsNormGrad(cudaStream_t stream, const int64_t nrows, const int64_t ncols, LOAD_X x_load,
+                    LOAD_DY dy_load, const ComputeType* inv_rms, STORE store) {
+  // return DispatchLayerNormGradBlockUncachedImpl<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType>(
+  //     stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
+  return cudaErrorInvalidValue;
+}
 
 }  // namespace rms_norm
 }  // namespace cuda
