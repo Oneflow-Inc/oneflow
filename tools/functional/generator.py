@@ -233,6 +233,40 @@ def render_file_if_different(target_file, content):
                 f.write(content)
 
 
+def generate_named_tuple(signature, params, return_names, func_name, i):
+    param_names = ", ".join(["{{\"{}\", \"\"}}".format(x) for x in return_names])
+
+    code = []
+    code.append("""
+  const auto& tensortuple = functional::{0}({1}).GetOrThrow();\n
+""".format(signature._name, ", ".join(params))
+    )
+    code.append(f"""
+  static PyStructSequence_Field NamedTuple_fields[] = {{ {param_names},  {{nullptr}} }}; 
+  static PyTypeObject {func_name}NamedTuple{i}; 
+  static bool is_initialized = false; 
+  static PyStructSequence_Desc desc = {{ "oneflow.return_types.{func_name}", nullptr, NamedTuple_fields, {len(return_names)} }}; 
+  if (!is_initialized) {{ 
+      PyStructSequence_InitType(&{func_name}NamedTuple{i}, &desc); 
+      {func_name}NamedTuple{i}.tp_repr = (reprfunc)PyTuple_Type.tp_repr; 
+      is_initialized = true; 
+  }}
+
+  // PyObjectPtr r (PyStructSequence_New(tensortuple.size()));
+  PyObjectPtr r (PyStructSequence_New(&{func_name}NamedTuple{i}));
+  if (!r) {{
+    // throw python_error();
+  }}
+  for (int i = 0; i < tensortuple.size(); i++) {{
+    PyTuple_SET_ITEM(r.get(), i, CastToPyObject(tensortuple.at(i)));
+  }}
+  // return (PyObject*)&{func_name}NamedTuple{i}; 
+  return r.release(); 
+"""
+    )
+    return "\n".join(code)
+
+
 class Argument:
     def __init__(self, fmt, keyword_only=False):
         self._keyword_only = keyword_only
@@ -304,7 +338,8 @@ class Argument:
 
 class Return:
     def __init__(self, fmt):
-        self._type = _normalize(fmt)
+        self._type, self._return_names = self.check_named_tuple(_normalize(fmt))
+
         assert self._type in types_allowed, "Unknow type: " + self._type
 
         if self._type in return_type_aliases:
@@ -318,6 +353,22 @@ class Return:
 
     def to_string(self, to_cpp=False):
         return self._cpp_type if to_cpp else self._type
+
+    @staticmethod
+    def check_named_tuple(fmt):
+        sp = fmt.rfind("<")
+        if sp != -1:
+            # import ipdb; ipdb.set_trace()
+            _type = _normalize(fmt[:sp])
+            param_names = _normalize(fmt[sp: ])
+            sp = param_names.rfind(">")
+            assert sp != -1, "Missing '>' for argument def: " + fmt
+            param_names = param_names[1:sp-1]
+            _return_names = [_normalize(x) for x in param_names.split(",")]
+        else:
+            _type = _normalize(fmt)
+            _return_names = None
+        return _type, _return_names
 
 
 class FunctionSignature:
@@ -544,15 +595,20 @@ class Generator:
                 schema_fmt += "  int idx = parser.Parse(args, kwargs, &r);\n"
                 i = 0
                 for block in blocks:
-                    signature = block._signature
+                    signature: FunctionSignature = block._signature
                     schema_fmt += "  if (idx == {0}) {{\n".format(i)
                     params = []
                     for j in range(len(signature._args)):
                         cpp_type = _std_decay(signature._args[j]._cpp_type)
                         params.append("r[{0}].As<{1}>()".format(j, cpp_type))
-                    schema_fmt += "    return CastToPyObject(functional::{0}({1}));\n".format(
-                        signature._name, ", ".join(params)
-                    )
+                    print(signature._name)
+                    if signature._ret._return_names is None:
+                        schema_fmt += "    return CastToPyObject(functional::{0}({1}));\n".format(
+                            signature._name, ", ".join(params)
+                        )
+                    else:
+                        # import ipdb; ipdb.set_trace()
+                        schema_fmt += generate_named_tuple(signature, params, signature._ret._return_names, signature._name, i)
                     schema_fmt += "  }\n"
                     i += 1
                 schema_fmt += "  Py_RETURN_NONE;\n"
