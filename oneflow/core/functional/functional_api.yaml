@@ -652,6 +652,10 @@
   signature: "Tensor (Tensor input, Int64 dim=-1) => Glu"
   bind_python: True
 
+- name: "fused_geglu"
+  signature: "Tensor (Tensor in, Tensor w, Tensor b) => FusedGeglu"
+  bind_python: True
+
 - name: "sigmoid"
   signature: "Tensor (Tensor x) => Sigmoid"
   bind_python: True
