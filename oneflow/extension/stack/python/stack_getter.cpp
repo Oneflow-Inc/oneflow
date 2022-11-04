@@ -65,6 +65,7 @@ class PyStackGetter final : public ForeignStackGetter {
  public:
   PyStackGetter() {
     auto* frame = PyEval_GetFrame();
+    // Get the first frame. It assumes `import oneflow` is called in global scope,
     while (frame->f_back != nullptr) { frame = frame->f_back; }
     current_frame_ = object_pool_.make_shared(frame->f_code, 0, nullptr);
   }
