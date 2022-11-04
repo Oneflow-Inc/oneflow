@@ -71,7 +71,7 @@ Maybe<T> GetItemInScalarTensor(PyObject* obj) {
       SyncAutoMemcpy(stream, &scalar, eager_blob_object->mut_dptr(), sizeof(T),
                      memory::MakeHostMemCase(), eager_blob_object->mem_case());
     };
-    auto btb = std::make_shared<BlockingThenBusy>(1);
+    auto btb = std::make_shared<BlockingThenBusy>();
     JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
       return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, "const");
     }));

@@ -79,7 +79,6 @@ class ScalarMathBaseFunctor {
   virtual ~ScalarMathBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
                            bool inplace) const {
-    OF_PROFILER_RANGE_GUARD("ScalarMathBaseFunctor");
     if (std::dynamic_pointer_cast<StaticZerosTensor>(x) && op_->op_type_name() == "scalar_mul") {
       return x;
     }

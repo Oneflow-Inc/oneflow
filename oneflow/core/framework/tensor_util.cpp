@@ -30,7 +30,7 @@ Maybe<void> SyncAccessTensorWithTimeOut(
     const std::shared_ptr<Tensor>& tensor,
     const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& Callback,
     const std::string& modifier) {
-  auto btb = std::make_shared<BlockingThenBusy>(1);
+  auto btb = std::make_shared<BlockingThenBusy>();
   auto local_tensor = JUST(tensor->AsLocalTensor());
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, modifier);
@@ -51,7 +51,7 @@ Maybe<void> CopyLocalTensorDataTo(const std::shared_ptr<Tensor>& input, void* me
     SyncAutoMemcpy(stream, mem_ptr, eager_blob_object->dptr(), size, memory::MakeHostMemCase(),
                    eager_blob_object->mem_case());
   };
-  auto btb = std::make_shared<BlockingThenBusy>(1);
+  auto btb = std::make_shared<BlockingThenBusy>();
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, "const");
   }));

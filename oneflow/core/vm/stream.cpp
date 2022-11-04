@@ -38,5 +38,31 @@ void Stream::__Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamType s
 
 int64_t Stream::device_id() const { return device_->device_id(); }
 
+char* Stream::CheckSizeAndGetTmpSmallPinnedMemPtr(size_t size) {
+  static constexpr int kSmallSize = 512;
+  CHECK_LE(size, kSmallSize);
+  if (!static_cast<bool>(small_pinned_mem_ptr_)) {
+    auto* ep_device = stream_policy_->stream()->device();
+    Maybe<void> (ep::Device::*Alloc)(const ep::AllocationOptions& options, void** ptr,
+                                     size_t size) = nullptr;
+    void (ep::Device::*Free)(const ep::AllocationOptions& options, void* ptr) = nullptr;
+    if (ep_device->device_type() == DeviceType::kCPU) {
+      Alloc = &ep::Device::Alloc;
+      Free = &ep::Device::Free;
+    } else {
+      Alloc = &ep::Device::AllocPinned;
+      Free = &ep::Device::FreePinned;
+    }
+    void* mem_ptr = nullptr;
+    CHECK_JUST((ep_device->*Alloc)(ep::AllocationOptions{}, &mem_ptr, kSmallSize));
+    std::function<void(char*)> Deleter = [ep_device, Free](char* ptr) {
+      (ep_device->*Free)(ep::AllocationOptions{}, ptr);
+    };
+    char* ptr = reinterpret_cast<char*>(mem_ptr);
+    small_pinned_mem_ptr_ = decltype(small_pinned_mem_ptr_)(ptr, Deleter);
+  }
+  return small_pinned_mem_ptr_.get();
+}
+
 }  // namespace vm
 }  // namespace oneflow

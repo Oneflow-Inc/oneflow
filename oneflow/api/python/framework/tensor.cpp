@@ -36,7 +36,6 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/tensor_index.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/profiler/profiler.h"
 
 namespace py = pybind11;
 
@@ -316,7 +315,6 @@ static PyObject* PyTensorObject_check_meta_consistency(PyObject* self, PyObject*
 }
 
 static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
-  OF_PROFILER_RANGE_GUARD("PyTensorObject_to_numpy");
   HANDLE_ERRORS
   const auto& t = PyTensor_Unpack(self);
   DataType data_type = t->dtype()->data_type();
@@ -325,6 +323,24 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
   case of_type: return ASSERT(EagerLocalTensorToNumpy<cpp_type>(self));
     OF_PP_FOR_EACH_TUPLE(SWITCH_EAGER_TENSOR_TO_NUMPY, POD_DATA_TYPE_SEQ)
     case DataType::kFloat16: return ASSERT(EagerLocalTensorToNumpy<float16>(self));
+    default: {
+      return PyErr_Format(PyExc_RuntimeError,
+                          ("Invalid datatype " + DataType_Name(data_type)).data());
+    }
+  }
+#undef SWITCH_EAGER_TENSOR_TO_NUMPY
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_item(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  const auto& t = PyTensor_Unpack(self);
+  DataType data_type = t->dtype()->data_type();
+  switch (data_type) {
+#define SWITCH_EAGER_TENSOR_TO_NUMPY(cpp_type, of_type) \
+  case of_type: return ASSERT(EagerLocalTensorItem<cpp_type>(self));
+    OF_PP_FOR_EACH_TUPLE(SWITCH_EAGER_TENSOR_TO_NUMPY, POD_DATA_TYPE_SEQ)
+    case DataType::kFloat16: return ASSERT(EagerLocalTensorItem<float16>(self));
     default: {
       return PyErr_Format(PyExc_RuntimeError,
                           ("Invalid datatype " + DataType_Name(data_type)).data());
@@ -457,6 +473,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"global_id", PyTensorObject_global_id, METH_NOARGS, NULL},
     {"check_meta_consistency", PyTensorObject_check_meta_consistency, METH_NOARGS, NULL},
     {"to_numpy", PyTensorObject_to_numpy, METH_NOARGS, NULL},
+    {"item", PyTensorObject_item, METH_NOARGS, NULL},
     {"type", (PyCFunction)PyTensorObject_type, METH_VARARGS | METH_KEYWORDS, NULL},
     {"_copy_to_numpy", PyTensorObject__copy_to_numpy, METH_O, NULL},
     {"_copy_from_numpy", PyTensorObject__copy_from_numpy, METH_O, NULL},

@@ -171,14 +171,6 @@ def _scalar_int(self):
     return self.numpy().astype(np.int64).item()
 
 
-def _item(self):
-    flow._oneflow_internal.profiler.RangePush("_item")
-    assert self.numel() == 1, "Only a Tensor with 1 element can be converted to Scalar"
-    ret = self.numpy().item()
-    flow._oneflow_internal.profiler.RangePop()
-    return ret
-
-
 def _new_empty(
     self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
 ):
@@ -435,7 +427,6 @@ def _where(self, x=None, y=None):
 
 
 def _numpy(self):
-    flow._oneflow_internal.profiler.RangePush("_numpy")
     assert (
         not self.is_lazy
     ), "tensor.numpy() is not allowed to be called in nn.Graph.build(*args) or be called by lazy tensor."
@@ -456,9 +447,7 @@ def _numpy(self):
             .to_local()
         )
     assert self.is_local
-    ret = self.to_numpy()
-    flow._oneflow_internal.profiler.RangePop()
-    return ret
+    return self.to_numpy()
 
 
 def zero_(self):
@@ -610,7 +599,6 @@ def RegisterMethods():
     Tensor.T = property(_T)
     Tensor.masked_select = _masked_select
     Tensor.eq = _eq
-    Tensor.item = _item
     Tensor.sort = _sort
     Tensor.type_as = _type_as
     Tensor.tolist = _tolist
