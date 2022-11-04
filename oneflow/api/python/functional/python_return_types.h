@@ -21,6 +21,7 @@ limitations under the License.
 #include <sstream>
 #include <structmember.h>
 
+#include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/functional/common.h"
 
 namespace oneflow {
@@ -28,6 +29,7 @@ namespace one {
 namespace functional {
 
 PyObject* returned_structseq_repr(PyStructSequence* obj) {
+  HANDLE_ERRORS
   PyTypeObject* typ = Py_TYPE(obj);
   PyObjectPtr tup((PyObject*)obj);
   if (tup == nullptr) { return nullptr; }
@@ -61,6 +63,7 @@ PyObject* returned_structseq_repr(PyStructSequence* obj) {
   ss << ")";
 
   return PyUnicode_FromString(ss.str().c_str());
+  END_HANDLE_ERRORS
 }
 
 }  // namespace functional

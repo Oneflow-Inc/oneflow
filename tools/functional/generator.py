@@ -375,7 +375,6 @@ class Return:
     def check_named_tuple(fmt):
         sp = fmt.rfind("<")
         if sp != -1:
-            # import ipdb; ipdb.set_trace()
             _type = _normalize(fmt[:sp])
             param_names = _normalize(fmt[sp: ])
             sp = param_names.rfind(">")
@@ -612,7 +611,7 @@ class Generator:
                 schema_fmt += "  int idx = parser.Parse(args, kwargs, &r);\n"
                 i = 0
                 for block in blocks:
-                    signature: FunctionSignature = block._signature
+                    signature = block._signature
                     schema_fmt += "  if (idx == {0}) {{\n".format(i)
                     params = []
                     for j in range(len(signature._args)):
