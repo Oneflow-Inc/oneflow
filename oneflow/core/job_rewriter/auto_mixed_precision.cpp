@@ -380,28 +380,6 @@ REGISTER_NO_CAST_REGISTRY("broadcast_add", "y", 0);
 REGISTER_NO_CAST_REGISTRY("broadcast_mul", "x", 0);
 REGISTER_NO_CAST_REGISTRY("broadcast_mul", "y", 0);
 
-REGISTER_NO_CAST_REGISTRY("max_pool_2d", "x", 0);
-REGISTER_NO_CAST_REGISTRY("max_pool_2d_grad", "x", 0);
-REGISTER_NO_CAST_REGISTRY("max_pool_2d_grad", "indice", 0);
-REGISTER_NO_CAST_REGISTRY("max_pool_2d_grad", "dy", 0);
-
-REGISTER_NO_CAST_REGISTRY("avg_pool_2d", "x", 0);
-REGISTER_NO_CAST_REGISTRY("avg_pool_2d_grad", "x", 0);
-REGISTER_NO_CAST_REGISTRY("avg_pool_2d_grad", "dy", 0);
-
-REGISTER_NO_CAST_REGISTRY("tf_max_pool_2d", "x", 0);
-REGISTER_NO_CAST_REGISTRY("tf_max_pool_2d_grad", "x", 0);
-REGISTER_NO_CAST_REGISTRY("tf_max_pool_2d_grad", "y", 0);
-REGISTER_NO_CAST_REGISTRY("tf_max_pool_2d_grad", "dy", 0);
-
-REGISTER_NO_CAST_REGISTRY("tf_avg_pool_2d", "x", 0);
-REGISTER_NO_CAST_REGISTRY("tf_avg_pool_2d_grad", "x", 0);
-REGISTER_NO_CAST_REGISTRY("tf_avg_pool_2d_grad", "y", 0);
-REGISTER_NO_CAST_REGISTRY("tf_avg_pool_2d_grad", "dy", 0);
-
-REGISTER_NO_CAST_REGISTRY("bias_add", "a", 0);
-REGISTER_NO_CAST_REGISTRY("bias_add", "b", 0);
-
 }  // namespace
 
 namespace amp {
