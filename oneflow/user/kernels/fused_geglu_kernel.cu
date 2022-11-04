@@ -33,13 +33,17 @@ __device__ T Gelu(T x) {
         * (static_cast<T>(1.0) + erf(static_cast<T>(M_SQRT1_2) * x));
 }
 
+/*! Noted
+ * mixture precision isn't allowed
+ * hence we need to explicitly cast half or nv_bfloat16 type to float
+ * and after finishing the gelu calculation, explicitly cast back
+ */
 template<>
 __device__ half Gelu(half x) {
     return static_cast<half>(
         Gelu<float>(static_cast<float>(x))
     );
 }
-
 template<>
 __device__ nv_bfloat16 Gelu(nv_bfloat16 x) {
     return static_cast<nv_bfloat16>(
@@ -71,7 +75,7 @@ __global__ void FusedGegluForwardGpu(
     T hidden_state = matmul[2*out_row*out_size+x1_col] + b[x1_col];
     T gate = matmul[2*out_row*out_size+x2_col] + b[x2_col];
     
-    // calculate gelu (不支持混合精度: half -> float -> half)
+    // calculate gelu
     T gelu_gate = Gelu<T>(gate);
 
     // calculate element-wise product
