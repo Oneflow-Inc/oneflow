@@ -607,127 +607,105 @@ DispatchRmsNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t nrows
   return cudaErrorInvalidValue;
 }
 
-// /*
-// LayerNormGrad dx:
-// normalized = (x - mean) * inv_var
-// sum_stats1 = sum(scaled_dy)
-// sum_stats2 = sum(scaled_dy * normalized)
-// dx = cols * dy - sum_stats1 - normalized * sum_stats2
-// dx *= inv_var / cols
-// */
-// template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType,
-//          int pack_size, int max_cols_per_thread, int min_cols_per_thread, int
-//          thread_group_width, int rows_per_access>
-// __global__ void LayerNormGradWarpImpl(LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy, STORE
-// store,
-//                                       const ComputeType* mean, const ComputeType* inv_variance,
-//                                       const int64_t rows, const int64_t cols) {
-//   static_assert(max_cols_per_thread % pack_size == 0, "");
-//   static_assert(min_cols_per_thread % pack_size == 0, "");
-//   constexpr int max_num_packs = max_cols_per_thread / pack_size;
-//   constexpr int min_num_packs = min_cols_per_thread / pack_size;
-//   assert(cols <= max_cols_per_thread * thread_group_width);
-//   static_assert(thread_group_width <= kWarpSize, "");
-//   static_assert(kWarpSize % thread_group_width == 0, "");
-//   ComputeType normalized_buf[rows_per_access][max_cols_per_thread];
-//   ComputeType dy_buf[rows_per_access][max_cols_per_thread];
-//   const ComputeType one_over_cols = static_cast<ComputeType>(1.0) /
-//   static_cast<ComputeType>(cols); const int64_t global_thread_group_id = blockIdx.x *
-//   blockDim.y
-//   + threadIdx.y; const int64_t num_global_thread_group = gridDim.x * blockDim.y; const int
-//   lane_id = threadIdx.x; const int64_t step = num_global_thread_group * rows_per_access; for
-//   (int64_t row = global_thread_group_id * rows_per_access; row < rows; row += step) {
-//     ComputeType sum_stats1[rows_per_access];
-//     ComputeType sum_stats2[rows_per_access];
-//     ComputeType inv_variance_buf[rows_per_access];
-// #pragma unroll
-//     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
-//       const int global_row_id = row + row_id;
-//       ComputeType mean_val = mean[global_row_id];
-//       inv_variance_buf[row_id] = inv_variance[global_row_id];
-//       sum_stats1[row_id] = 0;
-//       sum_stats2[row_id] = 0;
-//       ComputeType* row_normalized_buf = normalized_buf[row_id];
-//       ComputeType* row_dy_buf = dy_buf[row_id];
-// #pragma unroll
-//       for (int pack_id = 0; pack_id < min_num_packs; ++pack_id) {
-//         const int col = (pack_id * thread_group_width + lane_id) * pack_size;
-//         const int pack_offset = pack_id * pack_size;
-//         load_x.template load<pack_size>(row_normalized_buf + pack_offset, global_row_id, col);
-//         load_scaled_dy.template load<pack_size>(row_dy_buf + pack_offset, global_row_id, col);
-// #pragma unroll
-//         for (int i = 0; i < pack_size; ++i) {
-//           const int col_id = pack_offset + i;
-//           // row_normalized_buf store x
-//           row_normalized_buf[col_id] =
-//               (row_normalized_buf[col_id] - mean_val) * inv_variance_buf[row_id];
-//           sum_stats1[row_id] += row_dy_buf[col_id];
-//           sum_stats2[row_id] += row_dy_buf[col_id] * row_normalized_buf[col_id];
-//         }
-//       }
-// #pragma unroll
-//       for (int pack_id = min_num_packs; pack_id < max_num_packs; ++pack_id) {
-//         const int col = (pack_id * thread_group_width + lane_id) * pack_size;
-//         const int pack_offset = pack_id * pack_size;
-//         if (col < cols) {
-//           load_x.template load<pack_size>(row_normalized_buf + pack_offset, global_row_id,
-//           col); load_scaled_dy.template load<pack_size>(row_dy_buf + pack_offset,
-//           global_row_id, col);
-// #pragma unroll
-//           for (int i = 0; i < pack_size; ++i) {
-//             const int col_id = pack_offset + i;
-//             // row_normalized_buf store x
-//             row_normalized_buf[col_id] =
-//                 (row_normalized_buf[col_id] - mean_val) * inv_variance_buf[row_id];
-//             sum_stats1[row_id] += row_dy_buf[col_id];
-//             sum_stats2[row_id] += row_dy_buf[col_id] * row_normalized_buf[col_id];
-//           }
-//         }
-//       }
-//     }
-//     ComputeType warp_sum_stats1[rows_per_access];
-//     ComputeType warp_sum_stats2[rows_per_access];
-// #pragma unroll
-//     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
-//       warp_sum_stats1[row_id] =
-//           WarpAllReduce<SumOp, ComputeType, thread_group_width>(sum_stats1[row_id]);
-//       warp_sum_stats2[row_id] =
-//           WarpAllReduce<SumOp, ComputeType, thread_group_width>(sum_stats2[row_id]);
-//     }
-// #pragma unroll
-//     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
-//       const int global_row_id = row + row_id;
-//       ComputeType* row_normalized_buf = normalized_buf[row_id];
-//       ComputeType* row_dy_buf = dy_buf[row_id];
-//       const ComputeType inv_variance_over_cols = inv_variance_buf[row_id] * one_over_cols;
-// #pragma unroll
-//       for (int pack_id = 0; pack_id < min_num_packs; ++pack_id) {
-//         const int col = (pack_id * thread_group_width + lane_id) * pack_size;
-//         for (int i = 0; i < pack_size; ++i) {
-//           const int col_id = pack_id * pack_size + i;
-//           row_dy_buf[col_id] = (cols * row_dy_buf[col_id] - warp_sum_stats1[row_id]
-//                                 - row_normalized_buf[col_id] * warp_sum_stats2[row_id])
-//                                * inv_variance_over_cols;
-//         }
-//         store.template store<pack_size>(row_dy_buf + pack_id * pack_size, global_row_id, col);
-//       }
-// #pragma unroll
-//       for (int pack_id = min_num_packs; pack_id < max_num_packs; ++pack_id) {
-//         const int col = (pack_id * thread_group_width + lane_id) * pack_size;
-//         if (col < cols) {
-//           for (int i = 0; i < pack_size; ++i) {
-//             const int col_id = pack_id * pack_size + i;
-//             row_dy_buf[col_id] = (cols * row_dy_buf[col_id] - warp_sum_stats1[row_id]
-//                                   - row_normalized_buf[col_id] * warp_sum_stats2[row_id])
-//                                  * inv_variance_over_cols;
-//           }
-//           store.template store<pack_size>(row_dy_buf + pack_id * pack_size, global_row_id,
-//           col);
-//         }
-//       }
-//     }
-//   }
-// }
+template<typename LOAD_X, typename LOAD_DY, typename STORE, typename ComputeType, int pack_size,
+         int max_cols_per_thread, int min_cols_per_thread, int thread_group_width,
+         int rows_per_access>
+__global__ void RmsNormGradWarpImpl(const int32_t nrows, const int32_t ncols, LOAD_X load_x,
+                                    LOAD_DY load_dy, STORE store, const ComputeType* inv_rms) {
+  static_assert(max_cols_per_thread % pack_size == 0, "");
+  static_assert(min_cols_per_thread % pack_size == 0, "");
+  constexpr int max_num_packs = max_cols_per_thread / pack_size;
+  constexpr int min_num_packs = min_cols_per_thread / pack_size;
+  assert(ncols <= max_cols_per_thread * thread_group_width);
+  static_assert(thread_group_width <= kWarpSize, "");
+  static_assert(kWarpSize % thread_group_width == 0, "");
+
+  ComputeType normalized_buf[rows_per_access][max_cols_per_thread];
+  ComputeType dy_buf[rows_per_access][max_cols_per_thread];
+  const int32_t global_thread_group_id = blockIdx.x * blockDim.y + threadIdx.y;
+  const int32_t num_global_thread_group = gridDim.x * blockDim.y;
+  const int32_t lane_id = threadIdx.x;
+  const int32_t step = num_global_thread_group * rows_per_access;
+  for (int32_t row = global_thread_group_id * rows_per_access; row < nrows; row += step) {
+    ComputeType sum_stats[rows_per_access];
+    ComputeType inv_rms_buf[rows_per_access];
+#pragma unroll
+    for (int32_t row_id = 0; row_id < rows_per_access; ++row_id) {
+      const int32_t global_row_id = row + row_id;
+      sum_stats[row_id] = 0;
+      inv_rms_buf[row_id] = inv_rms[global_row_id];
+      ComputeType* row_normalized_buf = normalized_buf[row_id];
+      ComputeType* row_dy_buf = dy_buf[row_id];
+#pragma unroll
+      for (int32_t pack_id = 0; pack_id < min_num_packs; ++pack_id) {
+        const int32_t col = (pack_id * thread_group_width + lane_id) * pack_size;
+        const int32_t pack_offset = pack_id * pack_size;
+        load_x.template load<pack_size>(row_normalized_buf + pack_offset, global_row_id, col);
+        load_dy.template load<pack_size>(row_dy_buf + pack_offset, global_row_id, col);
+#pragma unroll
+        for (int32_t i = 0; i < pack_size; ++i) {
+          const int32_t col_id = pack_offset + i;
+          row_normalized_buf[col_id] = row_normalized_buf[col_id] * inv_rms_buf[row_id];
+          sum_stats[row_id] += row_dy_buf[col_id] * row_normalized_buf[col_id];
+        }
+      }
+#pragma unroll
+      for (int32_t pack_id = min_num_packs; pack_id < max_num_packs; ++pack_id) {
+        const int32_t col = (pack_id * thread_group_width + lane_id) * pack_size;
+        const int32_t pack_offset = pack_id * pack_size;
+        if (col < ncols) {
+          load_x.template load<pack_size>(row_normalized_buf + pack_offset, global_row_id, col);
+          load_dy.template load<pack_size>(row_dy_buf + pack_offset, global_row_id, col);
+#pragma unroll
+          for (int32_t i = 0; i < pack_size; ++i) {
+            const int32_t col_id = pack_offset + i;
+            row_normalized_buf[col_id] = row_normalized_buf[col_id] * inv_rms_buf[row_id];
+            sum_stats[row_id] += row_dy_buf[col_id] * row_normalized_buf[col_id];
+          }
+        }
+      }
+    }
+    ComputeType warp_sum_stats[rows_per_access];
+#pragma unroll
+    for (int32_t row_id = 0; row_id < rows_per_access; ++row_id) {
+      warp_sum_stats[row_id] =
+          layer_norm::WarpAllReduce<layer_norm::SumOp, ComputeType, thread_group_width>(
+              sum_stats[row_id]);
+    }
+#pragma unroll
+    for (int32_t row_id = 0; row_id < rows_per_access; ++row_id) {
+      const int32_t global_row_id = row + row_id;
+      ComputeType* row_normalized_buf = normalized_buf[row_id];
+      ComputeType* row_dy_buf = dy_buf[row_id];
+#pragma unroll
+      for (int32_t pack_id = 0; pack_id < min_num_packs; ++pack_id) {
+        const int32_t col = (pack_id * thread_group_width + lane_id) * pack_size;
+        for (int32_t i = 0; i < pack_size; ++i) {
+          const int32_t col_id = pack_id * pack_size + i;
+          row_dy_buf[col_id] = (row_dy_buf[col_id]
+                                - row_normalized_buf[col_id] * warp_sum_stats[row_id]
+                                      / static_cast<ComputeType>(ncols))
+                               * inv_rms_buf[row_id];
+        }
+        store.template store<pack_size>(row_dy_buf + pack_id * pack_size, global_row_id, col);
+      }
+#pragma unroll
+      for (int32_t pack_id = min_num_packs; pack_id < max_num_packs; ++pack_id) {
+        const int32_t col = (pack_id * thread_group_width + lane_id) * pack_size;
+        if (col < ncols) {
+          for (int32_t i = 0; i < pack_size; ++i) {
+            const int32_t col_id = pack_id * pack_size + i;
+            row_dy_buf[col_id] = (row_dy_buf[col_id]
+                                  - row_normalized_buf[col_id] * warp_sum_stats[row_id]
+                                        / static_cast<ComputeType>(ncols))
+                                 * inv_rms_buf[row_id];
+          }
+          store.template store<pack_size>(row_dy_buf + pack_id * pack_size, global_row_id, col);
+        }
+      }
+    }
+  }
+}
 
 // template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType,
 //          int pack_size, int max_cols_per_thread, int min_cols_per_thread, int
@@ -835,7 +813,7 @@ DispatchRmsNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t nrows
 // }
 
 // template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
-// struct DispatchLayerNormGradWarpImplPackSize {
+// struct DispatchRmsNormGradWarpImplPackSize {
 //   cudaError_t operator()(cudaStream_t stream, LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
 //                          STORE store, const ComputeType* mean, const ComputeType* inv_variance,
 //                          const int64_t rows, const int64_t cols) {
@@ -844,13 +822,13 @@ DispatchRmsNorm(cudaStream_t stream, LOAD load, STORE store, const int64_t nrows
 //   }
 // };
 
-// template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType>
-// inline cudaError_t DispatchLayerNormGradWarpImpl(cudaStream_t stream, LOAD_X load_x,
-//                                                  LOAD_SCALED_DY load_scaled_dy, STORE store,
-//                                                  const ComputeType* mean,
-//                                                  const ComputeType* inv_variance,
-//                                                  const int64_t rows, const int64_t cols) {
-//   return DispatchLayerNormGradWarpImplPackSize<LOAD_X, LOAD_SCALED_DY, STORE, ComputeType>()(
+// template<typename LOAD_X, typename LOAD_DY, typename STORE, typename ComputeType>
+// inline cudaError_t DispatchRmsNormGradWarpImpl(cudaStream_t stream, const int64_t nrows,
+//                                                const int64_t ncols, LOAD_X load_x, LOAD_DY
+//                                                load_dy, STORE store, const ComputeType* inv_rms,
+
+// ) {
+//   return DispatchRmsNormGradWarpImplPackSize<LOAD_X, LOAD_DY, STORE, ComputeType>()(
 //       stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);
 // }
 
