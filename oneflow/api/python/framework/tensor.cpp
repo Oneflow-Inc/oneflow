@@ -186,6 +186,16 @@ static PyObject* PyTensorObject_is_pinned(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_is_floating_point(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  if (PyTensor_Unpack(self)->dtype()->is_floating_point()) {
+    Py_RETURN_TRUE;
+  } else {
+    Py_RETURN_FALSE;
+  }
+  END_HANDLE_ERRORS
+}
+
 static PyObject* PyTensorObject_requires_grad_(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   int requires_grad = 1;
@@ -431,6 +441,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"contiguous_", PyTensorObject_contiguous_, METH_NOARGS, NULL},
     {"pin_memory", PyTensorObject_pin_memory, METH_NOARGS, NULL},
     {"is_pinned", PyTensorObject_is_pinned, METH_NOARGS, NULL},
+    {"is_floating_point", PyTensorObject_is_floating_point, METH_NOARGS, NULL},
     {"requires_grad_", (PyCFunction)PyTensorObject_requires_grad_, METH_VARARGS | METH_KEYWORDS,
      NULL},
     {"retain_grad", PyTensorObject_retain_grad, METH_NOARGS, NULL},

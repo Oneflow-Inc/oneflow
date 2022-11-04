@@ -22,6 +22,7 @@ limitations under the License.
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
+#include "OneFlow/OneFlowEnums.h.inc"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/tensor.h"
 // This include is not necessary now, but it is here for testing the namespace collision
@@ -49,7 +50,10 @@ std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
     const mlir::Attribute& attr, const mlir::Attribute& device_tag,
     const mlir::Attribute& device_name);
 
-::oneflow::DataType GetDataTypeFromMLIRType(Type dt);
+FailureOr<::oneflow::DataType> FromMLIRTypeToOFDataType(Type mlir_type);
+FailureOr<::oneflow::DataType> FromMLIRDataTypeToOFDataType(::mlir::oneflow::DataType data_type);
+FailureOr<::oneflow::DataType> FromMLIRAttrToOFDataType(Attribute attr);
+
 }  // namespace support
 
 }  // namespace oneflow
