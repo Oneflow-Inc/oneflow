@@ -233,7 +233,7 @@ def render_file_if_different(target_file, content):
                 f.write(content)
 
 
-def generate_named_tuple(signature, params, return_names, func_name, i):
+def generate_named_tuple(signature, params, return_names, func_name, block_name, i):
     param_names = ", ".join(["{{\"{}\", \"\"}}".format(x) for x in return_names])
 
     code = []
@@ -245,10 +245,10 @@ def generate_named_tuple(signature, params, return_names, func_name, i):
   static PyStructSequence_Field NamedTuple_fields[] = {{ {param_names},  {{nullptr}} }}; 
   static PyTypeObject {func_name}NamedTuple{i}; 
   static bool is_initialized = false; 
-  static PyStructSequence_Desc desc = {{ "oneflow.return_types.{func_name}", nullptr, NamedTuple_fields, {len(return_names)} }}; 
+  static PyStructSequence_Desc desc = {{ "oneflow.return_types.{block_name}", nullptr, NamedTuple_fields, {len(return_names)} }}; 
   if (!is_initialized) {{ 
       PyStructSequence_InitType(&{func_name}NamedTuple{i}, &desc); 
-      {func_name}NamedTuple{i}.tp_repr = (reprfunc)PyTuple_Type.tp_repr; 
+      {func_name}NamedTuple{i}.tp_repr = (reprfunc)returned_structseq_repr; 
       is_initialized = true; 
   }}
 
@@ -608,7 +608,7 @@ class Generator:
                         )
                     else:
                         # import ipdb; ipdb.set_trace()
-                        schema_fmt += generate_named_tuple(signature, params, signature._ret._return_names, signature._name, i)
+                        schema_fmt += generate_named_tuple(signature, params, signature._ret._return_names, signature._name, block._name, i)
                     schema_fmt += "  }\n"
                     i += 1
                 schema_fmt += "  Py_RETURN_NONE;\n"

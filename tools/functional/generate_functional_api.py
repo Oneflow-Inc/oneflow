@@ -123,6 +123,7 @@ pybind_source_fmt = (
 #include "oneflow/api/python/functional/python_arg.h"
 #include "oneflow/api/python/functional/python_arg_parser.h"
 #include "oneflow/api/python/functional/python_frame.h"
+#include "oneflow/api/python/functional/python_return_types.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/functional/functional.h"
