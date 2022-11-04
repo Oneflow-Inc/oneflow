@@ -648,6 +648,14 @@
   signature: "Tensor (Tensor dy, Tensor x) => GeluGrad"
   bind_python: False
 
+- name: "fast_gelu"
+  signature: "Tensor (Tensor x) => FastGelu"
+  bind_python: True
+
+- name: "fast_gelu_grad"
+  signature: "Tensor (Tensor dy, Tensor x) => FastGeluGrad"
+  bind_python: False
+
 - name: "gelu_with_approximate"
   signature: 'Tensor (Tensor x, String approximate="none") => GeluWithApproximate'
   bind_python: True
@@ -687,6 +695,10 @@
 - name: "softmax_grad"
   signature: "Tensor (Tensor dy, Tensor y) => SoftmaxGrad"
   bind_python: False
+
+- name: "gumbel_softmax"
+  signature: "Tensor (Tensor x, Double tau=1., Int64 dim=None, Bool hard=False, Generator generator=None) => GumbelSoftmax"
+  bind_python: True
 
 - name: "log_softmax"
   signature: "Tensor (Tensor x, Int64 dim=None) => LogSoftmax"
@@ -1500,7 +1512,7 @@
   bind_python: True
 
 - name: "flip"
-  signature: "Tensor (Tensor x, Int32List dims) => Flip"
+  signature: "Tensor (Tensor x, Int32List[1] dims) => Flip"
   bind_python: True
 
 - name: "upsample"
