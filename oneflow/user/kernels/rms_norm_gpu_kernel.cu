@@ -192,8 +192,8 @@ void RmsNormBackwardGpu(ep::Stream* stream, const int64_t nrows, const int64_t n
   layer_norm::DirectStore<ComputeType, T> store(dx_ptr, ncols);
   OF_CUDA_CHECK((rms_norm::DispatchRmsNormGrad<decltype(load_x), decltype(load_dy), decltype(store),
                                                ComputeType>(
-      stream->As<ep::CudaStream>()->cuda_stream(), nrows, ncols, load_x, load_dy,
-      inv_rms->dptr<ComputeType>(), store)));
+      stream->As<ep::CudaStream>()->cuda_stream(), nrows, ncols, load_x, load_dy, store,
+      inv_rms->dptr<ComputeType>())));
 }
 
 template<typename T>
