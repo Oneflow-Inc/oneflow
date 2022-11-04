@@ -19,7 +19,9 @@ limitations under the License.
 #include "llvm/Support/raw_ostream.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/device_type.pb.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
@@ -45,31 +47,33 @@ Maybe<void> SetTensorDateType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-static const mlir::FunctionType GetFunctionType(user_op::InferContext* ctx,
-                                                mlir::OwningOpRef<mlir::ModuleOp>& module) {
+static Maybe<mlir::FunctionType> GetFunctionType(user_op::InferContext* ctx,
+                                                 mlir::OwningOpRef<mlir::ModuleOp>& module) {
   mlir::func::FuncOp funcOp = mlir::SymbolTable::lookupNearestSymbolFrom<mlir::func::FuncOp>(
       module.get(), mlir::SymbolRefAttr::get(module->getContext(), ctx->op_name()));
-  CHECK(funcOp) << "Fail to find funcOp of symbol " << ctx->op_name();
+  CHECK_OR_RETURN(funcOp) << "Fail to find funcOp of symbol " << ctx->op_name();
   const auto funcType = funcOp.getFunctionType();
-  CHECK_EQ(funcType.getNumInputs(), ctx->input_size("in"))
+  CHECK_EQ_OR_RETURN(funcType.getNumInputs(), ctx->input_size("in"))
       << "input size mismatch with mlir assembly";
-  CHECK_EQ(funcType.getNumResults(), ctx->output_size("out"))
+  CHECK_EQ_OR_RETURN(funcType.getNumResults(), ctx->output_size("out"))
       << "output size mismatch with mlir assembly";
   int32_t arg_i = 0;
   for (mlir::Type arg_type : funcType.getInputs()) {
     if (auto rankedTensorType = arg_type.dyn_cast<mlir::RankedTensorType>()) {
-      CHECK_EQ((Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()}),
-               ctx->InputShape("in", arg_i))
+      CHECK_EQ_OR_RETURN(
+          (Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()}),
+          ctx->InputShape("in", arg_i))
           << "arg #" << arg_i;
-      CHECK_EQ(mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType()),
-               ctx->InputDType("in", arg_i))
-          << "arg #" << arg_i;
+      const auto data_type =
+          mlir::oneflow::support::FromMLIRTypeToOFDataType(rankedTensorType.getElementType());
+      if (mlir::failed(data_type)) { exit(1); }
+      CHECK_EQ_OR_RETURN(data_type.getValue(), ctx->InputDType("in", arg_i)) << "arg #" << arg_i;
       arg_i += 1;
     } else {
       std::string arg_type_str = "";
       llvm::raw_string_ostream os(arg_type_str);
       arg_type.print(os);
-      LOG(FATAL) << "Unsupported arg type " << arg_type_str;
+      THROW(RuntimeError) << "Unsupported arg type " << arg_type_str;
     }
   }
   return funcType;
@@ -89,22 +93,24 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
     LOG(ERROR) << "Fail to load mlir assembly";
     exit(1);
   }
-  auto funcType = GetFunctionType(ctx, module);
+  auto funcType = *JUST(GetFunctionType(ctx, module));
   int32_t res_i = 0;
   for (mlir::Type res_type : funcType.getResults()) {
     if (auto rankedTensorType = res_type.dyn_cast<mlir::RankedTensorType>()) {
       ctx->SetOutputShape(
           "out", res_i,
           Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()});
-      ctx->SetOutputDType(
-          "out", res_i,
-          mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType()));
+
+      const auto data_type =
+          mlir::oneflow::support::FromMLIRTypeToOFDataType(rankedTensorType.getElementType());
+      if (mlir::failed(data_type)) { exit(1); }
+      ctx->SetOutputDType("out", res_i, data_type.getValue());
       res_i += 1;
     } else {
       std::string res_type_str = "";
       llvm::raw_string_ostream os(res_type_str);
       res_type.print(os);
-      LOG(FATAL) << "Unsupported arg type " << res_type_str;
+      THROW(RuntimeError) << "Unsupported arg type " << res_type_str;
     }
   }
   return Maybe<void>::Ok();
