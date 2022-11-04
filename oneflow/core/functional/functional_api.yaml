@@ -2391,6 +2391,10 @@
   signature: "Tensor (Tensor query,  Tensor key, Tensor value, Int64 num_heads, Bool causal=False, Int64 query_hidden_slice_start=0, Int64 query_hidden_slice_end=-1, Int64 key_hidden_slice_start=0, Int64 key_hidden_slice_end=-1, Int64 value_hidden_slice_start=0, Int64 value_hidden_slice_end=-1) => FusedMultiHeadAttentionInference"
   bind_python: True
 
+- name: "fused_row_attention_with_pair_bias"
+  signature: "Tensor (Tensor qmk, Tensor mask_bias, Tensor pair_bias, Float scale=2.8, Float eps=0.000000001) => FusedRowAttentionWithPairBias"
+  bind_python: True
+
 - name: "send"
   signature: "Void (Tensor input, Int64 dst, Bool send_meta=True) => Send"
   bind_python: True

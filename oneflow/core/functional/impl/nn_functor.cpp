@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <cmath>
+#include <cstdint>
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/tensor_util.h"
@@ -4309,6 +4311,29 @@ class FusedMultiHeadAttentionInferenceFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedRowAttentionWithPairBiasFunctor {
+ public:
+  FusedRowAttentionWithPairBiasFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_row_attention_with_pair_bias")
+                         .Input("qmk")
+                         .Input("mask_bias")
+                         .Input("pair_bias")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& qmk,
+                           const std::shared_ptr<one::Tensor>& mask_bias,
+                           const std::shared_ptr<one::Tensor>& pair_bias, const float& scale,
+                           const float& eps) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "eps");
+    attrs.SetAllAttrs(scale, eps);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {qmk, mask_bias, pair_bias}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -4426,6 +4451,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BatchNormBackwardReduceFunctor>("BatchNormBackwardReduce");
   m.add_functor<impl::BatchNormBackwardElemtFunctor>("BatchNormBackwardElemt");
   m.add_functor<impl::FusedMultiHeadAttentionInferenceFunctor>("FusedMultiHeadAttentionInference");
+  m.add_functor<impl::FusedRowAttentionWithPairBiasFunctor>("FusedRowAttentionWithPairBias");
 }
 
 }  // namespace functional
