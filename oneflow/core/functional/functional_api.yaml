@@ -390,6 +390,10 @@
   signature: "Tensor (Tensor out_diff, Tensor mask, Tensor device_count, Int32List axis, Bool keepdims=False) => ReduceMaxGlobalStageGrad"
   bind_python: False
 
+- name: "logsumexp"
+  signature: "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => LogSumExp"
+  bind_python: True
+
 - name: "transpose"
   signature:
     [
@@ -644,6 +648,14 @@
   signature: "Tensor (Tensor dy, Tensor x) => GeluGrad"
   bind_python: False
 
+- name: "fast_gelu"
+  signature: "Tensor (Tensor x) => FastGelu"
+  bind_python: True
+
+- name: "fast_gelu_grad"
+  signature: "Tensor (Tensor dy, Tensor x) => FastGeluGrad"
+  bind_python: False
+
 - name: "gelu_with_approximate"
   signature: 'Tensor (Tensor x, String approximate="none") => GeluWithApproximate'
   bind_python: True
@@ -683,6 +695,10 @@
 - name: "softmax_grad"
   signature: "Tensor (Tensor dy, Tensor y) => SoftmaxGrad"
   bind_python: False
+
+- name: "gumbel_softmax"
+  signature: "Tensor (Tensor x, Double tau=1., Int64 dim=None, Bool hard=False, Generator generator=None) => GumbelSoftmax"
+  bind_python: True
 
 - name: "log_softmax"
   signature: "Tensor (Tensor x, Int64 dim=None) => LogSoftmax"
@@ -1496,7 +1512,7 @@
   bind_python: True
 
 - name: "flip"
-  signature: "Tensor (Tensor x, Int32List dims) => Flip"
+  signature: "Tensor (Tensor x, Int32List[1] dims) => Flip"
   bind_python: True
 
 - name: "upsample"
@@ -2224,6 +2240,15 @@
     ]
   bind_python: True
 
+- name: "randn_like"
+  signature: [
+      "Tensor (Tensor input, *, DataType dtype=None, Device device=None,
+      Generator generator=None, Bool requires_grad=False) => RandnLike",
+      "Tensor (Tensor input, *, Placement placement, SbpList sbp, DataType dtype=None,
+      Generator generator=None, Bool requires_grad=False) => GlobalRandnLike",
+    ]
+  bind_python: True
+
 - name: "randint"
   signature: [
       "Tensor (Int64 low, Int64 high, Shape size, *, DataType dtype=None,
@@ -2365,6 +2390,10 @@
 - name: "fused_scale_tril_softmax_mask_scale_grad"
   signature: "Tensor (Tensor softmax_y, Tensor dy, Tensor mask, Int64 diagonal, Float tril_scale_value, Float mask_scale_value) => FusedScaleTrilSoftmaxMaskScaleGrad"
   bind_python: False
+
+- name: "fused_multi_head_attention_inference"
+  signature: "Tensor (Tensor query,  Tensor key, Tensor value, Int64 num_heads, Bool causal=False, Int64 query_hidden_slice_start=0, Int64 query_hidden_slice_end=-1, Int64 key_hidden_slice_start=0, Int64 key_hidden_slice_end=-1, Int64 value_hidden_slice_start=0, Int64 value_hidden_slice_end=-1) => FusedMultiHeadAttentionInference"
+  bind_python: True
 
 - name: "send"
   signature: "Void (Tensor input, Int64 dst, Bool send_meta=True) => Send"
@@ -2862,4 +2891,8 @@
 
 - name: "bincount"
   signature: "Tensor (Tensor input, Tensor weights=None, Int64 minlength=None) => BinCount"
+  bind_python: True
+
+- name: "isclose"
+  signature: "Tensor (Tensor input, Tensor other, Float atol=1e-08, Float rtol=1e-05, Bool equal_nan=False) => IsClose"
   bind_python: True

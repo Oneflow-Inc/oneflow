@@ -939,7 +939,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   int32_t pass_cnt = 0;
   const int64_t prev_v = FLAGS_v;
   auto DoPass = [&](const std::string& pass_name, int32_t cnt = 0) -> Maybe<void> {
-    auto pass_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
+    auto pass_tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true, true);
     VLOG(1) << job_name << " start compiling with pass"
             << " pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name
             << (cnt > 0 ? std::to_string(cnt) : "");
@@ -962,8 +962,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     return Maybe<void>::Ok();
   };
 
-  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()
-      || Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create(StrCat("forward_graph", job_id()))->Write(job());
     Singleton<OpGraph>::New(job());
     Singleton<OpGraph>::Get()->ToDotWithFilePath("forward_dlnet_" + std::to_string(job_id())
