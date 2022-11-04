@@ -115,18 +115,18 @@ struct ChannelsLastStore {
         c1(channel_size / num_groups) {}
 
   template<int PackSize>
-  __device__ void store(const SRC* src, int64_t row, int64_t col) {
+  __device__ void store(const SRC* src, int32_t row, int32_t col) {
     cuda::layer_norm::Pack<DST, PackSize> y_pack;
     cuda::layer_norm::Pack<DST, PackSize> gamma_pack;
     cuda::layer_norm::Pack<DST, PackSize> beta_pack;
-    const int64_t spatial_idx = col / c1;
-    const int64_t c1_idx = col - spatial_idx * c1;
-    const int64_t batch_idx = row / c0;
-    const int64_t c0_idx = row - batch_idx * c0;
-    const int64_t y_offset =
+    const int32_t spatial_idx = col / c1;
+    const int32_t c1_idx = col - spatial_idx * c1;
+    const int32_t batch_idx = row / c0;
+    const int32_t c0_idx = row - batch_idx * c0;
+    const int32_t y_offset =
         (batch_idx * c0 * c1 * spatial_size + spatial_idx * c0 * c1 + c0_idx * c1 + c1_idx)
         / PackSize;
-    const int64_t gamma_beta_offset = (c0_idx * c1 + c1_idx) / PackSize;
+    const int32_t gamma_beta_offset = (c0_idx * c1 + c1_idx) / PackSize;
 
     if (affine) {
       gamma_pack.storage =
@@ -152,9 +152,9 @@ struct ChannelsLastStore {
   DST* y;
   const DST* gamma;
   const DST* beta;
-  int64_t spatial_size;
-  int64_t c0;
-  int64_t c1;
+  int32_t spatial_size;
+  int32_t c0;
+  int32_t c1;
 };
 
 template<typename SRC, typename DST>
@@ -162,13 +162,13 @@ struct ChannelsLastLoad {
   ChannelsLastLoad(const SRC* src, int64_t spatial_size, int64_t channel_size, int64_t num_groups)
       : src(src), spatial_size(spatial_size), c0(num_groups), c1(channel_size / num_groups) {}
   template<int N>
-  __device__ void load(DST* dst, int64_t row, int64_t col) const {
-    const int64_t spatial_idx = col / c1;
-    const int64_t c1_idx = col - spatial_idx * c1;
-    const int64_t batch_idx = row / c0;
-    const int64_t c0_idx = row - batch_idx * c0;
+  __device__ void load(DST* dst, int32_t row, int32_t col) const {
+    const int32_t spatial_idx = col / c1;
+    const int32_t c1_idx = col - spatial_idx * c1;
+    const int32_t batch_idx = row / c0;
+    const int32_t c0_idx = row - batch_idx * c0;
     cuda::layer_norm::Pack<SRC, N> pack;
-    const int64_t offset =
+    const int32_t offset =
         (batch_idx * c0 * c1 * spatial_size + spatial_idx * c0 * c1 + c0_idx * c1 + c1_idx) / N;
 
     pack.storage = *(reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(src) + offset);
@@ -176,9 +176,9 @@ struct ChannelsLastLoad {
     for (int i = 0; i < N; ++i) { dst[i] = static_cast<DST>(pack.elem[i]); }
   }
   const SRC* src;
-  int64_t spatial_size;
-  int64_t c0;
-  int64_t c1;
+  int32_t spatial_size;
+  int32_t c0;
+  int32_t c1;
 };
 
 template<typename T, bool affine>
