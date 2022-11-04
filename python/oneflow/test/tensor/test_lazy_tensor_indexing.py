@@ -236,7 +236,7 @@ def _test_advanced_indexing(test_case, placement, dtype):
         elif choice == 1:
             return list(indices)
         else:
-            return tuple([indices, ])
+            return tuple(indices)
 
     def validate_indexing(x):
         _assert_tensor_equal(
@@ -252,24 +252,26 @@ def _test_advanced_indexing(test_case, placement, dtype):
 
     def validate_setting(x):
         #  x[[0]] = -2
-        x = get_graph_output(x, func=lambda x: setitem_and_return(x, ri([0]), -2))
+        x = get_graph_output(x, func=lambda x: setitem_and_return(x, [0], -2))
         _assert_tensor_equal(test_case, x[0], flow.tensor([-2], dtype=dtype))
         #  x[[0]] = -1
-        x = get_graph_output(x, func=lambda x: setitem_and_return(x, ri([0]), -1))
+        x = get_graph_output(x, func=lambda x: setitem_and_return(x, [0], -1))
         _assert_tensor_equal(test_case, x[0], flow.tensor([-1], dtype=dtype))
         #  x[[2, 3, 4]] = 4
-        x = get_graph_output(x, func=lambda x: setitem_and_return(x, ri([2, 3, 4]), 4))
+        x = get_graph_output(x, func=lambda x: setitem_and_return(x, [2, 3, 4], 4))
         _assert_tensor_equal(
             test_case, x[[2, 3, 4]], flow.tensor([4, 4, 4], dtype=dtype)
         )
         #  x[ri([2, 3, 4]),] = 3
-        x = get_graph_output(x, func=lambda x: setitem_and_return(x, ri([2, 3, 4]), 3))
+        x = get_graph_output(x, func=lambda x: setitem_and_return(x, [ri([2, 3, 4]), ], 3))
         _assert_tensor_equal(
             test_case, x[[2, 3, 4]], flow.tensor([3, 3, 3], dtype=dtype),
         )
         #  x[ri([0, 2, 4]),] = _cpu_global_tensor(flow.tensor([5, 4, 3], dtype=dtype))
         value_tensor = _cpu_global_tensor(flow.tensor([5, 4, 3], dtype=dtype))
-        x = get_graph_output(x, func=lambda x: setitem_and_return(x, ri([0, 2, 4]), value_tensor))
+        x = get_graph_output(
+            x, func=lambda x: setitem_and_return(x, [ri([0, 2, 4]), ], value_tensor)
+        )
         _assert_tensor_equal(
             test_case, x[[0, 2, 4]], flow.tensor([5, 4, 3], dtype=dtype),
         )
@@ -279,7 +281,6 @@ def _test_advanced_indexing(test_case, placement, dtype):
     reference = global_broadcast_consec((8,)).to_global(placement, sbp)
     validate_indexing(reference)
     validate_setting(reference)
-    return
 
     # reference is  1  2  3  4  5  6  7  8
     #               9 10 11 12 13 14 15 16
@@ -293,33 +294,37 @@ def _test_advanced_indexing(test_case, placement, dtype):
     reference = global_broadcast_consec((8, 8)).to_global(placement, sbp)
     _assert_tensor_equal(
         test_case,
-        reference[ri([0, 1, 2]), ri([0])],
+        get_graph_output(reference, func=lambda x: x[ri([0, 1, 2]), ri([0])]),
         flow.tensor([1, 9, 17], dtype=dtype),
     )
     _assert_tensor_equal(
         test_case,
-        reference[ri([0, 1, 2]), ri([1])],
+        get_graph_output(reference, func=lambda x: x[ri([0, 1, 2]), ri([1])]),
         flow.tensor([2, 10, 18], dtype=dtype),
     )
     _assert_tensor_equal(
-        test_case, reference[ri([0]), ri([0])], global_broadcast_consec((1,))
-    )
-    _assert_tensor_equal(
-        test_case, reference[ri([2]), ri([1])], global_broadcast_consec((1,), 18)
+        test_case,
+        get_graph_output(reference, func=lambda x: x[ri([0]), ri([0])]),
+        global_broadcast_consec((1,))
     )
     _assert_tensor_equal(
         test_case,
-        reference[[ri([0, 0]), ri([0, 1])]],
+        get_graph_output(reference, func=lambda x: x[ri([2]), ri([1])]),
+        global_broadcast_consec((1,), 18)
+    )
+    _assert_tensor_equal(
+        test_case,
+        get_graph_output(reference, func=lambda x: x[ri([0, 0]), ri([0, 1])]),
         flow.tensor([1, 2], dtype=dtype),
     )
     _assert_tensor_equal(
         test_case,
-        reference[[ri([0, 1, 1, 0, 2, 7]), ri([1])]],
+        get_graph_output(reference, func=lambda x: x[ri([0, 1, 1, 0, 2, 7]), ri([1])]),
         flow.tensor([2, 10, 10, 2, 18, 58], dtype=dtype),
     )
     _assert_tensor_equal(
         test_case,
-        reference[[ri([0, 0, 1, 1]), ri([0, 1, 0, 0])]],
+        get_graph_output(reference, func=lambda x: x[ri([0, 0, 1, 1]), ri([0, 1, 0, 0])]),
         flow.tensor([1, 2, 9, 9], dtype=dtype),
     )
 
@@ -327,7 +332,7 @@ def _test_advanced_indexing(test_case, placement, dtype):
     columns = ([0],)
     _assert_tensor_equal(
         test_case,
-        reference[rows, columns],
+        get_graph_output(reference, func=lambda x: x[rows, columns]),
         flow.tensor([[1, 1], [9, 49]], dtype=dtype),
     )
 
@@ -335,33 +340,38 @@ def _test_advanced_indexing(test_case, placement, dtype):
     columns = ri([6, 0])
     _assert_tensor_equal(
         test_case,
-        reference[rows, columns],
+        get_graph_output(reference, func=lambda x: x[rows, columns]),
         flow.tensor([[7, 1], [15, 49]], dtype=dtype),
     )
     rows = ri([[0, 0], [1, 2]])
     columns = ri([[0, 1], [3, 7]])
     _assert_tensor_equal(
         test_case,
-        reference[rows, columns],
+        get_graph_output(reference, func=lambda x: x[rows, columns]),
         flow.tensor([[1, 2], [12, 24]], dtype=dtype),
     )
 
     # setting values
-    reference[ri([0]), ri([1])] = -1
+    #  reference[ri([0]), ri([1])] = -1
+    reference = get_graph_output(reference, func=lambda x: setitem_and_return(x, [ri([0]), ri([1])], -1))
     _assert_tensor_equal(
         test_case, reference[ri([0]), ri([1])], flow.tensor([-1], dtype=dtype),
     )
-    reference[ri([0, 1, 2]), ri([0])] = _cpu_global_tensor(
+
+    value_tensor = _cpu_global_tensor(
         flow.tensor([-1, 2, -4], dtype=dtype)
     ).to_global(placement, broadcast_for_placement)
+    reference = get_graph_output(reference, func=lambda x: setitem_and_return(x, [ri([0, 1, 2]), ri([0])], value_tensor))
     _assert_tensor_equal(
         test_case,
         reference[ri([0, 1, 2]), ri([0])],
         flow.tensor([-1, 2, -4], dtype=dtype),
     )
-    reference[rows, columns] = _cpu_global_tensor(
+
+    value_tensor = _cpu_global_tensor(
         flow.tensor([[4, 6], [2, 3]], dtype=dtype)
     ).to_global(placement, broadcast_for_placement)
+    reference = get_graph_output(reference, func=lambda x: setitem_and_return(x, [rows, columns], value_tensor))
     _assert_tensor_equal(
         test_case, reference[rows, columns], flow.tensor([[4, 6], [2, 3]], dtype=dtype),
     )
@@ -379,32 +389,21 @@ def _test_advanced_indexing(test_case, placement, dtype):
     reference = global_broadcast_consec((8, 8)).to_global(placement, sbp)
     _assert_tensor_equal(
         test_case,
-        reference[ri([0, 2]),],
+        get_graph_output(reference, func=lambda x: x[ri([0, 2]),]),
         flow.tensor(
             [[1, 2, 3, 4, 5, 6, 7, 8], [17, 18, 19, 20, 21, 22, 23, 24]], dtype=dtype
         ),
     )
     _assert_tensor_equal(
         test_case,
-        reference[ri([1]), ...],
+        get_graph_output(reference, func=lambda x: x[ri([1]), ...]),
         flow.tensor([[9, 10, 11, 12, 13, 14, 15, 16]], dtype=dtype),
     )
     _assert_tensor_equal(
         test_case,
-        reference[..., ri([1])],
+        get_graph_output(reference, func=lambda x: x[..., ri([1])]),
         flow.tensor([[2], [10], [18], [26], [34], [42], [50], [58]], dtype=dtype),
     )
-
-    # verify too many indices fails
-    with test_case.assertRaises(IndexError):
-        reference[ri([1]), ri([0, 2]), ri([3])]
-
-    # test invalid index fails
-    sbp = random_sbp(placement, max_dim=1).value()
-    reference = _cpu_global_tensor(flow.empty(8, dtype=dtype)).to_global(placement, sbp)
-    for err_idx in (10, -11):
-        with test_case.assertRaisesRegex(IndexError, r"out of bounds"):
-            reference[err_idx]
 
 
 def _test_combined_indexing(test_case, placement, dtype):
