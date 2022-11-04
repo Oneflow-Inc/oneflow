@@ -281,7 +281,7 @@
   signature:
     [
       "Tensor (Tensor input) => Max",
-      "TensorTuple<values,indices> (Tensor input, Int32 dim, Bool keepdim=False) => Max",
+      "TensorTuple<values, indices> (Tensor input, Int32 dim, Bool keepdim=False) => Max",
       "Tensor (Tensor input, Tensor other) => Max",
     ]
   bind_python: True

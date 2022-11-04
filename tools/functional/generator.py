@@ -181,6 +181,24 @@ def _normalize(fmt):
     fmt = fmt.strip()
     return re.sub(r"\s+", " ", fmt)
 
+def _remove_angle_brackets(fmt):
+    return re.sub(r'\<[^()]*\>', '', fmt)
+
+def _split_ignore_in_brackets(fmt: str):
+    params = fmt.split(",")
+    if len(params) == 1:
+        return params
+    results = []
+    i = 0
+    while i < len(params) - 1:
+        if "<" in params[i] and ">" in params[i + 1]:
+            results.append(params[i] + "," + params[i + 1])
+            i += 2
+        else:
+            results.append(params[i])
+            i += 1
+    return results
+
 
 def _std_decay(fmt):
     fmt = fmt.strip()
@@ -196,11 +214,14 @@ def parse_function_params(fmt):
         raise ValueError('Missing "(" in function def: ' + fmt)
 
     header = _normalize(fmt[0:open_paren])
-    items = header.split(" ")
+    items = _remove_angle_brackets(header).split(" ")
     if (len(items)) != 1:
         raise ValueError(
             "Missing return type or more than 1 return type in function def: " + fmt
         )
+
+    items = _split_ignore_in_brackets(header)
+    # items = header.split(" ")
     params.append(items[0])
 
     close_paren = fmt.rfind(")")
@@ -237,32 +258,28 @@ def generate_named_tuple(signature, params, return_names, func_name, block_name,
     param_names = ", ".join(["{{\"{}\", \"\"}}".format(x) for x in return_names])
 
     code = []
-    code.append("""
-  const auto& tensortuple = functional::{0}({1}).GetOrThrow();\n
-""".format(signature._name, ", ".join(params))
+    code.append(
+"    const auto& tensortuple = functional::{0}({1}).GetOrThrow();".format(signature._name, ", ".join(params))
     )
-    code.append(f"""
-  static PyStructSequence_Field NamedTuple_fields[] = {{ {param_names},  {{nullptr}} }}; 
-  static PyTypeObject {func_name}NamedTuple{i}; 
-  static bool is_initialized = false; 
-  static PyStructSequence_Desc desc = {{ "oneflow.return_types.{block_name}", nullptr, NamedTuple_fields, {len(return_names)} }}; 
-  if (!is_initialized) {{ 
-      PyStructSequence_InitType(&{func_name}NamedTuple{i}, &desc); 
-      {func_name}NamedTuple{i}.tp_repr = (reprfunc)returned_structseq_repr; 
-      is_initialized = true; 
-  }}
+    code.append(
+f"""    static PyStructSequence_Field NamedTuple_fields[] = {{ {param_names},  {{nullptr}} }}; 
+    static PyTypeObject {func_name}NamedTuple{i}; 
+    static bool is_initialized = false; 
+    static PyStructSequence_Desc desc = {{ "oneflow.return_types.{block_name}", nullptr, NamedTuple_fields, {len(return_names)} }}; 
+    if (!is_initialized) {{ 
+        PyStructSequence_InitType(&{func_name}NamedTuple{i}, &desc); 
+        {func_name}NamedTuple{i}.tp_repr = (reprfunc)returned_structseq_repr; 
+        is_initialized = true; 
+    }}
 
-  // PyObjectPtr r (PyStructSequence_New(tensortuple.size()));
-  PyObjectPtr r (PyStructSequence_New(&{func_name}NamedTuple{i}));
-  if (!r) {{
-    // throw python_error();
-  }}
-  for (int i = 0; i < tensortuple.size(); i++) {{
-    PyTuple_SET_ITEM(r.get(), i, CastToPyObject(tensortuple.at(i)));
-  }}
-  // return (PyObject*)&{func_name}NamedTuple{i}; 
-  return r.release(); 
-"""
+    PyObjectPtr r (PyStructSequence_New(&{func_name}NamedTuple{i}));
+    if (!r) {{
+      throw py::error_already_set();
+    }}
+    for (int i = 0; i < tensortuple.size(); i++) {{
+      PyTuple_SET_ITEM(r.get(), i, CastToPyObject(tensortuple.at(i)));
+    }}
+    return r.release();"""
     )
     return "\n".join(code)
 
@@ -601,13 +618,11 @@ class Generator:
                     for j in range(len(signature._args)):
                         cpp_type = _std_decay(signature._args[j]._cpp_type)
                         params.append("r[{0}].As<{1}>()".format(j, cpp_type))
-                    print(signature._name)
                     if signature._ret._return_names is None:
                         schema_fmt += "    return CastToPyObject(functional::{0}({1}));\n".format(
                             signature._name, ", ".join(params)
                         )
                     else:
-                        # import ipdb; ipdb.set_trace()
                         schema_fmt += generate_named_tuple(signature, params, signature._ret._return_names, signature._name, block._name, i)
                     schema_fmt += "  }\n"
                     i += 1
