@@ -197,7 +197,7 @@ Maybe<void> TensorAutoCastProcessor::Apply() {
     // Skip autocast if any input is float32 for gray or clear list
     if (autocast_meta_.autocast_color() != autocast::kWhite) {
       for (int i = 0; i < inputs_.size(); ++i) {
-        if (!autocast_meta_.is_args_autocast_eligible(i) && inputs_[i]->dtype()->is_floating_point()
+        if (autocast_meta_.is_args_autocast_eligible(i) && inputs_[i]->dtype()->is_floating_point()
             && inputs_[i]->dtype() != autocast_dtype) {
           return false;
         }
