@@ -372,6 +372,10 @@ class TestGraphBlock(flow.unittest.TestCase):
         class ConfigMixin:
             def hello_from_cfg(self):
                 return "hello_from_cfg"
+            
+            @property
+            def property_from_cfg(self):
+                return 128
         
         class MixedModule(ModuleMixin, ConfigMixin):
             def __init__(self):
@@ -380,6 +384,7 @@ class TestGraphBlock(flow.unittest.TestCase):
             def forward(self, x):
                 test_case.assertEqual(self.dtype, flow.float32)
                 test_case.assertEqual(self.hello_from_cfg(), "hello_from_cfg")
+                test_case.assertEqual(self.property_from_cfg, 128)
                 return x
 
         mixedm = MixedModule()
