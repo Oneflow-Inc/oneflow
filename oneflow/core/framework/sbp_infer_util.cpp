@@ -445,10 +445,12 @@ void NdSbpsDimReduce(const Shape& hierarchy, const std::vector<const NdSbp*>& nd
   // At this moment, if we have [2, 4, 3, 7]: (S0, S1, S0, S0) for logical shape [601, 301, 999]
   // We hold the split when accessing the current dimension
   // Do the true splitting until we reach the next step
-  // dim = 0, split_axis2holding_reduced_shapes: {(0: 601)}
-  // dim = 1, split_axis2holding_reduced_shapes: {(0: 300, 301), (1: 601)}
-  // dim = 2, split_axis2holding_reduced_shapes: {(0: 300, 301), (1: 150, 151)}
-  // dim = 3, split_axis2holding_reduced_shapes: {(0: 100, 101), (1: 150, 151)}
+  // dim = 0, split_axis2holding_reduced_shapes: {(0: 601)}, last split axis = -1
+  // dim = 1, split_axis2holding_reduced_shapes: {(0: 300, 301), (1: 301)}, last split axis = 0
+  // dim = 2, split_axis2holding_reduced_shapes: {(0: 300, 301), (1: 75, 76)}, last split axis = 1
+  // dim = 3, at this moment, last split axis (0) == current split axis (0),
+  // dim = 3, but judging 300 % (3 * 7) = 6 fails the CanMergeSplit(), not merging
+  // dim = 3, split_axis2holding_reduced_shapes: {(0: 100, 101), (1: 75, 76)}, last split axis = 0
   std::vector<HashMap<int32_t, HashSet<int32_t>>> index2split_axis2holding_reduced_shapes(sbp_num);
   std::vector<std::vector<int32_t>> index2last_holding_reduced_shapes(sbp_num);
   std::vector<int32_t> last_split_axises(sbp_num, -1);
