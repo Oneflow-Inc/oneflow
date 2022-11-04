@@ -338,8 +338,7 @@ bool IsSplitValid(const Shape& shape, const NdSbp& nd_sbp, const Shape& hierachy
     if (sbp.has_split_parallel()) {
       const int64_t dim = sbp.split_parallel().axis();
       if (dim >= cur_shape.NumAxes()) { return false; }
-      // Evenly split.
-      if (cur_shape.At(dim) % hierachy.At(i) != 0) { return false; }
+      // Unbalanced split and take the minimum
       cur_shape.Set(dim, cur_shape.At(dim) / hierachy.At(i));
       // Larger then min size.
       if (cur_shape.elem_cnt() < min_size) { return false; }
