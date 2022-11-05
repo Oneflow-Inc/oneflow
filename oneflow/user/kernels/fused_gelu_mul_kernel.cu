@@ -18,10 +18,6 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/ep/cuda/primitive/binary_functor.cuh"
 #include "oneflow/user/kernels/elementwise_primitive_kernel.h"
-// #if CUDA_VERSION >= 11000
-// #include <cuda_bf16.h>
-// #endif  // CUDA_VERSION >= 11000
-// #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
 
 namespace oneflow {
 
@@ -58,15 +54,15 @@ namespace cuda {
 REGISTER_USER_KERNEL("fused_fast_gelu_mul")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-          "y", "x", "multiplier", [](user_op::KernelComputeContext* ctx) {
-            const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-            const user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+          "out", "in", "multiplier", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+            const user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
-                ctx->device_type(), ep::primitive::BinaryOp::kFastGeluFuseMul, x->data_type(),
-                y->data_type(), 1 /*max_num_dims*/);
+                ctx->device_type(), ep::primitive::BinaryOp::kFastGeluFuseMul, in->data_type(),
+                out->data_type(), 1 /*max_num_dims*/);
           });
     })
-    .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kFastGeluFuseMul, "y", "x"));
+    .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kFastGeluFuseMul, "out", "in"));
 
 template<typename T>
 struct FusedFastGeluMulGradFunctor {
@@ -122,16 +118,15 @@ class FusedFastGeluMulGradCudaKernel final : public user_op::OpKernel {
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const auto* out_diff = ctx->Tensor4ArgNameAndIndex("out_diff", 0);
+    const auto* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const auto* multiplier = ctx->Tensor4ArgNameAndIndex("multiplier", 0);
-    auto* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    auto* in_diff = ctx->Tensor4ArgNameAndIndex("in_diff", 0);
 
-    int64_t elem_cnt = dy->shape_view().elem_cnt();
-
+    int64_t elem_cnt = in->shape_view().elem_cnt();
     OF_CUDA_CHECK((elementwise::Ternary<FusedFastGeluMulGradFunctor<T>, T, T, T, T>(
-        FusedFastGeluMulGradFunctor<T>(), elem_cnt, dx->mut_dptr<T>(), dy->dptr<T>(), x->dptr<T>(),
-        multiplier->dptr<T>(), ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
+        FusedFastGeluMulGradFunctor<T>(), elem_cnt, in_diff->mut_dptr<T>(), out_diff->dptr<T>(),
+        in->dptr<T>(), multiplier->dptr<T>(), ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -141,7 +136,7 @@ class FusedFastGeluMulGradCudaKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("fused_fast_gelu_mul_grad")                     \
       .SetCreateFn<FusedFastGeluMulGradCudaKernel<dtype>>()            \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("out_diff", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUSED_FAST_GELU_MUL_GRAD_CUDA_KERNEL(float)
 REGISTER_FUSED_FAST_GELU_MUL_GRAD_CUDA_KERNEL(double)
