@@ -99,6 +99,7 @@ Maybe<void> GetSbpSignatures4Conv(user_op::SbpContext* ctx) {
 
   if (has_bias) {
     ctx->NewBuilder()
+        .Split(ctx->inputs(), 0)
         .Split(user_op::OpArg("in", 0), 0)
         .Broadcast(user_op::OpArg("weight", 0))
         .Broadcast(user_op::OpArg("bias", 0))
@@ -106,6 +107,7 @@ Maybe<void> GetSbpSignatures4Conv(user_op::SbpContext* ctx) {
         .Build();
   } else {
     ctx->NewBuilder()
+        .Split(ctx->inputs(), 0)
         .Split(user_op::OpArg("in", 0), 0)
         .Broadcast(user_op::OpArg("weight", 0))
         .Split(user_op::OpArg("out", 0), 0)
