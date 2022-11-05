@@ -2897,10 +2897,10 @@
   signature: "Tensor (Tensor input, Tensor other, Float atol=1e-08, Float rtol=1e-05, Bool equal_nan=False) => IsClose"
   bind_python: True
 
-- name: "fused_gelu_mul"
-  signature: "Tensor (Tensor x, Tensor multiplier, String approximate) => FusedGeluMul"
+- name: "fused_fast_gelu_mul"
+  signature: "Tensor (Tensor x, Tensor multiplier) => FusedFastGeluMul"
   bind_python: True
 
-- name: "fused_gelu_mul_grad"
-  signature: "Tensor (Tensor dy, Tensor x, Tensor multiplier, String approximate) => FusedGeluMulGrad"
+- name: "fused_fast_gelu_mul_grad"
+  signature: "Tensor (Tensor dy, Tensor x, Tensor multiplier) => FusedFastGeluMulGrad"
   bind_python: False

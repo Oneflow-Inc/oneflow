@@ -19,43 +19,32 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct FusedGeluMulGradCaptureState : public AutoGradCaptureState {
+struct FusedFastGeluMulGradCaptureState : public AutoGradCaptureState {
   bool in_requires_grad = true;
   bool multiplier_requires_grad = true;
-  std::string approximate = "tanh";
 };
 
-class FusedGeluMulGrad : public OpExprGradFunction<FusedGeluMulGradCaptureState> {
+class FusedFastGeluMulGrad : public OpExprGradFunction<FusedFastGeluMulGradCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-    return Maybe<void>::Ok();
-  }
+  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(FusedGeluMulGradCaptureState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(FusedFastGeluMulGradCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);   // (in, multiplier)
     CHECK_EQ_OR_RETURN(outputs.size(), 1);  // (out,)
     ctx->in_requires_grad = inputs.at(0)->requires_grad();
     ctx->multiplier_requires_grad = inputs.at(1)->requires_grad();
-
     if (ctx->in_requires_grad || ctx->multiplier_requires_grad) {
       ctx->SaveTensorForBackward(inputs.at(0));  // in
       ctx->SaveTensorForBackward(inputs.at(1));  // multiplier
     }
-
     if (ctx->multiplier_requires_grad) {
       ctx->SaveTensorForBackward(outputs.at(0));  // out
     }
-
-    ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->approximate = JUST(composed_attrs.GetAttr<std::string>("approximate"));
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const FusedGeluMulGradCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const FusedFastGeluMulGradCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->in_requires_grad && !ctx->multiplier_requires_grad) { return Maybe<void>::Ok(); }
 
@@ -64,15 +53,13 @@ class FusedGeluMulGrad : public OpExprGradFunction<FusedGeluMulGradCaptureState>
     CHECK_GE_OR_RETURN(saved_tensors.size(), 2);
 
     const auto& out_diff = out_grads.at(0);
-    // const int64_t num_axes = out_diff->shape()->NumAxes();
 
     in_grads->resize(2);  // (in_diff, multiplier_diff)
     const auto& in = saved_tensors.at(0);
     const auto& multiplier = saved_tensors.at(1);
 
     if (ctx->in_requires_grad) {
-      in_grads->at(0) =
-          JUST(functional::FusedGeluMulGrad(out_diff, in, multiplier, ctx->approximate));
+      in_grads->at(0) = JUST(functional::FusedFastGeluMulGrad(out_diff, in, multiplier));
     }
 
     if (ctx->multiplier_requires_grad) {
@@ -83,12 +70,9 @@ class FusedGeluMulGrad : public OpExprGradFunction<FusedGeluMulGradCaptureState>
 
     return Maybe<void>::Ok();
   }
-
- private:
-  AttrMap base_attrs_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("fused_gelu_mul", FusedGeluMulGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_fast_gelu_mul", FusedFastGeluMulGrad);
 
 }  // namespace one
 }  // namespace oneflow

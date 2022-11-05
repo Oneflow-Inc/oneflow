@@ -4311,51 +4311,42 @@ class FusedMultiHeadAttentionInferenceFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedGeluMulFunctor {
+class FusedFastGeluMulFunctor {
  public:
-  FusedGeluMulFunctor() {
-    op_tanh_ = CHECK_JUST(one::OpBuilder("fused_fast_gelu_mul")
-                              .Input("in")
-                              .Input("multiplier")
-                              .Output("out")
-                              .Build());
+  FusedFastGeluMulFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_fast_gelu_mul")
+                         .Input("in")
+                         .Input("multiplier")
+                         .Output("out")
+                         .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& multiplier,
-                           const std::string& approximate) const {
-    if (approximate != "none" && approximate != "tanh") {
-      return Error::RuntimeError() << "the approximate argument should be 'none' or 'tanh'";
-    }
-    if (approximate == "none") {
-      return Error::UnimplementedError() << "FusedGeluMul only support approximate 'tanh'";
-    }
-    return OpInterpUtil::Dispatch<Tensor>(*op_tanh_, {x, multiplier});
+                           const std::shared_ptr<one::Tensor>& multiplier) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, multiplier});
   }
 
  private:
-  std::shared_ptr<OpExpr> op_tanh_;
+  std::shared_ptr<OpExpr> op_;
 };
 
-class FusedGeluMulGradFunctor {
+class FusedFastGeluMulGradFunctor {
  public:
-  FusedGeluMulGradFunctor() {
-    op_tanh_ = CHECK_JUST(one::OpBuilder("fused_fast_gelu_mul_grad")
-                              .Input("a")
-                              .Input("b")
-                              .Input("dy")
-                              .Output("dx")
-                              .Build());
+  FusedFastGeluMulGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_fast_gelu_mul_grad")
+                         .Input("out_diff")
+                         .Input("in")
+                         .Input("multiplier")
+                         .Output("in_diff")
+                         .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& multiplier,
-                           const std::string& approximate) const {
-    CHECK_EQ_OR_RETURN(approximate, "tanh") << "FusedGeluMul only support approximate 'tanh'";
-    return OpInterpUtil::Dispatch<Tensor>(*op_tanh_, {dy, x, multiplier});
+                           const std::shared_ptr<one::Tensor>& multiplier) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x, multiplier});
   }
 
  private:
-  std::shared_ptr<OpExpr> op_tanh_;
+  std::shared_ptr<OpExpr> op_;
 };
 
 }  // namespace impl
@@ -4475,8 +4466,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BatchNormBackwardReduceFunctor>("BatchNormBackwardReduce");
   m.add_functor<impl::BatchNormBackwardElemtFunctor>("BatchNormBackwardElemt");
   m.add_functor<impl::FusedMultiHeadAttentionInferenceFunctor>("FusedMultiHeadAttentionInference");
-  m.add_functor<impl::FusedGeluMulFunctor>("FusedGeluMul");
-  m.add_functor<impl::FusedGeluMulGradFunctor>("FusedGeluMulGrad");
+  m.add_functor<impl::FusedFastGeluMulFunctor>("FusedFastGeluMul");
+  m.add_functor<impl::FusedFastGeluMulGradFunctor>("FusedFastGeluMulGrad");
 }
 
 }  // namespace functional
