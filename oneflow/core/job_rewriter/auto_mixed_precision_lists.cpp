@@ -116,6 +116,8 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "fused_bias_add_gelu",
                               "fused_bias_add_gelu_grad",
                               "fused_bias_add_mask_scale",
+                              "fused_fast_gelu_mul",
+                              "fused_fast_gelu_mul_grad",
                               "acc",
                               "reciprocal",
                               "reciprocal_no_nan",
