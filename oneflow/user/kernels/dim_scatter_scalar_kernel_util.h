@@ -72,7 +72,8 @@ struct UpdateScalarFunctor {
   template struct DimScatterScalarFunctor<device_type, int8_t, int64_t, opt>;  \
   template struct DimScatterScalarFunctor<device_type, int32_t, int64_t, opt>; \
   template struct DimScatterScalarFunctor<device_type, int64_t, int64_t, opt>; \
-  template struct DimScatterScalarFunctor<device_type, float, int64_t, opt>;
+  template struct DimScatterScalarFunctor<device_type, float, int64_t, opt>;   \
+  template struct DimScatterScalarFunctor<device_type, double, int64_t, opt>;
 
 template<typename T>
 using DimOpIndexNdHelper = NdIndexOffsetHelper<T, kDimGatherMaxDimCount>;
