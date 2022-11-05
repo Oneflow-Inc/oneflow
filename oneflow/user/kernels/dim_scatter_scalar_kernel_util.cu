@@ -45,6 +45,15 @@ struct DimScatterScalarFunctor<DeviceType::kCUDA, IN_T, IDX_T, Opt> final {
 INSTANTIATE_DIM_SCATTER_SCARLAR_FUNCTORS(DeviceType::kCUDA, UpdateScalarFunctor);
 INSTANTIATE_DIM_SCATTER_SCARLAR_FUNCTORS(DeviceType::kCUDA, AddScalarFunctor);
 
+template struct DimScatterScalarFunctor<DeviceType::kCUDA, double, int64_t, UpdateScalarFunctor>;
+template struct DimScatterScalarFunctor<DeviceType::kCUDA, double, int64_t, AddScalarFunctor>;
+
+template struct DimScatterScalarFunctor<DeviceType::kCUDA, half, int64_t, UpdateScalarFunctor>;
+template struct DimScatterScalarFunctor<DeviceType::kCUDA, half, int32_t, UpdateScalarFunctor>;
+
+template struct DimScatterScalarFunctor<DeviceType::kCUDA, half, int64_t, AddScalarFunctor>;
+template struct DimScatterScalarFunctor<DeviceType::kCUDA, half, int32_t, AddScalarFunctor>;
+
 }  // namespace user_op
 }  // namespace oneflow
 #endif

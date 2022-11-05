@@ -182,7 +182,9 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "ones_like",
                                "pinned_identity",
                                "to_contiguous",
-                               "copy"};
+                               "copy",
+                               "fill_",
+                               "dim_scatter_update_scalar"};
 
   return clear_list;
 }

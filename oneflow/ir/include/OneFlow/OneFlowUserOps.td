@@ -10748,6 +10748,7 @@ def OneFlow_KernelLaunchOp : OneFlow_JITLikeOp<"kernel_launch"> {}
 
 #endif // GET_ONEFLOW_MLIR_JIT_OP_DEFINITIONS
 
+#ifdef GET_ONEFLOW_COMPLEX_OP_DEFINITIONS
 
 def OneFlow_StftOp : OneFlow_BaseOp<"stft", [SupportNonContiguous,NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
@@ -10774,3 +10775,5 @@ def OneFlow_StftOp : OneFlow_BaseOp<"stft", [SupportNonContiguous,NoSideEffect, 
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
+
+#endif // GET_ONEFLOW_COMPLEX_OP_DEFINITIONS
