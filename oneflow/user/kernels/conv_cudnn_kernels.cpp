@@ -55,7 +55,6 @@ struct CudnnConvArgsAndAlgo final {
                      .cudnn_conv_enable_pseudo_half()
                  || (ctx->Attr<std::string>("data_format") == "channels_last"
                      && std::is_same<PerfT, cudnnConvolutionBwdFilterAlgoPerf_t>::value)) {
-    LOG(ERROR) << "LazyMode::is_enabled " << LazyMode::is_enabled();
     size_t byte_size_of_buf = buf->shape_view().elem_cnt();
     AllocatedCudnnConvResource res(stream->As<ep::CudaStream>()->cudnn_handle(),
                                    const_cast<void*>(x->dptr()), const_cast<void*>(w->dptr()),
