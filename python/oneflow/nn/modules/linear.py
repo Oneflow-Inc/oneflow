@@ -111,6 +111,10 @@ class Linear(Module):
             if bias
             else None
         )
+        self.use_fused_mlp = (
+            self.bias is not None
+            and os.getenv("ONEFLOW_KERNEL_ENABLE_FUSED_LINEAR") == "1"
+        )
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
@@ -121,10 +125,7 @@ class Linear(Module):
             flow.nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        if (
-            self.bias is not None
-            and os.getenv("ONEFLOW_KERNEL_ENABLE_FUSED_LINEAR") == "1"
-        ):
+        if self.use_fused_mlp:
             x_shape = x.shape
             if len(x_shape) > 2:
                 x = x.reshape(-1, x.shape[-1])

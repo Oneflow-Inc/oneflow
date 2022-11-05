@@ -378,6 +378,7 @@ class TestGroupNorm(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_groupnorm_nhwc(test_case):
         _test_groupnorm_nhwc(test_case, (16, 64, 128, 128), 32)
 

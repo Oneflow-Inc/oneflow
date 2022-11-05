@@ -131,7 +131,6 @@ struct ChannelsLastStore {
          + c0_idx * c1.divisor + c1_idx)
         / PackSize;
     const int32_t gamma_beta_offset = (c0_idx * c1.divisor + c1_idx) / PackSize;
-
     if (affine) {
       gamma_pack.storage =
           *(reinterpret_cast<const cuda::layer_norm::PackType<DST, PackSize>*>(gamma)
