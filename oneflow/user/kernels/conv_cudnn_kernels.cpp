@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 
@@ -40,9 +41,10 @@ struct CudnnConvArgsAndAlgo final {
       : args(*ctx, x->data_type(), x->shape_view(), w->data_type(), w->shape_view(), y->data_type(),
              y->shape_view(), ctx->Attr<std::string>("data_format"), buf->shape_view().elem_cnt(),
              Singleton<ResourceDesc, ForSession>::Get()
-                 ->resource()
-                 .cudnn_conf()
-                 .cudnn_conv_heuristic_search_algo(),
+                     ->resource()
+                     .cudnn_conf()
+                     .cudnn_conv_heuristic_search_algo()
+                 || (!LazyMode::is_enabled()),
              Singleton<ResourceDesc, ForSession>::Get()
                  ->resource()
                  .cudnn_conf()
@@ -53,6 +55,7 @@ struct CudnnConvArgsAndAlgo final {
                      .cudnn_conv_enable_pseudo_half()
                  || (ctx->Attr<std::string>("data_format") == "channels_last"
                      && std::is_same<PerfT, cudnnConvolutionBwdFilterAlgoPerf_t>::value)) {
+    LOG(ERROR) << "LazyMode::is_enabled " << LazyMode::is_enabled();
     size_t byte_size_of_buf = buf->shape_view().elem_cnt();
     AllocatedCudnnConvResource res(stream->As<ep::CudaStream>()->cudnn_handle(),
                                    const_cast<void*>(x->dptr()), const_cast<void*>(w->dptr()),
@@ -83,7 +86,7 @@ size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::Tensor
 
   const auto& cudnn_conf = Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
   size_t workspace_size = cudnn_conf.cudnn_buf_limit_mbyte() * 1024 * 1024;
-  if (!x->is_dynamic()) {
+  if (!x->is_dynamic() && LazyMode::is_enabled()) {
     CudnnConvArgs args(ctx, x->data_type(), ShapeView(x->shape()), w->data_type(),
                        ShapeView(w->shape()), y->data_type(), ShapeView(y->shape()),
                        ctx.Attr<std::string>("data_format"), workspace_size,

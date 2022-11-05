@@ -440,7 +440,13 @@ llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
 
 bool Conv2DOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
 
-llvm::DenseSet<Value> Conv2DOp::OperandsToTranspose() { return {this->in(), this->weight()}; }
+llvm::DenseSet<Value> Conv2DOp::OperandsToTranspose() {
+  if (this->_add_to_output()) {
+    return {this->in(), this->weight(), this->_add_to_output()};
+  } else {
+    return {this->in(), this->weight()};
+  }
+}
 
 llvm::DenseSet<Value> Conv2DOp::ResultsToTranspose() { return {this->out()}; }
 
@@ -452,6 +458,7 @@ llvm::SmallVector<Value, 4> Conv2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> val
   operands.push_back(value[1]);
   if (conv_op.bias()) operands.push_back(conv_op.bias());
   if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
+  if (this->_add_to_output()) { operands.push_back(value[2]); }
   NamedAttrList attributes = conv_op->getAttrs();
   attributes.set(conv_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
   auto res = rewriter
