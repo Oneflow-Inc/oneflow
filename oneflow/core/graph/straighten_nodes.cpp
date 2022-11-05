@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <memory>
+#include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/graph/straighten_nodes.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/graph/op_graph.h"
@@ -23,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/register/runtime_register_desc.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -40,11 +42,12 @@ class TopoStruct {
   TaskNode* node = nullptr;
   int32_t min_layer = -1;
   int32_t tributary_layer = -1;
-  bool on_trunk = false;
+  bool on_mainstem = false;
   int32_t counter = 0;
   int32_t min_distance2transfer = -1;
   int64_t memory_increment = -1;
   TopoStruct* next_same_node = nullptr;
+  int32_t activation_time = -1;
   // We can have some other nodes in it for example
   // SbpNode<NdSbpSignature>* node;
   // SbpEdge<NdSbpSignature>* node;
@@ -55,13 +58,16 @@ class TopoStruct {
 
   void SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
 
-  void SpreadTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
+  void SpreadMainstem(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
 
   // The minimum computation distance from the beginning of this op to the next transfer
   int32_t GetMinDistance2Transfer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
 
   // Memory increment = (memory of out registers) - (memory of in registers)
   void ComputeMeomoryIncrement();
+
+  // Activation time = time of cpu - time of gpu
+  void ComputeActivationTime();
 
   // TODO: We might design more deciding parameter and choose a right combination of them in the
   // future.
@@ -71,10 +77,13 @@ class TopoStruct {
   // i = 1: those with small minimum distance to transfer go first
   // i = 2: first in first out
   // i = 3: those with small memory increment go first
-  // i = 4: those with large tributary layers go first
-  // i = 5: those with long distance to transfer go first
-  // i = 6: last in first out
-  // i = 7: those with large memory increment go first
+  // i = 4: those with small activation time go first
+
+  // i = 5: those with large tributary layers go first
+  // i = 6: those with long distance to transfer go first
+  // i = 7: last in first out
+  // i = 8: those with large memory increment go first
+  // i = 9: those with large activation time go first
   int64_t GetDecidingParameter(int32_t i) const;
 };
 
@@ -90,13 +99,15 @@ static std::vector<int64_t> decide_parameters;
 // America.
 void InitDecideParameters(StraightenAlgorithmTag sat) {
   decide_parameters.clear();
+  decide_parameters.push_back(4);
+  decide_parameters.push_back(1);
   if (sat == StraightenAlgorithmTag::kCompressMemory) {
     decide_parameters.push_back(3);
     decide_parameters.push_back(0);
   } else {
     // sat==StraightenAlgorithmTag::kOverlap4ModelParallelism
-    decide_parameters.push_back(6);
-    decide_parameters.push_back(4);
+    decide_parameters.push_back(7);
+    decide_parameters.push_back(5);
   }
 }
 
@@ -161,7 +172,29 @@ TaskClassifier GetTaskClassifier(const TaskNode* node) {
   // They are sorted according to frequency of judgement
   // frequency of judgement = the number of occurrences / the times of judgement
   TaskType task_type = node->GetTaskType();
-  if (task_type == TaskType::kNormalForward) { return TaskClassifier::kWaitingComputation; }
+  if (task_type == TaskType::kNormalForward) {
+    // auto comp_task_node = dynamic_cast<const CompTaskNode*>(node);
+    const auto& node_name = node->VisualStr();
+    if (node_name.find("-cast-") != std::string::npos
+        || node_name.find("-expand") != std::string::npos) {
+      // if (GlobalProcessCtx::Rank() == 0 && comp_task_node->op()->op_conf().has_user_conf()) {
+      //   std::cout << node_name << ", op type name: "
+      //             << comp_task_node->op()->op_conf().user_conf().op_type_name() << std::endl;
+      // }
+      return TaskClassifier::kWaitingTransfer;
+    } else if (node_name.find(".weight") != std::string::npos
+               || node_name.find(".bias") != std::string::npos) {
+      // if (GlobalProcessCtx::Rank() == 0) {
+      //   std::cout << node_name
+      //             << ", has variable conf: " <<
+      //             comp_task_node->op()->op_conf().has_variable_conf()
+      //             << std::endl;
+      // }
+      return TaskClassifier::kRunASAP;
+    } else {
+      return TaskClassifier::kWaitingComputation;
+    }
+  }
   if (IsTransferNode(task_type)) { return TaskClassifier::kWaitingTransfer; }
   if (task_type == TaskType::kCallbackNotify) { return TaskClassifier::kRunALAP; }
   if (ShouldRunASAP(task_type)) { return TaskClassifier::kRunASAP; }
@@ -180,7 +213,7 @@ void TopoStruct::DropTributaryLayer(int32_t upper_bound) {
 void TopoStruct::SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
   if (counter || min_layer <= 0) { return; }
   int32_t producer_max_lay = 0;
-  if (on_trunk) {
+  if (on_mainstem) {
     producer_max_lay = min_layer - 1;
   } else {
     // On a tributary, the operator could be run later.
@@ -196,15 +229,15 @@ void TopoStruct::SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>* task_node2
   counter--;
 }
 
-// Judge if this node is on the trunk
+// Judge if this node is on the mainstem
 // If so, judge it for its producer/upstream nodes
-void TopoStruct::SpreadTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
+void TopoStruct::SpreadMainstem(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
   // Skip it if this node is already judged.
-  if (on_trunk) { return; }
+  if (on_mainstem) { return; }
   CHECK_GE(min_layer, 0) << "TopoStruct not initialized!";
-  on_trunk = true;
-  // If I am in the trunk, then all the children with (min_layer >= my layer id - 1) would be
-  // considered as in the trunk
+  on_mainstem = true;
+  // If I am in the mainstem, then all the children with (min_layer >= my layer id - 1) would be
+  // considered as in the mainstem
   node->ForEachNodeOnInEdge([&](TaskNode* in) {
     auto& topo_struct_in = task_node2topo_struct->at(in);
     if (topo_struct_in.min_layer == min_layer - 1) {
@@ -257,6 +290,17 @@ void TopoStruct::ComputeMeomoryIncrement() {
   }
 }
 
+// Activation time = time of cpu - time of gpu
+void TopoStruct::ComputeActivationTime() {
+  const auto& node_name = node->VisualStr();
+  if (node_name.find("-cast-") != std::string::npos
+      || node_name.find("-expand") != std::string::npos) {
+    activation_time = 1;
+  } else {
+    activation_time = 0;
+  }
+}
+
 // deciding parameter
 // i = 0: those with small tributary layers go first
 // i = 1: those with small minimum distance to transfer go first
@@ -268,8 +312,8 @@ void TopoStruct::ComputeMeomoryIncrement() {
 // i = 7: those with large memory increment go first
 int64_t TopoStruct::GetDecidingParameter(int32_t i) const {
   int64_t sign = 1;
-  if (i >= 4) {
-    i -= 4;
+  if (i >= 5) {
+    i -= 5;
     sign = -1;
   }
   switch (i) {
@@ -277,27 +321,30 @@ int64_t TopoStruct::GetDecidingParameter(int32_t i) const {
     case 1: return sign * min_distance2transfer;
     case 2: return sign * min_layer;
     case 3: return sign * memory_increment;
+    case 4: return sign * activation_time;
   }
   return 0;
 }
 
-// Find the trunk of the task graph, then reduce the wait time for tributaries
-void FindTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
+// Find the mainstem of the task graph, then reduce the wait time for tributaries
+void FindMainstem(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
   // Find the maximum layer number
   int32_t max_min_layer = -1;
   for (const auto& pair : *task_node2topo_struct) {
     if (max_min_layer < pair.second.min_layer) { max_min_layer = pair.second.min_layer; }
   }
-  // All the nodes with min_layer>=trunk_end_id would be considered as trunk nodes
-  // The last 5 layers would be considered as in trunk anyway.
-  int32_t trunk_end_id = max_min_layer - 4;
+  // All the nodes with min_layer>=mainstem_end_id would be considered as mainstem nodes
+  // The last 5 layers would be considered as in mainstem anyway.
+  int32_t mainstem_end_id = max_min_layer - 4;
   for (auto& pair : *task_node2topo_struct) {
     auto& topo_struct = pair.second;
     // Initialize the counter and Tributary Layer
     topo_struct.counter = pair.first->out_edges().size();
     topo_struct.tributary_layer = max_min_layer;
-    // Find out all the nodes on the trunk.
-    if (topo_struct.min_layer >= trunk_end_id) { topo_struct.SpreadTrunk(task_node2topo_struct); }
+    // Find out all the nodes on the mainstem.
+    if (topo_struct.min_layer >= mainstem_end_id) {
+      topo_struct.SpreadMainstem(task_node2topo_struct);
+    }
   }
 
   for (auto& pair : *task_node2topo_struct) {
@@ -325,6 +372,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
     auto& topo_struct = task_node2topo_struct[node];
     topo_struct.node = node;
     topo_struct.ComputeMeomoryIncrement();
+    topo_struct.ComputeActivationTime();
     if (node->in_edges().empty()) {
       topo_struct.min_layer = 0;
     } else {
@@ -382,7 +430,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   });
 
   // Generate other parameters in the topological data structure
-  FindTrunk(&task_node2topo_struct);
+  FindMainstem(&task_node2topo_struct);
 
   // Decide which node should run first
   InitDecideParameters(GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph());
@@ -527,7 +575,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
         remain_task_nums[TaskClassifier::kWaitingTransfer] -= transfer_execution_list.size();
         for (auto* transfer_node : transfer_execution_list) { SetOrderInGraph(transfer_node); }
         // Overlap transfer with computation
-        execute(TaskClassifier::kWaitingComputation, computation_num);
+        execute(TaskClassifier::kWaitingComputation, 10);
 
         // Release the transfer
         for (auto* transfer_node : transfer_execution_list) { finish_execution(transfer_node); }
