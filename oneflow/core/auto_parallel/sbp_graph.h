@@ -91,9 +91,6 @@ class SbpGraph final {
   // Set wait time
   void SetWaitTime(double wait_time);
 
-  // Set transfer cost
-  void SetTransferCost(double transfer_cost);
-
  private:
   friend class SbpCollector;
   friend class SbpConstructor;
@@ -106,8 +103,6 @@ class SbpGraph final {
   int32_t threshold_ = 100;
   // Overlayable wait time for copy cost, which occurs before communication between devices.
   double wait_time_ = 16500.0;
-  // Uncovered wait time for copy cost, which is already set up somewhere else
-  double transfer_cost_ = 0.0;
 
   // Remove a node from the node list
   void RemoveFromNodeList(SbpNode* this_node);

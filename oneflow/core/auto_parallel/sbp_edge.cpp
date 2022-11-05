@@ -225,8 +225,7 @@ double SbpEdge::GetMaxCost() const {
 
 // Assemble copy cost
 
-void SbpEdge::InitializeCopyCost(const std::string& ibn, bool compute_cost,
-                                 bool use_sbp_collector) {
+void SbpEdge::InitializeCopyCost(const std::string& ibn, bool use_sbp_collector) {
   // In this part, we assemble the cost from nodes to nodes.
   if (start_node_->op_node_ && end_node_->op_node_) {
     OpNode* consumer = end_node_->op_node_;
@@ -235,7 +234,7 @@ void SbpEdge::InitializeCopyCost(const std::string& ibn, bool compute_cost,
     const LogicalBlobId& lbi = consumer->op().BnInOp2Lbi(ibn);
 
     // Check whether lbi is transferred by this edge
-    if (use_sbp_collector && compute_cost && !SearchLbi(lbi)) { return; }
+    if (use_sbp_collector && !SearchLbi(lbi)) { return; }
 
     OpNode* producer = start_node_->op_node_;
     const std::string& producer_lbn = *CHECK_JUST(producer->op().obn4lbi(lbi));
@@ -250,7 +249,7 @@ void SbpEdge::InitializeCopyCost(const std::string& ibn, bool compute_cost,
     const std::string& obn = *CHECK_JUST(producer->op().obn4lbi(lbi));
     // If we are deciding whether we need the wait time, then make require_same_sbp true.
     // B->S cause cudaEventSynchronize in current implementation.
-    bool require_same_sbp = (!compute_cost) || RequireSameSbp(consumer, ibn);
+    bool require_same_sbp = RequireSameSbp(consumer, ibn);
     int32_t consumer_sbp_size = end_node_->sbp_sig_list_.size();
     LazyMode::Guard enable_lazy_mode(true);
 
