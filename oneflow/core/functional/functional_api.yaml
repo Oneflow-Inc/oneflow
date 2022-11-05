@@ -2896,3 +2896,11 @@
 - name: "isclose"
   signature: "Tensor (Tensor input, Tensor other, Float atol=1e-08, Float rtol=1e-05, Bool equal_nan=False) => IsClose"
   bind_python: True
+
+- name: "fused_gelu_mul"
+  signature: "Tensor (Tensor x, Tensor multiplier, String approximate) => FusedGeluMul"
+  bind_python: True
+
+- name: "fused_gelu_mul_grad"
+  signature: "Tensor (Tensor dy, Tensor x, Tensor multiplier, String approximate) => FusedGeluMulGrad"
+  bind_python: False
