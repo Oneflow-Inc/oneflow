@@ -93,7 +93,7 @@ class ScalarMathKernel final : public user_op::OpKernel {
       const bool is_mul_div_1 =
           (op == ep::primitive::BinaryOp::kMul || op == ep::primitive::BinaryOp::kDiv)
           && value.Value<double>() == 1.0;
-      if ((is_add_sum_0 || is_mul_div_1) && in->dptr() == out->dptr()) { return; }
+      if ((is_add_sub_0 || is_mul_div_1) && in->dptr() == out->dptr()) { return; }
       std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> primitive =
           NewBroadcastElementwiseBinaryPrimitive(ctx, op);
       CHECK(primitive);
