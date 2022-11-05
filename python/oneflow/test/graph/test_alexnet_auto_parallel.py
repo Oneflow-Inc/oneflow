@@ -125,7 +125,7 @@ def _test_alexnet_graph(test_case, args, placement, sbp):
             self.add_optimizer(of_sgd)
             self.config.enable_auto_parallel(True)
             self.config.enable_auto_parallel_ignore_user_sbp_config(True)
-            self.config.enable_auto_parallel_mainstem_algo(True)
+            self.config.enable_auto_parallel_trunk_algo(True)
             self.config.enable_auto_parallel_sbp_collector(True)
 
         def build(self, image, label):
@@ -142,7 +142,7 @@ def _test_alexnet_graph(test_case, args, placement, sbp):
             self.alexnet = alexnet_module
             self.config.enable_auto_parallel(True)
             self.config.enable_auto_parallel_ignore_user_sbp_config(True)
-            self.config.enable_auto_parallel_mainstem_algo(True)
+            self.config.enable_auto_parallel_trunk_algo(True)
             self.config.enable_auto_parallel_sbp_collector(True)
 
         def build(self, image):
