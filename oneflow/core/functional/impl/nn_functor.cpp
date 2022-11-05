@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/tensor_util.h"
@@ -4311,6 +4312,53 @@ class FusedMultiHeadAttentionInferenceFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedGeluMulFunctor {
+ public:
+  FusedGeluMulFunctor() {
+    op_tanh_ = CHECK_JUST(one::OpBuilder("fused_fast_gelu_mul")
+                              .Input("in")
+                              .Input("multiplier")
+                              .Output("out")
+                              .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& multiplier,
+                           const std::string& approximate) const {
+    if (approximate != "none" && approximate != "tanh") {
+      return Error::RuntimeError() << "the approximate argument should be 'none' or 'tanh'";
+    }
+    if (approximate == "none") {
+      return Error::UnimplementedError() << "FusedGeluMul only support approximate 'tanh'";
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_tanh_, {x, multiplier});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_tanh_;
+};
+
+class FusedGeluMulGradFunctor {
+ public:
+  FusedGeluMulGradFunctor() {
+    op_tanh_ = CHECK_JUST(one::OpBuilder("fused_fast_gelu_mul_grad")
+                              .Input("a")
+                              .Input("b")
+                              .Input("dy")
+                              .Output("dx")
+                              .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& multiplier,
+                           const std::string& approximate) const {
+    CHECK_EQ_OR_RETURN(approximate, "tanh") << "FusedGeluMul only support approximate 'tanh'";
+    return OpInterpUtil::Dispatch<Tensor>(*op_tanh_, {dy, x, multiplier});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_tanh_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -4428,6 +4476,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BatchNormBackwardReduceFunctor>("BatchNormBackwardReduce");
   m.add_functor<impl::BatchNormBackwardElemtFunctor>("BatchNormBackwardElemt");
   m.add_functor<impl::FusedMultiHeadAttentionInferenceFunctor>("FusedMultiHeadAttentionInference");
+  m.add_functor<impl::FusedGeluMulFunctor>("FusedGeluMul");
+  m.add_functor<impl::FusedGeluMulGradFunctor>("FusedGeluMulGrad");
 }
 
 }  // namespace functional
