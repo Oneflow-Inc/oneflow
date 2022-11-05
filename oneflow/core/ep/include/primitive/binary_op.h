@@ -98,6 +98,8 @@ enum class BinaryOp {
   kSquareBackwardWithDyX,
   kTanBackwardWithDyX,
   kFastGeluBackwardWithDyX,
+  // composite
+  kFastGeluFuseMul,
 };
 
 }
