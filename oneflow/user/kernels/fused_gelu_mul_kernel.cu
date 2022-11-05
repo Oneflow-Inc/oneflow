@@ -16,40 +16,9 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
-#include "oneflow/core/ep/cuda/primitive/binary_functor.cuh"
 #include "oneflow/user/kernels/elementwise_primitive_kernel.h"
 
 namespace oneflow {
-
-namespace ep {
-namespace primitive {
-namespace broadcast_elementwise_binary {
-
-template<typename Src, typename Dst>
-struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kFastGeluFuseMul, Src, Dst> {
-  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC Dst operator()(Src x, Src m) const {
-    // ref to UnaryOp::kFastGelu
-    const Src half = static_cast<Src>(0.5);
-    const Src one = static_cast<Src>(1);
-    const Src tanh_in = alpha * (x + beta * x * x * x);
-    return half * x * (one + tanh(tanh_in)) * m;
-  }
-
- private:
-  const Src alpha = static_cast<Src>(0.7978845608028654);
-  const Src beta = static_cast<Src>(0.044714998453855515);
-};
-
-SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kFastGeluFuseMul);
-SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kFastGeluFuseMul);
-
-}  // namespace broadcast_elementwise_binary
-}  // namespace primitive
-}  // namespace ep
-
-namespace cuda {
 
 REGISTER_USER_KERNEL("fused_fast_gelu_mul")
     .SetCreateFn([]() {
@@ -63,6 +32,8 @@ REGISTER_USER_KERNEL("fused_fast_gelu_mul")
           });
     })
     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kFastGeluFuseMul, "out", "in"));
+
+namespace cuda {
 
 template<typename T>
 struct FusedFastGeluMulGradFunctor {

@@ -643,6 +643,23 @@ struct BinaryFunctor<device, BinaryOp::kTanBackwardWithDyX, Src, Dst> {
   }
 };
 
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kFastGeluFuseMul, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src x, Src m) const {
+    // ref to UnaryOp::kFastGelu
+    const Src half = static_cast<Src>(0.5);
+    const Src one = static_cast<Src>(1);
+    const Src tanh_in = alpha * (x + beta * x * x * x);
+    return half * x * (one + tanh(tanh_in)) * m;
+  }
+
+ private:
+  const Src alpha = static_cast<Src>(0.7978845608028654);
+  const Src beta = static_cast<Src>(0.044714998453855515);
+};
+
 }  // namespace broadcast_elementwise_binary
 }  // namespace primitive
 }  // namespace ep
