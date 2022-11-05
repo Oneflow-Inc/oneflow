@@ -43,10 +43,13 @@ template<>
 __device__ half Gelu(half x) {
   return static_cast<half>(Gelu<float>(static_cast<float>(x)));
 }
+
+#if CUDA_VERSION >= 11000
 template<>
 __device__ nv_bfloat16 Gelu(nv_bfloat16 x) {
   return static_cast<nv_bfloat16>(Gelu<float>(static_cast<float>(x)));
 }
+#endif  // CUDA_VERSION >= 11000
 
 template<typename T>
 __global__ void FusedGegluForwardGpu(const int in_size, const int out_size, const int num_sample,
@@ -175,6 +178,8 @@ class GpuFusedGegluKernel final : public user_op::OpKernel {
 REGISTER_GPU_FUSED_GEGLU_KERNEL(float)
 REGISTER_GPU_FUSED_GEGLU_KERNEL(double)
 REGISTER_GPU_FUSED_GEGLU_KERNEL(half)
+#if CUDA_VERSION >= 11000
 REGISTER_GPU_FUSED_GEGLU_KERNEL(nv_bfloat16)
+#endif  // CUDA_VERSION >= 11000
 
 }  // namespace oneflow
