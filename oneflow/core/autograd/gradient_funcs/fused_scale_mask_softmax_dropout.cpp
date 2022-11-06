@@ -85,7 +85,92 @@ Maybe<void> FusedScaleMaskSoftmaxDropout::Apply(const FusedScaleMaskSoftmaxDropo
   return Maybe<void>::Ok();
 }
 
+struct FusedBiasAddScaleMaskSoftmaxDropoutCaptureState : public AutoGradCaptureState {
+  bool x_requires_grad = false;
+  bool bias_requires_grad = false;
+  bool bias_broadcast = false;
+  int bias_index = 0;
+  float scale = 1.0;
+  float dropout_scale = 1.0;
+};
+
+class FusedBiasAddScaleMaskSoftmaxDropoutGradFunction
+    : public OpExprGradFunction<FusedBiasAddScaleMaskSoftmaxDropoutCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Capture(FusedBiasAddScaleMaskSoftmaxDropoutCaptureState* ctx,
+                      const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 4);  // (x, bias, mask, dropout_mask)
+    ctx->x_requires_grad = inputs.at(0)->requires_grad();
+    ctx->bias_requires_grad = inputs.at(1)->requires_grad();
+
+    if (!ctx->x_requires_grad && !ctx->bias_requires_grad) { return Maybe<void>::Ok(); }
+
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    ctx->scale = JUST(composed_attrs.GetAttr<float>("scale_value"));
+    ctx->dropout_scale = JUST(composed_attrs.GetAttr<float>("dropout_scale_value"));
+
+    if (ctx->x_requires_grad) {
+      ctx->SaveTensorForBackward(inputs.at(2));   // mask
+      ctx->SaveTensorForBackward(inputs.at(3));   // dropout_mask
+      ctx->SaveTensorForBackward(outputs.at(1));  // softmax_y
+    }
+
+    if (ctx->bias_requires_grad) {
+      ctx->bias_broadcast = (inputs.at(0)->shape() != inputs.at(1)->shape());
+      if (ctx->bias_broadcast) {
+        ctx->bias_index = ctx->SaveTensorForBackward(inputs.at(1));  // bias
+      }
+    }
+
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const FusedBiasAddScaleMaskSoftmaxDropoutCaptureState* ctx,
+                    const TensorTuple& out_grads, TensorTuple* in_grads) const override {
+    if (!ctx->x_requires_grad && !ctx->bias_requires_grad) { return Maybe<void>::Ok(); }
+
+    CHECK_EQ_OR_RETURN(out_grads.size(), 2);  // (dy, d_softmax_y)
+    in_grads->resize(4);                      // (x, bias, mask, dropout_mask)
+
+    const auto& saved_tensors = ctx->SavedTensors();
+    const auto& dy = out_grads.at(0);
+
+    if (ctx->x_requires_grad) {
+      CHECK_GE_OR_RETURN(saved_tensors.size(), 3);  // (mask, dropout_mask, softmax_y, [bias])
+      const auto& mask = saved_tensors.at(0);
+      const auto& dropout_mask = saved_tensors.at(1);
+      const auto& softmax_y = saved_tensors.at(2);
+      in_grads->at(0) = JUST(functional::FusedScaleMaskSoftmaxDropoutGrad(
+          softmax_y, dy, mask, dropout_mask, ctx->scale, ctx->dropout_scale));
+    }
+
+    if (ctx->bias_requires_grad) {
+      if (ctx->bias_broadcast) {
+        const auto& bias = saved_tensors.at(ctx->bias_index);
+        in_grads->at(0) = JUST(functional::BroadcastReduceSumLike(dy, bias));
+      } else {
+        in_grads->at(0) = dy;
+      }
+    }
+
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  AttrMap base_attrs_;
+};
+
 REGISTER_OP_EXPR_GRAD_FUNCTION("fused_scale_mask_softmax_dropout", FusedScaleMaskSoftmaxDropout);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_bias_add_scale_mask_softmax_dropout",
+                               FusedBiasAddScaleMaskSoftmaxDropoutGradFunction);
 
 }  // namespace one
 }  // namespace oneflow
