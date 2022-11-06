@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <memory>
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/graph/straighten_nodes.h"
 #include "oneflow/core/common/shape.h"
@@ -99,16 +100,19 @@ static std::vector<int64_t> decide_parameters;
 // America.
 void InitDecideParameters(StraightenAlgorithmTag sat) {
   decide_parameters.clear();
-  decide_parameters.push_back(4);
-  decide_parameters.push_back(1);
-  if (sat == StraightenAlgorithmTag::kCompressMemory) {
-    decide_parameters.push_back(3);
-    decide_parameters.push_back(0);
-  } else {
-    // sat==StraightenAlgorithmTag::kOverlap4ModelParallelism
-    decide_parameters.push_back(7);
-    decide_parameters.push_back(5);
-  }
+  decide_parameters.push_back(ParseIntegerFromEnv("Parameter0", 0));
+  decide_parameters.push_back(ParseIntegerFromEnv("Parameter1", 0));
+  decide_parameters.push_back(ParseIntegerFromEnv("Parameter2", 0));
+  // decide_parameters.push_back(4);
+  // decide_parameters.push_back(1);
+  // if (sat == StraightenAlgorithmTag::kCompressMemory) {
+  //   decide_parameters.push_back(3);
+  //   decide_parameters.push_back(0);
+  // } else {
+  //   // sat==StraightenAlgorithmTag::kOverlap4ModelParallelism
+  //   decide_parameters.push_back(7);
+  //   decide_parameters.push_back(5);
+  // }
 }
 
 // move the head from source to target
@@ -436,8 +440,9 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
 
   // Decide which node should run first
   InitDecideParameters(GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph());
-  VLOG(3) << "Straightening order: ";
-  for (int32_t decide_parameter : decide_parameters) { VLOG(3) << decide_parameter; }
+  std::cout << "Straightening order: ";
+  for (int32_t decide_parameter : decide_parameters) { std::cout << decide_parameter << ", "; }
+  std::cout << std::endl;
 
   // Order in the waiting sets
   struct comp {
