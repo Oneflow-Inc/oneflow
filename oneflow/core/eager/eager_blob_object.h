@@ -97,7 +97,7 @@ class TensorStorage {
   bool is_allocated_in_vm_;
 };
 
-class EagerBlobObject final : public user_op::Tensor,
+class EagerBlobObject : public user_op::Tensor,
                               public user_op::TensorDesc,
                               public std::enable_shared_from_this<EagerBlobObject> {
  public:
@@ -115,89 +115,89 @@ class EagerBlobObject final : public user_op::Tensor,
                   DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage,
                   const intrusive::shared_ptr<LocalDepObject>& dep_object);
 
-  ~EagerBlobObject() { tensor_storage_.reset(); }
+  virtual ~EagerBlobObject() { tensor_storage_.reset(); }
 
-  const std::shared_ptr<const one::MutLocalTensorMeta>& mut_tensor_meta() {
+  virtual const std::shared_ptr<const one::MutLocalTensorMeta>& mut_tensor_meta() {
     return dynamic_local_tensor_meta_;
   }
   // Getters
-  const Symbol<one::LocalTensorMeta>& tensor_meta() const { return static_local_tensor_meta_; }
+  virtual const Symbol<one::LocalTensorMeta>& tensor_meta() const { return static_local_tensor_meta_; }
 
   // user_op::TensorDesc overrides
-  const Shape& shape() const override;
-  const Stride& stride() const override;
-  DataType data_type() const override { return data_type_; }
-  bool is_dynamic() const override { return is_dynamic_; }
+  virtual const Shape& shape() const override;
+  virtual const Stride& stride() const override;
+  virtual DataType data_type() const override { return data_type_; }
+  virtual bool is_dynamic() const override { return is_dynamic_; }
 
-  void set_shape(const Shape& shape) override;
-  void set_stride(const Stride& stride) override;
-  void set_data_type(DataType data_type) override { data_type_ = data_type; }
-  void set_is_dynamic(bool is_dynamic) override { is_dynamic_ = is_dynamic; }
+  virtual void set_shape(const Shape& shape) override;
+  virtual void set_stride(const Stride& stride) override;
+  virtual void set_data_type(DataType data_type) override { data_type_ = data_type; }
+  virtual void set_is_dynamic(bool is_dynamic) override { is_dynamic_ = is_dynamic; }
 
   // user_op::Tensor overrides
-  ShapeView shape_view() const override { return shape(); }
-  MutShapeView mut_shape_view() override;
-  const MemoryCase& mem_case() const override { return *mem_case_; }
-  const void* raw_dptr() const override {
+  virtual ShapeView shape_view() const override { return shape(); }
+  virtual MutShapeView mut_shape_view() override;
+  virtual const MemoryCase& mem_case() const override { return *mem_case_; }
+  virtual const void* raw_dptr() const override {
     CHECK(inited_mem_ptr_for_allocation_compuation_pipelining_)
         << "mem_ptr_for_allocation_compuation_pipelining_ not initialized. Please check if there "
            "are any EagerBlobObjects created outside vm";
     return mem_ptr_for_allocation_compuation_pipelining_
            + storage_offset_ * GetSizeOfDataType(data_type_);
   }
-  void* mut_raw_dptr() override { return const_cast<void*>(raw_dptr()); }
+  virtual void* mut_raw_dptr() override { return const_cast<void*>(raw_dptr()); }
 
-  void set_storage_offset(const int64_t offset);
+  virtual void set_storage_offset(const int64_t offset);
 
-  Maybe<void> TryAllocateBlobBodyMemory(vm::Allocator* allocator);
-  Maybe<void> DeallocateBlobDataPtr() {
+  virtual Maybe<void> TryAllocateBlobBodyMemory(vm::Allocator* allocator);
+  virtual Maybe<void> DeallocateBlobDataPtr() {
     tensor_storage_->Release();
     tensor_storage_.reset(new TensorStorage);
     return Maybe<void>::Ok();
   }
-  void RegisterStorageDeleteHook(const std::function<void()>& hook) {
+  virtual void RegisterStorageDeleteHook(const std::function<void()>& hook) {
     tensor_storage_->RegisterStorageDeleteHook(hook);
   }
 
-  Maybe<LocalDepObject*> compute_local_dep_object() const {
+  virtual Maybe<LocalDepObject*> compute_local_dep_object() const {
     CHECK_NOTNULL_OR_RETURN(compute_local_dep_object_.get());
     return compute_local_dep_object_.get();
   }
 
-  std::shared_ptr<TensorStorage>& tensor_storage() { return tensor_storage_; }
+  virtual std::shared_ptr<TensorStorage>& tensor_storage() { return tensor_storage_; }
 
-  const Optional<Symbol<::oneflow::Stream>>& producer_stream() const {
+  virtual const Optional<Symbol<::oneflow::Stream>>& producer_stream() const {
     return tensor_storage_->producer_stream();
   }
-  Maybe<void> init_producer_stream(Symbol<::oneflow::Stream> producer_stream) {
+  virtual Maybe<void> init_producer_stream(Symbol<::oneflow::Stream> producer_stream) {
     return tensor_storage_->init_producer_stream(producer_stream);
   }
 
-  const Optional<Symbol<::oneflow::Stream>>& last_used_stream() const {
+  virtual const Optional<Symbol<::oneflow::Stream>>& last_used_stream() const {
     return tensor_storage_->last_used_stream();
   }
-  void set_last_used_stream(Symbol<::oneflow::Stream> last_used_stream) {
+  virtual void set_last_used_stream(Symbol<::oneflow::Stream> last_used_stream) {
     tensor_storage_->set_last_used_stream(last_used_stream);
   }
 
-  std::shared_ptr<const Shape> shape_ptr() const;
-  std::shared_ptr<const Stride> stride_ptr() const;
+  virtual std::shared_ptr<const Shape> shape_ptr() const;
+  virtual std::shared_ptr<const Stride> stride_ptr() const;
 
-  size_t ByteSizeOfBlobBody() const { return shape().elem_cnt() * GetSizeOfDataType(data_type_); }
-  size_t AlignedByteSizeOfBlobBody() const {
+  virtual size_t ByteSizeOfBlobBody() const { return shape().elem_cnt() * GetSizeOfDataType(data_type_); }
+  virtual size_t AlignedByteSizeOfBlobBody() const {
     return RoundUp(ByteSizeOfBlobBody(), kBlobBodyAlignSize);
   }
-  size_t ByteSizeOfBlobHeader() const { return shape().NumAxes() * sizeof(int64_t); }
-  size_t AlignedByteSizeOfBlobHeader() const {
+  virtual size_t ByteSizeOfBlobHeader() const { return shape().NumAxes() * sizeof(int64_t); }
+  virtual size_t AlignedByteSizeOfBlobHeader() const {
     return RoundUp(ByteSizeOfBlobHeader(), kBlobHeaderAlignSize);
   }
 
-  const char* header_ptr() const { return reinterpret_cast<const char*>(shape().dim_vec().data()); }
-  char* mut_header_ptr() {
+  virtual const char* header_ptr() const { return reinterpret_cast<const char*>(shape().dim_vec().data()); }
+  virtual char* mut_header_ptr() {
     return reinterpret_cast<char*>(const_cast<int64_t*>(shape().dim_vec().data()));
   }
 
-  void InitOrCheckMemPtrForAllocationComputationPipelining() {
+  virtual void InitOrCheckMemPtrForAllocationComputationPipelining() {
     auto* ptr = tensor_storage_->blob_dptr();
     if (inited_mem_ptr_for_allocation_compuation_pipelining_) {
       CHECK_EQ(mem_ptr_for_allocation_compuation_pipelining_, ptr);
@@ -207,7 +207,7 @@ class EagerBlobObject final : public user_op::Tensor,
     }
   }
 
-  void TryInitNonPODTypeEagerBlobObjectIfNeed();
+  virtual void TryInitNonPODTypeEagerBlobObjectIfNeed();
 
  private:
   void InitMemPtrForAllocationComputationPipelining() {

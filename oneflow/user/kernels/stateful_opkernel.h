@@ -32,6 +32,7 @@ class AttrMap;
 
 namespace vm {
 struct OpCallInstructionUtil;
+struct DtrOpCallInstructionUtil;
 }
 
 namespace eager {
@@ -87,6 +88,7 @@ class StatefulOpKernel final {
 
  private:
   friend struct vm::OpCallInstructionUtil;
+  friend struct vm::DtrOpCallInstructionUtil;
   StatefulOpKernel() = default;
 
   void Compute(eager::CallContext* call_ctx, ep::Stream* stream,
