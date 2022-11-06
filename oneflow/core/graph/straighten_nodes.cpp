@@ -31,8 +31,8 @@ namespace oneflow {
 namespace {
 
 enum TaskClassifier : int {
-  kWaitingTransfer = 0,
-  kWaitingComputation = 1,
+  kWaitingTributaryOverlap = 0,
+  kWaitingMainComputation = 1,
   kRunASAP = 2,
   kRunALAP = 3
 };
@@ -44,7 +44,7 @@ class TopoStruct {
   int32_t tributary_layer = -1;
   bool on_trunk = false;
   int32_t counter = 0;
-  int32_t min_distance2transfer = -1;
+  int32_t min_distance2tributary = -1;
   int64_t memory_increment = -1;
   TopoStruct* next_same_node = nullptr;
   int32_t activation_time = -1;
@@ -60,8 +60,8 @@ class TopoStruct {
 
   void SpreadTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
 
-  // The minimum computation distance from the beginning of this op to the next transfer
-  int32_t GetMinDistance2Transfer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
+  // The minimum computation distance from the beginning of this op to the next tributary node
+  int32_t GetMinDistance2Tributary(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
 
   // Memory increment = (memory of out registers) - (memory of in registers)
   void ComputeMeomoryIncrement();
@@ -74,13 +74,13 @@ class TopoStruct {
 
   // deciding parameter
   // i = 0: those with small tributary layers go first
-  // i = 1: those with small minimum distance to transfer go first
+  // i = 1: those with small minimum distance to tributary go first
   // i = 2: first in first out
   // i = 3: those with small memory increment go first
   // i = 4: those with small activation time go first
 
   // i = 5: those with large tributary layers go first
-  // i = 6: those with long distance to transfer go first
+  // i = 6: those with long distance to tributary go first
   // i = 7: last in first out
   // i = 8: those with large memory increment go first
   // i = 9: those with large activation time go first
@@ -191,16 +191,16 @@ TaskClassifier GetTaskClassifier(const TaskNode* node) {
   if (task_type == TaskType::kNormalForward) {
     const auto& op_conf = dynamic_cast<const CompTaskNode*>(node)->op()->op_conf();
     if (LongerActivationTimeInCpu(op_conf)) {
-      return TaskClassifier::kWaitingTransfer;
+      return TaskClassifier::kWaitingTributaryOverlap;
     } else if (op_conf.has_variable_conf()) {
       // Variable operators would not be run. They just create tensors.
       // We do not visualize any execution in NVTX. (Even a tick operator has something in NVTX.)
       return TaskClassifier::kRunASAP;
     } else {
-      return TaskClassifier::kWaitingComputation;
+      return TaskClassifier::kWaitingMainComputation;
     }
   }
-  if (IsTransferNode(task_type)) { return TaskClassifier::kWaitingTransfer; }
+  if (IsTransferNode(task_type)) { return TaskClassifier::kWaitingTributaryOverlap; }
   if (task_type == TaskType::kCallbackNotify) { return TaskClassifier::kRunALAP; }
   if (ShouldRunASAP(task_type)) { return TaskClassifier::kRunASAP; }
   CHECK(false) << "Unclassified or invalid task type (" << task_type << ") showing up";
@@ -251,24 +251,25 @@ void TopoStruct::SpreadTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_stru
   });
 }
 
-// The minimum computation distance from the beginning of this op to the next transfer
-int32_t TopoStruct::GetMinDistance2Transfer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
-  if (min_distance2transfer >= 0) { return min_distance2transfer; }
-  // if this node is a transfer node
-  if (IsTransferNode(node->GetTaskType())) {
-    min_distance2transfer = 0;
-    return min_distance2transfer;
+// The minimum computation distance from the beginning of this op to the next tributary
+int32_t TopoStruct::GetMinDistance2Tributary(
+    HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
+  if (min_distance2tributary >= 0) { return min_distance2tributary; }
+  // if this node is on a tributary
+  if (GetTaskClassifier(node) == TaskClassifier::kWaitingTributaryOverlap) {
+    min_distance2tributary = 0;
+    return min_distance2tributary;
   }
   // Otherwise, initialize it with a large number
   // Well, the total number in the task graph is large enough
-  min_distance2transfer = task_node2topo_struct->size();
+  min_distance2tributary = task_node2topo_struct->size();
   node->ForEachNodeOnOutEdge([&](TaskNode* out) {
-    min_distance2transfer =
-        std::min(min_distance2transfer,
-                 task_node2topo_struct->at(out).GetMinDistance2Transfer(task_node2topo_struct));
+    min_distance2tributary =
+        std::min(min_distance2tributary,
+                 task_node2topo_struct->at(out).GetMinDistance2Tributary(task_node2topo_struct));
   });
-  ++min_distance2transfer;
-  return min_distance2transfer;
+  ++min_distance2tributary;
+  return min_distance2tributary;
 }
 
 // Memory increment = (memory of out registers) - (memory of in registers)
@@ -307,11 +308,11 @@ void TopoStruct::ComputeActivationTime() {
 
 // deciding parameter
 // i = 0: those with small tributary layers go first
-// i = 1: those with small minimum distance to transfer go first
+// i = 1: those with small minimum distance to tributary go first
 // i = 2: first in first out
 // i = 3: those with small memory increment go first
 // i = 4: those with large tributary layers go first
-// i = 5: those with long distance to transfer go first
+// i = 5: those with long distance to tributary go first
 // i = 6: last in first out
 // i = 7: those with large memory increment go first
 int64_t TopoStruct::GetDecidingParameter(int32_t i) const {
@@ -322,7 +323,7 @@ int64_t TopoStruct::GetDecidingParameter(int32_t i) const {
   }
   switch (i) {
     case 0: return sign * tributary_layer;
-    case 1: return sign * min_distance2transfer;
+    case 1: return sign * min_distance2tributary;
     case 2: return sign * min_layer;
     case 3: return sign * memory_increment;
     case 4: return sign * activation_time;
@@ -352,8 +353,8 @@ void FindTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
   for (auto& pair : *task_node2topo_struct) {
     // Compute maximum layer for tributaries
     pair.second.SpreadTributaryLayer(task_node2topo_struct);
-    // Set the min_distance2transfer for each topological structure
-    pair.second.GetMinDistance2Transfer(task_node2topo_struct);
+    // Set the min_distance2tributary for each topological structure
+    pair.second.GetMinDistance2Tributary(task_node2topo_struct);
   }
 }
 
@@ -454,10 +455,15 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   };
 
   // Classify sets for the task nodes
-  // std::set<TopoStruct*, comp> waiting_transfer; // 0, TaskClassifier::kWaitingTransfer
-  // std::set<TopoStruct*, comp> waiting_computation; // 1, TaskClassifier::kWaitingComputation
-  // std::set<TopoStruct*, comp> run_asap;  // 2, TaskClassifier::kRunASAP , run as soon as possible
-  // std::set<TopoStruct*, comp> run_alap;  // 3, TaskClassifier::kRunALAP , run as late as possible
+  // 0, TaskClassifier::kWaitingTributaryOverlap
+  // It contains transfer nodes, and those with longer activation time in cpu if request.
+  // std::set<TopoStruct*, comp> waiting_tributary_overlap;
+  // 1, TaskClassifier::kWaitingMainComputation
+  // std::set<TopoStruct*, comp> waiting_main_computation;
+  // 2, TaskClassifier::kRunASAP , run as soon as possible
+  // std::set<TopoStruct*, comp> run_asap;
+  // 3, TaskClassifier::kRunALAP , run as late as possible
+  // std::set<TopoStruct*, comp> run_alap;
   const int32_t num_classifier = 4;
   std::vector<std::set<TopoStruct*, comp>> waiting_lists(num_classifier);
 
@@ -551,8 +557,8 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   // straightening
   while (true) {
     if (waiting_lists[TaskClassifier::kRunASAP].empty()) {
-      if (waiting_lists[TaskClassifier::kWaitingTransfer].empty()) {
-        if (waiting_lists[TaskClassifier::kWaitingComputation].empty()) {
+      if (waiting_lists[TaskClassifier::kWaitingTributaryOverlap].empty()) {
+        if (waiting_lists[TaskClassifier::kWaitingMainComputation].empty()) {
           if (waiting_lists[TaskClassifier::kRunALAP].empty()) {
             // All the waiting lists are empty
             break;
@@ -562,25 +568,26 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
           }
         } else {
           // Execute one computation node
-          execute(TaskClassifier::kWaitingComputation, 1);
+          execute(TaskClassifier::kWaitingMainComputation, 1);
         }
       } else {
         int32_t computation_num =
-            std::min(int32_t(waiting_lists[TaskClassifier::kWaitingComputation].size()
-                             / (waiting_lists[TaskClassifier::kWaitingTransfer].size())),
-                     remain_task_nums[TaskClassifier::kWaitingComputation]
-                         / remain_task_nums[TaskClassifier::kWaitingTransfer]);
-        // Holding the transfer
-        std::vector<TaskNode*> transfer_execution_list;
-        move2execution_list(waiting_lists[TaskClassifier::kWaitingTransfer],
-                            transfer_execution_list);
-        remain_task_nums[TaskClassifier::kWaitingTransfer] -= transfer_execution_list.size();
-        for (auto* transfer_node : transfer_execution_list) { SetOrderInGraph(transfer_node); }
-        // Overlap transfer with computation
-        execute(TaskClassifier::kWaitingComputation, 10);
+            std::min(int32_t(waiting_lists[TaskClassifier::kWaitingMainComputation].size()
+                             / (waiting_lists[TaskClassifier::kWaitingTributaryOverlap].size())),
+                     remain_task_nums[TaskClassifier::kWaitingMainComputation]
+                         / remain_task_nums[TaskClassifier::kWaitingTributaryOverlap]);
+        // Holding the node in the tributary
+        std::vector<TaskNode*> tributary_execution_list;
+        move2execution_list(waiting_lists[TaskClassifier::kWaitingTributaryOverlap],
+                            tributary_execution_list);
+        remain_task_nums[TaskClassifier::kWaitingTributaryOverlap] -=
+            tributary_execution_list.size();
+        for (auto* tributary_node : tributary_execution_list) { SetOrderInGraph(tributary_node); }
+        // Overlap the tributary node with computation from the trunk
+        execute(TaskClassifier::kWaitingMainComputation, 10);
 
-        // Release the transfer
-        for (auto* transfer_node : transfer_execution_list) { finish_execution(transfer_node); }
+        // Release the tributary node
+        for (auto* tributary_node : tributary_execution_list) { finish_execution(tributary_node); }
       }
     } else {
       execute(TaskClassifier::kRunASAP, waiting_lists[TaskClassifier::kRunASAP].size());
