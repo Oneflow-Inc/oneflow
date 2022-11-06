@@ -559,6 +559,8 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   };
 
   // straightening
+  int32_t max_over_num = ParseIntegerFromEnv("MAX_OVERLAP_NUM", 10);
+  std::cout << "maximum overlap num: " << max_over_num << std::endl;
   while (true) {
     if (waiting_lists[TaskClassifier::kRunASAP].empty()) {
       if (waiting_lists[TaskClassifier::kWaitingOverlapNode].empty()) {
@@ -587,7 +589,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
         remain_task_nums[TaskClassifier::kWaitingOverlapNode] -= overlap_execution_list.size();
         for (auto* overlap_node : overlap_execution_list) { SetOrderInGraph(overlap_node); }
         // Overlap the node with computation from the trunk
-        execute(TaskClassifier::kWaitingMainComputation, 10);
+        execute(TaskClassifier::kWaitingMainComputation, max_over_num);
 
         // Release the overlap node
         for (auto* overlap_node : overlap_execution_list) { finish_execution(overlap_node); }
