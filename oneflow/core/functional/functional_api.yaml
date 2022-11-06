@@ -665,7 +665,7 @@
   bind_python: True
 
 - name: "fused_geglu"
-  signature: "Tensor (Tensor in, Tensor w, Tensor b) => FusedGeglu"
+  signature: "Tensor (Tensor x, Tensor w, Tensor b) => FusedGeglu"
   bind_python: True
 
 - name: "sigmoid"

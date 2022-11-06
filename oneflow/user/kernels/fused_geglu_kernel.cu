@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/ep/common/primitive/unary_functor.h"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
+
 #if CUDA_VERSION >= 11000
 #include <cuda_bf16.h>
 #endif  // CUDA_VERSION >= 11000
@@ -51,27 +52,25 @@ __device__ nv_bfloat16 Gelu(nv_bfloat16 x) {
 template<typename T>
 __global__ void FusedGegluForwardGpu(const int in_size, const int out_size, const int num_sample,
                                      const T* matmul, const T* b, T* y) {
-  // obtain the index of current thread
-  const int64_t i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i >= out_size * num_sample) { return; }
+  CUDA_1D_KERNEL_LOOP(i, num_sample*out_size){
+    // obtain index of row and col in the output tensor
+    const int64_t out_row = i / out_size;
+    const int64_t out_col = i - out_row * out_size;
 
-  // obtain index of row and col in the output tensor
-  const int64_t out_row = i / out_size;
-  const int64_t out_col = i - out_row * out_size;
+    // obtain col index in both matmul tensor and bias tensor
+    const int64_t x1_col = out_col;
+    const int64_t x2_col = out_col + out_size;
 
-  // obtain col index in both matmul tensor and bias tensor
-  const int64_t x1_col = out_col;
-  const int64_t x2_col = out_col + out_size;
+    // obtain element before gelu and element-wise product
+    T hidden_state = matmul[2 * out_row * out_size + x1_col] + b[x1_col];
+    T gate = matmul[2 * out_row * out_size + x2_col] + b[x2_col];
 
-  // obtain element before gelu and element-wise product
-  T hidden_state = matmul[2 * out_row * out_size + x1_col] + b[x1_col];
-  T gate = matmul[2 * out_row * out_size + x2_col] + b[x2_col];
+    // calculate gelu
+    T gelu_gate = Gelu<T>(gate);
 
-  // calculate gelu
-  T gelu_gate = Gelu<T>(gate);
-
-  // calculate element-wise product
-  y[i] = gelu_gate * hidden_state;
+    // calculate element-wise product
+    y[i] = gelu_gate * hidden_state;
+  }
 }
 
 }  // namespace
