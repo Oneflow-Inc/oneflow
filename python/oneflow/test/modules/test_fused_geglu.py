@@ -13,7 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import unittest
+import time
 import numpy as np
 from collections import OrderedDict
 
@@ -21,7 +23,7 @@ import oneflow as flow
 import oneflow.nn as nn
 import oneflow.unittest
 from oneflow.test_utils.test_util import GenArgList
-from oneflow.test_utils.automated_test_util import *
+# from oneflow.test_utils.automated_test_util import *
 
 
 class Geglu(nn.Module):
@@ -43,6 +45,23 @@ class Geglu(nn.Module):
         # gelu and element-wise product
         return hidden_state * flow.gelu(gate)
 
+def _test_fused_geglu_profile(test_case, params: dict):
+    # config test data
+    m = params["m"]
+    n = params["n"]
+    k = params["k"]
+    input = np.random.randn(m, k)
+    weight = np.random.randn(k, n * 2)
+    weight_t = np.transpose(weight)
+    bias = np.random.randn(n * 2)
+
+    # test: fused op
+    flow_input_tensor = flow.Tensor(input).to("cuda")
+    flow_weight_t_tensor = flow.Tensor(weight_t).to("cuda")
+    flow_bias_tensor = flow.Tensor(bias).to("cuda")
+    fused_out = flow._C.fused_geglu(
+        flow_input_tensor, flow_weight_t_tensor, flow_bias_tensor
+    )
 
 def _test_fused_geglu(test_case, params: dict):
     # config test data
@@ -80,14 +99,19 @@ def _test_fused_geglu(test_case, params: dict):
 class TestFusedGeglu(flow.unittest.TestCase):
     def test_gather(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_fused_geglu]
+        arg_dict["test_fun"] = [
+            # _test_fused_geglu,
+            _test_fused_geglu_profile
+        ]
         arg_dict["params"] = [
-            {"m": 16, "k": 10, "n": 20},
-            {"m": 40, "k": 20, "n": 60},
+            {"m": 256, "k": 1280, "n": 5120},
+            {"m": 1024, "k": 640, "n": 2560},
+            {"m": 4096, "k": 320, "n": 1280}
         ]
 
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+            time.sleep(2)
 
 
 if __name__ == "__main__":
