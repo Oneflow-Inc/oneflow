@@ -89,7 +89,7 @@ struct FusedBiasAddScaleMaskSoftmaxDropoutCaptureState : public AutoGradCaptureS
   bool x_requires_grad = false;
   bool bias_requires_grad = false;
   bool bias_broadcast = false;
-  int bias_index = 0;
+  int bias_index = -1;
   float scale = 1.0;
   float dropout_scale = 1.0;
 };
@@ -107,7 +107,8 @@ class FusedBiasAddScaleMaskSoftmaxDropoutGradFunction
   Maybe<void> Capture(FusedBiasAddScaleMaskSoftmaxDropoutCaptureState* ctx,
                       const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 4);  // (x, bias, mask, dropout_mask)
+    CHECK_EQ_OR_RETURN(outputs.size(), 2);  // (y, softmax_y)
+    CHECK_EQ_OR_RETURN(inputs.size(), 4);   // (x, bias, mask, dropout_mask)
     ctx->x_requires_grad = inputs.at(0)->requires_grad();
     ctx->bias_requires_grad = inputs.at(1)->requires_grad();
 
