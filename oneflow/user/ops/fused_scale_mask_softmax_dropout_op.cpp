@@ -186,6 +186,7 @@ Maybe<void> FusedBiasAddScaleMaskSoftmaxDropoutOp::InferLogicalTensorDesc(
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& bias_shape = ctx->InputShape("bias", 0);
   const Shape& mask_shape = ctx->InputShape("mask", 0);
+  const Shape& drop_mask_shape = ctx->InputShape("drop_mask", 0);
 
   CHECK_GE_OR_RETURN(x_shape.size(), 2) << Error::RuntimeError() << "x has at least 2 dimensions";
   CHECK_OR_RETURN(CheckBroadcastable(bias_shape, x_shape))
@@ -194,6 +195,9 @@ Maybe<void> FusedBiasAddScaleMaskSoftmaxDropoutOp::InferLogicalTensorDesc(
   CHECK_OR_RETURN(CheckBroadcastable(mask_shape, x_shape))
       << Error::RuntimeError() << "mask shape " << mask_shape.ToString()
       << " could not be broadcast to x shape " << x_shape.ToString();
+  CHECK_EQ_OR_RETURN(drop_mask_shape, x_shape)
+      << Error::RuntimeError() << "drop_mask shape " << drop_mask_shape.ToString()
+      << " should be equal to x shape " << x_shape.ToString();
 
   ctx->SetOutputShape("y", 0, x_shape);
   ctx->SetOutputShape("softmax_y", 0, x_shape);
@@ -211,6 +215,7 @@ Maybe<void> FusedBiasAddScaleMaskSoftmaxDropoutOp::InferDataType(user_op::InferC
   const DataType x_dtype = ctx->InputDType("x", 0);
   const DataType bias_dtype = ctx->InputDType("bias", 0);
   const DataType mask_dtype = ctx->InputDType("mask", 0);
+  const DataType drop_mask_dtype = ctx->InputDType("drop_mask", 0);
 
   CHECK_EQ_OR_RETURN(bias_dtype, x_dtype)
       << Error::RuntimeError() << "Expected bias data type " << DataType_Name(x_dtype)
@@ -218,6 +223,9 @@ Maybe<void> FusedBiasAddScaleMaskSoftmaxDropoutOp::InferDataType(user_op::InferC
   CHECK_OR_RETURN(IsBoolDataType(mask_dtype) || IsIntegralDataType(mask_dtype))
       << Error::RuntimeError() << "Expected mask data type to be bool or integer, but got "
       << DataType_Name(mask_dtype);
+  CHECK_OR_RETURN(IsBoolDataType(drop_mask_dtype))
+      << Error::RuntimeError() << "Expected drop_mask data type to be bool, but got "
+      << DataType_Name(drop_mask_dtype);
 
   ctx->SetOutputDType("y", 0, x_dtype);
   ctx->SetOutputDType("softmax_y", 0, x_dtype);
@@ -228,8 +236,13 @@ Maybe<void> FusedBiasAddScaleMaskSoftmaxDropoutOp::GetSbp(user_op::SbpContext* c
   const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
   const Shape& bias_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("bias", 0).shape();
   const Shape& mask_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("mask", 0).shape();
+  const Shape& drop_mask_shape =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("drop_mask", 0).shape();
 
   CHECK_GE_OR_RETURN(x_shape.size(), 2) << Error::RuntimeError() << "x has at least 2 dimensions";
+  CHECK_EQ_OR_RETURN(drop_mask_shape, x_shape)
+      << Error::RuntimeError() << "drop_mask shape " << drop_mask_shape.ToString()
+      << " should be equal to x shape " << x_shape.ToString();
 
   HashSet<int> bias_broadcast_dims;
   HashSet<int> mask_broadcast_dims;
