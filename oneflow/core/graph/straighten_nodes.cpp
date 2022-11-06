@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <memory>
+#include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/graph/straighten_nodes.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/graph/op_graph.h"
@@ -22,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/task.pb.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 
 namespace oneflow {
@@ -164,6 +166,22 @@ bool IsTransferNode(TaskType task_type) {
   }
 }
 
+// Some operators have longer time in cpu and less time in gpu.
+// Running those operators without overlap would cause large gap during each iteration.
+bool LongerActivationTimeInCpu(const OperatorConf& op_conf) {
+  if (op_conf.has_user_conf()) {
+    const auto& op_type_name = op_conf.user_conf().op_type_name();
+    // They are sorted according to frequency of occurrences in stable diffusion
+    if (op_type_name == "expand_dims"  // 90
+        || op_type_name == "cast"      // 16
+        || op_type_name == "expand"    // 2
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Classifier for the set according to the task type
 TaskClassifier GetTaskClassifier(const TaskNode* node) {
   // Check task.pb.h for detail
@@ -171,12 +189,12 @@ TaskClassifier GetTaskClassifier(const TaskNode* node) {
   // frequency of judgement = the number of occurrences / the times of judgement
   TaskType task_type = node->GetTaskType();
   if (task_type == TaskType::kNormalForward) {
-    const auto& node_name = node->VisualStr();
-    if (node_name.find("-cast-") != std::string::npos
-        || node_name.find("-expand") != std::string::npos) {
+    const auto& op_conf = dynamic_cast<const CompTaskNode*>(node)->op()->op_conf();
+    if (LongerActivationTimeInCpu(op_conf)) {
       return TaskClassifier::kWaitingTransfer;
-    } else if (node_name.find(".weight") != std::string::npos
-               || node_name.find(".bias") != std::string::npos) {
+    } else if (op_conf.has_variable_conf()) {
+      // Variable operators would not be run. They just create tensors.
+      // We do not visualize any execution in NVTX. (Even a tick operator has something in NVTX.)
       return TaskClassifier::kRunASAP;
     } else {
       return TaskClassifier::kWaitingComputation;
@@ -279,9 +297,8 @@ void TopoStruct::ComputeMeomoryIncrement() {
 
 // Activation time = time of cpu - time of gpu
 void TopoStruct::ComputeActivationTime() {
-  const auto& node_name = node->VisualStr();
-  if (node_name.find("-cast-") != std::string::npos
-      || node_name.find("-expand") != std::string::npos) {
+  if (node->GetTaskType() == TaskType::kNormalForward
+      && LongerActivationTimeInCpu(dynamic_cast<const CompTaskNode*>(node)->op()->op_conf())) {
     activation_time = 1;
   } else {
     activation_time = 0;
