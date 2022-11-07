@@ -43,26 +43,28 @@ class ContiguousParamsUnit(object):
 
 class ParamGroup(object):
     def __init__(
-        self, parameters: Dict[str, Any], default_options: Dict, contiguous_params: False,
+        self, parameters: Dict[str, Any], default_options: Dict, contiguous_params: bool = False,
     ):
         # ParamGroup must be constructed by Dict["params": parameters: List[Parameter, Tensor or TensorBlock], "...": ...]
         assert isinstance(parameters, dict) and "params" in parameters
         assert not isinstance(parameters["params"], (Parameter, Tensor))
         self._parameters = list()
 
-        if not contiguous_params:
-            for p in parameters["params"]:
-                if isinstance(p, (Parameter, Tensor)):
-                    self._parameters.append(p)
-                elif isinstance(p, TensorBlock):
-                    # Add parameter from nn.Graph
-                    self._parameters.append(p.origin)
-                else:
-                    raise ValueError(
-                        "parameters in ParamGroup must be Tensor or TensorBlock."
-                    )
-        else: 
+        for p in parameters["params"]:
+            if isinstance(p, (Parameter, Tensor)):
+                self._parameters.append(p)
+            elif isinstance(p, TensorBlock):
+                # Add parameter from nn.Graph
+                self._parameters.append(p.origin)
+            else:
+                raise ValueError(
+                    "parameters in ParamGroup must be Tensor or TensorBlock."
+                )
+        
+        self.contiguous_params = contiguous_params
+        if self.contiguous_params: 
             self.params_dict = dict()
+            self._contiguous_parameters = list()
             self._make_contiguous_params(parameters)
 
         self._options = deepcopy(default_options)
@@ -108,7 +110,7 @@ class ParamGroup(object):
 
         for buf_type in self.params_dict.keys():
             self.params_dict[buf_type].param_buf.grad = self.params_dict[buf_type].grad_buf
-            self._parameters.append(self.params_dict[buf_type].param_buf)
+            self._contiguous_parameters.append(self.params_dict[buf_type].param_buf)
 
     def __getitem__(self, key):
         return self._options[key]
@@ -137,6 +139,12 @@ class ParamGroup(object):
 
     @property
     def parameters(self):
+        if self.contiguous_params:
+            return self._contiguous_parameters
+        return self._parameters
+    
+    @property
+    def origin_parameters(self):
         return self._parameters
 
 
@@ -279,7 +287,7 @@ class Optimizer(object):
             raise ValueError(
                 "loaded state dict has a different number of parameter groups"
             )
-        param_lens = (len(g._parameters) for g in groups)
+        param_lens = (len(g.parameters) for g in groups)
         saved_lens = (len(g["params"]) for g in saved_groups)
         if any(p_len != s_len for p_len, s_len in zip(param_lens, saved_lens)):
             raise ValueError(
@@ -292,7 +300,7 @@ class Optimizer(object):
             old_id: p
             for old_id, p in zip(
                 chain.from_iterable((g["params"] for g in saved_groups)),
-                chain.from_iterable((g._parameters for g in groups)),
+                chain.from_iterable((g.parameters for g in groups)),
             )
         }
 
@@ -361,11 +369,11 @@ class Optimizer(object):
             param_mappings.update(
                 {
                     id(p): i
-                    for i, p in enumerate(group._parameters, start_index)
+                    for i, p in enumerate(group.parameters, start_index)
                     if id(p) not in param_mappings
                 }
             )
-            packed["params"] = [param_mappings[id(p)] for p in group._parameters]
+            packed["params"] = [param_mappings[id(p)] for p in group.parameters]
             start_index += len(packed["params"])
             return packed
 
@@ -410,7 +418,7 @@ class Optimizer(object):
         for param_group in self.param_groups:
             if param_group._enable_clip_grad:
                 clip_grad_norm_(
-                    param_group.parameters,
+                    param_group.origin_parameters,
                     param_group["clip_grad_max_norm"],
                     param_group["clip_grad_norm_type"],
                     error_if_nonfinite,

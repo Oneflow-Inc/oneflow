@@ -266,9 +266,7 @@ def compare_with_numpy_sgd_clip_grad(
         return x
 
     oneflow_res = train_by_oneflow()
-    print(oneflow_res)
     numpy_res = train_by_numpy()
-    print(numpy_res)
 
     for i in range(tensor_num):
         test_case.assertTrue(
@@ -319,9 +317,7 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["contiguous_params"] = [False, True]
         arg_dict["tensor_num"] = [1, 4]
         for arg in GenArgDict(arg_dict):
-            print(arg)
             compare_with_numpy_sgd_clip_grad(test_case, **arg)
-            print()
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_eager_global_zero_grad_sbp(test_case):

@@ -139,7 +139,8 @@ class AdamW(Optimizer):
         options["bias_correction2"] = 1.0
         options["do_bias_correction"] = do_bias_correction
         options["amsgrad"] = amsgrad
-        super().__init__(params, options, contiguous_params)
+        options["contiguous_params"] = contiguous_params
+        super().__init__(params, options)
 
         for param_group in self.param_groups:
             for param in param_group.parameters:

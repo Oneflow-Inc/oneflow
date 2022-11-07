@@ -39,7 +39,7 @@ def compare_with_numpy_adam(
     amsgrad,
     reload_state_step,
     save_load_by_pickle,
-    multi_tensor,
+    contiguous_params,
     tensor_num,
 ):
     random_grad_seq = []
@@ -75,7 +75,7 @@ def compare_with_numpy_adam(
             ],
             do_bias_correction=do_bias_correction,
             amsgrad=amsgrad,
-            multi_tensor=multi_tensor,
+            contiguous_params=contiguous_params,
         )
 
         def train_one_iter(grad):
@@ -96,7 +96,7 @@ def compare_with_numpy_adam(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = adam.state_dict()
-                adam = flow.optim.Adam([{"params": x,}],)
+                adam = flow.optim.Adam([{"params": x,}], contiguous_params=contiguous_params)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
@@ -172,7 +172,7 @@ def compare_with_numpy_adam_clip_grad(
     clip_grad_norm_type,
     reload_state_step,
     save_load_by_pickle,
-    multi_tensor,
+    contiguous_params,
     tensor_num,
 ):
     random_grad_seq = []
@@ -210,7 +210,7 @@ def compare_with_numpy_adam_clip_grad(
             ],
             do_bias_correction=do_bias_correction,
             amsgrad=amsgrad,
-            multi_tensor=multi_tensor,
+            contiguous_params=contiguous_params,
         )
 
         def train_one_iter(grad):
@@ -232,7 +232,7 @@ def compare_with_numpy_adam_clip_grad(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = adam.state_dict()
-                adam = flow.optim.Adam([{"params": x,}])
+                adam = flow.optim.Adam([{"params": x,}], contiguous_params=contiguous_params)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
