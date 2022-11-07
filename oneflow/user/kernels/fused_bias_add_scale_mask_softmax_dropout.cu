@@ -26,21 +26,18 @@ namespace {
 template<typename IndexType, size_t NDIM>
 struct BroadcastMapper {
   using index_type = IndexType;
-  IndexType ndim = 0;
   IndexType src_dims[NDIM] = {0};
   IndexType dst_dims[NDIM] = {0};
 
   template<typename DimType>
-  BroadcastMapper(const size_t arg_ndim, const DimType* arg_src_dims, const DimType* arg_dst_dims)
-      : ndim(arg_ndim) {
-    CHECK_LE(arg_ndim, NDIM);
-    for (size_t i = 0; i < ndim; ++i) { src_dims[i] = arg_src_dims[i]; }
-    for (size_t i = 0; i < ndim; ++i) { dst_dims[i] = arg_dst_dims[i]; }
+  BroadcastMapper(const DimType* arg_src_dims, const DimType* arg_dst_dims) {
+    for (size_t i = 0; i < NDIM; ++i) { src_dims[i] = arg_src_dims[i]; }
+    for (size_t i = 0; i < NDIM; ++i) { dst_dims[i] = arg_dst_dims[i]; }
   }
 
   __device__ IndexType map(IndexType src) const {
-    NdIndexOffsetHelper<IndexType, NDIM> src_index_helper(src_dims, ndim);
-    NdIndexOffsetHelper<IndexType, NDIM> dst_index_helper(dst_dims, ndim);
+    NdIndexOffsetHelper<IndexType, NDIM> src_index_helper(src_dims);
+    NdIndexOffsetHelper<IndexType, NDIM> dst_index_helper(dst_dims);
     IndexType src_index[NDIM];
     IndexType dst_index[NDIM];
     src_index_helper.OffsetToNdIndex(src, src_index);
@@ -113,17 +110,17 @@ struct BiasAddScaleMaskLoad {
   }
 };
 
-template<typename T, typename MASK, typename IndexType, size_t NDIM>
-void DispatchBroadcastForward(cudaStream_t stream, const user_op::Tensor* x,
-                              const user_op::Tensor* bias, const user_op::Tensor* mask,
-                              const user_op::Tensor* dropout_mask, const float mask_fill,
-                              const float scale, const float dropout_scale, user_op::Tensor* y,
-                              user_op::Tensor* softmax_y) {
+template<typename T, typename MASK>
+void DispatchForward(cudaStream_t stream, const user_op::Tensor* x, const user_op::Tensor* bias,
+                     const user_op::Tensor* mask, const user_op::Tensor* dropout_mask,
+                     const float mask_fill, const float scale, const float dropout_scale,
+                     user_op::Tensor* y, user_op::Tensor* softmax_y) {
   using ComputeType = typename softmax::DefaultComputeType<T>::type;
+  using IndexType = int32_t;
+  constexpr int kMaxNDim = 5;
 
   const auto& x_shape = x->shape_view();
   CHECK_GE(x_shape.size(), 2);
-  CHECK_LE(x_shape.size(), NDIM);
   // the last dim is softmax dim which is considered as col
   int64_t ncol = x_shape[x_shape.size() - 1];
   int64_t nrow = x_shape.elem_cnt() / ncol;
@@ -131,82 +128,72 @@ void DispatchBroadcastForward(cudaStream_t stream, const user_op::Tensor* x,
       y->mut_dptr<T>(), softmax_y->mut_dptr<T>(), dropout_mask->dptr<bool>(), ncol, dropout_scale);
 
   size_t bias_sndim = 0;
-  int64_t bias_x_sdims[NDIM];
-  int64_t bias_sdims[NDIM];
+  int64_t bias_x_sdims[kMaxNDim];
+  int64_t bias_sdims[kMaxNDim];
   const auto& bias_shape = bias->shape_view();
   fused_scale_mask_softmax::SimplifyBroadcastDims(x_shape.size(), x_shape.ptr(), bias_shape.size(),
                                                   bias_shape.ptr(), &bias_sndim, bias_x_sdims,
                                                   bias_sdims);
   size_t mask_sndim = 0;
-  int64_t mask_x_sdims[NDIM];
-  int64_t mask_sdims[NDIM];
+  int64_t mask_x_sdims[kMaxNDim];
+  int64_t mask_sdims[kMaxNDim];
   const auto& mask_shape = mask->shape_view();
   fused_scale_mask_softmax::SimplifyBroadcastDims(x_shape.size(), x_shape.ptr(), mask_shape.size(),
                                                   mask_shape.ptr(), &mask_sndim, mask_x_sdims,
                                                   mask_sdims);
 
-  bool broadcast_bias = (bias_sndim > 1);
-  bool broadcast_mask = (mask_sndim > 1);
+#define DISPATCH_BIAS_ADD_SCALE_MASK_SOFTMAX(bias_mapper, mask_mapper)                           \
+  BiasAddScaleMaskLoad<T, ComputeType, MASK, decltype(bias_mapper), decltype(mask_mapper)> load( \
+      x->dptr<T>(), bias->dptr<T>(), mask->dptr<MASK>(), mask_fill, scale, ncol, bias_mapper,    \
+      mask_mapper);                                                                              \
+  OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(   \
+      stream, load, store, nrow, ncol)))
 
-  if (broadcast_bias && broadcast_mask) {
-    BroadcastMapper<IndexType, NDIM> bias_mapper(bias_sndim, bias_x_sdims, bias_sdims);
-    BroadcastMapper<IndexType, NDIM> mask_mapper(mask_sndim, mask_x_sdims, mask_sdims);
-    BiasAddScaleMaskLoad<T, ComputeType, MASK, decltype(bias_mapper), decltype(mask_mapper)> load(
-        x->dptr<T>(), bias->dptr<T>(), mask->dptr<MASK>(), mask_fill, scale, ncol, bias_mapper,
-        mask_mapper);
-    OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
-        stream, load, store, nrow, ncol)));
-  } else if (broadcast_bias) {
-    BroadcastMapper<IndexType, NDIM> bias_mapper(bias_sndim, bias_x_sdims, bias_sdims);
-    ElementwiseMapper<IndexType> mask_mapper;
-    BiasAddScaleMaskLoad<T, ComputeType, MASK, decltype(bias_mapper), decltype(mask_mapper)> load(
-        x->dptr<T>(), bias->dptr<T>(), mask->dptr<MASK>(), mask_fill, scale, ncol, bias_mapper,
-        mask_mapper);
-    OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
-        stream, load, store, nrow, ncol)));
-  } else if (broadcast_mask) {
+  if (bias_sndim == 1 && mask_sndim == 1) {
+    // bias elementwise
+    // mask elementwise
     ElementwiseMapper<IndexType> bias_mapper;
-    BroadcastMapper<IndexType, NDIM> mask_mapper(mask_sndim, mask_x_sdims, mask_sdims);
-    BiasAddScaleMaskLoad<T, ComputeType, MASK, decltype(bias_mapper), decltype(mask_mapper)> load(
-        x->dptr<T>(), bias->dptr<T>(), mask->dptr<MASK>(), mask_fill, scale, ncol, bias_mapper,
-        mask_mapper);
-    OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
-        stream, load, store, nrow, ncol)));
+    ElementwiseMapper<IndexType> mask_mapper;
+    DISPATCH_BIAS_ADD_SCALE_MASK_SOFTMAX(bias_mapper, mask_mapper);
+  } else if (bias_sndim == 1 && mask_sndim == 2) {
+    // bias elementwise
+    // mask broadcast: (M, 1) -> (M, N) or (1, N) -> (M, N)
+    ElementwiseMapper<IndexType> bias_mapper;
+    BroadcastMapper<IndexType, 2> mask_mapper(mask_x_sdims, mask_sdims);
+    DISPATCH_BIAS_ADD_SCALE_MASK_SOFTMAX(bias_mapper, mask_mapper);
+  } else if (bias_sndim == 1 && mask_sndim == 3) {
+    // bias elementwise
+    // mask broadcast: (M, 1, N) -> (M, K, N)
+    ElementwiseMapper<IndexType> bias_mapper;
+    BroadcastMapper<IndexType, 3> mask_mapper(mask_x_sdims, mask_sdims);
+    DISPATCH_BIAS_ADD_SCALE_MASK_SOFTMAX(bias_mapper, mask_mapper);
+  } else if (bias_sndim == 2 && mask_sndim == 1) {
+    // bias broadcast: (M, 1) -> (M, N) or (1, N) -> (M, N)
+    // mask elementwise
+    BroadcastMapper<IndexType, 2> bias_mapper(bias_x_sdims, bias_sdims);
+    ElementwiseMapper<IndexType> mask_mapper;
+    DISPATCH_BIAS_ADD_SCALE_MASK_SOFTMAX(bias_mapper, mask_mapper);
+  } else if (bias_sndim == 2 && mask_sndim == 2) {
+    // bias broadcast: (M, 1) -> (M, N) or (1, N) -> (M, N)
+    // mask broadcast: (M, 1) -> (M, N) or (1, N) -> (M, N)
+    BroadcastMapper<IndexType, 2> bias_mapper(bias_x_sdims, bias_sdims);
+    BroadcastMapper<IndexType, 2> mask_mapper(mask_x_sdims, mask_sdims);
+    DISPATCH_BIAS_ADD_SCALE_MASK_SOFTMAX(bias_mapper, mask_mapper);
+  } else if (bias_sndim == 2 && mask_sndim == 3) {
+    // bias broadcast: (M, 1) -> (M, N) or (1, N) -> (M, N)
+    // mask broadcast: (M, 1, N) -> (M, K, N)
+    BroadcastMapper<IndexType, 2> bias_mapper(bias_x_sdims, bias_sdims);
+    BroadcastMapper<IndexType, 3> mask_mapper(mask_x_sdims, mask_sdims);
+    DISPATCH_BIAS_ADD_SCALE_MASK_SOFTMAX(bias_mapper, mask_mapper);
+    // not support for now
+    // } else if (bias_sndim == 3 && mask_sndim == 1) {
+    // } else if (bias_sndim == 3 && mask_sndim == 2) {
+    // } else if (bias_sndim == 3 && mask_sndim == 3) {
   } else {
-    ElementwiseMapper<IndexType> bias_mapper;
-    ElementwiseMapper<IndexType> mask_mapper;
-    BiasAddScaleMaskLoad<T, ComputeType, MASK, decltype(bias_mapper), decltype(mask_mapper)> load(
-        x->dptr<T>(), bias->dptr<T>(), mask->dptr<MASK>(), mask_fill, scale, ncol, bias_mapper,
-        mask_mapper);
-    OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
-        stream, load, store, nrow, ncol)));
+    UNIMPLEMENTED();
   }
-}
 
-template<typename T, typename MASK, typename IndexType>
-void DispatchNumOfDimensionsForward(cudaStream_t stream, const user_op::Tensor* x,
-                                    const user_op::Tensor* bias, const user_op::Tensor* mask,
-                                    const user_op::Tensor* dropout_mask, const float mask_fill,
-                                    const float scale, const float dropout_scale,
-                                    user_op::Tensor* y, user_op::Tensor* softmax_y) {
-  size_t ndim = x->shape_view().size();
-  CHECK_GE(ndim, 2);
-  switch (ndim) {
-#define DEFINE_ONE_CASE(NDIM)                                                                \
-  case NDIM: {                                                                               \
-    DispatchBroadcastForward<T, MASK, IndexType, NDIM>(                                      \
-        stream, x, bias, mask, dropout_mask, mask_fill, scale, dropout_scale, y, softmax_y); \
-    break;                                                                                   \
-  }
-    DEFINE_ONE_CASE(2)
-    DEFINE_ONE_CASE(3)
-    DEFINE_ONE_CASE(4)
-    // DEFINE_ONE_CASE(5)
-#undef DEFINE_ONE_CASE
-    default: {
-      UNIMPLEMENTED();
-    }
-  }
+#undef DISPATCH_BIAS_ADD_SCALE_MASK_SOFTMAX
 }
 
 template<typename T, typename MASK>
@@ -234,16 +221,9 @@ class FusedBiasAddScaleMaskSoftmaxDropoutKernel final : public user_op::OpKernel
     const ShapeView& x_shape = x->shape_view();
     // int32 index computing is much faster than int64
     // TODO: consider using multiple int32 computing to substitute int64 computing
-    if (x_shape.elem_cnt() < INT_MAX) {
-      DispatchNumOfDimensionsForward<T, MASK, int32_t>(
-          ctx->stream()->As<ep::CudaStream>()->cuda_stream(), x, bias, mask, dropout_mask,
-          mask_fill, scale, dropout_scale, y, softmax_y);
-    } else {
-      UNIMPLEMENTED();
-      // DispatchNumOfDimensionsForward<T, MASK, int64_t>(
-      //     ctx->stream()->As<ep::CudaStream>()->cuda_stream(), x, bias, mask, dropout_mask,
-      //     mask_fill, scale, dropout_scale, y, softmax_y);
-    }
+    CHECK_LT(x_shape.elem_cnt(), INT_MAX) << "only support int32 max limits size of elements";
+    DispatchForward<T, MASK>(ctx->stream()->As<ep::CudaStream>()->cuda_stream(), x, bias, mask,
+                             dropout_mask, mask_fill, scale, dropout_scale, y, softmax_y);
   }
 };
 
