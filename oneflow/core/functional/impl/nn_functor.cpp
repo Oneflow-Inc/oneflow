@@ -772,9 +772,10 @@ class GroupNormFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<one::Tensor>& gamma, const Optional<one::Tensor>& beta,
                            const bool affine, const int32_t num_groups, const double& epsilon,
-                           const std::string& data_format) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_groups", "epsilon", "data_format");
-    attrs.SetAllAttrs(num_groups, epsilon, data_format);
+                           const std::string& data_format, const std::string& activation) const {
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("num_groups", "epsilon", "data_format", "activation");
+    attrs.SetAllAttrs(num_groups, epsilon, data_format, activation);
     if (affine) {
       return OpInterpUtil::Dispatch<Tensor>(*affine_op_, {x, JUST(gamma), JUST(beta)}, attrs);
     } else {
