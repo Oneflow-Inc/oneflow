@@ -90,6 +90,7 @@ void InitMemoryChains(Plan* plan,
     DeviceType device_type = stream_id.device_id().device_type();
     // TODO(zwx): eliminate this special 'is cpu' determine
     if (device_type == DeviceType::kCPU) { continue; }
+    if (!IsValidChainId(task->task_set_info().chain_id())) { continue; }
     int64_t device_id = stream_id.device_id().device_index();
     int64_t device_unique_id = GenDeviceUniqueId(machine_id, device_id);
     MemoryChain* mem_chain =
@@ -97,15 +98,15 @@ void InitMemoryChains(Plan* plan,
     mem_chain->sorted_tasks.emplace_back(task);
     for (auto& pair : *(task->mutable_produced_regst_desc())) {
       RegstDescProto* regst_desc = &pair.second;
+      int64_t regst_total_main_size = RtRegstDesc(*regst_desc).TotalMainByteSize4AllRegst();
       if (regst_desc->mem_case().device_type() == device_type
           && regst_desc->mem_case().device_id() == device_id && regst_desc->enable_reuse_mem()
           && regst_desc->register_num() == 1 && regst_desc->mem_block_id() == -1
           && regst_desc->mem_block_offset() == -1
-          && regst_desc->regst_desc_type().has_data_regst_desc()) {
+          && regst_desc->regst_desc_type().has_data_regst_desc() && regst_total_main_size > 0) {
         CHECK(mem_chain->mem_reused_regsts.insert(regst_desc).second);
-        size_t regst_desc_size = RtRegstDesc(*regst_desc).TotalMainByteSize4AllRegst();
-        (*mem_reused_regst2size)[regst_desc] = regst_desc_size;
-        mem_chain->total_mem_reused_size += regst_desc_size;
+        (*mem_reused_regst2size)[regst_desc] = regst_total_main_size;
+        mem_chain->total_mem_reused_size += regst_total_main_size;
 
         // for time shape in mem chain
         Shape regst_time_shape =
