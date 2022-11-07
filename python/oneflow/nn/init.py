@@ -77,9 +77,8 @@ def uniform_(tensor, a=0.0, b=1.0):
         assert a.ndim == 0 and a.nelement() == 1, "a must be a number or scalar tensor!"
         a = a.numpy().item()
     if isinstance(b, Tensor):
-        assert b.ndim == 0 and b.nelement() == 1, "b must be a number or scalar tensor!"
+        assert b.ndim == 0 and b.nelement() == 1, "b must be a number or scaar tensor!"
         b = b.numpy().item()
-
     return flow._C.uniform_(tensor, a, b, dtype=tensor.dtype)
 
 def normal_(tensor, mean=0.0, std=1.0):

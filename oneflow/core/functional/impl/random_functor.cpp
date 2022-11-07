@@ -151,23 +151,16 @@ class UniformFunctor {
         gen->set_current_seed(rank_seed);
       }
       const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-      // return JUST(OpInterpUtil::Dispatch<Tensor>(
-      //     *op_, {}, OpExprInterpContext(attrs, placement, nb_sbp, distribution_state)));
       OpExprInterpContext ctx(attrs, placement, nb_sbp, distribution_state);
       ctx.device = JUST(x->device());
       JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(), ctx));
     } else {  // local
-      std::cout << "local" << std::endl;
       attrs.SetAllAttrs(from, to, shape, dtype_val, static_cast<int64_t>(gen->current_seed()),
                         NullOpt);
       const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-      // return JUST(
-      //     OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs,
-      //     distribution_state)));
       OpExprInterpContext ctx(attrs, distribution_state);
       ctx.device = JUST(x->device());
-      JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(),
-                                  OpExprInterpContext(attrs, distribution_state)));
+      JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(), ctx));
     }
     return outputs->at(0);
   }
