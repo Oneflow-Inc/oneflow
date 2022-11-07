@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
 #include "oneflow/core/cuda/layer_norm.cuh"
 #include <cub/cub.cuh>
 #include <cutlass/fast_math.h>
@@ -25,7 +26,7 @@ namespace oneflow {
 
 namespace {
 
-template<typename SRC, typename DST, bool affine>
+template<typename SRC, typename DST, ep::primitive::UnaryOp activation, bool affine>
 struct AffineStore {
   AffineStore(DST* y, int64_t row_size, int64_t channel_size, int64_t spatial_size,
               const DST* gamma, const DST* beta)
@@ -34,7 +35,8 @@ struct AffineStore {
         channel_size(channel_size),
         spatial_size(spatial_size),
         gamma(gamma),
-        beta(beta) {}
+        beta(beta),
+        act(0, 0) {}
 
   template<int PackSize>
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
@@ -53,10 +55,10 @@ struct AffineStore {
     for (int i = 0; i < PackSize; ++i) {
       DST normalized_i = static_cast<DST>(src[i]);
       if (affine) {
-        y_pack.elem[i] = normalized_i * gamma_val + beta_val;
+        y_pack.elem[i] = act(normalized_i * gamma_val + beta_val);
       } else {
         // Direct Store.
-        y_pack.elem[i] = normalized_i;
+        y_pack.elem[i] = act(normalized_i);
       }
     }
     *(reinterpret_cast<cuda::layer_norm::PackType<DST, PackSize>*>(y) + packed_offset) =
@@ -69,6 +71,7 @@ struct AffineStore {
   int64_t spatial_size;
   const DST* gamma;
   const DST* beta;
+  ep::primitive::UnaryFunctor<DeviceType::kCUDA, activation, DST, DST> act;
 };
 
 template<typename SRC, typename DST, bool affine>
@@ -104,7 +107,7 @@ struct ScaleLoad {
   int64_t spatial_size;
 };
 
-template<typename SRC, typename DST, bool affine>
+template<typename SRC, typename DST, ep::primitive::UnaryOp activation, bool affine>
 struct ChannelsLastStore {
   ChannelsLastStore(DST* y, const DST* gamma, const DST* beta, int64_t spatial_size,
                     int64_t channel_size, int64_t num_groups)
@@ -113,7 +116,8 @@ struct ChannelsLastStore {
         beta(beta),
         spatial_size(spatial_size),
         c0(num_groups),
-        c1(channel_size / num_groups) {}
+        c1(channel_size / num_groups),
+        act(0, 0) {}
 
   template<int PackSize>
   __device__ void store(const SRC* src, int32_t row, int32_t col) {
@@ -143,10 +147,10 @@ struct ChannelsLastStore {
     for (int i = 0; i < PackSize; ++i) {
       DST normalized_i = static_cast<DST>(src[i]);
       if (affine) {
-        y_pack.elem[i] = normalized_i * gamma_pack.elem[i] + beta_pack.elem[i];
+        y_pack.elem[i] = act(normalized_i * gamma_pack.elem[i] + beta_pack.elem[i]);
       } else {
         // Direct Store.
-        y_pack.elem[i] = normalized_i;
+        y_pack.elem[i] = act(normalized_i);
       }
     }
     *(reinterpret_cast<cuda::layer_norm::PackType<DST, PackSize>*>(y) + y_offset) = y_pack.storage;
@@ -158,6 +162,7 @@ struct ChannelsLastStore {
   int32_t spatial_size;
   cutlass::FastDivmod c0;
   cutlass::FastDivmod c1;
+  ep::primitive::UnaryFunctor<DeviceType::kCUDA, activation, DST, DST> act;
 };
 
 template<typename SRC, typename DST>
@@ -188,7 +193,7 @@ struct ChannelsLastLoad {
   cutlass::FastDivmod c1;
 };
 
-template<typename T, bool affine>
+template<typename T, ep::primitive::UnaryOp activation, bool affine>
 void GroupNormForwardGpu(ep::Stream* stream, const int64_t num_instances, const int64_t norm_size,
                          const int64_t channel_size, const int64_t spatial_size,
                          const double epsilon, const T* x_ptr, const T* gamma_ptr,
@@ -197,8 +202,8 @@ void GroupNormForwardGpu(ep::Stream* stream, const int64_t num_instances, const 
   using ComputeType = typename cuda::layer_norm::DefaultComputeType<T>::type;
   if (channels_first) {
     cuda::layer_norm::DirectLoad<T, ComputeType> load(x_ptr, norm_size);
-    AffineStore<ComputeType, T, affine> store(y_ptr, norm_size, channel_size, spatial_size,
-                                              gamma_ptr, beta_ptr);
+    AffineStore<ComputeType, T, activation, affine> store(y_ptr, norm_size, channel_size,
+                                                          spatial_size, gamma_ptr, beta_ptr);
 
     cuda::layer_norm::DispatchLayerNorm<decltype(load), decltype(store), ComputeType>(
         stream->As<ep::CudaStream>()->cuda_stream(), load, store, num_instances, norm_size, epsilon,
@@ -206,13 +211,30 @@ void GroupNormForwardGpu(ep::Stream* stream, const int64_t num_instances, const 
   } else {
     ChannelsLastLoad<T, ComputeType> load(x_ptr, spatial_size, channel_size,
                                           channel_size / (norm_size / spatial_size));
-    ChannelsLastStore<ComputeType, T, affine> store(y_ptr, gamma_ptr, beta_ptr, spatial_size,
-                                                    channel_size,
-                                                    channel_size / (norm_size / spatial_size));
+    ChannelsLastStore<ComputeType, T, activation, affine> store(
+        y_ptr, gamma_ptr, beta_ptr, spatial_size, channel_size,
+        channel_size / (norm_size / spatial_size));
 
     cuda::layer_norm::DispatchLayerNorm<decltype(load), decltype(store), ComputeType>(
         stream->As<ep::CudaStream>()->cuda_stream(), load, store, num_instances, norm_size, epsilon,
         mean->mut_dptr<ComputeType>(), inv_variance->mut_dptr<ComputeType>());
+  }
+}
+
+template<typename T, ep::primitive::UnaryOp activation>
+void DispatchGroupNormAffine(ep::Stream* stream, const int64_t num_instances,
+                             const int64_t norm_size, const int64_t channel_size,
+                             const int64_t spatial_size, const double epsilon, const T* x_ptr,
+                             const T* gamma_ptr, const T* beta_ptr, T* y_ptr, user_op::Tensor* mean,
+                             user_op::Tensor* inv_variance, bool channels_first) {
+  if (gamma_ptr != nullptr && beta_ptr != nullptr) {
+    GroupNormForwardGpu<T, activation, true>(stream, num_instances, norm_size, channel_size,
+                                             spatial_size, epsilon, x_ptr, gamma_ptr, beta_ptr,
+                                             y_ptr, mean, inv_variance, channels_first);
+  } else {
+    GroupNormForwardGpu<T, activation, false>(stream, num_instances, norm_size, channel_size,
+                                              spatial_size, epsilon, x_ptr, gamma_ptr, beta_ptr,
+                                              y_ptr, mean, inv_variance, channels_first);
   }
 }
 
@@ -222,15 +244,17 @@ void DispatchGroupNormForwardGpu(ep::Stream* stream, const int64_t num_instances
                                  const int64_t spatial_size, const double epsilon, const T* x_ptr,
                                  const T* gamma_ptr, const T* beta_ptr, T* y_ptr,
                                  user_op::Tensor* mean, user_op::Tensor* inv_variance,
-                                 bool channels_first) {
-  if (gamma_ptr != nullptr && beta_ptr != nullptr) {
-    GroupNormForwardGpu<T, true>(stream, num_instances, norm_size, channel_size, spatial_size,
-                                 epsilon, x_ptr, gamma_ptr, beta_ptr, y_ptr, mean, inv_variance,
-                                 channels_first);
+                                 bool channels_first, const std::string& activation) {
+  if (activation == "none") {
+    DispatchGroupNormAffine<T, ep::primitive::UnaryOp::kIdentity>(
+        stream, num_instances, norm_size, channel_size, spatial_size, epsilon, x_ptr, gamma_ptr,
+        beta_ptr, y_ptr, mean, inv_variance, channels_first);
+  } else if (activation == "silu") {
+    DispatchGroupNormAffine<T, ep::primitive::UnaryOp::kSilu>(
+        stream, num_instances, norm_size, channel_size, spatial_size, epsilon, x_ptr, gamma_ptr,
+        beta_ptr, y_ptr, mean, inv_variance, channels_first);
   } else {
-    GroupNormForwardGpu<T, false>(stream, num_instances, norm_size, channel_size, spatial_size,
-                                  epsilon, x_ptr, gamma_ptr, beta_ptr, y_ptr, mean, inv_variance,
-                                  channels_first);
+    UNIMPLEMENTED();
   }
 }
 
@@ -312,7 +336,8 @@ class GroupNormGpuKernel final : public user_op::OpKernel {
     }
     DispatchGroupNormForwardGpu<T>(ctx->stream(), num_instances, norm_size, channel_size,
                                    spatial_size, epsilon, x->dptr<T>(), gamma_ptr, beta_ptr,
-                                   y->mut_dptr<T>(), mean, inv_variance, channels_first);
+                                   y->mut_dptr<T>(), mean, inv_variance, channels_first,
+                                   ctx->Attr<std::string>("activation"));
   }
 };
 
