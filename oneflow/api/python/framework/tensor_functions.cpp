@@ -791,6 +791,7 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(value)));
   const auto& index_item = functional::PyUnpackTensorIndex(item);
 
+  auto tensor = PyTensor_Unpack(self);
   // NOTE: use masked_fill_(local,global) to avoid D2H in TensorSetItem if index is bool tensor
   if (functional::PyScalarCheck(value) && index_item.size() == 1 && index_item[0].IsTensor()) {
     const auto& index_tensor = index_item[0].tensor();
@@ -802,7 +803,6 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
     }
   }
 
-  auto tensor = PyTensor_Unpack(self);
   std::shared_ptr<Tensor> value_tensor;
   {
     if (tensor->is_global()) {
