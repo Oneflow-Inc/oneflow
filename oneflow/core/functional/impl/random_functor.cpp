@@ -106,6 +106,76 @@ class BernoulliProbInplaceFunctor {
   }
 };
 
+class UniformFunctor {
+ public:
+  UniformFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double from,
+                           const double to, const Optional<Symbol<DType>>& dtype) const {
+    JUST(CheckInplaceValid(x));
+    const Shape& shape = *(x->shape());
+    DataType dtype_val = GetDefaultDType()->data_type();
+    if (dtype.has_value()) {
+      dtype_val = JUST(dtype)->data_type();
+      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble
+          && dtype_val != DataType::kFloat16) {
+        OF_UNIMPLEMENTED() << "Only support floating dtype in rand().";
+      }
+    }
+
+    auto gen = JUST(one::DefaultAutoGenerator());
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("from", "to", "shape", "dtype", "seed", "nb_sbp");
+    auto outputs = std::make_shared<TensorTuple>(1);
+    JUST(CheckInplaceValid(x));
+    (*outputs)[0] = x;
+    if (x->is_global())  // global
+    {
+      const auto& nb_sbp = JUST(x->nd_sbp());
+      const auto& placement = JUST(x->parallel_desc());
+      JUST(CheckDeviceIdsIsValid(placement));
+      uint64_t init_seed = JUST(gen->Get<CPUGeneratorImpl>(0))->engine()();
+      if (LazyMode::is_enabled())  // lazy模式
+      {
+        attrs.SetAllAttrs(from, to, shape, dtype_val, static_cast<int64_t>(init_seed),
+                          *JUST(GetNdSbpStrList(nb_sbp)));
+      } else  // eager
+      {
+        uint64_t rank_seed = 0;
+        {
+          JUST(BroadcastSeedToAllRanks(&init_seed, /*root=*/0));
+          rank_seed =
+              JUST(GetRandomSeedForRank(*placement, *nb_sbp, init_seed, GlobalProcessCtx::Rank()));
+        }
+        attrs.SetAllAttrs(from, to, shape, dtype_val, static_cast<int64_t>(rank_seed), NullOpt);
+
+        gen = JUST(MakeGenerator(placement->device_type()));
+        gen->set_current_seed(rank_seed);
+      }
+      const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+      // return JUST(OpInterpUtil::Dispatch<Tensor>(
+      //     *op_, {}, OpExprInterpContext(attrs, placement, nb_sbp, distribution_state)));
+      OpExprInterpContext ctx(attrs, placement, nb_sbp, distribution_state);
+      ctx.device = JUST(x->device());
+      JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(), ctx));
+    } else {  // local
+      std::cout << "local" << std::endl;
+      attrs.SetAllAttrs(from, to, shape, dtype_val, static_cast<int64_t>(gen->current_seed()),
+                        NullOpt);
+      const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+      // return JUST(
+      //     OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs,
+      //     distribution_state)));
+      OpExprInterpContext ctx(attrs, distribution_state);
+      ctx.device = JUST(x->device());
+      JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(),
+                                  OpExprInterpContext(attrs, distribution_state)));
+    }
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class RandFunctor {
  public:
   RandFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
@@ -787,6 +857,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<GlobalRandIntLikeFunctor, GlobalRandIntLike2Functor>("GlobalRandIntLike");
   m.add_functor<ExponentialFunctor>("Exponential");
   m.add_functor<MultinomialFunctor>("Multinomial");
+  m.add_functor<UniformFunctor>("Uniform");
 };
 
 }  // namespace functional
