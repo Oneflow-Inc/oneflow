@@ -2846,6 +2846,25 @@ def OneFlow_FusedRowAttentionWithPairBiasOp : OneFlow_BaseOp<"fused_row_attentio
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_FusedRowAttentionWithPairBiasGradOp : OneFlow_BaseOp<"fused_row_attention_with_pair_bias_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx,
+    OneFlow_Tensor:$dp
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F32Attr, "2.82843">:$scale,
+    DefaultValuedAttr<SI64Attr, "1">:$stride
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 #endif // GET_ONEFLOW_FUSED_OP_DEFINITIONS
 
 // Group: IDEMPOTENT

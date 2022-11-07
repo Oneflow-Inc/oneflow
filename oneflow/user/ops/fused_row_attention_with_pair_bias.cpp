@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <cstdint>
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 #include "oneflow/core/framework/user_op_conf.h"
@@ -73,6 +74,43 @@ namespace oneflow {
       .Split(user_op::OpArg("mask_bias", 0), 0)
       .Broadcast(user_op::OpArg("pair_bias", 0))
       .Split(user_op::OpArg("out", 0), 0)
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/*static*/ auto FusedRowAttentionWithPairBiasGradOp::InferDataType(user_op::InferContext* ctx)
+    -> Maybe<void> {
+  DataType y_type = ctx->InputDType("y", 0);
+  DataType dy_type = ctx->InputDType("dy", 0);
+  CHECK_EQ_OR_RETURN(y_type, dy_type);
+  ctx->SetOutputDType("dx", 0, y_type);
+  ctx->SetOutputDType("dp", 0, y_type);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ auto FusedRowAttentionWithPairBiasGradOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) -> Maybe<void> {
+  const Shape& y_shape = ctx->InputShape("y", 0);
+  const Shape& dy_shape = ctx->InputShape("dy", 0);
+  CHECK_EQ_OR_RETURN(y_shape, dy_shape);
+
+  ctx->SetOutputShape("dx", 0, y_shape);
+  ctx->SetOutputShape("dp", 0, y_shape);  
+  return Maybe<void>::Ok();
+}
+
+/*static*/ auto FusedRowAttentionWithPairBiasGradOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) -> Maybe<void> {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/*static*/ auto FusedRowAttentionWithPairBiasGradOp::GetSbp(user_op::SbpContext* ctx)
+    -> Maybe<void> {
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("y", 0), 0)
+      .Split(user_op::OpArg("dy", 0), 0)
+      .Split(user_op::OpArg("dx", 0), 0)
+      .Split(user_op::OpArg("dp", 0), 0)
       .Build();
   return Maybe<void>::Ok();
 }

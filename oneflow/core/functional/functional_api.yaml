@@ -2395,6 +2395,10 @@
   signature: "Tensor (Tensor qmk, Tensor mask_bias, Tensor pair_bias, Float scale=2.8, Float eps=0.000000001) => FusedRowAttentionWithPairBias"
   bind_python: True
 
+- name: "fused_row_attention_with_pair_bias_grad"
+  signature: "TensorTuple (Tensor y, Tensor dy, Float scale=2.8, Int64 stride=1) => FusedRowAttentionWithPairBiasGrad"
+  bind_python: False
+
 - name: "send"
   signature: "Void (Tensor input, Int64 dst, Bool send_meta=True) => Send"
   bind_python: True

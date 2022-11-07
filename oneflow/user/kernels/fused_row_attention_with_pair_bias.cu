@@ -13,8 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cassert>
-#include <cstdint>
 #include "oneflow/core/cuda/softmax.cuh"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/maybe.h"
@@ -57,32 +55,54 @@ struct MSADirectLoad {
   int64_t row_size;
 };
 
-template<typename SRC, typename DST>
-struct MSADirectStore {
-  MSADirectStore(DST* dst, int64_t row_size) : dst(dst), row_size(row_size) {}
-  template<int N>
-  __device__ void store(const SRC* src, int64_t row, int64_t col) {
-    Pack<DST, N> pack;
-    const int64_t offset = (row * row_size + col) / N;
-#pragma unroll
-    for (int i = 0; i < N; ++i) { pack.elem[i] = static_cast<DST>(src[i]); }
-    *(reinterpret_cast<PackType<DST, N>*>(dst) + offset) = pack.storage;
-  }
-  DST* dst;
-  int64_t row_size;
-};
-
 template<typename T, typename ComputeType>
 void LaunchMSABroadcastForwardKernel(cudaStream_t stream, T* out, const T* qmk, const T* mask,
                                      const T* pair_bias, T scale, const int64_t stride,
                                      const int64_t row_size, const int64_t rows,
                                      const int64_t cols) {
-  MSADirectStore<ComputeType, T> store(out, row_size);
+  DirectStore<ComputeType, T> store(out, row_size);
   MSADirectLoad<T, ComputeType> load(qmk, mask, pair_bias, scale, stride, row_size);
   OF_CUDA_CHECK((DispatchSoftmax<decltype(load), decltype(store), ComputeType>(stream, load, store,
                                                                                rows, cols)));
 }
+
+template<typename SRC, typename DST = SRC>
+struct MSAGradDirectStore {
+  MSAGradDirectStore(DST* dx, DST* dp, const SRC scale, int64_t stride, int64_t row_size)
+      : dx(dx), dp(dp), scale(scale), stride(stride), row_size(row_size) {}
+  template<int N>
+  __device__ void store(const SRC* dout, int64_t row, int64_t col) const {
+    Pack<SRC, N> qmk;
+    Pack<SRC, N> pair;
+    const int64_t offset = (row * row_size + col) / N;
+#pragma unroll
+    for (int i = 0; i < N; ++i) {
+      qmk.elem[i] = static_cast<DST>(dout[i] * scale);
+      pair.elem[i] = static_cast<DST>(dout[i]);
+    }
+    *(reinterpret_cast<PackType<DST, N>*>(dx) + offset) = qmk.storage;
+    *(reinterpret_cast<PackType<DST, N>*>(dp) + offset) = pair.storage;
+  }
+  SRC* dx;
+  SRC* dp;
+  const SRC scale;
+  int64_t stride;
+  int64_t row_size;
+};
+
+template<typename T, typename ComputeType>
+void LaunchMSABroadcastBackwardKernel(cudaStream_t stream, T* dx, T* dp, const T* y, const T* dy,
+                                      T scale, const int64_t stride, const int64_t row_size,
+                                      const int64_t rows, const int64_t cols) {
+  MSAGradDirectStore<ComputeType, T> store(dx, dp, scale, stride, row_size);
+  DirectLoad<T, ComputeType> load_y(y, row_size);
+  DirectLoad<T, ComputeType> load_dy(dy, row_size);
+  OF_CUDA_CHECK(
+      (DispatchSoftmaxGrad<decltype(load_y), decltype(load_dy), decltype(store), ComputeType>(
+          stream, load_y, load_dy, store, rows, cols)));
+}
 }  // namespace softmax
+
 }  // namespace cuda
 
 namespace {
@@ -113,7 +133,6 @@ class FusedRowAttentionWithPairBiasKernel final : public user_op::OpKernel {
     auto qmk_shape = qmk->shape_view();
     const int64_t elem_cnt = qmk_shape.elem_cnt();
     auto out_shape = out->shape_view();
-    assert(out_shape == qmk_shape);
 
     const int64_t B = qmk_shape.At(0), h = qmk_shape.At(1), S = qmk_shape.At(2);
     cuda::softmax::LaunchMSABroadcastForwardKernel<T, T>(
@@ -133,4 +152,39 @@ class FusedRowAttentionWithPairBiasKernel final : public user_op::OpKernel {
 REGISTER_FUSED_ROW_ATTENTION_WITH_PAIR_BIAS_KERNEL_GPU(float)
 REGISTER_FUSED_ROW_ATTENTION_WITH_PAIR_BIAS_KERNEL_GPU(double)
 
+template<typename T>
+class FusedRowAttentionWithPairBiasGradKernel final : public user_op::OpKernel {
+ public:
+  FusedRowAttentionWithPairBiasGradKernel() = default;
+  ~FusedRowAttentionWithPairBiasGradKernel() override = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    user_op::Tensor* dp = ctx->Tensor4ArgNameAndIndex("dp", 0);
+    const T scale = ctx->Attr<T>("scale");
+    const int64_t stride = ctx->Attr<int64_t>("stride");
+    auto y_shape = y->shape_view();
+
+    const int64_t B = y_shape.At(0), h = y_shape.At(1), S = y_shape.At(2);
+    cuda::softmax::LaunchMSABroadcastBackwardKernel<T, T>(
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream(), dx->mut_dptr<T>(), dp->mut_dptr<T>(),
+        y->dptr<T>(), dy->dptr<T>(), scale, h * S, S, B * h * S, S);
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_FUSED_ROW_ATTENTION_WITH_PAIR_BIAS_GRAD_KERNEL_GPU(dtype)             \
+  REGISTER_USER_KERNEL("fused_row_attention_with_pair_bias_grad")                      \
+      .SetCreateFn<FusedRowAttentionWithPairBiasGradKernel<dtype>>()                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("dp", 0) == GetDataType<dtype>::value));
+
+REGISTER_FUSED_ROW_ATTENTION_WITH_PAIR_BIAS_GRAD_KERNEL_GPU(float)
+REGISTER_FUSED_ROW_ATTENTION_WITH_PAIR_BIAS_GRAD_KERNEL_GPU(double)
 }  // namespace oneflow
