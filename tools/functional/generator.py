@@ -257,7 +257,12 @@ def render_file_if_different(target_file, content):
 
 
 def generate_named_tuple(signature, params, return_names, func_name, block_name, i):
-    param_names = ", ".join(["{{const_cast<char*>(\"{}\"), const_cast<char*>(\"\")}}".format(x) for x in return_names])
+    param_names = ", ".join(
+        [
+            '{{const_cast<char*>("{}"), const_cast<char*>("")}}'.format(x)
+            for x in return_names
+        ]
+    )
 
     code = []
     code.append(
