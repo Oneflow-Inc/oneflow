@@ -86,11 +86,11 @@ size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::Tensor
 
   const auto& cudnn_conf = Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
   size_t workspace_size = cudnn_conf.cudnn_buf_limit_mbyte() * 1024 * 1024;
-  if (!x->is_dynamic() && LazyMode::is_enabled()) {
+  if (!x->is_dynamic()) {
     CudnnConvArgs args(ctx, x->data_type(), ShapeView(x->shape()), w->data_type(),
                        ShapeView(w->shape()), y->data_type(), ShapeView(y->shape()),
                        ctx.Attr<std::string>("data_format"), workspace_size,
-                       cudnn_conf.cudnn_conv_heuristic_search_algo(),
+                       cudnn_conf.cudnn_conv_heuristic_search_algo() || (!LazyMode::is_enabled()),
                        cudnn_conf.cudnn_conv_use_deterministic_algo_only(),
                        cudnn_conf.cudnn_conv_enable_pseudo_half()
                            || (ctx.Attr<std::string>("data_format") == "channels_last"
