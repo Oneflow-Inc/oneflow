@@ -79,12 +79,15 @@ Maybe<void> FusedBiasAddScaleMaskSoftmaxDropoutOp::InferLogicalTensorDesc(
   const Shape& mask_shape = ctx->InputShape("mask", 0);
   const Shape& dropout_mask_shape = ctx->InputShape("dropout_mask", 0);
 
+  CHECK_GE_OR_RETURN(x_shape.size(), 2) << Error::RuntimeError() << "x has at least 2 dimensions";
+  CHECK_EQ_OR_RETURN(dropout_mask_shape, x_shape)
+      << Error::RuntimeError() << "dropout_mask shape " << dropout_mask_shape.ToString()
+      << " should be equal to x shape " << x_shape.ToString();
+
   int simplified_bias_ndim = 0;
   int simplified_mask_ndim = 0;
   DimVector simplified_bias_dims(x_shape.size());
   DimVector simplified_mask_dims(x_shape.size());
-
-  CHECK_GE_OR_RETURN(x_shape.size(), 2) << Error::RuntimeError() << "x has at least 2 dimensions";
   CHECK_OR_RETURN(CheckBroadcastAndSimplifyDims(bias_shape, x_shape, simplified_bias_ndim,
                                                 simplified_bias_dims.data()))
       << Error::RuntimeError() << "bias shape " << bias_shape.ToString()
@@ -93,18 +96,13 @@ Maybe<void> FusedBiasAddScaleMaskSoftmaxDropoutOp::InferLogicalTensorDesc(
                                                 simplified_mask_dims.data()))
       << Error::RuntimeError() << "mask shape " << mask_shape.ToString()
       << " could not be broadcast to x shape " << x_shape.ToString();
-  CHECK_EQ_OR_RETURN(dropout_mask_shape, x_shape)
-      << Error::RuntimeError() << "dropout_mask shape " << dropout_mask_shape.ToString()
-      << " should be equal to x shape " << x_shape.ToString();
-
   CHECK_GT_OR_RETURN(simplified_bias_ndim, 0);  // NOLINT(maybe-need-error-msg)
   CHECK_GT_OR_RETURN(simplified_mask_ndim, 0);  // NOLINT(maybe-need-error-msg)
-
   // (1, ) -> (K, )
   // (M, 1) -> (M, N)
   // (1, N) -> (M, N)
   // (M, 1, N) -> (M, K, N)
-  if (simplified_bias_ndim == 1 || (simplified_bias_ndim == 2 && simplified_mask_dims[0] != 1)) {
+  if (simplified_bias_ndim == 1 || (simplified_bias_ndim == 2 && simplified_bias_dims[0] != 1)) {
     return Error::RuntimeError()
            << "bias only support (1, N)->(M, N) broadcast, but got bias shape "
            << bias_shape.ToString() << " broadcast to x shape " << x_shape.ToString();
