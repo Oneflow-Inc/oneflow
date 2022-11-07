@@ -260,6 +260,7 @@ DIRECT_PASS_FUNC(PyTensorObject_addcmul, functional::addcmul)
 DIRECT_PASS_FUNC(PyTensorObject_addcmul_, functional::addcmul_)
 DIRECT_PASS_FUNC(PyTensorObject_addcdiv, functional::addcdiv)
 DIRECT_PASS_FUNC(PyTensorObject_addcdiv_, functional::addcdiv_)
+DIRECT_PASS_FUNC(PyTensorObject_flip, functional::flip)
 DIRECT_PASS_FUNC(PyTensorObject_clip, functional::clip)
 DIRECT_PASS_FUNC(PyTensorObject_clip_, functional::clip_)
 DIRECT_PASS_FUNC(PyTensorObject_clamp, functional::clamp)
@@ -291,6 +292,7 @@ DIRECT_PASS_FUNC(PyTensorObject_min, functional::min)
 DIRECT_PASS_FUNC(PyTensorObject_median, functional::median)
 DIRECT_PASS_FUNC(PyTensorObject_pow, functional::pow)
 DIRECT_PASS_FUNC(PyTensorObject_chunk, functional::chunk)
+DIRECT_PASS_FUNC(PyTensorObject_split, functional::split)
 DIRECT_PASS_FUNC(PyTensorObject_narrow, functional::narrow)
 DIRECT_PASS_FUNC(PyTensorObject_masked_fill, functional::masked_fill)
 DIRECT_PASS_FUNC(PyTensorObject_masked_fill_, functional::masked_fill_)
@@ -900,6 +902,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"ne", (PyCFunction)PyTensorObject_ne, METH_VARARGS | METH_KEYWORDS, NULL},
     {"lt", (PyCFunction)PyTensorObject_lt, METH_VARARGS | METH_KEYWORDS, NULL},
     {"le", (PyCFunction)PyTensorObject_le, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"flip", (PyCFunction)PyTensorObject_flip, METH_VARARGS | METH_KEYWORDS, NULL},
     {"clip", (PyCFunction)PyTensorObject_clip, METH_VARARGS | METH_KEYWORDS, NULL},
     {"clip_", (PyCFunction)PyTensorObject_clip_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"clamp", (PyCFunction)PyTensorObject_clamp, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -931,6 +934,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"median", (PyCFunction)PyTensorObject_median, METH_VARARGS | METH_KEYWORDS, NULL},
     {"pow", (PyCFunction)PyTensorObject_pow, METH_VARARGS | METH_KEYWORDS, NULL},
     {"chunk", (PyCFunction)PyTensorObject_chunk, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"split", (PyCFunction)PyTensorObject_split, METH_VARARGS | METH_KEYWORDS, NULL},
     {"narrow", (PyCFunction)PyTensorObject_narrow, METH_VARARGS | METH_KEYWORDS, NULL},
     {"masked_fill", (PyCFunction)PyTensorObject_masked_fill, METH_VARARGS | METH_KEYWORDS, NULL},
     {"masked_fill_", (PyCFunction)PyTensorObject_masked_fill_, METH_VARARGS | METH_KEYWORDS, NULL},
