@@ -104,7 +104,6 @@ struct BiasAddScaleMaskLoad {
         *(reinterpret_cast<const softmax::PackType<MASK, N>*>(mask) + mask_offset / N);
 #pragma unroll
     for (int i = 0; i < N; ++i) {
-      dst[i] = static_cast<DST>(src_pack.elem[i] + bias_pack.elem[i]);
       if (mask_pack.elem[i] == 0) {
         dst[i] = fill;
       } else {
