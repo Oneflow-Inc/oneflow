@@ -255,7 +255,7 @@ def render_file_if_different(target_file, content):
 
 
 def generate_named_tuple(signature, params, return_names, func_name, block_name, i):
-    param_names = ", ".join(["{{\"{}\", \"\"}}".format(x) for x in return_names])
+    param_names = ", ".join(["{{const_cast<char*>(\"{}\"), const_cast<char*>(\"\")}}".format(x) for x in return_names])
 
     code = []
     code.append(
@@ -265,7 +265,7 @@ def generate_named_tuple(signature, params, return_names, func_name, block_name,
 f"""    static PyStructSequence_Field NamedTuple_fields[] = {{ {param_names},  {{nullptr}} }}; 
     static PyTypeObject {func_name}NamedTuple{i}; 
     static bool is_initialized = false; 
-    static PyStructSequence_Desc desc = {{ "oneflow.return_types.{block_name}", nullptr, NamedTuple_fields, {len(return_names)} }}; 
+    static PyStructSequence_Desc desc = {{ const_cast<char*>("oneflow.return_types.{block_name}"), nullptr, NamedTuple_fields, {len(return_names)} }};
     if (!is_initialized) {{ 
         PyStructSequence_InitType(&{func_name}NamedTuple{i}, &desc); 
         {func_name}NamedTuple{i}.tp_repr = (reprfunc)returned_structseq_repr; 
