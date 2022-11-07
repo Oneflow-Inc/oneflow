@@ -181,8 +181,10 @@ def _normalize(fmt):
     fmt = fmt.strip()
     return re.sub(r"\s+", " ", fmt)
 
+
 def _remove_angle_brackets(fmt):
-    return re.sub(r'\<[^()]*\>', '', fmt)
+    return re.sub(r"\<[^()]*\>", "", fmt)
+
 
 def _split_ignore_in_brackets(fmt: str):
     params = fmt.split(",")
@@ -259,10 +261,12 @@ def generate_named_tuple(signature, params, return_names, func_name, block_name,
 
     code = []
     code.append(
-"    const auto& tensortuple = functional::{0}({1}).GetOrThrow();".format(signature._name, ", ".join(params))
+        "    const auto& tensortuple = functional::{0}({1}).GetOrThrow();".format(
+            signature._name, ", ".join(params)
+        )
     )
     code.append(
-f"""    static PyStructSequence_Field NamedTuple_fields[] = {{ {param_names},  {{nullptr}} }}; 
+        f"""    static PyStructSequence_Field NamedTuple_fields[] = {{ {param_names},  {{nullptr}} }}; 
     static PyTypeObject {func_name}NamedTuple{i}; 
     static bool is_initialized = false; 
     static PyStructSequence_Desc desc = {{ const_cast<char*>("oneflow.return_types.{block_name}"), nullptr, NamedTuple_fields, {len(return_names)} }};
@@ -376,10 +380,10 @@ class Return:
         sp = fmt.rfind("<")
         if sp != -1:
             _type = _normalize(fmt[:sp])
-            param_names = _normalize(fmt[sp: ])
+            param_names = _normalize(fmt[sp:])
             sp = param_names.rfind(">")
             assert sp != -1, "Missing '>' for argument def: " + fmt
-            param_names = param_names[1:sp-1]
+            param_names = param_names[1 : sp - 1]
             _return_names = [_normalize(x) for x in param_names.split(",")]
         else:
             _type = _normalize(fmt)
@@ -622,7 +626,14 @@ class Generator:
                             signature._name, ", ".join(params)
                         )
                     else:
-                        schema_fmt += generate_named_tuple(signature, params, signature._ret._return_names, signature._name, block._name, i)
+                        schema_fmt += generate_named_tuple(
+                            signature,
+                            params,
+                            signature._ret._return_names,
+                            signature._name,
+                            block._name,
+                            i,
+                        )
                     schema_fmt += "  }\n"
                     i += 1
                 schema_fmt += "  Py_RETURN_NONE;\n"
