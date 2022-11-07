@@ -36,6 +36,13 @@ class TestLogSumExpModule(flow.unittest.TestCase):
         return y
 
     @autotest(n=3, auto_backward=False, check_graph=True)
+    def test_log_sum_exp_with_big_value(test_case):
+        device = random_device()
+        x = torch.tensor([100, 200]).to(device)
+        y = torch.logsumexp(x, dim=0)
+        return y
+
+    @autotest(n=3, auto_backward=False, check_graph=True)
     def test_log_sum_exp_with_0_size_tensor(test_case):
         device = random_device()
         x = random_tensor(4, 4, 3, 0, 2).to(device)
@@ -54,6 +61,13 @@ class TestLogSumExpModule(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor(4, random(0, 5), 2).to(device)
         y = x.logsumexp(dim=np.random.randint(0, 3))
+        return y
+
+    @autotest(n=3, auto_backward=False, check_graph=True)
+    def test_tensor_log_sum_exp_with_big_value(test_case):
+        device = random_device()
+        x = torch.tensor([100, 200]).to(device)
+        y = x.logsumexp(dim=0)
         return y
 
     @autotest(n=3, auto_backward=False, check_graph=True)
