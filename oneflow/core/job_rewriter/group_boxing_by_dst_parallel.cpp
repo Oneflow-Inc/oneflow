@@ -66,6 +66,7 @@ Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_bu
       if (blob_modifier_.has_is_mutable() && blob_modifier_.is_mutable()) { continue; }
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
       const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
+      const auto& logical_shape = node->LogicalBlobDesc4Lbi(lbi).shape();
       const NdSbp& producer_nd_sbp = producer.NdSbp4Lbi(lbi);
       const std::string& producer_lbn = *CHECK_JUST(producer.op().obn4lbi(lbi));
       const ParallelDesc& producer_parallel_desc =
@@ -73,7 +74,7 @@ Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_bu
       ParallelDesc reduced_in_parallel_desc = producer_parallel_desc;
       NdSbp reduced_in_nd_sbp;
       NdSbpDimReduce(producer_parallel_desc, producer_nd_sbp, &reduced_in_parallel_desc,
-                     &reduced_in_nd_sbp);
+                     &reduced_in_nd_sbp, logical_shape);
 
       const NdSbp& consumer_nd_sbp = node->NdSbp4BnInOp(ibn);
       const ParallelDesc& consumer_parallel_desc =
@@ -81,7 +82,7 @@ Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_bu
       ParallelDesc reduced_out_parallel_desc = consumer_parallel_desc;
       NdSbp reduced_out_nd_sbp;
       NdSbpDimReduce(consumer_parallel_desc, consumer_nd_sbp, &reduced_out_parallel_desc,
-                     &reduced_out_nd_sbp);
+                     &reduced_out_nd_sbp, logical_shape);
 
       if (reduced_in_parallel_desc == reduced_out_parallel_desc
           && reduced_in_nd_sbp == reduced_out_nd_sbp) {

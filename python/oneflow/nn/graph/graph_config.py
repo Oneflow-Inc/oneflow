@@ -347,22 +347,11 @@ class GraphConfig(object):
         """
         self.proto.auto_parallel_wait_time = cost
 
-    def set_auto_parallel_transfer_cost(self, cost):
+    def enable_auto_parallel_trunk_algo(self, mode: bool = True):
         """
-        Set transfer cost for auto-parallel algorithm.
-
-        transfer cost: An auto-parallel parameter. Describe the fixed extra time it will take when
-        communication between devices occurs. It will be added to the copy cost and can not be reduced.
-        Default value: 0
-        Using a positive number such as 1.65e8 would reduce the frequency of data transfer.
+        Find the trunk of the SBP graph, then reduce the wait time for tributaries.
         """
-        self.proto.auto_parallel_transfer_cost = cost
-
-    def enable_auto_parallel_mainstem_algo(self, mode: bool = True):
-        """
-        Find the mainstem of the SBP graph, then reduce the wait time for tributaries.
-        """
-        self.proto.enable_auto_parallel_mainstem_algo = mode
+        self.proto.enable_auto_parallel_trunk_algo = mode
 
     def enable_auto_parallel_sbp_collector(self, mode: bool = True):
         """
@@ -372,13 +361,13 @@ class GraphConfig(object):
 
     def enable_multi_tensor_update(self, mode: bool = True):
         """
-        Enable Multi Tensor Update Pass, it will merge small optimizer kernels to reduce kernel launch overhead. 
+        Enable Multi Tensor Update Pass, it will merge small optimizer kernels to reduce kernel launch overhead.
         """
         self.proto.enable_multi_tensor_update = mode
 
     def enable_fused_model_update_cast(self, mode: bool = True):
         """
-        This option only works in AMP Mode, it will fuse optimizer update and model weights cast to half precision operation. 
+        This option only works in AMP Mode, it will fuse optimizer update and model weights cast to half precision operation.
         """
         self.proto.enable_fused_model_update_cast = mode
 

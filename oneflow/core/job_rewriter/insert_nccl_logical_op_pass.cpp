@@ -433,7 +433,7 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
   InOutParallelDimReduce(src_node->parallel_desc(), dst_node->parallel_desc(),
                          src_node->NdSbp4Lbi(lbi), dst_node->NdSbp4Lbi(lbi),
                          src_reduced_parallel_desc, dst_reduced_parallel_desc, src_reduced_nd_sbp,
-                         dst_reduced_nd_sbp);
+                         dst_reduced_nd_sbp, logical_blob_desc.shape());
 
   CHECK_EQ(src_reduced_parallel_desc->parallel_num(), dst_reduced_parallel_desc->parallel_num());
   std::shared_ptr<Shape> src_reduced_hierarchy = src_reduced_parallel_desc->hierarchy();
