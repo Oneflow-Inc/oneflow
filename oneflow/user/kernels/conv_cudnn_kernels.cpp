@@ -89,7 +89,7 @@ size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::Tensor
     CudnnConvArgs args(ctx, x->data_type(), ShapeView(x->shape()), w->data_type(),
                        ShapeView(w->shape()), y->data_type(), ShapeView(y->shape()),
                        ctx.Attr<std::string>("data_format"), workspace_size,
-                       cudnn_conf.cudnn_conv_heuristic_search_algo(),
+                       cudnn_conf.cudnn_conv_heuristic_search_algo() || (!LazyMode::is_enabled()),
                        cudnn_conf.cudnn_conv_use_deterministic_algo_only(),
                        cudnn_conf.cudnn_conv_enable_pseudo_half()
                            || (ctx.Attr<std::string>("data_format") == "channels_last"
