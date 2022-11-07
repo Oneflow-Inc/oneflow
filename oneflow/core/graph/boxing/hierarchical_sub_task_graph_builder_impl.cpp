@@ -411,62 +411,10 @@ class Same2DHierarchySubTskGphBuilder final : public HierarchicalSubTskGphBuilde
   std::unique_ptr<Dim0NdSbpMismatchedSubTskGphBuilder> dim0_nd_sbp_mismatched_sub_tsk_gph_builder_;
 };
 
-class ExpandToSame2DHierarchySubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(ExpandToSame2DHierarchySubTskGphBuilder);
-  ExpandToSame2DHierarchySubTskGphBuilder() {
-    same_2d_hierarchy_sub_tsk_gph_builder_.reset(new Same2DHierarchySubTskGphBuilder());
-  }
-  ~ExpandToSame2DHierarchySubTskGphBuilder() override = default;
-
-  Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
-                                      const std::vector<TaskNode*>& sorted_in_tasks,
-                                      std::vector<TaskNode*>* sorted_out_tasks,
-                                      std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks,
-                                      const ParallelDesc& in_parallel_desc,
-                                      const ParallelDesc& out_parallel_desc,
-                                      const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
-                                      const NdSbp& in_nd_sbp, const NdSbp& out_nd_sbp,
-                                      const Shape& time_shape) const override {
-    if (in_parallel_desc.hierarchy()->elem_cnt() == out_parallel_desc.hierarchy()->elem_cnt()
-        && in_parallel_desc.hierarchy()->NumAxes() == 1
-        && out_parallel_desc.hierarchy()->NumAxes() == 2) {
-      ParallelConf intermediate_parallel_conf = in_parallel_desc.parallel_conf();
-      out_parallel_desc.hierarchy()->ToProto(intermediate_parallel_conf.mutable_hierarchy());
-      NdSbp intermediate_nd_sbp;
-      *intermediate_nd_sbp.add_sbp_parallel() = in_nd_sbp.sbp_parallel(0);
-      *intermediate_nd_sbp.add_sbp_parallel() = in_nd_sbp.sbp_parallel(0);
-      return same_2d_hierarchy_sub_tsk_gph_builder_->Build(
-          ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks,
-          ParallelDesc(intermediate_parallel_conf), out_parallel_desc, lbi, logical_blob_desc,
-          intermediate_nd_sbp, out_nd_sbp, time_shape);
-    } else if (in_parallel_desc.hierarchy()->elem_cnt() == out_parallel_desc.hierarchy()->elem_cnt()
-               && in_parallel_desc.hierarchy()->NumAxes() == 2
-               && out_parallel_desc.hierarchy()->NumAxes() == 1) {
-      ParallelConf intermediate_parallel_conf = out_parallel_desc.parallel_conf();
-      in_parallel_desc.hierarchy()->ToProto(intermediate_parallel_conf.mutable_hierarchy());
-      NdSbp intermediate_nd_sbp;
-      *intermediate_nd_sbp.add_sbp_parallel() = out_nd_sbp.sbp_parallel(0);
-      *intermediate_nd_sbp.add_sbp_parallel() = out_nd_sbp.sbp_parallel(0);
-      return same_2d_hierarchy_sub_tsk_gph_builder_->Build(
-          ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, in_parallel_desc,
-          ParallelDesc(intermediate_parallel_conf), lbi, logical_blob_desc, in_nd_sbp,
-          intermediate_nd_sbp, time_shape);
-    } else {
-      return Error::BoxingNotSupportedError();
-    }
-  }
-
- private:
-  std::unique_ptr<Same2DHierarchySubTskGphBuilder> same_2d_hierarchy_sub_tsk_gph_builder_;
-};
-
 struct DispatchHierarchicalSubTskGphBuilder::Impl {
   Impl();
   std::unique_ptr<FlatSubTskGphBuilder> flat_sub_tsk_gph_builder_;
   std::unique_ptr<Same2DHierarchySubTskGphBuilder> same_2d_hierarchy_sub_tsk_gph_builder_;
-  std::unique_ptr<ExpandToSame2DHierarchySubTskGphBuilder>
-      expand_to_same_2d_hierarchy_sub_tsk_gph_builder_;
   std::unique_ptr<NDNcclSendRecvBoxingSubTskGphBuilder>
       nd_nccl_send_recv_boxing_sub_tsk_gph_builder_;
 };
@@ -474,8 +422,6 @@ struct DispatchHierarchicalSubTskGphBuilder::Impl {
 DispatchHierarchicalSubTskGphBuilder::Impl::Impl() {
   flat_sub_tsk_gph_builder_.reset(new FlatSubTskGphBuilder());
   same_2d_hierarchy_sub_tsk_gph_builder_.reset(new Same2DHierarchySubTskGphBuilder());
-  expand_to_same_2d_hierarchy_sub_tsk_gph_builder_.reset(
-      new ExpandToSame2DHierarchySubTskGphBuilder());
   nd_nccl_send_recv_boxing_sub_tsk_gph_builder_.reset(new NDNcclSendRecvBoxingSubTskGphBuilder());
 }
 
@@ -496,9 +442,12 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
   ParallelDesc reduced_out_parallel_desc = out_parallel_desc;
   NdSbp reduced_in_nd_sbp;
   NdSbp reduced_out_nd_sbp;
+  // The 1d to 2d and 2d to 1d cases are consider in this function
+  // If it gives out 1d sbp and 2d sbp simultaneously, then that the 2d sbp can not be converted
+  // to 1d sbp and 1d sbp can not be expanded to 2d sbp.
   InOutParallelDimReduce(in_parallel_desc, out_parallel_desc, in_nd_sbp, out_nd_sbp,
                          &reduced_in_parallel_desc, &reduced_out_parallel_desc, &reduced_in_nd_sbp,
-                         &reduced_out_nd_sbp);
+                         &reduced_out_nd_sbp, logical_blob_desc.shape());
   const auto& in_hierarchy = reduced_in_parallel_desc.hierarchy();
   const auto& out_hierarchy = reduced_out_parallel_desc.hierarchy();
   if ((in_hierarchy->NumAxes() > 2 || out_hierarchy->NumAxes() > 2)
@@ -517,13 +466,6 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
           time_shape);
     } else if ((in_hierarchy->NumAxes() == 2) && (*in_hierarchy == *out_hierarchy)) {
       return impl_->same_2d_hierarchy_sub_tsk_gph_builder_->Build(
-          ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
-          reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_nd_sbp, reduced_out_nd_sbp,
-          time_shape);
-    } else if (in_hierarchy->elem_cnt() == out_hierarchy->elem_cnt()
-               && ((in_hierarchy->NumAxes() == 1 && out_hierarchy->NumAxes() == 2)
-                   || (in_hierarchy->NumAxes() == 2 && out_hierarchy->NumAxes() == 1))) {
-      return impl_->expand_to_same_2d_hierarchy_sub_tsk_gph_builder_->Build(
           ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
           reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_nd_sbp, reduced_out_nd_sbp,
           time_shape);
