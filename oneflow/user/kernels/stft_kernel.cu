@@ -14,6 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#if __CUDACC_VER_MAJOR__ >= 11
+#define CUDA_SUPPORT_CUFFT
+#endif
+
+#ifdef CUDA_SUPPORT_CUFFT
+
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
@@ -155,3 +161,5 @@ class StftGpuKernel final : public user_op::OpKernel {
 REGISTER_STFT_GPU_KERNEL(float, cufftComplex)
 REGISTER_STFT_GPU_KERNEL(double, cufftDoubleComplex)
 }  // namespace oneflow
+
+#endif
