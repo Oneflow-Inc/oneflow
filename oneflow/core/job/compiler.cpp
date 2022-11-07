@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/time_util.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 
@@ -63,6 +64,7 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   // TODO(levi): we can rewrite this part of code in visitor pattern.
   auto task_gph = std::make_unique<TaskGraph>();
   using std::placeholders::_1;
+  LazyMode::Guard guard(true);
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
