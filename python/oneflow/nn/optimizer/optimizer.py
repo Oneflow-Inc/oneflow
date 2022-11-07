@@ -365,7 +365,7 @@ class Optimizer(object):
 
         def pack_group(group):
             nonlocal start_index
-            packed = {k: v for k, v in group.items() if k not in ["_parameters", 'params_dict']}
+            packed = {k: v for k, v in group.items() if k not in ["_contiguous_parameters", "_parameters", 'params_dict']}
             param_mappings.update(
                 {
                     id(p): i
