@@ -41,14 +41,5 @@ def batch_norm(
         axis = 1
 
     return flow._C.normalization(
-        input,
-        running_mean,
-        running_var,
-        weight,
-        bias,
-        axis,
-        eps, 
-        momentum, 
-        training,
+        input, running_mean, running_var, weight, bias, axis, eps, momentum, training,
     )
-
