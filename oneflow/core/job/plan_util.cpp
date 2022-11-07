@@ -239,7 +239,6 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
 
 void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
   if (job.logical_chain_groups_size() == 0) { return; }
-  HashMap<int64_t, HashSet<RegstDescProto*>> mem_block_id2regsts;
   HashMap<int64_t, HashMap<int64_t, int64_t>> logical_chain_id2machine_id2mem_block_id;
 
   for (int64_t i = 0; i < plan->task_size(); ++i) {
@@ -258,7 +257,6 @@ void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
           && regst_desc->mem_case().device_type() == device_type
           && regst_desc->regst_desc_type().has_data_regst_desc()) {
         int64_t mem_block_id = regst_desc->mem_block_id();
-        mem_block_id2regsts[mem_block_id].insert(regst_desc);
         auto* rank2blocks = &(logical_chain_id2machine_id2mem_block_id[logical_chain_id]);
         if (rank2blocks->find(machine_id) == rank2blocks->end()) {
           rank2blocks->emplace(machine_id, mem_block_id);
