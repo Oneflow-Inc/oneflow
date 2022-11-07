@@ -79,10 +79,7 @@ def uniform_(tensor, a=0.0, b=1.0):
     if isinstance(b, Tensor):
         assert b.ndim == 0 and b.nelement() == 1, "b must be a number or scalar tensor!"
         b = b.numpy().item()
-    initializer_conf = initializer_register.random_uniform_initializer(
-        minval=a, maxval=b, dtype=tensor.dtype
-    )
-    return _init_by_initializer_conf(tensor, initializer_conf)
+    return flow._C.uniform_(tensor, a, b, dtype=tensor.dtype)
 
 
 def normal_(tensor, mean=0.0, std=1.0):
@@ -141,10 +138,10 @@ def xavier_uniform_(tensor, gain=1.0, *, data_format="NCHW"):
         >>> w = flow.empty(3, 5)
         >>> nn.init.xavier_uniform_(w, gain=nn.init.calculate_gain('relu'))
     """
-    initializer_conf = initializer_register.xavier_initializer(
-        tensor.shape, gain=gain, data_format=data_format, distribution="random_uniform"
-    )
-    return _init_by_initializer_conf(tensor, initializer_conf)
+    fan = calc_fan(tensor.shape, "fan_sum", get_data_format(data_format))
+    std = gain * math.sqrt(2.0 / fan)
+    bound = math.sqrt(3.0) * std
+    return uniform_(tensor, -bound, bound)
 
 
 def xavier_normal_(tensor, gain=1.0, *, data_format="NCHW"):
@@ -236,15 +233,11 @@ def kaiming_uniform_(
     """
     if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
         data_format = "NHWC"
-    initializer_conf = initializer_register.kaiming_initializer(
-        tensor.shape,
-        a=a,
-        mode=mode,
-        nonlinearity=nonlinearity,
-        data_format=data_format,
-        distribution="random_uniform",
-    )
-    return _init_by_initializer_conf(tensor, initializer_conf)
+    fan = calc_fan(tensor.shape, mode, get_data_format(data_format))
+    gain = calculate_gain(nonlinearity, a)
+    std = gain / math.sqrt(fan)
+    bound = math.sqrt(3.0) * std
+    return uniform_(tensor, -bound, bound)
 
 
 def kaiming_normal_(

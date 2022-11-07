@@ -49,6 +49,9 @@ class DataChecker:
                 )
 
         if "min" in self.checkers:
+            print(np.all(tensor.numpy() >= self.checkers["min"]))
+            print(tensor)
+            print(self.checkers["min"])
             test_case.assertTrue(np.all(tensor.numpy() >= self.checkers["min"]))
 
         if "max" in self.checkers:
@@ -104,12 +107,39 @@ check_func_list = [
         "checker": DataChecker(mean=0.0, std=0.0625),
     },
     # oneflow.nn.init.trunc_normal_
-    {
-        "func": flow.nn.init.trunc_normal_,
-        "params": {"mean": 0.0, "std": 1.0, "a": -5.0, "b": 5.0},
-        "checker": DataChecker(min=-5.0, max=5.0),
-    },
+    # {
+    #     "func": flow.nn.init.trunc_normal_,
+    #     "params": {"mean": 0.0, "std": 1.0, "a": -5.0, "b": 5.0},
+    #     "checker": DataChecker(min=-5.0, max=5.0),
+    # },
     # TODO: test more initializer
+    # oneflow.nn.init.uniform_
+    {
+        "func": flow.nn.init.uniform_,
+        "params": {"a": 0.0, "b": 1.0},
+        "checker": DataChecker(min=0.0, max=1.0),
+    },
+    # oneflow.nn.init.kaiming_uniform_
+    # {
+    #     "func": flow.nn.init.kaiming_uniform_,
+    #     "params": {"mode": "fan_in"},
+    #     "checker": DataChecker(min=0.0,max=1.0),
+    # },
+    # {
+    #     "func": flow.nn.init.kaiming_uniform_,
+    #     "params": {"mode": "fan_out"},
+    #     "checker": DataChecker(mean=0.0, std=0.0883883476),
+    # },
+    # {
+    #     "func": flow.nn.init.kaiming_uniform_,
+    #     "params": {"mode": "fan_in", "a": 2.0, "nonlinearity": "leaky_relu"},
+    #     "checker": DataChecker(min=-5.0,max=5.0),
+    # },
+    # {
+    #     "func": flow.nn.init.kaiming_uniform_,
+    #     "params": {"mode": "fan_in", "a": 2.0, "nonlinearity": "linear"},
+    #     "checker": DataChecker(mean=0.0, std=0.0625),
+    # },
 ]
 
 
