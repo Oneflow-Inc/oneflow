@@ -45,11 +45,8 @@ class DimGatherKernel final : public user_op::OpKernel {
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("output", 0);
     const int32_t dim = ctx->Attr<int32_t>("dim");
 
-    LOG(ERROR) << 1;
     const IN_T* input = input_tensor->dptr<IN_T>();
-    LOG(ERROR) << 2;
     const IDX_T* index = index_tensor->dptr<IDX_T>();
-    LOG(ERROR) << 3;
     IN_T* output = out_tensor->mut_dptr<IN_T>();
 
     const Shape in_shape = ExpandDimIf0D(input_tensor->shape_view());

@@ -39,8 +39,8 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
   using namespace mlir::oneflow::user_op;
   auto source = GetOpSourceByName(op, arg_name);
   op->dump();
-  LOG(ERROR) << arg_name << ":" << index << " type: " << source.type
-             << " offset: " << source.offset;
+  // LOG(ERROR) << arg_name << ":" << index << " type: " << source.type
+  //            << " offset: " << source.offset;
   if (source.type == Source::OUTPUT) {
     mlir::Value val = op->getResult(index + source.offset);
     for (auto use : val.getUsers()) {
