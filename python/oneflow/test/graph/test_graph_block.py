@@ -248,8 +248,9 @@ class TestGraphBlock(flow.unittest.TestCase):
                 self.modulelist = nn.ModuleList([linear1, linear2, linear3])
         
             def forward(self, x):
-                y = self.modulelist[0](flow.randn(5, 5))
-                test_case.assertEqual(len(self.modulelist[1:]), 2)
+                sliced_m = self.modulelist[1:]
+                test_case.assertEqual(len(sliced_m), 2)
+                y = sliced_m[1](x)
                 return y
         
         class GraphModuleListSlice(nn.Graph):
@@ -260,10 +261,15 @@ class TestGraphBlock(flow.unittest.TestCase):
             def build(self, x):
                 return self.m(x)
         
+        in_tensor = flow.randn(5, 5)
+
         m = ModuleListSlice()
-        eager_out = m(flow.randn(5, 5))
+        eager_out = m(in_tensor)
+
         g = GraphModuleListSlice(m)
-        graph_out = g(flow.randn(5, 5))
+        graph_out = g(in_tensor)
+
+        test_case.assertTrue(np.array_equal(eager_out.numpy(), graph_out.numpy()))
 
     def test_block_with_dict_container(test_case):
         class SubModule0(flow.nn.Module):
