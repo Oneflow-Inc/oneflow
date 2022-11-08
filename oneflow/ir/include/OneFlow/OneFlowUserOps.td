@@ -4591,10 +4591,7 @@ def OneFlow_StftOp : OneFlow_BaseOp<"stft", [SupportNonContiguous,NoSideEffect, 
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
-<<<<<<< HEAD
 
-=======
->>>>>>> 5b89609f72f2975ef27ed751fba45989ebdd3364
 #endif // GET_ONEFLOW_MATH_OP_DEFINITIONS
 
 // Group: MATMUL
