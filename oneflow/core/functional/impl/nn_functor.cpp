@@ -3003,7 +3003,8 @@ class CdistFunctor {
 
     Shape x1_batch_shape = Shape(DimVector({x1->shape()->begin(), x1->shape()->end() - 2}));
     Shape x2_batch_shape = Shape(DimVector({x2->shape()->begin(), x2->shape()->end() - 2}));
-    Shape max_batch_shape = Shape::Ones(std::max(x1_batch_shape.NumAxes(), x2_batch_shape.NumAxes()));
+    Shape max_batch_shape =
+        Shape::Ones(std::max(x1_batch_shape.NumAxes(), x2_batch_shape.NumAxes()));
     {
       for (int64_t i = max_batch_shape.NumAxes() - 1; i >= 0; i--) {
         int64_t offset = max_batch_shape.NumAxes() - 1 - i;
@@ -3013,8 +3014,8 @@ class CdistFunctor {
         int64_t size_y = (dim_y >= 0) ? x2_batch_shape.At(dim_y) : 1;
         if (!(size_x == size_y || size_x == 1 || size_y == 1)) {
           return Error::RuntimeError()
-                << "The size of tensor a (" << size_x << ") must match the size of tensor b ("
-                << size_y << ") at non-singleton dimension " << i;
+                 << "The size of tensor a (" << size_x << ") must match the size of tensor b ("
+                 << size_y << ") at non-singleton dimension " << i;
         }
         max_batch_shape.Set(i, std::max(size_x, size_y));
       }
@@ -3022,16 +3023,12 @@ class CdistFunctor {
     // auto max_batch_shape = JUST(InferShapeForDistance(x1_batch_shape, x2_batch_shape));
     Shape x1_expand_shape(max_batch_shape);
     Shape x2_expand_shape(max_batch_shape);
-    std::cout << x1_expand_shape.DebugStr() << std::endl;
-    std::cout << "r1: " << r1 << std::endl;
     x1_expand_shape.emplace_back(r1);
     x1_expand_shape.emplace_back(d);
     x2_expand_shape.emplace_back(r2);
     x2_expand_shape.emplace_back(d);
 
-    std::cout << "run1: " << x1_expand_shape.DebugStr() << std::endl;
     const auto x1_expand = JUST(Expand(x1, x1_expand_shape));
-    std::cout << "run2: " << x2_expand_shape.DebugStr() << std::endl;
     const auto x2_expand = JUST(Expand(x2, x2_expand_shape));
 
     TensorProcessor tensor_processor;

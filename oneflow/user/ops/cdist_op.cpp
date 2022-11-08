@@ -52,11 +52,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 /* static */ Maybe<void> CdistOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x1_desc = ctx->InputTensorDesc("x1", 0);
   user_op::TensorDesc* output_desc = ctx->MutOutputTensorDesc("out", 0);
-  if (IsIntegralDataType(x1_desc.data_type())) {
-    output_desc->set_data_type(DataType::kFloat);
-  } else {
-    output_desc->set_data_type(x1_desc.data_type());
-  }
+  output_desc->set_data_type(x1_desc.data_type());
   return Maybe<void>::Ok();
 }
 
