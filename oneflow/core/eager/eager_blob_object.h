@@ -43,27 +43,26 @@ namespace vm {
 class TensorStorage {
  public:
   TensorStorage()
-      : non_pod_allocator_(std::make_unique<MemoryAllocator>()),
+      : blob_bytes_(0),
+        non_pod_allocator_(std::make_unique<MemoryAllocator>()),
         producer_stream_(NullOpt),
-        last_used_stream_(NullOpt),
-        is_allocated_in_vm_(false) {}
+        last_used_stream_(NullOpt) {}
 
-  ~TensorStorage() {
+  virtual ~TensorStorage() {
     for (const auto& hook : storage_delete_hooks_) { hook(); }
   }
+
+  virtual bool is_allocated_in_vm() const = 0;
 
   size_t blob_bytes() const { return blob_bytes_; }
 
   char* blob_dptr() { return blob_dptr_.get(); }
-  bool is_allocated_in_vm() { return is_allocated_in_vm_; }
 
   MemoryAllocator* non_pod_allocator() { return non_pod_allocator_.get(); }
 
-  void set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>&& blob_dptr, size_t bytes,
-                     bool is_allocated_in_vm) {
+  void set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>&& blob_dptr, size_t bytes) {
     blob_dptr_ = std::move(blob_dptr);
     blob_bytes_ = bytes;
-    is_allocated_in_vm_ = is_allocated_in_vm;
   }
 
   const Optional<Symbol<::oneflow::Stream>>& producer_stream() const { return producer_stream_; }
@@ -94,7 +93,22 @@ class TensorStorage {
   Optional<Symbol<::oneflow::Stream>> producer_stream_;
   Optional<Symbol<::oneflow::Stream>> last_used_stream_;
   std::vector<std::function<void()>> storage_delete_hooks_;
-  bool is_allocated_in_vm_;
+};
+
+class InsideVmTensorStorage : public TensorStorage {
+ public:
+  InsideVmTensorStorage() = default;
+  ~InsideVmTensorStorage() = default;
+
+  bool is_allocated_in_vm() const override { return true; }
+};
+
+class OutsideVmTensorStorage : public TensorStorage {
+ public:
+  OutsideVmTensorStorage() = default;
+  ~OutsideVmTensorStorage() = default;
+
+  bool is_allocated_in_vm() const override { return false; }
 };
 
 class EagerBlobObject final : public user_op::Tensor,
@@ -139,20 +153,19 @@ class EagerBlobObject final : public user_op::Tensor,
   MutShapeView mut_shape_view() override;
   const MemoryCase& mem_case() const override { return *mem_case_; }
   const void* raw_dptr() const override {
-    CHECK(inited_mem_ptr_for_allocation_compuation_pipelining_)
-        << "mem_ptr_for_allocation_compuation_pipelining_ not initialized. Please check if there "
-           "are any EagerBlobObjects created outside vm";
-    return mem_ptr_for_allocation_compuation_pipelining_
-           + storage_offset_ * GetSizeOfDataType(data_type_);
+    char* ptr = tensor_storage_->blob_dptr();
+    if (tensor_storage_->blob_bytes() > 0) { CHECK_NOTNULL(ptr); }
+    return ptr + storage_offset_ * GetSizeOfDataType(data_type_);
   }
   void* mut_raw_dptr() override { return const_cast<void*>(raw_dptr()); }
 
   void set_storage_offset(const int64_t offset);
 
-  Maybe<void> TryAllocateBlobBodyMemory(vm::Allocator* allocator);
+  // Returns true if allocate successfully.
+  Maybe<bool> TryAllocateBlobBodyMemory(vm::Allocator* allocator);
   Maybe<void> DeallocateBlobDataPtr() {
     tensor_storage_->Release();
-    tensor_storage_.reset(new TensorStorage);
+    tensor_storage_.reset(new InsideVmTensorStorage());
     return Maybe<void>::Ok();
   }
   void RegisterStorageDeleteHook(const std::function<void()>& hook) {
@@ -197,37 +210,12 @@ class EagerBlobObject final : public user_op::Tensor,
     return reinterpret_cast<char*>(const_cast<int64_t*>(shape().dim_vec().data()));
   }
 
-  void InitOrCheckMemPtrForAllocationComputationPipelining() {
-    auto* ptr = tensor_storage_->blob_dptr();
-    if (inited_mem_ptr_for_allocation_compuation_pipelining_) {
-      CHECK_EQ(mem_ptr_for_allocation_compuation_pipelining_, ptr);
-    } else {
-      mem_ptr_for_allocation_compuation_pipelining_ = ptr;
-      inited_mem_ptr_for_allocation_compuation_pipelining_ = true;
-    }
-  }
-
-  void TryInitNonPODTypeEagerBlobObjectIfNeed();
-
  private:
-  void InitMemPtrForAllocationComputationPipelining() {
-    auto* ptr = tensor_storage_->blob_dptr();
-    CHECK(!inited_mem_ptr_for_allocation_compuation_pipelining_)
-        << "mem_ptr_for_allocation_compuation_pipelining_ has been initialized.";
-    mem_ptr_for_allocation_compuation_pipelining_ = ptr;
-    inited_mem_ptr_for_allocation_compuation_pipelining_ = true;
-  }
-
   bool is_dynamic_;
   std::shared_ptr<MemoryCase> mem_case_;
   DataType data_type_;
   int64_t storage_offset_;
   std::shared_ptr<TensorStorage> tensor_storage_;
-  // For allocation-computation pipeline, the value of mem_ptr_for_allocation_compuation_pipelining_
-  // are kept even after tensor_storage_.reset().
-  char* mem_ptr_for_allocation_compuation_pipelining_;
-  bool inited_mem_ptr_for_allocation_compuation_pipelining_;
-  bool is_non_pod_object_placement_newed_;
   bool pin_memory_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
 

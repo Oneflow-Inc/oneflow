@@ -1564,7 +1564,12 @@ class FlipFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int32_t>& dims) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dims");
-    attrs.SetAllAttrs(dims);
+    if (dims.empty()) {
+      attrs.SetAllAttrs(dims);
+    } else {
+      std::vector<int32_t> flip_dims = *JUST(CheckAxis(dims, x->ndim()));
+      attrs.SetAllAttrs(flip_dims);
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -3352,7 +3357,9 @@ class FillTensorFunctor {
         << "fill_ only supports 0-dimension value tensor but got tensor with " << ndim
         << " dimensions.";
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({in, value}).Apply());
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true, in->dtype())
+             .AddInputs({in, value})
+             .Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     auto outputs = std::make_shared<TensorTuple>(1);
     (*outputs)[0] = in;

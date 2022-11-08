@@ -116,7 +116,7 @@ class GraphConfig(object):
 
         Args:
             mode (bool): if set to true, optimizer states of Data Parallel will be sharded across devices.
-            stage (int): optimization stage, range from 1 to 3. 
+            stage (int): optimization stage, range from 1 to 3.
             shard_min_size (int): min size (element count) of a shard of an optimizer state.
             shard_restore_level (int): level to restore sharded parameter to whole parameter for consumer operators, level 0 is no restore, level 1 is soft restore, level 2 is hard restore. Note that this paremeter is at pre-alpha stage.
         """
@@ -178,7 +178,7 @@ class GraphConfig(object):
                     self.bn1 = flow.nn.BatchNorm1d(100)
                     self.config.allow_fuse_add_to_output(True)
                 def build(self, x):
-                    bn = self.bn1(x) 
+                    bn = self.bn1(x)
                     out = bn + x
                     return out
 
@@ -191,7 +191,7 @@ class GraphConfig(object):
 
     def allow_fuse_cast_scale(self, mode: bool = True):
         r"""If set to true, try to fuse cast and scalar_mul_by_tensor to improve performance.
-    
+
         For example:
 
         .. code-block:: python
@@ -240,6 +240,11 @@ class GraphConfig(object):
             value (int): num of steps.
         """
         self.proto.num_gradient_accumulation_steps = value
+        if value > 1:
+            # NOTE(chengcheng): when use gradient accumulation, optimizer nccl allreduce can NOT
+            #  overlap with backward, so nccl use compute stream is optimization without negative
+            #  effects.
+            nccl_config.enable_use_compute_stream(True)
 
     def set_outputs_buffer_size(self, value: int = 2):
         r"""Set the outputs buffer size of ``nn.Graph``.
@@ -278,7 +283,7 @@ class GraphConfig(object):
                     return self.m(x)
 
             graph = Graph()
-    
+
         Args:
             mode (bool, optional): The default vaule is True.
         """
@@ -288,14 +293,14 @@ class GraphConfig(object):
         r""" Whether enable the straighten algorithm.
 
         straighten_algorithm_tag 1: Disable
-        Disable the straighten algorithm in the task graph. 
+        Disable the straighten algorithm in the task graph.
         Would use the original topography order for executing task nodes.
 
         straighten_algorithm_tag 2: SpeedFirst
         Under the second configuration, the straighten algorithm would try to speed up the training as much as possible.
         If using nccl compute stream, setting the tag to 2 might not speed up the training.
         If not using nccl compute stream, setting the tag to 2 might speed up data parallelism by 0.6% and model parallelism by 6%.
-        Considering memory, enabling the straighten algorithm is forbidden with one machine/device only, and not recommended under pipeline parallelism. 
+        Considering memory, enabling the straighten algorithm is forbidden with one machine/device only, and not recommended under pipeline parallelism.
 
         straighten_algorithm_tag 3: MemoryFirst
         Under the third configuration, the straighten algorithm would try to compress memory as much as possible.
@@ -342,22 +347,11 @@ class GraphConfig(object):
         """
         self.proto.auto_parallel_wait_time = cost
 
-    def set_auto_parallel_transfer_cost(self, cost):
+    def enable_auto_parallel_trunk_algo(self, mode: bool = True):
         """
-        Set transfer cost for auto-parallel algorithm.
-        
-        transfer cost: An auto-parallel parameter. Describe the fixed extra time it will take when
-        communication between devices occurs. It will be added to the copy cost and can not be reduced.
-        Default value: 0
-        Using a positive number such as 1.65e8 would reduce the frequency of data transfer. 
+        Find the trunk of the SBP graph, then reduce the wait time for tributaries.
         """
-        self.proto.auto_parallel_transfer_cost = cost
-
-    def enable_auto_parallel_mainstem_algo(self, mode: bool = True):
-        """
-        Find the mainstream of the SBP graph, then reduce the wait time for tributaries.
-        """
-        self.proto.enable_auto_parallel_mainstem_algo = mode
+        self.proto.enable_auto_parallel_trunk_algo = mode
 
     def enable_auto_parallel_sbp_collector(self, mode: bool = True):
         """
@@ -367,13 +361,13 @@ class GraphConfig(object):
 
     def enable_multi_tensor_update(self, mode: bool = True):
         """
-        Enable Multi Tensor Update Pass, it will merge small optimizer kernels to reduce kernel launch overhead. 
+        Enable Multi Tensor Update Pass, it will merge small optimizer kernels to reduce kernel launch overhead.
         """
         self.proto.enable_multi_tensor_update = mode
 
     def enable_fused_model_update_cast(self, mode: bool = True):
         """
-        This option only works in AMP Mode, it will fuse optimizer update and model weights cast to half precision operation. 
+        This option only works in AMP Mode, it will fuse optimizer update and model weights cast to half precision operation.
         """
         self.proto.enable_fused_model_update_cast = mode
 

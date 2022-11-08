@@ -948,20 +948,19 @@ class Graph(object):
             if (
                 modules_has_training or self.training or self._is_global_view
             ) and enable_mlir_inference_opt:
+                log_for_mlir_inference_opt = lambda extra_info: logging.warning(
+                    f"environment variable ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION will be ignored {extra_info}."
+                )
                 if self.training:
-                    logging.warning(
-                        "environment variable ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION will be ignored in training mode."
-                    )
+                    log_for_mlir_inference_opt("in training mode")
 
                 if modules_has_training and not self.training:
-                    logging.warning(
-                        "environment variable ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION will be ignored when not all modules in graph are in eval mode. "
+                    log_for_mlir_inference_opt(
+                        "when not all modules in graph are in eval mode"
                     )
 
                 if self._is_global_view:
-                    logging.warning(
-                        "environment variable ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION will be ignored in global mode. "
-                    )
+                    log_for_mlir_inference_opt("in global mode")
                 enable_mlir_inference_opt = False
                 del os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"]
             oneflow._oneflow_internal.FillVariableTensorMgr(
@@ -1422,7 +1421,7 @@ class Graph(object):
             os.environ[
                 "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
             ] = self.env_enable_mlir_inference_opt
-        oneflow._oneflow_internal.ClearVariableTensorMgr()
+        oneflow._oneflow_internal.ResetVariableTensorMgr()
 
     def __ensure_input_tensors_contiguous(self, *args, **kwargs):
         args_tree = ArgsTree((args, kwargs), False)
