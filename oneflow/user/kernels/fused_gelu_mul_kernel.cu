@@ -33,8 +33,8 @@ struct FusedFastGeluMulFunctor {
   }
 
  private:
-  constexpr T alpha = static_cast<T>(0.7978845608028654);
-  constexpr T beta = static_cast<T>(0.044714998453855515);
+  const T alpha = static_cast<T>(0.7978845608028654);
+  const T beta = static_cast<T>(0.044714998453855515);
 };
 
 template<>
@@ -76,8 +76,8 @@ struct FusedFastGeluMulGradFunctor {
   }
 
  private:
-  constexpr T alpha = static_cast<T>(0.7978845608028654);
-  constexpr T beta = static_cast<T>(0.044714998453855515);
+  const T alpha = static_cast<T>(0.7978845608028654);
+  const T beta = static_cast<T>(0.044714998453855515);
 };
 
 template<>
@@ -130,7 +130,7 @@ class FusedFastGeluMulCudaKernel final : public user_op::OpKernel {
 
 #define REGISTER_FUSED_FAST_GELU_MUL_CUDA_KERNEL(dtype)                \
   REGISTER_USER_KERNEL("fused_fast_gelu_mul")                          \
-      .SetCreateFn<FusedFastGeluMulGradCudaKernel<dtype>>()            \
+      .SetCreateFn<FusedFastGeluMulCudaKernel<dtype>>()                \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
