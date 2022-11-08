@@ -357,8 +357,8 @@ void SbpCollector::ProxySbpCandidate(const OpGraph& op_graph,
       // clip this edge if it no longer carries any blob
       // We don't clip edges before since we have transfer cost
       // Now we clip edges, which makes the topology simpler
-      if (edge_found->EmptyLbi() && edge_found->wait_time_ <= 0.0 && edge_found->wait_time_ > -0.5
-          && sbp_graph.transfer_cost_ <= 0.0) {
+      if (edge_found->EmptyLbi() && edge_found->wait_time_ <= 0.0
+          && edge_found->wait_time_ > -0.5) {
         sbp_graph.ClipEdge(edge_found);
       }
     }

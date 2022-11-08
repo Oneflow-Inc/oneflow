@@ -38,14 +38,13 @@ class SbpConstructor final {
   SbpConstructor() = delete;
   SbpConstructor(const OpGraph& op_graph, Job* job)
       : cost_ratio_(job->job_conf().auto_parallel_computation_cost_ratio()),
-        enable_trunk_algo_(job->job_conf().enable_auto_parallel_mainstem_algo()),
+        enable_trunk_algo_(job->job_conf().enable_auto_parallel_trunk_algo()),
         use_sbp_collector_(!Singleton<ResourceDesc, ForSession>::Get()
                                 ->resource()
                                 .disable_group_boxing_by_dst_parallel()
                            && job->job_conf().enable_auto_parallel_sbp_collector()),
         op_graph_(&op_graph) {
     sbp_graph_.SetWaitTime(job->job_conf().auto_parallel_wait_time());
-    sbp_graph_.SetTransferCost(job->job_conf().auto_parallel_transfer_cost());
     CHECK_JUST(Init(op_graph, job));
   }
   ~SbpConstructor() = default;
