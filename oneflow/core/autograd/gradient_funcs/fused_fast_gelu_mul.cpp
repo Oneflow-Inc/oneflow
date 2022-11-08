@@ -36,10 +36,9 @@ class FusedFastGeluMulGrad : public OpExprGradFunction<FusedFastGeluMulGradCaptu
     ctx->multiplier_requires_grad = inputs.at(1)->requires_grad();
     if (ctx->in_requires_grad || ctx->multiplier_requires_grad) {
       ctx->SaveTensorForBackward(inputs.at(0));  // in
-      ctx->SaveTensorForBackward(inputs.at(1));  // multiplier
     }
-    if (ctx->multiplier_requires_grad) {
-      ctx->SaveTensorForBackward(outputs.at(0));  // out
+    if (ctx->in_requires_grad) {
+      ctx->SaveTensorForBackward(inputs.at(1));  // multiplier
     }
     return Maybe<void>::Ok();
   }
@@ -48,24 +47,21 @@ class FusedFastGeluMulGrad : public OpExprGradFunction<FusedFastGeluMulGradCaptu
                     TensorTuple* in_grads) const override {
     if (!ctx->in_requires_grad && !ctx->multiplier_requires_grad) { return Maybe<void>::Ok(); }
 
-    const auto& saved_tensors = ctx->SavedTensors();
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-    CHECK_GE_OR_RETURN(saved_tensors.size(), 2);
-
     const auto& out_diff = out_grads.at(0);
 
-    in_grads->resize(2);  // (in_diff, multiplier_diff)
+    const auto& saved_tensors = ctx->SavedTensors();
+    CHECK_GE_OR_RETURN(saved_tensors.size(), 1);
     const auto& in = saved_tensors.at(0);
-    const auto& multiplier = saved_tensors.at(1);
 
+    in_grads->resize(2);  // (in_diff, multiplier_diff)
     if (ctx->in_requires_grad) {
+      CHECK_EQ_OR_RETURN(saved_tensors.size(), 2);
+      const auto& multiplier = saved_tensors.at(1);
       in_grads->at(0) = JUST(functional::FusedFastGeluMulGrad(out_diff, in, multiplier));
     }
-
     if (ctx->multiplier_requires_grad) {
-      CHECK_EQ_OR_RETURN(saved_tensors.size(), 3);
-      const auto& out = saved_tensors.at(2);
-      in_grads->at(1) = JUST(functional::Mul(out_diff, out));
+      in_grads->at(1) = JUST(functional::Mul(out_diff, JUST(functional::FastGelu(in))));
     }
 
     return Maybe<void>::Ok();
