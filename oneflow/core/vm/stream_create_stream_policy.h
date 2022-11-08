@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_STREAM_GET_STREAM_POLICY_H_
-#define ONEFLOW_CORE_VM_STREAM_GET_STREAM_POLICY_H_
+#ifndef ONEFLOW_CORE_VM_STREAM_CREATE_STREAM_POLICY_H_
+#define ONEFLOW_CORE_VM_STREAM_CREATE_STREAM_POLICY_H_
 
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/stream_type.h"
@@ -35,13 +35,23 @@ struct CreateStreamPolicy final : public StreamTypeVisitor<CreateStreamPolicy> {
     return std::shared_ptr<vm::StreamPolicy>(new vm::EpStreamPolicy(device));
   }
   static Maybe<vm::StreamPolicy> VisitHost2Device(Symbol<Device> device) {
-    return std::shared_ptr<vm::StreamPolicy>(new vm::EventRecordedEpStreamPolicy(device));
+    std::unique_ptr<vm::Allocator> allocator{};
+    if (device->enum_type() == DeviceType::kCPU) {
+      allocator = vm::EventRecordedEpStreamPolicy::CreateEpBackendDeviceAllocator(device);
+    } else {
+      allocator =
+          std::make_unique<vm::UnimplementedAllocator>("allocator is not supported on h2d stream.");
+    }
+    return std::shared_ptr<vm::StreamPolicy>(
+        new vm::EventRecordedEpStreamPolicy(device, std::move(allocator)));
   }
   static Maybe<vm::StreamPolicy> VisitDevice2Host(Symbol<Device> device) {
     return std::shared_ptr<vm::StreamPolicy>(new vm::EpD2HStreamPolicy(device));
   }
   static Maybe<vm::StreamPolicy> VisitCcl(Symbol<Device> device) {
-    return std::shared_ptr<vm::StreamPolicy>(new vm::EventRecordedEpStreamPolicy(device));
+    auto allocator = vm::EventRecordedEpStreamPolicy::CreateEpBackendDeviceAllocator(device);
+    return std::shared_ptr<vm::StreamPolicy>(
+        new vm::EventRecordedEpStreamPolicy(device, std::move(allocator)));
   }
   static Maybe<vm::StreamPolicy> VisitBarrier(Symbol<Device> device) {
     return std::shared_ptr<vm::StreamPolicy>(new vm::ControlStreamPolicy());
@@ -59,4 +69,4 @@ struct CreateStreamPolicy final : public StreamTypeVisitor<CreateStreamPolicy> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_STREAM_GET_STREAM_POLICY_H_
+#endif  // ONEFLOW_CORE_VM_STREAM_CREATE_STREAM_POLICY_H_
