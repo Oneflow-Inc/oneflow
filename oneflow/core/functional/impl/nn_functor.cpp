@@ -2968,6 +2968,86 @@ class CosineSimilarityFunctor {
   }
 };
 
+class CdistFunctor {
+ public:
+  CdistFunctor() {
+    op_ = CHECK_JUST(OpBuilder("cdist").Input("x1").Input("x2").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x1, const std::shared_ptr<Tensor>& x2,
+                           const double& p, const std::string& compute_mode) const {
+    const int64_t x1_ndim = x1->ndim();
+    const int64_t x2_ndim = x2->ndim();
+    CHECK_OR_RETURN(x1_ndim >= 2) << "cdist only supports at least 2D tensors, X1 got: "
+                                  << x1->ndim() << "D";
+    CHECK_OR_RETURN(x2_ndim >= 2) << "cdist only supports at least 2D tensors, X2 got: "
+                                  << x2->ndim() << "D";
+    CHECK_OR_RETURN(x1->dim(x1_ndim - 1) == x2->dim(x2_ndim - 1))
+        << "X1 and X2 must have the same number of columns. X1: " << x1->dim(x1_ndim - 1)
+        << " X2: " << x2->dim(x2_ndim - 1);
+    CHECK_OR_RETURN(p >= 0) << "cdist only supports non-negative p values, got " << p;
+
+    int32_t mode = 0;
+    if (compute_mode == "use_mm_for_euclid_dist_if_necessary") {
+      mode = 0;
+    } else if (compute_mode == "use_mm_for_euclid_dist") {
+      mode = 1;
+    } else if (compute_mode == "donot_use_mm_for_euclid_dist") {
+      mode = 2;
+    } else {
+      THROW(RuntimeError) << compute_mode << " is not a valid value for compute_mode";
+    }
+
+    int64_t r1 = x1->dim(x1_ndim - 2);
+    int64_t r2 = x2->dim(x2_ndim - 2);
+    int64_t d = x1->dim(x1_ndim - 1);
+
+    Shape x1_batch_shape = Shape(DimVector({x1->shape()->begin(), x1->shape()->end() - 2}));
+    Shape x2_batch_shape = Shape(DimVector({x2->shape()->begin(), x2->shape()->end() - 2}));
+    Shape max_batch_shape = Shape::Ones(std::max(x1_batch_shape.NumAxes(), x2_batch_shape.NumAxes()));
+    {
+      for (int64_t i = max_batch_shape.NumAxes() - 1; i >= 0; i--) {
+        int64_t offset = max_batch_shape.NumAxes() - 1 - i;
+        int64_t dim_x = x1_batch_shape.NumAxes() - 1 - offset;
+        int64_t dim_y = x2_batch_shape.NumAxes() - 1 - offset;
+        int64_t size_x = (dim_x >= 0) ? x1_batch_shape.At(dim_x) : 1;
+        int64_t size_y = (dim_y >= 0) ? x2_batch_shape.At(dim_y) : 1;
+        if (!(size_x == size_y || size_x == 1 || size_y == 1)) {
+          return Error::RuntimeError()
+                << "The size of tensor a (" << size_x << ") must match the size of tensor b ("
+                << size_y << ") at non-singleton dimension " << i;
+        }
+        max_batch_shape.Set(i, std::max(size_x, size_y));
+      }
+    }
+    // auto max_batch_shape = JUST(InferShapeForDistance(x1_batch_shape, x2_batch_shape));
+    Shape x1_expand_shape(max_batch_shape);
+    Shape x2_expand_shape(max_batch_shape);
+    std::cout << x1_expand_shape.DebugStr() << std::endl;
+    std::cout << "r1: " << r1 << std::endl;
+    x1_expand_shape.emplace_back(r1);
+    x1_expand_shape.emplace_back(d);
+    x2_expand_shape.emplace_back(r2);
+    x2_expand_shape.emplace_back(d);
+
+    std::cout << "run1: " << x1_expand_shape.DebugStr() << std::endl;
+    const auto x1_expand = JUST(Expand(x1, x1_expand_shape));
+    std::cout << "run2: " << x2_expand_shape.DebugStr() << std::endl;
+    const auto x2_expand = JUST(Expand(x2, x2_expand_shape));
+
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+             .AddInputs({x1_expand, x2_expand})
+             .Apply());
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("p", "mode");
+    attrs.SetAllAttrs(p, mode);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x1, x2}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class L2NormalizeFunctor {
  public:
   L2NormalizeFunctor() {
@@ -4538,6 +4618,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PairwiseDistanceFunctor>("PairwiseDistance");
   m.add_functor<impl::CosineSimilarityFunctor>("CosineSimilarity");
   m.add_functor<impl::NormalizeFunctor>("Normalize");
+  m.add_functor<impl::CdistFunctor>("CDist");
   m.add_functor<impl::L2NormalizeFunctor>("L2Normalize");
   m.add_functor<impl::L2NormalizeGradFunctor>("L2NormalizeGrad");
   m.add_functor<impl::FusedBiasAddGeluFunctor>("FusedBiasAddGelu");

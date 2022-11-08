@@ -2315,6 +2315,10 @@
   signature: "Tensor (Tensor x, Tensor y, Int32 dim=1, Double eps=1e-8) => CosineSimilarity"
   bind_python: True
 
+- name: "cdist"
+  signature: 'Tensor (Tensor x1, Tensor x2, Double p=2.0, String compute_mode="use_mm_for_euclid_dist_if_necessary") => CDist'
+  bind_python: True
+
 - name: "normalize"
   signature: "Tensor (Tensor input, Float p=2.0, Int32 dim=1, Float eps=1e-12, Bool use_l2_norm_kernel=True) => Normalize"
   bind_python: True
