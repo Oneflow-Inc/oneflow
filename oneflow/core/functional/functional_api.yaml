@@ -2898,7 +2898,5 @@
   bind_python: True
 
 - name: "uniform_"
-  signature: [
-      "Tensor (Tensor x,Double from, Double to,  DataType dtype=None) => Uniform",
-    ]
+  signature: "Tensor (Tensor x,Double from, Double to) => InplaceUniform"
   bind_python: True

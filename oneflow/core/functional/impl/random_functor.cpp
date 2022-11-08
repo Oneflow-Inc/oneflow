@@ -108,24 +108,28 @@ class BernoulliProbInplaceFunctor {
 
 class UniformFunctor {
  public:
-  UniformFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
+  UniformFunctor() {
+    float_op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build());
+    int_op_ = CHECK_JUST(one::OpBuilder("uniform_int").Output("out").Build());
+  }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double from,
-                           const double to, const Optional<Symbol<DType>>& dtype) const {
+                           const double to) const {
     JUST(CheckInplaceValid(x));
     const Shape& shape = *(x->shape());
-    DataType dtype_val = GetDefaultDType()->data_type();
-    if (dtype.has_value()) {
-      dtype_val = JUST(dtype)->data_type();
-      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble
-          && dtype_val != DataType::kFloat16) {
-        OF_UNIMPLEMENTED() << "Only support floating dtype in rand().";
-      }
+    std::shared_ptr<OpExpr> exec_op;
+    const auto& dtype = x->dtype();
+    if (dtype->is_floating_point()) {
+      exec_op = float_op_;
+    } else if (dtype->is_integer()) {
+      exec_op = int_op_;
+    } else {
+      OF_UNIMPLEMENTED() << "Only support floating and int dtype.";
     }
+    DataType dtype_val = dtype->data_type();
 
     auto gen = JUST(one::DefaultAutoGenerator());
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("from", "to", "shape", "dtype", "seed", "nb_sbp");
     auto outputs = std::make_shared<TensorTuple>(1);
-    JUST(CheckInplaceValid(x));
     (*outputs)[0] = x;
     if (x->is_global())  // global
     {
@@ -133,7 +137,7 @@ class UniformFunctor {
       const auto& placement = JUST(x->parallel_desc());
       JUST(CheckDeviceIdsIsValid(placement));
       uint64_t init_seed = JUST(gen->Get<CPUGeneratorImpl>(0))->engine()();
-      if (LazyMode::is_enabled())  // lazy模式
+      if (LazyMode::is_enabled())  // lazy
       {
         attrs.SetAllAttrs(from, to, shape, dtype_val, static_cast<int64_t>(init_seed),
                           *JUST(GetNdSbpStrList(nb_sbp)));
@@ -153,20 +157,21 @@ class UniformFunctor {
       const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
       OpExprInterpContext ctx(attrs, placement, nb_sbp, distribution_state);
       ctx.device = JUST(x->device());
-      JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(), ctx));
+      JUST(OpInterpUtil::Dispatch(*exec_op, {}, outputs.get(), ctx));
     } else {  // local
       attrs.SetAllAttrs(from, to, shape, dtype_val, static_cast<int64_t>(gen->current_seed()),
                         NullOpt);
       const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
       OpExprInterpContext ctx(attrs, distribution_state);
       ctx.device = JUST(x->device());
-      JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(), ctx));
+      JUST(OpInterpUtil::Dispatch(*exec_op, {}, outputs.get(), ctx));
     }
     return outputs->at(0);
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> float_op_;
+  std::shared_ptr<OpExpr> int_op_;
 };
 
 class RandFunctor {
@@ -850,7 +855,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<GlobalRandIntLikeFunctor, GlobalRandIntLike2Functor>("GlobalRandIntLike");
   m.add_functor<ExponentialFunctor>("Exponential");
   m.add_functor<MultinomialFunctor>("Multinomial");
-  m.add_functor<UniformFunctor>("Uniform");
+  m.add_functor<UniformFunctor>("InplaceUniform");
 };
 
 }  // namespace functional

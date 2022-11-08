@@ -109,18 +109,17 @@ check_func_list = [
         "params": {"mean": 0.0, "std": 1.0, "a": -5.0, "b": 5.0},
         "checker": DataChecker(min=-5.0, max=5.0),
     },
-    # TODO: test more initializer
     # oneflow.nn.init.uniform_
     {
         "func": flow.nn.init.uniform_,
-        "params": {"a": -5.0, "b": 5.0},
-        "checker": DataChecker(min=-5.0, max=5.0),
+        "params": {"a": 0.0, "b": 1.0},
+        "checker": DataChecker(min=0.0, max=1.0, mean=0.5, std=0.28849875926971436)
     },
     # oneflow.nn.init.xavier_uniform_
     {
         "func": flow.nn.init.xavier_uniform_,
         "params": {"gain": 1.0},
-        "checker": DataChecker(mean=0.0, std=0.0625),
+        "checker": DataChecker(min=-0.10825317547305482,max=0.10825317547305482, mean=0.0, std=0.0625)
     },
     # oneflow.nn.init.kaiming_uniform_
     {
@@ -143,6 +142,7 @@ check_func_list = [
         "params": {"mode": "fan_in", "a": 2.0, "nonlinearity": "linear"},
         "checker": DataChecker(mean=0.0, std=0.0625),
     },
+    # TODO: test more initializer
 ]
 
 
