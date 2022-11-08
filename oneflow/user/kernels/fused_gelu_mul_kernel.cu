@@ -16,24 +16,50 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
-#include "oneflow/user/kernels/elementwise_primitive_kernel.h"
 
 namespace oneflow {
-
-REGISTER_USER_KERNEL("fused_fast_gelu_mul")
-    .SetCreateFn([]() {
-      return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-          "out", "in", "multiplier", [](user_op::KernelComputeContext* ctx) {
-            const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-            const user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-            return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
-                ctx->device_type(), ep::primitive::BinaryOp::kFastGeluFuseMul, in->data_type(),
-                out->data_type(), 1 /*max_num_dims*/);
-          });
-    })
-    .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kFastGeluFuseMul, "out", "in"));
-
 namespace cuda {
+
+template<typename T>
+struct FusedFastGeluMulFunctor {
+  OF_DEVICE_FUNC FusedFastGeluMulFunctor() {}
+
+  OF_DEVICE_FUNC T operator()(T x, T m) const {
+    // ref to UnaryFunctor of kFastGelu
+    const T half = static_cast<T>(0.5);
+    const T one = static_cast<T>(1);
+    const T tanh_in = alpha * (x + beta * x * x * x);
+    return half * x * (one + tanh(tanh_in)) * m;
+  }
+
+ private:
+  constexpr T alpha = static_cast<T>(0.7978845608028654);
+  constexpr T beta = static_cast<T>(0.044714998453855515);
+};
+
+template<>
+struct FusedFastGeluMulFunctor<half> {
+  OF_DEVICE_FUNC FusedFastGeluMulFunctor() {}
+
+  OF_DEVICE_FUNC half operator()(const half x, const half m) const {
+    return __float2half(float_functor(__half2float(x), __half2float(m)));
+  }
+
+ private:
+  FusedFastGeluMulFunctor<float> float_functor;
+};
+
+template<>
+struct FusedFastGeluMulFunctor<nv_bfloat16> {
+  OF_DEVICE_FUNC FusedFastGeluMulFunctor() {}
+
+  OF_DEVICE_FUNC nv_bfloat16 operator()(const nv_bfloat16 x, const nv_bfloat16 m) const {
+    return __float2bfloat16(float_functor(__bfloat162float(x), __bfloat162float(m)));
+  }
+
+ private:
+  FusedFastGeluMulFunctor<float> float_functor;
+};
 
 template<typename T>
 struct FusedFastGeluMulGradFunctor {
@@ -50,8 +76,8 @@ struct FusedFastGeluMulGradFunctor {
   }
 
  private:
-  const T alpha = static_cast<T>(0.7978845608028654);
-  const T beta = static_cast<T>(0.044714998453855515);
+  constexpr T alpha = static_cast<T>(0.7978845608028654);
+  constexpr T beta = static_cast<T>(0.044714998453855515);
 };
 
 template<>
@@ -81,12 +107,49 @@ struct FusedFastGeluMulGradFunctor<nv_bfloat16> {
 };
 
 template<typename T>
+class FusedFastGeluMulCudaKernel final : public user_op::OpKernel {
+ public:
+  FusedFastGeluMulCudaKernel() = default;
+  ~FusedFastGeluMulCudaKernel() override = default;
+
+ private:
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const auto* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    const auto* multiplier = ctx->Tensor4ArgNameAndIndex("multiplier", 0);
+    auto* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+
+    int64_t elem_cnt = in->shape_view().elem_cnt();
+    OF_CUDA_CHECK((elementwise::Binary(FusedFastGeluMulFunctor<T>(), elem_cnt, out->mut_dptr<T>(),
+                                       in->dptr<T>(), multiplier->dptr<T>(),
+                                       ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
+  };
+};
+
+#define REGISTER_FUSED_FAST_GELU_MUL_CUDA_KERNEL(dtype)                \
+  REGISTER_USER_KERNEL("fused_fast_gelu_mul")                          \
+      .SetCreateFn<FusedFastGeluMulGradCudaKernel<dtype>>()            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+
+REGISTER_FUSED_FAST_GELU_MUL_CUDA_KERNEL(float)
+REGISTER_FUSED_FAST_GELU_MUL_CUDA_KERNEL(double)
+REGISTER_FUSED_FAST_GELU_MUL_CUDA_KERNEL(half)
+#if CUDA_VERSION >= 11000
+REGISTER_FUSED_FAST_GELU_MUL_CUDA_KERNEL(nv_bfloat16)
+#endif
+
+template<typename T>
 class FusedFastGeluMulGradCudaKernel final : public user_op::OpKernel {
  public:
   FusedFastGeluMulGradCudaKernel() = default;
   ~FusedFastGeluMulGradCudaKernel() override = default;
 
  private:
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* out_diff = ctx->Tensor4ArgNameAndIndex("out_diff", 0);
@@ -95,12 +158,10 @@ class FusedFastGeluMulGradCudaKernel final : public user_op::OpKernel {
     auto* in_diff = ctx->Tensor4ArgNameAndIndex("in_diff", 0);
 
     int64_t elem_cnt = in->shape_view().elem_cnt();
-    OF_CUDA_CHECK((elementwise::Ternary<FusedFastGeluMulGradFunctor<T>, T, T, T, T>(
+    OF_CUDA_CHECK((elementwise::Ternary(
         FusedFastGeluMulGradFunctor<T>(), elem_cnt, in_diff->mut_dptr<T>(), out_diff->dptr<T>(),
         in->dptr<T>(), multiplier->dptr<T>(), ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
   };
-
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_FUSED_FAST_GELU_MUL_GRAD_CUDA_KERNEL(dtype)           \
@@ -117,5 +178,4 @@ REGISTER_FUSED_FAST_GELU_MUL_GRAD_CUDA_KERNEL(nv_bfloat16)
 #endif
 
 }  // namespace cuda
-
 }  // namespace oneflow
