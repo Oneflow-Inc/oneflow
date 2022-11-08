@@ -29,7 +29,7 @@ import oneflow as flow
 class ContiguousParamsUnit(object):
     def __init__(self, bufsize, dtype, device):
         self.bufsize = bufsize
-        self.index = 0 # record the next buf position will be used in copying parameters
+        self.index = 0 # record the next buf position will be used while copying parameters
         self.param_buf = flow.zeros(bufsize, dtype=dtype, device=device)
         self.grad_buf = flow.zeros(bufsize, dtype=dtype, device=device)
 
@@ -84,12 +84,19 @@ class ParamGroup(object):
             self._options["clip_grad_norm_type"] = parameters["clip_grad_norm_type"]
 
     def _make_contiguous_params(self, parameters):            
+        def numel_in_bucket(tensor: flow.Tensor):
+            def align(x: int, unit_size: int):
+                return (x + (unit_size - 1)) // unit_size * unit_size
+
+            # tensor memory should be align to 512 bytes for cuda operations,
+            # 4 is the bytes of a float number
+            # TODO(jianhao): expose the `kCudaMemAllocAlignSize` from C++ to
+            # avoid this hardcoded "512"
+            return align(tensor.numel(), 512 // 4)
+
         for p in parameters['params']:
             buf_type = (p.dtype, p.device)
-            if buf_type in self.params_dict:
-                self.params_dict[buf_type] += p.numel()
-            else: 
-                self.params_dict[buf_type] = p.numel()
+            self.params_dict[buf_type] = self.params_dict.get(buf_type, 0) + numel_in_bucket(p)
 
         for (dtype, device), bufsize in self.params_dict.items():
             self.params_dict[(dtype, device)] = ContiguousParamsUnit(
@@ -98,7 +105,8 @@ class ParamGroup(object):
 
         for p in parameters['params']:
             buf_type = (p.dtype, p.device)
-            size, shape = p.numel(), p.data.shape
+            size = p.numel()
+            shape = p.data.shape
             index = self.params_dict[buf_type].index
             assert index + size <= self.params_dict[buf_type].bufsize
 
@@ -106,7 +114,7 @@ class ParamGroup(object):
             p.data = self.params_dict[buf_type].param_buf[index:index + size].view(shape)
             p.grad = self.params_dict[buf_type].grad_buf[index:index + size].view(shape)
             p._is_grad_acc_inplace = True
-            self.params_dict[buf_type].index += size 
+            self.params_dict[buf_type].index += numel_in_bucket(p)
 
         for buf_type in self.params_dict.keys():
             self.params_dict[buf_type].param_buf.grad = self.params_dict[buf_type].grad_buf
