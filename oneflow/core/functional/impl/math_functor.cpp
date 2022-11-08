@@ -3148,7 +3148,7 @@ class StftFunctor {
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t n_fft,
-                           const Optional<int64_t> hop_length, const Optional<int64_t> win_length,
+                           const Optional<int64_t>& hop_length, const Optional<int64_t>& win_length,
                            const Optional<one::Tensor>& window, const bool center,
                            const std::string& mode, const bool normalized, const bool onesided,
                            const bool return_complex) const {
@@ -3202,9 +3202,12 @@ class StftFunctor {
         << Error::RuntimeError() << "Expected 0 < win_length <=n_fft ,but got " << new_win_length;
     const auto& stride = *JUST(input_tensor->stride());
     std::vector<int32_t> strides(stride.begin(), stride.end());
-    input_tensor = JUST(view::AsStrided(
-        input_tensor, {batch, n_frames, fft_size},
-        {strides.at(0), static_cast<int32_t>(new_hop_length) * strides.at(1), strides.at(1)}, 0));
+    input_tensor =
+        JUST(view::AsStrided(input_tensor, {batch, n_frames, fft_size},
+                             {JUST(VectorAt(strides, 0)),
+                              static_cast<int32_t>(new_hop_length) * JUST(VectorAt(strides, 1)),
+                              JUST(VectorAt(strides, 1))},
+                             0));
 
     auto temp_tensor = JUST(functional::Empty(Shape{n_fft}, input->dtype(), JUST(input->device()),
                                               /*pin_memory=*/false));

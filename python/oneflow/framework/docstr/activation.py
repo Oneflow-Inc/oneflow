@@ -143,6 +143,37 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow._C.gumbel_softmax,
+    r"""
+    gumbel_softmax(x: Tensor, dim: int, tau: float = 1.0, hard: bool = False) -> Tensor 
+
+    Solve the problem that the output values of argmax do not reflect the probability distribution of the model's output.
+    Compensates for the fact that the argmax cannot participate in gradient back-propagation.
+
+    Gumbel is defined as:
+
+    .. math::
+        Gumbel_i = -log(-log(U_i)),\ U_i \sim U(0,1)
+
+    Add Noise ~ Gumbel:
+
+    .. math::
+        In = (In + Noise) / tau
+
+    Calculate Softmax value:
+
+    .. math::
+        gumbel\_softmax(In)=\frac{e^{In_i/tau}}{\sum_{j=1}^n{e^{In_j/tau}}},i=1,2,3...n
+
+    Parameters:
+        x (oneflow.Tensor): the input Tensor.
+        dim (int, Tuple[int]): the dimension to softmax. 
+        tau (double): the input tensor of Softmax should obey the Gumbel(x, tau).
+        hard (bool): if `hard=True`, the output tensor will be one-hot.
+    """,
+)
+
+add_docstr(
     oneflow.softplus,
     r"""
     softplus(x: Tensor, beta: double = 1, threshold: double = 20) -> Tensor 
