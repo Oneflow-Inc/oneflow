@@ -33,8 +33,8 @@ struct FusedFastGeluMulFunctor {
   }
 
  private:
-  const T alpha = static_cast<T>(0.7978845608028654);
-  const T beta = static_cast<T>(0.044714998453855515);
+  static constexpr T alpha = static_cast<T>(0.7978845608028654);
+  static constexpr T beta = static_cast<T>(0.044714998453855515);
 };
 
 template<>
@@ -76,8 +76,8 @@ struct FusedFastGeluMulGradFunctor {
   }
 
  private:
-  const T alpha = static_cast<T>(0.7978845608028654);
-  const T beta = static_cast<T>(0.044714998453855515);
+  static constexpr T alpha = static_cast<T>(0.7978845608028654);
+  static constexpr T beta = static_cast<T>(0.044714998453855515);
 };
 
 template<>
