@@ -337,16 +337,15 @@ static PyObject* PyTensorObject_item(PyObject* self, PyObject* unused) {
   const auto& t = PyTensor_Unpack(self);
   DataType data_type = t->dtype()->data_type();
   switch (data_type) {
-#define SWITCH_EAGER_TENSOR_TO_NUMPY(cpp_type, of_type) \
-  case of_type: return ASSERT(EagerLocalTensorItem<cpp_type>(self));
-    OF_PP_FOR_EACH_TUPLE(SWITCH_EAGER_TENSOR_TO_NUMPY, POD_DATA_TYPE_SEQ)
-    case DataType::kFloat16: return ASSERT(EagerLocalTensorItem<float16>(self));
+#define CASE_SCALAR_TENSOR_TO_SCALAR(cpp_type, of_type) \
+  case of_type: return ASSERT(EagerLocalTensorItem<cpp_type>(t));
+    OF_PP_FOR_EACH_TUPLE(CASE_SCALAR_TENSOR_TO_SCALAR, POD_AND_HALF_DATA_TYPE_SEQ);
     default: {
       return PyErr_Format(PyExc_RuntimeError,
                           ("Invalid datatype " + DataType_Name(data_type)).data());
     }
   }
-#undef SWITCH_EAGER_TENSOR_TO_NUMPY
+#undef CASE_SCALAR_TENSOR_TO_SCALAR
   END_HANDLE_ERRORS
 }
 

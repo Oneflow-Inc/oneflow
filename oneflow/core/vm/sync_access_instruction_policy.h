@@ -66,10 +66,6 @@ class SyncReadInstructionPolicy final : public SyncAccessInstructionPolicy {
     return empty;
   }
 
-  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
-    DoEach(CHECK_NOTNULL(eager_blob_object_));
-  }
-
   std::string DebugName(const Instruction& instruction) const override { return "SyncRead"; }
 
   void Reset(char* mem_ptr, size_t bytes, EagerBlobObject* eager_blob_object) {

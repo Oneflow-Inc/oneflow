@@ -421,8 +421,8 @@ class NonZeroFunctor {
         CHECK_OR_RETURN(JUST(size->parallel_desc())->parallel_num() == 1  // NOLINT
                         || NdSbpIsAllBroadcast(*JUST(size->nd_sbp())));   // NOLINT
       }
-      JUST(CopyLocalTensorDataTo(size->is_local() ? size : JUST(size->cur_rank_phy_tensor()),
-                                 (void*)(&size_val), GetSizeOfDataType(DataType::kInt64)));
+      JUST(GetItemInScalarTensor(size->is_local() ? size : JUST(size->cur_rank_phy_tensor()),
+                                 &size_val, sizeof(size_val)));
     }
     std::vector<int64_t> start{0, 0};
     std::vector<int64_t> stop{size_val, ndim};
@@ -3357,7 +3357,9 @@ class FillTensorFunctor {
         << "fill_ only supports 0-dimension value tensor but got tensor with " << ndim
         << " dimensions.";
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({in, value}).Apply());
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true, in->dtype())
+             .AddInputs({in, value})
+             .Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     auto outputs = std::make_shared<TensorTuple>(1);
     (*outputs)[0] = in;

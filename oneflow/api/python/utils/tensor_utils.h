@@ -34,6 +34,7 @@ limitations under the License.
 #include "oneflow/core/common/foreign_lock_helper.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/api/python/functional/common.h"
+#include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/profiler/profiler.h"
 
 namespace py = pybind11;
@@ -127,16 +128,9 @@ struct TensorTypeToPyType<bfloat16> final {
 };
 
 template<typename T>
-inline static Maybe<PyObject*> EagerLocalTensorItem(PyObject* py_tensor) {
+inline static Maybe<PyObject*> EagerLocalTensorItem(const std::shared_ptr<Tensor>& tensor) {
   OF_PROFILER_RANGE_GUARD("EagerLocalTensorItem");
-  const auto& t = PyTensor_Unpack(py_tensor);
-
-  std::shared_ptr<LocalTensor> tensor = JUST(t->AsLocalTensor());
-  CHECK_OR_RETURN(tensor->is_eager()) << "Tensor.item only supported on eager tensor.";
-  CHECK_EQ_OR_RETURN(tensor->nelement(), 1)
-      << "can only convert a tensor of size 1 to a Python scalar";
-  T value(0);  // NOLINT
-  JUST(SyncReadSmallMem(reinterpret_cast<char*>(&value), sizeof(T), tensor));
+  T value = JUST(GetItemInScalarTensor<T>(tensor));
   return functional::CastToPyObject(static_cast<typename TensorTypeToPyType<T>::type>(value));
 }
 
