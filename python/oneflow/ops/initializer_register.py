@@ -113,7 +113,7 @@ def random_normal_initializer(
     setattr(initializer.random_normal_conf, "mean", float(mean))
     setattr(initializer.random_normal_conf, "std", float(stddev))
     return initializer
-    
+
 @register_initializer("constant_conf")
 @register_initializer("constant_int_conf")
 def ConstantInitializerImpl(
@@ -136,32 +136,6 @@ def RandomNormalInitializerImpl(
     rng = np.random.default_rng(random_seed)
     return lambda length: rng.normal(
         loc=initializer_conf.mean, scale=initializer_conf.std, size=length
-    )
-
-
-@register_initializer("random_uniform_conf")
-def RandomUniformInitializerImpl(
-    initializer_conf: initializer_conf_util.RandomUniformIntInitializerConf,
-    random_seed: int,
-    var_blob_shape: Sequence[int],
-):
-    rng = np.random.default_rng(random_seed)
-    return lambda length: rng.uniform(
-        low=initializer_conf.min,
-        high=np.nextafter(initializer_conf.max, float("inf")),
-        size=length,
-    )
-
-
-@register_initializer("random_uniform_int_conf")
-def RandomUniformIntInitializerImpl(
-    initializer_conf: initializer_conf_util.RandomUniformIntInitializerConf,
-    random_seed: int,
-    var_blob_shape: Sequence[int],
-):
-    rng = np.random.default_rng(random_seed)
-    return lambda length: rng.integers(
-        low=initializer_conf.min, high=initializer_conf.max, size=length
     )
 
 
