@@ -53,6 +53,11 @@ void FastCopy(char* dst, const char* src, size_t bytes) {
       *reinterpret_cast<int64_t*>(dst) = *reinterpret_cast<const int64_t*>(src);
       return;
     }
+    case 16: {
+      using Bit128 = std::pair<int64_t, int64_t>;
+      *reinterpret_cast<Bit128*>(dst) = *reinterpret_cast<const Bit128*>(src);
+      return;
+    }
     default: UNIMPLEMENTED() << "FastCopy on bytes " << bytes << " not supported.";
   }
 }
