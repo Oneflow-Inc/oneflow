@@ -23,7 +23,10 @@ struct FusedBiasAddScaleMaskSoftmaxDropoutCaptureState : public AutoGradCaptureS
   bool x_requires_grad = false;
   bool bias_requires_grad = false;
   bool bias_broadcast = false;
+  int softmax_y_index = -1;
   int bias_index = -1;
+  int mask_index = -1;
+  int dropout_mask_index = -1;
   float scale = 1.0;
   float dropout_scale = 1.0;
 };
@@ -53,9 +56,9 @@ class FusedBiasAddScaleMaskSoftmaxDropoutGradFunction
     ctx->dropout_scale = JUST(composed_attrs.GetAttr<float>("dropout_scale_value"));
 
     if (ctx->x_requires_grad) {
-      ctx->SaveTensorForBackward(inputs.at(2));   // mask
-      ctx->SaveTensorForBackward(inputs.at(3));   // dropout_mask
-      ctx->SaveTensorForBackward(outputs.at(1));  // softmax_y
+      ctx->mask_index = ctx->SaveTensorForBackward(inputs.at(2));          // mask
+      ctx->dropout_mask_index = ctx->SaveTensorForBackward(inputs.at(3));  // dropout_mask
+      ctx->softmax_y_index = ctx->SaveTensorForBackward(outputs.at(1));    // softmax_y
     }
 
     if (ctx->bias_requires_grad) {
@@ -77,12 +80,12 @@ class FusedBiasAddScaleMaskSoftmaxDropoutGradFunction
 
     const auto& saved_tensors = ctx->SavedTensors();
     const auto& dy = out_grads.at(0);
+    CHECK_GE_OR_RETURN(saved_tensors.size(), 3);  // (mask, dropout_mask, softmax_y, [bias])
 
-    if (ctx->x_requires_grad) {
-      CHECK_GE_OR_RETURN(saved_tensors.size(), 3);  // (mask, dropout_mask, softmax_y, [bias])
-      const auto& mask = saved_tensors.at(0);
-      const auto& dropout_mask = saved_tensors.at(1);
-      const auto& softmax_y = saved_tensors.at(2);
+    if (ctx->x_requires_grad || ctx->bias_requires_grad) {
+      const auto& mask = saved_tensors.at(ctx->mask_index);
+      const auto& dropout_mask = saved_tensors.at(ctx->dropout_mask_index);
+      const auto& softmax_y = saved_tensors.at(ctx->softmax_y_index);
       in_grads->at(0) = JUST(functional::FusedScaleMaskSoftmaxDropoutGrad(
           softmax_y, dy, mask, dropout_mask, ctx->scale, ctx->dropout_scale));
     }
@@ -90,9 +93,9 @@ class FusedBiasAddScaleMaskSoftmaxDropoutGradFunction
     if (ctx->bias_requires_grad) {
       if (ctx->bias_broadcast) {
         const auto& bias = saved_tensors.at(ctx->bias_index);
-        in_grads->at(1) = JUST(functional::BroadcastReduceSumLike(dy, bias));
+        in_grads->at(1) = JUST(functional::BroadcastReduceSumLike(in_grads->at(0), bias));
       } else {
-        in_grads->at(1) = dy;
+        in_grads->at(1) = in_grads->at(0);
       }
     }
 
