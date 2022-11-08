@@ -920,8 +920,8 @@ class LogSumExpFunctor {
       const std::shared_ptr<one::Tensor>& maxes = JUST(Amax(x, axis, true));
       const std::shared_ptr<one::Tensor>& maxes_squeezed =
           (keepdims ? maxes : JUST(SqueezeMultiple(maxes, axis)));
-      MaskedFillInplace(maxes_squeezed,
-                        JUST(ScalarLogicalEqual(JUST(Abs(maxes_squeezed)), INFINITY)), 0);
+      JUST(MaskedFillInplace(maxes_squeezed,
+                             JUST(ScalarLogicalEqual(JUST(Abs(maxes_squeezed)), INFINITY)), 0));
       std::shared_ptr<one::Tensor> exp_out = JUST(Exp(JUST(Sub(x, maxes, 1, false))));
       return Add(JUST(Log(JUST(ReduceSum(exp_out, axis, keepdims)))), maxes_squeezed, 1, false);
     }
