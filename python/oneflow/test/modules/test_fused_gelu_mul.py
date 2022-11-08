@@ -29,6 +29,7 @@ def _test_fused_fast_gelu_mul(test_case, shape, dtype=flow.float32):
     y = flow.nn.functional.gelu(x, approximate="tanh") * multiplier
     y.mean().backward()
     x_grad = x.grad.detach().cpu()
+    m_grad = multiplier.grad.detach().cpu()
     y = y.detach().cpu()
 
     fused_x = x.detach().clone().requires_grad_(True)
@@ -36,16 +37,23 @@ def _test_fused_fast_gelu_mul(test_case, shape, dtype=flow.float32):
     fused_y = flow._C.fused_fast_gelu_mul(fused_x, fused_multiplier)
     fused_y.mean().backward()
     fused_x_grad = fused_x.grad.detach().cpu()
+    fused_m_grad = fused_multiplier.grad.detach().cpu()
     fused_y = fused_y.detach().cpu()
 
-    test_case.assertTrue(
-        np.allclose(fused_y.numpy(), y.numpy()),
-        f"\nfused_y:\n{fused_y.numpy()}\n{'-' * 80}\ny:\n{y.numpy()}\n{'*' * 80}\ndiff:\n{fused_y.numpy() - y.numpy()}",
-    )
-    test_case.assertTrue(
-        np.allclose(fused_x_grad.numpy(), x_grad.numpy()),
-        f"\nfused_x_grad:\n{fused_x_grad.numpy()}\n{'-' * 80}\nx_grad:\n{x_grad.numpy()}\n{'*' * 80}\ndiff:\n{fused_x_grad.numpy() - x_grad.numpy()}",
-    )
+    def compare(a, b, rtol=1e-5, atol=1e-8):
+        test_case.assertTrue(
+            np.allclose(a.numpy(), b.numpy(), rtol=rtol, atol=atol),
+            f"\na\n{a}\n{'-' * 80}\nb:\n{b}\n{'*' * 80}\ndiff:\n{a - b}",
+        )
+
+    if dtype == flow.float16:
+        compare(fused_y, y, 1e-3, 1e-3)
+        compare(fused_x_grad, x_grad, 1e-4, 1e-4)
+        compare(fused_m_grad, m_grad)
+    else:
+        compare(fused_y, y)
+        compare(fused_x_grad, x_grad)
+        compare(fused_m_grad, m_grad)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -54,7 +62,7 @@ class TestFusedFastGeluMul(flow.unittest.TestCase):
     def test_fused_fast_gelu_mul(test_case):
         args_dict = OrderedDict()
         args_dict["shape"] = [[7, 10], [4, 2, 3], [8, 3, 16, 16]]
-        args_dict["dtype"] = [flow.float32, flow.float16]
+        args_dict["dtype"] = [flow.float16, flow.float32]
         for kwarg in GenArgDict(args_dict):
             _test_fused_fast_gelu_mul(test_case, **kwarg)
 
