@@ -118,7 +118,7 @@ class MaxUnpoolNdGradKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    const user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
+    const user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indices", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
     const int64_t elem_num = dx->shape_view().elem_cnt();
@@ -183,10 +183,12 @@ class MaxUnpoolNdGradKernel final : public user_op::OpKernel {
 
 #define REGISTER_UNPOOL_WITH_DEVICE(device) \
   REGISTER_UNPOOL_KERNELS(device, int32_t)  \
+  REGISTER_UNPOOL_KERNELS(device, int64_t)  \
   REGISTER_UNPOOL_KERNELS(device, float)    \
   REGISTER_UNPOOL_KERNELS(device, double)
 
 REGISTER_UNPOOL_WITH_DEVICE(DeviceType::kCPU)
+REGISTER_UNPOOL_KERNELS(DeviceType::kCPU, float16)
 
 #ifdef WITH_CUDA
 REGISTER_UNPOOL_WITH_DEVICE(DeviceType::kCUDA)

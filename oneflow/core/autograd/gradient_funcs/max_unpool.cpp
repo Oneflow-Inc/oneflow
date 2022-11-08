@@ -25,9 +25,9 @@ struct MaxUnpoolCaptureState : public AutoGradCaptureState {
   bool requires_grad = false;
   size_t input_index = 0;
   size_t indices_index = 0;
-  std::vector<int32_t> kernel_size;
 };
 
+template<int T>
 class MaxUnpoolNdGrad : public OpExprGradFunction<MaxUnpoolCaptureState> {
  public:
   virtual ~MaxUnpoolNdGrad() = default;
@@ -44,45 +44,50 @@ class MaxUnpoolNdGrad : public OpExprGradFunction<MaxUnpoolCaptureState> {
   AttrMap base_attrs_;
 };
 
-Maybe<void> MaxUnpoolNdGrad::Init(const OpExpr& op) {
+template<int T>
+Maybe<void> MaxUnpoolNdGrad<T>::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MaxUnpoolNdGrad::Capture(MaxUnpoolCaptureState* ctx, const TensorTuple& inputs,
-                                     const TensorTuple& outputs, const AttrMap& attrs) const {
+template<int T>
+Maybe<void> MaxUnpoolNdGrad<T>::Capture(MaxUnpoolCaptureState* ctx, const TensorTuple& inputs,
+                                        const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   ctx->input_index = ctx->SaveTensorForBackward(inputs.at(0));
   ctx->indices_index = ctx->SaveTensorForBackward(inputs.at(1));
-
-  ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->kernel_size = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("kernel_size"));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MaxUnpoolNdGrad::Apply(const MaxUnpoolCaptureState* ctx, const TensorTuple& out_grads,
-                                   TensorTuple* in_grads) const {
+template<int T>
+Maybe<void> MaxUnpoolNdGrad<T>::Apply(const MaxUnpoolCaptureState* ctx,
+                                      const TensorTuple& out_grads, TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_LE_OR_RETURN(out_grads.size(), 2);  // NOLINT(maybe-need-error-msg)
 
-  int32_t ndims = ctx->kernel_size.size();
   const auto& input = ctx->SavedTensors().at(ctx->input_index);
   const auto& indices = ctx->SavedTensors().at(ctx->indices_index);
 
   in_grads->resize(2);
-  (*in_grads)[0] = JUST(functional::MaxUnpoolNdGrad(input, indices, out_grads[0], ndims));
+  if (T == 1) {
+    (*in_grads)[0] = JUST(functional::MaxUnpool1dGrad(input, indices, out_grads[0]));
+  } else if (T == 2) {
+    (*in_grads)[0] = JUST(functional::MaxUnpool2dGrad(input, indices, out_grads[0]));
+  } else if (T == 3) {
+    (*in_grads)[0] = JUST(functional::MaxUnpool3dGrad(input, indices, out_grads[0]));
+  }
 
   return Maybe<void>::Ok();
 }
 
 }  // namespace
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("max_unpool_1d", MaxUnpoolNdGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("max_unpool_2d", MaxUnpoolNdGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("max_unpool_3d", MaxUnpoolNdGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("max_unpool_1d", MaxUnpoolNdGrad<1>);
+REGISTER_OP_EXPR_GRAD_FUNCTION("max_unpool_2d", MaxUnpoolNdGrad<2>);
+REGISTER_OP_EXPR_GRAD_FUNCTION("max_unpool_3d", MaxUnpoolNdGrad<3>);
 
 }  // namespace one
 }  // namespace oneflow

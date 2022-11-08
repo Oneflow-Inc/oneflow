@@ -914,16 +914,46 @@ class MaxPool3DFunctor : public MaxPoolNDFunctor {
   }
 };
 
+template<int N>
 class MaxUnpoolNDFunctor {
  public:
-  MaxUnpoolNDFunctor() = default;
-  virtual ~MaxUnpoolNDFunctor() = default;
+  MaxUnpoolNDFunctor() {
+    if (N == 1) {
+      op_ = CHECK_JUST(
+          one::OpBuilder("max_unpool_1d").Input("x").Input("indices").Output("y").Build());
+    } else if (N == 2) {
+      op_ = CHECK_JUST(
+          one::OpBuilder("max_unpool_2d").Input("x").Input("indices").Output("y").Build());
+    } else if (N == 3) {
+      op_ = CHECK_JUST(
+          one::OpBuilder("max_unpool_3d").Input("x").Input("indices").Output("y").Build());
+    };
+  };
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& indices,
                            const std::vector<int32_t>& kernel_size,
                            const Optional<std::vector<int32_t>>& stride,
                            const std::vector<int32_t>& padding,
                            const Optional<Shape>& output_size) const {
+    CHECK_EQ_OR_RETURN(kernel_size.size(), N)
+        << "`kernel_size` must be an integer or a list of " << N << " integers";
+    for (int32_t pool_dim : kernel_size) {
+      CHECK_GT_OR_RETURN(pool_dim, 0)
+          << "each element in `kernel_size` must be greater than 0, got " << pool_dim;
+    }
+    if (stride) {
+      CHECK_EQ_OR_RETURN(JUST(stride)->size(), N)
+          << "`stride` must be an integer or a list of " << N << " integers";
+      for (int32_t stride_dim : *JUST(stride)) {
+        CHECK_GT_OR_RETURN(stride_dim, 0)
+            << "each element in `stride` must be greater than 0, got " << stride_dim;
+      }
+    }
+    for (int32_t i = 0; i < padding.size(); i++) {
+      CHECK_GE_OR_RETURN(kernel_size[i], 2 * padding[i])
+          << "pad should be smaller than half of kernel size";
+    }
+
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("kernel_size", "padding", "stride",
                                                  "has_output_size", "output_size");
     attrs.SetAllAttrs(kernel_size, padding, stride ? *JUST(stride) : kernel_size,
@@ -934,30 +964,6 @@ class MaxUnpoolNDFunctor {
 
  protected:
   std::shared_ptr<OpExpr> op_;
-};
-
-class MaxUnpool1DFunctor : public MaxUnpoolNDFunctor {
- public:
-  MaxUnpool1DFunctor() {
-    op_ =
-        CHECK_JUST(one::OpBuilder("max_unpool_1d").Input("x").Input("indices").Output("y").Build());
-  }
-};
-
-class MaxUnpool2DFunctor : public MaxUnpoolNDFunctor {
- public:
-  MaxUnpool2DFunctor() {
-    op_ =
-        CHECK_JUST(one::OpBuilder("max_unpool_2d").Input("x").Input("indices").Output("y").Build());
-  }
-};
-
-class MaxUnpool3DFunctor : public MaxUnpoolNDFunctor {
- public:
-  MaxUnpool3DFunctor() {
-    op_ =
-        CHECK_JUST(one::OpBuilder("max_unpool_3d").Input("x").Input("indices").Output("y").Build());
-  }
 };
 
 class AdaptivePoolNDFunctor {
@@ -4534,9 +4540,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MaxPool1DFunctor>("MaxPool1D");
   m.add_functor<impl::MaxPool2DFunctor>("MaxPool2D");
   m.add_functor<impl::MaxPool3DFunctor>("MaxPool3D");
-  m.add_functor<impl::MaxUnpool1DFunctor>("MaxUnpool1D");
-  m.add_functor<impl::MaxUnpool2DFunctor>("MaxUnpool2D");
-  m.add_functor<impl::MaxUnpool3DFunctor>("MaxUnpool3D");
+  m.add_functor<impl::MaxUnpoolNDFunctor<1>>("MaxUnpool1D");
+  m.add_functor<impl::MaxUnpoolNDFunctor<2>>("MaxUnpool2D");
+  m.add_functor<impl::MaxUnpoolNDFunctor<3>>("MaxUnpool3D");
   m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");

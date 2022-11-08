@@ -340,12 +340,12 @@ class OneFlow_MaxUnpoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
   let summary = "OneFlow Max Unpooling Grad operation";
   let input = (ins
-    AnyType:$x,
-    AnyType:$indice,
-    AnyType:$dy
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$indices,
+    OneFlow_Tensor:$dy
   );
   let output = (outs
-    AnyType:$dx
+    OneFlow_Tensor:$dx
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

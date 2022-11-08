@@ -38,7 +38,7 @@ __launch_bounds__(kBlockSize) __global__
     void DoCUDAMaxUnpoolNdForward(const NdIndexOffsetHelper<IDX, 2> index_helper, IDX elem_num,
                                   const T* src, T* dest, const int64_t* indice_ptr,
                                   const int64_t y_hwd_size, const int64_t y_elem_num) {
-  XPU_1D_KERNEL_LOOP(num, elem_num) {
+  CUDA_1D_KERNEL_LOOP_T(IDX, num, elem_num) {
     IDX bc_idx, hwd_idx;
     index_helper.OffsetToNdIndex(num, bc_idx, hwd_idx);
     IDX dest_idx = bc_idx * y_hwd_size + indice_ptr[num];
@@ -51,7 +51,7 @@ __launch_bounds__(kBlockSize) __global__
     void DoCUDAMaxUnpoolNdBackward(const NdIndexOffsetHelper<IDX, 2> index_helper, IDX elem_num,
                                    const T* src, T* dest, const int64_t* indice_ptr,
                                    const int64_t dy_hwd_size, const int64_t dy_elem_num) {
-  XPU_1D_KERNEL_LOOP(num, elem_num) {
+  CUDA_1D_KERNEL_LOOP_T(IDX, num, elem_num) {
     IDX bc_idx, hwd_idx;
     index_helper.OffsetToNdIndex(num, bc_idx, hwd_idx);
     IDX src_idx = bc_idx * dy_hwd_size + indice_ptr[num];

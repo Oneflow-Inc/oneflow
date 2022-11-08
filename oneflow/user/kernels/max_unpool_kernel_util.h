@@ -23,6 +23,7 @@ namespace oneflow {
 
 #define UNPOOL_DATA_TYPE_SEQ                      \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64) \
   OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)   \
   OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
 
@@ -30,7 +31,8 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
-#define UNPOOL_DATA_TYPE_CPU_SEQ UNPOOL_DATA_TYPE_SEQ
+#define UNPOOL_DATA_TYPE_CPU_SEQ \
+  UNPOOL_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float16, DataType::kFloat16)
 #define UNPOOL_DATA_TYPE_CUDA_SEQ \
   UNPOOL_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)
 

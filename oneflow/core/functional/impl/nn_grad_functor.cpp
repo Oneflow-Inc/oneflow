@@ -157,32 +157,41 @@ class MaxPoolNdGradFunctor {
   std::unordered_map<std::string, std::shared_ptr<OpExpr>> op_expr_map_;
 };
 
+template<int N>
 class MaxUnpoolNdGradFunctor {
  public:
   MaxUnpoolNdGradFunctor() {
-    for (int ndims = 1; ndims <= 3; ++ndims) {
-      const auto& op_type_name = GetOpTypeName(ndims);
-      op_expr_map_[op_type_name] = CHECK_JUST(
-          one::OpBuilder(op_type_name).Input("dy").Input("x").Input("indice").Output("dx").Build());
-    }
-  }
-  static std::string GetOpTypeName(const int32_t& ndims) {
-    return "max_unpool_" + std::to_string(ndims) + "d_grad";
+    if (N == 1) {
+      op_ = CHECK_JUST(one::OpBuilder("max_unpool_1d_grad")
+                           .Input("dy")
+                           .Input("x")
+                           .Input("indices")
+                           .Output("dx")
+                           .Build());
+    } else if (N == 2) {
+      op_ = CHECK_JUST(one::OpBuilder("max_unpool_2d_grad")
+                           .Input("dy")
+                           .Input("x")
+                           .Input("indices")
+                           .Output("dx")
+                           .Build());
+    } else if (N == 3) {
+      op_ = CHECK_JUST(one::OpBuilder("max_unpool_3d_grad")
+                           .Input("dy")
+                           .Input("x")
+                           .Input("indices")
+                           .Output("dx")
+                           .Build());
+    };
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& indice,
-                           const std::shared_ptr<one::Tensor>& dy, const int32_t& ndims) const {
-    const auto& op_type_name = GetOpTypeName(ndims);
-    const auto& it = op_expr_map_.find(op_type_name);
-    CHECK_OR_RETURN(it != op_expr_map_.end())
-        << Error::RuntimeError() << "Encounter unsupported op " << op_type_name
-        << " in MaxUnpoolNdGradFunctor.";
-    CHECK_NOTNULL_OR_RETURN(it->second);  // NOLINT(maybe-need-error-msg)
-    return OpInterpUtil::Dispatch<Tensor>(*it->second, {dy, x, indice});
+                           const std::shared_ptr<one::Tensor>& dy) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x, indice});
   }
 
  protected:
-  std::unordered_map<std::string, std::shared_ptr<OpExpr>> op_expr_map_;
+  std::shared_ptr<OpExpr> op_;
 };
 
 class AdaptiveMaxPoolNdGradFunctor {
@@ -1554,7 +1563,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AffineGridGradFunctor>("AffineGridGrad");
   m.add_functor<impl::GridSampleGradFunctor>("GridSampleGrad");
   m.add_functor<impl::MaxPoolNdGradFunctor>("MaxPoolNdGrad");
-  m.add_functor<impl::MaxUnpoolNdGradFunctor>("MaxUnpoolNdGrad");
+  m.add_functor<impl::MaxUnpoolNdGradFunctor<1>>("MaxUnpool1dGrad");
+  m.add_functor<impl::MaxUnpoolNdGradFunctor<2>>("MaxUnpool2dGrad");
+  m.add_functor<impl::MaxUnpoolNdGradFunctor<3>>("MaxUnpool3dGrad");
   m.add_functor<impl::AdaptiveMaxPoolNdGradFunctor>("AdaptiveMaxPoolNdGrad");
   m.add_functor<impl::PadGradFunctor>("PadGrad");
   m.add_functor<impl::AvgPoolNdGradFunctor>("AvgPoolNdGrad");

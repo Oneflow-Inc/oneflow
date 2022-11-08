@@ -38,15 +38,6 @@ TensorDescInferFn MaxUnpoolMakeForwardTensorDescInferFn(const int32_t dim) {
       output_shape = params_3d.GetYShape();
     }
 
-    CHECK_EQ_OR_RETURN(kernel_size.size(), dim);
-    for (int32_t pool_dim : kernel_size) { CHECK_GT_OR_RETURN(pool_dim, 0); }
-    CHECK_EQ_OR_RETURN(stride.size(), dim);
-    for (int32_t stride_dim : stride) { CHECK_GT_OR_RETURN(stride_dim, 0); }
-    for (int32_t i = 0; i < padding.size(); i++) {
-      CHECK_GE_OR_RETURN(kernel_size[i], 2 * padding[i])
-          << "pad should be smaller than half of kernel size";
-    }
-
     user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
     *y_desc = ctx->InputTensorDesc("x", 0);
     y_desc->set_shape(output_shape);
@@ -57,7 +48,7 @@ TensorDescInferFn MaxUnpoolMakeForwardTensorDescInferFn(const int32_t dim) {
 
 Maybe<void> MaxUnpoolForwardGetSbpFn(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  FOR_RANGE(int64_t, i, 0, std::min(2, (int)tensor.shape().NumAxes() - 2)) {
+  FOR_RANGE(int64_t, i, 0, std::min(2L, tensor.shape().NumAxes() - 2)) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("x", 0), i)
         .Split(user_op::OpArg("indices", 0), i)
@@ -69,7 +60,7 @@ Maybe<void> MaxUnpoolForwardGetSbpFn(user_op::SbpContext* ctx) {
 
 Maybe<void> MaxUnpoolBackwardGetSbpFn(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  FOR_RANGE(int64_t, i, 0, std::min(2, (int)tensor.shape().NumAxes())) {
+  FOR_RANGE(int64_t, i, 0, std::min(2L, tensor.shape().NumAxes())) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("x", 0), i)
         .Split(user_op::OpArg("indices", 0), i)

@@ -55,224 +55,137 @@ def _get_valid_output_size(
     return torch.Size(unpool_output_shape)
 
 
+def _test_module_unpoolnd(test_case, n):
+    device = random_device()
+    if n == 1:
+        _size_n_t = _size_1_t
+        MaxPoolNd = torch.nn.MaxPool1d
+        MaxUnpoolNd = torch.nn.MaxUnpool1d
+        x = random_tensor(ndim=3, dim2=random(20, 31), requires_grad=False).to(device)
+    elif n == 2:
+        _size_n_t = _size_2_t
+        MaxPoolNd = torch.nn.MaxPool2d
+        MaxUnpoolNd = torch.nn.MaxUnpool2d
+        x = random_tensor(
+            ndim=4, dim2=random(20, 31), dim3=random(20, 31), requires_grad=False
+        ).to(device)
+    elif n == 3:
+        _size_n_t = _size_3_t
+        MaxPoolNd = torch.nn.MaxPool3d
+        MaxUnpoolNd = torch.nn.MaxUnpool3d
+        x = random_tensor(
+            ndim=5,
+            dim2=random(20, 31),
+            dim3=random(20, 31),
+            dim4=random(20, 31),
+            requires_grad=False,
+        ).to(device)
+
+    kernel_size = random(4, 6).to(_size_n_t)
+    stride = random(1, 3).to(_size_n_t) | nothing()
+    padding = random(1, 3).to(_size_n_t) | nothing()
+    m = MaxPoolNd(
+        kernel_size=kernel_size, stride=stride, padding=padding, return_indices=True,
+    )
+    m.train(random())
+    m.to(device)
+    y = m(x)
+    pooling_results_dtype = random_util.choice(
+        [torch.int, torch.long, torch.float, torch.double]
+    )
+    indices_dtype = random_util.choice([torch.int, torch.long])
+    pooling_results = y[0].to(pooling_results_dtype)
+    indices = y[1].to(indices_dtype)
+    pooling_results.requires_grad_()
+    output_size = _get_valid_output_size(
+        x.shape, pooling_results.shape, kernel_size, stride, padding
+    )
+    unpool_module = MaxUnpoolNd(
+        kernel_size=kernel_size, stride=stride, padding=padding,
+    )
+    result = unpool_module(pooling_results, indices, output_size=output_size)
+    return result
+
+
+def _test_functional_unpoolnd(test_case, n):
+    device = random_device()
+
+    if n == 1:
+        _size_n_t = _size_1_t
+        MaxPoolNd = torch.nn.MaxPool1d
+        max_unpool_nd = torch.nn.functional.max_unpool1d
+        x = random_tensor(ndim=3, dim2=random(20, 31), requires_grad=False).to(device)
+    elif n == 2:
+        _size_n_t = _size_2_t
+        MaxPoolNd = torch.nn.MaxPool2d
+        max_unpool_nd = torch.nn.functional.max_unpool2d
+        x = random_tensor(
+            ndim=4, dim2=random(20, 31), dim3=random(20, 31), requires_grad=False
+        ).to(device)
+    elif n == 3:
+        _size_n_t = _size_3_t
+        MaxPoolNd = torch.nn.MaxPool3d
+        max_unpool_nd = torch.nn.functional.max_unpool3d
+        x = random_tensor(
+            ndim=5,
+            dim2=random(20, 31),
+            dim3=random(20, 31),
+            dim4=random(20, 31),
+            requires_grad=False,
+        ).to(device)
+
+    kernel_size = random(4, 6).to(_size_n_t)
+    stride = random(1, 3).to(_size_n_t) | nothing()
+    padding = random(1, 3).to(_size_n_t) | nothing()
+    m = MaxPoolNd(
+        kernel_size=kernel_size, stride=stride, padding=padding, return_indices=True,
+    )
+    m.train(random())
+    m.to(device)
+    y = m(x)
+    pooling_results_dtype = random_util.choice([torch.int, torch.float, torch.double])
+    indices_dtype = random_util.choice([torch.int, torch.long])
+    pooling_results = y[0].to(pooling_results_dtype)
+    indices = y[1].to(indices_dtype)
+    pooling_results.requires_grad_()
+    output_size = _get_valid_output_size(
+        x.shape, pooling_results.shape, kernel_size, stride, padding
+    )
+    return max_unpool_nd(
+        pooling_results,
+        indices,
+        kernel_size=kernel_size,
+        stride=stride,
+        padding=padding,
+        output_size=output_size,
+    )
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestMaxUnpooling(flow.unittest.TestCase):
     @autotest(n=3, check_graph=False)
     def test_max_unpool1d_with_random_data(test_case):
-        kernel_size = random(4, 6).to(_size_1_t)
-        stride = random(1, 3).to(_size_1_t) | nothing()
-        padding = random(1, 3).to(_size_1_t) | nothing()
-        m = torch.nn.MaxPool1d(
-            kernel_size=kernel_size,
-            stride=stride,
-            padding=padding,
-            return_indices=True,
-        )
-        m.train(random())
-        device = random_device()
-        m.to(device)
-        x = random_tensor(ndim=3, dim2=random(20, 31), requires_grad=False).to(device)
-        y = m(x)
-        pooling_results_dtype = random_util.choice(
-            [torch.int, torch.float, torch.double]
-        )
-        indices_dtype = random_util.choice([torch.int, torch.long])
-        pooling_results = y[0].to(pooling_results_dtype)
-        indices = y[1].to(indices_dtype)
-        pooling_results.requires_grad_()
-        output_size = _get_valid_output_size(
-            x.shape, pooling_results.shape, kernel_size, stride, padding
-        )
-        unpool_module = torch.nn.MaxUnpool1d(
-            kernel_size=kernel_size, stride=stride, padding=padding,
-        )
-        result = unpool_module(pooling_results, indices, output_size=output_size)
-        return result
+        return _test_module_unpoolnd(test_case, 1)
 
     @autotest(n=3, check_graph=False)
     def test_functional_max_unpool1d_with_random_data(test_case):
-        kernel_size = random(4, 6).to(_size_1_t)
-        stride = random(1, 3).to(_size_1_t) | nothing()
-        padding = random(1, 3).to(_size_1_t) | nothing()
-        m = torch.nn.MaxPool1d(
-            kernel_size=kernel_size,
-            stride=stride,
-            padding=padding,
-            return_indices=True,
-        )
-        m.train(random())
-        device = random_device()
-        m.to(device)
-        x = random_tensor(ndim=3, dim2=random(20, 31), requires_grad=False).to(device)
-        y = m(x)
-        pooling_results_dtype = random_util.choice(
-            [torch.int, torch.float, torch.double]
-        )
-        indices_dtype = random_util.choice([torch.int, torch.long])
-        pooling_results = y[0].to(pooling_results_dtype)
-        indices = y[1].to(indices_dtype)
-        pooling_results.requires_grad_()
-        output_size = _get_valid_output_size(
-            x.shape, pooling_results.shape, kernel_size, stride, padding
-        )
-        return torch.nn.functional.max_unpool1d(
-            pooling_results,
-            indices,
-            kernel_size=kernel_size,
-            stride=stride,
-            padding=padding,
-            output_size=output_size,
-        )
+        return _test_functional_unpoolnd(test_case, 1)
 
     @autotest(n=3, check_graph=False)
     def test_max_unpool2d_with_random_data(test_case):
-        kernel_size = random(4, 6).to(_size_2_t)
-        stride = random(1, 3).to(_size_2_t) | nothing()
-        padding = random(1, 3).to(_size_2_t) | nothing()
-        m = torch.nn.MaxPool2d(
-            kernel_size=kernel_size,
-            stride=stride,
-            padding=padding,
-            return_indices=True,
-        )
-        m.train(random())
-        device = random_device()
-        m.to(device)
-        x = random_tensor(
-            ndim=4, dim2=random(20, 31), dim3=random(20, 31), requires_grad=False
-        ).to(device)
-        y = m(x)
-        pooling_results_dtype = random_util.choice(
-            [torch.int, torch.float, torch.double]
-        )
-        indices_dtype = random_util.choice([torch.int, torch.long])
-        pooling_results = y[0].to(pooling_results_dtype)
-        indices = y[1].to(indices_dtype)
-        pooling_results.requires_grad_()
-        output_size = _get_valid_output_size(
-            x.shape, pooling_results.shape, kernel_size, stride, padding
-        )
-        unpool_module = torch.nn.MaxUnpool2d(
-            kernel_size=kernel_size, stride=stride, padding=padding,
-        )
-        result = unpool_module(pooling_results, indices, output_size)
-        return result
+        return _test_module_unpoolnd(test_case, 2)
 
     @autotest(n=3, check_graph=False)
     def test_functional_max_unpool2d_with_random_data(test_case):
-        kernel_size = random(4, 6).to(_size_2_t)
-        stride = random(1, 3).to(_size_2_t) | nothing()
-        padding = random(1, 3).to(_size_2_t) | nothing()
-        m = torch.nn.MaxPool2d(
-            kernel_size=kernel_size,
-            stride=stride,
-            padding=padding,
-            return_indices=True,
-        )
-        m.train(random())
-        device = random_device()
-        m.to(device)
-        x = random_tensor(
-            ndim=4, dim2=random(20, 31), dim3=random(20, 31), requires_grad=False
-        ).to(device)
-        y = m(x)
-        pooling_results_dtype = random_util.choice(
-            [torch.int, torch.float, torch.double]
-        )
-        indices_dtype = random_util.choice([torch.int, torch.long])
-        pooling_results = y[0].to(pooling_results_dtype)
-        indices = y[1].to(indices_dtype)
-        pooling_results.requires_grad_()
-        output_size = _get_valid_output_size(
-            x.shape, pooling_results.shape, kernel_size, stride, padding
-        )
-        return torch.nn.functional.max_unpool2d(
-            pooling_results,
-            indices,
-            kernel_size=kernel_size,
-            stride=stride,
-            padding=padding,
-            output_size=output_size,
-        )
+        return _test_functional_unpoolnd(test_case, 2)
 
     @autotest(n=3, check_graph=False)
     def test_max_unpool3d_with_random_data(test_case):
-        kernel_size = random(4, 6).to(_size_3_t)
-        stride = random(1, 3).to(_size_3_t) | nothing()
-        padding = random(1, 3).to(_size_3_t) | nothing()
-        m = torch.nn.MaxPool3d(
-            kernel_size=kernel_size,
-            stride=stride,
-            padding=padding,
-            return_indices=True,
-        )
-        m.train(random())
-        device = random_device()
-        m.to(device)
-        x = random_tensor(
-            ndim=5,
-            dim2=random(20, 31),
-            dim3=random(20, 31),
-            dim4=random(20, 31),
-            requires_grad=False,
-        ).to(device)
-        y = m(x)
-        pooling_results_dtype = random_util.choice(
-            [torch.int, torch.float, torch.double]
-        )
-        indices_dtype = random_util.choice([torch.int, torch.long])
-        pooling_results = y[0].to(pooling_results_dtype)
-        indices = y[1].to(indices_dtype)
-        pooling_results.requires_grad_()
-        output_size = _get_valid_output_size(
-            x.shape, pooling_results.shape, kernel_size, stride, padding
-        )
-        unpool_module = torch.nn.MaxUnpool3d(
-            kernel_size=kernel_size, stride=stride, padding=padding,
-        )
-        result = unpool_module(pooling_results, indices, output_size)
-        return result
+        return _test_module_unpoolnd(test_case, 3)
 
     @autotest(n=3, check_graph=False)
     def test_functional_max_unpool3d_with_random_data(test_case):
-        kernel_size = random(4, 6).to(_size_3_t)
-        stride = random(1, 3).to(_size_3_t) | nothing()
-        padding = random(1, 3).to(_size_3_t) | nothing()
-        m = torch.nn.MaxPool3d(
-            kernel_size=kernel_size,
-            stride=stride,
-            padding=padding,
-            return_indices=True,
-        )
-        m.train(random())
-        device = random_device()
-        m.to(device)
-        x = random_tensor(
-            ndim=5,
-            dim2=random(20, 31),
-            dim3=random(20, 31),
-            dim4=random(20, 31),
-            requires_grad=False,
-        ).to(device)
-        y = m(x)
-        pooling_results_dtype = random_util.choice(
-            [torch.int, torch.float, torch.double]
-        )
-        indices_dtype = random_util.choice([torch.int, torch.long])
-        pooling_results = y[0].to(pooling_results_dtype)
-        indices = y[1].to(indices_dtype)
-        pooling_results.requires_grad_()
-        output_size = _get_valid_output_size(
-            x.shape, pooling_results.shape, kernel_size, stride, padding
-        )
-        return torch.nn.functional.max_unpool3d(
-            pooling_results,
-            indices,
-            kernel_size=kernel_size,
-            stride=stride,
-            padding=padding,
-            output_size=output_size,
-        )
+        return _test_functional_unpoolnd(test_case, 3)
 
 
 if __name__ == "__main__":
