@@ -339,15 +339,18 @@ class ModuleBlock(Block):
         return self.to(BlockGraph)._belonged_graph._unique_identity_op_dict[key]
 
     def add_module(self, name: str, module: Optional[Module]) -> None:
-        self.__setattr__(
-            name,
-            get_block_cls(module)(
-                self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".",
+        if isinstance(module, Module):
+            self.__setattr__(
                 name,
-                module,
-                self.to(BlockGraph)._belonged_graph,
-            ),
-        )
+                get_block_cls(module)(
+                    self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".",
+                    name,
+                    module,
+                    self.to(BlockGraph)._belonged_graph,
+                ),
+            )
+        elif isinstance(module, Block):
+            self.__setattr__(name, module)
 
     def register_parameter(self, name: str, param: Optional[Parameter]) -> None:
         self.__setattr__(
@@ -727,12 +730,27 @@ class ModuleListBlock(get_list(ModuleBlock)):
         origin: ModuleList = None,
         belonged_graph: weakref.ProxyTypes = None,
     ):
-        super().__init__()
-        self.to(BlockGraph)._name_prefix = prefix
-        self.to(BlockGraph)._name = name
-        self.to(BlockGraph)._belonged_graph = belonged_graph
-        self._oneflow_internal_blockgraph__set_origin(origin)
-        # MoudleList is a container without forward() method,
+        if isinstance(prefix, str):
+            super().__init__()
+            self.to(BlockGraph)._name_prefix = prefix
+            self.to(BlockGraph)._name = name
+            self.to(BlockGraph)._belonged_graph = belonged_graph
+            self._oneflow_internal_blockgraph__set_origin(origin)
+            # MoudleList is a container without forward() method,
+        elif isinstance(prefix, list):
+            super().__init__(prefix)
+            if len(prefix) > 0:
+                first = prefix[0]
+                new_name = "_idx"
+                new_list = []
+                for item in prefix:
+                    new_name += "-" + item.to(BlockGraph).name
+                    new_list.append(item.to(Module))
+                new_module_list = ModuleList(new_list)
+                self.to(BlockGraph)._name_prefix = first.to(BlockGraph).name_prefix + first.to(BlockGraph).name
+                self.to(BlockGraph)._name = new_name
+                self.to(BlockGraph)._belonged_graph = first.to(BlockGraph)._belonged_graph
+                self._oneflow_internal_origin__ = new_module_list
 
 
 class ModuleDictBlock(get_dict(ModuleBlock)):

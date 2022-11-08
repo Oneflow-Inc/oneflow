@@ -20,6 +20,7 @@ import types
 import numpy as np
 
 import oneflow as flow
+import oneflow.nn as nn
 import oneflow.unittest
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.scope_util as scope_util
@@ -234,6 +235,35 @@ class TestGraphBlock(flow.unittest.TestCase):
 
         # print(module_list_g)
         test_case.assertTrue(np.array_equal(output_m.numpy(), output_g.numpy()))
+
+    def test_module_list_slice(test_case):
+        class ModuleListSlice(nn.Module):
+            def __init__(
+                self,
+            ):
+                super().__init__()
+                linear1 = nn.Linear(5, 5, bias=False)
+                linear2 = nn.Linear(5, 5, bias=False)
+                linear3 = nn.Linear(5, 5, bias=False)
+                self.modulelist = nn.ModuleList([linear1, linear2, linear3])
+        
+            def forward(self, x):
+                y = self.modulelist[0](flow.randn(5, 5))
+                test_case.assertEqual(len(self.modulelist[1:]), 2)
+                return y
+        
+        class GraphModuleListSlice(nn.Graph):
+            def __init__(self, m):
+                super().__init__()
+                self.m = m
+        
+            def build(self, x):
+                return self.m(x)
+        
+        m = ModuleListSlice()
+        eager_out = m(flow.randn(5, 5))
+        g = GraphModuleListSlice(m)
+        graph_out = g(flow.randn(5, 5))
 
     def test_block_with_dict_container(test_case):
         class SubModule0(flow.nn.Module):
