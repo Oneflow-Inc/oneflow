@@ -106,11 +106,11 @@ class BernoulliProbInplaceFunctor {
   }
 };
 
-class UniformFunctor {
+class InplaceUniformFunctor {
  public:
-  UniformFunctor() {
-    float_op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build());
-    int_op_ = CHECK_JUST(one::OpBuilder("uniform_int").Output("out").Build());
+  InplaceUniformFunctor() {
+    uniform_op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build());
+    uniform_int_op_ = CHECK_JUST(one::OpBuilder("uniform_int").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& from,
                            const Scalar& to) const {
@@ -121,9 +121,9 @@ class UniformFunctor {
     bool IsInteger = false;
 
     if (dtype->is_floating_point()) {
-      exec_op = float_op_;
+      exec_op = uniform_op_;
     } else if (dtype->is_integer()) {
-      exec_op = int_op_;
+      exec_op = uniform_int_op_;
       IsInteger = true;
     } else {
       OF_UNIMPLEMENTED() << "Only support floating and int dtype.";
@@ -188,8 +188,8 @@ class UniformFunctor {
   }
 
  private:
-  std::shared_ptr<OpExpr> float_op_;
-  std::shared_ptr<OpExpr> int_op_;
+  std::shared_ptr<OpExpr> uniform_op_;
+  std::shared_ptr<OpExpr> uniform_int_op_;
 };
 
 class RandFunctor {
@@ -873,7 +873,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<GlobalRandIntLikeFunctor, GlobalRandIntLike2Functor>("GlobalRandIntLike");
   m.add_functor<ExponentialFunctor>("Exponential");
   m.add_functor<MultinomialFunctor>("Multinomial");
-  m.add_functor<UniformFunctor>("InplaceUniform");
+  m.add_functor<InplaceUniformFunctor>("InplaceUniform");
 };
 
 }  // namespace functional

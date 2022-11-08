@@ -127,22 +127,33 @@ check_func_list = [
     {
         "func": flow.nn.init.kaiming_uniform_,
         "params": {"mode": "fan_in"},
-        "checker": DataChecker(mean=0.0, std=0.0883883476),
+        "checker": DataChecker(
+            min=-0.15309310892394865, max=15309310892394865, mean=0.0, std=0.0883883476
+        ),
     },
     {
         "func": flow.nn.init.kaiming_uniform_,
         "params": {"mode": "fan_out"},
-        "checker": DataChecker(mean=0.0, std=0.0883883476),
+        "checker": DataChecker(
+            min=-0.15309310892394865, max=15309310892394865, mean=0.0, std=0.0883883476
+        ),
     },
     {
         "func": flow.nn.init.kaiming_uniform_,
         "params": {"mode": "fan_in", "a": 2.0, "nonlinearity": "leaky_relu"},
-        "checker": DataChecker(mean=0.0, std=0.0395284708),
+        "checker": DataChecker(
+            min=-0.06846531968814576,
+            max=0.06846531968814576,
+            mean=0.0,
+            std=0.0395284708,
+        ),
     },
     {
         "func": flow.nn.init.kaiming_uniform_,
         "params": {"mode": "fan_in", "a": 2.0, "nonlinearity": "linear"},
-        "checker": DataChecker(mean=0.0, std=0.0625),
+        "checker": DataChecker(
+            min=-0.10825317547305482, max=0.10825317547305482, mean=0.0, std=0.0625
+        ),
     },
     # TODO: test more initializer
 ]

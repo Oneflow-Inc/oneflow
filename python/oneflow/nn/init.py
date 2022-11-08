@@ -73,13 +73,7 @@ def uniform_(tensor, a=0.0, b=1.0):
         >>> w = flow.empty(3, 5)
         >>> nn.init.uniform_(w)
     """
-    assert a <= b
-    if isinstance(a, Tensor):
-        assert a.ndim == 0 and a.nelement() == 1, "a must be a number or scalar tensor!"
-        a = a.numpy().item()
-    if isinstance(b, Tensor):
-        assert b.ndim == 0 and b.nelement() == 1, "b must be a number or scalar tensor!"
-        b = b.numpy().item()
+    assert a <= b, "b must be greater than or equal to a!"
     return flow._C.uniform_(tensor, a, b)
 
 
