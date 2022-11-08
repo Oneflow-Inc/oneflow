@@ -28,6 +28,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+import math
 
 import oneflow as flow
 from oneflow.test_utils.test_util import GenArgList
@@ -35,46 +36,69 @@ from oneflow.test_utils.test_util import GenArgList
 from oneflow.test_utils.automated_test_util import *
 
 
+def getRandBoolvalue():
+    value = np.random.randint(0, 2)
+    if value == 1:
+        return True
+    else:
+        return False
+
+def getRandFFtvalue():
+    pow=np.random.randint(2,10)
+    result=1
+    for i in range(pow):
+        result=result*2
+    return result
+
 class TestStft(flow.unittest.TestCase):
     @autotest(
-        check_graph=False, check_grad_use_random_data=False, auto_backward=False,
+        n=20,
+        check_graph=False,
+        check_grad_use_random_data=False,
+        auto_backward=False,
     )
     def test_stft_with_1D_random_data(test_case):
         device = random_device()
-        rand_size = np.random.randint(10, 100000)
-        rand_fft = 2 * np.random.randint(4, rand_size / 2)
+        rand_fft =getRandFFtvalue()
+        rand_size = np.random.randint(rand_fft, 100000)
         input_dims = [rand_size]
         win_dims = [rand_fft]
         x = random_tensor(1, *input_dims).to(device)
         win = random_tensor(1, *win_dims).to(device)
+        onesided_value = getRandBoolvalue()
+        center_value = getRandBoolvalue()
+        normalized_value = getRandBoolvalue()
         y = torch.stft(
             x,
             n_fft=rand_fft,
             window=win,
             return_complex=False,
-            onesided=False,
-            center=True,
-            normalized=True,
+            onesided=onesided_value,  # onesided_value,
+            center=center_value,  # center_value,
+            normalized=normalized_value,  # normalized_value,
         )
         return y
 
     def test_stft_with_2D_random_data(test_case):
         device = random_device()
-        row_rand_size = np.random.randint(10, 500)
-        col_rand_size = np.random.randint(10, 2000)
-        rand_fft = 2 * np.random.randint(5, col_rand_size / 2)
+        row_rand_size = np.random.randint(1, 50)
+        rand_fft =getRandFFtvalue()
+        col_rand_size = np.random.randint(rand_fft, 30000)
         input_dims = [row_rand_size, col_rand_size]
         win_dims = [rand_fft]
         x = random_tensor(2, *input_dims).to(device)
         win = random_tensor(1, *win_dims).to(device)
+        onesided_value = getRandBoolvalue()
+        center_value = getRandBoolvalue()
+        normalized_value = getRandBoolvalue()
         y = torch.stft(
             x,
             n_fft=rand_fft,
             window=win,
             return_complex=False,
-            onesided=False,
-            center=True,
-            normalized=True,
+            onesided=onesided_value,
+            center=center_value,
+            normalized=normalized_value,
         )
         return y
 
