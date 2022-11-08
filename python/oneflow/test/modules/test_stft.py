@@ -43,23 +43,22 @@ def getRandBoolvalue():
     else:
         return False
 
+
 def getRandFFtvalue():
-    pow=np.random.randint(2,10)
-    result=1
+    pow = np.random.randint(2, 10)
+    result = 1
     for i in range(pow):
-        result=result*2
+        result = result * 2
     return result
+
 
 class TestStft(flow.unittest.TestCase):
     @autotest(
-        n=20,
-        check_graph=False,
-        check_grad_use_random_data=False,
-        auto_backward=False,
+        n=20, check_graph=False, check_grad_use_random_data=False, auto_backward=False,
     )
     def test_stft_with_1D_random_data(test_case):
         device = random_device()
-        rand_fft =getRandFFtvalue()
+        rand_fft = getRandFFtvalue()
         rand_size = np.random.randint(rand_fft, 100000)
         input_dims = [rand_size]
         win_dims = [rand_fft]
@@ -82,7 +81,7 @@ class TestStft(flow.unittest.TestCase):
     def test_stft_with_2D_random_data(test_case):
         device = random_device()
         row_rand_size = np.random.randint(1, 50)
-        rand_fft =getRandFFtvalue()
+        rand_fft = getRandFFtvalue()
         col_rand_size = np.random.randint(rand_fft, 30000)
         input_dims = [row_rand_size, col_rand_size]
         win_dims = [rand_fft]
