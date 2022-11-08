@@ -95,6 +95,7 @@ def ones_initializer(
     """
     return constant_initializer(1.0, dtype)
 
+
 def random_normal_initializer(
     mean: float = 0.0, stddev: float = 1.0,
 ) -> initializer_conf_util.InitializerConf:
@@ -113,6 +114,7 @@ def random_normal_initializer(
     setattr(initializer.random_normal_conf, "mean", float(mean))
     setattr(initializer.random_normal_conf, "std", float(stddev))
     return initializer
+
 
 @register_initializer("constant_conf")
 @register_initializer("constant_int_conf")

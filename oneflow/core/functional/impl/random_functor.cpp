@@ -112,16 +112,19 @@ class UniformFunctor {
     float_op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build());
     int_op_ = CHECK_JUST(one::OpBuilder("uniform_int").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double from,
-                           const double to) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& from,
+                           const Scalar& to) const {
     JUST(CheckInplaceValid(x));
     const Shape& shape = *(x->shape());
     std::shared_ptr<OpExpr> exec_op;
     const auto& dtype = x->dtype();
+    bool IsInteger = false;
+
     if (dtype->is_floating_point()) {
       exec_op = float_op_;
     } else if (dtype->is_integer()) {
       exec_op = int_op_;
+      IsInteger = true;
     } else {
       OF_UNIMPLEMENTED() << "Only support floating and int dtype.";
     }
@@ -139,8 +142,13 @@ class UniformFunctor {
       uint64_t init_seed = JUST(gen->Get<CPUGeneratorImpl>(0))->engine()();
       if (LazyMode::is_enabled())  // lazy
       {
-        attrs.SetAllAttrs(from, to, shape, dtype_val, static_cast<int64_t>(init_seed),
-                          *JUST(GetNdSbpStrList(nb_sbp)));
+        if (IsInteger) {
+          attrs.SetAllAttrs(from.Value<int64_t>(), to.Value<int64_t>(), shape, dtype_val,
+                            static_cast<int64_t>(init_seed), *JUST(GetNdSbpStrList(nb_sbp)));
+        } else {
+          attrs.SetAllAttrs(from.Value<double>(), to.Value<double>(), shape, dtype_val,
+                            static_cast<int64_t>(init_seed), *JUST(GetNdSbpStrList(nb_sbp)));
+        }
       } else  // eager
       {
         uint64_t rank_seed = 0;
@@ -149,8 +157,13 @@ class UniformFunctor {
           rank_seed =
               JUST(GetRandomSeedForRank(*placement, *nb_sbp, init_seed, GlobalProcessCtx::Rank()));
         }
-        attrs.SetAllAttrs(from, to, shape, dtype_val, static_cast<int64_t>(rank_seed), NullOpt);
-
+        if (IsInteger) {
+          attrs.SetAllAttrs(from.Value<int64_t>(), to.Value<int64_t>(), shape, dtype_val,
+                            static_cast<int64_t>(rank_seed), NullOpt);
+        } else {
+          attrs.SetAllAttrs(from.Value<double>(), to.Value<double>(), shape, dtype_val,
+                            static_cast<int64_t>(rank_seed), NullOpt);
+        }
         gen = JUST(MakeGenerator(placement->device_type()));
         gen->set_current_seed(rank_seed);
       }
@@ -159,8 +172,13 @@ class UniformFunctor {
       ctx.device = JUST(x->device());
       JUST(OpInterpUtil::Dispatch(*exec_op, {}, outputs.get(), ctx));
     } else {  // local
-      attrs.SetAllAttrs(from, to, shape, dtype_val, static_cast<int64_t>(gen->current_seed()),
-                        NullOpt);
+      if (IsInteger) {
+        attrs.SetAllAttrs(from.Value<int64_t>(), to.Value<int64_t>(), shape, dtype_val,
+                          static_cast<int64_t>(gen->current_seed()), NullOpt);
+      } else {
+        attrs.SetAllAttrs(from.Value<double>(), to.Value<double>(), shape, dtype_val,
+                          static_cast<int64_t>(gen->current_seed()), NullOpt);
+      }
       const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
       OpExprInterpContext ctx(attrs, distribution_state);
       ctx.device = JUST(x->device());

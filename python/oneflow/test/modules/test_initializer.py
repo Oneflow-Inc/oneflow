@@ -113,13 +113,15 @@ check_func_list = [
     {
         "func": flow.nn.init.uniform_,
         "params": {"a": 0.0, "b": 1.0},
-        "checker": DataChecker(min=0.0, max=1.0, mean=0.5, std=0.28849875926971436)
+        "checker": DataChecker(min=0.0, max=1.0, mean=0.5, std=0.28849875926971436),
     },
     # oneflow.nn.init.xavier_uniform_
     {
         "func": flow.nn.init.xavier_uniform_,
         "params": {"gain": 1.0},
-        "checker": DataChecker(min=-0.10825317547305482,max=0.10825317547305482, mean=0.0, std=0.0625)
+        "checker": DataChecker(
+            min=-0.10825317547305482, max=0.10825317547305482, mean=0.0, std=0.0625
+        ),
     },
     # oneflow.nn.init.kaiming_uniform_
     {
