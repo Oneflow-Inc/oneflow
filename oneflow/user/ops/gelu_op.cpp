@@ -137,9 +137,11 @@ Maybe<void> GetGeluGradSbp(user_op::SbpContext* ctx) {
   ctx->SetOutputShape("out", 0, in_shape);
   return Maybe<void>::Ok();
 }
+
 /*static*/ Maybe<void> FusedFastGeluMulOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
+
 /*static*/ Maybe<void> FusedFastGeluMulOp::InferDataType(user_op::InferContext* ctx) {
   const DataType in_dtype = ctx->InputDType("in", 0);
   const DataType m_dtype = ctx->InputDType("multiplier", 0);
@@ -149,6 +151,7 @@ Maybe<void> GetGeluGradSbp(user_op::SbpContext* ctx) {
   ctx->SetOutputDType("out", 0, in_dtype);
   return Maybe<void>::Ok();
 }
+
 /*static*/ Maybe<void> FusedFastGeluMulOp::GetSbp(user_op::SbpContext* ctx) {
   return GetGeluSbp(ctx);
 }
