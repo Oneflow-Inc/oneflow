@@ -435,7 +435,6 @@ IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value)
       operands.push_back(pad_op.x());
       operands.push_back(conv_op.weight());
       if (conv_op.bias()) operands.push_back(conv_op.bias());
-      if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
       llvm::SmallVector<int32_t> padding_before_array;
       if (conv_op.data_formatAttr().getValue().str() == "channels_first") {
         for (auto val : pad_op.padding_before().getValue().take_back(2)) {
@@ -551,7 +550,6 @@ NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name)
         emitError(conv_op.getLoc())
             << "Fusing conv2d and batch_norm only supports conv2d without bias now.";
       }
-      if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
 
       auto new_conv_op = rewriter.create<oneflow::Conv2DOp>(
           conv_op->getLoc(), conv_op->getResultTypes(), operands, attributes);

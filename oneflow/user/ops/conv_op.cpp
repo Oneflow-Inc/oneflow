@@ -87,7 +87,6 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
 }
 
 Maybe<void> GetSbpSignatures4Conv(user_op::SbpContext* ctx) {
-  // TODO(niuchong) : handle bias_multiplier
   bool has_bias = false;
   for (const auto& pair : ctx->inputs()) {
     if (pair.first == "bias") {

@@ -139,7 +139,6 @@ class OneFlow_ConvolutionBaseOp<string mnemonic, list<Trait> traits = []> :
       OneFlow_Tensor:$in,
       OneFlow_Tensor:$weight,
       Optional<OneFlow_Tensor>:$bias,
-      Optional<OneFlow_Tensor>:$bias_multiplier,
       Optional<OneFlow_Tensor>:$_add_to_output
     );
     let output = (outs OneFlow_Tensor:$out);

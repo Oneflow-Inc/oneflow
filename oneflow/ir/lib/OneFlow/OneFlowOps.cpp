@@ -457,7 +457,6 @@ llvm::SmallVector<Value, 4> Conv2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> val
   operands.push_back(value[0]);
   operands.push_back(value[1]);
   if (conv_op.bias()) operands.push_back(conv_op.bias());
-  if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
   if (this->_add_to_output()) { operands.push_back(value[2]); }
   NamedAttrList attributes = conv_op->getAttrs();
   attributes.set(conv_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
