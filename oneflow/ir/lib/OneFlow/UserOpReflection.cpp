@@ -16,6 +16,7 @@ limitations under the License.
 // this file should contains functions to get operands and results with user op name and index
 
 #include "OneFlow/UserOpReflection.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
 
@@ -126,27 +127,38 @@ LogicalResult GetUserOpFilteredSegmentKeyAndSizes(UserOp op, std::vector<std::st
   return success();
 }
 
-Sources GetOpSourcesByName(Operation* op, const std::string& key) {
+Source GetOpSourceByName(Operation* op, const std::string& to_find) {
   if (auto user_op = dyn_cast<UserOpCompatible>(op)) {
-    auto found = [&](std::vector<std::string> keys) {
-      return std::find(keys.begin(), keys.end(), key) != keys.end();
+    auto found = [&](std::vector<std::string> keys, bool is_res = false) -> int {
+      auto res = -1;
+      auto offset = 0;
+      for (const auto& key : llvm::enumerate(keys)) {
+        if (key.value() == to_find) { return offset; }
+        offset += is_res ? user_op.getODSResultIndexAndLength(key.index()).second
+                         : user_op.getODSOperandIndexAndLength(key.index()).second;
+      }
+      return res;
     };
 
-    if (found(*user_op.inputKeys())) { return INPUT; }
-    if (found(*user_op.outputKeys())) { return OUTPUT; }
+    if (auto res = found(*user_op.inputKeys()); res != -1) { return {Source::INPUT, res}; }
+    if (auto res = found(*user_op.outputKeys(), true); res != -1) { return {Source::OUTPUT, res}; }
 
     if (auto alternative_name = dyn_cast<HasAlternativeOpTypeName>(op)) {
-      if (found(*alternative_name.inputKeys())) { return INPUT; }
-      if (found(*alternative_name.outputKeys())) { return OUTPUT; }
+      if (auto res = found(*alternative_name.inputKeys()); res != -1) {
+        return {Source::INPUT, res};
+      }
+      if (auto res = found(*alternative_name.outputKeys(), true); res != -1) {
+        return {Source::OUTPUT, res};
+      }
     }
 
-    if (key == "tmp_buffer") { return BUFFER; }
-    op->emitError(key + " not found in this op");
-    return INVALID;
+    if (to_find == "tmp_buffer") { return {Source::BUFFER, 0}; }
+    op->emitError(to_find + " not found in this op");
+    return {Source::INVALID, -1};
   } else {
     op->dump();
     op->emitError("Not support op which is not user  op");
-    return Sources::INVALID;
+    return {Source::INVALID, -1};
   }
 }
 

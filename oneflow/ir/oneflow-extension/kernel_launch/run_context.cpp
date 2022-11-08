@@ -37,9 +37,12 @@ const user_op::TensorDesc* RunContext::TensorDesc4ArgNameAndIndex(const std::str
 user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) {
   auto op = reg_ctx_->GetOp();
   using namespace mlir::oneflow::user_op;
-  auto source = GetOpSourcesByName(op, arg_name);
-  if (source == Sources::OUTPUT) {
-    mlir::Value val = op->getResult(index);
+  auto source = GetOpSourceByName(op, arg_name);
+  op->dump();
+  LOG(ERROR) << arg_name << ":" << index << " type: " << source.type
+             << " offset: " << source.offset;
+  if (source.type == Source::OUTPUT) {
+    mlir::Value val = op->getResult(index + source.offset);
     for (auto use : val.getUsers()) {
       if (llvm::isa<mlir::okl::GetTensorAsRetOp>(use)) {
         auto index = use->getAttr("index").cast<mlir::IntegerAttr>().getInt();
@@ -47,8 +50,8 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
       }
     }
     op->emitError("Failed to find " + std::to_string(index) + "in outputs");
-  } else if (source == Sources::INPUT) {
-    mlir::Value val = op->getOperand(index);
+  } else if (source.type == Source::INPUT) {
+    mlir::Value val = op->getOperand(index + source.offset);
     auto define_op = val.getDefiningOp();
     return llvm::TypeSwitch<::mlir::Operation*, user_op::Tensor*>(define_op)
         .Case([&](mlir::okl::GetTensorFromArgOp elem) {
@@ -63,7 +66,7 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
           LOG(FATAL) << "Signature: " << arg_name << " Not supported";
           return nullptr;
         });
-  } else if (source == Sources::BUFFER) {
+  } else if (source.type == Source::BUFFER) {
     TODO() << "buffer to do";
   }
   exit(1);
