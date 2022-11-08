@@ -14,7 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <algorithm>
+#include <string>
+#include "OneFlow/UserOpReflection.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Casting.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RunContext.h"
@@ -33,28 +36,37 @@ const user_op::TensorDesc* RunContext::TensorDesc4ArgNameAndIndex(const std::str
 
 user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) {
   auto op = reg_ctx_->GetOp();
-  mlir::Value val = op->getResult(index);
-  for (auto use : val.getUsers()) {
-    if (llvm::isa<mlir::okl::GetTensorAsRetOp>(use)) {
-      auto index = use->getAttr("index").cast<mlir::IntegerAttr>().getInt();
-      return comp_ctx_->Tensor4ArgNameAndIndex("out", index);
-    }
-  }
-  val = op->getOperand(index);
-  auto define_op = val.getDefiningOp();
-  return llvm::TypeSwitch<::mlir::Operation*, user_op::Tensor*>(define_op)
-      .Case([&](mlir::okl::GetTensorFromArgOp elem) {
-        auto index = elem.index();
-        return comp_ctx_->Tensor4ArgNameAndIndex("in", index);
-      })
-      .Case([&](mlir::okl::GetTensorFromRetOp elem) {
-        auto index = elem.index();
+  using namespace mlir::oneflow::user_op;
+  auto source = GetOpSourcesByName(op, arg_name);
+  if (source == Sources::OUTPUT) {
+    mlir::Value val = op->getResult(index);
+    for (auto use : val.getUsers()) {
+      if (llvm::isa<mlir::okl::GetTensorAsRetOp>(use)) {
+        auto index = use->getAttr("index").cast<mlir::IntegerAttr>().getInt();
         return comp_ctx_->Tensor4ArgNameAndIndex("out", index);
-      })
-      .Default([&](::mlir::Operation* op) {
-        LOG(FATAL) << "Signature: " << arg_name << " Not supported";
-        return nullptr;
-      });
+      }
+    }
+    op->emitError("Failed to find " + std::to_string(index) + "in outputs");
+  } else if (source == Sources::INPUT) {
+    mlir::Value val = op->getOperand(index);
+    auto define_op = val.getDefiningOp();
+    return llvm::TypeSwitch<::mlir::Operation*, user_op::Tensor*>(define_op)
+        .Case([&](mlir::okl::GetTensorFromArgOp elem) {
+          auto index = elem.index();
+          return comp_ctx_->Tensor4ArgNameAndIndex("in", index);
+        })
+        .Case([&](mlir::okl::GetTensorFromRetOp elem) {
+          auto index = elem.index();
+          return comp_ctx_->Tensor4ArgNameAndIndex("out", index);
+        })
+        .Default([&](::mlir::Operation* op) {
+          LOG(FATAL) << "Signature: " << arg_name << " Not supported";
+          return nullptr;
+        });
+  } else if (source == Sources::BUFFER) {
+    TODO() << "buffer to do";
+  }
+  exit(1);
 }
 
 ep::Stream* RunContext::stream() { return comp_ctx_->stream(); }

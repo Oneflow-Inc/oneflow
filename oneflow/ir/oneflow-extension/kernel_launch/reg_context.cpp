@@ -54,10 +54,6 @@ RegContext::RegContext(mlir::Operation* op) : op_(op), conf_wrapper_(GetConfWrap
           mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType()));
       // TODO: set stride
       // TODO: set is_dynamic
-      operand.dump();
-      rankedTensorType.getElementType().dump();
-      LOG(ERROR) << mlir::oneflow::support::GetDataTypeFromMLIRType(
-          rankedTensorType.getElementType());
     } else {
       LOG(FATAL) << "Unranked tensor type not supported";
     }

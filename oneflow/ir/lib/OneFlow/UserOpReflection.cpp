@@ -126,6 +126,30 @@ LogicalResult GetUserOpFilteredSegmentKeyAndSizes(UserOp op, std::vector<std::st
   return success();
 }
 
+Sources GetOpSourcesByName(Operation* op, const std::string& key) {
+  if (auto user_op = dyn_cast<UserOpCompatible>(op)) {
+    auto found = [&](std::vector<std::string> keys) {
+      return std::find(keys.begin(), keys.end(), key) != keys.end();
+    };
+
+    if (found(*user_op.inputKeys())) { return INPUT; }
+    if (found(*user_op.outputKeys())) { return OUTPUT; }
+
+    if (auto alternative_name = dyn_cast<HasAlternativeOpTypeName>(op)) {
+      if (found(*alternative_name.inputKeys())) { return INPUT; }
+      if (found(*alternative_name.outputKeys())) { return OUTPUT; }
+    }
+
+    if (key == "tmp_buffer") { return BUFFER; }
+    op->emitError(key + " not found in this op");
+    return INVALID;
+  } else {
+    op->dump();
+    op->emitError("Not support op which is not user  op");
+    return Sources::INVALID;
+  }
+}
+
 template<template<typename T> class Trait>
 LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::string>& keys,
                                             std::vector<int32_t>& sizes) {

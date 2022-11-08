@@ -92,10 +92,6 @@ Maybe<void> SetTensorDataType(user_op::InferContext* ctx) {
       ctx->SetDtype4ArgNameAndIndex(
           "out", res_i,
           mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType()));
-      rankedTensorType.getElementType().dump();
-      LOG(ERROR) << "out" << res_i << ": "
-                 << mlir::oneflow::support::GetDataTypeFromMLIRType(
-                        rankedTensorType.getElementType());
       res_i += 1;
     } else {
       std::string res_type_str = "";
