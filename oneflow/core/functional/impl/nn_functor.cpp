@@ -66,6 +66,8 @@ class ConvBaseFunctor {
  public:
   explicit ConvBaseFunctor(const int& num_spatial_dims) : num_spatial_dims_(num_spatial_dims) {
     bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
+    enable_fused_conv_bias_ =
+        ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDNN_FUSED_CONV_BIAS", false);
   }
   virtual ~ConvBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -90,7 +92,7 @@ class ConvBaseFunctor {
                                        "dilation_rate", "groups", "data_format");
     conv_attrs.SetAllAttrs(static_cast<int32_t>(weight->shape()->At(0)), kernel_size_vec, padding,
                            stride, dilation, groups, channel_pos);
-    if (bias && ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDNN_FUSED_CONV_BIAS", false)) {
+    if (bias && enable_fused_conv_bias_) {
       return OpInterpUtil::Dispatch<Tensor>(*conv_bias_op_, {x, weight, JUST(bias)}, conv_attrs);
     }
     const std::shared_ptr<one::Tensor>& conv_out =
@@ -107,6 +109,7 @@ class ConvBaseFunctor {
   std::shared_ptr<OpExpr> bias_op_;
   std::shared_ptr<OpExpr> conv_bias_op_;
   int32_t num_spatial_dims_;
+  bool enable_fused_conv_bias_;
 };
 
 class Conv1dFunctor : public ConvBaseFunctor {
