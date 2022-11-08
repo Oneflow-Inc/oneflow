@@ -38,7 +38,6 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
   auto op = reg_ctx_->GetOp();
   using namespace mlir::oneflow::user_op;
   auto source = GetOpSourceByName(op, arg_name);
-  op->dump();
   // LOG(ERROR) << arg_name << ":" << index << " type: " << source.type
   //            << " offset: " << source.offset;
   if (source.type == Source::OUTPUT) {
