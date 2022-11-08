@@ -92,7 +92,7 @@ class TopoStruct {
 // static std::vector<int64_t> decide_parameters({ParseIntegerFromEnv("Parameter0", 3),
 //                                                ParseIntegerFromEnv("Parameter1", 0),
 //                                                ParseIntegerFromEnv("Parameter2", 3)});
-// The best parameter set for saving time is {6, 4}
+// The best parameter set for saving time is {7, 5}
 // The best parameter set for saving memory is {3, 0}
 static std::vector<int64_t> decide_parameters;
 
