@@ -119,8 +119,7 @@ class TestBroadcastOpsOther(flow.unittest.TestCase):
     def test_broadcast_shapes(test_case):
         shapes = (2,), (3, 1), (1, 1, 1)
         test_case.assertTrue(
-            flow.broadcast_shapes(*shapes),
-            ori_torch.broadcast_shapes(*shapes),
+            flow.broadcast_shapes(*shapes), ori_torch.broadcast_shapes(*shapes),
         )
 
     @autotest(n=3)
