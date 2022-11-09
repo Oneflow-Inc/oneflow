@@ -21,7 +21,11 @@ namespace oneflow {
 namespace vm {
 
 SyncAccessInstructionPolicy::SyncAccessInstructionPolicy()
-    : host_mem_case_(memory::MakeHostMemCase()) {
+    : host_mem_case_(memory::MakeHostMemCase()),
+      btb_(),
+      mem_ptr_(nullptr),
+      bytes_(0),
+      eager_blob_object_(nullptr) {
   ResetBase(nullptr, 0, nullptr);
 }
 
