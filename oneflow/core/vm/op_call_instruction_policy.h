@@ -36,9 +36,6 @@ namespace vm {
 
 class OpCallInstructionPolicy final : public InstructionPolicy {
  public:
-  OpCallInstructionPolicy(const OpCallInstructionPolicy&) = delete;
-  OpCallInstructionPolicy(OpCallInstructionPolicy&&) = delete;
-
   ~OpCallInstructionPolicy() override = default;
 
   template<typename... Args>
@@ -104,7 +101,6 @@ class OpCallInstructionPolicy final : public InstructionPolicy {
   void InitStreamSequentialDependence();
   Maybe<void> Prepare(Instruction* instruction) override;
   void Compute(Instruction* instruction) override;
-  Maybe<void> MaybeCompute(vm::Instruction* instruction) const;
 
   Stream* vm_stream_;
   eager::CallContext call_ctx_;
