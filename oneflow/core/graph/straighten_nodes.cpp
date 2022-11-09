@@ -387,7 +387,7 @@ void FindTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
 
 void UpdateSat(const HashMap<TaskNode*, TopoStruct>& task_node2topo_struct) {
   // sat = GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph();
-  sat = StraightenAlgorithmTag(ParseIntegerFromEnv("SAT", 3));
+  sat = StraightenAlgorithmTag(ParseIntegerFromEnv("SAT", 4));
   if (sat == StraightenAlgorithmTag::kOverlap4CpuGpu) {
     // If not cpu nodes, then the overlap strategy between cpu and gpu might consume large memory
     bool exist_cpu_nodes = false;
