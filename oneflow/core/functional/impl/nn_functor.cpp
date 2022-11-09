@@ -3066,6 +3066,33 @@ class FusedBiasAddDropoutFunctor {
   std::shared_ptr<OpExpr> fused_bias_add_mask_scale_op_;
 };
 
+class FusedGluFunctor {
+ public:
+  FusedGluFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_glu")
+                         .Input("x")
+                         .Input("w_t")
+                         .Input("b")
+                         .Input("v_t")
+                         .Input("c")
+                         .Output("y")
+                         .Output("matmul_wx")
+                         .Output("matmul_vx")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& w_t,
+                           const std::shared_ptr<one::Tensor>& b,
+                           const std::shared_ptr<one::Tensor>& v_t,
+                           const std::shared_ptr<one::Tensor>& c) const {
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, w_t, b, v_t, c});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class FusedGegluFunctor {
  public:
   FusedGegluFunctor() {

@@ -9186,6 +9186,31 @@ def OneFlow_FusedGegluOp : OneFlow_BaseOp<"fused_geglu", [NoSideEffect, DeclareO
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_FusedGluOp : OneFlow_BaseOp<"fused_glu", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$w_t,
+    OneFlow_Tensor:$b,
+    Optional<OneFlow_Tensor>:$v_t,
+    Optional<OneFlow_Tensor>:$c
+  );
+  let attrs = (ins
+    DefaultValuedAttr<StrAttr, "\"none\"">:$activation
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
+  let output = (outs
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$matmul_wx,
+    Optional<OneFlow_Tensor>:$matmul_vx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_FastGeluOp : OneFlow_BaseOp<"fast_gelu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in

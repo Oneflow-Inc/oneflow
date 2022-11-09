@@ -35,7 +35,7 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(bias_shape.NumAxes(), 1);
 
   // check input shape
-  size_t num_axes = input_shape.shape().NumAxes();
+  size_t num_axes = input_shape.NumAxes();
   CHECK_EQ_OR_RETURN(weight_t_shape.At(1), input_shape.At(num_axes-2))
       << "get " << weight_t_shape.At(1) << " and " << input_shape.At(num_axes-2);
   CHECK_EQ_OR_RETURN(bias_shape.At(0), weight_t_shape.At(0))

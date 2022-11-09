@@ -49,6 +49,7 @@ __device__ nv_bfloat16 Gelu(nv_bfloat16 x) {
   return static_cast<nv_bfloat16>(Gelu<float>(static_cast<float>(x)));
 }
 
+// 支持区分的 WV 
 template<typename T>
 __global__ void FusedGegluForwardGpu(const int elem_cnt_out, const int m, const int n, const int k, 
                                      const T* matmul, const T* b, T* y) {
@@ -110,16 +111,17 @@ class GpuFusedGegluKernel final : public user_op::OpKernel {
     CHECK_EQ(matmul_out->data_type(), data_type);
 
     // check axes
-    CHECK_EQ(in->shape_view().NumAxes(), out->shape_view().NumAxes());
-    CHECK_EQ(in->shape_view().NumAxes(), matmul_out->shape_view().NumAxes());
+    const int64_t in_num_axes = in->shape_view().NumAxes();
+    CHECK_GE(in_num_axes, 2);
+    CHECK_EQ(out->shape_view().NumAxes(), in_num_axes);
+    CHECK_EQ(matmul_out->shape_view().NumAxes(), in_num_axes);
     CHECK_EQ(w->shape_view().NumAxes(), 2);
     CHECK_EQ(b->shape_view().NumAxes(), 1);
 
     // infer m, n, k
-    const int64_t num_axes = in->shape_view().NumAxes();
-    const int64_t m = in->shape_view().At(num_axes-2);
-    const int64_t n = out->shape_view().At(num_axes-1);
-    const int64_t k = in->shape_view().At(num_axes-1);
+    const int64_t m = in->shape_view().Count(0, in_num_axes-1);
+    const int64_t n = out->shape_view().At(in_num_axes-1);
+    const int64_t k = in->shape_view().At(in_num_axes-1);
     
     // calculate X*W through cuBLAS
     // ref -> reduce_kernel.cpp -> matmul

@@ -40,7 +40,7 @@ class Geglu(nn.Module):
         temp_add_bias = flow._C.add(input=temp_matmul, other=b)
 
         # chunk
-        hidden_state, gate = temp_add_bias.chunk(2, dim=-1)
+        hidden_state, gate = temp_add_bias.chunk(2, dim=-1).contiguous() # sync
 
         # gelu and element-wise product
         return hidden_state * flow.gelu(gate)
@@ -70,7 +70,7 @@ def _test_fused_geglu(test_case, params: dict):
     k = params["k"]
     input = np.random.randn(m, k)
     weight = np.random.randn(k, n * 2)
-    weight_t = np.transpose(weight)
+    weight_t = np.transpose(weight).contiguous() #sync
     bias = np.random.randn(n * 2)
 
     # test: fused op
@@ -100,8 +100,8 @@ class TestFusedGeglu(flow.unittest.TestCase):
     def test_gather(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            # _test_fused_geglu,
-            _test_fused_geglu_profile
+            _test_fused_geglu,
+            # _test_fused_geglu_profile
         ]
         arg_dict["params"] = [
             {"m": 256, "k": 1280, "n": 5120},
