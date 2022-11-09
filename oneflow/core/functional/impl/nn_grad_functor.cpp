@@ -641,6 +641,31 @@ class BinaryCrossEntropyWithLogitsReduceMeanLossTargetGradFunctor {
   }
 };
 
+class CDistGradFunctor {
+ public:
+  CDistGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("cdist_grad")
+                         .Input("x1")
+                         .Input("x2")
+                         .Input("out")
+                         .Input("dy")
+                         .Output("dx1")
+                         .Output("dx2")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& x1,
+                                const std::shared_ptr<Tensor>& x2,
+                                const std::shared_ptr<Tensor>& out,
+                                const std::shared_ptr<Tensor>& dy, const double& p) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("p");
+    attrs.SetAllAttrs(p);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x1, x2, out, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class CombinedMarginLossGradFunctor {
  public:
   CombinedMarginLossGradFunctor() {
@@ -1529,6 +1554,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SparseSoftmaxCrossEntropyGrad>("SparseSoftmaxCrossEntropyGrad");
   m.add_functor<impl::SparseSoftmaxCrossEntropyMsGrad>("SparseSoftmaxCrossEntropyMsGrad");
   m.add_functor<impl::SmoothL1LossGradFunctor>("SmoothL1LossGrad");
+  m.add_functor<impl::CDistGradFunctor>("CDistGrad");
   m.add_functor<impl::CombinedMarginLossGradFunctor>("CombinedMarginLossGrad");
   m.add_functor<impl::AffineGridGradFunctor>("AffineGridGrad");
   m.add_functor<impl::GridSampleGradFunctor>("GridSampleGrad");

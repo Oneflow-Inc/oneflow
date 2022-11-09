@@ -3941,6 +3941,26 @@ def OneFlow_CdistOp : OneFlow_BaseOp<"cdist", [NoSideEffect, DeclareOpInterfaceM
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_CdistGradOp : OneFlow_BaseOp<"cdist_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x1,
+    OneFlow_Tensor:$x2,
+    OneFlow_Tensor:$out,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx1,
+    OneFlow_Tensor:$dx2
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F32Attr, "2.0">:$p
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_ErfOp : OneFlow_BaseOp<"erf", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x

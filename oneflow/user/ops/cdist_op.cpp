@@ -21,7 +21,7 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
+Maybe<void> FwdInferTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x1_desc = ctx->InputTensorDesc("x1", 0);
   const user_op::TensorDesc& x2_desc = ctx->InputTensorDesc("x2", 0);
   user_op::TensorDesc* output_desc = ctx->MutOutputTensorDesc("out", 0);
@@ -38,7 +38,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 }  // namespace
 
 /* static */ Maybe<void> CdistOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  return InferTensorDesc(ctx);
+  return FwdInferTensorDesc(ctx);
 }
 
 /*static*/ Maybe<void> CdistOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -53,6 +53,44 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x1_desc = ctx->InputTensorDesc("x1", 0);
   user_op::TensorDesc* output_desc = ctx->MutOutputTensorDesc("out", 0);
   output_desc->set_data_type(x1_desc.data_type());
+  return Maybe<void>::Ok();
+}
+
+namespace {
+
+Maybe<void> BwdInferTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& x1_desc = ctx->InputTensorDesc("x1", 0);
+  const user_op::TensorDesc& x2_desc = ctx->InputTensorDesc("x2", 0);
+  user_op::TensorDesc* dx1_desc = ctx->MutOutputTensorDesc("dx1", 0);
+  user_op::TensorDesc* dx2_desc = ctx->MutOutputTensorDesc("dx2", 0);
+
+  dx1_desc->set_shape(x1_desc.shape());
+  dx2_desc->set_shape(x2_desc.shape());
+
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
+/* static */ Maybe<void> CdistGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return BwdInferTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> CdistGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> CdistGradOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+}
+
+/* static */ Maybe<void> CdistGradOp::InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& x1_desc = ctx->InputTensorDesc("x1", 0);
+  user_op::TensorDesc* dx1_desc = ctx->MutOutputTensorDesc("dx1", 0);
+  user_op::TensorDesc* dx2_desc = ctx->MutOutputTensorDesc("dx2", 0);
+  dx1_desc->set_data_type(x1_desc.data_type());
+  dx2_desc->set_data_type(x1_desc.data_type());
+
   return Maybe<void>::Ok();
 }
 
