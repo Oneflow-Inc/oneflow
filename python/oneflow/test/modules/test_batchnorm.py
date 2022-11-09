@@ -80,9 +80,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(
-        rtol=1e-3, atol=1e-3, auto_backward=False, check_graph=False
-    )
+    @autotest(rtol=1e-3, atol=1e-3, auto_backward=False, check_graph=False)
     def test_batchnorm2d_module_with_half_random_data(test_case):
         device = random_device()
         channel = random(1, 4).to(int)
