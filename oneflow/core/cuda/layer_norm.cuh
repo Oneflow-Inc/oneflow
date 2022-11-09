@@ -713,9 +713,9 @@ inline cudaError_t TryDispatchLayerNormBlockSMemImpl(cudaStream_t stream, LOAD l
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size>
-__global__ void LayerNormBlockUncachedImpl(LOAD load, STORE store, const int64_t rows,
-                                           const int64_t cols, const double epsilon,
-                                           ComputeType* mean, ComputeType* inv_variance) {
+__global__ void __launch_bounds__(1024)
+    LayerNormBlockUncachedImpl(LOAD load, STORE store, const int64_t rows, const int64_t cols,
+                               const double epsilon, ComputeType* mean, ComputeType* inv_variance) {
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = static_cast<int>(cols) / pack_size;
