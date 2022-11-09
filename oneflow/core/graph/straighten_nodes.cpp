@@ -89,7 +89,7 @@ class TopoStruct {
   int64_t GetDecidingParameter(int32_t i) const;
 };
 
-StraightenAlgorithmTag sat = GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph();
+StraightenAlgorithmTag sat;
 
 // NOTE: Leave these code for debugging in the future
 // static std::vector<int64_t> decide_parameters({ParseIntegerFromEnv("Parameter0", 3),
@@ -99,7 +99,7 @@ StraightenAlgorithmTag sat = GlobalJobDesc().job_conf().straighten_algorithm_tag
 // The best parameter set for saving memory is {3, 0}
 static std::vector<int64_t> decide_parameters;
 
-// SAT, a.k.a. Scholastic Aptitude Test, 
+// SAT, a.k.a. Scholastic Aptitude Test,
 // is the college admission test in the United States of America.
 void InitDecideParameters(StraightenAlgorithmTag sat) {
   decide_parameters.clear();
@@ -201,7 +201,8 @@ TaskClassifier GetTaskClassifier(const TaskNode* node) {
       // Variable operators would not be run. They just create tensors.
       // We do not visualize any execution in NVTX. (Even a tick operator has something in NVTX.)
       return TaskClassifier::kRunASAP;
-    } else if (sat == StraightenAlgorithmTag::kOverlap4CpuGpu && LongerActivationTimeInCpu(op_conf)) {
+    } else if (sat == StraightenAlgorithmTag::kOverlap4CpuGpu
+               && LongerActivationTimeInCpu(op_conf)) {
       return TaskClassifier::kWaitingOverlapNode;
     } else {
       return TaskClassifier::kWaitingMainComputation;
@@ -364,6 +365,26 @@ void FindTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
   }
 }
 
+void UpdateSat(const HashMap<TaskNode*, TopoStruct>& task_node2topo_struct) {
+  sat = GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph();
+  if (sat == StraightenAlgorithmTag::kOverlap4CpuGpu) {
+    // If not cpu nodes, then the overlap strategy between cpu and gpu might consume large memory
+    bool exist_cpu_nodes = false;
+    for (const auto& pair : task_node2topo_struct) {
+      // Found a cpu node
+      if (pair.second.activation_time == 1) {
+        exist_cpu_nodes = true;
+        break;
+      }
+    }
+    if (!exist_cpu_nodes) {
+      // Switch to the compress memory strategy, the default one
+      // Since the overlap strategy for transfer might not be working on 1n1d.
+      sat = StraightenAlgorithmTag::kCompressMemory;
+    }
+  }
+}
+
 }  // anonymous namespace
 
 void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes) {
@@ -441,6 +462,8 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   // Generate other parameters in the topological data structure
   FindTrunk(&task_node2topo_struct);
 
+  // Update sat, since sat might be changed in previous jobs
+  UpdateSat(task_node2topo_struct);
   // Decide which node should run first
   InitDecideParameters(sat);
   std::cout << "Straightening order: ";
