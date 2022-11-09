@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/time_util.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 
@@ -63,6 +64,7 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   // TODO(levi): we can rewrite this part of code in visitor pattern.
   auto task_gph = std::make_unique<TaskGraph>();
   using std::placeholders::_1;
+  LazyMode::Guard guard(true);
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
@@ -109,8 +111,11 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
   (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
   // NOTE(chengcheng): infer mem blob id & set inplace & add ctrl
+  // TODO(chengcheng): set inplace hint for cpu regst
   IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan, IsReachable);
+  PlanUtil::MergeMemBlockIdByLogicalChainId(plan, *job);
   PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
+  PlanUtil::SetForceInplaceMemBlock(plan);
   compile_tc->Count("[GraphCompile]" + job_name + " InferMemShare", 1);
   Singleton<OpGraph>::Delete();
 }

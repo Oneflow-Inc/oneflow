@@ -29,6 +29,8 @@ struct GroupNormCaptureState : public AutoGradCaptureState {
   size_t mean_index = 1;
   size_t inv_variance_index = 2;
   size_t gamma_index = 3;
+  std::string data_format;
+  std::string activation;
 };
 
 class GroupNorm : public OpExprGradFunction<GroupNormCaptureState> {
@@ -60,6 +62,8 @@ Maybe<void> GroupNorm::Capture(GroupNormCaptureState* ctx, const TensorTuple& in
   ctx->affine = JUST(composed_attrs.GetAttr<bool>("affine"));
   ctx->epsilon = JUST(composed_attrs.GetAttr<double>("epsilon"));
   ctx->num_groups = JUST(composed_attrs.GetAttr<int32_t>("num_groups"));
+  ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
+  ctx->activation = JUST(composed_attrs.GetAttr<std::string>("activation"));
   if (ctx->affine) {
     CHECK_EQ_OR_RETURN(inputs.size(), 3);  // NOLINT(maybe-need-error-msg)
   } else {
@@ -81,6 +85,8 @@ Maybe<void> GroupNorm::Capture(GroupNormCaptureState* ctx, const TensorTuple& in
 
 Maybe<void> GroupNorm::Apply(const GroupNormCaptureState* ctx, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
+  CHECK_EQ_OR_RETURN(ctx->data_format, "channels_first");
+  CHECK_EQ_OR_RETURN(ctx->activation, "none");
   const auto& saved_tensors = ctx->SavedTensors();
   if (ctx->affine) {
     in_grads->resize(3);

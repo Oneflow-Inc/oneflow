@@ -66,6 +66,8 @@ class ConvBaseFunctor {
  public:
   explicit ConvBaseFunctor(const int& num_spatial_dims) : num_spatial_dims_(num_spatial_dims) {
     bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
+    enable_fused_conv_bias_ =
+        ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDNN_FUSED_CONV_BIAS", false);
   }
   virtual ~ConvBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -90,6 +92,9 @@ class ConvBaseFunctor {
                                        "dilation_rate", "groups", "data_format");
     conv_attrs.SetAllAttrs(static_cast<int32_t>(weight->shape()->At(0)), kernel_size_vec, padding,
                            stride, dilation, groups, channel_pos);
+    if (bias && enable_fused_conv_bias_) {
+      return OpInterpUtil::Dispatch<Tensor>(*conv_bias_op_, {x, weight, JUST(bias)}, conv_attrs);
+    }
     const std::shared_ptr<one::Tensor>& conv_out =
         JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {x, weight}, conv_attrs));
     if (bias) {
@@ -102,7 +107,9 @@ class ConvBaseFunctor {
  protected:
   std::shared_ptr<OpExpr> conv_op_;
   std::shared_ptr<OpExpr> bias_op_;
+  std::shared_ptr<OpExpr> conv_bias_op_;
   int32_t num_spatial_dims_;
+  bool enable_fused_conv_bias_;
 };
 
 class Conv1dFunctor : public ConvBaseFunctor {
@@ -110,6 +117,8 @@ class Conv1dFunctor : public ConvBaseFunctor {
   Conv1dFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/1) {
     conv_op_ =
         CHECK_JUST(one::OpBuilder("conv1d").Input("in").Input("weight").Output("out").Build());
+    conv_bias_op_ = CHECK_JUST(
+        one::OpBuilder("conv1d").Input("in").Input("weight").Input("bias").Output("out").Build());
   }
 };
 
@@ -118,6 +127,8 @@ class Conv2dFunctor : public ConvBaseFunctor {
   Conv2dFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/2) {
     conv_op_ =
         CHECK_JUST(one::OpBuilder("conv2d").Input("in").Input("weight").Output("out").Build());
+    conv_bias_op_ = CHECK_JUST(
+        one::OpBuilder("conv2d").Input("in").Input("weight").Input("bias").Output("out").Build());
   }
 };
 
@@ -126,6 +137,8 @@ class Conv3dFunctor : public ConvBaseFunctor {
   Conv3dFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/3) {
     conv_op_ =
         CHECK_JUST(one::OpBuilder("conv3d").Input("in").Input("weight").Output("out").Build());
+    conv_bias_op_ = CHECK_JUST(
+        one::OpBuilder("conv3d").Input("in").Input("weight").Input("bias").Output("out").Build());
   }
 };
 
@@ -771,10 +784,11 @@ class GroupNormFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<one::Tensor>& gamma, const Optional<one::Tensor>& beta,
-                           const bool affine, const int32_t num_groups,
-                           const double& epsilon) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_groups", "epsilon");
-    attrs.SetAllAttrs(num_groups, epsilon);
+                           const bool affine, const int32_t num_groups, const double& epsilon,
+                           const std::string& data_format, const std::string& activation) const {
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("num_groups", "epsilon", "data_format", "activation");
+    attrs.SetAllAttrs(num_groups, epsilon, data_format, activation);
     if (affine) {
       return OpInterpUtil::Dispatch<Tensor>(*affine_op_, {x, JUST(gamma), JUST(beta)}, attrs);
     } else {
