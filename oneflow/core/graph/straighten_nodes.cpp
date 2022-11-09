@@ -39,6 +39,25 @@ enum TaskClassifier : int {
   kRunALAP = 3
 };
 
+// deciding parameter
+// The sorting order of nodes for the straighten algorithm
+enum StraightenOrder : int {
+  kTributaryLayerAscend = 0,     // small tributary layers go first
+  kDistanceToOverlapAscend = 1,  // small minimum distance to overlap go first
+  kLayerAscend = 2,              // first in first out
+  kMemoryIncrementAscend = 3,    // small memory increment go first
+  kActivationTimeAscend = 4,     // small activation time go first
+
+  kTributaryLayerDescend = 100,     // large tributary layers go first
+  kDistanceToOverlapDescend = 101,  // long distance to overlap go first
+  kLayerDescend = 102,              // last in first out
+  kMemoryIncrementDescend = 103,    // large memory increment go first
+  kActivationTimeDescend = 104,     // large activation time go first
+};
+
+// The difference between a descending order and its corresponding ascending order
+const int kDiff4AscendDescend = 100;
+
 class TopoStruct {
  public:
   TaskNode* node = nullptr;
@@ -86,34 +105,34 @@ class TopoStruct {
   // i = 7: last in first out
   // i = 8: those with large memory increment go first
   // i = 9: those with large activation time go first
-  int64_t GetDecidingParameter(int32_t i) const;
+  int64_t GetDecidingParameter(StraightenOrder so) const;
 };
 
 StraightenAlgorithmTag sat;
 
 // NOTE: Leave these code for debugging in the future
-// static std::vector<int64_t> decide_parameters({ParseIntegerFromEnv("Parameter0", 3),
-//                                                ParseIntegerFromEnv("Parameter1", 0),
-//                                                ParseIntegerFromEnv("Parameter2", 3)});
-// The best parameter set for saving time is {7, 5}
+// static std::vector<StraightenOrder> decide_parameters({ParseIntegerFromEnv("Parameter0", 3),
+//                                                        ParseIntegerFromEnv("Parameter1", 0),
+//                                                        ParseIntegerFromEnv("Parameter2", 3)});
+// The best parameter set for saving time is {102, 100}
 // The best parameter set for saving memory is {3, 0}
-static std::vector<int64_t> decide_parameters;
+static std::vector<StraightenOrder> decide_parameters;
 
 // SAT, a.k.a. Scholastic Aptitude Test,
 // is the college admission test in the United States of America.
 void InitDecideParameters(StraightenAlgorithmTag sat) {
   decide_parameters.clear();
   if (sat == StraightenAlgorithmTag::kCompressMemory) {
-    decide_parameters.push_back(3);
-    decide_parameters.push_back(0);
+    decide_parameters.push_back(StraightenOrder::kMemoryIncrementAscend);
+    decide_parameters.push_back(StraightenOrder::kTributaryLayerAscend);
   } else if (sat == StraightenAlgorithmTag::kOverlap4Transfer) {
-    decide_parameters.push_back(7);
-    decide_parameters.push_back(5);
+    decide_parameters.push_back(StraightenOrder::kLayerDescend);
+    decide_parameters.push_back(StraightenOrder::kTributaryLayerDescend);
   } else {
     // sat==StraightenAlgorithmTag::kOverlap4CpuGpu
-    decide_parameters.push_back(9);
-    decide_parameters.push_back(7);
-    decide_parameters.push_back(3);
+    decide_parameters.push_back(StraightenOrder::kActivationTimeDescend);
+    decide_parameters.push_back(StraightenOrder::kLayerDescend);
+    decide_parameters.push_back(StraightenOrder::kMemoryIncrementAscend);
   }
 }
 
@@ -322,18 +341,18 @@ void TopoStruct::ComputeActivationTime() {
 // i = 5: those with long distance to overlap go first
 // i = 6: last in first out
 // i = 7: those with large memory increment go first
-int64_t TopoStruct::GetDecidingParameter(int32_t i) const {
+int64_t TopoStruct::GetDecidingParameter(StraightenOrder so) const {
   int64_t sign = 1;
-  if (i >= 5) {
-    i -= 5;
+  if (so >= kDiff4AscendDescend) {
+    so = StraightenOrder(int(so) - kDiff4AscendDescend);
     sign = -1;
   }
-  switch (i) {
-    case 0: return sign * tributary_layer;
-    case 1: return sign * min_distance2overlap;
-    case 2: return sign * min_layer;
-    case 3: return sign * memory_increment;
-    case 4: return sign * activation_time;
+  switch (so) {
+    case StraightenOrder::kTributaryLayerAscend: return sign * tributary_layer;
+    case StraightenOrder::kDistanceToOverlapAscend: return sign * min_distance2overlap;
+    case StraightenOrder::kLayerAscend: return sign * min_layer;
+    case StraightenOrder::kMemoryIncrementAscend: return sign * memory_increment;
+    case StraightenOrder::kActivationTimeAscend: return sign * activation_time;
   }
   return 0;
 }
@@ -473,9 +492,9 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   // Order in the waiting sets
   struct comp {
     bool operator()(const TopoStruct* a, const TopoStruct* b) const {
-      for (int32_t decide_parameter : decide_parameters) {
-        int64_t decide_parameter_a = a->GetDecidingParameter(decide_parameter);
-        int64_t decide_parameter_b = b->GetDecidingParameter(decide_parameter);
+      for (auto decide_parameter : decide_parameters) {
+        auto decide_parameter_a = a->GetDecidingParameter(decide_parameter);
+        auto decide_parameter_b = b->GetDecidingParameter(decide_parameter);
         if (decide_parameter_a != decide_parameter_b) {
           return decide_parameter_a < decide_parameter_b;
         }
