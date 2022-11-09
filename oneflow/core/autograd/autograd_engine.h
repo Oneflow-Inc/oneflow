@@ -63,6 +63,7 @@ class FunctionNode {
   void set_scope(const std::shared_ptr<Scope>& scope) { scope_ = scope; }
 
  protected:
+  friend class GraphTask;
   explicit FunctionNode(const std::string& name,
                         const std::shared_ptr<BackwardFunction>& backward_fn)
       : name_(name), backward_fn_(backward_fn), scope_(nullptr) {}
@@ -139,13 +140,23 @@ class GraphTask final {
   Maybe<void> ComputeDependencies();
   Maybe<void> ComputeDependenciesAndPruneNode(const TensorTuple& inputs);
   Maybe<void> Apply(bool save_grad_for_leaf);
+  std::shared_ptr<TensorTuple> GetCapturedGrads() const { return captured_grads_; }
 
  private:
+  class ExecInfo {
+   public:
+    ExecInfo() = default;
+
+    int32_t dependencies = 0;
+    bool need_execute = false;
+    std::unique_ptr<std::vector<size_t>> capture_indices;
+  };
+
   bool retain_graph_;
   bool create_graph_;
   std::vector<FunctionNode*> roots_;
-  HashMap<FunctionNode*, int> dependencies_;
-  HashSet<FunctionNode*> need_execute_;
+  HashMap<FunctionNode*, ExecInfo> grad_fn2exec_info_;
+  std::shared_ptr<TensorTuple> captured_grads_;
 };
 
 class GraphAutogradEngine final : public AutogradEngine {
