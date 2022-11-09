@@ -91,7 +91,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
             track_running_stats=random().to(bool),
             affine=random().to(bool),
         ).to(device)
-        m.train(False)
+        m.train(random())
         m.half()
         x = random_tensor(
             ndim=4, dim0=random(1, 4), dim1=channel, requires_grad=True
