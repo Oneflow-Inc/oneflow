@@ -75,7 +75,7 @@ class TestBroadcastOps(flow.unittest.TestCase):
         )
         with test_case.assertRaises(RuntimeError) as ctx:
             y = flow.broadcast_tensors()
-        test_case.assertTrue("shapes should not be empty." in str(ctx.exception))
+        test_case.assertTrue("tensors should not be empty." in str(ctx.exception))
 
     def test_broadcast_to(test_case):
         # see flow.expand, because broadcast_to is an alias of flow.expand

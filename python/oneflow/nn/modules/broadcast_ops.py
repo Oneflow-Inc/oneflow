@@ -14,21 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow.nn.modules.utils import _single
+from oneflow.nn.modules.utils import _single, _handle_size_arg
 
 
 def broadcast_shapes(*shapes):
     r"""broadcast_shapes(*shapes) -> Size
-    
-    The interface is consistent with PyTorch.    
-    The documentation is referenced from: 
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from:
     https://pytorch.org/docs/1.10/generated/torch.broadcast_shapes.html.
 
     Similar to :func:`oneflow.broadcast_tensors` but for shapes.
 
-    This is equivalent to ``flow.broadcast_tensors(*map(flow.empty, shapes))[0].shape`` 
-    but avoids the need create to intermediate tensors. 
-    This is useful for broadcasting tensors of common batch shape but different rightmost shape, 
+    This is equivalent to ``flow.broadcast_tensors(*map(flow.empty, shapes))[0].shape``
+    but avoids the need create to intermediate tensors.
+    This is useful for broadcasting tensors of common batch shape but different rightmost shape,
     e.g. to broadcast mean vectors with covariance matrices.
 
     Args:
@@ -53,8 +53,8 @@ def broadcast_shapes(*shapes):
 def broadcast_tensors(*tensors):
     r"""broadcast_tensors(*tensors) -> List of Tensors
 
-    The interface is consistent with PyTorch.    
-    The documentation is referenced from: 
+    The interface is consistent with PyTorch.
+    The documentation is referenced from:
     https://pytorch.org/docs/1.10/generated/torch.broadcast_tensors.html.
 
     Broadcasts the given tensors according to ``broadcasting-semantics``.
@@ -88,8 +88,8 @@ def broadcast_tensors(*tensors):
 def broadcast_to(input, shape):
     r"""broadcast_to(input, shape) -> Tensors
 
-    The interface is consistent with PyTorch.    
-    The documentation is referenced from: 
+    The interface is consistent with PyTorch.
+    The documentation is referenced from:
     https://pytorch.org/docs/1.10/generated/torch.broadcast_to.html.
 
     Broadcasts ``input`` to the shape ``shape``. Equivalent to calling ``input.expand(shape)``. See :func:`oneflow.expand` for details.
@@ -107,6 +107,8 @@ def broadcast_to(input, shape):
                 [1, 2, 3],
                 [1, 2, 3]], dtype=oneflow.int64)
     """
+    sizes = _handle_size_arg(sizes)
+    sizes = _single(sizes)
     return flow._C.broadcast_to(input, shape)
 
 

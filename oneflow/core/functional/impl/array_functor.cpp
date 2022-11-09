@@ -3379,6 +3379,8 @@ class BroadcastShapesFunctor {
 class BroadcastTensorsFunctor {
  public:
   Maybe<TensorTuple> operator()(const TensorTuple& tensors) const {
+    if (tensors.empty()) { return Error::RuntimeError() << "tensors should not be empty."; }
+
     Shape shape_to_broadcast;
     std::deque<bool> need_to_broadcast;
 
