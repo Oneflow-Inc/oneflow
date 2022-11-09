@@ -266,7 +266,10 @@ GraphTask::GraphTask(const TensorTuple& outputs, bool retain_graph, bool create_
 Maybe<void> GraphTask::ComputeDependencies() {
   HashSet<FunctionNode*> seen;
   std::stack<FunctionNode*> stack;
-  for (FunctionNode* node : roots_) { stack.push(node); }
+  for (FunctionNode* node : roots_) {
+    stack.push(node);
+    grad_fn2exec_info_[node].need_execute = true;
+  }
 
   while (!stack.empty()) {
     FunctionNode* node = stack.top();
@@ -276,6 +279,7 @@ Maybe<void> GraphTask::ComputeDependencies() {
       FunctionNode* next_node = next_grad_fn.get();
       ExecInfo& exec_info = grad_fn2exec_info_[next_node];
       exec_info.dependencies += 1;
+      exec_info.need_execute = true;
       if (seen.find(next_node) == seen.end()) { stack.push(next_node); }
     }
   }
@@ -359,7 +363,7 @@ Maybe<void> GraphTask::Apply(bool save_grad_for_leaf) {
     }
     BackwardPassScopeGuard backward_guard(node->scope());
     if (exec_info.capture_indices) {
-      CHECK_NOTNULL_OR_RETURN(captured_grads_) << "captured grads in GraphTask is nullptr";
+      CHECK_NOTNULL_OR_RETURN(captured_grads_.get()) << "captured grads in GraphTask is nullptr";
       for (size_t i : *exec_info.capture_indices) {
         JUST(VectorAt(*captured_grads_, i)) =
             JUST(JUST(VectorAt(node->output_meta_data_, i))->current_grad_value());
