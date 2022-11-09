@@ -1,0 +1,37 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/job/job.proto";
+import "oneflow/core/job/resource.proto";
+
+message ReuseMemPriorityStrategy {
+}
+
+message ParallelismPriorityStrategy {
+}
+
+message JobNameGroup {
+  repeated string job_name = 1;
+}
+
+message CustomParallelismStrategy {
+  repeated JobNameGroup nonparallel_group = 1;
+}
+
+message InterJobReuseMemStrategy {
+  oneof strategy_case {
+    ReuseMemPriorityStrategy reuse_mem_priority = 1;
+    ParallelismPriorityStrategy parallelism_priority = 2;
+    CustomParallelismStrategy custom_parallelism = 3;
+  }
+}
+
+message ConfigProto {
+  required Resource resource = 1;
+  required int64 session_id = 5;
+}
+
+message JobSet {
+  repeated Job job = 1;
+  optional InterJobReuseMemStrategy inter_job_reuse_mem_strategy = 5;
+}

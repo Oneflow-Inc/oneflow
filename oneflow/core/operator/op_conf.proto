@@ -1,0 +1,474 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/common/shape.proto";
+import "oneflow/core/common/data_type.proto";
+import "oneflow/core/common/device_type.proto";
+import "oneflow/core/record/record.proto";
+import "oneflow/core/job/resource.proto";
+import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/register/tensor_slice_view.proto";
+import "oneflow/core/framework/user_op_conf.proto";
+import "oneflow/core/job/sbp_parallel.proto";
+import "oneflow/core/graph/boxing/collective_boxing.proto";
+import "oneflow/core/job/initializer_conf.proto";
+import "oneflow/core/job/regularizer_conf.proto";
+import "oneflow/core/job/placement.proto";
+import "oneflow/core/job/learning_rate_schedule_conf.proto";
+import "oneflow/core/operator/interface_blob_conf.proto";
+import "oneflow/core/register/blob_desc.proto";
+
+
+enum ActivationType {
+  kNone = 0;
+  kTanH = 1;
+  kSigmoid = 2;
+  kRelu = 3;
+}
+
+message DistributeConcatOpConf {
+  repeated string in = 1;
+  required string out = 2;
+  required int32 axis = 3;
+}
+
+message DistributeSplitOpConf {
+  required string in = 1;
+  repeated string out = 2;
+  required int32 axis = 3;
+  optional bool is_variable_ref = 4 [default = false];
+}
+
+message DistributeCloneOpConf {
+  required string in = 1;
+  repeated string out = 2;
+  optional bool is_variable_ref = 3 [default = false];
+}
+
+message DistributeAddOpConf {
+  repeated string in = 1;
+  required string out = 2;
+}
+
+message CopyCommNetOpConf {
+  required LogicalBlobId lbi = 2;
+}
+
+message BoxConcatConf {
+  required int32 axis = 1;
+}
+
+message BoxAddConf {
+}
+
+message BoxSplitConf {
+  required int32 axis = 1;
+  repeated int32 part_num = 2;
+}
+
+message BoxCloneConf {
+}
+
+message BoxingOpConf {
+  required LogicalBlobId lbi = 1;
+  required int32 in_num = 2;
+  required int32 out_num = 3;
+
+  oneof in_box {
+    BoxConcatConf concat_box = 4;
+    BoxAddConf add_box = 5;
+  }
+  oneof out_box {
+    BoxSplitConf split_box = 6;
+    BoxCloneConf clone_box = 7;
+  }
+}
+
+message DynamicReshapeOpConf {
+  required string in = 1;
+  required string out = 2;
+  required ShapeProto shape = 3;
+}
+
+message DynamicReshapeLikeOpConf {
+  required string x = 1;
+  required string y = 2;
+  required string like = 3;
+}
+
+message FeedInputOpConf {
+  // NOTE(chengcheng): define in/out key as UserOp ibn/obn.
+  required string in_0 = 1;
+  required string out_0 = 2;
+}
+
+message FeedVariableOpConf {
+  required string in_0 = 1;
+  required string out_0 = 2;
+}
+
+message FetchOutputOpConf {
+  required string in_0 = 1;
+  required string out_0 = 2;
+}
+
+message InputOpConf {
+  optional string tick = 1;
+  required string out = 2;
+  required InterfaceBlobConf blob_conf = 3;
+  optional string job_name = 4;
+}
+
+message ReturnOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional string job_name = 3;
+}
+
+message OutputOpConf {
+  required string in = 1;
+  required string out = 2;
+  required InterfaceBlobConf blob_conf = 3;
+  optional string job_name = 4;
+}
+
+message VariableOpConf {
+  optional string tick = 1;
+  required string out = 2;
+  required ShapeProto shape = 3;
+  optional DataType data_type = 4;
+  oneof initialize {
+    InitializerConf initializer = 5;
+    InitializeWithSnapshotConf initialize_with_snapshot = 6;
+  }
+  optional string model_name = 7 [default = "weight"];
+  optional int64 random_seed = 9;
+  optional RegularizerConf regularizer = 10;
+  optional bool trainable = 11 [default = true];
+  repeated string nd_sbp = 12;
+}
+
+message TickOpConf {
+  repeated string tick = 1;
+  required string out = 2;
+}
+
+message CriticalSectionWaitTickOpConf {
+  repeated string tick = 1;
+  required string out = 2;
+  required string buffer_name = 3;
+}
+
+message CriticalSectionCallbackTickOpConf {
+  repeated string tick = 1;
+  required string out = 2;
+  required string buffer_name = 3;
+}
+
+message DeviceTickOpConf {
+  repeated string tick = 1;
+  required string out = 2;
+  optional ShapeProto time_shape = 3;
+}
+
+message WaitAndSendIdsOpConf {
+  required string out = 1;
+  required string wait_buffer_name = 2;
+  repeated Int64List id_list = 3;
+  required DataType data_type = 4 [default = kInt32];
+  optional string job_name = 5;
+}
+
+message CallbackNotifyOpConf {
+  required string in = 1;
+  repeated string callback_buffer_name = 2;
+  optional string job_name = 3;
+}
+
+message ReentrantLockOpConf {
+  required string start = 1;
+  optional string end = 2;
+  required string out = 3;
+  repeated Int64List lock_id2intersecting_lock_ids = 4;
+}
+
+message SrcSubsetTickOpConf {
+  repeated string in = 1;
+  required string out = 2;
+}
+
+message DstSubsetTickOpConf {
+  repeated string in = 1;
+  required string out = 2;
+}
+
+message SourceTickOpConf {
+  required string out = 1;
+}
+
+message SinkTickOpConf {
+  repeated string tick = 1;
+  required string out = 2;
+}
+
+message TotalLossInstanceNumOpConf {
+  repeated string in = 1;
+  required string out = 2;
+}
+
+message ShapeElemCntAxisConf {
+  repeated int32 axis = 1;
+}
+
+message ShapeElemCntRangeAxisConf {
+  // closed interval: [begin_axis, end_axis]
+  optional int32 begin_axis = 1 [default = 0];
+  optional int32 end_axis = 2 [default = -1];
+}
+
+message ShapeElemCntOpConf {
+  required string x = 1;
+  required string y = 2;
+  optional DataType data_type = 3 [default = kInt32];
+  oneof axis_conf {
+    ShapeElemCntAxisConf exclude_axis_conf = 4;
+    ShapeElemCntAxisConf include_axis_conf = 5;
+    ShapeElemCntRangeAxisConf range_axis_conf = 6;
+  }
+}
+
+message AccTickOpConf {
+  // in
+  required string one = 1;
+  // out
+  required string acc = 2;
+  optional int32 max_acc_num = 3 [default = 1];
+}
+
+message IdentityOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
+message CopyOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
+message CastToLocalOpConf {
+  required string in = 1;
+  required string out = 2;
+  required SbpParallel sbp_parallel = 3;
+}
+
+message CastFromLocalOpConf {
+  required string in = 1;
+  required string out = 2;
+  required SbpParallel sbp_parallel = 3;
+}
+
+message CaseOpConf {
+  required string in = 1;
+  repeated string out = 2;
+}
+
+message EsacOpConf {
+  repeated string in = 1;
+  required string out = 2;
+  optional DataType data_type = 3 [default=kInt32];
+}
+
+message AssignOpConf {
+  required string ref = 1;
+  required string value = 2;
+}
+
+message LearningRateScheduleOpConf {
+  required string train_step = 1;
+  required string out = 2;
+  required float learning_rate = 3;
+  optional LearningRateDecayConf learning_rate_decay = 4;
+}
+
+message SliceBoxingConf {
+  required LogicalBlobId lbi = 1;
+  repeated TensorSliceViewProto in_slice = 2;
+  required TensorSliceViewProto out_slice = 3;
+  optional ShapeProto out_shape = 4;
+}
+
+message SliceBoxingCopyOpConf {
+  required SliceBoxingConf slice_boxing_conf = 1;
+}
+
+message SliceBoxingAddOpConf {
+  required SliceBoxingConf slice_boxing_conf = 1;
+}
+
+message ConstantLikeOpConf {
+  required string like = 1;
+  required string out = 2;
+  optional DataType data_type = 3;
+  oneof scalar_operand {
+    int64 int_operand = 4;
+    double float_operand = 5;
+  }
+}
+
+message SyncDynamicResizeOpConf {
+  required string in = 1;
+  required string size = 2;
+  required string out = 3;
+  required int64 axis = 4;
+  optional bool eager = 5 [default = false];
+}
+
+message BroadcastToCompatibleWithOpConf {
+  required string x = 1;
+  repeated string compatible = 2;
+  required string y = 3;
+}
+
+message CollectiveBoxingGenericOpConf {
+  required LogicalBlobId lbi = 1;
+  required boxing.collective.RankDesc rank_desc = 2;
+}
+
+message BoxingIdentityOpConf {
+  required LogicalBlobId lbi = 1;
+}
+
+message CollectiveBoxingPackOpConf {
+  required LogicalBlobId lbi = 1;
+  required SbpParallel src_sbp_parallel = 2;
+  required SbpParallel dst_sbp_parallel = 3;
+  required int64 num_ranks = 4;
+  required ShapeProto logical_shape = 5;
+}
+
+message CollectiveBoxingUnpackOpConf {
+  required LogicalBlobId lbi = 1;
+  required SbpParallel src_sbp_parallel = 2;
+  required SbpParallel dst_sbp_parallel = 3;
+  required int64 num_ranks = 4;
+  required ShapeProto logical_shape = 5;
+}
+
+message ImageDecoderRandomCropResizeOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int64 target_width = 3;
+  required int64 target_height = 4;
+  optional int64 num_workers = 5 [default = 3];
+  optional int64 max_num_pixels = 6 [default = 67108864];
+  optional int64 warmup_size = 7 [default = 6400];
+  optional int64 seed = 8;
+  optional int64 num_attempts = 9 [default = 10];
+  optional float random_area_min = 10 [default = 0.08];
+  optional float random_area_max = 11 [default = 1.0];
+  optional float random_aspect_ratio_min = 12 [default = 0.75];
+  optional float random_aspect_ratio_max = 13 [default = 1.333333];
+}
+
+message BoxingZerosOpConf {
+  required LogicalBlobId lbi = 1;
+  required ShapeProto shape = 2;
+  required DataType data_type = 3;
+}
+
+message NcclSendRecvBoxingOpConf {
+  required LogicalBlobId lbi = 1;
+  required NdSbp src_nd_sbp = 2;
+  required NdSbp dst_nd_sbp = 3;
+  required ParallelConf parallel_conf = 4;
+  required ParallelConf src_parallel_conf = 5;
+  required ParallelConf dst_parallel_conf = 6;
+  required ShapeProto logical_shape = 7;
+  required DataType data_type = 8;
+  required bool has_input = 9;
+  required bool has_output = 10;
+}
+
+message OperatorConf {
+  required string name = 1;
+  optional string device_tag = 4 [default = "invalid_device"];
+  repeated string ctrl_in_op_name = 7;
+  optional int64 scope_symbol_id = 8;
+  optional string stream_name_hint = 9;
+  optional string pass_tag = 10;
+  optional string loc = 11 [default = ""];
+  optional int64 logical_chain_id = 12 [default = -1];
+  oneof op_type {
+    // system op
+    CopyCommNetOpConf copy_comm_net_conf = 106;
+    BoxingOpConf boxing_conf = 108;
+    VariableOpConf variable_conf = 122;
+    TickOpConf tick_conf = 124;
+    CriticalSectionWaitTickOpConf critical_section_wait_tick_conf = 125;
+    CriticalSectionCallbackTickOpConf critical_section_callback_tick_conf = 126;
+    TotalLossInstanceNumOpConf total_loss_instance_num_conf = 131;
+    ShapeElemCntOpConf shape_elem_cnt_conf = 132;
+    SrcSubsetTickOpConf src_subset_tick_conf = 133;
+    DstSubsetTickOpConf dst_subset_tick_conf = 134;
+    SourceTickOpConf source_tick_conf = 135;
+    SinkTickOpConf sink_tick_conf = 136;
+    InputOpConf input_conf = 137;
+    OutputOpConf output_conf = 138;
+    WaitAndSendIdsOpConf wait_and_send_ids_conf = 139;
+    ReentrantLockOpConf reentrant_lock_conf = 140;
+    CallbackNotifyOpConf callback_notify_conf = 141;
+    AccTickOpConf acc_tick_conf = 144;
+    ReturnOpConf return_conf = 146;
+    DistributeConcatOpConf distribute_concat_conf = 155;
+    DistributeSplitOpConf distribute_split_conf = 156;
+    DistributeCloneOpConf distribute_clone_conf = 157;
+    DistributeAddOpConf distribute_add_conf = 158;
+    DeviceTickOpConf device_tick_conf = 159;
+    SliceBoxingCopyOpConf slice_boxing_copy_conf = 166;
+    SliceBoxingAddOpConf slice_boxing_add_conf = 167;
+    CollectiveBoxingGenericOpConf collective_boxing_generic_conf = 170;
+    BoxingIdentityOpConf boxing_identity_conf = 171;
+    CollectiveBoxingPackOpConf collective_boxing_pack_conf = 174;
+    CollectiveBoxingUnpackOpConf collective_boxing_unpack_conf = 175;
+    BoxingZerosOpConf boxing_zeros_conf = 176;
+    NcclSendRecvBoxingOpConf nccl_send_recv_boxing_conf = 177;
+    UserOpConf user_conf = 199;
+
+    // domain op
+    DynamicReshapeOpConf dynamic_reshape_conf = 203;
+    DynamicReshapeLikeOpConf dynamic_reshape_like_conf = 287;
+    IdentityOpConf identity_conf = 290;
+    CaseOpConf case_conf = 291;
+    EsacOpConf esac_conf = 292;
+    AssignOpConf assign_conf = 296;
+    LearningRateScheduleOpConf learning_rate_schedule_conf = 298;
+    ConstantLikeOpConf constant_like_conf = 339;
+    SyncDynamicResizeOpConf sync_dynamic_resize_conf = 340;
+    CopyOpConf copy_conf = 343;
+    CastToLocalOpConf cast_to_local_conf = 344;
+    CastFromLocalOpConf cast_from_local_conf = 345;
+    ImageDecoderRandomCropResizeOpConf image_decoder_random_crop_resize_conf = 349;
+
+    // math op
+    BroadcastToCompatibleWithOpConf broadcast_to_compatible_with_conf = 525;
+
+    // NOTE(chengcheng): Lazy 1.0 system ops.
+    //   Feed EagerTensor to interface op.
+    //   Note that FeedxxOp just for build CustomOpExpr, and has NO operator impl.
+    FeedInputOpConf feed_input_conf = 600;
+    FeedVariableOpConf feed_variable_conf = 601;
+    //   Fetch EagerTensor from output op
+    FetchOutputOpConf fetch_output_conf = 602;
+  }
+}
+
+message OpNameRelations {
+  map<string, string> src_op_name2dst_op_name = 1;
+}
+
+message OpNameGroups {
+  message OpNameGroup {
+    repeated string op_name = 1;
+  }
+  repeated OpNameGroup op_name_group = 2;
+}

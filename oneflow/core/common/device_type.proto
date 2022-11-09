@@ -1,0 +1,9 @@
+syntax = "proto2";
+package oneflow;
+
+enum DeviceType {
+  kInvalidDevice = 0;
+  kCPU = 1;
+  kCUDA = 2;
+  kMockDevice = 3; // pseudo device for test.
+}

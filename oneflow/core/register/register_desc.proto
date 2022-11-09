@@ -1,0 +1,53 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/register/blob_desc.proto";
+import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/memory/memory_case.proto";
+import "oneflow/core/common/shape.proto";
+
+message LbiBlobDescPair {
+  required LogicalBlobId lbi = 1;
+  required BlobDescProto blob_desc = 2;
+}
+
+message DataRegstDesc {
+  repeated LbiBlobDescPair lbi2blob_desc = 1;
+  required ShapeProto time_shape = 3;
+}
+
+message CtrlRegstDesc {
+}
+
+message RegstDescTypeProto {
+  oneof type {
+    DataRegstDesc data_regst_desc = 1;
+    CtrlRegstDesc ctrl_regst_desc = 3;
+  }
+}
+
+message RegstDescProto {
+  required int64 regst_desc_id = 1;
+  required int64 producer_task_id = 2;
+  repeated int64 consumer_task_id = 3;
+  required int32 min_register_num = 4;
+  required int32 max_register_num = 5;
+  required int32 register_num = 6;
+  required MemoryCase mem_case = 7;
+  required RegstDescTypeProto regst_desc_type = 8;
+  required bool enable_reuse_mem = 9;
+  required int64 mem_block_id = 10;
+  required int64 mem_block_offset = 11;
+  optional int64 separated_header_mem_block_id = 12 [default = -1];
+  optional int64 inplace_consumed_regst_desc_id = 13 [default = -1];
+  oneof inplace_info_type {
+    int64 hint_inplace_consumed_regst_desc_id = 14 [default = -1];
+    int64 force_inplace_consumed_regst_desc_id = 15 [default = -1];
+  }
+  // NOTE(chengcheng): mark this regst memory is shared with EagerParameter.
+  optional string variable_op_name = 16 [default = ""];
+  // NOTE(chengcheng): for mem block debug.
+  optional int64 mem_block_total_actor_count = 20 [default = -1];
+  optional int64 alloc_before_actor = 21 [default = -1];
+  optional int64 free_after_actor = 22 [default = -1];
+}

@@ -1,0 +1,6 @@
+syntax = "proto2";
+package oneflow;
+
+message JobSetCompileCtxProto {
+  map<string, int64> var_op_name2random_seed = 1;
+}

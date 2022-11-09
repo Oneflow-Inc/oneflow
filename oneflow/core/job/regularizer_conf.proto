@@ -1,0 +1,13 @@
+syntax = "proto2";
+package oneflow;
+
+message L1L2RegularizerConf {
+  optional float l1 = 1 [default = 0.0];
+  optional float l2 = 2 [default = 0.0];
+}
+
+message RegularizerConf {
+  oneof type {
+    L1L2RegularizerConf l1_l2_conf = 1;
+  }
+}

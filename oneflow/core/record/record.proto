@@ -1,0 +1,36 @@
+syntax = "proto2";
+package oneflow;
+
+message BytesList {
+  repeated bytes value = 1;
+}
+
+message FloatList {
+  repeated float value = 1 [packed = true];
+}
+
+message DoubleList {
+  repeated double value = 1 [packed = true];
+}
+
+message Int32List {
+  repeated int32 value = 1 [packed = true];
+}
+
+message Int64List {
+  repeated int64 value = 1 [packed = true];
+}
+
+message Feature {
+  oneof kind {
+    BytesList bytes_list = 1;
+    FloatList float_list = 2;
+    DoubleList double_list = 3;
+    Int32List int32_list = 4;
+    Int64List int64_list = 5;
+  }
+}
+
+message OFRecord {
+  map<string, Feature> feature = 1;
+}

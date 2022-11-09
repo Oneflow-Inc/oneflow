@@ -1,0 +1,12 @@
+sphinx==3.5.4
+jinja2<3.1
+recommonmark==0.6.0
+furo==2021.4.11b34
+sphinx-copybutton==0.5.0
+# dependencies above must be identical to docs/requirements.txt
+pycocotools
+opencv-python==4.2.0.34
+scipy
+pillow
+tensorflow-addons==0.9.1
+https://oneflow-static.oss-cn-beijing.aliyuncs.com/pipindex/pipindex-0.1.3-py2.py3-none-any.whl

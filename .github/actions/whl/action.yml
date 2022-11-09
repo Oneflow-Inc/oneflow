@@ -1,0 +1,35 @@
+inputs:
+  tmp_dir:
+    description: "tmp dir"
+    required: true
+  cuda_version:
+    description: "cuda_version"
+    default: "10.2"
+  python_version:
+    description: "python_version"
+    default: "3.8"
+  extra_flags:
+    description: "flags like --xla"
+    default: ""
+  extra_docker_args:
+    description: ""
+    default: ""
+runs:
+  using: "composite"
+  steps:
+    - run: |
+        set -x
+        src_dir=${PWD}
+        tmp_dir="${{ inputs.tmp_dir }}"
+        mkdir -p ${tmp_dir}
+        cd ${tmp_dir}
+        docker run --rm -v $PWD:/p -w $PWD:/p busybox rm -rf /p/wheelhouse
+        python3 ${src_dir}/docker/package/manylinux/build_wheel.py \
+            --cuda_version=${{ inputs.cuda_version }} \
+            --python_version=${{ inputs.python_version }} \
+            --use_tuna --use_system_proxy --use_aliyun_mirror \
+            --wheel_house_dir=${tmp_dir}/wheelhouse \
+            --oneflow_src_dir=${src_dir} ${{ inputs.extra_flags }} \
+            --retry=1 \
+            --extra_docker_args "${extra_docker_args}"
+      shell: bash

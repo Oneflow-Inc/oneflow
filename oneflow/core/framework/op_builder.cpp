@@ -1,0 +1,117 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#include "oneflow/core/framework/op_builder.h"
+
+#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/framework/attr_value.h"
+#include "oneflow/core/framework/attr_value_accessor.h"
+#include "oneflow/core/framework/id_util.h"
+
+namespace oneflow {
+namespace one {
+
+static constexpr char PositionalPlaceholderPrefix[] = "^Placeholder_";
+
+OpBuilder::OpBuilder(const std::string& op_type_name) {
+  *(proto_.mutable_op_type_name()) = op_type_name;
+  op_name_ = *CHECK_JUST(UniqueStr(op_type_name));
+}
+
+OpBuilder::OpBuilder(const std::string& op_type_name, const std::string& op_name)
+    : op_name_(op_name) {
+  *(proto_.mutable_op_type_name()) = op_type_name;
+}
+
+Maybe<OpBuilder&> OpBuilder::MaybeInput(const std::string& input_name, const int count) {
+  CHECK_GT_OR_RETURN(count, 0);
+  CHECK_EQ_OR_RETURN(proto_.input().count(input_name), 0)
+      << "The Input " << input_name << " has been specified more than once.";
+  proto_.add_input_order(input_name);
+  auto* input_list = &((*(proto_.mutable_input()))[input_name]);
+  for (int i = 0; i < count; ++i) {
+    const std::string& tensor_name =
+        op_name_ + "/" + PositionalPlaceholderPrefix + std::to_string(input_pos_++);
+    input_list->mutable_s()->Add()->assign(tensor_name);
+    indexed_ibns_.emplace_back(input_name + "_" + std::to_string(i));
+  }
+  CHECK_EQ_OR_RETURN(proto_.input().size(), proto_.input_order().size());
+  return *this;
+}
+
+OpBuilder& OpBuilder::Input(const std::string& input_name) {
+  return CHECK_JUST(MaybeInput(input_name, 1));
+}
+OpBuilder& OpBuilder::Input(const std::string& input_name, const int count) {
+  return CHECK_JUST(MaybeInput(input_name, count));
+}
+
+Maybe<OpBuilder&> OpBuilder::MaybeOutput(const std::string& output_name, const int count) {
+  CHECK_GT_OR_RETURN(count, 0);
+  CHECK_EQ_OR_RETURN(proto_.output().count(output_name), 0)
+      << "The output " << output_name << " has been specified more than once.";
+  proto_.add_output_order(output_name);
+  auto* output_list = &((*(proto_.mutable_output()))[output_name]);
+  for (int i = 0; i < count; ++i) {
+    const std::string& tensor_name = op_name_ + "/" + output_name + "_" + std::to_string(i);
+    output_list->mutable_s()->Add()->assign(tensor_name);
+    indexed_obns_.emplace_back(output_name + "_" + std::to_string(i));
+  }
+  CHECK_EQ_OR_RETURN(proto_.output().size(), proto_.output_order().size());
+  return *this;
+}
+
+OpBuilder& OpBuilder::Output(const std::string& output_name) {
+  return CHECK_JUST(MaybeOutput(output_name, 1));
+}
+
+OpBuilder& OpBuilder::Output(const std::string& output_name, const int count) {
+  return CHECK_JUST(MaybeOutput(output_name, count));
+}
+
+template<>
+Maybe<OpBuilder&> OpBuilder::MaybeAttr(const std::string& attr_name, const AttrValue& attr_value) {
+  (*(proto_.mutable_attr()))[attr_name] = attr_value;
+  return *this;
+}
+
+template<>
+OpBuilder& OpBuilder::Attr(const std::string& attr_name, const AttrValue& attr_value) {
+  return CHECK_JUST(MaybeAttr<AttrValue>(attr_name, attr_value));
+}
+
+#define DEFINE_OP_BUILDER_ATTR_FUNC(field, cpp_type, attr_type)                             \
+  template<>                                                                                \
+  Maybe<OpBuilder&> OpBuilder::MaybeAttr<cpp_type>(const std::string& attr_name,            \
+                                                   const cpp_type& val) {                   \
+    AttrValue attr_val;                                                                     \
+    user_op::AttrValueAccessor<cpp_type>::Attr(val, &attr_val);                             \
+    return this->MaybeAttr<AttrValue>(attr_name, attr_val);                                 \
+  }                                                                                         \
+                                                                                            \
+  template<>                                                                                \
+  OpBuilder& OpBuilder::Attr<cpp_type>(const std::string& attr_name, const cpp_type& val) { \
+    return CHECK_JUST(MaybeAttr<cpp_type>(attr_name, val));                                 \
+  }
+
+OF_PP_FOR_EACH_TUPLE(DEFINE_OP_BUILDER_ATTR_FUNC, ATTR_SEQ)
+#undef DEFINE_OP_BUILDER_ATTR_FUNC
+
+Maybe<UserOpExpr> OpBuilder::Build() {
+  return UserOpExpr::New(op_name_, std::move(proto_), indexed_ibns_, indexed_obns_);
+}
+
+}  // namespace one
+}  // namespace oneflow

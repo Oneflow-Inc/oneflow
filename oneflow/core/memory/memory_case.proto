@@ -1,0 +1,11 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/common/device_type.proto";
+
+message MemoryCase {
+  required DeviceType device_type = 1;
+  required int64 device_id = 2;
+  optional DeviceType pinned_device_type = 3;
+  optional int64 pinned_device_id = 4;
+}

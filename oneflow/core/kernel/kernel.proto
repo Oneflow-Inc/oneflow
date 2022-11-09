@@ -1,0 +1,52 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/common/data_type.proto";
+import "oneflow/core/common/dtype_signature.proto";
+import "oneflow/core/operator/op_attribute.proto";
+import "oneflow/core/job/placement.proto";
+import "oneflow/core/register/blob_desc.proto";
+
+message DecodeRandomKernelConf {
+  required uint32 random_seed = 1;
+}
+
+message ShapeElemCntKernelConf {
+  repeated int32 axis = 1;
+}
+
+message UserKernelConf {
+  map<string, BlobDescProto> bn_in_op2blob_desc = 1;
+}
+
+message SyncDynamicResizeKernelConf {
+  required DataType size_data_type = 1;
+}
+
+message BroadcastToCompatibleWithKernelConf {
+  repeated int64 broadcast_axes = 1;
+}
+
+message ImageDecoderRandomCropResizeKernelConf {
+  required int64 seed = 1;
+  required int64 batch_size = 2;
+}
+
+message KernelConf {
+  required DataType data_type = 2;
+  required bool all_blobs_are_static = 6;
+  required DTypeSignature dtype_signature = 7;
+  optional ParallelContext parallel_ctx = 8;
+  optional OpAttribute op_attribute = 9;
+  optional string op_attribute_ref = 10;
+
+  oneof kernel_type {
+    UserKernelConf user_conf = 100;
+    DecodeRandomKernelConf decode_random_conf = 103;
+    SyncDynamicResizeKernelConf sync_dynamic_resize_conf = 360;
+
+    ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
+    BroadcastToCompatibleWithKernelConf broadcast_to_compatible_with_conf = 428;
+    ImageDecoderRandomCropResizeKernelConf image_decoder_random_crop_resize_conf = 429;
+  }
+}

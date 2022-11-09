@@ -1,0 +1,40 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/job/dlnet_conf.proto";
+import "oneflow/core/job/placement.proto";
+import "oneflow/core/job/job_conf.proto";
+import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/register/op_blob_arg.proto";
+import "oneflow/core/register/blob_desc.proto";
+import "oneflow/core/operator/op_conf.proto";
+import "oneflow/core/job/sbp_parallel.proto";
+import "oneflow/core/job/module_conf.proto";
+
+message JobParallelViewConf {
+  map<string, SbpSignature> op_name2sbp_signature_conf = 1;
+  map<string, bool> op_name2is_local_parallel_view = 2;
+  map<string, NdSbpSignature> op_name2nd_sbp_signature_conf = 3;
+}
+
+message JobHelperConf {
+  map<string, LogicalBlobIdPairs> tag2lbi_relations = 1;
+  map<string, OpNameRelations> tag2op_name_relations = 2;
+  map<string, BlobDescProto> lbn2logical_blob_desc = 4;
+  map<string, int64> lbn2logical_object_id = 5;
+  map<string, ArgSignature> op_name2arg_signature = 9;
+}
+
+message MergedLogicalChainIdGroup {
+  repeated int64 logical_chain_id_list = 1;
+}
+
+message Job {
+  optional DLNetConf net = 1;
+  optional Placement placement = 2;
+  required JobConfigProto job_conf = 3;
+  optional JobParallelViewConf job_parallel_view_conf = 4;
+  optional JobHelperConf helper = 5;
+  map<string, ModuleConf> module_name2module_conf = 6;
+  repeated MergedLogicalChainIdGroup logical_chain_groups = 7;
+}

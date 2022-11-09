@@ -1,0 +1,27 @@
+syntax = "proto2";
+package oneflow;
+
+message LogicalBlobId {
+  optional string op_name = 1;
+  optional string blob_name = 2;
+}
+
+message LogicalBlobIdPair {
+  required LogicalBlobId first = 1;
+  required LogicalBlobId second = 2;
+}
+
+message LogicalBlobIdPairs {
+  repeated LogicalBlobIdPair pair = 1;
+}
+
+message LogicalBlobIdGroups {
+  message LogicalBlobIdGroup {
+    repeated LogicalBlobId lbi = 1;
+  }
+  repeated LogicalBlobIdGroup lbi_group = 2;
+}
+
+message ArgSignature {
+  map<string, LogicalBlobId> bn_in_op2lbi = 1;
+}

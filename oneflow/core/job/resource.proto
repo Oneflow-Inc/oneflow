@@ -1,0 +1,61 @@
+syntax = "proto2";
+package oneflow;
+
+import public "oneflow/core/common/device_type.proto";
+
+message CollectiveBoxingConf {
+  // global
+  optional bool enable_fusion = 1 [default = true];
+  optional int64 num_callback_threads = 2 [default = 4];
+
+  // nccl
+  optional int64 nccl_num_streams = 101 [default = 1];
+  optional int64 nccl_fusion_threshold_mb = 102 [default = 16];
+  optional bool nccl_fusion_all_reduce = 103 [default = true];
+  optional bool nccl_fusion_reduce_scatter = 104 [default = false];
+  optional bool nccl_fusion_all_gather = 105 [default = false];
+  optional bool nccl_fusion_reduce = 106 [default = true];
+  optional bool nccl_fusion_broadcast = 107 [default = true];
+  optional bool nccl_fusion_all_reduce_use_buffer = 108 [default = false];
+  optional int64 nccl_fusion_max_ops = 109 [default = 64];
+  optional bool nccl_enable_all_to_all = 110 [default = false];
+  optional bool nccl_enable_mixed_fusion = 111 [default = false];
+}
+
+message CudnnConfig {
+  optional bool enable_cudnn = 1 [default = true];
+  optional int64 cudnn_buf_limit_mbyte = 2 [default = 1024];  // 1GByte
+  optional int32 cudnn_conv_force_fwd_algo = 3;
+  optional int32 cudnn_conv_force_bwd_data_algo = 4;
+  optional int32 cudnn_conv_force_bwd_filter_algo = 5;
+  optional bool cudnn_conv_heuristic_search_algo = 6 [default = true];
+  optional bool cudnn_conv_use_deterministic_algo_only = 7 [default = false];
+  optional bool enable_cudnn_fused_normalization_add_relu = 8;
+  optional bool cudnn_conv_enable_pseudo_half = 9 [default = true];
+}
+
+message Resource {
+  optional int32 machine_num = 1 [default = 0];
+  optional int32 cpu_device_num = 5 [default = 0];
+  optional int32 comm_net_worker_num = 6 [default = 4];
+  optional int32 max_mdsave_worker_num = 7 [default = 64];
+  optional uint64 reserved_host_mem_mbyte = 12 [default = 500];
+  optional uint64 reserved_device_mem_mbyte = 13 [default = 500];
+  optional int32 compute_thread_pool_size = 15;
+  optional bool enable_thread_local_cache = 16 [default = true];
+  optional int64 thread_local_cache_max_size = 17 [default = 67108864]; // 64M
+  optional bool enable_debug_mode = 18 [default = false];
+  optional bool enable_tensor_float_32_compute = 20 [default = true];
+  // NOTE(chengcheng): mem chain merge has an implicit correctness bug under boundary conditions.
+  optional bool enable_mem_chain_merge = 21 [default = false];
+  
+  optional CollectiveBoxingConf collective_boxing_conf = 19;
+
+  // NOTE(chengcheng) to reuse nccl memory and speed up
+  optional bool nccl_use_compute_stream = 30 [default = false];
+  optional bool disable_group_boxing_by_dst_parallel = 31 [default = false];
+
+  optional CudnnConfig cudnn_conf = 32;
+  optional bool enable_legacy_model_io = 33 [default = true];
+  optional bool enable_legacy_model_io_v2 = 34 [default = false];
+}

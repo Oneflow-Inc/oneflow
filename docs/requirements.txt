@@ -1,0 +1,9 @@
+sphinx==3.5.4
+jinja2<3.1
+recommonmark==0.6.0
+furo==2021.4.11b34
+sphinx-copybutton==0.5.0
+# above are dev dependencies
+--pre
+--find-links https://staging.oneflow.info/branch/master/cpu
+oneflow

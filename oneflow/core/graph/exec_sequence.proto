@@ -1,0 +1,13 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/kernel/kernel.proto";
+
+message ExecNodeProto {
+  required KernelConf kernel_conf = 1;
+  map<string, int64> bn_in_op2regst_desc_id = 2;
+}
+
+message ExecSequence {
+  repeated ExecNodeProto exec_node = 1;
+}

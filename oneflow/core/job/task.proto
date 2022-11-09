@@ -1,0 +1,66 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/graph/exec_sequence.proto";
+import "oneflow/core/register/register_desc.proto";
+import "oneflow/core/job/placement.proto";
+
+enum TaskType {
+  kInvalid = 0;
+  kNormalForward = 1;
+  kCopyHd = 12;
+  kCopyCommNet = 13;
+  kDeviceTick = 27;
+  kPack = 30;
+  kUnpack = 31;
+  kRepeat = 32;
+  kAcc = 33;
+  kAccCtrlTick = 34;
+  kSrcSubsetTick = 38;
+  kDstSubsetTick = 39;
+  kSourceTick = 40;
+  kTick = 41;
+  kAccTick = 42;
+  kCase = 43;
+  kEsac = 44;
+  kWaitAndSendIds = 45;
+  kReentrantLock = 46;
+  kCallbackNotify = 47;
+  kDistributeConcat = 55;
+  kDistributeSplit = 56;
+  kSliceBoxing = 57;
+  kCollectiveBoxingGeneric = 58;
+  kBoxingIdentity = 59;
+  kDecodeH2D = 60;
+  kCollectiveBoxingPack = 61;
+  kCollectiveBoxingUnpack = 62;
+  kSspVariableProxy = 63;
+  kBoxingZeros = 64;
+  kCriticalSectionWaitTick = 65;
+  kNcclSendRecvBoxing = 66;
+};
+
+message RegstDescIdSet {
+  repeated int64 regst_desc_id = 1;
+}
+
+message TaskSetInfo {
+  required int64 chain_id = 4;
+  required int64 order_in_graph = 5;
+}
+
+message TaskProto {
+  // common
+  required TaskType task_type = 1;
+  required int64 machine_id = 2;
+  required int64 thrd_id = 3;
+  required int64 task_id = 4;
+  required int64 job_id = 5;
+  required TaskSetInfo task_set_info = 6;
+  required ExecSequence exec_sequence = 7;
+  map<string, RegstDescProto> produced_regst_desc = 8;
+  map<string, RegstDescIdSet> consumed_regst_desc_id = 9;
+  optional bool all_register_num_eq_one_hint = 10 [default = false];
+  // compute task
+  optional ParallelContext parallel_ctx = 1000; // CompTask
+};

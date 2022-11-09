@@ -1,0 +1,55 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.209.6/containers/cpp
+// workaround for EACCES: permission denied, mkdir '/tmp/vsch.....
+// https://github.com/microsoft/vscode-remote-release/issues/2347
+// sudo chmod 777 /tmp/vsch/container-features
+{
+	"name": "oneflow-devel",
+	"image": "oneflowinc/manylinux2014_x86_64_cuda11.2",
+	"runArgs": [
+		"--cap-add=SYS_PTRACE",
+		"--privileged",
+		"--shm-size=8g",
+		"--security-opt",
+		"seccomp=unconfined",
+		"--network=host",
+		// "--gpus",
+		// "all",
+	],
+	"remoteEnv": {
+		"PATH": "${containerEnv:PATH}:/opt/python/cp37-cp37m/bin",
+		"ONEFLOW_CI_PYTHON_EXE": "/opt/python/cp37-cp37m/bin/python3",
+		"ONEFLOW_CI_SRC_DIR": "${containerWorkspaceFolder}",
+		"ONEFLOW_CI_BUILD_DIR": "${containerWorkspaceFolder}/build",
+		"ONEFLOW_CI_CMAKE_INIT_CACHE": "${containerWorkspaceFolder}/cmake/caches/ci/cuda.cmake",
+		"ONEFLOW_CI_BUILD_PARALLEL": "20"
+	},
+	"initializeCommand": "mkdir -p ${localWorkspaceFolder}/devcontainer-cache/dot/ccache && mkdir -p ${localWorkspaceFolder}/devcontainer-cache/dot/local && mkdir -p ${localWorkspaceFolder}/devcontainer-cache/dot/cache",
+	"mounts": [
+		"source=${localWorkspaceFolder}/devcontainer-cache/dot/ccache,target=/root/.ccache,type=bind,consistency=cached",
+		"source=${localWorkspaceFolder}/devcontainer-cache/dot/local,target=/root/.local,type=bind,consistency=cached",
+		"source=${localWorkspaceFolder}/devcontainer-cache/dot/cache,target=/root/.cache,type=bind,consistency=cached",
+		"source=/dataset,target=/dataset,type=bind,consistency=cached,readonly",
+		"source=/model_zoo,target=/model_zoo,type=bind,consistency=cached,readonly",
+	],
+	// Set *default* container specific settings.json values on container create.
+	"settings": {
+		"files.insertFinalNewline": true,
+		"files.trimFinalNewlines": true,
+		"files.trimTrailingWhitespace": true,
+		"files.eol": "\n",
+		"clangd.arguments": [
+			"-j",
+			"8",
+			"-header-insertion=never"
+		],
+	},
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"llvm-vs-code-extensions.vscode-clangd",
+		"ms-vscode.cmake-tools",
+		"ms-python.python"
+	],
+	// Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
+	"remoteUser": "root",
+}

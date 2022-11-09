@@ -1,0 +1,47 @@
+name: "Build OneFlow on macOS"
+description: ""
+runs:
+  using: "composite"
+  steps:
+    - name: Install dependencies
+      run: |
+        brew install nasm
+      shell: bash
+    - name: Set environment variables
+      run: |
+        set -x
+        cmake_flags=""
+        cmake_flags+=" -DPython3_EXECUTABLE=$(which python3)"
+        cmake_flags+=" -DRPC_BACKEND=LOCAL"
+        cmake_flags+=" -DCMAKE_BUILD_TYPE=Release"
+        cmake_flags+=" -DBUILD_CUDA=OFF"
+        echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
+      shell: bash
+    - name: Build (third party)
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. $cmake_flags -DTHIRD_PARTY=ON -DONEFLOW=OFF
+        make -j $(nproc)
+      shell: bash
+    - name: Build (oneflow)
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
+        make -j 2 oneflow
+      shell: bash
+    - name: Build (oneflow_internal)
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
+        make -j 2 oneflow_internal
+      shell: bash
+    - name: Build (generate_api)
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
+        make -j 2 generate_api
+      shell: bash
