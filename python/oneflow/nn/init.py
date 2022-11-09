@@ -73,7 +73,7 @@ def uniform_(tensor, a=0.0, b=1.0):
         >>> w = flow.empty(3, 5)
         >>> nn.init.uniform_(w)
     """
-    assert a <= b, "b must be greater than or equal to a,but got {%d} vs {%d}"%(b,a)
+    assert a <= b, "b must be greater than or equal to a,but got {%d} vs {%d}" % (b, a)
     with flow.no_grad():
         return flow._C.uniform_(tensor, a, b)
 
