@@ -43,7 +43,7 @@ def _test_fused_fast_gelu_mul(test_case, shape, dtype=flow.float32):
     def compare(a, b, rtol=1e-5, atol=1e-8):
         test_case.assertTrue(
             np.allclose(a.numpy(), b.numpy(), rtol=rtol, atol=atol),
-            f"\na\n{a}\n{'-' * 80}\nb:\n{b}\n{'*' * 80}\ndiff:\n{a - b}",
+            f"\na\n{a.numpy()}\n{'-' * 80}\nb:\n{b.numpy()}\n{'*' * 80}\ndiff:\n{a.numpy() - b.numpy()}",
         )
 
     if dtype == flow.float16:
