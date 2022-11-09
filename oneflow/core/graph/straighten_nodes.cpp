@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/task.pb.h"
@@ -88,6 +89,8 @@ class TopoStruct {
   int64_t GetDecidingParameter(int32_t i) const;
 };
 
+StraightenAlgorithmTag sat = GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph();
+
 // NOTE: Leave these code for debugging in the future
 // static std::vector<int64_t> decide_parameters({ParseIntegerFromEnv("Parameter0", 3),
 //                                                ParseIntegerFromEnv("Parameter1", 0),
@@ -96,8 +99,8 @@ class TopoStruct {
 // The best parameter set for saving memory is {3, 0}
 static std::vector<int64_t> decide_parameters;
 
-// SAT, a.k.a. Scholastic Aptitude Test, is the college admission test in the United States of
-// America.
+// SAT, a.k.a. Scholastic Aptitude Test, 
+// is the college admission test in the United States of America.
 void InitDecideParameters(StraightenAlgorithmTag sat) {
   decide_parameters.clear();
   if (sat == StraightenAlgorithmTag::kCompressMemory) {
@@ -194,12 +197,12 @@ TaskClassifier GetTaskClassifier(const TaskNode* node) {
   TaskType task_type = node->GetTaskType();
   if (task_type == TaskType::kNormalForward) {
     const auto& op_conf = dynamic_cast<const CompTaskNode*>(node)->op()->op_conf();
-    if (LongerActivationTimeInCpu(op_conf)) {
-      return TaskClassifier::kWaitingOverlapNode;
-    } else if (op_conf.has_variable_conf()) {
+    if (op_conf.has_variable_conf()) {
       // Variable operators would not be run. They just create tensors.
       // We do not visualize any execution in NVTX. (Even a tick operator has something in NVTX.)
       return TaskClassifier::kRunASAP;
+    } else if (sat == StraightenAlgorithmTag::kOverlap4CpuGpu && LongerActivationTimeInCpu(op_conf)) {
+      return TaskClassifier::kWaitingOverlapNode;
     } else {
       return TaskClassifier::kWaitingMainComputation;
     }
@@ -439,7 +442,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   FindTrunk(&task_node2topo_struct);
 
   // Decide which node should run first
-  InitDecideParameters(GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph());
+  InitDecideParameters(sat);
   std::cout << "Straightening order: ";
   for (int32_t decide_parameter : decide_parameters) { std::cout << decide_parameter << ", "; }
   std::cout << std::endl;
@@ -559,8 +562,6 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   };
 
   // straightening
-  int32_t max_over_num = ParseIntegerFromEnv("MAX_OVERLAP_NUM", 10);
-  std::cout << "maximum overlap num: " << max_over_num << std::endl;
   while (true) {
     if (waiting_lists[TaskClassifier::kRunASAP].empty()) {
       if (waiting_lists[TaskClassifier::kWaitingOverlapNode].empty()) {
