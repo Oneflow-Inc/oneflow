@@ -100,19 +100,18 @@ static std::vector<int64_t> decide_parameters;
 // America.
 void InitDecideParameters(StraightenAlgorithmTag sat) {
   decide_parameters.clear();
-  decide_parameters.push_back(ParseIntegerFromEnv("Parameter0", 0));
-  decide_parameters.push_back(ParseIntegerFromEnv("Parameter1", 0));
-  decide_parameters.push_back(ParseIntegerFromEnv("Parameter2", 0));
-  // decide_parameters.push_back(4);
-  // decide_parameters.push_back(1);
-  // if (sat == StraightenAlgorithmTag::kCompressMemory) {
-  //   decide_parameters.push_back(3);
-  //   decide_parameters.push_back(0);
-  // } else {
-  //   // sat==StraightenAlgorithmTag::kOverlap4ModelParallelism
-  //   decide_parameters.push_back(7);
-  //   decide_parameters.push_back(5);
-  // }
+  if (sat == StraightenAlgorithmTag::kCompressMemory) {
+    decide_parameters.push_back(3);
+    decide_parameters.push_back(0);
+  } else if (sat == StraightenAlgorithmTag::kOverlap4Transfer) {
+    decide_parameters.push_back(7);
+    decide_parameters.push_back(5);
+  } else {
+    // sat==StraightenAlgorithmTag::kOverlap4CpuGpu
+    decide_parameters.push_back(9);
+    decide_parameters.push_back(7);
+    decide_parameters.push_back(3);
+  }
 }
 
 // move the head from source to target
@@ -590,7 +589,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
         remain_task_nums[TaskClassifier::kWaitingOverlapNode] -= overlap_execution_list.size();
         for (auto* overlap_node : overlap_execution_list) { SetOrderInGraph(overlap_node); }
         // Overlap the node with computation from the trunk
-        execute(TaskClassifier::kWaitingMainComputation, max_over_num);
+        execute(TaskClassifier::kWaitingMainComputation, computation_num);
 
         // Release the overlap node
         for (auto* overlap_node : overlap_execution_list) { finish_execution(overlap_node); }
