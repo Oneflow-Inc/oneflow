@@ -27,10 +27,13 @@ namespace functional {
 namespace {
 
 Maybe<Shape> InferUnifiedShapeForBroadcasting(const Shape& input_shape, const Shape& other_shape) {
+  // same shapes need no broadcasting
   if (input_shape == other_shape) { return input_shape; }
 
   const auto num_axes = std::make_pair(input_shape.NumAxes(), other_shape.NumAxes());
 
+  // num_axes.first != num_axes.second
+  // (3, 4) vs (2, 3, 1) => (1, 3, 4) vs (2, 3, 1) then do broadcast
   if (num_axes.first < num_axes.second) {
     auto new_input_shape = Shape::Ones(num_axes.second);
     std::copy(input_shape.begin(), input_shape.end(),
@@ -38,22 +41,26 @@ Maybe<Shape> InferUnifiedShapeForBroadcasting(const Shape& input_shape, const Sh
     return InferUnifiedShapeForBroadcasting(new_input_shape, other_shape);
   }
 
+  // (2, 3, 1) vs (3, 4) => (2, 3, 1) vs (1, 3, 4) then do broadcast
   if (num_axes.first > num_axes.second) {
     auto new_other_shape = Shape::Ones(num_axes.first);
     std::copy(other_shape.begin(), other_shape.end(),
               new_other_shape.begin() + (num_axes.first - num_axes.second));
     return InferUnifiedShapeForBroadcasting(input_shape, new_other_shape);
   }
+
   // num_axes.first == num_axes.second
   Shape target;
-  for (size_t i = 0; i < num_axes.first; ++i) {
+  for (size_t i = 0; i < num_axes.first /* both first and secend are ok */; ++i) {
     const auto num_in_curr_dim = std::make_pair(input_shape.At(i), other_shape.At(i));
 
+    // A = (2, ), B = (2, ), A[0] == B[0], so C = (2, )
     if (num_in_curr_dim.first == num_in_curr_dim.second) {
       target.push_back(num_in_curr_dim.first);
       continue;
     }
 
+    // A = (2, ), B = (3, ), A[0] != B[0] and A[0] != 1 and B[0] != 1, so raise RuntimeError
     if (num_in_curr_dim.first != 1 && num_in_curr_dim.second != 1) {
       return Error::RuntimeError()
              << fmt::format("input and other can't be broadcasted to a single shape. [input's "
@@ -61,6 +68,7 @@ Maybe<Shape> InferUnifiedShapeForBroadcasting(const Shape& input_shape, const Sh
                             input_shape.ToString(), other_shape.ToString());
     }
 
+    // A = (2, ), B = (1, ), A[0] != B[0] but B[0] == 1, so C = (2, )
     target.push_back(
         num_in_curr_dim.first == 1
             ? num_in_curr_dim.second
@@ -227,14 +235,27 @@ Maybe<Shape> InferUnifiedShapeForBroadcasting(const std::vector<Shape>& shapes) 
   auto result =
       *JUST(InferUnifiedShapeForBroadcasting(JUST(VectorAt(shapes, 0)), JUST(VectorAt(shapes, 1))));
 
+  // (1, 2) vs (3, 2) => (3, 2)
   if (shapes.size() == 2) { return result; }
 
+  /*
+    (1, 3) vs (3, 1) vs (3, 1, 1)
+
+    1. (1, 3) vs (3, 1) => (3, 3)
+    2. (3, 3) vs (3, 1, 1) => (3, 3, 3)
+    3. (3, 3, 3) is the final result
+  */
   for (auto iter = shapes.begin() + 2; iter != shapes.end(); ++iter) {
     result = *JUST(InferUnifiedShapeForBroadcasting(result, *iter));
   }
   return result;
 }
 
+/*
+  if input shapes are [(1, 3), (3, 1), (3, 1, 1)]
+  will return ((3, 3, 3), [true, true, true])
+  means the shape to broadcast to is (3, 3, 3) and all three shapes need broadcasting
+*/
 Maybe<std::tuple<Shape, std::deque<bool>>> InferUnifiedShapeForBroadcastingWithInfo(
     const std::vector<Shape>& shapes) {
   const auto unified_shape = *JUST(InferUnifiedShapeForBroadcasting(shapes));

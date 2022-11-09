@@ -3600,7 +3600,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PinMemoryFunctor>("PinMemory");
   m.add_functor<impl::BroadcastShapesFunctor>("BroadcastShapes");
   m.add_functor<impl::BroadcastTensorsFunctor>("BroadcastTensors");
-  m.add_functor<impl::ExpandFunctor>("BroadcastTo");
+  m.add_functor<impl::ExpandFunctor>("BroadcastTo");  // BroadcastTo is an alias of Expand
   m.add_functor<impl::BinCountFunctor>("BinCount");
 };
 
