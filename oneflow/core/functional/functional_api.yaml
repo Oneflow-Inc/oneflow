@@ -2391,12 +2391,12 @@
   signature: "Tensor (Tensor query,  Tensor key, Tensor value, Int64 num_heads, Bool causal=False, Int64 query_hidden_slice_start=0, Int64 query_hidden_slice_end=-1, Int64 key_hidden_slice_start=0, Int64 key_hidden_slice_end=-1, Int64 value_hidden_slice_start=0, Int64 value_hidden_slice_end=-1) => FusedMultiHeadAttentionInference"
   bind_python: True
 
-- name: "fused_row_attention_with_pair_bias"
-  signature: "Tensor (Tensor qmk, Tensor mask_bias, Tensor pair_bias, Float scale=2.8, Float eps=0.000000001) => FusedRowAttentionWithPairBias"
+- name: "fused_msa_attention"
+  signature: 'Tensor (Tensor qmk, Tensor mask, Tensor bias=None, Float scale=0.35355, String mode="row") => FusedMSAAttention'
   bind_python: True
 
-- name: "fused_row_attention_with_pair_bias_grad"
-  signature: "TensorTuple (Tensor y, Tensor dy, Float scale=2.8, Int64 stride=1) => FusedRowAttentionWithPairBiasGrad"
+- name: "fused_msa_attention_grad"
+  signature: 'TensorTuple (Tensor y, Tensor dy, Float scale=0.35355, String mode="row") => FusedMSAAttentionGrad'
   bind_python: False
 
 - name: "send"

@@ -2827,18 +2827,18 @@ def OneFlow_FusedMultiHeadAttentionInferenceOp : OneFlow_BaseOp<"fused_multi_hea
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedRowAttentionWithPairBiasOp : OneFlow_BaseOp<"fused_row_attention_with_pair_bias", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedMSAAttentionOp : OneFlow_BaseOp<"fused_msa_attention", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$qmk,
-    OneFlow_Tensor:$mask_bias,
-    OneFlow_Tensor:$pair_bias
+    OneFlow_Tensor:$mask,
+    Optional<OneFlow_Tensor>:$bias
   );
   let output = (outs
     OneFlow_Tensor:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "2.82843">:$scale,
-    DefaultValuedAttr<F32Attr, "0.00000001">:$eps
+    DefaultValuedAttr<F32Attr, "0.35355">:$scale,
+    DefaultValuedAttr<StrAttr, "\"row\"">:$mode
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -2846,18 +2846,17 @@ def OneFlow_FusedRowAttentionWithPairBiasOp : OneFlow_BaseOp<"fused_row_attentio
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedRowAttentionWithPairBiasGradOp : OneFlow_BaseOp<"fused_row_attention_with_pair_bias_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedMSAAttentionGradOp : OneFlow_BaseOp<"fused_msa_attention_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$y,
     OneFlow_Tensor:$dy
   );
   let output = (outs
-    OneFlow_Tensor:$dx,
-    OneFlow_Tensor:$dp
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "2.82843">:$scale,
-    DefaultValuedAttr<SI64Attr, "1">:$stride
+    DefaultValuedAttr<F32Attr, "0.35355">:$scale,
+    DefaultValuedAttr<StrAttr, "\"row\"">:$mode
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

@@ -4312,49 +4312,61 @@ class FusedMultiHeadAttentionInferenceFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedRowAttentionWithPairBiasFunctor {
+class FusedMSAAttentionFunctor {
  public:
-  FusedRowAttentionWithPairBiasFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_row_attention_with_pair_bias")
-                         .Input("qmk")
-                         .Input("mask_bias")
-                         .Input("pair_bias")
-                         .Output("out")
-                         .Build());
+  FusedMSAAttentionFunctor() {
+    op_with_bias_ = CHECK_JUST(one::OpBuilder("fused_msa_attention")
+                                   .Input("qmk")
+                                   .Input("mask")
+                                   .Input("bias")
+                                   .Output("out")
+                                   .Build());
+    op_without_bias_ = CHECK_JUST(
+        one::OpBuilder("fused_msa_attention").Input("qmk").Input("mask").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& qmk,
-                           const std::shared_ptr<one::Tensor>& mask_bias,
-                           const std::shared_ptr<one::Tensor>& pair_bias, const float& scale,
-                           const float& eps) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "eps");
-    attrs.SetAllAttrs(scale, eps);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {qmk, mask_bias, pair_bias}, attrs);
+                           const std::shared_ptr<one::Tensor>& mask,
+                           const Optional<one::Tensor>& bias, const float& scale,
+                           const std::string& mode) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "mode");
+    attrs.SetAllAttrs(scale, mode);
+    if (bias) {
+      return OpInterpUtil::Dispatch<Tensor>(*op_with_bias_, {qmk, mask, JUST(bias)}, attrs);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_without_bias_, {qmk, mask}, attrs);
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_without_bias_;
+  std::shared_ptr<OpExpr> op_with_bias_;
 };
 
-class FusedRowAttentionWithPairBiasGradFunctor {
+class FusedMSAAttentionGradFunctor {
  public:
-  FusedRowAttentionWithPairBiasGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_row_attention_with_pair_bias_grad")
-                         .Input("y")
-                         .Input("dy")
-                         .Output("dx")
-                         .Output("dp")
-                         .Build());
+  FusedMSAAttentionGradFunctor() {
+    op_with_bias_grad = CHECK_JUST(one::OpBuilder("fused_msa_attention_grad")
+                                       .Input("y")
+                                       .Input("dy")
+                                       .Output("dx")
+                                       .Output("dp")
+                                       .Build());
+    op_without_bias_grad = CHECK_JUST(
+        one::OpBuilder("fused_msa_attention_grad").Input("y").Input("dy").Output("dx").Build());
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& y,
                                 const std::shared_ptr<one::Tensor>& dy, const float& scale,
-                                const int64_t& stride) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "stride");
-    attrs.SetAllAttrs(scale, stride);
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {y, dy}, attrs);
+                                const std::string& mode) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "mode");
+    attrs.SetAllAttrs(scale, mode);
+    if (mode == "row" || mode == "triangle_start" || mode == "triangle_end") {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_with_bias_grad, {y, dy}, attrs);
+    }
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_without_bias_grad, {y, dy}, attrs);
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_without_bias_grad;
+  std::shared_ptr<OpExpr> op_with_bias_grad;
 };
 
 }  // namespace impl
@@ -4474,9 +4486,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BatchNormBackwardReduceFunctor>("BatchNormBackwardReduce");
   m.add_functor<impl::BatchNormBackwardElemtFunctor>("BatchNormBackwardElemt");
   m.add_functor<impl::FusedMultiHeadAttentionInferenceFunctor>("FusedMultiHeadAttentionInference");
-  m.add_functor<impl::FusedRowAttentionWithPairBiasFunctor>("FusedRowAttentionWithPairBias");
-  m.add_functor<impl::FusedRowAttentionWithPairBiasGradFunctor>(
-      "FusedRowAttentionWithPairBiasGrad");
+  m.add_functor<impl::FusedMSAAttentionFunctor>("FusedMSAAttention");
+  m.add_functor<impl::FusedMSAAttentionGradFunctor>("FusedMSAAttentionGrad");
 }
 
 }  // namespace functional
