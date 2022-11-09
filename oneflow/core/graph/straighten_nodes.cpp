@@ -94,17 +94,16 @@ class TopoStruct {
   // future.
 
   // deciding parameter
-  // i = 0: those with small tributary layers go first
-  // i = 1: those with small minimum distance to overlap go first
-  // i = 2: first in first out
-  // i = 3: those with small memory increment go first
-  // i = 4: those with small activation time go first
-
-  // i = 5: those with large tributary layers go first
-  // i = 6: those with long distance to overlap go first
-  // i = 7: last in first out
-  // i = 8: those with large memory increment go first
-  // i = 9: those with large activation time go first
+  // kTributaryLayerAscend = 0,     // small tributary layers go first
+  // kDistanceToOverlapAscend = 1,  // small minimum distance to overlap go first
+  // kLayerAscend = 2,              // first in first out
+  // kMemoryIncrementAscend = 3,    // small memory increment go first
+  // kActivationTimeAscend = 4,     // small activation time go first
+  // kTributaryLayerDescend = 100,     // large tributary layers go first
+  // kDistanceToOverlapDescend = 101,  // long distance to overlap go first
+  // kLayerDescend = 102,              // last in first out
+  // kMemoryIncrementDescend = 103,    // large memory increment go first
+  // kActivationTimeDescend = 104,     // large activation time go first
   int64_t GetDecidingParameter(StraightenOrder so) const;
 };
 
@@ -333,14 +332,16 @@ void TopoStruct::ComputeActivationTime() {
 }
 
 // deciding parameter
-// i = 0: those with small tributary layers go first
-// i = 1: those with small minimum distance to overlap go first
-// i = 2: first in first out
-// i = 3: those with small memory increment go first
-// i = 4: those with large tributary layers go first
-// i = 5: those with long distance to overlap go first
-// i = 6: last in first out
-// i = 7: those with large memory increment go first
+// kTributaryLayerAscend = 0,     // small tributary layers go first
+// kDistanceToOverlapAscend = 1,  // small minimum distance to overlap go first
+// kLayerAscend = 2,              // first in first out
+// kMemoryIncrementAscend = 3,    // small memory increment go first
+// kActivationTimeAscend = 4,     // small activation time go first
+// kTributaryLayerDescend = 100,     // large tributary layers go first
+// kDistanceToOverlapDescend = 101,  // long distance to overlap go first
+// kLayerDescend = 102,              // last in first out
+// kMemoryIncrementDescend = 103,    // large memory increment go first
+// kActivationTimeDescend = 104,     // large activation time go first
 int64_t TopoStruct::GetDecidingParameter(StraightenOrder so) const {
   int64_t sign = 1;
   if (so >= kDiff4AscendDescend) {
