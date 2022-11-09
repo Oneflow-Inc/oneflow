@@ -14,11 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/common/just.h"
-#include "oneflow/core/common/shape.h"
-#include "oneflow/core/framework/op_expr_grad_function.h"
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
@@ -30,7 +29,7 @@ namespace one {
 struct FusedMSAAttentionCaptureState : public AutoGradCaptureState {
   bool input_requires_grad = false;
   bool bias_requires_grad = false;
-  bool input_size = 3;
+  int32_t input_size = 3;
   std::string mode = "row";
   float scale = 1.0;
 };
@@ -71,7 +70,6 @@ Maybe<void> FusedMSAAttention::Capture(FusedMSAAttentionCaptureState* ctx,
   if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
 
   ctx->scale = JUST(composed_attrs.GetAttr<float>("scale"));
-  auto shape = inputs.at(0)->shape();
 
   ctx->SaveTensorForBackward(outputs.at(0));  // y
   return Maybe<void>::Ok();
@@ -81,16 +79,18 @@ Maybe<void> FusedMSAAttention::Apply(const FusedMSAAttentionCaptureState* ctx,
                                      const TensorTuple& out_grads, TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // dy
   if (!ctx->input_requires_grad && !ctx->bias_requires_grad) { return Maybe<void>::Ok(); }
-  in_grads->resize(ctx->input_size);  // input, mask, dropout_mask
+  in_grads->resize(ctx->input_size);
 
   const std::shared_ptr<oneflow::one::Tensor>& y = ctx->SavedTensors().at(0);
-  const std::shared_ptr<oneflow::one::TensorTuple>& input_grads =
+  const std::shared_ptr<oneflow::one::Tensor>& input_grad =
       JUST(functional::FusedMSAAttentionGrad(y, out_grads.at(0), ctx->scale, ctx->mode));
 
-  in_grads->at(0) = input_grads->at(0);  // input
-  if (ctx->bias_requires_grad)
-    in_grads->at(2) = JUST(functional::ReduceSum(input_grads->at(0), std::vector<int32_t>{0},
-                                                 true));  // pair_grad: B,h,S,S -> 1, h, S, S
+  in_grads->at(0) = input_grad;
+  if (ctx->bias_requires_grad) {
+    in_grads->at(2) = JUST(functional::ScalarMul(
+        1 / ctx->scale,
+        JUST(functional::ReduceSum(input_grad, {0}, true))));  // pair_grad: B,h,S,S -> 1, h, S, S
+  }
 
   return Maybe<void>::Ok();
 }

@@ -4344,29 +4344,19 @@ class FusedMSAAttentionFunctor {
 class FusedMSAAttentionGradFunctor {
  public:
   FusedMSAAttentionGradFunctor() {
-    op_with_bias_grad = CHECK_JUST(one::OpBuilder("fused_msa_attention_grad")
-                                       .Input("y")
-                                       .Input("dy")
-                                       .Output("dx")
-                                       .Output("dp")
-                                       .Build());
-    op_without_bias_grad = CHECK_JUST(
+    op_ = CHECK_JUST(
         one::OpBuilder("fused_msa_attention_grad").Input("y").Input("dy").Output("dx").Build());
   }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& y,
-                                const std::shared_ptr<one::Tensor>& dy, const float& scale,
-                                const std::string& mode) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& dy, const float& scale,
+                           const std::string& mode) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("scale", "mode");
     attrs.SetAllAttrs(scale, mode);
-    if (mode == "row" || mode == "triangle_start" || mode == "triangle_end") {
-      return OpInterpUtil::Dispatch<TensorTuple>(*op_with_bias_grad, {y, dy}, attrs);
-    }
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_without_bias_grad, {y, dy}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {y, dy}, attrs);
   }
 
  private:
-  std::shared_ptr<OpExpr> op_without_bias_grad;
-  std::shared_ptr<OpExpr> op_with_bias_grad;
+  std::shared_ptr<OpExpr> op_;
 };
 
 }  // namespace impl
