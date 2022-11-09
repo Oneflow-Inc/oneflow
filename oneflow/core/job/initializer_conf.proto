@@ -9,11 +9,6 @@ message ConstantIntInitializerConf {
   optional int64 value = 1 [default = 0];
 }
 
-message RandomUniformIntInitializerConf {
-  optional int32 min = 1 [default = 0];
-  optional int32 max = 2 [default = 1];
-}
-
 message RandomNormalInitializerConf {
   optional float mean = 1 [default = 0];
   optional float std = 2 [default = 1];
@@ -39,11 +34,10 @@ message InitializerConf {
   oneof type {
     ConstantInitializerConf constant_conf = 1;
     ConstantIntInitializerConf constant_int_conf = 2;
-    RandomUniformIntInitializerConf random_uniform_int_conf = 3;
-    RandomNormalInitializerConf random_normal_conf = 4;
-    RangeInitializerConf range_conf = 5;
-    IntRangeInitializerConf int_range_conf = 6;
-    EmptyInitializerConf empty_conf = 7;
+    RandomNormalInitializerConf random_normal_conf = 3;
+    RangeInitializerConf range_conf = 4;
+    IntRangeInitializerConf int_range_conf = 5;
+    EmptyInitializerConf empty_conf = 6;
   }
 }
 
