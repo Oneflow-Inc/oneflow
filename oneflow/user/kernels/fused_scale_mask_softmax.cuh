@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_USER_KERNELS_FUSED_SCALE_MASK_SOFTMAX_H_
+#define ONEFLOW_USER_KERNELS_FUSED_SCALE_MASK_SOFTMAX_H_
+
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
@@ -214,3 +217,5 @@ struct ElementwiseScaleMaskStore {
 }  // namespace fused_scale_mask_softmax
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_USER_KERNELS_FUSED_SCALE_MASK_SOFTMAX_H_
