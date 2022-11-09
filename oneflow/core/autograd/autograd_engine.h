@@ -149,6 +149,7 @@ class GraphTask final {
 
     int32_t dependencies = 0;
     bool need_execute = false;
+    // Used in autograd.grad interface, to record which grad of tensor will be captured
     std::unique_ptr<std::vector<size_t>> capture_indices;
   };
 
