@@ -71,8 +71,6 @@ class TestModuleToGlobalOrLocal(flow.unittest.TestCase):
                 super().__init__()
                 self.linear = flow.nn.Linear(3, 4, False)
 
-
-
         to_local_m = ToLocalModule()
         flow.nn.init.uniform_(to_local_m.linear.weight)
 
