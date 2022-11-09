@@ -26,7 +26,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n2d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestModuleToCosistent(flow.unittest.TestCase):
+class TestModuleToGlobalOrLocal(flow.unittest.TestCase):
     def test_module_to_global(test_case):
         rank = flow.env.get_rank()
         P = flow.placement("cuda", ranks=[0, 1])
@@ -58,6 +58,63 @@ class TestModuleToCosistent(flow.unittest.TestCase):
         test_case.assertTrue(reuse_var_m.linear1.bias is not reuse_var_m.linear2.bias)
         test_case.assertEqual(reuse_var_m.linear1.bias.placement, P)
         test_case.assertEqual(reuse_var_m.linear1.bias.sbp[0], B)
+
+    def test_module_to_local(test_case):
+        rank = flow.env.get_rank()
+        device = "cuda"
+        P = flow.placement(device, ranks=[0, 1])
+        B = flow.sbp.broadcast
+        S = flow.sbp.split(0)
+
+        class ToLocalModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linear = flow.nn.Linear(3, 4, False)
+
+
+
+        to_local_m = ToLocalModule()
+        flow.nn.init.uniform_(to_local_m.linear.weight)
+
+        to_local_m.to_global(placement=P, sbp=B)
+        origin_w_np = to_local_m.linear.weight.numpy()
+
+        to_local_m.to_global(placement=P, sbp=S)
+        test_case.assertTrue(
+            np.array_equal(to_local_m.linear.weight.numpy(), origin_w_np)
+        )
+
+        # When wight SBP is split(0)
+        to_local_m.to_local()
+        test_case.assertTrue(to_local_m.linear.weight.is_local)
+        if rank == 0:
+            test_case.assertTrue(
+                np.array_equal(to_local_m.linear.weight.numpy(), origin_w_np[:2])
+            )
+        elif rank == 1:
+            test_case.assertTrue(
+                np.array_equal(to_local_m.linear.weight.numpy(), origin_w_np[2:])
+            )
+
+        # local to global from split(0)
+        to_local_m.to_global(placement=P, sbp=S)
+        test_case.assertTrue(
+            np.array_equal(to_local_m.linear.weight.numpy(), origin_w_np)
+        )
+
+        # When wight SBP is broadcast
+        to_local_m.to_global(placement=P, sbp=B)
+        test_case.assertTrue(not to_local_m.linear.weight.is_local)
+        test_case.assertTrue(
+            np.array_equal(to_local_m.linear.weight.numpy(), origin_w_np)
+        )
+
+        # When wight SBP is broadcast
+        to_local_m.to_local()
+        test_case.assertTrue(to_local_m.linear.weight.is_local)
+        test_case.assertTrue(
+            np.array_equal(to_local_m.linear.weight.numpy(), origin_w_np)
+        )
 
 
 if __name__ == "__main__":
