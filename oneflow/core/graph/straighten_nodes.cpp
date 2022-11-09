@@ -386,7 +386,8 @@ void FindTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
 }
 
 void UpdateSat(const HashMap<TaskNode*, TopoStruct>& task_node2topo_struct) {
-  sat = GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph();
+  // sat = GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph();
+  sat = StraightenAlgorithmTag(ParseIntegerFromEnv("SAT", 3));
   if (sat == StraightenAlgorithmTag::kOverlap4CpuGpu) {
     // If not cpu nodes, then the overlap strategy between cpu and gpu might consume large memory
     bool exist_cpu_nodes = false;
@@ -486,9 +487,8 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   UpdateSat(task_node2topo_struct);
   // Decide which node should run first
   InitDecideParameters(sat);
-  std::cout << "Straightening order: ";
-  for (int32_t decide_parameter : decide_parameters) { std::cout << decide_parameter << ", "; }
-  std::cout << std::endl;
+  VLOG(3) << "Straightening order: ";
+  for (int32_t decide_parameter : decide_parameters) { VLOG(3) << decide_parameter; }
 
   // Order in the waiting sets
   struct comp {
