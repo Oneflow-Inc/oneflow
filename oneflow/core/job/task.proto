@@ -12,9 +12,10 @@ enum TaskType {
   kCopyCommNet = 13;
   kDeviceTick = 27;
   kPack = 30;
-  kUnpack = 32;
-  kRepeat = 34;
-  kAcc = 37;
+  kUnpack = 31;
+  kRepeat = 32;
+  kAcc = 33;
+  kAccCtrlTick = 34;
   kSrcSubsetTick = 38;
   kDstSubsetTick = 39;
   kSourceTick = 40;
