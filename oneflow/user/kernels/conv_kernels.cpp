@@ -522,8 +522,8 @@ class ConvCpuKernel final : public user_op::OpKernel {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), out->data_type());
       CHECK_EQ(add_to_output->shape_view(), out->shape_view());
-      Memcpy<DeviceType::kCUDA>(
-          ctx->stream(), out->mut_dptr<void>(), add_to_output->dptr<void>(),
+      Memcpy<DeviceType::kCPU>(
+          ctx->stream(), out->mut_dptr(), add_to_output->dptr(),
           add_to_output->shape_view().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       beta = 1;
     }

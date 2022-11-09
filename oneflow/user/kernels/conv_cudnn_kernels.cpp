@@ -192,7 +192,7 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
       CHECK_EQ(add_to_output->data_type(), out->data_type());
       CHECK_EQ(add_to_output->shape_view(), out->shape_view());
       Memcpy<DeviceType::kCUDA>(
-          ctx->stream(), out->mut_dptr<void>(), add_to_output->dptr<void>(),
+          ctx->stream(), out->mut_dptr(), add_to_output->dptr(),
           add_to_output->shape_view().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       beta = CudnnSPOnePtr(in->data_type());
     } else {
