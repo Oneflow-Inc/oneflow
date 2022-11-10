@@ -151,8 +151,9 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   // >> x = [flow.tensor([1, 2])] * 3
   // >> y = flow.tensor(x)
   // So we cast the input array to the desired dtype manually.
-  PyArrayObject* _array = reinterpret_cast<PyArrayObject*>(PyArray_FromAny(
-      data, nullptr, 0, 0, NPY_ARRAY_DEFAULT | NPY_ARRAY_ENSURECOPY | NPY_ARRAY_FORCECAST, nullptr));
+  PyArrayObject* _array = reinterpret_cast<PyArrayObject*>(
+      PyArray_FromAny(data, nullptr, 0, 0,
+                      NPY_ARRAY_DEFAULT | NPY_ARRAY_ENSURECOPY | NPY_ARRAY_FORCECAST, nullptr));
   if (!_array) {
     return Error::RuntimeError() << "Can not convert input data to a new numpy array.";
   }
