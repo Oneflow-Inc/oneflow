@@ -296,6 +296,13 @@ def seq_to_func_return(seq, need_unpack=False):
 
 
 def _is_raw_type(value, raw_type):
+    # special case for namedtuple return types, for example, max(x, dim=1) return oneflow.return_types.max(values=..., indices=...)
+    if (
+        raw_type == tuple
+        and isinstance(value, tuple)
+        and type(value).__module__ == "oneflow.return_types"
+    ):
+        return True
     return type(value) is raw_type
 
 
