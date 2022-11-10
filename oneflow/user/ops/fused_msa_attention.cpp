@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <glog/logging.h>
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/util.h"
@@ -146,4 +145,87 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
+/*static*/ auto FusedMSASigmoidMulOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
+  DataType g_type = ctx->InputDType("g", 0);
+  DataType x_type = ctx->InputDType("x", 0);
+  CHECK_EQ_OR_RETURN(g_type, x_type);
+  const bool inplace = ctx->Attr<bool>("inplace");
+  if (inplace == false) { ctx->SetOutputDType("out", 0, g_type); }
+  return Maybe<void>::Ok();
+}
+
+/*static*/ auto FusedMSASigmoidMulOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
+    -> Maybe<void> {
+  const Shape& g_shape = ctx->InputShape("g", 0);
+  const Shape& x_shape = ctx->InputShape("x", 0);
+  CHECK_EQ_OR_RETURN(g_shape, x_shape);
+  const bool inplace = ctx->Attr<bool>("inplace");
+  if (inplace == false) { ctx->SetOutputShape("out", 0, g_shape); }
+  return Maybe<void>::Ok();
+}
+
+/*static*/ auto FusedMSASigmoidMulOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
+    -> Maybe<void> {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/*static*/ auto FusedMSASigmoidMulOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+  const bool inplace = ctx->Attr<bool>("inplace");
+  if (inplace) {
+    ctx->NewBuilder().Split(user_op::OpArg("x", 0), 0).Split(user_op::OpArg("g", 0), 0).Build();
+  }
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("x", 0), 0)
+      .Split(user_op::OpArg("g", 0), 0)
+      .Split(user_op::OpArg("out", 0), 0)
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/*static*/ auto FusedMSADropoutAddOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
+  DataType x_type = ctx->InputDType("x", 0);
+  DataType mask_type = ctx->InputDType("mask", 0);
+  CHECK_EQ_OR_RETURN(mask_type, x_type);
+  DataType res_type = ctx->InputDType("residual", 0);
+  CHECK_EQ_OR_RETURN(res_type, x_type);
+  const bool inplace = ctx->Attr<bool>("inplace");
+  if (inplace == false) { ctx->SetOutputDType("out", 0, x_type); }
+  return Maybe<void>::Ok();
+}
+
+/*static*/ auto FusedMSADropoutAddOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
+    -> Maybe<void> {
+  const Shape& x_shape = ctx->InputShape("x", 0);
+  const Shape& mask_shape = ctx->InputShape("mask", 0);
+  CHECK_EQ_OR_RETURN(mask_shape, x_shape);
+  const Shape& res_shape = ctx->InputShape("residual", 0);
+  CHECK_EQ_OR_RETURN(res_shape, x_shape);
+  const bool inplace = ctx->Attr<bool>("inplace");
+  if (inplace == false) { ctx->SetOutputShape("out", 0, x_shape); }
+  return Maybe<void>::Ok();
+}
+
+/*static*/ auto FusedMSADropoutAddOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
+    -> Maybe<void> {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/*static*/ auto FusedMSADropoutAddOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+  const bool inplace = ctx->Attr<bool>("inplace");
+  if (inplace) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("x", 0), 0)
+        .Split(user_op::OpArg("mask", 0), 0)
+        .Split(user_op::OpArg("residual", 0), 0)
+        .Build();
+  } else {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("x", 0), 0)
+        .Split(user_op::OpArg("mask", 0), 0)
+        .Split(user_op::OpArg("residual", 0), 0)
+        .Split(user_op::OpArg("out", 0), 0)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
 }  // namespace oneflow

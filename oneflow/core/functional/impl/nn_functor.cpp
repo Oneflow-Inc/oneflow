@@ -4359,6 +4359,54 @@ class FusedMSAAttentionGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedMSASigmoidMulFunctor {
+ public:
+  FusedMSASigmoidMulFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("fused_msa_sigmoid_mul").Input("g").Input("x").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& g,
+                           const std::shared_ptr<one::Tensor>& x, const bool inplace) const {
+    if (inplace) {
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {g, x}, outputs.get()));
+      return outputs->at(0);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {g, x});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedMSADropoutAddFunctor {
+ public:
+  FusedMSADropoutAddFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_msa_dropout_add")
+                         .Input("x")
+                         .Input("mask")
+                         .Input("residual")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& mask,
+                           const std::shared_ptr<one::Tensor>& residual,
+                           const bool inplace = false) const {
+    if (inplace) {
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x, mask, residual}, outputs.get()));
+      return outputs->at(0);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mask, residual});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -4478,6 +4526,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedMultiHeadAttentionInferenceFunctor>("FusedMultiHeadAttentionInference");
   m.add_functor<impl::FusedMSAAttentionFunctor>("FusedMSAAttention");
   m.add_functor<impl::FusedMSAAttentionGradFunctor>("FusedMSAAttentionGrad");
+  m.add_functor<impl::FusedMSASigmoidMulFunctor>("FusedMSASigmoidMul");
+  m.add_functor<impl::FusedMSADropoutAddFunctor>("FusedMSADropoutAdd");
 }
 
 }  // namespace functional
