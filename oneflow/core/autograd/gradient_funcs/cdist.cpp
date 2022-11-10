@@ -82,8 +82,9 @@ Maybe<void> CDistGrad::Apply(const CDistCaptureState* ctx, const TensorTuple& ou
   const double p = ctx->p;
 
   in_grads->resize(2);
-  (*in_grads)[0] = JUST(functional::CDistGrad(x1, x2, out, out_grads.at(0), p))->at(0);
-  (*in_grads)[1] = JUST(functional::CDistGrad(x1, x2, out, out_grads.at(0), p))->at(1);
+  auto results = JUST(functional::CDistGrad(x1, x2, out, out_grads.at(0), p));
+  (*in_grads)[0] = results->at(0);
+  (*in_grads)[1] = results->at(1);
   return Maybe<void>::Ok();
 }
 

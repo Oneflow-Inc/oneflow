@@ -246,12 +246,14 @@ class CpuCdistGradKernel final : public user_op::OpKernel {
     T* dx1_ptr = dx1->mut_dptr<T>();
     T* dx2_ptr = dx2->mut_dptr<T>();
 
+    std::unique_ptr<ep::primitive::Memset> memset_primitive =
+        ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
+    CHECK(memset_primitive);
+    memset_primitive->Launch(ctx->stream(), dx1_ptr, 0, dx1->shape_view().elem_cnt() * sizeof(T));
+    memset_primitive->Launch(ctx->stream(), dx2_ptr, 0, dx2->shape_view().elem_cnt() * sizeof(T));
+
     if (p == 0) {
-      std::unique_ptr<ep::primitive::Memset> memset_primitive =
-          ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
-      CHECK(memset_primitive);
-      memset_primitive->Launch(ctx->stream(), dx1_ptr, 0, dx1->shape_view().elem_cnt() * sizeof(T));
-      memset_primitive->Launch(ctx->stream(), dx2_ptr, 0, dx2->shape_view().elem_cnt() * sizeof(T));
+      // grad is always zero
     } else if (p == 1) {
       CpuCdistBackward<T, OneDist<T>>(ctx->stream()->As<ep::CpuStream>(), x1_ptr, x2_ptr, dist_ptr,
                                       grad_ptr, dx1_ptr, dx2_ptr, out->shape_view().elem_cnt(), r1,
