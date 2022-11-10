@@ -2881,6 +2881,24 @@ def OneFlow_FusedMSASigmoidMulOp : OneFlow_BaseOp<"fused_msa_sigmoid_mul", [NoSi
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_FusedMSASigmoidMulGradOp : OneFlow_BaseOp<"fused_msa_sigmoid_mul_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dout,
+    OneFlow_Tensor:$g,
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$dgx
+  );
+  let attrs = (ins
+    DefaultValuedAttr<BoolAttr, "false">:$inplace
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_FusedMSADropoutAddOp : OneFlow_BaseOp<"fused_msa_dropout_add", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
@@ -2899,6 +2917,22 @@ def OneFlow_FusedMSADropoutAddOp : OneFlow_BaseOp<"fused_msa_dropout_add", [NoSi
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_FusedMSADropoutAddGradOp : OneFlow_BaseOp<"fused_msa_dropout_add_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dout,
+    OneFlow_Tensor:$mask
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let attrs = (ins
+    DefaultValuedAttr<BoolAttr, "false">:$inplace
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 #endif // GET_ONEFLOW_FUSED_OP_DEFINITIONS
 
 // Group: IDEMPOTENT

@@ -4367,13 +4367,37 @@ class FusedMSASigmoidMulFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& g,
                            const std::shared_ptr<one::Tensor>& x, const bool inplace) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("inplace");
+    attrs.SetAllAttrs(inplace);
     if (inplace) {
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {g, x}, outputs.get()));
+      JUST(OpInterpUtil::Dispatch(*op_, {g, x}, outputs.get(), attrs));
       return outputs->at(0);
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {g, x});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {g, x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedMSASigmoidMulGradFunctor {
+ public:
+  FusedMSASigmoidMulGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_msa_sigmoid_mul_grad")
+                         .Input("dout")
+                         .Input("g")
+                         .Input("x")
+                         .Output("dgx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dout,
+                           const std::shared_ptr<one::Tensor>& g,
+                           const std::shared_ptr<one::Tensor>& x, const bool inplace) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("inplace");
+    attrs.SetAllAttrs(inplace);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {g, x}, attrs);
   }
 
  private:
@@ -4394,13 +4418,36 @@ class FusedMSADropoutAddFunctor {
                            const std::shared_ptr<one::Tensor>& mask,
                            const std::shared_ptr<one::Tensor>& residual,
                            const bool inplace = false) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("inplace");
+    attrs.SetAllAttrs(inplace);
     if (inplace) {
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {x, mask, residual}, outputs.get()));
+      JUST(OpInterpUtil::Dispatch(*op_, {x, mask, residual}, outputs.get(), attrs));
       return outputs->at(0);
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mask, residual});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mask, residual}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedMSADropoutAddGradFunctor {
+ public:
+  FusedMSADropoutAddGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_msa_dropout_add_grad")
+                         .Input("dout")
+                         .Input("mask")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dout,
+                           const std::shared_ptr<one::Tensor>& mask,
+                           const bool inplace = false) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("inplace");
+    attrs.SetAllAttrs(inplace);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dout, mask}, attrs);
   }
 
  private:
@@ -4527,7 +4574,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedMSAAttentionFunctor>("FusedMSAAttention");
   m.add_functor<impl::FusedMSAAttentionGradFunctor>("FusedMSAAttentionGrad");
   m.add_functor<impl::FusedMSASigmoidMulFunctor>("FusedMSASigmoidMul");
+  m.add_functor<impl::FusedMSASigmoidMulGradFunctor>("FusedMSASigmoidMulGrad");
   m.add_functor<impl::FusedMSADropoutAddFunctor>("FusedMSADropoutAdd");
+  m.add_functor<impl::FusedMSADropoutAddGradFunctor>("FusedMSADropoutAddGrad");
 }
 
 }  // namespace functional

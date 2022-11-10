@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -95,7 +96,95 @@ Maybe<void> FusedMSAAttention::Apply(const FusedMSAAttentionCaptureState* ctx,
   return Maybe<void>::Ok();
 }
 
+struct FusedMSASigmoidMulCaptureState : public AutoGradCaptureState {
+  bool input_requires_grad = false;
+};
+
+class FusedMSASigmoidMul : public OpExprGradFunction<FusedMSASigmoidMulCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+    return Maybe<void>::Ok();
+  }
+  Maybe<void> Capture(FusedMSASigmoidMulCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    bool inplace = JUST(composed_attrs.GetAttr<bool>("inplace"));
+    CHECK_EQ_OR_RETURN(inplace, false);
+    ctx->input_requires_grad = inputs.at(0)->requires_grad();
+    ctx->SaveTensorForBackward(inputs.at(0));
+    ctx->SaveTensorForBackward(inputs.at(1));
+    return Maybe<void>::Ok();
+  }
+  Maybe<void> Apply(const FusedMSASigmoidMulCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    if (!ctx->input_requires_grad) return Maybe<void>::Ok();
+    in_grads->resize(2);
+    const std::shared_ptr<oneflow::one::Tensor>& g = ctx->SavedTensors().at(0);
+    const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(1);
+    const std::shared_ptr<oneflow::one::Tensor>& dgx =
+        JUST(functional::FusedMSASigmoidMulGrad(out_grads.at(0), g, x, false));
+    auto shape = dgx->shape();
+    std::vector<int64_t> start, step, stop;
+    int i = 0;
+    for (; i < shape->size(); ++i) {
+      start.push_back(0);
+      stop.push_back(shape->At(i));
+      step.push_back(1);
+    }
+    step[-1] = 2;
+    in_grads->at(0) = JUST(functional::Slice(dgx, start, stop, step, true));
+    start[-1] = 1;
+    in_grads->at(1) = JUST(functional::Slice(dgx, start, stop, step, true));
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  AttrMap base_attrs_;
+};
+
+struct FusedMSADropoutAddCaptureState : public AutoGradCaptureState {
+  bool input_requires_grad = false;
+};
+
+class FusedMSADropoutAdd : public OpExprGradFunction<FusedMSADropoutAddCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+    return Maybe<void>::Ok();
+  }
+  Maybe<void> Capture(FusedMSADropoutAddCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    bool inplace = JUST(composed_attrs.GetAttr<bool>("inplace"));
+    CHECK_EQ_OR_RETURN(inplace, false);
+    ctx->input_requires_grad = inputs.at(0)->requires_grad();
+    ctx->SaveTensorForBackward(inputs.at(1));
+    return Maybe<void>::Ok();
+  }
+  Maybe<void> Apply(const FusedMSADropoutAddCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    if (!ctx->input_requires_grad) return Maybe<void>::Ok();
+    in_grads->resize(2);
+    const std::shared_ptr<oneflow::one::Tensor>& mask = ctx->SavedTensors().at(0);
+    const std::shared_ptr<oneflow::one::Tensor>& dx =
+        JUST(functional::FusedMSADropoutAddGrad(out_grads.at(0), mask, false));
+    in_grads->at(0) = dx;
+    in_grads->at(1) = out_grads.at(0);
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  AttrMap base_attrs_;
+};
+
 REGISTER_OP_EXPR_GRAD_FUNCTION("fused_msa_attention", FusedMSAAttention);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_msa_sigmoid_mul", FusedMSASigmoidMul);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_msa_dropout_add", FusedMSADropoutAdd);
 
 }  // namespace one
 }  // namespace oneflow

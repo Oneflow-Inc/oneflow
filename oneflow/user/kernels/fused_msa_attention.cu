@@ -223,7 +223,7 @@ struct Pack2 {
 };
 template<typename T>
 struct SigmoidMulGradFunctor {
-  OF_DEVICE_FUNC T operator()(T dout, T g, T x) const {
+  OF_DEVICE_FUNC Pack2<T> operator()(T dout, T g, T x) const {
     Pack2<T> p;
     T sigmoid_g = 1 / (1 + exp(-g));
     p.elem[0] = dout * sigmoid_g;
@@ -238,8 +238,8 @@ struct DropoutAddFunctor {
   OF_DEVICE_FUNC T operator()(T x, T residual, T mask) const { return x * mask + residual; }
 };
 template<typename T>
-struct DropoutAddInplaceFunctor {
-  OF_DEVICE_FUNC T operator()(T x, T residual, T mask) const { return x + x * mask + residual; }
+struct DropoutAddGradFunctor {
+  OF_DEVICE_FUNC T operator()(T dout, T mask) const { return dout * mask; }
 };
 }  // namespace dropout_add
 }  // namespace alphafold
@@ -274,6 +274,15 @@ class FusedMSASigmoidMulKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+#define REGISTER_FUSED_MSA_SIGMOID_MUL_KERNEL_GPU(dtype)               \
+  REGISTER_USER_KERNEL("fused_msa_sigmoid_mul")                        \
+      .SetCreateFn<FusedMSASigmoidMulKernel<dtype>>()                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+                       && (user_op::HobDataType("g", 0) == GetDataType<dtype>::value));
+
+REGISTER_FUSED_MSA_SIGMOID_MUL_KERNEL_GPU(float)
+REGISTER_FUSED_MSA_SIGMOID_MUL_KERNEL_GPU(double)
+
 template<typename T>
 class FusedMSASigmoidMulGradKernel final : public user_op::OpKernel {
  public:
@@ -292,7 +301,7 @@ class FusedMSASigmoidMulGradKernel final : public user_op::OpKernel {
     user_op::Tensor* dgx = ctx->Tensor4ArgNameAndIndex("dgx", 0);
     CHECK(cnt * 2 == dgx->shape_view().elem_cnt());
     cuda::elementwise::Ternary(alphafold::gate::SigmoidMulGradFunctor<T>(), cnt,
-                               static_cast<alphafold::gate::Pack2<T>>(dgx->mut_dptr<T>()),
+                               reinterpret_cast<alphafold::gate::Pack2<T>*>(dgx->mut_dptr<T>()),
                                dout->dptr<T>(), g->dptr<T>(), x->dptr<T>(),
                                ctx->stream()->As<ep::CudaStream>()->cuda_stream());
   }
@@ -300,14 +309,14 @@ class FusedMSASigmoidMulGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_MSA_SIGMOID_MUL_KERNEL_GPU(dtype)               \
-  REGISTER_USER_KERNEL("fused_msa_sigmoid_mul")                        \
-      .SetCreateFn<FusedMSASigmoidMulKernel<dtype>>()                  \
+#define REGISTER_FUSED_MSA_SIGMOID_MUL_GRAD_KERNEL_GPU(dtype)          \
+  REGISTER_USER_KERNEL("fused_msa_sigmoid_mul_grad")                   \
+      .SetCreateFn<FusedMSASigmoidMulGradKernel<dtype>>()              \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("dout", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_MSA_SIGMOID_MUL_KERNEL_GPU(float)
-REGISTER_FUSED_MSA_SIGMOID_MUL_KERNEL_GPU(double)
+REGISTER_FUSED_MSA_SIGMOID_MUL_GRAD_KERNEL_GPU(float)
+REGISTER_FUSED_MSA_SIGMOID_MUL_GRAD_KERNEL_GPU(double)
 
 template<typename T>
 class FusedMSADropoutAddKernel final : public user_op::OpKernel {
@@ -324,10 +333,9 @@ class FusedMSADropoutAddKernel final : public user_op::OpKernel {
     auto cnt = res->shape_view().elem_cnt();
     if (ctx->Attr<bool>("inplace") == true) {
       user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-      cuda::elementwise::Ternary(alphafold::dropout_add::DropoutAddInplaceFunctor<T>(), cnt,
-                                 x->mut_dptr<T>(), x->mut_dptr<T>(), mask->dptr<T>(),
-                                 res->dptr<T>(),
-                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream());
+      cuda::elementwise::Ternary(
+          alphafold::dropout_add::DropoutAddFunctor<T>(), cnt, x->mut_dptr<T>(), x->mut_dptr<T>(),
+          mask->dptr<T>(), res->dptr<T>(), ctx->stream()->As<ep::CudaStream>()->cuda_stream());
     } else {
       const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
       user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -350,4 +358,36 @@ class FusedMSADropoutAddKernel final : public user_op::OpKernel {
 
 REGISTER_FUSED_MSA_DROPOUT_ADD_KERNEL_GPU(float)
 REGISTER_FUSED_MSA_DROPOUT_ADD_KERNEL_GPU(double)
+
+template<typename T>
+class FusedMSADropoutAddGradKernel final : public user_op::OpKernel {
+ public:
+  FusedMSADropoutAddGradKernel() = default;
+  ~FusedMSADropoutAddGradKernel() override = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* dout = ctx->Tensor4ArgNameAndIndex("dout", 0);  // broadcast
+    const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
+    auto cnt = dout->shape_view().elem_cnt();
+    CHECK(cnt = mask->shape_view().elem_cnt());
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    CHECK(cnt = dx->shape_view().elem_cnt());
+    cuda::elementwise::Binary(alphafold::dropout_add::DropoutAddGradFunctor<T>(), cnt,
+                              dx->mut_dptr<T>(), dout->dptr<T>(), mask->dptr<T>(),
+                              ctx->stream()->As<ep::CudaStream>()->cuda_stream());
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_FUSED_MSA_DROPOUT_ADD_GRAD_KERNEL_GPU(dtype)          \
+  REGISTER_USER_KERNEL("fused_msa_dropout_add_grad")                   \
+      .SetCreateFn<FusedMSADropoutAddGradKernel<dtype>>()              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+                       && (user_op::HobDataType("dout", 0) == GetDataType<dtype>::value));
+
+REGISTER_FUSED_MSA_DROPOUT_ADD_GRAD_KERNEL_GPU(float)
+REGISTER_FUSED_MSA_DROPOUT_ADD_GRAD_KERNEL_GPU(double)
 }  // namespace oneflow

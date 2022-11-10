@@ -2403,9 +2403,17 @@
   signature: "Tensor (Tensor g, Tensor x, Bool inplace=False) => FusedMSASigmoidMul"
   bind_python: True
 
+- name: "fused_msa_sigmoid_mul_grad"
+  signature: "Tensor (Tensor dout, Tensor g, Tensor x, Bool inplace=False) => FusedMSASigmoidMulGrad"
+  bind_python: True
+
 - name: "fused_msa_dropout_add"
   signature: "Tensor (Tensor x, Tensor mask, Tensor residual, Bool inplace=False) => FusedMSADropoutAdd"
   bind_python: True
+
+- name: "fused_msa_dropout_add_grad"
+  signature: "Tensor (Tensor dout, Tensor mask, Bool inplace=False) => FusedMSADropoutAddGrad"
+  bind_python: False
 
 - name: "send"
   signature: "Void (Tensor input, Int64 dst, Bool send_meta=True) => Send"

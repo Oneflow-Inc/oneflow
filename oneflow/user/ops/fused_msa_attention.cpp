@@ -13,12 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/shape.h"
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
-#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
@@ -182,6 +178,48 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
+/*static*/ auto FusedMSASigmoidMulGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
+  DataType dout_type = ctx->InputDType("dout", 0);
+  DataType x_type = ctx->InputDType("x", 0);
+  DataType g_type = ctx->InputDType("g", 0);
+  CHECK_EQ_OR_RETURN(g_type, dout_type);
+  CHECK_EQ_OR_RETURN(x_type, dout_type);
+  const bool inplace = ctx->Attr<bool>("inplace");
+  CHECK_EQ_OR_RETURN(inplace, false);
+  ctx->SetOutputDType("dgx", 0, g_type);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ auto FusedMSASigmoidMulGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
+    -> Maybe<void> {
+  const Shape& dout_shape = ctx->InputShape("dout", 0);
+  const Shape& g_shape = ctx->InputShape("g", 0);
+  const Shape& x_shape = ctx->InputShape("x", 0);
+  CHECK_EQ_OR_RETURN(g_shape, dout_shape);
+  CHECK_EQ_OR_RETURN(x_shape, dout_shape);
+  Shape dgx_shape;
+  int i = 0;
+  for (; i < dout_shape.size() - 1; ++i) { dgx_shape.push_back(dout_shape.At(i)); }
+  dgx_shape.push_back(dout_shape.At(i) * 2);
+  ctx->SetOutputShape("dgx", 0, dgx_shape);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ auto FusedMSASigmoidMulGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
+    -> Maybe<void> {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/*static*/ auto FusedMSASigmoidMulGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("x", 0), 0)
+      .Split(user_op::OpArg("g", 0), 0)
+      .Split(user_op::OpArg("out", 0), 0)
+      .Split(user_op::OpArg("dgx", 0), 0)
+      .Build();
+  return Maybe<void>::Ok();
+}
+
 /*static*/ auto FusedMSADropoutAddOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
   DataType x_type = ctx->InputDType("x", 0);
   DataType mask_type = ctx->InputDType("mask", 0);
@@ -226,6 +264,40 @@ namespace oneflow {
         .Split(user_op::OpArg("out", 0), 0)
         .Build();
   }
+  return Maybe<void>::Ok();
+}
+
+/*static*/ auto FusedMSADropoutAddGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
+  DataType dout_type = ctx->InputDType("dout", 0);
+  DataType mask_type = ctx->InputDType("mask", 0);
+  CHECK_EQ_OR_RETURN(mask_type, dout_type);
+  const bool inplace = ctx->Attr<bool>("inplace");
+  CHECK_EQ_OR_RETURN(inplace, false);
+  ctx->SetOutputDType("dx", 0, dout_type);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ auto FusedMSADropoutAddGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
+    -> Maybe<void> {
+  const Shape& dout_shape = ctx->InputShape("dout", 0);
+  const Shape& mask_shape = ctx->InputShape("mask", 0);
+  CHECK_EQ_OR_RETURN(mask_shape, dout_shape);
+  ctx->SetOutputShape("dx", 0, dout_shape);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ auto FusedMSADropoutAddGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
+    -> Maybe<void> {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/*static*/ auto FusedMSADropoutAddGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("dout", 0), 0)
+      .Split(user_op::OpArg("mask", 0), 0)
+      .Split(user_op::OpArg("dx", 0), 0)
+      .Build();
+
   return Maybe<void>::Ok();
 }
 }  // namespace oneflow
