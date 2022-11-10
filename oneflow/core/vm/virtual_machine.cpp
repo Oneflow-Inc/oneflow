@@ -83,9 +83,11 @@ VirtualMachine::VirtualMachine() : disable_vm_threads_(false), scheduler_stopped
   // an argument for VirtualMachineEngine's constructor.
   engine_ = intrusive::make_shared<vm::VirtualMachineEngine>();
   OF_PROFILER_NAME_THIS_HOST_THREAD("_Main");
-  std::function<void()> SchedulerInitializer;
-  GetSchedulerThreadInitializer(&SchedulerInitializer);
-  schedule_thread_ = std::thread(&VirtualMachine::ScheduleLoop, this, SchedulerInitializer);
+  if (!ThreadLocalEnvBool<ONEFLOW_VM_NO_SCHEDULER_THREAD>()) {
+    std::function<void()> SchedulerInitializer;
+    GetSchedulerThreadInitializer(&SchedulerInitializer);
+    schedule_thread_ = std::thread(&VirtualMachine::ScheduleLoop, this, SchedulerInitializer);
+  }
   transport_dependence_.Reset();
 }
 
@@ -128,7 +130,7 @@ Maybe<void> VirtualMachine::CloseVMThreads() {
   CHECK_OR_RETURN(!disable_vm_threads_) << "vm threads closed";
   ControlSync();
   pending_notifier_.Close();
-  schedule_thread_.join();
+  if (!ThreadLocalEnvBool<ONEFLOW_VM_NO_SCHEDULER_THREAD>()) { schedule_thread_.join(); }
   disable_vm_threads_ = true;
   return Maybe<void>::Ok();
 }
