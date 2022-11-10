@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/primitive/type_seq.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include <cuda.h>
 
 namespace oneflow {
 namespace ep {
@@ -57,13 +58,13 @@ namespace {
 
 OF_DEVICE_FUNC
 float TanhApprox(float x) {
-#if (__CUDA_ARCH__ >= 750 && CUDART_VERSION >= 11000)
+#if (__CUDA_ARCH__ >= 750 && CUDA_VERSION >= 11000)
   float r;
   asm("tanh.approx.f32 %0,%1; \n\t" : "=f"(r) : "f"(x));
   return r;
 #else
   return tanhf(x);
-#endif  // (__CUDA_ARCH__ >= 750 && CUDART_VERSION >= 11000)
+#endif  // (__CUDA_ARCH__ >= 750 && CUDA_VERSION >= 11000)
 }
 
 }  // namespace
@@ -75,17 +76,17 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kFastGelu, half, half> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {}
 
   OF_DEVICE_FUNC half operator()(half src) const {
-#if (__CUDA_ARCH__ >= 750 && CUDART_VERSION >= 11000)
+#if (__CUDA_ARCH__ >= 750 && CUDA_VERSION >= 11000)
     const float tanh_in =
         __half2float(__float2half_rn(alpha) * (src + __float2half_rn(beta) * src * src * src));
     const float tanh_out = unary_functor_internal::TanhApprox(tanh_in);
     return __float2half_rn(0.5F) * src * (__float2half_rn(1.0F) + __float2half_rn(tanh_out));
 #else
     return static_cast<half>(float_functor(static_cast<float>(src)));
-#endif  // (__CUDA_ARCH__ >= 750 && CUDART_VERSION >= 11000)
+#endif  // (__CUDA_ARCH__ >= 750 && CUDA_VERSION >= 11000)
   }
 
-#if (__CUDA_ARCH__ >= 750 && CUDART_VERSION >= 11000)
+#if (__CUDA_ARCH__ >= 750 && CUDA_VERSION >= 11000)
   __device__ void Apply2(half* dst, const half* src) const {
     const half2 src2 = *(reinterpret_cast<const half2*>(src));
     const float2 tanh_in = __half22float2(__hmul2(
@@ -98,7 +99,7 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kFastGelu, half, half> {
                                __hadd2(__float2half2_rn(1.0F), __float22half2_rn(tanh_out)));
     *reinterpret_cast<half2*>(dst) = dst2;
   }
-#endif  // (__CUDA_ARCH__ >= 750 && CUDART_VERSION >= 11000)
+#endif  // (__CUDA_ARCH__ >= 750 && CUDA_VERSION >= 11000)
 
  private:
   static constexpr float alpha = 0.7978845608028654F;
