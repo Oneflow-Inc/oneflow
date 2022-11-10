@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "fmt/core.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/tensor_util.h"
@@ -917,36 +918,34 @@ class MaxPool3DFunctor : public MaxPoolNDFunctor {
 template<int N>
 class MaxUnpoolNDFunctor {
  public:
-  MaxUnpoolNDFunctor() {
-    if (N == 1) {
-      op_ = CHECK_JUST(
-          one::OpBuilder("max_unpool_1d").Input("x").Input("indices").Output("y").Build());
-    } else if (N == 2) {
-      op_ = CHECK_JUST(
-          one::OpBuilder("max_unpool_2d").Input("x").Input("indices").Output("y").Build());
-    } else if (N == 3) {
-      op_ = CHECK_JUST(
-          one::OpBuilder("max_unpool_3d").Input("x").Input("indices").Output("y").Build());
-    };
-  };
+  MaxUnpoolNDFunctor()
+      : op_(CHECK_JUST(one::OpBuilder(fmt::format("max_unpool_{}d", N))
+                           .Input("x")
+                           .Input("indices")
+                           .Output("y")
+                           .Build())){};
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& indices,
                            const std::vector<int32_t>& kernel_size,
                            const Optional<std::vector<int32_t>>& stride,
                            const std::vector<int32_t>& padding,
                            const Optional<Shape>& output_size) const {
-    CHECK_EQ_OR_RETURN(kernel_size.size(), N)
-        << "`kernel_size` must be an integer or a list of " << N << " integers";
+    const auto fmt_error_msg = [](const std::string& name, int32_t num, bool check_element) {
+      if (check_element) {
+        return fmt::format("each element in `{}` must be greater than 0, got {}", name, num);
+      }
+      return fmt::format("`{}` must be an integer or a list of {} integers", name, N);
+    };
+
+    CHECK_EQ_OR_RETURN(kernel_size.size(), N) << fmt_error_msg("kernel_size", N, false);
     for (int32_t pool_dim : kernel_size) {
-      CHECK_GT_OR_RETURN(pool_dim, 0)
-          << "each element in `kernel_size` must be greater than 0, got " << pool_dim;
+      CHECK_GT_OR_RETURN(pool_dim, 0) << fmt_error_msg("kernel_size", pool_dim, true);
     }
+
     if (stride) {
-      CHECK_EQ_OR_RETURN(JUST(stride)->size(), N)
-          << "`stride` must be an integer or a list of " << N << " integers";
+      CHECK_EQ_OR_RETURN(JUST(stride)->size(), N) << fmt_error_msg("stride", N, false);
       for (int32_t stride_dim : *JUST(stride)) {
-        CHECK_GT_OR_RETURN(stride_dim, 0)
-            << "each element in `stride` must be greater than 0, got " << stride_dim;
+        CHECK_GT_OR_RETURN(stride_dim, 0) << fmt_error_msg("stride", stride_dim, true);
       }
     }
     for (int32_t i = 0; i < padding.size(); i++) {

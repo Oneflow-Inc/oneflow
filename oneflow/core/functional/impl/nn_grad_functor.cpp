@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
+#include "fmt/core.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/functional/function_library.h"
@@ -160,30 +160,13 @@ class MaxPoolNdGradFunctor {
 template<int N>
 class MaxUnpoolNdGradFunctor {
  public:
-  MaxUnpoolNdGradFunctor() {
-    if (N == 1) {
-      op_ = CHECK_JUST(one::OpBuilder("max_unpool_1d_grad")
+  MaxUnpoolNdGradFunctor()
+      : op_(CHECK_JUST(one::OpBuilder(fmt::format("max_unpool_{}d_grad", N))
                            .Input("dy")
                            .Input("x")
                            .Input("indices")
                            .Output("dx")
-                           .Build());
-    } else if (N == 2) {
-      op_ = CHECK_JUST(one::OpBuilder("max_unpool_2d_grad")
-                           .Input("dy")
-                           .Input("x")
-                           .Input("indices")
-                           .Output("dx")
-                           .Build());
-    } else if (N == 3) {
-      op_ = CHECK_JUST(one::OpBuilder("max_unpool_3d_grad")
-                           .Input("dy")
-                           .Input("x")
-                           .Input("indices")
-                           .Output("dx")
-                           .Build());
-    };
-  }
+                           .Build())) {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& indice,
                            const std::shared_ptr<one::Tensor>& dy) const {

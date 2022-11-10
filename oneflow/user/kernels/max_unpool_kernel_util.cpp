@@ -14,36 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/operator/operator_util.h"
+#include "oneflow/user/utils/pool_util.h"
 #include "oneflow/user/kernels/max_unpool_kernel_util.h"
 
 namespace oneflow {
 namespace {
-
-std::vector<int32_t> Get3DVec(const std::vector<int32_t>& original_vec, int32_t NDims) {
-  std::vector<int32_t> vec;
-  FOR_RANGE(uint8_t, dim, 0, 3) {
-    int64_t index = static_cast<int64_t>(dim) - (3 - NDims);
-    if (index < 0) {
-      vec.emplace_back(1);
-    } else {
-      vec.emplace_back(original_vec.at(index));
-    }
-  }
-  return vec;
-}
-
-std::vector<int32_t> Get3DPadVec(const std::vector<int32_t>& original_vec, int32_t NDims) {
-  std::vector<int32_t> vec;
-  FOR_RANGE(uint8_t, dim, 0, 3) {
-    int64_t index = static_cast<int64_t>(dim) - (3 - NDims);
-    if (index < 0) {
-      vec.emplace_back(0);
-    } else {
-      vec.emplace_back(original_vec.at(index));
-    }
-  }
-  return vec;
-}
 
 void GetWindowedOutputShape(int64_t input_size, int32_t filter_size, int32_t stride,
                             int32_t padding, int64_t* output_ptr) {
@@ -69,7 +44,7 @@ MaxUnpoolParams3D::MaxUnpoolParams3D(const int32_t dim, const ShapeView& x_shape
                                      const std::vector<int32_t>& kernel_size,
                                      const std::vector<int32_t>& stride)
     : dim_(dim),
-      padding_(Get3DPadVec(padding, dim)),
+      padding_(Get3DVec<Get3DVecType::kPad>(padding, dim)),
       pool_size_3d_(Get3DVec(kernel_size, dim)),
       stride_3d_(Get3DVec(stride, dim)),
       batch_num_(x_shape.At(0)),
