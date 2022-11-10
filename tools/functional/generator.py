@@ -223,7 +223,6 @@ def parse_function_params(fmt):
         )
 
     items = _split_ignore_in_brackets(header)
-    # items = header.split(" ")
     params.append(items[0])
 
     close_paren = fmt.rfind(")")
@@ -365,7 +364,6 @@ class Argument:
 class Return:
     def __init__(self, fmt):
         self._type, self._return_names = self.check_named_tuple(_normalize(fmt))
-
         assert self._type in types_allowed, "Unknow type: " + self._type
 
         if self._type in return_type_aliases:
