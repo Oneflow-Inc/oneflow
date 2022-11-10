@@ -24,8 +24,8 @@ namespace cuda {
 namespace fused_softmax {
 
 inline void SimplifyBroadcastDims(size_t num_a_dims, const int64_t* a_dims, size_t num_b_dims,
-                           const int64_t* b_dims, size_t* simplified_num_dims,
-                           int64_t* simplified_a_dims, int64_t* simplified_b_dims) {
+                                  const int64_t* b_dims, size_t* simplified_num_dims,
+                                  int64_t* simplified_a_dims, int64_t* simplified_b_dims) {
   const size_t num_max_dims = std::max(num_a_dims, num_b_dims);
   auto MakeGetDim = [num_max_dims](size_t num_dims, const int64_t* dims) {
     const int64_t num_padding_dims = num_max_dims - num_dims;
