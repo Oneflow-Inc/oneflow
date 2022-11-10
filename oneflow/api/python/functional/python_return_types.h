@@ -14,7 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// This code is referenced from: https://github.com/pytorch/pytorch/blob/master/torch/csrc/utils/structseq.cpp
+// This code is referenced from:
+// https://github.com/pytorch/pytorch/blob/master/torch/csrc/utils/structseq.cpp
 
 #ifndef ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_RETURN_TYPES_H_
 #define ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_RETURN_TYPES_H_
