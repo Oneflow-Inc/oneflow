@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
+# This return type template code is referenced from: https://github.com/pytorch/pytorch/blob/master/tools/autograd/gen_python_functions.py
+
 import os
 import re
 import argparse
