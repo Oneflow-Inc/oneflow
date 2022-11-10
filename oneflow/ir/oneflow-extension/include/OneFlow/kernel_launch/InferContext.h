@@ -18,11 +18,8 @@ limitations under the License.
 
 #include <memory>
 #include <utility>
-#include "llvm/Support/Casting.h"
-#include "mlir/IR/MLIRContext.h"
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/kernel/user_kernel.h"
-#include "mlir/Parser/Parser.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/KernelLaunchState.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
 
@@ -32,56 +29,21 @@ namespace okl {
 using namespace user_op;
 class InferContext final : public user_op::InferContext {
  public:
-  static size_t InferTmpSize(user_op::InferContext* ctx) {
-    mlir::MLIRContext mlir_ctx(KernelLaunchState::GetRegistry());
+  static size_t InferTmpSize(user_op::InferContext* ctx);
 
-    auto module =
-        mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
-    if (!module) { LOG(FATAL) << "Fail to load mlir assembly"; }
-    if (failed(mlir::okl::LowerWrapOpsToOKL(*module))) {
-      LOG(ERROR) << "Fail lowering kernel launch Module to okl ir";
-      exit(1);
-    }
-
-    auto& ops = module->lookupSymbol("okl_init_context")->getRegion(0).front();
-
-    size_t max_size = 0;
-    for (auto& op : ops) {
-      if (llvm::dyn_cast_or_null<mlir::okl::BuildRegContextOp>(op)) {
-        mlir::Operation* reg_op = nullptr;
-        for (auto& op_it : op.getRegion(0).front().getOperations()) {
-          if (op_it.getDialect()->getNamespace() == "oneflow") {
-            reg_op = &op_it;
-            break;
-          }
-        }
-        if (!reg_op) { LOG(FATAL) << "Failed to find reg_op in okl.build_reg_context_op"; }
-
-        auto size = RegContext(reg_op).GetTmpBufferSize();
-        max_size = std::max(size, max_size);
-      }
-    }
-    return max_size;
-  }
-
-  explicit InferContext(RegContext* reg_ctx) : reg_ctx_(reg_ctx) {}
+  explicit InferContext(RegContext* reg_ctx);
 
   const TensorDesc& InputTensorDesc(const std::string&, int32_t) const override { TODO(); }
   const TensorDesc& OutputTensorDesc(const std::string&, int32_t) const override { TODO(); }
   TensorDesc* MutOutputTensorDesc(const std::string&, int32_t) override { TODO(); }
   const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                      int32_t index) const override {
-    return reg_ctx_->TensorDesc4ArgNameAndIndex(arg_name, index);
-  }
+                                                      int32_t index) const override;
 
-  const Shape& InputShape(const std::string& arg_name, int32_t index) const override {
-    return Shape4ArgNameAndIndex(arg_name, index);
-  }
+  const Shape& InputShape(const std::string& arg_name, int32_t index) const override;
+
   const Shape& OutputShape(const std::string&, int32_t) const override { TODO(); }
   void SetOutputShape(const std::string&, int32_t, const Shape&) override { TODO(); }
-  const Shape& Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
-    return LogicalTensorDesc4ArgNameAndIndex(arg_name, index)->shape();
-  }
+  const Shape& Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override;
   void SetShape4ArgNameAndIndex(const std::string&, int32_t, const Shape&) override { TODO(); }
   const Stride& InputStride(const std::string&, int32_t) const override { TODO(); }
   const Stride& OutputStride(const std::string&, int32_t) const override { TODO(); }
@@ -123,11 +85,9 @@ class InferContext final : public user_op::InferContext {
   int64_t parallel_num() const override { TODO(); }
 
  private:
-  RegContext* reg_ctx_;
+  const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const override;
 
-  const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const override {
-    return reg_ctx_->user_op_conf().Attr4Name(attr_name);
-  }
+  RegContext* reg_ctx_;
 };
 
 }  // namespace okl
