@@ -49,7 +49,7 @@ class RegContext final : public user_op::KernelRegContext {
 
   const user_op::OpKernel* GenKernel();
 
-  size_t GetTmpBufferSize() { return tmp_buffer_size_; }
+  size_t GetTmpBufferSize();
 
  private:
   ::mlir::Operation* op_;
@@ -58,7 +58,6 @@ class RegContext final : public user_op::KernelRegContext {
   ArgVec inputs_;
   ArgVec outputs_;
   user_op::UserOpConfWrapper conf_wrapper_;
-  size_t tmp_buffer_size_ = 0;
 };
 
 }  // namespace okl

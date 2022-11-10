@@ -18,7 +18,12 @@ limitations under the License.
 
 #include <memory>
 #include <utility>
+#include "llvm/Support/Casting.h"
+#include "mlir/IR/MLIRContext.h"
+#include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/kernel/user_kernel.h"
+#include "mlir/Parser/Parser.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/KernelLaunchState.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
 
 namespace oneflow {
@@ -27,6 +32,38 @@ namespace okl {
 using namespace user_op;
 class InferContext final : public user_op::InferContext {
  public:
+  static size_t InferTmpSize(user_op::InferContext* ctx) {
+    mlir::MLIRContext mlir_ctx(KernelLaunchState::GetRegistry());
+
+    auto module =
+        mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
+    if (!module) { LOG(FATAL) << "Fail to load mlir assembly"; }
+    if (failed(mlir::okl::LowerWrapOpsToOKL(*module))) {
+      LOG(ERROR) << "Fail lowering kernel launch Module to okl ir";
+      exit(1);
+    }
+
+    auto& ops = module->lookupSymbol("okl_init_context")->getRegion(0).front();
+
+    size_t max_size = 0;
+    for (auto& op : ops) {
+      if (llvm::dyn_cast_or_null<mlir::okl::BuildRegContextOp>(op)) {
+        mlir::Operation* reg_op = nullptr;
+        for (auto& op_it : op.getRegion(0).front().getOperations()) {
+          if (op_it.getDialect()->getNamespace() == "oneflow") {
+            reg_op = &op_it;
+            break;
+          }
+        }
+        if (!reg_op) { LOG(FATAL) << "Failed to find reg_op in okl.build_reg_context_op"; }
+
+        auto size = RegContext(reg_op).GetTmpBufferSize();
+        max_size = std::max(size, max_size);
+      }
+    }
+    return max_size;
+  }
+
   explicit InferContext(RegContext* reg_ctx) : reg_ctx_(reg_ctx) {}
 
   const TensorDesc& InputTensorDesc(const std::string&, int32_t) const override { TODO(); }

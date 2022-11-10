@@ -121,11 +121,17 @@ const std::shared_ptr<const user_op::AttrVal>& RegContext::Attr4Name(
 const user_op::OpKernel* RegContext::GenKernel() {
   auto reg_res = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
       GetOp()->getName().stripDialect().str(), *this));
+  return reg_res->create_fn();
+}
+
+size_t RegContext::GetTmpBufferSize() {
+  auto reg_res = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
+      GetOp()->getName().stripDialect().str(), *this));
   if (reg_res->need_temp_storage) {
     InferContext infer_ctx(this);
-    tmp_buffer_size_ = reg_res->infer_tmp_size_fn(&infer_ctx);
+    return reg_res->infer_tmp_size_fn(&infer_ctx);
   }
-  return reg_res->create_fn();
+  return 0;
 }
 
 }  // namespace okl
