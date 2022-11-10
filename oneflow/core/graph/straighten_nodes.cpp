@@ -357,8 +357,8 @@ int64_t TopoStruct::GetDecidingParameter(StraightenOrder so) const {
     case StraightenOrder::kLayerAscend: return sign * min_layer;
     case StraightenOrder::kMemoryIncrementAscend: return sign * memory_increment;
     case StraightenOrder::kActivationTimeAscend: return sign * activation_time;
+    default: return 0;
   }
-  return 0;
 }
 
 // Find the trunk of the task graph, then reduce the wait time for tributaries
@@ -625,11 +625,11 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
           execute(TaskClassifier::kWaitingMainComputation, 1);
         }
       } else {
-        int32_t computation_num =
-            std::min(int32_t(waiting_lists[TaskClassifier::kWaitingMainComputation].size()
-                             / (waiting_lists[TaskClassifier::kWaitingOverlapNode].size())),
-                     remain_task_nums[TaskClassifier::kWaitingMainComputation]
-                         / remain_task_nums[TaskClassifier::kWaitingOverlapNode]);
+        // int32_t computation_num =
+        //     std::min(int32_t(waiting_lists[TaskClassifier::kWaitingMainComputation].size()
+        //                      / (waiting_lists[TaskClassifier::kWaitingOverlapNode].size())),
+        //              remain_task_nums[TaskClassifier::kWaitingMainComputation]
+        //                  / remain_task_nums[TaskClassifier::kWaitingOverlapNode]);
         int32_t max_over_num = ParseIntegerFromEnv("MAX_OVERLAP_NUM", 5);
         // Holding the node to be overlapped
         std::vector<TaskNode*> overlap_execution_list;
