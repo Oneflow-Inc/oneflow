@@ -58,7 +58,7 @@ __launch_bounds__(kBlockSize) __global__
     if (src_idx >= 0 && src_idx < dy_elem_num) {
       dest[num] = src[src_idx];
     } else {
-      dest[num] = 0;
+      dest[num] = 0.0f;
     }
   }
 }

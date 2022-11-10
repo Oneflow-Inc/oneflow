@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "fmt/core.h"
+#include "oneflow/core/common/bfloat16.h"
 #include "oneflow/core/common/throw.h"
 #include "oneflow/user/kernels/max_unpool_kernel_util.h"
 
@@ -57,7 +58,7 @@ struct UnpoolKernelUtil<DeviceType::kCPU, T, IDX> {
   }
 };
 
-template<DeviceType device_type, typename T, int NDIMS>
+template<DeviceType device_type, typename T>
 class MaxUnpoolNdKernel final : public user_op::OpKernel {
  public:
   MaxUnpoolNdKernel() = default;
@@ -81,11 +82,10 @@ class MaxUnpoolNdKernel final : public user_op::OpKernel {
 
     int64_t y_hwd_size = 1;
 
-    x_vector.at(1) =
-        std::accumulate(x->shape_view().begin() + 2, x->shape_view().begin() + 1 + NDIMS, 1,
-                        std::multiplies<int64_t>());
-    y_hwd_size = std::accumulate(y->shape_view().begin() + 2, y->shape_view().begin() + 1 + NDIMS,
-                                 1, std::multiplies<int64_t>());
+    x_vector.at(1) = std::accumulate(x->shape_view().begin() + 2, x->shape_view().end(), 1,
+                                     std::multiplies<int64_t>());
+    y_hwd_size = std::accumulate(y->shape_view().begin() + 2, y->shape_view().end(), 1,
+                                 std::multiplies<int64_t>());
 
     std::unique_ptr<ep::primitive::Memset> memset_primitive =
         ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
@@ -107,7 +107,7 @@ class MaxUnpoolNdKernel final : public user_op::OpKernel {
   }
 };
 
-template<DeviceType device_type, typename T, int NDIMS>
+template<DeviceType device_type, typename T>
 class MaxUnpoolNdGradKernel final : public user_op::OpKernel {
  public:
   MaxUnpoolNdGradKernel() = default;
@@ -130,12 +130,10 @@ class MaxUnpoolNdGradKernel final : public user_op::OpKernel {
     dx_vector.at(0) = dx->shape_view().At(0) * dx->shape_view().At(1);
     int64_t dy_hwd_size = 1;
 
-    dx_vector.at(1) =
-        std::accumulate(dx->shape_view().begin() + 2, dx->shape_view().begin() + 1 + NDIMS, 1,
-                        std::multiplies<int64_t>());
-    dy_hwd_size =
-        std::accumulate(dy->shape_view().begin() + 2, dy->shape_view().begin() + 1 + NDIMS, 1,
-                        std::multiplies<int64_t>());
+    dx_vector.at(1) = std::accumulate(dx->shape_view().begin() + 2, dx->shape_view().end(), 1,
+                                      std::multiplies<int64_t>());
+    dy_hwd_size = std::accumulate(dy->shape_view().begin() + 2, dy->shape_view().end(), 1,
+                                  std::multiplies<int64_t>());
 
     const int64_t dy_elem_num = dy->shape_view().elem_cnt();
 
@@ -153,27 +151,27 @@ class MaxUnpoolNdGradKernel final : public user_op::OpKernel {
 
 #define REGISTER_UNPOOL_KERNELS(device, dtype)                                          \
   REGISTER_USER_KERNEL("max_unpool_1d")                                                 \
-      .SetCreateFn<MaxUnpoolNdKernel<device, dtype, 1>>()                               \
+      .SetCreateFn<MaxUnpoolNdKernel<device, dtype>>()                                  \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("max_unpool_2d")                                                 \
-      .SetCreateFn<MaxUnpoolNdKernel<device, dtype, 2>>()                               \
+      .SetCreateFn<MaxUnpoolNdKernel<device, dtype>>()                                  \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("max_unpool_3d")                                                 \
-      .SetCreateFn<MaxUnpoolNdKernel<device, dtype, 3>>()                               \
+      .SetCreateFn<MaxUnpoolNdKernel<device, dtype>>()                                  \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("max_unpool_1d_grad")                                            \
-      .SetCreateFn<MaxUnpoolNdGradKernel<device, dtype, 1>>()                           \
+      .SetCreateFn<MaxUnpoolNdGradKernel<device, dtype>>()                              \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("max_unpool_2d_grad")                                            \
-      .SetCreateFn<MaxUnpoolNdGradKernel<device, dtype, 2>>()                           \
+      .SetCreateFn<MaxUnpoolNdGradKernel<device, dtype>>()                              \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("max_unpool_3d_grad")                                            \
-      .SetCreateFn<MaxUnpoolNdGradKernel<device, dtype, 3>>()                           \
+      .SetCreateFn<MaxUnpoolNdGradKernel<device, dtype>>()                              \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
@@ -185,10 +183,12 @@ class MaxUnpoolNdGradKernel final : public user_op::OpKernel {
 
 REGISTER_UNPOOL_WITH_DEVICE(DeviceType::kCPU)
 REGISTER_UNPOOL_KERNELS(DeviceType::kCPU, float16)
+REGISTER_UNPOOL_KERNELS(DeviceType::kCPU, bfloat16)
 
 #ifdef WITH_CUDA
 REGISTER_UNPOOL_WITH_DEVICE(DeviceType::kCUDA)
 REGISTER_UNPOOL_KERNELS(DeviceType::kCUDA, half)
+REGISTER_UNPOOL_KERNELS(DeviceType::kCUDA, nv_bfloat16)
 #endif
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_UNPOOL_KERNEL_UTIL, (DeviceType::kCPU),
