@@ -40,6 +40,8 @@ RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,
 RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
                                                        const std::string& regst_desc_name);
 
+bool inline IsValidChainId(int64_t val) { return val >= 0; }
+
 class TaskEdge;
 
 class TaskNode : public Node<TaskNode, TaskEdge> {

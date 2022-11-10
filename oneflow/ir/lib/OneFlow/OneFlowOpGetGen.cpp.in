@@ -8,7 +8,6 @@
 #include "mlir/Support/LogicalResult.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOpTraits.h"
-#include "OneFlow/OneFlowEnums.h.inc"
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/OneFlowInterfaces.h.inc"
 #include "OneFlow/OneFlowTypes.h"

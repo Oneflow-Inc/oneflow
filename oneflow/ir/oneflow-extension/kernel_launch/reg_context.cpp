@@ -54,8 +54,11 @@ RegContext::RegContext(mlir::Operation* op) : op_(op), conf_wrapper_(GetConfWrap
     if (auto rankedTensorType = operand.getType().dyn_cast<mlir::RankedTensorType>()) {
       tensor_desc.set_shape(
           Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()});
-      tensor_desc.set_data_type(
-          mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType()));
+
+      const auto data_type =
+          mlir::oneflow::support::FromMLIRTypeToOFDataType(rankedTensorType.getElementType());
+      if (mlir::failed(data_type)) { exit(1); }
+      tensor_desc.set_data_type(data_type.getValue());
       // TODO: set stride
       // TODO: set is_dynamic
     } else {
@@ -71,8 +74,11 @@ RegContext::RegContext(mlir::Operation* op) : op_(op), conf_wrapper_(GetConfWrap
     if (auto rankedTensorType = result.getType().dyn_cast<mlir::RankedTensorType>()) {
       tensor_desc.set_shape(
           Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()});
-      tensor_desc.set_data_type(
-          mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType()));
+
+      const auto data_type =
+          mlir::oneflow::support::FromMLIRTypeToOFDataType(rankedTensorType.getElementType());
+      if (mlir::failed(data_type)) { exit(1); }
+      tensor_desc.set_data_type(data_type.getValue());
       // TODO: set stride
       // TODO: set is_dynamic
     } else {
