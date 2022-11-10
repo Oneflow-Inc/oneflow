@@ -334,13 +334,11 @@ Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs
         continue;  // recurse
       }
     } else {
-      if (!frame.node_->next_functions().empty()) {
-        grad_fn2exec_info_[frame.node_].need_execute =
-            std::any_of(frame.node_->next_functions().begin(), frame.node_->next_functions().end(),
-                        [&](const std::shared_ptr<FunctionNode>& fn) {
-                          return grad_fn2exec_info_[fn.get()].need_execute;
-                        });
-      }
+      grad_fn2exec_info_[frame.node_].need_execute |=
+          std::any_of(frame.node_->next_functions().begin(), frame.node_->next_functions().end(),
+                      [&](const std::shared_ptr<FunctionNode>& fn) {
+                        return grad_fn2exec_info_[fn.get()].need_execute;
+                      });
       seen.insert(frame.node_);
       stack.pop();
     }
