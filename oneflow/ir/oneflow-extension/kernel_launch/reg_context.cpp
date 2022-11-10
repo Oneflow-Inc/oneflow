@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "OneFlow/UserOpReflection.h"
-#include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/Support/LogicalResult.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/common/protobuf.h"
@@ -25,9 +23,11 @@ limitations under the License.
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/InferContext.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
+#include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
-#include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 
 #include <memory>
 #include <string>

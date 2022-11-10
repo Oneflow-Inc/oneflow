@@ -16,12 +16,13 @@ limitations under the License.
 #ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_INFERCONTEXT_H_
 #define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_INFERCONTEXT_H_
 
-#include <memory>
-#include <utility>
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/kernel/user_kernel.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/KernelLaunchState.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
+
+#include <memory>
+#include <utility>
 
 namespace oneflow {
 namespace okl {
