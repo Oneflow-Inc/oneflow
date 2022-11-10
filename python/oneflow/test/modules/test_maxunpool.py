@@ -189,6 +189,37 @@ class TestMaxUnpooling(flow.unittest.TestCase):
     def test_functional_max_unpool3d_with_random_data(test_case):
         return _test_functional_unpoolnd(test_case, 3)
 
+    @profile(torch.nn.functional.max_unpool1d)
+    def profile_max_unpool1d(test_case):
+        max_pool_results = torch.randn(1, 32, 64)
+        max_pool_indices = torch.arange(64).expand(1, 32, 64)
+        torch.nn.functional.max_unpool1d(max_pool_results, max_pool_indices, 2)
+
+        max_pool_results = torch.randn(32, 32, 64)
+        max_pool_indices = torch.arange(64).expand(32, 32, 64)
+        torch.nn.functional.max_unpool1d(max_pool_results, max_pool_indices, 2)
+
+    @profile(torch.nn.functional.max_unpool2d)
+    def profile_max_unpool2d(test_case):
+        max_pool_results = torch.randn(1, 16, 32, 32)
+        max_pool_indices = torch.arange(32).expand(1, 16, 32, 32)
+        torch.nn.functional.max_unpool2d(max_pool_results, max_pool_indices, 2)
+
+        max_pool_results = torch.randn(32, 16, 32, 32)
+        max_pool_indices = torch.arange(32).expand(32, 16, 32, 32)
+        torch.nn.functional.max_unpool2d(max_pool_results, max_pool_indices, 2)
+
+    @profile(torch.nn.functional.max_unpool3d)
+    def profile_max_unpool3d(test_case):
+        max_pool_results = torch.randn(1, 4, 32, 32, 32)
+        max_pool_indices = torch.arange(32).expand(1, 4, 32, 32, 32)
+        torch.nn.functional.max_unpool3d(max_pool_results, max_pool_indices, 2)
+
+        max_pool_results = torch.randn(16, 4, 32, 32, 32)
+        max_pool_indices = torch.arange(32).expand(16, 4, 32, 32, 32)
+        torch.nn.functional.max_unpool3d(max_pool_results, max_pool_indices, 2)
+
+
 
 if __name__ == "__main__":
     unittest.main()
