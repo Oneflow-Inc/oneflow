@@ -16,6 +16,9 @@ limitations under the License.
 
 #include "oneflow/core/vm/op_call_instruction_policy.h"
 #include "oneflow/core/vm/allocator.h"
+#include "oneflow/core/vm/dtr_cuda_allocator.h"
+#include "oneflow/core/vm/thread_safe_guard.h"
+#include "oneflow/core/vm/dtr_env.h"
 #include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/eager/tensor_storage.h"
@@ -27,6 +30,20 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
+namespace {
+static double GetEstimatedComputeTime(OpCallInstructionPolicy* operand) {
+  const auto& inputs = operand->inputs();
+  const auto& outputs = operand->outputs();
+  size_t estimated_compute_time = 0;
+  for (const auto& input : inputs) {
+    estimated_compute_time += input->tensor_storage()->blob_bytes();
+  }
+  for (const auto& output : outputs) {
+    estimated_compute_time += output->tensor_storage()->blob_bytes();
+  }
+  return estimated_compute_time;
+}
+}  // namespace
 struct OpCallInstructionUtil final {
   static inline Maybe<void> Prepare(OpCallInstructionPolicy* op_call_instruction_policy,
                                     Instruction* instruction) {
@@ -43,7 +60,12 @@ struct OpCallInstructionUtil final {
       if (x->tensor_storage()->blob_dptr() == nullptr) {
         JUST(Compute(x->tensor_storage()->compute_op(), vm_stream));
       }
-      // pin input
+      x->tensor_storage()->Pin();
+    }
+    for (const auto& y : op_call_instruction_policy->outputs()) {
+      y->tensor_storage()->Pin();
+      y->tensor_storage()->Access();
+      y->tensor_storage()->set_compute_op(op_call_instruction_policy);
     }
     JUST(AllocateOutputBlobsMemory(op_call_instruction_policy, allocator, vm_stream));
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
@@ -59,9 +81,9 @@ struct OpCallInstructionUtil final {
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
       DeallocateTempStorage(op_call_instruction_policy, allocator);
     }
-    for (const auto& y : op_call_instruction_policy->outputs()) {
-      y->tensor_storage()->set_compute_op(op_call_instruction_policy);
-    }
+    for (const auto& x : op_call_instruction_policy->inputs()) { x->tensor_storage()->Unpin(); }
+    for (const auto& y : op_call_instruction_policy->outputs()) { y->tensor_storage()->Unpin(); }
+    Singleton<dtr::Env>::Get()->add_time(GetEstimatedComputeTime(op_call_instruction_policy));
     return Maybe<void>::Ok();
   }
 
@@ -99,6 +121,10 @@ struct OpCallInstructionUtil final {
       if (JUST(blob_object->TryAllocateBlobBodyMemory(allocator))) {
         CHECK_OR_RETURN(stream_type == allocator_stream_type)
             << "no allocator supported on stream type " << GetStreamTypeName::Visit(stream_type);
+        if (auto* dtr_allocator =
+                dynamic_cast<vm::DtrEpAllocator<ReentrantThreadSafeLock>*>(allocator)) {
+          dtr_allocator->Mark(blob_object.get(), static_cast<const char*>(blob_object->dptr()));
+        }
       }
     }
     return Maybe<void>::Ok();
@@ -216,7 +242,8 @@ Maybe<void> OpCallInstructionPolicy::Prepare(vm::Instruction* instruction) {
 }
 
 void OpCallInstructionPolicy::Compute(vm::Instruction* instruction) {
-  CHECK_JUST_MSG(OpCallInstructionUtil::Compute(this, instruction->mut_stream()), instruction->DebugName());
+  CHECK_JUST_MSG(OpCallInstructionUtil::Compute(this, instruction->mut_stream()),
+                 instruction->DebugName());
 }
 
 std::string OpCallInstructionPolicy::DebugName(const vm::Instruction& instruction) const {

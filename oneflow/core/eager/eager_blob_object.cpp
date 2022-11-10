@@ -26,11 +26,6 @@ namespace oneflow {
 
 namespace vm {
 
-void TensorStorage::set_compute_op(OpCallInstructionPolicy* compute_op) {
-  // copy a new OpCallInstructionPolicy
-  compute_op_ = std::make_shared<OpCallInstructionPolicy>(*compute_op);
-}
-
 EagerBlobObject::EagerBlobObject(
     const std::shared_ptr<MemoryCase>& mem_case,
     const Symbol<one::LocalTensorMeta>& static_local_tensor_meta,

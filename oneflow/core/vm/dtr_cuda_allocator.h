@@ -40,7 +40,7 @@ class DtrEpAllocator final : public Allocator {
 
   Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
-  void Mark(EagerBlobObject* ebo, char* mem_ptr);
+  void Mark(EagerBlobObject* ebo, const char* mem_ptr);
   void DisplayAllPieces();
   nlohmann::json DumpSearchFreeMemCost();
   size_t allocated_memory();
@@ -125,7 +125,7 @@ class DtrEpAllocator final : public Allocator {
   };
   std::vector<std::set<Piece*, PieceCmp>> free_pieces_overlapping_with_group_;
   // std::map is sorted by key, so we can find contiguous memory by it
-  std::map<char*, Piece*> ptr2piece_;
+  std::map<const char*, Piece*> ptr2piece_;
   std::vector<std::tuple<size_t, int, int64_t>> search_free_mem_cost_;
   Piece* recycle_piece_list_;
   size_t total_allocate_bytes_ = 0;

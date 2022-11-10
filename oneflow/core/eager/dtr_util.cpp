@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifdef ENABLE
-
 #include <algorithm>
 
 #include "oneflow/core/common/env_var/dtr.h"
@@ -56,6 +54,8 @@ double append_memory_frag_info_and_get(size_t free_mem, size_t threshold) {
 }
 
 }  // namespace dtr
+
+#ifdef ENABLE
 
 namespace vm {
 
@@ -153,6 +153,8 @@ Maybe<void> CheckOutputInMemory(LocalCallOpKernelPhyInstrOperand* operand) {
 }
 
 }  // namespace vm
-}  // namespace oneflow
 
 #endif
+
+}  // namespace oneflow
+

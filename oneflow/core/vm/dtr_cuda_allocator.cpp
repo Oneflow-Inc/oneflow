@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/vm/dtr_cuda_allocator.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/eager/tensor_storage.h"
+#include "oneflow/core/vm/thread_safe_guard.h"
 #include <iostream>
 
 namespace oneflow {
@@ -83,7 +84,7 @@ typename DtrEpAllocator<ThreadLock>::offset_t DtrEpAllocator<ThreadLock>::get_of
 }
 
 template<typename ThreadLock>
-void DtrEpAllocator<ThreadLock>::Mark(EagerBlobObject* ebo, char* mem_ptr) {
+void DtrEpAllocator<ThreadLock>::Mark(EagerBlobObject* ebo, const char* mem_ptr) {
   Piece* piece = ptr2piece_.at(mem_ptr);
   piece->tensor = ebo->tensor_storage().get();
   if (dtr::debug_level() >= 1) {
@@ -319,6 +320,9 @@ auto DtrEpAllocator<ThreadLock>::AllocateMemoryInPiece(Piece* piece, offset_t of
 
 template<typename ThreadLock>
 size_t DtrEpAllocator<ThreadLock>::iterate_group_index(bool high) const {
+  if (normal_group_num_ == 1) {
+    return 0;
+  }
   auto is_high_group = [](size_t idx) -> bool { return (idx / 2) % 2 == (idx % 2); };
   if (high) {
     size_t index;  // NOLINT
@@ -497,7 +501,7 @@ Maybe<typename DtrEpAllocator<ThreadLock>::Piece*> DtrEpAllocator<ThreadLock>::E
     }
     if (min_tensor) {
       min_tensor->Evict(false);
-      Piece* piece = FindPiece(required_size, true);
+      Piece* piece = JUST(FindPiece(required_size, true));
       if (piece != nullptr) { return piece; }
     } else {
       return Error::RuntimeError() << "Cannot find a piece to evict";
@@ -609,7 +613,7 @@ Maybe<typename DtrEpAllocator<ThreadLock>::Piece*> DtrEpAllocator<ThreadLock>::E
   }
   if (dtr::debug_level() >= 2) { LOG(INFO) << "evict size: " << evict_size; }
 
-  if (!pieces_to_be_evicted.empty()) { return CHECK_NOTNULL(FindPiece(required_size, true)); }
+  if (!pieces_to_be_evicted.empty()) { return CHECK_NOTNULL(JUST(FindPiece(required_size, true))); }
   return nullptr;
 }
 
@@ -622,7 +626,7 @@ Maybe<void> DtrEpAllocator<ThreadLock>::Allocate(char** mem_ptr, std::size_t siz
   typename ThreadLock::RAIIGuard guard(thread_lock_);
   size_t aligned_size = CudaMemAlignedBytes(size);
 
-  Piece* piece = FindPiece(aligned_size, false);
+  Piece* piece = JUST(FindPiece(aligned_size, false));
 
   if (piece == nullptr) {
     if (first_time) {
@@ -632,11 +636,11 @@ Maybe<void> DtrEpAllocator<ThreadLock>::Allocate(char** mem_ptr, std::size_t siz
     const auto started_at = profiler::GetTimeNow();
     const size_t evict_num1 = num_forced_eviction_;
     if (EnvBool<ONEFLOW_DTR_MEGENGINE_STYLE>()) {
-      piece = EvictAndFindPieceLoop(aligned_size, true);
+      piece = JUST(EvictAndFindPieceLoop(aligned_size, true));
     } else if (EnvBool<ONEFLOW_DTR_DTR_NO_FREE>()) {
-      piece = EvictAndFindPieceLoop(aligned_size, false);
+      piece = JUST(EvictAndFindPieceLoop(aligned_size, false));
     } else {
-      piece = EvictAndFindPieceOnce(aligned_size);
+      piece = JUST(EvictAndFindPieceOnce(aligned_size));
     }
     const size_t evict_num2 = num_forced_eviction_;
     const auto duration = profiler::GetTimeNow() - started_at;
@@ -732,6 +736,8 @@ template<typename ThreadLock>
 nlohmann::json DtrEpAllocator<ThreadLock>::DumpSearchFreeMemCost() {
   return {{"overhead", search_free_mem_cost_}};
 }
+
+template class DtrEpAllocator<ReentrantThreadSafeLock>;
 
 }  // namespace vm
 }  // namespace oneflow

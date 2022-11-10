@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/vm/virtual_machine_scope.h"
+#include "oneflow/core/vm/dtr_env.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/device/cudnn_conv_util.h"
@@ -142,6 +143,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Singleton<EnvGlobalObjectsScope>::SetAllocated(this);
 
   InitLogging(env_proto.cpp_logging_conf());
+  Singleton<dtr::Env>::New();
   Singleton<EnvDesc>::New(env_proto);
   Singleton<ProcessCtx>::New();
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in

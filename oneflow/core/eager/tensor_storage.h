@@ -13,11 +13,7 @@ class OpCallInstructionPolicy;
 
 class TensorStorage {
  public:
-  TensorStorage()
-      : blob_bytes_(0),
-        non_pod_allocator_(std::make_unique<MemoryAllocator>()),
-        producer_stream_(NullOpt),
-        last_used_stream_(NullOpt) {}
+  TensorStorage();
   OF_DISALLOW_COPY_AND_MOVE(TensorStorage);
 
   virtual ~TensorStorage() {
@@ -60,19 +56,26 @@ class TensorStorage {
 
   void set_compute_op(OpCallInstructionPolicy* compute_op);
   OpCallInstructionPolicy* compute_op() const { return compute_op_.get(); }
-
   void Evict(bool eager_eviction) { return Release(); }
-  void Pin() { UNIMPLEMENTED(); }
+  void Pin() { num_pinned_++; }
+  void Unpin() { num_pinned_--; }
+  void Access();
+  bool is_in_memory() const { return blob_dptr_ != nullptr; }
   bool is_pinned() const { return num_pinned() > 0; }
-  int32_t num_pinned() const { UNIMPLEMENTED(); }
-  bool is_evictable() const { UNIMPLEMENTED(); }
-
-  size_t id() const { UNIMPLEMENTED(); }
-  Maybe<double> cost(size_t override_size) const { UNIMPLEMENTED(); }
-  std::string compute_op_type_name() const { UNIMPLEMENTED(); }
+  int32_t num_pinned() const { return num_pinned_; }
+  bool is_evictable() const { return is_evictable_; }
+  int64_t id() const { return id_; }
+  Maybe<double> cost(size_t override_size) const;
+  std::string compute_op_type_name() const;
 
  private:
+  int64_t id_;
+  size_t num_pinned_;
   size_t blob_bytes_;
+  bool is_evictable_;
+  double last_access_time_;
+  double compute_time_;
+
   std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
   std::unique_ptr<MemoryAllocator> non_pod_allocator_;
   Optional<Symbol<::oneflow::Stream>> producer_stream_;
