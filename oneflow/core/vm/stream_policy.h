@@ -59,7 +59,7 @@ class StreamPolicy {
       const Stream& stream, const InstructionStatusBuffer& status_buffer) const = 0;
   virtual bool QueryInstructionStatusDone(const Stream& stream,
                                           const InstructionStatusBuffer& status_buffer) const = 0;
-  virtual bool OnSchedulerThread(StreamType stream_type) const;
+  virtual bool OnSchedulerThread(StreamType stream_type, int64_t thread_uid) const;
   virtual bool SupportingTransportInstructions() const = 0;
 
   void RunIf(Instruction* instruction) const;

@@ -57,6 +57,7 @@ class Stream final : public intrusive::Base {
 
   // methods
   void __Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamType stream_type,
+                int64_t thread_uid,
                 const intrusive::shared_ptr<Dependence>& schedule_local_dep_object,
                 const std::vector<intrusive::shared_ptr<Dependence>>& transport_dependences);
   int64_t device_id() const;

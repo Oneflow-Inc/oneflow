@@ -18,14 +18,16 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/framework/stream_on_independent_thread.h"
 #include "oneflow/core/framework/stream_is_comm_net_stream.h"
+#include "oneflow/core/framework/stream.h"
 #include "oneflow/core/common/env_var/vm.h"
 #include "oneflow/core/thread/thread_global_id.h"
 
 namespace oneflow {
 namespace vm {
 
-bool StreamPolicy::OnSchedulerThread(StreamType stream_type) const {
+bool StreamPolicy::OnSchedulerThread(StreamType stream_type, int64_t thread_uid) const {
   if (StreamOnIndependentThread::Visit(stream_type)) { return false; }
+  if (thread_uid != oneflow::Stream::kDefaultStreamThreadUid) { return false; }
   return !ThreadLocalEnvBool<ONEFLOW_VM_COMPUTE_ON_WORKER_THREAD>();
 }
 

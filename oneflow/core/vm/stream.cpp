@@ -25,6 +25,7 @@ namespace oneflow {
 namespace vm {
 
 void Stream::__Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamType stream_type,
+                      int64_t thread_uid,
                       const intrusive::shared_ptr<Dependence>& schedule_local_dep_object,
                       const std::vector<intrusive::shared_ptr<Dependence>>& transport_dependences) {
   set_thread_ctx(thread_ctx);
@@ -33,7 +34,7 @@ void Stream::__Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamType s
   stream_policy_ = CHECK_JUST(CreateStreamPolicy::Visit(stream_type, device));
   schedule_local_dep_object_ = schedule_local_dep_object;
   transport_dependences_ = transport_dependences;
-  on_scheduler_thread_ = stream_policy_->OnSchedulerThread(stream_type);
+  on_scheduler_thread_ = stream_policy_->OnSchedulerThread(stream_type, thread_uid);
 }
 
 int64_t Stream::device_id() const { return device_->device_id(); }

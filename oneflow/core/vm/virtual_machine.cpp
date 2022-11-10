@@ -436,9 +436,9 @@ Maybe<vm::Stream*> VirtualMachine::CreateStream(vm::ThreadCtx* thread_ctx, Symbo
   if (IsCommNetStream::Visit(stream->stream_type())) {
     transport_dependences.push_back(FindOrCreateTransportLocalDepObject());
   }
-  auto vm_stream =
-      intrusive::make_shared<vm::Stream>(thread_ctx, stream->device(), stream->stream_type(),
-                                         schedule_dependence, transport_dependences);
+  auto vm_stream = intrusive::make_shared<vm::Stream>(thread_ctx, stream->device(),
+                                                      stream->stream_type(), stream->thread_uid(),
+                                                      schedule_dependence, transport_dependences);
 
   auto bc = std::make_shared<BlockingCounter>(1);
   engine_->InsertProbe([&vm_stream, thread_ctx, bc](vm::VirtualMachineEngine* engine) {
