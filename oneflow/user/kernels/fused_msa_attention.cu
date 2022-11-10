@@ -215,13 +215,31 @@ namespace alphafold {
 namespace gate {
 template<typename T>
 struct SigmoidMulFunctor {
-  OF_DEVICE_FUNC T operator()(T g, T x) const { return x / (1 + exp(g)); }
+  OF_DEVICE_FUNC T operator()(T g, T x) const { return x / (1 + exp(-g)); }
+};
+template<typename T>
+struct Pack2 {
+  T elem[2];
+};
+template<typename T>
+struct SigmoidMulGradFunctor {
+  OF_DEVICE_FUNC T operator()(T dout, T g, T x) const {
+    Pack2<T> p;
+    T sigmoid_g = 1 / (1 + exp(-g));
+    p.elem[0] = dout * sigmoid_g;
+    p.elem[1] = dout * x * sigmoid_g * (1 - sigmoid_g);
+    return p;
+  }
 };
 }  // namespace gate
 namespace dropout_add {
 template<typename T>
 struct DropoutAddFunctor {
   OF_DEVICE_FUNC T operator()(T x, T residual, T mask) const { return x * mask + residual; }
+};
+template<typename T>
+struct DropoutAddInplaceFunctor {
+  OF_DEVICE_FUNC T operator()(T x, T residual, T mask) const { return x + x * mask + residual; }
 };
 }  // namespace dropout_add
 }  // namespace alphafold
@@ -256,6 +274,32 @@ class FusedMSASigmoidMulKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+template<typename T>
+class FusedMSASigmoidMulGradKernel final : public user_op::OpKernel {
+ public:
+  FusedMSASigmoidMulGradKernel() = default;
+  ~FusedMSASigmoidMulGradKernel() override = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* dout = ctx->Tensor4ArgNameAndIndex("dout", 0);
+    const user_op::Tensor* g = ctx->Tensor4ArgNameAndIndex("g", 0);
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    auto cnt = g->shape_view().elem_cnt();
+    CHECK(cnt = x->shape_view().elem_cnt());
+
+    user_op::Tensor* dgx = ctx->Tensor4ArgNameAndIndex("dgx", 0);
+    CHECK(cnt * 2 == dgx->shape_view().elem_cnt());
+    cuda::elementwise::Ternary(alphafold::gate::SigmoidMulGradFunctor<T>(), cnt,
+                               static_cast<alphafold::gate::Pack2<T>>(dgx->mut_dptr<T>()),
+                               dout->dptr<T>(), g->dptr<T>(), x->dptr<T>(),
+                               ctx->stream()->As<ep::CudaStream>()->cuda_stream());
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
 #define REGISTER_FUSED_MSA_SIGMOID_MUL_KERNEL_GPU(dtype)               \
   REGISTER_USER_KERNEL("fused_msa_sigmoid_mul")                        \
       .SetCreateFn<FusedMSASigmoidMulKernel<dtype>>()                  \
@@ -263,6 +307,7 @@ class FusedMSASigmoidMulKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUSED_MSA_SIGMOID_MUL_KERNEL_GPU(float)
+REGISTER_FUSED_MSA_SIGMOID_MUL_KERNEL_GPU(double)
 
 template<typename T>
 class FusedMSADropoutAddKernel final : public user_op::OpKernel {
@@ -279,9 +324,10 @@ class FusedMSADropoutAddKernel final : public user_op::OpKernel {
     auto cnt = res->shape_view().elem_cnt();
     if (ctx->Attr<bool>("inplace") == true) {
       user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-      cuda::elementwise::Ternary(
-          alphafold::dropout_add::DropoutAddFunctor<T>(), cnt, x->mut_dptr<T>(), x->mut_dptr<T>(),
-          mask->dptr<T>(), res->dptr<T>(), ctx->stream()->As<ep::CudaStream>()->cuda_stream());
+      cuda::elementwise::Ternary(alphafold::dropout_add::DropoutAddInplaceFunctor<T>(), cnt,
+                                 x->mut_dptr<T>(), x->mut_dptr<T>(), mask->dptr<T>(),
+                                 res->dptr<T>(),
+                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream());
     } else {
       const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
       user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -303,5 +349,5 @@ class FusedMSADropoutAddKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUSED_MSA_DROPOUT_ADD_KERNEL_GPU(float)
-
+REGISTER_FUSED_MSA_DROPOUT_ADD_KERNEL_GPU(double)
 }  // namespace oneflow
