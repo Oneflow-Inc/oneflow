@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from inspect import ismodule
+from inspect import ismodule, currentframe
 from types import ModuleType
 from typing import Any
 from importlib.abc import MetaPathFinder, Loader
@@ -114,57 +114,74 @@ For fine-grained control of importing torch and oneflow, use Mock with enable an
         sys.meta_path.insert(0, OneflowImporter())
 
 
-class Mock:
-    def __init__(self, globals):
-        self.importer = OneflowImporter()
-        self.importer.enable = False  # deal with previously imported torch
-        sys.meta_path.insert(0, self.importer)
-        self.enable(globals)
+_importer = OneflowImporter()
 
-    def enable(self, globals):
-        if self.importer.enable:  # already enabled
-            return
-        for k, v in sys.modules.copy().items():
-            if k.startswith("torch"):
-                self.importer.disable_mod_cache.update({k: v})
-                del sys.modules[k]
-                try:
-                    del globals[k]
-                except KeyError:
-                    pass
-        for k, v in self.importer.enable_mod_cache.items():
-            sys.modules.update({k: v})
-            globals.update({k: v})
-        self.importer.enable = True
 
-    def disable(self, globals):
-        if not self.importer.enable:  # already disabled
-            return
-        for k, v in sys.modules.copy().items():
-            if k.startswith("torch"):
-                self.importer.enable_mod_cache.update({k: v})
-                del sys.modules[k]
-                try:
-                    del globals[k]
-                except KeyError:
-                    pass
-        for k, v in self.importer.disable_mod_cache.items():
-            sys.modules.update({k: v})
-            globals.update({k: v})
-        self.importer.enable = False
+def mock_init(globals=None):
+    if globals is None:
+        globals = currentframe().f_back.f_globals
+    _importer.enable = False  # deal with previously imported torch
+    sys.meta_path.insert(0, _importer)
+    enable(globals)
 
-    @contextmanager
-    def enable_with(self, globals):
-        try:
-            self.enable(globals)
-            yield None
-        finally:
-            self.disable(globals)
 
-    @contextmanager
-    def disable_with(self, globals):
-        try:
-            self.disable(globals)
-            yield None
-        finally:
-            self.enable(globals)
+def enable(globals=None):
+    if globals is None:
+        globals = currentframe().f_back.f_globals
+    if _importer.enable:  # already enabled
+        return
+    for k, v in sys.modules.copy().items():
+        if k.startswith("torch"):
+            _importer.disable_mod_cache.update({k: v})
+            del sys.modules[k]
+            try:
+                del globals[k]
+            except KeyError:
+                pass
+    for k, v in _importer.enable_mod_cache.items():
+        sys.modules.update({k: v})
+        globals.update({k: v})
+    _importer.enable = True
+
+
+def disable(globals=None):
+    if globals is None:
+        globals = currentframe().f_back.f_globals
+    if not _importer.enable:  # already disabled
+        return
+    for k, v in sys.modules.copy().items():
+        if k.startswith("torch"):
+            _importer.enable_mod_cache.update({k: v})
+            del sys.modules[k]
+            try:
+                del globals[k]
+            except KeyError:
+                pass
+    for k, v in _importer.disable_mod_cache.items():
+        sys.modules.update({k: v})
+        globals.update({k: v})
+    _importer.enable = False
+
+
+@contextmanager
+def enable_with(globals=None):
+    if globals is None:
+        # go back two frames
+        globals = currentframe().f_back.f_back.f_globals
+    try:
+        enable(globals)
+        yield None
+    finally:
+        disable(globals)
+
+
+@contextmanager
+def disable_with(globals=None):
+    if globals is None:
+        globals = currentframe().f_back.f_back.f_globals
+    try:
+        disable(globals)
+        yield None
+    finally:
+        enable(globals)
+
