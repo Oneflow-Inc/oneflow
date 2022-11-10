@@ -370,6 +370,7 @@ Other Ops
     adaptive_avg_pool3d
     broadcast_like 
     cast
+    cdist
     cumprod 
     cumsum 
     decode_onerec
