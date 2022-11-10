@@ -58,8 +58,8 @@ class TestStft(flow.unittest.TestCase):
     )
     def test_stft_with_1D_random_data(test_case):
         device = random_device()
-        rand_fft =getRandFFtvalue()
-        rand_size =np.random.randint(rand_fft, 30000)
+        rand_fft = getRandFFtvalue()
+        rand_size = np.random.randint(rand_fft, 30000)
         input_dims = [rand_size]
         win_dims = [rand_fft]
         x = random_tensor(1, *input_dims).to(device)
@@ -72,9 +72,9 @@ class TestStft(flow.unittest.TestCase):
             n_fft=rand_fft,
             window=win,
             return_complex=False,
-            onesided=onesided_value, 
+            onesided=onesided_value,
             center=center_value,
-            normalized=normalized_value
+            normalized=normalized_value,
         )
         return y
 
