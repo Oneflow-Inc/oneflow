@@ -32,6 +32,7 @@ limitations under the License.
 #include "oneflow/ir/oneflow-extension/include/OneFlow/JITOpInfer.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/JITEngine.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/KernelLaunchState.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/InferContext.h"
 
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/Parser/Parser.h"
@@ -65,7 +66,7 @@ Maybe<void> KernelLaunchOp::GetSbp(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> KernelLaunchOp::InferDataType(user_op::InferContext* ctx) {
-  return ir::jit::SetTensorDateType(ctx);
+  return ir::jit::SetTensorDataType(ctx);
 }
 
 namespace {
@@ -136,6 +137,9 @@ class KernelLaunchGpuKernel final : public user_op::OpKernel {
       .SetCreateFn<KernelLaunchGpuKernel<dtype>>()                                              \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
+        return oneflow::okl::InferContext::InferTmpSize(ctx);                                   \
+      })                                                                                        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         return Maybe<void>::Ok();                                                               \

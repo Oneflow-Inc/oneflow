@@ -40,11 +40,6 @@ namespace ir {
 
 namespace jit {
 
-Maybe<void> SetTensorDateType(user_op::InferContext* ctx) {
-  ctx->SetDtype4ArgNameAndIndex("out", 0, ctx->InputDType("in", 0));
-  return Maybe<void>::Ok();
-}
-
 static const mlir::FunctionType GetFunctionType(user_op::InferContext* ctx,
                                                 mlir::OwningOpRef<mlir::ModuleOp>& module) {
   mlir::func::FuncOp funcOp = mlir::SymbolTable::lookupNearestSymbolFrom<mlir::func::FuncOp>(
@@ -73,6 +68,39 @@ static const mlir::FunctionType GetFunctionType(user_op::InferContext* ctx,
     }
   }
   return funcType;
+}
+
+Maybe<void> SetTensorDataType(user_op::InferContext* ctx) {
+  auto mlir_assembly_str = ctx->Attr<std::string>("mlir_assembly");
+  mlir::DialectRegistry registry;
+  mlir::registerAllDialects(registry);
+  mlir::MLIRContext context(registry);
+  context.loadDialect<mlir::func::FuncDialect>();
+  context.loadDialect<mlir::oneflow::OneFlowDialect>();
+
+  mlir::OwningOpRef<mlir::ModuleOp> module =
+      mlir::parseSourceString<mlir::ModuleOp>(mlir_assembly_str, &context);
+  if (!module) {
+    LOG(ERROR) << "Fail to load mlir assembly";
+    exit(1);
+  }
+
+  auto funcType = GetFunctionType(ctx, module);
+  int32_t res_i = 0;
+  for (mlir::Type res_type : funcType.getResults()) {
+    if (auto rankedTensorType = res_type.dyn_cast<mlir::RankedTensorType>()) {
+      ctx->SetDtype4ArgNameAndIndex(
+          "out", res_i,
+          mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType()));
+      res_i += 1;
+    } else {
+      std::string res_type_str = "";
+      llvm::raw_string_ostream os(res_type_str);
+      res_type.print(os);
+      LOG(FATAL) << "Unsupported arg type " << res_type_str;
+    }
+  }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {

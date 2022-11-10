@@ -34,6 +34,14 @@ namespace okl {
 
 class KernelLaunchState final : public user_op::OpKernelState {
  public:
+  static mlir::DialectRegistry GetRegistry() {
+    mlir::DialectRegistry registry;
+    registry.insert<mlir::oneflow::OneFlowDialect, mlir::okl::OKLDialect, mlir::func::FuncDialect,
+                    mlir::arith::ArithmeticDialect, mlir::LLVM::LLVMDialect>();
+    mlir::registerLLVMDialectTranslation(registry);
+    return registry;
+  }
+
   explicit KernelLaunchState(user_op::KernelInitContext* ctx);
   ~KernelLaunchState() = default;
 

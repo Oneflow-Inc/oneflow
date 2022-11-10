@@ -618,7 +618,7 @@ LogicalResult ConvertDTFromAttr(Attribute attr, ::oneflow::DataType& data_type) 
   return ConvertDT(dt_attr.getValue(), data_type);
 }
 
-LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf) {
+LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf) {
   auto user_conf = op_conf.mutable_user_conf();
   std::string op_type_name = GetOpTypeName(op);
   op_conf.mutable_user_conf()->set_op_type_name(op_type_name);

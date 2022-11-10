@@ -16,6 +16,7 @@ limitations under the License.
 // this file should contains functions to get operands and results with user op name and index
 
 #include "OneFlow/UserOpReflection.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
 
@@ -126,6 +127,41 @@ LogicalResult GetUserOpFilteredSegmentKeyAndSizes(UserOp op, std::vector<std::st
   return success();
 }
 
+Source GetOpSourceByName(Operation* op, const std::string& to_find) {
+  if (auto user_op = dyn_cast<UserOpCompatible>(op)) {
+    auto found = [&](std::vector<std::string> keys, bool is_res = false) -> int {
+      auto res = -1;
+      auto offset = 0;
+      for (const auto& key : llvm::enumerate(keys)) {
+        if (key.value() == to_find) { return offset; }
+        offset += is_res ? user_op.getODSResultIndexAndLength(key.index()).second
+                         : user_op.getODSOperandIndexAndLength(key.index()).second;
+      }
+      return res;
+    };
+
+    if (auto res = found(*user_op.inputKeys()); res != -1) { return {Source::INPUT, res}; }
+    if (auto res = found(*user_op.outputKeys(), true); res != -1) { return {Source::OUTPUT, res}; }
+
+    if (auto alternative_name = dyn_cast<HasAlternativeOpTypeName>(op)) {
+      if (auto res = found(*alternative_name.inputKeys()); res != -1) {
+        return {Source::INPUT, res};
+      }
+      if (auto res = found(*alternative_name.outputKeys(), true); res != -1) {
+        return {Source::OUTPUT, res};
+      }
+    }
+
+    if (to_find == "tmp_buffer") { return {Source::BUFFER, 0}; }
+    op->emitError(to_find + " not found in this op");
+    return {Source::INVALID, -1};
+  } else {
+    op->dump();
+    op->emitError("Not support op which is not user  op");
+    return {Source::INVALID, -1};
+  }
+}
+
 template<template<typename T> class Trait>
 LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::string>& keys,
                                             std::vector<int32_t>& sizes) {
@@ -188,7 +224,7 @@ ArgIds<Trait>::ArgIds(Operation* op) {
   }
   for (int i = 0; i < keys.size(); i += 1) {
     auto& key = keys[i];
-    for (size_t j = 0; j < sizes.size(); j += 1) {
+    for (size_t j = 0; j < sizes[i]; j += 1) {
       ArgID id{key, j};
       ids_.push_back(id);
     }

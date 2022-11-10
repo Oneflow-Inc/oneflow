@@ -18,6 +18,7 @@ limitations under the License.
 #include "OneFlow/OKL/OKLTypes.h"
 #include "OneFlow/OKL/OKLAttributes.h"
 #include "OneFlow/OneFlowOps.h"
+#include "OneFlow/Passes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "OneFlow/OKLDialect.cpp.inc"
 #include "mlir/IR/Dialect.h"
@@ -51,6 +52,7 @@ void OKLDialect::initialize() {
 }
 
 void registerOneFlowPasses() {
+  mlir::registerAggregateComputeOpsPassPass();
   mlir::registerWrapOpsToKernelLaunchPassPass();
   mlir::registerExtractKernelLaunchTensorPassPass();
   mlir::registerTrimReturnAsVoidPassPass();

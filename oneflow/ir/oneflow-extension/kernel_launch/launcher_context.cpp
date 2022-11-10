@@ -51,16 +51,22 @@ LauncherContext::LauncherContext(user_op::KernelComputeContext* compute_context,
           index = kernel_vec_.size();
 
           auto reg_ctx = reg_ctx_vec_[GetOpIndex(&op, 0)];
-          auto kernel = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-                                       reg_ctx->GetOp()->getName().stripDialect().str(), *reg_ctx))
-                            ->create_fn();
-          kernel_vec_.push_back(kernel);
+          kernel_vec_.push_back(reg_ctx->GenKernel());
           op.setAttr("index", mlir::IntegerAttr::get(mlir::IntegerType::get(context, 32), index));
         })
         .Case([&](mlir::okl::BuildRegContextOp elem) {
           index = reg_ctx_vec_.size();
 
-          auto* reg_op = op.getRegion(0).front().front().getNextNode();
+          mlir::Operation* reg_op = nullptr;
+          for (auto& op_it : op.getRegion(0).front().getOperations()) {
+            if (op_it.getDialect()->getNamespace() == "oneflow") {
+              reg_op = &op_it;
+              break;
+            }
+          }
+
+          if (!reg_op) { LOG(FATAL) << "Failed to find reg_op in okl.build_reg_context_op"; }
+
           reg_ctx_vec_.emplace_back(std::make_shared<RegContext>(reg_op));
           op.setAttr("index", mlir::IntegerAttr::get(mlir::IntegerType::get(context, 32), index));
         })

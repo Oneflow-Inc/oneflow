@@ -14,18 +14,39 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "OneFlow/UserOpReflection.h"
+#include "oneflow/core/framework/infer_util.h"
+#include "oneflow/core/framework/user_op_attr.pb.h"
+#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/kernel/blob_tensor_view.h"
+#include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/InferContext.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
+#include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
 
+#include <memory>
 #include <string>
 #include <vector>
 
 namespace oneflow {
 namespace okl {
 
-RegContext::RegContext(mlir::Operation* op) : op_(op) {
+static user_op::UserOpConfWrapper GetConfWrapper(mlir::Operation* op) {
+  OperatorConf op_conf;
+  if (mlir::failed(mlir::oneflow::ConvertUserOpAttributes(op, op_conf))) {
+    op->emitError("fail to convert user op attributes");
+    exit(1);
+  }
+  auto conf_wrapper_ = user_op::UserOpConfWrapper(std::make_shared<OperatorConf>(op_conf));
+  return conf_wrapper_;
+}
+
+RegContext::RegContext(mlir::Operation* op) : op_(op), conf_wrapper_(GetConfWrapper(op)) {
   for (const auto& operand_id : ::llvm::enumerate(
            mlir::oneflow::user_op::ArgIds<mlir::OpTrait::AttrSizedOperandSegments>(op))) {
     user_op::NaiveTensorDesc tensor_desc{};
@@ -87,11 +108,8 @@ const user_op::TensorDesc* RegContext::TensorDesc4ArgNameAndIndex(const std::str
 const ArgVec& RegContext::inputs() const { return inputs_; }
 const ArgVec& RegContext::outputs() const { return outputs_; }
 
-const user_op::UserOpConfWrapper& RegContext::user_op_conf() const {
-  TODO() << "get user op conf from op in mlir";
-  OperatorConf user_op_conf;
-  return user_op::UserOpConfWrapper(std::make_shared<OperatorConf>(user_op_conf));
-}
+// TODO: more information is needed
+const user_op::UserOpConfWrapper& RegContext::user_op_conf() const { return conf_wrapper_; }
 
 const std::shared_ptr<const user_op::AttrVal>& RegContext::Attr4Name(
     const std::string& attr_name) const {
@@ -99,6 +117,22 @@ const std::shared_ptr<const user_op::AttrVal>& RegContext::Attr4Name(
 }
 
 ::mlir::Operation* RegContext::GetOp() const { return op_; }
+
+const user_op::OpKernel* RegContext::GenKernel() {
+  auto reg_res = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
+      GetOp()->getName().stripDialect().str(), *this));
+  return reg_res->create_fn();
+}
+
+size_t RegContext::GetTmpBufferSize() {
+  auto reg_res = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
+      GetOp()->getName().stripDialect().str(), *this));
+  if (reg_res->need_temp_storage) {
+    InferContext infer_ctx(this);
+    return reg_res->infer_tmp_size_fn(&infer_ctx);
+  }
+  return 0;
+}
 
 }  // namespace okl
 }  // namespace oneflow

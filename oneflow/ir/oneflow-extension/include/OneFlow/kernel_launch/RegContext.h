@@ -16,13 +16,15 @@ limitations under the License.
 #ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_REGCONTEXT_H_
 #define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_KERNEL_LAUNCH_REGCONTEXT_H_
 
-#include <string>
-#include <vector>
+#include "OneFlow/UserOpReflection.h"
+#include "oneflow/core/framework/user_op_kernel_registry.h"
+#include "oneflow/core/register/blob.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
-#include "oneflow/core/framework/user_op_kernel_registry.h"
-#include "OneFlow/UserOpReflection.h"
 
+#include <memory>
+#include <string>
+#include <vector>
 namespace oneflow {
 namespace okl {
 // this context should support querying information about the kernel from representation in MLIR
@@ -45,12 +47,17 @@ class RegContext final : public user_op::KernelRegContext {
 
   ::mlir::Operation* GetOp() const;
 
+  const user_op::OpKernel* GenKernel();
+
+  size_t GetTmpBufferSize();
+
  private:
   ::mlir::Operation* op_;
   DeviceType device_type_ = DeviceType::kInvalidDevice;
   std::unordered_map<mlir::oneflow::user_op::ArgID, user_op::NaiveTensorDesc> arg2tensor_desc_{};
   ArgVec inputs_;
   ArgVec outputs_;
+  user_op::UserOpConfWrapper conf_wrapper_;
 };
 
 }  // namespace okl

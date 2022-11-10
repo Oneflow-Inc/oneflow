@@ -13,24 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_JITOPINFER_H_
-#define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_JITOPINFER_H_
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_AGGREGATE_COMPUTE_OPS_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_AGGREGATE_COMPUTE_OPS_H_
 
-#include "oneflow/core/framework/infer_util.h"
+#include "mlir/Pass/Pass.h"
 
+namespace mlir {
 namespace oneflow {
 
-namespace ir {
-
-namespace jit {
-
-Maybe<void> InferTensorDesc(user_op::InferContext* ctx);
-Maybe<void> SetTensorDataType(user_op::InferContext* ctx);
-
-}  // namespace jit
-
-}  // namespace ir
+std::unique_ptr<mlir::Pass> createAggregateComputeOpsPass();
 
 }  // namespace oneflow
+}  // namespace mlir
 
-#endif  // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_JITOPINFER_H_
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_AGGREGATE_COMPUTE_OPS_H_

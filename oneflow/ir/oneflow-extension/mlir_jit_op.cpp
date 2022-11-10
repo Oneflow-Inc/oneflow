@@ -57,7 +57,7 @@ Maybe<void> MlirJitOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
 Maybe<void> MlirJitOp::GetSbp(user_op::SbpContext* ctx) { return GetSbpFn(ctx); }
 
 Maybe<void> MlirJitOp::InferDataType(user_op::InferContext* ctx) {
-  return ir::jit::SetTensorDateType(ctx);
+  return ir::jit::SetTensorDataType(ctx);
   ;
 }
 

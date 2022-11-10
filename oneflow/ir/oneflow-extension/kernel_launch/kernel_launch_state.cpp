@@ -29,13 +29,6 @@ limitations under the License.
 
 namespace oneflow {
 namespace okl {
-static mlir::DialectRegistry GetRegistry() {
-  mlir::DialectRegistry registry;
-  registry.insert<mlir::oneflow::OneFlowDialect, mlir::okl::OKLDialect, mlir::func::FuncDialect,
-                  mlir::arith::ArithmeticDialect, mlir::LLVM::LLVMDialect>();
-  mlir::registerLLVMDialectTranslation(registry);
-  return registry;
-}
 
 KernelLaunchState::KernelLaunchState(user_op::KernelInitContext* ctx) : mlir_ctx_(GetRegistry()) {
   // get raw module from ctx attr
