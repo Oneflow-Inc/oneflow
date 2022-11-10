@@ -909,8 +909,37 @@ class LogSumExpFunctor {
   LogSumExpFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
-    std::shared_ptr<one::Tensor> exp_out = JUST(Exp(x));
-    return Log(JUST(ReduceSum(exp_out, axis, keepdims)));
+    if (x->ndim() == 0) {
+      // can't take amax of 0-dim tensor
+      return To(x, JUST(DType::Get(DataType::kFloat)), false);
+    } else if (x->nelement() == 0) {
+      // can't take amax of empty tensor
+      std::shared_ptr<one::Tensor> exp_out = JUST(Exp(x));
+      return Log(JUST(ReduceSum(exp_out, axis, keepdims)));
+    } else {
+      const std::shared_ptr<one::Tensor>& maxes = JUST(Amax(x, axis, true));
+      const std::shared_ptr<one::Tensor>& maxes_squeezed =
+          (keepdims ? maxes : JUST(SqueezeMultiple(maxes, axis)));
+      JUST(MaskedFillInplace(maxes_squeezed,
+                             JUST(ScalarLogicalEqual(JUST(Abs(maxes_squeezed)), INFINITY)), 0));
+      std::shared_ptr<one::Tensor> exp_out = JUST(Exp(JUST(Sub(x, maxes, 1, false))));
+      return Add(JUST(Log(JUST(ReduceSum(exp_out, axis, keepdims)))), maxes_squeezed, 1, false);
+    }
+  }
+
+ private:
+  Maybe<Tensor> SqueezeMultiple(const std::shared_ptr<one::Tensor>& x,
+                                const std::vector<int32_t>& axis) const {
+    int ndims = x->ndim();
+    const auto& dims_to_squeeze = JUST(dim_list_to_bitset(axis, ndims));
+    std::shared_ptr<one::Tensor> result = x;
+    for (int i = ndims - 1; i >= 0; --i) {
+      if ((*dims_to_squeeze)[i]) {
+        std::vector<int32_t> dims = {i};
+        result = JUST(Squeeze(result, dims));
+      }
+    }
+    return result;
   }
 };
 
