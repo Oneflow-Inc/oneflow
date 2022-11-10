@@ -183,6 +183,8 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "pinned_identity",
                                "to_contiguous",
                                "copy",
+                               "fill_",
+                               "dim_scatter_update_scalar",
                                "upsample_nearest_2d"};
 
   return clear_list;
