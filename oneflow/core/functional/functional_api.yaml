@@ -696,6 +696,10 @@
   signature: "Tensor (Tensor dy, Tensor y) => SoftmaxGrad"
   bind_python: False
 
+- name: "gumbel_softmax"
+  signature: "Tensor (Tensor x, Double tau=1., Int64 dim=None, Bool hard=False, Generator generator=None) => GumbelSoftmax"
+  bind_python: True
+
 - name: "log_softmax"
   signature: "Tensor (Tensor x, Int64 dim=None) => LogSoftmax"
   bind_python: True
@@ -1369,7 +1373,7 @@
 
 - name: "group_norm"
   signature:
-    "Tensor (Tensor x, Tensor gamma=None, Tensor beta=None, Bool affine, Int32 num_groups, Double epsilon) => GroupNorm"
+    'Tensor (Tensor x, Tensor gamma=None, Tensor beta=None, Bool affine, Int32 num_groups, Double epsilon, String data_format="channels_first", String activation="none") => GroupNorm'
   bind_python: True
 
 - name: "group_norm_grad"
@@ -2915,4 +2919,8 @@
 
 - name: "isclose"
   signature: "Tensor (Tensor input, Tensor other, Float atol=1e-08, Float rtol=1e-05, Bool equal_nan=False) => IsClose"
+  bind_python: True
+
+- name: "uniform_"
+  signature: "Tensor (Tensor x,Scalar from, Scalar to) => InplaceUniform"
   bind_python: True

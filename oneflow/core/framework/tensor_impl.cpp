@@ -117,7 +117,7 @@ Maybe<void> EagerLocalTensorImpl::InitEagerBlobObject(
   } else {
     const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
         mem_case, local_tensor_meta, mut_local_tensor_meta, local_tensor_meta->dtype(),
-        std::make_shared<vm::TensorStorage>(), dep_object);
+        std::make_shared<vm::InsideVmTensorStorage>(), dep_object);
     JUST(set_eager_blob_object(eager_blob_object));
   }
   return Maybe<void>::Ok();

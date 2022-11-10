@@ -758,8 +758,7 @@ void SbpGraph::FindTrunk(int32_t max_min_layer,
   for (SbpNode* this_node : node_list_) { this_node->RaiseConsumerNum(op_name2sbp_node); }
   // Reduce the wait time for tributaries
   for (SbpNode* this_node : node_list_) {
-    this_node->SpreadAvailWaitTime(trunk_cost, acc_trunk_cost, op_name2sbp_node, wait_time_,
-                                   transfer_cost_);
+    this_node->SpreadAvailWaitTime(trunk_cost, acc_trunk_cost, op_name2sbp_node, wait_time_);
   }
 
   // Reduce the wait time for trunk from the end to the begin
@@ -787,11 +786,11 @@ void SbpGraph::FindTrunk(int32_t max_min_layer,
     // This code maintains ( acc_tributary_cost + used_tributary_cost )
     if (acc_tributary_cost > 0.0) {
       if (acc_tributary_cost > wait_time_) {
-        curr_wait_time = transfer_cost_;
+        curr_wait_time = 0.0;
         acc_tributary_cost -= wait_time_;
         used_tributary_cost += wait_time_;
       } else {
-        curr_wait_time = transfer_cost_ + wait_time_ - acc_tributary_cost;
+        curr_wait_time = wait_time_ - acc_tributary_cost;
         used_tributary_cost += acc_tributary_cost;
         acc_tributary_cost = 0.0;
       }
@@ -804,12 +803,7 @@ void SbpGraph::FindTrunk(int32_t max_min_layer,
 }
 
 // Set wait time
-
 void SbpGraph::SetWaitTime(double wait_time) { wait_time_ = wait_time; }
-
-// Set transfer cost
-
-void SbpGraph::SetTransferCost(double transfer_cost) { transfer_cost_ = transfer_cost; }
 
 }  // namespace auto_parallel
 }  // namespace oneflow
