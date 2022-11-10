@@ -729,6 +729,7 @@ bool IsSameDtype(mlir::OpResult cast_result, mlir::Value input) {
 }  // namespace mlir
 
 #include "OneFlow/OneFlowPatterns.cpp.inc"
+#include "OneFlow/TestPDLLPatterns.h.inc"
 
 namespace mlir {
 
@@ -1052,7 +1053,9 @@ void populatePreConvertInferenceOp(::mlir::RewritePatternSet& patterns) {
 }
 
 void populateConvertInferenceOp(::mlir::RewritePatternSet& patterns) {
-  patterns.add<FuseConv2DBatchNormPattern>(patterns.getContext());
+  // patterns.add<FuseConv2DBatchNormPattern>(patterns.getContext());
+  patterns.add<GeneratedPDLLPattern0>(patterns.getContext());
+
 }
 
 void populatePostConvertInferenceOp(::mlir::RewritePatternSet& patterns) {

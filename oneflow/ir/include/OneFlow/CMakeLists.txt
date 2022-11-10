@@ -6,6 +6,9 @@ mlir_tablegen(OneFlowEnums.h.inc -gen-enum-decls)
 mlir_tablegen(OneFlowEnums.cpp.inc -gen-enum-defs)
 add_public_tablegen_target(MLIROneFlowEnumsIncGen)
 
+add_mlir_pdll_library(MLIROneFlowPdllIncGen expr.pdll TestPDLLPatterns.h.inc) 
+
+
 set(LLVM_TARGET_DEFINITIONS OneFlowPatterns.td)
 set(ONEFLOW_OP_GROUPS_USED_IN_PATTERNS
     "SCALAR;UNARY;FUSED;MISC;BINARY;IDEMPOTENT;NORMALIZATION;MATMUL;BROADCAST;CONV;PADDING")
@@ -64,3 +67,4 @@ add_mlir_dialect(
   MLIROneFlowInterfacesIncGen
   MLIROneFlowOpGroupDefsIncGen
   MLIROneFlowOpGroupDeclsIncGen)
+  # MLIROneFlowPdllIncGen)
