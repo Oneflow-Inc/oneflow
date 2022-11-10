@@ -41,7 +41,7 @@ bool CheckBroadcastAndSimplifyDims(const Shape& shape, const Shape& broadcast_sh
     int64_t broadcast_dim = broadcast_shape[i];
     if (dim != 1 && dim != broadcast_dim) { return false; }
     bool broadcast = (dim == 1 && broadcast_dim != 1);
-    if (broadcast == prev_broadcast && simplified_ndim > 0) {
+    if (simplified_ndim > 0 && broadcast == prev_broadcast) {
       // fold to prev dim
       simplified_dims[simplified_ndim - 1] *= dim;
     } else {
@@ -80,6 +80,8 @@ Maybe<void> FusedBiasAddScaleMaskSoftmaxDropoutOp::InferLogicalTensorDesc(
   const Shape& dropout_mask_shape = ctx->InputShape("dropout_mask", 0);
 
   CHECK_GE_OR_RETURN(x_shape.size(), 2) << Error::RuntimeError() << "x has at least 2 dimensions";
+  CHECK_EQ_OR_RETURN(x_shape.back(), mask_shape.back())
+      << " Last dimension of x and mask should be equal, which is softmax dimension.";
   CHECK_EQ_OR_RETURN(dropout_mask_shape, x_shape)
       << Error::RuntimeError() << "dropout_mask shape " << dropout_mask_shape.ToString()
       << " should be equal to x shape " << x_shape.ToString();
@@ -102,7 +104,7 @@ Maybe<void> FusedBiasAddScaleMaskSoftmaxDropoutOp::InferLogicalTensorDesc(
   // (M, 1) -> (M, N)
   // (1, N) -> (M, N)
   // (M, 1, N) -> (M, K, N)
-  if (simplified_bias_ndim == 1 || (simplified_bias_ndim == 2 && simplified_bias_dims[0] != 1)) {
+  if ((simplified_bias_ndim == 2 && simplified_bias_dims[0] != 1) || simplified_bias_ndim > 2) {
     return Error::RuntimeError()
            << "bias only support (1, N)->(M, N) broadcast, but got bias shape "
            << bias_shape.ToString() << " broadcast to x shape " << x_shape.ToString();

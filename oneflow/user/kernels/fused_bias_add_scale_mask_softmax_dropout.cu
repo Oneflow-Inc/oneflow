@@ -190,7 +190,7 @@ void DispatchForward(cudaStream_t stream, const user_op::Tensor* x, const user_o
     // } else if (bias_sndim == 3 && mask_sndim == 2) {
     // } else if (bias_sndim == 3 && mask_sndim == 3) {
   } else {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED() << ", bias_sndim=" << bias_sndim << ", mask_sndim=" << mask_sndim;
   }
 
 #undef DISPATCH_BIAS_ADD_SCALE_MASK_SOFTMAX
