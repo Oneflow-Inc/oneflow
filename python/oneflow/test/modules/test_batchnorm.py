@@ -80,6 +80,24 @@ class TestBatchNormModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @autotest(rtol=1e-3, atol=1e-3, auto_backward=False, check_graph=False)
+    def test_batchnorm2d_module_with_half_random_data(test_case):
+        device = random_device()
+        channel = random(1, 4).to(int)
+        m = torch.nn.BatchNorm2d(
+            num_features=channel,
+            track_running_stats=random().to(bool),
+            affine=random().to(bool),
+        ).to(device)
+        m.train(random())
+        m.half()
+        x = random_tensor(
+            ndim=4, dim0=random(1, 4), dim1=channel, requires_grad=True
+        ).to(device)
+        x.half()
+        y = m(x)
+        return y
+
     """
     @profile(torch.nn.BatchNorm1d) 
     def profile_BatchNorm1d(test_case):
