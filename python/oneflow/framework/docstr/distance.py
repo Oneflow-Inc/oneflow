@@ -128,6 +128,5 @@ add_docstr(
         tensor([[ 8., 12.],
                 [ 4.,  8.]], dtype=oneflow.float32)
 
-    """
-
+    """,
 )

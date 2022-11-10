@@ -20,6 +20,7 @@ import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestCDist(flow.unittest.TestCase):
     @autotest(n=2, check_graph=True)
@@ -54,14 +55,15 @@ class TestCDist(flow.unittest.TestCase):
         x2 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2)
         return torch.cdist(x1, x2, p=float("inf"))
 
-    @autotest(n=2, check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_random_p_cdist(test_case):
         dim0 = random()
         dim2 = random()
         x1 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2)
         x2 = random_tensor(ndim=3, dim0=dim0, dim1=random(), dim2=dim2)
-        p = random(0, 4).to(float) 
+        p = random(0, 4).to(float)
         return torch.cdist(x1, x2, p=p)
+
 
 if __name__ == "__main__":
     unittest.main()
