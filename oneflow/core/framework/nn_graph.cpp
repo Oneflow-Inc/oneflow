@@ -301,24 +301,13 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NNGraph::CompileAndInitRuntime() {
-  auto compile_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
-  CHECK_OR_RETURN(!runtime_inited_)
-      << Error::RuntimeError() << "nn.Graph runtime is already initialized";
-  JUST(RegisterFreeEagerTensorsToVariableOpNames());
-  JUST(RegisterNewVariableOpInJobPass());
-  JUST(DeleteOutdatedVariableInVariableTensorMgr());
-
-  // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
-  one::TensorNameScope::Global()->Clear();
-  // Clear all backward pass scope
-  ClearAllBackwardPassScope();
-
+Maybe<void> NNGraph::CompleteJobAndCompliePlan() {
   // NOTE(chengcheng): Singleton<JobDesc> need be clear before GlobalJobDescScope construct.
   if (Singleton<JobDesc>::Get() != nullptr) { Singleton<JobDesc>::Delete(); }
 
   auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id_);
 
+  auto compile_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
   // NOTE(chengcheng): do job compeleter for each rank.
   JUST(JobCompleter().Complete(&job_));
   compile_tc->Count("[GraphCompile]" + name_ + " CompleteJob", 0);
@@ -366,9 +355,42 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   compile_tc->Count("[GraphCompile]" + name_ + " SyncPlan", 0);
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
+}
 
+Maybe<void> NNGraph::CompileAndInitRuntime() {
+  CHECK_OR_RETURN(!runtime_inited_)
+      << Error::RuntimeError() << "nn.Graph runtime is already initialized";
+  JUST(RegisterFreeEagerTensorsToVariableOpNames());
+  JUST(RegisterNewVariableOpInJobPass());
+  JUST(DeleteOutdatedVariableInVariableTensorMgr());
+
+  // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
+  one::TensorNameScope::Global()->Clear();
+  // Clear all backward pass scope
+  ClearAllBackwardPassScope();
+
+  // Try cache graph.
+  if (job_.job_conf().try_cache_graph()) {
+    const std::string cache_graph_file_name = "_OneFlowCacheGraph_" + name_;
+    const std::string cache_graph_file_path = JoinPath(FLAGS_log_dir, cache_graph_file_name);
+    LOG(INFO) << " Try cache graph file: " << cache_graph_file_path;
+    auto* fs = LocalFS();
+    if (fs->FileExists(cache_graph_file_path)) {
+      std::unique_ptr<PersistentInStream> in_stream = std::make_unique<PersistentInStream>(
+          fs, cache_graph_file_path, false, false);
+      TensorBuffer in_buffer;
+      uint64_t cache_file_size = fs->GetFileSize(cache_graph_file_path);
+      CHECK_GT_OR_RETURN(cache_file_size, 0)
+        << Error::RuntimeError() <<  cache_graph_file_path << " is empty";
+      in_buffer.Resize();
+
+    } 
+  } else {
+    JUST(CompleteJobAndCompliePlan());
+  }
+
+  auto runtime_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
   NewRuntimeBuffers();
-
   JUST(GetVariableRealBlobAfterSyncPlan());
 
   // NOTE(strint): Do memory shrink to free cached memory in eager VM before graph runtime init.
@@ -377,7 +399,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   JUST(vm->ShrinkAllMem());
 
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));
-  compile_tc->Count("[GraphCompile]" + name_ + " InitRuntime", 0);
+  runtime_tc->Count("[GraphCompile]" + name_ + " InitRuntime", 0);
   runtime_inited_ = true;
   return Maybe<void>::Ok();
 }

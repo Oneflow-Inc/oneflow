@@ -39,7 +39,8 @@ class NNGraph final : public NNGraphIf {
         job_id_(job_id),
         session_ctx_(session_ctx),
         runtime_inited_(false),
-        is_closed_(false) {}
+        is_closed_(false),
+        try_cache_graph_(false) {}
   OF_DISALLOW_COPY_AND_MOVE(NNGraph);
   ~NNGraph();
 
@@ -72,6 +73,7 @@ class NNGraph final : public NNGraphIf {
   Maybe<std::vector<std::string>> GetAdditionalVarOpNames() const;
   Maybe<std::vector<std::shared_ptr<one::Tensor>>> GetAdditionalVarOpTensors() const;
   Maybe<void> CompileAndInitRuntime();
+  Maybe<void> CompleteJobAndCompliePlan();
   Maybe<void> Close();
 
  private:
@@ -108,6 +110,7 @@ class NNGraph final : public NNGraphIf {
   std::unique_ptr<Runtime> runtime_;
   bool runtime_inited_;
   bool is_closed_;
+  bool try_cache_graph_;
 };
 
 Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTuple& outputs,

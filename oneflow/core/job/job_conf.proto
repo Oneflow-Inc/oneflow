@@ -223,6 +223,8 @@ message JobConfigProto {
     InitializerConf default_initializer_conf = 10;
     string default_initialize_with_snapshot_path = 11;
   }
+  
+  optional bool try_cache_graph = 100 [default = false];
 
   optional MemoryAllocationAlgorithmConf memory_allocation_algorithm_conf = 102;
 
