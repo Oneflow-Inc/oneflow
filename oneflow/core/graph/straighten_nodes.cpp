@@ -121,18 +121,21 @@ static std::vector<StraightenOrder> decide_parameters;
 // is the college admission test in the United States of America.
 void InitDecideParameters(StraightenAlgorithmTag sat) {
   decide_parameters.clear();
-  if (sat == StraightenAlgorithmTag::kCompressMemory) {
-    decide_parameters.push_back(StraightenOrder::kMemoryIncrementAscend);
-    decide_parameters.push_back(StraightenOrder::kTributaryLayerAscend);
-  } else if (sat == StraightenAlgorithmTag::kOverlap4Transfer) {
-    decide_parameters.push_back(StraightenOrder::kLayerDescend);
-    decide_parameters.push_back(StraightenOrder::kTributaryLayerDescend);
-  } else {
-    // sat==StraightenAlgorithmTag::kOverlap4CpuGpu
-    decide_parameters.push_back(StraightenOrder::kActivationTimeDescend);
-    decide_parameters.push_back(StraightenOrder::kLayerDescend);
-    decide_parameters.push_back(StraightenOrder::kMemoryIncrementAscend);
-  }
+  decide_parameters.push_back(StraightenOrder(ParseIntegerFromEnv("Parameter0", 4)));
+  decide_parameters.push_back(StraightenOrder(ParseIntegerFromEnv("Parameter1", 1)));
+  decide_parameters.push_back(StraightenOrder(ParseIntegerFromEnv("Parameter2", 3)));
+  // if (sat == StraightenAlgorithmTag::kCompressMemory) {
+  //   decide_parameters.push_back(StraightenOrder::kMemoryIncrementAscend);
+  //   decide_parameters.push_back(StraightenOrder::kTributaryLayerAscend);
+  // } else if (sat == StraightenAlgorithmTag::kOverlap4Transfer) {
+  //   decide_parameters.push_back(StraightenOrder::kLayerDescend);
+  //   decide_parameters.push_back(StraightenOrder::kTributaryLayerDescend);
+  // } else {
+  //   // sat==StraightenAlgorithmTag::kOverlap4CpuGpu
+  //   decide_parameters.push_back(StraightenOrder::kActivationTimeDescend);
+  //   decide_parameters.push_back(StraightenOrder::kLayerDescend);
+  //   decide_parameters.push_back(StraightenOrder::kMemoryIncrementAscend);
+  // }
 }
 
 // move the head from source to target
@@ -487,8 +490,9 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   UpdateSat(task_node2topo_struct);
   // Decide which node should run first
   InitDecideParameters(sat);
-  VLOG(3) << "Straightening order: ";
-  for (int32_t decide_parameter : decide_parameters) { VLOG(3) << decide_parameter; }
+  std::cout << "Straightening order: " << std::endl;
+  for (int32_t decide_parameter : decide_parameters) { std::cout << decide_parameter << ", "; }
+  std::cout << std::endl;
 
   // Order in the waiting sets
   struct comp {
@@ -626,6 +630,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
                              / (waiting_lists[TaskClassifier::kWaitingOverlapNode].size())),
                      remain_task_nums[TaskClassifier::kWaitingMainComputation]
                          / remain_task_nums[TaskClassifier::kWaitingOverlapNode]);
+        int32_t max_over_num = ParseIntegerFromEnv("MAX_OVERLAP_NUM", 5);
         // Holding the node to be overlapped
         std::vector<TaskNode*> overlap_execution_list;
         move2execution_list(waiting_lists[TaskClassifier::kWaitingOverlapNode],
@@ -633,7 +638,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
         remain_task_nums[TaskClassifier::kWaitingOverlapNode] -= overlap_execution_list.size();
         for (auto* overlap_node : overlap_execution_list) { SetOrderInGraph(overlap_node); }
         // Overlap the node with computation from the trunk
-        execute(TaskClassifier::kWaitingMainComputation, computation_num);
+        execute(TaskClassifier::kWaitingMainComputation, max_over_num);
 
         // Release the overlap node
         for (auto* overlap_node : overlap_execution_list) { finish_execution(overlap_node); }
