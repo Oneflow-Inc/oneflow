@@ -2047,6 +2047,7 @@ class NormalizationFunctor {
                                                 .Output("inv_variance")
                                                 .Attr("training", true)
                                                 .Build());
+    cast_op_ = CHECK_JUST(one::OpBuilder("cast").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<one::Tensor>& moving_mean,
@@ -2076,26 +2077,67 @@ class NormalizationFunctor {
       beta_val = JUST(functional::Constant(gamma_beta_shape, 0.0, x->dtype(), JUST(x->device())));
     }
 
+    if (gamma_val->dtype()->data_type() == DataType::kFloat16
+        || gamma_val->dtype()->data_type() == DataType::kBFloat16) {
+      gamma_val = JUST(functional::Cast(gamma_val, DType::Float(), /*pin_memory=*/false));
+      beta_val = JUST(functional::Cast(beta_val, DType::Float(), /*pin_memory=*/false));
+    }
+
+    std::shared_ptr<one::Tensor> moving_mean_val;
+    std::shared_ptr<one::Tensor> moving_variance_val;
+    if (moving_mean) {
+      if (JUST(moving_mean)->dtype()->data_type() == DataType::kFloat16
+          || JUST(moving_mean)->dtype()->data_type() == DataType::kBFloat16) {
+        moving_mean_val =
+            JUST(functional::Cast(JUST(moving_mean), DType::Float(), /*pin_memory=*/false));
+        moving_variance_val =
+            JUST(functional::Cast(JUST(moving_variance), DType::Float(), /*pin_memory=*/false));
+      } else {
+        moving_mean_val = JUST(moving_mean);
+        moving_variance_val = JUST(moving_variance);
+      }
+    }
+
+    std::shared_ptr<one::Tensor> res;
+
     if (!training) {
       CHECK_OR_RETURN(moving_mean && moving_variance)
           << Error::RuntimeError() << "Must have moving_mean and moving_variance in eval mode.";
-      return OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma_val, beta_val},
-          attrs);
+      res = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+          *norm_eval_op_, {x, moving_mean_val, moving_variance_val, gamma_val, beta_val}, attrs));
+    } else if (moving_mean) {
+      res = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+          *norm_training_stats_op_, {x, moving_mean_val, moving_variance_val, gamma_val, beta_val},
+          attrs));
+    } else {
+      res = JUST(OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_,
+                                                     {x, gamma_val, beta_val}, attrs));
     }
+
     if (moving_mean) {
-      return OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_training_stats_op_,
-          {x, JUST(moving_mean), JUST(moving_variance), gamma_val, beta_val}, attrs);
+      if (JUST(moving_mean)->dtype()->data_type() == DataType::kFloat16
+          || JUST(moving_mean)->dtype()->data_type() == DataType::kBFloat16) {
+        // For inplace update moving_mean and moving_variance
+        JUST(CheckInplaceValid(JUST(moving_mean)));
+        std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+        outputs->at(0) = JUST(moving_mean);
+        auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "pin_memory");
+        attrs.SetAllAttrs(JUST(moving_mean)->dtype()->data_type(), false);
+        JUST(OpInterpUtil::Dispatch(*cast_op_, {moving_mean_val}, outputs.get(), attrs));
+        JUST(CheckInplaceValid(JUST(moving_variance)));
+        outputs->at(0) = JUST(moving_variance);
+        JUST(OpInterpUtil::Dispatch(*cast_op_, {moving_variance_val}, outputs.get(), attrs));
+      }
     }
-    return OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_,
-                                               {x, gamma_val, beta_val}, attrs);
+
+    return res;
   }
 
  private:
   std::shared_ptr<OpExpr> norm_eval_op_;
   std::shared_ptr<OpExpr> norm_training_stats_op_;
   std::shared_ptr<OpExpr> norm_training_no_stats_op_;
+  std::shared_ptr<OpExpr> cast_op_;
 };
 
 class NormalizationAddReluFunctor {
