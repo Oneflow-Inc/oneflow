@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstdint>
 #include "fmt/core.h"
 #include "oneflow/core/common/throw.h"
 #include "oneflow/user/kernels/max_unpool_kernel_util.h"
