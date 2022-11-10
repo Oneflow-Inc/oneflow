@@ -1348,9 +1348,10 @@ class Graph(object):
 
         The block can be accessed as an attribute using the given name.
             >>> g = LinearGraph()
-            >>> print(repr(g.linear))
+            >>> print(g.linear)
             (MODULE:linear:Linear(in_features=3, out_features=8, bias=False)): (
               (PARAMETER:linear.weight:tensor(..., size=(8, 3), dtype=oneflow.float32, requires_grad=True)): ()
+              (ModuleGraph:linear()): ()
             )
         """
         if "_name" not in self.__dict__:
