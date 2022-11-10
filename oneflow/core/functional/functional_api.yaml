@@ -390,6 +390,10 @@
   signature: "Tensor (Tensor out_diff, Tensor mask, Tensor device_count, Int32List axis, Bool keepdims=False) => ReduceMaxGlobalStageGrad"
   bind_python: False
 
+- name: "logsumexp"
+  signature: "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => LogSumExp"
+  bind_python: True
+
 - name: "transpose"
   signature:
     [
@@ -644,6 +648,14 @@
   signature: "Tensor (Tensor dy, Tensor x) => GeluGrad"
   bind_python: False
 
+- name: "fast_gelu"
+  signature: "Tensor (Tensor x) => FastGelu"
+  bind_python: True
+
+- name: "fast_gelu_grad"
+  signature: "Tensor (Tensor dy, Tensor x) => FastGeluGrad"
+  bind_python: False
+
 - name: "gelu_with_approximate"
   signature: 'Tensor (Tensor x, String approximate="none") => GeluWithApproximate'
   bind_python: True
@@ -683,6 +695,10 @@
 - name: "softmax_grad"
   signature: "Tensor (Tensor dy, Tensor y) => SoftmaxGrad"
   bind_python: False
+
+- name: "gumbel_softmax"
+  signature: "Tensor (Tensor x, Double tau=1., Int64 dim=None, Bool hard=False, Generator generator=None) => GumbelSoftmax"
+  bind_python: True
 
 - name: "log_softmax"
   signature: "Tensor (Tensor x, Int64 dim=None) => LogSoftmax"
@@ -1357,7 +1373,7 @@
 
 - name: "group_norm"
   signature:
-    "Tensor (Tensor x, Tensor gamma=None, Tensor beta=None, Bool affine, Int32 num_groups, Double epsilon) => GroupNorm"
+    'Tensor (Tensor x, Tensor gamma=None, Tensor beta=None, Bool affine, Int32 num_groups, Double epsilon, String data_format="channels_first", String activation="none") => GroupNorm'
   bind_python: True
 
 - name: "group_norm_grad"
@@ -1526,7 +1542,7 @@
   bind_python: True
 
 - name: "flip"
-  signature: "Tensor (Tensor x, Int32List dims) => Flip"
+  signature: "Tensor (Tensor x, Int32List[1] dims) => Flip"
   bind_python: True
 
 - name: "upsample"
@@ -2907,3 +2923,6 @@
   signature: "Tensor (Tensor input, Tensor weights=None, Int64 minlength=None) => BinCount"
   bind_python: True
 
+- name: "isclose"
+  signature: "Tensor (Tensor input, Tensor other, Float atol=1e-08, Float rtol=1e-05, Bool equal_nan=False) => IsClose"
+  bind_python: True
