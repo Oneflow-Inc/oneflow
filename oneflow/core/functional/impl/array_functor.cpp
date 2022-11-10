@@ -3395,7 +3395,7 @@ class BroadcastTensorsFunctor {
 
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>();
     for (size_t i = 0; i < tensors.size(); ++i) {
-      outputs->emplace_back(need_to_broadcast.at(i)
+      outputs->emplace_back(need_to_broadcast.at(i)  // NOLINT
                                 ? JUST(functional::Expand(tensors.at(i), shape_to_broadcast))
                                 : tensors.at(i));
     }

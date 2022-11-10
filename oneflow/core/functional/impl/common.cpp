@@ -260,7 +260,7 @@ Maybe<std::tuple<Shape, std::deque<bool>>> InferUnifiedShapeForBroadcastingWithI
     const std::vector<Shape>& shapes) {
   const auto unified_shape = *JUST(InferUnifiedShapeForBroadcasting(shapes));
   std::deque<bool> need_to_broadcast;
-  for (const auto& x : shapes) { need_to_broadcast.push_back(x != unified_shape); }
+  for (const auto& x : shapes) { need_to_broadcast.emplace_back(x != unified_shape); }
   return std::make_tuple(unified_shape, need_to_broadcast);
 }
 
