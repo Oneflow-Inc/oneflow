@@ -122,7 +122,8 @@ class ModuleGraph(BlockGraph):
 
         .. code-block:: python
 
-            # m_stage0 and m_stage1 are the two pipeline stages of the network, respectively.
+            # module0 and module1 are two nn.Module in a nn.Graph.
+            # When a nn.Module is added into a nn.Graph, it is wrapped into a ModuleBlock.
             # We can set Stage ID and Placement by using ModuleBlock.to(ModuleGraph).set_stage()
             # The Stage ID is numbered starting from 0 and increasing by 1.
             # The Placement is all tensors placement of this module.
@@ -130,8 +131,8 @@ class ModuleGraph(BlockGraph):
             form oneflow.nn.graph import ModuleGraph
             P_0 = flow.placement(type = "cuda", ranks = [0, 1])
             P_1 = flow.placement(type = "cuda", ranks = [2, 3])
-            self.module_pipeline.m_stage0.to(ModuleGraph).set_stage(stage_id = 0, placement = P0)
-            self.module_pipeline.m_stage1.to(ModuleGraph).set_stage(stage_id = 1, placement = P1)
+            self.module0.to(ModuleGraph).set_stage(stage_id = 0, placement = P0)
+            self.module1.to(ModuleGraph).set_stage(stage_id = 1, placement = P1)
 
         """
 
@@ -142,10 +143,10 @@ class ModuleGraph(BlockGraph):
     # NOTE(lixiang): For the normal display of docstr, the API Doc of the get and set methods are written together in the stage_id function.
     @property
     def stage_id(self):
-        r"""Set/Get stage id of nn.Module/ModuleBlock in pipeline parallelism.
+        r"""Set/Get stage id of nn.Module/ModuleGraph in pipeline parallelism.
         When calling stage_id(value: int = None), set different module's stage id to hint the graph
         preparing right num of buffers in pipeline. (Not Recommended, for easy and efficient pipeline
-        parallelism experience, please use config.set_stage(stage_id, placement))
+        parallelism experience, please use set_stage(stage_id, placement))
         """
         return self._stage_id
 
@@ -155,8 +156,8 @@ class ModuleGraph(BlockGraph):
         Set different module's stage id to hint the graph preparing right num of buffers in pipeline.
         """
         print(
-            "Warning: `config.stage_id = i` is deprecated, please use \n",
-            " config.set_stage(i, placement) for easy and efficient Pipeline parallel experience.",
+            "Warning: `stage_id = i` is deprecated, please use \n",
+            " set_stage(i, placement) for easy and efficient Pipeline parallel experience.",
         )
 
         self._is_null = False
