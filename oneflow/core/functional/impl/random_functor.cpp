@@ -169,7 +169,6 @@ class InplaceUniformFunctor {
       }
       const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
       OpExprInterpContext ctx(attrs, placement, nb_sbp, distribution_state);
-      ctx.device = JUST(x->device());
       JUST(OpInterpUtil::Dispatch(*exec_op, {}, outputs.get(), ctx));
     } else {  // local
       if (IsInteger) {
