@@ -3179,6 +3179,12 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
   std::shared_ptr<OpExpr> fused_scale_mask_softmax_dropout_op_;
 };
 
+// Equivalent to 
+// masked = (x + bias) * mask * scale_value
+// unmask = (1 - mask).bool()
+// masked.masked_fill_(unmask, mask_fill_value)
+// softmax_y = softmax(masked, dim=-1)
+// y = dropout(softmax_y, p)
 class FusedBiasAddScaleMaskSoftmaxDropoutFunctor {
  public:
   FusedBiasAddScaleMaskSoftmaxDropoutFunctor() {
