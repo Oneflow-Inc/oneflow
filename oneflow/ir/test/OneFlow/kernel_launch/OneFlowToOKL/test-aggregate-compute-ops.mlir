@@ -1,6 +1,10 @@
 // RUN: oneflow-opt %s \
-// RUN: -aggregate-cmopute-ops \
+// RUN: -aggregate-compute-ops \
 // RUN: | FileCheck %s
+
+// CHECK: %[[ARG0:[a-zA-Z0-9_]+]] = "oneflow.arg_sort"
+// CHECK: %[[ARG1:[a-zA-Z0-9_]+]] = "oneflow.dim_gather"
+// CHECK: "oneflow.output"(%[[ARG0]])
 
 module {
   oneflow.job @GraphToRun_1(%arg0: tensor<2xf32>) -> (tensor<2xsi32>, tensor<2xf32>) {
