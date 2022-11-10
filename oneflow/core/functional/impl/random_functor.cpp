@@ -106,6 +106,91 @@ class BernoulliProbInplaceFunctor {
   }
 };
 
+class InplaceUniformFunctor {
+ public:
+  InplaceUniformFunctor() {
+    uniform_op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build());
+    uniform_int_op_ = CHECK_JUST(one::OpBuilder("uniform_int").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& from,
+                           const Scalar& to) const {
+    JUST(CheckInplaceValid(x));
+    const Shape& shape = *(x->shape());
+    std::shared_ptr<OpExpr> exec_op;
+    const auto& dtype = x->dtype();
+    bool IsInteger = false;
+
+    if (dtype->is_floating_point()) {
+      exec_op = uniform_op_;
+    } else if (dtype->is_integer()) {
+      exec_op = uniform_int_op_;
+      IsInteger = true;
+    } else {
+      OF_UNIMPLEMENTED() << "Only support floating and int dtype.";
+    }
+    DataType dtype_val = dtype->data_type();
+
+    auto gen = JUST(one::DefaultAutoGenerator());
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("from", "to", "shape", "dtype", "seed", "nb_sbp");
+    auto outputs = std::make_shared<TensorTuple>(1);
+    (*outputs)[0] = x;
+    if (x->is_global())  // global
+    {
+      const auto& nb_sbp = JUST(x->nd_sbp());
+      const auto& placement = JUST(x->parallel_desc());
+      JUST(CheckDeviceIdsIsValid(placement));
+      uint64_t init_seed = JUST(gen->Get<CPUGeneratorImpl>(0))->engine()();
+      if (LazyMode::is_enabled())  // lazy
+      {
+        if (IsInteger) {
+          attrs.SetAllAttrs(from.Value<int64_t>(), to.Value<int64_t>(), shape, dtype_val,
+                            static_cast<int64_t>(init_seed), *JUST(GetNdSbpStrList(nb_sbp)));
+        } else {
+          attrs.SetAllAttrs(from.Value<double>(), to.Value<double>(), shape, dtype_val,
+                            static_cast<int64_t>(init_seed), *JUST(GetNdSbpStrList(nb_sbp)));
+        }
+      } else  // eager
+      {
+        uint64_t rank_seed = 0;
+        {
+          JUST(BroadcastSeedToAllRanks(&init_seed, /*root=*/0));
+          rank_seed =
+              JUST(GetRandomSeedForRank(*placement, *nb_sbp, init_seed, GlobalProcessCtx::Rank()));
+        }
+        if (IsInteger) {
+          attrs.SetAllAttrs(from.Value<int64_t>(), to.Value<int64_t>(), shape, dtype_val,
+                            static_cast<int64_t>(rank_seed), NullOpt);
+        } else {
+          attrs.SetAllAttrs(from.Value<double>(), to.Value<double>(), shape, dtype_val,
+                            static_cast<int64_t>(rank_seed), NullOpt);
+        }
+        gen = JUST(MakeGenerator(placement->device_type()));
+        gen->set_current_seed(rank_seed);
+      }
+      const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+      OpExprInterpContext ctx(attrs, placement, nb_sbp, distribution_state);
+      JUST(OpInterpUtil::Dispatch(*exec_op, {}, outputs.get(), ctx));
+    } else {  // local
+      if (IsInteger) {
+        attrs.SetAllAttrs(from.Value<int64_t>(), to.Value<int64_t>(), shape, dtype_val,
+                          static_cast<int64_t>(gen->current_seed()), NullOpt);
+      } else {
+        attrs.SetAllAttrs(from.Value<double>(), to.Value<double>(), shape, dtype_val,
+                          static_cast<int64_t>(gen->current_seed()), NullOpt);
+      }
+      const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+      OpExprInterpContext ctx(attrs, distribution_state);
+      ctx.device = JUST(x->device());
+      JUST(OpInterpUtil::Dispatch(*exec_op, {}, outputs.get(), ctx));
+    }
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> uniform_op_;
+  std::shared_ptr<OpExpr> uniform_int_op_;
+};
+
 class RandFunctor {
  public:
   RandFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
@@ -787,6 +872,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<GlobalRandIntLikeFunctor, GlobalRandIntLike2Functor>("GlobalRandIntLike");
   m.add_functor<ExponentialFunctor>("Exponential");
   m.add_functor<MultinomialFunctor>("Multinomial");
+  m.add_functor<InplaceUniformFunctor>("InplaceUniform");
 };
 
 }  // namespace functional
