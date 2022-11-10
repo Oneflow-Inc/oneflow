@@ -66,7 +66,7 @@ user_op::Tensor* RunContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
           return nullptr;
         });
   } else if (source.type == Source::BUFFER) {
-    TODO() << "buffer to do";
+    return comp_ctx_->Tensor4ArgNameAndIndex("tmp_buffer", 0);
   }
   exit(1);
 }

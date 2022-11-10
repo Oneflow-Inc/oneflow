@@ -16,9 +16,13 @@ limitations under the License.
 #include "OneFlow/UserOpReflection.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LogicalResult.h"
+#include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/kernel/blob_tensor_view.h"
+#include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/InferContext.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/kernel_launch/RegContext.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
 #include "mlir/IR/OpDefinition.h"
@@ -113,6 +117,16 @@ const std::shared_ptr<const user_op::AttrVal>& RegContext::Attr4Name(
 }
 
 ::mlir::Operation* RegContext::GetOp() const { return op_; }
+
+const user_op::OpKernel* RegContext::GenKernel() {
+  auto reg_res = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
+      GetOp()->getName().stripDialect().str(), *this));
+  if (reg_res->need_temp_storage) {
+    InferContext infer_ctx(this);
+    tmp_buffer_size_ = reg_res->infer_tmp_size_fn(&infer_ctx);
+  }
+  return reg_res->create_fn();
+}
 
 }  // namespace okl
 }  // namespace oneflow

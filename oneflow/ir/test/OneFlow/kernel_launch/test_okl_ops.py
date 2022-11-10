@@ -58,7 +58,7 @@ def _test_okl_relu_with_cuda(test_case: flow.unittest.TestCase):
     lazy_relu = graph_to_run(x)
 
     cmp = flow.sort(flow.tanh(flow.relu(x)))
-    test_case.assertTrue(flow.all(flow.equal(cmp, lazy_relu)))
+    test_case.assertTrue(flow.all(flow.equal(cmp[0], lazy_relu[0])))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -66,9 +66,9 @@ class TestOKLRelu(flow.unittest.TestCase):
     def test_okl_relu_with_cpu(test_case):
         _test_okl_relu_with_cpu(test_case)
 
-    # @unittest.skipUnless(flow.sysconfig.with_cuda(), "only test cpu cases")
-    # def test_okl_relu_with_cuda(test_case):
-    #     _test_okl_relu_with_cuda(test_case)
+    @unittest.skipUnless(flow.sysconfig.with_cuda(), "only test cpu cases")
+    def test_okl_relu_with_cuda(test_case):
+        _test_okl_relu_with_cuda(test_case)
 
 
 if __name__ == "__main__":

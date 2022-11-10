@@ -136,6 +136,7 @@ class KernelLaunchGpuKernel final : public user_op::OpKernel {
       .SetCreateFn<KernelLaunchGpuKernel<dtype>>()                                              \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) { return 1791; })                       \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         return Maybe<void>::Ok();                                                               \

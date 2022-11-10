@@ -22,6 +22,7 @@ limitations under the License.
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
+#include "oneflow/core/register/blob.h"
 #include "OneFlow/UserOpReflection.h"
 
 namespace oneflow {
@@ -46,6 +47,10 @@ class RegContext final : public user_op::KernelRegContext {
 
   ::mlir::Operation* GetOp() const;
 
+  const user_op::OpKernel* GenKernel();
+
+  size_t GetTmpBufferSize() { return tmp_buffer_size_; }
+
  private:
   ::mlir::Operation* op_;
   DeviceType device_type_ = DeviceType::kInvalidDevice;
@@ -53,6 +58,7 @@ class RegContext final : public user_op::KernelRegContext {
   ArgVec inputs_;
   ArgVec outputs_;
   user_op::UserOpConfWrapper conf_wrapper_;
+  size_t tmp_buffer_size_ = 0;
 };
 
 }  // namespace okl
