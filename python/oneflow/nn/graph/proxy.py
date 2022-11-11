@@ -107,7 +107,9 @@ class ProxyModule(Proxy):
             self.__setattr__(
                 n,
                 get_proxy_cls(m)(
-                    self.to(GraphModule)._name_prefix + self.to(GraphModule)._name + ".",
+                    self.to(GraphModule)._name_prefix
+                    + self.to(GraphModule)._name
+                    + ".",
                     n,
                     m,
                     self.to(GraphModule)._belonged_graph,
@@ -117,7 +119,9 @@ class ProxyModule(Proxy):
             self.__setattr__(
                 n,
                 get_proxy_cls(p)(
-                    self.to(GraphTensor)._name_prefix + self.to(GraphTensor)._name + ".",
+                    self.to(GraphTensor)._name_prefix
+                    + self.to(GraphTensor)._name
+                    + ".",
                     n,
                     p,
                 ),
@@ -126,7 +130,9 @@ class ProxyModule(Proxy):
             self.__setattr__(
                 n,
                 get_proxy_cls(b)(
-                    self.to(GraphTensor)._name_prefix + self.to(GraphTensor)._name + ".",
+                    self.to(GraphTensor)._name_prefix
+                    + self.to(GraphTensor)._name
+                    + ".",
                     n,
                     b,
                 ),
@@ -139,7 +145,10 @@ class ProxyModule(Proxy):
         args_tree = ArgsTree(
             (args, kwargs),
             True,
-            "_" + self.to(GraphModule).name_prefix + self.to(GraphModule).name + "_input",
+            "_"
+            + self.to(GraphModule).name_prefix
+            + self.to(GraphModule).name
+            + "_input",
             None,
         )
 
