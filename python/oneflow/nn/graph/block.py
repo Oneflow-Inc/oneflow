@@ -20,7 +20,6 @@ import types
 import oneflow._C
 import oneflow._oneflow_internal
 from oneflow.framework import graph_build_util
-from oneflow.env import get_rank
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.nn.module import Module
 from oneflow.nn.modules.container import *
