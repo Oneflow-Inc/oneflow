@@ -239,7 +239,6 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
 
 void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
   if (job.logical_chain_groups_size() == 0) { return; }
-  HashMap<int64_t, HashSet<RegstDescProto*>> mem_block_id2regsts;
   HashMap<int64_t, HashMap<int64_t, int64_t>> logical_chain_id2machine_id2mem_block_id;
 
   for (int64_t i = 0; i < plan->task_size(); ++i) {
@@ -258,7 +257,6 @@ void PlanUtil::MergeMemBlockIdByLogicalChainId(Plan* plan, const Job& job) {
           && regst_desc->mem_case().device_type() == device_type
           && regst_desc->regst_desc_type().has_data_regst_desc()) {
         int64_t mem_block_id = regst_desc->mem_block_id();
-        mem_block_id2regsts[mem_block_id].insert(regst_desc);
         auto* rank2blocks = &(logical_chain_id2machine_id2mem_block_id[logical_chain_id]);
         if (rank2blocks->find(machine_id) == rank2blocks->end()) {
           rank2blocks->emplace(machine_id, mem_block_id);
@@ -373,7 +371,8 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     int64_t regst_main_size = rt_regst_desc.TotalMainByteSize4AllRegst();
     int64_t regst_separated_size = rt_regst_desc.TotalSeparatedHeaderByteSize4AllRegst();
 
-    if (mem_block_id2mem_block.find(mem_block_id) == mem_block_id2mem_block.end()) {
+    auto mem_block_it = mem_block_id2mem_block.find(mem_block_id);
+    if (mem_block_it == mem_block_id2mem_block.end()) {
       MemBlockProto mem_block;
       mem_block.set_mem_block_id(mem_block_id);
       mem_block.add_job_id(job_id);
@@ -390,7 +389,7 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
                 .emplace(mem_block.mem_block_id(), std::make_unique<MemBlockProto>(mem_block))
                 .second);
     } else {
-      MemBlockProto* mem_block = mem_block_id2mem_block.at(mem_block_id).get();
+      MemBlockProto* mem_block = mem_block_it->second.get();
       CHECK_EQ(mem_block->job_id(0), job_id);
       CHECK_EQ(mem_block->machine_id(), machine_id);
       CHECK(mem_block->mem_case() == regst_desc->mem_case());

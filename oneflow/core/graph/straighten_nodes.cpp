@@ -40,7 +40,7 @@ class TopoStruct {
   TaskNode* node = nullptr;
   int32_t min_layer = -1;
   int32_t tributary_layer = -1;
-  bool on_mainstem = false;
+  bool on_trunk = false;
   int32_t counter = 0;
   int32_t min_distance2transfer = -1;
   int64_t memory_increment = -1;
@@ -55,7 +55,7 @@ class TopoStruct {
 
   void SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
 
-  void SpreadMainstem(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
+  void SpreadTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
 
   // The minimum computation distance from the beginning of this op to the next transfer
   int32_t GetMinDistance2Transfer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
@@ -181,7 +181,7 @@ void TopoStruct::DropTributaryLayer(int32_t upper_bound) {
 void TopoStruct::SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
   if (counter || min_layer <= 0) { return; }
   int32_t producer_max_lay = 0;
-  if (on_mainstem) {
+  if (on_trunk) {
     producer_max_lay = min_layer - 1;
   } else {
     // On a tributary, the operator could be run later.
@@ -197,15 +197,15 @@ void TopoStruct::SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>* task_node2
   counter--;
 }
 
-// Judge if this node is on the mainstem
+// Judge if this node is on the trunk
 // If so, judge it for its producer/upstream nodes
-void TopoStruct::SpreadMainstem(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
+void TopoStruct::SpreadTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
   // Skip it if this node is already judged.
-  if (on_mainstem) { return; }
+  if (on_trunk) { return; }
   CHECK_GE(min_layer, 0) << "TopoStruct not initialized!";
-  on_mainstem = true;
-  // If I am in the mainstem, then all the children with (min_layer >= my layer id - 1) would be
-  // considered as in the mainstem
+  on_trunk = true;
+  // If I am in the trunk, then all the children with (min_layer >= my layer id - 1) would be
+  // considered as in the trunk
   node->ForEachNodeOnInEdge([&](TaskNode* in) {
     auto& topo_struct_in = task_node2topo_struct->at(in);
     if (topo_struct_in.min_layer == min_layer - 1) {
@@ -282,25 +282,23 @@ int64_t TopoStruct::GetDecidingParameter(int32_t i) const {
   return 0;
 }
 
-// Find the mainstem of the task graph, then reduce the wait time for tributaries
-void FindMainstem(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
+// Find the trunk of the task graph, then reduce the wait time for tributaries
+void FindTrunk(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
   // Find the maximum layer number
   int32_t max_min_layer = -1;
   for (const auto& pair : *task_node2topo_struct) {
     if (max_min_layer < pair.second.min_layer) { max_min_layer = pair.second.min_layer; }
   }
-  // All the nodes with min_layer>=mainstem_end_id would be considered as mainstem nodes
-  // The last 5 layers would be considered as in mainstem anyway.
-  int32_t mainstem_end_id = max_min_layer - 4;
+  // All the nodes with min_layer>=trunk_end_id would be considered as trunk nodes
+  // The last 5 layers would be considered as in trunk anyway.
+  int32_t trunk_end_id = max_min_layer - 4;
   for (auto& pair : *task_node2topo_struct) {
     auto& topo_struct = pair.second;
     // Initialize the counter and Tributary Layer
     topo_struct.counter = pair.first->out_edges().size();
     topo_struct.tributary_layer = max_min_layer;
-    // Find out all the nodes on the mainstem.
-    if (topo_struct.min_layer >= mainstem_end_id) {
-      topo_struct.SpreadMainstem(task_node2topo_struct);
-    }
+    // Find out all the nodes on the trunk.
+    if (topo_struct.min_layer >= trunk_end_id) { topo_struct.SpreadTrunk(task_node2topo_struct); }
   }
 
   for (auto& pair : *task_node2topo_struct) {
@@ -385,7 +383,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   });
 
   // Generate other parameters in the topological data structure
-  FindMainstem(&task_node2topo_struct);
+  FindTrunk(&task_node2topo_struct);
 
   // Decide which node should run first
   InitDecideParameters(GlobalJobDesc().job_conf().straighten_algorithm_tag_in_task_graph());

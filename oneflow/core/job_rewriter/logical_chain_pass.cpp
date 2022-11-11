@@ -474,7 +474,7 @@ void TryMergeAfterAccLogicalChainToLastLogicalChain(
   group->add_logical_chain_id_list(last_chain->logical_chain_id);
   group->add_logical_chain_id_list(acc_chain_id);
   VLOG(3) << " Merge acc chain : " << acc_chain_id
-          << " to last logcal chain : " << last_chain->logical_chain_id;
+          << " to last logical chain : " << last_chain->logical_chain_id;
 }
 
 Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {

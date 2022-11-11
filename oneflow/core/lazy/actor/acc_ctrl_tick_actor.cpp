@@ -24,7 +24,7 @@ class AccCtrlTickActor : public Actor {
   AccCtrlTickActor()
       : acc_cnt_(0),
         max_acc_num_(0),
-        inplace_consume_(false),
+        last_micro_batch_input_output_mutex_(false),
         consumed_tick_regst_desc_id_(-1),
         produced_tick_regst_desc_id_(-1){};
   virtual ~AccCtrlTickActor() = default;
@@ -41,7 +41,7 @@ class AccCtrlTickActor : public Actor {
   }
 
   bool IsCustomizedReadReady() const override {
-    return (!inplace_consume_) && consumed_tick_rs_.IsCurSlotReady();
+    return (!last_micro_batch_input_output_mutex_) && consumed_tick_rs_.IsCurSlotReady();
   }
   bool IsCustomizedWriteReady() const override { return produced_tick_rs_.IsCurSlotReady(); }
 
@@ -60,7 +60,7 @@ class AccCtrlTickActor : public Actor {
 
   int32_t acc_cnt_;
   int32_t max_acc_num_;
-  bool inplace_consume_;
+  bool last_micro_batch_input_output_mutex_;
   int64_t consumed_tick_regst_desc_id_;
   int64_t produced_tick_regst_desc_id_;
   RegstSlot consumed_tick_rs_;
@@ -69,7 +69,7 @@ class AccCtrlTickActor : public Actor {
 
 void AccCtrlTickActor::VirtualActorInit(const TaskProto& proto) {
   acc_cnt_ = 0;
-  const OperatorConf op_conf =
+  const OperatorConf& op_conf =
       proto.exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf();
   max_acc_num_ = user_op::UserOpConfWrapper(op_conf).attr<int32_t>("max_acc_num");
 
@@ -117,14 +117,14 @@ void AccCtrlTickActor::VirtualActorInit(const TaskProto& proto) {
 void AccCtrlTickActor::Act() {
   acc_cnt_ += 1;
   if (acc_cnt_ == max_acc_num_) {
-    CHECK(!inplace_consume_);
-    inplace_consume_ = true;
+    CHECK(!last_micro_batch_input_output_mutex_);
+    last_micro_batch_input_output_mutex_ = true;
     acc_cnt_ = 0;
   }
 }
 
 void AccCtrlTickActor::AsyncSendCustomizedProducedRegstMsgToConsumer() {
-  if (inplace_consume_) {
+  if (last_micro_batch_input_output_mutex_) {
     CHECK(consumed_tick_rs_.IsCurSlotReady());  // inplace consume
     CHECK(produced_tick_rs_.IsCurSlotReady());
     Regst* const tick_regst = produced_tick_rs_.Front(produced_tick_regst_desc_id_);
@@ -134,7 +134,7 @@ void AccCtrlTickActor::AsyncSendCustomizedProducedRegstMsgToConsumer() {
 }
 
 void AccCtrlTickActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
-  if (!inplace_consume_) {
+  if (!last_micro_batch_input_output_mutex_) {
     Regst* const tick_regst = consumed_tick_rs_.Front(consumed_tick_regst_desc_id_);
     CHECK_NOTNULL(tick_regst);
     AsyncSendRegstMsgToProducer(tick_regst);
@@ -143,7 +143,7 @@ void AccCtrlTickActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
 }
 
 void AccCtrlTickActor::UpdtStateAsCustomizedProducedRegst(Regst* regst) {
-  CHECK(inplace_consume_);
+  CHECK(last_micro_batch_input_output_mutex_);
   CHECK_EQ(regst->regst_desc_id(), produced_tick_regst_desc_id_);
   CHECK_EQ(produced_tick_rs_.TryPushBackRegst(regst), 0);
 
@@ -151,7 +151,7 @@ void AccCtrlTickActor::UpdtStateAsCustomizedProducedRegst(Regst* regst) {
   CHECK(in_regst);
   AsyncSendRegstMsgToProducer(in_regst);
   CHECK_EQ(0, consumed_tick_rs_.TryPopFrontRegst(consumed_tick_regst_desc_id_));
-  inplace_consume_ = false;
+  last_micro_batch_input_output_mutex_ = false;
 }
 
 void AccCtrlTickActor::NormalProcessCustomizedReadableRegstMsg(const ActorMsg& msg) {

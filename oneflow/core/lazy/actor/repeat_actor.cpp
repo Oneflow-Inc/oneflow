@@ -77,7 +77,7 @@ class RepeatActor final : public Actor {
 
 void RepeatActor::VirtualActorInit(const TaskProto& proto) {
   repeat_count_ = 0;
-  const OperatorConf op_conf =
+  const OperatorConf& op_conf =
       proto.exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf();
   repeat_num_ = user_op::UserOpConfWrapper(op_conf).attr<int32_t>("repeat_num");
 
