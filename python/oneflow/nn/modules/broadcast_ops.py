@@ -107,8 +107,8 @@ def broadcast_to(input, shape):
                 [1, 2, 3],
                 [1, 2, 3]], dtype=oneflow.int64)
     """
-    sizes = _handle_size_arg(sizes)
-    sizes = _single(sizes)
+    shape = _handle_size_arg(shape)
+    shape = _single(shape)
     return flow._C.broadcast_to(input, shape)
 
 
