@@ -186,6 +186,19 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     const cudnnConvolutionFwdAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
     const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
 
+    const void* beta = nullptr;
+    if (ctx->has_input("_add_to_output", 0)) {
+      const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+      CHECK_EQ(add_to_output->data_type(), out->data_type());
+      CHECK_EQ(add_to_output->shape_view(), out->shape_view());
+      Memcpy<DeviceType::kCUDA>(
+          ctx->stream(), out->mut_dptr(), add_to_output->dptr(),
+          add_to_output->shape_view().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
+      beta = CudnnSPOnePtr(in->data_type());
+    } else {
+      beta = CudnnSPZeroPtr(in->data_type());
+    }
+
 #if CUDNN_MAJOR >= 8
     if (bias != nullptr && algo_perf.algo == CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM
         && ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDNN_FUSED_CONV_BIAS", false)) {
@@ -198,9 +211,9 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
       OF_CUDNN_CHECK(cudnnConvolutionBiasActivationForward(
           ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CudnnSPOnePtr(in->data_type()),
           args.xdesc.Get(), in->dptr(), args.wdesc.Get(), weight->dptr(), args.cdesc.Get(),
-          algo_perf.algo, buf->mut_dptr(), args.params.max_ws_size, CudnnSPZeroPtr(in->data_type()),
-          args.ydesc.Get(), out->mut_dptr(), conv_cache->bias_desc->Get(), bias->dptr(),
-          activation_desc, args.ydesc.Get(), out->mut_dptr()));
+          algo_perf.algo, buf->mut_dptr(), args.params.max_ws_size, beta, args.ydesc.Get(),
+          out->mut_dptr(), conv_cache->bias_desc->Get(), bias->dptr(), activation_desc,
+          args.ydesc.Get(), out->mut_dptr()));
       OF_CUDNN_CHECK(cudnnDestroyActivationDescriptor(activation_desc));
       return;
     }
@@ -209,8 +222,8 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     OF_CUDNN_CHECK(cudnnConvolutionForward(
         ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CudnnSPOnePtr(in->data_type()),
         args.xdesc.Get(), in->dptr(), args.wdesc.Get(), weight->dptr(), args.cdesc.Get(),
-        algo_perf.algo, buf->mut_dptr(), args.params.max_ws_size, CudnnSPZeroPtr(in->data_type()),
-        args.ydesc.Get(), out->mut_dptr()));
+        algo_perf.algo, buf->mut_dptr(), args.params.max_ws_size, beta, args.ydesc.Get(),
+        out->mut_dptr()));
 
     if (bias != nullptr) {
       const auto* conv_cache = dynamic_cast<const ConvCudnnOpKernelCache*>(cache);
@@ -231,21 +244,29 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
   }
 };
 
-#define REGISTER_CONV_KERNEL(op_name, ndims)                                      \
-  REGISTER_USER_KERNEL(#op_name)                                                  \
-      .SetCreateFn<ConvGpuKernel<ndims>>()                                        \
-      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA)             \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {               \
-        const auto& in = ctx->InputTensorDesc("in", 0);                           \
-        if (in.shape().elem_cnt() == 0) return 0;                                 \
-        const auto& weight = ctx->InputTensorDesc("weight", 0);                   \
-        const auto& out = ctx->OutputTensorDesc("out", 0);                        \
-        const auto& cudnn_conf =                                                  \
-            Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();  \
-        return InferTmpSizeWithCudnn<cudnnConvolutionFwdAlgoPerf_t>(              \
-            &in, &weight, &out, *ctx, cudnn_conf.has_cudnn_conv_force_fwd_algo(), \
-            cudnn_conf.cudnn_conv_force_fwd_algo());                              \
-      })
+#define REGISTER_CONV_KERNEL(op_name, ndims)                                                \
+  REGISTER_USER_KERNEL(#op_name)                                                            \
+      .SetCreateFn<ConvGpuKernel<ndims>>()                                                  \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA)                       \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                         \
+        const auto& in = ctx->InputTensorDesc("in", 0);                                     \
+        if (in.shape().elem_cnt() == 0) return 0;                                           \
+        const auto& weight = ctx->InputTensorDesc("weight", 0);                             \
+        const auto& out = ctx->OutputTensorDesc("out", 0);                                  \
+        const auto& cudnn_conf =                                                            \
+            Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();            \
+        return InferTmpSizeWithCudnn<cudnnConvolutionFwdAlgoPerf_t>(                        \
+            &in, &weight, &out, *ctx, cudnn_conf.has_cudnn_conv_force_fwd_algo(),           \
+            cudnn_conf.cudnn_conv_force_fwd_algo());                                        \
+      })                                                                                    \
+      .SetInplaceProposalFn(                                                                \
+          [](const user_op::InferContext& ctx,                                              \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {        \
+            if (ctx.has_input("_add_to_output", 0)) {                                       \
+              OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true)); \
+            }                                                                               \
+            return Maybe<void>::Ok();                                                       \
+          });
 
 REGISTER_CONV_KERNEL(conv1d, 1);
 REGISTER_CONV_KERNEL(conv2d, 2);

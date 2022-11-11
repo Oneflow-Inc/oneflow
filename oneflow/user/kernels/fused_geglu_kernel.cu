@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/ep/include/primitive/matmul.h"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/ep/common/primitive/unary_functor.h"
+#include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
 #if CUDA_VERSION >= 11000
 #include <cuda_bf16.h>
@@ -77,32 +77,56 @@ __global__ void FusedGegluForwardGpu(const int in_size, const int out_size, cons
   y[i] = gelu_gate * hidden_state;
 }
 
-template<>
-__global__ void FusedGegluForwardGpu(const int in_size, const int out_size, const int num_sample,
-                                     const half2* matmul, const half2* b, half2* y) {
+struct alignas(8) Half4 {
+  half2 x;
+  half2 y;
+};
+
+__device__ Half4 Hmul4(const Half4& a, const Half4& b) {
+  Half4 r;
+  r.x = __hmul2(a.x, b.x);
+  r.y = __hmul2(a.y, b.y);
+  return r;
+}
+
+__device__ Half4 Hadd4(const Half4& a, const Half4& b) {
+  Half4 r;
+  r.x = __hadd2(a.x, b.x);
+  r.y = __hadd2(a.y, b.y);
+  return r;
+}
+
+__global__ void FusedGegluHalf4ForwardGpu(const int in_size, const int out_size,
+                                          const int num_sample, const Half4* matmul, const Half4* b,
+                                          Half4* y) {
   // obtain the index of current thread
   const int64_t i = blockIdx.x * blockDim.x + threadIdx.x;
   if (i >= out_size * num_sample) { return; }
 
   // obtain index of row and col in the output tensor
-  const int64_t out_row = i / out_size;
-  const int64_t out_col = i - out_row * out_size;
+  const int32_t out_row = i / out_size;
+  const int32_t out_col = i - out_row * out_size;
 
   // obtain col index in both matmul tensor and bias tensor
-  const int64_t x1_col = out_col;
-  const int64_t x2_col = out_col + out_size;
+  const int32_t x1_col = out_col;
+  const int32_t x2_col = out_col + out_size;
 
   // obtain element before gelu and element-wise product
-  half2 hidden_state = matmul[2 * out_row * out_size + x1_col] + b[x1_col];
-  half2 gate = matmul[2 * out_row * out_size + x2_col] + b[x2_col];
+  const Half4 hidden_state = Hadd4(matmul[2 * out_row * out_size + x1_col], b[x1_col]);
+  const Half4 gate = Hadd4(matmul[2 * out_row * out_size + x2_col], b[x2_col]);
 
   // calculate gelu
-  half2 out;
-  out.x = Gelu<half>(gate.x) * hidden_state.x;
-  out.y = Gelu<half>(gate.y) * hidden_state.y;
+  ep::primitive::UnaryFunctor<DeviceType::kCUDA, ep::primitive::UnaryOp::kFastGelu, half, half>
+      fast_gelu(0, 0);
+  Half4 gelu_out;
+
+#if (__CUDA_ARCH__ >= 750 && CUDART_VERSION >= 11000)
+  fast_gelu.Apply2(reinterpret_cast<half*>(&gelu_out.x), reinterpret_cast<const half*>(&gate.x));
+  fast_gelu.Apply2(reinterpret_cast<half*>(&gelu_out.y), reinterpret_cast<const half*>(&gate.y));
+#endif
 
   // calculate element-wise product
-  y[i] = out;
+  y[i] = Hmul4(gelu_out, hidden_state);
 }
 
 }  // namespace
@@ -142,16 +166,16 @@ class GpuFusedGegluKernel final : public user_op::OpKernel {
                    0.0, matmul_out->mut_dptr());
 
     // invoke fused geglu kernel
-    if (out_size % 2 == 0 && in->data_type() == DataType::kFloat16) {
-      int n = out_size * num_samples / 2;
-      FusedGegluForwardGpu<half2>
-          <<<(n + 256 - 1) / 256, 256, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-              in_size / 2,                                          /* in_size */
-              out_size / 2,                                         /* out_size */
-              num_samples,                                          /* element_cnt */
-              reinterpret_cast<const half2*>(matmul_out->dptr<>()), /* matmul result */
-              reinterpret_cast<const half2*>(b->dptr()),            /* bias */
-              reinterpret_cast<half2*>(out->mut_dptr()) /* output tensor */);
+    if (out_size % 4 == 0 && in->data_type() == DataType::kFloat16) {
+      int n = out_size * num_samples / 4;
+      FusedGegluHalf4ForwardGpu<<<(n + 256 - 1) / 256, 256, 0,
+                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+          in_size / 4,                                          /* in_size */
+          out_size / 4,                                         /* out_size */
+          num_samples,                                          /* element_cnt */
+          reinterpret_cast<const Half4*>(matmul_out->dptr<>()), /* matmul result */
+          reinterpret_cast<const Half4*>(b->dptr()),            /* bias */
+          reinterpret_cast<Half4*>(out->mut_dptr()) /* output tensor */);
 
     } else {
       int n = out_size * num_samples;
