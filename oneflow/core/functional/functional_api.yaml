@@ -1373,7 +1373,7 @@
 
 - name: "group_norm"
   signature:
-    'Tensor (Tensor x, Tensor gamma=None, Tensor beta=None, Bool affine, Int32 num_groups, Double epsilon, String data_format="channels_first") => GroupNorm'
+    'Tensor (Tensor x, Tensor gamma=None, Tensor beta=None, Bool affine, Int32 num_groups, Double epsilon, String data_format="channels_first", String activation="none") => GroupNorm'
   bind_python: True
 
 - name: "group_norm_grad"
@@ -2899,4 +2899,8 @@
 
 - name: "isclose"
   signature: "Tensor (Tensor input, Tensor other, Float atol=1e-08, Float rtol=1e-05, Bool equal_nan=False) => IsClose"
+  bind_python: True
+
+- name: "uniform_"
+  signature: "Tensor (Tensor x,Scalar from, Scalar to) => InplaceUniform"
   bind_python: True
