@@ -123,14 +123,14 @@ Optimization options of a nn.Graph.
     enable_straighten_algorithm
     
 
-Config options on a ModuleGraph
+Config options on a GraphModule
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-ModuleGraph is the graph representation of a nn.Module in a nn.Graph.
+GraphModule is the graph representation of a nn.Module in a nn.Graph.
 
-When an nn.Module is added into an nn.Graph, it is wrapped into a ModuleBlock. The ModuleBlock has a ModuleGraph inside it.
-You can get and set the ModuleGraph to enable graph optimization on the nn.Module.
+When an nn.Module is added into an nn.Graph, it is wrapped into a ModuleBlock. The ModuleBlock has a GraphModule inside it.
+You can get and set the GraphModule to enable graph optimization on the nn.Module.
 
-.. currentmodule:: oneflow.nn.graph.block_graph.ModuleGraph
+.. currentmodule:: oneflow.nn.graph.graph_block.GraphModule
 
 .. autosummary::
     :toctree: generated

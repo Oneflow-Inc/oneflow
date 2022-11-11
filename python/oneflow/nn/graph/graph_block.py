@@ -24,28 +24,31 @@ from oneflow.nn.graph.util import (
 )
 
 
-class BlockGraphType:
+class GraphBlockType:
     NONE = "NONE"
     MODULE = "MODULE"
     PARAMETER = "PARAMETER"
     BUFFER = "BUFFER"
 
 
-class BlockGraph(object):
+class GraphBlock(object):
     def __init__(
         self,
         prefix: str = "",
         name: str = "",
         belonged_graph: weakref.ProxyTypes = None,
-        block_graph_type: BlockGraphType = BlockGraphType.NONE,
+        belonged_block: weakref.ProxyTypes = None,
+        block_graph_type: GraphBlockType = GraphBlockType.NONE,
     ):
         self._name = name
         self._name_prefix = prefix
         self._type = block_graph_type
         self._scope = None
         self._prev_scope = None
-        assert belonged_graph is None or isinstance(belonged_graph, weakref.ProxyTypes)
+        assert belonged_graph is not None and isinstance(belonged_graph, weakref.ProxyTypes)
         self._belonged_graph = belonged_graph
+        assert belonged_block is not None and isinstance(belonged_block , weakref.ProxyTypes)
+        self._belonged_block = belonged_block
 
     @property
     def name(self):
@@ -77,11 +80,11 @@ class BlockGraph(object):
         return graph_build_util.BlockScopeContext(self.prev_scope, self.scope)
 
 
-class ModuleGraph(BlockGraph):
-    r"""ModuleGraph is the graph representation of a nn.Module in a nn.Graph.
+class GraphModule(GraphBlock):
+    r"""GraphModule is the graph representation of a nn.Module in a nn.Graph.
 
-    When an nn.Module is added into an nn.Graph, it is wrapped into a ModuleBlock. The ModuleBlock has a ModuleGraph inside it.
-    You can get and set the ModuleGraph to enable graph optimization on the nn.Module.
+    When an nn.Module is added into an nn.Graph, it is wrapped into a ModuleBlock. The ModuleBlock has a GraphModule inside it.
+    You can get and set the GraphModule to enable graph optimization on the nn.Module.
     """
 
     def __init__(
@@ -89,8 +92,9 @@ class ModuleGraph(BlockGraph):
         prefix: str = "",
         name: str = "",
         belonged_graph: weakref.ProxyTypes = None,
+        belonged_block: weakref.ProxyTypes = None,
     ):
-        super().__init__(prefix, name, belonged_graph, BlockGraphType.MODULE)
+        super().__init__(prefix, name, belonged_graph, belonged_block, GraphBlockType.MODULE)
         self._is_null = True
         self._stage_id = None
         self._stage_placement = None
@@ -124,15 +128,15 @@ class ModuleGraph(BlockGraph):
 
             # module0 and module1 are two nn.Module in a nn.Graph.
             # When a nn.Module is added into a nn.Graph, it is wrapped into a ModuleBlock.
-            # We can set Stage ID and Placement by using ModuleBlock.to(ModuleGraph).set_stage()
+            # We can set Stage ID and Placement by using ModuleBlock.to(GraphModule).set_stage()
             # The Stage ID is numbered starting from 0 and increasing by 1.
             # The Placement is all tensors placement of this module.
             import oneflow as flow
-            from oneflow.nn.graph import ModuleGraph
+            from oneflow.nn.graph import GraphModule
             P_0 = flow.placement(type = "cuda", ranks = [0, 1])
             P_1 = flow.placement(type = "cuda", ranks = [2, 3])
-            self.module0.to(ModuleGraph).set_stage(stage_id = 0, placement = P0)
-            self.module1.to(ModuleGraph).set_stage(stage_id = 1, placement = P1)
+            self.module0.to(GraphModule).set_stage(stage_id = 0, placement = P0)
+            self.module1.to(GraphModule).set_stage(stage_id = 1, placement = P1)
 
         """
 
@@ -143,7 +147,7 @@ class ModuleGraph(BlockGraph):
     # NOTE(lixiang): For the normal display of docstr, the API Doc of the get and set methods are written together in the stage_id function.
     @property
     def stage_id(self):
-        r"""Set/Get stage id of nn.Module/ModuleGraph in pipeline parallelism.
+        r"""Set/Get stage id of nn.Module/GraphModule in pipeline parallelism.
         When calling stage_id(value: int = None), set different module's stage id to hint the graph
         preparing right num of buffers in pipeline. (Not Recommended, for easy and efficient pipeline
         parallelism experience, please use set_stage(stage_id, placement))
@@ -177,15 +181,15 @@ class ModuleGraph(BlockGraph):
         .. code-block:: python
 
             import oneflow as flow
-            from oneflow.nn.graph import ModuleGraph
+            from oneflow.nn.graph import GraphModule
 
             class Graph(flow.nn.Graph):
                 def __init__(self):
                     super().__init__()
                     self.linear1 = flow.nn.Linear(3, 5, False)
                     self.linear2 = flow.nn.Linear(5, 8, False)
-                    self.linear1.to(ModuleGraph).activation_checkpointing = True
-                    self.linear2.to(ModuleGraph).activation_checkpointing = True
+                    self.linear1.to(GraphModule).activation_checkpointing = True
+                    self.linear2.to(GraphModule).activation_checkpointing = True
 
                 def build(self, x):
                     y_pred = self.linear1(x)
@@ -227,8 +231,56 @@ class ModuleGraph(BlockGraph):
         )
         return main_str
 
+    def debug(
+        self,
+        v_level: int = 0,
+        *,
+        ranks: Optional[Union[int, List[int]]] = None,
+        max_py_stack_depth: int = 2,
+        only_user_py_stack=True,
+        op_repr_with_py_stack=False,
+    ) -> None:
+        assert isinstance(v_level, int)
+        assert isinstance(max_py_stack_depth, int)
+        assert isinstance(only_user_py_stack, bool)
+        assert isinstance(op_repr_with_py_stack, bool)
+
+        if ranks is None:
+            rank_list = [0]
+        elif isinstance(ranks, int):
+            rank_list = [ranks]
+        elif isinstance(ranks, list):
+            rank_list = ranks
+        else:
+            raise ValueError("ranks must be int or List[int].")
+
+        my_rank = get_rank()
+        if -1 in rank_list or my_rank in rank_list:
+            self._debug = v_level >= 0
+            if self._debug:
+                self._debug_min_s_level = 0
+                self._debug_max_v_level = max(0, v_level)
+
+            self._debug_max_py_stack_depth = max_py_stack_depth
+            self._debug_only_user_py_stack = only_user_py_stack
+            self._debug_op_repr_with_py_stack = op_repr_with_py_stack
+
+            if self._type == GraphBlockType.MODULE:
+
+                def _set_child(d):
+                    for (_, n) in d.items():
+                        n.to(GraphBlock).debug(
+                            v_level,
+                            ranks=ranks,
+                            max_py_stack_depth=max_py_stack_depth,
+                            only_user_py_stack=only_user_py_stack,
+                            op_repr_with_py_stack=op_repr_with_py_stack,
+                        )
+
+                _set_child(self._belonged_block._modules)
+
     def _ops_repr(self):
-        r"""Generate operators' string representation of this ModuleGraph
+        r"""Generate operators' string representation of this GraphModule
         """
         assert self._belonged_graph, (
             "ModuleBlock: "
@@ -295,8 +347,8 @@ class ModuleGraph(BlockGraph):
         return main_str
 
 
-class TensorGraph(BlockGraph):
-    r"""TensorGraph is the graph representation of a Tensor in a nn.Graph.
+class GraphTensor(GraphBlock):
+    r"""GraphTensor is the graph representation of a Tensor in a nn.Graph.
     """
 
     def __init__(
@@ -304,6 +356,7 @@ class TensorGraph(BlockGraph):
         prefix: str = "",
         name: str = "",
         belonged_graph: weakref.ProxyTypes = None,
-        tensor_graph_type: BlockGraphType = BlockGraphType.NONE,
+        belonged_block: weakref.ProxyTypes = None,
+        tensor_graph_type: GraphBlockType = GraphBlockType.NONE,
     ):
-        super().__init__(prefix, name, belonged_graph, tensor_graph_type)
+        super().__init__(prefix, name, belonged_graph, belonged_block, tensor_graph_type)

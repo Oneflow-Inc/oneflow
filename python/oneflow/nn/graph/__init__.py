@@ -15,6 +15,6 @@ limitations under the License.
 """
 from .graph import Graph
 from .block import Block
-from .block_graph import BlockGraph
-from .block_graph import ModuleGraph
-from .block_graph import TensorGraph
+from .graph_block import GraphBlock
+from .graph_block import GraphModule
+from .graph_block import GraphTensor

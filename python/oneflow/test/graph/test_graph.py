@@ -22,7 +22,7 @@ import numpy as np
 
 import oneflow
 import oneflow as flow
-from oneflow.nn.graph import ModuleGraph, TensorGraph, BlockGraph
+from oneflow.nn.graph import GraphModule, GraphTensor, GraphBlock
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.unittest
@@ -73,18 +73,18 @@ class TestGraph(flow.unittest.TestCase):
 
         g = CustomGraphNestedModule()
         test_case.assertTrue(isinstance(g.m, flow.nn.graph.Block))
-        test_case.assertEqual(g.m.to(BlockGraph).type, "MODULE")
-        test_case.assertEqual(g.m.to(BlockGraph).name, "m")
+        test_case.assertEqual(g.m.to(GraphBlock).type, "MODULE")
+        test_case.assertEqual(g.m.to(GraphBlock).name, "m")
         test_case.assertTrue(isinstance(g.m.dummy_buff, flow.nn.graph.Block))
-        test_case.assertEqual(g.m.dummy_buff.to(BlockGraph).type, "BUFFER")
+        test_case.assertEqual(g.m.dummy_buff.to(GraphBlock).type, "BUFFER")
         test_case.assertTrue(isinstance(g.m.layer.conv1, flow.nn.graph.Block))
-        test_case.assertEqual(g.m.layer.conv1.to(BlockGraph).name, "conv1")
-        test_case.assertEqual(g.m.layer.conv1.to(BlockGraph).name_prefix, "m.layer.")
+        test_case.assertEqual(g.m.layer.conv1.to(GraphBlock).name, "conv1")
+        test_case.assertEqual(g.m.layer.conv1.to(GraphBlock).name_prefix, "m.layer.")
         test_case.assertTrue(isinstance(g.m.layer.conv1.weight, flow.nn.graph.Block))
-        test_case.assertEqual(g.m.layer.conv1.weight.to(BlockGraph).type, "PARAMETER")
-        g.m.layer.conv1.to(BlockGraph)._is_executing_forward = True
+        test_case.assertEqual(g.m.layer.conv1.weight.to(GraphBlock).type, "PARAMETER")
+        g.m.layer.conv1.to(GraphBlock)._is_executing_forward = True
         test_case.assertTrue(isinstance(g.m.layer.conv1.weight, flow.Tensor))
-        g.m.layer.conv1.to(BlockGraph)._is_executing_forward = False
+        g.m.layer.conv1.to(GraphBlock)._is_executing_forward = False
         test_case.assertEqual(g.m.layer.conv1.kernel_size, (5, 5))
         z = g.build(x)
         test_case.assertTrue(np.array_equal(y.numpy(), z.numpy()))
@@ -193,7 +193,7 @@ class TestGraph(flow.unittest.TestCase):
                 scope_proto = graph_build_util.scope_to_proto(scope)
                 test_case.assertEqual(
                     scope_proto.parent_scope_symbol_id,
-                    self.to(flow.nn.graph.BlockGraph).prev_scope.symbol_id,
+                    self.to(flow.nn.graph.GraphBlock).prev_scope.symbol_id,
                 )
                 ck_bool = scope_proto.attr_name2attr_value["checkpointing"]
                 test_case.assertEqual(ck_bool.WhichOneof("value"), None)
@@ -202,8 +202,8 @@ class TestGraph(flow.unittest.TestCase):
                 ].at_int64
                 test_case.assertEqual(stage_int, 1)
                 name = (
-                    self.to(flow.nn.graph.BlockGraph).name_prefix
-                    + self.to(flow.nn.graph.BlockGraph).name
+                    self.to(flow.nn.graph.GraphBlock).name_prefix
+                    + self.to(flow.nn.graph.GraphBlock).name
                 )
                 prefixes = []
                 for prefix in scope_proto.scope_op_name_prefixes:
@@ -212,7 +212,7 @@ class TestGraph(flow.unittest.TestCase):
                 test_case.assertEqual(name, name_in_scope)
                 b = self.dummy_buff
                 dummy_buff_scope_proto = graph_build_util.scope_to_proto(
-                    self._buffers["dummy_buff"].to(flow.nn.graph.BlockGraph).scope
+                    self._buffers["dummy_buff"].to(flow.nn.graph.GraphBlock).scope
                 )
                 test_case.assertEqual(
                     dummy_buff_scope_proto.parent_scope_symbol_id, scope.symbol_id
@@ -241,9 +241,9 @@ class TestGraph(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.m = m
-                self.m.layer0.to(ModuleGraph).set_stage(stage_id=0)
-                self.m.layer0.to(ModuleGraph).activation_checkpointing = True
-                self.m.layer1.to(ModuleGraph).set_stage(stage_id=1)
+                self.m.layer0.to(GraphModule).set_stage(stage_id=0)
+                self.m.layer0.to(GraphModule).activation_checkpointing = True
+                self.m.layer1.to(GraphModule).set_stage(stage_id=1)
 
             def build(self, x, y):
                 return self.m(x, y)

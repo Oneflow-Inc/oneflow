@@ -23,7 +23,7 @@ import oneflow as flow
 import oneflow.unittest
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.scope_util as scope_util
-from oneflow.nn.graph import ModuleGraph
+from oneflow.nn.graph import GraphModule
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -66,7 +66,7 @@ class TestGraphBlock(flow.unittest.TestCase):
             def forward(self, x):
                 test_case.assertEqual(self.config, 1)
                 test_case.assertEqual(self.name, "test_name")
-                test_case.assertEqual(self.to(ModuleGraph).name, "m")
+                test_case.assertEqual(self.to(GraphModule).name, "m")
                 return x
 
         class CustomGraphHasSpecialAttr(flow.nn.Graph):
@@ -166,7 +166,7 @@ class TestGraphBlock(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.linears = flow.nn.Sequential(*list_of_m)
-                self.linears.to(ModuleGraph).activation_checkpointing = True
+                self.linears.to(GraphModule).activation_checkpointing = True
 
             def build(self, x):
                 x = self.linears(x)
@@ -214,9 +214,9 @@ class TestGraphBlock(flow.unittest.TestCase):
                 super().__init__()
                 self.linears = flow.nn.ModuleList(list_of_m)
                 # NOTE: ModuleList doesn't have config.
-                # self.linears.to(ModuleGraph).activation_checkpointing = True
+                # self.linears.to(GraphModule).activation_checkpointing = True
                 for i, _ in enumerate(self.linears):
-                    self.linears[i].to(ModuleGraph).activation_checkpointing = True
+                    self.linears[i].to(GraphModule).activation_checkpointing = True
 
             def build(self, x):
                 # ModuleList can act as an iterable, or be indexed using ints
@@ -268,9 +268,9 @@ class TestGraphBlock(flow.unittest.TestCase):
                 self.linears = flow.nn.ModuleDict(dict_of_m)
 
                 # NOTE: ModuleDict doesn't have config.
-                # self.linears.to(ModuleGraph).activation_checkpointing = True
+                # self.linears.to(GraphModule).activation_checkpointing = True
                 for k, _ in self.linears.items():
-                    self.linears[k].to(ModuleGraph).activation_checkpointing = True
+                    self.linears[k].to(GraphModule).activation_checkpointing = True
 
             def build(self, x):
                 # ModuleDict can act as an iterable, or get using key

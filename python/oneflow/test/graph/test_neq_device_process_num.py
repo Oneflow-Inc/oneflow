@@ -23,7 +23,7 @@ import oneflow
 import oneflow as flow
 import oneflow.unittest
 import oneflow.sysconfig
-from oneflow.nn.graph import ModuleGraph
+from oneflow.nn.graph import GraphModule
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -90,8 +90,8 @@ class TestGraphNeqDeviceProcessNum(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.module_pipeline = module_pipeline
-                self.module_pipeline.m_stage0.to(ModuleGraph).set_stage(0)
-                self.module_pipeline.m_stage1.to(ModuleGraph).set_stage(1)
+                self.module_pipeline.m_stage0.to(GraphModule).set_stage(0)
+                self.module_pipeline.m_stage1.to(GraphModule).set_stage(1)
                 self.loss_fn = flow.nn.CrossEntropyLoss(reduction="none")
                 self.config.set_gradient_accumulation_steps(2)
                 self.add_optimizer(sgd)

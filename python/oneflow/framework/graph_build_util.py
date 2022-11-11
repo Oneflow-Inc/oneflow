@@ -27,7 +27,7 @@ import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_context
 from oneflow.framework.tensor import Tensor
-from oneflow.nn.graph.block import BlockGraphType
+from oneflow.nn.graph.block import GraphBlockType
 import oneflow._oneflow_internal._C as _C
 
 lazy_mode = oneflow._oneflow_internal.lazy_mode
@@ -166,15 +166,15 @@ def _make_new_graph_scope(prev_scope, graph_name):
     return _make_new_scope(prev_scope, scope_proto_str_setter)
 
 
-def make_new_blockgraph_scope(prev_scope, block_graph):
+def make_new_blockgraph_scope(prev_scope, graph_block):
     assert prev_scope is not None
-    assert block_graph is not None
+    assert graph_block is not None
     attr_dict = dict()
-    if block_graph.type == BlockGraphType.MODULE:
-        if block_graph.stage_id is not None:
-            attr_dict["pipeline_stage_id_hint"] = block_graph.stage_id
-        if block_graph.activation_checkpointing is not None:
-            attr_dict["checkpointing"] = block_graph.activation_checkpointing
+    if graph_block.type == GraphBlockType.MODULE:
+        if graph_block.stage_id is not None:
+            attr_dict["pipeline_stage_id_hint"] = graph_block.stage_id
+        if graph_block.activation_checkpointing is not None:
+            attr_dict["checkpointing"] = graph_block.activation_checkpointing
 
     name2default = session_context.GetDefaultSession().scope_attr_name2default_val
 
@@ -193,11 +193,11 @@ def make_new_blockgraph_scope(prev_scope, block_graph):
         # append name prefix
         scope_proto.ClearField("scope_op_name_prefixes")
         scope_proto.scope_op_name_prefixes.append(
-            block_graph.name_prefix + block_graph.name
+            graph_block.name_prefix + graph_block.name
         )
         # set module name
-        if block_graph.type == BlockGraphType.MODULE:
-            scope_proto.module_name = block_graph.name_prefix + block_graph.name
+        if graph_block.type == GraphBlockType.MODULE:
+            scope_proto.module_name = graph_block.name_prefix + graph_block.name
         return str(text_format.MessageToString(scope_proto))
 
     return _make_new_scope(prev_scope, scope_proto_str_setter)

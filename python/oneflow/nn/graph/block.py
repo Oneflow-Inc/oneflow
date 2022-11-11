@@ -26,11 +26,11 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.container import *
 from oneflow.nn.utils.container import *
 from oneflow.nn.parameter import Parameter
-from oneflow.nn.graph.block_graph import (
-    BlockGraphType,
-    BlockGraph,
-    ModuleGraph,
-    TensorGraph,
+from oneflow.nn.graph.graph_block import (
+    GraphBlockType,
+    GraphBlock,
+    GraphModule,
+    GraphTensor,
 )
 from oneflow.nn.graph.util import (
     add_indent,
@@ -67,13 +67,13 @@ class Block(object):
         # The original data
         self._oneflow_internal_origin__ = None
         # The graph representation of the original data
-        self._oneflow_internal_blockgraph__ = None
+        self._oneflow_internal_graphblock__ = None
 
     def to(self, *args, **kwargs):
         """
         """
-        if len(args) == 1 and issubclass(args[0], BlockGraph):
-            return self._oneflow_internal_blockgraph__
+        if len(args) == 1 and issubclass(args[0], GraphBlock):
+            return self._oneflow_internal_graphblock__
         elif len(args) == 1 and (args[0] is Module or args[0] is Tensor):
             return self._oneflow_internal_origin__
         else:
@@ -90,14 +90,14 @@ class ModuleBlock(Block):
     ):
         assert not isinstance(origin, Block)
         super().__init__()
-        self._oneflow_internal_blockgraph__ = ModuleGraph(prefix, name, belonged_graph)
+        self._oneflow_internal_graphblock__ = GraphModule(prefix, name, belonged_graph, weakref.proxy(self))
         self._modules = OrderedDict()
         self._parameters = OrderedDict()
         self._buffers = OrderedDict()
 
-        self._oneflow_internal_blockgraph__set_origin(origin)
+        self._oneflow_internal_graphblock__set_origin(origin)
 
-    def _oneflow_internal_blockgraph__set_origin(self, origin):
+    def _oneflow_internal_graphblock__set_origin(self, origin):
         self._oneflow_internal_origin__ = origin
         if origin is None:
             return
@@ -106,17 +106,17 @@ class ModuleBlock(Block):
             self.__setattr__(
                 n,
                 get_block_cls(m)(
-                    self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".",
+                    self.to(GraphBlock)._name_prefix + self.to(GraphBlock)._name + ".",
                     n,
                     m,
-                    self.to(BlockGraph)._belonged_graph,
+                    self.to(GraphBlock)._belonged_graph,
                 ),
             )
         for (n, p) in list(origin.named_parameters("", False)):
             self.__setattr__(
                 n,
                 get_block_cls(p)(
-                    self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".",
+                    self.to(GraphBlock)._name_prefix + self.to(GraphBlock)._name + ".",
                     n,
                     p,
                 ),
@@ -125,68 +125,21 @@ class ModuleBlock(Block):
             self.__setattr__(
                 n,
                 get_block_cls(b)(
-                    self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".",
+                    self.to(GraphBlock)._name_prefix + self.to(GraphBlock)._name + ".",
                     n,
                     b,
                 ),
             )
 
-    def _oneflow_internal_blockgraph__debug(
-        self,
-        v_level: int = 0,
-        *,
-        ranks: Optional[Union[int, List[int]]] = None,
-        max_py_stack_depth: int = 2,
-        only_user_py_stack=True,
-        op_repr_with_py_stack=False,
-    ) -> None:
-        assert isinstance(v_level, int)
-        assert isinstance(max_py_stack_depth, int)
-        assert isinstance(only_user_py_stack, bool)
-        assert isinstance(op_repr_with_py_stack, bool)
-
-        if ranks is None:
-            rank_list = [0]
-        elif isinstance(ranks, int):
-            rank_list = [ranks]
-        elif isinstance(ranks, list):
-            rank_list = ranks
-        else:
-            raise ValueError("ranks must be int or List[int].")
-
-        my_rank = get_rank()
-        if -1 in rank_list or my_rank in rank_list:
-            self.to(BlockGraph)._debug = v_level >= 0
-            if self.to(BlockGraph)._debug:
-                self.to(BlockGraph)._debug_min_s_level = 0
-                self.to(BlockGraph)._debug_max_v_level = max(0, v_level)
-
-            self.to(BlockGraph)._debug_max_py_stack_depth = max_py_stack_depth
-            self.to(BlockGraph)._debug_only_user_py_stack = only_user_py_stack
-            self.to(BlockGraph)._debug_op_repr_with_py_stack = op_repr_with_py_stack
-
-            if self.to(BlockGraph)._type == BlockGraphType.MODULE:
-
-                def _set_child(d):
-                    for (_, n) in d.items():
-                        n._oneflow_internal_blockgraph__debug(
-                            v_level,
-                            ranks=ranks,
-                            max_py_stack_depth=max_py_stack_depth,
-                            only_user_py_stack=only_user_py_stack,
-                            op_repr_with_py_stack=op_repr_with_py_stack,
-                        )
-
-                _set_child(self._modules)
 
     def __call__(self, *args, **kwargs):
-        assert self.to(BlockGraph)._type == BlockGraphType.MODULE
+        assert self.to(GraphBlock)._type == GraphBlockType.MODULE
         self.__print(0, 1, self._shallow_repr())
 
         args_tree = ArgsTree(
             (args, kwargs),
             True,
-            "_" + self.to(BlockGraph).name_prefix + self.to(BlockGraph).name + "_input",
+            "_" + self.to(GraphBlock).name_prefix + self.to(GraphBlock).name + "_input",
             None,
         )
 
@@ -201,7 +154,7 @@ class ModuleBlock(Block):
                 in_str = "(INPUT:" + name + ":" + meta_repr_str + ")"
                 if not isinstance(arg_value, Tensor):
                     in_str = "[WARNING]" + in_str
-                self.to(BlockGraph)._args_repr.append(in_str)
+                self.to(GraphBlock)._args_repr.append(in_str)
                 self.__print(0, 1, in_str)
 
         def _print_state(d):
@@ -215,11 +168,11 @@ class ModuleBlock(Block):
         # that hooks of nn.Modules are ignored. It is not recommended
         # to use hooks of nn.Module in nn.Graph for the moment.
         with graph_build_util.DebugScopeContext(
-            self.to(BlockGraph)._debug_min_s_level,
-            self.to(BlockGraph)._debug_max_v_level,
-            self.to(BlockGraph)._debug,
-            self.to(BlockGraph)._debug_max_py_stack_depth,
-            self.to(BlockGraph)._debug_only_user_py_stack,
+            self.to(GraphBlock)._debug_min_s_level,
+            self.to(GraphBlock)._debug_max_v_level,
+            self.to(GraphBlock)._debug,
+            self.to(GraphBlock)._debug_max_py_stack_depth,
+            self.to(GraphBlock)._debug_only_user_py_stack,
         ):
             result = self.__block_forward(*args, **kwargs)
 
@@ -233,8 +186,8 @@ class ModuleBlock(Block):
             (outputs, {}),
             True,
             "_"
-            + self.to(BlockGraph).name_prefix
-            + self.to(BlockGraph).name
+            + self.to(GraphBlock).name_prefix
+            + self.to(GraphBlock).name
             + "_output",
             None,
         )
@@ -250,22 +203,22 @@ class ModuleBlock(Block):
                 out_str = "(OUTPUT:" + name + ":" + meta_repr_str + ")"
                 if not isinstance(arg_value, Tensor):
                     out_str = "[WARNING]" + out_str
-                self.to(BlockGraph)._outs_repr.append(out_str)
+                self.to(GraphBlock)._outs_repr.append(out_str)
                 self.__print(0, 1, out_str)
 
         return result
 
     def __block_forward(self, *args, **kwargs):
-        self.to(BlockGraph)._is_executing_forward = True
+        self.to(GraphBlock)._is_executing_forward = True
         args, kwargs = self.__pre_forward_map(*args, **kwargs)
-        with self.to(BlockGraph).scope_context():
+        with self.to(GraphBlock).scope_context():
             # "Instance method __func__ is the function object", "when an instance method object is called,
             # the underlying function __func__ is called, inserting the class instance __self__ in front of
             # the argument list."
             # Reference: https://docs.python.org/3/reference/datamodel.html
             unbound_forward_of_module_instance = self.to(Module).forward.__func__
             result = unbound_forward_of_module_instance(self, *args, **kwargs)
-        self.to(BlockGraph)._is_executing_forward = False
+        self.to(GraphBlock)._is_executing_forward = False
         return result
 
     def __pre_forward_map(self, *args, **kwargs):
@@ -273,21 +226,21 @@ class ModuleBlock(Block):
         # Identity op outside activation checkpointing scope will be the endpoint of an activation checkpointing segment.
         # Identity op as the first op of a pipeline stage will make backward op depends on the identity op within the stage,
         # otherwise the backward op may depends the op in former stage which will make graph creates unnessary buffers.
-        if self.to(BlockGraph)._stage_placement is not None:
+        if self.to(GraphBlock)._stage_placement is not None:
 
             def insert_to_global(t):
                 assert isinstance(t, Tensor)
                 return self.__get_or_create_global(
-                    t, self.to(BlockGraph)._stage_placement
+                    t, self.to(GraphBlock)._stage_placement
                 )
 
             args, kwargs = self.__map_io(
                 "input", insert_to_global, "insert_to_global", *args, **kwargs
             )
 
-        if self.to(BlockGraph).activation_checkpointing or (
-            self.to(BlockGraph).stage_id is not None
-            and self.to(BlockGraph).stage_id >= 0
+        if self.to(GraphBlock).activation_checkpointing or (
+            self.to(GraphBlock).stage_id is not None
+            and self.to(GraphBlock).stage_id >= 0
         ):
 
             def insert_identity(t):
@@ -306,14 +259,14 @@ class ModuleBlock(Block):
         key = str(id(input_tensor)) + str(placement)
 
         # input_tensor + placement -> unique_global_tensor
-        if key not in self.to(BlockGraph)._belonged_graph._unique_global_op_dict:
+        if key not in self.to(GraphBlock)._belonged_graph._unique_global_op_dict:
             # store input tensor to avoid tensor id recycle
-            self.to(BlockGraph)._belonged_graph._unique_global_op_dict[key] = (
+            self.to(GraphBlock)._belonged_graph._unique_global_op_dict[key] = (
                 input_tensor.to_global(placement=placement),
                 input_tensor,
             )
 
-        return self.to(BlockGraph)._belonged_graph._unique_global_op_dict[key][0]
+        return self.to(GraphBlock)._belonged_graph._unique_global_op_dict[key][0]
 
     def __get_or_create_identity(self, input_tensor: Tensor = None):
         assert input_tensor is not None
@@ -322,30 +275,30 @@ class ModuleBlock(Block):
         # input_tensor(with placement) -> unique_identity_tensor
         # When placement is different, the input tensor(output tensor of __get_or_create_global) is different, so the
         # key can use only input tensor.
-        if key not in self.to(BlockGraph)._belonged_graph._unique_identity_op_dict:
+        if key not in self.to(GraphBlock)._belonged_graph._unique_identity_op_dict:
             # Reuse current module name for indentity op
             ident_name_scope = graph_build_util.make_new_name_scope(
-                self.to(BlockGraph).prev_scope,
-                self.to(BlockGraph).name_prefix + self.to(BlockGraph).name,
+                self.to(GraphBlock).prev_scope,
+                self.to(GraphBlock).name_prefix + self.to(GraphBlock).name,
             )
             with graph_build_util.BlockScopeContext(
-                self.to(BlockGraph).prev_scope, ident_name_scope
+                self.to(GraphBlock).prev_scope, ident_name_scope
             ):
                 # store input tensor to avoid tensor id recycle
-                self.to(BlockGraph)._belonged_graph._unique_identity_op_dict[
+                self.to(GraphBlock)._belonged_graph._unique_identity_op_dict[
                     key
                 ] = oneflow._C.identity(input_tensor)
 
-        return self.to(BlockGraph)._belonged_graph._unique_identity_op_dict[key]
+        return self.to(GraphBlock)._belonged_graph._unique_identity_op_dict[key]
 
     def add_module(self, name: str, module: Optional[Module]) -> None:
         self.__setattr__(
             name,
             get_block_cls(module)(
-                self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".",
+                self.to(GraphBlock)._name_prefix + self.to(GraphBlock)._name + ".",
                 name,
                 module,
-                self.to(BlockGraph)._belonged_graph,
+                self.to(GraphBlock)._belonged_graph,
             ),
         )
 
@@ -353,14 +306,14 @@ class ModuleBlock(Block):
         self.__setattr__(
             name,
             get_block_cls(param)(
-                self.to(BlockGraph)._name_prefix + self.to(BlockGraph)._name + ".",
+                self.to(GraphBlock)._name_prefix + self.to(GraphBlock)._name + ".",
                 name,
                 param,
             ),
         )
 
     def modules(self, memo: Optional[Set["Block"]] = None) -> Iterator["Block"]:
-        assert self.to(BlockGraph)._type == BlockGraphType.MODULE
+        assert self.to(GraphBlock)._type == GraphBlockType.MODULE
         if memo is None:
             memo = set()
         if self not in memo:
@@ -385,8 +338,8 @@ class ModuleBlock(Block):
             (args, kwargs),
             True,
             "_"
-            + self.to(BlockGraph).name_prefix
-            + self.to(BlockGraph).name
+            + self.to(GraphBlock).name_prefix
+            + self.to(GraphBlock).name
             + "_"
             + io_type,
             None,
@@ -436,7 +389,7 @@ class ModuleBlock(Block):
             return False, repr_str
 
     def __members(self, get_members_fn, recurse=True) -> Iterator["Block"]:
-        assert self.to(BlockGraph)._type == BlockGraphType.MODULE
+        assert self.to(GraphBlock)._type == GraphBlockType.MODULE
         memo = set()
         modules = self.modules() if recurse else [self]
         for module in modules:
@@ -448,13 +401,13 @@ class ModuleBlock(Block):
                 yield v
 
     def parameters(self, recurse: bool = True) -> Iterator["Block"]:
-        assert self.to(BlockGraph)._type == BlockGraphType.MODULE
+        assert self.to(GraphBlock)._type == GraphBlockType.MODULE
         gen = self.__members(lambda module: module._parameters.items(), recurse=recurse)
         for elem in gen:
             yield elem
 
     def buffers(self, recurse: bool = True) -> Iterator["Block"]:
-        assert self.to(BlockGraph)._type == BlockGraphType.MODULE
+        assert self.to(GraphBlock)._type == GraphBlockType.MODULE
         gen = self.__members(lambda module: module._buffers.items(), recurse=recurse)
         for elem in gen:
             yield elem
@@ -473,14 +426,14 @@ class ModuleBlock(Block):
                 if name in d:
                     raise AttributeError(
                         "'{}' object has duplicated attribute named '{}'".format(
-                            self.to(BlockGraph)._name, name
+                            self.to(GraphBlock)._name, name
                         )
                     )
-            if value.to(BlockGraph).type == BlockGraphType.MODULE:
+            if value.to(GraphBlock).type == GraphBlockType.MODULE:
                 self._modules[name] = value
-            elif value.to(BlockGraph).type == BlockGraphType.PARAMETER:
+            elif value.to(GraphBlock).type == GraphBlockType.PARAMETER:
                 self._parameters[name] = value
-            elif value.to(BlockGraph).type == BlockGraphType.BUFFER:
+            elif value.to(GraphBlock).type == GraphBlockType.BUFFER:
                 self._buffers[name] = value
             else:
                 raise AttributeError(
@@ -523,9 +476,9 @@ class ModuleBlock(Block):
             return attr
         raise AttributeError(
             "'{}' '{}' object '{}' in nn.Graph has no attribute '{}'".format(
-                self.to(BlockGraph)._type,
+                self.to(GraphBlock)._type,
                 type(self).__name__,
-                self.to(BlockGraph)._name_prefix + self.to(BlockGraph).name,
+                self.to(GraphBlock)._name_prefix + self.to(GraphBlock).name,
                 name,
             )
         )
@@ -543,7 +496,7 @@ class ModuleBlock(Block):
             _s_block.try_build()
             return _s_block.lazy_origin
         elif (not graph_build_util.lazy_mode.is_enabled()) and self.to(
-            BlockGraph
+            GraphBlock
         )._is_executing_forward:
             # eager and inside nn.Graph.build()
             return _s_block.to(Tensor)
@@ -555,8 +508,8 @@ class ModuleBlock(Block):
     def __repr__(self):
         lines = None
         child_lines = []
-        if len(self.to(BlockGraph)._args_repr) > 0:
-            for in_str in self.to(BlockGraph)._args_repr:
+        if len(self.to(GraphBlock)._args_repr) > 0:
+            for in_str in self.to(GraphBlock)._args_repr:
                 input_str = add_indent(in_str, 2)
                 child_lines.append(input_str)
 
@@ -570,12 +523,12 @@ class ModuleBlock(Block):
         _append_child(self._buffers)
         _append_child(self._modules)
 
-        if len(self.to(BlockGraph)._outs_repr) > 0:
-            for out_str in self.to(BlockGraph)._outs_repr:
+        if len(self.to(GraphBlock)._outs_repr) > 0:
+            for out_str in self.to(GraphBlock)._outs_repr:
                 output_str = add_indent(out_str, 2)
                 child_lines.append(output_str)
 
-        child_lines.append(add_indent(repr(self.to(BlockGraph)), 2))
+        child_lines.append(add_indent(repr(self.to(GraphBlock)), 2))
 
         if len(child_lines) > 0:
             lines = child_lines
@@ -589,10 +542,10 @@ class ModuleBlock(Block):
     def _shallow_repr(self):
         shallow_repr = (
             "("
-            + self.to(BlockGraph)._type
+            + self.to(GraphBlock)._type
             + ":"
-            + self.to(BlockGraph)._name_prefix
-            + self.to(BlockGraph)._name
+            + self.to(GraphBlock)._name_prefix
+            + self.to(GraphBlock)._name
             + ":"
             + self._oneflow_internal_origin__._shallow_repr()
             + ")"
@@ -605,9 +558,9 @@ class ModuleBlock(Block):
         assert isinstance(s_level, int)
         assert isinstance(v_level, int)
         assert isinstance(msg, str)
-        if s_level >= self.to(BlockGraph)._debug_min_s_level:
+        if s_level >= self.to(GraphBlock)._debug_min_s_level:
             if (s_level > 0) or (
-                s_level == 0 and v_level <= self.to(BlockGraph)._debug_max_v_level
+                s_level == 0 and v_level <= self.to(GraphBlock)._debug_max_v_level
             ):
                 print(msg, flush=True)
 
@@ -624,7 +577,7 @@ class LazyBuilder(object):
             assert self.name is not None
             assert self.method is not None
             assert self.result is None
-            with block.to(BlockGraph).scope_context():
+            with block.to(GraphBlock).scope_context():
                 self.result = self.method()
             self.finished = True
 
@@ -639,41 +592,41 @@ class TensorBlock(Block):
     ):
         assert not isinstance(origin, Block)
         if isinstance(origin, Parameter):
-            self._oneflow_internal_blockgraph__ = TensorGraph(
-                prefix, name, belonged_graph, BlockGraphType.PARAMETER
+            self._oneflow_internal_graphblock__ = GraphTensor(
+                prefix, name, belonged_graph, weakref.proxy(self), GraphBlockType.PARAMETER
             )
         elif isinstance(origin, Tensor):
-            self._oneflow_internal_blockgraph__ = TensorGraph(
-                prefix, name, belonged_graph, BlockGraphType.BUFFER
+            self._oneflow_internal_graphblock__ = GraphTensor(
+                prefix, name, belonged_graph, weakref.proxy(self), GraphBlockType.BUFFER
             )
         else:
             raise NotImplementedError()
         self._lazy_origin_builder = LazyBuilder()
         self.build_finished = False
-        self._oneflow_internal_blockgraph__set_origin(origin)
+        self._oneflow_internal_graphblock__set_origin(origin)
 
-    def _oneflow_internal_blockgraph__set_origin(self, origin):
+    def _oneflow_internal_graphblock__set_origin(self, origin):
         self._oneflow_internal_origin__ = origin
 
     @property
     def lazy_origin(self):
         assert (
-            self.to(BlockGraph)._type == BlockGraphType.PARAMETER
-            or self.to(BlockGraph)._type == BlockGraphType.BUFFER
+            self.to(GraphBlock)._type == GraphBlockType.PARAMETER
+            or self.to(GraphBlock)._type == GraphBlockType.BUFFER
         ), "Only Parameter or Buffer Block has lazy_origin"
         return self._lazy_origin_builder.result
 
     def lazy_origin_builder(self):
         assert (
-            self.to(BlockGraph)._type == BlockGraphType.PARAMETER
-            or self.to(BlockGraph)._type == BlockGraphType.BUFFER
+            self.to(GraphBlock)._type == GraphBlockType.PARAMETER
+            or self.to(GraphBlock)._type == GraphBlockType.BUFFER
         ), "Only Parameter or Buffer Block has lazy_origin_builder"
         return self._lazy_origin_builder
 
     def set_lazy_origin_builder(self, builder=None):
         assert (
-            self.to(BlockGraph)._type == BlockGraphType.PARAMETER
-            or self.to(BlockGraph)._type == BlockGraphType.BUFFER
+            self.to(GraphBlock)._type == GraphBlockType.PARAMETER
+            or self.to(GraphBlock)._type == GraphBlockType.BUFFER
         ), "Only Parameter or Buffer Block has lazy_origin_builder"
         self._lazy_origin_builder = builder
 
@@ -693,10 +646,10 @@ class TensorBlock(Block):
     def _shallow_repr(self):
         shallow_repr = (
             "("
-            + self.to(BlockGraph)._type
+            + self.to(GraphBlock)._type
             + ":"
-            + self.to(BlockGraph)._name_prefix
-            + self.to(BlockGraph)._name
+            + self.to(GraphBlock)._name_prefix
+            + self.to(GraphBlock)._name
             + ":"
             + self._oneflow_internal_origin__._meta_repr()
             + ")"
@@ -713,10 +666,11 @@ class SequentialBlock(get_seq(ModuleBlock)):
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
-        self.to(BlockGraph)._name_prefix = prefix
-        self.to(BlockGraph)._name = name
-        self.to(BlockGraph)._belonged_graph = belonged_graph
-        self._oneflow_internal_blockgraph__set_origin(origin)
+        self.to(GraphBlock)._name_prefix = prefix
+        self.to(GraphBlock)._name = name
+        self.to(GraphBlock)._belonged_graph = belonged_graph
+        self.to(GraphBlock)._belonged_block = weakref.proxy(self)
+        self._oneflow_internal_graphblock__set_origin(origin)
 
 
 class ModuleListBlock(get_list(ModuleBlock)):
@@ -728,10 +682,11 @@ class ModuleListBlock(get_list(ModuleBlock)):
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
-        self.to(BlockGraph)._name_prefix = prefix
-        self.to(BlockGraph)._name = name
-        self.to(BlockGraph)._belonged_graph = belonged_graph
-        self._oneflow_internal_blockgraph__set_origin(origin)
+        self.to(GraphBlock)._name_prefix = prefix
+        self.to(GraphBlock)._name = name
+        self.to(GraphBlock)._belonged_graph = belonged_graph
+        self.to(GraphBlock)._belonged_block = weakref.proxy(self)
+        self._oneflow_internal_graphblock__set_origin(origin)
         # MoudleList is a container without forward() method,
 
 
@@ -744,10 +699,11 @@ class ModuleDictBlock(get_dict(ModuleBlock)):
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
-        self.to(BlockGraph)._name_prefix = prefix
-        self.to(BlockGraph)._name = name
-        self.to(BlockGraph)._belonged_graph = belonged_graph
-        self._oneflow_internal_blockgraph__set_origin(origin)
+        self.to(GraphBlock)._name_prefix = prefix
+        self.to(GraphBlock)._name = name
+        self.to(GraphBlock)._belonged_graph = belonged_graph
+        self.to(GraphBlock)._belonged_block = weakref.proxy(self)
+        self._oneflow_internal_graphblock__set_origin(origin)
 
 
 class ParameterListBlock(get_para_list(ModuleBlock)):
@@ -759,11 +715,12 @@ class ParameterListBlock(get_para_list(ModuleBlock)):
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
-        self.to(BlockGraph)._name_prefix = prefix
-        self.to(BlockGraph)._name = name
-        self.to(BlockGraph)._belonged_graph = belonged_graph
-        self._oneflow_internal_blockgraph__set_origin(origin)
-        self.to(BlockGraph)._is_executing_forward = True
+        self.to(GraphBlock)._name_prefix = prefix
+        self.to(GraphBlock)._name = name
+        self.to(GraphBlock)._belonged_graph = belonged_graph
+        self.to(GraphBlock)._belonged_block = weakref.proxy(self)
+        self._oneflow_internal_graphblock__set_origin(origin)
+        self.to(GraphBlock)._is_executing_forward = True
 
     def __getitem__(self, idx):
         assert isinstance(idx, int)
@@ -785,11 +742,12 @@ class ParameterDictBlock(get_para_dict(ModuleBlock)):
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
-        self.to(BlockGraph)._name_prefix = prefix
-        self.to(BlockGraph)._name = name
-        self.to(BlockGraph)._belonged_graph = belonged_graph
-        self._oneflow_internal_blockgraph__set_origin(origin)
-        self.to(BlockGraph)._is_executing_forward = True
+        self.to(GraphBlock)._name_prefix = prefix
+        self.to(GraphBlock)._name = name
+        self.to(GraphBlock)._belonged_graph = belonged_graph
+        self.to(GraphBlock)._belonged_block = weakref.proxy(self)
+        self._oneflow_internal_graphblock__set_origin(origin)
+        self.to(GraphBlock)._is_executing_forward = True
 
     def __getitem__(self, key: str):
         p_state = self._get_from_states(key, "_parameters")
