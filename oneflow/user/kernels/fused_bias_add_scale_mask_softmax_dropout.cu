@@ -63,7 +63,7 @@ struct ElementwiseMapper {
 template<typename SRC, typename DST, typename MASK, typename BiasMapper, typename MaskMapper>
 struct BiasAddScaleMaskLoad {
   static_assert(
-      std::is_same<typename BiasMapper::index_type, typename MaskMapper::index_type>::value);
+      std::is_same<typename BiasMapper::index_type, typename MaskMapper::index_type>::value, "");
   using IndexType = typename BiasMapper::index_type;
   const SRC* src;
   const SRC* bias;
