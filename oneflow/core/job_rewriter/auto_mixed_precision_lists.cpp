@@ -46,7 +46,8 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "binary_cross_entropy_with_logits_reduce_mean_grad",
                                "fused_cross_feature_interaction",
                                "fused_cross_feature_interaction_v1_grad",
-                               "fused_cross_feature_interaction_v2_grad"};
+                               "fused_cross_feature_interaction_v2_grad",
+                               "fused_multi_head_attention_inference"};
   return white_list;
 }
 
@@ -162,7 +163,6 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "slice_grad",
                                "fused_scale_tril",
                                "identity",
-                               "flatten",
                                "squeeze",
                                "embedding",
                                "embedding_grad",
@@ -182,7 +182,8 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "ones_like",
                                "pinned_identity",
                                "to_contiguous",
-                               "copy"};
+                               "copy",
+                               "upsample_nearest_2d"};
 
   return clear_list;
 }

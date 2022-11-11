@@ -139,7 +139,7 @@ def FusedPadConv2DPattern : Pat<
     ),
     $weight,
     $bias,
-    $bias_multiplier,
+    $_add_to_output,
     $conv2d_op_name,
     $conv2d_device_tag,
     $conv2d_device_name,
@@ -379,6 +379,7 @@ def FuseConv2DBatchNormPattern : Pat<
             OneFlow_FrozenVariableOp : $variable_conv_2d_weight
               $value,
               $v_op_name,
+              $v_data_type,
               $v_device_tag,
               $v_device_name,
               $v_scope_symbol_id,
@@ -386,7 +387,7 @@ def FuseConv2DBatchNormPattern : Pat<
               $v_nd_sbp
           ),
           $bias,
-          $bias_multiplier,
+          $_add_to_output,
           $conv2d_op_name,
           $conv2d_device_tag,
           $conv2d_device_name,

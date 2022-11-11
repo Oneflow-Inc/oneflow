@@ -137,6 +137,23 @@ void ParseAndSetStateInitializerIndex(const std::string& state_initializer,
   }
 }
 
+void ParseAndSetStepInitializerIndex(const int32_t num_tables, const int64_t line_size,
+                                     const int64_t embedding_size,
+                                     std::vector<EmbeddingInitializer>* initializer_params,
+                                     std::vector<int8_t>* initializer_index) {
+  if (line_size % embedding_size == 0) { return; }
+  nlohmann::json initializer;
+  initializer["type"] = "constant";
+  initializer["value"] = 0.0;
+  int32_t offset = ParseJsonToUniqueInitializerVecAndReturnOffset(initializer, initializer_params);
+  int32_t col_start = line_size / embedding_size * embedding_size;
+  int32_t col_end = line_size;
+  CHECK_LE(col_end, line_size);
+  for (int32_t j = 0; j < num_tables; ++j) {
+    SetInitializerIndex(j, col_start, col_end, line_size, offset, initializer_index);
+  }
+}
+
 void ParseAndSetModelInitializerIndex(const nlohmann::json& tables,
                                       const std::vector<int64_t>& column_dims,
                                       const int32_t num_tables, const int32_t num_columns,
@@ -176,6 +193,8 @@ void ParseInitializers(const int64_t line_size, const int64_t embedding_size,
   CHECK(tables.is_array());
   const int32_t num_tables = tables.size();
   initializer_index->resize(num_tables * line_size);
+  ParseAndSetStepInitializerIndex(num_tables, line_size, embedding_size, initializer_params,
+                                  initializer_index);
   ParseAndSetStateInitializerIndex(state_initializer, num_tables, line_size, embedding_size,
                                    initializer_params, initializer_index);
   ParseAndSetModelInitializerIndex(tables, column_dims, num_tables, num_columns, line_size,

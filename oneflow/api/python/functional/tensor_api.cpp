@@ -220,7 +220,9 @@ class AssignLocalTensorFunctor {
     // JUST(CheckInplaceValid(ref)); // align check to torch
     CHECK_OR_RETURN(ref->is_local() && value->is_local())
         << "Both ref and value must be local tensor.";
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, value}));
+    std::shared_ptr<one::Tensor> src = value;
+    if (ref->dtype() != src->dtype()) { src = JUST(To(src, ref->dtype(), false)); }
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, src}));
     return Maybe<void>::Ok();
   }
 
@@ -291,10 +293,10 @@ class LocalTensorSharedNumpyDataFunctor {
     };
 
     const auto array_size_in_bytes = PyArray_NBYTES(array);
-    auto tensor_data = std::make_shared<vm::TensorStorage>();
+    auto tensor_data = std::make_shared<vm::OutsideVmTensorStorage>();
     tensor_data->set_blob_dptr(
         std::unique_ptr<char, std::function<void(char*)>>(static_cast<char*>(data_ptr), Free),
-        array_size_in_bytes, /*is_allocated_in_vm*/ false);
+        array_size_in_bytes);
 
     // Build TensorStorage: decrease ndarray reference count before releasing
     auto tensor_storage = std::make_shared<TensorStorage>(tensor_data);

@@ -153,6 +153,7 @@ from oneflow._C import reduce_mean as mean
 from oneflow._C import reduce_all as all
 from oneflow._C import reduce_any as any
 from oneflow._C import reduce_nansum as nansum
+from oneflow._C import logsumexp
 from oneflow._C import rsqrt
 from oneflow._C import sqrt
 from oneflow._C import square
@@ -214,6 +215,7 @@ from oneflow._C import not_equal as ne
 from oneflow._C import less as lt
 from oneflow._C import less_equal as le
 from oneflow._C import searchsorted
+from oneflow._C import flip
 from oneflow._C import index_select
 from oneflow._C import isnan
 from oneflow._C import isinf
@@ -222,6 +224,10 @@ from oneflow._C import inv as inverse
 from oneflow._C import iinfo, finfo
 from oneflow._C import multinomial
 from oneflow._C import linalg_cross as cross
+from oneflow._C import bincount
+from oneflow._C import isclose
+from oneflow._C import allclose
+
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
@@ -294,6 +300,7 @@ from oneflow.framework.dtype import (
     set_default_dtype,
     set_default_tensor_type,
     get_default_dtype,
+    is_floating_point,
 )
 
 import oneflow._C
@@ -365,8 +372,6 @@ from oneflow.nn.modules.distributed_partial_fc_sample import (
     distributed_partial_fc_sample_op as distributed_partial_fc_sample,
 )
 from oneflow.nn.modules.roll import roll_op as roll
-from oneflow.nn.modules.flip import flip_op as flip
-from oneflow.nn.modules.tensor_ops import is_floating_point
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
 from oneflow.nn.modules.math_ops import topk_op as topk
@@ -377,6 +382,7 @@ from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
 from oneflow._C import normal
 from oneflow._C import rand
 from oneflow._C import randn
+from oneflow._C import randn_like
 from oneflow._C import randint
 from oneflow._C import randint_like
 from oneflow._C import randperm
