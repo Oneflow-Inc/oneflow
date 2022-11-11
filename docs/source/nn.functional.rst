@@ -73,6 +73,7 @@ Non-linear activation functions
     softmax
     softshrink
     log_softmax
+    gumbel_softmax
     tanh
     sigmoid
     hardsigmoid

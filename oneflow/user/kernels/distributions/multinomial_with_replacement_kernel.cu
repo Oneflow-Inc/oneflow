@@ -105,6 +105,7 @@ class MultinomialWithReplacementGpuKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
     auto* distribution_state = dynamic_cast<DistributionKernelState*>(state);

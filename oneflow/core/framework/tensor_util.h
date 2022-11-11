@@ -45,6 +45,8 @@ Maybe<void> CopyLocalTensorDataTo(const std::shared_ptr<Tensor>& input, void* me
 
 Maybe<Scope> GetTensorScope(const std::shared_ptr<Tensor>& tensor);
 
+template<typename T>
+Maybe<T> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor);
 }  // namespace one
 }  // namespace oneflow
 

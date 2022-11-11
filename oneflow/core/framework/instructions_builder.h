@@ -138,6 +138,8 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
 
  private:
+  Maybe<void> AllocateTensors(const vm::EagerBlobObjectList& eager_blob_objects,
+                              Symbol<Stream> stream);
   Maybe<void> SoftSyncStream(const vm::EagerBlobObjectList& eager_blob_objects,
                              Symbol<Stream> stream);
   Maybe<void> SoftSyncStreamBetween(
