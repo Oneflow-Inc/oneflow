@@ -306,14 +306,15 @@ Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs
 
   // initialize all variable to capture grad for input tensors
   captured_grads_ = std::make_shared<TensorTuple>(inputs.size());
-  for (const auto& input : inputs) {
-    CHECK_NOTNULL_OR_RETURN(input->mut_grad_fn_node().get());
+  for (int idx = 0; idx < inputs.size(); idx++) {
+    const auto& input = inputs[idx];
+    CHECK_NOTNULL_OR_RETURN(input->mut_grad_fn_node().get());  //  NOLINT(maybe-need-error-msg)
     ExecInfo& exec_info = grad_fn2exec_info_[input->mut_grad_fn_node().get()];
     exec_info.need_execute = true;
     if (!exec_info.capture_indices) {
-      exec_info.capture_indices = std::make_unique<std::vector<size_t>>();
+      exec_info.capture_indices = std::make_unique<std::vector<std::pair<size_t, size_t>>>();
     }
-    exec_info.capture_indices->emplace_back(input->get_grad_fn_output_index());
+    exec_info.capture_indices->emplace_back(std::make_pair(input->get_grad_fn_output_index(), idx));
   }
 
   HashSet<FunctionNode*> seen;
@@ -364,9 +365,10 @@ Maybe<void> GraphTask::Apply(bool save_grad_for_leaf) {
     BackwardPassScopeGuard backward_guard(node->scope());
     if (exec_info.capture_indices) {
       CHECK_NOTNULL_OR_RETURN(captured_grads_.get()) << "captured grads in GraphTask is nullptr";
-      for (size_t i : *exec_info.capture_indices) {
-        JUST(VectorAt(*captured_grads_, i)) =
-            JUST(JUST(VectorAt(node->output_meta_data_, i))->current_grad_value());
+      for (const auto& out_idx_and_capture_idx : *exec_info.capture_indices) {
+        JUST(VectorAt(*captured_grads_, out_idx_and_capture_idx.second)) =
+            JUST(JUST(VectorAt(node->output_meta_data_, out_idx_and_capture_idx.first))
+                     ->current_grad_value());
       }
     }
     if (/*bool not_ready_to_apply=*/!(JUST(node->Apply(create_graph_)))) { continue; }
