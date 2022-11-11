@@ -141,6 +141,7 @@ class GraphTask final {
   Maybe<void> ComputeDependenciesAndPruneNode(const TensorTuple& inputs);
   Maybe<void> Apply(bool save_grad_for_leaf);
   std::shared_ptr<TensorTuple> GetCapturedGrads() const { return captured_grads_; }
+  Maybe<void> WriteGraphToDotFile(const std::string& file_name) const;
 
  private:
   class ExecInfo {

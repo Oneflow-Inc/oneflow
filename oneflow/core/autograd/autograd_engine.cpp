@@ -32,6 +32,8 @@ limitations under the License.
 #include "oneflow/core/framework/global_param_grad_sync_mode.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
+#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
 namespace one {
@@ -262,6 +264,51 @@ GraphTask::GraphTask(const TensorTuple& outputs, bool retain_graph, bool create_
   }
 }
 
+Maybe<void> GraphTask::WriteGraphToDotFile(const std::string& file_name) const {
+  auto ExecInfoToDotString = [](const ExecInfo& exec_info) -> std::string {
+    std::stringstream ss;
+    ss << "ExecInfo{\\l";
+    ss << "\tdependencies: " << exec_info.dependencies << "\\l";
+    ss << "\tneed_execute: " << exec_info.need_execute << "\\l";
+    if (exec_info.capture_indices) {
+      ss << "\tcapture_indices: [";
+      for (int idx : *exec_info.capture_indices) { ss << idx << ", "; }
+      ss << "]\\l";
+    }
+    ss << "}\\l";
+    return ss.str();
+  };
+
+  auto log_stream = TeePersistentLogStream::Create(file_name);
+  std::string indent = "\t";
+  log_stream << "digraph AutogradTaskGraph {\n";
+  log_stream << indent << "margin=\"1.5\";\n";
+  log_stream << indent << "node [shape=box];\n";
+  for (auto iter = grad_fn2exec_info_.begin(); iter != grad_fn2exec_info_.end(); ++iter) {
+    const FunctionNode* node = iter->first;
+    const ExecInfo& exec_info = iter->second;
+    std::stringstream ss;
+    // write label attribute
+    ss << "\t\"" << static_cast<const void*>(node) << "\" [label=\"" << node->name() << "\\l"
+       << static_cast<const void*>(node) << "\\l" << ExecInfoToDotString(exec_info) << "\"";
+    if (exec_info.dependencies == 0 && exec_info.need_execute) {  // start node
+      ss << ", color=red";
+    } else if (exec_info.need_execute && exec_info.capture_indices) {  // end node
+      ss << ", color=green";
+    }
+    ss << "];\n";
+    // write edge
+    for (const auto& next_fn : node->next_functions()) {
+      ss << "\t\"" << static_cast<const void*>(node) << "\" -> \""
+         << static_cast<const void*>(next_fn.get()) << "\";\n";
+    }
+    log_stream << ss.str();
+  }
+  log_stream << "}\n";
+  log_stream->Flush();
+  return Maybe<void>::Ok();
+}
+
 // Computes the number of dependencies for each FunctionNode
 Maybe<void> GraphTask::ComputeDependencies() {
   HashSet<FunctionNode*> seen;
@@ -394,6 +441,11 @@ Maybe<void> GraphAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const Tensor
   }
   GraphTask graph_task(outputs, retain_graph, create_graph);
   JUST(graph_task.ComputeDependencies());
+  if (IsInDebugMode()) {
+    JUST(graph_task.WriteGraphToDotFile("autograd_backward_rank"
+                                        + std::to_string(GlobalProcessCtx::Rank()) + "_"
+                                        + std::to_string(clock()) + "_graph.dot"));
+  }
   JUST(graph_task.Apply(/*save_grad_for_leaf=*/true));
   return Maybe<void>::Ok();
 }
@@ -407,6 +459,11 @@ Maybe<TensorTuple> GraphAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
 
   GraphTask graph_task(outputs, retain_graph, create_graph);
   JUST(graph_task.ComputeDependenciesAndPruneNode(inputs));
+  if (IsInDebugMode()) {
+    JUST(graph_task.WriteGraphToDotFile("autograd_grad_rank"
+                                        + std::to_string(GlobalProcessCtx::Rank()) + "_"
+                                        + std::to_string(clock()) + "_graph.dot"));
+  }
   JUST(graph_task.Apply(/*save_grad_for_leaf=*/false));
   return graph_task.GetCapturedGrads();
 }
