@@ -163,6 +163,7 @@ Maybe<void> GetGeluGradSbp(user_op::SbpContext* ctx) {
   CHECK_EQ_OR_RETURN(out_diff_shape, in_shape);  // NOLINT(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(m_shape, in_shape);         // NOLINT(maybe-need-error-msg)
   ctx->SetOutputShape("in_diff", 0, in_shape);
+  ctx->SetOutputShape("multiplier_diff", 0, m_shape);
   return Maybe<void>::Ok();
 }
 
@@ -177,6 +178,7 @@ Maybe<void> GetGeluGradSbp(user_op::SbpContext* ctx) {
   CHECK_EQ_OR_RETURN(out_diff_dtype, in_dtype);  // NOLINT(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(m_dtype, in_dtype);         // NOLINT(maybe-need-error-msg)
   ctx->SetOutputDType("in_diff", 0, in_dtype);
+  ctx->SetOutputDType("multiplier_diff", 0, m_dtype);
   return Maybe<void>::Ok();
 }
 
@@ -190,6 +192,7 @@ Maybe<void> GetGeluGradSbp(user_op::SbpContext* ctx) {
       .Broadcast(user_op::OpArg("multiplier", 0))
       .PartialSum(user_op::OpArg("out_diff", 0))
       .PartialSum(user_op::OpArg("in_diff", 0))
+      .PartialSum(user_op::OpArg("multiplier_diff", 0))
       .Build();
   return Maybe<void>::Ok();
 }

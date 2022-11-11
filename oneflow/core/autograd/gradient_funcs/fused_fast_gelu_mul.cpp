@@ -20,8 +20,7 @@ namespace oneflow {
 namespace one {
 
 struct FusedFastGeluMulGradCaptureState : public AutoGradCaptureState {
-  bool in_requires_grad = true;
-  bool multiplier_requires_grad = true;
+  bool requires_grad = true;
 };
 
 class FusedFastGeluMulGrad : public OpExprGradFunction<FusedFastGeluMulGradCaptureState> {
@@ -32,12 +31,9 @@ class FusedFastGeluMulGrad : public OpExprGradFunction<FusedFastGeluMulGradCaptu
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);   // (in, multiplier)
     CHECK_EQ_OR_RETURN(outputs.size(), 1);  // (out,)
-    ctx->in_requires_grad = inputs.at(0)->requires_grad();
-    ctx->multiplier_requires_grad = inputs.at(1)->requires_grad();
-    if (ctx->in_requires_grad || ctx->multiplier_requires_grad) {
+    ctx->requires_grad = inputs.at(0)->requires_grad() || inputs.at(1)->requires_grad();
+    if (ctx->requires_grad) {
       ctx->SaveTensorForBackward(inputs.at(0));  // in
-    }
-    if (ctx->in_requires_grad) {
       ctx->SaveTensorForBackward(inputs.at(1));  // multiplier
     }
     return Maybe<void>::Ok();
@@ -45,25 +41,21 @@ class FusedFastGeluMulGrad : public OpExprGradFunction<FusedFastGeluMulGradCaptu
 
   Maybe<void> Apply(const FusedFastGeluMulGradCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    if (!ctx->in_requires_grad && !ctx->multiplier_requires_grad) { return Maybe<void>::Ok(); }
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     const auto& out_diff = out_grads.at(0);
 
     const auto& saved_tensors = ctx->SavedTensors();
-    CHECK_GE_OR_RETURN(saved_tensors.size(), 1);
+    CHECK_EQ_OR_RETURN(saved_tensors.size(), 2);
     const auto& in = saved_tensors.at(0);
+    const auto& multiplier = saved_tensors.at(1);
 
     in_grads->resize(2);  // (in_diff, multiplier_diff)
-    if (ctx->in_requires_grad) {
-      CHECK_EQ_OR_RETURN(saved_tensors.size(), 2);
-      const auto& multiplier = saved_tensors.at(1);
-      in_grads->at(0) = JUST(functional::FusedFastGeluMulGrad(out_diff, in, multiplier));
-    }
-    if (ctx->multiplier_requires_grad) {
-      in_grads->at(1) = JUST(functional::Mul(out_diff, JUST(functional::FastGelu(in))));
-    }
-
+    auto result = JUST(functional::FusedFastGeluMulGrad(out_diff, in, multiplier));
+    CHECK_EQ_OR_RETURN(result->size(), 2);
+    in_grads->at(0) = result->at(0);
+    in_grads->at(1) = result->at(1);
     return Maybe<void>::Ok();
   }
 };

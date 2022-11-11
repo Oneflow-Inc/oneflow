@@ -2848,7 +2848,8 @@ def OneFlow_FusedFastGeluMulGradOp : OneFlow_BaseOp<"fused_fast_gelu_mul_grad", 
     OneFlow_Tensor:$multiplier
   );
   let output = (outs
-    OneFlow_Tensor:$in_diff
+    OneFlow_Tensor:$in_diff,
+    OneFlow_Tensor:$multiplier_diff
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

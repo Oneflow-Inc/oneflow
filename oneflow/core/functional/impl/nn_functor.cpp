@@ -4336,12 +4336,13 @@ class FusedFastGeluMulGradFunctor {
                          .Input("in")
                          .Input("multiplier")
                          .Output("in_diff")
+                         .Output("multiplier_diff")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
-                           const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& multiplier) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x, multiplier});
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                                const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& multiplier) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, x, multiplier});
   }
 
  private:

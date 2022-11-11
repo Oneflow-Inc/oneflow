@@ -2902,5 +2902,5 @@
   bind_python: True
 
 - name: "fused_fast_gelu_mul_grad"
-  signature: "Tensor (Tensor dy, Tensor x, Tensor multiplier) => FusedFastGeluMulGrad"
+  signature: "TensorTuple (Tensor dy, Tensor x, Tensor multiplier) => FusedFastGeluMulGrad"
   bind_python: False
