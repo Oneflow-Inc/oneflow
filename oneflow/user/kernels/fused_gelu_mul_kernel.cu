@@ -250,13 +250,13 @@ struct FusedFastGeluMulGradFunctor<half> {
 #if (__CUDA_ARCH__ >= 750 && CUDA_VERSION >= 11000)
     const half halpha = __float2half_rn(alpha);
     const half hbeta = __float2half_rn(beta);
+    const half hone = __float2half_rn(1.0F);
+    const half hhalf = __float2half_rn(0.5F);
     const half pow3 = x * x * x;
     const float tanh_in = __half2float(halpha * (x + hbeta * pow3));
     const half tanh_out = __float2half_rn(TanhApprox(tanh_in));
-    const half hone = __float2half_rn(1.0F);
-    const half hhalf = __float2half_rn(0.5F);
     // m_diff
-    m_diff = hhalf * x * (hone + tanh_out) * m;
+    m_diff = hhalf * x * (hone + tanh_out) * dy;
     // x_diff
     const half dtanh = halpha * (hhalf * x + hbeta * __float2half_rn(1.5F) * pow3);
     x_diff = (hhalf + hhalf * tanh_out + dtanh * (hone - tanh_out * tanh_out)) * m * dy;
@@ -287,7 +287,7 @@ struct FusedFastGeluMulGradFunctor<half> {
     tanh_out.y = TanhApprox(tanh_in.y);
     const half2 tanh_out2 = __float22half2_rn(tanh_out);
     // m_diff
-    const half2 m_diff2 = __hmul2(__hmul2(hhalf2, __hmul2(x2, __hadd2(one2, tanh_out2))), m2);
+    const half2 m_diff2 = __hmul2(__hmul2(hhalf2, __hmul2(x2, __hadd2(one2, tanh_out2))), dy2);
     // x_diff
     const half2 dtanh = __hmul2(
         alpha2,
