@@ -4808,7 +4808,8 @@ def OneFlow_CublasFusedMLPOp : OneFlow_BaseOp<"cublas_fused_mlp", [NoSideEffect,
   let input = (ins
     OneFlow_Tensor:$x,
     Variadic<OneFlow_Tensor>:$weights,
-    Variadic<OneFlow_Tensor>:$biases
+    Variadic<OneFlow_Tensor>:$biases,
+    Optional<OneFlow_Tensor>:$_add_to_output
   );
   let output = (outs
     OneFlow_Tensor:$out,

@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/op_generated.h"
 
+
 namespace oneflow {
 
 namespace {
@@ -126,6 +127,10 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   for (int i = 0; i < ctx->user_op_conf().output_size("hidden"); ++i) {
     builder.Split(user_op::OpArg("hidden", i), 0);
   }
+  if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    builder.Split(user_op::OpArg("_add_to_output", 0), 0);
+  }
+
   builder.Split(user_op::OpArg("out", 0), 0);
   builder.Build();
   return Maybe<void>::Ok();

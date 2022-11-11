@@ -45,6 +45,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
       {{"conv_data_grad", user_op::OpArg("dx", 0)},
        {"normalization", user_op::OpArg("y", 0)},
        {"conv2d", user_op::OpArg("out", 0)},
+       {"cublas_fused_mlp", user_op::OpArg("out", 0)},
        {"dropout", user_op::OpArg("out", 0)},
        {"matmul", user_op::OpArg("out", 0)},
        {"layer_norm_grad", user_op::OpArg("dx", 0)},
