@@ -116,7 +116,7 @@ class Adam(Optimizer):
         weight_decay: float = 0,
         amsgrad: bool = False,
         do_bias_correction: bool = True,
-        contiguous_params: bool = True,
+        contiguous_params: bool = False,
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
