@@ -66,6 +66,8 @@ class ConvBaseFunctor {
  public:
   explicit ConvBaseFunctor(const int& num_spatial_dims) : num_spatial_dims_(num_spatial_dims) {
     bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
+    enable_fused_conv_bias_ =
+        ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDNN_FUSED_CONV_BIAS", false);
   }
   virtual ~ConvBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -90,6 +92,9 @@ class ConvBaseFunctor {
                                        "dilation_rate", "groups", "data_format");
     conv_attrs.SetAllAttrs(static_cast<int32_t>(weight->shape()->At(0)), kernel_size_vec, padding,
                            stride, dilation, groups, channel_pos);
+    if (bias && enable_fused_conv_bias_) {
+      return OpInterpUtil::Dispatch<Tensor>(*conv_bias_op_, {x, weight, JUST(bias)}, conv_attrs);
+    }
     const std::shared_ptr<one::Tensor>& conv_out =
         JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {x, weight}, conv_attrs));
     if (bias) {
@@ -102,7 +107,9 @@ class ConvBaseFunctor {
  protected:
   std::shared_ptr<OpExpr> conv_op_;
   std::shared_ptr<OpExpr> bias_op_;
+  std::shared_ptr<OpExpr> conv_bias_op_;
   int32_t num_spatial_dims_;
+  bool enable_fused_conv_bias_;
 };
 
 class Conv1dFunctor : public ConvBaseFunctor {
@@ -110,6 +117,8 @@ class Conv1dFunctor : public ConvBaseFunctor {
   Conv1dFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/1) {
     conv_op_ =
         CHECK_JUST(one::OpBuilder("conv1d").Input("in").Input("weight").Output("out").Build());
+    conv_bias_op_ = CHECK_JUST(
+        one::OpBuilder("conv1d").Input("in").Input("weight").Input("bias").Output("out").Build());
   }
 };
 
@@ -118,6 +127,8 @@ class Conv2dFunctor : public ConvBaseFunctor {
   Conv2dFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/2) {
     conv_op_ =
         CHECK_JUST(one::OpBuilder("conv2d").Input("in").Input("weight").Output("out").Build());
+    conv_bias_op_ = CHECK_JUST(
+        one::OpBuilder("conv2d").Input("in").Input("weight").Input("bias").Output("out").Build());
   }
 };
 
@@ -126,6 +137,8 @@ class Conv3dFunctor : public ConvBaseFunctor {
   Conv3dFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/3) {
     conv_op_ =
         CHECK_JUST(one::OpBuilder("conv3d").Input("in").Input("weight").Output("out").Build());
+    conv_bias_op_ = CHECK_JUST(
+        one::OpBuilder("conv3d").Input("in").Input("weight").Input("bias").Output("out").Build());
   }
 };
 
@@ -771,10 +784,11 @@ class GroupNormFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<one::Tensor>& gamma, const Optional<one::Tensor>& beta,
-                           const bool affine, const int32_t num_groups,
-                           const double& epsilon) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("num_groups", "epsilon");
-    attrs.SetAllAttrs(num_groups, epsilon);
+                           const bool affine, const int32_t num_groups, const double& epsilon,
+                           const std::string& data_format, const std::string& activation) const {
+    auto& attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("num_groups", "epsilon", "data_format", "activation");
+    attrs.SetAllAttrs(num_groups, epsilon, data_format, activation);
     if (affine) {
       return OpInterpUtil::Dispatch<Tensor>(*affine_op_, {x, JUST(gamma), JUST(beta)}, attrs);
     } else {
@@ -2001,157 +2015,6 @@ class GridSampleFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class NormalFunctor {
- public:
-  NormalFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
-  Maybe<Tensor> operator()(const float& mean, const float& std, const Shape& shape,
-                           const Optional<one::Tensor>& out,
-                           const Optional<Symbol<DType>>& optional_dtype,
-                           const Optional<Symbol<Device>>& optional_device,
-                           const Optional<one::Generator>& optional_generator,
-                           const bool& requires_grad) const {
-    Symbol<DType> dtype = DType::Float();
-    if (optional_dtype.has_value()) {
-      dtype = JUST(optional_dtype);
-      if (dtype->data_type() != DataType::kFloat && dtype->data_type() != DataType::kDouble) {
-        OF_UNIMPLEMENTED() << "Only support float and double in normal().";
-      }
-    }
-    Symbol<Device> device = JUST(Device::New("cpu"));
-    if (optional_device.has_value()) { device = JUST(optional_device); }
-
-    if (out.has_value()) {
-      auto out_tensor = JUST(out);
-      Symbol<DType> output_tensor_dtype = out_tensor->dtype();
-      if (optional_dtype.has_value()) {
-        CHECK_OR_RETURN(output_tensor_dtype == dtype)
-            << Error::RuntimeError() << "data type " << dtype->name()
-            << " does not match data type of out parameter " << output_tensor_dtype->name();
-      }
-      dtype = output_tensor_dtype;
-      Symbol<Device> out_tensor_device = JUST(out_tensor->device());
-      if (optional_device.has_value()) {
-        CHECK_OR_RETURN(out_tensor_device == JUST(optional_device))
-            << Error::RuntimeError() << "device type " << device->ToString()
-            << " does not match device type of out parameter " << out_tensor_device->ToString();
-      }
-      device = out_tensor_device;
-    }
-    const auto gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("mean", "std", "shape", "dtype", "seed");
-    attrs.SetAllAttrs(static_cast<double>(mean), static_cast<double>(std), shape,
-                      dtype->data_type(), static_cast<int64_t>(gen->current_seed()));
-
-    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-    OpExprInterpContext ctx(attrs, distribution_state);
-    ctx.device = device;
-    if (out.has_value()) {
-      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      (*outputs)[0] = JUST(out);
-      JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(), ctx));
-      return (*outputs)[0];
-    }
-
-    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
-    JUST(result->set_requires_grad(requires_grad));
-    return result;
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class Normal2Functor {
- public:
-  Maybe<Tensor> operator()(const float& mean, const float& std, const int32_t& shape,
-                           const Optional<one::Tensor>& out,
-                           const Optional<Symbol<DType>>& optional_dtype,
-                           const Optional<Symbol<Device>>& optional_device,
-                           const Optional<one::Generator>& optional_generator,
-                           const bool& requires_grad) const {
-    const Shape size = Shape({shape});
-    return Normal(mean, std, size, out, optional_dtype, optional_device, optional_generator,
-                  requires_grad);
-  }
-};
-
-class GlobalNormalFunctor {
- public:
-  GlobalNormalFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
-  Maybe<Tensor> operator()(const float& mean, const float& std, const Shape& shape,
-                           const Optional<one::Tensor>& out, const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                           const Optional<Symbol<DType>>& optional_dtype,
-                           const Optional<one::Generator>& optional_generator,
-                           const bool& requires_grad) const {
-    JUST(CheckDeviceIdsIsValid(placement));
-
-    Symbol<DType> dtype = DType::Float();
-    if (optional_dtype.has_value()) {
-      dtype = JUST(optional_dtype);
-      if (dtype->data_type() != DataType::kFloat && dtype->data_type() != DataType::kDouble) {
-        OF_UNIMPLEMENTED() << "Only support float and double in normal().";
-      }
-    }
-
-    if (out.has_value()) {
-      auto out_tensor = JUST(out);
-      Symbol<DType> output_tensor_dtype = out_tensor->dtype();
-      if (optional_dtype.has_value()) {
-        CHECK_OR_RETURN(output_tensor_dtype == dtype)
-            << Error::RuntimeError() << "data type " << dtype->name()
-            << " does not match data type of out parameter (" << output_tensor_dtype->name();
-      }
-      dtype = output_tensor_dtype;
-    }
-
-    const auto gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("mean", "std", "shape", "dtype", "seed", "nd_sbp");
-
-    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-
-    if (LazyMode::is_enabled()) {
-      attrs.SetAllAttrs(static_cast<double>(mean), static_cast<double>(std), shape,
-                        dtype->data_type(), static_cast<int64_t>(gen->current_seed()),
-                        *JUST(GetNdSbpStrList(nd_sbp)));
-    } else {
-      attrs.SetAllAttrs(static_cast<double>(mean), static_cast<double>(std), shape,
-                        dtype->data_type(), static_cast<int64_t>(gen->current_seed()), NullOpt);
-    }
-    if (out.has_value()) {
-      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      (*outputs)[0] = JUST(out);
-      JUST(OpInterpUtil::Dispatch(
-          *op_, {}, outputs.get(),
-          OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
-      return (*outputs)[0];
-    }
-
-    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
-    JUST(result->set_requires_grad(requires_grad));
-    return result;
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class GlobalNormal2Functor {
- public:
-  Maybe<Tensor> operator()(const float& mean, const float& std, const int32_t& shape,
-                           const Optional<one::Tensor>& out, const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                           const Optional<Symbol<DType>>& optional_dtype,
-                           const Optional<one::Generator>& optional_generator,
-                           const bool& requires_grad) const {
-    const Shape size = Shape({shape});
-    return GlobalNormal(mean, std, size, out, placement, sbp_tuple, optional_dtype,
-                        optional_generator, requires_grad);
-  }
-};
-
 class NormalizationFunctor {
  public:
   NormalizationFunctor() {
@@ -2184,6 +2047,7 @@ class NormalizationFunctor {
                                                 .Output("inv_variance")
                                                 .Attr("training", true)
                                                 .Build());
+    cast_op_ = CHECK_JUST(one::OpBuilder("cast").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<one::Tensor>& moving_mean,
@@ -2213,26 +2077,67 @@ class NormalizationFunctor {
       beta_val = JUST(functional::Constant(gamma_beta_shape, 0.0, x->dtype(), JUST(x->device())));
     }
 
+    if (gamma_val->dtype()->data_type() == DataType::kFloat16
+        || gamma_val->dtype()->data_type() == DataType::kBFloat16) {
+      gamma_val = JUST(functional::Cast(gamma_val, DType::Float(), /*pin_memory=*/false));
+      beta_val = JUST(functional::Cast(beta_val, DType::Float(), /*pin_memory=*/false));
+    }
+
+    std::shared_ptr<one::Tensor> moving_mean_val;
+    std::shared_ptr<one::Tensor> moving_variance_val;
+    if (moving_mean) {
+      if (JUST(moving_mean)->dtype()->data_type() == DataType::kFloat16
+          || JUST(moving_mean)->dtype()->data_type() == DataType::kBFloat16) {
+        moving_mean_val =
+            JUST(functional::Cast(JUST(moving_mean), DType::Float(), /*pin_memory=*/false));
+        moving_variance_val =
+            JUST(functional::Cast(JUST(moving_variance), DType::Float(), /*pin_memory=*/false));
+      } else {
+        moving_mean_val = JUST(moving_mean);
+        moving_variance_val = JUST(moving_variance);
+      }
+    }
+
+    std::shared_ptr<one::Tensor> res;
+
     if (!training) {
       CHECK_OR_RETURN(moving_mean && moving_variance)
           << Error::RuntimeError() << "Must have moving_mean and moving_variance in eval mode.";
-      return OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma_val, beta_val},
-          attrs);
+      res = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+          *norm_eval_op_, {x, moving_mean_val, moving_variance_val, gamma_val, beta_val}, attrs));
+    } else if (moving_mean) {
+      res = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+          *norm_training_stats_op_, {x, moving_mean_val, moving_variance_val, gamma_val, beta_val},
+          attrs));
+    } else {
+      res = JUST(OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_,
+                                                     {x, gamma_val, beta_val}, attrs));
     }
+
     if (moving_mean) {
-      return OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_training_stats_op_,
-          {x, JUST(moving_mean), JUST(moving_variance), gamma_val, beta_val}, attrs);
+      if (JUST(moving_mean)->dtype()->data_type() == DataType::kFloat16
+          || JUST(moving_mean)->dtype()->data_type() == DataType::kBFloat16) {
+        // For inplace update moving_mean and moving_variance
+        JUST(CheckInplaceValid(JUST(moving_mean)));
+        std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+        outputs->at(0) = JUST(moving_mean);
+        auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype", "pin_memory");
+        attrs.SetAllAttrs(JUST(moving_mean)->dtype()->data_type(), false);
+        JUST(OpInterpUtil::Dispatch(*cast_op_, {moving_mean_val}, outputs.get(), attrs));
+        JUST(CheckInplaceValid(JUST(moving_variance)));
+        outputs->at(0) = JUST(moving_variance);
+        JUST(OpInterpUtil::Dispatch(*cast_op_, {moving_variance_val}, outputs.get(), attrs));
+      }
     }
-    return OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_,
-                                               {x, gamma_val, beta_val}, attrs);
+
+    return res;
   }
 
  private:
   std::shared_ptr<OpExpr> norm_eval_op_;
   std::shared_ptr<OpExpr> norm_training_stats_op_;
   std::shared_ptr<OpExpr> norm_training_no_stats_op_;
+  std::shared_ptr<OpExpr> cast_op_;
 };
 
 class NormalizationAddReluFunctor {
@@ -4641,10 +4546,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingFusedLookupGradFunctor>("OneEmbeddingFusedLookupGrad");
   m.add_functor<impl::OneEmbeddingEmbeddingPutFunctor>("OneEmbeddingEmbeddingPut");
   m.add_functor<impl::OneEmbeddingUniqueKeyValuePairFunctor>("OneEmbeddingUniqueKeyValuePair");
-  m.add_functor<impl::NormalFunctor>("Normal");
-  m.add_functor<impl::Normal2Functor>("Normal2");
-  m.add_functor<impl::GlobalNormalFunctor>("GlobalNormal");
-  m.add_functor<impl::GlobalNormal2Functor>("GlobalNormal2");
   m.add_functor<impl::OneEmbeddingSgdUpdateFunctor>("OneEmbeddingSgdUpdate");
   m.add_functor<impl::OneEmbeddingAdamUpdateFunctor>("OneEmbeddingAdamUpdate");
   m.add_functor<impl::OneEmbeddingAdagradUpdateFunctor>("OneEmbeddingAdagradUpdate");

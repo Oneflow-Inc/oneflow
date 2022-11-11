@@ -319,6 +319,7 @@ Reduction Ops
     nansum
     std  
     sum  
+    logsumexp
     var
     norm
     all
@@ -348,6 +349,8 @@ Comparison Ops
     maximum
     minimum
     not_equal
+    isclose
+    allclose
 
 Spectral Ops
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
