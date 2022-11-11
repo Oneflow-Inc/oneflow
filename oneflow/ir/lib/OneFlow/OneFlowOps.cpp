@@ -440,7 +440,13 @@ llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
 
 bool Conv2DOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
 
-llvm::DenseSet<Value> Conv2DOp::OperandsToTranspose() { return {this->in(), this->weight()}; }
+llvm::DenseSet<Value> Conv2DOp::OperandsToTranspose() {
+  if (this->_add_to_output()) {
+    return {this->in(), this->weight(), this->_add_to_output()};
+  } else {
+    return {this->in(), this->weight()};
+  }
+}
 
 llvm::DenseSet<Value> Conv2DOp::ResultsToTranspose() { return {this->out()}; }
 
@@ -451,7 +457,7 @@ llvm::SmallVector<Value, 4> Conv2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> val
   operands.push_back(value[0]);
   operands.push_back(value[1]);
   if (conv_op.bias()) operands.push_back(conv_op.bias());
-  if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
+  if (this->_add_to_output()) { operands.push_back(value[2]); }
   NamedAttrList attributes = conv_op->getAttrs();
   attributes.set(conv_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
   auto res = rewriter
@@ -667,6 +673,35 @@ llvm::SmallVector<Value, 4> ConcatOp::NchwToNhwc(llvm::SmallVector<Value, 4> val
                                             getNHWCResultTypes(elementwise_op), values, attributes)
                  .out();
   return {out};
+}
+
+bool GroupNormOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
+
+llvm::DenseSet<Value> GroupNormOp::OperandsToTranspose() { return {this->x()}; }
+
+llvm::DenseSet<Value> GroupNormOp::ResultsToTranspose() { return {this->y()}; }
+
+llvm::SmallVector<Value, 4> GroupNormOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                                    PatternRewriter& rewriter) {
+  auto group_norm_op = *this;
+  SmallVector<Value, 4> operands;
+  operands.push_back(value[0]);
+  if (this->affine()) {
+    operands.push_back(this->beta());
+    operands.push_back(this->gamma());
+  }
+  NamedAttrList attributes = group_norm_op->getAttrs();
+  attributes.set(group_norm_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
+  auto res =
+      rewriter
+          .create<oneflow::GroupNormOp>(group_norm_op.getLoc(), getNHWCResultTypes(group_norm_op),
+                                        operands, attributes)
+          ->getResults();
+  llvm::SmallVector<Value, 4> results;
+  results.push_back(res[0]);
+  results.push_back(res[1]);
+  results.push_back(res[2]);
+  return results;
 }
 
 }  // namespace oneflow
