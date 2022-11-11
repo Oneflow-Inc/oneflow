@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from .graph import Graph
-from .block import Block
-from .graph_block import GraphBlock
+from .proxy import Proxy
 from .graph_block import GraphModule
 from .graph_block import GraphTensor
+from .graph_block import GraphBlock

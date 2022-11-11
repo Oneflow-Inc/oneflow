@@ -27,7 +27,7 @@ import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_context
 from oneflow.framework.tensor import Tensor
-from oneflow.nn.graph.block import GraphBlockType
+from oneflow.nn.graph.proxy import GraphBlockType
 import oneflow._oneflow_internal._C as _C
 
 lazy_mode = oneflow._oneflow_internal.lazy_mode

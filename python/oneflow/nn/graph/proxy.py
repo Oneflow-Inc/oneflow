@@ -38,30 +38,30 @@ from oneflow.nn.graph.util import (
 )
 
 
-def get_block_cls(item):
+def get_proxy_cls(item):
     if isinstance(item, Sequential):
-        return SequentialBlock
+        return ProxySequential
     elif isinstance(item, ModuleList):
-        return ModuleListBlock
+        return ProxyModuleList
     elif isinstance(item, ModuleDict):
-        return ModuleDictBlock
+        return ProxyModuleDict
     elif isinstance(item, ParameterList):
-        return ParameterListBlock
+        return ProxyParameterList
     elif isinstance(item, ParameterDict):
-        return ParameterDictBlock
+        return ProxyParameterDict
     elif isinstance(item, Module):
-        return ModuleBlock
+        return ProxyModule
     elif isinstance(item, Tensor):
-        return TensorBlock
+        return ProxyTensor
     else:
         raise NotImplementedError()
 
 
-class Block(object):
+class Proxy(object):
     def __init__(self):
-        """ A block of code in nn.Graph, serves as an execution proxy of nn.Module or Tensor.
+        """ An ecution proxy of nn.Module or Tensor.
 
-        A block contains the original data(nn.Module or Tensor) and a graph representation of the original data.
+        A proxy contains the original data(nn.Module or Tensor) and a graph representation of the original data.
         """
         # The original data
         self._oneflow_internal_origin__ = None
@@ -79,7 +79,7 @@ class Block(object):
             self._oneflow_internal_origin__.to(*args, **kwargs)
 
 
-class ModuleBlock(Block):
+class ProxyModule(Proxy):
     def __init__(
         self,
         prefix: str = "",
@@ -87,7 +87,7 @@ class ModuleBlock(Block):
         origin: Module = None,
         belonged_graph: weakref.ProxyTypes = None,
     ):
-        assert not isinstance(origin, Block)
+        assert not isinstance(origin, Proxy)
         super().__init__()
         self._oneflow_internal_graphblock__ = GraphModule(
             prefix, name, belonged_graph, weakref.proxy(self)
@@ -106,7 +106,7 @@ class ModuleBlock(Block):
         for (n, m) in list(origin.named_children()):
             self.__setattr__(
                 n,
-                get_block_cls(m)(
+                get_proxy_cls(m)(
                     self.to(GraphBlock)._name_prefix + self.to(GraphBlock)._name + ".",
                     n,
                     m,
@@ -116,7 +116,7 @@ class ModuleBlock(Block):
         for (n, p) in list(origin.named_parameters("", False)):
             self.__setattr__(
                 n,
-                get_block_cls(p)(
+                get_proxy_cls(p)(
                     self.to(GraphBlock)._name_prefix + self.to(GraphBlock)._name + ".",
                     n,
                     p,
@@ -125,7 +125,7 @@ class ModuleBlock(Block):
         for (n, b) in list(origin.named_buffers("", False)):
             self.__setattr__(
                 n,
-                get_block_cls(b)(
+                get_proxy_cls(b)(
                     self.to(GraphBlock)._name_prefix + self.to(GraphBlock)._name + ".",
                     n,
                     b,
@@ -294,7 +294,7 @@ class ModuleBlock(Block):
     def add_module(self, name: str, module: Optional[Module]) -> None:
         self.__setattr__(
             name,
-            get_block_cls(module)(
+            get_proxy_cls(module)(
                 self.to(GraphBlock)._name_prefix + self.to(GraphBlock)._name + ".",
                 name,
                 module,
@@ -305,14 +305,14 @@ class ModuleBlock(Block):
     def register_parameter(self, name: str, param: Optional[Parameter]) -> None:
         self.__setattr__(
             name,
-            get_block_cls(param)(
+            get_proxy_cls(param)(
                 self.to(GraphBlock)._name_prefix + self.to(GraphBlock)._name + ".",
                 name,
                 param,
             ),
         )
 
-    def modules(self, memo: Optional[Set["Block"]] = None) -> Iterator["Block"]:
+    def modules(self, memo: Optional[Set["Proxy"]] = None) -> Iterator["Proxy"]:
         assert self.to(GraphBlock)._type == GraphBlockType.MODULE
         if memo is None:
             memo = set()
@@ -388,7 +388,7 @@ class ModuleBlock(Block):
             )
             return False, repr_str
 
-    def __members(self, get_members_fn, recurse=True) -> Iterator["Block"]:
+    def __members(self, get_members_fn, recurse=True) -> Iterator["Proxy"]:
         assert self.to(GraphBlock)._type == GraphBlockType.MODULE
         memo = set()
         modules = self.modules() if recurse else [self]
@@ -400,20 +400,20 @@ class ModuleBlock(Block):
                 memo.add(v)
                 yield v
 
-    def parameters(self, recurse: bool = True) -> Iterator["Block"]:
+    def parameters(self, recurse: bool = True) -> Iterator["Proxy"]:
         assert self.to(GraphBlock)._type == GraphBlockType.MODULE
         gen = self.__members(lambda module: module._parameters.items(), recurse=recurse)
         for elem in gen:
             yield elem
 
-    def buffers(self, recurse: bool = True) -> Iterator["Block"]:
+    def buffers(self, recurse: bool = True) -> Iterator["Proxy"]:
         assert self.to(GraphBlock)._type == GraphBlockType.MODULE
         gen = self.__members(lambda module: module._buffers.items(), recurse=recurse)
         for elem in gen:
             yield elem
 
     def __setattr__(self, name: str, value=None) -> None:
-        if value is None or not isinstance(value, Block):
+        if value is None or not isinstance(value, Proxy):
             self.__dict__[name] = value
         else:
             dicts_or_sets = (
@@ -582,7 +582,7 @@ class LazyBuilder(object):
             self.finished = True
 
 
-class TensorBlock(Block):
+class ProxyTensor(Proxy):
     def __init__(
         self,
         prefix: str = "",
@@ -590,7 +590,7 @@ class TensorBlock(Block):
         origin: Union[Parameter, Tensor] = None,
         belonged_graph: weakref.ProxyTypes = None,
     ):
-        assert not isinstance(origin, Block)
+        assert not isinstance(origin, Proxy)
         if isinstance(origin, Parameter):
             self._oneflow_internal_graphblock__ = GraphTensor(
                 prefix,
@@ -617,21 +617,21 @@ class TensorBlock(Block):
         assert (
             self.to(GraphBlock)._type == GraphBlockType.PARAMETER
             or self.to(GraphBlock)._type == GraphBlockType.BUFFER
-        ), "Only Parameter or Buffer Block has lazy_origin"
+        ), "Only Parameter or Buffer Proxy has lazy_origin"
         return self._lazy_origin_builder.result
 
     def lazy_origin_builder(self):
         assert (
             self.to(GraphBlock)._type == GraphBlockType.PARAMETER
             or self.to(GraphBlock)._type == GraphBlockType.BUFFER
-        ), "Only Parameter or Buffer Block has lazy_origin_builder"
+        ), "Only Parameter or Buffer Proxy has lazy_origin_builder"
         return self._lazy_origin_builder
 
     def set_lazy_origin_builder(self, builder=None):
         assert (
             self.to(GraphBlock)._type == GraphBlockType.PARAMETER
             or self.to(GraphBlock)._type == GraphBlockType.BUFFER
-        ), "Only Parameter or Buffer Block has lazy_origin_builder"
+        ), "Only Parameter or Buffer Proxy has lazy_origin_builder"
         self._lazy_origin_builder = builder
 
     def try_build(self):
@@ -661,7 +661,7 @@ class TensorBlock(Block):
         return shallow_repr
 
 
-class SequentialBlock(get_seq(ModuleBlock)):
+class ProxySequential(get_seq(ProxyModule)):
     def __init__(
         self,
         prefix: str = "",
@@ -677,7 +677,7 @@ class SequentialBlock(get_seq(ModuleBlock)):
         self._oneflow_internal_graphblock__set_origin(origin)
 
 
-class ModuleListBlock(get_list(ModuleBlock)):
+class ProxyModuleList(get_list(ProxyModule)):
     def __init__(
         self,
         prefix: str = "",
@@ -694,7 +694,7 @@ class ModuleListBlock(get_list(ModuleBlock)):
         # MoudleList is a container without forward() method,
 
 
-class ModuleDictBlock(get_dict(ModuleBlock)):
+class ProxyModuleDict(get_dict(ProxyModule)):
     def __init__(
         self,
         prefix: str = "",
@@ -710,7 +710,7 @@ class ModuleDictBlock(get_dict(ModuleBlock)):
         self._oneflow_internal_graphblock__set_origin(origin)
 
 
-class ParameterListBlock(get_para_list(ModuleBlock)):
+class ProxyParameterList(get_para_list(ProxyModule)):
     def __init__(
         self,
         prefix: str = "",
@@ -737,7 +737,7 @@ class ParameterListBlock(get_para_list(ModuleBlock)):
             raise AttributeError("ParameterList dosen't contain ", key)
 
 
-class ParameterDictBlock(get_para_dict(ModuleBlock)):
+class ProxyParameterDict(get_para_dict(ProxyModule)):
     def __init__(
         self,
         prefix: str = "",

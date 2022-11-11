@@ -116,7 +116,7 @@ class TestGraphBlock(flow.unittest.TestCase):
                 return self._forward_impl(x)
 
             def _forward_impl(self, x):
-                test_case.assertTrue(isinstance(self.linear, flow.nn.graph.Block))
+                test_case.assertTrue(isinstance(self.linear, flow.nn.graph.Proxy))
                 return self.linear(x)
 
         class LinearTrainGraph(flow.nn.Graph):

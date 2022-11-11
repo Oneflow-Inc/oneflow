@@ -72,15 +72,15 @@ class TestGraph(flow.unittest.TestCase):
                 return self.m(x)
 
         g = CustomGraphNestedModule()
-        test_case.assertTrue(isinstance(g.m, flow.nn.graph.Block))
+        test_case.assertTrue(isinstance(g.m, flow.nn.graph.Proxy))
         test_case.assertEqual(g.m.to(GraphBlock).type, "MODULE")
         test_case.assertEqual(g.m.to(GraphBlock).name, "m")
-        test_case.assertTrue(isinstance(g.m.dummy_buff, flow.nn.graph.Block))
+        test_case.assertTrue(isinstance(g.m.dummy_buff, flow.nn.graph.Proxy))
         test_case.assertEqual(g.m.dummy_buff.to(GraphBlock).type, "BUFFER")
-        test_case.assertTrue(isinstance(g.m.layer.conv1, flow.nn.graph.Block))
+        test_case.assertTrue(isinstance(g.m.layer.conv1, flow.nn.graph.Proxy))
         test_case.assertEqual(g.m.layer.conv1.to(GraphBlock).name, "conv1")
         test_case.assertEqual(g.m.layer.conv1.to(GraphBlock).name_prefix, "m.layer.")
-        test_case.assertTrue(isinstance(g.m.layer.conv1.weight, flow.nn.graph.Block))
+        test_case.assertTrue(isinstance(g.m.layer.conv1.weight, flow.nn.graph.Proxy))
         test_case.assertEqual(g.m.layer.conv1.weight.to(GraphBlock).type, "PARAMETER")
         g.m.layer.conv1.to(GraphBlock)._is_executing_forward = True
         test_case.assertTrue(isinstance(g.m.layer.conv1.weight, flow.Tensor))
@@ -267,7 +267,7 @@ class TestGraph(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.linear = linear
-                # creat optimizer in nn.Graph and add parameter from ModuleBlock
+                # creat optimizer in nn.Graph and add parameter from ProxyModule
                 self.add_optimizer(
                     flow.optim.SGD(self.linear.parameters(), lr=0.001, momentum=0.9)
                 )

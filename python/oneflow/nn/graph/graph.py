@@ -35,7 +35,7 @@ from oneflow.env import get_rank
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
-from oneflow.nn.graph.block import Block, GraphBlockType, get_block_cls, GraphBlock
+from oneflow.nn.graph.proxy import Proxy, GraphBlockType, get_proxy_cls, GraphBlock
 from oneflow.nn.graph.graph_config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import (
@@ -1320,7 +1320,7 @@ class Graph(object):
 
         return self.__map_io(io_type, func, *args, **kwargs)
 
-    def _add_block(self, name: str, module: Module = None) -> None:
+    def _add_module(self, name: str, module: Module = None) -> None:
         r"""Adds module to the graph as a block so that the module will
         be called in nn.Graph.build.
 
@@ -1328,8 +1328,8 @@ class Graph(object):
             name (str): name of the child block. The child block can be accessed from this graph using the given name.
             module (Module): child module to be added to the graph.
 
-        Just assign nn.Module in nn.Graph, _add_block will be called to add the
-        module as a Block:
+        Just assign nn.Module in nn.Graph, _add_module will be called to add the
+        module as a ProxyModule:
 
         For example:
 
@@ -1371,13 +1371,13 @@ class Graph(object):
         elif name == "":
             raise KeyError('module name can\'t be empty string ""')
 
-        self._blocks[name] = get_block_cls(module)(
+        self._blocks[name] = get_proxy_cls(module)(
             "", name, module, weakref.proxy(self)
         )
 
     def __setattr__(self, name: str, value=None):
         if isinstance(value, Module):
-            self._add_block(name, value)
+            self._add_module(name, value)
         elif isinstance(value, Optimizer):
             raise AttributeError(
                 "'{}' nn.Graph is not allowed to set Optimizer attribute named '{}'. "

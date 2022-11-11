@@ -39,7 +39,7 @@ class GraphBlock(object):
         prefix: str = "",
         name: str = "",
         belonged_graph: weakref.ProxyTypes = None,
-        belonged_block: weakref.ProxyTypes = None,
+        belonged_proxy: weakref.ProxyTypes = None,
         block_graph_type: GraphBlockType = GraphBlockType.NONE,
     ):
         self._name = name
@@ -49,8 +49,8 @@ class GraphBlock(object):
         self._prev_scope = None
         assert (belonged_graph is None or isinstance(belonged_graph, weakref.ProxyTypes))
         self._belonged_graph = belonged_graph
-        assert (belonged_block is None or isinstance(belonged_block , weakref.ProxyTypes))
-        self._belonged_block = belonged_block
+        assert (belonged_proxy is None or isinstance(belonged_proxy, weakref.ProxyTypes))
+        self._belonged_proxy = belonged_proxy
 
     @property
     def name(self):
@@ -85,7 +85,7 @@ class GraphBlock(object):
 class GraphModule(GraphBlock):
     r"""GraphModule is the graph representation of a nn.Module in a nn.Graph.
 
-    When an nn.Module is added into an nn.Graph, it is wrapped into a ModuleBlock. The ModuleBlock has a GraphModule inside it.
+    When an nn.Module is added into an nn.Graph, it is wrapped into a ProxyModule. The ProxyModule has a GraphModule inside it.
     You can get and set the GraphModule to enable graph optimization on the nn.Module.
     """
 
@@ -94,10 +94,10 @@ class GraphModule(GraphBlock):
         prefix: str = "",
         name: str = "",
         belonged_graph: weakref.ProxyTypes = None,
-        belonged_block: weakref.ProxyTypes = None,
+        belonged_proxy: weakref.ProxyTypes = None,
     ):
         super().__init__(
-            prefix, name, belonged_graph, belonged_block, GraphBlockType.MODULE
+            prefix, name, belonged_graph, belonged_proxy, GraphBlockType.MODULE
         )
         self._is_null = True
         self._stage_id = None
@@ -131,8 +131,8 @@ class GraphModule(GraphBlock):
         .. code-block:: python
 
             # module0 and module1 are two nn.Module in a nn.Graph.
-            # When a nn.Module is added into a nn.Graph, it is wrapped into a ModuleBlock.
-            # We can set Stage ID and Placement by using ModuleBlock.to(GraphModule).set_stage()
+            # When a nn.Module is added into a nn.Graph, it is wrapped into a ProxyModule.
+            # We can set Stage ID and Placement by using ProxyModule.to(GraphModule).set_stage()
             # The Stage ID is numbered starting from 0 and increasing by 1.
             # The Placement is all tensors placement of this module.
             import oneflow as flow
@@ -160,7 +160,7 @@ class GraphModule(GraphBlock):
 
     @stage_id.setter
     def stage_id(self, value: int = None):
-        r"""Set stage id of Block in pipeline parallelism.
+        r"""Set stage id of Module in pipeline parallelism.
         Set different module's stage id to hint the graph preparing right num of buffers in pipeline.
         """
         print(
@@ -207,7 +207,7 @@ class GraphModule(GraphBlock):
 
     @activation_checkpointing.setter
     def activation_checkpointing(self, mode: bool = False):
-        r"""Set whether do activation checkpointing in this Block.
+        r"""Set whether do activation checkpointing in this Module.
         """
         self._is_null = False
         self._activation_checkpointing = mode
@@ -281,14 +281,14 @@ class GraphModule(GraphBlock):
                             op_repr_with_py_stack=op_repr_with_py_stack,
                         )
 
-                assert self._belonged_block is not None and isinstance(self._belonged_block , weakref.ProxyTypes)
-                _set_child(self._belonged_block._modules)
+                assert self._belonged_proxy is not None and isinstance(self._belonged_proxy, weakref.ProxyTypes)
+                _set_child(self._belonged_proxy._modules)
 
     def _ops_repr(self):
         r"""Generate operators' string representation of this GraphModule
         """
         assert self._belonged_graph, (
-            "ModuleBlock: "
+            "ProxyModule: "
             + self._name_prefix
             + self.name
             + "'s belonged graph is not set."
@@ -361,9 +361,9 @@ class GraphTensor(GraphBlock):
         prefix: str = "",
         name: str = "",
         belonged_graph: weakref.ProxyTypes = None,
-        belonged_block: weakref.ProxyTypes = None,
+        belonged_proxy: weakref.ProxyTypes = None,
         tensor_graph_type: GraphBlockType = GraphBlockType.NONE,
     ):
         super().__init__(
-            prefix, name, belonged_graph, belonged_block, tensor_graph_type
+            prefix, name, belonged_graph, belonged_proxy, tensor_graph_type
         )
