@@ -102,22 +102,10 @@ class OneflowImporter(MetaPathFinder, Loader):
         globals()[fullname] = module
 
 
-# dynamically mock torch and its submodules
-# work with 'clean' sys.modules (i.e. no torch imported)
-def mock():
-    if sys.modules.get("torch") is not None:
-        print(
-            """Warning: Detected imported torch modules, quitting `mock`.
-For fine-grained control of importing torch and oneflow, use Mock with enable and disable"""
-        )
-    else:
-        sys.meta_path.insert(0, OneflowImporter())
-
-
 _importer = OneflowImporter()
 
 
-def mock_init(globals=None):
+def mock(globals=None):
     if globals is None:
         globals = currentframe().f_back.f_globals
     _importer.enable = False  # deal with previously imported torch
