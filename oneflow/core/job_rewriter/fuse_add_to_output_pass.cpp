@@ -44,6 +44,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
   const HashMap<std::string, user_op::OpArg> supported_op_type_name2output_arg(
       {{"conv_data_grad", user_op::OpArg("dx", 0)},
        {"normalization", user_op::OpArg("y", 0)},
+       {"conv2d", user_op::OpArg("out", 0)},
        {"dropout", user_op::OpArg("out", 0)},
        {"matmul", user_op::OpArg("out", 0)},
        {"layer_norm_grad", user_op::OpArg("dx", 0)},
