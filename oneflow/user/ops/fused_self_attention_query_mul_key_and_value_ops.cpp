@@ -21,11 +21,6 @@ namespace oneflow {
 /*static*/ auto FusedSelfAttentionQueryMulKeyAndValueOp::InferDataType(user_op::InferContext* ctx)
     -> Maybe<void> {
   DataType dtype = ctx->InputDType("hidden_states", 0);
-  if (ctx->has_input("_add_to_output", 0)) {
-    CHECK_EQ_OR_RETURN(ctx->InputDType("_add_to_output", 0), dtype)
-        << "Expected _add_to_output has dtype " << DataType_Name(dtype) << ", but got "
-        << DataType_Name(ctx->InputDType("_add_to_output", 0));
-  }
   ctx->SetOutputDType("query_mul_key", 0, dtype);
   ctx->SetOutputDType("value", 0, dtype);
   return Maybe<void>::Ok();
@@ -49,14 +44,6 @@ namespace oneflow {
   ctx->SetOutputShape("query_mul_key", 0, Shape({batch_size, num_heads, seq_len, seq_len}));
   ctx->SetOutputShape("value", 0, Shape({batch_size, num_heads, seq_len, head_size}));
 
-  if (ctx->has_input("_add_to_output", 0)) {
-    const Shape& output_shape = ctx->OutputShape("query_mul_key", 0);
-    const Shape& add_to_shape = ctx->InputShape("_add_to_output", 0);
-    CHECK_EQ_OR_RETURN(add_to_shape, output_shape)
-        << "Expected _add_to_output has shape " << add_to_shape.ToString() << ", but got "
-        << output_shape.ToString();
-  }
-
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedSelfAttentionQueryMulKeyAndValueOp::InferPhysicalTensorDesc(
@@ -65,13 +52,16 @@ namespace oneflow {
 }
 /*static*/ auto FusedSelfAttentionQueryMulKeyAndValueOp::GetSbp(user_op::SbpContext* ctx)
     -> Maybe<void> {
-  std::vector<user_op::OpArg> output_args = {user_op::OpArg("query_mul_key", 0),
-                                             user_op::OpArg("value", 0)};
-  if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
-    output_args.emplace_back("_add_to_output", 0);
-  }
-  ctx->NewBuilder().Split(user_op::OpArg("hidden_states", 0), 1).Split(output_args, 0).Build();
-  ctx->NewBuilder().Split(user_op::OpArg("hidden_states", 0), 2).Split(output_args, 1).Build();
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("hidden_states", 0), 1)
+      .Split(user_op::OpArg("query_mul_key", 0), 0)
+      .Split(user_op::OpArg("value", 0), 0)
+      .Build();
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("hidden_states", 0), 2)
+      .Split(user_op::OpArg("query_mul_key", 0), 1)
+      .Split(user_op::OpArg("value", 0), 1)
+      .Build();
   return Maybe<void>::Ok();
 }
 

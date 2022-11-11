@@ -51,8 +51,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
        {"batch_matmul", user_op::OpArg("out", 0)},
        {"fused_bias_add_mask_scale", user_op::OpArg("out", 0)},
        {"broadcast_matmul", user_op::OpArg("out", 0)},
-       {"broadcast_matmul_grad_b", user_op::OpArg("out", 0)},
-       {"fused_self_attention_query_mul_key_and_value", user_op::OpArg("query_mul_key", 0)}});
+       {"broadcast_matmul_grad_b", user_op::OpArg("out", 0)}});
   HashSet<std::string> consumer_op_names;
   auto IsAddToOutputSupported = [&](const OpNode* node, const LogicalBlobId& lbi) -> bool {
     const OperatorConf& op_conf = node->op().op_conf();

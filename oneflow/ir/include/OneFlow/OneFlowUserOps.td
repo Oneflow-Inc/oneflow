@@ -2589,8 +2589,7 @@ def OneFlow_FusedScaleTrilOp : OneFlow_BaseOp<"fused_scale_tril", [NoSideEffect,
 
 def OneFlow_FusedSelfAttentionQueryMulKeyAndValueOp : OneFlow_BaseOp<"fused_self_attention_query_mul_key_and_value", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$hidden_states,
-    Optional<OneFlow_Tensor>:$_add_to_output
+    OneFlow_Tensor:$hidden_states
   );
   let output = (outs
     OneFlow_Tensor:$query_mul_key,

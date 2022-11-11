@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/user/kernels/slice_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/ep/include/primitive/permute.h"
-#include "oneflow/core/ep/include/primitive/memcpy.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
@@ -169,12 +168,6 @@ void TransposeGpu(ep::Stream* stream, DataType data_type, const ShapeView& in_sh
   transpose->Launch(stream, data_type, in_shape.NumAxes(), in_shape.ptr(), in, perm.data(), out);
 }
 
-template<typename Context>
-std::unique_ptr<ep::primitive::Memcpy> NewMemcpyPrimitive(Context* ctx) {
-  return ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(
-      ctx->device_type(), ep::primitive::MemcpyKind::kDtoD);
-}
-
 template<typename T>
 class FusedSelfAttentionQueryMulKeyAndValueGpuKernel final : public user_op::OpKernel {
  public:
@@ -200,22 +193,8 @@ class FusedSelfAttentionQueryMulKeyAndValueGpuKernel final : public user_op::OpK
     user_op::Tensor* qmk_tensor = ctx->Tensor4ArgNameAndIndex("query_mul_key", 0);
     const T* q_dptr = h_tensor->dptr<T>();
     const T* k_dptr = h_tensor->dptr<T>() + k_offset;
-    T* qmk_dptr = qmk_tensor->mut_dptr<T>();
-
-    float beta = 0.0f;
-    if (ctx->has_input("_add_to_output", 0)) {
-      const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
-      CHECK_EQ(add_to_output->data_type(), qmk_tensor->data_type());
-      CHECK_EQ(add_to_output->shape_view(), qmk_tensor->shape_view());
-      auto memcpy = NewMemcpyPrimitive(ctx);
-      CHECK(memcpy);
-      memcpy->Launch(
-          ctx->stream(), qmk_dptr, add_to_output->dptr(),
-          add_to_output->shape_view().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
-      beta = 1.0f;
-    }
     BatchedGemm<T>(ctx->stream(), 'N', 'T', seq_len, seq_len, head_size, alpha, q_dptr, ld, stride,
-                   k_dptr, ld, stride, beta, qmk_dptr, seq_len, seq_len * seq_len,
+                   k_dptr, ld, stride, 0.0f, qmk_tensor->mut_dptr<T>(), seq_len, seq_len * seq_len,
                    batch_size * num_heads);
 
     // slice v
@@ -298,14 +277,6 @@ size_t InferGradTmpBufferSize(user_op::InferContext* ctx) {
   return value_shape.elem_cnt() * GetSizeOfDataType(value_dtype);
 }
 
-Maybe<void> ProposeInplace(const user_op::InferContext& ctx,
-                           const user_op::AddInplaceArgPair& AddInplaceArgPairFn) {
-  if (ctx.has_input("_add_to_output", 0)) {
-    OF_RETURN_IF_ERROR(AddInplaceArgPairFn("query_mul_key", 0, "_add_to_output", 0, true));
-  }
-  return Maybe<void>::Ok();
-}
-
 }  // namespace
 
 #define REGISTER_FUSED_SELF_ATTENTION_QUERY_MUL_KEY_AND_VALUE_CUDA_KERNEL(dtype)                   \
@@ -313,8 +284,7 @@ Maybe<void> ProposeInplace(const user_op::InferContext& ctx,
       .SetCreateFn<FusedSelfAttentionQueryMulKeyAndValueGpuKernel<dtype>>()                        \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                             \
                        && (user_op::HobDataType("hidden_states", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn(InferTmpBufferSize)                                                       \
-      .SetInplaceProposalFn(ProposeInplace);
+      .SetInferTmpSizeFn(InferTmpBufferSize);
 
 #define REGISTER_FUSED_SELF_ATTENTION_QUERY_MUL_KEY_AND_VALUE_GRAD_CUDA_KERNEL(dtype)              \
   REGISTER_USER_KERNEL("fused_self_attention_query_mul_key_and_value_grad")                        \
