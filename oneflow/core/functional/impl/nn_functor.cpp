@@ -608,6 +608,68 @@ class FusedMLPFunctor {
 #endif
 };
 
+class CublasFusedMatmulAddBiasFunctor {
+ public:
+  CublasFusedMatmulAddBiasFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& bias) const {
+    int64_t n = 0, k = 0;
+    /*
+    x: (m, k)
+    weight: (n, k) need transpose
+    bias: (n)
+    */
+    const auto& x_shape = x->shape();
+    k = x_shape->At(1);
+
+    const auto& weight_shape = weight->shape();
+    const auto& bias_shape = bias->shape();
+
+    // TODO(): Support Fused batch/broadcast matmul.
+    CHECK_EQ_OR_RETURN(weight_shape->NumAxes(), 2)
+        << Error::RuntimeError() << "Weight's dim size should == 2";
+    CHECK_EQ_OR_RETURN(bias_shape->NumAxes(), 1)
+        << Error::RuntimeError() << "Bias's dim size should == 1";
+
+    n = weight_shape->At(0);
+    CHECK_EQ_OR_RETURN(bias_shape->At(0), n)
+        << Error::RuntimeError() << "Bias's dim is not equal to weight's first dim. ";
+    CHECK_EQ_OR_RETURN(weight_shape->At(1), k)
+        << Error::RuntimeError() << "weight's second dim should be equal to input's second dim. ";
+
+#if CUDA_VERSION >= 11060
+    DeviceType device_type{};
+    if (x->is_global()) {
+      device_type = JUST(x->parallel_desc())->device_type();
+    } else {
+      device_type = JUST(x->device())->enum_type();
+    }
+
+    if ((device_type == DeviceType::kCUDA) && (3 <= kMaxInputCount)) {
+      TensorTuple input(3);
+      input[0] = x;
+      input[1] = weight;
+      input[2] = bias;
+
+      std::shared_ptr<OpExpr> op = CHECK_JUST(one::OpBuilder("cublas_fused_matmul_bias")
+                                                  .Input("x")
+                                                  .Input("weight")
+                                                  .Input("bias")
+                                                  .Output("out")
+                                                  .Build());
+
+      // auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("skip_final_activation");
+      // attrs.SetAllAttrs(skip_final_activation);
+      return OpInterpUtil::Dispatch<Tensor>(*op, input /*, attrs*/);
+    }
+#endif  // CUDA_VERSION >= 11060
+
+    return JUST(
+        functional::BiasAdd(JUST(functional::MatMul(x, weight, false, true, 1.0)), bias, 1));
+  }
+};
+
 class FusedMatmulBiasAddReluDropoutFunctor {
  public:
   FusedMatmulBiasAddReluDropoutFunctor() {
@@ -4617,6 +4679,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorDotFunctor>("TensorDot");
   m.add_functor<impl::TensorDotIntDimsFunctor>("TensorDotIntDims");
   m.add_functor<impl::FusedMLPFunctor>("FusedMLP");
+  m.add_functor<impl::CublasFusedMatmulAddBiasFunctor>("CublasFusedMatmulAddBias");
   m.add_functor<impl::FusedMatmulBiasAddReluDropoutFunctor>("FusedMatmulBiasAddReluDropout");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
