@@ -128,7 +128,7 @@ class ModuleGraph(BlockGraph):
             # The Stage ID is numbered starting from 0 and increasing by 1.
             # The Placement is all tensors placement of this module.
             import oneflow as flow
-            form oneflow.nn.graph import ModuleGraph
+            from oneflow.nn.graph import ModuleGraph
             P_0 = flow.placement(type = "cuda", ranks = [0, 1])
             P_1 = flow.placement(type = "cuda", ranks = [2, 3])
             self.module0.to(ModuleGraph).set_stage(stage_id = 0, placement = P0)
@@ -177,7 +177,7 @@ class ModuleGraph(BlockGraph):
         .. code-block:: python
 
             import oneflow as flow
-            form flow.nn.graph import ModuleGraph
+            from oneflow.nn.graph import ModuleGraph
 
             class Graph(flow.nn.Graph):
                 def __init__(self):

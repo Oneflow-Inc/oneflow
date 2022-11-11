@@ -171,7 +171,7 @@ TaskClassifier GetTaskClassifier(const TaskNode* node) {
   return TaskClassifier::kRunASAP;
 }
 
-// Drop down the maximum layer with the minimum layer form consumer
+// Drop down the maximum layer with the minimum layer from consumer
 void TopoStruct::DropTributaryLayer(int32_t upper_bound) {
   if (upper_bound < tributary_layer || tributary_layer < 0) { tributary_layer = upper_bound; }
 }
