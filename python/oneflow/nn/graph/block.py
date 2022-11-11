@@ -90,7 +90,9 @@ class ModuleBlock(Block):
     ):
         assert not isinstance(origin, Block)
         super().__init__()
-        self._oneflow_internal_graphblock__ = GraphModule(prefix, name, belonged_graph, weakref.proxy(self))
+        self._oneflow_internal_graphblock__ = GraphModule(
+            prefix, name, belonged_graph, weakref.proxy(self)
+        )
         self._modules = OrderedDict()
         self._parameters = OrderedDict()
         self._buffers = OrderedDict()
@@ -130,7 +132,6 @@ class ModuleBlock(Block):
                     b,
                 ),
             )
-
 
     def __call__(self, *args, **kwargs):
         assert self.to(GraphBlock)._type == GraphBlockType.MODULE
@@ -593,7 +594,11 @@ class TensorBlock(Block):
         assert not isinstance(origin, Block)
         if isinstance(origin, Parameter):
             self._oneflow_internal_graphblock__ = GraphTensor(
-                prefix, name, belonged_graph, weakref.proxy(self), GraphBlockType.PARAMETER
+                prefix,
+                name,
+                belonged_graph,
+                weakref.proxy(self),
+                GraphBlockType.PARAMETER,
             )
         elif isinstance(origin, Tensor):
             self._oneflow_internal_graphblock__ = GraphTensor(
