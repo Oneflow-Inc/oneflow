@@ -81,10 +81,6 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
 
   void ForEachMut2Dependence(const std::function<void(Dependence* compute)>&) const {}
 
-  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
-    for (const auto& eager_blob_object : *param_blob_objects_) { DoEach(eager_blob_object.get()); }
-  }
-
   std::string DebugName(const Instruction&) const override { return "LaunchLazyJob"; }
   Maybe<void> Prepare(Instruction* instruction) override { return Maybe<void>::Ok(); }
   void Compute(Instruction* instruction) override {

@@ -119,3 +119,7 @@ def set_default_tensor_type(tensor_type):
     if isinstance(tensor_type, str):
         tensor_type = _import_dotted_name(tensor_type)
     oneflow._oneflow_internal.set_default_tensor_type(tensor_type)
+
+
+def is_floating_point(input):
+    return input.is_floating_point()

@@ -339,7 +339,6 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     // TODO(chengcheng): test collective boxing for multi-job.
     PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);
     sub_compile_tc->Count("[GraphCompile]" + name_ + " GenCollectiveBoxingPlan", 1);
-    // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
     sub_compile_tc->Count("[GraphCompile]" + name_ + " DumpCtrlRegstInfoToPlan", 1);
     PlanUtil::PlanMemoryLog(&plan_, name_);
