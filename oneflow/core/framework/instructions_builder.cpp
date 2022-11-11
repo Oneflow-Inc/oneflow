@@ -706,7 +706,8 @@ Maybe<Symbol<Stream>> GetAccessStream(const T tensor) {
   // ```
   // `ndarray` may not be ones because instruction AccessBlobByCallback is prescheduled before
   // oneflow.ones actually finished.
-  return GetDefaultStreamByDevice(device);
+  Symbol<Stream> stream = JUST(GetDefaultStreamByDevice(device));
+  return StreamGuard::TryConvertStream(stream);
 }
 
 }  // namespace
@@ -718,7 +719,6 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(
     const std::string& modifier) {
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
   Symbol<Stream> stream = JUST(GetAccessStream(tensor));
-  stream = JUST(StreamGuard::TryConvertStream(stream));
   JUST(SoftSyncStream({eager_blob_object}, stream));
   auto instruction = intrusive::make_shared<vm::Instruction>(
       // Never replace `stream` with producer_stream or last_used_stream.
@@ -768,21 +768,6 @@ Maybe<void> InstructionsBuilder::Barrier(const std::function<void()>& Callback) 
 
 namespace {
 
-Maybe<vm::Instruction*> WaitRefCntToOne(vm::Instruction* instruction) {
-  if (instruction->ref_cnt() == 1) { return instruction; }
-  auto start = std::chrono::system_clock::now();
-  while (instruction->ref_cnt() > 1) {
-    std::this_thread::yield();
-    auto current = std::chrono::system_clock::now();
-    CHECK_LT_OR_RETURN(std::chrono::duration_cast<std::chrono::seconds>(current - start).count(),
-                       EnvInteger<ONEFLOW_TIMEOUT_SECONDS>())
-        << Error::TimeoutError();
-  }
-  CHECK_EQ_OR_RETURN(instruction->ref_cnt(), 1)
-      << "fatal bug occured, instruction->ref_cnt() must be 1";
-  return instruction;
-}
-
 template<typename InstructionPolicyT>
 Maybe<vm::Instruction*> MutThreadLocalInstruction(Symbol<Stream> stream) {
   static thread_local std::vector<intrusive::shared_ptr<vm::Instruction>> vec;
@@ -790,12 +775,16 @@ Maybe<vm::Instruction*> MutThreadLocalInstruction(Symbol<Stream> stream) {
     vec.resize(stream->unique_stream_id() + 1);
   }
   auto* instruction_ptr = &vec[stream->unique_stream_id()];
+  if (static_cast<bool>(*instruction_ptr) && (*instruction_ptr)->ref_cnt() != 1) {
+    // This instruction should not be reusd because of being hold by other threads.
+    instruction_ptr->Reset();
+  }
   if (unlikely(!static_cast<bool>(*instruction_ptr))) {
     *instruction_ptr = intrusive::make_shared<vm::Instruction>(
         JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream)),
         std::make_shared<InstructionPolicyT>());
   }
-  return WaitRefCntToOne(instruction_ptr->Mutable());
+  return instruction_ptr->Mutable();
 }
 
 }  // namespace
