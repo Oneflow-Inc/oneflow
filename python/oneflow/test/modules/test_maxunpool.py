@@ -220,6 +220,5 @@ class TestMaxUnpooling(flow.unittest.TestCase):
         torch.nn.functional.max_unpool3d(max_pool_results, max_pool_indices, 2)
 
 
-
 if __name__ == "__main__":
     unittest.main()

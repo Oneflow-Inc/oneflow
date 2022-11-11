@@ -175,6 +175,9 @@ class MaxUnpoolNdGradKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_UNPOOL_KERNEL_UTIL, (DeviceType::kCPU),
+                                 UNPOOL_DATA_TYPE_CPU_SEQ, UNPOOL_IDX_DATA_TYPE_SEQ);
+
 #define REGISTER_UNPOOL_WITH_DEVICE(device) \
   REGISTER_UNPOOL_KERNELS(device, int32_t)  \
   REGISTER_UNPOOL_KERNELS(device, int64_t)  \
@@ -188,10 +191,9 @@ REGISTER_UNPOOL_KERNELS(DeviceType::kCPU, bfloat16)
 #ifdef WITH_CUDA
 REGISTER_UNPOOL_WITH_DEVICE(DeviceType::kCUDA)
 REGISTER_UNPOOL_KERNELS(DeviceType::kCUDA, half)
+#if CUDA_VERSION >= 11000
 REGISTER_UNPOOL_KERNELS(DeviceType::kCUDA, nv_bfloat16)
-#endif
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_UNPOOL_KERNEL_UTIL, (DeviceType::kCPU),
-                                 UNPOOL_DATA_TYPE_CPU_SEQ, UNPOOL_IDX_DATA_TYPE_SEQ);
+#endif  // CUDA_VERSION >= 11000
+#endif  // WITH_CUDA
 
 }  // namespace oneflow

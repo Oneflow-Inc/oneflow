@@ -86,6 +86,11 @@ struct UnpoolKernelUtil<DeviceType::kCUDA, T, IDX> {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_UNPOOL_KERNEL_UTIL, (DeviceType::kCUDA),
                                  UNPOOL_DATA_TYPE_CUDA_SEQ, UNPOOL_IDX_DATA_TYPE_SEQ);
+#if CUDA_VERSION >= 11000
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_UNPOOL_KERNEL_UTIL, (DeviceType::kCUDA),
+                                 OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16),
+                                 UNPOOL_IDX_DATA_TYPE_SEQ);
+#endif  // CUDA_VERSION >= 11000
 
 }  // namespace oneflow
 #endif  // WITH_CUDA
