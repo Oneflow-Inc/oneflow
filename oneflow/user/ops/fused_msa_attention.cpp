@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <glog/logging.h>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
@@ -186,7 +187,8 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(x_type, dout_type);
   const bool inplace = ctx->Attr<bool>("inplace");
   CHECK_EQ_OR_RETURN(inplace, false);
-  ctx->SetOutputDType("dgx", 0, g_type);
+  ctx->SetOutputDType("dg", 0, g_type);
+  ctx->SetOutputDType("dx", 0, x_type);
   return Maybe<void>::Ok();
 }
 
@@ -197,11 +199,8 @@ namespace oneflow {
   const Shape& x_shape = ctx->InputShape("x", 0);
   CHECK_EQ_OR_RETURN(g_shape, dout_shape);
   CHECK_EQ_OR_RETURN(x_shape, dout_shape);
-  Shape dgx_shape;
-  int i = 0;
-  for (; i < dout_shape.size() - 1; ++i) { dgx_shape.push_back(dout_shape.At(i)); }
-  dgx_shape.push_back(dout_shape.At(i) * 2);
-  ctx->SetOutputShape("dgx", 0, dgx_shape);
+  ctx->SetOutputShape("dg", 0, g_shape);
+  ctx->SetOutputShape("dx", 0, x_shape);
   return Maybe<void>::Ok();
 }
 
@@ -215,7 +214,8 @@ namespace oneflow {
       .Split(user_op::OpArg("x", 0), 0)
       .Split(user_op::OpArg("g", 0), 0)
       .Split(user_op::OpArg("out", 0), 0)
-      .Split(user_op::OpArg("dgx", 0), 0)
+      .Split(user_op::OpArg("dg", 0), 0)
+      .Split(user_op::OpArg("dx", 0), 0)
       .Build();
   return Maybe<void>::Ok();
 }

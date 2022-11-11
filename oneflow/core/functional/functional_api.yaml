@@ -2408,8 +2408,8 @@
   bind_python: True
 
 - name: "fused_msa_sigmoid_mul_grad"
-  signature: "Tensor (Tensor dout, Tensor g, Tensor x, Bool inplace=False) => FusedMSASigmoidMulGrad"
-  bind_python: True
+  signature: "TensorTuple (Tensor dout, Tensor g, Tensor x, Bool inplace=False) => FusedMSASigmoidMulGrad"
+  bind_python: False
 
 - name: "fused_msa_dropout_add"
   signature: "Tensor (Tensor x, Tensor mask, Tensor residual, Bool inplace=False) => FusedMSADropoutAdd"

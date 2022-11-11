@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <glog/logging.h>
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -124,20 +125,10 @@ class FusedMSASigmoidMul : public OpExprGradFunction<FusedMSASigmoidMulCaptureSt
     in_grads->resize(2);
     const std::shared_ptr<oneflow::one::Tensor>& g = ctx->SavedTensors().at(0);
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(1);
-    const std::shared_ptr<oneflow::one::Tensor>& dgx =
+    const std::shared_ptr<oneflow::one::TensorTuple>& dgx =
         JUST(functional::FusedMSASigmoidMulGrad(out_grads.at(0), g, x, false));
-    auto shape = dgx->shape();
-    std::vector<int64_t> start, step, stop;
-    int i = 0;
-    for (; i < shape->size(); ++i) {
-      start.push_back(0);
-      stop.push_back(shape->At(i));
-      step.push_back(1);
-    }
-    step[-1] = 2;
-    in_grads->at(0) = JUST(functional::Slice(dgx, start, stop, step, true));
-    start[-1] = 1;
-    in_grads->at(1) = JUST(functional::Slice(dgx, start, stop, step, true));
+    in_grads->at(0) = dgx->at(0);
+    in_grads->at(1) = dgx->at(1);
     return Maybe<void>::Ok();
   }
 
@@ -169,12 +160,12 @@ class FusedMSADropoutAdd : public OpExprGradFunction<FusedMSADropoutAddCaptureSt
   Maybe<void> Apply(const FusedMSADropoutAddCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->input_requires_grad) return Maybe<void>::Ok();
-    in_grads->resize(2);
+    in_grads->resize(3);
     const std::shared_ptr<oneflow::one::Tensor>& mask = ctx->SavedTensors().at(0);
     const std::shared_ptr<oneflow::one::Tensor>& dx =
         JUST(functional::FusedMSADropoutAddGrad(out_grads.at(0), mask, false));
     in_grads->at(0) = dx;
-    in_grads->at(1) = out_grads.at(0);
+    in_grads->at(2) = out_grads.at(0);
     return Maybe<void>::Ok();
   }
 

@@ -2888,7 +2888,8 @@ def OneFlow_FusedMSASigmoidMulGradOp : OneFlow_BaseOp<"fused_msa_sigmoid_mul_gra
     OneFlow_Tensor:$x
   );
   let output = (outs
-    OneFlow_Tensor:$dgx
+    OneFlow_Tensor:$dg,
+    OneFlow_Tensor:$dx
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$inplace

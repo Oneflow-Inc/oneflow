@@ -222,13 +222,17 @@ struct Pack2 {
   T elem[2];
 };
 template<typename T>
-struct SigmoidMulGradFunctor {
-  OF_DEVICE_FUNC Pack2<T> operator()(T dout, T g, T x) const {
-    Pack2<T> p;
+struct SigmoidMulGradXFunctor {
+  OF_DEVICE_FUNC T operator()(T dout, T g) const {
     T sigmoid_g = 1 / (1 + exp(-g));
-    p.elem[0] = dout * sigmoid_g;
-    p.elem[1] = dout * x * sigmoid_g * (1 - sigmoid_g);
-    return p;
+    return dout * sigmoid_g;
+  }
+};
+template<typename T>
+struct SigmoidMulGradGFunctor {
+  OF_DEVICE_FUNC T operator()(T g, T x, T dx) const {
+    T sigmoid_g = 1 / (1 + exp(-g));
+    return dx * x * (1 - sigmoid_g);
   }
 };
 }  // namespace gate
@@ -257,13 +261,13 @@ class FusedMSASigmoidMulKernel final : public user_op::OpKernel {
     auto cnt = gate->shape_view().elem_cnt();
     if (ctx->Attr<bool>("inplace") == true) {
       user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-      CHECK(cnt = x->shape_view().elem_cnt());
+      CHECK(cnt == x->shape_view().elem_cnt());
       cuda::elementwise::Binary(alphafold::gate::SigmoidMulFunctor<T>(), cnt, x->mut_dptr<T>(),
                                 gate->dptr<T>(), x->mut_dptr<T>(),
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream());
     } else {
       const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-      CHECK(cnt = x->shape_view().elem_cnt());
+      CHECK(cnt == x->shape_view().elem_cnt());
       user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
       cuda::elementwise::Binary(alphafold::gate::SigmoidMulFunctor<T>(), cnt, out->mut_dptr<T>(),
                                 gate->dptr<T>(), x->dptr<T>(),
@@ -298,11 +302,14 @@ class FusedMSASigmoidMulGradKernel final : public user_op::OpKernel {
     auto cnt = g->shape_view().elem_cnt();
     CHECK(cnt = x->shape_view().elem_cnt());
 
-    user_op::Tensor* dgx = ctx->Tensor4ArgNameAndIndex("dgx", 0);
-    CHECK(cnt * 2 == dgx->shape_view().elem_cnt());
-    cuda::elementwise::Ternary(alphafold::gate::SigmoidMulGradFunctor<T>(), cnt,
-                               reinterpret_cast<alphafold::gate::Pack2<T>*>(dgx->mut_dptr<T>()),
-                               dout->dptr<T>(), g->dptr<T>(), x->dptr<T>(),
+    user_op::Tensor* dg = ctx->Tensor4ArgNameAndIndex("dg", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    CHECK(cnt == dg->shape_view().elem_cnt());
+    cuda::elementwise::Binary(alphafold::gate::SigmoidMulGradXFunctor<T>(), cnt, dx->mut_dptr<T>(),
+                              dout->dptr<T>(), g->dptr<T>(),
+                              ctx->stream()->As<ep::CudaStream>()->cuda_stream());
+    cuda::elementwise::Ternary(alphafold::gate::SigmoidMulGradGFunctor<T>(), cnt, dg->mut_dptr<T>(),
+                               g->dptr<T>(), x->dptr<T>(), dx->dptr<T>(),
                                ctx->stream()->As<ep::CudaStream>()->cuda_stream());
   }
 
@@ -339,7 +346,7 @@ class FusedMSADropoutAddKernel final : public user_op::OpKernel {
     } else {
       const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
       user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-      CHECK(cnt = x->shape_view().elem_cnt() && cnt == out->shape_view().elem_cnt());
+      CHECK(cnt == x->shape_view().elem_cnt() && cnt == out->shape_view().elem_cnt());
 
       cuda::elementwise::Ternary(alphafold::dropout_add::DropoutAddFunctor<T>(), cnt,
                                  out->mut_dptr<T>(), x->dptr<T>(), mask->dptr<T>(), res->dptr<T>(),
@@ -371,9 +378,9 @@ class FusedMSADropoutAddGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* dout = ctx->Tensor4ArgNameAndIndex("dout", 0);  // broadcast
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     auto cnt = dout->shape_view().elem_cnt();
-    CHECK(cnt = mask->shape_view().elem_cnt());
+    CHECK(cnt == mask->shape_view().elem_cnt());
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    CHECK(cnt = dx->shape_view().elem_cnt());
+    CHECK(cnt == dx->shape_view().elem_cnt());
     cuda::elementwise::Binary(alphafold::dropout_add::DropoutAddGradFunctor<T>(), cnt,
                               dx->mut_dptr<T>(), dout->dptr<T>(), mask->dptr<T>(),
                               ctx->stream()->As<ep::CudaStream>()->cuda_stream());

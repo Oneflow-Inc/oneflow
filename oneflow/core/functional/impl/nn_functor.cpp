@@ -4445,15 +4445,16 @@ class FusedMSASigmoidMulGradFunctor {
                          .Input("dout")
                          .Input("g")
                          .Input("x")
-                         .Output("dgx")
+                         .Output("dg")
+                         .Output("dx")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dout,
-                           const std::shared_ptr<one::Tensor>& g,
-                           const std::shared_ptr<one::Tensor>& x, const bool inplace) const {
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dout,
+                                const std::shared_ptr<one::Tensor>& g,
+                                const std::shared_ptr<one::Tensor>& x, const bool inplace) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("inplace");
     attrs.SetAllAttrs(inplace);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {g, x}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dout, g, x}, attrs);
   }
 
  private:
