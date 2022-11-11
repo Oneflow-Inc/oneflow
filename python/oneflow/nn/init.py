@@ -26,7 +26,6 @@ from oneflow.ops.util.initializer_util import (
 )
 from oneflow.framework.tensor import Tensor
 import oneflow.framework.dtype as dtype_util
-import oneflow.ops.initializer_register as initializer_register
 
 def uniform_(tensor, a=0.0, b=1.0):
     r"""
