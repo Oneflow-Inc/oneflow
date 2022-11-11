@@ -5,7 +5,6 @@ import "oneflow/core/job/job.proto";
 import "oneflow/core/job/plan.proto";
 
 message CacheGraph {
-  required string graph_name = 1;
-  required Job job = 2;
-  required Plan plan = 3;
+  required Job job = 1;
+  required Plan plan = 2;
 }

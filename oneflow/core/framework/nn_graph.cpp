@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/time_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/eager/eager_blob_object.h"
@@ -30,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/compiler.h"
+#include "oneflow/core/job/cache_graph.pb.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_instance.h"
@@ -38,6 +40,8 @@ limitations under the License.
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/persistence/persistent_in_stream.h"
+#include "oneflow/core/persistence/persistent_out_stream.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/profiler/profiler.h"
@@ -355,6 +359,7 @@ Maybe<void> NNGraph::CompleteJobAndCompliePlan() {
   compile_tc->Count("[GraphCompile]" + name_ + " SyncPlan", 0);
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> NNGraph::CompileAndInitRuntime() {
@@ -371,20 +376,68 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
   // Try cache graph.
   if (job_.job_conf().try_cache_graph()) {
+    auto cache_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true, true);
     const std::string cache_graph_file_name = "_OneFlowCacheGraph_" + name_;
     const std::string cache_graph_file_path = JoinPath(FLAGS_log_dir, cache_graph_file_name);
     LOG(INFO) << " Try cache graph file: " << cache_graph_file_path;
     auto* fs = LocalFS();
+    bool need_do_compile_and_store = false;
     if (fs->FileExists(cache_graph_file_path)) {
-      std::unique_ptr<PersistentInStream> in_stream = std::make_unique<PersistentInStream>(
-          fs, cache_graph_file_path, false, false);
+      std::unique_ptr<PersistentInStream> in_stream =
+          std::make_unique<PersistentInStream>(fs, cache_graph_file_path);
       TensorBuffer in_buffer;
-      uint64_t cache_file_size = fs->GetFileSize(cache_graph_file_path);
+      int64_t cache_file_size = static_cast<int64_t>(fs->GetFileSize(cache_graph_file_path));
       CHECK_GT_OR_RETURN(cache_file_size, 0)
-        << Error::RuntimeError() <<  cache_graph_file_path << " is empty";
-      in_buffer.Resize();
+          << Error::RuntimeError() << cache_graph_file_path << " is empty";
+      in_buffer.Resize(Shape({cache_file_size}), DataType::kChar);
+      CHECK_EQ_OR_RETURN(in_stream->ReadFully(in_buffer.mut_data<char>(), cache_file_size), 0)
+          << Error::RuntimeError() << cache_graph_file_path
+          << " read fully failed with size : " << cache_file_size;
 
-    } 
+      CacheGraph cache_graph;
+      if (cache_graph.ParseFromArray(in_buffer.data(), in_buffer.nbytes())) {
+        std::string cache_job_str;
+        std::string current_job_str;
+        CHECK_OR_RETURN(cache_graph.job().SerializeToString(&cache_job_str));
+        CHECK_OR_RETURN(job_.SerializeToString(&current_job_str));
+        // google::protobuf::TextFormat::PrintToString(cache_graph.job(), &cache_job_str);
+        // google::protobuf::TextFormat::PrintToString(job_, &cache_job_str);
+
+        cache_tc->Count("[GraphCompileCache]" + name_ + " ParseCacheFile", 0);
+        if (cache_job_str == current_job_str) {
+          plan_.CopyFrom(cache_graph.plan());
+          LOG(INFO) << " Successfully find the matching job, then will loading cache plan and skip "
+                       "Compiler.";
+          cache_tc->Count("[GraphCompileCache]" + name_ + " UsingCachePlan", 0);
+        } else {
+          LOG(INFO) << " The cache job is NOT match, so we will compile and update cache.";
+          need_do_compile_and_store = true;
+        }
+      } else {
+        LOG(INFO) << " The cache plan is NOT valid to parse, so we will compile and update cache.";
+        need_do_compile_and_store = true;
+      }
+    } else {
+      LOG(INFO) << " Can NOT find cache plan, so we will compile and store cache.";
+      need_do_compile_and_store = true;
+    }
+    if (need_do_compile_and_store) {
+      CacheGraph store_cache_graph;
+      // NOTE(chengcheng) : MUST cache job before complete.
+      store_cache_graph.mutable_job()->CopyFrom(job_);
+      JUST(CompleteJobAndCompliePlan());
+      store_cache_graph.mutable_plan()->CopyFrom(plan_);
+
+      std::unique_ptr<PersistentOutStream> out_stream =
+          std::make_unique<PersistentOutStream>(fs, cache_graph_file_path);
+      std::string cache_graph_str;
+      CHECK_OR_RETURN(store_cache_graph.SerializeToString(&cache_graph_str));
+      // google::protobuf::TextFormat::PrintToString(store_cache_graph, &cache_graph_str);
+      out_stream->Write(cache_graph_str.data(), cache_graph_str.size());
+      out_stream->Flush();
+      LOG(INFO) << " Successfully write and save: " << cache_graph_file_path << " to file.";
+      cache_tc->Count("[GraphCompileCache]" + name_ + " StoreCacheFile", 0);
+    }
   } else {
     JUST(CompleteJobAndCompliePlan());
   }

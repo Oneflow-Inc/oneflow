@@ -371,6 +371,12 @@ class GraphConfig(object):
         """
         self.proto.enable_fused_model_update_cast = mode
 
+    def try_cache_graph(self, mode: bool = True):
+        """
+        Try cache graph and skip Compiler when second run.
+        """
+        self.proto.try_cache_graph = mode
+
     def _generate_optimizer_and_variable_configs(
         self, opt_dict: OptDict = None, variables_conf: OrderedDict = None,
     ):
