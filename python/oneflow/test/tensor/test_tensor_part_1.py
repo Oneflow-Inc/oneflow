@@ -1277,6 +1277,9 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.tensor(np_arr, dtype=flow.int8)
         test_case.assertTrue(np.array_equal(x.numpy(), [1.0, 2.0, 3.0]))
         test_case.assertEqual(x.dtype, flow.int8)
+        x = flow.tensor([flow.tensor([1, 2])] * 3, dtype=flow.float32)
+        test_case.assertTrue(np.array_equal(x.numpy(), [[1, 2], [1, 2], [1, 2]]))
+        test_case.assertEqual(x.dtype, flow.float32)
 
     def test_tensor_contains_magic_method(test_case):
         x = flow.tensor([[1, 2, 3], [4, 5, 6]])
