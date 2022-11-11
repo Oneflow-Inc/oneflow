@@ -273,7 +273,11 @@ Maybe<void> GraphTask::WriteGraphToDotFile(const std::string& file_name) const {
     ss << "\tdependencies: " << exec_info.dependencies << "\\l";
     ss << "\tneed_execute: " << exec_info.need_execute << "\\l";
     if (exec_info.capture_indices) {
-      ss << fmt::format("\tcapture_indices: [{}]\\l", fmt::join(*exec_info.capture_indices, ", "));
+      ss << "\tcapture_indices: [";
+      for (const auto& out_idx_and_capture_idx : *exec_info.capture_indices) {
+        ss << out_idx_and_capture_idx.second << ", ";
+      }
+      ss << "]\\l";
     }
     ss << "}\\l";
     return ss.str();
