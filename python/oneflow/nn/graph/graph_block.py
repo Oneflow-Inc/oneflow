@@ -96,7 +96,9 @@ class GraphModule(GraphBlock):
         belonged_graph: weakref.ProxyTypes = None,
         belonged_block: weakref.ProxyTypes = None,
     ):
-        super().__init__(prefix, name, belonged_graph, belonged_block, GraphBlockType.MODULE)
+        super().__init__(
+            prefix, name, belonged_graph, belonged_block, GraphBlockType.MODULE
+        )
         self._is_null = True
         self._stage_id = None
         self._stage_placement = None
@@ -362,4 +364,6 @@ class GraphTensor(GraphBlock):
         belonged_block: weakref.ProxyTypes = None,
         tensor_graph_type: GraphBlockType = GraphBlockType.NONE,
     ):
-        super().__init__(prefix, name, belonged_graph, belonged_block, tensor_graph_type)
+        super().__init__(
+            prefix, name, belonged_graph, belonged_block, tensor_graph_type
+        )
