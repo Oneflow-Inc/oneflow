@@ -17,6 +17,8 @@ limitations under the License.
 #include <memory>
 #include <stack>
 #include <queue>
+#include "fmt/core.h"
+#include "fmt/format.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/autograd/autograd_mode.h"
@@ -271,40 +273,38 @@ Maybe<void> GraphTask::WriteGraphToDotFile(const std::string& file_name) const {
     ss << "\tdependencies: " << exec_info.dependencies << "\\l";
     ss << "\tneed_execute: " << exec_info.need_execute << "\\l";
     if (exec_info.capture_indices) {
-      ss << "\tcapture_indices: [";
-      for (int idx : *exec_info.capture_indices) { ss << idx << ", "; }
-      ss << "]\\l";
+      ss << fmt::format("\tcapture_indices: [{}]", fmt::join(*exec_info.capture_indices, ", "));
     }
     ss << "}\\l";
     return ss.str();
   };
 
   auto log_stream = TeePersistentLogStream::Create(file_name);
-  std::string indent = "\t";
-  log_stream << "digraph AutogradTaskGraph {\n";
-  log_stream << indent << "margin=\"1.5\";\n";
-  log_stream << indent << "node [shape=box];\n";
+  std::vector<std::string> lines;
+  lines.emplace_back("digraph AutogradTaskGraph {");
+  lines.emplace_back("\tmargin=\"1.5\";");
+  lines.emplace_back("\tnode [shape=box];");
   for (auto iter = grad_fn2exec_info_.begin(); iter != grad_fn2exec_info_.end(); ++iter) {
     const FunctionNode* node = iter->first;
     const ExecInfo& exec_info = iter->second;
-    std::stringstream ss;
     // write label attribute
-    ss << "\t\"" << static_cast<const void*>(node) << "\" [label=\"" << node->name() << "\\l"
-       << static_cast<const void*>(node) << "\\l" << ExecInfoToDotString(exec_info) << "\"";
+    std::string node_color = "black";
     if (exec_info.dependencies == 0 && exec_info.need_execute) {  // start node
-      ss << ", color=red";
+      node_color = "red";
     } else if (exec_info.need_execute && exec_info.capture_indices) {  // end node
-      ss << ", color=green";
+      node_color = "green";
     }
-    ss << "];\n";
+    lines.emplace_back(fmt::format(
+        "\t\"{}\" [label=\"{}\\l{}\\l{}\", color={}];", static_cast<const void*>(node),
+        node->name(), static_cast<const void*>(node), ExecInfoToDotString(exec_info), node_color));
     // write edge
     for (const auto& next_fn : node->next_functions()) {
-      ss << "\t\"" << static_cast<const void*>(node) << "\" -> \""
-         << static_cast<const void*>(next_fn.get()) << "\";\n";
+      lines.emplace_back(fmt::format("\t\"{}\" -> \"{}\";", static_cast<const void*>(node),
+                                     static_cast<const void*>(next_fn.get())));
     }
-    log_stream << ss.str();
   }
-  log_stream << "}\n";
+  lines.emplace_back("}");
+  log_stream << fmt::format("{}", fmt::join(lines, "\n"));
   log_stream->Flush();
   return Maybe<void>::Ok();
 }
