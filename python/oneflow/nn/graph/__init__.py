@@ -17,4 +17,3 @@ from .graph import Graph
 from .proxy import Proxy
 from .graph_block import GraphModule
 from .graph_block import GraphTensor
-from .graph_block import GraphBlock

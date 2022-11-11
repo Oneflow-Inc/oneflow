@@ -35,7 +35,7 @@ from oneflow.env import get_rank
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
-from oneflow.nn.graph.proxy import Proxy, GraphBlockType, get_proxy_cls, GraphBlock
+from oneflow.nn.graph.proxy import Proxy, GraphBlockType, get_proxy_cls, GraphModule, GraphTensor
 from oneflow.nn.graph.graph_config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import (
@@ -346,7 +346,7 @@ class Graph(object):
             destination._metadata = OrderedDict()
         # Get states from sub module block
         for name, block in self._blocks.items():
-            assert block.to(GraphBlock).type == GraphBlockType.MODULE
+            assert block.to(GraphModule).type == GraphBlockType.MODULE
             sub_destination = OrderedDict()
             sub_destination._metadata = OrderedDict()
             module = block.to(Module)
@@ -492,8 +492,8 @@ class Graph(object):
                 self._debug_min_s_level = 0
                 self._debug_max_v_level = max(0, v_level)
             for name, block in self._blocks.items():
-                assert block.to(GraphBlock).type == GraphBlockType.MODULE
-                block.to(GraphBlock).debug(
+                assert block.to(GraphModule).type == GraphBlockType.MODULE
+                block.to(GraphModule).debug(
                     v_level,
                     ranks=ranks,
                     max_py_stack_depth=max_py_stack_depth,
@@ -664,13 +664,13 @@ class Graph(object):
             if state_tensor in state_tensor_set:
                 continue
             op_name = (
-                state_block.to(GraphBlock).name_prefix + state_block.to(GraphBlock).name
+                state_block.to(GraphTensor).name_prefix + state_block.to(GraphTensor).name
             )
             state_tensor_set.add(state_tensor)
             state_tensors.append(state_tensor)
             state_op_names.append(op_name)
 
-            if state_block.to(GraphBlock).type == GraphBlockType.PARAMETER:
+            if state_block.to(GraphTensor).type == GraphBlockType.PARAMETER:
                 self._variables_conf[state_tensor] = VariableConfig(op_name)
 
         self._state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
@@ -694,14 +694,14 @@ class Graph(object):
         for state_block in self._state():
             state_tensor = state_block.to(Tensor)
             op_name = (
-                state_block.to(GraphBlock).name_prefix + state_block.to(GraphBlock).name
+                state_block.to(GraphTensor).name_prefix + state_block.to(GraphTensor).name
             )
             if state_tensor in state2lazy_builder:
                 # Differe tensor block shares the same tensor, so they need to share the same
                 # builder.
                 state_block.set_lazy_origin_builder(state2lazy_builder[state_tensor])
             else:
-                if state_block.to(GraphBlock).type == GraphBlockType.PARAMETER:
+                if state_block.to(GraphTensor).type == GraphBlockType.PARAMETER:
                     assert state_tensor in self._variables_conf
                     state_config = self._variables_conf[state_tensor]
                     op_name = state_config.name
@@ -722,7 +722,7 @@ class Graph(object):
         gradients = []
         for state_block in self._state():
             if (
-                state_block.to(GraphBlock).type == GraphBlockType.PARAMETER
+                state_block.to(GraphTensor).type == GraphBlockType.PARAMETER
                 and state_block.to(Tensor).grad is not None
                 and state_block.to(Tensor).grad.is_lazy
             ):

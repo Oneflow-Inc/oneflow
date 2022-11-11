@@ -273,7 +273,7 @@ class GraphModule(GraphBlock):
 
                 def _set_child(d):
                     for (_, n) in d.items():
-                        n.to(GraphBlock).debug(
+                        n.to(GraphModule).debug(
                             v_level,
                             ranks=ranks,
                             max_py_stack_depth=max_py_stack_depth,

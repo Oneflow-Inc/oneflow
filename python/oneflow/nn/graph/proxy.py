@@ -107,17 +107,17 @@ class ProxyModule(Proxy):
             self.__setattr__(
                 n,
                 get_proxy_cls(m)(
-                    self.to(GraphBlock)._name_prefix + self.to(GraphBlock)._name + ".",
+                    self.to(GraphModule)._name_prefix + self.to(GraphModule)._name + ".",
                     n,
                     m,
-                    self.to(GraphBlock)._belonged_graph,
+                    self.to(GraphModule)._belonged_graph,
                 ),
             )
         for (n, p) in list(origin.named_parameters("", False)):
             self.__setattr__(
                 n,
                 get_proxy_cls(p)(
-                    self.to(GraphBlock)._name_prefix + self.to(GraphBlock)._name + ".",
+                    self.to(GraphTensor)._name_prefix + self.to(GraphTensor)._name + ".",
                     n,
                     p,
                 ),
@@ -126,20 +126,20 @@ class ProxyModule(Proxy):
             self.__setattr__(
                 n,
                 get_proxy_cls(b)(
-                    self.to(GraphBlock)._name_prefix + self.to(GraphBlock)._name + ".",
+                    self.to(GraphTensor)._name_prefix + self.to(GraphTensor)._name + ".",
                     n,
                     b,
                 ),
             )
 
     def __call__(self, *args, **kwargs):
-        assert self.to(GraphBlock)._type == GraphBlockType.MODULE
+        assert self.to(GraphModule)._type == GraphBlockType.MODULE
         self.__print(0, 1, self._shallow_repr())
 
         args_tree = ArgsTree(
             (args, kwargs),
             True,
-            "_" + self.to(GraphBlock).name_prefix + self.to(GraphBlock).name + "_input",
+            "_" + self.to(GraphModule).name_prefix + self.to(GraphModule).name + "_input",
             None,
         )
 
@@ -154,7 +154,7 @@ class ProxyModule(Proxy):
                 in_str = "(INPUT:" + name + ":" + meta_repr_str + ")"
                 if not isinstance(arg_value, Tensor):
                     in_str = "[WARNING]" + in_str
-                self.to(GraphBlock)._args_repr.append(in_str)
+                self.to(GraphModule)._args_repr.append(in_str)
                 self.__print(0, 1, in_str)
 
         def _print_state(d):
@@ -168,11 +168,11 @@ class ProxyModule(Proxy):
         # that hooks of nn.Modules are ignored. It is not recommended
         # to use hooks of nn.Module in nn.Graph for the moment.
         with graph_build_util.DebugScopeContext(
-            self.to(GraphBlock)._debug_min_s_level,
-            self.to(GraphBlock)._debug_max_v_level,
-            self.to(GraphBlock)._debug,
-            self.to(GraphBlock)._debug_max_py_stack_depth,
-            self.to(GraphBlock)._debug_only_user_py_stack,
+            self.to(GraphModule)._debug_min_s_level,
+            self.to(GraphModule)._debug_max_v_level,
+            self.to(GraphModule)._debug,
+            self.to(GraphModule)._debug_max_py_stack_depth,
+            self.to(GraphModule)._debug_only_user_py_stack,
         ):
             result = self.__block_forward(*args, **kwargs)
 
@@ -186,8 +186,8 @@ class ProxyModule(Proxy):
             (outputs, {}),
             True,
             "_"
-            + self.to(GraphBlock).name_prefix
-            + self.to(GraphBlock).name
+            + self.to(GraphModule).name_prefix
+            + self.to(GraphModule).name
             + "_output",
             None,
         )
@@ -203,22 +203,22 @@ class ProxyModule(Proxy):
                 out_str = "(OUTPUT:" + name + ":" + meta_repr_str + ")"
                 if not isinstance(arg_value, Tensor):
                     out_str = "[WARNING]" + out_str
-                self.to(GraphBlock)._outs_repr.append(out_str)
+                self.to(GraphModule)._outs_repr.append(out_str)
                 self.__print(0, 1, out_str)
 
         return result
 
     def __block_forward(self, *args, **kwargs):
-        self.to(GraphBlock)._is_executing_forward = True
+        self.to(GraphModule)._is_executing_forward = True
         args, kwargs = self.__pre_forward_map(*args, **kwargs)
-        with self.to(GraphBlock).scope_context():
+        with self.to(GraphModule).scope_context():
             # "Instance method __func__ is the function object", "when an instance method object is called,
             # the underlying function __func__ is called, inserting the class instance __self__ in front of
             # the argument list."
             # Reference: https://docs.python.org/3/reference/datamodel.html
             unbound_forward_of_module_instance = self.to(Module).forward.__func__
             result = unbound_forward_of_module_instance(self, *args, **kwargs)
-        self.to(GraphBlock)._is_executing_forward = False
+        self.to(GraphModule)._is_executing_forward = False
         return result
 
     def __pre_forward_map(self, *args, **kwargs):
@@ -226,21 +226,21 @@ class ProxyModule(Proxy):
         # Identity op outside activation checkpointing scope will be the endpoint of an activation checkpointing segment.
         # Identity op as the first op of a pipeline stage will make backward op depends on the identity op within the stage,
         # otherwise the backward op may depends the op in former stage which will make graph creates unnessary buffers.
-        if self.to(GraphBlock)._stage_placement is not None:
+        if self.to(GraphModule)._stage_placement is not None:
 
             def insert_to_global(t):
                 assert isinstance(t, Tensor)
                 return self.__get_or_create_global(
-                    t, self.to(GraphBlock)._stage_placement
+                    t, self.to(GraphModule)._stage_placement
                 )
 
             args, kwargs = self.__map_io(
                 "input", insert_to_global, "insert_to_global", *args, **kwargs
             )
 
-        if self.to(GraphBlock).activation_checkpointing or (
-            self.to(GraphBlock).stage_id is not None
-            and self.to(GraphBlock).stage_id >= 0
+        if self.to(GraphModule).activation_checkpointing or (
+            self.to(GraphModule).stage_id is not None
+            and self.to(GraphModule).stage_id >= 0
         ):
 
             def insert_identity(t):
@@ -259,14 +259,14 @@ class ProxyModule(Proxy):
         key = str(id(input_tensor)) + str(placement)
 
         # input_tensor + placement -> unique_global_tensor
-        if key not in self.to(GraphBlock)._belonged_graph._unique_global_op_dict:
+        if key not in self.to(GraphModule)._belonged_graph._unique_global_op_dict:
             # store input tensor to avoid tensor id recycle
-            self.to(GraphBlock)._belonged_graph._unique_global_op_dict[key] = (
+            self.to(GraphModule)._belonged_graph._unique_global_op_dict[key] = (
                 input_tensor.to_global(placement=placement),
                 input_tensor,
             )
 
-        return self.to(GraphBlock)._belonged_graph._unique_global_op_dict[key][0]
+        return self.to(GraphModule)._belonged_graph._unique_global_op_dict[key][0]
 
     def __get_or_create_identity(self, input_tensor: Tensor = None):
         assert input_tensor is not None
@@ -275,30 +275,30 @@ class ProxyModule(Proxy):
         # input_tensor(with placement) -> unique_identity_tensor
         # When placement is different, the input tensor(output tensor of __get_or_create_global) is different, so the
         # key can use only input tensor.
-        if key not in self.to(GraphBlock)._belonged_graph._unique_identity_op_dict:
+        if key not in self.to(GraphModule)._belonged_graph._unique_identity_op_dict:
             # Reuse current module name for indentity op
             ident_name_scope = graph_build_util.make_new_name_scope(
-                self.to(GraphBlock).prev_scope,
-                self.to(GraphBlock).name_prefix + self.to(GraphBlock).name,
+                self.to(GraphModule).prev_scope,
+                self.to(GraphModule).name_prefix + self.to(GraphModule).name,
             )
             with graph_build_util.BlockScopeContext(
-                self.to(GraphBlock).prev_scope, ident_name_scope
+                self.to(GraphModule).prev_scope, ident_name_scope
             ):
                 # store input tensor to avoid tensor id recycle
-                self.to(GraphBlock)._belonged_graph._unique_identity_op_dict[
+                self.to(GraphModule)._belonged_graph._unique_identity_op_dict[
                     key
                 ] = oneflow._C.identity(input_tensor)
 
-        return self.to(GraphBlock)._belonged_graph._unique_identity_op_dict[key]
+        return self.to(GraphModule)._belonged_graph._unique_identity_op_dict[key]
 
     def add_module(self, name: str, module: Optional[Module]) -> None:
         self.__setattr__(
             name,
             get_proxy_cls(module)(
-                self.to(GraphBlock)._name_prefix + self.to(GraphBlock)._name + ".",
+                self.to(GraphModule)._name_prefix + self.to(GraphModule)._name + ".",
                 name,
                 module,
-                self.to(GraphBlock)._belonged_graph,
+                self.to(GraphModule)._belonged_graph,
             ),
         )
 
@@ -306,14 +306,14 @@ class ProxyModule(Proxy):
         self.__setattr__(
             name,
             get_proxy_cls(param)(
-                self.to(GraphBlock)._name_prefix + self.to(GraphBlock)._name + ".",
+                self.to(GraphModule)._name_prefix + self.to(GraphModule)._name + ".",
                 name,
                 param,
             ),
         )
 
     def modules(self, memo: Optional[Set["Proxy"]] = None) -> Iterator["Proxy"]:
-        assert self.to(GraphBlock)._type == GraphBlockType.MODULE
+        assert self.to(GraphModule)._type == GraphBlockType.MODULE
         if memo is None:
             memo = set()
         if self not in memo:
@@ -338,8 +338,8 @@ class ProxyModule(Proxy):
             (args, kwargs),
             True,
             "_"
-            + self.to(GraphBlock).name_prefix
-            + self.to(GraphBlock).name
+            + self.to(GraphModule).name_prefix
+            + self.to(GraphModule).name
             + "_"
             + io_type,
             None,
@@ -389,7 +389,7 @@ class ProxyModule(Proxy):
             return False, repr_str
 
     def __members(self, get_members_fn, recurse=True) -> Iterator["Proxy"]:
-        assert self.to(GraphBlock)._type == GraphBlockType.MODULE
+        assert self.to(GraphModule)._type == GraphBlockType.MODULE
         memo = set()
         modules = self.modules() if recurse else [self]
         for module in modules:
@@ -401,13 +401,13 @@ class ProxyModule(Proxy):
                 yield v
 
     def parameters(self, recurse: bool = True) -> Iterator["Proxy"]:
-        assert self.to(GraphBlock)._type == GraphBlockType.MODULE
+        assert self.to(GraphModule)._type == GraphBlockType.MODULE
         gen = self.__members(lambda module: module._parameters.items(), recurse=recurse)
         for elem in gen:
             yield elem
 
     def buffers(self, recurse: bool = True) -> Iterator["Proxy"]:
-        assert self.to(GraphBlock)._type == GraphBlockType.MODULE
+        assert self.to(GraphModule)._type == GraphBlockType.MODULE
         gen = self.__members(lambda module: module._buffers.items(), recurse=recurse)
         for elem in gen:
             yield elem
@@ -426,14 +426,14 @@ class ProxyModule(Proxy):
                 if name in d:
                     raise AttributeError(
                         "'{}' object has duplicated attribute named '{}'".format(
-                            self.to(GraphBlock)._name, name
+                            self.to(GraphModule)._name, name
                         )
                     )
-            if value.to(GraphBlock).type == GraphBlockType.MODULE:
+            if value.to(GraphModule).type == GraphBlockType.MODULE:
                 self._modules[name] = value
-            elif value.to(GraphBlock).type == GraphBlockType.PARAMETER:
+            elif value.to(GraphTensor).type == GraphBlockType.PARAMETER:
                 self._parameters[name] = value
-            elif value.to(GraphBlock).type == GraphBlockType.BUFFER:
+            elif value.to(GraphTensor).type == GraphBlockType.BUFFER:
                 self._buffers[name] = value
             else:
                 raise AttributeError(
@@ -476,9 +476,9 @@ class ProxyModule(Proxy):
             return attr
         raise AttributeError(
             "'{}' '{}' object '{}' in nn.Graph has no attribute '{}'".format(
-                self.to(GraphBlock)._type,
+                self.to(GraphModule)._type,
                 type(self).__name__,
-                self.to(GraphBlock)._name_prefix + self.to(GraphBlock).name,
+                self.to(GraphModule)._name_prefix + self.to(GraphModule).name,
                 name,
             )
         )
@@ -496,7 +496,7 @@ class ProxyModule(Proxy):
             _s_block.try_build()
             return _s_block.lazy_origin
         elif (not graph_build_util.lazy_mode.is_enabled()) and self.to(
-            GraphBlock
+            GraphModule
         )._is_executing_forward:
             # eager and inside nn.Graph.build()
             return _s_block.to(Tensor)
@@ -508,8 +508,8 @@ class ProxyModule(Proxy):
     def __repr__(self):
         lines = None
         child_lines = []
-        if len(self.to(GraphBlock)._args_repr) > 0:
-            for in_str in self.to(GraphBlock)._args_repr:
+        if len(self.to(GraphModule)._args_repr) > 0:
+            for in_str in self.to(GraphModule)._args_repr:
                 input_str = add_indent(in_str, 2)
                 child_lines.append(input_str)
 
@@ -523,12 +523,12 @@ class ProxyModule(Proxy):
         _append_child(self._buffers)
         _append_child(self._modules)
 
-        if len(self.to(GraphBlock)._outs_repr) > 0:
-            for out_str in self.to(GraphBlock)._outs_repr:
+        if len(self.to(GraphModule)._outs_repr) > 0:
+            for out_str in self.to(GraphModule)._outs_repr:
                 output_str = add_indent(out_str, 2)
                 child_lines.append(output_str)
 
-        child_lines.append(add_indent(repr(self.to(GraphBlock)), 2))
+        child_lines.append(add_indent(repr(self.to(GraphModule)), 2))
 
         if len(child_lines) > 0:
             lines = child_lines
@@ -542,10 +542,10 @@ class ProxyModule(Proxy):
     def _shallow_repr(self):
         shallow_repr = (
             "("
-            + self.to(GraphBlock)._type
+            + self.to(GraphModule)._type
             + ":"
-            + self.to(GraphBlock)._name_prefix
-            + self.to(GraphBlock)._name
+            + self.to(GraphModule)._name_prefix
+            + self.to(GraphModule)._name
             + ":"
             + self._oneflow_internal_origin__._shallow_repr()
             + ")"
@@ -558,9 +558,9 @@ class ProxyModule(Proxy):
         assert isinstance(s_level, int)
         assert isinstance(v_level, int)
         assert isinstance(msg, str)
-        if s_level >= self.to(GraphBlock)._debug_min_s_level:
+        if s_level >= self.to(GraphModule)._debug_min_s_level:
             if (s_level > 0) or (
-                s_level == 0 and v_level <= self.to(GraphBlock)._debug_max_v_level
+                s_level == 0 and v_level <= self.to(GraphModule)._debug_max_v_level
             ):
                 print(msg, flush=True)
 
@@ -577,7 +577,7 @@ class LazyBuilder(object):
             assert self.name is not None
             assert self.method is not None
             assert self.result is None
-            with block.to(GraphBlock).scope_context():
+            with block.to(GraphTensor).scope_context():
                 self.result = self.method()
             self.finished = True
 
@@ -615,22 +615,22 @@ class ProxyTensor(Proxy):
     @property
     def lazy_origin(self):
         assert (
-            self.to(GraphBlock)._type == GraphBlockType.PARAMETER
-            or self.to(GraphBlock)._type == GraphBlockType.BUFFER
+            self.to(GraphTensor)._type == GraphBlockType.PARAMETER
+            or self.to(GraphTensor)._type == GraphBlockType.BUFFER
         ), "Only Parameter or Buffer Proxy has lazy_origin"
         return self._lazy_origin_builder.result
 
     def lazy_origin_builder(self):
         assert (
-            self.to(GraphBlock)._type == GraphBlockType.PARAMETER
-            or self.to(GraphBlock)._type == GraphBlockType.BUFFER
+            self.to(GraphTensor)._type == GraphBlockType.PARAMETER
+            or self.to(GraphTensor)._type == GraphBlockType.BUFFER
         ), "Only Parameter or Buffer Proxy has lazy_origin_builder"
         return self._lazy_origin_builder
 
     def set_lazy_origin_builder(self, builder=None):
         assert (
-            self.to(GraphBlock)._type == GraphBlockType.PARAMETER
-            or self.to(GraphBlock)._type == GraphBlockType.BUFFER
+            self.to(GraphTensor)._type == GraphBlockType.PARAMETER
+            or self.to(GraphTensor)._type == GraphBlockType.BUFFER
         ), "Only Parameter or Buffer Proxy has lazy_origin_builder"
         self._lazy_origin_builder = builder
 
@@ -650,10 +650,10 @@ class ProxyTensor(Proxy):
     def _shallow_repr(self):
         shallow_repr = (
             "("
-            + self.to(GraphBlock)._type
+            + self.to(GraphTensor)._type
             + ":"
-            + self.to(GraphBlock)._name_prefix
-            + self.to(GraphBlock)._name
+            + self.to(GraphTensor)._name_prefix
+            + self.to(GraphTensor)._name
             + ":"
             + self._oneflow_internal_origin__._meta_repr()
             + ")"
@@ -670,10 +670,10 @@ class ProxySequential(get_seq(ProxyModule)):
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
-        self.to(GraphBlock)._name_prefix = prefix
-        self.to(GraphBlock)._name = name
-        self.to(GraphBlock)._belonged_graph = belonged_graph
-        self.to(GraphBlock)._belonged_block = weakref.proxy(self)
+        self.to(GraphModule)._name_prefix = prefix
+        self.to(GraphModule)._name = name
+        self.to(GraphModule)._belonged_graph = belonged_graph
+        self.to(GraphModule)._belonged_block = weakref.proxy(self)
         self._oneflow_internal_graphblock__set_origin(origin)
 
 
@@ -686,10 +686,10 @@ class ProxyModuleList(get_list(ProxyModule)):
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
-        self.to(GraphBlock)._name_prefix = prefix
-        self.to(GraphBlock)._name = name
-        self.to(GraphBlock)._belonged_graph = belonged_graph
-        self.to(GraphBlock)._belonged_block = weakref.proxy(self)
+        self.to(GraphModule)._name_prefix = prefix
+        self.to(GraphModule)._name = name
+        self.to(GraphModule)._belonged_graph = belonged_graph
+        self.to(GraphModule)._belonged_block = weakref.proxy(self)
         self._oneflow_internal_graphblock__set_origin(origin)
         # MoudleList is a container without forward() method,
 
@@ -703,10 +703,10 @@ class ProxyModuleDict(get_dict(ProxyModule)):
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
-        self.to(GraphBlock)._name_prefix = prefix
-        self.to(GraphBlock)._name = name
-        self.to(GraphBlock)._belonged_graph = belonged_graph
-        self.to(GraphBlock)._belonged_block = weakref.proxy(self)
+        self.to(GraphModule)._name_prefix = prefix
+        self.to(GraphModule)._name = name
+        self.to(GraphModule)._belonged_graph = belonged_graph
+        self.to(GraphModule)._belonged_block = weakref.proxy(self)
         self._oneflow_internal_graphblock__set_origin(origin)
 
 
@@ -719,12 +719,12 @@ class ProxyParameterList(get_para_list(ProxyModule)):
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
-        self.to(GraphBlock)._name_prefix = prefix
-        self.to(GraphBlock)._name = name
-        self.to(GraphBlock)._belonged_graph = belonged_graph
-        self.to(GraphBlock)._belonged_block = weakref.proxy(self)
+        self.to(GraphModule)._name_prefix = prefix
+        self.to(GraphModule)._name = name
+        self.to(GraphModule)._belonged_graph = belonged_graph
+        self.to(GraphModule)._belonged_block = weakref.proxy(self)
         self._oneflow_internal_graphblock__set_origin(origin)
-        self.to(GraphBlock)._is_executing_forward = True
+        self.to(GraphModule)._is_executing_forward = True
 
     def __getitem__(self, idx):
         assert isinstance(idx, int)
@@ -746,12 +746,12 @@ class ProxyParameterDict(get_para_dict(ProxyModule)):
         belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
-        self.to(GraphBlock)._name_prefix = prefix
-        self.to(GraphBlock)._name = name
-        self.to(GraphBlock)._belonged_graph = belonged_graph
-        self.to(GraphBlock)._belonged_block = weakref.proxy(self)
+        self.to(GraphModule)._name_prefix = prefix
+        self.to(GraphModule)._name = name
+        self.to(GraphModule)._belonged_graph = belonged_graph
+        self.to(GraphModule)._belonged_block = weakref.proxy(self)
         self._oneflow_internal_graphblock__set_origin(origin)
-        self.to(GraphBlock)._is_executing_forward = True
+        self.to(GraphModule)._is_executing_forward = True
 
     def __getitem__(self, key: str):
         p_state = self._get_from_states(key, "_parameters")
