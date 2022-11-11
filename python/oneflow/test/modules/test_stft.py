@@ -13,22 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
-
-# import oneflow as flow
-# import torch
-
-# import unittest
-# import oneflow.unittest
-
-
 from numpy import random
 
 import unittest
 from collections import OrderedDict
 
 import numpy as np
-import math
+import re
 
 import oneflow as flow
 from oneflow.test_utils.test_util import GenArgList
@@ -57,9 +48,13 @@ class TestStft(flow.unittest.TestCase):
         n=20, check_graph=False, check_grad_use_random_data=False, auto_backward=False,
     )
     def test_stft_with_1D_random_data(test_case):
-        device = random_device()
-        rand_fft =getRandFFtvalue()
-        rand_size =np.random.randint(rand_fft, 30000)
+        min_cuda_version=int(re.search('\d{2}',flow.__version__).group())
+        if min_cuda_version<11:
+            device = cpu_device()
+        else:
+            device = random_device()
+        rand_fft = getRandFFtvalue()
+        rand_size = np.random.randint(rand_fft, 30000)
         input_dims = [rand_size]
         win_dims = [rand_fft]
         x = random_tensor(1, *input_dims).to(device)
@@ -72,14 +67,18 @@ class TestStft(flow.unittest.TestCase):
             n_fft=rand_fft,
             window=win,
             return_complex=False,
-            onesided=onesided_value, 
+            onesided=onesided_value,
             center=center_value,
-            normalized=normalized_value
+            normalized=normalized_value,
         )
         return y
 
     def test_stft_with_2D_random_data(test_case):
-        device = random_device()
+        min_cuda_version=int(re.search('\d{2}',flow.__version__).group())
+        if min_cuda_version<11:
+            device = cpu_device()
+        else:
+            device = random_device()
         row_rand_size = np.random.randint(1, 50)
         rand_fft = getRandFFtvalue()
         col_rand_size = np.random.randint(rand_fft, 30000)
