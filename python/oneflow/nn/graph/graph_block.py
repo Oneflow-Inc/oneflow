@@ -47,7 +47,7 @@ class GraphBlock(object):
         self._type = block_graph_type
         self._scope = None
         self._prev_scope = None
-        assert (belonged_graph is None or isinstance(belonged_graph, weakref.ProxyTypes))
+        assert belonged_graph is None or isinstance(belonged_graph, weakref.ProxyTypes)
         self._belonged_graph = belonged_graph
         assert (belonged_proxy is None or isinstance(belonged_proxy, weakref.ProxyTypes))
         self._belonged_proxy = belonged_proxy
