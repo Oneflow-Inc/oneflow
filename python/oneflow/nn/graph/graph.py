@@ -35,7 +35,13 @@ from oneflow.env import get_rank
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
-from oneflow.nn.graph.proxy import Proxy, GraphBlockType, get_proxy_cls, GraphModule, GraphTensor
+from oneflow.nn.graph.proxy import (
+    Proxy,
+    GraphBlockType,
+    get_proxy_cls,
+    GraphModule,
+    GraphTensor,
+)
 from oneflow.nn.graph.graph_config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import (
@@ -664,7 +670,8 @@ class Graph(object):
             if state_tensor in state_tensor_set:
                 continue
             op_name = (
-                state_block.to(GraphTensor).name_prefix + state_block.to(GraphTensor).name
+                state_block.to(GraphTensor).name_prefix
+                + state_block.to(GraphTensor).name
             )
             state_tensor_set.add(state_tensor)
             state_tensors.append(state_tensor)
@@ -694,7 +701,8 @@ class Graph(object):
         for state_block in self._state():
             state_tensor = state_block.to(Tensor)
             op_name = (
-                state_block.to(GraphTensor).name_prefix + state_block.to(GraphTensor).name
+                state_block.to(GraphTensor).name_prefix
+                + state_block.to(GraphTensor).name
             )
             if state_tensor in state2lazy_builder:
                 # Differe tensor block shares the same tensor, so they need to share the same
