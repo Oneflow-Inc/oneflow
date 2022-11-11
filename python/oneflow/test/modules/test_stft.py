@@ -48,8 +48,8 @@ class TestStft(flow.unittest.TestCase):
         n=20, check_graph=False, check_grad_use_random_data=False, auto_backward=False,
     )
     def test_stft_with_1D_random_data(test_case):
-        min_cuda_version=int(re.search('\d{2}',flow.__version__).group())
-        if min_cuda_version<11:
+        min_cuda_version = int(re.search("\d{2}", flow.__version__).group())
+        if min_cuda_version < 11:
             device = cpu_device()
         else:
             device = random_device()
@@ -74,8 +74,8 @@ class TestStft(flow.unittest.TestCase):
         return y
 
     def test_stft_with_2D_random_data(test_case):
-        min_cuda_version=int(re.search('\d{2}',flow.__version__).group())
-        if min_cuda_version<11:
+        min_cuda_version = int(re.search("\d{2}", flow.__version__).group())
+        if min_cuda_version < 11:
             device = cpu_device()
         else:
             device = random_device()
