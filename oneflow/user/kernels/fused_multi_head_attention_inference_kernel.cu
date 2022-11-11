@@ -76,16 +76,17 @@ void LaunchCutlassFmha(const Params& params, ep::CudaStream* stream) {
   p.q_strideM = params.query_hidden_stride;
   p.k_strideM = params.key_hidden_stride;
   p.v_strideM = params.value_hidden_stride;
+  p.o_strideM = p.num_heads * params.value_head_size;
 
   p.q_strideH = params.head_size;
   p.k_strideH = params.head_size;
   p.v_strideH = params.value_head_size;
-  p.o_strideH = params.query_seq_len * params.value_head_size;
+  p.o_strideH = params.value_head_size;
 
   p.q_strideB = params.query_seq_len * p.q_strideM;
   p.k_strideB = params.kv_seq_len * p.k_strideM;
   p.v_strideB = params.kv_seq_len * p.v_strideM;
-  p.o_strideB = p.o_strideH * p.num_heads;
+  p.o_strideB = params.query_seq_len * p.o_strideM;
 
   p.causal = params.causal;
 
@@ -234,25 +235,12 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel {
     params.query_ptr = query->dptr<char>() + query_hidden_offset;
     params.key_ptr = key->dptr<char>() + key_hidden_offset;
     params.value_ptr = value->dptr<char>() + value_hidden_offset;
-    params.out_ptr = tmp->mut_dptr();
-    const int64_t out_buffer_size =
-        GetCudaAlignedSize(out->shape_view().elem_cnt() * GetSizeOfDataType(data_type));
+    params.out_ptr = out->mut_dptr();
     const int64_t tmp_buffer_size = tmp->shape_view().elem_cnt();
-    CHECK_GE(tmp_buffer_size, out_buffer_size);
-    params.workspace = tmp->mut_dptr<char>() + out_buffer_size;
-    params.workspace_size = tmp_buffer_size - out_buffer_size;
+    params.workspace = tmp->mut_dptr<char>();
+    params.workspace_size = tmp_buffer_size;
     params.causal = ctx->Attr<bool>("causal");
-
     DispatchCutlassFmha(params, ctx->stream()->As<ep::CudaStream>());
-
-    auto permute =
-        ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(ctx->device_type(), 4);
-    CHECK(permute);
-    const int64_t src_dims[4] = {batch_size, num_heads, query_seq_len,
-                                 value_hidden_size / num_heads};
-    const int permutation[4] = {0, 2, 1, 3};
-    permute->Launch(ctx->stream(), data_type, 4, src_dims, tmp->dptr(), permutation,
-                    out->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -260,8 +248,6 @@ class FusedMultiHeadAttentionInferenceKernel final : public user_op::OpKernel {
 size_t InferTmpBufferSize(InferContext* ctx) {
   const auto& out_desc = ctx->OutputTensorDesc("out", 0);
   size_t buffer_size = 0;
-  buffer_size +=
-      GetCudaAlignedSize(out_desc.shape().elem_cnt() * GetSizeOfDataType(out_desc.data_type()));
   buffer_size +=
       GetCudaAlignedSize(out_desc.shape().elem_cnt() * GetSizeOfDataType(DataType::kFloat));
   return buffer_size;
