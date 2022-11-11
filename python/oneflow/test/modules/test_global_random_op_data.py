@@ -33,7 +33,7 @@ _fn_param = {
         size=shape, placement=placement, sbp=sbp
     ),
     "randint": lambda shape, placement, sbp: flow.randint(
-       low=0, high=2, size=shape,placement=placement, sbp=sbp
+        low=0, high=2, size=shape, placement=placement, sbp=sbp
     ),
     "randn": lambda shape, placement, sbp: flow.randn(
         size=shape, placement=placement, sbp=sbp
