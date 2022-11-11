@@ -47,9 +47,9 @@ class GraphBlock(object):
         self._type = block_graph_type
         self._scope = None
         self._prev_scope = None
-        assert (belonged_graph is None or isinstance(belonged_graph, weakref.ProxyTypes))
+        assert belonged_graph is None or isinstance(belonged_graph, weakref.ProxyTypes)
         self._belonged_graph = belonged_graph
-        assert (belonged_block is None or isinstance(belonged_block , weakref.ProxyTypes))
+        assert belonged_block is None or isinstance(belonged_block, weakref.ProxyTypes)
         self._belonged_block = belonged_block
 
     @property
@@ -281,7 +281,9 @@ class GraphModule(GraphBlock):
                             op_repr_with_py_stack=op_repr_with_py_stack,
                         )
 
-                assert self._belonged_block is not None and isinstance(self._belonged_block , weakref.ProxyTypes)
+                assert self._belonged_block is not None and isinstance(
+                    self._belonged_block, weakref.ProxyTypes
+                )
                 _set_child(self._belonged_block._modules)
 
     def _ops_repr(self):
