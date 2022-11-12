@@ -812,13 +812,18 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   }
   pm.addPass(createCanonicalizerPass());
   if (std::getenv("ONEFLOW_MLIR_PRINT_STATS") != nullptr) { pm.addPass(createPrintOpStatsPass()); }
-  llvm::raw_string_ostream os_graphviz(graphviz);
-  pm.addPass(createPrintOpGraphPass(os_graphviz));
+  const bool shouldPrintGraphviz = std::getenv("ONEFLOW_MLIR_PRINT_OP_GRAPH") != nullptr;
+  if (shouldPrintGraphviz) {
+    llvm::raw_string_ostream os_graphviz(graphviz);
+    pm.addPass(createPrintOpGraphPass(os_graphviz));
+  }
   if (mlir::failed(pm.run(*module))) {
     module->emitError("Failed to run round-trip passes");
     return failure();
   }
-  job_wrapper.DumpLog("RoundTripOneFlowJob.optimized.mlir.dot", graphviz);
+  if (shouldPrintGraphviz) {
+    job_wrapper.DumpLog("RoundTripOneFlowJob.optimized.mlir.dot", graphviz);
+  }
   DumpMLIR(job_wrapper, module.get(), "RoundTripOneFlowJob.optimized");
   return success();
 }
