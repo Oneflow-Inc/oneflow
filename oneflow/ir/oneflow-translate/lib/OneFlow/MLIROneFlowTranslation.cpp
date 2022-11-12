@@ -802,7 +802,9 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   pm.addPass(oneflow::createAutoNhwcPass());
   pm.addPass(oneflow::createFuseIntoExistingOpPass());
   // TODO: support backward or put it in a env flag
-  pm.addPass(oneflow::createGroupMatMul());
+  if (std::getenv("ONEFLOW_MLIR_GROUP_MATMUL") != nullptr) {
+    pm.addPass(oneflow::createGroupMatMul());
+  }
   if (job_wrapper.IsLastIRPass()
       && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION", false)) {
     pm.addPass(oneflow::createPreConvertInferenceOpPass());
