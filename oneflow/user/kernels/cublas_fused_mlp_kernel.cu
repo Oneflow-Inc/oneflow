@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/user/kernels/cublas_fused_mlp_util.cuh"
 // CUBLAS_AUX_EPILOGUE only support in cuda11.4 or higher version, in cuda11.4 it need static link.
+#include "oneflow/core/kernel/new_kernel_util.h"
 #if CUDA_VERSION >= 11060
 
 namespace oneflow {
@@ -63,12 +64,20 @@ class CublasFusedMLPKernel final : public user_op::OpKernel, public user_op::Cud
 
     const double alpha = 1.0;
     const auto sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
-    const double beta = 0.0;
-    const auto sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
+
+    if (ctx->has_input("_add_to_output", 0)) {
+      const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+      CHECK_EQ(add_to_output->data_type(), out->data_type());
+      CHECK_EQ(add_to_output->shape_view(), out->shape_view());
+      Memcpy<DeviceType::kCUDA>(
+          ctx->stream(), out->mut_dptr(), add_to_output->dptr(),
+          add_to_output->shape_view().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
+    }
 
     // Currently only support 2D matmul.
     DimVector in_shape(2);
-    x->shape_view().ToDimVector(&in_shape);
+    in_shape[0] = x->shape_view().Count(0, x->shape_view().NumAxes() - 1);
+    in_shape[1] = x->shape_view().At(x->shape_view().NumAxes() - 1);
 
     DimVector weight_shape(2);
 
@@ -90,11 +99,15 @@ class CublasFusedMLPKernel final : public user_op::OpKernel, public user_op::Cud
       bool need_aux = true;
       void* y_ptr = nullptr;
 
+      auto sp_beta = GetCublasScalarParameter(0, cublas_compute_dtype);
       if (idx == weight_size - 1) {
         y_ptr = ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr();
         if (skip_final_activation) {
           epilogue = CUBLASLT_EPILOGUE_BIAS;
           need_aux = false;
+        }
+        if (ctx->has_input("_add_to_output", 0)) {
+          sp_beta = GetCublasScalarParameter(1, cublas_compute_dtype);
         }
       } else {
         y_ptr = ctx->Tensor4ArgNameAndIndex("hidden", idx)->mut_dptr();
@@ -122,11 +135,19 @@ class CublasFusedMLPKernel final : public user_op::OpKernel, public user_op::Cud
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CUBLAS_FUSED_MLP_KERNEL_GPU(cpp_type, data_type)      \
-  REGISTER_USER_KERNEL("cublas_fused_mlp")                             \
-      .SetCreateFn<CublasFusedMLPKernel<cpp_type>>()                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("out", 0) == data_type));
+#define REGISTER_CUBLAS_FUSED_MLP_KERNEL_GPU(cpp_type, data_type)                           \
+  REGISTER_USER_KERNEL("cublas_fused_mlp")                                                  \
+      .SetCreateFn<CublasFusedMLPKernel<cpp_type>>()                                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                      \
+                       && (user_op::HobDataType("out", 0) == data_type))                    \
+      .SetInplaceProposalFn(                                                                \
+          [](const user_op::InferContext& ctx,                                              \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {        \
+            if (ctx.has_input("_add_to_output", 0)) {                                       \
+              OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true)); \
+            }                                                                               \
+            return Maybe<void>::Ok();                                                       \
+          });
 
 REGISTER_CUBLAS_FUSED_MLP_KERNEL_GPU(double, DataType::kDouble);
 REGISTER_CUBLAS_FUSED_MLP_KERNEL_GPU(float, DataType::kFloat);

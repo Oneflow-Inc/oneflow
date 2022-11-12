@@ -542,14 +542,14 @@ class FusedMLPFunctor {
     bias: (n)
     */
     const auto& x_shape = x->shape();
-    k = x_shape->At(1);
+    k = x_shape->At(x_shape->NumAxes() - 1);
     for (int64_t i = 0; i < weight_size; i++) {
       const auto& weight_shape = weights[i]->shape();
       const auto& bias_shape = biases[i]->shape();
 
       // TODO(): Support Fused batch/broadcast matmul.
-      CHECK_EQ_OR_RETURN(weight_shape->NumAxes(), 2)
-          << Error::RuntimeError() << "Weight's dim size should == 2";
+      CHECK_GE_OR_RETURN(weight_shape->NumAxes(), 2)
+          << Error::RuntimeError() << "Weight's dim size should >= 2";
       CHECK_EQ_OR_RETURN(bias_shape->NumAxes(), 1)
           << Error::RuntimeError() << "Bias's dim size should == 1";
 
@@ -589,7 +589,7 @@ class FusedMLPFunctor {
     for (int32_t layer_idx = 0; layer_idx < weight_size; layer_idx++) {
       out = JUST(
           functional::BiasAdd(JUST(functional::MatMul(out, weights[layer_idx], false, true, 1.0)),
-                              biases[layer_idx], 1));
+                              biases[layer_idx], x->shape()->NumAxes() - 1));
       if ((layer_idx != weight_size - 1) || (!skip_final_activation)) {
         /*
         When it is not last dense layer, or it is last dense layer and skip_final_activate=False,
@@ -3122,6 +3122,28 @@ class FusedBiasAddDropoutFunctor {
   std::shared_ptr<OpExpr> fused_bias_add_mask_scale_op_;
 };
 
+class FusedGegluFunctor {
+ public:
+  FusedGegluFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_geglu")
+                         .Input("in")
+                         .Input("weight")
+                         .Input("bias")
+                         .Output("out")
+                         .Output("matmul_out")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
+                           const std::shared_ptr<one::Tensor>& w,
+                           const std::shared_ptr<one::Tensor>& b) const {
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {in, w, b});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class FusedScaleTrilFunctor {
  public:
   FusedScaleTrilFunctor() {
@@ -3219,6 +3241,56 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
  private:
   std::shared_ptr<OpExpr> random_mask_like_op_;
   std::shared_ptr<OpExpr> fused_scale_mask_softmax_dropout_op_;
+};
+
+// Equivalent to
+// masked = (x + bias) * mask * scale_value
+// unmask = (1 - mask).bool()
+// masked.masked_fill_(unmask, mask_fill_value)
+// softmax_y = softmax(masked, dim=-1)
+// y = dropout(softmax_y, p)
+class FusedBiasAddScaleMaskSoftmaxDropoutFunctor {
+ public:
+  FusedBiasAddScaleMaskSoftmaxDropoutFunctor() {
+    random_mask_op_ =
+        CHECK_JUST(one::OpBuilder("random_mask_like").Input("like").Output("out").Build());
+    fused_op_ = CHECK_JUST(one::OpBuilder("fused_bias_add_scale_mask_softmax_dropout")
+                               .Input("x")
+                               .Input("bias")
+                               .Input("mask")
+                               .Input("dropout_mask")
+                               .Output("y")
+                               .Output("softmax_y")
+                               .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& bias,
+                                const std::shared_ptr<one::Tensor>& mask, const float& fill_value,
+                                const float& scale, const float& p, const bool& training,
+                                const Optional<one::Generator>& generator) const {
+    float rate = p;
+    if (!training) rate = 0.0;
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    auto& random_mask_like_attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("rate", "seed");
+    random_mask_like_attrs.SetAllAttrs(rate, static_cast<int64_t>(gen->current_seed()));
+    const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
+
+    const auto& dropout_mask = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *random_mask_op_, {x},
+        OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
+
+    float dropout_scale = 0.0;
+    if (rate != 1.0) { dropout_scale = 1.0 / (1.0 - rate); }
+    auto& fused_scale_mask_softmax_dropout_attrs =
+        THREAD_CACHED_MUTABLE_ATTR_MAP("scale_value", "mask_fill_value", "dropout_scale_value");
+    fused_scale_mask_softmax_dropout_attrs.SetAllAttrs(scale, fill_value, dropout_scale);
+    return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_, {x, bias, mask, dropout_mask},
+                                               fused_scale_mask_softmax_dropout_attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> random_mask_op_;
+  std::shared_ptr<OpExpr> fused_op_;
 };
 
 class CtcGreedyDecoderFunctor {
@@ -4539,9 +4611,12 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::L2NormalizeGradFunctor>("L2NormalizeGrad");
   m.add_functor<impl::FusedBiasAddGeluFunctor>("FusedBiasAddGelu");
   m.add_functor<impl::FusedBiasAddGeluGradFunctor>("FusedBiasAddGeluGrad");
+  m.add_functor<impl::FusedGegluFunctor>("FusedGeglu");
   m.add_functor<impl::FusedBiasAddDropoutFunctor>("FusedBiasAddDropout");
   m.add_functor<impl::FusedScaleMaskSoftmaxFunctor>("FusedScaleMaskSoftmax");
   m.add_functor<impl::FusedScaleMaskSoftmaxDropoutFunctor>("FusedScaleMaskSoftmaxDropout");
+  m.add_functor<impl::FusedBiasAddScaleMaskSoftmaxDropoutFunctor>(
+      "FusedBiasAddScaleMaskSoftmaxDropout");
   m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleFunctor>("FusedScaleTrilSoftmaxMaskScale");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
   m.add_functor<impl::CtcGreedyDecoderFunctor>("CtcGreedyDecoder");
