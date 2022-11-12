@@ -33,9 +33,10 @@ module  {
      %m1 = "oneflow.matmul"(%x, %weight1) {alpha = 1.000000e+00 : f64, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "unet.time_embedding.linear_1-matmul-20", scope_symbol_id = 90 : i64, transpose_a = false, transpose_b = true} : (tensor<2x320xf16>, tensor<1280x320xf16>) -> tensor<2x1280xf16>
      %m2 = "oneflow.matmul"(%x, %weight2) {alpha = 1.000000e+00 : f64, device_name = ["@0:0"], device_tag = "cuda", hierarchy = [1], op_name = "unet.time_embedding.linear_1-matmul-20", scope_symbol_id = 90 : i64, transpose_a = false, transpose_b = true} : (tensor<2x320xf16>, tensor<1280x320xf16>) -> tensor<2x1280xf16>
     return %r1, %r2, %m1, %m2: tensor<2x1280xf16>, tensor<2x1280xf16>, tensor<2x1280xf16>, tensor<2x1280xf16>
-    // CHECK: %0:2 = "oneflow.grouped_matmul_bias"(%arg0, %arg0, %arg2, %arg1, %arg4, %arg3)
-    // CHECK: %1:2 = "oneflow.grouped_matmul_bias"(%arg0, %arg0, %arg2, %arg1)
-    // CHECK: return %0#1, %0#0, %1#1, %1#0
+    // CHECK: @mixed(%[[X:[a-zA-Z0-9_]+]]: tensor<2x320xf16>, %[[WEIGHT1:[a-zA-Z0-9_]+]]: tensor<1280x320xf16>, %[[WEIGHT2:[a-zA-Z0-9_]+]]: tensor<1280x320xf16>, %[[BIAS1:[a-zA-Z0-9_]+]]: tensor<1280xf16>, %[[BIAS2:[a-zA-Z0-9_]+]]: tensor<1280xf16>)
+    // CHECK: %[[OUT0:[a-zA-Z0-9_]+]]:2 = "oneflow.grouped_matmul_bias"(%[[X]], %[[X]], %[[WEIGHT2]], %[[WEIGHT1:[a-zA-Z0-9_]+]], %[[BIAS2:[a-zA-Z0-9_]+]], %[[BIAS1:[a-zA-Z0-9_]+]])
+    // CHECK: %[[OUT1:[a-zA-Z0-9_]+]]:2 = "oneflow.grouped_matmul_bias"(%[[X]], %[[X]], %[[WEIGHT2]], %[[WEIGHT1]])
+    // CHECK: return %[[OUT0]]#1, %[[OUT0]]#0, %[[OUT1]]#1, %[[OUT1]]#0
   }
 
   // CHECK-LABEL: func.func
