@@ -76,7 +76,8 @@ struct GroupMatMulPattern : public mlir::OpRewritePattern<MatmulOp> {
   explicit GroupMatMulPattern(mlir::MLIRContext* context)
       : OpRewritePattern<MatmulOp>(context, /*benefit=*/1) {}
   mlir::LogicalResult matchAndRewrite(MatmulOp op, mlir::PatternRewriter& rewriter) const override {
-    if (op.transpose_a() != false && op.transpose_b() != true) { return failure(); }
+    const bool isLinear = op.transpose_a() == false && op.transpose_b() == true;
+    if (isLinear) { return failure(); }
     if (op.alpha().convertToFloat() != 1.0) { return failure(); }
     if (op.device_tag() != "cuda") { return failure(); }
     BiasAddOp bias_add;
