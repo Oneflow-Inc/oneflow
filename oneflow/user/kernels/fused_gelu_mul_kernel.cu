@@ -139,83 +139,6 @@ REGISTER_FUSED_FAST_GELU_MUL_CUDA_KERNEL(nv_bfloat16)
 
 namespace fused_gelu {
 
-template<int pack_size, typename FunctorT, typename R, typename... ARGS>
-__device__ __forceinline__
-    typename std::enable_if<elementwise::HasApply2<FunctorT>::value == true && pack_size % 2 == 0,
-                            void>::type
-    ApplyPack(const FunctorT& functor, elementwise::Packed<R, pack_size>& r1,
-              elementwise::Packed<R, pack_size>& r2,
-              const elementwise::Packed<ARGS, pack_size>&... args) {
-#pragma unroll
-  for (int j = 0; j < pack_size; j += 2) {
-    functor.Apply2(r1.elem + j, r2.elem + j, (args.elem + j)...);
-  }
-}
-
-template<int pack_size, typename FunctorT, typename R, typename... ARGS>
-__device__ __forceinline__
-    typename std::enable_if<elementwise::HasApply2<FunctorT>::value == false || pack_size % 2 != 0,
-                            void>::type
-    ApplyPack(const FunctorT& functor, elementwise::Packed<R, pack_size>& r1,
-              elementwise::Packed<R, pack_size>& r2,
-              const elementwise::Packed<ARGS, pack_size>&... args) {
-#pragma unroll
-  for (int j = 0; j < pack_size; ++j) { functor(r1.elem[j], r2.elem[j], (args.elem[j])...); }
-}
-
-template<int pack_size, typename FactoryT, typename R, typename... ARGS>
-__global__ void __launch_bounds__(elementwise::kBlockSize)
-    FusedFastGeluMulGradCudaKernel(FactoryT factory, int64_t n_pack,
-                                   elementwise::Packed<R, pack_size>* pack_r1,
-                                   elementwise::Packed<R, pack_size>* pack_r2,
-                                   const elementwise::Packed<ARGS, pack_size>*... pack_in,
-                                   int64_t n_tail, R* tail_r1, R* tail_r2,
-                                   const ARGS*... tail_args) {
-  auto functor = factory();
-  const int global_tid = blockIdx.x * elementwise::kBlockSize + threadIdx.x;
-  for (int64_t i = global_tid; i < n_pack; i += blockDim.x * gridDim.x) {
-    ApplyPack<pack_size>(functor, pack_r1[i], pack_r2[i], (pack_in[i])...);
-  }
-  if (global_tid < n_tail) {
-    functor(tail_r1[global_tid], tail_r2[global_tid], (tail_args[global_tid])...);
-  }
-}
-
-template<size_t pack_size, typename FactoryT, typename R, typename... ARGS>
-cudaError_t LaunchFusedFastGeluMulGradCudaKernelByPack(cudaStream_t stream, FactoryT factory,
-                                                       int64_t n, R* r1, R* r2,
-                                                       const ARGS*... args) {
-  const int64_t n_pack = n / pack_size;
-  const int64_t tail_offset = n_pack * pack_size;
-  const int64_t n_tail = n - tail_offset;
-  int num_blocks;
-  {
-    cudaError_t err = elementwise::GetNumBlocks(n_pack, &num_blocks);
-    if (err != cudaSuccess) { return err; }
-  }
-  FusedFastGeluMulGradCudaKernel<pack_size, FactoryT, R, ARGS...>
-      <<<num_blocks, elementwise::kBlockSize, 0, stream>>>(
-          factory, n_pack, reinterpret_cast<elementwise::Packed<R, pack_size>*>(r1),
-          reinterpret_cast<elementwise::Packed<R, pack_size>*>(r2),
-          (reinterpret_cast<const elementwise::Packed<ARGS, pack_size>*>(args))..., n_tail,
-          r1 + tail_offset, r2 + tail_offset, (args + tail_offset)...);
-  return cudaPeekAtLastError();
-}
-
-template<typename FunctorT, typename R, typename... ARGS>
-static cudaError_t LaunchFusedFastGeluMulGradCudaKernel(cudaStream_t stream, FunctorT functor,
-                                                        int64_t n, R* r1, R* r2,
-                                                        const ARGS*... args) {
-  constexpr int max_pack_size = elementwise::PackSize<R, ARGS...>();
-  elementwise::SimpleFactory<FunctorT> factory(functor);
-  if (elementwise::IsAlignedForPack<max_pack_size>(r1, r2, args...)) {
-    return LaunchFusedFastGeluMulGradCudaKernelByPack<max_pack_size>(stream, factory, n, r1, r2,
-                                                                     args...);
-  } else {
-    return LaunchFusedFastGeluMulGradCudaKernelByPack<1>(stream, factory, n, r1, r2, args...);
-  }
-}
-
 template<typename T>
 struct FusedFastGeluMulGradFunctor {
   static constexpr T alpha = static_cast<T>(0.7978845608028654);
@@ -324,6 +247,96 @@ struct FusedFastGeluMulGradFunctor<nv_bfloat16> {
 
 #endif  // CUDA_VERSION >= 11000
 
+template<int pack_size, typename FunctorT, typename T>
+__device__ __forceinline__
+    typename std::enable_if<elementwise::HasApply2<FunctorT>::value == true && pack_size % 2 == 0,
+                            void>::type
+    FusedFastGeluMulGradFunctorApplyPack(const FunctorT& functor,
+                                         elementwise::Packed<T, pack_size>& x_diff_pack,
+                                         elementwise::Packed<T, pack_size>& m_diff_pack,
+                                         const elementwise::Packed<T, pack_size>& dy_pack,
+                                         const elementwise::Packed<T, pack_size>& x_pack,
+                                         const elementwise::Packed<T, pack_size>& m_pack) {
+#pragma unroll
+  for (int j = 0; j < pack_size; j += 2) {
+    functor.Apply2(x_diff_pack.elem + j, m_diff_pack.elem + j, dy_pack.elem + j, x_pack.elem + j,
+                   m_pack.elem + j);
+  }
+}
+
+template<int pack_size, typename FunctorT, typename T>
+__device__ __forceinline__
+    typename std::enable_if<elementwise::HasApply2<FunctorT>::value == false || pack_size % 2 != 0,
+                            void>::type
+    FusedFastGeluMulGradFunctorApplyPack(const FunctorT& functor,
+                                         elementwise::Packed<T, pack_size>& x_diff_pack,
+                                         elementwise::Packed<T, pack_size>& m_diff_pack,
+                                         const elementwise::Packed<T, pack_size>& dy_pack,
+                                         const elementwise::Packed<T, pack_size>& x_pack,
+                                         const elementwise::Packed<T, pack_size>& m_pack) {
+#pragma unroll
+  for (int j = 0; j < pack_size; ++j) {
+    functor(x_diff_pack.elem[j], m_diff_pack.elem[j], dy_pack.elem[j], x_pack.elem[j],
+            m_pack.elem[j]);
+  }
+}
+
+template<int pack_size, typename T>
+__global__ void __launch_bounds__(elementwise::kBlockSize)
+    FusedFastGeluMulGradCudaKernel(int64_t n_pack, elementwise::Packed<T, pack_size>* x_diff_pack,
+                                   elementwise::Packed<T, pack_size>* m_diff_pack,
+                                   const elementwise::Packed<T, pack_size>* dy_pack,
+                                   const elementwise::Packed<T, pack_size>* x_pack,
+                                   const elementwise::Packed<T, pack_size>* m_pack, int64_t n_tail,
+                                   T* x_diff_tail, T* m_diff_tail, const T* dy_tail,
+                                   const T* x_tail, const T* m_tail) {
+  FusedFastGeluMulGradFunctor<T> functor;
+  const int global_tid = blockIdx.x * elementwise::kBlockSize + threadIdx.x;
+  for (int64_t i = global_tid; i < n_pack; i += blockDim.x * gridDim.x) {
+    FusedFastGeluMulGradFunctorApplyPack<pack_size>(functor, x_diff_pack[i], m_diff_pack[i],
+                                                    dy_pack[i], x_pack[i], m_pack[i]);
+  }
+  if (global_tid < n_tail) {
+    functor(x_diff_tail[global_tid], m_diff_tail[global_tid], dy_tail[global_tid],
+            x_tail[global_tid], m_tail[global_tid]);
+  }
+}
+
+template<size_t pack_size, typename T>
+cudaError_t LaunchFusedFastGeluMulGradCudaKernelByPack(cudaStream_t stream, int64_t n, T* x_diff,
+                                                       T* m_diff, const T* dy, const T* x,
+                                                       const T* m) {
+  const int64_t n_pack = n / pack_size;
+  const int64_t tail_offset = n_pack * pack_size;
+  const int64_t n_tail = n - tail_offset;
+  int num_blocks;
+  {
+    cudaError_t err = elementwise::GetNumBlocks(n_pack, &num_blocks);
+    if (err != cudaSuccess) { return err; }
+  }
+  FusedFastGeluMulGradCudaKernel<pack_size><<<num_blocks, elementwise::kBlockSize, 0, stream>>>(
+      n_pack, reinterpret_cast<elementwise::Packed<T, pack_size>*>(x_diff),
+      reinterpret_cast<elementwise::Packed<T, pack_size>*>(m_diff),
+      reinterpret_cast<const elementwise::Packed<T, pack_size>*>(dy),
+      reinterpret_cast<const elementwise::Packed<T, pack_size>*>(x),
+      reinterpret_cast<const elementwise::Packed<T, pack_size>*>(m), n_tail, x_diff + tail_offset,
+      m_diff + tail_offset, dy + tail_offset, x + tail_offset, m + tail_offset);
+  return cudaPeekAtLastError();
+}
+
+template<typename T>
+static cudaError_t LaunchFusedFastGeluMulGradCudaKernel(cudaStream_t stream, int64_t n, T* x_diff,
+                                                        T* m_diff, const T* dy, const T* x,
+                                                        const T* m) {
+  constexpr int max_pack_size = elementwise::PackSize<T>();
+  if (elementwise::IsAlignedForPack<max_pack_size>(x_diff, m_diff, dy, x, m)) {
+    return LaunchFusedFastGeluMulGradCudaKernelByPack<max_pack_size>(stream, n, x_diff, m_diff, dy,
+                                                                     x, m);
+  } else {
+    return LaunchFusedFastGeluMulGradCudaKernelByPack<1>(stream, n, x_diff, m_diff, dy, x, m);
+  }
+}
+
 }  // namespace fused_gelu
 
 template<typename T>
@@ -345,8 +358,7 @@ class FusedFastGeluMulGradKernel final : public user_op::OpKernel {
 
     int64_t elem_cnt = in->shape_view().elem_cnt();
     OF_CUDA_CHECK((fused_gelu::LaunchFusedFastGeluMulGradCudaKernel(
-        ctx->stream()->As<ep::CudaStream>()->cuda_stream(),
-        fused_gelu::FusedFastGeluMulGradFunctor<T>(), elem_cnt, in_diff->mut_dptr<T>(),
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream(), elem_cnt, in_diff->mut_dptr<T>(),
         multiplier_diff->mut_dptr<T>(), out_diff->dptr<T>(), in->dptr<T>(),
         multiplier->dptr<T>())));
   };
