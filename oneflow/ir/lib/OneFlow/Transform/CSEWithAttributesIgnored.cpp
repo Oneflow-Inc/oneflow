@@ -31,11 +31,6 @@ namespace {
 static auto MAGIC_OP_NAME = "ONEFLOW_ERASE_MAGIC";
 static auto MAGIC_SCOPE_SYMBOL_ID = 77777;
 
-struct CSEState {
-  llvm::DenseMap<Operation*, IntegerAttr> scopeSymbolIDs;
-  llvm::DenseMap<Operation*, StringAttr> opNames;
-};
-
 struct EraseAttributes : public mlir::OpInterfaceRewritePattern<UserOpCompatible> {
   explicit EraseAttributes(mlir::MLIRContext* context, std::shared_ptr<CSEState> state)
       : OpInterfaceRewritePattern<UserOpCompatible>(context, /*benefit=*/1), state_{state} {}
@@ -90,6 +85,9 @@ struct PutAttributes : public mlir::OpInterfaceRewritePattern<UserOpCompatible> 
 };
 
 class CSEWithAttributesIgnored : public CSEWithAttributesIgnoredBase<CSEWithAttributesIgnored> {
+ public:
+  explicit CSEWithAttributesIgnored() {}
+  explicit CSEWithAttributesIgnored(std::shared_ptr<CSEState> state) { state_ = state; }
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
@@ -102,6 +100,10 @@ class CSEWithAttributesIgnored : public CSEWithAttributesIgnoredBase<CSEWithAttr
 };
 
 class CSEPutAttributes : public CSEPutAttributesBase<CSEPutAttributes> {
+ public:
+  explicit CSEPutAttributes() {}
+  explicit CSEPutAttributes(std::shared_ptr<CSEState> state) { state_ = state; }
+
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
@@ -120,6 +122,12 @@ std::unique_ptr<Pass> createCSEWithAttributesIgnored() {
 }
 
 std::unique_ptr<Pass> createCSEPutAttributes() { return std::make_unique<CSEPutAttributes>(); }
+
+std::pair<std::unique_ptr<Pass>, std::unique_ptr<Pass>> createCSEPasses(
+    std::shared_ptr<CSEState> state) {
+  return std::make_pair(std::make_unique<CSEWithAttributesIgnored>(state),
+                        std::make_unique<CSEPutAttributes>(state));
+}
 
 }  // namespace oneflow
 

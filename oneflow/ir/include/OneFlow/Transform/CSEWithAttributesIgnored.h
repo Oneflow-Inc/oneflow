@@ -22,8 +22,14 @@ namespace mlir {
 
 namespace oneflow {
 
+struct CSEState {
+  llvm::DenseMap<Operation*, IntegerAttr> scopeSymbolIDs;
+  llvm::DenseMap<Operation*, StringAttr> opNames;
+};
 std::unique_ptr<mlir::Pass> createCSEWithAttributesIgnored();
 std::unique_ptr<mlir::Pass> createCSEPutAttributes();
+std::pair<std::unique_ptr<Pass>, std::unique_ptr<Pass>> createCSEPasses(
+    std::shared_ptr<CSEState> state);
 
 }  // namespace oneflow
 
