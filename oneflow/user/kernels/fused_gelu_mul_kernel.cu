@@ -144,9 +144,9 @@ struct FusedFastGeluMulGradFunctor {
   static constexpr T alpha = static_cast<T>(0.7978845608028654);
   static constexpr T beta = static_cast<T>(0.044714998453855515);
 
-  OF_DEVICE_FUNC FusedFastGeluMulGradFunctor() {}
+  __device__ FusedFastGeluMulGradFunctor() {}
 
-  OF_DEVICE_FUNC void operator()(T& x_diff, T& m_diff, const T& dy, const T& x, const T& m) const {
+  __device__ void operator()(T& x_diff, T& m_diff, const T& dy, const T& x, const T& m) const {
     const T one = static_cast<T>(1);
     const T half = static_cast<T>(0.5);
     const T pow3 = x * x * x;
@@ -166,10 +166,10 @@ struct FusedFastGeluMulGradFunctor<half> {
   static constexpr float beta = FusedFastGeluMulGradFunctor<float>::beta;
   FusedFastGeluMulGradFunctor<float> float_functor;
 
-  OF_DEVICE_FUNC FusedFastGeluMulGradFunctor() {}
+  __device__ FusedFastGeluMulGradFunctor() {}
 
-  OF_DEVICE_FUNC void operator()(half& x_diff, half& m_diff, const half& dy, const half& x,
-                                 const half& m) const {
+  __device__ void operator()(half& x_diff, half& m_diff, const half& dy, const half& x,
+                             const half& m) const {
 #if (__CUDA_ARCH__ >= 750 && CUDA_VERSION >= 11000)
     const half halpha = __float2half_rn(alpha);
     const half hbeta = __float2half_rn(beta);
@@ -232,10 +232,10 @@ template<>
 struct FusedFastGeluMulGradFunctor<nv_bfloat16> {
   FusedFastGeluMulGradFunctor<float> float_functor;
 
-  OF_DEVICE_FUNC FusedFastGeluMulGradFunctor() {}
+  __device__ FusedFastGeluMulGradFunctor() {}
 
-  OF_DEVICE_FUNC void operator()(nv_bfloat16& x_diff, nv_bfloat16& m_diff, const nv_bfloat16& dy,
-                                 const nv_bfloat16& x, const nv_bfloat16& m) const {
+  __device__ void operator()(nv_bfloat16& x_diff, nv_bfloat16& m_diff, const nv_bfloat16& dy,
+                             const nv_bfloat16& x, const nv_bfloat16& m) const {
     float x_diff_float;
     float m_diff_float;
     float_functor(x_diff_float, m_diff_float, __bfloat162float(dy), __bfloat162float(x),
