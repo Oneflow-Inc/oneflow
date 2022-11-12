@@ -51,6 +51,28 @@ struct EraseAttributes : public mlir::OpInterfaceRewritePattern<UserOpCompatible
   }
 };
 
+struct PutAttributes : public mlir::OpInterfaceRewritePattern<UserOpCompatible> {
+  explicit PutAttributes(mlir::MLIRContext* context, std::shared_ptr<std::atomic<int64_t>> id)
+      : OpInterfaceRewritePattern<UserOpCompatible>(context, /*benefit=*/1), id_{id} {}
+  mlir::LogicalResult matchAndRewrite(UserOpCompatible op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    if (op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
+            .getValue()
+            .str()
+        == MAGIC_OP_NAME) {
+      op->setAttr(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+                  rewriter.getStringAttr("op" + std::to_string(*id_)));
+      *id_ += 1;
+      return success();
+    } else {
+      return failure();
+    }
+  }
+
+ private:
+  std::shared_ptr<std::atomic<int64_t>> id_;
+};
+
 class CSEWithAttributesIgnored : public CSEWithAttributesIgnoredBase<CSEWithAttributesIgnored> {
   void runOnOperation() override {
     Operation* op = getOperation();
@@ -60,11 +82,23 @@ class CSEWithAttributesIgnored : public CSEWithAttributesIgnoredBase<CSEWithAttr
   }
 };
 
+class CSEPutAttributes : public CSEWithAttributesIgnoredBase<CSEWithAttributesIgnored> {
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    std::shared_ptr<std::atomic<int64_t>> id = std::make_shared<std::atomic<int64_t>>(0);
+    patterns.add<PutAttributes>(op->getContext(), id);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
 }  // namespace
 
 std::unique_ptr<Pass> createCSEWithAttributesIgnored() {
   return std::make_unique<CSEWithAttributesIgnored>();
 }
+
+std::unique_ptr<Pass> createCSEPutAttributes() { return std::make_unique<CSEPutAttributes>(); }
 
 }  // namespace oneflow
 

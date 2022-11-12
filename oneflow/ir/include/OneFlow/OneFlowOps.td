@@ -316,11 +316,20 @@ def ConvertToSignlessForTosaPass : Pass<"convert-to-signless-for-tosa", "ModuleO
 }
 
 def CSEWithAttributesIgnored : Pass<"cse-with-attributes-ignored", "ModuleOp"> {
-  let summary = "cse and ignore oneflow attributes";
+  let summary = "ignore oneflow attributes to have cse work";
   let description = [{
     cse and ignore oneflow attributes like op name, symbol id, etc.
   }];
   let constructor = "mlir::oneflow::createCSEWithAttributesIgnored()";
+  let dependentDialects = [];
+}
+
+def CSEPutAttributes : Pass<"cse-put-attributes", "ModuleOp"> {
+  let summary = "cse and ignore oneflow attributes";
+  let description = [{
+    put back oneflow attributes like op name, symbol id, etc.
+  }];
+  let constructor = "mlir::oneflow::createCSEPutAttributes()";
   let dependentDialects = [];
 }
 

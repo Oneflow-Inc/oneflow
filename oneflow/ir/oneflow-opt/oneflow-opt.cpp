@@ -59,6 +59,7 @@ int32_t main(int32_t argc, char** argv) {
   mlir::registerConvertOFKLCalleeToLLVMPassPass();
   mlir::registerOutlineJitFunctionPassPass();
   mlir::registerCSEWithAttributesIgnoredPass();
+  mlir::registerCSEPutAttributesPass();
   mlir::DialectRegistry registry;
   registry.insert<mlir::sbp::SBPDialect>();
   registry.insert<mlir::oneflow::OneFlowDialect>();

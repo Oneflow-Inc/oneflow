@@ -784,7 +784,11 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   mlir::oneflow::CheckEnableIRPrinting(pm);
   // this canonicalizer should create concrete ops and create fuse opportunities
   pm.addPass(createCanonicalizerPass());
-  if (std::getenv("ONEFLOW_MLIR_CSE") != nullptr) { pm.addPass(createCSEPass()); }
+  if (std::getenv("ONEFLOW_MLIR_CSE") != nullptr) {
+    pm.addPass(createCSEWithAttributesIgnored());
+    pm.addPass(createCSEPass());
+    pm.addPass(createCSEPutAttributes());
+  }
   std::string graphviz;
   if (job_wrapper.IsLastIRPass() && std::getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS") != nullptr) {
     pm.addPass(oneflow::createOutlineJitFunctionPass());

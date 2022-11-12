@@ -23,6 +23,7 @@ namespace mlir {
 namespace oneflow {
 
 std::unique_ptr<mlir::Pass> createCSEWithAttributesIgnored();
+std::unique_ptr<mlir::Pass> createCSEPutAttributes();
 
 }  // namespace oneflow
 
