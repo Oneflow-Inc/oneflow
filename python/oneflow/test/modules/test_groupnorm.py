@@ -86,8 +86,8 @@ def _test_groupnorm(test_case, device):
     )
     x = flow.tensor(input_arr, dtype=flow.float32, device=flow.device(device))
     m = flow.nn.GroupNorm(num_groups=1, num_channels=2).to(device=flow.device(device))
-    y1 = m(x)
-    test_case.assertTrue(np.allclose(y1.numpy(), output, 1e-03, 1e-03))
+    y = m(x)
+    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-03, 1e-03))
 
 
 def _test_groupnorm_3d(test_case, device):
@@ -358,7 +358,7 @@ class TestGroupNorm(flow.unittest.TestCase):
             _test_groupnorm_backward,
             _test_groupnorm_backward_3d,
         ]
-        arg_dict["device"] = ["cuda"]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
