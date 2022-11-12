@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/blob_desc.h"
@@ -141,8 +142,8 @@ std::shared_ptr<const Shape> GetTaskNodeTimeShape(const TaskNode* node) {
 }
 
 void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_t this_chain_id) {
-  CHECK_NE(this_chain_id, -1);
-  CHECK_EQ(this_node->chain_id(), -1);
+  CHECK(IsValidChainId(this_chain_id));
+  CHECK(!IsValidChainId(this_node->chain_id()));
   // bfs search all node can be merged in this chain
   std::shared_ptr<const Shape> seed_time_shape = GetTaskNodeTimeShape(this_node);
   HashSet<TaskNode*> visited_nodes;
@@ -153,14 +154,14 @@ void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_
     TaskNode* cur_node = queued_nodes.front();
     queued_nodes.pop();
 
-    CHECK_EQ(cur_node->chain_id(), -1);
+    CHECK(!IsValidChainId(cur_node->chain_id()));
     cur_node->set_chain_id(this_chain_id);
 
     cur_node->ForEachNodeOnInOutDataEdge([&](TaskNode* next_node) {
       if (visited_nodes.find(next_node) == visited_nodes.end() && CanBeMergedInChain(next_node)
           && this_node->thrd_id() == next_node->thrd_id()
           && (*GetTaskNodeTimeShape(next_node)) == (*seed_time_shape)) {
-        if (next_node->chain_id() == -1) {
+        if (!IsValidChainId(next_node->chain_id())) {
           queued_nodes.push(next_node);
           visited_nodes.insert(next_node);
         } else {
@@ -202,7 +203,8 @@ MakePredicatorIsLbiAllConsumersReachable(
         IsOpNameDataOrCtrlReachable) {
   auto IsDataOrCtrlReachable = [IsOpNameDataOrCtrlReachable](const TaskNode* src_node,
                                                              const TaskNode* dst_node) -> bool {
-    if (src_node->chain_id() == dst_node->chain_id()
+    if (IsValidChainId(src_node->chain_id()) && IsValidChainId(dst_node->chain_id())
+        && src_node->chain_id() == dst_node->chain_id()
         && src_node->order_in_graph() <= dst_node->order_in_graph()) {
       return true;
     }
@@ -418,7 +420,17 @@ void ForEachOpGraphNecessaryCtrlEdge(
         if (dst_time_shape == nullptr) {
           dst_time_shape = CHECK_JUST(dst->op().GetOpTimeShape()).get();
         }
-        CHECK_EQ(src_time_shape->elem_cnt(), dst_time_shape->elem_cnt());
+        if (src_time_shape->elem_cnt() != dst_time_shape->elem_cnt()) {
+          // NOTE(chengcheng): acc / pack op node can be merged and add ctrl edge.
+          CHECK(src->op().op_conf().has_user_conf());
+          const std::string& op_type_name = src->op().op_conf().user_conf().op_type_name();
+          CHECK(op_type_name == "acc" || op_type_name == "pack");
+          const Shape* src_input_time_shape =
+              CHECK_JUST(src->op().GetInputBlobFastestTimeShape()).get();
+          CHECK_EQ(src_input_time_shape->elem_cnt(), dst_time_shape->elem_cnt());
+        } else {
+          CHECK_EQ(src_time_shape->elem_cnt(), dst_time_shape->elem_cnt());
+        }
         Handler(src, dst);
       }
     }
@@ -555,7 +567,12 @@ void TaskGraph::RemoveEmptyRegsts() {
 }
 
 void TaskGraph::MergeChainAndAddOrderingCtrlEdgeInSameChain() {
-  MergeChain();
+  if (EnableLogicalChain()) {
+    MergeChainByLogicalChainId();
+  } else {
+    // TODO(chengcheng): erase old chain version in the future.
+    MergeChainByPhysicalTaskGraph();
+  }
   BuildCtrlRegstDescInSameChain();
 }
 
@@ -569,13 +586,12 @@ void TaskGraph::SetOrderInGraphForEachNode() {
   TopoForEachNode(SetOrderInGraph);
 }
 
-void TaskGraph::MergeChain() {
+void TaskGraph::MergeChainByPhysicalTaskGraph() {
   int64_t chain_id = 0;
   for (auto* this_node : ordered_task_nodes_) {
     // skip if this node has been set in a chain.
-    if (this_node->chain_id() != -1) { continue; }
+    if (IsValidChainId(this_node->chain_id())) { continue; }
 
-    CHECK_EQ(this_node->chain_id(), -1);
     if (CanBeMergedInChain(this_node)) {
       TraverseConnectedSubGraphMergeInThisChain(this_node, chain_id);
     } else {
@@ -584,17 +600,32 @@ void TaskGraph::MergeChain() {
 
     ++chain_id;
   }
-  for (auto* node : ordered_task_nodes_) { CHECK_NE(node->chain_id(), -1); }
+  for (auto* node : ordered_task_nodes_) { CHECK(IsValidChainId(node->chain_id())); }
+}
+
+void TaskGraph::MergeChainByLogicalChainId() {
+  for (TaskNode* this_node : ordered_task_nodes_) {
+    CompTaskNode* comp_node = dynamic_cast<CompTaskNode*>(this_node);
+    if (!comp_node) { continue; }
+    const int64_t logical_chain_id = comp_node->op()->op_conf().logical_chain_id();
+    if (IsValidChainId(logical_chain_id)) { this_node->set_chain_id(logical_chain_id); }
+  }
 }
 
 void TaskGraph::BuildCtrlRegstDescInSameChain() {
-  HashMap<int64_t, TaskNode*> chain_id2node;
+  auto GenPhysicalChainId = [](TaskNode* node) {
+    // NOTE(chengcheng): different rank cannot use same chain id for bad ctrl link.
+    return (node->chain_id() << 31) | (node->machine_id());
+  };
+  HashMap<int64_t, TaskNode*> physical_chain_id2node;
   for (auto* node : ordered_task_nodes_) {
     if (IsConnectToTickOp(node)) { continue; }
-    int64_t chain_id = node->chain_id();
-    auto iter = chain_id2node.find(chain_id);
-    if (iter == chain_id2node.end()) {
-      CHECK(chain_id2node.emplace(chain_id, node).second);
+    // NOTE(chengcheng): skip invalid chain id
+    if (!IsValidChainId(node->chain_id())) { continue; }
+    int64_t physical_chain_id = GenPhysicalChainId(node);
+    auto iter = physical_chain_id2node.find(physical_chain_id);
+    if (iter == physical_chain_id2node.end()) {
+      CHECK(physical_chain_id2node.emplace(physical_chain_id, node).second);
     } else {
       TaskNode* src_node = iter->second;
       TaskNode* dst_node = node;

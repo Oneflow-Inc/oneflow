@@ -113,6 +113,7 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "fused_scale_mask_softmax_dropout_grad",
                               "fused_scale_mask_softmax",
                               "fused_scale_mask_softmax_grad",
+                              "fused_bias_add_scale_mask_softmax_dropout",
                               "fused_bias_add_gelu",
                               "fused_bias_add_gelu_grad",
                               "fused_bias_add_mask_scale",
@@ -182,7 +183,8 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "ones_like",
                                "pinned_identity",
                                "to_contiguous",
-                               "copy"};
+                               "copy",
+                               "upsample_nearest_2d"};
 
   return clear_list;
 }
