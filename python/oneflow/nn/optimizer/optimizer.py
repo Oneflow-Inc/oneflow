@@ -216,7 +216,7 @@ class Optimizer(object):
 
         self.step = _decorate_step(self.step)
 
-    def add_param_group(self, param_group, contiguous_params) -> None:
+    def add_param_group(self, param_group, contiguous_params=False) -> None:
         r"""
         
         Add a param group to the :class:`Optimizer` s `param_groups`.
