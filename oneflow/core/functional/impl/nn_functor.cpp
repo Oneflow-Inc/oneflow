@@ -4365,6 +4365,58 @@ class FusedMultiHeadAttentionInferenceFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class GroupedMatmulBiasFunctor {
+ public:
+  GroupedMatmulBiasFunctor() {
+    fused_op_.resize(kMaxInputCount /*the maximum number of inputs*/);
+    for (int n = 1; n < fused_op_.size(); ++n) {
+      fused_op_[n] = CHECK_JUST(one::OpBuilder("grouped_matmul_bias")
+                                    .Input("xs", n)
+                                    .Input("weights", n)
+                                    .Input("biases", n)
+                                    .Output("ys", n)
+                                    .Build());
+    }
+  }
+  Maybe<TensorTuple> operator()(const TensorTuple& xs, const TensorTuple& weights,
+                                const TensorTuple& biases) const {
+    const int64_t input_size = xs.size();
+    const int64_t weight_size = weights.size();
+    const int64_t bias_size = biases.size();
+    CHECK_GE_OR_RETURN(input_size, 1)
+        << Error::RuntimeError() << "The number of xs should be greater equal than 1.";
+    CHECK_EQ_OR_RETURN(weight_size, input_size)
+        << Error::RuntimeError() << "The number of weights should be equal to xs.";
+    CHECK_EQ_OR_RETURN(bias_size, input_size)
+        << Error::RuntimeError() << "The number of bias should be equal to xs.";
+    for (int64_t i = 0; i < input_size; ++i) {
+      const auto& input_shape = xs[i]->shape();
+      const auto& weight_shape = weights[i]->shape();
+      const auto& bias_shape = biases[i]->shape();
+      CHECK_GE_OR_RETURN(input_shape->NumAxes(), 2)
+          << Error::RuntimeError() << "x's dim size should greater equal than 2.";
+      CHECK_EQ_OR_RETURN(weight_shape->NumAxes(), 2)
+          << Error::RuntimeError() << "Weight's dim size should == 2";
+      CHECK_EQ_OR_RETURN(bias_shape->NumAxes(), 1)
+          << Error::RuntimeError() << "Bias's dim size should == 1";
+      const int64_t k = input_shape->At(input_shape->NumAxes() - 1);
+      CHECK_EQ_OR_RETURN(weight_shape->At(1), k)
+          << Error::RuntimeError() << "weight's second dim should be equal to input's last dim. ";
+      const int64_t n = weight_shape->At(0);
+      CHECK_EQ_OR_RETURN(bias_shape->At(0), n)
+          << Error::RuntimeError() << "Bias's dim is not equal to weight's first dim. ";
+    }
+    TensorTuple input(3 * input_size);
+    std::copy(xs.begin(), xs.end(), input.begin() + 0 * input_size);
+    std::copy(weights.begin(), weights.end(), input.begin() + 1 * input_size);
+    std::copy(biases.begin(), biases.end(), input.begin() + 2 * input_size);
+    return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_[input_size], input);
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> fused_op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -4482,6 +4534,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BatchNormBackwardReduceFunctor>("BatchNormBackwardReduce");
   m.add_functor<impl::BatchNormBackwardElemtFunctor>("BatchNormBackwardElemt");
   m.add_functor<impl::FusedMultiHeadAttentionInferenceFunctor>("FusedMultiHeadAttentionInference");
+  m.add_functor<impl::GroupedMatmulBiasFunctor>("GroupedMatmulBias");
 }
 
 }  // namespace functional
