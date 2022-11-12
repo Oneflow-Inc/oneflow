@@ -224,7 +224,7 @@ class RmsNormGpuKernel final : public user_op::OpKernel, public user_op::CudaGra
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* inv_rms = ctx->Tensor4ArgNameAndIndex("inv_rms", 0);
-    const double eps = ctx->Attr<double>("epsilon");
+    const double eps = ctx->Attr<float>("epsilon");
     const Shape& normalized_shape = ctx->Attr<Shape>("normalized_shape");
     const int64_t ncols = normalized_shape.elem_cnt();
     const int64_t nrows = inv_rms->shape_view().elem_cnt();
@@ -288,11 +288,11 @@ class RmsNormGradGpuKernel final : public user_op::OpKernel, public user_op::Cud
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
 
 REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(float)
-// REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(double)
-// REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(half)
-// #if CUDA_VERSION >= 11000
-// REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(nv_bfloat16)
-// #endif
+REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(double)
+REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(half)
+#if CUDA_VERSION >= 11000
+REGISTER_RMS_NORM_GRAD_CUDA_KERNEL(nv_bfloat16)
+#endif
 
 template<typename T>
 class RmsNormParamGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {

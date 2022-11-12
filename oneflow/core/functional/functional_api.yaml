@@ -1372,7 +1372,7 @@
   bind_python: False
 
 - name: "rms_norm"
-  signature: "Tensor (Tensor x, Tensor weight=None, Shape normalized_shape, Float epsilon) => RMSNorm"
+  signature: "Tensor (Tensor x, Tensor weight=None, Shape normalized_shape, Float epsilon=1e-6) => RMSNorm"
   bind_python: True
 
 - name: "rms_norm_grad"

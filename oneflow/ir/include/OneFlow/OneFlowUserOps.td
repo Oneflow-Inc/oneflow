@@ -6286,7 +6286,7 @@ def OneFlow_RmsNormOp : OneFlow_BaseOp<"rms_norm", [NoSideEffect, DeclareOpInter
   );
   let attrs = (ins
     ShapeAttr:$normalized_shape,
-    DefaultValuedAttr<F64Attr, "0.00001">:$epsilon
+    DefaultValuedAttr<F32Attr, "0.00001">:$epsilon
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
