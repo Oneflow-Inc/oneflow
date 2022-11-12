@@ -31,15 +31,24 @@ namespace {
 static auto MAGIC_OP_NAME = "ONEFLOW_ERASE_MAGIC";
 static auto MAGIC_SCOPE_SYMBOL_ID = 77777;
 
+struct CSEState {
+  llvm::DenseMap<Operation*, IntegerAttr> scopeSymbolIDs;
+  llvm::DenseMap<Operation*, StringAttr> opNames;
+};
+
 struct EraseAttributes : public mlir::OpInterfaceRewritePattern<UserOpCompatible> {
-  explicit EraseAttributes(mlir::MLIRContext* context)
-      : OpInterfaceRewritePattern<UserOpCompatible>(context, /*benefit=*/1) {}
+  explicit EraseAttributes(mlir::MLIRContext* context, std::shared_ptr<CSEState> state)
+      : OpInterfaceRewritePattern<UserOpCompatible>(context, /*benefit=*/1), state_{state} {}
   mlir::LogicalResult matchAndRewrite(UserOpCompatible op,
                                       mlir::PatternRewriter& rewriter) const override {
     if (op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
             .getValue()
             .str()
         != MAGIC_OP_NAME) {
+      state_->opNames[op] =
+          op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr());
+      state_->scopeSymbolIDs[op] =
+          op->getAttrOfType<IntegerAttr>(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr());
       op->setAttr(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
                   rewriter.getStringAttr(MAGIC_OP_NAME));
       op->setAttr(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
@@ -49,20 +58,23 @@ struct EraseAttributes : public mlir::OpInterfaceRewritePattern<UserOpCompatible
       return failure();
     }
   }
+
+ private:
+  std::shared_ptr<CSEState> state_;
 };
 
 struct PutAttributes : public mlir::OpInterfaceRewritePattern<UserOpCompatible> {
-  explicit PutAttributes(mlir::MLIRContext* context, std::shared_ptr<std::atomic<int64_t>> id)
-      : OpInterfaceRewritePattern<UserOpCompatible>(context, /*benefit=*/1), id_{id} {}
+  explicit PutAttributes(mlir::MLIRContext* context, std::shared_ptr<CSEState> state)
+      : OpInterfaceRewritePattern<UserOpCompatible>(context, /*benefit=*/1), state_{state} {}
   mlir::LogicalResult matchAndRewrite(UserOpCompatible op,
                                       mlir::PatternRewriter& rewriter) const override {
     if (op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
             .getValue()
             .str()
         == MAGIC_OP_NAME) {
-      op->setAttr(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
-                  rewriter.getStringAttr("op" + std::to_string(*id_)));
-      *id_ += 1;
+      op->setAttr(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), state_->opNames[op]);
+      op->setAttr(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
+                  state_->scopeSymbolIDs[op]);
       return success();
     } else {
       return failure();
@@ -70,7 +82,7 @@ struct PutAttributes : public mlir::OpInterfaceRewritePattern<UserOpCompatible> 
   }
 
  private:
-  std::shared_ptr<std::atomic<int64_t>> id_;
+  std::shared_ptr<CSEState> state_;
 };
 
 class CSEWithAttributesIgnored : public CSEWithAttributesIgnoredBase<CSEWithAttributesIgnored> {
