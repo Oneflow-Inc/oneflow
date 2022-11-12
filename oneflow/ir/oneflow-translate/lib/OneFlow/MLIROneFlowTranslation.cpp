@@ -786,7 +786,8 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   // this canonicalizer should create concrete ops and create fuse opportunities
   pm.addPass(createCanonicalizerPass());
   // TODO: add a IsFirstIRPass func
-  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_CSE", false) && job_wrapper.IsLastIRPass() == false) {
+  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_CSE", false)
+      && job_wrapper.IsLastIRPass() == false) {
     auto cse_state = std::make_shared<CSEState>();
     auto passes = createCSEPasses(cse_state);
     pm.addPass(std::move(passes.first));
@@ -794,7 +795,8 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     pm.addPass(std::move(passes.second));
   }
   std::string graphviz;
-  if (job_wrapper.IsLastIRPass() && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS", false)) {
+  if (job_wrapper.IsLastIRPass()
+      && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS", false)) {
     pm.addPass(oneflow::createOutlineJitFunctionPass());
   }
   // we must do auto nhwc and eliminate redundant transpose op first, avoid insert redundant
@@ -811,12 +813,16 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     pm.addPass(oneflow::createConvertInferenceOpPass());
     pm.addPass(oneflow::createPostConvertInferenceOpPass());
   }
-  if (job_wrapper.IsLastIRPass() && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH", false)) {
+  if (job_wrapper.IsLastIRPass()
+      && ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_FUSE_KERNEL_LAUNCH", false)) {
     pm.addPass(createKernelLaunchFunctionPass());
   }
   pm.addPass(createCanonicalizerPass());
-  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_PRINT_STATS", false)) { pm.addPass(createPrintOpStatsPass()); }
-  const bool shouldPrintGraphviz = ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_PRINT_OP_GRAPH", false);
+  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_PRINT_STATS", false)) {
+    pm.addPass(createPrintOpStatsPass());
+  }
+  const bool shouldPrintGraphviz =
+      ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_PRINT_OP_GRAPH", false);
   if (shouldPrintGraphviz) {
     llvm::raw_string_ostream os_graphviz(graphviz);
     pm.addPass(createPrintOpGraphPass(os_graphviz));
