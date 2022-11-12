@@ -142,7 +142,7 @@ class GroupMatMulPass : public GroupMatMulBase<GroupMatMulPass> {
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    populateFuserForExistingOp(patterns);
+    patterns.add<GroupMatMulPattern>(op->getContext());
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
